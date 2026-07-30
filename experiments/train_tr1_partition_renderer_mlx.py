@@ -230,6 +230,23 @@ class TR1Config:
     # to an .npy of pair indices to use as the composed-S subset. Pose is content/tail-limited
     # (QA66: top-17 pairs = 74.3% of pose mass) => run the bounded solve on the POSE-MASS TAIL
     # for max signal/sec. None => the first composed_s_gate_subset pairs (head, uniform).
+    renderer_head_mode: str = "rgb"       # QA83 (census §4.1) OUTPUT-SPACE FACTORIZATION: the
+    # renderer head output space. "rgb" = 3-channel RGB via sigmoid*255 (control = current burn);
+    # "class_field" = k=1 class-field scalar c(x) -> a FIXED monotone gray lift L:R->R^3 (the
+    # 1-luma-channel ur-instance; comma10k class_values live on one luma axis); "class_field_photo"
+    # = k=2 (class c + margin-slack-confined luma photometric channel p). The lift is generic
+    # decoder code (rule-118 FREE); only the k-channel token field is counted. Reduces the head
+    # conv output DOF (renderer_bytes) and, at matched TOTAL bytes vs "rgb", tests the ~2x
+    # effective-capacity-per-byte claim. Default "rgb" => exact current behavior (resume-safe).
+    head_photo_slack_gain: float = 0.05   # QA83/QA80 margin-slack budget for the class_field_photo
+    # luma photometric channel: a CONSERVATIVE fixed gain (~13/255 luma) so the pose-legible
+    # perturbation stays inside the boundary-annulus flip-distance budget (band lemma => ~zero seg
+    # flips). The EXACT per-pixel budget d=|m|/||dw|| (QA80 flip-distance field) is the named
+    # compress-time scorer refinement; this fixed gain is the scorer-free build default.
+    byte_ledger_coder: str = "smevr"      # QA86(b) / census T5: coder used to PRICE the token
+    # stream for stage/telemetry decisions. "smevr" = the SHIPPED r7 coder (decisions match the
+    # archive); "zlib" = the legacy temporal-delta surrogate (decision-noise vs shipped bytes,
+    # kept for a byte-continuous live-burn resume). NEVER changes shipped/trained bytes.
     composed_s_delta_ref: str | None = None   # §3.5 ADOPTED form (MAIN Option A 2026-07-30):
     # path to the GT-ideal delta reference .npz (ddm_bc1_delta_baseline.py: baseline_dpose +
     # knee_sensitivity + tail_ids). When set, the composed-S runs the DEGRADED DIRECTIONAL-DELTA
@@ -285,7 +302,26 @@ def derive_ema_decay(total_updates: int) -> tuple[float, str]:
         d = 1.0 - 2.0 / (0.5 * max(int(total_updates), 8))
         prov = (f"DERIVED closed-form d=1-2/(phi*U) phi=0.5 U={total_updates} -> "
                 f"{d:.6f} (LawRef evaluator import failed: {exc})")
-    d = min(max(d, 0.9), 0.9995)
+    # QA86(c) / census T6 FIX: the guard window is DERIVED from run geometry, NEVER a
+    # constant. The old [0.9, 0.9995] clamp was a tiny-smoke guard whose UPPER cap
+    # BOUND OVER the derived long-run value: at U=30,000 (400 ep x 75 batches) the
+    # phi=0.5 law gives 0.999867, but 0.9995 collapsed the two-time-constant warmup
+    # window from 2/(1-d)=15,038 -> 4,000 steps, violating the phi=0.5 design that the
+    # whole LawRef exists to honor (constants-are-poison instance). The law with
+    # phi=0.5 already guarantees 0<d<1 (max(U,8) => phi*U>=4>2 => d>0; finite U => d<1);
+    # the ONLY defensible bound is that warmup must COMPLETE within the run
+    # (phi<=1 => d <= 1 - 2/U). That ceiling is strictly <1 (no frozen shadow) AND is
+    # always >= the phi=0.5 derived value (1-4/U <= 1-2/U), so it NEVER binds the
+    # design — it only catches a degenerate explicit/short-window request. No floor:
+    # the phi=0.5 law is self-consistent at every scale (a smoke's warmup completes at
+    # its own halfway point); a constant floor would distort short-run shadows.
+    u_eff = max(int(total_updates), 8)
+    d_ceiling = 1.0 - 2.0 / u_eff  # phi=1 warmup-fills-run bound (strictly < 1)
+    if d > d_ceiling:
+        d = d_ceiling
+        prov += f"; run-geometry ceiling d<=1-2/U={d_ceiling:.6f} bound (no constant clamp)"
+    else:
+        prov += f"; within run-geometry window (ceiling 1-2/U={d_ceiling:.6f}, no constant clamp)"
     return d, prov
 
 
@@ -300,14 +336,47 @@ class _FixedBank:
         self.tensors = tensors
 
 
+#: QA83 comma10k class luma anchors (the ur-instance: one luma axis separates the 5
+#: classes; class_values 41/76/90/124/161). Documented reference for the lift's
+#: initialization span; the seg gradient through R places c(x), and the margin-optimal
+#: RGB refinement (v14 / rank-4 head) is a named compress-time scorer step (a tiny counted
+#: lift table if adopted). The default lift is a full [0,255] gray ramp that spans them.
+_COMMA10K_LUMA_ANCHORS: tuple[float, ...] = (41.0, 76.0, 90.0, 124.0, 161.0)
+
+
+def _head_out_ch(cfg: "TR1Config") -> int:
+    """QA83 factorized-head output channel count: rgb=3, class_field=1, class_field_photo=2."""
+    return {"rgb": 3, "class_field": 1, "class_field_photo": 2}[
+        getattr(cfg, "renderer_head_mode", "rgb")]
+
+
+def _apply_head(mx, x, cfg: "TR1Config"):
+    """QA83 (census §4.1) apply the factorized OUTPUT head. ``x`` is the raw head-conv
+    output (…, out_ch); returns (…, 3) RGB in [0, 255] (pre-R). The lift is FIXED generic
+    decoder code (rule-118 free); only the k-channel token field is counted."""
+    mode = getattr(cfg, "renderer_head_mode", "rgb")
+    if mode == "rgb":
+        return mx.sigmoid(x) * 255.0                      # exact current behavior (control)
+    c = mx.sigmoid(x[..., 0:1])                           # class field in [0,1] (…,1)
+    luma = c * 255.0                                      # monotone gray-ramp lift (…,1)
+    rgb = mx.concatenate([luma, luma, luma], axis=-1)     # 1-luma-channel ur-instance -> (…,3)
+    if mode == "class_field_photo":
+        # margin-slack-confined luma photometric channel (QA80 band lemma): a small fixed-gain
+        # luma modulation carries pose-legible structure at ~zero seg cost. tanh(p) in [-1,1].
+        p = mx.tanh(x[..., 1:2]) * (float(cfg.head_photo_slack_gain) * 255.0)
+        rgb = mx.clip(rgb + p, 0.0, 255.0)
+    return rgb
+
+
 def _conv_shapes(cfg: TR1Config) -> list[tuple[str, tuple[int, int, int, int]]]:
     """Conv weight shapes (MLX layout: (C_out, kh, kw, C_in)). RF ~= 3 conv layers
-    per SPEC S1.3 (conv0 + one conv per x2 upsample + head)."""
+    per SPEC S1.3 (conv0 + one conv per x2 upsample + head). QA83: the head output
+    channel count is the factorized-head DOF (rgb=3, class_field=1, class_field_photo=2)."""
     w = cfg.renderer_width
     shapes: list[tuple[str, tuple[int, int, int, int]]] = [("conv0", (w, 3, 3, cfg.code_width))]
     for k in range(cfg.n_upsample):
         shapes.append((f"up{k}", (w, 3, 3, w)))
-    shapes.append(("head", (3, 3, 3, w)))
+    shapes.append(("head", (_head_out_ch(cfg), 3, 3, w)))
     return shapes
 
 
@@ -433,7 +502,7 @@ def build_module(cfg: TR1Config):
                 x = mx.conv2d(x, self._weight(f"up{k}"), padding=1) + getattr(self, f"b_up{k}")
                 x = nn.gelu(x)
             x = mx.conv2d(x, self._weight("head"), padding=1) + self.b_head
-            return mx.sigmoid(x) * 255.0
+            return _apply_head(mx, x, cfg)  # QA83 factorized head (rgb control = sigmoid*255)
 
     return TR1Module()
 
@@ -493,6 +562,36 @@ def token_stream_bytes(tokens_np: np.ndarray, levels: int,
     return len(zlib.compress(delta.astype(np.uint8).tobytes(), 9))
 
 
+def token_stream_bytes_smevr(full_codes_u8: np.ndarray, levels: int) -> int:
+    """QA86(b) / census T5 FIX: price the token field with the SHIPPED coder (SMEVR,
+    the landed r7 token coder ``experiments/ddm_r7_token_coder.py``) instead of the
+    zlib-temporal-delta surrogate ``token_stream_bytes`` used for stage/telemetry
+    decisions. The archive ships SMEVR (r7 race receipt: SMEVR decisively wins;
+    ddm_gd1 Hilbert race: the SMEVR-2D control reproduces the stored member bytes
+    EXACTLY), so decisions that price in zlib are decision-noise vs shipped bytes.
+
+    ``full_codes_u8`` is the FULL per-frame quantized token field (P,gh,gw,c) uint8 in
+    [0,levels): SMEVR does its OWN temporal mode-base + modulo-delta factorization
+    internally, and inactive (dropped) cells are 0 by construction so their delta
+    stream codes ~free — matching the shipped keep-mask savings without a separate
+    kept-cell restriction. Deterministic + lossless (the r7 encode is exact)."""
+    from experiments.ddm_r7_token_coder import encode_token_codes
+
+    return len(encode_token_codes(
+        np.ascontiguousarray(full_codes_u8), levels=int(levels), codec="smevr"))
+
+
+def _full_token_field_np(model, cfg: "TR1Config") -> np.ndarray:
+    """Reconstruct the FULL per-frame token field (P,gh,gw,c) EXACTLY as it renders/ships
+    (``raw_tokens`` = (base+delta)*keep for shared_base; tokens*keep otherwise)."""
+    keep3 = np.asarray(model._cell_mask.tensors["keep"], dtype=np.float32)  # (gh,gw,1)
+    if cfg.token_temporal_mode == "shared_base":
+        base_np = np.asarray(model.tokens_base, dtype=np.float32)[None]      # (1,gh,gw,c)
+        delta_np = np.asarray(model.tokens_delta, dtype=np.float32)          # (P,gh,gw,c)
+        return (base_np + delta_np) * keep3
+    return np.asarray(model.tokens, dtype=np.float32) * keep3
+
+
 def _int8_tensor_bytes(w: np.ndarray) -> bytes:
     scale = float(np.max(np.abs(w))) / 127.0 if np.max(np.abs(w)) > 0 else 1.0
     q = np.clip(np.round(w / scale), -127, 127).astype(np.int8)
@@ -519,10 +618,8 @@ def selector_ledger_blob(cfg: TR1Config) -> bytes:
     return json.dumps(sel, sort_keys=True, separators=(",", ":")).encode()
 
 
-def counted_bytes_ledger(model, cfg: TR1Config) -> dict[str, int]:
-    """Per-stream COUNTED bytes for the current EMA/live params (rule-118 boundary):
-    tokens + (plain: int8 weights | lotto: mask+modulations+biases) + selector."""
-    # §3.1: the coarse-from-birth keep-mask (gh,gw bool) excludes inactive cells from coding.
+def _token_bytes_zlib(model, cfg: "TR1Config") -> int:
+    """Legacy zlib temporal-delta token price (census T5 pre-fix control / fast path)."""
     keep = np.asarray(model._cell_mask.tensors["keep"], dtype=np.float32)[..., 0] > 0.5
     keep_arg = keep if not keep.all() else None  # None => uniform grid (no selection needed)
     if cfg.token_temporal_mode == "shared_base":
@@ -530,12 +627,37 @@ def counted_bytes_ledger(model, cfg: TR1Config) -> dict[str, int]:
         delta_np = np.asarray(model.tokens_delta, dtype=np.float32)
         base_code = (base_np[:, keep, :] if keep_arg is not None else base_np)
         # base coded once; the per-frame delta stream rides the same lattice.
-        tok_b = (len(zlib.compress(quantize_tokens_np(base_code, cfg.token_quant_levels).tobytes(), 9))
-                 + token_stream_bytes(delta_np, cfg.token_quant_levels, keep_mask=keep_arg))
+        return (len(zlib.compress(quantize_tokens_np(base_code, cfg.token_quant_levels).tobytes(), 9))
+                + token_stream_bytes(delta_np, cfg.token_quant_levels, keep_mask=keep_arg))
+    return token_stream_bytes(np.asarray(model.tokens, dtype=np.float32),
+                              cfg.token_quant_levels, keep_mask=keep_arg)
+
+
+def counted_bytes_ledger(model, cfg: TR1Config) -> dict[str, Any]:
+    """Per-stream COUNTED bytes for the current EMA/live params (rule-118 boundary):
+    tokens + (plain: int8 weights | lotto: mask+modulations+biases) + selector.
+
+    QA86(b) / census T5: the token stream is priced with ``cfg.byte_ledger_coder``
+    ("smevr" default = the SHIPPED r7 coder; "zlib" = the legacy temporal-delta
+    surrogate). The zlib price is ALSO recorded (cheap) for decomposable observability
+    (max-observability non-negotiable); ``total_counted_bytes`` sums ONLY the three real
+    streams (never the observability keys)."""
+    coder = getattr(cfg, "byte_ledger_coder", "smevr")
+    tok_b_zlib = _token_bytes_zlib(model, cfg)
+    if coder == "smevr":
+        full = _full_token_field_np(model, cfg)
+        q = quantize_tokens_np(full, cfg.token_quant_levels)
+        try:
+            tok_b = token_stream_bytes_smevr(q, cfg.token_quant_levels)
+        except Exception:  # r7 coder unavailable => fall back to zlib (never crash a gate)
+            tok_b, coder = tok_b_zlib, "zlib_fallback"
     else:
-        tok_b = token_stream_bytes(np.asarray(model.tokens, dtype=np.float32),
-                                   cfg.token_quant_levels, keep_mask=keep_arg)
-    ledger: dict[str, int] = {"tokens_bytes": int(tok_b)}
+        tok_b = tok_b_zlib
+    ledger: dict[str, Any] = {"tokens_bytes": int(tok_b)}
+    obs: dict[str, int | str] = {"tokens_bytes_zlib": int(tok_b_zlib),
+                                 "token_ledger_coder": coder}
+    if coder == "smevr":  # SMEVR succeeded (fallback relabels to zlib_fallback => omit)
+        obs["tokens_bytes_smevr"] = int(tok_b)
     shapes = _conv_shapes(cfg)
     if cfg.variant == "plain":
         blob = b"".join(
@@ -556,7 +678,10 @@ def counted_bytes_ledger(model, cfg: TR1Config) -> dict[str, int]:
             for n, _ in shapes)
         ledger["renderer_bytes"] = len(mask_blob) + len(mods)
     ledger["selector_ledger_bytes"] = len(selector_ledger_blob(cfg))
-    ledger["total_counted_bytes"] = int(sum(ledger.values()))
+    # total sums ONLY the three real streams (obs keys are merged AFTER, never summed).
+    ledger["total_counted_bytes"] = int(
+        ledger["tokens_bytes"] + ledger["renderer_bytes"] + ledger["selector_ledger_bytes"])
+    ledger.update(obs)  # decomposable observability (excluded from the total by construction)
     return ledger
 
 
@@ -831,6 +956,20 @@ def build_argparser() -> argparse.ArgumentParser:
                          ".npz (ddm_bc1_delta_baseline.py). When set, the composed-S runs the "
                          "DEGRADED DIRECTIONAL-DELTA instrument (Knee-A pose externality sign+"
                          "trend, NEVER an absolute S) on the ref table's knee-A tail")
+    ap.add_argument("--byte-ledger-coder", default="smevr", choices=("smevr", "zlib"),
+                    help="QA86(b) / census T5: coder used to PRICE the token stream for stage/"
+                         "telemetry decisions. 'smevr' (default) = the SHIPPED r7 coder (decisions "
+                         "match the archive); 'zlib' = the legacy temporal-delta surrogate (kept "
+                         "for a byte-continuous live-burn resume). NEVER changes trained/shipped bytes")
+    ap.add_argument("--renderer-head-mode", default="rgb",
+                    choices=("rgb", "class_field", "class_field_photo"),
+                    help="QA83 (census §4.1) OUTPUT-SPACE FACTORIZATION: 'rgb' = 3-ch control; "
+                         "'class_field' = k=1 class scalar + fixed gray lift (1-luma-channel "
+                         "ur-instance); 'class_field_photo' = k=2 (class + margin-slack luma "
+                         "photometric). Lift = rule-118-free code; only k-ch tokens counted")
+    ap.add_argument("--head-photo-slack-gain", type=float, default=0.05,
+                    help="QA83/QA80: conservative fixed luma-slack gain for class_field_photo "
+                         "(~13/255); the exact per-pixel band-lemma budget is the QA80 scorer step")
     return ap
 
 
@@ -879,6 +1018,9 @@ def main() -> int:
         composed_s_gate_subset=args.composed_s_gate_subset,
         composed_s_subset_ids=args.composed_s_subset_ids,
         composed_s_delta_ref=args.composed_s_delta_ref,
+        byte_ledger_coder=args.byte_ledger_coder,
+        renderer_head_mode=args.renderer_head_mode,
+        head_photo_slack_gain=args.head_photo_slack_gain,
     )
     (out_dir / "tr1_config.json").write_text(cfg.canonical_json() + "\n")
     telemetry_path = out_dir / "telemetry.jsonl"

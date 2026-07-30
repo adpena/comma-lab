@@ -134,6 +134,72 @@ def lever_window(epochs: int, max_wall_minutes: float, batch_pairs: int = 8,
 
 
 # ---------------------------------------------------------------------------
+# QA83 / QA86 burn-2 levers (census §4.1 / §2 T-rows; each with a pre-registered
+# falsifier + provenance rung — no bare constants).
+# ---------------------------------------------------------------------------
+def lever_renderer_head(mode: str = "rgb", slack_gain: float = 0.05) -> Lever:
+    """QA83 (census §4.1) OUTPUT-SPACE FACTORIZATION: the renderer head output space.
+    'rgb' = 3-ch RGB via sigmoid*255 (control = burn endpoint); 'class_field' = k=1 class
+    scalar c(x) -> FIXED monotone gray lift (the 1-luma-channel ur-instance; comma10k
+    class_values on one luma axis); 'class_field_photo' = k=2 (class + margin-slack-confined
+    luma photometric channel). The lift is rule-118-FREE decoder code; only the k-channel
+    token field is counted. v14 FORMULATION-negative (static-dict painting) does NOT cover
+    this TRAINED-renderer form (census §4.1 conditional-validity note)."""
+    if mode not in ("rgb", "class_field", "class_field_photo"):
+        raise ValueError("renderer_head_mode is rgb|class_field|class_field_photo")
+    ov = {"--renderer-head-mode": mode}
+    if mode == "class_field_photo":
+        ov["--head-photo-slack-gain"] = str(slack_gain)
+    return Lever(
+        name=f"tr1_renderer_head_{mode}", overrides=ov,
+        notes="QA83 §4.1 factorized output head; lift=comma10k luma anchors "
+              "(41/76/90/124/161), margin-optimal RGB refinement = named compress-time scorer "
+              "step; falsifier: class_field/photo endpoint d_seg >= rgb at MATCHED counted bytes "
+              "=> factorized-output closes at INSTANCE + v14 negative extends to trained forms",
+        constant_manifest={
+            "--head-photo-slack-gain": {
+                "value": slack_gain, "rung": "DERIVED-CONSERVATIVE-BOUND",
+                "provenance": "QA80 band-lemma margin-slack budget d=|m|/||dw||; 0.05*255~=13/255 "
+                              "luma is a conservative fixed bound (bottom-margin-decile excluded "
+                              "=> ~zero seg flips); the EXACT per-pixel budget from QA80's "
+                              "flip-distance field is the named scorer refinement, not a constant"},
+        } if mode == "class_field_photo" else {},
+    )
+
+
+def lever_ema_decay(value: float) -> Lever:
+    """QA86(c) EXPLICIT EMA decay (for the mid-run resume config): pin --ema-decay so the
+    sealed ticket records exactly the run-geometry-derived value the trainer's fixed
+    derive_ema_decay now yields (default None => derive). Use for an auditable resume where
+    MAIN must see the exact decay that fires; a fresh burn-2 can omit it (derive is fixed)."""
+    return Lever(name=f"tr1_ema_decay_{value:.8f}".rstrip("0"),
+                 overrides={"--ema-decay": repr(float(value))},
+                 notes="QA86(c) explicit EMA decay = run-geometry law d=1-2/(phi*U), phi=0.5; the "
+                       "[0.9,0.9995] tiny-smoke clamp UPPER cap that bound over the derived "
+                       "0.999867 is REMOVED (trainer derive_ema_decay run-geometry ceiling)",
+                 constant_manifest={
+                     "--ema-decay": {
+                         "value": float(value), "rung": "DERIVED (ema_decay_run_geometry_v1)",
+                         "provenance": "d=1-2/(phi*U), phi=0.5, U=updates_per_run; registered LawRef "
+                                       "ema_decay_run_geometry_v1 mode decay_from_warmup_fraction"},
+                 })
+
+
+def lever_byte_ledger_coder(coder: str = "smevr") -> Lever:
+    """QA86(b) / census T5: coder used to PRICE the token stream for stage/telemetry
+    decisions. 'smevr' (default) = the SHIPPED r7 coder (decisions match the archive;
+    Hilbert-race receipt: SMEVR-2D reproduces the stored member bytes EXACTLY); 'zlib' =
+    the legacy temporal-delta surrogate (decision-noise vs shipped bytes; kept for a
+    byte-continuous live-burn resume). NEVER changes trained/shipped bytes."""
+    if coder not in ("smevr", "zlib"):
+        raise ValueError("byte_ledger_coder is smevr|zlib")
+    return Lever(name=f"tr1_byte_ledger_coder_{coder}",
+                 overrides={"--byte-ledger-coder": coder},
+                 notes="QA86(b) census T5: decisions priced by the shipped SMEVR coder; falsifier "
+                       "N/A (observability/decision-quality fix, not a score lever)")
+
+
+# ---------------------------------------------------------------------------
 # QA24 5-piece composed re-burn levers (sg1 §3; each with a pre-registered falsifier).
 # ---------------------------------------------------------------------------
 def lever_token_cell_mask(mask_path: str) -> Lever:
@@ -156,7 +222,16 @@ def lever_seg_margin_weight(temp: float = 1.0) -> Lever:
                  overrides={"--margin-weighted-loss": "on", "--margin-weight-temp": str(temp)},
                  notes="§3.2 inverse-margin reweight (make_loss_fn margin_weighted); falsifier: "
                        "margin-weighted endpoint d_seg >= uniform at matched epoch => close at "
-                       "INSTANCE (does not help THIS renderer)")
+                       "INSTANCE (does not help THIS renderer)",
+                 constant_manifest={
+                     "--margin-weight-temp": {
+                         "value": temp, "rung": "RACED-NOT-ASSERTED (census T8/QA86d)",
+                         "provenance": "FORM derived from the Fisher-margin law (curvature<->(-margin) "
+                                       "Pearson 0.978) => w=1/(1+m/temp); the SCALE temp is a bare "
+                                       "default with NO provenance rung. Burn-2 duty-to-measure: sweep "
+                                       "{0.3, 1, 3} (half-weight at m=temp in logit-margin units). Not "
+                                       "a constant asserted as optimal — a tracked race slot"},
+                 })
 
 
 def lever_rate_in_loss(w_rate: float, rate_model: str = "entropy") -> Lever:
@@ -171,7 +246,23 @@ def lever_rate_in_loss(w_rate: float, rate_model: str = "entropy") -> Lever:
                  overrides={"--w-rate": str(w_rate), "--rate-model": rate_model},
                  notes="§3.4 stl1 row-8 rate-in-loss LAW; falsifier: rate-in-loss arm archive "
                        "bytes not lower than distortion-only at matched d_seg => law does not "
-                       "bind this payload, fall back to post-hoc coding (gr1/lv1 stack)")
+                       "bind this payload, fall back to post-hoc coding (gr1/lv1 stack)",
+                 constant_manifest={
+                     "--w-rate": {
+                         "value": w_rate, "rung": "DERIVED-ESTIMATE (census T19/QA86d)",
+                         "provenance": "S-exact exchange rate 25/37,545,489 (S/byte); the "
+                                       "S-commensurate in-loss weight (matching w_seg=100 which IS "
+                                       "S-exact) = (25/37,545,489) * n_counted_delta_tokens/8 ~= 0.077 "
+                                       "for the burn geometry (n~923k tokens). The live 0.05 is ~65%% "
+                                       "of derived; SURROGATE<->exact-bytes map is approximate => the "
+                                       "burn-2 rate A/B (QA86a) MEASURES bytes/d_seg at 0.05 vs derived. "
+                                       "See spec_tr1_burn2.derive_w_rate_exchange_rate"},
+                     "--rate-model": {
+                         "value": rate_model, "rung": "RACED (QA86a)",
+                         "provenance": "sg1 §3.4 skipped 'race-if-cheap'; entropy=marginal surrogate "
+                                       "(coder-mismatched), smevr_surrogate=temporal-delta (matches "
+                                       "the shipped SMEVR event/value split). Burn-2 A/B."},
+                 })
 
 
 def lever_token_quant_anneal(mode: str = "at_knee") -> Lever:
