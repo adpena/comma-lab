@@ -147,6 +147,11 @@ from tac.canonical_equations.ddm_b2b_rowband_flip_mass_20260731 import (
     flip_band_render_rows,
     populate_rowband_flip_mass_foveation_v1,
 )
+from tac.canonical_equations.ddm_gc9_seg_rate_product_law_20260730 import (
+    build_seg_rate_product_law_v1,
+    populate_seg_rate_product_law_v1,
+    product_c,
+)
 from tac.canonical_equations.ddm_v4b_composed_gate_fidelity_20260730 import (
     build_ddm_v4b_composed_gate_instrument_fidelity_v1,
     composed_gate_fidelity,
