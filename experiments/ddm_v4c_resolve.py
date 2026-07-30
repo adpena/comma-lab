@@ -72,6 +72,7 @@ RELINS = 4
 GAIN_FD, BIAS_FD = 0.02, 2.0   # rung-B FD steps (a near 1.0, b in 0..255 units)
 GN_RELINS_PHOTO = 4
 RS_BETAS = [0.0, 0.5, 1.0, -0.5, -1.0]  # rolling-shutter shear sweep (b=0 == ctrl)
+RS_GLOBAL_G = (0.5, 1.0)  # SHIPPABLE global shear magnitudes (sign from yaw, free)
 SEG_D_KNEEA = 0.00553676       # MEASURED d_seg at the wr1 Knee-A gate (tokens unchanged)
 
 
@@ -546,11 +547,15 @@ def run_photo(args: argparse.Namespace) -> None:
         # quantize (a,b) to f16 (the shipped precision) and re-score honestly
         a_q, b_q = float(np.float16(a_p)), float(np.float16(b_p))
         d_photoB = mse(pose6(a_q, b_q))
-        # RUNG A: rolling-shutter row-shear at the (a,b)-corrected exposure
+        # RUNG A: rolling-shutter row-shear at the (a,b)-corrected exposure.
+        # ONLY the SHIPPABLE candidates: beta = g * sign(yaw) for global g (the
+        # receiver derives the sign from pose[5] free; g is one manifest const).
+        # Record d PER g so the build picks the global g* by exact arithmetic.
+        yaw_sign = 1.0 if theta[5] >= 0.0 else -1.0
+        rungA_by_g: dict[str, float] = {"0.0": float(d_photoB)}
         best_A, best_beta = d_photoB, 0.0
-        for beta in RS_BETAS:
-            if beta == 0.0:
-                continue
+        for g in RS_GLOBAL_G:
+            beta = g * yaw_sign
             wg_t, wf_t = comp.warps(f1_f, theta, s_t, 1.0 - beta / 2.0)
             wg_b, wf_b = comp.warps(f1_f, theta, s_t, 1.0 + beta / 2.0)
             f0_t = np.where(comp.far[..., None], wf_t, wg_t) if sel else wg_t
@@ -559,12 +564,14 @@ def run_photo(args: argparse.Namespace) -> None:
             if a_q != 1.0 or b_q != 0.0:
                 f0 = a_q * f0 + b_q
             dv = mse(comp.o.p3v2.pose6_u8(comp.o.posenet, comp.recv._to_uint8(f0), f1_u8))
+            rungA_by_g[str(g)] = float(dv)
             if dv < best_A:
                 best_A, best_beta = dv, beta
         rec = {"pair": int(pidx), "selector": sel, "s_t": s_t,
                "d_ctrl": float(d_ctrl), "d_rungB": float(d_photoB),
                "a": a_q, "b": b_q, "d_rungAB": float(best_A),
-               "rungA_beta": float(best_beta),
+               "rungA_beta": float(best_beta), "rungA_by_g": rungA_by_g,
+               "yaw_sign": yaw_sign,
                "p": [float(v) for v in theta]}
         fj.write(json.dumps(rec) + "\n")
         fj.flush()
@@ -590,6 +597,13 @@ def _summarize_photo(base: str, pose_source: str, cache: dict[int, dict],
             for i in range(600)}
     ab_arr = np.asarray([ab[i] for i in range(600)])
     ctrl_arr = np.asarray([ctrl[i] for i in range(600)])
+    # SHIPPABLE global-g rung-A selection: one manifest constant, sign from yaw
+    g_means = {}
+    for g in ("0.0", *(str(x) for x in RS_GLOBAL_G)):
+        vals = [cache[i]["rungA_by_g"].get(g, cache[i]["d_rungB"])
+                if i in cache else float(ship[i]["d"]) for i in range(600)]
+        g_means[g] = float(np.mean(vals))
+    g_star = min(g_means, key=g_means.get)
     rate_base = 25.0 * BASES[base].stat().st_size / 37_545_489
     receipt = {
         "schema": "ddm_v4c_photo.v1", "utc": _utc(), "base": base,
@@ -604,6 +618,10 @@ def _summarize_photo(base: str, pose_source: str, cache: dict[int, dict],
         "rungAB_delta_S_600": (contribution(float(ab_arr.mean()))
                                - contribution(float(ctrl_arr.mean()))),
         "n_rungA_active": int(sum(1 for i in cache if cache[i]["rungA_beta"] != 0.0)),
+        "rungA_global_g_means": g_means,
+        "rungA_global_g_star": g_star,
+        "shippable_mean_d_pose_600_at_g_star": g_means[g_star],
+        "shippable_contribution_600_at_g_star": contribution(g_means[g_star]),
         "note": "rung B = f16 (a,b) auto-exposure applied on the realizable "
                 "static compose; rung A = rolling-shutter row-shear (best beta). "
                 "ctrl = compose at (a=1,b=0). ADVISORY; the n600 evaluate gate is "
