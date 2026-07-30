@@ -25269,3 +25269,30 @@ receipts /Volumes/VertigoDataTier/pact/ddm_wr1_20260729/. [no-triality] [p0-ledg
   reconstructable; future arms: FEEDs append HERE, standalone FEED files are the orphan class).
 - Post-burn: MAIN charter #782 (tt1-twin pose re-solve → photometric → TTO terminal → composed
   gate = the fidelity law's 4th anchor vs the 0.9640 line).
+
+## FEED-gd1 (2026-07-31) — QA82 generic-default census SEALED; QA85 Hilbert CLOSED-MEASURED; QA83/84/86 minted
+
+POINTER 0.1910828242 [contest-CPU] UNMOVED. All rows [macOS-CPU advisory]; score_claim=false.
+Memo `.omx/research/ddm_gd1_generic_default_census_20260731.md` (typed 48-row census, 4 levels
+object/structure/operator-tomography/process, SEALED at round-3 zero-new-sites).
+
+- gd1.law: generic-default law operationalized over the WHOLE live path (trainer + R + coder + pose
+  decode + byte-close). Verdict: heavy structures are DERIVED/RACED with receipts; surviving generic
+  mass = renderer pointwise objects (GELU/sigmoid×255/nearest-up) + LIVE rate-surrogate mismatch
+  (rate_model=entropy w_rate=0.05 active; smevr_surrogate BUILT unraced; ledger prices zlib) +
+  spatial grid axis + pose-decode kernel/photometric form.
+- gd1.QA85_closed: Hilbert/gilbert2d scan-order RACED NOW (scorer-free, sealed v4d tokens, r7
+  harness reused): raster WINS every coder (SMEVR control byte-exact 346,478; hilbert +452 B,
+  context-matched pure-order +27 B; brotli/lzma +5.0/5.1 KB; mask AC 30 vs 37 B). Wire order
+  unchanged. Law record → 4-of-5: first raced default that SURVIVES (presumption → receipt).
+- gd1.QA83: output-space factorization (MAIN-seeded): class-field k=1 + margin-optimal lift +
+  margin-slack photometric channel vs RGB head, matched bytes — burn-2 HEAD race. v14 negative
+  carries conditional-validity note (static-dict/no-training preconditions do not cover trained
+  form); PR86/130 neutral-gray carrier = external factorization receipt.
+- gd1.QA84: spatial variable-cell tiling (MAIN-seeded; precision axis owned co9/gr1/wr1): uniform
+  vs row-band (queued foveation lane) vs quadtree-at-annulus, from birth, matched bytes — burn-2
+  GRAMMAR race. gr1 nested-rung dominance scoped INSTANCE (solved-token substrate).
+- gd1.QA86: burn-2 config corrections (~$0): rate-surrogate A/B; SMEVR gate ledger; EMA clamp
+  binding over derived 0.999867 (constants-are-poison instance); w_rate provenance; margin-temp.
+- gd1.watch: single A1_REALIZATION_GAP_ALARM at burn ep49 gate (2-consecutive = stage-exit refuse)
+  — surfaced to MAIN, not actioned.
