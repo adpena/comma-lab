@@ -349,3 +349,13 @@ never let the acceptor be its own auditor.
 **Routing:** QA77 rowed (bilevel; LITE form → sg1 burn NOW, full form → v6 design) · rate-in-loss
 = stl1 law APPLICATION, messaged to sg1 for the burn config race · items 3/5/6/7 live in their
 existing rows (QA68/QA72/QA69/QA70). Sister laws: realization doctrine §1 · no-axis-priority §7.
+
+## §8c (MEASURED correction from sg1's QA74 typing — supersedes §8's residual framing)
+
+sg1's n600 typing (memo commit da493fad26, endpoint d_seg 0.00388778) CORRECTS two §8 claims:
+(1) **The renderer residual is LANE-dominated, not Road-dominated**: Lane = 38.7% of flips at
+25.7% in-class error rate (Road 31.0%); Lane is RENDERER-REACH-limited, not SegNet-stride-limited
+(69.5× over its exact-solve floor). (2) The measured amortization split vs the EXACT C1 teacher:
+**≥96.1% of flips are attackable gap (25.58×), ≤3.9% exact-solve floor**; 100% of flips sit in
+the bottom GT-margin decile (the separatrix annulus) — which is why margin-weighted loss is the
+#1 form fix in the QA24 config (piece 2 of the bc1 build). §8's plan is otherwise unchanged.
