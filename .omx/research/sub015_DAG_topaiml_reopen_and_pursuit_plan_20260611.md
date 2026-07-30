@@ -25209,3 +25209,17 @@ receipts /Volumes/VertigoDataTier/pact/ddm_wr1_20260729/. [no-triality] [p0-ledg
   FULL = v6 implicit diff) > stl1 rate-in-loss law APPLIED to the burn > receiver
   predict-then-innovate (v5/v6 grammar) > support-in-loop > rounding/precision/context
   (existing rows QA72/69/70). Items 1-2 messaged to sg1 pre-freeze.
+
+## FEED-2026-07-31-f — v4d gate MEASURED: S 0.9639878179 (residual 1.82e-6, third fidelity anchor)
+- **Pointer honesty: 0.1910828242 [contest-CPU] UNMOVED.** Row [macOS-CPU advisory], score_claim=false.
+- Real evaluate.py n600 on the exact 360,238 B archive (sha f1f32880…): d_pose 0.00858145 ·
+  d_seg 0.00431179 (reproduced TO THE DIGIT — sha-checked byte-identical v4c token base) →
+  recomputed S **0.9639878179** vs predicted 0.963986 = residual **1.82e-6**, the tightest of the
+  three anchors (v4b 3e-6 · v4c 1.38e-4 · v4d 1.8e-6). Law extended (commit b19a8cdf7c).
+- Advisory own-vehicle line: 2.2566 → 1.5343 → 0.9930 → **0.9640** in ~4.5 days. Axis state:
+  seg 0.4312 (largest) · pose 0.2929 · rate 0.2399. Floor qa66 gate not fired (dominated).
+- Ops: detached-ppid-1 fire clean first try (nohup+disown; macOS has no setsid — pattern noted);
+  monitor with crash-signature coverage caught nothing because nothing failed.
+- Routing: scorer slot RELEASED to bc1 (§3.5 completion smokes → burn). v4e TTO-terminal
+  composition deferred to the POST-BURN endpoint (running it on v4d would be superseded by the
+  burn — means-discipline). QA78 FIRED-MEASURED; #779 complete.
