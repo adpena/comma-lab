@@ -57,8 +57,23 @@ Verdict-scope: the v1 losses were INSTANCE(single-start), not the family.
 - #404 ratios: −0.4067 = 19.6% of the 2.08 total gap; ≈30% of the pose-axis gap
   (1.4881→~0.13 target-grade); bytes-equivalent: −0.4067 S rate-priced would cost ~611 KB.
 
-## §5 FINAL totals — APPENDED AT SWEEP COMPLETION (owed; sweep resumable, one silent kill
-at pair 35 relaunched; killer unidentified — log clean, no traceback; watch RSS if it recurs)
+## §5 FINAL totals (full tail-112, appended 07-29)
+
+- Coverage 112/112; controls **112/112 exact**; 186 raw rows dedup to 112 with **zero
+  mismatches** (the "silent kill" at 35 was a WATCHER instrument bug — my pgrep found no process
+  but the first sweep was still alive and raced the resume; duplicates bit-identical ⇒ pipeline
+  DETERMINISM confirmed as a free positive control; instrument-bug class: pgrep-based liveness
+  from a different shell is not authoritative — prefer pidfile).
+- **95/112 wins · 77 >2× · 41 >10×.** Tail selection total 87.085 → 41.357 (**−52.5%**).
+- **Pose axis (per-pair realized): warp 1.4881 → P0 1.2630 → P0+two-plane-selection 0.9127**
+  = two-plane extra −0.3503; **total −0.5754 S from the operating row's pose member at ≤7.3 KB
+  marginal** (600×6×f16 field + ~75 B selector + rule-118-free multi-plane receiver code).
+- #404: −0.5754 = **27.7% of the 2.08 gap**; pose falls from 71% of the gap to mean d_pose
+  0.0833 (contribution 0.9127). Residual pose mass: 83% still in the tail (17 hard-core losses
+  + partial survivors) → stage-1b free-class probe target; the 488 non-tail pairs (mean 0.0177)
+  are a cheap extension sweep (two-plane may also win there; diminishing, est. ≤−0.05 S).
+- Composed projection (arithmetic, verification = byte-close + n600 evaluate gate):
+  2.2566 − 0.197 (Knee A staged) − 0.5754 (pose, measured) − ~0.13 (seg base solve) ≈ **1.35**.
 
 ## §6 Routing
 - QA43 stage-0 (compose P0) + stage-1a (this) MEASURED; stage-1b free-class structure probe now
