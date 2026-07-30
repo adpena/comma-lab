@@ -25255,3 +25255,17 @@ receipts /Volumes/VertigoDataTier/pact/ddm_wr1_20260729/. [no-triality] [p0-ledg
   pre-freeze; else burn-2 warm-start headline (resumability makes burn-2 cheap — critical path
   never hostage). Held w/ scope honesty: curvelet-by-citation, chroma-audit (no QA74 flag),
   seg-TTO (superseded), #218 built-default-off levers.
+
+## FEED-2026-07-31-i — QA24 seg re-burn FIRED (canonical anchor; detail in bc1's FEED file)
+- **Pointer honesty: 0.1910828242 [contest-CPU] UNMOVED.** The burn is MEANS.
+- QA24 composed re-burn LIVE: pid 68621 detached, ticket 81e9f26c, git e0a37e82f4, ETA ~7.3h,
+  5 pieces (cell-mask · margin-weight · lattice-anneal STE@knee · rate-in-loss · directional-delta
+  §3.5 noise-floor-0.0-validated) + solve_project init + basin-handoff + QA79-bicubic R (race
+  CONFIRMED incumbent: d_seg 0.000960 vs bilinear 0.001044, dimension closed at zero bytes).
+  P0 resumability OBSERVED (per-stage + intra-stage EMA checkpoints on disk). §10 menu honestly
+  cut to burn-2 on named blockers; ddm_b2p arm pre-paying all three during the burn window.
+- Detail: `.omx/research/ddm_bc1_qa24_compose_and_fire_DAG_FEED_20260731.md` (bc1 wrote its FEED
+  as a standalone file — this row re-anchors it in the canonical DAG so the graph memory stays
+  reconstructable; future arms: FEEDs append HERE, standalone FEED files are the orphan class).
+- Post-burn: MAIN charter #782 (tt1-twin pose re-solve → photometric → TTO terminal → composed
+  gate = the fidelity law's 4th anchor vs the 0.9640 line).
