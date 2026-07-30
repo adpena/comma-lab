@@ -150,3 +150,10 @@ through the landing review gate. All of cb1's non-compose deps (`ddm_hood_static
 `materialize_solve_frames`), `qa80_margin_budget/` (522 MB, per-field sha manifests, rebuildable from
 `gt_n{96,600}.npz` via `budget_field_from_gt_cache`), `logs/`. All rebuildable, all sha-manifested, no
 `/tmp` in evidence.
+
+## Consumer-leg assertion (per-leg drift gate, recorded post-landing)
+`tac.witness_dsl.qa75_solve_frame_targets.SolveFrameTargets` is a TYPED DATA-LOADER surface
+(memmapped frame access + sha verification). It exports NO Lever / WitnessProgram / Schedule /
+registry entry — there is nothing for the dashboard, costate digest, schedule readback, or
+producer bridge to render beyond generic introspection. Consumer = the burn-2 trainer (future,
+named). Dashboard/costate consumer updates: N/A by surface type — asserted [consumers-generic].
