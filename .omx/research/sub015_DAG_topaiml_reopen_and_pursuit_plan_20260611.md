@@ -25423,3 +25423,24 @@ exported+REGISTERED (f2482dc3b2). Pointer 0.1910828242 [contest-CPU] UNMOVED; al
   `.omx/research/ddm_su2_pose_endgame_program_20260730.md`. MAIN landing review remains
   mandatory. Pure-build code is `[no-triality]`; this canonical FEED is the graph leg and
   no new empirical equation is claimed.
+
+## FEED-gc9 (2026-07-30) — 11th convocation: the TWO-ENDPOINT state → product law + projection probe
+
+Operator-convened ("Schmidhuber + pantheon + pantheon-of-pantheons + invited minds — from here").
+Memo: `.omx/research/ddm_gc9_from_here_convocation_20260730.md` (T3, Schmidhuber LEAD, override recorded).
+NEW measured frame: E1 burn-1 (0.0038892 @ 569,996B D1) and E2 QA24 (0.0052766 @ 358,209B / SMEVR
+250,898B, archive sha e7640dee) define the joint observable **c=(100·d_seg)·rate: 0.1476 → 0.08815
+(×0.60/burn measured)**; bar 0.172141 with pose 0.03 (ASSUMED) needs c ≤ 5.05e-3 = ×17.5 — so the
+next compute unit buys SLOPE-changing measurements, not another point: (1) wr1 Gate-B staged gate
+(34 min, su2 stage-1, #766); (2) **PROJECTION PROBE** — freeze E2 renderer, fit tokens to the C1
+solve frames (scorer-free; b2p targets), one n600 gate → f = renderer-class capacity floor, splitting
+the QA74 25.58× into capacity × objective; (3) product-law canonical registration + Δlog c telemetry;
+(4) S2 ν-audit pre-burn-3; (5) QA75 distill-window discriminator gated on low f. Central fork
+(burn-3 vs ν/capacity vs class-change vs compose-forward) ruled NOT-ADJUDICABLE-TODAY — decision
+table binds it to rows 1+2 receipts (~1 day). Assumption-Adversary: "seg+rate≈0.77 wall" reading =
+CARGO-CULTED (sum framing hides the ×0.60 product move); "96.1% attackable" = typed vs the teacher,
+never vs this class's capacity — row 2 is the missing measurement. Consultee sweep added per-title
+hull chart ($0), K-SVD-on-solve-tokens, λ-domain bytes-target w_rate, born-again gen-2, 2-point
+capacity curve. verdict_scope: formulation — the conditional "capacity wall" branch in §2/§4 is a
+pre-registered INSTANCE(QA24-geometry) outcome of the probe, not an asserted negative; no negative
+verdict is asserted in this FEED. Pointer 0.1910828242 [contest-CPU] UNMOVED.
