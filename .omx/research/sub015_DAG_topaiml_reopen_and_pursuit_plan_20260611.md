@@ -25311,3 +25311,36 @@ object/structure/operator-tomography/process, SEALED at round-3 zero-new-sites).
 - STANDING CENSUS RULE adopted (§3a): no row closes on an eyeball — every LOW/hold carries
   {measured basis or derivation} + relative number + verdict_scope + reopen trigger. Seal
   stands (zero new sites); top-5 ranking unchanged.
+
+## FEED-b2b (2026-07-31) — burn-2 composition BUILT (QA86+QA83+QA84+QA75/80 harness), scorer-free, tested
+- **Pointer honesty: 0.1910828242 [contest-CPU] UNMOVED.** BUILD unit (means, not the end): 0 trained
+  bytes, 0 scorer runs; the QA24 burn (pid 68621) untouched. Memo `ddm_b2b_burn2_composition_build_20260731`.
+  4 commits: f28e427dd9 (QA86+QA83) · e8d531e735 (QA84) · 4bdd72a2f7 (QA75/80 harness) · d138df0c00 (eqns leg).
+  40 tests pass; ruff-F clean.
+- **QA86 (T4/T5/T6/T8/T19) DONE:** (b) `counted_bytes_ledger` now prices tokens via the SHIPPED SMEVR coder
+  (`--byte-ledger-coder smevr` default; zlib+smevr both recorded as observability, never summed; fail-open to
+  zlib). (c) `derive_ema_decay` guard RUN-LENGTH-DERIVED (`d<=1-2/U`, no constant): U=30,000 → **0.99986667**
+  (was clamped to 0.9995; warmup 15,038→4,000 was the T6 poison). MID-RUN resume config BUILT
+  (`qa86_mid_run_resume_program`, explicit ema, MAIN-GO-only). (a) rate A/B `entropy` vs `smevr_surrogate`
+  = `qa86_rate_surrogate_race_programs`. (d) w_rate DERIVED-ESTIMATE **0.0768** = (25/37,545,489)·n/8 (live 0.05
+  = ~65% of it); margin_temp RACED {0.3,1,3}; ema points at ema_decay_run_geometry_v1.
+- **QA83 (§4.1) DONE:** `--renderer-head-mode {rgb,class_field,class_field_photo}` — k=1 class scalar + FIXED
+  gray lift (rule-118-free; only k-ch tokens counted) ± margin-slack luma photometric; rgb control BIT-IDENTICAL
+  to sigmoid*255. Lever + `qa83_head_race_programs` A/B/C at matched bytes (c4→c2). Falsifier: no matched-bytes
+  d_seg win ⇒ v14 static-dict negative extends to trained forms.
+- **QA84 (§4.2) DONE:** `RowBandGrammar` — D8 fine base, bulk 2×2 TIED (D16-effective), op1 flip-band (rows
+  160-240, 72.1% flip mass) FREE at D8. Differentiable gather tie (numpy/MLX BIT-IDENTICAL parity); SMEVR
+  byte-close (tied bulk = ~free zero-delta runs) + ~130 B spec. DOF 1248 vs D8 3072 vs D16 768. Trainer wired
+  (`--token-rowband-spec`, needs D8); `qa84_grammar_race_programs` {uniform-D16-drop50, rowband-D8} + quadtree
+  NAMED. Raster wire order UNCHANGED (QA85 stands); gr1 INSTANCE-scoped.
+- **QA75/QA80 harness DONE (real scorer POST-BURN):** `tools/ddm_b2b_segnet_field_pass.py` — one SegNet forward
+  (logits→top2) emits QA75 logit/margin distill (solve frames) + QA80 exact flip-distance runner-up field (burn
+  frames); injectable scorer (real frozen CPU SegNet + stub); derived ≤120/chunk law; manifest+sha; stub-smoked
+  (no Metal, no n600).
+- **triality legs SETTLED (MAIN drift routing):** registered `rowband_flip_mass_foveation_band_v1` canonical eqn
+  + measured anchor (72.1% flip mass, op1 gate, QA74 gt-cache custody); QA84 lever `constant_refs` → MEASURED_ANCHOR
+  ladder (no bare constant). Config-shaped Lever factories = `[consumers-generic]`. Registry `populate`/`__init__`
+  export = named landing follow-up. Pure-build commits carried `[no-triality]`.
+- **OWED:** the 4 races BUILT not MEASURED (no d_seg/byte row until MAIN fires n600 + byte-closes); pointer
+  moves only through that. QA75/80 real scorer pass post-burn. ph3_s10 stubs NOT folded (my flags ≠ the stub
+  flags). QA81 stays blocked on the parallel-session WIP.
