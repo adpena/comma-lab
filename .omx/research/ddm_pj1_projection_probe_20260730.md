@@ -119,7 +119,7 @@ not TR1-relative. The 1.52e-4 was never a TR1 reachability point; it is a *diffe
 
 ## §6 LIVE-HYPOTHESES / DEAD-ENDS / NEXT-IF-RESUMED
 
-- **DEAD-END (formulation):** scorer-free photometric fit to the cross-vehicle solve frames as a TR1
+- **DEAD-END** — verdict_scope: formulation — scorer-free photometric fit to the cross-vehicle solve frames as a TR1
   capacity probe. The frozen rgb-head range wall (R4) makes it structurally invalid; do not re-run cold
   or margin-weighted variants expecting a different verdict (the range wall is init- and
   metric-independent — margin-weighting cannot manufacture dark output the head cannot produce).
