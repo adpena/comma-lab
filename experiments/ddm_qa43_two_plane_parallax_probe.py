@@ -45,9 +45,12 @@ import ddm_pfs1_ep_warp_pose_solve as d2m  # oracle + FD_STEPS
 D2_JL = Path("/Volumes/VertigoDataTier/pact/ddm_pfs1_20260729/d2/d2_ep_solve.partial.jsonl")
 GT_NPZ = Path("experiments/results/mlx_fleet_gt_cache/gt_n600.npz")
 OUT = Path("/Volumes/VertigoDataTier/pact/ddm_qa43_20260729")
-JL = OUT / "two_plane_probe.partial.jsonl"
+# v2 (multi-start): GN from BOTH starts {p0 rotation-zeroed, q16(p_star)} — the
+# v1 run measured the zero-rotation start POISONED for the two-plane compose
+# (H_far=identity freezes the far field; pairs 82/71/72 stuck). v1 file kept.
+JL = OUT / "two_plane_probe_v2.partial.jsonl"
 
-K_PAIRS = 8
+K_PAIRS = 24
 RELINS = 4
 
 
@@ -124,44 +127,56 @@ def main() -> None:
         two_at_pstar = mse(pose6_two(q16(p_star)))
         n_fwd += 1
 
-        # GN re-solve through the two-plane compose (mirrors solve_pair_gn)
+        def gn_from(theta_init: np.ndarray, *, _pose6=pose6_two,
+                    _tp=tp, _mse=mse) -> tuple[float, np.ndarray, int]:
+            """Damped GN through the two-plane compose (mirrors solve_pair_gn);
+            monotone acceptance at shipped f16 quantization."""
+            nf = 0
+            theta = q16(theta_init)
+            cur6 = _pose6(theta)
+            cur = _mse(cur6)
+            nf += 1
+            lm = 1.0
+            for _ in range(RELINS):
+                jac = np.zeros((6, 6), np.float64)
+                for k in range(6):
+                    dp = theta.copy()
+                    dp[k] += d2m.FD_STEPS[k]
+                    jac[:, k] = (_pose6(dp) - cur6) / d2m.FD_STEPS[k]
+                nf += 6
+                r = cur6 - _tp
+                accepted = False
+                for _damp in range(4):
+                    a = jac.T @ jac + lm * np.diag(
+                        np.maximum(np.diag(jac.T @ jac), 1e-8))
+                    try:
+                        step = np.linalg.solve(a, -(jac.T @ r))
+                    except np.linalg.LinAlgError:
+                        break
+                    for scale in (1.0, 0.5):
+                        cand = q16(theta + scale * step)
+                        c6 = _pose6(cand)
+                        nf += 1
+                        cv = _mse(c6)
+                        if cv < cur:
+                            theta, cur6, cur = cand, c6, cv
+                            accepted = True
+                            break
+                    if accepted:
+                        lm = max(lm * 0.33, 1e-3)
+                        break
+                    lm *= 4.0
+                if not accepted:
+                    break
+            return cur, theta, nf
+
+        # MULTI-START: p0 (rotation-zeroed t_p) + p_star (the single-plane optimum)
         p0 = tp.copy()
         p0[3:] = 0.0
-        theta = q16(p0)
-        cur6 = pose6_two(theta)
-        cur = mse(cur6)
-        n_fwd += 1
-        lm = 1.0
-        for _ in range(RELINS):
-            jac = np.zeros((6, 6), np.float64)
-            for k in range(6):
-                dp = theta.copy()
-                dp[k] += d2m.FD_STEPS[k]
-                jac[:, k] = (pose6_two(dp) - cur6) / d2m.FD_STEPS[k]
-            n_fwd += 6
-            r = cur6 - tp
-            accepted = False
-            for _damp in range(4):
-                a = jac.T @ jac + lm * np.diag(np.maximum(np.diag(jac.T @ jac), 1e-8))
-                try:
-                    step = np.linalg.solve(a, -(jac.T @ r))
-                except np.linalg.LinAlgError:
-                    break
-                for scale in (1.0, 0.5):
-                    cand = q16(theta + scale * step)
-                    c6 = pose6_two(cand)
-                    n_fwd += 1
-                    cv = mse(c6)
-                    if cv < cur:
-                        theta, cur6, cur = cand, c6, cv
-                        accepted = True
-                        break
-                if accepted:
-                    lm = max(lm * 0.33, 1e-3)
-                    break
-                lm *= 4.0
-            if not accepted:
-                break
+        cur_a, th_a, nf_a = gn_from(p0)
+        cur_b, th_b, nf_b = gn_from(p_star)
+        n_fwd += nf_a + nf_b
+        cur, theta = (cur_a, th_a) if cur_a <= cur_b else (cur_b, th_b)
 
         rec = {
             "pair": int(pidx),
@@ -169,6 +184,8 @@ def main() -> None:
             "d_single_solved_cached": float(row["d_pose_solved"]),
             "d_single_ctrl": float(ctrl),
             "d_two_at_pstar": float(two_at_pstar),
+            "d_two_from_p0": float(cur_a),
+            "d_two_from_pstar": float(cur_b),
             "d_two_solved": float(cur),
             "p_two_star": [float(v) for v in theta],
             "n_fwd": int(n_fwd),
