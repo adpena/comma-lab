@@ -118,10 +118,23 @@ def test_band_parents_read_from_sealed_ticket_and_all_explode():
         ticket["adjudication"]["arithmetic"]["lotto"]["full_dseg"]
     )
     assert lotto["counted_bytes"] == 534597
-    # Every live parent base (W_joint 0.0705, tr1 ~0.0138-0.0141) is above the 1e-2
-    # band upper -> corrections stay dead at every parent.
-    assert all(row["regime"] == "explode" for row in parents["rows"])
-    assert parents["any_parent_in_band"] is False
+    # PREMISE FLIP (co9, ng1 §2 row 10): at co7 every enumerated parent (W_joint 0.0705,
+    # tr1 ~0.0138-0.0141) was above the 1e-2 band upper. co9 added the tb1 burn ENDPOINT
+    # (0.00389, read from the committed pfs1 D1 eval receipt) as the CURRENT live base — it
+    # is INSIDE the band, so any_parent_in_band is now True and the pre-arc parents (which
+    # remain "explode") are relabeled as the stale bases the digest was wrongly parenting on.
+    #   was: assert all(row["regime"] == "explode" for row in parents["rows"])
+    #        assert parents["any_parent_in_band"] is False
+    assert all(
+        row["regime"] == "explode"
+        for row in parents["rows"]
+        if row["parent"] != "tb1_burn_endpoint"
+    )
+    endpoint = rows["tb1_burn_endpoint"]
+    assert endpoint["regime"] == "correct"
+    assert 5.02e-4 < endpoint["base_d_seg"] < 1.0e-2  # inside the rational band
+    assert "BREAK_EVEN" in endpoint["measured_correction_value_at_base"]  # white-jitter caveat travels
+    assert parents["any_parent_in_band"] is True
     assert parents["sealed_ticket"]["available"] is True
     assert parents["sealed_ticket"]["winner_arm"] == "lotto"
 
@@ -156,14 +169,20 @@ def test_fd1_precondition_regraded_by_committed_successors():
     assert fd1["status"] == "BROKEN"
     assert fd1["disposition"] == "RE_GRADED_BY_COMMITTED_SUCCESSOR"
     assert "fd2_zero_accept_disambiguation" in fd1["successors"]
-    # sp1's parent precondition breaks (live parent is tr1) but the band leg holds ->
-    # the re-grade duty is ARMED, not DUE, while every parent is still above-band.
+    # sp1's parent precondition breaks (live parent is tr1) and its disposition is a re-grade
+    # candidate — unchanged by co9.
     sp1_parent = rows["sp1_copy_base_parent"]
     assert sp1_parent["status"] == "BROKEN"
     assert sp1_parent["disposition"] == "REGRADE_CANDIDATE"
-    assert rows["sp1_band_regime_explode"]["status"] == "HOLDS"
+    # PREMISE FLIP (co9, ng1 §2 row 10): the tb1 burn endpoint entered the band, so the live
+    # band-regime precondition is now BROKEN and the re-grade duty is DUE (the co8-registered
+    # ARMED->DUE flip firing on the REAL in-band base, not the synthetic one below). The
+    # white-jitter break-even prior travels with the DUE via the DDM-parents caveat + sense law.
+    #   was: assert rows["sp1_band_regime_explode"]["status"] == "HOLDS"
+    #        assert duties["sp1_copy_base_parent"]["status"] == "ARMED_NOT_DUE_BAND_STILL_EXPLODE"
+    assert rows["sp1_band_regime_explode"]["status"] == "BROKEN"
     duties = {d["precondition_id"]: d for d in review["re_grade_duties"]}
-    assert duties["sp1_copy_base_parent"]["status"] == "ARMED_NOT_DUE_BAND_STILL_EXPLODE"
+    assert duties["sp1_copy_base_parent"]["status"] == "DUE"
     assert "rv1" in review["table_owner"]
 
 
@@ -300,7 +319,12 @@ def test_report_and_digest_surface_the_new_sections():
     assert "DDM-chain[endgame]:" in joined
     assert "head=T3_BURN_FIRE" in joined
     assert "DDM-laws:" in joined and "basin-solve=ARMED_NO_TRIGGER" in joined
-    assert "DDM-parents:" in joined and "corrections DEAD at every live parent" in joined
+    # PREMISE FLIP (co9, ng1 §2 row 10): the burn endpoint entered the band, so the digest no
+    # longer emits "corrections DEAD at every live parent" — it emits the in-band re-grade with
+    # the white-jitter break-even caveat welded on.
+    #   was: assert "DDM-parents:" in joined and "corrections DEAD at every live parent" in joined
+    assert "DDM-parents:" in joined and "tb1_burn_endpoint IN-BAND" in joined
+    assert "MEASURED BREAK-EVEN at this base" in joined
     # PREMISE FLIP (co8, 2026-07-28): at co7 rv1 was an UNCOMMITTED parallel arm, so the
     # digest read table-owner=rv1[pending]. rv1 landed on main (merge 6cf5454509) and co8
     # folded its table (rv1_table section) -> the owner state is now consumed-co8. The

@@ -24,6 +24,7 @@ import hashlib
 import json
 import math
 import os
+import re
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -602,6 +603,16 @@ ARC_EVIDENCE_AXIS = "[macOS-CPU advisory]"  # coder-rate / frozen-scorer advisor
 LIVE_BASE_DSEG_RECEIPT = (
     ".omx/research/ddm_ct1_campaign_telemetry_encode_20260725T111500Z/r6_rehearsal_receipt.json"
 )
+# The tb1 burn ENDPOINT (the S-A live critical-path vehicle) — the CURRENT live base after the
+# t3 lotto burn DESCENDED from the tr1 T2 full-confirm bases (0.0138) all the way to the endpoint.
+# ng1 §2 row 10 (owed to co9): the digest's "corrections DEAD at every live parent" verdict was
+# parented on the STALE pre-arc bases (W_joint 0.0705, tr1 0.0138/0.0141) — the burn endpoint
+# 0.00389 IS the live base and it is INSIDE the rational band [rho_c, 1e-2]. Read machine-readably
+# from the committed pfs1 D1 locked-evaluate.py receipt (real evaluator, real bytes; archive
+# 624ffe57; the SegNet-distortion line of the pinned upstream evaluate.py report). The re-grade
+# it triggers is DUE by band-entry BUT carries the QA03/QA04 white-jitter MEASURED-BREAK-EVEN prior
+# (seg is a base-quality game; in-band != a promising correction lever).
+LIVE_BURN_ENDPOINT_EVAL_RECEIPT = ".omx/research/ddm_pfs1_d1_eval_receipt_20260729.json"
 
 
 @dataclass(frozen=True)
@@ -1181,6 +1192,11 @@ def _pending_producers(repo_root: Path) -> list[dict[str, Any]]:
 # committed memo it is folded from; ASSUMED priors stay labeled ASSUMED (NO-FAKE #8).
 RV1_TABLE_MEMO = ".omx/research/ddm_rv1_conditional_validity_regrade_20260728.md"
 PN1_MEMO = ".omx/research/ddm_pn1_pantheon_of_pantheons_completion_20260728.md"
+# The single consolidated deferral queue ledger (gc7r 07-29; the organ's DECLARED
+# consumed-evidence + recall source per its own frontmatter). Dated glob so the date rolling
+# forward selects the newest ledger without a code change. co9 registers it as consumed evidence
+# and scans it for the OWNERSHIP-ON-GATE-OPEN SENSE surface.
+DEFERRAL_LEDGER_GLOB = "ddm_deferral_queue_ledger_*.md"
 
 
 @dataclass(frozen=True)
@@ -1819,10 +1835,19 @@ def consumed_evidence_registry() -> dict[str, Any]:
     from tac.ddm_campaign_costate import SOURCES as CAMPAIGN_SOURCES
 
     paths = {spec.artifact for spec in ARC_EVIDENCE_SPECS}
-    paths.update((LIVE_BASE_DSEG_RECEIPT, T3_SEALED_TICKET, RV1_TABLE_MEMO, PN1_MEMO))
+    paths.update(
+        (
+            LIVE_BASE_DSEG_RECEIPT,
+            LIVE_BURN_ENDPOINT_EVAL_RECEIPT,
+            T3_SEALED_TICKET,
+            RV1_TABLE_MEMO,
+            PN1_MEMO,
+        )
+    )
     paths.update(spec.path for spec in CAMPAIGN_SOURCES)
     globs = [".omx/research/" + spec.glob for spec in SOURCE_SPECS]
     globs += [".omx/research/" + spec.glob for spec in PENDING_PRODUCER_SPECS]
+    globs += [".omx/research/" + DEFERRAL_LEDGER_GLOB]  # QA37: the organ's declared consumed source
     globs += list(J8F_GLOBS)
     return {
         "schema": "ddm_costate_consumed_evidence_registry.v1",
@@ -1831,12 +1856,54 @@ def consumed_evidence_registry() -> dict[str, Any]:
     }
 
 
+def _burn_endpoint_base(repo_root: Path) -> dict[str, Any] | None:
+    """The tb1 burn-ENDPOINT base d_seg, MEASURED by locked evaluate.py on the shipped bytes.
+
+    ng1 §2 row 10: this is the CURRENT live base of the S-A critical-path vehicle (the t3 lotto
+    burn descended here from the tr1 T2 full-confirm 0.0138). Parsed from the pinned upstream
+    evaluate.py report text ("Average SegNet Distortion: X") inside the committed pfs1 D1 eval
+    receipt — the format is fixed by the pinned upstream snapshot, so the read is deterministic.
+    Fail-open (None on any absence/parse failure): a SENSE input must never break the digest.
+    """
+
+    path = repo_root / LIVE_BURN_ENDPOINT_EVAL_RECEIPT
+    if not path.is_file():
+        return None
+    try:
+        payload = _load_json(path)
+    except Exception:
+        return None
+    report = payload.get("report")
+    if not isinstance(report, str):
+        return None
+    m = re.search(r"Average SegNet Distortion:\s*([0-9][0-9.eE+-]*)", report)
+    if not m:
+        return None
+    try:
+        d_seg = float(m.group(1))
+    except ValueError:
+        return None
+    if not (0.0 < d_seg < 1.0):
+        return None
+    return {
+        "d_seg": d_seg,
+        "archive_sha256": payload.get("archive_sha256"),
+        "evidence_axis": payload.get("evidence_axis"),
+        "source_path": LIVE_BURN_ENDPOINT_EVAL_RECEIPT,
+        "sha256": _sha256(path),
+    }
+
+
 def _band_position_parents(repo_root: Path, base_band: Mapping[str, Any]) -> dict[str, Any]:
-    """Per-parent band placement: W_joint base + the tb1 T2 tr1 full-confirm bases.
+    """Per-parent band placement: the LIVE burn endpoint + the pre-arc W_joint / tr1 T2 bases.
 
     The tr1 arm bases are read machine-readably from the committed sealed ticket
-    (``adjudication.arithmetic.{plain,lotto}.full_dseg``), never hardcoded. All bases
-    currently above the band upper => corrections stay dead at EVERY live parent.
+    (``adjudication.arithmetic.{plain,lotto}.full_dseg``); the tb1 burn ENDPOINT is read from the
+    committed pfs1 D1 locked-evaluate.py receipt (``_burn_endpoint_base``). ng1 §2 row 10 (co9):
+    the pre-arc parents (W_joint 0.0705, tr1 0.0138/0.0141) are STALE — the burn endpoint 0.00389
+    is the live base and it is INSIDE the rational band, so ``any_parent_in_band`` is now True and
+    the correction-class re-grade is DUE by band-entry. The re-grade carries the QA03/QA04
+    white-jitter MEASURED-BREAK-EVEN prior (seg = base-quality; in-band != a promising lever).
     """
 
     from tac.canonical_equations.ddm_pp1_correction_stream_position_band_20260728 import (
@@ -1845,12 +1912,37 @@ def _band_position_parents(repo_root: Path, base_band: Mapping[str, Any]) -> dic
     )
 
     rows: list[dict[str, Any]] = []
+    endpoint = _burn_endpoint_base(repo_root)
+    if endpoint is not None:
+        base = endpoint["d_seg"]
+        rows.append(
+            {
+                "parent": "tb1_burn_endpoint",
+                "base_d_seg": base,
+                "regime": str(position_cost_band(base)["regime"]),
+                "vehicle": "S-A live critical path (t3 lotto endpoint; the CURRENT live base)",
+                "measured_correction_value_at_base": (
+                    "BREAK_EVEN — QA03 full-population GN/CG seg solve (+1,866 flips, ΔS_seg "
+                    "−0.001582 = 1.15% of the −0.138 ceiling, 1.45 B/flip ≈ water 1.27) + QA04 "
+                    "attack-search round-2 (+773 flips, ΔS_seg −0.000655) = 3rd/4th white-jitter "
+                    "confirmations; in-band is RATIONAL by the band lemma but corrections are "
+                    "MEASURED break-even at this base (seg is a base-quality game)"
+                ),
+                "source": {
+                    "path": endpoint["source_path"],
+                    "sha256": endpoint["sha256"],
+                    "archive_sha256": endpoint["archive_sha256"],
+                    "axis": endpoint["evidence_axis"],
+                },
+            }
+        )
     if base_band.get("available"):
         rows.append(
             {
                 "parent": "W_joint_describe_line",
                 "base_d_seg": base_band["base_d_seg"],
                 "regime": base_band["regime"],
+                "vehicle": "pre-arc describe-line (S-E lineage; SUPERSEDED-PENDING by the tr1 pivot)",
                 "source": dict(base_band["source"]),
             }
         )
@@ -1897,9 +1989,161 @@ def _band_position_parents(repo_root: Path, base_band: Mapping[str, Any]) -> dic
     }
 
 
+def _deferral_ledger_path(repo_root: Path) -> Path | None:
+    """Newest committed DDM deferral queue ledger (dated glob; None if absent)."""
+    hits = sorted((repo_root / ".omx" / "research").glob(DEFERRAL_LEDGER_GLOB))
+    return hits[-1] if hits else None
+
+
+def _deferral_ledger_source(repo_root: Path) -> dict[str, Any] | None:
+    """Content-hashed source stamp for the deferral ledger (path + sha + frontmatter date)."""
+    path = _deferral_ledger_path(repo_root)
+    if path is None:
+        return None
+    date_utc = None
+    try:
+        for ln in path.read_text(errors="replace").splitlines()[:12]:
+            m = re.match(r"\s*date_utc:\s*([0-9]{4}-[0-9]{2}-[0-9]{2})", ln)
+            if m:
+                date_utc = m.group(1)
+                break
+    except Exception:
+        date_utc = None
+    return {
+        "path": str(path.relative_to(repo_root)),
+        "sha256": _sha256(path),
+        "date_utc": date_utc,
+    }
+
+
+def _ledger_age_days(date_utc: str | None) -> float | None:
+    """Age in days of the ledger's as-of date (None if unparseable). Read-only, UTC."""
+    if not date_utc:
+        return None
+    try:
+        import datetime as _dt
+
+        d = _dt.date.fromisoformat(date_utc)
+        return max(0.0, (_dt.datetime.now(_dt.UTC).date() - d).days)
+    except Exception:
+        return None
+
+
+# Gate-status column tokens that mean the gate is OPEN / actionable-now (vs CLOSED / HELD /
+# BLOCKED / pre-arc). Read as a substring test against the "gate status NOW" markdown cell.
+_LEDGER_GATE_OPEN_TOKENS = ("OPEN", "MET", "FIRED MID-ARM", "GATE FIRED", "MEASURABLE_NOW")
+_LEDGER_GATE_CLOSED_TOKENS = ("CLOSED", "BLOCKED", "PRE-ARC", "HELD", "STAGED")
+# Row-status tokens that mean the item has NOT completed (an open-gate/no-completion item).
+_LEDGER_STATUS_UNFIRED = ("DUE", "ORPHAN")
+
+
+def _open_gate_ownership_scan(repo_root: Path) -> dict[str, Any]:
+    """OWNERSHIP-ON-GATE-OPEN SENSE surface (co9, new SENSE law).
+
+    Operator 07-30 routing audit: 4 items had gates that OPENED with no owner-arm to FIRE them
+    (QA05 owner-arm died; QA41 gate opened inside an arm with no duty; QA03/04/11 ran-but-unflipped
+    before this ledger). This scan makes "gate OPEN + not yet FIRED" machine-surfaced, not
+    audit-discovered: it parses the committed deferral ledger's markdown tables and flags every row
+    whose gate is OPEN/actionable-now while its row-status is still DUE/ORPHAN (i.e. not FIRED),
+    surfacing the OWNER (the consumer column) + the ledger age. A row with an EMPTY consumer is a
+    genuine no-owner alarm. ADVISORY only (actuation NONE); fail-open (any error -> unavailable).
+
+    NO-FAKE: derives entirely from the committed ledger cells; asserts nothing the ledger does not
+    already state. Does not judge arm-liveness (not in the ledger) — it surfaces open-gate/no-fire
+    so the operator/next-arm can route ownership; the routing-audit judgment stays the human's.
+    """
+
+    source = _deferral_ledger_source(repo_root)
+    if source is None:
+        return {
+            "schema": "ddm_costate_open_gate_ownership.v1",
+            "available": False,
+            "reason": "DEFERRAL_LEDGER_ABSENT",
+            "actuation": "NONE",
+            "score_claim": False,
+        }
+    path = repo_root / source["path"]
+    try:
+        text = path.read_text(errors="replace")
+    except Exception as exc:
+        return {
+            "schema": "ddm_costate_open_gate_ownership.v1",
+            "available": False,
+            "reason": f"{type(exc).__name__}: {exc}",
+            "actuation": "NONE",
+            "score_claim": False,
+        }
+    age_days = _ledger_age_days(source.get("date_utc"))
+    open_rows: list[dict[str, Any]] = []
+    for ln in text.splitlines():
+        if not ln.lstrip().startswith("| Q"):  # QA*/QD*/QE*/QF* data rows only
+            continue
+        cells = [c.strip() for c in ln.strip().strip("|").split("|")]
+        if len(cells) < 4:
+            continue
+        row_id = cells[0]
+        status = cells[-1].upper()
+        # gate status column: S-A/S-D tables put it 5th (index 4); S-E puts it 5th too. Use a
+        # substring scan across all cells so a schema shift never silently drops a row.
+        joined_upper = " ".join(cells).upper()
+        status_unfired = any(tok in status for tok in _LEDGER_STATUS_UNFIRED) and "FIRED" not in status
+        if not status_unfired:
+            continue
+        gate_open = any(tok in joined_upper for tok in _LEDGER_GATE_OPEN_TOKENS)
+        gate_closed_only = (
+            any(tok in joined_upper for tok in _LEDGER_GATE_CLOSED_TOKENS) and not gate_open
+        )
+        if not gate_open or gate_closed_only:
+            continue
+        consumer = cells[-2] if len(cells) >= 2 else ""
+        no_owner = not consumer or consumer in ("—", "-", "?")
+        open_rows.append(
+            {
+                "row_id": row_id,
+                "row_status": status.split()[0] if status else status,
+                "owner": consumer or "(NONE)",
+                "no_owner_alarm": bool(no_owner),
+                "item": cells[1][:80] if len(cells) > 1 else "",
+                "age_days": age_days,
+            }
+        )
+    # cn1/cn2 gate-opener (QA37 contract): the rc1 branch never landed, so QE03's cn1/cn2
+    # consumption waves are HELD on an UNMERGED branch — a gate that OPENS from an off-main
+    # landing, invisible to the on-main ledger scan. Encode it as a named gate-opener so the
+    # unmerged-branch recall surface is not orphaned (deferral-scatter lesson).
+    gate_openers = [
+        {
+            "gate_opener": "rc1_branch_landing",
+            "opens": "QE03 (cn1 #726 + cn2 #727 consumption waves; recovered receipts + PDW1 fp32)",
+            "state": "UNMERGED_BRANCH — rc1 never landed; HELD off-main",
+            "recall_surface": "git branch -a --no-merged main + the QD14 standing unmerged-branch sweep",
+            "actuation": "NONE",
+        }
+    ]
+    no_owner = [r for r in open_rows if r["no_owner_alarm"]]
+    return {
+        "schema": "ddm_costate_open_gate_ownership.v1",
+        "available": True,
+        "source": source,
+        "ledger_age_days": age_days,
+        "open_gate_unfired_rows": open_rows,
+        "open_gate_count": len(open_rows),
+        "no_owner_alarm_count": len(no_owner),
+        "no_owner_alarm_rows": [r["row_id"] for r in no_owner],
+        "gate_openers": gate_openers,
+        "note": (
+            "DUE/ORPHAN rows whose gate is OPEN but which have NOT fired; OWNER = the ledger "
+            "consumer cell; age = ledger as-of. Advisory routing surface, not an arm-liveness judge."
+        ),
+        "actuation": "NONE",
+        "score_claim": False,
+    }
+
+
 def _sense_laws(
     arc_index: Mapping[str, Mapping[str, Any]],
     pn1_source: Mapping[str, Any] | None = None,
+    ledger_source: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """The 07-28 SENSE laws, anchored to committed artifacts.
 
@@ -2012,9 +2256,89 @@ def _sense_laws(
         "status": "REGISTERED_LAW_RACE_ARMED_NOT_DUE",
         "source": dict(pn1_source) if pn1_source else None,
     }
+    # ── co9 measured laws, anchored to the committed deferral ledger (which cites the SSD
+    #    receipts). Each is MEASURED on the [macOS-CPU advisory] axis; none is a contest score.
+    ledger_src = dict(ledger_source) if ledger_source else None
+    two_plane_pose = {
+        "law_id": "posenet_far_field_photometrics_bidirectional_v1",
+        "statement": (
+            "PoseNet reads FAR-FIELD photometrics: any actuator that touches far-field content is "
+            "priced on the POSE axis, in BOTH directions. FORWARD (encode it): a two-plane per-class "
+            "warp (far cls2 -> pure-rotation K·R·K⁻¹ at s_t=0 · ground -> full homography · hood -> "
+            "identity; masks = the shipped partition, rule-118 free) RECOVERS pose. REVERSE (drop it): "
+            "freezing far-field content COSTS pose. Same mechanism, opposite sign."
+        ),
+        "empirical_anchor": (
+            "FORWARD QA43: composed pose axis 1.4881 -> P0 1.2630 -> 0.9127 = −0.5754 S at ≤7.3 KB "
+            "marginal (95/112 tail wins, 41 >10×); REVERSE QA06 Knee-A: sky/hood drops froze "
+            "far-field -> +0.185 S pose (0.28002128) — the SAME two-plane physics IN REVERSE"
+        ),
+        "consequence": (
+            "price every far-field-touching actuator (token drops, sky/hood edits, waterfill rungs) "
+            "on the JOINT axis, not SegNet flips alone (the Knee-A INSTANCE reject was a pose-blind "
+            "waterfill); pose successors QA43 stage-1b + QA44 photometric rungs ride this law"
+        ),
+        "epistemic_status": "MEASURED",
+        "evidence_axis": ARC_EVIDENCE_AXIS,
+        "ledger_rows": ["QA43", "QA06", "QA44"],
+        "source": ledger_src,
+    }
+    sensitivity_spread = {
+        "law_id": "token_sensitivity_spread_nu_pivot_v1",
+        "statement": (
+            "The token stream's per-quantum sensitivity is 35× spread (median 8.6e-5 / p99 3.0e-3) "
+            "with 27% grads exact-zero, and ν=0.7 sits INSIDE the pivot band [0.55, 0.75] -> "
+            "CONTINUOUS log-bit allocation (sensitivity-ordered waterfill) DOMINATES the 3-rung "
+            "{L16,L8,L4} ladder; uniform null-snap is DOMINATED by the wr1 sensitivity-ordered curve."
+        ),
+        "empirical_anchor": (
+            "QA11 S2 ν nullspace re-measure on the t3 FINAL ckpt: ν=0.7 in-band (old ν=0.0 = FORM "
+            "ARTIFACT confirmed); hard-null deciles 0.56 -> 13.0; the generic-triple law's 2nd "
+            "instrument (uniform null-snap dominated). CONFOUND CARRIED: prereg baseline d_seg "
+            "0.013833 vs measured q=0 0.0038892 (3.6×) — the prereg number is QUARANTINED"
+        ),
+        "consequence": (
+            "re-prices the QA07 (nested-quant ladder) + QA12 (token-LOTTO) token-RATE pool toward "
+            "continuous log-bit allocation; the 3-rung ladder is dominated (QA07 amendment)"
+        ),
+        "epistemic_status": "MEASURED",
+        "evidence_axis": ARC_EVIDENCE_AXIS,
+        "ledger_rows": ["QA11", "QA07", "QA12"],
+        "source": ledger_src,
+    }
+    white_jitter = {
+        "law_id": "seg_is_base_quality_white_jitter_v1",
+        "statement": (
+            "SEG is a BASE-QUALITY game, not a corrections game: at the in-band burn base (0.00389), "
+            "full-population seg solves and attack searches move flips at ≈ the region-merge water "
+            "level (1.27 B/flip) — i.e. BREAK-EVEN. In-band by the band lemma is RATIONAL but NOT a "
+            "promising correction lever; only a LOWER BASE (burn capacity) descends seg."
+        ),
+        "empirical_anchor": (
+            "QA03 full-population GN/CG seg solve: +1,866 flips, ΔS_seg −0.001582 = 1.15% of the "
+            "−0.138 ceiling, 1.45 B/flip ≈ water 1.27 (~break-even) = 3rd white-jitter confirmation; "
+            "QA04 attack-search round-2: +773 flips, ΔS_seg −0.000655 @ 800 evals = 4th confirmation"
+        ),
+        "consequence": (
+            "the correction-class re-grade is DUE by band-entry (ng1 §2 row 10 re-parent) BUT its "
+            "MEASURED prior is BREAK-EVEN; corrections-class duties stay low-priority — the seg "
+            "descent lever is the burn (lower the base), not any correction stream at this base"
+        ),
+        "epistemic_status": "MEASURED",
+        "evidence_axis": ARC_EVIDENCE_AXIS,
+        "ledger_rows": ["QA03", "QA04"],
+        "source": ledger_src,
+    }
     return {
         "schema": "ddm_costate_sense_laws.v1",
-        "rows": [gate_basis, basin, ladder],
+        "rows": [
+            gate_basis,
+            basin,
+            ladder,
+            two_plane_pose,
+            sensitivity_spread,
+            white_jitter,
+        ],
         "actuation": "NONE",
         "score_claim": False,
     }
@@ -2330,9 +2654,12 @@ def build_live_ddm_costate(
     arc_index = {row["finding_id"]: row for row in arc_evidence if row.get("available")}
     rv1_table = _rv1_conditional_validity_table(repo_root)
     pn1_nodes = _pn1_nodes(repo_root, band_parents)
+    ledger_source = _deferral_ledger_source(repo_root)
+    open_gate_ownership = _open_gate_ownership_scan(repo_root)
     sense_laws = _sense_laws(
         arc_index,
         pn1_source=pn1_nodes.get("source") if pn1_nodes.get("available") else None,
+        ledger_source=ledger_source,
     )
     pending_producers = _pending_producers(repo_root)
     conditional_validity = _conditional_validity_review(
@@ -2478,6 +2805,7 @@ def build_live_ddm_costate(
         "band_position": band_position,
         "band_position_parents": band_parents,
         "sense_laws": sense_laws,
+        "open_gate_ownership": open_gate_ownership,
         "pending_producers": pending_producers,
         "conditional_validity": conditional_validity,
         "rv1_table": rv1_table,
@@ -2574,11 +2902,12 @@ def digest_lines(report: Mapping[str, Any]) -> list[str]:
         ),
         (
             (
-                f"DDM-band: base d_seg={band_pos['base_d_seg']:.6g} "
+                f"DDM-band[pre-arc describe-line base]: d_seg={band_pos['base_d_seg']:.6g} "
                 f"regime={band_pos['regime'].upper()} (rho_c={band_pos['rho_c']:.3g}, "
                 f"upper={band_pos['band_upper']:.3g}) -> corrections "
                 f"{'RATIONAL' if band_pos['correction_duty_multiplier'] else 'DEAD'}: "
-                f"{band_pos['correction_class_regime']}"
+                f"{band_pos['correction_class_regime']} "
+                "(the LIVE burn endpoint is in DDM-parents, not here)"
             )
             if band_pos.get("available")
             else f"DDM-band: unavailable ({band_pos.get('reason', 'no live base')})"
@@ -2617,6 +2946,23 @@ def digest_lines(report: Mapping[str, Any]) -> list[str]:
             f"(never-auto-stop={basin_law.get('never_auto_stop')}; "
             f"gate-basis-commit={gate_law.get('code_commit', 'ABSENT')})"
         )
+        co9_laws = [
+            law_rows.get(lid)
+            for lid in (
+                "posenet_far_field_photometrics_bidirectional_v1",
+                "token_sensitivity_spread_nu_pivot_v1",
+                "seg_is_base_quality_white_jitter_v1",
+            )
+            if law_rows.get(lid)
+        ]
+        if co9_laws:
+            lines.append(
+                "DDM-laws[co9 MEASURED]: "
+                "pose-far-field=BIDIRECTIONAL (QA43 −0.575S recover / QA06 +0.185S freeze) · "
+                "token-sensitivity=35×-spread ν=0.7-in-band -> continuous-log-bit DOMINATES 3-rung "
+                "(QA07/12 re-priced) · seg=BASE-QUALITY white-jitter (QA03/04 corrections BREAK-EVEN "
+                "at in-band base) [macOS-CPU advisory; not a score]"
+            )
     parents = report.get("band_position_parents") or {}
     if parents.get("rows"):
         lines.append(
@@ -2628,7 +2974,11 @@ def digest_lines(report: Mapping[str, Any]) -> list[str]:
             + (
                 " -> corrections DEAD at every live parent"
                 if not parents.get("any_parent_in_band")
-                else " -> A PARENT IS IN-BAND: correction-class re-grade DUE"
+                else (
+                    " -> tb1_burn_endpoint IN-BAND: correction-class re-grade DUE by band-entry "
+                    "(ng1 §2 row 10 re-parent) BUT QA03/QA04 white-jitter = MEASURED BREAK-EVEN "
+                    "at this base (seg=base-quality; lower the base, not correct it)"
+                )
             )
         )
     validity = report.get("conditional_validity") or {}
@@ -2660,6 +3010,31 @@ def digest_lines(report: Mapping[str, Any]) -> list[str]:
                 for row in pending
             )
             + "; numbers uncounted until committed (NO-FAKE)"
+        )
+    # ── co9 line: OWNERSHIP-ON-GATE-OPEN — DUE/ORPHAN rows whose gate is OPEN but unfired,
+    #    surfaced with OWNER + age so open-gate/no-owner is machine-surfaced, not audit-discovered.
+    owners = report.get("open_gate_ownership") or {}
+    if owners.get("available") and owners.get("open_gate_count"):
+        rows = owners.get("open_gate_unfired_rows") or []
+        top = ", ".join(
+            f"{r['row_id']}(owner={r['owner'][:22]}{'⚠NO-OWNER' if r['no_owner_alarm'] else ''})"
+            for r in rows[:6]
+        )
+        more = owners["open_gate_count"] - min(6, len(rows))
+        openers = owners.get("gate_openers") or []
+        opener_txt = (
+            " | gate-openers: " + "; ".join(f"{o['gate_opener']}->{o['opens'][:40]}" for o in openers)
+            if openers
+            else ""
+        )
+        age = owners.get("ledger_age_days")
+        age_txt = f"{age:.0f}d" if isinstance(age, (int, float)) else "?"
+        lines.append(
+            f"DDM-owners[gate-open/unfired]: {owners['open_gate_count']} rows "
+            f"(no-owner-alarm={owners['no_owner_alarm_count']}; ledger age {age_txt}): {top}"
+            + (f" (+{more})" if more > 0 else "")
+            + opener_txt
+            + " [advisory routing surface; actuation NONE]"
         )
     # ── co8 lines: rv1 table fold · pn1 VOI/nu-pivot/S1 nodes · allocator waterfill.
     rv1 = report.get("rv1_table") or {}

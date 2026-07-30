@@ -204,10 +204,14 @@ def test_pn1_nodes_fail_open_without_memo(tmp_path):
 def test_sense_laws_gain_granularity_ladder_and_stay_backward_compatible():
     laws = _sense_laws(_arc_index(), pn1_source={"path": PN1_MEMO, "sha256": "0" * 64})
     rows = {row["law_id"]: row for row in laws["rows"]}
+    # co8 laws stay backward-compatible; co9 appends three MEASURED laws (ng1/QA consumption).
     assert set(rows) == {
         "ema_gate_basis_v1",
         "basin_solve_handoff_v1",
         "correction_granularity_ladder_v1",
+        "posenet_far_field_photometrics_bidirectional_v1",
+        "token_sensitivity_spread_nu_pivot_v1",
+        "seg_is_base_quality_white_jitter_v1",
     }
     ladder = rows["correction_granularity_ladder_v1"]
     assert ladder["kind"] == "DERIVED_LAW"
@@ -393,12 +397,16 @@ def test_report_and_digest_surface_the_co8_nodes():
 
 
 def test_band_parents_unchanged_burn_chain_intact():
-    # rung 4 boundary: the B-verdict/burn chain is UNCHANGED by co8.
+    # rung 4 boundary: the B-verdict/burn chain is UNCHANGED by the band re-parent.
     bp = _band_position(REPO)
     if not bp.get("available"):
         pytest.skip(f"live-base receipt absent: {bp.get('reason')}")
     parents = _band_position_parents(REPO, bp)
-    assert parents["any_parent_in_band"] is False
+    # PREMISE FLIP (co9, ng1 §2 row 10): the tb1 burn endpoint (0.00389) entered the band, so
+    # any_parent_in_band is now True. The invariant this test guards is that the ENDGAME/BURN
+    # CHAIN head is unaffected by the correction-band re-parent — that still holds.
+    #   was: assert parents["any_parent_in_band"] is False
+    assert parents["any_parent_in_band"] is True
     from tac.ddm_costate_organ import _endgame_chain_duties
 
     chain = _endgame_chain_duties(_arc_index(), _pending_producers(REPO), parents)
