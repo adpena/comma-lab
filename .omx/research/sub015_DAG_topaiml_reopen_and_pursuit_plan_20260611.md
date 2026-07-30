@@ -25475,3 +25475,26 @@ composite, terminal pose solve). (4) su2's joint-co-location constraint reformul
 REQUIREMENT (QA80 pose-legibility from birth). (5) Apparatus-negative class healthy: 4 instrument
 corrections → same-day laws. Open metric question = f (pj1 LIVE). verdict scopes declared per row.
 pointer 0.1910828242 [contest-CPU] UNMOVED
+
+
+## FEED-ax1 (2026-07-30) — all-axes optimization derivation (operator-convened "dig deeper"; task #789)
+
+Memo `.omx/research/ddm_ax1_all_axes_derivation_20260730.md` + DSL stubs
+`src/tac/witness_dsl/ax1_derived_levers_20260730.py`. **§0 PRE-REGISTERED f prediction (committed BEFORE
+pj1's number): f ∈ [7e-4, 2.0e-3] central 1.2e-3**, mechanism split Lane-microstructure 40-50% /
+conv-expressiveness 30-40% / quant+uint8 10-20% / masked ~5%; against solve targets ALL residual is
+capacity by construction (target-infeasibility zero) — the QA74 25.58× typing splits at f. Nine axis rows
+each with recall-receipt → gap → derived term → falsifier → consumer: topology RATIFIES QA81
+carrier-composite; deep-math derives margin-coupled token quant + range(A)-gauge loss; geometry routes
+burn-3 to the BUILT QA84 rowband race (op1 P2 BEV closure cited, not reopened); dimensions derive delta
+group-sparsity (98.806% image-stationarity has NO training force) + frame_0 carried-ξ warp (zeros stub →
+physical pose base, rule-118 free); physics folds ξ into the shrinkage weight field; photometrics =
+QA80 ON (ea1 N3); order-of-ops adds ONE new constraint (delta-shrinkage after base-stability event);
+dynamics: QA24 was schedule-truncated (COUPLED_DESCENT at ep399) → burn-3 event-terminated + w_rate
+0.0768; interactions: Pool-A (rowband × quant × shrinkage) = ONE joint race at matched SMEVR bytes
+(non-additive-pools; v19b +0.0805 precedent). **Composed burn-3 stack arithmetic (DERIVED, gate-grade
+via fidelity law only): S ≈ 0.17-0.20 central — AT the bar; c ≈ 6e-3-1.2e-2 vs needed 5.05e-3 ⇒ one
+further slope-holding burn beyond burn-3 remains the honest central expectation.** Op-routables: pj1
+comparison → gc9 fork row; burn-3 config consumption; ax1_capacity_split_v1 registration ONLY
+post-pj1-anchor; Pool-A race harness = the one named build gap. All rows [macOS-CPU advisory].
+pointer 0.1910828242 [contest-CPU] UNMOVED
