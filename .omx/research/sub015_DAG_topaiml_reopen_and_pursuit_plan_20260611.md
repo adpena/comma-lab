@@ -25444,3 +25444,20 @@ hull chart ($0), K-SVD-on-solve-tokens, λ-domain bytes-target w_rate, born-agai
 capacity curve. verdict_scope: formulation — the conditional "capacity wall" branch in §2/§4 is a
 pre-registered INSTANCE(QA24-geometry) outcome of the probe, not an asserted negative; no negative
 verdict is asserted in this FEED. Pointer 0.1910828242 [contest-CPU] UNMOVED.
+
+
+## FEED-wr1gb (2026-07-30) — wr1 Gate-B staged exact gate MEASURED: knee-B truncation REFUTED at this operating point (instance)
+
+MAIN fired the wr1-staged Gate-B realized gate (`experiments/stage_wr1_realized_gate.sh kneeB cpu`,
+full 600-sample evaluate path, receipt `/Volumes/VertigoDataTier/pact/ddm_wr1_20260729/wr1_kneeB_realized_gate_receipt.json`,
+schema ddm_wr1_realized_gate.v1) per gc9 row-1 + su2 stage-1 + Hotz dissent. All [macOS-CPU advisory].
+
+- MEASURED composed row @ 174,578 B: d_seg 0.01001419 (term 1.0014) · d_pose 0.48164272 (term 2.1946) · rate 0.1162 → **S = 3.3122** vs REF 2.256641 (pfs1 D1): **+1.056 net**.
+- Break-even miss ~4x PER AXIS: seg +0.612 and pose +0.707 vs rate savings −0.263. Pose degraded MORE than seg — truncation harms the pose-carrying token content too, not just boundaries.
+- Product-law read (gc9): c = (100·d_seg)·rate = 0.1164 — WORSE than the QA24 endpoint's 0.08815. Truncation moves c UP the hyperbola; only burns have moved it down (x0.60/burn). Third point for the gc9 law: slope-changing measurements, not allocation shuffles.
+- su2's "174,578 B target-capable parent" premise: at knee-B's own rate the bar needs seg+pose < 0.055897; measured 3.196 = **57x over**. Gate-B is MEASURED-DEAD as a parent. Gate-A deliberately NOT run: su2's arithmetic already excludes it (needs 15,809 B more removed even at zero distortion).
+- verdict_scope: instance — THIS sensitivity-weighted truncation rung on THIS burn-1 parent at THIS operating point; the reverse-waterfill FAMILY is not closed (finer rungs / different allocation / a lower-c parent could re-enter), but any re-entry must first beat the 4x-per-axis break-even miss recorded here.
+- CONSEQUENCE for the gc9 decision table: the compose-forward-via-kneeB leg is eliminated; the burn-3-vs-class-change fork now hangs on f (ddm_pj1 capacity-floor probe, LIVE). Scorer slot freed for pj1's n600 gate.
+- OWED (defer-at-source): gc9 op-routable #3 product-law canonical-equation registration + Δlog-c telemetry — owner MAIN, next boundary commit (ledger row updated).
+
+pointer 0.1910828242 [contest-CPU] UNMOVED
