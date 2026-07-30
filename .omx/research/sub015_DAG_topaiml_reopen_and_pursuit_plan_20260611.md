@@ -25172,3 +25172,21 @@ receipts /Volumes/VertigoDataTier/pact/ddm_wr1_20260729/. [no-triality] [p0-ledg
   0.7365, pose-blind-drop caveat + re-solve precedent 0.98×) + QA62 A+B photometric (−0.104
   measured) + kl1 lossless trio (−0.0012) + QA47 receiver-derived-basis k-sweep + effective-quantum
   re-solve (~0.03). Composed v4c arithmetic target ≈ 1.30-1.37 advisory, gate-verified as always.
+
+
+## FEED-2026-07-30-d (MAIN): v4c gate MEASURED — first sub-1.0 own-vehicle row [pointer 0.1910828242 [contest-CPU] UNMOVED]
+
+- **Real n600 evaluate.py [macOS-CPU advisory]: d_pose 0.01038450 · d_seg 0.00431179 · 359,750 B →
+  recomputed S = 0.992972** (seg 0.431179 + pose 0.322250 + rate 0.239543). Predicted 0.992834 →
+  residual 1.38e-4, entirely the pre-declared d_seg evaluate band (±2.8e-5 d_seg); pose matched to
+  ~1e-7. Fidelity-law 2nd anchor HOLDS (re-anchor duty threshold 1e-3). Trajectory: ref 2.2566 →
+  v4b 1.534258 measured → **v4c 0.992972 measured** = −1.264 (56%) in ~36 hours, all original-
+  vehicle, all realized. Grammar: gr1 cell_drop50 base × static-mask pose re-solve (250 hardest,
+  0.1373→0.0273; 188/250 two-plane — pays far beyond the tail) × QA62 photometric (a,b) rung
+  (−0.0892 at 1,820 B) × kl1 lossless trio. Honest negatives carried: rung-A one-constant HURTS
+  (per-pair → QA66); QA61 dz dead 2nd time; QA58 exposure = 3rd white solver-field.
+- Next rungs (v4d stack): QA65 dim0 offset-quantum re-solve (~0.03) · QA66 per-pair shear
+  (−0.0135 @ ~150B) · QA47 receiver-derived-basis k-sweep · non-tail two-plane extension remainder ·
+  pose-aware cell re-order. Axis state at 0.993: rate 0.2395 (24%) · seg 0.4312 (43%) · pose 0.3222
+  (32%) — seg is now the largest axis; the seg structural rung (granularity re-burn QA24 /
+  renderer line) rises in rank.

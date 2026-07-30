@@ -143,6 +143,39 @@ def build_ddm_v4b_composed_gate_instrument_fidelity_v1(
         provenance=provenance,
         empirical_verification_status="VERIFIED_VIA_EMPIRICAL_ANCHOR",
     )
+    anchor_v4c = EmpiricalAnchor(
+        anchor_id="v4c_composed_gate_evaluate_py_n600_20260730",
+        measurement_utc="2026-07-30T23:59:00Z",
+        inputs={
+            "d_seg": 0.00431179,
+            "d_pose": 0.01038450,
+            "archive_bytes": 359_750,
+            "predicted_s": 0.992834,
+            "archive_sha256_prefix": "b6365270ddc55fde",
+        },
+        predicted_output={"S": 0.992834, "prediction_residual": 0.0},
+        empirical_output={
+            "S": 0.992972,  # recomputed from evaluator components (printed 0.99)
+            "seg_term": 0.431179,
+            "pose_term": 0.322250,
+            "rate_term": 0.239543,
+            "prediction_residual": 1.38e-04,
+            "d_pose_prediction_residual": 1e-07,
+        },
+        residual=1.38e-04,
+        source_artifact=str(MEMO.relative_to(REPO)),
+        measurement_method=(
+            "real upstream/evaluate.py n600 --device cpu, exact archive bytes, same "
+            "eval_root protocol; the STANDING RE-ANCHOR DUTY's first exercise: "
+            "residual 1.38e-4 < the 1e-3 falsification threshold and lies entirely "
+            "inside the pre-declared d_seg evaluate band (+-2.8e-5 d_seg = +-2.8e-3 "
+            "S); pose predicted-vs-measured ~1e-7 — law HOLDS on the v4c grammar "
+            "(cell_drop50 base + static two-plane re-solve + photometric (a,b) rung "
+            "+ lossless trio); first measured sub-1.0 own-vehicle row"
+        ),
+        provenance=provenance,
+        empirical_verification_status="VERIFIED_VIA_EMPIRICAL_ANCHOR",
+    )
     return CanonicalEquation(
         equation_id=EQUATION_ID,
         name="Composed-gate instrument fidelity (v4b evaluator row)",
@@ -198,9 +231,9 @@ def build_ddm_v4b_composed_gate_instrument_fidelity_v1(
             "S": "score units",
             "prediction_residual": "score units (|predicted - measured|)",
         },
-        empirical_anchors=(anchor,),
-        predicted_vs_empirical_residual={"S": 3e-06},
-        last_calibration_utc="2026-07-30T21:30:00Z",
+        empirical_anchors=(anchor, anchor_v4c),
+        predicted_vs_empirical_residual={"S": 1.38e-04},
+        last_calibration_utc="2026-07-30T23:59:00Z",
         next_recalibration_trigger=RECALIBRATE_ON_NEW_ANCHORS,
         canonical_consumers=(
             "tools.costate_digest",
