@@ -163,7 +163,9 @@ def test_counted_ledger_total_excludes_observability_keys():
     m = _fake_plain_model(cfg)
     led = TR.counted_bytes_ledger(m, cfg)
     assert led["total_counted_bytes"] == (
-        led["tokens_bytes"] + led["renderer_bytes"] + led["selector_ledger_bytes"])
+        led["tokens_bytes"] + led["renderer_bytes"] + led["selector_ledger_bytes"]
+        + led["rowband_spec_bytes"])
+    assert led["rowband_spec_bytes"] == 0  # no grammar on this fake model
     # observability keys are present but NOT summed into the total.
     assert led["token_ledger_coder"] == "smevr"
     assert "tokens_bytes_zlib" in led and "tokens_bytes_smevr" in led
@@ -231,3 +233,100 @@ def test_derived_w_rate_matches_exchange_rate():
     w, prov = b2.derive_w_rate_exchange_rate(n)
     assert w == pytest.approx((25 / 37_545_489) * n / 8.0)
     assert 0.05 < w < 0.10  # ~0.0768: the live 0.05 is ~65% of derived
+
+
+# ---------------------------------------------------------------------------
+# QA84 — the row-band variable-cell grammar (foveation).
+# ---------------------------------------------------------------------------
+def _grammar():
+    g = importlib.import_module("tac.witness_dsl.qa84_rowband_grammar_20260731")
+    return g.default_flip_band_grammar()
+
+
+def test_rowband_grammar_is_foveated_between_the_uniform_lattices():
+    dof = _grammar().dof_summary()
+    # rowband spends more DOF than uniform coarse (D16) but far less than uniform fine (D8).
+    assert dof["uniform_coarse_cells"] < dof["rowband_cells"] < dof["uniform_fine_cells"]
+    assert dof["band_spec_bytes"] > 0
+
+
+def test_rowband_tie_numpy_mlx_parity_and_structure():
+    mx = importlib.import_module("mlx.core")
+    mx.set_default_device(mx.cpu)
+    g = _grammar()
+    rng = np.random.default_rng(0)
+    field = (rng.random((5, g.fine_gh, g.fine_gw, g.code_width)) * 2 - 1).astype(np.float32)
+    tied_np = g.apply_tie_np(field)
+    tied_mx = np.asarray(g.apply_tie_mx(mx, mx.array(field)))
+    assert np.array_equal(tied_np, tied_mx)                       # backend parity (bit-identical)
+    assert np.array_equal(tied_np[0, 0, 0], tied_np[0, 1, 1])     # bulk 2x2 block tied
+    band_r = (g.band_row_lo + g.band_row_hi) // 2
+    assert np.array_equal(tied_np[0, band_r, 3], field[0, band_r, 3])  # band cell free
+
+
+def test_rowband_tie_single_frame_shape():  # the raw_tokens path
+    mx = importlib.import_module("mlx.core")
+    mx.set_default_device(mx.cpu)
+    g = _grammar()
+    frame = np.zeros((g.fine_gh, g.fine_gw, g.code_width), np.float32)
+    assert g.apply_tie_np(frame).shape == (g.fine_gh, g.fine_gw, g.code_width)
+    assert tuple(g.apply_tie_mx(mx, mx.array(frame)).shape) == (g.fine_gh, g.fine_gw, g.code_width)
+
+
+def test_rowband_spec_json_roundtrip_and_render_snap():
+    gm = importlib.import_module("tac.witness_dsl.qa84_rowband_grammar_20260731")
+    g = gm.RowBandGrammar.from_render_rows(
+        160, 240, fine_downsample=8, render_h=384, render_w=512, coarse_factor=2)
+    assert (g.fine_gh, g.fine_gw) == (48, 64)
+    assert g.band_row_lo % 2 == 0 and g.band_row_hi % 2 == 0          # coarse-aligned
+    g2 = gm.RowBandGrammar.from_spec_json(g.spec_json())
+    assert g2 == g
+
+
+def test_rowband_grammar_fail_closed_on_unaligned_band():
+    gm = importlib.import_module("tac.witness_dsl.qa84_rowband_grammar_20260731")
+    with pytest.raises(ValueError):
+        gm.RowBandGrammar(48, 64, band_row_lo=21, band_row_hi=30, coarse_factor=2)  # 21 % 2 != 0
+
+
+def _fake_rowband_model(g, P=5):
+    m = _fake_shared_base_model(P=P, gh=g.fine_gh, gw=g.fine_gw, c=g.code_width)
+    m._rowband = g
+    return m
+
+
+def test_full_token_field_applies_rowband_tie():
+    g = _grammar()
+    cfg = _cfg(grid_downsample=8, token_rowband_spec=g.spec_json())
+    m = _fake_rowband_model(g)
+    full = TR._full_token_field_np(m, cfg)
+    assert np.array_equal(full[0, 0, 0], full[0, 1, 1])              # bulk tied in the reconstruction
+    band_r = (g.band_row_lo + g.band_row_hi) // 2
+    raw0 = (np.asarray(m.tokens_base) + np.asarray(m.tokens_delta)[0])
+    assert np.array_equal(full[0, band_r, 3], raw0[band_r, 3])       # band cell free
+
+
+def test_rowband_ledger_counts_spec_bytes_in_total():
+    g = _grammar()
+    cfg = _cfg(grid_downsample=8, token_rowband_spec=g.spec_json())
+    m = _fake_rowband_model(g)
+    for name, shp in TR._conv_shapes(cfg):
+        setattr(m, f"w_{name}", np.zeros(shp, np.float32))
+        setattr(m, f"b_{name}", np.zeros((shp[0],), np.float32))
+    led = TR.counted_bytes_ledger(m, cfg)
+    assert led["rowband_spec_bytes"] == g.band_spec_bytes() > 0
+    assert led["total_counted_bytes"] == (
+        led["tokens_bytes"] + led["renderer_bytes"] + led["selector_ledger_bytes"]
+        + led["rowband_spec_bytes"])
+
+
+def test_qa84_grammar_race_programs_validate():
+    b2 = importlib.import_module("tac.witness_dsl.spec_tr1_burn2_20260731")
+    race = b2.qa84_grammar_race_programs("lotto", "/tmp/o", "/tmp/m.npy")
+    a = race["A_uniform_D16_drop50"]
+    b = race["B_rowband_D8"]
+    assert a.merged_overrides()["--grid-downsample"] == "16"
+    assert b.merged_overrides()["--grid-downsample"] == "8"
+    assert "--token-rowband-spec" in b.merged_overrides()
+    a.validate()
+    b.validate()  # never-invent-flags fail-closed

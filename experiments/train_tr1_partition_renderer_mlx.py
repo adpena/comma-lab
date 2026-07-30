@@ -230,6 +230,11 @@ class TR1Config:
     # to an .npy of pair indices to use as the composed-S subset. Pose is content/tail-limited
     # (QA66: top-17 pairs = 74.3% of pose mass) => run the bounded solve on the POSE-MASS TAIL
     # for max signal/sec. None => the first composed_s_gate_subset pairs (head, uniform).
+    token_rowband_spec: str | None = None  # QA84 (census §4.2) VARIABLE-CELL GRAMMAR: path to a
+    # RowBandGrammar spec .json (or inline json) => the token grid is D8 (fine) with BULK rows
+    # TIED in 2x2 blocks (D16-effective) and the op1 flip-band rows FREE at D8 (foveation). The
+    # tie is a differentiable gather; byte-close prices the tied field via SMEVR (bulk blocks
+    # code ~free) + the band spec. Requires --grid-downsample 8. None => uniform grid (control).
     renderer_head_mode: str = "rgb"       # QA83 (census §4.1) OUTPUT-SPACE FACTORIZATION: the
     # renderer head output space. "rgb" = 3-channel RGB via sigmoid*255 (control = current burn);
     # "class_field" = k=1 class-field scalar c(x) -> a FIXED monotone gray lift L:R->R^3 (the
@@ -422,6 +427,10 @@ def build_module(cfg: TR1Config):
             else:
                 cell_keep = np.ones((cfg.grid_h, cfg.grid_w, 1), dtype=np.float32)
             self._cell_mask = _FixedBank({"keep": mx.array(cell_keep)})
+            # QA84 (census §4.2) row-band variable-cell tiling: build the grammar and validate
+            # its fine dims match the (D8) grid; the tie is applied in raw_tokens (differentiable
+            # gather) so render + byte-close see the SAME tied field.
+            self._rowband = _build_rowband_grammar(cfg)
             # §3.3(a) lattice-anneal / staged quantizer: when "at_knee" the STE is DISENGAGED
             # (float tokens) until the CE->tau knee EVENT flips this to True (see main()); "off"
             # engages the STE from birth (tb1 control). Plain bool attribute (NOT an mx.array =>
@@ -464,7 +473,10 @@ def build_module(cfg: TR1Config):
             else:
                 t = self.tokens[idx]
             # §3.1 coarse-from-birth: zero the inactive cells (fixed {0,1} mask, stop-grad).
-            return t * mx.stop_gradient(self._cell_mask.tensors["keep"])
+            t = t * mx.stop_gradient(self._cell_mask.tensors["keep"])
+            if self._rowband is not None:  # QA84 §4.2: tie bulk 2x2 blocks (D16-effective)
+                t = self._rowband.apply_tie_mx(mx, t)
+            return t
 
         def quantized_tokens(self, idx: int):
             t = mx.clip(self.raw_tokens(idx), -1.0, 1.0)  # (gh, gw, c)
@@ -581,15 +593,41 @@ def token_stream_bytes_smevr(full_codes_u8: np.ndarray, levels: int) -> int:
         np.ascontiguousarray(full_codes_u8), levels=int(levels), codec="smevr"))
 
 
+def _build_rowband_grammar(cfg: "TR1Config"):
+    """QA84 §4.2: build the RowBandGrammar from ``cfg.token_rowband_spec`` (a spec .json path
+    OR inline json), validating its fine dims match the (D8) grid (fail-closed never-invent
+    geometry). Returns None when unset (uniform grid = control)."""
+    spec = getattr(cfg, "token_rowband_spec", None)
+    if not spec:
+        return None
+    from pathlib import Path
+
+    from tac.witness_dsl.qa84_rowband_grammar_20260731 import RowBandGrammar
+
+    text = Path(spec).read_text() if Path(spec).exists() else str(spec)
+    g = RowBandGrammar.from_spec_json(text)
+    if (g.fine_gh, g.fine_gw) != (cfg.grid_h, cfg.grid_w):
+        raise ValueError(
+            f"rowband grammar fine dims ({g.fine_gh},{g.fine_gw}) != grid "
+            f"({cfg.grid_h},{cfg.grid_w}) at D={cfg.grid_downsample}; row-band needs the FINE "
+            f"(D8) base — pass --grid-downsample 8 with a matching spec (fail-closed)")
+    return g
+
+
 def _full_token_field_np(model, cfg: "TR1Config") -> np.ndarray:
     """Reconstruct the FULL per-frame token field (P,gh,gw,c) EXACTLY as it renders/ships
-    (``raw_tokens`` = (base+delta)*keep for shared_base; tokens*keep otherwise)."""
+    (``raw_tokens`` = tie(cell_mask*(base+delta)) — cell_mask then QA84 row-band tie)."""
     keep3 = np.asarray(model._cell_mask.tensors["keep"], dtype=np.float32)  # (gh,gw,1)
     if cfg.token_temporal_mode == "shared_base":
         base_np = np.asarray(model.tokens_base, dtype=np.float32)[None]      # (1,gh,gw,c)
         delta_np = np.asarray(model.tokens_delta, dtype=np.float32)          # (P,gh,gw,c)
-        return (base_np + delta_np) * keep3
-    return np.asarray(model.tokens, dtype=np.float32) * keep3
+        field = (base_np + delta_np) * keep3
+    else:
+        field = np.asarray(model.tokens, dtype=np.float32) * keep3
+    grammar = getattr(model, "_rowband", None)
+    if grammar is not None:  # QA84: byte-close must see the SAME tied field the renderer ships
+        field = grammar.apply_tie_np(field)
+    return field
 
 
 def _int8_tensor_bytes(w: np.ndarray) -> bytes:
@@ -678,9 +716,13 @@ def counted_bytes_ledger(model, cfg: TR1Config) -> dict[str, Any]:
             for n, _ in shapes)
         ledger["renderer_bytes"] = len(mask_blob) + len(mods)
     ledger["selector_ledger_bytes"] = len(selector_ledger_blob(cfg))
-    # total sums ONLY the three real streams (obs keys are merged AFTER, never summed).
+    # QA84 §4.2: the row-band grammar spec is COUNTED decoder side-info (few bytes).
+    grammar = getattr(model, "_rowband", None)
+    ledger["rowband_spec_bytes"] = int(grammar.band_spec_bytes()) if grammar is not None else 0
+    # total sums ONLY the four real streams (obs keys are merged AFTER, never summed).
     ledger["total_counted_bytes"] = int(
-        ledger["tokens_bytes"] + ledger["renderer_bytes"] + ledger["selector_ledger_bytes"])
+        ledger["tokens_bytes"] + ledger["renderer_bytes"]
+        + ledger["selector_ledger_bytes"] + ledger["rowband_spec_bytes"])
     ledger.update(obs)  # decomposable observability (excluded from the total by construction)
     return ledger
 
@@ -970,6 +1012,10 @@ def build_argparser() -> argparse.ArgumentParser:
     ap.add_argument("--head-photo-slack-gain", type=float, default=0.05,
                     help="QA83/QA80: conservative fixed luma-slack gain for class_field_photo "
                          "(~13/255); the exact per-pixel band-lemma budget is the QA80 scorer step")
+    ap.add_argument("--token-rowband-spec", type=str, default=None,
+                    help="QA84 (census §4.2): RowBandGrammar spec .json path (or inline json) => "
+                         "D8 base with bulk 2x2 tie (D16-effective) + op1 flip-band free at D8. "
+                         "Requires --grid-downsample 8. None = uniform grid (control)")
     return ap
 
 
@@ -1021,6 +1067,7 @@ def main() -> int:
         byte_ledger_coder=args.byte_ledger_coder,
         renderer_head_mode=args.renderer_head_mode,
         head_photo_slack_gain=args.head_photo_slack_gain,
+        token_rowband_spec=args.token_rowband_spec,
     )
     (out_dir / "tr1_config.json").write_text(cfg.canonical_json() + "\n")
     telemetry_path = out_dir / "telemetry.jsonl"

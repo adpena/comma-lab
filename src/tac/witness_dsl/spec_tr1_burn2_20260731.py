@@ -15,11 +15,30 @@ from __future__ import annotations
 
 from dataclasses import replace
 
+from tac.witness_dsl.qa84_rowband_grammar_20260731 import (
+    RowBandGrammar,
+    default_flip_band_grammar,
+)
 from tac.witness_dsl.spec_tr1_renderer_20260728 import (
     TR1RendererProgramV1,
+    lever_a1_gate,
+    lever_basin_handoff,
     lever_byte_ledger_coder,
+    lever_desc_level_roundtrip,
     lever_ema_decay,
+    lever_lotto,
+    lever_rate_in_loss,
+    lever_renderer_capacity,
     lever_renderer_head,
+    lever_seg_margin_weight,
+    lever_seg_physics,
+    lever_token_grid,
+    lever_token_init,
+    lever_token_quant_anneal,
+    lever_token_rowband,
+    lever_token_temporal,
+    lever_variant,
+    lever_window,
     qa24_composed_burn_program,
 )
 
@@ -140,6 +159,66 @@ def qa83_head_race_programs(
             lever_renderer_head(mode, slack_gain), lever_byte_ledger_coder("smevr"))
     return {"A_rgb": _arm("rgb"), "B_class_field": _arm("class_field"),
             "C_class_field_photo": _arm("class_field_photo")}
+
+
+# ---------------------------------------------------------------------------
+# QA84 — the variable-size cell tiling grammar race (census §4.2).
+# ---------------------------------------------------------------------------
+def _rowband_arm_program(variant: str, out_dir: str, grammar: RowBandGrammar, *,
+                         epochs: int, max_wall_minutes: float, w_rate: float,
+                         margin_temp: float, gt_cache: str | None) -> TR1RendererProgramV1:
+    """The row-band arm: D8 base + row-band tie + the shared d_seg pieces (margin-weight,
+    rate-in-loss, lattice-anneal, solve_project init, basin-handoff) — NO D16 cell_mask (the
+    tie IS the cell structure). Composed-S is verdict-only (omitted; instrument, not a byte)."""
+    levers = [
+        lever_variant(variant),
+        lever_token_grid(8, grammar.code_width),   # D8 FINE base (row-band needs it)
+        lever_renderer_capacity(24),
+        lever_desc_level_roundtrip(16, "round"),
+        lever_token_temporal("shared_base"),
+        lever_seg_physics("ce", 100.0),
+        lever_token_init("solve_project"),
+        lever_basin_handoff("on"),
+        lever_a1_gate(10),
+        lever_window(epochs, max_wall_minutes, batch_pairs=8, lr=2e-3),
+        lever_seg_margin_weight(margin_temp),
+        lever_token_quant_anneal("at_knee"),
+        lever_rate_in_loss(w_rate),
+        lever_token_rowband(grammar),
+        lever_byte_ledger_coder("smevr"),
+    ]
+    if variant == "lotto":
+        levers.append(lever_lotto(118, 0.5))
+    prog = TR1RendererProgramV1(levers=tuple(levers), num_pairs=600, out_dir=out_dir,
+                                gt_cache=gt_cache, full_confirm=True)
+    prog.validate()
+    return prog
+
+
+def qa84_grammar_race_programs(
+    variant: str, out_dir: str, mask_path: str, *, grammar: RowBandGrammar | None = None,
+    epochs: int = 400, max_wall_minutes: float = 480.0, w_rate: float = 0.05,
+    margin_temp: float = 1.0, gt_cache: str | None = None,
+) -> dict[str, object]:
+    """QA84 §4.2 grammar race at MATCHED counted bytes from birth: {A uniform D16+drop50
+    (control = the qa24 base) · B row-band D8/D16 (the op1 GATE-PASSED foveation lane, 72.1%%
+    flip mass rows 160-240)}. Quadtree D8-at-annulus is the NAMED further arm (census: pays only
+    if in-band azimuthal sparsity is real — QA74 g4). Byte-matching (D8-rowband vs D16-drop50) is
+    a burn-2 tuning step (measure total_counted_bytes). SMEVR ledger on both; raster wire order
+    (QA85). Falsifier: no matched-bytes d_seg win => spatial uniformity survives at INSTANCE;
+    row-band >= quadtree => the separable approximation suffices."""
+    g = grammar or default_flip_band_grammar()
+    control = _append_levers(
+        qa24_composed_burn_program(
+            variant, out_dir, mask_path, epochs=epochs, max_wall_minutes=max_wall_minutes,
+            w_rate=w_rate, margin_temp=margin_temp, gt_cache=gt_cache),
+        lever_byte_ledger_coder("smevr"))
+    rowband = _rowband_arm_program(
+        variant, out_dir, g, epochs=epochs, max_wall_minutes=max_wall_minutes,
+        w_rate=w_rate, margin_temp=margin_temp, gt_cache=gt_cache)
+    return {"A_uniform_D16_drop50": control, "B_rowband_D8": rowband, "grammar": g,
+            "quadtree_named_further_arm": "D8-at-annulus-cells (census §4.2; pays iff in-band "
+            "azimuthal sparsity real, QA74 g4 custody) — not built this unit"}
 
 
 # ---------------------------------------------------------------------------

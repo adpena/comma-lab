@@ -185,6 +185,28 @@ def lever_ema_decay(value: float) -> Lever:
                  })
 
 
+def lever_token_rowband(grammar) -> Lever:
+    """QA84 (census §4.2) VARIABLE-CELL GRAMMAR: pass a RowBandGrammar (D8 base, bulk 2x2 tie =>
+    D16-effective, op1 flip-band free at D8). The spec is embedded inline (rule-118-free decoder
+    side-info; only ~130 B counted). Compose with lever_token_grid(8, c) — the row-band arm
+    needs the FINE (D8) base. gr1 nested-rungs DOMINATED is INSTANCE-scoped (solved-token
+    post-hoc); the trained-renderer from-birth form is uncovered. Raster wire order UNCHANGED
+    (QA85 Hilbert receipt stands). Falsifier: no matched-bytes d_seg win vs uniform D16 =>
+    spatial uniformity survives at INSTANCE on this vehicle."""
+    return Lever(
+        name="tr1_token_rowband", overrides={"--token-rowband-spec": grammar.spec_json()},
+        notes=f"QA84 §4.2 row-band foveation; DOF {grammar.dof_summary()}; falsifier: no "
+              "matched-bytes d_seg win vs uniform D16 => uniformity survives at INSTANCE; "
+              "row-band >= quadtree => the separable approximation suffices, quadtree closes",
+        constant_manifest={
+            "--token-rowband-spec": {
+                "value": grammar.spec_json(), "rung": "DERIVED (op1 foveation gate, QA74 typing)",
+                "provenance": "band rows from FLIP_BAND_RENDER_ROWS = 72.1-72.7%% flip mass "
+                              "(op1 gate PASSED >=50%%); D ~ (flip-density)^-alpha separable "
+                              "approximation; not a bare constant — a measured density field"},
+        })
+
+
 def lever_byte_ledger_coder(coder: str = "smevr") -> Lever:
     """QA86(b) / census T5: coder used to PRICE the token stream for stage/telemetry
     decisions. 'smevr' (default) = the SHIPPED r7 coder (decisions match the archive;
