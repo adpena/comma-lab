@@ -260,6 +260,24 @@ class TR1Config:
     # ref table's knee-A tail. The absolute bounded-solve pose_contrib is INSTANCE-DEAD on this
     # vehicle pre-joint-re-solve (measured, 4 solvers). None => the absolute composed_s (kept as
     # reference-only; not for endpoint acceptance).
+    distill_field_cache: str | None = None    # QA75 (ddm_dw1): path to the concatenated b2b
+    # teacher distill-logit cache (P,5,384,512) f16 (tools/ddm_dw1_build_distill_field_cache.py).
+    # None => distill OFF => BYTE-IDENTICAL to the plain continuation control (window B).
+    distill_weight: float = 0.0               # w_distill (ADDITIVE to the seg loss). 0.0 => OFF.
+    # DERIVED rung = w_seg (100.0, the S-exact d_seg weight): the distill term is a d_seg surrogate
+    # on the FEASIBLE teacher, so it shares the seg weight (own-optimum: raced, not asserted).
+    distill_temp: float = 2.0                 # KD softmax temperature T (kd_logits form). Rung:
+    # project-canonical KD temperature (Quantizr/PR95 kl_on_logits T=2.0; Hinton 2015 lineage).
+    distill_form: str = "kd_logits"           # {kd_logits | margin_field | argmax_ce}; the winner
+    # of the ddm_dw1 loss-form mini-race (own-optimum law; never a borrowed default).
+    distill_attack_temp: float = 0.0          # >0 => emphasise the low-GT-margin boundary annulus
+    # (QA74 attack set; exp(-GT_margin/temp) normalised); 0 = uniform. RACED dimension (not optional).
+    head_range_relax: str = "off"             # {off | linear} (ddm_dw1 Window C, MAIN charter):
+    # "linear" adds a trainable per-channel output residual gain (init 0 => warm-start-EQUIVALENT to
+    # rgb) to sigmoid*255, de-saturating the head so gradients reach out-of-chart (dark) pixels — the
+    # off-RGB output-chart probe (pj1 range-wall 67.95). ADVISORY-NON-DEPLOYABLE (a head change breaks
+    # the E1 receiver arch tr1_lotto_combined_ema_v1); its slope is the decision signal for a receiver
+    # rev, NOT a deployable row. "off" => no new param => resume/checkpoint byte-compatible.
 
     @property
     def grid_h(self) -> int:
@@ -466,6 +484,21 @@ def build_module(cfg: TR1Config):
             else:
                 raise ValueError(f"unknown variant {cfg.variant!r}")
 
+            # Window C (ddm_dw1, MAIN charter): warm-start-equivalent output-chart relax.
+            # A trainable per-channel gain on a LINEAR residual of the head pre-activation,
+            # INIT 0 => at the resumed weights the head output == sigmoid(x)*255 EXACTLY
+            # (warm-start equivalence; verified by first-epoch loss == Window A). As the gain
+            # trains it de-saturates the sigmoid so gradients reach out-of-chart (dark) pixels
+            # — the direct test of whether the rgb output chart binds. Only built when
+            # requested (default "off" => no new param => resume/checkpoint byte-compatible).
+            if getattr(cfg, "head_range_relax", "off") == "linear":
+                if getattr(cfg, "renderer_head_mode", "rgb") != "rgb":
+                    raise ValueError(
+                        "head_range_relax='linear' requires renderer_head_mode='rgb' "
+                        f"(got {cfg.renderer_head_mode!r}); the residual is added to the "
+                        "3-channel head pre-activation — fail closed")
+                self.head_relax_gain = mx.zeros((_head_out_ch(cfg),))
+
         # -- description-level eval_roundtrip: token lattice with STE ------------
         def raw_tokens(self, idx: int):
             if cfg.token_temporal_mode == "shared_base":
@@ -514,7 +547,11 @@ def build_module(cfg: TR1Config):
                 x = mx.conv2d(x, self._weight(f"up{k}"), padding=1) + getattr(self, f"b_up{k}")
                 x = nn.gelu(x)
             x = mx.conv2d(x, self._weight("head"), padding=1) + self.b_head
-            return _apply_head(mx, x, cfg)  # QA83 factorized head (rgb control = sigmoid*255)
+            out = _apply_head(mx, x, cfg)  # QA83 factorized head (rgb control = sigmoid*255)
+            if getattr(cfg, "head_range_relax", "off") == "linear":
+                # de-saturating linear residual, gain INIT 0 => identity at warm start.
+                out = out + self.head_relax_gain.reshape((1, 1, 1, -1)) * x
+            return out
 
     return TR1Module()
 
@@ -1016,6 +1053,24 @@ def build_argparser() -> argparse.ArgumentParser:
                     help="QA84 (census §4.2): RowBandGrammar spec .json path (or inline json) => "
                          "D8 base with bulk 2x2 tie (D16-effective) + op1 flip-band free at D8. "
                          "Requires --grid-downsample 8. None = uniform grid (control)")
+    # ---- QA75 solve-frame distillation (ddm_dw1) ----
+    ap.add_argument("--distill-field-cache", type=str, default=None,
+                    help="QA75: path to the concatenated b2b teacher distill-logit cache "
+                         "(P,5,384,512) f16. None = distill OFF (byte-identical control)")
+    ap.add_argument("--distill-weight", type=float, default=0.0,
+                    help="w_distill added to the seg loss; 0.0 = OFF. DERIVED rung = w_seg=100")
+    ap.add_argument("--distill-temp", type=float, default=2.0,
+                    help="KD temperature T (kd_logits form); Quantizr/PR95 T=2.0 provenance rung")
+    ap.add_argument("--distill-form", default="kd_logits",
+                    choices=("kd_logits", "margin_field", "argmax_ce"),
+                    help="QA75 loss form; the ddm_dw1 mini-race winner (own-optimum law)")
+    ap.add_argument("--distill-attack-temp", type=float, default=0.0,
+                    help="emphasise low-GT-margin boundary annulus (attack set) via "
+                         "exp(-GT_margin/temp); 0 = uniform. RACED dimension")
+    ap.add_argument("--head-range-relax", default="off", choices=("off", "linear"),
+                    help="Window C (MAIN charter): 'linear' adds a warm-start-equivalent trainable "
+                         "output residual (de-saturate the sigmoid head); ADVISORY-NON-DEPLOYABLE "
+                         "(breaks the E1 receiver). 'off' = rgb control (deployable, resume-safe)")
     return ap
 
 
@@ -1068,6 +1123,12 @@ def main() -> int:
         renderer_head_mode=args.renderer_head_mode,
         head_photo_slack_gain=args.head_photo_slack_gain,
         token_rowband_spec=args.token_rowband_spec,
+        distill_field_cache=args.distill_field_cache,
+        distill_weight=args.distill_weight,
+        distill_temp=args.distill_temp,
+        distill_form=args.distill_form,
+        distill_attack_temp=args.distill_attack_temp,
+        head_range_relax=args.head_range_relax,
     )
     (out_dir / "tr1_config.json").write_text(cfg.canonical_json() + "\n")
     telemetry_path = out_dir / "telemetry.jsonl"
@@ -1088,6 +1149,22 @@ def main() -> int:
     if lstars.shape[0] < cfg.num_pairs:
         raise SystemExit(f"gt cache has {lstars.shape[0]} pairs < --num-pairs {cfg.num_pairs}")
     seg_cpu = load_real_segnet("cpu")
+
+    # QA75 solve-frame distillation teacher (ddm_dw1): the concatenated b2b SegNet FIELD,
+    # memmapped (P,5,384,512) f16. None => distill OFF => byte-identical to the control.
+    distill_mm = None
+    if cfg.distill_field_cache is not None and cfg.distill_weight != 0.0:
+        distill_mm = np.load(cfg.distill_field_cache, mmap_mode="r")
+        if distill_mm.shape[0] < cfg.num_pairs:
+            raise SystemExit(
+                f"distill field cache has {distill_mm.shape[0]} pairs < --num-pairs "
+                f"{cfg.num_pairs}")
+        if distill_mm.shape[1:] != (5, SEG_H, SEG_W):
+            raise SystemExit(f"distill field cache shape {distill_mm.shape} != (P,5,384,512)")
+        tlog({"event": "distill_field_ready", "cache": str(cfg.distill_field_cache),
+              "shape": list(distill_mm.shape), "form": cfg.distill_form,
+              "weight": cfg.distill_weight, "temp": cfg.distill_temp,
+              "attack_temp": cfg.distill_attack_temp})
 
     mx.set_default_device(mx.gpu if args.mlx_device == "gpu" else mx.cpu)
     mx.random.seed(cfg.seed)
@@ -1184,12 +1261,23 @@ def main() -> int:
         ema = st["ema"]
         start_epoch = st["epoch"] + 1
         stage = st["meta"].get("stage", stage)
+        # Resume-registry hygiene (ddm_dw1 Window C, guard 7): a trainable param INTRODUCED
+        # since the checkpoint (e.g. head_relax_gain) is absent from the loaded shadow. Backfill
+        # BOTH the live param (load_checkpoint's model.update already leaves it at its init) and
+        # the EMA shadow from the model's INIT value so live and shadow start warm-start-equivalent
+        # (head_relax_gain init 0 => head == sigmoid(x)*255 at ep0). No-op when no new params
+        # (Windows A/B) => byte-identical resume.
+        model_init = dict(tree_flatten(model.trainable_parameters()))
+        backfilled = [k for k in model_init if k not in ema]
+        for k in backfilled:
+            ema[k] = mx.array(model_init[k])
         # §3.3(a) resume-past-knee: if the STE anneal already engaged (we resume in a post-CE
         # stage), re-engage it so the token forward matches the checkpointed lattice state.
         if cfg.token_quant_anneal == "at_knee" and stage != "seg_trunk_ce":
             model._quant_engaged = True
         tlog({"event": "resume", "resume_from": str(args.resume_from), "epoch": start_epoch,
-              "stage": stage, "quant_engaged": bool(model._quant_engaged)})
+              "stage": stage, "quant_engaged": bool(model._quant_engaged),
+              "ema_backfilled_new_params": backfilled})
         # NOTE: Adam moments are re-anchored fresh (warm-start re-anchor law #517/#518):
         # a bounded-window resume restarts moment estimation at the resume geometry.
 
@@ -1207,9 +1295,17 @@ def main() -> int:
         if cfg.class_weight_lane != 1.0:
             w_np = 1.0 + (cfg.class_weight_lane - 1.0) * (lstar == 1).astype(np.float32)
             seg_pixel_w = mx.array(w_np)[None]
+        # QA75 teacher logits for THIS pair (precomputed b2b scorer response); None => OFF.
+        distill_logits = None
+        if distill_mm is not None:
+            dl = np.asarray(distill_mm[idx], dtype=np.float32)         # (5,H,W)
+            distill_logits = mx.array(np.transpose(dl, (1, 2, 0)))[None]  # (1,H,W,5)
         return loss_fn(mdl, None, idx, idx, lstar_oh, margin, pose_tgt,
                        cfg.w_seg, 0.0, 0.0, cfg.margin_target, seg_form=form,
-                       seg_pixel_w=seg_pixel_w, compute_pose=False)
+                       seg_pixel_w=seg_pixel_w, compute_pose=False,
+                       distill_logits=distill_logits, distill_weight=cfg.distill_weight,
+                       distill_temp=cfg.distill_temp, distill_form=cfg.distill_form,
+                       distill_attack_temp=cfg.distill_attack_temp)
 
     state_form = {"form": cfg.seg_form_start}
 

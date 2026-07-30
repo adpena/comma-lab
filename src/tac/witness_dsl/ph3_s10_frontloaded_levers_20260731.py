@@ -21,26 +21,11 @@ from __future__ import annotations
 
 from tac.witness_dsl.curriculum_dsl import Lever
 
-
-def Qa75SolveFrameDistill(window: int = 100) -> Lever:  # stub — bc1/burn-2 real impl supersedes
-    """QA75-lite (ph3 §10.1): EXACT-solve frames as opening-stage regression/distill target.
-
-    Teacher = the EXACT C1 solve frames (realized d_seg 1.52e-4 through the real
-    path; margins FEASIBLE by construction, unlike GT).  Front-loaded: distill
-    dominates opening stages, anneals to margin-CE.  Full logit/margin distill
-    (SegNet on solve frames at compress time) is the burn-2 headline #1 form.
-    """
-
-    return Lever(
-        "qa75_solve_frame_distill",
-        overrides={"--solve-frame-distill": True},
-        epochs_delta=window,
-        notes=(
-            "DESIGNED-STUB (never-fired): attacks the QA74-typed 25.58x amortization gap "
-            "(96.1% of renderer seg residual attackable). Real impl supersedes in "
-            "spec_tr1_renderer; ledger QA75."
-        ),
-    )
+# ph3 §10.1 Qa75SolveFrameDistill was the DESIGNED-STUB; its real implementation LANDED in
+# ddm_dw1 (2026-07-30) and superseded it per this module's own fold-and-delete note. The live
+# lever is ``tac.witness_dsl.spec_tr1_renderer_20260728.lever_solve_frame_distill`` (raced forms
+# kd_logits|margin_field|argmax_ce; teacher = the b2b SegNet field; the trainer consumes
+# --distill-* flags). The QA80/QA81 stubs below remain DESIGNED-state pending their real landings.
 
 
 def Qa80MarginBoundedPhotometric(window: int = 100) -> Lever:  # stub — bc1/burn-2 real impl supersedes
@@ -85,7 +70,8 @@ def Qa81LaneCarrierComposite(window: int = 100) -> Lever:  # stub — bc1/burn-2
 
 
 PH3_S10_STUB_LEVERS = (
-    Qa75SolveFrameDistill,
+    # Qa75SolveFrameDistill FOLDED-AND-DELETED (ddm_dw1 2026-07-30): real impl is
+    # spec_tr1_renderer_20260728.lever_solve_frame_distill (raced forms; b2b field teacher).
     Qa80MarginBoundedPhotometric,
     Qa81LaneCarrierComposite,
 )

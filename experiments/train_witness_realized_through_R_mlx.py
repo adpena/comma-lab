@@ -1257,6 +1257,54 @@ def _seg_unify_tau_perpixel(seg_logits, lstar_oh, tau):
     return logsum_t - tgt  # τ·logsumexp(φ/τ) − φ_y  (τ=1 ≡ CE; τ→0 → ReLU(−margin))
 
 
+def _solve_frame_distill_loss_mlx(mx, student_logits, teacher_logits, lstar_oh,
+                                  gt_margin, form, temp, attack_temp):
+    """QA75 solve-frame distillation term (ddm_dw1).  Teacher = the b2b SegNet FIELD on
+    the EXACT C1 solve frames (a *precomputed scorer response*, realized d_seg ~1.52e-4);
+    ``teacher_logits`` (1,H,W,5) is that field for THIS pair.  The student's scorer forward
+    is the SAME ``adapter.segnet(f1)`` the seg loss already ran — no second scorer forward.
+
+    THREE raced forms (own-optimum law; the mini-race picks the winner):
+      * ``kd_logits``  — Hinton KD: T^2·KL(softmax(teacher/T) ‖ softmax(student/T)).
+      * ``margin_field`` — one-sided hinge driving the student's GT-class signed margin up to
+        the teacher's FEASIBLE top1-top2 margin (the field margin IS the flip-distance currency).
+      * ``argmax_ce`` — CE to the teacher's argmax label (margin-weighted when attack_temp>0).
+
+    ``attack_temp`` > 0 emphasises the low-GT-margin boundary annulus (the QA74 attack set;
+    100% of realized flips there) via exp(-GT_margin/attack_temp), normalised; 0 = uniform.
+    All ops are differentiable MLX (runs under value_and_grad).
+    """
+    if attack_temp and attack_temp > 0.0:
+        aw = mx.exp(-mx.clip(gt_margin, 0.0, 1e9) / float(attack_temp))  # (H,W)
+        aw = (aw / (mx.mean(aw) + 1e-8))[None]                            # (1,H,W)
+    else:
+        aw = None
+    if form == "kd_logits":
+        T = float(temp)
+        ls_s, ls_t = student_logits / T, teacher_logits / T
+        logp_s = ls_s - mx.logsumexp(ls_s, axis=-1, keepdims=True)
+        logp_t = ls_t - mx.logsumexp(ls_t, axis=-1, keepdims=True)
+        p_t = mx.exp(logp_t)
+        per = (T * T) * mx.sum(p_t * (logp_t - logp_s), axis=-1)          # (1,H,W)
+    elif form == "margin_field":
+        t_sorted = mx.sort(teacher_logits, axis=-1)
+        t_margin = t_sorted[..., -1] - t_sorted[..., -2]                  # (1,H,W) top1-top2 > 0
+        gt_logit = mx.sum(student_logits * lstar_oh, axis=-1)
+        runner = mx.max(student_logits + lstar_oh * (-1e9), axis=-1)
+        s_margin = gt_logit - runner                                     # (1,H,W) signed
+        per = mx.maximum(t_margin - s_margin, 0.0)
+    elif form == "argmax_ce":
+        t_arg = mx.argmax(teacher_logits, axis=-1)                       # (1,H,W)
+        t_oh = (t_arg[..., None] == mx.arange(student_logits.shape[-1])).astype(
+            student_logits.dtype)
+        per = mx.logsumexp(student_logits, axis=-1) - mx.sum(student_logits * t_oh, axis=-1)
+    else:
+        raise ValueError(f"unknown distill_form {form!r} (kd_logits|margin_field|argmax_ce)")
+    if aw is not None:
+        per = per * aw
+    return mx.mean(per)
+
+
 def make_loss_fn(
     adapter,
     render_h: int,
@@ -1334,7 +1382,7 @@ def make_loss_fn(
         b, t, h2, w2, c6 = yuv.shape
         return mx.reshape(mx.transpose(yuv, (0, 2, 3, 1, 4)), (b, h2, w2, t * c6))
 
-    def loss_fn(model, coord_feats, code0, code1, lstar_oh, margin, pose_tgt, w_seg, w_pose, hinge, margin_target, mw_active=True, mw_temp=None, seg_form=None, tau_override=None, l7_thr_override=None, seg_pixel_w=None, terms_out=None, compute_pose=True):
+    def loss_fn(model, coord_feats, code0, code1, lstar_oh, margin, pose_tgt, w_seg, w_pose, hinge, margin_target, mw_active=True, mw_temp=None, seg_form=None, tau_override=None, l7_thr_override=None, seg_pixel_w=None, terms_out=None, compute_pose=True, distill_logits=None, distill_weight=0.0, distill_temp=2.0, distill_form="kd_logits", distill_attack_temp=0.0):
         # ``terms_out`` (#304 item 4 per-term loss telemetry; ADDITIVE, default None => BYTE-IDENTICAL):
         # when given a dict, the WEIGHTED contributions {"seg": w_seg*seg_l, "pose": w_pose*pose_term}
         # are recorded as (lazy) mx arrays for the caller to eval OUTSIDE any grad transform. The
@@ -1461,11 +1509,26 @@ def make_loss_fn(
             pose_term = mx.sqrt(10.0 * pose_l + pose_eps) if score_domain else pose_l
         else:
             pose_term = mx.zeros_like(seg_l)
+        # ``distill_*`` (ddm_dw1 QA75 solve-frame distillation; ADDITIVE, default OFF =>
+        # distill_logits None OR distill_weight 0.0 => this branch never builds => graph +
+        # loss + grads BYTE-IDENTICAL). The teacher field is the precomputed b2b scorer
+        # response; the KD/margin/CE forms run on the SAME ``seg_logits`` (no 2nd forward).
+        seg_pose = w_seg * seg_l + w_pose * pose_term
+        distill_on = distill_logits is not None and distill_weight != 0.0
+        distill_term = None
+        if distill_on:
+            distill_term = _solve_frame_distill_loss_mlx(
+                mx, seg_logits, distill_logits, lstar_oh, margin,
+                distill_form, distill_temp, distill_attack_temp)
         if terms_out is not None:
             # #304 item 4: record the weighted contributions (lazy; caller evals outside grad).
             terms_out["seg"] = w_seg * seg_l
             terms_out["pose"] = w_pose * pose_term
-        return w_seg * seg_l + w_pose * pose_term
+            if distill_on:
+                terms_out["distill"] = distill_weight * distill_term
+        if distill_on:
+            return seg_pose + distill_weight * distill_term
+        return seg_pose
 
     return loss_fn
 

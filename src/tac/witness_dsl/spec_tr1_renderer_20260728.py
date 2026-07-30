@@ -335,6 +335,81 @@ def lever_composed_s_verdict(subset: int, subset_ids_path: str | None = None,
                        "changed no decision (record; keep it — the correct instrument)")
 
 
+def lever_solve_frame_distill(field_cache: str, *, form: str = "kd_logits",
+                              weight: float = 100.0, temp: float = 2.0,
+                              attack_temp: float = 0.0) -> Lever:
+    """QA75 solve-frame distillation (ddm_dw1): finish the renderer against the b2b SegNet
+    FIELD on the EXACT C1 solve frames (a precomputed scorer response, realized d_seg ~1.52e-4)
+    instead of / alongside argmax-CE vs GT. The teacher's soft logits carry dark knowledge the
+    hard GT labels lack; distilling to the FEASIBLE teacher is the clean capacity-vs-objective
+    arbiter for the QA74 25.58x amortization gap. Forms {kd_logits | margin_field | argmax_ce} and
+    the attack-set weighting are RACED (own-optimum law); the winner is passed here.
+
+    Falsifier (preregistered, QA75 ledger row): distilled endpoint NOT clearly better than the CE
+    control at matched budget => the amortization gap is NOT distillation-curable (optimization/
+    capacity leads, class-change leg strengthens); distill slope clearly better => burn-3
+    distill-opening GO. NON-DEPLOYABLE nothing here (rgb head, E1-decodable); Window C (head relax)
+    carries the non-deployable flag, not this lever."""
+    if form not in ("kd_logits", "margin_field", "argmax_ce"):
+        raise ValueError("distill form is kd_logits|margin_field|argmax_ce")
+    return Lever(
+        name=f"tr1_solve_frame_distill_{form}",
+        overrides={"--distill-field-cache": str(field_cache),
+                   "--distill-form": form, "--distill-weight": str(weight),
+                   "--distill-temp": str(temp), "--distill-attack-temp": str(attack_temp)},
+        notes="QA75 solve-frame distill; teacher = b2b SegNet field on the EXACT C1 solve frames "
+              "(feasible margins by construction, unlike GT); falsifier: distilled not clearly "
+              "better than CE at matched budget => gap not distillation-curable (QA24 form fixes "
+              "lead) else burn-3 distill-opening GO",
+        constant_manifest={
+            "--distill-temp": {
+                "value": temp, "rung": "CANONICAL (Quantizr/PR95 kl_on_logits T=2.0; Hinton 2015)",
+                "provenance": "project-canonical KD temperature; the SegNet distillation "
+                              "temperature used across the contest (CLAUDE.md Quantizr SegNet "
+                              "kl_on_logits T=2.0). Not a bare constant — the KD lineage default"},
+            "--distill-weight": {
+                "value": weight, "rung": "DERIVED = w_seg (S-exact d_seg weight 100)",
+                "provenance": "the distill term is a d_seg surrogate on the FEASIBLE teacher, so it "
+                              "shares the S-exact seg weight (100 = the d_seg coefficient in S). "
+                              "Own-optimum: comparable early gnorm to the seg term (raced, not "
+                              "asserted); a per-form gnorm check confirms it is not under/over-driven"},
+            "--distill-attack-temp": {
+                "value": attack_temp, "rung": "RACED (ddm_dw1 mini-race dimension)",
+                "provenance": "Fisher-margin law (curvature<->(-margin) Pearson 0.978): emphasise "
+                              "the low-GT-margin boundary annulus (QA74 attack set, 100% of flips) "
+                              "via exp(-m/temp); 0=uniform. RACED against attack-weighted, never "
+                              "assumed optimal — uniform KD wastes gradient on the dark Fisher interior"},
+            "--distill-form": {
+                "value": form, "rung": "RACED (ddm_dw1 loss-form mini-race winner)",
+                "provenance": "own-optimum law: kd_logits (Hinton dark knowledge) vs margin_field "
+                              "(the field margin IS the flip-distance currency) vs argmax_ce (hard "
+                              "teacher label, margin-weighted); winner selected at ITS optimum on n96"},
+            "--distill-field-cache": {
+                "value": str(field_cache), "rung": "MEASURED_ANCHOR (b2b field pass)",
+                "provenance": "concatenated teacher distill-logit cache (P,5,384,512) f16 built by "
+                              "tools/ddm_dw1_build_distill_field_cache.py over the b2b field "
+                              "(ddm_b2b_qa75_field_20260730); each pair sha-verified vs the field manifest"},
+        })
+
+
+def lever_head_range_relax(mode: str = "linear") -> Lever:
+    """Window C (ddm_dw1, MAIN charter 2026-07-30): the OFF-RGB output-chart race. 'linear' adds a
+    warm-start-EQUIVALENT trainable per-channel output residual (init 0 => head == sigmoid*255 at
+    ep0) that de-saturates the rgb head so gradients reach out-of-chart (dark) pixels — the direct
+    test of whether the sigmoid*255 rgb chart binds (pj1 dark-reachability floor 67.95). ADVISORY-
+    NON-DEPLOYABLE: a head change breaks the E1 receiver (arch tr1_lotto_combined_ema_v1); the
+    slope is the decision signal for whether a receiver arch rev is worth building, NOT a deployable
+    row. Falsifier: C-vs-A slope split at/below noise => the rgb chart is NOT the binding constraint
+    (tokens/loss already task-space); a clear C>A split => the chart binds, receiver-rev is on."""
+    if mode not in ("off", "linear"):
+        raise ValueError("head_range_relax is off|linear")
+    return Lever(name=f"tr1_head_range_relax_{mode}",
+                 overrides={"--head-range-relax": mode},
+                 notes="Window C off-RGB output-chart probe; ADVISORY-NON-DEPLOYABLE (breaks the "
+                       "E1 receiver); warm-start-equivalent (init-0 residual); falsifier: C-vs-A "
+                       "slope split <= noise => rgb chart does not bind")
+
+
 def qa24_composed_burn_program(variant: str, out_dir: str, mask_path: str, *,
                                epochs: int = 400, max_wall_minutes: float = 480.0,
                                w_rate: float = 0.05, rate_model: str = "entropy",
