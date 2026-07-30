@@ -2329,6 +2329,49 @@ def _sense_laws(
         "ledger_rows": ["QA03", "QA04"],
         "source": ledger_src,
     }
+    # ── ja1 (QA73) STANDING allocator law: the digest surfaces the top of the JOINT
+    #    waterfill table, NOT axis-scoped duties. Every rung fires on its JOINT realized
+    #    exchange rate (read from the committed table), never on axis identity. Advisory.
+    joint_allocator = {
+        "law_id": "joint_exchange_rate_allocator_v1",
+        "statement": (
+            "no rung fires on axis identity; every rung fires on its JOINT realized exchange rate "
+            "read from the committed ja1 waterfill table. Pools are NON-ADDITIVE (same-pool levers "
+            "COMPETE, never sum). At the v4c base (S 0.992972; seg 0.431 · pose 0.322 · rate 0.240) "
+            "the axes are near-parity, so the axis-reflex (biggest-axis-first) is the dominant "
+            "allocation error — the JOINT table overrides it."
+        ),
+        "allocation_surprise": (
+            "seg is the LARGEST axis (0.431) but its BYTE pool is MEASURED-SATURATED at the "
+            "cell_drop50 knee (gr1: restore +0.047S / drop-more +0.052S) AND seg corrections are "
+            "BREAK-EVEN (co9 white-jitter). Every cheap LIVE byte lever is on the POSE axis; seg "
+            "only moves via a HEAVY re-burn (QA24, a CAPACITY pool, PARALLEL not vs the byte budget)."
+        ),
+        "table_top": [
+            "1 QA66 photometric per-pair rung-A: REALIZED-live-base −0.0134 S @ +150 B (READY, v4d)",
+            "2 QA72a+QA54 information/precision: $0 stage-attribution (DERIVED content-limited) — run FIRST",
+            "3 QA68 pose-content expert menu: DERIVED headroom in the 88-pair tail (90% of pose mass; UNBUILT)",
+            "4 QA65 dim0 offset-finer: DERIVED-bounded-SMALL (pose content-limited, NOT storage — demoted)",
+            "5 QA24 seg re-burn: ≤ −0.098 seg+rate LOWER BOUND (HEAVY, operator-GO, PARALLEL capacity pool)",
+        ],
+        "saturated_do_not_spend": [
+            "token-cell bytes (gr1: knee, any move +0.05S)",
+            "rate/lossless container (SMEVR floor + deflate consumed)",
+            "seg corrections (co9 white-jitter break-even)",
+        ],
+        "order_of_operations": (
+            "physical order motion→projection→photometric→uint8→coder; token_base change invalidates "
+            "pose+photo+selector (re-solve ~1h+30min), pose change invalidates photo fit (~30min), so "
+            "cheap pose rungs (v4d, no token-base touch) come FIRST; the seg re-burn (v5) LAST/PARALLEL."
+        ),
+        "epistemic_status": "MEASURED_ALLOCATOR",
+        "evidence_axis": ARC_EVIDENCE_AXIS,
+        "ledger_rows": ["QA73", "QA66", "QA65", "QA68", "QA72", "QA54", "QA24", "QA64"],
+        "committed_table": ".omx/research/ddm_ja1_joint_waterfill_table_20260731.json",
+        "committed_atlas": ".omx/research/ddm_ja1_joint_sensitivity_atlas_20260731.json",
+        "committed_order_dag": ".omx/research/ddm_ja1_order_of_operations_dag_20260731.json",
+        "source": ledger_src,
+    }
     return {
         "schema": "ddm_costate_sense_laws.v1",
         "rows": [
@@ -2338,6 +2381,7 @@ def _sense_laws(
             two_plane_pose,
             sensitivity_spread,
             white_jitter,
+            joint_allocator,
         ],
         "actuation": "NONE",
         "score_claim": False,
@@ -2962,6 +3006,16 @@ def digest_lines(report: Mapping[str, Any]) -> list[str]:
                 "token-sensitivity=35×-spread ν=0.7-in-band -> continuous-log-bit DOMINATES 3-rung "
                 "(QA07/12 re-priced) · seg=BASE-QUALITY white-jitter (QA03/04 corrections BREAK-EVEN "
                 "at in-band base) [macOS-CPU advisory; not a score]"
+            )
+        allocator = law_rows.get("joint_exchange_rate_allocator_v1")
+        if allocator:
+            top = (allocator.get("table_top") or [])[:3]
+            lines.append(
+                "DDM-joint[ja1 allocator, QA73]: fire on JOINT exchange rate not axis identity; "
+                "TOP=" + " | ".join(top)
+                + " ; SURPRISE=seg is largest axis but byte-SATURATED at knee -> cheap byte levers "
+                "are POSE; seg moves only via HEAVY re-burn (QA24, PARALLEL). "
+                f"table={allocator.get('committed_table')} [macOS-CPU advisory; not a score; actuation NONE]"
             )
     parents = report.get("band_position_parents") or {}
     if parents.get("rows"):

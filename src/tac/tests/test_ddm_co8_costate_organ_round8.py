@@ -204,7 +204,8 @@ def test_pn1_nodes_fail_open_without_memo(tmp_path):
 def test_sense_laws_gain_granularity_ladder_and_stay_backward_compatible():
     laws = _sense_laws(_arc_index(), pn1_source={"path": PN1_MEMO, "sha256": "0" * 64})
     rows = {row["law_id"]: row for row in laws["rows"]}
-    # co8 laws stay backward-compatible; co9 appends three MEASURED laws (ng1/QA consumption).
+    # co8 laws stay backward-compatible; co9 appends three MEASURED laws (ng1/QA consumption);
+    # ja1 (QA73) appends the standing joint-exchange-rate allocator law.
     assert set(rows) == {
         "ema_gate_basis_v1",
         "basin_solve_handoff_v1",
@@ -212,6 +213,7 @@ def test_sense_laws_gain_granularity_ladder_and_stay_backward_compatible():
         "posenet_far_field_photometrics_bidirectional_v1",
         "token_sensitivity_spread_nu_pivot_v1",
         "seg_is_base_quality_white_jitter_v1",
+        "joint_exchange_rate_allocator_v1",
     }
     ladder = rows["correction_granularity_ladder_v1"]
     assert ladder["kind"] == "DERIVED_LAW"

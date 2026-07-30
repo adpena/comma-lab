@@ -1,0 +1,109 @@
+{
+ "schema": "ddm_ja1_order_of_operations_dag.v1",
+ "axis": "[macOS-CPU advisory]",
+ "score_claim": false,
+ "pointer": "0.1910828242 [contest-CPU] UNMOVED",
+ "physical_order": [
+  "motion (xi GN solve)",
+  "per-depth projection (two-plane warp)",
+  "photometric (a,b + rolling-shutter)",
+  "uint8 (through-R)",
+  "coder (SMEVR token field)"
+ ],
+ "nodes": [
+  {
+   "id": "token_base",
+   "stage": "coder",
+   "controls": "cell_drop level / token field",
+   "pool": "token-cell / seg-capacity"
+  },
+  {
+   "id": "pose_solve",
+   "stage": "motion+projection",
+   "controls": "per-pair warp params (6-dof)",
+   "pool": "pose-content"
+  },
+  {
+   "id": "photo_fit",
+   "stage": "photometric",
+   "controls": "(a,b) + rung-A beta",
+   "pool": "photometric"
+  },
+  {
+   "id": "selector",
+   "stage": "projection",
+   "controls": "single/two-plane + expert id",
+   "pool": "expert-menu"
+  },
+  {
+   "id": "quantum",
+   "stage": "storage",
+   "controls": "f16 / offset lattice for shipped params",
+   "pool": "pose-precision"
+  }
+ ],
+ "invalidation_edges": [
+  {
+   "from": "token_base",
+   "invalidates": [
+    "pose_solve",
+    "photo_fit",
+    "selector"
+   ],
+   "reason": "changing the cell-drop level changes the decoded frame_1 the warp reads (Knee-A law: far-field freezes cost pose; recoverable via re-solve, parity 0.98)",
+   "resolve_cost": "pose re-solve ~1h PoseNet (ck1/v4c path) + photo re-fit ~30min + selector re-solve"
+  },
+  {
+   "from": "pose_solve",
+   "invalidates": [
+    "photo_fit"
+   ],
+   "reason": "(a,b) is GN-solved at FIXED pose; changing the warp changes warp(f1) the exposure fits",
+   "resolve_cost": "photo re-fit ~30min PoseNet (2-param GN/pair)"
+  },
+  {
+   "from": "quantum",
+   "invalidates": [
+    "pose_solve"
+   ],
+   "reason": "re-solving dim0 on a finer lattice (QA65) needs a re-solve on the new lattice",
+   "resolve_cost": "bounded re-solve on new lattice"
+  },
+  {
+   "from": "photo_fit",
+   "invalidates": [],
+   "reason": "photometric is the last param stage before uint8; nothing downstream but the render",
+   "resolve_cost": "~0 (re-render only)"
+  }
+ ],
+ "ordered_next_3_builds": [
+  {
+   "build": "v4d-cheap (NO token-base change)",
+   "rungs": [
+    "QA72a stage-attribution ($0, FIRST \u2014 decides QA65 vs QA68)",
+    "QA54 luma-only exposure ($0)",
+    "QA66 per-pair rung-A (+150B, MEASURED \u22120.0134S)",
+    "QA65 dim0 offset-finer (ONLY if QA72a says storage-limited \u2014 ja1 predicts NO)"
+   ],
+   "invalidates": "photo_fit only (cheap re-fit); token_base UNTOUCHED",
+   "gate": "compose + n600 evaluate.py; expected small net \u2212S at ~+150B"
+  },
+  {
+   "build": "v4d-menu (expert menu, NO token-base change)",
+   "rungs": [
+    "QA68 per-pair expert menu best-of (targets the 88-pair content tail)"
+   ],
+   "invalidates": "selector + per-pair photo re-fit; token_base UNTOUCHED",
+   "gate": "compose + n600; DERIVED headroom \u22120.05..\u22120.15S in the tail (UNANCHORED, needs build)"
+  },
+  {
+   "build": "v5-reburn (QA24 seg re-burn \u2014 HEAVY, operator-GO, PARALLEL)",
+   "rungs": [
+    "QA24 from-birth coarser solve-init burn"
+   ],
+   "invalidates": "EVERYTHING (token_base change \u2192 full pose+photo+selector re-do)",
+   "gate": "the ONLY seg-axis descent; runs in PARALLEL with v4d, not competing for the byte budget"
+  }
+ ],
+ "order_law": "oc1 'ORDER is important' lifted from build-time to campaign-time: the allocator emits the ORDER (which rungs compose in which build + what re-solves when), not just amounts. Cheap pose rungs (v4d) come FIRST because they don't touch token_base (cheapest invalidation); the seg re-burn (v5) comes LAST/PARALLEL because it invalidates everything."
+}

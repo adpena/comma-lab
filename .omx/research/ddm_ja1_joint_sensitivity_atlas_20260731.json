@@ -1,0 +1,100 @@
+{
+ "schema": "ddm_ja1_joint_sensitivity_atlas.v1",
+ "axis": "[macOS-CPU advisory]",
+ "score_claim": false,
+ "pointer": "0.1910828242 [contest-CPU] UNMOVED",
+ "base": {
+  "archive_sha256_prefix": "b6365270",
+  "archive_bytes": 359750,
+  "S_measured": 0.992972,
+  "seg_contribution": 0.431179,
+  "d_seg": 0.00431179,
+  "pose_contribution": 0.32225,
+  "d_pose": 0.0103845,
+  "rate_contribution": 0.239543,
+  "eval": "n600 evaluate.py CPU (QA64 FIRED); [macOS-CPU advisory]; pointer 0.1910828242 UNMOVED",
+  "byte_breakdown": {
+   "tokens.dr7t": 346478,
+   "pose_warp.stp": 8175,
+   "renderer.sec": 3341,
+   "manifest.json": 1303,
+   "selector.sec": 535,
+   "pose_stub.sec": 83,
+   "pose_warp_internal": {
+    "tp_member": 6059,
+    "ab_member": 1820,
+    "st_coded": 189,
+    "sel_coded": 79
+   }
+  }
+ },
+ "surfaces": [
+  {
+   "surface": "segnet_head_rank4_hyperplanes",
+   "content": "head is EXACTLY rank-4 linear; flip distance d=|margin|/\u2016w_c\u2212w_c'\u2016 exact; all 4 Lane-pair normals largest (3.75-4.01 vs 2.60-2.95); well-cond \u03c31/\u03c34=1.74",
+   "freshness": "TRANSFER-BY-CONSTRUCTION",
+   "transfers": true,
+   "source": "segnet_recursive_fractal_factorization_20260715 \u00a72-3 (frozen segnet.safetensors)",
+   "note": "STRUCTURE base-independent. OCCUPANCY (which pixels sit at small margin) is base-dependent; at v4c the seg error is the cell_drop50 token field (gr1)."
+  },
+  {
+   "surface": "segnet_stride2_skip_lane_bottleneck",
+   "content": "Lane boundary precision rides the ONE 16-ch stride-2 skip = 77% of skip-detail flips; final decoder block skipless; SE shallow gates frozen (stabilizer, 3.3e-4 flip)",
+   "freshness": "TRANSFER-BY-CONSTRUCTION",
+   "transfers": true,
+   "source": "segnet_recursive_fractal_factorization_20260715 \u00a74-5"
+  },
+  {
+   "surface": "posenet_head_rank6_p0_dominance",
+   "content": "head rank-6 ill-cond \u03c31/\u03c36=24.8 one-dominant-axis; \u2202pose/\u2202input p0 (fwd trans) dominates ~50\u00d7; rotations p3-5 INPUT+VALUE near-null; 99.3% LUMA (chroma-blind); ~52% Jacobian energy on seg-free frame_0; realization-limited (tangent over 3-10\u00d7)",
+   "freshness": "TRANSFER-BY-CONSTRUCTION",
+   "transfers": true,
+   "source": "ddm_pi2_posenet_inversion_20260730 \u00a71-2 (frozen posenet.safetensors, 53 gt_n96 pairs)",
+   "note": "STRUCTURE transfers (frozen net + video-general). Per-pair OCCUPANCY re-anchored at v4c this arm (see pose_per_pair_occupancy)."
+  },
+  {
+   "surface": "pose_per_pair_occupancy_v4c",
+   "content": "per-pair d_pose spread at v4c: p10 2.54e-04 / p50 9.95e-04 / p90 1.03e-02 / max 7.81e-01; max/median 785\u00d7; 90% of pose MASS in 88 pairs (14.7%)",
+   "freshness": "REALIZED-LIVE-BASE",
+   "transfers": "N/A (this IS the live-base re-anchor)",
+   "source": "ja1 read of v4c photo_celldrop50_resolve.partial.jsonl (realized-through-frozen-PoseNet)",
+   "implication": "pose is CONTENT-TAIL-limited (88 hard pairs), NOT storage/precision-limited \u2014 DERIVED stage-attribution; re-aims QA65\u2193 and QA68\u2191"
+  },
+  {
+   "surface": "resize_null_ker_A_shared",
+   "content": "bilinear downsample (874,1164)\u2192(384,512) ker dim = 820,728 DOF/ch/frame = 80.7% of camera DOF EXACTLY invisible to BOTH scorers (A_seg \u2261 A_pose); pose adds chroma-HF null",
+   "freshness": "TRANSFER-BY-CONSTRUCTION",
+   "transfers": true,
+   "source": "ddm_pi2 \u00a71b + frozen_scorer_exact_factorization_20260715 B1/B4 (#580)"
+  },
+  {
+   "surface": "photometric_response_rungB",
+   "content": "PoseNet reads inter-frame camerad auto-exposure: a\u00b7warp(f1)+b improves 112/112 tail; rung-A rolling-shutter improves 96/112. rung-B CONSUMED in v4c (1820 B).",
+   "freshness": "REALIZED-LIVE-BASE",
+   "transfers": "consumed",
+   "source": "ddm_pm1_physical_prior_mine_20260730 \u00a71 (full-tail-112) + v4c photo receipt (realized rung-B \u0394S -0.0892 @ v4c)"
+  },
+  {
+   "surface": "margin_fisher_gram_and_composite_R_hessian",
+   "content": "margin-Fisher head geometry (Gram of rank-4 normals) + pose output quadratic + composite-R Hessian (uint8 through-R coupling)",
+   "freshness": "TRANSFER-STRUCTURE/STALE-OCCUPANCY",
+   "transfers": "geometry yes; occupancy STALE (measured 07-24, pre-v4 base)",
+   "source": "ddm_ms3/ms4/ms4d metric custody bundle (07-24)",
+   "note": "NOT the binding surface at v4c: it prices the seg-CORRECTION levers, which gr1 + co9 white-jitter proved SATURATED/BREAK-EVEN at the base. Re-anchoring OCCUPANCY is low-value upkeep (the pool it serves is closed). Structure transfers."
+  },
+  {
+   "surface": "bn_channel_capacity_structure",
+   "content": "0 dead channels / 33,368 (fully live); BN per-channel affine; error-source-tensor telemetry asymmetry (sn1)",
+   "freshness": "TRANSFER-BY-CONSTRUCTION",
+   "transfers": true,
+   "source": "ddm_sn1_five_type_derivation_20260724 + segnet fractal \u00a77 (BN fold)"
+  },
+  {
+   "surface": "token_cell_RD_curve_gr1",
+   "content": "cell_drop RD at the v4c base (cell_drop50 IS the base): drop35 439,836B@d_seg0.003882 \u00b7 drop50(base) 359,221B@0.003947(n48)/0.004310(n600) \u00b7 drop63 277,815B@0.005013; token-granular & nested-rung DOMINATED; cell-drop is the efficient unit",
+   "freshness": "REALIZED-LIVE-BASE",
+   "transfers": "N/A (this IS the base)",
+   "source": "ddm_gr1_granularity_rerace_20260730 (realized render+SegNet, real SMEVR bytes)"
+  }
+ ]
+}
