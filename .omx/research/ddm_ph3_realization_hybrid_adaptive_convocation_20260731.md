@@ -143,3 +143,56 @@ precision-starved, easy pairs waste bits).
 - v4d arm charter = QA65 + QA66 + QA68 + QA69 (+QA70 rider) under the §1 doctrine (proposals
   cheap, acceptance realized, gates verify); seg structural rung (QA24 re-burn) surfaced to
   operator as the PARALLEL heavy slot per §4.4.
+
+## §6 ADDENDUM (operator 07-31 "the quantum issue") — the pantheon on quantization: not a wall, a MEDIUM
+
+**The measured quantum stack (three lattices, one issue):** (1) uint8 pixels at the decode boundary
+(realization death for sub-LSB atoms — pi2; #532 range(A) exactness broken Δ=62.74); (2) f16
+storage quanta on shipped params (dim0 f16-MARGINAL, 1 ulp ≈ 0.040 S — pi2; QA65 offset cure
+riding v4d); (3) the solve-lattice interaction (monotone acceptance AT q16 = the solver only
+visits lattice points). Prior partial cures already in receipts: camera-Q8 sub-quantum staging
+(j5) · quarter-quantum realized caps (#518/j4) · #149 pre-R placement (set flips at camera res
+BEFORE the averaging) · fd2's named quantum-arithmetic fork.
+
+**FRIDRICH/YOUSFI (the inverse-steganalysis reading — the deepest cut):** the contest IS inverse
+steganalysis, and quantization boundaries are precisely where steganographic technique lives.
+Three mechanisms, all classical steg/halftoning transplants:
+1. **The resize divides the quantum.** R averages ~k camera pixels per scorer pixel (k≈30 area).
+   A COHERENT pattern of ±1-LSB roundings across a support realizes EFFECTIVE sub-LSB moves at
+   the scorer's input — spatial DITHERING / error diffusion through the averaging operator. The
+   realization wall is not 1 LSB; it is ~1/k LSB for coherent dithered actuators. **Named
+   reopening: the steering-atom family (pi2, killed at naive rounding) re-enters at
+   DITHERED-REALIZATION scope** — the atoms died because rounding was treated as given, not
+   designed.
+2. **The rounding-direction field is a near-free actuator.** Pixels whose pre-round fractional
+   part sits near 0.5 can round either way at negligible cost (wet-paper-codes logic: use the
+   "dry" pixels). We ship descriptions, not pixels — so the field is steered by SUB-EFFECT-SCALE
+   perturbations of spatially-LOCAL description DOF (tokens are cell-local: a tiny token nudge
+   flips the rounding pattern of its cell). Cell-granular, ~zero marginal bytes at f16.
+3. **tt1 is already the discovery instrument for this**: a gradient on the pre-uint8 values sees
+   the threshold crossings; realized acceptance verifies each one. The joint TTO will find
+   dithering implicitly IF token DOF are in the loop — watch for accepted steps whose continuous
+   magnitude is sub-LSB but whose realized effect is not (the signature).
+**TAO / THE LATTICE LINE (ms1/ms2 lineage):** rounding = CVP in the SCORER metric on a severely
+anisotropic lattice (head cond 24.8, per-dim sensitivity spread ~600×). Independent per-param
+rounding is Babai rounding — provably suboptimal on anisotropic lattices. Part of the measured
+3-10× tangent-overshoot may be a ROUNDING artifact, not intrinsic realization: solve CONTINUOUS,
+then JOINT-round the coupled 6-dim block in the scorer metric (race vs the current
+solve-on-lattice). Cheap race, bounded pairs.
+**SHANNON/MACKAY/LLOYD:** quantizer design is a solved discipline being applied naively — f16 is
+a value-space log quantizer, but sensitivity is not proportional to value. Per-dim COMPANDING
+(Lloyd-Max in the measured d_pose-vs-Δparam curve) is QA65/QA69's principled completion; the
+refinement waterfill's realized curve IS the quantizer-design instrument. And the quantum is the
+RATE DIAL — coarser where the curve is flat, finer where f16-marginal; never uniform.
+**THE DECISIVE $0 WONDER (stage attribution):** is the current pose residual (contribution 0.322)
+bounded by f16 storage (curable: offset/companding — QA65 measures), by uint8-through-R (curable:
+dithering — QA72), or by content (neither)? Solve a bounded set at CONTINUOUS precision, then
+re-quantize stage-by-stage (fp32 → f16 → uint8-through-R) and attribute the realized loss per
+stage. One afternoon; aims every quantum lever.
+**CONTRARIAN (binding):** every dithering/CVP claim passes the same realized acceptor as
+everything else; token-nudge collateral (seg flips) is jointly priced; the steg transplants are
+EASIER here than in steganography (we fight an exact forward simulation, not a detector) but that
+is an argument for measuring fast, not for believing early.
+**Routing:** QA72 (dithered realization + rounding-field steering + stage-attribution probe +
+continuous-solve-then-CVP-round race) → ledger, defer-at-source; tt1 messaged to instrument the
+threshold-crossing signature; QA65/QA69 unchanged (they are the storage-lattice half).
