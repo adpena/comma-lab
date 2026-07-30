@@ -77,13 +77,16 @@ pairs the geometry already "won". Which rung drives each pair's best: **B=17/25,
   mis-warped; it needs a per-pair selector and a realizable Movable mask (decoded partition). Rung B
   dominates it. INSTANCE scope; defer to QA48 (plane+parallax) which subsumes it.
 
-**#404 (advisory):** projecting the measured −3.412 tail-25 selection cut onto qa45's full-tail pose
-member (contribution 0.7198 at tail-selection 22.464, non-tail 8.6199) gives pose contribution
-0.7198 → ~0.679 = **−0.041 S PROJECTED** at ≤4 B/pair, ON TOP of qa45's −0.7683 — a NEW orthogonal
-(photometric) axis. Full-tail-112 confirmation running (converts the projection to a measurement).
-Falsifier for the projection: full-tail rung-B win-rate ≪ 25/25 → photometric is a hard-tail-only
-effect (still real, smaller). **Grammar impact: v4c gains 2 photometric coeffs/pair (rung B) + a
-1-line free rolling-shutter receiver amendment (rung A); rung C stays deferred.**
+**#404 (advisory) — FULL-TAIL-112 MEASURED (receipt sha 025898218825fdb8):** rung B improves
+**112/112** tail pairs, 0 degradations; rung A improves 96/112, 0 degradations. The full-tail pose
+member (Σmin(single), non-tail 488 held at P0 sum 8.6199): qa45 static base tail-selection 22.734
+(contribution 0.7229) → **rung B only 15.040 (0.6280, −0.0949 S) → rungs A+B 14.365 (0.6189,
+−0.1039 S)**. **So the photometric axis is a MEASURED −0.1039 S at ≤4 B/pair (rung B) + ~0 B (rung
+A), ON TOP of qa45's −0.7683 — a NEW orthogonal (photometric) axis, 2.5× the 25-pair projection**
+(the projection was conservative; the full tail has many more improvable pairs). **Grammar impact:
+v4c gains 2 photometric coeffs/pair (rung B) + a 1-line free rolling-shutter receiver amendment
+(rung A); rung C stays deferred.** Absolute totals remain an UPPER BOUND (GT-optimized poses, no
+static re-solve); the composed byte-close + n600 evaluate gate is OWED at v4c.
 
 ## §2 THE CARRIER MINE — CONSUMED (already in the shipped/measured vehicle, with receipt)
 
