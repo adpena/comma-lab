@@ -1323,7 +1323,7 @@ def main(rebind_root: bool = False) -> int:
             "/ canonical_equations_registry) never SHRINK in normal operation; "
             "a net line loss is the whole-file-clobber-off-a-stale-base "
             "signature (2026-07-18 matrix incident). The serializer refuses "
-            f"such a commit unless you declare an INTENTIONAL shrink here "
+            "such a commit unless you declare an INTENTIONAL shrink here "
             "(e.g. a consolidation pass). Requires a real rationale string "
             "(placeholder '<rationale>'/'<reason>' literals are rejected). The "
             "RIGHT fix for a stale-base clobber is a 3-way `git merge-file`, "
@@ -1389,6 +1389,35 @@ def main(rebind_root: bool = False) -> int:
             "must pass --files or --stdin-files (or --no-stage if files are "
             "already staged, or --patch-file for intent-manifest staging)"
         )
+
+    # SHIFT-LEFT triality-leg advisory (ddm_hw1, task #785): the Stop-hook legs
+    # (missing_legs + consumer_leg in triality_drift_detector) fire AFTER the commit
+    # lands, so a missed leg is a re-finish (the "4 backstop fires in one day" tax).
+    # This prints the SAME suggestion BEFORE the commit, so the author tags/settles
+    # now. Fail-open + read-only: never blocks, never mutates the commit; any error
+    # (import failure / git error / worktree quirk) prints nothing.
+    try:
+        import importlib.util as _ilu
+
+        _tdd_path = Path(__file__).resolve().parent / "triality_drift_detector.py"
+        _spec = _ilu.spec_from_file_location("_serializer_tdd_shiftleft", _tdd_path)
+        _tdd = _ilu.module_from_spec(_spec)
+        _spec.loader.exec_module(_tdd)
+        _dsl_files = [f for f in files if str(f).startswith("src/tac/witness_dsl/")]
+        _dsl_diff = ""
+        if _dsl_files:
+            _dsl_diff = subprocess.run(
+                ["git", "diff", "HEAD", "--", *_dsl_files],
+                cwd=str(REPO_ROOT),
+                capture_output=True,
+                text=True,
+                timeout=10,
+            ).stdout
+        _owed = _tdd.owed_legs_line(args.message.splitlines()[0], files, _dsl_diff)
+        if _owed:
+            print(f"[subagent-commit-serializer] SHIFT-LEFT {_owed}", file=sys.stderr)
+    except Exception:
+        pass
 
     started_iso = _now_iso()
     pid = os.getpid()

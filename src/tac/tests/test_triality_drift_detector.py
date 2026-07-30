@@ -557,3 +557,103 @@ def test_verdict_scope_violations_fail_open_on_hostile_input():
     # cases do NOT raise:
     assert D.negative_verdict_tokens([None, 123]) == ([], False)
     assert D.verdict_scope_violations(_DOC, [None, 123]) == []
+
+
+# --------------------- RECALL-DEPTH LEG (#713; ddm_hw1 task #785) ---------------------
+def test_recall_depth_ledger_append_without_recall_fires_advisory():
+    subs = ["ledger QA88: flip row to BUILT"]
+    files = [".omx/research/ddm_deferral_queue_ledger_20260729.md"]
+    appended = {files[0]: "QA88 BUILT hot-state manifest shipped"}
+    advs = D.recall_depth_advisories(subs, files, appended)
+    assert len(advs) == 1
+    assert "RECALL-DEPTH" in advs[0] and "ADVISORY (never blocks)" in advs[0]
+
+
+def test_recall_depth_dag_append_without_recall_fires():
+    subs = ["routing FEED: new landing"]
+    files = [".omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md"]
+    appended = {files[0]: "FEED: shipped a thing"}
+    assert len(D.recall_depth_advisories(subs, files, appended)) == 1
+
+
+def test_recall_depth_body_recall_token_silences():
+    subs = ["ledger QA88: BUILT"]
+    files = [".omx/research/ddm_deferral_queue_ledger_20260729.md"]
+    appended = {files[0]: "BUILT; STORES CONSULTED: memory: all_arms; per [[foo]]"}
+    assert D.recall_depth_advisories(subs, files, appended) == []
+
+
+def test_recall_depth_subject_recall_token_silences():
+    # A recall token in the commit SUBJECT covers all appends in the window.
+    subs = ["ledger QA88 BUILT (grepped .omx/research + memory: prior work)"]
+    files = [".omx/research/ddm_deferral_queue_ledger_20260729.md"]
+    appended = {files[0]: "QA88 BUILT"}
+    assert D.recall_depth_advisories(subs, files, appended) == []
+
+
+def test_recall_depth_non_ledger_file_silent():
+    assert D.recall_depth_advisories(["x"], ["src/tac/foo.py"], {}) == []
+
+
+def test_recall_depth_is_ledger_or_dag_append_matcher():
+    assert D.is_ledger_or_dag_append(".omx/research/sub015_DAG_topaiml_x.md")
+    assert D.is_ledger_or_dag_append(".omx/research/ddm_deferral_queue_ledger_20260729.md")
+    assert not D.is_ledger_or_dag_append("src/tac/witness_dsl/foo.py")
+    assert not D.is_ledger_or_dag_append(".omx/research/some_memo_20260730.md")
+    assert not D.is_ledger_or_dag_append(None)
+
+
+def test_recall_depth_safe_wrapper_fail_open():
+    # A hostile appended_text mapping value must not escape the fail-open wrapper.
+    class Hostile:
+        def __str__(self):
+            raise RuntimeError("boom")
+
+    files = [".omx/research/ddm_deferral_queue_ledger_20260729.md"]
+    out = D.recall_depth_advisories_safe(["s"], files, {files[0]: Hostile()})
+    assert out == []
+
+
+# ------------------ SHIFT-LEFT LEG CLASSIFIER (ddm_hw1 task #785) --------------------
+def test_owed_legs_line_dsl_lever_change():
+    line = D.owed_legs_line("witness: new lever wired", ["experiments/train.py"])
+    assert "DSL" in line and "shift-left" in line
+
+
+def test_owed_legs_line_equations_measured_row():
+    line = D.owed_legs_line("witness verdict d_seg 0.0031 measured", ["experiments/x.py"])
+    assert "equations" in line
+
+
+def test_owed_legs_line_opt_out_silent():
+    assert D.owed_legs_line("witness: new lever wired [no-triality]", ["experiments/x.py"]) == ""
+
+
+def test_owed_legs_line_ordinary_chore_silent():
+    assert D.owed_legs_line("docs: fix a typo", ["docs/x.md"]) == ""
+
+
+def test_owed_legs_line_dsl_touch_satisfies_dsl_leg():
+    # A lever change that DID touch the DSL leg owes no DSL suggestion.
+    line = D.owed_legs_line("witness: new lever", ["src/tac/witness_dsl/foo.py"])
+    assert "DSL (" not in line
+
+
+def test_owed_legs_line_consumer_leg_on_public_surface_growth():
+    diff = (
+        "+++ b/src/tac/witness_dsl/new_mod.py\n"
+        "+def NewLeverFactory(x):\n"
+    )
+    line = D.owed_legs_line(
+        "witness: new lever factory", ["src/tac/witness_dsl/new_mod.py"], diff
+    )
+    assert "consumer" in line
+
+
+def test_owed_legs_line_fail_open_on_hostile_files():
+    class Hostile:
+        def __str__(self):
+            raise RuntimeError("boom")
+
+    # A hostile file entry must not break a commit — the classifier returns "".
+    assert D.owed_legs_line("witness: lever", [Hostile()]) == ""

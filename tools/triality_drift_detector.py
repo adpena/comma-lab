@@ -290,6 +290,122 @@ def consumer_leg_missing_safe(subjects: list[str], files: list[str], dsl_diff_te
         return False
 
 
+# --- RECALL-DEPTH LEG (ddm_hw1, task #785; #713 recall-depth enforcement; operator standing
+# complaint 2026-07-30 "I thought there was always a recall step"). The recall-EVIDENCE leg
+# (below, in main) checks that DECISION-CLASS docs carry a "STORES CONSULTED" line (EXISTENCE).
+# This DEPTH sibling targets LEDGER/DAG APPENDS: a new ledger row / DAG FEED whose commit
+# subject AND appended body cite ZERO prior-artifact recall (no STORES-CONSULTED, grep, memory:,
+# .omx/research path, per-[[...]] token) is an un-recalled append — the "did you check what we
+# already know?" gap. ADVISORY-ONLY by construction (fmtools law: advisory on semantic surfaces,
+# NEVER blocking): it appends to an existing block reason if one fires, else persists to the
+# durable advisory sink for the costate digest, but NEVER triggers a standalone block. ---
+
+# A ledger is any .omx/research/*ledger*.md (deferral queue, orchestration ledger, ...).
+_LEDGER_PAT = re.compile(r"\.omx/research/.*ledger.*\.md$", re.IGNORECASE)
+# Tokens that evidence prior-artifact recall was done before the append.
+_RECALL_TOKENS = re.compile(
+    r"stores?\s+consulted|recall\w*|re-?grep\w*|\bgrep(?:ped|s|ping)?\b|consult\w*|"
+    r"per\s+\[\[|memory:|\.omx/research/|prior\s+(?:artifact|memo|finding|row|work)|"
+    r"cross-?ref\w*|see\s+\.omx|corpus_query|already\s+(?:measured|built|solved|know)",
+    re.IGNORECASE,
+)
+
+
+def is_ledger_or_dag_append(f: str) -> bool:
+    """True iff a changed file is a ledger or the canonical DAG (a recall-depth-scoped append)."""
+    f = f or ""
+    return f.startswith(".omx/research/sub015_DAG_") or bool(_LEDGER_PAT.search(f))
+
+
+def cites_prior_recall(text: str) -> bool:
+    """True iff the text names any prior-artifact recall token (grep/store/memory/path/[[...]])."""
+    return bool(_RECALL_TOKENS.search(str(text or "")))
+
+
+def recall_depth_advisories(
+    subjects: list[str], files: list[str], appended_text_by_file: dict[str, str]
+) -> list[str]:
+    """ADVISORY strings for ledger/DAG appends that cite ZERO prior-artifact recall.
+
+    ``subjects`` = window commit subjects; ``files`` = window files; ``appended_text_by_file``
+    = {ledger/DAG path: its added-lines text}. Returns [] when every ledger/DAG append cites
+    recall (in the subject OR its added lines), or when there is no ledger/DAG append. Pure +
+    testable; advisory-only by construction (the caller never blocks on it). Defensive
+    ``str(... or "")`` throughout so odd input never raises."""
+    subj_recall = cites_prior_recall(" ".join(str(s or "") for s in subjects))
+    out: list[str] = []
+    for f in files:
+        if not is_ledger_or_dag_append(f):
+            continue
+        if subj_recall or cites_prior_recall(appended_text_by_file.get(f, "")):
+            continue
+        out.append(
+            f"RECALL-DEPTH (#713; operator 'I thought there was always a recall step'): the "
+            f"append to {f} cites ZERO prior-artifact recall — no STORES-CONSULTED / grep / "
+            f"memory: / .omx/research path / per-[[...]] token in the commit subject or the "
+            f"added lines. Before landing a ledger/DAG append, recall what we already "
+            f"measured/built on this topic (tools/corpus_query.py '<topic>') and name it. "
+            f"ADVISORY (never blocks)."
+        )
+    return out
+
+
+def recall_depth_advisories_safe(
+    subjects: list[str], files: list[str], appended_text_by_file: dict[str, str]
+) -> list[str]:
+    """Fail-open wrapper: any exception in the NEW leg ⇒ [] (silent), so a bug here can neither
+    block a session nor perturb the existing legs' verdict."""
+    try:
+        return recall_depth_advisories(subjects, files, appended_text_by_file)
+    except Exception:
+        return []
+
+
+# --- SHIFT-LEFT LEG CLASSIFIER (ddm_hw1, task #785; the "4 backstop fires in one day" tax).
+# The Stop-hook legs (missing_legs + consumer_leg) fire AFTER the commit lands, so a missed leg
+# is a re-finish. This pure classifier lets the commit serializer SUGGEST the same legs BEFORE
+# the commit (a shift-left of the exact same heuristics), so the author tags/settles at commit
+# time instead of being backstopped. Advisory only; the serializer never blocks on it. ---
+def owed_legs_line(message: str, files: list[str], dsl_diff_text: str = "") -> str:
+    """One-line 'triality legs likely owed' suggestion for a pre-commit advisory, or "".
+
+    Reuses the EXACT Stop-hook leg heuristics (``missing_legs`` for DSL/equations +
+    ``consumer_leg_missing`` for the consumer leg) so the shift-left suggestion matches the hook
+    that would otherwise fire post-commit. ``message`` = the commit subject; ``files`` = staged
+    files; ``dsl_diff_text`` = the staged/working DSL diff (optional; enables the consumer leg).
+    Respects the [no-triality]/[skip-drift] opt-out. Fail-open: any error ⇒ "" (never breaks a
+    commit)."""
+    try:
+        subjects = [str(message or "")]
+        if is_opted_out(subjects):
+            return ""
+        owed: list[str] = []
+        for leg in missing_legs(subjects, files):
+            if leg == "DSL":
+                owed.append(
+                    "DSL (a lever/curriculum/carrier/gauge change — add its Lever factory in "
+                    "src/tac/witness_dsl/, not just a trainer flag)"
+                )
+            elif leg == "equations":
+                owed.append(
+                    "equations (a measured finding/verdict/byte-close/exact-row — register an "
+                    "EmpiricalAnchor in src/tac/canonical_equations/)"
+                )
+        if consumer_leg_missing_safe(subjects, files, dsl_diff_text):
+            owed.append(
+                "consumer (public DSL surface grew — update a consumer surface or tag "
+                "[consumers-generic])"
+            )
+        if not owed:
+            return ""
+        return (
+            "triality legs likely owed (shift-left; tag [no-triality]/[consumers-generic] or "
+            "settle now to avoid the Stop-hook backstop): " + " · ".join(owed)
+        )
+    except Exception:
+        return ""
+
+
 # --- VERDICT-SCOPE LEG (requirement R, operator 2026-07-08: "ensure no falsifications or
 # negative interpretations made based on naive or toy or binary; many techniques have
 # multiple ways of formulation and one failure does not mean family dead"). Every negative
@@ -1046,6 +1162,28 @@ def main() -> None:
     except Exception:
         recall_missing = []
 
+    # --- RECALL-DEPTH LEG (#713; ddm_hw1 task #785; fail-open independently). A ledger/DAG
+    # append whose subject AND added lines cite ZERO prior-artifact recall is un-recalled.
+    # ADVISORY-ONLY: appended to a block reason if one fires, else persisted to the durable
+    # advisory sink for the costate digest — NEVER a standalone block trigger. ---
+    recall_depth_advs: list[str] = []
+    try:
+        appended_by_file: dict[str, str] = {}
+        for f in files:
+            if not is_ledger_or_dag_append(f):
+                continue
+            try:
+                fdiff = _git(root, "diff", f"{last_head}..{head}", "--", f).stdout
+            except Exception:
+                continue
+            appended_by_file[f] = "\n".join(added_lines_from_diff(fdiff))
+        if appended_by_file:
+            recall_depth_advs = recall_depth_advisories_safe(subjects, files, appended_by_file)
+    except Exception:
+        recall_depth_advs = []
+    if recall_depth_advs:
+        _persist_scope_advisories(root, recall_depth_advs, head)
+
     # --- VERDICT-SCOPE LEG (requirement R; fail-open independently). Deterministic
     # layer: a decision-class doc whose ADDED lines carry load-bearing negative-verdict
     # tokens must declare verdict_scope (+ family-citation + reformulation-queue rules)
@@ -1220,6 +1358,9 @@ def main() -> None:
         if fm_advisories:
             reason = (reason + " ADVISORY (verdict-scope, on-device FM — never blocking): "
                       + " | ".join(fm_advisories[:2]))
+        if recall_depth_advs:
+            reason = (reason + " ADVISORY (recall-depth #713 — never blocking): "
+                      + " | ".join(recall_depth_advs[:2]))
         print(json.dumps({"decision": "block", "reason": reason}))
         sys.exit(0)
 

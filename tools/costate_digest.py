@@ -1210,9 +1210,7 @@ def _ledger_row_is_resolution(row: dict) -> bool:
         if str(row.get(field) or "").strip().lower() in _LEDGER_RESOLVED_STATUS:
             return True
     res = row.get("resolution")
-    if isinstance(res, str) and res.strip():
-        return True
-    return False
+    return bool(isinstance(res, str) and res.strip())
 
 
 def _summarize_failure_ledger_v2(rows: list[dict]) -> dict | None:
@@ -1464,7 +1462,7 @@ def section_graph_memory() -> tuple[str | None, dict | None]:
             import datetime as _dt
             import json as _json
 
-            _cutoff = _dt.datetime.now(_dt.timezone.utc) - _dt.timedelta(hours=24)
+            _cutoff = _dt.datetime.now(_dt.UTC) - _dt.timedelta(hours=24)
             _log = npath.parent / "recall_log.jsonl"
             if _log.is_file():
                 for _row in _log.open(encoding="utf-8"):
@@ -1741,7 +1739,7 @@ def section_chain_watchdog() -> tuple[str | None, dict | None]:
         else:
             return None, None
         return line, {"scan_ts": row.get("ts"), "verdicts": verdicts}
-    except Exception:  # noqa: BLE001 — SENSE row must never break the digest
+    except Exception:  # SENSE row must never break the digest
         return None, None
 
 
@@ -2051,6 +2049,19 @@ def main(argv: list[str] | None = None) -> int:
                 print("[costate-digest] controller SENSE+DECIDE state (auto-surfaced; tools/costate_digest.py):")
                 print(_model_identity_stamp())
             print("\n".join(lines))
+            # ADDITIVE, FAIL-OPEN (ddm_hw1, task #785): the MAIN retained-reasoning
+            # manifest (compaction-cliff cure; ARC-AGI-3 retained-reasoning crosswalk).
+            # Printed AFTER the digest so a compaction-recovered session re-loads the
+            # live pids/arms/decisions/boundaries. Any failure prints NOTHING (never
+            # blinds a session start) — the whole block is guarded and never raises.
+            try:
+                import main_hot_state as _mhs  # tools/ is on sys.path (line ~48)
+
+                _block = _mhs.digest_block(max_lines=40)
+                if _block:
+                    print(_block)
+            except Exception:
+                pass
         return 0
     except Exception as exc:  # fail-open: a broken digest must never crash a session
         print(f"[costate-digest] unavailable ({type(exc).__name__}: {exc})")

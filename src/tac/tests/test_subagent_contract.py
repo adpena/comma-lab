@@ -88,8 +88,11 @@ def test_standard_contract_grounding_phrase_always_present() -> None:
 
 def test_standard_contract_blocks_separated_by_blank_lines() -> None:
     composed = sc.standard_contract()
-    # 23 blocks by default: the previous 18 plus five workflow-v2 doctrine blocks.
-    assert composed.count("\n\n") == 22
+    # 27 blocks by default (26 separators): the 25 prior blocks (this magic number
+    # had drifted stale at 22 from an earlier workflow-v2 landing that added blocks
+    # without updating it) plus the #767 original-design-authority + retained-reasoning
+    # blocks (ddm_hw1, task #785). Asserted against the live composer, not a memory.
+    assert composed.count("\n\n") == 26
 
 
 def test_review_only_names_are_subset_of_contract_names() -> None:

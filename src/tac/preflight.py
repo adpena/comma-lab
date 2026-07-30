@@ -87936,6 +87936,10 @@ _SUBAGENT_CONTRACT_REQUIRED_CONSTANTS: tuple[str, ...] = (
     "TIEBREAK_LEAST_COMPLEXITY",
     "MASTER_THESIS_FRAMING",
     "VERDICT_SCOPE_LADDER",
+    # Harness retained-reasoning + #767 original-design authority (ddm_hw1, task
+    # #785, 2026-07-30). Hardcoded here per the same anti-self-waive design.
+    "RETAINED_REASONING",
+    "RESEARCH_ORIGINAL_DESIGN_AUTHORITY",
 )
 _SUBAGENT_CONTRACT_REQUIRED_KEY_PHRASES: dict[str, str] = {
     "RESEARCH_AUTHORITY": "'$0 local' bounds spend only, never information",
@@ -87943,6 +87947,11 @@ _SUBAGENT_CONTRACT_REQUIRED_KEY_PHRASES: dict[str, str] = {
     "TIEBREAK_LEAST_COMPLEXITY": "without touching score, ALWAYS choose the least complex",
     "MASTER_THESIS_FRAMING": "formulation × realization × completeness",
     "VERDICT_SCOPE_LADDER": "INSTANCE < FORMULATION < FAMILY < PARADIGM",
+    # NOTE: RETAINED_REASONING + RESEARCH_ORIGINAL_DESIGN_AUTHORITY are in the
+    # REQUIRED_CONSTANTS list above (existence + key-phrase-in-value verified via
+    # the module's own KEY_PHRASES fallback), but deliberately NOT added here —
+    # this dict is the workflow-v2 COMPOSED-verification set (its violation text
+    # is "workflow-v2 block") and stays that exact set (a test asserts equality).
 }
 _SUBAGENT_CONTRACT_GROUNDING_PHRASE = (
     "Before reporting progress, audit each claim against a tool result"

@@ -50,6 +50,8 @@ __all__ = [
     "CONTENT_LINEAGE_CRUX",
     "CORRECT_OVER_EASY",
     "RESEARCH_AUTHORITY",
+    "RESEARCH_ORIGINAL_DESIGN_AUTHORITY",
+    "RETAINED_REASONING",
     "RETRIEVAL_FIRST_CLAUSE",
     "REVIEW_ONLY_CONSTANT_NAMES",
     "REVIEW_STATUS_CLAUSE",
@@ -390,6 +392,42 @@ CORRECT_OVER_EASY = (
     "wall met mid-solve is a missing equation to register, not a stop."
 )
 
+# --- Harness retained-reasoning + original-design authority (ddm_hw1, task #785; 2026-07-30) --
+#
+# Source: operator directive 2026-07-29 ("make you smarter and more capable and less forgetful
+# and more coherent") + the ARC-AGI-3 harness crosswalk (Bigio & Sanders 2026-07-29: two
+# settings — retained reasoning + context compaction — took GPT-5.6 Sol 13.3%->38.3% at 6x
+# fewer output tokens). An arm's reasoning dies with the arm today; the retained-reasoning
+# clause is OUR agent-side equivalent: the final message carries the live state a successor
+# would otherwise re-walk. #767 (the standing original-design authority) rides the same touch.
+
+#: Retained-reasoning handoff — the arm's live state survives the arm (ARC-AGI-3 crosswalk).
+#: Asks for CONCLUSIONS / hypotheses / next actions (NOT a reasoning transcript), so the sister
+#: gate check_no_reasoning_echo_instructions stays green (no echo-your-thinking phrasing).
+RETAINED_REASONING = (
+    "RETAINED REASONING (harness crosswalk, ARC-AGI-3): end your final message with three "
+    "labeled lines so a successor inherits your live state instead of re-walking it — "
+    "LIVE-HYPOTHESES (untested leads still worth pursuing, each with why it is plausible); "
+    "DEAD-ENDS (paths you closed, each with the reason, so no successor re-tries them); "
+    "NEXT-IF-RESUMED (the exact first action a successor would take). State conclusions, "
+    "hypotheses, and next actions in plain language — this is a handoff of WHAT you found and "
+    "WHERE to go next, not a replay of how you got there."
+)
+
+#: #767 standing original-design authority (operator 2026-07-29 verbatim). An arm asking
+#: permission to design an original is a signal the charter under-scoped it — so it ships in the
+#: contract. Memory: all_arms_online_research_and_oss_authority_standing_20260720.
+RESEARCH_ORIGINAL_DESIGN_AUTHORITY = (
+    "ORIGINAL-DESIGN AUTHORITY (#767, operator 2026-07-29 verbatim: \"Remember all always have "
+    "full research and OSS authority and authority to derive and engineer and iterate and "
+    "optimize our own variants or original\"): deriving/engineering/iterating/optimizing OUR "
+    "OWN variant or original (coder, optimizer, carrier, solver, schedule, kernel — any "
+    "surface) is in-authority BY DEFAULT whenever the found/published form is not "
+    "measured-optimal for our frozen-scorer task — never a per-arm grant to re-request. "
+    "Guardrail: an original is RACED against the incumbent on real payloads (never presumed), "
+    "priced with a real coder, honesty-labeled, and borrowed-substrate-accounted."
+)
+
 # --- Registry (consumed by tests + the preflight integrity gate) -----------------------------
 
 #: Every named contract constant this module guarantees. The preflight integrity gate
@@ -427,6 +465,8 @@ CONTRACT_CONSTANT_NAMES: tuple[str, ...] = (
     "VERDICT_SCOPE_LADDER",
     "CONTENT_LINEAGE_CRUX",
     "CORRECT_OVER_EASY",
+    "RETAINED_REASONING",
+    "RESEARCH_ORIGINAL_DESIGN_AUTHORITY",
 )
 
 #: Review-dispatch-only constants: composed by ``review_contract()``, deliberately NOT
@@ -474,6 +514,10 @@ KEY_PHRASES: dict[str, str] = {
     "VERDICT_SCOPE_LADDER": "INSTANCE < FORMULATION < FAMILY < PARADIGM",
     "CONTENT_LINEAGE_CRUX": "harvest-only signal, never a starting point",
     "CORRECT_OVER_EASY": "never go for easy - go for correct and true and understanding",
+    "RETAINED_REASONING": "LIVE-HYPOTHESES",
+    "RESEARCH_ORIGINAL_DESIGN_AUTHORITY": (
+        "derive and engineer and iterate and optimize our own variants or original"
+    ),
 }
 
 
@@ -485,8 +529,9 @@ def standard_contract(*, review: bool = True, triality: bool = True) -> str:
     fresh-context verification), the four #346 retrieval-first clauses (recursion-default,
     control laws, retrieval-first, review-status provenance), the requirement-S citation
     clause, the eight design philosophies clause (P1-P8 + clauses A/B + fmtools availability),
-    the five workflow-v2 doctrine blocks, the #405 commit-through-serializer discipline block,
-    plus the operating-manual citation.
+    the five workflow-v2 doctrine blocks, the #767 original-design-authority block, the
+    retained-reasoning handoff clause (final-message live-state carry, ARC-AGI-3 crosswalk),
+    the #405 commit-through-serializer discipline block, plus the operating-manual citation.
 
     Args:
         review: include the #337 own-round-1 adversarial-review block (default True;
@@ -512,6 +557,8 @@ def standard_contract(*, review: bool = True, triality: bool = True) -> str:
         VERDICT_SCOPE_LADDER,
         CONTENT_LINEAGE_CRUX,
         CORRECT_OVER_EASY,
+        RESEARCH_ORIGINAL_DESIGN_AUTHORITY,
+        RETAINED_REASONING,
         FRESH_CONTEXT_VERIFIER,
         RECURSION_CLAUSE,
         CONTROL_LAW_CLAUSE,
