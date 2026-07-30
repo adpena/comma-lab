@@ -25223,3 +25223,24 @@ receipts /Volumes/VertigoDataTier/pact/ddm_wr1_20260729/. [no-triality] [p0-ledg
 - Routing: scorer slot RELEASED to bc1 (§3.5 completion smokes → burn). v4e TTO-terminal
   composition deferred to the POST-BURN endpoint (running it on v4d would be superseded by the
   burn — means-discipline). QA78 FIRED-MEASURED; #779 complete.
+
+## FEED-2026-07-31-g — bc1 §3.5 measured wall + reformulation: absolute in-burn pose verdict INSTANCE-DEAD; directional-delta adopted (Option A GO)
+- **Pointer honesty: 0.1910828242 [contest-CPU] UNMOVED.** All rows [macOS-CPU advisory].
+- **MEASURED (bc1, 4 solvers, GT frames, bounded stage-exit budget):** Adam warp-pose6 ~10 ·
+  FD-LM-GN ~30 · analytic-STE-LM-GN ~29 (200→48 in 1 relin, then stalls) · p3v2's own production
+  s0_cosine6_solve ~11-16 (its memo records plateau 38.06). Diagnostic: GT_f0+GT_f1 → d_pose
+  9.7e-12 (target reachable) but pose recovery from a SINGLE seg-rendered frame plateaus ~10-38
+  → the wall is FUNDAMENTAL to the vehicle, not solver quality. Trustworthy d_pose exists only
+  after the FULL joint re-solve (pose+photometric+TTO on fixed f1 = the post-burn chain).
+- **Honest correction:** MAIN's recall steer predicted the production GN solver would converge —
+  WRONG, measured; the steer's "verdict needs values not gradients" frame survives.
+- **QA77 amendment (bc1 lands the ledger flip):** LITE-absolute composed-S stage verdict =
+  INSTANCE-DEAD (this vehicle, pre-joint-re-solve) · LITE-delta ADOPTED (d_pose delta vs the v4d
+  per-pair baseline at fixed reference — cancels the offset, tracks the Knee-A externality SIGN)
+  · FULL bilevel (v6, differentiates through the JOINT solve) unaffected.
+- **MAIN decision: Option A GO** with pre-registered rules — directional-only (never composed
+  into S) · trend-based stage signals (2+ worsening exits → surface mid-burn, advisory) ·
+  instrument-noise falsifier before fire (below floor → silent degrade to Option B, run continues)
+  · QA66 pose-tail subset first. Bounded-risk note: the keep-set is the SAME cell_drop50 support
+  already measured pose-recoverable through both gates (0.0086-0.0104); the burn changes token
+  VALUES, which is what the delta watches. Sequence: delta wire → noise floor → reseal → FIRE.
