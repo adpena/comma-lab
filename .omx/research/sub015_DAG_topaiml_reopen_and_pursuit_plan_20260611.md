@@ -25344,3 +25344,32 @@ object/structure/operator-tomography/process, SEALED at round-3 zero-new-sites).
 - **OWED:** the 4 races BUILT not MEASURED (no d_seg/byte row until MAIN fires n600 + byte-closes); pointer
   moves only through that. QA75/80 real scorer pass post-burn. ph3_s10 stubs NOT folded (my flags ≠ the stub
   flags). QA81 stays blocked on the parallel-session WIP.
+
+## FEED-hw1 (2026-07-30) — MAIN cognition/harness wave BUILT (task #785 / QA88): retained-reasoning + compaction crosswalk applied to OUR agent apparatus
+
+**Pointer 0.1910828242 [contest-CPU] UNMOVED — apparatus wave, MEANS not end.** STORES CONSULTED:
+CLAUDE.md subagent-contract/drift-detector/serializer non-negotiables; docs/operating_manual_craft_handoff.md;
+memory:all_arms_online_research_and_oss_authority_standing_20260720 (#767 verbatim); .omx/research/ddm_deferral_queue_ledger_20260729
+(QA87/QA88/QD05); ~/.codex/config.toml + tools/codex_delegate.py. External: OpenAI ARC-AGI-3 (Bigio & Sanders
+2026-07-29) — 2 harness settings tripled GPT-5.6 Sol at 6× fewer tokens.
+
+- **BUILT+TESTED (4 of 6):** (1) `tools/main_hot_state.py` — MAIN retained-reasoning manifest (typed sections:
+  live_processes/live_arms/open_operator_decisions/monitor_tasks/next_boundaries/freshest_receipts/pointer_line;
+  atomic fcntl-locked write) wired FAIL-OPEN into `tools/costate_digest.py` SessionStart (compaction-cliff cure).
+  (2) `tac.subagent_contract` RETAINED_REASONING clause (final-message LIVE-HYPOTHESES/DEAD-ENDS/NEXT-IF-RESUMED —
+  no reasoning-echo) + #767 RESEARCH_ORIGINAL_DESIGN_AUTHORITY; both gates green, 74 tests pass. (4) #713
+  recall-DEPTH leg in the drift detector (ledger/DAG append citing zero prior-artifact recall → ADVISORY, never
+  blocks). (5) shift-left `owed_legs_line()` — serializer SUGGESTS owed triality legs pre-commit (the 4-backstop-
+  fires/day tax), reusing the exact Stop-hook heuristics. +14 drift tests.
+- **BUILT (research, no code):** (3) `.omx/research/ddm_hw1_task_archive_manifest_20260730.md` — 67 defensible
+  SAFE-TO-ARCHIVE task#s (explicit `task #NNN` commit custody) + 60-row DO-NOT-ARCHIVE guardrail; PRIMARY finding =
+  `#NNN` is a shared task/catalog/PR/equation number-space so bare-#NNN custody is unreliable (MAIN cross-refs the
+  harness list). (6) QA87 codex audit: model/reasoning_effort=xhigh/service_tier = SET-DERIVED; automatic-compaction
+  = DEFAULT-UNRACED (catalog default per config comment, manual override risks truncation); reasoning-retention not
+  CLI-exposed. Named race: codex-compaction-instrumentation (future sol arm A/B, enumeration only).
+- **triality legs:** DSL untouched (apparatus-only, no lever/curriculum); equations untouched (no measured d_seg/
+  d_pose finding — this is harness code). Pure-build .py commits carry [no-triality]; the contract/preflight touch is
+  apparatus not a DSL lever. Memos: ddm_hw1_main_cognition_harness_wave_20260730 + ddm_hw1_task_archive_manifest_20260730.
+- **OWED:** archive DECISION stays harness-side (MAIN prunes using the manifest); the compaction A/B is a future
+  arm (needs codex --json instrumentation first); pointer moves only through a byte-closed n600 exact row, untouched
+  here. Burn pid 68621 untouched (no scorer/MLX/Metal).
