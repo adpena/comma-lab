@@ -359,3 +359,53 @@ sg1's n600 typing (memo commit da493fad26, endpoint d_seg 0.00388778) CORRECTS t
 **≥96.1% of flips are attackable gap (25.58×), ≤3.9% exact-solve floor**; 100% of flips sit in
 the bottom GT-margin decile (the separatrix annulus) — which is why margin-weighted loss is the
 #1 form fix in the QA24 config (piece 2 of the bc1 build). §8's plan is otherwise unchanged.
+
+## §10 (operator 07-31, 10th convocation: "even better on Seg while possibly doing photometrics, front loaded")
+
+**Seat map against the typed state** (seg 0.4312 of measured 0.9640; QA74: 96.1% amortization gap
+25.58× vs the EXACT C1 teacher · Lane 38.7% of flips, reach-limited 69.5× · 100% of flips in the
+bottom GT-margin decile; pose L68 photometric wall; pp1 correction-band lemma = registered LAW;
+SegNet-fractal flip-distance law d=|m|/‖Δw‖):
+
+1. **HINTON/SCHMIDHUBER — teach from the solve, not from GT (QA75 FIRED-ROUTING).** The burn
+   currently trains toward GT argmax through (margin-weighted) CE; the measured wall is REACH +
+   margin. The EXACT solve's frames are a teacher that already realizes 1.52e-4 THROUGH the real
+   path — and at compress time we may run SegNet on them and distill the LOGIT/MARGIN field:
+   soft targets that encode the boundary-annulus structure exactly where 100% of flips live, and
+   whose margins are FEASIBLE by construction (GT margins may be unreachable; solve margins are
+   realized). Front-loaded: distill dominates the OPENING stages, anneals toward CE/margin later.
+   The single largest named seg move; teacher rate is free (compress-time only, nothing ships).
+2. **THE DUAL-USE EUREKA — margin-bounded photometric shaping (QA80, the operator's "while
+   possibly doing photometrics").** The band lemma + flip-distance law define, per pixel, an
+   amplitude budget below which NO argmax flip can occur (bottom-decile pixels ~excluded; the
+   top-9-decile interior has measured slack). Inside that budget, luma/chroma edits are
+   PROVABLY seg-free — so a low-weight photometric term (warp/GT-luma consistency, Horn's
+   pose-legibility constraint) confined to the margin-slack region carries pose-legible
+   structure at ZERO seg cost. This dissolves the L68 wall FROM BIRTH: burn frames stay
+   pose-recoverable, the delta instrument reads cleaner, and the post-burn joint re-solve
+   starts near the tube instead of rescuing from ~10-38. NOT resize-null (that is invisible
+   to PoseNet too) — margin-slack, which PoseNet sees.
+3. **LANE = PREDICT-THEN-INNOVATE AT CLASS LEVEL (QA81).** Reach-limited means the conv
+   renderer cannot paint thin structures — so stop asking it to: composite the byte-closed cb1
+   Lane band carrier (1-2KB; Lane = 53% of enemy) INTO the render during training, renderer
+   learns the RESIDUAL. The v8 per-class-carrier doctrine landing inside the burn; the §9
+   receiver-prediction-in-loop principle at class granularity. Sister receipts: sp1 contour
+   coder, op1 lane geometry, #203/#213 rasters.
+4. **FRONT-LOADED = CURRICULUM ORDER + MEASUREMENT ORDER.** Curriculum: distill + carrier +
+   photometric terms dominate the opening stages (highest-signal gradients while plastic),
+   anneal to margin-CE + QAT-lattice later — sched1's event schedule already carries the
+   skeleton. Measurement: anything cheap runs BEFORE the freeze; anything not provably cheap
+   goes to burn-2, which is CHEAP because the burn is resumable + warm-startable (per-stage
+   EMA checkpoints are the P0 law) — burn-2 warm-starts from burn-1's endpoint with the next
+   lever ON. The critical path is never held hostage to front-loading.
+5. **Considered + held (scope honesty):** curvelet basis (raced, needs its own A/B, not
+   by-citation); chroma-for-seg audit (no QA74 evidence flag — watch, don't build); seg-token
+   TTO (superseded by the burn; v19c asymptote measured); direct-partition route (pp1 priced,
+   settled); Mumford-Shah/clDice/#218 margin-field levers (BUILT, default-off — bc1 may
+   consult the lever registry but no new build).
+
+**ROUTING (binding):** bc1 gets the menu with a HARD TIMEBOX — QA75-lite (solve-frame regression
+target using the cached solve frames; logit-distill if the cache is cheap) + QA80 (margin-bounded
+photometric term; #580/band-lemma objects exist) + QA81 (carrier composite) are OPTIONAL-IF-CHEAP
+pieces; anything exceeding the timebox is NOT built now but becomes the burn-2 headline list, in
+this order: QA75 > QA81 > QA80. The burn fires without further sign-off either way.

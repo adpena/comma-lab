@@ -25244,3 +25244,14 @@ receipts /Volumes/VertigoDataTier/pact/ddm_wr1_20260729/. [no-triality] [p0-ledg
   · QA66 pose-tail subset first. Bounded-risk note: the keep-set is the SAME cell_drop50 support
   already measured pose-recoverable through both gates (0.0086-0.0104); the burn changes token
   VALUES, which is what the delta watches. Sequence: delta wire → noise floor → reseal → FIRE.
+
+## FEED-2026-07-31-h — 10th convocation (seg + photometrics, front-loaded): ph3 §10
+- **Pointer honesty: 0.1910828242 [contest-CPU] UNMOVED.** Ranked from the typed state: QA75
+  teach-from-the-solve (feasible-margin logit distill, opening-stage dominant — the 25.58× gap's
+  named cure) > QA81 Lane carrier composite in-burn (reach-limited class gets its explicit 1-2KB
+  carrier; renderer learns residual) > QA80 margin-bounded photometric shaping (band lemma +
+  flip-distance law ⇒ provably seg-free pose-legibility from birth — the L68 wall dissolved
+  inside the amplitude budget, PoseNet-visible not resize-null). Front-loaded doctrine: cheap →
+  pre-freeze; else burn-2 warm-start headline (resumability makes burn-2 cheap — critical path
+  never hostage). Held w/ scope honesty: curvelet-by-citation, chroma-audit (no QA74 flag),
+  seg-TTO (superseded), #218 built-default-off levers.
