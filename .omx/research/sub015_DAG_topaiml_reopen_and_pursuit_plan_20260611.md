@@ -25112,3 +25112,39 @@ DROPPED stream (never sum). **Bottom line: rate lever real+large; exact S is POS
 rate-bound; rung DONE at build level, pointer UNMOVED 0.1910828242 [contest-CPU]; next = MAIN
 fires 2 staged gates (~34 min).** Memo .omx/research/ddm_wr1_reverse_waterfill_20260729.md;
 receipts /Volumes/VertigoDataTier/pact/ddm_wr1_20260729/. [no-triality] [p0-ledger-ok]
+
+## FEED-2026-07-30-b (MAIN): the 07-30 pose-physics arc — v4b composed gate FIRED + three honest law-overturns [pointer 0.1910828242 [contest-CPU] UNMOVED; all rows macOS-CPU advisory]
+
+- **v4b composed gate STAGED+FIRED (running):** Knee-A base × full-600 re-solved pose × two-plane
+  STATIC-horizon (v=437 DERIVED from intrinsics, 0 mask bytes, rule-118 free) × ~75B selector.
+  Archive 274,479 B sha 3b3a4abf; predicted composed S **1.5343** (seg 0.5537 exact-at-wr1-gate +
+  pose 0.7978 per-pair realized + rate 0.1828 recomputed) = −0.722 vs ref 2.2566. REALIZABLE beats
+  the illegal GT-mask UB by −0.180 (physics-beats-semantics held on the knee base; qa45 mechanism).
+  Knee-A REJECT was stale-params INSTANCE (ck1: tail re-solve parity 0.98× vs full base).
+- **Photometric family MEASURED (pm1, operator "Also, photometric"):** QA44 rung-B auto-exposure
+  gain/bias improves 112/112 (0 degradations), composed A+B pose member 0.7229→0.6189 = −0.1039 S
+  at ≤4 B/pair → banked v4c rung QA62 (v4b receiver was frozen; no churn). Five prior families
+  measured EMPTY (Bayer/sensor-noise/vignetting/radiometry/mount-yaw). Mount pitch NULL.
+- **PoseNet inverted (pi2, operator prompt #1):** head exactly rank-6 ill-conditioned (cond 24.8);
+  composed exact input null 80.7%; p0 dominates ~50×, rotations p3-5 input-near-null (~1/300×,
+  input-side confirmation of s_r=0); 99.3% LUMA (pose chroma-carriers dead); ~52% frame_0 (seg-free
+  steering surface); steering is uint8-REALIZATION-limited (tangent over-predicts 3-10×). PH-1
+  fixed shared basis FALSIFIED (k=8 → 36%); surviving cheaper path = receiver-DERIVED per-pair
+  Jacobian basis (~1-2 coeffs/pair) → QA47 re-aimed. dim0 f16-MARGINAL: 1 ulp ≈ 0.040 S.
+- **Three law-overturns (kl1 + gr1, negatives=signal):** (1) ξ-trajectory law FALSIFIED at the
+  stored representation — solver output is WHITE (std(diff)/std 1.14-1.40); per-pair solving
+  launders smooth physics into white params → representation-design principle: constrain the
+  solver to the law's manifold, don't fit 600 independent solutions. Byte-plane codec wins
+  (−880 B lossless); spline/AR/rank-1 coders LOSE. (2) selector-from-yaw FALSIFIED (98/112
+  mispredict) → colex sparse set ~47 B. (3) the "98% rank-1 dim-0" was substantially a SCALE
+  artifact (standardized SVD [0.71,0.15,0.10]) — mechanism reading survives, compression reading
+  dead; QA61 flagged for v4c adjudication. PLUS gr1: token-FINER granularity DOMINATED, QA07
+  nested-rung DOMINATED, QA11 continuous-log-bit law INSTANCE-OVERTURNED through real coder+render
+  — **cell-drop is the rate frontier** (knee cell_drop50 359,221 B @ n600 d_seg 0.004310 =
+  −0.098 seg+rate, byte-closed a6398e44); QA08 STAYS CLOSED; QA24 re-aimed COARSER (re-burn class).
+- **Composed pose axis (all per-pair realized):** warp 1.4881 → P0 1.2630 → two-plane-static
+  0.7978 (knee, shipping) → +A/B photometric ≈0.62-class (v4c, measured on full base) — ~58% of
+  the pose member removed at ≤10 KB marginal. Verification authority = the running n600 gate.
+- Next: gate verdict (measured-vs-predicted per axis = composition finding) → v4c rung stack
+  (QA62 A+B · kl1 lossless trio · QA47 receiver-derived-basis k-sweep · QA59/60 · effective-quantum
+  re-solve ~0.03 S) → gr1 coarser re-burn fork (operator-GO class if it demands training).
