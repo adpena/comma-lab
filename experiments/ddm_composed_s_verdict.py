@@ -175,24 +175,70 @@ class ComposedSVerdict:
 
     # ---- numpy realized warp (two-plane static compose; mirrors v4c Decoder._warp_pair) --- #
     def _warp_f0(self, f1_u8: np.ndarray, pose: np.ndarray, a: float, b: float,
-                 quantize: bool) -> np.ndarray:
-        """Realized frame_0 = two-plane warp(frame_1, pose6) then photometric a*.+b, then uint8.
-        ``quantize`` True applies the SHIPPED f16 pose/(a,b) quantization (final realized eval);
-        False keeps full precision (the FD-Jacobian solve, so f16 granularity never swamps eps)."""
+                 quantize: bool, s_t: float = 1.0, sel: int = 1) -> np.ndarray:
+        """Realized frame_0 = warp(frame_1, pose6, s_t, sel) then photometric a*.+b, then uint8.
+        ``s_t`` (translation scale) + ``sel`` (0=single ground plane, 1=two-plane far compose)
+        match the v4c/v4d per-pair decode geometry when reproducing a REFERENCE warp (the delta
+        instrument); the default (1.0, 1) is the two-plane self-contained solve geometry.
+        ``quantize`` True applies the SHIPPED f16 pose/(a,b) quantization."""
         pw = self._pw
         p = np.asarray(pose, np.float64)
         if quantize:
             p = p.astype(np.float16).astype(np.float64)
             a, b = float(np.float16(a)), float(np.float16(b))
         f1_f = f1_u8.astype(np.float64)
-        hg = pw.pose_to_homography(p, self.K, self.Kinv, 1.0, 1.0, 0.0)
-        wg = pw.warp_rgb(f1_f, hg, self.grid)
-        hf = pw.pose_to_homography(p, self.K, self.Kinv, 0.0, 1.0, 0.0)  # far plane (s_t=0)
-        wf = pw.warp_rgb(f1_f, hf, self.grid)
-        f0f = np.where(self._far[..., None], wf, wg)
+        hg = pw.pose_to_homography(p, self.K, self.Kinv, float(s_t), 1.0, 0.0)
+        f0f = pw.warp_rgb(f1_f, hg, self.grid)
+        if int(sel) == 1:  # two-plane: far field uses the s_t=0 (rotation-only) plane
+            hf = pw.pose_to_homography(p, self.K, self.Kinv, 0.0, 1.0, 0.0)
+            wf = pw.warp_rgb(f1_f, hf, self.grid)
+            f0f = np.where(self._far[..., None], wf, f0f)
         if a != 1.0 or b != 0.0:
             f0f = a * f0f + b
         return pw._to_uint8(f0f)
+
+    def d_pose_ideal_f0(self, pair_idx: int, f1_cam_u8: np.ndarray,
+                        gt_f0_u8: np.ndarray) -> float:
+        """Realized d_pose of ``f1_cam_u8`` paired with the IDEAL (real GT) frame_0 — the
+        directional-delta primitive (NO warp, NO solve): d_pose(GT_f0, f1) isolates the pose
+        cost of frame_1 alone (with a perfect frame_0), so the burn's frozen sky/hood shows as
+        a positive delta vs the GT_f1 baseline. One PoseNet forward; deterministic."""
+        return float(self._d_pose_u8(self.posenet, gt_f0_u8.astype(np.uint8),
+                                     f1_cam_u8.astype(np.uint8), self.targets[pair_idx]))
+
+    def delta_verdict(self, subset_ids: list[int], burn_cams_u8: list[np.ndarray],
+                      gt_f0_u8: list[np.ndarray], baseline_dpose: np.ndarray,
+                      dseg_subset: float, total_counted_bytes: int) -> dict:
+        """§3.5 DEGRADED DIRECTIONAL-DELTA verdict (MAIN Option A, 2026-07-30). Per tail-subset
+        pair: delta[i] = d_pose(GT_f0, burn_f1) - baseline[i], where baseline = d_pose(GT_f0,
+        GT_f1) ~1e-11 (the un-dropped ideal). DIRECTIONAL ONLY (rule 1): NEVER composed into an
+        absolute pose_contrib or endpoint S — it is the SIGN + TREND of pose-recoverability (the
+        co9 Knee-A externality). The absolute bounded-solve pose_contrib is INSTANCE-DEAD on this
+        vehicle pre-joint-re-solve (measured across 4 solvers; see the module docstring)."""
+        deltas, curr = [], []
+        for i, bf1, gf0 in zip(subset_ids, burn_cams_u8, gt_f0_u8, strict=True):
+            d = self.d_pose_ideal_f0(i, bf1, gf0)
+            curr.append(d)
+            deltas.append(d - float(baseline_dpose[i]))
+        rate = 25.0 * float(total_counted_bytes) / SCORE_RATE_DENOM
+        return {
+            "delta_dpose_mean": float(np.mean(deltas)),          # DIRECTIONAL sign/trend only
+            "delta_dpose_per_pair": [float(x) for x in deltas],
+            "d_pose_ideal_f0_mean": float(np.mean(curr)),
+            "baseline_dpose_mean": float(np.mean([baseline_dpose[i] for i in subset_ids])),
+            "d_seg_subset": float(dseg_subset),                  # the trustworthy in-burn axis
+            "rate_contrib": rate,
+            "n_subset": len(subset_ids),
+            "instrument": "degraded_directional_delta_ideal_f0_vs_gt_baseline",
+            "interpretation_rules": (
+                "1. delta is DIRECTIONAL ONLY (sign+trend of pose-recoverability); NEVER an "
+                "absolute pose_contrib/endpoint S. 2. stage decisions use seg descent + "
+                "delta-TREND; monotone-worsening across 2+ stage exits => surface to MAIN "
+                "(advisory, no auto-stop). 3. if |delta| < the measured noise floor, the "
+                "instrument is uninformative (degrade silently). 4. tail subset = QA66 top-K."),
+            "score_claim": False,
+            "axis": "[macOS-CPU advisory]",
+        }
 
     def solve_d_pose(self, pair_idx: int, f1_cam_u8: np.ndarray, relins: int = 12,
                      lm_lambda: float = 1e-2, backtracks: int = 8) -> dict:

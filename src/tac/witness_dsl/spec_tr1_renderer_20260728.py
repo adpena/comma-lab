@@ -188,7 +188,8 @@ def lever_token_quant_anneal(mode: str = "at_knee") -> Lever:
                        "d_seg >= from-birth-STE at matched bytes => no basin benefit, close")
 
 
-def lever_composed_s_verdict(subset: int, subset_ids_path: str | None = None) -> Lever:
+def lever_composed_s_verdict(subset: int, subset_ids_path: str | None = None,
+                             delta_ref_path: str | None = None) -> Lever:
     """§3.5 QA77-lite: >0 = at stage exits run the bounded terminal pose+photometric solve on
     this many pairs and record COMPOSED S (100*d_seg + sqrt(10*d_pose) + rate) so stage/
     endpoint decisions see the co9 sky/hood-freeze pose cost (Knee-A externality). VERDICT-
@@ -200,6 +201,8 @@ def lever_composed_s_verdict(subset: int, subset_ids_path: str | None = None) ->
     ov = {"--composed-s-gate-subset": str(subset)}
     if subset_ids_path is not None:
         ov["--composed-s-subset-ids"] = str(subset_ids_path)
+    if delta_ref_path is not None:  # ADOPTED directional-delta (MAIN Option A)
+        ov["--composed-s-delta-ref"] = str(delta_ref_path)
     return Lever(name="tr1_composed_s_verdict", overrides=ov,
                  notes="§3.5 co9 Knee-A pricing; QA66 pose-tail subset; falsifier: composed-S "
                        "never diverges from seg-only at stage exits => free insurance that "
@@ -211,6 +214,7 @@ def qa24_composed_burn_program(variant: str, out_dir: str, mask_path: str, *,
                                w_rate: float = 0.05, rate_model: str = "entropy",
                                margin_temp: float = 1.0, composed_s_subset: int = 16,
                                composed_s_subset_ids: str | None = None,
+                               composed_s_delta_ref: str | None = None,
                                gt_cache: str | None = None,
                                resume_from: str | None = None) -> TR1RendererProgramV1:
     """The QA24 5-piece COMPOSED seg re-burn (sg1 §3): the sealed T3 skeleton + solve_project
@@ -234,7 +238,8 @@ def qa24_composed_burn_program(variant: str, out_dir: str, mask_path: str, *,
         lever_seg_margin_weight(margin_temp),
         lever_token_quant_anneal("at_knee"),
         lever_rate_in_loss(w_rate, rate_model),
-        lever_composed_s_verdict(composed_s_subset, composed_s_subset_ids),
+        lever_composed_s_verdict(composed_s_subset, composed_s_subset_ids,
+                                 composed_s_delta_ref),
     ]
     if variant == "lotto":
         levers.append(lever_lotto(118, 0.5))

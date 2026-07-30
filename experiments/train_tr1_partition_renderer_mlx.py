@@ -230,6 +230,14 @@ class TR1Config:
     # to an .npy of pair indices to use as the composed-S subset. Pose is content/tail-limited
     # (QA66: top-17 pairs = 74.3% of pose mass) => run the bounded solve on the POSE-MASS TAIL
     # for max signal/sec. None => the first composed_s_gate_subset pairs (head, uniform).
+    composed_s_delta_ref: str | None = None   # §3.5 ADOPTED form (MAIN Option A 2026-07-30):
+    # path to the GT-ideal delta reference .npz (ddm_bc1_delta_baseline.py: baseline_dpose +
+    # knee_sensitivity + tail_ids). When set, the composed-S runs the DEGRADED DIRECTIONAL-DELTA
+    # instrument (d_pose(GT_f0, burn_f1) - baseline, DIRECTIONAL ONLY — sign+trend of the co9
+    # Knee-A pose-recoverability externality; NEVER an absolute pose_contrib/endpoint S) on the
+    # ref table's knee-A tail. The absolute bounded-solve pose_contrib is INSTANCE-DEAD on this
+    # vehicle pre-joint-re-solve (measured, 4 solvers). None => the absolute composed_s (kept as
+    # reference-only; not for endpoint acceptance).
 
     @property
     def grid_h(self) -> int:
@@ -818,6 +826,11 @@ def build_argparser() -> argparse.ArgumentParser:
                     help="§3.5 subset SELECTION (MAIN QA66): path to an .npy of pair indices "
                          "(the pose-mass TAIL, top-17 = 74.3%%) to use as the composed-S "
                          "subset; None = the first --composed-s-gate-subset pairs")
+    ap.add_argument("--composed-s-delta-ref", type=str, default=None,
+                    help="§3.5 ADOPTED (MAIN Option A): path to the GT-ideal delta reference "
+                         ".npz (ddm_bc1_delta_baseline.py). When set, the composed-S runs the "
+                         "DEGRADED DIRECTIONAL-DELTA instrument (Knee-A pose externality sign+"
+                         "trend, NEVER an absolute S) on the ref table's knee-A tail")
     return ap
 
 
@@ -865,6 +878,7 @@ def main() -> int:
         token_quant_anneal=args.token_quant_anneal,
         composed_s_gate_subset=args.composed_s_gate_subset,
         composed_s_subset_ids=args.composed_s_subset_ids,
+        composed_s_delta_ref=args.composed_s_delta_ref,
     )
     (out_dir / "tr1_config.json").write_text(cfg.canonical_json() + "\n")
     telemetry_path = out_dir / "telemetry.jsonl"
@@ -1335,11 +1349,12 @@ def main() -> int:
 
     # §3.5 QA77-LITE composed-S ENDPOINT verdict (co9 Knee-A pricing). VERDICT-level: does NOT
     # change any trained token/weight/byte (the burn is seg-only). Fires only when the operator
-    # enables the bounded pose solve (composed_s_gate_subset>0). Fails GRACEFULLY (advisory).
-    # The solver is the PROVEN warp-constrained FD-Jacobian LM-GN (eg1/tt1 approach; MAIN recall
-    # steer 2026-07-30) — the razor-sharp realized pose landscape needs damped GN, not Adam. The
-    # per-pair residual_mse_traj + relins_run in the verdict SELF-DOCUMENT convergence; firing is
-    # gated on a convergence smoke (bc1), so no untrustworthy verdict reaches an endpoint decision.
+    # enables it (composed_s_gate_subset>0). Fails GRACEFULLY (advisory; NEVER crashes the burn).
+    # ADOPTED form (MAIN Option A 2026-07-30) = the DEGRADED DIRECTIONAL-DELTA when a delta-ref
+    # is set: d_pose(GT_f0, burn_f1) - baseline, DIRECTIONAL ONLY (sign+trend of the Knee-A
+    # pose-recoverability externality; NEVER an absolute pose_contrib/endpoint S — the absolute
+    # bounded solve is INSTANCE-DEAD on this vehicle, measured across 4 solvers). Without a
+    # delta-ref it falls back to the absolute composed_s (reference-only, not endpoint-acceptance).
     if cfg.composed_s_gate_subset > 0:
         try:
             from experiments.ddm_composed_s_verdict import ComposedSVerdict
@@ -1349,7 +1364,12 @@ def main() -> int:
             )
 
             n_sub = min(int(cfg.composed_s_gate_subset), cfg.num_pairs)
-            if cfg.composed_s_subset_ids is not None:  # MAIN QA66 pose-mass tail
+            delta_ref = (np.load(cfg.composed_s_delta_ref)
+                         if cfg.composed_s_delta_ref is not None else None)
+            if delta_ref is not None:  # ADOPTED: knee-A tail from the reference table
+                sub_ids = [int(i) for i in delta_ref["tail_ids"].ravel()[:n_sub]
+                           if 0 <= int(i) < cfg.num_pairs]
+            elif cfg.composed_s_subset_ids is not None:  # MAIN QA66 pose-mass tail
                 sub_ids = [int(i) for i in np.load(cfg.composed_s_subset_ids).ravel()[:n_sub]
                            if 0 <= int(i) < cfg.num_pairs]
             else:
@@ -1371,12 +1391,18 @@ def main() -> int:
                 if live is not None:
                     ema_restore(model, live)
             verdict = ComposedSVerdict(cfg.num_pairs)
-            if verdict.available:
-                receipt["composed_s_verdict"] = verdict.composed_s(
-                    sub_ids, cams, dseg_sub, total_bytes)
-            else:
+            if not verdict.available:
                 receipt["composed_s_verdict"] = {"skipped": verdict.reason,
                                                  "score_claim": False}
+            elif delta_ref is not None:  # ADOPTED directional-delta
+                gt_f0 = open_stored_npy_memmap(args.gt_cache, "gt_f0")
+                gt_f0_sub = [np.asarray(gt_f0[i], dtype=np.uint8) for i in sub_ids]
+                receipt["composed_s_verdict"] = verdict.delta_verdict(
+                    sub_ids, cams, gt_f0_sub, delta_ref["baseline_dpose"],
+                    dseg_sub, total_bytes)
+            else:  # reference-only absolute solve (NOT endpoint acceptance)
+                receipt["composed_s_verdict"] = verdict.composed_s(
+                    sub_ids, cams, dseg_sub, total_bytes)
         except Exception as exc:  # advisory instrument NEVER crashes the burn
             receipt["composed_s_verdict"] = {"error": repr(exc), "score_claim": False}
 
