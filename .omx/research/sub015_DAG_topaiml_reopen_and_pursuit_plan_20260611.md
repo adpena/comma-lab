@@ -25461,3 +25461,17 @@ schema ddm_wr1_realized_gate.v1) per gc9 row-1 + su2 stage-1 + Hotz dissent. All
 - OWED (defer-at-source): gc9 op-routable #3 product-law canonical-equation registration + Δlog-c telemetry — owner MAIN, next boundary commit (ledger row updated).
 
 pointer 0.1910828242 [contest-CPU] UNMOVED
+
+
+## FEED-ea1 (2026-07-30) — Einsteinian reformulation audit of all current negatives (operator-convened)
+
+Memo `.omx/research/ddm_ea1_einsteinian_negative_audit_20260730.md`. Headlines: (1) Gate-B truncation
+negative reformulated — rate must fall IN the representation, never by post-hoc deletion (instance scope;
+c=0.1164 rose). (2) The two-endpoint "wall" already dissolved into the product-law slope (×0.60/burn,
+×17.5 to bar) — recorded as the week's method template. (3) NEW TIGHTENING: the correction PINCER —
+ms2r/pf3 uphill at high base × QA03/04 break-even at in-band base = post-hoc correction streams closed at
+FORMULATION scope on this vehicle (both regimes measured); live homes are in-loop only (QA81 carrier
+composite, terminal pose solve). (4) su2's joint-co-location constraint reformulates into a burn-3 config
+REQUIREMENT (QA80 pose-legibility from birth). (5) Apparatus-negative class healthy: 4 instrument
+corrections → same-day laws. Open metric question = f (pj1 LIVE). verdict scopes declared per row.
+pointer 0.1910828242 [contest-CPU] UNMOVED
