@@ -25385,3 +25385,41 @@ qa86_live_config_pin lever. INCIDENT: first resume (pid 23199) trained CE agains
 killed ~ep202, trainer fixed 6b546da198 (resume_form_reanchor), re-fire VERIFIED (tau_softplus, loss 0.99→0.875
 settling). Cost ~6 epochs + 15 min. verdict_scope: instance — the #517-twin resume-form defect in train_tr1_partition_renderer_mlx.py (fixed 6b546da198, re-fire VERIFIED); no formulation/family/paradigm negative in this FEED. Ledger QA86c-FIRED (7b45e3cd37). Equations leg: rowband_flip_mass law
 exported+REGISTERED (f2482dc3b2). Pointer 0.1910828242 [contest-CPU] UNMOVED; all rows [macOS-CPU advisory].
+
+## FEED-su2 (2026-07-30) — post-burn pose program adjudicated; honest v4d warp-tail solver/receiver BUILT
+
+- **Pointer honesty:** official competitive bar ~0.172141; custody-local 0.1910828242
+  [contest-CPU] UNMOVED. `[macOS-CPU advisory]`, `score_claim=false`; no scorer, PoseNet,
+  Metal, live-burn touch, dispatch, or evaluator row in this arm. Burn-1 `d_seg=x` remains
+  UNKNOWN; old v4d `.00431179` is forbidden as a substitute.
+- **Ordered #782 program:** freeze/hash final burn archive → select/rebuild **WR1 A XOR B before
+  pose** (B is the only unchanged gate with target-capable rate; A's 274,333 B rate alone
+  exceeds the official bar) → fresh n600 geometry best-of on that exact base → TT1 pose-only
+  → TT1 joint realized best-of → QA66/photo refit with OFF → terminal TT1 finish →
+  same-output representation race → public parseback+n600+exact evaluator. Geometry/TT1/
+  pose6/QA66 are overlapping pools and historical deltas are never summed.
+- **Arithmetic:** `S_g=100x+sqrt(10*d_pose)+r_g+(25/37545489)*delta_bytes`;
+  `r_A=.182667084187`, `r_B=.116244324318`. A needs at least 15,809 B more removal even
+  at zero distortion to reach `.172141`. B requires
+  `100x+sqrt(10*d_pose)<.055896675682` for the official bar and
+  `<.033755675682` for sub-.15. Every banked nonideal pose term is already above `.172141`,
+  so all cited rows rank mechanisms only; a fresh joint descent is mandatory.
+- **BUILT+TESTED:** `experiments/ddm_su2_qa43_tail_solver.py` plus the shipped
+  `inflate_runner_v4d_qa43_tail.py` receiver and scorer-free tests. Strict n600,
+  atomic/resumable k=56→112→200; signed-int4 R7 SMEVR/Brotli race; exact 75-B map;
+  same-codec null accounting; whole-action >600 B/admitted-pair falsifier; full-n600
+  active/inactive/frame1/codec closure; source hashes; direct public
+  `Decoder(extracted_archive)` nonzero positive control. Real v4d validation PASS on
+  360,238-B parent `f1f328806246...`: SMEVR 360,719 B / Brotli 360,720 B. This is
+  receiver closure, not a pose result.
+- **Scoped negatives:** `verdict_scope=NO_VERDICT_IMPLEMENTATION_CUSTODY` for the distinct
+  QA43 free-frame0 counterfactual: this build is explicitly same-pool `warp-tail`, never
+  free-frame0. `verdict_scope=DERIVED_UNBUILT` for QA68. PC1 remains typed/no-descent;
+  SC1 remains a coding representation without corrected endpoint; EG1 fixed cosine6 is
+  instance-dead while its acceptance contract survives. FR1 supplies
+  `NO_VERDICT_DATA_CUSTODY` on base dependence; PP1 band-lemma economics apply only to
+  correction-support position coding, not these pose members.
+- Canonical program/evidence:
+  `.omx/research/ddm_su2_pose_endgame_program_20260730.md`. MAIN landing review remains
+  mandatory. Pure-build code is `[no-triality]`; this canonical FEED is the graph leg and
+  no new empirical equation is claimed.
