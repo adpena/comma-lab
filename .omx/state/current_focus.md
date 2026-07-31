@@ -1,4 +1,28 @@
-# Current Focus - 2026-07-31 (burn-4 SEALED+HELD: R6+lane-guard config, awaiting lg1 fold)
+# Current Focus - 2026-07-31 (lg1 LANDED → b4s resumed: fold → re-seal → re-smoke → RE-FIRE burn-4)
+
+> **lg1 (#808) LANDED (c009a2e123/c66acf4d79/8afe941864/9ac4aff09d):** scorer-coordinate
+> lane-guard WIRED — λ_Lane primal-dual (budget 0.12589 S custodied via
+> dsl_custodied_scalar_identity_v1, = xp1's exact ep641 Lane level; η_λ 66.2252 derived
+> from the measured 0.00151 unprotected erosion; step cap 0.1/gate, λ_max 5.0; dual reads
+> the a1 gate's EXISTING realized argmax = zero new scorer passes) + born-lane protection
+> mask (×1.19607 rank-4 head sensitivity) + PIXEL margin floor (p10 of Lane-restricted
+> QA80 margins, derived at first gate). DEFERRED: gradient surgery (~1.8× step tax) +
+> per-component rank-4 hinge wiring (helper landed+tested, insertion point named).
+> Byte-identity: structural default-off + ep0 realized d_seg BIT-EQUAL 0.5078303019205729
+> across 8 arms (vehicle is rerun-nondeterministic on both devices — pre/post-OFF inside
+> that scatter). 3 DSL Lever factories lever_lane_guard_{lambda,born,margin_floor} +
+> --lane-guard-lambda-init warm-λ rollback path. Custody ddm_lg1_20260731/ + lg1.done.
+> **HANDOFF EXECUTED:** #808 completed · b4s (a82f149e…) RESUMED with the turnkey fold
+> instruction (verify argparse → 3 levers into ticket builder → flip LG1_DUAL_ENGAGED →
+> re-seal fresh hash → bounded re-smoke ΔS<0 → RE-FIRE under standing GO, daemon+markers
+> burn4.done/ALARM + LANE-EROSION guard armed). NEXT WAKE: b4s fire receipt (then P0
+> ledger + marker watch) or burn4.done endpoint. **NEW (operator 07-31): #809 ddm_cg1**
+> registered — generalized per-class/per-edge guard LEDGER (targets/caps/duals per
+> class+edge+saddle vs realized outcome+telemetry+archive), gated on burn-4 endpoint
+> telemetry as its calibration table; burn-4 seal untouched (Lane = the one measured need).
+> Pointer 0.1910828242 [contest-CPU] UNMOVED.
+
+# Historical - 2026-07-31 (burn-4 SEALED+HELD: R6+lane-guard config, awaiting lg1 fold)
 
 > **b4s LANDED (e53c0720bf/e5edf0f354/18ee715068, #807 blocked-on-lg1):** all skeleton
 > slots FILLED (xp1 P 0.04401 S w/ per-class [Road .188, Lane .126, Undriv .056, Mov
