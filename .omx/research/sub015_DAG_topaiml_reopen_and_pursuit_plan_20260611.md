@@ -25863,3 +25863,17 @@ memos + L68/ea1-N3 + the QA24 burn window receipt):
   receipts alone.
 
 pointer 0.1910828242 [contest-CPU] UNMOVED
+
+
+## FEED-triality-pa1r (2026-07-30) — triality-leg record for the pa1r additive-S analyzer extension (apparatus)
+
+- EQUATIONS leg: the additive-S verdict authority the analyzer now enforces is ALREADY registered — the
+  ddm_gc9_seg_rate_product_law_v1 DOMAIN REFINEMENT event (2026-07-30, nv1 rung table 838273e222 as the
+  measured anchor: c excluded from ranking/allocation; additive S sole decision authority). No new
+  equation owed; the analyzer is the CONSUMER of that refinement, not a new finding. Race verdict rows
+  will register their own anchors at pa1r landing.
+- DSL CONSUMER leg: the pa1b/pa1r Pool-A DSL surfaces (ax1_pool_a_levers/race) surface through
+  lever_registry.completeness() + describe() generic introspection — [consumers-generic] asserted;
+  dashboard/costate render via the registry path, no bespoke consumer edit owed.
+
+pointer 0.1910828242 [contest-CPU] UNMOVED
