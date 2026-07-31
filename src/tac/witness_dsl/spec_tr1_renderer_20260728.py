@@ -485,6 +485,34 @@ def lever_delta_group_sparsity(weight: float, *, engage: str = "after_base_stabi
         })
 
 
+def lever_telemetry_v9_port(state: str = "on") -> Lever:
+    """ddm_tp1 (#804) v9-line confound-cure TELEMETRY PORT (vh1 row 7; burn-4 §3.1 prereq 1).
+
+    ``state='on'`` emits ADDITIVE read-only rows to telemetry.jsonl — per-term ``loss_terms``
+    (#304), ``term_domination`` + ``term_inert`` alarms (#321), a #404 positive-control
+    sentinel, and canonical ``lever_engage`` companions (Q7).  Burn-4's F1–F4 halt rules need
+    these SIGNALS to EXIST (the guards are only as good as the telemetry that trips them).
+
+    This is OBSERVABILITY, not a score-affecting lever: it is a DSL Lever ONLY so the DSL holds
+    every trainer flag (never-invent-flags / config-orphan law) and so a sealed ticket can turn
+    it on explicitly.  It defaults ``off`` at the TRAINER argparse for the sealed-r1c-lineage
+    BYTE-IDENTITY guarantee (the flag is threaded via args, never TR1Config, and new rows go to
+    tlog/JSONL only, never the checkpoint-baked telemetry_tail => trained/checkpoint bytes are
+    flag-invariant).  This is the default-off-is-orphan reconciliation's SECOND case, recorded:
+    score-neutral telemetry is off here NOT by orphaning but because a sealed live run demands
+    trained-byte invariance — a controller/ticket turns it on on-demand.  No falsifier (read-only
+    telemetry never moves S)."""
+    if state not in ("off", "on"):
+        raise ValueError("telemetry_v9_port state is off|on")
+    return Lever(
+        name=f"tr1_telemetry_v9_port_{state}",
+        overrides={"--telemetry-v9-port": state},
+        notes="ddm_tp1 v9 telemetry port (loss_terms #304 + term_domination/term_inert #321 + "
+              "#404 positive-control + Q7 lever_engage). Observability-as-Lever: default-off for "
+              "sealed-lineage byte-identity, controller/ticket turns on on-demand (read-only; "
+              "no falsifier — telemetry never moves S)")
+
+
 def qa24_composed_burn_program(variant: str, out_dir: str, mask_path: str, *,
                                epochs: int = 400, max_wall_minutes: float = 480.0,
                                w_rate: float = 0.05, rate_model: str = "entropy",

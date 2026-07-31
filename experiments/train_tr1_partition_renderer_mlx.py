@@ -992,6 +992,78 @@ def a1_adjudicate(prev: dict[str, Any] | None, cur: dict[str, Any],
 
 
 # ---------------------------------------------------------------------------
+# ddm_tp1 (#804) — v9-line confound-cure TELEMETRY PORT (vh1 row 7; burn-4 §3.1).
+# Pure / MLX-free / unit-tested row + alarm builders. Emitted by main() ONLY when
+# ``--telemetry-v9-port on`` (default off => byte-identical trained/checkpoint bytes;
+# the flag is threaded via ``args`` ONLY, never TR1Config, and new rows go to the
+# telemetry.jsonl via ``tlog`` ONLY — never ``telemetry_tail`` (which is baked into
+# the checkpoint meta), so checkpoints are FLAG-INVARIANT).  The reusable Q1-Q7
+# producers (``term_inert_rows``, ``lever_engage_row``, ``deterministic_strata``,
+# ``ProducerResumeState``) live in ``tac.witness_control.telemetry_producers`` and the
+# #404 positive-control canary in ``tac.witness_control.verdict_trend_alarm`` — this
+# is a PORT (reuse the v9 producers), not a reimplementation.  READ-ONLY / score-neutral.
+# ---------------------------------------------------------------------------
+# The exact top-level addends of ``batch_loss`` (mean per-pair seg distortion +
+# w_rate*rate surrogate + delta_sparsity_weight*group-L2).  "seg" is the distortion
+# term (KD distill, when active, folds into it — it is added inside ``pair_loss``).
+TR1_LOSS_TERM_KEYS: tuple[str, ...] = ("seg", "rate", "delta_sparsity")
+# (#321) one post-weight addend dominating > FRAC of the loss for >= MIN_ROWS sustained
+# rows => a "scored seg signal may be a passenger" alarm (mirrors v9 ``_TERMDOM_FRAC``).
+TR1_TERMDOM_FRAC = 0.40
+TR1_TERMDOM_MIN_ROWS = 3
+
+
+def tr1_loss_terms_row(terms: dict[str, float], total: float, *, ep: int,
+                       accum_batch: int, accepted_frac: float, weights_stepped: bool,
+                       stage: str, seg_form: str) -> dict[str, Any]:
+    """(#304) Canonical per-term ``loss_terms`` row for the TR1 top-level loss
+    decomposition.  Stable complete key set (missing terms -> 0.0 so the schema is
+    config-stable); ``sum_terms`` + ``sum_minus_total`` make the breakdown
+    self-checking; ``accepted_frac`` + ``weights_stepped`` are the C6 LIVENESS stamps
+    (#402 — a reader can tell a frozen epoch from a converging one).  Pure / MLX-free /
+    unit-tested; score-neutral."""
+    t = {k: float(terms.get(k, 0.0)) for k in TR1_LOSS_TERM_KEYS}
+    ssum = float(sum(t.values()))
+    return {
+        "stage": "loss_terms", "ep": int(ep), "accum_batch": int(accum_batch),
+        "terms": {k: round(v, 6) for k, v in t.items()},
+        "total": round(float(total), 6), "sum_terms": round(ssum, 6),
+        "sum_minus_total": round(ssum - float(total), 8),
+        "accepted_frac": round(float(accepted_frac), 4),
+        "weights_stepped": bool(weights_stepped),
+        "seg_form": str(seg_form), "tr1_stage": str(stage),
+        "score_neutral": True,
+    }
+
+
+def tr1_term_domination_alarms(terms: dict[str, float], total: float,
+                               streaks: dict[str, int], *,
+                               frac: float = TR1_TERMDOM_FRAC,
+                               min_rows: int = TR1_TERMDOM_MIN_ROWS) -> list[dict[str, Any]]:
+    """(#321) term_domination: a single post-weight addend > ``frac`` of the loss for
+    ``min_rows`` sustained rows.  Mutates ``streaks`` (per-term run length) IN PLACE and
+    returns the alarm rows that just CROSSED the sustained threshold (edge-triggered, so
+    a persistent domination emits once per crossing, not every row).  Pure / unit-tested;
+    mirrors the v9 trainer's inline term_domination streak logic (post-weight addends)."""
+    tot_abs = abs(float(total)) + 1e-12
+    rows: list[dict[str, Any]] = []
+    for name in TR1_LOSS_TERM_KEYS:
+        share = abs(float(terms.get(name, 0.0))) / tot_abs
+        streak = int(streaks.get(name, 0))
+        streak = streak + 1 if share > float(frac) else 0
+        streaks[name] = streak
+        if streak == int(min_rows):
+            rows.append({
+                "event": "confound_alarm", "kind": "term_domination", "term": str(name),
+                "frac_of_loss": round(float(share), 4), "sustained_rows": int(streak),
+                "note": "one post-weight loss term dominates >40% of the loss; the scored "
+                        "seg signal may be a passenger (v9 #321 port)",
+                "score_neutral": True,
+            })
+    return rows
+
+
+# ---------------------------------------------------------------------------
 # Checkpointing (P0): atomic npz; EMA shadow saved; distinct stage-encoded names.
 # ---------------------------------------------------------------------------
 def _tree_to_flat(params: dict[str, Any]) -> dict[str, np.ndarray]:
@@ -1195,6 +1267,20 @@ def build_argparser() -> argparse.ArgumentParser:
                     choices=("uniform", "xi_informed"),
                     help="ax1 §5: 'xi_informed' relaxes shrinkage on dynamic (lane/movable) cells, "
                          "tightens on the static mass (DERIVED from the QA80 winner-class field)")
+    # ---- ddm_tp1 (#804) v9-line confound-cure telemetry PORT (vh1 row 7; burn-4 §3.1) ----
+    ap.add_argument("--telemetry-v9-port", default="off", choices=("off", "on"),
+                    help="v9 telemetry port: 'on' emits ADDITIVE read-only rows to "
+                         "telemetry.jsonl — per-term loss_terms (#304), term_domination + "
+                         "term_inert alarms (#321), a #404 positive-control sentinel, and "
+                         "canonical lever_engage companions (Q7). DEFAULT 'off' => BYTE-IDENTICAL "
+                         "trained/checkpoint bytes: the flag is threaded via args ONLY (never "
+                         "TR1Config => config_hash + every checkpoint stay flag-invariant) and "
+                         "new rows go to tlog/JSONL ONLY (never telemetry_tail, the checkpoint-"
+                         "baked tail). READ-ONLY: no grad, no RNG advance (fixed dither bank + "
+                         "isolated order_rng), no model/opt-state mutation. The flag exists ONLY "
+                         "for the sealed r1c-lineage byte-identity guarantee (default-off-is-"
+                         "orphan reconciliation: score-neutral telemetry is off here NOT by "
+                         "orphaning but because a sealed live run demands trained-byte invariance)")
     return ap
 
 
@@ -1538,6 +1624,33 @@ def main() -> int:
               "form": state_form["form"], "seg_form_start": cfg.seg_form_start})
     stop_reason = "epochs_complete"
 
+    # ddm_tp1 (#804) v9 telemetry PORT setup (READ-ONLY; gated => byte-identical when off).
+    # All state + the reusable-producer imports live behind the flag so an OFF run has ZERO
+    # new import side effects and ZERO new state. Trained/checkpoint bytes are flag-invariant
+    # (flag not in cfg; new rows via tlog only, never telemetry_tail).
+    _tel_v9 = (args.telemetry_v9_port == "on")
+    _tel_termdom_streaks: dict[str, int] = {}
+    _tel_inert_state = None
+    _tel_lever_engage = None
+    _tel_term_inert_rows = None
+    _tel_strata: tuple[int, ...] = ()
+    _tel_pos_ctrl_emitted = False
+    if _tel_v9:
+        from tac.witness_control.telemetry_producers import (
+            ProducerResumeState as _TelResumeState,
+            deterministic_strata as _tel_det_strata,
+            lever_engage_row as _tel_lever_engage,
+            term_inert_rows as _tel_term_inert_rows,
+        )
+        _tel_inert_state = _TelResumeState()
+        _tel_strata = _tel_det_strata(cfg.num_pairs, min(8, cfg.num_pairs))
+        tlog({"event": "telemetry_v9_port", "status": "on",
+              "strata_ids": list(_tel_strata), "loss_term_keys": list(TR1_LOSS_TERM_KEYS),
+              "termdom_frac": TR1_TERMDOM_FRAC, "termdom_min_rows": TR1_TERMDOM_MIN_ROWS,
+              "note": "additive read-only rows; trained/checkpoint bytes flag-invariant "
+                      "(flag via args not cfg; new rows via tlog not telemetry_tail)",
+              "score_neutral": True})
+
     for epoch in range(start_epoch, cfg.epochs):
         if time.monotonic() > deadline:
             stop_reason = "max_wall_minutes"
@@ -1643,6 +1756,26 @@ def main() -> int:
         tlog(row)
         telemetry_tail.append(row)
 
+        # ddm_tp1 (#804) Q7 lever_engage COMPANIONS: for every event fired into the epoch
+        # row this epoch, ALSO emit the canonical uniform {stage:lever_engage,...} row (v9
+        # schema) so a reader sees engages in ONE vocabulary. Reads the already-built `row`
+        # (no new event logic); tlog-only + gated => byte-identical when off.
+        if _tel_v9:
+            for _evk, _lever, _via in (
+                ("event_knee_switch", "seg_form_ce_to_tau", "ce_tau_knee"),
+                ("event_knee_fallback", "seg_form_ce_to_tau", "F2_midpoint_fallback"),
+                ("event_quant_engage", "token_quant_ste", "quant_anneal"),
+                ("event_delta_sparsity_engage", "token_delta_group_sparsity",
+                 "delta_sparsity_engage"),
+            ):
+                if _evk in row:
+                    _ev = row[_evk]
+                    _extra = {"source_event": _evk}
+                    if isinstance(_ev, dict) and "trigger" in _ev:
+                        _extra["trigger"] = _ev["trigger"]
+                    tlog(_tel_lever_engage(_lever, status="fired", epoch=epoch,
+                                           via=_via, extra=_extra))
+
         # A1 realized gate. Basis = EMA shadow once warm (W = 2/(1-d) updates), LIVE
         # params before that (the #85 shadow-lag guard above; basis recorded, LOUD).
         if (epoch + 1) % cfg.gate_every == 0 or epoch == cfg.epochs - 1:
@@ -1709,6 +1842,62 @@ def main() -> int:
             save_checkpoint(out_dir / "checkpoints" / f"intra_{stage}_ep{epoch:05d}.npz",
                             model=model, ema=ema, opt_state_flat={}, epoch=epoch,
                             stage=stage, cfg=cfg, telemetry_tail=telemetry_tail)
+
+            # ddm_tp1 (#804) v9 telemetry PORT emissions (READ-ONLY; gated => byte-identical
+            # when off). Params are LIVE here (the EMA-shadow gate swap was restored in the
+            # gate's finally). The per-term recompute runs the SAME deterministic forwards the
+            # loss uses on a small fixed strata subset (no order_rng, no mx.random, no
+            # model/opt mutation) and NEVER touches telemetry_tail => the checkpoint just
+            # written is byte-identical to an off run.
+            if _tel_v9:
+                _tp_ids = [int(i) for i in _tel_strata]
+                _tp_seg = float(mx.mean(mx.stack(
+                    [pair_loss(model, i, state_form["form"]) for i in _tp_ids])))
+                _tp_rate = (float(cfg.w_rate * token_rate_term(model, _tp_ids))
+                            if cfg.w_rate > 0.0 else 0.0)
+                _tp_ds = (float(cfg.delta_sparsity_weight
+                                * delta_sparsity_term(model, _tp_ids))
+                          if (model._delta_sparsity_engaged
+                              and cfg.delta_sparsity_weight > 0.0) else 0.0)
+                _tp_terms = {"seg": _tp_seg, "rate": _tp_rate, "delta_sparsity": _tp_ds}
+                _tp_total = _tp_seg + _tp_rate + _tp_ds
+                tlog(tr1_loss_terms_row(
+                    _tp_terms, _tp_total, ep=epoch, accum_batch=steps,
+                    accepted_frac=(1.0 if steps > 0 else 0.0),
+                    weights_stepped=(steps > 0), stage=stage,
+                    seg_form=state_form["form"]))
+                for _dom in tr1_term_domination_alarms(_tp_terms, _tp_total,
+                                                       _tel_termdom_streaks):
+                    tlog(_dom)
+                _tp_engaged = {
+                    "seg": True,
+                    "rate": bool(cfg.w_rate > 0.0),
+                    "delta_sparsity": bool(model._delta_sparsity_engaged
+                                           and cfg.delta_sparsity_weight > 0.0),
+                }
+                for _inert in _tel_term_inert_rows(
+                        _tp_terms, engaged=_tp_engaged, epoch=epoch,
+                        state=_tel_inert_state):
+                    tlog(_inert)
+                if not _tel_pos_ctrl_emitted:
+                    # (#404) $0 synthetic known-effect sentinel: the verdict-trend instrument
+                    # MUST register a known d_seg descent AND stay quiet on a co-descending
+                    # run. If clearance is False the trend meter is UNTRUSTED for this run.
+                    from tac.witness_control.verdict_trend_alarm import (
+                        canary_suite as _tel_canary,
+                    )
+                    _pc = _tel_canary()
+                    tlog({"stage": "positive_control", "epoch": epoch,
+                          "canary_passed": bool(_pc.passed),
+                          "verdict_clearance": bool(_pc.verdict_clearance()),
+                          "descent_positive_registered": bool(
+                              _pc.descent_positive_registered),
+                          "negative_fired": bool(_pc.negative_fired),
+                          "reason": _pc.reason,
+                          "note": "#404 known-effect verdict-trend sentinel; clearance False "
+                                  "=> the trend instrument is UNTRUSTED for this run",
+                          "score_neutral": True})
+                    _tel_pos_ctrl_emitted = True
 
             # ---- BASIN-ENTRY HANDOFF (operator ×2 2026-07-28: "train only to condition;
             # if basin hit, solve only, preferable always"). Detection = the TerminalSolve
