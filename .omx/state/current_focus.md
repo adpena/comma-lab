@@ -14,15 +14,22 @@
 > finishing-distill (dw1), post-hoc pose (ps1/L68), encode-side null-snap (nv1,
 > co-location −0.51), all Pool-A in-loop token-byte levers (pa1r).
 >
-> **Active critical path (W2 fired):** ddm_fp1 (#799, Opus arm LIVE) — the f′
-> class-field projection probe: frozen control_tail tokens → K=5 class-field
-> margin-channel head vs the sha-verified QA75 solve-field teacher → ONE n600 gate.
-> Preregistered falsifiers: f′ ≥ 0.0051 → INSTANCE-dead (+reformulation queue);
-> f′ ≤ 5e-4 → **BR-B fires** (the only branch whose arithmetic can cross the bar,
-> Contrarian probe-gate). QA91 erased-lane analyzer folded ($0; pool bounds ~0.128
-> S·seg ≈ 26% of the remaining 0.501 gap). On fp1 landing: gc11 branch selection
-> finalizes (BR-B / BR-D wall = from-birth distill + v8 carrier) → seal → burn-3
-> fires under W1, no pause.
+> **Active critical path (fp1 LANDED 07-31 → BR-D ADJUDICATED → gc12 LIVE):**
+> fp1 (#799, c90254b5ef/8870930cc4) returned a decisive typed negative — **receiver
+> floor f′ ≥ 0.008305 BY CONSTRUCTION** (perfect-GT-argmax flat paint through
+> R+SegNet already loses to the RGB parent's 0.00494; rg3 split 100% RECEIVER-limited,
+> 0% token-limited; trained head 0.499 = second wall). BR-B graft INSTANCE-DEAD
+> (FORMULATION scope: flat-prototype-paint class-field output); reformulation
+> re-routed to the RECEIVER (AA/smooth paint, margin-channel modulation). QA91:
+> erased Lane mass is NOT GT-flicker (97.67% of Lane area super-nucleus; births
+> +8.75/gate STILL RISING at burn end) → BIRTH_PLATEAU_KEY_CANDIDATE, recoverable
+> ~0.134 S ≈ 26% of the endpoint seg term. gc11 §2 mechanical branch-select:
+> BR-A FALSE ∧ BR-B FALSE ∧ f′ > 2e-3 ⇒ **BR-D THE WALL BRANCH** (fp1's "BR-A
+> stays live" was a loose reading; MAIN adjudicated per the receipt table, W11).
+> **gc12 = the 14th convocation (task #800, Fable arm LIVE)**: compose {from-birth
+> distill (dw1 row 1) · v8 per-class-carrier-IN-RGB derivation · continuation-to-
+> birth-plateau · receiver-paint reformulation} → ONE plan + seal demand + prep
+> charters → fire under W1.
 >
 > **Apparatus:** canonical_task_status 603-fold REPAIRED (1b95ab4f09; 3 sc2-folded
 > rows quarantined to .omx/research sidecar + sha256 manifest; strict appends restored;
