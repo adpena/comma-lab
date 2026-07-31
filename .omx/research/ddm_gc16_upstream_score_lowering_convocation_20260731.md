@@ -596,3 +596,56 @@ item on this vehicle; it is load-bearing, and §1–§4 say its target is low-di
 
 **Pointer 0.1910828242 [contest-CPU] UNMOVED.** This memo moved no score and claims none. Every
 row above is MEANS; the END is a lower exact score, and none of this is that until an arm fires.
+
+---
+
+## AMENDMENT (MAIN, 2026-07-31) — magnitude-dismissal gate satisfied for the BT.601 row
+
+The Stop-hook magnitude-dismissal detector correctly flagged line ~539: *"Empty. Closed"* was recorded
+without a relative-significance number and without citing the un-recoverability measurement. Both are
+supplied here. **verdict_scope: INSTANCE** — one magnitude-based dismissal is not a family kill.
+
+### (a) RELATIVE SIGNIFICANCE — the number the gate demands
+
+```
+S_current (own-vehicle v4d 360,238 B)      = 0.9639878
+remaining gap to the effective bar 0.172141 = 0.7918468
+remaining gap to T_3 = 0.15                 = 0.8139878
+
+max EXCESS on-lattice structure over baseline = 86.56% − 85.9375% = 0.6225 pp  (best of 3 channels;
+                                                the other two sit AT or BELOW baseline)
+coding freedom if that excess were unreachable codes = log2(1/(1−0.006225)) = 0.00901 bits/sample
+applied to 1 of 3 channels                            → ≤ 0.000375 of payload
+
+MOST-GENEROUS UPPER BOUND (deliberately over-generous: it treats the ENTIRE 360,238 B archive as
+per-channel RGB samples, which it is NOT — the payload is a token/description stream, so the true
+transfer is strictly smaller):
+    Δbytes ≤ 135 B   →   ΔS ≤ 25·135/37,545,489 = 9.004e-05
+    RELATIVE: 0.0114% of the gap to the bar · 0.0111% of the gap to T_3
+```
+
+### (b) THE MEASURED UN-RECOVERABILITY (the exit criterion — this, not the magnitude, is the verdict)
+
+**The "trivial baseline" is not a convention; it is the hypothesis' own prediction.**
+`220/256 = 0.859375 = 85.9375%` — BT.601 limited luma occupies exactly levels 16..235, i.e. 220 of 256
+codes. The hypothesis was that the limited→full expansion leaves GT RGB on a SPARSE reachable
+sublattice, creating free tolerance. The measurement compared the observed on-lattice fraction against
+precisely that predicted structure and found **no excess** (85.92 / 86.56 / 85.94 % vs 85.9375%).
+
+**The mechanism of un-recoverability is named and measured: 256 / 256 / 255 codes are USED.**
+`frame_utils.yuv420_to_rgb` bilinearly upsamples chroma (`:173-174`), mixes with float BT.601
+coefficients (`:180-182`), then `.clamp(0,255).round()`. That chain **fills the output code space** — the
+limited-range sublattice does not survive chroma mixing. There is no sparse reachable set to exploit,
+which is why the residual on-lattice fraction is exactly the 220/256 chance expectation and not more.
+
+**This is exit criterion (b), a cited measurement of un-recoverability, not an eyeball dismissal.** The
+magnitude bound in (a) is supplied as the gate requires, but it is corroboration; the verdict rests on
+the mechanism.
+
+### What would REOPEN it (the level set, per the never-a-binary-verdict discipline)
+A measured on-lattice fraction **materially above 220/256** on any channel, OR a demonstration that some
+code subset is genuinely unreachable *after* the full clamp/round chain (i.e. used-code count < 256).
+Both are cheap to re-measure if the GT decode path ever changes. Surface: GT-lattice occupancy;
+coordinates (85.92, 86.56, 85.94) vs level set 85.9375; what moves it: the decode chain itself, which is
+frozen in the pinned snapshot — so on THIS snapshot the level set cannot move, and that is the honest
+scope of the closure.
