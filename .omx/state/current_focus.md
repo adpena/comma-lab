@@ -1,3 +1,36 @@
+# Current Focus - 2026-07-31 (burn-3 gate: pa1r landed, fp1 discriminator LIVE)
+
+> **Pointer honesty:** submittable local baseline `0.1910828242 [contest-CPU]` UNMOVED;
+> effective competitive bar `0.172141` (official PR #130, [contest-CUDA] reconstruction).
+> All local rows `[macOS-CPU advisory]`, `score_claim=false`.
+>
+> **State:** THE AUTONOMOUS WORKFLOW POLICY (gc11, fe12a36a14, rules W1-W11/OP1) is
+> ADOPTED AND BINDING — the standing GO removes WAITING, never RIGOR. The pa1r Pool-A
+> race LANDED (fdb48e2c26): `hull_moved_s=FALSE` everywhere; **control_tail = NEW BEST
+> realized point** (n600 d_seg 0.0049411, S_additive 0.67325 @ 265,528 B SMEVR, c
+> 0.08851; custody /Volumes/VertigoDataTier/pact/ddm_pa1r_20260730/control_tail/).
+> delta_sparsity + margin_quant `worse_s`; rowband BLOCKED_NO_D8_PARENT; Pool-A levers
+> EXIT burn-3 at instance scope. Closed fork-space to date: post-hoc deletion (Gate-B),
+> finishing-distill (dw1), post-hoc pose (ps1/L68), encode-side null-snap (nv1,
+> co-location −0.51), all Pool-A in-loop token-byte levers (pa1r).
+>
+> **Active critical path (W2 fired):** ddm_fp1 (#799, Opus arm LIVE) — the f′
+> class-field projection probe: frozen control_tail tokens → K=5 class-field
+> margin-channel head vs the sha-verified QA75 solve-field teacher → ONE n600 gate.
+> Preregistered falsifiers: f′ ≥ 0.0051 → INSTANCE-dead (+reformulation queue);
+> f′ ≤ 5e-4 → **BR-B fires** (the only branch whose arithmetic can cross the bar,
+> Contrarian probe-gate). QA91 erased-lane analyzer folded ($0; pool bounds ~0.128
+> S·seg ≈ 26% of the remaining 0.501 gap). On fp1 landing: gc11 branch selection
+> finalizes (BR-B / BR-D wall = from-birth distill + v8 carrier) → seal → burn-3
+> fires under W1, no pause.
+>
+> **Apparatus:** canonical_task_status 603-fold REPAIRED (1b95ab4f09; 3 sc2-folded
+> rows quarantined to .omx/research sidecar + sha256 manifest; strict appends restored;
+> #793 completion + #799 registration backfilled). Burn-3 design inputs banked: pa1r
+> reformulation rows (w-sweep {3e-3,1e-2} · pre-knee parent · rowband from-birth at the
+> theorem band [160,240)/1248) + un-exhausted plain-continuation dividend at B's knee.
+
+<!-- prior focus (2026-07-25, effective frontier correction) preserved below as history -->
 # Current Focus - 2026-07-25 (effective frontier correction + DDM closure)
 
 > **Competitive score to beat: `0.172`, official leaderboard PR #130.** The
