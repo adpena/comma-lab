@@ -1,4 +1,54 @@
-# Current Focus - 2026-07-31 (gc14 VERDICT: the "descent" is plausibly a BOUNDARY-STEP APPARATUS ARTIFACT — 3 MAIN claims falsified)
+# Current Focus - 2026-07-31 (gc15 DERIVES THE MECHANISM FROM SOURCE: bias_correction=False ⇒ every boundary is an unpriced 3.16–6.57× LR SPIKE)
+
+> **⚡ gc15 (#816 DONE, ca4850be52) — THE SOURCE DERIVATION.** MLX `Adam` defaults
+> **`bias_correction=False`** and `train_tr1:1543` NEVER overrides it. With zeroed moments the
+> effective step multiplier is **η(t)=(1−β₁ᵗ)/√(1−β₂ᵗ) — 3.16× at t=1, PEAK 6.5685× at t=12**,
+> decaying over ~1000 steps. At the burn's measured argv (batch-pairs 8, 600 pairs ⇒ 75
+> steps/ep, lr 2e-3) **EACH BOUNDARY INJECTS ~1,212.6 extra sign-steps ≈ 16.17 EPOCHS OF FREE
+> DISPLACEMENT, 81.7% inside the first 13 epochs.** This DERIVES ALL FOUR gc14 boundary
+> observations (step · flat in-window slope t=−0.09 · ep_loss spike at normal gnorm · ratio
+> 1.36) **from source with NO new experiment** ⇒ **the campaign's only measured seg descent this
+> month is plausibly an OPTIMIZER ARTIFACT, not learning.**
+> **THE $0 SETTLER — ARM B′: `bias_correction=True`, all else byte-identical, ~2h.** Highest
+> information per dollar in the campaign; alone separates H1(spike) from H2/H3(conditioning/
+> exploration). FIRES FIRST at the window_03 endpoint, ahead of everything in #815. If the
+> descent vanishes, every seg verdict since needs re-grading against a corrected baseline
+> (r̂=0.310 itself must be re-derived from bias-corrected data before R3 can bind).
+> **OPERATOR Q ANSWERED (fresh-vs-warm):** NEITHER POLE. Warm beats fresh MECHANICALLY (k windows
+> = k kicks PLUS the preserved path; fresh gets one kick and must re-learn) ⇒ **do NOT birth
+> fresh for the seg axis**. But restart count is a KNOB, not a property of warmness, and the
+> bigger lever is WHAT WE RESET *TO*: zero makes the post-reset step a uniform SIGN step = the
+> maximally generic metric-free direction, violating our own generic_basis_metric_never_optimal
+> law + sy1 S1-POLICY, at the ONE point where inserting the custodied frozen-scorer metric costs
+> ZERO extra wall-clock (we discard the metric anyway) ⇒ **a STRUCTURED RESET ON A WARM RUN
+> plausibly DOMINATES BOTH POLES.** Caveats NOT softened: the benefit may BE the disorder (arms
+> magnitude-matched, vary DIRECTION only) · H5 pure time-travel (a bigger step arriving sooner
+> where the run was already going).
+> **MAIN CORRECTED:** my "the protection stack never ran from ep0" argument is OVERRATED —
+> **5 of 6 forces are DESIGNED-STUB**; Carmack: *wiring is the blocker, not birth*.
+> **FRESH-RUN DECISION FUNCTION:** FIRE ⟺ T1 ∨ T2 ∨ T3. **T1 STRUCTURAL-IMPOSSIBILITY is the
+> only currently-TRUE trigger, ONE instance: QA84 rowband D8** — no D8 ckpt exists anywhere
+> (every tr1 ckpt is D16), RowBandGrammar BUILT, `--token-rowband-spec` exists, band
+> [160,240)/1248 theorem-certified rate-optimal ⇒ warm CANNOT buy a D8 parent. T2 matched-compute
+> reversal PROVISIONAL-TRUE for QA24 (fires only on re-measurement). T3 path-dependence ceiling
+> E≥0.30 UNMEASURED (Rudin: bare constant, needs derivation). Config if fired: rowband D8 ×
+> solve_project init × **kd_warm_start_dir ← the warm endpoint** × the §7 reset winner; ~13h, $0.
+> **RE-GRADES:** QA24 from-birth **MEASURED-DOMINATED → CONDITIONALLY RE-OPENED** (bc1@ep399 vs
+> warm@ep641 = +60.7% compute, unmatched bytes; at matched ep499 the sign REVERSES to fresh
+> ~0.035 S ahead — PROVISIONAL/extrapolated). **K-FAC 07-13 DISCARD conditionally re-opened at
+> FORMULATION scope** (both stated grounds fail for a boundary insertion).
+> **ORPHAN NAMED:** the DEFERRED from-birth-KD and rowband D8 cells are **ONE RUN**, and their
+> actuator (#74/#129 KD-warm-start, BUILT w/ 6 NO-FAKE tests) has **NEVER FIRED** — 6 weeks old.
+> **#815 AMENDED:** 5-arm magnitude-matched reset-operator race (A no-reset · B zero-reset
+> incumbent · B′ bias-corrected · C momentum-only · D± scorer-metric from ms4d+#725+rank-4) with
+> H1–H5; **φ-preflight gates D± with pre-registered withdrawal at φ>0.8** (fraction of a uniform
+> kick landing in range(A) — Yousfi upgraded it to campaign-level diagnostic); **cadence A/B
+> DEMOTED 1st→4th** (the impulse is now a DERIVED constant).
+> POINTER NOTE (gc15 accuracy): canonical_frontier_pointer.json's local contest-CPU field carries
+> **0.18804** = the Modal 07-12 PR128-on-PR110 **NON-SUBMITTABLE bank**; the SUBMITTABLE custody
+> row is **0.1910828242**. BOTH UNMOVED.
+
+# Historical - 2026-07-31 (gc14 VERDICT: the "descent" is plausibly a BOUNDARY-STEP APPARATUS ARTIFACT — 3 MAIN claims falsified)
 
 > **⛔ gc14 (#814 DONE, 0068807a62) FALSIFIED THREE MAIN CLAIMS — carry the corrections:**
 > (1) **"λ_Lane guard MEASURED WORKING" is FALSE** — `lambda_lane` was exactly **0.0 at all 38
