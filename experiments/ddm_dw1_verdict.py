@@ -38,6 +38,15 @@ def _load(run_dir: Path) -> dict:
     rows = [json.loads(ln) for ln in tel.read_text().splitlines() if ln.strip()] \
         if tel.is_file() else []
     receipt = json.loads(rcpt.read_text()) if rcpt.is_file() else {}
+    # A window that stopped on the pre-registered A1 refuse has no in-run full_confirm; the
+    # zero-step resume confirm (SAME trainer EMA-shadow surface) lands in a sibling
+    # ``<name>_endpoint_confirm`` dir — consume its full_confirm as the endpoint.
+    if not (receipt.get("full_confirm") or {}).get("realized_dseg_mean"):
+        sib = run_dir.parent / f"{run_dir.name}_endpoint_confirm" / "tr1_window_receipt.json"
+        if sib.is_file():
+            fc_sib = (json.loads(sib.read_text()).get("full_confirm") or {})
+            if fc_sib.get("realized_dseg_mean") is not None:
+                receipt = {**receipt, "full_confirm": fc_sib}
     gates = [r for r in rows if r.get("event") == "a1_gate"]
     eps = [r for r in rows if r.get("event") == "epoch"]
     reanchor = [r for r in rows if r.get("event") == "resume_form_reanchor"]
@@ -104,8 +113,14 @@ def main() -> int:
     split_ab = (ep_b - ep_a) if (ep_b is not None and ep_a is not None) else None  # >0 => A better
     split_ca = (ep_a - ep_c) if (ep_a is not None and ep_c is not None) else None  # >0 => C better
 
-    under_driven = (b_slope is not None and noise_floor is not None
-                    and abs(b_slope) < (noise_floor if noise_floor > 0 else 1e-9))
+    # Under-drive (guard 4), DIMENSIONALLY CONSISTENT: compare B's TOTAL window descent
+    # |slope x gate-span| (a d_seg quantity) against the d_seg noise floor — a per-epoch
+    # slope vs a level-noise floor is a unit conflation (caught in self-review; the first
+    # emitted verdict used the conflated test and mis-fired PROVISIONAL-UNDERDRIVEN).
+    b_span = (B["shadow_gates"][-1][0] - B["shadow_gates"][0][0]) if len(B["shadow_gates"]) >= 2 else 0
+    b_total_descent = abs(b_slope * b_span) if (b_slope is not None and b_span) else None
+    under_driven = (b_total_descent is not None and noise_floor is not None
+                    and b_total_descent < (noise_floor if noise_floor > 0 else 1e-9))
 
     # Falsifier (endpoint d_seg split vs noise floor; slope corroborates).
     if ep_a is None or ep_b is None:
@@ -147,6 +162,7 @@ def main() -> int:
         "endpoint_split_B_minus_A_pos_means_A_better": split_ab,
         "endpoint_split_A_minus_C_pos_means_C_better": split_ca,
         "under_driven": under_driven,
+        "b_total_window_descent_gate_dseg": b_total_descent,
         "verdict": verdict,
         "verdict_scope": "INSTANCE (this endpoint/scorer/window)" if "NO SPLIT" in verdict
                          or "WORSE" in verdict else "n/a",
