@@ -311,6 +311,8 @@ class TR1Config:
     lane_guard_lambda_max: float = 5.0    # bounded safety ceiling (5x the natural weight unit)
     lane_guard_born_weight: float = 0.0   # 0.0 => born-lane protection OFF
     lane_guard_margin_floor_weight: float = 0.0   # 0.0 => margin-floor emphasis OFF
+    lane_guard_lambda_init: float = 0.0   # warm-start dual (b4s rollback+raise-lambda path:
+    # state resets at relaunch; the supervisor re-fires with the last lambda + one step)
 
     @property
     def grid_h(self) -> int:
@@ -1169,6 +1171,8 @@ def build_argparser() -> argparse.ArgumentParser:
                     help="lg1 born-lane protection weight (0.0 => OFF; scaled by Lane head sensitivity)")
     ap.add_argument("--lane-guard-margin-floor-weight", type=float, default=0.0,
                     help="lg1 low-margin Lane emphasis weight (0.0 => OFF; floor DERIVED from QA80 p10)")
+    ap.add_argument("--lane-guard-lambda-init", type=float, default=0.0,
+                    help="lg1 warm-start dual multiplier (supervisor rollback+raise-lambda relaunch)")
     ap.add_argument("--token-temporal-mode", default="shared_base",
                     choices=("shared_base", "independent"),
                     help="shared_base = identity-xi advection (Einstein d_cov/d_gauge force)")
@@ -1382,6 +1386,7 @@ def main() -> int:
         lane_guard_lambda_max=args.lane_guard_lambda_max,
         lane_guard_born_weight=args.lane_guard_born_weight,
         lane_guard_margin_floor_weight=args.lane_guard_margin_floor_weight,
+        lane_guard_lambda_init=args.lane_guard_lambda_init,
     )
     (out_dir / "tr1_config.json").write_text(cfg.canonical_json() + "\n")
     telemetry_path = out_dir / "telemetry.jsonl"
@@ -1596,8 +1601,11 @@ def main() -> int:
             born_protect_weight=cfg.lane_guard_born_weight,
             margin_floor_weight=cfg.lane_guard_margin_floor_weight,
         ).resolved()
-        lane_guard_state = _lane_guard.LaneGuardState()
+        lane_guard_state = _lane_guard.LaneGuardState(
+            lambda_lane=max(0.0, min(cfg.lane_guard_lambda_init,
+                                     lane_guard_cfg.lambda_max)))
         tlog({"event": "lane_guard_init", "budget_s": lane_guard_cfg.budget_s,
+              "lambda_init": lane_guard_state.lambda_lane,
               "eta_lambda": lane_guard_cfg.eta_lambda,
               "lambda_step_cap": lane_guard_cfg.lambda_step_cap,
               "lambda_max": lane_guard_cfg.lambda_max,
