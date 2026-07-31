@@ -95,7 +95,7 @@ DSL_REQUIRING = re.compile(
 #   the enumerated stems below + the numeric-value detector `_MEASURED_ROW` (a real d_seg/
 #   d_pose row). "exact[\s-]row" catches both the space and hyphenated spelling (r4).
 #   DROPPED "pointer\w*" (dogfood over-fire 2026-07-06): the ubiquitous provenance FOOTER
-#   "pointer 0.19110 UNMOVED (apparatus)" is boilerplate in ~every commit, not a measured
+#   "pointer 0.19110 UNMOVED (apparatus)" is boilerplate in ~every commit, not a measured  # HISTORICAL_SCORE_LITERAL_OK:quotes_the_2026-07-06_commit_footer_verbatim_to_explain_why_the_pointer_stem_was_dropped_from_the_regex; not a current score claim (live pointer is .omx/state/canonical_frontier_pointer.json), no code reads this number
 #   finding — it fired the equations requirement on apparatus commits. A genuine pointer MOVE
 #   always states its mechanism (byte-close/exact-eval/exact-row) or a numeric d_seg/d_pose row
 #   (_MEASURED_ROW), which the surviving stems catch; the bare word is redundant + boilerplate.
@@ -1082,7 +1082,14 @@ def _advance_and_allow(root: str, head: str) -> None:
 def main() -> None:
     # --- read hook input (fail-open on anything) ---
     try:
-        raw = sys.stdin.read()
+        # isatty guard (ddm_gh2, 2026-07-31): a bare sys.stdin.read() BLOCKS — it does
+        # not raise — when stdin is a TTY or an inherited pipe nobody closes, so the
+        # try/except below cannot save it. MEASURED: this hook ran >119s (never
+        # returned) under a harness that left stdin open. Under a TTY it hangs until
+        # Ctrl-D, which makes the tool un-runnable by hand. Sister hooks
+        # codex_landing_review_gate.py:516 and auto_push_main.py:422 already carry
+        # this guard; this makes the Stop-hook family consistent.
+        raw = sys.stdin.read() if not sys.stdin.isatty() else ""
         inp = json.loads(raw) if raw.strip() else {}
     except Exception:
         inp = {}

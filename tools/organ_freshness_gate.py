@@ -54,6 +54,13 @@ REROUTING_MARKERS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("rerouting", re.compile(r"re-?rout", re.IGNORECASE)),
 )
 THRESHOLD_FLOOR = 2  # minimum N; the derived value never drops below this
+# Stop-hook output budget (ddm_gh2, 2026-07-31). MEASURED before this change: the
+# DUE branch emitted ONE 3,471-byte line — a raw join of every unconsumed memo path
+# — on EVERY Stop, i.e. every turn boundary, unchanged until the debt is consumed.
+# Naming the rows is the point of the gate, so rows are still NAMED; what is bounded
+# is HOW MANY are named inline. The count is always exact and the residue is always
+# disclosed (never a silent truncation), with --json carrying the complete list.
+_NAMED_ROWS_IN_HOOK = 4
 
 
 def _consumed_registry() -> dict[str, Any]:
@@ -186,8 +193,13 @@ def evaluate(repo: Path = REPO) -> dict[str, Any]:
     due_rerouting = bool(rerouting)
     reasons: list[str] = []
     if due_rerouting:
+        # COUNT only. This used to interpolate `sorted(rerouting)` — a raw list repr
+        # of full paths — straight into the reason string, which is what made the
+        # Stop-hook line 3,471 B (MEASURED 2026-07-31). The names are not lost: they
+        # are carried structurally in the "rerouting" field below (so --json is
+        # complete) and rendered, capped, by the human formatter.
         reasons.append(
-            f"re-routing-class landing(s) unconsumed (threshold 1): {sorted(rerouting)}"
+            f"{len(rerouting)} re-routing-class landing(s) unconsumed (threshold 1)"
         )
     if due_generic:
         reasons.append(
@@ -197,6 +209,7 @@ def evaluate(repo: Path = REPO) -> dict[str, Any]:
         "schema": "ddm_organ_freshness_gate.v1",
         "due": due_generic or due_rerouting,
         "reasons": reasons,
+        "rerouting": sorted(rerouting),
         "unconsumed": unconsumed,
         "rerouting_class": rerouting,
         "threshold": threshold,
@@ -225,11 +238,18 @@ def main(argv: list[str] | None = None) -> int:
     if args.json:
         print(json.dumps(report, indent=2, sort_keys=True))
     elif report["due"]:
-        named = ", ".join(report["unconsumed"]) or "(none named)"
+        rows = list(report["unconsumed"])
+        # Paths are long and repetitive (".omx/research/ddm_*.md"); the basename is
+        # the identifying part, so name basenames and keep the directory implicit.
+        shown = [Path(p).name for p in rows[:_NAMED_ROWS_IN_HOOK]]
+        named = ", ".join(shown) or "(none named)"
+        if len(rows) > len(shown):
+            named += f", +{len(rows) - len(shown)} more (full list: --json)"
         print(
             "ORGAN ROUND DUE: "
             + "; ".join(report["reasons"])
-            + f" — named rows: {named} (WARN-only; advisory; actuation NONE)"
+            + f" — {len(rows)} unconsumed in .omx/research/: {named}"
+            " (WARN-only; advisory; actuation NONE)"
         )
     elif not args.quiet_ok:
         th = report["threshold"]

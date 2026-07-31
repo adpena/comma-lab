@@ -400,7 +400,11 @@ def _advance_and_allow(root: str, head: str) -> None:
 def main() -> None:
     # --- read hook input (fail-open on anything) ---
     try:
-        raw = sys.stdin.read()
+        # isatty guard (ddm_gh2, 2026-07-31): a bare sys.stdin.read() BLOCKS rather
+        # than raises when stdin is a TTY or an inherited never-closed pipe, so the
+        # try/except cannot save it. Sister hooks codex_landing_review_gate.py:516 and
+        # auto_push_main.py:422 already carry this guard.
+        raw = sys.stdin.read() if not sys.stdin.isatty() else ""
         inp = json.loads(raw) if raw.strip() else {}
     except Exception:
         inp = {}

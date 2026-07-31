@@ -45,8 +45,39 @@ TH = {
 _CONSOLIDATION_RE = r"consolidat|signal.reconciliation|reconcile|drain|signal-loss"
 
 
+# Every git call is bounded (ddm_gh2, 2026-07-31). This hook is wired into BOTH
+# SessionStart and Stop, and `git status` can block on `.git/index.lock` — which is
+# a live, recurring event in this repo (concurrent arms, the auto_push_main Stop
+# hook, a running trainer). An unbounded subprocess in a SessionStart hook is a
+# session-hang hazard, so the call is bounded here and the hook registration
+# declares an outer timeout too (belt and suspenders).
+_GIT_TIMEOUT_S = 15
+# Set when any git call fails or times out. Previously `_sh` swallowed rc and
+# stderr, so a failed `git status` returned "" -> pile_files=0 -> verdict "OK":
+# the monitor reported CLEAN precisely when it had gone BLIND. Per the CLAUDE.md
+# confound discipline (L1: make silent artifacts LOUD), a blind monitor must say
+# so rather than emit a false all-clear.
+_DEGRADED: list[str] = []
+
+
 def _sh(args: list[str]) -> str:
-    return subprocess.run(args, cwd=REPO, capture_output=True, text=True).stdout
+    """Run a git command, bounded. On ANY failure record the degradation and return
+    "" — callers keep their shape, but the verdict is no longer allowed to read
+    clean (see `compute`)."""
+    try:
+        r = subprocess.run(
+            args, cwd=REPO, capture_output=True, text=True, timeout=_GIT_TIMEOUT_S
+        )
+    except subprocess.TimeoutExpired:
+        _DEGRADED.append(f"{' '.join(args[:3])}: timeout after {_GIT_TIMEOUT_S}s")
+        return ""
+    except OSError as exc:  # git missing / exec failure
+        _DEGRADED.append(f"{' '.join(args[:3])}: {type(exc).__name__}")
+        return ""
+    if r.returncode != 0:
+        _DEGRADED.append(f"{' '.join(args[:3])}: rc={r.returncode} {r.stderr.strip()[:80]}")
+        return ""
+    return r.stdout
 
 
 def _pile() -> tuple[int, int]:
@@ -124,6 +155,7 @@ def _sev(value: float, soon: float, now: float) -> int:
 
 
 def compute() -> dict:
+    _DEGRADED.clear()
     pf, pl = _pile()
     land = _undispositioned_landings()
     stale = _stale_commits()
@@ -137,13 +169,22 @@ def compute() -> dict:
     }
     sev = max(s for _, s in comps.values())
     verdict = ("CONSOLIDATE-NOW" if sev == 2 else "CONSOLIDATE-SOON" if sev == 1 else "OK")
-    return {"verdict": verdict, "severity": sev, "components": comps,
+    degraded = list(_DEGRADED)
+    if degraded and verdict == "OK":
+        # A clean read and a blind read are NOT the same answer. Never launder the
+        # second into the first: an OK produced from missing inputs is a false
+        # all-clear, which is worse than no report.
+        verdict = "DEGRADED"
+    return {"verdict": verdict, "severity": sev, "components": comps, "degraded": degraded,
             "signal_detail": {"memos_24h": n_memos, "system_intelligence_commits_24h": n_si}}
 
 
 def _fmt(r: dict) -> str:
     icon = {0: "✓", 1: "△", 2: "✕"}
     lines = [f"[consolidation-debt] {r['verdict']}  (proactive monitor — read-only, never blocks)"]
+    if r.get("degraded"):
+        lines.append(f"  ! BLIND on {len(r['degraded'])} git read(s) — components below "
+                     f"may under-report: {'; '.join(r['degraded'][:2])}")
     for k, (v, s) in r["components"].items():
         if s or k in ("pile_files", "landings"):
             soon, now = TH[k]
@@ -165,7 +206,17 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--quiet-ok", action="store_true", help="print nothing if verdict==OK")
     ap.add_argument("--strict", action="store_true", help="rc=2 when verdict==CONSOLIDATE-NOW")
     args = ap.parse_args(argv)
-    r = compute()
+    try:
+        r = compute()
+    except Exception as exc:
+        # FAIL-OPEN (ddm_gh2, 2026-07-31). This hook is wired into SessionStart AND
+        # Stop; before this guard ANY exception (git absent, decode error, ledger
+        # corruption) escaped as a traceback on a nonzero exit at a session boundary.
+        # An observability monitor must never wedge or noise-up a session — but it
+        # must still SAY it failed rather than pretend it passed.
+        print(f"[consolidation-debt] DEGRADED — monitor unavailable "
+              f"({type(exc).__name__}: {str(exc)[:120]}); treat debt as UNKNOWN, not OK")
+        return 0
     if args.json:
         print(json.dumps(r, indent=2))
     elif not (args.quiet_ok and r["verdict"] == "OK"):

@@ -55,6 +55,44 @@ _DISPATCH_DOC = ".omx/research/organ_regime_conditional_dispatch_436_20260711.md
 _REVIEW_COUNTER = _REPO / ".omx" / "state" / "review_counter.jsonl"
 _DUTY_TOP_N = 6
 _SHADOW_STALE_S = 2 * 3600.0
+
+# --- SessionStart line budget (ddm_gh2, 2026-07-31) -------------------------
+# MEASURED before this change: the session-start digest was 10,268 B (~2,570
+# tokens), paid on EVERY session start AND every compaction, of which 6,085 B
+# were DDM-* lines and 3,851 B the main-hot-state block.  The prefixes below
+# carry ACCOUNTING / LAW / HISTORY detail: real signal, but not signal that
+# changes MAIN's NEXT MOVE at t=0, and every byte of it is one `--full` away.
+#
+# Decision-relevance test applied per prefix: "would MAIN pick a different next
+# action without this line?"  KEPT (not listed here): the pointer, the model
+# stamp, live-run liveness/cadence, the duty-queue head, the schedulable
+# allocation, blockers/validity/staleness, and the actuation BOUNDARY.
+#
+# FAIL-TOWARD-VISIBLE: this is a DROP-list, not a keep-list.  Any line whose
+# prefix is not named here — including one a future author adds — stays VISIBLE
+# by default, so the budget can never silently swallow new signal.  That is the
+# opposite polarity from a keep-list and is deliberate (anti-forgetfulness).
+_HOOK_DETAIL_PREFIXES = (
+    "DDM-lambda",             # rho/NDCG model-fit accounting
+    "DDM-arc",                # 15-row arc status board (mostly SETTLED)
+    "DDM-band",               # regime narration
+    "DDM-laws",               # measured laws (also carried in MEMORY.md)
+    "DDM-joint",              # allocator table (head is re-emitted below)
+    "DDM-parents",            # parent-band accounting
+    "DDM-pending",            # commitment accounting
+    "DDM-owners",             # 29-row owner queue (self-truncating already)
+    "DDM-rv1",                # reactivation accounting
+    "DDM-voi",                # VOI ranking (overlaps DDM-alloc)
+    "DDM-campaign",           # campaign accounting + evidence roll-up
+    "DDM-CO5",                # CO5 accounting
+    "DDM-batch-local",        # batch-local telemetry detail
+    "DDM-pose-watch",         # pose verdict-count detail
+)
+# Hot-state manifest: cap PER LINE, not just per line-COUNT.  The manifest holds
+# free-text paragraphs (measured: 1,047 / 1,011 / 635 chars), so the existing
+# max_lines=40 cap bounded nothing that mattered — a line budget on a file with
+# mega-lines is a cap that looks binding and is not.
+_HOOK_HOT_STATE_MAX_LINE_CHARS = 240
 # section_ncde cache: {run_dir_str: (log_signature, line, data)} — keyed on run.log
 # (mtime_ns, size) so a re-call within the same session reuses the fit instead of re-probing.
 _NCDE_CACHE: dict[str, tuple[tuple, str | None, dict | None]] = {}
@@ -2056,11 +2094,43 @@ def _model_identity_stamp() -> str:
     )
 
 
+def _compact_for_hook(lines: list[str]) -> list[str]:
+    """Apply the SessionStart line budget: drop `_HOOK_DETAIL_PREFIXES` lines and
+    replace them with ONE honest pointer naming what was suppressed and how to get
+    it back.  Progressive disclosure, not deletion — nothing is destroyed, and the
+    reader is told exactly what it is not seeing (a silent cut would be the very
+    "hook fucking us up" class this budget exists to avoid).
+
+    Order of kept lines is preserved.  Pure function; never raises."""
+    kept: list[str] = []
+    tags: list[str] = []
+    for ln in lines:
+        if ln.startswith(_HOOK_DETAIL_PREFIXES):
+            # tag = the prefix up to ':' or '[' — "DDM-arc[07-28]: ..." -> "DDM-arc"
+            tags.append(ln.split(":", 1)[0].split("[", 1)[0].strip())
+        else:
+            kept.append(ln)
+    if tags:
+        uniq = list(dict.fromkeys(tags))  # stable de-dupe
+        kept.append(
+            f"DDM-detail: {len(tags)} accounting/law lines suppressed for the hook budget "
+            f"({', '.join(uniq)}) — full state: "
+            f".venv/bin/python tools/costate_digest.py --full"
+        )
+    return kept
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--json", action="store_true", help="machine-readable output")
     ap.add_argument(
         "--session-start", action="store_true", help="hook mode: same digest, ALWAYS exits 0 (never blocks a session)"
+    )
+    ap.add_argument(
+        "--full",
+        action="store_true",
+        help="emit every line uncompacted (the pre-2026-07-31 session-start payload); "
+        "the escape hatch the compacted hook digest points at",
     )
     args = ap.parse_args(argv)
     try:
@@ -2068,10 +2138,14 @@ def main(argv: list[str] | None = None) -> int:
         if args.json:
             print(json.dumps(data, indent=2, sort_keys=True, default=str))
         else:
+            # Compact ONLY in hook mode and ONLY when --full was not asked for.  An
+            # explicit interactive `costate_digest.py` call is unchanged (full detail),
+            # so no human workflow regresses; only the recurring hook payload shrinks.
+            compact = args.session_start and not args.full
             if args.session_start:
                 print("[costate-digest] controller SENSE+DECIDE state (auto-surfaced; tools/costate_digest.py):")
                 print(_model_identity_stamp())
-            print("\n".join(lines))
+            print("\n".join(_compact_for_hook(lines) if compact else lines))
             # ADDITIVE, FAIL-OPEN (ddm_hw1, task #785): the MAIN retained-reasoning
             # manifest (compaction-cliff cure; ARC-AGI-3 retained-reasoning crosswalk).
             # Printed AFTER the digest so a compaction-recovered session re-loads the
@@ -2080,7 +2154,10 @@ def main(argv: list[str] | None = None) -> int:
             try:
                 import main_hot_state as _mhs  # tools/ is on sys.path (line ~48)
 
-                _block = _mhs.digest_block(max_lines=40)
+                _block = _mhs.digest_block(
+                    max_lines=40,
+                    max_line_chars=None if not compact else _HOOK_HOT_STATE_MAX_LINE_CHARS,
+                )
                 if _block:
                     print(_block)
             except Exception:

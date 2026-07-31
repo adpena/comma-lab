@@ -6,7 +6,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"$CLAUDE_PROJECT_DIR/.venv/bin/python\" \"$CLAUDE_PROJECT_DIR/tools/launch_guard_hook.py\""
+            "command": "\"$CLAUDE_PROJECT_DIR/.venv/bin/python\" \"$CLAUDE_PROJECT_DIR/tools/launch_guard_hook.py\"",
+            "timeout": 20
           }
         ]
       }
@@ -16,7 +17,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"$CLAUDE_PROJECT_DIR/.venv/bin/python\" \"$CLAUDE_PROJECT_DIR/tools/sync_agents_md.py\""
+            "command": "\"$CLAUDE_PROJECT_DIR/.venv/bin/python\" \"$CLAUDE_PROJECT_DIR/tools/sync_agents_md.py\"",
+            "timeout": 60
           }
         ]
       },
@@ -24,31 +26,38 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"$CLAUDE_PROJECT_DIR/.venv/bin/python\" \"$CLAUDE_PROJECT_DIR/tools/triality_drift_detector.py\""
+            "command": "\"$CLAUDE_PROJECT_DIR/.venv/bin/python\" \"$CLAUDE_PROJECT_DIR/tools/triality_drift_detector.py\"",
+            "timeout": 60
           },
           {
             "type": "command",
-            "command": "\"$CLAUDE_PROJECT_DIR/.venv/bin/python\" \"$CLAUDE_PROJECT_DIR/tools/magnitude_dismissal_detector.py\""
+            "command": "\"$CLAUDE_PROJECT_DIR/.venv/bin/python\" \"$CLAUDE_PROJECT_DIR/tools/magnitude_dismissal_detector.py\"",
+            "timeout": 60
           },
           {
             "type": "command",
-            "command": "\"$CLAUDE_PROJECT_DIR/.venv/bin/python\" \"$CLAUDE_PROJECT_DIR/tools/auto_push_main.py\""
+            "command": "\"$CLAUDE_PROJECT_DIR/.venv/bin/python\" \"$CLAUDE_PROJECT_DIR/tools/auto_push_main.py\"",
+            "timeout": 180
           },
           {
             "type": "command",
-            "command": "\"$CLAUDE_PROJECT_DIR/.venv/bin/python\" \"$CLAUDE_PROJECT_DIR/tools/codex_landing_review_gate.py\""
+            "command": "\"$CLAUDE_PROJECT_DIR/.venv/bin/python\" \"$CLAUDE_PROJECT_DIR/tools/codex_landing_review_gate.py\"",
+            "timeout": 90
           },
           {
             "type": "command",
-            "command": "\"$CLAUDE_PROJECT_DIR/.venv/bin/python\" \"$CLAUDE_PROJECT_DIR/tools/consolidation_debt.py\" --quiet-ok"
+            "command": "\"$CLAUDE_PROJECT_DIR/.venv/bin/python\" \"$CLAUDE_PROJECT_DIR/tools/consolidation_debt.py\" --quiet-ok",
+            "timeout": 60
           },
           {
             "type": "command",
-            "command": "\"$CLAUDE_PROJECT_DIR/.venv/bin/python\" \"$CLAUDE_PROJECT_DIR/tools/organ_freshness_gate.py\" --quiet-ok"
+            "command": "\"$CLAUDE_PROJECT_DIR/.venv/bin/python\" \"$CLAUDE_PROJECT_DIR/tools/organ_freshness_gate.py\" --quiet-ok",
+            "timeout": 90
           },
           {
             "type": "command",
-            "command": "\"$CLAUDE_PROJECT_DIR/.venv/bin/python\" \"$CLAUDE_PROJECT_DIR/tools/operator_p0_stop_hook.py\""
+            "command": "\"$CLAUDE_PROJECT_DIR/.venv/bin/python\" \"$CLAUDE_PROJECT_DIR/tools/operator_p0_stop_hook.py\"",
+            "timeout": 60
           }
         ]
       }
@@ -58,19 +67,23 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"$CLAUDE_PROJECT_DIR/.venv/bin/python\" \"$CLAUDE_PROJECT_DIR/tools/costate_digest.py\" --session-start"
+            "command": "\"$CLAUDE_PROJECT_DIR/.venv/bin/python\" \"$CLAUDE_PROJECT_DIR/tools/costate_digest.py\" --session-start",
+            "timeout": 60
           },
           {
             "type": "command",
-            "command": "\"$CLAUDE_PROJECT_DIR/.venv/bin/python\" \"$CLAUDE_PROJECT_DIR/tools/operator_p0_digest.py\" --session-start"
+            "command": "\"$CLAUDE_PROJECT_DIR/.venv/bin/python\" \"$CLAUDE_PROJECT_DIR/tools/operator_p0_digest.py\" --session-start",
+            "timeout": 30
           },
           {
             "type": "command",
-            "command": "\"$CLAUDE_PROJECT_DIR/.venv/bin/python\" \"$CLAUDE_PROJECT_DIR/tools/dashboard_ctl.py\" ensure-up --quiet"
+            "command": "\"$CLAUDE_PROJECT_DIR/.venv/bin/python\" \"$CLAUDE_PROJECT_DIR/tools/dashboard_ctl.py\" ensure-up --quiet",
+            "timeout": 60
           },
           {
             "type": "command",
-            "command": "\"$CLAUDE_PROJECT_DIR/.venv/bin/python\" \"$CLAUDE_PROJECT_DIR/tools/consolidation_debt.py\" --quiet-ok"
+            "command": "\"$CLAUDE_PROJECT_DIR/.venv/bin/python\" \"$CLAUDE_PROJECT_DIR/tools/consolidation_debt.py\" --quiet-ok",
+            "timeout": 60
           }
         ]
       }

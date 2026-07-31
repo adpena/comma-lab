@@ -190,15 +190,31 @@ def seed_if_absent(force: bool = False) -> bool:
     return True
 
 
-def digest_block(max_lines: int = 40) -> str:
+def digest_block(max_lines: int = 40, max_line_chars: int | None = None) -> str:
     """Compact manifest block for the SessionStart digest (truncated). Fail-open: on ANY
-    error returns "" so the caller (costate_digest) can print nothing without a crash."""
+    error returns "" so the caller (costate_digest) can print nothing without a crash.
+
+    ``max_line_chars`` (ddm_gh2, 2026-07-31) caps each line's WIDTH.  ``max_lines``
+    alone bounded nothing that mattered: this manifest holds free-text paragraphs
+    (MEASURED 2026-07-31: single lines of 1,047 / 1,011 / 635 chars, 3,851 B total
+    for 40 lines), so a line-COUNT budget on a file with mega-lines is a cap that
+    looks binding and is not.  ``None`` (the default) preserves the historical
+    behaviour exactly, so existing callers are unaffected; the SessionStart hook
+    passes a width so the recurring payload is actually bounded.  Truncated lines
+    are marked with a visible ellipsis + the dropped-char count — never silently."""
     try:
         text = _read_text()
         if not text.strip():
             return ""
         lines = text.splitlines()
         head = lines[:max_lines]
+        if max_line_chars is not None and max_line_chars > 0:
+            head = [
+                ln
+                if len(ln) <= max_line_chars
+                else f"{ln[:max_line_chars]}… (+{len(ln) - max_line_chars} chars; read the file)"
+                for ln in head
+            ]
         out = ["[main-hot-state] MAIN retained-reasoning manifest (tools/main_hot_state.py):"]
         out.extend(head)
         if len(lines) > max_lines:

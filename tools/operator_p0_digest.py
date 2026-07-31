@@ -166,25 +166,55 @@ def open_rows(root: str) -> list[dict]:
     return rows
 
 
-def format_digest(rows: list[dict], header: bool = True, verbose: bool = False) -> str:
-    """Human-readable digest of ledger rows (compact by default — hook budget)."""
+# --- SessionStart line budget (ddm_gh2, 2026-07-31) -------------------------
+# MEASURED before this change: 7,315 B (~1,830 tokens) for 22 rows, paid on EVERY
+# session start AND every compaction, at 2 lines/row (~362 B/row).
+#
+# The anti-abandonment invariant is ABSOLUTE and is NOT traded for tokens: EVERY
+# open/in_progress row still prints, always.  What the hook rendering drops is the
+# per-row ``verbatim_ask``, because (a) for nearly every row the p0_id already
+# states it (``p0_ema_calibration_20260717`` vs ask "EMA calibration is p0 too"),
+# (b) it was truncated mid-word at 140 chars, so the tail was an unparseable
+# fragment rather than signal, and (c) the full text is preserved in the ledger
+# and one ``--verbose`` away.  ``next_action`` — the actionable cue — is kept.
+_COMPACT_NEXT_CHARS = 120
+_STATUS_ABBREV = {"open": "O ", "in_progress": "IP"}
+
+
+def format_digest(
+    rows: list[dict], header: bool = True, verbose: bool = False, compact: bool = False
+) -> str:
+    """Human-readable digest of ledger rows.
+
+    ``compact`` is the SessionStart hook rendering: one line per row (id + status +
+    next-action cue), never fewer rows.  Default/``verbose`` renderings are
+    unchanged, so an interactive call still shows the verbatim asks."""
     out: list[str] = []
     if header:
         n_open = sum(1 for r in rows if r.get("status") == "open")
         n_prog = sum(1 for r in rows if r.get("status") == "in_progress")
+        tail = (
+            "full text: tools/operator_p0_digest.py --verbose"
+            if compact
+            else "update via tools/operator_p0_digest.py --update"
+        )
         out.append(
             f"OPERATOR-P0 LEDGER — {n_open} open / {n_prog} in_progress "
-            "(operator-designated P0s; NONE may be silently dropped — "
-            "update via tools/operator_p0_digest.py --update)"
+            f"(operator-designated P0s; NONE may be silently dropped — {tail})"
         )
     for r in rows:
-        status = str(r.get("status") or "?").upper()
-        ask = str(r.get("verbatim_ask") or "").strip().replace("\n", " ")
+        raw_status = str(r.get("status") or "?")
         nxt = str(r.get("next_action") or "").strip().replace("\n", " ")
+        if compact:
+            # One line per row: the handle, the state, and a recognition cue.
+            cue = nxt[:_COMPACT_NEXT_CHARS] or "(no next_action recorded)"
+            out.append(f"  [{_STATUS_ABBREV.get(raw_status, '? ')}] {r.get('p0_id')} · {cue}")
+            continue
+        ask = str(r.get("verbatim_ask") or "").strip().replace("\n", " ")
         if not verbose:
             ask = ask[:140]
             nxt = nxt[:160]
-        out.append(f"  [{status}] {r.get('p0_id')} ({r.get('designated_date')}): {ask}")
+        out.append(f"  [{raw_status.upper()}] {r.get('p0_id')} ({r.get('designated_date')}): {ask}")
         if nxt:
             out.append(f"      NEXT: {nxt}")
         if verbose and r.get("evidence"):
@@ -223,7 +253,7 @@ def main(argv: list[str] | None = None) -> int:
             root = repo_root(args.root)
             rows = open_rows(root)
             if rows:
-                print(format_digest(rows))
+                print(format_digest(rows, compact=not args.verbose))
         except Exception:
             pass
         return 0

@@ -118,13 +118,22 @@ def test_open_gate_ownership_scan_surfaces_due_orphan_open_rows():
     if not scan.get("available"):
         pytest.skip(f"deferral ledger absent: {scan.get('reason')}")
     assert scan["open_gate_count"] >= 1
-    ids = {r["row_id"] for r in scan["open_gate_unfired_rows"]}
-    # QA05 is an ORPHAN->DUE row with gate OPEN -> it must be surfaced.
-    assert "QA05" in ids
+    # NO ROW-IDENTITY PINS AGAINST THE LIVE LEDGER (task #780, fixed 2026-07-31).
+    # This asserted `"QA05" in ids`, pinning a row whose status is a LIVE MUTABLE cell
+    # in .omx/research/ddm_deferral_queue_ledger_*.md. QA05 legitimately advanced to
+    # FIRED on 2026-07-30 (ddm_qp1) and the test went red on clean main — the ledger
+    # doing its job broke the test. That is staleness baked into a test: it re-breaks
+    # every time the queue advances, and a permanently-red test erodes the authority
+    # of the whole suite. Assert the STRUCTURAL invariant of the scan instead, which
+    # is what the scan actually guarantees and what a regression would violate.
+    # Positive/"a due row IS surfaced" coverage is NOT lost: it lives in
+    # test_no_owner_alarm_flags_empty_consumer below, against a SYNTHETIC fixture row
+    # (the correct home for it — a fixture cannot drift).
     for r in scan["open_gate_unfired_rows"]:
         # every surfaced row is DUE/ORPHAN and carries an owner + age field.
         assert ("DUE" in r["row_status"]) or ("ORPHAN" in r["row_status"])
         assert "owner" in r and "age_days" in r
+        assert r["row_id"], "every surfaced row must carry a non-empty row_id"
     # the cn1/cn2 gate-opener (rc1 unmerged branch) is encoded.
     openers = {o["gate_opener"] for o in scan["gate_openers"]}
     assert "rc1_branch_landing" in openers
