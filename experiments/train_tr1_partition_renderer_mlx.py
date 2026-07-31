@@ -278,6 +278,26 @@ class TR1Config:
     # off-RGB output-chart probe (pj1 range-wall 67.95). ADVISORY-NON-DEPLOYABLE (a head change breaks
     # the E1 receiver arch tr1_lotto_combined_ema_v1); its slope is the decision signal for a receiver
     # rev, NOT a deployable row. "off" => no new param => resume/checkpoint byte-compatible.
+    # ---- ax1 Pool-A token-byte levers (ddm_pa1b #793; DEFAULT-OFF => byte-identical control) ----
+    token_quant_margin_coupling: str = "off"  # ax1 §2a {off|on}: per-cell EFFECTIVE quant levels
+    # allocated by the MEASURED QA80 flip-distance field (allocation LAW = rank transform of the
+    # field's own flip-mass; no bare constant). "on" builds a FIXED (non-trainable) per-cell level
+    # map => not checkpointed, not in EMA => byte-identical resume. "off" => scalar-L control.
+    token_quant_coupling_field: str | None = None  # QA80 field custody dir (ddm_zb1_qa80_field);
+    # required when margin-coupling "on" (fail-closed if the SSD tier is not mounted).
+    token_quant_coupling_min_levels: int = 0  # coarse-floor endpoint of the allocation ladder;
+    # 0 => derive (base_levels // 4, a lattice-friendly coarse floor). base endpoint = quant_levels.
+    token_delta_group_sparsity: str = "off"   # ax1 §4a {off|on}: group-L2 shrinkage on per-pair
+    # token deltas (98.8% image-stationarity has NO train-side force). Loss term only => no param.
+    delta_sparsity_weight: float = 0.0        # w_delta_sparsity (ADDITIVE); 0.0 => OFF. The
+    # TRAIN-side twin of the export-side ν null-snap (gc10 F2): both drive stationary deltas to 0.
+    delta_sparsity_engage: str = "after_base_stability"  # {after_base_stability|from_step_0}:
+    # §7 ordering derives "engage AFTER base stability" (shrinking deltas against a moving base is
+    # noise); the base-stability EVENT = the CE->tau knee (loss plateau). "from_step_0" = the gc10
+    # F2 ν-snap warm-start holder (a burn warm-started from the snapped export keeps bytes low).
+    delta_sparsity_weight_field: str = "uniform"  # {uniform|xi_informed}: xi_informed RELAXES the
+    # shrinkage where the ego-motion prior says deltas legitimately move (lane/movable, DERIVED
+    # from the QA80 winner-class field), TIGHTENS on the static mass (ax1 §5).
 
     @property
     def grid_h(self) -> int:
@@ -449,6 +469,26 @@ def build_module(cfg: TR1Config):
             # its fine dims match the (D8) grid; the tie is applied in raw_tokens (differentiable
             # gather) so render + byte-close see the SAME tied field.
             self._rowband = _build_rowband_grammar(cfg)
+            # ax1 Pool-A (ddm_pa1b #793): FIXED per-cell effective-level map (margin-coupled quant)
+            # + xi-informed delta-sparsity weight field, from the MEASURED QA80 field. Both are
+            # _FixedBank (non-trainable => not checkpointed, not in EMA => byte-identical resume).
+            # None => no buffer => the forward + byte-close are bit-identical to the control.
+            _lvl_np, _dw_np = _build_pool_a_banks(cfg)
+            if _lvl_np is not None:
+                lm = _lvl_np.astype(np.float32)[..., None]                   # (gh,gw,1) level COUNT
+                if self._rowband is not None:  # tie the level map so tied VALUE cells share a level
+                    lm = np.asarray(self._rowband.apply_tie_np(lm[None])[0], dtype=np.float32)
+                self._level_map = _FixedBank({"L": mx.array(lm)})
+            else:
+                self._level_map = None
+            self._delta_sparsity_weight_field = (
+                _FixedBank({"w": mx.array(_dw_np.astype(np.float32))}) if _dw_np is not None
+                else None)
+            # engagement is event-driven (§7 base-stability = the CE->tau knee); "from_step_0" is
+            # the gc10 F2 nu-snap warm-start holder. Plain bool (never in MLX trainable traversal).
+            self._delta_sparsity_engaged = (
+                cfg.token_delta_group_sparsity == "on"
+                and cfg.delta_sparsity_engage == "from_step_0")
             # §3.3(a) lattice-anneal / staged quantizer: when "at_knee" the STE is DISENGAGED
             # (float tokens) until the CE->tau knee EVENT flips this to True (see main()); "off"
             # engages the STE from birth (tb1 control). Plain bool attribute (NOT an mx.array =>
@@ -517,7 +557,13 @@ def build_module(cfg: TR1Config):
             # float tokens (find the basin in float, refine on the shipped lattice after).
             if not self._quant_engaged:
                 return t
-            L = float(cfg.token_quant_levels - 1)
+            # ax1 §2a margin-coupled quant: per-cell effective L from the QA80 field when the
+            # level map is present; else the scalar-L control (byte-identical). L broadcasts
+            # (gh,gw,1) over the (gh,gw,c) token field.
+            if self._level_map is not None:
+                L = self._level_map.tensors["L"] - 1.0                     # (gh,gw,1) per-cell
+            else:
+                L = float(cfg.token_quant_levels - 1)
             x01 = (t + 1.0) * 0.5
             if cfg.token_ste == "dither":
                 u = mx.stop_gradient(self._dither.tensors["u"])
@@ -649,6 +695,41 @@ def _build_rowband_grammar(cfg: "TR1Config"):
             f"({cfg.grid_h},{cfg.grid_w}) at D={cfg.grid_downsample}; row-band needs the FINE "
             f"(D8) base — pass --grid-downsample 8 with a matching spec (fail-closed)")
     return g
+
+
+def _build_pool_a_banks(cfg: "TR1Config") -> tuple[np.ndarray | None, np.ndarray | None]:
+    """ax1 Pool-A (ddm_pa1b #793): build the FIXED (non-trainable) per-cell level map
+    (margin-coupled quant) + the xi-informed delta-sparsity weight field from the MEASURED QA80
+    flip-distance field custody. At most ONE field load (both levers share it). Returns
+    (level_map (gh,gw) int | None, delta_weight (gh,gw) float | None). None,None when both OFF
+    => build_module adds no buffers => byte-identical control. Fail-closed if a field-consuming
+    lever is on without the custody dir (never-invent)."""
+    need_level = cfg.token_quant_margin_coupling == "on"
+    need_xi = (cfg.token_delta_group_sparsity == "on"
+               and cfg.delta_sparsity_weight_field == "xi_informed")
+    if not (need_level or need_xi):
+        return None, None
+    if cfg.token_delta_group_sparsity == "on" and cfg.token_temporal_mode != "shared_base":
+        raise ValueError("delta group-sparsity requires --token-temporal-mode shared_base "
+                         "(the per-pair deltas it shrinks only exist in shared_base) — fail-closed")
+    if not cfg.token_quant_coupling_field:
+        raise ValueError("ax1 Pool-A field levers require --token-quant-coupling-field "
+                         "(the QA80 flip-distance custody dir) — fail-closed (never-invent)")
+    from tac.witness_dsl.ax1_pool_a_levers_20260730 import (
+        load_qa80_cell_field,
+        margin_coupled_level_map,
+        xi_informed_delta_weight,
+    )
+
+    agg = load_qa80_cell_field(cfg.grid_h, cfg.grid_w, downsample=cfg.grid_downsample,
+                               field_custody=cfg.token_quant_coupling_field)
+    level_map = None
+    if need_level:
+        base = int(cfg.token_quant_levels)
+        min_lv = cfg.token_quant_coupling_min_levels or max(2, base // 4)  # lattice-friendly floor
+        level_map = margin_coupled_level_map(agg.flip_mass, base_levels=base, min_levels=min_lv)
+    delta_weight = xi_informed_delta_weight(agg.dynamic_frac) if need_xi else None
+    return level_map, delta_weight
 
 
 def _full_token_field_np(model, cfg: "TR1Config") -> np.ndarray:
@@ -1071,6 +1152,31 @@ def build_argparser() -> argparse.ArgumentParser:
                     help="Window C (MAIN charter): 'linear' adds a warm-start-equivalent trainable "
                          "output residual (de-saturate the sigmoid head); ADVISORY-NON-DEPLOYABLE "
                          "(breaks the E1 receiver). 'off' = rgb control (deployable, resume-safe)")
+    # ---- ax1 Pool-A token-byte levers (ddm_pa1b #793; default-off => byte-identical control) ----
+    ap.add_argument("--token-quant-margin-coupling", default="off", choices=("off", "on"),
+                    help="ax1 §2a: 'on' allocates per-cell EFFECTIVE quant levels by the MEASURED "
+                         "QA80 flip-distance field (rank-transform allocation LAW, no bare const); "
+                         "fixed non-trainable level map => byte-identical resume. 'off' = scalar-L")
+    ap.add_argument("--token-quant-coupling-field", type=str, default=None,
+                    help="QA80 field custody dir (ddm_zb1_qa80_field_20260730); required when "
+                         "--token-quant-margin-coupling on (fail-closed if the SSD tier is absent)")
+    ap.add_argument("--token-quant-coupling-min-levels", type=int, default=0,
+                    help="coarse-floor endpoint of the per-cell level ladder; 0 => derive "
+                         "(quant_levels//4). base endpoint = --token-quant-levels")
+    ap.add_argument("--token-delta-group-sparsity", default="off", choices=("off", "on"),
+                    help="ax1 §4a: 'on' adds a group-L2 shrinkage on per-pair token deltas "
+                         "(98.806% image-stationarity has NO train-side force). Loss term => no param")
+    ap.add_argument("--delta-sparsity-weight", type=float, default=0.0,
+                    help="w_delta_sparsity (additive to the seg loss); 0.0 => OFF. The TRAIN-side "
+                         "twin of the export-side ν null-snap (gc10 F2)")
+    ap.add_argument("--delta-sparsity-engage", default="after_base_stability",
+                    choices=("after_base_stability", "from_step_0"),
+                    help="§7: 'after_base_stability' engages at the CE->tau knee EVENT (never "
+                         "epoch-hardcoded); 'from_step_0' = the gc10 F2 ν-snap warm-start holder")
+    ap.add_argument("--delta-sparsity-weight-field", default="uniform",
+                    choices=("uniform", "xi_informed"),
+                    help="ax1 §5: 'xi_informed' relaxes shrinkage on dynamic (lane/movable) cells, "
+                         "tightens on the static mass (DERIVED from the QA80 winner-class field)")
     return ap
 
 
@@ -1129,6 +1235,13 @@ def main() -> int:
         distill_form=args.distill_form,
         distill_attack_temp=args.distill_attack_temp,
         head_range_relax=args.head_range_relax,
+        token_quant_margin_coupling=args.token_quant_margin_coupling,
+        token_quant_coupling_field=args.token_quant_coupling_field,
+        token_quant_coupling_min_levels=args.token_quant_coupling_min_levels,
+        token_delta_group_sparsity=args.token_delta_group_sparsity,
+        delta_sparsity_weight=args.delta_sparsity_weight,
+        delta_sparsity_engage=args.delta_sparsity_engage,
+        delta_sparsity_weight_field=args.delta_sparsity_weight_field,
     )
     (out_dir / "tr1_config.json").write_text(cfg.canonical_json() + "\n")
     telemetry_path = out_dir / "telemetry.jsonl"
@@ -1275,6 +1388,12 @@ def main() -> int:
         # stage), re-engage it so the token forward matches the checkpointed lattice state.
         if cfg.token_quant_anneal == "at_knee" and stage != "seg_trunk_ce":
             model._quant_engaged = True
+        # ax1 §4a: if we resume PAST the base-stability knee, re-engage delta-sparsity so the
+        # shrinkage force matches the checkpointed schedule state (resume-registry hygiene).
+        if (cfg.token_delta_group_sparsity == "on"
+                and cfg.delta_sparsity_engage == "after_base_stability"
+                and stage != "seg_trunk_ce"):
+            model._delta_sparsity_engaged = True
         tlog({"event": "resume", "resume_from": str(args.resume_from), "epoch": start_epoch,
               "stage": stage, "quant_engaged": bool(model._quant_engaged),
               "ema_backfilled_new_params": backfilled})
@@ -1337,6 +1456,24 @@ def main() -> int:
                  for i in ids], axis=0)
         return _soft_hist_entropy_bits(vals, cfg.token_quant_levels)
 
+    def delta_sparsity_term(mdl, ids: list[int]):
+        """ax1 §4a group-L2 (group-lasso) shrinkage on the per-pair token deltas of the batch's
+        KEPT cells (the 98.806% image-stationary mass has no train-side force). The group is a
+        (pair,cell) delta over its ``c`` channels; whole-cell deltas → 0 → SMEVR zero-delta runs.
+        xi-informed weight (§5) relaxes the shrinkage on dynamic (lane/movable) cells. Mirrors
+        ``delta_group_sparsity_penalty`` (numpy authority) exactly."""
+        keep_idx = mx.array(keep_flat_np)
+        c = cfg.code_width
+        ds = mx.stack(
+            [mx.take(mx.reshape(mdl.tokens_delta[int(i)], (-1, c)), keep_idx, axis=0) for i in ids],
+            axis=0)                                            # (B, n_kept, c)
+        g = mx.sqrt(mx.sum(ds * ds, axis=-1) + 1e-8)          # (B, n_kept) per-group L2
+        if mdl._delta_sparsity_weight_field is not None:
+            wf = mx.take(mx.reshape(mdl._delta_sparsity_weight_field.tensors["w"], (-1,)),
+                         keep_idx, axis=0)                     # (n_kept,)
+            g = g * wf[None]
+        return mx.mean(g)
+
     def batch_loss(mdl, ids: list[int]):
         acc = None
         for i in ids:
@@ -1345,6 +1482,10 @@ def main() -> int:
         acc = acc / len(ids)
         if cfg.w_rate > 0.0:  # §3.4 (0.0 => byte-identical to the distortion-only control)
             acc = acc + cfg.w_rate * token_rate_term(mdl, ids)
+        # ax1 §4a delta group-sparsity: only once ENGAGED (base-stability event / from_step_0) and
+        # weight>0 => byte-identical to the control until engagement (gc10 F2 twin of the ν snap).
+        if mdl._delta_sparsity_engaged and cfg.delta_sparsity_weight > 0.0:
+            acc = acc + cfg.delta_sparsity_weight * delta_sparsity_term(mdl, ids)
         return acc
 
     vg = nn.value_and_grad(model, batch_loss)
@@ -1451,6 +1592,15 @@ def main() -> int:
                 # comparing tau_softplus loss against a CE baseline would fire a
                 # FALSE realization-gap alarm at the next gate. One-gate rebase.
                 prev_gate_smooth = None
+                # ax1 §4a delta-sparsity ENGAGE (base-stability event = the CE->tau knee): shrink
+                # the per-pair deltas now that the shared base has found its basin (§7: shrinking
+                # deltas against a moving base is noise). Event-driven, never epoch-hardcoded.
+                if (cfg.token_delta_group_sparsity == "on"
+                        and cfg.delta_sparsity_engage == "after_base_stability"
+                        and not model._delta_sparsity_engaged):
+                    model._delta_sparsity_engaged = True
+                    row["event_delta_sparsity_engage"] = {
+                        "epoch": epoch, "trigger": "ce_tau_knee_base_stable"}
         # F2 EVENT-FALLBACK (triggers-forces P0): if the CE knee never fires, the
         # form switch still fires at the window midpoint — an event with a fallback,
         # never a stranded stage (recorded as fallback, distinct from the knee).
@@ -1466,6 +1616,12 @@ def main() -> int:
             if cfg.token_quant_anneal == "at_knee" and not model._quant_engaged:
                 model._quant_engaged = True  # §3.3(a) engage STE at the F2 fallback knee too
                 row["event_quant_engage"] = {"epoch": epoch, "trigger": "F2_midpoint_fallback"}
+            if (cfg.token_delta_group_sparsity == "on"
+                    and cfg.delta_sparsity_engage == "after_base_stability"
+                    and not model._delta_sparsity_engaged):
+                model._delta_sparsity_engaged = True  # ax1 §4a engage at the F2 fallback knee too
+                row["event_delta_sparsity_engage"] = {
+                    "epoch": epoch, "trigger": "F2_midpoint_fallback"}
         tlog(row)
         telemetry_tail.append(row)
 

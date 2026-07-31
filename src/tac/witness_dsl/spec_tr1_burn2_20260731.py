@@ -24,6 +24,7 @@ from tac.witness_dsl.spec_tr1_renderer_20260728 import (
     lever_a1_gate,
     lever_basin_handoff,
     lever_byte_ledger_coder,
+    lever_delta_group_sparsity,
     lever_desc_level_roundtrip,
     lever_ema_decay,
     lever_lotto,
@@ -35,6 +36,7 @@ from tac.witness_dsl.spec_tr1_renderer_20260728 import (
     lever_token_grid,
     lever_token_init,
     lever_token_quant_anneal,
+    lever_token_quant_margin_coupling,
     lever_token_rowband,
     lever_token_temporal,
     lever_variant,
@@ -219,6 +221,87 @@ def qa84_grammar_race_programs(
     return {"A_uniform_D16_drop50": control, "B_rowband_D8": rowband, "grammar": g,
             "quadtree_named_further_arm": "D8-at-annulus-cells (census §4.2; pays iff in-band "
             "azimuthal sparsity real, QA74 g4 custody) — not built this unit"}
+
+
+# ---------------------------------------------------------------------------
+# ax1 Pool-A JOINT race (ddm_pa1b #793): rowband ∥ margin-quant ∥ delta-sparsity at matched
+# SMEVR bytes on ONE shared base — the hull-curvature instrument's arms.  The non-additive-pools
+# LAW: these three levers spend/save the SAME counted token bytes; per-lever stack-claims are
+# structurally refused — the RACE is the composition adjudicator (v19b +0.0805 synergy precedent
+# => measure JOINTLY).  Byte-matching + argv-diff sealing is done by the driver
+# (``ax1_pool_a_race_20260730.seal_matched_bytes_race``) against the FIRE-TIME parent field.
+# ---------------------------------------------------------------------------
+def pool_a_race_programs(
+    variant: str, out_dir: str, mask_path: str, *, field_custody: str,
+    grammar: RowBandGrammar | None = None, delta_sparsity_weight: float = 1e-3,
+    delta_sparsity_engage: str = "after_base_stability",
+    delta_sparsity_weight_field: str = "xi_informed", quant_min_levels: int = 0,
+    epochs: int = 400, max_wall_minutes: float = 480.0, w_rate: float = 0.05,
+    margin_temp: float = 1.0, gt_cache: str | None = None,
+) -> dict[str, object]:
+    """The ax1 Pool-A JOINT race arms (gc10 op-routable 3): all on the D8 row-band foveation base
+    (the shared vehicle), differing ONLY by which Pool-A lever(s) engage, so the matched-SMEVR-byte
+    comparison isolates the pool.  Arms:
+      * ``control_rowband``      — D8 row-band only (the foveation base; Pool-A levers OFF).
+      * ``margin_quant``         — + per-cell margin-coupled quant (ax1 §2a).
+      * ``delta_sparsity``       — + group-L2 delta shrinkage (ax1 §4a/§5).
+      * ``joint_quant_sparsity`` — + BOTH Pool-A byte levers (the joint waterfill).
+    Each is a valid sealed TR1 program (SMEVR ledger on all).  The driver prices each arm's SMEVR
+    bytes on the FIRE-TIME parent field and enforces ±1% matching (mismatch = the burn-2
+    code_width/level tuning-step signal — the non-additive-pools race, not a per-lever claim).
+    Falsifier (per arm, pre-registered): any lever ≤ noise at matched bytes ⇒ it EXITS the burn-3
+    stack (gc10 §1 row 3)."""
+    g = grammar or default_flip_band_grammar()
+    base_levers = _rowband_base_levers(
+        variant, g, epochs=epochs, max_wall_minutes=max_wall_minutes, w_rate=w_rate,
+        margin_temp=margin_temp)
+
+    def _prog(*extra) -> TR1RendererProgramV1:
+        levers = list(base_levers) + list(extra) + [lever_byte_ledger_coder("smevr")]
+        if variant == "lotto":
+            levers.append(lever_lotto(118, 0.5))
+        prog = TR1RendererProgramV1(levers=tuple(levers), num_pairs=600, out_dir=out_dir,
+                                    gt_cache=gt_cache, full_confirm=True)
+        prog.validate()
+        return prog
+
+    quant = lever_token_quant_margin_coupling(field_custody, min_levels=quant_min_levels)
+    sparse = lever_delta_group_sparsity(
+        delta_sparsity_weight, engage=delta_sparsity_engage,
+        weight_field=delta_sparsity_weight_field)
+    return {
+        "control_rowband": _prog(),
+        "margin_quant": _prog(quant),
+        "delta_sparsity": _prog(sparse),
+        "joint_quant_sparsity": _prog(quant, sparse),
+        "grammar": g,
+        "non_additive_pools_law": ("rowband ∥ margin-quant ∥ delta-sparsity spend the SAME "
+                                   "counted token bytes; per-lever stack-claims REFUSED — the "
+                                   "matched-SMEVR-byte race is the composition adjudicator"),
+    }
+
+
+def _rowband_base_levers(variant: str, grammar: RowBandGrammar, *, epochs: int,
+                         max_wall_minutes: float, w_rate: float, margin_temp: float) -> list:
+    """The shared D8 row-band base lever stack (the Pool-A race vehicle; extracted so every arm
+    composes onto ONE identical base — the matched-bytes comparison isolates the Pool-A pool)."""
+    levers = [
+        lever_variant(variant),
+        lever_token_grid(8, grammar.code_width),   # D8 FINE base (row-band needs it)
+        lever_renderer_capacity(24),
+        lever_desc_level_roundtrip(16, "round"),
+        lever_token_temporal("shared_base"),
+        lever_seg_physics("ce", 100.0),
+        lever_token_init("solve_project"),
+        lever_basin_handoff("on"),
+        lever_a1_gate(10),
+        lever_window(epochs, max_wall_minutes, batch_pairs=8, lr=2e-3),
+        lever_seg_margin_weight(margin_temp),
+        lever_token_quant_anneal("at_knee"),
+        lever_rate_in_loss(w_rate),
+        lever_token_rowband(grammar),
+    ]
+    return levers
 
 
 # ---------------------------------------------------------------------------

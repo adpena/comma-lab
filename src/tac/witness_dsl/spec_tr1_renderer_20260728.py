@@ -410,6 +410,81 @@ def lever_head_range_relax(mode: str = "linear") -> Lever:
                        "slope split <= noise => rgb chart does not bind")
 
 
+def lever_token_quant_margin_coupling(field_custody: str, *, min_levels: int = 0) -> Lever:
+    """ax1 §2a margin-coupled token quant (ddm_pa1b #793; folded from the ax1 DESIGN-stub): per-cell
+    EFFECTIVE quant precision allocated by the MEASURED QA80 exact flip-distance field.  The
+    segnet-fractal flip-distance law d=|m|/‖Δw‖ says quant noise is seg-safe where the field is
+    slack and dangerous where it is tight (100% of realized flips are in the bottom GT-margin
+    decile) — so spend precision where the field is tight, coarsen where slack.  Realized as a
+    FIXED per-cell level map (non-trainable => byte-identical resume) stored in the SAME uint8
+    lattice; coarse cells snap to a sublattice → SMEVR codes them with lower entropy (the bytes
+    materialize through the SHIPPED coder, identical mechanism to the QA84 rowband tie).  Pool-A
+    member: COMPETES with rowband + delta-sparsity for the same counted bytes (joint race only,
+    never stack-claimed — non-additive-pools LAW).  Falsifier: matched-SMEVR-byte A/B no d_seg win
+    ⇒ instance-close.  The allocation LAW is a rank transform of the field's own flip-mass — NO
+    bare α/β constant."""
+    ov = {"--token-quant-margin-coupling": "on", "--token-quant-coupling-field": str(field_custody)}
+    if min_levels:
+        ov["--token-quant-coupling-min-levels"] = str(min_levels)
+    return Lever(
+        name="tr1_token_quant_margin_coupling", overrides=ov,
+        notes="ax1 §2a per-cell precision by QA80 flip-distance mass (Pool A); falsifier: "
+              "matched-SMEVR-byte A/B no d_seg win => instance-close",
+        constant_manifest={
+            "--token-quant-coupling-field": {
+                "value": str(field_custody), "rung": "MEASURED_ANCHOR (QA80 field pass, zb1 item-1)",
+                "provenance": "exact flip-distance field, frozen CPU-torch SegNet over 600 burn "
+                              "frame1s, 600/600 per-pair sha custody (ddm_zb1_qa80_field_20260730); "
+                              "the allocation law = rank transform of the field's own flip-mass "
+                              "order statistic (segnet-fractal d=|m|/||dw|| flip-distance law) — "
+                              "not a bare constant, a measured field"},
+            "--token-quant-coupling-min-levels": {
+                "value": int(min_levels), "rung": "DERIVED (quant_levels//4 lattice-floor when 0)",
+                "provenance": "coarse-floor endpoint of the per-cell level ladder; 0 => derive "
+                              "base_levels//4 (a power-of-two-friendly coarse floor); base endpoint "
+                              "= token_quant_levels (the config's raced level count, not asserted)"},
+        })
+
+
+def lever_delta_group_sparsity(weight: float, *, engage: str = "after_base_stability",
+                               weight_field: str = "uniform") -> Lever:
+    """ax1 §4a/§5 delta group-sparsity (ddm_pa1b #793; folded from the ax1 DESIGN-stub): group-L2
+    (group-lasso) shrinkage on the per-pair token deltas.  op1 P2 measured 98.806% image-stationary
+    flip mass, but the trainer has NO delta-shrinkage force — SMEVR exploits stationarity only at
+    coding time; this shrinks whole-cell deltas at the SOURCE so bytes fall through the coder's
+    zero-delta runs.  §7 ordering: engage AFTER the base-stability EVENT (the CE→tau knee; shrinking
+    deltas against a moving base is noise) — event-driven, never epoch-hardcoded.  gc10 F2: this is
+    the TRAIN-side twin of the export-side ν null-snap; ``engage='from_step_0'`` is the ν-snap
+    warm-start holder (a burn warm-started from the snapped export keeps bytes low).  §5:
+    ``weight_field='xi_informed'`` relaxes shrinkage on dynamic (lane/movable) cells and tightens
+    on the static mass (DERIVED from the QA80 winner-class field).  Pool-A member.  Loss term only
+    ⇒ NO trainable param ⇒ byte-identical resume.  Falsifier: d_seg cost at matched SMEVR bytes ⇒
+    instance-close."""
+    if engage not in ("after_base_stability", "from_step_0"):
+        raise ValueError("engage is after_base_stability|from_step_0")
+    if weight_field not in ("uniform", "xi_informed"):
+        raise ValueError("weight_field is uniform|xi_informed")
+    return Lever(
+        name="tr1_delta_group_sparsity",
+        overrides={"--token-delta-group-sparsity": "on", "--delta-sparsity-weight": str(weight),
+                   "--delta-sparsity-engage": engage, "--delta-sparsity-weight-field": weight_field},
+        notes="ax1 §4a group-L2 delta shrinkage (Pool A; gc10 F2 train-side twin of the ν snap); "
+              "engage-after-base-stability event (§7); falsifier: d_seg cost at matched bytes => "
+              "instance-close",
+        constant_manifest={
+            "--delta-sparsity-weight": {
+                "value": float(weight), "rung": "RACED-NOT-ASSERTED (Pool-A matched-bytes race)",
+                "provenance": "the shrinkage strength is a Pool-A race slot swept at matched SMEVR "
+                              "bytes (v19b +0.0805 synergy precedent => measure JOINTLY, per-lever "
+                              "stack-claims refused); not a constant asserted as optimal"},
+            "--delta-sparsity-weight-field": {
+                "value": weight_field, "rung": "DERIVED (ax1 §5 ego-motion prior)",
+                "provenance": "xi_informed relax map = the QA80 winner-class dynamic fraction "
+                              "(lane/movable move; static mass does not) — DERIVED from the measured "
+                              "field, not a hand-drawn mask"},
+        })
+
+
 def qa24_composed_burn_program(variant: str, out_dir: str, mask_path: str, *,
                                epochs: int = 400, max_wall_minutes: float = 480.0,
                                w_rate: float = 0.05, rate_model: str = "entropy",
