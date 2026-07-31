@@ -22,7 +22,11 @@
 > wall-cap}, QA80 staleness gate, F1-F4+A1, governed+DSL-hashed) → FIRE → supervise
 > windowed loop w/ the P2 key between ~120-150ep windows, ≤2 extensions, ~8h cap →
 > endpoint obligations (n600 realized verdict + P re-measure + QA80 staleness re-check)
-> = the burn-4 parent. **Parallel (task #804, ddm_tp1, scorer-free):** the v9→TR1
+> = the burn-4 parent. **Parallel (task #805, ddm_fh1, Fable, scorer-free — operator
+> 07-31):** the v8/v9/v10 FORCES harvest+adaptation (σ_cc′ anti-erosion · critical-
+> nucleus/birth ladder · screw-consistency · satisficing · tie-locus · R-phase ·
+> per-class-λ events + a fresh area-Lagrange pass on the TR1 energy) → adapted-force
+> table → burn-4 arm matrix BEFORE seal. **Parallel (task #804, ddm_tp1, scorer-free):** the v9→TR1
 > telemetry port (P5's hardest prerequisite, vh1 row 7) — flag-gated default-off,
 > byte-identity-off proven, DSL Lever, fills the P5 telemetry slot. On rung-1 endpoint:
 > MAIN fills the P5 skeleton from receipts → burn-4 seal chain → fire. Honest
