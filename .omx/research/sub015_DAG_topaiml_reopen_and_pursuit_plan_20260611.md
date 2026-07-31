@@ -25679,3 +25679,31 @@ Memo `.omx/research/ddm_zb1_cheap_batch_20260730.md`. All [macOS-CPU advisory]; 
   QA34 $0-read DONE; QA80 row FIELD-PASS-RUN.
 
 pointer 0.1910828242 [contest-CPU] UNMOVED  ·  [no-triality] [p0-ledger-ok]
+
+
+## FEED-gc10 (2026-07-30) — 12th convocation (Schmidhuber LEAD): the HULL-MOVER question + negative-audit + verb legs
+
+Memo `.omx/research/ddm_gc10_hull_mover_convocation_20260730.md` (T3, override recorded). STORES-CONSULTED:
+gc9 memo/FEED · product law (3 anchors) · FEED-wr1gb · dw1 memo/FEED · zb1 memo · pj1 memo · ax1 · ea1.
+Headlines: (1) ranked table — authority-ν confirm+bank = the ONE named hull move (c 0.088→~0.044-0.048
+DERIVED, distortion column OWED per binding Contrarian dissent); Pool-A race = the hull-curvature
+instrument; f′ class-field projection probe (pj1 confound CURED: class-field→class-field, same manifold)
+= the class-change discriminator. (2) Fork = a SEQUENCE: bank-rate → price-Pool-A → discriminate-f′ →
+burn-3 only after bar-c is recomputed from ps1's real pose. (3) DERIVED-ORIGINAL (before research):
+band-lemma-gated snap coder (field-local admission — ours) + class-field token renderer (output IS the
+decision object, deterministic receiver paint — ours); research diff: NeuroQuant/JOMP/MoECodec/FlexiCodec
+validate directions, LESSONS-ONLY, our variants differ by deriving allocation from MEASURED laws.
+(4) LEG-g negative audit: Gate-B STANDS(instance)+pose-solved re-entry row · dw1 STANDS(formulation)
+WITH teacher-manifold qualifier + self-teacher queue row · zb1 knee RESCOPED to instance(current-coder)
+— post-snap re-measure may REOPEN cheap continuation · Window-C RESCOPED to "chart-relax does not rescue
+finishing-distill in 40ep" (scope-creep in prior summaries flagged); KD #74+dw1 = two formulation
+negatives, NO family upgrade; positives counter-audited: 117KB custody check (op-r 5) + QA80 field
+staleness on B (op-r 6) owed; B anchor double-measured = strongest positive. (5) Verb legs: BACKCAST
+and SANDWICH independently localize the missing object = a description→output map ~17× more efficient
+in d_seg·B (≈1,305→≤76) — convergence with the forward fork is the signal; HYBRIDIZE: graft dominates
+replace at equal f′, c(f′)≈100f′×0.078 (f′=5e-4 ⇒ under-bar CONJECTURE); EXHAUST: 2 cheap theorems
+(6-dim pose lattice → ps1 S5; 276 band-edge configs → Pool-A); PRE-MORTEM F1-F3 join ea1's charts as
+burn-3 constraints — F2 REFINES the bank ordering (snap at EXPORT only; burns warm-start UN-snapped
+with sparsity force ON). 8 op-routables in frontmatter; no arm spawned (fleet-cap law; MAIN actuates).
+verdict_scope notes: all new negatives herein are scoped in-table; no ≥formulation closure introduced.
+pointer 0.1910828242 [contest-CPU] UNMOVED
