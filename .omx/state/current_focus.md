@@ -1,4 +1,37 @@
-# Current Focus - 2026-07-31 (lg1 LANDED → b4s resumed: fold → re-seal → re-smoke → RE-FIRE burn-4)
+# Current Focus - 2026-07-31 (burn-4 alarm adjudicated + gc13/us1 landed → b4s fix-chain relaunch pending)
+
+> **BURN-4 ARC:** fired lg1-protected (ticket 6206cf56, daemon 40118) → first ALARM at ~18min:
+> term_domination = **seg ITSELF 67.8%** on the lean 2-term loss (seg .349/rate .147) — MAIN
+> adjudicated **FALSE POSITIVE by ported-predicate semantics** (v9 intent = NON-scored term
+> crowding seg; port fires on ANY >40%; would fire on EVERY telemetry-on TR1 run). NEW LAW:
+> **alarm predicates/thresholds are per-vehicle calibration objects** (constants-are-poison →
+> the guard system's own sensors; hold+adjudicate chain = the calibration mechanism).
+> Window_01 science VALID: re-smoke FLAT (Δ +4.2e-7, below own ~1.1e-6 resolution), Lane guard
+> healthy, birth key fired. **b4s RESUMED executing:** scored-term-exempt predicate fix (two-
+> landing) → reseal → carry-or-rerun smoke evidence → retire ALARM → +seal-neutral supervisor
+> **UNDRIV_EROSION watch** (gc13 receipt: Undriv eroded +0.00204 > Lane +0.00151 in the
+> unprotected ep499→641 window — "Lane=the one need" FALSIFIED, INSTANCE scope) → relaunch
+> full 140-ep windows. MAIN re-arms marker waiter on its relaunch receipt.
+> **gc13 (#810 DONE, 71659bd3d7):** missing shape = the closed bar↔burn loop; truly-optimal =
+> discretized Pontryagin TPBVP in scorer coords (per-EDGE dual trajectories from a bar-backcast
+> band-box, gate-cadence PID duals + SE deadbands, ONE KKT waterfill settle, distortion-only
+> per-class floors, graduation-to-solve, sensor-calibration leg). 3 seed-gap CORRECTIONS:
+> rd1 duals EXCLUDED as price source · per-class rate floors ill-posed · guarded set =
+> {Lane, Undriv}. Backcast (derived, advisory): corner C 0.16182 sub-bar @130KB · corner D
+> 0.14418 sub-0.15 @149KB · 42.6% of 0.36640 seg debt in the two positive-slope classes.
+> #809 cg1 AMENDED (11 items). R1=endpoint consumption bundle (per-class re-measure + 5×5 flip
+> matrix + protected descent rates + Undriv typing; falsifier: protected slopes ≥0 at λ_max ⇒
+> dual form falsified ⇒ #208 projection successor). R3 FIRED: **fl1 arm LIVE (#813)** —
+> per-class GT-flicker floors vs corner-C allocations (falsifier: floor>allocation ⇒
+> re-waterfill).
+> **us1 (#811 DONE, 64030ffc6d):** upstream re-read scorecard **0 CRITICAL** (13 laws re-
+> derived+HOLD; drift = operational only: 2 DRIFTED/4 FORGOTTEN/11 NEW). Top: rate denominator
+> is DYNAMIC rglob-sum (evaluate.py:64; stray ._*/.DS_Store silently shifts rate → **guard
+> task #812**) · rule-118 stakes +62.8 S · PoseNet luma = 2×2 POLYPHASE + camera_fl=910 (pose-
+> solve inputs) · timm 1.0.22-vs-1.0.27 parity OWED (advisory-only impact).
+> Pointer 0.1910828242 [contest-CPU] UNMOVED.
+
+# Historical - 2026-07-31 (lg1 LANDED → b4s resumed: fold → re-seal → re-smoke → RE-FIRE burn-4)
 
 > **lg1 (#808) LANDED (c009a2e123/c66acf4d79/8afe941864/9ac4aff09d):** scorer-coordinate
 > lane-guard WIRED — λ_Lane primal-dual (budget 0.12589 S custodied via
