@@ -26504,3 +26504,105 @@ Memo: `.omx/research/ddm_gc14_first_descent_20260731.md` · anchor `ddm_gc14_fir
 **OP-ROUTABLES (falsifier + consumer + fire-timing in memo sec.8):** R1 restart-cadence A/B ($0, w03 endpoint) · R2 alarm re-calibration x2 (before any guard) · R3 adopt the STOP rule (now, $0) · R4 hand slot to RATE (on B5-C) · R5 fix/formalize the optimizer discontinuity (with R1) · R6 camera_fl+polyphase -> terminal pose (post-burn) · R7 register re-grade (HELD on Test 1). **R1 preflight, derived from the frozen scorer (not a transplant):** the head is exact rank-4 with flip distance `d=|m|/||dw_e||`, so weight-space averaging over restart excursions reduces margin-field *variance* without moving its mean => **the restart gain should be proportional to the margin density at zero**, computable at $0 from the banked QA80 margin atlas — the cheapest falsifier for R1, runnable *before* the A/B.
 
 **Pointer 0.1910828242 [contest-CPU] UNMOVED. All burn evidence `[macOS-CPU/MLX advisory]`, `score_claim=false`.**
+
+---
+
+## FEED-gc15 — fresh-vs-warm is a false dichotomy: the reset is an unpriced 6.57x LR spike (#816, 17th convocation)
+
+`date_utc: 2026-07-31` · `arm: ddm_gc15` · `pointer: 0.1910828242 [contest-CPU] UNMOVED` ·
+`score_claim: false` · `[macOS-CPU/MLX advisory]` + `[source-derived]` · scorer-FREE ($0, 0 SegNet/PoseNet
+forwards; window_03 owns the slot) · memo `.omx/research/ddm_gc15_fresh_vs_warm_20260731.md` · Opus 5
+(Fable at usage limit).
+
+- **THE MECHANISM (DERIVED from source; closes gc14's INFERRED V5 to a closed form).**
+  `mlx.optimizers.Adam` defaults **`bias_correction=False`** and `train_tr1:1543` never overrides it. With
+  b=(0.9,0.999) and zeroed moments the effective step multiplier is **eta(t)=(1-b1^t)/sqrt(1-b2^t)**:
+  **eta(1)=3.1623, peak eta(12)=6.5685**, decaying to 1 with time-constant 1/(1-b2)=1000 steps. At the burn's
+  measured argv (`--batch-pairs 8`, `--num-pairs 600` => **75 steps/epoch**, `--lr 2e-3`, 140-ep window =
+  10,500 steps) each boundary injects **1,212.6 extra sign-steps = 16.17 epochs of free displacement =
+  11.5% per window, 81.7% of it in the first 13 epochs**. This predicts ALL FOUR of gc14's boundary
+  observations without being fitted to any (step-then-flat; |step|/|window delta| > 1; loss spikes at normal
+  gnorm 0.94-0.99; magnitude set by restart count not epoch count - 99.7% of the impulse lands by ep67
+  regardless of window length). **`bias_correction=True` sets eta==1 exactly** => the one-field falsifier.
+- **CONSEQUENCE (stated plainly):** on the leading derived hypothesis the campaign's only measured seg
+  descent this month is **an artifact of a missing bias correction**, not learning. gc14's r=0.310 is
+  re-read: the per-restart impulse is CONSTANT; r measures the LANDSCAPE's diminishing return to a fixed
+  displacement. `verdict_scope: STRUCTURAL` (mechanism, VERIFIED_VIA_SOURCE_INSPECTION) /
+  `PROVISIONAL-PENDING-VERIFICATION` (realized magnitude - constant-g is an upper envelope, Contrarian
+  objection sustained).
+- **THE OBJECT IS A 3-KNOB RESET OPERATOR, not a cadence line.** knob1 WHAT RESETS {m,v,EMA-shadow,theta}
+  (m and v are zeroed together but do different things - zeroing v is what creates eta, and v is the
+  quantity whose staleness was MILDER; the code applies the harsher treatment to the one that needed it
+  less) · knob2 WHAT IT RESETS TO {zero | previous | **scorer-prior**} · knob3 PER-COORDINATE {uniform |
+  per-channel | staggered release}. **tr1 exposes 0 of 64 flags governing ANY of them.**
+- **STANDING-LAW VIOLATION FOUND:** `v<-0` + no bias correction makes the first step `3.16*lr*sign(g)` - a
+  uniform-magnitude, sign-only, **metric-free** step = the generic metric, forbidden by
+  `generic_basis_metric_never_optimal` (op 07-29) and sy1 `S1-POLICY` ("Euclidean-default projection
+  REFUSED") absent derivation or race. **It arrived as a library default and was never derived or raced.**
+- **KNOB RANKING by information per $0 (DEMOTES MAIN's seed item 1 from 1st to 4th, with a reason):**
+  knob2/bias-correction > knob3a per-channel (#725 BUILT: capacity strongly non-uniform - Lane-Movable
+  top-3 of 16 channels = 70.7%) > knob1 (m vs v) > **knob0 CADENCE** (the impulse is now KNOWN and
+  CONSTANT, so a cadence A/B mostly re-measures a derived quantity - it becomes the CONTROL arm) >
+  knob3b staggered release.
+- **SCORER-DERIVED RESET, derived from OUR quantities (not transplanted):** Adam's `v` IS a diagonal
+  empirical Fisher; ms4d `BUNDLE-COMPLETE` passes the strict MS3 loader and #725 supplies per-stratum
+  `cap_b^{ab}(i)=||Dw_ab[i]||_F*sqrt(K_b(i))` on the exact n600 measure (argmax custody
+  0.999999991522895; rank-4 head sv 4.703/2.831/2.039/2.018). Setting `v <- s*cap^2` inserts natural
+  gradient **at the one point the empirical metric is discarded anyway - ~0x wall-clock**, vs lg1's
+  DEFERRED per-step gradient surgery at **~1.8x step cost**. **HONEST TENSION (not papered over):**
+  conditioning reading wants `v ~ cap^2`, targeting reading wants `v ~ 1/cap^2` - OPPOSITE. They agree
+  only that **scorer-null directions get ZERO kick**; the shape within range(A) must be RACED. Precision:
+  ker(A)~52% / 80.67% resize-null are properties of the realization operator on the IMAGE; hb1 measured
+  **0 dead SegNet channels** - do not conflate. The waste runs through the composite-R adjoint.
+- **THE ARM DESIGN absorbs the operator's mandatory falsifier BY CONSTRUCTION:** the benefit may BE the
+  disorder (indeed eta says it IS an LR spike), so all metric arms are **magnitude-matched** (first-100-step
+  cumulative ||dtheta|| matched to within 2%) and vary ONLY direction. Five arms: A no-reset control /
+  B zero-reset incumbent / **B' bias-corrected** / C momentum-only / D+- scorer-metric. Pre-registered
+  H1 spike (P~0.6) / H2 conditioning (P~0.2) / H3 momentum-staleness (P~0.1) / H4 none (P~0.1) / **H5
+  time-travel** (Assumption-Adversary: a bigger step merely arrives sooner where the run was going;
+  discriminator = arm A run 16 epochs longer). **Derived preflight owed BEFORE any arm: phi = fraction of
+  a uniform parameter kick landing in range(A); pre-registered withdrawal of D+- if phi > 0.8.**
+- **CONDITIONAL-VALIDITY RE-GRADE - QA24 from-birth: `MEASURED-DOMINATED` -> `CONDITIONALLY RE-OPENED`.**
+  bc1 was measured at **ep399**, the warm base at **ep641** (`--epochs` is CUMULATIVE in this trainer) =
+  **+60.7% compute**, at unmatched bytes (253,858 vs 273,004 = fresh 0.01275 S ahead on rate; the sg1
+  Contrarian falsifier was pre-registered "at matched bytes" and never matched). Projecting bc1 to ep499 at
+  the warm lineage's OWN later-stage rate (-4.767e-4 S/ep from ep499->641) gives fresh seg **0.46923 vs
+  warm 0.49410** => **fresh ~0.035 S AHEAD; the 0.078 S "domination" reverses sign.** Conservative (bc1 is
+  LESS converged so its true local rate is faster). `verdict_scope: INSTANCE`,
+  **DERIVED-BY-EXTRAPOLATION, PROVISIONAL-PENDING-VERIFICATION** - sufficient to RE-OPEN, never to reverse.
+- **FRESH-RUN DECISION FUNCTION (pre-registered):** FIRE-FRESH iff T1 v T2 v T3. **T1 STRUCTURAL-
+  IMPOSSIBILITY is the only currently-TRUE trigger and it has exactly one instance: QA84 rowband D8** -
+  pa1r: "NO D8/rowband checkpoint exists anywhere (every tr1 ckpt is D16)"; `RowBandGrammar` BUILT
+  (b2b e8d531e735), `--token-rowband-spec` exists, band [160,240)/1248 theorem-certified rate-optimal at
+  the >=50% gate. T2 = the QA24 matched-compute reversal (fires only on re-measurement). T3 = path-
+  dependence ceiling E (**UNMEASURED $0 read from the ru1 atlas**; threshold flagged as a bare constant by
+  Rudin - derive or race before firing). **Config if it fires:** rowband D8 x `solve_project` init
+  (sc2 -28.9% ADOPTED) x **`kd_warm_start_dir` <- the warm endpoint** (the #74/#129 actuator: BUILT, 6
+  NO-FAKE tests, DEFAULT-OFF, **NEVER FIRED**) x the sec-7 reset winner. Price ~13h local, $0 cash.
+  **Schmidhuber endorses (higher-drive domain: the rate derivative has not collapsed); Carmack endorses T1
+  ONLY (warm literally cannot buy a D8 parent) and REFUSES a fresh run motivated by "the stack never ran
+  from ep0" while 5 of 6 forces are DESIGNED-STUB.**
+- **ORPHAN FOUND:** the b4s-DEFERRED **from-birth-KD** cell and the b4s-DEFERRED **rowband** cell are ONE
+  run, and their actuator (`kd_warm_start_dir`, #74/#129) was **built 6 weeks earlier and never connected**.
+- **SEED AUDIT:** item 1 DERIVED-and-STRENGTHENED (continuum is a 3-cube, not a line) · item 2
+  **PLAUSIBLE, mildly overrated** - the stack has never run together at all, but because it is UNBUILT;
+  **wiring is the blocker, not birth**, and gc14's own `gt_components_erased` 567->508 (Lane -53) is a WARM
+  in-loop recovery receipt arguing against birth's necessity · item 3 DERIVED, and the re-grade is stronger
+  than framed (compute, not the D16 cap, is binding) · item 4 DERIVED and the best instinct: the seg
+  fresh-vs-warm question is a ~0.01-0.02 S object against a 0.098 S banked rate pool - **and the one
+  structurally-fresh cell is itself a RATE cell**, which reconciles the operator's question with gc14's
+  B5-C default.
+- **RE-OPENED at FORMULATION scope:** K-FAC `DISCARD` (negative_audit_wave 07-13 row 12) - both stated
+  grounds ("does not change the frozen teacher-call bottleneck" = wall-clock; "no unique ticket consumer" =
+  routing) **fail for a boundary insertion**, which costs ~0x wall-clock and now has a consumer.
+- **NEW LAW PROPOSED:** *a cited law with an underived effect size is an unpriced lever.* The trainer
+  comments "#517/#518 warm-start re-anchor law" at L1583 - the law was **honored**; its **magnitude was
+  never computed**. Distinct from (and more insidious than) an unlabelled constant. Sister to gc14's
+  window-length finding. **Two-route corroboration:** j4's beta2-derived **2000-step** LR ramp (07-23) and
+  this memo's 1/(1-b2)=**1000-step** timescale are the same object derived independently.
+- **NAMED $0 GAP:** gd1's QA82 generic-default census covered OUR defaults; it did **not** cover our
+  DEPENDENCIES' defaults (betas, eps, bias_correction) - which is where the load-bearing one was hiding.
+- **RELATIVE SIGNIFICANCE (pace != direction):** gc15's own S is **UNMEASURED and plausibly 0.011-0.047 S**;
+  the largest number in the census remains **0.098 S** (QA24 cell_drop50, banked, RATE axis), 5-10x larger.
+  Its product is a **re-pricing of the campaign's only measured descent** plus a **$0 arm (B') that says
+  whether that descent was real**. [magnitude-ok on dismissals below 0.001 S.] **Pointer UNMOVED.**
