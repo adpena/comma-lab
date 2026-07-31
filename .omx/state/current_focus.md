@@ -11,7 +11,16 @@
 > landing) → reseal → carry-or-rerun smoke evidence → retire ALARM → +seal-neutral supervisor
 > **UNDRIV_EROSION watch** (gc13 receipt: Undriv eroded +0.00204 > Lane +0.00151 in the
 > unprotected ep499→641 window — "Lane=the one need" FALSIFIED, INSTANCE scope) → relaunch
-> full 140-ep windows. MAIN re-arms marker waiter on its relaunch receipt.
+> full 140-ep windows. **RELAUNCH DONE (b4s d7d7c2fa87+84b5a695c1): predicate intent-restored
+> (scored-term exempt; floor 0.60 DERIVED as caps-law complement; 16/16 tests; per-vehicle-
+> calibration doctrine documented) · smoke evidence CARRIED (3-hunk telemetry-only diff receipt)
+> · ALARM retired via append-only supersession + overlay reader · window_02 FULL LIVE (ticket
+> bf1141d5fa594eb3, trainer pid 79174, ep665→806, ~90min/window, ≤2 more in 6h cap t0 14:17Z)
+> · UNDRIV_EROSION watch LIVE seal-neutral (rebuild hash == live hash; daemon pid 83959).
+> ⚠ FIRST READING: Undriv watch reads ERODING on window_01 smoke telemetry (slope −0.804/gate
+> vs ε 0.650, net −4 over 5pts/24ep — MARGINAL, short window); window_02's 140-ep boundary =
+> the clean adjudication; if it fires, MAIN adjudicates (no trainer-side λ_undriv yet — cg1
+> build item). Marker waiter v2 ARMED.**
 > **gc13 (#810 DONE, 71659bd3d7):** missing shape = the closed bar↔burn loop; truly-optimal =
 > discretized Pontryagin TPBVP in scorer coords (per-EDGE dual trajectories from a bar-backcast
 > band-box, gate-cadence PID duals + SE deadbands, ONE KKT waterfill settle, distortion-only
