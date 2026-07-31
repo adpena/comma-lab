@@ -26387,3 +26387,34 @@ alarms_resolved/ + append-only decision supersession (halt reclassified SPURIOUS
 supervisor reads supersessions at receipt time, originals never mutated). Burn-4 PROCEEDS: first FULL
 140-ep window from ep665 under the re-armed daemon. Pointer 0.1910828242 [contest-CPU] UNMOVED.
 [no-triality] [p0-ledger-ok]
+
+
+## FEED-fl1 (2026-07-31, task #813 ddm_fl1): per-class GT-flicker floors — gc13 R3 sandwich lower-bound leg MEASURED
+
+$0 scorer-FREE (cached `gt_n600.npz` lstars, ch1 S8 CLEAN sha cf8d83605d...; ZERO SegNet forwards;
+burn-4 slot untouched). Decomposed the registered aggregate flicker floor
+(`gt_scoredframe_spike_rate_equals_witness_flicker_floor_v1`, 0.005318) PER CLASS, charge-by-`lstars[t]`
+(= xp1 `_per_class_flip_counts` convention; L67 44%-Lane cross-check). **Reproduced to +4.4e-7**
+(/598 interior pairs = the registered denominator, DERIVED); Part D shares reproduced <0.1%; repairable
+0.9773. **Floors table (S-units, /598):** Lane **0.2316** (43.55%) · Road **0.1889** (35.52%) · MyCar
+**0.0434** (8.17%) · Undriv **0.0394** (7.41%) · Movable **0.0285** (5.35%); TOTAL 0.5318 (= 100x
+0.005318). **Sum-check PASS.** **FALSIFIER (pre-registered):** literal trigger fires for ALL 5 classes
+(each smooth-label floor 5.0-16.8x its corner-C alloc), but SCOPED verdict = **NO re-waterfill** —
+verdict_scope FORMULATION (the "hard floor" reading is FALSIFIED, not the paradigm): the flicker floor
+is smooth-label-only (operator 2026-07-15 + gc13 §5) and PIERCED by phase-faithful renderers (PR130
+2.966e-4 = 18x below; ep641 0.004264; FEED-ma 0.00086 — all below the 0.005318 floor). Binding sandwich
+lower-bound leg = ru1 GT-jitter-typed reachable ~6e-4 (=corner-C), NOT 5.3e-3. **Binding class for
+RE-WATERFILL: NONE. Binding phase-faithfulness DEBT rank: Lane #1** (0.2316 S, 13.1x corner-C; = 43.6%
+of the floor total). **JOIN (residual-above-floor = max(0, xp1_ep641 − floor)):** only **Undrivable
+(+0.01635 S = 29% of its own residual level) and Movable (+0.00945 S)** sit ABOVE their smooth-label
+floor = honestly-reachable non-flicker headroom; **Undrivable is EXACTLY gc13 §2.0/B1's eroding-unguarded
+class** (+0.00204 S/window) → its erosion is entirely in the reachable regime, so the cg1 guard protects
+genuine headroom (load-bearing for cg1's first guarded set {Lane, Undriv}). Lane/MyCar/Road residuals
+sit AT/BELOW their floors (witness already pierces via per-pair conditioning; Lane residual 46% below
+its floor, 66.8% ru1-flicker-typed = erasure-tail regime, needs positional carriers not smooth descent);
+scope INSTANCE (xp1 ep641 r1c endpoint; ru1 typing ep399 tb1 = cross-base structure label per gc13 §0.6).
+Consumers: cg1 (R2) sandwich distortion-floor leg + first-guarded-set confirmation; gc13 §4 backcast v2.
+Memo `.omx/research/ddm_fl1_perclass_flicker_floors_20260731.md`; custody
+`/Volumes/VertigoDataTier/pact/ddm_fl1_20260731/` (verdict + join_falsifier + driver + manifest).
+All rows `[macOS-CPU advisory]` derived-from-cached-GT, score_claim=false. Pointer 0.1910828242
+[contest-CPU] UNMOVED — this is MEANS. [no-triality] [p0-ledger-ok]
