@@ -26418,3 +26418,33 @@ Memo `.omx/research/ddm_fl1_perclass_flicker_floors_20260731.md`; custody
 `/Volumes/VertigoDataTier/pact/ddm_fl1_20260731/` (verdict + join_falsifier + driver + manifest).
 All rows `[macOS-CPU advisory]` derived-from-cached-GT, score_claim=false. Pointer 0.1910828242
 [contest-CPU] UNMOVED — this is MEANS. [no-triality] [p0-ledger-ok]
+
+
+## FEED-dg1 (2026-07-31, task #812 ddm_dg1): rate-denominator cleanliness guard — the DYNAMIC denominator hazard, two-landing self-protect
+
+$0 · scorer-FREE (never ran evaluate.py; burn-4 slot untouched) · `upstream/` read-only. VERIFIED (not
+trusted) from source: `upstream/evaluate.py:64` computes the rate DENOMINATOR **dynamically** —
+`sum(f.stat().st_size for f in uncompressed_dir.rglob('*') if f.is_file())` — rglobbing the WHOLE
+`upstream/videos/` tree. Line 56 reads `public_test_video_names.txt` for the SCORED set, but line 64 sums
+the ENTIRE dir → the asymmetry IS the vulnerability: a stray NOT in the names list still inflates the
+denominator. **MEASURED (tmp fixture, real upstream untouched):** `pathlib.rglob('*')` COUNTS dotfiles —
+a fixture went 100→180 with `._0.mkv` (AppleDouble) + `.DS_Store`; the hazard is REAL. Live tree today:
+sum `37,545,489` == constant `37_545_489`, inventory `{0.mkv}` → CLEAN. Hardcode survey: 203 `37545489`
+hits across src/tac|tools|experiments; canonical mirror `compute_contest_score` (#168) has 83 import
+sites, all routing rate arithmetic through `rate_term` → ONE chokepoint guards the chain (charter:
+guard chokepoints, not mass-migrate). **LANDING 1 (fail-closed, extends the SoT `tac.contest_score` — no
+new module):** `verify_upstream_videos_clean`/`assert_upstream_videos_clean` (replicate line 64 exactly,
+count dotfiles, NAME strays/missing, NEVER delete — upstream immutable) + a cached per-process guard wired
+into `rate_term` BEFORE any rate arithmetic, gated on the canonical constant (explicit non-canonical
+denominators skip it); absent/unreadable tree = never a violation. **LANDING 2 (warn-only preflight,
+Catalog #407):** `check_upstream_videos_dir_clean` — inventory-scoped stray/missing detection reusing the
+Landing-1 measurement SoT; wired warn-only into `preflight_all`. **STRICT decision: WARN-ONLY (deliberate,
+not purgatory; live count 0).** The HARD enforcement is at `rate_term` (where a wrong score is produced);
+the broad preflight stays warn-only because this macOS box generates `.DS_Store` routinely and a strict
+broad gate would false-block unrelated commits — sibling-consistent with the two adjacent filesystem
+anti-rot gates. Concrete strict-flip condition documented (eliminate the stray-dotfile vector on
+dev/CI). 26 tests green; 48 regression tests green; ruff F clean. Catalog-row for #407 in CLAUDE.md is
+OWED (flagged in memo §5, not landed to avoid same-turn cap collision). Memo
+`.omx/research/ddm_dg1_rate_denominator_guard_20260731.md`; commit `e66f225934`. Pointer 0.1910828242
+[contest-CPU] UNMOVED — this is APPARATUS (a correctness self-protect), NOT a score mover.
+[no-triality] [p0-ledger-ok]
