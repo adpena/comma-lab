@@ -363,6 +363,17 @@ def _elapsed_hours() -> float:
     return (datetime.now(UTC) - t0).total_seconds() / 3600.0
 
 
+def _cap_would_be_exceeded() -> tuple[bool, float]:
+    """(would_exceed, elapsed_hours) for STARTING one more FULL window now.
+
+    Projected against ``FULL_WALL_MINUTES`` (the trainer's OWN wall cap) rather than the measured
+    window duration: a window MAY legally run to its wall cap, so only the wall cap is a
+    GUARANTEED-completion bound. Binds EVERY launch path (extend AND the lane-erosion
+    rollback-and-raise relaunch) — a cap that only one caller honors is not a cap."""
+    e = _elapsed_hours()
+    return (e + (FULL_WALL_MINUTES / 60.0) > TOTAL_CAP_HOURS, e)
+
+
 def _heartbeat(phase: str, window: int) -> None:
     _atomic_write(STATE_PATH, {"ts_utc": _now(), "phase": phase, "current_window": window,
                                "supervisor_pid": os.getpid(), "pointer": POINTER,
@@ -790,6 +801,24 @@ def main() -> int:
                                                   "direction: #208 containment-projection "
                                                   "successor). OPERATOR decision owed."})
                     return 0
+                # PROSPECTIVE cap on the ROLLBACK path too (ddm_b4r): the protective relaunch is
+                # a full window and must also fit inside the cap. Checked BEFORE the retire/rename
+                # so custody is untouched when we cannot proceed — an unresolvable-in-budget
+                # protection failure is a genuine judgment call, so ALARM+HOLD for MAIN rather
+                # than silently endpointing on a half-executed rollback.
+                would_exceed, elapsed_now = _cap_would_be_exceeded()
+                if would_exceed:
+                    _alarm("LANE_EROSION_ROLLBACK_EXCEEDS_CAP", {
+                        **details, "elapsed_hours": round(elapsed_now, 3),
+                        "cap_hours": TOTAL_CAP_HOURS,
+                        "projected_hours_if_relaunched":
+                            round(elapsed_now + FULL_WALL_MINUTES / 60.0, 3),
+                        "reading": "Lane eroded and the lg1 rollback-and-raise relaunch is owed, "
+                                   "but that window cannot COMPLETE inside the burn cap. The "
+                                   "eroded window is left IN PLACE (not retired) so custody is "
+                                   "intact. MAIN decides: endpoint on the rollback-target ckpt "
+                                   "(the last ACCEPTED state), or extend the cap and relaunch."})
+                    return 0
                 # retire the eroded window + its decision receipt (custody preserved), then
                 # relaunch the SAME window number from the rollback target with raised λ.
                 rej = ROOT / "rejected"
@@ -890,7 +919,7 @@ def main() -> int:
         if len(wins) >= MAX_WINDOWS:
             _endpoint_stage(cur, "extension_cap_reached", decisions)
             return 0
-        elapsed_h = _elapsed_hours()
+        would_exceed, elapsed_h = _cap_would_be_exceeded()
         if elapsed_h >= TOTAL_CAP_HOURS:
             _endpoint_stage(cur, "total_wall_cap_reached", decisions)
             return 0
@@ -900,7 +929,7 @@ def main() -> int:
         # Never START a window that cannot COMPLETE inside the ORIGINAL cap; go to the endpoint
         # stage instead (a shorter chain with a real endpoint beats a truncated final window).
         # The cap itself is UNCHANGED (TOTAL_CAP_HOURS, t0 from burn4_t0.json).
-        if elapsed_h + (FULL_WALL_MINUTES / 60.0) > TOTAL_CAP_HOURS:
+        if would_exceed:
             _log(f"PROSPECTIVE cap: elapsed {elapsed_h:.2f}h + window "
                  f"{FULL_WALL_MINUTES / 60.0:.2f}h > cap {TOTAL_CAP_HOURS}h; endpoint now")
             _endpoint_stage(cur, "total_wall_cap_would_be_exceeded", decisions)
