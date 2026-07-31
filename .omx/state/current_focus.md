@@ -1,20 +1,26 @@
 # Current Focus - 2026-07-31 (BR-D wall branch: THE BIRTH-COMPLETION LADDER adopted)
 
-> **LADDER STATE (gc12 b4d317538d, 14th convocation LANDED):** the composed wall-branch
-> plan is "THE BIRTH-COMPLETION LADDER" — non-additive: from-birth KD / Lane carrier /
-> solve-seeded births all COMPETE for the same erased-Lane pool (~0.128-0.134 S), raced
-> or gated, never stacked. **Rung 0 = QA92 LIVE (task #801, Opus arm, owns the scorer
-> slot):** Lane-carrier receiver discriminator — erased super-nucleus components
-> composited onto control_tail frames (AA stroke edges camera-res pre-R, the Daubechies
-> binding) → tier-1 GT-RGB oracle O + tier-2 flat prototype F → falsifiers O<0.25 ⇒
-> carrier family closes · F≥0.7·O ⇒ flat 1-2KB carrier · else (e1) solve-seeded births;
-> Contrarian bound ADOPTED: rung 2 fires ONLY if P·O ≥ 0.05 S, else SKIP→burn-4.
-> **Prep LIVE (task #802):** P2 birth_completion typed gate key (rung-1 seal prereq) +
-> P3 (e1) seeding harness + P5 burn-4 charter skeleton. Rung 1 (continuation-to-birth-
-> plateau, windowed warm tail from control_tail ep499, ~8h cap) seals + fires on QA92
-> landing per the gc12 seal demand. Honest arithmetic: full ladder success ⇒ composed
-> ~0.65-0.70 advisory — does NOT reach 0.172141; it re-prices the hull + buys the
-> receipt-parameterized burn-4 charter where rate (0.179→~0.08 needed) rejoins.
+> **LADDER STATE (gc12 b4d317538d; QA92 LANDED 6c23883be6):** rung-0 QA92 FIRED-MEASURED
+> and the **Contrarian bound fired: P·O = 0.017 S < 0.05 ⇒ RUNG 2 SKIPPED** — no carrier
+> build, no solve-seeded births; **burn-4 is the terminal deliverable**. The measurement:
+> P (remaining erased super-nucleus Lane pool) = **0.04189 S**, sharply refining QA91's
+> 0.134 upper bound — the ep399→ep499 continuation already recovered ~0.09 S for free.
+> O = 0.407 / F = 0.194, but collateral dominates: **joint ΔS +0.30 S (oracle) / +0.22 S
+> (flat) — BOTH NET WORSE even with perfect GT-RGB content** (identity-fill control
+> bit-identical; metric identity JOINT = −P·O + collateral verified exact). NEW MEASURED
+> LAW (fp1+QA92 convergent, memory `erf_collateral_law_...20260731`): SegNet's ~85px-r50
+> ERF re-reads any injected stroke's neighborhood ⇒ post-hoc injection on textured
+> renders is net-negative; erased-structure recovery must be BORN IN-LOOP. Re-pricing:
+> carrier (b) gate now carries a hard collateral clause (~5-8× unfavorable); (e1)
+> priority-dropped behind burn-4; birth arm defaults to continuation/KD-from-birth.
+> **NEXT (mechanical):** rung 1 (continuation-to-birth-plateau pre-stage, the burn-4
+> parent-improver; windowed warm tail from control_tail ep499, ~8h cap, endpoint
+> obligations = realized verdict + P + QA80 staleness re-check) seals + fires the moment
+> lp2 (task #802, LIVE) lands the P2 birth_completion gate key; burn-4 chartering (P5
+> skeleton fill-in + v9 telemetry-port prerequisite) proceeds scorer-free in parallel;
+> burn-4 fires from rung-1's endpoint. Honest arithmetic unchanged: ladder ⇒ ~0.65-0.70
+> advisory, does NOT reach 0.172141; burn-4's rate re-race (~0.19-0.28 S) is the
+> gap-sized lever.
 
 > **Pointer honesty:** submittable local baseline `0.1910828242 [contest-CPU]` UNMOVED;
 > effective competitive bar `0.172141` (official PR #130, [contest-CUDA] reconstruction).
