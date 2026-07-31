@@ -26206,3 +26206,29 @@ arm's own continuation has STALLED/regressed against it, and paint-on-texture is
 `/Volumes/VertigoDataTier/pact/ddm_xp1_20260731/` (verdict + 5 chunks + custody manifest); memo
 `.omx/research/ddm_xp1_exact_p_20260731.md`. b4s consumes this P line at burn-4 fire time. task 806
 registered→in_progress→completed (actor ddm_xp1). [no-triality] [p0-ledger-ok]
+
+
+## FEED-b4s (2026-07-31, task #807 ddm_b4s): BURN-4 COMPOSED + SEALED — the wall-branch ladder's terminal deliverable
+
+**Pointer 0.1910828242 [contest-CPU] UNMOVED. Bar 0.172141. burn-4 does NOT cross it (stated plainly).**
+Filled the burn-4 skeleton (lp2 P5) from rung-0/1/2 receipts and COMPOSED the sealed config. **The
+decisive reconciliation:** the skeleton's three from-birth arms were re-priced against the receipts and
+**two were ALREADY FIRED-AND-DOMINATED** — (1) from-birth QA24 (bc1, ep399 seg+rate 0.686) LOST to the
+warm ep641 (0.608); grid can't go coarser than D16; (2) continuation-KD (dw1, B−A −3.82e-4, realization-
+gap reversal) CLOSED at FORMULATION; from-birth-KD needs from-scratch (dw1-deprioritized) → DEFERRED.
+rung-2 paint SKIPPED (QA92 P·O 0.017<0.05, +0.317 S ERF collateral). **So burn-4 = a bounded governed
+CONTINUATION from the r1c ep641 warm-QA24 WINNER (sha 40553db8…, n600 d_seg 0.00426407708, S_add 0.6082,
+273,004 B) engaging the ONE live lever: R6 `--class-weight-lane` 1.0→1.3** (fh1 #1 ranked, LANE-BIRTH
+pool, never-fired duty-to-measure, $0) + tp1 telemetry ON, seg-only, pose TERMINAL, NO injection (ERF
+law). **xp1 (task 806) sharpened the rationale:** the continuation improves Road/Mov/MyCar but the LANE
+axis REGRESSED +0.00151 and the erased Lane pool GREW to P=0.04401 S exact — R6 is exactly the Lane-
+upweight the measured dynamics call for (and genuinely OPEN: must un-stall Lane without over-tilting the
+bulk; the re-smoke ΔS gate + endpoint per-class split adjudicate). **SEAL:** window_01 re-smoke ticket
+098b5aea32feb048 (argv-diff vs r1c ep641 = EXACTLY {--class-weight-lane, --telemetry-v9-port, epochs,
+wall, out-dir, resume}); governed dry-run ALL GATES PASS (venv/seal-freshness/import/mem 88.9>25.6/slot
+FREE). **Composed advisory band seg+rate ~0.564 (full-P) to 0.608 (R6-null), realistic ~0.586-0.605;
+does NOT reach the bar.** Builder `ddm_b4s_20260731/build_burn4_window_ticket.py`; supervisor
+`tools/supervise_ddm_b4s_burn4.py` (adapted r1c daemon: re-smoke ΔS gate → full windows → birth-
+completion/caps → burn4.done/ALARM + endpoint manifest; 2 review passes, ruff F clean). Fired-or-blocker
+in the fire receipt (this FEED updated at fire). Charter `.omx/research/ddm_b4s_burn4_charter_20260731.md`.
+[no-triality] [p0-ledger-ok]
