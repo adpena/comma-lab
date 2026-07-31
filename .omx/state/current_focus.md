@@ -13,14 +13,21 @@
 > renders is net-negative; erased-structure recovery must be BORN IN-LOOP. Re-pricing:
 > carrier (b) gate now carries a hard collateral clause (~5-8× unfavorable); (e1)
 > priority-dropped behind burn-4; birth arm defaults to continuation/KD-from-birth.
-> **NEXT (mechanical):** rung 1 (continuation-to-birth-plateau pre-stage, the burn-4
-> parent-improver; windowed warm tail from control_tail ep499, ~8h cap, endpoint
-> obligations = realized verdict + P + QA80 staleness re-check) seals + fires the moment
-> lp2 (task #802, LIVE) lands the P2 birth_completion gate key; burn-4 chartering (P5
-> skeleton fill-in + v9 telemetry-port prerequisite) proceeds scorer-free in parallel;
-> burn-4 fires from rung-1's endpoint. Honest arithmetic unchanged: ladder ⇒ ~0.65-0.70
-> advisory, does NOT reach 0.172141; burn-4's rate re-race (~0.19-0.28 S) is the
-> gap-sized lever.
+> **LIVE (mechanical execution):** lp2 LANDED (8fd0f7836b/d9bd131824/34d2354ac4 — P2
+> birth_completion key w/ DERIVED ε [28 tests, measured-runnable: births still rising
+> at the burn tail, correctly does not fire] + P3 build-only seeding harness w/
+> preregistered survival<0.50 falsifier + P5 burn-4 skeleton w/ ⟪UNKNOWN⟫ slots).
+> **Rung 1 LIVE (task #803, ddm_r1c, owns the scorer slot):** seal per the gc12 demand
+> (control_tail ep499 parent, NO new levers, argv-diff exactly {window,outdir,resume,
+> wall-cap}, QA80 staleness gate, F1-F4+A1, governed+DSL-hashed) → FIRE → supervise
+> windowed loop w/ the P2 key between ~120-150ep windows, ≤2 extensions, ~8h cap →
+> endpoint obligations (n600 realized verdict + P re-measure + QA80 staleness re-check)
+> = the burn-4 parent. **Parallel (task #804, ddm_tp1, scorer-free):** the v9→TR1
+> telemetry port (P5's hardest prerequisite, vh1 row 7) — flag-gated default-off,
+> byte-identity-off proven, DSL Lever, fills the P5 telemetry slot. On rung-1 endpoint:
+> MAIN fills the P5 skeleton from receipts → burn-4 seal chain → fire. Honest
+> arithmetic unchanged: ladder ⇒ ~0.65-0.70 advisory, does NOT reach 0.172141;
+> burn-4's rate re-race (~0.19-0.28 S) is the gap-sized lever.
 
 > **Pointer honesty:** submittable local baseline `0.1910828242 [contest-CPU]` UNMOVED;
 > effective competitive bar `0.172141` (official PR #130, [contest-CUDA] reconstruction).
