@@ -26185,3 +26185,24 @@ DERIVED-ESTIMATE erased-count + the named exact method). MAIN consumes the marke
 Custody `/Volumes/VertigoDataTier/pact/ddm_r1c_20260731/` (manifest, tickets, windows, decisions);
 task 803 registered→in_progress (flips completed when MAIN consumes the endpoint). [no-triality]
 [p0-ledger-ok]
+
+## FEED-xp1 (2026-07-31): EXACT-P on the rung-1 birth ENDPOINT — the MAIN-owed measurement FIRED (task
+#806, $0 scorer slot, all [macOS-CPU advisory] score_claim=false; pointer 0.1910828242 [contest-CPU]
+UNMOVED). Cured the manifest's 4-conn DERIVED-ESTIMATE (474) with the exact QA92 base-pass method (8-conn
+frozen CPU-torch SegNet, n600) on the ep641 endpoint (ckpt 40553db8…). **P = 0.04401 S** (erased
+super-nucleus Lane pool remaining); n_erased 4228 / n_super 9035 (GT invariant) / realized_super 6023;
+base_dseg_mean 0.004264052 == manifest n600_d_seg 0.00426407708 to ~1e-7 (render→R→uint8→SegNet chain
+EXACT). **DECISIVE unpredicted read:** the 140-epoch birth continuation (ep499 control_tail parent → ep641)
+LOWERED overall d_seg −0.000677 but the erased Lane pool GREW +0.00212 S (QA92 ep499 0.04189 → 0.04401),
++187 erased components (4041→4228); the win is ALL Road(−0.034)/Movable(−0.018)/MyCar(−0.020), Lane axis
+REGRESSED +0.00151. Two-instrument agreement: XP1 frozen-scorer pool-growth CORROBORATES the birth gate's
+own telemetry stall (betti0_realized 534→500, no significant positive birth slope; gate fired on FLATTENING
+not exhaustion). Basis note: manifest 474 / gate 985/500 are tr1 telemetry (grid_downsample-16, NO scorer);
+XP1 4228/9035 are exact full-res frozen-SegNet n600 — different instruments, do not conflate. **Burn-4
+accounting:** KD-from-birth's target pool is P≤0.044 S — LARGER than the parent snapshot assumed, the birth
+arm's own continuation has STALLED/regressed against it, and paint-on-texture is QA92-net-negative (oracle
++0.30 S WORSE); no measured crossing mechanism yet. Small driver `experiments/ddm_xp1_exact_p.py`
+(3e588562d1…) REUSES QA92's `erased_super_nucleus_mask`+P-L353 verbatim (base pass only, 133s n600). Custody
+`/Volumes/VertigoDataTier/pact/ddm_xp1_20260731/` (verdict + 5 chunks + custody manifest); memo
+`.omx/research/ddm_xp1_exact_p_20260731.md`. b4s consumes this P line at burn-4 fire time. task 806
+registered→in_progress→completed (actor ddm_xp1). [no-triality] [p0-ledger-ok]
