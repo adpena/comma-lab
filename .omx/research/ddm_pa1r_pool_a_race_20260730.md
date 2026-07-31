@@ -15,8 +15,11 @@ saves — `worse_s` at both comparisons. The A1 apparatus REFUSED the arm twice 
 corrected, penalty-excluded instrument): soft descent decouples from realized argmax movement under
 the shrinkage force — **the co-location wall is now measured IN-LOOP, not just encode-side.** nv1's
 F2 escape hatch ("in-training delta sparsity is the snap's only viable form") is **INSTANCE-CLOSED
-at this weight/parent/budget**. Meanwhile the CONTROL tail itself moved the realized frontier
-(S 0.6842→0.67325, best realized point yet, by plain coupled-descent physics — no Pool-A lever).
+at this weight/parent/budget**. margin_quant ran its FULL budget and landed `worse_s` too (ΔS
++0.0644, favorability 0.0017 — its coarse-map bytes never materialize because training pulls
+tokens off the sublattice to recover d_seg). Meanwhile the CONTROL tail itself moved the realized
+frontier (S 0.6842→0.67325, best realized point yet, by plain coupled-descent physics — no Pool-A
+lever).
 Bonus: a REAL A1-instrument confound (penalty term inside the gate's smooth input) caught,
 class-fixed (713c119fa2), regression-tested.
 
@@ -123,8 +126,8 @@ seal_verdict.json, tickets/, <arm>/}`.
 | delta_sparsity_tail (final ep470, REFUSED) | 27 | 0.0052144 | 259,840 | 263,340 | 0.52144 | 0.17535 | 0.69679 | 0.09143 |
 | control @ep464 (matched-epoch pair) | 23 | 0.0052708 | 259,957 | 263,457 | 0.52708 | 0.17542 | 0.70250 | 0.09246 |
 | delta_sparsity @ep464 (matched-epoch pair) | 23 | 0.0053078 | 259,089 | 262,589 | 0.53078 | 0.17485 | 0.70562 | 0.09280 |
-| margin_quant_tail | _(running at memo-freeze; appended below on landing)_ | | | | | | | |
-| joint_tail | DEFERRED (clock) — ticket + seal on disk | | | | | | | |
+| margin_quant_tail (ep499, epochs_complete) | 58 | 0.0055867 | 265,359 | 268,859 | 0.55867 | 0.17902 | 0.73769 | 0.10001 |
+| joint_tail | DEFERRED-sealed (both constituents individually worse_s ⇒ F1 read moot) | | | | | | | |
 
 **Axis breakdowns (the exchange-rate discriminator):**
 - **delta vs control @ep464 (matched budget):** Δd_seg +3.70e-5, Δbytes −868 → Δseg_term +0.00370,
@@ -151,15 +154,20 @@ ROSE here, 0.0883→0.0914/0.0928, so both currencies agree this time).
   w_rate entropy force at an EARLIER, pre-knee operating point — not evidence this second force
   pays at the knee. So this is a REANCHOR-plus-extension: nv1's co-location tax, previously
   encode-side, now measured for the in-loop form too.
-- **margin_quant early read (gate-subset, pre-endpoint):** gate d_seg jumped to ~0.0066–0.0068
-  (vs control ~0.0051) on the coarse map while bytes at the ledger stayed ≈control (the map's
-  savings materialize only as training pulls tokens onto the sublattice — the ledger prices the
-  raw field uniform-L). Heading to a clear worse_s unless the last epochs recover ~0.0015 d_seg;
-  endpoint appended below.
+- **margin_quant ENDPOINT (MEASURED, epochs_complete — no refuse):** ran the full 58-epoch tail in
+  sustained COUPLED_DESCENT recovering the coarse-map's initial d_seg hit (gate 0.00680→0.00560)
+  but ended at n600 d_seg 0.0055867 = **+6.46e-4 vs control at essentially matched bytes (−169 B)**
+  → ΔS **+0.0644**, s_favorability **0.0017** (catastrophic exchange). Mechanism: the map's
+  predicted −3,961 B never materialized — training pulled tokens OFF the coarse sublattice to
+  recover d_seg, refilling the entropy (the ledger prices the raw field uniform-L; the byte saving
+  requires tokens to SIT on the sublattice, which the seg objective actively resists in exactly the
+  co-located cells). `worse_s`, hull NOT moved; QA80-rank coarsening INSTANCE-closed on this
+  parent/budget. Both currencies agree (c rose 0.0885→0.1000).
 
 ## §6 BURN-3 design consequence
 1. **Pool-A token-byte levers EXIT the burn-3 stack** (gc10 §1 row 3 falsifier FIRED for
-   delta-sparsity at instance scope; margin_quant heading the same way; rowband untested-blocked):
+   delta-sparsity AND margin_quant at instance scope — both measured worse_s; rowband
+   untested-blocked):
    burn-3 falls back to **the f′ class-change discriminator + the from-birth queue** per pa1b's
    §4 verdict logic. The surviving Pool-A fact: at B's knee, S-progress comes from the coupled
    descent SPENDING bytes on d_seg, not from reclaiming bytes.
@@ -172,8 +180,9 @@ ROSE here, 0.0883→0.0914/0.0928, so both currencies agree this time).
    tail). The theorem-certified [160,240)/1248 band is ready when/if that burn is chartered.
 4. **joint_tail DEFERRED (clock)** — ticket + seal on disk
    (`tickets/joint_tail_ticket.json`); resume plan: governed launch from B with the same
-   ±1%-refused starting-byte note as margin_quant; only worth firing if margin_quant's endpoint
-   surprises (else F1 antagonism is moot — both constituents individually worse_s).
+   ±1%-refused starting-byte note as margin_quant. **RESOLVED at memo close: margin_quant's
+   endpoint did NOT surprise (worse_s +0.0644) ⇒ F1 antagonism read is moot — both constituents
+   individually worse_s; joint stays sealed-unfired unless a reformulation revives a constituent.**
 
 ## §7 Honest limits + verdict_scope
 - **verdict_scope: INSTANCE** for delta-sparsity — {w=0.03, xi_informed, from_step_0, B-parent
