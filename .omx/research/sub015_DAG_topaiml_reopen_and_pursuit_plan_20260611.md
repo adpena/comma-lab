@@ -26232,3 +26232,22 @@ does NOT reach the bar.** Builder `ddm_b4s_20260731/build_burn4_window_ticket.py
 completion/caps → burn4.done/ALARM + endpoint manifest; 2 review passes, ruff F clean). Fired-or-blocker
 in the fire receipt (this FEED updated at fire). Charter `.omx/research/ddm_b4s_burn4_charter_20260731.md`.
 [no-triality] [p0-ledger-ok]
+
+
+## FEED-b4s-amend (2026-07-31, task #807): HELD for the MAIN CONSTRAIN-AND-PROTECT amendment (xp1 Lane-erosion)
+
+MAIN (operator "constrain and protect", responding to xp1's finding that rung-1 continuation ERODED Lane
++0.00151 S / +187 components while the bulk descended) amended the burn-4 charter: burn-4 must carry a
+CONSTRAIN-AND-PROTECT layer (hard λ_Lane primal-dual constraint + born-lane protection, trainer-side,
+built by parallel arm ddm_lg1), not just raced R6 re-weighting. **The R6-only seal was FIRED before the
+amendment arrived and has been HELD** — the re-smoke (window_01, R6=1.3 only) was killed at ep645 (4 ep,
+first gate d_seg 0.0043004 delta +2.3e-5 within noise, NO damage), retired to
+`window_01_preamendment_r6only_retired`, marker `burn4.HOLD`. **My surface (MAIN items #4/#5), BUILT
+trainer-independent:** the supervisor now carries the LANE-EROSION GUARD — the P2 birth key INVERTED
+(Lane betti0_realized OLS slope < −epsilon = significant net erasure; epsilon DERIVED per-window, no
+hand-set threshold), which STOPS any window that erodes Lane (ALARM LANE_EROSION + rollback target) —
+catching EXACTLY xp1's mechanism (overall d_seg improving while Lane erodes) that the overall-ΔS gate
+would miss. `LG1_DUAL_ENGAGED=False` gate until lg1's λ flag is sealed in (then the rollback+raise-λ
+path wires; never-launch-a-weaker-state). OWED at lg1's landing: verify argparse → fold λ_Lane/born-mask
+flags into the sealed ticket → flip the dual gate → re-seal → re-smoke → re-fire. task 807 blocked-on-lg1.
+Pointer 0.1910828242 [contest-CPU] UNMOVED. [no-triality] [p0-ledger-ok]

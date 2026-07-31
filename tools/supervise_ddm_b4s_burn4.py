@@ -68,6 +68,16 @@ PARENT_CKPT = Path("/Volumes/VertigoDataTier/pact/ddm_r1c_20260731/window_01/"
                    "checkpoints/stage_seg_trunk_tau_final.npz")
 
 BURN4_CLASS_WEIGHT_LANE = 1.3    # fh1 R6 derived S-share tilt (Lane 0.126/0.494); raced
+# --- MAIN charter amendment 2026-07-31: CONSTRAIN-AND-PROTECT layer (xp1 Lane-erosion finding) ---
+# lg1 delivers the trainer-side protection (λ_Lane primal-dual constraint + born-lane mask). When its
+# flags are folded into the sealed ticket, flip LG1_DUAL_ENGAGED True and wire the rollback+raise-λ
+# path (the ROLLBACK-AND-RAISE branch below). Until then the supervisor-side erosion guards (MAIN
+# items #4/#5, this file, trainer-independent) are the SAFETY NET: a Lane-eroding window is NOT
+# extended — ALARM (LANE_EROSION) + the rollback target recorded. Constants-are-poison: the erosion
+# threshold ε is DERIVED per-window from the SAME OLS+quant machinery the P2 birth key uses (no
+# hand-set λ, no hand-set ε). Non-additive-pools: this is a CONSTRAINT layer, orthogonal to the R6
+# race cell (it does not enter the race). ERF law: no injection anywhere.
+LG1_DUAL_ENGAGED = False         # flip True ONLY when lg1's λ_Lane flags are in the sealed ticket
 SMOKE_EPOCHS = 25                # window_01 bounded re-smoke extent
 FULL_EPOCHS = 140                # windows 02+ (gc12 §5 ~120-150 ep)
 SMOKE_WALL_MINUTES = 30.0        # 25 ep x ~0.64 min/ep ~16 min + slack
@@ -360,6 +370,34 @@ def _resmoke_gate(decision: dict) -> str:
     return "REGRESSED" if dseg >= PARENT_FINAL_GATE_DSEG + RESMOKE_NOISE else "PROCEED"
 
 
+def _lane_erosion_verdict(key: dict) -> dict:
+    """MAIN items #4 (LANE-EROSION EVENT KEY) + #5 (WINDOW REALIZED ACCEPTANCE), supervisor-side.
+
+    The P2 birth key INVERTED: the same OLS fit of Lane ``betti0_realized`` vs gate over the window,
+    but the erosion test is ``slope < -epsilon`` (Lane components net ERASED, a significant NEGATIVE
+    trend) — vs the birth key's ``slope <= epsilon`` (flattening). epsilon is DERIVED per-window from
+    the SAME OLS+quant machinery (constants-are-poison: no hand-set threshold). ``net_delta`` (last −
+    first betti0_realized_lane over the window) is the item-#5 realized-acceptance signal reported
+    alongside. ``eroding`` True ⇒ the window WORSENED Lane beyond the derived noise band ⇒ do NOT
+    extend; REJECT (rollback target = the window's START ckpt = the last accepted state)."""
+    fit = key.get("fit") or {}
+    slope = fit.get("slope_comp_per_gate")
+    eps = fit.get("epsilon_comp_per_gate")
+    trend = list(key.get("window_betti0_realized") or ())
+    net_delta = (trend[-1] - trend[0]) if len(trend) >= 2 else None
+    eroding = (slope is not None and eps is not None and slope < -abs(eps))
+    return {
+        "eroding": bool(eroding),
+        "slope_comp_per_gate": slope,
+        "epsilon_comp_per_gate": eps,
+        "net_betti0_realized_lane_delta": net_delta,
+        "window_betti0_realized_lane": trend,
+        "rule": "eroding <=> Lane betti0_realized OLS slope < -epsilon (significant net erasure over "
+                "the window); epsilon DERIVED (t_crit*max(SE_ols,SE_quant), same machinery as the P2 "
+                "birth key); no hand-set threshold (constants-are-poison)",
+    }
+
+
 def main() -> int:
     ROOT.mkdir(parents=True, exist_ok=True)
     if PIDFILE.is_file():
@@ -439,6 +477,7 @@ def main() -> int:
                                "above_nucleus_erasure_persists", "erased_count",
                                "above_nucleus_erased_estimate", "betti0_realized_endpoint")},
                 "birth_key_fit": key.get("fit"),
+                "lane_erosion": _lane_erosion_verdict(key),  # MAIN items #4/#5 (protection)
                 "elapsed_hours": round(_elapsed_hours(), 3),
                 "pointer": POINTER, "score_claim": False,
             }
@@ -454,6 +493,39 @@ def main() -> int:
         if last["stop_reason"] not in OK_STOP_REASONS:
             _alarm("UNEXPECTED_STOP_REASON",
                    {"window": last["window_dir"], "stop_reason": last["stop_reason"]})
+            return 0
+        # --- MAIN protection: LANE-EROSION GUARD (items #4/#5; every window) ---------
+        # A window whose Lane betti0_realized OLS slope is significantly NEGATIVE (< -epsilon)
+        # WORSENED the protected Lane pool beyond the derived noise band. REJECT it: do NOT extend
+        # from its (eroded) end ckpt; the last ACCEPTED state is its START ckpt (the prior window's
+        # end, or the parent for window_01).
+        le = last.get("lane_erosion") or {}
+        if le.get("eroding"):
+            n_cur = int(Path(last["window_dir"]).name.split("_")[1])
+            prior = (_window_dir(n_cur - 1) / "checkpoints" / "stage_seg_trunk_tau_final.npz"
+                     if n_cur > 1 else PARENT_CKPT)
+            details = {"window": last["window_dir"],
+                       "slope_comp_per_gate": le.get("slope_comp_per_gate"),
+                       "epsilon_comp_per_gate": le.get("epsilon_comp_per_gate"),
+                       "net_betti0_realized_lane_delta": le.get("net_betti0_realized_lane_delta"),
+                       "rollback_target_ckpt": str(prior),
+                       "lg1_dual_engaged": LG1_DUAL_ENGAGED}
+            if LG1_DUAL_ENGAGED:
+                # ROLLBACK-AND-RAISE (lg1 dual path): rollback to the START ckpt + relaunch this
+                # window with a raised λ_Lane per the sealed dual-ascent rule (bounded step, gate
+                # cadence). WIRED when lg1's --lambda-lane flag is in the sealed ticket; until then
+                # LG1_DUAL_ENGAGED is False so this branch is inert (never-launch-a-weaker-state:
+                # no half-wired rollback).
+                _alarm("LANE_EROSION_DUAL_ROLLBACK_OWED",
+                       {**details, "note": "lg1 dual engaged but the raise-λ relaunch rule is the "
+                                           "seal-time wiring owed to MAIN; STOP + rollback target "
+                                           "recorded rather than a half-wired retry"})
+                return 0
+            _alarm("LANE_EROSION",
+                   {**details, "reading": "R6 (class-weight-lane) ERODES the protected Lane pool "
+                                          "beyond noise (xp1's finding realized); the burn is NOT "
+                                          "extended. Accepted state = the rollback target ckpt. "
+                                          "Needs lg1's λ_Lane constraint to proceed (MAIN)."})
             return 0
         # --- window_01 RE-SMOKE ΔS SAFETY GATE -------------------------------------
         if last.get("is_resmoke"):

@@ -168,14 +168,39 @@ the caps law, so it is not auto-fired).
   own-vehicle line is ~0.96 full-S; the rate majority-owner still needs a fresh from-scratch attack that
   bc1 showed the coarse-grid does NOT supply warm).
 
-## §6 SEAL RECEIPT + FIRE PLAN
+## §6 SEAL RECEIPT + FIRE PLAN — HELD (MAIN CONSTRAIN-AND-PROTECT amendment 2026-07-31)
 
-- **SEAL (scorer-free, DONE):** window_01 re-smoke ticket sealed (ticket_hash 098b5aea32feb048); governed
-  dry-run ALL GATES PASS (venv_custody PASS · seal_freshness PASS [recompiled argv == sealed] · import
-  custody OK · memory 88.9 GiB > 25.6 floor · scorer_slot FREE). argv-diff = exactly the 6 sanctioned
-  flags. Builder `ddm_b4s_20260731/build_burn4_window_ticket.py`; supervisor
-  `tools/supervise_ddm_b4s_burn4.py` (2 review passes recorded; ruff F clean).
-- **FIRE SEQUENCE (under the standing GO, after the slot frees):**
+> **HOLD (MAIN charter amendment, operator directive "We can use sophisticated techniques to constrain
+> and protect", in response to xp1's Lane-erosion finding):** burn-4 must carry a CONSTRAIN-AND-PROTECT
+> layer (a hard λ_Lane primal-dual constraint + born-lane protection, trainer-side, built by the
+> parallel scorer-free arm **ddm_lg1**), not just raced R6 re-weighting. The **R6-only seal was FIRED
+> before this amendment arrived and has been HELD** — the pre-amendment re-smoke (window_01, R6=1.3
+> only) was killed at ep645 (4 ep in; first gate d_seg 0.0043004, delta +2.3e-5 within noise; **no
+> damage**) and retired to `window_01_preamendment_r6only_retired`; markers `burn4.HOLD`. **The re-fire
+> WAITS for lg1's protection layer to be folded into the sealed config** (MAIN: "HOLD THE SEAL until the
+> protection build lands").
+
+- **SEAL (R6-only, scorer-free, DONE but HELD):** window_01 re-smoke ticket sealed (ticket_hash
+  098b5aea32feb048); governed dry-run ALL GATES PASS (venv_custody · seal_freshness [recompiled argv ==
+  sealed] · import custody · memory 88.9 GiB > 25.6 floor · scorer_slot FREE). argv-diff = exactly the 6
+  sanctioned flags. **This seal is SUPERSEDED by the protected re-seal (below).**
+- **SUPERVISOR-SIDE PROTECTION (MAIN items #4/#5, MY surface — BUILT, trainer-independent):**
+  `tools/supervise_ddm_b4s_burn4.py` now carries the **LANE-EROSION GUARD**: after every window it
+  computes `_lane_erosion_verdict` — the P2 birth key INVERTED (Lane `betti0_realized` OLS slope <
+  −epsilon = significant net erasure; epsilon DERIVED per-window, no hand-set threshold). **A
+  Lane-eroding window is NOT extended: ALARM `LANE_EROSION` + the rollback target (the window's START
+  ckpt = last accepted state) recorded.** This catches EXACTLY xp1's mechanism — overall d_seg improving
+  while Lane erodes — which the overall-ΔS gate alone would PASS. `LG1_DUAL_ENGAGED=False` until lg1's
+  λ_Lane flag is sealed in; then the ROLLBACK-AND-RAISE (rollback + raise-λ + relaunch) path wires
+  (never-launch-a-weaker-state: no half-wired rollback now). 2 review passes; ruff F clean.
+- **OWED at lg1's landing (the fold, then re-seal + re-fire):** (a) verify lg1's trainer flags via
+  argparse (never-invent-flags); (b) fold the λ_Lane primal-dual + born-lane-mask flags into the sealed
+  ticket (default-off proven byte-identity, per lg1's memo); (c) flip `LG1_DUAL_ENGAGED` + wire the
+  raise-λ rollback rule; (d) the budget = the MEASURED ep641 Lane level (constants-are-poison); (e)
+  re-seal + governed dry-run + re-smoke + re-fire. Protection is a CONSTRAINT layer, orthogonal to the
+  R6 race (non-additive-pools: it does NOT enter the race). Builder
+  `ddm_b4s_20260731/build_burn4_window_ticket.py`.
+- **FIRE SEQUENCE (unchanged once the PROTECTED seal completes; under the standing GO):**
   1. WAIT for xp1's landing (custody complete + no process + governed-launcher G4 slot-free). [xp1's
      exact-P pass is DONE; verdict.json emitted; folded into §2.]
   2. Launch the DETACHED supervisor daemon (`nohup+disown`). The daemon:
