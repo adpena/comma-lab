@@ -1,3 +1,90 @@
+# Current Focus - 2026-07-31 (RECURSIVE REVIEW ROUND 1 — NOT CLEAN. 4 CRITICAL against MAIN's own adjudications. Honest burn descent is −0.0176 S composed, NOT −0.0210. Counter 0/3.)
+
+> **⚖️ ROUND 1 CORRECTIONS — the record below supersedes MAIN's 18:35Z and 18:52Z decisions on these
+> points.** Full record: `/Volumes/VertigoDataTier/pact/ddm_b4s_20260731/burn4_R1_review_corrections_MAIN.json`
+> (append-only; the two decision JSONs are NOT mutated).
+>
+> **CRITICAL 1 — the headline descent number was wrong twice.** MAIN reported **−0.0210 S**. It used the
+> WRONG PARENT (window_01 ep665 — but window_01 **is a burn window**: its ticket carries `--resume-from`
+> the r1c ep641 state AND `--class-weight-lane 1.3`, the R6 lever live; it REGRESSED n600 d_seg
+> 0.004264077→0.004277157, so baselining on it silently credits the burn with recovering its own
+> regression). The pre-registered baseline is `PARENT_BASELINE['n600_d_seg'] = 0.00426407708062066`,
+> stated **twice in MAIN's own supervisor** (`:64`, `:440`). It also **DROPPED THE RATE TERM**: bytes
+> moved 273,004→276,078 = **+0.002047 S**. **HONEST COMPOSED DESCENT = −0.017648 S** (seg −0.019695 +
+> rate +0.002047); MAIN overstated by **19%**. Aggravating: **gc14 had already landed this correction**
+> (`:48`, −0.018303 S, reproduced to the digit) and MAIN **reverted to the superseded seg-only figure** —
+> the consumption-failure class, committed against MAIN's own prior finding. Also owed: **window_03
+> composes to −0.013024 S = a +0.004624 S REGRESSION from window_02**; window_02 is the best composed
+> state in the burn. UNAFFECTED: the pre-registered falsifier still says **R6 PAYS on d_seg**.
+> Caveat that travels: `total_counted_bytes` is a counted-payload ledger, **not archive.zip bytes**.
+>
+> **CRITICAL 2 — the gate-bias "law" is FALSIFIED and its corroboration was LAUNDERED.** Third anchor
+> (ep945) breaks it: level bias **+0.026% / −0.374% / +1.273%** — **sign-flipping, 50× range**, on a
+> FIXED gate set (`default_rng(0)` re-seeded per call), so it is genuine state-dependent drift, not
+> sampling churn. At ep945 the bias is **25% of the entire window_02 descent**. And gc14's "7.2%" is
+> **the same two numbers with a different denominator** — one measurement cited as two witnesses.
+> ADMISSIBLE REPLACEMENT: *"n=3 anchors, INSTANCE scope; level bias −0.37%→+1.27% sign-flipping,
+> delta magnification 1.08× and 1.84×. **No bias law is established and none may be used to correct a
+> gate reading.**"* The rank-on-gate/decide-on-n600 RULE survives; the numerical correction does not.
+>
+> **CRITICAL 3 — MAIN's withdrawal of cn3's read WAS ITSELF the error MAIN criticized.** Full-window
+> OLS: **t=+7.41, net +0.000261**, and **at the exact moment MAIN cited (through ep929) it was already
+> t=+6.83**. MAIN's added data made the rise MORE significant. Window_03 ended at gate 0.0042013 vs
+> window_02's 0.0040519 — **worse than the window it continued from**. **cn3 was RIGHT IN DIRECTION.**
+> gd1's aliasing critique kills 5-point verdicts (12 sign flips measured in the rolling 5-point slope)
+> but NOT a 29-point regression spanning ~5 alias periods. Sign robust, magnitude not, no terminal
+> verdict from the gate alone.
+>
+> **CRITICAL 4 — MAIN's lane-guard hypothesis is REFUTED AS STATED (#822 rewritten).**
+> `realized_lane_s_units` (GT-referenced pixel mass, S-units) and `net_betti0_realized_lane_delta`
+> (**NOT GT-referenced**, component count) are DIFFERENT quantities; "opposite directions" is the
+> EXPECTED signature of Lane **consolidation**. Across the burn **all three Lane instruments improve
+> together** (0.12244→0.07748 · 528→576 · gt_components_erased **539→444**). The "erosion" was a 5-point
+> OLS on [586,576,577,561,576] — net −10 on base 576 = **−1.7%, oscillating ±25**.
+> **What survives, and is WORSE than MAIN said:** (a) the dual was **structurally inert across all 64
+> rows / all 3 windows** — root cause: `budget_s` is an **n600** quantity while `realized_lane_s` is read
+> on a gate subset with **16.2% less Lane**, so the constraint compares different populations and biases
+> g negative BY CONSTRUCTION; (b) the **remediation ladder is structurally unreachable** —
+> `lambda_step_cap` == `LG1_LAMBDA_STEP` == the same derived quantity, so a 0.1 raise is annihilated in
+> ONE gate, the supervisor then always reads 0.0, always computes new_init 0.1, and **never reaches
+> escalate=1.0**; (c) NEW — the erosion detector's stated rule is *"components net ERASED"* but it reads
+> the non-GT metric while **`gt_components_erased` sits UNUSED in the same row**, and that GT metric says
+> erasure **decreased**.
+>
+> **CONFIRMED CORRECT (no change):** `full_confirm` **IS n600** — verified from source
+> (`train_tr1:2118-2148`, pairs 0..599 no skips; all three receipts `n_pairs=600`, `ema_shadow`,
+> `chunk=32`; scorer path bit-identical to the gate). **MAIN's own top suspicion was wrong** and the
+> selection rule is structurally sound. Label that must travel: this n600 is the campaign's frozen-scorer
+> **ADVISORY** convention, never an upstream evaluator row. Also correct: the cure refusal (understated —
+> λ is annihilated in ONE gate, not "decays"), the cap-scope reading (pre-registered 1h31m before the
+> alarm), and the per-class endpoint amendment.
+>
+> **FIXES LANDED THIS ROUND:** **#824 created** — Arm B′ carved out of #815 as STANDALONE and UNBLOCKED
+> (R1-B: `ARM_BPRIME.requires_persistence == False`, executed; B′ needs one cfg field + one
+> `add_argument` + the `bias_correction=` kwarg + one Lever, NOT the 6-site checkpoint-format refactor
+> #820 bundles; MAIN had parked its own named-highest-value action behind a build it does not consume).
+> **#822 rewritten.** Endpoint shortlist **RESTRUCTURED**: the three window_03 candidates are separated
+> by **0.2–0.3σ of the ranking instrument's own noise** (spread 1.09e-5 vs first-difference sd 5.52e-5)
+> — statistically indistinguishable, so three of four n600 slots were buying a tie. Keep the rollback
+> target + ONE window_03 representative; spend freed slots on ep934 (does the Lane trade track the rise?)
+> and per-class on the control. **SELECT ON COMPOSED S, not d_seg alone** — bytes vary ~5,300 across
+> candidates = 0.0035 S ≈ 32% of the claimed selection gain, and on composed S **ep854 beats ep809**.
+> ep809 stays a legitimate candidate but **may win the endpoint and still be worthless as evidence about
+> the lever** (it sits ~3 epochs past the resume, inside gc15's 81.7%-within-13-epochs impulse).
+> Also corrected: custody count **30, not 26**; "+6.3–8.3% harder" is **one proxy family** (boundary_frac
+> −2.63% and mean_margin +1.30% say EASIER); "−16.2% Lane" is **lane_frac, a GT proxy**, not a realized
+> d_seg deficit; the **SRS noise is 1.5–4.3× larger** than the block over-weight, so 16.67× is real but
+> is NOT the dominant estimator defect; and MAIN's "**build asymmetry**" escalation on KD is **withdrawn**
+> — from-birth-KD IS tr1-reachable (`--distill-field-cache` with no `--resume-from`); what is unbuildable
+> is a KD *warm start*, a different mechanism, and the charter's DEFERRED carries a stated cost reason
+> and a live falsifier. sb2's ledger row was precisely worded; MAIN's escalation was not.
+>
+> **APPARATUS:** #815/#819/#820/#821/#822 are **absent from `.omx/state/canonical_task_status.jsonl`
+> entirely** — the blocking relation MAIN asserted is not in the canonical ledger at all. Same orphan
+> class as the week's other findings, at the ledger layer.
+>
+> **Counter 0/3. Round 2 fires after these fixes.** Pointer **0.1910828242 [contest-CPU] UNMOVED**.
+
 # Current Focus - 2026-07-31 (BURN-4 ENDED on ALARM #3; MAIN REFUSED the prescribed cure; the LANE GUARD NEVER ACTUATED ONCE — λ=0 at all 58 gates, and its constraint read SLACK while its sibling detector measured EROSION)
 
 > **🚨 ALARM #3 `LANE_EROSION_ROLLBACK_EXCEEDS_CAP` (18:43:49Z) — ADJUDICATED.**
