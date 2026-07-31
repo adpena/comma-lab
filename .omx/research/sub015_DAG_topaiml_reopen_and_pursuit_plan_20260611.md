@@ -26941,3 +26941,57 @@ SegNet/PoseNet forwards; window_03 owns the slot) · memo
   the trip point. **Nothing reconciles the two denominators**, so even a watcher who existed would
   compare the wrong quantities and conclude "comfortably safe." This is the single cleanest live
   argument for making `estimand` a REQUIRED field.
+
+---
+
+## FEED-sb2 (task #819, 2026-07-31) — build-closure of the optimal configs; the reset hook that did not exist
+
+**Scorer-FREE, $0, commit `c44c7565af`. Pointer `0.1910828242` [contest-CPU] UNMOVED — APPARATUS.**
+Memo: `.omx/research/ddm_sb2_complete_the_stubs_20260731.md`.
+
+**1. NOT-EVEN-DESIGNED confirmed and closed (the decision-gating build).** `train_tr1_partition_
+renderer_mlx.py:1543` = `optim.Adam(learning_rate=cfg.lr)` with no betas / no `bias_correction` / no
+persistence / no injection point, and **all 6 `save_checkpoint` sites pass `opt_state_flat={}`**;
+64-flag census returns ZERO `adam|beta|bias|moment|restart|precond|warmup`. **4 of gc15 §7's 5 reset
+arms (A, B′, C, D±) had no mechanism anywhere** — only arm B (the accidental incumbent) was reachable.
+`tac.optimization.reset_operator` (NEW, 32 behaviour tests) closes A/B/B′/C and supplies D±'s
+injection contract ⇒ the BOTH-BRANCHES rule is satisfied for the #815 reset race in one module.
+
+**2. gc15's headline INDEPENDENTLY REPRODUCED, plus a refinement.** η(t)=(1−β₁ᵗ)/√(1−β₂ᵗ) verified
+**against the real `mlx.optimizers.Adam`** across 40 steps (rel 2e-3): η(1)=3.1623, peak
+**η(12)=6.5685**, cumulative excess asymptote **1212.57** = gc15's 1,212.6 to 4 s.f. = **16.17
+epochs/boundary** at 75 steps/epoch, 82% in the first 13 epochs. REFINEMENT: convergence is SLOW (a
+2000-step sum reaches only 94%; η still 2.6% high at t=3000) — window arithmetic truncated at a few
+thousand steps UNDER-prices the impulse.
+
+**3. The detector was vacuous — repaired, with the before/after delta as the finding.**
+`lever_registry._module_source()` ASTed ONE file. Package-wide scan with **per-module trainer
+resolution** (a naive widening would report every tr1 flag "stale" = false FAIL replacing vacuous
+PASS). **1 of 171 modules (0.6%) → 16 factory-bearing modules; 116 → 177 factories (+52.6%);
+DESIGNED-STUB detection 0 (structurally impossible) → 10, of which 2 SILENT** (`WeightNormTelemetryRow`
+— score-neutral telemetry that should default ON; `IntegerPlaneEmitter`). `lru_cache` on an
+(size,mtime) fingerprint: **1.03s → 0.9ms (1096×)**, because a slow gate is a disabled gate.
+
+**4. A FIFTH grade the mandate did not anticipate, and it dominates: BUILT-ELSEWHERE-UNWIRED-HERE (8).**
+KD warm start · gradient surgery · σ_cc′ · birth-seeding Lever · rank-4 head quantities · ms4d bundle ·
+#725 BN capacity · #425 phase carrier — all built+fired on the levelset/torch vehicle, **zero tr1
+wiring**. A stub sweep marks every one GREEN because a mechanism exists somewhere; **my own gate cannot
+see them either, by construction.** PREMISE CORRECTION: tr1's `--distill-*` is a precomputed teacher-
+LOGIT cache (`:1444-1456`), **NOT** a from-checkpoint KD warm start — anything counting it as Path A's
+`kd_warm_start_dir` counted the wrong mechanism.
+
+**5. Two-landing gate.** (a) `activation_ledger` gains the BUILD axis — the old `{default, ever_fired,
+state}` cannot separate "off but real" from "off and HOLLOW" (both read `never-fired`), which is
+precisely how this class hid; plus `record_required_component`/`not_even_designed` for grade 5, which
+no AST sweep can see. (b) `check_no_stub_lever_factories` — **LIVE 10, WARN-ONLY**, structural not
+label-based. **Strict-flip NOT taken, deliberately:** all 10 are chartered builds owned by other arms;
+flipping would refuse the tree for debt this arm does not own. Flip at live-count 0.
+
+**6. 12 charters registered** in `.omx/state/required_component_ledger.jsonl` with
+`{grade, owner, missing_mechanism, fire_order, consumer}`. The REGISTRY drains the queue (a component
+whose factory lands drops off automatically) so a row can only be cleared by BUILDING. fire-order 1 =
+TR1ResetOperatorWiring · TR1KDWarmStart · TR1RowbandD8Config (**fully built, never fired** — needs only
+a spec `.json` + `--grid-downsample 8`; the single cheapest Path-A item).
+
+**Owed, unstarted, needs an owner:** the `check_codex_findings_memos_consumed` 3-day scan window (0 of
+1,260 files in scope) and the Catalog #396 strict-flip (433 live / 108 in-window).
