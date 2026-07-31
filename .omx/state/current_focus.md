@@ -8,8 +8,13 @@
 > END-TO-END mechanically, halt_events=[]). Burn-4 parent = ep641 ckpt sha 40553db8be98…;
 > QA80 NOT_CONSUMED_FRESH_BY_CONSTRUCTION; P 4-conn estimate 474 above-nucleus (exact
 > owed → xp1). c telemetry 0.0775 (from 0.0885, cross-burn trend down).
-> **LIVE:** ddm_xp1 (#806, scorer slot) — exact P via the QA92 base-pass on the ep641
-> render. ddm_b4s (#807, scorer-free) — fill last skeleton slots → compose the burn-4
+> **xp1 LANDED (cc55db90d5/cff7ce033e, #806):** exact P = **0.04401 S** (8-conn, 4228/9035
+> erased; chain validated to ~1e-7 vs the manifest). THE TWIST: the pool GREW +0.00212 S
+> during rung 1 — the −0.0651 S win was entirely Road/Movable/MyCar while **Lane
+> REGRESSED +0.00151** (two-instrument agreement w/ the birth gate's betti0 534→500).
+> Plain continuation now MEASURABLY erodes Lane → the fh1 seg-cell forces (R6
+> class-weight-lane · σ_cc′ pair-weighting) are measured-motivated, not just harvested;
+> no measured crossing mechanism for the Lane pool yet (KD arm carries its falsifier). ddm_b4s (#807, scorer-free) — fill last skeleton slots → compose the burn-4
 > arm matrix (QA24 from-birth rate cell × KD-from-birth seg cell w/ R6/R7 raced × fh1
 > force stack per §3b × telemetry ON) → reseal → bounded re-smoke after xp1 frees the
 > slot → FIRE under standing GO w/ the adapted daemon+marker supervisor. Honest
