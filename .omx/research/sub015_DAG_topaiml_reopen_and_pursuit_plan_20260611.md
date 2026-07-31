@@ -25707,3 +25707,43 @@ burn-3 constraints — F2 REFINES the bank ordering (snap at EXPORT only; burns 
 with sparsity force ON). 8 op-routables in frontmatter; no arm spawned (fleet-cap law; MAIN actuates).
 verdict_scope notes: all new negatives herein are scoped in-table; no ≥formulation closure introduced.
 pointer 0.1910828242 [contest-CPU] UNMOVED
+
+## FEED-ps1 (2026-07-30) — THE POSE STAGE RUNS: post-hoc geometric pose is L68-WALLED on the B-control seg-native parent (task #791)
+
+Memo `.omx/research/ddm_ps1_pose_stage_20260730.md`; harness `experiments/ddm_ps1_pose_stage.py`
+(reuses the PROVEN pfs1 WarpPoseOracle + solve_pair_gn by swapping oracle.packet → B-control; no
+shared-tool edit). All `[macOS-CPU frozen-PoseNet advisory]`, score_claim=false; scorer slot consumed;
+pointer UNMOVED. STORES-CONSULTED: su2 program (merged 6813679636) · B-control ckpt feba3b7f · compiled
+archive 438bc022 (zb1 §4 realized d_seg 0.005114) · ax1 §4b/§6 · pfs1 solver + D1 s_t init · p3v2 ·
+pose_metric_n600 (rows[i].center) · ck1 v4a receiver · pb1 p5 receipt · QA80 field.
+
+THE LADDER (receiver-realized d_pose through the EXACT pfs1_warp_receiver path, n600 unless noted):
+S0 stub (f0=zeros) d_pose **160.0998** (term 40.01) → S1 warp base (§4b, f0=warp(f1,H(p0))) d_pose
+**27.8185** (term 16.68) → S2 terminal 6-DOF GN solve d_pose **20.4075** (term 14.29; med 7.55; 502/600
+improve). The warp (§4b) works — 5.8× over the stub, ax1 §4b falsifier (b) does NOT fire — but the solve
+FLOORS at 20.41, ~2400× above v4d (0.0086).
+
+DECISIVE CONTROL (proves harness + isolates cause): the SAME solver on the pb1 parent (pose-legible,
+f1 mean 51), no swap, reproduces pfs1 D1 EXACTLY (warp 0.2474 → solved 0.1720). On B-control (seg-native,
+f1 mean 107) the same solver gives 27.8 → 20.4 = 30-120× worse. The blowup is PURELY the parent's f1
+photometric legibility → **L68 photometric wall CONFIRMED on the current live vehicle for the first time.**
+
+CROSS-PARENT RECONCILIATION (vs the QA43/QA44/QA45/QA48 pose wins): those solves worked because v4d/pfs1
+were pose-CONDITIONED bases; the B-control (QA24 post-burn seg trunk) is pure-seg, so post-hoc pose is
+walled there. The pose program's success on v4d does NOT transfer to the rate-competitive seg-trunk
+vehicle. This confirms ax1 §6 / ea1 N3: **pose-legibility MUST be born in the burn (QA80
+pose-legibility-from-birth + JOINT descent), not solved post-hoc.**
+
+COMPOSED-S (measured components; SMEVR 259,407 B + pose_warp.stp 6,633 B MEASURED, rate 0.1771; d_seg
+0.005114): S2 realized **14.9741** (pose-dominated); ideal-pose floor 0.6886 (= seg 0.5114 + rate 0.1771,
+≈ dw1 S 0.6842). The seg+rate floor is ALREADY above the 0.172141 bar (seg axis alone 0.5114 exceeds it)
+→ **B-control is a seg/rate anchor, not a target-crossing parent regardless of pose.** Bars: 2.2566 REF
+/ 0.9640 v4d line / 0.172141 official.
+
+CONSEQUENCE for gc10's "bar-c recomputed from ps1's real pose": on THIS parent the real post-hoc pose is
+20.41, NOT a low number — bar-c CANNOT be recomputed low from B-control's post-hoc pose. Burn-3 must
+condition pose in-loop. STAGE DISPOSITIONS: S3 (QA43 tail) NOT RUN — precondition unmet (no admissibly
+close pair on a walled base; family LIVE for a conditioned base); S4 (QA66/QA80 photometric) NOT RUN —
+dominated (±0.0134 S vs 14.29 pose term); S5 (compose) arithmetic complete. verdict_scope: every negative
+is INSTANCE (B-control seg-native parent × post-hoc-geometric-pose); no family closed.
+pointer 0.1910828242 [contest-CPU] UNMOVED  ·  [no-triality] [p0-ledger-ok]
