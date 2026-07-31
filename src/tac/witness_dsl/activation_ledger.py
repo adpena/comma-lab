@@ -451,8 +451,8 @@ def duty_to_measure_ranked(
     path: Path | None = None,
     sig_path: Path | None = None,
     pointer_path: Path | None = None,
-    term_current: "dict[str, float] | None" = None,
-    term_floors: "dict[str, object] | None" = None,
+    term_current: dict[str, float] | None = None,
+    term_floors: dict[str, object] | None = None,
     floor_aware: bool = True,
 ) -> list[dict]:
     """The duty-to-measure queue RANKED by relative significance (fraction of remaining descent).
@@ -563,11 +563,197 @@ def duty_to_measure_ranked(
     return rows
 
 
+# ══ BUILD COMPLETENESS — the dimension this ledger could not express ═══════════════════════════
+# ddm_sb2 (task #819), operator 2026-07-31: *"Everything that is designed to stub ... needs to be
+# fully built out. No orphan signal is a very important principle"* + *"Everything that we need for
+# our truly optimal from start run or continued warm start and fresh tuning needs to be fully built."*
+#
+# THE BUG THIS CLOSES. The schema above is ``{default, ever_fired, last_verdict, state}``. It can
+# distinguish "off but real" from "fired" — it CANNOT distinguish "off but real" from "off and
+# HOLLOW". A DESIGNED-STUB (a ``Lever`` factory whose trainer flag does not exist) reports
+# ``state=never-fired``, byte-identical to a fully-built default-off lever, to every consumer: the
+# duty queue, the costate SENSE layer, launch tickets, council deliberations. That is NO-FAKE
+# forbidden class #1 (marker-without-mechanism) at the registry layer, and it already corrupted a
+# strategy decision (a fresh-run argument rested on "the full force stack has never run from ep0",
+# when 5 of 6 of those forces were stubs). Build state is now a FIRST-CLASS axis.
+#
+# FOUR grades, ordered by how much is missing:
+#   built-and-fired    — mechanism exists, wired, and has actually run
+#   built-never-fired  — mechanism exists + wired, never executed (the classic orphan)
+#   designed-stub      — a Lever/flag exists, the MECHANISM does not (derived: emitted flag absent
+#                        from the module's own trainer argparse)
+#   not-even-designed  — a component an optimal config REQUIRES with no Lever, no flag, nothing.
+#
+# ``not-even-designed`` is STRUCTURALLY INVISIBLE to any AST/registry sweep — there is no artifact
+# to detect — so it cannot be derived; it must be DECLARED against the config that needs it. That is
+# what :func:`record_required_component` is for, and it is the deliberate reason this ledger gains a
+# second store rather than another boolean. A required component that is never declared is the grade
+# that kills a run at fire time while every gate stays green.
+BUILD_FIRED = "built-and-fired"
+BUILD_NEVER_FIRED = "built-never-fired"
+BUILD_DESIGNED_STUB = "designed-stub"
+BUILD_NOT_DESIGNED = "not-even-designed"
+VALID_BUILD_GRADES = (BUILD_FIRED, BUILD_NEVER_FIRED, BUILD_DESIGNED_STUB, BUILD_NOT_DESIGNED)
+
+# Canonical APPEND-ONLY fcntl-locked store for DECLARED required components (grade 4). Keyed by
+# (component, needed_by); latest row wins on read.
+REQUIRED_COMPONENT_PATH = _REPO_ROOT / ".omx" / "state" / "required_component_ledger.jsonl"
+
+
+def _build_index() -> dict[str, object]:
+    """{factory_name: FactoryBuild} across the WHOLE witness_dsl package (per-module trainer)."""
+    from tac.witness_dsl.lever_registry import package_lever_factories
+
+    return {f.factory: f for f in package_lever_factories()}
+
+
+def package_known_levers() -> tuple[str, ...]:
+    """Every lever factory in the package — the honest superset of :func:`known_levers`.
+
+    ``known_levers()`` reads ``lever_factories()``, which ASTs ONLY ``curriculum_dsl.py``; sibling
+    lever modules (fh1 forces, ph3_s10, ax1, the tr1 spec) were invisible to the activation ledger
+    entirely, so their levers were never even IN the duty queue. Preserved as a separate function so
+    the historical contract is unchanged for existing consumers.
+    """
+    return tuple(sorted(_build_index()))
+
+
+def build_grade(
+    lever: str,
+    *,
+    path: Path | None = None,
+    index: dict[str, object] | None = None,
+) -> str:
+    """The BUILD grade of one lever — derived from the registry + this ledger, never remembered.
+
+    A lever absent from the package index is ``not-even-designed`` (nothing implements it); a lever
+    whose factory emits a flag its trainer does not declare is ``designed-stub``; otherwise the
+    activation ledger decides fired vs never-fired.
+    """
+    idx = _build_index() if index is None else index
+    fb = idx.get(lever)
+    if fb is None:
+        return BUILD_NOT_DESIGNED
+    if getattr(fb, "is_stub", False):
+        return BUILD_DESIGNED_STUB
+    return BUILD_FIRED if activation_status(lever, path).ever_fired else BUILD_NEVER_FIRED
+
+
+def record_required_component(
+    component: str,
+    *,
+    needed_by: str,
+    missing_mechanism: str,
+    owner: str,
+    fire_order: int,
+    consumer: str,
+    grade: str = BUILD_NOT_DESIGNED,
+    notes: str = "",
+    agent: str | None = None,
+    path: Path | None = None,
+) -> dict:
+    """DECLARE a component an optimal config requires — the only way grade 4 becomes visible.
+
+    Every field is mandatory-by-refusal because a charter missing any of them is the same orphan in
+    a new coat: ``owner`` (who builds it), ``missing_mechanism`` (what exactly does not exist),
+    ``fire_order`` (when it must be ready), ``consumer`` (what reads it), ``needed_by`` (the config
+    that blocks without it). NO-FAKE: this records a DEBT, never a capability — declaring a component
+    does not build it, and :func:`not_even_designed` keeps reporting it until a factory exists.
+    """
+    if not component or not isinstance(component, str):
+        raise ValueError(f"component must be a non-empty str, got {component!r}")
+    if grade not in VALID_BUILD_GRADES:
+        raise ValueError(f"invalid grade {grade!r}; must be one of {list(VALID_BUILD_GRADES)}")
+    for name, val in (("needed_by", needed_by), ("missing_mechanism", missing_mechanism),
+                      ("owner", owner), ("consumer", consumer)):
+        if not isinstance(val, str) or len(val.strip()) < 3:
+            raise ValueError(
+                f"{name} is required and must be substantive (>=3 chars); got {val!r} — a charter "
+                "without it cannot be actioned, which is the orphan this ledger exists to extinct")
+    if not isinstance(fire_order, int) or fire_order < 0:
+        raise ValueError(f"fire_order must be a non-negative int, got {fire_order!r}")
+    row = {
+        "component": component, "needed_by": needed_by, "grade": grade,
+        "missing_mechanism": missing_mechanism, "owner": owner, "fire_order": fire_order,
+        "consumer": consumer, "notes": notes, "agent": agent, "ts": _utc(),
+    }
+    append_locked_jsonl(Path(path) if path is not None else REQUIRED_COMPONENT_PATH, row)
+    return row
+
+
+def read_required_components(path: Path | None = None) -> list[dict]:
+    """Latest-row-wins declared required components, sorted by (fire_order, component)."""
+    p = Path(path) if path is not None else REQUIRED_COMPONENT_PATH
+    if not p.exists():
+        return []
+    latest: dict[tuple[str, str], dict] = {}
+    for ln in p.read_text(encoding="utf-8").splitlines():
+        ln = ln.strip()
+        if not ln:
+            continue
+        try:
+            row = json.loads(ln)
+        except (json.JSONDecodeError, ValueError):
+            continue
+        if isinstance(row, dict) and row.get("component") and row.get("grade") in VALID_BUILD_GRADES:
+            latest[(row["component"], row.get("needed_by", ""))] = row
+    return sorted(latest.values(), key=lambda r: (r.get("fire_order", 0), r["component"]))
+
+
+def not_even_designed(path: Path | None = None) -> tuple[dict, ...]:
+    """Declared required components that STILL have no lever factory — the live grade-4 debt.
+
+    A declared component whose factory has since landed drops off automatically (the registry, not
+    a human, decides), so this list can only be drained by BUILDING, never by editing a memo.
+    """
+    idx = _build_index()
+    return tuple(r for r in read_required_components(path) if r["component"] not in idx)
+
+
+def build_completeness_report(path: Path | None = None) -> list[dict]:
+    """One row per lever factory AND per declared required component, four-graded.
+
+    This is the operator-facing "what is hollow?" surface. Ordered worst-grade-first so the debt
+    is the first thing read, never a footnote under a wall of built levers.
+    """
+    idx = _build_index()
+    rows: list[dict] = []
+    for name in sorted(idx):
+        fb = idx[name]
+        rows.append({
+            "component": name,
+            "grade": build_grade(name, path=path, index=idx),
+            "module": getattr(fb, "module", None),
+            "trainer": getattr(fb, "trainer", None),
+            "missing_flags": list(getattr(fb, "missing_flags", ())),
+            "label_drift": getattr(fb, "label_drift", False),
+            "activation_state": activation_status(name, path).state,
+        })
+    for r in read_required_components(path):
+        if r["component"] in idx:
+            continue  # it got built; the registry decides, not the declaration
+        rows.append({
+            "component": r["component"], "grade": BUILD_NOT_DESIGNED, "module": None,
+            "trainer": None, "missing_flags": [], "label_drift": False,
+            "activation_state": "not-registered", "needed_by": r.get("needed_by"),
+            "owner": r.get("owner"), "fire_order": r.get("fire_order"),
+            "missing_mechanism": r.get("missing_mechanism"), "consumer": r.get("consumer"),
+        })
+    order = {BUILD_NOT_DESIGNED: 0, BUILD_DESIGNED_STUB: 1, BUILD_NEVER_FIRED: 2, BUILD_FIRED: 3}
+    rows.sort(key=lambda r: (order.get(r["grade"], 9), r.get("fire_order", 0), r["component"]))
+    return rows
+
+
 __all__ = [
+    "BUILD_DESIGNED_STUB",
+    "BUILD_FIRED",
+    "BUILD_NEVER_FIRED",
+    "BUILD_NOT_DESIGNED",
     "EVENT_FIRED",
     "EVENT_MEASURED",
     "EVENT_RETIRED",
     "LEDGER_PATH",
+    "REQUIRED_COMPONENT_PATH",
     "SIGNIFICANCE_PATH",
     "SIG_LABEL_ESTIMATED",
     "SIG_LABEL_MEASURED",
@@ -578,20 +764,27 @@ __all__ = [
     "STATE_RETIRED",
     "S_TARGET_DEFAULT",
     "TARGET_D_SEG",
+    "VALID_BUILD_GRADES",
     "VALID_EVENTS",
     "VALID_SIG_AXES",
     "VALID_SIG_LABELS",
     "ActivationStatus",
     "activation_report",
     "activation_status",
+    "build_completeness_report",
+    "build_grade",
     "duty_to_measure",
     "duty_to_measure_ranked",
     "known_levers",
     "levers_fired_for_run",
     "never_fired",
+    "not_even_designed",
+    "package_known_levers",
     "read_pointer_s",
+    "read_required_components",
     "record_activation",
     "record_measured_for_run",
     "record_relative_significance",
+    "record_required_component",
     "relative_significance",
 ]

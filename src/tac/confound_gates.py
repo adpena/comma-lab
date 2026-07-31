@@ -2430,7 +2430,7 @@ def check_process_guard_excludes_observer_flag_values(
         if path.name in {"argv_role.py"}:
             continue
         text = _read(path)
-        if not text or "cmdline" not in text and "process_iter" not in text:
+        if not text or ("cmdline" not in text and "process_iter" not in text):
             continue
         if not any(tok in text for tok in _CLASS2_TRAINER_TOKENS):
             continue
@@ -2828,6 +2828,97 @@ def check_no_duplicate_canonical_spec_across_refs(
     )
 
 
+# ── DESIGNED-STUB refusal gate (ddm_sb2, task #819) ──────────────────────────
+def check_no_stub_lever_factories(
+    *,
+    repo_root: str | Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """REFUSE a DSL ``Lever`` factory whose MECHANISM does not exist (the DESIGNED-STUB class).
+
+    Confound class (NO-FAKE forbidden class #1, marker-without-mechanism, at the registry
+    layer): a ``Lever`` factory presents as BUILT to every consumer — the DSL, the
+    ``lever_registry`` coverage query, the activation ledger, the costate duty queue, launch
+    tickets, council deliberations. If its emitted trainer flag does not EXIST on that
+    module's trainer argparse, the lever is hollow, yet its activation row reads
+    ``never-fired``, byte-identical to a fully-built default-off lever. Nothing anywhere
+    could tell the two apart.
+
+    RECEIPT 2026-07-31 (the incident this gate extincts): a strategy argument for a fresh
+    from-birth run rested on "the full protection/force stack has never run from ep0"; the
+    gc15 convocation then found **5 of 6 of those forces were DESIGNED-STUBs** — wiring, not
+    birth, was the blocker. The debt had been reported as a neutral STATUS LABEL for weeks.
+    Operator, same day: *"Everything that is designed to stub ... needs to be fully built
+    out. No orphan signal is a very important principle."*
+
+    The judgement is STRUCTURAL, never label-based: ``tac.witness_dsl.lever_registry.
+    build_completeness`` resolves EACH module's own trainer (a module declaring
+    ``TRAINER_RELPATH`` binds to it; others bind to the levelset entry point + base) and
+    grades a factory a stub iff it emits a flag that trainer does not declare. So a factory
+    that forgot to say "DESIGNED-STUB" is still caught, and one that says so while its flags
+    exist is reported as LABEL DRIFT rather than as a stub.
+
+    Warn-only at landing (Strict-flip atomicity rule) — the live count is non-zero and the
+    remaining stubs are chartered builds owned by other arms, so flipping now would refuse
+    the tree for debt this arm does not own. STRICT-FLIP CONDITION: flip once every factory
+    either has its trainer flag or carries the waiver (live count 0).
+
+    Same-line waiver (in the factory's own source): ``# DESIGNED_STUB_OK:<rationale>``.
+    A bare ``<rationale>`` placeholder does not self-waive (Catalog #287 sister).
+    """
+    from tac.witness_dsl.lever_registry import build_completeness
+
+    root = Path(repo_root or REPO_ROOT)
+    violations: list[str] = []
+    bc = build_completeness()
+    for fb in bc.stubs:
+        src_path = root / "src" / "tac" / "witness_dsl" / fb.module
+        if _factory_waived(src_path, fb.factory):
+            continue
+        silent = "" if fb.stub_marker else " [SILENT — it does not even announce itself]"
+        violations.append(
+            f"src/tac/witness_dsl/{fb.module}: Lever factory {fb.factory!r} is a "
+            f"DESIGNED-STUB{silent} — it emits {list(fb.missing_flags)} which "
+            f"{fb.trainer} does not declare, so the lever presents as BUILT to the DSL, the "
+            f"activation ledger and the duty queue while no mechanism exists "
+            f"(NO-FAKE marker-without-mechanism). Build the trainer wiring, or add a "
+            f"`# DESIGNED_STUB_OK:<rationale>` marker on the factory's def line."
+        )
+    for fb in bc.label_drift:
+        if fb.is_stub:
+            continue  # already reported above
+        violations.append(
+            f"src/tac/witness_dsl/{fb.module}: Lever factory {fb.factory!r} still declares "
+            f"itself a DESIGNED-STUB but every flag it emits now exists on {fb.trainer} — "
+            f"stale label. Drop the marker so the registry's grade and the source agree."
+        )
+    return _finish(
+        name="check_no_stub_lever_factories",
+        tag="no-stub-lever-factories",
+        violations=violations,
+        strict=strict,
+        verbose=verbose,
+        ok_detail=(
+            f"{bc.total - len(bc.stubs)}/{bc.total} lever factories across "
+            f"{bc.modules_scanned} module(s) have real trainer mechanisms"
+        ),
+    )
+
+
+def _factory_waived(path: Path, factory: str) -> bool:
+    """True when the factory's own ``def`` line carries a non-placeholder waiver marker."""
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        return False
+    for line in text.splitlines():
+        stripped = line.lstrip()
+        if stripped.startswith(("def ", "async def ")) and f" {factory}(" in f" {stripped}":
+            return _waiver_present(line, "DESIGNED_STUB_OK")
+    return False
+
+
 # The two automatable eightfold gates (P1 + P4), for the preflight wire-in + tests.
 EIGHTFOLD_GATES = (
     check_significance_keys_canonical,
@@ -2857,4 +2948,5 @@ CONFOUND_GATES = (
     check_no_raw_virtual_memory_safety_basis,
     check_process_guard_excludes_observer_flag_values,
     check_no_duplicate_canonical_spec_across_refs,
+    check_no_stub_lever_factories,
 )

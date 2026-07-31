@@ -41,6 +41,7 @@ import ast
 import re
 from collections.abc import Mapping
 from dataclasses import dataclass, field
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -103,8 +104,226 @@ def resolve_canonical_metric(metric_id: str) -> CanonicalMetricDescriptor:
     return descriptor
 
 
-def _module_source() -> str:
-    return Path(_cd.__file__).read_text()
+def _module_source(path: Path | None = None) -> str:
+    return Path(path if path is not None else _cd.__file__).read_text()
+
+
+# ── PACKAGE-WIDE SCAN (the vacuous-gate repair; ddm_sb2 task #819, 2026-07-31) ────────
+# MEASURED BUG (`.omx/research/ddm_cn3_week_coherence_audit_20260731.md` L135-143): every
+# function above ASTs ONE file — ``curriculum_dsl.py`` — so ~170 sibling ``witness_dsl/*.py``
+# modules were invisible. ``completeness().stale == []`` was therefore VACUOUSLY clean, and the
+# grade-(1) DESIGNED-STUB levers (e.g. the five fh1 adapted forces) could never surface: the
+# registry could not see the file they live in. A gate returning a clean marker while scanning
+# 0.6% of its domain is NO-FAKE forbidden class #1 at the gate layer.
+#
+# The repair is NOT to widen ``lever_factories()`` in place. Different lever modules target
+# DIFFERENT trainers (``spec_tr1_renderer_20260728`` declares its own ``TRAINER_RELPATH``), so a
+# single widened flag-set compared against the levelset trainer would report every tr1 flag as
+# "stale" — swapping a vacuous PASS for a false FAIL. Instead the package-wide surface below
+# resolves EACH module's own trainer and reports per-factory build grades. The historical
+# ``lever_factories`` / ``completeness`` contract (levelset-trainer coverage) is preserved
+# verbatim so its existing consumers are unaffected.
+_PKG_DIR = Path(__file__).resolve().parent
+_TRAINER_RELPATH_RE = re.compile(r'^TRAINER_RELPATH\s*=\s*"([^"]+)"', re.MULTILINE)
+_REPO_ROOT = _PKG_DIR.parents[2]
+# A factory whose docstring/body announces itself as a stub. Detected but never TRUSTED: the
+# authoritative grade is whether the emitted flags exist on the module's trainer.
+_STUB_MARKER_RE = re.compile(r"DESIGNED-STUB|AUTO-STUB")
+
+
+def package_lever_modules() -> tuple[Path, ...]:
+    """Every ``witness_dsl`` module that could define a ``Lever`` factory (sorted, deterministic)."""
+    return tuple(sorted(p for p in _PKG_DIR.glob("*.py") if not p.name.startswith("_")))
+
+
+def module_trainer_paths(path: Path) -> tuple[Path, ...]:
+    """The trainer(s) a lever module's flags must exist on.
+
+    A module that declares its own ``TRAINER_RELPATH`` (the ``spec_tr1_renderer`` pattern) binds
+    to that trainer; every other module binds to the canonical levelset entry point plus the base
+    it imports its primitives from. Resolving this per-module is what keeps the widened scan
+    HONEST rather than merely louder.
+    """
+    m = _TRAINER_RELPATH_RE.search(_module_source(path))
+    if m:
+        return (_REPO_ROOT / m.group(1),)
+    from tac.witness_dsl.curriculum_dsl import TRAINER_PATH
+    base = TRAINER_PATH.parent / "train_witness_realized_through_R_mlx.py"
+    return tuple(p for p in (TRAINER_PATH, base) if p.is_file())
+
+
+def _flags_of(paths: tuple[Path, ...]) -> frozenset[str]:
+    out: set[str] = set()
+    for p in paths:
+        if p.is_file():
+            out |= set(re.findall(r'add_argument\(\s*"(--[a-z0-9-]+)"', p.read_text()))
+    return frozenset(out)
+
+
+@dataclass(frozen=True, slots=True)
+class FactoryBuild:
+    """One lever factory's BUILD grade — the dimension coverage/activation could not express."""
+
+    module: str
+    factory: str
+    flags: tuple[str, ...]
+    missing_flags: tuple[str, ...]   # emitted flags absent from THIS module's trainer argparse
+    trainer: str
+    stub_marker: bool                # the factory SAYS it is a stub
+
+    @property
+    def is_stub(self) -> bool:
+        """A DESIGNED-STUB: it emits at least one flag its trainer does not declare.
+
+        Structural, not label-based — a factory that forgot to say "DESIGNED-STUB" is still a
+        stub, and a factory that says so while its flags exist is a stale label, not a stub.
+        """
+        return bool(self.missing_flags)
+
+    @property
+    def label_drift(self) -> bool:
+        """The factory's self-declared stub status disagrees with its measured build state."""
+        return self.stub_marker != self.is_stub
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "module": self.module, "factory": self.factory, "flags": list(self.flags),
+            "missing_flags": list(self.missing_flags), "trainer": self.trainer,
+            "stub_marker": self.stub_marker, "is_stub": self.is_stub,
+            "label_drift": self.label_drift,
+        }
+
+
+def _factories_in_source(src: str) -> dict[str, tuple[frozenset[str], bool]]:
+    """{factory: (flags, stub_marker)} for one module's source (same predicate as ``lever_factories``)."""
+    tree = ast.parse(src)
+    fdefs = [n for n in tree.body if isinstance(n, _FUNC_DEFS)]
+    direct: dict[str, frozenset[str]] = {}
+    calls: dict[str, set[str]] = {}
+    marks: dict[str, bool] = {}
+    for node in fdefs:
+        if _constructs(node, "WitnessProgram"):
+            continue
+        if _constructs(node, "Lever") or _returns_lever(node):
+            direct[node.name] = _flags_in_node(node)
+            calls[node.name] = _called_names(node)
+            seg = ast.get_source_segment(src, node) or ""
+            marks[node.name] = bool(_STUB_MARKER_RE.search(seg))
+    out: dict[str, tuple[frozenset[str], bool]] = {}
+    for name in direct:  # transitive delegation closure, as in lever_factories()
+        seen: set[str] = set()
+        stack = [name]
+        flags: set[str] = set()
+        while stack:
+            cur = stack.pop()
+            if cur in seen:
+                continue
+            seen.add(cur)
+            flags |= direct.get(cur, frozenset())
+            for callee in calls.get(cur, ()):
+                if callee in direct and callee not in seen:
+                    stack.append(callee)
+        out[name] = (frozenset(flags), marks[name])
+    return out
+
+
+def _mtime_fingerprint() -> tuple[tuple[str, int, int], ...]:
+    """(name, size, mtime_ns) per scanned module — the cache key, so an edit invalidates it."""
+    out = []
+    for p in package_lever_modules():
+        try:
+            st = p.stat()
+        except OSError:
+            continue
+        out.append((p.name, st.st_size, st.st_mtime_ns))
+    return tuple(out)
+
+
+@lru_cache(maxsize=8)
+def _package_lever_factories_cached(_fingerprint: object) -> tuple[FactoryBuild, ...]:
+    return _scan_package_lever_factories()
+
+
+def package_lever_factories() -> tuple[FactoryBuild, ...]:
+    """EVERY lever factory in the whole ``witness_dsl`` package, graded against ITS OWN trainer.
+
+    This is the surface the stub sweep needs and the one the registry never had. Deterministic
+    (sorted by module then factory); pure AST + argparse text, no imports, no execution.
+
+    CACHED on the scanned modules' (size, mtime) fingerprint. The uncached scan re-parses ~170
+    modules — including the 375 KB ``curriculum_dsl.py`` — and takes seconds; a preflight gate
+    that costs seconds per call is a gate that gets turned off, which is how the vacuous-scan
+    bug survived in the first place. An edit to any scanned module changes the fingerprint and
+    invalidates the entry, so the cache can never serve a stale grade.
+    """
+    return _package_lever_factories_cached(_mtime_fingerprint())
+
+
+def _scan_package_lever_factories() -> tuple[FactoryBuild, ...]:
+    out: list[FactoryBuild] = []
+    for mod in package_lever_modules():
+        try:
+            src = _module_source(mod)
+            facs = _factories_in_source(src)
+        except (SyntaxError, OSError, UnicodeDecodeError):
+            continue
+        if not facs:
+            continue
+        trainers = module_trainer_paths(mod)
+        tflags = _flags_of(trainers)
+        tname = ", ".join(str(t.relative_to(_REPO_ROOT)) if t.is_relative_to(_REPO_ROOT) else str(t)
+                          for t in trainers)
+        for name, (flags, marker) in sorted(facs.items()):
+            out.append(FactoryBuild(
+                module=mod.name, factory=name, flags=tuple(sorted(flags)),
+                missing_flags=tuple(sorted(f for f in flags if f not in tflags)),
+                trainer=tname, stub_marker=marker,
+            ))
+    return tuple(sorted(out, key=lambda f: (f.module, f.factory)))
+
+
+@dataclass(frozen=True, slots=True)
+class BuildCompleteness:
+    """Package-wide build-grade summary — the answer to 'which levers are hollow?'."""
+
+    factories: tuple[FactoryBuild, ...]
+
+    @property
+    def total(self) -> int:
+        return len(self.factories)
+
+    @property
+    def stubs(self) -> tuple[FactoryBuild, ...]:
+        return tuple(f for f in self.factories if f.is_stub)
+
+    @property
+    def silent_stubs(self) -> tuple[FactoryBuild, ...]:
+        """Stubs that do NOT announce themselves — the worst grade: they present as BUILT."""
+        return tuple(f for f in self.factories if f.is_stub and not f.stub_marker)
+
+    @property
+    def label_drift(self) -> tuple[FactoryBuild, ...]:
+        return tuple(f for f in self.factories if f.label_drift)
+
+    @property
+    def modules_scanned(self) -> int:
+        return len({f.module for f in self.factories})
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "total_factories": self.total,
+            "modules_with_factories": self.modules_scanned,
+            "modules_globbed": len(package_lever_modules()),
+            "stub_count": len(self.stubs),
+            "silent_stub_count": len(self.silent_stubs),
+            "label_drift_count": len(self.label_drift),
+            "stubs": [f.to_dict() for f in self.stubs],
+        }
+
+
+def build_completeness() -> BuildCompleteness:
+    """Grade every lever factory in the package as BUILT or DESIGNED-STUB. Deterministic."""
+    return BuildCompleteness(package_lever_factories())
 
 
 def _flags_in_node(node: ast.AST) -> frozenset[str]:
@@ -374,10 +593,13 @@ def campaign_activation_nag(campaign_state: Mapping[str, Any]) -> dict[str, Any]
 
 __all__ = [
     "BASELINE",
+    "BuildCompleteness",
     "CanonicalMetricDescriptor",
     "Completeness",
+    "FactoryBuild",
     "LeverCompositionError",
     "MetricResolutionError",
+    "build_completeness",
     "campaign_activation_nag",
     "canonical_metric_ids",
     "completeness",
@@ -385,7 +607,10 @@ __all__ = [
     "dsl_referenced_flags",
     "emit_stub_lever",
     "lever_factories",
+    "module_trainer_paths",
     "name_composable_levers",
+    "package_lever_factories",
+    "package_lever_modules",
     "program_constructors",
     "resolve_canonical_metric",
     "resolve_composable_lever",
