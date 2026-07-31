@@ -298,6 +298,19 @@ class TR1Config:
     delta_sparsity_weight_field: str = "uniform"  # {uniform|xi_informed}: xi_informed RELAXES the
     # shrinkage where the ego-motion prior says deltas legitimately move (lane/movable, DERIVED
     # from the QA80 winner-class field), TIGHTENS on the static mass (ax1 §5).
+    # ---- ddm_lg1 (#808) CONSTRAIN-AND-PROTECT layer (default-OFF => byte-identical) ----
+    lane_guard: bool = False              # master switch; False => tac.optimization.lane_guard
+    # is NEVER invoked (no state, no RNG, seg_pixel_w path unchanged => bit-identical to a
+    # pre-lg1 run). ON: hold realized Lane error <= the ep641 endpoint budget via a
+    # primal-dual multiplier + protect born-lane support + emphasise low-margin Lane pixels,
+    # all as ADDITIVE per-pixel weights in the EXISTING seg_pixel_w hook (b4s consumes via the
+    # engagement spec). Budget = xp1 base_lane_S_units 0.12589; eta/step/floor DERIVED.
+    lane_guard_budget_s: float = 0.0      # 0.0 => LANE_BUDGET_S_UNITS (0.12589, xp1 ep641)
+    lane_guard_eta: float = 0.0           # 0.0 => derive_eta_lambda() (~66.2)
+    lane_guard_lambda_step_cap: float = 0.0   # 0.0 => derive_lambda_step_cap() (0.1)
+    lane_guard_lambda_max: float = 5.0    # bounded safety ceiling (5x the natural weight unit)
+    lane_guard_born_weight: float = 0.0   # 0.0 => born-lane protection OFF
+    lane_guard_margin_floor_weight: float = 0.0   # 0.0 => margin-floor emphasis OFF
 
     @property
     def grid_h(self) -> int:
@@ -1140,6 +1153,22 @@ def build_argparser() -> argparse.ArgumentParser:
                     help="margin_hinge target (RACED lever; step-native lineage)")
     ap.add_argument("--class-weight-lane", type=float, default=1.0,
                     help="sn1 asymmetry lever: loss weight on GT Lane pixels (1.0 = off)")
+    # ---- ddm_lg1 (#808) CONSTRAIN-AND-PROTECT layer (default-OFF => byte-identical) ----
+    ap.add_argument("--lane-guard", action="store_true",
+                    help="lg1: primal-dual Lane constraint + born-lane protection + margin-floor "
+                         "(DEFAULT-OFF; byte-identical when absent). Budget = xp1 ep641 Lane S.")
+    ap.add_argument("--lane-guard-budget-s", type=float, default=0.0,
+                    help="lg1 constraint budget in S-units (0.0 => LANE_BUDGET_S_UNITS 0.12589, xp1)")
+    ap.add_argument("--lane-guard-eta", type=float, default=0.0,
+                    help="lg1 dual step size (0.0 => DERIVED derive_eta_lambda ~66.2)")
+    ap.add_argument("--lane-guard-lambda-step-cap", type=float, default=0.0,
+                    help="lg1 per-gate dual-step ceiling (0.0 => DERIVED 0.1; caps-law)")
+    ap.add_argument("--lane-guard-lambda-max", type=float, default=5.0,
+                    help="lg1 bounded lambda ceiling (5x the natural per-Lane-pixel weight unit)")
+    ap.add_argument("--lane-guard-born-weight", type=float, default=0.0,
+                    help="lg1 born-lane protection weight (0.0 => OFF; scaled by Lane head sensitivity)")
+    ap.add_argument("--lane-guard-margin-floor-weight", type=float, default=0.0,
+                    help="lg1 low-margin Lane emphasis weight (0.0 => OFF; floor DERIVED from QA80 p10)")
     ap.add_argument("--token-temporal-mode", default="shared_base",
                     choices=("shared_base", "independent"),
                     help="shared_base = identity-xi advection (Einstein d_cov/d_gauge force)")
@@ -1346,6 +1375,13 @@ def main() -> int:
         delta_sparsity_weight=args.delta_sparsity_weight,
         delta_sparsity_engage=args.delta_sparsity_engage,
         delta_sparsity_weight_field=args.delta_sparsity_weight_field,
+        lane_guard=args.lane_guard,
+        lane_guard_budget_s=args.lane_guard_budget_s,
+        lane_guard_eta=args.lane_guard_eta,
+        lane_guard_lambda_step_cap=args.lane_guard_lambda_step_cap,
+        lane_guard_lambda_max=args.lane_guard_lambda_max,
+        lane_guard_born_weight=args.lane_guard_born_weight,
+        lane_guard_margin_floor_weight=args.lane_guard_margin_floor_weight,
     )
     (out_dir / "tr1_config.json").write_text(cfg.canonical_json() + "\n")
     telemetry_path = out_dir / "telemetry.jsonl"
@@ -1515,8 +1551,21 @@ def main() -> int:
         # sn1 ASYMMETRY lever: per-GT-class weight on Lane pixels (class index 1 —
         # canonical comma10k order, MEASURED; NEVER luma-sort re-derived).
         seg_pixel_w = None
+        w_np = None
         if cfg.class_weight_lane != 1.0:
             w_np = 1.0 + (cfg.class_weight_lane - 1.0) * (lstar == 1).astype(np.float32)
+        # ddm_lg1 (#808): fold the CONSTRAIN-AND-PROTECT addend (lambda_lane + born-lane
+        # protection + margin-floor emphasis) into the SAME per-pixel weight. Gated =>
+        # byte-identical when off (block skipped; w_np stays None).
+        if cfg.lane_guard:
+            _lg_margin = (np.asarray(margins[idx], dtype=np.float32)
+                          if (lane_guard_cfg.margin_floor_weight > 0.0
+                              and lane_guard_state.margin_floor is not None) else None)
+            _lg_add = _lane_guard.pixel_weight_addend(
+                lstar, _lg_margin, lane_guard_state, lane_guard_cfg, idx)
+            if _lg_add is not None:
+                w_np = (_lg_add + 1.0) if w_np is None else (w_np + _lg_add)
+        if w_np is not None:
             seg_pixel_w = mx.array(w_np)[None]
         # QA75 teacher logits for THIS pair (precomputed b2b scorer response); None => OFF.
         distill_logits = None
@@ -1531,6 +1580,33 @@ def main() -> int:
                        distill_attack_temp=cfg.distill_attack_temp)
 
     state_form = {"form": cfg.seg_form_start}
+
+    # ddm_lg1 (#808) CONSTRAIN-AND-PROTECT state. Built ONLY when the lever is on;
+    # off => these are never referenced (pair_loss + the gate block are cfg.lane_guard-gated)
+    # => byte-identical. Budget = xp1 ep641 Lane S; eta/step DERIVED (constants-are-poison).
+    lane_guard_cfg = lane_guard_state = None
+    if cfg.lane_guard:
+        from tac.optimization import lane_guard as _lane_guard
+        lane_guard_cfg = _lane_guard.LaneGuardConfig(
+            enabled=True,
+            budget_s=(cfg.lane_guard_budget_s or _lane_guard.LANE_BUDGET_S_UNITS),
+            eta_lambda=cfg.lane_guard_eta,
+            lambda_step_cap=cfg.lane_guard_lambda_step_cap,
+            lambda_max=cfg.lane_guard_lambda_max,
+            born_protect_weight=cfg.lane_guard_born_weight,
+            margin_floor_weight=cfg.lane_guard_margin_floor_weight,
+        ).resolved()
+        lane_guard_state = _lane_guard.LaneGuardState()
+        tlog({"event": "lane_guard_init", "budget_s": lane_guard_cfg.budget_s,
+              "eta_lambda": lane_guard_cfg.eta_lambda,
+              "lambda_step_cap": lane_guard_cfg.lambda_step_cap,
+              "lambda_max": lane_guard_cfg.lambda_max,
+              "born_protect_weight": lane_guard_cfg.born_protect_weight,
+              "margin_floor_weight": lane_guard_cfg.margin_floor_weight,
+              "lane_sensitivity_ratio": lane_guard_cfg.lane_sensitivity_ratio,
+              "eta_provenance": _lane_guard.derive_eta_lambda()[1],
+              "note": "lg1 CONSTRAIN-AND-PROTECT; realized-g read from a1 gate (zero new "
+                      "scorer passes); score_neutral verdict authority unchanged"})
 
     # §3.4 rate-in-loss keep-cell indices (kept cells only enter the token-entropy surrogate,
     # so the zeroed inactive cells do not bias the histogram with a constant spike at bin-0).
@@ -1838,6 +1914,23 @@ def main() -> int:
                     break
             else:
                 a1_consecutive = 0
+            # ddm_lg1 (#808): dual ascent + protection refresh at GATE cadence, reading the
+            # gate's EXISTING realized argmax (zero new scorer passes). lambda is CONSTANT
+            # between gates (caps-law reconciliation: dual variables update at constraint-
+            # evaluation cadence with a bounded step, never per-step). Gated => byte-identical
+            # when off (block skipped; telemetry untouched).
+            if cfg.lane_guard:
+                _lg_gts = np.stack([np.asarray(lstars[i], dtype=np.int64) for i in gate_ids])
+                _lg_margins = None
+                if (lane_guard_cfg.margin_floor_weight > 0.0
+                        and lane_guard_state.margin_floor is None):
+                    _lg_margins = {int(i): np.asarray(margins[i], dtype=np.float32)
+                                   for i in gate_ids}
+                _lg_row = _lane_guard.gate_update(
+                    lane_guard_state, lane_guard_cfg, realized_argmax, _lg_gts,
+                    gate_ids, lane_margins_by_id=_lg_margins)
+                _lg_row.update({"epoch": epoch, "stage": stage, "gate_basis": gate_basis})
+                tlog(_lg_row)
             prev_gate_row, prev_gate_smooth, prev_realized = gate_row, a1_smooth, realized_argmax
             save_checkpoint(out_dir / "checkpoints" / f"intra_{stage}_ep{epoch:05d}.npz",
                             model=model, ema=ema, opt_state_flat={}, epoch=epoch,

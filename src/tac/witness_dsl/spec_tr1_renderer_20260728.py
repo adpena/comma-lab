@@ -662,6 +662,98 @@ def default_t3_long_burn_program(variant: str, out_dir: str, *, epochs: int = 40
                                 full_confirm=True)
 
 
+def lever_lane_guard_lambda(budget_s: float = 0.0, eta: float = 0.0,
+                            step_cap: float = 0.0, lambda_max: float = 5.0) -> Lever:
+    """ddm_lg1 (#808) piece 1 — the primal-dual Lane constraint (default-OFF; byte path
+    preserved when the flag is absent). Holds realized Lane per-class error <= the ep641
+    endpoint budget via a bounded dual multiplier updated at GATE cadence (caps-law: dual
+    variables move at constraint-evaluation cadence with a capped step, never per-step).
+    0.0 sentinels => DERIVED at build (tac.optimization.lane_guard: budget 0.12589 = xp1
+    base_lane_S_units; eta = lambda_target/(n_gates*erosion_s) ~66.2; cap 0.1). Falsifier:
+    burn-4 with the guard shows the SAME Lane-pool growth (+0.00151 S class) as the
+    unprotected rung-1 continuation => the constraint form (loss-weight dual) is too weak
+    on this vehicle and the #208 containment-projection lift is the successor."""
+    from tac.witness_dsl.lawref import LADDER_MEASURED_ANCHOR, InputRef, LawRef
+
+    budget_ref = LawRef(
+        equation_id="dsl_custodied_scalar_identity_v1",
+        inputs={"value": InputRef.literal(
+            0.12589, "xp1 (#806) ep641 endpoint base_lane_S_units — "
+            "/Volumes/VertigoDataTier/pact/ddm_xp1_20260731/xp1_verdict.json; ckpt sha "
+            "40553db8be98215a67205d3670aa15d9b9edbe2322380ce169d8448af670f2db",
+            config_tags={"vehicle": "tr1_renderer"})},
+        ladder_class=LADDER_MEASURED_ANCHOR)
+    return Lever(
+        name="tr1_lane_guard_lambda",
+        overrides={"--lane-guard": True, "--lane-guard-budget-s": str(budget_s),
+                   "--lane-guard-eta": str(eta),
+                   "--lane-guard-lambda-step-cap": str(step_cap),
+                   "--lane-guard-lambda-max": str(lambda_max)},
+        notes="lg1 piece 1: dual-ascent Lane budget constraint; realized g from the a1 "
+              "gate's EXISTING argmax (zero new scorer passes); complementarity lambda*g "
+              "telemetry (#549 KKTDiagnostics-aligned)",
+        lawrefs={"--lane-guard-budget-s": budget_ref},
+        constant_manifest={
+            "--lane-guard-budget-s": {
+                "value": budget_s or 0.12589,
+                "rung": "MEASURED_ANCHOR (xp1 ep641 endpoint Lane per-class S)",
+                "equation_id": "dsl_custodied_scalar_identity_v1",
+                "provenance": "0.0 sentinel => LANE_BUDGET_S_UNITS (xp1_verdict.json "
+                              "base_per_class_S_units[1]); error definition matches qa92 "
+                              "_per_class_flip_counts exactly"},
+            "--lane-guard-eta": {
+                "value": eta or 66.2251655629139,
+                "rung": "DERIVED_AT_CONFIG (derive_eta_lambda)",
+                "provenance": "eta = lambda_target/(n_gates_to_engage * erosion_s) = "
+                              "1.0/(10 * 0.00151); erosion_s = xp1 MEASURED unprotected "
+                              "rung-1 Lane erosion (+0.00151 S)"},
+        })
+
+
+def lever_lane_guard_born(weight: float) -> Lever:
+    """ddm_lg1 (#808) piece 2 — born-lane protection (default-OFF). Extra loss weight on the
+    currently-WON Lane support (gt==Lane & realized==Lane, refreshed at gate cadence from the
+    a1 gate's realized argmax), scaled by the MEASURED Lane head-sensitivity ratio 1.19607
+    (mean of the four Lane-pair rank-4 head normals 4.007/3.953/3.862/3.748 over the all-pair
+    mean — segnet fractal memo §2). The #725 per-channel refinement (Lane strata dominated by
+    pre-head channels 2/9/6; ch9 alone 30% of Lane-Undrivable capacity) is the DEFERRED
+    Fisher-anchor successor (render params do not expose scorer channels; the scalar ratio is
+    the honest render-side projection)."""
+    return Lever(
+        name="tr1_lane_guard_born",
+        overrides={"--lane-guard": True, "--lane-guard-born-weight": str(weight)},
+        notes="lg1 piece 2: born-lane support protection; weight RACED (no measured "
+              "own-optimum yet); sensitivity scale MEASURED (fractal memo §2 head normals)",
+        constant_manifest={
+            "--lane-guard-born-weight": {
+                "value": weight, "rung": "RACED (no measured optimum; race at engage)",
+                "provenance": "multiplied in-code by LANE_HEAD_SENSITIVITY_RATIO 1.19607 = "
+                              "mean(4 Lane-pair ||dw||)/mean(10 pair ||dw||), MEASURED "
+                              "segnet_recursive_fractal_factorization_20260715.md §2"},
+        })
+
+
+def lever_lane_guard_margin_floor(weight: float, pct: float = 10.0) -> Lever:
+    """ddm_lg1 (#808) piece 3 — low-margin Lane emphasis in the head-hyperplane metric
+    (default-OFF). Hinge deficit relu(1 - m/floor) on GT-Lane pixels; floor DERIVED at the
+    first gate as the pct-th percentile of the run's own QA80 margin field restricted to
+    GT-Lane (never a bare constant; the pct=10 default is the MEASURED '100% of realized
+    flips live in the bottom GT-margin decile' law — sg1 §1.3 / ax1 pool-A header). QA80
+    n600 field anchors for cross-check: q05 med 0.4302, q50 med 1.8181 (ddm_zb1 custody)."""
+    return Lever(
+        name="tr1_lane_guard_margin_floor",
+        overrides={"--lane-guard": True, "--lane-guard-margin-floor-weight": str(weight)},
+        notes="lg1 piece 3: margin floor per flip-prone Lane pixel, d=|m|/||dw|| closed-form "
+              "lineage (rank-4 head); floor derived per-run at first gate (pct=10)",
+        constant_manifest={
+            "--lane-guard-margin-floor-weight": {
+                "value": weight, "rung": "RACED (no measured optimum; race at engage)",
+                "provenance": f"floor = percentile_{pct}(QA80 margin | gt==Lane) derived "
+                              "in-run (derive_margin_floor); pct=10 from the MEASURED "
+                              "bottom-decile flip law (sg1 §1.3); NOT a bare constant"},
+        })
+
+
 def default_t1_smoke_program(variant: str, out_dir: str, *, num_pairs: int = 24,
                              epochs: int = 60, max_wall_minutes: float = 75.0,
                              gt_cache: str | None = None) -> TR1RendererProgramV1:
