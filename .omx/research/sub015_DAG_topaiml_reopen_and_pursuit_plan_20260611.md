@@ -26059,3 +26059,33 @@ crossing + ΔS≥0.05 bound; Daubechies: AA-or-it-measures-aliasing). Assumption
 recoverability + plateau-reachability CARGO-CULTED (cured by QA92 tier-1 + windowed cap); additive-S
 HARD-EARNED; teacher-staleness cured by gated re-check. **Pointer 0.1910828242 [contest-CPU] UNMOVED
 (all means; no exact row).** [no-triality] [p0-ledger-ok]
+
+---
+
+**FEED-qa92 (2026-07-31, task #801, ddm_qa92, claude-opus-4-8) — gc12 RUNG 0 FIRED-MEASURED: the
+Lane-carrier receiver discriminator ⇒ RUNG 2 SKIPS TO BURN-4.** Memo
+`.omx/research/ddm_qa92_carrier_discriminator_20260731.md`; custody
+`/Volumes/VertigoDataTier/pact/ddm_qa92_20260731/` (qa92_verdict.json + 5 chunk npz + custody manifest).
+Pointer **0.1910828242 [contest-CPU] UNMOVED**; all [macOS-CPU advisory], score_claim=false. THE
+MEASUREMENT (gc12 §4, n600, frozen CPU-torch SegNet authority NEVER MPS): render control_tail ep499 →
+deploy R → SegNet = BASE d_seg **0.0049411 (== pa1r NEW BEST endpoint EXACTLY — harness validated)**;
+label erased super-nucleus (>5px) GT Lane components (scipy 8-conn vs base realized, <50% recovered =
+erased; folds fp1's deferred per-component item) = **4041 erased of 9035 super-nucleus**; composite them
+onto the render at CAMERA res pre-R with **AA alpha (Daubechies-binding: +1px dilation → bilinear-up soft
+matte; identity-fill control BIT-IDENTICAL ⇒ 0 compositing artifact, all collateral is real ERF
+physics)**. Tier-1 GT-RGB oracle + tier-2 flat solved-proto [77,87,119]. RESULT: **P (erased super-nucleus
+pool) = 0.04189 S — REFINES QA91's 0.134 UPPER bound down (the continuation to ep499 recovered ~0.09 S
+for free)**; **O (oracle recovery) = 0.407** (comp-level 0.421), **F (flat) = 0.194**; **P·O = 0.017 S**,
+P·F = 0.008 S. DECISIVE: **collateral oracle +0.317 S / flat +0.233 S ⇒ JOINT ΔS oracle +0.300 / flat
++0.225 (BOTH NET WORSE)** — even PERFECT GT paint is net-negative because the ~85px-r50 SegNet ERF
+re-classifies the neighborhood of any injected stroke (per-class ΔS oracle Road +0.125/Lane +0.034/Undriv
++0.055/Movable +0.065/MyCar +0.020 — EVERY class worse, incl Lane despite 41% target recovery). Metric
+identity JOINT = −P·O + collateral verified EXACT. FALSIFIER ROUTE (mechanical, gc12 §4): O≥0.25 ⇒ family
+NOT formally closed (scope FORMULATION, paradigm untouched); F<0.7·O ⇒ (e1)>(b) IF it fired; **but P·O
+0.017 < 0.05 Contrarian bound ⇒ RUNG 2 SKIPPED, slot → burn-4 charter directly.** CORROBORATES fp1
+("receiver is the wall") on the localized case fp1 left open; the paint-on-texture carrier (b)/(d) is
+measured net-negative even at the Wyner oracle. RE-PRICES: burn-4 birth arm defaults to KD-from-birth /
+plain-continuation (NOT paint); (e1) premise (re-render not composite) preserved but priority-dropped,
+gated behind burn-4; carrier (b) build gate now carries a hard collateral clause (must absorb ~0.22-0.32
+S ERF collateral to break even vs a 0.042 S pool = ~5-8× unfavorable ⇒ MacKay's ~100× MDL bet does NOT
+hold at the JOINT level). [no-triality] [p0-ledger-ok]
