@@ -25837,3 +25837,29 @@ ps1 pose stream (carried unchanged) · product_c (VERIFIED on B) · r7 SMEVR cod
   lower-rate/pose-conditioned parent ($0 rate pre-screen possible); (3) per-class snap (deprioritized).
 
 pointer 0.1910828242 [contest-CPU] UNMOVED  ·  [no-triality] [p0-ledger-ok]
+
+
+## FEED-reanchor (2026-07-30) — operator correction: the 07-30 arc RE-ANCHORED v8/v9/v10 laws; it did not discover them
+
+Operator: "We have already discovered much of that in the past on earlier research including v8, v9, and
+v10." CORRECT — recorded as the binding frame for consuming today's receipts (STORES-CONSULTED: memory
+todays_findings_reanchor_v8_v9_v10_laws_not_discoveries_20260730.md + #110/#242/#558 task rows + ms1/fd1/is1
+memos + L68/ea1-N3 + the QA24 burn window receipt):
+- nv1's "rate must be in-loop / bytes co-located with flips" = the v10 rate-INSIDE-the-objective doctrine
+  (ms1 #662, fd1 #740, is1 #684) + the ms2r/pf3 pincer, with #110's latent-structure-inducing regularizer
+  as the delta-sparsity lever's direct ancestor — and the QA24 burn had ALREADY demonstrated in-loop joint
+  rate+seg descent on THIS vehicle (355,343→250,898 B while gate d_seg fell). nv1's real contributions:
+  the measured −0.51 co-location coefficient + closing the ENCODE-SIDE admission at formulation scope +
+  the c≠S instrument correction. The design conclusion predated it.
+- ps1's "pose born legible" = L68 (07-10, 5 formulations) re-anchored on TR1 via the decisive same-solver
+  control (owed per the L18 ancestor law); the doctrine predated it.
+- Gate-B/dw1 map to #153/#69 and #74/rv1 lineages respectively (dw1 recalled its lineage; the
+  well-chartered case).
+- CONSEQUENCE (structural, extends the charter-recall law): every measurement charter now carries a
+  PRIOR-LAW PREDICTION line ("existing laws predict X per law Y at scope Z"); convocation ranking rows
+  state it for top candidates. Predictable-negative-reaches-slot-unpredicted = charter-recall failure.
+- burn-3 design gate amended: assembles from an explicit v8/v9/v10 harvest pass (per-class carriers,
+  range(A)/#520 reallocation, #519 gauge, size-in-loss lineage) PLUS the 07-30 receipts — not the
+  receipts alone.
+
+pointer 0.1910828242 [contest-CPU] UNMOVED
