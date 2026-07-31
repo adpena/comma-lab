@@ -25905,3 +25905,27 @@ row · S_floor · su2 Gate-B):
   POSSIBLE-not-projected.
 
 pointer 0.1910828242 [contest-CPU] UNMOVED
+
+
+## FEED-vh1 (2026-07-30) — v8/v9/v10 deep harvest: 10 untransferred lessons routed; law taxonomy; 6 honest exhaustions (task #798)
+
+Memo `.omx/research/ddm_vh1_v8v9v10_harvest_20260730.md` (STORES-CONSULTED header lists the full sweep).
+Beyond FEED-reanchor + gc11's four folds: (1) SPEC_v8's edge-centric seam doctrine + 6-risk checklist →
+the BR-B design-review gate; (2) v8 P-C flat-paint-floor probe → the f′ per-class readout column; (3)
+the #502 built shearlet frames + 3.2× along-tangent law re-anchor ($0 spectral read of B's residual)
+gates conditioning slot N5; (4) g3 hard-pair registry (+ $0 subset-validity r re-check on TR1) replaces
+ad hoc verdict subsets in the burn-3 ticket; (5) rd1's λ-continuation METHOD (not its L18 numbers) → a
+raced w_rate-continuation schedule variant for BR-A; (6) gc2 oracle facade → the f′/W6 measurement API
+(three ad hoc verdict-path re-inventions this week were the smell); (7) the v9 confound-cure telemetry
+stack is only PARTIALLY ported to the TR1 trainer (4 vocabulary hits) — the W4 halt guards depend on
+these signals, so the port is a burn-3 ticket PREREQUISITE; (8) v8 flip-weighted de-share → conditional
+delta-sparsity v2; (9) REACTIVATION: #535/#425 temporal carriers — TR1's delta tokens ARE the temporal
+axis; $0 coherence read queued as QA90 (original negatives' scopes unchanged until it runs); (10)
+REACTIVATION: MC-finisher #400 at the W5 window — a genuine discriminator (co-location law does not
+predict discrete argmax polish), break-even falsifier pre-registered. Cross-vehicle LAW TAXONOMY landed
+(VALID: rowband/flip-distance/kerA/band-lemma/stationarity · L18-SCOPED: co-location −0.51, knee prices,
+slopes · UNKNOWN w/ named $0 re-anchors: along-tangent deficit, g3 r, flicker coherence). NOTHING-MORE:
+#504 Bregman, #664 pf1, #542 Cole-Hopf, #539 power-diagram (BR-D only), #500 metric (consumed), #514
+white-box (pincer-closed) — verdict_scope: formulation-on-TR1 routing, families not killed.
+
+pointer 0.1910828242 [contest-CPU] UNMOVED
