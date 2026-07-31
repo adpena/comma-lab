@@ -1,3 +1,51 @@
+# Current Focus - 2026-07-31 (ENDPOINT DECISION RECORDED: no window_04 by CAP not by gate; cn3's reversal read WITHDRAWN — the rise itself reversed; gd1 proves the gate amplifies drift 16.7×)
+
+> **⚖️ ENDPOINT DECISION LANDED (`/Volumes/VertigoDataTier/pact/ddm_b4s_20260731/burn4_endpoint_decision_MAIN.json`).**
+> Three parts, each receipt-grounded:
+> **(1) NO WINDOW_04 — on GOVERNANCE, not measurement.** b4r's prospective wall-cap check already
+> decides this mechanically: a window may legally run to its own 130-min trainer wall cap, so admitting
+> one at the ~4.4h boundary would end ~6.5h > the 6.0h cap / 20:17:42Z hard stop. The endpoint
+> MEASUREMENT stage is explicitly NOT truncated by that cap.
+> **(2) cn3's REVERSAL READ IS WITHDRAWN as a decision input.** It reported mid-audit "7 monotone rises,
+> 347% of the boundary step surrendered, OLS t=+6.28 ⇒ B5-C." The full trajectory shows the rise was a
+> TRANSIENT that has itself reversed: ep884 0.0040827 → ep914 **0.0043281 (peak)** → ep919 0.0042619 →
+> ep924 0.0041589 → ep929 **0.0041162**, three consecutive COUPLED_DESCENT recovering 0.0002119 of the
+> 0.0003879 rise. Correct read at the time; wrong basis for a terminal verdict. **Two INDEPENDENT gd1
+> (#817) findings say this instrument can never carry one alone:** the A1 gate reduces a NON-probability
+> sample (block 447–450 + 32 SRS) with an **unweighted mean**, over-weighting the block 16.67× ⇒ it
+> **amplifies block drift 16.7×**, and the block is **+6.3–8.3% harder** than the population and
+> **−16.2% in Lane**; and `n_points=5` × `--gate-every 5` **aliases a ~30-gate oscillation into a sign
+> flip** — a 7-gate monotone run is ≈1 alias period. L3 verdict-clearance: apparatus-validity
+> precondition FAILS ⇒ no load-bearing verdict admissible from the gate alone.
+> **(3) ENDPOINT SELECTION RULE = rank on the gate, DECIDE on n600.** Every gate epoch wrote a
+> checkpoint (~54 candidates). Measured gate↔n600 relationship: at ep805 gate 0.0040519 vs
+> full_confirm **0.0040671** — the LEVEL is nearly unbiased (0.374%) but the DELTA overstates the descent
+> by **~7.6%** (independently matching gc14's 7.2%). Shortlist to n600: **ep809 (0.0039402, window-best
+> AND the boundary state = highest information)**, ep854 (0.0039406), ep879 (0.0039510), + the final.
+> Control ALREADY measured — do not re-run: window_02 ep805 full_confirm **0.004067128**.
+> **HONEST BURN-4 DESCENT TO DATE (n600, not gate):** 0.004277157 (w01 ep665) → 0.004067128 (w02 ep805)
+> = **−0.000210029 d_seg = −0.0210 S** `[macOS-CPU advisory]`. Pointer **0.1910828242 [contest-CPU] UNMOVED.**
+>
+> **What this does NOT decide:** whether the descent is optimizer artifact or learning. gc15's source
+> derivation (`bias_correction=False`, `train_tr1:1543`) predicts EXACTLY the ep809 boundary gain.
+> **#815 Arm B′ (`bias_correction=True`, byte-identical otherwise, ~2h, $0) retains FIRST CLAIM** on the
+> post-endpoint slot. cn3 proposed firing burn-2 there instead — that CONFOUNDS composition with
+> optimizer. **ORDER: B′ (isolates optimizer) → burn-2 (isolates composition, at B′'s decided setting).**
+>
+> **Hygiene done this turn:** orphan PID 77097 (`observe_m1_banded_checkpoints.py`, retired M1 lineage,
+> **10d 15h**) REAPED. #817/#818 flipped completed.
+>
+> **⛔ THE STRUCTURAL ROOT the operator's stub correction pointed at — cn3 MEASURED it (lines 135–143):
+> ALL THREE anti-orphan gates are VACUOUS.** `lever_registry.completeness()` returns `stale=[]` while
+> ASTing **1 of 171 modules (0.6%)** — `_module_source()` (`lever_registry.py:107`) returns only
+> `curriculum_dsl.__file__` — which is *why* the 5 DESIGNED-STUB fh1 forces never surfaced: the registry
+> cannot see the file they live in. `check_codex_findings_memos_consumed` reports LIVE COUNT 0 while
+> scanning `mtime<3days` ⇒ **0 of 1,260 files**. Catalog #396 has the right scan set but **433 live
+> violations, never strict-flipped**. A gate returning a clean marker over 0.6% of its domain IS NO-FAKE
+> class #1 at the gate layer. **ROUTED to sb2 (#819) as in-scope**, with the instruction to fix the
+> registry scope FIRST and re-run its inventory, because any stub count taken before that fix is an
+> undercount by construction.
+
 # Current Focus - 2026-07-31 (gc15 DERIVES THE MECHANISM FROM SOURCE: bias_correction=False ⇒ every boundary is an unpriced 3.16–6.57× LR SPIKE)
 
 > **⚡ gc15 (#816 DONE, ca4850be52) — THE SOURCE DERIVATION.** MLX `Adam` defaults
