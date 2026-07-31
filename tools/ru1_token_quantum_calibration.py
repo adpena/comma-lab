@@ -30,6 +30,11 @@ from pathlib import Path
 
 import numpy as np
 
+try:  # canonical argv-role helper (repo-root import, then script-dir fallback)
+    from tools.argv_role import process_table_entrypoint_holders
+except ImportError:  # pragma: no cover - exercised when run as `python tools/<this>.py`
+    from argv_role import process_table_entrypoint_holders  # type: ignore
+
 REPO = Path("/Users/adpena/projects/pact")
 SCHEMA = "ddm_ru1_token_quantum_calibration.v1"
 CELL = 16  # px per token cell at (384,512)
@@ -38,11 +43,24 @@ SLOT_TOKENS = ("pb1_receiver_realized_verdict", "train_levelset_witness",
                "train_witness_realized", "pb1_qdbs", "pb1_p2")
 
 
-def slot_is_live() -> bool:
+def slot_holders() -> list[str]:
+    """Command lines of processes that actually RUN a scorer/verdict/trainer entrypoint.
+
+    ddm_gh1 #829: this used to be `any(tok in line ...)` — a bare SUBSTRING scan of the process
+    table. An unrelated background `grep -rn train_levelset_witness ...` (or an editor, a pager,
+    a log path containing the token) matched, and the tool REFUSED A LAUNCH that nothing was
+    blocking. A gate that wrongly refuses is worse than no gate. Routed through the canonical
+    `tools.argv_role.process_table_entrypoint_holders`, which requires the token to appear in the
+    BASENAME of a PATH-SHAPED argument of a non-reader program.
+    """
     out = subprocess.run(["ps", "-axo", "command"], capture_output=True,
                          text=True, check=False).stdout
-    return any(tok in line for line in out.splitlines()
-               for tok in SLOT_TOKENS if "ru1_token_quantum" not in line)
+    return process_table_entrypoint_holders(
+        out, SLOT_TOKENS, self_tokens=("ru1_token_quantum",))
+
+
+def slot_is_live() -> bool:
+    return bool(slot_holders())
 
 
 def parse_args() -> argparse.Namespace:

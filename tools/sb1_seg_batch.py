@@ -43,6 +43,11 @@ from pathlib import Path
 
 import numpy as np
 
+try:  # canonical argv-role helper (repo-root import, then script-dir fallback)
+    from tools.argv_role import process_table_entrypoint_holders
+except ImportError:  # pragma: no cover - exercised when run as `python tools/<this>.py`
+    from argv_role import process_table_entrypoint_holders  # type: ignore
+
 REPO = Path("/Users/adpena/projects/pact")
 LEVELS = 16
 SHAPE = (600, 24, 32, 4)
@@ -63,12 +68,23 @@ def _sha(b: bytes) -> str:
     return hashlib.sha256(b).hexdigest()
 
 
-def slot_is_live() -> bool:
-    """True if another scorer/verdict/trainer job appears in the process table."""
+def slot_holders() -> list[str]:
+    """Command lines of processes that actually RUN a scorer/verdict/trainer entrypoint.
+
+    ddm_gh1 #829: this used to be `any(tok in line ...)` — a bare SUBSTRING scan of the process
+    table, so an unrelated background `grep`/`rg`/editor whose argv merely CONTAINED a token (or a
+    `--out` path with the token in a directory component) made the tool REFUSE A LAUNCH nothing
+    was blocking. Routed through the canonical `tools.argv_role`, which requires the token to
+    appear in the BASENAME of a PATH-SHAPED argument of a non-reader program.
+    """
     out = subprocess.run(["ps", "-axo", "command"], capture_output=True,
                          text=True, check=False).stdout
-    return any(tok in line for line in out.splitlines()
-               for tok in SLOT_TOKENS if "sb1_seg_batch" not in line)
+    return process_table_entrypoint_holders(out, SLOT_TOKENS, self_tokens=("sb1_seg_batch",))
+
+
+def slot_is_live() -> bool:
+    """True if another scorer/verdict/trainer job appears in the process table."""
+    return bool(slot_holders())
 
 
 def _atomic_write_text(path: Path, text: str) -> None:
