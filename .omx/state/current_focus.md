@@ -1,3 +1,76 @@
+# Current Focus - 2026-07-31 (ENDPOINT WON: ep854, ALL FIVE CLASSES IMPROVE, positive control EXACT. The ALARM's Lane premise is REFUTED A THIRD TIME — the w03 rise is UNDRIVABLE/ROAD. Composition row −0.035996 S seg+rate byte-closed.)
+
+> **🏁 ENDPOINT WINNER — `window_03/checkpoints/intra_seg_trunk_tau_ep00854.npz`** (ddm_ep2, commit
+> `9ba46893f5`, receipt `/Volumes/VertigoDataTier/pact/ddm_ep2_20260731/ddm_ep2_receipt.json`).
+> n600 d_seg **0.003943024**; byte-closed S **0.634232** @ 360,331 B; beats the ep805 control by
+> **−0.013558 S byte-closed**. **`eroding=[]` — Road, Lane, Undrivable, Movable, MyCar ALL improve.**
+> ep809 did not win, so its PROVISIONAL flag is moot. Ranking: ep854 0.634232 · ep809 0.639638 ·
+> ep934 0.644132 · control 0.647790.
+>
+> **✅ POSITIVE CONTROL PASSED EXACTLY** — re-measuring ep805 at chunk 64 reproduced the banked chunk-32
+> value to **abs_err = 0.0**. Chunk-invariance is now MEASURED, not assumed. Custody verified: the
+> rollback target and `ep00805.npz` differ in exactly one array (`meta::epoch` 806 vs 805); all 20 EMA
+> arrays `array_equal`.
+>
+> **⛔ THE ALARM'S LANE PREMISE IS REFUTED A THIRD TIME, now by direct per-class measurement.** ep934's
+> diagnostic: through the entire window_03 rise **Lane keeps IMPROVING** (0.0959 → 0.0820 S — the best
+> Lane of any candidate). The rise is carried by **Undrivable (+0.026111 S)** and Road. **The window_03
+> regression is an UNDRIVABLE/ROAD event, not Lane erosion.** That independently confirms round 2's
+> KKT reading (#822): the lane guard was correctly inactive because Lane was genuinely fine.
+> *(ep2 measured ep934 composed 0.588228 vs control 0.590542 — it BEATS the control, contra the round-2
+> gate projection 0.591523 vs 0.589021. Selection unaffected. ep879 not measured.)*
+>
+> **📉 THE BYTE-LEDGER ORDERING CHECK CAME BACK NEGATIVE — and worse than I feared.** Byte order is
+> **NOT preserved**: w02 vs ep809 INVERTS (ledger −44 B, real +20 B). The ledger's *error* varies by
+> **2,018 B = 0.001344 S** across candidates — **45% of the 4,497 B spread it was being used to
+> compare**, and larger than the 1,589 B shortlist spread I cited. **`total_counted_bytes` CANNOT
+> arbitrate bytes at this granularity.** BUT selection order IS preserved and the winner is identical
+> under both conventions, because the d_seg spread (0.0130 S best-to-control) dominates. **LAW: select
+> on d_seg-dominated margins with confidence; any future selection between byte-separated,
+> d_seg-TIED candidates MUST be byte-closed.** Running the check was worth it — it produced a law.
+>
+> **🔧 A FOURTH SILENTLY-WRONG INSTRUMENT (#828) — and this one emits FALSE BLOCKERS.**
+> `rehearse_ddm_tr1_runtime.py::_mlx_reference` never sets `_quant_engaged=True`, so on any past-knee
+> checkpoint it compares an UNQUANTIZED reference to a QUANTIZED receiver and returns
+> `BLOCKED_DEPLOYMENT_BACKEND_PARITY`. Corrected locally to prove it: camera agreement **0.1987 →
+> 0.99997346**, float max_abs **55.14 → 2.14e-4**, all three gates pass. **The archive was never the
+> problem.** ep2 correctly did NOT fix it (unreviewed new code on a gate). Second leg: `decode_token_grid`
+> vs `quantized_tokens` disagree by EXACTLY half a quant step on both kept and dropped cells — a
+> dequantization-CONVENTION mismatch, not the cell mask; no render effect. Tally is now
+> lever_registry (1/171) · findings gate (0/1,260) · duty-queue (116/177) · this. A gate emitting false
+> BLOCKED is the mirror of one emitting false clean — arguably worse, because it stops real work.
+>
+> **🎯 THE COMPOSITION ROW (#827) — the largest live number.** ep854 DOMINATES the seg base of
+> `gr1_cell_drop50` (d_seg 0.004310379 @ 359,221 B — the BASE constant of the S=0.9640 v4d archive) by
+> **−0.035996 S on seg+rate**, byte-closed, on a verified-identical surface. **NAMED BLOCKER:** the v4d
+> pose payload was solved against gr1's RENDERS, so a base swap ships corrections fitted to different
+> pixels — MEASURABLE IN ONE n600 EVAL, not assumable. Bridge is mechanical (`pb1_p5` exposes
+> `--seg-archive`). Order per gc16/su2: rate parent FIRST, then re-solve pose.
+>
+> **🔥 FIRE-ORDER-0 (#826) — VERIFIED BY MAIN, not relayed.** `gr1_cell_drop50_archive.zip`
+> (**359,221 B**, sha256 `a6398e441f4bc818…` — MAIN recomputed, MATCHES) is byte-closed with
+> `seg_plus_rate 0.6702284` vs ref `0.7685479` = **−0.0983195**, and has **NEVER been through
+> `upstream/evaluate.py`**. gc14: "five times larger" than the whole burn. ⚠ The receipt is
+> **seg+rate ONLY, NO POSE**, `score_claim=False` — full S ~0.96, so **it does NOT move the pointer**.
+> Its value is the first genuine exact row for our own vehicle + the never-done CALIBRATION of our
+> advisory n600 protocol against the real evaluator.
+>
+> **📏 gc16 BOUNDS MY RESTART ENTHUSIASM — correctly.** The impulse **I = 1,212.6 is FIXED and
+> CADENCE-INDEPENDENT** (99.7% delivered by epoch 67 regardless of window length), and gc14's geometric
+> envelope caps 2× cadence at **~0.019 S ≈ 2.4% of the 0.802 S gap**. The campaign has moreover NEVER
+> measured a restart helping (full restart destabilized v3; the adopted TAIL_k warm restart was inert
+> as sealed; SGDR is logged-never-fired). **Fire it because it is nearly free, NEVER as a gap-closer.**
+> gc16's per-class evidence points instead at gc15's **H5 "time-travel"**: restarts carry **−9.5%** of
+> Lane's net structural improvement while the 61 training intervals carry **+109.5%**, and Lane
+> `gt_components_erased` WORSENS at both restarts — displacement without structural gain. Cheap
+> discriminator: run arm A **16 epochs longer**.
+>
+> **⚖️ ALLOCATION, sharpened by gc16 and it lands on me:** rg5 fixed the 61-of-177 lever blindness and
+> PRE-REGISTERED that the ranked head is **UNCHANGED** — only **5 of 179** levers carry a ΔS estimate.
+> Widening a queue containing nothing exact-shaped cannot change allocation; treating the sense-organ
+> repair as the answer would be **means-as-ends one layer up**. The real number: **9 of 15 task ids
+> issued in two days are UNREGISTERED (60%)** — including **#825, the allocation corrective itself**.
+
 # Current Focus - 2026-07-31 (ROUND 2 — NOT CLEAN, counter RESETS 0/3. The lane-guard root cause is REFUTED IN DIRECTION: λ=0 was CORRECT KKT. "Four inert instruments" → THREE. A FOURTH reset found that would have VOIDED #824.)
 
 > **🔴 ROUND-2 CRITICAL — MY lane-guard root cause is WRONG, and wrong in DIRECTION.**
