@@ -25972,3 +25972,41 @@ Reformulations queued: weight sweep {3e-3,1e-2} · pre-knee parent · joint (tic
 PRIOR-LAW PREDICTION honored: QA24's joint descent = the w_rate entropy force pre-knee; the ADDED
 shrinkage force at the knee was the open question — answered NO. **Pointer 0.1910828242
 [contest-CPU] UNMOVED (all means; no exact row).** [no-triality] [p0-ledger-ok]
+
+
+## FEED-fp1 (2026-07-31, task #799) f' PROBE — CLASS-FIELD PROJECTION: BR-B GRAFT INSTANCE-DEAD (receiver wall)
+Auto-fired per gc11 W2 (pa1r freed the slot). Question: how much class-semantic capacity does the FROZEN
+TR1 token bottleneck carry when the OUTPUT SPACE is scorer-native (K=5 class-field/margin-channel head +
+deterministic flat-prototype-paint receiver) instead of RGB? Teacher = QA75 solve FIELD (same-manifold —
+the pj1 confound CURE). MVP-first decisive-first: the flat-prototype-paint RECEIVER FLOOR (paint the
+PERFECT GT argmax with margin-optimally-solved prototype colours -> contest-exact R -> frozen CPU-torch
+SegNet) is a head-INDEPENDENT lower bound on f'. **MEASURED n600: receiver floor d_seg 0.008305**
+(teacher-argmax floor 0.008513) — ABOVE the parent RGB head's 0.0049411 AND the 0.0051 dead threshold
+(1.63x). Since f' = paint(head_argmax)->R->SegNet and any head <= GT only ADDS flips, **f' >= 0.008305 by
+construction ⇒ BR-B graft INSTANCE-DEAD; BR-B does NOT fire.** rg3 split (airtight): GT is the ideal head,
+so ALL 0.0083 is RECEIVER/renderer-capacity-limited (0% token-limited). Per-class floor [Road 0.00517,
+Lane 0.00101, Undriv 2.2e-5, Movable 0.00198, MyCar 1.2e-4] = boundary-bleed (Road 62% + Movable 24%):
+flat piecewise-constant paint rings (Gibbs) through bicubic-R and SegNet's ERF blurs the seams. Trained
+K=5 head (50 ep, scorer-free vs QA75 field, margin-weighted): **f' point estimate 0.499366** — a SECOND
+wall (INSTANCE small-3x3-head x frozen-trunk): the frozen trunk features (optimised to render good RGB,
+not to expose a 5-class partition) are NOT small-conv-decodable to the class field (CE plateau 0.550).
+HEAD-INIT GATE (#208/#532) FIRED not as formality: un-protected ridge init produced a DEAD Lane channel
+(head_frac 0.0 vs prior 0.006) -> ABORT rc=3; cured by per-class bias frequency-calibration (rare-class
+protection) -> PASS. DEEPEST READ: the "scorer-native output space" premise (gc10 sketch-2) FAILS at the
+receiver — the frozen SegNet reads textured RGB, not a flat class field; the output-space factorization
+TRADES the RGB-render loss for a measurably-worse flat-paint receiver loss (0.0083 vs 0.00494). BRANCH
+CONSEQUENCE: reformulation queue RE-ROUTED away from the charter default (token grammar / D8 / joint fit —
+NOT the limit) toward the RECEIVER (anti-aliased/smooth paint to kill the seam ringing; margin-channel
+luma modulation; note a learned smooth paint collapses back toward the incumbent RGB head). pa1r's BR-A
+(control_tail in-loop rate continuation) stays the live branch. verdict_scope: FORMULATION
+(flat-prototype-paint class-field-output vehicle) — class-change FAMILY + renderer PARADIGM untouched.
+P5 FOLDED — QA91 erased-lane analyzer ($0, NO scorer, exact scipy 8-conn on gt_n600 + bc1 burn telemetry):
+14,323 GT Lane components; **sub-nucleus (<=5px, #315) 37% by COUNT but only 2.33% by AREA; super-nucleus
+97.67% of Lane area.** Endpoint (ep399) 599 GT Lane components erased, births STILL RISING (+8.75/gate) —
+burn terminated BEFORE the lane birth plateau. VERDICT: BIRTH_PLATEAU_KEY_CANDIDATE (erased mass is NOT
+GT-flicker; #315 does NOT close the corpus). RELATIVE SIGNIFICANCE: Lane = 0.1377 S-units (26% of the
+0.494 endpoint seg-term); recoverable (super-nucleus) bound dS ~0.134. Memo
+`.omx/research/ddm_fp1_class_field_projection_20260731.md`; custody `/Volumes/VertigoDataTier/pact/ddm_fp1_20260731/`
+(receiver floors, prototypes, head-init receipt, fprime receipt, qa91_erased_lane.json). **Pointer
+0.1910828242 [contest-CPU] UNMOVED (all means; no exact row; [macOS-CPU advisory], score_claim=false).**
+[no-triality] [p0-ledger-ok]
