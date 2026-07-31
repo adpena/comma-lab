@@ -26606,3 +26606,164 @@ forwards; window_03 owns the slot) · memo `.omx/research/ddm_gc15_fresh_vs_warm
   the largest number in the census remains **0.098 S** (QA24 cell_drop50, banked, RATE axis), 5-10x larger.
   Its product is a **re-pricing of the campaign's only measured descent** plus a **$0 arm (B') that says
   whether that descent was real**. [magnitude-ok on dismissals below 0.001 S.] **Pointer UNMOVED.**
+
+## FEED-cn3 — the week audited: the largest orphan is a BUILD, and no banked composition reaches the bar (#818)
+
+`date_utc: 2026-07-31` · `arm: ddm_cn3` · `pointer: 0.1910828242 [contest-CPU] UNMOVED` ·
+`score_claim: false` · `[macOS-CPU advisory]` — $0 read-only audit, **0 scorer forwards** (window_03
+owns the slot) · memo `.omx/research/ddm_cn3_week_coherence_audit_20260731.md` · Opus 5. Operator
+07-31: *"review all of our configs and memos and such from the past week to ensure no signal loss and
+a coherent workflow and queue and road map."*
+
+- **⚡ LIVE FINDING (not in the charter; it FORCES the roadmap rather than merely recommending it).**
+  Read from `window_03/telemetry.jsonl` (READ-ONLY, 22 gates ep809→ep914): **window_03 has REVERSED.**
+  Trough ep879 0.0039510 → **ep914 0.0043281**, seven consecutive monotone rises; **now WORSE than the
+  window_02 endpoint 0.0040519 by +2.76e-4**; **347% of the boundary step surrendered**. OLS on gc14's
+  OWN TEST-1 window (ep≥819, n=20): **slope +3.263e-6/epoch, t = +6.28** (gc14 could only measure
+  t=−0.26 on 4 gates). Since the trough: +9.276e-6/epoch, **t = +9.57**. **Applying gc14 §4.3's
+  pre-registered thresholds: TEST 1 ⇒ (c) BOUNDARY-LOCALIZED (now overwhelming); TEST 2 ⇒ Δ_tot lands
+  POSITIVE ⇒ the top band "DRAIN COMPLETE — pool exhausted, stop."** gc14's own point prediction
+  ("I am pre-registering that this prediction will be beaten", endpoint 0.0040019) is being **MISSED in
+  the wrong direction** — an honest falsification of its forecast that **STRENGTHENS** its mechanism
+  verdict and its STOP rule, and is inconsistent with branches (a) and (b). **⇒ B5-C FIRES; a window_04
+  must NOT run.** Authority caveat binding: 36-pair a1 gate, in-window, `[macOS-CPU/MLX advisory]`, and
+  gc14 measured this gate's bias against n600 as MOVING (−1.1e-6 → +1.52e-5) — the ~18:40Z endpoint
+  bundle is the authority; but no bias of order 1e-5 reverses a +2.76e-4 gap at t=+6.28.
+- **THE DECISIVE ARITHMETIC (the roadmap's binding fact, checkable by subtraction).** On the MEASURED
+  own-vehicle line (QA78 v4d gate, n600 `evaluate.py`, S **0.9639878179** = seg 0.431179 + pose
+  0.292941 + rate 0.239866, 360,238 B): **banked pose fallback 0.12689 + the best byte-closed rate ever
+  built (Knee-B 174,578 B = 0.11624) = 0.24313 > bar 0.172141 with ZERO seg budget — excess +0.07099.**
+  ⇒ **No composition of currently-banked components reaches the bar.** Debts to gc13 corner C: seg
+  **0.371179 (7.19×)** · pose 0.277677 (19.19×) · rate 0.153305 (2.77×, 360,238→130,000 B). Any
+  single-axis roadmap is excluded *a priori*, not merely sub-optimal — the arithmetic reason behind the
+  standing `NO AXIS PRIORITY` law.
+- **⭐ ROOT CAUSE — THREE ANTI-ORPHAN GATES ALL REPORT CLEAN BECAUSE EACH SCANS THE WRONG SET.**
+  (i) `check_codex_findings_memos_consumed` reports **LIVE COUNT 0** while scanning only `mtime<3 days`
+  ⇒ **0 of 1,260 files in scope** — structurally vacuous. (ii) `lever_registry.completeness()` reports
+  **`stale=[]`** because `_module_source()` (`lever_registry.py:107`) returns only
+  `curriculum_dsl.__file__` and `lever_factories()` (L165) ASTs **that one file** ⇒ ~180 other
+  `witness_dsl/*.py` modules invisible; the triality drift-detector inherits the blindness.
+  (iii) `check_measured_win_findings_are_wired_or_research_only` (#396) has the CORRECT scan set and
+  **433 violations (108 in-window)** — but was never strict-flipped, so it never blocks (warn-only
+  purgatory). **The apparatus is not failing to DETECT the orphan class; it is failing to LOOK AT THE
+  RIGHT SET — and where it looks correctly it is not permitted to act. All three repairs are $0** and
+  are strictly upstream of every individual orphan. **NEW LAW: a gate's LIVE-COUNT-0 is meaningless
+  until its DENOMINATOR is asserted;** a green gate over an empty scan set is indistinguishable from a
+  green gate over a clean repo — the same failure shape as this arm's own two near-misses below.
+- **10 ORPHANED DSL LEVERS, 2 of them expensive.** 8 DESIGNED-STUB (no trainer flag either) +
+  **`lever_token_rowband` (QA84)** and **`lever_renderer_head` (QA83)** — trainer-implemented, race
+  programs built, **set in NO sealed ticket**. `lever_token_rowband` is the sharpest orphan in the
+  campaign: trainer-implemented **and** carrying a registered canonical equation
+  (`ddm_b2b_rowband_flip_mass_20260731.py`, flip-mass 0.721) **and** a race program
+  (`spec_tr1_burn2_20260731.py:200`) — **everything exists except a ticket that sets it**, while the
+  other 26 levers in `spec_tr1_renderer_20260728.py` ARE wired (35 instances across sealed tickets).
+  **This confirms the burn-2 orphan from a SECOND, independent direction (DSL layer vs SSD custody).**
+  And the duty-to-measure mechanism cannot surface any of them: `lever_activation_ledger.jsonl`
+  (251 rows / 37 levers) contains **none of the 10, not even as `built`**, and has no `ever_fired`
+  field — so CLAUDE.md's *"'off' is a tracked queue"* rule is sound but its ledger is not written by the
+  paths that create levers. Also fully detached: `fh1_adapted_force_levers_20260731.py` (zero importers)
+  → `ph3_s10_frontloaded_levers_20260731.py`.
+- **THE LARGEST SIGNAL LOSS OF THE WEEK IS A BUILD, NOT A FINDING.** `ddm_b2b`'s burn-2 stack — QA83
+  factorized head · QA84 `RowBandGrammar` variable-cell tiling · QA86 config corrections · QA75/QA80
+  harness — is **BUILT + TESTED, 4 commits landed (`f28e427dd9` · `e8d531e735` · `4bdd72a2f7` ·
+  `d138df0c00`), and NEVER FIRED.** Its own memo names its consumer as *"MAIN post-burn boundary —
+  compose + fire burn-2 immediately"*; that boundary arrived and the slot went to burn-4 continuation,
+  the mechanism gc14 then measured as exhausted (r = 0.310, **2.3%** of the gap, w04 net-POSITIVE).
+  **VERIFIED WIRED, not phantom:** `renderer_head_mode` ×8 and `rowband`/`RowBandGrammar` ×20 in the
+  LIVE trainer `experiments/train_tr1_partition_renderer_mlx.py`, plus DSL levers
+  `witness_dsl/qa84_rowband_grammar_20260731.py` + `spec_tr1_burn2_20260731.py`. **NEW LAW PROPOSED:**
+  *a BUILD with a named consumer and no fire receipt is a strictly worse orphan than an orphaned
+  finding — its cost is already sunk.* Sister of velocity-driven-orphaning, at a surface that law had
+  not been applied to.
+- **gc14 RETIRED A MECHANISM, NOT THE AXIS — and the queue is reading it as the latter.** Retired:
+  *continuation windows* as a seg actuator. NOT retired: the **seg debt**, which at 0.371179 S is the
+  campaign's largest single absolute debt and whose axis alone (0.431179) is **2.5× the entire bar**.
+  Read B5-C as *"stop buying seg with continuation epochs"*, **not** *"seg is done"*. The actuator its
+  freed slot should reach for is burn-2 — which ja1 already places **PARALLEL** (capacity pool, does not
+  compete for the byte budget), so it does not even contend with the rate work B5-C wants.
+- **STALE ALLOCATOR (staleness-at-consumption, at the worst possible surface).** ja1 §8 pre-registered
+  its own re-anchor trigger verbatim — *"it re-anchors when v4d lands"* — and **v4d landed and was
+  MEASURED**. Its ranks 1–4 (QA66, QA72a, QA65, QA70/QA69) were **all consumed by v4d**, leaving only
+  QA68 (UNBUILT) and QA24 (heavy). Since its standing instruction is *"the next charter should read the
+  top of the committed table BEFORE spawning"*, **every charter spawned since reads a table whose top
+  four rows are spent.** A stale *measurement* misleads one decision; a stale **allocator** misleads
+  every decision after it.
+- **6 QA ROWS CARRY STALE STATUS** — QA62/QA65/QA66/QA69/QA70/QA72a are still `DUE`/`OPEN` while v4d's
+  `operator_binding` names them as its composed stack and the gate FIRED. A charter reading them would
+  **spend a slot redoing measured work**. Disposition: flip to FIRED citing QA78 (QA72 → split
+  A-fired / B,C,D-open).
+- **TWO LEDGERS, NEITHER A SUPERSET — the defer-at-source rule has a naming gap.** Verified by folding
+  the JSONL latest-row-wins (NOT by grep — see the ops note): **#815, #817, #809/cg1, #425, #535,
+  W1-COH have NO task-ledger row**; #814 and #816 do. The rule says *append a row at the moment of
+  deferral* but never says
+  **WHICH** ledger. **Structural repair proposed:** name the QA ledger the *queue-of-record* and the
+  task ledger the *work-of-record*, with a stated cross-reference duty. Transcribing #815/#816 by hand
+  is only the instance fix.
+- **INDEPENDENT RE-DERIVATION of gc15's mechanism (different route, same conclusion):**
+  `grep -c bias_correction experiments/train_tr1_partition_renderer_mlx.py` → **0**. The field is never
+  set anywhere, so `mlx.optimizers.Adam`'s default `bias_correction=False` binds unopposed at all six
+  `optim.Adam` sites. This is an *absence-of-field* proof vs gc15's *call-site* reading ⇒ the
+  **mechanism** leg is now two-route corroborated. The **causation** leg is NOT raised — it still needs
+  the A/B, which firing burn-2 with the field explicitly declared would deliver as a by-product.
+- **RANKED NEXT-3 — all labelled MEANS; none crosses the bar (stating that plainly is the deliverable):**
+  **(1) FIRE BURN-2 at the window_03 boundary instead of a window_04** — largest reach on the binding
+  axis, already built, and with `bias_correction` declared it is simultaneously the seg-capacity move,
+  gc15's one-field falsifier, and gc14's R1 control (three pre-registered questions, one slot).
+  Reach UNMEASURED; QA24's post-hoc lower bound −0.098 seg+rate is **12% of the gap**. *Falsifier with
+  real teeth:* bc1 already measured from-birth ep399 at d_seg 0.005169, **worse** than warm 0.004264 —
+  burn-2's new grammar/head is exactly what must overturn that. *Blocker first:* gc14 R2.
+  **(2) RE-ANCHOR ja1 at the v4d base ($0)** — cheapest coherence repair in the campaign.
+  **(3) TERMINAL POSE SOLVE, routed by ja1's CONTENT-limited finding** — pose is the 2nd-largest debt
+  (0.277677) and its banked fallback alone eats **74%** of the bar. ja1 §4's DERIVED routing binds:
+  pose is **CONTENT-limited** (784× per-pair spread, 90% of mass in 88 pairs) ⇒ **QA68 expert-menu
+  (UNBUILT) outranks QA65 finer quanta**; the axis-reflex over-weights precision.
+- **SELF-CORRECTION, recorded not silently fixed (and it kills half of a live routable).** I drafted
+  next-3 item 3 as *"consume us1's UNCONSUMED `camera_fl=910`"* per us1 F2 + gc14 **R6**, then traced it:
+  **`src/tac/boundary_math/xi_pose_coder.py:70` = `_NATIVE_FX, _NATIVE_FY = 910.0, 910.0`**, and the live
+  v4d receiver builds `K` from exactly that path (`inflate_runner_v4d.py:61,147`). **The live pose path
+  already uses the true focal length** ⇒ **gc14 R6's focal-length leg is a NO-OP** (its falsifier is
+  pre-answered); R6 survives only on its F4-polyphase leg. **Root cause = a taxonomy defect worth
+  fixing:** us1's `FORGOTTEN` means *absent from live pose DOCTRINE*, **not** *absent from the CODE* —
+  different failures, different cures (a citation vs a patch), and conflating them produced a routable
+  written against a premise the code already satisfies. **Proposed: us1's FORGOTTEN rows gain a
+  `code_state` column {present, absent, divergent}.** Ops note: a first `grep camera_fl` returned 179
+  files, all the substring `camera_float` — the false-positive and the true-positive pointed opposite
+  ways and both mis-answered the actual question. Re-derive, don't recognize.
+  *$0 riders:* gc14 R3 (rate-triggered STOP into the decision record) · gc14 R2 · the #535
+  Fisher-spectrum gate · the W1-COH Bayes-floor preflight owed to Yousfi.
+- **QUEUE: 92% OF THE OPEN LEDGER IS STALE-OR-DUPLICATED.** Folded latest-row-wins: 371 events → **129
+  task_ids, 51 non-terminal** → **29 STALE · 18 DUPLICATED · 2 BLOCKED-ON-ALREADY-LANDED · 1 ORPHANED ·
+  1 LIVE-AND-CORRECT.** *Exactly one* open row is live and correctly aimed. The 18 mirrors are
+  `deferral_ledger::D41–D52c` duplicated wholesale against their own declared `canonical_source`. The 2
+  free unblocks (`sfess_cached_replay_ugc64`, `C4-MOD19-RATE-BYTECLOSE-LOCAL`) had their codex-sandbox
+  `rc=128` blocker fixed by `9cc9eb830b` and harvested by `47f712aca1`/`51ece84eb4`/`335e386088` — **all
+  on 2026-07-15, the same day the blockers were written**; nobody swept afterward. **Live orphan
+  PROCESS:** PID 77097 `observe_m1_banded_checkpoints.py`, **10 d 15 h**, on the #575 m1/curvelet
+  lineage retired by CLAUDE.md's 07-27 superseded-routing note.
+- **CHARTER PREMISE CORRECTED (#807 is NOT the dead-arm class).** The charter said *"b4s is dead, its
+  work was completed by ddm_b4r."* Half right: the ARM is dead and b4r landed 4 commits, **but the
+  deliverable is still executing** — trainer PID 49743 + supervisor 65276 both ALIVE. #807 =
+  **LIVE-AND-CORRECT with a stale `owner` and FALSIFIED notes** (it asserts `LG1_DUAL_ENGAGED=True`,
+  which gc14 falsified). Repair in place; do NOT complete it. The **6 OTHER** in_progress rows are the
+  real dead-arm class. Ops note: a truncated `ps aux | grep` returned 31 of 1096 processes and would
+  have manufactured a false "all arms dead" verdict — `ps -p` is the verified basis.
+- **THE REGISTRATION BOUNDARY IS #793 / 07-31 — and it is why the corrections cannot reach the queue.**
+  Numeric registration *restarts* at #793; everything between #766 and #792 is unregistered. **#766
+  (wr1 Knee-A/B) — one of only TWO surviving material pools in gc14's census (−0.197/−0.263 S rate) —
+  has NO ledger row at all**, the largest unregistered item in the campaign. Consequence: **the gc14
+  corrections land almost entirely OUTSIDE the ledger's reach**, because burn-4/cg1/#815 are
+  unregistered. Register #766/#809/#815 before the endpoint.
+- **METHOD LAW EARNED THE HARD WAY (two near-misses in one audit, same root cause).** (i) A zsh glob
+  error (`no matches found: --include=*.md`) meant grep **never ran**; the empty output was
+  indistinguishable from a clean negative and I nearly shipped "#816 has no ledger row" (it is
+  `completed`). (ii) `grep camera_fl` over-matched `camera_float` in 179 files. **A command that fails
+  to run and a substring that over-matches are both indistinguishable from evidence unless the tool
+  states its own denominator.** ⇒ **every absence-claim in this audit is backed by a POSITIVE
+  enumeration** (fold the ledger and list what IS there), never an empty grep. *An empty result is not
+  a finding until the command is proven to have run.* Sister of the silent-guard law.
+- **RELATIVE SIGNIFICANCE (pace ≠ direction):** this arm's own ΔS is **exactly 0.000** — it is
+  apparatus. The largest banked number in the census remains **0.098 S** (QA24 `cell_drop50`, RATE
+  axis); burn-4's whole contribution was **−0.018303 (2.3%)**. [magnitude-ok on dismissals below
+  0.001 S.] **verdict_scope: FORMULATION** (the audit binds at this base; it re-anchors when the next
+  gate lands). `TaskUpdate` is **unavailable in this environment** — the full disposition table lives in
+  the memo §3 and **nowhere else**; transcription into the ledger is OWED. **Pointer UNMOVED.**
