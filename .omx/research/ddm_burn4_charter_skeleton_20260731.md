@@ -66,12 +66,21 @@ step 0, collapsing the nucleation barrier the +8.75/gate slope is paying for) �
 convergence. `⟪UNKNOWN: does the rung-2 verdict route the seg axis to KD, or did (b)/(e1) win first?⟫`
 
 ## §3 PREREQUISITES (binding; burn-4 does NOT fire until these are DONE)
-1. **v9 telemetry port to TR1 (THE named owed port; vh1 row 7).** The TR1 trainer has only 4/N of the
-   v9 confound-cure vocabulary (`loss_terms`/`term_domination`/`liveness`/`confound_alarm`); burn-4's
-   F1–F4 halt rules need the missing signals to EXIST: **per-term loss rows (#304) · term-domination
-   + term_inert alarms (#321) · liveness stamps (accepted-frac / weights_stepped) · positive-control
-   sentinel (#404).** The guards are only as good as the telemetry that trips them. Owner: MAIN, before
-   fire. `⟪UNKNOWN: port landing sha⟫`. **This is the single hardest prerequisite and gates the whole burn.**
+1. **v9 telemetry port to TR1 (THE named owed port; vh1 row 7) — DONE (ddm_tp1 #804, sha 15aad5a28b).**
+   `--telemetry-v9-port {off,on}` (DEFAULT off) emits, when on: **per-term loss rows (#304**, keys
+   {seg,rate,delta_sparsity} = the exact `batch_loss` addends, with `sum_terms`/`sum_minus_total`
+   self-check**) · term-domination + term_inert alarms (#321**, edge-triggered 40%/3-rows + the reused
+   `term_inert_rows` producer**) · liveness stamps (accepted-frac / weights_stepped, #402**) ·
+   positive-control sentinel (#404**, reused `canary_suite()`) · Q7 `lever_engage` companions**.
+   Burn-4's F1–F4 halt rules now have their SIGNALS. **Byte-identical when off** (CPU off-vs-on: 112
+   param/ema/opt arrays across 4 checkpoints bit-identical; only the pre-existing wall-clock
+   `gate_wall_seconds` differs, matched by the off-vs-off control ⇒ flag fully inert). Flag threaded via
+   `args` ONLY (never TR1Config ⇒ config_hash/checkpoint flag-invariant); new rows via `tlog` only,
+   never `telemetry_tail`. DSL: `lever_telemetry_v9_port("on")` in `spec_tr1_renderer_20260728`. Memo
+   `.omx/research/ddm_tp1_v9_telemetry_port_20260731.md`. Q3 verdict-live-gap recorded NOT-ported
+   (2nd-scorer-pass cost; DSL-default-off in v9); Q1/Q4/Q5 N/A (no clip / no tail-cycles / different
+   levers on TR1); Q6 birth_completion is P2-owned and rides this surface. Owner: MAIN turns it ON in
+   the sealed ticket. **This prerequisite is now CLEARED.**
 2. **rung-1 endpoint parent ckpt** (the birth-plateau continuation endpoint) + its n600 realized
    verdict + P measurement. `⟪UNKNOWN: rung-1 endpoint ckpt path + sha + realized d_seg + P⟫`.
 3. **QA80 photometric field staleness re-check** at the rung-1 endpoint (staleness-is-a-named-confound
