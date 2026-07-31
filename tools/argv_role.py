@@ -90,12 +90,33 @@ def _program_basename(pieces: list[str]) -> str:
 
 
 def _path_shaped_basenames(pieces: list[str]) -> list[str]:
-    """Basenames of every piece that looks like a filesystem path (so a bare search PATTERN or a
-    numeric flag value can never match a token)."""
+    """Entrypoint names this argv actually RUNS.
+
+    Two forms, both deliberately narrow so a bare search PATTERN or a numeric flag value can never
+    match a token:
+
+    * PATH-SHAPED args (contain ``/`` or end in ``.py``) contribute their basename.
+    * The arg after ``-m`` contributes its dotted components. Found in round-1 self-review: without
+      this leg ``python -m tools.pb1_qdbs`` was NOT recognised as a slot holder while 9 launch
+      scripts use ``python -m`` — a guard that wrongly ADMITS is as real a defect as one that
+      wrongly refuses, just quieter (two n600 scorer jobs colliding).
+    """
     out: list[str] = []
+    take_module = False
     for piece in pieces:
         text = piece.strip(_PATH_FENCE)
-        if not text or text.startswith("-"):
+        if not text:
+            continue
+        if take_module:
+            take_module = False
+            if not text.startswith("-"):
+                out.extend(part for part in text.split(".") if part)
+                out.append(text)
+                continue
+        if text == "-m":
+            take_module = True
+            continue
+        if text.startswith("-"):
             continue
         if "/" not in text and not text.endswith(".py"):
             continue

@@ -38,6 +38,8 @@ FALSE_POSITIVES = (
     '.venv/bin/python tools/witness_checkin.py --training-sig train_levelset_witness',
     'sed -n 1,50p tools/ru1_endpoint_residual.py',
     'cat experiments/contest_auth_eval_notes.txt',
+    # `-m` with a NUMERIC value: the token here is a flag VALUE, not a module.
+    'python other.py -m 4 --note pb1_qdbs_followup',
 )
 
 # --- the positive control: every one of these IS a live slot holder and MUST still fire -------
@@ -48,6 +50,11 @@ TRUE_HOLDERS = (
     '/usr/bin/python3 tools/pb1_qdbs.py --pairs 600',
     'bash -c "cd /repo && .venv/bin/python tools/ru1_endpoint_residual.py --out x"',
     'python experiments/train_witness_realized_through_R_mlx.py',
+    # round-1 self-review: the `-m` module form. Without it `python -m tools.pb1_qdbs` was NOT
+    # recognised as a slot holder while 9 launch scripts use `python -m` — a guard that wrongly
+    # ADMITS is as real a defect as one that wrongly refuses, just quieter.
+    'python -m tools.pb1_qdbs --pairs 600',
+    '.venv/bin/python -m experiments.train_levelset_witness_realized_through_R_mlx',
 )
 
 
@@ -128,7 +135,9 @@ def test_both_tools_route_through_the_canonical_helper():
     import ast
     import pathlib
 
-    for rel in ("tools/ru1_token_quantum_calibration.py", "tools/sb1_seg_batch.py"):
+    for rel in ("tools/ru1_token_quantum_calibration.py", "tools/sb1_seg_batch.py",
+                # THIRD site, found by the widened CLASS-2 gate rather than named up front.
+                "tools/ru1_endpoint_residual_atlas.py"):
         text = pathlib.Path(rel).read_text()
         tree = ast.parse(text)
         assert "process_table_entrypoint_holders" in text, f"{rel} does not use the helper"
