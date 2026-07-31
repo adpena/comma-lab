@@ -1,0 +1,36 @@
+{
+  "reason": "duplicate `registered` for task_id 603: sc2 fold (b449aae37f rescue) blind-concatenated a codex-delegate worktree event stream past the strict writer; loader refuses ALL appends (CanonicalTaskStatusCorruptError)",
+  "repair": "row-granularity quarantine (loader's own remedy applied narrowly); rows preserved VERBATIM in sidecar (.omx/research/, tracked); ledger atomically rewritten under the writer fcntl lock; strict re-validate + canonical append_note proof follow",
+  "source_fold_session": "codex_delegate:direct_description_minimizer_builder:20260721T221054Z",
+  "original_line_numbers_1indexed": [
+    320,
+    321,
+    322
+  ],
+  "repaired_at_utc": "2026-07-31T00:00:00Z",
+  "repaired_by": "MAIN session 89ff112f (pa1r blocker follow-up)",
+  "rows": [
+    {
+      "line_1indexed": 320,
+      "sha256": "ac46c992dbe4ec8b680fbb9246b1e7f9cedccb992e2cd0fe9fd205ee8539ba87",
+      "task_id": "603",
+      "event_type": "registered",
+      "event_timestamp_utc": "2026-07-22T00:02:38.718887Z"
+    },
+    {
+      "line_1indexed": 321,
+      "sha256": "21e4eea374a4d71bd2751809e8b9826cd8b13c5eef2ae443f539d3de8f609fa3",
+      "task_id": "603",
+      "event_type": "status_change",
+      "event_timestamp_utc": "2026-07-22T00:02:38.720660Z"
+    },
+    {
+      "line_1indexed": 322,
+      "sha256": "951c75575880b1e3e90e4cc487c6cd97fa71289e82027f2ab69383e779cf6e93",
+      "task_id": "603",
+      "event_type": "blocked",
+      "event_timestamp_utc": "2026-07-22T00:02:38.722135Z"
+    }
+  ],
+  "recovery": "cat .omx/research/canonical_task_status_fold_quarantine_20260731.jsonl; the folded stream is a DIFFERENT delegated instance of task 603 (direct_description_minimizer builder lane, ended blocked); if ever re-keyed back in, use a distinct task_id"
+}
