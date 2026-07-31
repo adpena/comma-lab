@@ -1,4 +1,39 @@
-# Current Focus - 2026-07-31 (RECOVERY 16:58Z: Fable-5 limit → MAIN on Opus 5 → burn-4 respawned)
+# Current Focus - 2026-07-31 (RECOVERED + window_03 LIVE-DESCENDING; gc14 16th convocation on the first working descent)
+
+> **RECOVERY COMPLETE (b4r, commits c72d1e7b75/fb58d89af9/1f53a78bdc/b08f750268).** Both procs
+> verified dead → ALARM retired to alarms_resolved/ sha 08bce4ca… as
+> **UNDRIV_EROSION_ADJUDICATED_CONTINUE** with `supersedes_fields: []` — the arm deliberately
+> did NOT overlay the measured field: the derived-ε machinery is CORRECT and the erosion is
+> REAL; retired as a PRICED TRADE, never a measurement error (contrast ALARM #1's
+> SPURIOUS_PORTED_PREDICATE). Pre-auth bound |net betti0| ≤ 10 labeled **class-4 governance
+> value** (owner MAIN, re-derivation trigger = λ_undriv via cg1 #809) — constants-are-poison
+> applied to a governance knob. **window_03 FIRING**: ticket c286049aac3f…, ep806→946, trainer
+> 49743 / supervisor 65276, launched 17:09:57Z, boundary ~18:40Z, all 6 governed gates PASS,
+> argv-diff = only epochs/out-dir/resume (NO reseal needed, zero unsanctioned drift).
+> **LIVE-DESCENDING: ep829 d_seg 0.003998 < window_02's 0.004052 endpoint** (in-window a1
+> telemetry, NOT an endpoint verdict — early-window rates run hot). Measured window_02 net ΔS
+> = **−0.019934 S** (seg −0.022634 + rate +0.002700, w01→w02 baseline; the w01-vs-rung1
+> baseline ambiguity is owed to gc14 §3). **CAP UNCHANGED 20:17Z** but enforcement made
+> PROSPECTIVE — b4r found the retrospective-only check would have admitted a window_04 that
+> breaches by ~33 min; class-fixed across every launch path incl. the lg1 rollback-relaunch
+> (new LANE_EROSION_ROLLBACK_EXCEEDS_CAP). window_03 = THE LAST WINDOW. Endpoint bundle
+> producer BUILT+verified (experiments/ddm_b4r_endpoint_extras.py: per-class n600 d_seg in
+> xp1's convention, partition sum-check 8.7e-19; 5×5 class-pair flip matrix; per-class descent
+> rates parent-ep641→w01→w02→w03; Undriv priced in S vs the fl1 floor; ZERO extra SegNet
+> forwards). Waiter v3 armed (4×135s sub-call protocol).
+> **gc14 (#814) LIVE — 16th convocation, on OPUS (Fable at limit).** Seeded with THE
+> DISCRIMINATOR: window_03 tests reachable-headroom-drain (fl1 ~0.026 S ⇒ 1.15 windows runway
+> ⇒ flatten) vs FLOOR-PIERCING (renderer learning temporal phase-faithfulness in-loop,
+> descending THROUGH the FORMULATION-scoped flicker floors as PR130 does 18× below) —
+> per-class decomposition discriminates; Road-at-its-floor ⇒ any Road descent = piercing
+> evidence. Plus the unclaimed CROSSOVER derivation (d_seg −0.0226/window decelerating vs rate
+> +0.00205/window growing ⇒ computable window where net ΔS flips positive = the DERIVED
+> stopping rule superseding judgment-based E2 handoff) + burn-5 decision function +
+> phase-faithfulness axis (#425/#535/W1-COH, Lane #1 at 43.6% of floor mass) + us1's
+> unconsumed pose geometry (2×2 polyphase luma, camera_fl=910) + cg1 amendments.
+> Pointer 0.1910828242 [contest-CPU] UNMOVED.
+
+# Historical - 2026-07-31 (RECOVERY 16:58Z: Fable-5 limit → MAIN on Opus 5 → burn-4 respawned)
 
 > **INTERRUPTION + RECOVERY (no signal lost).** The b4s arm hit a **Fable-5 usage limit**
 > mid-execution of MAIN's CONTINUE adjudication (received, zero steps executed). Operator
