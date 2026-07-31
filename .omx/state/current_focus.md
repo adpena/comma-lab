@@ -1,4 +1,22 @@
-# Current Focus - 2026-07-31 (BR-D wall branch: THE BIRTH-COMPLETION LADDER adopted)
+# Current Focus - 2026-07-31 (RUNG-1 LANDED: new best S 0.6082 → burn-4 compose+seal LIVE)
+
+> **RUNG-1 ENDPOINT (manifest /Volumes/VertigoDataTier/pact/ddm_r1c_20260731/):** NEW BEST
+> realized point — **n600 d_seg 0.00426407708, S_additive 0.6081898657 @ 273,004 B**
+> (parent 0.0049411/0.67325: ΔS **−0.0651** in 1.498h, ONE 140-ep window). stop_reason
+> = birth_completion_fired (P2 key: slope −10.30 comp/gate, t=−2.81 — births plateaued/
+> declining; the sealed window → key → stop → endpoint-obligations → marker chain ran
+> END-TO-END mechanically, halt_events=[]). Burn-4 parent = ep641 ckpt sha 40553db8be98…;
+> QA80 NOT_CONSUMED_FRESH_BY_CONSTRUCTION; P 4-conn estimate 474 above-nucleus (exact
+> owed → xp1). c telemetry 0.0775 (from 0.0885, cross-burn trend down).
+> **LIVE:** ddm_xp1 (#806, scorer slot) — exact P via the QA92 base-pass on the ep641
+> render. ddm_b4s (#807, scorer-free) — fill last skeleton slots → compose the burn-4
+> arm matrix (QA24 from-birth rate cell × KD-from-birth seg cell w/ R6/R7 raced × fh1
+> force stack per §3b × telemetry ON) → reseal → bounded re-smoke after xp1 frees the
+> slot → FIRE under standing GO w/ the adapted daemon+marker supervisor. Honest
+> arithmetic: burn-4's rate re-race (~0.19-0.28 S) is the gap-sized lever; ladder does
+> NOT reach 0.172141 by itself.
+
+# Historical - 2026-07-31 (BR-D wall branch: THE BIRTH-COMPLETION LADDER adopted)
 
 > **LADDER STATE (gc12 b4d317538d; QA92 LANDED 6c23883be6):** rung-0 QA92 FIRED-MEASURED
 > and the **Contrarian bound fired: P·O = 0.017 S < 0.05 ⇒ RUNG 2 SKIPPED** — no carrier
