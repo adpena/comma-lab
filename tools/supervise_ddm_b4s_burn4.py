@@ -462,6 +462,71 @@ def _decision_receipts() -> list[dict]:
     return out
 
 
+UNDRIV_CLASS_INDEX = 2  # comma10k CANONICAL order [Road, Lane, Undrivable, Movable, MyCar]
+
+
+def _class_erosion_verdict(wdir: Path, class_index: int, class_name: str) -> dict:
+    """gc13 (71659bd3d7) UNDRIV watch: 'Lane = the one measured need' is FALSIFIED by
+    receipt — Undrivable eroded +0.00204 S over the same unprotected ep499→641 window
+    (qa92 ep499 vs xp1 ep641, both n600-exact; INSTANCE scope), MORE than Lane's
+    +0.00151 — and the R6+λ_Lane config protects Lane only.  Same derived-ε machinery
+    as the Lane key (betti0_realized[class] OLS slope over the last window gates;
+    ε = t_crit·max(SE_ols, SE_quant); eroding ⇔ slope < −ε; REUSES the P2 module's
+    fit + constants verbatim — no hand-set threshold).  Consumed as ALARM+HOLD ONLY
+    (no auto-rollback: there is no trainer-side λ_undriv to raise; MAIN adjudicates on
+    fire).  Never raises — a malformed/short window returns eroding=False with a note
+    (the watch must not kill the loop); daemon-decision-logic only, sealed config
+    untouched."""
+    try:
+        sys.path.insert(0, str(REPO / "src"))
+        import numpy as np
+        from scipy import stats as sci_stats
+        from tac.optimization.ddm_lp2_birth_completion import (
+            _QUANT_ROUNDING_VAR, DEFAULT_ALPHA_ONE_SIDED, DEFAULT_WINDOW_GATES,
+            MIN_WINDOW_POINTS, _ols_slope_fit)
+
+        tele = wdir / "telemetry.jsonl"
+        pts: dict[int, int] = {}
+        for line in tele.read_text().splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                row = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            topo = row.get("topology_per_class")
+            if not isinstance(topo, dict) or "epoch" not in row:
+                continue
+            realized = topo.get("betti0_realized")
+            if isinstance(realized, list) and len(realized) > class_index:
+                pts[int(row["epoch"])] = int(realized[class_index])
+        ordered = sorted(pts.items())[-int(DEFAULT_WINDOW_GATES):]
+        if len(ordered) < int(MIN_WINDOW_POINTS):
+            return {"eroding": False, "class_name": class_name,
+                    "note": f"insufficient topology points ({len(ordered)})"}
+        epochs = np.array([e for e, _ in ordered], dtype=np.float64)
+        counts = np.array([c for _, c in ordered], dtype=np.float64)
+        gates = epochs / float(EPOCHS_PER_GATE)
+        slope, se_ols, s_xx, _ssr, dof = _ols_slope_fit(gates, counts)
+        se_quant = float(np.sqrt(float(_QUANT_ROUNDING_VAR) / s_xx))
+        se = max(se_ols, se_quant)
+        eps = float(sci_stats.t.ppf(1.0 - float(DEFAULT_ALPHA_ONE_SIDED), dof)) * se
+        return {
+            "eroding": bool(slope < -abs(eps)), "class_name": class_name,
+            "class_index": int(class_index),
+            "slope_comp_per_gate": float(slope), "epsilon_comp_per_gate": float(eps),
+            "net_betti0_realized_delta": int(ordered[-1][1] - ordered[0][1]),
+            "n_points": len(ordered),
+            "rule": "eroding <=> betti0_realized OLS slope < -epsilon; epsilon = "
+                    "t_crit*max(SE_ols, SE_quant) (P2 machinery reused verbatim; "
+                    "gc13 receipt: Undriv +0.00204 S unprotected ep499->641)",
+        }
+    except Exception as exc:  # the watch must never kill the supervisor loop
+        return {"eroding": False, "class_name": class_name,
+                "note": f"watch error (degraded, non-fatal): {exc!r}"}
+
+
 def _resmoke_gate(decision: dict) -> str:
     """The ΔS SAFETY GATE after window_01: not-regressing-beyond-noise => PROCEED; else ALARM.
     Returns 'PROCEED' or 'REGRESSED'."""
@@ -580,6 +645,8 @@ def main() -> int:
                                "above_nucleus_erased_estimate", "betti0_realized_endpoint")},
                 "birth_key_fit": key.get("fit"),
                 "lane_erosion": _lane_erosion_verdict(key),  # MAIN items #4/#5 (protection)
+                "undriv_erosion": _class_erosion_verdict(    # gc13: the unwatched eroder
+                    cur, UNDRIV_CLASS_INDEX, "Undrivable"),
                 "elapsed_hours": round(_elapsed_hours(), 3),
                 "pointer": POINTER, "score_claim": False,
             }
@@ -654,6 +721,20 @@ def main() -> int:
                                           "beyond noise (xp1's finding realized); the burn is NOT "
                                           "extended. Accepted state = the rollback target ckpt. "
                                           "Needs lg1's λ_Lane constraint to proceed (MAIN)."})
+            return 0
+        # --- gc13 UNDRIV-EROSION WATCH (ALARM+HOLD only; no rollback actuator) -------
+        ue = last.get("undriv_erosion") or {}
+        if ue.get("eroding"):
+            _alarm("UNDRIV_EROSION",
+                   {"window": last["window_dir"],
+                    "slope_comp_per_gate": ue.get("slope_comp_per_gate"),
+                    "epsilon_comp_per_gate": ue.get("epsilon_comp_per_gate"),
+                    "net_betti0_realized_delta": ue.get("net_betti0_realized_delta"),
+                    "reading": "Undrivable betti0 erodes beyond the derived noise band "
+                               "(gc13 receipt: Undriv +0.00204 S over the unprotected "
+                               "ep499->641 window, MORE than Lane's +0.00151). NO "
+                               "auto-rollback — there is no trainer-side lambda_undriv "
+                               "to raise; the burn HOLDS here and MAIN adjudicates."})
             return 0
         # --- window_01 RE-SMOKE ΔS SAFETY GATE -------------------------------------
         if last.get("is_resmoke"):
