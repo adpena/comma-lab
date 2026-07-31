@@ -26153,3 +26153,35 @@ measured), Muon −32% (vehicle-scoped FREE number), all v9 numeric constants (L
 ph3_s10 anti-collision pattern; default-OFF, never-fired, fold-and-delete; trainer untouched — tp1
 owns it). 2 recorded review passes; ruff F clean; import/shape validation green. Pointer
 0.1910828242 [contest-CPU] UNMOVED. [no-triality] [p0-ledger-ok]
+
+## FEED-r1c (2026-07-31, task #803 ddm_r1c): RUNG 1 FIRED — the continuation-to-birth-plateau windowed warm tail is LIVE under a detached supervisor
+Memo `.omx/research/ddm_r1c_rung1_continuation_20260731.md`. Pointer 0.1910828242 [contest-CPU]
+UNMOVED; all [macOS-CPU/MLX advisory], score_claim=false. **THE SEAL (gc12 §5, honored mechanically):**
+parent = control_tail ep500 ckpt sha `a2dc86b8a898…` (verified; meta::epoch=500; n600 d_seg 0.0049411 /
+S_add 0.67325 / 269,028 B); levers = the 16 control_tail levers VERBATIM (DSL-copied from its sealed
+ticket 4a67d694…), NO new lever, w_rate 0.05 inherited (0.0768 refused as un-raced mid-lineage);
+**argv-diff = EXACTLY {--epochs 500→641, --max-wall-minutes 45→130, --out-dir, --resume-from}** (the
+sanctioned four; ema_decay re-derivation 0.9998933→~0.9999168 is the DERIVED run-geometry law adapting,
+not a flag). Governed launch: all gates PASS (venv-custody/seal-freshness/import-custody/memory 78.3 ≥
+25.6 GiB/scorer-slot FREE); window_01 pid 16550, ep501→640, ticket faa4a888…, resume clean
+(`resume_form_reanchor`, tau_softplus), first gate ep504 d_seg 0.004903 (< parent), no alarms.
+**QA80 staleness verdict: field NOT CONSUMED** by the sealed config (coupling/delta/head consumers all
+off; the margin term is the LIVE per-step `_live_margin_weight`, stop-grad — fresh by construction) ⇒
+no re-derive. **DECISIVE PRE-FIRE FINDING: the Lane birth curve has ALREADY plateaued at the parent**
+— P2 key on control_tail telemetry (epochs_per_gate=5): fired=True, slope 1.60 ≤ ε 1.88, 411
+super-nucleus components still erased, betti0 flat ~574/985 — so rung-1's recoverable value is the
+residual COUPLED-DESCENT d_seg dividend (sharpening, not births), and the mechanical STOP rule will
+bound it (tree-vortex guard). **Supervision = the daemon+marker pattern (MAIN correction applied):**
+`tools/supervise_ddm_r1c_rung1.py` (committed, ruff-clean, 2 review passes; pass-1 caught the
+receipt-vs-process-exit G4 slot race) runs DETACHED: waits for `tr1_window_receipt.json` → runs the P2
+key CLI → mechanical decide (fired=False ∧ windows<3 ∧ <8h ⇒ governed next window; fired ∨ caps ⇒
+STOP + terminal endpoint stage; confound_alarm/a1_refuse/crash ⇒ `rung1.ALARM`, never extend) →
+per-window `window_NN_decision.json` receipts + `supervisor_state.json` heartbeat; stateless
+crash-resume from receipts, pidfile singleton, ticket rebuild-hash verified against window_01.
+**Endpoint obligations disposition:** n600 realized verdict (pa1r harness, +1.9e-7-validated) + QA80
+re-check FOLDED into the supervisor terminal stage → `rung1_endpoint_manifest.json` + `rung1.done`
+marker; exact S-unit P re-measure (QA92 base-pass, 8-conn) OWED TO MAIN (manifest carries the
+DERIVED-ESTIMATE erased-count + the named exact method). MAIN consumes the marker at its next wake.
+Custody `/Volumes/VertigoDataTier/pact/ddm_r1c_20260731/` (manifest, tickets, windows, decisions);
+task 803 registered→in_progress (flips completed when MAIN consumes the endpoint). [no-triality]
+[p0-ledger-ok]
