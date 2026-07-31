@@ -13,7 +13,6 @@ from pathlib import Path
 from typing import Any, Literal
 
 import numpy as np
-import psutil
 import torch
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -40,6 +39,7 @@ from tools.measure_ddm_menu1_realized_flip_menu import (  # noqa: E402
     _forward,
     _load_models,
 )
+from tools.mem_basis import conservative_free_gib  # noqa: E402
 
 SCHEMA = "ddm_e4_ws1_packet_batch32_remeasure.v1"
 IC1_SCHEMA = "ddm_ic1_packet_batch32_remeasure.v1"
@@ -302,7 +302,12 @@ def remeasure(
             != config.menu1_config_sha256
         ):
             raise RemeasureError("MENU1 config SHA-256 differs")
-        available_memory_bytes = psutil.virtual_memory().available
+        # ddm_gh1 #830: route the REFUSE basis through the canonical reclaimable-aware helper.
+        # macOS `psutil.virtual_memory().available` = free + inactive, counting DIRTY ANON pages
+        # as available (MEASURED on this box while the trainer ran: psutil 90.55 GiB vs truly
+        # reclaimable 87.29 GiB) — the UNDER-protecting direction for a memory preflight.
+        # Fail-closed default 0.0: an unmeasurable box must refuse, not admit.
+        available_memory_bytes = int(conservative_free_gib(default=0.0) * (1024**3))
         if available_memory_bytes < config.minimum_available_memory_bytes:
             raise RemeasureError(
                 "R6_BLOCKED_E5A_N600_MEMORY_PREFLIGHT: "

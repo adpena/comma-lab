@@ -13,7 +13,6 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any, Final, Literal
 
-import psutil
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 REPO: Final = Path(__file__).resolve().parents[1]
@@ -28,6 +27,7 @@ from tac.optimization.ddm_ms2r_r3_366box_typed_fisher_g4_waterfill import (  # n
     build_artifacts,
     canonical_bytes,
 )
+from tools.mem_basis import conservative_free_gib  # noqa: E402
 
 CONFIG_SCHEMA: Final = "DDMMS2RR3366BoxTypedFisherG4WaterfillConfigV1"
 RUN_ID: Final = (
@@ -192,7 +192,10 @@ def run(config_path: Path) -> dict[str, Any]:
         inputs,
         input_custody=custody,
         config_custody=config_custody,
-        available_memory_bytes=int(psutil.virtual_memory().available),
+        # ddm_gh1 #830: feeds `memory_preflight.passes_threshold` (>= 20 GiB) in the receipt, so
+        # a reader treats it as a safety relation. Reclaimable-aware basis; called once, so the
+        # canonical helper's ~45 ms is free. Fail-closed default 0.0 (unmeasurable => BELOW).
+        available_memory_bytes=int(conservative_free_gib(default=0.0) * (1024**3)),
     )
     output_root = _resolve(config.output_root)
     stage_root = output_root / "stage_checkpoints"

@@ -2302,15 +2302,31 @@ def check_verdict_live_gap_defaults_on_during_ema_warmup(
 
 
 def _python_source_files(root: Path) -> list[Path]:
-    """tools/*.py + src/tac/**/*.py (the memory-guard surface), skipping the canonical
-    accounting modules + tests + this gate module itself."""
+    """The DECLARED memory-guard surface, as an explicit denominator.
+
+    ``tools/*.py`` + ``src/tac/**/*.py`` + ``experiments/*.py`` + ``scripts/*.py``, skipping the
+    canonical accounting modules, tests, and this gate module itself.
+
+    ddm_gh1 #830: ``experiments/`` and ``scripts/`` were previously OUT of scope silently — a
+    future guard written there would have been invisible while the gate still printed ``OK``.
+    They are scanned TOP-LEVEL ONLY (deliberately non-recursive): ``experiments/results/**`` and
+    ``experiments/**/.venv/**`` hold vendored third-party trees and frozen run bundles that are
+    not our guard surface and would swamp the denominator (MEASURED: 20+ vendored numpy/torch
+    files match ``virtual_memory``). ``tools/`` stays non-recursive because its only subdirectory
+    is ``tools/tests`` (116 files), which the ``/tests/`` filter excludes anyway. The scope is a
+    declaration, not an accident — the caller reports ``considered`` next to ``scanned`` so
+    "0 violations" can never be confused with "0 scanned".
+    """
     out: list[Path] = []
-    tools = root / "tools"
-    if tools.is_dir():
-        out.extend(sorted(tools.glob("*.py")))
-    srctac = root / "src" / "tac"
-    if srctac.is_dir():
-        out.extend(sorted(srctac.glob("**/*.py")))
+    for relative, pattern in (
+        ("tools", "*.py"),
+        ("src/tac", "**/*.py"),
+        ("experiments", "*.py"),
+        ("scripts", "*.py"),
+    ):
+        directory = root.joinpath(*relative.split("/"))
+        if directory.is_dir():
+            out.extend(sorted(directory.glob(pattern)))
     skip = {
         (root / "tools" / "mem_basis.py"),
         (root / "tools" / "system_memory_governor.py"),
@@ -2356,12 +2372,25 @@ def check_no_raw_virtual_memory_safety_basis(
     ``.total`` is EXCLUDED (denominator, not a safety basis). Same-line waiver
     ``# RAW_VM_BASIS_OK:<rationale>`` for telemetry-only display / last-resort fallbacks.
 
-    WARN-ONLY at landing (live-count 0 after the sweep; ``preflight_all`` calls it warn-only per
-    the Strict-flip atomicity rule — not yet in ``_CONFOUND_STRICT``)."""
+    STRICT since 2026-07-31 (ddm_gh1 #830 fix+gate atomic landing). This gate was OWNERLESS and
+    RED: declared live-count 0 in its own docstring but MEASURED 6. Re-derived and classified:
+    3 in ``tools/launch_ddm_joint_descent.py``'s ``_RSSMonitor`` are TELEMETRY-ONLY (the value
+    only ever reaches the ``measured_free_memory_floor_gib`` receipt field — 3 emit sites, never
+    compared, never refuses) and are waived with a MEASURED rationale (20 Hz poll; the canonical
+    basis costs 45 ms/call vs psutil's 0.014 ms = 3200x, so routing it there would burn ~90% of a
+    core beside the live trainer); the other 3 (``remeasure_ddm_e4_ws1_packet``,
+    ``run_ddm_j12_receiver_coordinate_custody``, ``run_ddm_ms2r_r3_366box_typed_fisher_g4_waterfill``)
+    genuinely REFUSE or publish a ``memory_preflight`` threshold relation and were routed through
+    ``tools.mem_basis.conservative_free_gib`` with a fail-closed default. Live evidence for the
+    bug class on this box at fix time: psutil ``.available`` 90.55 GiB vs truly reclaimable
+    87.29 GiB — a 3.3 GiB over-report in the UNDER-protecting direction. Live count is 0, so it
+    flips strict in this landing rather than into warn-only purgatory."""
     root = Path(repo_root or REPO_ROOT)
     violations: list[str] = []
+    considered = 0
     scanned = 0
     for path in _python_source_files(root):
+        considered += 1
         text = _read(path)
         if not text or "virtual_memory" not in text:
             continue
@@ -2388,7 +2417,13 @@ def check_no_raw_virtual_memory_safety_basis(
         violations=violations,
         strict=strict,
         verbose=verbose,
-        ok_detail=f"{scanned} source file(s) scanned",
+        # DECLARED DENOMINATOR (ddm_gh1 class fix): `considered` is the in-scope surface,
+        # `scanned` the subset that mentions the token. Reporting only the latter lets a
+        # narrowed scope print a clean OK while scanning almost nothing.
+        ok_detail=(
+            f"{scanned} of {considered} in-scope source file(s) mention virtual_memory "
+            f"(scope: tools/*.py + src/tac/**/*.py + experiments/*.py + scripts/*.py)"
+        ),
     )
 
 

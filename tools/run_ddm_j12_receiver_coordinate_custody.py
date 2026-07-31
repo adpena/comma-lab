@@ -270,9 +270,13 @@ def _validate_binding(binding: Mapping[str, Any]) -> dict[str, Any]:
 
 
 def _free_memory_receipt(stage: str, minimum_gib: int) -> dict[str, Any]:
-    import psutil
+    # ddm_gh1 #830: this REFUSES a stage, so the basis must be reclaimable-aware. macOS
+    # `psutil.virtual_memory().available` = free + inactive and counts DIRTY ANON pages as
+    # available (MEASURED live: psutil 90.55 GiB vs truly reclaimable 87.29 GiB) — it
+    # UNDER-protects the live trainer. Fail-closed default 0.0 (unmeasurable => refuse).
+    from tools.mem_basis import conservative_free_gib
 
-    available = int(psutil.virtual_memory().available)
+    available = int(conservative_free_gib(default=0.0) * 1024**3)
     required = int(minimum_gib * 1024**3)
     if available < required:
         raise J12Error(f"REFUSE_{stage}_AVAILABLE_MEMORY_BELOW_{minimum_gib}_GIB")
@@ -280,6 +284,7 @@ def _free_memory_receipt(stage: str, minimum_gib: int) -> dict[str, Any]:
         "stage": stage,
         "available_bytes": available,
         "required_bytes": required,
+        "memory_basis": "tac_canonical_reclaimable_aware_conservative_free_gib",
         "psutil_available": True,
         "admitted": True,
     }

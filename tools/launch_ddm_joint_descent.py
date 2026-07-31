@@ -171,14 +171,14 @@ class _RSSMonitor:
         self._stop = threading.Event()
         self._thread = threading.Thread(target=self._run, daemon=True)
         self.peak_rss_bytes = self._process.memory_info().rss
-        self.free_floor_bytes = psutil.virtual_memory().available
+        self.free_floor_bytes = psutil.virtual_memory().available  # RAW_VM_BASIS_OK: telemetry-only receipt field `measured_free_memory_floor_gib` (3 emit sites, never compared to a floor / never refuses); the monitor polls at 20 Hz and the canonical reclaimable-aware basis MEASURED 45 ms/call vs psutil 0.014 ms (3200x) -> routing it here would burn ~90% of a core next to the live trainer (ddm_gh1 #830)
 
     def _run(self) -> None:
         import psutil
 
         while not self._stop.wait(0.05):
             self.peak_rss_bytes = max(self.peak_rss_bytes, self._process.memory_info().rss)
-            self.free_floor_bytes = min(self.free_floor_bytes, psutil.virtual_memory().available)
+            self.free_floor_bytes = min(self.free_floor_bytes, psutil.virtual_memory().available)  # RAW_VM_BASIS_OK: telemetry-only receipt field `measured_free_memory_floor_gib` (3 emit sites, never compared to a floor / never refuses); the monitor polls at 20 Hz and the canonical reclaimable-aware basis MEASURED 45 ms/call vs psutil 0.014 ms (3200x) -> routing it here would burn ~90% of a core next to the live trainer (ddm_gh1 #830)
 
     def __enter__(self) -> _RSSMonitor:
         self._thread.start()
@@ -193,7 +193,7 @@ class _RSSMonitor:
         import psutil
 
         self.peak_rss_bytes = max(self.peak_rss_bytes, self._process.memory_info().rss)
-        self.free_floor_bytes = min(self.free_floor_bytes, psutil.virtual_memory().available)
+        self.free_floor_bytes = min(self.free_floor_bytes, psutil.virtual_memory().available)  # RAW_VM_BASIS_OK: telemetry-only receipt field `measured_free_memory_floor_gib` (3 emit sites, never compared to a floor / never refuses); the monitor polls at 20 Hz and the canonical reclaimable-aware basis MEASURED 45 ms/call vs psutil 0.014 ms (3200x) -> routing it here would burn ~90% of a core next to the live trainer (ddm_gh1 #830)
 
 
 def _storage_receipt(out_dir: Path) -> dict[str, Any]:

@@ -6707,6 +6707,15 @@ def preflight_all(
             # flips strict in this landing rather than into warn-only purgatory.
             # CLAUDE_MD_ENTRY_OK: rides the check_no_stub_lever_factories row; standalone numbered catalog row deferred per Catalog #299 post-#400 consolidation
             "check_no_legacy_single_module_lever_surface_consumers",
+            # 2026-07-31 ddm_gh1 (#830) fix+gate atomic landing. This gate was OWNERLESS and
+            # RED — its docstring declared live-count 0 while it MEASURED 6. All 6 re-derived
+            # and closed in the same landing (3 telemetry-only waivers with a MEASURED 3200x
+            # cost rationale; 3 genuine refuse/threshold bases routed through
+            # tools.mem_basis.conservative_free_gib fail-closed), and its scan scope now
+            # DECLARES its denominator instead of silently omitting experiments/ + scripts/.
+            # Live count 0, so it flips strict here rather than into warn-only purgatory.
+            # CLAUDE_MD_ENTRY_OK: existing catalog row (CLASS 1 bug-class sweep 2026-07-17); strictness flip only, no new number per Catalog #299 post-#400 consolidation
+            "check_no_raw_virtual_memory_safety_basis",
         }
         for _confound_gate in _CONFOUND_GATES:
             _confound_gate(
