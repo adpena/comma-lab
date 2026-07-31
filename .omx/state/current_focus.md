@@ -1,3 +1,67 @@
+# Current Focus - 2026-07-31 (ROUND 1 CLOSED — 4 CRITICAL, 4 Medium, 2 Low. THE BURN'S TRAINING NET-REGRESSED; the RESTARTS paid for the descent (p≈0.011). "16.67× bias" was MY false relay. Counter 0/3.)
+
+> **🔴 THE RESULT THAT REFRAMES THE BURN (R1-C, measured on the 64 gate readings → 63 per-epoch
+> intervals; 61 within-window, 2 window-restart).** Internal to the gate series ep644→ep945: net
+> **−1.09779e-4**; the **two restart intervals sum −1.85083e-4 = 168.6%** of that net, while the **61
+> training intervals sum +7.53e-5 = −68.6%**. **ACROSS THE WHOLE BURN, TRAINING NET-REGRESSED AND THE
+> RESTARTS MORE THAN PAID FOR IT.** The restarts rank **2nd and 6th most-negative of 63**; exact
+> enumeration of all C(63,2)=1953 pairs gives **p = 11/1953 = 0.0056**, Bonferroni ×2 → **p ≈ 0.011**
+> (two splits tried; the FIRST — boundary+17 epochs, gc15's 16.17-epoch impulse window — **FAILED**,
+> d_seg ROSE there). This figure uses neither PARENT_BASELINE nor the rate term, so R1-A's correction
+> does not touch it. Re-based onto the corrected seg-only −1.96949e-4: window_01 **−6.6%** (works
+> AGAINST the descent — independently confirming R1-A), restart **+34.6%**, window_02 training
+> **+72.1%**; against composed −0.017648 S the restart is **38.6%**.
+>
+> **⛔ MY FALSE RELAY — "16.67× estimator BIAS" is wrong and I propagated it.** `gd1_gate_estimator_audit.py:196-197`
+> computes `(n_block/n_gate)/(n_block/n_population)` — **`n_block` CANCELS**. It is algebraically
+> **600/36 = 16.667, the reciprocal of the sampling fraction, containing ZERO DATA.** gd1's memo said
+> **"over-weight"** (correct); **"bias" was added in transmission — by me.** MEASURED bias is
+> **1.51–3.34%**. Also unreported: HT **INCREASES** realized error on `lane_frac` (+68.9%) and
+> `boundary_frac` (+30.5%); and the **−16.2% Lane deviation is n=4, permutation p=0.154 — NOT
+> significant**, though the memo calls it "systematic." **Correct every place 16.67× appears**, and
+> drop "amplifies block drift 16.7×" entirely.
+>
+> **🔴 THIRD RESET CONFIRMED — and gd1 had already found it; I dropped it.** VERIFIED FROM SOURCE:
+> `train_tr1:1372` `total_updates = args.epochs * (num_pairs//batch_pairs)` → `:1376`
+> `derive_ema_decay(total_updates)` **whenever `--ema-decay` is not passed**. At 75 steps/epoch the burn
+> ran **U = 49,950 / 60,450 / 70,950** (`--epochs` 666/806/946) ⇒ **the derived EMA decay CHANGES AT
+> EVERY BOUNDARY**, and **the gate reads `ema_shadow`, so the measuring instrument's own averaging
+> length drifts underneath it** (gd1 verbatim: "the shadow lengthens 166→202→236 ep"). So each boundary
+> resets **three** things at once: Adam moments (LR spike), the EMA shadow anchor, and the EMA decay
+> VALUE. **#824 MUST hold the EMA basis fixed** — pass an explicit `--ema-decay` (the `:1373` branch
+> bypasses the derivation) or hold `--epochs` identical across arms. Latent sister (not blocking):
+> `:1855` gates the F2 knee fallback on `epoch >= cfg.epochs // 2`, which is **TRUE from the first epoch
+> of every resumed window** (w02: start ~666 vs half 403) — structurally always-on under resume.
+>
+> **#824 DESIGN FINALIZED: fire A vs B′ ONLY; arm C must NOT gate it.** R1-C measured arm C's plumbing
+> **doubly dead** — `opt_flat` has ONE repo-wide hit (`:1150`, the load return) and **nothing reads it**;
+> all 6 `save_checkpoint` sites pass `opt_state_flat={}` and **nothing writes it**. C is a BUILD, not a
+> port. B′ is one kwarg (`_adam_bias_correction_for` already exists, unit-tested at `levelset:4326`).
+> **Instrument the BOUNDARY JUMP specifically** — ~35% of the corrected descent lives in that one
+> 4-epoch interval; an end-state readout dilutes it. READ-OUT MAP: jump **collapses** ⇒ spike was the
+> mechanism, ep809 is NOT a safe pick; jump **persists** ⇒ moment-reset and/or EMA re-anchor, needs arm
+> C + an EMA-hold arm — **do NOT read "persists" as "the descent is real."**
+>
+> **R1-C CRITICAL 1+2.** (1) **`#815` is SKIPPED in `canonical_task_status.jsonl`** (812,813,814,**816**,
+> 817,818) and `grep -rl "ddm_bs1" .omx/` returns **nothing**; `#822` likewise absent; and
+> **`lever_reset_operator` occurs exactly ONCE repo-wide — as a sentence in `gc15:261` instructing that
+> it be built.** Three specified-in-prose / zero-in-code items **from one day** = ONE failure mode,
+> *specification without registration*, better fixed once at the ledger/DSL boundary than three times at
+> the instances — **same root as CRITICAL 4**. Needs a monotonic-id check. (2) The endpoint shortlist
+> ranks the **boundary state ep809 #1** while the arm that would invalidate it runs AFTER ⇒ fire B′
+> first, or measure ep809 **and** ep854 and mark any boundary-state win **PROVISIONAL**.
+>
+> **A4 — MEANS-VS-ENDS, and it is a MISS.** R1-C looked hard for means-narrated-as-ends and **did not
+> find it** — every row carries `score_claim:false`, the verbatim pointer, `[macOS-CPU advisory]`, and
+> `decision_1` names its own basis "GOVERNANCE, NOT MEASUREMENT." **The failure is ALLOCATION, not
+> labelling: 6 of 6 registered arms are apparatus/measurement, ZERO aimed at an exact-eval row, and
+> `burn4_endpoint_decision_MAIN.json` contains the strings `byte_close` and `exact` ZERO TIMES.** Per the
+> firewall that is an honest MISS. CRITICAL 4 gives a plausible (INFERRED, testable) mechanism.
+>
+> **R1-C retracted a false absence claim mid-flight** and noted both its errors ran the same direction —
+> asserting absences from non-exhaustive greps. Its own remedy is right and is being applied: weight its
+> positive primary-artifact measurements above its negative ones. **#825** opened for CRITICAL 4.
+
 # Current Focus - 2026-07-31 (RECURSIVE REVIEW ROUND 1 — NOT CLEAN. 4 CRITICAL against MAIN's own adjudications. Honest burn descent is −0.0176 S composed, NOT −0.0210. Counter 0/3.)
 
 > **⚖️ ROUND 1 CORRECTIONS — the record below supersedes MAIN's 18:35Z and 18:52Z decisions on these
