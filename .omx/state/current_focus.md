@@ -1,4 +1,20 @@
-# Current Focus - 2026-07-31 (burn-3 gate: pa1r landed, fp1 discriminator LIVE)
+# Current Focus - 2026-07-31 (BR-D wall branch: THE BIRTH-COMPLETION LADDER adopted)
+
+> **LADDER STATE (gc12 b4d317538d, 14th convocation LANDED):** the composed wall-branch
+> plan is "THE BIRTH-COMPLETION LADDER" — non-additive: from-birth KD / Lane carrier /
+> solve-seeded births all COMPETE for the same erased-Lane pool (~0.128-0.134 S), raced
+> or gated, never stacked. **Rung 0 = QA92 LIVE (task #801, Opus arm, owns the scorer
+> slot):** Lane-carrier receiver discriminator — erased super-nucleus components
+> composited onto control_tail frames (AA stroke edges camera-res pre-R, the Daubechies
+> binding) → tier-1 GT-RGB oracle O + tier-2 flat prototype F → falsifiers O<0.25 ⇒
+> carrier family closes · F≥0.7·O ⇒ flat 1-2KB carrier · else (e1) solve-seeded births;
+> Contrarian bound ADOPTED: rung 2 fires ONLY if P·O ≥ 0.05 S, else SKIP→burn-4.
+> **Prep LIVE (task #802):** P2 birth_completion typed gate key (rung-1 seal prereq) +
+> P3 (e1) seeding harness + P5 burn-4 charter skeleton. Rung 1 (continuation-to-birth-
+> plateau, windowed warm tail from control_tail ep499, ~8h cap) seals + fires on QA92
+> landing per the gc12 seal demand. Honest arithmetic: full ladder success ⇒ composed
+> ~0.65-0.70 advisory — does NOT reach 0.172141; it re-prices the hull + buys the
+> receipt-parameterized burn-4 charter where rate (0.179→~0.08 needed) rejoins.
 
 > **Pointer honesty:** submittable local baseline `0.1910828242 [contest-CPU]` UNMOVED;
 > effective competitive bar `0.172141` (official PR #130, [contest-CUDA] reconstruction).
