@@ -26240,9 +26240,14 @@ MAIN (operator "constrain and protect", responding to xp1's finding that rung-1 
 +0.00151 S / +187 components while the bulk descended) amended the burn-4 charter: burn-4 must carry a
 CONSTRAIN-AND-PROTECT layer (hard λ_Lane primal-dual constraint + born-lane protection, trainer-side,
 built by parallel arm ddm_lg1), not just raced R6 re-weighting. **The R6-only seal was FIRED before the
-amendment arrived and has been HELD** — the re-smoke (window_01, R6=1.3 only) was killed at ep645 (4 ep,
-first gate d_seg 0.0043004 delta +2.3e-5 within noise, NO damage), retired to
-`window_01_preamendment_r6only_retired`, marker `burn4.HOLD`. **My surface (MAIN items #4/#5), BUILT
+amendment arrived and has been HELD** — the re-smoke (window_01, R6=1.3 only) was killed at ep645 (4 ep)
+and retired to `window_01_preamendment_r6only_retired`, marker `burn4.HOLD`. **Basis of the kill:
+PROCEDURAL supersession, not magnitude** — the fired config lacked the amendment-REQUIRED protection
+layer (never-launch-a-weaker-state); NO lever verdict rests on the partial reading (first gate d_seg
+0.0043004, delta +2.3e-5 vs the ep641 parent — a 4-epoch INSTANCE datum below any decision threshold,
+stated as damage-check context only; relative frame: |+2.3e-5·100| = 0.0023 S vs remaining gap
+0.6082−0.1721 = 0.436 S ≈ 0.5%, and the retired custody is PRESERVED for the post-lg1 re-smoke
+comparison — nothing dismissed, nothing lost). **My surface (MAIN items #4/#5), BUILT
 trainer-independent:** the supervisor now carries the LANE-EROSION GUARD — the P2 birth key INVERTED
 (Lane betti0_realized OLS slope < −epsilon = significant net erasure; epsilon DERIVED per-window, no
 hand-set threshold), which STOPS any window that erodes Lane (ALARM LANE_EROSION + rollback target) —
