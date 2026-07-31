@@ -26010,3 +26010,48 @@ GT-flicker; #315 does NOT close the corpus). RELATIVE SIGNIFICANCE: Lane = 0.137
 (receiver floors, prototypes, head-init receipt, fprime receipt, qa91_erased_lane.json). **Pointer
 0.1910828242 [contest-CPU] UNMOVED (all means; no exact row; [macOS-CPU advisory], score_claim=false).**
 [no-triality] [p0-ledger-ok]
+
+
+## FEED-gc12 (2026-07-31, task #800) — THE 14TH CONVOCATION: BR-D WALL BRANCH = THE BIRTH-COMPLETION LADDER
+
+Convened per gc11 §2 BR-D (mechanical adjudication at MAIN: BR-A FALSE / BR-B DEAD / mid-band FALSE).
+Memo `.omx/research/ddm_gc12_wall_branch_convocation_20260731.md` (T3, 20 seats, anchor appended;
+model claude-fable-5). THE WALL (receipts): token-byte levers don't move the hull (pa1r) · class-field
+output pays ≥0.008305 receiver tax — recovery must arrive ON the textured render (fp1) · burn ended
+pre-birth-plateau with ~0.13 S measurably recoverable = the largest MEASURED bounded pool (QA91) ·
+bound-gap = class-semantics-at-low-rate (gc11 backcast). THE COMPOSED PLAN (non-additive: (a) KD /
+(b) carrier / (e1) seeding COMPETE for the SAME erased-Lane pool — raced or gated, never stacked):
+**Rung 0 = QA92** (the ONE demanded measurement, scorer slot, ~1-2h, $0): Lane-carrier receiver
+discriminator — composite erased super-nucleus Lane components ONTO control_tail rendered frames at
+camera res pre-R with AA edges (Daubechies-binding), tier-1 GT-RGB oracle (Wyner bound) + tier-2 flat
+solved-prototype [77,87,119] → R → frozen SegNet → recovery fractions O, F. PLP: genuinely unpredicted
+(fp1 measured only ALL-FLAT; Tishby/Atick predict HIGH, Daubechies partial/AA-sensitive; QA91 bounds
+≤0.13) ⇒ discriminator, not re-anchor. Falsifiers: O<0.25 ⇒ carrier family CLOSES (formulation:
+paint-on-texture) · F≥0.7·O ⇒ flat 1-2KB carrier suffices · else textured/(e1). **Rung 1 = continuation-
+to-birth-plateau** (fires after QA92; ADJUDICATED: PRE-STAGE not separate rung): windowed warm tail
+from control_tail ep499 (pure continuation, argv-diff = {window,outdir,resume,wall-cap} ONLY; w_rate
+0.05 inherited — 0.0768 is BR-A's from-scratch derivation, mid-lineage change = new lever raced-only;
+QA80 term + staleness re-check; F1-F4 + A1 + topology telemetry; external birth-plateau key between
+windows ≤2 extensions, hard cap ~8h; endpoint obligations: n600 realized verdict + P = remaining
+above-nucleus erased-Lane pool + field staleness re-check). **Rung 2 = residual-pool race** (mechanical,
+Contrarian bound ADOPTED): P·O < 0.05 S ⇒ SKIP → burn-4 charter directly; F≥0.7·O ⇒ (b) 1-2KB
+parametric stroke carrier (SPEC_v8 6-risk checklist + merge→diff→correct + #208/#532 init verification
++ per-carrier byte-close); O≥0.25 ∧ F<0.7·O ⇒ **(e1) SOLVE-SEEDED BIRTHS (derive-original)**: bounded
+local token solve per erased component (QA75/pj1 machinery, covering tokens, margin objective through
+R) → seed → reconcile tail → survival rate (falsifier: survival <50% ⇒ closes at formulation scope);
+stays ON the render manifold (fp1 inapplicable), SPENDS bytes (pa1r-favorable direction), NOT nv1's
+null-snap (opposite sign, scope-checked). **(a) from-birth KD NEVER standalone** — enters burn-4's arm
+matrix only, kd_logits+attack (dw1 mini-race law) annealed-to-CE, NEW preregistered falsifier: beat
+rung-1 endpoint at MATCHED total compute, else closed; its burn-4 job = BIRTH ACCELERATION (teacher
+carries every GT component from step 0). (d) receiver-reformulation family FOLDED into (b) via QA92.
+**Terminal deliverable = THE BURN-4 CHARTER** (from-birth composed burn where the rate axis rejoins:
+QA24 granularity re-race [gap-sized, ΔS_rate ≈ 0.19-0.28] × birth-completion winner × QA84 rowband;
+v9 telemetry port = PREREQUISITE; chartered by MAIN on rung-2 receipts, NOT fired here). Prep charters
+P1-P5 (QA92 harness · typed birth_completion key · e1 seeding harness · carrier doc · burn-4 skeleton),
+all scorer-free-buildable. HONEST ARITHMETIC: wall-branch full success ⇒ seg+rate 0.50-0.60 (vs 0.673),
+composed advisory ~0.59-0.86 centered ~0.65-0.70 — **does NOT reach 0.172141**; re-prices the TR1 hull,
+closes the birth corpus, buys the burn-4 charter. Dissents verbatim in memo (Contrarian: receipts-not-
+crossing + ΔS≥0.05 bound; Daubechies: AA-or-it-measures-aliasing). Assumption-Adversary: output-side-
+recoverability + plateau-reachability CARGO-CULTED (cured by QA92 tier-1 + windowed cap); additive-S
+HARD-EARNED; teacher-staleness cured by gated re-check. **Pointer 0.1910828242 [contest-CPU] UNMOVED
+(all means; no exact row).** [no-triality] [p0-ledger-ok]
