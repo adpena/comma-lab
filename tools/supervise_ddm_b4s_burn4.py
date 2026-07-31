@@ -105,6 +105,31 @@ POINTER = "0.1910828242 [contest-CPU] UNMOVED"
 HALT_EVENTS = ("confound_alarm", "a1_stage_exit_refuse")
 OK_STOP_REASONS = ("epochs_complete", "max_wall_minutes")
 
+# --- S-arithmetic (upstream/evaluate.py): S = 100*d_seg + sqrt(10*d_pose) + 25*bytes/DEN.
+# The burn trains SEG ONLY (pose TERMINAL, #383) => the pose term is constant across
+# windows and cancels in a WINDOW-NET delta; only the seg + rate terms move.
+S_RATE_DENOMINATOR = 37_545_489.0  # upstream/evaluate.py:63 compressed_size denominator
+S_SEG_COEF = 100.0
+S_RATE_COEF = 25.0
+
+# --- MAIN adjudication 2026-07-31 (ddm_b4r, successor to ddm_b4s): UNDRIV PRE-AUTHORIZATION.
+# MAIN adjudicated the window_02 UNDRIV_EROSION fire CONTINUE: the reading is REAL (not
+# spurious — contrast the window_01 term_domination fire, SPURIOUS_PORTED_PREDICATE), but it
+# is a PRICED TRADE: fl1 (#813) prices Undrivable's TOTAL reachable non-flicker headroom at
+# +0.0164 S, which does not justify halting a measured -0.02 S/window descent. To keep a
+# repeat fire from dead-stopping the chain between MAIN wakes, the standing adjudication is
+# encoded as a BOUNDED pre-authorization rather than a blanket mute.
+#
+# PROVENANCE (honesty, per constants-are-poison): UNDRIV_PREAUTH_MAX_ABS_NET is NOT a derived
+# physical threshold and is not used to decide whether erosion is REAL — the DERIVED epsilon
+# (t_crit*max(SE_ols,SE_quant), P2 machinery) still decides ``eroding``, unchanged. It is a
+# GOVERNANCE bound: how much erosion MAIN's standing verdict covers before a FRESH adjudication
+# is owed. Class-4 value, owner MAIN, re-derivation trigger = trainer-side lambda_undriv lands
+# (routes to cg1 #809, calibrated by this burn's endpoint) or an endpoint re-pricing of the
+# Undrivable pool. Outside the bounds => ALARM+HOLD exactly as before.
+UNDRIV_PREAUTH_MAX_ABS_NET = 10   # |net betti0_realized delta| components over the window
+UNDRIV_PREAUTH_REQUIRES_NET_DS_NEGATIVE = True  # the window must still be net score-lowering
+
 
 def _now() -> str:
     return datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -388,7 +413,19 @@ def _endpoint_stage(final_dir: Path, stop_reason: str, decisions: list[dict]) ->
             "lambda_max": LG1_LAMBDA_MAX,
             "rejected_windows": sorted(p.name for p in (ROOT / "rejected").glob("window_*"))
             if (ROOT / "rejected").is_dir() else [],
+            "lambda_trajectory": [{"window": w.name,
+                                   "last_lambda_lane": _last_lane_guard_lambda(w)}
+                                  for w in _existing_windows()],
         },
+        "window_history": {
+            "superseded": sorted(p.name for p in
+                                 ROOT.glob("window_*_decision_supersession.json")),
+            "undriv_preauth": sorted(p.name for p in ROOT.glob("window_*_undriv_preauth.json")),
+            "alarms_resolved": sorted(p.name for p in (ROOT / "alarms_resolved").glob("*.json"))
+            if (ROOT / "alarms_resolved").is_dir() else [],
+        },
+        "window_net_delta_s_chain": [
+            _window_net_delta_s(decisions[:i + 1]) for i in range(len(decisions))],
         "r6_falsifier": "beat parent n600 d_seg 0.00426407708 at matched compute; "
                         "else R6 (class-weight-lane LANE-BIRTH tilt) closes at INSTANCE",
         "pointer": POINTER, "score_claim": False,
@@ -426,6 +463,29 @@ def _endpoint_stage(final_dir: Path, stop_reason: str, decisions: list[dict]) ->
         "parent_exact_P_S_units_xp1": 0.04401,
     }
     manifest["qa80_staleness_recheck"] = _qa80_staleness_recheck(final_dir)
+    # --- ENDPOINT EXTRAS (ddm_b4r): the gc13 R1-bundle measurements MAIN consumes beyond the
+    # scalar verdict — per-class n600 d_seg (all 5 classes), the 5x5 class-PAIR flip matrix,
+    # per-class descent rates across the accepted windows, and the Undrivable pool priced in S
+    # across the whole burn. Runs in the free scorer slot (nothing else is live at endpoint).
+    # FAIL-SOFT by construction: a missing/failing extras tool records the debt and NEVER
+    # invalidates or blocks the manifest + done marker (the chain's payload survives).
+    extras_tool = REPO / "experiments" / "ddm_b4r_endpoint_extras.py"
+    try:
+        if not extras_tool.is_file():
+            raise FileNotFoundError(str(extras_tool))
+        r2 = subprocess.run(
+            [VENV_PY, str(extras_tool), str(final_dir), "--root", str(ROOT),
+             "--parent-ckpt", str(PARENT_CKPT), "--chunk", "100"],
+            cwd=REPO, capture_output=True, text=True, timeout=3600,
+            env={**os.environ, "PYTHONPATH": f"{REPO}/src:{REPO}:{REPO}/upstream"})
+        if r2.returncode == 0:
+            manifest["endpoint_extras"] = json.loads(r2.stdout)
+        else:
+            manifest["endpoint_extras_error"] = (r2.stderr or r2.stdout).strip()[-800:]
+            manifest["endpoint_extras_owed"] = f"MAIN: re-run {extras_tool.name}"
+    except Exception as exc:
+        manifest["endpoint_extras_error"] = repr(exc)
+        manifest["endpoint_extras_owed"] = f"MAIN: re-run {extras_tool.name}"
     _atomic_write(ROOT / "burn4_endpoint_manifest.json", manifest)
     _atomic_write(DONE_MARKER, {"schema": "ddm_b4s_burn4_done.v1", "ts_utc": _now(),
                                 "endpoint_manifest": str(ROOT / "burn4_endpoint_manifest.json"),
@@ -460,6 +520,40 @@ def _decision_receipts() -> list[dict]:
                 pass  # a malformed supersession never hides the original receipt
         out.append(d)
     return out
+
+
+def _window_net_delta_s(decisions: list[dict]) -> dict:
+    """WINDOW-NET ΔS of the LAST window vs the prior ACCEPTED state.
+
+    ``100*(d_seg_end - d_seg_start) + 25*(bytes_end - bytes_start)/37_545_489``, read off the
+    per-window decision receipts (the same realized-gate instrument both ends). The prior
+    accepted state is the previous window's decision receipt, or the r1c ep641 parent baseline
+    for the chain's first window. The pose term cancels (seg-only burn, pose TERMINAL #383), so
+    this IS the window's full score-arithmetic movement on the two axes the burn touches.
+
+    Returns the decomposition (never a bare composite — decompose-every-headline). ``net_delta_s``
+    is None when either endpoint is missing; a None NEVER satisfies a pre-authorization bound.
+    [macOS-CPU/MLX advisory]; score_claim False."""
+    if not decisions:
+        return {"net_delta_s": None, "note": "no decision receipts"}
+    cur = decisions[-1]
+    d1, b1 = cur.get("final_gate_dseg"), cur.get("total_counted_bytes")
+    if len(decisions) >= 2:
+        prev = decisions[-2]
+        d0, b0 = prev.get("final_gate_dseg"), prev.get("total_counted_bytes")
+        basis = f"prior window receipt ({prev.get('window')})"
+    else:
+        d0, b0 = PARENT_FINAL_GATE_DSEG, PARENT_BASELINE["total_counted_bytes"]
+        basis = "r1c ep641 parent baseline"
+    if any(v is None for v in (d0, d1, b0, b1)):
+        return {"net_delta_s": None, "basis": basis,
+                "note": "missing d_seg/bytes endpoint on one side"}
+    seg_term = S_SEG_COEF * (float(d1) - float(d0))
+    rate_term = S_RATE_COEF * (int(b1) - int(b0)) / S_RATE_DENOMINATOR
+    return {"net_delta_s": seg_term + rate_term, "seg_term_delta_s": seg_term,
+            "rate_term_delta_s": rate_term, "d_seg_start": d0, "d_seg_end": d1,
+            "bytes_start": b0, "bytes_end": b1, "basis": basis,
+            "formula": "100*d_seg + 25*bytes/37545489 (pose cancels: seg-only burn)"}
 
 
 UNDRIV_CLASS_INDEX = 2  # comma10k CANONICAL order [Road, Lane, Undrivable, Movable, MyCar]
@@ -722,20 +816,55 @@ def main() -> int:
                                           "extended. Accepted state = the rollback target ckpt. "
                                           "Needs lg1's λ_Lane constraint to proceed (MAIN)."})
             return 0
-        # --- gc13 UNDRIV-EROSION WATCH (ALARM+HOLD only; no rollback actuator) -------
+        # --- gc13 UNDRIV-EROSION WATCH (ALARM+HOLD; MAIN-PRE-AUTHORIZED continuation) ---
+        # No rollback actuator exists (no trainer-side lambda_undriv). MAIN's 2026-07-31
+        # standing adjudication CONTINUES a fire that stays inside the pre-authorization
+        # bounds (small erosion inside a still-net-negative window); anything outside them
+        # is a FRESH adjudication and still ALARM+HOLDs.
         ue = last.get("undriv_erosion") or {}
         if ue.get("eroding"):
-            _alarm("UNDRIV_EROSION",
-                   {"window": last["window_dir"],
-                    "slope_comp_per_gate": ue.get("slope_comp_per_gate"),
-                    "epsilon_comp_per_gate": ue.get("epsilon_comp_per_gate"),
-                    "net_betti0_realized_delta": ue.get("net_betti0_realized_delta"),
-                    "reading": "Undrivable betti0 erodes beyond the derived noise band "
-                               "(gc13 receipt: Undriv +0.00204 S over the unprotected "
-                               "ep499->641 window, MORE than Lane's +0.00151). NO "
-                               "auto-rollback — there is no trainer-side lambda_undriv "
-                               "to raise; the burn HOLDS here and MAIN adjudicates."})
-            return 0
+            net_comp = ue.get("net_betti0_realized_delta")
+            ds = _window_net_delta_s(decisions)
+            net_ds = ds.get("net_delta_s")
+            within_comp = (net_comp is not None
+                           and abs(int(net_comp)) <= UNDRIV_PREAUTH_MAX_ABS_NET)
+            within_ds = (not UNDRIV_PREAUTH_REQUIRES_NET_DS_NEGATIVE
+                         or (net_ds is not None and net_ds < 0.0))
+            common = {"window": last["window_dir"],
+                      "slope_comp_per_gate": ue.get("slope_comp_per_gate"),
+                      "epsilon_comp_per_gate": ue.get("epsilon_comp_per_gate"),
+                      "net_betti0_realized_delta": net_comp,
+                      "window_net_delta_s": ds,
+                      "preauth_bounds": {
+                          "max_abs_net_betti0": UNDRIV_PREAUTH_MAX_ABS_NET,
+                          "requires_net_delta_s_negative":
+                              UNDRIV_PREAUTH_REQUIRES_NET_DS_NEGATIVE,
+                          "within_component_bound": within_comp,
+                          "within_net_delta_s_bound": within_ds}}
+            if within_comp and within_ds:
+                wname = Path(last["window_dir"]).name
+                _atomic_write(ROOT / f"{wname}_undriv_preauth.json", {
+                    "schema": "ddm_b4r_undriv_preauth.v1", "ts_utc": _now(),
+                    "classification": "UNDRIV_EROSION_ADJUDICATED_CONTINUE_PREAUTHORIZED",
+                    "reading_is_real_not_spurious": True,
+                    "trade": "PRICED: fl1 (#813) prices Undrivable's TOTAL reachable "
+                             "non-flicker headroom at +0.0164 S; this window's realized net "
+                             "is score-LOWERING. MAIN adjudicated CONTINUE (2026-07-31); the "
+                             "trainer-side lambda_undriv routes to cg1 (#809), calibrated by "
+                             "this burn's endpoint — NOT a mid-burn build.",
+                    **common, "pointer": POINTER, "score_claim": False})
+                _log(f"UNDRIV_EROSION PRE-AUTHORIZED (net {net_comp} comp, window net "
+                     f"dS {'n/a' if net_ds is None else f'{net_ds:.6f}'}); chain continues")
+            else:
+                _alarm("UNDRIV_EROSION", {
+                    **common,
+                    "reading": "Undrivable betti0 erodes beyond the derived noise band AND "
+                               "outside MAIN's standing pre-authorization bounds (gc13 "
+                               "receipt: Undriv +0.00204 S over the unprotected ep499->641 "
+                               "window, MORE than Lane's +0.00151). NO auto-rollback — there "
+                               "is no trainer-side lambda_undriv to raise; the burn HOLDS "
+                               "here and MAIN adjudicates FRESH."})
+                return 0
         # --- window_01 RE-SMOKE ΔS SAFETY GATE -------------------------------------
         if last.get("is_resmoke"):
             verdict = _resmoke_gate(last)
@@ -761,8 +890,20 @@ def main() -> int:
         if len(wins) >= MAX_WINDOWS:
             _endpoint_stage(cur, "extension_cap_reached", decisions)
             return 0
-        if _elapsed_hours() >= TOTAL_CAP_HOURS:
+        elapsed_h = _elapsed_hours()
+        if elapsed_h >= TOTAL_CAP_HOURS:
             _endpoint_stage(cur, "total_wall_cap_reached", decisions)
+            return 0
+        # PROSPECTIVE wall cap (ddm_b4r 2026-07-31): the retrospective check above admits a
+        # window that STARTS inside the cap and RUNS ~2.2h past it — the cap is only read at
+        # window boundaries, so a 5.1h-elapsed boundary would launch a window ending at ~7.3h.
+        # Never START a window that cannot COMPLETE inside the ORIGINAL cap; go to the endpoint
+        # stage instead (a shorter chain with a real endpoint beats a truncated final window).
+        # The cap itself is UNCHANGED (TOTAL_CAP_HOURS, t0 from burn4_t0.json).
+        if elapsed_h + (FULL_WALL_MINUTES / 60.0) > TOTAL_CAP_HOURS:
+            _log(f"PROSPECTIVE cap: elapsed {elapsed_h:.2f}h + window "
+                 f"{FULL_WALL_MINUTES / 60.0:.2f}h > cap {TOTAL_CAP_HOURS}h; endpoint now")
+            _endpoint_stage(cur, "total_wall_cap_would_be_exceeded", decisions)
             return 0
         # extend: spawn-guard then governed launch of window n+1
         nxt = _window_dir(n + 1)
