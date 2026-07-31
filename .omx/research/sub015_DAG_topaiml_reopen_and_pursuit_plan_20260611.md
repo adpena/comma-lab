@@ -26014,7 +26014,11 @@ GT-flicker; #315 does NOT close the corpus). RELATIVE SIGNIFICANCE: Lane = 0.137
 
 ## FEED-gc12 (2026-07-31, task #800) — THE 14TH CONVOCATION: BR-D WALL BRANCH = THE BIRTH-COMPLETION LADDER
 
-Convened per gc11 §2 BR-D (mechanical adjudication at MAIN: BR-A FALSE / BR-B DEAD / mid-band FALSE).
+Convened per gc11 §2 BR-D (mechanical adjudication at MAIN: BR-A FALSE / BR-B DEAD / mid-band FALSE;
+verdict_scope: FORMULATION — BR-B's death is fp1's flat-prototype-paint class-field-output formulation
+per FEED-fp1's declaration; the class-field FAMILY stays open behind the receiver reformulation queue
+(AA/smooth paint, margin-channel modulation), and BR-A's FALSE is INSTANCE-scoped to the pa1r lever set
+at this parent/budget — both cited receipts, no new negative issued here).
 Memo `.omx/research/ddm_gc12_wall_branch_convocation_20260731.md` (T3, 20 seats, anchor appended;
 model claude-fable-5). THE WALL (receipts): token-byte levers don't move the hull (pa1r) · class-field
 output pays ≥0.008305 receiver tax — recovery must arrive ON the textured render (fp1) · burn ended
