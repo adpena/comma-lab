@@ -26327,3 +26327,39 @@ upstream/.venv]. (4) camera_fl=910 (frame_utils:12) + (5) yuv6 luma=2×2 POLYPHA
 [recomputed ✓]. (7) upstream README leaderboard STALE (tops mask2mask 0.60 #53, pre-HNeRV) → NEVER the
 score-to-beat. Memo: `.omx/research/ddm_us1_upstream_reread_20260731.md` (4-class ledger, every row file:line).
 Pointer 0.1910828242 [contest-CPU] UNMOVED — this read is MEANS. [no-triality] [p0-ledger-ok]
+
+
+## FEED-gc13 (2026-07-31, task #810): 15th convocation — the guard-ledger shape ADJUDICATED (#809 amendment)
+
+Operator-convened ("what is that shape missing / what would be truly optimal"). Scorer-FREE $0.
+**The composed truly-optimal form = a discretized Pontryagin TPBVP in scorer coordinates**: forward
+primal burn under sealed levers; backward per-EDGE (rank-4 class-pair) dual trajectories priced from a
+bar-backcast terminal BAND-box; meeting at gate cadence; settling at window boundaries against ONE
+KKT waterfill in S-units (11-item amendment, memo §8). **NEW RECEIPT (found this convocation):
+Undrivable is the SECOND eroding class** — qa92(ep499)→xp1(ep641) per-class S: Undriv +0.00204 >
+Lane +0.00151 (both n600-exact; verdict_scope=INSTANCE, one window one vehicle, mechanism un-typed)
+⇒ first guarded set = {Lane, Undrivable}; "#809: Lane = the one measured need" amended. **Producer
+correction:** rd1's dual tables are BLOCKED as backcast prices by rd1's own routing (verdict_scope=
+SOURCE-INSPECTION); live producers = eg1 policy corners × ja1 joint waterfill × burn-4 endpoint
+protected trajectories. **Backcast COMPUTED** (memo §4): corner C (ru1-typed, d_seg 6e-4 @130KB +
+terminal pose) = 0.16182 sub-bar; corner D (149KB) = 0.14418 sub-0.15; per-class proportional-CONTROL
+split + debt schedule: 0.15608 of 0.36640 S seg debt (42.6%) sits in positive-slope classes =
+unreachable without guards/crossing at any horizon; waterfilled split BLOCKED-ON the endpoint
+calibration table (#809's gating vindicated). Sandwich: per-class rate floors ILL-POSED (r7 universal
+bound 0 B + class-shared stream; verdict_scope=FORMULATION); distortion floors $0-producible NOW
+(cached lstars flicker decomposition + ru1 atlas typing join). **LIVE mid-convocation receipts:**
+(1) burn-4 first ALARM = term_domination FALSE-POSITIVE on the scored seg term (~70% of a two-term
+lean loss, dominance by design) ⇒ NEW LAW: alarm predicates/thresholds are PER-VEHICLE CALIBRATION
+OBJECTS (constants-are-poison extends to the guard system's own sensors); hold+adjudicate chain =
+the calibration mechanism (worked end-to-end); (2) FLAT verdict +4.24e-7 BELOW the instrument's own
+~1.1e-6 internal resolution (gate vs full-confirm same-state) ⇒ SE-banded triggers receipt-backed
+[magnitude-ok: 4.24e-7 vs resolution 1.1e-6 = 0.39x, sub-resolution by construction]. Post-hoc
+correction pools stay DEAD across all classes (verdict_scope=FAMILY-at-this-base: qa92 P·O 0.0171
+<0.05 + ERF-collateral law + white-jitter ×5). Ranked op-routables R1-R6 (falsifier+consumer+timing)
+in memo §9; top falsifier: protected Lane/Undriv slopes ≥0 at λ_max ⇒ loss-weight dual form
+falsified ⇒ #208 containment projection successor. Literature: PID-Lagrangian (Stooke 2020) adopted
+for dual dynamics; GradNorm-class per-step balancing stays locally REFUSED (#312 canary receipt).
+Memo `.omx/research/ddm_gc13_optimal_control_shape_20260731.md`; T3 anchor
+gc13_optimal_control_shape_20260731 (operator-override recorded). TaskUpdate tool unavailable in this
+env — #809 amendment recorded for MAIN. Pointer 0.1910828242 [contest-CPU] UNMOVED — this is MEANS.
+[no-triality] [p0-ledger-ok]
