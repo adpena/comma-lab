@@ -89,7 +89,7 @@ def _sha256_file(path: Path) -> tuple[int, str]:
 def _mlx_reference(
     checkpoint: Path,
     pair_ids: list[int],
-) -> tuple[list[np.ndarray], list[np.ndarray], list[np.ndarray], str]:
+) -> tuple[list[np.ndarray], list[np.ndarray], list[np.ndarray], str, dict[str, Any]]:
     import mlx.core as mx
     from mlx.utils import tree_unflatten
 
@@ -100,12 +100,41 @@ def _mlx_reference(
 
     with np.load(checkpoint, allow_pickle=False) as stored:
         metadata = json.loads(bytes(stored["meta::json"]).decode())
-        model = build_module(TR1Config(**metadata["cfg"]))
+        config = TR1Config(**metadata["cfg"])
+        model = build_module(config)
         ema_numpy = [
             (key[len("ema::") :], np.asarray(stored[key], dtype=np.float32))
             for key in stored.files
             if key.startswith("ema::")
         ]
+    # §3.3(a) lattice-anneal engagement is a PLAIN BOOL on the module (never an mx.array =>
+    # deliberately absent from the checkpoint), so a freshly-built module always starts at
+    # `cfg.token_quant_anneal != "at_knee"`. The trainer re-engages it on resume
+    # (train_tr1_partition_renderer_mlx.py: `if cfg.token_quant_anneal == "at_knee" and
+    # stage != "seg_trunk_ce"`); this rehearsal did not, so on an `at_knee` checkpoint the
+    # reference rendered UNQUANTIZED float tokens while the receiver
+    # (`compile_archive_from_checkpoint` -> `_token_codes`) quantizes UNCONDITIONALLY. The gate
+    # then measured token_max_abs == exactly half a lattice step and returned a FALSE
+    # BLOCKED_DEPLOYMENT_BACKEND_PARITY (#828; measured 0.0666667 == 1/(levels-1) -> 0.0).
+    #
+    # The reference must sit in the state the ARCHIVE encodes, and the receiver quantizes for
+    # every checkpoint, so engagement is unconditional here — derived from the receiver contract,
+    # not from the training schedule. The trainer's own resume rule is still evaluated and
+    # emitted so a pre-knee checkpoint (where the two disagree) is visible, never silent.
+    stage = str(metadata.get("stage", ""))
+    anneal = getattr(config, "token_quant_anneal", "off")
+    trainer_resume_rule = (anneal != "at_knee") or (stage != "seg_trunk_ce")
+    build_default = model._quant_engaged
+    model._quant_engaged = True  # receiver quantizes unconditionally => reference must too
+    engagement = {
+        "basis": "receiver_contract_compile_archive_always_quantizes",
+        "build_default_quant_engaged": bool(build_default),
+        "checkpoint_stage": stage,
+        "reference_quant_engaged": True,
+        "token_quant_anneal": anneal,
+        "trainer_resume_rule_would_engage": bool(trainer_resume_rule),
+        "trainer_rule_agrees_with_reference": bool(trainer_resume_rule),
+    }
     model.update(tree_unflatten([(key, mx.array(value)) for key, value in ema_numpy]))
     mx.eval(model.parameters())
     tokens: list[np.ndarray] = []
@@ -138,6 +167,7 @@ def _mlx_reference(
         source_frames,
         deployed_frames,
         _sha256_file(trainer_path)[1],
+        engagement,
     )
 
 
@@ -155,6 +185,7 @@ def _parity_receipt(
         source_frames,
         deployed_frames,
         trainer_sha,
+        engagement,
     ) = _mlx_reference(checkpoint, pair_ids)
     rows: list[dict[str, Any]] = []
     for index, pair_id in enumerate(pair_ids):
@@ -199,6 +230,7 @@ def _parity_receipt(
         "pair_rows": rows,
         "parity_minimum": PORTABLE_PARITY_MIN,
         "passed": passed,
+        "quant_engagement": engagement,
         "source_ema_fp32_deploy_gap_status": ("MEASURED_NOT_BACKEND_PARITY"),
         "source_ema_fp32_reference": "mlx_cpu_fp32_checkpoint_forward",
         "trainer_source_sha256": trainer_sha,
