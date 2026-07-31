@@ -1,0 +1,28 @@
+{
+  "segnet": {
+    "path": "upstream/models/segnet.safetensors",
+    "file_bytes": 38502892,
+    "sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6",
+    "header_bytes": 59992,
+    "n_tensors": 562,
+    "params": 9610645,
+    "metadata": {
+      "eid": "ef2db93d-2a06-49fd-b119-993e52cb5a44/144",
+      "format": "pt_state_dict",
+      "classes": "5",
+      "backbone": "tu-efficientnet_b2",
+      "activation": "none"
+    },
+    "n_degenerate_all_equal": 78
+  },
+  "posenet": {
+    "path": "upstream/models/posenet.safetensors",
+    "file_bytes": 55835560,
+    "sha256": "0f3a0874c5c387f990d7b88bd1d7e1f6de35d98b45f2a289989db2c77b9b6576",
+    "header_bytes": 60944,
+    "n_tensors": 510,
+    "params": 13943652,
+    "metadata": null,
+    "n_degenerate_all_equal": 34
+  }
+}
