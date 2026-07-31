@@ -26363,3 +26363,27 @@ Memo `.omx/research/ddm_gc13_optimal_control_shape_20260731.md`; T3 anchor
 gc13_optimal_control_shape_20260731 (operator-override recorded). TaskUpdate tool unavailable in this
 env — #809 amendment recorded for MAIN. Pointer 0.1910828242 [contest-CPU] UNMOVED — this is MEANS.
 [no-triality] [p0-ledger-ok]
+
+
+## FEED-b4s-calib (2026-07-31, task #807): term_domination FALSE POSITIVE adjudicated — ALARM PREDICATES ARE PER-VEHICLE CALIBRATION OBJECTS
+
+burn4.ALARM (window_01 halt on `confound_alarm kind=term_domination`) adjudicated by MAIN (gc11 W4):
+**FALSE POSITIVE by ported-predicate semantics** — the row was term=seg frac 0.6783, the SCORED
+objective dominating a seg-only burn BY DESIGN; the v9 intent ("the scored seg signal may be a
+passenger") is a NON-scored term crowding seg out, but the ported any-term>40% predicate would fire on
+EVERY telemetry-on TR1 run. **The lesson (feeds cg1 #809 + gc13): alarm predicates are per-vehicle
+CALIBRATION OBJECTS — constants-are-poison applies to PREDICATES, and a ported predicate's first fire
+on a new vehicle is a calibration event, not automatically a confound.** Two-landing fix:
+`tr1_term_domination_alarms` INTENT-RESTORED — scored term exempt from the ceiling; alarm on (a)
+NON-scored term > 0.40 (v9 caps-law single-term ceiling) OR (b) scored seg share < 0.60 = 1−0.40
+(DERIVED complement of the caps-law non-scored aggregate cap; the two clauses provably CO-FIRE when a
+single non-scored term exceeds the ceiling — shares sum to 1). Regression: the exact window_01 ep665
+profile (seg 0.6783) → NO alarm; rate 0.45 → alarm; seg 0.25 → alarm; 16/16 tp1 tests.
+**Score-path-neutrality receipt:** the diff touches ONLY the telemetry surface (constants + the pure
+helper + a status literal; no training-computation hunk) ⇒ **window_01's completed re-smoke CARRIES as
+admission evidence** (ep641→665, FLAT +4.2e-7 ≪ 3e-5 noise = my three-way gate PASS; lane_erosion
+false net −7; λ stayed 0.0 — the lane-guard priced nothing, correct). ALARM retired to
+alarms_resolved/ + append-only decision supersession (halt reclassified SPURIOUS_PORTED_PREDICATE; the
+supervisor reads supersessions at receipt time, originals never mutated). Burn-4 PROCEEDS: first FULL
+140-ep window from ep665 under the re-armed daemon. Pointer 0.1910828242 [contest-CPU] UNMOVED.
+[no-triality] [p0-ledger-ok]

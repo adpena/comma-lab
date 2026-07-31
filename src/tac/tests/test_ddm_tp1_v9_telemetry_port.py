@@ -29,6 +29,8 @@ for _p in (str(WORKTREE), str(WORKTREE / "src")):
 
 from experiments.train_tr1_partition_renderer_mlx import (  # noqa: E402
     TR1_LOSS_TERM_KEYS,
+    TR1_SCORED_FLOOR,
+    TR1_SCORED_TERM,
     TR1_TERMDOM_FRAC,
     TR1_TERMDOM_MIN_ROWS,
     TR1Config,
@@ -83,41 +85,66 @@ def test_liveness_token_literal_present_for_catalog_402():
 
 
 # --------------------------------------------------------- term_domination ----
-def test_term_domination_edge_triggered_after_min_rows():
+def test_term_domination_scored_seg_dominant_no_alarm():
+    """b4s 2026-07-31 first-fire calibration regression (MAIN adjudication): the SCORED
+    seg term dominating a seg-only burn is the DESIGN, never an alarm.  Uses the real
+    window_01 ep665 profile (seg 0.349 / rate 0.147 / ds 0.0 => seg share 0.6783) that
+    produced the spurious fire under the pre-fix any-term>ceiling predicate."""
     streaks: dict[str, int] = {}
-    # seg dominates (>40% of total) for MIN_ROWS-1 rows: no alarm yet
-    dom_terms = {"seg": 9.0, "rate": 1.0, "delta_sparsity": 0.0}
+    ep665 = {"seg": 0.349, "rate": 0.147, "delta_sparsity": 0.0}
+    total = sum(ep665.values())
+    for _ in range(TR1_TERMDOM_MIN_ROWS + 3):
+        assert tr1_term_domination_alarms(ep665, total, streaks) == []
+
+
+def test_term_domination_nonscored_ceiling_fires_edge_triggered():
+    """MAIN spec case: rate at 0.45 of the loss => alarm (a NON-scored term over the
+    v9 caps-law single-term ceiling), edge-triggered after MIN_ROWS sustained rows.
+    NOTE (derivation property): with shares summing to 1, rate > 0.40 IMPLIES
+    seg < 0.60 = the floor — the two clauses CO-FIRE by construction (the floor is
+    the exact complement of the caps-law non-scored aggregate cap), so BOTH rows are
+    expected; the ceiling row is the primary attribution."""
+    streaks: dict[str, int] = {}
+    dom = {"seg": 5.5, "rate": 4.5, "delta_sparsity": 0.0}  # rate share 0.45 > 0.40
     for _ in range(TR1_TERMDOM_MIN_ROWS - 1):
-        assert tr1_term_domination_alarms(dom_terms, 10.0, streaks) == []
-    # the MIN_ROWS-th sustained row fires exactly once (edge-triggered)
-    rows = tr1_term_domination_alarms(dom_terms, 10.0, streaks)
-    assert len(rows) == 1
-    assert rows[0]["kind"] == "term_domination"
-    assert rows[0]["term"] == "seg"
-    assert rows[0]["sustained_rows"] == TR1_TERMDOM_MIN_ROWS
-    assert rows[0]["event"] == "confound_alarm"
-    # still dominating one more row => streak advances but does NOT re-fire (edge, not level)
-    assert tr1_term_domination_alarms(dom_terms, 10.0, streaks) == []
+        assert tr1_term_domination_alarms(dom, 10.0, streaks) == []
+    rows = tr1_term_domination_alarms(dom, 10.0, streaks)
+    fired = {(r["term"], r["predicate"]) for r in rows}
+    assert fired == {("rate", "nonscored_above_ceiling"), ("seg", "scored_below_floor")}
+    for r in rows:
+        assert r["kind"] == "term_domination"
+        assert r["event"] == "confound_alarm"
+        assert r["sustained_rows"] == TR1_TERMDOM_MIN_ROWS
+    # still violating one more row => streaks advance but do NOT re-fire (edge, not level)
+    assert tr1_term_domination_alarms(dom, 10.0, streaks) == []
 
 
-def test_term_domination_resets_when_share_drops():
+def test_term_domination_scored_floor_fires_when_seg_is_passenger():
+    """MAIN spec case: seg at 0.25 of the loss => alarm (the SCORED share below the
+    derived caps-law floor = seg-as-passenger, the original v9 meaning)."""
     streaks: dict[str, int] = {}
-    dom = {"seg": 9.0, "rate": 1.0, "delta_sparsity": 0.0}
+    passenger = {"seg": 2.5, "rate": 3.9, "delta_sparsity": 3.6}  # seg 0.25 < 0.60 floor;
+    # rate 0.39 / ds 0.36 both under the per-term ceiling => ONLY the floor clause fires
+    for _ in range(TR1_TERMDOM_MIN_ROWS - 1):
+        assert tr1_term_domination_alarms(passenger, 10.0, streaks) == []
+    rows = tr1_term_domination_alarms(passenger, 10.0, streaks)
+    assert len(rows) == 1
+    assert rows[0]["term"] == TR1_SCORED_TERM
+    assert rows[0]["predicate"] == "scored_below_floor"
+
+
+def test_term_domination_resets_when_profile_recovers():
+    streaks: dict[str, int] = {}
+    dom = {"seg": 5.5, "rate": 4.5, "delta_sparsity": 0.0}
     for _ in range(TR1_TERMDOM_MIN_ROWS - 1):
         tr1_term_domination_alarms(dom, 10.0, streaks)
-    # a balanced row resets the streak before it fires
-    balanced = {"seg": 3.4, "rate": 3.3, "delta_sparsity": 3.3}
-    assert tr1_term_domination_alarms(balanced, 10.0, streaks) == []
-    assert streaks["seg"] == 0
-    # frac threshold sanity: 34% < 40% => no domination
+    # a healthy row (seg dominant, rate under ceiling) resets the rate streak before it fires
+    healthy = {"seg": 7.0, "rate": 3.0, "delta_sparsity": 0.0}
+    assert tr1_term_domination_alarms(healthy, 10.0, streaks) == []
+    assert streaks["rate"] == 0
+    # threshold provenance sanity: ceiling 0.40 (v9 caps law), floor = its complement
     assert TR1_TERMDOM_FRAC == 0.40
-
-
-def test_term_domination_no_fire_when_balanced():
-    streaks: dict[str, int] = {}
-    balanced = {"seg": 3.4, "rate": 3.3, "delta_sparsity": 3.3}
-    for _ in range(TR1_TERMDOM_MIN_ROWS + 2):
-        assert tr1_term_domination_alarms(balanced, 10.0, streaks) == []
+    assert TR1_SCORED_FLOOR == 1.0 - TR1_TERMDOM_FRAC
 
 
 # ------------------------------------------------------------- term_inert ----

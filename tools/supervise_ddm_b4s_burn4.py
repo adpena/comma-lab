@@ -435,12 +435,30 @@ def _endpoint_stage(final_dir: Path, stop_reason: str, decisions: list[dict]) ->
 
 
 def _decision_receipts() -> list[dict]:
+    """Window decision receipts with APPEND-ONLY SUPERSESSION overlay: a companion
+    ``window_NN_decision_supersession.json`` (written by an adjudication, e.g. the
+    2026-07-31 MAIN false-positive verdict on the ported term_domination predicate)
+    overlays ONLY its declared ``supersedes_fields`` onto the original receipt at READ
+    time — the original decision file is never mutated (append-only law)."""
     out = []
     for p in sorted(ROOT.glob("window_*_decision.json")):
+        if not re.fullmatch(r"window_\d{2}_decision\.json", p.name):
+            continue  # companions/debris are overlays, not receipts
         try:
-            out.append(json.loads(p.read_text()))
+            d = json.loads(p.read_text())
         except Exception:
             continue
+        sup = p.with_name(p.name[:-len(".json")] + "_supersession.json")
+        if sup.is_file():
+            try:
+                s = json.loads(sup.read_text())
+                for k in s.get("supersedes_fields", []):
+                    if k in s:
+                        d[k] = s[k]
+                d["superseded_by"] = sup.name
+            except Exception:
+                pass  # a malformed supersession never hides the original receipt
+        out.append(d)
     return out
 
 

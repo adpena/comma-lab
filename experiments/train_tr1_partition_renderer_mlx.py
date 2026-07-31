@@ -1022,10 +1022,25 @@ def a1_adjudicate(prev: dict[str, Any] | None, cur: dict[str, Any],
 # w_rate*rate surrogate + delta_sparsity_weight*group-L2).  "seg" is the distortion
 # term (KD distill, when active, folds into it — it is added inside ``pair_loss``).
 TR1_LOSS_TERM_KEYS: tuple[str, ...] = ("seg", "rate", "delta_sparsity")
-# (#321) one post-weight addend dominating > FRAC of the loss for >= MIN_ROWS sustained
-# rows => a "scored seg signal may be a passenger" alarm (mirrors v9 ``_TERMDOM_FRAC``).
+# (#321) term_domination — INTENT-RESTORED predicate (b4s first-fire calibration
+# 2026-07-31, MAIN adjudication of the burn4 window_01 FALSE POSITIVE): the v9 alarm
+# exists to catch a NON-scored term crowding out the SCORED objective ("the scored seg
+# signal may be a passenger").  The originally-ported any-term>ceiling predicate fired
+# on seg=0.6783 in a seg-only burn — the scored objective dominating BY DESIGN (it
+# would fire on every telemetry-on TR1 run).  Alarm predicates are per-vehicle
+# CALIBRATION OBJECTS (constants-are-poison applied to predicates).  Corrected:
+#   (a) any NON-scored term share > TR1_TERMDOM_FRAC  (v9 caps-law single-term ceiling,
+#       MEASURED-ANCHOR provenance: the v9 caps law "each new force <=15%, sum <=40%,
+#       any single term >40% => term_domination")
+#   (b) the SCORED term share < TR1_SCORED_FLOOR = 1 - TR1_TERMDOM_FRAC  (DERIVED as
+#       the complement of the caps-law non-scored AGGREGATE cap: the three post-weight
+#       shares sum to ~1 — the loss_terms ``sum_minus_total`` self-check — so
+#       scored < 0.60  <=>  non-scored aggregate > 0.40 = seg-as-passenger, the
+#       original v9 meaning; no bare constant).
 TR1_TERMDOM_FRAC = 0.40
 TR1_TERMDOM_MIN_ROWS = 3
+TR1_SCORED_TERM = "seg"  # the scored objective on this seg-only vehicle (pose #383 terminal)
+TR1_SCORED_FLOOR = 1.0 - TR1_TERMDOM_FRAC
 
 
 def tr1_loss_terms_row(terms: dict[str, float], total: float, *, ep: int,
@@ -1054,25 +1069,41 @@ def tr1_loss_terms_row(terms: dict[str, float], total: float, *, ep: int,
 def tr1_term_domination_alarms(terms: dict[str, float], total: float,
                                streaks: dict[str, int], *,
                                frac: float = TR1_TERMDOM_FRAC,
-                               min_rows: int = TR1_TERMDOM_MIN_ROWS) -> list[dict[str, Any]]:
-    """(#321) term_domination: a single post-weight addend > ``frac`` of the loss for
-    ``min_rows`` sustained rows.  Mutates ``streaks`` (per-term run length) IN PLACE and
-    returns the alarm rows that just CROSSED the sustained threshold (edge-triggered, so
-    a persistent domination emits once per crossing, not every row).  Pure / unit-tested;
-    mirrors the v9 trainer's inline term_domination streak logic (post-weight addends)."""
+                               min_rows: int = TR1_TERMDOM_MIN_ROWS,
+                               scored_term: str = TR1_SCORED_TERM,
+                               scored_floor: float = TR1_SCORED_FLOOR) -> list[dict[str, Any]]:
+    """(#321) term_domination, INTENT-RESTORED (see the constants block above): the
+    SCORED term is EXEMPT from the ceiling (it dominating a seg-only burn is the
+    design); alarm when (a) a NON-scored post-weight addend > ``frac`` of the loss, OR
+    (b) the SCORED term's share < ``scored_floor`` (seg-as-passenger, the original v9
+    meaning).  Both clauses ``min_rows``-sustained; mutates ``streaks`` (per-term run
+    length) IN PLACE and returns the alarm rows that just CROSSED the sustained
+    threshold (edge-triggered: a persistent violation emits once per crossing, not
+    every row).  Pure / unit-tested."""
     tot_abs = abs(float(total)) + 1e-12
     rows: list[dict[str, Any]] = []
     for name in TR1_LOSS_TERM_KEYS:
         share = abs(float(terms.get(name, 0.0))) / tot_abs
+        if name == scored_term:
+            violated = share < float(scored_floor)
+            predicate = "scored_below_floor"
+            note = ("the SCORED seg share fell below the caps-law floor — non-scored "
+                    "terms crowd the scored objective (seg-as-passenger; v9 #321 "
+                    "intent, b4s 2026-07-31 first-fire calibration)")
+        else:
+            violated = share > float(frac)
+            predicate = "nonscored_above_ceiling"
+            note = ("a NON-scored post-weight term exceeds the v9 caps-law single-term "
+                    "ceiling; the scored seg signal may be a passenger (v9 #321 port)")
         streak = int(streaks.get(name, 0))
-        streak = streak + 1 if share > float(frac) else 0
+        streak = streak + 1 if violated else 0
         streaks[name] = streak
         if streak == int(min_rows):
             rows.append({
                 "event": "confound_alarm", "kind": "term_domination", "term": str(name),
+                "predicate": predicate,
                 "frac_of_loss": round(float(share), 4), "sustained_rows": int(streak),
-                "note": "one post-weight loss term dominates >40% of the loss; the scored "
-                        "seg signal may be a passenger (v9 #321 port)",
+                "note": note,
                 "score_neutral": True,
             })
     return rows
@@ -1731,6 +1762,8 @@ def main() -> int:
         tlog({"event": "telemetry_v9_port", "status": "on",
               "strata_ids": list(_tel_strata), "loss_term_keys": list(TR1_LOSS_TERM_KEYS),
               "termdom_frac": TR1_TERMDOM_FRAC, "termdom_min_rows": TR1_TERMDOM_MIN_ROWS,
+              "termdom_scored_term": TR1_SCORED_TERM,
+              "termdom_scored_floor": TR1_SCORED_FLOOR,
               "note": "additive read-only rows; trained/checkpoint bytes flag-invariant "
                       "(flag via args not cfg; new rows via tlog not telemetry_tail)",
               "score_neutral": True})
