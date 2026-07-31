@@ -25644,3 +25644,38 @@ Memo: `.omx/research/ddm_dw1_qa75_distill_window_20260730.md`. Receipts: SSD
   form, distinct from all 3 raced logit/margin forms); (5) distill into a DIFFERENT vehicle class (the class-change
   leg this verdict strengthens — cross-class KD was never the measured object). Owner: burn-3 design gate consumes
   (1)+(2) as design-space rows; (3)-(5) ledger-recorded, fire on their named preconditions.
+
+
+## FEED-zb1 (2026-07-30) — cheap-batch arm (#792): QA80 field MEASURED + 3 cheap reads CONVERGE "B is a hull-filler not a hull-mover"
+
+Memo `.omx/research/ddm_zb1_cheap_batch_20260730.md`. All [macOS-CPU advisory]; score_claim=False.
+
+- **QA80 EXACT flip-distance field (item 1, MEASURED n600, DONE):** real frozen CPU-torch SegNet over
+  the 600 burn frame1s (materialized from QA24 endpoint e7640dee via render_frame1_camera_uint8; frames
+  npy sha 937f9672…). Out `/Volumes/VertigoDataTier/pact/ddm_zb1_qa80_field_20260730/` (600 npz; per-pair
+  sha custody 600/600; manifest v1). Budget for QA83 class_field_photo + ea1-N3: q50 median 1.8181, q05
+  0.4302, tightest ~1.9e-6 (zero budget at boundary). verdict_scope: producer MEASURED; consumers OPEN.
+- **S2 ν-audit rate-side (item 2, $0):** on NEW-best B (dw1 control ep440 EMA). Base SMEVR stream
+  255,907 B (1.111 b/q); **delta-zero frac 0.3959** (gauge PARTIAL — ~60% moved off zero, tb1 #3 NOT
+  fully verified); null-snap curve reaches **117,068 B (0.508 b/q) at ~q70 < G4 0.578 ceiling** → G4
+  130KB RATE-REACHABLE, landing feasibility INSIDE pn1 ν∈[0.55,0.75]. verdict_scope: rate-side-only;
+  authority ν (|g|-ranked + Δd_seg≤2e-4 confirm) is the one owed scorer step / burn-3 precondition.
+- **QA34 knee read (item 3, $0, DONE):** renderer FLAT 3,284 B (0 marginal; all rate is tokens); two
+  `at_knee` quant resets (ep~49/~199); burn endpoint 478 B/1e-4 (still productive); **B continuation
+  price RISING 444→1332 B/1e-4 + bytes growing → B ENTERED the token marginal-price knee.**
+- **S1 Stage-A dress rehearsal (item 4, DONE):** FIRST end-to-end export chain on B (compile→ZIP→numpy
+  receiver→SegNet). Archive sha 438bc022; **realized d_seg 0.005114475 vs dw1 B 0.005114661 → DEPLOY
+  PARITY 1.86e-7** (≪ pn1 1e-4 band; falsifier did NOT fire). Wall 151s ≪ 30-min. Advisory, not a score.
+- **gc9 row-8 hull (item 5, $0, DONE):** token-family hull = {QA24 c=0.08815, B c=0.08835} at iso-c
+  ~0.088; **B slid ALONG iso-c, did NOT move the hull** (traded +8,509 B for −1.6e-4 d_seg); pj1
+  photometric-fit dominated c=10.70. Byte-basis caveat flagged (burn-1 composed ≠ token-SMEVR). Consumer:
+  costate SENSE + burn-3 waterfill.
+- **CONVERGENT DIRECTIVE (§3+§5+§2):** B is a hull-FILLER, not a hull-MOVER — plain continuation is
+  exhausted. burn-3 must (a) reclaim S2 free rate on the ENCODE side (authority ν confirm = one owed
+  scorer step) AND (b) MOVE the hull via an in-loop lever (correction band / QA80 pose-legibility-from-
+  birth), never post-hoc deletion (FEED-wr1gb instance-refuted).
+- **Ledger dispositions:** QA18 CLOSED-MOOTED (wr1 dead; nullity re-homed to S2; verdict_scope
+  formulation); QE03 cn1#726/cn2#727 RE-GATED rc1→cs1 harvest (PDW1 superseded-by-main, no strand owed);
+  QA34 $0-read DONE; QA80 row FIELD-PASS-RUN.
+
+pointer 0.1910828242 [contest-CPU] UNMOVED  ·  [no-triality] [p0-ledger-ok]
