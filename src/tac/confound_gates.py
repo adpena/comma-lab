@@ -58,6 +58,8 @@ import re
 import subprocess
 import tempfile
 from collections import Counter
+from collections.abc import Mapping
+from dataclasses import dataclass
 from pathlib import Path
 
 from tac.witness_dsl.curriculum_dsl import TRAINER_REL
@@ -2427,6 +2429,15 @@ def check_no_raw_virtual_memory_safety_basis(
     )
 
 
+# Ways a guard enumerates the live process table. `ps` + `splitlines` is the form that made the
+# #829 slot guards invisible to this gate; keep this list as the ONE place the surface is declared.
+# Each marker is DELIMITED on purpose: the first draft used a bare `"pgrep"` and matched the
+# identifier `pgreport` in an unrelated probe — a substring false positive inside the very gate
+# written to extinct substring false positives. Delimiters, not bare tokens.
+_CLASS2_ENUMERATION_MARKERS = (
+    "cmdline", "process_iter", "-axo", "ps -ax", "pgrep ", '"pgrep"', "'pgrep'",
+)
+
 _CLASS2_TRAINER_TOKENS = ("train_levelset_witness", "train_witness")
 _CLASS2_DECISION_TOKENS = (
     "killpg", "os.kill", "sys.exit", "SystemExit", "return 12", "return 1",
@@ -2470,11 +2481,17 @@ def check_process_guard_excludes_observer_flag_values(
         if path.name in {"argv_role.py"}:
             continue
         text = _read(path)
-        if not text or ("cmdline" not in text and "process_iter" not in text):
+        # ddm_gh1 #829 SCOPE FIX: the prefilter previously required `cmdline` or `process_iter`,
+        # so the whole `subprocess.run(["ps", "-axo", "command"])` enumeration family was skipped
+        # at the FILE level — the gate printed OK while two live slot guards (ru1, sb1) carried
+        # exactly this bug class. A gate that silently scans a fraction of its intended surface is
+        # the same defect one level out.
+        if not text or not any(marker in text for marker in _CLASS2_ENUMERATION_MARKERS):
             continue
         if not any(tok in text for tok in _CLASS2_TRAINER_TOKENS):
             continue
         scanned += 1
+        file_hit = False
         try:
             tree = ast.parse(text)
         except SyntaxError:
@@ -2485,7 +2502,14 @@ def check_process_guard_excludes_observer_flag_values(
             if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 continue
             span = "\n".join(lines[node.lineno - 1: (node.end_lineno or node.lineno)])
-            classifies = ("process_iter" in span) or ("cmdline" in span and ".join" in span)
+            classifies = (
+                ("process_iter" in span)
+                or ("cmdline" in span and ".join" in span)
+                # ddm_gh1 #829: the `ps -axo command` form. `splitlines()` over ps output is the
+                # same act of enumerating the process table by text.
+                or ('"ps"' in span and "splitlines" in span)
+                or ("'ps'" in span and "splitlines" in span)
+            )
             if not classifies:
                 continue
             if not any(tok in span for tok in _CLASS2_TRAINER_TOKENS):
@@ -2500,13 +2524,36 @@ def check_process_guard_excludes_observer_flag_values(
                 f"values. Strip via tools.argv_role.strip_observer_flag_values (mirrors #406/#512), "
                 f"or add a `# OBSERVER_ROLE_OK:<rationale>` waiver."
             )
+            file_hit = True
+        # ddm_gh1 #829 SPLIT-ACROSS-FUNCTIONS fallback. The function-scoped predicate requires
+        # enumeration + token + decision in ONE body. The measured ru1/sb1 defect split them: a
+        # `slot_is_live()` helper enumerated and token-tested, a separate caller refused, and the
+        # token tuple lived at module scope — so all three legs were individually invisible. If a
+        # candidate file carries all three legs anywhere and no exclusion marker, flag the FILE.
+        if (
+            not file_hit
+            and not any(e in text for e in _CLASS2_EXCLUSION_MARKERS)
+            and any(d in text for d in _CLASS2_DECISION_TOKENS)
+        ):
+            violations.append(
+                f"{rel}: enumerates the process table and refuses on trainer-token presence, "
+                f"with the enumeration, the token test, and the decision SPLIT across "
+                f"functions/module scope. Route the classification through "
+                f"tools.argv_role (cmdline_names_entrypoint / "
+                f"process_table_entrypoint_holders), or add a "
+                f"`# OBSERVER_ROLE_OK:<rationale>` waiver."
+            )
     return _finish(
         name="check_process_guard_excludes_observer_flag_values",
         tag="observer-flag-exclusion",
         violations=violations,
         strict=strict,
         verbose=verbose,
-        ok_detail=f"{scanned} candidate guard file(s) scanned",
+        # DECLARED DENOMINATOR (ddm_gh1 class fix).
+        ok_detail=(
+            f"{scanned} of {len(files)} in-scope tools/*.py enumerate the process table and name "
+            f"a trainer token"
+        ),
     )
 
 
@@ -3144,3 +3191,215 @@ CONFOUND_GATES = (
     check_no_stub_lever_factories,
     check_no_legacy_single_module_lever_surface_consumers,
 )
+
+
+# ---------------------------------------------------------------------------
+# ddm_gh1 CLASS GUARD — a REFUSE-capable gate needs a POSITIVE CONTROL and a
+# DECLARED DENOMINATOR.
+#
+# THE CLASS (measured 2026-07-31, five instances in one day): a gate that can
+# REFUSE is trusted precisely because nobody re-derives it. When its detector is
+# narrowed — by a prefilter, a glob, a registry that enumerates part of its
+# universe — it keeps printing OK over an almost-empty scan and everyone reads
+# that as "clean". Instances: this module's own CLASS-2 gate skipped the entire
+# `ps -axo command` guard family at the FILE level while two live slot guards
+# carried the bug (#829); the raw-vm gate declared live-count 0 while measuring 6
+# and silently omitted experiments/ + scripts/ (#830); the lever registry AST'd
+# 1 of 171 modules; a findings gate scanned 0 of 1,260 files; a duty queue
+# enumerated 116 of 177. The identical reasoning error shows up in prose as a
+# false "X does not exist" claim built on a partial search.
+#
+# TWO STRUCTURAL REQUIREMENTS, both of which make a narrowing LOUD:
+#   1. POSITIVE CONTROL — a fixture the gate MUST still flag. Registered here and
+#      EXECUTED by the meta-gate, so it is a live assertion rather than a claim.
+#      A narrowing that guts the detector fails here instead of printing OK.
+#   2. DECLARED DENOMINATOR — the gate reports what it CONSIDERED next to what it
+#      scanned, so "0 violations" can never be read as "0 scanned".
+#
+# Coverage is a TRACKED QUEUE, never a forgotten default: gates without a control
+# are NAMED in the ok_detail and the covered count RATCHETS (it may grow, never
+# shrink), so a new REFUSE-capable gate cannot quietly land without one.
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class PositiveControl:
+    """A fixture a REFUSE-capable gate MUST still flag, plus why it matters."""
+
+    gate: str
+    files: Mapping[str, str]
+    must_mention: str
+    why: str
+
+
+POSITIVE_CONTROLS: tuple[PositiveControl, ...] = (
+    PositiveControl(
+        gate="check_no_raw_virtual_memory_safety_basis",
+        files={
+            "tools/planted.py": (
+                "import psutil\n"
+                "def guard():\n"
+                "    if psutil.virtual_memory().available < 1:\n"
+                "        raise SystemExit(7)\n"
+            )
+        },
+        must_mention="planted.py",
+        why=(
+            "#830: the gate declared live-count 0 while measuring 6, and omitted experiments/ + "
+            "scripts/ from its scan. If a future prefilter narrows it, this fires."
+        ),
+    ),
+    PositiveControl(
+        gate="check_process_guard_excludes_observer_flag_values",
+        files={
+            "tools/planted_guard.py": (
+                "import psutil\n"
+                "def refuse_dup(out_dir):\n"
+                "    for p in psutil.process_iter(['cmdline']):\n"
+                "        cl = ' '.join(p.info.get('cmdline') or ())\n"
+                "        if 'train_levelset_witness' in cl:\n"
+                "            raise SystemExit(12)\n"
+            )
+        },
+        must_mention="planted_guard.py",
+        why="#406/#512: the original function-scoped observer-flag leg.",
+    ),
+    PositiveControl(
+        gate="check_process_guard_excludes_observer_flag_values",
+        files={
+            "tools/planted_split.py": (
+                'import subprocess\n'
+                'SLOT_TOKENS = ("train_levelset_witness", "evaluate.py")\n'
+                'def slot_is_live():\n'
+                '    out = subprocess.run(["ps", "-axo", "command"], capture_output=True,\n'
+                '                         text=True, check=False).stdout\n'
+                '    return any(tok in line for line in out.splitlines()\n'
+                '               for tok in SLOT_TOKENS)\n'
+                'def main():\n'
+                '    if slot_is_live():\n'
+                '        raise SystemExit("refuse: slot busy")\n'
+            )
+        },
+        must_mention="planted_split.py",
+        why=(
+            "#829: the EXACT pre-fix ru1/sb1 shape — `ps -axo command` enumeration with the "
+            "enumeration, the token test and the decision SPLIT across functions and module "
+            "scope. Every leg was individually invisible to the function-scoped predicate, so "
+            "the gate printed OK while three live slot guards emitted false refusals."
+        ),
+    ),
+    PositiveControl(
+        gate="check_levelset_hosc_requires_beta_end",
+        files={
+            "experiments/results/planted_run/launch.sh": (
+                "#!/bin/bash\npython t.py --activation hosc --hosc-beta 4.0\n"
+            )
+        },
+        must_mention="planted_run",
+        why="CLAUDE.md-forbidden fixed-beta hosc (tanh saturation -> vanishing gradient).",
+    ),
+    PositiveControl(
+        gate="check_no_duplicate_long_flags_in_launch",
+        files={
+            "experiments/results/planted_dup/launch.sh": (
+                "#!/bin/bash\npython t.py --epochs 4 --epochs 9\n"
+            )
+        },
+        must_mention="planted_dup",
+        why="argparse last-wins silently discards the earlier value.",
+    ),
+)
+
+# RATCHET FLOOR: the number of DISTINCT gates carrying a positive control at landing. It may only
+# grow. A new REFUSE-capable gate landing without a control drops coverage below this and the
+# meta-gate refuses — which is what makes the uncovered set a queue instead of a grave.
+MIN_POSITIVE_CONTROL_COVERAGE = 4
+
+
+def positive_control_coverage() -> dict[str, object]:
+    """The DECLARED DENOMINATOR for control coverage: covered / total, plus the named queue."""
+    gates = [fn.__name__ for fn in CONFOUND_GATES]
+    covered = sorted({c.gate for c in POSITIVE_CONTROLS})
+    return {
+        "controls": len(POSITIVE_CONTROLS),
+        "covered_gates": covered,
+        "covered": len(covered),
+        "total_refuse_capable_gates": len(gates),
+        "uncovered_gates": sorted(set(gates) - set(covered)),
+    }
+
+
+def check_refusal_gates_have_live_positive_control(
+    *,
+    repo_root: str | Path | None = None,  # unused: controls run on synthetic fixtures
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """CLASS GUARD (ddm_gh1 2026-07-31) — every registered POSITIVE CONTROL must still fire, and
+    control coverage may never regress.
+
+    This EXECUTES each control against its gate on a synthetic tree. It is not a declaration that
+    controls exist; it is a live assertion that they still catch what they were written to catch.
+    A prefilter, glob, or registry narrowing that guts a detector fails HERE, loudly, instead of
+    printing a clean OK over an almost-empty scan.
+
+    Coverage is reported as a declared denominator with the uncovered gates NAMED, and the covered
+    count ratchets against :data:`MIN_POSITIVE_CONTROL_COVERAGE`.
+
+    STRICT from byte one: live count is 0 in this landing.
+    """
+    violations: list[str] = []
+    by_name = {fn.__name__: fn for fn in CONFOUND_GATES}
+    for control in POSITIVE_CONTROLS:
+        gate = by_name.get(control.gate)
+        if gate is None:
+            violations.append(
+                f"positive control names an unregistered gate {control.gate!r} — a stale control "
+                f"is indistinguishable from a passing one. Remove it or restore the gate."
+            )
+            continue
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            for relative, text in control.files.items():
+                target = root / relative
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text(text)
+            try:
+                found = gate(repo_root=root, strict=False, verbose=False)
+            except Exception as exc:  # a raising gate is itself the finding
+                violations.append(f"{control.gate}: positive control raised {exc!r}")
+                continue
+        if not any(control.must_mention in item for item in found):
+            violations.append(
+                f"{control.gate}: POSITIVE CONTROL NO LONGER FIRES — the planted violation in "
+                f"{sorted(control.files)} was not flagged. The detector has been narrowed or "
+                f"gutted and the gate is now printing OK over a surface it does not scan. "
+                f"Control rationale: {control.why}"
+            )
+    coverage = positive_control_coverage()
+    covered = int(coverage["covered"])
+    if covered < MIN_POSITIVE_CONTROL_COVERAGE:
+        violations.append(
+            f"positive-control coverage REGRESSED: {covered} gate(s) covered, floor is "
+            f"{MIN_POSITIVE_CONTROL_COVERAGE}. Add a control for the new REFUSE-capable gate "
+            f"(uncovered: {coverage['uncovered_gates']}) — the floor may only ratchet up."
+        )
+    return _finish(
+        name="check_refusal_gates_have_live_positive_control",
+        tag="refusal-gate-positive-control",
+        violations=violations,
+        strict=strict,
+        verbose=verbose,
+        ok_detail=(
+            f"{len(POSITIVE_CONTROLS)} control(s) fired across {covered} of "
+            f"{coverage['total_refuse_capable_gates']} refuse-capable gates; "
+            f"uncovered queue: {coverage['uncovered_gates']}"
+        ),
+    )
+
+
+# The class guard CONSUMES ``CONFOUND_GATES`` to discover the refuse-capable set, so it is defined
+# after the catalog tuple and registers itself here rather than inside the literal. It deliberately
+# does NOT include itself in its own coverage denominator (it plants no fixture of its own; its
+# controls ARE its test).
+CONFOUND_GATES = (*CONFOUND_GATES, check_refusal_gates_have_live_positive_control)

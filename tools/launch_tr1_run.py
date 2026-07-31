@@ -34,7 +34,7 @@ from pathlib import Path
 
 MEASURED_T2_PEAK_RSS_GIB = 12.8  # tb1 memo T2: /usr/bin/time -l at the real config
 SAFETY_FACTOR = 2.0
-SLOT_PATTERNS = ("train_tr1_partition_renderer", "train_levelset_witness",
+SLOT_PATTERNS = ("train_tr1_partition_renderer", "train_levelset_witness",  # OBSERVER_ROLE_OK: slot_holders() already does the precise discrimination this gate asks for -- python-interpreter argv[0] + Path(t).name in TRAINER_BASENAMES -- and reports mentions-but-not-holders LOUDLY; it was hardened for this exact false-refusal class on 2026-07-31 (the rtk-grep pids 6443/6445/6447 incident). ddm_gh1 #829 file-scope fallback FP.
                  "train_witness_realized")
 # G4 holds the ONE-n600-job slot. A holder is a PYTHON PROCESS EXECUTING one of these scripts —
 # not any process whose command line happens to mention one (see slot_holders).

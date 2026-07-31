@@ -38,7 +38,7 @@ from tac import witness_run_artifacts as _wra  # noqa: E402
 
 RESULTS_DEFAULT = _REPO / "experiments" / "results"
 RUN_GLOB = _wra.RUN_DIR_GLOB
-TRAINER_TOKEN = "train_levelset_witness_realized_through_R_mlx"
+TRAINER_TOKEN = "train_levelset_witness_realized_through_R_mlx"  # OBSERVER_ROLE_OK: read-only status reporter -- it SELECTS which trainer to report on and never refuses/kills; and it already requires python as argv[0] basename + per-token matching ("not editors/greps of the file"). ddm_gh1 #829 file-scope fallback FP.
 STALE_AFTER_S_DEFAULT = 30 * 60.0
 
 # Named signal files (from the contract) — used for the per-file freshness readout.

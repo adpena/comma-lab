@@ -35,6 +35,11 @@ import numpy as np
 
 REPO = Path("/Users/adpena/projects/pact")
 SCHEMA_CHUNK = "ddm_ru1_atlas_chunk.v1"
+try:  # canonical argv-role helper (repo-root import, then script-dir fallback)
+    from tools.argv_role import process_table_entrypoint_holders
+except ImportError:  # pragma: no cover - exercised when run as `python tools/<this>.py`
+    from argv_role import process_table_entrypoint_holders  # type: ignore
+
 N_CLASSES = 5
 
 # Processes that indicate the pb1 scorer slot (or the trainer) is live.
@@ -60,12 +65,24 @@ def parse_args() -> argparse.Namespace:
     return args
 
 
-def slot_is_live() -> bool:
-    """True if a pb1/trainer scorer job appears in the process table."""
+def slot_holders() -> list[str]:
+    """Command lines of processes that actually RUN a pb1/trainer scorer entrypoint.
+
+    ddm_gh1 #829 (THIRD site of this class, found by the widened CLASS-2 gate rather than named
+    up front): this was `any(tok in line ...)` — a bare SUBSTRING scan of the process table, so an
+    unrelated background grep/rg/editor, or a `--out` path with a token in a directory component,
+    reported the slot busy and REFUSED A LAUNCH nothing was blocking. Routed through the canonical
+    `tools.argv_role.process_table_entrypoint_holders`.
+    """
     out = subprocess.run(["ps", "-axo", "command"], capture_output=True,
                          text=True, check=False).stdout
-    return any(tok in line for line in out.splitlines()
-               for tok in SLOT_TOKENS if "ru1_endpoint_residual_atlas" not in line)
+    return process_table_entrypoint_holders(
+        out, SLOT_TOKENS, self_tokens=("ru1_endpoint_residual_atlas",))
+
+
+def slot_is_live() -> bool:
+    """True if a pb1/trainer scorer job appears in the process table."""
+    return bool(slot_holders())
 
 
 def _atomic_write_bytes(path: Path, payload: bytes) -> None:

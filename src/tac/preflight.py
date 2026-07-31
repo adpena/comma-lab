@@ -6716,6 +6716,14 @@ def preflight_all(
             # Live count 0, so it flips strict here rather than into warn-only purgatory.
             # CLAUDE_MD_ENTRY_OK: existing catalog row (CLASS 1 bug-class sweep 2026-07-17); strictness flip only, no new number per Catalog #299 post-#400 consolidation
             "check_no_raw_virtual_memory_safety_basis",
+            # 2026-07-31 ddm_gh1 CLASS GUARD. Subsumes the false-refusal / silently-narrowed
+            # detector class across >=3 measured cases (#829 process guards, #830 raw-vm scope,
+            # the lever registry's 1-of-171 AST) instead of adding a gate per case, per the
+            # Catalog #299 consolidation discipline. It EXECUTES each registered positive
+            # control, so a narrowing that guts a detector fails here loudly instead of printing
+            # OK over an empty scan; coverage is a ratcheting tracked queue. Live count 0.
+            # CLAUDE_MD_ENTRY_OK: rides the confound-gate 3-layer immune-system row (L2 STRICT preflight gates); standalone numbered catalog row deferred per Catalog #299 post-#400 consolidation
+            "check_refusal_gates_have_live_positive_control",
         }
         for _confound_gate in _CONFOUND_GATES:
             _confound_gate(

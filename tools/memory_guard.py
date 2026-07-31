@@ -104,7 +104,7 @@ DEFAULT_INTERVAL_SEC = 5.0
 
 # POSITIVE ALLOWLIST (training arms only): a process is a kill CANDIDATE only if
 # its command matches this regex. OURS — the contest training-arm scripts.
-DEFAULT_TRAINING_KILL_PATTERN = (
+DEFAULT_TRAINING_KILL_PATTERN = (  # OBSERVER_ROLE_OK: kill selection is custody-gated by SIX independent conditions (positive training allowlist AND explicit custody AND control-plane protection AND direct-kill denylist AND own-process-group-leader), not by token presence; regex is one necessary condition, never sufficient. ddm_gh1 #829 file-scope fallback FP -- flagged for a dedicated review, not silently blessed.
     r"train_witness_realized_through_R"
     r"|train_witness"
     r"|witness_capstone_deepmath_smoke"

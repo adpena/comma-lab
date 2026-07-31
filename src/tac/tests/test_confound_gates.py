@@ -849,7 +849,11 @@ class TestModule:
         # (#819) added check_no_stub_lever_factories without updating this
         # count (a pre-existing failure ddm_rg5 confirmed by git-stash A/B),
         # and ddm_rg5 (#825) adds its consumer-side sister.
-        assert len(cg.CONFOUND_GATES) == 22
+        # 22 -> 23 on 2026-07-31: ddm_gh1 registers the CLASS GUARD
+        # (check_refusal_gates_have_live_positive_control), which consumes
+        # CONFOUND_GATES to discover the refuse-capable set and therefore
+        # self-registers after the catalog tuple.
+        assert len(cg.CONFOUND_GATES) == 23
         names = {fn.__name__ for fn in cg.CONFOUND_GATES}
         assert names == {
             "check_no_spike_guard_defaults_to_deadlock_mode",
@@ -874,6 +878,9 @@ class TestModule:
             "check_no_duplicate_canonical_spec_across_refs",
             "check_no_stub_lever_factories",
             "check_no_legacy_single_module_lever_surface_consumers",
+            # 2026-07-31 ddm_gh1 CLASS GUARD: refuse-capable gates must carry an
+            # EXECUTED positive control + a declared denominator.
+            "check_refusal_gates_have_live_positive_control",
         }
 
     def test_followon_gates_are_strict_flipped_in_preflight_all(self):
@@ -956,6 +963,11 @@ class TestModule:
             # stay 0 — any growth here means a new consumer re-created the
             # blindness that hid 9 of 10 designed-stubs from the duty queue.
             "check_no_legacy_single_module_lever_surface_consumers": 0,
+            # 2026-07-31 ddm_gh1 CLASS GUARD. STRICT in preflight at live-count 0:
+            # any growth means a registered positive control stopped firing (a
+            # detector was narrowed/gutted) or control coverage regressed below
+            # the ratchet floor.
+            "check_refusal_gates_have_live_positive_control": 0,
         }
         v = fn(strict=False, verbose=False)
         assert len(v) <= bounds[fn.__name__], f"{fn.__name__} live-count grew: {v[:3]}"
