@@ -6758,6 +6758,16 @@ def preflight_all(
         # break surfaces loudly but never blocks an unrelated pipeline).
         check_operating_manual_pointer_integrity(strict=False, verbose=verbose)
 
+        # 2026-07-31 Catalog #407 (task #812, FEED-dg1): the contest rate DENOMINATOR is
+        # dynamic (upstream/evaluate.py:64 rglobs upstream/videos/ and COUNTS DOTFILES); a
+        # stray macOS ._* / .DS_Store silently inflates it and corrupts every score. This
+        # gate surfaces stray/missing files under upstream/videos/. WARN-ONLY by design
+        # (this box is macOS — a strict broad gate would false-block on a transient
+        # .DS_Store; the HARD fail-closed enforcement lives at
+        # tac.contest_score.rate_term, Landing 1). Absent/unverifiable tree is never a
+        # violation. Strict-flip condition in the gate docstring.
+        check_upstream_videos_dir_clean(strict=False, verbose=verbose)
+
         # Crosswalk A1 (2026-07-19): the harness failure ledger must stay on the canonical
         # FailureEventV2 schema — no unknown lifecycle shapes, no un-migrated legacy classes.
         # WARN-ONLY at landing (a stale/partial-migration ledger is signal-loss risk, not a
@@ -87272,6 +87282,114 @@ def check_operating_manual_pointer_integrity(
         raise PreflightError(
             "check_operating_manual_pointer_integrity found "
             f"{len(violations)} violation(s) (operating-manual anti-rot):\n  "
+            + "\n  ".join(violations))
+    return violations
+
+
+def check_upstream_videos_dir_clean(
+    *, repo_root: Path | str | None = None, strict: bool = False, verbose: bool = False
+) -> list[str]:
+    """Catalog #407 (WARN-ONLY) — rate-denominator cleanliness gate (task #812).
+
+    The contest rate DENOMINATOR is DYNAMIC. ``upstream/evaluate.py:64`` computes
+    it as ``sum(f.stat().st_size for f in uncompressed_dir.rglob('*') if
+    f.is_file())`` — it rglobs the WHOLE ``upstream/videos/`` tree and COUNTS
+    DOTFILES (MEASURED 2026-07-31: a stray macOS ``._0.mkv`` AppleDouble or
+    ``.DS_Store`` inflates the sum). Every rate/score computation in our stack
+    hardcodes ``UNCOMPRESSED_SIZE_BYTES = 37_545_489`` as that denominator; a
+    stray silently changes the REAL denominator and corrupts every score.
+    Historical precedent: old bootstrap scripts carried
+    ``find upstream -name '._*' -delete``.
+
+    This gate detects INVENTORY contamination (stray/unexpected files, or a
+    MISSING expected payload file) under ``upstream/videos/`` by delegating to
+    the canonical measurement helper ``tac.contest_score.verify_upstream_videos_clean``
+    (single source of truth — the same rglob logic the fail-closed consumption
+    guard uses). It NEVER deletes anything: ``upstream/`` is IMMUTABLE per
+    CLAUDE.md "Non-Negotiable Upstream Rule"; the report NAMES the offending
+    file(s) for the operator to clear.
+
+    Two-landing sisters:
+      * Landing 1 (HARD fail-closed): ``tac.contest_score.rate_term`` asserts the
+        live byte-sum still equals the canonical constant before ANY rate
+        arithmetic on the default denominator. That is where a WRONG SCORE would
+        actually be produced, so it raises.
+      * Landing 2 (THIS gate, WARN-ONLY): early inventory surfacing in the broad
+        preflight sweep.
+
+    WARN-ONLY decision (deliberate, not purgatory): this operator's dev box is
+    macOS (Finder generates ``.DS_Store`` routinely). A STRICT gate in the broad
+    ``preflight_all`` sweep would intermittently block UNRELATED commits/dispatches
+    on a transient Finder artifact — the same "never block an unrelated pipeline"
+    rationale the sibling ``check_operating_manual_pointer_integrity`` /
+    ``check_harness_failure_ledger_v2_hygiene`` gates carry. The HARD enforcement
+    already lives at ``rate_term`` (Landing 1), so no wrong score can be produced
+    even while this gate warns. Live count at landing: 0 (clean tree). Strict-flip
+    condition: flip to ``strict=True`` only once the stray-dotfile creation vector
+    under ``upstream/videos/`` is structurally eliminated on the dev box / CI (so a
+    strict broad gate cannot false-block on a transient ``.DS_Store``). No waiver
+    token: the fix is to clear the stray, never to suppress the finding.
+    """
+    root = Path(repo_root or REPO_ROOT)
+    violations: list[str] = []
+
+    try:
+        from tac.contest_score import UNCOMPRESSED_SIZE_BYTES, verify_upstream_videos_clean
+    except Exception as exc:  # pragma: no cover - import safety
+        if verbose:
+            print(f"  [videos-clean] canonical helper unavailable ({exc}); skipping.")
+        return violations
+
+    videos_dir = root / "upstream" / "videos"
+    names_file = root / "upstream" / "public_test_video_names.txt"
+
+    # Derive the expected inventory RELATIVE TO THIS root (keeps the gate
+    # repo_root-parametric / testable — never anchored to the helper's own repo).
+    try:
+        text = names_file.read_text(encoding="utf-8")
+        expected_names = tuple(
+            sorted({line.strip() for line in text.splitlines() if line.strip()})
+        ) or ("0.mkv",)
+    except OSError:
+        expected_names = ("0.mkv",)
+
+    verdict = verify_upstream_videos_clean(
+        videos_dir,
+        expected_sum=UNCOMPRESSED_SIZE_BYTES,
+        expected_names=expected_names,
+    )
+
+    # Only INVENTORY contamination is a preflight finding (the byte-sum-vs-constant
+    # assertion is the fail-closed consumption guard in tac.contest_score.rate_term).
+    # An absent/unverifiable tree is NEVER a violation (matches the sibling gates'
+    # "never fabricate a violation from a missing surface" philosophy).
+    if verdict.present:
+        if verdict.strays:
+            violations.append(
+                f"upstream/videos/: STRAY file(s) {list(verdict.strays)} — "
+                "rglob-counted into evaluate.py:64's rate denominator (macOS "
+                "AppleDouble '._*' / '.DS_Store' / other unexpected file). "
+                "upstream/ is IMMUTABLE (CLAUDE.md) — the operator clears the "
+                "stray (e.g. `rm upstream/videos/.DS_Store`); do NOT auto-delete."
+            )
+        if verdict.missing:
+            violations.append(
+                f"upstream/videos/: MISSING expected payload file(s) "
+                f"{list(verdict.missing)} — the rate denominator would be "
+                "wrong/zero. Restore from the pinned upstream snapshot."
+            )
+
+    if verbose:
+        print(
+            f"  [videos-clean] check_upstream_videos_dir_clean: {len(violations)} "
+            "violation(s)"
+            if violations else
+            "  [videos-clean] check_upstream_videos_dir_clean: OK"
+        )
+    if strict and violations:
+        raise PreflightError(
+            "check_upstream_videos_dir_clean found "
+            f"{len(violations)} violation(s) (rate-denominator contamination):\n  "
             + "\n  ".join(violations))
     return violations
 
