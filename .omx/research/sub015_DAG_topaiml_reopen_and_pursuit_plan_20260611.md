@@ -25877,3 +25877,31 @@ pointer 0.1910828242 [contest-CPU] UNMOVED
   dashboard/costate render via the registry path, no bespoke consumer edit owed.
 
 pointer 0.1910828242 [contest-CPU] UNMOVED
+
+
+## FEED-gc11 (2026-07-30) — 13th convocation: THE BURN-3 DECISION FUNCTION + the AUTONOMOUS WORKFLOW POLICY adopted (task #797)
+
+Operator: standing GO for all + full verb set. Honoring gc10's own Schmidhuber verdict (another ranking
+has derivative ~0), gc11 emitted TWO BINDING OBJECTS instead (memo ddm_gc11_burn3_gate_20260730.md;
+STORES-CONSULTED: gc10 2647b1f080 · nv1 838273e222 · ps1 · pa1b · zb1 · dw1 · FEED-reanchor · v4d QA78
+row · S_floor · su2 Gate-B):
+- §2 BURN-3 DECISION FUNCTION: mechanical branch-select over {pa1r race × f' probe} receipts — BR-A
+  in-loop rate burn on B (levers by race winner only; QA80-from-birth; rate-in-loss w_rate 0.0768;
+  v8/v9/v10 harvest verdicts folded per element w/ prior-law prediction lines; F1-F4 guards incl. NEW F4
+  delta-pool-conflict telemetry from the Assumption-Adversary) · BR-B class-field graft (the ONLY branch
+  whose arithmetic can cross the bar — CONJECTURE, Contrarian-gated on the probe receipt) · BR-C sequence
+  · BR-D wall branch (from-birth distill case + v8 carrier derivation; only THERE a 14th convocation).
+- §3 WORKFLOW POLICY (BINDING, adopted by MAIN): fire-rule table W1-W11 (race→branch-select→seal→fire;
+  stage events→terminal chain→byte-close→staged gate→pointer refresh iff beaten; STALL rule 2x; drift
+  self-check at stage boundaries) + OP1 operator-only set (Modal beyond $20 · pinned upstream · public
+  submission · fleet-cap). Explicit NOT-waived list: the GO removes WAITING, not RIGOR.
+- §4 f' probe fire-ready charter (hybridize finalized): frozen-B-tokens -> K=5 class-field head vs the
+  QA75 solve-field teacher -> ONE n600 realized gate; falsifiers preregistered; fires at pa1r boundary.
+- §5 BACKCAST honesty: NO branch reaches 0.1910828242 in one step; nearest = BR-B low tail, missing a
+  measured hybrid rate + legible-base pose <0.04 (largest unmeasured distance). SANDWICH localizes the
+  bound-gap to class-semantics-at-low-rate = f'. EXHAUST adds the K=5xD8 paint-alphabet enumeration.
+- Dissents recorded verbatim (Contrarian: BR-B burn probe-gated; Hotz: rules must be mechanically
+  executable). Council anchor appended. verdict scopes: branch arithmetic DERIVED; BR-B crossing
+  POSSIBLE-not-projected.
+
+pointer 0.1910828242 [contest-CPU] UNMOVED
