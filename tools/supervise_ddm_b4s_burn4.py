@@ -43,6 +43,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import subprocess
 import sys
 import time
@@ -135,7 +136,11 @@ def _window_dir(n: int) -> Path:
 
 
 def _existing_windows() -> list[Path]:
-    return sorted(p for p in ROOT.glob("window_*") if p.is_dir())
+    # EXACT window_NN dirs only: retired/rejected debris (window_01_preamendment_*,
+    # rollback-retired copies) must never be picked up as the current window (the
+    # 2026-07-31 false WINDOW_CRASHED_NO_RECEIPT lesson — glob matched a retired dir).
+    return sorted(p for p in ROOT.glob("window_*")
+                  if p.is_dir() and re.fullmatch(r"window_\d{2}", p.name))
 
 
 def _window_pid(wdir: Path) -> int | None:
