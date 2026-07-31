@@ -1,4 +1,21 @@
-# Current Focus - 2026-07-31 (window_02 COUPLED_DESCENT: NEW BEST d_seg 0.0040519 → UNDRIV alarm adjudicated CONTINUE → window_03)
+# Current Focus - 2026-07-31 (RECOVERY 16:58Z: Fable-5 limit → MAIN on Opus 5 → burn-4 respawned)
+
+> **INTERRUPTION + RECOVERY (no signal lost).** The b4s arm hit a **Fable-5 usage limit**
+> mid-execution of MAIN's CONTINUE adjudication (received, zero steps executed). Operator
+> switched MAIN to **Opus 5** (deviation from the Fable-main-thread directive — EXPLICIT
+> operator-initiated, not a silent reroute). Recovery state at 16:58Z: supervisor daemon
+> 83959 + trainer 79174 both **DEAD**; burn4.ALARM NOT retired; window_03 never launched;
+> ~3.2h of the 6h cap remain (t0 14:17Z → hard stop 20:17Z) ⇒ ONE full 140-ep window fits.
+> Uncommitted hot-state COMMITTED (6498ab4577) before anything else. **ddm_b4r respawned on
+> Opus** with full disk-grounded context: verify → retire ALARM (UNDRIV_EROSION_ADJUDICATED_
+> CONTINUE, priced trade NOT spurious, append-only supersession) → relaunch window_03 from
+> ep805 same seal, fresh daemon, both watches armed → endpoint obligations = **the gc13 R1
+> consumption bundle** (per-class re-measure · 5×5 class-pair flip matrix · protected descent
+> rates · Undriv exact S-pricing · R6_PAYS/R6_CLOSES). PRE-AUTHORIZED: a repeat UNDRIV alarm
+> with |Δbetti0| ≤ 10 AND window ΔS < 0 continues automatically (no dead stop between wakes).
+> Waiter re-arms on the fire receipt. MEMORY.md is 18.3KB (>17KB load cap) = hygiene debt.
+
+# Historical - 2026-07-31 (window_02 COUPLED_DESCENT: NEW BEST d_seg 0.0040519 → UNDRIV alarm adjudicated CONTINUE → window_03)
 
 > **WINDOW_02 (ep665→805, 2.03h): THE CAMPAIGN'S FIRST GENUINE COUPLED DESCENT.** d_seg
 > 0.0042778→**0.0040519** (Δ −0.000226 ≈ −0.0226 S seg-axis; NEW BEST realized, beats rung-1
