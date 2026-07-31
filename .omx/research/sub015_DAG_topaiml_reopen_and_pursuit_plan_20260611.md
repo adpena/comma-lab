@@ -25791,3 +25791,49 @@ RETIRED) + non-additive-pools LAW.
   resumable) → $0 analyzer verdict. F1-F3 pre-mortem compliance documented.
 
 pointer 0.1910828242 [contest-CPU] UNMOVED  ·  [no-triality] [p0-ledger-ok]
+
+
+## FEED-nv1 (2026-07-30) — THE HULL MOVE authority-confirm (#796): null-snap NEGATIVE on additive S; ×1.9 was a product-c artifact
+
+Memo `.omx/research/ddm_nv1_hull_move_20260730.md`. All [macOS-CPU advisory]; score_claim=False; pointer
+0.1910828242 [contest-CPU] UNMOVED (ran the owed authority; result is a negative, no bank). STORES-CONSULTED:
+gc10 (2647b1f080) row-1/op-r5/op-r6/F2/sketch-1 · zb1 (d3ff40bad5) S2 curve+QA80 field+438bc022 archive ·
+ps1 pose stream (carried unchanged) · product_c (VERIFIED on B) · r7 SMEVR coder · tr1 runtime · gt_n600.
+
+- **R0b coder custody PASSED (op-r 5, closed-form-CDF trap check):** base token stream re-derived through
+  the REAL SMEVR coder = **255,907 B EXACTLY** (drift 0.0); compiled base archive sha **438bc022fcd835ab…**
+  byte-identical to zb1's dress rehearsal. The 117KB curve is a real coder byte count.
+- **R1 rate curve (real coder) reproduces zb1** within 0.4–1.7% (thr1≈q50 193,455B; thr2≈q70 knee 116,611B;
+  thr3≈q90 67,898B; thr4 34,619B). Rungs = snap deltas with circular residual |signed|≤thr → temporal mode.
+- **R2 DISTORTION AUTHORITY (the owed Contrarian column) MEASURED n600** through the real receiver+R+uint8+
+  frozen-CPU-SegNet path (base parity 1.74e-10 vs zb1 0.005114475). **FAILS Δd_seg≤2e-4 at EVERY depth:**
+  thr1 +5.78e-4 (2.9×) · thr2 +3.33e-3 (16.6×, the 117KB knee, d_seg 0.008448) · thr3 +8.82e-3 · thr4 +1.61e-2.
+- **DECISIVE REFRAME — c(product) ≠ S(additive score):** product_c DROPS 0.0883→0.0538 (×1.64) — a
+  MULTIPLICATIVE ARTIFACT (seg,rate<1). On the ADDITIVE contest S the snap **LOSES at every depth**: ΔS
+  +0.0163(thr1) → +1.46(thr4); unfavorable exchange 1.39×→10.9×. gc10 row-1's "at d_seg≤0.0053 ⇒ c 0.044-0.048"
+  had ~right arithmetic but a FALSIFIED premise (d_seg rises to 0.008448 at 117KB). Row-1 falsifier FIRES and
+  "re-derive shallower" cannot save it (thr1 already fails). Confirms zb1 §3 (B past the token-price knee).
+- **Seg-aware / band-lemma reformulation (gc10 sketch-1, QA80-field-gated) MEASURED-DEAD, DOMINATED:** snap
+  safest-25% cells → +1.74e-3 (8.7× bar), tokens 206,956B; global-thr1 dominates on BOTH rate (193k<207k)
+  AND d_seg (5.78e-4<1.74e-3). Magnitude-ranking beats cell-safety-ranking; field-gate adds nothing.
+- **ROOT MECHANISM (MEASURED):** reclaimable rate is CO-LOCATED with seg-risk — corr(|delta|-mass, QA80
+  flip-distance) = **−0.5126** (GT-margin staleness-free cross-check −0.2481, same sign). Safest 50% of cells
+  holds only 41.2% of reclaimable mass; safest 25% only 18.1%. The bytes are in the dynamic/boundary cells
+  where the flips are — no encode-side admission escapes it. R0a: field direction robust (GT-margin agrees).
+- **LEDGER DISPOSITIONS:** **S2 ν-audit → authority-confirm DONE-NEGATIVE** (rate-side curve real but the
+  distortion column KILLS the free-reclaim premise); **G4 130KB → rate-reachable but NOT d_seg-safe / S-
+  NEGATIVE** (feasible on bytes, infeasible on score); **gc10 op-routable 1 (AUTHORITY-ν CONFIRM + BANK) →
+  CLOSED, bank EMPTY**; op-r 5 custody PASSED; op-r 6 QA80 staleness satisfied (direction). verdict_scope:
+  FORMULATION (two admissions closed) on INSTANCE B-control; nullity FAMILY stays live with a measured
+  co-location mechanism predicting family-wide difficulty on any seg-native parent at this operating point.
+- **REFRAMES THE burn-3 FORK:** (a) "reclaim S2 free rate" is DEAD as a standalone precondition — rate is
+  not free; it must be FUSED in-loop as the delta group-sparsity force (F2/ax1 lever, now the PRIMARY not
+  fallback mechanism), so one descent finds low-d_seg AND delta-sparse together. Post-hoc export snap is a
+  net-S loss with nothing to bank. Schmidhuber-LEAD "row-1 highest Δlog-c/hr" retracted at score level (it
+  was Δlog-c; c≠S). Pool-A race (pa1b) is unaffected as the hull-curvature instrument.
+- **REFORMULATION QUEUE:** (1) [→burn-3] post-snap re-continuation / multiplicative-composition thesis (F2:
+  warm-start un-snapped + delta group-sparsity from step 0; the burn must re-earn ALL snap-cost d_seg + more
+  at the snapped rate — co-location makes it doubtful, but it is the burn's to measure); (2) snap on a
+  lower-rate/pose-conditioned parent ($0 rate pre-screen possible); (3) per-class snap (deprioritized).
+
+pointer 0.1910828242 [contest-CPU] UNMOVED  ·  [no-triality] [p0-ledger-ok]
