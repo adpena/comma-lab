@@ -513,6 +513,138 @@ def lever_telemetry_v9_port(state: str = "on") -> Lever:
               "no falsifier — telemetry never moves S)")
 
 
+def lever_reset_operator(arm: str = "B") -> Lever:
+    """ddm_bp1 (#824) BOUNDARY RESET RACE arm selector — the DSL half of the
+    ``TR1ResetOperatorWiring`` charter (grade: BUILT-ELSEWHERE-UNWIRED-HERE).
+
+    The trainer zeroes BOTH Adam moments at every window boundary (fresh ``optim.Adam``; all six
+    ``save_checkpoint`` sites pass ``opt_state_flat={}``), i.e. ``tac.optimization.reset_operator``
+    knobs are pinned at ``what='both', to='zero', structure='uniform'``.  The one free knob is
+    ``bias_correction``, so exactly two pre-registered arms are REACHABLE without new plumbing:
+
+      * ``'B'``  — ``ARM_B_ZERO_RESET``, ``bias_correction=False``.  This IS MLX's own
+        ``optim.Adam`` default (VERIFIED from the installed signature), so the control arm trains
+        BIT-IDENTICALLY to every pre-#824 run.
+      * ``'Bprime'`` — ``ARM_BPRIME_BIAS_CORRECTED``, ``bias_correction=True``.  Removes the
+        post-reset over-step ``eta(t)=(1-b1^t)/sqrt(1-b2^t)`` (eta(1)=3.162, max eta(12)=6.569),
+        worth 1212.57 excess sign-steps = 16.168 epochs of free displacement per boundary at
+        75 steps/epoch, 81.7% of it inside the first 13 epochs (MEASURED at the converged
+        n=20k sum; the reset_operator docstring's ~1203/~16.0/82% is a shorter-window read of
+        the same quantity).
+
+    Arms A and C are OUT OF SCOPE for #824 by MEASURED verdict, not by preference:
+    ``ResetOperatorConfig.requires_persistence`` is True for both, and the persistence plumbing is
+    doubly dead — ``opt_flat`` has ONE repo-wide hit (the ``load_checkpoint`` return) that nothing
+    reads, and nothing writes it.  C is a BUILD, not a port; it must not gate this race.
+
+    Falsifier (pre-registered): if the B' arm's boundary jump matches B's within the gate's own
+    single-pixel resolution, the eta(t) impulse is NOT the mechanism behind the measured restart
+    descent (R1-C: the two restarts sum 168.6% of the ep644->945 net while the 61 training
+    intervals sum -68.6%; p~=0.0225 on the raw basis that matches that effect size) and the
+    remaining boundary legs lead instead.  There are exactly TWO other legs, both MEASURED
+    (round-2 correction): the Adam MOMENT reset itself (which bias_correction rescales but does
+    not remove) and the EMA DECAY-VALUE change.  The EMA SHADOW is NOT re-anchored — the trainer
+    loads it from the checkpoint (``ema = st['ema']``), so it is continuous across boundaries;
+    do not cite a shadow re-anchor.  Separating those two needs arm C plus a decay-hold arm, NOT
+    a bigger B' window.  A COLLAPSED jump under B' also means a boundary-state endpoint pick is
+    NOT safe.
+
+    SEAL-BLOCKING INVARIANT (round-2, MEASURED at ``train_tr1`` ``global_step = 0 if resume_from
+    is None else ema_warmup_updates`` feeding ``gate_basis = 'ema_shadow' if global_step >=
+    ema_warmup_updates else 'live_ema_warmup'``): a RESUMED run reports the ``ema_shadow`` basis
+    from its first post-resume gate, while a FRESH run reads ``live_ema_warmup`` for its first
+    U/2 updates.  **A fresh arm and a resumed arm are not read on the same instrument and their
+    comparison is void.**  Both arms must be resumed from the SAME checkpoint, or both fresh;
+    :func:`bp1_boundary_reset_race_program` takes a required ``resume_from`` shared by both, and
+    the ticket builder refuses if the two arms' resume targets differ.
+    """
+    if arm not in ("B", "Bprime"):
+        raise ValueError("reachable tr1 reset arms are B|Bprime; A and C require optimizer-state "
+                         "persistence, which this trainer does not have (see docstring)")
+    return Lever(
+        name=f"tr1_reset_arm_{arm}",
+        overrides={"--adam-bias-correction": "on" if arm == "Bprime" else "off"},
+        notes="#824 reset-race arm selector (tac.optimization.reset_operator ARM_B_ZERO_RESET / "
+              "ARM_BPRIME_BIAS_CORRECTED); on|off rather than store_true so the compiled argv "
+              "carries a VALUED flag (the stray-True seal break); falsifier in the factory "
+              "docstring — jump collapses => the eta(t) impulse WAS the mechanism",
+        constant_manifest={
+            "--adam-bias-correction": {
+                "value": "on" if arm == "Bprime" else "off",
+                "rung": "DERIVED (closed form, independently MEASURED against the real optimizer)",
+                "provenance": "eta(t)=(1-b1^t)/sqrt(1-b2^t) at MLX Adam's default betas "
+                              "[0.9, 0.999]; tac.optimization.reset_operator."
+                              "effective_lr_multiplier / cumulative_excess_sign_steps. Verified "
+                              "empirically: optim.Adam(lr) == optim.Adam(lr, "
+                              "bias_correction=False) step-for-step, and the corrected/"
+                              "uncorrected ratio equals 1/eta(t) to 6 digits "
+                              "(test_ddm_bp1_boundary_reset_race.py). Not a bare switch"},
+        })
+
+
+def lever_boundary_probe(state: str = "on") -> Lever:
+    """ddm_bp1 (#824) BOUNDARY INSTRUMENT — the positive control + fail-closed EMA-basis guard.
+
+    OBSERVABILITY-as-Lever (the telemetry_v9_port precedent): args-only in the trainer, never
+    ``TR1Config``, so trained/checkpoint bytes are flag-invariant and BOTH arms set it identically
+    => it cannot confound the race.  ``'on'`` adds
+
+      (a) a POSITIVE-CONTROL re-gate at the resume epoch BEFORE any training — the restored state
+          must reproduce the parent checkpoint's last realized-gate reading to within HALF a
+          single-pixel quantum (``0.5/(n_gate*384*512)``, DERIVED, not a bare tolerance).  If the
+          canary is invisible the instrument is untrusted and NO #824 verdict is admissible
+          (CLAUDE.md L3 verdict-clearance); and
+      (b) a FAIL-CLOSED refusal when the parent and child resolved DIFFERENT ``ema_decay``.  The
+          realized gate reads the EMA SHADOW, and ``derive_ema_decay`` consumes
+          ``epochs*(num_pairs//batch_pairs)`` — so an ``--epochs`` change ALONE moves the
+          shadow's averaging length underneath the measurement (the burn ran U=49,950/60,450/
+          70,950 => a different decay at EVERY boundary; gd1: "the shadow lengthens
+          166->202->236 ep").  Pair this lever with :func:`lever_ema_decay` so the basis is pinned.
+
+    The FREE half of the instrument (per-gate interval decomposition + the ``boundary_jump`` row)
+    is NOT behind this flag: it is derived from values already computed, so per the "score-neutral
+    observability is not gate-able" rule it defaults ON.  Only the re-gate costs compute.
+    No falsifier — read-only instrumentation never moves S.
+    """
+    if state not in ("off", "on"):
+        raise ValueError("boundary_probe state is off|on")
+    return Lever(
+        name=f"tr1_boundary_probe_{state}",
+        overrides={"--boundary-probe": state},
+        notes="#824 boundary instrument: resume positive-control re-gate + fail-closed EMA-basis "
+              "guard; identical in both arms => never a confound; read-only => no falsifier")
+
+
+def bp1_boundary_reset_race_program(
+    arm: str, out_dir: str, resume_from: str, *, ema_decay: float,
+    epochs: int, max_wall_minutes: float, parent_levers: tuple[Lever, ...],
+    gt_cache: str | None = None) -> TR1RendererProgramV1:
+    """#824 arm A (``arm='B'``) vs arm B' (``arm='Bprime'``): BYTE-IDENTICAL except one flag.
+
+    Built by COMPOSING the parent burn's own sealed levers (``parent_levers``, taken verbatim from
+    the burn-4 ticket the arms resume from) with exactly three additions, all identical across the
+    two arms except the first flag's value:
+
+      1. :func:`lever_reset_operator` — the ONE flag that differs (``--adam-bias-correction``).
+      2. :func:`lever_ema_decay` — pins ``--ema-decay`` EXPLICITLY so ``derive_ema_decay`` is
+         bypassed on both arms (the R1-C third-reset confound: the derivation consumes
+         ``--epochs`` and would move the gate's own EMA basis between arms or windows).
+      3. :func:`lever_boundary_probe` — the instrument, on in both arms.
+
+    ``lever_window`` is re-emitted from ``epochs``/``max_wall_minutes`` so the two arms also carry
+    IDENTICAL geometry — belt and braces with (2): either alone fixes the basis, both together
+    make the fix independent of which mechanism a reader trusts.
+    """
+    superseded = ("tr1_window_ep", "tr1_ema_decay", "tr1_boundary_probe", "tr1_reset_arm")
+    levers = [lv for lv in parent_levers if not lv.name.startswith(superseded)]
+    levers.append(lever_window(epochs, max_wall_minutes, batch_pairs=8, lr=2e-3))
+    levers.append(lever_ema_decay(ema_decay))
+    levers.append(lever_boundary_probe("on"))
+    levers.append(lever_reset_operator(arm))
+    return TR1RendererProgramV1(levers=tuple(levers), num_pairs=600, out_dir=out_dir,
+                                gt_cache=gt_cache, resume_from=resume_from, full_confirm=True)
+
+
 def qa24_composed_burn_program(variant: str, out_dir: str, mask_path: str, *,
                                epochs: int = 400, max_wall_minutes: float = 480.0,
                                w_rate: float = 0.05, rate_model: str = "entropy",

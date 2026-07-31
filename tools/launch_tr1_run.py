@@ -36,11 +36,60 @@ MEASURED_T2_PEAK_RSS_GIB = 12.8  # tb1 memo T2: /usr/bin/time -l at the real con
 SAFETY_FACTOR = 2.0
 SLOT_PATTERNS = ("train_tr1_partition_renderer", "train_levelset_witness",
                  "train_witness_realized")
+# G4 holds the ONE-n600-job slot. A holder is a PYTHON PROCESS EXECUTING one of these scripts —
+# not any process whose command line happens to mention one (see slot_holders).
+TRAINER_BASENAMES = frozenset({
+    "train_tr1_partition_renderer_mlx.py",
+    "train_levelset_witness_realized_through_R_mlx.py",
+    "train_witness_realized_through_R_mlx.py",
+})
 
 
 def refuse(msg: str) -> int:
     print(f"REFUSE: {msg}", file=sys.stderr)
     return 4
+
+
+def _is_python_exe(tok: str) -> bool:
+    return Path(tok).name.startswith("python")
+
+
+def slot_holders(ps_text: str, self_pid: int) -> tuple[list[str], list[str]]:
+    """Split ``ps -axo pid,command`` output into (real slot holders, mentions-but-not-holders).
+
+    BUG FIXED HERE (found 2026-07-31 during the #824 dry-run, and it would have blocked the fire):
+    the previous test was ``any(pattern in line)``, so ANY process whose command line merely
+    MENTIONED a trainer held the slot. A background
+    ``rtk grep -rln train_tr1_partition_renderer_mlx|...`` (pids 6443/6445/6447) produced a
+    spurious REFUSE. A guard that fires when nothing is wrong gets routed around, which is how a
+    real guard dies.
+
+    A holder is now: ``argv[0]`` is a python interpreter AND some later token's BASENAME is one of
+    :data:`TRAINER_BASENAMES`. That rejects greps, editors and shells (wrong ``argv[0]``) and the
+    launcher itself (right ``argv[0]``, wrong script), while still catching the detached launch
+    form (``python .../train_tr1_partition_renderer_mlx.py --num-pairs 600 ...``).
+
+    The second list is NOT discarded: every line that mentions a trainer but was not counted is
+    reported, so a genuinely-odd launch form (a wrapper that is not a python interpreter) shows up
+    LOUDLY as a near-miss instead of being silently un-detected. Fail-open is only acceptable when
+    it is visible.
+    """
+    holders: list[str] = []
+    mentions: list[str] = []
+    for ln in ps_text.splitlines():
+        parts = ln.split()
+        if len(parts) < 2 or not parts[0].isdigit():
+            continue                      # header / malformed
+        if int(parts[0]) == self_pid or "launch_tr1_run" in ln:
+            continue
+        argv = parts[1:]
+        is_holder = (_is_python_exe(argv[0])
+                     and any(Path(t).name in TRAINER_BASENAMES for t in argv[1:]))
+        if is_holder:
+            holders.append(ln)
+        elif any(p in ln for p in SLOT_PATTERNS):
+            mentions.append(ln)
+    return holders, mentions
 
 
 def venv_custody_gate0(cwd: Path) -> str | None:
@@ -175,14 +224,18 @@ def main() -> int:
                       f"{need:.1f} GiB (= measured T2 peak {MEASURED_T2_PEAK_RSS_GIB} "
                       f"GiB x {SAFETY_FACTOR})")
 
-    # G4 — scorer slot.
+    # G4 — scorer slot (ONE n600 job at a time).
     ps = subprocess.run(["ps", "-axo", "pid,command"], capture_output=True,
                         text=True).stdout
-    holders = [ln for ln in ps.splitlines()
-               if any(p in ln for p in SLOT_PATTERNS) and "launch_tr1_run" not in ln]
+    holders, mentions = slot_holders(ps, os.getpid())
     if holders:
         return refuse("scorer slot busy (ONE n600 job at a time):\n" +
-                      "\n".join(holders[:3]))
+                      "\n".join(h[:200] for h in holders[:3]))
+    if mentions:
+        # LOUD near-miss: not counted as a holder, but say so rather than fail open in silence.
+        print(f"NOTE: {len(mentions)} process(es) mention a trainer but are not python trainer "
+              f"processes (not slot holders):\n" +
+              "\n".join(m[:160] for m in mentions[:3]), file=sys.stderr)
 
     # G5 — detached launch + receipt.
     args.out_dir.mkdir(parents=True, exist_ok=True)
@@ -206,7 +259,8 @@ def main() -> int:
         "gates": {"venv_custody_gate0": "PASS", "seal_freshness": "PASS",
                   "import_custody": str(tac_file),
                   "memory_free_gib": round(free_gib, 1),
-                  "memory_floor_gib": round(need, 1), "scorer_slot": "FREE"},
+                  "memory_floor_gib": round(need, 1), "scorer_slot": "FREE",
+                  "scorer_slot_near_misses": len(mentions)},
         "score_claim": False, "launched_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ",
                                                             time.gmtime()),
     }

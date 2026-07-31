@@ -101,6 +101,16 @@ A1_SMOOTH_DROP_REL = 0.02      # smooth loss fell >= 2% since previous gate ...
 A1_REALIZED_DROP_REL = 0.005   # ... while realized gate d_seg fell < 0.5%  -> ALARM
 A1_CONSECUTIVE_REFUSE = 2      # this many consecutive alarms => stage-exit REFUSE
 
+# ---- ddm_bp1 (#824) boundary reset race ------------------------------------------------
+# MLX ``optim.Adam`` betas default (VERIFIED from the installed signature, not recalled:
+# ``Adam(learning_rate, betas=[0.9, 0.999], eps=1e-08, bias_correction=False)``). This
+# trainer never overrides betas, so beta2 is always 0.999 — which is exactly the value at
+# which ``_adam_bias_correction_for`` passes ``reference_semantics`` through verbatim.
+RESET_ADAM_BETAS: tuple[float, float] = (0.9, 0.999)
+# ``sum_t (eta(t) - 1)`` converges with time constant 1/(1-beta2) = 1000 steps; 20k steps is
+# 20 time constants => the reported impulse is the converged value, not a window artifact.
+BOUNDARY_IMPULSE_CONVERGENCE_STEPS = 20_000
+
 # "Off is a tracked queue, never a forgotten default": named levers DESIGNED here but
 # NOT half-wired — each carries its receipt and its activation state (never-fired).
 DUTY_TO_MEASURE: tuple[dict[str, str], ...] = (
@@ -313,6 +323,17 @@ class TR1Config:
     lane_guard_margin_floor_weight: float = 0.0   # 0.0 => margin-floor emphasis OFF
     lane_guard_lambda_init: float = 0.0   # warm-start dual (b4s rollback+raise-lambda path:
     # state resets at relaunch; the supervisor re-fires with the last lambda + one step)
+    # ---- ddm_bp1 (#824) BOUNDARY RESET RACE — arm selector (default = arm B incumbent) ----
+    adam_bias_correction: bool = False    # gc15 §7 / tac.optimization.reset_operator: False =
+    # ARM_B_ZERO_RESET (MLX's own Adam default => arm A/control trains BIT-IDENTICALLY to every
+    # pre-#824 run); True = ARM_BPRIME_BIAS_CORRECTED. MEASURED (this module's test, real MLX):
+    # optim.Adam(lr) and optim.Adam(lr, bias_correction=False) produce IDENTICAL updates, and
+    # the corrected/uncorrected step ratio is exactly 1/eta(t), eta(t)=(1-b1^t)/sqrt(1-b2^t) —
+    # eta(1)=3.1623, max eta(12)=6.5685, and 1212.57 excess sign-steps = 16.168 epochs at 75
+    # steps/epoch (MEASURED here at n=20k = 20 time constants, i.e. the CONVERGED sum; the
+    # reset_operator docstring's ~1203/~16.0 is the same quantity over a shorter window)
+    # of free displacement per moment reset. This field IS in the config identity (it changes
+    # training), unlike the read-only telemetry/probe flags which are args-only.
 
     @property
     def grid_h(self) -> int:
@@ -984,6 +1005,130 @@ def a1_smooth_excluding_delta_penalty(ep_loss: float, engaged: bool, weight: flo
     return float(ep_loss)
 
 
+def reset_arm_for(cfg: TR1Config):
+    """The pre-registered ``tac.optimization.reset_operator`` arm this config selects (#824).
+
+    Closes the ``TR1ResetOperatorWiring`` charter's BUILT-ELSEWHERE-UNWIRED-HERE grade: the
+    operator module was built + tested with zero trainer importers.  This trainer zeroes both
+    Adam moments at every boundary (fresh ``optim.Adam``, all six ``save_checkpoint`` sites pass
+    ``opt_state_flat={}``), which is exactly ``what='both', to='zero', structure='uniform'`` —
+    so the ONLY free knob here is ``bias_correction``, and the two reachable arms are B and B'.
+    Arms A and C need ``requires_persistence`` (opt-state save/load) and are OUT OF SCOPE for
+    #824 by MEASURED verdict: ``opt_flat`` has one repo-wide hit (the ``load_checkpoint``
+    return) and nothing reads it, and nothing writes it — C is a BUILD, not a port.
+    """
+    from tac.optimization.reset_operator import (
+        ARM_B_ZERO_RESET,
+        ARM_BPRIME_BIAS_CORRECTED,
+    )
+
+    return ARM_BPRIME_BIAS_CORRECTED if cfg.adam_bias_correction else ARM_B_ZERO_RESET
+
+
+def a1_alarm_summary(gate_rows: list[dict[str, Any]]) -> dict[str, Any]:
+    """First-class summary of ``A1_REALIZATION_GAP_ALARM`` firings (#824 round-2, MAIN).
+
+    The alarm's semantics — smooth loss fell >=2% while realized d_seg fell <0.5% — are the
+    restart decomposition's claim arriving through a COMPLETELY DIFFERENT channel, which is what
+    makes it strong: it was built for another job.  It fired **6 times** in the burn (ep649/659,
+    ep674/714, ep814/899 — exactly 2 per window, every window) and the b4s supervisor never
+    greps it (``grep -c a1_alarm`` = 0); the decision JSONs propagate only ``final_gate_a1``, and
+    none of the six was at a final gate, so **all six were invisible to every decision record**.
+    The in-trainer guard (``A1_CONSECUTIVE_REFUSE``) is live and correctly did not fire — no two
+    were consecutive — which is exactly why silence there was mistaken for absence.
+
+    Pure over the gate rows the caller already holds; emitted per window and on the boundary row.
+    Pre-registered read: if B' collapses the boundary jump, this count should FALL too.
+    """
+    fired = [r for r in gate_rows if r.get("a1_alarm")]
+    return {
+        "a1_alarm_count": len(fired),
+        "a1_alarm_epochs": [int(r["epoch"]) for r in fired if r.get("epoch") is not None],
+        "a1_classifications": sorted({str(r.get("a1_classification")) for r in gate_rows}),
+        "gates_seen": len(gate_rows),
+        "note": "corroborating channel for #824: smooth fell >=2% while realized fell <0.5%. "
+                "6 firings in the burn were invisible to every decision record (only "
+                "final_gate_a1 was propagated and none was at a final gate)",
+    }
+
+
+def boundary_jump_row(parent_tail: list[dict[str, Any]], parent_ema_decay: float | None,
+                      child_ema_decay: float, resume_epoch: int,
+                      gate_row: dict[str, Any], arm: str) -> dict[str, Any] | None:
+    """The #824 BOUNDARY-JUMP typed row: the resume interval, isolated (pure; $0 unit-testable).
+
+    WHY this and not an end-state read-out (MEASURED, R1-C, 64 gate readings → 63 intervals):
+    the two window-restart intervals sum −1.85083e-4 = **168.6%** of the ep644→945 net while the
+    61 TRAINING intervals sum **+7.53e-5 = −68.6%** — training net-REGRESSED and the restarts
+    paid for the descent.  The restarts rank 2nd and 6th most-negative of 63; on the RAW
+    telescoping basis that matches the 168.6% effect size, exact enumeration of all C(63,2)=1953
+    pairs gives p=22/1953=0.0113, Bonferroni ×2 ⇒ **p≈0.0225** (the per-epoch normalization gives
+    0.0056/0.011; the claim survives both ways, but 0.0225 is the figure that pairs with the
+    quoted effect size — cite THAT).  Re-based on the corrected seg-only −1.96949e-4 the restart
+    is **+34.6%** of the descent.  Note the split gc15's mechanism actually PREDICTED —
+    boundary+17 epochs, the impulse window — **FAILED** (d_seg ROSE there): the significant window
+    is NARROWER than the theory, which is itself a constraint on any mechanism claim.  An
+    end-state readout averages that one short interval into ~140 epochs and dilutes it away.
+
+    ``parent_tail`` is the parent checkpoint's ``meta['telemetry_tail']`` (its last ≤4 gate rows).
+    Returns None when the parent carries no usable gate anchor (fail-open on ABSENCE of history,
+    never on a DRIFT — drift is the ``ema_basis_held`` flag below, which the caller fails closed on).
+
+    ``ema_basis_held`` is the load-bearing caveat: the gate reads the EMA shadow, so if the parent
+    and child resolved DIFFERENT ``ema_decay`` the shadow's own averaging length moved underneath
+    the measurement and the two readings are not commensurable.  ``derive_ema_decay`` consumes
+    ``epochs*(num_pairs//batch_pairs)``, so an ``--epochs`` change alone moves it (the burn ran
+    U=49,950/60,450/70,950 ⇒ a different decay at EVERY boundary).  Held ⇔ both arms pin the same
+    explicit ``--ema-decay`` (or run identical geometry).
+    """
+    anchors = [r for r in (parent_tail or [])
+               if isinstance(r, dict) and r.get("realized_gate_dseg_mean") is not None
+               and r.get("epoch") is not None]
+    if not anchors or gate_row.get("realized_gate_dseg_mean") is None:
+        return None
+    parent = max(anchors, key=lambda r: int(r["epoch"]))
+    p_epoch, p_dseg = int(parent["epoch"]), float(parent["realized_gate_dseg_mean"])
+    c_epoch, c_dseg = int(gate_row["epoch"]), float(gate_row["realized_gate_dseg_mean"])
+    span = c_epoch - p_epoch
+    held = (parent_ema_decay is not None
+            and abs(float(parent_ema_decay) - float(child_ema_decay)) <= 1e-12)
+    return {
+        "event": "boundary_jump", "arm": arm,
+        "parent_gate_epoch": p_epoch, "parent_gate_dseg": p_dseg,
+        "parent_gate_basis": parent.get("gate_params"),
+        "first_gate_epoch": c_epoch, "first_gate_dseg": c_dseg,
+        "first_gate_basis": gate_row.get("gate_params"),
+        "resume_epoch": int(resume_epoch),
+        "boundary_span_epochs": span,
+        "boundary_dseg_delta": c_dseg - p_dseg,
+        "boundary_dseg_per_epoch": (c_dseg - p_dseg) / span if span > 0 else None,
+        "ema_basis_held": bool(held),
+        "parent_ema_decay": (None if parent_ema_decay is None else float(parent_ema_decay)),
+        "child_ema_decay": float(child_ema_decay),
+        "score_claim": False, "evidence_axis": "[macOS-CPU/MLX advisory]",
+        "caveat": "ADVISORY realized-argmax gate on the fd2 gate subset, NOT an exact-eval row; "
+                  "commensurable with the parent reading ONLY when ema_basis_held is true",
+    }
+
+
+def gate_interval_fields(prev: dict[str, Any] | None,
+                         cur: dict[str, Any]) -> dict[str, Any]:
+    """Per-gate-INTERVAL decomposition fields (#824; pure).  Emitting the interval at write time
+    is what makes the 63-interval analysis reproducible from telemetry alone instead of by
+    post-hoc pairing — the reconstruction step that hid the restart effect for a whole burn."""
+    if prev is None:
+        return {"interval_epochs": None, "interval_dseg_delta": None,
+                "interval_dseg_per_epoch": None}
+    try:
+        span = int(cur["epoch"]) - int(prev["epoch"])
+        d = float(cur["realized_gate_dseg_mean"]) - float(prev["realized_gate_dseg_mean"])
+    except (KeyError, TypeError, ValueError):
+        return {"interval_epochs": None, "interval_dseg_delta": None,
+                "interval_dseg_per_epoch": None}
+    return {"interval_epochs": span, "interval_dseg_delta": d,
+            "interval_dseg_per_epoch": (d / span if span > 0 else None)}
+
+
 def a1_adjudicate(prev: dict[str, Any] | None, cur: dict[str, Any],
                   smooth_prev: float | None, smooth_cur: float) -> dict[str, Any]:
     """Typed A1 verdict per gate: coupled descent vs realization gap (never silent)."""
@@ -1215,7 +1360,27 @@ def build_argparser() -> argparse.ArgumentParser:
     ap.add_argument("--epochs", type=int, default=60)
     ap.add_argument("--gate-every", type=int, default=5)
     ap.add_argument("--ema-decay", type=float, default=None,
-                    help="explicit override; default = DERIVED from run geometry (LawRef)")
+                    help="explicit override; default = DERIVED from run geometry (LawRef). "
+                         "PIN THIS across A/B arms: derive_ema_decay consumes total_updates = "
+                         "epochs*(num_pairs//batch_pairs), so an --epochs change silently moves "
+                         "the EMA shadow length the realized gate READS (#824 R1-C confound)")
+    # ---- ddm_bp1 (#824) boundary reset race: arm selector + boundary instrument ----
+    ap.add_argument("--adam-bias-correction", default="off", choices=("off", "on"),
+                    help="#824 reset-race ARM SELECTOR (tac.optimization.reset_operator): 'off' "
+                         "= ARM_B_ZERO_RESET (MLX Adam's own default => bit-identical to every "
+                         "pre-#824 run); 'on' = ARM_BPRIME_BIAS_CORRECTED (bias_correction=True "
+                         "=> the post-reset step is lr*sign(g), removing the eta(t) impulse "
+                         "worth 1212.57 excess sign-steps = 16.168 epochs per boundary at 75 "
+                         "steps/epoch, 81.7% of it inside the first 13 epochs). "
+                         "on|off is used (not store_true) so the DSL compiles a VALUED flag")
+    ap.add_argument("--boundary-probe", default="off", choices=("off", "on"),
+                    help="#824 boundary instrument (READ-ONLY; args-only, never TR1Config => "
+                         "trained bytes flag-invariant). 'on' adds (a) a POSITIVE-CONTROL re-gate "
+                         "at the resume epoch BEFORE any training (must reproduce the parent "
+                         "checkpoint's last gate; if it does not, the instrument is untrusted and "
+                         "no verdict is admissible) and (b) a FAIL-CLOSED refusal when the parent "
+                         "and child EMA decay differ (the measuring instrument's own averaging "
+                         "length must not drift under the measurement). Costs ONE extra gate")
     ap.add_argument("--gt-cache", type=Path, default=Path(DEFAULT_GT_CACHE))
     ap.add_argument("--out-dir", type=Path, required=True)
     ap.add_argument("--resume-from", type=Path, default=None)
@@ -1369,7 +1534,8 @@ def main() -> int:
         load_mlx_distortion_scorer_adapter_from_upstream,
     )
 
-    total_updates = args.epochs * max(1, args.num_pairs // max(1, args.batch_pairs))
+    steps_per_epoch = max(1, args.num_pairs // max(1, args.batch_pairs))
+    total_updates = args.epochs * steps_per_epoch
     if args.ema_decay is not None:
         ema_decay, ema_prov = float(args.ema_decay), f"EXPLICIT --ema-decay {args.ema_decay}"
     else:
@@ -1418,6 +1584,7 @@ def main() -> int:
         lane_guard_born_weight=args.lane_guard_born_weight,
         lane_guard_margin_floor_weight=args.lane_guard_margin_floor_weight,
         lane_guard_lambda_init=args.lane_guard_lambda_init,
+        adam_bias_correction=(args.adam_bias_correction == "on"),
     )
     (out_dir / "tr1_config.json").write_text(cfg.canonical_json() + "\n")
     telemetry_path = out_dir / "telemetry.jsonl"
@@ -1540,7 +1707,45 @@ def main() -> int:
         # law #517/#518); the EMA shadow initializes from the post-projection params
         # (fresh warmup window => live-basis gates until W, same as the control).
 
-    optimizer = optim.Adam(learning_rate=cfg.lr)
+    # ddm_bp1 (#824) reset-race arm selector. REUSES the levelset trainer's already-unit-tested
+    # gate (never reimplemented): _adam_bias_correction_for(beta2, reference_semantics=) returns
+    # `reference_semantics` verbatim at MLX's default beta2=0.999, which is the only beta2 this
+    # trainer uses (optim.Adam betas default [0.9, 0.999]). arm B => False == MLX's own default
+    # => optimizer construction and every trained byte are IDENTICAL to a pre-#824 run (MEASURED
+    # against the real optimizer in test_ddm_bp1_boundary_reset_race.py, not asserted).
+    from experiments.train_levelset_witness_realized_through_R_mlx import (
+        _adam_bias_correction_for,
+    )
+    from tac.optimization.reset_operator import boundary_impulse_epochs, resolve_arm_name
+
+    _reset_arm = reset_arm_for(cfg)
+    _bias_correction = _adam_bias_correction_for(
+        RESET_ADAM_BETAS[1], reference_semantics=cfg.adam_bias_correction)
+    if bool(_bias_correction) != bool(cfg.adam_bias_correction):  # defensive: gate must be exact
+        raise SystemExit(
+            f"#824 arm-selector contract broken: _adam_bias_correction_for returned "
+            f"{_bias_correction} for adam_bias_correction={cfg.adam_bias_correction}")
+    optimizer = optim.Adam(learning_rate=cfg.lr, bias_correction=_bias_correction)
+    tlog({"event": "optimizer_arm",
+          "arm": resolve_arm_name(_reset_arm), "reset_operator": _reset_arm.describe(),
+          "bias_correction": bool(_bias_correction), "betas": list(RESET_ADAM_BETAS),
+          "lr": cfg.lr, "steps_per_epoch": steps_per_epoch,
+          "boundary_impulse_epochs_per_reset": boundary_impulse_epochs(
+              BOUNDARY_IMPULSE_CONVERGENCE_STEPS, steps_per_epoch, RESET_ADAM_BETAS),
+          "note": "arm B (bias_correction False) IS MLX's Adam default => trained bytes "
+                  "identical to every pre-#824 run; arm B' removes the eta(t) reset impulse",
+          "score_claim": False})
+
+    # ddm_bp1 (#824) boundary instrument state (args-only, never TR1Config => trained bytes are
+    # flag-invariant; the telemetry_v9_port precedent). Interval decomposition + the boundary_jump
+    # row are FREE (derived from values already computed) and therefore default ON per the
+    # "score-neutral observability is not gate-able" rule; only the positive-control RE-GATE costs
+    # compute, so only THAT is behind --boundary-probe, and both arms set it identically.
+    boundary_probe = (args.boundary_probe == "on")
+    boundary_parent_tail: list[dict[str, Any]] = []
+    boundary_parent_ema_decay: float | None = None
+    boundary_ema_held = True          # a fresh (non-resume) run has no basis to drift from
+    boundary_jump_emitted = False
 
     ema: dict[str, Any] = {k: mx.array(v) for k, v in tree_flatten(model.trainable_parameters())}
     start_epoch = 0
@@ -1570,11 +1775,43 @@ def main() -> int:
                 and cfg.delta_sparsity_engage == "after_base_stability"
                 and stage != "seg_trunk_ce"):
             model._delta_sparsity_engaged = True
+        # ddm_bp1 (#824): the BOUNDARY ANCHOR — the parent's last realized-gate reading and the
+        # ema_decay it was read under. The gate reads the EMA SHADOW, so a parent/child decay
+        # mismatch moves the instrument's own averaging length underneath the measurement
+        # (derive_ema_decay consumes epochs*(num_pairs//batch_pairs) ⇒ an --epochs change alone
+        # moves it: the burn ran U=49,950/60,450/70,950, a different decay at EVERY boundary).
+        boundary_parent_tail = list(st["meta"].get("telemetry_tail") or [])
+        _pcfg = st["meta"].get("cfg") or {}
+        boundary_parent_ema_decay = (float(_pcfg["ema_decay"])
+                                     if isinstance(_pcfg, dict) and "ema_decay" in _pcfg
+                                     else None)
+        boundary_ema_held = (boundary_parent_ema_decay is not None
+                             and abs(boundary_parent_ema_decay - cfg.ema_decay) <= 1e-12)
         tlog({"event": "resume", "resume_from": str(args.resume_from), "epoch": start_epoch,
               "stage": stage, "quant_engaged": bool(model._quant_engaged),
-              "ema_backfilled_new_params": backfilled})
+              "ema_backfilled_new_params": backfilled,
+              "parent_ema_decay": boundary_parent_ema_decay,
+              "child_ema_decay": cfg.ema_decay, "ema_basis_held": bool(boundary_ema_held),
+              "parent_gate_anchors": len(boundary_parent_tail)})
+        if not boundary_ema_held:
+            # L1 runtime alarm — LOUD, never silent (confound self-protection).
+            tlog({"event": "confound_alarm", "kind": "ema_basis_drift",
+                  "epoch": start_epoch, "parent_ema_decay": boundary_parent_ema_decay,
+                  "child_ema_decay": cfg.ema_decay,
+                  "note": "the realized gate reads the EMA shadow; parent and child resolved "
+                          "DIFFERENT decays ⇒ the shadow's averaging length drifted under the "
+                          "measurement and cross-boundary gate readings are NOT commensurable. "
+                          "Pin --ema-decay (bypasses derive_ema_decay) or hold --epochs fixed."})
+            if boundary_probe:
+                # FAIL-CLOSED, scoped to the boundary experiment: an A/B whose two arms differ in
+                # the measurement basis as well as the optimizer cannot be read at all.
+                raise SystemExit(
+                    "#824 --boundary-probe on REFUSES: EMA basis drift across the resume "
+                    f"(parent {boundary_parent_ema_decay} != child {cfg.ema_decay}). Pin an "
+                    "explicit --ema-decay equal to the parent's, or hold --epochs identical.")
         # NOTE: Adam moments are re-anchored fresh (warm-start re-anchor law #517/#518):
-        # a bounded-window resume restarts moment estimation at the resume geometry.
+        # a bounded-window resume restarts moment estimation at the resume geometry. WHICH reset
+        # operator that is, is now the DSL-selected #824 arm (see `optimizer_arm` above).
 
     # Gate set (pre-registered): all pairs when num_pairs < 600, else fd2 geometry.
     gate_ids = resolve_gate_ids(cfg.num_pairs)
@@ -1738,6 +1975,50 @@ def main() -> int:
         tlog({"event": "resume_form_reanchor", "stage": stage,
               "form": state_form["form"], "seg_form_start": cfg.seg_form_start})
     stop_reason = "epochs_complete"
+
+    # ddm_bp1 (#824) POSITIVE-CONTROL re-gate (CLAUDE.md L3 verdict-clearance: a known-effect
+    # canary the apparatus must register, else the instrument is untrusted and NO verdict is
+    # admissible). Runs the realized gate on the RESTORED state BEFORE any training: it must
+    # reproduce the parent checkpoint's last gate reading from the same bytes on the same basis.
+    # READ-ONLY (tlog only, never telemetry_tail => the next checkpoint is byte-identical to an
+    # off run) and identical in BOTH arms, so it cannot confound the A/B. Costs one gate.
+    if boundary_probe and args.resume_from is not None:
+        # Tolerance DERIVED, not a bare constant: d_seg is the mean per-pixel argmax disagreement
+        # over the gate set, so its smallest possible non-zero change is ONE pixel flip =
+        # 1/(n_gate*H*W). Half that quantum accepts only a bit-exact reproduction while staying
+        # robust to float summation order across processes.
+        boundary_pc_tol = 0.5 / float(len(gate_ids) * SEG_H * SEG_W)
+        _pc_basis = "ema_shadow" if global_step >= ema_warmup_updates else "live_ema_warmup"
+        _pc_live = ema_snapshot_swap(model, ema) if _pc_basis == "ema_shadow" else None
+        try:
+            _pc_row = realized_gate(model, gate_ids, lstars, seg_cpu, None)
+        finally:
+            if _pc_live is not None:
+                ema_restore(model, _pc_live)
+        _pc_row.pop("_realized_argmax", None)
+        _pc_anchors = [r for r in boundary_parent_tail
+                       if isinstance(r, dict) and r.get("realized_gate_dseg_mean") is not None]
+        _pc_parent = (max(_pc_anchors, key=lambda r: int(r.get("epoch", -1)))
+                      if _pc_anchors else None)
+        _pc_ref = (float(_pc_parent["realized_gate_dseg_mean"]) if _pc_parent else None)
+        _pc_now = float(_pc_row["realized_gate_dseg_mean"])
+        _pc_delta = (None if _pc_ref is None else _pc_now - _pc_ref)
+        _pc_ok = (_pc_ref is not None and _pc_parent.get("gate_params") == _pc_basis
+                  and abs(_pc_delta) <= boundary_pc_tol)
+        tlog({"event": "boundary_positive_control", "epoch": start_epoch,
+              "basis": _pc_basis, "parent_basis": (_pc_parent or {}).get("gate_params"),
+              "parent_gate_epoch": (None if not _pc_parent else int(_pc_parent.get("epoch", -1))),
+              "parent_gate_dseg": _pc_ref, "reproduced_dseg": _pc_now,
+              "abs_delta": (None if _pc_delta is None else abs(_pc_delta)),
+              "tolerance": boundary_pc_tol, "reproduced": bool(_pc_ok),
+              "score_claim": False, "evidence_axis": "[macOS-CPU/MLX advisory]",
+              "note": "the restored state must reproduce the parent's last gate BEFORE training; "
+                      "reproduced=false ⇒ the instrument is untrusted, no #824 verdict admissible"})
+        if not _pc_ok:
+            tlog({"event": "confound_alarm", "kind": "boundary_positive_control_failed",
+                  "epoch": start_epoch, "parent_gate_dseg": _pc_ref,
+                  "reproduced_dseg": _pc_now,
+                  "note": "canary invisible/inconsistent — see CLAUDE.md L3 verdict-clearance"})
 
     # ddm_tp1 (#804) v9 telemetry PORT setup (READ-ONLY; gated => byte-identical when off).
     # All state + the reusable-producer imports live behind the flag so an OFF run has ZERO
@@ -1940,7 +2221,34 @@ def main() -> int:
             gate_row.update({"event": "a1_gate", "epoch": epoch, "ep_loss": ep_loss,
                              "weights_stepped": True, "stage": stage,
                              "seg_form": state_form["form"]})
+            # ddm_bp1 (#824) per-INTERVAL decomposition, emitted at write time so the 63-interval
+            # analysis is reproducible from telemetry alone (post-hoc pairing is what hid the
+            # restart effect for a whole burn). Free: derived from values already in hand.
+            gate_row.update(gate_interval_fields(prev_gate_row, gate_row))
+            gate_row["epochs_since_resume"] = epoch - start_epoch
+            gate_row["reset_arm"] = resolve_arm_name(_reset_arm)
             tlog(gate_row)
+            # The BOUNDARY JUMP itself: the FIRST post-resume interval, isolated. ~35% of the
+            # corrected seg descent lived in this one short interval last burn; an end-state
+            # readout averages it into ~140 training epochs and dilutes it below resolution.
+            if not boundary_jump_emitted and args.resume_from is not None:
+                _bj = boundary_jump_row(
+                    boundary_parent_tail, boundary_parent_ema_decay, cfg.ema_decay,
+                    start_epoch, gate_row, resolve_arm_name(_reset_arm) or "unknown")
+                boundary_jump_emitted = True
+                if _bj is not None:
+                    # MEASUREMENT-BASIS invariant (round-2): a RESUMED run reports the ema_shadow
+                    # basis from its FIRST gate while a FRESH run reads live_ema_warmup for U/2
+                    # updates — so a fresh arm and a resumed arm are read on DIFFERENT instruments
+                    # and their comparison is void. Recorded here so a comparer can check it; the
+                    # ticket builder enforces sameness (only it can see both arms).
+                    _bj["gate_basis_mode"] = "resumed_warm_shadow"
+                    # INCLUDE the current gate: telemetry_tail is appended AFTER this block, and
+                    # at the FIRST post-resume gate the tail is otherwise empty — the summary
+                    # would report 0 alarms even when THIS gate alarmed. (Caught in round-2
+                    # self-review of my own instrumentation.)
+                    _bj["a1_alarms"] = a1_alarm_summary([*telemetry_tail, gate_row])
+                    tlog(_bj)
             telemetry_tail.append(dict(gate_row.items()))
             print(json.dumps({k: gate_row[k] for k in
                               ("epoch", "realized_gate_dseg_mean", "a1_classification",
@@ -2112,6 +2420,16 @@ def main() -> int:
         "final_ep_loss": ep_losses[-1] if ep_losses else None,
         "final_gate": {k: v for k, v in (prev_gate_row or {}).items() if not k.startswith("_")},
         "elapsed_seconds": time.monotonic() - started,
+        # ddm_bp1 (#824): the reset arm + the A1 alarm channel as FIRST-CLASS receipt fields.
+        # Every A1 alarm of the burn was invisible to every decision record because only
+        # `final_gate_a1` was propagated and none of the six firings was at a final gate.
+        "reset_arm": resolve_arm_name(_reset_arm),
+        "reset_operator": _reset_arm.describe(),
+        "a1_alarms": a1_alarm_summary(telemetry_tail),
+        "gate_basis_mode": ("resumed_warm_shadow" if args.resume_from is not None
+                            else "fresh_live_then_shadow"),
+        "ema_basis_held": bool(boundary_ema_held),
+        "boundary_probe": args.boundary_probe,
     }
 
     # Optional full realized confirm (chunked <=120; EMA shadow).
