@@ -951,6 +951,24 @@ def resolve_gate_ids(num_pairs: int) -> tuple[int, ...]:
         int(x) for x in rng.choice(off, size=GATE_OFFBLOCK_SAMPLE, replace=False))
 
 
+def a1_smooth_excluding_delta_penalty(ep_loss: float, engaged: bool, weight: float,
+                                      penalty: float) -> float:
+    """The A1 gate's smooth-loss INPUT with the delta-sparsity penalty term EXCLUDED (ddm_pa1r
+    confound fix, 2026-07-31).  MEASURED incident (delta_sparsity_tail, w=0.03 from_step_0 on the
+    B resume): the engage transient relaxes the w·penalty term fast (ep444→449 ep_loss −11.3%,
+    mostly penalty relaxation) while realized d_seg is flat → ``a1_adjudicate`` misreads the drop
+    as a REALIZATION GAP → 2 consecutive alarms → ``a1_realization_gap_refuse`` stop at ep454.
+    The instrument must read the SAME quantity in a lever arm as in the control (the seg+rate
+    smooth), so the gate input is ``ep_loss − weight·penalty`` when the force is engaged.
+    Byte-identical when the lever is off (engaged False or weight 0 ⇒ returns ep_loss exactly).
+    Sister of the confound self-protection rule (a new loss term with its own relaxation dynamics
+    entered the A1 instrument's input un-corrected — the L1 'instrument reads the wrong quantity'
+    class)."""
+    if engaged and weight > 0.0:
+        return float(ep_loss) - float(weight) * float(penalty)
+    return float(ep_loss)
+
+
 def a1_adjudicate(prev: dict[str, Any] | None, cur: dict[str, Any],
                   smooth_prev: float | None, smooth_cur: float) -> dict[str, Any]:
     """Typed A1 verdict per gate: coupled descent vs realization gap (never silent)."""
@@ -1654,7 +1672,19 @@ def main() -> int:
                 den = sum(v.size for v in live_np.values())
                 gate_row["param_delta_rms_since_prev_gate"] = float(np.sqrt(num / max(den, 1)))
             gate_param_snapshot = live_np
-            a1 = a1_adjudicate(prev_gate_row, gate_row, prev_gate_smooth, ep_loss)
+            # ddm_pa1r confound fix: the A1 smooth input EXCLUDES the delta-sparsity penalty
+            # (the engage transient's penalty relaxation is not seg progress; feeding raw
+            # ep_loss fired a false a1_realization_gap_refuse at ep454 on the w=0.03 arm).
+            # Penalty computed full-P on the LIVE params (ep_loss's own basis); byte-identical
+            # when the lever is off (a1_smooth == ep_loss exactly; no penalty forward run).
+            a1_smooth = ep_loss
+            if model._delta_sparsity_engaged and cfg.delta_sparsity_weight > 0.0:
+                pen_now = float(delta_sparsity_term(model, list(range(cfg.num_pairs))))
+                a1_smooth = a1_smooth_excluding_delta_penalty(
+                    ep_loss, True, cfg.delta_sparsity_weight, pen_now)
+                gate_row["delta_penalty_now"] = pen_now
+                gate_row["a1_smooth_input"] = a1_smooth
+            a1 = a1_adjudicate(prev_gate_row, gate_row, prev_gate_smooth, a1_smooth)
             gate_row.update(a1)
             gate_row.update(ledger)
             gate_row.update({"event": "a1_gate", "epoch": epoch, "ep_loss": ep_loss,
@@ -1675,7 +1705,7 @@ def main() -> int:
                     break
             else:
                 a1_consecutive = 0
-            prev_gate_row, prev_gate_smooth, prev_realized = gate_row, ep_loss, realized_argmax
+            prev_gate_row, prev_gate_smooth, prev_realized = gate_row, a1_smooth, realized_argmax
             save_checkpoint(out_dir / "checkpoints" / f"intra_{stage}_ep{epoch:05d}.npz",
                             model=model, ema=ema, opt_state_flat={}, epoch=epoch,
                             stage=stage, cfg=cfg, telemetry_tail=telemetry_tail)

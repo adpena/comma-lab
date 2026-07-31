@@ -423,3 +423,38 @@ def test_trainer_delta_sparsity_requires_shared_base():
                     token_temporal_mode="independent", token_quant_coupling_field="/x")
     with pytest.raises(ValueError, match="shared_base"):
         T._build_pool_a_banks(cfg)
+
+
+# ---------------------------------------------------------------------------
+# 9. A1 smooth-input confound fix (ddm_pa1r 2026-07-31): the gate reads the
+#    penalty-EXCLUDED smooth when the delta-sparsity force is engaged.
+# ---------------------------------------------------------------------------
+def test_a1_smooth_off_path_is_identity():
+    import experiments.train_tr1_partition_renderer_mlx as T
+    assert T.a1_smooth_excluding_delta_penalty(0.55, False, 0.03, 1.7) == 0.55
+    assert T.a1_smooth_excluding_delta_penalty(0.55, True, 0.0, 1.7) == 0.55
+
+
+def test_a1_smooth_subtracts_engaged_penalty():
+    import experiments.train_tr1_partition_renderer_mlx as T
+    out = T.a1_smooth_excluding_delta_penalty(0.6178, True, 0.03, 1.7)
+    assert out == pytest.approx(0.6178 - 0.03 * 1.7)
+
+
+def test_a1_gate_confound_regression_ep454_incident():
+    """Regression for the MEASURED false refuse (delta_sparsity_tail w=0.03, ep444->449->454):
+    raw ep_loss fell 0.6178->0.5478 (-11.3%, mostly penalty relaxation) with realized d_seg flat
+    -> alarm on the RAW signal.  With the penalty excluded, the corrected smooth barely moves ->
+    NO alarm.  Encodes both directions so the fix is falsifiable."""
+    import experiments.train_tr1_partition_renderer_mlx as T
+    prev = {"realized_gate_dseg_mean": 0.005064}
+    cur = {"realized_gate_dseg_mean": 0.005067}          # flat realized (the incident)
+    # RAW signal (the bug): -11.3% smooth drop + flat realized => alarm fires.
+    raw = T.a1_adjudicate(prev, cur, 0.6178, 0.5478)
+    assert raw["a1_alarm"] and raw["a1_classification"] == "A1_REALIZATION_GAP_ALARM"
+    # CORRECTED signal: exclude w*penalty from both sides (penalty 2.20->0.10 over the
+    # transient at w=0.03); the seg+rate smooth is ~flat => NO alarm.
+    sm_prev = T.a1_smooth_excluding_delta_penalty(0.6178, True, 0.03, 2.20)
+    sm_cur = T.a1_smooth_excluding_delta_penalty(0.5478, True, 0.03, 0.10)
+    fixed = T.a1_adjudicate(prev, cur, sm_prev, sm_cur)
+    assert not fixed["a1_alarm"]
