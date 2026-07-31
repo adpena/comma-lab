@@ -26089,3 +26089,38 @@ plain-continuation (NOT paint); (e1) premise (re-render not composite) preserved
 gated behind burn-4; carrier (b) build gate now carries a hard collateral clause (must absorb ~0.22-0.32
 S ERF collateral to break even vs a 0.042 S pool = ~5-8× unfavorable ⇒ MacKay's ~100× MDL bet does NOT
 hold at the JOINT level). [no-triality] [p0-ledger-ok]
+
+
+## FEED-lp2 (2026-07-31, task #802) — LADDER PREP BUNDLE (P2/P3/P5; scorer-free; NOTHING launched)
+
+Prep bundle for the gc12 birth-completion ladder per gc12 §6. Memo
+`.omx/research/ddm_lp2_ladder_prep_20260731.md`. Pointer 0.1910828242 [contest-CPU] UNMOVED; all MEANS.
+**P2 = the typed `birth_completion` gate-key PRODUCER** (`src/tac/optimization/ddm_lp2_birth_completion.py`
++ CLI `tools/run_ddm_lp2_birth_completion_key.py`; 28 tests): the EXTERNAL evaluator the rung-1 window
+loop calls BETWEEN windows (trainer SEALED, gc12 §5). Fits Lane `betti0_realized` slope over the last
+`window_gates` (5) checkpoints from telemetry.jsonl vs the QA91 inventory; fires
+`ddm_lp2_birth_completion_key.v1` when `slope ≤ ε ∧ above-nucleus erasure persists`. **ε DERIVED (not
+hardcoded):** `ε = t_crit · max(SE_slope_ols, SE_slope_quant)`, SE_ols = OLS slope std-err over the
+window (adapts to the measured early-burn churn 276→252→269→54), SE_quant = sqrt((1/12)/S_xx) integer-
+count rounding floor, t_crit = one-sided Student-t(α, dof=W−2); the ONLY non-derived scalar is α (default
+0.15866 = one-σ, STATED-CONFIDENCE class-4 with re-derivation trigger). **Self-test on the REAL bc1
+endpoint telemetry: fired=False, slope=7.60, ε=3.34, erased=509** — CORRECT (births still rising at
+ep399, matches QA91 8.75 birth_tail_slope ⇒ window loop keeps extending). Fail-closed on malformed/
+missing/insufficient/duplicate/degenerate telemetry. NO prefix re-added / NO registry touched
+(birth_completion already in resume_registry.DIRECT_CONTROLLER_NAMES #358; this is the DISTINCT external
+tr1 window-loop producer). **P3 = the (e1) solve-seeded-births HARNESS** (build-only, does NOT run;
+`src/tac/optimization/ddm_lp2_e1_seeding_harness.py`; 21 tests): per erased super-nucleus Lane
+component → real covering-token geometry → bounded LOCAL solve via INJECTED `LocalTokenSolver` (real =
+fd1 `FamilyDGaussNewtonEngineV1.propose` / `coupled_margin_levelset.solve_active_set_kkt`, REUSE not
+fork) → `solve_residual` = reachability (rg3-analog) → #208 rare-class + #532 rendered-init verification
+BEFORE marking → typed `ddm_lp2_e1_seeding_harness.v1`. Scorer-free via b2b stub solver/oracle.
+PREREGISTERED FALSIFIER built: survival < 0.50 of seeded ΔS (gc12 anchor) ⇒ (e1) closes at FORMULATION
+scope (MAIN runs the reconcile tail). Scope-checked: ON-manifold (fp1 inapplicable), SPENDS bytes
+(pa1r-favorable), NOT nv1 null-snap. **P5 = the burn-4 CHARTER SKELETON**
+(`.omx/research/ddm_burn4_charter_skeleton_20260731.md`): receipt-parameterized arm matrix (QA24
+granularity ΔS_rate 0.19–0.28 × rung-2 birth-completion winner × QA84 rowband) with `⟪UNKNOWN⟫` slots
+filled from rung-0/1/2 receipts; names the **v9 telemetry port to TR1 as the single hardest PREREQUISITE**
+(vh1 row 7 #304/#321/#404); MAIN charters burn-4 as a fill-in, not a design session. P4 (carrier doc)
+NOT built — gated on ddm_qa92 (whose FEED above re-priced the paint carrier net-negative; (e1) premise
+preserved, priority-dropped). 2 recorded review passes on the 3 tracked .py files; ruff clean; 49 tests
+pass. Pointer 0.1910828242 [contest-CPU] UNMOVED. [no-triality] [p0-ledger-ok]
