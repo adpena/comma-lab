@@ -81,6 +81,26 @@ convergence. `⟪UNKNOWN: does the rung-2 verdict route the seg axis to KD, or d
 5. **g3 hard-pair verdict subset re-check on TR1** (vh1 row 4; the ad-hoc 17-pair gate replaced by the
    principled subset AFTER the $0 r re-check). `⟪UNKNOWN: TR1 subset→full validity r⟫`.
 
+## §3b FORCE STACK (FILLED by MAIN 2026-07-31 from fh1 task #805, memo ddm_fh1_forces_harvest_20260731.md, commit 72ac061bd3)
+
+> **FORCE STACK (fh1, task #805).** Levers (composable, not new matrix axes): tie-locus
+> pair-weighted boundary term (fh1 R1+R4; DESIGNED-STUB `TieLocusEdgeWeighted`; engage post-knee;
+> W raced uniform vs TR1-measured flip-mass vs Young's-σ) · margin-satisfice cap allocator (fh1 R3;
+> `MarginSatisficeCap`; m_safe = headroom·δ_R re-measured through TR1's R) · `--class-weight-lane`
+> raced {1.0, ~1.3, sweep} inside the seg axis (fh1 R6 — LANE-BIRTH pool, COMPETES with KD/(e1),
+> raced never stacked; NOTE: existing flag+DSL lever, never-fired — the activation-ledger duty row) ·
+> KD arm carries attack-temp + anneal-to-CE-at-derived-event (fh1 R7, dw1
+> law) · OPTIONAL rate-axis raced variant xi-advected base (fh1 R2) ONLY after the QA90 $0
+> coherence read (QA90 = a named pre-seal $0 item; add to §3 checklist). **Events:** knee/quant-engage/KD-anneal events gain the birth-plateau CONJUNCT
+> (lane betti0 slope→0 above-nucleus ∧ loss-knee; fh1 R8, rides P2). **Guards (extends F1–F4):**
+> per-term loss + gnorm rows at verdict cadence; caps ≤15% per new force, ≤40% sum, stage-boundary
+> weight changes only (v9 caps law); PAIRWISE grad-cosine rows for every same-pool force pair
+> (Euclid + Fisher — F4 generalized). **Endpoint obligations add:** per-class area-theft vs
+> placement split (fh1 R13 — the seg-axis attribution router). Prerequisite unchanged: the tp1
+> v9-telemetry port gates ALL of the above (the caps/cosine guards need #304/#321/#404 signals to
+> exist). Demoted/behind: renderer-rate force MEASURED-SMALL 0.0022 S pool (fh1 §3 F-A) ·
+> ERF birth-context co-adaptation force = speculative-derived rung behind burn-4 window-1 (fh1 R14/F-E).
+
 ## §4 SEALED-CONFIG DEMAND (mirrors gc12 §5 rung-1 template; W1-style)
 - **Parent ckpt:** `⟪UNKNOWN: from-scratch (QA24 requires from-birth) OR rung-1 endpoint if the seg
   axis alone is raced⟫` — sha recorded at seal time into the ticket.
