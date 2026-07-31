@@ -25747,3 +25747,47 @@ close pair on a walled base; family LIVE for a conditioned base); S4 (QA66/QA80 
 dominated (±0.0134 S vs 14.29 pose term); S5 (compose) arithmetic complete. verdict_scope: every negative
 is INSTANCE (B-control seg-native parent × post-hoc-geometric-pose); no family closed.
 pointer 0.1910828242 [contest-CPU] UNMOVED  ·  [no-triality] [p0-ledger-ok]
+
+
+## FEED-pa1b (2026-07-30) — Pool-A RACE HARNESS BUILT (#793): the hull-curvature instrument (scorer-free)
+
+Memo `.omx/research/ddm_pa1b_pool_a_harness_20260730.md`. All [macOS-CPU advisory]; score_claim=False;
+pointer 0.1910828242 [contest-CPU] UNMOVED (built the instrument; did not move the score). STORES-CONSULTED:
+gc10 (2647b1f080) + ax1 memo/stubs + QA84 grammar + rowband_flip_mass equation + r7 SMEVR coder + gc9
+product_c (3 anchors) + zb1 QA80 field custody + dw1 re-price (distill DROPPED, plain-continuation dividend
+RETIRED) + non-additive-pools LAW.
+
+- **Two ax1 stubs REALIZED as real trainer levers** (ph3 fold-and-delete): (a) `ax1 §2a margin-coupled
+  token quant` — per-cell EFFECTIVE quant levels allocated by a RANK TRANSFORM of the MEASURED QA80
+  flip-distance field's own flip-mass order statistic (NO bare constant; the field IS the law); (b)
+  `ax1 §4a delta group-sparsity` — group-L2 shrinkage on per-pair deltas (98.8% stationarity), engaged at
+  the base-stability EVENT (CE→tau knee; event-driven, never epoch-hardcoded) with a `from_step_0` mode =
+  the gc10 F2 ν-snap warm-start holder (documented train-side twin of the export snap), ξ-informed weight
+  DERIVED from the QA80 winner classes. BYTE-IDENTICAL when OFF (proven); NO trainable param ⇒ byte-identical
+  resume by construction. Trainer flags declared (never-invent) + DSL factories folded into the SoT
+  (`spec_tr1_renderer`); superseded stubs DELETED (only Pool-C frame0-warp remains).
+- **THE RACE HARNESS** (`src/tac/witness_dsl/ax1_pool_a_race_20260730.py`): matched-SMEVR-bytes seal (real
+  r7 coder, ±1% tol, REFUSE-on-mismatch = the tuning-step signal, per-arm argv-diff = the pre-fire diff law)
+  + the typed race-receipt schema + the `HullCurvatureAnalyzer` (does ANY matched-bytes point sit strictly
+  INSIDE iso-c 0.08815?). `pool_a_race_programs` {control_rowband · margin_quant · delta_sparsity ·
+  joint_quant_sparsity} on ONE shared D8 base — the non-additive-pools race is the composition adjudicator.
+- **EXHAUST THEOREM #2 — 276 CORRECTED to 300 (derivation shown).** The RowBandGrammar constraint set
+  (0≤lo<hi≤48, coarse-aligned) gives 25 coarse boundaries ⇒ C(25,2)=**300** non-empty bands; the memo's
+  C(24,2)=276 excludes the 24 single-D16-row bands (boundaries-vs-rows off-by-one). The enumeration covers
+  the full 300 SUPERSET ⇒ the rowband arm is a THEOREM, not a sample.
+- **THEOREM FIRED on the real n600 field** ($0, sha-verified, q50 1.8107, custody
+  `/Volumes/VertigoDataTier/pact/ddm_pa1b_theorem_20260730_per_row_flip_mass_D8.npy`): the provably-rate-
+  optimal min-cells band at the op1 ≥50% gate is render rows **[160,240) at 1248 independent cells — EXACTLY
+  the QA84 default grammar's band + DOF.** The exact-flip-distance field independently recovers the QA74
+  `rowband_flip_mass_foveation_band_v1` typing AND certifies the pre-registered rowband default is
+  rate-optimal at the gate; 72.1% → [160,272)/1440, 90% → [112,304)/1920 (the full 24-point Pareto frontier
+  is MAIN's coverage-vs-rate choice).
+- **Tests:** 27/27 pass (theorem count/optimality/Pareto · allocation off-identity+monotonicity · per-cell
+  quant off-identity · delta penalty + ξ weight · REAL QA80 field consumption + fail-closed · seal
+  match/refuse/argv-diff · analyzer hull-moved/line-stands/unmatched · DSL compile+validate+coverage ·
+  fold-and-delete · trainer off-path + guards). tr1 regression (b2b+bc1) 34/34 unaffected.
+- **READY-TO-FIRE:** fires from MAIN, scorer slot AFTER nv1 (#796). Parent resolved at fire time (ps1 best
+  or B, never hardcoded). Sequence: $0 seal (byte-match+argv-diff) → scorer (train 4 arms, event-terminated,
+  resumable) → $0 analyzer verdict. F1-F3 pre-mortem compliance documented.
+
+pointer 0.1910828242 [contest-CPU] UNMOVED  ·  [no-triality] [p0-ledger-ok]
