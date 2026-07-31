@@ -1,4 +1,33 @@
-# Current Focus - 2026-07-31 (burn-4 alarm adjudicated + gc13/us1 landed → b4s fix-chain relaunch pending)
+# Current Focus - 2026-07-31 (window_02 COUPLED_DESCENT: NEW BEST d_seg 0.0040519 → UNDRIV alarm adjudicated CONTINUE → window_03)
+
+> **WINDOW_02 (ep665→805, 2.03h): THE CAMPAIGN'S FIRST GENUINE COUPLED DESCENT.** d_seg
+> 0.0042778→**0.0040519** (Δ −0.000226 ≈ −0.0226 S seg-axis; NEW BEST realized, beats rung-1
+> 0.0042641). **Lane STRONGLY BIRTHING: betti0 498→540 (net +42, slope +11.66/gate, t=+5.54)**
+> — R6 1.3 + λ_Lane guard MEASURED WORKING (λ stayed 0.0, within budget). Rate +3,074B
+> (→276,078B, +0.00205 S) ⇒ net window ΔS ≈ **−0.0206 S**. Birth key NOT fired (births active
+> ⇒ chain continues). **UNDRIV_EROSION alarm #2 fired at boundary** (slope −0.799 vs ε 0.633,
+> net −3 comps — REAL but small, already inside the net-positive aggregate; guard-era erosion
+> SLOWER than unprotected). **MAIN ADJUDICATED: CONTINUE** — b4s resumed to retire the ALARM
+> (UNDRIV_EROSION_ADJUDICATED_CONTINUE, priced trade not spurious) + launch window_03 from
+> ep805, same seal, watch armed, cap unchanged (hard stop 20:17Z, ~2 windows feasible);
+> λ_undriv routes to cg1 (#809) with endpoint calibration, NOT mid-burn. fl1 context: Undriv
+> reachable headroom +0.0164 S total vs −0.02 S/window descent — trade clearly favors continue.
+> **fl1 (#813 DONE, 0c671abe00):** per-class flicker floors sum-check +4.4e-7; falsifier
+> honestly SCOPED (smooth-label floors are FORMULATION-bound, pierced by phase-faithful
+> renderers — NO re-waterfill); live value = PHASE-DEBT RANKING Lane #1 (43.6%); Road AT its
+> formulation floor (capacity exhausted under current render family); reachable non-flicker
+> headroom = Undriv +0.0164 + Movable +0.0095 ≈ 0.026 S; the rest of the corner-C gap =
+> phase-faithfulness debt → #425/#535/W1-COH axis after the burn. {Lane, Undriv} guard set
+> TRIPLE-CONFIRMED (gc13 receipt × live watch × fl1 headroom).
+> **dg1 (#812 DONE, e66f225934+36a1f01f59+4a5504fe51):** dynamic-denominator guard — line-56/64
+> asymmetry verified from source; fail-closed at rate_term (83 import sites, one chokepoint) +
+> Catalog #407 warn-only-deliberate. **Waiter laws memorialized** (foreground sleep >~3min ALSO
+> SIGURG-killed in waiter contexts → 4×135s sub-calls; memory waiter_agent_protocol_laws).
+> NEXT WAKE: b4s resume receipt → re-arm waiter → burn4.done endpoint → R1 consumption bundle
+> (per-class exact re-measure + 5×5 flip matrix + protected descent rates + Undriv S-pricing).
+> Pointer 0.1910828242 [contest-CPU] UNMOVED.
+
+# Historical - 2026-07-31 (burn-4 alarm adjudicated + gc13/us1 landed → b4s fix-chain relaunch pending)
 
 > **BURN-4 ARC:** fired lg1-protected (ticket 6206cf56, daemon 40118) → first ALARM at ~18min:
 > term_domination = **seg ITSELF 67.8%** on the lean 2-term loss (seg .349/rate .147) — MAIN
