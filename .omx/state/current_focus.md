@@ -14,7 +14,17 @@
 > REGRESSED +0.00151** (two-instrument agreement w/ the birth gate's betti0 534→500).
 > Plain continuation now MEASURABLY erodes Lane → the fh1 seg-cell forces (R6
 > class-weight-lane · σ_cc′ pair-weighting) are measured-motivated, not just harvested;
-> no measured crossing mechanism for the Lane pool yet (KD arm carries its falsifier). ddm_b4s (#807, scorer-free) — fill last skeleton slots → compose the burn-4
+> no measured crossing mechanism for the Lane pool yet (KD arm carries its falsifier).
+> **OPERATOR 07-31 ×2 ("sophisticated techniques to constrain and protect" + "remember
+> the upstream channels and hyperplane and basis"):** burn-4 seal HELD for ddm_lg1
+> (#808, LIVE) — the scorer-coordinate LANE-GUARD layer: λ_Lane primal-dual hard
+> constraint (budget = ep641 measured level, gate-cadence bounded dual) · born-lane
+> protection mask weighted by lane-channel sensitivity (rank-4 head rows + #725 BN
+> capacities, #208 lifted to train-time) · margin floor in the EXACT head flip-distance
+> metric d=|m|/‖Δw‖ · optional Fisher-metric gradient surgery (dual-metric readback).
+> b4s amended: supervisor gains the LANE-EROSION event key (P2 inverted) + window-level
+> realized acceptance w/ rollback; protection = constraint layer, orthogonal to the
+> raced force cells. ddm_b4s (#807, scorer-free) — fill last skeleton slots → compose the burn-4
 > arm matrix (QA24 from-birth rate cell × KD-from-birth seg cell w/ R6/R7 raced × fh1
 > force stack per §3b × telemetry ON) → reseal → bounded re-smoke after xp1 frees the
 > slot → FIRE under standing GO w/ the adapted daemon+marker supervisor. Honest
