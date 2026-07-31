@@ -25633,3 +25633,14 @@ distill term; add the plain-continuation dividend (−0.016 S·seg per 40 ep at 
 Memo: `.omx/research/ddm_dw1_qa75_distill_window_20260730.md`. Receipts: SSD
 `ddm_dw1_20260730/{mini_race,control,distill,distill_head_relax,verdict.json,tickets}`.
 [macOS-CPU advisory]; score_claim=false; pointer **0.1910828242 [contest-CPU] UNMOVED**.
+
+- untested formulations / alternatives (the reformulation queue this FORMULATION closure does NOT cover):
+  (1) FROM-BIRTH distill — distill-dominant OPENING stages in a FRESH burn (the ph3 §10.1 front-loaded form;
+  dw1 measured only the FINISHING form on a converged endpoint; needs its own preregistered case);
+  (2) distill raced against the REWARMED/still-descending base — B proved plain optimization still pays, so
+  the matched-budget comparison at a NON-converged operating point is a different measurement;
+  (3) alternative teacher: GT-margin-feasible projected targets (not the solve-field) or a born-again gen-2
+  self-teacher (gc9 Caruana invitee row); (4) QA75-lite frame-match regression on the solve frames (pixel-target
+  form, distinct from all 3 raced logit/margin forms); (5) distill into a DIFFERENT vehicle class (the class-change
+  leg this verdict strengthens — cross-class KD was never the measured object). Owner: burn-3 design gate consumes
+  (1)+(2) as design-space rows; (3)-(5) ledger-recorded, fire on their named preconditions.
