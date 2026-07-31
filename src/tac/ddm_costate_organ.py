@@ -1208,8 +1208,19 @@ class Rv1ReactivationSpec:
     negatives: tuple[str, ...]  # the committed verdicts re-graded (quoted in the memo)
     precondition_changed: str  # YES | YES_CONDITIONAL | PARTIAL_RACE | PARTIAL
     measurement: str  # the NAMED reactivation measurement — nothing reactivates without it
-    status: str  # when the measurement can run
+    status: str  # rv1's OWN schedulability field, frozen at 2026-07-28 (never a live state)
     consumer: str
+    # ── rx1 (2026-07-31): THE WRITE PATH. `reactivated` shipped as a hardcoded `False`
+    # literal inside the fold's comprehension with no writer anywhere in the module, so a
+    # row could never record its own discharge — a ledger field that structurally cannot
+    # log the thing it names (sister of the default-off orphan class + NO-FAKE #2, and the
+    # co8 test froze it by asserting the constant). It is now RESOLVED FROM COMMITTED
+    # EVIDENCE ON DISK and fails closed to False when no artifact matches.
+    result_glob: tuple[str, ...]  # committed RESULT artifact(s) == the measurement LANDED
+    landed_disposition: str  # what the landed measurement FOUND (never "the lever paid")
+    open_state: str  # duty_state when no result artifact exists
+    open_reason: str  # one line: why it is still open + what would close it
+    charter_glob: tuple[str, ...] = ()  # chartered-and-live pointer (NOT a result)
 
 
 RV1_REACTIVATION_SPECS: tuple[Rv1ReactivationSpec, ...] = (
@@ -1227,6 +1238,16 @@ RV1_REACTIVATION_SPECS: tuple[Rv1ReactivationSpec, ...] = (
         "to tr1 token/renderer tensors; unblock DR1's ordered pairwise redundancy audit",
         "POST_BURN",
         "eg1 finishers / post-burn wave",
+        result_glob=("ddm_pb1_postburn_completion_2*.md",),
+        landed_disposition=(
+            "LANDED 2026-07-29 (pb1 §2 QDBS = 49 evals, honest-axis mode, commit 838b5adfbc; "
+            "#400 diagonal EXPLICIT = §4 renderer leg + §5 dxi pose-polish leg). pb1's own "
+            "owed-table row records it DONE. CAVEAT travels with it: the 0.05-0.07 S prior "
+            "was witness-vehicle/foreign-parent, NOT a same-parent quote. Sibling still open: "
+            "the FULL-POPULATION GN/CG seg solve (orphan QA03) never ran"
+        ),
+        open_state="OPEN_POST_BURN",
+        open_reason="needs the burn endpoint + a governed n600 verdict budget",
     ),
     Rv1ReactivationSpec(
         "R7_token_stream_coder_race",
@@ -1244,6 +1265,19 @@ RV1_REACTIVATION_SPECS: tuple[Rv1ReactivationSpec, ...] = (
         "onto the token object",
         "MEASURABLE_NOW_T2_DUMPS",
         "burn rate axis (entropy-coded prior + boundary-gated c + (D,c,levels) waterfill)",
+        result_glob=("ddm_r7_token_coder_race_2*.md",),
+        landed_disposition=(
+            "LANDED 2026-07-29 as a complete non-additive race (14 token-entropy arms incl. "
+            "KT-prev1/CTW/rANS/Bayes-mix vs Brotli-Q11/LZMA/Huffman, every admitted row a "
+            "materialized R7PL frame with exact parse-back). The stale coder negatives are "
+            "CLEARED off the token object, but the race did NOT hand back free bytes at the "
+            "endpoint: solve-project endpoint winner = SMEVR 557,238 B -> 562,174 B composed "
+            "(zero-init T2 winner Bayes-base+Brotli-delta 360,743 B is a DIFFERENT lineage and "
+            "does not transfer). Deficit +371,840 B to the 0.172 ceiling. "
+            "OWED_EG1_INTEGRATION_NOT_AN_ARCHIVE_ROW"
+        ),
+        open_state="OPEN_MEASURABLE_NOW",
+        open_reason="T2 token dumps exist; $0 CPU coder race, no scorer slot needed",
     ),
     Rv1ReactivationSpec(
         "R4_token_granularity_correction_probe",
@@ -1260,6 +1294,21 @@ RV1_REACTIVATION_SPECS: tuple[Rv1ReactivationSpec, ...] = (
         "MEASURABLE_NOW_T2_CHECKPOINTS",
         "feeds R1 QDBS proposal design + R2 pricing + the token-stream entropy race; "
         "doubles as granularity-ladder rung-2 instrument",
+        result_glob=("ddm_gr1_granularity_rerace_2*.md",),
+        landed_disposition=(
+            "LANDED 2026-07-30 as gr1 — a SUPERSET of the named probe (archive-faithful "
+            "re-quant -> real SMEVR bytes + realized n600 d_seg through the frozen CPU SegNet; "
+            "gates PASS, baseline injection 0.0038892 vs evaluate.py 0.00389011, delta 1.9e-6). "
+            "Its OWN pre-registered GO test FAILED at token granularity: every candidate worse "
+            "on realized seg+rate, B/flip 0.04-0.51 ALL below the 1.273 water -> token-granular "
+            "correction STRICTLY DOMINATED (scope INSTANCE/FORMULATION). But the same probe "
+            "found the UNIT: the cell, not the token (SMEVR conditions on per-cell temporal "
+            "mode). cell_drop50 = 359,221 B @ realized n600 d_seg 0.004310 -> seg+rate 0.6702 = "
+            "-0.098 vs the 0.7685 reference, byte-closed a6398e44. That base is CONSUMED by the "
+            "v4b/v4c/v4d composed candidate. Also overturned QA11 and dominated QA07"
+        ),
+        open_state="OPEN_MEASURABLE_NOW",
+        open_reason="T2 lotto checkpoints exist; $0 perturbation probe, no new training",
     ),
     Rv1ReactivationSpec(
         "R2_correction_stream_band_repriced",
@@ -1277,6 +1326,19 @@ RV1_REACTIVATION_SPECS: tuple[Rv1ReactivationSpec, ...] = (
         "<=~5e-4 ships NO stream",
         "BAND_ENTRY_ARMED",
         "byte-close composition of the burn candidate (E4/WS1 exporter chain)",
+        result_glob=("ddm_ea1_einsteinian_negative_audit_2*.md",),
+        landed_disposition=(
+            "TRIGGER FIRED then PRICED NO-GO. The burn endpoint realized d_seg 0.0038892 sits "
+            "INSIDE the armed [5e-4, 1e-2] band, so the conditional opened exactly as "
+            "pre-specified; the stream was then priced and REFUSED on its own GO test "
+            "(co9: dS_seg -0.001582 = 1.15% of the -0.138 ceiling at 1.45 B/flip ~= the 1.27 "
+            "water). ea1 generalizes it: at an in-band base the seg residual is WHITE, and "
+            "post-hoc correction streams are now measured non-paying at BOTH base regimes "
+            "(verdict_scope: FORMULATION -- post-hoc streams x this vehicle class). "
+            "In-band != a promising lever; the seg descent lever is the burn, not a stream"
+        ),
+        open_state="OPEN_BAND_ENTRY_ARMED",
+        open_reason="fires the moment a burn checkpoint's realized d_seg enters [5e-4, 1e-2]",
     ),
     Rv1ReactivationSpec(
         "R6_lane_channel_intraining_entrants",
@@ -1292,6 +1354,22 @@ RV1_REACTIVATION_SPECS: tuple[Rv1ReactivationSpec, ...] = (
         "arm; readout = realized Lane Betti-0 nucleation + per-class d_seg at the A1 gates",
         "BURN_WINDOW_RACE_FIRST_ITEM",
         "burn Lane-pool race (plain checkpoint retained as nucleation fallback)",
+        result_glob=("ddm_b4s_burn4_endpoint_*.md", "ddm_b4s_burn4_result_*.md"),
+        landed_disposition=(
+            "burn-4 endpoint measured: R6 GO iff endpoint n600 d_seg < the 0.00426407708 "
+            "ep641 control, else R6 closes at INSTANCE"
+        ),
+        open_state="OPEN_IN_FLIGHT_CHARTERED",
+        open_reason=(
+            "the named race did NOT run in its own burn window: the sealed tb1 ticket fired a "
+            "SINGLE arm at fixed --class-weight-lane 1.0, and the Lane-pool race lived only in "
+            "the ticket's adjudication CAVEAT, never in its levers -- so none of the three "
+            "entrants (band-ACTIVE / in-training dash-comb / fixed-gate lane-prior) ever "
+            "entered. Independently re-found by fh1 (A6: 'DSL lever EXISTS, default 1.0 = "
+            "never-fired') and re-chartered as the burn-4 S1 fire (class_weight_lane 1.0->1.3). "
+            "Closes on the burn-4 endpoint n600 row"
+        ),
+        charter_glob=("ddm_b4s_burn4_charter_*.md",),
     ),
     Rv1ReactivationSpec(
         "R8_solve_init_tokens_distill_shape",
@@ -1305,6 +1383,18 @@ RV1_REACTIVATION_SPECS: tuple[Rv1ReactivationSpec, ...] = (
         "teacher = the exact-solve object, never a banned-lineage teacher",
         "BURN_WINDOW_RACE",
         "burn config (lv1-B slot; pn1 S5 solve-ANCHOR rides as a third arm)",
+        result_glob=("ddm_sc2_schedule_optimality_convocation_2*.md",),
+        landed_disposition=(
+            "LANDED 2026-07-28 (sc2 row 14) and ADOPTED -- the campaign's ONE measured init "
+            "lever. The named A/B ran at matched epoch on n600 full-confirm: "
+            "token_init_mode=solve_project 0.009839 vs zero-init 0.013833 = -28.9%. Teacher = "
+            "the exact-solve object (no banned-lineage teacher). Now ON in every current config "
+            "including the bc1 QA24 re-burn. v1/v2 formulations MEASURED inadmissible "
+            "(verdict_scope: FORMULATION). Sibling still parked: from-birth KD "
+            "(dw1-CLOSED for continuation; from-SCRATCH needs a separate charter)"
+        ),
+        open_state="OPEN_BURN_WINDOW_RACE",
+        open_reason="needs a matched-seed/schedule A/B slot in a live burn config",
     ),
     Rv1ReactivationSpec(
         "R3_directional_conditioning_from_scratch_race",
@@ -1318,6 +1408,22 @@ RV1_REACTIVATION_SPECS: tuple[Rv1ReactivationSpec, ...] = (
         "race slot, same seed/schedule/floor, realized-through-R n600 readout",
         "BURN_WINDOW_RACE",
         "burn config lever race (falsifiers already registered)",
+        result_glob=("ddm_r3_oriented_conditioning_race_*.md",),
+        landed_disposition=(
+            "matched from-scratch ON/OFF n600 A/B of the oriented boundary-tangent "
+            "conditioning channel, realized-through-R"
+        ),
+        open_state="OPEN_LEVER_NOT_BUILT_ON_LIVE_VEHICLE",
+        open_reason=(
+            "NOT merely un-fired -- UNBUILT: the sealed tb1 ticket carries no CLADE-ICPE slot "
+            "and no oriented/directional conditioning lever exists on the tr1 partition "
+            "renderer (its only 'directional' surface is the sn1 Road<->Lane asymmetric loss "
+            "weight, a different object). The vehicle changed under the row: the -48% "
+            "directional evidence was the witness INR's, and CLAUDE.md already routes "
+            "self-orient OFF in production pending a matched from-scratch A/B. Closing this "
+            "requires a BUILD (channel + DSL lever) before any race, so it can never be a $0 "
+            "row -- rank it against the axis weights, not against its rv1 rank"
+        ),
     ),
     Rv1ReactivationSpec(
         "R5_step_hosc_head_conditional",
@@ -1329,6 +1435,20 @@ RV1_REACTIVATION_SPECS: tuple[Rv1ReactivationSpec, ...] = (
         "+ siren-init) inside the (D,c,levels) window; otherwise leave closed",
         "CONDITIONAL_TRIGGER_ONLY",
         "burn lever race (conditional entry only)",
+        result_glob=("ddm_r5_step_hosc_head_race_*.md",),
+        landed_disposition=(
+            "one step-native/annealed-beta head variant raced under the cured form inside the "
+            "(D,c,levels) window"
+        ),
+        open_state="OPEN_NON_BINDING_ON_LIVE_VEHICLE",
+        open_reason=(
+            "the conditional never armed AND the family does not bind: fh1 records no "
+            "sinusoidal layers anywhere on the tr1 conv renderer, so there is no periodic "
+            "activation for an annealed-beta cure to act on, and the hard-state selection the "
+            "step family chased is already supplied by uint8-STE + the realized A1 gate "
+            "(RACED as tr1_token_quant_L16_round). The Lane-nucleation trigger it waited on is "
+            "now owned by R6/burn-4. Leave closed; re-open only on a periodic-activation head"
+        ),
     ),
 )
 
@@ -1445,6 +1565,16 @@ def _rv1_conditional_validity_table(repo_root: Path) -> dict[str, Any]:
     reactivates until its measurement lands) + 12 honest non-reactivations as tagged
     closed verdicts + 2 charter-framing corrections, all stamped with the committed
     memo's content hash.
+
+    rx1 (2026-07-31) — THE WRITE PATH. `reactivated` shipped as a hardcoded `False` with no
+    writer anywhere in the module, so the ledger could never record a discharge: by 07-31,
+    FIVE of the eight named measurements had landed (R8 sc2 07-28 · R1 pb1 + R7 07-29 · R4
+    gr1 + R2 ea1 07-30) and the SessionStart digest was still advertising the two
+    MEASURABLE_NOW rows as free duties — an already-discharged duty, re-offered every
+    session. Each row now resolves its own state from COMMITTED evidence on disk (content-
+    hashed, fails closed to False when absent). `reactivated=True` means STRICTLY "the named
+    measurement landed", never "the lever paid" — R2 and R4 landed as measured NO-GO /
+    DOMINATED at their own pre-registered GO tests; the outcome is in `disposition`.
     """
 
     path = repo_root / RV1_TABLE_MEMO
@@ -1457,8 +1587,28 @@ def _rv1_conditional_validity_table(repo_root: Path) -> dict[str, Any]:
         }
     sha = _sha256(path)
     source = {"path": RV1_TABLE_MEMO, "sha256": sha}
-    reactivations = [
-        {
+    research = repo_root / ".omx" / "research"
+
+    def _matches(globs: tuple[str, ...]) -> list[dict[str, str]]:
+        """Committed artifacts (path + content hash) for a row's evidence globs."""
+
+        found: list[dict[str, str]] = []
+        for pattern in globs:
+            for hit in sorted(research.glob(pattern)):
+                if hit.is_file():
+                    found.append(
+                        {"path": str(hit.relative_to(repo_root)), "sha256": _sha256(hit)}
+                    )
+        return found[:3]
+
+    reactivations: list[dict[str, Any]] = []
+    for spec in sorted(RV1_REACTIVATION_SPECS, key=lambda s: s.rank):
+        result_hits = _matches(spec.result_glob)
+        landed = bool(result_hits)
+        # evidence_kind is derived from what was actually FOUND, never from what was
+        # declared: a declared-but-unmatched charter glob must read NONE, not CHARTER.
+        evidence = result_hits if landed else _matches(spec.charter_glob)
+        row: dict[str, Any] = {
             "row_id": spec.row_id,
             "rank": spec.rank,
             "negatives": list(spec.negatives),
@@ -1466,13 +1616,20 @@ def _rv1_conditional_validity_table(repo_root: Path) -> dict[str, Any]:
             "measurement": spec.measurement,
             "status": spec.status,
             "consumer": spec.consumer,
-            "reactivated": False,  # PROPOSAL until its named measurement lands
+            # EVIDENCE-DERIVED, never asserted: True means strictly "the NAMED reactivation
+            # measurement LANDED as a committed artifact" — NOT "the lever paid". The
+            # outcome (including measured NO-GOs) lives in `disposition`.
+            "reactivated": landed,
+            "duty_state": "LANDED" if landed else spec.open_state,
+            "disposition": spec.landed_disposition if landed else spec.open_reason,
+            "evidence": evidence,
+            "evidence_kind": ("RESULT" if landed else "CHARTER") if evidence else "NONE",
+            "result_glob": list(spec.result_glob),
             "source": source,
             "actuation": "NONE",
             "score_claim": False,
         }
-        for spec in sorted(RV1_REACTIVATION_SPECS, key=lambda s: s.rank)
-    ]
+        reactivations.append(row)
     closed = [
         {
             "row_id": spec.row_id,
@@ -1484,8 +1641,11 @@ def _rv1_conditional_validity_table(repo_root: Path) -> dict[str, Any]:
         for spec in RV1_NON_REACTIVATION_SPECS
     ]
     by_status: dict[str, int] = {}
+    by_duty_state: dict[str, int] = {}
     for row in reactivations:
         by_status[row["status"]] = by_status.get(row["status"], 0) + 1
+        by_duty_state[row["duty_state"]] = by_duty_state.get(row["duty_state"], 0) + 1
+    landed_rows = [row for row in reactivations if row["reactivated"]]
     # rv1 §2b accounting: 20 distinct negatives re-graded across the 8 rows (R1:3 · R2:4 ·
     # R3:1 family · R4:3 · R5:1 · R6:3 · R7:4 · R8:1). Derived from the typed rows, never
     # asserted beside them.
@@ -1502,10 +1662,18 @@ def _rv1_conditional_validity_table(repo_root: Path) -> dict[str, Any]:
             "non_reactivations": len(closed),
             "distinct_negatives_regraded": distinct_negatives,
             "by_status": dict(sorted(by_status.items())),
+            # rx1: the live discharge split. `by_status` is rv1's frozen 2026-07-28
+            # schedulability field and is NOT a state — read `by_duty_state`.
+            "landed": len(landed_rows),
+            "open": len(reactivations) - len(landed_rows),
+            "by_duty_state": dict(sorted(by_duty_state.items())),
         },
         "boundary": (
             "re-grades are PROPOSALS with named measurements; NOTHING reactivates without "
-            "its measurement landing (rv1 memo boundary, quoted)"
+            "its measurement landing (rv1 memo boundary, quoted). rx1 amendment: `reactivated` "
+            "is RESOLVED FROM COMMITTED EVIDENCE (fails closed to False) and means ONLY that "
+            "the named measurement LANDED — never that the lever paid; several landed rows are "
+            "measured NO-GOs, read each row's `disposition`"
         ),
         "actuation": "NONE",
         "score_claim": False,
@@ -3094,15 +3262,22 @@ def digest_lines(report: Mapping[str, Any]) -> list[str]:
     rv1 = report.get("rv1_table") or {}
     if rv1.get("available"):
         counts = rv1["counts"]
-        by_status = counts.get("by_status") or {}
-        now = sum(v for k, v in by_status.items() if k.startswith("MEASURABLE_NOW"))
-        armed = sum(v for k, v in by_status.items() if "ARMED" in k)
+        # rx1: report the LIVE discharge split, not rv1's frozen schedulability field. The
+        # old line derived "now=$0xN" from `by_status` (a 2026-07-28 constant) and so kept
+        # advertising already-discharged duties as free measurements.
+        rows = rv1.get("reactivation_rows") or []
+        landed = [r["row_id"].split("_")[0] for r in rows if r.get("reactivated")]
+        open_rows = [r for r in rows if not r.get("reactivated")]
+        open_txt = " ".join(
+            f"{r['row_id'].split('_')[0]}={r.get('duty_state', '?')}" for r in open_rows
+        )
         lines.append(
             f"DDM-rv1[consumed]: reactivations={counts['reactivations']} "
-            f"(now=$0x{now} armed={armed} post-burn={by_status.get('POST_BURN', 0)}) "
+            f"landed={counts.get('landed', 0)}[{','.join(landed) or '-'}] "
+            f"open={counts.get('open', 0)}{' ' + open_txt if open_txt else ''} "
             f"closed={counts['non_reactivations']} "
             f"corrections={len(rv1.get('charter_corrections') or [])} "
-            "nothing-reactivates-without-its-measurement"
+            "landed=measurement-landed-NOT-lever-paid (evidence-derived, read disposition)"
         )
     pn1 = report.get("pn1_nodes") or {}
     if pn1.get("available"):

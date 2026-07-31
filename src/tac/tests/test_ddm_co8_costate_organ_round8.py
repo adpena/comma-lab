@@ -72,12 +72,76 @@ def test_rv1_table_folds_committed_memo_with_content_hash():
 def test_rv1_reactivations_are_proposals_with_named_measurements():
     table = _rv1_conditional_validity_table(REPO)
     for row in table["reactivation_rows"]:
-        # NOTHING reactivates until its measurement lands (rv1 memo boundary).
-        assert row["reactivated"] is False
         assert row["measurement"], row["row_id"]
         assert row["consumer"], row["row_id"]
         assert row["negatives"], row["row_id"]
+        assert row["disposition"], row["row_id"]
         assert row["source"]["sha256"] == table["source"]["sha256"]
+        # rx1: `reactivated` is EVIDENCE-DERIVED, never a literal. It must equal the
+        # presence of a committed RESULT artifact — a row can neither claim a discharge it
+        # has no artifact for, nor hide one it does. (The prior assertion here was
+        # `reactivated is False` for every row, which froze the hardcoded literal in place
+        # and is exactly NO-FAKE forbidden class #2: a test that verifies a constant would
+        # still pass with the function body replaced by its markers.)
+        assert row["reactivated"] is (row["evidence_kind"] == "RESULT")
+        assert row["reactivated"] is (row["duty_state"] == "LANDED")
+        if row["reactivated"]:
+            assert row["evidence"], row["row_id"]
+            for hit in row["evidence"]:
+                assert len(hit["sha256"]) == 64
+                assert (REPO / hit["path"]).is_file(), hit["path"]
+        else:
+            assert row["duty_state"].startswith("OPEN_"), row["row_id"]
+
+
+def test_rv1_reactivated_fails_closed_when_no_result_artifact_exists(tmp_path):
+    """No committed artifacts => every row resolves False (the fail-closed direction).
+
+    Pairs with the landed-set test below: together they mutation-test both directions, so
+    neither a hardcoded True nor a hardcoded False can survive.
+    """
+
+    research = tmp_path / ".omx" / "research"
+    research.mkdir(parents=True)
+    (tmp_path / RV1_TABLE_MEMO).write_bytes((REPO / RV1_TABLE_MEMO).read_bytes())
+    table = _rv1_conditional_validity_table(tmp_path)
+    assert table["available"] is True
+    assert table["counts"]["landed"] == 0
+    assert table["counts"]["open"] == len(RV1_REACTIVATION_SPECS)
+    for row in table["reactivation_rows"]:
+        assert row["reactivated"] is False, row["row_id"]
+        assert row["evidence"] == []
+
+
+def test_rv1_landed_rows_match_the_measured_record():
+    """The five discharged duties, each pinned to the artifact that discharged it.
+
+    This is the anti-re-offer guard: before rx1 the digest advertised R7/R4 as free
+    MEASURABLE_NOW duties for two days after they had actually been measured.
+    """
+
+    rows = {r["row_id"]: r for r in _rv1_conditional_validity_table(REPO)["reactivation_rows"]}
+    expected = {
+        "R8_solve_init_tokens_distill_shape": "ddm_sc2_schedule_optimality_convocation_",
+        "R1_terminal_band_discrete_search": "ddm_pb1_postburn_completion_",
+        "R7_token_stream_coder_race": "ddm_r7_token_coder_race_",
+        "R4_token_granularity_correction_probe": "ddm_gr1_granularity_rerace_",
+        "R2_correction_stream_band_repriced": "ddm_ea1_einsteinian_negative_audit_",
+    }
+    for row_id, prefix in expected.items():
+        row = rows[row_id]
+        assert row["reactivated"] is True, row_id
+        assert any(Path(h["path"]).name.startswith(prefix) for h in row["evidence"]), row_id
+    # The three genuinely-open rows, each with the honest reason it is still open.
+    assert rows["R6_lane_channel_intraining_entrants"]["duty_state"] == "OPEN_IN_FLIGHT_CHARTERED"
+    assert (
+        rows["R3_directional_conditioning_from_scratch_race"]["duty_state"]
+        == "OPEN_LEVER_NOT_BUILT_ON_LIVE_VEHICLE"
+    )
+    assert rows["R5_step_hosc_head_conditional"]["duty_state"] == "OPEN_NON_BINDING_ON_LIVE_VEHICLE"
+    # LANDED is measurement-landed, NOT lever-paid: R4 and R2 both landed as measured
+    # negatives against their own pre-registered GO tests. The boundary must say so.
+    assert "never that the lever paid" in _rv1_conditional_validity_table(REPO)["boundary"]
 
 
 def test_rv1_statuses_match_the_committed_ranking():
