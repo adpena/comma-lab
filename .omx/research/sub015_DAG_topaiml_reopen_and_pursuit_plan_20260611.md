@@ -26124,3 +26124,32 @@ filled from rung-0/1/2 receipts; names the **v9 telemetry port to TR1 as the sin
 NOT built — gated on ddm_qa92 (whose FEED above re-priced the paint carrier net-negative; (e1) premise
 preserved, priority-dropped). 2 recorded review passes on the 3 tracked .py files; ruff clean; 49 tests
 pass. Pointer 0.1910828242 [contest-CPU] UNMOVED. [no-triality] [p0-ledger-ok]
+
+## FEED-fh1 (2026-07-31): v8/v9/v10 FORCE corpus harvested → ADAPTED for TR1/burn-4 (task #805, scorer-free)
+
+Operator directive ("the forces within v8, v9, v10 … an adapted version … may be useful to us now")
+executed as the scoped vh1 successor. Memo `.omx/research/ddm_fh1_forces_harvest_20260731.md`:
+**§1 ALREADY-PRESENT table** (13 rows — no double-counting: margin-weighted CE = #274 lineage; w_rate
+= token-side weight_entropy; shared_base = identity-ξ Force-1 approximation; QA80 slack-gain = the
+existence proof v9 forces adapt; class-weight-lane lever EXISTS never-fired). **§2 ADAPTED-FORCE
+table** {original derivation · dynamics · L18 grade · present? · adapted form · weight derivation ·
+pool · consumer slot · PLP+falsifier · cost}: **R1+R4** tie-locus×per-pair W[c,c′] (Force-3+σ_cc′
+merged; PLACEMENT pool; providers cross-vehicle) · **R2** ξ-advected token base (Force-1; FLICKER+RATE;
+QA90-gated) · **R3** satisficing CAP allocator (#459-corrected; m_safe=headroom·δ_R re-measured) ·
+**R6** class-weight-lane raced (island-birth (P/A)_c law; LANE-BIRTH 0.042 S pool; $0, never-fired
+flag) · **R7** KD attack-set+anneal-to-CE detail (dw1 law) · **R8** birth-plateau knee CONJUNCT (#430
+cascade; births +8.75/gate STILL RISING = the measured motivation) · **R9** NCDE advisor · **R10**
+caps law ≤15%/≤40% + generalized pairwise pool-cosine guards · **R13** area-theft-vs-placement
+telemetry split (the seg-axis pool ROUTER). **§3 fresh area-Lagrange pass on the TR1 energy:** F-A
+renderer-weight rate force missing but MEASURED-SMALL (burn_out ledger read: renderer 3,284 B vs
+tokens 250,358 B ⇒ pool 0.0022 S — demoted, decompose-every-headline honored); F-E **ERF
+birth-context co-adaptation force** = the genuinely-neither term (born from QA92's 07-31 collateral
+physics; SPECULATIVE-DERIVED rung behind burn-4 window-1). **§5 P5 FORCE-STACK fill-in text**
+delivered for the burn-4 skeleton (skeleton untouched — MAIN-owned). **§6 honest non-transfers:**
+eikonal/length-MCF/T1-#424/#425/adaptive-ε (level-set-chart-specific; UU-2), hosc-β/SIREN init (no
+sinusoids), w_pose law + crest gate in-burn (seg-only staging; L68), Chan-Vese (no theft regime
+measured), Muon −32% (vehicle-scoped FREE number), all v9 numeric constants (L18/constants-are-poison).
+**DSL:** 5 DESIGNED-STUB levers landed (`src/tac/witness_dsl/fh1_adapted_force_levers_20260731.py`,
+ph3_s10 anti-collision pattern; default-OFF, never-fired, fold-and-delete; trainer untouched — tp1
+owns it). 2 recorded review passes; ruff F clean; import/shape validation green. Pointer
+0.1910828242 [contest-CPU] UNMOVED. [no-triality] [p0-ledger-ok]
