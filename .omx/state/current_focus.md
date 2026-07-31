@@ -1,3 +1,66 @@
+# Current Focus - 2026-07-31 (BURN-4 ENDED on ALARM #3; MAIN REFUSED the prescribed cure; the LANE GUARD NEVER ACTUATED ONCE — λ=0 at all 58 gates, and its constraint read SLACK while its sibling detector measured EROSION)
+
+> **🚨 ALARM #3 `LANE_EROSION_ROLLBACK_EXCEEDS_CAP` (18:43:49Z) — ADJUDICATED.**
+> Adjudication: `/Volumes/VertigoDataTier/pact/ddm_b4s_20260731/burn4_ALARM3_adjudication_MAIN.json`.
+> Trainer 49743 and supervisor 65276 both GONE; 3 windows, 3 alarms; final gate ep945 0.0042013 FLAT.
+> **DECISION: endpoint on the rollback target. Cap NOT extended. Prescribed relaunch NOT fired.**
+>
+> **⛔ THE FINDING — the guard's two instruments disagree in SIGN, and the guard never fired.**
+> MEASURED, both windows, all 58 gates: **`lambda_lane == 0.0`, uniq == 1** — it never moved once.
+> `g_s_units < 0` at EVERY gate and **monotonically more negative** (w02 −0.009189→−0.031102, w03
+> −0.033588→−0.048409) against fixed `budget_s_units` 0.12589; `complementarity == −0.0`.
+> `realized_lane_s_units` FELL 0.116701→0.094788 (w02) and 0.092302→0.077481 (w03).
+> **Over exactly that span the sibling erosion detector FIRED** (net betti0 −10, slope −4.874/gate vs
+> derived ε 3.120). Two instruments on the same Lane quantity, opposite directions, same data.
+> **CORRECT reading of λ=0 (supersedes gc14's framing):** λ pinned at 0 under g<0 is **correct KKT
+> behavior for an INACTIVE constraint** — the dual is NOT broken plumbing. If there is a defect it is
+> in the **CONSTRAINT DEFINITION**. **HYPOTHESIS, to be TESTED not assumed (#822):** the budget metric
+> may be **self-defeating** — if `realized_lane_s_units` shrinks when Lane components DISAPPEAR, the
+> guard mechanically **REWARDS the erasure it exists to prevent** (spike-guard-median-freeze class).
+> Named measurement: recompute against a **GT-referenced** Lane cost on the same 58 points via gd1's
+> HT estimator (same 36 renders, $0). Compounding: gd1 measured the gate block at **−16.2% in Lane**
+> with **16.7× drift amplification**, so BOTH instruments run on a Lane-poor sample ⇒ any Lane verdict
+> currently fails the L3 apparatus-validity precondition.
+>
+> **Why the prescribed cure was REFUSED (raise λ_init 0→0.1 + relaunch, projected 6.602h vs 6.0h cap):**
+> (1) it targets the SYMPTOM (λ=0) not the CAUSE — with g<0 and η_λ=66.225, λ_init=0.1 **decays back
+> toward 0**, so the telemetry predicts the cure is INERT; it would spend 2.17h and breach the cap to
+> test that. (2) The triggering predicate is known-miscalibrated (−16.2% Lane sample). (3) b4r refused
+> to extend this cap for 50.5 min of dead time to keep the bound falsifiable — extending it now is the
+> same unfalsifiability move. (4) λ never actuated ONCE, so a λ_init run is a **NEW EXPERIMENT** owed
+> its own sealed charter, not a cap-busting tail.
+>
+> **ENDPOINT INSTRUCTION — AMENDED: measurement MUST be PER-CLASS, not total d_seg.** The alarm IS a
+> per-class trade: window_03's gate-best states (ep809 0.0039402, ep854 0.0039406, ep879 0.0039510)
+> beat window_02's endpoint on TOTAL but lie INSIDE the Lane-flagged window. Total-only would silently
+> buy d_seg with Lane components. `experiments/ddm_b4r_endpoint_extras.py` already emits per-class n600
+> + the 5×5 flip matrix at zero extra SegNet forwards. Shortlist = rollback target (w02 final, total
+> already 0.004067128, per-class NOT yet) + those three. Report the Lane trade explicitly; never a
+> single headline.
+>
+> **🏗️ sb2 (#819) LANDED — there are FIVE orphan grades, and #5 dominates.** built-and-fired 2 ·
+> built-never-fired 165 · **BUILT-ELSEWHERE-UNWIRED-HERE 8 (detectable by NOTHING automated)** ·
+> designed-stub 10 (2 silent) · not-even-designed 12. **`tac.optimization.reset_operator` BUILT** —
+> verified wider than predicted: tr1's optimizer is ONE line, **all 6 `save_checkpoint` sites pass
+> `opt_state_flat={}`**, 64-flag census returns zero for `adam|beta|bias|moment|restart|precond|warmup`
+> ⇒ **4 of gc15's 5 reset arms had no mechanism ANYWHERE**. Independently reproduced gc15's per-boundary
+> impulse as **1212.57** sign-steps against the real MLX Adam (+ refinement: truncating at a few
+> thousand steps UNDER-prices it). Registry repaired 1→171 modules via per-module trainer resolution
+> (**116→177 factories, stubs 0→10**), cached **1096×** because *a slow gate is a disabled gate — which
+> is how this survived*. **#815 is now blocked-by #820** (TR1ResetOperatorWiring).
+> **Premise correction:** tr1's `--distill-*` is a teacher-LOGIT CACHE, not a KD warm start.
+>
+> **⚠️ STRATEGY-LEVEL: three live decisions have exactly ONE branch built** (Path A/B closure audit).
+> The dangerous one: **from-birth-KD vs warm continuation resolved by BUILD ASYMMETRY, not
+> measurement** — the charter marks from-birth-KD `DEFERRED`, but `TR1KDWarmStart` was **never
+> buildable on tr1**, and a DEFERRED label on an unbuilt branch reads downstream as a resolved
+> decision. Also: rowband D8 never executed one step (any D16 verdict is a build artifact);
+> lane-guard component form is a stub while the pixel form fired in all three windows.
+> Path A is **NOT closed**; Path B is closed **except reset**.
+>
+> New rows: **#820** tr1 wiring debt · **#821** two hollow UNOWNED gates · **#822** lane-guard sign
+> disagreement. Pointer **0.1910828242 [contest-CPU] UNMOVED**.
+
 # Current Focus - 2026-07-31 (ENDPOINT DECISION RECORDED: no window_04 by CAP not by gate; cn3's reversal read WITHDRAWN — the rise itself reversed; gd1 proves the gate amplifies drift 16.7×)
 
 > **⚖️ ENDPOINT DECISION LANDED (`/Volumes/VertigoDataTier/pact/ddm_b4s_20260731/burn4_endpoint_decision_MAIN.json`).**
