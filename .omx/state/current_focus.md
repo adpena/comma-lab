@@ -1,3 +1,83 @@
+# Current Focus - 2026-07-31 (ROUND 2 — NOT CLEAN, counter RESETS 0/3. The lane-guard root cause is REFUTED IN DIRECTION: λ=0 was CORRECT KKT. "Four inert instruments" → THREE. A FOURTH reset found that would have VOIDED #824.)
+
+> **🔴 ROUND-2 CRITICAL — MY lane-guard root cause is WRONG, and wrong in DIRECTION.**
+> I claimed the constraint compares an n600 budget against a **Lane-poor** 36-pair subset, biasing g
+> negative by construction. MEASURED refutation, two independent legs: (a) the −16.2% is the **4-pair
+> BLOCK**; the **36-pair GATE** — what `realized_lane_s` is actually computed on — is `lane_frac`
+> 0.006050 vs pop 0.005855 = **+3.3% MORE Lane**, so any gate↔n600 mismatch pushes g **POSITIVE**;
+> (b) a construction bias would be ~CONSTANT, but g grows **14×** (−0.003452 → −0.048409) tracking the
+> real Lane descent. ⚠ **This is the exact block↔gate conflation I had RETRACTED ~200 lines earlier in
+> the same document.** Retracting an error and then re-committing it elsewhere in the same document is
+> the failure mode to watch.
+> **CORRECT READING: λ=0 across all 64 rows is the CORRECT KKT solution for a genuinely SLACK
+> constraint** — already satisfied at the first gate (slack 2.7%) and 14× more slack as Lane improved.
+> The guard was NOT a broken instrument. **⇒ "four silently-inert instruments in one day" has a PHANTOM
+> entry; it is THREE** (lever_registry 1/171 · findings gate 0/1,260 · duty-queue 116/177). Correct that
+> wherever it appears — it is driving the reframe.
+> **THE REAL FINDING, and it is better:** `LANE_BUDGET_S_UNITS = 0.12589` (`lane_guard.py:59`, "ep641
+> Lane S") is **PINNED AT THE STARTING LEVEL and never tightens** — so once Lane improves at all the
+> constraint is slack forever. **A guard with a fixed starting budget can only protect against becoming
+> worse than the start; it can NEVER HOLD A GAIN.** Reformulation: make the budget a **RATCHET**
+> (budget ← min(budget, realized + derived margin) at accepted boundaries) so the dual engages when a
+> gain begins to erode. Cheap, derived-not-guessed, raced-not-presumed. (#822 rewritten.)
+>
+> **🔴 A FOURTH RESET — and it would have VOIDED #824.** "Three resets" OVERCOUNTS: the EMA shadow is
+> **NOT re-anchored** (`train_tr1:1550 ema = st["ema"]` loads it from the checkpoint — continuous across
+> boundaries). So **TWO** resets (Adam moments, decay VALUE). The genuinely unnamed one is a
+> **MEASUREMENT-BASIS reset**: `:1723 global_step = 0 if resume_from is None else ema_warmup_updates` ⇒
+> a RESUMED run reports `gate_basis="ema_shadow"` from its first post-resume step while a FRESH run
+> reads `live_ema_warmup` for its first U/2 steps (`:1899`). **If one #824 arm runs fresh and the other
+> resumed, the arms are not read on the same instrument and the comparison is void.** Now a
+> seal-blocking invariant; sent to the build arm. The `--ema-decay` finding is CONFIRMED and stronger:
+> `ema_warmup_updates` measured **24975/30226/35475** = exactly U/2 for U = 49950/60450/70950, and
+> `--ema-decay` is ABSENT from all 5 tickets.
+>
+> **📐 THE RESTART p IS 2× WEAKER THAN I QUOTED.** `p=0.0056` is the **per-epoch** statistic while the
+> "168.6%" effect size is the **RAW** telescoping sum. On the raw basis: `22/1953 = 0.0113`, ×2 =
+> **0.0225**. Claim SURVIVES (p<0.05 both ways; ranks 2nd and 6th of 63 robust to normalization) but is
+> optimistic 2× on its own stated basis. Exchangeability is fine and was MEASURED not assumed
+> (interval autocorrelation lag1–4 = −0.097/+0.068/−0.103/+0.013, inside ±0.25). **Carry this into the
+> headline: the split gc15's mechanism actually PREDICTED — boundary+17 epochs — FAILED.** The
+> significant window is NARROWER than the theory.
+>
+> **↩️ MY "AGGRAVATING gc14" ATTRIBUTION IS FALSE — withdrawn.** gc14 §2 **explicitly DECLARES
+> window_01 as baseline and REJECTS the parent**, with a stated reason ("a different derived
+> `ema_decay` — a different measuring instrument"), and lists BOTH rows. Its −0.018303 was a
+> **gate-basis→n600-basis** correction, not a parent correction. My real round-1 error was **dropping
+> gc14's RATE column**, not using the wrong parent. Sharper still: F3 undercuts gc14's rationale too —
+> since `--epochs` differs at every window, **no two windows share an EMA instrument**, so neither
+> baseline is instrument-matched. **Report BOTH.** The arithmetic −0.017648 stands and is the right
+> number for the pre-registered falsifier (`supervise:64`, `:440`).
+>
+> **🔔 AN INDEPENDENT INSTRUMENT ALREADY AGREED WITH THE RESTART FINDING — unread.**
+> `A1_REALIZATION_GAP_ALARM` fired **6×** (2 per window, every window: ep649/659, ep674/714, ep814/899).
+> Semantics: *smooth loss fell ≥2% while realized d_seg fell <0.5%* — the restart decomposition's claim
+> arriving through a different channel, built for another purpose. `grep -c a1_alarm supervise…` = **0**;
+> decision JSONs carry only `final_gate_a1` (the LAST gate) and none of the six was final ⇒ all six
+> invisible to every decision record. In-trainer guard was live and correctly silent (no two
+> consecutive). Now folded into #824's boundary instrumentation as a free corroborator.
+>
+> **⚖️ SELECTION IS DECIDED BY AN UNVALIDATED BYTE LEDGER.** Composed-S ranking reproduced (ep854
+> 0.577173 best of ALL 58 gates; ep809 0.577874; ep879 0.577904) — but the byte term separates them by
+> up to **1,589 B = 0.00106 S**, the SAME ORDER as the whole d_seg spread (1.09e-5 = 0.00109 S). So
+> `total_counted_bytes` is the DECIDING variable, and it has never been checked against `archive.zip`
+> ordering. The caveat bounds AUTHORITY, not ORDERING — and selection IS an ordering operation.
+> Ordering check routed to the endpoint arm, to run BEFORE any winner is announced. Also: **ep934
+> composes to 0.591523, WORSE than the ep805 control 0.589021** — diagnostic only, NOT a candidate.
+>
+> **Low:** the 16.67× should be kept **WITH its antecedent** (`(4/36)/(4/600)` is a real design
+> sensitivity requiring block-localized drift), not deleted — reconcile the correction JSON vs
+> hot-state. And `:1855` is always-TRUE but **never-ON** (guarded by `not knee_switched`; `:1730-1737`
+> sets it True on any post-CE resume) — my wording overstated.
+>
+> **VERIFIED CORRECT, no change:** the composed arithmetic (`s_additive` 0.6081898657 reproduces to the
+> last digit; w02 ΔS −0.017648008; w03 +0.004624 regression), the `--epochs`→`derive_ema_decay` chain,
+> the 16.67× retraction itself, arm-C double-death (all 6 save sites at `:1565,1875,1906,2026,2108,2152`),
+> the read-out map, and the three-Lane-instruments-improve-together topology.
+>
+> **Counter 0/3. Round 3 owes:** the 6 items above, each already routed. Pointer **0.1910828242
+> [contest-CPU] UNMOVED**.
+
 # Current Focus - 2026-07-31 (ROUND 1 CLOSED — 4 CRITICAL, 4 Medium, 2 Low. THE BURN'S TRAINING NET-REGRESSED; the RESTARTS paid for the descent (p≈0.011). "16.67× bias" was MY false relay. Counter 0/3.)
 
 > **🔴 THE RESULT THAT REFRAMES THE BURN (R1-C, measured on the 64 gate readings → 63 per-epoch
