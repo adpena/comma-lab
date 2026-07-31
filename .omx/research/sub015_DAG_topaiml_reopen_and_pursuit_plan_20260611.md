@@ -25564,3 +25564,36 @@ delta UNMOVED (0.1910828242 [contest-CPU]) — means, not end.
   358,209 B sha e7640dee).
 
 pointer 0.1910828242 [contest-CPU] UNMOVED
+
+## FEED-coe1 (2026-07-30) — ScientistOne / Chain-of-Evidence crosswalk (apparatus-vs-apparatus; #794)
+
+- DROP = Google "Science One" → the paper is **ScientistOne** (arXiv 2605.26340). Closest-genre drop the
+  campaign has had: a system in OUR genre (autonomous research, every claim carries a verifiable evidence
+  chain). Memo `ddm_coe1_science_one_coe_crosswalk_20260730.md` (14-row crosswalk + §3 claim-tag
+  adjudication + §4 what-they-do-better). $0, WebFetch/WebSearch only. No launches, no scorer jobs.
+- SYMMETRIC HONEST HEADLINE: our SCORE-verif / METHOD-CODE-align / SPEC-violation verification is
+  **ALREADY-BETTER** — I1↔re-derive-from-components + exact-oracle-only + byte-close-through-R; I4↔#332
+  STRUCTURAL commit-time provenance bijection (config↔DSL Lever↔LawRef↔trainer consumer) ⊃ their post-hoc
+  LLM judge; I2↔rule-118 + #417 consumption bijection + NO-FAKE 8-class ⊃ their LLM code inspection.
+  Discovery isolation (git-worktree/CFL) ⊃ their branch isolation; read-only evaluator record
+  (#110/#113 append-only + git-SHA'd frozen measurement_row) ⊃ their "strict read-only record". And we
+  UNIQUELY hold what they LACK: verdict-scope ladder (instance<formulation<family<paradigm), confound-hunt
+  3-layer immune system, authority-axis discipline (contest-CPU/CUDA vs advisory-never-score).
+- THE ONE THING THEY ENFORCE THAT WE ONLY CULTURALLY PRACTICE: **standing claim-level COMPLETENESS.**
+  Their Claim Verifier binds every factual claim to an inline evidence artifact + runs every paper; our
+  completeness is MEMO-level (STORES-CONSULTED headers) + PERIODIC (ddm_fu1, operator-convened). §3
+  adjudication: the tag convention already EXISTS (CLAUDE.md "docstring-overstatement trap" mandates
+  `[empirical:…]`/`[contest-CPU]`); the gap is ENFORCEMENT, not schema, and NOT per-sentence tagging
+  (that's polish-hoarding/theater). Claim-without-evidence-tag = the SAME leak class fu1 found one rung
+  DOWN (task-orphan → claim-orphan). Proposed A1 = a warn-only drift-detector leg that flags load-bearing
+  claim sentences (score literal OR verdict verb {refuted|measured|beats|UNMOVED|solved|SOTA|−0.…})
+  lacking an adjacent evidence tag; reuses the tag convention + drift-detector we run every commit;
+  fail-OPEN like the existing triality legs.
+- DISPOSITION: A1/A2(grounded-API-only reference resolve, advisory)/A3(2D claim taxonomy) are ALL
+  apparatus OFF the critical path — none shortens distance to the next EXACT row (pointer moves through
+  dw1's rate slot). Per drain-circling guard + DISTANCE test + fu1 "recorded-not-built" pattern:
+  **NO arm spawned, NO QA/ledger row.** A1 recorded as a NAMED APPARATUS GAP → knowledge-apparatus line
+  (#346/#569), to be built WITH the already-recorded adjacent gap (CORE crosswalk's "landing-time
+  contrastive rows", papers_checked_arxiv_2605_28742_core row 2) as one increment at a quiet boundary.
+
+pointer 0.1910828242 [contest-CPU] UNMOVED
