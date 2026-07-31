@@ -26301,3 +26301,29 @@ composed program against the REAL trainer argparser; 25/25; r1c parent ticket re
 REMOVED; the daemon (nohup+disown) bootstraps window_01 re-smoke (25 ep, ΔS<0 gate) → full windows →
 burn4.done/ALARM + endpoint manifest (now records lane_guard config + rejected-window history).
 Pointer 0.1910828242 [contest-CPU] UNMOVED. [no-triality] [p0-ledger-ok]
+
+
+## FEED-us1 (2026-07-31, task #811 ddm_us1): UPSTREAM FULL RE-READ — 0 CRITICAL law-basis failures; drift is operational-only
+
+Operator 07-31: re-derive doctrine from primary artifacts, not working memory. Read WHOLE
+`upstream/{evaluate,modules,frame_utils}.py` + README + evaluate.sh + baseline_fast contract + deps
+AS-INSTALLED (`upstream/.venv` py3.11.15: torch 2.10.0 / timm 1.0.22 / smp 0.5.0 / numpy 2.3.4 =
+uv.lock). **DRIFT SCORECARD [magnitude-ok]: recall FAITHFUL on load-bearing physics — all 13 canonical
+cross-check laws' bases RE-DERIVED and HOLD; 0 CRITICAL.** verdict_scope: the drift found is
+operational-envelope + precision, NOT scorer geometry — do NOT re-open the factorization spine.
+Confirmed from primary artifact: A_seg≡A_pose→(512,384) (both preprocess resize to segnet_model_input_size,
+modules.py:73,109); frame_0 seg-free (x[:,-1], :108); rank-4 linear head = single Conv2d(16→5,k3)
+activation=None (probe); FastViT-t12 = 12 RepMixerBlock / 0 AttentionBlock (probe → MPS-drift-not-attention
+basis); ker(A) 80.67% nullity + 230,904 blind-px (22.70%, 106 rows+140 cols, DISTINCT numbers); d_seg=argmax
+disagreement last-frame; d_pose=MSE first-6-of-12 (h.out//2); rate=archive.zip stat, NO time term
+(evaluate.py:92, grep 0 timing refs); rule-118 (README:118 + "applies to PoseNet and SegNet"); seq_len=2
+non-overlap=600 pairs (0.mkv, 1200 frames). **Top FORGOTTEN/NEW by consumer leverage:** (1) posenet.safetensors
+55.8MB > 37.5MB VIDEO; ship-both = +62.8 score [DERIVED upper bound] → #809 cg1 guard stake. (2) rate DENOM is
+DYNAMIC sum(rglob '*')==stat(0.mkv)==37,545,489 [MEASURED match] not a hardcoded constant → stray videos/ file
+silently changes rate; byte-close/export precondition. (3) lab timm 1.0.27 ≠ replica 1.0.22 but BOTH strict-load
+frozen scorers missing=0/unexpected=0 [MEASURED-benign at key level; numeric-forward parity OWED; authority stays
+upstream/.venv]. (4) camera_fl=910 (frame_utils:12) + (5) yuv6 luma=2×2 POLYPHASE y00/y10/y01/y11 (frame_utils:74)
+→ terminal pose solve inputs. (6) baseline_fast fixture pose .38042614/seg .00946623/rate .05979147/4.39
+[recomputed ✓]. (7) upstream README leaderboard STALE (tops mask2mask 0.60 #53, pre-HNeRV) → NEVER the
+score-to-beat. Memo: `.omx/research/ddm_us1_upstream_reread_20260731.md` (4-class ledger, every row file:line).
+Pointer 0.1910828242 [contest-CPU] UNMOVED — this read is MEANS. [no-triality] [p0-ledger-ok]
