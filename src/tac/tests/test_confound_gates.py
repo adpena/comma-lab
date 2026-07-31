@@ -845,7 +845,11 @@ class TestModule:
         # gates (raw-vm basis + observer-flag exclusion; added to the tuple by
         # a sibling arm without updating this test — pre-existing failure,
         # fixed forward here) + the NAME-ANCHORED-SEARCH duplicate-SoT gate.
-        assert len(cg.CONFOUND_GATES) == 20
+        # 20 -> 22 on 2026-07-31: the same fix-forward, twice more — ddm_sb2
+        # (#819) added check_no_stub_lever_factories without updating this
+        # count (a pre-existing failure ddm_rg5 confirmed by git-stash A/B),
+        # and ddm_rg5 (#825) adds its consumer-side sister.
+        assert len(cg.CONFOUND_GATES) == 22
         names = {fn.__name__ for fn in cg.CONFOUND_GATES}
         assert names == {
             "check_no_spike_guard_defaults_to_deadlock_mode",
@@ -868,6 +872,8 @@ class TestModule:
             "check_no_raw_virtual_memory_safety_basis",
             "check_process_guard_excludes_observer_flag_values",
             "check_no_duplicate_canonical_spec_across_refs",
+            "check_no_stub_lever_factories",
+            "check_no_legacy_single_module_lever_surface_consumers",
         }
 
     def test_followon_gates_are_strict_flipped_in_preflight_all(self):
@@ -936,6 +942,20 @@ class TestModule:
             # 2026-07-18 NAME-ANCHORED-SEARCH duplicate-SoT gate (live 0 at
             # landing: all working-tree specs registered at their own paths).
             "check_no_duplicate_canonical_spec_across_refs": 0,
+            # 2026-07-31 ddm_sb2 (#819) DESIGNED-STUB gate, landed into
+            # CONFOUND_GATES with NO bounds entry — which makes this test raise
+            # KeyError rather than assert, i.e. a gate registered without an
+            # owner for its own live count. Backfilled by ddm_rg5 (#825) at the
+            # MEASURED value; drains to 0 as #819 builds the stubs (that gate's
+            # own named strict-flip condition), and until then this bound stops
+            # the debt GROWING.
+            "check_no_stub_lever_factories": 10,
+            # 2026-07-31 ddm_rg5 (#825) sister of the above: refuses a CONSUMER
+            # binding orphan accounting to the single-module lever surface.
+            # STRICT in preflight at live-count 0, so the bound is 0 and must
+            # stay 0 — any growth here means a new consumer re-created the
+            # blindness that hid 9 of 10 designed-stubs from the duty queue.
+            "check_no_legacy_single_module_lever_surface_consumers": 0,
         }
         v = fn(strict=False, verbose=False)
         assert len(v) <= bounds[fn.__name__], f"{fn.__name__} live-count grew: {v[:3]}"

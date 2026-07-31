@@ -201,9 +201,51 @@ def activation_status(lever: str, path: Path | None = None) -> ActivationStatus:
     )
 
 
-def known_levers() -> tuple[str, ...]:
-    """The canonical set of DSL ``Lever`` factory names (from ``lever_registry.lever_factories``)."""
+def curriculum_dsl_known_levers() -> tuple[str, ...]:
+    """ONLY the ``Lever`` factories declared in ``curriculum_dsl.py`` (``lever_registry.lever_factories``).
+
+    A DELIBERATELY NARROW surface, named so a reader cannot mistake it for the campaign's lever
+    universe. It exists for the one legitimate question "what does the levelset trainer's own DSL
+    module hold?" — never for orphan/duty accounting, which must see the whole package
+    (:func:`known_levers`). ``check_no_legacy_single_module_lever_surface_consumers``
+    (``tac.confound_gates``) refuses NEW consumers of this surface outside its allowlist.
+    """
     return tuple(sorted(lever_factories().keys()))
+
+
+def known_levers() -> tuple[str, ...]:
+    """The canonical set of DSL ``Lever`` factory names — EVERY module in ``tac.witness_dsl``.
+
+    ddm_rg5 (task #825), 2026-07-31 — **the sense organ was blind to its own stubs.** This
+    function used to return ``lever_factories()``, which ASTs ONE file (``curriculum_dsl.py``).
+    ``never_fired()`` and ``duty_to_measure()`` BOTH default to it, and those two ARE the
+    duty-to-measure queue CLAUDE.md's "'Off' is a tracked queue, never a forgotten default"
+    non-negotiable mandates. ddm_sb2 repaired the registry by ADDING
+    :func:`package_known_levers` beside it but PRESERVING this default, so nothing opted in: the
+    honest superset had exactly one grep hit outside its own definition, and that hit was a
+    docstring.
+
+    MEASURED (ddm_rg5, n=live registry + ledger): legacy 116 factories vs package 177 — the
+    legacy set is a strict SUBSET (0 extra), so **61 factories were structurally INELIGIBLE for
+    the duty queue**, including **9 of the 10 DESIGNED-STUBS** (fh1 x5, ph3_s10 x2, ax1 x1,
+    constants_telemetry x1). Those stubs are the exact NO-FAKE forbidden-class-#1 surface the
+    same-day binding memory
+    (``designed_stub_is_orphan_signal_and_a_no_fake_violation_20260731``) names — invisible to
+    their own tracker on the day the rule was written.
+
+    HONEST BOUND on what this repairs (ddm_rg5 ran the diff before claiming it): the RANKED HEAD
+    of the queue is UNCHANGED. All 61 newly-visible factories carry no ``est_delta_s`` row, so
+    they sort into the alphabetical duty-to-ESTIMATE tail below the 5 significance-carrying rows,
+    and the digest prints only the top-N. What the blindness cost is COUNT (owed 115 -> 176),
+    ELIGIBILITY (a lever absent from ``known_levers`` can never be nagged, estimated, or ranked
+    at all), and the ORPHAN LIST ITSELF (:func:`never_fired`). It did NOT corrupt the ranking —
+    any claim that it did is unsupported by the measured diff.
+
+    Cost is not a reason to stay narrow: ``package_lever_factories`` is cached
+    (MEASURED cold 1340 ms, warm 1.2 ms — a slow gate is a disabled gate, which is how the
+    vacuity survived; ddm_sb2's lesson, honored).
+    """
+    return package_known_levers()
 
 
 def never_fired(known: tuple[str, ...] | None = None, path: Path | None = None) -> tuple[str, ...]:
@@ -608,12 +650,13 @@ def _build_index() -> dict[str, object]:
 
 
 def package_known_levers() -> tuple[str, ...]:
-    """Every lever factory in the package — the honest superset of :func:`known_levers`.
+    """Every lever factory in the package — the honest lever universe.
 
-    ``known_levers()`` reads ``lever_factories()``, which ASTs ONLY ``curriculum_dsl.py``; sibling
-    lever modules (fh1 forces, ph3_s10, ax1, the tr1 spec) were invisible to the activation ledger
-    entirely, so their levers were never even IN the duty queue. Preserved as a separate function so
-    the historical contract is unchanged for existing consumers.
+    Landed by ddm_sb2 (#819) as a superset BESIDE ``known_levers``; ddm_rg5 (#825) made
+    :func:`known_levers` RETURN it, because a correct surface nobody opts into is not a repair.
+    The narrow single-module view survives, explicitly named, as
+    :func:`curriculum_dsl_known_levers`. This function is retained as the intention-revealing
+    name (callers that specifically mean "the whole package" should keep saying so).
     """
     return tuple(sorted(_build_index()))
 
@@ -773,6 +816,7 @@ __all__ = [
     "activation_status",
     "build_completeness_report",
     "build_grade",
+    "curriculum_dsl_known_levers",
     "duty_to_measure",
     "duty_to_measure_ranked",
     "known_levers",

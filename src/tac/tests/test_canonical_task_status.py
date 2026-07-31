@@ -264,3 +264,72 @@ def test_duckdb_refresh_preserves_last_good_table_on_corrupt_ledger(tmp_path: Pa
     finally:
         con.close()
     assert rows == [("memo::ITEM_6",)]
+
+
+# ── SPECIFICATION WITHOUT REGISTRATION (ddm_rg5 #825) ────────────────────────────────
+def _focus_repo(tmp_path: Path, focus_text: str, *, register: list[str] = ()) -> Path:
+    (tmp_path / ".omx" / "state").mkdir(parents=True)
+    (tmp_path / ".omx" / "research").mkdir(parents=True)
+    memo = tmp_path / ".omx" / "research" / "m_20260731.md"
+    memo.write_text("# memo\n", encoding="utf-8")
+    for tid in register:
+        register_task(tid, ".omx/research/m_20260731.md", f"t{tid}", "owner",
+                      actor="t", session_id="s", repo_root=tmp_path)
+    (tmp_path / ".omx" / "state" / "current_focus.md").write_text(
+        focus_text, encoding="utf-8")
+    return tmp_path
+
+
+def test_unregistered_task_ref_in_current_focus_is_surfaced(tmp_path: Path) -> None:
+    """Prose is not existence.
+
+    The receipt (R1-C, 2026-07-31): #815 was skipped in the ledger, #822 likewise, and MAIN then
+    asserted a BLOCKING RELATION between #815 and #820 — neither of which had a row at all.
+    Every downstream reader took the focus doc's ``#NNN`` as evidence the task existed.
+    """
+    from tac.canonical_task_status.checks import unregistered_task_refs_in_current_focus
+
+    root = _focus_repo(tmp_path, "burn #815 blocked by #820; #816 done\n", register=["816"])
+    v = unregistered_task_refs_in_current_focus(root)
+    assert len(v) == 2
+    assert any("#815" in x for x in v) and any("#820" in x for x in v)
+    assert all("#816" not in x for x in v)
+
+
+def test_registration_check_ignores_ids_below_the_baseline(tmp_path: Path) -> None:
+    """A bare ``#NNN`` cannot distinguish a TASK from a CATALOG number.
+
+    ``#396`` and ``#316`` appear in the live focus doc as catalog GATES, and the JSONL holds
+    historical rows while the live TaskList is SoT for #200+. Firing on those would make the gate
+    noise, and a noisy gate is an ignored gate — the failure this whole task exists to break.
+    """
+    from tac.canonical_task_status.checks import unregistered_task_refs_in_current_focus
+
+    root = _focus_repo(tmp_path, "Catalog #396 warn-only; #316 strict; task #825 open\n")
+    v = unregistered_task_refs_in_current_focus(root)
+    assert len(v) == 1 and "#825" in v[0]
+
+
+def test_registration_violations_flow_into_the_canonical_gate(tmp_path: Path) -> None:
+    from tac.canonical_task_status import canonical_task_status_violations
+
+    root = _focus_repo(tmp_path, "#899 is the next thing\n")
+    assert any("#899" in x for x in canonical_task_status_violations(root))
+
+
+def test_the_backfilled_orphans_are_registered() -> None:
+    """The eleven ids ddm_rg5 (#825) backfilled must stay registered.
+
+    Deliberately NOT ``unregistered_task_refs_in_current_focus() == []``: ``current_focus.md`` is
+    edited continuously by concurrent arms — three NEW unregistered ids (#826/#827/#828) appeared
+    in it while this landing was in flight — so a live-count-0 unit test would flake on other
+    arms' prose rather than on a defect. The live ratchet belongs in the preflight gate, which
+    runs against the tree as it is at commit time; the durable, non-racy property a test can own
+    is that the known orphans did not silently disappear again.
+    """
+    from tac.canonical_task_status import latest_status_by_task_id
+
+    for tid in ("809", "815", "819", "820", "821", "822", "824", "825", "826", "827", "828"):
+        row = latest_status_by_task_id(tid)
+        assert row is not None, f"#{tid} lost its registration"
+        assert row.title.strip(), f"#{tid} registered with an empty title"

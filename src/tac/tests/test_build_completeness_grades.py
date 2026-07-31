@@ -49,8 +49,47 @@ def test_package_scan_is_strictly_wider_than_the_single_file_scan() -> None:
     assert len(package_lever_modules()) > 100
 
 
-def test_package_known_levers_supersets_known_levers() -> None:
-    assert set(known_levers()) < set(package_known_levers())
+def test_known_levers_is_the_package_wide_universe() -> None:
+    """``known_levers()`` IS the package surface — the contract ddm_rg5 (#825) changed.
+
+    ddm_sb2 (#819) landed ``package_known_levers`` BESIDE ``known_levers`` and preserved the
+    single-module default "so the historical contract is unchanged". Nothing opted in: the honest
+    superset had exactly one grep hit outside its own definition, and that hit was a docstring.
+    Meanwhile ``never_fired()`` and ``duty_to_measure()`` — the duty queue itself — both defaulted
+    to the narrow set and enumerated 116 of 179 factories, blind to 9 of the 10 designed-stubs the
+    sister gate reports. A correct surface nobody consumes is not a repair, so the DEFAULT moved.
+
+    The narrow view survives under an intention-revealing name for the one legitimate question it
+    answers, and this test pins BOTH halves: default is package-wide, narrow is a strict subset.
+    """
+    from tac.witness_dsl.activation_ledger import curriculum_dsl_known_levers
+
+    assert set(known_levers()) == set(package_known_levers())
+    assert set(curriculum_dsl_known_levers()) < set(known_levers())
+    assert set(curriculum_dsl_known_levers()) == set(lever_factories())
+
+
+def test_duty_queue_sees_the_designed_stubs() -> None:
+    """The orphan tracker must be able to see the orphans its sister gate reports.
+
+    This is the property whose ABSENCE was the bug: every designed-stub is, by construction, a
+    lever that has never fired, so it must appear in ``never_fired()``. Under the single-module
+    default, 9 of 10 did not — the NO-FAKE forbidden-class-#1 surface was invisible to the very
+    queue that exists to surface it, on the day the rule naming that class was written.
+    """
+    from tac.witness_dsl.activation_ledger import (
+        BUILD_DESIGNED_STUB,
+        build_completeness_report,
+        duty_to_measure,
+        never_fired,
+    )
+
+    stubs = {r["component"] for r in build_completeness_report()
+             if r["grade"] == BUILD_DESIGNED_STUB}
+    assert stubs, "fixture guard: expected at least one designed-stub in the live registry"
+    missing = stubs - set(never_fired())
+    assert not missing, f"designed-stubs invisible to the orphan list: {sorted(missing)}"
+    assert not stubs - set(duty_to_measure()), "designed-stubs missing from the duty queue"
 
 
 def test_trainer_resolution_is_per_module_not_global() -> None:
@@ -246,3 +285,69 @@ def test_mutation_guard_stub_body_would_fail() -> None:
     assert any("--tie-locus-edge-weight" in s for s in v), (
         "the gate must quote the REAL missing flag, not a canned message")
     assert np.isfinite(len(v))
+
+
+# ── the CONSUMER half of the same class (ddm_rg5 #825) ───────────────────────────────
+# The stub gate above refuses a lever that PRESENTS as built with no mechanism. Its sister
+# refuses a CONSUMER that reads a PARTIAL registry and so presents a partial universe as
+# complete. Live count 0 at landing, hence STRICT from byte one.
+def test_legacy_surface_gate_is_wired_and_strict_clean() -> None:
+    from tac.confound_gates import check_no_legacy_single_module_lever_surface_consumers as g
+
+    assert g in CONFOUND_GATES
+    assert g(strict=True, verbose=False) == []
+
+
+def test_legacy_surface_gate_flags_a_real_binding(tmp_path) -> None:
+    src = tmp_path / "tools"
+    src.mkdir(parents=True)
+    (src / "ranker.py").write_text(
+        "from tac.witness_dsl.lever_registry import lever_factories\n"
+        "def rank():\n    return sorted(lever_factories())\n",
+        encoding="utf-8")
+    from tac.confound_gates import check_no_legacy_single_module_lever_surface_consumers as g
+
+    from tac.preflight import PreflightError
+
+    v = g(repo_root=tmp_path, strict=False, verbose=False)
+    assert len(v) == 1 and "tools/ranker.py" in v[0]
+    with pytest.raises(PreflightError):
+        g(repo_root=tmp_path, strict=True, verbose=False)
+
+
+def test_legacy_surface_gate_ignores_prose_and_honours_waiver(tmp_path) -> None:
+    """AST, not regex: the two live TEXT hits at landing were a docstring and an f-string.
+
+    ``tools/register_ema_finisher_duty.py`` mentions ``lever_factories()`` in its module
+    docstring and inside an error message. A regex gate reports both, the reader learns the gate
+    cries wolf, and the next real binding slides past — the exact dynamic this task exists to
+    break. Only an actual call may be refused.
+    """
+    src = tmp_path / "tools"
+    src.mkdir(parents=True)
+    (src / "prose.py").write_text(
+        '"""Docs mentioning lever_factories() in prose."""\n'
+        'MSG = "not discovered by lever_factories(); build it"\n'
+        "# comment about lever_factories()\n",
+        encoding="utf-8")
+    (src / "waived.py").write_text(
+        "from tac.witness_dsl.lever_registry import lever_factories\n"
+        "def only_curriculum_dsl():\n"
+        "    return lever_factories()  # SINGLE_MODULE_LEVER_SURFACE_OK: this reports the "
+        "levelset trainer's own module coverage, not the campaign lever universe\n",
+        encoding="utf-8")
+    from tac.confound_gates import check_no_legacy_single_module_lever_surface_consumers as g
+
+    assert g(repo_root=tmp_path, strict=True, verbose=False) == []
+
+
+def test_legacy_surface_gate_rejects_placeholder_waiver(tmp_path) -> None:
+    src = tmp_path / "tools"
+    src.mkdir(parents=True)
+    (src / "fake.py").write_text(
+        "from tac.witness_dsl.lever_registry import lever_factories\n"
+        "def q():\n    return lever_factories()  # SINGLE_MODULE_LEVER_SURFACE_OK: <rationale>\n",
+        encoding="utf-8")
+    from tac.confound_gates import check_no_legacy_single_module_lever_surface_consumers as g
+
+    assert len(g(repo_root=tmp_path, strict=False, verbose=False)) == 1

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import os
+from pathlib import Path
 import time
 
 import pytest
@@ -18,7 +19,14 @@ from tac.preflight import (
     check_codex_findings_memos_consumed,
 )
 
-NOW = 1_800_000_000.0  # fixed clock for deterministic freshness math
+# Fixed clock = 2026-07-18T00:00:00Z. ddm_rg5 (#825): producer age now comes from the memo's
+# FILENAME DATE STAMP, not its mtime (mtime is a property of the checkout, not of the work — it
+# is what made this gate scan 0 of 1,260 memos while reporting LIVE COUNT 0). The clock therefore
+# has to sit in the same era as the fixture filenames, which are stamped 2026-07-17 / 2026-06-01.
+# The previous value (1.8e9 = 2027-01-15) was ~6 months AHEAD of every fixture name, which the
+# mtime axis hid entirely. ``_write(age_seconds=...)`` still drives mtime, which still governs the
+# CONSUMER-side scan window — that axis is unchanged and the tests below still exercise it.
+NOW = 1_784_332_800.0  # 2026-07-18T00:00:00Z
 
 
 def _mk_repo(tmp_path):
@@ -60,11 +68,60 @@ def test_fresh_orphan_memo_flagged(tmp_path):
 
 
 def test_stale_orphan_memo_not_flagged(tmp_path):
-    # older than the 3-day grace window ⇒ outside this gate's jurisdiction
+    # filename-stamped 2026-06-01, i.e. 47 days before NOW ⇒ outside the 30-day routing window
     research, _ = _mk_repo(tmp_path)
     _write(research / "codex_findings_old_arm_20260601_codex.md",
            "# findings\n", age_seconds=10 * 24 * 3600)
     assert check_codex_findings_memos_consumed(repo_root=tmp_path, now=NOW) == []
+
+
+def test_producer_age_comes_from_filename_not_mtime(tmp_path):
+    """THE regression guard for the vacuity: a freshly-touched file with an OLD name is stale.
+
+    On the mtime axis this memo reads as 60 seconds old and would be scanned; on the honest axis
+    its name says 2026-06-01, 47 days back, so it is out of the routing window. The mirror case
+    (old mtime, in-window name) must still be scanned. Together these pin the axis itself, which
+    is the property no previous test asserted — and its absence is why a checkout-dependent
+    window survived review while scanning 0 of 1,260 memos.
+    """
+    research, _ = _mk_repo(tmp_path)
+    _write(research / "codex_findings_freshly_touched_20260601_codex.md",
+           "# findings\n", age_seconds=60.0)
+    assert check_codex_findings_memos_consumed(repo_root=tmp_path, now=NOW) == []
+
+    _write(research / "codex_findings_old_mtime_arm_20260717_codex.md",
+           "# findings\n", age_seconds=365 * 24 * 3600)
+    v = check_codex_findings_memos_consumed(repo_root=tmp_path, now=NOW)
+    assert len(v) == 1
+    assert "old_mtime_arm" in v[0]
+
+
+def test_unstamped_filename_falls_back_to_mtime(tmp_path):
+    """A memo whose name carries no date stamp must not silently drop out of scope."""
+    research, _ = _mk_repo(tmp_path)
+    _write(research / "codex_findings_nostamp_arm.md", "# findings\n", age_seconds=60.0)
+    v = check_codex_findings_memos_consumed(repo_root=tmp_path, now=NOW)
+    assert len(v) == 1
+    assert "nostamp_arm" in v[0]
+
+    _write(research / "codex_findings_nostamp_arm.md", "# findings\n",
+           age_seconds=90 * 24 * 3600)
+    assert check_codex_findings_memos_consumed(repo_root=tmp_path, now=NOW) == []
+
+
+def test_verbose_reports_scan_scope(capsys, tmp_path):
+    """"OK" must never be printable without the scope it was computed over.
+
+    The hollow gate printed ``OK (0 fresh memo(s) scanned)`` — technically honest, and read by
+    every reviewer as "clean". The verdict now carries in-window count, total, and window width.
+    """
+    research, _ = _mk_repo(tmp_path)
+    _write(research / "codex_findings_scoped_arm_20260717_codex.md", "# findings\n")
+    _write(research / "codex_findings_way_old_arm_20260101_codex.md", "# findings\n")
+    check_codex_findings_memos_consumed(repo_root=tmp_path, now=NOW, verbose=True)
+    out = capsys.readouterr().out
+    assert "1 in-window memo(s) scanned of 2 total" in out
+    assert "window 30d by filename date" in out
 
 
 def test_dag_feed_companion_filename_clears(tmp_path):
@@ -184,3 +241,33 @@ def test_audit_memo_content_counts_as_consumer(tmp_path):
     _write(research / "codex_findings_consumption_audit_20260717.md",
            "ORPHAN routed: audited_arm -> reactivation route recorded here\n")
     assert check_codex_findings_memos_consumed(repo_root=tmp_path, now=NOW) == []
+
+
+def test_date_axis_is_year_agnostic():
+    """No one-year fuse: a 2027-stamped memo must still resolve on the filename axis.
+
+    Both regexes originally hardcoded ``2026``. Left alone, on 2027-01-01 the stamp regex would
+    fall back to mtime (re-acquiring the exact vacuity #825 fixes) and the label regex would stop
+    stripping the stamp, so every label would match nothing and every memo would report as an
+    orphan forever. A gate with an expiry date is a gate that will be ignored on the day it goes
+    off, so the axis is pinned here rather than trusted.
+    """
+    import datetime as dt
+
+    from tac.preflight import _codex_findings_memo_age_seconds
+
+    assert _codex_findings_arm_label("codex_findings_future_arm_20270301_codex.md") == "future_arm"
+    now = dt.datetime(2027, 3, 2, tzinfo=dt.UTC).timestamp()
+    age = _codex_findings_memo_age_seconds(Path("codex_findings_future_arm_20270301_codex.md"), now)
+    assert age is not None and 0 < age < 2 * 24 * 3600
+
+
+def test_impossible_date_stamp_falls_back_instead_of_being_accepted(tmp_path):
+    """``_20261332`` is not a date; strptime decides validity, not the pattern."""
+    from tac.preflight import _codex_findings_memo_age_seconds
+
+    research, _ = _mk_repo(tmp_path)
+    memo = _write(research / "codex_findings_bad_stamp_20261332_codex.md", "# f\n",
+                  age_seconds=60.0)
+    age = _codex_findings_memo_age_seconds(memo, NOW)
+    assert age is not None and age < 3600, "must fall back to mtime, not accept a fake date"

@@ -1078,7 +1078,14 @@ def section_dsl_orphan_flags() -> tuple[str | None, dict | None]:
     NOTE (anti-fake): this only COUNTS + names the debt; it does NOT auto-stub the
     flags (a generic knob is a lever only WITH swept intent — blind N-by-hand
     stubbing is the anti-pattern the discipline forbids). The fold path is the
-    per-lever emit_stub_lever, done as designed, not from this row."""
+    per-lever emit_stub_lever, done as designed, not from this row.
+
+    ddm_rg5 (#825): ``completeness()`` ASTs ONLY ``curriculum_dsl.py``, so a flag held by a
+    SIBLING lever module (fh1 / ph3_s10 / ax1 / constants_telemetry) was reported as an orphan
+    that nobody holds. MEASURED: 9 of the 80 unmapped flags were FALSE ORPHANS (11%) — e.g.
+    ``--muon-momentum``, ``--score-domain-loss``, ``--warm-start-weights-only``. The debt is now
+    netted against the package-wide factory flag set before it is reported, and the false-orphan
+    count is surfaced so the repair is auditable rather than silent."""
     try:
         from tac.witness_dsl import lever_registry as _lr
 
@@ -1088,14 +1095,29 @@ def section_dsl_orphan_flags() -> tuple[str | None, dict | None]:
             unmapped = comp.get("unmapped")
         if not unmapped:
             return None, None
+        n_raw = len(unmapped)
+        try:  # net out flags held by a sibling module's Lever (fail-open: keep the raw debt)
+            pkg_flags: set[str] = set()
+            for fb in _lr.package_lever_factories():
+                pkg_flags |= set(getattr(fb, "flags", ()) or ())
+            unmapped = [u for u in unmapped if u not in pkg_flags]
+        except Exception:
+            pkg_flags = set()
+        n_false = n_raw - len(unmapped)
+        if not unmapped:
+            return None, {"unmapped_count": 0, "unmapped_sample": [],
+                          "false_orphans_netted": n_false}
         sample = list(unmapped)[:6]
         line = (
             f"dsl-orphan ({len(unmapped)} trainer flag(s) NOT held by a DSL Lever "
             f"— #332 SoT debt; fold per-lever via emit_stub_lever ONLY with swept "
-            f"intent, never N-by-hand): " + ", ".join(sample)
+            f"intent, never N-by-hand"
+            + (f"; {n_false} sibling-module false orphan(s) netted out" if n_false else "")
+            + "): " + ", ".join(sample)
             + (f" (+{len(unmapped) - len(sample)} more)" if len(unmapped) > len(sample) else "")
         )
-        return line, {"unmapped_count": len(unmapped), "unmapped_sample": sample}
+        return line, {"unmapped_count": len(unmapped), "unmapped_sample": sample,
+                      "false_orphans_netted": n_false, "unmapped_count_single_module": n_raw}
     except Exception as exc:  # fail-open: a SENSE row must never break the digest
         return f"dsl-orphan: unavailable ({type(exc).__name__})", None
 

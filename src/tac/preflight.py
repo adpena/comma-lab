@@ -6697,6 +6697,16 @@ def preflight_all(
             "check_witness_trainers_emit_partial_freeze_alarm",
             "check_witness_verdict_rows_carry_dseg_descent_canary",
             "check_verdict_live_gap_defaults_on_during_ema_warmup",
+            # 2026-07-31 ddm_rg5 (#825) fix+gate atomic landing. Rides the
+            # check_no_stub_lever_factories catalog row (#299 quota: next number is
+            # 408, past the 400 brake) — same NO-FAKE marker-without-mechanism class
+            # one layer out: a CONSUMER of the single-module lever surface presents a
+            # partial universe (116 of 179 factories, MEASURED) as complete, which is
+            # how the orphan tracker stayed blind to 9 of its own 10 designed-stubs.
+            # Live count 0 after the two production consumers were flipped, so it
+            # flips strict in this landing rather than into warn-only purgatory.
+            # CLAUDE_MD_ENTRY_OK: rides the check_no_stub_lever_factories row; standalone numbered catalog row deferred per Catalog #299 post-#400 consolidation
+            "check_no_legacy_single_module_lever_surface_consumers",
         }
         for _confound_gate in _CONFOUND_GATES:
             _confound_gate(
@@ -81115,6 +81125,28 @@ _CHECK_396_RESEARCH_RELPATH = ".omx/research"
 # The day the bug class was named (forward-looking gate cutoff). The
 # retroactive sweep tool scans a WIDER window for backlog burndown.
 _CHECK_396_CUTOFF_DATE_SUFFIX_INT = 20260702
+# Strict-flip RATCHET baseline (ddm_rg5 #825, 2026-07-31). The gate's live count is 434, and
+# MEASURED, all 434 are dated within the last 30 days — a production RATE (~15/day), not a legacy
+# backlog. A "backlog == 0" flip trigger would therefore never fire; a ratchet on memos dated
+# AFTER this baseline converts the rate to zero first, and the historical debt drains through
+# ``tools/audit_orphaned_measured_wins.py`` in parallel.
+_CHECK_396_RATCHET_BASELINE_INT = 20260731
+_CHECK_396_MEMO_DATE_RE = re.compile(r"memo dated (\d{8})")
+
+
+def _check_396_new_since(violations: list[str], baseline_yyyymmdd: int) -> list[str]:
+    """Orphaned measured-win rows dated on/after ``baseline_yyyymmdd`` — the ratchet slice.
+
+    NO-FAKE: this reads the date the gate itself already parsed out of the FILENAME, so it can
+    never disagree with the violation it summarises, and it never suppresses a row — the full
+    list is still returned to the caller and still raises under ``strict``.
+    """
+    out: list[str] = []
+    for v in violations:
+        m = _CHECK_396_MEMO_DATE_RE.search(v)
+        if m and int(m.group(1)) >= baseline_yyyymmdd:
+            out.append(v)
+    return out
 _CHECK_396_DESIGN_FILENAME_RE = _CHECK_344_DESIGN_FILENAME_RE
 
 # MEASURED-evidence tokens (real measurement, not a plan/derivation).
@@ -81310,6 +81342,29 @@ def check_measured_win_findings_are_wired_or_research_only(
     (live orphan backlog exists; ``tools/audit_orphaned_measured_wins.py``
     surfaces it for burndown; strict-flip after).
 
+    STRICT-FLIP CONDITION + OWNER (ddm_rg5, task #825/#821, 2026-07-31 — the gate
+    had NEITHER, which is what warn-only purgatory is made of; contrast
+    ``check_no_stub_lever_factories``, landed warn-only the same week WITH a named
+    trigger and a stated reason).
+
+      * TRIGGER: flip when ``_check_396_new_since(<the flip baseline>)`` is 0 for
+        three consecutive landings — i.e. no NEW orphaned measured-win memo has
+        appeared since the baseline. The historical backlog is drained separately
+        and does NOT gate the flip; a ratchet on NEW orphans is what stops the
+        bleeding, and waiting for a zeroed backlog is precisely why this gate sat
+        warn-only for a month.
+      * OWNER: the arm that LANDS each measured-win memo (wiring a win is the
+        author's job, per "Results must become system intelligence"), with the
+        burndown queue owned by whoever runs
+        ``tools/audit_orphaned_measured_wins.py``.
+      * WHY NOT NOW (measured, ddm_rg5): **434 live**, and — the number that
+        actually decides this — **434 of 434 are dated within the last 30 days**
+        (the memo-naming cutoff, 2026-07-02, is 29 days old). So this is not a
+        legacy backlog draining slowly; it is a PRODUCTION RATE of ~15 orphaned
+        measured-win memos per day. Flipping strict today refuses the tree for
+        debt every arm is still generating; ratcheting on NEW orphans is the
+        mechanism that converts the rate to zero first.
+
     Memory: ``orphaned_measured_win_not_wired_into_vehicle_and_triality_bug_class_20260702.md``.
     """
     root = Path(repo_root or REPO_ROOT)
@@ -81368,9 +81423,14 @@ def check_measured_win_findings_are_wired_or_research_only(
 
     if verbose:
         if violations:
+            # Surface the RATCHET slice beside the total: the strict-flip trigger is
+            # "no NEW orphans since the baseline", not "backlog zero" (see docstring).
+            new_since = _check_396_new_since(violations, _CHECK_396_RATCHET_BASELINE_INT)
             print(
                 f"  [catalog-396] {len(violations)} orphaned measured-win "
-                "memo(s) (not wired, not research_only)"
+                f"memo(s) (not wired, not research_only); {len(new_since)} NEW since "
+                f"ratchet baseline {_CHECK_396_RATCHET_BASELINE_INT} "
+                f"(strict-flip when NEW == 0 for 3 consecutive landings)"
             )
         else:
             print("  [catalog-396] OK (no orphaned measured-win memos)")
@@ -89023,9 +89083,40 @@ _CODEX_FINDINGS_CONSUMPTION_WAIVER = "CODEX_FINDINGS_CONSUMPTION_WAIVED:"
 # codex_findings_ filename prefix (charter-named path) but is a CONSUMER, not a
 # producer: excluded from the producer scan, included in the consumer scans.
 _CODEX_FINDINGS_AUDIT_PREFIX = "codex_findings_consumption_audit"
-_CODEX_FINDINGS_FRESH_SECONDS = 3 * 24 * 3600  # 3-day routing grace window
+# ddm_rg5 (task #825/#821), 2026-07-31 — THE GATE WAS VACUOUS, and the window width was the
+# symptom, not the disease. Producer age came from FILE MTIME, which is a property of the
+# CHECKOUT, not of the work: a fresh clone stamps every file "now" (everything in scope), and a
+# long-lived tree stamps everything old (nothing in scope). MEASURED on main: **0 of 1,260
+# codex_findings memos were in scope** while the gate reported LIVE COUNT 0 — the two are
+# indistinguishable to a reader, which is exactly how a hollow gate survives.
+#
+# The date is IN THE FILENAME (``codex_findings_<label>_2026MMDD[THHMMSS].md``), the same place
+# Catalog #396 already reads it from. Age is now derived from the filename stamp, with mtime kept
+# only as a fallback for a memo whose name carries no stamp.
+#
+# Window: 30 days, not 3. MEASURED live counts at the new default — 30d: **10 violations** over
+# 273 in-window memos (the 10 orphans R1-C named); all-time: 992 over 1,260. The 30-day window is
+# the routing horizon a finding can still be acted on within; the all-time backlog is real but is
+# a burndown, not a blocker, and reporting 992 would train readers to ignore the gate.
+_CODEX_FINDINGS_FRESH_SECONDS = 30 * 24 * 3600  # 30-day routing window (was 3d on a dead mtime axis)
 _CODEX_FINDINGS_MIN_LABEL_LEN = 4  # shorter labels are unmatchable substrings
+# Year-agnostic ON PURPOSE. The sibling label regex hardcodes ``2026``; if THIS one did too, then
+# on 2027-01-01 every new memo would silently fall back to mtime and the gate would re-acquire the
+# exact vacuity being fixed here — a self-disabling gate with a one-year fuse. Validity is decided
+# by ``strptime``, not by the pattern, so a non-date like ``_20261332`` still falls back rather
+# than being accepted.
+_CODEX_FINDINGS_STAMP_RE = re.compile(r"_(20\d{6})(?:T\d{4,6}Z?)?(?:_codex)?\.md$")
 # consumer content scan is bounded to recently-touched research files:
+#
+# KNOWN LIMIT, stated so it is not mistaken for fixed (ddm_rg5 #825). The PRODUCER axis moved off
+# mtime because mtime is a checkout artifact; this CONSUMER axis is still mtime, because consumer
+# files are arbitrary ``.omx/research`` docs with no guaranteed date stamp to read instead. The
+# residual failure mode is therefore real but bounded and OPPOSITE in each direction: in a fresh
+# clone every consumer looks recent (over-CLEARS, so orphans hide), and in a long-stale tree none
+# do (over-REPORTS, which is loud and self-correcting). It is not a silent wrong number in the way
+# the producer axis was, so it is named rather than papered over. Closing it properly needs a
+# consumption RECEIPT store rather than a content scan — the ``--consumed-by`` write path already
+# exists in tools/codex_landing_review_gate.py and is the right long-run surface.
 _CODEX_FINDINGS_CONSUMER_MTIME_WINDOW_SECONDS = 30 * 24 * 3600
 
 
@@ -89039,8 +89130,94 @@ def _codex_findings_arm_label(filename: str) -> str:
         name = name[len("codex_findings_"):]
     name = re.sub(r"\.md$", "", name)
     name = re.sub(r"_codex$", "", name)
-    name = re.sub(r"_2026[01]\d{3}(T\d{4,6}Z?)?$", "", name)
+    # Year-agnostic (ddm_rg5 #825): the hardcoded ``2026`` would, on 2027-01-01, stop stripping the
+    # stamp, so every label would carry its date and match NOTHING in any consumer surface — every
+    # memo reported as an orphan, forever. Same one-year fuse as the stamp regex above.
+    name = re.sub(r"_20\d{6}(T\d{4,6}Z?)?$", "", name)
     return name
+
+
+def _codex_findings_memo_age_seconds(memo: Path, now: float) -> float | None:
+    """Age of a findings memo in seconds, from its FILENAME stamp (mtime is a checkout artifact).
+
+    Falls back to mtime only when the name carries no ``_2026MMDD`` stamp. Returns None when
+    neither is available. See the ``_CODEX_FINDINGS_FRESH_SECONDS`` note for why this axis moved.
+    """
+    m = _CODEX_FINDINGS_STAMP_RE.search(memo.name)
+    if m:
+        try:
+            stamped = _dt.datetime.strptime(m.group(1), "%Y%m%d").replace(tzinfo=_dt.UTC)
+            return now - stamped.timestamp()
+        except ValueError:
+            pass
+    try:
+        return now - memo.stat().st_mtime
+    except OSError:
+        return None
+
+
+def _codex_findings_consumer_corpus(
+    *,
+    research_dir: Path,
+    state_dir: Path,
+    now: float,
+) -> tuple[list[str], list[tuple[str, str]], list[tuple[str, str]], str]:
+    """Build the consumer surfaces ONCE: (filenames, [(name, lowered text)], ledger, p0 text).
+
+    ddm_rg5 (#825): the per-memo implementation re-walked the research dir and re-read every
+    recently-touched .md for EVERY memo — O(N_memos x M_files). MEASURED at the honest scope that
+    is **131.9 s** for 1,260 memos, i.e. widening the window naively would have re-created the
+    disabled gate it was meant to fix. Hoisting the corpus makes it O(N + M). This is ddm_sb2's
+    1096x-caching lesson applied to the sister surface, as its landing memo required.
+    """
+    filenames: list[str] = []
+    contents: list[tuple[str, str]] = []
+    try:
+        entries = sorted(research_dir.iterdir())
+    except OSError:
+        entries = []
+    for f in entries:
+        fname = f.name
+        is_producer = fname.startswith(
+            ("codex_findings_", "codex_session_summary_")
+        ) and not fname.startswith(_CODEX_FINDINGS_AUDIT_PREFIX)
+        if not is_producer:
+            filenames.append(fname)
+        if is_producer or not fname.endswith(".md"):
+            continue
+        try:
+            if now - f.stat().st_mtime > _CODEX_FINDINGS_CONSUMER_MTIME_WINDOW_SECONDS:
+                continue
+            contents.append((fname, f.read_text(encoding="utf-8", errors="ignore").lower()))
+        except OSError:
+            continue
+
+    ledger_rows: list[tuple[str, str]] = []
+    ledger = state_dir / "codex_landing_ledger.jsonl"
+    if ledger.is_file():
+        try:
+            for line in ledger.read_text(encoding="utf-8", errors="ignore").splitlines():
+                if not line.strip():
+                    continue
+                try:
+                    row = json.loads(line)
+                except ValueError:
+                    continue
+                consumed_by = row.get("consumed_by")
+                if consumed_by:
+                    ledger_rows.append(
+                        (str(row.get("label") or "").lower(), str(consumed_by)))
+        except OSError:
+            pass
+
+    p0_text = ""
+    p0 = state_dir / "operator_p0_ledger.jsonl"
+    if p0.is_file():
+        try:
+            p0_text = p0.read_text(encoding="utf-8", errors="ignore").lower()
+        except OSError:
+            p0_text = ""
+    return filenames, contents, ledger_rows, p0_text
 
 
 def _codex_findings_label_consumed(
@@ -89050,6 +89227,7 @@ def _codex_findings_label_consumed(
     state_dir: Path,
     self_name: str,
     now: float,
+    corpus: tuple[list[str], list[tuple[str, str]], list[tuple[str, str]], str] | None = None,
 ) -> str | None:
     """Return a short consumer citation if ``label`` appears in any consumer
     surface, else None. Consumer surfaces (cheap → expensive):
@@ -89068,67 +89246,31 @@ def _codex_findings_label_consumed(
     audit memo discipline (a FEED that mentions-but-defers WITH a named reason
     is consumption; a bare mention is not)."""
     needle = label.lower()
+    if corpus is None:
+        corpus = _codex_findings_consumer_corpus(
+            research_dir=research_dir, state_dir=state_dir, now=now)
+    filenames, contents, ledger_rows, p0_text = corpus
 
     # 1. filename route (DAG FEED companions, build specs, sub015 per-arm DAGs)
-    try:
-        for f in research_dir.iterdir():
-            fname = f.name
-            if fname.startswith(
-                ("codex_findings_", "codex_session_summary_")
-            ) and not fname.startswith(_CODEX_FINDINGS_AUDIT_PREFIX):
-                continue
-            if needle in fname.lower():
-                return f"filename:{fname}"
-    except OSError:
-        pass
+    for fname in filenames:
+        if needle in fname.lower():
+            return f"filename:{fname}"
 
     # 2. landing-ledger consumed_by receipts
-    ledger = state_dir / "codex_landing_ledger.jsonl"
-    if ledger.is_file():
-        try:
-            for line in ledger.read_text(encoding="utf-8", errors="ignore").splitlines():
-                if not line.strip():
-                    continue
-                try:
-                    row = json.loads(line)
-                except ValueError:
-                    continue
-                row_label = str(row.get("label") or "").lower()
-                if not row.get("consumed_by"):
-                    continue
-                if row_label.startswith(needle) or needle.startswith(row_label):
-                    return f"ledger-consumed-by:{row.get('consumed_by')}"
-        except OSError:
-            pass
+    for row_label, consumed_by in ledger_rows:
+        if row_label.startswith(needle) or (row_label and needle.startswith(row_label)):
+            return f"ledger-consumed-by:{consumed_by}"
 
     # 3. operator-P0 ledger content
-    p0 = state_dir / "operator_p0_ledger.jsonl"
-    if p0.is_file():
-        try:
-            if needle in p0.read_text(encoding="utf-8", errors="ignore").lower():
-                return "p0-ledger"
-        except OSError:
-            pass
+    if p0_text and needle in p0_text:
+        return "p0-ledger"
 
     # 4. content of recently-touched non-codex research files (main DAG etc.)
-    try:
-        for f in research_dir.iterdir():
-            fname = f.name
-            if fname == self_name or not fname.endswith(".md"):
-                continue
-            if fname.startswith(
-                ("codex_findings_", "codex_session_summary_")
-            ) and not fname.startswith(_CODEX_FINDINGS_AUDIT_PREFIX):
-                continue
-            try:
-                if now - f.stat().st_mtime > _CODEX_FINDINGS_CONSUMER_MTIME_WINDOW_SECONDS:
-                    continue
-                if needle in f.read_text(encoding="utf-8", errors="ignore").lower():
-                    return f"content:{fname}"
-            except OSError:
-                continue
-    except OSError:
-        pass
+    for fname, lowered in contents:
+        if fname == self_name:
+            continue
+        if needle in lowered:
+            return f"content:{fname}"
 
     return None
 
@@ -89141,11 +89283,26 @@ def check_codex_findings_memos_consumed(
     now: float | None = None,
     fresh_seconds: int = _CODEX_FINDINGS_FRESH_SECONDS,
 ) -> list[str]:
-    """WARN-ONLY: flag fresh codex findings memos with ZERO consumer surfaces.
+    """WARN-ONLY: flag recent codex findings memos with ZERO consumer surfaces.
 
-    Scans ``.omx/research/codex_findings_*.md`` whose mtime is within
-    ``fresh_seconds`` (default 3 days — the routing grace window) and whose arm
-    label appears in NO consumer surface (see ``_codex_findings_label_consumed``).
+    Scans ``.omx/research/codex_findings_*.md`` whose FILENAME DATE STAMP is within
+    ``fresh_seconds`` (default 30 days) and whose arm label appears in NO consumer
+    surface (see ``_codex_findings_label_consumed``).
+
+    ddm_rg5 (#825/#821) 2026-07-31 — this gate was VACUOUS. It aged memos by
+    MTIME, a checkout artifact, and MEASURED **0 of 1,260 memos in scope** while
+    printing LIVE COUNT 0. A reader cannot distinguish "nothing is wrong" from
+    "nothing was looked at", which is how a hollow gate survives review. Age now
+    comes from the filename stamp (the axis Catalog #396 already uses) and the
+    window is 30 days. First honest run: **10 violations over 273 in-window
+    memos** — the orphan backlog R1-C named. That count IS the finding.
+
+    STRICT-FLIP CONDITION (named, per the pattern ``check_no_stub_lever_factories``
+    set and the pattern #396 lacked): flip when the in-window live count reaches 0
+    — i.e. every memo in the 30-day routing window is either routed to a consumer
+    surface or carries the in-memo waiver. OWNER: the arm that lands each findings
+    memo (the write path is ``tools/codex_landing_review_gate.py --consumed-by``);
+    the 10 live rows are owned by their originating arms, not by this gate.
 
     Waiver: a line containing ``CODEX_FINDINGS_CONSUMPTION_WAIVED:<rationale>``
     inside the memo itself (non-placeholder rationale required — a memo whose
@@ -89161,16 +89318,17 @@ def check_codex_findings_memos_consumed(
     now_ts = float(now if now is not None else time.time())
     violations: list[str] = []
     scanned = 0
+    total_memos = 0
+    # Hoisted ONCE (was rebuilt per memo: O(N x M) = 131.9 s MEASURED at honest scope).
+    corpus: tuple[list[str], list[tuple[str, str]], list[tuple[str, str]], str] | None = None
 
     if research_dir.is_dir():
         for memo in sorted(research_dir.glob("codex_findings_*.md")):
             if memo.name.startswith(_CODEX_FINDINGS_AUDIT_PREFIX):
                 continue  # the adjudication memo family is a consumer, not a producer
-            try:
-                age = now_ts - memo.stat().st_mtime
-            except OSError:
-                continue
-            if age > fresh_seconds:
+            total_memos += 1
+            age = _codex_findings_memo_age_seconds(memo, now_ts)
+            if age is None or age > fresh_seconds:
                 continue
             label = _codex_findings_arm_label(memo.name)
             if len(label) < _CODEX_FINDINGS_MIN_LABEL_LEN:
@@ -89192,12 +89350,16 @@ def check_codex_findings_memos_consumed(
                         break
             if waiver_ok:
                 continue
+            if corpus is None:
+                corpus = _codex_findings_consumer_corpus(
+                    research_dir=research_dir, state_dir=state_dir, now=now_ts)
             consumer = _codex_findings_label_consumed(
                 label,
                 research_dir=research_dir,
                 state_dir=state_dir,
                 self_name=memo.name,
                 now=now_ts,
+                corpus=corpus,
             )
             if consumer is None:
                 rel = memo.relative_to(root).as_posix()
@@ -89213,12 +89375,15 @@ def check_codex_findings_memos_consumed(
                 )
 
     if verbose:
+        # The SCOPE is printed beside the verdict, always: "OK (0 scanned)" is the exact
+        # ambiguity that let this gate report clean while looking at nothing (ddm_rg5 #825).
+        scope = (f"{scanned} in-window memo(s) scanned of {total_memos} total, "
+                 f"window {fresh_seconds / 86400:.0f}d by filename date")
         print(
             f"  [codex-findings-consumed] check_codex_findings_memos_consumed: "
-            f"{len(violations)} violation(s) ({scanned} fresh memo(s) scanned)"
+            f"{len(violations)} violation(s) ({scope})"
             if violations else
-            f"  [codex-findings-consumed] check_codex_findings_memos_consumed: OK "
-            f"({scanned} fresh memo(s) scanned)")
+            f"  [codex-findings-consumed] check_codex_findings_memos_consumed: OK ({scope})")
     if strict and violations:
         raise PreflightError(
             "check_codex_findings_memos_consumed found "

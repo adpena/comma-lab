@@ -53,6 +53,7 @@ from __future__ import annotations
 import ast
 import importlib.util
 import json
+import os
 import re
 import subprocess
 import tempfile
@@ -1107,8 +1108,8 @@ def check_significance_keys_canonical(
         from tac.witness_dsl.activation_ledger import (
             _read_significance,
             canonicalize_significance_keys,
+            known_levers,
         )
-        from tac.witness_dsl.lever_registry import lever_factories
     except Exception as exc:  # pragma: no cover - import-environment guard
         return _finish(
             name="check_significance_keys_canonical",
@@ -1118,7 +1119,11 @@ def check_significance_keys_canonical(
             verbose=verbose,
             ok_detail=f"activation_ledger/lever_registry unavailable ({exc!r}) — fail-open",
         )
-    factory_names = set(lever_factories().keys())
+    # ddm_rg5 (#825): was ``lever_registry.lever_factories()`` — the SINGLE-MODULE surface. A
+    # significance row keyed on an fh1/ph3_s10/ax1 lever was therefore reported as "not a factory
+    # — build the lever", when the lever exists. ``known_levers()`` is now the package-wide
+    # universe, so this gate resolves against every factory that actually exists.
+    factory_names = set(known_levers())
     sig = _read_significance(store)
     canon = canonicalize_significance_keys(sig, factory_names)
     resolved = 0
@@ -2906,6 +2911,159 @@ def check_no_stub_lever_factories(
     )
 
 
+def check_no_legacy_single_module_lever_surface_consumers(
+    *,
+    repo_root: str | Path | None = None,
+    strict: bool = True,
+    verbose: bool = True,
+) -> list[str]:
+    """REFUSE a consumer that binds orphan/duty accounting to the SINGLE-MODULE lever surface.
+
+    Sister of :func:`check_no_stub_lever_factories`, sharing its catalog row (see the scope-
+    extension note below): that gate refuses a lever that PRESENTS as built with no mechanism;
+    this one refuses a CONSUMER that reads a PARTIAL registry and therefore presents a partial
+    universe as complete. Same NO-FAKE marker-without-mechanism class, one layer out.
+
+    Live count 0 at landing (ddm_rg5 #825), so STRICT from byte one per the Strict-flip
+    atomicity rule — no warn-only purgatory for a class whose whole failure mode is a correct
+    surface nobody opts into.
+    """
+    root = Path(repo_root or REPO_ROOT)
+    return _finish(
+        name="check_no_legacy_single_module_lever_surface_consumers",
+        tag="no-legacy-single-module-lever-surface",
+        violations=_legacy_single_module_lever_consumers(root),
+        strict=strict,
+        verbose=verbose,
+        ok_detail="no consumer binds orphan accounting to the single-module lever surface",
+    )
+
+
+# ── SCOPE EXTENSION (ddm_rg5, task #825, 2026-07-31) ──────────────────────────────────────────
+# NOT a new catalog number: per CLAUDE.md "Gate consolidation discipline" (#299) the catalog is
+# past #400 (next=408), so a new strict gate must retire or replace one. This gate is the same
+# bug class as ``check_no_stub_lever_factories`` one layer OUT and rides its catalog row — the
+# precedent CLAUDE.md records for the 2026-07-20 Catalog #351 extension, and the precedent the
+# ``check_v9_fake_claim_guards`` strict call site records inline ("standalone numbered catalog
+# row deferred").
+#
+# THE CLASS. ``check_no_stub_lever_factories`` refuses a lever that PRESENTS as built while no
+# mechanism exists. The sibling failure is a CONSUMER that reads a PARTIAL registry and therefore
+# presents a partial universe as complete. ddm_sb2 repaired the registry by ADDING the package-wide
+# surface but PRESERVING the single-module default, documenting the choice as "the historical
+# contract is unchanged" — backward compatibility chosen over correctness, silently, ON THE ORPHAN
+# TRACKER. Nothing opted in: the honest superset had ONE grep hit outside its own definition, a
+# docstring. MEASURED consequence (ddm_rg5): ``known_levers()`` enumerated 116 of 179 factories, so
+# 61 were structurally ineligible for the duty queue — including 9 of the 10 DESIGNED-STUBS this
+# very gate reports. The tracker could not see the debt its sister gate was raising.
+#
+# The judgement is STRUCTURAL: a call to the narrow surface outside the allowlist is refused
+# regardless of what the calling module claims. Tests are exempt (asserting on the narrow surface
+# is exactly how its contract stays pinned). Waiver: same-line ``# SINGLE_MODULE_LEVER_SURFACE_OK:
+# <rationale>`` (bare ``<rationale>`` does not self-waive, Catalog #287 sister).
+#
+# STRICT FROM BYTE ONE: live count is 0 after the #825 fix (the two definers are allowlisted, the
+# two production consumers were flipped to ``known_levers()``), so the Strict-flip atomicity rule
+# is satisfied in this landing rather than deferred to a warn-only purgatory.
+_LEGACY_LEVER_SURFACE_RE = re.compile(
+    r"(?<![A-Za-z0-9_])(lever_factories|curriculum_dsl_known_levers)\s*\(")
+# The two modules that legitimately OWN the narrow surface: the registry that computes it and the
+# activation ledger that exposes it under an intention-revealing name.
+_LEGACY_LEVER_SURFACE_OWNERS = (
+    "src/tac/witness_dsl/lever_registry.py",
+    "src/tac/witness_dsl/activation_ledger.py",
+)
+_LEGACY_LEVER_SURFACE_ROOTS = ("src/tac", "tools", "experiments", "scripts")
+_LEGACY_LEVER_SURFACE_NAMES = ("lever_factories", "curriculum_dsl_known_levers")
+# Directory names pruned during the walk. Without this the four roots hold 62,817 .py files
+# (vendored intake clones + nested virtualenvs) and the scan costs 12.7 s — MEASURED. Pruning
+# takes it to ~0.4 s. sb2's lesson, binding: a slow gate is a disabled gate, which is how the
+# vacuity survived in the first place.
+_LEGACY_LEVER_SURFACE_PRUNE_DIRS = frozenset({
+    "__pycache__", ".git", ".venv", "venv", "env", "node_modules", "site-packages",
+    "build", "dist", ".mypy_cache", ".pytest_cache", ".ruff_cache", "tests",
+})
+# ``experiments/results`` is ARTIFACT CUSTODY, not source: 15,498 of the 16,328 .py files under
+# ``experiments`` live there (run dirs + public-PR intake clones we are forbidden to edit), they
+# cost 1.9 s to read, and MEASURED ZERO of them mention either narrow name. Pruning the subtree
+# takes the whole scan 3.67 s -> 0.4 s. Keyed by (root-relative) path so a source dir that merely
+# happens to be named "results" elsewhere is unaffected.
+_LEGACY_LEVER_SURFACE_PRUNE_SUBTREES = ("experiments/results",)
+# Vendored / public-PR-intake path markers (mirrors preflight's ``_VENDORED_PATH_MARKERS``):
+# those trees are forensic inputs we may not edit, so a hit there is never actionable.
+_LEGACY_LEVER_SURFACE_SKIP_MARKERS = (
+    "_intake_", "/pr_heads/", "/vendored/", "/leaderboard_intel_",
+    "/reverse_engineering_", "/public_runtime_adapters_", "/av1_crf31_bicubic/",
+)
+
+
+def _legacy_single_module_lever_consumers(root: Path) -> list[str]:
+    """Call sites binding orphan/duty accounting to the SINGLE-MODULE lever surface.
+
+    The judgement is AST-based (an ``ast.Call`` whose callee resolves to one of the narrow
+    names), never a text match: the two live text hits at landing were a module docstring and an
+    error-message f-string in ``tools/register_ema_finisher_duty.py`` — PROSE ABOUT the surface,
+    not a binding to it. A regex gate would have reported both and taught its readers to ignore
+    it, which is the failure mode this whole task is about.
+    """
+    out: list[str] = []
+    for rel_root in _LEGACY_LEVER_SURFACE_ROOTS:
+        base = root / rel_root
+        if not base.is_dir():
+            continue
+        for dirpath, dirnames, filenames in os.walk(base):
+            here = Path(dirpath).relative_to(root).as_posix()
+            if any(here == s or here.startswith(f"{s}/")
+                   for s in _LEGACY_LEVER_SURFACE_PRUNE_SUBTREES):
+                dirnames[:] = []
+                continue
+            dirnames[:] = sorted(d for d in dirnames
+                                 if d not in _LEGACY_LEVER_SURFACE_PRUNE_DIRS)
+            for fname in sorted(filenames):
+                if not fname.endswith(".py") or fname.startswith("test_"):
+                    continue
+                path = Path(dirpath) / fname
+                rel = path.relative_to(root).as_posix()
+                if rel in _LEGACY_LEVER_SURFACE_OWNERS:
+                    continue
+                if any(m in f"/{rel}" for m in _LEGACY_LEVER_SURFACE_SKIP_MARKERS):
+                    continue
+                try:
+                    text = path.read_text(encoding="utf-8", errors="ignore")
+                except OSError:
+                    continue
+                if not any(n in text for n in _LEGACY_LEVER_SURFACE_NAMES):
+                    continue  # cheap reject before paying for a parse
+                try:
+                    tree = ast.parse(text)
+                except SyntaxError:
+                    continue  # unparseable file cannot be bound to anything; fail-open
+                lines = text.splitlines()
+                for node in ast.walk(tree):
+                    if not isinstance(node, ast.Call):
+                        continue
+                    fn = node.func
+                    name = (fn.attr if isinstance(fn, ast.Attribute)
+                            else fn.id if isinstance(fn, ast.Name) else None)
+                    if name not in _LEGACY_LEVER_SURFACE_NAMES:
+                        continue
+                    lineno = getattr(node, "lineno", 0)
+                    line = lines[lineno - 1] if 0 < lineno <= len(lines) else ""
+                    if _waiver_present(line, "SINGLE_MODULE_LEVER_SURFACE_OK"):
+                        continue
+                    out.append(
+                        f"{rel}:{lineno}: binds to the SINGLE-MODULE lever surface "
+                        f"(`{name}`), which ASTs only curriculum_dsl.py and enumerated 116 of "
+                        f"179 factories when measured — a consumer of a partial registry "
+                        f"presents a partial universe as complete (ddm_rg5 #825; the orphan "
+                        f"tracker was blind to 9 of its own 10 designed-stubs). Use "
+                        f"`tac.witness_dsl.activation_ledger.known_levers()` (package-wide), or "
+                        f"add `# SINGLE_MODULE_LEVER_SURFACE_OK:<rationale>` if the narrow "
+                        f"single-module question is genuinely what is being asked."
+                    )
+    return out
+
+
 def _factory_waived(path: Path, factory: str) -> bool:
     """True when the factory's own ``def`` line carries a non-placeholder waiver marker."""
     try:
@@ -2949,4 +3107,5 @@ CONFOUND_GATES = (
     check_process_guard_excludes_observer_flag_values,
     check_no_duplicate_canonical_spec_across_refs,
     check_no_stub_lever_factories,
+    check_no_legacy_single_module_lever_surface_consumers,
 )
