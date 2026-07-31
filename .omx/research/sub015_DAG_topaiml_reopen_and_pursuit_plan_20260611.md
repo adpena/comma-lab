@@ -26256,3 +26256,29 @@ would miss. `LG1_DUAL_ENGAGED=False` gate until lg1's λ flag is sealed in (then
 path wires; never-launch-a-weaker-state). OWED at lg1's landing: verify argparse → fold λ_Lane/born-mask
 flags into the sealed ticket → flip the dual gate → re-seal → re-smoke → re-fire. task 807 blocked-on-lg1.
 Pointer 0.1910828242 [contest-CPU] UNMOVED. [no-triality] [p0-ledger-ok]
+
+
+## FEED-lg1 (2026-07-31, task #808): CONSTRAIN-AND-PROTECT layer LANDED (burn-4 unblock for b4s)
+
+Per operator ×2 ("constrain and protect" + "remember the upstream channels and hyperplane and basis"):
+`tac.optimization.lane_guard` + tr1 trainer wiring (c009a2e123 + c66acf4d79), flag-gated DEFAULT-OFF.
+**Three mechanisms in the scorer's OWN coordinates, all additive `seg_pixel_w` addends:** (1) λ_Lane
+primal-dual constraint — realized Lane per-class S (EXACT qa92 definition) ≤ the xp1 ep641 budget
+0.12589 S; bounded dual ascent at a1-GATE cadence reading the gate's EXISTING realized argmax (zero
+new scorer passes); η_λ DERIVED 66.2252 = 1/(10 gates × 0.00151 xp1-measured erosion), step cap
+0.1/gate, λ_max 5.0 (caps-law reconciliation: duals move at constraint-evaluation cadence, bounded —
+never per-step). (2) Born-lane protection — gt==Lane & realized==Lane support per gate, scaled by the
+MEASURED rank-4 head Lane sensitivity 1.19607 (the four Lane-pair normals 4.007/3.953/3.862/3.748 are
+the four largest — fractal memo §2). (3) Margin-floor emphasis — hinge on low-margin GT-Lane pixels,
+floor = per-run p10 of the QA80 margin field (bottom-decile flip law, sg1 §1.3); plus the LANDED
+closed-form `per_component_min_flip_distance` (d=|m|/‖Δw‖, conservative ‖Δw‖=4.007) — its
+per-component loss form + the Fisher gradient surgery (reuse `contain_protected_grad_mx`) + #725
+channel pullback ((2,9,6)/ch9-30%) are the DEFERRED table. 3 DSL Lever factories (budget custodied
+`dsl_custodied_scalar_identity_v1`, resolves 0.12589). 24 tests. OFF byte-identity: structural +
+noise-floor-bounded — the vehicle is rerun-NONDETERMINISTIC same-code both devices (MEASURED, custody
+`ddm_lg1_20260731/smoke_*`); ep0 realized d_seg bit-equal 0.5078303019205729 across all 8 arms. ON
+smoke: λ 0→0.1→0.2 capped under g=0.5065, floor 0.10734, complementarity λ·g telemetry. Engagement
+spec for b4s (flags/derivations/gate rules/rollback+raise-λ via `--lane-guard-lambda-init`) in
+`.omx/research/ddm_lg1_lane_guard_20260731.md`. Falsifier pre-registered: burn-4 erodes Lane at λ_max
+⇒ the loss-weight dual form is falsified on this vehicle ⇒ #208 containment projection is the
+successor. Pointer 0.1910828242 [contest-CPU] UNMOVED. [no-triality] [p0-ledger-ok]
