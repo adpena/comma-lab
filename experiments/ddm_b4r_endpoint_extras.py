@@ -323,12 +323,20 @@ def main() -> int:
         ap.error("--pairs and --chunk must be >= 1")
     root = args.root or args.final_dir.parent
     out = build_extras(args.final_dir, root, args.parent_ckpt, args.chunk, args.pairs)
-    if args.output_json is not None:
-        args.output_json.parent.mkdir(parents=True, exist_ok=True)
-        tmp = args.output_json.with_suffix(args.output_json.suffix + ".tmp")
-        tmp.write_text(json.dumps(out, indent=2, sort_keys=True) + "\n")
-        tmp.replace(args.output_json)
-    print(json.dumps(out, indent=2, sort_keys=True))
+    payload = json.dumps(out, indent=2, sort_keys=True) + "\n"
+    # ALWAYS persist to disk, not only on --output-json. The supervisor consumes this via
+    # ``json.loads(stdout)``; a single stray library print on stdout would lose the ENTIRE
+    # bundle to a parse error with no way to recover it (the n600 passes are not cheap to
+    # repeat). Writing the file first makes stdout the convenience path, not the custody path.
+    dest = args.output_json or (root / "burn4_endpoint_extras.json")
+    try:
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        tmp = dest.with_suffix(dest.suffix + ".tmp")
+        tmp.write_text(payload)
+        tmp.replace(dest)
+    except Exception as exc:  # never lose stdout because the disk write failed
+        print(f"WARN: could not persist extras to {dest}: {exc!r}", file=sys.stderr)
+    print(payload, end="")
     return 0
 
 
