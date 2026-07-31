@@ -1,4 +1,45 @@
-# Current Focus - 2026-07-31 (RECOVERED + window_03 LIVE-DESCENDING; gc14 16th convocation on the first working descent)
+# Current Focus - 2026-07-31 (gc14 VERDICT: the "descent" is plausibly a BOUNDARY-STEP APPARATUS ARTIFACT — 3 MAIN claims falsified)
+
+> **⛔ gc14 (#814 DONE, 0068807a62) FALSIFIED THREE MAIN CLAIMS — carry the corrections:**
+> (1) **"λ_Lane guard MEASURED WORKING" is FALSE** — `lambda_lane` was exactly **0.0 at all 38
+> gates**; the guard NEVER actuated ⇒ lg1 is **UNTESTED, not validated**. (2) **"Lane strongly
+> birthing +42 t=+5.54" is a 5-GATE PHASE ARTIFACT** — full-window slope −0.497 (t=−1.50),
+> all-38-gate −0.158 (t=−0.69). (3) The 36-pair gate **overstates descent by 7.2%** ⇒ honest
+> n600 net = **−0.018303 S**, not −0.019934.
+> **THE FINDING — BRANCH (c) BOUNDARY-STEP / APPARATUS ARTIFACT (currently winning):** over
+> window_02's 29 gates realized d_seg OLS slope = **−1.46e-7/gate, t=−0.09 (statistically
+> ZERO)** while ep_loss fell 13.4% ⇒ **139 epochs of real loss descent bought NO realized
+> d_seg**. The level moves as a STEP at the boundary: w02→w03 −1.118e-4, then flat;
+> **|step|/|window Δ| = 1.36** (the boundary jump EXCEEDS the whole window's movement).
+> **Mechanism SOURCE-CONFIRMED:** train_tr1 passes `opt_state_flat={}` at every save + rebuilds
+> `optim.Adam` fresh unconditionally (L1543) ⇒ **every boundary = a full Adam warm restart**
+> (ep_loss spikes +9.6%/+22.8% at normal gnorm), with ema_decay re-derived per window (shadow τ
+> 166→202→236 ep) = an **unintended SWA regime**. Causation INFERRED not proven — R1 is the
+> experiment. **⇒ "the first genuine coupled descent" may be an artifact of HOW MAIN WINDOWED
+> THE BURN, not a property of training.**
+> **CROSSOVER ARITHMETIC (kills the 16-window extrapolation):** measured per-window decay
+> **r = 0.310** (−0.06769 → −0.02101 S); TWO independent routes agree runway = **1.2–1.8
+> windows**; **w04 goes NET-POSITIVE (+0.00068)**; geometric remaining **0.00946 S**; closing
+> the 0.36640 S seg debt needs r ≥ 0.9458. **Burn-4 closes 2.3% of the own-vehicle gap.**
+> **BURN-5 DECISION FUNCTION (Test 1 gates all; ep834 already returns BOUNDARY-LOCALIZED,
+> ratio 1.36):** B5-A restart-cadence A/B · B5-B pool-drain ONLY AFTER R2 · **B5-C hand off seg
+> → RATE = THE DEFAULT on current arithmetic** (cell_drop50's banked −0.098 S is **5.4× larger
+> than anything burn-4 produced**) · B5-D sustained (pre-registered predicted-NOT-to-fire).
+> Point prediction for w03 endpoint: n600 d_seg **0.0040019**, D_tot ∈ [−0.0110,−0.0075].
+> **WHAT SURVIVES:** `gt_components_erased` fell **567→508 (Lane −53)** in-loop unaided — the
+> strongest live receipt for the ERF-collateral in-loop-birth doctrine (unpriced in S: no
+> scorer slot; Yousfi dissent recorded). **GUARD IMPLICATION:** falling betti0 may be
+> CONVERGENCE TOWARD GT, not erosion — the predicate has NO GT-reference term ⇒ MAIN's CONTINUE
+> adjudication holds but partly for the wrong reason; R2 must precede any guard.
+> **#815 QUEUED** (R1 causal A/B w/ derived margin-density-at-zero preflight · R2 predicate
+> re-calibration ×2 · R3 derived STOP rule) — fires at the ~18:40Z endpoint.
+> **#809 amendments** (memo §16): sensor leg AHEAD of dual leg · GT-reference mandatory ·
+> estimator window derived not n_points=5 · boundary_event = first-class ledger row · MyCar
+> dual RETIRES (betti0 = GT = 36, zero variance, 38/38) · **window length was a SILENT UNPRICED
+> HYPERPARAMETER for the entire campaign** (contrast: the pre-auth bound WAS class-4 labelled).
+> Pointer 0.1910828242 [contest-CPU] UNMOVED.
+
+# Historical - 2026-07-31 (RECOVERED + window_03 LIVE-DESCENDING; gc14 16th convocation on the first working descent)
 
 > **RECOVERY COMPLETE (b4r, commits c72d1e7b75/fb58d89af9/1f53a78bdc/b08f750268).** Both procs
 > verified dead → ALARM retired to alarms_resolved/ sha 08bce4ca… as
