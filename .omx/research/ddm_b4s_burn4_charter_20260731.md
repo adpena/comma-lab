@@ -200,18 +200,32 @@ the caps law, so it is not auto-fired).
   re-seal + governed dry-run + re-smoke + re-fire. Protection is a CONSTRAINT layer, orthogonal to the
   R6 race (non-additive-pools: it does NOT enter the race). Builder
   `ddm_b4s_20260731/build_burn4_window_ticket.py`.
-- **OBSERVED-IN-FLIGHT lg1 flags (uncommitted at this writing — the turnkey fold target; VERIFY at
-  lg1's landing before use, they may change):** `--lane-guard` (master switch, default off) ·
-  `--lane-guard-budget-s` (0.0 ⇒ derived `LANE_BUDGET_S_UNITS 0.12589` = **xp1's exact ep641 Lane
-  S-level** — budget = measured level, constants-are-poison ✓) · `--lane-guard-eta` (0.0 ⇒
-  `derive_eta_lambda()`) · `--lane-guard-lambda-step-cap` (0.0 ⇒ `derive_lambda_step_cap()`) ·
-  `--lane-guard-lambda-max` (5.0 bounded ceiling) · `--lane-guard-born-weight` (born-lane protection) ·
-  `--lane-guard-margin-floor-weight` (margin-floor barrier) — backed by `tac.optimization.lane_guard`.
-  The fold = a `lever_lane_guard(...)` DSL factory (once lg1 lands it in `spec_tr1_renderer`) + these
-  flags in the ticket builder's swap set; the argv-diff ALLOWED set extends to include them. The
-  supervisor's `LANE_EROSION` rollback becomes ROLLBACK-AND-RAISE (raise `--lane-guard` λ per the sealed
-  dual-ascent rule). **Blocked because these flags are UNCOMMITTED — the governed launcher's G1
-  seal-freshness recompiles the COMMITTED DSL/argparse; folding in-flight flags would fail closed.**
+- **THE FOLD — EXECUTED 2026-07-31 (lg1 #808 LANDED: c009a2e123 + c66acf4d79 + 8afe941864).**
+  All three lg1 DSL lever factories folded into the ticket builder + the supervisor's `_build_ticket`:
+  `lever_lane_guard_lambda()` (budget 0.0 sentinel ⇒ **0.12589 = xp1 ep641 Lane S**, LawRef
+  `dsl_custodied_scalar_identity_v1`; η 0.0 ⇒ 66.2252 derived; step-cap 0.0 ⇒ 0.1; λ_max 5.0) +
+  `lever_lane_guard_born(0.25)` + `lever_lane_guard_margin_floor(0.5)` — **W=0.25 / V=0.5 = the LOW
+  end of the lg1 engagement-spec race sets {0.25,0.5}/{0.5,1.0}** (conservative first engagement per
+  the caps law; RECORDED raced-pending, never a silent optimum claim; the higher-end race = a
+  follow-up cell). `LG1_DUAL_ENGAGED=True`; the LANE_EROSION guard now executes **ROLLBACK-AND-RAISE**:
+  retire the eroding window to `rejected/` → relaunch the SAME window from its START ckpt with
+  `--lane-guard-lambda-init = last λ + 0.1` (lg1 amend c66acf4d79, caps-law) → **ALARM-ESCALATE to
+  operator at λ ≥ 1.0** (`LANE_EROSION_LAMBDA_ESCALATE`). The topology-trend guard (mine) + the level
+  dual (lg1) are COMPLEMENTARY on the same gate cadence — the guard STOPS/rolls a window, the dual
+  PRICES erosion inside it (no double-counting).
+- **FOLD-TIME BUG FOUND + FIXED (two-landing):** the DSL `compile_trainer_argv` emitted
+  `--lane-guard True` — `action="store_true"` argparse REFUSES the stray `True` token (proven; lg1's
+  24 tests validate the Lever objects but none compiled argv — the wiring gap). Fix: boolean overrides
+  compile to the bare flag (`True`) / omitted (`False`) in `spec_tr1_renderer_20260728`; regression
+  `test_dsl_compile_argv_parses_against_real_trainer_argparse` (parses the composed program against
+  the REAL trainer argparser; asserts no stray token). 25/25 lane-guard tests; the r1c parent ticket
+  recompiles bit-identical (G1 invariance for existing sealed programs).
+- **PROTECTED RE-SEAL (SUPERSEDES 098b5aea):** window_01 re-smoke ticket **6206cf56ede3a14d**
+  (20 levers; sealed_sha256 09177a16bfccb544). argv-diff vs the r1c ep641 parent = exactly
+  {class-weight-lane 1.0→1.3, telemetry-v9-port ∅→on, the 7 lane-guard flags ∅→engaged, epochs, wall,
+  out-dir, resume} — all within the sanctioned set; the builder ASSERTS + refuses stray store_true
+  tokens. Governed dry-run ALL GATES PASS (memory 86.9 GiB > 25.6 floor; scorer_slot FREE;
+  seal-freshness recompile == sealed).
 - **FIRE SEQUENCE (unchanged once the PROTECTED seal completes; under the standing GO):**
   1. WAIT for xp1's landing (custody complete + no process + governed-launcher G4 slot-free). [xp1's
      exact-P pass is DONE; verdict.json emitted; folded into §2.]

@@ -69,15 +69,22 @@ PARENT_CKPT = Path("/Volumes/VertigoDataTier/pact/ddm_r1c_20260731/window_01/"
 
 BURN4_CLASS_WEIGHT_LANE = 1.3    # fh1 R6 derived S-share tilt (Lane 0.126/0.494); raced
 # --- MAIN charter amendment 2026-07-31: CONSTRAIN-AND-PROTECT layer (xp1 Lane-erosion finding) ---
-# lg1 delivers the trainer-side protection (λ_Lane primal-dual constraint + born-lane mask). When its
-# flags are folded into the sealed ticket, flip LG1_DUAL_ENGAGED True and wire the rollback+raise-λ
-# path (the ROLLBACK-AND-RAISE branch below). Until then the supervisor-side erosion guards (MAIN
-# items #4/#5, this file, trainer-independent) are the SAFETY NET: a Lane-eroding window is NOT
-# extended — ALARM (LANE_EROSION) + the rollback target recorded. Constants-are-poison: the erosion
-# threshold ε is DERIVED per-window from the SAME OLS+quant machinery the P2 birth key uses (no
-# hand-set λ, no hand-set ε). Non-additive-pools: this is a CONSTRAINT layer, orthogonal to the R6
-# race cell (it does not enter the race). ERF law: no injection anywhere.
-LG1_DUAL_ENGAGED = False         # flip True ONLY when lg1's λ_Lane flags are in the sealed ticket
+# lg1 (#808) LANDED (c009a2e123 + c66acf4d79): the trainer-side protection (λ_Lane primal-dual
+# constraint + born-lane protection + margin-floor emphasis) is folded into the sealed ticket via
+# the three lever_lane_guard_* DSL factories (see _build_ticket). LG1_DUAL_ENGAGED=True wires the
+# ROLLBACK-AND-RAISE path: on a LANE_EROSION window verdict, rollback to the window's START ckpt
+# and relaunch the SAME window with --lane-guard-lambda-init = last λ + one capped step (lg1 amend
+# c66acf4d79; caps-law honored), escalating to an operator ALARM at λ ≥ 1.0 (the natural full
+# unit, lg1 engagement spec). The supervisor-side erosion guard (P2-inverted betti0 slope key) is
+# the TOPOLOGY-trend constraint; lg1's dual is the LEVEL constraint on the same gate cadence —
+# complementary, no double-counting (the guard STOPS/rolls a window; the dual PRICES erosion
+# inside it). Constants-are-poison: ε derived per-window (OLS+quant); λ step/max lg1-derived.
+LG1_DUAL_ENGAGED = True          # lg1 landed; λ_Lane flags are in the sealed ticket
+LG1_LAMBDA_STEP = 0.1            # lg1 derive_lambda_step_cap() (caps-law; one raise per rollback)
+LG1_LAMBDA_ESCALATE = 1.0        # lg1 engagement spec: ALARM-ESCALATE to operator at λ >= 1.0
+LG1_LAMBDA_MAX = 5.0             # lg1 bounded safety ceiling (trainer clamps too)
+LANE_GUARD_BORN_W = 0.25         # lg1 engagement-spec race {0.25,0.5} LOW end (raced-pending)
+LANE_GUARD_MARGIN_FLOOR_V = 0.5  # lg1 engagement-spec race {0.5,1.0} LOW end (raced-pending)
 SMOKE_EPOCHS = 25                # window_01 bounded re-smoke extent
 FULL_EPOCHS = 140                # windows 02+ (gc12 §5 ~120-150 ep)
 SMOKE_WALL_MINUTES = 30.0        # 25 ep x ~0.64 min/ep ~16 min + slack
@@ -177,14 +184,19 @@ def _sha256(path: Path) -> str:
 
 
 def _build_ticket(epochs: int, wall_minutes: float, out_dir: Path, resume_from: Path,
-                  out_ticket: Path) -> dict:
+                  out_ticket: Path, lambda_init: float = 0.0) -> dict:
     """DSL-compile the burn-4 window ticket: r1c ep641 parent levers VERBATIM, swapping
     ONLY the seg-physics --class-weight-lane (-> 1.3), adding telemetry_v9_port('on'),
-    and the window lever. Fail-closed never-invent-flags + ticket_hash."""
+    the lg1 (#808) CONSTRAIN-AND-PROTECT trio (lambda dual w/ LawRef-custodied budget +
+    born W=0.25 + margin-floor V=0.5 — engagement-spec low-end, raced-pending), the
+    optional --lane-guard-lambda-init (rollback+raise relaunch), and the window lever.
+    Fail-closed never-invent-flags + ticket_hash + no-stray-store_true-token check."""
     sys.path.insert(0, str(REPO / "src"))
     from tac.witness_dsl.curriculum_dsl import Lever
     from tac.witness_dsl.spec_tr1_renderer_20260728 import (
-        TR1RendererProgramV1, lever_seg_physics, lever_telemetry_v9_port, lever_window)
+        TR1RendererProgramV1, lever_lane_guard_born, lever_lane_guard_lambda,
+        lever_lane_guard_margin_floor, lever_seg_physics, lever_telemetry_v9_port,
+        lever_window)
 
     parent = json.loads(PARENT_TICKET.read_text())
     levers: list[Lever] = []
@@ -202,15 +214,28 @@ def _build_ticket(epochs: int, wall_minutes: float, out_dir: Path, resume_from: 
         elif "--telemetry-v9-port" in ov:
             levers.append(lever_telemetry_v9_port("on"))
             saw_tel = True
+        elif "--lane-guard" in ov:
+            continue  # parent never carries lane-guard; re-added canonically below
         else:
             levers.append(Lever(name=d["name"], overrides=dict(ov), notes=d.get("notes", "")))
     if not saw_tel:
         levers.append(lever_telemetry_v9_port("on"))
+    levers.append(lever_lane_guard_lambda())          # 0.0 sentinels => derived/custodied
+    levers.append(lever_lane_guard_born(LANE_GUARD_BORN_W))
+    levers.append(lever_lane_guard_margin_floor(LANE_GUARD_MARGIN_FLOOR_V))
+    if lambda_init > 0.0:
+        levers.append(Lever(
+            name="tr1_lane_guard_lambda_init",
+            overrides={"--lane-guard-lambda-init": str(lambda_init)},
+            notes="b4s rollback+raise-lambda relaunch (lg1 amend c66acf4d79): warm-start "
+                  "the dual at last lambda + one capped step; clamped trainer-side"))
 
     prog = TR1RendererProgramV1(levers=tuple(levers), num_pairs=600, out_dir=str(out_dir),
                                 seed=0, gt_cache=GT_CACHE, resume_from=str(resume_from),
                                 full_confirm=True)
     ticket = prog.sealed_ticket()
+    if "True" in ticket["argv"] or "False" in ticket["argv"]:
+        raise RuntimeError(f"stray store_true token in compiled argv: {ticket['argv']}")
     _atomic_write(out_ticket, ticket)
     return ticket
 
@@ -234,15 +259,18 @@ def _is_resmoke(wdir: Path) -> bool:
     return wdir.name == "window_01"
 
 
-def _launch_window(n: int, resume_ckpt: Path) -> dict:
+def _launch_window(n: int, resume_ckpt: Path, lambda_init: float = 0.0) -> dict:
     wdir = _window_dir(n)
     epochs_add = SMOKE_EPOCHS if n == 1 else FULL_EPOCHS
     wall = SMOKE_WALL_MINUTES if n == 1 else FULL_WALL_MINUTES
     epochs = _ckpt_epoch(resume_ckpt) + epochs_add
-    ticket_path = ROOT / "tickets" / f"window_{n:02d}_ticket.json"
-    ticket = _build_ticket(epochs, wall, wdir, resume_ckpt, ticket_path)
+    suffix = f"_lam{lambda_init:.1f}" if lambda_init > 0.0 else ""
+    ticket_path = ROOT / "tickets" / f"window_{n:02d}{suffix}_ticket.json"
+    ticket = _build_ticket(epochs, wall, wdir, resume_ckpt, ticket_path,
+                           lambda_init=lambda_init)
     purpose = (f"ddm_b4s burn-4 window_{n:02d} "
-               f"{'re-smoke' if n == 1 else 'full'} (class_weight_lane=1.3, telemetry on)")
+               f"{'re-smoke' if n == 1 else 'full'} (R6=1.3, lg1-protected, telemetry on"
+               + (f", lambda_init={lambda_init:.1f}" if lambda_init > 0.0 else "") + ")")
     r = subprocess.run(
         [VENV_PY, "tools/launch_tr1_run.py",
          "--ticket", str(ticket_path), "--out-dir", str(wdir),
@@ -252,14 +280,55 @@ def _launch_window(n: int, resume_ckpt: Path) -> dict:
         raise RuntimeError(
             f"governed launcher REFUSED window_{n:02d} rc={r.returncode}: "
             f"{(r.stderr or r.stdout).strip()[:600]}")
-    _log(f"window_{n:02d} launched (epochs->{epochs}, ticket {ticket['ticket_hash'][:12]})")
+    _log(f"window_{n:02d} launched (epochs->{epochs}, ticket {ticket['ticket_hash'][:12]}"
+         + (f", lambda_init={lambda_init:.1f}" if lambda_init > 0.0 else "") + ")")
     return {"window": n, "epochs_arg": epochs, "ticket_hash": ticket["ticket_hash"],
-            "ticket_path": str(ticket_path)}
+            "ticket_path": str(ticket_path), "lambda_init": lambda_init}
+
+
+def _last_lane_guard_lambda(wdir: Path) -> float | None:
+    """Last ``lambda_lane`` from the window's ``event=lane_guard`` telemetry rows (lg1
+    engagement spec: one row per a1 gate). None if the window emitted none."""
+    tele = wdir / "telemetry.jsonl"
+    lam: float | None = None
+    if not tele.is_file():
+        return None
+    for line in tele.read_text().splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if row.get("event") == "lane_guard" and row.get("lambda_lane") is not None:
+            try:
+                lam = float(row["lambda_lane"])
+            except (TypeError, ValueError):
+                continue
+    return lam
+
+
+T0_PATH = ROOT / "burn4_t0.json"
+
+
+def _ensure_t0() -> None:
+    """Persist the burn's t0 ONCE (window_01's launch time if present, else now). The
+    rollback path may RETIRE window_01, so the wall-cap clock must not depend on it."""
+    if T0_PATH.is_file():
+        return
+    rec = _window_dir(1) / "launch_receipt.json"
+    if rec.is_file():
+        t0 = json.loads(rec.read_text())["launched_utc"]
+    else:
+        t0 = _now()
+    _atomic_write(T0_PATH, {"schema": "ddm_b4s_burn4_t0.v1", "launched_utc": t0,
+                            "pointer": POINTER, "score_claim": False})
 
 
 def _elapsed_hours() -> float:
-    rec = _window_dir(1) / "launch_receipt.json"
-    t0 = datetime.strptime(json.loads(rec.read_text())["launched_utc"],
+    _ensure_t0()
+    t0 = datetime.strptime(json.loads(T0_PATH.read_text())["launched_utc"],
                            "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=UTC)
     return (datetime.now(UTC) - t0).total_seconds() / 3600.0
 
@@ -306,6 +375,15 @@ def _endpoint_stage(final_dir: Path, stop_reason: str, decisions: list[dict]) ->
         "final_ckpt_meta_epoch": _ckpt_epoch(ckpt) if ckpt.is_file() else None,
         "windows": decisions, "parent_baseline": PARENT_BASELINE,
         "class_weight_lane": BURN4_CLASS_WEIGHT_LANE,
+        "lane_guard": {
+            "dual_engaged": LG1_DUAL_ENGAGED,
+            "born_weight": LANE_GUARD_BORN_W,
+            "margin_floor_weight": LANE_GUARD_MARGIN_FLOOR_V,
+            "lambda_step": LG1_LAMBDA_STEP, "lambda_escalate": LG1_LAMBDA_ESCALATE,
+            "lambda_max": LG1_LAMBDA_MAX,
+            "rejected_windows": sorted(p.name for p in (ROOT / "rejected").glob("window_*"))
+            if (ROOT / "rejected").is_dir() else [],
+        },
         "r6_falsifier": "beat parent n600 d_seg 0.00426407708 at matched compute; "
                         "else R6 (class-weight-lane LANE-BIRTH tilt) closes at INSTANCE",
         "pointer": POINTER, "score_claim": False,
@@ -420,6 +498,7 @@ def main() -> int:
         except RuntimeError as exc:
             _alarm("WINDOW_01_LAUNCH_REFUSED", {"error": str(exc)})
             return 0
+    _ensure_t0()  # persist the wall-cap clock ONCE (rollback may retire window_01)
 
     while True:
         if DONE_MARKER.is_file() or ALARM_MARKER.is_file():
@@ -511,16 +590,42 @@ def main() -> int:
                        "rollback_target_ckpt": str(prior),
                        "lg1_dual_engaged": LG1_DUAL_ENGAGED}
             if LG1_DUAL_ENGAGED:
-                # ROLLBACK-AND-RAISE (lg1 dual path): rollback to the START ckpt + relaunch this
-                # window with a raised λ_Lane per the sealed dual-ascent rule (bounded step, gate
-                # cadence). WIRED when lg1's --lambda-lane flag is in the sealed ticket; until then
-                # LG1_DUAL_ENGAGED is False so this branch is inert (never-launch-a-weaker-state:
-                # no half-wired rollback).
-                _alarm("LANE_EROSION_DUAL_ROLLBACK_OWED",
-                       {**details, "note": "lg1 dual engaged but the raise-λ relaunch rule is the "
-                                           "seal-time wiring owed to MAIN; STOP + rollback target "
-                                           "recorded rather than a half-wired retry"})
-                return 0
+                # ROLLBACK-AND-RAISE (lg1 amend c66acf4d79): rollback to the START ckpt and
+                # relaunch the SAME window with --lane-guard-lambda-init = last λ + one capped
+                # step (caps-law). Escalate to an operator ALARM at λ >= 1.0 (engagement spec).
+                lam = _last_lane_guard_lambda(Path(last["window_dir"]))
+                new_init = min((lam if lam is not None else 0.0) + LG1_LAMBDA_STEP,
+                               LG1_LAMBDA_MAX)
+                details.update({"last_lambda_lane": lam, "raise_lambda_init_to": new_init})
+                if new_init >= LG1_LAMBDA_ESCALATE:
+                    _alarm("LANE_EROSION_LAMBDA_ESCALATE",
+                           {**details, "reading": "Lane still erodes with the dual at "
+                                                  f"lambda>={LG1_LAMBDA_ESCALATE} (the natural "
+                                                  "full unit) — the loss-weight dual form is "
+                                                  "too weak on this vehicle (lg1 falsifier "
+                                                  "direction: #208 containment-projection "
+                                                  "successor). OPERATOR decision owed."})
+                    return 0
+                # retire the eroded window + its decision receipt (custody preserved), then
+                # relaunch the SAME window number from the rollback target with raised λ.
+                rej = ROOT / "rejected"
+                rej.mkdir(exist_ok=True)
+                stamp = _now().replace(":", "")
+                wdir_p = Path(last["window_dir"])
+                wdir_p.rename(rej / f"{wdir_p.name}_eroded_{stamp}")
+                dec_p = ROOT / f"{wdir_p.name}_decision.json"
+                if dec_p.is_file():
+                    dec_p.rename(rej / f"{wdir_p.name}_decision_{stamp}.json")
+                _log(f"LANE_EROSION rollback: retired {wdir_p.name} -> rejected/; "
+                     f"relaunching with lambda_init={new_init:.1f} from {prior}")
+                try:
+                    _launch_window(n_cur, prior, lambda_init=new_init)
+                except RuntimeError as exc:
+                    _alarm("GOVERNED_LAUNCH_REFUSED",
+                           {"window": n_cur, "lambda_init": new_init, "error": str(exc)})
+                    return 0
+                time.sleep(POLL_SECONDS)
+                continue
             _alarm("LANE_EROSION",
                    {**details, "reading": "R6 (class-weight-lane) ERODES the protected Lane pool "
                                           "beyond noise (xp1's finding realized); the burn is NOT "

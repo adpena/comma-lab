@@ -26282,3 +26282,22 @@ spec for b4s (flags/derivations/gate rules/rollback+raise-λ via `--lane-guard-l
 `.omx/research/ddm_lg1_lane_guard_20260731.md`. Falsifier pre-registered: burn-4 erodes Lane at λ_max
 ⇒ the loss-weight dual form is falsified on this vehicle ⇒ #208 containment projection is the
 successor. Pointer 0.1910828242 [contest-CPU] UNMOVED. [no-triality] [p0-ledger-ok]
+
+
+## FEED-b4s-fire (2026-07-31, task #807): lg1 FOLD EXECUTED + PROTECTED RE-SEAL + RE-FIRE
+
+lg1 (#808) landed (c009a2e123+c66acf4d79) → the b4s turnkey fold ran: all three lever_lane_guard_*
+factories folded into the ticket builder + supervisor _build_ticket (born W=0.25 / margin-floor V=0.5 =
+engagement-spec LOW-end, raced-pending; budget LawRef-custodied 0.12589 = xp1 ep641 Lane S; η/cap
+derived). LG1_DUAL_ENGAGED=True: the LANE_EROSION guard now ROLLS BACK the eroding window (retire →
+rejected/) and RELAUNCHES it from its START ckpt with --lane-guard-lambda-init = last λ + 0.1 (caps-law,
+lg1 amend), ALARM-ESCALATE to operator at λ≥1.0. Topology-trend guard (P2-inverted) + lg1 level dual =
+COMPLEMENTARY on one gate cadence. **Fold-time bug FOUND+FIXED (two-landing):** DSL compile emitted
+`--lane-guard True` — store_true argparse REFUSES the stray token (lg1's 24 tests never compiled argv);
+fix = boolean overrides → bare flag/omitted in spec_tr1_renderer compile; regression test parses the
+composed program against the REAL trainer argparser; 25/25; r1c parent ticket recompiles bit-identical
+(G1 invariance). **PROTECTED RE-SEAL: ticket 6206cf56ede3a14d (20 levers), argv-diff = exactly
+{R6 1.0→1.3, telemetry on, 7 lane-guard flags, window fields}; dry-run ALL GATES PASS.** burn4.HOLD
+REMOVED; the daemon (nohup+disown) bootstraps window_01 re-smoke (25 ep, ΔS<0 gate) → full windows →
+burn4.done/ALARM + endpoint manifest (now records lane_guard config + rejected-window history).
+Pointer 0.1910828242 [contest-CPU] UNMOVED. [no-triality] [p0-ledger-ok]

@@ -577,7 +577,18 @@ class TR1RendererProgramV1:
                            "--out-dir", self.out_dir,
                            "--seed", str(self.seed)]
         for k, v in sorted(self.merged_overrides().items()):
-            argv.extend([k, v])
+            # store_true master switches (e.g. --lane-guard, lg1 #808): a bool True
+            # override stringifies to "True"; argparse action="store_true" takes NO
+            # value, so emit the bare flag ("True") / omit entirely ("False"). No
+            # value-taking trainer flag uses the literal strings True/False (choices
+            # are on/off etc.), so this cannot swallow a real value. Regression:
+            # test_lane_guard.py compile round-trip (no stray True token).
+            if v == "True":
+                argv.append(k)
+            elif v == "False":
+                continue
+            else:
+                argv.extend([k, v])
         if self.gt_cache:
             argv.extend(["--gt-cache", self.gt_cache])
         if self.resume_from:

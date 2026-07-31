@@ -292,3 +292,43 @@ def test_resolved_fail_closed_on_sign_inverting_values():
         lg.LaneGuardConfig(enabled=True, lambda_step_cap=-0.1).resolved()
     with pytest.raises(ValueError):
         lg.LaneGuardConfig(enabled=True, lambda_max=0.0).resolved()
+
+
+def test_dsl_compile_argv_parses_against_real_trainer_argparse():
+    """b4s regression (the store_true wiring gap): a program carrying the three lane-guard
+    levers must compile to an argv the REAL trainer argparser accepts — the bool True
+    override must emit the bare ``--lane-guard`` flag (never a stray ``True`` token)."""
+    from tac.witness_dsl.spec_tr1_renderer_20260728 import (
+        TR1RendererProgramV1,
+        lever_a1_gate,
+        lever_desc_level_roundtrip,
+        lever_lane_guard_born,
+        lever_lane_guard_lambda,
+        lever_lane_guard_margin_floor,
+        lever_renderer_capacity,
+        lever_seg_physics,
+        lever_token_grid,
+        lever_token_temporal,
+        lever_variant,
+        lever_window,
+    )
+
+    prog = TR1RendererProgramV1(
+        levers=(lever_variant("plain"), lever_token_grid(16, 4),
+                lever_renderer_capacity(24), lever_desc_level_roundtrip(16, "round"),
+                lever_token_temporal("shared_base"), lever_seg_physics("ce", 100.0, 1.3),
+                lever_a1_gate(5), lever_window(10, 20.0),
+                lever_lane_guard_lambda(), lever_lane_guard_born(0.25),
+                lever_lane_guard_margin_floor(0.5)),
+        num_pairs=8, out_dir="/tmp/b4s_compile_probe")
+    argv = prog.compile_trainer_argv()
+    assert "True" not in argv, f"stray store_true token in argv: {argv}"
+    assert "False" not in argv
+    assert "--lane-guard" in argv
+    import experiments.train_tr1_partition_renderer_mlx as tr1
+
+    ns = tr1.build_argparser().parse_args(argv[1:])  # argv[0] is the trainer relpath
+    assert ns.lane_guard is True
+    assert ns.lane_guard_born_weight == 0.25
+    assert ns.lane_guard_margin_floor_weight == 0.5
+    assert ns.class_weight_lane == 1.3
