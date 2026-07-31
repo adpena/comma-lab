@@ -1,0 +1,493 @@
+{
+ "schema": "ddm_gc16_headchain_spectrum.v1",
+ "utc": "2026-07-31",
+ "axis": "[macOS-CPU advisory]",
+ "score_claim": false,
+ "promotion_eligible": false,
+ "pointer": "0.1910828242 [contest-CPU] UNMOVED",
+ "source": {
+  "file": "upstream/models/posenet.safetensors",
+  "read_only": true,
+  "exactness": "linearized under all-ReLU-active; AllNorm==BatchNorm1d(1) is a SCALAR affine in eval mode; final_layer is nn.Linear so dp = W_scored*dh is EXACT",
+  "boundary": "chain stops at the 2048-d vision output; FastViT nonlinearity EXCLUDED. Authority for real-input concentration is ddm_pi2_posenet_inversion_20260730 (~50x, 53 gt_n96 pairs)."
+ },
+ "levels": {
+  "A_h32": {
+   "name": "scored <- h32 (final_layer only) [ua1 replication]",
+   "n_in": 32,
+   "sv": [
+    8.768578116075172,
+    0.9877134777724267,
+    0.6995887073820016,
+    0.5120725666811252,
+    0.41976571777286514,
+    0.35331605131637944
+   ],
+   "cond": 24.81794439682358,
+   "gain_ratio": 615.930364083827,
+   "spec_eff_rank": 1.1664843885628782,
+   "per_dim_share": [
+    0.9736335425419943,
+    0.012289061897864228,
+    0.00462039925529841,
+    0.002658889468113531,
+    0.0023819323530164228,
+    0.004416174483712984
+   ],
+   "share_eff_dim": 1.1723625590758642,
+   "dim0": 0.9736335425419943,
+   "row_norms": [
+    8.7655848146887,
+    0.9847874343630686,
+    0.6038413997530674,
+    0.45807150269494884,
+    0.4335586389855096,
+    0.5903454830929583
+   ]
+  },
+  "B_z32": {
+   "name": "scored <- z32 (through res_layer)",
+   "n_in": 32,
+   "sv": [
+    15.660156441840703,
+    1.3478086697330223,
+    0.8252120848006939,
+    0.5445048787416893,
+    0.38017714275910053,
+    0.3621562923476815
+   ],
+   "cond": 43.24143131774294,
+   "gain_ratio": 1869.8213824070801,
+   "spec_eff_rank": 1.0841519451576842,
+   "per_dim_share": [
+    0.9868702889296956,
+    0.00727439206212097,
+    0.0018439127523441259,
+    0.0007944115868166923,
+    0.0010843087216571364,
+    0.0021326859473654747
+   ],
+   "share_eff_dim": 1.0905220137353673,
+   "dim0": 0.9868702889296956,
+   "row_norms": [
+    15.654072909916147,
+    1.3439888547047858,
+    0.6766553175554796,
+    0.44414021669274795,
+    0.5188881953965289,
+    0.7277140648959857
+   ]
+  },
+  "C_x512": {
+   "name": "scored <- hydra input x512",
+   "n_in": 512,
+   "sv": [
+    12.033119865114394,
+    0.9981959492961548,
+    0.5485345811990563,
+    0.34156971203248926,
+    0.2724296039165321,
+    0.2161275706370946
+   ],
+   "cond": 55.676005748102895,
+   "gain_ratio": 3099.817616062787,
+   "spec_eff_rank": 1.071688626515875,
+   "per_dim_share": [
+    0.9889076273293691,
+    0.006497613833440447,
+    0.0014320143695968977,
+    0.0007974114165704066,
+    0.0007137155634748169,
+    0.001651617487548458
+   ],
+   "share_eff_dim": 1.077423428264907,
+   "dim0": 0.9889076273293691,
+   "row_norms": [
+    12.029451421534363,
+    0.9750904607418324,
+    0.4577640126154046,
+    0.34159317425228913,
+    0.3231696314763829,
+    0.49161224953799604
+   ]
+  },
+  "D_s512": {
+   "name": "scored <- pre-resblock 512 (hydra.resblock)",
+   "n_in": 512,
+   "sv": [
+    12.734318076866534,
+    1.0092175913795147,
+    0.5492644177432425,
+    0.3379170986377277,
+    0.26804134281043207,
+    0.22037192045250492
+   ],
+   "cond": 57.785574726209575,
+   "gain_ratio": 3339.1726464383505,
+   "spec_eff_rank": 1.0655899372339805,
+   "per_dim_share": [
+    0.9898305206503982,
+    0.005995163884738284,
+    0.0012791316867578186,
+    0.0006646523854870617,
+    0.0006787085271046638,
+    0.0015518228655140491
+   ],
+   "share_eff_dim": 1.0716146630702499,
+   "dim0": 0.9898305206503982,
+   "row_norms": [
+    12.729993830064302,
+    0.9907140054214117,
+    0.45762042644331824,
+    0.32987169851259046,
+    0.3333415308403179,
+    0.5040444604553966
+   ]
+  },
+  "E_v2048": {
+   "name": "scored <- vision 2048 (full summarizer+hydra)",
+   "n_in": 2048,
+   "sv": [
+    188.33766700136442,
+    6.650309229552781,
+    2.965453996950114,
+    1.7415685061876311,
+    0.5305928930735784,
+    0.3443014510278544
+   ],
+   "cond": 547.0138636915814,
+   "gain_ratio": 299224.1670707919,
+   "spec_eff_rank": 1.0129882781837432,
+   "per_dim_share": [
+    0.9970617700992713,
+    0.0012061497521588381,
+    0.00020579783801656158,
+    0.0005170878822835522,
+    0.0003372330759986214,
+    0.0006719613522711325
+   ],
+   "share_eff_dim": 1.0246022576066427,
+   "dim0": 0.9970617700992713,
+   "row_norms": [
+    188.21036746843168,
+    6.546107398841513,
+    2.7039765091085193,
+    4.286123597850678,
+    3.461366548734713,
+    4.886013448691715
+   ]
+  }
+ },
+ "pose_null_ladder": {
+  "note": "residual sum(sigma^2) after nulling top-k right-singular directions of the 6x2048 scored Jacobian",
+  "total_sigma2": 35527.530474942636,
+  "rows": [
+   {
+    "k": 0,
+    "residual_sigma2": 35527.530474942636,
+    "fraction": 1.0,
+    "d_pose_reduction": 1.0
+   },
+   {
+    "k": 1,
+    "residual_sigma2": 56.45366342580701,
+    "fraction": 0.00158901175148167,
+    "d_pose_reduction": 629.3219663527047
+   },
+   {
+    "k": 2,
+    "residual_sigma2": 12.2270505771321,
+    "fraction": 0.00034415706393541116,
+    "d_pose_reduction": 2905.6500789641577
+   },
+   {
+    "k": 3,
+    "residual_sigma2": 3.4331331691046927,
+    "fraction": 9.663303706195007e-05,
+    "d_pose_reduction": 10348.427726212456
+   },
+   {
+    "k": 4,
+    "residual_sigma2": 0.4000723073600758,
+    "fraction": 1.126090955413421e-05,
+    "d_pose_reduction": 88802.77345206727
+   },
+   {
+    "k": 5,
+    "residual_sigma2": 0.11854348917988604,
+    "fraction": 3.33666561101099e-06,
+    "d_pose_reduction": 299700.39451960725
+   },
+   {
+    "k": 6,
+    "residual_sigma2": 0.0,
+    "fraction": 0.0,
+    "d_pose_reduction": null
+   }
+  ]
+ },
+ "control": {
+  "draws": 200,
+  "design": "same shapes, same per-matrix Frobenius norm, iid gaussian, identical chain",
+  "eff_rank": {
+   "trained": 1.01299,
+   "median": 5.2345,
+   "p95": 5.5145,
+   "max": 5.7121
+  },
+  "dim0_share": {
+   "trained": 0.99706,
+   "median": 0.23054,
+   "p95": 0.29717,
+   "max": 0.37085
+  },
+  "cond": {
+   "trained": 547.014,
+   "median": 2.2752,
+   "p95": 3.0872,
+   "max": 3.8535
+  },
+  "gain_ratio": {
+   "trained": 299224.2,
+   "median": 5.1764,
+   "p95": 9.531,
+   "max": 14.85
+  },
+  "argmax_dim_histogram": {
+   "trained": 0,
+   "control": [
+    44,
+    23,
+    45,
+    24,
+    30,
+    34
+   ]
+  }
+ },
+ "gt_pose_targets_n600": {
+  "source": "experiments/results/mlx_fleet_gt_cache/gt_n600.npz::gt_poses",
+  "mean": [
+   31.2606,
+   -0.0188391,
+   -0.00900263,
+   0.00163696,
+   0.00159237,
+   0.000828466
+  ],
+  "std": [
+   1.25634,
+   0.03575,
+   0.02989,
+   0.00957,
+   0.00739,
+   0.02862
+  ],
+  "rms": [
+   31.2859,
+   0.0404084,
+   0.0312137,
+   0.00970537,
+   0.00756402,
+   0.0286345
+  ],
+  "centred_svd_dim0_share": 0.998025,
+  "raw_energy_dim0_share": 0.999996,
+  "prior_work": "da1/ar1 07-28 measured t_p rank-1 at 0.998 SVD energy; reproduced here, not claimed"
+ },
+ "our_residual_bound": {
+  "d_pose_v4d": 0.00858145,
+  "contribution": 0.292941,
+  "archive_bytes": 360238,
+  "bound_status": "CONDITIONAL -- REFUTED as unconditional by our own banked receipt",
+  "condition": "holds only if |pred_i| <= max|GT_i| for i>=1",
+  "conditional_max_dims1to5_contribution": 0.000596,
+  "conditional_min_dim0_share": 0.9306,
+  "conditional_min_abs_dim0_error": 0.2189,
+  "measured_counterexample": {
+   "receipt": ".omx/research/ddm_pfs1_d2_price_receipt_20260729.json",
+   "e_p_per_dim_std": [
+    0.8195,
+    0.117,
+    0.2379,
+    0.0096,
+    0.0075,
+    0.02859
+   ],
+   "gt_std": [
+    1.25634,
+    0.03575,
+    0.02989,
+    0.00957,
+    0.00739,
+    0.02862
+   ],
+   "dims1_2_overshoot_vs_gt_std": [
+    3.27,
+    7.96
+   ],
+   "dims1to5_contribution_on_that_base": 0.0117,
+   "note": "20x the assumed ceiling; base is pfs1 warp (d_pose 0.2214), not v4d"
+  },
+  "floor_of_nail_dim0_strategy": {
+   "d_pose": 0.000596,
+   "contribution": 0.077201,
+   "delta_S_vs_ours": -0.21574,
+   "status": "conditional on the same condition"
+  },
+  "OWED_ROUTING_MEASUREMENT": "six-way per-dim MSE breakout of v4d 0.00858145 -- recall (exhaustive) found NO artifact decomposing the CURRENT residual per dim; all custody is on predecessor bases",
+  "tail_concentration": {
+   "source": "ddm_v4d_adaptive_hybrid_20260731.md sec4",
+   "top17_pairs_share": 0.743,
+   "top50": 0.859,
+   "top100": 0.911,
+   "median_d": 0.00088,
+   "mean_d": 0.00858
+  }
+ },
+ "segnet_head": {
+  "pairwise_dw_frobenius": {
+   "Road-Lane": 3.9535,
+   "Road-Undriv": 2.6018,
+   "Road-Movable": 2.9415,
+   "Road-MyCar": 2.7053,
+   "Lane-Undriv": 3.7479,
+   "Lane-Movable": 4.0074,
+   "Lane-MyCar": 3.8624,
+   "Undriv-Movable": 2.9458,
+   "Undriv-MyCar": 2.8686,
+   "Movable-MyCar": 2.9098
+  },
+  "max_over_min_ratio": 1.5402,
+  "tap_energy_share_3x3_rowmajor": [
+   0.091,
+   0.09644,
+   0.07428,
+   0.13126,
+   0.23893,
+   0.13237,
+   0.07277,
+   0.09485,
+   0.06809
+  ],
+  "centre_tap_share": 0.23893,
+  "centre_tap_share_argmax_effective": 0.24184,
+  "centre_tap_only_captures_of_argmax_effective_frobenius2": 0.24184,
+  "prior_work": "pairwise ||dw|| is PRIOR (segnet_recursive_fractal_factorization_20260715, carried in ja1); tap split is new"
+ },
+ "posenet_stem": {
+  "conv_kxk_3x3": {
+   "luma_share": 0.731903,
+   "chroma_share": 0.268097,
+   "f0_share": 0.521883,
+   "f1_share": 0.478117,
+   "cos_Wf0_Wf1": 0.35073,
+   "antisym_share": 0.324801
+  },
+  "conv_scale_1x1": {
+   "luma_share": 0.813449,
+   "chroma_share": 0.186551,
+   "f0_share": 0.508635,
+   "f1_share": 0.491365,
+   "cos_Wf0_Wf1": 0.49712,
+   "antisym_share": 0.251479
+  },
+  "trivial_baselines": {
+   "luma": 0.666667,
+   "chroma": 0.333333,
+   "frame": 0.5,
+   "antisym": 0.5
+  },
+  "reading": "stem is SUM-dominated, not a temporal differencer; motion is inferred deep. Chroma under-weighted but NOT ignored at the stem -- pi2's end-to-end 99.3% luma remains the authority."
+ },
+ "gt_uint8_lattice_probe": {
+  "denominator_pixels": 12208032,
+  "frames": "12 of 96 (gt_n96::gt_f1)",
+  "distinct_codes": {
+   "R": 256,
+   "G": 256,
+   "B": 255
+  },
+  "on_limited_range_grey_lattice": {
+   "R": 0.85924,
+   "G": 0.86557,
+   "B": 0.85944,
+   "trivial_baseline": 0.859375
+  },
+  "marginal_entropy_bits": {
+   "R": 6.1154,
+   "G": 5.9295,
+   "B": 5.6609
+  },
+  "verdict": "EMPTY at FAMILY scope for this video -- on-lattice fraction is exactly the trivial baseline; bilinear chroma upsample dithers off the lattice before the round"
+ },
+ "S_arithmetic_v4d": {
+  "archive_bytes": 360238,
+  "seg": 0.431179,
+  "pose": 0.2929391,
+  "rate": 0.2398677,
+  "S_predicted": 0.9639858,
+  "S_measured": 0.9639878,
+  "gap_to_demonstrated_floor": {
+   "seg": 0.4015,
+   "pose": 0.2776,
+   "rate": 0.1126,
+   "floor_row": "PR130 191052 B @ distortion 0.0449 = 0.172141 (external, lessons-only)"
+  }
+ },
+ "owed": [
+  "ker(W6) unscored-mass 87.35% (here) vs 93.5% (ua1) -- definitions not reconciled; not load-bearing",
+  "P0: six-way per-dim MSE breakout of the CURRENT v4d residual -- the routing measurement",
+  "P4 scope guard: does the v4d receiver contain an upscale for a decode-side unsharp to invert?",
+  "neither recall sweep read /Volumes/VertigoDataTier/pact/ raw receipts"
+ ],
+ "prior_work_credit": {
+  "oldest_anchor": {
+   "file": "memory/project_posenet_rank1_discovery.md",
+   "date": "~2026-04-24",
+   "claim": "PoseNet Jacobian rank 1.008; GT pose dim0 = 99.80% of variance; mean 31.26 std 1.26",
+   "my_reproduction": {
+    "dim0_variance_share": 0.998025,
+    "mean": 31.2606,
+    "std": 1.25634
+   },
+   "verdict": "my gt_poses SVD reproduces a 98-day-old measurement to 4 digits -- CONTROL, not a finding"
+  },
+  "da1_ar1_20260728": "t_p rank-1 at 0.998 SVD energy, xi-smooth",
+  "pi2_20260730_QA51": "p0 dominates ~50x at the REAL input on 53 gt_n96 pairs; cond 24.8; 26-dim head-null explicitly named; 99.3% luma; 52% Jacobian on frame_0 -- THE AUTHORITY for real-input concentration",
+  "qa43_20260729": "rotation/translation aliasing MEASURED: single-plane homography makes the solver substitute speed for turn; tail correction 98.1% rank-1 on dim0",
+  "surviving_as_new": [
+   "depth profile of the concentration (h32 -> v2048)",
+   "200-draw matched random-chain control",
+   "the k-mode pose-null sigma ladder",
+   "stem sum-dominance / not-a-differencer",
+   "the QA50-vs-raw-MSE unification",
+   "the exact 50% yuv6 DOF kill + frame_0 24.2% composition",
+   "GT uint8 limited-range lattice probe (empty)",
+   "SegNet head tap-energy split + 1x1-loses-76%"
+  ]
+ },
+ "su2_arithmetic_wall": {
+  "bar_0.172141_needs_d_pose_at_d_seg_0": 0.0003124,
+  "sub_0.15_needs": 0.0001139,
+  "current": 0.00858145,
+  "factor_above": [
+   27.5,
+   75.3
+  ],
+  "note": "every non-ideal pose term in the banked table exceeds the bar on its own"
+ },
+ "live_blocker_ordering": {
+  "source": ".omx/state/current_focus.md",
+  "blocker": "ep854 dominates gr1 by -0.035996 S (seg+rate) byte-closed, but v4d pose payload was solved against gr1 RENDERS; base swap ships corrections fitted to different pixels",
+  "order": "rate parent FIRST, then re-solve pose (su2)",
+  "row_placement": {
+   "P0": "now, parent-independent",
+   "P2_diagnostic": "now",
+   "P2_fix": "before the post-swap pose re-solve",
+   "P1": "repaint stage, before terminal pose solve per #383 staging law",
+   "P3": "any time",
+   "P4": "after the $0 scope check"
+  }
+ }
+}
