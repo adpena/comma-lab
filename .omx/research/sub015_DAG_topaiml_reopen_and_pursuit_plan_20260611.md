@@ -25929,3 +25929,22 @@ slopes · UNKNOWN w/ named $0 re-anchors: along-tangent deficit, g3 r, flicker c
 white-box (pincer-closed) — verdict_scope: formulation-on-TR1 routing, families not killed.
 
 pointer 0.1910828242 [contest-CPU] UNMOVED
+
+FEED-vh1b (2026-07-30, #798 charter extension "Also siren init and islands birth and more"): init +
+islands-birth + event corpus folded into the vh1 table (rows 11-16) FROM EXISTING CUSTODY — no new
+scorer measurement proposed where custody answers. HEADLINE ADJUDICATION (row 11): island-starvation
+laws are VEHICLE-SCOPED — TR1's burn births unaided (telemetry topology_per_class ep9→ep399: Lane
+realized components 20→476 of GT 985, Movable 68→105 of GT 134, birth threshold 89px→1px; QA24 endpoint
+per_class_d_seg [Road 0.002495, Lane 0.001377, Undriv 0.000678, Movable 0.000454, MyCar 0.000274]).
+#300 starvation + #323 movable-dilation preconditions GONE on TR1 (non-reactivations, scope:
+formulation-on-witness-INR). RESIDUE: 599/985 lane GT components erased = 26% of endpoint d_seg → QA91
+$0 analyzer (erased-component size distribution vs the #315 π₁≳5 nucleus + band-lemma GT-flicker
+prediction; if sub-nucleus, birth corpus CLOSES as GT-noise chasing; else a birth-plateau event key
+enters BR-A/BR-C). BR-B gains the head-init gate (#208 rare-class-protected + #532 silent-init-bug →
+identity-preserving graft init + protected Lane/Movable gain + $0 rendered-init verification) and the
+rg3 zero-support split in f′ (token-limited vs renderer-capacity-limited). Init corpus (#178 SIREN/FINER
+ports, #310 FINER++ bias-init, #448 FreSh) = BR-D-only, raced never adopted; the one vehicle-general
+line is the saturating-activation divergence law. #364 birth_completion emission rides the row-7
+telemetry port (trainer already logs betti0/erasure at :858). NOTHING-MORE added: #300 cure ·
+#323-movable · #220 AA-coverage (no SDF seam on TR1) · §14 priming (consumed by sched1). pointer
+0.1910828242 [contest-CPU] UNMOVED

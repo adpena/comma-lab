@@ -16,7 +16,13 @@ mc_finisher_400_energy_ranked_topk_design_20260720T154953Z.md · p0_425_phase_ca
 collateral_coupling_geometry_and_film_flicker_sidecar_20260718.md (#535) ·
 experiments/train_tr1_partition_renderer_mlx.py (apparatus vocabulary grep: 4 hits = PARTIAL port) ·
 gc11 memo fe12a36a14 + FEED-reanchor + nv1 838273e222 + pa1b b336969c2e + canonical_equations registry
-(parabolic-capacity + v8 geometric-rate equations).
+(parabolic-capacity + v8 geometric-rate equations). **Extension (operator "Also siren init and islands
+birth and more"):** /Volumes/VertigoDataTier/pact/ddm_782_qa24_endpoint_20260730/realized_verdict/
+p1_receiver_realized_verdict.json (per_class_d_seg) · /Volumes/VertigoDataTier/pact/ddm_bc1_20260731/
+burn_out/telemetry.jsonl (40 topology_per_class rows, reads-only) · ddm_pj1_projection_probe_20260730.md
+R8 · trainer birth-vocabulary grep (8 hits: coarse-from-birth mask, STE-from-birth, erasure/birth
+telemetry at :858) · #178/#310/#448/#208/#532 init corpus + #300/#323/#315/#220/#364 birth corpus +
+§14 DSL event machinery (via index + task ledger).
 
 ## §1 RANKED UNTRANSFERRED-LESSON TABLE
 {lesson · evidence · TR1-applicability + prior-law-prediction (PLP) · consumer · cost}
@@ -88,6 +94,52 @@ gc11 memo fe12a36a14 + FEED-reanchor + nv1 838273e222 + pa1b b336969c2e + canoni
     not predict its outcome → a DISCRIMINATOR, not a re-anchor. Consumer: **W5 optional rung between
     terminal pose solve and byte-close, break-even falsifier pre-registered**. Cost: harness exists.
 
+*(Extension rows 11-16: init + islands-birth + event corpus, operator-directed.)*
+
+11. **[c — ADJUDICATED FROM EXISTING CUSTODY, no new measurement] Island-starvation laws are
+    VEHICLE-SCOPED; TR1 births unaided.** Evidence (all pre-existing): burn telemetry
+    `topology_per_class` ep9→ep399 — Lane realized components **20→476** (GT 985; erased 971→599),
+    Movable **68→105** (GT 134; erased 53→19), smallest surviving lane component **89px→1px**; QA24
+    endpoint per_class_d_seg **[Road 0.002495, Lane 0.001377, Undriv 0.000678, Movable 0.000454,
+    MyCar 0.000274]** (sum = 0.005277). Scorer-in-loop CE + margin weighting births islands with NO
+    dedicated birth lever → #300 seed-compose starvation and #323 movable-dilation preconditions are
+    GONE on TR1 (non-reactivations, scope: formulation-on-witness-INR). Residue: 599/985 lane GT
+    components erased = Lane holds 26% of endpoint d_seg → row 12.
+12. **[d→burn-3, CONDITIONAL] Birth-lever corpus (#323 lane curve-prior homotopy · #315
+    critical-nucleus π₁≳5 · isoperimetric/Chan-Vese registered equations) — reactivation gated on ONE
+    $0 analyzer from existing custody:** erased-lane-component SIZE distribution + birth-curve trend
+    (telemetry topology rows × GT masks). PLP: #315 nucleus law + band lemma predict the erased tail
+    is sub-nucleus GT flicker (≲5px; GT-noise floor ~0.005318 lineage) — if ≥~80% of erased mass is
+    sub-nucleus, the corpus CLOSES as GT-noise chasing; else a **birth-plateau event key** (lane
+    betti0_realized slope→0 while above-nucleus erasure persists) enters the BR-A/BR-C event
+    schedule. Consumer: burn-3 ticket (conditional). Cost: $0 analyzer (ledger row QA91).
+13. **[a→BR-B] #208 rare-class-protected init + #532 silent-init-bug lesson → BR-B head-init design
+    gate.** Evidence: #208 EUREKA (lane+movable seeded at zero never birthed — measured on witness);
+    #532 (frac_of_frame mis-scaled by frame count + wrong sky detector = silent whole-run poison).
+    Lifted to the graft: BR-B's K=5 class-field head must use **identity-preserving graft init**
+    (preserve the incumbent's per-class output at step 0) with **protected Lane/Movable channel
+    gain**, plus a $0 rendered-init verification (render the initialized head, check per-class mass
+    vs GT priors) BEFORE fire. A Lane channel initialized dead kills the already-birthed 476
+    components. Consumer: BR-B design gate (joins row 1's 6-risk checklist). Cost $0.
+14. **[e→burn-3 ticket] #364 birth_completion gate key + v13 birth/death event vocabulary.** The
+    trainer ALREADY emits betti0/erasure per gate (trainer:858); the untransferred residue is (i)
+    emit `birth_completion` per class as a typed gate key (apparatus 90% present, small port riding
+    row 7's telemetry item) and (ii) use the v13 worldsheet birth/death event GRAMMAR as the readout
+    vocabulary for the QA91 trend analyzer — not as a codec. Cost: rides row 7.
+15. **[b→BR-D ONLY] Init corpus for from-birth arms: #178 SIREN/FINER MLX ports (BUILT) + #310
+    FINER++ bias-init + annealed-β/step_basis stability law + #448 FreSh spectrum-matched init.**
+    N-A to BR-B (graft = warm-start, not init) and to TR1's conv head (no sinusoidal layers). Enters
+    ONLY if BR-D fires or a spectral head is ever raced; FreSh's TR1 translation = match token-INIT
+    distribution to the MEASURED delta spectrum (of1 W1-COH + g4 stationarity receipts) — "the deltas
+    ARE a spectrum." PLP: fixed-β saturating activations diverge (measured law, vehicle-general for
+    any saturating choice — that one line IS a design-gate item everywhere); FreSh on token fields
+    UNMEASURED → race, never adopt. Cost: $0 doc fold now; code exists if raced.
+16. **[a→f′ readout] rg3 zero-support lesson lifted to the f′ instrument.** rg3's 10 class-birth
+    zero-support rows taught: some structure is unreachable at ANY setting of the current coordinate
+    alphabet. f′'s per-class readout (row 2) should therefore split unreached components into
+    **token-limited vs renderer-capacity-limited** (the pj1 f-floor analog) — this is the decision
+    input BR-B's head-capacity question actually needs. Cost: analyzer column, joins row 2.
+
 ## §2 CROSS-VEHICLE LAW TAXONOMY (durable deliverable; cite before any charter)
 - **CROSS-VEHICLE VALID** (mechanism lives in the frozen scorer / R / the clip itself): rowband 72.1%
   flip-mass law (re-derived vehicle-independently by pa1b from the field) · flip-distance law
@@ -96,7 +148,13 @@ gc11 memo fe12a36a14 + FEED-reanchor + nv1 838273e222 + pa1b b336969c2e + canoni
   QA80 field FORM (values are base-scoped, the law form is scorer-side).
 - **VEHICLE-SCOPED (L18)**: co-location −0.51 (B's trained delta distribution; nv1 correctly
   INSTANCE-scoped — do NOT cite as universal) · saliency-flat 5.5× (#121, ancestor) · v16/v17 validity
-  radii · QA24 knee prices · dw1 slopes · pose 3.4e-5 (ancestor) · rd1's NUMERIC knee/duals.
+  radii · QA24 knee prices · dw1 slopes · pose 3.4e-5 (ancestor) · rd1's NUMERIC knee/duals ·
+  **island-starvation family (#300/#323 preconditions) — witness-INR-scoped, MEASURED ABSENT on TR1**
+  (row 11: Lane 20→476, Movable 68→105 unaided) · FINER++/FreSh init NUMERICS (INR-scoped; only the
+  saturating-activation divergence LAW is vehicle-general).
+- **TR1-MEASURED NEW FACTS (this harvest, from existing custody)**: birth-threshold descent 89px→1px
+  over the burn · endpoint per-class d_seg split [47% Road / 26% Lane / 13% Undriv / 8.6% Movable /
+  5.2% MyCar] · 599/985 lane GT components erased at ep399.
 - **UNKNOWN → cheap re-anchor named**: 3.2× along-tangent deficit (→ §1 row 3's $0 spectral read) ·
   g3 subset→full validity r on TR1 (→ §1 row 4's $0 correlation) · flicker-phase coherence of TR1
   deltas (→ §1 row 9's $0 read).
@@ -109,7 +167,17 @@ gc11 memo fe12a36a14 + FEED-reanchor + nv1 838273e222 + pa1b b336969c2e + canoni
   telemetry section must port the v9 per-term/domination/inert/liveness alarms BEFORE fire (W4
   dependency); (iv) conditioning slot N5 gated on the $0 spectral re-anchor.
 - **W5 terminal chain**: + MC-finisher #400 optional rung w/ pre-registered break-even falsifier.
-- **All branches**: QA90 temporal-coherence ledger row (queued measurement, not in-config).
+- **BR-B (extension)**: (iv) head-init gate — identity-preserving graft init + protected Lane/Movable
+  channel gain + $0 rendered-init verification (#208/#532, row 13); (v) f′ readout splits unreached
+  components token-limited vs renderer-capacity-limited (row 16).
+- **BR-A/BR-C (extension)**: (v) OPTIONAL birth-plateau event key, gated on QA91's verdict (row 12) —
+  enters the event schedule only if above-nucleus erased-lane mass is material; (vi) emit
+  birth_completion per class as a typed gate key (row 14, rides the telemetry-port item).
+- **BR-D (extension)**: from-birth arms consume the init corpus (row 15) — SIREN/FINER ports +
+  FreSh-style spectrum-matched token init raced vs plain init; saturating-activation stability law is
+  a design-gate line for ANY activation choice.
+- **All branches**: QA90 temporal-coherence ledger row (queued measurement, not in-config) + QA91
+  erased-lane-component analyzer ($0, from existing custody).
 
 ## §4 NOTHING-MORE (honest exhaustion verdicts; verdict_scope: formulation-on-TR1 routing, not family death)
 - **#504 Bregman levers** — consumed into policy_bindings/optimal_metric; no branch-relevant residue.
@@ -121,5 +189,13 @@ gc11 memo fe12a36a14 + FEED-reanchor + nv1 838273e222 + pa1b b336969c2e + canoni
 - **#500 optimal-metric unification** — already the metric bindings consumed by fd1 + the pa1r analyzer.
 - **#514 white-box composite lattice** — its PARTIALs merged into the ms-line and closed by the
   ms2r/pf3 pincer; no reopening without a new base regime (that gate already exists in the pincer row).
+- **#300 seed-compose island-gradient starvation cure** — precondition MEASURED ABSENT on TR1 (row
+  11); non-reactivation, scope: formulation-on-witness-INR.
+- **#323 movable-dilation-GO lever** — Movable births to 105/134 unaided on TR1; non-reactivation
+  (the lane curve-prior half stays conditional behind QA91, row 12).
+- **#220 AA coverage-integrated render** — witness SDF-raster-path specific; TR1's conv renderer has
+  no coverage-integration seam. verdict_scope: formulation.
+- **§14 priming/levels-as-paths DSL machinery** — already consumed by sched1/#686/#688's
+  event-continuation derivation; no burn-3 residue beyond what the sealed schedule spec carries.
 
 pointer 0.1910828242 [contest-CPU] UNMOVED
