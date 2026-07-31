@@ -15,7 +15,11 @@ useDefault = true
 [[rules]]
 id = "tailscale-cgnat-fleet-ip"
 description = "Tailscale CGNAT fleet IP (100.64.0.0/10) — private infrastructure, must never reach a public remote"
-regex = '''\b100\.(6[4-9]|[7-9][0-9]|1[01][0-9]|12[0-7])\.[0-9]{1,3}\.[0-9]{1,3}\b'''
+# NON-capturing groups are load-bearing (fixed 2026-07-31): with capturing `(...)`, gitleaks
+# reports Secret as the GROUP — a real fleet-IP leak surfaced to the operator as
+# `secret='101'`, unreadable and easy to dismiss as noise. `(?:...)` makes the finding report
+# the whole IP. Verified by control: 100.101.102.103 now reports as the full address.
+regex = '''\b100\.(?:6[4-9]|[7-9][0-9]|1[01][0-9]|12[0-7])\.[0-9]{1,3}\.[0-9]{1,3}\b'''
 tags = ["fleet", "infra-ip", "tailscale"]
 
 [allowlist]
@@ -39,4 +43,16 @@ regexes = [
     # other rule still fire on these files. Held the 2026-07-18 completeness-coupling push.
     '''\b[0-9a-f]{64}\b''',
     '''\b[0-9a-f]{40}\b''',
+    # CLASS fix (2026-07-31), not another one-off: our memo/arm/task slug vocabulary is pure
+    # lowercase snake_case ("ddm_sc2_schedule_optimality_convocation_", "qa43_tail_pose"), and
+    # our DOMAIN vocabulary is *token* grid / *token* stream / solve-init *tokens* — so a slug
+    # sitting next to a key containing "token" trips generic-api-key's entropy heuristic
+    # PERMANENTLY, not incidentally. Held the 2026-07-31 rx1 push (hand-verified benign:
+    # test_ddm_co8_costate_organ_round8.py:125, entropy 3.975, no credential, no IP).
+    # SCOPE: anchored, so ONLY strings that are ENTIRELY lowercase snake_case are exempt, and
+    # at least one underscore is REQUIRED — an unbroken lowercase-hex/base32 key (the actual
+    # generic-api-key target shape) still fires. Every high-precision prefix rule (AKIA… /
+    # ghp_… / xoxb-… / sk-… / -----BEGIN PRIVATE KEY) and the Tailscale fleet-IP rule above
+    # are UNAFFECTED on these files. Narrowing one entropy heuristic, never a detector.
+    '''^[a-z][a-z0-9]*(_[a-z0-9]+)+_?$''',
 ]
