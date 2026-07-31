@@ -26767,3 +26767,147 @@ a coherent workflow and queue and road map."*
   0.001 S.] **verdict_scope: FORMULATION** (the audit binds at this base; it re-anchors when the next
   gate lands). `TaskUpdate` is **unavailable in this environment** — the full disposition table lives in
   the memo §3 and **nowhere else**; transcription into the ledger is OWED. **Pointer UNMOVED.**
+## FEED-gd1u (#817, 2026-07-31) — undecided defaults: the load-bearing CHOICES nobody made
+
+`date_utc: 2026-07-31` · `arm: ddm_gd1_undecided_defaults (#817)` · `pointer: 0.1910828242
+[contest-CPU] UNMOVED` · `score_claim: false` · `[macOS-CPU advisory]` · scorer-FREE ($0, zero
+SegNet/PoseNet forwards; window_03 owns the slot) · memo
+`.omx/research/ddm_gd1_undecided_defaults_audit_20260731.md` · receipt
+`.omx/research/ddm_gd1_gate_estimator_audit_20260731.json` · Opus 5.
+
+- **THE CLASS (distinct from QA82's generic-default census, which swept OBJECTS).** An *undecided
+  default* is a load-bearing **CHOICE** — a SUBSET, ORDER, CADENCE, MODE, REFERENCE FRAME, WINDOW or
+  ESTIMAND — that steers a decision and has no recorded decision. The value-provenance ladder cannot
+  reach it, for three verified reasons: (1) a choice usually has **no literal** (it is code:
+  `np.mean(dsegs)`, `default_rng(0)`, `% gate_every == 0`, `torch.round`); (2) **a formula's
+  certificate says nothing about the binding of its free variables** — `ema_decay` IS LawRef-derived
+  and nobody ever decided what `U` means under windowing; (3) **no rung token can express an ESTIMAND
+  mismatch**. Two live rows already prove the gate rubber-stamps choices: `--seed-anneal-shape:
+  "linear"` and `--containment-mode: "shield"` carry rung `derived_at_config` with no choice-set, no
+  eliminated alternatives, no falsifier. Ladder honesty: the bijection gate is **WARN-ONLY with 3862
+  live violations on main** — a design, not an enforced boundary; do not cite it as one.
+- **A1 — THE INSTRUMENT IS BIASED BY DESIGN, and the mechanism is now DERIVED.** `realized_gate`
+  reduces a NON-PROBABILITY sample (deterministic block 447-450 + 32 SRS) with an **unweighted mean**
+  (trainer:921). The block carries `4/36 = 11.11%` in the estimator vs `4/600 = 0.667%` in the
+  quantity it stands in for = a **16.67x over-weight**. Exact split (unit-tested):
+  `unweighted − pop = 0.104444·(X̄_block − X̄_srs)` [deterministic, removable EXACTLY]
+  `+ 0.993333·(X̄_srs − X̄_offblock)` [SRS error, fixed at seed 0]. **A change δ in the block moves
+  the live estimator 0.111·δ vs HT's 0.00667·δ — the estimator AMPLIFIES BLOCK DRIFT 16.7x**, and
+  gc14 measured exactly a drift (−1.10e-6 → +1.52e-5, overstating window_02 by 7.2%).
+- **MEASURED scorer-free (frozen GT cache; `margins` = the Fisher surrogate at Pearson 0.978):** the
+  block is **+6.3% to +8.3% harder than the population** on every flip-prone-mass proxy (τ=0.25/0.5/
+  1.0/2.0) — and it is the thing weighted 16.7x. Sign agrees with gc14's d_seg overstatement
+  (magnitude does NOT transfer and is not claimed). **Second, independent consequence never priced:
+  the block is −16.2% in Lane fraction and the gate over-reads Lane by +3.34% overall — the per-class
+  watches (Lane b0, `lane_erased`, UNDRIV erosion) run on this same Lane-poor 36-pair set.**
+- **BUILT ($0, scorer-free, 11 tests, ruff clean, 2 review passes):**
+  `src/tac/optimization/ddm_gd1_gate_estimator.py` (`horvitz_thompson_mean` = the drop-in replacement
+  for `np.mean(dsegs)`, **same 36 renders, zero extra scorer cost**; `anchored_mean`;
+  `bias_decomposition`; `srs_standard_error`; `neyman_stratified_gate`) +
+  `tools/gd1_gate_estimator_audit.py` (reads the LIVE geometry by importing the trainer) +
+  `src/tac/tests/test_gd1_gate_estimator.py` (incl. a drift guard against `resolve_gate_ids` and a
+  400-draw unbiasedness test). **Trainer patch deliberately NOT landed** — run dirs sacred, and
+  changing an instrument mid-campaign is itself a comparability confound; the additive-only patch is
+  specified for the window boundary, `mean_ht` as a NEW key so the historical series stays comparable.
+- **THE FREE ANCHOR WAS THERE THE WHOLE TIME.** `full_confirm` computes `all_dsegs` for all 600 pairs
+  and **discards it** to mean+max (trainer:2141-2147); the gate logs mean + per-pair MAX only. So the
+  instrument's own error is **unmeasurable from its own logs** — which is why the bias drifted unseen.
+  Logging the per-pair vector is score-neutral observability (cannot change a weight or a byte), costs
+  nothing, and unlocks the bias split, the K-seed error distribution, and the Neyman design. **This is
+  the highest-value $0 item in the sweep.** Pre-registered re-design (campaign boundary, NOT mid-burn,
+  because it changes the gate SET): Neyman allocation over 4 sensitivity strata, same 32-pair budget,
+  **predicted −64.3% SE** (var ratio 0.128) — a DESIGN prediction on a proxy.
+- **DERIVED-BUT-UNDECIDED (new sub-class):** `ema_decay` binds `U = args.epochs` = the **cumulative**
+  target at each resume (trainer:1372), so the shadow time-constant lengthens 166→202→236 ep (gc14).
+  The law is honored; the meaning of `U` under windowing was never decided. The gate reads
+  `gate_params="ema_shadow"` ⇒ **the instrument's own basis drifts underneath it.** $0 config fix.
+- **ANCHOR PLACEMENT IS CONFOUNDED:** `full_confirm` fires only at `stop_reason ∈ {epochs_complete,
+  max_wall_minutes, basin_entry_handoff}` (trainer:2118) — **every n600 anchor is taken at a window
+  boundary**, i.e. exactly where the restart transient lives. Bias drift and boundary step cannot be
+  separated by the current anchor cadence.
+- **SEED AUDIT (MAIN corrected in three places).** A1 CONFIRMED + sharpened, with one amendment to
+  the standing record: QA82 census row **S12 types the gate "DERIVED (fd2 instrument geometry)"** —
+  right about the geometry, silent about the reduction; **re-grade to DERIVED-geometry /
+  NEVER-DECIDED-reduction.** A2 optimizer is **NOT undiscovered — census T7 already types it
+  TRACKED-NEVER-FIRED** with `update_rms_matched_optimizer_race` logged-not-enforced (#685 px1);
+  minting a new row would be the rediscovery this unit exists to prevent — the real finding is that
+  nothing FORCES a never-fired high-blast-radius row to drain. A3 CONFIRMED and it is genuinely ours
+  (nothing upstream constrains how we pick the uint8 from our own float render); MAIN's `#532` figure
+  is **UNVERIFIED-BY-ME**; scorer-free bound offered instead — flip-prone mass at τ=0.25 is **0.701%**
+  of pixels vs d_seg ≈0.41%, so the target population is commensurate, not dismissible.
+- **B2 — MAIN's TRIGGER LOGIC IS INVERTED, and the precondition has already moved.** Verbatim
+  (`ddm_burn4_charter_skeleton_20260731.md:75`): "re-adjudicates v10 row-12 pose-in-burn (**currently
+  REQUIRED** at INSTANCE(uniform-≤4KB) scope — do NOT pre-flip). Falsifier: realized price > ~600
+  B/pair → burn strictly cheaper, **REQUIRED stands**." So `>600 B/pair` **CONFIRMS** the rule; a
+  **cheap** price (~120 B/pair, `ΔS ≈ −1.10`) is what would relax it. Add ps1 #791 (the terminal-solve
+  base is **L68-WALLED**: 160.10 → 20.41 vs the pose-legible control at 0.172 — "moot on a walled
+  base… reopen when a burn conditions pose in-loop") and QA43 stage-1a (**−0.5754 S measured**,
+  "re-adjudicate at full-112"). **The finding is not a missing byte-counter: a `REQUIRED` verdict and
+  a `NEVER` rule are both live in different stores and nothing reconciles them.** #383's own measured
+  basis is intact and stays on the PRESERVE list; what is unowned is the adjudication.
+- **B1 — OWED.** The one-n600-at-a-time bound is **claim-based prose** (`current_focus.md` "owns the
+  scorer slot"), not a lock. No measured justification located; the relayed "83.8 GiB free vs 25.6 GiB
+  floor" is **UNVERIFIED-BY-ME**. Flagged rather than asserted: wrong in either direction is
+  expensive (a doubling of learning rate if it fits; a #205-class checkpointless OOM if it does not).
+- **CEDED TO SISTER ARMS, NOT RE-MINTED (multi-pass recall paid here):** the window-boundary reset
+  and window length belong to **gc15 (#816)**, which closed the mechanism deeper than I had it
+  (`mlx.optimizers.Adam` defaults `bias_correction=False` ⇒ η(1)=3.16, peak **η(12)=6.57**). gc15's
+  NAMED $0 GAP — "gd1's QA82 census covered OUR defaults; it did not cover our **DEPENDENCIES'**
+  defaults" — is folded in as a first-class sub-class here (row 5b) and generates detector rule (vii).
+  Loss-term weight VALUES (T19 `w_rate`, T8 margin temp), pair order (T18) and base init (T11/T12) are
+  **existing census rows**, cited not re-minted.
+- **THE DETECTOR — Decision Provenance Register (SPECIFIED, deliberately NOT half-built).** The ladder
+  types VALUES; the DPR types ESTIMANDS/SETS/ORDERS/CADENCES/MODES/WINDOWS/REFERENCE FRAMES. Shape, in
+  the existing idiom, gate-first (because the schema-first attempt already died — see below): (i) a
+  `confound_gates.py` sibling `check_load_bearing_choices_are_decided` with the standard
+  `(repo_root,*,strict,verbose)->list[str]` + `_finish` + `# CHOICE_PROVENANCE_OK:<rationale>` waiver,
+  landed WARN-ONLY; its strict-flip sibling is `v9_provenance_gates.py:1324`, the one line that today
+  accepts any rung for any flag regardless of whether the value is a number or an enum/mode/cadence.
+  (ii) **AST auto-discovery** mirroring `lever_registry.completeness().unmapped`, with seven rules
+  derived FROM the found instances (subset-mean → ESTIMAND; `default_rng(<lit>)` → SUBSET/ORDER;
+  `% <lit> == 0` → CADENCE; `round/rint` in a verdict path → MODE; literal-window slice → WINDOW;
+  re-construction after `load_checkpoint` → REFERENCE FRAME; **and (vii) consequential library
+  keywords NOT explicitly passed** — the rule that catches `bias_correction=False` and `torch.round`).
+  (iii) duty rows reusing `activation_ledger` + `costate_digest` (`*=never-fired` generalises to
+  `*=never-decided`). (iv) carrier = **`Lever.policy_contracts`**, already argv-inert, sha-pinned and
+  non-scalar across the Lever→TypedLever boundary — **no new plumbing.** (v) the one new REQUIRED
+  field is **`estimand`**, which obliges a `bias_audit`; nothing existing can express it, which is why
+  A1 was invisible for a whole campaign. (vi) `kind=PROHIBITION` carries `precondition` +
+  `precondition_watch` (B1/B2 are the seed rows; the `|net betti0| ≤ 10` bound is the passing example).
+- **RECALLED ORPHAN (why the proposal is gate-first):** `.omx/state/arbitrariness_extinction_audit_
+  20260518.jsonl` — 52 rows of "is this value arbitrary and what retires it", 2026-05-18, **wired to
+  no gate and no consumer.** It died because it was value-scoped (could not express A1's estimand
+  mismatch) and had no reader. A register with no gate is that orphan; a gate with no auto-discovery
+  is a hand-typed registry beside the DSL. Both halves land together or neither does.
+- **WHY `ema_decay` GOT A LAW AND ITS SIBLINGS DID NOT (the asymmetry the operator asked for).** Two
+  reasons, neither structural: an operator P0 pushed it (`p0_ema_calibration_20260717`), and **a free
+  anchor existed** — a closed-form identity cross-checkable against an already-registered executable
+  (`ema_warmup_updates(0.997)==667`). Everything else falls to the honest class-4 backfill via
+  `dsl_custodied_scalar_identity_v1`. **There is no queue anywhere that says "derive this next."** The
+  asymmetry is `operator attention × free-anchor availability` — and A1 is the proof the question
+  pays: the anchor was free the whole time and nobody was pointed at it.
+- **PRESERVE (measured basis stated, not reopened):** MPS-never-authority (23x PoseNet drift) ·
+  never auto-delete upstream strays · no `REVIEW_GATE_OVERRIDE` on `.py` · no-old-lineage-as-vehicles ·
+  no co-author trailer · governed-launcher/DSL-hash/memory-preflight P0 (the #205 receipt) ·
+  **n600-or-it-is-not-evidence — STRENGTHENED by this unit's own receipt**, and gc14's authority rule
+  (n600 binds, 36-pair for shape only) was **correct** · `|net betti0| ≤ 10` as the *template* for a
+  correctly-typed governance knob · raster wire order (QA82 §5) · bicubic-up (QA79) · comma10k class
+  order. *Preserving a rule and watching its precondition are different jobs; only one is being done.*
+- **PRIOR-LAW PREDICTIONS (pre-registered).** constants-are-poison → CONFIRMED at the *binding* of a
+  derived law's free variable (`U`) and at the estimator window (`n_points`). generic-basis-metric-
+  never-optimal → CONFIRMED: unweighted-mean + SRS are controls, beaten by Neyman −64.3% SE at equal
+  budget; **independently corroborated by gc15 the same day** on the metric-free `3.16·lr·sign(g)`
+  restart step. Law-record honesty: QA82 §5 logged the first *surviving* default (raster); this unit
+  logs a *falsified* one — the ledger stays honest in both directions. alarm-predicates-are-per-
+  vehicle → CONFIRMED structurally (Lane-poor gate); realized predicate effect NOT measured, owed.
+  **ERF-collateral (fp1+QA92)** → constrains A3: a ±0.5-LSB nudge is ~1/255 of the amplitude that law
+  was measured on, so it does not kill the lever, but it predicts the falsifier — **per-pixel greedy
+  margin-aware rounding will not compose** (each nudge is re-read across the ~85 px ERF); evaluate
+  realized-through-R at n600 or not at all.
+- **RELATIVE SIGNIFICANCE (pace != direction).** **No ΔS is claimed by this unit; the pointer is
+  UNMOVED.** The A1 fix buys DECISION QUALITY, sized against the signal it corrupts: the instrument's
+  bias drift is **7.8% of one window's realized descent** and the estimator amplifies the drifting
+  component **16.7x**. Rows 3/6/7/10 are confound removal, not S. Row 8 (uint8 rounding) is the only
+  row with a plausible direct ΔS and its **magnitude is UNKNOWN**, bounded only by a commensurate
+  target population. [magnitude-ok on the two rows dismissed on measured bases: mean-margin proxy
+  drift 0.13%, and border-adjacent effects already closed by QA82 T10.]
