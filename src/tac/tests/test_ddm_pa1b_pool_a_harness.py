@@ -234,6 +234,109 @@ def test_analyzer_ignores_unmatched_arms():
 
 
 # ---------------------------------------------------------------------------
+# 6b. ADDITIVE-S analyzer — the PRIMARY verdict (nv1 reframe: c is a multiplicative artifact).
+# ---------------------------------------------------------------------------
+def test_s_additive_terms_match_nv1_b_anchor():
+    """RaceReceipt.s_additive reproduces nv1's MEASURED B-control accounting base (d_seg 0.005114,
+    259,407 B => seg 0.5114, rate 0.17273, S 0.6842, c 0.08834)."""
+    r = RaceReceipt("control", "w", 0.005114, 259407, 0, 0, True)
+    assert r.seg_term() == pytest.approx(0.5114, abs=1e-4)
+    assert r.rate_term() == pytest.approx(0.17273, abs=1e-4)
+    assert r.s_additive() == pytest.approx(0.6842, abs=1e-3)
+    assert r.c() == pytest.approx(0.08834, abs=1e-4)
+
+
+def test_s_additive_catches_the_nv1_c_artifact():
+    """THE decisive test: nv1's thr2 snap has LOWER c (0.0676 < 0.0883) but HIGHER additive S
+    (0.925 > 0.684).  The c-analyzer calls it 'inside the contour' (a false hull move); the
+    S-analyzer MUST classify it worse_s and report hull_moved_s=False."""
+    control = RaceReceipt("control", "w", 0.005114, 259407, 0, 0, True)
+    snap = RaceReceipt("delta_sparsity", "w", 0.008448, 120111, 0.003334, -139296, True)
+    # c-telemetry (legacy) is fooled: snap.c < iso_c => "inside contour".
+    assert snap.c() < control.c()
+    cverd = HullCurvatureAnalyzer().analyze([control, snap])
+    assert "delta_sparsity" in cverd.inside_contour            # c says (falsely) hull moved
+    # S-additive (primary) is not fooled: S rose => worse, hull did NOT move.
+    sverd = HullCurvatureAnalyzer().analyze_s_additive([control, snap])
+    assert not sverd.hull_moved_s
+    assert "delta_sparsity" in sverd.worse_s
+    assert sverd.best_delta_s_vs_control > 0                   # best arm is still ABOVE control
+    assert "DID NOT move" in sverd.verdict_note
+
+
+def test_s_additive_axis_breakdown_exchange_rate_matches_nv1():
+    """The reframe discriminator (FEED-reanchor): the per-arm axis breakdown exposes the EXCHANGE
+    RATE, not just the net.  nv1 thr2 reported 'unfavorable× 3.59' = Δseg/(−Δrate); our
+    s_favorability = (−Δrate)/Δseg must be its reciprocal ≈ 0.278 (<1 => unfavorable)."""
+    control = RaceReceipt("control", "w", 0.005114, 259407, 0, 0, True)
+    snap = RaceReceipt("delta_sparsity", "w", 0.008448, 120111, 0.003334, -139296, True)
+    v = HullCurvatureAnalyzer().analyze_s_additive([control, snap])
+    bd = v.arm_axis_breakdown["delta_sparsity"]
+    assert bd["delta_seg_term"] == pytest.approx(0.3334, abs=1e-3)      # seg cost (S units)
+    assert bd["delta_rate_term"] == pytest.approx(-0.09275, abs=1e-3)   # rate saved (S units)
+    assert bd["delta_bytes"] == pytest.approx(-139296.0)
+    assert bd["exchange_bytes_per_dseg"] > 0                            # paid d_seg for bytes
+    assert bd["s_favorability"] == pytest.approx(1.0 / 3.59, abs=0.02)  # nv1 unfavorable 3.59×
+    assert bd["s_favorability"] < 1.0                                   # unfavorable exchange
+
+
+def test_s_additive_axis_breakdown_pareto_has_no_exchange():
+    """A Pareto arm (lower d_seg AND bytes) has no exchange to price: exchange_bytes_per_dseg and
+    s_favorability are None (d_seg fell => nothing traded)."""
+    control = RaceReceipt("control", "w", 0.005114, 259407, 0, 0, True)
+    win = RaceReceipt("delta_sparsity", "w", 0.005000, 250000, -1.14e-4, -9407, True)
+    bd = HullCurvatureAnalyzer().analyze_s_additive([control, win]).arm_axis_breakdown["delta_sparsity"]
+    assert bd["exchange_bytes_per_dseg"] is None
+    assert bd["s_favorability"] is None
+    assert bd["delta_rate_term"] < 0 and bd["delta_seg_term"] < 0        # both terms fell
+
+
+def test_s_additive_detects_true_hull_move_pareto():
+    """A genuine mover: lower d_seg AND lower bytes => Pareto-dominant + better_s + hull_moved_s."""
+    control = RaceReceipt("control", "w", 0.005114, 259407, 0, 0, True)
+    win = RaceReceipt("delta_sparsity", "w", 0.005000, 250000, -1.14e-4, -9407, True)
+    v = HullCurvatureAnalyzer().analyze_s_additive([control, win])
+    assert v.hull_moved_s
+    assert "delta_sparsity" in v.better_s
+    assert "delta_sparsity" in v.pareto_dominates_control
+    assert v.best_lever == "delta_sparsity" and v.best_delta_s_vs_control < 0
+    assert "hull MOVED" in v.verdict_note and "Pareto" in v.verdict_note
+
+
+def test_s_additive_on_line_within_noise():
+    """An arm within the d_seg noise band of control (bytes matched) sits on the S line."""
+    control = RaceReceipt("control", "w", 0.005114, 259407, 0, 0, True)
+    tie = RaceReceipt("margin_quant", "w", 0.005114 + 1e-5, 259407, 1e-5, 0, True)
+    v = HullCurvatureAnalyzer().analyze_s_additive([control, tie])
+    assert not v.hull_moved_s
+    assert "margin_quant" in v.on_s_line
+
+
+def test_s_additive_control_lever_fallback_to_rowband():
+    """When no bare 'control' exists the analyzer falls back to a 'control*' lever
+    (control_rowband is the local Pool-A control)."""
+    control = RaceReceipt("control_rowband", "w", 0.005114, 250000, 0, 0, True)
+    arm = RaceReceipt("delta_sparsity", "w", 0.005114, 250000, 0, 0, True)
+    v = HullCurvatureAnalyzer().analyze_s_additive([control, arm])
+    assert v.control_lever == "control_rowband"
+    assert v.n_points == 1
+
+
+def test_s_additive_json_entry_attaches_c_telemetry():
+    import json as _json
+
+    from tac.witness_dsl.ax1_pool_a_race_20260730 import analyze_race_s_additive_json
+    recs = [
+        {"lever": "control", "d_seg": 0.005114, "counted_bytes": 259407},
+        {"lever": "delta_sparsity", "d_seg": 0.008448, "counted_bytes": 120111},
+    ]
+    out = analyze_race_s_additive_json(_json.dumps(recs))
+    assert out["verdict_currency"].startswith("additive_S")
+    assert out["hull_moved_s"] is False
+    assert "c_telemetry" in out                                # c read attached, not the verdict
+
+
+# ---------------------------------------------------------------------------
 # 7. DSL — pool_a_race_programs compiles + validates; new levers emit declared flags;
 #    fold-and-delete complete (stubs superseded).
 # ---------------------------------------------------------------------------

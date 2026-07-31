@@ -38,16 +38,28 @@ from math import comb
 
 import numpy as np
 
-from tac.canonical_equations.ddm_gc9_seg_rate_product_law_20260730 import product_c
+from tac.canonical_equations.ddm_gc9_seg_rate_product_law_20260730 import (
+    CONTEST_UNCOMPRESSED_BYTES,
+    product_c,
+)
 from tac.witness_dsl.qa84_rowband_grammar_20260731 import RowBandGrammar
 
 #: The gc9 token-family hull iso-c (MEASURED QA24 anchor c=0.08815; B slid to 0.08835) — the
-#: contour the race probes.  Sourced from the registered product-law anchor, not a magic number.
+#: contour the c-TELEMETRY probes.  Sourced from the registered product-law anchor, not a magic
+#: number.  NOTE (nv1, 838273e222): c=seg·rate is a MULTIPLICATIVE ARTIFACT — it can DROP while
+#: the additive contest score S RISES (seg,rate < 1, so trading seg-up for rate-down shrinks the
+#: PRODUCT even as the SUM grows).  c is TELEMETRY ONLY; the verdict currency is additive S
+#: (``RaceReceipt.s_additive`` / ``analyze_s_additive``).
 HULL_ISO_C: float = 0.08815
 
 #: SMEVR byte-match tolerance (±1%); dw1 precedent + gc10 "matched-bytes constraint is
 #: SMEVR-priced, ±1% tolerance per dw1".
 MATCHED_BYTES_TOL: float = 0.01
+
+#: d_seg measurement noise floor (dw1 precedent 2.99e-5; re-derive per-race from a control
+#: repeat if available).  The additive-S noise band = 100·(this): bytes are DETERMINISTIC through
+#: the SMEVR coder (no byte-measurement noise), so all S-noise lives in the d_seg term.
+DEFAULT_DSEG_NOISE_FLOOR: float = 2.99e-5
 
 
 # ===========================================================================
@@ -289,7 +301,26 @@ class RaceReceipt:
     within_matched_tol: bool
 
     def c(self) -> float:
+        """The product invariant c = seg_term·rate_term — TELEMETRY ONLY (nv1: multiplicative
+        artifact; can drop while additive S rises).  Use ``s_additive`` for the verdict."""
         return product_c(self.d_seg, self.counted_bytes)
+
+    def seg_term(self) -> float:
+        """The contest seg distortion term = 100·d_seg."""
+        return 100.0 * float(self.d_seg)
+
+    def rate_term(self) -> float:
+        """The contest rate term = 25·counted_bytes / 37,545,489."""
+        return 25.0 * float(self.counted_bytes) / CONTEST_UNCOMPRESSED_BYTES
+
+    def s_additive(self) -> float:
+        """The ADDITIVE contest seg+rate score S = 100·d_seg + 25·bytes/N — the VERDICT currency.
+
+        Pose (√(10·d_pose)) is orthogonal + TERMINAL (#383; ps1 carries the pose stream unchanged),
+        so the seg×rate hull is measured on S_segrate = seg_term + rate_term.  This is the score the
+        contest actually sums; c (product) is a multiplicative artifact reported alongside as
+        telemetry (nv1 838273e222: c DROPS 0.0883->0.0538 while S RISES 0.6842->2.14 under the snap)."""
+        return self.seg_term() + self.rate_term()
 
 
 @dataclass(frozen=True)
@@ -315,17 +346,156 @@ class HullCurvatureVerdict:
         }
 
 
-class HullCurvatureAnalyzer:
-    """Consume matched-bytes race receipts → the hull-curvature verdict.
+@dataclass(frozen=True)
+class SAdditiveHullVerdict:
+    """The PRIMARY hull verdict in ADDITIVE contest S (nv1 reframe: c is a multiplicative
+    artifact; S is what the contest sums).  "Inside the contour" is re-expressed here as: an arm
+    is a hull-mover iff its additive S is strictly below the control's beyond the d_seg noise band,
+    OR it Pareto-dominates the control (strictly lower in BOTH d_seg AND bytes)."""
 
-    The question (gc10, Assumption-Adversary): does ANY matched-bytes point sit strictly INSIDE
-    the iso-c contour (c < iso_c ⇒ the hull MOVED) or do they all slide ALONG it (c ≈ iso_c ⇒
-    the 3-move negative record extends to the class)?  ``on_contour`` uses a relative band so a
-    point within ``rel_band`` of iso_c is "along the line," not a move."""
+    control_lever: str
+    control_s: float
+    control_d_seg: float
+    control_bytes: int
+    n_points: int
+    s_noise_band: float                          # 100 · dseg_noise_floor (bytes deterministic)
+    arm_s: dict[str, float]                       # per-arm additive S
+    arm_c: dict[str, float]                       # per-arm product c (TELEMETRY)
+    # per-arm axis breakdown (the reframe discriminator, FEED-reanchor): the EXCHANGE RATE, not
+    # just the net.  Keys per arm: delta_seg_term, delta_rate_term, delta_bytes, delta_d_seg,
+    # exchange_bytes_per_dseg (bytes freed per unit d_seg spent; None if the arm also lowered
+    # d_seg => Pareto/free), s_favorability (−Δrate_term/Δseg_term; >1 favorable, <1 the nv1
+    # unfavorable exchange; None if Δseg_term<=0).
+    arm_axis_breakdown: dict[str, dict[str, float | None]]
+    pareto_dominates_control: tuple[str, ...]     # strictly lower d_seg AND bytes (unambiguous)
+    better_s: tuple[str, ...]                     # additive S below control beyond the noise band
+    on_s_line: tuple[str, ...]                    # additive S within the noise band of control
+    worse_s: tuple[str, ...]                      # additive S above control beyond the band
+    hull_moved_s: bool                            # ANY arm strictly below control in additive S
+    best_lever: str | None
+    best_s: float | None
+    best_delta_s_vs_control: float | None
+    verdict_note: str
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "verdict_currency": "additive_S_segrate=100*d_seg+25*bytes/N (nv1: c is telemetry)",
+            "control_lever": self.control_lever, "control_s": round(self.control_s, 6),
+            "control_d_seg": self.control_d_seg, "control_bytes": self.control_bytes,
+            "n_points": self.n_points, "s_noise_band": self.s_noise_band,
+            "hull_moved_s": self.hull_moved_s, "best_lever": self.best_lever,
+            "best_s": None if self.best_s is None else round(self.best_s, 6),
+            "best_delta_s_vs_control": (
+                None if self.best_delta_s_vs_control is None
+                else round(self.best_delta_s_vs_control, 6)),
+            "pareto_dominates_control": list(self.pareto_dominates_control),
+            "better_s": list(self.better_s), "on_s_line": list(self.on_s_line),
+            "worse_s": list(self.worse_s),
+            "arm_s": {k: round(v, 6) for k, v in self.arm_s.items()},
+            "arm_c_telemetry": {k: round(v, 6) for k, v in self.arm_c.items()},
+            "arm_axis_breakdown": {
+                k: {kk: (None if vv is None else round(vv, 8)) for kk, vv in d.items()}
+                for k, d in self.arm_axis_breakdown.items()},
+            "verdict_note": self.verdict_note,
+        }
+
+
+class HullCurvatureAnalyzer:
+    """Consume matched-bytes race receipts → the hull verdict.
+
+    PRIMARY verdict = ``analyze_s_additive`` (additive contest S; nv1 reframe).  The legacy
+    ``analyze`` (below) is the c-TELEMETRY read (product invariant); it is retained as a
+    diagnostic ONLY — nv1 (838273e222) proved c can DROP while additive S RISES, so a c-based
+    "hull moved" is NOT a score verdict.  Every fire consumes ``analyze_s_additive`` for the
+    verdict and reports ``analyze`` as telemetry.
+
+    The c-telemetry question (gc10, Assumption-Adversary): does ANY matched-bytes point sit
+    strictly INSIDE the iso-c contour (c < iso_c) or slide ALONG it (c ≈ iso_c)?  ``on_contour``
+    uses a relative band so a point within ``rel_band`` of iso_c is "along the line," not a move."""
 
     def __init__(self, iso_c: float = HULL_ISO_C, *, rel_band: float = 0.02):
         self.iso_c = float(iso_c)
         self.rel_band = float(rel_band)
+
+    def analyze_s_additive(
+        self, receipts: list[RaceReceipt], *, control_lever: str = "control",
+        dseg_noise_floor: float = DEFAULT_DSEG_NOISE_FLOOR,
+    ) -> SAdditiveHullVerdict:
+        """PRIMARY verdict: does any matched arm beat the control in ADDITIVE S?
+
+        The control is the receipt named ``control_lever`` (falls back to the first lever starting
+        ``control`` — e.g. ``control_rowband`` — so both the B-anchor and the rowband-base framings
+        work).  An arm is a hull-mover iff its additive S is below the control beyond the d_seg noise
+        band (``s_noise_band = 100·dseg_noise_floor``; bytes are deterministic) OR it Pareto-dominates
+        the control in both axes.  c is computed for every arm as TELEMETRY, never as the verdict."""
+        if not receipts:
+            raise ValueError("no receipts")
+        ctrl = next((r for r in receipts if r.lever == control_lever), None)
+        if ctrl is None:
+            ctrl = next((r for r in receipts if r.lever.startswith("control")), None)
+        if ctrl is None:
+            raise ValueError(f"no control receipt (looked for {control_lever!r} / control*)")
+        s_band = 100.0 * float(dseg_noise_floor)
+        ctrl_s = ctrl.s_additive()
+        matched = [r for r in receipts if r.lever != ctrl.lever and r.within_matched_tol]
+        arm_s = {r.lever: r.s_additive() for r in matched}
+        arm_c = {r.lever: r.c() for r in matched}
+        breakdown: dict[str, dict[str, float | None]] = {}
+        pareto, better, on_line, worse = [], [], [], []
+        for r in matched:
+            ds = r.s_additive() - ctrl_s
+            d_seg_delta = r.d_seg - ctrl.d_seg
+            seg_delta = r.seg_term() - ctrl.seg_term()
+            rate_delta = r.rate_term() - ctrl.rate_term()
+            byte_delta = r.counted_bytes - ctrl.counted_bytes
+            breakdown[r.lever] = {
+                "delta_seg_term": seg_delta, "delta_rate_term": rate_delta,
+                "delta_bytes": float(byte_delta), "delta_d_seg": d_seg_delta,
+                # bytes freed per unit d_seg spent (>0 => paid d_seg for bytes); None if the arm
+                # ALSO lowered d_seg (Pareto/free reclaim, no exchange to price).
+                "exchange_bytes_per_dseg": (
+                    None if d_seg_delta <= 0 else -float(byte_delta) / d_seg_delta),
+                # nv1 exchange favorability: rate saved / seg cost in S units (>1 favorable).
+                "s_favorability": (None if seg_delta <= 0 else -rate_delta / seg_delta),
+            }
+            if (r.d_seg < ctrl.d_seg - float(dseg_noise_floor)
+                    and r.counted_bytes < ctrl.counted_bytes):
+                pareto.append(r.lever)
+            if ds < -s_band:
+                better.append(r.lever)
+            elif ds > s_band:
+                worse.append(r.lever)
+            else:
+                on_line.append(r.lever)
+        best = min(matched, key=lambda r: r.s_additive()) if matched else None
+        note = self._s_note(matched, ctrl, ctrl_s, s_band, better, pareto)
+        return SAdditiveHullVerdict(
+            control_lever=ctrl.lever, control_s=ctrl_s, control_d_seg=ctrl.d_seg,
+            control_bytes=ctrl.counted_bytes, n_points=len(matched), s_noise_band=s_band,
+            arm_s=arm_s, arm_c=arm_c, arm_axis_breakdown=breakdown,
+            pareto_dominates_control=tuple(sorted(pareto)),
+            better_s=tuple(sorted(better)), on_s_line=tuple(sorted(on_line)),
+            worse_s=tuple(sorted(worse)), hull_moved_s=bool(better),
+            best_lever=None if best is None else best.lever,
+            best_s=None if best is None else best.s_additive(),
+            best_delta_s_vs_control=None if best is None else best.s_additive() - ctrl_s,
+            verdict_note=note)
+
+    def _s_note(self, matched: list[RaceReceipt], ctrl: RaceReceipt, ctrl_s: float,
+                s_band: float, better: list[str], pareto: list[str]) -> str:
+        if not matched:
+            return ("no matched-bytes arms — additive-S hull UNMEASURED "
+                    "(Assumption-Adversary line stands)")
+        best = min(matched, key=lambda r: r.s_additive())
+        d = best.s_additive() - ctrl_s
+        if better:
+            tail = f" (Pareto-dominant in d_seg AND bytes: {sorted(pareto)})" if pareto else \
+                   " (S-lower via the exchange, not Pareto — verify the axis breakdown)"
+            return (f"hull MOVED on additive S: {best.lever} S={best.s_additive():.5f} < "
+                    f"control {ctrl_s:.5f} (ΔS {d:+.5f}, beyond ±{s_band:.5f} noise){tail}")
+        return (f"additive-S hull DID NOT move: best arm {best.lever} S={best.s_additive():.5f} "
+                f"vs control {ctrl_s:.5f} (ΔS {d:+.5f}, within/above the noise band) — the levers "
+                "EXIT the burn-3 stack on S (nv1 co-location tax confirmed at this operating point)")
 
     def analyze(self, receipts: list[RaceReceipt]) -> HullCurvatureVerdict:
         if not receipts:
@@ -367,19 +537,37 @@ class HullCurvatureAnalyzer:
                 "mixed; the min point is on/above the contour")
 
 
-def analyze_race_json(receipts_json: str, *, iso_c: float = HULL_ISO_C) -> dict[str, object]:
-    """Analyzer entry for a JSON list of receipt dicts (MAIN pipes the measured race here)."""
+def _receipts_from_json(receipts_json: str) -> list[RaceReceipt]:
     rows = json.loads(receipts_json)
-    receipts = [RaceReceipt(
+    return [RaceReceipt(
         lever=r["lever"], window=r.get("window", ""), d_seg=float(r["d_seg"]),
         counted_bytes=int(r["counted_bytes"]),
         delta_d_seg_vs_control=float(r.get("delta_d_seg_vs_control", 0.0)),
         delta_bytes_vs_control=int(r.get("delta_bytes_vs_control", 0)),
         within_matched_tol=bool(r.get("within_matched_tol", True))) for r in rows]
-    return HullCurvatureAnalyzer(iso_c).analyze(receipts).to_dict()
+
+
+def analyze_race_json(receipts_json: str, *, iso_c: float = HULL_ISO_C) -> dict[str, object]:
+    """c-TELEMETRY analyzer entry (product invariant; diagnostic only — see analyze_race_s_additive_json
+    for the verdict)."""
+    return HullCurvatureAnalyzer(iso_c).analyze(_receipts_from_json(receipts_json)).to_dict()
+
+
+def analyze_race_s_additive_json(
+    receipts_json: str, *, control_lever: str = "control",
+    dseg_noise_floor: float = DEFAULT_DSEG_NOISE_FLOOR,
+) -> dict[str, object]:
+    """PRIMARY verdict entry (additive contest S): MAIN pipes the measured race here.  Returns the
+    S-additive hull verdict with the c read attached as telemetry."""
+    receipts = _receipts_from_json(receipts_json)
+    out = HullCurvatureAnalyzer().analyze_s_additive(
+        receipts, control_lever=control_lever, dseg_noise_floor=dseg_noise_floor).to_dict()
+    out["c_telemetry"] = HullCurvatureAnalyzer().analyze(receipts).to_dict()
+    return out
 
 
 __all__ = [
+    "DEFAULT_DSEG_NOISE_FLOOR",
     "HULL_ISO_C",
     "MATCHED_BYTES_TOL",
     "ArmByteRecord",
@@ -388,8 +576,10 @@ __all__ = [
     "HullCurvatureAnalyzer",
     "HullCurvatureVerdict",
     "RaceReceipt",
+    "SAdditiveHullVerdict",
     "SealVerdict",
     "analyze_race_json",
+    "analyze_race_s_additive_json",
     "enumerate_band_edge_theorem",
     "per_row_flip_mass_from_field",
     "seal_matched_bytes_race",
