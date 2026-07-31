@@ -26911,3 +26911,33 @@ SegNet/PoseNet forwards; window_03 owns the slot) · memo
   row with a plausible direct ΔS and its **magnitude is UNKNOWN**, bounded only by a commensurate
   target population. [magnitude-ok on the two rows dismissed on measured bases: mean-margin proxy
   drift 0.13%, and border-adjacent effects already closed by QA82 T10.]
+- **B1/B2 ADDENDUM (same unit, investigation closed after first append)** — **B1 CLOSED and MAIN's expectation REVERSED.** The rule has a MEASURED
+  justification (#205 OOM `peak_rss=90300 MiB` before first checkpoint; `SPEC_tr1:207-211` — 99.6% of a
+  ~1,547 s training step IS the realized-through-R verdict). But **the receipt everyone cites measures
+  the wrong thing**: `window_03/launch_receipt.json:95-97` (`free 83.8` vs `floor 25.6`) compares
+  against the **TRAINER** floor (`MEASURED_T2_PEAK_RSS_GIB 12.8 × SAFETY 2.0`,
+  `launch_tr1_run.py:35-36`), which **does not model the verdict spike at all**. The verdict constants
+  live only in `witness_memory_preflight.py:19-25,59-61` (unchunked n600 **+66.2 GiB**; chunked floor
+  +5.6 GiB, 0.11 GiB/pair; resident cf_mx_cache ~41 GiB @ n600; fixed ~15 GiB) and
+  **`launch_tr1_run.py` never consults them — the two preflights are UNWIRED.** With the right
+  constants the arithmetic REFUSES: 2 × (41+6+15) ≈ **124 GiB vs the 116 GiB operator ceiling**; two
+  unchunked verdicts reproduce #205 outright. **So the ONE-at-a-time rule SURVIVES on its merits — and
+  the number cited to relax it does not support it either way.** The genuinely unexploited headroom is
+  a **VERDICT-ONLY second job** (no cf_mx_cache training state), never priced, precisely because the
+  two preflights don't talk. **Enforcement defects worth fixing regardless:** it is a **ps-scan, not a
+  lock** (`launch_tr1_run.py:178-185`) ⇒ **TOCTOU-racy**, and G3 reads free RAM *at that instant*, so a
+  second launcher firing before the first grows to peak **passes and both die later**; it matches only
+  3 trainer argv patterns ⇒ a raw `evaluate.py`/verdict process is **invisible**;
+  `tools/launch_witness_run.py` has **no slot gate at all**; and the sum-over-RAM gate that would do it
+  correctly — `witness_memory_preflight.system_aware_admission()` (`:380-401`) — **exists and is not
+  called.** — **B2 trigger measurably unwatched, plus an ESTIMAND defect.** The 600 B/pair threshold is
+  coded exactly once (`experiments/ddm_su2_qa43_tail_solver.py:1360-1368`,
+  `tail_price_gt_600B_per_admitted_pair`) inside the arm's own solver;
+  `grep -rl tail_price_gt_600B` across the repo AND the SSD tier returns **zero hits outside the source
+  — it has never been evaluated on data**, and no preflight/confound-gate/lever-registry/costate/state
+  row references it. **Second-order (the §7(v) class, verbatim):** the threshold is per **ADMITTED
+  (tail)** pair (~67 KB whole-archive delta at k=112), while the number a diligent watcher reaches for
+  is the **amortized full-field** carrier — 7.2-7.4 KB / 600 = **~12 B/pair**, apparently ~50× *below*
+  the trip point. **Nothing reconciles the two denominators**, so even a watcher who existed would
+  compare the wrong quantities and conclude "comfortably safe." This is the single cleanest live
+  argument for making `estimand` a REQUIRED field.

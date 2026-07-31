@@ -115,7 +115,7 @@ carried in from another vehicle/context; **DERIVED/RACED** = has a receipt.
 | **10** | n600 anchor placement | `full_confirm` fires only at `stop_reason ∈ {epochs_complete, max_wall_minutes, basin_entry_handoff}` (trainer:2118) | CADENCE | **NEVER-DECIDED** | **every n600 anchor is taken at a window boundary** — i.e. exactly where the #4 restart transient lives. Bias drift and boundary step are **confounded by anchor placement** | $0 once #2 lands (the bias is then computed at each anchor for free); a mid-window anchor costs one n600 verdict, not $0 | de-confounds the only authority series we have | after #2 |
 | 11 | `check_..._provenance_bijection_complete` | WARN-ONLY, 3862 live | (the ladder itself) | typed + owned (`preflight.py:6716`) | the enforcement everyone cites is not enforcing | — | none; **listed so no one cites it as a live boundary** | MAIN |
 | **12** | B2 pose-never-trained vs `pose-in-burn REQUIRED` | **both live, in different stores** (§5b) | PROHIBITION | rule = DERIVED (5-formulation photometric wall); its **precondition is contested in the record** and unowned | the pose axis is 71.4% of the 2.08 gap in the QA43 row's own arithmetic | $0 — the reconciliation is a **read**: charter row vs SPEC vs ps1 vs QA43 stage-1a, adjudicate scope | removes a directional error already in circulation (MAIN's relay had the trigger **inverted**) | **now** (adjudication, not a race) |
-| 13 | B1 "one full-n600 scorer job at a time" | claim-based prose in `current_focus.md`, no lock found | PROHIBITION | **UNVERIFIED-BY-ME** — no measured justification located | measurement throughput is the campaign's real bottleneck; wrong either way is expensive (doubling vs a #205-class OOM) | re-derive the admission projection at the real config via the existing memory-preflight | **owed** — see §5b | after a real preflight receipt |
+| **13** | B1 "one full-n600 scorer job at a time" | ps-scan in `launch_tr1_run.py:178-185`; **no lock**; prose everywhere else | PROHIBITION | **MEASURED justification** (#205 OOM + 99.6%-of-step verdict cost) — but the receipt everyone cites measures the **trainer** floor, not the verdict spike | throughput is the campaign's real bottleneck; a wrong relax reproduces #205 (checkpointless OOM) | DONE (§5b): the right constants **REFUSE** 2 concurrent jobs (~124 GiB vs the 116 GiB ceiling) | **rule SURVIVES; its cited number does not support it.** Real headroom = a **verdict-only** second job, never priced | wire `system_aware_admission()` into the launcher |
 | — | optimizer / margin temp / w_rate / pair order | Adam 2e-3 fixed / 1.0 / 0.05 / seeded shuffle | MODE, constants, ORDER | **already TRACKED — QA82 census T7/T8/T19/T18** | — | — | **NOT re-minted here** — see §5 correction | census queue |
 
 **Not reached (named, not swept):** precision choices inside the render/loss path beyond the
@@ -308,6 +308,19 @@ Two further recorded facts sharpen this into the strongest PROHIBITION finding o
   Its own routing line reads: "v10 row-12 pose-in-burn: pressure **REDUCED** by −0.407 measured at
   ~0 bytes; verdict still INSTANCE-scoped, **re-adjudicate at full-112**."
 
+**And the trigger is measurably unwatched, with a second-order defect.** The threshold is coded
+exactly once — `experiments/ddm_su2_qa43_tail_solver.py:1360-1368`,
+`"tail_price_gt_600B_per_admitted_pair"` — inside the arm's own solver, so it fires only if that
+solver is run. `grep -rl "tail_price_gt_600B"` across the repo **and** the SSD tier returns **zero
+hits outside the source file: it has never been evaluated on data.** No preflight, confound gate,
+lever-registry row, costate duty row, or `.omx/state` ledger references it.
+**The second-order defect is an ESTIMAND mismatch — the exact class §7(v) exists for:** the 600 B/pair
+threshold is defined **per ADMITTED (tail) pair** for the free-class solve (at k=112 that is ~67 KB of
+whole-archive delta), while the number a diligent watcher would naturally reach for is the
+**amortized full-field** carrier: ~7.2-7.4 KB / 600 pairs = **~12 B/pair**, which looks ~50× *below*
+the threshold. **Nothing in the repo reconciles the two denominators.** So even a watcher who existed
+would compare the wrong quantities and conclude "comfortably safe."
+
 **The finding is therefore not "nobody computes bytes-per-pair."** It is worse and more interesting:
 **a `REQUIRED` verdict and a `NEVER` rule are both live, in different stores, and nothing
 reconciles them.** The charter ledger types pose-in-burn REQUIRED; the SPEC/#383 discipline says pose
@@ -320,17 +333,37 @@ post-hoc/stored family died across 5 formulations on a photometric wall) is inta
 PRESERVE list. I am saying its **precondition is contested in the record and nobody owns the
 adjudication.**
 
-**B1 — partially verified; I could not close it scorer-free within this unit.** What I could confirm
-myself: the serialization is expressed as **claim-based prose, not a lock** — `current_focus.md`
-carries "owns the scorer slot" language per-arm (e.g. `:311` "Rung 1 LIVE (task #803, ddm_r1c, owns
-the scorer slot)"), and my own charter inherited it as "window_03 owns the single n600 slot until
-~18:40Z". A convention enforced by charter text is exactly the class of rule whose precondition is
-never re-checked, because there is no code to fail. **I did not locate a measured justification for
-the ONE-at-a-time bound, and I did not verify the relayed "83.8 GiB free vs 25.6 GiB floor" receipt.
-Both are marked UNVERIFIED-BY-ME and remain owed** — flagged rather than asserted, because
-"measurement throughput is the campaign's bottleneck" makes this the row where a wrong answer is
-most expensive in either direction (a straight doubling of learning rate if it fits; an OOM that
-kills a burn with no checkpoint if it does not — the #205 receipt).
+**B1 — CLOSED, and MAIN's expectation is REVERSED: two concurrent n600 jobs do NOT fit, but the
+number MAIN reasoned from is the wrong number.** The rule has a **measured** justification, so it is
+not the unowned-convention I expected: memory (the #205 OOM, `peak_rss=90300 MiB` before first
+checkpoint) and throughput (`SPEC_tr1…:207-211` — a training step is ~1,547 s of which **99.6% is
+the realized-through-R verdict**; verdict pricing DOMINATES). Three findings:
+
+1. **The relayed receipt compares against the wrong floor.** `window_03/launch_receipt.json:95-97`
+   does read `memory_free_gib: 83.8`, `memory_floor_gib: 25.6`, `scorer_slot: FREE` — but 25.6 is
+   the **TRAINER** floor (`MEASURED_T2_PEAK_RSS_GIB = 12.8 × SAFETY_FACTOR = 2.0`,
+   `launch_tr1_run.py:35-36`). **It does not model the verdict spike at all.** The verdict numbers
+   live only in `witness_memory_preflight.py:19-25, 59-61` (unchunked n600 = **+66.2 GiB**; chunked
+   = **+5.6 GiB floor**, `0.11 GiB/pair`; resident `cf_mx_cache` ≈ 41 GiB @ n600; fixed ≈ 15 GiB) and
+   **`launch_tr1_run.py` never consults them. The two preflights are unwired from each other.**
+2. **So the concurrency arithmetic, done with the right constants, REFUSES.** Two chunked n600 jobs
+   ≈ 2 × (41 + 6 + 15) = **~124 GiB against the 116 GiB operator ceiling** — it does not fit, and two
+   *unchunked* verdicts (+66.2 GiB each) reproduce #205 outright. **The ONE-at-a-time rule SURVIVES
+   on its merits.** The genuinely unexploited headroom is a **verdict-only** second job (no
+   `cf_mx_cache` training state), which nobody has priced separately — precisely because the two
+   preflights don't talk.
+3. **The enforcement is nevertheless weak, in three ways worth fixing regardless.** It is a single
+   **ps-scan**, not a lock (`launch_tr1_run.py:178-185`), so it is **TOCTOU-racy** — and G3 reads
+   *free RAM at that instant*, so a second launcher firing before the first grows to peak **passes
+   and both die later**. It matches only three trainer argv patterns, so a raw
+   `evaluate.py`/verdict process is **invisible** to it. And `tools/launch_witness_run.py` has **no
+   slot gate at all**. The function that would do it correctly —
+   `witness_memory_preflight.system_aware_admission()` (`:380-401`, the sum-over-RAM gate) — exists
+   and is **not called** by the launcher.
+
+**Net:** PRESERVE the rule; **fix the reasoning attached to it**, because the receipt everyone reads
+does not measure the thing the rule protects against. That is an undecided default of the purest
+kind — a right answer resting on a number that does not support it.
 
 **The structural point, independent of both:** B1 and B2 are the same object as §3 rows 1-10 with
 the sign flipped. A standing "never do X" is a decision too, and it decays the same way — not by
