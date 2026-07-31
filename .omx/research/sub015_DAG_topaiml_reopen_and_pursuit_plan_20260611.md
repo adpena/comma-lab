@@ -25948,3 +25948,27 @@ line is the saturating-activation divergence law. #364 birth_completion emission
 telemetry port (trainer already logs betti0/erasure at :858). NOTHING-MORE added: #300 cure ·
 #323-movable · #220 AA-coverage (no SDF seam on TR1) · §14 priming (consumed by sched1). pointer
 0.1910828242 [contest-CPU] UNMOVED
+
+## FEED-pa1r (2026-07-31) — Pool-A race FIRED (D16 warm-tail realization): additive-S hull NOT moved; in-loop co-location tax MEASURED; control tail = the live mover
+
+Task #793 execution (memo `.omx/research/ddm_pa1r_pool_a_race_20260730.md`; custody
+`/Volumes/VertigoDataTier/pact/ddm_pa1r_20260730/`). Grid reality forced the D16 warm-tail
+realization (NO D8 parent exists; rowband = fresh-burn class, BLOCKED). Seal: B EMA-shadow SMEVR
+re-derived 255,907 EXACT (the shipped state is the EMA shadow — live params give 269,437); endpoint
+harness validated on B to +1.9e-7 vs nv1. MEASURED (n600 realized through R, real coder, all
+[macOS-CPU advisory]): control_tail (B+58 warm ep) d_seg 0.0049411 / 269,028 B / **S 0.67325** — a
+NEW best realized point (B 0.68419) from plain coupled descent (SPEND bytes, BUY d_seg; favorability
+~2.7× FOR spending at B's knee). delta_sparsity (w=0.03 ξ-informed from_step_0): A1-REFUSED ×2 —
+refuse #1 = INSTRUMENT CONFOUND (penalty term inside the gate's smooth input; class-fixed
+713c119fa2 + regression tests), refuse #2 = GENUINE on the corrected instrument (soft descent
+decoupled from realized argmax; penalty flat). Matched-epoch ep464: −868 B for +3.70e-5 d_seg ⇒
+s_favorability 0.156; endpoint 0.139 — **nv1's encode-side ~6–7× co-location tax now measured
+IN-LOOP** (the F2 escape hatch INSTANCE-closed at this weight/parent/budget). Analyzer EXTENDED
+pre-fire to the ADDITIVE-S verdict currency (083726730b; c = telemetry only per nv1; per-arm
+exchange-rate axis breakdown). Burn-3 consequence: Pool-A token-byte levers EXIT the stack (gc10 §1
+row 3 falsifier FIRED at instance scope); the un-exhausted plain-continuation dividend at B's knee
+is the cheapest live lever; rowband needs a from-birth charter (theorem band [160,240)/1248 ready).
+Reformulations queued: weight sweep {3e-3,1e-2} · pre-knee parent · joint (ticket sealed, deferred).
+PRIOR-LAW PREDICTION honored: QA24's joint descent = the w_rate entropy force pre-knee; the ADDED
+shrinkage force at the knee was the open question — answered NO. **Pointer 0.1910828242
+[contest-CPU] UNMOVED (all means; no exact row).** [no-triality] [p0-ledger-ok]
