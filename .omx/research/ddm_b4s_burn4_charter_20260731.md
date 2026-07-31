@@ -200,6 +200,18 @@ the caps law, so it is not auto-fired).
   re-seal + governed dry-run + re-smoke + re-fire. Protection is a CONSTRAINT layer, orthogonal to the
   R6 race (non-additive-pools: it does NOT enter the race). Builder
   `ddm_b4s_20260731/build_burn4_window_ticket.py`.
+- **OBSERVED-IN-FLIGHT lg1 flags (uncommitted at this writing — the turnkey fold target; VERIFY at
+  lg1's landing before use, they may change):** `--lane-guard` (master switch, default off) ·
+  `--lane-guard-budget-s` (0.0 ⇒ derived `LANE_BUDGET_S_UNITS 0.12589` = **xp1's exact ep641 Lane
+  S-level** — budget = measured level, constants-are-poison ✓) · `--lane-guard-eta` (0.0 ⇒
+  `derive_eta_lambda()`) · `--lane-guard-lambda-step-cap` (0.0 ⇒ `derive_lambda_step_cap()`) ·
+  `--lane-guard-lambda-max` (5.0 bounded ceiling) · `--lane-guard-born-weight` (born-lane protection) ·
+  `--lane-guard-margin-floor-weight` (margin-floor barrier) — backed by `tac.optimization.lane_guard`.
+  The fold = a `lever_lane_guard(...)` DSL factory (once lg1 lands it in `spec_tr1_renderer`) + these
+  flags in the ticket builder's swap set; the argv-diff ALLOWED set extends to include them. The
+  supervisor's `LANE_EROSION` rollback becomes ROLLBACK-AND-RAISE (raise `--lane-guard` λ per the sealed
+  dual-ascent rule). **Blocked because these flags are UNCOMMITTED — the governed launcher's G1
+  seal-freshness recompiles the COMMITTED DSL/argparse; folding in-flight flags would fail closed.**
 - **FIRE SEQUENCE (unchanged once the PROTECTED seal completes; under the standing GO):**
   1. WAIT for xp1's landing (custody complete + no process + governed-launcher G4 slot-free). [xp1's
      exact-P pass is DONE; verdict.json emitted; folded into §2.]
