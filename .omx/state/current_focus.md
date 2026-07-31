@@ -30,9 +30,14 @@
 > read (pre-seal item) · R8 plateau conjunct · R9/R10/R13 guards ride the tp1 port;
 > renderer-rate force demoted (measured pool 0.0022 S); R14 ERF birth-context
 > co-adaptation = FRESH derived force, speculative rung behind burn-4 window-1;
-> 5 default-OFF DSL lever stubs landed, trainer untouched. **Parallel (task #804, ddm_tp1, scorer-free):** the v9→TR1
-> telemetry port (P5's hardest prerequisite, vh1 row 7) — flag-gated default-off,
-> byte-identity-off proven, DSL Lever, fills the P5 telemetry slot. On rung-1 endpoint:
+> 5 default-OFF DSL lever stubs landed, trainer untouched. **tp1 LANDED (15aad5a28b/fe55c9e599, task #804):** the
+> v9→TR1 telemetry port — 6 core rows ported (per-term loss · term-domination ·
+> term-inert · liveness · positive-control · lever_engage), flag default-off, CPU
+> byte-identity PROVEN w/ OFF-vs-OFF control (112 arrays bit-identical; sole diff =
+> flag-independent wall-clock float), DSL Lever, 15 tests — **burn-4 prereq-1 CLEARED**.
+> Skeleton slots now: force stack FILLED (fh1) · rung-2 verdict FILLED (QA92 SKIP,
+> ffbac5f3e5) · REMAINING = rung-1 endpoint {ckpt sha, d_seg, P} + QA80 staleness +
+> QA24 d_seg-cost + validity-r — all fill at the rung-1 endpoint boundary. On rung-1 endpoint:
 > MAIN fills the P5 skeleton from receipts → burn-4 seal chain → fire. Honest
 > arithmetic unchanged: ladder ⇒ ~0.65-0.70 advisory, does NOT reach 0.172141;
 > burn-4's rate re-race (~0.19-0.28 S) is the gap-sized lever.
