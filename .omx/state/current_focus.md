@@ -1,4 +1,24 @@
-# Current Focus - 2026-07-31 (RUNG-1 LANDED: new best S 0.6082 → burn-4 compose+seal LIVE)
+# Current Focus - 2026-07-31 (burn-4 SEALED+HELD: R6+lane-guard config, awaiting lg1 fold)
+
+> **b4s LANDED (e53c0720bf/e5edf0f354/18ee715068, #807 blocked-on-lg1):** all skeleton
+> slots FILLED (xp1 P 0.04401 S w/ per-class [Road .188, Lane .126, Undriv .056, Mov
+> .038, MyCar .018]). RECEIPTS-FORCED RECONCILIATION: from-birth QA24 rate cell
+> MEASURED-DOMINATED by warm ep641 (0.686 vs 0.608, grid capped D16) · continuation-KD
+> CLOSED (realization-gap reversal) · paint SKIPPED ⇒ **burn-4 = bounded continuation
+> from ep641 + R6 class-weight-lane 1.0→1.3 (never-fired lever FIRES) + telemetry ON,
+> seg-only, no injection**; composed advisory 0.564-0.608 — does NOT reach 0.172141;
+> from-birth-KD/rowband = DEFERRED from-scratch cells (the residual rate axis).
+> Sealed ticket 098b5aea (argv-diff = exactly 6 sanctioned flags, all gates PASS);
+> R6-only re-smoke fired pre-amendment then HELD cleanly (killed ep645, 4 ep, procedural
+> supersession, custody preserved, burn4.HOLD). **Supervisor carries the LANE-EROSION
+> GUARD** (P2 key inverted, derived ε — catches xp1's erode-while-improving mechanism).
+> **BLOCKER:** lg1's trainer flags (--lane-guard family, budget default→0.12589 = xp1's
+> exact ep641 Lane level) are wired-but-UNCOMMITTED (lg1 resumed after an API drop,
+> in flight); seal-freshness recompiles COMMITTED state ⇒ fold waits. ON lg1 LANDING:
+> resume b4s (turnkey §6: verify argparse → lever_lane_guard in ticket builder → flip
+> dual gate → re-seal → re-smoke → re-fire under standing GO).
+
+# Historical - 2026-07-31 (RUNG-1 LANDED: new best S 0.6082 → burn-4 compose+seal LIVE)
 
 > **RUNG-1 ENDPOINT (manifest /Volumes/VertigoDataTier/pact/ddm_r1c_20260731/):** NEW BEST
 > realized point — **n600 d_seg 0.00426407708, S_additive 0.6081898657 @ 273,004 B**
