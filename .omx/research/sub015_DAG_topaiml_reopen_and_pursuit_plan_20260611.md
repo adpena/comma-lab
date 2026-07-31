@@ -25597,3 +25597,39 @@ pointer 0.1910828242 [contest-CPU] UNMOVED
   contrastive rows", papers_checked_arxiv_2605_28742_core row 2) as one increment at a quiet boundary.
 
 pointer 0.1910828242 [contest-CPU] UNMOVED
+
+## FEED-dw1 (2026-07-30) — QA75 distill-WINDOW discriminator: falsifier FIRES on the WORSE side; finishing-distill CLOSED at FORMULATION; E2 NOT converged (task #790)
+
+The gc9 fork's clean capacity-vs-objective arbiter (replacing the confounded photometric row-2) is
+MEASURED. Built the REAL QA75 lever (b2b SegNet-field teacher = precomputed scorer response on the
+EXACT C1 solve frames; KD/margin-field/argmax-CE forms × attack-set weighting RACED at their own
+optima; byte-identical OFF; ph3 §10.1 stub folded-and-deleted; commits 67ed745266 + dbd00ada76).
+6-config mini-race from E2 (n600, 12 ep): winner kd_logits+attack 0.0050507 — and the attack
+weighting is LOAD-BEARING (uniform KD A1-REFUSED: smooth fell, realized didn't — the dark Fisher
+interior wastes KD gradient exactly as the Fisher-margin law predicts). Three MATCHED sealed
+governed 40-ep windows from the SAME E2 endpoint (argv-diff law asserted: A−B = exactly the 5
+distill flags; C−A = exactly --head-range-relax):
+
+- **B control (plain continuation): n600 0.0051147, descending (−6.8e-6/ep; window descent 2.45e-4
+  = 8.2× the 2.99e-5 noise floor — NOT under-driven).** E2 (0.0052766) improved −3.1% in 40 ep ⇒
+  **the burn endpoint is NOT converged; continued/rewarmed optimization is real, cheap headroom.**
+  B's endpoint = the new best realized n600 anchor on this lineage (ckpt in custody).
+- **A distill (winner form): A1 realization-gap REFUSE @ep430** — transient dip to 0.004995@ep409
+  (the 12-ep mini-race horizon ended exactly there — short-window form races measure transients),
+  then REVERSAL to 0.005463 while the smooth KD loss fell 19.8→8.1. Endpoint (zero-step resume
+  confirm, same EMA surface) **0.0054967**. Slope ratio A/B = **−2.01**. Split B−A = −3.82e-4 =
+  12.8× noise. Bytes matched ±0.7% (seg dominates the S-arithmetic 40×).
+- **C chart-relax (MAIN charter; warm-start-equivalent head residual, ema-backfilled): 0.0054394,
+  no rescue** — the rgb output chart is NOT what binds the KD reversal; no receiver rev motivated.
+  ADVISORY-NON-DEPLOYABLE by design.
+
+**Preregistered falsifier FIRES (worse side): the 25.58× amortization gap is NOT distillation-
+curable at this endpoint — optimization/capacity leads; QA24 form/granularity fixes lead; the
+class-change leg strengthens; burn-3 distill-opening NO-GO** (its GO condition — distill slope
+clearly better — is inverted). verdict_scope: FORMULATION (finishing-stage distill on the converged
+E2 endpoint, 6 own-optimum configs + chart probe); distill-from-BIRTH remains formally uncovered but
+deprioritized (needs a NEW preregistered case). ax1 stack re-pricing: remove the QA75 finishing-
+distill term; add the plain-continuation dividend (−0.016 S·seg per 40 ep at zero design cost).
+Memo: `.omx/research/ddm_dw1_qa75_distill_window_20260730.md`. Receipts: SSD
+`ddm_dw1_20260730/{mini_race,control,distill,distill_head_relax,verdict.json,tickets}`.
+[macOS-CPU advisory]; score_claim=false; pointer **0.1910828242 [contest-CPU] UNMOVED**.
