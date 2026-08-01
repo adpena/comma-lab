@@ -88,11 +88,13 @@ def test_standard_contract_grounding_phrase_always_present() -> None:
 
 def test_standard_contract_blocks_separated_by_blank_lines() -> None:
     composed = sc.standard_contract()
-    # 27 blocks by default (26 separators): the 25 prior blocks (this magic number
-    # had drifted stale at 22 from an earlier workflow-v2 landing that added blocks
-    # without updating it) plus the #767 original-design-authority + retained-reasoning
-    # blocks (ddm_hw1, task #785). Asserted against the live composer, not a memory.
-    assert composed.count("\n\n") == 26
+    # 29 blocks by default (28 separators). This magic number has drifted stale twice
+    # (22 -> 26 -> 28) because landings add blocks without updating it, which is exactly
+    # what the assertion is FOR: a silent block addition is an unreviewed change to every
+    # subagent's contract. +2 on 2026-08-01 for the operator's "never recall only from
+    # working memory" + "never naive/toy/generic basis" clauses. Asserted against the live
+    # composer, not a memory; update it deliberately when you add a block, never reflexively.
+    assert composed.count("\n\n") == 28
 
 
 def test_review_only_names_are_subset_of_contract_names() -> None:

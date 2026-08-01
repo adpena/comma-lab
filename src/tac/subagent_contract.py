@@ -53,6 +53,8 @@ __all__ = [
     "RESEARCH_ORIGINAL_DESIGN_AUTHORITY",
     "RETAINED_REASONING",
     "RETRIEVAL_FIRST_CLAUSE",
+    "PRIMARY_SOURCE_RE_DERIVATION",
+    "OPTIMAL_FORM_NO_GENERIC_BASIS",
     "REVIEW_ONLY_CONSTANT_NAMES",
     "REVIEW_STATUS_CLAUSE",
     "RISK_RANKING",
@@ -383,6 +385,48 @@ CONTENT_LINEAGE_CRUX = (
     "REALIZATION - if your work does not touch it, say which solved end it serves instead."
 )
 
+# --- Primary-source re-derivation (operator 2026-08-01) -------------------------------------
+#
+# Source: operator binding 2026-08-01 verbatim — "Make sure that it never recalls anything only
+# from the working memory and that all implementations are optimal and informed. never naive or
+# toy or generic basis." Sister of the 2026-07-31 directive that produced ddm_us1 ("you're just
+# recalling from working memory").
+#
+# THE GAP THIS FILLS, and why RETRIEVAL_FIRST_CLAUSE did not already cover it: retrieval-first
+# says CONSULT THE STORES. It says nothing about the numbers in the arm's OWN PROMPT. A dispatch
+# seed is a recollection written by the dispatcher — it carries the dispatcher's errors, its
+# staleness, and its framing, and an arm that builds on it inherits all three without ever
+# touching a source. MEASURED the same day: MAIN's own routing note to ddm_rh1 quoted
+# `ddm_tr1_runtime.py:319` correctly and read it as SAFE; the line admits an ABSENT token_codec,
+# and rh1 found the hole MAIN had on screen. Reading is not re-deriving.
+
+#: Every number handed to you is a POINTER, not evidence — including the ones in this prompt.
+PRIMARY_SOURCE_RE_DERIVATION = (
+    "NEVER RECALL ONLY FROM WORKING MEMORY: every number, mechanism, and verdict in your "
+    "dispatch prompt is a POINTER to a primary artifact, not evidence. Before any of it becomes "
+    "a premise, re-derive it at the source - file:line for a mechanism, commit sha or receipt "
+    "path for a measurement, the canonical pointer file for a score. The seed was written by "
+    "someone recalling, so it carries their errors, staleness, and framing; building on it "
+    "without checking inherits all three silently. State which seed facts you RE-DERIVED and "
+    "which you could not - an unchecked premise must be labelled, never assumed."
+)
+
+#: Optimal-form + no-generic, with the measured sharpening that DERIVED is not CORRECT.
+OPTIMAL_FORM_NO_GENERIC_BASIS = (
+    "OPTIMAL AND INFORMED, NEVER NAIVE/TOY/GENERIC: no generic basis, metric, default, ladder, "
+    "or threshold anywhere - in what you propose, what you build, or what you EVALUATE with. "
+    "Cosine / Fourier / Euclidean / uniform / round-number tolerances are CONTROLS, never "
+    "answers; every constant sits on the value-provenance ladder and every knob is derived or "
+    "raced. Propose mechanisms at OPTIMAL FORM (per-lever hyperparameters at their own optimum, "
+    "not a shared default) and name the real measurement that would score them. A verdict drawn "
+    "on a toy, a subset, a proxy, or a naive first implementation falsifies the IMPLEMENTATION, "
+    "not the paradigm - scope it that way or do not draw it. MEASURED SHARPENING (ddm_rh1, "
+    "2026-08-01, 8f8af336b7): racing three candidates against the REAL encoder gave "
+    "hand-DERIVED -1,140 B, GENERIC control -2,117 B, RACED family -2,781 B - the derived "
+    "surrogate LOST to the generic control by 1.9x because it was context-blind. 'Derived' is "
+    "not a synonym for 'correct': a derivation buys a better CANDIDATE, never a skipped RACE."
+)
+
 #: The root selection rule (operator 2026-07-20): never easy; correct, true, understanding.
 CORRECT_OVER_EASY = (
     "CORRECT OVER EASY: never go for easy - go for correct and true and understanding. Easy is "
@@ -442,6 +486,8 @@ CONTRACT_CONSTANT_NAMES: tuple[str, ...] = (
     "RECURSION_CLAUSE",
     "CONTROL_LAW_CLAUSE",
     "RETRIEVAL_FIRST_CLAUSE",
+    "PRIMARY_SOURCE_RE_DERIVATION",
+    "OPTIMAL_FORM_NO_GENERIC_BASIS",
     "REVIEW_STATUS_CLAUSE",
     "CITATION_CLAUSE",
     "EIGHTFOLD_CLAUSE",
@@ -491,6 +537,8 @@ KEY_PHRASES: dict[str, str] = {
     "RECURSION_CLAUSE": "a conclusion is the start of a chain",
     "CONTROL_LAW_CLAUSE": "every recommended knob is a control law",
     "RETRIEVAL_FIRST_CLAUSE": "STORES CONSULTED",
+    "PRIMARY_SOURCE_RE_DERIVATION": "NEVER RECALL ONLY FROM WORKING MEMORY",
+    "OPTIMAL_FORM_NO_GENERIC_BASIS": "NEVER NAIVE/TOY/GENERIC",
     "REVIEW_STATUS_CLAUSE": "fresh-eyes-reviewed(N)",
     "CITATION_CLAUSE": "authors · year · exact title · arXiv ID or DOI",
     "EIGHTFOLD_CLAUSE": "one fact, one store, one key",
@@ -562,6 +610,8 @@ def standard_contract(*, review: bool = True, triality: bool = True) -> str:
         FRESH_CONTEXT_VERIFIER,
         RECURSION_CLAUSE,
         CONTROL_LAW_CLAUSE,
+        PRIMARY_SOURCE_RE_DERIVATION,
+        OPTIMAL_FORM_NO_GENERIC_BASIS,
         RETRIEVAL_FIRST_CLAUSE,
         REVIEW_STATUS_CLAUSE,
         CITATION_CLAUSE,
