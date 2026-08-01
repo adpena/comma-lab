@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import datetime as _dt
+import warnings
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -57,6 +58,34 @@ def _validate_utc_iso(value: str, field_name: str) -> None:
         raise ValueError(f"{field_name} must be timezone-aware UTC")
 
 
+def _coerce_event_notes(value: object) -> str:
+    """Read-side normalisation of a historical ``event_notes`` value. LOUD, never silent.
+
+    The ledger is APPEND-ONLY (Catalog #110/#113), so a historical row cannot be
+    rewritten in place and the reader must stay total. But the previous
+    ``str(obj.get("event_notes", ""))`` turned a list into the literal
+    ``"['FINAL race verdict...']"`` -- brackets, quotes and all -- and never raised.
+    MEASURED 2026-08-01: task 793 (written 2026-07-31T09:20:59Z) carried a mangled
+    verdict string through every canonical read since. A crash announces itself; that
+    did not. So: join sanely, and WARN so the row gets corrected by append.
+    """
+    if isinstance(value, str):
+        return value
+    if value is None:
+        return ""
+    if isinstance(value, (list, tuple)):
+        coerced = "; ".join(str(item) for item in value)
+    else:
+        coerced = str(value)
+    warnings.warn(
+        f"canonical_task_status: event_notes was {type(value).__name__}, not str -- "
+        f"joined for readability; the SOURCE ROW is malformed and must be corrected "
+        f"by appending a fixed row (the ledger is append-only)",
+        stacklevel=2,
+    )
+    return coerced
+
+
 @dataclass(frozen=True, slots=True)
 class CanonicalTaskStatusRow:
     """One append-only event row in `.omx/state/canonical_task_status.jsonl`."""
@@ -106,6 +135,16 @@ class CanonicalTaskStatusRow:
             _validate_utc_iso(self.completed_at_utc, "completed_at_utc")
         if self.written_pid <= 0:
             raise ValueError("written_pid must be positive")
+        # Free-text fields are ANNOTATED ``str`` but annotations do not enforce.
+        # MEASURED 2026-08-01: a list reached event_notes (task 793) and rode the
+        # ledger unchallenged, crashing graph-memory recall campaign-wide. Fail CLOSED
+        # at construction so no NEW malformed row can ever be written.
+        for _name in ("task_id", "title", "status", "owner", "event_notes"):
+            _value = getattr(self, _name)
+            if not isinstance(_value, str):
+                raise TypeError(
+                    f"{_name} must be str, got {type(_value).__name__}: {_value!r}"
+                )
         if self.status not in VALID_STATUSES:
             raise ValueError(f"invalid status: {self.status!r}")
         if self.event_type not in VALID_EVENT_TYPES:
@@ -156,7 +195,7 @@ class CanonicalTaskStatusRow:
             event_type=str(obj.get("event_type", "")),
             event_timestamp_utc=str(obj.get("event_timestamp_utc", "")),
             event_actor=str(obj.get("event_actor", "")),
-            event_notes=str(obj.get("event_notes", "")),
+            event_notes=_coerce_event_notes(obj.get("event_notes")),
             session_id=str(obj.get("session_id", "")),
             written_at_utc=str(obj.get("written_at_utc", "")),
             written_pid=int(obj.get("written_pid", 0)),

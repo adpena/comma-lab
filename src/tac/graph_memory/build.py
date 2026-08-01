@@ -20,6 +20,8 @@ from __future__ import annotations
 import json
 import re
 import subprocess
+import sys
+import warnings
 from pathlib import Path
 from urllib.parse import unquote
 
@@ -83,9 +85,59 @@ _SISTER_RE = re.compile(r"[Ss]ister(?:\s+of)?:?\s*\[\[([^\]]+)\]\]")
 _SUPERSEDE_RE = re.compile(r"[Ss]upersed(?:ed|es)?\s*(?:by)?:?\s*\[\[([^\]]+)\]\]")
 
 
-def _clean(text: str, cap: int) -> str:
-    text = re.sub(r"\s+", " ", text).strip()
-    return text[:cap]
+#: Every non-string value coerced at an ingestion boundary, in order. NEVER silent:
+#: `_clean` warns on each distinct (field, type) and `build_graph` refuses to return
+#: without surfacing the total. Read programmatically via `ingestion_anomalies()`.
+_INGESTION_ANOMALIES: list[dict[str, str]] = []
+_ANOMALY_WARNED: set[tuple[str, str]] = set()
+
+
+def ingestion_anomalies() -> list[dict[str, str]]:
+    """Malformed corpus values coerced during the last build (schema debt, not noise)."""
+    return list(_INGESTION_ANOMALIES)
+
+
+def _clean(text: object, cap: int, *, field: str = "?", source: str = "?") -> str:
+    """Normalise a corpus-derived value to a bounded single-line string.
+
+    TOTAL *and* LOUD -- both halves are load-bearing.
+
+    TOTAL, because this is an ingestion boundary and the graph IS the recall surface:
+    when the build raises, every `recall_fused`/graph query returns nothing and the
+    reader silently falls back to hand-grepping. MEASURED 2026-08-01: `event_notes` was
+    a list in 1 of 395 rows of `.omx/state/canonical_task_status.jsonl` (task 793, an
+    arm verdict written as a list of strings). `re.sub` raised `TypeError: expected
+    string or bytes-like object, got 'list'`, so 100% of recall failed on 0.25% bad data.
+
+    LOUD, because a coercion that repairs availability by hiding the schema violation
+    just converts a crash into permanent invisible corpus debt -- the DEFAULT-HARMFUL x
+    SILENT shape the confound-immune rule exists to kill. Every coercion is recorded and
+    the distinct (field, type) is warned once, so the bad ROW gets fixed, not tolerated.
+    """
+    if isinstance(text, str):
+        return re.sub(r"\s+", " ", text).strip()[:cap]
+
+    kind = type(text).__name__
+    _INGESTION_ANOMALIES.append(
+        {"field": field, "source": source, "type": kind, "repr": repr(text)[:120]}
+    )
+    key = (field, kind)
+    if key not in _ANOMALY_WARNED:
+        _ANOMALY_WARNED.add(key)
+        warnings.warn(
+            f"graph_memory ingestion: {source}:{field} expected str, got {kind} "
+            f"-- coerced so recall stays available; FIX THE ROW "
+            f"(see tac.graph_memory.build.ingestion_anomalies())",
+            stacklevel=2,
+        )
+
+    if text is None:
+        return ""
+    if isinstance(text, (list, tuple)):
+        text = " ".join(str(item) for item in text)
+    else:
+        text = str(text)
+    return re.sub(r"\s+", " ", text).strip()[:cap]
 
 
 def _canonical_repo_root() -> Path:
@@ -598,7 +650,10 @@ def parse_tasks(graph: Graph, tasks_path: Path) -> int:
         graph.add_node(Node(
             id=node_id, ntype="task",
             title=_clean(d.get("title", tid), 160),
-            summary=_clean(d.get("event_notes", "") or d.get("status", ""), 400),
+            summary=_clean(
+                d.get("event_notes", "") or d.get("status", ""), 400,
+                field="event_notes|status", source=str(tasks_path),
+            ),
             source=str(tasks_path),
             attrs={"status": d.get("status", ""), "owner": d.get("owner", "")},
         ))
@@ -741,6 +796,8 @@ def build_graph(
         value is None
         for value in (memory_dir, dag_path, equations_path, tasks_path, deferral_path)
     )
+    _INGESTION_ANOMALIES.clear()
+    _ANOMALY_WARNED.clear()
     g = Graph()
     eq_path = equations_path or _EQUATIONS_JSONL
     eq_ids = parse_equations(g, eq_path)
@@ -759,6 +816,16 @@ def build_graph(
         parse_lanes(g)
     parse_deferrals(g, deferral_path or _DEFERRAL_MD)
     parse_costate_organ_ledger(g)
+    if _INGESTION_ANOMALIES:
+        # NO SILENT FAILURES: the build succeeded, but the corpus carries schema debt.
+        # Surface it on stderr every time so it gets FIXED rather than tolerated.
+        fields = sorted({a["field"] for a in _INGESTION_ANOMALIES})
+        print(
+            f"[graph_memory] {len(_INGESTION_ANOMALIES)} malformed corpus value(s) "
+            f"coerced at ingestion; fields={fields}. Recall is AVAILABLE but the "
+            f"source rows are wrong -- see ingestion_anomalies().",
+            file=sys.stderr,
+        )
     return g
 
 # ---------------------------------------------------------- costate organ ----
