@@ -293,10 +293,27 @@ def lever_rate_in_loss(w_rate: float, rate_model: str = "entropy") -> Lever:
                                        "burn-2 rate A/B (QA86a) MEASURES bytes/d_seg at 0.05 vs derived. "
                                        "See spec_tr1_burn2.derive_w_rate_exchange_rate"},
                      "--rate-model": {
-                         "value": rate_model, "rung": "RACED (QA86a)",
-                         "provenance": "sg1 §3.4 skipped 'race-if-cheap'; entropy=marginal surrogate "
-                                       "(coder-mismatched), smevr_surrogate=temporal-delta (matches "
-                                       "the shipped SMEVR event/value split). Burn-2 A/B."},
+                         "value": rate_model, "rung": "UNRACED (QA86a OWED)",
+                         "provenance": "CORRECTED 2026-08-01 (receipt d619ec4ede). The prior rung said "
+                                       "'RACED (QA86a)' while its own text said sg1 §3.4 SKIPPED the "
+                                       "race -- a rung asserting a measurement that was never taken "
+                                       "(gd1 T4 also classes it GENERIC-CHOSEN-UNRACED). The race is "
+                                       "OWED, not done. Prior text also claimed smevr_surrogate "
+                                       "'matches the shipped SMEVR event/value split'; it does NOT -- "
+                                       "SMEVR factors against the per-cell temporal MODE "
+                                       "(factor_mode_delta) while the surrogate uses CONSECUTIVE-FRAME "
+                                       "deltas. It APPROXIMATES the temporal structure; it does not "
+                                       "match the split. MEASURED rank-fidelity vs real shipped SMEVR "
+                                       "bytes on the burn-4 parent lineage (r1c ep504->640, n=70 "
+                                       "fields): live 'entropy' rho = -0.7235 [-0.943,-0.227] "
+                                       "(ANTI-correlated -- a marginal histogram is invariant under "
+                                       "temporal permutation, so it goes blind once the field stops "
+                                       "FILLING and starts REARRANGING, which is where burn-4 sits); "
+                                       "'smevr_surrogate' rho = +0.7412. Scope: FORMULATION, "
+                                       "regime-scoped (entropy tracks at rho=+1.00 in the filling "
+                                       "regime) -- NOT a family kill. Fixing rate_model is logically "
+                                       "PRIOR to raising w_rate, whose derivation assumes a "
+                                       "surrogate-to-bytes premise 'entropy' does not satisfy."},
                  })
 
 
