@@ -231,17 +231,29 @@ def test_grouped_strided_reference_path_is_also_forward_d_seg_exactness_crux() -
     native must FIRST re-run the real-frame d_seg parity gate; this test documents
     why the swap is not free.
 
-    OPEN FINDING (MEASURED 2026-08-01, ddm_tr6 -- deliberately pinned, NOT resolved here). The
-    2026-06-27 default flip means the LIVE default routing is
-    ``MLXCustomKernelStridedGroupedConvAdapter``, whose FORWARD is native ``mx.conv2d`` --
-    measured BIT-IDENTICAL to ``mx.conv2d`` and NOT bit-identical to the fixed-order reference.
-    So the forward swap that the g0 probe REJECTED is what the default now runs. The flip's
-    justification covers the BACKWARD only (grad cosine ~1.0); it says nothing about forward
-    argmax exactness. Two facts bound the risk and neither closes it: MLX is never a score
-    authority (the frozen CPU-torch scorer is), so no reported d_seg is corrupted; but the
-    MLX forward does shape the training-time seg signal. The real-frame d_seg parity gate this
-    docstring demands has NOT been re-run for the custom adapter. The assertions below pin the
-    measured relationships so the hazard stays visible instead of being renamed away.
+    RESOLVED 2026-08-01 (ddm_mk1) -- the gate ddm_tr6 pinned as OWED has now been RUN, and it
+    CONFIRMS the hazard. Context: the 2026-06-27 flip made ``MLXCustomKernelStridedGroupedConvAdapter``
+    the live default; its FORWARD is native ``mx.conv2d`` (bit-identical to it, and NOT to the
+    fixed-order reference), i.e. exactly the forward swap the 2026-06-11 g0 probe REJECTED. The
+    flip's justification covers the BACKWARD only (grad cosine ~1.0) and says nothing about
+    forward argmax exactness.
+
+    MEASURED, default-vs-reference on 96 real ``0.mkv`` frames from the canonical scorer-input
+    cache (``tools/probe_real_frame_dseg_grouped_conv_routing.py --pairs 96``):
+        argmax flips        76 / 18,874,368 pixels = 4.03e-06
+        frames affected     53 of 96 (max 4 flips in one frame)
+        max logit delta     4.57e-02
+        worst frame         mismatched pixels at top-2 margin 1.34e-05 vs logit delta 3.50e-03
+    The last line is the g0 mechanism reproducing exactly: the perturbation is ~262x the margin
+    it must cross. Verdict scope: INSTANCE-and-FORMULATION -- this is the measured behaviour of
+    this routing pair on these real frames, not a claim about grouped-conv kernels in general.
+
+    What it does and does not mean. No reported score is affected: MLX is never a score
+    authority, the frozen CPU-torch scorer is. It DOES perturb the training-time seg signal, by
+    4.03e-06 of pixels (~0.1% of the live witness d_seg 0.0038892) -- systematic, not random.
+    That is a reason to cite this measurement in any MLX-forward argmax-exactness claim, not on
+    its own a reason to revert the ~17x backward. The assertions below keep both relationships
+    pinned so the hazard cannot be renamed away.
     """
     import mlx.core as mx
 

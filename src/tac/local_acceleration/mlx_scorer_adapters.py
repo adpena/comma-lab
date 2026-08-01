@@ -1080,9 +1080,25 @@ class MLXCustomKernelStridedGroupedConvAdapter:
     ``test_grouped_strided_reference_path_is_also_forward_d_seg_exactness_crux`` records a
     2026-06-11 real-frame probe in which exactly that forward swap produced 1 deterministic
     per-pixel argmax flip on ``0.mkv`` frame 1125 (native-vs-reference logit delta 1.08e-3
-    against a top-2 margin of 6.2e-5). That real-frame d_seg parity gate has NOT been re-run
-    since this path became the DEFAULT on 2026-06-27. No reported score is affected (MLX is
-    never a score authority) but the MLX forward does shape the training-time seg signal.
+    against a top-2 margin of 6.2e-5).
+
+    THE OWED REAL-FRAME GATE IS NOW RUN -- and it CONFIRMS the hazard (MEASURED 2026-08-01,
+    ddm_mk1, ``tools/probe_real_frame_dseg_grouped_conv_routing.py``; reproduce with
+    ``--pairs 96``). Against the fixed-order reference on 96 real ``0.mkv`` frames from the
+    canonical scorer-input cache: **76 argmax flips / 18,874,368 pixels = 4.03e-06**, with 53 of
+    96 frames carrying at least one flip (max 4 per frame) and a max logit delta of 4.57e-02.
+    The mechanism reproduces the 2026-06-11 finding exactly: on the worst frame the mismatched
+    pixels had a top-2 margin of 1.34e-05 against a logit delta of 3.50e-03 -- the perturbation
+    is ~262x the margin it has to cross. This is the DEFAULT routing since 2026-06-27, so any
+    MLX+Metal run since then that did not explicitly set ``TAC_MLX_CUSTOM_GROUPED_BACKWARD=0``
+    carried it (the canonical perf-env prefix sets it to ``1``). Which specific runs those were
+    was not enumerated.
+
+    SCOPE of that number, stated plainly. No reported score is affected: MLX is never a score
+    authority, the frozen CPU-torch scorer is. What it does perturb is the TRAINING-TIME seg
+    signal, by 4.03e-06 of pixels -- about 0.1% of the live witness d_seg (0.0038892), i.e.
+    small but systematic rather than random. It is not a reason to revert on its own; it IS a
+    reason that any argmax-exactness claim about the MLX forward must cite this measurement.
 
     THROUGHPUT TOOL ONLY. The gradient is fp32 and ~exact (cosine ~1.0 vs the
     trusted Python-loop reference) but is NEVER a d_seg/d_pose score authority —
@@ -1199,7 +1215,14 @@ def _log_custom_backward_decision_once() -> None:
         "reason": reason,
         "path": ("MLXCustomKernelStridedGroupedConvAdapter"
                  if active else "MLXReferenceConv2dAdapter(fixed_fp32 loop)"),
-        "note": "log-only; compute is bit-identical regardless. ~17x backward when active.",
+        # The emitted note is read by operators deciding whether a run's seg signal is
+        # comparable across configs, so it must not repeat the retired "bit-identical
+        # regardless" claim -- MEASURED FALSE on real frames, see the WARNING on
+        # MLXCustomKernelStridedGroupedConvAdapter.
+        "note": ("log-only, but the routing it reports is NOT numerically neutral: the two "
+                 "paths differ in the FORWARD and flip 4.0e-06 of SegNet argmax pixels on real "
+                 "0.mkv frames (MEASURED n=96 pairs, 2026-08-01). ~17x backward when active."),
+        "forward_argmax_flip_fraction_vs_reference_real_frames_n96": 4.026624891493056e-06,
     }), flush=True)
 
 

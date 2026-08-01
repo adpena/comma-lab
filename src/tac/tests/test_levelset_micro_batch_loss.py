@@ -14,6 +14,7 @@ per-pair base math matches the canonical importable ``make_loss_fn`` op-for-op.
 from __future__ import annotations
 
 import importlib.util
+import inspect
 import os
 import sys
 
@@ -33,6 +34,7 @@ from tac.boundary_math.levelset_micro_batch_loss import (  # noqa: E402
     batched_realized_loss,
     single_realized_loss,
 )
+from tac.local_acceleration import metal_micro_batch_v9_levers as _v9_kernels  # noqa: E402
 
 # ---- import the trainer-local eikonal/nuclear helpers (module-level, cheap import ~0.2s) ----
 _REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
@@ -115,6 +117,16 @@ def _build(K, seed=0):
     n_px = rh * rw
     feat_dim, mod_dim, hidden = 7, 4, 6
     n_frames = 2 * K
+    # DETERMINISM (added 2026-08-01). ``nn.Linear`` initializes from MLX's PROCESS-GLOBAL RNG, not
+    # from the ``seed`` argument — only ``_TinyWitness.code`` and the numpy draws below were ever
+    # seeded. So the trunk weights depended on how many MLX random draws happened EARLIER in the
+    # process, i.e. on test ordering and on which ``-k`` filter was used. MEASURED 2026-08-01: the
+    # temporal lever's share of the loss moved ~130x (6.5e-4 vs 8.6e-2) between a filtered run and
+    # a full-suite run of the SAME test. That breaks the deterministic-reproducibility
+    # non-negotiable ("all RNG from a single recorded seed") and makes every measured ratio in
+    # this file order-dependent. Seeding the global stream here makes ``_build`` a pure function
+    # of ``(K, seed)`` again.
+    mx.random.seed(seed)
     rng = np.random.default_rng(seed + 7)
     model = _TinyWitness(feat_dim, mod_dim, hidden, n_frames, seed=seed)
     adapter = _MockAdapter(pose_dims=6, seed=seed + 1)
@@ -155,17 +167,105 @@ def _base_lc(**over):
 
 
 _FP32_EPS = float(np.finfo(np.float32).eps)          # 1.1920929e-07
-# Slack over one ulp-of-the-field. DERIVED, not tuned-to-pass: the phase VJP divides by
-# ``(m + mq + eps)**2`` with the kernel's ``eps = 1e-6``, so a near-tie pixel amplifies input
-# rounding well past a single ulp. MEASURED 2026-08-01 at (B,H,W)=(2,384,512): the largest
-# observed ``maxabs / (eps32 * max|ref|)`` was ~14 (phase grad0: maxabs 5.6e-3, field max 3346;
-# chroma value sits at ~1). 64 leaves ~4.6x headroom over the worst measured case while still
-# refusing a real indexing/dispatch defect by ~5 orders (such a defect misplaces whole rows or
-# tiles, i.e. an error of order the FIELD SCALE itself => ratio ~1/eps32 ~ 8.4e6, not ~14).
+_FP32_U = _FP32_EPS / 2.0                            # half-ulp, 2^-24
+# Slack over one ulp-of-the-field, for the maps whose fused-vs-reference disagreement really is
+# reordered-summation rounding: MEASURED 2026-08-01, chroma value/grads and temporal value/grads
+# all sit at <= 1.7 ulp of their field. 64 leaves ~37x headroom there while still refusing a real
+# indexing/dispatch defect by ~5 orders (such a defect misplaces whole rows or tiles, i.e. an
+# error of order the FIELD SCALE itself => ratio ~1/eps32 ~ 8.4e6, not ~2).
+#
+# The phase grad0 field is NOT in that regime and deliberately does NOT use this bound; see
+# _assert_phase_signed_grad_parity. MEASURED 2026-08-01 over 24 (shape x distribution x seed)
+# combinations, its field-ulp ratio ranged 0.53 .. 58.0 — a 110x spread that reaches 91% of this
+# 64.0 threshold. A threshold calibrated on ONE seed's draw of a quantity with that spread is a
+# hand-picked atol wearing a derivation, and would flip red on an innocent fixture change.
 _FP32_FIELD_SLACK = 64.0
 
+# Multiplier over the DERIVED per-pixel phase-VJP budget below. MEASURED 2026-08-01: the worst
+# observed err/budget over the same 24 combinations was 0.53 (range 0.25..0.53, a 2.1x spread —
+# versus 110x for the field-scale metric). 4.0 leaves ~7.5x headroom on a bound that is a
+# FUNCTION OF THE PRIMALS, so it travels with shape, seed and distribution instead of being
+# recalibrated whenever the fixture moves.
+_PHASE_CANCELLATION_SLACK = 4.0
+# The eps these tests exercise: the ``phase_squared_map`` signature default, since the fused/
+# reference calls below pass no eps. Read from the signature so it cannot silently drift.
+_PHASE_KERNEL_DEFAULT_EPS = float(
+    inspect.signature(_v9_kernels.phase_squared_map).parameters["eps"].default
+)
 
-def _assert_fp32_field_parity(label, fused, reference):
+
+def _assert_phase_signed_grad_parity(label, fused, reference, signed, direction, ref_map, cot,
+                                     eps):
+    """Phase dL/dsigned parity at a bound DERIVED from the reference's cancellation floor.
+
+    The two sides are not equally accurate and the test must not pretend otherwise. MEASURED
+    2026-08-01 at (B,H,W)=(2,384,512), both against an independent float64 evaluation:
+    the FUSED Metal kernel is 1.60 ulp-of-field from truth; the MLX REFERENCE is 25.6 ulp — the
+    kernel is ~16x MORE accurate, and the disagreement is almost entirely the reference's error.
+    (Ruled out as causes, both MEASURED: the MLX GPU stream — reference GPU vs reference CPU is
+    bit-identical, 0/393216 elements differing — and any matmul precision floor, since this VJP
+    contains no matmul.)
+
+    MECHANISM, derived then confirmed: MLX forms ``dL/dm`` for ``tie = m/den`` as
+    ``g/den - g*tie/den``, a difference of two O(g/den) terms that cancels catastrophically as
+    ``tie -> 1`` (i.e. wherever the partner margin is small next to ``m``). The kernel instead
+    evaluates the algebraically-identical closed form ``(partner + eps)/den**2``, which has no
+    subtraction and therefore no cancellation. In float64 the two routes agree to 2.9e-15 and
+    both match a central finite difference of the forward map to 3.3e-9, so neither is "the
+    kernel's own answer" — they are the same number, and only the fp32 conditioning differs.
+    Binned by ``1 - tie``: for pixels with ``1-tie`` in [1e-6, 1e-4) the autodiff route's error is
+    3.6e-6 while the kernel route's is 5.7e-10, a 6300x gap that closes as ``tie`` leaves 1.
+
+    So the honest tolerance is the REFERENCE's error floor, ~u*|g|/den per pixel (absolute, set by
+    the cancellation) plus the kernel's own ~u*|g|*A relative term, propagated through the same
+    three-term stencil the VJP uses. DO NOT "fix" the kernel toward the reference: that would make
+    the shipped gradient strictly worse.
+    """
+    f = np.asarray(fused, dtype=np.float64)
+    r = np.asarray(reference, dtype=np.float64)
+    assert f.shape == r.shape, (label, f.shape, r.shape)
+    s = np.asarray(signed, dtype=np.float64)
+    d = np.asarray(direction, dtype=np.float64)
+    m = np.maximum(s, 0.0)
+    right = np.pad(m[:, :, 1:], ((0, 0), (0, 0), (0, 1)))
+    down = np.pad(m[:, 1:, :], ((0, 0), (0, 1), (0, 0)))
+    partner = np.where(d < 0.5, right, down)
+    den = m + partner + float(eps)
+    tie = m / den
+    # |chain-rule multiplier| = |dL/dtie| at each pixel.
+    g = np.abs(2.0 * (tie - np.asarray(ref_map, dtype=np.float64))
+               * np.asarray(cot, dtype=np.float64))
+    pos = s > 0.0
+    # 8 roundings is the op count of each route (the two divides, the multiply chain, the
+    # subtraction) rounded up; it is an op-count, not a fitted constant.
+    own = np.where(pos, _FP32_U * g * (8.0 / den + 8.0 * (partner + float(eps)) / (den * den)),
+                   0.0)
+    pred = np.where(pos, _FP32_U * g * (8.0 / den + 8.0 * m / (den * den)), 0.0)
+    budget = own.copy()
+    budget[:, :, 1:] += np.where(d[:, :, :-1] < 0.5, pred[:, :, :-1], 0.0)
+    budget[:, 1:, :] += np.where(~(d[:, :-1, :] < 0.5), pred[:, :-1, :], 0.0)
+    budget = np.where(pos, budget, 0.0) * _PHASE_CANCELLATION_SLACK
+    err = np.abs(f - r)
+    over = err > budget
+    if over.any():
+        # A structurally-zero budget (signed <= 0, so the pixel contributes no gradient) with a
+        # nonzero error is an infinite ratio; report it as such rather than dividing by `tiny`.
+        pos_budget = budget[over] > 0.0
+        ratio = (float((err[over][pos_budget] / budget[over][pos_budget]).max())
+                 if pos_budget.any() else float("inf"))
+        raise AssertionError(
+            f"{label}: {int(over.sum())} pixel(s) exceed the derived fp32 cancellation budget; "
+            f"worst err {float(err[over].max()):.6g} vs budget {float(budget[over].max()):.6g} "
+            f"(worst ratio {ratio:.4g}). This budget scales with the primals, so a breach means "
+            "an indexing/dispatch defect, not a fixture change."
+        )
+    assert float(np.abs(r).max()) > 0.0, (
+        f"{label}: reference dL/dsigned is identically zero — the gradient under test is absent, "
+        "so the comparison above is vacuous."
+    )
+
+
+def _assert_fp32_field_parity(label, fused, reference, *, expect_nonzero):
     """Fused-kernel vs reference parity at a FIELD-SCALE fp32 bound.
 
     A fixed ``atol`` is the wrong instrument for these maps: they span many decades (the phase VJP
@@ -174,17 +274,32 @@ def _assert_fp32_field_parity(label, fused, reference):
     arithmetic perturbs a field by ~ulp-of-the-LARGEST-term, not ulp-of-each-element, so the
     honest bound scales with ``max|reference|``.
 
-    An all-zero reference field is handled EXPLICITLY rather than swept into the tolerance. Some
-    primals are static providers (the phase ``direction`` selector, the temporal ``class_mask``)
-    whose gradient is structurally zero, so a scale-relative bound would degenerate to ``atol=0``
-    and silently pass anything. For those the contract is EXACT zero — which is a real assertion
-    (a kernel writing garbage into a static-provider gradient still fails), not a vacuum.
+    ``expect_nonzero`` is REQUIRED and is the caller's DECLARATION, never an inference from the
+    data. That distinction is the whole point: an all-zero field and a correctly-computed field
+    are both "no assertion failure", so a helper that INFERS the zero branch cannot tell a static
+    provider (phase ``direction``, temporal ``class_mask`` — structurally zero, and asserting
+    EXACT zero on them is a real check) from a theta-bearing gradient that COLLAPSED to zero on
+    both sides because the term under test went missing. The second case is
+    ``[[vacuity_is_indistinguishable_from_pass_empty_scope_confound_20260801]]``: an instrument
+    that examined nothing emits the same symbol as one that examined everything cleanly. Declaring
+    the expectation up front makes the collapse a FAILURE instead of a silent pass.
     """
     f = np.asarray(fused, dtype=np.float64)
     r = np.asarray(reference, dtype=np.float64)
     assert f.shape == r.shape, (label, f.shape, r.shape)
     scale = float(np.abs(r).max())
-    if scale == 0.0:
+    if expect_nonzero:
+        assert scale > 0.0, (
+            f"{label}: caller declared this field theta-bearing (expect_nonzero=True) but the "
+            "reference is IDENTICALLY ZERO. A scale-relative parity check would then compare "
+            "0 to 0 and pass vacuously — the term under test is absent, not correct."
+        )
+    else:
+        assert scale == 0.0, (
+            f"{label}: caller declared this field a structurally-zero static provider "
+            f"(expect_nonzero=False) but the reference is nonzero (maxabs {scale:.6g}); "
+            "re-derive which primals are theta-bearing rather than relaxing this."
+        )
         stray = float(np.abs(f).max())
         assert stray == 0.0, (
             f"{label}: reference gradient is structurally zero (static provider) but the fused "
@@ -791,11 +906,57 @@ def _v9_providers(env):
             "phase_dir": phase_dir, "phase_weight": phase_weight, "xi": xi}
 
 
+_PARITY_TOL = 1e-4
+_MIN_SIGNAL_MULTIPLE = 10.0
+
+
+def _assert_lever_signal_is_resolvable(env, lc_on, label, *, lc_off=None, **kwargs):
+    """NEGATIVE CONTROL: the lever must move the loss by MUCH more than the parity tolerance.
+
+    ``_assert_parity`` asserts ``|batched - mean_of_pairs| / |mean_of_pairs| < 1e-4``. If the lever
+    named in the test contributes LESS than that 1e-4 of the total loss, the assertion cannot
+    distinguish "this lever batches correctly" from "this lever is ABSENT" — deleting it entirely
+    would still pass. That is vacuity by TOLERANCE, the same failure shape as vacuity by ZERO
+    (``[[vacuity_is_indistinguishable_from_pass_empty_scope_confound_20260801]]``): the
+    instrument's resolution is coarser than the signal it claims to resolve.
+
+    MEASURED 2026-08-01 at the ORIGINAL lever settings, with the ``_build`` determinism fix in
+    place so these are reproducible rather than test-order dependent. Lever contribution relative
+    to the total loss, and the resulting NEW setting:
+        chroma   w=0.4  K=2 3.67e-01, K=4 1.92e-01 -> OK, unchanged (1900-3700x the tolerance)
+        phase    w=0.6  K=2 1.11e-04, K=4 9.72e-05 -> MARGINAL at K=2 and BELOW tolerance at
+                 K=4; raised to w=60.0 -> 1.09e-02 / 9.62e-03
+        area     {0:2.0, 3:0.7}  K=2 1.33e-05, K=4 0.0 EXACT -> VACUOUS. At K=4 the hinge
+                 ``max(mean(softmax[c]) - mean(onehot[c]), 0)`` is identically 0 for BOTH
+                 configured classes on all 4 pairs, so the parity assert compared a number to
+                 itself; widened to all five classes @400 -> 4.72e-03 / 4.29e-02
+        temporal w=0.8  K=2 9.33e-08, K=4 7.64e-08 -> VACUOUS, roughly one fp32 ulp of the loss;
+                 raised to w=80000 -> 5.53e-03 / 1.07e-02
+    The temporal and area terms are NOT defective — both are exactly weight-linear (temporal:
+    w=800 -> +0.1027, w=80000 -> +10.27, a clean 100x). They were simply configured at an
+    amplitude ~1e-7 of the loss. The fixtures below therefore raise the weights until the signal
+    clears the tolerance by >=10x; the batching contract is weight-linear, so this tests exactly
+    the same thing at a resolution where a failure can actually be seen.
+    """
+    off = _batched_and_meanpairs(env, lc_off if lc_off is not None else _base_lc(), **kwargs)[0]
+    on = _batched_and_meanpairs(env, lc_on, **kwargs)[0]
+    ratio = abs(on - off) / max(abs(on), 1e-30)
+    assert ratio > _MIN_SIGNAL_MULTIPLE * _PARITY_TOL, (
+        f"{label}: lever contributes {abs(on - off):.6g} = {ratio:.4g} of the total loss "
+        f"{on:.6g}, which is below {_MIN_SIGNAL_MULTIPLE}x the {_PARITY_TOL} parity tolerance. "
+        "The parity assertion cannot distinguish correct batching from an ABSENT lever — raise "
+        "the lever weight or fix the provider, do NOT relax this guard."
+    )
+    return ratio
+
+
 def _assert_parity(env, lc, *, receipt_lever=None, backend_receipt="mlx_reference", **kwargs):
     lb, gb, lm, gm = _batched_and_meanpairs(env, lc, **kwargs)
     grad_rel = _max_rel_grad_err(gb, gm)
-    assert abs(lb - lm) / (abs(lm) + 1e-6) < 1e-4, (lb, lm)
-    assert grad_rel < 1e-4
+    # Uses _PARITY_TOL so this tolerance and the _assert_lever_signal_is_resolvable guard that
+    # protects it cannot drift apart: loosening one without the other silently re-opens vacuity.
+    assert abs(lb - lm) / (abs(lm) + 1e-6) < _PARITY_TOL, (lb, lm)
+    assert grad_rel < _PARITY_TOL
     if receipt_lever is not None:
         from tac.boundary_math.micro_batch_bit_identity_probe import make_functional_parity_receipt
 
@@ -818,11 +979,22 @@ def test_v9_routed_lever_batched_loss_and_grad_parity(K, lever):
         lc = _base_lc(chroma_w=0.4, chroma_gt_prov=p["chroma_gt"],
                       chroma_ann_prov=p["ann"], use_metal_v9_levers=False)
     elif lever == "phase":
-        lc = _base_lc(phase_w=0.6, phase_ref_prov=p["phase_ref"],
+        # phase_w RAISED 0.6 -> 60.0 (2026-08-01). MEASURED: at 0.6 this lever moved the loss by
+        # 1.1e-4 (K=2) / 9.7e-5 (K=4) relative — at or BELOW the 1e-4 parity tolerance asserted
+        # below, so the assertion could not tell correct batching from an absent lever.
+        lc = _base_lc(phase_w=60.0, phase_ref_prov=p["phase_ref"],
                       phase_dir_prov=p["phase_dir"], phase_weight_prov=p["phase_weight"],
                       use_metal_v9_levers=False)
     else:
-        lc = _base_lc(area_lambda={0: 2.0, 3: 0.7})
+        # area_lambda widened from {0: 2.0, 3: 0.7} to all five classes (2026-08-01). MEASURED:
+        # the hinge max(mean(softmax[c]) - mean(onehot[c]), 0) is class- AND K-dependent — at K=2
+        # only classes {0,2,4} are active, at K=4 only class {1}. The old two-class map was
+        # therefore IDENTICALLY ZERO at K=4 (confirmed: loss unchanged to the last bit across
+        # lambda 2.0 -> 500.0), making that parametrization a 0-vs-0 comparison. Covering all
+        # five classes keeps the lever active at both K.
+        lc = _base_lc(area_lambda=dict.fromkeys(range(5), 400.0))
+    _assert_lever_signal_is_resolvable(env, lc, f"v9-routed:{lever}",
+                                       seg_form="ce", eik_w=1e-2, len_w=1e-3)
     _assert_parity(env, lc, receipt_lever=lever, seg_form="ce", eik_w=1e-2, len_w=1e-3)
 
 
@@ -843,10 +1015,18 @@ def test_v9_temporal_screw_batched_loss_and_grad_parity(K, monkeypatch):
     monkeypatch.setattr(warp_mod, "compiled_batch_native_warp", compiled_identity)
     env = _build(K, seed=1200 + K)
     p = _v9_providers(env)
-    lc = _base_lc(temporal_w=0.8, temporal_ann_prov=p["ann"],
+    # temporal_w RAISED 0.8 -> 80000.0 (2026-08-01). MEASURED: at 0.8 the temporal term moved the
+    # loss by ~1.3e-4 ABSOLUTE against a ~1220 total, i.e. ~1e-7 relative — one to two fp32 ulp of
+    # the loss, 1000x below the 1e-4 parity tolerance asserted below, so the parity assertions
+    # passed on a term the instrument could not represent. The term is NOT broken: it is exactly
+    # weight-linear (w=800 -> +0.1027, w=80000 -> +10.27). The annulus weighted mean
+    # sum(sq*ann)/sum(ann) simply normalizes it to a very small number on this fixture.
+    lc = _base_lc(temporal_w=80000.0, temporal_ann_prov=p["ann"],
                   temporal_xi_prov=p["xi"], temporal_geom_mlx=object(),
                   temporal_class_mask=mx.array([1.0, 0.5, 0.25]),
                   use_metal_v9_levers=False)
+    _assert_lever_signal_is_resolvable(env, lc, "v9-temporal-screw",
+                                       seg_form="ce", eik_w=1e-2, len_w=1e-3)
     _assert_parity(env, lc, receipt_lever="temporal", seg_form="ce", eik_w=1e-2, len_w=1e-3)
     # The batched leg must reach the compiled factory as one K-row warp; serial B=1 reference
     # calls can coexist but may not replace it with a Python pair loop.
@@ -942,7 +1122,20 @@ def test_v9_gate_off_and_zero_mask_are_exact_noops(lever, monkeypatch):
     assert abs(_batched_and_meanpairs(env, zero)[0] - base) < 1e-9
 
 
-def test_v9_active_legs_change_loss_and_area_gate_is_empty_mapping():
+def test_v9_active_legs_change_loss_and_area_gate_is_empty_mapping(monkeypatch):
+    """NEGATIVE CONTROL for every V9 leg: an active lever must MOVE the loss.
+
+    ``temporal`` was ADDED here 2026-08-01. It was the one V9 lever this control omitted, and it
+    is exactly the lever whose parity assertions were later found to be vacuous — first passing
+    ``0 == 0`` on a saturated mock (ddm_tr6), then still passing on a term ~1e-7 of the loss. A
+    negative control that skips a leg cannot notice that leg going missing, which is the same
+    empty-scope confound the control exists to prevent
+    (``[[vacuity_is_indistinguishable_from_pass_empty_scope_confound_20260801]]``). Every leg the
+    module routes belongs in this list.
+    """
+    import tac.boundary_math.warp_real_luma_frame0 as warp_mod
+    monkeypatch.setattr(warp_mod, "compiled_batch_native_warp",
+                        lambda geom: (lambda g0, xi: g0))
     env = _build(2, seed=1500)
     p = _v9_providers(env)
     base = _batched_and_meanpairs(env, _base_lc())[0]
@@ -952,6 +1145,12 @@ def test_v9_active_legs_change_loss_and_area_gate_is_empty_mapping():
         _base_lc(phase_w=0.5, phase_ref_prov=p["phase_ref"], phase_dir_prov=p["phase_dir"],
                  phase_weight_prov=p["phase_weight"], use_metal_v9_levers=False),
         _base_lc(area_lambda={0: 500.0, 1: 500.0, 2: 500.0, 3: 500.0, 4: 500.0}),
+        # temporal_w is large for the reason documented on the screw-parity fixture: the annulus
+        # weighted mean normalizes this term to ~1e-7 of the loss at w=0.8, below what a float32
+        # loss can even represent as a change.
+        _base_lc(temporal_w=80000.0, temporal_ann_prov=p["ann"], temporal_xi_prov=p["xi"],
+                 temporal_geom_mlx=object(),
+                 temporal_class_mask=mx.array([1.0, 0.5, 0.25]), use_metal_v9_levers=False),
     ]
     for lc in configs:
         assert abs(_batched_and_meanpairs(env, lc)[0] - base) > 1e-6
@@ -1250,10 +1449,30 @@ def test_v9_map_helper_output_and_all_primal_vjps_match_reference(K, kind):
     mx.eval(vf, vr, *gf, *gr)
     assert np.allclose(np.asarray(vf), np.asarray(vr), rtol=1e-5, atol=1e-5)
     assert len(gf) == len(gr) == len(args)
-    for fused_grad, reference_grad in zip(gf, gr, strict=True):
-        assert np.allclose(
-            np.asarray(fused_grad), np.asarray(reference_grad), rtol=1e-4, atol=1e-4
+    # Which primals are theta-bearing is a DECLARATION, not an inference from the data. Only
+    # ``phase``'s ``direction`` (index 1) is a non-differentiable selector; every other primal
+    # here must carry a nonzero gradient. Without this, an ``allclose`` on two identically-zero
+    # fields passes vacuously and a gradient that silently went missing reads as a clean pass
+    # (``[[vacuity_is_indistinguishable_from_pass_empty_scope_confound_20260801]]``). MEASURED
+    # 2026-08-01: ``phase:grad1`` is exactly that case on both this surface and the 384x512 one.
+    structurally_zero = {1} if kind == "phase" else set()
+    for gi, (fused_grad, reference_grad) in enumerate(zip(gf, gr, strict=True)):
+        ref_np = np.asarray(reference_grad)
+        peak = float(np.abs(ref_np).max())
+        if gi in structurally_zero:
+            assert peak == 0.0, (
+                f"{kind}:grad{gi} is declared a structurally-zero selector gradient but the "
+                f"reference is nonzero (maxabs {peak:.6g}); re-derive the primal roles."
+            )
+            assert float(np.abs(np.asarray(fused_grad)).max()) == 0.0, (
+                f"{kind}:grad{gi} static-provider gradient must be exactly zero in the fused path"
+            )
+            continue
+        assert peak > 0.0, (
+            f"{kind}:grad{gi} is theta-bearing but the reference gradient is identically zero — "
+            "the quantity under test is absent, so the parity check below would be vacuous."
         )
+        assert np.allclose(np.asarray(fused_grad), ref_np, rtol=1e-4, atol=1e-4)
 
 
 @pytest.mark.parametrize("kind", ["chroma", "phase", "temporal"])
@@ -1367,11 +1586,22 @@ def test_v9_faithful_384x512_metal_maps_and_area_value_vjp():
             kernels.verify_v9_lever_backend_execution(kind)
             assert kernels.v9_lever_backend_receipt()[kind] == "metal"
             mx.eval(fused_value, ref_value, *fused_grads, *ref_grads)
-            _assert_fp32_field_parity(f"{kind}:value", fused_value, ref_value)
+            _assert_fp32_field_parity(f"{kind}:value", fused_value, ref_value,
+                                      expect_nonzero=True)
             for gi, (fused_grad, ref_grad) in enumerate(
                 zip(fused_grads, ref_grads, strict=True)
             ):
-                _assert_fp32_field_parity(f"{kind}:grad{gi}", fused_grad, ref_grad)
+                if kind == "phase" and gi == 0:
+                    # dL/dsigned: cancellation-dominated, gets its own DERIVED budget.
+                    _assert_phase_signed_grad_parity(
+                        f"{kind}:grad{gi}", fused_grad, ref_grad, signed, direction, reference,
+                        cotangent, _PHASE_KERNEL_DEFAULT_EPS)
+                    continue
+                # ``phase:grad1`` is dL/d(direction) — a non-differentiable selector, so its
+                # gradient is structurally zero. Every other primal here is theta-bearing.
+                _assert_fp32_field_parity(
+                    f"{kind}:grad{gi}", fused_grad, ref_grad,
+                    expect_nonzero=not (kind == "phase" and gi == 1))
 
         logits = mx.array(rng.standard_normal((B, H, W, 5)).astype(np.float32))
         labels = rng.integers(0, 5, (B, H, W))

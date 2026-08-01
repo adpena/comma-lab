@@ -306,6 +306,19 @@ _CHROMA_VJP_SRC = r"""
 # The phase tie at pixel p depends on signed[p] and at most one right/down partner.  Therefore
 # dL/dsigned[i] is the sum of its own term plus at most two predecessor terms (left and up).
 # Computing one output element per thread avoids nondeterministic atomics while retaining O(BHW).
+#
+# ACCURACY DIRECTION (MEASURED 2026-08-01, ddm_mk1 -- do NOT "fix" this kernel toward the MLX
+# reference).  This kernel is the MORE ACCURATE side of the pair.  Against an independent float64
+# evaluation at (B,H,W)=(2,384,512): this kernel is 1.60 ulp-of-field from truth, the MLX
+# reference (``phase_squared_map_reference`` differentiated by MLX) is 25.6 ulp -- ~16x worse.
+# Cause: MLX forms dL/dm for ``tie = m/den`` as ``g/den - g*tie/den``, a difference of two
+# O(g/den) terms that cancels catastrophically as ``tie -> 1``; the closed form below,
+# ``(mq + eps)/den**2``, is algebraically identical (float64 agreement 2.9e-15, both matching a
+# central finite difference to 3.3e-9) but has no subtraction and therefore no cancellation.
+# Ruled out as causes, both MEASURED: the MLX GPU stream (reference GPU vs reference CPU is
+# bit-identical, 0/393216 elements differing) and any matmul precision floor (there is no matmul
+# here).  The parity test therefore bounds the disagreement by the REFERENCE's cancellation floor
+# -- see ``_assert_phase_signed_grad_parity`` in test_levelset_micro_batch_loss.py.
 _PHASE_VJP_SRC = r"""
     uint i = thread_position_in_grid.x;
     int B = sdf_shape[0];
