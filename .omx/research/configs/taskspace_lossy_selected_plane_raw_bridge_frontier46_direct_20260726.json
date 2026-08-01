@@ -1,0 +1,14 @@
+{
+  "schema": "taskspace_lossy_selected_plane_raw_bridge_config.v1",
+  "research_only": true,
+  "candidate_lineage_allowed": false,
+  "score_claim": false,
+  "codec_config_path": "/Users/adpena/Projects/pact/.omx/research/configs/taskspace_lossy_selected_plane_codec_n600_frontier_20260726.json",
+  "codec_config_file_sha256": "74de56aaee53892e8812c030b73cb14a04c5340eb7cbacb1fdebc073082ec7a6",
+  "codec_output_root": "/Volumes/VertigoDataTier/pact/evidence/g52_fulln600_lossy_selected_plane_codec_frontier46_20260726",
+  "codec_aggregate_sha256": "fd409089e44452868f3d1054dac2d1e4c62c2100635228d672e67ac82e7e2fd8",
+  "endpoint": "frontier_046kbps_total",
+  "arm": "DIRECT_INTERLEAVED_RGB",
+  "output_root": "/Volumes/VertigoDataTier/pact/evidence/g52_fulln600_lossy_selected_plane_scoring_frontier46_direct_20260726",
+  "pair_count": 600
+}

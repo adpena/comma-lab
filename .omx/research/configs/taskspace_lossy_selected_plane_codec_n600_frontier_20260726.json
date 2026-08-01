@@ -1,0 +1,46 @@
+{
+  "schema": "taskspace_lossy_selected_plane_codec_config.v1",
+  "research_only": true,
+  "historical_c1_encoder_oracle_only": true,
+  "candidate_lineage_allowed": false,
+  "pair_count": 600,
+  "pairs_per_segment": 120,
+  "segment_count": 5,
+  "geometry": {
+    "height": 384,
+    "width": 512,
+    "channels": 3
+  },
+  "rate_ceiling_bytes": 258312,
+  "source": {
+    "archive_path": "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/capstone_submission/archive.zip",
+    "archive_sha256": "e4cd154f79a30e2b1d759af0d26e54444d22807f81700565e475392eae064f42",
+    "member_name": "0.bin",
+    "member_sha256": "aa1dbb5e2efff28cd0d31f5ee2a4b0575a248a27a431151bfcae64eb320d385b"
+  },
+  "codec": {
+    "ffmpeg_executable": "ffmpeg",
+    "encoder": "libsvtav1",
+    "container": "ivf",
+    "input_pixel_format": "rgb24",
+    "encoded_pixel_format": "yuv420p",
+    "decoded_pixel_format": "rgb24",
+    "frame_rate": 20,
+    "preset": 10,
+    "threads": 1,
+    "color_range": "pc",
+    "colorspace": "bt709",
+    "color_primaries": "bt709",
+    "color_transfer": "bt709"
+  },
+  "endpoints": [
+    {
+      "name": "frontier_046kbps_total",
+      "direct_bitrate_bps": 46000,
+      "base_bitrate_bps": 23000,
+      "enhancement_bitrate_bps": 23000
+    }
+  ],
+  "required_free_bytes": 10737418240,
+  "test_only_small_fixture": false
+}

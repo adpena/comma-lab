@@ -1,0 +1,43 @@
+{
+  "schema": "tac.taskspace_batch16_margin_base_scorer_cache_config.v1",
+  "run_id": "taskspace_batch16_margin_base_scorer_cache_n600_20260727_r5",
+  "output_root": "/Volumes/VertigoDataTier/pact/taskspace_batch16_margin_base_scorer_cache_n600_20260727_r5",
+  "pair_count": 600,
+  "stage_pairs": 120,
+  "scorer_batch_pairs": 16,
+  "scorer_hw": [384, 512],
+  "class_count": 5,
+  "seed": 1234,
+  "num_threads": 4,
+  "required_free_bytes": 12884901888,
+  "g46_batch_geometry_audit": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/original_taskspace_inverse_witness_codec_20260725/g46_teacher_batch_geometry_audit_v2_20260726.json",
+    "expected_sha256": "d1e74b6fdafbc59bf8274851e2c26e402ecc965ec018d08301195de7122597d9"
+  },
+  "g51_aggregate": {
+    "path": "/Volumes/VertigoDataTier/pact/taskspace_fresh_scorer_planes_n600_20260726/aggregate_receipt.json",
+    "expected_sha256": "ae9048dfc24947a6268315590b65da02b56549379e347cbaced25e2e6f67d915"
+  },
+  "v15_compile_receipt": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/original_taskspace_inverse_witness_codec_20260725/fresh_v15_semantic_base_n600_20260726/ddm_v15_scorer_solved_templates_n600_receipt.json",
+    "expected_sha256": "53b60e4a397fc1cdb7660a0c543221be17b723d38942157ff075b49e76a76e65"
+  },
+  "v15_semantic_archive": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/original_taskspace_inverse_witness_codec_20260725/fresh_v15_semantic_base_n600_20260726/ddm_v15_solved_templates_n600.not_a_candidate.zip.receipt-bytes",
+    "expected_sha256": "759e28332ce1ea2d4cabba731e4b7b2b21c191fef1bd2b104fab18805388d6df"
+  },
+  "v15_source_config": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/configs/taskspace_fresh_v15_semantic_base_n600_20260726.json",
+    "expected_sha256": "b7f0c380de4cb354e0fe5d6432aa91f50a166c8558f73d1c56f22ac6fa08d5f6"
+  },
+  "v15_camera_identity_root": "/Users/adpena/Projects/pact/.omx/research/original_taskspace_inverse_witness_codec_20260725/fresh_v15_semantic_base_n600_20260726/stage_checkpoints/full_p_camera_identity",
+  "producer_root": "/Users/adpena/Projects/pact",
+  "truth": {
+    "research_only": true,
+    "score_claim": false,
+    "candidate_claim": false,
+    "promotion_eligible": false,
+    "dense_fields_candidate_payload_allowed": false,
+    "scorer_weights_candidate_payload_allowed": false
+  }
+}
