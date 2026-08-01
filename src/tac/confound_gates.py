@@ -3311,9 +3311,25 @@ POSITIVE_CONTROLS: tuple[PositiveControl, ...] = (
 )
 
 # RATCHET FLOOR: the number of DISTINCT gates carrying a positive control at landing. It may only
-# grow. A new REFUSE-capable gate landing without a control drops coverage below this and the
-# meta-gate refuses — which is what makes the uncovered set a queue instead of a grave.
+# grow. Deleting or stranding a control drops coverage below this and the meta-gate refuses.
 MIN_POSITIVE_CONTROL_COVERAGE = 4
+
+# RATCHET CEILING (added 2026-07-31, task #831). The floor above is on the NUMERATOR — the count
+# of gates that HAVE controls — so it can only ever fire when a control is REMOVED. Landing a new
+# REFUSE-capable gate without a control raises the DENOMINATOR and leaves the numerator untouched,
+# so the floor stays satisfied and the guard prints OK. That is exactly the trigger the original
+# comment here advertised ("a new gate landing without a control ... the meta-gate refuses") and
+# exactly the one the arithmetic could not produce.
+#
+# MEASURED at the moment this was found: landing check_upstream_pin_no_content_drift took the
+# catalog 23 -> 24 and the uncovered set 19 -> 20, and the guard emitted nothing.
+#
+# This ceiling closes it from the other side and MAY ONLY SHRINK. It is deliberately set to the
+# CURRENT uncovered count rather than to 0: refusing all 20 today would be permanently red, and a
+# permanently-red gate trains readers to ignore the suite (the #821 lesson). Recording the debt as
+# a number that can only go down is what makes the uncovered set a queue instead of a grave —
+# lower it as controls land; never raise it to admit a new bare gate.
+MAX_UNCOVERED_REFUSE_GATES = 20
 
 
 def positive_control_coverage() -> dict[str, object]:
@@ -3378,11 +3394,22 @@ def check_refusal_gates_have_live_positive_control(
             )
     coverage = positive_control_coverage()
     covered = int(coverage["covered"])
+    uncovered = list(coverage["uncovered_gates"])
     if covered < MIN_POSITIVE_CONTROL_COVERAGE:
         violations.append(
             f"positive-control coverage REGRESSED: {covered} gate(s) covered, floor is "
-            f"{MIN_POSITIVE_CONTROL_COVERAGE}. Add a control for the new REFUSE-capable gate "
-            f"(uncovered: {coverage['uncovered_gates']}) — the floor may only ratchet up."
+            f"{MIN_POSITIVE_CONTROL_COVERAGE}. A control was removed or stranded "
+            f"(uncovered: {uncovered}) — the floor may only ratchet up."
+        )
+    # The DENOMINATOR-side ratchet. The floor above cannot see a new bare gate (it raises the
+    # denominator, not the numerator); this is the leg that does.
+    if len(uncovered) > MAX_UNCOVERED_REFUSE_GATES:
+        violations.append(
+            f"uncovered REFUSE-capable gates GREW to {len(uncovered)}, ceiling is "
+            f"{MAX_UNCOVERED_REFUSE_GATES}. A gate that can refuse work landed without a positive "
+            f"control, so nothing proves its detector still fires. Add a control for it, or lower "
+            f"the ceiling only by covering others — NEVER raise it to admit a bare gate. "
+            f"Uncovered: {uncovered}"
         )
     return _finish(
         name="check_refusal_gates_have_live_positive_control",
@@ -3403,3 +3430,165 @@ def check_refusal_gates_have_live_positive_control(
 # does NOT include itself in its own coverage denominator (it plants no fixture of its own; its
 # controls ARE its test).
 CONFOUND_GATES = (*CONFOUND_GATES, check_refusal_gates_have_live_positive_control)
+
+
+# ---------------------------------------------------------------------------
+# UPSTREAM-PIN CONTENT DRIFT — the parent repo is STRUCTURALLY BLIND here.
+#
+# MEASURED INCIDENT (2026-07-31, task #836). ``upstream/`` is a NESTED GIT REPO.
+# ``git status --porcelain upstream`` from the repo root returns EMPTY while
+# ``git -C upstream status --porcelain`` returned 36 dirty entries. No parent gate,
+# hook or preflight scan could see it, and CLAUDE.md declares that snapshot IMMUTABLE
+# ("Never edit, patch, monkeypatch, hotfix, or 'temporarily' modify anything inside
+# the pinned upstream snapshot"). The rule had ZERO structural enforcement.
+#
+# What was actually there: 35 of 36 were MODE-ONLY (100755 -> 100644, exec bit stripped
+# by a bulk copy) — including evaluate.py / modules.py / frame_utils.py, whose CONTENT
+# hashes were byte-identical to the pin, so the scorer authority was intact. The real
+# drift was `uv.lock` (+296/-192, additive: charset-normalizer / requests / urllib3 pulled
+# in by a stray `uv` invocation with cwd inside upstream) plus 2 lost symlinks.
+#
+# WHY CONTENT-ONLY (the #821 lesson, applied): a gate that also refused the 35 benign mode
+# strips would be PERMANENTLY RED on a clean checkout. A permanently-red gate is not
+# protection — it trains readers to ignore the suite, and it is how the lane-smoke gate
+# ended up parked behind ``--no-codebase`` where it could never fire. So this gate refuses
+# CONTENT drift only, and is explicitly silent about mode.
+#
+# BINARY-SAFE BY CONSTRUCTION: ``git diff --numstat`` prints ``-`` for binaries, so it
+# CANNOT distinguish a mode-only binary from an edited one. This compares the HEAD blob
+# bytes against the working-tree bytes directly — exact for text and binary alike.
+_UPSTREAM_PIN_WAIVER = "UPSTREAM_PIN_DRIFT_OK"
+
+
+def _upstream_git_bytes(up: Path, args: list[str]) -> tuple[int, bytes]:
+    """``git -C <up> <args>`` -> (returncode, stdout bytes). Never raises."""
+    import subprocess
+
+    try:
+        proc = subprocess.run(
+            ["git", "-C", str(up), *args], capture_output=True, timeout=60, check=False
+        )
+        return proc.returncode, proc.stdout
+    except Exception:  # git missing / timeout / permissions — treat as unavailable
+        return 1, b""
+
+
+def check_upstream_pin_no_content_drift(
+    *,
+    repo_root: str | Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Refuse CONTENT drift inside the pinned ``upstream/`` snapshot (mode changes exempt).
+
+    The pinned snapshot is the source of truth for scorer behaviour and contest mechanics,
+    and CLAUDE.md forbids modifying it without explicit operator approval. Because it is a
+    NESTED git repo, the parent repo's gates cannot see inside it — this gate is the only
+    structural enforcement of that rule.
+
+    Drift = any of:
+      * a tracked file whose working-tree bytes differ from its HEAD blob,
+      * a tracked file DELETED from the working tree,
+      * an UNTRACKED file (writing into the pin is exactly what the rule forbids;
+        gitignored paths never appear in ``status --porcelain`` so they are already exempt).
+
+    NOT drift: a mode change (``100755 -> 100644``) with identical content.
+
+    Fail-open when the nested repo is absent (not every checkout carries ``upstream/.git``),
+    but SAY SO when verbose — a guard that silently stops guarding is the confound signature
+    this module exists to extinct.
+
+    Waiver: ``# UPSTREAM_PIN_DRIFT_OK:<rationale>`` anywhere in the first 4 KB of
+    ``.omx/state/upstream_pin_waiver.txt`` (a file, not a same-line comment, because the
+    drifting artifacts are upstream's own and MUST NOT be annotated in place — editing them
+    to waive them would itself be the violation).
+
+    STRICT from byte one (2026-07-31): the operator approved reverting the snapshot to its
+    pin in the same landing, so live count is 0 and the "Strict-flip atomicity rule" applies.
+    """
+    root = Path(repo_root) if repo_root is not None else REPO_ROOT
+    up = root / "upstream"
+    violations: list[str] = []
+
+    if not (up / ".git").exists():
+        if verbose:
+            print(
+                "  [upstream-pin-drift] SKIP: no nested git repo at upstream/.git — "
+                "the pin CANNOT be verified from here (stated, not silently passed)"
+            )
+        return violations
+
+    waiver_path = root / ".omx" / "state" / "upstream_pin_waiver.txt"
+    if waiver_path.is_file():
+        try:
+            head = waiver_path.read_text(errors="replace")[:4096]
+        except OSError:
+            head = ""
+        marker = f"# {_UPSTREAM_PIN_WAIVER}:"
+        idx = head.find(marker)
+        if idx >= 0 and len(head[idx + len(marker):].strip().splitlines()[0].strip()) >= 4:
+            if verbose:
+                print("  [upstream-pin-drift] WAIVED via .omx/state/upstream_pin_waiver.txt")
+            return violations
+
+    rc, out = _upstream_git_bytes(up, ["status", "--porcelain"])
+    if rc != 0:
+        if verbose:
+            print("  [upstream-pin-drift] SKIP: `git -C upstream status` unavailable")
+        return violations
+
+    for raw in out.decode("utf-8", errors="replace").splitlines():
+        if len(raw) < 4:
+            continue
+        code, rest = raw[:2], raw[3:].strip()
+        # renames render as "old -> new"; the NEW path is what exists on disk.
+        rel = rest.split(" -> ")[-1].strip().strip('"')
+        if not rel:
+            continue
+        wt = up / rel
+
+        if code.strip() == "??":
+            violations.append(
+                f"upstream/{rel}: UNTRACKED file inside the pinned snapshot — something "
+                f"wrote into the immutable upstream tree."
+            )
+            continue
+
+        if not wt.exists():
+            violations.append(
+                f"upstream/{rel}: tracked file DELETED from the pinned snapshot."
+            )
+            continue
+
+        blob_rc, blob = _upstream_git_bytes(up, ["show", f"HEAD:{rel}"])
+        if blob_rc != 0:
+            violations.append(
+                f"upstream/{rel}: dirty ({code.strip() or 'M'}) and its HEAD blob could not "
+                f"be read — cannot prove it matches the pin."
+            )
+            continue
+        try:
+            live = wt.read_bytes()
+        except OSError as exc:
+            violations.append(f"upstream/{rel}: unreadable ({type(exc).__name__}).")
+            continue
+        if live != blob:
+            violations.append(
+                f"upstream/{rel}: CONTENT differs from the pin "
+                f"({len(blob)} B at HEAD vs {len(live)} B on disk). The pinned upstream "
+                f"snapshot is IMMUTABLE — revert it, or record an operator-approved waiver "
+                f"in .omx/state/upstream_pin_waiver.txt."
+            )
+        # else: mode-only (or index noise) — content matches the pin, deliberately silent.
+
+    return _finish(
+        name="check_upstream_pin_no_content_drift",
+        tag="upstream-pin-drift",
+        violations=violations,
+        strict=strict,
+        verbose=verbose,
+        ok_detail="upstream/ content matches its pin (mode-only changes exempt by design)",
+    )
+
+
+CONFOUND_GATES = (*CONFOUND_GATES, check_upstream_pin_no_content_drift)

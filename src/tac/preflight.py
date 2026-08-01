@@ -1853,6 +1853,23 @@ def preflight_all(
         )
         return
 
+    # 0. UPSTREAM-PIN CONTENT DRIFT — deliberately OUTSIDE the `check_codebase` block.
+    #
+    # MEASURED 2026-07-31 (task #836/#821): ALL 502 `check_*()` call sites in this function
+    # live inside the `if check_codebase:` block below, and `tools/preflight_hook.py`
+    # (`_preflight_command`) appends `--no-codebase` unless `PREFLIGHT_FULL=1` — so on a
+    # NORMAL COMMIT none of them run. A gate landed into that block is protection for
+    # `PREFLIGHT_FULL=1` runs, NOT for commits. Wiring this one there would have reproduced
+    # exactly the hollow-instrument class it exists to catch.
+    #
+    # This check is ~one `git -C upstream status` (sub-second) and guards a CLAUDE.md
+    # non-negotiable the parent repo is otherwise STRUCTURALLY BLIND to (upstream/ is a
+    # nested git repo, invisible to every parent-repo gate). STRICT: live count is 0 —
+    # the snapshot was reverted to its pin in this same landing (operator-approved).
+    from tac.confound_gates import check_upstream_pin_no_content_drift as _upstream_pin_gate
+
+    _upstream_pin_gate(repo_root=REPO_ROOT, strict=True, verbose=verbose)
+
     # 1. Codebase drift check (cheap, always run unless explicitly disabled)
     if check_codebase:
         _parallel = _ParallelPreflightRunner(

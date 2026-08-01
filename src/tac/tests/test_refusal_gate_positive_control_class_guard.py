@@ -130,3 +130,46 @@ def test_each_control_carries_a_substantive_rationale(control):
     """A control without a stated reason rots into a fixture nobody dares change."""
     assert len(control.why) > 40
     assert control.files and control.must_mention
+
+
+# ---------------------------------------------------------------------------
+# DENOMINATOR-SIDE RATCHET (task #831, added 2026-07-31)
+#
+# The floor above is on the NUMERATOR (gates that HAVE controls), so it can only fire when a
+# control is REMOVED. It is structurally blind to the case its own comment advertised: a new
+# REFUSE-capable gate landing WITHOUT a control raises the denominator and leaves the numerator
+# alone, so `covered < MIN` stays False and the guard prints OK.
+#
+# MEASURED: landing check_upstream_pin_no_content_drift took the catalog 23 -> 24 and the
+# uncovered set 19 -> 20, and the guard emitted nothing. These two tests are the assertion that
+# the closing leg is real rather than another comment.
+# ---------------------------------------------------------------------------
+
+
+def test_ceiling_fires_when_a_bare_refuse_gate_lands(monkeypatch):
+    """THE case the numerator floor cannot see. Behaviour, not arithmetic restated."""
+
+    def bare_gate(**_kwargs):
+        return []
+
+    bare_gate.__name__ = "check_simulated_new_bare_gate"
+    monkeypatch.setattr(cg, "CONFOUND_GATES", (*cg.CONFOUND_GATES, bare_gate))
+
+    violations = cg.check_refusal_gates_have_live_positive_control(strict=False, verbose=False)
+    grew = [v for v in violations if "uncovered REFUSE-capable gates GREW" in v]
+    assert grew, f"a bare REFUSE-capable gate landed silently: {violations}"
+    # The message must NAME the gate, or the reader cannot act on the refusal.
+    assert "check_simulated_new_bare_gate" in grew[0]
+
+    # And the NUMERATOR floor must be silent here — proving the two legs are genuinely
+    # independent and that this case was previously unreachable.
+    assert not [v for v in violations if "coverage REGRESSED" in v]
+
+
+def test_ceiling_is_tight_against_the_live_uncovered_count():
+    """A ratchet slack by even one admits a free bare gate; slack the other way is red-by-default."""
+    live = len(cg.positive_control_coverage()["uncovered_gates"])
+    assert cg.MAX_UNCOVERED_REFUSE_GATES == live, (
+        f"ceiling {cg.MAX_UNCOVERED_REFUSE_GATES} != live uncovered {live}. Lower it when a "
+        f"control lands; NEVER raise it to admit a bare gate."
+    )
