@@ -1,0 +1,195 @@
+{
+ "archive": {
+  "bytes": 360238,
+  "members": {
+   "manifest.json": {
+    "compressed": 715,
+    "uncompressed": 1385,
+    "zip_method": 8
+   },
+   "state/pose_stub.sec": {
+    "compressed": 83,
+    "uncompressed": 83,
+    "zip_method": 0
+   },
+   "state/pose_warp.stp": {
+    "compressed": 8621,
+    "uncompressed": 8621,
+    "zip_method": 0
+   },
+   "state/renderer.sec": {
+    "compressed": 3341,
+    "uncompressed": 3341,
+    "zip_method": 0
+   },
+   "state/selector.sec": {
+    "compressed": 314,
+    "uncompressed": 535,
+    "zip_method": 8
+   },
+   "state/tokens.dr7t": {
+    "compressed": 346478,
+    "uncompressed": 346478,
+    "zip_method": 0
+   }
+  },
+  "path": "/Volumes/VertigoDataTier/pact/ddm_v4d_20260731/v4d_composed_refine_celldrop50_archive.zip",
+  "sha256": "f1f3288062468e97c090ffe88ac81a6d6f76925743bd83aecb15307c0314a220",
+  "zip_container_overhead_bytes": 686
+ },
+ "axis": "[macOS-CPU advisory] rate accounting only; NO scorer run; NO score claim; pointer UNMOVED",
+ "code_landed": "NONE \u2014 the cut is not live on v4d, so no v4-runner change is warranted. experiments/inflate_runner_v4d.py is byte-identical to the DEPLOYED runtime tree copy at the v4d submission dir; editing it would desync the deployed archive's runtime tree for zero rate benefit.",
+ "codec_sweep_on_shipped_field": {
+  "brotli11": {
+   "archive_bytes_if_shipped": 410202,
+   "bytes": 396442,
+   "delta_vs_shipped": 49964,
+   "encode_seconds": 0.68,
+   "rate_term_if_shipped": 0.27313667428862093
+  },
+  "cae_inspired_identity_inter": {
+   "archive_bytes_if_shipped": 435624,
+   "bytes": 421864,
+   "delta_vs_shipped": 75386,
+   "encode_seconds": 9.61,
+   "rate_term_if_shipped": 0.29006414059489277
+  },
+  "huffman_nibble": {
+   "archive_bytes_if_shipped": 533489,
+   "bytes": 519729,
+   "delta_vs_shipped": 173251,
+   "encode_seconds": 0.32,
+   "rate_term_if_shipped": 0.3552284270421941
+  },
+  "kt_o8_prev5_backoff": {
+   "archive_bytes_if_shipped": 412277,
+   "bytes": 398517,
+   "delta_vs_shipped": 52039,
+   "encode_seconds": 5.49,
+   "rate_term_if_shipped": 0.2745183316163494
+  },
+  "kt_prev1": {
+   "archive_bytes_if_shipped": 419913,
+   "bytes": 406153,
+   "delta_vs_shipped": 59675,
+   "encode_seconds": 1.38,
+   "rate_term_if_shipped": 0.2796028305823903
+  },
+  "lzma1": {
+   "archive_bytes_if_shipped": 411784,
+   "bytes": 398024,
+   "delta_vs_shipped": 51546,
+   "encode_seconds": 0.14,
+   "rate_term_if_shipped": 0.2741900631524602
+  },
+  "rans_o0": {
+   "archive_bytes_if_shipped": 488843,
+   "bytes": 475083,
+   "delta_vs_shipped": 128605,
+   "encode_seconds": 0.13,
+   "rate_term_if_shipped": 0.3255004882211016
+  },
+  "rans_o0_on_adjacent_innovation": {
+   "archive_bytes_if_shipped": 550216,
+   "bytes": 536456,
+   "delta_vs_shipped": 189978,
+   "encode_seconds": 0.13,
+   "rate_term_if_shipped": 0.36636624975106863
+  },
+  "smevr": {
+   "archive_bytes_if_shipped": 360238,
+   "bytes": 346478,
+   "delta_vs_shipped": 0,
+   "encode_seconds": 4.81,
+   "rate_term_if_shipped": 0.23986769755482476
+  }
+ },
+ "codec_sweep_verdict": "smevr is the STRICT MINIMUM of all 9 registered r7 codecs on this field; next best brotli11 at +49,964 B. No residual token-coder headroom from codec selection.",
+ "e1_exporter_note": "compile_archive_from_checkpoint emits a TR1 single-file four-section PACKET \u2014 a DIFFERENT grammar from the v4 ZIP-of-members line, and its #843 measurement used a different checkpoint (r1c window_01). Its 274,737 B is NOT comparable to v4d's 360,238 B as a score.",
+ "in_memory_scaffold_at_inflate_runner_v4d_line_129": {
+  "call": "_encode_tokens(np.ascontiguousarray(codes, dtype=np.uint8))  # legacy raw-uint8 Brotli-Q11",
+  "in_memory_tr1_packet_bytes": 456589,
+  "is_counted": false,
+  "produced_bytes": 451927,
+  "proof": [
+   "the in-memory packet (456589 B) is LARGER than the entire shipped archive (360238 B) \u2014 arithmetically impossible to be inside it",
+   "the archive contains exactly 6 members and no tr1 packet: ['manifest.json', 'state/pose_stub.sec', 'state/pose_warp.stp', 'state/renderer.sec', 'state/selector.sec', 'state/tokens.dr7t']",
+   "inflate_runner_v4d.py writes only decoded f0/f1 frame bytes (lines 204-209); the packet is a local variable consumed by parse_packet"
+  ],
+  "selector_token_codec_key_present": false
+ },
+ "live_cut_remaining": {
+  "archive_bytes_delta": 0,
+  "rate_term_delta_S": 0.0,
+  "token_bytes_delta": 0
+ },
+ "losslessness_proof": {
+  "decode_arrays_equal": true,
+  "dtype": "uint8",
+  "dtype_is_uint8": true,
+  "levels": 16,
+  "max_code": 15,
+  "note": "decode_token_codes runs canonical=True: it re-encodes with the declared codec and REFUSES on any byte difference, so a successful decode is itself independent proof the shipped frame is canonically smevr.",
+  "reencode_byte_identical_to_shipped": true,
+  "reencode_smevr_bytes": 346478
+ },
+ "pointer_moved": false,
+ "provenance_chain_measured": [
+  {
+   "action": "encode_token_codes(codes, levels=16, codec='smevr') -> state/tokens.dr7t (line 539)",
+   "role": "originator of the .dr7t member format",
+   "step": "tools/pfs1_recompose_warp_base_and_eval.py:458"
+  },
+  {
+   "action": "encode_token_codes(cand_codes, levels=LEVELS, codec='smevr')",
+   "output": "/Volumes/VertigoDataTier/pact/ddm_gr1_20260730/gr1_cell_drop50_archive.zip",
+   "output_archive_bytes": 359221,
+   "output_token_bytes": 346478,
+   "output_token_sha256": "305a2be96a292967268105241170d0f9d94e5dd7342b0ede573916ad46c53d91",
+   "role": "immediate producer of v4d's token bytes",
+   "step": "experiments/ddm_gr1_granularity_rerace.py:357"
+  },
+  {
+   "action": "copies state/tokens.dr7t VERBATIM from BASE; rewrites only pose_warp.stp + manifest",
+   "step": "experiments/ddm_v4d_build_composed_archive.py",
+   "verbatim_copy_confirmed": true
+  }
+ ],
+ "question": "Is the r7 SMEVR token-coder rate cut LIVE on the own-vehicle frontier candidate v4d, or already spent?",
+ "research_only": true,
+ "schema": "ddm_r7_smevr_liveness_on_v4d.v1",
+ "score_claim": false,
+ "shipped_token_section": {
+  "base_bytes": 1360,
+  "bytes": 346478,
+  "codec": "smevr",
+  "delta_bytes": 345062,
+  "header_bytes": 56,
+  "levels": 16,
+  "member": "state/tokens.dr7t",
+  "raw_uint8_token_bytes": 1843200,
+  "sha256": "305a2be96a292967268105241170d0f9d94e5dd7342b0ede573916ad46c53d91",
+  "shape": [
+   600,
+   24,
+   32,
+   4
+  ],
+  "share_of_archive_pct": 96.18
+ },
+ "v4d_S_decomposition": {
+  "S_pose_term": 0.29294112036380276,
+  "S_rate_term": 0.23986769755482476,
+  "S_seg_term": 0.43117900000000003,
+  "S_total": 0.9639878179186275,
+  "archive_bytes": 360238,
+  "avg_posenet_distortion": 0.00858145,
+  "avg_segnet_distortion": 0.00431179,
+  "note": "codec is lossless => decoded token codes are bit-identical => rendered frames identical => seg and pose CANNOT move. Only the rate term is a function of the codec.",
+  "seg_pose_unchanged_by_construction": true,
+  "source": "deployed report.txt, upstream/evaluate.py, 600 samples, device=cpu"
+ },
+ "verdict": "ALREADY SPENT \u2014 0 bytes remaining. v4d ships state/tokens.dr7t as a canonical r7 DR7T codec=smevr frame.",
+ "verdict_scope": "FAMILY (the whole v4 composed-archive family: v4b/v4c/v4d all ship smevr)",
+ "written_at_utc": "2026-08-01T04:49:42.336728+00:00"
+}
