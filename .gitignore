@@ -561,6 +561,16 @@ experiments/results/public_pr_intake_full/*/source/
 .omx/research/**/submission_runtime_closure/
 .omx/research/**/telemetry.jsonl
 .omx/research/**/training_artifact.json
+# Governed-runner run trees (.omx/runs/<runner>/<UTC stamp>/...). Same class as
+# the .omx/research/**/checkpoints/ rule above: per-stage checkpoints and the
+# per-branch candidate bundles are BULK REBUILDABLE run state (63 MB / 1.4k
+# files for a single allocator sweep on 2026-07-26). The bytes stay on local
+# disk — nothing is deleted — but they must not enter git, where they were
+# silently inflating the consolidation-debt pile. The DURABLE per-run summaries
+# (manifest.json, final_receipt.json, pointers/*.json) are deliberately NOT
+# ignored so a run's identity, config hash, and outcome survive in git.
+.omx/runs/**/checkpoints/
+.omx/runs/**/branches/
 experiments/results/
 reports/graphs/public_site/
 reports/private/
