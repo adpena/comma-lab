@@ -127,3 +127,57 @@ def test_live_repo_is_clean(tmp_path: Path):
         pytest.skip("no nested upstream repo in this checkout")
     v = check_upstream_pin_no_content_drift(repo_root=repo, verbose=False)
     assert v == [], f"live upstream content drift: {v[:3]}"
+
+
+# ---------------------------------------------------------------------------
+# EXEC-BIT LOSS (correction 2026-07-31). The original design exempted ALL mode changes and
+# called them "benign noise". The magnitude-dismissal hook flagged that phrasing, and checking
+# it rather than waiving it found the hole: `git ls-files -s` shows upstream tracks 33 paths at
+# 100755, and `ffmpeg-new` is a BINARY invoked by bare path
+# (upstream/submissions/*/compress.sh: FFMPEG="${HERE}/ffmpeg-new"). Strip its exec bit and the
+# run dies with "Permission denied" — a total failure, not a small perturbation.
+#
+# So the exemption is ASYMMETRIC: gaining exec is harmless, LOSING it on a HEAD-executable is not.
+# ---------------------------------------------------------------------------
+
+
+def _exec_pin(tmp_path: Path) -> Path:
+    """A pin whose one file is tracked EXECUTABLE, like upstream's ffmpeg-new."""
+    up = tmp_path / "upstream"
+    up.mkdir()
+    exe = up / "ffmpeg-new"
+    exe.write_bytes(b"\x00binary\xff")
+    os.chmod(exe, 0o755)
+    _git(up, "init", "-q")
+    _git(up, "config", "user.email", "t@t")
+    _git(up, "config", "user.name", "t")
+    _git(up, "add", "-A")
+    _git(up, "commit", "-q", "-m", "pin")
+    return tmp_path
+
+
+def test_exec_bit_LOSS_is_drift_even_though_content_is_identical(tmp_path: Path):
+    """THE correction. A gate that stayed silent here would let the eval die on Permission denied."""
+    root = _exec_pin(tmp_path)
+    exe = root / "upstream" / "ffmpeg-new"
+    before = exe.read_bytes()
+    assert check_upstream_pin_no_content_drift(repo_root=root, verbose=False) == []
+
+    os.chmod(exe, 0o644)
+    assert exe.read_bytes() == before, "fixture must change ONLY the mode"
+
+    v = check_upstream_pin_no_content_drift(repo_root=root, verbose=False)
+    assert len(v) == 1 and "EXEC BIT LOST" in v[0] and "ffmpeg-new" in v[0]
+    # and it must NOT be mis-reported as content drift, or the operator reverts the wrong thing
+    assert "CONTENT differs" not in v[0]
+
+
+def test_exec_bit_GAIN_is_not_drift(tmp_path: Path):
+    """The asymmetry. Gaining exec cannot break an invocation, so it stays exempt."""
+    root = _exec_pin(tmp_path)
+    plain = root / "upstream" / "notes.txt"
+    plain.write_text("x", encoding="utf-8")
+    _git(root / "upstream", "add", "-A")
+    _git(root / "upstream", "commit", "-q", "-m", "add plain")
+    os.chmod(plain, 0o755)  # gained exec; HEAD tracks it 100644
+    assert check_upstream_pin_no_content_drift(repo_root=root, verbose=False) == []

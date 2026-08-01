@@ -3537,6 +3537,18 @@ def check_upstream_pin_no_content_drift(
             print("  [upstream-pin-drift] SKIP: `git -C upstream status` unavailable")
         return violations
 
+    # Paths HEAD tracks as executable (mode 100755). MEASURED 2026-07-31: 33 of them, incl.
+    # ffmpeg-new, evaluate.sh, and every submissions/*/inflate.sh. Used for the exec-bit-loss leg.
+    head_exec: set[str] = set()
+    rc_ls, out_ls = _upstream_git_bytes(up, ["ls-files", "-s"])
+    if rc_ls == 0:
+        for line in out_ls.decode("utf-8", errors="replace").splitlines():
+            # "<mode> <oid> <stage>\t<path>"
+            if line.startswith("100755\t") or line.startswith("100755 "):
+                tab = line.find("\t")
+                if tab != -1:
+                    head_exec.add(line[tab + 1 :].strip())
+
     for raw in out.decode("utf-8", errors="replace").splitlines():
         if len(raw) < 4:
             continue
@@ -3579,7 +3591,29 @@ def check_upstream_pin_no_content_drift(
                 f"snapshot is IMMUTABLE — revert it, or record an operator-approved waiver "
                 f"in .omx/state/upstream_pin_waiver.txt."
             )
-        # else: mode-only (or index noise) — content matches the pin, deliberately silent.
+            continue
+        # Content matches. The mode exemption is NOT blanket — see below.
+        #
+        # CORRECTION 2026-07-31, prompted by the magnitude-dismissal hook and confirmed by
+        # MEASUREMENT: "mode-only is benign" was WRONG for one subset. `git ls-files -s` shows
+        # upstream tracks 33 files at 100755, and `ffmpeg-new` is a BINARY invoked by bare path
+        # (upstream/submissions/*/compress.sh: FFMPEG="${HERE}/ffmpeg-new"). Strip its exec bit
+        # and the invocation is "Permission denied" — that is not a small delta, it is a total
+        # failure of the run. Dismissing it as noise would have been the eyeball-dismissal the
+        # hook exists to catch.
+        #
+        # The asymmetry is the whole point: GAINING an exec bit is harmless, LOSING one on a file
+        # HEAD tracks as executable is potentially catastrophic. So exempt mode changes EXCEPT
+        # exec-bit LOSS. Live count is 0 (the revert restored every mode), so this stays a
+        # queue-not-grave refinement rather than a permanently-red one.
+        if rel in head_exec and not os.access(wt, os.X_OK):
+            violations.append(
+                f"upstream/{rel}: EXEC BIT LOST (HEAD tracks it 100755, on disk it is not "
+                f"executable). Content is identical, so this is not content drift — but upstream "
+                f"invokes its executables by bare path, so a stripped exec bit fails the run "
+                f"outright rather than perturbing it. Restore the mode "
+                f"(git -C upstream checkout -- '{rel}' or chmod +x)."
+            )
 
     return _finish(
         name="check_upstream_pin_no_content_drift",
@@ -3587,7 +3621,10 @@ def check_upstream_pin_no_content_drift(
         violations=violations,
         strict=strict,
         verbose=verbose,
-        ok_detail="upstream/ content matches its pin (mode-only changes exempt by design)",
+        ok_detail=(
+            f"upstream/ content matches its pin; mode changes exempt EXCEPT exec-bit LOSS "
+            f"({len(head_exec)} paths tracked 100755, all still executable)"
+        ),
     )
 
 
