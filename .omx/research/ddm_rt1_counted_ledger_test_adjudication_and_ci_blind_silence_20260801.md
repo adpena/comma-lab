@@ -164,3 +164,52 @@ which is the whole point); (2) mark genuinely-obsolete banned-lineage modules `-
 them; (3) `PREFLIGHT_SKIP_CI_BLIND_TESTS=1` for a single commit — loud, documented, and NOT a
 default. What must not happen is that override becoming habitual: that reproduces the original
 silence with extra steps.
+
+---
+
+## 8. Closure of §7 — and the genus at a THIRD surface (MAIN, 2026-08-01, later same day)
+
+§7 said "reported, not repaired." Repaired, and the repair was **already done** when MAIN picked it up.
+
+**MEASURED at HEAD, each module in its own process, `-m "not slow"`:**
+
+| module | result |
+|---|---|
+| `test_run_pr95_mlx_timing_smoke.py` | 1 xfailed, 4.40s |
+| `test_train_substrate_hi_nerv_mlx_local.py` | 69 passed, 5 xfailed, 1.34s |
+| `test_loss_term_telemetry.py` | 17 passed, 0.42s |
+| `test_levelset_micro_batch_loss.py` | 111 passed, 1.81s |
+| `test_mlx_scorer_adapters.py` | 43 passed, 14.31s |
+| `test_instant_projected_adjoint.py` | 8 passed, 1.16s |
+| `test_ddm_tb1_tr1_renderer.py` (task #845) | 18 passed, 0.45s |
+
+**All green.** The CI-blind hook step will not refuse an innocent commit on these. `b02b99cecb` (11:52,
+`ddm_tr6`) did the triage — "2 REAL code defects, 3 stale tests, 1 pinned open finding; both
+over-budget modules are SLOW not red" — and `aa0a27a2af` (12:59, `ddm_mk1`) the follow-on. Tasks #851
+and #845 stayed open in the ledger regardless.
+
+### The third surface
+
+The genus of §5 (`vacuity_is_indistinguishable_from_pass`) and of the staleness class recurs here in a
+form neither names:
+
+> **A verdict TABLE is a consumption surface. §7's RED list was true when measured and false when read
+> — and because it errs PESSIMISTIC, nothing flags it.** An over-optimistic stale claim gets caught the
+> moment someone depends on it. An over-pessimistic one just sits there generating phantom work, and
+> the work looks like diligence.
+
+**MEASURED sweep, 400 commits vs the 54 open (pending + in_progress) task rows: 13 open rows carry a
+commit that NAMES them** — #366 #729 #809 #815 #820 #821 #822 #824 #831 #843 #845 #846 #851. A naming
+commit is **not** proof of closure (#366 is merely referenced by a consolidation harvest), so the
+cross-check is a PROMPT to re-derive, never an auto-close. Both rows closed above were closed on
+MAIN's own re-run, not on the commit message's word.
+
+**Cheap apparatus fix, not yet built:** the same `git log | grep "#<id>"` cross-check the sweep above
+performed by hand, surfaced next to any open row before work is dispatched against it. Cost is one
+`git log` per session. It would have saved this triage entirely.
+
+**Routed:** `#843` has two claiming commits (`743e70fb06` typed fail-closed `token_codec` selector at
+`ddm_tr1_runtime.py:319-320,342-343,462`; `fe1175c4e5` "the SMEVR cut is ALREADY SPENT"). The live
+`rh1` arm owns #843/#853 and was messaged with both, plus the two things MAIN did **not** verify: that
+the EXPORTER emits what the receiver demands, and whether "already spent" means the −0.0499 S rate half
+is double-counted against the v4d 360,238 B baseline — which would flip that headline's sign.
