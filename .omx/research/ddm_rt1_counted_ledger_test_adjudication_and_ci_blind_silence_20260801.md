@@ -131,3 +131,36 @@ exit code 5 as an explicit *nothing verified* notice rather than a silent green)
 - The step covers the MLX-gated set only. Other CI-invisible classes (GPU-only, network-only, and
   `-m slow`-marked tests) remain unaddressed and are NOT claimed to be covered here.
 - `.claude/worktrees/**` copies of the trainer/test are not on `main` and were not touched.
+
+## 7. What the blindness had accumulated — and the cost of turning it loud
+
+**MEASURED (2026-08-01, after the §5 fix landed as `57d4747e60`).** Each of the 57 CI-blind modules
+was run in its own process (`-m "not slow"`, 90 s budget each). **8 are not green:**
+
+| module | rc | reading |
+|---|---|---|
+| `test_run_pr95_mlx_timing_smoke.py` | 1 | failing |
+| `test_train_substrate_hi_nerv_mlx_local.py` | 1 | failing |
+| `test_loss_term_telemetry.py` | 1 | failing |
+| `test_levelset_micro_batch_loss.py` | 1 | failing |
+| `test_mlx_scorer_adapters.py` | 1 | failing |
+| `test_instant_projected_adjoint.py` | 1 | failing |
+| `test_micro_batch_bit_identity_probe.py` | 124 | exceeded **my 90 s sweep budget** — may be merely slow, NOT established as red |
+| `test_compact_renderer_mlx_spine_runner.py` | 124 | same caveat |
+
+Separately, running all 57 in ONE process **SEGFAULTS** at ~55% inside
+`src/tac/substrates/_shared/mlx_score_aware/adapter.py:5486` (`_score_aware_loss_part_metrics`,
+reached via `run_mlx_score_aware_full_main`). Not attributed to a module here.
+
+I did NOT triage or fix these — out of scope, and two of the six failures are on the BANNED
+PR95/HNeRV lineage (lessons-only per the no-old-lineage rule), so their priority is not obvious.
+They are reported, not repaired.
+
+**The operational consequence, stated plainly rather than discovered by whoever hits it first:**
+step 3 BLOCKS, so a commit whose staged files reach one of those 6 modules will now be refused for
+a red the committer did not cause. That is the intended trade — silence became noise — but it is a
+real cost. Options for the operator, in preference order: (1) triage the 6 (they are now visible,
+which is the whole point); (2) mark genuinely-obsolete banned-lineage modules `-m slow` or delete
+them; (3) `PREFLIGHT_SKIP_CI_BLIND_TESTS=1` for a single commit — loud, documented, and NOT a
+default. What must not happen is that override becoming habitual: that reproduces the original
+silence with extra steps.
