@@ -372,6 +372,29 @@ The wr1 gap was recoverable by reading a stored column in an existing receipt (�
 debt was **restatement discipline in the memo** — print the third promised column. A ~300-line
 cross-corpus detector was built for a gap that a table edit closes. `verdict_scope: INSTANCE`.
 
+### C2-2b — the creation/repair rate, measured, with the caveat that keeps it honest
+
+MEASURED over the 7 days 2026-07-24 → 07-31 (`git log --diff-filter=A`):
+
+| quantity | measured |
+|---|---:|
+| NEW `.py` files added under `tools/` + `src/tac/` | **430** (~61/day) |
+| ...of which under `tools/` | **130** |
+| distinct tasks in `canonical_task_status.jsonl` | 143 (**44 pending**) |
+| pending tasks explicitly naming WIRING / ORPHAN / STUB / registry debt | **4** (#819, #820, #821, #825) |
+
+**The caveat is load-bearing and I will not drop it: 430 is not 430 orphans.** Each `ddm_*` arm
+legitimately writes one-shot measurement scripts (`tools/analyze_ddm_*`, `tools/aggregate_ddm_*`), and
+a one-shot analysis script is *supposed* to be single-use — calling those orphans would be the same
+name-for-substance error this arm is auditing. The honest reading is a **rate asymmetry**: new-surface
+creation runs at ~61/day while the named wiring debt sits at 4 open rows.
+
+**And the debt is being paid, partially — the counter-evidence belongs here.** #821 (*"two hollow
+UNOWNED gates"*) was **discharged in part today** by `ddm_rg5`: the findings gate went from vacuous
+(0/1,260) to honest (10 violations over 218 in-window). That is the C2-correct action — repair an
+existing surface — executed the same day, and it is why this row is a *rate* observation and not an
+indictment. `verdict_scope: FORMULATION` (the rate), `INSTANCE` (each named task).
+
 ### C2-3 — the orphan-grade inventory is the standing measurement of this class
 
 `ddm_sb2` (#819), via `ddm_ba31_negative_surfaces_20260731.md:281-291`:
@@ -501,10 +524,11 @@ single instrument would have reported as a clean zero**, which is exactly the fa
    semantic-stand-in (infection). I examined roughly a dozen closely. The remainder is *unclassified*,
    not *clean* — this is precisely the "nothing looked at ≠ nothing wrong" distinction, and I decline
    to launder it.
-3. **`git`-based C2 quantification** (new `tools/*.py` added in the last 7 days vs pending wiring
-   tasks over the same window) was delegated to a parallel sweep and was unreported at write time.
-   The C2 rows above rest on `ddm_sb2`'s 197-row inventory and on this arm's own origin, not on that
-   count. Treat any such ratio as NOT MEASURED BY THIS ARM.
+3. **The grade-3 component inventory (8 BUILT-ELSEWHERE-UNWIRED-HERE rows) is cited from
+   `ddm_sb2`/`ddm_ba31`, not re-derived.** I did not open those 8 components or verify their unwired
+   status first-hand; a parallel sweep tasked with it had not reported at write time. The one grade-2
+   instance I *did* derive myself is B-1 (the P4 fmtools layer). The 430-vs-4 rate in C2-2b **is**
+   mine, with its caveat.
 3b. **Positive-control coverage outside `CONFOUND_GATES` was not swept.** The 4-of-23 figure is now
    VERIFIED (C1-3) but its denominator is the 23-gate confound subset. The ~440 `def check_*` in
    `preflight.py` were **not** enumerated for positive-control coverage; that population is outside
