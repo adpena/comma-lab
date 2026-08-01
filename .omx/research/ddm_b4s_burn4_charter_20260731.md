@@ -252,3 +252,15 @@ carry reasons (trainer-unwired / from-scratch / dominated), never a hand-added f
 apparatus + a fire order; nothing here is a score claim.
 
 **Pointer 0.1910828242 [contest-CPU] UNMOVED.** [no-triality] [p0-ledger-ok]
+
+## §8 SUCCESSOR (append-only cross-ref, 2026-08-01)
+
+The burn FIRED and TERMINATED on `burn4.ALARM` / `LANE_EROSION_ROLLBACK_EXCEEDS_CAP`
+(2026-07-31T18:43:49Z, 4.435 h, 3 windows). The §6 OWED list is CLOSED — all five items verified paid
+at `588a26c819`. **Successor audit: `.omx/research/ddm_b4s_guard_audit_20260801.md`** — verifies the
+5 owed items at source, re-tests seal freshness (recompiles bit-identical at HEAD), reports the burn's
+measured result (**R6_PAYS**, best endpoint w02 ep805 n600 d_seg 0.004067128 = −0.0197 S vs parent),
+and AUDITS the LANE_EROSION guard: Lane-scoped and correctly inverted (clean on the aggregate-masking
+axis) but carrying a **measured 25% per-window false-positive rate** on a Lane series that GREW
++10.1%, reading the same 36-pair gate that `burn4_endpoint_decision_MAIN.json` §decision_2 ruled
+inadmissible for terminal verdicts. Do not let it hold a terminal verdict in burn-5 as calibrated.
