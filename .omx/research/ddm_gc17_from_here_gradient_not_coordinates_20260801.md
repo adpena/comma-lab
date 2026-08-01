@@ -94,19 +94,43 @@ The corpus corroborates that this is chronic, not a bad day: **QA22 was recommen
 gc8) and never run; QA17 Modal 2× and never flown; gc9 row 4 re-ordered a ν-measurement that had
 landed the previous day.** gc5 is never accounted for by any successor.
 
+### §1b The second half (gc11–gc17, N=47) — the format DEGRADED, and the trend is the finding
+
+| | gc5–gc10 | **gc11–gc17** |
+|---|---:|---:|
+| recommendations tabled | 39 | **47** |
+| BUILT + MEASURED | 27 (**69%**) | **18 (38%)** |
+| NOT-BUILT | 8 (21%) | **23 (49%)** |
+| own prediction measured FALSE | 13 | 12 |
+
+**Execution nearly halved while volume grew.** The collapse localises: **gc14 onward tabled 28 rows
+and produced 5 built+measured — of which 2 were already done *before* the convocation recommended
+them.** `gc17` diagnosed *"retrieval is the binding constraint"* and then **exhibited it**: its
+rank-1 rested on "`#826` has never been exact-eval'd," refuted by a receipt sitting in custody
+**5 h 27 m earlier**.
+
+**Combined, gc5–gc17: N = 86 recommendations, 45 built+measured (52%), 25 refuted their own
+prediction, and ZERO pointer delta across thirteen convocations.**
+
+**One correlation is actionable.** The *only* convocation whose recommendations produced measured
+score-lowering rows on our own vehicle is **gc12** (rung-1 ep641 Δ **−0.0651** S_add; burn-4 w02
+**−0.018303**; endpoint ep854 byte-closed **0.634232**, −0.013558 vs control) — and **gc12 is the one
+convocation that mechanically audited its predecessor's table** (BR-A FALSE / BR-B DEAD / BR-D
+FIRED). Auditing the predecessor is the only observed correlate of producing a real row.
+
 > **VERDICT. Do not convene to RANK. Convene to FALSIFY — and rank by cost-to-falsify, never by
-> predicted ΔS.** The estimator that sorts the table is the one thing measured to fail every time;
-> the falsifiers are the one thing measured to work. A convocation whose first act is generating
-> candidates is means-as-ends. Its first act must be a **recall pass naming, per candidate, the
-> artifact that last touched it and that artifact's verdict-scope** — today that pass alone refuted
-> four claims at $0, two of them mine.
+> predicted ΔS.** In the first half the estimator that sorted the table failed six times out of six
+> at the head; in the second half the table stopped being executed at all. A convocation whose first
+> act is generating candidates is means-as-ends. Its first act must be **(i) a mechanical audit of
+> the predecessor's table and (ii) a recall pass naming, per candidate, the artifact that last
+> touched it and its verdict-scope.** Today that pass alone refuted four claims at $0, two of them
+> mine — and the audit found a finished measurement nobody had read (A0 below).
 
-**This is why §5 ranks by cost-to-falsify, carries no ΔS estimates at the head, and has two entries
-rather than fifteen** — and why both are levers that are *already built and never raced*, i.e. the
-QA22 pattern, where the deficit was never ideation.
+**This is why §5 ranks by cost-to-falsify, carries no ΔS at the head, and has three entries rather
+than fifteen** — one of which is not a proposal at all but a harvest.
 
-*(A second arm auditing gc11–gc17 had not returned at write time; it can only sharpen these counts,
-not overturn a verdict resting on N=39 plus four same-day source-verified refutations.)*
+*Scope caveat inherited from both arms:* `/Volumes/APDataStore/pact`, `.omx/tmp/codex_worktrees/`,
+and unmerged worktree branches were **not** searched. Every "NOT-BUILT" above carries that blind spot.
 
 ---
 
@@ -271,6 +295,28 @@ chosen for its name.*
 
 Ranked by expected ΔS per unit wall-clock. **Neither requires new machinery** — this is the
 "pay the debt on the EXISTING surface" discipline, and both are one-flag or one-array changes.
+
+### A0 — **HARVEST `#824` (`ddm_bp1`). It is already measured. Nobody has read it.** Cost ≈ 0.
+
+The backcast found a **completed n600 run whose result has never been landed**. `ddm_bp1` — gc14's R1
+and gc15's rank-2, billed as *"the cheapest decisive arm in the campaign"* — ran to completion on
+07-31 (receipts 16:23 / 16:59, custody `/Volumes/VertigoDataTier/pact/ddm_bp1_20260731/`), both arms
+from the **same parent ep946**, argv identical except `--adam-bias-correction`:
+
+| arm | n600 `full_confirm` d_seg | vs parent 0.004148441 |
+|---|---:|---:|
+| **A — incumbent (bias-correction OFF)** | **0.004134369** | **−0.0014072 S** |
+| B′ — bias-corrected | 0.004259211 | +0.011077 S |
+
+**Arm A beats its own parent, and the bias-corrected arm LOSES by 0.012484 S seg.** No memo, no
+commit, no ledger row; `#824` is still `pending`. This settles gc15's H1 in the *opposite* direction
+to the one feared (the descent is **not** a bias-correction artifact) — a real result, sitting unread.
+
+- **Cost:** a memo + a ledger row. No compute, no slot.
+- **Stakes:** −0.0014072 S = **0.18% of the gap**. Small — *and it is finished*, which is the point.
+- **Why it is ranked first:** per §1's verdict, harvesting a completed measurement strictly dominates
+  convening about an uncompleted one. This is grade-5 orphan debt
+  (`[[designed_stub_is_orphan_signal_and_a_no_fake_violation]]`), found by audit, not by ideation.
 
 ### A1 — race `rate_model=smevr_surrogate` against the live `entropy`. **Highest yield, lowest cost.**
 
