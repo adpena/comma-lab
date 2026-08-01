@@ -1100,6 +1100,50 @@ class MLXCustomKernelStridedGroupedConvAdapter:
     small but systematic rather than random. It is not a reason to revert on its own; it IS a
     reason that any argmax-exactness claim about the MLX forward must cite this measurement.
 
+    ADJUDICATED 2026-08-01 (ddm_mi1, task #855): KEEP THE NATIVE FORWARD. The default stands.
+    ------------------------------------------------------------------------------------
+    The hazard above compares the two routings TO EACH OTHER, which cannot decide anything,
+    because NEITHER is truth: both are valid fp32 evaluations of the same convolution that
+    differ only in accumulation order. The deciding question is which forward disagrees LESS
+    with the frozen CPU-torch SegNet argmax -- the only authority. MEASURED over ALL 600
+    cache pairs (117,964,800 px, ``--with-torch-authority``):
+
+      * native forward    vs torch-CPU authority: 1,812 px (1.5361e-05)
+      * fixed-order ref   vs torch-CPU authority: 1,830 px (1.5513e-05)
+      * BOTH wrong and agreeing with each other:  1,565 px  = 86.4% of the native gap
+
+    So 86.4% of the MLX-vs-authority gap is shared by both routings and no routing choice can
+    touch it. The routing-attributable residue splits 247 px where native is wrong and the
+    reference right, against 265 px the other way: reverting the forward would move agreement
+    with the authority by -18 px, i.e. WORSE, against a counting noise of +/-22.6 on that
+    difference. The honest reading is "indistinguishable, and certainly not an improvement".
+
+    PRICE OF REVERTING (MEASURED, so the tradeoff is priced rather than asserted). M5 Max,
+    MLX-GPU, SegNet fwd+bwd at B=8, median of 5 after 2 warmups, via
+    ``scorer_throughput_gate.measure_segnet_fwd_bwd_ms``:
+
+      * native fwd + custom Metal bwd (this adapter)     395.2 ms   1.00x
+      * fixed-order ref fwd + custom Metal bwd (revert)   608.9 ms   1.54x
+      * fixed-order ref fwd + ref bwd (env=0)            6868.2 ms  17.38x
+
+    VERDICT: accept the 4.03e-06 routing delta. Paying 1.54x wall-clock on the dominant
+    training cost to move authority-agreement by -18 px in 117.9M is not a trade worth making,
+    and the falsified premise is worth recording: the 2026-06-11 probe that rejected the
+    forward swap treated the fixed-order reference as the correct forward, and it is not --
+    it is simply a different accumulation order, measurably no closer to the authority.
+
+    CONTROL-KNOB PROVENANCE (#847 rung):
+      * derivation: MEASURED, n=600 real 0.mkv frames, authority-agreement delta -18 px
+        (inside +/-22.6 noise) against a MEASURED 1.54x throughput cost. Not a constant.
+      * owner: the grouped+strided conv routing default (``TAC_MLX_CUSTOM_GROUPED_BACKWARD``).
+      * re-derivation trigger: re-run ``tools/probe_real_frame_dseg_grouped_conv_routing.py
+        --pairs 600 --with-torch-authority`` and re-decide if EITHER (a) the routing-
+        attributable net exceeds its counting noise in favour of the reference, or (b) the
+        measured throughput ratio of the hybrid falls below 1.10x, or (c) the MLX forward is
+        ever promoted to compute a REPORTED d_seg (today the verdict path is torch-CPU:
+        ``_verdict_dseg_dpose_chunked(seg_cpu, posenet_cpu, ...)``, so no reported number
+        flows through this routing at all -- it shapes only the training gradient).
+
     THROUGHPUT TOOL ONLY. The gradient is fp32 and ~exact (cosine ~1.0 vs the
     trusted Python-loop reference) but is NEVER a d_seg/d_pose score authority —
     the FP32-exact torch-CPU scorer remains the only authority (CLAUDE.md
@@ -1221,8 +1265,20 @@ def _log_custom_backward_decision_once() -> None:
         # MLXCustomKernelStridedGroupedConvAdapter.
         "note": ("log-only, but the routing it reports is NOT numerically neutral: the two "
                  "paths differ in the FORWARD and flip 4.0e-06 of SegNet argmax pixels on real "
-                 "0.mkv frames (MEASURED n=96 pairs, 2026-08-01). ~17x backward when active."),
+                 "0.mkv frames (MEASURED n=96 pairs, 2026-08-01). ~17x backward when active. "
+                 "ADJUDICATED #855: the native forward is KEPT -- measured over all 600 pairs "
+                 "it agrees with the frozen torch-CPU authority on 18 MORE pixels than the "
+                 "fixed-order reference does (inside +/-22.6 noise), so reverting buys nothing "
+                 "and costs 1.54x wall-clock."),
         "forward_argmax_flip_fraction_vs_reference_real_frames_n96": 4.026624891493056e-06,
+        # Both routings sit ~3.5x FURTHER from the torch-CPU authority than they do from each
+        # other, and 86.4% of that gap is shared -- so the routing delta is the smaller,
+        # already-adjudicated term. Operators comparing runs should read this one.
+        "forward_argmax_disagreement_vs_torch_cpu_authority_n600": {
+            "native": 1.5360514322916666e-05,
+            "fixed_order_reference": 1.5513102213541666e-05,
+            "shared_fraction_of_native_gap": 0.8636865342163356,  # 1565/1812
+        },
     }), flush=True)
 
 

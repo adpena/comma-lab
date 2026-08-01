@@ -17,6 +17,38 @@ these tests MUST fail. The headline behavioral guards are:
 
 MLX is required (Apple Silicon); the module is a ``[macOS-MLX research-signal]``
 kernel and asserts no contest score.
+
+DEVICE IS PINNED, AND WHY (2026-08-01, ddm_mi1). Every numeric assertion here is
+device-sensitive, and this module used to inherit whatever MLX default device the
+*process* happened to be in. Sibling test modules set the process-global default
+device at IMPORT time with no restore (12 of them do; ``test_levelset_micro_batch_loss``
+is one), and pytest imports every collected module before running any test — so a
+mere ``-k`` sweep that collected one of those silently moved this module to CPU.
+MEASURED: ``mx.set_default_device(mx.cpu)`` alone reproduces exactly the two parity
+reds seen in wider sweeps. The ``_pin_mlx_device`` fixture below makes this module
+declare its own device instead of inheriting one, which is immune to every such
+leaker, present or future.
+
+TOLERANCES ARE DERIVED FROM THE bf16 QUANTUM, NOT HARDCODED (same landing). These
+parity tests cast to bfloat16 and then claimed sub-ULP agreement: the square-update
+test asserted ``< 1e-6`` — **3906x below one bf16 ULP** — and the polar
+orthonormality-equality test asserted ``< 1e-3`` = 0.256 ULP. A tolerance finer than
+the dtype's own quantum cannot be a parity claim; it can only pass by a coincidence
+of reduction order, which is exactly why they passed on GPU and failed on CPU. The
+bounds are now multiples of :data:`_BF16_ULP_AT_ONE` with MEASURED headroom, and
+:func:`test_parity_bounds_still_catch_a_real_logic_error` is the negative control.
+
+WHAT THESE PARITY TESTS DO **NOT** COVER (MEASURED, stated so nobody assumes it).
+The prior docstring claimed "a real logic error (wrong coeffs, wrong steps, missing
+transpose) would blow either check up by orders of magnitude". That is FALSE for the
+step count: forcing ``AURORA_SIMPLE_QUINTIC_STEPS`` from 12 down to 6 or even 3
+leaves both parity quantities bit-identical to the clean run (2.00 ULP / 0.42 ULP),
+because the quintic iteration has converged well before step 3 at bf16 resolution.
+The step count is pinned ONLY as a constant, by
+``test_provenance_constants_are_the_verified_aurora_values`` — a constants test, not
+a behavioral one (CLAUDE.md NO-FAKE class 2). Coefficient errors ARE caught: scaling
+``b`` by 1.5 gives 52.5 ULP / 129.5 ULP, and a divergent coefficient (``a`` x 1.10)
+goes all-NaN and is caught by the finiteness assertions.
 """
 
 from __future__ import annotations
@@ -43,6 +75,46 @@ from tac.optimization.aurora_mlx import (  # noqa: E402
     aurora_update_mlx,
     classify_matrix_shape,
 )
+
+# ---------------------------------------------------------------------------
+# Device + tolerance discipline (see the module docstring for the measurements)
+# ---------------------------------------------------------------------------
+
+# bfloat16 keeps 8 total mantissa bits, so the representable quantum at |x| ~ 1 is 2**-8.
+# Every parity quantity below is a bf16-rounded value at O(1), so this is the unit that
+# any "differs only by reduction order" claim has to be expressed in.
+_BF16_ULP_AT_ONE = 2.0**-8  # 3.90625e-03
+
+# Bounds as multiples of one bf16 ULP. Each carries its MEASURED clean value (MLX-CPU vs
+# torch-CPU, 2026-08-01) and the MEASURED margin by which a real coefficient defect
+# (b x 1.5) overshoots it -- the >=10x signal-clears-tolerance law.
+_POLAR_MAXDIFF_ULP = 4.0  # clean <=2.00 ULP (2.0x headroom); defect 52.5 ULP = 13.1x bound
+_ORTH_GAP_ULP = 2.0  # clean <=0.42 ULP (4.8x headroom); defect 129.5 ULP = 64.7x bound
+_UPDATE_MAXDIFF_ULP = 2.0  # clean 0.100 ULP (20x headroom); shares the same polar kernel
+
+# The device this module's tolerances were calibrated on. CPU is deliberate: it is the
+# apples-to-apples device against the torch-CPU reference, it needs no Metal (so these run
+# in CI), and it does not contend with the live GPU training arm -- the same reason sibling
+# modules pin CPU ("NEVER gpu: the live run owns it").
+_PINNED_DEVICE = "cpu"
+
+
+@pytest.fixture(autouse=True)
+def _pin_mlx_device():
+    """Declare this module's MLX device instead of inheriting the process-global one.
+
+    Snapshot + restore, so this fixture neither leaks its own choice nor depends on what
+    any earlier-imported module leaked. Without it, the two ``test_parity_*`` tests are
+    order-dependent: they pass when collected alone (GPU default) and fail when collected
+    after any module that sets the global default to CPU at import time.
+    """
+    previous = mx.default_device()
+    mx.set_default_device(mx.cpu if _PINNED_DEVICE == "cpu" else mx.gpu)
+    try:
+        yield
+    finally:
+        mx.set_default_device(previous)
+
 
 # Location of the cloned upstream reference (SSD scratch; optional).
 _REF_SRC = "/Volumes/VertigoDataTier/pact/tilde_scratch/aurora-release/src"
@@ -361,9 +433,12 @@ def test_parity_polar_vs_pytorch_reference():
                 mx.array(a), cast_float32_to_bfloat16=True
             ).astype(mx.float32)
         )
-        # A few bf16 ULPs at O(1) magnitude.
+        # A few bf16 ULPs at O(1) magnitude -- expressed in ULPs, because that is the
+        # only unit in which "differs only by reduction order" is a checkable claim.
         max_diff = float(np.abs(got - ref).max())
-        assert max_diff < 1e-2, (m, n, max_diff)
+        assert np.isfinite(max_diff), (m, n, "non-finite polar output")
+        assert max_diff < _POLAR_MAXDIFF_ULP * _BF16_ULP_AT_ONE, (
+            m, n, max_diff, max_diff / _BF16_ULP_AT_ONE)
         # Both are equally-valid polar factors: identical orthonormality error.
         # (np.errstate suppresses the spurious macOS Accelerate BLAS warnings
         # for these small matmuls; outputs are finite.)
@@ -376,7 +451,10 @@ def test_parity_polar_vs_pytorch_reference():
                 ref_orth = float(np.abs(ref @ ref.T - np.eye(m)).max())
                 got_orth = float(np.abs(got @ got.T - np.eye(m)).max())
         assert np.isfinite(ref_orth) and np.isfinite(got_orth), (m, n)
-        assert abs(ref_orth - got_orth) < 1e-3, (m, n, ref_orth, got_orth, k)
+        # Both orthonormality errors are themselves bf16-rounded quantities, so they can
+        # only be compared down to the bf16 quantum -- the old 1e-3 was 0.256 ULP.
+        assert abs(ref_orth - got_orth) < _ORTH_GAP_ULP * _BF16_ULP_AT_ONE, (
+            m, n, ref_orth, got_orth, k, abs(ref_orth - got_orth) / _BF16_ULP_AT_ONE)
 
 
 @pytest.mark.skipif(
@@ -433,6 +511,59 @@ def test_polar_logic_exact_in_float64_vs_numpy_reference():
     not _reference_available(),
     reason="cloned aurora-release reference not present on SSD scratch",
 )
+def test_parity_bounds_still_catch_a_real_logic_error():
+    """NEGATIVE CONTROL for the bf16-derived bounds above.
+
+    Widening a tolerance is only safe if the widened bound still fires on a real defect.
+    This perturbs the quintic's ``b`` coefficient by 1.5x -- a genuine logic error, not a
+    strawman -- and asserts BOTH parity quantities overshoot their bounds by >=10x, so the
+    bounds discriminate rather than merely accommodate. Without this control, a future
+    "just bump the tolerance" edit could silently turn these parity tests vacuous.
+    """
+    torch = pytest.importorskip("torch")
+    _, torch_polar = _load_reference()
+    from tac.optimization import aurora_mlx as _aurora_mod
+
+    a, b, c = _aurora_mod.AURORA_SIMPLE_QUINTIC_COEFFS
+    original = _aurora_mod.AURORA_SIMPLE_QUINTIC_COEFFS
+    worst_maxdiff = 0.0
+    worst_orth_gap = 0.0
+    _aurora_mod.AURORA_SIMPLE_QUINTIC_COEFFS = (a, b * 1.5, c)
+    try:
+        rng = np.random.default_rng(11)
+        for m, n in [(64, 8), (16, 16), (8, 64), (40, 6), (20, 20)]:
+            arr = rng.standard_normal((m, n)).astype(np.float32)
+            ref = torch_polar(torch.tensor(arr)).float().numpy()
+            got = np.asarray(
+                aurora_simple_quintic_polar_mlx(
+                    mx.array(arr), cast_float32_to_bfloat16=True
+                ).astype(mx.float32)
+            )
+            worst_maxdiff = max(worst_maxdiff, float(np.abs(got - ref).max()))
+            with np.errstate(divide="ignore", over="ignore", invalid="ignore"):
+                if m >= n:
+                    ref_orth = float(np.abs(ref.T @ ref - np.eye(n)).max())
+                    got_orth = float(np.abs(got.T @ got - np.eye(n)).max())
+                else:
+                    ref_orth = float(np.abs(ref @ ref.T - np.eye(m)).max())
+                    got_orth = float(np.abs(got @ got.T - np.eye(m)).max())
+            worst_orth_gap = max(worst_orth_gap, abs(ref_orth - got_orth))
+    finally:
+        _aurora_mod.AURORA_SIMPLE_QUINTIC_COEFFS = original
+
+    # MEASURED 2026-08-01 on MLX-CPU: 52.5 ULP and 129.5 ULP against 4 / 2 ULP bounds.
+    assert worst_maxdiff >= 10.0 * _POLAR_MAXDIFF_ULP * _BF16_ULP_AT_ONE, (
+        "polar maxdiff bound no longer discriminates a real coefficient defect",
+        worst_maxdiff / _BF16_ULP_AT_ONE)
+    assert worst_orth_gap >= 10.0 * _ORTH_GAP_ULP * _BF16_ULP_AT_ONE, (
+        "orthonormality-gap bound no longer discriminates a real coefficient defect",
+        worst_orth_gap / _BF16_ULP_AT_ONE)
+
+
+@pytest.mark.skipif(
+    not _reference_available(),
+    reason="cloned aurora-release reference not present on SSD scratch",
+)
 def test_parity_square_update_vs_pytorch_reference():
     """Square update has no f32 preconditioning loop => near-exact parity."""
     torch = pytest.importorskip("torch")
@@ -468,7 +599,12 @@ def test_parity_square_update_vs_pytorch_reference():
         polar_cast_float32_to_bfloat16=True,
     )
     max_diff = float(np.abs(np.asarray(wm) - wt.numpy()).max())
-    assert max_diff < 1e-6, max_diff
+    assert np.isfinite(max_diff), "non-finite square update"
+    # The update runs the polar kernel in bf16, so its parity floor is the bf16 quantum.
+    # The old ``< 1e-6`` was 3906x BELOW one bf16 ULP -- unreachable except by a
+    # coincidence of reduction order, which is why it passed on GPU and failed on CPU.
+    assert max_diff < _UPDATE_MAXDIFF_ULP * _BF16_ULP_AT_ONE, (
+        max_diff, max_diff / _BF16_ULP_AT_ONE)
 
 
 @pytest.mark.skipif(

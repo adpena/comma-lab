@@ -19,6 +19,24 @@ WHAT IT IS NOT. MLX is NEVER a score authority (CLAUDE.md "MPS auth eval is NOIS
 corrupt any reported d_seg. It perturbs the TRAINING-TIME seg signal, which is a real but
 different claim, and this tool reports it as such.
 
+``--with-torch-authority`` -- THE ARM THAT ADJUDICATES, not just measures (added 2026-08-01,
+ddm_mi1, task #855). Native-vs-reference disagreement alone cannot decide which routing to
+run, because NEITHER is truth: both are valid fp32 evaluations of the same convolution that
+differ only in accumulation order. The decision-relevant question is which one disagrees LESS
+with the frozen CPU-torch SegNet argmax. This arm scores the same frames through
+``modules.SegNet`` on torch-CPU (the exact counterpart of the MLX adapter: encoder -> decoder
+-> segmentation_head) and reports each routing's disagreement with it, plus the SHARED
+component -- the pixels where both routings disagree with the authority AND agree with each
+other, which no routing choice can fix.
+
+MEASURED with this arm over all 600 cache pairs (117,964,800 px), 2026-08-01: native 1,812 px
+(1.536e-05), fixed-order reference 1,830 px (1.551e-05), shared 1,565 px. So 86.4% of the
+MLX-vs-authority gap is common to both routings, the routing-attributable residue splits 247
+px (native wrong) / 265 px (reference wrong), and reverting the forward to the reference would
+make agreement with the authority WORSE by 18 px -- inside the +/-22.6 counting noise, but
+certainly not an improvement -- at a MEASURED 1.54x wall-clock cost. That is the evidence
+behind the #855 verdict recorded on ``MLXCustomKernelStridedGroupedConvAdapter``.
+
 METHOD. Both adapters are built from the SAME frozen upstream ``DistortionNet.segnet``. The
 routing is frozen at ADAPTER CONSTRUCTION (every ``torch_conv2d_to_mlx`` call site is inside an
 ``__init__``), so the env var must be set BEFORE each build and the adapter rebuilt -- flipping
@@ -60,6 +78,10 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     ap.add_argument("--chunk", type=int, default=4, help="frames per forward (memory bound)")
     ap.add_argument("--device", choices=("gpu", "cpu"), default="gpu")
     ap.add_argument("--out", default="", help="write the full per-frame JSON here")
+    ap.add_argument(
+        "--with-torch-authority", action="store_true",
+        help="also score each chunk through the frozen torch-CPU SegNet and report which "
+             "routing disagrees LESS with it (the arm that adjudicates the routing choice)")
     return ap.parse_args(argv)
 
 
@@ -101,6 +123,10 @@ def main(argv: list[str] | None = None) -> int:
     total_flips = 0
     per_frame: list[dict] = []
     worst: dict | None = None
+    # --with-torch-authority accumulators: disagreement of each routing with the frozen
+    # torch-CPU argmax, plus the shared component no routing choice can move.
+    auth_disagree = {"native": 0, "reference": 0}
+    auth_shared = 0
     try:
         for lo in range(0, n_pairs, max(1, int(args.chunk))):
             hi = min(n_pairs, lo + max(1, int(args.chunk)))
@@ -115,6 +141,19 @@ def main(argv: list[str] | None = None) -> int:
             ref, custom = logits["0"], logits["1"]
             arg_ref, arg_custom = ref.argmax(axis=1), custom.argmax(axis=1)
             mismatch = arg_ref != arg_custom
+            if args.with_torch_authority:
+                import torch
+
+                with torch.no_grad():
+                    # dist.segnet IS modules.SegNet, whose forward is exactly
+                    # encoder -> decoder -> segmentation_head -- the same composition
+                    # MLXSegNetAdapter performs, on the same already-preprocessed input.
+                    auth = dist.segnet(torch.from_numpy(x.copy())).float().numpy()
+                arg_auth = auth.argmax(axis=1)
+                wrong_c, wrong_r = arg_custom != arg_auth, arg_ref != arg_auth
+                auth_disagree["native"] += int(wrong_c.sum())
+                auth_disagree["reference"] += int(wrong_r.sum())
+                auth_shared += int((wrong_c & wrong_r & (arg_custom == arg_ref)).sum())
             total_pixels += int(arg_ref.size)
             total_flips += int(mismatch.sum())
             ordered = np.sort(ref, axis=1)
@@ -165,6 +204,39 @@ def main(argv: list[str] | None = None) -> int:
         "source_video_sha256": cache.manifest.get("source_video_sha256"),
         "device": args.device,
     }
+    if args.with_torch_authority:
+        native_only = auth_disagree["native"] - auth_shared
+        reference_only = auth_disagree["reference"] - auth_shared
+        net = auth_disagree["reference"] - auth_disagree["native"]
+        # Counting noise on a difference of two disjoint Poisson-ish counts.
+        noise = (native_only + reference_only) ** 0.5
+        result["torch_cpu_authority"] = {
+            "disagree_pixels": dict(auth_disagree),
+            "disagree_fraction": {
+                k: (v / total_pixels if total_pixels else 0.0)
+                for k, v in auth_disagree.items()
+            },
+            "shared_disagreement_pixels": auth_shared,
+            "shared_fraction_of_native_gap": (
+                auth_shared / auth_disagree["native"] if auth_disagree["native"] else 0.0),
+            "routing_attributable": {
+                "native_wrong_reference_right": native_only,
+                "reference_wrong_native_right": reference_only,
+            },
+            "net_pixels_reverting_forward_would_cost": net,
+            "counting_noise_on_net": noise,
+            # POLARITY: net = reference_disagreements - native_disagreements, so net > 0
+            # means the reference is the WORSE forward and reverting would cost pixels.
+            "verdict": (
+                "REVERTING_FORWARD_WORSENS_AGREEMENT" if net > noise else
+                "REVERTING_FORWARD_IMPROVES_AGREEMENT" if net < -noise else
+                "ROUTING_CHOICE_INDISTINGUISHABLE_AT_THE_AUTHORITY"),
+            "note": (
+                "Neither routing is truth; both are fp32 evaluations of the same convolution "
+                "differing in accumulation order. A POSITIVE 'net' means the fixed-order "
+                "reference disagrees with the authority on MORE pixels than native, i.e. "
+                "reverting the forward would move AWAY from the authority."),
+        }
     print(json.dumps(result, indent=2))
     if args.out:
         out_path = Path(args.out)
