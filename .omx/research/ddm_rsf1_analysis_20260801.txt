@@ -1,0 +1,103 @@
+loaded 70 fields
+shapes: {(600, 24, 32, 4)}   levels: {16}   (matched-shape => raw byte totals are directly comparable)
+
+--- ALL FIELDS (pooled; mixes 4 runs -> between-run scale dominates)  (n=70) ---
+    smevr_bytes: min 8,837  max 557,238  spread 6205.7% of min
+    surrogate                                        rho             95% CI  r(log bytes)
+    entropy (LIVE DEFAULT)                       +0.2832 [-0.040,+0.549]       +0.6893
+    smevr_surrogate (BUILT; consec-delta)        +0.3647 [+0.114,+0.591]       +0.3690
+    mode-base residual (gd1 T4 derived cand.)    +0.2558 [+0.003,+0.501]       +0.3184
+    soft mode-occupancy (SMEVR cost driver)      +0.2421 [-0.016,+0.489]       +0.4317
+    [oracle] hard mode-occupancy                 +0.8673 [+0.737,+0.947]       +0.7986
+
+--- A_crossconfig  (n=22) ---
+    smevr_bytes: min 8,837  max 557,238  spread 6205.7% of min
+    surrogate                                        rho             95% CI  r(log bytes)
+    entropy (LIVE DEFAULT)                       +0.3424 [-0.210,+0.741]       +0.7337
+    smevr_surrogate (BUILT; consec-delta)        +0.3107 [-0.201,+0.767]       +0.3200
+    mode-base residual (gd1 T4 derived cand.)    +0.3096 [-0.217,+0.771]       +0.3344
+    soft mode-occupancy (SMEVR cost driver)      +0.2373 [-0.287,+0.717]       +0.5221
+    [oracle] hard mode-occupancy                 +0.4757 [-0.040,+0.823]       +0.7605
+
+--- B_traj_r1c  (n=16) ---
+    smevr_bytes: min 265,876  max 270,229  spread 1.6% of min
+    surrogate                                        rho             95% CI  r(log bytes)
+    entropy (LIVE DEFAULT)                       -0.7235 [-0.943,-0.227]       -0.6457
+    smevr_surrogate (BUILT; consec-delta)        +0.7412 [+0.231,+0.973]       +0.8534
+    mode-base residual (gd1 T4 derived cand.)    +0.7412 [+0.231,+0.973]       +0.8505
+    soft mode-occupancy (SMEVR cost driver)      +0.7441 [+0.250,+0.973]       +0.8690
+    [oracle] hard mode-occupancy                 -0.6941 [-0.910,-0.225]       -0.5522
+
+--- C_traj_bc1  (n=16) ---
+    smevr_bytes: min 86,283  max 250,358  spread 190.2% of min
+    surrogate                                        rho             95% CI  r(log bytes)
+    entropy (LIVE DEFAULT)                       -0.5382 [-0.988,+0.110]       +0.4859
+    smevr_surrogate (BUILT; consec-delta)        +1.0000 [+1.000,+1.000]       +0.8407
+    mode-base residual (gd1 T4 derived cand.)    +1.0000 [+1.000,+1.000]       +0.8141
+    soft mode-occupancy (SMEVR cost driver)      +1.0000 [+1.000,+1.000]       +0.8400
+    [oracle] hard mode-occupancy                 +0.9735 [+0.851,+1.000]       +0.9965
+
+--- D_traj_lv1_unmasked  (n=16) ---
+    smevr_bytes: min 154,299  max 557,238  spread 261.1% of min
+    surrogate                                        rho             95% CI  r(log bytes)
+    entropy (LIVE DEFAULT)                       +1.0000 [+1.000,+1.000]       +0.9757
+    smevr_surrogate (BUILT; consec-delta)        +1.0000 [+1.000,+1.000]       +0.8984
+    mode-base residual (gd1 T4 derived cand.)    +1.0000 [+1.000,+1.000]       +0.8501
+    soft mode-occupancy (SMEVR cost driver)      +1.0000 [+1.000,+1.000]       +0.9317
+    [oracle] hard mode-occupancy                 +1.0000 [+1.000,+1.000]       +0.9946
+
+
+=== WITHIN-TRAJECTORY DIRECTIONAL CONCORDANCE ===
+(adjacent-checkpoint sign agreement: does the surrogate move with real SMEVR bytes?)
+
+  B_traj_r1c (n_steps=15; bytes rise in 10/15 steps)
+    entropy (LIVE DEFAULT)                       sign-agree  40.0%   rho(level) -0.7235
+    smevr_surrogate (BUILT; consec-delta)        sign-agree  66.7%   rho(level) +0.7412
+    mode-base residual (gd1 T4 derived cand.)    sign-agree  66.7%   rho(level) +0.7412
+    soft mode-occupancy (SMEVR cost driver)      sign-agree  73.3%   rho(level) +0.7441
+    [oracle] hard mode-occupancy                 sign-agree  46.7%   rho(level) -0.6941
+
+  C_traj_bc1 (n_steps=15; bytes rise in 15/15 steps)
+    entropy (LIVE DEFAULT)                       sign-agree  33.3%   rho(level) -0.5382
+    smevr_surrogate (BUILT; consec-delta)        sign-agree 100.0%   rho(level) +1.0000
+    mode-base residual (gd1 T4 derived cand.)    sign-agree 100.0%   rho(level) +1.0000
+    soft mode-occupancy (SMEVR cost driver)      sign-agree 100.0%   rho(level) +1.0000
+    [oracle] hard mode-occupancy                 sign-agree  86.7%   rho(level) +0.9735
+
+  D_traj_lv1_unmasked (n_steps=15; bytes rise in 15/15 steps)
+    entropy (LIVE DEFAULT)                       sign-agree 100.0%   rho(level) +1.0000
+    smevr_surrogate (BUILT; consec-delta)        sign-agree 100.0%   rho(level) +1.0000
+    mode-base residual (gd1 T4 derived cand.)    sign-agree 100.0%   rho(level) +1.0000
+    soft mode-occupancy (SMEVR cost driver)      sign-agree 100.0%   rho(level) +1.0000
+    [oracle] hard mode-occupancy                 sign-agree 100.0%   rho(level) +1.0000
+
+
+=== SMEVR STREAM DECOMPOSITION (where the shipped bytes actually are) ===
+  A_crossconfig          base      749 ( 0.3%)  occupancy    116198 (41.6%)  value    162538 (58.2%)
+  B_traj_r1c             base      664 ( 0.2%)  occupancy     81568 (30.3%)  value    186737 (69.4%)
+  C_traj_bc1             base      680 ( 0.3%)  occupancy     92317 (43.7%)  value    118073 (55.9%)
+  D_traj_lv1_unmasked    base     1195 ( 0.3%)  occupancy    175054 (39.7%)  value    264553 (60.0%)
+
+
+=== MEASURED bits->bytes EXCHANGE RATE vs the ASSUMED n/8 ===
+  assumed slope (n_counted/8) = 115,392 bytes per 1 bit/token [n_counted=923,136]
+  A_crossconfig          entropy (LIVE DEFAULT)                     slope      -45,945 B/bit  R^2 0.195
+  A_crossconfig          smevr_surrogate (BUILT; consec-delta)      slope      +24,443 B/bit  R^2 0.587
+  A_crossconfig          mode-base residual (gd1 T4 derived cand.)  slope      +28,950 B/bit  R^2 0.615
+  B_traj_r1c             entropy (LIVE DEFAULT)                     slope      -45,228 B/bit  R^2 0.417
+  B_traj_r1c             smevr_surrogate (BUILT; consec-delta)      slope      +23,947 B/bit  R^2 0.729
+  B_traj_r1c             mode-base residual (gd1 T4 derived cand.)  slope      +25,189 B/bit  R^2 0.724
+  C_traj_bc1             entropy (LIVE DEFAULT)                     slope     +135,830 B/bit  R^2 0.117
+  C_traj_bc1             smevr_surrogate (BUILT; consec-delta)      slope     +120,239 B/bit  R^2 0.841
+  C_traj_bc1             mode-base residual (gd1 T4 derived cand.)  slope     +125,329 B/bit  R^2 0.803
+
+
+=== IN-LOOP SAMPLING NOISE FLOOR (batch-8, the estimator the gradient sees) ===
+  A_crossconfig          entropy          between-field spread 3.0041 bits | batch-8 std 0.0244 bits | SNR 122.98x
+  A_crossconfig          smevr_surrogate  between-field spread 1.5975 bits | batch-8 std 0.0363 bits | SNR 43.96x
+  B_traj_r1c             entropy          between-field spread 0.0570 bits | batch-8 std 0.0160 bits | SNR  3.56x
+  B_traj_r1c             smevr_surrogate  between-field spread 0.1523 bits | batch-8 std 0.0460 bits | SNR  3.31x
+  C_traj_bc1             entropy          between-field spread 0.4537 bits | batch-8 std 0.0166 bits | SNR 27.36x
+  C_traj_bc1             smevr_surrogate  between-field spread 1.0226 bits | batch-8 std 0.0516 bits | SNR 19.84x
+  D_traj_lv1_unmasked    entropy          between-field spread 0.9609 bits | batch-8 std 0.0124 bits | SNR 77.57x
+  D_traj_lv1_unmasked    smevr_surrogate  between-field spread 1.2914 bits | batch-8 std 0.0400 bits | SNR 32.31x

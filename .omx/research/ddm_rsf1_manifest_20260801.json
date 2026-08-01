@@ -1,0 +1,352 @@
+[
+{
+"dir": "ddm_b4s_20260731/window_01",
+"ckpt": "stage_seg_trunk_tau_final.npz",
+"group": "A_crossconfig"
+},
+{
+"dir": "ddm_b4s_20260731/window_02",
+"ckpt": "stage_seg_trunk_tau_final.npz",
+"group": "A_crossconfig"
+},
+{
+"dir": "ddm_b4s_20260731/window_03",
+"ckpt": "stage_seg_trunk_tau_final.npz",
+"group": "A_crossconfig"
+},
+{
+"dir": "ddm_bc1_20260731/burn_out",
+"ckpt": "intra_seg_trunk_ce_ep00009.npz",
+"group": "C_traj_bc1"
+},
+{
+"dir": "ddm_bc1_20260731/burn_out",
+"ckpt": "intra_seg_trunk_tau_ep00039.npz",
+"group": "C_traj_bc1"
+},
+{
+"dir": "ddm_bc1_20260731/burn_out",
+"ckpt": "intra_seg_trunk_tau_ep00059.npz",
+"group": "C_traj_bc1"
+},
+{
+"dir": "ddm_bc1_20260731/burn_out",
+"ckpt": "intra_seg_trunk_tau_ep00089.npz",
+"group": "C_traj_bc1"
+},
+{
+"dir": "ddm_bc1_20260731/burn_out",
+"ckpt": "intra_seg_trunk_tau_ep00109.npz",
+"group": "C_traj_bc1"
+},
+{
+"dir": "ddm_bc1_20260731/burn_out",
+"ckpt": "intra_seg_trunk_tau_ep00139.npz",
+"group": "C_traj_bc1"
+},
+{
+"dir": "ddm_bc1_20260731/burn_out",
+"ckpt": "intra_seg_trunk_tau_ep00169.npz",
+"group": "C_traj_bc1"
+},
+{
+"dir": "ddm_bc1_20260731/burn_out",
+"ckpt": "intra_seg_trunk_tau_ep00189.npz",
+"group": "C_traj_bc1"
+},
+{
+"dir": "ddm_bc1_20260731/burn_out",
+"ckpt": "intra_seg_trunk_tau_ep00219.npz",
+"group": "C_traj_bc1"
+},
+{
+"dir": "ddm_bc1_20260731/burn_out",
+"ckpt": "intra_seg_trunk_tau_ep00239.npz",
+"group": "C_traj_bc1"
+},
+{
+"dir": "ddm_bc1_20260731/burn_out",
+"ckpt": "intra_seg_trunk_tau_ep00269.npz",
+"group": "C_traj_bc1"
+},
+{
+"dir": "ddm_bc1_20260731/burn_out",
+"ckpt": "intra_seg_trunk_tau_ep00299.npz",
+"group": "C_traj_bc1"
+},
+{
+"dir": "ddm_bc1_20260731/burn_out",
+"ckpt": "intra_seg_trunk_tau_ep00319.npz",
+"group": "C_traj_bc1"
+},
+{
+"dir": "ddm_bc1_20260731/burn_out",
+"ckpt": "intra_seg_trunk_tau_ep00349.npz",
+"group": "C_traj_bc1"
+},
+{
+"dir": "ddm_bc1_20260731/burn_out",
+"ckpt": "intra_seg_trunk_tau_ep00369.npz",
+"group": "C_traj_bc1"
+},
+{
+"dir": "ddm_bc1_20260731/burn_out",
+"ckpt": "intra_seg_trunk_tau_ep00399.npz",
+"group": "C_traj_bc1"
+},
+{
+"dir": "ddm_bc1_20260731/burn_out",
+"ckpt": "stage_seg_trunk_tau_final.npz",
+"group": "A_crossconfig"
+},
+{
+"dir": "ddm_bp1_20260731/arm_A",
+"ckpt": "stage_seg_trunk_tau_final.npz",
+"group": "A_crossconfig"
+},
+{
+"dir": "ddm_bp1_20260731/arm_Bprime",
+"ckpt": "stage_seg_trunk_tau_final.npz",
+"group": "A_crossconfig"
+},
+{
+"dir": "ddm_dw1_20260730/control",
+"ckpt": "stage_seg_trunk_tau_final.npz",
+"group": "A_crossconfig"
+},
+{
+"dir": "ddm_dw1_20260730/distill",
+"ckpt": "stage_seg_trunk_tau_final.npz",
+"group": "A_crossconfig"
+},
+{
+"dir": "ddm_dw1_20260730/distill_endpoint_confirm",
+"ckpt": "stage_seg_trunk_tau_final.npz",
+"group": "A_crossconfig"
+},
+{
+"dir": "ddm_dw1_20260730/distill_head_relax",
+"ckpt": "stage_seg_trunk_tau_final.npz",
+"group": "A_crossconfig"
+},
+{
+"dir": "ddm_lv1_20260728/b_solveinit_v1_aborted_joint_pretrain_gelu_dead_basin",
+"ckpt": "stage_solve_init_pretrain.npz",
+"group": "A_crossconfig"
+},
+{
+"dir": "ddm_lv1_20260728/b_solveinit_v3_lotto_n600",
+"ckpt": "stage_seg_trunk_tau_final.npz",
+"group": "A_crossconfig"
+},
+{
+"dir": "ddm_lv1_20260728/lane_w2_solveinit_lotto_n600",
+"ckpt": "stage_seg_trunk_tau_final.npz",
+"group": "A_crossconfig"
+},
+{
+"dir": "ddm_lv1_20260728/t3_long_burn_lotto_v2",
+"ckpt": "intra_seg_trunk_ce_ep00009.npz",
+"group": "D_traj_lv1_unmasked"
+},
+{
+"dir": "ddm_lv1_20260728/t3_long_burn_lotto_v2",
+"ckpt": "intra_seg_trunk_tau_ep00039.npz",
+"group": "D_traj_lv1_unmasked"
+},
+{
+"dir": "ddm_lv1_20260728/t3_long_burn_lotto_v2",
+"ckpt": "intra_seg_trunk_tau_ep00059.npz",
+"group": "D_traj_lv1_unmasked"
+},
+{
+"dir": "ddm_lv1_20260728/t3_long_burn_lotto_v2",
+"ckpt": "intra_seg_trunk_tau_ep00089.npz",
+"group": "D_traj_lv1_unmasked"
+},
+{
+"dir": "ddm_lv1_20260728/t3_long_burn_lotto_v2",
+"ckpt": "intra_seg_trunk_tau_ep00109.npz",
+"group": "D_traj_lv1_unmasked"
+},
+{
+"dir": "ddm_lv1_20260728/t3_long_burn_lotto_v2",
+"ckpt": "intra_seg_trunk_tau_ep00139.npz",
+"group": "D_traj_lv1_unmasked"
+},
+{
+"dir": "ddm_lv1_20260728/t3_long_burn_lotto_v2",
+"ckpt": "intra_seg_trunk_tau_ep00169.npz",
+"group": "D_traj_lv1_unmasked"
+},
+{
+"dir": "ddm_lv1_20260728/t3_long_burn_lotto_v2",
+"ckpt": "intra_seg_trunk_tau_ep00189.npz",
+"group": "D_traj_lv1_unmasked"
+},
+{
+"dir": "ddm_lv1_20260728/t3_long_burn_lotto_v2",
+"ckpt": "intra_seg_trunk_tau_ep00219.npz",
+"group": "D_traj_lv1_unmasked"
+},
+{
+"dir": "ddm_lv1_20260728/t3_long_burn_lotto_v2",
+"ckpt": "intra_seg_trunk_tau_ep00239.npz",
+"group": "D_traj_lv1_unmasked"
+},
+{
+"dir": "ddm_lv1_20260728/t3_long_burn_lotto_v2",
+"ckpt": "intra_seg_trunk_tau_ep00269.npz",
+"group": "D_traj_lv1_unmasked"
+},
+{
+"dir": "ddm_lv1_20260728/t3_long_burn_lotto_v2",
+"ckpt": "intra_seg_trunk_tau_ep00299.npz",
+"group": "D_traj_lv1_unmasked"
+},
+{
+"dir": "ddm_lv1_20260728/t3_long_burn_lotto_v2",
+"ckpt": "intra_seg_trunk_tau_ep00319.npz",
+"group": "D_traj_lv1_unmasked"
+},
+{
+"dir": "ddm_lv1_20260728/t3_long_burn_lotto_v2",
+"ckpt": "intra_seg_trunk_tau_ep00349.npz",
+"group": "D_traj_lv1_unmasked"
+},
+{
+"dir": "ddm_lv1_20260728/t3_long_burn_lotto_v2",
+"ckpt": "intra_seg_trunk_tau_ep00369.npz",
+"group": "D_traj_lv1_unmasked"
+},
+{
+"dir": "ddm_lv1_20260728/t3_long_burn_lotto_v2",
+"ckpt": "intra_seg_trunk_tau_ep00399.npz",
+"group": "D_traj_lv1_unmasked"
+},
+{
+"dir": "ddm_lv1_20260728/t3_long_burn_lotto_v2",
+"ckpt": "stage_seg_trunk_tau_final.npz",
+"group": "A_crossconfig"
+},
+{
+"dir": "ddm_pa1r_20260730/control_tail",
+"ckpt": "stage_seg_trunk_tau_final.npz",
+"group": "A_crossconfig"
+},
+{
+"dir": "ddm_pa1r_20260730/delta_sparsity_tail",
+"ckpt": "stage_seg_trunk_tau_final.npz",
+"group": "A_crossconfig"
+},
+{
+"dir": "ddm_pa1r_20260730/margin_quant_tail",
+"ckpt": "stage_seg_trunk_tau_final.npz",
+"group": "A_crossconfig"
+},
+{
+"dir": "ddm_r1c_20260731/window_01",
+"ckpt": "intra_seg_trunk_tau_ep00504.npz",
+"group": "B_traj_r1c"
+},
+{
+"dir": "ddm_r1c_20260731/window_01",
+"ckpt": "intra_seg_trunk_tau_ep00514.npz",
+"group": "B_traj_r1c"
+},
+{
+"dir": "ddm_r1c_20260731/window_01",
+"ckpt": "intra_seg_trunk_tau_ep00524.npz",
+"group": "B_traj_r1c"
+},
+{
+"dir": "ddm_r1c_20260731/window_01",
+"ckpt": "intra_seg_trunk_tau_ep00534.npz",
+"group": "B_traj_r1c"
+},
+{
+"dir": "ddm_r1c_20260731/window_01",
+"ckpt": "intra_seg_trunk_tau_ep00539.npz",
+"group": "B_traj_r1c"
+},
+{
+"dir": "ddm_r1c_20260731/window_01",
+"ckpt": "intra_seg_trunk_tau_ep00549.npz",
+"group": "B_traj_r1c"
+},
+{
+"dir": "ddm_r1c_20260731/window_01",
+"ckpt": "intra_seg_trunk_tau_ep00559.npz",
+"group": "B_traj_r1c"
+},
+{
+"dir": "ddm_r1c_20260731/window_01",
+"ckpt": "intra_seg_trunk_tau_ep00569.npz",
+"group": "B_traj_r1c"
+},
+{
+"dir": "ddm_r1c_20260731/window_01",
+"ckpt": "intra_seg_trunk_tau_ep00579.npz",
+"group": "B_traj_r1c"
+},
+{
+"dir": "ddm_r1c_20260731/window_01",
+"ckpt": "intra_seg_trunk_tau_ep00589.npz",
+"group": "B_traj_r1c"
+},
+{
+"dir": "ddm_r1c_20260731/window_01",
+"ckpt": "intra_seg_trunk_tau_ep00599.npz",
+"group": "B_traj_r1c"
+},
+{
+"dir": "ddm_r1c_20260731/window_01",
+"ckpt": "intra_seg_trunk_tau_ep00609.npz",
+"group": "B_traj_r1c"
+},
+{
+"dir": "ddm_r1c_20260731/window_01",
+"ckpt": "intra_seg_trunk_tau_ep00614.npz",
+"group": "B_traj_r1c"
+},
+{
+"dir": "ddm_r1c_20260731/window_01",
+"ckpt": "intra_seg_trunk_tau_ep00624.npz",
+"group": "B_traj_r1c"
+},
+{
+"dir": "ddm_r1c_20260731/window_01",
+"ckpt": "intra_seg_trunk_tau_ep00634.npz",
+"group": "B_traj_r1c"
+},
+{
+"dir": "ddm_r1c_20260731/window_01",
+"ckpt": "intra_seg_trunk_tau_ep00640.npz",
+"group": "B_traj_r1c"
+},
+{
+"dir": "ddm_r1c_20260731/window_01",
+"ckpt": "stage_seg_trunk_tau_final.npz",
+"group": "A_crossconfig"
+},
+{
+"dir": "ddm_tb1_20260728/t2_memory_preflight",
+"ckpt": "stage_seg_trunk_tau_final.npz",
+"group": "A_crossconfig"
+},
+{
+"dir": "ddm_tb1_20260728/t2_n600_lotto",
+"ckpt": "stage_seg_trunk_tau_final.npz",
+"group": "A_crossconfig"
+},
+{
+"dir": "ddm_tb1_20260728/t2_n600_plain",
+"ckpt": "stage_seg_trunk_tau_final.npz",
+"group": "A_crossconfig"
+},
+{
+"dir": "ddm_tb1_20260728/t2_n600_plain_aborted_emawarmup_gate_artifact",
+"ckpt": "intra_seg_trunk_ce_ep00009.npz",
+"group": "A_crossconfig"
+}
+]
