@@ -45,6 +45,10 @@
     32,
     4
    ],
+   "source": {
+    "archive": "/Volumes/VertigoDataTier/pact/ddm_v4d_20260731/v4d_composed_refine_celldrop50_archive.zip",
+    "member": "state/tokens.dr7t"
+   },
    "speedup": {
     "decode_loop": 2.2451478999383983,
     "decode_total_canonical": 2.650853055647115,
@@ -96,6 +100,10 @@
     32,
     4
    ],
+   "source": {
+    "archive": "/Volumes/VertigoDataTier/pact/ddm_pb1_20260729/p5/eval_root/submissions/pb1/archive.zip",
+    "member": "state/tokens.dr7t"
+   },
    "speedup": {
     "decode_loop": 1.945843220648157,
     "decode_total_canonical": 2.200722169984296,
@@ -147,6 +155,10 @@
     32,
     4
    ],
+   "source": {
+    "archive": "/Volumes/VertigoDataTier/pact/ddm_ck1_20260729/ck1_composed_STANDIN_fullbase_pstar_archive.zip",
+    "member": "state/tokens.dr7t"
+   },
    "speedup": {
     "decode_loop": 2.5047398976426787,
     "decode_total_canonical": 3.010050809527638,
@@ -198,6 +210,10 @@
     32,
     4
    ],
+   "source": {
+    "archive": "/Volumes/VertigoDataTier/pact/ddm_pfs1_20260729/d1/eval_root/submissions/wr1_kneeB/archive.zip",
+    "member": "state/tokens.dr7t"
+   },
    "speedup": {
     "decode_loop": 2.909727111126336,
     "decode_total_canonical": 3.6649753752231433,
@@ -226,6 +242,7 @@
   "note": "The optimised encode trades peak memory for time: it materialises one int64 context field plus its Python list per channel. This is the one COST the change introduces; it is charged against RAM, never against archive bytes."
  },
  "pointer_moved": false,
+ "reproduce": "Each field is the verbatim 'state/tokens.dr7t' member of the named archive on the SSD tier; the recorded sha256 is that member's. Re-extract with zipfile, then time experiments.ddm_r7_token_coder._decode_smevr / _encode_smevr against their retained _reference twins in one process. The 4 archives are distinct fields: v4b/v4c/v4d and gr1 share F1's bytes verbatim, so only one of that family is counted here.",
  "research_only": true,
  "schema": "ddm_r7_decode_cost_profile.v1",
  "score_claim": false,
