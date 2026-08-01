@@ -23,6 +23,7 @@ import pytest
 REPO = Path(__file__).resolve().parents[3]
 
 from tac.ddm_costate_organ import (  # noqa: E402
+    _LEDGER_GATE_OPEN_RE,
     DEFERRAL_LEDGER_GLOB,
     LIVE_BURN_ENDPOINT_EVAL_RECEIPT,
     _arc_evidence_rows,
@@ -162,6 +163,60 @@ def test_no_owner_alarm_flags_empty_consumer(tmp_path):
     assert scan["available"] is True
     assert "QZ99" in scan["no_owner_alarm_rows"]
     assert scan["no_owner_alarm_count"] == 1
+
+
+# ── substring-scan slot-holder bug class (task #829), fixed 2026-07-31 ─────────
+def test_gate_open_tokens_are_boundary_matched_not_substring_contained():
+    """BEHAVIOUR, not constants: the words that used to false-match must not match.
+
+    "MET" is a substring of METHOD / PHOTOMETRIC / TELEMETRY / GEOMETRY / PARAMETER and
+    "OPEN" of OPENPILOT / REOPEN(ED) — every one of them occurs in ledger prose. If this
+    regex regresses to bare containment, each of these asserts flips.
+    """
+    for haystack in (
+        "ALL MEMBERS METHOD=0 (UNCOMPRESSED)",  # the MEASURED live false OPEN (row QA55)
+        "PHOTOMETRIC RUNG",
+        "V9 TELEMETRY PORT",
+        "TWO-PLANE GEOMETRY",
+        "DERIVED PARAMETER LADDER",
+        "OPENPILOT PLANE PRIOR",
+        "REOPENED AFTER THE BURN",
+    ):
+        assert _LEDGER_GATE_OPEN_RE.search(haystack) is None, haystack
+
+    # NEGATIVE CONTROL — the fix must not over-correct: real gate cells still match.
+    for haystack in (
+        "OPEN",
+        "OPEN — $0, FIRES AT THE ENDPOINT",
+        "MET",
+        "GATE MET (DOC)",
+        "GATE_MET",  # "_" is a boundary: fail-safe toward surfacing
+        "MEASURABLE_NOW (DOC)",
+        "FIRED MID-ARM",
+        "GATE FIRED",
+    ):
+        assert _LEDGER_GATE_OPEN_RE.search(haystack) is not None, haystack
+
+
+def test_prose_only_gate_token_does_not_surface_a_row(tmp_path):
+    """End-to-end: a DUE row whose ONLY 'MET' is inside METHOD must not be surfaced.
+
+    Pre-fix this row appeared in the controller's DECIDE queue as a phantom open gate.
+    """
+    ledger = tmp_path / ".omx" / "research"
+    ledger.mkdir(parents=True)
+    (ledger / "ddm_deferral_queue_ledger_29990102.md").write_text(
+        "---\ndate_utc: 2999-01-02\n---\n"
+        "| id | item | src | gate | gate status NOW | effect | price | consumer | status |\n"
+        "|---|---|---|---|---|---|---|---|---|\n"
+        "| QZ01 | zip METHOD=0 audit | s | g | CLOSED | e | $0 | main | DUE |\n"
+        "| QZ02 | genuinely actionable | s | g | OPEN | e | $0 | main | DUE |\n",
+        encoding="utf-8",
+    )
+    scan = _open_gate_ownership_scan(tmp_path)
+    assert scan["available"] is True
+    ids = {r["row_id"] for r in scan["open_gate_unfired_rows"]}
+    assert ids == {"QZ02"}, f"phantom open gate surfaced: {ids}"
 
 
 # ── work item 4: QA37 — ledger registered as consumed evidence ─────────────────

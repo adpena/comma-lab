@@ -2198,11 +2198,31 @@ def _ledger_age_days(date_utc: str | None) -> float | None:
 
 
 # Gate-status column tokens that mean the gate is OPEN / actionable-now (vs CLOSED / HELD /
-# BLOCKED / pre-arc). Read as a substring test against the "gate status NOW" markdown cell.
+# BLOCKED / pre-arc). Matched with an ALPHANUMERIC-BOUNDARY regex, NEVER bare substring
+# containment: "MET" is a substring of METHOD / PHOTOMETRIC / TELEMETRY / GEOMETRY / PARAMETER
+# and "OPEN" of OPENPILOT / REOPEN, all of which occur in ledger prose. MEASURED on the live
+# ledger 2026-07-31 (ddm_deferral_queue_ledger_20260729.md): bare containment flagged 29 rows
+# gate-OPEN, boundary matching flags 28 — the extra was QA55 matching "MET" inside "METHOD=0"
+# (a ZIP compression-method note), i.e. one phantom duty row in the controller's DECIDE queue.
+# "_" counts as a boundary, so a hypothetical GATE_MET cell still matches (fail-safe direction:
+# surfacing a row that may not be open is cheaper than hiding one that is).
+# Sister bug class: task #829 substring-scan slot-holder.
 _LEDGER_GATE_OPEN_TOKENS = ("OPEN", "MET", "FIRED MID-ARM", "GATE FIRED", "MEASURABLE_NOW")
 _LEDGER_GATE_CLOSED_TOKENS = ("CLOSED", "BLOCKED", "PRE-ARC", "HELD", "STAGED")
 # Row-status tokens that mean the item has NOT completed (an open-gate/no-completion item).
+# Substring is CORRECT here: the only containments are OVERDUE->DUE and ORPHANED->ORPHAN, both
+# of which SHOULD match. Do not "fix" this one to boundary matching without re-measuring.
 _LEDGER_STATUS_UNFIRED = ("DUE", "ORPHAN")
+
+
+def _ledger_token_re(tokens: tuple[str, ...]) -> re.Pattern[str]:
+    """Alphanumeric-boundary alternation over literal ledger tokens (never bare containment)."""
+    alternation = "|".join(re.escape(tok) for tok in tokens)
+    return re.compile(rf"(?<![A-Z0-9])(?:{alternation})(?![A-Z0-9])")
+
+
+_LEDGER_GATE_OPEN_RE = _ledger_token_re(_LEDGER_GATE_OPEN_TOKENS)
+_LEDGER_GATE_CLOSED_RE = _ledger_token_re(_LEDGER_GATE_CLOSED_TOKENS)
 
 
 def _open_gate_ownership_scan(repo_root: Path) -> dict[str, Any]:
@@ -2257,10 +2277,11 @@ def _open_gate_ownership_scan(repo_root: Path) -> dict[str, Any]:
         status_unfired = any(tok in status for tok in _LEDGER_STATUS_UNFIRED) and "FIRED" not in status
         if not status_unfired:
             continue
-        gate_open = any(tok in joined_upper for tok in _LEDGER_GATE_OPEN_TOKENS)
-        gate_closed_only = (
-            any(tok in joined_upper for tok in _LEDGER_GATE_CLOSED_TOKENS) and not gate_open
-        )
+        gate_open = bool(_LEDGER_GATE_OPEN_RE.search(joined_upper))
+        # PROVABLY REDUNDANT, kept behaviour-identical and named so no reader mistakes it for a
+        # veto: it can only be True when gate_open is False, and that case already `continue`s on
+        # the first clause below. A CLOSED token does NOT override an OPEN token here.
+        gate_closed_only = bool(_LEDGER_GATE_CLOSED_RE.search(joined_upper)) and not gate_open
         if not gate_open or gate_closed_only:
             continue
         consumer = cells[-2] if len(cells) >= 2 else ""
