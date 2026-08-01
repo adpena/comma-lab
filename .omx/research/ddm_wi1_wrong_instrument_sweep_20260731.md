@@ -46,9 +46,13 @@ attention, never a verdict; every row's evidence is in its section.
 | 4 | costate `_LEDGER_GATE_OPEN_TOKENS` | `ddm_costate_organ.py:2202,2260` | C1 (#829) | **YES — core sense organ** | `"MET"` matched by substring; **85% false-match** on this corpus (`PHOTOMETRIC`/`TELEMETRY`/`GEOMETRY`); 1 live false OPEN today | INSTANCE + FORMULATION |
 | 5 | p0 ledger `next_action` | `.omx/state/operator_p0_ledger.jsonl` (last row) | C1 staleness | **YES — routing surface** | Declares OWED a defect repaired ~3 h earlier (commit `990674f4a9`) | INSTANCE |
 | 6 | P4 fmtools advisory layer | `confound_gates.py:1278` + `preflight.py:6774` | C2 / orphan grade 2 | YES (warn-only) | `use_fmtools=False` and the orchestrator never passes it ⇒ structurally un-fireable | INSTANCE |
-| 7 | `tools/audit_receipt_field_coverage.py` | *(deleted)* | **C2** | was none | New machinery while `lever_registry` 0.585% and findings-gate 0% went unpaid | INSTANCE |
-| 8 | `_validate_amrc_artifacts` | `preflight.py:15555` (STRICT `:1890`) | C1 | DORMANT | Glob matches **0** files repo-wide; validator returns `[]` unconditionally | INSTANCE |
-| 9 | orphan-grade population | `ddm_ba31:281-291` (`ddm_sb2` #819) | **C2** | YES | **2 of 197 built-and-fired (1.0%)**; grade 3 (8 rows) detectable by *nothing automated* | FAMILY |
+| 7 | `lever_registry.completeness()` | `witness_dsl/lever_registry.py:107` | **C2 + C1** | **YES — the live "what's missing from the DSL?" answer** | Walks **1 of 171** modules; the 07-31 repair added a parallel API and left it unchanged | FORMULATION |
+| 8 | tr1 checkpoint persistence (#820) | `train_tr1_partition_renderer_mlx.py:1703,2107,2138,2285,2367,2411` | **C2** | **YES — blocks #815 arms A/C/D** | All 6 sites still `opt_state_flat={}`; cheap arm wired, expensive refactor **re-chartered** | INSTANCE |
+| 9 | `lane_guard.py:63-65` | `src/tac/optimization/lane_guard.py` | **C2 + constants-poison** | YES (module is live) | 10 rank-4 floats retyped; canonical module has ≥10 live importers, `lane_guard` imports it **zero** times | INSTANCE |
+| 10 | `fh1_adapted_force_levers_20260731.py` | `src/tac/witness_dsl/` | **C2** | no — born orphan | **Zero** importers; contributes 5 of the 10 designed-stubs it was meant to close | INSTANCE |
+| 11 | `tools/audit_receipt_field_coverage.py` | *(deleted)* | **C2** | was none | New machinery while `lever_registry` 0.585% and findings-gate 0% went unpaid | INSTANCE |
+| 12 | `_validate_amrc_artifacts` | `preflight.py:15555` (STRICT `:1890`) | C1 | DORMANT | Glob matches **0** files repo-wide; validator returns `[]` unconditionally | INSTANCE |
+| 13 | orphan-grade population | `ddm_ba31:281-291` (`ddm_sb2` #819) | **C2** | YES | **2 of 197 built-and-fired (1.0%)**; grade 3 (8 rows) detectable by *nothing automated* | FAMILY |
 
 **The single most consequential row is not in the table: §1** — the wrong-instrument *verdict* on row 7
 was itself reached with a wrong instrument. That is the arm's headline.
@@ -374,14 +378,24 @@ cross-corpus detector was built for a gap that a table edit closes. `verdict_sco
 
 ### C2-2b — the creation/repair rate, measured, with the caveat that keeps it honest
 
-MEASURED over the 7 days 2026-07-24 → 07-31 (`git log --diff-filter=A`):
+MEASURED over the 7 days 2026-07-24 → 07-31 (`git log --no-merges --diff-filter=A`):
 
 | quantity | measured |
 |---|---:|
-| NEW `.py` files added under `tools/` + `src/tac/` | **430** (~61/day) |
-| ...of which under `tools/` | **130** |
+| NEW `.py` files added under `tools/` + `src/tac/` | **430** |
+| ...tests | 176 |
+| ...**non-test surfaces** | **254** (99 `tools/`, 155 `src/tac/`) |
 | distinct tasks in `canonical_task_status.jsonl` | 143 (**44 pending**) |
 | pending tasks explicitly naming WIRING / ORPHAN / STUB / registry debt | **4** (#819, #820, #821, #825) |
+
+**Arbitration note — a parallel sweep reported 42 non-test surfaces; that is a ~6× undercount, and I
+resolved it by spot-check rather than by preferring my own number.** Six files drawn at random from
+my 430-row list each return an in-window first-add date under
+`git log --diff-filter=A --format=%ad -- <file>` (2026-07-25 … 07-31), and the list is 430/430 present
+on disk. `--since` is filtering correctly (`--since=2026-07-30` → 5 files in `tools/`;
+`--since=2026-01-01` → 2,030). **254 stands; 42 does not.** Recording this because the same arm's
+*qualitative* rows below are excellent and were independently re-verified — a wrong count does not
+condemn the findings, and a right count does not sanctify them. They are separate measurements.
 
 **The caveat is load-bearing and I will not drop it: 430 is not 430 orphans.** Each `ddm_*` arm
 legitimately writes one-shot measurement scripts (`tools/analyze_ddm_*`, `tools/aggregate_ddm_*`), and
@@ -394,6 +408,54 @@ UNOWNED gates"*) was **discharged in part today** by `ddm_rg5`: the findings gat
 (0/1,260) to honest (10 violations over 218 in-window). That is the C2-correct action — repair an
 existing surface — executed the same day, and it is why this row is a *rate* observation and not an
 indictment. `verdict_scope: FORMULATION` (the rate), `INSTANCE` (each named task).
+
+### C2-2c — four C2 specimens, each RE-VERIFIED first-hand at file:line
+
+Surfaced by a parallel sweep; every one re-measured here because that sweep's headline count was wrong
+(C2-2b). All four reproduce exactly.
+
+**(i) `fh1_adapted_force_levers_20260731.py` — a lever module with ZERO importers.**
+`rg -l "fh1_adapted_force_levers" src/ tools/ experiments/` excluding the file itself returns **0**.
+Landed 2026-07-31. It is not merely unwired — per `ddm_sb2` it *contributes 5 of the 10 DESIGNED-STUBs*
+it was meant to discharge. **A new lever module built to close a stub debt, which became stub debt.**
+`verdict_scope: INSTANCE`.
+
+**(ii) #820 is verifiably unpaid at HEAD.** `experiments/train_tr1_partition_renderer_mlx.py` has
+**six** live `save_checkpoint` call sites, every one still passing `opt_state_flat={}` — lines
+**1703, 2107, 2138, 2285, 2367, 2411**. Meanwhile `.omx/state/required_component_ledger.jsonl`
+(2026-07-31T20:33:25Z) flips `TR1ResetOperatorWiring` to `built-never-fired` — *closed by the cheap
+`--adam-bias-correction` flag* — and opens a **new** `TR1OptimizerStatePersistence` charter,
+`not-even-designed`, owner "ddm_bp1 successor". **The cheap arm got wired; the expensive refactor got
+re-chartered.** That sentence is the C2 mechanism in one line. `verdict_scope: INSTANCE`.
+
+**(iii) `lever_registry.completeness()` still walks 1 of 171 modules — and the repair went AROUND it.**
+`src/tac/witness_dsl/lever_registry.py:107-108` is `Path(path if path is not None else _cd.__file__).read_text()`
+with `_cd = curriculum_dsl`; `ls src/tac/witness_dsl/*.py` = **171**. `lever_factories()`,
+`program_constructors()` and `dsl_referenced_flags()` all call it with **no argument** ⇒ 1/171 = 0.585%,
+which is where `ddm_sb2`'s figure comes from. The 07-31 repair added a *parallel* package-walking API
+(`package_lever_factories()`, `:247-259`) and **deliberately left `completeness()` unchanged**
+(`:119-125`: *"The repair is NOT to widen `lever_factories()` in place… preserved verbatim so its
+existing consumers are unaffected"*). Defensible for compatibility — **and structurally C2**: a new
+surface beside the broken one rather than through it, with #825 still pending to finish the job. So
+`completeness().unmapped` — the live "what is missing from the DSL?" answer named in CLAUDE.md — is
+**still computed from one file**. `verdict_scope: FORMULATION`. LOAD-BEARING NOW.
+
+**(iv) `lane_guard.py` transcribes ten floats instead of wiring the live consumer path.**
+`src/tac/optimization/lane_guard.py:63-65`:
+```python
+_LANE_PAIR_NORMS = (4.007, 3.953, 3.862, 3.748)   # Lane-Movable, Road-Lane, Lane-MyCar, Lane-Undriv
+_ALL_PAIR_NORMS  = (4.007, 3.953, 3.862, 3.748, 2.946, 2.942, 2.910, 2.869, 2.705, 2.602)
+```
+Its **only** mention of the canonical source is a docstring at `:200`
+(*"canonical equation `segnet_head_rank4_linear_flipdist_v1`"*); its imports are `dataclasses`,
+`typing`, `numpy` — **no import of the canonical module**. Yet
+`segnet_head_rank4_flipdist_20260715` has ≥10 live non-test importers
+(`predict_project_receiver.py`, `margin_budget_field.py`, `prereq_surfaces.py`,
+`factorized_features.py`, `factorized_adjoint.py`, …). The wire existed and was retyped as constants —
+simultaneously a C2 row and a `constants_are_poison_unless_optimal_across_surfaces_curriculum_20260715`
+row. **`lane_guard.py` itself is a correct new build and is wired into the live trainer
+(`train_tr1_partition_renderer_mlx.py:312-322`) — the defect is the constants, not the module.**
+`verdict_scope: INSTANCE`.
 
 ### C2-3 — the orphan-grade inventory is the standing measurement of this class
 
@@ -506,7 +568,18 @@ class guard must refuse."* It monkeypatches a real gate to return a clean OK ove
 this is a genuine live assertion. **C1-3 is about coverage breadth, not a broken mechanism** — stating
 both is the whole point of carrying controls.
 
-**CONTROL ROW 6 — my own near-miss, reported because it is the same disease.** I first ran the costate
+**CONTROL ROW 6 — C2 side: new surfaces CORRECTLY built new.** Relayed from the parallel sweep and
+sampled for verification: `tools/check_venv_src_custody.py` (genuinely new gate, invoked as gate0 with
+rc-checking by `tools/launch_tr1_run.py:98-106`, closing the named "eg1 hijack class — 2nd
+recurrence"); `src/tac/optimization/ddm_lp2_birth_completion.py` (three-deep live call chain through
+`tools/run_ddm_lp2_birth_completion_key.py` into two supervisors);
+`src/tac/witness_dsl/qa84_rowband_grammar_20260731.py` (4 non-test consumers including the tr1
+trainer); and `lane_guard.py` itself (91 references across 8 files, wired at
+`train_tr1_partition_renderer_mlx.py:312-322`). **Of 42 sampled new surfaces that sweep found 25 with
+a production caller** — most new building is legitimate, which is why C2 must be argued per-row and
+never from the aggregate rate alone.
+
+**CONTROL ROW 7 — my own near-miss, reported because it is the same disease.** I first ran the costate
 scan reading key `open_rows` and got `[]`, and was about to record "the scan returns 0 rows." The real
 key is `open_gate_unfired_rows` (29). My independent re-derivation of the documented logic *also* gave
 29 — the disagreement between my two methods is what caught it. **Cross-derivation caught what a
@@ -524,11 +597,14 @@ single instrument would have reported as a clean zero**, which is exactly the fa
    semantic-stand-in (infection). I examined roughly a dozen closely. The remainder is *unclassified*,
    not *clean* — this is precisely the "nothing looked at ≠ nothing wrong" distinction, and I decline
    to launder it.
-3. **The grade-3 component inventory (8 BUILT-ELSEWHERE-UNWIRED-HERE rows) is cited from
-   `ddm_sb2`/`ddm_ba31`, not re-derived.** I did not open those 8 components or verify their unwired
-   status first-hand; a parallel sweep tasked with it had not reported at write time. The one grade-2
-   instance I *did* derive myself is B-1 (the P4 fmtools layer). The 430-vs-4 rate in C2-2b **is**
-   mine, with its caveat.
+3. **Of the 8 grade-3 (BUILT-ELSEWHERE-UNWIRED-HERE) rows, I re-verified 3** — KD warm start (no
+   `kd_warm_start`/`warm_start` reference in the tr1 trainer), birth-seeding, and the rank-4 row
+   (C2-2c-iv). **Rows 6 and 8** (`ddm_ms4d_direct_completion.py:617`, `dash_phase_carrier.py`) are
+   relayed from `ddm_sb2:102,104` and **NOT independently confirmed**. The grade-3 population of 8 and
+   the 197-row total are `ddm_sb2`'s measurement, not mine.
+3b. **Orphan determination is Python-scoped only.** "Zero importers" for `fh1_adapted_force_levers`
+   means no reference in `src/ tools/ experiments/` `*.py`. Shell scripts, CI config, `.omx/` dispatch
+   JSON and `.claude/` hooks were **not** searched — a caller could exist there.
 3b. **Positive-control coverage outside `CONFOUND_GATES` was not swept.** The 4-of-23 figure is now
    VERIFIED (C1-3) but its denominator is the 23-gate confound subset. The ~440 `def check_*` in
    `preflight.py` were **not** enumerated for positive-control coverage; that population is outside
