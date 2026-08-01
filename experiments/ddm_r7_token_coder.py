@@ -11,10 +11,15 @@ already-decoded prefix.  No fitted histogram, scorer tensor, checkpoint value,
 or sensitivity table is hidden in this free decoder code.
 
 This module deliberately lives under ``experiments`` pending MAIN's landing
-review: ``PROGRAM.md`` does not currently allow this arm to edit ``src/tac``.
-It is nevertheless a strict production-format prototype: compact framing,
-integer arithmetic decode, exact SHA closure, canonical re-encode, and no
-SciPy/MLX/Torch dependency.
+review.  It is nevertheless a strict production-format prototype: compact
+framing, integer arithmetic decode, exact SHA closure, canonical re-encode, and
+no SciPy/MLX/Torch dependency.
+
+Decode carries a typed verification ladder (:data:`TOKEN_VERIFY_MODES`).  The
+default rung re-encodes canonically and refuses on any byte difference, so a
+successful decode also proves the shipped bytes are the unique canonical
+encoding of the decoded lattice.  The cheaper rung is a deliberate, explicit
+weakening for trusted callers; it is never selected by default.
 """
 
 from __future__ import annotations
@@ -60,6 +65,15 @@ CODEC_IDS: Final = {
     "huffman_nibble": 9,
 }
 ID_CODECS: Final = {value: key for key, value in CODEC_IDS.items()}
+
+# Decode verification ladder, strongest first.  ``canonical`` additionally
+# proves the SHIPPED BYTES are the unique canonical encoding of the decoded
+# lattice (no inert or covert slack bytes); ``digest`` proves only that the
+# DECODED CONTENT matches the frame header's semantic SHA-256.  Both rungs keep
+# every structural, length-closure, and lattice-range refusal.
+VERIFY_CANONICAL: Final = "canonical"
+VERIFY_DIGEST: Final = "digest"
+TOKEN_VERIFY_MODES: Final = (VERIFY_CANONICAL, VERIFY_DIGEST)
 HEADER: Final = struct.Struct("<4sBBBB4HII32s")
 _SMEVR_LENGTH: Final = struct.Struct("<I")
 _HUFFMAN_HEADER: Final = struct.Struct("<Q16B")
@@ -594,8 +608,14 @@ def _rank_to_residual(rank: int, levels: int) -> int:
     return signed % levels
 
 
-def _encode_smevr(base: np.ndarray, delta: np.ndarray, levels: int) -> bytes:
-    """Static-Mode Event/Value Renewal (SMEVR), the R7 original arm."""
+def _encode_smevr_reference(base: np.ndarray, delta: np.ndarray, levels: int) -> bytes:
+    """Reference SMEVR encoder: the readable definition of the format.
+
+    Kept as the byte-for-byte oracle for :func:`_encode_smevr`.  It is not on
+    the production path; ``test_ddm_r7_token_coder.py`` asserts the fast path
+    reproduces it exactly, so the format stays defined by this function rather
+    than by the optimised one.
+    """
 
     _pairs, height, width, channels = delta.shape
     frame_values = height * width
@@ -645,12 +665,269 @@ def _encode_smevr(base: np.ndarray, delta: np.ndarray, levels: int) -> bytes:
     return _SMEVR_LENGTH.pack(len(occupancy_stream)) + occupancy_stream + value_stream
 
 
-def _decode_smevr(
+def _smevr_encode_contexts(
+    source_2d: np.ndarray,
+    head: np.ndarray,
+    width: int,
+) -> list[int]:
+    """Vectorised SMEVR occupancy contexts for one channel of the ENCODER.
+
+    Every context term is a pure function of the encoder's own input, so the
+    whole ``[pairs, frame_values]`` context field can be built with array ops.
+    The decoder cannot do this: its neighbours are values it has not decoded
+    yet.  ``source_2d`` is ``[pairs, frame_values]`` uint8.
+
+    Only the context list is returned: the caller reads ``previous_value`` and
+    ``occupancy`` straight off its own already-materialised source list, so
+    materialising them here would just be a second copy of the same numbers.
+    Intermediates are released before the list is built to hold the peak down.
+    """
+
+    pairs, frame_values = source_2d.shape
+    occupancy = (source_2d != 0).astype(np.int64)
+
+    previous_occupancy = np.zeros((pairs, frame_values), dtype=np.int64)
+    previous_occupancy[1:] = occupancy[:-1]
+
+    cells = np.arange(frame_values)
+    has_upper = cells >= width
+    has_left = (cells % width) != 0
+    left = np.zeros((pairs, frame_values), dtype=np.int64)
+    left[:, has_left] = occupancy[:, cells[has_left] - 1]
+    upper = np.zeros((pairs, frame_values), dtype=np.int64)
+    upper[:, has_upper] = occupancy[:, cells[has_upper] - width]
+
+    # ``ages`` is the per-cell run length of "occupancy unchanged since the
+    # previous frame", read BEFORE the update exactly as the reference loop
+    # does.  The recurrence is sequential in frames only, so it costs ``pairs``
+    # vector steps rather than ``pairs * frame_values`` scalar ones.
+    same = occupancy == previous_occupancy
+    ages_used = np.empty((pairs, frame_values), dtype=np.int64)
+    current = np.zeros(frame_values, dtype=np.int64)
+    for pair in range(pairs):
+        ages_used[pair] = current
+        current = np.where(same[pair], np.minimum(current + 1, 255), 0)
+    del occupancy, same, current
+
+    context = (((head[None, :] * 2 + previous_occupancy) * 2 + left) * 2 + upper) * 4
+    del previous_occupancy, left, upper
+    context += np.minimum(ages_used, 3, out=ages_used)
+    del ages_used
+    return context.reshape(-1).tolist()
+
+
+def _encode_smevr(base: np.ndarray, delta: np.ndarray, levels: int) -> bytes:
+    """Static-Mode Event/Value Renewal (SMEVR), the R7 original arm.
+
+    Byte-for-byte identical to :func:`_encode_smevr_reference`.  Two lossless
+    changes carry the speedup: the context field is built with array ops
+    (:func:`_smevr_encode_contexts`), and the arithmetic-coder state is held in
+    locals over Python lists instead of numpy scalars behind method calls.
+    """
+
+    _pairs, height, width, channels = delta.shape
+    frame_values = height * width
+    sources = _channel_views(delta)
+    bases = np.ascontiguousarray(base.transpose(2, 0, 1)).reshape(channels, -1)
+    value_alphabet = levels - 1
+    levels_plus = levels + 1
+
+    occupancy_out = bytearray()
+    occupancy_current = 0
+    occupancy_used = 0
+    occupancy_low = 0
+    occupancy_high = _FULL_RANGE - 1
+    occupancy_pending = 0
+    value_out = bytearray()
+    value_current = 0
+    value_used = 0
+    value_low = 0
+    value_high = _FULL_RANGE - 1
+    value_pending = 0
+
+    occupancy_rows: dict[int, list[int]] = {}
+    value_rows: dict[int, list[int]] = {}
+
+    for channel in range(channels):
+        source = sources[channel]
+        head = bases[channel].astype(np.int64) + channel * levels
+        raw_values = source.tolist()
+        contexts = _smevr_encode_contexts(source.reshape(-1, frame_values), head, width)
+        heads = head.tolist()
+        cell = 0
+
+        for index in range(len(raw_values)):
+            if cell == frame_values:
+                cell = 0
+            context = contexts[index]
+            counts = occupancy_rows.get(context)
+            if counts is None:
+                counts = [1, 1]
+                occupancy_rows[context] = counts
+            raw = raw_values[index]
+            occupancy = 1 if raw else 0
+            zero_count = counts[0]
+            total = zero_count + counts[1]
+            if occupancy:
+                lower = zero_count
+                upper = total
+            else:
+                lower = 0
+                upper = zero_count
+            span = occupancy_high - occupancy_low + 1
+            occupancy_high = occupancy_low + (span * upper // total) - 1
+            occupancy_low += span * lower // total
+            while True:
+                if occupancy_high < _HALF:
+                    bit = 0
+                elif occupancy_low >= _HALF:
+                    bit = 1
+                    occupancy_low -= _HALF
+                    occupancy_high -= _HALF
+                elif occupancy_low >= _QUARTER and occupancy_high < _THREE_QUARTERS:
+                    occupancy_pending += 1
+                    occupancy_low = (occupancy_low - _QUARTER) << 1
+                    occupancy_high = ((occupancy_high - _QUARTER) << 1) | 1
+                    continue
+                else:
+                    break
+                occupancy_current = (occupancy_current << 1) | bit
+                occupancy_used += 1
+                if occupancy_used == 8:
+                    occupancy_out.append(occupancy_current)
+                    occupancy_current = 0
+                    occupancy_used = 0
+                if occupancy_pending:
+                    opposite = 1 - bit
+                    for _ in range(occupancy_pending):
+                        occupancy_current = (occupancy_current << 1) | opposite
+                        occupancy_used += 1
+                        if occupancy_used == 8:
+                            occupancy_out.append(occupancy_current)
+                            occupancy_current = 0
+                            occupancy_used = 0
+                    occupancy_pending = 0
+                occupancy_low <<= 1
+                occupancy_high = (occupancy_high << 1) | 1
+            counts[occupancy] += 2
+            if counts[0] + counts[1] >= _RESCALE_AT:
+                counts[0] = max(1, (counts[0] + 1) // 2)
+                counts[1] = max(1, (counts[1] + 1) // 2)
+
+            if occupancy:
+                previous_value = raw_values[index - frame_values] if index >= frame_values else 0
+                value_context = heads[cell] * levels_plus + previous_value
+                value_counts = value_rows.get(value_context)
+                if value_counts is None:
+                    value_counts = [1] * value_alphabet
+                    value_rows[value_context] = value_counts
+                signed = raw if raw <= levels // 2 else raw - levels
+                rank = 2 * signed - 2 if signed > 0 else -2 * signed - 1
+                total = 0
+                lower = 0
+                for position in range(value_alphabet):
+                    count = value_counts[position]
+                    total += count
+                    if position < rank:
+                        lower += count
+                upper = lower + value_counts[rank]
+                span = value_high - value_low + 1
+                value_high = value_low + (span * upper // total) - 1
+                value_low += span * lower // total
+                while True:
+                    if value_high < _HALF:
+                        bit = 0
+                    elif value_low >= _HALF:
+                        bit = 1
+                        value_low -= _HALF
+                        value_high -= _HALF
+                    elif value_low >= _QUARTER and value_high < _THREE_QUARTERS:
+                        value_pending += 1
+                        value_low = (value_low - _QUARTER) << 1
+                        value_high = ((value_high - _QUARTER) << 1) | 1
+                        continue
+                    else:
+                        break
+                    value_current = (value_current << 1) | bit
+                    value_used += 1
+                    if value_used == 8:
+                        value_out.append(value_current)
+                        value_current = 0
+                        value_used = 0
+                    if value_pending:
+                        opposite = 1 - bit
+                        for _ in range(value_pending):
+                            value_current = (value_current << 1) | opposite
+                            value_used += 1
+                            if value_used == 8:
+                                value_out.append(value_current)
+                                value_current = 0
+                                value_used = 0
+                        value_pending = 0
+                    value_low <<= 1
+                    value_high = (value_high << 1) | 1
+                value_counts[rank] += 2
+                running = 0
+                for count in value_counts:
+                    running += count
+                if running >= _RESCALE_AT:
+                    for position in range(value_alphabet):
+                        value_counts[position] = max(1, (value_counts[position] + 1) // 2)
+            cell += 1
+
+    occupancy_stream = _flush_arithmetic_tail(
+        occupancy_out,
+        occupancy_current,
+        occupancy_used,
+        occupancy_low,
+        occupancy_pending,
+    )
+    value_stream = _flush_arithmetic_tail(
+        value_out,
+        value_current,
+        value_used,
+        value_low,
+        value_pending,
+    )
+    return _SMEVR_LENGTH.pack(len(occupancy_stream)) + occupancy_stream + value_stream
+
+
+def _flush_arithmetic_tail(
+    output: bytearray,
+    current: int,
+    used: int,
+    low: int,
+    pending: int,
+) -> bytes:
+    """Inline equivalent of ``_ArithmeticEncoder.finish`` over local state."""
+
+    pending += 1
+    bit = 0 if low < _QUARTER else 1
+    opposite = 1 - bit
+    for value in (bit, *([opposite] * pending)):
+        current = (current << 1) | value
+        used += 1
+        if used == 8:
+            output.append(current)
+            current = 0
+            used = 0
+    if used:
+        output.append(current << (8 - used))
+    return bytes(output)
+
+
+def _decode_smevr_reference(
     payload: bytes,
     base: np.ndarray,
     shape: tuple[int, int, int, int],
     levels: int,
 ) -> np.ndarray:
+    """Reference SMEVR decoder: the readable definition of the format.
+
+    Kept as the array-for-array oracle for :func:`_decode_smevr`; see
+    :func:`_encode_smevr_reference` for why both survive.
+    """
+
     if len(payload) <= _SMEVR_LENGTH.size:
         raise DDMR7CoderError("SMEVR stream is truncated")
     (occupancy_length,) = _SMEVR_LENGTH.unpack_from(payload)
@@ -698,6 +975,220 @@ def _decode_smevr(
                 ages[cell] = min(int(ages[cell]) + 1, 255)
             else:
                 ages[cell] = 0
+    return np.ascontiguousarray(output.reshape(channels, *shape[:-1]).transpose(1, 2, 3, 0))
+
+
+def _decode_smevr(
+    payload: bytes,
+    base: np.ndarray,
+    shape: tuple[int, int, int, int],
+    levels: int,
+) -> np.ndarray:
+    """Array-for-array identical to :func:`_decode_smevr_reference`.
+
+    The SMEVR decode loop is NOT vectorisable: every context term but the mode
+    base is a neighbour the decoder has not produced yet (previous frame, left,
+    upper) or adaptive-count state, so symbol ``n`` cannot be started before
+    symbol ``n-1`` closes.  What is lossless here is scalar specialisation --
+    Python-list state instead of boxed numpy scalars, the cyclic per-cell terms
+    hoisted out, and the arithmetic-decoder plus bit-reader state inlined into
+    locals.  Every arithmetic operation below is exact integer arithmetic on the
+    same values the reference computes.
+    """
+
+    if len(payload) <= _SMEVR_LENGTH.size:
+        raise DDMR7CoderError("SMEVR stream is truncated")
+    (occupancy_length,) = _SMEVR_LENGTH.unpack_from(payload)
+    if occupancy_length <= 0 or _SMEVR_LENGTH.size + occupancy_length >= len(payload):
+        raise DDMR7CoderError("SMEVR stream lengths differ")
+    occupancy_buffer = payload[_SMEVR_LENGTH.size : _SMEVR_LENGTH.size + occupancy_length]
+    value_buffer = payload[_SMEVR_LENGTH.size + occupancy_length :]
+    if not occupancy_buffer or not value_buffer:
+        raise DDMR7CoderError("arithmetic stream is empty")
+
+    pairs, height, width, channels = shape
+    frame_values = height * width
+    total_indices = pairs * frame_values
+
+    # Both streams are independent ``_ArithmeticDecoder`` instances; their state
+    # is unrolled into locals.  Past the end the reference reader returns zero
+    # padding, which the ``>= length`` guards below reproduce exactly.
+    occupancy_end = len(occupancy_buffer)
+    occupancy_byte = 0
+    occupancy_bit = 0
+    occupancy_code = 0
+    for _ in range(_STATE_BITS):
+        if occupancy_byte >= occupancy_end:
+            bit = 0
+        else:
+            bit = (occupancy_buffer[occupancy_byte] >> (7 - occupancy_bit)) & 1
+            occupancy_bit += 1
+            if occupancy_bit == 8:
+                occupancy_bit = 0
+                occupancy_byte += 1
+        occupancy_code = (occupancy_code << 1) | bit
+    occupancy_low = 0
+    occupancy_high = _FULL_RANGE - 1
+
+    value_end = len(value_buffer)
+    value_byte = 0
+    value_bit = 0
+    value_code = 0
+    for _ in range(_STATE_BITS):
+        if value_byte >= value_end:
+            bit = 0
+        else:
+            bit = (value_buffer[value_byte] >> (7 - value_bit)) & 1
+            value_bit += 1
+            if value_bit == 8:
+                value_bit = 0
+                value_byte += 1
+        value_code = (value_code << 1) | bit
+    value_low = 0
+    value_high = _FULL_RANGE - 1
+
+    bases = np.ascontiguousarray(base.transpose(2, 0, 1)).reshape(channels, -1)
+    occupancy_rows: dict[int, list[int]] = {}
+    value_rows: dict[int, list[int]] = {}
+    value_alphabet = levels - 1
+    levels_plus = levels + 1
+    # ``row``/``column`` in the reference only decide whether the upper/left
+    # neighbour exists, and both cycle with period ``frame_values``.
+    has_upper = [1 if cell >= width else 0 for cell in range(frame_values)]
+    has_left = [1 if cell % width else 0 for cell in range(frame_values)]
+    planes: list[list[int]] = []
+
+    for channel in range(channels):
+        heads = [channel * levels + int(value) for value in bases[channel].tolist()]
+        target = [0] * total_indices
+        ages = [0] * frame_values
+        cell = 0
+        for index in range(total_indices):
+            if cell == frame_values:
+                cell = 0
+            previous_value = target[index - frame_values] if index >= frame_values else 0
+            previous_occupancy = 1 if previous_value else 0
+            left_occupancy = 1 if (has_left[cell] and target[index - 1]) else 0
+            upper_occupancy = 1 if (has_upper[cell] and target[index - width]) else 0
+            age = ages[cell]
+            head = heads[cell]
+            context = (
+                ((head * 2 + previous_occupancy) * 2 + left_occupancy) * 2 + upper_occupancy
+            ) * 4 + (age if age < 3 else 3)
+
+            counts = occupancy_rows.get(context)
+            if counts is None:
+                counts = [1, 1]
+                occupancy_rows[context] = counts
+            zero_count = counts[0]
+            total = zero_count + counts[1]
+            span = occupancy_high - occupancy_low + 1
+            point = ((occupancy_code - occupancy_low + 1) * total - 1) // span
+            if point < zero_count:
+                occupancy = 0
+                lower = 0
+                upper = zero_count
+            else:
+                occupancy = 1
+                lower = zero_count
+                upper = total
+            occupancy_high = occupancy_low + (span * upper // total) - 1
+            occupancy_low += span * lower // total
+            while True:
+                if occupancy_high < _HALF:
+                    pass
+                elif occupancy_low >= _HALF:
+                    occupancy_low -= _HALF
+                    occupancy_high -= _HALF
+                    occupancy_code -= _HALF
+                elif occupancy_low >= _QUARTER and occupancy_high < _THREE_QUARTERS:
+                    occupancy_low -= _QUARTER
+                    occupancy_high -= _QUARTER
+                    occupancy_code -= _QUARTER
+                else:
+                    break
+                occupancy_low <<= 1
+                occupancy_high = (occupancy_high << 1) | 1
+                if occupancy_byte >= occupancy_end:
+                    bit = 0
+                else:
+                    bit = (occupancy_buffer[occupancy_byte] >> (7 - occupancy_bit)) & 1
+                    occupancy_bit += 1
+                    if occupancy_bit == 8:
+                        occupancy_bit = 0
+                        occupancy_byte += 1
+                occupancy_code = (occupancy_code << 1) | bit
+            counts[occupancy] += 2
+            if counts[0] + counts[1] >= _RESCALE_AT:
+                counts[0] = max(1, (counts[0] + 1) // 2)
+                counts[1] = max(1, (counts[1] + 1) // 2)
+
+            if occupancy:
+                value_context = head * levels_plus + previous_value
+                value_counts = value_rows.get(value_context)
+                if value_counts is None:
+                    value_counts = [1] * value_alphabet
+                    value_rows[value_context] = value_counts
+                total = 0
+                for count in value_counts:
+                    total += count
+                span = value_high - value_low + 1
+                point = ((value_code - value_low + 1) * total - 1) // span
+                lower = 0
+                rank = -1
+                for position in range(value_alphabet):
+                    count = value_counts[position]
+                    if point < lower + count:
+                        rank = position
+                        break
+                    lower += count
+                if rank < 0:
+                    raise DDMR7CoderError("arithmetic target escaped model")
+                upper = lower + value_counts[rank]
+                value_high = value_low + (span * upper // total) - 1
+                value_low += span * lower // total
+                while True:
+                    if value_high < _HALF:
+                        pass
+                    elif value_low >= _HALF:
+                        value_low -= _HALF
+                        value_high -= _HALF
+                        value_code -= _HALF
+                    elif value_low >= _QUARTER and value_high < _THREE_QUARTERS:
+                        value_low -= _QUARTER
+                        value_high -= _QUARTER
+                        value_code -= _QUARTER
+                    else:
+                        break
+                    value_low <<= 1
+                    value_high = (value_high << 1) | 1
+                    if value_byte >= value_end:
+                        bit = 0
+                    else:
+                        bit = (value_buffer[value_byte] >> (7 - value_bit)) & 1
+                        value_bit += 1
+                        if value_bit == 8:
+                            value_bit = 0
+                            value_byte += 1
+                    value_code = (value_code << 1) | bit
+                value_counts[rank] += 2
+                running = 0
+                for count in value_counts:
+                    running += count
+                if running >= _RESCALE_AT:
+                    for position in range(value_alphabet):
+                        value_counts[position] = max(1, (value_counts[position] + 1) // 2)
+                signed = rank // 2 + 1 if rank % 2 == 0 else -(rank // 2 + 1)
+                target[index] = signed % levels
+
+            if occupancy == previous_occupancy:
+                ages[cell] = age + 1 if age < 255 else 255
+            else:
+                ages[cell] = 0
+            cell += 1
+        planes.append(target)
+
+    output = np.array(planes, dtype=np.uint8)
     return np.ascontiguousarray(output.reshape(channels, *shape[:-1]).transpose(1, 2, 3, 0))
 
 
@@ -1003,11 +1494,25 @@ def _decode_token_codes(frame: bytes, *, canonical: bool) -> np.ndarray:
     return restored
 
 
-def decode_token_codes(frame: bytes) -> np.ndarray:
-    """Decode and canonically re-encode one R7 token frame."""
+def decode_token_codes(frame: bytes, *, verify: str = VERIFY_CANONICAL) -> np.ndarray:
+    """Decode one R7 token frame at the requested rung of the verify ladder.
 
+    ``verify=VERIFY_CANONICAL`` (the default) additionally re-encodes the frame
+    canonically and refuses on any byte difference, so a successful decode also
+    proves the shipped bytes carry no inert or covert slack.  That proof costs a
+    full encode -- about half of total decode time -- so a caller that already
+    trusts the frame's provenance may drop to ``verify=VERIFY_DIGEST``.
+
+    ``VERIFY_DIGEST`` keeps every structural refusal, the exact length closure,
+    the lattice-range checks, and the frame's semantic SHA-256 over the decoded
+    tokens; it drops ONLY the canonical-bytes proof.  It is a deliberate,
+    explicit weakening and is never selected by default.
+    """
+
+    if verify not in TOKEN_VERIFY_MODES:
+        raise DDMR7CoderError(f"unsupported token verify mode: {verify!r}")
     try:
-        return _decode_token_codes(bytes(frame), canonical=True)
+        return _decode_token_codes(bytes(frame), canonical=verify == VERIFY_CANONICAL)
     except (OverflowError, struct.error) as exc:
         raise DDMR7CoderError("token frame structure is invalid") from exc
 
@@ -1036,6 +1541,9 @@ __all__ = [
     "CODEC_IDS",
     "DEFAULT_CODEC",
     "DDMR7CoderError",
+    "TOKEN_VERIFY_MODES",
+    "VERIFY_CANONICAL",
+    "VERIFY_DIGEST",
     "TokenFrameAccounting",
     "decode_token_codes",
     "encode_token_codes",

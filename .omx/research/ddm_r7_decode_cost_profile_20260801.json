@@ -1,0 +1,233 @@
+{
+ "axis": "[macOS-CPU advisory] wall-clock + rate accounting only; NO scorer run; NO score claim; the rate term and archive bytes are UNCHANGED; pointer UNMOVED",
+ "decode_budget_seconds": 1800,
+ "fields": {
+  "F1_v4d": {
+   "budget_share_pct": {
+    "after_canonical": 0.19417676624531546,
+    "after_digest": 0.11181495607727104,
+    "before_canonical": 0.5147340741370701
+   },
+   "bytes": 346478,
+   "decode_seconds": {
+    "after_canonical": 3.4951817924156785,
+    "after_digest": 2.0126692093908787,
+    "before_canonical": 9.265213334467262,
+    "e2e_after_canonical": 3.496515375096351,
+    "e2e_after_digest": 2.0121708754450083
+   },
+   "encode_seconds": {
+    "after": 1.4724116660654545,
+    "before": 4.739453125279397,
+    "e2e_after_full": 1.5104648331180215
+   },
+   "exactness": {
+    "decode_array_equal_to_reference": true,
+    "encode_byte_identical_to_reference": true,
+    "reencode_reproduces_shipped_delta_stream": true
+   },
+   "levels": 16,
+   "phase_seconds": {
+    "base_lzma_decode": 7.975008338689804e-05,
+    "decode_smevr_after": 2.0101950000971556,
+    "decode_smevr_before": 4.513185082934797,
+    "reconstruct": 0.0017003752291202545,
+    "semantic_digest": 0.0006940839812159538,
+    "verify_base_lzma_encode": 0.002991999965161085,
+    "verify_encode_smevr_after": 1.4724116660654545,
+    "verify_encode_smevr_before": 4.739453125279397,
+    "verify_factor_mode_delta": 0.007108916994184256
+   },
+   "sha256": "305a2be96a292967268105241170d0f9d94e5dd7342b0ede573916ad46c53d91",
+   "shape": [
+    600,
+    24,
+    32,
+    4
+   ],
+   "speedup": {
+    "decode_loop": 2.2451478999383983,
+    "decode_total_canonical": 2.650853055647115,
+    "decode_total_digest_rung": 4.603445658748523,
+    "encode_loop": 3.2188369832358483
+   },
+   "symbols": 1843200
+  },
+  "F2_pb1": {
+   "budget_share_pct": {
+    "after_canonical": 0.26760772460450727,
+    "after_digest": 0.15078817364863223,
+    "before_canonical": 0.5889302523961911
+   },
+   "bytes": 557253,
+   "decode_seconds": {
+    "after_canonical": 4.816939042881131,
+    "after_digest": 2.7141871256753802,
+    "before_canonical": 10.60074454313144,
+    "e2e_after_canonical": 4.813353042118251,
+    "e2e_after_digest": 2.7091042078100145
+   },
+   "encode_seconds": {
+    "after": 2.095206667203456,
+    "before": 5.3140355842188,
+    "e2e_after_full": 2.0986643750220537
+   },
+   "exactness": {
+    "decode_array_equal_to_reference": true,
+    "encode_byte_identical_to_reference": true,
+    "reencode_reproduces_shipped_delta_stream": true
+   },
+   "levels": 16,
+   "phase_seconds": {
+    "base_lzma_decode": 7.483316585421562e-05,
+    "decode_smevr_after": 2.7118411669507623,
+    "decode_smevr_before": 5.276817750185728,
+    "reconstruct": 0.0016811671666800976,
+    "semantic_digest": 0.0005899583920836449,
+    "verify_base_lzma_encode": 0.00046575022861361504,
+    "verify_encode_smevr_after": 2.095206667203456,
+    "verify_encode_smevr_before": 5.3140355842188,
+    "verify_factor_mode_delta": 0.007079499773681164
+   },
+   "sha256": "85e2b15d28bddd1b5cf88519a4a601f17b7a8a9c8b9678e491958bb90a877a0c",
+   "shape": [
+    600,
+    24,
+    32,
+    4
+   ],
+   "speedup": {
+    "decode_loop": 1.945843220648157,
+    "decode_total_canonical": 2.200722169984296,
+    "decode_total_digest_rung": 3.9056793258105307,
+    "encode_loop": 2.5362822996891397
+   },
+   "symbols": 1843200
+  },
+  "F3_ck1": {
+   "budget_share_pct": {
+    "after_canonical": 0.16156220141177377,
+    "after_digest": 0.09258203707738882,
+    "before_canonical": 0.4863104351485769
+   },
+   "bytes": 261590,
+   "decode_seconds": {
+    "after_canonical": 2.9081196254119277,
+    "after_digest": 1.666476667392999,
+    "before_canonical": 8.753587832674384,
+    "e2e_after_canonical": 2.9393896660767496,
+    "e2e_after_digest": 1.7031976250000298
+   },
+   "encode_seconds": {
+    "after": 1.23377695819363,
+    "before": 4.5751738329418,
+    "e2e_after_full": 1.1874694586731493
+   },
+   "exactness": {
+    "decode_array_equal_to_reference": true,
+    "encode_byte_identical_to_reference": true,
+    "reencode_reproduces_shipped_delta_stream": true
+   },
+   "levels": 16,
+   "phase_seconds": {
+    "base_lzma_decode": 7.145898416638374e-05,
+    "decode_smevr_after": 1.6641223751939833,
+    "decode_smevr_before": 4.168193707708269,
+    "reconstruct": 0.0016913330182433128,
+    "semantic_digest": 0.0005915001966059208,
+    "verify_base_lzma_encode": 0.00045337481424212456,
+    "verify_encode_smevr_after": 1.23377695819363,
+    "verify_encode_smevr_before": 4.5751738329418,
+    "verify_factor_mode_delta": 0.007412625011056662
+   },
+   "sha256": "e27c20bf0e30d39039bc17cc04afecada27478c3a14d6d58015cd41b1da230a9",
+   "shape": [
+    600,
+    24,
+    32,
+    4
+   ],
+   "speedup": {
+    "decode_loop": 2.5047398976426787,
+    "decode_total_canonical": 3.010050809527638,
+    "decode_total_digest_rung": 5.252751510987737,
+    "encode_loop": 3.708266557060931
+   },
+   "symbols": 1843200
+  },
+  "F4_wr1": {
+   "budget_share_pct": {
+    "after_canonical": 0.12164125930414432,
+    "after_digest": 0.07243163430959815,
+    "before_canonical": 0.445812219960822
+   },
+   "bytes": 161835,
+   "decode_seconds": {
+    "after_canonical": 2.1895426674745977,
+    "after_digest": 1.3037694175727665,
+    "before_canonical": 8.024619959294796,
+    "e2e_after_canonical": 2.1889123748987913,
+    "e2e_after_digest": 1.3071266249753535
+   },
+   "encode_seconds": {
+    "after": 0.8779386249370873,
+    "before": 4.2275615418329835,
+    "e2e_after_full": 0.8874839995987713
+   },
+   "exactness": {
+    "decode_array_equal_to_reference": true,
+    "encode_byte_identical_to_reference": true,
+    "reencode_reproduces_shipped_delta_stream": true
+   },
+   "levels": 16,
+   "phase_seconds": {
+    "base_lzma_decode": 6.5583735704422e-05,
+    "decode_smevr_after": 1.3014709590934217,
+    "decode_smevr_before": 3.786925334017724,
+    "reconstruct": 0.0016633747145533562,
+    "semantic_digest": 0.0005695000290870667,
+    "verify_base_lzma_encode": 0.00046079186722636223,
+    "verify_encode_smevr_after": 0.8779386249370873,
+    "verify_encode_smevr_before": 4.2275615418329835,
+    "verify_factor_mode_delta": 0.00737383309751749
+   },
+   "sha256": "0ccdc6f747056dcdc3650f0d1773d092f4db7508509cac26d7aec01162aa3178",
+   "shape": [
+    600,
+    24,
+    32,
+    4
+   ],
+   "speedup": {
+    "decode_loop": 2.909727111126336,
+    "decode_total_canonical": 3.6649753752231433,
+    "decode_total_digest_rung": 6.154938021352171,
+    "encode_loop": 4.815326973609264
+   },
+   "symbols": 1843200
+  }
+ },
+ "git_head": "358215be01b78e606f0bcbb0ecd305d55b4f9450",
+ "host": {
+  "machine": "arm64",
+  "numpy": "1.26.4",
+  "platform": "macOS-26.4-arm64-arm-64bit-Mach-O",
+  "python": "3.13.12"
+ },
+ "note": "BEFORE is the retained reference implementation timed in the same process as AFTER, so both see identical machine state. Every field is a real shipped state/tokens.dr7t member extracted from an archive on the SSD tier.",
+ "peak_rss_delta_mib": {
+  "field": "F2_pb1",
+  "measured": {
+   "decode_after": 18.578125,
+   "decode_before": 4.453125,
+   "encode_after": 42.875,
+   "encode_before": 1.0
+  },
+  "note": "The optimised encode trades peak memory for time: it materialises one int64 context field plus its Python list per channel. This is the one COST the change introduces; it is charged against RAM, never against archive bytes."
+ },
+ "pointer_moved": false,
+ "research_only": true,
+ "schema": "ddm_r7_decode_cost_profile.v1",
+ "score_claim": false,
+ "written_at_utc": "2026-08-01T05:49:43.457977+00:00"
+}
