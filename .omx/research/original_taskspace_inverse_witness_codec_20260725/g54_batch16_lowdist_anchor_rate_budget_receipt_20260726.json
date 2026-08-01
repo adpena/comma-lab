@@ -1,0 +1,74 @@
+{
+  "schema": "tac.taskspace_lowdist_rate_budget_anchor.v1",
+  "created_at_utc": "2026-07-26T21:23:31Z",
+  "lane_id": "lane_original_taskspace_inverse_witness_codec_capstone_20260726",
+  "research_only": true,
+  "score_claim": false,
+  "promotion_eligible": false,
+  "pointer_mutation_allowed": false,
+  "pointer_delta": 0.0,
+  "novelty": "INDEPENDENT_REPRODUCTION_OF_PREEXISTING_CANONICAL_BATCH16_ANCHOR",
+  "effective_frontier_target": {
+    "score": 0.172,
+    "evidence_grade": "official-leaderboard display",
+    "selection_rule": "min(our_local_frontier_contest_cpu,our_local_frontier_contest_cuda,upstream_official_leaderboard.best_entry)"
+  },
+  "prior_canonical_anchor": {
+    "path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/c1_live_target_debt_n600_batch16.json",
+    "file_sha256": "0db8e47a994cad5367e5eb3028055e667bc4caf3f174026d13171be662e7fbd3",
+    "receipt_sha256": "8b083df5b61955cce942b4e69133f28c639f287b3c4e3c9ba0351a57499aa853",
+    "written_at_utc": "2026-07-26T00:41:37.774154+00:00",
+    "d_seg": 0.00015196058485243054,
+    "d_pose": 0.00010184347386600314,
+    "distortion_score_term": 0.047108982805336805,
+    "strict_less_than_0_172_max_archive_bytes": 187563,
+    "role": "PRIMARY_CANONICAL_PLANNING_ANCHOR"
+  },
+  "replay": {
+    "path": "/Volumes/VertigoDataTier/pact/c1_batch16_exact_replay_20260726/11_batch_replay_receipt.json",
+    "file_sha256": "2d117579c13bf8209c3d6ed8d884f86b7f902a8e1b15a82e146ab4afbe2a49cf",
+    "receipt_sha256": "691f641a19db499a4fd0a18d7226921bbc395a6d05e8186c1747c4faf3124949",
+    "preflight_sha256": "14967588535bb371a8d6de6fec29be1d153611d4feee5752aa62cefe4750b55f",
+    "batch_stage_count": 38,
+    "batch_stage_root_sha256": "c452d0fee233fcf18c9833114873ac005f28a2f261d3b80ef8325c6614b372d5",
+    "pair_count": 600,
+    "frame_count": 1200,
+    "batch_size": 16,
+    "d_seg": 0.00015196057211142033,
+    "d_pose": 0.0001018434704747051,
+    "distortion_score_term": 0.04710898099989964,
+    "axis_correction": "macOS-CPU deterministic batch16 scorer advisory; exact input and frozen recursive closure custody, but not an exact numeric upstream-host mirror",
+    "implementation_closure_present": false
+  },
+  "replay_minus_prior_canonical_distortion_score_term": -1.8054371678233316e-09,
+  "contest_cpu_crosscheck": {
+    "path": "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/modal_contest_cpu/harvest_fc01KXXRAR/contest_auth_eval.json",
+    "archive_sha256": "e4cd154f79a30e2b1d759af0d26e54444d22807f81700565e475392eae064f42",
+    "archive_bytes": 409526925,
+    "rounded_d_seg": 0.00015196,
+    "rounded_d_pose": 0.00010184,
+    "canonical_score_from_rounded_components": 272.73427793588485,
+    "evidence_grade": "contest-CPU Linux x86_64"
+  },
+  "batch32_comparison": {
+    "d_seg": 0.0001519690619574653,
+    "d_pose": 0.00010184327939026322,
+    "distortion_score_term": 0.04710980004607969,
+    "batch16_minus_batch32_distortion_score_term": -8.190461800519633e-07
+  },
+  "conditional_rate_budget": {
+    "strict_less_than_0_172_max_archive_bytes": 187563,
+    "score_at_187563_bytes": 0.17199948382435346,
+    "score_at_187564_bytes": 0.1720001496833066,
+    "strict_less_than_0_15_max_archive_bytes": 154523,
+    "score_at_154523_bytes": 0.14999950401319692,
+    "score_at_154524_bytes": 0.15000016987215004,
+    "v15_reference_bytes": 133941,
+    "v15_reference_score_if_distortion_preserved": 0.1362947950400364,
+    "headroom_from_v15_to_0_172_ceiling_bytes": 53622,
+    "headroom_from_v15_to_0_15_ceiling_bytes": 20582,
+    "conditional_on_preserving_replay_distortion": true
+  },
+  "macro_verdict": "PRIOR_CANONICAL_ANCHOR_INDEPENDENTLY_REPRODUCED_RATE_REPRESENTATION_REMAINS_THE_CRUX",
+  "next_consumer": "race full-n600 Y1 temporal semantic base plus conditional Y0-given-Y1 pose enhancement against direct interleaved and semantic-program residual layouts; arbitrate solely by receiver-closed whole-object score"
+}

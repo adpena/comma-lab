@@ -1,0 +1,32 @@
+{
+  "axis": "[macOS-CPU frozen-scorer advisory]",
+  "blocker_code": "G14_STAGE_IDENTIFIER_PRENORMALIZATION_LENGTH_REFUSAL",
+  "candidate_archive_eligible": false,
+  "checkpoint_counts": {
+    "g0_a": 8,
+    "g8_a": 29,
+    "g8_pass_a": 64,
+    "g8_screen": 1,
+    "g8_screen_retained_branches": 30,
+    "g8_screen_unique_programs": 64,
+    "matched_g0_a_control": 28
+  },
+  "classification": "implementation_blocker_after_successful_branch_checkpoint",
+  "dense_frames_or_scorer_tensors_persisted": false,
+  "exact_failure": "TaskspaceG8A3N2AllocatorError: stage identifier must be bounded safe ASCII",
+  "failure_site": "tools/run_taskspace_g8_a3_n2_allocator.py:_stage_token called for stage_310.g0_a_control",
+  "frontier_pointer_moved": false,
+  "manifest_sha256": "cdf0e3c9db8e73e8bffa23ed9d9ec01e6e699cfbceece3379a30c0f346f43ec4",
+  "next_action": "Land a bounded long-identifier normalization regression guard under new implementation custody, then relaunch or perform an explicit reviewed checkpoint migration; never monkeypatch the frozen process or misstate old manifest custody.",
+  "no_completed_checkpoint_lost": true,
+  "pointer_comparison_admissible": false,
+  "public_archive_payload_reused": false,
+  "research_only": true,
+  "run_directory": ".omx/runs/taskspace_g8_a3_n2_allocator/20260726T135256Z_full_p2_4_8_16",
+  "run_directory_bytes_approximate": 13631488,
+  "runner_sha256": "4fbaa88ac67451f932584fa9109d48e13bc9c606ec2d1c773efb060f2261c3a1",
+  "schema": "tac.g14_stage_identifier_blocker.v1",
+  "score_claim": false,
+  "verdict_scope": "The frozen G14 runner cannot complete every lawful retained branch whose branch plus A program identity exceeds the pre-normalization 192-character helper bound. This is not a G8, A, scorer, receiver, or representation-family negative.",
+  "written_at_utc": "2026-07-26T14:35:39Z"
+}

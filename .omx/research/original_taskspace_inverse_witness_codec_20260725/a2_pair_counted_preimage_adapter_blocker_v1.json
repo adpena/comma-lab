@@ -1,0 +1,142 @@
+{
+  "adapter": {
+    "causal_role": "Y0_GIVEN_EXACT_REALIZED_UINT8_Y1",
+    "counted_artifact_class": "coupled_preimage_parameters",
+    "counted_section_role": "frame0_from_exact_y1",
+    "exact_payload_rule": "the counted A section bytes are the exact canonical coupled_preimage_program packet bytes with no uncounted wrapper or sidecar",
+    "implementation_path": "src/tac/witness_dsl/coupled_preimage_pair_adapter.py",
+    "modes": [
+      "FRAME1_ANCHORED_Y0_FIBRE",
+      "JOINT_SHARED_SKELETON_TWO_FIBRE"
+    ],
+    "pair_role_orders_admitted": [
+      [
+        "generative_correction",
+        "frame0_from_exact_y1"
+      ],
+      [
+        "generative_correction",
+        "frame0_from_exact_y1",
+        "terminal_quotient"
+      ]
+    ],
+    "pose6_consumed_by_a_materializer": false,
+    "pose6_serialized_in_a": false,
+    "research_only": true
+  },
+  "canonical_instance": {
+    "candidate_instance_claimed": false,
+    "canonical_source_custodied_a_packet_present": false,
+    "conclusion": "BLOCKED_NO_CANONICAL_SOURCE_CUSTODIED_A_INSTANCE",
+    "n600_instance_present": false,
+    "reason": "the reopened stack receipt and G1 findings contain the two-mode A grammar but no source-custodied canonical A packet plus compile receipt; inventing controls from the n64 structural or encoder-only n600 artifacts would be a fake instance",
+    "searched_evidence": [
+      {
+        "byte_length": 14284,
+        "path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/taskspace_inverse_codec_stack_receipt_v1.json",
+        "sha256": "f4a0e49951571b9b690294ccd06ab8e7552565cd69e8ba571c7a6910c96ebdcb"
+      },
+      {
+        "byte_length": 19187,
+        "path": ".omx/research/codex_findings_g1_exact_output_lineage_and_coupled_admission_20260726_codex.md",
+        "sha256": "337d327457190f20776fe7dbdce585edf3a81e170b36a3e04dd50b64bc3b9057"
+      },
+      {
+        "byte_length": 11712,
+        "path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/c0b_pbr2_progressive_geometry_n64.json",
+        "sha256": "a56ed973f2169d26a117c96536ec7952b57bde420375f0b439d5e4d0b7407545"
+      },
+      {
+        "byte_length": 1029901,
+        "path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/v9_target_partition_grammar_census_n600.json",
+        "sha256": "c70c9b3062a746d1d6469e43cae3985a7092736d81d72390a729da6d64b4f545"
+      },
+      {
+        "byte_length": 689718,
+        "path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/c1_exact_target_raw_debt_n600.json",
+        "sha256": "60431f1946bc86918630f24a3dda2f73cd948c46938c5535d05309314ce32dc8"
+      },
+      {
+        "byte_length": 2303785,
+        "path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/c1_live_target_debt_n600_batch16.json",
+        "sha256": "0db8e47a994cad5367e5eb3028055e667bc4caf3f174026d13171be662e7fbd3"
+      },
+      {
+        "byte_length": 4057,
+        "path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/c0b_counted_receiver_n1_structural_receipt_v2.json",
+        "sha256": "37ed0ca985c6b9c0d7cab9b0315f48a60ec3a0e7489aa80e8bd415bc6950ed4b"
+      }
+    ]
+  },
+  "closed_structurally": {
+    "a_only_counterfactual_changes_y0": true,
+    "a_only_counterfactual_preserves_exact_y1": true,
+    "a_only_counterfactual_preserves_non_target_g_and_optional_t_bytes": true,
+    "counted_section_offset_length_and_sha256_derived_from_retained_bytes": true,
+    "deletion_corruption_trailing_unknown_mode_hash_and_source_mismatch_fail_closed": true,
+    "deterministic_double_decode": true,
+    "exact_y1_hash_verified_before_y0_materializer": true,
+    "pair_v10_source_id_and_order_identity_required": true,
+    "source_artifact_path_bytes_sha256_and_known_producer_metadata_reopened": true,
+    "strict_byte_identical_a_parse_back": true
+  },
+  "created_at_utc": "2026-07-26T08:42:26Z",
+  "git_head_before_root_serialization": "08279e376636189a2d93b3fe79092e56409dd2b2",
+  "implementation_custody": [
+    {
+      "byte_length": 38125,
+      "path": "src/tac/witness_dsl/coupled_preimage_pair_adapter.py",
+      "sha256": "7eae36d7ec25f6a0acb7a2d2304dd8c040f7d5169f0fb3f282dcb178685bebc6"
+    },
+    {
+      "byte_length": 103846,
+      "path": "src/tac/witness_dsl/pair_population_envelope.py",
+      "sha256": "c602ead524926ab28062a891ec14ad42c70ba65ae1a2bf34f3b90692d4de3a8b"
+    },
+    {
+      "byte_length": 19798,
+      "path": "src/tac/witness_dsl/tests/test_coupled_preimage_pair_adapter.py",
+      "sha256": "070156e69f34ba892c2352ac1eb58075a6e74bc202dfcbfb2888b7667298881e"
+    },
+    {
+      "byte_length": 55545,
+      "path": "src/tac/witness_dsl/coupled_preimage_program.py",
+      "sha256": "4ed3ccc50f71be35577e69796cff89564151d6a4674772728b5f3c86d1f59b11"
+    }
+  ],
+  "not_closed": {
+    "candidate_payload_eligible": false,
+    "complete_archive_payload_lineage": false,
+    "complete_typed_derivation_of_every_a_control_byte": false,
+    "data_in_code_candidate_audit": false,
+    "exact_n600_archive_replay": false,
+    "legacy_pair_compact_pose_independence": false,
+    "originality_proven": false,
+    "promotion_eligible": false,
+    "score_claim": false,
+    "standalone_archive_runtime_closure": false
+  },
+  "rate_accounting": {
+    "generic_deterministic_receiver_code_counted_as_payload": false,
+    "rule": "generic deterministic receiver code is free under rule 118; every learned video source or target derived constant must be in counted payload bytes",
+    "source_or_target_derived_constants_in_decoder_independently_audited": false,
+    "the_exact_a_packet_is_counted": true
+  },
+  "remaining_blockers": [
+    "canonical source-custodied A packet and compile receipt absent",
+    "complete typed derivation and standalone archive lineage for every A control byte absent",
+    "standalone receiver runtime closure and exact n600 archive replay absent",
+    "legacy CompactGeneratorDecode and PairPopulationEnvelope seals still require predictor_pose6_sha256 plus ExclusivePoseOwnership; the new FRAME0_FROM_EXACT_Y1 path must replace that stale foreign key without relabeling ep725 latent codes as Pose6",
+    "complete candidate archive byte accounting data-in-code audit and originality proof absent"
+  ],
+  "schema": "tac.a2_pair_counted_preimage_adapter_blocker.v1",
+  "status": "STRUCTURAL_ADAPTER_LANDED_CANONICAL_INSTANCE_BLOCKED",
+  "tests": {
+    "acceptance_command": ".venv/bin/pytest -q src/tac/witness_dsl/tests/test_generative_taskspace_correction.py src/tac/witness_dsl/tests/test_coupled_preimage_program.py src/tac/witness_dsl/tests/test_pair_population_envelope.py src/tac/witness_dsl/tests/test_c0b_counted_receiver_codec.py src/tac/witness_dsl/tests/test_taskspace_inverse_stack_receipt.py src/tac/witness_dsl/tests/test_coupled_preimage_pair_adapter.py src/tac/witness_dsl/tests/test_generative_taskspace_receiver.py",
+    "acceptance_passed": 108,
+    "acceptance_result": "PASS",
+    "focused_command": ".venv/bin/pytest -q src/tac/witness_dsl/tests/test_coupled_preimage_program.py src/tac/witness_dsl/tests/test_pair_population_envelope.py src/tac/witness_dsl/tests/test_coupled_preimage_pair_adapter.py",
+    "focused_passed": 51,
+    "focused_result": "PASS"
+  }
+}

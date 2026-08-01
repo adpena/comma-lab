@@ -1,0 +1,182 @@
+{
+  "anchors": {
+    "low_distortion": {
+      "authority": {
+        "axis": "[macOS-CPU frozen-scorer advisory]",
+        "execution_allowed": false,
+        "main_landing_review_required": true,
+        "pointer": "0.1910828242 [contest-CPU] UNMOVED",
+        "promotion_eligible": false,
+        "research_only": true,
+        "score_claim": false
+      },
+      "candidate_claim": false,
+      "conditional_frontier_max_archive_bytes": 187562,
+      "conditional_required_byte_reduction_from_diagnostic": 731434763,
+      "d_pose": 0.00010184327939026322,
+      "d_seg": 0.0001519690619574653,
+      "diagnostic_composite_if_bytes_were_charged": 487.2043852053551,
+      "diagnostic_description_bytes": 731622325,
+      "diagnostic_to_conditional_budget_ratio": 3900.695903221335,
+      "distortion_term": 0.04710980004607969,
+      "evidence": {
+        "bytes": 8800,
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_ms1_min_description_lattice_solve_20260724_receipt.json",
+        "sha256": "1b7063a44574b0839ede08c807f348ad417be0492ac32d68634b124b9c2b1e97"
+      },
+      "feasible_distortions_at_zero_rate": true,
+      "role": "low_distortion_encoder_teacher_not_candidate_archive"
+    },
+    "low_rate": {
+      "archive_bytes": 81027,
+      "archive_sha256": "8e9c7ba0fdd1fc0fdff696c639821d6e64a3110bb8744f47ae0ab3d287cd70d8",
+      "candidate_claim": false,
+      "contest_cpu_cuda_owed": true,
+      "d_pose": null,
+      "d_seg": null,
+      "evidence": {
+        "bytes": 5680,
+        "path": "/Users/adpena/Projects/pact/.omx/research/original_taskspace_inverse_witness_codec_20260725/ep725_lossless_xcodec_recode_20260726/receipt.json",
+        "sha256": "02ccb8a6209c79651b64fa93b15aa1ed6155b03d9709f5f18b4ff98edfe25c8c"
+      },
+      "full_n600_replay_owed": true,
+      "full_quantized_state_equal": true,
+      "role": "low_rate_same_state_spelling_not_scored_candidate",
+      "score_claim": false
+    },
+    "receiver_closed_dense_control": {
+      "archive_bytes": 291205400,
+      "archive_sha256": "e3d0581ff4a3f475057e77e530374dad444b640a049b058cd66b37563534773e",
+      "authority": {
+        "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+        "execution_allowed": false,
+        "local_cost_usd": 0,
+        "main_landing_review_required": true,
+        "pointer": "0.1910828242 [contest-CPU]",
+        "pointer_moved": false,
+        "promotion_eligible": false,
+        "research_only": true,
+        "score_claim": false,
+        "torch_threads": 4
+      },
+      "candidate_claim": false,
+      "composite": 194.42556029038283,
+      "conditional_frontier_max_archive_bytes": null,
+      "d_pose": 0.01663315449034709,
+      "d_seg": 0.001159998575846354,
+      "distortion_term": 0.5238375028596528,
+      "evidence": {
+        "bytes": 92594,
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_ms2r_tolerance_capped_solve_r2_20260724T181428Z/receipt.json",
+        "sha256": "03cd9aabc1275c49c983631dd547e7497f8fe95804a9bfd7a24c5d61e9a81d25"
+      },
+      "feasible_distortions_at_zero_rate": false,
+      "role": "receiver_closed_dense_selected_solution_teacher_not_candidate"
+    }
+  },
+  "authority": {
+    "pointer_moved": false,
+    "promotion_eligible": false,
+    "research_only": true,
+    "score_claim": false
+  },
+  "closure_identity_sha256": "65a84235e7df32b019e76bfb1f530b3abac3b15f240d8453aa716d5cc8a3c1a5",
+  "competitive_target": {
+    "axis": "official_leaderboard",
+    "cached_row_rederived": true,
+    "custody": "external target only; no local archive authority implied",
+    "evidence_grade": "[official-leaderboard display]",
+    "leaderboard_rank": 1,
+    "pointer_evidence": {
+      "bytes": 17319,
+      "path": "/Users/adpena/Projects/pact/.omx/state/canonical_frontier_pointer.json",
+      "sha256": "2a61b052be496d3a9a1be1a9c230c8d179a788e61fd03472e50fc85832da94c6"
+    },
+    "pr_number": 130,
+    "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/130",
+    "role": "competitive_score_to_beat",
+    "score": 0.172,
+    "score_precision": "official_display",
+    "selection_rule": "min(our_local_frontier_contest_cpu, our_local_frontier_contest_cuda, upstream_official_leaderboard.best_entry)",
+    "snapshot_at_utc": "2026-07-26T15:42:58.100127+00:00",
+    "source": "upstream_official_leaderboard",
+    "source_kind": "external_public_leaderboard_target",
+    "submission_name": "semantic-pose-HPAC_CPR1"
+  },
+  "dependency_order": [
+    "close exact full-population equality and whole-object recode proofs",
+    "close selected-solution compiler authority and physical ownership",
+    "materialize terminal G14 feedback/costates without extrapolating n2",
+    "implement and price the decoder-executable R10 relay against pixel/tensor controls",
+    "run selected-solution homotopy from low-rate and low-distortion anchors to a complete n600 bridge row",
+    "standalone double-decode then frozen-scorer advisory full-n600 row",
+    "governed same-byte contest CPU and CUDA evaluation"
+  ],
+  "measured_bridge": {
+    "complete_own_lineage_candidate_triples": 0,
+    "exists": false,
+    "reason": "low-rate and low-distortion evidence belong to different objects; no exact finite transition joins them",
+    "scalar_distance_to_frontier": null
+  },
+  "objective": {
+    "admission": "one complete exact triple against the current target sublevel",
+    "formula": "100*d_seg + sqrt(10*d_pose) + 25*archive_bytes/37545489",
+    "independent_axis_thresholds_forbidden": true
+  },
+  "observed_gates": {
+    "g14_interaction_population": {
+      "authority": "n2 advisory until a terminal receipt; never extrapolate to n600",
+      "stage_counts": {
+        "stage_010": 1,
+        "stage_020": 1,
+        "stage_024": 1,
+        "stage_025": 8,
+        "stage_026": 1,
+        "stage_030": 1,
+        "stage_100": 64,
+        "stage_200": 1,
+        "stage_250": 14,
+        "stage_300": 107,
+        "stage_310": 106
+      },
+      "terminal_receipt_exists": false
+    },
+    "g22_full_population_equality": {
+      "authority": "receipt existence only; strict semantic validation is a separate consumer",
+      "checkpoint_count": 25,
+      "receipt_exists": false
+    },
+    "g23_selected_solution_compiler": {
+      "authority": "structural build state only",
+      "compiler_source_exists": true,
+      "focused_test_exists": false,
+      "runner_exists": false
+    }
+  },
+  "principal_cruxes": [
+    {
+      "code": "R10_RECEIVER_EXECUTABLE_FEATURE_RELAY_OWED",
+      "meaning": "carry amplitude/frequency/phase/contrast/channel-energy/texture and chronological Pose continuity through generic decoder operations with counted operands"
+    },
+    {
+      "code": "SELECTED_SOLUTION_COMPILER_LIFECYCLE_OWED",
+      "meaning": "close SourceTruth->IR->RealizedPair->Archive->Decode->axis-score with real callbacks, physical ownership, and authority sealing"
+    },
+    {
+      "code": "CURRENT_FULL_POPULATION_BRIDGE_ROW_OWED",
+      "meaning": "one current own-lineage n600 object must jointly expose exact output, exact final ZIP bytes, d_seg, and d_pose"
+    },
+    {
+      "code": "SUBSTITUTIVE_HOMOTOPY_OWED",
+      "meaning": "replace dense teacher/base/code homes rather than add sidecars; retain whole-object interactions and Pareto branches"
+    }
+  ],
+  "proof_domains": {
+    "artifact_identity": "archive/runtime/output equality and custody",
+    "competitive_admission_depends_on_frontier_pointer": true,
+    "decode_equality_depends_on_frontier_pointer": false,
+    "proof_dependency_set": "only observed external reads invalidate a proof",
+    "semantic_control_identity": "current competitive target and admission rule"
+  },
+  "schema": "tac.taskspace_frontier_closure_audit.v1"
+}

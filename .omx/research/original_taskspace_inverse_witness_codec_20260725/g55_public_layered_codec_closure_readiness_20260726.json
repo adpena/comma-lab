@@ -1,0 +1,77 @@
+{
+  "schema": "taskspace_g55_public_layered_codec_closure_readiness.v1",
+  "measured_at_utc": "2026-07-26T22:43:57Z",
+  "status": "CODE_CLOSED_FRESH_G52_AVAILABLE_BUILD_NOT_RUN_BY_G55",
+  "pointer_delta": "UNMOVED",
+  "score_claim": false,
+  "evaluation_claim": false,
+  "candidate_claim": false,
+  "promotion_eligible": false,
+  "research_only": true,
+  "representation_mode": "DIRECT_TASK_LAYERED",
+  "historical_payload_reused": false,
+  "v15_composition_claim": false,
+  "embedded_v15_bytes": 0,
+  "canonical_frontier_snapshot": {
+    "path": ".omx/state/canonical_frontier_pointer.json",
+    "sha256": "2a61b052be496d3a9a1be1a9c230c8d179a788e61fd03472e50fc85832da94c6",
+    "target_score": 0.172,
+    "selected_source": "upstream_official_leaderboard",
+    "target_is_dynamic_and_must_be_reopened_before_build_and_promotion": true
+  },
+  "fresh_g51_provider": {
+    "path": "/Volumes/VertigoDataTier/pact/taskspace_fresh_scorer_planes_n600_20260726/aggregate_receipt.json",
+    "bytes": 8868,
+    "outer_file_sha256": "ae9048dfc24947a6268315590b65da02b56549379e347cbaced25e2e6f67d915",
+    "embedded_self_seal_sha256": "4363827c2aeb613916029d8bacde8aeb4ded961c4d1ca297310a1e53e204619c",
+    "stage_digest_chain_sha256": "36f1aa103f7ee6c374a8b5b9baad38f5c7b9e6f19b0ef4b58b5f963a4c433e62",
+    "pair_count": 600,
+    "status": "AVAILABLE_AND_ACTUAL_STRICT_LOADER_REOPENED_ALL_FIVE_STAGES"
+  },
+  "required_g52_input": {
+    "aggregate_schema": "taskspace_fresh_selected_plane_codec_aggregate.v1",
+    "bundle_schema": "taskspace_fresh_selected_plane_stream_bundle.v1",
+    "status": "AVAILABLE_AND_G55_RECURSIVE_LINEAGE_GATE_PASSED",
+    "aggregate_path": "/Volumes/VertigoDataTier/pact/taskspace_fresh_selected_plane_codec_x264rgb_46k_n600_20260726/aggregate_receipt.json",
+    "aggregate_sha256": "0305e72d72f3f4f1beb36d8e085fec032ff81ca8dfbe76ee10ce1389f1dc83a0",
+    "bundle_path": "/Volumes/VertigoDataTier/pact/taskspace_fresh_selected_plane_codec_x264rgb_46k_n600_20260726/final/counted_stream_bundle.zip",
+    "bundle_bytes": 184052,
+    "bundle_sha256": "52865d91133ccf41518e738ac47c6119d3aa19e91f70a8b657d841bbb78441cd",
+    "expected_public_raw_sha256": "ccddfd9ab3606ed7a1b8e6bc0d2213028e9408f0dc082c1cba62587118a2ca3d",
+    "old_taskspace_lossy_selected_plane_aggregate_receipt_v1_is_rejected": true,
+    "required_pair_count": 600,
+    "required_stage_receipt_count": 5,
+    "required_public_pyav_version": "17.0.0"
+  },
+  "public_runtime": {
+    "path": "submissions/robust_current/taskspace_layered_public/inflate.py",
+    "sha256": "434bfeb9548e8b4791307c5a0f9bd7a70beca449400ffb52e3742a9f7c3e865c",
+    "scorer_free": true,
+    "shell_ffmpeg_or_ffprobe_required": false,
+    "official_upstream_lock": {
+      "path": "upstream/uv.lock",
+      "bytes": 767724,
+      "sha256": "0489187bd4222ad24ea252c94e51585469c435b9c6a479a047aa85d0e7d17286",
+      "package": "av",
+      "version": "17.0.0"
+    },
+    "official_av_17_0_0_typed_decode": {
+      "thread_count": 1,
+      "libx264rgb_gbrp_native_rgb_sha256": "88c2959d41f54a68a0badd95f4c6849c5b420d43049b2124a6fe85c2d3b6a2b1",
+      "libx265_yuv444p_rgb24_sha256": "0fee877d1fd0cbf14852d416ead4955ad3710aabc8658c629f294ed08df38be7",
+      "result": "PASS"
+    },
+    "factor2_shared_helper_equality": "PASS"
+  },
+  "verification": {
+    "focused_tests": "15 passed",
+    "ruff": "PASS",
+    "py_compile": "PASS",
+    "public_build_preview": "NOT_RUN_BY_G55_PER_ROOT_COORDINATION",
+    "public_double_inflate_n600": "NOT_RUN",
+    "upstream_evaluate_py_n600": "NOT_RUN",
+    "archive_preview_zip": "NOT_CREATED",
+    "archive_zip": "NOT_CREATED"
+  },
+  "next_action": "run the sealed x264rgb G55 config under coordination, stage archive.zip without promotion, inflate in two distinct clean roots, then run exact upstream evaluator"
+}

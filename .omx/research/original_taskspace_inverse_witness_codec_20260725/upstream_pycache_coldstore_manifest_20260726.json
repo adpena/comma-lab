@@ -1,0 +1,82 @@
+{
+  "schema": "tac.upstream_executable_cache_coldstore_manifest.v1",
+  "generated_at_utc": "2026-07-26T16:45:00Z",
+  "operation": "recoverable_move",
+  "destructive_delete_performed": false,
+  "reason": "Generated Python bytecode inside the frozen upstream tree caused the canonical executable-artifact snapshot guard to refuse public auth-eval closure.",
+  "cold_store_root": "/Volumes/VertigoDataTier/pact/cold_store/upstream_pycache_20260726T1645Z",
+  "source_roots": [
+    "/Users/adpena/Projects/pact/upstream/__pycache__",
+    "/Users/adpena/Projects/pact/upstream/submissions/__pycache__"
+  ],
+  "files": [
+    {
+      "original_path": "/Users/adpena/Projects/pact/upstream/__pycache__/evaluate.cpython-313.pyc",
+      "cold_store_path": "/Volumes/VertigoDataTier/pact/cold_store/upstream_pycache_20260726T1645Z/root_pycache/evaluate.cpython-313.pyc",
+      "bytes": 10468,
+      "sha256": "9d7d57218c5f63f36dad18b6190edab6e20f71a03ac6b0111947346657149e57"
+    },
+    {
+      "original_path": "/Users/adpena/Projects/pact/upstream/__pycache__/frame_utils.cpython-311.pyc",
+      "cold_store_path": "/Volumes/VertigoDataTier/pact/cold_store/upstream_pycache_20260726T1645Z/root_pycache/frame_utils.cpython-311.pyc",
+      "bytes": 21208,
+      "sha256": "31b1786c80c201ba9085e4b9dbb2ae466dbe30b15f285d7525ef3da4e16e615e"
+    },
+    {
+      "original_path": "/Users/adpena/Projects/pact/upstream/__pycache__/frame_utils.cpython-312.pyc",
+      "cold_store_path": "/Volumes/VertigoDataTier/pact/cold_store/upstream_pycache_20260726T1645Z/root_pycache/frame_utils.cpython-312.pyc",
+      "bytes": 19085,
+      "sha256": "d63174a8a6dee52b3e6a6292bba930a3413357f32848e112b40bdc444fc28269"
+    },
+    {
+      "original_path": "/Users/adpena/Projects/pact/upstream/__pycache__/frame_utils.cpython-313.pyc",
+      "cold_store_path": "/Volumes/VertigoDataTier/pact/cold_store/upstream_pycache_20260726T1645Z/root_pycache/frame_utils.cpython-313.pyc",
+      "bytes": 19315,
+      "sha256": "2a20929ababb5cce03723d12481541bd625d7b27f84a9faca0b8b11683668626"
+    },
+    {
+      "original_path": "/Users/adpena/Projects/pact/upstream/__pycache__/frame_utils.cpython-314.pyc",
+      "cold_store_path": "/Volumes/VertigoDataTier/pact/cold_store/upstream_pycache_20260726T1645Z/root_pycache/frame_utils.cpython-314.pyc",
+      "bytes": 20960,
+      "sha256": "19ffb47ad5460b28a20ffe125fdad70d26db67c02532d83ea4a482f18a78298f"
+    },
+    {
+      "original_path": "/Users/adpena/Projects/pact/upstream/__pycache__/modules.cpython-311.pyc",
+      "cold_store_path": "/Volumes/VertigoDataTier/pact/cold_store/upstream_pycache_20260726T1645Z/root_pycache/modules.cpython-311.pyc",
+      "bytes": 22605,
+      "sha256": "3843fd02f3cd5789290d9c651dffdcf9de3fdf7fdb8999182e6d5c07e7d925f6"
+    },
+    {
+      "original_path": "/Users/adpena/Projects/pact/upstream/__pycache__/modules.cpython-312.pyc",
+      "cold_store_path": "/Volumes/VertigoDataTier/pact/cold_store/upstream_pycache_20260726T1645Z/root_pycache/modules.cpython-312.pyc",
+      "bytes": 19040,
+      "sha256": "07fb698079313b3384a47afedb4e57deb86cea18dee1a1b41833d0d18821de00"
+    },
+    {
+      "original_path": "/Users/adpena/Projects/pact/upstream/__pycache__/modules.cpython-313.pyc",
+      "cold_store_path": "/Volumes/VertigoDataTier/pact/cold_store/upstream_pycache_20260726T1645Z/root_pycache/modules.cpython-313.pyc",
+      "bytes": 19177,
+      "sha256": "5a6b412b187258f2c2b06186769a837d1feb9396ae67564231ea985751b78c76"
+    },
+    {
+      "original_path": "/Users/adpena/Projects/pact/upstream/__pycache__/modules.cpython-314.pyc",
+      "cold_store_path": "/Volumes/VertigoDataTier/pact/cold_store/upstream_pycache_20260726T1645Z/root_pycache/modules.cpython-314.pyc",
+      "bytes": 20099,
+      "sha256": "3550b2cb96ec546918f9c48baad176b79575ce076d98b8ea93dcc5ff29e6411a"
+    },
+    {
+      "original_path": "/Users/adpena/Projects/pact/upstream/submissions/__pycache__/__init__.cpython-313.pyc",
+      "cold_store_path": "/Volumes/VertigoDataTier/pact/cold_store/upstream_pycache_20260726T1645Z/submissions/submissions_pycache/__init__.cpython-313.pyc",
+      "bytes": 157,
+      "sha256": "74149f04b34f801425dee9df6809fe7c07b6d3a25b5fb37052f1a09709c19cb0"
+    }
+  ],
+  "post_move_closure": {
+    "python_bytecode_writes_disabled": true,
+    "upstream_executable_bytecode_remaining": false,
+    "upstream_snapshot_sha256": "d46d89155dbf0848e357858c8f62e12ef450a2914ef65814a4359ef6768d2d41",
+    "runtime_content_tree_sha256": "445f7e4c80714d330d1b2ac6dd120368b311f713ac1782092744bf7eb5532cec",
+    "repo_local_tac_unresolved_imports": [],
+    "repo_local_tac_parse_errors": []
+  }
+}

@@ -1,0 +1,126 @@
+{
+  "schema": "g107_g94v2_conditional_y0_final_semanticroot_y1_receipt_v1",
+  "date": "2026-07-27",
+  "lane_id": "lane_g107_g94v2_conditional_y0_final_semanticroot_y1_20260727",
+  "implementation_base_head_observed": "b602eac3a0",
+  "shared_worktree_head_at_freeze": "d04b0ab9f6",
+  "head_change_note": "shared-worktree sibling commit advanced HEAD during this bounded lane; G107 created only the four listed uncommitted files",
+  "status": "FROZEN_FOR_ROOT_ADVERSARIAL_REVIEW",
+  "research_only": true,
+  "candidate_claim": false,
+  "score_claim": false,
+  "frontier_pointer_moved": false,
+  "commit_created": false,
+  "heavy_training_run": false,
+  "proxy_score_run": false,
+  "historical_payload_reused": false,
+  "files": [
+    {
+      "path": "src/tac/witness_dsl/taskspace_g107_g94v2_conditional_y0_final_semanticroot_y1_v1.py",
+      "sha256": "610f53138224bb9cd14ad3c227cfd946b8de1fcd5169c72efd7e71e113c547c2"
+    },
+    {
+      "path": "src/tac/witness_dsl/tests/test_taskspace_g107_g94v2_conditional_y0_final_semanticroot_y1_v1.py",
+      "sha256": "aed80a93fa5a067113d5a0c3a15dbac995d07b13c878d66acc7b4bd072b9e055"
+    },
+    {
+      "path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/SPEC_g107_g94v2_conditional_y0_final_semanticroot_y1_20260727.md",
+      "sha256": "089fdf61cdc65553605f8aa4af6e2ef5528d98e84e6be9988c2693ef87ace3e6"
+    },
+    {
+      "path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/g107_g94v2_conditional_y0_final_semanticroot_y1_receipt_20260727.json",
+      "sha256": null,
+      "note": "self-hash intentionally omitted"
+    }
+  ],
+  "verification": {
+    "command": "uv run --frozen python -m pytest -q src/tac/witness_dsl/tests/test_taskspace_g107_g94v2_conditional_y0_final_semanticroot_y1_v1.py",
+    "result": "19 passed in 2.61s",
+    "ruff": "All checks passed",
+    "py_compile": "passed",
+    "scope": "deterministic synthetic behavior only; no SegNet, PoseNet, source-video, archive candidate, or exact-eval evidence"
+  },
+  "contract": {
+    "wire_policy": "FROZEN_FINAL_SEMANTIC_ROOT_Y1_TIMES_ONE_CONDITIONAL_Y0_OWNER_V1",
+    "final_y1_binding": [
+      "semantic_root_packet_sha256",
+      "canonical_g17_ordered_n600_population_binding_sha256",
+      "actual_decoded_ordered_n600_scorer_y1_population_sha256"
+    ],
+    "sole_y0_owner": true,
+    "duplicate_raw_pair_gauges_forbidden": true,
+    "second_temporal_state_forbidden": true,
+    "conditional_operands": [
+      "global_int8_residual_basis",
+      "per_rank_fp32_basis_scales",
+      "ordered_600_by_rank_int16_coefficients",
+      "per_rank_fp32_coefficient_scales"
+    ],
+    "perturb_every_conditional_operand_tested": true,
+    "source_and_scorer_free_receiver": true,
+    "ordered_pair_count": 600,
+    "maximum_stream_batch_pairs": 16,
+    "v10_factor2_exact_for_y0_and_y1": true,
+    "strict_parse_back": true,
+    "exact_g17_root_plus_chronological_pose_seam": true,
+    "candidate_byte_accounting_includes_selected_outer_zip": true
+  },
+  "pose_batch_geometry_p0": {
+    "upstream_batch_size": 16,
+    "source_pose_target_contract": "UPSTREAM_POSENET_SOURCE_TARGET_ORDERED_N600_BATCH16_V1",
+    "candidate_pose_contract": "UPSTREAM_POSENET_FINAL_Y0_Y1_ORDERED_N600_BATCH16_V1",
+    "accepted_source_target_modes": [
+      "FRESH_UPSTREAM_BATCH16_TARGET",
+      "EXACT_BATCH1_TO_BATCH16_PARITY_RECEIPT"
+    ],
+    "legacy_batch1_gt_poses_reused": false,
+    "batch32_trainer_verdict_or_costate_rows_are_authority": false,
+    "fresh_batch16_source_pose_target_present": false,
+    "exact_batch1_to_batch16_parity_receipt_present": false,
+    "blocker": "fresh upstream-batch16 target or exact parity receipt remains owed by the producer lane"
+  },
+  "joint_feasibility": {
+    "formula": "100*d_seg + sqrt(10*d_pose) + 25*selected_archive_bytes/37545489",
+    "policy": "one strict score sublevel only; no independent d_seg or d_pose threshold",
+    "required_pose_measurement_batch_size": 16,
+    "target_byte_budget_api": "target_byte_budget_for_score",
+    "strict_score_slack_api": "G107JointFeasibilityV1.strict_score_slack",
+    "illustrative_arithmetic_only": [
+      {
+        "target_score": 0.172,
+        "d_seg": 0.0006,
+        "d_pose": 0.0003,
+        "target_byte_budget_for_score": 85945,
+        "score_at_budget": 0.17199950347660165,
+        "strict_score_slack": 4.965233983411643e-07
+      },
+      {
+        "target_score": 0.172,
+        "d_seg": 0.0008,
+        "d_pose": 0.0001,
+        "target_byte_budget_for_score": 90675,
+        "score_at_budget": 0.17199953717603667,
+        "strict_score_slack": 4.628239633208686e-07
+      },
+      {
+        "target_score": 0.172,
+        "d_seg": 0.001,
+        "d_pose": 0.00003,
+        "target_byte_budget_for_score": 82118,
+        "score_at_budget": 0.17199951358817525,
+        "strict_score_slack": 4.864118247349669e-07
+      }
+    ],
+    "illustrative_rows_are_measurements": false
+  },
+  "open_blockers": [
+    "G107_FRESH_OWN_LINEAGE_CONDITIONAL_Y0_OPERANDS_OWED",
+    "fresh upstream-batch16 n600 source-pose target binding or exact parity receipt owed",
+    "G107_PUBLIC_INFLATE_SH_RECURSIVE_RUNTIME_CLOSURE_OWED",
+    "G107_SAME_ARCHIVE_UPSTREAM_EVALUATE_PY_N600_CPU_CUDA_OWED"
+  ],
+  "pointer_delta": {
+    "moved": false,
+    "reason": "contract and behavior proofs only; no fresh source-backed operands or exact archive row"
+  }
+}

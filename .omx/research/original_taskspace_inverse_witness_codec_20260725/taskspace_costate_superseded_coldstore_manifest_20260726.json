@@ -1,0 +1,63 @@
+{
+  "schema": "tac.rebuildable_artifact_coldstore_manifest.v1",
+  "created_at_utc": "2026-07-26T18:17:00Z",
+  "operation": "LOSSLESS_MOVE_TO_SSD_COLD_STORE",
+  "delete_performed": false,
+  "reason": "Three append-only intermediate controller materializations were superseded by v4 after identity-domain, sign-reversal, and exact branch-and-bound controller hardening. They are preserved losslessly for historical custody and omitted from the active repository evidence surface.",
+  "active_successor": {
+    "path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/taskspace_feedback_costate_materialization_n600_v5_20260726.json",
+    "bytes": 4043545,
+    "sha256": "9db91f681131c6cd1126a5dd8b2ee048b4d35b08967509ec07d240b016078338"
+  },
+  "cold_store_root": "/Volumes/VertigoDataTier/pact/cold_store/taskspace_costate_superseded_20260726",
+  "artifacts": [
+    {
+      "original_path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/taskspace_feedback_costate_materialization_n600_20260726.json",
+      "cold_store_path": "/Volumes/VertigoDataTier/pact/cold_store/taskspace_costate_superseded_20260726/taskspace_feedback_costate_materialization_n600_20260726.json",
+      "bytes": 4024634,
+      "sha256": "8c441f38133df39c3a05dcf4658255332dbd719fa538484e9f9c7ad475591863"
+    },
+    {
+      "original_path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/taskspace_feedback_costate_materialization_n600_v2_20260726.json",
+      "cold_store_path": "/Volumes/VertigoDataTier/pact/cold_store/taskspace_costate_superseded_20260726/taskspace_feedback_costate_materialization_n600_v2_20260726.json",
+      "bytes": 4026348,
+      "sha256": "81e5fb7adc943245df8496d0186f2f5ae5ddbc2fe8cb5cfed8c6ac773a53cf95"
+    },
+    {
+      "original_path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/taskspace_feedback_costate_materialization_n600_v3_20260726.json",
+      "cold_store_path": "/Volumes/VertigoDataTier/pact/cold_store/taskspace_costate_superseded_20260726/taskspace_feedback_costate_materialization_n600_v3_20260726.json",
+      "bytes": 4043018,
+      "sha256": "6e7f231c8be8ee9d52c367b697c74ee2eb6f997d2084600a7c5a9e521b0bc439"
+    },
+    {
+      "original_path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/taskspace_feedback_costate_materialization_n600_v4_20260726.json",
+      "cold_store_path": "/Volumes/VertigoDataTier/pact/cold_store/taskspace_costate_superseded_20260726/taskspace_feedback_costate_materialization_n600_v4_20260726.json",
+      "bytes": 4043157,
+      "sha256": "128713ed173c7f31eb67e77b3f48cbf410f6615d5b73c8571c3da54623c0c724"
+    }
+  ],
+  "reproducibility": {
+    "source_inputs": [
+      ".omx/runs/taskspace_g8_a3_n2_allocator/20260726T154500Z_full_p2_4_8_16_g14a/final_receipt.json",
+      ".omx/research/original_taskspace_inverse_witness_codec_20260725/canonical_n600_pair_population_20260726.json",
+      ".omx/research/original_taskspace_inverse_witness_codec_20260725/ep725_lossless_xcodec_recode_20260726/receipt.json",
+      ".omx/research/original_taskspace_inverse_witness_codec_20260725/g22_ep725_xcodec_n600_equality_replay_20260726/full_n600_decode_receipt.json",
+      ".omx/research/original_taskspace_inverse_witness_codec_20260725/ep725_population_global_recode_v2_20260726_r2/receipt.json",
+      ".omx/research/original_taskspace_inverse_witness_codec_20260725/g28_ep725_xcodec_full_n600_bridge_eval_20260726.json"
+    ],
+    "tool": "tools/materialize_taskspace_feedback_costate.py",
+    "environment": {
+      "PYTHONDONTWRITEBYTECODE": "1",
+      "python": ".venv/bin/python"
+    },
+    "exact_old_byte_rebuild_claim": false,
+    "note": "The old files remain authoritative by preserved bytes and hashes. Current code intentionally emits the v4 successor, so exact regeneration of superseded bytes is not claimed."
+  },
+  "authority": {
+    "research_only": true,
+    "score_claim": false,
+    "candidate_claim": false,
+    "promotion_eligible": false,
+    "pointer_mutation_performed": false
+  }
+}
