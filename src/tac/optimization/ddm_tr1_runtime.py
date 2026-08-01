@@ -8,6 +8,11 @@ four-section packet:
     Quantized codes for ``clip(EMA.tokens_base + EMA.tokens_delta[p], -1, 1)``.
     The old accounting estimate compressed base and delta separately; this
     runtime intentionally compiles the *combined* field used by the forward.
+    The counted framing is chosen by the selector's ``token_codec``: an absent
+    key is the legacy raw-uint8 Brotli-Q11 frame, and ``r7_smevr_v1`` is the
+    R7 Static-Mode Event/Value Renewal coder that factors the vehicle's own
+    ``shared_base`` temporal mode instead of making a generic LZ window
+    rediscover it.
 ``lotto_renderer``
     Every effective learned renderer value: binary masks plus deployed fp16
     gains and biases.  The fixed signed bank is regenerated from the counted
@@ -66,7 +71,16 @@ COMPRESSED_FRAME_HEADER: Final = struct.Struct(">8sQQ32s")
 TOKENS_RAW_HEADER: Final = struct.Struct(">HHHH")
 RENDERER_RAW_HEADER: Final = struct.Struct(">II")
 TOKENS_FRAME_MAGIC: Final = b"TR1TOK1!"
+TOKENS_R7_FRAME_MAGIC: Final = b"TR1TKR7!"
 RENDERER_FRAME_MAGIC: Final = b"TR1REN1!"
+
+# The counted token-section codec selector.  Legacy packets predate the key, so
+# ABSENCE is the one canonical spelling of the raw-uint8 Brotli-Q11 framing:
+# existing archives keep parsing and a legacy recompile stays byte-identical.
+# Exactly one value may ever be written into a selector.
+TOKEN_CODEC_R7_SMEVR: Final = "r7_smevr_v1"
+# ``experiments.ddm_r7_token_coder._codes`` admits only ``2 <= levels <= 16``.
+_R7_SMEVR_MAX_LEVELS: Final = 16
 
 SEG_H: Final = 384
 SEG_W: Final = 512
@@ -281,6 +295,9 @@ def _validate_selector(value: Any) -> Mapping[str, Any]:
     token_ste = value.get("token_ste")
     if token_ste == "dither":
         expected_keys.add("dither_seed")
+    token_codec = value.get("token_codec")
+    if "token_codec" in value:
+        expected_keys.add("token_codec")
     if set(value) != expected_keys:
         raise TR1RuntimeError(f"selector keys differ: {sorted(value)!r} != {sorted(expected_keys)!r}")
     fixed = {
@@ -297,6 +314,10 @@ def _validate_selector(value: Any) -> Mapping[str, Any]:
     for key, expected in fixed.items():
         if value.get(key) != expected:
             raise TR1RuntimeError(f"selector {key} must equal {expected!r}")
+    # Membership, not ``is not None``: an explicit ``null`` would be a second
+    # spelling of the legacy framing and is refused as noncanonical.
+    if "token_codec" in value and value["token_codec"] != TOKEN_CODEC_R7_SMEVR:
+        raise TR1RuntimeError(f"selector token_codec must be absent or equal {TOKEN_CODEC_R7_SMEVR!r}")
     num_pairs = _exact_int(value.get("num_pairs"), label="num_pairs", minimum=1)
     if num_pairs > 65535:
         raise TR1RuntimeError("num_pairs exceeds uint16 token framing")
@@ -318,6 +339,8 @@ def _validate_selector(value: Any) -> Mapping[str, Any]:
     )
     if levels > 256:
         raise TR1RuntimeError("uint8 token codes support at most 256 levels")
+    if token_codec == TOKEN_CODEC_R7_SMEVR and levels > _R7_SMEVR_MAX_LEVELS:
+        raise TR1RuntimeError(f"token_codec {TOKEN_CODEC_R7_SMEVR} supports at most {_R7_SMEVR_MAX_LEVELS} levels")
     if token_ste not in {"round", "dither"}:
         raise TR1RuntimeError("token_ste must be round or dither")
     if token_ste == "dither":
@@ -374,12 +397,11 @@ def _decode_name(raw: bytes) -> str:
     return name
 
 
-def _encode_brotli_frame(magic: bytes, raw: bytes) -> bytes:
+def _pack_frame(magic: bytes, raw: bytes, coded: bytes) -> bytes:
+    """Frame one coded section against the digest of its codec-independent raw."""
+
     if len(magic) != 8:
         raise TR1RuntimeError("compressed frame magic must be eight bytes")
-    if brotli is None:
-        raise TR1RuntimeError("Brotli is required for TR1 E1 packet compilation")
-    coded = brotli.compress(raw, quality=11)
     return (
         COMPRESSED_FRAME_HEADER.pack(
             magic,
@@ -391,7 +413,9 @@ def _encode_brotli_frame(magic: bytes, raw: bytes) -> bytes:
     )
 
 
-def _decode_brotli_frame(payload: bytes, *, magic: bytes, label: str) -> bytes:
+def _unpack_frame(payload: bytes, *, magic: bytes, label: str) -> tuple[int, bytes, bytes]:
+    """Return ``(raw_length, raw_sha256, coded)`` for one exact-closing frame."""
+
     if len(payload) < COMPRESSED_FRAME_HEADER.size:
         raise TR1RuntimeError(f"{label} frame is truncated")
     observed_magic, raw_length, coded_length, raw_sha = COMPRESSED_FRAME_HEADER.unpack_from(payload)
@@ -399,10 +423,21 @@ def _decode_brotli_frame(payload: bytes, *, magic: bytes, label: str) -> bytes:
         raise TR1RuntimeError(f"{label} frame magic differs")
     if len(payload) != COMPRESSED_FRAME_HEADER.size + coded_length:
         raise TR1RuntimeError(f"{label} coded length does not close")
+    return raw_length, raw_sha, payload[COMPRESSED_FRAME_HEADER.size :]
+
+
+def _encode_brotli_frame(magic: bytes, raw: bytes) -> bytes:
+    if brotli is None:
+        raise TR1RuntimeError("Brotli is required for TR1 E1 packet compilation")
+    return _pack_frame(magic, raw, brotli.compress(raw, quality=11))
+
+
+def _decode_brotli_frame(payload: bytes, *, magic: bytes, label: str) -> bytes:
+    raw_length, raw_sha, coded = _unpack_frame(payload, magic=magic, label=label)
     if brotli is None:
         raise TR1RuntimeError("Brotli is required for TR1 E1 packet decoding")
     try:
-        raw = brotli.decompress(payload[COMPRESSED_FRAME_HEADER.size :])
+        raw = brotli.decompress(coded)
     except brotli.error as exc:
         raise TR1RuntimeError(f"{label} Brotli stream is invalid") from exc
     if len(raw) != raw_length:
@@ -410,6 +445,23 @@ def _decode_brotli_frame(payload: bytes, *, magic: bytes, label: str) -> bytes:
     if hashlib.sha256(raw).digest() != raw_sha:
         raise TR1RuntimeError(f"{label} raw SHA-256 differs")
     return raw
+
+
+def _r7_token_coder() -> Any:
+    """Import the counted R7 token coder lazily; fail closed when it is absent.
+
+    The coder lives under ``experiments`` (its own landing-review boundary), so
+    a legacy-codec parse must never pay for the import.  ``src/tac`` already
+    reaches it the same way from ``tac.witness_dsl.ax1_pool_a_race_20260730``.
+    """
+
+    try:
+        from experiments import ddm_r7_token_coder
+    except ImportError as exc:  # pragma: no cover - depends on sys.path layout
+        raise TR1RuntimeError(
+            f"token_codec {TOKEN_CODEC_R7_SMEVR} requires experiments.ddm_r7_token_coder on sys.path"
+        ) from exc
+    return ddm_r7_token_coder
 
 
 def _token_codes(
@@ -440,44 +492,127 @@ def _token_codes(
     return np.ascontiguousarray(codes_i64.astype(np.uint8))
 
 
-def _encode_tokens(codes: np.ndarray) -> bytes:
+def _tokens_raw(codes: np.ndarray) -> bytes:
+    """The codec-independent raw token image every token frame header digests."""
+
     if codes.ndim != 4:
         raise TR1RuntimeError("token codes must have shape [P,H,W,C]")
     shape = tuple(int(value) for value in codes.shape)
     if any(value > 65535 for value in shape):
         raise TR1RuntimeError("token shape exceeds uint16 framing")
-    raw = (
+    return (
         TOKENS_RAW_HEADER.pack(*shape)
         + np.ascontiguousarray(
             codes,
             dtype=np.uint8,
         ).tobytes()
     )
-    return _encode_brotli_frame(TOKENS_FRAME_MAGIC, raw)
+
+
+def _encode_tokens(codes: np.ndarray, selector: Mapping[str, Any] | None = None) -> bytes:
+    """Encode the counted token section under the selector's ``token_codec``.
+
+    ``selector=None`` -- and any selector without ``token_codec`` -- is the
+    legacy raw-uint8 Brotli-Q11 framing and is byte-identical to the pre-codec
+    runtime, so existing positional callers keep their exact accounting.
+    """
+
+    raw = _tokens_raw(codes)
+    if selector is None:
+        return _encode_brotli_frame(TOKENS_FRAME_MAGIC, raw)
+    token_codec = selector.get("token_codec")
+    if token_codec is None:
+        return _encode_brotli_frame(TOKENS_FRAME_MAGIC, raw)
+    if token_codec != TOKEN_CODEC_R7_SMEVR:
+        raise TR1RuntimeError(f"unsupported token_codec {token_codec!r}")
+    levels = _exact_int(
+        selector.get("token_quant_levels"),
+        label="token_quant_levels",
+        minimum=2,
+    )
+    if levels > _R7_SMEVR_MAX_LEVELS:
+        raise TR1RuntimeError(f"token_codec {TOKEN_CODEC_R7_SMEVR} supports at most {_R7_SMEVR_MAX_LEVELS} levels")
+    coder = _r7_token_coder()
+    try:
+        frame = bytes(
+            coder.encode_token_codes(
+                np.ascontiguousarray(codes, dtype=np.uint8),
+                levels=levels,
+                codec="smevr",
+            )
+        )
+    except coder.DDMR7CoderError as exc:
+        raise TR1RuntimeError(f"R7 SMEVR token encode failed closed: {exc}") from exc
+    return _pack_frame(TOKENS_R7_FRAME_MAGIC, raw, frame)
+
+
+def _decode_r7_tokens(
+    payload: bytes,
+    expected_shape: tuple[int, ...],
+) -> np.ndarray:
+    """Decode one R7 SMEVR token frame and close it against the frame header.
+
+    ``decode_token_codes`` already refuses a noncanonical or trailing-byte R7
+    stream and checks its own semantic digest.  The outer frame adds the
+    independent raw-image length and SHA-256 the legacy framing also carries,
+    so both codecs close on exactly the same evidence.
+    """
+
+    raw_length, raw_sha, frame = _unpack_frame(
+        payload,
+        magic=TOKENS_R7_FRAME_MAGIC,
+        label="tokens",
+    )
+    coder = _r7_token_coder()
+    try:
+        decoded = coder.decode_token_codes(frame)
+    except coder.DDMR7CoderError as exc:
+        raise TR1RuntimeError(f"R7 SMEVR token stream is invalid: {exc}") from exc
+    # Refuse a non-uint8 lattice rather than casting it: a silent wrap would
+    # turn an out-of-range decode into a plausible-looking token field.
+    codes = np.asarray(decoded)
+    if codes.dtype != np.uint8:
+        raise TR1RuntimeError("R7 token decode returned a non-uint8 lattice")
+    codes = np.ascontiguousarray(codes)
+    shape = tuple(int(value) for value in codes.shape)
+    if shape != tuple(expected_shape):
+        raise TR1RuntimeError(f"token shape differs: {shape!r} != {tuple(expected_shape)!r}")
+    raw = _tokens_raw(codes)
+    if len(raw) != raw_length:
+        raise TR1RuntimeError("tokens raw length differs")
+    if hashlib.sha256(raw).digest() != raw_sha:
+        raise TR1RuntimeError("tokens raw SHA-256 differs")
+    return codes
 
 
 def _decode_tokens(payload: bytes, selector: Mapping[str, Any]) -> np.ndarray:
-    raw = _decode_brotli_frame(
-        payload,
-        magic=TOKENS_FRAME_MAGIC,
-        label="tokens",
-    )
-    if len(raw) < TOKENS_RAW_HEADER.size:
-        raise TR1RuntimeError("tokens raw frame is truncated")
-    shape = TOKENS_RAW_HEADER.unpack_from(raw)
     expected_shape = (
         selector["num_pairs"],
         selector["grid_h"],
         selector["grid_w"],
         selector["code_width"],
     )
-    if shape != expected_shape:
-        raise TR1RuntimeError(f"token shape differs: {shape!r} != {expected_shape!r}")
-    expected_bytes = math.prod(shape)
-    if len(raw) != TOKENS_RAW_HEADER.size + expected_bytes:
-        raise TR1RuntimeError("token raw bytes do not close exactly")
-    codes = np.frombuffer(raw, dtype=np.uint8, offset=TOKENS_RAW_HEADER.size)
-    codes = np.ascontiguousarray(codes.reshape(shape))
+    token_codec = selector.get("token_codec")
+    if token_codec is None:
+        raw = _decode_brotli_frame(
+            payload,
+            magic=TOKENS_FRAME_MAGIC,
+            label="tokens",
+        )
+        if len(raw) < TOKENS_RAW_HEADER.size:
+            raise TR1RuntimeError("tokens raw frame is truncated")
+        shape = TOKENS_RAW_HEADER.unpack_from(raw)
+        if shape != expected_shape:
+            raise TR1RuntimeError(f"token shape differs: {shape!r} != {expected_shape!r}")
+        expected_bytes = math.prod(shape)
+        if len(raw) != TOKENS_RAW_HEADER.size + expected_bytes:
+            raise TR1RuntimeError("token raw bytes do not close exactly")
+        codes = np.frombuffer(raw, dtype=np.uint8, offset=TOKENS_RAW_HEADER.size)
+        codes = np.ascontiguousarray(codes.reshape(shape))
+    elif token_codec == TOKEN_CODEC_R7_SMEVR:
+        codes = _decode_r7_tokens(payload, expected_shape)
+    else:  # pragma: no cover - _validate_selector already refuses this
+        raise TR1RuntimeError(f"unsupported token_codec {token_codec!r}")
     if np.any(codes >= selector["token_quant_levels"]):
         raise TR1RuntimeError("token code exceeds selector quantization levels")
     return codes
@@ -890,7 +1025,11 @@ def _checkpoint_arrays(
     return custody, config, arrays
 
 
-def _selector_from_config(config: Mapping[str, Any]) -> Mapping[str, Any]:
+def _selector_from_config(
+    config: Mapping[str, Any],
+    *,
+    token_codec: str | None = None,
+) -> Mapping[str, Any]:
     if config.get("variant") != "lotto":
         raise TR1RuntimeError("only the lotto TR1 variant is supported")
     if config.get("token_temporal_mode") != "shared_base":
@@ -952,15 +1091,27 @@ def _selector_from_config(config: Mapping[str, Any]) -> Mapping[str, Any]:
             )
             + 7
         )
+    if token_codec is not None:
+        selector["token_codec"] = token_codec
     return _validate_selector(selector)
 
 
 def compile_archive_from_checkpoint(
     checkpoint_path: Path | str,
+    *,
+    token_codec: str | None = TOKEN_CODEC_R7_SMEVR,
 ) -> CompiledTR1Archive:
+    """Compile one counted TR1 archive from a trained lotto checkpoint.
+
+    ``token_codec`` defaults to the R7 SMEVR coder, which prices the token
+    section with the coder that actually ships it.  ``token_codec=None``
+    recompiles the legacy raw-uint8 Brotli-Q11 section and reproduces
+    pre-codec archives byte-for-byte.
+    """
+
     path = Path(checkpoint_path)
     custody, config, arrays = _checkpoint_arrays(path)
-    selector = _selector_from_config(config)
+    selector = _selector_from_config(config, token_codec=token_codec)
     base = arrays["tokens_base"]
     delta = arrays["tokens_delta"]
     expected_base_shape = (
@@ -1013,7 +1164,7 @@ def compile_archive_from_checkpoint(
         biases.append(bias)
     selector_payload = _canonical_json(dict(selector))
     section_payloads = {
-        "tokens": _encode_tokens(codes),
+        "tokens": _encode_tokens(codes, selector),
         "lotto_renderer": _encode_renderer(masks, gains, biases),
         "selector": selector_payload,
         "pose_stub": _pose_stub(),
