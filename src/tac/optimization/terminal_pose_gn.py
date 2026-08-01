@@ -489,12 +489,44 @@ class TerminalPoseGNConfig:
     amplitude_q8: int = 256
     line_search: tuple[float, ...] = (1.0, 0.5, 0.25)
     coefficient_limit: int = np.iinfo(np.int16).max
+    #: Marginal-value floor in JOINT-ACTION UNITS PER SCORER EVALUATION -- a Lagrange
+    #: multiplier, not a tuning threshold. `None` (default) runs to exact convergence via
+    #: the stop-on-rejection proof, i.e. the floor=0 limit: keep buying while the price is
+    #: anything above nothing.
+    #:
+    #: WHY A CALLER SUPPLIES IT, AND WHY THERE IS NO DEFAULT NUMBER: this solve is one of
+    #: 600 sharing one wall-clock budget. The optimal allocation is a waterfill -- every
+    #: pair gets iterations until its marginal joint-action gain per evaluation equals a
+    #: COMMON multiplier across all pairs. That multiplier is a property of the caller's
+    #: budget, which the solver cannot see, so inventing one here would be exactly the
+    #: undderived constant this field exists to replace. The solver's job is to EMIT the
+    #: per-iteration exchange rate (`TerminalPoseStepTrace.marginal_value`) so the caller
+    #: can waterfill; the floor is how the caller's answer comes back in.
+    marginal_value_floor: float | None = None
     authority_mode: PoseAuthorityMode = PoseAuthorityMode.STALE_REHEARSAL
     production_custody: ProductionPoseCustodyV1 | None = None
     resume_path: str | None = None
 
     def __post_init__(self) -> None:
-        relinearizations = _integer(self.relinearizations, "config.relinearizations", minimum=2, maximum=3)
+        # NO INVENTED CEILING. The prior `maximum=3` was a magic constant with no
+        # derivation, and it BOUND: `tools/pb1_terminal_pose_gn_600.py` defaults to 2 (the
+        # floor), and eg1's rehearsal receipt shows both solves stopping at 2 while still
+        # descending 13-23%/iteration. The solve was truncated by a number nobody derived.
+        #
+        # The bound that IS derived: this loop provably terminates on its own. A step is
+        # admitted only when `joint_action` STRICTLY decreases (see the acceptance test in
+        # the iteration body), and the code vector lives on a finite integer lattice
+        # (|code| <= coefficient_limit, int16). Strict decrease means no state can recur, so
+        # the accepted-step count is bounded by the reachable-state count -- finite without
+        # any cap. On top of that, a REJECTED step terminates immediately (see the
+        # stop-on-rejection proof at the end of the iteration body), so the loop stops at
+        # convergence, not at a count.
+        #
+        # `relinearizations` therefore survives as a caller-chosen EVALUATION BUDGET, not a
+        # correctness bound: raising it is free for any solve that converges first, because
+        # convergence -- not the count -- ends the loop. The floor stays 2 so an existing
+        # binding payload keeps its meaning.
+        relinearizations = _integer(self.relinearizations, "config.relinearizations", minimum=2)
         object.__setattr__(self, "relinearizations", relinearizations)
         object.__setattr__(self, "damping", _finite(self.damping, "config.damping", minimum=0.0))
         if self.damping == 0.0:
@@ -527,6 +559,16 @@ class TerminalPoseGNConfig:
                 maximum=np.iinfo(np.int16).max,
             ),
         )
+        if self.marginal_value_floor is not None:
+            # A NEGATIVE floor would ask the solve to keep buying at a price worse than
+            # free, which the acceptance rule already refuses -- so it can only ever be
+            # a caller mistake. Zero is legal and exactly reproduces the default: the
+            # stop-on-rejection proof IS the floor=0 case.
+            object.__setattr__(
+                self,
+                "marginal_value_floor",
+                _finite(self.marginal_value_floor, "config.marginal_value_floor", minimum=0.0),
+            )
         if not isinstance(self.authority_mode, PoseAuthorityMode):
             raise TerminalPoseError("config.authority_mode must be PoseAuthorityMode")
         if self.production_custody is not None and not isinstance(self.production_custody, ProductionPoseCustodyV1):
@@ -635,6 +677,13 @@ class TerminalPoseStepTrace:
     line_search_alpha: float | None
     coefficients_before: tuple[int, ...]
     coefficients_after: tuple[int, ...]
+    #: EVERY scorer evaluation this iteration actually spent -- finite differences AND
+    #: line-search probes. `finite_difference_evaluations` counts only the former, so it
+    #: cannot price an iteration. Defaults keep pre-existing resume ledgers loadable.
+    evaluations_spent: int = 0
+    #: Realized joint-action gain per scorer evaluation: the exchange rate this iteration
+    #: bought, in the contest's own units. `None` on a rejected step (it bought nothing).
+    marginal_value: float | None = None
 
     def to_payload(self) -> dict[str, object]:
         return {
@@ -648,6 +697,8 @@ class TerminalPoseStepTrace:
             "line_search_alpha": self.line_search_alpha,
             "coefficients_before": list(self.coefficients_before),
             "coefficients_after": list(self.coefficients_after),
+            "evaluations_spent": self.evaluations_spent,
+            "marginal_value": self.marginal_value,
         }
 
     @classmethod
@@ -660,6 +711,10 @@ class TerminalPoseStepTrace:
             joint_action_before=float(payload["joint_action_before"]),
             joint_action_after=float(payload["joint_action_after"]),
             admitted=bool(payload["admitted"]),
+            evaluations_spent=int(payload.get("evaluations_spent", 0)),
+            marginal_value=(
+                None if payload.get("marginal_value") is None else float(payload["marginal_value"])
+            ),
             line_search_alpha=(None if payload["line_search_alpha"] is None else float(payload["line_search_alpha"])),
             coefficients_before=tuple(int(v) for v in payload["coefficients_before"]),
             coefficients_after=tuple(int(v) for v in payload["coefficients_after"]),
@@ -1028,6 +1083,12 @@ def solve_terminal_pose_gn(
                 raise TerminalPoseError("cached iteration authority differs")
             traces.append(trace)
             start_iteration = iteration + 1
+        if traces and not traces[-1].admitted:
+            # The stop-on-rejection proof has to survive a resume, or resuming would
+            # re-run exactly the work the proof says is a no-op -- and would append a
+            # second rejected trace that a live run could never produce. A rejected
+            # trace on disk means the solve had already converged when it stopped.
+            start_iteration = config.relinearizations
 
     for iteration in range(start_iteration, config.relinearizations):
         before_codes = current_codes.copy()
@@ -1035,6 +1096,7 @@ def solve_terminal_pose_gn(
         before_mse = current_mse
         jacobian = np.empty((6, rank), dtype=np.float64)
         fd_evaluations = 0
+        line_search_evaluations = 0
         for coordinate in range(rank):
             plus = current_codes.astype(np.int64)
             minus = current_codes.astype(np.int64)
@@ -1073,6 +1135,7 @@ def solve_terminal_pose_gn(
                 continue
             seen.add(digest)
             candidate_evaluation, candidate_mse = evaluate(candidate_codes)
+            line_search_evaluations += 1
             if (
                 candidate_mse < before_mse
                 and candidate_evaluation.joint_action < before_evaluation.joint_action
@@ -1091,9 +1154,16 @@ def solve_terminal_pose_gn(
         else:
             admitted = True
             alpha_used, current_codes, current_evaluation, current_mse = best
+        evaluations_spent = fd_evaluations + line_search_evaluations
+        marginal_value: float | None = None
+        if admitted and evaluations_spent > 0:
+            gain = before_evaluation.joint_action - current_evaluation.joint_action
+            marginal_value = gain / float(evaluations_spent)
         trace = TerminalPoseStepTrace(
             iteration=iteration,
             finite_difference_evaluations=fd_evaluations,
+            evaluations_spent=evaluations_spent,
+            marginal_value=marginal_value,
             pose_mse_before=before_mse,
             pose_mse_after=current_mse,
             joint_action_before=before_evaluation.joint_action,
@@ -1116,6 +1186,63 @@ def solve_terminal_pose_gn(
                     "current_pose_mse": current_mse,
                 },
             )
+        if not admitted:
+            # STOP ON REJECTION -- a proof, not a heuristic threshold.
+            #
+            # A rejected iteration leaves `current_codes` and `current_evaluation`
+            # untouched. Every input to the next iteration is therefore bit-identical:
+            # the Jacobian is re-measured at the same point through the same deterministic
+            # `evaluate`, the residual is the same, `delta` solves the same linear system,
+            # and the line search proposes the same candidates -- which fail the same
+            # acceptance test. The next iteration cannot differ, so it cannot succeed.
+            #
+            # MEASURED before this landed (rank 6, linear-response fixture with a
+            # magnitude-proportional d_seg veto): relinearizations=3 cost 12 more scorer
+            # evaluations than relinearizations=2 and reached a BIT-IDENTICAL final MSE of
+            # 0.0013718196004356654. The extra iteration was pure waste, and it is exactly
+            # the shape a reader mistakes for "we ran three relinearizations".
+            #
+            # Determinism of `score_realized_candidate` is the precondition, and this module
+            # already requires it: the verdict cache refuses a replay whose pose MSE differs
+            # (`cached verdict pose MSE differs`), and re-validation refuses a within-call
+            # disagreement (`verdict pose MSE differs after validation`). A scorer that could
+            # make the repeat behave differently is one this solver already rejects.
+            break
+        if config.marginal_value_floor is not None:
+            # EVENT-GATED SOFT STOP, extrapolated by the iteration's own decay law.
+            #
+            # Stop-on-rejection above catches the HARD wall -- no representable step
+            # improves. It cannot catch the SOFT one: a solve that keeps accepting while
+            # its gain decays toward nothing still pays 2*rank + line-search evaluations
+            # per iteration for an ever-smaller return. That is the case this gate reads.
+            #
+            # THE DECAY LAW (why extrapolation is legitimate, not a guess): a damped
+            # Gauss-Newton iteration on a locally-quadratic objective contracts the error
+            # GEOMETRICALLY -- e_{k+1} ~ rho * e_k, with rho set by the damping-to-curvature
+            # ratio. So the per-iteration gain sequence is geometric, and one-step-ahead
+            # prediction is the ratio extrapolation. Nothing is fitted beyond that.
+            #
+            # THE AVERAGE IS GEOMETRIC, NOT ARITHMETIC: a multiplicative sequence averages
+            # in log space. The arithmetic mean of ratios would be biased upward by a single
+            # noisy iteration and would keep a dead solve alive. This is the rolling estimate
+            # of rho over every ratio observed so far.
+            realized = [t.marginal_value for t in traces if t.marginal_value is not None]
+            if realized:
+                predicted_next = realized[-1]
+                if len(realized) >= 2:
+                    ratios = [
+                        realized[i] / realized[i - 1]
+                        for i in range(1, len(realized))
+                        if realized[i - 1] > 0.0 and realized[i] > 0.0
+                    ]
+                    if ratios:
+                        rho = math.exp(sum(math.log(r) for r in ratios) / len(ratios))
+                        # rho >= 1 means the sequence is NOT decaying -- the solve is still
+                        # finding its stride, so extrapolating a stop would be premature.
+                        if rho < 1.0:
+                            predicted_next = realized[-1] * rho
+                if predicted_next < config.marginal_value_floor:
+                    break
 
     strict_improvement = current_mse < initial_mse and current_evaluation.joint_action < initial_evaluation.joint_action
     external_governor_review_required = (
