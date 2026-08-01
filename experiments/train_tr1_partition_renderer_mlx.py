@@ -832,8 +832,11 @@ def counted_bytes_ledger(model, cfg: TR1Config) -> dict[str, Any]:
     QA86(b) / census T5: the token stream is priced with ``cfg.byte_ledger_coder``
     ("smevr" default = the SHIPPED r7 coder; "zlib" = the legacy temporal-delta
     surrogate). The zlib price is ALSO recorded (cheap) for decomposable observability
-    (max-observability non-negotiable); ``total_counted_bytes`` sums ONLY the three real
-    streams (never the observability keys)."""
+    (max-observability non-negotiable); ``total_counted_bytes`` sums ONLY the FOUR real
+    streams — tokens + renderer + selector + rowband spec (QA84 §4.2) — never the
+    observability keys. The counted-vs-observability split is pinned by
+    ``src/tac/tests/test_ddm_tb1_tr1_renderer.py`` (key classification; an unclassified
+    new key fails) and ``test_ddm_b2b_burn2_composition.py`` (nonzero rowband term)."""
     coder = getattr(cfg, "byte_ledger_coder", "smevr")
     tok_b_zlib = _token_bytes_zlib(model, cfg)
     if coder == "smevr":

@@ -148,15 +148,46 @@ def test_lotto_mask_is_hard_and_score_grad_flows():
 
 
 # ---------------------------------------------------------------- ledger ----
+# The rule-118 counted-vs-free boundary of ``counted_bytes_ledger``. EVERY key the
+# ledger emits must be classified here:
+#   COUNTED       -> archive.zip payload; MUST be summed into total_counted_bytes.
+#   OBSERVABILITY -> decomposition telemetry; MUST NOT be summed (max-observability
+#                    non-negotiable keeps them in the dict, never in the price).
+# A new, unclassified key FAILS this test by construction — the author must decide
+# which side of the boundary it is on. That decision is a compliance decision: a
+# byte-bearing key left out of the total UNDER-prices the rate term.
+COUNTED_LEDGER_KEYS = frozenset({
+    "tokens_bytes",             # token stream (smevr or zlib per cfg.byte_ledger_coder)
+    "renderer_bytes",           # plain: int8 weights | lotto: 1-bit mask + fp16 mods
+    "selector_ledger_bytes",    # every decoder-visible VIDEO-SELECTED choice (eu1)
+    "rowband_spec_bytes",       # QA84 §4.2 row-band grammar spec (decoder side-info)
+})
+OBSERVABILITY_LEDGER_KEYS = frozenset({
+    "tokens_bytes_zlib",        # legacy temporal-delta price, kept for decomposition
+    "tokens_bytes_smevr",       # r7 coder price (== tokens_bytes when smevr is used)
+    "token_ledger_coder",       # which coder priced tokens_bytes (a str, not bytes)
+})
+
+
 def test_counted_ledger_keys_and_selector_counted_both_variants():
     for variant in ("plain", "lotto"):
         m = build_module(_cfg(variant))
         led = counted_bytes_ledger(m, _cfg(variant))
-        assert set(led) == {"tokens_bytes", "renderer_bytes", "selector_ledger_bytes",
-                            "total_counted_bytes"}
+        assert COUNTED_LEDGER_KEYS <= set(led)
+        # rule-118 boundary: the total is EXACTLY the counted streams, no more, no less.
+        assert led["total_counted_bytes"] == sum(int(led[k]) for k in COUNTED_LEDGER_KEYS)
+        unclassified = (set(led) - COUNTED_LEDGER_KEYS - OBSERVABILITY_LEDGER_KEYS
+                        - {"total_counted_bytes"})
+        assert not unclassified, (
+            f"unclassified counted_bytes_ledger key(s) {sorted(unclassified)}: add each to "
+            "COUNTED_LEDGER_KEYS (archive payload -> summed into total_counted_bytes) or to "
+            "OBSERVABILITY_LEDGER_KEYS (telemetry -> never summed). Leaving a byte-bearing "
+            "key out of the total UNDER-prices the rate term.")
         assert led["selector_ledger_bytes"] > 0  # rule-118: selection COUNTED for BOTH
-        assert led["total_counted_bytes"] == (led["tokens_bytes"] + led["renderer_bytes"]
-                                              + led["selector_ledger_bytes"])
+        # No row-band grammar on these configs, so that term is degenerate HERE; the
+        # nonzero case is covered by test_ddm_b2b_burn2_composition.py
+        # ::test_rowband_ledger_counts_spec_bytes_in_total.
+        assert led["rowband_spec_bytes"] == 0
 
 
 def test_lotto_renderer_bytes_below_plain_int8():

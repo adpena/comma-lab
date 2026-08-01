@@ -12,7 +12,10 @@ Layers (in order):
      evaluation for weeks.
   2. tac.preflight --scope dev — the bounded developer validator stack.
      PREFLIGHT_FULL=1 switches to the exhaustive release/custody stack.
-  3. Hands off to review_gate_hook for the standard review-tracker check.
+  3. CI-blind tests — the MLX-gated modules GitHub Actions cannot execute (no Linux
+     mlx wheel => pytest.importorskip skips them and reports GREEN), restricted to
+     those reachable from the staged files. This hook is their ONLY automated surface.
+  4. Hands off to review_gate_hook for the standard review-tracker check.
 
 Install:
     ln -sf ../../tools/preflight_hook.py .git/hooks/pre-commit
@@ -27,10 +30,14 @@ Environment overrides:
     REVIEW_GATE_ENABLED=0      Skip review gate
     REVIEW_GATE_OVERRIDE=1     Override review gate (still runs preflight)
     PREFLIGHT_SKIP_RUFF=1      Skip ruff F821 step (e.g., when ruff missing)
+    PREFLIGHT_SKIP_CI_BLIND_TESTS=1  Skip the CI-blind test step (NOT recommended)
+    PREFLIGHT_CI_BLIND_TIMEOUT_SECONDS  Override that step's subprocess timeout
 """
 from __future__ import annotations
 
+import ast
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -104,6 +111,175 @@ def run_ruff_undefined_name(staged: list[str]) -> int:
         print("  Skip (NOT recommended): PREFLIGHT_SKIP_RUFF=1 git commit ...",
               file=sys.stderr)
         return 1
+    return 0
+
+
+def _ci_blind_test_modules() -> list[Path]:
+    """Test modules that GitHub Actions CI structurally CANNOT execute.
+
+    `.github/workflows/ci.yml` runs pytest on ubuntu-24.04 and installs `.[dev,runtime]`.
+    `mlx` is a SEPARATE optional extra (pyproject `mlx = ["mlx>=0.5"]`) with no Linux
+    wheels, so every module whose import guard is `pytest.importorskip("mlx...")` is
+    SKIPPED there — and pytest reports a skip as green. Those modules therefore have NO
+    automated surface at all: CI cannot run them, and this hook (until this step) ran no
+    tests. `test_ddm_tb1_tr1_renderer.py` sat red on main for ~2 days that way.
+
+    Detection is static (never imports the modules it guards): a cheap substring
+    prefilter, then an AST confirmation that an actual `importorskip("mlx...")` CALL
+    exists. The AST step matters — a test that merely mentions the guard inside a string
+    literal (this file's own tests do) is not itself MLX-gated, and a substring-only
+    detector would mis-classify it.
+    """
+    tests_dir = REPO_ROOT / "src" / "tac" / "tests"
+    if not tests_dir.is_dir():
+        return []
+    blind: list[Path] = []
+    for path in sorted(tests_dir.glob("test_*.py")):
+        try:
+            text = path.read_text(encoding="utf-8", errors="ignore")
+        except OSError:
+            continue
+        if "importorskip" not in text or "mlx" not in text:
+            continue
+        try:
+            tree = ast.parse(text)
+        except SyntaxError:
+            blind.append(path)  # unparseable => assume gated; ties go to running it
+            continue
+        if _has_mlx_importorskip_call(tree):
+            blind.append(path)
+    return blind
+
+
+def _has_mlx_importorskip_call(tree: ast.AST) -> bool:
+    """True when the module CALLS importorskip("mlx...") — any of the observed forms
+    (`pytest.importorskip(...)`, a bare `importorskip(...)`, with or without `reason=`)."""
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        func = node.func
+        name = func.attr if isinstance(func, ast.Attribute) else getattr(func, "id", None)
+        if name != "importorskip" or not node.args:
+            continue
+        first = node.args[0]
+        if isinstance(first, ast.Constant) and isinstance(first.value, str) \
+                and first.value.split(".")[0] == "mlx":
+            return True
+    return False
+
+
+def _module_reference_tokens(rel_path: str) -> set[str]:
+    """Every importable dotted name a test could use to reach `rel_path`.
+
+    `src/tac/witness_dsl/qa84_rowband_grammar.py` ->
+        {"tac.witness_dsl.qa84_rowband_grammar", "witness_dsl.qa84_rowband_grammar",
+         "qa84_rowband_grammar"}
+    All trailing sub-paths are included because `src/` is on sys.path and tests import by
+    package path, by sub-package, or by bare module name depending on their own sys.path
+    surgery. No heuristics/thresholds: an extra match only costs runtime, never silence.
+    """
+    if not rel_path:
+        return set()
+    parts = Path(rel_path).with_suffix("").parts
+    if parts and parts[0] == "src":
+        parts = parts[1:]
+    return {".".join(parts[i:]) for i in range(len(parts))}
+
+
+def _select_ci_blind_tests(staged: list[str]) -> list[str]:
+    """CI-blind test modules that reference any staged module (or are staged themselves)."""
+    blind = _ci_blind_test_modules()
+    if not blind or not staged:
+        return []
+    staged_set = {str(REPO_ROOT / s) for s in staged}
+    tokens: set[str] = set()
+    for rel in staged:
+        tokens |= _module_reference_tokens(rel)
+    selected: list[str] = []
+    # Whole-word match, not substring: a bare stem like "io" or "foo" must appear as a
+    # name, not inside another identifier. Over-matching costs only runtime; UNDER-matching
+    # costs silence, so ties go to running the test.
+    pattern = re.compile("|".join(rf"\b{re.escape(t)}\b" for t in sorted(tokens))) \
+        if tokens else None
+    for path in blind:
+        if str(path) in staged_set:
+            selected.append(str(path.relative_to(REPO_ROOT)))
+            continue
+        if pattern is None:
+            continue
+        try:
+            text = path.read_text(encoding="utf-8", errors="ignore")
+        except OSError:
+            continue
+        if pattern.search(text):
+            selected.append(str(path.relative_to(REPO_ROOT)))
+    return selected
+
+
+def _ci_blind_timeout_seconds() -> int:
+    raw = os.environ.get("PREFLIGHT_CI_BLIND_TIMEOUT_SECONDS")
+    if raw:
+        try:
+            value = int(raw)
+        except ValueError:
+            value = 0
+        return value if value > 0 else 180
+    return 180
+
+
+def run_ci_blind_tests(staged: list[str]) -> int:
+    """Run the CI-blind (MLX-gated) tests reachable from the staged files.
+
+    This is the ONLY automated moment on the only machine that can execute them, so it
+    BLOCKS on red and on timeout rather than warning: a soft-pass here would re-create
+    the exact silence it exists to remove (skip-as-green).
+    """
+    if os.environ.get("PREFLIGHT_SKIP_CI_BLIND_TESTS") == "1":
+        return 0
+    selected = _select_ci_blind_tests(staged)
+    if not selected:
+        return 0
+    timeout = _ci_blind_timeout_seconds()
+    try:
+        result = subprocess.run(
+            [".venv/bin/python", "-m", "pytest", *selected,
+             "-q", "--no-header", "-m", "not slow"],
+            cwd=REPO_ROOT, capture_output=True, text=True, timeout=timeout,
+        )
+    except FileNotFoundError:
+        print(f"{YELLOW}[preflight-hook] .venv missing, skipping CI-blind tests{RST}",
+              file=sys.stderr)
+        return 0
+    except subprocess.TimeoutExpired:
+        print(f"\n{RED}{BOLD}[preflight-hook] BLOCKED: CI-blind tests timed out{RST}",
+              file=sys.stderr)
+        print(f"  modules: {' '.join(selected)}", file=sys.stderr)
+        print(f"  timeout: {timeout}s (PREFLIGHT_CI_BLIND_TIMEOUT_SECONDS overrides)",
+              file=sys.stderr)
+        return 1
+    if result.returncode == 5:
+        # pytest EXIT_NOTESTSCOLLECTED: everything in the selection was deselected by
+        # `-m "not slow"`. Nothing ran, so nothing is proven — say so instead of
+        # reporting the green tick that a bare `!= 0` check would have called a failure
+        # and a bare `== 0` check would have called a pass.
+        print(f"{YELLOW}[preflight-hook] CI-blind step: no tests collected in "
+              f"{len(selected)} selected module(s) (all `slow`?) — nothing verified{RST}",
+              file=sys.stderr)
+        return 0
+    if result.returncode != 0:
+        print(f"\n{RED}{BOLD}[preflight-hook] BLOCKED: CI-blind (MLX-gated) test failed{RST}")
+        print(result.stdout[-6000:], file=sys.stderr)
+        if result.stderr:
+            print(result.stderr[-2000:], file=sys.stderr)
+        print(f"\n{RED}GitHub Actions CANNOT catch this: mlx has no Linux wheel, so CI "
+              f"SKIPS these modules and reports green.{RST}", file=sys.stderr)
+        print("  This hook is the only automated surface that runs them. Fix, then commit.",
+              file=sys.stderr)
+        print("  Skip (NOT recommended): PREFLIGHT_SKIP_CI_BLIND_TESTS=1 git commit ...",
+              file=sys.stderr)
+        return 1
+    print(f"{GREEN}[preflight-hook] CI-blind tests OK ({len(selected)} module(s)){RST}",
+          file=sys.stderr)
     return 0
 
 
@@ -236,7 +412,13 @@ def main() -> int:
     if rc != 0:
         return rc
 
-    # Step 3: review gate
+    # Step 3: CI-blind (MLX-gated) tests reachable from the staged files — the set
+    # GitHub Actions structurally cannot execute (skip-as-green).
+    rc = run_ci_blind_tests(staged)
+    if rc != 0:
+        return rc
+
+    # Step 4: review gate
     return run_review_gate()
 
 
