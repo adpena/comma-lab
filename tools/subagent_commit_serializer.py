@@ -139,6 +139,7 @@ import argparse
 import datetime as _dt
 import fcntl
 import hashlib
+import importlib.util
 import json
 import os
 import socket
@@ -441,10 +442,98 @@ def _append_co_author_trailer(message: str) -> str:
     """
     return message
 
-# How many seconds to wait for the lock before giving up. The pre-commit
-# hook runs full preflight (~5-10s) so 120s easily accommodates 5+ queued
-# subagents.
-DEFAULT_TIMEOUT_SECONDS = 120
+# ------------------------------------------------------------------------------------
+# Lock patience.
+#
+# This is a CONTROL knob (task #847 / #854): it acts on the SELECTION channel, deciding
+# which commit attempts survive contention. It is DERIVED from the hook's own declared
+# bounds rather than chosen, because the previous literal was derived once and then
+# silently outlived its measurement.
+#
+# WHAT WENT WRONG WITH THE LITERAL. The retired comment read "the pre-commit hook runs
+# full preflight (~5-10s) so 120s easily accommodates 5+ queued subagents". That was TRUE
+# when written and is STILL true at the median: MEASURED over .omx/state/commit-serializer
+# .log (n=9112 attempts carrying `commit_seconds`), p50 = 3.2s, p90 = 7.8s. The hazard
+# moved into the TAIL: p99 = 161.0s, max = 468.0s, because the hook grew a CI-blind
+# (MLX-gated) pytest step that agents routinely run with
+# PREFLIGHT_CI_BLIND_TIMEOUT_SECONDS raised to 1500. A patience derived from the median
+# cannot survive a tail that grew, and nothing re-derived it. MEASURED consequence on
+# 2026-08-01: 7 of 60 commit attempts (11.7%) died with outcome=lock_timeout — ddm_tr6 x5,
+# ddm_vc1 x1, ddm_rt1 x1 — every one of them a healthy commit behind a healthy sibling.
+#
+# WHY A TIMEOUT AT ALL, AND WHY LARGE. `fcntl.flock` is released by the kernel when the
+# holder dies, so a CRASHED holder can never block us: the only thing this timeout can
+# protect against is a holder that is alive but wedged, and a timeout cannot tell wedged
+# from slow. Setting it below the legitimate hook duration therefore buys no safety and
+# converts normal contention into failure. The patience is set to cover legitimate
+# contention, and `_acquire_lock` now REPORTS progress while waiting so a wedged holder
+# is visible immediately instead of after a silent block.
+#
+# DERIVATION. Two ways to be starved, so the patience is the max of two terms:
+#   (1) ONE sibling running its hook to the full bound. We must not give up while it is
+#       still healthy, so the patience is at least
+#       preflight_hook.effective_hook_wall_clock_bound_seconds(), read from the SAME
+#       environment the child `git commit` inherits — a raised
+#       PREFLIGHT_CI_BLIND_TIMEOUT_SECONDS raises this patience with it, so the two can
+#       no longer drift apart. This is the term that binds today.
+#   (2) A QUEUE of siblings each taking a typical long hook:
+#       MAX_CONCURRENT_COMMITTERS x the ledger's p99 hold.
+#         queue depth = 6, MEASURED: the maximum number of DISTINCT agent labels with
+#           overlapping commit attempts since 2026-07-25 (n=735 attempts; the same
+#           statistic for 2026-08-01 alone is 3).
+#         p99 hold = 161s, MEASURED: p99 of `commit_seconds` over the ledger (n=9112).
+# NOT queue depth x the BOUND: that compounds two worst cases into a patience of hours.
+# Six siblings simultaneously running to a 20-minute ceiling is not contention, it is a
+# wedged machine — which the progress line below surfaces while it is happening.
+# CROSS-CHECK (independent of the derivation): the largest SUCCESSFUL lock wait ever
+# recorded is 1021.93s (n=9833 waits), and the arm instructions already tell agents to
+# pass `--timeout-seconds 2400` by hand. The derived default sits between the two, and
+# making it the DEFAULT is the point: a patience that only works when every caller
+# remembers a flag is an orphaned default.
+# OWNER: the commit serializer surface (tools/subagent_commit_serializer.py).
+# RE-DERIVATION TRIGGER: a lock_timeout rate above ~1% of attempts in any week; a
+#   measured max concurrent-label count above MAX_CONCURRENT_COMMITTERS; or a measured
+#   p99 `commit_seconds` above MEASURED_P99_HOLD_SECONDS.
+MAX_CONCURRENT_COMMITTERS = 6
+MEASURED_P99_HOLD_SECONDS = 161
+
+# Used only when tools/preflight_hook.py cannot be read (fixtures stand up minimal repos).
+_FALLBACK_HOOK_BOUND_SECONDS = 180
+
+
+def _hook_wall_clock_bound_seconds() -> int:
+    """Whatever bound the pre-commit hook is running under, in THIS environment."""
+    hook_path = Path(__file__).resolve().parent / "preflight_hook.py"
+    try:
+        spec = importlib.util.spec_from_file_location(
+            "_serializer_preflight_hook", hook_path)
+        if spec is None or spec.loader is None:
+            return _FALLBACK_HOOK_BOUND_SECONDS
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return int(module.effective_hook_wall_clock_bound_seconds())
+    except Exception:
+        # A hook we cannot read must not stop a commit; fall back, never raise.
+        return _FALLBACK_HOOK_BOUND_SECONDS
+
+
+def default_timeout_seconds() -> int:
+    """Lock patience = max(one full hook bound, a queue of typical long hooks).
+
+    See the derivation above; both terms are measured, neither is chosen.
+    """
+    return max(
+        _hook_wall_clock_bound_seconds(),
+        MAX_CONCURRENT_COMMITTERS * MEASURED_P99_HOLD_SECONDS,
+    )
+
+
+DEFAULT_TIMEOUT_SECONDS = default_timeout_seconds()
+
+# How often to say, out loud, that we are still waiting. A silent multi-minute block is
+# indistinguishable from a hang; the periodic line is what makes a wedged holder legible
+# without turning legitimate contention into a failure.
+LOCK_WAIT_PROGRESS_SECONDS = 30
 
 
 def _now_iso() -> str:
@@ -464,27 +553,49 @@ def _append_log(record: dict) -> None:
 
 
 def _acquire_lock(timeout_seconds: int):
-    """Acquire LOCK_EX on .commit-lock with a soft timeout.
+    """Acquire LOCK_EX on .commit-lock with a soft timeout, reporting progress.
 
     Returns the open file handle (caller must keep it open until release).
     Raises TimeoutError if the lock can't be acquired within timeout.
+
+    The wait is NARRATED every LOCK_WAIT_PROGRESS_SECONDS. Patience without narration is
+    the failure mode this replaces: the caller could not tell a healthy sibling's long
+    hook from a hang, so the only visible signal was the eventual FATAL. Since `flock` is
+    released by the kernel when a holder dies, a wait that keeps growing means a LIVE
+    holder — which the periodic line makes actionable while it is still happening.
     """
     LOCK_PATH.parent.mkdir(parents=True, exist_ok=True)
     LOCK_PATH.touch(exist_ok=True)
     fh = open(LOCK_PATH, "w")  # noqa: SIM115 - caller must hold the handle until explicit unlock.
-    deadline = time.monotonic() + timeout_seconds
+    started = time.monotonic()
+    deadline = started + timeout_seconds
+    next_report = started + LOCK_WAIT_PROGRESS_SECONDS
     while True:
         try:
             fcntl.flock(fh.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
             return fh
         except BlockingIOError:
-            if time.monotonic() >= deadline:
+            now = time.monotonic()
+            if now >= deadline:
                 fh.close()
                 raise TimeoutError(
                     f"Could not acquire {LOCK_PATH} within {timeout_seconds}s "
-                    f"— another subagent's commit hook is taking unusually "
-                    f"long. Inspect: tail .omx/state/commit-serializer.log"
+                    f"(= {MAX_CONCURRENT_COMMITTERS} concurrent committers x the "
+                    f"{_hook_wall_clock_bound_seconds()}s pre-commit hook bound). "
+                    f"A holder that outlives this is wedged, not slow — flock is "
+                    f"released on process death. Inspect: "
+                    f"tail .omx/state/commit-serializer.log"
                 ) from None
+            if now >= next_report:
+                waited = int(now - started)
+                print(
+                    f"[subagent-commit-serializer] waiting for {LOCK_PATH.name}: "
+                    f"{waited}s of {timeout_seconds}s — a sibling's pre-commit hook "
+                    f"holds it (its CI-blind test step can legitimately run minutes). "
+                    f"Inspect: tail .omx/state/commit-serializer.log",
+                    file=sys.stderr,
+                )
+                next_report = now + LOCK_WAIT_PROGRESS_SECONDS
             # Brief backoff so we don't spin at 100% CPU.
             time.sleep(0.25)
 

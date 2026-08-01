@@ -12,9 +12,13 @@ Layers (in order):
      evaluation for weeks.
   2. tac.preflight --scope dev — the bounded developer validator stack.
      PREFLIGHT_FULL=1 switches to the exhaustive release/custody stack.
-  3. CI-blind tests — the MLX-gated modules GitHub Actions cannot execute (no Linux
-     mlx wheel => pytest.importorskip skips them and reports GREEN), restricted to
-     those reachable from the staged files. This hook is their ONLY automated surface.
+  3. CI-blind tests — what GitHub Actions structurally cannot execute (no Linux mlx
+     wheel => pytest.importorskip skips it and reports GREEN), restricted to what is
+     reachable from the staged files. This hook is their ONLY automated surface.
+     Granularity matters: a MODULE-scope mlx gate hides the whole file from CI, an
+     IN-TEST gate hides only those tests. The step runs whole files for the first and
+     node ids for the second — running whole files for both duplicated CI instead of
+     covering it (see `_mlx_gate_scope`).
   4. Hands off to review_gate_hook for the standard review-tracker check.
 
 Install:
@@ -129,6 +133,12 @@ def _ci_blind_test_modules() -> list[Path]:
     exists. The AST step matters — a test that merely mentions the guard inside a string
     literal (this file's own tests do) is not itself MLX-gated, and a substring-only
     detector would mis-classify it.
+
+    CAUTION (MEASURED 2026-08-01): membership here does NOT mean CI skips the whole
+    module. It means the module contains an mlx gate SOMEWHERE. Of the 57 members, 25
+    gate per-test, so GitHub Actions imports them, collects every test, and skips only
+    the gated ones. `_mlx_gate_scope` draws that line and `_ci_blind_targets_for` acts
+    on it; this function stays deliberately broad so the scope decision has one owner.
     """
     tests_dir = REPO_ROOT / "src" / "tac" / "tests"
     if not tests_dir.is_dir():
@@ -151,21 +161,182 @@ def _ci_blind_test_modules() -> list[Path]:
     return blind
 
 
-def _has_mlx_importorskip_call(tree: ast.AST) -> bool:
-    """True when the module CALLS importorskip("mlx...") — any of the observed forms
+def _is_mlx_importorskip_call(node: ast.AST) -> bool:
+    """True for a CALL of importorskip("mlx...") — any of the observed forms
     (`pytest.importorskip(...)`, a bare `importorskip(...)`, with or without `reason=`)."""
-    for node in ast.walk(tree):
-        if not isinstance(node, ast.Call):
+    if not isinstance(node, ast.Call):
+        return False
+    func = node.func
+    name = func.attr if isinstance(func, ast.Attribute) else getattr(func, "id", None)
+    if name != "importorskip" or not node.args:
+        return False
+    first = node.args[0]
+    return (isinstance(first, ast.Constant) and isinstance(first.value, str)
+            and first.value.split(".")[0] == "mlx")
+
+
+def _has_mlx_importorskip_call(tree: ast.AST) -> bool:
+    """True when the module CALLS importorskip("mlx...") ANYWHERE (module or test scope)."""
+    return any(_is_mlx_importorskip_call(n) for n in ast.walk(tree))
+
+
+def _mlx_gate_scope(tree: ast.Module) -> str:
+    """Where the module's MLX skip-gate sits: "module" or "test".
+
+    This distinction decides whether GitHub Actions runs the module AT ALL, and it is
+    the difference between a step that covers CI's blind spot and one that duplicates
+    CI's work:
+
+    * "module" — an `importorskip("mlx...")` (or an mlx-conditioned `pytestmark` /
+      module-level `pytest.skip(allow_module_level=True)`) executes at IMPORT time, so
+      CI collects ZERO tests from the file. The whole module is CI-blind.
+    * "test" — the gate sits INSIDE test bodies, so CI imports the module, collects
+      every test, and skips only the gated ones. The rest are already covered there.
+
+    MEASURED 2026-08-01 (denominator: the 57 modules `_ci_blind_test_modules()` returns):
+    32 are module-scope, 25 are test-scope. A `--collect-only` run with every `mlx*`
+    import blocked (simulating the Linux CI wheel gap) collected 0 tests from all 32
+    module-scope modules and 769 tests from the 25 test-scope ones — i.e. those 769 run
+    in GitHub Actions on every push. Treating all 57 as wholesale-blind made this hook
+    re-run them locally: `test_compact_renderer_mlx_spine_runner.py` contributes 309 of
+    the 769 and costs 664s standalone (ddm_tr6 measured 718s for it under different
+    load), on 9.4% of git-tracked single-file commits — the largest selection footprint
+    of the 57. Its 8 genuinely-gated tests account for 24.2s of that 664s.
+    """
+    for node in _module_scope_nodes(tree):
+        if _is_mlx_importorskip_call(node):
+            return "module"
+        # `pytest.skip(..., allow_module_level=True)` at module scope
+        if isinstance(node, ast.Call):
+            func = node.func
+            name = func.attr if isinstance(func, ast.Attribute) else getattr(func, "id", None)
+            if name == "skip" and any(kw.arg == "allow_module_level" for kw in node.keywords):
+                return "module"
+        # an mlx-conditioned `pytestmark` skips the whole module on CI too
+        if isinstance(node, (ast.Assign, ast.AnnAssign)):
+            targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+            if any(getattr(t, "id", None) == "pytestmark" for t in targets) \
+                    and _mentions_mlx(node):
+                return "module"
+    return "test"
+
+
+def _module_scope_nodes(tree: ast.Module):
+    """Every node reachable from module scope, PRUNED at any def/class body.
+
+    `ast.walk` would descend into test bodies and erase exactly the distinction
+    `_mlx_gate_scope` exists to draw.
+    """
+    stack: list[ast.AST] = list(tree.body)
+    while stack:
+        node = stack.pop()
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
             continue
-        func = node.func
-        name = func.attr if isinstance(func, ast.Attribute) else getattr(func, "id", None)
-        if name != "importorskip" or not node.args:
-            continue
-        first = node.args[0]
-        if isinstance(first, ast.Constant) and isinstance(first.value, str) \
-                and first.value.split(".")[0] == "mlx":
+        yield node
+        stack.extend(ast.iter_child_nodes(node))
+
+
+def _mentions_mlx(node: ast.AST) -> bool:
+    """True when any identifier / attribute / string literal under `node` says "mlx".
+
+    Used for the module-scope `pytestmark` probe, where the question is only "is this
+    mark conditioned on MLX at all". Deliberately loose there; NOT used to decide which
+    individual tests run — see `_carries_mlx_skip_gate` for that.
+    """
+    for sub in ast.walk(node):
+        if isinstance(sub, ast.Name) and "mlx" in sub.id.lower():
+            return True
+        if isinstance(sub, ast.Attribute) and "mlx" in sub.attr.lower():
+            return True
+        if isinstance(sub, ast.Constant) and isinstance(sub.value, str) \
+                and "mlx" in sub.value.lower():
+            return True
+        if isinstance(sub, ast.arg) and "mlx" in sub.arg.lower():
+            return True
+        if isinstance(sub, ast.alias) and "mlx" in (sub.name or "").lower():
             return True
     return False
+
+
+def _carries_mlx_skip_gate(node: ast.AST) -> bool:
+    """True when executing `node` can itself trigger the MLX skip that CI hits.
+
+    The question is not "does this mention MLX" — a monkeypatched test may name a dozen
+    `..._mlx_...` helpers and still RUN on Linux CI. It is "does this SKIP on CI", whose
+    only sources are:
+      * `pytest.importorskip("mlx...")` executed in the body,
+      * a real `import mlx` / `from mlx import ...` (ImportError on Linux),
+      * a decorator conditioned on MLX (`@pytest.mark.skipif(not _MLX_AVAILABLE, ...)`).
+    Selecting on the mention instead of the gate re-runs CI's work: MEASURED on
+    `test_compact_renderer_mlx_spine_runner.py`, mention-based tainting selects 177 of
+    302 tests where gate-based tainting selects 4.
+    """
+    for sub in ast.walk(node):
+        if _is_mlx_importorskip_call(sub):
+            return True
+        if isinstance(sub, ast.Import):
+            if any((a.name or "").split(".")[0] == "mlx" for a in sub.names):
+                return True
+        if isinstance(sub, ast.ImportFrom):
+            if (sub.module or "").split(".")[0] == "mlx":
+                return True
+    decorators = getattr(node, "decorator_list", None) or []
+    return any(_mentions_mlx(dec) for dec in decorators)
+
+
+def _called_names(node: ast.AST) -> set[str]:
+    names: set[str] = set()
+    for sub in ast.walk(node):
+        if isinstance(sub, ast.Call):
+            func = sub.func
+            name = func.attr if isinstance(func, ast.Attribute) else getattr(func, "id", None)
+            if name:
+                names.add(name)
+    return names
+
+
+def _mlx_gated_test_names(tree: ast.Module) -> list[str]:
+    """pytest name selectors for the tests a test-scope module hides from CI.
+
+    Transitive by fixpoint over the module's own defs: a helper that carries the gate
+    taints every test that calls it, one or many hops away, and a FIXTURE that carries
+    the gate taints every test that requests it by argument name (there is no conftest.py
+    under src/tac/tests, so a module's own defs close the fixture graph).
+    """
+    # name -> every def with that name: two classes can each define `test_x`, and if
+    # EITHER carries the gate the name is tainted. Keeping only the first would silently
+    # drop the second from the selection.
+    defs: dict[str, list[ast.AST]] = {}
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            defs.setdefault(node.name, []).append(node)
+    tainted = {name for name, nodes in defs.items()
+               if any(_carries_mlx_skip_gate(n) for n in nodes)}
+    changed = True
+    while changed:
+        changed = False
+        for name, nodes in defs.items():
+            if name in tainted:
+                continue
+            for node in nodes:
+                params = {a.arg for a in node.args.args} | \
+                    {a.arg for a in node.args.kwonlyargs}
+                if (_called_names(node) & tainted) or (params & tainted):
+                    tainted.add(name)
+                    changed = True
+                    break
+
+    selected: list[str] = []
+    for node in tree.body:
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) \
+                and node.name.startswith("test") and node.name in tainted:
+            selected.append(node.name)
+        elif isinstance(node, ast.ClassDef):
+            for sub in node.body:
+                if isinstance(sub, (ast.FunctionDef, ast.AsyncFunctionDef)) \
+                        and sub.name.startswith("test") and sub.name in tainted:
+                    selected.append(f"{node.name}::{sub.name}")
+    return selected
 
 
 def _module_reference_tokens(rel_path: str) -> set[str]:
@@ -202,18 +373,78 @@ def _select_ci_blind_tests(staged: list[str]) -> list[str]:
     pattern = re.compile("|".join(rf"\b{re.escape(t)}\b" for t in sorted(tokens))) \
         if tokens else None
     for path in blind:
-        if str(path) in staged_set:
-            selected.append(str(path.relative_to(REPO_ROOT)))
-            continue
-        if pattern is None:
-            continue
+        staged_here = str(path) in staged_set
         try:
             text = path.read_text(encoding="utf-8", errors="ignore")
         except OSError:
+            # Unreadable: a STAGED blind module must still be run whole (dropping it
+            # would be the silence this step exists to remove); an unstaged one cannot
+            # be matched against the tokens at all.
+            if staged_here:
+                selected.append(str(path.relative_to(REPO_ROOT)))
             continue
-        if pattern.search(text):
-            selected.append(str(path.relative_to(REPO_ROOT)))
+        if not staged_here and (pattern is None or not pattern.search(text)):
+            continue
+        selected.extend(_ci_blind_targets_for(path, text))
     return selected
+
+
+def _ci_blind_targets_for(path: Path, text: str) -> list[str]:
+    """pytest targets for one selected module: the whole file, or just its gated tests.
+
+    A module-scope gate makes GitHub Actions collect NOTHING from the file, so the whole
+    file is this hook's job. A test-scope gate leaves CI running every non-gated test, so
+    running the whole file here duplicates CI instead of covering it — only the gated
+    node ids are this hook's job.
+
+    Fails SAFE in both directions: an unparseable file, or a test-scope module where the
+    static scan finds no gated test (the gate hides behind something this scan cannot
+    see), falls back to the whole file rather than silently running less.
+    """
+    rel = str(path.relative_to(REPO_ROOT))
+    try:
+        tree = ast.parse(text)
+    except SyntaxError:
+        return [rel]
+    if _mlx_gate_scope(tree) == "module":
+        return [rel]
+    names = _mlx_gated_test_names(tree)
+    if not names:
+        return [rel]
+    return [f"{rel}::{name}" for name in names]
+
+
+# --------------------------------------------------------------------------------------
+# CI-blind step wall-clock ceiling.
+#
+# This is a CONTROL knob, not a tuning constant: it decides which commits SURVIVE the
+# hook, so it acts on the SELECTION channel (see task #847 and
+# `governance_knobs_are_unladdered_control_provenance_20260801`). It therefore carries a
+# derivation, an owner, and a re-derivation trigger rather than a chosen number.
+#
+# DERIVATION (all MEASURED 2026-08-01 on Primary.local, `-m "not slow"`):
+#   * The step's cost is the cost of the SELECTED targets in ONE pytest invocation.
+#     After the gate-scope split above, the worst case is the largest module-scope
+#     module plus every test-scope node id that can be co-selected.
+#   * Largest module-scope module measured alone: test_micro_batch_bit_identity_probe.py
+#     = 64 passed in 214.4s wall (ddm_tr6 measured 257s for the same module under
+#     different load on 2026-08-01 -> run-to-run spread 257/214 = 1.20x).
+#   * Second input: the pre-split worst case, both slow modules in one invocation,
+#     was 975s (ddm_tr6). That is what the pre-split ceiling had to cover.
+#   * Ceiling = pre-split worst case 975s x the measured 1.20x load spread = 1170s,
+#     rounded up to the next minute = 1200s. Deliberately derived against the PRE-split
+#     worst case, not the post-split one: the split reduces what the step actually runs,
+#     and a bound that only just covers the reduced set would re-fire the moment a new
+#     module-scope module lands. Headroom here costs nothing on a green run (the bound
+#     is a timeout, not a budget) and costs a false BLOCK when it is too small.
+# OWNER: the pre-commit hook surface (tools/preflight_hook.py).
+# RE-DERIVATION TRIGGER: any of (a) a CI-blind module measured above 600s alone,
+#   (b) the measured p99 of the step's wall clock exceeding half this bound,
+#   (c) the gate-scope split being reverted or narrowed. `test_preflight_hook.py`
+#   pins this constant to the measurement above, so lowering it fails a test.
+_CI_BLIND_PRE_SPLIT_WORST_MEASURED_SECONDS = 975
+_CI_BLIND_LOAD_SPREAD = 1.20
+_CI_BLIND_TIMEOUT_DEFAULT_SECONDS = 1200
 
 
 def _ci_blind_timeout_seconds() -> int:
@@ -223,8 +454,8 @@ def _ci_blind_timeout_seconds() -> int:
             value = int(raw)
         except ValueError:
             value = 0
-        return value if value > 0 else 180
-    return 180
+        return value if value > 0 else _CI_BLIND_TIMEOUT_DEFAULT_SECONDS
+    return _CI_BLIND_TIMEOUT_DEFAULT_SECONDS
 
 
 def run_ci_blind_tests(staged: list[str]) -> int:
@@ -253,7 +484,8 @@ def run_ci_blind_tests(staged: list[str]) -> int:
     except subprocess.TimeoutExpired:
         print(f"\n{RED}{BOLD}[preflight-hook] BLOCKED: CI-blind tests timed out{RST}",
               file=sys.stderr)
-        print(f"  modules: {' '.join(selected)}", file=sys.stderr)
+        print(f"  targets ({len(selected)}): {' '.join(selected[:12])}"
+              f"{' ...' if len(selected) > 12 else ''}", file=sys.stderr)
         print(f"  timeout: {timeout}s (PREFLIGHT_CI_BLIND_TIMEOUT_SECONDS overrides)",
               file=sys.stderr)
         return 1
@@ -278,8 +510,15 @@ def run_ci_blind_tests(staged: list[str]) -> int:
         print("  Skip (NOT recommended): PREFLIGHT_SKIP_CI_BLIND_TESTS=1 git commit ...",
               file=sys.stderr)
         return 1
-    print(f"{GREEN}[preflight-hook] CI-blind tests OK ({len(selected)} module(s)){RST}",
-          file=sys.stderr)
+    # Report the DENOMINATOR, not just a green tick: "OK" over an empty or accidentally
+    # narrowed selection is the vacuity failure this step exists to refuse.
+    modules = len({t.split("::", 1)[0] for t in selected})
+    node_ids = sum(1 for t in selected if "::" in t)
+    detail = f"{modules} module(s)"
+    if node_ids:
+        detail += (f", {node_ids} gated node id(s) — the rest of those modules run in "
+                   f"GitHub Actions")
+    print(f"{GREEN}[preflight-hook] CI-blind tests OK ({detail}){RST}", file=sys.stderr)
     return 0
 
 
@@ -362,6 +601,29 @@ def _echo_preflight_scope_coverage(stderr: str) -> None:
                 file=sys.stderr,
             )
             return
+
+
+# Everything the hook does OUTSIDE its two timed subprocesses: ruff on the staged files,
+# the review gate, and git's own commit work. MEASURED 2026-08-01 (Primary.local):
+# ruff 0.014s on one staged file, review gate 0.041s, and .omx/state/commit-serializer.log
+# p50 `commit_seconds` = 3.2s (n=9112) in the mode where preflight itself costs 0.52s.
+# Rounded up to one minute so the bound stays whole-minute legible.
+_HOOK_FIXED_OVERHEAD_SECONDS = 60
+
+
+def effective_hook_wall_clock_bound_seconds() -> int:
+    """Upper bound on how long this hook can hold its caller, UNDER THE CURRENT ENV.
+
+    Public because the commit serializer's lock patience must be derived from it rather
+    than re-guessed: the serializer holds `.commit-lock` across `git commit`, so its
+    lock timeout has to exceed whatever bound THIS hook is running under — including the
+    per-invocation `PREFLIGHT_*_TIMEOUT_SECONDS` overrides, which the child `git commit`
+    inherits from the same environment. Reading the bounds here makes that exact instead
+    of approximate, and makes any future change to either timeout propagate on its own.
+    """
+    return (_preflight_timeout_seconds()
+            + _ci_blind_timeout_seconds()
+            + _HOOK_FIXED_OVERHEAD_SECONDS)
 
 
 def _preflight_command() -> list[str]:

@@ -161,18 +161,24 @@ def test_select_ci_blind_tests_skips_modules_ci_can_already_run() -> None:
     assert "src/tac/tests/test_ddm_b2b_burn2_composition.py" not in sel
 
 
+# These two pinned the literal 180 and correctly went red when it changed. They now pin
+# the BEHAVIOUR (env override wins; garbage falls back to the default) against the
+# derived constant; the constant itself is pinned to its measurement further down, in
+# `test_ci_blind_timeout_default_covers_the_measured_worst_case`.
 def test_ci_blind_timeout_default_and_override(monkeypatch) -> None:
     monkeypatch.delenv("PREFLIGHT_CI_BLIND_TIMEOUT_SECONDS", raising=False)
-    assert preflight_hook._ci_blind_timeout_seconds() == 180
+    assert preflight_hook._ci_blind_timeout_seconds() == \
+        preflight_hook._CI_BLIND_TIMEOUT_DEFAULT_SECONDS
     monkeypatch.setenv("PREFLIGHT_CI_BLIND_TIMEOUT_SECONDS", "42")
     assert preflight_hook._ci_blind_timeout_seconds() == 42
 
 
 def test_ci_blind_timeout_rejects_garbage(monkeypatch) -> None:
+    default = preflight_hook._CI_BLIND_TIMEOUT_DEFAULT_SECONDS
     monkeypatch.setenv("PREFLIGHT_CI_BLIND_TIMEOUT_SECONDS", "not-an-int")
-    assert preflight_hook._ci_blind_timeout_seconds() == 180
+    assert preflight_hook._ci_blind_timeout_seconds() == default
     monkeypatch.setenv("PREFLIGHT_CI_BLIND_TIMEOUT_SECONDS", "-5")
-    assert preflight_hook._ci_blind_timeout_seconds() == 180
+    assert preflight_hook._ci_blind_timeout_seconds() == default
 
 
 def test_run_ci_blind_tests_env_skip_is_explicit(monkeypatch) -> None:
@@ -227,3 +233,235 @@ def test_ci_blind_step_is_wired_into_main_not_orphaned() -> None:
         encoding="utf-8")
     main_body = src.split("def main()", 1)[1]
     assert "run_ci_blind_tests(staged)" in main_body
+
+
+# ---------------------------------------------------------------------------
+# CI-blind GATE SCOPE (task #854).
+#
+# The step exists to cover what GitHub Actions structurally cannot run. Whether CI can
+# run a module depends on WHERE its MLX gate sits: a module-scope `importorskip` stops
+# collection dead, an in-test one does not. Conflating the two made this step re-run
+# work CI already does.
+#
+# MEASURED 2026-08-01 (denominator: the 57 modules `_ci_blind_test_modules()` returns):
+#   * 32 module-scope, 25 test-scope.
+#   * `--collect-only` with every `mlx*` import blocked collected 0 tests from all 32
+#     module-scope modules and 769 from the 25 test-scope ones.
+#   * test_compact_renderer_mlx_spine_runner.py: 309 passed in 664.0s standalone; the
+#     8 gate-selected node ids account for 24.2s of that (3.7%). Selecting on the gate
+#     instead of the whole file took the same staged-file commit from 664s to 30.8s.
+# ---------------------------------------------------------------------------
+import ast  # noqa: E402
+import textwrap  # noqa: E402
+
+
+def _scope(source: str) -> str:
+    return preflight_hook._mlx_gate_scope(ast.parse(textwrap.dedent(source)))
+
+
+def test_module_scope_importorskip_is_module_gated() -> None:
+    assert _scope('''
+        import pytest
+        mx = pytest.importorskip("mlx.core")
+
+        def test_a():
+            assert mx
+    ''') == "module"
+
+
+def test_importorskip_inside_a_module_level_try_is_still_module_gated() -> None:
+    # ast.walk would find this either way; the point is that PRUNING at defs must not
+    # also prune compound statements at module scope.
+    assert _scope('''
+        import pytest
+        try:
+            mx = pytest.importorskip("mlx.core")
+        except Exception:
+            mx = None
+    ''') == "module"
+
+
+def test_in_test_importorskip_is_test_gated_not_module_gated() -> None:
+    assert _scope('''
+        import pytest
+
+        def test_a():
+            mx = pytest.importorskip("mlx.core")
+            assert mx
+
+        def test_b():
+            assert True
+    ''') == "test"
+
+
+def test_module_level_pytestmark_conditioned_on_mlx_is_module_gated() -> None:
+    assert _scope('''
+        import pytest
+        try:
+            import mlx.core  # noqa: F401
+            _MLX_AVAILABLE = True
+        except ImportError:
+            _MLX_AVAILABLE = False
+        pytestmark = pytest.mark.skipif(not _MLX_AVAILABLE, reason="needs mlx")
+
+        def test_a():
+            mx = pytest.importorskip("mlx.core")
+    ''') == "module"
+
+
+def test_module_level_allow_module_level_skip_is_module_gated() -> None:
+    # `allow_module_level` stops collection dead on CI, so it outranks any in-test gate.
+    assert _scope('''
+        import pytest
+        pytest.skip("no mlx", allow_module_level=True)
+
+        def test_a():
+            pytest.importorskip("mlx.core")
+    ''') == "module"
+    assert _scope('''
+        import pytest
+        if not _HAVE:
+            pytest.skip("no mlx", allow_module_level=True)
+
+        def test_a():
+            pytest.importorskip("mlx.core")
+    ''') == "module"
+
+
+def test_gated_test_names_follow_the_gate_not_the_word_mlx() -> None:
+    names = preflight_hook._mlx_gated_test_names(ast.parse(textwrap.dedent('''
+        import pytest
+
+        def test_gated():
+            pytest.importorskip("mlx.core")
+
+        def test_merely_mentions_mlx():
+            # runs fine on Linux CI: the mlx-named symbol is monkeypatched away
+            assert "run_mlx_thing" == "run_mlx_thing"
+    ''')))
+    assert names == ["test_gated"]
+
+
+def test_gated_test_names_are_transitive_through_helpers_and_fixtures() -> None:
+    names = set(preflight_hook._mlx_gated_test_names(ast.parse(textwrap.dedent('''
+        import pytest
+
+        def _inner():
+            pytest.importorskip("mlx.core")
+
+        def _outer():
+            _inner()
+
+        @pytest.fixture
+        def gated_fixture():
+            import mlx.core
+            return mlx.core
+
+        def test_via_helper():
+            _outer()
+
+        def test_via_fixture(gated_fixture):
+            assert gated_fixture
+
+        def test_clean():
+            assert True
+    '''))))
+    assert names == {"test_via_helper", "test_via_fixture"}
+
+
+def test_gated_test_names_include_skipif_decorated_class_methods() -> None:
+    names = preflight_hook._mlx_gated_test_names(ast.parse(textwrap.dedent('''
+        import pytest
+        _MLX_AVAILABLE = False
+
+        class TestThing:
+            @pytest.mark.skipif(not _MLX_AVAILABLE, reason="needs mlx")
+            def test_gated(self):
+                assert True
+
+            def test_clean(self):
+                assert True
+    ''')))
+    assert names == ["TestThing::test_gated"]
+
+
+def test_targets_for_module_scope_module_is_the_whole_file() -> None:
+    # Live anchor: 64 tests, module-scope `importorskip` at line 26, MEASURED 214.4s.
+    # CI collects nothing from it, so this hook owns every one of those tests.
+    path = preflight_hook.REPO_ROOT / "src/tac/tests/test_micro_batch_bit_identity_probe.py"
+    assert preflight_hook._ci_blind_targets_for(path, path.read_text(encoding="utf-8")) == [
+        "src/tac/tests/test_micro_batch_bit_identity_probe.py"
+    ]
+
+
+def test_targets_for_test_scope_module_are_node_ids_covering_the_real_gates() -> None:
+    rel = "src/tac/tests/test_compact_renderer_mlx_spine_runner.py"
+    path = preflight_hook.REPO_ROOT / rel
+    targets = preflight_hook._ci_blind_targets_for(path, path.read_text(encoding="utf-8"))
+    assert all("::" in t for t in targets), targets
+    assert 0 < len(targets) < 50, f"{len(targets)} of 302 tests — see the header note"
+    names = {t.split("::", 1)[1] for t in targets}
+    # the two in-test `pytest.importorskip("mlx.core")` tests ...
+    assert "test_hinerv_live_birth_hysteresis_probe_restores_model_state" in names
+    assert (
+        "test_hinerv_live_birth_survival_writes_four_arm_rows_when_birth_not_accepted"
+        in names
+    )
+    # ... and the `skipif(not _MLX_AVAILABLE or not _AV_AVAILABLE)` one
+    assert "test_hinerv_execute_runs_training_archive_and_receiver_proof" in names
+
+
+def test_targets_fall_back_to_the_whole_file_when_no_gate_is_visible(tmp_path) -> None:
+    # A test-scope module whose gate the static scan cannot see must run WHOLE, never
+    # partially: running less is the silence this step exists to remove.
+    path = preflight_hook.REPO_ROOT / "src/tac/tests/_ct2_fixture.py"
+    text = 'import pytest\n\ndef helper():\n    pytest.importorskip("mlx.core")\n'
+    assert preflight_hook._ci_blind_targets_for(path, text) == [
+        "src/tac/tests/_ct2_fixture.py"
+    ]
+
+
+def test_targets_fall_back_to_the_whole_file_on_unparseable_source() -> None:
+    path = preflight_hook.REPO_ROOT / "src/tac/tests/_ct2_fixture.py"
+    assert preflight_hook._ci_blind_targets_for(path, "def broken(:\n") == [
+        "src/tac/tests/_ct2_fixture.py"
+    ]
+
+
+def test_every_ci_blind_module_yields_at_least_one_target() -> None:
+    # A module in the blind set that selects NOTHING would be a silent coverage hole.
+    for path in preflight_hook._ci_blind_test_modules():
+        text = path.read_text(encoding="utf-8", errors="ignore")
+        assert preflight_hook._ci_blind_targets_for(path, text), path
+
+
+# ---------------------------------------------------------------------------
+# The two CONTROL knobs (task #854): both DERIVED from measurement, both pinned here so
+# a future edit that lowers them below the measurement fails a test instead of silently
+# re-firing on green modules.
+# ---------------------------------------------------------------------------
+def test_ci_blind_timeout_default_covers_the_measured_worst_case() -> None:
+    derived = (preflight_hook._CI_BLIND_PRE_SPLIT_WORST_MEASURED_SECONDS
+               * preflight_hook._CI_BLIND_LOAD_SPREAD)
+    assert preflight_hook._CI_BLIND_TIMEOUT_DEFAULT_SECONDS >= derived, (
+        "the ceiling must cover 975s (both slow modules in one invocation, ddm_tr6 "
+        "2026-08-01) times the measured 1.20x run-to-run load spread"
+    )
+    # 180s — the value this replaced — did NOT cover it. That is the bug being fixed.
+    assert preflight_hook._CI_BLIND_TIMEOUT_DEFAULT_SECONDS > 180
+
+
+def test_effective_hook_bound_composes_both_timeouts_and_follows_the_env(
+    monkeypatch,
+) -> None:
+    monkeypatch.delenv("PREFLIGHT_TIMEOUT_SECONDS", raising=False)
+    monkeypatch.delenv("PREFLIGHT_CI_BLIND_TIMEOUT_SECONDS", raising=False)
+    monkeypatch.delenv("PREFLIGHT_FULL", raising=False)
+    base = preflight_hook.effective_hook_wall_clock_bound_seconds()
+    assert base == (preflight_hook._preflight_timeout_seconds()
+                    + preflight_hook._ci_blind_timeout_seconds()
+                    + preflight_hook._HOOK_FIXED_OVERHEAD_SECONDS)
+    # The serializer derives its lock patience from this, so an override must propagate.
+    monkeypatch.setenv("PREFLIGHT_CI_BLIND_TIMEOUT_SECONDS", "1500")
+    assert preflight_hook.effective_hook_wall_clock_bound_seconds() == base - \
+        preflight_hook._CI_BLIND_TIMEOUT_DEFAULT_SECONDS + 1500
