@@ -3308,6 +3308,27 @@ POSITIVE_CONTROLS: tuple[PositiveControl, ...] = (
         must_mention="planted_dup",
         why="argparse last-wins silently discards the earlier value.",
     ),
+    PositiveControl(
+        gate="check_verdict_surfaces_report_examined_count",
+        files={
+            "tools/planted_vacuous.py": (
+                "from pathlib import Path\n"
+                "def audit(root):\n"
+                "    bad = [p for p in Path(root).rglob('*.py') if 'x' in p.name]\n"
+                "    if not bad:\n"
+                "        print('AUDIT PASSED')\n"
+                "    return bad\n"
+            )
+        },
+        must_mention="planted_vacuous.py",
+        why=(
+            "#842 in miniature: enumerate a scope, then emit the verdict as a bare "
+            "constant. When rglob matches NOTHING this prints exactly what a clean "
+            "full scan prints — vacuity indistinguishable from PASS. If a future "
+            "prefilter narrows the detector (e.g. it stops treating rglob as "
+            "enumeration, or stops walking tools/), this control stops firing."
+        ),
+    ),
 )
 
 # RATCHET FLOOR: the number of DISTINCT gates carrying a positive control at landing. It may only
@@ -3629,3 +3650,252 @@ def check_upstream_pin_no_content_drift(
 
 
 CONFOUND_GATES = (*CONFOUND_GATES, check_upstream_pin_no_content_drift)
+
+
+# ---------------------------------------------------------------------------
+# VACUITY IS INDISTINGUISHABLE FROM PASS — a verdict is a symbol PLUS a
+# denominator (ddm_vc1, 2026-08-01, task #842).
+#
+# THE LAW (memory ``vacuity_is_indistinguishable_from_pass_empty_scope_confound_20260801``):
+# an instrument that evaluated an EMPTY SCOPE emits the same symbol as one that
+# evaluated a full scope cleanly. This is the GENUS of the 2026-08-01 silent
+# instruments, not a sibling of the usual DEFAULT-HARMFUL x SILENT x
+# MEASUREMENT-CORRUPTING signature: that one gives a WRONG answer, this one
+# gives NO answer while looking like a right one. It defeats every check that
+# reads the VERDICT rather than the DENOMINATOR.
+#
+# THREE MEASURED INSTANCES: pytest reports 57 SKIPPED mlx modules as GREEN;
+# `--no-codebase` ran 0 of 27 declared preflight gates in 0.52 s and printed
+# "PREFLIGHT PASSED" (MEASURED by this landing's probe); a findings scan with an
+# `mtime < 3d` window reported CLEAN over 0 of 1,260 files.
+#
+# This is the SECOND landing per CLAUDE.md "Bugs must be permanently fixed AND
+# self-protected against". The first is ``tac.scope_ledger`` plus its wire-in at
+# the preflight CLI verdict.
+#
+# THE REFUSED SIGNATURE is deliberately narrow and mechanical, because the bug's
+# fingerprint is structural: a function that ENUMERATES a scope and then emits a
+# verdict as a BARE STRING CONSTANT. A bare constant cannot carry a count — the
+# denominator is absent BECAUSE the literal has no room for one. So
+# ``print(f"ALL {n} CHECKS PASSED")`` passes and ``print("PREFLIGHT PASSED")``
+# refuses, with no judgement call in between.
+#
+# Sister of ``check_refusal_gates_have_live_positive_control`` above: that guard
+# asks "does this detector still fire?", this one asks "did this instrument look
+# at anything?". Both are denominator questions.
+# ---------------------------------------------------------------------------
+
+# Verdict words that assert success. Matched case-insensitively as substrings of
+# a print()ed STRING CONSTANT.
+_VACUITY_PASS_TOKENS: tuple[str, ...] = (
+    "PASSED",
+    "ALL CLEAN",
+    "NO VIOLATIONS",
+    "ALL OK",
+    "ALL GREEN",
+)
+
+# Calls that ENUMERATE a scope. Their presence is what turns a verdict into a
+# claim ABOUT a population, which is what makes a missing denominator a defect.
+_VACUITY_ENUM_TOKENS: tuple[str, ...] = (
+    ".glob(",
+    ".rglob(",
+    ".iterdir(",
+    ".scandir(",
+    "os.walk(",
+    ".walk(",
+)
+
+_VACUITY_ENUM_NAME_RE = re.compile(
+    r"\b(_existing_\w+|\w+_files|list_\w+|collect_\w+|discover_\w+|scan_\w+"
+    r"|iter_\w+|find_\w+|_staged\w*)\s*\("
+)
+
+#: Canonical verdict surfaces that MUST route through ``tac.scope_ledger``.
+#: Keyed by repo-relative path -> (function name, why). Skipped when the file is
+#: absent so the synthetic positive-control tree does not trip this leg.
+_VACUITY_LEDGER_SURFACES: tuple[tuple[str, str, str], ...] = (
+    (
+        "src/tac/preflight.py",
+        "_preflight_cli_main",
+        "task #842: `--no-codebase` executed 0 of 27 declared gates and printed "
+        "a bare PREFLIGHT PASSED. This is the regression the ledger cures.",
+    ),
+)
+
+
+def _vacuity_bare_pass_prints(
+    func: ast.FunctionDef | ast.AsyncFunctionDef,
+) -> list[tuple[int, str]]:
+    """``print()`` calls in ``func`` whose argument is a BARE pass-word constant.
+
+    An f-string / ``%`` / ``.format`` verdict is accepted unconditionally: it has
+    somewhere to put a count, which is all this gate can mechanically ask for.
+    """
+    out: list[tuple[int, str]] = []
+    for node in ast.walk(func):
+        if not isinstance(node, ast.Call):
+            continue
+        fn = node.func
+        if isinstance(fn, ast.Name):
+            name = fn.id
+        elif isinstance(fn, ast.Attribute):
+            name = fn.attr
+        else:
+            continue
+        if name != "print":
+            continue
+        for arg in node.args:
+            if not isinstance(arg, ast.Constant) or not isinstance(arg.value, str):
+                continue
+            upper = arg.value.upper()
+            if any(tok in upper for tok in _VACUITY_PASS_TOKENS):
+                out.append((node.lineno, arg.value.strip()[:80]))
+    return out
+
+
+def _vacuity_scan_files(root: Path) -> list[Path]:
+    """The scanned population: operator-facing tools plus top-level tac modules."""
+    files: list[Path] = []
+    tools_dir = root / "tools"
+    if tools_dir.is_dir():
+        files.extend(sorted(tools_dir.glob("*.py")))
+    tac_dir = root / "src" / "tac"
+    if tac_dir.is_dir():
+        files.extend(sorted(tac_dir.glob("*.py")))
+    return sorted(set(files))
+
+
+def check_verdict_surfaces_report_examined_count(
+    *,
+    repo_root: str | Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """2026-08-01 (ddm_vc1, task #842) — a verdict emitted over an ENUMERATED
+    scope must be able to report how many items it examined.
+
+    Two legs:
+
+    **Leg A — the scanner.** Refuses a function that enumerates a scope (glob /
+    rglob / iterdir / scandir / walk, or a ``collect_*`` / ``*_files`` / ``scan_*``
+    style call) and emits a success verdict as a BARE STRING CONSTANT. A bare
+    constant physically cannot carry a denominator, so "0 violations" and
+    "0 scanned" print identically. Same-line or in-function waiver:
+    ``# VACUITY_LEDGER_OK:<rationale>``.
+
+    **Leg B — the canonical surfaces.** Named verdict surfaces must reference
+    ``tac.scope_ledger``. Currently just the preflight CLI, whose bare
+    ``print("PREFLIGHT PASSED")`` over an empty scope is the measured anchor for
+    the whole class. Absent files are skipped, so the synthetic positive-control
+    tree exercises Leg A cleanly.
+
+    What this gate does NOT claim: it is not a proof that every verdict in the
+    repo carries a denominator. It refuses ONE mechanical signature over ONE
+    named population, and it reports that population. Surfaces outside
+    ``tools/*.py`` and ``src/tac/*.py``, verdicts that are not ``print`` calls,
+    and prose ``ok_detail`` strings that state no count are all NOT covered —
+    see the census in
+    ``.omx/research/ddm_vc1_vacuity_denominator_cure_and_census_20260801.md``.
+
+    STRICT from byte one: live count is 0 in this landing, after the two
+    same-batch fixes (the preflight CLI ledger wire-in and ``review_tracker``'s
+    ``cmd_selftest`` verdict).
+    """
+    root = Path(repo_root or REPO_ROOT)
+    violations: list[str] = []
+    scanned = 0
+    enumerating = 0
+
+    for path in _vacuity_scan_files(root):
+        text = _read(path)
+        if not text:
+            continue
+        scanned += 1
+        try:
+            tree = ast.parse(text)
+        except SyntaxError:
+            continue
+        rel = path.relative_to(root).as_posix()
+        lines = text.splitlines()
+        for node in ast.walk(tree):
+            if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            # Whole LINES, not ast.get_source_segment: a node's end_col_offset
+            # stops at the last token, so a waiver comment trailing the final
+            # statement falls OUTSIDE the segment and would be invisible. That
+            # is the shape of the very bug this module guards — a detector
+            # narrowed just enough to miss the thing it was written to see.
+            segment = _span_source(lines, node)
+            if not segment:
+                continue
+            body = _strip_comments(segment)
+            enumerates = any(
+                tok in body for tok in _VACUITY_ENUM_TOKENS
+            ) or bool(_VACUITY_ENUM_NAME_RE.search(body))
+            if not enumerates:
+                continue
+            enumerating += 1
+            if _waiver_present(segment, "VACUITY_LEDGER_OK"):
+                continue
+            for lineno, literal in _vacuity_bare_pass_prints(node):
+                violations.append(
+                    f"{rel}:{lineno}: {node.name}() enumerates a scope but emits its "
+                    f"verdict as a bare constant {literal!r} — no denominator, so an "
+                    f"EMPTY scope prints exactly what a clean full scope prints. "
+                    f"Report the count (e.g. f\"... {{len(items)}} examined ...\") or "
+                    f"route through tac.scope_ledger.ScopeLedger. Waiver: "
+                    f"`# VACUITY_LEDGER_OK:<rationale>`."
+                )
+
+    surfaces_checked = 0
+    for rel, func_name, why in _VACUITY_LEDGER_SURFACES:
+        path = root / rel
+        if not path.is_file():
+            continue
+        text = _read(path)
+        if not text:
+            continue
+        surfaces_checked += 1
+        try:
+            tree = ast.parse(text)
+        except SyntaxError:
+            continue
+        target = None
+        for node in ast.walk(tree):
+            if (
+                isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+                and node.name == func_name
+            ):
+                target = node
+                break
+        if target is None:
+            violations.append(
+                f"{rel}: canonical verdict surface {func_name}() is GONE. Either it "
+                f"was renamed (update _VACUITY_LEDGER_SURFACES) or the ledger "
+                f"wire-in was deleted. Why it is registered: {why}"
+            )
+            continue
+        segment = _span_source(text.splitlines(), target)
+        if "ScopeLedger" not in segment:
+            violations.append(
+                f"{rel}:{target.lineno}: canonical verdict surface {func_name}() no "
+                f"longer references ScopeLedger, so its verdict can again be emitted "
+                f"over an unmeasured scope. Why it is registered: {why}"
+            )
+
+    return _finish(
+        name="check_verdict_surfaces_report_examined_count",
+        tag="verdict-reports-examined-count",
+        violations=violations,
+        strict=strict,
+        verbose=verbose,
+        ok_detail=(
+            f"{scanned} file(s) scanned, {enumerating} scope-enumerating function(s) "
+            f"considered, {surfaces_checked} of {len(_VACUITY_LEDGER_SURFACES)} "
+            f"canonical ledger surface(s) present"
+        ),
+    )
+
+
+CONFOUND_GATES = (*CONFOUND_GATES, check_verdict_surfaces_report_examined_count)

@@ -10,11 +10,17 @@ import tools.preflight_hook as preflight_hook
 def test_preflight_hook_defaults_to_no_codebase(monkeypatch) -> None:
     monkeypatch.delenv("PREFLIGHT_FULL", raising=False)
 
+    # `--acknowledge-empty-scope` joined the contract 2026-08-01 (task #842):
+    # `--no-codebase` examines 0 gates, and the CLI now refuses rc=3 on an
+    # empty scope instead of printing a bare "PREFLIGHT PASSED". This hook is
+    # the one caller with a designed reason to accept vacuity, so it must NAME
+    # it. The verdict still prints VACUOUS.
     assert preflight_hook._preflight_command() == [
         ".venv/bin/python",
         "-m",
         "tac.preflight",
         "--no-codebase",
+        "--acknowledge-empty-scope",
     ]
     assert preflight_hook._preflight_timeout_seconds() == 30
 

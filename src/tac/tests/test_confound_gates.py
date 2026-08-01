@@ -853,7 +853,14 @@ class TestModule:
         # (check_refusal_gates_have_live_positive_control), which consumes
         # CONFOUND_GATES to discover the refuse-capable set and therefore
         # self-registers after the catalog tuple.
-        assert len(cg.CONFOUND_GATES) == 23
+        # 23 -> 25 on 2026-08-01: the same fix-forward pattern, twice more.
+        # check_upstream_pin_no_content_drift was appended to the tuple by a
+        # sibling arm (#836) without updating this test, so the assert was
+        # ALREADY failing at 24 before ddm_vc1 touched it — DERIVED from the
+        # tuple's tail on main, where that gate is the last append and this
+        # name set does not list it. ddm_vc1 (#842) adds the second:
+        # check_verdict_surfaces_report_examined_count.
+        assert len(cg.CONFOUND_GATES) == 25
         names = {fn.__name__ for fn in cg.CONFOUND_GATES}
         assert names == {
             "check_no_spike_guard_defaults_to_deadlock_mode",
@@ -881,6 +888,13 @@ class TestModule:
             # 2026-07-31 ddm_gh1 CLASS GUARD: refuse-capable gates must carry an
             # EXECUTED positive control + a declared denominator.
             "check_refusal_gates_have_live_positive_control",
+            # 2026-07-31 ddm_gh1 (#836): the parent repo is structurally blind to
+            # the nested upstream/ git repo.
+            "check_upstream_pin_no_content_drift",
+            # 2026-08-01 ddm_vc1 (#842): a verdict emitted over an ENUMERATED
+            # scope must be able to report how many items it examined —
+            # "vacuity is indistinguishable from PASS".
+            "check_verdict_surfaces_report_examined_count",
         }
 
     def test_followon_gates_are_strict_flipped_in_preflight_all(self):
@@ -968,6 +982,19 @@ class TestModule:
             # detector was narrowed/gutted) or control coverage regressed below
             # the ratchet floor.
             "check_refusal_gates_have_live_positive_control": 0,
+            # 2026-07-31 ddm_gh1 (#836). PRE-EXISTING KeyError: the gate was
+            # registered without a bound, so this parametrised case had been
+            # erroring (not passing) since it landed. Fixed forward by ddm_vc1
+            # at its MEASURED live count of 0 — leaving a known-red test on main
+            # is the exact failure that produced the law this batch cures.
+            "check_upstream_pin_no_content_drift": 0,
+            # 2026-08-01 ddm_vc1 (#842). STRICT in preflight at live-count 0
+            # (MEASURED across 2404 files / 1595 scope-enumerating functions,
+            # after the two same-batch fixes: the preflight CLI ScopeLedger
+            # wire-in and review_tracker's cmd_selftest verdict). Any growth
+            # means a NEW verdict landed that cannot report its denominator —
+            # fix it or waive it with a real rationale; do NOT raise this bound.
+            "check_verdict_surfaces_report_examined_count": 0,
         }
         v = fn(strict=False, verbose=False)
         assert len(v) <= bounds[fn.__name__], f"{fn.__name__} live-count grew: {v[:3]}"

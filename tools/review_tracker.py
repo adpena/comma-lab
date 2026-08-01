@@ -1561,6 +1561,13 @@ def cmd_selftest() -> None:
 
     print("Running self-tests...\n")
     errors = []
+    # A verdict is a symbol PLUS a denominator (2026-08-01 vacuity ledger
+    # discipline: an instrument that examined an EMPTY SCOPE emits the same
+    # symbol as one that examined a full scope cleanly). Every one of the 8
+    # blocks below either prints PASS or appends to `errors` — there is no
+    # skip path — so this declared total IS the examined count, and the final
+    # verdict reports it rather than a bare pass word.
+    selftest_count = 8
 
     # Test 1: AST extraction on a synthetic file
     print("  [1/8] AST extraction...")
@@ -1721,7 +1728,7 @@ def cmd_selftest() -> None:
             print(f"  - {e}")
         sys.exit(1)
     else:
-        print("ALL TESTS PASSED")
+        print(f"ALL {selftest_count} SELF-TESTS PASSED (0 error(s))")
 
 
 # ---------------------------------------------------------------------------

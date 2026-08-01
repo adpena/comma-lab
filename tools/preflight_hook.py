@@ -336,7 +336,32 @@ def run_preflight() -> int:
         print("  Skip (NOT recommended): PREFLIGHT_HOOK_ENABLED=0 git commit ...",
               file=sys.stderr)
         return 1
+    _echo_preflight_scope_coverage(result.stderr)
     return 0
+
+
+def _echo_preflight_scope_coverage(stderr: str) -> None:
+    """Surface the preflight DENOMINATOR where a committer actually reads it.
+
+    A green hook that examined nothing is the exact bug this reports on
+    ("vacuity is indistinguishable from PASS"). The CLI emits a VACUOUS ledger
+    line; without echoing it here the committer sees only the hook's silence.
+    One concise line, not an alarm: the number is the signal.
+    """
+    for line in (stderr or "").splitlines():
+        if "PREFLIGHT VACUOUS" in line:
+            print(
+                f"{YELLOW}[preflight-hook] preflight examined 0 gates this "
+                f"commit (fast --no-codebase mode). This hook is NOT gate "
+                f"coverage.{RST}",
+                file=sys.stderr,
+            )
+            print(
+                "  Full developer gate set: PREFLIGHT_FULL=0 "
+                ".venv/bin/python -m tac.preflight --scope dev",
+                file=sys.stderr,
+            )
+            return
 
 
 def _preflight_command() -> list[str]:
@@ -348,6 +373,16 @@ def _preflight_command() -> list[str]:
             cmd.append("--allow-slow-preflight")
     else:
         cmd.append("--no-codebase")
+        # VACUITY ACKNOWLEDGEMENT (2026-08-01, task #842). `--no-codebase`
+        # skips EVERY codebase gate call site, so this hook mode examines
+        # 0 gates — MEASURED: 0 of 27 declared in 0.52s. The CLI now refuses
+        # rc=3 on an empty scope rather than printing a bare "PREFLIGHT
+        # PASSED"; this hook is the one caller with a designed reason to
+        # accept that, so it must NAME the emptiness rather than inherit it
+        # silently. The verdict still prints VACUOUS and `run_preflight`
+        # echoes the coverage number on every commit — acknowledgement
+        # suppresses the refusal ONLY, never the report.
+        cmd.append("--acknowledge-empty-scope")
     return cmd
 
 

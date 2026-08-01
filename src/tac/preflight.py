@@ -6741,6 +6741,18 @@ def preflight_all(
             # OK over an empty scan; coverage is a ratcheting tracked queue. Live count 0.
             # CLAUDE_MD_ENTRY_OK: rides the confound-gate 3-layer immune-system row (L2 STRICT preflight gates); standalone numbered catalog row deferred per Catalog #299 post-#400 consolidation
             "check_refusal_gates_have_live_positive_control",
+            # 2026-08-01 ddm_vc1 (#842) fix+gate atomic landing. THE LAW: an
+            # instrument that evaluated an EMPTY SCOPE emits the same symbol as one
+            # that evaluated a full scope cleanly — vacuity is indistinguishable
+            # from PASS. MEASURED anchor: `tac.preflight --no-codebase` completed in
+            # 0.52s having executed 0 of 27 declared gates and printed "PREFLIGHT
+            # PASSED"; the commit hook takes exactly that path. The fix (this same
+            # batch) is tac.scope_ledger + the CLI verdict wire-in, which now emits
+            # VACUOUS and refuses rc=3 on an empty scope. Live count 0 after the two
+            # same-batch fixes, so it flips strict here rather than into warn-only
+            # purgatory. Carries a live positive control per the sister class guard.
+            # CLAUDE_MD_ENTRY_OK: rides the confound-gate 3-layer immune-system row (L2 STRICT preflight gates); standalone numbered catalog row deferred per Catalog #299 post-#400 consolidation
+            "check_verdict_surfaces_report_examined_count",
         }
         for _confound_gate in _CONFOUND_GATES:
             _confound_gate(
@@ -79117,6 +79129,17 @@ def _preflight_cli_main() -> None:
             "broad-scan regressions."
         ),
     )
+    parser.add_argument(
+        "--acknowledge-empty-scope",
+        action="store_true",
+        help=(
+            "Accept a run that examines ZERO gates (e.g. --no-codebase, which "
+            "skips every codebase gate call site) instead of exiting rc=3. The "
+            "verdict still prints VACUOUS and the denominator is still "
+            "reported: acknowledging an empty scope suppresses the refusal "
+            "ONLY, never the report. Vacuity is not a pass."
+        ),
+    )
     args = parser.parse_args()
 
     status = "passed"
@@ -79178,7 +79201,48 @@ def _preflight_cli_main() -> None:
         runner_kwargs["wall_clock_budget_s"] = None
         with recorder, _preflight_timeout_after(timeout_s):
             runner(**runner_kwargs)
-        print("\nPREFLIGHT PASSED")
+        # VACUITY LEDGER (2026-08-01, task #842). A verdict is a symbol PLUS a
+        # denominator. MEASURED before this landing: `--no-codebase` completed
+        # in 0.52s having executed 0 of 27 declared developer gates (0 of 448
+        # for --scope all, where all ~502 check_*() call sites live inside the
+        # `if check_codebase:` block) and printed a bare "PREFLIGHT PASSED".
+        # That is the pure form of the law "vacuity is indistinguishable from
+        # PASS" — and the commit hook takes exactly that path by default.
+        #
+        # `_called_preflight_cli_check_names(runner)` is the DENOMINATOR (gates
+        # the scope statically declares) and the timing recorder's rows are the
+        # NUMERATOR (gates that actually ran). Both instruments already existed;
+        # nobody had ever compared them.
+        from tac.scope_ledger import ScopeLedger
+
+        _declared = _called_preflight_cli_check_names(runner)
+        _examined = {str(row["name"]) for row in recorder.rows()}
+        ledger = ScopeLedger(
+            surface=f"tac.preflight --scope {args.scope}",
+            examined=len(_examined),
+            declared=len(_declared),
+            skipped_scopes=("codebase",) if args.no_codebase else (),
+            acknowledged=args.acknowledge_empty_scope,
+        )
+        if ledger.is_vacuous:
+            # Never spell an empty scope with a pass word — in the human line OR
+            # in the machine-readable timing payload. An ACKNOWLEDGED vacuity is
+            # still vacuity, so `status` changes here rather than inside the
+            # unacknowledged branch: a JSON consumer reading "passed" for a run
+            # that examined nothing is the same bug one layer down.
+            status = "vacuous"
+            print(f"\nPREFLIGHT VACUOUS — {ledger.render()}", file=sys.stderr)
+            if not ledger.acknowledged:
+                print(
+                    "  No gate was executed, so nothing was validated. Re-run "
+                    "without --no-codebase, or pass "
+                    "--acknowledge-empty-scope to accept an empty scope "
+                    "explicitly (it stays VACUOUS in the report).",
+                    file=sys.stderr,
+                )
+                exit_code = 3
+        else:
+            print(f"\nPREFLIGHT PASSED — {ledger.render()}")
     except (PreflightError, ArityViolation, FilenameContractError,
             CodebaseDriftError, LoaderFormatSafetyError) as e:
         status = "failed"
