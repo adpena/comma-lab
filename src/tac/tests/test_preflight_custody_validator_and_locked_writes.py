@@ -328,6 +328,90 @@ def test_check127_posterior_update_routing_accepted(tmp_path: Path) -> None:
     assert violations == []
 
 
+def test_check127_exact_eval_evidence_validator_accepted(tmp_path: Path) -> None:
+    """Task #852 class fix: `validate_exact_eval_evidence` is the OTHER canonical
+    validator of the (tag/axis, substrate, device) triple and must satisfy #127.
+
+    Before this token landed, every site routing through
+    `tac.exact_eval_custody.validate_exact_eval_evidence` read as a tag-only
+    bypass — a latent trip-wire across the 14 non-test files that call it.
+    """
+    root = _mkrepo(
+        tmp_path,
+        {
+            "tools/exact_eval_router.py": (
+                "from tac.exact_eval_custody import validate_exact_eval_evidence\n"
+                "semantic_axis = 'contest_cpu' if axis == '[contest-CPU]' else 'contest_cuda'\n"
+                "validation = validate_exact_eval_evidence(\n"
+                "    exact, expected_axis=semantic_axis, require_hardware=True,\n"
+                ")\n"
+                "if validation.blockers:\n"
+                "    raise RuntimeError('blocked')\n"
+            ),
+        },
+    )
+    violations = check_authoritative_tag_requires_custody_metadata(
+        repo_root=root, strict=False, verbose=False
+    )
+    assert violations == []
+
+
+def test_check127_exact_eval_evidence_token_in_comment_does_not_whitelist(
+    tmp_path: Path,
+) -> None:
+    """The new token buys no comment-shaped exemption either.
+
+    Guards the specific way a broadened accepted-token set could become a
+    bypass: writing the validator's NAME near a tag predicate without calling
+    it. Mirrors the sister guards for `posterior_update` / `validate_custody`.
+    """
+    root = _mkrepo(
+        tmp_path,
+        {
+            "tools/exact_eval_comment.py": (
+                "from tac.continual_learning import AUTHORITATIVE_TAGS\n"
+                "# TODO: route through validate_exact_eval_evidence(exact, ...)\n"
+                "if tag in AUTHORITATIVE_TAGS:  # '[contest-CUDA]'\n"
+                "    print(tag)\n"
+            ),
+        },
+    )
+    violations = check_authoritative_tag_requires_custody_metadata(
+        repo_root=root, strict=False, verbose=False
+    )
+    assert len(violations) == 1
+    assert "tools/exact_eval_comment.py" in violations[0]
+
+
+def test_check127_accepted_tokens_name_real_callables() -> None:
+    """Every accepted token must resolve to a callable that actually exists.
+
+    A typo'd or renamed token would silently accept nothing (or, worse for a
+    substring token, accept a lookalike) and the gate would keep reporting
+    clean — the vacuity failure mode one layer down. This pins the token set to
+    live code rather than to a string the reviewer eyeballed once.
+    """
+    from tac import continual_learning as _cl
+    from tac import exact_eval_custody as _eec
+    from tac.continual_learning import ContestResult
+    from tac.preflight import _CUSTODY_VALIDATOR_TOKENS
+
+    resolvers = {
+        "validate_custody": lambda: ContestResult.validate_custody,
+        "validate_custody_verdict": lambda: ContestResult.validate_custody_verdict,
+        "posterior_update_locked": lambda: _cl.posterior_update_locked,
+        "posterior_update(": lambda: _cl.posterior_update,
+        "validate_exact_eval_evidence": lambda: _eec.validate_exact_eval_evidence,
+    }
+    assert set(_CUSTODY_VALIDATOR_TOKENS) == set(resolvers), (
+        "accepted-token set drifted from its resolver map; a new token must be "
+        "adjudicated (does it validate tag+axis+substrate jointly?) before it "
+        "is allowed to satisfy Catalog #127"
+    )
+    for token, resolve in resolvers.items():
+        assert callable(resolve()), f"custody token {token!r} does not name a live callable"
+
+
 def test_check127_comment_validator_token_does_not_whitelist(tmp_path: Path) -> None:
     """A nearby comment mentioning posterior_update is not executable custody."""
     root = _mkrepo(

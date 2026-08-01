@@ -1203,3 +1203,120 @@ class TestNoInertAdditiveMarginComposition:
         with pytest.raises(PreflightError):
             cg.check_no_inert_additive_margin_composition(
                 repo_root=tmp_path, strict=True, verbose=False)
+
+
+# ---------------------------------------------------------------------------
+# NEGATIVE CONTROLS for the three positive controls landed 2026-08-01 (#831).
+#
+# A control that only FIRES is half a control. If the paired clean fixture is
+# never asserted, a detector that flags EVERYTHING passes its positive control
+# perfectly while being useless — the positive leg proves sensitivity, the
+# negative leg proves specificity, and a refusal gate needs both before it can
+# be called proven. Each clean case below is the exact CURE the gate names, run
+# through the same scan surface as its planted twin.
+# ---------------------------------------------------------------------------
+
+
+class TestPositiveControlNegativeTwins831:
+    def test_spike_guard_rollback_default_is_silent(self, tmp_path):
+        """#397's cure: default='rollback' (what the live trainer ships)."""
+        _trainer(
+            tmp_path,
+            "import argparse\n"
+            "def build():\n"
+            "    p = argparse.ArgumentParser()\n"
+            "    p.add_argument('--spike-guard-mode', default='rollback')\n"
+            "    return p\n",
+            base=True,
+        )
+        assert cg.check_no_spike_guard_defaults_to_deadlock_mode(
+            repo_root=tmp_path, strict=False, verbose=False) == []
+        # NON-VACUITY: prove the clean silence came from the CURE, not from an
+        # unscanned path. Same file, defect restored -> must fire.
+        _trainer(
+            tmp_path,
+            "import argparse\n"
+            "def build():\n"
+            "    p = argparse.ArgumentParser()\n"
+            "    p.add_argument('--spike-guard-mode', default='legacy')\n"
+            "    return p\n",
+            base=True,
+        )
+        assert cg.check_no_spike_guard_defaults_to_deadlock_mode(
+            repo_root=tmp_path, strict=False, verbose=False) != []
+
+    def test_verdict_pairs_zero_default_is_silent(self, tmp_path):
+        """#401's cure: default=0 == all pairs == n600."""
+        _trainer(
+            tmp_path,
+            "import argparse\n"
+            "def build():\n"
+            "    p = argparse.ArgumentParser()\n"
+            "    p.add_argument('--verdict-pairs', type=int, default=0)\n"
+            "    return p\n",
+            base=True,
+        )
+        assert cg.check_verdict_pairs_default_is_n600(
+            repo_root=tmp_path, strict=False, verbose=False) == []
+        # NON-VACUITY: same file, defect restored -> must fire.
+        _trainer(
+            tmp_path,
+            "import argparse\n"
+            "def build():\n"
+            "    p = argparse.ArgumentParser()\n"
+            "    p.add_argument('--verdict-pairs', type=int, default=24)\n"
+            "    return p\n",
+            base=True,
+        )
+        assert cg.check_verdict_pairs_default_is_n600(
+            repo_root=tmp_path, strict=False, verbose=False) != []
+
+    def test_rearm_present_is_silent(self, tmp_path):
+        """#398's cure: an explicit re-anchor next to the accepted-only append."""
+        _trainer(
+            tmp_path,
+            "def train_step(loss, median_window, stall):\n"
+            "    ref = sorted(median_window)[len(median_window) // 2]\n"
+            "    spiked = loss > 3.0 * ref\n"
+            "    if spiked:\n"
+            "        stall += 1\n"
+            "        if stall > 50:\n"
+            "            median_window.clear()\n"
+            "        return True\n"
+            "    else:\n"
+            "        median_window.append(loss)\n"
+            "    return False\n",
+            base=True,
+        )
+        assert cg.check_reject_filter_updates_reference_from_accepted_only_has_rearm(
+            repo_root=tmp_path, strict=False, verbose=False) == []
+        # NON-VACUITY: same file, re-arm removed -> must fire.
+        _trainer(
+            tmp_path,
+            "def train_step(loss, median_window):\n"
+            "    ref = sorted(median_window)[len(median_window) // 2]\n"
+            "    spiked = loss > 3.0 * ref\n"
+            "    if spiked:\n"
+            "        return True\n"
+            "    else:\n"
+            "        median_window.append(loss)\n"
+            "    return False\n",
+            base=True,
+        )
+        assert cg.check_reject_filter_updates_reference_from_accepted_only_has_rearm(
+            repo_root=tmp_path, strict=False, verbose=False) != []
+
+    def test_control_registry_and_ratchets_are_consistent(self):
+        """The two ratchets must describe the SAME live coverage they gate on.
+
+        A floor or ceiling that drifts from the measured coverage is a silent
+        instrument: the meta-gate keeps passing while the number it reports has
+        stopped meaning anything.
+        """
+        coverage = cg.positive_control_coverage()
+        assert coverage["covered"] >= cg.MIN_POSITIVE_CONTROL_COVERAGE
+        assert len(coverage["uncovered_gates"]) <= cg.MAX_UNCOVERED_REFUSE_GATES
+        # The ceiling is the debt QUEUE length; it must not have been raised to
+        # admit a bare gate.
+        assert cg.MAX_UNCOVERED_REFUSE_GATES <= 17
+        assert cg.MIN_POSITIVE_CONTROL_COVERAGE >= 8

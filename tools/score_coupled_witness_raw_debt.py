@@ -198,7 +198,18 @@ def _contest_reference(
         or payload.get("n_samples") != DEFAULT_PAIR_COUNT
         or payload.get("score_axis") != "contest_cpu"
         or payload.get("evidence_grade") != "contest-CPU"
-        or payload.get("lane_tag") != "[contest-CPU]"
+        # Catalog #127 adjudication (2026-08-01, task #852). The next line is ONE
+        # LEG of an inline joint refusal chain, not a tag-only predicate. This
+        # single `if` requires, conjunctively: lane_tag AND score_axis AND
+        # evidence_grade (the TAG leg) AND provenance.device == "cpu" AND
+        # platform_system == "Linux" AND cuda_available is False AND
+        # mps_available is False (the SUBSTRATE leg). That is the (tag, axis,
+        # hardware_substrate) triple Catalog #127 demands, and the substrate leg
+        # covers the exact original bug — a CPU tag accepted on a non-Linux host.
+        # Direction: the chain can only `raise`; it never promotes. Routing it
+        # through `validate_custody` would LOSE the platform/accelerator checks,
+        # which that validator does not perform on this payload shape.
+        or payload.get("lane_tag") != "[contest-CPU]"  # CUSTODY_VALIDATOR_OK:leg of the inline joint tag+axis+substrate refusal chain at lines 195-226; see comment above
         or payload.get("score_claim") is not True
         or payload.get("score_claim_valid") is not True
         or payload.get("score_claim_eligible") is not True

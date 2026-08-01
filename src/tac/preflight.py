@@ -732,6 +732,29 @@ class PreflightTimeoutError(PreflightError):
     pass
 
 
+def _is_non_collectable_control_exception(exc: BaseException) -> bool:
+    """True for exceptions that must ABORT the run instead of being aggregated.
+
+    Caught in round-2 review of this landing's own fix (task #852, 2026-08-01):
+    the first version of failure aggregation collected ``BaseException``, which
+    swallowed two things it had no business touching.
+
+    ``PreflightTimeoutError`` is a WALL-CLOCK BUDGET breach, not a gate
+    violation. Collecting it (a) destroyed the exception type the CLI needs to
+    report the hot step, and (b) inverted the budget's purpose — a run that blew
+    its deadline would keep executing the remaining gates instead of stopping.
+    ``KeyboardInterrupt`` / ``SystemExit`` / ``MemoryError`` are operator or
+    process control and must never be turned into a report line.
+
+    The distinction is the whole safety of aggregation: aggregate what the
+    DEVELOPER must fix, propagate what the RUN must obey.
+    """
+
+    if isinstance(exc, (KeyboardInterrupt, SystemExit, MemoryError)):
+        return True
+    return isinstance(exc, PreflightTimeoutError)
+
+
 class _ParallelPreflightRunner:
     """Run independent preflight checks concurrently while preserving fail sites."""
 
@@ -770,19 +793,52 @@ class _ParallelPreflightRunner:
         ctx = contextvars.copy_context()
         self._futures[name] = self._executor.submit(ctx.run, fn)
 
-    def run(self, name: str, label: str, fn, *, strict: bool = True):
+    def run(self, name: str, label: str, fn, *, strict: bool = True, collect: bool = False):
+        """Execute one submitted check.
+
+        ``collect=True`` returns the raised exception instead of closing the
+        pool and re-raising. That is what lets the caller report the DENOMINATOR
+        of failing gates rather than only the first one (task #852, 2026-08-01).
+
+        Why this matters, MEASURED: on 2026-08-01 the developer scope was red on
+        SIX gates, but the fail-fast path aborted at the first, so the standing
+        plan to turn the commit hook's real gate coverage on was written against
+        "4 custody bypasses" — the violation count of gate #1 — as though it were
+        the whole blocker. A first-failure report read as a debt total is the
+        failure-side sibling of "vacuity is indistinguishable from PASS": both
+        answer with a symbol where the caller needed a count.
+
+        Aggregating is nearly free here BY CONSTRUCTION: `submit()` dispatches
+        every check before the first `run()`, so fail-fast only cancelled work
+        that was already in flight. Running to completion costs the critical
+        path, not the sum.
+        """
         future = self._futures.pop(name, None)
         if future is None:
-            result = fn()
+            try:
+                result = fn()
+            except BaseException as exc:  # noqa: BLE001 - re-raised unless collectable
+                if not collect or _is_non_collectable_control_exception(exc):
+                    self.close(cancel=True)
+                    raise
+                if not self._futures:
+                    self.close(cancel=False)
+                return exc
             self._record_result(result, strict=strict)
             if not self._futures:
                 self.close(cancel=False)
             return result
         try:
             result = future.result()
-        except BaseException:
-            self.close(cancel=True)
-            raise
+        except BaseException as exc:  # noqa: BLE001 - re-raised unless collectable
+            if not collect or _is_non_collectable_control_exception(exc):
+                self.close(cancel=True)
+                raise
+            if self.verbose:
+                print(f"  {label} FAILED: {type(exc).__name__}")
+            if not self._futures:
+                self.close(cancel=False)
+            return exc
         self._record_result(result, strict=strict)
         if self.verbose:
             if isinstance(result, list):
@@ -6940,6 +6996,59 @@ def preflight_all(
         )
 
 
+def _dev_gate_failure_summary(exc: BaseException) -> str:
+    """One-line, count-bearing summary of a single red developer gate."""
+
+    head = str(exc).strip().splitlines()
+    first = head[0] if head else ""
+    # Most gates lead with "<check_name>: N violation(s)..." or a banner line.
+    # Keep whatever count the gate already computed; never invent one.
+    return f"{type(exc).__name__}: {first[:200]}" if first else type(exc).__name__
+
+
+def _raise_aggregated_dev_gate_failures(
+    failures: list[tuple[str, BaseException]],
+    *,
+    declared: int,
+) -> None:
+    """Raise once for ALL red developer gates, reporting the denominator.
+
+    Behaviour contract (task #852, 2026-08-01):
+
+    * ZERO failures -> returns; caller proceeds.
+    * ONE failure   -> re-raises the ORIGINAL exception object, unchanged. Every
+      existing caller, test, and error-message assertion keeps working, and the
+      exception TYPE (``CodebaseDriftError`` / ``MetaBugViolation`` /
+      ``PreflightError`` / ...) still selects the right handler in the CLI.
+    * MANY failures -> raises one :class:`PreflightError` that NAMES every red
+      gate and states ``N of M declared``.
+
+    The third case is the whole point. Fail-fast reported the first red gate as
+    though it were the debt, and a reader planning to enable real gate coverage
+    on the commit hook budgeted against that one gate. Reporting ``6 of 27``
+    with all six named is the difference between a plannable wall and a
+    surprise. Nothing that raised before stops raising.
+    """
+
+    if not failures:
+        return
+    if len(failures) == 1:
+        raise failures[0][1]
+    lines = [
+        f"{len(failures)} of {declared} declared developer gates are RED "
+        f"(fail-fast previously reported only the first):",
+    ]
+    lines.extend(
+        f"  - {name}: {_dev_gate_failure_summary(exc)}" for name, exc in failures
+    )
+    lines.append(
+        "Each gate above must be adjudicated on its own merits. Curing a gate by "
+        "widening its exemptions is a weakening, not a fix — check which DIRECTION "
+        "the disagreement errs before deciding whether the gate or the code is wrong."
+    )
+    raise PreflightError("\n".join(lines))
+
+
 def preflight_developer(
     profile_name: str | None = None,
     profile_arch: dict | None = None,
@@ -7247,11 +7356,29 @@ def preflight_developer(
         )
         for name, _label, fn in dev_checks:
             _parallel.submit(name, fn)
+        failures: list[tuple[str, BaseException]] = []
         try:
             for name, label, fn in dev_checks:
-                _parallel.run(name, label, fn)
+                outcome = _parallel.run(name, label, fn, collect=True)
+                if isinstance(outcome, BaseException):
+                    failures.append((name, outcome))
         finally:
             _parallel.close(cancel=False)
+        if failures:
+            # DENOMINATOR ON THE FAILURE SIDE (task #852, 2026-08-01). This used
+            # to raise the FIRST red gate and abandon the rest, so a reader could
+            # not tell one red gate from six. That is how the plan to give commits
+            # real gate coverage came to be written against a single gate's
+            # violation count: `--scope dev` aborted at
+            # check_authoritative_tag_requires_custody_metadata's 4 bypasses while
+            # five more gates were red behind it (MEASURED 2026-08-01: 19 green /
+            # 6 red / 2 not-independently-invocable of 27 declared).
+            #
+            # NOT a relaxation: every input that raised before still raises, with
+            # the same exception type for the single-failure case. What changes is
+            # that a multi-failure run now names ALL of them, so the next reader
+            # gets the debt total instead of its first element.
+            _raise_aggregated_dev_gate_failures(failures, declared=len(dev_checks))
         if codebase_cache_token is not None:
             _store_preflight_developer_clean_cache(
                 REPO_ROOT,
@@ -41028,6 +41155,28 @@ _CUSTODY_VALIDATOR_TOKENS: tuple[str, ...] = (
     "validate_custody_verdict",
     "posterior_update_locked",
     "posterior_update(",
+    # 2026-08-01 (task #852) CLASS FIX, not a relaxation. `tac.exact_eval_custody.
+    # validate_exact_eval_evidence` is the OTHER canonical validator of the exact
+    # triple this gate exists to force — and it was missing from this list, so
+    # every site routing through it read as a tag-only bypass. MEASURED by reading
+    # `src/tac/exact_eval_custody.py:531-670`, it validates the triple at least as
+    # strictly as `validate_custody`:
+    #   axis        -> `expected_axis` mismatch => "axis_mismatch" blocker
+    #   substrate   -> `require_hardware` + is_contest_cuda/cpu_device_text =>
+    #                  "hardware_not_cuda"/"hardware_not_contest_cpu"
+    #   device      -> `require_devices` on BOTH inflate_device and eval_device,
+    #                  incl. contains_forbidden_contest_cpu_token
+    # and additionally binds archive_sha256, runtime_tree_sha256, n_samples==600,
+    # and the auth-eval command shape — none of which `validate_custody` checks.
+    # Both are RETURN-based (validate_custody -> (ok, reason);
+    # validate_exact_eval_evidence -> .blockers), so admitting it introduces no
+    # new "called but ignored" hole that the existing tokens did not already have:
+    # this gate is a token-adjacency heuristic, never a dataflow proof. Scope of
+    # the class: 14 non-test files call this validator today (MEASURED), so the
+    # omission was a latent trip-wire across the whole exact-eval custody family,
+    # not one site. Comments/strings still cannot satisfy it — the window scan is
+    # `_line_window_code_contains_any`, which drops COMMENT and STRING tokens.
+    "validate_exact_eval_evidence",
 )
 
 _CUSTODY_WAIVER_MARKER = "CUSTODY_VALIDATOR_OK"

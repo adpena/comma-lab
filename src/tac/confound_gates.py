@@ -3298,6 +3298,76 @@ POSITIVE_CONTROLS: tuple[PositiveControl, ...] = (
         must_mention="planted_run",
         why="CLAUDE.md-forbidden fixed-beta hosc (tanh saturation -> vanishing gradient).",
     ),
+    # -----------------------------------------------------------------------
+    # 2026-08-01 (task #831, ddm_gc16). The three gates below are the ORIGINAL
+    # immune system from the 2026-07-05 confound hunt — Catalog #397 / #398 /
+    # #401 — and they were the most load-bearing entries still sitting in the
+    # uncovered queue. Each was STRICT-flipped at live-count 0, which is exactly
+    # the state where nothing else proves the detector still fires: a live count
+    # of zero looks identical whether the gate is working or gutted. That is the
+    # vacuity genus one layer down, on the gates themselves.
+    # -----------------------------------------------------------------------
+    PositiveControl(
+        gate="check_no_spike_guard_defaults_to_deadlock_mode",
+        files={
+            "experiments/train_witness_realized_through_R_mlx.py": (
+                "import argparse\n"
+                "def build():\n"
+                "    p = argparse.ArgumentParser()\n"
+                "    p.add_argument('--spike-guard-mode', default='legacy')\n"
+                "    return p\n"
+            )
+        },
+        must_mention="--spike-guard-mode",
+        why=(
+            "Catalog #397 anchor confound C1: default='legacy' is skip-with-frozen-median. "
+            "It froze BOTH the v5 and v6 n600 runs at ep114/ep103 while telemetry kept "
+            "advancing, and a whole session's eikonal/viscosity verdicts were drawn from "
+            "the frozen weights. This control is what proves the detector still sees a "
+            "deadlock-mode default now that the live trainer defaults to 'rollback'."
+        ),
+    ),
+    PositiveControl(
+        gate="check_verdict_pairs_default_is_n600",
+        files={
+            "experiments/train_witness_realized_through_R_mlx.py": (
+                "import argparse\n"
+                "def build():\n"
+                "    p = argparse.ArgumentParser()\n"
+                "    p.add_argument('--verdict-pairs', type=int, default=24)\n"
+                "    return p\n"
+            )
+        },
+        must_mention="--verdict-pairs",
+        why=(
+            "Catalog #401 confound C12: a non-zero --verdict-pairs default runs best-checkpoint "
+            "selection and ALL d_seg telemetry on a subset, violating the n600 non-negotiable at "
+            "the exact number that defines the goal. A subset verdict is a toy, and a toy that "
+            "looks like a measurement is the most expensive kind."
+        ),
+    ),
+    PositiveControl(
+        gate="check_reject_filter_updates_reference_from_accepted_only_has_rearm",
+        files={
+            "experiments/train_witness_realized_through_R_mlx.py": (
+                "def train_step(loss, median_window):\n"
+                "    ref = sorted(median_window)[len(median_window) // 2]\n"
+                "    spiked = loss > 3.0 * ref\n"
+                "    if spiked:\n"
+                "        return True\n"
+                "    else:\n"
+                "        median_window.append(loss)\n"
+                "    return False\n"
+            )
+        },
+        must_mention="train_witness_realized_through_R_mlx.py",
+        why=(
+            "Catalog #398 is the GENERALIZED structural gate behind C1: a reference window "
+            "appended ONLY in the accepted branch can never recover once a sustained spike "
+            "starts rejecting, so the guard deadlocks silently. This fixture is the bare "
+            "shape — accepted-only append, spike comparison, no re-arm token."
+        ),
+    ),
     PositiveControl(
         gate="check_no_duplicate_long_flags_in_launch",
         files={
@@ -3333,7 +3403,7 @@ POSITIVE_CONTROLS: tuple[PositiveControl, ...] = (
 
 # RATCHET FLOOR: the number of DISTINCT gates carrying a positive control at landing. It may only
 # grow. Deleting or stranding a control drops coverage below this and the meta-gate refuses.
-MIN_POSITIVE_CONTROL_COVERAGE = 4
+MIN_POSITIVE_CONTROL_COVERAGE = 8  # 4 -> 5 (vc1, #842) -> 8 (ddm_gc16, #831: +#397/#398/#401)
 
 # RATCHET CEILING (added 2026-07-31, task #831). The floor above is on the NUMERATOR — the count
 # of gates that HAVE controls — so it can only ever fire when a control is REMOVED. Landing a new
@@ -3350,7 +3420,7 @@ MIN_POSITIVE_CONTROL_COVERAGE = 4
 # permanently-red gate trains readers to ignore the suite (the #821 lesson). Recording the debt as
 # a number that can only go down is what makes the uncovered set a queue instead of a grave —
 # lower it as controls land; never raise it to admit a new bare gate.
-MAX_UNCOVERED_REFUSE_GATES = 20
+MAX_UNCOVERED_REFUSE_GATES = 17  # 20 -> 17 (ddm_gc16, #831). Only ever shrinks.
 
 
 def positive_control_coverage() -> dict[str, object]:
