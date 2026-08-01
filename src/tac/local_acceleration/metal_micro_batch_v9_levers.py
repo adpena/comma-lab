@@ -237,15 +237,24 @@ _CHROMA_SRC = r"""
     out[i] = dr * dr + dg * dg + db * db;
 """
 
+# NAMING CONSTRAINT (do NOT rename ``sdf`` back to ``signed``): ``mx.fast.metal_kernel`` splices each
+# ``input_names`` entry VERBATIM into the generated Metal signature (``const device float* <name>``)
+# and derives ``<name>_shape`` from it.  ``signed`` is a Metal/C++ type keyword, so an input named
+# ``signed`` makes the kernel fail to COMPILE ("invalid parameter name: 'signed' is a keyword") on
+# every dispatch.  The Python-facing argument stays ``signed`` (public API); only the buffer identifier
+# crossing into Metal is ``sdf``.  MEASURED 2026-08-01: before this rename the phase forward/VJP
+# kernels had never once compiled -- not since they were written on 2026-07-12 (d880211c96, whose
+# own message records "Metal-verify ... owed" because the authoring sandbox had no Metal). CI
+# cannot run MLX either, so nothing executed them for 20 days.
 _PHASE_SRC = r"""
     uint i = thread_position_in_grid.x;
-    int B = signed_shape[0];
-    int H = signed_shape[1];
-    int W = signed_shape[2];
+    int B = sdf_shape[0];
+    int H = sdf_shape[1];
+    int W = sdf_shape[2];
     if (i >= (uint)(B * H * W)) return;
     int col = i % W;
     int row = (i / W) % H;
-    float m = signed[i] > 0.0f ? signed[i] : 0.0f;
+    float m = sdf[i] > 0.0f ? sdf[i] : 0.0f;
     bool right = direction[i] < 0.5f;
     int q = (int)i;
     bool has_q = true;
@@ -256,7 +265,7 @@ _PHASE_SRC = r"""
         if (row + 1 < H) q += W;
         else has_q = false;
     }
-    float mq = has_q && signed[q] > 0.0f ? signed[q] : 0.0f;
+    float mq = has_q && sdf[q] > 0.0f ? sdf[q] : 0.0f;
     float t = m / (m + mq + eps[0]);
     float d = t - reference[i];
     out[i] = d * d;
@@ -299,13 +308,13 @@ _CHROMA_VJP_SRC = r"""
 # Computing one output element per thread avoids nondeterministic atomics while retaining O(BHW).
 _PHASE_VJP_SRC = r"""
     uint i = thread_position_in_grid.x;
-    int B = signed_shape[0];
-    int H = signed_shape[1];
-    int W = signed_shape[2];
+    int B = sdf_shape[0];
+    int H = sdf_shape[1];
+    int W = sdf_shape[2];
     if (i >= (uint)(B * H * W)) return;
     int col = i % W;
     int row = (i / W) % H;
-    float si = signed[i];
+    float si = sdf[i];
     float m = si > 0.0f ? si : 0.0f;
     float grad = 0.0f;
 
@@ -320,7 +329,7 @@ _PHASE_VJP_SRC = r"""
         if (row + 1 < H) q += W;
         else has_q = false;
     }
-    float mq = has_q && signed[q] > 0.0f ? signed[q] : 0.0f;
+    float mq = has_q && sdf[q] > 0.0f ? sdf[q] : 0.0f;
     float den = m + mq + eps[0];
     float tie = m / den;
     float common = 2.0f * (tie - reference[i]) * cot[i];
@@ -329,7 +338,7 @@ _PHASE_VJP_SRC = r"""
         int p = (int)i - 1;
         // The left predecessor chooses its right neighbour only when direction[p] < 0.5.
         if (direction[p] < 0.5f) {
-            float pm = signed[p] > 0.0f ? signed[p] : 0.0f;
+            float pm = sdf[p] > 0.0f ? sdf[p] : 0.0f;
             float pden = pm + m + eps[0];
             float ptie = pm / pden;
             float pcommon = 2.0f * (ptie - reference[p]) * cot[p];
@@ -341,14 +350,14 @@ _PHASE_VJP_SRC = r"""
         // The upper predecessor chooses its down neighbour for every non-right selector,
         // including NaN, matching mx.where(direction < 0.5, right, down).
         if (!(direction[p] < 0.5f)) {
-            float pm = signed[p] > 0.0f ? signed[p] : 0.0f;
+            float pm = sdf[p] > 0.0f ? sdf[p] : 0.0f;
             float pden = pm + m + eps[0];
             float ptie = pm / pden;
             float pcommon = 2.0f * (ptie - reference[p]) * cot[p];
             grad += pcommon * (-pm) / (pden * pden);
         }
     }
-    g_signed[i] = grad;
+    g_sdf[i] = grad;
 """
 
 # One thread per pixel writes the two theta-bearing g1/g0 gradients.  The canonical class mask is a
@@ -387,7 +396,7 @@ def _kernel(kind: str):
     elif kind == "phase":
         hit = mx.fast.metal_kernel(
             name="micro_batch_v9_phase_map",
-            input_names=["signed", "direction", "reference", "eps"],
+            input_names=["sdf", "direction", "reference", "eps"],
             output_names=["out"], source=_PHASE_SRC,
         )
     elif kind == "temporal":
@@ -405,8 +414,8 @@ def _kernel(kind: str):
     elif kind == "phase_vjp":
         hit = mx.fast.metal_kernel(
             name="micro_batch_v9_phase_map_vjp",
-            input_names=["signed", "direction", "reference", "eps", "cot"],
-            output_names=["g_signed"],
+            input_names=["sdf", "direction", "reference", "eps", "cot"],
+            output_names=["g_sdf"],
             source=_PHASE_VJP_SRC,
         )
     elif kind == "temporal_vjp":

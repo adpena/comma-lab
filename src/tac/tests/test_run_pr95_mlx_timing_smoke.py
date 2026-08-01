@@ -36,6 +36,21 @@ from tac.optimization.representation_training_probe_integration import (
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
+@pytest.mark.xfail(
+    strict=True,
+    reason=(
+        "OBSOLETE FIXTURE on a BANNED lineage (ddm_tr6, 2026-08-01). The final assertion demands "
+        "`archive_bound_candidate_ready is True` for this smoke's synthetic 6,223-byte archive. "
+        "`build_archive_bound_candidate_contract` was hardened on 2026-05-31 (817d0ea3aa) so that "
+        "readiness now also requires `material_change_proven` -- the no-op-detector discipline "
+        "(Catalog #105/#139): an archive must PROVE it changed score-affecting bytes before it can "
+        "be called archive-bound-ready. A one-step timing smoke cannot prove that, and should not. "
+        "Making this pass would mean weakening that predicate, which is the compliance-regression "
+        "direction. PR95/HNeRV is lessons-only under the no-old-lineage ban, so the fixture is not "
+        "worth enriching either. strict=True PINS the negative: if the readiness predicate is ever "
+        "loosened enough to certify this smoke, the test goes RED instead of quietly green."
+    ),
+)
 def test_run_pr95_mlx_timing_smoke_cli_writes_queueable_manifests(tmp_path: Path) -> None:
     output_dir = tmp_path / "pr95_mlx_smoke"
     result = subprocess.run(

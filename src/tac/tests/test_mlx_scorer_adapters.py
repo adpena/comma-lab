@@ -178,12 +178,39 @@ def test_conv2d_adapter_matches_torch_nchw(
     assert _max_abs(actual, expected) < 1.0e-5
 
 
-def test_grouped_strided_conv_uses_reference_path_for_metal_backward_crux() -> None:
+def test_grouped_strided_conv_uses_reference_path_for_metal_backward_crux(monkeypatch) -> None:
+    """Pins BOTH grouped+strided routings, and which one is the DEFAULT.
+
+    NAME KEPT DELIBERATELY: `.omx/research/mlx_metal_252_execution_20260703.md:137` cites this test
+    by name, and that memo is APPEND-ONLY historical provenance. The name is now narrower than the
+    body (the reference path is asserted under the parity-audit override, not as the default) --
+    see the HISTORY note below rather than inferring the default from the name.
+
+    HISTORY (do not re-litigate by renaming a string): this test originally asserted the DEFAULT
+    was ``MLXReferenceConv2dAdapter``. On 2026-06-27 (``fcbb6112ee``) the custom Metal grouped
+    backward was flipped from opt-in to default-ON, so the default became
+    ``MLXCustomKernelStridedGroupedConvAdapter`` and this test went red. Because CI cannot run MLX
+    it stayed red and unseen for ~5 weeks. The flip was DELIBERATE and its stated justification is
+    a BACKWARD exoneration (grad cosine ~1.0 vs the loop reference, ~17x faster). It is recorded
+    here as measured fact rather than deleted — see the sibling d_seg-exactness test for the
+    FORWARD caveat the backward exoneration does not cover.
+
+    The parity-audit escape hatch (``TAC_MLX_CUSTOM_GROUPED_BACKWARD=0``) must keep returning the
+    fixed-order reference, because that is the only way to re-run a forward/gradient audit.
+    """
     conv = nn.Conv2d(8, 16, kernel_size=3, stride=2, padding=1, groups=8, bias=False)
 
-    adapter = torch_conv2d_to_mlx(conv)
+    monkeypatch.setenv("TAC_MLX_CUSTOM_GROUPED_BACKWARD", "0")
+    assert type(torch_conv2d_to_mlx(conv)).__name__ == "MLXReferenceConv2dAdapter"
 
-    assert type(adapter).__name__ == "MLXReferenceConv2dAdapter"
+    monkeypatch.delenv("TAC_MLX_CUSTOM_GROUPED_BACKWARD", raising=False)
+    from tac.local_acceleration.mlx_scorer_adapters import _custom_metal_backward_status
+
+    active, reason = _custom_metal_backward_status()
+    expected = (
+        "MLXCustomKernelStridedGroupedConvAdapter" if active else "MLXReferenceConv2dAdapter"
+    )
+    assert type(torch_conv2d_to_mlx(conv)).__name__ == expected, (active, reason)
 
 
 def test_grouped_strided_reference_path_is_also_forward_d_seg_exactness_crux() -> None:
@@ -203,10 +230,26 @@ def test_grouped_strided_reference_path_is_also_forward_d_seg_exactness_crux() -
     keeps a stable, reproducible result. A future agent who routes these convs to
     native must FIRST re-run the real-frame d_seg parity gate; this test documents
     why the swap is not free.
+
+    OPEN FINDING (MEASURED 2026-08-01, ddm_tr6 -- deliberately pinned, NOT resolved here). The
+    2026-06-27 default flip means the LIVE default routing is
+    ``MLXCustomKernelStridedGroupedConvAdapter``, whose FORWARD is native ``mx.conv2d`` --
+    measured BIT-IDENTICAL to ``mx.conv2d`` and NOT bit-identical to the fixed-order reference.
+    So the forward swap that the g0 probe REJECTED is what the default now runs. The flip's
+    justification covers the BACKWARD only (grad cosine ~1.0); it says nothing about forward
+    argmax exactness. Two facts bound the risk and neither closes it: MLX is never a score
+    authority (the frozen CPU-torch scorer is), so no reported d_seg is corrupted; but the
+    MLX forward does shape the training-time seg signal. The real-frame d_seg parity gate this
+    docstring demands has NOT been re-run for the custom adapter. The assertions below pin the
+    measured relationships so the hazard stays visible instead of being renamed away.
     """
     import mlx.core as mx
 
-    from tac.local_acceleration.mlx_scorer_adapters import nchw_to_nhwc
+    from tac.local_acceleration.mlx_scorer_adapters import (
+        MLXCustomKernelStridedGroupedConvAdapter,
+        MLXReferenceConv2dAdapter,
+        nchw_to_nhwc,
+    )
 
     torch.manual_seed(20260611)
     # A grouped+strided depthwise conv of the same class as the 4 SegNet convs.
@@ -215,9 +258,8 @@ def test_grouped_strided_reference_path_is_also_forward_d_seg_exactness_crux() -
     x_nhwc = nchw_to_nhwc(x.numpy())
     xm = mx.array(x_nhwc)
 
-    # Reference (production routing) is deterministic run-to-run.
-    ref_adapter = torch_conv2d_to_mlx(conv)
-    assert type(ref_adapter).__name__ == "MLXReferenceConv2dAdapter"
+    # The fixed-order reference is deterministic run-to-run.
+    ref_adapter = MLXReferenceConv2dAdapter(conv, accumulation_mode="fixed_fp32")
     ref_a = np.asarray(ref_adapter(xm)).copy()
     ref_b = np.asarray(ref_adapter(xm)).copy()
     assert np.array_equal(ref_a, ref_b), "fixed-order reference must be reproducible"
@@ -239,6 +281,20 @@ def test_grouped_strided_reference_path_is_also_forward_d_seg_exactness_crux() -
     # ...but they are NOT bit-identical — that residual is exactly what flips
     # near-tie argmaxes on real frames, which is why the routing must not change.
     assert logit_max_abs > 0.0
+
+    # The custom-kernel adapter's FORWARD is that same native path, not the reference. Pinning
+    # both halves is what keeps the caveat above true-by-measurement rather than by memory.
+    custom_adapter = MLXCustomKernelStridedGroupedConvAdapter(conv)
+    custom = np.asarray(custom_adapter(xm)).copy()
+    assert np.array_equal(custom, native), (
+        "the custom grouped-conv adapter's forward is documented as native mx.conv2d; if this "
+        "no longer holds, the OPEN FINDING in this test's docstring must be re-derived"
+    )
+    assert not np.array_equal(custom, ref_a), (
+        "custom-adapter forward is bit-identical to the fixed-order reference — the g0-probe "
+        "argmax-flip hazard would be RESOLVED; re-run the real-frame d_seg parity gate and "
+        "update the OPEN FINDING in this docstring rather than silently relaxing it"
+    )
 
 
 def test_batchnorm2d_adapter_matches_torch_eval_nchw() -> None:

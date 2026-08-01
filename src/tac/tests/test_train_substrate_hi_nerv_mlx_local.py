@@ -2981,6 +2981,27 @@ def test_hinerv_short_scorer_smoke_readiness_blocks_unconsumed_hard_birth_reques
     )
 
 
+_BANNED_LINEAGE_READINESS_XFAIL = pytest.mark.xfail(
+    strict=True,
+    reason=(
+        "OBSOLETE FIXTURE on a BANNED lineage (ddm_tr6, 2026-08-01). These 5 tests assert that a "
+        "2026-06-05 synthetic metric bundle is certified `short_scorer_teacher_smoke_ready`. The "
+        "shared gate in tac/substrates/hi_nerv/short_scorer_readiness.py has since been hardened "
+        "to demand real receiver-surface custody, and the fixture now trips exactly three "
+        "actionable blockers (MEASURED): "
+        "hi_nerv_short_smoke_receiver_surface_{archive_identity,parseback,cache_manifest}_missing. "
+        "The gate is RIGHT and the tightening is the safe direction -- making these pass would "
+        "either loosen a gate that guards paid dispatch on archive-identity/parse-back proof, or "
+        "fabricate receiver-custody values that do not exist. HiNeRV is lessons-only under the "
+        "no-old-lineage ban, so repairing the fixture would be reflex-repair of a banned vehicle. "
+        "strict=True is deliberate: this PINS the negative. If the gate is ever relaxed enough for "
+        "these fixtures to be certified ready, these tests go RED and force a review rather than "
+        "quietly turning green."
+    ),
+)
+
+
+@_BANNED_LINEAGE_READINESS_XFAIL
 def test_hinerv_short_scorer_smoke_readiness_accepts_nondegenerate_metrics() -> None:
     report = _build_hinerv_short_scorer_smoke_readiness_report(
         train_time_controls=_short_scorer_smoke_controls(),
@@ -3154,6 +3175,7 @@ def test_hinerv_short_scorer_smoke_readiness_failure_marks_training_artifact_lon
     ] is False
 
 
+@_BANNED_LINEAGE_READINESS_XFAIL
 def test_hinerv_short_scorer_smoke_readiness_pass_preserves_training_artifact_long_run_admission(
     tmp_path: Path,
 ) -> None:
@@ -3235,6 +3257,7 @@ def test_hinerv_short_scorer_smoke_readiness_pass_preserves_training_artifact_lo
     assert metadata["blockers"] == ["contest_cpu_cuda_exact_eval_not_executed"]
 
 
+@_BANNED_LINEAGE_READINESS_XFAIL
 def test_hinerv_short_scorer_smoke_readiness_accepts_direct_live_segnet_binding() -> None:
     report = _build_hinerv_short_scorer_smoke_readiness_report(
         train_time_controls=_short_scorer_smoke_controls(),
@@ -3294,6 +3317,7 @@ def test_hinerv_short_scorer_smoke_readiness_accepts_direct_live_segnet_binding(
     assert report["ready_for_long_run"] is True
 
 
+@_BANNED_LINEAGE_READINESS_XFAIL
 def test_hinerv_short_scorer_smoke_readiness_accepts_region_subcontrol_only_binding() -> None:
     controls = _train_time_control_config_from_args(
         _build_parser().parse_args(
@@ -3379,6 +3403,7 @@ def test_hinerv_short_scorer_smoke_readiness_accepts_region_subcontrol_only_bind
     ] == pytest.approx(0.07)
 
 
+@_BANNED_LINEAGE_READINESS_XFAIL
 def test_hinerv_short_scorer_smoke_readiness_accepts_target_mass_floor_only_binding() -> None:
     controls = _train_time_control_config_from_args(
         _build_parser().parse_args(

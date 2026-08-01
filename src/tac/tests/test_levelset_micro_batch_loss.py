@@ -89,7 +89,16 @@ class _MockAdapter:
         self.pose_w = mx.array(rng.standard_normal((12, pose_dims)).astype(np.float32) * 0.01)
 
     def segnet(self, f):                 # f (B,H,W,3) -> (B,H,W,5)
-        return f @ self.seg_w + self.seg_b
+        # ``f`` is 0..255 RGB. Feeding it RAW into an N(0,1) linear map yields logits spanning
+        # ~[-107, +179], which SATURATES every downstream ``mx.softmax`` to an exact one-hot: the
+        # class probabilities used by the V9 chroma/phase/temporal levers collapse to 0.0/1.0 and
+        # any ``g1 - g0`` probability difference underflows to 0 in fp32. MEASURED 2026-08-01 on
+        # the pre-fix fixture: ``max(softmax(logits)[..., 0:3]) == 5.0e-37`` and the temporal term
+        # was IDENTICALLY ZERO, so its parity assertions (``|routed - oracle| / |oracle|``) passed
+        # VACUOUSLY -- 0 == 0 -- and only the negative control noticed. The real scorer's logits
+        # live at O(1..10) because SegNet normalizes its input; dividing by 255 restores that
+        # regime so the probability-space levers are actually EXERCISED.
+        return (f / 255.0) @ self.seg_w + self.seg_b
 
     def posenet(self, yuv):              # yuv (B,h2,w2,12) -> {"pose": (B, pose_dims)}
         return {"pose": mx.mean(yuv, axis=(1, 2)) @ self.pose_w}
@@ -143,6 +152,52 @@ def _base_lc(**over):
     for k, v in over.items():
         setattr(lc, k, v)
     return lc
+
+
+_FP32_EPS = float(np.finfo(np.float32).eps)          # 1.1920929e-07
+# Slack over one ulp-of-the-field. DERIVED, not tuned-to-pass: the phase VJP divides by
+# ``(m + mq + eps)**2`` with the kernel's ``eps = 1e-6``, so a near-tie pixel amplifies input
+# rounding well past a single ulp. MEASURED 2026-08-01 at (B,H,W)=(2,384,512): the largest
+# observed ``maxabs / (eps32 * max|ref|)`` was ~14 (phase grad0: maxabs 5.6e-3, field max 3346;
+# chroma value sits at ~1). 64 leaves ~4.6x headroom over the worst measured case while still
+# refusing a real indexing/dispatch defect by ~5 orders (such a defect misplaces whole rows or
+# tiles, i.e. an error of order the FIELD SCALE itself => ratio ~1/eps32 ~ 8.4e6, not ~14).
+_FP32_FIELD_SLACK = 64.0
+
+
+def _assert_fp32_field_parity(label, fused, reference):
+    """Fused-kernel vs reference parity at a FIELD-SCALE fp32 bound.
+
+    A fixed ``atol`` is the wrong instrument for these maps: they span many decades (the phase VJP
+    field runs 0 .. 3.3e3, the chroma map 0 .. 2e5), so a single absolute floor is simultaneously
+    far too loose for the large elements and unsatisfiable for the small ones. Reordered fp32
+    arithmetic perturbs a field by ~ulp-of-the-LARGEST-term, not ulp-of-each-element, so the
+    honest bound scales with ``max|reference|``.
+
+    An all-zero reference field is handled EXPLICITLY rather than swept into the tolerance. Some
+    primals are static providers (the phase ``direction`` selector, the temporal ``class_mask``)
+    whose gradient is structurally zero, so a scale-relative bound would degenerate to ``atol=0``
+    and silently pass anything. For those the contract is EXACT zero — which is a real assertion
+    (a kernel writing garbage into a static-provider gradient still fails), not a vacuum.
+    """
+    f = np.asarray(fused, dtype=np.float64)
+    r = np.asarray(reference, dtype=np.float64)
+    assert f.shape == r.shape, (label, f.shape, r.shape)
+    scale = float(np.abs(r).max())
+    if scale == 0.0:
+        stray = float(np.abs(f).max())
+        assert stray == 0.0, (
+            f"{label}: reference gradient is structurally zero (static provider) but the fused "
+            f"kernel wrote a nonzero field (maxabs {stray:.6g})"
+        )
+        return
+    atol = _FP32_FIELD_SLACK * _FP32_EPS * scale
+    maxabs = float(np.abs(f - r).max())
+    assert maxabs <= atol, (
+        f"{label}: fused-vs-reference maxabs {maxabs:.6g} exceeds the fp32 field bound "
+        f"{atol:.6g} (field max {scale:.6g}, ratio {maxabs / (_FP32_EPS * scale):.3g} ulp). "
+        "A ratio of order 1e6 means an indexing/dispatch defect, not rounding."
+    )
 
 
 def _max_rel_grad_err(g_batched, g_mean):
@@ -1312,10 +1367,11 @@ def test_v9_faithful_384x512_metal_maps_and_area_value_vjp():
             kernels.verify_v9_lever_backend_execution(kind)
             assert kernels.v9_lever_backend_receipt()[kind] == "metal"
             mx.eval(fused_value, ref_value, *fused_grads, *ref_grads)
-            assert np.allclose(np.asarray(fused_value), np.asarray(ref_value), rtol=1e-5, atol=1e-5)
-            for fused_grad, ref_grad in zip(fused_grads, ref_grads, strict=True):
-                assert np.allclose(
-                    np.asarray(fused_grad), np.asarray(ref_grad), rtol=1e-4, atol=1e-5)
+            _assert_fp32_field_parity(f"{kind}:value", fused_value, ref_value)
+            for gi, (fused_grad, ref_grad) in enumerate(
+                zip(fused_grads, ref_grads, strict=True)
+            ):
+                _assert_fp32_field_parity(f"{kind}:grad{gi}", fused_grad, ref_grad)
 
         logits = mx.array(rng.standard_normal((B, H, W, 5)).astype(np.float32))
         labels = rng.integers(0, 5, (B, H, W))

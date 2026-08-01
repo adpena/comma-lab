@@ -1065,13 +1065,24 @@ class MLXPoseNetAdapter:
 class MLXCustomKernelStridedGroupedConvAdapter:
     """Strided grouped/depthwise Conv2d (NHWC) with a fast custom Metal backward.
 
-    Forward = native ``mx.conv2d`` (bit-exact + fast on Metal). Backward = the
+    Forward = native ``mx.conv2d`` (fast on Metal; bit-identical to ``mx.conv2d``, and NOT
+    bit-identical to :class:`MLXReferenceConv2dAdapter` -- MEASURED, see the WARNING below).
+    Backward = the
     ``make_grouped_conv2d_nhwc`` config-bound ``@mx.custom_function`` whose vjp
     runs two correct Metal kernels for grad_input + grad_weight. This replaces
     the ~13-35x-slower Python-loop ``MLXReferenceConv2dAdapter`` backward on the
     narrow strided-grouped downsample class while keeping the SAME descent
     direction (full-SegNet pixel-gradient cosine 0.99999775 vs the reference on
     real weights; per-layer grad_input/grad_weight cosine 1.000000).
+
+    WARNING -- the exoneration covers the BACKWARD only (MEASURED 2026-08-01, ddm_tr6). Selecting
+    this adapter ALSO swaps the FORWARD from the fixed-order reference to native ``mx.conv2d``.
+    ``test_grouped_strided_reference_path_is_also_forward_d_seg_exactness_crux`` records a
+    2026-06-11 real-frame probe in which exactly that forward swap produced 1 deterministic
+    per-pixel argmax flip on ``0.mkv`` frame 1125 (native-vs-reference logit delta 1.08e-3
+    against a top-2 margin of 6.2e-5). That real-frame d_seg parity gate has NOT been re-run
+    since this path became the DEFAULT on 2026-06-27. No reported score is affected (MLX is
+    never a score authority) but the MLX forward does shape the training-time seg signal.
 
     THROUGHPUT TOOL ONLY. The gradient is fp32 and ~exact (cosine ~1.0 vs the
     trusted Python-loop reference) but is NEVER a d_seg/d_pose score authority —
@@ -1165,8 +1176,12 @@ def _custom_metal_backward_enabled() -> bool:
 # One-time runtime confirmation guard (max-observability): emitted the FIRST time
 # a strided grouped Conv2d is adapted (== scorer construction), so every launched
 # run logs whether the custom Metal grouped backward (the ~17x throughput lever)
-# is ACTIVE or silently falling back to the loop reference. Log-only -> the compute
-# (forward + backward numerics) is BIT-IDENTICAL whether or not this fires.
+# is ACTIVE or silently falling back to the loop reference. The LOGGING is side-effect-free, but
+# the DECISION it reports is not: the two paths are NOT bit-identical. MEASURED 2026-08-01 on a
+# 96-group stride-2 depthwise conv -- custom-vs-reference forward maxabs 2.4e-07 (and a 1.08e-3
+# logit delta on real SegNet activations per the g0 probe). The prior wording here claimed
+# "the compute (forward + backward numerics) is BIT-IDENTICAL whether or not this fires", which
+# is false and hid the forward swap behind a backward-only exoneration.
 _CUSTOM_BACKWARD_LOG_EMITTED = False
 
 

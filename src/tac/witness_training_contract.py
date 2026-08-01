@@ -11,8 +11,11 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
+# MIRROR of ``experiments/train_levelset_witness_realized_through_R_mlx.py::LOSS_TERM_KEYS`` --
+# kept key-for-key identical by hand; see that module for the per-key provenance comments.
 LOSS_TERM_KEYS: tuple[str, ...] = (
-    "seg", "pose", "eikonal", "length", "eik_steik", "boundary_distance",
+    "seg", "pose", "distill",
+    "eikonal", "length", "eik_steik", "boundary_distance",
     "lane_edge", "margin_saliency", "subpix", "chroma_boundary", "lane_skipband",
     "margin_satisfice", "horizon_margin", "temporal_screw", "phase_advect", "island_amplify",
     "area_constraint", "persistence", "rankfloor", "code_spectral",

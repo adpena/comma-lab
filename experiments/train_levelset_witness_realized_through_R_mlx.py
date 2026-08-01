@@ -5221,7 +5221,8 @@ def _stage_rewarmup_factor(
 LOSS_TERM_KEYS: tuple[str, ...] = (
     # #304 item 4 per-term loss telemetry -- the canonical row schema. Order matches total_loss_fn's
     # additive composition: base (seg CE-form + pose sqrt-term) then every stacked lever term.
-    "seg", "pose", "eikonal", "length", "eik_steik", "boundary_distance", "lane_edge",
+    "seg", "pose", "distill",
+    "eikonal", "length", "eik_steik", "boundary_distance", "lane_edge",
     "margin_saliency", "subpix", "chroma_boundary", "lane_skipband",
     "margin_satisfice", "horizon_margin", "temporal_screw",
     "phase_advect",
@@ -5232,6 +5233,13 @@ LOSS_TERM_KEYS: tuple[str, ...] = (
     # so they MUST be in the schema or the sum_minus_total confound-immune self-check breaks the
     # moment a P0 force is activated (SEAL R5 MAJOR-1 fix). Composition order: after chroma_boundary,
     # before island_amplify (matches total_loss_fn's additive order). Default-OFF => 0.0, byte-neutral.
+    # "distill" (ddm_dw1 QA75 solve-frame distillation, 2026-07-30): the base trainer's base_loss
+    # writes terms_out["distill"] AND adds distill_weight*distill_term to the returned total
+    # (train_witness_realized_through_R_mlx.py ~L1528). It shipped UNREGISTERED for 2 days -- the
+    # exact SEAL R5 MAJOR-1 bug class -- so whenever the lever was active, sum_terms (which iterates
+    # this schema) DROPPED that addend and the confound-immune sum_minus_total self-check would have
+    # read a spurious nonzero residual. Registering here, in base-composition order beside seg/pose,
+    # is the safe direction: excluding a real addend UNDER-reports the composition.
     # "eik_steik" (EIK-STAB build 1a): the additive StEik directional-divergence stabilizer; 0.0
     # unless --eikonal-steik-weight > 0. NOTE: when --eikonal-viscosity > 0 the "eikonal" key holds
     # the VISCOUS residual contribution (ViscoReg replaces the residual; same constraint, viscous

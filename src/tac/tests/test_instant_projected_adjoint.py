@@ -127,12 +127,53 @@ def test_ineligible_convolutions_and_bad_calibration_fail_closed() -> None:
 
 
 def test_mlx_projection_matches_numpy_when_metal_is_available() -> None:
+    """MLX projector vs the NumPy reference, split by MLX stream.
+
+    This assertion used to be a single ``rtol=1e-5`` comparison against the default (GPU) stream,
+    and it was RED for as long as anyone has run it on Metal (CI cannot execute MLX). ddm_tr6
+    localized it on 2026-08-01 and it is NOT a fp32-vs-fp64 artifact and NOT our arithmetic:
+
+      * MEASURED -- the numpy reference computed in float32 vs float64 agrees to 1.4e-07, so the
+        reference is precision-insensitive here.
+      * MEASURED -- the MLX intermediates ``matrix`` and ``matrix @ q.T`` are BIT-IDENTICAL to
+        numpy. Only the final ``@ q`` diverges, by 1.0e-03 relative.
+      * MEASURED -- running the identical MLX graph on the CPU stream gives 6.0e-08.
+      * MEASURED (standalone ``mx.matmul``, MLX 0.31.2) -- normalized error ``|err| / (|a| @ |b|)``
+        is 1.7e-03 .. 1.7e-04 on the GPU stream across shapes from (4,1,3) to (1024,1024,256),
+        versus 3.4e-08 .. 2.7e-07 on the CPU stream. A 1x1x1 matmul is exact on both.
+      * INFERRED -- MLX dispatches to a reduced-precision tiled/simdgroup GEMM on Metal above a
+        very small size threshold. Mechanism not confirmed upstream; the numbers above are.
+
+    So the honest contract is per-stream. CPU is held to fp32 (that is the real test of OUR math).
+    The GPU deviation is PINNED with a measured bound rather than papered over with a loose global
+    tolerance: a bound that is tight enough to catch an actual algorithmic break, and that will
+    fail loudly if MLX's GPU precision gets worse. Note this projector shapes ADJOINTS, so the
+    GPU-side error is a gradient-quality fact worth keeping visible.
+    """
     mx = pytest.importorskip("mlx.core")
     values = _rng_values(samples=2, channels=3, height=2, width=2)
     calibration = calibrate_adaptive_projector_numpy(values, energy_target=0.7, oversampling=0)
+    expected = project_cotangent_numpy(values[0], calibration)
+
     try:
-        observed = project_cotangent_mlx(mx.array(values[0]), calibration)
-        mx.eval(observed)
+        with mx.stream(mx.cpu):
+            observed_cpu = project_cotangent_mlx(mx.array(values[0]), calibration)
+            mx.eval(observed_cpu)
     except RuntimeError as exc:
         pytest.skip(f"MLX runtime unavailable: {exc}")
-    np.testing.assert_allclose(np.asarray(observed), project_cotangent_numpy(values[0], calibration), rtol=1e-5, atol=1e-5)
+
+    # fp32-exact on the CPU stream: this is the assertion that actually tests our arithmetic.
+    np.testing.assert_allclose(np.asarray(observed_cpu), expected, rtol=1e-5, atol=1e-5)
+
+    observed_gpu = project_cotangent_mlx(mx.array(values[0]), calibration)
+    mx.eval(observed_gpu)
+    gpu_rel = float(
+        np.abs(np.asarray(observed_gpu) - expected).max() / (np.abs(expected).max() + 1e-30)
+    )
+    # Measured 1.02e-03 on MLX 0.31.2 / M-series. 1e-02 leaves ~10x headroom for MLX build drift
+    # while still refusing an algorithmic break (wrong axis, wrong basis => O(1) relative).
+    assert gpu_rel < 1.0e-2, (
+        f"MLX GPU-stream projection deviates from the NumPy reference by {gpu_rel:.3g} relative, "
+        "beyond the measured reduced-precision GEMM bound — suspect an algorithmic break, "
+        "not rounding"
+    )
