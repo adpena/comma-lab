@@ -959,17 +959,42 @@ BASIN_THRESHOLDS = {
     "lane_b0_delta_max": 2, "lane_erased_delta_max": 1,
 }
 
+# ddm_tp2 (2026-08-02) — the basin predicate keys on the LOSS FORM, never on the DISPLAY NAME.
+# MEASURED BUG (fixed here): the predicate compared ``row["stage"] == "seg_trunk_tau"`` by exact
+# string, but ``stage`` is a display label whose text VARIES WITH A LAUNCH FLAG:
+#   ``--seg-form-start ce``          -> "seg_trunk_ce", then the knee event sets "seg_trunk_tau"  [fires]
+#   ``--seg-form-start tau_softplus``-> "seg_trunk_tau_softplus" FOREVER                          [NEVER fires]
+# and in the second case ``knee_switched = stage != "seg_trunk_ce"`` is True from epoch 0, so BOTH
+# form-switch blocks are guarded off and the label can never be rewritten. Such a run trains the
+# IDENTICAL tau_softplus loss and is structurally incapable of entering the basin. The semantic the
+# predicate actually wants is the FORM the loss is running (``state_form["form"]``, the state machine
+# the switch events mutate) -- that value is "tau_softplus" in BOTH launch paths.
+BASIN_TERMINAL_SEG_FORM = "tau_softplus"
+SEG_TRUNK_CE_STAGE = "seg_trunk_ce"
+
+
+def initial_stage_label(seg_form_start: str) -> str:
+    """The DISPLAY label for the opening stage. Sole owner of the label convention.
+
+    NOTE (ddm_tp2): this is a LABEL, not a semantic. It is NOT stable under
+    ``--seg-form-start``: "ce" -> "seg_trunk_ce" (rewritten to "seg_trunk_tau" by the knee
+    event) but "tau_softplus" -> "seg_trunk_tau_softplus", which no event ever rewrites.
+    Never key a predicate on it; key on ``state_form["form"]`` (see BASIN_TERMINAL_SEG_FORM).
+    """
+    return (SEG_TRUNK_CE_STAGE if seg_form_start == "ce"
+            else f"seg_trunk_{seg_form_start}")
+
 
 def basin_entry_fires(w: list[dict]) -> bool:
     """TerminalSolve §16.1 validity predicate over the last-3-gate window (pure logic;
     unit-tested; consumed by main()'s basin-handoff block). Conditions: (a) quadratic
     crawl in BOTH smooth and realized channels; (b) lane topology stable; (c) shadow
-    basis + tau stage throughout (no transitions remaining); zero A1 alarms in-window
-    (linearization fidelity)."""
+    basis + terminal seg FORM throughout (no transitions remaining); zero A1 alarms
+    in-window (linearization fidelity)."""
     t = BASIN_THRESHOLDS
     return (len(w) == 3
             and all(x["basis"] == "ema_shadow" for x in w)
-            and all(x["stage"] == "seg_trunk_tau" for x in w)
+            and all(x.get("form") == BASIN_TERMINAL_SEG_FORM for x in w)
             and not any(x["alarm"] for x in w)
             and w[0]["smooth"] > 0 and w[0]["dseg"] > 0
             and (w[0]["smooth"] - w[-1]["smooth"]) / abs(w[0]["smooth"])
@@ -1752,7 +1777,7 @@ def main() -> int:
 
     ema: dict[str, Any] = {k: mx.array(v) for k, v in tree_flatten(model.trainable_parameters())}
     start_epoch = 0
-    stage = "seg_trunk_ce" if cfg.seg_form_start == "ce" else f"seg_trunk_{cfg.seg_form_start}"
+    stage = initial_stage_label(cfg.seg_form_start)
     if args.resume_from is not None:
         st = load_checkpoint(args.resume_from, model)
         ema = st["ema"]
@@ -1967,7 +1992,7 @@ def main() -> int:
     basin_window: list[dict] = []  # basin-entry detector state (basin_handoff == "on")
     gate_param_snapshot: dict[str, np.ndarray] | None = None
     order_rng = np.random.default_rng(cfg.seed + 1)
-    knee_switched = stage != "seg_trunk_ce"
+    knee_switched = stage != SEG_TRUNK_CE_STAGE
     if knee_switched and state_form["form"] == "ce":
         # #517-twin re-anchor (2026-07-30 qa86 EMA-resume incident): the form state
         # machine must position to the RESTORED stage, not --seg-form-start. Without
@@ -2358,7 +2383,11 @@ def main() -> int:
             if cfg.basin_handoff == "on":
                 topo = gate_row.get("topology_per_class", {})
                 basin_window.append({
+                    # ddm_tp2: ``form`` is the PREDICATE key (the loss form the state machine is
+                    # actually running, launch-flag-invariant); ``stage`` is retained for the
+                    # receipt/telemetry as a human label ONLY -- never compared.
                     "epoch": epoch, "basis": gate_basis, "stage": stage,
+                    "form": state_form["form"],
                     "dseg": float(gate_row["realized_gate_dseg_mean"]),
                     "smooth": float(ep_loss), "alarm": bool(a1["a1_alarm"]),
                     "lane_b0": int(topo.get("betti0_realized", [0] * 5)[1]),
