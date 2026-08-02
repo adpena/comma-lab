@@ -21,23 +21,40 @@ Consumes the a1 gate's EXISTING realized argmax (``realized_gate._realized_argma
 Authority: ``[macOS-CPU advisory]``; ``research_only=True``; ``score_claim=False``;
 pointer ``0.1910828242 [contest-CPU]`` UNMOVED. Everything here is MEANS.
 
-Scorer-coordinate provenance (all MEASURED, cited — constants-are-poison: no bare
-literals; every default is DERIVED from a measured artifact with its source):
+Scorer-coordinate provenance (constants-are-poison: every default carries its
+value-provenance LADDER CLASS and its source.  Re-derived at source 2026-08-01 by
+ddm_hl1; one entry below is class 4 / UNVERIFIED and says so — the previous blanket
+claim that every default was artifact-DERIVED was itself the disguise this file's
+own copied-table bug wore):
 
   * Budget ``LANE_BUDGET_S_UNITS = 0.12589`` (Lane per-class S at the ep641
     endpoint) — /Volumes/VertigoDataTier/pact/ddm_xp1_20260731/xp1_verdict.json
     ``base_per_class_S_units[1]``; ckpt stage_seg_trunk_tau_final.npz sha256
     40553db8be98215a67205d3670aa15d9b9edbe2322380ce169d8448af670f2db (ep641).
     d_seg units = S/100 = 0.0012589.
+    LADDER CLASS 3 (measured_anchor), re-verified 2026-08-01: value and ckpt sha
+    both match the artifact EXACTLY.  Caveat: the artifact is OUT OF REPO on an
+    external volume, so no gate can check it and it is unverifiable on any other
+    host — the citation is only as durable as that volume.
   * Lane head sensitivity ratio (derive_lane_head_sensitivity_ratio) — the four
     Lane-pair rank-4 head normals are the four LARGEST of all ten class pairs:
     Lane-Movable 4.007, Road-Lane 3.953, Lane-MyCar 3.862, Lane-Undrivable 3.748
-    (mean 3.8925) vs all-ten-pair mean 3.2544 => 1.1961.  Source:
-    .omx/research/segnet_recursive_fractal_factorization_20260715.md §2 (head is
-    EXACTLY rank-4 linear; flip distance d = |margin_cc'| / ||w_c - w_c'||).
+    (mean 3.8925) vs all-ten-pair mean 3.2544 => 1.1961.  RESOLVED THROUGH the
+    canonical producer ``tac.canonical_equations.segnet_head_rank4_flipdist_20260715``
+    (equation ``segnet_head_rank4_linear_flipdist_v1``; head is EXACTLY rank-4
+    linear, flip distance d = |margin_cc'| / ||w_c - w_c'||) — NOT copied as
+    literals.  Memo: .omx/research/segnet_recursive_fractal_factorization_20260715.md §2.
   * Measured unprotected erosion ``EROSION_S_MEASURED = 0.00151`` (rung-1's
     unprotected continuation eroded the Lane pool by +0.00151 S while bulk classes
     descended) — xp1 (task #808 brief) — the scale that DERIVES eta_lambda.
+    LADDER CLASS 4 (hardcoded), UNVERIFIED as of 2026-08-01: the value appears
+    NOWHERE in xp1_verdict.json (all 23 keys checked); the citation is a prose
+    brief, not a machine-readable artifact, and it carries no typed
+    HardcodedWaiverCustody.  RE-DERIVATION TRIGGER: emit the rung-1 unprotected
+    Lane erosion into a machine-readable verdict artifact and cite that, OR
+    record typed waiver custody naming an owner.  Owner: lg1 successor.
+    Consequence if wrong: it scales ``derive_eta_lambda`` only (dual step size),
+    so an error changes how FAST the constraint engages, not the budget it holds.
   * Per-class Lane error definition matches the budget EXACTLY: ddm_qa92
     ``_per_class_flip_counts`` + P formula ``100 * flips / (n*384*512)``
     (experiments/ddm_qa92_carrier_discriminator.py L188, L353).
@@ -50,6 +67,8 @@ from typing import Any
 
 import numpy as np
 
+from tac.canonical_equations.segnet_head_rank4_flipdist_20260715 import HEAD_PAIR_NORMS
+
 # ---- MEASURED scorer-coordinate constants (comma10k canonical order) -----------
 LANE_CLASS = 1  # [Road, Lane, Undrivable, Movable, MyCar] — MEASURED (CLAUDE.md); NEVER luma-sort
 N_CLASSES = 5
@@ -59,10 +78,26 @@ SEG_H, SEG_W = 384, 512  # frozen SegNet argmax plane (modules.py preprocess)
 LANE_BUDGET_S_UNITS = 0.12589
 LANE_BUDGET_DSEG = LANE_BUDGET_S_UNITS / 100.0  # 0.0012589
 
-# segnet_recursive_fractal_factorization_20260715.md §2 — rank-4 head class-pair normals ||dw||.
+# Rank-4 head class-pair normals ||w_c - w_c'||, RESOLVED from the canonical producer
+# (equation ``segnet_head_rank4_linear_flipdist_v1``) rather than copied as literals: a
+# literal copied out of a measured artifact LOOKS wired, passes review, and cannot track
+# its source — if the head is re-measured the copy goes stale in silence.  Descending
+# order is fixed so the derived mean is bit-reproducible.
 # The FOUR Lane pairs are the four LARGEST of all ten (the frozen net amplifies Lane).
-_LANE_PAIR_NORMS = (4.007, 3.953, 3.862, 3.748)  # Lane-Movable, Road-Lane, Lane-MyCar, Lane-Undriv
-_ALL_PAIR_NORMS = (4.007, 3.953, 3.862, 3.748, 2.946, 2.942, 2.910, 2.869, 2.705, 2.602)
+_LANE_PAIR_NORMS = tuple(
+    sorted((v for k, v in HEAD_PAIR_NORMS.items() if "Lane" in k.split("-")), reverse=True)
+)
+_ALL_PAIR_NORMS = tuple(sorted(HEAD_PAIR_NORMS.values(), reverse=True))
+
+# Fail-closed shape canary: the frozen 5-class head has exactly C(5,2)=10 pairs, 4 of
+# which touch Lane.  If the canonical producer ever changes shape (class renamed, class
+# added), REFUSE at import rather than silently averaging the wrong set.
+if len(_ALL_PAIR_NORMS) != 10 or len(_LANE_PAIR_NORMS) != 4:  # pragma: no cover - guard
+    raise ImportError(
+        "lane_guard: canonical HEAD_PAIR_NORMS shape changed "
+        f"({len(_ALL_PAIR_NORMS)} pairs, {len(_LANE_PAIR_NORMS)} Lane pairs; expected 10/4) "
+        "— re-derive the Lane head-sensitivity ratio before using the guard"
+    )
 
 # xp1-measured unprotected Lane erosion over the rung-1 continuation (S-units).
 EROSION_S_MEASURED = 0.00151

@@ -65,13 +65,18 @@ Wire into ``preflight_all(strict=False)`` once the sibling's preflight.py lands.
 """
 from __future__ import annotations
 
+import ast
 import re
 from dataclasses import dataclass
+from decimal import Decimal
 from pathlib import Path
 
 __all__ = [
+    "CanonicalConstantCopyViolation",
     "RunConstantViolation",
+    "check_no_canonical_equation_constant_copied_as_literal",
     "check_no_hardcoded_run_constants_in_consumers",
+    "scan_repo_for_canonical_constant_copies",
     "scan_repo_for_hardcoded_run_constants",
 ]
 
@@ -222,6 +227,257 @@ def check_no_hardcoded_run_constants_in_consumers(strict: bool = False,
     return findings
 
 
+# ---------------------------------------------------------------------------
+# P5 — the DISGUISED form: a measured quantity copied out of its canonical
+# producer into a live consumer as bare float literals.
+#
+# Scope EXTENSION of this same #340 surface (post-#400 Catalog #299 consolidation
+# rule: extend an existing gate rather than claim a new number). Same class —
+# "a constant that duplicates a property owned elsewhere" — but the source of
+# truth is the canonical-equations registry rather than the run's own config.
+#
+# Why it needs its own detector: a copied literal LOOKS wired. It passes review,
+# it carries a plausible comment citing the memo it came from, and it cannot
+# track its source. The regex patterns P1-P4 cannot see it (the value is not a
+# stage flag or a resolution), and a stub sweep marks it GREEN because a
+# mechanism does exist — in the canonical module it was copied from.
+#
+# SIGNATURE (measured 2026-08-01 over 5,794 live files / 59,992 float literals):
+# a single value collision is coincidence (0.999 is every Adam beta2 in the
+# repo, not a copy). The discriminating signature is a COPIED TABLE — >=3
+# DISTINCT values of one canonical constant appearing in one file that never
+# names the owning module. Single-value collisions: 347 (noise). Copied tables: 3.
+_CANONICAL_COPY_WAIVER_TOKEN = "CANONICAL_CONSTANT_COPY_OK:"
+_COPIED_TABLE_MIN_DISTINCT_VALUES = 3
+#: A 4-significant-digit value is a MEASUREMENT; 3 significant digits is usually a
+#: rounded convention. MEASURED 2026-08-01 on the live tree: the bar at 4 keeps every
+#: real finding identical (lane_guard 10 values, pool harness 4, costate backtest 3)
+#: while cutting the candidate index 425 -> 278 and the files needing an AST parse from
+#: 61% to 9% of the tree. At 5 both remaining findings are LOST, so 4 is the boundary.
+_MIN_SIGNIFICANT_DIGITS = 4
+_P5_EXCLUDED_MARKERS = (
+    "/tests/",
+    "/test_",
+    "_intake_",
+    "/__pycache__/",
+    "/experiments/results/",
+    "/canonical_equations/",
+    # Vendored / third-party trees: not ours to fix, and a nested venv alone is
+    # ~40% of the byte volume the scan would otherwise read.
+    "/.venv",
+    "/site-packages/",
+    "/node_modules/",
+)
+#: Scanned subtrees = the LIBRARY + TOOLING consumer surface (where a live consumer
+#: reads a measured quantity). ``experiments/`` is deliberately out of scope for the
+#: same reason it is out of scope for P1-P4 — a trainer is the DSL's COMPILE TARGET,
+#: not a consumer — and because it doubles the wall clock. A gate that costs many
+#: seconds is a gate that gets turned off, which is how the vacuous scan survived.
+#: MEASURED 2026-08-01: a one-off wider sweep INCLUDING ``experiments/`` (5,794 files,
+#: 59,992 float literals) found NO copied table outside these two subtrees.
+_P5_SCANNED_SUBTREES = ("src/tac", "tools")
+
+
+@dataclass(frozen=True)
+class CanonicalConstantCopyViolation:
+    """One canonical-equation constant copied into a consumer as bare literals."""
+
+    path: str
+    lines: tuple[int, ...]
+    owner_module: str
+    owner_constant: str
+    values: tuple[float, ...]
+
+    def describe(self) -> str:
+        return (
+            f"{self.path}:{','.join(str(n) for n in self.lines)} [P5] "
+            f"{len(self.values)} distinct values of "
+            f"tac.canonical_equations.{self.owner_module}:{self.owner_constant} "
+            f"({', '.join(repr(v) for v in self.values[:6])}"
+            f"{', ...' if len(self.values) > 6 else ''}) appear as bare literals in a "
+            f"file that never names the producer -- a copied table cannot track its "
+            f"source and goes stale in silence when the producer is re-measured. Fix: "
+            f"import the constant from tac.canonical_equations.{self.owner_module} and "
+            f"derive these values from it, or waive same-line with "
+            f"# {_CANONICAL_COPY_WAIVER_TOKEN}<rationale>"
+        )
+
+
+def _significant_digits(value: float) -> int:
+    return len(Decimal(repr(abs(float(value)))).normalize().as_tuple().digits)
+
+
+def _module_level_float_constants(tree: ast.Module) -> list[tuple[str, float]]:
+    """(name, value) for every float in a module-level UPPER_CASE/_private assignment."""
+    out: list[tuple[str, float]] = []
+    for stmt in tree.body:
+        if isinstance(stmt, ast.Assign):
+            names = [t.id for t in stmt.targets if isinstance(t, ast.Name)]
+            value = stmt.value
+        elif isinstance(stmt, ast.AnnAssign) and isinstance(stmt.target, ast.Name):
+            names, value = [stmt.target.id], stmt.value
+        else:
+            continue
+        if value is None:
+            continue
+        for name in names:
+            if not (name.isupper() or name.startswith("_")):
+                continue
+            for node in ast.walk(value):
+                if isinstance(node, ast.Constant) and isinstance(node.value, float):
+                    out.append((name, float(node.value)))
+    return out
+
+
+def _canonical_constant_index(root: Path) -> dict[float, tuple[str, str]]:
+    """value -> (module_stem, constant_name) for DISTINCTIVE single-owner values.
+
+    Distinctive = >= 3 significant digits AND claimed by exactly one canonical
+    module. A value many modules share is a common tolerance (1e-4, 0.005), and
+    matching on it produces only coincidences.
+    """
+    canon_dir = root / "src" / "tac" / "canonical_equations"
+    owners: dict[float, set[tuple[str, str]]] = {}
+    if not canon_dir.is_dir():
+        return {}
+    for path in sorted(canon_dir.glob("*.py")):
+        if path.name.startswith("_") or path.name in {"equation.py", "evaluators.py"}:
+            continue
+        try:
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+        except (SyntaxError, UnicodeDecodeError, OSError):
+            continue
+        for name, value in _module_level_float_constants(tree):
+            if _significant_digits(value) >= _MIN_SIGNIFICANT_DIGITS:
+                owners.setdefault(value, set()).add((path.stem, name))
+    return {
+        value: sorted(own)[0]
+        for value, own in owners.items()
+        if len({module for module, _ in own}) == 1
+    }
+
+
+def _has_valid_canonical_copy_waiver(line: str) -> bool:
+    idx = line.find(_CANONICAL_COPY_WAIVER_TOKEN)
+    if idx < 0:
+        return False
+    rationale = line[idx + len(_CANONICAL_COPY_WAIVER_TOKEN):].strip().strip("'\")")
+    return rationale.lower() not in _PLACEHOLDER_RATIONALES and len(rationale) >= 4
+
+
+def _candidate_digit_regex(index: dict[float, tuple[str, str]]) -> re.Pattern[str]:
+    """Cheap SUPERSET prefilter so the AST parse only runs on plausible files.
+
+    A value's repr is NOT its source text (``0.0004203`` is written ``4.203e-4``), so a
+    repr-substring prefilter would produce FALSE NEGATIVES. Match the significant-digit
+    sequence instead, allowing an optional decimal point between digits — a superset of
+    every textual spelling of the value, so no candidate is ever skipped.
+
+    Deliberately a single first-match ``search``. A richer variant that tallied
+    distinct matches per owning constant (to apply the copied-table threshold at the
+    text level) was built and MEASURED SLOWER by more than an order of magnitude:
+    ``finditer`` must walk every match of short digit sequences across ~100 MB, which
+    costs far more than the AST parses it saves. Keeping the cheap form.
+    """
+    patterns = set()
+    for value in index:
+        digits = "".join(str(d) for d in Decimal(repr(abs(value))).normalize().as_tuple().digits)
+        # NOTE the ESCAPED dot: an unescaped "." matches ANY character, which is still
+        # a superset (so still correct) but over-matches so badly the scan never ends.
+        patterns.add(r"\.?".join(digits))
+    return re.compile("|".join(sorted(patterns)))
+
+
+def scan_repo_for_canonical_constant_copies(
+    repo_root: str | Path | None = None,
+) -> list[CanonicalConstantCopyViolation]:
+    """Scan live source for copied canonical-equation constant tables (P5)."""
+    root = Path(repo_root) if repo_root is not None else Path(__file__).resolve().parents[2]
+    index = _canonical_constant_index(root)
+    if not index:
+        return []
+    prefilter = _candidate_digit_regex(index)
+    groups: dict[tuple[str, str, str], tuple[set[float], set[int]]] = {}
+    for sub in _P5_SCANNED_SUBTREES:
+        base = root / sub
+        if not base.is_dir():
+            continue
+        for path in base.rglob("*.py"):
+            # Match markers against the REPO-RELATIVE path, never the absolute one:
+            # an absolute path can contain "/tests/" or "/test_" upstream of the repo
+            # (a pytest tmpdir, a checkout under ~/test_runs/), which would silently
+            # empty the scope. An empty scope reports the same symbol as a clean full
+            # scope -- vacuity is indistinguishable from PASS.
+            relative = "/" + path.relative_to(root).as_posix()
+            if any(marker in relative for marker in _P5_EXCLUDED_MARKERS):
+                continue
+            try:
+                source = path.read_text(encoding="utf-8")
+            except (UnicodeDecodeError, OSError):
+                continue
+            if not prefilter.search(source):
+                continue
+            try:
+                tree = ast.parse(source)
+            except (SyntaxError, ValueError):
+                continue
+            source_lines = source.splitlines()
+            for node in ast.walk(tree):
+                if not (isinstance(node, ast.Constant) and isinstance(node.value, float)):
+                    continue
+                owner = index.get(float(node.value))
+                if owner is None:
+                    continue
+                module, constant = owner
+                if module in source:  # linked: the file names its producer
+                    continue
+                line_no = getattr(node, "lineno", 0)
+                line = source_lines[line_no - 1] if 0 < line_no <= len(source_lines) else ""
+                if _has_valid_canonical_copy_waiver(line):
+                    continue
+                key = (str(path.relative_to(root)), module, constant)
+                values, lines = groups.setdefault(key, (set(), set()))
+                values.add(float(node.value))
+                lines.add(line_no)
+    return [
+        CanonicalConstantCopyViolation(
+            path=path,
+            lines=tuple(sorted(lines)),
+            owner_module=module,
+            owner_constant=constant,
+            values=tuple(sorted(values, reverse=True)),
+        )
+        for (path, module, constant), (values, lines) in sorted(groups.items())
+        if len(values) >= _COPIED_TABLE_MIN_DISTINCT_VALUES
+    ]
+
+
+def check_no_canonical_equation_constant_copied_as_literal(
+    strict: bool = False,
+    repo_root: str | Path | None = None,
+) -> list[CanonicalConstantCopyViolation]:
+    """WARN-ONLY gate for the copied-canonical-constant-table class (P5, see above).
+
+    Rule chain (per the CLAUDE.md failure-message discipline): a measured quantity
+    copied out of its canonical producer into a consumer violates the value-provenance
+    ladder — it presents as a class-3 ``measured_anchor`` while actually being a
+    class-4 bare literal with no re-derivation path. The fix is to name/import the
+    constant from its canonical module and derive the consumer's view from it; where
+    the live path genuinely cannot, waive same-line with a real rationale naming the
+    re-derivation trigger.
+
+    ``strict=True`` raises ``RuntimeError``; keep ``strict=False`` until live count 0.
+    """
+    findings = scan_repo_for_canonical_constant_copies(repo_root)
+    if strict and findings:
+        detail = "\n".join(f.describe() for f in findings)
+        raise RuntimeError(
+            f"check_no_canonical_equation_constant_copied_as_literal: {len(findings)} "
+            f"copied canonical-constant table(s):\n{detail}"
+        )
+    return findings
+
+
 def _main(argv: list[str] | None = None) -> int:
     import argparse
 
@@ -234,7 +490,12 @@ def _main(argv: list[str] | None = None) -> int:
     for f in findings:
         print(f"WARN {f.describe()}")
     print(f"[run_constant_gates] live count = {len(findings)}")
-    return 1 if (args.strict and findings) else 0
+    copies = check_no_canonical_equation_constant_copied_as_literal(
+        strict=False, repo_root=args.repo_root)
+    for c in copies:
+        print(f"WARN {c.describe()}")
+    print(f"[run_constant_gates] P5 canonical-constant-copy live count = {len(copies)}")
+    return 1 if (args.strict and (findings or copies)) else 0
 
 
 if __name__ == "__main__":
