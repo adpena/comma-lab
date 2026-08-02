@@ -44,6 +44,7 @@ from tac.boundary_math.power_diagram_witness import (
     project_channel_features,
     read_frozen_segmentation_head,
     read_safetensors_tensors,
+    realized_margin_and_gradient,
 )
 
 
@@ -554,3 +555,186 @@ def test_description_comparator_is_target_only_and_makes_no_score_or_k_claim(
     assert not receipt.archive_saving_claim
     assert [row.bytes for row in receipt.realization_files] == [checkpoint.stat().st_size, packed.stat().st_size]
     assert receipt.target_sha256 == hashlib.sha256(encode_pdw1(target)).hexdigest()
+
+
+# --------------------------------------------------------------------------- #
+# realized_margin_and_gradient -- the exact top-2 margin primitive (#539 -> #888)
+# --------------------------------------------------------------------------- #
+
+
+def _reference_geometric_margin(
+    features: np.ndarray, weight: np.ndarray, bias: np.ndarray
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Independent top-2 geometric margin straight from the affine head."""
+
+    logits = np.einsum("nd,kd->nk", features, weight, optimize=False) + bias
+    order = np.argsort(-logits, axis=-1, kind="stable")
+    top, runner = order[:, 0], order[:, 1]
+    gap = (
+        np.take_along_axis(logits, top[:, None], axis=-1)[:, 0]
+        - np.take_along_axis(logits, runner[:, None], axis=-1)[:, 0]
+    )
+    return gap / np.linalg.norm(weight[top] - weight[runner], axis=-1), top, runner
+
+
+def test_realized_margin_top_class_matches_power_assign_and_margin_is_non_negative() -> None:
+    rng = np.random.default_rng(20260802)
+    weight, bias = rng.normal(size=(5, 11)), rng.normal(size=5)
+    head = affine_head_to_power_diagram(weight, bias)
+    points = project_channel_features(rng.normal(size=(2000, 11)), head.quotient_basis)
+
+    realized = realized_margin_and_gradient(points, head.target)
+
+    np.testing.assert_array_equal(realized.top_class, power_assign(points, head.target))
+    assert np.all(realized.margin >= 0.0)
+    assert np.all(realized.top_class != realized.runner_up_class)
+    np.testing.assert_allclose(np.linalg.norm(realized.gradient, axis=-1), 1.0, atol=1e-12)
+
+
+def test_realized_margin_equals_geometric_margin_of_the_affine_head() -> None:
+    rng = np.random.default_rng(20260802)
+    weight, bias = rng.normal(size=(5, 11)), rng.normal(size=5)
+    features = rng.normal(size=(4000, 11))
+    head = affine_head_to_power_diagram(weight, bias)
+
+    realized = realized_margin_and_gradient(
+        project_channel_features(features, head.quotient_basis), head.target
+    )
+    expected, top, runner = _reference_geometric_margin(features, weight, bias)
+
+    # The target is serialized float32, so the identity holds to f32 epsilon in
+    # ABSOLUTE terms (relative error is unbounded only where the gap -> 0).
+    np.testing.assert_allclose(realized.margin, expected, atol=5e-6, rtol=0.0)
+    np.testing.assert_array_equal(realized.top_class, top)
+    np.testing.assert_array_equal(realized.runner_up_class, runner)
+
+
+def test_realized_margin_gradient_matches_finite_differences_on_stable_sites() -> None:
+    rng = np.random.default_rng(20260802)
+    weight, bias = rng.normal(size=(5, 7)), rng.normal(size=5)
+    head = affine_head_to_power_diagram(weight, bias)
+    points = project_channel_features(rng.normal(size=(1500, 7)), head.quotient_basis)
+    realized = realized_margin_and_gradient(points, head.target)
+
+    step, rank = 1e-5, head.target.rank
+    finite = np.empty_like(realized.gradient)
+    stable = np.ones(points.shape[0], dtype=bool)
+    for axis in range(rank):
+        offset = np.zeros(rank)
+        offset[axis] = step
+        plus = realized_margin_and_gradient(points + offset, head.target)
+        minus = realized_margin_and_gradient(points - offset, head.target)
+        finite[:, axis] = (plus.margin - minus.margin) / (2 * step)
+        stable &= (plus.top_class == realized.top_class) & (minus.top_class == realized.top_class)
+        stable &= (plus.runner_up_class == realized.runner_up_class)
+        stable &= (minus.runner_up_class == realized.runner_up_class)
+
+    assert stable.sum() > 0.9 * points.shape[0]
+    relative = np.linalg.norm(finite - realized.gradient, axis=-1)
+    # Pre-registered falsifier leg: relative gradient error <= 1e-3.
+    assert relative[stable].max() < 1e-3
+    # Positive control: a deliberately wrong gradient must FAIL the same bar.
+    wrong = np.linalg.norm(finite - realized.gradient[:, ::-1], axis=-1)
+    assert wrong[stable].max() > 1e-3
+
+
+def test_realized_margin_flags_the_uncovered_codim_two_junction_stratum() -> None:
+    # Three unit sites co-dominating the origin; coordinates are chosen exactly
+    # representable in float32 so the constructed tie survives serialization.
+    sites = np.array([[1.0, 0.0], [0.0, 1.0], [-1.0, 0.0], [0.0, 0.0]])
+    target = make_power_diagram_target(sites, np.array([0.0, 0.0, 0.0, -9.0]))
+
+    junction_point = realized_margin_and_gradient(np.zeros((1, 2)), target, junction_tolerance=1e-9)
+    assert bool(junction_point.junction[0])
+
+    generic = realized_margin_and_gradient(np.array([[3.0, 0.05]]), target, junction_tolerance=1e-9)
+    assert not bool(generic.junction[0])
+    # A tolerance wide enough to swallow every gap flags everything.
+    assert bool(realized_margin_and_gradient(np.array([[3.0, 0.05]]), target, junction_tolerance=1e6).junction[0])
+
+
+def test_junction_tolerance_must_clear_the_float32_target_noise_floor() -> None:
+    """A constructed exact tie is broken by ~1e-8 once the target is float32.
+
+    Consumers therefore may not use ``junction_tolerance=0`` (or a margin floor)
+    below the serialization floor -- at that scale they would be deciding on
+    float32 noise rather than on geometry.
+    """
+
+    root_three_over_two = 0.8660254037844386  # not representable in float32
+    sites = np.array([[1.0, 0.0], [-0.5, root_three_over_two], [-0.5, -root_three_over_two], [0.0, 0.0]])
+    target = make_power_diagram_target(sites, np.array([0.0, 0.0, 0.0, -9.0]))
+    origin = np.zeros((1, 2))
+
+    assert not bool(realized_margin_and_gradient(origin, target, junction_tolerance=0.0).junction[0])
+    assert bool(realized_margin_and_gradient(origin, target, junction_tolerance=1e-6).junction[0])
+
+
+def test_realized_margin_preserves_batch_shape_and_rejects_bad_input() -> None:
+    rng = np.random.default_rng(7)
+    target = make_power_diagram_target(rng.normal(size=(3, 2)), rng.normal(size=3))
+
+    batched = realized_margin_and_gradient(rng.normal(size=(4, 6, 2)), target)
+    assert batched.margin.shape == (4, 6)
+    assert batched.gradient.shape == (4, 6, 2)
+    assert batched.junction.shape == (4, 6)
+    assert batched.junction_tolerance == 0.0
+
+    with pytest.raises(PowerDiagramWitnessError, match="final dimension"):
+        realized_margin_and_gradient(np.zeros((5, 3)), target)
+    with pytest.raises(PowerDiagramWitnessError, match="final dimension"):
+        realized_margin_and_gradient(np.full((5, 2), np.nan), target)
+    with pytest.raises(PowerDiagramWitnessError, match="junction_tolerance"):
+        realized_margin_and_gradient(np.zeros((5, 2)), target, junction_tolerance=-1.0)
+    with pytest.raises(PowerDiagramWitnessError, match="junction_tolerance"):
+        realized_margin_and_gradient(np.zeros((5, 2)), target, junction_tolerance=np.inf)
+
+
+def test_realized_margin_fails_closed_when_finite_points_overflow_the_score() -> None:
+    """A finite point can still drive the score to +/-inf, making the margin NaN.
+
+    The primitive exists to carry an objective, so it refuses rather than
+    seeding a descent with a silent NaN.
+    """
+
+    target = make_power_diagram_target(
+        np.array([[1.0, 0.0], [0.0, 1.0], [-1.0, 0.0]]), np.zeros(3)
+    )
+    assert np.isfinite(np.full((1, 2), 1e308)).all()  # the INPUT is finite
+    with pytest.raises(PowerDiagramWitnessError, match="non-finite"):
+        realized_margin_and_gradient(np.full((1, 2), 1e308), target)
+
+
+def test_realized_margin_is_invariant_to_head_rescaling_unlike_cross_entropy() -> None:
+    """argmax ignores a common positive rescale of the head; so must the margin.
+
+    This is the structural reason the primitive exists: the describe loop's CE
+    leg is scale-sensitive where the scored argmax quantity is not.
+    """
+
+    rng = np.random.default_rng(20260802)
+    weight, bias = rng.normal(size=(5, 11)), rng.normal(size=5)
+    features = rng.normal(size=(3000, 11))
+    base = affine_head_to_power_diagram(weight, bias)
+    base_margin = realized_margin_and_gradient(
+        project_channel_features(features, base.quotient_basis), base.target
+    )
+
+    def mean_cross_entropy(scale: float) -> float:
+        logits = scale * (np.einsum("nd,kd->nk", features, weight, optimize=False) + bias)
+        shifted = logits - logits.max(axis=-1, keepdims=True)
+        log_sum = np.log(np.exp(shifted).sum(axis=-1))
+        target_logit = np.take_along_axis(shifted, base_margin.top_class[:, None], axis=-1)[:, 0]
+        return float(np.mean(log_sum - target_logit))
+
+    baseline_ce = mean_cross_entropy(1.0)
+    for scale in (0.5, 2.0, 10.0):
+        scaled = affine_head_to_power_diagram(weight * scale, bias * scale)
+        rescaled = realized_margin_and_gradient(
+            project_channel_features(features, scaled.quotient_basis), scaled.target
+        )
+        np.testing.assert_array_equal(rescaled.top_class, base_margin.top_class)
+        np.testing.assert_allclose(rescaled.margin, base_margin.margin, atol=5e-6, rtol=0.0)
+        # ...while the cross-entropy leg the describe loop currently minimizes
+        # moves substantially under the very same score-preserving rescale.
+        assert abs(mean_cross_entropy(scale) / baseline_ce - 1.0) > 0.25

@@ -71,6 +71,26 @@ class PowerDiagramTarget:
 
 
 @dataclass(frozen=True)
+class RealizedMargin:
+    """Top-2 signed margin, its exact quotient gradient, and the junction flag.
+
+    ``margin`` is a signed *distance* in quotient units (positive inside the
+    winning cell); ``gradient`` is the exact unit normal ``d(margin)/dz`` of the
+    deciding hyperplane.  ``junction`` is True on the codim-2/3 stratum the
+    registered power-diagram law leaves un-covered, where the local decision is
+    not a single hyperplane.  The gradient is with respect to the quotient
+    coordinate ``z`` only -- never with respect to image pixels.
+    """
+
+    margin: np.ndarray
+    gradient: np.ndarray
+    top_class: np.ndarray
+    runner_up_class: np.ndarray
+    junction: np.ndarray
+    junction_tolerance: float
+
+
+@dataclass(frozen=True)
 class HeadPowerDiagram:
     """Real-arithmetic affine quotient and its serialized-float32 target."""
 
@@ -565,6 +585,110 @@ def power_assign(points: np.ndarray, target: PowerDiagramTarget) -> np.ndarray:
     # for a large quotient coordinate near a small separating normal.
     indices = np.argmax(power_scores(points, target), axis=-1)
     return target.class_ids[indices]
+
+
+def realized_margin_and_gradient(
+    points: np.ndarray,
+    target: PowerDiagramTarget,
+    *,
+    junction_tolerance: float = 0.0,
+) -> RealizedMargin:
+    """Exact top-2 signed margin and its analytic gradient in the quotient chart.
+
+    ``argmax`` over the frozen head's affine rows *is* an additively-weighted
+    power diagram (registered law
+    ``argmax_of_sdf_is_additively_weighted_power_diagram_v1``), so at any point
+    the decision between the winner ``t`` and the runner-up ``r`` is a single
+    hyperplane and the margin is an affine function of ``z``::
+
+        margin(z) = (power_score_t(z) - power_score_r(z)) / ||2(s_t - s_r)||
+
+    Its gradient is therefore the constant unit normal ``2(s_t-s_r)/||...||`` --
+    exact, closed form, no straight-through estimator and no bias.  Dividing by
+    the normal's length makes ``margin`` a signed *distance*, so one scalar
+    floor is comparable across different competing class pairs.  ``margin``
+    equals the head's geometric margin ``(l_t - l_r)/||w_t - w_r||`` and is
+    consequently invariant to a common positive rescale of the head, exactly as
+    ``argmax`` is; a cross-entropy leg is not.
+
+    The gradient is exact but *piecewise* constant: it is the true derivative
+    only while ``(top_class, runner_up_class)`` is unchanged, i.e. within the
+    current pair of cells.  A step large enough to change the deciding pair
+    leaves the region on which it was derived.
+
+    ``junction`` marks the stratum the registered law names as UN-COVERED: where
+    a third class lies within ``junction_tolerance`` of the runner-up the local
+    decision is not a single hyperplane (codim-2/3 junction) and the returned
+    scalar margin/gradient describe only one of the incident facets.  The flag
+    is returned rather than silently folded away, because a reformulation that
+    drifts without saying so is worse than an estimator known to be biased.
+
+    Scope, stated literally per this module's authority contract: this is
+    ``DERIVED`` and lives entirely in the rank quotient of the frozen affine
+    head.  ``gradient`` is ``d(margin)/dz`` and **not** a gradient with respect
+    to image pixels -- composing it with a spatial objective additionally
+    requires the (uncounted, non-reformulated) feature-field pullback
+    ``dz/dx``.  See ``pdw2_coefficient_only_spatial_nonidentifiability_v1``.
+
+    Args:
+        points: ``(..., rank)`` finite quotient coordinates.
+        target: canonical power-diagram target for the frozen head.
+        junction_tolerance: non-negative slack for the third-class test.
+
+    Returns:
+        ``RealizedMargin`` whose ``top_class`` agrees with :func:`power_assign`
+        site-for-site (both use NumPy's first-max tie rule).
+
+    Raises:
+        PowerDiagramWitnessError: on non-finite input, rank mismatch, fewer than
+            two classes, or a non-finite/negative ``junction_tolerance``.
+    """
+
+    z = np.asarray(points, dtype=np.float64)
+    if z.ndim < 1 or z.shape[-1] != target.rank or not np.isfinite(z).all():
+        raise PowerDiagramWitnessError("points must be finite with final dimension target.rank")
+    if target.n_classes < 2:
+        raise PowerDiagramWitnessError("a realized margin requires at least two classes")
+    if not math.isfinite(junction_tolerance) or junction_tolerance < 0:
+        raise PowerDiagramWitnessError("junction_tolerance must be finite and >= 0")
+
+    scores = power_scores(z, target)
+    # ``stable`` keeps the first-occurrence tie rule, so ``order[..., 0]`` is
+    # exactly ``np.argmax`` and ``top_class`` matches ``power_assign``.
+    order = np.argsort(-scores, axis=-1, kind="stable")
+    top_index = order[..., 0]
+    runner_index = order[..., 1]
+
+    sites = np.asarray(target.sites, dtype=np.float64)
+    raw_normal = 2.0 * (sites[top_index] - sites[runner_index])
+    length = np.linalg.norm(raw_normal, axis=-1)
+    if not np.all(length > 0.0):
+        raise PowerDiagramWitnessError("degenerate target: two competing classes share a site")
+
+    top_score = np.take_along_axis(scores, top_index[..., None], axis=-1)[..., 0]
+    runner_score = np.take_along_axis(scores, runner_index[..., None], axis=-1)[..., 0]
+    margin = (top_score - runner_score) / length
+    if not np.isfinite(margin).all():
+        # Reachable from *finite* points: a large quotient coordinate overflows
+        # the score to +/-inf and ``inf - inf`` is NaN.  This value is built to
+        # carry an objective, so it fails closed rather than seeding a descent
+        # with a silent NaN.
+        raise PowerDiagramWitnessError("realized margin overflowed to a non-finite value")
+
+    if target.n_classes >= 3:
+        third_score = np.take_along_axis(scores, order[..., 2][..., None], axis=-1)[..., 0]
+        junction = (runner_score - third_score) <= junction_tolerance
+    else:
+        junction = np.zeros(top_index.shape, dtype=bool)
+
+    return RealizedMargin(
+        margin=margin,
+        gradient=raw_normal / length[..., None],
+        top_class=target.class_ids[top_index],
+        runner_up_class=target.class_ids[runner_index],
+        junction=junction,
+        junction_tolerance=float(junction_tolerance),
+    )
 
 
 def measure_f32_target_parity(features: np.ndarray, head: HeadPowerDiagram) -> F32ParityReceipt:
@@ -1400,6 +1524,7 @@ __all__ = [
     "InverseFitReceipt",
     "PowerDiagramTarget",
     "PowerDiagramWitnessError",
+    "RealizedMargin",
     "VideoFedTargetReceipt",
     "affine_head_to_power_diagram",
     "canonical_adjacency",
@@ -1431,5 +1556,6 @@ __all__ = [
     "project_channel_features",
     "read_frozen_segmentation_head",
     "read_safetensors_tensors",
+    "realized_margin_and_gradient",
     "sha256_file",
 ]
