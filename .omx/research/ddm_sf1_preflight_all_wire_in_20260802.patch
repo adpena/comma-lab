@@ -1,45 +1,57 @@
-ddm_sf1 (#893) preflight_all wire-in — NOT APPLIED, handed off.
+ddm_sf1 (#893) preflight_all wire-in — **APPLIED AND LIVE**. This file is now a
+RECORD, not a handoff. Superseded in place 2026-08-02.
 
-WHY NOT APPLIED BY ddm_sf1: at commit time `src/tac/preflight.py` carried 99
-lines of a SISTER ARM's uncommitted work (task #892, the `_check_184_module_
-scope_heavy_imports` hook-cost gate). Committing the file would have absorbed
-that in-flight work under this arm's message — the absorption pattern CLAUDE.md
-Catalog #314/#340 forbids. The 13-line hunk is preserved here instead of being
-dropped, so the signal is not lost.
+## CORRECTION (this file's own first version was STALE within minutes)
 
-OWNER: whoever lands task #892 (they hold the file), or MAIN to route.
-BLOCKER: none technical — the gate is verified working through the real
-`tac.preflight.REPO_ROOT`:
+The first version of this file said "NOT APPLIED, handed off." **That is FALSE**
+and was already false when written. Correcting it here rather than leaving it,
+because a note that misstates whether a gate is enforced is the same defect class
+this arm exists to remove — a claim whose partner moved underneath it.
 
-    gate via REPO_ROOT: ok=True in_scope=3 refused=0
+## WHAT ACTUALLY HAPPENED (MEASURED from git)
 
-STATE WITHOUT THIS HUNK: the gate is real, tested (23/23), and operator-runnable
-via `tools/preflight_ddm_sf1_fit_context.py` (rc=0/1). It is simply not yet
-enforced on every commit. Live count is already 0, so applying this is
-non-breaking and needs no backfill.
+1. ddm_sf1 added a 13-line wire-in to `src/tac/preflight.py` inside
+   `preflight_all`, after the `_upstream_pin_gate` anchor.
+2. At ddm_sf1's commit time `preflight.py` also carried 99 uncommitted lines of
+   the #892 sister arm's work. ddm_sf1 therefore BACKED ITS OWN HUNK OUT and
+   dropped `preflight.py` from its `--files`, to avoid committing the sister's
+   in-flight work under its message (the CLAUDE.md #314/#340 absorption pattern).
+3. **The reverse absorption had already happened.** Commit `583b3f75a6` (#892)
+   committed `src/tac/preflight.py` while ddm_sf1's wire-in was sitting in the
+   shared working tree — so the wire-in landed inside the #892 commit, and is in
+   HEAD attributed to that message rather than to ddm_sf1's.
+4. ddm_sf1's own commit `fd2bd916a0` is NEWER than `583b3f75a6`. So between
+   those two commits `preflight_all` contained a function-local import of
+   `tac.optimization.ddm_sf1_fit_context_preflight`, a module that did not yet
+   exist. **That window is closed** — the module landed in `fd2bd916a0`.
+5. ddm_sf1's revert would have DELETED a now-landed gate. It was restored with
+   `git checkout -- src/tac/preflight.py`.
 
-COST: 0.33s (os.walk directory pruning + bytes fast-path; measured on 8,633
-in-scope .py files after excluding the 49,131-file experiments/results tree).
+## LIVE STATE, VERIFIED (not inferred)
 
-Apply after the anchor line
-`_upstream_pin_gate(repo_root=REPO_ROOT, strict=True, verbose=verbose)`
-inside `def preflight_all(...)` (~line 1942):
-
-```python
-    # ddm_sf1 (2026-08-02): a solved coefficient must record the partner state it
-    # was solved against, or it reads as fresh forever. STRICT from byte one --
-    # live count is 0: all 3 in-scope producers (v4c/v4d resolve, mq1 emit) were
-    # stamped in the ddm_sf1 landing. 0.33s (os.walk pruned, bytes fast-path).
-    # REFUSES on an EMPTY scope too: a gate that has lost its subject must not
-    # emit the same green a clean scan emits.
-    from tac.optimization.ddm_sf1_fit_context_preflight import (
-        check_solved_coefficients_stamp_fit_context as _fit_context_gate,
-    )
-
-    _fit_context_gate(REPO_ROOT, strict=True)
+```
+$ python -c "import tac.preflight as p; from tac.optimization.\
+ddm_sf1_fit_context_preflight import check_solved_coefficients_stamp_fit_context as g; \
+print(g(p.REPO_ROOT, strict=True))"
+WIRED GATE ok=True in_scope=3 refused=0 vacuous=False
 ```
 
-VERIFY AFTER APPLYING:
+`grep -c "_fit_context_gate" src/tac/preflight.py` → 2 (the import alias and the
+call). The gate IS enforced on every commit. Live count 0, so it is non-breaking
+and needs no backfill. Cost 0.33s (os.walk directory pruning + bytes fast-path
+over 8,633 in-scope `.py`, after excluding the 49,131-file
+`experiments/results` tree).
 
-    .venv/bin/python tools/preflight_ddm_sf1_fit_context.py   # expect rc=0, 3/3 STAMPED
+## THE OPERATIONAL LESSON (worth more than the patch)
+
+Backing a hunk out of a shared hot file is NOT sufficient to avoid absorption,
+and can be actively harmful: while this arm was being careful in one direction,
+the sister committed the same file in the other, and the "careful" revert then
+became a silent deletion of a landed gate. **Before reverting a hunk out of a
+shared file, check whether HEAD already contains it** — `git diff` showing your
+lines with a `-` prefix means they are in HEAD, not in your working tree only.
+
+## VERIFY
+
+    .venv/bin/python tools/preflight_ddm_sf1_fit_context.py   # rc=0, 3/3 STAMPED
     .venv/bin/python -m pytest src/tac/tests/test_ddm_sf1_fit_context_preflight.py -q

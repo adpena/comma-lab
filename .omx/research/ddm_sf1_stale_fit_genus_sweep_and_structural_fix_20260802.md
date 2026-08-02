@@ -108,7 +108,10 @@ and the fail-closed consumption. An unstamped row **raises**
 than no stamp.
 
 **4. `check_solved_coefficients_stamp_fit_context` — STRICT from byte one,
-wired into `preflight_all`.** Live count 0: all 3 in-scope producers stamped in
+wired into `preflight_all` and VERIFIED LIVE** (`ok=True in_scope=3 refused=0
+vacuous=False` through the real `tac.preflight.REPO_ROOT`; the wire-in landed
+inside sister commit `583b3f75a6` by cross-absorption — see
+`ddm_sf1_preflight_all_wire_in_20260802.patch` for the full record). Live count 0: all 3 in-scope producers stamped in
 this landing. 0.33 s (os.walk dir-pruning + bytes fast-path). CLI:
 `tools/preflight_ddm_sf1_fit_context.py`.
 
