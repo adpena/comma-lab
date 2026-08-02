@@ -27328,3 +27328,109 @@ are **byte-free** (they already ship as plain f16 columns); `beta` needs only a 
 table and **no receiver change**. The chained refine emits a merged n600 JSONL; the byte-closed
 row is STAGED for MAIN (`ddm_v4d_build_composed_archive.py --tag mq1` then
 `stage_v4d_realized_gate.sh cpu mq1`) and was NOT self-fired.
+
+## FEED-mq1/cr2/sv1/p1a/p2a — TWO POINTER MOVES on the pose axis, and the day the apparatus failed silently five times (2026-08-01)
+
+**POINTER MOVED TWICE. Own-vehicle line: 0.9639878 → 0.9476091 (pw1) → 0.9352823 (mq1).**
+Gap to bar 0.172141: **0.7631413** (was 0.7754681). Submittable **0.1910828242 UNMOVED**; every row
+below is `[macOS-CPU advisory]`, `score_claim=false`.
+
+### 1. The second move, and why it is the same lever as the first
+
+`mq1_partial` measured (`upstream/evaluate.py` n600, 360,702 B):
+
+| axis | value | vs pw1 0.9476091 |
+|---|---:|---:|
+| seg 0.00431179 | 0.4311790 | **0.0000000** — bit-identical tokens |
+| **pose 0.00696572** | **0.2639265** | **−0.0125794** ← the entire win |
+| rate 0.00960707 | 0.2401768 | +0.0002525 (+379 B) |
+| **S** | **0.9352823** | **−0.0123268** |
+
+mq1 PREDICTED 0.9352782 → error **+4.1e-6**. Byte-close fidelity held twice in one day (pw1's was
++2.5e-6). Both moves are **pose**, and both came from **SEARCH, not FORMAT**.
+
+### 2. THE CONVERGENT LAW — three arms, three payloads, one ordering
+
+> **The solver's STARTING POINT dominates both its BOUNDS and its MENUS.**
+
+| arm | payload | measurement |
+|---|---|---|
+| pw1 | v4d pose menus | freeing 2 clipped menus → exact **−0.0163787** |
+| mq1 | v4d pose params | format ≤0.056% vs search ≥1.82% of gap = **33×**; argmin agreement **5/16**; 3/16 wrong-init restarts strictly BETTER |
+| sv1 | (a,b) photometric GN | **0% converged · 56.7% damp_cap · 43.3% relin_cap**; yet restarts beat bound-freeing **0.327 vs 0.192** (n600: **1.11%** of gap from 4 pairs vs 0.65%); argmin **0/4**, strictly-better **4/4** |
+
+**sv1's structural sharpening beats the genus I filed:** under the shipped bounds `converged` was
+**UNREACHABLE** — `not accepted` ∧ `not singular` ⇒ the ladder ran every level, so every non-accepting
+relin was a `damp_cap` by construction. *"The loop had no convergence state — only bounds wearing one."*
+Not "a bound outranked a criterion" — **there was no criterion.**
+
+**Both mq1 and sv1 REVERSED THEIR OWN HEADLINES via a positive control.** That is the method finding.
+
+### 3. cr2's composition — REJECT at S 20.0466, but the rejection is ENTIRELY pose
+
+seg 0.394407 (**−0.0367720**) · rate 0.190122 (**−0.0498023**) · **seg+rate −0.0865743 MEASURED** vs
+cr2's predicted −0.0866789. Rate landed EXACTLY. Pose came in at **d_pose 37.877 against a 0.0132
+break-even — 2,871× over**, because the payload was fitted to gr1's renders.
+
+**Had pose held: S 0.8610349.** The unlock is ONE located line — `ddm_v4c_resolve.py:63`, the 2-entry
+`BASES` dict cr2 deliberately left alone because it was needed only on the negative branch. That branch
+fired. **LAW: pose payloads are RENDER-LINEAGE-BOUND**; a break-even computed on the old base is not
+evidence it holds on a new one. Rows #881 (unlock) × #882 (the start-is-the-lever) × mq1's machinery
+converge on ONE action.
+
+### 4. Both backlog populations DRAINED to measured verdicts
+
+- **Memos (p1a):** 86 UNKNOWN → **25 not-a-follow-on · 21 already-done · 40 real-debt → 29 open items**,
+  machine-checked partition, no gaps/overlaps. QA52 is **ALREADY-DONE** (fired 07-30 by `ddm_kl1`).
+  All 86 carried ONE reason — `joinable=False`: the detector **declined**, never tried-and-failed. And
+  **the closure evidence was on the same line it read** — 32 rows name queue ids whose STATUS cell says
+  FIRED/CLOSED/BUILT; reading that column resolves **21 of 86 for free**. `ORPHANED` is **structurally
+  unreachable on this host** (`/Volumes/APDataStore/pact` absent) — so fo1's `ORPHANED=0` is
+  *uninterpretable*, the vacuity genus inside our own new detector.
+- **Task rows (p2a):** reconstructed the ledger by replaying 882 `TaskCreate` + 1,607 `TaskUpdate`
+  (3.0 GB) → **880 tasks, zero id gaps, 114 open**. Verdicts: 2 ALREADY-CLOSED · 2 REAL-OPEN ·
+  1 SUPERSEDED · **109 UNDECIDABLE — 104 of 114 (91%) carry NO artifact token at all.**
+  **Recall on this population is 2.4% (18/762), NOT the 16% I carried forward.**
+  Killed two shortcut detectors: text closure-markers (`VERDICT:` 3.74× lift = **entirely an era
+  artifact**; era-controlled every marker ≤1.0) and self-supersession (**17 of 18 false**).
+
+**p2a's decisive catch — a FALSE ALREADY-CLOSED on a live row.** `#536` returned EXECUTED on a receipt
+reading `"launch_performed": false` / `"measurement_axis": "no_scientific_measurement"`, for a row whose
+own first words are *"MEASUREMENT STILL BLOCKED."* **A refusal receipt is a RUN product BY SHAPE** — an
+execution attempt writes it. 25 such artifacts exist. Fixed + 4 tests (`29f96a22a0`).
+> Inversion worth keeping: **artifact ABSENCE can never prove a row open; a refusal receipt's PRESENCE
+> can prove one wasn't.**
+
+**THE CURE, adopted by doing:** one line — `CLOSING-ARTIFACT: <path>` — in the `TaskUpdate` that closes
+a row. Free text already written at closure, no new surface, no schema change, **2.4% → ~100% with zero
+new code.** First used draining #375 and #841, both *right-verdict-WRONG-evidence* (one cited a file
+that merely exists; one cited an artifact that PREDATES the row).
+
+### 5. FIVE SILENT-SUCCESS MECHANISMS IN ONE DAY — all apparatus, none science
+
+1. **Vacuity** — empty/truncated scope emits the same symbol as a clean full one.
+2. **Swallowed serializer verdict** — a `grep` ate the output; a commit landed anyway as `wip` (#883).
+3. **`--allow-empty --no-stage` committed a NON-EMPTY index**, dropping a sister arm's canonical-equation
+   rows (restored + verified: 865 rows, `ddm_dc1` ×3, all parse) (#883).
+4. **Preflight >120 s against a 30 s bound**, and its refusal message recommends `PREFLIGHT_ALLOW_SLOW=1`
+   — **a guard whose failure mode instructs you to disable it** (#884). Override DECLINED.
+5. **`git log --oneline | wc -l` → 50 against a true 13,742** — 274× silent undercount; the `&&` chain
+   does not escape it (#885). MAIN's `-400` scans were NOT capped (verified), but 400 was too SHORT:
+   p2a's full-history scan found **18** never-named vs MAIN's 13, catching #775 and #877.
+
+### 6. Honest self-accounting
+
+- **MAIN carried a laundered claim.** fo1 wrote QA52 "unadjudicated"; one restatement made it
+  "no arm has claimed"; MAIN repeated it into #879 and p1a's charter. It was FALSE and cost p1a an hour.
+  Escalation-by-retelling, third instance today, **with MAIN as the carrier**.
+- **MAIN's #874 count was wrong** — 31 files/0 emitters vs sv1's **98/3**, flag-set dependent. Conclusion
+  survives for solvers only. Re-ranked by the 33×: **35 search-caps, 62 format-only**.
+- **Today's two pointer-moving laws were BUILT+TESTED+COMMITTED and NOT QUERYABLE.** `query_equations()`
+  held `dc1` but not `pw1`/`mq1`. The pw1 omission is MINE. Registered: **417 → 419**. The orphan class,
+  in our own work, hours after documenting it.
+- **zsh-glob positive-control failures: three people, one day** (MAIN, p1a, p2a). Each caught it only
+  because the control errored rather than returning empty.
+- **sv1's fix is a POINT FIX** (idiom at 5 of 8,631 files); three live pose-GN sites remain unmeasured
+  on the LARGER axis.
+- **REFUTED (answers the operator's lattice question):** `realize_factor2_uint8` is closed-form integer
+  construction — no loop, no budget. RATE-DEAD needs **no** re-grading on censoring grounds.
