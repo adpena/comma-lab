@@ -523,6 +523,55 @@ _TASK_TEXT_FIELDS = ("title", "event_notes", "source_design_memo", "next_action"
 _BUILD_PRODUCT_SUFFIXES = (".zip", ".npz")
 _RUN_PRODUCT_SUFFIXES = tuple(s for s in _OUTPUT_SUFFIXES if s not in _BUILD_PRODUCT_SUFFIXES)
 
+# A REFUSAL RECEIPT is a run product that records that the run DID NOT HAPPEN -- a governed
+# harness refusing pre-write, a blocked launch, a preflight fail-closed. It is the one artifact
+# class whose PRESENCE is evidence the row is still OPEN, and the build-vs-run split above does
+# not catch it: it is written BY an execution attempt, so it is a run product by shape.
+#
+# MEASURED DEFECT, #880 population, on shipped code. Task #536 ("Measure the 3-axis JOINT
+# rate-distortion optimum") names
+# ``.omx/research/factor10_kkt_waterfill_blocked_receipt_20260718.json``. That file exists, so the
+# join returned EXECUTED / "candidate ALREADY-CLOSED". Its contents:
+# ``"measurement_axis": "no_scientific_measurement"``, ``"launch_performed": false``. The row's own
+# text opens "MEASUREMENT STILL BLOCKED". So the join reported a row as drainable on the strength
+# of a document certifying the opposite -- a FALSE ALREADY-CLOSED, the one direction this module's
+# docstring forbids ("a false EXECUTED silently DELETES real backlog"). 25 artifacts under
+# ``.omx/research`` alone carry a blocked/refused marker, so the class is live, not hypothetical.
+#
+# Detection is NAME-ONLY, and both the inclusions and the exclusions are MEASURED over the live
+# 76,449-artifact corpus rather than guessed:
+#
+#   ``refusal`` -- 79 artifacts, all ``*_refusal_*.json`` governance receipts. Correct.
+#   ``blocked``  -- 29 artifacts; the target class plus ``*_blocked_globalNNNNNN.npz`` training
+#                   checkpoints that use "blocked" as a STATE LABEL. Those are ``.npz``, already
+#                   excluded as build products upstream, so no live true positive is suppressed.
+#   ``no_go``    -- REJECTED after measuring it. It matched ``go_no_go_verdict.json`` and
+#                   ``failure_terminal_n600_no_go_*.json``, which are RUN products of measurements
+#                   that EXECUTED and returned NO-GO. A NO-GO verdict is a completed measurement,
+#                   so suppressing it would destroy true positives in an instrument whose measured
+#                   sensitivity is already ~2%. Included in the first draft of this fix; removed
+#                   once measured. This is why the marker set is measured, not enumerated.
+#
+# HONEST LIMIT, and it is the larger half: a refusal receipt that is not NAMED like one still earns
+# EXECUTED. A content probe (``"launch_performed": false`` / ``no_scientific_measurement``) was
+# written and then REMOVED, because it could never fire in production: ``_load_index_cache``
+# reconstructs the corpus with ``produced_paths={}``, so on every cached load -- the normal path for
+# every consumer -- the probe had zero artifacts to read. Shipping it would have been a designed
+# stub that passes its own unit test (which hand-builds a corpus WITH paths) while being inert on
+# real inputs. Making it live means persisting ~76k paths in the hot SessionStart cache (~6 MB);
+# that is a real trade with an unmeasured payoff, so it is DEFERRED and named here rather than
+# faked. This fix narrows the false-EXECUTED surface; it does not close it.
+_REFUSAL_NAME_RX = re.compile(r"(?:^|[_.\-])(?:blocked|refused|refusal)(?:[_.\-]|$)", re.I)
+
+
+def refusal_receipt_reason(token: str, corpus: ExecutionCorpus) -> str | None:
+    """Why this present artifact certifies NON-execution, or ``None`` if it does not."""
+    del corpus  # name-only by design; see the measured note above for why content is deferred
+    name = token.rsplit("/", 1)[-1]
+    if _REFUSAL_NAME_RX.search(name):
+        return f"filename marks it a refusal/blocked receipt: {name}"
+    return None
+
 
 def task_row_text(task: dict) -> str:
     """The searchable text of a task row: its titled fields plus any list-valued blockers."""
@@ -575,6 +624,21 @@ def classify_task_execution(task: dict, corpus: ExecutionCorpus) -> ExecutionVer
         )
 
     present = [t for t in tokens if t.rsplit("/", 1)[-1] in corpus.produced_names]
+
+    # Strip refusal receipts BEFORE anything can earn EXECUTED. Their presence is evidence the row
+    # is OPEN, so counting them as closure inverts the verdict on exactly the rows that most need
+    # to stay in the backlog.
+    refusals = [(t, r) for t in present if (r := refusal_receipt_reason(t, corpus)) is not None]
+    refused_tokens = {t for t, _ in refusals}
+    present = [t for t in present if t not in refused_tokens]
+    if refusals and not present:
+        return ExecutionVerdict(
+            f"task#{tid}", UNKNOWN,
+            "the only OUTPUT this row names is a REFUSAL/BLOCKED receipt, which certifies the run "
+            "did NOT happen — its presence is evidence the row is OPEN, never that it is closed",
+            tuple(f"refusal-receipt-present:{t} — {r}" for t, r in refusals[:4]),
+        )
+
     if present and corpus.artifact_scope_complete:
         return ExecutionVerdict(
             f"task#{tid}", EXECUTED,

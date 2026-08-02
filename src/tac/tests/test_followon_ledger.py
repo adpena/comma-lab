@@ -343,6 +343,56 @@ def test_task_join_will_not_earn_executed_from_a_BUILD_product():
     assert v.evidence  # the present build product is still REPORTED, just not counted as closure
 
 
+def test_task_join_will_not_earn_executed_from_a_REFUSAL_receipt_by_name():
+    """MEASURED DEFECT on shipped code (#880 population). Task #536 names
+    ``factor10_kkt_waterfill_blocked_receipt_20260718.json``; that file exists, so the join
+    returned EXECUTED / "candidate ALREADY-CLOSED" — on a document whose own contents read
+    ``"launch_performed": false``. A refusal receipt is a RUN product by shape (an execution
+    attempt wrote it) so the build-vs-run split does not catch it, and its presence is evidence
+    the row is OPEN. This is the damaging direction: a false EXECUTED deletes live backlog."""
+    name = "factor10_kkt_waterfill_blocked_receipt_20260718.json"
+    t = {"task_id": "536", "title": f"measure the 3-axis waterfill; blocked-receipt: `{name}`"}
+    v = classify_task_execution(t, _corpus({name}))
+    assert v.verdict == UNKNOWN
+    assert "REFUSAL" in v.reason
+    assert v.evidence and "refusal-receipt-present" in v.evidence[0]
+
+
+def test_task_join_still_earns_executed_when_a_real_output_sits_beside_a_refusal():
+    """The fix must narrow the false-EXECUTED surface WITHOUT suppressing genuine closure: a row
+    naming both a refusal receipt and a real output is still closed by the real output."""
+    corpus = _corpus({"zz1_task_receipt.json", "zz1_blocked_receipt.json"})
+    t = {"task_id": "8", "title": "owed `zz1_task_receipt.json` and `zz1_blocked_receipt.json`"}
+    v = classify_task_execution(t, corpus)
+    assert v.verdict == EXECUTED
+    assert all("blocked" not in e for e in v.evidence)
+
+
+def test_refusal_marker_set_does_not_suppress_a_NO_GO_verdict():
+    """MEASURED correction to this fix's own first draft. ``no_go`` was in the marker set until a
+    sweep of the live 76,449-artifact corpus showed it matching ``go_no_go_verdict.json`` and
+    ``failure_terminal_n600_no_go_*.json`` — RUN products of measurements that EXECUTED and
+    returned NO-GO. A NO-GO verdict is a completed measurement, and this instrument's measured
+    sensitivity is ~2%, so destroying true positives is not affordable."""
+    from tac.followon_ledger import refusal_receipt_reason
+
+    corpus = _corpus(set())
+    for benign in ("go_no_go_verdict.json", "failure_terminal_n600_no_go_000035_abc.json"):
+        assert refusal_receipt_reason(benign, corpus) is None, benign
+    for hit in ("x_blocked_receipt.json", "family_process_refusal_hi_nerv.json"):
+        assert refusal_receipt_reason(hit, corpus) is not None, hit
+
+
+def test_refusal_probe_is_name_only_and_needs_no_paths():
+    """The probe must work on the corpus consumers actually get. ``_load_index_cache`` rebuilds
+    with ``produced_paths={}``, so any probe needing paths is inert on every cached load — the
+    designed-stub failure this module exists to find, one level down."""
+    from tac.followon_ledger import refusal_receipt_reason
+
+    pathless = ExecutionCorpus(produced_names=frozenset(), produced_paths={})
+    assert refusal_receipt_reason("zz1_blocked_receipt.json", pathless) is not None
+
+
 def test_task_join_never_reads_commit_shas_as_closure():
     """Naming is not closure. A task cited in a commit witnesses it was NAMED, and the memo-side
     join already proved that votes the wrong way."""
