@@ -790,14 +790,25 @@ def main() -> int:
     if rc != 0:
         return rc
 
-    # Step 2: bounded developer preflight (PREFLIGHT_FULL=1 for full release scan)
-    rc = run_preflight()
+    # Step 1b: the heavy-import guard runs BEFORE preflight, not after.
+    #
+    # ROUND-4 review, 2026-08-02: it was placed after run_preflight(), and run_preflight()
+    # EARLY-RETURNS on failure — so the guard was skipped whenever preflight failed. That is
+    # circular, because the bug this guard exists to prevent (a module-scope heavy import,
+    # 43.86 s cold) is itself a cause of preflight failing/timing out at rc=124. The guard
+    # for the timeout was skipped exactly when the timeout fired.
+    #
+    # My own round-1 test asserted the WRONG order
+    # (test_scan_step_runs_after_preflight_so_a_vacuous_preflight_cannot_hide_it): a
+    # VACUOUS-but-rc0 preflight indeed cannot hide it, but I reasoned only about the rc0
+    # case and never the failure case. Running FIRST satisfies both, and additionally guards
+    # preflight's own cost BEFORE preflight pays it. It costs ~30 ms.
+    rc = run_hook_path_heavy_import_scan()
     if rc != 0:
         return rc
 
-    # Step 2b: the ONE gate that must run even when step 2 is scope-vacuous.
-    # See run_hook_path_heavy_import_scan.__doc__ for the measured reason.
-    rc = run_hook_path_heavy_import_scan()
+    # Step 2: bounded developer preflight (PREFLIGHT_FULL=1 for full release scan)
+    rc = run_preflight()
     if rc != 0:
         return rc
 

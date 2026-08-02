@@ -129,11 +129,17 @@ def test_main_actually_calls_the_scan() -> None:
     assert "run_hook_path_heavy_import_scan" in inspect.getsource(hook.main)
 
 
-def test_scan_step_runs_after_preflight_so_a_vacuous_preflight_cannot_hide_it() -> None:
-    """Order matters: step 2 can return VACUOUS-but-rc0, so 2b must still run."""
+def test_scan_step_runs_BEFORE_preflight_so_a_FAILING_preflight_cannot_skip_it() -> None:
+    """ROUND-4 CORRECTION of my own round-1 test, which asserted the OPPOSITE order.
+
+    Round 1 reasoned only about the VACUOUS-but-rc0 case (where after is fine) and never
+    about the FAILURE case. run_preflight() EARLY-RETURNS on failure, so 'after' meant the
+    guard was skipped exactly when preflight failed — and a module-scope heavy import
+    (43.86 s cold) is itself a cause of preflight failing at rc=124. The guard for the
+    timeout was skipped precisely when the timeout fired. BEFORE satisfies both cases."""
     hook = _load_hook()
     src = inspect.getsource(hook.main)
-    assert src.index("run_preflight") < src.index("run_hook_path_heavy_import_scan")
+    assert src.index("run_hook_path_heavy_import_scan") < src.index("rc = run_preflight()")
 
 
 def test_hook_step_returns_nonzero_when_the_scan_fires(monkeypatch) -> None:
