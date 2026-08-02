@@ -229,7 +229,13 @@ def _refine_dim0(comp, pose0, s_t, sel, f1_u8, f1_f, tp, offset, a, b):
 
 
 def _refit_ab(comp, pose, s_t, sel, f1_u8, f1_f, tp, a0, b0):
-    """2-param (a,b) GN re-fit reusing the warp at the given pose (cheap)."""
+    """2-param (a,b) GN re-fit reusing the warp at the given pose (cheap).
+
+    Returns ``(a_q, b_q, d, trace)``.  The solve itself is
+    ``v4c.ab_damped_gn`` -- this site and the v4c rung-B site carried
+    byte-identical copies of the same loop, and neither recorded WHY it
+    stopped; see that function for the measured censoring.
+    """
     if sel:
         wg, wf = comp.warps(f1_f, pose, s_t)
     else:
@@ -243,37 +249,11 @@ def _refit_ab(comp, pose, s_t, sel, f1_u8, f1_f, tp, a0, b0):
     def mse(p6):
         return float(np.mean((p6 - tp) ** 2))
 
-    a_p, b_p = a0, b0
-    cur6 = pose6(a_p, b_p)
-    curB = mse(cur6)
-    lm = 1.0
-    for _ in range(GN_RELINS_PHOTO):
-        jb = np.stack([(pose6(a_p + GAIN_FD, b_p) - cur6) / GAIN_FD,
-                       (pose6(a_p, b_p + BIAS_FD) - cur6) / BIAS_FD], 1)
-        r = cur6 - tp
-        accepted = False
-        for _damp in range(4):
-            aa = jb.T @ jb + lm * np.diag(np.maximum(np.diag(jb.T @ jb), 1e-8))
-            try:
-                step = np.linalg.solve(aa, -(jb.T @ r))
-            except np.linalg.LinAlgError:
-                break
-            for scale in (1.0, 0.5):
-                ca, cb = a_p + scale * step[0], b_p + scale * step[1]
-                c6 = pose6(ca, cb)
-                cv = mse(c6)
-                if cv < curB:
-                    a_p, b_p, cur6, curB = ca, cb, c6, cv
-                    lm = max(lm * 0.3, 1e-4)
-                    accepted = True
-                    break
-            if accepted:
-                break
-            lm *= 8.0
-        if not accepted:
-            break
+    cur6 = pose6(a0, b0)
+    a_p, b_p, cur6, curB, trace = v4c.ab_damped_gn(
+        pose6, mse, a0, b0, cur6, mse(cur6), tp, relins=GN_RELINS_PHOTO)
     a_q, b_q = float(np.float16(a_p)), float(np.float16(b_p))
-    return a_q, b_q, mse(pose6(a_q, b_q))
+    return a_q, b_q, mse(pose6(a_q, b_q)), trace
 
 
 def _beta_select(comp, pose, s_t, sel, f1_u8, f1_f, tp, a, b, d_ab):
@@ -386,7 +366,8 @@ def run_refine(args: argparse.Namespace) -> None:
         pose = pose0.copy()
         pose[0] = best_x
         # 2. (a,b) re-fit at the new dim0
-        a_q, b_q, d_ab = _refit_ab(comp, pose, s_t, sel, f1_u8, f1_f, tp, a0, b0)
+        a_q, b_q, d_ab, ab_trace = _refit_ab(
+            comp, pose, s_t, sel, f1_u8, f1_f, tp, a0, b0)
         # 3. beta select
         beta_mag, d_final, by_g = _beta_select(
             comp, pose, s_t, sel, f1_u8, f1_f, tp, a_q, b_q, d_ab)

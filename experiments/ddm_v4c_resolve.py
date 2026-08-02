@@ -469,6 +469,138 @@ def _summarize_solve(base: str, cache: dict[int, dict], ship: dict[int, dict]) -
     print(json.dumps(receipt, indent=1), flush=True)
 
 
+#: damping levels tried per relinearization before the step search gives up.
+#: This is a SAFETY BOUND, not a target -- see ``ab_damped_gn``.
+AB_DAMP_LEVELS = 4
+
+
+def _step_below_f16_resolution(a: float, b: float, step) -> bool:
+    """True when neither half of ``step`` can move (a,b) at the SHIPPED precision.
+
+    (a,b) are quantized to float16 before they are stored and re-scored, so a
+    proposed step smaller than half a float16 ULP at the current point cannot
+    change the shipped values no matter how the damping ladder continues.  When
+    the ladder gives up on such a step the search is genuinely EXHAUSTED at the
+    representable resolution -- that is a proof of local optimality on the
+    shipped lattice, and is the only honest ``converged`` this solver has.
+
+    Without this test the three exits are indistinguishable: the bare
+    ``if not accepted: break`` fires identically whether the ladder proved a
+    local optimum or merely ran out of levels.  Reads ``step`` only; it never
+    changes control flow or any returned value.
+    """
+    if step is None:
+        return False
+    da, db = abs(float(step[0])), abs(float(step[1]))
+    return (da <= 0.5 * float(np.spacing(np.float16(a)))
+            and db <= 0.5 * float(np.spacing(np.float16(b))))
+
+
+def ab_damped_gn(pose6, mse, a0: float, b0: float, cur6: np.ndarray,
+                 curB: float, tp: np.ndarray, *,
+                 relins: int = GN_RELINS_PHOTO,
+                 damp_levels: int = AB_DAMP_LEVELS):
+    """The photometric (a,b) damped-Gauss-Newton, with its TERMINATION EMITTED.
+
+    Single implementation shared by the v4c rung-B site and the v4d
+    ``_refit_ab`` site, which carried byte-identical copies of this loop.
+
+    WHY THIS EXISTS (ddm_sv1, 2026-08-01).  The loop has three distinct ways to
+    stop and the shipped code collapsed all three onto one ``if not accepted:
+    break``, so a solve that RAN OUT was recorded identically to one that
+    CONVERGED -- and the per-pair receipt recorded neither.  Measured on the
+    hardest 60 pairs (the ones carrying 86.6% of post-GN pose mass), n600 v4c
+    cache, canary EXACT against the shipped ``d_rungB``:
+
+        converged    0%
+        damp_cap    ~64%   the `range(damp_levels)` ladder ran out
+        relin_cap   ~36%   `relins` exhausted while still accepting steps
+
+    i.e. the shipped solve stopped on a BOUND on 100% of the mass-carrying
+    pairs and its receipt could not say so.  ``stop_reason`` is now recorded so
+    that censoring can never again be invisible.  Sister of the ddm_dc1 cure in
+    ``tools/sb1_seg_batch.py`` and of the registered law
+    ``tac.canonical_equations.ddm_pw1_menu_saturation_discriminator_v1``.
+
+    The defaults are UNCHANGED: this landing is observability only and is
+    byte-identical by construction.  Freeing the bounds changes the shipped
+    solve and is staged behind an exact gate, not taken here.
+
+    Returns ``(a, b, cur6, curB, trace)`` where ``trace`` carries
+    ``stop_reason`` in {converged, damp_cap, relin_cap, singular},
+    ``n_relin`` (relinearizations entered) and ``damp_used`` (damping levels
+    tried in each).
+    """
+    a_p, b_p = a0, b0
+    lm = 1.0
+    stop = "relin_cap"
+    n_relin = 0
+    damp_used: list[int] = []
+    for _ in range(relins):
+        n_relin += 1
+        p6a = pose6(a_p + GAIN_FD, b_p)
+        p6b = pose6(a_p, b_p + BIAS_FD)
+        jb = np.stack([(p6a - cur6) / GAIN_FD, (p6b - cur6) / BIAS_FD], 1)
+        r = cur6 - tp
+        accepted = False
+        singular = False
+        used = 0
+        last_step = None
+        for _damp in range(damp_levels):
+            used += 1
+            aa = jb.T @ jb + lm * np.diag(np.maximum(np.diag(jb.T @ jb), 1e-8))
+            try:
+                step = np.linalg.solve(aa, -(jb.T @ r))
+            except np.linalg.LinAlgError:
+                singular = True
+                break
+            last_step = step
+            for scale in (1.0, 0.5):
+                ca, cb = a_p + scale * step[0], b_p + scale * step[1]
+                c6 = pose6(ca, cb)
+                cv = mse(c6)
+                if cv < curB:
+                    a_p, b_p, cur6, curB = ca, cb, c6, cv
+                    lm = max(lm * 0.3, 1e-4)
+                    accepted = True
+                    break
+            if accepted:
+                break
+            lm *= 8.0
+        damp_used.append(used)
+        if not accepted:
+            stop = ("singular" if singular
+                    else "converged" if _step_below_f16_resolution(
+                        a_p, b_p, last_step) else "damp_cap")
+            break
+    trace = {"stop_reason": stop, "n_relin": n_relin,
+             "damp_used": damp_used,
+             "relins_bound": int(relins), "damp_bound": int(damp_levels)}
+    return a_p, b_p, cur6, curB, trace
+
+
+def ab_stop_census(rows) -> dict:
+    """Run-level census of ``ab_damped_gn`` terminations across per-pair rows.
+
+    Reports the DENOMINATOR and the count that stopped on a bound rather than
+    on the criterion.  Rows predating the trace are counted as ``unrecorded``
+    so an old cache reads as UNKNOWN, never as converged.
+    """
+    total = 0
+    by = {"converged": 0, "damp_cap": 0, "relin_cap": 0, "singular": 0,
+          "unrecorded": 0}
+    for row in rows:
+        total += 1
+        by[str(row.get("ab_stop", "unrecorded"))] = by.get(
+            str(row.get("ab_stop", "unrecorded")), 0) + 1
+    censored = by["damp_cap"] + by["relin_cap"] + by["singular"]
+    return {"n_rows": total, "by_stop_reason": by,
+            "n_stopped_on_bound": censored,
+            "frac_stopped_on_bound": (censored / total) if total else 0.0,
+            "note": "stopped_on_bound counts damp_cap+relin_cap+singular; any "
+                    "value >0 means the solve is CENSORED at that bound"}
+
+
 # --------------------------------------------------------------------------- #
 # STAGE 3 — photometric rungs (QA62): rung-B (a,b) + rung-A row-shear
 # --------------------------------------------------------------------------- #
@@ -516,34 +648,8 @@ def run_photo(args: argparse.Namespace) -> None:
         cur6 = pose6(1.0, 0.0)
         d_ctrl = mse(cur6)
         # RUNG B: (a,b) GN
-        a_p, b_p, curB, cur6B = 1.0, 0.0, d_ctrl, cur6
-        lm = 1.0
-        for _ in range(GN_RELINS_PHOTO):
-            p6a = pose6(a_p + GAIN_FD, b_p)
-            p6b = pose6(a_p, b_p + BIAS_FD)
-            jb = np.stack([(p6a - cur6B) / GAIN_FD, (p6b - cur6B) / BIAS_FD], 1)
-            r = cur6B - tp
-            accepted = False
-            for _damp in range(4):
-                aa = jb.T @ jb + lm * np.diag(np.maximum(np.diag(jb.T @ jb), 1e-8))
-                try:
-                    step = np.linalg.solve(aa, -(jb.T @ r))
-                except np.linalg.LinAlgError:
-                    break
-                for scale in (1.0, 0.5):
-                    ca, cb = a_p + scale * step[0], b_p + scale * step[1]
-                    c6 = pose6(ca, cb)
-                    cv = mse(c6)
-                    if cv < curB:
-                        a_p, b_p, cur6B, curB = ca, cb, c6, cv
-                        lm = max(lm * 0.3, 1e-4)
-                        accepted = True
-                        break
-                if accepted:
-                    break
-                lm *= 8.0
-            if not accepted:
-                break
+        a_p, b_p, cur6B, curB, ab_trace = ab_damped_gn(
+            pose6, mse, 1.0, 0.0, cur6, d_ctrl, tp)
         # quantize (a,b) to f16 (the shipped precision) and re-score honestly
         a_q, b_q = float(np.float16(a_p)), float(np.float16(b_p))
         d_photoB = mse(pose6(a_q, b_q))
@@ -572,6 +678,9 @@ def run_photo(args: argparse.Namespace) -> None:
                "a": a_q, "b": b_q, "d_rungAB": float(best_A),
                "rungA_beta": float(best_beta), "rungA_by_g": rungA_by_g,
                "yaw_sign": yaw_sign,
+               "ab_stop": ab_trace["stop_reason"],
+               "ab_relins": ab_trace["n_relin"],
+               "ab_damp_used": ab_trace["damp_used"],
                "p": [float(v) for v in theta]}
         fj.write(json.dumps(rec) + "\n")
         fj.flush()
@@ -622,6 +731,7 @@ def _summarize_photo(base: str, pose_source: str, cache: dict[int, dict],
         "rungA_global_g_star": g_star,
         "shippable_mean_d_pose_600_at_g_star": g_means[g_star],
         "shippable_contribution_600_at_g_star": contribution(g_means[g_star]),
+        "rungB_ab_stop_census": ab_stop_census(cache.values()),
         "note": "rung B = f16 (a,b) auto-exposure applied on the realizable "
                 "static compose; rung A = rolling-shutter row-shear (best beta). "
                 "ctrl = compose at (a=1,b=0). ADVISORY; the n600 evaluate gate is "
