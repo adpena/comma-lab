@@ -27549,3 +27549,43 @@ DIFFERENT PROGRAM from the one that wrote the receipt. Pinned as a regression:
 undetermined rows into a bound state. Cannot convert any into a convergence.
 
 CLOSING-ARTIFACT: .omx/research/ddm_os1_optimization_sweep_termination_census_20260802.md §7
+
+---
+
+## FEED-cr2r (2026-08-02) — the ep854 pose re-solve is REFUTED; the CONTROL says BASE, not solver
+
+**#827 closed. #881's named blocker resolved as a NEGATIVE.** The re-solve that was supposed to
+unstrand −0.0866789 S ran 77/600 pairs and was stopped on decisive evidence.
+
+MEASURED, 74 matched pairs, same tool + same code path, only the base archive differs:
+
+| | mean d_pose | median |
+|---|---:|---:|
+| celldrop50 (control) | 0.0778 | 0.0029 |
+| ep854 (candidate) | 11.5904 | 2.5308 |
+| ep854 better on | 1/74 | |
+
+rho = **148.98** (registered as a 4th anchor on `ddm_cr1_seg_only_base_pose_degradation_v1`).
+The solver is HEALTHY — celldrop50 solve-stage mean 0.0273 over 250 rows, photo stage 0.00953
+over all 600. Break-even is 0.0132; the FLOOR (526 unsolved pairs granted an exact zero) is
+**4.04 S** against 0.0867 to defend — 46x. Hardest-first ordering measured Pearson **r = −0.016**
+vs ep854 difficulty, i.e. uninformative, so the remainder is ~random → expected ~11 S.
+
+**SCOPE.** INSTANCE + FORMULATION refuted (post-hoc pose solving on a seg-only-burned base).
+FAMILY OPEN — joint/in-loop pose descent on ep854 is untested and is the named alternative.
+The seg+rate half stays real; it needs a POSE-CARRYING base, not a better solver.
+
+**CARRIER-DEPENDENCE, new:** the warp-base carrier measured rho 6.36 on the SAME base. 6.36 vs
+148.98 means rho does NOT transfer across carrier classes — only the sign and the mechanism do.
+The equation's `excluded` list now says so explicitly.
+
+**THE CHEAP GUARD (free, mandatory going forward):** before composing any seg base with any pose
+stream, run the matched-control solve on >=32 pairs of BOTH bases; refuse above ~10x. It would
+have retired this 3.7 h run at the 32-pair mark.
+
+**REUSABLE LESSON:** *the control was already on disk.* A sister arm had run the identical stage
+on a different base; the decisive A/B was a JOIN, not a measurement. Listing the output directory
+BEFORE interpreting a partial result is the move — and its absence is the same defect class as the
+open degenerate-baseline debt (#833): with no control, a BASE property reads as a SOLVER property.
+
+CLOSING-ARTIFACT: .omx/research/ddm_cr2r_ep854_pose_resolve_refuted_matched_control_20260802.md
