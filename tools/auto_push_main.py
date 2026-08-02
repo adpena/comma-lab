@@ -309,10 +309,53 @@ def _block_reason(verdict: dict) -> str:
         )
     return (
         f"Auto-push FAILED (git push origin main → rc={verdict.get('rc')}): {verdict.get('detail')}. "
-        f"origin/main likely moved (the parallel Marimo agent pushed) — reconcile manually "
-        f"(git pull --rebase origin main, resolve, git push). Not auto-rebasing (won't touch the working "
-        f"tree mid-session)."
+        f"{_derived_push_failure_cause()} "
+        f"Not auto-rebasing (won't touch the working tree mid-session)."
     )
+
+
+def _derived_push_failure_cause() -> str:
+    """DERIVE the cause from the repo, never assert one we did not check.
+
+    2026-08-02 defect this replaces: this message asserted "origin/main likely moved
+    (the parallel Marimo agent pushed) — reconcile manually (git pull --rebase ...)"
+    on EVERY push failure, regardless of cause.  MEASURED counter-example: the push
+    was refused by the LOCAL pre-push hook (preflight exceeding its budget under I/O
+    contention) while origin/main had NOT moved -- HEAD was 2 ahead and 0 behind.
+    Acting on the asserted cause would have run a rebase, for nothing, against a
+    153-file dirty tree.  The stderr naming the real cause was already in hand and
+    printed one line above; the hook simply guessed instead of reading it.
+
+    Same genus as the vacuity/censoring classes this repo already gates: an
+    instrument reporting a CONCLUSION it never measured.  So: fetch, count, and say
+    only what the count supports -- including "I could not determine it".
+    """
+    fetched = False
+    try:
+        root = _repo_root()
+        # Refresh the remote-tracking ref first: a stale origin/main answers the
+        # wrong question (it reports what we knew, not what is true now).  Track
+        # whether it SUCCEEDED -- claiming "VERIFIED" off a stale ref would be the
+        # very defect this function exists to remove, one level deeper.
+        fetched = _git(root, "fetch", "--quiet", "origin", "main", timeout=20.0).returncode == 0
+        out = _git(root, "rev-list", "--count", "HEAD..origin/main", timeout=10.0)
+        behind = int((out.stdout or "").strip()) if out.returncode == 0 else None
+    except Exception:
+        behind = None
+
+    if behind is None:
+        return ("Cause NOT determined (behind-count unavailable) — read the git detail "
+                "above; do not assume the remote moved.")
+    if not fetched:
+        return (f"Cause UNCERTAIN: the fetch failed, so the {behind}-behind count is read "
+                f"off a possibly-STALE origin/main — treat it as unverified. Read the git "
+                f"detail above before rebasing.")
+    if behind > 0:
+        return (f"VERIFIED: origin/main moved ({behind} commit(s) we do not have) — "
+                f"reconcile with `git pull --rebase origin main`, resolve, push.")
+    return ("VERIFIED: origin/main did NOT move (we are 0 behind) — so this is a LOCAL "
+            "refusal (pre-push hook) or a remote-side rejection; the git detail above "
+            "names it. Do NOT rebase — it would be a no-op against your working tree.")
 
 
 def run(dry_run: bool = False, use_fmtools: bool = True, fm_hold: bool = False,
