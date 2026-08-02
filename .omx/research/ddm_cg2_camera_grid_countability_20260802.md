@@ -241,7 +241,19 @@ budget, **not** a rate saving. **DERIVED, not measured on the real receiver** �
   I did not build the naive form (known-refuted) or the cured form (it is a *placement* rule,
   not a section, so it is out of this arm's scope and into #149's).
 - **Not measured:** actual decode wall-clock; any clustered-address camera-res encoding; the
-  realized d_seg value of the free amplitude lattice.
+  realized d_seg value of the free amplitude lattice. (I attempted an n600 round-trip
+  realization-error sweep to size that last one; it died at exit 144 — the documented SIGURG
+  kill — and I am reporting it as not-run rather than quoting a partial. Nothing in this
+  artifact depends on it.)
+- **The steelman that survives, stated precisely so the closure is not over-claimed.** What is
+  dominated is **storing camera-grid VALUES**. A compact generative *program* whose output
+  happens to be evaluated at camera resolution is **not** touched by §3 — `H(y) ≤ H(x)` bounds
+  ideal codes, and a real coder could describe, say, a thin diagonal line more cheaply at
+  camera res than the anti-aliased 2-px band it becomes at 384. But that description is a
+  **latent program**, not a camera-res section: the decoder can always render it and apply `D`
+  for free. **That is exactly what v4d already is** — a 24×32 token grid rendered up. So this
+  steelman does not reopen the section question; it re-describes the vehicle we already have,
+  and it belongs in the token/renderer budget, not in a new counted camera-res member.
 
 ## §8 — the ONE next measurement (gated, names its own gate)
 
