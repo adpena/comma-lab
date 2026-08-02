@@ -27589,3 +27589,64 @@ BEFORE interpreting a partial result is the move — and its absence is the same
 open degenerate-baseline debt (#833): with no control, a BASE property reads as a SOLVER property.
 
 CLOSING-ARTIFACT: .omx/research/ddm_cr2r_ep854_pose_resolve_refuted_matched_control_20260802.md
+
+---
+
+## FEED-pb2 (2026-08-02) — the bracket is PRICED, and the greedy-entry lesson generalizes
+
+TRAJECTORY POINT. ddm_pb2, commit 10bdd9d9f3. Pointer UNMOVED (0.1910828242 submittable /
+0.9476091 own-vehicle). Slot spent; the question is CLOSED, not parked.
+
+MEASURED (n600, lg2's pre-registered falsifier fired as written). Both positive controls returned
+EXACTLY 0.0 — the asymmetric replay is bit-identical to pw1's stored arms, and the composed mean
+reproduces pw1's receipt 0.007645062472871804 to the last digit. That control is what makes a
+number this small readable at all.
+
+  verdict          ASYMMETRY_PRICED (not a null)
+  d_pose           −2.580e-06 (population mean) · −1.420e-05 (per-scope-pair) — BOTH past −1e-06
+  reach            8 of 109 untested commitments changed outcome; 101/109 (93%) inconsequential
+  concentration    2 pairs carry 96% of the effect
+  byte-closed      360,323 → 360,339 B (+16); pose −4.8103e-05, rate +1.0654e-05
+  composed         ΔS = −3.745e-05 = 0.0048% of the gap; bytes ate 22.1% of the pose gain
+  parse-back       4/4
+
+THE LAW THIS ADDS — A ONE-STEP-LOOKAHEAD ENTRY PROBE DOES NOT ORDER THE CONTINUATION.
+NEITHER entry rule dominates: `+` wins 2 of the 8, `−` wins 6, and the entry-probe LOSER can win
+the doubling continuation — pair 326 takes g=−1.5 on a strictly better probe and ends 4.58e-05
+WORSE. So "free the menu / drop the break" is NOT automatically an improvement; the achievable
+bound is the PER-PAIR MIN OF BOTH CONTINUATIONS. pb2 emitted and byte-closed that bound, and a
+test now guards it so no successor asserts the false ordering.
+This SHARPENS the pw1 menu law rather than contradicting it. pw1's two real levers had occupancy
+piled AT A BOUND and freeing them paid (0.9639878 → 0.9476091). This third menu is a DIRECTION
+choice resolved by a greedy probe, and there the probe's own myopia — not the bound — is what
+binds. Menu-freeing pays where the CONSTRAINT is the bound; it does not pay merely because a
+discrete choice exists. Sister of the #871 triage rule (occupancy-at-a-bound is the lever test)
+and of the ST_GRID negative control that keeps that rule falsifiable.
+
+DECISION (MAIN): do NOT spend a scorer slot on −3.745e-05 alone. Archive
+v4d_composed_pb2_bestof_archive.zip sha 6e1b80e901 is BANKED; fold it into the next pose re-solve
+that fires for a larger reason. Not fired at the gate — stage_v4d_realized_gate.sh:3 reserves that
+for MAIN.
+
+COST HONESTY: +188 forwards, not the +125 MAIN briefed — and pb2 flags even that as an UPPER BOUND,
+because its own rows discard per-probe traces (the same produced-and-discarded defect it names in
+pw1's arm-AB probes). Named, not hidden.
+
+SECOND ROW, SAME LANDING — the unread decode-path adapter is CONSUMED HARD AT IMPORT, NEVER AT CALL.
+Removing it → ModuleNotFoundError kills the whole decode (AST: 1 top-level import, 0 guarded;
+`brotli` immediately above it IS guarded). Yet all four live archives ship token codec smevr(3),
+not rans_o0(4/5), and there are ZERO TACANS1/TACRNG1 magics in any member. NOT a #417 violation —
+receiver code costs 0 archive bytes, so nothing counted can be inert. Rule-118 clean (stdlib-only;
+147 constants audited, 41 numeric with 11 distinct values, all structural). Fail-closed 8/8 with a
+sha256 decode proof; round-trip 7/7 rANS + 7/7 range including degenerate cases. Its manifest
+advertises contest_runtime_decoder_adapter_integrated: False while staged into 5 gate scripts — an
+UNDER-claim, so not NO-FAKE, but a live staleness confound. Corroborates lg2's clipping row on
+SHIPPED bytes: every archive carries levels=16 == _R7_SMEVR_MAX_LEVELS.
+
+TWO INSTRUMENT FAILURES CAUGHT BY CHECKING RATHER THAN TRUSTING — the day's recurring lesson, now
+with four independent instances across four arms. os.path.normcase is a NO-OP on darwin, so a
+hijack guard fired on a benign case-insensitive path alias (fixed to samefile); and a `grep -l`
+scan had its file list mangled and would have produced FOUR confident negatives from a broken
+instrument (redone in Python with an explicit denominator and a positive control).
+
+CLOSING-ARTIFACT: task #900 (completed), commit 10bdd9d9f3.
