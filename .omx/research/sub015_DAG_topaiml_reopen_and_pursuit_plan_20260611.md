@@ -27095,3 +27095,43 @@ the test suite as a pinned property.
 
 Pointer: contest submittable 0.1910828 UNMOVED; bar 0.172141. This is the OWN-VEHICLE
 line, `[macOS-CPU frozen-PoseNet advisory]`, `score_claim=false`, `promotable=false`.
+
+### FEED-pw1/rg5/dc1 — SCOPE + RELATIVE-SIGNIFICANCE APPENDIX (two Stop hooks, both correct)
+
+**(1) VERDICT-SCOPE for the rg5 REFUTED token above.**
+`verdict_scope: formulation — the entropy rate-surrogate used AS A DESCENT DIRECTION on the SMEVR-priced
+token field at the v4d operating point.` The measurement is 4 fields × 4 step sizes × 3 preconditioner
+variants = 120 directional rows with perfect sign separation (descent 72/76 lower, 0 raise; ascent 44/44
+raise). That supports FORMULATION, not FAMILY: it refutes *"ρ<0 ⟹ trains against rate"* as an inference
+about THIS surrogate's direction. It does NOT refute entropy surrogates as a family, and it does NOT
+refute ρ = −0.7235 (which reproduced). The surviving finding — a ~16–18 kB (0.0107 S) permutation blind
+subspace — is a MISSING component, so the family stays open with a named build.
+
+**(2) RELATIVE SIGNIFICANCE at the CURRENT operating point — every 08-01 arm priced against a STALE gap.**
+The pointer moved mid-session (v4d 0.9639878 → **0.9476091**), so `gap = S_current − S_target` went
+**0.7918468 → 0.7754681**. Three arms wrote their percentages against the old denominator. Restated:
+
+| finding | ΔS | % of OLD gap (as written) | **% of CURRENT gap 0.7754681** |
+|---|---:|---:|---:|
+| dc1 re-priced correction slope (ja1) | −0.132 | 16.7% | **17.02%** |
+| dc1 re-priced correction slope (burn) | −0.111 | 14.0% | **14.31%** |
+| rg5 permutation blind subspace | 0.0107 | 1.35% | **1.38%** |
+| pw1 realized (the row that moved it) | −0.0163787 | 2.07% | **2.11%** |
+| bs2 1%-of-gap unit | 0.0079185 = 11,892 B | — | **0.0077547 S = 11,646 B** |
+
+**No magnitude-based dismissal stands in this FEED.** dc1's disposition was an UPGRADE
+(`do_not_spend → decidable_next`); its only exclusion — QA03's 1.4518 B/flip — is excluded on DOMAIN
+(no position/label streams exist to split; in-place token edit + whole-archive re-encode), not on size.
+`verdict_scope: instance — QA03's specific measurement, not the correction family.` The one genuine
+un-recoverability citation in the arc is the pp1 band edge moving 5.02e-4 → **1.285e-3** (2.56×), which is
+a MEASURED design constraint, not an eyeball. [magnitude-ok]
+
+**bs2 (#871/#822) lands with this block** — the binary-operations sweep's first real consumer. Two of MY
+seed facts were wrong and it corrected them at source: #822's real title is the lane-guard SIGN
+DISAGREEMENT (not "budget never tightens"), and **#871 had no row in the canonical task ledger at all** —
+the specification-without-registration class ddm_rg5 closed at #825, recurring. It also REFUTED #822's
+hypothesis at **r = +0.9697** (`verdict_scope: INSTANCE — this burn, 64 gates, one run`): the pixel-recall
+budget metric and the GT-referenced topological Lane cost move together, so the dual's metric is sound and
+the ratchet is safe to build on. The real asymmetry is one level over — `betti0_realized` counts ~43 Lane
+components (8.2%) with no surviving GT parent, and the topology ALARM consumes that contaminated quantity
+while the dual consumes the clean one.

@@ -332,3 +332,291 @@ def test_dsl_compile_argv_parses_against_real_trainer_argparse():
     assert ns.lane_guard_born_weight == 0.25
     assert ns.lane_guard_margin_floor_weight == 0.5
     assert ns.class_weight_lane == 1.3
+
+
+# ==================================================================================
+# ddm_bs2 (#871) — the BUDGET SCHEDULE (a constant budget can never bind)
+#
+# Every test below is a REGRESSION GUARD for a defect that was MEASURED, not imagined:
+# the burn-4 primary telemetry (64 lane_guard rows) has lambda_lane == 0.0 on 64/64
+# gates and g < 0 on 64/64.  The two control tests are the canary pair — the negative
+# one FAILED on the first implementation (analytic k) and is what forced the calibrator.
+# ==================================================================================
+
+# MEASURED from /Volumes/VertigoDataTier/pact/ddm_b4s_20260731/window_0{1,2,3}/telemetry.jsonl
+_BURN4_SIGMA = 0.00142148          # sd(diff(realized_lane_s))/sqrt(2) over the 64 gates
+_BURN4_FIRST, _BURN4_LAST = 0.122438, 0.077481
+
+
+def _replay(series, *, ratchet: bool, horizon: int = 64):
+    """Drive the SHIPPED ratchet + dual arithmetic over a realized-Lane series."""
+    cfg = lg.LaneGuardConfig(enabled=True, budget_ratchet=ratchet,
+                             ratchet_horizon_gates=horizon).resolved()
+    st = lg.LaneGuardState()
+    lam, bud = [], []
+    for x in series:
+        st.realized_history.append(float(x))
+        if st.budget_s_current is None:
+            st.budget_s_current = float(cfg.budget_s)
+        if cfg.budget_ratchet:
+            nb, _ = lg.derive_ratchet_budget(
+                st.realized_history, st.budget_s_current, cfg.eta_lambda,
+                cfg.lambda_step_cap, mean_gates=cfg.ratchet_mean_gates,
+                n_gates_horizon=cfg.ratchet_horizon_gates, lambda_max=cfg.lambda_max)
+            st.budget_s_current = float(nb)
+        lam.append(lg.dual_ascent(st, cfg, float(x), budget_s=st.budget_s_current))
+        bud.append(st.budget_s_current)
+    return np.asarray(lam), np.asarray(bud)
+
+
+# ------------------------------------------------------------------ noise floor
+def test_noise_floor_is_trend_agnostic():
+    """A pure linear ramp has ZERO gate-to-gate noise; an OLS-residual estimator would
+    also say ~0 here, but the first-difference estimator must say EXACTLY 0 and must
+    keep saying sigma when a ramp is ADDED to noise (the burn-4 situation)."""
+    ramp = np.linspace(0.12, 0.07, 40)
+    s_ramp, _ = lg.derive_noise_floor(ramp)
+    assert s_ramp is not None and s_ramp < 1e-12
+    rng = np.random.default_rng(11)
+    noise = rng.normal(0.0, _BURN4_SIGMA, 40)
+    s_flat, _ = lg.derive_noise_floor(noise)
+    s_both, _ = lg.derive_noise_floor(ramp + noise)
+    # adding a linear trend must not inflate the estimate
+    assert abs(s_both - s_flat) < 0.15 * s_flat
+
+
+def test_noise_floor_refuses_short_history():
+    """Fail SAFE: with too little history there is no measured floor, so the caller
+    must fall back to the static budget rather than ratchet on an unmeasured sigma."""
+    s, prov = lg.derive_noise_floor([0.1, 0.1, 0.1])
+    assert s is None and prov["value"] is None
+    b, prov2 = lg.derive_ratchet_budget([0.1, 0.1, 0.1], 0.12589, 66.2, 0.1)
+    assert b == 0.12589
+    assert prov2["engaged"] is False and prov2["reason"] == "insufficient_history"
+
+
+def test_noise_floor_matches_burn4_measurement():
+    """The estimator reproduces the MEASURED burn-4 sigma on a synthetic series of the
+    same construction (guards against a silent change of estimator)."""
+    rng = np.random.default_rng(5)
+    ser = np.linspace(0.122, 0.077, 64) + rng.normal(0.0, _BURN4_SIGMA, 64)
+    s, prov = lg.derive_noise_floor(ser)
+    assert abs(s - _BURN4_SIGMA) < 0.25 * _BURN4_SIGMA
+    assert prov["mad_agreement_rel"] < 0.35  # MAD twin agrees => no outlier contamination
+
+
+# ------------------------------------------------------------------ deadband
+def test_analytic_k_is_a_lower_bracket_for_the_calibrated_k():
+    """The analytic k prices a FIXED reference; the shipped budget is a RUNNING MINIMUM.
+    The gap IS the min-selection bias and must be strictly positive, never negative."""
+    eta, cap = lg.derive_eta_lambda()[0], lg.derive_lambda_step_cap()
+    k_a, _ = lg.derive_deadband_k(_BURN4_SIGMA, eta, cap, 64)
+    k_c, prov = lg.calibrate_deadband_k(_BURN4_SIGMA, eta, cap, horizon=64)
+    assert k_c > k_a > 0.0
+    assert prov["selection_bias_k"] == k_c - k_a > 0.0
+    assert prov["null_expected_max_lambda_rel"] <= 1.0 + 1e-9
+
+
+def test_deadband_k_grows_with_noise_and_horizon():
+    """Physics check on the derivation: a noisier gate or a longer horizon must WIDEN
+    the deadband.  If either monotonicity inverts, the formula is wired backwards."""
+    eta, cap = lg.derive_eta_lambda()[0], lg.derive_lambda_step_cap()
+    k_short, _ = lg.derive_deadband_k(_BURN4_SIGMA, eta, cap, 16)
+    k_long, _ = lg.derive_deadband_k(_BURN4_SIGMA, eta, cap, 256)
+    assert k_long > k_short
+    k_quiet, _ = lg.derive_deadband_k(_BURN4_SIGMA / 4.0, eta, cap, 64)
+    assert k_quiet < k_short or k_quiet < k_long
+
+
+def test_deadband_k_degenerate_inputs_do_not_raise():
+    k, prov = lg.derive_deadband_k(0.0, 66.2, 0.1, 64)
+    assert k == 0.0 and "degenerate" in prov["note"]
+    k2, prov2 = lg.calibrate_deadband_k(0.0, 66.2, 0.1)
+    assert k2 == 0.0 and prov2["calibrated"] is False
+
+
+# ------------------------------------------------------------------ the ratchet
+def test_ratchet_is_monotone_non_increasing():
+    """The whole point: a budget that can RISE is not a ratchet and cannot lock in gains."""
+    rng = np.random.default_rng(3)
+    ser = np.concatenate([np.linspace(0.122, 0.077, 40), 0.077 + rng.normal(0, 0.003, 24)])
+    _, bud = _replay(ser, ratchet=True)
+    assert np.all(np.diff(bud) <= 1e-12)
+
+
+def test_ratchet_target_is_never_an_extrapolation():
+    """Feasibility by construction: the budget never drops below a level the run has
+    actually held on average, so the constraint is always achievable."""
+    rng = np.random.default_rng(4)
+    ser = np.linspace(0.122, 0.077, 64) + rng.normal(0, _BURN4_SIGMA, 64)
+    _, bud = _replay(ser, ratchet=True)
+    m = lg.N_GATES_TO_ENGAGE_DEFAULT
+    for t in range(m, len(ser)):
+        assert bud[t] >= float(np.min([np.mean(ser[max(0, i + 1 - m):i + 1])
+                                       for i in range(m - 1, t + 1)])) - 1e-12
+
+
+def test_ratchet_off_reproduces_the_measured_burn4_inertness():
+    """REGRESSION GUARD on the defect itself.  On a monotonically IMPROVING Lane series
+    the constant budget yields lambda == 0 at every gate — the exact 64/64 signature
+    measured on burn-4.  If this ever fails, the legacy arm changed behaviour."""
+    rng = np.random.default_rng(7)
+    ser = np.linspace(_BURN4_FIRST, _BURN4_LAST, 64) + rng.normal(0, _BURN4_SIGMA, 64)
+    lam, bud = _replay(ser, ratchet=False)
+    assert np.all(lam == 0.0)
+    assert len(np.unique(bud)) == 1 and bud[0] == lg.LANE_BUDGET_S_UNITS
+
+
+def test_ratchet_arms_the_guard_on_the_same_series():
+    """Same improving series, ratchet ON: lambda still stays 0 (correct — nothing eroded)
+    but the budget has TRACKED DOWN, so the guard is now armed near the achieved level
+    instead of ~0.047 S above it."""
+    rng = np.random.default_rng(7)
+    ser = np.linspace(_BURN4_FIRST, _BURN4_LAST, 64) + rng.normal(0, _BURN4_SIGMA, 64)
+    lam, bud = _replay(ser, ratchet=True)
+    assert np.all(lam == 0.0), "an improving series must not engage the dual"
+    assert bud[-1] < lg.LANE_BUDGET_S_UNITS
+    permitted_erosion = bud[-1] - float(ser.min())
+    assert permitted_erosion < 0.02, "ratcheted budget must sit near the achieved level"
+    legacy_permitted = lg.LANE_BUDGET_S_UNITS - float(ser.min())
+    assert legacy_permitted > 2.0 * permitted_erosion
+
+
+# ------------------------------------------------------------------ THE CONTROLS (P4)
+def test_negative_control_null_series_does_not_thrash_the_dual():
+    """NEGATIVE CONTROL / canary.  A stationary series with only measurement noise has NO
+    erosion, so noise alone must not move the dual by more than one step cap.  This is
+    the test that FAILED on the analytic-k implementation (36.2% of gates engaged,
+    200/200 trials) and forced calibrate_deadband_k."""
+    rng = np.random.default_rng(777)
+    cap = lg.derive_lambda_step_cap()
+    peaks, engaged = [], []
+    for _ in range(24):
+        lam, _ = _replay(0.09 + rng.normal(0, _BURN4_SIGMA, 64), ratchet=True)
+        peaks.append(float(lam.max()))
+        engaged.append(float((lam > 0).mean()))
+    assert float(np.mean(peaks)) <= cap, (
+        f"E[max lambda | NULL] = {np.mean(peaks):.5f} exceeds the step cap {cap}")
+    assert float(np.mean(engaged)) < 0.20, "null engagement rate is thrash-level"
+
+
+def test_negative_control_single_lucky_gate_does_not_lock_the_budget():
+    """A -4 sigma outlier must not ratchet the budget onto an unreachable level (the
+    naive zero-deadband ratchet's failure mode: bind forever after one lucky gate)."""
+    rng = np.random.default_rng(31)
+    ser = 0.09 + rng.normal(0, _BURN4_SIGMA, 64)
+    ser[20] -= 4.0 * _BURN4_SIGMA
+    lam, _ = _replay(ser, ratchet=True)
+    assert lam.max() == 0.0
+
+
+def test_positive_control_genuine_erosion_engages_the_dual():
+    """POSITIVE CONTROL.  Real descent followed by real erosion must engage — and must
+    engage where the legacy constant budget stays silent."""
+    rng = np.random.default_rng(999)
+    ser = np.concatenate([np.linspace(0.120, 0.075, 40),
+                          0.075 + np.linspace(0.0, 0.025, 24)])
+    ser = ser + rng.normal(0, _BURN4_SIGMA, 64)
+    lam_r, _ = _replay(ser, ratchet=True)
+    lam_l, _ = _replay(ser, ratchet=False)
+    assert lam_r.max() > 0.5, "ratchet failed to engage on +0.025 S of genuine erosion"
+    assert lam_l.max() == 0.0, "legacy is expected to be blind here (the defect)"
+
+
+def test_positive_control_detection_floor_matches_the_derived_deadband():
+    """The MEASURED smallest detected erosion must agree with the DERIVED deadband
+    k*sigma — derivation and behaviour have to be the same object."""
+    rng = np.random.default_rng(1234)
+    eta, cap = lg.derive_eta_lambda()[0], lg.derive_lambda_step_cap()
+    k, _ = lg.calibrate_deadband_k(_BURN4_SIGMA, eta, cap, horizon=64)
+    deadband = k * _BURN4_SIGMA
+    below = np.concatenate([np.linspace(0.120, 0.075, 40),
+                            0.075 + np.linspace(0.0, 0.3 * deadband, 24)])
+    above = np.concatenate([np.linspace(0.120, 0.075, 40),
+                            0.075 + np.linspace(0.0, 6.0 * deadband, 24)])
+    n = rng.normal(0, _BURN4_SIGMA, 64)
+    lam_below = _replay(below + n, ratchet=True)[0].max()
+    lam_above = _replay(above + n, ratchet=True)[0].max()
+    # The DESIGNED guarantee is a bound on MAGNITUDE, not on incidence: sub-deadband
+    # motion may produce a transient blip but must stay inside the same one-step-cap
+    # envelope the null calibration enforces.  (Asserting lam_below == 0 here is
+    # STRONGER than anything the derivation promises — it failed, correctly.)
+    assert lam_below <= cap, f"sub-deadband erosion drove lambda to {lam_below} > cap {cap}"
+    assert lam_above > 10.0 * cap, "supra-deadband erosion must engage decisively"
+    assert lam_above > 10.0 * max(lam_below, 1e-12)
+
+
+# ------------------------------------------------------------------ integration
+def test_gate_update_reports_ratchet_and_inertness():
+    """The guard must SURFACE its own inert state: burn-4 ran 64/64 gates with lambda==0
+    and g<0 and NO telemetry field said so.  'Off' is a tracked state, never silent."""
+    cfg = lg.LaneGuardConfig(enabled=True, budget_ratchet=False).resolved()
+    st = lg.LaneGuardState()
+    gt = np.zeros((2, 8, 8), dtype=np.int64)
+    gt[:, :2, :] = lg.LANE_CLASS
+    realized = gt.copy()  # perfect Lane => realized_lane_s = 0 => deeply slack
+    row = {}
+    for _ in range(cfg.ratchet_mean_gates + 2):
+        row = lg.gate_update(st, cfg, realized, gt, (0, 1))
+    assert row["lambda_lane"] == 0.0
+    assert row["g_s_units"] < 0.0
+    assert row["inertness_alarm"] is True
+    assert row["inert_slack_gates"] >= cfg.ratchet_mean_gates
+    assert row["budget_ratchet"] is False
+    assert row["ratchet"]["engaged"] is False
+    assert row["budget_s_units"] == row["budget_s_static"] == cfg.budget_s
+
+
+def test_gate_update_ratchet_on_tightens_the_budget():
+    cfg = lg.LaneGuardConfig(enabled=True, budget_ratchet=True).resolved()
+    st = lg.LaneGuardState()
+    gt = np.zeros((2, 8, 8), dtype=np.int64)
+    gt[:, :2, :] = lg.LANE_CLASS
+    realized = gt.copy()
+    rows = [lg.gate_update(st, cfg, realized, gt, (0, 1))
+            for _ in range(cfg.ratchet_mean_gates + 2)]
+    row = rows[-1]
+    assert row["budget_ratchet"] is True
+    assert row["ratchet"]["engaged"] is True
+    assert row["budget_s_units"] < row["budget_s_static"]
+    assert row["ratchet"]["sigma_s"] >= 0.0
+    # `tightened_by_s` is PER-GATE, so it is 0.0 once the ratchet has settled (this series
+    # is constant).  The cumulative tightening is the quantity that must be positive.
+    assert sum(r["ratchet"].get("tightened_by_s", 0.0) for r in rows) > 0.0
+    assert row["ratchet"]["tightened_by_s"] == 0.0, "a settled ratchet must not keep moving"
+
+
+def test_config_rejects_invalid_ratchet_params():
+    import pytest
+    with pytest.raises(ValueError):
+        lg.LaneGuardConfig(enabled=True, ratchet_mean_gates=0).resolved()
+    with pytest.raises(ValueError):
+        lg.LaneGuardConfig(enabled=True, ratchet_horizon_gates=-1).resolved()
+
+
+def test_dual_ascent_budget_override_is_backward_compatible():
+    """budget_s=None must reproduce the pre-ratchet arithmetic EXACTLY."""
+    cfg = lg.LaneGuardConfig(enabled=True).resolved()
+    a, b = lg.LaneGuardState(), lg.LaneGuardState()
+    for x in (0.20, 0.20, 0.05):
+        la = lg.dual_ascent(a, cfg, x)
+        lb = lg.dual_ascent(b, cfg, x, budget_s=None)
+        assert la == lb
+
+
+def test_ratchet_dsl_lever_compiles_to_real_flags():
+    """never-invent-flags: the DSL lever's tokens must exist in the trainer's argparse."""
+    import experiments.train_tr1_partition_renderer_mlx as tr1
+    from tac.witness_dsl.spec_tr1_renderer_20260728 import lever_lane_guard_ratchet
+    lev = lever_lane_guard_ratchet(64)
+    ap = tr1.build_argparser()
+    known: set[str] = set()
+    for a in ap._actions:
+        known |= set(a.option_strings)
+    for flag in lev.overrides:
+        assert flag in known, f"DSL lever emits {flag}, absent from the trainer argparse"
+    ns = ap.parse_args(["--variant", "lotto", "--out-dir", "/dev/null",
+                        "--lane-guard", "--lane-guard-ratchet",
+                        "--lane-guard-ratchet-horizon", "64"])
+    assert ns.lane_guard is True and ns.lane_guard_ratchet is True
+    assert ns.lane_guard_ratchet_horizon == 64

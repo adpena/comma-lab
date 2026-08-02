@@ -62,6 +62,7 @@ own copied-table bug wore):
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -102,6 +103,12 @@ if len(_ALL_PAIR_NORMS) != 10 or len(_LANE_PAIR_NORMS) != 4:  # pragma: no cover
 # xp1-measured unprotected Lane erosion over the rung-1 continuation (S-units).
 EROSION_S_MEASURED = 0.00151
 
+# The dual's INTEGRATION TIME in gates: a sustained violation needs this many gates to
+# drive lambda from 0 to lambda_target.  Single source for BOTH the dual step size
+# (derive_eta_lambda) and the ratchet's averaging window (derive_ratchet_budget) so the
+# two loops run at the SAME bandwidth and cannot resonate against each other.
+N_GATES_TO_ENGAGE_DEFAULT = 10
+
 
 def derive_lane_head_sensitivity_ratio() -> float:
     """Ratio of mean Lane-pair head-normal magnitude to the all-pair mean (MEASURED,
@@ -117,7 +124,7 @@ LANE_HEAD_SENSITIVITY_RATIO = derive_lane_head_sensitivity_ratio()  # 1.19607...
 # ---- DERIVED dual hyperparameters (no bare constants) --------------------------
 def derive_eta_lambda(
     lambda_target: float = 1.0,
-    n_gates_to_engage: int = 10,
+    n_gates_to_engage: int = N_GATES_TO_ENGAGE_DEFAULT,
     erosion_s: float = EROSION_S_MEASURED,
 ) -> tuple[float, dict[str, Any]]:
     """Dual step size eta_lambda, DERIVED so a SUSTAINED violation of the measured
@@ -151,7 +158,7 @@ def derive_eta_lambda(
 
 
 def derive_lambda_step_cap(
-    lambda_target: float = 1.0, n_gates_to_engage: int = 10,
+    lambda_target: float = 1.0, n_gates_to_engage: int = N_GATES_TO_ENGAGE_DEFAULT,
 ) -> float:
     """Per-gate dual-step ceiling (caps-law): |d lambda| <= lambda_target/n_gates so
     NO single gate can move the multiplier more than one engage-increment — one gate
@@ -159,10 +166,382 @@ def derive_lambda_step_cap(
     return float(lambda_target) / float(n_gates_to_engage)
 
 
+# ---- the BUDGET SCHEDULE (the #822 defect: a constant budget can never bind) ---------
+#
+# MEASURED DEFECT (re-derived at source 2026-08-01 by ddm_bs2 from the burn-4 primary
+# telemetry, /Volumes/VertigoDataTier/pact/ddm_b4s_20260731/window_0{1,2,3}/telemetry.jsonl,
+# 64 `lane_guard` gate rows):
+#
+#     lambda_lane   == 0.0        on 64 / 64 gates   (100% of mass at the KKT lower bound)
+#     g = realized - budget < 0   on 64 / 64 gates   (max g = -0.003452, min = -0.053665)
+#     budget_s_units               ONE value, 0.12589, on 64 / 64 gates
+#     realized_lane_s              0.122438 -> 0.072225   (the run won 0.050213 S of Lane)
+#
+# The budget was pinned at the ep641 STARTING level, so the constraint was slack at gate 1
+# and got monotonically SLACKER as the primal descended.  A constraint that is satisfied by
+# a growing margin has multiplier 0 forever: that is correct KKT on a mis-specified problem,
+# not a broken instrument.  Concretely the constant budget licenses the primal to give back
+# ALL 0.050213 S-units of won Lane before the guard can begin to respond.
+#
+# WHY A RATCHET IS THE DERIVED SHAPE (not a picked one).  Lane's cost is not symmetric in
+# time.  Lane is 985 GT components on a 384x512 plane, 44-55% of them already erased, and a
+# thin component that loses its last supporting pixels has NO gradient support left to
+# recover through - erasure is effectively irreversible (the prominence/erasure result;
+# per_component_min_flip_distance is the local statement of the same geometry).  The correct
+# constraint for an irreversible loss is "do not give back what has been won", i.e. a
+# MONOTONE NON-INCREASING budget that tracks the achieved level.  Feasibility is free: the
+# target is always a level the run has ALREADY HELD for `mean_gates` gates, never an
+# extrapolation.
+#
+# WHY THE DEADBAND IS DERIVED, NOT PICKED.  A zero-deadband ratchet locks onto a lucky low
+# gate and then binds forever = a thrash generator (gc13, verbatim: "Never close a loop below
+# its noise floor").  So the budget sits k*sigma above the achieved mean, with:
+#   * sigma  MEASURED online from the guard's OWN realized series (first-difference
+#            estimator, trend-agnostic), never a constant;
+#   * k      DERIVED by requiring that NOISE ALONE cannot move the dual by more than one
+#            step cap over the horizon (see derive_deadband_k).
+#
+# WHY THE RATCHET ALSO FIXES A SECOND, INDEPENDENT DEFECT.  The constant budget compares a
+# 36-of-600-pair gate estimate against a constant that was measured on all 600 pairs - an
+# apples-to-oranges comparison carrying gd1's MEASURED +3.34% Lane design error.  The gate
+# subset is FIXED (`gate_ids_n == 36` and `gate_basis == "ema_shadow"` on all 64 rows), so a
+# ratchet - which compares the estimator only to ITSELF - is immune to that bias by
+# construction: any constant subset offset cancels in the difference.
+
 # lambda_max: bounded safety ceiling at 5x the natural unit (a sustained SEVERE
 # violation can lift Lane weight to ~5, comparable to a strong class_weight_lane;
 # above that the primal would be dominated by one class => refuse further ascent).
 LAMBDA_MAX_DEFAULT = 5.0
+
+
+def derive_noise_floor(
+    history: list[float] | tuple[float, ...] | np.ndarray,
+    min_gates: int = N_GATES_TO_ENGAGE_DEFAULT,
+) -> tuple[float | None, dict[str, Any]]:
+    """Gate-to-gate noise floor ``sigma`` of the realized Lane series, MEASURED online
+    from the guard's own history — never a constant.
+
+    Estimator: ``sigma = sd(diff(history)) / sqrt(2)`` (the standard trend-agnostic
+    first-difference / Allan-style estimator).  First-differencing annihilates ANY
+    constant slope exactly, so a descending run does not inflate sigma — which an OLS
+    residual sd does whenever the descent has curvature.  Cross-checked on the burn-4
+    series (64 gates): first-difference 0.00142148, its outlier-robust MAD twin
+    0.00146636 (agree to 3.2%, so no outlier contamination), OLS-detrend 0.00356611
+    (2.5x inflated by within-window curvature — this is exactly the estimator NOT to use).
+
+    Returns ``(None, prov)`` until ``min_gates`` samples exist: before that the caller
+    MUST fall back to the static budget rather than ratchet on an unmeasured floor.
+    """
+    arr = np.asarray(list(history), dtype=np.float64).ravel()
+    arr = arr[np.isfinite(arr)]
+    if arr.size < max(3, int(min_gates)):
+        return None, {
+            "estimator": "sd(diff)/sqrt(2)", "n_samples": int(arr.size),
+            "min_gates": int(min_gates), "value": None,
+            "note": "insufficient history — caller must use the static budget",
+        }
+    d = np.diff(arr)
+    sigma = float(np.std(d, ddof=1) / math.sqrt(2.0))
+    mad = float(np.median(np.abs(d - np.median(d))) * 1.4826 / math.sqrt(2.0))
+    return sigma, {
+        "estimator": "sd(diff)/sqrt(2)  (trend-agnostic first-difference)",
+        "n_samples": int(arr.size), "value": sigma,
+        "mad_cross_check": mad,
+        "mad_agreement_rel": (abs(sigma - mad) / sigma if sigma > 0 else 0.0),
+    }
+
+
+def _std_normal_pdf(x: float) -> float:
+    return math.exp(-0.5 * x * x) / math.sqrt(2.0 * math.pi)
+
+
+def _std_normal_sf(x: float) -> float:
+    """P(Z > x) = Phi(-x), via erfc (no scipy dependency in the trainer hot path)."""
+    return 0.5 * math.erfc(x / math.sqrt(2.0))
+
+
+def _partial_expectation(k: float) -> float:
+    """E[(Z-k)^+] for Z~N(0,1) = phi(k) - k*Phi(-k).  Strictly decreasing in k."""
+    return _std_normal_pdf(k) - k * _std_normal_sf(k)
+
+
+def derive_deadband_k(
+    sigma: float,
+    eta_lambda: float,
+    lambda_step_cap: float,
+    n_gates_horizon: int,
+) -> tuple[float, dict[str, Any]]:
+    """Deadband multiplier ``k``, DERIVED from the requirement that NOISE ALONE cannot
+    move the dual by more than ONE step cap over the horizon.
+
+    With a one-sided deadband at ``k*sigma`` and residuals ~N(0, sigma), the expected
+    dual drift accumulated purely from noise over ``W`` gates is
+
+        E[ sum_W eta * max(0, resid - k*sigma) ] = eta * W * sigma * E[(Z-k)^+]
+
+    Requiring that to stay at or below one ``lambda_step_cap`` gives the closed condition
+
+        phi(k) - k*Phi(-k)  <=  lambda_step_cap / (eta * sigma * W)
+
+    solved here by bisection (the left side is strictly decreasing in k).  Every input is
+    MEASURED or already DERIVED — sigma online, eta and cap from derive_eta_lambda /
+    derive_lambda_step_cap, W the gate horizon — so k is a formula output, never a knob.
+    It carries the right physics in both directions: a noisier gate or a longer horizon
+    widens the deadband (k grows like sqrt(2 ln W), the Bonferroni-like scaling), and a
+    perfectly clean gate collapses it to zero.
+
+    *** THIS IS A LOWER BOUND ON THE REQUIRED k, NOT THE DEADBAND TO SHIP. ***
+    The derivation above prices the residual against a FIXED reference level.  The budget
+    this guard actually uses is a RUNNING MINIMUM, and the minimum of W correlated trailing
+    means is biased low by roughly ``(sigma/sqrt(m)) * sqrt(2 ln W)`` — selection bias that
+    EATS the deadband.  MEASURED (ddm_bs2 2026-08-01, 200 null trials x 64 gates at the
+    burn-4 sigma): shipping this analytic k gave a null engagement rate of 36.2% of gates,
+    200/200 trials engaging — a thrash generator, exactly the failure the deadband exists
+    to prevent.  ``calibrate_deadband_k`` keeps this value only as the bisection's lower
+    bracket and solves the SAME condition against the true running-min statistic.
+    """
+    if not (sigma > 0.0) or not (eta_lambda > 0.0) or not (lambda_step_cap > 0.0):
+        return 0.0, {
+            "formula": "phi(k) - k*Phi(-k) = cap/(eta*sigma*W)", "value": 0.0,
+            "note": "degenerate input (sigma/eta/cap non-positive) — deadband disabled",
+            "sigma": float(sigma), "eta_lambda": float(eta_lambda),
+            "lambda_step_cap": float(lambda_step_cap),
+        }
+    w = max(1, int(n_gates_horizon))
+    rhs = float(lambda_step_cap) / (float(eta_lambda) * float(sigma) * w)
+    if rhs >= _partial_expectation(0.0):  # noise is already too small to matter
+        k = 0.0
+    else:
+        lo, hi = 0.0, 40.0
+        for _ in range(200):
+            mid = 0.5 * (lo + hi)
+            if _partial_expectation(mid) > rhs:
+                lo = mid
+            else:
+                hi = mid
+        k = 0.5 * (lo + hi)
+    return float(k), {
+        "formula": "solve phi(k) - k*Phi(-k) = lambda_step_cap/(eta_lambda*sigma*W)",
+        "sigma": float(sigma), "eta_lambda": float(eta_lambda),
+        "lambda_step_cap": float(lambda_step_cap), "n_gates_horizon": int(w),
+        "rhs": float(rhs), "value": float(k), "deadband_s_units": float(k) * float(sigma),
+    }
+
+
+def _null_expected_max_lambda(
+    k: float, gain: float, lam_max_rel: float,
+    horizon: int, mean_gates: int, n_trials: int, seed: int,
+) -> float:
+    """``E[ max_t lambda(t) ] / lambda_step_cap`` under the NULL (a stationary series plus
+    N(0,sigma) noise, i.e. no erosion at all), driving the EXACT ratchet + projected-dual
+    arithmetic this module ships.  Deterministic for a given ``seed``; vectorised over
+    trials.
+
+    NORMALISED, because the statistic is scale-free in a single dimensionless group.
+    Write noise = sigma*z.  Then level = sigma*mean(z), budget = sigma*(min_t mean(z)+k),
+    g = sigma*(z_t - mean - k), and
+
+        step = clip(eta*g, +-cap) = cap * clip( (eta*sigma/cap) * (z - mean - k), +-1 )
+        lambda = cap * clip( sum steps, 0, lambda_max/cap )
+
+    so lambda/cap depends on (sigma, eta, cap, lambda_max) ONLY through
+    ``gain = eta*sigma/cap`` and ``lam_max_rel = lambda_max/cap``.  Calibrating in these
+    two numbers rather than four collapses the memo key and makes the shipped k a
+    function of the run's actual loop gain — which is what it physically is.
+    """
+    rng = np.random.default_rng(seed)
+    m = max(1, int(mean_gates))
+    n, w = int(n_trials), int(horizon)
+    z = rng.normal(0.0, 1.0, (n, w))
+    csum = np.concatenate([np.zeros((n, 1)), np.cumsum(z, axis=1)], axis=1)
+    idx = np.arange(w)
+    lo = np.maximum(0, idx + 1 - m)
+    level = (csum[:, idx + 1] - csum[:, lo]) / (idx + 1 - lo)[None, :]
+    budget = np.minimum.accumulate(level + k, axis=1)          # the RUNNING MINIMUM
+    g = z - budget
+    step = np.clip(gain * g, -1.0, 1.0)
+    lam = np.zeros(n)
+    peak = np.zeros(n)
+    for t in range(w):                                          # rectified integrator
+        lam = np.clip(lam + step[:, t], 0.0, lam_max_rel)
+        peak = np.maximum(peak, lam)
+    return float(peak.mean())
+
+
+def calibrate_deadband_k(
+    sigma: float,
+    eta_lambda: float,
+    lambda_step_cap: float,
+    lambda_max: float = LAMBDA_MAX_DEFAULT,
+    horizon: int = 64,
+    mean_gates: int = N_GATES_TO_ENGAGE_DEFAULT,
+    n_trials: int = 128,
+    seed: int = 20260801,
+) -> tuple[float, dict[str, Any]]:
+    """The SHIPPED deadband multiplier: the SAME condition as ``derive_deadband_k``
+    ("noise alone must not move the dual by more than one ``lambda_step_cap`` over the
+    horizon"), but evaluated against the TRUE running-minimum statistic instead of the
+    fixed-reference analytic surrogate.
+
+    Only the evaluation changes, never the condition.  The analytic k remains the
+    bisection's lower bracket, so the shipped value is always >= the analytic one and the
+    gap IS the min-selection bias, reported as ``selection_bias_k``.  Bisection is on a
+    monotone statistic (larger k => looser budget => smaller null lambda), seeded, and run
+    once at build time — it never touches the training hot path.
+
+    Why not just widen k by a fudge factor: the bias depends on sigma, ``mean_gates`` AND
+    the horizon jointly, and it interacts with the step cap and the lambda>=0 projection
+    (the dual is a clipped, rectified integrator, not a linear filter).  Simulating the
+    shipped arithmetic is the only way to price it without inventing a constant.
+    """
+    k_lo, prov_lo = derive_deadband_k(sigma, eta_lambda, lambda_step_cap, horizon)
+    if not (sigma > 0.0) or not (eta_lambda > 0.0) or not (lambda_step_cap > 0.0):
+        return k_lo, {"calibrated": False, "reason": "degenerate input",
+                      "analytic": prov_lo, "value": float(k_lo)}
+    gain = float(eta_lambda) * float(sigma) / float(lambda_step_cap)
+    lam_max_rel = float(lambda_max) / float(lambda_step_cap)
+    kw = {"gain": gain, "lam_max_rel": lam_max_rel, "horizon": int(horizon),
+          "mean_gates": int(mean_gates), "n_trials": int(n_trials), "seed": int(seed)}
+    lo, hi = float(k_lo), float(k_lo)
+    for _ in range(40):                       # expand until the null is quiet enough
+        if _null_expected_max_lambda(hi, **kw) <= 1.0:
+            break
+        lo, hi = hi, (hi * 2.0 if hi > 1e-9 else 1.0)
+    else:                                     # pragma: no cover - unreachable in practice
+        return hi, {"calibrated": False, "reason": "no k satisfied the null bound",
+                    "analytic": prov_lo, "value": float(hi)}
+    for _ in range(32):
+        mid = 0.5 * (lo + hi)
+        if _null_expected_max_lambda(mid, **kw) > 1.0:
+            lo = mid
+        else:
+            hi = mid
+    k = float(hi)
+    return k, {
+        "calibrated": True,
+        "condition": "E[max_t lambda | NULL] <= lambda_step_cap",
+        "value": k,
+        "analytic_lower_bracket_k": float(k_lo),
+        "selection_bias_k": k - float(k_lo),
+        "null_expected_max_lambda_rel": _null_expected_max_lambda(k, **kw),
+        "loop_gain_eta_sigma_over_cap": gain,
+        "lambda_max_rel": lam_max_rel,
+        "n_trials": int(n_trials), "seed": int(seed), "horizon": int(horizon),
+        "mean_gates": int(mean_gates), "deadband_s_units": k * float(sigma),
+        "analytic": prov_lo,
+    }
+
+
+_K_CACHE: dict[tuple[Any, ...], tuple[float, dict[str, Any]]] = {}
+
+
+def _cached_calibrated_k(
+    sigma: float, eta_lambda: float, lambda_step_cap: float,
+    lambda_max: float, horizon: int, mean_gates: int,
+) -> tuple[float, dict[str, Any]]:
+    """Memoised ``calibrate_deadband_k``, invoked once per gate, so the key quantises the
+    two inputs that drift — and does so in the SCALE-FREE coordinates the statistic
+    actually depends on (see ``_null_expected_max_lambda``):
+
+      * the loop gain ``eta*sigma/cap`` to 3 significant figures.  k varies only
+        logarithmically in the gain, so 0.1% gain granularity is far below any effect on
+        the deadband, and a drifting sigma stops thrashing the cache.
+      * ``horizon`` UP to the next power of two, CONSERVATIVE by construction (a longer
+        horizon yields a larger k, a wider deadband, a quieter guard) and capping the
+        recalibrations per run at log2(n_gates).
+
+    k is scale-free but the DEADBAND is not: the returned k is always multiplied by the
+    caller's live sigma, so quantising the key never quantises the shipped budget.
+    """
+    h = 1
+    while h < max(1, int(horizon)):
+        h <<= 1
+    gain = float(eta_lambda) * float(sigma) / float(lambda_step_cap)
+    gain_q = float(f"{gain:.3g}") if gain > 0.0 else 0.0
+    key = (gain_q, h, int(mean_gates),
+           round(float(lambda_max) / float(lambda_step_cap), 3))
+    hit = _K_CACHE.get(key)
+    if hit is None:
+        # Re-express the quantised gain at the caller's cap/eta so the simulated loop is
+        # the caller's loop; sigma_eff differs from sigma only by the 3-sig-fig rounding.
+        sigma_eff = gain_q * float(lambda_step_cap) / float(eta_lambda)
+        k, prov = calibrate_deadband_k(
+            sigma=sigma_eff, eta_lambda=float(eta_lambda),
+            lambda_step_cap=float(lambda_step_cap), lambda_max=float(lambda_max),
+            horizon=h, mean_gates=int(mean_gates))
+        prov = dict(prov, cache_key_horizon_pow2=h, cache_key_gain_3sf=gain_q,
+                    live_sigma=float(sigma), deadband_s_units=k * float(sigma))
+        _K_CACHE[key] = (k, prov)
+        hit = (k, prov)
+    return hit[0], dict(hit[1], live_sigma=float(sigma),
+                        deadband_s_units=hit[0] * float(sigma))
+
+
+def derive_ratchet_budget(
+    history: list[float] | tuple[float, ...] | np.ndarray,
+    prev_budget_s: float,
+    eta_lambda: float,
+    lambda_step_cap: float,
+    mean_gates: int = N_GATES_TO_ENGAGE_DEFAULT,
+    n_gates_horizon: int | None = None,
+    lambda_max: float = LAMBDA_MAX_DEFAULT,
+    calibrate: bool = True,
+    k_override: float | None = None,
+) -> tuple[float, dict[str, Any]]:
+    """The BUDGET SCHEDULE: a monotone non-increasing ratchet that locks in won Lane.
+
+        L_hat(t) = mean of the last ``mean_gates`` realized values   (achieved level)
+        sigma    = derive_noise_floor(history)                       (measured floor)
+        k        = derive_deadband_k(sigma, eta, cap, W)             (derived deadband)
+        budget(t) = min( budget(t-1),  L_hat(t) + k*sigma )          (RATCHET)
+
+    ``mean_gates`` is the dual's own integration time (N_GATES_TO_ENGAGE_DEFAULT): the
+    budget's averaging window and the dual's engagement window are the SAME bandwidth, so
+    the level loop and the dual loop cannot resonate.  ``n_gates_horizon`` defaults to the
+    self-deriving ``max(mean_gates, len(history))`` — the deadband widens as the run
+    accumulates more chances for a spurious exceedance, which is the correct scaling.
+
+    Fails SAFE: with too little history to measure sigma the previous budget is returned
+    unchanged, so the guard degrades exactly to its pre-ratchet behaviour rather than
+    ratcheting on an unmeasured noise floor.
+    """
+    hist = np.asarray(list(history), dtype=np.float64).ravel()
+    # R1 review catch: derive_noise_floor filters non-finite values but the trailing MEAN
+    # below did not, so a single non-finite realized value would poison the budget through
+    # min(prev, nan) — whose result is order-dependent.  Filter ONCE, here, for both.
+    hist = hist[np.isfinite(hist)]
+    m = max(1, int(mean_gates))
+    sigma, sig_prov = derive_noise_floor(hist, min_gates=m)
+    if sigma is None:
+        return float(prev_budget_s), {
+            "engaged": False, "reason": "insufficient_history",
+            "budget_s": float(prev_budget_s), "sigma": sig_prov,
+        }
+    w = int(n_gates_horizon) if n_gates_horizon else max(m, int(hist.size))
+    if k_override is not None:
+        k = float(k_override)
+        k_prov = {"value": k, "source": "k_override (caller-supplied; A/B or test)"}
+    elif calibrate:
+        k, k_prov = _cached_calibrated_k(sigma, eta_lambda, lambda_step_cap, lambda_max, w, m)
+    else:
+        k, k_prov = derive_deadband_k(sigma, eta_lambda, lambda_step_cap, w)
+    level = float(np.mean(hist[-m:]))
+    target = level + k * sigma
+    new_budget = min(float(prev_budget_s), target)
+    return new_budget, {
+        "engaged": True,
+        "budget_s": float(new_budget),
+        "prev_budget_s": float(prev_budget_s),
+        "achieved_level_s": level,
+        "mean_gates": m,
+        "sigma_s": float(sigma),
+        "deadband_k": float(k),
+        "deadband_s": float(k * sigma),
+        "ratchet_target_s": float(target),
+        "tightened_by_s": float(prev_budget_s) - float(new_budget),
+        "sigma_provenance": sig_prov,
+        "k_provenance": k_prov,
+    }
 
 
 def derive_margin_floor(
@@ -262,7 +641,7 @@ class LaneGuardConfig:
     never invokes the guard => byte-identical."""
 
     enabled: bool = False
-    budget_s: float = LANE_BUDGET_S_UNITS          # ep641 Lane S (xp1)
+    budget_s: float = LANE_BUDGET_S_UNITS          # ep641 Lane S (xp1) — the RATCHET's start
     eta_lambda: float = 0.0                          # 0.0 => derive at build (derive_eta_lambda)
     lambda_step_cap: float = 0.0                     # 0.0 => derive (derive_lambda_step_cap)
     lambda_max: float = LAMBDA_MAX_DEFAULT
@@ -270,6 +649,15 @@ class LaneGuardConfig:
     margin_floor_weight: float = 0.0                 # 0.0 => margin-floor emphasis OFF
     margin_floor_pct: float = 10.0                   # percentile for derive_margin_floor
     lane_sensitivity_ratio: float = LANE_HEAD_SENSITIVITY_RATIO
+    # ---- budget SCHEDULE (ddm_bs2 #871) ----
+    # DEFAULT FALSE so an existing sealed ticket recompiles BIT-IDENTICAL and any landed
+    # run stays reproducible.  "Off" here is NOT a forgotten default: with the ratchet off
+    # the guard SELF-REPORTS its own inertness every gate (`inert_slack_gates` +
+    # `inertness_alarm` in the gate_update telemetry row), so the state is tracked and
+    # surfaced rather than silent.
+    budget_ratchet: bool = False
+    ratchet_mean_gates: int = N_GATES_TO_ENGAGE_DEFAULT   # matched to the dual's integration time
+    ratchet_horizon_gates: int = 0                        # 0 => self-derive max(mean_gates, n_seen)
 
     def resolved(self) -> LaneGuardConfig:
         """Fill any 0.0-sentinel derived field from its derivation (idempotent).
@@ -281,6 +669,11 @@ class LaneGuardConfig:
                 f"lane_guard config invalid: eta_lambda={self.eta_lambda}, "
                 f"lambda_step_cap={self.lambda_step_cap}, lambda_max={self.lambda_max} "
                 "(eta/cap must be >= 0, lambda_max > 0)")
+        if self.ratchet_mean_gates < 1 or self.ratchet_horizon_gates < 0:
+            raise ValueError(
+                f"lane_guard config invalid: ratchet_mean_gates={self.ratchet_mean_gates} "
+                f"(must be >= 1), ratchet_horizon_gates={self.ratchet_horizon_gates} "
+                "(must be >= 0; 0 => self-derive)")
         eta = self.eta_lambda or derive_eta_lambda()[0]
         cap = self.lambda_step_cap or derive_lambda_step_cap()
         return LaneGuardConfig(
@@ -290,6 +683,9 @@ class LaneGuardConfig:
             margin_floor_weight=self.margin_floor_weight,
             margin_floor_pct=self.margin_floor_pct,
             lane_sensitivity_ratio=self.lane_sensitivity_ratio,
+            budget_ratchet=self.budget_ratchet,
+            ratchet_mean_gates=self.ratchet_mean_gates,
+            ratchet_horizon_gates=self.ratchet_horizon_gates,
         )
 
 
@@ -303,9 +699,18 @@ class LaneGuardState:
     n_gates: int = 0
     last_g_s: float = 0.0
     last_realized_lane_s: float = 0.0
+    # ---- budget-schedule state (ddm_bs2 #871) ----
+    realized_history: list[float] = field(default_factory=list)
+    budget_s_current: float | None = None   # None => cfg.budget_s (pre-ratchet behaviour)
+    inert_slack_gates: int = 0              # consecutive gates with lambda==0 AND g<0
 
 
-def dual_ascent(state: LaneGuardState, cfg: LaneGuardConfig, realized_lane_s: float) -> float:
+def dual_ascent(
+    state: LaneGuardState,
+    cfg: LaneGuardConfig,
+    realized_lane_s: float,
+    budget_s: float | None = None,
+) -> float:
     """Bounded projected dual ascent at gate cadence:
 
         g       = realized_lane_s - budget_s              (constraint violation, S-units)
@@ -319,8 +724,12 @@ def dual_ascent(state: LaneGuardState, cfg: LaneGuardConfig, realized_lane_s: fl
     constraint g is measured).  Within a gate interval lambda is CONSTANT, so the
     primal sees a slowly-varying, per-interval-fixed weight — no per-step thrash,
     consistent with the caps-law spirit.  ``lambda_step_cap`` + ``lambda_max`` bound
-    it so a single noisy gate cannot dominate the primal."""
-    g = float(realized_lane_s) - float(cfg.budget_s)
+    it so a single noisy gate cannot dominate the primal.
+
+    ``budget_s`` overrides ``cfg.budget_s`` for this gate (the RATCHETED budget); None
+    keeps the static config budget, i.e. the exact pre-ratchet behaviour."""
+    eff_budget = float(cfg.budget_s if budget_s is None else budget_s)
+    g = float(realized_lane_s) - eff_budget
     step = max(-cfg.lambda_step_cap, min(cfg.lambda_step_cap, cfg.eta_lambda * g))
     new_lambda = max(0.0, min(cfg.lambda_max, state.lambda_lane + step))
     state.lambda_lane = float(new_lambda)
@@ -350,7 +759,39 @@ def gate_update(
     realized_arr = np.asarray(realized_argmax)
     gts_arr = np.asarray(gts)
     realized_lane_s = per_class_lane_flip_S(realized_arr, gts_arr, LANE_CLASS)
-    lam = dual_ascent(state, cfg, realized_lane_s)
+    state.realized_history.append(float(realized_lane_s))
+
+    # --- BUDGET SCHEDULE: ratchet BEFORE the dual sees the violation ---------------
+    if state.budget_s_current is None:
+        state.budget_s_current = float(cfg.budget_s)
+    if cfg.budget_ratchet:
+        new_budget, ratchet_prov = derive_ratchet_budget(
+            state.realized_history, state.budget_s_current,
+            cfg.eta_lambda, cfg.lambda_step_cap,
+            mean_gates=cfg.ratchet_mean_gates,
+            n_gates_horizon=(cfg.ratchet_horizon_gates or None),
+            # R1 review catch: the null calibration depends on lambda_max/cap, so a run that
+            # overrides --lane-guard-lambda-max MUST calibrate against ITS ceiling, not the
+            # 5.0 default.  Omitting this silently calibrated every run as if lambda_max=5.
+            lambda_max=cfg.lambda_max,
+        )
+        state.budget_s_current = float(new_budget)
+    else:
+        ratchet_prov = {"engaged": False, "reason": "budget_ratchet_disabled",
+                        "budget_s": float(state.budget_s_current)}
+
+    lam = dual_ascent(state, cfg, realized_lane_s, budget_s=state.budget_s_current)
+
+    # --- INERTNESS self-report: "off" is a TRACKED state, never a silent default ----
+    # The burn-4 defect signature is exactly (lambda == 0) AND (g < 0) sustained: a guard
+    # that cannot engage.  Count it and raise once the run has had a full engagement
+    # window of opportunity, so an inert guard can never again be mistaken for a
+    # satisfied one by a reader of this telemetry.
+    if lam <= 0.0 and state.last_g_s < 0.0:
+        state.inert_slack_gates += 1
+    else:
+        state.inert_slack_gates = 0
+    inertness_alarm = state.inert_slack_gates >= max(1, int(cfg.ratchet_mean_gates))
 
     # born-lane support masks for THIS gate's pairs (used next epoch's pair_loss).
     if cfg.born_protect_weight > 0.0:
@@ -373,7 +814,14 @@ def gate_update(
         "event": "lane_guard",
         "n_gates": state.n_gates,
         "realized_lane_s_units": float(realized_lane_s),
-        "budget_s_units": float(cfg.budget_s),
+        "budget_s_units": float(state.budget_s_current),
+        "budget_s_static": float(cfg.budget_s),
+        "budget_ratchet": bool(cfg.budget_ratchet),
+        "ratchet": ratchet_prov,
+        # The guard's own inertness receipt (ddm_bs2 #871): burn-4 ran 64/64 gates in
+        # exactly this state and no telemetry field said so.
+        "inert_slack_gates": int(state.inert_slack_gates),
+        "inertness_alarm": bool(inertness_alarm),
         "g_s_units": float(state.last_g_s),
         "lambda_lane": float(lam),
         # KKT complementarity residual lambda*g (the #549 KKTDiagnostics-aligned surface:
@@ -442,15 +890,19 @@ __all__ = [
     "LANE_CLASS",
     "LANE_HEAD_SENSITIVITY_RATIO",
     "N_CLASSES",
+    "N_GATES_TO_ENGAGE_DEFAULT",
     "SEG_H",
     "SEG_W",
     "LaneGuardConfig",
     "LaneGuardState",
     "born_lane_support_mask",
+    "derive_deadband_k",
     "derive_eta_lambda",
     "derive_lambda_step_cap",
     "derive_lane_head_sensitivity_ratio",
     "derive_margin_floor",
+    "derive_noise_floor",
+    "derive_ratchet_budget",
     "dual_ascent",
     "gate_update",
     "per_class_lane_flip_S",
