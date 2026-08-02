@@ -7,6 +7,9 @@ mutation guard at the bottom states explicitly what a marker-returning stub coul
 """
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 import numpy as np
 import pytest
 
@@ -747,3 +750,154 @@ def test_the_exact_pre_fix_call_shape_is_now_refused(tmp_path) -> None:
             path=p)
     assert not p.exists() or p.read_text(encoding="utf-8").strip() == ""
     assert built_elsewhere_unwired(p) == ()
+
+
+# ---------------------------------------------------------------------------
+# THE READ PATH RE-RUNS THE WRITE GATE (ddm_ri1, #899).
+# ddm_wd2 signed the harm clause on the WRITE path and left the READ path open, deliberately
+# and in writing: dropping unverified rows is signal loss, silently trusting them is a false
+# claim. The third option is to TYPE what was loaded. MEASURED against the pre-fix module: a
+# hand-appended grade-5 row with NO numbers -- a shape record_required_component REFUSES -- was
+# read back, entered built_elsewhere_unwired(), and sorted to build_completeness_report()[0],
+# ABOVE a genuinely measured row; and a truncated line vanished (3 lines on disk -> 2 rows, no
+# signal). Since ddm_gd5 DELETED the grade-5 detector, DECLARATION is the only route into this
+# grade, so the read path is the only remaining check on it.
+# ---------------------------------------------------------------------------
+
+
+def _hand_append(p, component, **over):
+    """Write a row the way a HUMAN or a partial write would — bypassing the write gate entirely."""
+    row = {
+        "component": component, "needed_by": "cfgOptimalFromStart",
+        "grade": "built-elsewhere-unwired", "missing_mechanism": "declared, never measured",
+        "owner": "whoever-edited-the-file", "fire_order": 0, "consumer": "the live receiver",
+        "notes": "", "live_recipient": "", "measured_comparison": "", "live_measured": None,
+        "candidate_measured": None, "metric_direction": "", "harm_advantage": None,
+        "agent": "hand-edit", "ts": "2026-08-02T00:00:00Z",
+    }
+    row.update(over)
+    with Path(p).open("a", encoding="utf-8") as fh:
+        fh.write(json.dumps(row, sort_keys=True) + "\n")
+    return row
+
+
+def test_hand_appended_grade5_row_is_typed_declared_unverified(tmp_path) -> None:
+    """POSITIVE CONTROL: the read path refuses to believe what the write path would have refused."""
+    from tac.witness_dsl.activation_ledger import RECORD_DECLARED_UNVERIFIED
+
+    p = tmp_path / "req.jsonl"
+    _hand_append(p, "HandAppendedNoEvidence")
+    row = next(r for r in read_required_components(p) if r["component"] == "HandAppendedNoEvidence")
+    assert row["record_integrity"] == RECORD_DECLARED_UNVERIFIED
+    # The REASON travels with the row: a bare flag would make the operator re-derive the defect.
+    # (First failing check wins — here the absent recipient; the numbers branch is asserted below.)
+    assert "live_recipient" in row["record_integrity_reason"]
+
+    # A row that clears the PROSE fields but carries no numbers — the exact pre-wd2 call shape,
+    # which is what a row written before the signed clause landed looks like on disk today.
+    _hand_append(p, "PoseBasisSwap", live_recipient="warp-pose6 (live in inflate_runner_v4d)",
+                 measured_comparison="candidate plateaus d_pose ~29-30 vs live 0.00858133")
+    row2 = next(r for r in read_required_components(p) if r["component"] == "PoseBasisSwap")
+    assert row2["record_integrity"] == RECORD_DECLARED_UNVERIFIED
+    assert "metric_direction" in row2["record_integrity_reason"]
+
+
+def test_written_row_verifies_so_the_typing_is_not_an_unconditional_reject(tmp_path) -> None:
+    """NEGATIVE CONTROL. Without this, 'everything is declared-unverified' would pass every test."""
+    from tac.witness_dsl.activation_ledger import RECORD_VERIFIED
+
+    p = tmp_path / "req.jsonl"
+    record_required_component("RealWinner", path=p, **_harm_kwargs())
+    row = next(r for r in read_required_components(p) if r["component"] == "RealWinner")
+    assert row["record_integrity"] == RECORD_VERIFIED
+    assert row["record_integrity_reason"] == ""
+
+
+def test_unverified_grade5_row_cannot_lead_the_operator_report(tmp_path) -> None:
+    """THE defect, end to end: rank 0 asserts a MEASURED present loss, so a declaration cannot hold it.
+
+    Pre-fix this ordering INVERTED — the evidence-free row led and the measured one sat under it.
+    """
+    from tac.witness_dsl.activation_ledger import BUILD_GRADE_ORDER, BUILD_NEVER_FIRED
+
+    p = tmp_path / "req.jsonl"
+    _hand_append(p, "HandAppendedNoEvidence")          # fire_order 0 — would sort first on every key
+    record_required_component("RealWinner", path=p, **_harm_kwargs(fire_order=5))
+
+    rep = {r["component"]: r for r in build_completeness_report(p)}
+    assert build_completeness_report(p)[0]["component"] == "RealWinner"
+    assert rep["RealWinner"]["sort_rank"] == 0
+    # Demoted to the rank of the grade the refusal text calls it indistinguishable from...
+    assert rep["HandAppendedNoEvidence"]["sort_rank"] == BUILD_GRADE_ORDER[BUILD_NEVER_FIRED]
+    # ...but NOT relabelled: swapping one false record for another is not a repair.
+    assert rep["HandAppendedNoEvidence"]["grade"] == "built-elsewhere-unwired"
+
+
+def test_unverified_row_is_kept_not_dropped_and_the_queue_orders_verified_first(tmp_path) -> None:
+    """Dropping is the failure mode ddm_wd2 named. It stays visible in every surface, typed."""
+    from tac.witness_dsl.activation_ledger import RECORD_DECLARED_UNVERIFIED, RECORD_VERIFIED
+
+    p = tmp_path / "req.jsonl"
+    _hand_append(p, "HandAppendedNoEvidence")
+    record_required_component("RealWinner", path=p, **_harm_kwargs(fire_order=5))
+
+    q = built_elsewhere_unwired(p)
+    assert [r["component"] for r in q] == ["RealWinner", "HandAppendedNoEvidence"]
+    assert [r["record_integrity"] for r in q] == [RECORD_VERIFIED, RECORD_DECLARED_UNVERIFIED]
+    assert "HandAppendedNoEvidence" in {r["component"] for r in read_required_components(p)}
+
+
+def test_malformed_lines_are_counted_instead_of_silently_skipped(tmp_path) -> None:
+    """A skipped line and an empty file used to emit the same symbol — the vacuity genus."""
+    from tac.witness_dsl.activation_ledger import required_component_integrity_summary
+
+    p = tmp_path / "req.jsonl"
+    record_required_component("RealWinner", path=p, **_harm_kwargs())
+    _hand_append(p, "HandAppendedNoEvidence")
+    with p.open("a", encoding="utf-8") as fh:
+        fh.write('{"component": "TruncatedRow", "grade": "built-elsewhe\n')   # unparseable
+        fh.write('{"component": "BadGrade", "grade": "invented-grade"}\n')     # parses, not a row
+
+    s = required_component_integrity_summary(p)
+    assert (s["rows_read"], s["verified"], s["declared_unverified"]) == (2, 1, 1)
+    assert s["malformed_lines"] == 2
+    assert s["declared_unverified_components"] == ["HandAppendedNoEvidence"]
+    assert {d["line_no"] for d in s["malformed_detail"]} == {3, 4}   # the LOCATION, not just a count
+
+
+def test_integrity_summary_on_an_absent_store_reports_zeros_not_a_crash(tmp_path) -> None:
+    """The denominator must be readable when there is nothing to read — that IS the useful answer."""
+    from tac.witness_dsl.activation_ledger import required_component_integrity_summary
+
+    s = required_component_integrity_summary(tmp_path / "does_not_exist.jsonl")
+    assert s["rows_read"] == 0 and s["malformed_lines"] == 0
+
+
+def test_the_live_store_is_currently_clean_so_the_typing_has_a_real_denominator(tmp_path) -> None:
+    """Runs against the REAL ledger: every stored row must re-pass the gate that wrote it.
+
+    This is the regression guard that matters — it fails the moment anyone hand-edits the canonical
+    store into a state its own writer would refuse.
+    """
+    from tac.witness_dsl.activation_ledger import required_component_integrity_summary
+
+    s = required_component_integrity_summary()
+    assert s["rows_read"] > 0, "empty scope: this assertion would pass vacuously"
+    assert s["declared_unverified"] == 0, s["declared_unverified_components"]
+    assert s["malformed_lines"] == 0, s["malformed_detail"]
+
+
+def test_one_malformed_fire_order_cannot_silence_the_whole_store(tmp_path) -> None:
+    """Round-2 self-review catch: a bad sort key used to raise and take the ENTIRE read down.
+
+    One bad row costing the whole corpus is the 2026-08-01 recall-layer failure. The bad row is
+    already typed declared-unverified; it must not also be able to hide its healthy neighbours.
+    """
+    p = tmp_path / "req.jsonl"
+    record_required_component("RealWinner", path=p, **_harm_kwargs())
+    _hand_append(p, "BadFireOrder", fire_order="not-an-int")
+
+    names = {r["component"] for r in read_required_components(p)}
+    assert names == {"RealWinner", "BadFireOrder"}, "the healthy row must survive its bad neighbour"
+    assert [r["component"] for r in built_elsewhere_unwired(p)][0] == "RealWinner"
+    assert build_completeness_report(p)[0]["component"] == "RealWinner"

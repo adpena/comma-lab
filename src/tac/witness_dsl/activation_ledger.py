@@ -790,6 +790,56 @@ def record_required_component(
     direction. NO-FAKE: the caller supplies two already-measured scalars; only their comparison is
     derived, so this surface cannot manufacture a win.
     """
+    harm_advantage = _validate_required_component(
+        component, needed_by=needed_by, missing_mechanism=missing_mechanism, owner=owner,
+        fire_order=fire_order, consumer=consumer, grade=grade, notes=notes,
+        live_recipient=live_recipient, measured_comparison=measured_comparison,
+        live_measured=live_measured, candidate_measured=candidate_measured,
+        metric_direction=metric_direction)
+    row = {
+        "component": component, "needed_by": needed_by, "grade": grade,
+        "missing_mechanism": missing_mechanism, "owner": owner, "fire_order": fire_order,
+        "consumer": consumer, "notes": notes, "live_recipient": live_recipient,
+        "measured_comparison": measured_comparison, "live_measured": live_measured,
+        "candidate_measured": candidate_measured, "metric_direction": metric_direction,
+        "harm_advantage": harm_advantage, "agent": agent, "ts": _utc(),
+    }
+    append_locked_jsonl(Path(path) if path is not None else REQUIRED_COMPONENT_PATH, row)
+    return row
+
+
+def _validate_required_component(
+    component: object,
+    *,
+    needed_by: object,
+    missing_mechanism: object,
+    owner: object,
+    fire_order: object,
+    consumer: object,
+    grade: object,
+    notes: object = "",
+    live_recipient: object = "",
+    measured_comparison: object = "",
+    live_measured: object = None,
+    candidate_measured: object = None,
+    metric_direction: object = "",
+) -> float | None:
+    """THE single admission predicate for a required-component row. Raises; returns harm_advantage.
+
+    Extracted by ddm_ri1 (#899) so the WRITE path and the READ path decide admissibility with the
+    SAME code. Before this, only :func:`record_required_component` enforced the charter and the harm
+    clause, while :func:`read_required_components` admitted any JSON line carrying a ``component``
+    and a known ``grade``. MEASURED against HEAD before the change: a hand-appended grade-5 row with
+    no ``live_measured``/``candidate_measured``/``metric_direction`` at all — a shape the write path
+    REFUSES — was read back, entered :func:`built_elsewhere_unwired`, and sorted to
+    ``build_completeness_report()[0]``, ABOVE a genuinely measured row. A gate whose read path does
+    not re-run its own write gate is not a gate; per ``ddm_gd5`` deleting the grade-5 detector,
+    DECLARATION is currently the only route into this grade, so the read path is the only remaining
+    check on it.
+
+    A duplicated predicate would be a drift generator (this module already says so about
+    ``BUILD_GRADE_ORDER``), so there is exactly one and both callers share it.
+    """
     if not component or not isinstance(component, str):
         raise ValueError(f"component must be a non-empty str, got {component!r}")
     if grade not in VALID_BUILD_GRADES:
@@ -861,35 +911,129 @@ def record_required_component(
                               else cand_f / live_f)
     else:
         harm_advantage = None
-    row = {
-        "component": component, "needed_by": needed_by, "grade": grade,
-        "missing_mechanism": missing_mechanism, "owner": owner, "fire_order": fire_order,
-        "consumer": consumer, "notes": notes, "live_recipient": live_recipient,
-        "measured_comparison": measured_comparison, "live_measured": live_measured,
-        "candidate_measured": candidate_measured, "metric_direction": metric_direction,
-        "harm_advantage": harm_advantage, "agent": agent, "ts": _utc(),
-    }
-    append_locked_jsonl(Path(path) if path is not None else REQUIRED_COMPONENT_PATH, row)
-    return row
+    return harm_advantage
+
+
+# ── RECORD INTEGRITY (ddm_ri1, #899) ─────────────────────────────────────────────────────────────
+# What a reader of a stored row is allowed to believe. A row that was WRITTEN through
+# record_required_component passed the charter + harm clause; a row that appeared in the file some
+# other way (hand edit, partial write, a schema change that predates a clause) did not. Before this
+# typing the two were INDISTINGUISHABLE on read, which is the vacuity genus at the record level:
+# "declared" returned the same shape as "verified", so a consumer could not tell an asserted harm
+# from a measured one.
+RECORD_VERIFIED = "verified"              # re-passes the write-path predicate NOW
+RECORD_DECLARED_UNVERIFIED = "declared-unverified"  # present and readable, but fails that predicate
+RECORD_MALFORMED = "malformed"            # not parseable / not a row at all -- counted, never silent
+VALID_RECORD_INTEGRITY = (RECORD_VERIFIED, RECORD_DECLARED_UNVERIFIED, RECORD_MALFORMED)
+
+
+def verify_required_component_row(row: dict) -> tuple[str, str]:
+    """Re-run the WRITE-path predicate on a STORED row → ``(integrity, reason)``.
+
+    ``reason`` is the verbatim refusal text when the row does not verify, so the operator sees WHY a
+    stored claim is not believable rather than a bare flag. NO-FAKE: this decides nothing new — it
+    replays the same admission check the writer applied, so a row can never be "verified" here on
+    weaker evidence than it would have needed to be written.
+    """
+    if not isinstance(row, dict):
+        return RECORD_MALFORMED, f"not a JSON object: {type(row).__name__}"
+    try:
+        _validate_required_component(
+            row.get("component"), needed_by=row.get("needed_by"),
+            missing_mechanism=row.get("missing_mechanism"), owner=row.get("owner"),
+            fire_order=row.get("fire_order"), consumer=row.get("consumer"),
+            grade=row.get("grade"), notes=row.get("notes", ""),
+            live_recipient=row.get("live_recipient", ""),
+            measured_comparison=row.get("measured_comparison", ""),
+            live_measured=row.get("live_measured"),
+            candidate_measured=row.get("candidate_measured"),
+            metric_direction=row.get("metric_direction", ""))
+    except (ValueError, TypeError) as exc:
+        # TypeError too: a stored value of an unexpected TYPE must type the ROW, never crash the
+        # read of the whole ledger. One bad row taking down the reader is how the recall layer
+        # lost 100% of its corpus to 0.25% of it on 2026-08-01.
+        return RECORD_DECLARED_UNVERIFIED, str(exc)
+    return RECORD_VERIFIED, ""
 
 
 def read_required_components(path: Path | None = None) -> list[dict]:
-    """Latest-row-wins declared required components, sorted by (fire_order, component)."""
+    """Latest-row-wins declared required components, sorted by (fire_order, component).
+
+    Every returned row carries ``record_integrity`` (see :func:`verify_required_component_row`) and
+    ``record_integrity_reason``. Rows are NEVER dropped for failing to verify — dropping would be
+    the signal loss this ledger exists to prevent — but they are TYPED, so no consumer can mistake a
+    declaration for a measurement. Unparseable lines are counted by
+    :func:`required_component_integrity_summary`, which reports the DENOMINATOR: a silently skipped
+    line and a file with nothing in it used to be indistinguishable.
+    """
+    rows, _ = _read_required_components_with_defects(path)
+    return rows
+
+
+def _read_required_components_with_defects(
+    path: Path | None = None,
+) -> tuple[list[dict], list[dict]]:
+    """(typed rows, malformed line records). Internal so the public read stays a plain list."""
     p = Path(path) if path is not None else REQUIRED_COMPONENT_PATH
     if not p.exists():
-        return []
+        return [], []
     latest: dict[tuple[str, str], dict] = {}
-    for ln in p.read_text(encoding="utf-8").splitlines():
+    malformed: list[dict] = []
+    for line_no, ln in enumerate(p.read_text(encoding="utf-8").splitlines(), start=1):
         ln = ln.strip()
         if not ln:
             continue
         try:
             row = json.loads(ln)
-        except (json.JSONDecodeError, ValueError):
+        except (json.JSONDecodeError, ValueError) as exc:
+            malformed.append({"line_no": line_no, "reason": f"unparseable JSON: {exc}",
+                              "excerpt": ln[:120]})
             continue
-        if isinstance(row, dict) and row.get("component") and row.get("grade") in VALID_BUILD_GRADES:
-            latest[(row["component"], row.get("needed_by", ""))] = row
-    return sorted(latest.values(), key=lambda r: (r.get("fire_order", 0), r["component"]))
+        if not (isinstance(row, dict) and row.get("component")
+                and row.get("grade") in VALID_BUILD_GRADES):
+            malformed.append({"line_no": line_no,
+                              "reason": "missing component or grade outside VALID_BUILD_GRADES",
+                              "excerpt": ln[:120]})
+            continue
+        integrity, reason = verify_required_component_row(row)
+        row["record_integrity"] = integrity
+        row["record_integrity_reason"] = reason
+        latest[(row["component"], row.get("needed_by", ""))] = row
+    ordered = sorted(latest.values(), key=lambda r: (_fire_order_key(r), r["component"]))
+    return ordered, malformed
+
+
+def _fire_order_key(row: dict) -> int:
+    """Sort key that a malformed ``fire_order`` cannot crash.
+
+    Found in my own round-2 review: a stored ``fire_order`` of the wrong TYPE (a string, a null)
+    made ``sorted`` raise and took down the read of the WHOLE store — one bad row costing the
+    entire corpus, the failure the recall layer hit on 2026-08-01. Such a row is already typed
+    ``declared-unverified``; it must not also be able to silence its 21 healthy neighbours.
+    """
+    val = row.get("fire_order", 0)
+    return val if isinstance(val, int) and not isinstance(val, bool) else 0
+
+
+def required_component_integrity_summary(path: Path | None = None) -> dict:
+    """The DENOMINATOR for the required-component store: how much of it is believable.
+
+    Exists because an empty scope and a clean scope emit the same symbol unless the counts are
+    reported (memory ``vacuity_is_indistinguishable_from_pass_empty_scope_confound_20260801``). A
+    caller that only ever sees the row list cannot tell "no unverified claims" from "the reader
+    skipped them".
+    """
+    rows, malformed = _read_required_components_with_defects(path)
+    by = {k: [r["component"] for r in rows if r.get("record_integrity") == k]
+          for k in (RECORD_VERIFIED, RECORD_DECLARED_UNVERIFIED)}
+    return {
+        "rows_read": len(rows),
+        "verified": len(by[RECORD_VERIFIED]),
+        "declared_unverified": len(by[RECORD_DECLARED_UNVERIFIED]),
+        "malformed_lines": len(malformed),
+        "declared_unverified_components": by[RECORD_DECLARED_UNVERIFIED],
+        "malformed_detail": malformed,
+    }
 
 
 def not_even_designed(path: Path | None = None) -> tuple[dict, ...]:
@@ -930,10 +1074,18 @@ def built_elsewhere_unwired(path: Path | None = None) -> tuple[dict, ...]:
 
     A row drops off automatically once the component acquires a lever factory — the registry
     decides, not a memo — exactly as the grade-4 queue behaves.
+
+    VERIFIED ROWS COME FIRST (ddm_ri1, #899). A row that does not re-pass the write-path harm clause
+    is still returned — dropping it would be signal loss, and it may be a real wiring debt someone
+    simply has not measured yet — but it cannot lead a queue whose whole premise is measured present
+    loss. It is typed ``record_integrity`` so a consumer reads a declaration as a declaration.
     """
     idx = _build_index()
-    return tuple(r for r in read_required_components(path)
-                 if r.get("grade") == BUILD_ELSEWHERE_UNWIRED and r["component"] not in idx)
+    rows = [r for r in read_required_components(path)
+            if r.get("grade") == BUILD_ELSEWHERE_UNWIRED and r["component"] not in idx]
+    rows.sort(key=lambda r: (0 if r.get("record_integrity") == RECORD_VERIFIED else 1,
+                             _fire_order_key(r), r["component"]))
+    return tuple(rows)
 
 
 def build_completeness_report(path: Path | None = None) -> list[dict]:
@@ -982,10 +1134,39 @@ def build_completeness_report(path: Path | None = None) -> list[dict]:
             "candidate_measured": r.get("candidate_measured"),
             "metric_direction": r.get("metric_direction"),
             "harm_advantage": r.get("harm_advantage"),
+            # What the reader is allowed to believe about this stored row (ddm_ri1, #899).
+            "record_integrity": r.get("record_integrity"),
+            "record_integrity_reason": r.get("record_integrity_reason"),
         })
-    rows.sort(key=lambda r: (BUILD_GRADE_ORDER.get(r["grade"], 9), r.get("fire_order", 0),
-                             r["component"]))
+    for row in rows:
+        row["sort_rank"] = _effective_grade_rank(row)
+    rows.sort(key=lambda r: (r["sort_rank"], _fire_order_key(r), r["component"]))
     return rows
+
+
+def _effective_grade_rank(row: dict) -> int:
+    """Read order for one report row — the declared rank, DEMOTED when its evidence does not hold.
+
+    ``built-elsewhere-unwired`` holds rank 0 for exactly one reason, stated in ``BUILD_GRADE_ORDER``
+    and in the write path's own refusal text: it is the only grade whose declaration is refused
+    without a MEASURED present loss. A stored row that does not re-pass that check has not earned
+    that reason, so it must not lead the operator-facing report above rows carrying real debt.
+
+    The demotion TARGET is derived, not chosen: the refusal text says such a row "is
+    indistinguishable from built-never-fired, which is dormant and harmless", so it reads at
+    built-never-fired's rank. The row KEEPS its declared grade label — silently relabelling it would
+    swap one false record for another; only the read ORDER changes, and ``record_integrity`` says
+    why. Rows of every other grade keep their rank: their rank is not evidence-justified, so an
+    unverified charter there is a debt with a thin description, not an unproven harm claim.
+    """
+    declared = BUILD_GRADE_ORDER.get(row.get("grade"), 9)
+    # FAIL-CLOSED: rank 0 requires POSITIVE evidence of verification, so an absent
+    # ``record_integrity`` demotes exactly like a failed one. Factory-derived rows never carry this
+    # grade (``build_grade`` cannot return it), so the strict form cannot demote a real build row.
+    if (row.get("grade") == BUILD_ELSEWHERE_UNWIRED
+            and row.get("record_integrity") != RECORD_VERIFIED):
+        return BUILD_GRADE_ORDER[BUILD_NEVER_FIRED]
+    return declared
 
 
 __all__ = [
@@ -1000,6 +1181,9 @@ __all__ = [
     "EVENT_MEASURED",
     "EVENT_RETIRED",
     "LEDGER_PATH",
+    "RECORD_DECLARED_UNVERIFIED",
+    "RECORD_MALFORMED",
+    "RECORD_VERIFIED",
     "REQUIRED_COMPONENT_PATH",
     "SIGNIFICANCE_PATH",
     "SIG_LABEL_ESTIMATED",
@@ -1013,6 +1197,7 @@ __all__ = [
     "TARGET_D_SEG",
     "VALID_BUILD_GRADES",
     "VALID_EVENTS",
+    "VALID_RECORD_INTEGRITY",
     "VALID_SIG_AXES",
     "VALID_SIG_LABELS",
     "ActivationStatus",
@@ -1036,4 +1221,6 @@ __all__ = [
     "record_relative_significance",
     "record_required_component",
     "relative_significance",
+    "required_component_integrity_summary",
+    "verify_required_component_row",
 ]
