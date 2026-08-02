@@ -1,0 +1,76 @@
+--- a/experiments/ddm_v4c_resolve.py
++++ b/experiments/ddm_v4c_resolve.py
+@@ -817,7 +817,20 @@
+                "ab_starts_tried": ab_trace.get("starts_tried", ["neutral"]),
+                "ab_relins": ab_trace["n_relin"],
+                "ab_damp_used": ab_trace["damp_used"],
+-               "p": [float(v) for v in theta]}
++               "p": [float(v) for v in theta],
++               # ddm_fs1/ddm_ft1: STAMP the co-coordinate state this (a,b) was
++               # solved against.  Rung B ran at rot_scale=1.0 (beta=0) on THIS
++               # theta; rung A then moves beta and later stages move theta, so
++               # without this stamp the staleness is unrecoverable from the
++               # artifact and `fit_staleness` must return UNDETERMINED_NO_CONTEXT
++               # (absence is NEVER freshness).  The menu records what the fit
++               # actually sampled: magnitudes only, sign PINNED to yaw -- so a
++               # shipped opposing sign is a hull escape too (MEASURED: 63 pairs,
++               # invisible to a magnitude-only test).
++               "fitted_against": {"beta": 0.0,
++                                  "p": [float(v) for v in theta]},
++               "fit_menu": {"beta": [0.0, *(float(g) for g in RS_GLOBAL_G)],
++                            "beta_sign_pinned_to_yaw": True}}
+         fj.write(json.dumps(rec) + "\n")
+         fj.flush()
+         os.fsync(fj.fileno())
+--- a/experiments/ddm_v4d_resolve.py
++++ b/experiments/ddm_v4d_resolve.py
+@@ -384,7 +384,15 @@
+                "dim0_fine": float(best_x),
+                "d_coarse_dim0": float(d_coarse), "d_dim0": float(d_dim0),
+                "d_ab": float(d_ab), "d_final": float(d_final),
+-               "d_ref_v4c": d_ref, "rungA_by_g": by_g, "n_fwd": int(nfwd)}
++               "d_ref_v4c": d_ref, "rungA_by_g": by_g, "n_fwd": int(nfwd),
++               # ddm_fs1/ddm_ft1: _refit_ab ran at rot_scale=1.0 (beta=0) on the
++               # post-dim0 `pose`; _beta_select then moves beta on the NEXT line
++               # and downstream refiners move pose dims.  Stamp the state the
++               # (a,b) was fitted against so the staleness stays recoverable.
++               "fitted_against": {"beta": 0.0,
++                                  "p": [float(v) for v in pose]},
++               "fit_menu": {"beta": [float(g) for g in BETA_MAGS],
++                            "beta_sign_pinned_to_yaw": True}}
+         fj.write(json.dumps(rec) + "\n")
+         fj.flush()
+         os.fsync(fj.fileno())
+--- a/tools/mq1_joint_pose_refine_emit.py
++++ b/tools/mq1_joint_pose_refine_emit.py
+@@ -217,7 +217,15 @@
+                "p": [float(v) for v in pose], "a": a, "b": b,
+                "selector": sel, "beta_mag": float(g),
+                "d_final": float(d_cur), "gain": max(d_ctrl - d_cur, 0.0),
+-               "s_t": s_t, "n_eval": n_eval, "source": "mq1_joint_refine"}
++               "s_t": s_t, "n_eval": n_eval, "source": "mq1_joint_refine",
++               # ddm_fs1/ddm_ft1: this refiner moves p1/p2/beta and does NOT
++               # re-solve (a,b) (`--order` cannot contain gain/bias).  So it
++               # must CARRY FORWARD the inherited fit context verbatim -- a
++               # fresh stamp here would claim a freshness that was never
++               # re-established.  MEASURED 2026-08-02: 128 of 147 replaced rows
++               # move p1/p2 under a (a,b) fitted at the pre-refine pose.
++               "fitted_against": sh.get("fitted_against"),
++               "fit_menu": sh.get("fit_menu")}
+         fj.write(json.dumps(rec) + "\n")
+         fj.flush()
+         os.fsync(fj.fileno())
+@@ -265,7 +273,12 @@
+                     row = {"pair": p, "p": r["p"], "a": r["a"], "b": r["b"],
+                            "selector": r["selector"], "beta_idx": 0,
+                            "beta_mag": r["beta_mag"], "d_final": r["d_final"],
+-                           "source": "mq1_joint_refine"}
++                           "source": "mq1_joint_refine",
++                           # carry the inherited context into the merged table;
++                           # dropping it here would silently downgrade every
++                           # replaced row to UNDETERMINED_NO_CONTEXT.
++                           "fitted_against": r.get("fitted_against"),
++                           "fit_menu": r.get("fit_menu")}
+                     n_replaced += 1
+                 else:
+                     row = dict(src)
