@@ -52686,6 +52686,94 @@ _CHECK_184_WAIVER_RE = re.compile(
     r"#\s*PREFLIGHT_HOOK_DEFAULT_OK\s*:\s*\S"
 )
 
+# --- #184 SCOPE EXTENSION (2026-08-02, task #892): the hook's default mode
+# must stay CHEAP, not merely correctly-shaped. `tools/preflight_hook.py`
+# runs `python -m tac.preflight` on EVERY commit and push, so anything
+# imported at module scope in the modules below is paid every time --
+# including in `--no-codebase` mode, which examines 0 of 27 gates.
+# MEASURED: a module-level `import torch` cost 43.86s real / 0.44s user when
+# the page cache had evicted torch's ~1 GB of dylibs, and 0.48s warm. That
+# BIMODALITY straddled the hook's own 30s timeout: green on every warm run,
+# rc=124 on every cold one, which reads as flaky drift rather than a fixed
+# cost. Deferring the import to the four `torch.load` call sites took the
+# same command to 0.06s and removed the cold mode entirely.
+# A heavy import here is a DX defect, never a correctness one -- import it
+# inside the function that needs it. Per-line waiver if a module-scope heavy
+# import is genuinely required: `# HOOK_HEAVY_IMPORT_OK:<rationale>`.
+_CHECK_184_HOOK_IMPORT_PATH_MODULES: tuple[str, ...] = ("src/tac/preflight.py",)
+_CHECK_184_HEAVY_IMPORT_ROOTS: frozenset[str] = frozenset(
+    {"torch", "mlx", "cv2", "av", "scipy", "sklearn", "matplotlib", "pandas"}
+)
+_CHECK_184_HEAVY_IMPORT_WAIVER_RE = re.compile(r"#\s*HOOK_HEAVY_IMPORT_OK\s*:\s*\S")
+
+
+def _check_184_import_time_statements(body: list[ast.stmt]) -> Iterable[ast.stmt]:
+    """Yield every statement that EXECUTES at import time, at any nesting depth.
+
+    "Module scope" is about COST, not indentation. A `try: import torch / except
+    ImportError:` guard, an `if TYPE_CHECKING:`-adjacent conditional, a `with`
+    block, or a class body all run on import and pay the full price -- and the
+    try/except form is exactly what someone reaching for a "defensive" import
+    would write, so a gate that only reads `tree.body` has a hole in its most
+    likely evasion path. Function and lambda bodies are deliberately NOT
+    descended into: a function-local import is the CURE this gate asks for, and
+    a gate that forbade its own remedy would be unusable.
+    """
+    for node in body:
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        yield node
+        for attr in ("body", "orelse", "finalbody"):
+            nested = getattr(node, attr, None)
+            if isinstance(nested, list):
+                yield from _check_184_import_time_statements(nested)
+        for handler in getattr(node, "handlers", []) or []:
+            yield from _check_184_import_time_statements(handler.body)
+
+
+def _check_184_module_scope_heavy_imports(root: Path) -> list[str]:
+    """Return violations for import-time heavy imports on the hook's import path.
+
+    Scope is every statement that runs on `import tac.preflight` -- module body
+    plus module-level try/if/with/class bodies. Function-local imports are the
+    cure and never count.
+    """
+    violations: list[str] = []
+    for rel in _CHECK_184_HOOK_IMPORT_PATH_MODULES:
+        path = root / rel
+        if not path.is_file():
+            continue
+        try:
+            text = path.read_text(encoding="utf-8", errors="replace")
+            tree = ast.parse(text)
+        except (OSError, SyntaxError):
+            continue
+        lines = text.splitlines()
+        for node in _check_184_import_time_statements(tree.body):
+            if isinstance(node, ast.Import):
+                roots = [alias.name.split(".", 1)[0] for alias in node.names]
+            elif isinstance(node, ast.ImportFrom):
+                roots = [(node.module or "").split(".", 1)[0]] if node.level == 0 else []
+            else:
+                continue
+            heavy = sorted(set(roots) & _CHECK_184_HEAVY_IMPORT_ROOTS)
+            if not heavy:
+                continue
+            line = lines[node.lineno - 1] if 0 <= node.lineno - 1 < len(lines) else ""
+            if _CHECK_184_HEAVY_IMPORT_WAIVER_RE.search(line):
+                continue
+            violations.append(
+                f"{rel}:{node.lineno} imports {heavy!r} at MODULE SCOPE. This "
+                f"module is loaded by tools/preflight_hook.py on every commit "
+                f"and push, so the cost is paid even in --no-codebase mode "
+                f"(0 of 27 gates). MEASURED for torch: 0.48s warm and 43.86s "
+                f"cold (page-cache eviction of ~1 GB of dylibs), straddling "
+                f"the hook's 30s timeout. Move the import inside the function "
+                f"that needs it, OR add a same-line "
+                f"`# HOOK_HEAVY_IMPORT_OK:<rationale>` waiver."
+            )
+    return violations
+
 
 def check_preflight_hook_codebase_default(
     *,
@@ -52707,12 +52795,17 @@ def check_preflight_hook_codebase_default(
     """
     root = (repo_root or Path.cwd()).resolve()
     hook_path = root / _CHECK_184_HOOK_REL_PATH
-    violations: list[str] = []
+    # Scope extension: the hook's import-path cost. Runs FIRST and
+    # unconditionally -- it is about a different file than the token contract
+    # below, so neither the missing-hook no-op nor the default-contract waiver
+    # may suppress it.
+    violations: list[str] = _check_184_module_scope_heavy_imports(root)
     if not hook_path.is_file():
         if verbose:
             print(
-                f"  [preflight-hook-codebase-default] OK ({hook_path} "
-                "does not exist; gate is no-op)"
+                f"  [preflight-hook-codebase-default] {hook_path} does not "
+                "exist; token contract is a no-op "
+                f"(heavy-import scan: {len(violations)} violation(s))"
             )
         return violations
     try:
@@ -52722,8 +52815,9 @@ def check_preflight_hook_codebase_default(
     if _CHECK_184_WAIVER_RE.search(text):
         if verbose:
             print(
-                "  [preflight-hook-codebase-default] OK (file-level "
-                "# PREFLIGHT_HOOK_DEFAULT_OK:<reason> waiver present)"
+                "  [preflight-hook-codebase-default] token contract waived "
+                "(file-level # PREFLIGHT_HOOK_DEFAULT_OK:<reason>); "
+                f"heavy-import scan: {len(violations)} violation(s)"
             )
         return violations
     missing: list[str] = []
