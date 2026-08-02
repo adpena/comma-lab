@@ -1,0 +1,494 @@
+{
+ "agg_ideal": {
+  "clipped_camera_values_total": 22442485,
+  "contiguous_0_to_n": true,
+  "denominator_values": 353894400,
+  "direct_camera_payload_residual_max": 0.0,
+  "frac_gt_half_LSB": 0.08232685795536748,
+  "frac_gt_one_LSB": 0.010556061356155961,
+  "frames_covered": 600,
+  "max_abs_err_LSB": 29.843917846679688,
+  "mean_abs_err_LSB": 0.19815324902865736,
+  "n_chunks": 6,
+  "render_kind": "ideal",
+  "rms_err_LSB": 0.34516929741114677,
+  "rms_quant_LSB": 0.1720041191266247,
+  "rms_resample_LSB": 0.3011067071089255
+ },
+ "agg_live": {
+  "clipped_camera_values_total": 2238378,
+  "contiguous_0_to_n": true,
+  "denominator_values": 353894400,
+  "direct_camera_payload_residual_max": 0.0,
+  "frac_gt_half_LSB": 0.1297911976001881,
+  "frac_gt_one_LSB": 0.041240980360243054,
+  "frames_covered": 600,
+  "max_abs_err_LSB": 20.411422729492188,
+  "mean_abs_err_LSB": 0.32925818727706446,
+  "n_chunks": 6,
+  "render_kind": "live",
+  "rms_err_LSB": 0.7989931390831381,
+  "rms_quant_LSB": 0.19566615331793263,
+  "rms_resample_LSB": 0.7725378971775192
+ },
+ "arm": "ddm_mp1",
+ "authority": "[macOS-CPU advisory] scorer-free sweep+join on cached frozen-SegNet fields; score_claim=false; promotion_eligible=false",
+ "control_d_parity": {
+  "control": "D-parity: this module's D vs segnet.preprocess_input, and SegNet(D(gt_f1)) argmax vs cached lstars",
+  "expect": "D_vs_upstream_preprocess_maxabs == 0.0 and 0 argmax mismatches",
+  "passed": true,
+  "rows": [
+   {
+    "D_vs_upstream_preprocess_maxabs": 0.0,
+    "argmax_mismatches": 0,
+    "frame": 0,
+    "pixels": 196608
+   },
+   {
+    "D_vs_upstream_preprocess_maxabs": 0.0,
+    "argmax_mismatches": 0,
+    "frame": 137,
+    "pixels": 196608
+   },
+   {
+    "D_vs_upstream_preprocess_maxabs": 0.0,
+    "argmax_mismatches": 0,
+    "frame": 599,
+    "pixels": 196608
+   }
+  ]
+ },
+ "control_receiver_parity": {
+  "archive_bytes": 360238,
+  "archive_sha256": "f1f3288062468e97c090ffe88ac81a6d6f76925743bd83aecb15307c0314a220",
+  "control": "receiver-parity: this module's clip(rint(U(r))) vs ddm_tr1_runtime.render_frame1_camera_uint8",
+  "expect": "0 mismatches on every frame",
+  "n_pairs": 600,
+  "passed": true,
+  "rows": [
+   {
+    "camera_value_mismatches": 0,
+    "frame": 0
+   },
+   {
+    "camera_value_mismatches": 0,
+    "frame": 137
+   },
+   {
+    "camera_value_mismatches": 0,
+    "frame": 599
+   }
+  ]
+ },
+ "date_utc": "2026-08-02",
+ "gt_cache": "experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+ "instrument": "experiments/ddm_mp1_lsb_misplacement_margin_join.py",
+ "join_ideal": {
+  "channel_aggregation": "chan_l2 = sqrt(sum_c e_c^2) (first-order margin coupling)",
+  "first_order_reach": {
+   "S_units_measured": 0.03244336305130652,
+   "W_B_per_flip": 1.27310821533,
+   "bytes_equivalent_at_W": 48724.07722255567,
+   "d_seg_measured_field": 0.00032443363051306515,
+   "d_seg_null_shuffled": 0.00015862081992922843,
+   "d_seg_null_uniform_rho": 0.0002345274801765857,
+   "d_seg_threshold_1sigma": 0.0008162350124782986,
+   "enrichment_vs_shuffled": 2.0453407734105595,
+   "enrichment_vs_uniform": 1.3833501740128078,
+   "law": "P(flip) = Phi(-m_p/sigma_p), sigma_p = (||e_p||_2/sqrt(3)) * G/cosh(m_p/2); G = 0.060599",
+   "law_source": "segnet_head_rank4_linear_flipdist_v1 + tools/adversarial_evasion_fisher_null_probe.py",
+   "law_status": "DERIVED first-order, single-anchor gain; NOT scorer-measured"
+  },
+  "frames": 600,
+  "margin_bins": [
+   {
+    "area_frac": 0.0014131334092881945,
+    "enrichment_vs_global": 2.0581144693967386,
+    "hi": 0.05,
+    "lo": 0.0,
+    "mean_misplacement_LSB": 0.8327555653830095,
+    "pixels": 166700,
+    "rms_misplacement_LSB": 1.542684749568165
+   },
+   {
+    "area_frac": 0.0014104037814670139,
+    "enrichment_vs_global": 2.045595396338881,
+    "hi": 0.1,
+    "lo": 0.05,
+    "mean_misplacement_LSB": 0.8276900902029903,
+    "pixels": 166378,
+    "rms_misplacement_LSB": 1.5224731304581018
+   },
+   {
+    "area_frac": 0.002798411051432292,
+    "enrichment_vs_global": 2.0389452917015563,
+    "hi": 0.2,
+    "lo": 0.1,
+    "mean_misplacement_LSB": 0.8249993207003908,
+    "pixels": 330114,
+    "rms_misplacement_LSB": 1.5344053786217577
+   },
+   {
+    "area_frac": 0.008202429877387153,
+    "enrichment_vs_global": 2.007638625172334,
+    "hi": 0.5,
+    "lo": 0.2,
+    "mean_misplacement_LSB": 0.8123319976853394,
+    "pixels": 967598,
+    "rms_misplacement_LSB": 1.5368551850407575
+   },
+   {
+    "area_frac": 0.012877570258246528,
+    "enrichment_vs_global": 1.8682292337894997,
+    "hi": 1.0,
+    "lo": 0.5,
+    "mean_misplacement_LSB": 0.7559240824469113,
+    "pixels": 1519100,
+    "rms_misplacement_LSB": 1.4433007266715947
+   },
+   {
+    "area_frac": 0.02163035922580295,
+    "enrichment_vs_global": 1.435247121227279,
+    "hi": 2.0,
+    "lo": 1.0,
+    "mean_misplacement_LSB": 0.5807305889318644,
+    "pixels": 2551621,
+    "rms_misplacement_LSB": 1.1124375444045842
+   },
+   {
+    "area_frac": 0.054686796400282116,
+    "enrichment_vs_global": 1.063526073039206,
+    "hi": 4.0,
+    "lo": 2.0,
+    "mean_misplacement_LSB": 0.43032458564509973,
+    "pixels": 6451117,
+    "rms_misplacement_LSB": 0.7068790370690594
+   },
+   {
+    "area_frac": 0.879318372938368,
+    "enrichment_vs_global": 0.9558503589839455,
+    "hi": 8.0,
+    "lo": 4.0,
+    "mean_misplacement_LSB": 0.3867567707983432,
+    "pixels": 103728616,
+    "rms_misplacement_LSB": 0.511990385243007
+   },
+   {
+    "area_frac": 0.017662523057725695,
+    "enrichment_vs_global": 1.0345289728897331,
+    "hi": Infinity,
+    "lo": 8.0,
+    "mean_misplacement_LSB": 0.41859176082485544,
+    "pixels": 2083556,
+    "rms_misplacement_LSB": 0.8714205366865756
+   }
+  ],
+  "mean_misplacement_chanL2_LSB": 0.40462062619243017,
+  "per_class": [
+   {
+    "class": "Road",
+    "mean_misplacement_LSB": 0.31335670595216464,
+    "pixels": 27407046,
+    "reach_d_seg_share": 0.3903933519937265
+   },
+   {
+    "class": "Lane",
+    "mean_misplacement_LSB": 1.1848406603394093,
+    "pixels": 690639,
+    "reach_d_seg_share": 0.28691596279366327
+   },
+   {
+    "class": "Undrivable",
+    "mean_misplacement_LSB": 0.41202648773251965,
+    "pixels": 58413281,
+    "reach_d_seg_share": 0.13552088935564185
+   },
+   {
+    "class": "Movable",
+    "mean_misplacement_LSB": 1.074625554082492,
+    "pixels": 1460325,
+    "reach_d_seg_share": 0.13266940400525323
+   },
+   {
+    "class": "MyCar",
+    "mean_misplacement_LSB": 0.4230045524777028,
+    "pixels": 29993509,
+    "reach_d_seg_share": 0.054500391851714125
+   }
+  ],
+  "pixels": 117964800,
+  "render_kind": "ideal",
+  "rms_misplacement_chanL2_LSB": 0.597850680872865
+ },
+ "join_live": {
+  "channel_aggregation": "chan_l2 = sqrt(sum_c e_c^2) (first-order margin coupling)",
+  "first_order_reach": {
+   "S_units_measured": 0.04184936720429864,
+   "W_B_per_flip": 1.27310821533,
+   "bytes_equivalent_at_W": 62850.198240937934,
+   "d_seg_measured_field": 0.0004184936720429864,
+   "d_seg_null_shuffled": 0.0002711292420253805,
+   "d_seg_null_uniform_rho": 0.0005448825866670509,
+   "d_seg_threshold_1sigma": 0.0010554758707682292,
+   "enrichment_vs_shuffled": 1.5435209751510723,
+   "enrichment_vs_uniform": 0.7680437626073484,
+   "law": "P(flip) = Phi(-m_p/sigma_p), sigma_p = (||e_p||_2/sqrt(3)) * G/cosh(m_p/2); G = 0.060599",
+   "law_source": "segnet_head_rank4_linear_flipdist_v1 + tools/adversarial_evasion_fisher_null_probe.py",
+   "law_status": "DERIVED first-order, single-anchor gain; NOT scorer-measured"
+  },
+  "frames": 600,
+  "margin_bins": [
+   {
+    "area_frac": 0.0014131334092881945,
+    "enrichment_vs_global": 1.554167660419706,
+    "hi": 0.05,
+    "lo": 0.0,
+    "mean_misplacement_LSB": 1.0791551765940757,
+    "pixels": 166700,
+    "rms_misplacement_LSB": 1.602023035432762
+   },
+   {
+    "area_frac": 0.0014104037814670139,
+    "enrichment_vs_global": 1.5489867742669379,
+    "hi": 0.1,
+    "lo": 0.05,
+    "mean_misplacement_LSB": 1.0755577654179902,
+    "pixels": 166378,
+    "rms_misplacement_LSB": 1.5891135180830365
+   },
+   {
+    "area_frac": 0.002798411051432292,
+    "enrichment_vs_global": 1.5410830078336744,
+    "hi": 0.2,
+    "lo": 0.1,
+    "mean_misplacement_LSB": 1.0700696892739123,
+    "pixels": 330114,
+    "rms_misplacement_LSB": 1.5739522066950267
+   },
+   {
+    "area_frac": 0.008202429877387153,
+    "enrichment_vs_global": 1.5167496813789771,
+    "hi": 0.5,
+    "lo": 0.2,
+    "mean_misplacement_LSB": 1.0531735487376663,
+    "pixels": 967598,
+    "rms_misplacement_LSB": 1.5338050726794203
+   },
+   {
+    "area_frac": 0.012877570258246528,
+    "enrichment_vs_global": 1.4459259677889351,
+    "hi": 1.0,
+    "lo": 0.5,
+    "mean_misplacement_LSB": 1.0039962436805852,
+    "pixels": 1519100,
+    "rms_misplacement_LSB": 1.4307323938450272
+   },
+   {
+    "area_frac": 0.02163035922580295,
+    "enrichment_vs_global": 1.2814994530877424,
+    "hi": 2.0,
+    "lo": 1.0,
+    "mean_misplacement_LSB": 0.8898246976961605,
+    "pixels": 2551621,
+    "rms_misplacement_LSB": 1.2255786939638336
+   },
+   {
+    "area_frac": 0.054686796400282116,
+    "enrichment_vs_global": 0.9642723075818894,
+    "hi": 4.0,
+    "lo": 2.0,
+    "mean_misplacement_LSB": 0.6695541793041137,
+    "pixels": 6451117,
+    "rms_misplacement_LSB": 0.8702832685328045
+   },
+   {
+    "area_frac": 0.879318372938368,
+    "enrichment_vs_global": 0.9807982519995514,
+    "hi": 8.0,
+    "lo": 4.0,
+    "mean_misplacement_LSB": 0.6810291693715365,
+    "pixels": 103728616,
+    "rms_misplacement_LSB": 1.4163378103356372
+   },
+   {
+    "area_frac": 0.017662523057725695,
+    "enrichment_vs_global": 0.9828294081701079,
+    "hi": Infinity,
+    "lo": 8.0,
+    "mean_misplacement_LSB": 0.6824395273089389,
+    "pixels": 2083556,
+    "rms_misplacement_LSB": 0.997560529308542
+   }
+  ],
+  "mean_misplacement_chanL2_LSB": 0.6943621361305689,
+  "per_class": [
+   {
+    "class": "Road",
+    "mean_misplacement_LSB": 0.574851825743755,
+    "pixels": 27407046,
+    "reach_d_seg_share": 0.4282828497588346
+   },
+   {
+    "class": "Lane",
+    "mean_misplacement_LSB": 1.1471612867079415,
+    "pixels": 690639,
+    "reach_d_seg_share": 0.1851635304893619
+   },
+   {
+    "class": "Undrivable",
+    "mean_misplacement_LSB": 0.503316794895506,
+    "pixels": 58413281,
+    "reach_d_seg_share": 0.10591220343259265
+   },
+   {
+    "class": "Movable",
+    "mean_misplacement_LSB": 0.9926145511616944,
+    "pixels": 1460325,
+    "reach_d_seg_share": 0.08467470297177522
+   },
+   {
+    "class": "MyCar",
+    "mean_misplacement_LSB": 1.15068565482971,
+    "pixels": 29993509,
+    "reach_d_seg_share": 0.19596671334743432
+   }
+  ],
+  "pixels": 117964800,
+  "render_kind": "live",
+  "rms_misplacement_chanL2_LSB": 1.38390300258978
+ },
+ "lattice": {
+  "achievable_uint8_residual": {
+   "max_LSB": 0.015566303419944916,
+   "mean_abs_LSB": 2.064315920053268e-05,
+   "n_blocks_sampled": 64,
+   "n_targets": 256,
+   "p99_LSB": 0.00026960112836064824,
+   "rms_LSB": 0.0002978810681129979,
+   "solve": "EXACT min over the full 256^k camera lattice per block"
+  },
+  "blind_camera_cols": 140,
+  "blind_camera_pixels": 230904,
+  "blind_camera_rows": 106,
+  "blocks_disjoint": true,
+  "camera_col_feeds_n_outputs": {
+   "max": 1,
+   "min": 0
+  },
+  "camera_row_feeds_n_outputs": {
+   "max": 1,
+   "min": 0
+  },
+  "col_kernel_shape": [
+   512,
+   1164
+  ],
+  "control_note": "D = Row @ frame @ Col.T must reproduce the torch 2-D bilinear",
+  "control_separability_maxabs_vs_torch_2d": 1.52587890625e-05,
+  "denominators": {
+   "camera_cols": 1164,
+   "camera_rows": 874,
+   "output_cols": 512,
+   "output_rows": 384
+  },
+  "plain_rint_residual_same_targets": {
+   "mean_abs_LSB": 0.24616462663837096,
+   "rms_LSB": 0.285426171828044
+  },
+  "row_kernel_shape": [
+   384,
+   874
+  ],
+  "taps_per_output_col": {
+   "max": 2,
+   "min": 2
+  },
+  "taps_per_output_row": {
+   "max": 2,
+   "min": 2
+  },
+  "torch_version": "2.12.1",
+  "weight_sums_row_max": 1.0,
+  "weight_sums_row_min": 1.0
+ },
+ "pays_debt_of": 898,
+ "reach_curve": {
+  "curve": [
+   {
+    "S_units": 2.2321486479801913e-05,
+    "d_seg": 2.232148647980191e-07,
+    "rho_LSB": 0.000298
+   },
+   {
+    "S_units": 0.0006946978022037969,
+    "d_seg": 6.946978022037968e-06,
+    "rho_LSB": 0.01
+   },
+   {
+    "S_units": 0.0034170720773003156,
+    "d_seg": 3.417072077300316e-05,
+    "rho_LSB": 0.05
+   },
+   {
+    "S_units": 0.006814274374206714,
+    "d_seg": 6.814274374206715e-05,
+    "rho_LSB": 0.1
+   },
+   {
+    "S_units": 0.01171400606764299,
+    "d_seg": 0.00011714006067642988,
+    "rho_LSB": 0.172
+   },
+   {
+    "S_units": 0.013325039060498946,
+    "d_seg": 0.00013325039060498945,
+    "rho_LSB": 0.19567
+   },
+   {
+    "S_units": 0.019659857667606542,
+    "d_seg": 0.00019659857667606544,
+    "rho_LSB": 0.28868
+   },
+   {
+    "S_units": 0.02050725646822895,
+    "d_seg": 0.0002050725646822895,
+    "rho_LSB": 0.30111
+   },
+   {
+    "S_units": 0.023512503706777658,
+    "d_seg": 0.0002351250370677766,
+    "rho_LSB": 0.34517
+   },
+   {
+    "S_units": 0.034084451290076825,
+    "d_seg": 0.0003408445129007682,
+    "rho_LSB": 0.5
+   },
+   {
+    "S_units": 0.05268710738839622,
+    "d_seg": 0.0005268710738839623,
+    "rho_LSB": 0.77254
+   },
+   {
+    "S_units": 0.05449021525245032,
+    "d_seg": 0.0005449021525245032,
+    "rho_LSB": 0.79899
+   },
+   {
+    "S_units": 0.06817518741441657,
+    "d_seg": 0.0006817518741441658,
+    "rho_LSB": 1.0
+   }
+  ],
+  "law": "P(flip) = Phi(-m/sigma), sigma = rho * G/cosh(m/2); G = 0.060599",
+  "law_status": "DERIVED first-order, single-anchor gain; NOT scorer-measured",
+  "scope": "cached frozen-SegNet margins, 600 frames, 117964800 pixels"
+ },
+ "run_dir": "/Volumes/VertigoDataTier/pact/ddm_mp1_20260802",
+ "task": 897,
+ "v4d_archive": {
+  "bytes": 360238,
+  "path": "/Volumes/VertigoDataTier/pact/ddm_v4d_20260731/v4d_composed_refine_celldrop50_archive.zip",
+  "sha256": "f1f3288062468e97c090ffe88ac81a6d6f76925743bd83aecb15307c0314a220"
+ }
+}
