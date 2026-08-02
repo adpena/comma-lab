@@ -498,6 +498,169 @@ class ExecutionCorpus:
         return corpus
 
 
+# ---------------------------------------------------------------------------
+# The TASK-ROW join (#880). Same artifact predicate, INVERTED conservative default.
+# ---------------------------------------------------------------------------
+#
+# WHY THE DEFAULT FLIPS. On the memo population the damaging direction is a false ORPHANED: it
+# manufactures debt, and this module's own round-1 review produced four of them. On the TASK
+# population it is the exact opposite -- a false EXECUTED silently DELETES real backlog, and a
+# deleted task row is not recoverable by reading harder. So here: EXECUTED must be EARNED by a
+# present artifact, and everything else is UNKNOWN. There is deliberately no ORPHANED bucket for
+# tasks: "this task was never done" is a negative-existence claim, and artifact absence does not
+# support it (a task can be completed by work whose output it never named).
+#
+# NAMING IS NOT CLOSURE. A task id appearing in a commit subject witnesses that somebody NAMED it;
+# the memo-side join already proved this votes the wrong way (a commit carrying ``stage_*.sh``
+# witnesses the runner was LANDED, which IS the built-never-fired state). ``commit_shas`` on a task
+# row is a recorded CLAIM, not an artifact, so it is not read here either.
+
+_TASK_TEXT_FIELDS = ("title", "event_notes", "source_design_memo", "next_action", "evidence")
+
+# A RUN product is written BY an execution (a receipt, a report, a log). A BUILD product is an
+# INPUT an execution consumes (an archive, a weight bundle). Only the former can witness closure --
+# the same runner-vs-output distinction the memo join makes, one level up.
+_BUILD_PRODUCT_SUFFIXES = (".zip", ".npz")
+_RUN_PRODUCT_SUFFIXES = tuple(s for s in _OUTPUT_SUFFIXES if s not in _BUILD_PRODUCT_SUFFIXES)
+
+
+def task_row_text(task: dict) -> str:
+    """The searchable text of a task row: its titled fields plus any list-valued blockers."""
+    parts = [str(task.get(f) or "") for f in _TASK_TEXT_FIELDS]
+    blockers = task.get("blockers")
+    if isinstance(blockers, (list, tuple)):
+        parts.extend(str(b) for b in blockers)
+    elif blockers:
+        parts.append(str(blockers))
+    return "\n".join(parts)
+
+
+def classify_task_execution(task: dict, corpus: ExecutionCorpus) -> ExecutionVerdict:
+    """EXECUTED / UNKNOWN for one task row, keyed to artifact existence and nothing else.
+
+    ``EXECUTED`` here means: this row names an output artifact and that artifact EXISTS. It is a
+    claim that the row is *already closed* and can be drained from the backlog. Everything else is
+    ``UNKNOWN`` -- including "the row names an output and it is absent", which is evidence but not
+    proof, and is reported with that reason so a reader can rank it.
+    """
+    tid = str(task.get("task_id", "?"))
+    text = task_row_text(task)
+    if not text.strip():
+        return ExecutionVerdict(f"task#{tid}", UNKNOWN, "task row carries no text to join on",
+                                joinable=False)
+
+    named = _candidate_tokens(text)
+    tokens = [t for t in named if t.lower().endswith(_RUN_PRODUCT_SUFFIXES)]
+    builds = [t for t in named if t.lower().endswith(_BUILD_PRODUCT_SUFFIXES)]
+    if not tokens:
+        if builds:
+            # MEASURED on the live run: task #826's only artifact is
+            # ``gr1_cell_drop50_archive.zip``, and the join called it EXECUTED. The verdict was
+            # CORRECT (the row IS closed -- an independent hand-check found its evaluate receipt)
+            # but the EVIDENCE did not support it: an archive is the INPUT to a gate, so its
+            # presence witnesses BUILT, never RAN. This is the runner-vs-output distinction from
+            # the memo join, reappearing one level up. Right-for-the-wrong-reason is the most
+            # dangerous state an instrument can be in, because it passes review.
+            present = [t for t in builds if t.rsplit("/", 1)[-1] in corpus.produced_names]
+            return ExecutionVerdict(
+                f"task#{tid}", UNKNOWN,
+                "row names only a BUILD product (archive/npz), whose presence witnesses BUILT and "
+                "never RAN — closure is undecidable from what this row names",
+                tuple(f"build-product-present:{t}" for t in present[:4]),
+            )
+        return ExecutionVerdict(
+            f"task#{tid}", UNKNOWN,
+            "row names no RUN product — nothing exists whose presence could witness closure",
+            joinable=False,
+        )
+
+    present = [t for t in tokens if t.rsplit("/", 1)[-1] in corpus.produced_names]
+    if present and corpus.artifact_scope_complete:
+        return ExecutionVerdict(
+            f"task#{tid}", EXECUTED,
+            "an OUTPUT artifact this row names EXISTS — candidate ALREADY-CLOSED",
+            tuple(f"output-present:{t}" for t in present[:4]),
+        )
+    if present:
+        return ExecutionVerdict(
+            f"task#{tid}", EXECUTED,
+            "an OUTPUT artifact this row names EXISTS (note: a declared tier was unreadable, "
+            f"which can only HIDE further evidence, never create this one): {corpus.missing_tiers}",
+            tuple(f"output-present:{t}" for t in present[:4]),
+        )
+    return ExecutionVerdict(
+        f"task#{tid}", UNKNOWN,
+        "row names an output that is ABSENT — evidence of open, but not proof: a task may be "
+        "closed by work whose output it never named, so this is never reported as done-or-not",
+        tuple(f"named-output-absent:{t}" for t in tokens[:4]),
+    )
+
+
+# The canary, per design philosophy P4 ("no meter without a canary"). Run BEFORE any result is
+# emitted, in the SAME run, because a scan that silently matches nothing returns the same shape as
+# a scan that legitimately found nothing -- four instruments failed exactly this way on 2026-08-01,
+# three of which reached the operator. Structural, not procedural: `audit_tasks` REFUSES to return
+# rows if the canary does not fire.
+_POSITIVE_CONTROL_ARTIFACT = "wr1_kneeA_realized_gate_receipt.json"
+_NEGATIVE_CONTROL_ARTIFACT = "fo1_control_artifact_that_must_never_exist.json"
+
+
+def task_join_canary(corpus: ExecutionCorpus) -> tuple[bool, str]:
+    """Prove the task join FIRES on a verified-present artifact and STAYS SILENT on an absent one.
+
+    The positive artifact is one this arm wrote and verified by hand (both wr1 gate receipts). If
+    it is missing the corpus is not indexing what it claims to index, and every ``UNKNOWN`` this
+    run would produce is uninterpretable.
+    """
+    pos = classify_task_execution(
+        {"task_id": "CANARY+", "title": f"owed: land `{_POSITIVE_CONTROL_ARTIFACT}`"}, corpus
+    )
+    neg = classify_task_execution(
+        {"task_id": "CANARY-", "title": f"owed: land `{_NEGATIVE_CONTROL_ARTIFACT}`"}, corpus
+    )
+    if pos.verdict != EXECUTED:
+        return False, (
+            f"POSITIVE CONTROL FAILED: {_POSITIVE_CONTROL_ARTIFACT} is verified-present on disk "
+            f"but the join returned {pos.verdict} — the corpus is not indexing what it claims, so "
+            "no verdict from this run is interpretable"
+        )
+    if neg.verdict == EXECUTED:
+        return False, "NEGATIVE CONTROL FAILED: the join fired on an artifact that cannot exist"
+    return True, "canary OK: fires on verified-present, silent on verified-absent"
+
+
+def audit_tasks(
+    rows: list[dict],
+    corpus: ExecutionCorpus | None = None,
+    *,
+    cache_ttl_s: float | None = None,
+) -> tuple[list[tuple[dict, ExecutionVerdict]], ScopeLedger, str]:
+    """Join task rows against artifact existence. Returns (paired, scope, canary_note).
+
+    ``rows`` is caller-supplied ON PURPOSE. The operator-visible backlog lives in the harness task
+    list, which has NO on-disk mirror in this repo -- MEASURED: every one of task ids 833/834/840/
+    841/844/858/859/860 and 864/869/870 is ABSENT from ``.omx/state/canonical_task_status.jsonl``.
+    So whoever holds that ledger passes its rows in; this function never pretends to enumerate a
+    population it cannot see, and the returned :class:`ScopeLedger` says which one it got.
+    """
+    corpus = ExecutionCorpus.build(cache_ttl_s=cache_ttl_s) if corpus is None else corpus
+    ok, note = task_join_canary(corpus)
+    if not ok:
+        return [], ScopeLedger(
+            surface="task-execution-join", examined=0, declared=len(rows),
+            note=f"REFUSED — {note}",
+        ), note
+    paired = [(r, classify_task_execution(r, corpus)) for r in rows]
+    order = {EXECUTED: 0, UNKNOWN: 1}
+    paired.sort(key=lambda rv: (order.get(rv[1].verdict, 9), str(rv[0].get("task_id"))))
+    return paired, ScopeLedger(
+        surface="task-execution-join",
+        examined=len(paired),
+        declared=len(rows),
+        note=note,
+    ), note
+
+
 def classify_execution(row: FollowOn, corpus: ExecutionCorpus) -> ExecutionVerdict:
     """EXECUTED / ORPHANED / UNKNOWN for one follow-on, with the evidence that decided it.
 
@@ -614,9 +777,13 @@ __all__ = [
     "ExecutionVerdict",
     "FollowOn",
     "audit",
+    "audit_tasks",
     "build_doc_frequency",
     "classify_execution",
+    "classify_task_execution",
     "extract_followons",
     "memo_date",
     "summarise",
+    "task_join_canary",
+    "task_row_text",
 ]

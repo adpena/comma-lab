@@ -17,6 +17,7 @@ from pathlib import Path
 import pytest
 
 from tac.followon_ledger import (
+    _POSITIVE_CONTROL_ARTIFACT,
     EXECUTED,
     ORPHANED,
     STAGED,
@@ -26,11 +27,15 @@ from tac.followon_ledger import (
     FollowOn,
     _candidate_tokens,
     _distinctive_tokens,
+    audit_tasks,
     build_doc_frequency,
     classify_execution,
+    classify_task_execution,
     extract_followons,
     memo_date,
     summarise,
+    task_join_canary,
+    task_row_text,
 )
 from tac.scope_ledger import VACUOUS
 
@@ -298,6 +303,86 @@ def test_indexed_suffixes_exactly_cover_what_the_join_can_decide():
     assert frozenset(_OUTPUT_SUFFIXES + _RUNNER_SUFFIXES) == _INDEXED_SUFFIXES
     for suffix in _INDEXED_SUFFIXES:
         assert _candidate_tokens(f"see `experiments/zz1_thing{suffix}` for it")
+
+
+# --------------------------------------------------------------------------- task-row join (#880)
+def test_task_join_earns_executed_from_a_present_output():
+    t = {"task_id": "1", "title": "owed: land `zz1_task_receipt.json`"}
+    v = classify_task_execution(t, _corpus({"zz1_task_receipt.json"}))
+    assert v.verdict == EXECUTED
+
+
+def test_task_join_default_is_unknown_never_executed():
+    """INVERTED default (#880). On tasks a false EXECUTED DELETES real backlog, which is strictly
+    worse than a false UNKNOWN — a deleted row is not recoverable by reading harder."""
+    absent = {"task_id": "2", "title": "owed: land `zz1_task_receipt.json`"}
+    assert classify_task_execution(absent, _corpus(set())).verdict == UNKNOWN
+    no_artifact = {"task_id": "3", "title": "re-measure the tail pairs, $0"}
+    assert classify_task_execution(no_artifact, _corpus(set())).verdict == UNKNOWN
+
+
+def test_task_join_has_no_orphaned_bucket():
+    """'This task was never done' is a negative-existence claim artifact-absence cannot support."""
+    for on_disk in (set(), {"zz1_task_receipt.json"}):
+        v = classify_task_execution(
+            {"task_id": "4", "title": "owed `zz1_task_receipt.json`"}, _corpus(on_disk)
+        )
+        assert v.verdict in (EXECUTED, UNKNOWN)
+        assert v.verdict != ORPHANED
+
+
+def test_task_join_will_not_earn_executed_from_a_BUILD_product():
+    """MEASURED on the live run: task #826 names only ``gr1_cell_drop50_archive.zip`` and the join
+    called it EXECUTED. The verdict happened to be right — an independent hand-check found its
+    evaluate receipt — but the evidence did not support it: an archive is the INPUT to a gate.
+    Right-for-the-wrong-reason passes review, which is what makes it dangerous."""
+    t = {"task_id": "826", "title": "FIRE-ORDER-0: `gr1_cell_drop50_archive.zip` byte-closed"}
+    v = classify_task_execution(t, _corpus({"gr1_cell_drop50_archive.zip"}))
+    assert v.verdict == UNKNOWN
+    assert "BUILD product" in v.reason
+    assert v.evidence  # the present build product is still REPORTED, just not counted as closure
+
+
+def test_task_join_never_reads_commit_shas_as_closure():
+    """Naming is not closure. A task cited in a commit witnesses it was NAMED, and the memo-side
+    join already proved that votes the wrong way."""
+    t = {"task_id": "5", "title": "do the thing", "commit_shas": ["abc123", "def456"]}
+    assert classify_task_execution(t, _corpus({"abc123"})).verdict == UNKNOWN
+
+
+def test_task_row_text_gathers_list_blockers():
+    t = {"task_id": "6", "title": "a", "blockers": ["b `x_receipt.json`", "c"], "event_notes": "d"}
+    txt = task_row_text(t)
+    assert "x_receipt.json" in txt and "d" in txt
+
+
+def test_canary_fires_on_present_and_is_silent_on_absent():
+    ok, note = task_join_canary(_corpus({_POSITIVE_CONTROL_ARTIFACT}))
+    assert ok, note
+
+
+def test_audit_tasks_REFUSES_when_the_positive_control_does_not_fire():
+    """The method warning, made structural. Four instruments on 2026-08-01 returned a clean-looking
+    zero because their scan silently matched nothing; three reached the operator. A run whose
+    canary is dark must emit NO rows and a VACUOUS scope, not a confident empty list."""
+    rows = [{"task_id": "9", "title": "owed `something.json`"}]
+    paired, led, note = audit_tasks(rows, _corpus(set()))  # positive control artifact absent
+    assert paired == []
+    assert led.verdict == VACUOUS
+    assert "PASS" not in led.render()
+    assert "POSITIVE CONTROL FAILED" in note
+
+
+def test_audit_tasks_reports_its_denominator_and_runs_when_the_canary_is_lit():
+    rows = [
+        {"task_id": "10", "title": "owed `zz1_task_receipt.json`"},
+        {"task_id": "11", "title": "owed `never_written.json`"},
+    ]
+    paired, led, _ = audit_tasks(
+        rows, _corpus({_POSITIVE_CONTROL_ARTIFACT, "zz1_task_receipt.json"})
+    )
+    assert led.examined == 2 and led.declared_count == 2
+    assert [v.verdict for _, v in paired] == [EXECUTED, UNKNOWN]  # EXECUTED sorts first
 
 
 def test_control_set_never_calls_a_real_orphan_executed():
