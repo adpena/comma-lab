@@ -1,0 +1,44 @@
+{
+  "argmax": {
+    "per_class_error_rate": {
+      "0": 0.001987335665434356,
+      "1": 0.030073598508048343,
+      "2": 0.00041896294097912426,
+      "3": 0.007340146885111191,
+      "4": 0.0008811906602858639
+    },
+    "per_pair_argmax_pair_id": 178,
+    "per_pair_max": 0.0026346842447916665,
+    "teacher_realized_d_seg_vs_gt": 0.0011601681179470484
+  },
+  "axis": "[macOS-CPU advisory]",
+  "control_fired": true,
+  "control_liveness_min_corr_drop": 0.05,
+  "control_stride": 137,
+  "gt_cache_path": "experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+  "margin_control_pair": {
+    "corr": 0.5606248449165323,
+    "n_pixels": 117964800,
+    "reference_sigma": 1.494706757985315,
+    "rmse": 1.4022062383942597,
+    "teacher_sigma": 1.4956448393001316
+  },
+  "margin_same_pair": {
+    "corr": 0.986669330610162,
+    "n_pixels": 117964800,
+    "reference_sigma": 1.4947067579853173,
+    "rmse": 0.24757716483707937,
+    "teacher_sigma": 1.4956448393001316
+  },
+  "n_pairs": 600,
+  "normalised": {
+    "rmse_control_over_reference_sigma": 0.9381146040205659,
+    "rmse_same_over_reference_sigma": 0.16563594398327552
+  },
+  "research_only": true,
+  "schema": "ddm_lr1_teacher_information_probe.v1",
+  "scope": "FULL",
+  "score_claim": false,
+  "teacher_logits_path": "/Volumes/VertigoDataTier/pact/ddm_dw1_20260730/distill_field_cache/distill_logits.f16.npy",
+  "teacher_logits_sha256": "4bb40f01620276b58f5b5b403a9d44f6369787f2537f7606b0d2a6c2b324fd0c"
+}
