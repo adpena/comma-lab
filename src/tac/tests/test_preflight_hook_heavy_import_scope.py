@@ -183,3 +183,24 @@ def test_hook_step_refuses_to_call_a_missing_target_a_pass(tmp_path, monkeypatch
     err = capsys.readouterr().err
     assert "VACUOUS" in err and "NOT a pass" in err
     assert "0 files examined" in err
+
+
+def test_hook_step_refuses_to_call_an_UNPARSEABLE_target_a_pass(tmp_path, monkeypatch, capsys) -> None:
+    """ROUND-3: the third layer. scan() swallows SyntaxError and returns [] — silently
+    identical to clean. Round 2 covered MISSING, not CORRUPT. The cure is a DENOMINATOR,
+    not a fourth existence check: prove the target parses, so [] means 'examined 1, found 0'."""
+    hook = _load_hook()
+    d = tmp_path / "src" / "tac"
+    d.mkdir(parents=True)
+    (d / "preflight.py").write_text("def broken(:\n", encoding="utf-8")
+    monkeypatch.setattr(hook, "REPO_ROOT", tmp_path)
+    assert hook.run_hook_path_heavy_import_scan() == 0
+    err = capsys.readouterr().err
+    assert "VACUOUS" in err and "does not parse" in err and "0 files examined" in err
+
+
+def test_hook_step_reports_a_real_denominator_on_the_live_repo(capsys) -> None:
+    """The live target must actually parse — i.e. a clean run is examined-1-found-0."""
+    hook = _load_hook()
+    assert hook.run_hook_path_heavy_import_scan() == 0
+    assert "VACUOUS" not in capsys.readouterr().err

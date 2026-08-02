@@ -738,11 +738,33 @@ def run_hook_path_heavy_import_scan() -> int:
     # pass SILENTLY: the vacuity genus one layer below the round-1 fix for the
     # vacuity genus. An empty scope is VACUOUS, never a PASS -- report the
     # DENOMINATOR instead of inferring cleanliness from an empty result.
+    # ROUND-3 review, 2026-08-02 — the STRUCTURAL fix, after hitting this genus at three
+    # layers in three rounds. The cause is not three separate bugs: it is that `[]` is the
+    # SUCCESS CHANNEL, so every failure mode that yields empty is indistinguishable from a
+    # clean pass. Measured, all returning "clean":
+    #   round 1  gate never invoked (wrong scope)     -> examined 0 of 27
+    #   round 2  scan target MISSING                  -> scan(...) == []
+    #   round 3  scan target UNPARSEABLE (SyntaxError swallowed inside) -> scan(...) == []
+    # A fourth existence check would repeat the mistake. Instead, establish the DENOMINATOR
+    # independently: prove the target parses HERE, so an empty result means "examined 1 file,
+    # found 0 violations" rather than "produced nothing, for one of three reasons."
     target = REPO_ROOT / "src" / "tac" / "preflight.py"
-    if not target.is_file():
+    examined = 0
+    try:
+        ast.parse(target.read_text(encoding="utf-8"))
+        examined = 1
+    except FileNotFoundError:
+        reason = f"target {target} does not exist"
+    except SyntaxError as exc:
+        reason = f"target {target} does not parse ({exc.__class__.__name__}: {exc.msg})"
+    except Exception as exc:  # pragma: no cover - unreadable target
+        reason = f"target {target} unreadable ({exc.__class__.__name__}: {exc})"
+
+    if examined == 0:
         print(
-            f"[preflight-hook] heavy-import scan VACUOUS (failing OPEN): scan target "
-            f"{target} does not exist — 0 files examined. This is NOT a pass.",
+            f"[preflight-hook] heavy-import scan VACUOUS (failing OPEN): {reason} — "
+            f"0 files examined. This is NOT a pass; an empty result here means the "
+            f"instrument produced nothing, not that the code is clean.",
             file=sys.stderr,
         )
         return 0
