@@ -113,6 +113,50 @@ select on top, all of which re-optimize — so downstream absorption is unquanti
 is an **UPPER BOUND**, possibly a large overestimate. 10 of 60 pairs got *worse* after f16
 quantization, so any adoption needs the monotone guard. Single seed, no noise floor.
 
+### 2b. POSITIVE CONTROL — the bound was NOT the dominant defect; the START was
+
+Folding `ddm_mq1` (*"over-resolution removed the menu censoring; it did not remove solver
+bias"* — 5/16 argmin agreement, 3/16 wrong-init restarts strictly better). My freed arm was
+**single-start**, so it could not separate "the bound was the whole defect" from "the bound
+plus a biased search". Ran the control: the SAME freed solver (relins=32, damp=12 on every
+start) from 5 starts on the hardest pairs.
+
+```
+pair   shipped-start d   best-of-5 d   restart gain
+  44          0.780256      0.576755       0.203501
+  16          0.638275      0.607987       0.030288
+  74          0.575960      0.536131       0.039828
+  21          0.393524      0.340075       0.053449
+
+argmin agreement: 0/4 = 0%       restarts strictly better: 4/4
+```
+
+**mq1's finding reproduces on this surface, and dominates.** On the same n600 rung-B
+denominator:
+
+| lever | pairs measured | summed gain | ΔS | % of the 0.7754681 gap |
+|---|---|---|---|---|
+| freeing the bounds | 60 | 0.192324 | −0.005012 | 0.65% |
+| **restarting the freed solver** | **4** | **0.327067** | **−0.008572** | **1.11%** |
+
+Restarts bought **1.70×** the gain from **0.07×** the pairs. Every start still terminated
+`damp_cap`, so this is not a bound effect at all. The per-start spread is large and
+multi-modal (pair 16: 0.638 → 2.547 across starts), which is why a single start is
+unreliable here.
+
+**Consequence for §2:** the ΔS −0.005 attributed to bound-freeing is an **under-estimate of
+the available gain** and a **correct attribution of the bound's own contribution**. The
+solve half is the larger half. The emission landed in `d7d11ef96f` is still the right first
+move — it is what makes either half auditable — but the score-moving lever here is a restart
+policy, not a longer ladder.
+
+**Scope and honesty limits:** `verdict_scope: instance` — 4 pairs, hardest-first, single
+seed, no noise floor. My 5-start displacement set is a **GENERIC control**, not a derived
+restart policy: it demonstrates that bias exists, it does not price the optimal policy. And
+per `cr2`'s 2,871× miss, pose payloads are render-lineage-bound — these (a,b) are solved
+against the same v4c static compose as the shipped values, so the comparison is in-lineage,
+but any adoption downstream must re-verify against the base it will actually run on.
+
 ---
 
 ## 3. The lattice solve — hypothesis REFUTED `verdict_scope: instance`
@@ -237,14 +281,20 @@ the site fixed here — `n_relin` and damping-level histograms are iteration cou
 
 ## 6. Staged for MAIN (not fired — MAIN owns the n600 slot)
 
-1. Re-run the v4c photo stage with the trace live to get the n600 census
-   (`rungB_ab_stop_census` now lands in `photo_*_receipt.json` automatically).
-2. If the census confirms the 60-pair reading at n600, raise `AB_DAMP_LEVELS` until
-   `damp_cap` → `converged` (bounded by `log8(step/resolution)`, not a guess), keep
-   `GN_RELINS_PHOTO` freed to 32 (measured non-binding at 17), and add the monotone guard —
-   10/60 pairs regressed under f16 quantization.
-3. Predicted, as an **upper bound with downstream absorption unquantified**:
-   ΔS ≈ −0.005 (0.65% of the gap) at ~3× the rung-B scorer cost.
+1. **Restart policy first** — §2b measured it at 1.70× the bound's gain from 0.07× the
+   pairs. Derive the start set rather than inheriting my generic 5-point displacement
+   control (candidates: the temporal-neighbour (a,b), the per-selector median, the
+   `d_ctrl`-implied exposure). This is the score-moving lever.
+2. Re-run the v4c photo stage with the trace live to get the n600 census
+   (`rungB_ab_stop_census` now lands in `photo_*_receipt.json` automatically) — this is what
+   turns either lever from a 60-pair reading into an n600 one.
+3. Then raise `AB_DAMP_LEVELS` until `damp_cap` → `converged` (bounded by
+   `log8(step/resolution)`, not a guess), keep `GN_RELINS_PHOTO` freed to 32 (measured
+   non-binding at 17), and add the monotone guard — 10/60 pairs regressed under f16
+   quantization.
+4. Predicted, both as **upper bounds with downstream absorption unquantified**:
+   bound-freeing ΔS ≈ −0.005 (0.65% of gap) at ~3× the rung-B scorer cost; restarts
+   ≥ −0.0086 (1.11%) from the 4 hardest pairs alone, at ~5× cost per pair restarted.
 
 ## 7. Falsifiers
 
