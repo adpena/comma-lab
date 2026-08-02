@@ -210,6 +210,33 @@ the pairs that currently short-circuit. **Falsifier:** if the symmetric search y
 (i.e. no measurable improvement) over the 109 pairs, the probe-order asymmetry is priced at zero on
 this vehicle and the row closes at FORMULATION scope.
 
+### §4b The rest of the sweep — companion artifact
+
+The full inventory (**64 rows over 13 files**, 12 with candidates, with an
+occupancy-read-feasibility column) is
+`.omx/research/ddm_lg2_binary_inventory_20260802.md`. It EXTENDS bs2's 84 rows over 10 files
+(different scoping — it includes the TR1 trainer's argparse surface bs2 excluded) and re-runs none of
+bs2's five measured rows. Headline results from it:
+
+- **One new occupancy read taken, and it is a NEGATIVE.** The top-ranked readable candidate,
+  `RS_GLOBAL_G = (0.5, 1.0)` (`ddm_v4c_resolve.py:93`), *does* show the pw1 signature at the seed —
+  415 / 84 / **101** pairs over `|g| ∈ {0.0, 0.5, 1.0}`, a **3.19× mass jump at the terminal bin**,
+  28.05% of rung-AB mass on the top entry. But joining those 101 pairs to `final_pw1.jsonl`: 22
+  escaped past 1.0 and **79 were probed outward by pw1's bracket and settled**. Verdict:
+  **saturated SEED, not a binding BOUND** — pw1's bracket is already the cure for this menu.
+  Reported because a sweep that reports only positives commits the selection defect it audits.
+- **Rank 1 residue (≈5 LOC):** `ddm_v4d_resolve.py:372` binds `ab_trace` from `_refit_ab` and never
+  writes it — signal produced and discarded at the live call site.
+- **Rank 2 (a re-run, no new code):** `ab_stop`/`ab_start` are written by
+  `ddm_v4c_resolve.py:818-822` but MEASURED `{'ABSENT': 600}` in the shipped receipt.
+- **The weld pw1 routed around is still there:** `inflate_runner_v4d.py:180` still computes
+  `beta = beta_mag * sign(pose[5])` at a hard 0-threshold; the negative table entries route around it
+  rather than removing it. `yaw_sign` occupancy is 333/267, so it is a real two-sided DOF.
+- **`--token-quant-levels default=16` sits exactly on `_R7_SMEVR_MAX_LEVELS = 16`** — bs2's
+  CLIPPING-SUSPECTED row now has its mechanism named: the default IS the ceiling.
+- **Sharpest named gap:** `experiments/repair_entropy_coder_runtime_adapters.py` is staged into the
+  decode path (`stage_v4d_realized_gate.sh:42`) and was **not opened** by the sweep.
+
 ## §5 WHAT LANDED
 
 - `tools/ddm_lg2_arity_census.py` — three subcommands, one per row, each **reporting its
