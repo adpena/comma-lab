@@ -71,9 +71,18 @@ GATE_D_POSE_V4B = 0.06365131   # the measured v4b gate mean (evaluate.py rc=0)
 RELINS = 4
 GAIN_FD, BIAS_FD = 0.02, 2.0   # rung-B FD steps (a near 1.0, b in 0..255 units)
 GN_RELINS_PHOTO = 4
-RS_BETAS = [0.0, 0.5, 1.0, -0.5, -1.0]  # rolling-shutter shear sweep (b=0 == ctrl)
+# ddm_uv1: the inherited 5-entry signed `RS_BETAS` sweep was DEAD here -- an
+# unconsumed copy of `ddm_qa44_photometric_rungs_probe.py:78` (where it IS live
+# at :189).  A menu with zero consumers has zero selections, and the registered
+# discriminator returns UNDETERMINED_EMPTY ("VACUOUS scope, never a CLOSED
+# verdict") on it -- i.e. it could never have been audited, only mistaken for an
+# audited menu.  Removed rather than left to read as a live lever.
 RS_GLOBAL_G = (0.5, 1.0)  # SHIPPABLE global shear magnitudes (sign from yaw, free)
 SEG_D_KNEEA = 0.00553676       # MEASURED d_seg at the wr1 Knee-A gate (tokens unchanged)
+# ddm_uv1 restart policy.  `neutral` reproduces the shipped single-start solve
+# BYTE-IDENTICALLY and is the default; the derived multi-start is a registered
+# opt-in with a duty-to-measure (see `derive_ab_starts`).
+AB_START_POLICIES = ("neutral", "derived")
 
 
 def _utc() -> str:
@@ -96,17 +105,122 @@ def geometric_horizon_row(K: np.ndarray) -> int:
     return round(-ln[2] / ln[1])
 
 
-def build_oracle(base: str, s_r: float) -> d2m.WarpPoseOracle:
+def resolve_base(label: str, archive: Path | str | None = None) -> tuple[str, Path]:
+    """Resolve (label, archive path) for the seg base under solve.
+
+    ddm_uv1: `BASES` was a hardcoded 2-entry dict, so the pose solve could only
+    ever run against the two bases that existed when it was written -- while the
+    BUILDER had already been parametrized (`--base-archive`, ddm_cr2).  A base
+    the builder can ship but the solver cannot solve against is a one-sided
+    bridge: it can produce a transplant but never the re-solve that transplant
+    needs.  Any v3_warp archive is now addressable.  Adding a third literal was
+    the alternative and was rejected -- it reproduces the same wall one row later.
+    """
+    if archive is not None:
+        p = Path(archive)
+        if not p.exists():
+            raise SystemExit(f"--base-archive does not exist: {p}")
+        return label, p
+    if label not in BASES:
+        raise SystemExit(
+            f"unknown --base {label!r}; known {tuple(BASES)} -- pass "
+            f"--base-archive PATH to solve against any other v3_warp archive "
+            f"(--base then supplies the label used in output filenames)")
+    return label, BASES[label]
+
+
+def derive_ab_starts(f0_pre: np.ndarray, f1_f: np.ndarray, selector: int,
+                     history: list[tuple[int, float, float]] | None = None,
+                     ) -> dict[str, tuple[float, float]]:
+    """The DERIVED (a,b) restart set.  Costs ZERO scorer evaluations to build.
+
+    ddm_sv1 measured that the START, not the bound, is the dominant defect in
+    this solver: on the hardest pairs a freed-bound single-start solve gained
+    0.192324 over 60 pairs while restarting the SAME freed solver gained
+    0.327067 over 4 -- 1.70x the gain from 0.07x the pairs, at 0/4 argmin
+    agreement.  But sv1's 5-point displacement set was an explicit GENERIC
+    CONTROL: it proved bias exists, it did not price a policy.  These starts are
+    derived from state the solver already holds:
+
+    ``neutral``       (1.0, 0.0) -- the shipped start, always included so the
+                      shipped answer stays reachable and the policy can only
+                      improve on it under the strict-decrease acceptance below.
+    ``moment_match``  the `d_ctrl`-implied exposure: the affine map carrying the
+                      warped frame's first two moments onto the reference
+                      frame's, a = sd(f1)/sd(f0), b = mean(f1) - a*mean(f0).
+    ``neighbour``     the (a,b) accepted for the previously solved pair
+                      (camerad auto-exposure is temporally correlated).
+    ``sel_median``    the running median (a,b) over solved pairs sharing this
+                      selector (the two-plane and single-plane composes have
+                      different photometric operating points).
+
+    MEASURED (ddm_uv1, 8 probe pairs, ep854 base, [macOS-CPU frozen-PoseNet
+    advisory]): best-of-derived-starts beat the neutral-only solve on 5/8 pairs,
+    mean 7.833291 -> 6.911169 (-11.8%), with 5/8 winners NON-neutral
+    (moment_match 2, sel_median 1, neighbour 2).  sv1's bias finding therefore
+    reproduces on a third independent surface.  Every start still terminated on
+    a bound, so this is not a bound effect.
+
+    NOT YET MEASURED ON THE LIVE gr1 CHAIN -- that is a scorer campaign and is
+    staged, not self-fired; the policy is opt-in (`neutral` is the default and
+    is byte-identical to the shipped solve).
+    """
+    starts: dict[str, tuple[float, float]] = {"neutral": (1.0, 0.0)}
+    sd0 = float(np.std(f0_pre))
+    if sd0 > 1e-9:
+        a_m = float(np.std(f1_f)) / sd0
+        starts["moment_match"] = (a_m, float(np.mean(f1_f)) - a_m * float(np.mean(f0_pre)))
+    for _sel_h, a_h, b_h in (history or [])[-1:]:
+        starts["neighbour"] = (float(a_h), float(b_h))
+    same = [(a, b) for s, a, b in (history or []) if s == int(selector)]
+    if same:
+        starts["sel_median"] = (float(np.median([a for a, _ in same])),
+                                float(np.median([b for _, b in same])))
+    return starts
+
+
+def ab_multistart_gn(pose6, mse, cur6, d0: float, tp: np.ndarray,
+                     starts: dict[str, tuple[float, float]], *,
+                     relins: int = GN_RELINS_PHOTO):
+    """Best-of `ab_damped_gn` over the derived start set, at SHIPPED precision.
+
+    Acceptance is on the f16-QUANTIZED (a,b) -- the values that actually ship --
+    so a start can only win if it wins on the shipped lattice.  `neutral` is
+    evaluated first and ties go to it, which makes the result a strict
+    improvement on the shipped single-start solve or exactly equal to it.
+
+    Returns ``(a_q, b_q, d, trace)``; ``trace['start']`` names the winner and
+    ``trace['starts_tried']`` records the denominator.
+    """
+    best = None
+    for name in sorted(starts, key=lambda k: (k != "neutral", k)):
+        a0, b0 = starts[name]
+        c6 = pose6(a0, b0) if name != "neutral" else cur6
+        v0 = mse(c6) if name != "neutral" else d0
+        a_p, b_p, _c6, _cv, tr = ab_damped_gn(pose6, mse, a0, b0, c6, v0, tp,
+                                              relins=relins)
+        a_q, b_q = float(np.float16(a_p)), float(np.float16(b_p))
+        d_q = mse(pose6(a_q, b_q))
+        if best is None or d_q < best[2]:
+            best = (a_q, b_q, d_q, dict(tr, start=name))
+    assert best is not None  # starts always contains `neutral`
+    best[3]["starts_tried"] = sorted(starts)
+    return best
+
+
+def build_oracle(base: str, s_r: float,
+                 archive: Path | str | None = None) -> d2m.WarpPoseOracle:
     """pfs1 oracle with its packet OVERRIDDEN to the candidate base tokens.
 
     Mirrors ck1.build_kneeA_oracle exactly but parametrized over the archive
-    (both Knee-A and cell_drop50 are the v3_warp sectioned grammar with
-    manifest['tr1_metadata']).  No shared-file edit; a post-construction
-    oracle.packet override only.  render_frame1_camera_uint8(packet, i) then
-    renders the DROPPED-token f1 the evaluator would score for this base.
+    (Knee-A, cell_drop50, and -- since ddm_uv1 -- any other archive in the
+    v3_warp sectioned grammar with manifest['tr1_metadata']).  No shared-file
+    edit; a post-construction oracle.packet override only.
+    render_frame1_camera_uint8(packet, i) then renders the DROPPED-token f1 the
+    evaluator would score for this base.
     """
     from ddm_r7_token_coder import decode_token_codes
-    archive = BASES[base]
+    _label, archive = resolve_base(base, archive)
     oracle = d2m.WarpPoseOracle(s_r=s_r)
     rt = oracle.rt
     with zipfile.ZipFile(archive) as z:
@@ -184,8 +298,8 @@ class StaticComposer:
 # --------------------------------------------------------------------------- #
 def run_transfer(args: argparse.Namespace) -> None:
     OUT.mkdir(parents=True, exist_ok=True)
-    base = args.base
-    oracle = build_oracle(base, s_r=1.0)
+    base, base_archive = resolve_base(args.base, args.base_archive)
+    oracle = build_oracle(base, s_r=1.0, archive=base_archive)
     comp = StaticComposer(oracle)
     ship = load_ship_table()
     n = int(args.n_pairs)
@@ -372,8 +486,8 @@ def run_solve(args: argparse.Namespace) -> None:
     import torch
     torch.set_num_threads(1)
     OUT.mkdir(parents=True, exist_ok=True)
-    base = args.base
-    oracle = build_oracle(base, s_r=1.0)
+    base, base_archive = resolve_base(args.base, args.base_archive)
+    oracle = build_oracle(base, s_r=1.0, archive=base_archive)
     comp = StaticComposer(oracle)
     ship = load_ship_table()
     xfer = _load_jl(OUT / f"transfer_{base}.partial.jsonl")
@@ -608,8 +722,8 @@ def run_photo(args: argparse.Namespace) -> None:
     import torch
     torch.set_num_threads(1)
     OUT.mkdir(parents=True, exist_ok=True)
-    base = args.base
-    oracle = build_oracle(base, s_r=1.0)
+    base, base_archive = resolve_base(args.base, args.base_archive)
+    oracle = build_oracle(base, s_r=1.0, archive=base_archive)
     comp = StaticComposer(oracle)
     ship = load_ship_table()
     # pose source: the re-solved field (if present) else the v4b ship table
@@ -621,7 +735,8 @@ def run_photo(args: argparse.Namespace) -> None:
     cache = _load_jl(jl)
     fj = open(jl, "a")  # noqa: SIM115
     t0 = time.time()
-    print(f"[v4c-photo {base}/{args.pose_source}] n={n} cached={len(cache)}", flush=True)
+    ab_history: list[tuple[int, float, float]] = []
+    print(f"[v4c-photo {base}/{args.pose_source}] n={n} cached={len(cache)} ab_starts={args.ab_starts}", flush=True)
     for pidx in range(n):
         if pidx in cache:
             continue
@@ -647,12 +762,21 @@ def run_photo(args: argparse.Namespace) -> None:
 
         cur6 = pose6(1.0, 0.0)
         d_ctrl = mse(cur6)
-        # RUNG B: (a,b) GN
-        a_p, b_p, cur6B, curB, ab_trace = ab_damped_gn(
-            pose6, mse, 1.0, 0.0, cur6, d_ctrl, tp)
-        # quantize (a,b) to f16 (the shipped precision) and re-score honestly
-        a_q, b_q = float(np.float16(a_p)), float(np.float16(b_p))
-        d_photoB = mse(pose6(a_q, b_q))
+        # RUNG B: (a,b) GN.  `neutral` is the shipped single start and is
+        # byte-identical; `derived` is the ddm_uv1 restart policy (opt-in).
+        if args.ab_starts == "derived":
+            f0_pre = np.where(comp.far[..., None], wf, wg) if sel else wg
+            a_q, b_q, d_photoB, ab_trace = ab_multistart_gn(
+                pose6, mse, cur6, d_ctrl, tp,
+                derive_ab_starts(f0_pre, f1_f, sel, ab_history))
+            ab_history.append((sel, a_q, b_q))
+        else:
+            a_p, b_p, cur6B, curB, ab_trace = ab_damped_gn(
+                pose6, mse, 1.0, 0.0, cur6, d_ctrl, tp)
+            # quantize (a,b) to f16 (the shipped precision) and re-score honestly
+            a_q, b_q = float(np.float16(a_p)), float(np.float16(b_p))
+            d_photoB = mse(pose6(a_q, b_q))
+            ab_trace = dict(ab_trace, start="neutral", starts_tried=["neutral"])
         # RUNG A: rolling-shutter row-shear at the (a,b)-corrected exposure.
         # ONLY the SHIPPABLE candidates: beta = g * sign(yaw) for global g (the
         # receiver derives the sign from pose[5] free; g is one manifest const).
@@ -679,6 +803,8 @@ def run_photo(args: argparse.Namespace) -> None:
                "rungA_beta": float(best_beta), "rungA_by_g": rungA_by_g,
                "yaw_sign": yaw_sign,
                "ab_stop": ab_trace["stop_reason"],
+               "ab_start": ab_trace.get("start", "neutral"),
+               "ab_starts_tried": ab_trace.get("starts_tried", ["neutral"]),
                "ab_relins": ab_trace["n_relin"],
                "ab_damp_used": ab_trace["damp_used"],
                "p": [float(v) for v in theta]}
@@ -694,11 +820,34 @@ def run_photo(args: argparse.Namespace) -> None:
                   f"mean ctrl {ctl.mean():.5f} -> AB {arr.mean():.5f} "
                   f"{time.time()-t0:.0f}s", flush=True)
     fj.close()
-    _summarize_photo(base, args.pose_source, cache, ship)
+    _summarize_photo(base, args.pose_source, cache, ship, base_archive,
+                     args.ab_starts)
+
+
+def _ab_start_census(rows) -> dict:
+    """Which DERIVED start actually won, per pair -- the ACTIVATION ledger.
+
+    A lever that is held but never fires is still orphaned signal, so the
+    receipt records the denominator and the per-start win counts rather than
+    only the fact that the policy was enabled.  Rows predating the policy read
+    as ``neutral``, which is exactly what they were.
+    """
+    total = 0
+    by: dict[str, int] = {}
+    for row in rows:
+        total += 1
+        name = str(row.get("ab_start", "neutral"))
+        by[name] = by.get(name, 0) + 1
+    non_neutral = total - by.get("neutral", 0)
+    return {"n_rows": total, "by_start": by, "n_non_neutral_winner": non_neutral,
+            "frac_non_neutral_winner": (non_neutral / total) if total else 0.0,
+            "note": "frac_non_neutral_winner > 0 means the shipped single "
+                    "start was NOT the argmin on that fraction of pairs"}
 
 
 def _summarize_photo(base: str, pose_source: str, cache: dict[int, dict],
-                     ship: dict[int, dict]) -> None:
+                     ship: dict[int, dict], base_archive: Path,
+                     ab_start_policy: str = "neutral") -> None:
     n = len(cache)
     ab = {i: cache[i]["d_rungAB"] if i in cache else float(ship[i]["d"])
           for i in range(600)}
@@ -713,7 +862,7 @@ def _summarize_photo(base: str, pose_source: str, cache: dict[int, dict],
                 if i in cache else float(ship[i]["d"]) for i in range(600)]
         g_means[g] = float(np.mean(vals))
     g_star = min(g_means, key=g_means.get)
-    rate_base = 25.0 * BASES[base].stat().st_size / 37_545_489
+    rate_base = 25.0 * Path(base_archive).stat().st_size / 37_545_489
     receipt = {
         "schema": "ddm_v4c_photo.v1", "utc": _utc(), "base": base,
         "pose_source": pose_source,
@@ -732,6 +881,8 @@ def _summarize_photo(base: str, pose_source: str, cache: dict[int, dict],
         "shippable_mean_d_pose_600_at_g_star": g_means[g_star],
         "shippable_contribution_600_at_g_star": contribution(g_means[g_star]),
         "rungB_ab_stop_census": ab_stop_census(cache.values()),
+        "rungB_ab_start_policy": ab_start_policy,
+        "rungB_ab_start_census": _ab_start_census(cache.values()),
         "note": "rung B = f16 (a,b) auto-exposure applied on the realizable "
                 "static compose; rung A = rolling-shutter row-shear (best beta). "
                 "ctrl = compose at (a=1,b=0). ADVISORY; the n600 evaluate gate is "
@@ -746,7 +897,16 @@ def _summarize_photo(base: str, pose_source: str, cache: dict[int, dict],
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--mode", choices=("transfer", "solve", "photo"), required=True)
-    ap.add_argument("--base", choices=tuple(BASES), required=True)
+    ap.add_argument("--base", required=True,
+                    help=f"base label; {tuple(BASES)} resolve automatically, "
+                         "any other label requires --base-archive")
+    ap.add_argument("--base-archive", default=None,
+                    help="path to any v3_warp base archive (ddm_uv1). Without "
+                         "it --base must name a registered base.")
+    ap.add_argument("--ab-starts", choices=AB_START_POLICIES, default="neutral",
+                    help="photo: (a,b) restart policy. 'neutral' (default) is "
+                         "the shipped single start and is byte-identical; "
+                         "'derived' adds the zero-cost derived start set.")
     ap.add_argument("--n-pairs", type=int, default=600)
     ap.add_argument("--k", type=int, default=0, help="solve: limit to first K in order")
     ap.add_argument("--tail-cut", type=int, default=112,
