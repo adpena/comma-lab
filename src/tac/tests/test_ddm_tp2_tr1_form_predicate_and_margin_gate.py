@@ -7,6 +7,9 @@ IDENTICAL loss form under the label ``seg_trunk_tau_softplus`` and could NEVER s
 predicate. The fix keys the predicate on the loss FORM (``state_form["form"]``), which is
 "tau_softplus" in BOTH launch paths.
 
+ROW 3 (third block): the #274 spike/coherent PRODUCER, ported from the levelset trainer onto
+the live vehicle. Cross-validated at n600 against two independent implementations.
+
 ROW 2 (second block): ``--margin-weighted-loss on`` is threaded into ``make_loss_fn`` for
 every seg form, but the ``tau_softplus`` and ``l7_softplus`` branches never read
 ``apply_mw`` -- the flag is declared-ON and INERT for those forms. Guarded by a STRUCTURAL
@@ -21,6 +24,7 @@ import inspect
 import sys
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 _HERE = Path(__file__).resolve()
@@ -33,10 +37,21 @@ from experiments.train_tr1_partition_renderer_mlx import (  # noqa: E402
     BASIN_TERMINAL_SEG_FORM,
     MARGIN_WEIGHTED_HONORING_SEG_FORMS,
     SEG_TRUNK_CE_STAGE,
+    SEG_COHERENT_MH_LIFT_N600,
+    SEG_COHERENT_UPWEIGHT_RACE_START,
+    SEG_SPIKE_DOWNWEIGHT_RACE_START,
+    SEG_SPIKE_MH_LIFT_N600,
+    SPIKE_CODE_COHERENT,
+    SPIKE_CODE_SPIKE,
+    SPIKE_CODE_STABLE,
     assert_margin_weighted_loss_is_honored,
+    assert_spike_scalars_have_their_gate,
     basin_entry_fires,
+    build_argparser,
+    build_spike_coherent_codes,
     initial_stage_label,
     reachable_seg_forms,
+    spike_weight_lut,
 )
 
 # The four values ``--seg-form-start`` actually accepts (argparse ``choices``).
@@ -218,3 +233,133 @@ def test_refusal_is_wired_into_the_trainer_before_the_loss_is_built():
     src = (WORKTREE / "experiments" / "train_tr1_partition_renderer_mlx.py").read_text()
     call = src.index("assert_margin_weighted_loss_is_honored(cfg.seg_form_start")
     assert call < src.index("loss_fn = make_loss_fn("), "refusal must precede loss construction"
+
+
+# --------------------------------------------------------------------------------------
+# ROW 3 — the ported #274 spike/coherent producer.
+# --------------------------------------------------------------------------------------
+
+def _toy_lstars() -> np.ndarray:
+    """4 pairs x 1 x 4 px. Column semantics at the INTERIOR pairs (1, 2):
+      col0 stable everywhere · col1 SPIKE at pair 1 (differs from both neighbours)
+      col2 COHERENT at pair 1 (matches prev, differs from next)
+      col3 COHERENT at pair 1 (differs from prev, matches next)
+    """
+    return np.array([[[0, 0, 0, 1]], [[0, 1, 0, 0]], [[0, 0, 1, 0]], [[0, 0, 1, 0]]],
+                    dtype=np.int64)
+
+
+def test_producer_classifies_spike_coherent_and_stable():
+    codes = build_spike_coherent_codes(_toy_lstars(), 4)
+    assert codes[1].tolist() == [[SPIKE_CODE_STABLE, SPIKE_CODE_SPIKE,
+                                  SPIKE_CODE_COHERENT, SPIKE_CODE_COHERENT]]
+
+
+def test_producer_leaves_endpoints_neutral():
+    """Endpoints have ONE neighbour, so they carry no verdict -- this is what makes the
+    scope 598 interior pairs at n600, matching ddm_ti1 exactly."""
+    codes = build_spike_coherent_codes(_toy_lstars(), 4)
+    assert codes[0].max() == 0 and codes[-1].max() == 0
+
+
+def test_producer_is_deterministic_and_theta_independent():
+    a = build_spike_coherent_codes(_toy_lstars(), 4)
+    b = build_spike_coherent_codes(_toy_lstars(), 4)
+    assert np.array_equal(a, b) and a.dtype == np.uint8
+
+
+def test_lut_is_all_ones_when_both_scalars_are_inert():
+    """The byte-identity guarantee: 1.0/1.0 => the fold multiplies by exactly 1.0."""
+    lut = spike_weight_lut(1.0, 1.0)
+    assert lut.tolist() == [1.0, 1.0, 1.0]
+    codes = build_spike_coherent_codes(_toy_lstars(), 4)
+    assert np.array_equal(lut[codes], np.ones_like(codes, dtype=np.float32))
+
+
+def test_lut_applies_each_scalar_to_its_own_class():
+    lut = spike_weight_lut(0.25, 1.3)
+    w = lut[build_spike_coherent_codes(_toy_lstars(), 4)]
+    assert w[1].tolist() == [[1.0, pytest.approx(0.25), pytest.approx(1.3), pytest.approx(1.3)]]
+
+
+def test_scalars_without_the_gate_are_refused():
+    """Same declared-but-inert genus as row 2: a magnitude with no gate is a silent no-op."""
+    for dn, up in ((0.25, 1.0), (1.0, 1.3), (0.25, 1.3)):
+        with pytest.raises(SystemExit) as exc:
+            assert_spike_scalars_have_their_gate(False, dn, up)
+        assert "without --seg-spike-reweight" in str(exc.value)
+    assert_spike_scalars_have_their_gate(False, 1.0, 1.0)   # inert+off is fine
+    assert_spike_scalars_have_their_gate(True, 0.25, 1.3)   # gated is fine
+
+
+def test_the_two_knobs_are_priced_asymmetrically():
+    """ddm_ti1 §3a. COHERENT is RISK-PROPORTIONAL (its race start IS its measured lift);
+    SPIKE is CONCESSION-priced and must NOT equal its own (higher) lift."""
+    assert SEG_SPIKE_MH_LIFT_N600 > SEG_COHERENT_MH_LIFT_N600 > 1.0
+    assert SEG_COHERENT_UPWEIGHT_RACE_START == SEG_COHERENT_MH_LIFT_N600
+    assert SEG_SPIKE_DOWNWEIGHT_RACE_START != SEG_SPIKE_MH_LIFT_N600
+    assert SEG_SPIKE_DOWNWEIGHT_RACE_START < 1.0 < SEG_COHERENT_UPWEIGHT_RACE_START
+
+
+def test_defaults_are_inert_so_the_port_is_byte_identical():
+    from experiments.train_tr1_partition_renderer_mlx import TR1Config
+    ns = build_argparser().parse_args(["--variant", "plain", "--out-dir", "/dev/null"])
+    assert ns.seg_spike_reweight is False
+    assert ns.seg_spike_downweight == 1.0 and ns.seg_coherent_upweight == 1.0
+    c = TR1Config.__dataclass_fields__
+    assert c["seg_spike_reweight"].default is False
+    assert c["seg_spike_downweight"].default == 1.0
+    assert c["seg_coherent_upweight"].default == 1.0
+
+
+def test_producer_is_wired_into_pair_loss_multiplicatively():
+    """A ported producer whose output nothing consumes is the orphan class this row closes."""
+    src = (WORKTREE / "experiments" / "train_tr1_partition_renderer_mlx.py").read_text()
+    assert "spike_codes = build_spike_coherent_codes(lstars, cfg.num_pairs)" in src
+    assert "w_np = _sp_w if w_np is None else (w_np * _sp_w)" in src, "must MULTIPLY, not replace"
+    # ... and it must compose AFTER the additive lane-guard accumulation, so it scales it.
+    assert src.index("_lg_add") < src.index("_sp_w = spike_lut[")
+
+
+_GT_N600 = Path(
+    "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz")
+
+
+@pytest.mark.skipif(not _GT_N600.exists(), reason="n600 GT cache not present on this host")
+def test_n600_cross_validation_against_two_independent_implementations():
+    """THE PORT'S POSITIVE CONTROL, at n600 on the real frozen-authority GT (no toy, no
+    scorer forward). ddm_ti1 and ddm_fl1 measured 625,297 SPIKE px with two independent
+    implementations; this port is a third and must agree EXACTLY. A port that silently
+    computes a different field is the failure mode this catches."""
+    from tac.boundary_math.power_diagram_witness import open_stored_npy_memmap
+    lstars = open_stored_npy_memmap(str(_GT_N600), "lstars")
+    assert lstars.shape == (600, 384, 512)
+    codes = build_spike_coherent_codes(lstars, 600)
+    interior_px = 598 * 384 * 512
+    assert interior_px == 117_571_584                       # ti1's stated scope
+    assert int((codes == SPIKE_CODE_SPIKE).sum()) == 625_297  # ti1 + fl1, exact
+    union = int((codes != SPIKE_CODE_STABLE).sum())
+    assert union / interior_px == pytest.approx(0.0196, abs=5e-4)  # ti1's "1.96% of pixels"
+
+
+def test_off_path_leaves_the_composed_weight_bit_untouched():
+    """Byte-identity of the OFF path, proven STRUCTURALLY (see the memo: the trainer is not
+    run-to-run bit-deterministic on this host, so a checkpoint diff cannot prove it).
+    The guard is a None sentinel, so with the lever off the fold below never executes; and
+    even if it did with inert scalars, the LUT is all-ones. Both legs asserted."""
+    rng = np.random.default_rng(0)
+    base = rng.random((1, 4), dtype=np.float32)          # a composed class/lane-guard weight
+
+    def fold(w_np, spike_codes, spike_lut, idx):          # verbatim consumer expression
+        if spike_codes is not None:
+            _sp_w = spike_lut[spike_codes[idx]]
+            w_np = _sp_w if w_np is None else (w_np * _sp_w)
+        return w_np
+
+    # leg 1: lever OFF -> sentinel None -> the expression is the identity on w_np
+    assert fold(base, None, None, 1) is base
+    assert fold(None, None, None, 1) is None
+    # leg 2: lever ON with inert scalars -> multiplies by exactly 1.0, bit-for-bit
+    codes = build_spike_coherent_codes(_toy_lstars(), 4)
+    out = fold(base, codes, spike_weight_lut(1.0, 1.0), 1)
+    assert np.array_equal(out, base) and out.dtype == base.dtype

@@ -223,6 +223,12 @@ class TR1Config:
     # canonical make_loss_fn with margin_weighted=True (100% of flips are in the bottom GT-margin
     # decile — sg1 §1.3; the uniform loss spends its budget on the never-flipping deep interior).
     margin_weight_temp: float = 1.0       # inverse-margin reweight temperature (make_loss_fn).
+    # ---- ddm_tp2 row 3: #274 spike/coherent per-pixel reweight (PORTED producer) ----
+    # Default OFF and both scalars 1.0 => no map is built => seg_pixel_w unchanged =>
+    # BYTE-IDENTICAL. See build_spike_coherent_codes + the ti1 admission evidence above.
+    seg_spike_reweight: bool = False
+    seg_spike_downweight: float = 1.0     # weight on SPIKE px (conceded; race start 0.25)
+    seg_coherent_upweight: float = 1.0    # weight on COHERENT px (race start = MEASURED lift)
     w_rate: float = 0.0                   # §3.4 rate-in-loss (stl1 row-8 LAW): weight on the
     # differentiable token-entropy surrogate added to the seg loss (0.0 = distortion-only = tb1
     # control). The explicit form of the §3.3(b) redistribution co-benefit.
@@ -1009,6 +1015,101 @@ def initial_stage_label(seg_form_start: str) -> str:
 # it reproduces the burn lineage EXACTLY, byte-for-byte.
 MARGIN_WEIGHTED_HONORING_SEG_FORMS = frozenset({"ce", "unify_tau", "margin_hinge"})
 
+# ---- ddm_tp2 (2026-08-02) row 3: #274 spike/coherent PRODUCER, ported onto the live vehicle ----
+# This is a PORT, not new machinery. The lever (--seg-spike-reweight / --seg-spike-downweight /
+# --seg-coherent-upweight) is BUILT at
+# ``experiments/train_levelset_witness_realized_through_R_mlx.py:9467-9494`` with a DSL Lever
+# (witness_dsl/curriculum_dsl.py:4477) and a gauge default (witness_dsl/gauge.py:1043), and its
+# activation-ledger row reads "ever_fired": false. Its PRODUCER had no counterpart on TR1; the
+# CONSUMER already does (``seg_pixel_w``, built in pair_loss from class_weight_lane + lane_guard
+# and multiplied into the per-pixel seg map before the mean by every seg form). So only the
+# producer moves.
+#
+# THE FIELD: a pixel is a SPIKE at pair pi when its GT argmax differs from BOTH temporal
+# neighbours (single-frame flicker a per-frame witness structurally cannot fit); COHERENT when it
+# is temporally unstable but still matches >= 1 neighbour (the winnable boundary residual).
+# Endpoints (pi in {0, P-1}) have one neighbour and are left neutral -- hence 598 interior pairs
+# at n600, matching the ddm_ti1 measurement scope exactly.
+#
+# WHY IT IS ADMISSIBLE (ddm_ti1, MEASURED n600 / 598 interior pairs / 117,571,584 px / ZERO scorer
+# forwards; receipt .omx/research/ddm_ti1_nonredundancy_probe_receipt_bins40_20260802.json):
+# TR1's per-pixel seg loss is PER-PAIR SEPARABLE -- for pair t it reads only lstars[t], margins[t]
+# and the student's own logits -- so every weight it can express is measurable w.r.t.
+# sigma(class, GT margin). A CROSS-PAIR field built from lstars[t +/- 1] is outside that
+# sigma-algebra BY CONSTRUCTION. That is the non-redundancy frontier, and it is why a per-pair
+# teacher (lr1) was structurally doomed. MEASURED: 79% (spike) / 77% (coherent) of the field's
+# variance is unexplained by sigma(class, GT margin), carrying stratified Mantel-Haenszel
+# flip-risk lift 1.757 / 1.299 against a hash-noise null of 1.02 and a pair-shuffled control of
+# 1.02 / 1.00.
+SEG_SPIKE_MH_LIFT_N600 = 1.7573955039587674       # MEASURED (ti1 bins40 receipt, 40 margin bins)
+SEG_COHERENT_MH_LIFT_N600 = 1.2988561739557636    # MEASURED (same receipt)
+
+# ASYMMETRIC PRICING (ddm_ti1 §3a). Nothing in the existing #274 record priced these apart: the
+# gauge carries a single SEG_SPIKE_DOWNWEIGHT_DEFAULT and both trainer flags default to a
+# symmetric inert 1.0. They are NOT symmetric, and they are priced by DIFFERENT rules:
+#   * COHERENT is RISK-PROPORTIONAL. The lever's job is to align per-pixel loss weight with
+#     conditional flip risk, so the winnable set takes its own MEASURED stratified lift directly
+#     as the up-weight. The number IS the measurement; no arithmetic is invented on top of it.
+#   * SPIKE is CONCESSION-PRICED, deliberately NOT risk-proportional. Its lift is HIGHER (1.757),
+#     but ~88.6% of that set is irreducible single-frame appearance change (#274's own measured
+#     note), where smooth is optimal -- so it is conceded at the inherited 0.25 rather than
+#     up-weighted to 1.757. Chasing it would spend capacity on error the witness cannot remove.
+# These are RACE STARTING VALUES, not defaults: both flags default to 1.0 (inert) so the port is
+# byte-identical, and ti1 §7 requires the two scalars be raced SEPARATELY, never moved together.
+SEG_SPIKE_DOWNWEIGHT_RACE_START = 0.25                        # conceded (inherited gauge value)
+SEG_COHERENT_UPWEIGHT_RACE_START = SEG_COHERENT_MH_LIFT_N600  # risk-proportional (DERIVED)
+
+# uint8 code lattice for the per-pair field. Stored as codes (P,H,W)=118 MB at n600 rather than
+# float maps (472 MB): the field has exactly three values, the scalars are applied through a
+# 3-entry LUT at use time, and the memory ceiling is shared with the gate/GT caches.
+SPIKE_CODE_STABLE, SPIKE_CODE_COHERENT, SPIKE_CODE_SPIKE = 0, 1, 2
+
+
+def build_spike_coherent_codes(lstars, num_pairs: int) -> np.ndarray:
+    """#274 producer: (P,H,W) uint8 temporal-instability codes from the GT argmax.
+
+    Scorer-free and theta-INDEPENDENT (it reads only frozen GT), so it is computed once
+    before training and never again. Endpoint pairs stay STABLE (one neighbour only).
+    """
+    prev = np.asarray(lstars[0], dtype=np.int64)
+    cur = np.asarray(lstars[1], dtype=np.int64) if num_pairs > 1 else None
+    codes = np.zeros((num_pairs, *prev.shape), dtype=np.uint8)
+    for pi in range(1, num_pairs - 1):
+        nxt = np.asarray(lstars[pi + 1], dtype=np.int64)
+        dp, dn = (cur != prev), (cur != nxt)
+        spike = dp & dn                 # differs from BOTH neighbours = unfittable flicker
+        coherent = (dp | dn) & (~spike)  # unstable but matches >=1 = winnable boundary
+        codes[pi][coherent] = SPIKE_CODE_COHERENT
+        codes[pi][spike] = SPIKE_CODE_SPIKE
+        prev, cur = cur, nxt
+    return codes
+
+
+def spike_weight_lut(downweight: float, upweight: float) -> np.ndarray:
+    """3-entry LUT indexed by the codes above. 1.0/1.0 => all-ones => byte-identical."""
+    return np.array([1.0, float(upweight), float(downweight)], dtype=np.float32)
+
+
+def assert_spike_scalars_have_their_gate(seg_spike_reweight: bool, downweight: float,
+                                         upweight: float) -> None:
+    """A value flag with no gate is a SILENT no-op -- the same declared-but-inert genus as row 2
+    (and the exact trap gauge.py documents for --seg-spike-downweight). Fail closed."""
+    if seg_spike_reweight:
+        return
+    set_without_gate = [n for n, v in (("--seg-spike-downweight", downweight),
+                                       ("--seg-coherent-upweight", upweight)) if v != 1.0]
+    if set_without_gate:
+        raise SystemExit(
+            f"REFUSED: {set_without_gate} set without --seg-spike-reweight, which gates the "
+            f"producer -- the value would be silently ignored (no weight map is ever built).\n"
+            f"  Pass --seg-spike-reweight to arm the lever, or drop the value flag(s).\n"
+            f"  Race starting values (ddm_ti1 §3a, priced ASYMMETRICALLY and raced SEPARATELY): "
+            f"--seg-spike-downweight {SEG_SPIKE_DOWNWEIGHT_RACE_START} (concession-priced) | "
+            f"--seg-coherent-upweight {SEG_COHERENT_UPWEIGHT_RACE_START:.6f} "
+            f"(risk-proportional = its MEASURED lift).")
+
+
+
 
 def reachable_seg_forms(seg_form_start: str) -> frozenset[str]:
     """Every loss form a run launched at ``seg_form_start`` can occupy.
@@ -1498,6 +1599,23 @@ def build_argparser() -> argparse.ArgumentParser:
     ap.add_argument("--margin-weighted-loss", default="off", choices=("off", "on"),
                     help="§3.2 boundary-annulus form fix: 'on' builds make_loss_fn with "
                          "margin_weighted=True (100%% of flips at small GT-margin; sg1 §1.3)")
+    # ---- ddm_tp2 row 3: #274 spike/coherent reweight, ported from the levelset trainer ----
+    ap.add_argument("--seg-spike-reweight", action="store_true",
+                    help="ddm_tp2/#274 PORT: build the per-pair temporal-instability weight map "
+                         "(SPIKE = GT argmax differs from BOTH neighbours = unfittable flicker; "
+                         "COHERENT = unstable but matches >=1 = winnable boundary) and fold it "
+                         "MULTIPLICATIVELY into seg_pixel_w. Gate only; the scalars carry the "
+                         "magnitude. DEFAULT-OFF => byte-identical.")
+    ap.add_argument("--seg-spike-downweight", type=float, default=1.0,
+                    help=f"weight on SPIKE pixels (1.0 = inert). CONCESSION-priced, deliberately "
+                         f"NOT risk-proportional (~88.6%% irreducible; smooth is optimal there). "
+                         f"Race start {SEG_SPIKE_DOWNWEIGHT_RACE_START}. Requires "
+                         f"--seg-spike-reweight.")
+    ap.add_argument("--seg-coherent-upweight", type=float, default=1.0,
+                    help=f"weight on COHERENT pixels (1.0 = inert). RISK-PROPORTIONAL: race start "
+                         f"{SEG_COHERENT_UPWEIGHT_RACE_START:.6f} == its MEASURED stratified "
+                         f"flip-risk lift (ddm_ti1 n600). Raced SEPARATELY from the spike scalar "
+                         f"-- the two are asymmetric. Requires --seg-spike-reweight.")
     ap.add_argument("--margin-weight-temp", type=float, default=1.0,
                     help="inverse-margin reweight temperature (make_loss_fn margin_weight_temp)")
     ap.add_argument("--w-rate", type=float, default=0.0,
@@ -1642,6 +1760,9 @@ def main() -> int:
         token_init_mode=args.token_init_mode, basin_handoff=args.basin_handoff,
         token_cell_mask=args.token_cell_mask,
         margin_weighted_loss=args.margin_weighted_loss,
+        seg_spike_reweight=args.seg_spike_reweight,
+        seg_spike_downweight=args.seg_spike_downweight,
+        seg_coherent_upweight=args.seg_coherent_upweight,
         margin_weight_temp=args.margin_weight_temp,
         w_rate=args.w_rate, rate_model=args.rate_model,
         token_quant_anneal=args.token_quant_anneal,
@@ -1722,6 +1843,9 @@ def main() -> int:
     # ddm_tp2 row 2: fail closed BEFORE any training if the flag would be inert for a form
     # this run will occupy (declared-on + silently-ignored is the day's dominant genus).
     assert_margin_weighted_loss_is_honored(cfg.seg_form_start, cfg.margin_weighted_loss)
+    # ddm_tp2 row 3: same genus -- a magnitude with no gate would be silently ignored.
+    assert_spike_scalars_have_their_gate(cfg.seg_spike_reweight, cfg.seg_spike_downweight,
+                                         cfg.seg_coherent_upweight)
     loss_fn = make_loss_fn(adapter, SEG_H, SEG_W, score_domain=True,
                            seg_loss=cfg.seg_form_start,
                            margin_weighted=(cfg.margin_weighted_loss == "on"),
@@ -1908,6 +2032,29 @@ def main() -> int:
     # Gate set (pre-registered): all pairs when num_pairs < 600, else fd2 geometry.
     gate_ids = resolve_gate_ids(cfg.num_pairs)
 
+    # ddm_tp2 row 3 (#274 PORT): build the theta-INDEPENDENT temporal-instability field ONCE.
+    # Gated => off leaves spike_codes None => pair_loss never touches it => byte-identical.
+    spike_codes = spike_lut = None
+    if cfg.seg_spike_reweight:
+        spike_codes = build_spike_coherent_codes(lstars, cfg.num_pairs)
+        spike_lut = spike_weight_lut(cfg.seg_spike_downweight, cfg.seg_coherent_upweight)
+        # Score-neutral observability defaults ON (it only READS): these counts are the port's
+        # own cross-check against ddm_ti1 / ddm_fl1, which measured 625,297 spike px at n600.
+        tlog({"event": "seg_spike_reweight_ready", "score_neutral": True,
+              "pairs": int(cfg.num_pairs),
+              "interior_pairs": int(max(cfg.num_pairs - 2, 0)),
+              "spike_px_total": int((spike_codes == SPIKE_CODE_SPIKE).sum()),
+              "coherent_px_total": int((spike_codes == SPIKE_CODE_COHERENT).sum()),
+              "downweight": float(cfg.seg_spike_downweight),
+              "upweight": float(cfg.seg_coherent_upweight),
+              "byte_identical_scalars": bool(cfg.seg_spike_downweight == 1.0
+                                             and cfg.seg_coherent_upweight == 1.0),
+              "measured_lift_spike": SEG_SPIKE_MH_LIFT_N600,
+              "measured_lift_coherent": SEG_COHERENT_MH_LIFT_N600,
+              "note": "#274 producer ported from the levelset trainer; cross-pair field, "
+                      "outside sigma(class, GT margin) BY CONSTRUCTION (ddm_ti1). A/B owed "
+                      "(needs GO); canonical effective-frontier pointer UNMOVED"})
+
     def pair_loss(mdl, idx: int, form: str):
         lstar = np.asarray(lstars[idx], dtype=np.int64)
         lstar_oh = mx.array((lstar[..., None] == np.arange(5)).astype(np.float32))[None]
@@ -1930,6 +2077,12 @@ def main() -> int:
                 lstar, _lg_margin, lane_guard_state, lane_guard_cfg, idx)
             if _lg_add is not None:
                 w_np = (_lg_add + 1.0) if w_np is None else (w_np + _lg_add)
+        # ddm_tp2 row 3 (#274): fold the temporal-instability weight in MULTIPLICATIVELY (the
+        # same composition rule the levelset trainer uses for focal/Fisher), AFTER the additive
+        # class/lane-guard accumulation, so it SCALES the composed weight rather than replacing it.
+        if spike_codes is not None:
+            _sp_w = spike_lut[spike_codes[idx]]          # (H,W) float32 via 3-entry LUT
+            w_np = _sp_w if w_np is None else (w_np * _sp_w)
         if w_np is not None:
             seg_pixel_w = mx.array(w_np)[None]
         # QA75 teacher logits for THIS pair (precomputed b2b scorer response); None => OFF.
