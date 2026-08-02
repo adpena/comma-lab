@@ -216,3 +216,81 @@ did not adjudicate the 84 UNKNOWN rows. It did not validate ORPHANED precision o
 live ORPHANED set is empty. What it did is convert an assumed-rampant class into a measured-near-empty
 one, name the real residual (stale never-run claims), pay the one genuine debt it found, and fix the
 echo-only harvest step that created it.
+
+---
+
+# APPENDIX (#880) — the task-row join: 0 of 62 open rows detectably closed, at a MEASURED recall of 16%
+
+Coordinator-directed extension, 2026-08-01. Same artifact predicate as §3, **conservative default
+INVERTED**: on memos a false ORPHANED manufactures debt, but on tasks a false EXECUTED silently
+DELETES real backlog — and a deleted row is not recoverable by reading harder. So `EXECUTED` must
+be EARNED by a present RUN product; everything else is `UNKNOWN`. **There is deliberately no
+ORPHANED bucket for tasks**: "never done" is a negative-existence claim that artifact-absence
+cannot support.
+
+## A.1 SCOPE BOUNDARY — the operator-visible backlog is not in this repo
+
+**MEASURED:** task ids **833 · 834 · 840 · 841 · 844 · 858 · 859 · 860** (the coordinator's
+never-named list) and **864 · 869 · 870** (the arms running today, including this one) are **ALL
+ABSENT** from `.omx/state/canonical_task_status.jsonl`. That store holds 143 distinct ids — 37
+numeric, range **383–828** — and no on-disk mirror of the harness task list exists anywhere under
+`.omx/state` (checked every `.jsonl`; `graph_memory/nodes.jsonl` carries no task nodes).
+
+So `audit_tasks` takes rows as **caller-supplied input**. Whoever holds the harness ledger feeds it;
+the function never pretends to enumerate a population it cannot see, and its `ScopeLedger` states
+which population it actually got. The coordinator's ~105-row population and mine are different sets.
+
+## A.2 THE MEASUREMENT (canary lit in the same run)
+
+| population | examined | EXECUTED | UNKNOWN |
+|---|---:|---:|---:|
+| **open** (pending + in_progress + blocked) | **62 of 62** | **0** | 62 |
+| **completed** (ground truth known) | **81 of 81** | **13** | 68 |
+
+**The completed-row control is what makes the open-row result readable.** It is a recall
+measurement on rows whose closure is already known: **13/81 = 16.0% sensitivity.** Therefore
+"0 of 62 open rows are already closed" is a **lower bound from a detector with 16% measured
+sensitivity** — *not* a claim that no open row is already closed. Stating the first without the
+second would be the negative-existence error the coordinator flagged.
+
+**Only 2 of 62 open rows carry ANY artifact evidence at all**, so the task population is **~97%
+undecidable by artifact join** — worse than the memo side's 84.3%. The two:
+
+| row | status | verdict | evidence |
+|---|---|---|---|
+| `#826` | pending | UNKNOWN | `build-product-present: gr1_cell_drop50_archive.zip` |
+| `#578` | blocked | UNKNOWN | `named-output-absent:` an absolute path under `.omx/tmp/codex_runs/…prompt.txt` — a **transient scratch location**, which CLAUDE.md forbids as durable evidence |
+
+## A.3 THE ROUND-1 CATCH — right for the wrong reason
+
+The first run returned exactly one `EXECUTED`: **#826**, on evidence *"`gr1_cell_drop50_archive.zip`
+is present"*. **The verdict was correct** — §1 independently established via hand-check that #826's
+evaluate receipt exists (S = 2.2027435921, 600 samples). **The evidence did not support it.** An
+archive is the **INPUT** to a gate, so its presence witnesses **BUILT**, never **RAN**. This is the
+runner-vs-output distinction from §3 reappearing one level up.
+
+**Right-for-the-wrong-reason is the most dangerous state an instrument can hold, because it passes
+review.** Build products (`.zip`, `.npz`) can no longer earn `EXECUTED`; they are still reported,
+just not counted as closure. That change is what took the open-row EXECUTED count from 1 to 0 — and
+the 1 was never real evidence.
+
+## A.4 THE CANARY IS NOW STRUCTURAL
+
+Per the coordinator's method warning (a misplaced `-E` returned 0-of-54 and was caught only by a
+positive control; three sibling instruments failed the same way today and reached the operator
+first), `audit_tasks` runs a positive **and** negative control **before emitting any row** and
+**REFUSES** — empty result, `VACUOUS` scope, reason string — if the positive does not fire. A run
+whose canary is dark cannot publish. This is P4 ("no meter without a canary") made structural
+rather than procedural, and it is asserted by a dedicated test.
+
+## A.5 THE ANSWER TO "HOW MUCH OF THIS BACKLOG IS REAL"
+
+**Not answerable from artifacts, and the reason is a recordkeeping gap rather than a detector gap:
+task rows do not name the artifact that would witness their own closure.** 68 of 81 rows *known*
+to be completed name no run product that exists. The limit is on the producing side, exactly as
+`ddm_gd5` §5 found for the rival relation — and the cure has the same shape: a `closing_artifact`
+field written at the moment a task is closed, while the information is in hand and free, makes the
+join mechanical. Absent that, both populations stay dominated by an honest, large `UNKNOWN`.
+
+**Pointer UNMOVED**: `effective_frontier` 0.172 official; own-vehicle v4d 0.9476091.
+`[macOS-CPU advisory]`, `score_claim=false`, zero scorer forwards.
