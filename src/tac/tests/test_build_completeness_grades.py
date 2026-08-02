@@ -369,7 +369,12 @@ def test_retired_is_a_valid_build_grade_and_distinct_from_the_other_four() -> No
     assert BUILD_RETIRED in VALID_BUILD_GRADES
     assert BUILD_RETIRED not in (
         BUILD_FIRED, BUILD_NEVER_FIRED, BUILD_DESIGNED_STUB, BUILD_NOT_DESIGNED)
-    assert len(set(VALID_BUILD_GRADES)) == 5
+    # Count pin retained deliberately (ddm_wt1): it forces anyone adding a grade to update this
+    # test consciously, which is how the 5th grade's arrival was caught. Bumped 5 -> 6 for
+    # built-elsewhere-unwired. Distinctness is asserted separately -- a duplicated string would
+    # keep the count right while silently collapsing two grades.
+    assert len(VALID_BUILD_GRADES) == 6
+    assert len(set(VALID_BUILD_GRADES)) == len(VALID_BUILD_GRADES), "grades must be distinct"
 
 
 def test_retired_row_leaves_the_not_even_designed_debt_queue(tmp_path) -> None:
@@ -464,3 +469,129 @@ def test_retirement_is_per_charter_key_not_per_component(tmp_path) -> None:
                               notes="REACTIVATION: named measured fact", **common)
     remaining = [r["needed_by"] for r in not_even_designed(p)]
     assert remaining == ["cfgB"]
+
+
+# ---------------------------------------------------------------------------
+# BUILD_ELSEWHERE_UNWIRED — the #864 P0 grade (ddm_wt1).
+# Operator 2026-08-01: "All built-elsewhere-unwired is p0". The axis could express
+# "missing on this vehicle" five ways and could not express "missing NOTHING, wired
+# NOWHERE, and beating what is live". Every test below asserts a PROPERTY of the
+# refusal/queue behaviour on real inputs, never that a constant equals itself.
+# ---------------------------------------------------------------------------
+
+
+def _harm_kwargs(**over):
+    base = {
+        "needed_by": "cfgOptimalFromStart",
+        "missing_mechanism": "no live call site reaches it from the vehicle entry point",
+        "owner": "ddm_wt1",
+        "fire_order": 1,
+        "consumer": "the live receiver",
+        "grade": "built-elsewhere-unwired",
+        "live_recipient": "live_incumbent_v1",
+        "measured_comparison": "challenger 1.0 vs incumbent 2.0 B [macOS-CPU advisory]",
+    }
+    base.update(over)
+    return base
+
+
+def test_elsewhere_unwired_is_distinct_from_never_fired() -> None:
+    """The distinction the P0 is ABOUT: never-fired is dormant, this one is losing score.
+
+    Collapsing them was the second structural reason the class stayed invisible -- not only
+    "no detector" but "no vocabulary".
+    """
+    from tac.witness_dsl.activation_ledger import BUILD_ELSEWHERE_UNWIRED, BUILD_RETIRED
+
+    assert BUILD_ELSEWHERE_UNWIRED in VALID_BUILD_GRADES
+    assert BUILD_ELSEWHERE_UNWIRED not in (
+        BUILD_FIRED, BUILD_NEVER_FIRED, BUILD_DESIGNED_STUB, BUILD_NOT_DESIGNED, BUILD_RETIRED)
+
+
+def test_grade_order_covers_every_grade_and_ranks_measured_harm_first() -> None:
+    """The order map must stay total, and the only grade carrying a MEASURED present loss reads first."""
+    from tac.witness_dsl.activation_ledger import BUILD_ELSEWHERE_UNWIRED
+
+    assert set(BUILD_GRADE_ORDER) == set(VALID_BUILD_GRADES)
+    assert len(set(BUILD_GRADE_ORDER.values())) == len(VALID_BUILD_GRADES), "ranks must be distinct"
+    assert BUILD_GRADE_ORDER[BUILD_ELSEWHERE_UNWIRED] == min(BUILD_GRADE_ORDER.values())
+
+
+def test_harm_clause_refuses_a_recipient_less_row(tmp_path) -> None:
+    """ddm_wr2 MEASURED 4-of-7 meeting the literal predicate and 0-of-7 meeting the harm clause.
+
+    Without this refusal the grade re-admits those 7 and an adjudicated NEGATIVE-CONTROL set turns
+    back into a wiring backlog -- the exact error wr2 spent an arm correcting.
+    """
+    p = tmp_path / "req.jsonl"
+    for missing in ("live_recipient", "measured_comparison"):
+        kwargs = _harm_kwargs(**{missing: ""})
+        with pytest.raises(ValueError, match="HARM CLAUSE"):
+            record_required_component("NoRecipient", path=p, **kwargs)
+    # ...and both absent at once is likewise refused, not silently defaulted.
+    with pytest.raises(ValueError, match="HARM CLAUSE"):
+        record_required_component(
+            "NoRecipient", path=p, **_harm_kwargs(live_recipient="", measured_comparison=""))
+    assert not p.exists() or p.read_text(encoding="utf-8").strip() == "", "refused rows must not persist"
+
+
+def test_harm_clause_refusal_names_the_right_alternative(tmp_path) -> None:
+    """A refusal that does not say what to record instead just teaches callers to pick any grade."""
+    p = tmp_path / "req.jsonl"
+    with pytest.raises(ValueError) as exc:
+        record_required_component("NoRecipient", path=p, **_harm_kwargs(live_recipient=""))
+    assert "built-never-fired" in str(exc.value)
+
+
+def test_elsewhere_unwired_leaves_the_build_queue_but_enters_the_wiring_queue(tmp_path) -> None:
+    """It is BUILT, so "not even designed" is false about it; its debt is WIRING, not building."""
+    from tac.witness_dsl.activation_ledger import built_elsewhere_unwired
+
+    p = tmp_path / "req.jsonl"
+    record_required_component("WiringDebt", path=p, **_harm_kwargs())
+    record_required_component(
+        "BuildDebt", needed_by="cfgOptimalFromStart", missing_mechanism="nothing implements it",
+        owner="ddm_wt1", fire_order=2, consumer="the live receiver", path=p)
+
+    assert {r["component"] for r in not_even_designed(p)} == {"BuildDebt"}
+    assert {r["component"] for r in built_elsewhere_unwired(p)} == {"WiringDebt"}
+    # Both remain declared: neither queue deletes, and the row keeps its evidence.
+    row = next(r for r in read_required_components(p) if r["component"] == "WiringDebt")
+    assert row["live_recipient"] == "live_incumbent_v1"
+    assert "incumbent" in row["measured_comparison"]
+
+
+def test_report_preserves_the_grade_instead_of_coercing_to_not_designed(tmp_path) -> None:
+    """Coercion would mis-state a measured WIRING debt as a BUILD debt and drop its harm."""
+    from tac.witness_dsl.activation_ledger import BUILD_ELSEWHERE_UNWIRED
+
+    p = tmp_path / "req.jsonl"
+    record_required_component("WiringDebt", path=p, **_harm_kwargs())
+    row = next(r for r in build_completeness_report(p) if r["component"] == "WiringDebt")
+    assert row["grade"] == BUILD_ELSEWHERE_UNWIRED
+    assert row["live_recipient"] == "live_incumbent_v1"
+    # ...and it sorts to the head of the operator-facing report.
+    assert build_completeness_report(p)[0]["component"] == "WiringDebt"
+
+
+def test_wiring_queue_drains_when_a_factory_lands_not_when_a_memo_says_so(tmp_path) -> None:
+    """Same contract as the grade-4 queue: the registry decides, never a human edit."""
+    from tac.witness_dsl.activation_ledger import built_elsewhere_unwired
+
+    p = tmp_path / "req.jsonl"
+    real = sorted(package_known_levers())[0]  # a component that DOES have a factory
+    record_required_component(real, path=p, **_harm_kwargs())
+    assert real not in {r["component"] for r in built_elsewhere_unwired(p)}
+
+
+def test_harm_clause_does_not_leak_onto_the_other_grades(tmp_path) -> None:
+    """Grades 1-5 must keep working with no recipient -- the refusal is scoped, not global."""
+    from tac.witness_dsl.activation_ledger import BUILD_RETIRED
+
+    p = tmp_path / "req.jsonl"
+    common = {"needed_by": "cfgOptimalFromStart", "missing_mechanism": "nothing implements it",
+              "owner": "ddm_wt1", "fire_order": 1, "consumer": "the live receiver", "path": p}
+    record_required_component("PlainGrade4", **common)
+    record_required_component("Retired", grade=BUILD_RETIRED,
+                              notes="REACTIVATION: iff tr1 grows the precondition", **common)
+    assert len(read_required_components(p)) == 2

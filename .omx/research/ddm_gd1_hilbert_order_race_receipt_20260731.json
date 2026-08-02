@@ -1,5 +1,5 @@
 {
- "schema": "ddm_gd1_hilbert_order_race.v1",
+ "schema": "ddm_gd1_hilbert_order_race.v2",
  "axis": "[macOS-CPU advisory, rate-only lossless byte measurement]",
  "score_claim": false,
  "promotion_eligible": false,
@@ -21,42 +21,42 @@
   "a0_smevr_2d_control": {
    "bytes": 346478,
    "codec": "smevr",
-   "seconds": 15.24
+   "seconds": 3.87
   },
   "a1_smevr_raster_1d": {
    "bytes": 346903,
    "codec": "smevr",
-   "seconds": 12.71
+   "seconds": 3.7
   },
   "a2_smevr_hilbert_1d": {
    "bytes": 346930,
    "codec": "smevr",
-   "seconds": 12.91
+   "seconds": 3.59
   },
   "a3_smevr_serpent_1d": {
    "bytes": 346866,
    "codec": "smevr",
-   "seconds": 13.49
+   "seconds": 3.58
   },
   "b0_brotli11_2d": {
    "bytes": 396442,
    "codec": "brotli11",
-   "seconds": 1.2
+   "seconds": 0.74
   },
   "b1_brotli11_hilbert": {
    "bytes": 401438,
    "codec": "brotli11",
-   "seconds": 1.67
+   "seconds": 1.08
   },
   "c0_lzma1_2d": {
    "bytes": 398024,
    "codec": "lzma1",
-   "seconds": 0.29
+   "seconds": 0.17
   },
   "c1_lzma1_hilbert": {
    "bytes": 403109,
    "codec": "lzma1",
-   "seconds": 0.35
+   "seconds": 0.22
   }
  },
  "keep_mask_arms": {
@@ -77,6 +77,125 @@
    "brotli11": 47
   }
  },
+ "rivalry": [
+  {
+   "role": "token_scan_order",
+   "incumbent": "a0_smevr_2d_control",
+   "challenger": "a1_smevr_raster_1d",
+   "metric": "lossless coded bytes of state/tokens.dr7t",
+   "axis": "[macOS-CPU advisory, rate-only lossless byte measurement]",
+   "unit": "B",
+   "incumbent_value": 346478,
+   "challenger_value": 346903,
+   "delta": 425.0,
+   "lower_is_better": true,
+   "challenger_wins": false,
+   "adopted": false,
+   "not_adopted_reason": "refused: lost the measured race against the live incumbent on the same sealed payload through the same coder \u2014 adopting it would raise bytes",
+   "notes": "incumbent = raster order in experiments/ddm_r7_token_coder.py::_encode_smevr"
+  },
+  {
+   "role": "token_scan_order",
+   "incumbent": "a0_smevr_2d_control",
+   "challenger": "a2_smevr_hilbert_1d",
+   "metric": "lossless coded bytes of state/tokens.dr7t",
+   "axis": "[macOS-CPU advisory, rate-only lossless byte measurement]",
+   "unit": "B",
+   "incumbent_value": 346478,
+   "challenger_value": 346930,
+   "delta": 452.0,
+   "lower_is_better": true,
+   "challenger_wins": false,
+   "adopted": false,
+   "not_adopted_reason": "refused: lost the measured race against the live incumbent on the same sealed payload through the same coder \u2014 adopting it would raise bytes",
+   "notes": "incumbent = raster order in experiments/ddm_r7_token_coder.py::_encode_smevr"
+  },
+  {
+   "role": "token_scan_order",
+   "incumbent": "a0_smevr_2d_control",
+   "challenger": "a3_smevr_serpent_1d",
+   "metric": "lossless coded bytes of state/tokens.dr7t",
+   "axis": "[macOS-CPU advisory, rate-only lossless byte measurement]",
+   "unit": "B",
+   "incumbent_value": 346478,
+   "challenger_value": 346866,
+   "delta": 388.0,
+   "lower_is_better": true,
+   "challenger_wins": false,
+   "adopted": false,
+   "not_adopted_reason": "refused: lost the measured race against the live incumbent on the same sealed payload through the same coder \u2014 adopting it would raise bytes",
+   "notes": "incumbent = raster order in experiments/ddm_r7_token_coder.py::_encode_smevr"
+  },
+  {
+   "role": "token_entropy_coder",
+   "incumbent": "a0_smevr_2d_control",
+   "challenger": "b0_brotli11_2d",
+   "metric": "lossless coded bytes of state/tokens.dr7t",
+   "axis": "[macOS-CPU advisory, rate-only lossless byte measurement]",
+   "unit": "B",
+   "incumbent_value": 346478,
+   "challenger_value": 396442,
+   "delta": 49964.0,
+   "lower_is_better": true,
+   "challenger_wins": false,
+   "adopted": false,
+   "not_adopted_reason": "refused: lost the measured race against the live incumbent on the same sealed payload through the same coder \u2014 adopting it would raise bytes",
+   "notes": "same 2D order, different coder \u2014 isolates the coder from the scan order"
+  },
+  {
+   "role": "token_entropy_coder",
+   "incumbent": "a0_smevr_2d_control",
+   "challenger": "c0_lzma1_2d",
+   "metric": "lossless coded bytes of state/tokens.dr7t",
+   "axis": "[macOS-CPU advisory, rate-only lossless byte measurement]",
+   "unit": "B",
+   "incumbent_value": 346478,
+   "challenger_value": 398024,
+   "delta": 51546.0,
+   "lower_is_better": true,
+   "challenger_wins": false,
+   "adopted": false,
+   "not_adopted_reason": "refused: lost the measured race against the live incumbent on the same sealed payload through the same coder \u2014 adopting it would raise bytes",
+   "notes": "same 2D order, different coder \u2014 isolates the coder from the scan order"
+  },
+  {
+   "role": "keep_mask_bit_order",
+   "incumbent": "raster",
+   "challenger": "hilbert",
+   "metric": "adaptive binary AC bytes of the 24x32 keep mask",
+   "axis": "[macOS-CPU advisory, rate-only lossless byte measurement]",
+   "unit": "B",
+   "incumbent_value": 30,
+   "challenger_value": 37,
+   "delta": 7.0,
+   "lower_is_better": true,
+   "challenger_wins": false,
+   "adopted": false,
+   "not_adopted_reason": "refused: lost the measured race against the live incumbent on the same sealed payload through the same coder \u2014 adopting it would raise bytes",
+   "notes": "incumbent = raster bit order of the QA24 keep mask"
+  },
+  {
+   "role": "keep_mask_bit_order",
+   "incumbent": "raster",
+   "challenger": "serpentine",
+   "metric": "adaptive binary AC bytes of the 24x32 keep mask",
+   "axis": "[macOS-CPU advisory, rate-only lossless byte measurement]",
+   "unit": "B",
+   "incumbent_value": 30,
+   "challenger_value": 30,
+   "delta": 0.0,
+   "lower_is_better": true,
+   "challenger_wins": false,
+   "adopted": false,
+   "not_adopted_reason": "refused: lost the measured race against the live incumbent on the same sealed payload through the same coder \u2014 adopting it would raise bytes",
+   "notes": "incumbent = raster bit order of the QA24 keep mask"
+  }
+ ],
+ "rivalry_schema": "tac.race_receipt.RivalryRow (ddm_wt1, task #868)",
+ "rivalry_excluded_arms": {
+  "b1_brotli11_hilbert": "varies BOTH coder and scan order vs the live path \u2014 a two-factor arm cannot answer a one-slot rivalry question",
+  "c1_lzma1_hilbert": "varies BOTH coder and scan order vs the live path"
+ },
  "verification": "every token arm decode-verified lossless + inverse-permutation checked",
- "generated_at_utc": "2026-07-30T15:29:51Z"
+ "generated_at_utc": "2026-08-02T01:03:35Z"
 }

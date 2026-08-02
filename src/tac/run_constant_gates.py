@@ -61,7 +61,21 @@ sibling's in-flight hunks (the absorbed-hunks class, recurrence 3+). Run standal
     .venv/bin/python -m tac.run_constant_gates          # report
     .venv/bin/python -m tac.run_constant_gates --strict # rc=1 on violations
 
-Wire into ``preflight_all(strict=False)`` once the sibling's preflight.py lands.
+WIRE-IN, RESOLVED (ddm_wt1, task #868, 2026-08-01). The 2026-07-07 blocker above (a sibling's
+in-flight ``preflight.py`` hunks) is long gone, but ``preflight_all()`` is STILL the wrong host,
+for a NEW and measured reason: ``preflight_all()`` runs at 26.1 / 29.6 / 30.2 s over three
+consecutive measurements against its own ``DEFAULT_PREFLIGHT_CLI_TIMEOUT_S = 30.0`` budget — one
+of the three already raised ``PreflightTimeoutError`` at HEAD before this module was added. These
+two gates cost a measured 1.21 s + 5.19 s = 6.40 s, or 21% of the whole budget, so wiring them
+there would put every run over. The consumer is therefore ``tools/all_lanes_preflight.py``
+(Gate #38) — a lower-frequency pre-dispatch surface, and one of the wire-in targets CLAUDE.md's
+"Operator gates must be wired and used" names explicitly.
+
+The gate is a RATCHET, not a pass/fail on absolute count: existing debt does not block (both
+checks are WARN-ONLY by design and the drain is a separate campaign), but any INCREASE fails.
+A gate that can never fail is the vacuity genus — it prints the clean symbol forever and trains
+its readers to ignore it — so "warn-only" is expressed as a pinned baseline rather than as an
+ignored result. Baselines below are MEASURED at HEAD, not chosen.
 """
 from __future__ import annotations
 
@@ -72,13 +86,24 @@ from decimal import Decimal
 from pathlib import Path
 
 __all__ = [
+    "RUN_CONSTANT_RATCHET_BASELINE",
     "CanonicalConstantCopyViolation",
     "RunConstantViolation",
     "check_no_canonical_equation_constant_copied_as_literal",
     "check_no_hardcoded_run_constants_in_consumers",
+    "run_constant_ratchet",
     "scan_repo_for_canonical_constant_copies",
     "scan_repo_for_hardcoded_run_constants",
 ]
+
+# MEASURED live counts at HEAD on 2026-08-01 (ddm_wt1, task #868) — the ratchet's pins, and the
+# ONLY thing standing between this module and the strict flip. Lower them as the debt drains;
+# raising one is a deliberate act that must be argued for in the commit, never a quiet edit.
+# Reproduce with: .venv/bin/python -m tac.run_constant_gates
+RUN_CONSTANT_RATCHET_BASELINE: dict[str, int] = {
+    "hardcoded_run_constants": 10,
+    "canonical_constant_copies": 2,
+}
 
 _WAIVER_TOKEN = "RUN_CONSTANT_OK:"
 _PLACEHOLDER_RATIONALES = {"<rationale>", "<reason>", "tbd", "todo", "placeholder", ""}
@@ -476,6 +501,44 @@ def check_no_canonical_equation_constant_copied_as_literal(
             f"copied canonical-constant table(s):\n{detail}"
         )
     return findings
+
+
+def run_constant_ratchet(
+    repo_root: str | Path | None = None,
+    baseline: dict[str, int] | None = None,
+) -> tuple[bool, str]:
+    """Run BOTH gates and report pass/fail against the pinned baseline — the consumer surface.
+
+    Returns ``(ok, report)`` — the exact shape ``tools/all_lanes_preflight.py`` steps use, so the
+    wire-in adds no adapter. ``ok`` is False iff either live count EXCEEDS its baseline.
+
+    Rule chain on failure (per the CLAUDE.md preflight failure-message discipline): a NEW hardcoded
+    run constant in a consumer violates the triality DSL-single-source-of-truth rule, and a NEW
+    copied canonical constant violates the value-provenance ladder. The fix in both cases is to
+    derive the value from its producer — schedule read-back / ``tac.clip_profile`` / the canonical
+    equation module — or, where the live path genuinely cannot, to waive same-line with a real
+    rationale naming the re-derivation trigger. Draining below baseline is welcome; re-pin
+    ``RUN_CONSTANT_RATCHET_BASELINE`` in the same commit so the ratchet keeps its teeth.
+    """
+    pins = RUN_CONSTANT_RATCHET_BASELINE if baseline is None else baseline
+    live = {
+        "hardcoded_run_constants": scan_repo_for_hardcoded_run_constants(repo_root),
+        "canonical_constant_copies": scan_repo_for_canonical_constant_copies(repo_root),
+    }
+    lines: list[str] = []
+    ok = True
+    for key, findings in live.items():
+        pin = pins.get(key, 0)
+        count = len(findings)
+        if count > pin:
+            ok = False
+            lines.append(f"  ✗ {key}: {count} > baseline {pin} — {count - pin} NEW violation(s)")
+            lines.extend(f"      {f.describe()}" for f in findings)
+        else:
+            verdict = "at baseline" if count == pin else f"BELOW baseline {pin} — re-pin it"
+            lines.append(f"  - {key}: {count} ({verdict})")
+    head = ("run-constant ratchet: PASS" if ok else "run-constant ratchet: FAIL (new debt)")
+    return ok, "\n".join([head, *lines])
 
 
 def _main(argv: list[str] | None = None) -> int:

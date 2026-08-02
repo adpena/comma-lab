@@ -112,6 +112,10 @@ Currently runs:
   Gate #37: tools/audit_frontier_rate_attack_consolidation.py
            (legacy final-rate/byte-shaving/materializer state is the single
             score-program compiler surface; parallel compiler scaffolds fail)
+  Gate #38: tac.run_constant_gates.run_constant_ratchet
+           (run constants and canonical-equation constants must be DERIVED in
+            consumers, not copied; a RATCHET against the measured baseline, so
+            existing debt does not block but new debt fails)
   Lane #1: tools/dispatch_dryrun_apogee_intN.py --all-pareto-frontier
            --allow-forensic-byte-only
            (self-protection check: Apogee intN remains byte-only and blocked
@@ -2371,6 +2375,20 @@ def _run_tooling_consolidation_gate(source_index=None) -> tuple[bool, str]:
     for key, count in counts.items():
         lines.append(f"  - {key}: {count}")
     return audit_exit_code(report) == 0, "\n".join(lines)
+
+
+def _run_run_constant_gates_gate() -> tuple[bool, str]:
+    """Gate #38: the run-constant / copied-canonical-constant ratchet (ddm_wt1, task #868).
+
+    ``tac.run_constant_gates`` landed 2026-07-07 with its wire-in DEFERRED behind a named blocker
+    and had ZERO consumers for the ~3.5 weeks since — the orphan class its own sister gates exist
+    to catch. It lives HERE rather than in ``preflight_all()`` because that surface is measured at
+    26.1-30.2 s against a 30.0 s budget (one of three runs already timed out at HEAD) and these
+    scans cost a measured 6.40 s. In-process, like Gate #0, to avoid the interpreter start-up cost.
+    """
+    from tac.run_constant_gates import run_constant_ratchet
+
+    return run_constant_ratchet(REPO)
 
 
 def _run_recovered_remote_lanes_gate() -> tuple[bool, str]:
@@ -4651,6 +4669,14 @@ def main(argv: list[str] | None = None) -> int:
             ),
             "  ✓ Gate #37: frontier final-rate compiler consolidation — PASSED",
             "  ✗ Gate #37: frontier final-rate compiler consolidation — FAILED",
+        ),
+        PreflightStep(
+            "GATE",
+            38,
+            "run-constant / canonical-constant-copy ratchet",
+            _run_run_constant_gates_gate,
+            "  ✓ Gate #38: run-constant / canonical-constant-copy ratchet — PASSED",
+            "  ✗ Gate #38: run-constant / canonical-constant-copy ratchet — FAILED",
         ),
     ]
     lane_steps = [

@@ -619,12 +619,16 @@ def duty_to_measure_ranked(
 # strategy decision (a fresh-run argument rested on "the full force stack has never run from ep0",
 # when 5 of 6 of those forces were stubs). Build state is now a FIRST-CLASS axis.
 #
-# FOUR grades, ordered by how much is missing:
-#   built-and-fired    — mechanism exists, wired, and has actually run
-#   built-never-fired  — mechanism exists + wired, never executed (the classic orphan)
-#   designed-stub      — a Lever/flag exists, the MECHANISM does not (derived: emitted flag absent
-#                        from the module's own trainer argparse)
-#   not-even-designed  — a component an optimal config REQUIRES with no Lever, no flag, nothing.
+# SIX grades. The first four are ordered by how much is missing on THIS vehicle; the last two are
+# adjudications that only a human/agent can make, so both are DECLARED, never derived:
+#   built-and-fired         — mechanism exists, wired, and has actually run
+#   built-never-fired       — mechanism exists + wired, never executed (the classic orphan)
+#   designed-stub           — a Lever/flag exists, the MECHANISM does not (derived: emitted flag
+#                             absent from the module's own trainer argparse)
+#   not-even-designed       — a component an optimal config REQUIRES with no Lever, no flag, nothing
+#   retired-with-reason     — adjudicated dormant; a recipient cannot exist here (ddm_wr2, #864)
+#   built-elsewhere-unwired — exists, tested, HAS RUN elsewhere; the live path has no call site and
+#                             is running a measured-worse alternative (the #864 P0 class)
 #
 # ``not-even-designed`` is STRUCTURALLY INVISIBLE to any AST/registry sweep — there is no artifact
 # to detect — so it cannot be derived; it must be DECLARED against the config that needs it. That is
@@ -644,13 +648,45 @@ BUILD_NOT_DESIGNED = "not-even-designed"
 # capability and NOT a kill; ``notes`` MUST carry the reactivation trigger (enforced by refusal
 # in ``record_required_component``), per CLAUDE.md's forbidden-premature-KILL rule.
 BUILD_RETIRED = "retired-with-reason"
+# The grade the operator designated P0 on 2026-08-01 ("All built-elsewhere-unwired is p0"), and
+# the one this axis could not express. The four grades above all describe a component by what is
+# MISSING on THIS vehicle. This one describes a component that is missing NOTHING: it exists, it
+# is tested, and it HAS RUN -- elsewhere -- while the live path has no call site for it.
+#
+# WHY IT IS NOT ``built-never-fired``. That grade means "exists on THIS vehicle, has not run": a
+# dormant capability, harmless. This one means "exists AND has run, elsewhere, and the live path
+# is meanwhile running a measured-WORSE alternative". Collapsing the two loses exactly the
+# distinction the P0 is about, and it loses it in the harmful direction -- the class reads as
+# ordinary dormant debt while it costs realized score continuously and silently.
+#
+# WHY IT MUST BE DECLARED AND NOT DERIVED. ddm_gd5 (#864) built the auto-derived detector, measured
+# it against real controls, and refuted three formulations: the P0's literal import-reachability
+# predicate fires on 1229 of 3251 modules; the "measured-better successor" relation that makes the
+# class harmful at all exists only in memos and receipts, with NO representation in code. So there
+# is no artifact for an AST sweep to walk -- structurally the same reason ``not-even-designed`` is
+# declared rather than derived.
+#
+# THE HARM CLAUSE IS MANDATORY-BY-REFUSAL. ddm_wr2 (#864) adjudicated the 7 unowned candidate rows
+# and MEASURED that 4 of 7 satisfy the literal predicate while 0 of 7 satisfy the harm clause --
+# because none has a RECIPIENT (a live mechanism it would replace) or a MEASURED comparison. A
+# grade that accepts recipient-less rows would immediately re-admit that error and turn an
+# adjudicated negative-control set back into a wiring backlog. So ``record_required_component``
+# REFUSES this grade without both ``live_recipient`` and ``measured_comparison``. NO-FAKE: those
+# fields record an already-measured fact, never manufacture one.
+BUILD_ELSEWHERE_UNWIRED = "built-elsewhere-unwired"
 VALID_BUILD_GRADES = (BUILD_FIRED, BUILD_NEVER_FIRED, BUILD_DESIGNED_STUB, BUILD_NOT_DESIGNED,
-                      BUILD_RETIRED)
+                      BUILD_RETIRED, BUILD_ELSEWHERE_UNWIRED)
 # Worst-debt-first read order, exported so no consumer hand-copies it. A duplicated order map is
 # a drift generator: the copy in the test suite silently went stale the moment a 5th grade landed.
+#
+# ``built-elsewhere-unwired`` sorts FIRST, and that rank is DERIVED rather than chosen: it is the
+# only grade whose declaration is refused without a MEASURED comparison proving the live path is
+# currently worse off. Every other grade describes an unquantified future cost (a capability we do
+# not yet have); this one carries a measured present loss at declaration time.
 BUILD_GRADE_ORDER: dict[str, int] = {
-    BUILD_NOT_DESIGNED: 0, BUILD_DESIGNED_STUB: 1, BUILD_NEVER_FIRED: 2, BUILD_FIRED: 3,
-    BUILD_RETIRED: 4,  # adjudicated closed -- never above live debt
+    BUILD_ELSEWHERE_UNWIRED: 0,  # measured present loss -- the only grade that quantifies its harm
+    BUILD_NOT_DESIGNED: 1, BUILD_DESIGNED_STUB: 2, BUILD_NEVER_FIRED: 3, BUILD_FIRED: 4,
+    BUILD_RETIRED: 5,  # adjudicated closed -- never above live debt
 }
 
 # Canonical APPEND-ONLY fcntl-locked store for DECLARED required components (grade 4). Keyed by
@@ -708,6 +744,8 @@ def record_required_component(
     consumer: str,
     grade: str = BUILD_NOT_DESIGNED,
     notes: str = "",
+    live_recipient: str = "",
+    measured_comparison: str = "",
     agent: str | None = None,
     path: Path | None = None,
 ) -> dict:
@@ -736,10 +774,25 @@ def record_required_component(
             "grade=retired-with-reason requires substantive notes carrying the REACTIVATION "
             "TRIGGER (what measured fact would re-open it); a retirement without one is a KILL, "
             "which CLAUDE.md forbids as a resting state")
+    if grade == BUILD_ELSEWHERE_UNWIRED:
+        # The HARM CLAUSE, enforced structurally. ddm_wr2 MEASURED that 4 of 7 candidate rows meet
+        # the literal predicate while 0 of 7 meet this clause; without refusal here the grade
+        # re-admits recipient-less rows and the adjudicated negative-control set silently becomes a
+        # wiring backlog again. Both facts must already be MEASURED -- this records, never derives.
+        for name, val in (("live_recipient", live_recipient),
+                          ("measured_comparison", measured_comparison)):
+            if not isinstance(val, str) or len(val.strip()) < 3:
+                raise ValueError(
+                    f"grade=built-elsewhere-unwired requires a substantive {name}; got {val!r}. "
+                    "This grade's HARM CLAUSE needs BOTH a RECIPIENT (the live mechanism this "
+                    "component would replace) and a MEASURED COMPARISON showing the component "
+                    "beats it. Without both it is indistinguishable from built-never-fired, which "
+                    "is dormant and harmless -- record that grade instead.")
     row = {
         "component": component, "needed_by": needed_by, "grade": grade,
         "missing_mechanism": missing_mechanism, "owner": owner, "fire_order": fire_order,
-        "consumer": consumer, "notes": notes, "agent": agent, "ts": _utc(),
+        "consumer": consumer, "notes": notes, "live_recipient": live_recipient,
+        "measured_comparison": measured_comparison, "agent": agent, "ts": _utc(),
     }
     append_locked_jsonl(Path(path) if path is not None else REQUIRED_COMPONENT_PATH, row)
     return row
@@ -770,14 +823,34 @@ def not_even_designed(path: Path | None = None) -> tuple[dict, ...]:
     A declared component whose factory has since landed drops off automatically (the registry, not
     a human, decides), so this list is drained by BUILDING, never by editing a memo.
 
-    The ONE other exit is an explicit ``BUILD_RETIRED`` row (``retired-with-reason``), which
-    requires a recorded reactivation trigger. It exists because "build it" is the wrong verdict
-    for a component whose recipient mechanism cannot exist on the live vehicle; without this exit
-    such a row nags forever and the queue trains its readers to ignore it.
+    TWO declared grades exit this queue, and neither is a kill:
+
+    * ``BUILD_RETIRED`` (``retired-with-reason``) — requires a recorded reactivation trigger. "Build
+      it" is the wrong verdict for a component whose recipient mechanism cannot exist on the live
+      vehicle; without this exit such a row nags forever and trains its readers to ignore the queue.
+    * ``BUILD_ELSEWHERE_UNWIRED`` — the component is already BUILT, so "not even designed" is simply
+      false about it. Its debt is real but it is a WIRING debt, drained by :func:`built_elsewhere_unwired`.
+      Leaving it here would mis-state the work as a build and hide the measured harm.
     """
     idx = _build_index()
     return tuple(r for r in read_required_components(path)
-                 if r["component"] not in idx and r.get("grade") != BUILD_RETIRED)
+                 if r["component"] not in idx
+                 and r.get("grade") not in (BUILD_RETIRED, BUILD_ELSEWHERE_UNWIRED))
+
+
+def built_elsewhere_unwired(path: Path | None = None) -> tuple[dict, ...]:
+    """Declared components that EXIST and have run elsewhere but have no live call site (grade 5).
+
+    The #864 P0 queue. Separate from :func:`not_even_designed` because the work is different in
+    kind: these are drained by WIRING, not by building, and each row carries a MEASURED comparison
+    (refused otherwise) so the queue is ranked by quantified harm rather than by guess.
+
+    A row drops off automatically once the component acquires a lever factory — the registry
+    decides, not a memo — exactly as the grade-4 queue behaves.
+    """
+    idx = _build_index()
+    return tuple(r for r in read_required_components(path)
+                 if r.get("grade") == BUILD_ELSEWHERE_UNWIRED and r["component"] not in idx)
 
 
 def build_completeness_report(path: Path | None = None) -> list[dict]:
@@ -802,17 +875,23 @@ def build_completeness_report(path: Path | None = None) -> list[dict]:
     for r in read_required_components(path):
         if r["component"] in idx:
             continue  # it got built; the registry decides, not the declaration
-        # A retired row keeps its OWN grade: reporting it as not-even-designed would re-assert the
-        # debt this adjudication closed, which is how a retirement silently becomes a build order.
+        # The two DECLARED-with-evidence grades keep their OWN grade; everything else is coerced to
+        # not-even-designed because a component with no factory cannot honestly report as built.
+        # Reporting a retired row as not-even-designed would re-assert the debt its adjudication
+        # closed (a retirement silently becoming a build order); reporting a grade-5 row that way
+        # would mis-state a WIRING debt as a BUILD debt and drop its measured harm on the floor.
+        declared = r.get("grade")
         rows.append({
             "component": r["component"],
-            "grade": BUILD_RETIRED if r.get("grade") == BUILD_RETIRED else BUILD_NOT_DESIGNED,
+            "grade": (declared if declared in (BUILD_RETIRED, BUILD_ELSEWHERE_UNWIRED)
+                      else BUILD_NOT_DESIGNED),
             "module": None,
             "trainer": None, "missing_flags": [], "label_drift": False,
             "activation_state": "not-registered", "needed_by": r.get("needed_by"),
             "owner": r.get("owner"), "fire_order": r.get("fire_order"),
             "missing_mechanism": r.get("missing_mechanism"), "consumer": r.get("consumer"),
-            "notes": r.get("notes"),
+            "notes": r.get("notes"), "live_recipient": r.get("live_recipient"),
+            "measured_comparison": r.get("measured_comparison"),
         })
     rows.sort(key=lambda r: (BUILD_GRADE_ORDER.get(r["grade"], 9), r.get("fire_order", 0),
                              r["component"]))
@@ -821,6 +900,7 @@ def build_completeness_report(path: Path | None = None) -> list[dict]:
 
 __all__ = [
     "BUILD_DESIGNED_STUB",
+    "BUILD_ELSEWHERE_UNWIRED",
     "BUILD_FIRED",
     "BUILD_GRADE_ORDER",
     "BUILD_NEVER_FIRED",
@@ -850,6 +930,7 @@ __all__ = [
     "activation_status",
     "build_completeness_report",
     "build_grade",
+    "built_elsewhere_unwired",
     "curriculum_dsl_known_levers",
     "duty_to_measure",
     "duty_to_measure_ranked",

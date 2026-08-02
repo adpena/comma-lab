@@ -1,6 +1,7 @@
 """Tests for tac.run_constant_gates (task #340 — hardcoded run constants in consumers)."""
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import pytest
@@ -164,3 +165,85 @@ def test_live_repo_routed_files_are_clean():
 def test_live_repo_scan_runs_without_exception():
     findings = check_no_hardcoded_run_constants_in_consumers(strict=False, repo_root=_REPO)
     assert isinstance(findings, list)
+
+
+# ---------------------------------------------------------------------------
+# THE RATCHET + ITS WIRE-IN (ddm_wt1, task #868).
+# This module had ZERO consumers from 2026-07-07 until 2026-08-01: its own docstring
+# deferred the wire-in behind a named blocker and nothing ever came back for it. These
+# tests pin BOTH halves — that the ratchet can actually fail, and that something real
+# calls it — because a gate nobody runs and a gate that cannot fail are the same defect
+# wearing different clothes.
+# ---------------------------------------------------------------------------
+
+
+def test_ratchet_passes_at_the_measured_baseline() -> None:
+    """POSITIVE control on the real repo: at HEAD the pinned baseline holds."""
+    from tac.run_constant_gates import run_constant_ratchet
+
+    ok, report = run_constant_ratchet(_REPO)
+    assert ok, report
+    assert "PASS" in report
+
+
+def test_ratchet_actually_fails_when_the_baseline_is_tightened() -> None:
+    """NEGATIVE control: the anti-vacuity property.
+
+    A gate that returns True unconditionally prints the clean symbol forever and trains its
+    readers to ignore it. Driving the pins to zero must produce a FAIL naming every finding,
+    which is exactly what a NEW violation would look like against the real baseline.
+    """
+    from tac.run_constant_gates import run_constant_ratchet
+
+    ok, report = run_constant_ratchet(
+        _REPO, baseline={"hardcoded_run_constants": 0, "canonical_constant_copies": 0})
+    assert not ok
+    assert "FAIL" in report
+    assert "NEW violation" in report
+
+
+def test_ratchet_baseline_keys_match_the_checks_it_runs() -> None:
+    """A pin whose key nobody reads is silently vacuous — the scope-emptiness genus."""
+    from tac.run_constant_gates import RUN_CONSTANT_RATCHET_BASELINE, run_constant_ratchet
+
+    _, report = run_constant_ratchet(_REPO)
+    for key in RUN_CONSTANT_RATCHET_BASELINE:
+        assert key in report, f"baseline key {key!r} is pinned but never reported"
+    assert set(RUN_CONSTANT_RATCHET_BASELINE) == {
+        "hardcoded_run_constants", "canonical_constant_copies"}
+
+
+def test_ratchet_reports_a_drained_count_as_needing_a_re_pin() -> None:
+    """Draining below baseline must SAY so, or the pins rot upward and the teeth go blunt."""
+    from tac.run_constant_gates import run_constant_ratchet
+
+    ok, report = run_constant_ratchet(
+        _REPO, baseline={"hardcoded_run_constants": 999, "canonical_constant_copies": 999})
+    assert ok
+    assert "re-pin" in report
+
+
+def test_gate_38_is_registered_in_all_lanes_preflight_and_calls_the_ratchet() -> None:
+    """THE WIRE-IN ITSELF. Without this the module is orphaned again the moment someone
+    reorders the gate list, and the fix would be invisible to every test."""
+    import tools.all_lanes_preflight as alp
+
+    ok, report = alp._run_run_constant_gates_gate()
+    assert ok, report
+    assert "ratchet" in report
+
+    src = Path(alp.__file__).read_text(encoding="utf-8")
+    assert "_run_run_constant_gates_gate," in src, "runner must be registered as a PreflightStep"
+    # Regex, not an indentation-exact literal: a reformat must not silently un-test the wire-in.
+    assert re.search(r'PreflightStep\(\s*"GATE",\s*38,', src), (
+        "Gate #38 must be registered as a numbered PreflightStep")
+    assert "Gate #38" in src, "the gate must be listed in the operator-facing docstring"
+
+
+def test_failure_report_names_the_derivation_fix_not_just_the_count() -> None:
+    """CLAUDE.md failure-message discipline: the output must be the documentation."""
+    from tac.run_constant_gates import run_constant_ratchet
+
+    doc = run_constant_ratchet.__doc__ or ""
+    assert "Rule chain" in doc
+    assert "waive same-line" in doc or "re-derivation trigger" in doc

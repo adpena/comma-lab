@@ -39,6 +39,12 @@ from pathlib import Path
 
 import numpy as np
 
+from tac.race_receipt import (
+    RivalryRow,
+    rivalry_rows_from_arms,
+    unadopted_better_challengers,
+)
+
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "experiments"))
 
@@ -202,6 +208,52 @@ def race_mask(mask: np.ndarray) -> dict:
     return out
 
 
+# Named explicitly rather than matched by name prefix: a future "a4_" arm that changed the
+# coder would silently join the SCAN-ORDER role and compare two factors at once.
+_SCAN_ORDER_ARMS = ("a0_smevr_2d_control", "a1_smevr_raster_1d", "a2_smevr_hilbert_1d",
+                    "a3_smevr_serpent_1d")
+_LOST = ("refused: lost the measured race against the live incumbent on the same sealed payload "
+         "through the same coder — adopting it would raise bytes")
+_AXIS = "[macOS-CPU advisory, rate-only lossless byte measurement]"
+
+
+def _rivalry_rows(results: dict[str, dict], mask_rows: dict[str, dict]) -> list[RivalryRow]:
+    """Record WHO RACED WHOM, per gd5's §5 schema, split so no row varies two factors at once.
+
+    The arms answer three different one-slot questions and must not be pooled: a1-a3 change the
+    SCAN ORDER through the same SMEVR coder, b0/c0 change the CODER at the same 2D order, and the
+    keep-mask arms change the bit order of a different payload entirely. A single flat "everything
+    vs a0" block would look tidier and would compare a scan order against a coder swap.
+    """
+    scan = rivalry_rows_from_arms(
+        role="token_scan_order",
+        incumbent_arm="a0_smevr_2d_control",
+        arms={k: v for k, v in results.items() if k in _SCAN_ORDER_ARMS},
+        value_key="bytes", metric="lossless coded bytes of state/tokens.dr7t",
+        axis=_AXIS, unit="B", not_adopted_reason=_LOST,
+        notes="incumbent = raster order in experiments/ddm_r7_token_coder.py::_encode_smevr",
+    )
+    coder = rivalry_rows_from_arms(
+        role="token_entropy_coder",
+        incumbent_arm="a0_smevr_2d_control",
+        arms={k: v for k, v in results.items()
+              if k in ("a0_smevr_2d_control", "b0_brotli11_2d", "c0_lzma1_2d")},
+        value_key="bytes", metric="lossless coded bytes of state/tokens.dr7t",
+        axis=_AXIS, unit="B", not_adopted_reason=_LOST,
+        notes="same 2D order, different coder — isolates the coder from the scan order",
+    )
+    mask_arms = {k: v for k, v in mask_rows.items() if isinstance(v, dict)}
+    mask = rivalry_rows_from_arms(
+        role="keep_mask_bit_order",
+        incumbent_arm="raster",
+        arms=mask_arms, value_key="adaptive_binary_ac",
+        metric="adaptive binary AC bytes of the 24x32 keep mask",
+        axis=_AXIS, unit="B", not_adopted_reason=_LOST,
+        notes="incumbent = raster bit order of the QA24 keep mask",
+    )
+    return scan + coder + mask
+
+
 def main() -> None:
     print("[gd1] loading sealed payload", flush=True)
     with zipfile.ZipFile(ARCHIVE) as zf:
@@ -230,9 +282,12 @@ def main() -> None:
     mask_rows = race_mask(np.load(KEEP_MASK))
     print(f"  {json.dumps(mask_rows)}")
 
+    rivalry = _rivalry_rows(results, mask_rows)
+    unadopted_winners = unadopted_better_challengers(rivalry)
+
     stored = len(token_frame)
     receipt = {
-        "schema": "ddm_gd1_hilbert_order_race.v1",
+        "schema": "ddm_gd1_hilbert_order_race.v2",
         "axis": "[macOS-CPU advisory, rate-only lossless byte measurement]",
         "score_claim": False,
         "promotion_eligible": False,
@@ -247,11 +302,27 @@ def main() -> None:
         "coder_custody": "experiments/ddm_r7_token_coder.py (r7 landed harness, reused)",
         "token_arms": results,
         "keep_mask_arms": mask_rows,
+        "rivalry": [r.to_dict() for r in rivalry],
+        "rivalry_schema": "tac.race_receipt.RivalryRow (ddm_wt1, task #868)",
+        "rivalry_excluded_arms": {
+            "b1_brotli11_hilbert": "varies BOTH coder and scan order vs the live path — a "
+                                   "two-factor arm cannot answer a one-slot rivalry question",
+            "c1_lzma1_hilbert": "varies BOTH coder and scan order vs the live path",
+        },
         "verification": "every token arm decode-verified lossless + inverse-permutation checked",
         "generated_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
     }
     RECEIPT.write_text(json.dumps(receipt, indent=1))
     print(f"[gd1] receipt -> {RECEIPT}")
+    print(
+        f"[gd1] rivalry: {len(rivalry)} row(s) recorded across "
+        f"{len({r.role for r in rivalry})} role(s); "
+        f"{len(unadopted_winners)} of {len(rivalry)} are unadopted challengers that BEAT the "
+        "live incumbent"
+    )
+    for row in unadopted_winners:
+        print(f"  ! {row.role}: {row.challenger} beats {row.incumbent} by {row.delta:+g} "
+              f"{row.unit} — {row.not_adopted_reason}")
     control = results["a0_smevr_2d_control"]["bytes"]
     print(
         f"[gd1] verdict inputs: control {control:,} B (stored {stored:,}) | "
