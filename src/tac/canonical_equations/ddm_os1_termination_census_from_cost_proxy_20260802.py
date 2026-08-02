@@ -44,22 +44,41 @@ what the solve DID rather than what it could have done.
 MEASURED (ddm_os1, 2026-08-02), n600, on the LIVE v4d pose chain -- ``ddm_v4c_resolve.py``
 imports ``ddm_pfs1_ep_warp_pose_solve`` at ``:61`` and consumes its D2 solve at ``:68``, so
 this solve produces the STARTING POINT that v4c's rung-B (a,b) GN then refines.  Receipt
-``/Volumes/VertigoDataTier/pact/ddm_pfs1_20260729/d2/d2_ep_solve.partial.jsonl``,
-600 rows, ``relins=4``, ``fd=6``, ``ladder_levels=4``, ``line_search_points=2``:
+``/Volumes/VertigoDataTier/pact/ddm_pfs1_20260729/d2/d2_ep_solve.partial.jsonl``, 600 rows.
+The producing revision is ``8eb3d14594`` (identical to HEAD), whose cost accounting is
+``n = 2 + 7R + Sum L_i`` -- ``init=2`` (one initial ``pose6_of`` plus one trailing
+``d_pose_shipped``), ``fd=7`` (six pose FD columns plus the ``s_t`` column), ladder 4,
+line-search 2:
 
-* **converged 0 / 600 = 0.0%** -- EXACT, not inferred: the solve's only genuine criterion
-  is ``cur < 1e-6`` and no pair's recorded ``d_pose_solved`` is below it.
-* **stopped on a BOUND 600 / 600 = 100.0%, 100% of d_pose mass** -- every observed
-  ``n_forwards`` admits only bound terminations.
-* PROVABLY ladder-exhausted (damp_cap) 114 / 600 = 19.0%, carrying **46.7% of mass**;
-  the remaining 486 admit ladder-exhaustion OR relin-exhaustion -- either way, a bound.
-* **0 rows INFEASIBLE under the model** -- the positive control on the model itself,
-  and evidence (not proof) that no singular step occurred, since a ``LinAlgError`` break
-  shortens ``L_i`` below the model floor and can only manifest as an infeasible row.
+* **converged 0 / 600 = 0.0%** -- EXACT and MODEL-INDEPENDENT: the solve's only genuine
+  criterion is ``cur < 1e-6``, no pair's recorded ``d_pose_solved`` is below it, and the
+  closest pair sits 15.5x above it.  This is the load-bearing reading.
+* **stopped on a BOUND at least 512 / 600 = 85.3%**, carrying 66.8% of d_pose mass
+  (222 provably ladder-exhausted, 290 ladder-OR-relin -- either way a bound).
+* **88 / 600 = 14.7% of rows (33.2% of mass) are INFEASIBLE under the model, so the law
+  REFUSES: ``sufficient_for_verdict=False``.**  48 of them record fewer than the 17
+  forwards a ladder-exhausted single relinearization costs, which is the signature of the
+  ``LinAlgError`` break shortening ``L_i`` -- exactly the limit named below.  The bound
+  fraction is therefore a LOWER BOUND, not a census.
+* A second receipt from the same solver, ``ddm_ps1_20260730/ps1_ladder.partial.jsonl``
+  (``relin_bound=3`` INFERRED -- the receipt does not record its config): converged
+  **0 / 600** again, bound at least 459 / 600 = 76.5%, 141 infeasible.
 
-That reproduces sv1's (a,b) result -- 0% converged, 100% bound-stopped -- on the
-SIX-parameter pose GN, at 600 pairs instead of 60, for ZERO scorer evaluations where sv1
-spent 1,385.  It is the same genus one stage UPSTREAM, on the larger axis.
+CORRECTION, recorded rather than quietly rewritten (2026-08-02, same session).  The first
+version of this law was anchored with ``init=1, fd=6`` -- read off the WORKING TREE, which
+carried an uncommitted sibling rewrite of the solver -- instead of the revision that
+produced the receipt.  Under those wrong parameters the census read "600/600 bound-stopped,
+0 infeasible", and the zero was cited as a positive control on the model.  It was an
+artifact of wrong parameters coincidentally fitting.  With the correct parameters the
+infeasible bucket fires and the law refuses.  **The instrument behaved as designed** -- it
+declined to emit a confident census on a shape it could not explain -- and the episode is
+the sharpest available argument for the ``n_infeasible`` guard.  What survives unchanged is
+the ``converged = 0/600`` reading, because it never depended on the cost model.
+
+So sv1's (a,b) finding -- 0% converged -- reproduces on the SIX-parameter pose GN at 600
+pairs instead of 60, for ZERO scorer evaluations where sv1 spent 1,385.  The companion
+"100% bound-stopped" does NOT reproduce at full strength here: 85.3% is proved and 14.7%
+is undetermined pending a singular-aware model.
 
 SHARPEST FORM OF THE DEFECT AT THAT SITE: the two exits are FUSED into a single
 condition, ``if not accepted or cur < 1e-6: break`` (``:212``).  Even a caller who
@@ -109,18 +128,25 @@ BOUND_RELIN = "bound_relin_exhausted"
 BOUND_EITHER = "bound_either"
 INFEASIBLE = "infeasible_under_model"
 
-#: measured anchor -- ddm_pfs1 D2 solve, n600, live v4d pose chain
+#: measured anchor -- ddm_pfs1 D2 solve, n600, live v4d pose chain.
+#: Shape read from the RECEIPT-PRODUCING revision 8eb3d14594 (== HEAD), not the working
+#: tree: init=2 (initial pose6_of + trailing d_pose_shipped), fd=7 (6 pose FD columns +
+#: the s_t column). See the CORRECTION paragraph in the module docstring.
 PFS1_PAIRS = 600
 PFS1_RELINS = 4
-PFS1_FD_PER_RELIN = 6
+PFS1_INIT_COST = 2
+PFS1_FD_PER_RELIN = 7
 PFS1_LADDER_LEVELS = 4
 PFS1_LINE_SEARCH_POINTS = 2
 PFS1_TOLERANCE = 1e-6
+#: model-INDEPENDENT: read from the objective, not the cost
 PFS1_CONVERGED = 0
-PFS1_BOUND_TOTAL = 600
-PFS1_PROVABLY_LADDER = 114
-PFS1_INFEASIBLE = 0
-PFS1_LADDER_MASS_FRACTION = 0.467
+#: LOWER BOUND -- 88 rows are infeasible under the model, so the law refuses
+PFS1_BOUND_LOWER_BOUND = 512
+PFS1_PROVABLY_LADDER = 222
+PFS1_INFEASIBLE = 88
+PFS1_BOUND_MASS_FRACTION = 0.668
+PFS1_INFEASIBLE_MASS_FRACTION = 0.332
 
 
 def _feasible_states(n: int, *, relin_bound: int, fd: int, l_max: int, init: int) -> set[str]:
@@ -329,7 +355,9 @@ def build_ddm_os1_termination_census_from_cost_proxy_v1(
             "site": "experiments/ddm_pfs1_ep_warp_pose_solve.py:183 solve_pair_gn",
             "on_live_chain": "ddm_v4c_resolve.py:61 imports it; :68 consumes the D2 solve",
             "population": PFS1_PAIRS,
+            "receipt_producing_revision": "8eb3d14594 (identical to HEAD)",
             "relin_bound": PFS1_RELINS,
+            "init_cost": PFS1_INIT_COST,
             "fd_per_relin": PFS1_FD_PER_RELIN,
             "ladder_levels": PFS1_LADDER_LEVELS,
             "line_search_points": PFS1_LINE_SEARCH_POINTS,
@@ -344,20 +372,28 @@ def build_ddm_os1_termination_census_from_cost_proxy_v1(
             "bound_stopped_fraction": 1.0,
         },
         empirical_output={
+            # model-INDEPENDENT, the load-bearing reading
             "converged": PFS1_CONVERGED,
             "converged_fraction": 0.0,
-            "stopped_on_a_bound": PFS1_BOUND_TOTAL,
-            "stopped_on_a_bound_fraction": 1.0,
-            "stopped_on_a_bound_mass_fraction": 1.0,
+            "closest_pair_multiple_of_tolerance": 15.5,
+            # LOWER BOUND: the law refuses because 88 rows are infeasible
+            "stopped_on_a_bound_at_least": PFS1_BOUND_LOWER_BOUND,
+            "stopped_on_a_bound_fraction_at_least": PFS1_BOUND_LOWER_BOUND / PFS1_PAIRS,
+            "stopped_on_a_bound_mass_fraction_at_least": PFS1_BOUND_MASS_FRACTION,
             "provably_ladder_exhausted": PFS1_PROVABLY_LADDER,
-            "provably_ladder_exhausted_mass_fraction": PFS1_LADDER_MASS_FRACTION,
-            "n_infeasible_model_positive_control": PFS1_INFEASIBLE,
+            "n_infeasible": PFS1_INFEASIBLE,
+            "n_infeasible_mass_fraction": PFS1_INFEASIBLE_MASS_FRACTION,
+            "sufficient_for_verdict": False,
+            "insufficiency_reason": "rows_infeasible_under_model_check_singular_step_handling",
+            "sister_receipt_ps1_converged": 0,
+            "sister_receipt_ps1_bound_at_least": 459,
             "cost_proxy_receipt_reach_omx_research": "0 of 21700",
             "cost_proxy_receipt_reach_ssd": "19 of 8204",
         },
-        # The census is a RECONSTRUCTION, not a prediction fit: sv1's 0%/100% reading on
-        # the sister solve is reproduced exactly on this one, so the residual is 0.
-        residual=0.0,
+        # The converged leg matched the prediction exactly (0.0 vs 0.0). The bound leg did
+        # NOT: predicted 1.0, proved 0.853 with 0.147 undetermined. Residual is that gap,
+        # recorded rather than rounded away.
+        residual=1.0 - PFS1_BOUND_LOWER_BOUND / PFS1_PAIRS,
         source_artifact=(
             "/Volumes/VertigoDataTier/pact/ddm_pfs1_20260729/d2/d2_ep_solve.partial.jsonl"
         ),
@@ -376,9 +412,9 @@ def build_ddm_os1_termination_census_from_cost_proxy_v1(
         equation_id=EQUATION_ID,
         name="Retroactive termination census of a damped-GN solve from a recorded cost proxy (ddm_os1)",
         one_line_summary=(
-            "Damped-GN terminal state occupies a known interval in its own forward count, "
-            "so the census is recoverable from an old receipt at zero cost. Measured n600: "
-            "converged 0/600, bound-stopped 600/600."
+            "Damped-GN terminal state occupies a known interval in its forward count, so a "
+            "census is recoverable from an old receipt at zero cost. Measured n600: "
+            "converged 0/600 exact; bound >= 512/600."
         ),
         latex_form=(
             r"n=\iota+\phi R+\sum_{i=1}^{R}L_i,\quad L_{\max}=\lambda\pi,\quad "
@@ -443,7 +479,7 @@ def build_ddm_os1_termination_census_from_cost_proxy_v1(
         },
         predicted_vs_empirical_residual={
             "converged_fraction_absolute": 0.0,
-            "bound_stopped_fraction_absolute": 0.0,
+            "bound_stopped_fraction_absolute": 1.0 - PFS1_BOUND_LOWER_BOUND / PFS1_PAIRS,
         },
         last_calibration_utc="2026-08-02T00:00:00Z",
         next_recalibration_trigger=RECALIBRATE_ON_NEW_ANCHORS,

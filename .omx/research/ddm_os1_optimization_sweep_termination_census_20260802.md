@@ -227,3 +227,73 @@ the list has been measured at all.
 **Landed:** `src/tac/canonical_equations/ddm_os1_termination_census_from_cost_proxy_20260802.py`
 (registered, registry 419 → 420) · `src/tac/tests/test_ddm_os1_termination_census.py` (29 tests)
 · `tools/os1_termination_census_report.py`.
+
+---
+
+## 7. CORRECTION (2026-08-02, same session, APPEND-ONLY — §§0–6 above are preserved unchanged)
+
+**I read the solver at the wrong revision, and part of §3 is wrong.** Recording it here in
+full rather than editing the original, per Catalog #110/#113.
+
+`experiments/ddm_pfs1_ep_warp_pose_solve.py` had **uncommitted sibling changes in the
+working tree** when I read it (a rewrite that fixes `s_t` and moves acceptance to shipped
+f16 quantization). I derived the cost model from that working-tree text. But the receipt I
+analysed was written on 2026-07-29 by revision **`8eb3d14594`** — which is byte-identical to
+HEAD and accounts differently:
+
+| | what I used | **the receipt's actual producer (`8eb3d14594`)** |
+|---|---|---|
+| `init_cost` | 1 | **2** (initial `pose6_of`, plus a trailing `d_pose_shipped` at `:199`) |
+| `fd_per_relin` | 6 | **7** (six pose FD columns **plus the `s_t` column**, `:173`) |
+
+### What changes
+
+| claim | as written in §3 | **corrected** |
+|---|---|---|
+| converged | 0 / 600 | **0 / 600 — UNCHANGED** |
+| stopped on a bound | 600 / 600 = 100%, 100% mass | **≥ 512 / 600 = 85.3%, ≥ 66.8% mass** |
+| provably ladder-exhausted | 114 (46.7% mass) | **222 (16.5% mass)** |
+| infeasible under the model | 0 | **88 = 14.7% of rows, 33.2% of mass** |
+| `sufficient_for_verdict` | True | **False** |
+| ps1 sister | 0 converged, 600/600 bound | **0 converged, ≥ 459/600 = 76.5% bound, 141 infeasible** |
+
+### What survives, and why
+
+**`converged = 0 / 600` stands, on both receipts.** It never depended on the cost model —
+it reads `d_pose_solved` against the literal `1e-6` in the source, and the closest pair is
+15.5× above it. **The load-bearing finding of this memo is unaffected:** the live pose
+solve's only genuine convergence criterion never fired at n600. So does §2 (the loop-shape
+measured negative), §4's ranking, and the fused-exit structural finding at `:212`.
+
+### What the error actually demonstrates
+
+My §3 cited "**0 infeasible**" as a positive control on the cost model. It was nothing of
+the kind — it was **wrong parameters coincidentally fitting**. Under the correct parameters
+the infeasible bucket fires at 88/600 and the law **refuses** (`sufficient_for_verdict=False`,
+`insufficiency_reason=rows_infeasible_under_model_check_singular_step_handling`). 48 of the
+88 record fewer than the 17 forwards a ladder-exhausted single relinearization costs — the
+signature of the `LinAlgError` break shortening `L_i`, which is **exactly the model limit
+the law documents**.
+
+So the instrument behaved as designed: given a shape it could not explain, it declined to
+emit a census instead of emitting a confident wrong one. That is the strongest argument
+available for the `n_infeasible` guard, and I would not have it without making the error.
+
+**The general lesson, which is the reusable part:** *"re-derive at file:line" is
+under-specified — it must be "re-derive at the REVISION THAT PRODUCED THE ARTIFACT."* A
+working tree carrying sibling edits is a different program from the one that wrote the
+receipt you are reading. Landed as a regression:
+`test_the_pfs1_anchor_shape_matches_the_receipt_producing_revision` pins the anchor's
+`init`/`fd` against `git show 8eb3d14594:...` rather than against the working tree.
+
+### Consequent corrections to §4's table
+
+Row 1's occupancy column becomes: **converged 0/600 (EXACT); bound ≥ 512/600 = 85.3%, ≥66.8%
+of mass; 88 rows undetermined pending a singular-aware model.** Its rank is unchanged — it
+is still the only measured row, still on the live chain, still the largest axis, and the
+undetermined 14.7% cannot contain a convergence (convergence is decided from the objective,
+which reports zero).
+
+**One further owed measurement, created by this correction:** model the singular-break path
+(`L_i < L_max` when `np.linalg.solve` raises) and re-run, which would convert some or all of
+the 88 into a bound state. Cost-to-falsify: **ZERO** — same receipt, same method.

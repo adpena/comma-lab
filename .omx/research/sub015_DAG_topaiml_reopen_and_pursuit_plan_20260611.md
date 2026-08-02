@@ -27511,3 +27511,41 @@ record the cost proxy and the census stays recoverable forever.**
 fired. `[macOS-CPU frozen-PoseNet advisory]`, `score_claim=false`, `promotable=false`.
 
 CLOSING-ARTIFACT: .omx/research/ddm_os1_optimization_sweep_termination_census_20260802.md
+
+### FEED-os1 CORRECTION (2026-08-02, APPEND-ONLY — the block above is preserved unchanged)
+
+**I read the solver at the wrong REVISION.** `experiments/ddm_pfs1_ep_warp_pose_solve.py`
+carried **uncommitted sibling changes** when I read it; the receipt was written by
+`8eb3d14594` (== HEAD), whose accounting is `n = 2 + 7R + ΣL_i` (`init=2`: initial
+`pose6_of` + trailing `d_pose_shipped` at `:199`; `fd=7`: six pose FD columns **plus the
+`s_t` column** at `:173`) — not the `1 + 6R + ΣL_i` I used.
+
+| claim | as filed | **corrected** |
+|---|---|---|
+| **converged** | **0 / 600** | **0 / 600 — UNCHANGED, model-independent** |
+| stopped on a bound | 600/600 = 100%, 100% mass | **≥ 512/600 = 85.3%, ≥ 66.8% mass** |
+| infeasible | 0 (cited as a positive control) | **88 = 14.7% rows / 33.2% mass; the law REFUSES** |
+| ps1 sister | 0 conv, 600/600 bound | **0 conv, ≥ 459/600 bound, 141 infeasible** |
+
+**The load-bearing finding stands:** `converged = 0/600` on BOTH receipts, because it reads
+the objective against the literal `1e-6`, never the cost model (closest pair 15.5× above).
+§2's loop-shape measured negative and the fused-exit finding are likewise untouched.
+
+**My "0 infeasible positive control" was wrong parameters coincidentally fitting.** Under
+the correct shape the guard FIRES: 48 of the 88 record fewer than the 17 forwards a
+ladder-exhausted single relinearization costs — the `LinAlgError`-shortened-`L_i` signature,
+**exactly the limit the law documents**. The instrument declined to emit a census on a shape
+it could not explain. That is the guard working, and I would not have the demonstration
+without the error.
+
+**REUSABLE LESSON:** *"re-derive at file:line" is under-specified — it must be "re-derive at
+the REVISION THAT PRODUCED THE ARTIFACT."* A working tree carrying sibling edits is a
+DIFFERENT PROGRAM from the one that wrote the receipt. Pinned as a regression:
+`test_the_pfs1_anchor_shape_matches_the_receipt_producing_revision` asserts the anchor's
+`init`/`fd` against `git show 8eb3d14594:…`, not the working tree.
+
+**New owed row, cost-to-falsify ZERO:** model the singular-break path (`L_i < L_max` when
+`np.linalg.solve` raises) and re-run the same receipt — converts some/all of the 88
+undetermined rows into a bound state. Cannot convert any into a convergence.
+
+CLOSING-ARTIFACT: .omx/research/ddm_os1_optimization_sweep_termination_census_20260802.md §7
