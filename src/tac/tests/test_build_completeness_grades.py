@@ -20,6 +20,7 @@ from tac.witness_dsl.activation_ledger import (
     VALID_BUILD_GRADES,
     build_completeness_report,
     build_grade,
+    built_elsewhere_unwired,
     known_levers,
     not_even_designed,
     package_known_levers,
@@ -490,6 +491,10 @@ def _harm_kwargs(**over):
         "grade": "built-elsewhere-unwired",
         "live_recipient": "live_incumbent_v1",
         "measured_comparison": "challenger 1.0 vs incumbent 2.0 B [macOS-CPU advisory]",
+        # The prose above is a CITATION; these three are the checkable fact (ddm_wd2, #861).
+        "live_measured": 2.0,
+        "candidate_measured": 1.0,
+        "metric_direction": "lower-is-better",
     }
     base.update(over)
     return base
@@ -595,3 +600,150 @@ def test_harm_clause_does_not_leak_onto_the_other_grades(tmp_path) -> None:
     record_required_component("Retired", grade=BUILD_RETIRED,
                               notes="REACTIVATION: iff tr1 grows the precondition", **common)
     assert len(read_required_components(p)) == 2
+
+
+# ---------------------------------------------------------------------------
+# THE HARM CLAUSE IS SIGNED (ddm_wd2, #864/#861).
+# The clause above checked that a comparison was PRESENT; nothing checked which way it
+# pointed, while the refusal text promised "showing the component BEATS it" and
+# BUILD_GRADE_ORDER ranked the grade 0 on the strength of that promise. These tests assert
+# the DIRECTION is now decided from the numbers, on real inputs, not from prose.
+# ---------------------------------------------------------------------------
+
+
+def test_harm_clause_refuses_the_founding_case_a_measured_worse_predecessor(tmp_path) -> None:
+    """THE founding case: the P0's own headline instance, which the length-only clause admitted.
+
+    ``p0_864`` records the pose pair as "~39x better, ~38x cheaper, RACED". ddm_wd1 then MEASURED
+    that family plateauing at d_pose ~29-30 against a live realized 0.00858133 -- ~3,400x WORSE.
+    A detector that cannot refuse its own founding case is not a detector, so this uses the real
+    measured numbers rather than a toy pair.
+    """
+    p = tmp_path / "req.jsonl"
+    with pytest.raises(ValueError, match="does not beat"):
+        record_required_component("PoseBasisSwap", path=p, **_harm_kwargs(
+            live_recipient="warp-pose6 via pfs1_warp_receiver (live in inflate_runner_v4d)",
+            measured_comparison="eg1 cosine family plateaus d_pose ~29-30 vs live realized "
+                                "0.00858133 [macOS-CPU advisory] (ddm_wd1)",
+            live_measured=0.00858133, candidate_measured=29.0,
+            metric_direction="lower-is-better"))
+    assert not p.exists() or p.read_text(encoding="utf-8").strip() == "", "refused rows must not persist"
+
+
+def test_harm_clause_accepts_the_same_pair_when_the_candidate_actually_wins(tmp_path) -> None:
+    """The negative control for the test above: identical shape, direction reversed => ACCEPTED.
+
+    Without this pair the refusal could be an unconditional reject and every test would still pass.
+    """
+    p = tmp_path / "req.jsonl"
+    row = record_required_component("RealWinner", path=p, **_harm_kwargs(
+        live_measured=29.0, candidate_measured=0.00858133, metric_direction="lower-is-better"))
+    assert row["harm_advantage"] == pytest.approx(29.0 / 0.00858133)
+    assert {r["component"] for r in built_elsewhere_unwired(p)} == {"RealWinner"}
+
+
+def test_harm_clause_is_directional_both_ways(tmp_path) -> None:
+    """higher-is-better inverts the comparison; a metric direction that is absent is undecidable."""
+    p = tmp_path / "req.jsonl"
+    # Under higher-is-better the SAME numbers that pass lower-is-better must now fail.
+    with pytest.raises(ValueError, match="does not beat"):
+        record_required_component("HigherLoser", path=p, **_harm_kwargs(
+            live_measured=2.0, candidate_measured=1.0, metric_direction="higher-is-better"))
+    row = record_required_component("HigherWinner", path=p, **_harm_kwargs(
+        live_measured=1.0, candidate_measured=2.0, metric_direction="higher-is-better"))
+    assert row["harm_advantage"] == pytest.approx(2.0)
+    for bad in ("", "lower", "LOWER-IS-BETTER", None):
+        with pytest.raises(ValueError, match="metric_direction"):
+            record_required_component("BadDir", path=p, **_harm_kwargs(metric_direction=bad))
+
+
+def test_harm_clause_refuses_a_tie_because_a_tie_is_not_beating(tmp_path) -> None:
+    """Strict inequality: an unwired EQUAL carries no measured present loss, so rank 0 is wrong."""
+    p = tmp_path / "req.jsonl"
+    with pytest.raises(ValueError, match="does not beat"):
+        record_required_component("Tie", path=p, **_harm_kwargs(
+            live_measured=1.0, candidate_measured=1.0, metric_direction="lower-is-better"))
+
+
+def test_harm_clause_refuses_missing_and_non_finite_measurements(tmp_path) -> None:
+    """A failed measurement is not a comparison; prose alone can no longer stand in for one."""
+    p = tmp_path / "req.jsonl"
+    # Absent entirely -- the pre-fix call shape, which used to be accepted on prose alone.
+    for missing in ("live_measured", "candidate_measured"):
+        with pytest.raises(ValueError, match=missing):
+            record_required_component("NoNumbers", path=p, **_harm_kwargs(**{missing: None}))
+    for bad in (float("nan"), float("inf"), float("-inf")):
+        with pytest.raises(ValueError, match="FINITE"):
+            record_required_component("NonFinite", path=p, **_harm_kwargs(candidate_measured=bad))
+    # A bool is an int in Python; accepting True as a measurement would be a silent coercion.
+    with pytest.raises(ValueError, match="numeric"):
+        record_required_component("BoolNum", path=p, **_harm_kwargs(candidate_measured=True))
+    assert not p.exists() or p.read_text(encoding="utf-8").strip() == ""
+
+
+def test_harm_advantage_is_none_rather_than_fabricated_when_a_ratio_is_meaningless(tmp_path) -> None:
+    """A ratio across zero or a signed quantity has no meaning -- record None, never a number.
+
+    The strict inequality is the gate; the ratio is evidence, so it must be absent when undefined
+    instead of inventing a value the caller would later rank on.
+    """
+    p = tmp_path / "req.jsonl"
+    row = record_required_component("SignedDelta", path=p, **_harm_kwargs(
+        live_measured=0.0, candidate_measured=-3.0, metric_direction="lower-is-better"))
+    assert row["harm_advantage"] is None
+    assert row["live_measured"] == 0.0 and row["candidate_measured"] == -3.0
+    # ...and it is still a legitimate grade-5 row: the DIRECTION was satisfied.
+    assert {r["component"] for r in built_elsewhere_unwired(p)} == {"SignedDelta"}
+
+
+def test_queue_order_is_fire_order_not_harm_as_the_docstring_now_states(tmp_path) -> None:
+    """The docstring used to claim "ranked by quantified harm"; the code never did that.
+
+    Asserted so the claim and the behaviour cannot drift apart again: the row with the SMALLER
+    advantage sorts first because its fire_order is lower.
+    """
+    p = tmp_path / "req.jsonl"
+    record_required_component("HugeWinLateFire", path=p, **_harm_kwargs(
+        fire_order=9, live_measured=1000.0, candidate_measured=1.0))
+    record_required_component("SmallWinEarlyFire", path=p, **_harm_kwargs(
+        fire_order=1, live_measured=1.01, candidate_measured=1.0))
+    q = built_elsewhere_unwired(p)
+    assert [r["component"] for r in q] == ["SmallWinEarlyFire", "HugeWinLateFire"]
+    assert q[0]["harm_advantage"] < q[1]["harm_advantage"], "ordering is deliberately NOT by harm"
+
+
+def test_report_carries_the_signed_evidence_not_just_the_prose(tmp_path) -> None:
+    """Found in my own round-1 review: the numbers were recorded and then dropped by the report.
+
+    A measurement the operator-facing surface does not show is built-but-unsurfaced — the class
+    this grade exists to name — reproduced inside the module that names it.
+    """
+    p = tmp_path / "req.jsonl"
+    record_required_component("WiringDebt", path=p, **_harm_kwargs(
+        live_measured=4.0, candidate_measured=1.0, metric_direction="lower-is-better"))
+    row = next(r for r in build_completeness_report(p) if r["component"] == "WiringDebt")
+    assert row["live_measured"] == 4.0
+    assert row["candidate_measured"] == 1.0
+    assert row["metric_direction"] == "lower-is-better"
+    assert row["harm_advantage"] == pytest.approx(4.0)
+
+
+def test_the_exact_pre_fix_call_shape_is_now_refused(tmp_path) -> None:
+    """THE regression guard: the historical call shape carried prose and NO numbers.
+
+    Verified against ``git show HEAD~:...`` before this change: that shape was ACCEPTED, entered
+    ``built_elsewhere_unwired()``, and sorted to ``build_completeness_report()[0]`` — above every
+    live debt row — while describing a ~3,400x REGRESSION. Reproduced here verbatim so the hole
+    cannot silently reopen by someone restoring the old signature defaults.
+    """
+    p = tmp_path / "req.jsonl"
+    with pytest.raises(ValueError):
+        record_required_component(
+            "PoseBasisSwap", needed_by="cfgOptimalFromStart",
+            missing_mechanism="no live call site reaches it", owner="ddm_wd2", fire_order=1,
+            consumer="the live receiver", grade="built-elsewhere-unwired",
+            live_recipient="warp-pose6 (LIVE in inflate_runner_v4d.py:57)",
+            measured_comparison="candidate plateaus d_pose ~29-30 vs live realized 0.00858133",
+            path=p)
+    assert not p.exists() or p.read_text(encoding="utf-8").strip() == ""
+    assert built_elsewhere_unwired(p) == ()

@@ -28,6 +28,7 @@ its DECIDE queue: the CONTROLLER remembers and surfaces; the operator never has 
 from __future__ import annotations
 
 import json
+import math
 import os
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -673,6 +674,27 @@ BUILD_RETIRED = "retired-with-reason"
 # adjudicated negative-control set back into a wiring backlog. So ``record_required_component``
 # REFUSES this grade without both ``live_recipient`` and ``measured_comparison``. NO-FAKE: those
 # fields record an already-measured fact, never manufacture one.
+#
+# THE HARM CLAUSE MUST ALSO BE SIGNED (ddm_wd2, #864/#861). The refusal above checked that a
+# comparison was PRESENT, never that it pointed the right way -- ``measured_comparison`` was free
+# text validated only by ``len(...) >= 3``, while the refusal message promised "a MEASURED
+# COMPARISON showing the component BEATS it". That is a comment-only contract, which CLAUDE.md
+# forbids, and it sat on the rank-0 grade.
+#
+# IT IS NOT HYPOTHETICAL: it admitted the P0's own headline instance. ``p0_864`` records the pose
+# pair as "~39x better, ~38x cheaper, RACED"; ddm_wd1 then MEASURED that family plateauing at
+# d_pose ~29-30 against a live realized 0.00858133 -- roughly 3,400x WORSE, an unwired far-worse
+# PREDECESSOR whose wiring would be a REGRESSION. Under the length-only clause that row was
+# recordable verbatim, and ``BUILD_GRADE_ORDER`` would have sorted it above every live debt row.
+#
+# So the numbers themselves are now mandatory-by-refusal and the direction is CHECKED: the caller
+# supplies the two ALREADY-MEASURED scalars plus which way the metric runs, and the declaration is
+# refused unless the candidate STRICTLY beats the live recipient. NO-FAKE: this records two
+# measured facts and derives only their comparison -- it cannot manufacture a win, and a strict
+# inequality means a tie is not "beats" either.
+METRIC_LOWER_BETTER = "lower-is-better"
+METRIC_HIGHER_BETTER = "higher-is-better"
+VALID_METRIC_DIRECTIONS = (METRIC_LOWER_BETTER, METRIC_HIGHER_BETTER)
 BUILD_ELSEWHERE_UNWIRED = "built-elsewhere-unwired"
 VALID_BUILD_GRADES = (BUILD_FIRED, BUILD_NEVER_FIRED, BUILD_DESIGNED_STUB, BUILD_NOT_DESIGNED,
                       BUILD_RETIRED, BUILD_ELSEWHERE_UNWIRED)
@@ -746,6 +768,9 @@ def record_required_component(
     notes: str = "",
     live_recipient: str = "",
     measured_comparison: str = "",
+    live_measured: float | None = None,
+    candidate_measured: float | None = None,
+    metric_direction: str = "",
     agent: str | None = None,
     path: Path | None = None,
 ) -> dict:
@@ -756,6 +781,14 @@ def record_required_component(
     ``fire_order`` (when it must be ready), ``consumer`` (what reads it), ``needed_by`` (the config
     that blocks without it). NO-FAKE: this records a DEBT, never a capability — declaring a component
     does not build it, and :func:`not_even_designed` keeps reporting it until a factory exists.
+
+    ``grade=built-elsewhere-unwired`` additionally requires ``live_recipient`` (the live mechanism
+    it would replace), ``measured_comparison`` (the human-readable citation for where the numbers
+    came from), and the numbers themselves — ``live_measured``, ``candidate_measured``,
+    ``metric_direction`` — because that grade's rank-0 position asserts a MEASURED PRESENT LOSS.
+    The declaration is REFUSED unless the candidate strictly beats the recipient in the declared
+    direction. NO-FAKE: the caller supplies two already-measured scalars; only their comparison is
+    derived, so this surface cannot manufacture a win.
     """
     if not component or not isinstance(component, str):
         raise ValueError(f"component must be a non-empty str, got {component!r}")
@@ -788,11 +821,53 @@ def record_required_component(
                     "component would replace) and a MEASURED COMPARISON showing the component "
                     "beats it. Without both it is indistinguishable from built-never-fired, which "
                     "is dormant and harmless -- record that grade instead.")
+        # ...and the comparison must POINT THE RIGHT WAY. Prose cannot be checked, so the two
+        # measured scalars and the metric's direction are required and the sign is DERIVED.
+        if metric_direction not in VALID_METRIC_DIRECTIONS:
+            raise ValueError(
+                f"grade=built-elsewhere-unwired requires metric_direction in "
+                f"{list(VALID_METRIC_DIRECTIONS)}; got {metric_direction!r}. The HARM CLAUSE is "
+                "directional: without knowing which way the metric runs, 'beats' is undecidable.")
+        for name, val in (("live_measured", live_measured),
+                          ("candidate_measured", candidate_measured)):
+            if isinstance(val, bool) or not isinstance(val, (int, float)):
+                raise ValueError(
+                    f"grade=built-elsewhere-unwired requires a numeric {name}; got {val!r}. The "
+                    "HARM CLAUSE needs the ALREADY-MEASURED value, not prose: free text can assert "
+                    "a win that the numbers contradict, which is how this grade admitted a row "
+                    "that was measured ~3,400x WORSE than the live path (ddm_wd1, #861).")
+            if not math.isfinite(float(val)):
+                raise ValueError(
+                    f"grade=built-elsewhere-unwired requires a FINITE {name}; got {val!r}. A "
+                    "non-finite measurement is a failed measurement, never a comparison.")
+        live_f, cand_f = float(live_measured), float(candidate_measured)
+        beats = cand_f < live_f if metric_direction == METRIC_LOWER_BETTER else cand_f > live_f
+        if not beats:
+            raise ValueError(
+                f"grade=built-elsewhere-unwired REFUSED: candidate_measured={cand_f!r} does not "
+                f"beat live_recipient {live_recipient!r} at live_measured={live_f!r} under "
+                f"{metric_direction!r}. This grade's whole justification -- and its rank-0 position "
+                "in BUILD_GRADE_ORDER -- is a MEASURED PRESENT LOSS on the live path. A component "
+                "that ties or loses is an unwired EQUAL or an unwired WORSE PREDECESSOR, and "
+                "wiring it would be a REGRESSION, not a repair. Record built-never-fired (dormant, "
+                "harmless) or retired-with-reason (adjudicated, needs a reactivation trigger).")
+        # Dimensionless relative advantage, recorded as EVIDENCE for a future ranker. Defined only
+        # when both magnitudes are strictly positive; a ratio across a zero or a signed quantity is
+        # meaningless, so it is None rather than a fabricated number. The strict inequality above,
+        # not this ratio, is the gate.
+        harm_advantage = None
+        if live_f > 0.0 and cand_f > 0.0:
+            harm_advantage = (live_f / cand_f if metric_direction == METRIC_LOWER_BETTER
+                              else cand_f / live_f)
+    else:
+        harm_advantage = None
     row = {
         "component": component, "needed_by": needed_by, "grade": grade,
         "missing_mechanism": missing_mechanism, "owner": owner, "fire_order": fire_order,
         "consumer": consumer, "notes": notes, "live_recipient": live_recipient,
-        "measured_comparison": measured_comparison, "agent": agent, "ts": _utc(),
+        "measured_comparison": measured_comparison, "live_measured": live_measured,
+        "candidate_measured": candidate_measured, "metric_direction": metric_direction,
+        "harm_advantage": harm_advantage, "agent": agent, "ts": _utc(),
     }
     append_locked_jsonl(Path(path) if path is not None else REQUIRED_COMPONENT_PATH, row)
     return row
@@ -842,8 +917,16 @@ def built_elsewhere_unwired(path: Path | None = None) -> tuple[dict, ...]:
     """Declared components that EXIST and have run elsewhere but have no live call site (grade 5).
 
     The #864 P0 queue. Separate from :func:`not_even_designed` because the work is different in
-    kind: these are drained by WIRING, not by building, and each row carries a MEASURED comparison
-    (refused otherwise) so the queue is ranked by quantified harm rather than by guess.
+    kind: these are drained by WIRING, not by building, and every row carries the two measured
+    scalars and a DERIVED, SIGN-CHECKED advantage over its live recipient (refused otherwise).
+
+    ORDER IS ``(fire_order, component)`` — NOT harm. An earlier version of this docstring claimed
+    the queue was "ranked by quantified harm"; it never was, and ranking it that way would be a
+    guess wearing a number. ``harm_advantage`` is dimensionless and therefore NOT comparable across
+    rows measured on different axes: a 2x win on an axis worth 0.29 S beats a 100x win on an axis
+    worth 1e-9 S. Ranking by realized harm needs each row's advantage converted into S units, which
+    is a per-row measurement no caller supplies today. The inputs are recorded so a future ranker
+    can do that honestly; until then the caller orders the work with ``fire_order``.
 
     A row drops off automatically once the component acquires a lever factory — the registry
     decides, not a memo — exactly as the grade-4 queue behaves.
@@ -892,6 +975,13 @@ def build_completeness_report(path: Path | None = None) -> list[dict]:
             "missing_mechanism": r.get("missing_mechanism"), "consumer": r.get("consumer"),
             "notes": r.get("notes"), "live_recipient": r.get("live_recipient"),
             "measured_comparison": r.get("measured_comparison"),
+            # The signed evidence travels WITH the row. Recording a measurement that the
+            # operator-facing surface drops would re-create, inside this very module, the
+            # built-but-unsurfaced class the grade exists to name.
+            "live_measured": r.get("live_measured"),
+            "candidate_measured": r.get("candidate_measured"),
+            "metric_direction": r.get("metric_direction"),
+            "harm_advantage": r.get("harm_advantage"),
         })
     rows.sort(key=lambda r: (BUILD_GRADE_ORDER.get(r["grade"], 9), r.get("fire_order", 0),
                              r["component"]))
