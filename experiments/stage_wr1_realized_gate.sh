@@ -6,6 +6,21 @@
 # WHAT IT MEASURES: the exact composed row (SegNet d_seg + PoseNet d_pose +
 # rate) of a wr1 byte-closed archive, apples-to-apples with the MEASURED
 # pfs1 D1 reference row S=2.256641 (same eval_root, same 0.mkv, same device).
+#
+# READ THE RESULT AGAINST THE LIVE BEST, NOT AGAINST 2.256641 (ddm_sf1 #893,
+# corrected 2026-08-02). This script has NO acceptance predicate -- it runs the
+# evaluator and harvests a receipt, and MAIN adjudicates. But 2.256641 is the
+# only number in this header, so it is what a reader anchors on, and it is now
+# 2.38x WORSE than the live own-vehicle best:
+#     pfs1 D1 reference (this header's anchor) .... S = 2.256641
+#     own-vehicle LIVE BEST (pw1, exact n600) .... S = 0.9476091
+#     the bar (PR130 measured) ................... S = 0.172141
+# A wr1 candidate at, say, S=1.8 would "beat the reference" and still be a large
+# REGRESSION against what we actually hold. Same defect class as the stale-fit
+# genus this comment was corrected under: a reference that outlived its partner.
+# Re-derive the live best from .omx/state/canonical_frontier_pointer.json +
+# main_hot_state before reading any receipt this script writes.
+#
 # Axis: [macOS-CPU advisory - real evaluator, real bytes]; the contest-CPU
 # authority is the later Modal flight (operator-GO). Pointer UNMOVED.
 #
