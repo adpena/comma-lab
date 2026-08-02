@@ -696,6 +696,55 @@ def _is_pre_push_invocation() -> bool:
         return False
 
 
+def run_hook_path_heavy_import_scan() -> int:
+    """Catalog #184 heavy-import scan, run REGARDLESS of preflight scope.
+
+    Round-1 recursive-adversarial review 2026-08-02 MEASURED that the gate landed
+    in 583b3f75a6 sits inside ``check_preflight_hook_codebase_default``, which
+    lives in the ``codebase`` scope -- the scope THIS HOOK SKIPS. Verbatim:
+
+        $ python -m tac.preflight --no-codebase --acknowledge-empty-scope
+        PREFLIGHT VACUOUS -- examined 0 of 27 declared -- scopes SKIPPED: codebase
+        rc: 0    mentions 184/heavy-import: False
+
+    So "unconditional" was unconditional inside a function that never executes --
+    the vacuity-equals-pass genus, built into the fix for the bimodal-cost bug it
+    was meant to guard. Its 18 unit tests passed the whole time: a passing test
+    proves the UNIT, never the WIRING.
+
+    There is no always-run preflight scope to move it into (``--no-codebase``
+    examines 0 of 27), so the hook must call it directly. Affordable because the
+    same morning's torch deferral cut ``import tac.preflight`` from 43.86 s cold /
+    0.48 s warm to 30 ms MEASURED -- this scan is a single-file AST parse on top.
+
+    Fail-OPEN on import error, deliberately: if ``tac`` will not import, step 2
+    has already failed and returned, so an import error here means the guard
+    itself is broken, and blocking every commit on a broken guard is worse than
+    the bug it guards. The message is loud so the fail-open is never silent.
+    """
+
+    try:
+        from tac.preflight import _check_184_module_scope_heavy_imports as scan
+    except Exception as exc:  # pragma: no cover - guard-broken path
+        print(
+            f"[preflight-hook] heavy-import scan UNAVAILABLE (failing OPEN): {exc}",
+            file=sys.stderr,
+        )
+        return 0
+
+    violations = scan(REPO_ROOT)
+    if violations:
+        print(
+            "[preflight-hook] Catalog #184: module-scope heavy import on the hook "
+            "path — this is the 43.86s-cold / rc=124 bug class.",
+            file=sys.stderr,
+        )
+        for v in violations:
+            print(f"[preflight-hook]   {v}", file=sys.stderr)
+        return 1
+    return 0
+
+
 def main() -> int:
     staged = _staged_py_files()
 
@@ -706,6 +755,12 @@ def main() -> int:
 
     # Step 2: bounded developer preflight (PREFLIGHT_FULL=1 for full release scan)
     rc = run_preflight()
+    if rc != 0:
+        return rc
+
+    # Step 2b: the ONE gate that must run even when step 2 is scope-vacuous.
+    # See run_hook_path_heavy_import_scan.__doc__ for the measured reason.
+    rc = run_hook_path_heavy_import_scan()
     if rc != 0:
         return rc
 

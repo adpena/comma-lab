@@ -97,3 +97,74 @@ def test_live_repo_is_clean() -> None:
     """The landed state must satisfy its own gate (live count 0)."""
     repo_root = Path(__file__).resolve().parents[3]
     assert scan(repo_root) == []
+
+
+# ---------------------------------------------------------------------------
+# WIRING tests (round-1 recursive-adversarial review, 2026-08-02).
+#
+# The 18 tests above all passed while the gate NEVER RAN on a commit: it lived
+# in `check_preflight_hook_codebase_default`, inside the `codebase` scope, and
+# the hook emits `--no-codebase` (measured: "examined 0 of 27 declared", rc 0).
+# A passing unit test proves the UNIT, never the PLACEMENT. These test the
+# placement, which is the thing that was actually broken.
+# ---------------------------------------------------------------------------
+
+import importlib.util
+import inspect
+
+
+def _load_hook():
+    root = Path(__file__).resolve().parents[3]
+    spec = importlib.util.spec_from_file_location(
+        "_ph_under_test", root / "tools" / "preflight_hook.py"
+    )
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def test_main_actually_calls_the_scan() -> None:
+    """THE test that was missing. Fails if the call is ever dropped from main()."""
+    hook = _load_hook()
+    assert "run_hook_path_heavy_import_scan" in inspect.getsource(hook.main)
+
+
+def test_scan_step_runs_after_preflight_so_a_vacuous_preflight_cannot_hide_it() -> None:
+    """Order matters: step 2 can return VACUOUS-but-rc0, so 2b must still run."""
+    hook = _load_hook()
+    src = inspect.getsource(hook.main)
+    assert src.index("run_preflight") < src.index("run_hook_path_heavy_import_scan")
+
+
+def test_hook_step_returns_nonzero_when_the_scan_fires(monkeypatch) -> None:
+    """POSITIVE CONTROL at the HOOK layer, not just the scan layer."""
+    hook = _load_hook()
+    import tac.preflight as P
+
+    monkeypatch.setattr(
+        P, "_check_184_module_scope_heavy_imports",
+        lambda root: ["src/tac/preflight.py:1: MODULE SCOPE heavy import 'torch'"],
+    )
+    assert hook.run_hook_path_heavy_import_scan() == 1
+
+
+def test_hook_step_fails_open_loudly_if_the_guard_itself_is_broken(monkeypatch, capsys) -> None:
+    """Deliberate fail-OPEN: a broken guard must not block every commit."""
+    hook = _load_hook()
+    import builtins
+
+    real_import = builtins.__import__
+
+    def _boom(name, *a, **k):
+        if name == "tac.preflight":
+            raise ImportError("simulated broken guard")
+        return real_import(name, *a, **k)
+
+    monkeypatch.setattr(builtins, "__import__", _boom)
+    assert hook.run_hook_path_heavy_import_scan() == 0
+    assert "UNAVAILABLE" in capsys.readouterr().err
+
+
+def test_hook_step_passes_on_the_live_clean_repo() -> None:
+    hook = _load_hook()
+    assert hook.run_hook_path_heavy_import_scan() == 0
