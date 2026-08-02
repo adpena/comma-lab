@@ -57,8 +57,19 @@ from collections.abc import Mapping
 from collections.abc import Sequence
 from pathlib import Path
 
-import torch
-
+# torch is DELIBERATELY NOT imported at module scope. It is used by exactly four
+# `torch.load` calls in this file (artifact validation in `preflight_check` and
+# `preflight_training_inputs`); both functions import it locally. MEASURED
+# 2026-08-02 (task #892): a top-level `import torch` costs 0.42s of the 0.48s
+# warm `python -m tac.preflight --no-codebase` run, and 43.9s real / 0.44s user
+# when the page cache has evicted torch's ~1 GB of dylibs -- blocked on I/O, not
+# computing. The pre-commit/pre-push hook pays that on EVERY invocation,
+# INCLUDING `--no-codebase` mode, which examines 0 of 27 gates and never reaches
+# a single `torch.load`. That made the hook's wall-clock BIMODAL (0.47s warm vs
+# 40s+ cold) straddling its own 30s timeout, so it passed every warm run and
+# rc=124'd every cold one. Deferring the import removes the cold mode entirely:
+# stubbed-torch measurement of the same import is 0.06s. If you need torch here,
+# import it inside your function -- do not restore a module-level import.
 DEFAULT_PREFLIGHT_CLI_TIMEOUT_S = 30.0
 PREFLIGHT_CLI_TIMING_SCHEMA = "pact.tac_preflight_cli_timing.v1"
 _PREFLIGHT_CACHE_SCHEMA = "pact.preflight_cache.v1"
@@ -1373,6 +1384,8 @@ def preflight_check(
             else:
                 _warn("Could not probe mask video with ffprobe")
         elif masks_path.suffix == ".pt":
+            import torch  # deferred: see the module-scope note above DEFAULT_PREFLIGHT_CLI_TIMEOUT_S
+
             m = torch.load(str(masks_path), weights_only=True)
             if m.shape[1] != expected_seg_h or m.shape[2] != expected_seg_w:
                 _warn(f"Masks shape {m.shape} - expected (N, {expected_seg_h}, {expected_seg_w})")
@@ -1384,6 +1397,8 @@ def preflight_check(
         poses_path = Path(poses_path)
         if not poses_path.exists():
             _fail(f"Poses not found: {poses_path}")
+
+        import torch  # deferred: see the module-scope note above DEFAULT_PREFLIGHT_CLI_TIMEOUT_S
 
         p = torch.load(str(poses_path), weights_only=True)
         if p.shape[0] != expected_n_pairs:
@@ -1925,6 +1940,18 @@ def preflight_all(
     from tac.confound_gates import check_upstream_pin_no_content_drift as _upstream_pin_gate
 
     _upstream_pin_gate(repo_root=REPO_ROOT, strict=True, verbose=verbose)
+
+    # ddm_sf1 (2026-08-02): a solved coefficient must record the partner state it
+    # was solved against, or it reads as fresh forever. STRICT from byte one --
+    # live count is 0: all 3 in-scope producers (v4c/v4d resolve, mq1 emit) were
+    # stamped in this same landing. 0.33s (os.walk pruned, bytes fast-path).
+    # REFUSES on an EMPTY scope too: a gate that has lost its subject must not
+    # emit the same green a clean scan emits.
+    from tac.optimization.ddm_sf1_fit_context_preflight import (
+        check_solved_coefficients_stamp_fit_context as _fit_context_gate,
+    )
+
+    _fit_context_gate(REPO_ROOT, strict=True)
 
     # 1. Codebase drift check (cheap, always run unless explicitly disabled)
     if check_codebase:
@@ -7435,6 +7462,9 @@ def preflight_training_inputs(
     p = Path(tto_frames_path)
     if not p.exists():
         raise PreflightError(f"TTO frames missing: {p}")
+
+    import torch  # deferred: see the module-scope note above DEFAULT_PREFLIGHT_CLI_TIMEOUT_S
+
     try:
         t = torch.load(str(p), map_location="cpu", weights_only=True)
     except Exception as e:
