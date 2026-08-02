@@ -27243,3 +27243,88 @@ method warning went to `sv1` before it could repeat at scale.
 (`ddm_pw1_menu_saturation_discriminator_v1`, 2 anchors, 11 tests, `6f95b30568`) and covers classes
 1–3. Classes 4–6 stay TASK-scoped until a measurement earns a law — filing an equation for an
 unadjudicated class would be the specification-without-registration error inverted.
+
+---
+
+## FEED-mq1 (2026-08-01) — the menu was never the constraint: FORMAT loses to SEARCH by 33×
+
+**Unit:** `ddm_mq1`, answering the operator's *"our menu and related could also use further
+optimization and nuance and informing"* + the mid-unit directive to DERIVE the reference
+distribution rather than argue around the circularity. **Pointer `0.1910828242` UNMOVED.**
+Own-vehicle live best `S = 0.9476091` (the pw1 exact-eval row); **gap to the bar 0.7754681**.
+Axis `[macOS-CPU frozen-PoseNet advisory]`, `score_claim=false`.
+
+### The measurement that redirects the work
+
+n=48 mass-ordered pairs = **86.5% of population `d_pose` mass**, canary **exactly 0.0**, each
+coordinate's recoverable distortion split into two DISJOINT parts:
+
+| coordinate | finer LATTICE buys | better SEARCH buys |
+|---|---|---|
+| `p0` forward — NEGATIVE CONTROL (pw1 bracketed it) | 0.0213% of gap | 0.1412% |
+| `p1` lateral | 0.0128% | **0.4694%** |
+| `p2` vertical | 0.0107% | **0.8743%** |
+| `beta` (over-fine reference, 10× step + polish) | — | **0.3358%** |
+| all three INDEX streams at their conditional-entropy floor | 0.0106% (123 B) | — |
+| **TOTAL** | **≤0.056%** | **≥1.82%** |
+
+**SEARCH beats FORMAT by 33×.** The negative control behaved (`p0`, already bracketed, has the
+smallest search gap). `p2` moved up to **2,985 f16 cells** — a basin problem, not a precision one.
+
+### Four findings
+
+1. **`s_t` is EXACTLY scale-degenerate with the pose translation columns** — `t = s_t·(p2,p1,p0)`,
+   max relative homography difference **5.98e-16** over 200 pairs × 4 scales × 3 rotations, and the
+   GN solve frees all six components. Zero added DOF; 189 bytes of duplicate data. **Deleting them
+   is still a NET LOSS** (+2.3e-04 S): the quantum is scale-invariant, and `s_t` is a coarse speed
+   predictor that strips 3.5× of variance before the f16 residual — a two-level code, not a
+   quantizer. Closes the `gd1` census row P5 gap (the chart was RACED; the normalizer inside it was
+   never separately examined).
+2. **The QA65 mean-offset device does not transfer to `p1`/`p2`** — 1.01× / 1.00×, because those
+   columns are already zero-centred. `verdict_scope: FORMULATION`.
+3. **The 13-entry `beta` table is not a codebook** — DERIVED from `bracket_out` source: every
+   shipped value is a seed or a point on the Swann doubling orbit `g₀ ± 0.5·(2^k − 1)`, no
+   exceptions. Its occupancy histogram pictures the SEARCH'S REACHABLE SET. Holes widen with
+   distance: pair 42 moved `−3.500 → −5.7891` (orbit jumps −3.5 → −7.5) for 2.26e-02.
+4. **Codebook design is INADMISSIBLE here on two independent measured grounds.** (a) ECONOMIC:
+   1 byte ≡ 3.68e-08 mean `d_pose`; the whole addressable budget is 0.0106% of the gap against a
+   35.66% distortion term, so λ cannot select — for ANY weighting. (b) STATISTICAL: the
+   wrong-init positive control (n=16) shows the objective agrees (11/16 within 1%) but the
+   **argmin does not (5/16)**, and 3/16 wrong-init restarts beat the from-shipped search. No
+   identified optimum distribution exists to fit.
+
+### On the operator directive
+
+Over-resolution reference: **BUILT** (10× finer step + golden polish, `beta`). Positive control:
+**RUN, and it is the finding** — over-resolution removed the MENU censoring but exposed residual
+SOLVER bias. Objective-weighted (not probability-weighted) placement is recorded as the correct
+criterion and **explicitly not used to claim optimality here**, because gate (a) refuses it
+regardless of weighting. Reference cost reported: ~10 min (beta) + ~16 min (lattice); the chained
+refine is ~20 s/pair, so n600 ≈ 3.3 h — hence a MEASURED mass-ordered top-150 subset with every
+unvisited pair keeping its shipped row, never a silent subset.
+
+### Seed audit
+
+10 of 11 dispatch claims re-derived and CONFIRMED at file:line (including the `s_t` occupancy
+`[0,0,0,0,0,0,22,364,156,58,0]` exactly, and the 124-at-bound / 37.37% / 2.29× conditioning).
+**One defect:** the parent memo's `dim0` interior histogram `103,93,67,39,51,34,46,28,15` and its
+*"decays monotonically"* reading do NOT reproduce under either candidate reconstruction (both rise
+from bin 0 to bin 1). Load-bearing numbers unaffected. `verdict_scope: INSTANCE`.
+
+### Legs
+
+- **DSL** — N/A this unit: no trainer lever changed. The three probes are encoder-side measurement
+  instruments over the v4d pose solve, which is not DSL-compiled.
+- **Equations** — `ddm_mq1_format_vs_search_attribution_v1` registered (2 independent anchors:
+  the attribution, and the two refusals; 21 behavioural tests; unrun gate → `None`, never a pass).
+- **Tasks/DAG** — this block. Artifacts: `.omx/research/ddm_mq1_pose_menu_rd_audit_20260801.md`,
+  `tools/mq1_pose_lattice_resolution_probe.py`, `tools/mq1_beta_overfine_reference.py`,
+  `tools/mq1_joint_pose_refine_emit.py`.
+
+### Next
+
+The search axis is OPEN and is where the remaining pose distortion lives. `p1`/`p2` improvements
+are **byte-free** (they already ship as plain f16 columns); `beta` needs only a widened manifest
+table and **no receiver change**. The chained refine emits a merged n600 JSONL; the byte-closed
+row is STAGED for MAIN (`ddm_v4d_build_composed_archive.py --tag mq1` then
+`stage_v4d_realized_gate.sh cpu mq1`) and was NOT self-fired.
