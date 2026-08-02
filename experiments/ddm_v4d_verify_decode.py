@@ -36,6 +36,10 @@ TEMPLATE = Path("/Volumes/VertigoDataTier/pact/ddm_pfs1_20260729/d1/eval_root/su
 DEPS = ("ddm_r7_token_coder.py", "ddm_tr1_runtime.py", "pfs1_warp_receiver.py",
         "repair_entropy_coder_runtime_adapters.py")
 RECEIVER = Path("experiments/inflate_runner_v4d.py")
+# The receiver reads its beta table from the manifest (inflate_runner_v4d.py
+# :127), so the verifier MUST read it from the decoder too -- a module-level
+# copy silently drifts the moment the solve extends the menu.  Kept only as
+# the legacy default for archives whose manifest predates the key.
 BETA_MAGS = (0.0, 0.5, 1.0)
 
 
@@ -103,11 +107,26 @@ def main() -> int:
         ab_ref = np.asarray([[final[i]["a"], final[i]["b"]] for i in range(n)],
                             np.float16)
         sel_ref = np.asarray([final[i]["selector"] for i in range(n)], np.int64)
-        beta_ref = np.asarray([final[i]["beta_idx"] for i in range(n)], np.int64)
+        # Compare MAGNITUDES, not indices: the table is derived from the
+        # magnitudes the solve chose and sorted, so an index is only meaningful
+        # against its own table.  A row written before the extended menu
+        # carries beta_idx into the seed table instead.
+        def _row_mag(row):
+            if "beta_mag" in row:
+                return float(row["beta_mag"])
+            idx = int(row["beta_idx"])
+            if not 0 <= idx < len(BETA_MAGS):
+                raise SystemExit(f"row beta_idx={idx} with no beta_mag")
+            return float(BETA_MAGS[idx])
+
+        beta_ref = np.asarray([_row_mag(final[i]) for i in range(n)],
+                              np.float64)
+        beta_dec = np.asarray([float(dec.beta_mags[int(dec.beta_idx[i])])
+                               for i in range(n)], np.float64)
         b_ab = bool(np.array_equal(dec.ab.astype(np.float16).view(np.uint16),
                                    ab_ref.view(np.uint16)))
         b_sel = bool(np.array_equal(dec.sel, sel_ref))
-        b_beta = bool(np.array_equal(dec.beta_idx, beta_ref))
+        b_beta = bool(np.array_equal(beta_dec, beta_ref))
         checks["B_pose_reconstruct_exact"] = b_pose
         checks["B_ab_bit_exact"] = b_ab
         checks["B_selector_exact"] = b_sel
@@ -118,7 +137,10 @@ def main() -> int:
         rng = np.random.default_rng(20260731)
         sel1 = [i for i in range(n) if dec.sel[i] == 1]
         sel0 = [i for i in range(n) if dec.sel[i] == 0]
-        betanz = [i for i in range(n) if int(dec.beta_idx[i]) != 0]
+        # index 0 is the SMALLEST magnitude in the derived table, which is
+        # not necessarily 0.0 -- test the magnitude, never the index.
+        betanz = [i for i in range(n)
+                  if float(dec.beta_mags[int(dec.beta_idx[i])]) != 0.0]
         sample = []
         if betanz:
             sample.append(int(rng.choice(betanz)))
@@ -148,7 +170,7 @@ def main() -> int:
             pose = dec.p_best[i]
             sel = int(dec.sel[i])
             a, b = float(dec.ab[i][0]), float(dec.ab[i][1])
-            beta_mag = float(BETA_MAGS[int(dec.beta_idx[i])])
+            beta_mag = float(dec.beta_mags[int(dec.beta_idx[i])])
             if beta_mag != 0.0:
                 c_beta_seen = True
                 beta = beta_mag * (1.0 if pose[5] >= 0.0 else -1.0)

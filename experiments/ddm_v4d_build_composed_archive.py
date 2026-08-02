@@ -102,6 +102,44 @@ def _load_final(path: Path) -> dict[int, dict]:
     return rows
 
 
+def row_beta_mag(row: dict) -> float:
+    """The signed rolling-shutter magnitude a final-JSONL row selected.
+
+    Rows written before ddm_pw1 carry only ``beta_idx`` into the 3-entry seed
+    table; rows written after carry the magnitude directly, which may be
+    negative (opposing yaw) or larger than the seed maximum.
+    """
+    if "beta_mag" in row:
+        return float(row["beta_mag"])
+    idx = int(row["beta_idx"])
+    if not 0 <= idx < len(BETA_MAGS):
+        # beta_idx=-1 marks "chose an extended magnitude"; Python would
+        # silently wrap that to BETA_MAGS[-1]=1.0, so fail closed.
+        raise SystemExit(f"row has beta_idx={idx} and no beta_mag; the "
+                         "magnitude it chose is not recoverable")
+    return float(BETA_MAGS[idx])
+
+
+def derive_beta_table(final: dict, n_pairs: int):
+    """Build ``rs_beta_mags`` from the magnitudes the solve actually chose.
+
+    Returns (table, per_pair_index).  When the chosen set IS the seed menu the
+    sorted table equals ``BETA_MAGS`` and the index map is the identity, so an
+    archive rebuilt from a pre-ddm_pw1 final JSONL is BYTE-IDENTICAL (measured:
+    sha f1f3288062..., 360,238 B).  The receiver reads the table from the
+    manifest (inflate_runner_v4d.py:127) and applies ``table[idx] * yaw_sign``
+    (:177-180), so negative and >1.0 entries need no receiver change, and
+    beta_idx stays uint8 so up to 256 entries cost zero extra per-pair bytes.
+    """
+    table = sorted({row_beta_mag(final[i]) for i in range(n_pairs)})
+    if len(table) > 256:
+        raise SystemExit(f"beta table {len(table)} entries exceeds uint8")
+    idx = np.zeros(n_pairs, np.uint8)
+    for i in range(n_pairs):
+        idx[i] = table.index(row_beta_mag(final[i]))
+    return table, idx
+
+
 def build(args: argparse.Namespace) -> None:
     members = _read_members(BASE)
     st_coded, n_pairs = _st_coded_from_base(members["state/pose_warp.stp"])
@@ -113,12 +151,20 @@ def build(args: argparse.Namespace) -> None:
     poses = np.zeros((n_pairs, 6), np.float64)
     ab = np.zeros((n_pairs, 2), np.float64)
     sel = np.zeros(n_pairs, np.uint8)
-    beta_idx = np.zeros(n_pairs, np.uint8)
+    # ddm_pw1: the beta table is now DERIVED from the magnitudes the solve
+    # actually chose, not pinned to the 3-entry seed menu.  The receiver reads
+    # it from the manifest (inflate_runner_v4d.py:127) and applies
+    # ``beta_mags[idx] * yaw_sign`` (:177-180), so negative and >1.0 entries
+    # need no receiver change; beta_idx stays uint8, so up to 256 entries cost
+    # ZERO extra per-pair bytes.  Rows written before beta_mag existed fall
+    # back to the seed table, and when the chosen set IS the seed table the
+    # derived table and the index remap are both the identity -- so an archive
+    # rebuilt from a pre-pw1 final JSONL is byte-identical.
+    beta_mags, beta_idx = derive_beta_table(final, n_pairs)
     for i in range(n_pairs):
         poses[i] = np.asarray(final[i]["p"], np.float64)
         ab[i] = [float(final[i]["a"]), float(final[i]["b"])]
         sel[i] = int(final[i]["selector"])
-        beta_idx[i] = int(final[i]["beta_idx"])
 
     # QA65 dim0 offset-coding: store f16 residual, receiver adds the offset.
     dim0_offset = None
@@ -148,8 +194,9 @@ def build(args: argparse.Namespace) -> None:
     manifest["pose_warp_sha256"] = _sha(new_pw)
     manifest["schema"] = "ddm_v4d_composed_archive.v4d_static_photo_beta"
     manifest["selector_num_two"] = int(sel.sum())
-    manifest["rs_beta_mags"] = list(BETA_MAGS)
-    manifest["beta_idx_counts"] = [int((beta_idx == k).sum()) for k in range(3)]
+    manifest["rs_beta_mags"] = list(beta_mags)
+    manifest["beta_idx_counts"] = [int((beta_idx == k).sum())
+                                   for k in range(len(beta_mags))]
     manifest["base"] = "cell_drop50"
     if dim0_offset is not None:
         manifest["pose_dim0_offset"] = dim0_offset
