@@ -56,6 +56,9 @@ np.seterr(all="ignore")
 
 sys.path.insert(0, "experiments")
 import ddm_v4c_resolve as v4c  # build_oracle, StaticComposer, q16, contribution, _d2_row
+from tac.canonical_equations.ddm_fs1_coordinate_fit_staleness_20260802 import (
+    FIT_CONTEXT_KEY, stamp_fit_context,
+)
 
 V4C = Path("/Volumes/VertigoDataTier/pact/ddm_v4c_20260730")
 OUT = Path("/Volumes/VertigoDataTier/pact/ddm_v4d_20260731")
@@ -384,7 +387,24 @@ def run_refine(args: argparse.Namespace) -> None:
                "dim0_fine": float(best_x),
                "d_coarse_dim0": float(d_coarse), "d_dim0": float(d_dim0),
                "d_ab": float(d_ab), "d_final": float(d_final),
-               "d_ref_v4c": d_ref, "rungA_by_g": by_g, "n_fwd": int(nfwd)}
+               "d_ref_v4c": d_ref, "rungA_by_g": by_g, "n_fwd": int(nfwd),
+               # ddm_sf1: step 2 re-fits (a,b) at the REFINED dim0 with beta=0;
+               # step 3 then selects beta with (a,b) FROZEN, and pw1/mq1 later
+               # move beta (out to |7.5|) and p1/p2 without ever re-solving
+               # (a,b) -- MEASURED 0 rows re-solved, 244 shipped stale, 100
+               # outside the fitted set.  This stamp is what makes that
+               # gradeable from the artifact.
+               FIT_CONTEXT_KEY: stamp_fit_context(
+                   coefficient="ab_gain_bias",
+                   partners={"beta": 0.0, "p0": float(pose[0]),
+                             "p1": float(pose[1]), "p2": float(pose[2])},
+                   base="celldrop50",
+                   fit_menu=BETA_MAGS,
+                   # _beta_select pins beta = g*yaw_sign, g >= 0 (see its
+                   # yaw_sign line): the menu was sampled at ONE sign, so an
+                   # opposing-sign shipment escapes the fitted set even at an
+                   # in-range magnitude (63 pairs, MEASURED by ft1).
+                   fit_sign=(1.0 if pose[5] >= 0.0 else -1.0))}
         fj.write(json.dumps(rec) + "\n")
         fj.flush()
         os.fsync(fj.fileno())

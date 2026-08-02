@@ -1,0 +1,45 @@
+ddm_sf1 (#893) preflight_all wire-in — NOT APPLIED, handed off.
+
+WHY NOT APPLIED BY ddm_sf1: at commit time `src/tac/preflight.py` carried 99
+lines of a SISTER ARM's uncommitted work (task #892, the `_check_184_module_
+scope_heavy_imports` hook-cost gate). Committing the file would have absorbed
+that in-flight work under this arm's message — the absorption pattern CLAUDE.md
+Catalog #314/#340 forbids. The 13-line hunk is preserved here instead of being
+dropped, so the signal is not lost.
+
+OWNER: whoever lands task #892 (they hold the file), or MAIN to route.
+BLOCKER: none technical — the gate is verified working through the real
+`tac.preflight.REPO_ROOT`:
+
+    gate via REPO_ROOT: ok=True in_scope=3 refused=0
+
+STATE WITHOUT THIS HUNK: the gate is real, tested (23/23), and operator-runnable
+via `tools/preflight_ddm_sf1_fit_context.py` (rc=0/1). It is simply not yet
+enforced on every commit. Live count is already 0, so applying this is
+non-breaking and needs no backfill.
+
+COST: 0.33s (os.walk directory pruning + bytes fast-path; measured on 8,633
+in-scope .py files after excluding the 49,131-file experiments/results tree).
+
+Apply after the anchor line
+`_upstream_pin_gate(repo_root=REPO_ROOT, strict=True, verbose=verbose)`
+inside `def preflight_all(...)` (~line 1942):
+
+```python
+    # ddm_sf1 (2026-08-02): a solved coefficient must record the partner state it
+    # was solved against, or it reads as fresh forever. STRICT from byte one --
+    # live count is 0: all 3 in-scope producers (v4c/v4d resolve, mq1 emit) were
+    # stamped in the ddm_sf1 landing. 0.33s (os.walk pruned, bytes fast-path).
+    # REFUSES on an EMPTY scope too: a gate that has lost its subject must not
+    # emit the same green a clean scan emits.
+    from tac.optimization.ddm_sf1_fit_context_preflight import (
+        check_solved_coefficients_stamp_fit_context as _fit_context_gate,
+    )
+
+    _fit_context_gate(REPO_ROOT, strict=True)
+```
+
+VERIFY AFTER APPLYING:
+
+    .venv/bin/python tools/preflight_ddm_sf1_fit_context.py   # expect rc=0, 3/3 STAMPED
+    .venv/bin/python -m pytest src/tac/tests/test_ddm_sf1_fit_context_preflight.py -q

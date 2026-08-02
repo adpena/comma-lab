@@ -59,10 +59,23 @@ np.seterr(all="ignore")
 
 sys.path.insert(0, "experiments")
 import ddm_pfs1_ep_warp_pose_solve as d2m  # WarpPoseOracle, solve_pair_gn, FD_STEPS, ST_GRID
+from tac.canonical_equations.ddm_fs1_coordinate_fit_staleness_20260802 import (
+    FIT_CONTEXT_KEY, stamp_fit_context,
+)
 
 BASES = {
     "kneeA": Path("/Volumes/VertigoDataTier/pact/ddm_wr1_20260729/wr1_kneeA_safe_274k_archive.zip"),
     "celldrop50": Path("/Volumes/VertigoDataTier/pact/ddm_gr1_20260730/gr1_cell_drop50_archive.zip"),
+    # ddm_cr2 (#881/#827) named blocker, cleared 2026-08-02.  cr2 MEASURED a
+    # seg+rate half of -0.08667888637575716 S (11.18% of the 0.7754681 gap) by
+    # transplanting the v4d/pw1 pose payload onto this ep854 seg base -- but the
+    # TRANSPLANT's pose measured d_pose 37.877 against a pre-registered break-even
+    # of 0.0131903 (2871x over), so cr2's own falsifier fired: NET-NEGATIVE as
+    # transplanted, "the pose must be re-solved against ep854 first".  That
+    # re-solve could not even be attempted because this dict did not carry the
+    # base.  Receipt: ddm_cr2_20260801/ddm_cr2_receipt.json
+    # (base sha256 fd50925899b22c7cd09fd7353b40ae3bf372266d107d586aa864508c0bb44904).
+    "ep854": Path("/Volumes/VertigoDataTier/pact/ddm_cr2_20260801/ep854_v3warp_base_archive.zip"),
 }
 SHIP_TABLE = Path("/Volumes/VertigoDataTier/pact/ddm_v4b_20260730/v4b_ship_table.json")
 D2_JL = Path("/Volumes/VertigoDataTier/pact/ddm_pfs1_20260729/d2/d2_ep_solve.partial.jsonl")
@@ -807,7 +820,23 @@ def run_photo(args: argparse.Namespace) -> None:
                "ab_starts_tried": ab_trace.get("starts_tried", ["neutral"]),
                "ab_relins": ab_trace["n_relin"],
                "ab_damp_used": ab_trace["damp_used"],
-               "p": [float(v) for v in theta]}
+               "p": [float(v) for v in theta],
+               # ddm_sf1: (a,b) was solved in RUNG B against THIS pose and with
+               # NO row-shear (beta=0); RUNG A then searches beta with (a,b)
+               # FROZEN, and later stages (pw1/mq1) move beta and the pose again
+               # without re-solving (a,b).  Record the partner state here so a
+               # reader can grade freshness from the row instead of
+               # reconstructing it by archaeology after the partner has moved.
+               FIT_CONTEXT_KEY: stamp_fit_context(
+                   coefficient="ab_gain_bias",
+                   partners={"beta": 0.0, "p0": float(theta[0]),
+                             "p1": float(theta[1]), "p2": float(theta[2])},
+                   base=base,
+                   fit_menu=(0.0, *RS_GLOBAL_G),
+                   # beta = g*yaw_sign with g >= 0: the menu was sampled at ONE
+                   # sign, so an opposing-sign shipment escapes the fitted set
+                   # even at an in-range magnitude (63 pairs, MEASURED).
+                   fit_sign=yaw_sign)}
         fj.write(json.dumps(rec) + "\n")
         fj.flush()
         os.fsync(fj.fileno())

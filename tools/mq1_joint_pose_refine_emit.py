@@ -62,6 +62,10 @@ from pathlib import Path
 
 import numpy as np
 
+from tac.canonical_equations.ddm_fs1_coordinate_fit_staleness_20260802 import (
+    FIT_CONTEXT_KEY,
+)
+
 REPO = Path("/Users/adpena/Projects/pact")
 SCHEMA = "ddm_mq1_joint_pose_refine.v1"
 V4D = Path("/Volumes/VertigoDataTier/pact/ddm_v4d_20260731")
@@ -217,7 +221,14 @@ def main() -> None:
                "p": [float(v) for v in pose], "a": a, "b": b,
                "selector": sel, "beta_mag": float(g),
                "d_final": float(d_cur), "gain": max(d_ctrl - d_cur, 0.0),
-               "s_t": s_t, "n_eval": n_eval, "source": "mq1_joint_refine"}
+               "s_t": s_t, "n_eval": n_eval, "source": "mq1_joint_refine",
+               # ddm_sf1: CARRY the upstream fit context forward, never re-stamp.
+               # mq1 moves the pose and beta but its refinement set is
+               # {p0,p1,p2,beta} -- it does NOT re-solve (a,b).  A fresh stamp
+               # here would assert a freshness that was never re-established;
+               # carrying the original partners is what lets the consumer see
+               # that the shipped (a,b) is stale against the pose mq1 just moved.
+               FIT_CONTEXT_KEY: sh.get(FIT_CONTEXT_KEY)}
         fj.write(json.dumps(rec) + "\n")
         fj.flush()
         os.fsync(fj.fileno())
