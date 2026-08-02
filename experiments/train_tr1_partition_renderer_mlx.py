@@ -985,6 +985,67 @@ def initial_stage_label(seg_form_start: str) -> str:
             else f"seg_trunk_{seg_form_start}")
 
 
+# ---- ddm_tp2 (2026-08-02) row 2: --margin-weighted-loss is INERT on two seg forms ----------
+# MEASURED BUG: ``--margin-weighted-loss on`` is threaded into make_loss_fn for EVERY form
+# (it sets ``apply_mw``), but only three of the five branches ever READ it. In
+# ``experiments/train_witness_realized_through_R_mlx.py::make_loss_fn.loss_fn`` the
+# ``margin_hinge`` / ``unify_tau`` / ``ce`` branches all guard on ``if apply_mw:``; the
+# ``tau_softplus`` and ``l7_softplus`` branches contain no such guard at all. For
+# ``l7_softplus`` that is DELIBERATE and documented ("l7_softplus carries its OWN hard-pixel
+# weight so the curriculum l7 stage does NOT also use this lever"); for ``tau_softplus`` --
+# a bare mean(tau*softplus(-m/tau)) with no weight of its own -- nothing absorbs it, so the
+# flag is simply declared-ON and dead.
+#
+# MEASURED blast radius: all four TR1 windows (ddm_b4s_20260731/window_01..03,
+# ddm_r1c_20260731/window_01) launched margin_weighted_loss='on' and ran the tau_softplus
+# form for 100% of their trained epochs -> the flag had ZERO effect on every epoch of the
+# burn lineage. window_03 alone: 199/199 gate rows at form tau_softplus, ep807-945.
+#
+# WHY REFUSE RATHER THAN WIRE: wiring margin weighting into the tau_softplus branch would
+# change the training loss of the live vehicle. That is a score-affecting lever, and levers
+# are RACED, never adopted by citation -- it would also make the next window incomparable to
+# windows 01-03. Refusing is fail-closed, costs nothing, and turns a silent artifact LOUD
+# (the confound-immune-system rule). The remedy is free: because the flag was inert, DROPPING
+# it reproduces the burn lineage EXACTLY, byte-for-byte.
+MARGIN_WEIGHTED_HONORING_SEG_FORMS = frozenset({"ce", "unify_tau", "margin_hinge"})
+
+
+def reachable_seg_forms(seg_form_start: str) -> frozenset[str]:
+    """Every loss form a run launched at ``seg_form_start`` can occupy.
+
+    Only ``ce`` has an outgoing transition: the knee event (and its F2 midpoint FALLBACK,
+    which makes the switch unconditional) moves ce -> tau_softplus. Every other start is
+    terminal, because ``knee_switched`` is True from epoch 0 for a non-ce label. This is why
+    the check below is on REACHABLE forms and not merely on the START form: a run launched at
+    ``ce`` with the flag on is honored at first and then goes silently inert at the knee --
+    which is exactly what happened to the whole b4s burn lineage.
+    """
+    return frozenset({seg_form_start} | ({"tau_softplus"} if seg_form_start == "ce" else set()))
+
+
+def assert_margin_weighted_loss_is_honored(seg_form_start: str, margin_weighted_loss: str) -> None:
+    """Fail closed when ``--margin-weighted-loss on`` would be inert for any reachable form."""
+    if margin_weighted_loss != "on":
+        return
+    inert = sorted(reachable_seg_forms(seg_form_start) - MARGIN_WEIGHTED_HONORING_SEG_FORMS)
+    if not inert:
+        return
+    raise SystemExit(
+        f"REFUSED: --margin-weighted-loss on is INERT for seg form(s) {inert} that a run "
+        f"launched at --seg-form-start {seg_form_start!r} will occupy.\n"
+        f"  Forms that honor it: {sorted(MARGIN_WEIGHTED_HONORING_SEG_FORMS)} (they guard on "
+        f"`if apply_mw:`).\n"
+        f"  Forms that ignore it: ['l7_softplus', 'tau_softplus'] (no apply_mw guard in "
+        f"make_loss_fn; l7_softplus deliberately carries its own hard-pixel weight).\n"
+        f"  NOTE 'ce' is not a way out: the knee event (F2 midpoint fallback makes it "
+        f"unconditional) switches ce -> tau_softplus mid-run, so the weighting dies at the "
+        f"knee. This is MEASURED: b4s window_01..03 + r1c window_01 all launched "
+        f"margin_weighted_loss='on' and ran tau_softplus for 100% of their epochs.\n"
+        f"  FIX (free, and byte-identical to what those runs actually did): drop "
+        f"--margin-weighted-loss. To USE the lever, launch a form that honors it -- and race "
+        f"it, because on this vehicle that is an unmeasured change to the training loss.")
+
+
 def basin_entry_fires(w: list[dict]) -> bool:
     """TerminalSolve §16.1 validity predicate over the last-3-gate window (pure logic;
     unit-tested; consumed by main()'s basin-handoff block). Conditions: (a) quadratic
@@ -1658,6 +1719,9 @@ def main() -> int:
     adapter = load_mlx_distortion_scorer_adapter_from_upstream(upstream_root, device="cpu")
     # §3.2 boundary-annulus form fix: 100% of realized flips sit in the bottom GT-margin decile
     # (sg1 §1.3) => reweight the per-pixel seg loss toward the small-margin boundary annulus.
+    # ddm_tp2 row 2: fail closed BEFORE any training if the flag would be inert for a form
+    # this run will occupy (declared-on + silently-ignored is the day's dominant genus).
+    assert_margin_weighted_loss_is_honored(cfg.seg_form_start, cfg.margin_weighted_loss)
     loss_fn = make_loss_fn(adapter, SEG_H, SEG_W, score_domain=True,
                            seg_loss=cfg.seg_form_start,
                            margin_weighted=(cfg.margin_weighted_loss == "on"),

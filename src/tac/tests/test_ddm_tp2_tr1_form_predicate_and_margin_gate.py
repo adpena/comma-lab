@@ -7,11 +7,17 @@ IDENTICAL loss form under the label ``seg_trunk_tau_softplus`` and could NEVER s
 predicate. The fix keys the predicate on the loss FORM (``state_form["form"]``), which is
 "tau_softplus" in BOTH launch paths.
 
-ROW 2 lands in a separate commit and extends this module.
+ROW 2 (second block): ``--margin-weighted-loss on`` is threaded into ``make_loss_fn`` for
+every seg form, but the ``tau_softplus`` and ``l7_softplus`` branches never read
+``apply_mw`` -- the flag is declared-ON and INERT for those forms. Guarded by a STRUCTURAL
+test that parses the canonical loss source, so the honoring set cannot drift out of sync
+with the branches that actually implement it.
 """
 
 from __future__ import annotations
 
+import ast
+import inspect
 import sys
 from pathlib import Path
 
@@ -25,9 +31,12 @@ for _p in (str(WORKTREE), str(WORKTREE / "src")):
 
 from experiments.train_tr1_partition_renderer_mlx import (  # noqa: E402
     BASIN_TERMINAL_SEG_FORM,
+    MARGIN_WEIGHTED_HONORING_SEG_FORMS,
     SEG_TRUNK_CE_STAGE,
+    assert_margin_weighted_loss_is_honored,
     basin_entry_fires,
     initial_stage_label,
+    reachable_seg_forms,
 )
 
 # The four values ``--seg-form-start`` actually accepts (argparse ``choices``).
@@ -109,3 +118,103 @@ def test_stage_label_derivation_has_a_single_owner():
     src = (WORKTREE / "experiments" / "train_tr1_partition_renderer_mlx.py").read_text()
     assert src.count('f"seg_trunk_{') == 1, (
         "the stage-label convention must live ONLY in initial_stage_label()")
+
+
+# --------------------------------------------------------------------------------------
+# ROW 2 — --margin-weighted-loss must never be silently inert.
+# --------------------------------------------------------------------------------------
+
+def _apply_mw_branches_from_source() -> dict[str, bool]:
+    """Parse the CANONICAL loss source and return {seg_form: reads `apply_mw`}.
+
+    This is the anti-drift core: the honoring set in the trainer is a hand-written
+    constant, and a constant that mirrors code silently rots. Reading the real if/elif
+    chain means any future edit that adds or removes an ``apply_mw`` guard fails this
+    test until the constant is updated to match.
+    """
+    from experiments.train_witness_realized_through_R_mlx import make_loss_fn
+
+    tree = ast.parse(inspect.getsource(make_loss_fn))
+    inner = next(n for n in ast.walk(tree)
+                 if isinstance(n, ast.FunctionDef) and n.name == "loss_fn")
+
+    def _reads_apply_mw(body) -> bool:
+        return any(isinstance(n, ast.Name) and n.id == "apply_mw"
+                   for stmt in body for n in ast.walk(stmt))
+
+    # Locate the `if form == "...": ... elif ... else: # ce` chain assigning seg_l.
+    def _is_form_test(node) -> str | None:
+        t = node.test
+        if (isinstance(t, ast.Compare) and isinstance(t.left, ast.Name)
+                and t.left.id == "form" and isinstance(t.ops[0], ast.Eq)
+                and isinstance(t.comparators[0], ast.Constant)):
+            return t.comparators[0].value
+        return None
+
+    chain = next(n for n in ast.walk(inner)
+                 if isinstance(n, ast.If) and _is_form_test(n) is not None)
+    out: dict[str, bool] = {}
+    node = chain
+    while True:
+        form = _is_form_test(node)
+        assert form is not None, "unexpected non-`form ==` test in the seg-form chain"
+        out[form] = _reads_apply_mw(node.body)
+        if len(node.orelse) == 1 and isinstance(node.orelse[0], ast.If):
+            node = node.orelse[0]
+            continue
+        out["ce"] = _reads_apply_mw(node.orelse)  # the terminal `else:  # "ce"` branch
+        break
+    return out
+
+
+def test_honoring_set_matches_the_branches_that_actually_read_apply_mw():
+    """THE ANTI-DRIFT TEST. The trainer's constant must equal the measured source truth."""
+    branches = _apply_mw_branches_from_source()
+    assert len(branches) == 5, f"expected 5 seg forms, parsed {sorted(branches)}"
+    measured = {f for f, reads in branches.items() if reads}
+    assert measured == set(MARGIN_WEIGHTED_HONORING_SEG_FORMS), (
+        f"MARGIN_WEIGHTED_HONORING_SEG_FORMS={sorted(MARGIN_WEIGHTED_HONORING_SEG_FORMS)} but the "
+        f"loss source honors {sorted(measured)}. Update the constant (and the refusal message).")
+
+
+def test_the_two_inert_forms_are_exactly_tau_softplus_and_l7_softplus():
+    """Documents the MEASURED bug: these two branches ignore the flag entirely."""
+    branches = _apply_mw_branches_from_source()
+    inert = sorted(f for f, reads in branches.items() if not reads)
+    assert inert == ["l7_softplus", "tau_softplus"], inert
+
+
+def test_reachable_forms_ce_reaches_tau_and_the_others_are_terminal():
+    """The knee (with its unconditional F2 midpoint fallback) is the only transition."""
+    assert reachable_seg_forms("ce") == frozenset({"ce", "tau_softplus"})
+    for terminal in ("tau_softplus", "unify_tau", "margin_hinge"):
+        assert reachable_seg_forms(terminal) == frozenset({terminal})
+
+
+def test_off_never_refuses_for_any_form():
+    """Positive control for the negatives below: the gate is silent when the flag is off."""
+    for form in SEG_FORM_START_CHOICES:
+        assert_margin_weighted_loss_is_honored(form, "off")  # must not raise
+
+
+@pytest.mark.parametrize("form", ["ce", "tau_softplus"])
+def test_on_refuses_for_forms_that_reach_an_inert_branch(form):
+    """'ce' must ALSO refuse -- it is honored only until the knee, then dies silently.
+    This is the exact configuration the entire b4s burn lineage launched with."""
+    with pytest.raises(SystemExit) as exc:
+        assert_margin_weighted_loss_is_honored(form, "on")
+    msg = str(exc.value)
+    assert "tau_softplus" in msg and "INERT" in msg
+    assert "drop --margin-weighted-loss" in msg      # the message is actionable
+
+
+@pytest.mark.parametrize("form", ["unify_tau", "margin_hinge"])
+def test_on_is_allowed_for_forms_that_honor_it(form):
+    assert_margin_weighted_loss_is_honored(form, "on")  # must not raise
+
+
+def test_refusal_is_wired_into_the_trainer_before_the_loss_is_built():
+    """A gate nobody calls is the very orphan class this row is fixing."""
+    src = (WORKTREE / "experiments" / "train_tr1_partition_renderer_mlx.py").read_text()
+    call = src.index("assert_margin_weighted_loss_is_honored(cfg.seg_form_start")
+    assert call < src.index("loss_fn = make_loss_fn("), "refusal must precede loss construction"
