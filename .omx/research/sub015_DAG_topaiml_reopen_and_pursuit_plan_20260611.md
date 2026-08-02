@@ -27135,3 +27135,111 @@ budget metric and the GT-referenced topological Lane cost move together, so the 
 the ratchet is safe to build on. The real asymmetry is one level over — `betti0_realized` counts ~43 Lane
 components (8.2%) with no surviving GT parent, and the topology ALARM consumes that contaminated quantity
 while the dual consumes the clean one.
+
+## FEED-fo1/censor1 — the CENSORING genus enumerated across the stack, and #870's premise measured much smaller than I wrote it (2026-08-01)
+
+**Pointer: own-vehicle v4d 0.9476091 [macOS-CPU advisory] · submittable 0.1910828242 UNMOVED · bar
+0.172141 · gap 0.7754681.** Nothing here moved it. Two commits: `0bfeb42fc6` (fo1 detector +
+harvest), `5972924bcf` (fo1 memo).
+
+### 1. The genus, generalized off "solver"
+
+`ddm_pw1` found a BOUND outranking a TERMINATION CRITERION and freeing two clipping menus realized
+exact ΔS **−0.0163787** at +85 bytes. The general statement drops the word solver:
+
+> **CENSORING = a limit that is not reported alongside the result. The result then reads COMPLETE
+> when it is TRUNCATED.** The cure is uniform and cheap: report the DENOMINATOR and the STOP REASON.
+
+Six classes, by where the limit sits. Owners assigned at filing — no row left unowned.
+
+| # | class | clips | measured | owner |
+|---|---|---|---|---|
+| 1 | SOLVE | which values get FOUND | 3 instances today | `sv1` |
+| 2 | MENU | which values are EXPRESSIBLE | dim0 8.27× terminal spike; beta 26.4% mass | `mq1` |
+| 3 | CAP | iterations/candidates, silently | **31 of 31, zero stop-reason** | #874 → `sv1` |
+| 4 | SCOPE | the population evaluated | `--verdict-pairs` defaults **96** / **24** | #875 |
+| 5 | RECORD | work done, never emitted | see §3 — the strongest instance | #876 |
+| 6 | REPORT | precision of the emitted field | `evaluate.py:100` `{score:.2f}` | #877 |
+
+**Class 3 is the new one and it is total.** Scope `tools/ experiments/ src/tac/`, tests excluded:
+**31** files carry an argparse cap default (`top_k|max_iter|max_quanta|max_steps|max_rounds|n_probe|
+budget|limit`); **0** emit any of `{stop_reason, cap_saturated, terminated_by, converged, n_at_cap}`.
+Not one capped loop can answer *"did I converge, or run out?"* Read it as an INSTRUMENTATION gap,
+NOT as 31 bugs — most terminal bins are probably empty; the finding is that we cannot tell.
+
+**Classes 4 and 6 are narrower than the table implies, stated so they are not over-cited.** Both
+`--verdict-pairs` files DO emit denominator sites (2 and 4); the defect is the DEFAULT, not absent
+reporting. And class 6 is mostly already defended — CLAUDE.md carries the recompute-from-components
+rule, 726 files honour it, and most parse sites are named `score_rounded` / `*_display_rounded`. The
+residual is the handful bound to a plain name (`tools/auth_eval_records.py:192`). The band still
+matters: 0.005 is **0.64% of the 0.7754681 gap**, larger than the SMEVR base-rule race at #859.
+
+### 2. `ddm_fo1` — #870's premise is MEASURED much smaller than I wrote it
+
+I filed #870 as *"worse than grade 5, DEF CON a thousand."* fo1 adjudicated it and the premise does
+not survive at that strength:
+
+- **5 of 6 seed "live orphaned instances" were STALE** — already executed by sister arms within
+  24–72 h. **Two of the six were my own seeds.** The one true non-execution
+  (`stage_ck1_composed_gate.sh`) was DELIBERATE: its own memo calls it *"a NEGATIVE control… do not
+  spend the winning slot on it."*
+- Live 14-day scope: **0 ORPHANED · 4 STAGED · 84 UNKNOWN · 10 EXECUTED** over 93 rows / 1,129 of
+  7,375 memos.
+- **The 84 UNKNOWN (90%) are UNADJUDICATED.** fo1 says so in as many words: it *"did not adjudicate
+  the 84 UNKNOWN rows"* and ORPHANED precision is **UNVALIDATED at n=0**. So "near-empty" describes
+  the CONFIRMED set against a 90% undetermined remainder — it is NOT "the class is empty."
+- **The residual failure is RETRIEVAL, not orphaning.** Memos assert "never run" about measurements
+  that ran hours earlier: `gc17` made *"#826 has never been exact-eval'd"* its rank-1 while the
+  receipt had been in custody **5h27m**; `pw1` wrote *"I did not fire one"* **twelve minutes** before
+  its gate fired. **Consequence: the instrument's high-value output is its EXECUTED bucket — which
+  live "never run" claims are FALSE — not its ORPHANED bucket.** That inverts the design intent.
+
+**The one genuinely orphaned thing was a HARVEST, not a measurement — and it is a NO-FAKE #1 instance.**
+`experiments/stage_wr1_realized_gate.sh` ended in four `echo` lines that DESCRIBED parsing
+`report.txt` into a receipt and wrote nothing. Both candidates had really been fired — **~22 minutes
+of paid n600 scorer time** — and neither produced a receipt. fo1 harvested both from existing SSD
+logs at $0, zero scorer forwards:
+
+| candidate | d_seg | d_pose | bytes | S | ΔS vs REF 2.256641 |
+|---|---:|---:|---:|---:|---:|
+| Knee A | 0.00553676 | 0.28002128 | 274,333 | **2.409727** | **+0.153086** REJECT |
+| Knee B | 0.01001419 | 0.48164272 | 174,578 | **3.312299** | **+1.055658** REJECT |
+
+Rate won **−0.196870** exactly as `wr1` predicted — but seg lost **+0.164665** (predicted ~zero) and
+pose lost **+0.185290** (predicted "pose-favourable by construction"). **Both wr1 §4/§7 premises
+REFUTED, `verdict_scope: INSTANCE`.** The echo-only step is now a real call.
+
+**Six self-review defects, four manufacturing confident FALSE ORPHANED**, every one pushing the same
+direction (`.jsonl` truncated to `.json` by regex alternation order; `src/` missing from the corpus;
+SSD tiers unscanned — 5 fabricated rows in fo1's OWN digest wiring; partial glob captures; joining on
+incidental context tokens; a cache serving a narrowed scope from a wider index). Same failure mode
+`gd5` hit, different instrument — which is why the conservative UNKNOWN-over-ORPHANED default is
+load-bearing, and why extraction is a CONJUNCTION: bare `$0` fires **12,684×** across 2,101 memos,
+while `staged follow-on` occurs **twice** repo-wide.
+
+### 3. fo1's structural gap IS class-5 censoring, at the worst possible surface
+
+> The contract-mandated **`LIVE-HYPOTHESES` / `NEXT-IF-RESUMED`** blocks appear only **9 times in 5
+> files** on disk — because they go to the COORDINATOR, not to a memo. **The richest follow-on
+> surface we have is structurally unpersisted.**
+
+That is RECORD censoring at its most consequential point: an arm's named next-measurement is
+generated at the highest-information instant in its life and then exists only in a message. It
+outranks the 16-worktree instance under #876 by a wide margin, because it is not a residue — it is
+EVERY arm, EVERY time, BY DESIGN. Folded into #876 as its primary cure candidate.
+
+### 4. Honest scoring of this turn
+
+Three arms live (`fo1` landed, `mq1`, `sv1`), cr2's composition gate running (`v4d_cr2_ep854`,
+packet identity `f78334bfdd3daff3` ⇒ d_seg EXACTLY 0.003943024; **S 0.8609302 iff d_pose holds** at
+break-even 1.725× tolerance). **My own instruments failed twice in this turn and both are recorded
+rather than quietly corrected:** a "join" that counted stop-reason mentions across a DIFFERENT file
+set than the cap sites (153 vs 46 — two unrelated numerators presented together), and
+`grep -oE 'default=[0-9]+' | head -1` returning each file's FIRST argparse default (200) instead of
+the flag asked about (96/24). Third first-match/substring miss in one session, sister of #829. The
+method warning went to `sv1` before it could repeat at scale.
+
+**Equations leg:** the discriminator law is already registered
+(`ddm_pw1_menu_saturation_discriminator_v1`, 2 anchors, 11 tests, `6f95b30568`) and covers classes
+1–3. Classes 4–6 stay TASK-scoped until a measurement earns a law — filing an equation for an
+unadjudicated class would be the specification-without-registration error inverted.
