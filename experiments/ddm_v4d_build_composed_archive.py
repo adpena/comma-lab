@@ -141,7 +141,14 @@ def derive_beta_table(final: dict, n_pairs: int):
 
 
 def build(args: argparse.Namespace) -> None:
-    members = _read_members(BASE)
+    # ddm_cr2: the seg base is a PARAMETER, not a module constant.  Default is
+    # the cell_drop50 base this builder shipped with, so a rebuild with no new
+    # flags is byte-identical (measured).  Any v3_warp-grammar base works; an
+    # endpoint ``ddm_tr1_runtime_archive.v1`` is first converted by
+    # tools/ddm_cr2_transcode_tr1_base_to_v3warp.py (which also carries the
+    # pose_warp.stp that supplies st_coded below).
+    base = Path(args.base_archive)
+    members = _read_members(base)
     st_coded, n_pairs = _st_coded_from_base(members["state/pose_warp.stp"])
 
     final = _load_final(Path(args.final_jsonl))
@@ -197,7 +204,7 @@ def build(args: argparse.Namespace) -> None:
     manifest["rs_beta_mags"] = list(beta_mags)
     manifest["beta_idx_counts"] = [int((beta_idx == k).sum())
                                    for k in range(len(beta_mags))]
-    manifest["base"] = "cell_drop50"
+    manifest["base"] = args.base_label
     if dim0_offset is not None:
         manifest["pose_dim0_offset"] = dim0_offset
     new_manifest = (json.dumps(manifest, sort_keys=True, separators=(",", ":"))
@@ -218,13 +225,14 @@ def build(args: argparse.Namespace) -> None:
     out_zip.write_bytes(archive_bytes)
     shutil.copy(RECEIVER_SRC, OUT / "inflate_runner_v4d.py")
 
-    base_b = len(BASE.read_bytes())
+    base_b = len(base.read_bytes())
     v4c_b = 359750
     d_final = np.array([float(final[i].get("d_final", np.nan)) for i in range(n_pairs)])
     receipt = {
         "schema": "ddm_v4d_composed_build.v1",
         "axis": "[macOS-CPU advisory] NON-PROMOTABLE; pointer 0.1910828242 UNMOVED",
-        "score_claim": False, "tag": args.tag, "base": "cell_drop50",
+        "score_claim": False, "tag": args.tag, "base": args.base_label,
+        "base_archive": str(base), "base_archive_sha256": _sha(base.read_bytes()),
         "grammar": "v4d_static_photo_beta", "dim0_offset": dim0_offset,
         "final_jsonl": args.final_jsonl, "n_selector_two": int(sel.sum()),
         "beta_idx_counts": manifest["beta_idx_counts"],
@@ -242,11 +250,15 @@ def build(args: argparse.Namespace) -> None:
         "frame0_policy": FRAME0_POLICY,
         "advisory_mean_d_final": float(np.nanmean(d_final)),
         "advisory_contribution_final": float(np.sqrt(10.0 * np.nanmean(d_final))),
-        "seg_note": "seg is MEASURED at the gate; cell_drop50 tokens => "
-                    "d_seg ~0.004312 (v4c gate MEASURED 0.00431179).",
-        "note": "tokens/renderer/selector/pose_stub = cell_drop50 verbatim; only "
-                "pose_warp.stp (v4d PFS1WPD1, +beta section) + manifest change. "
-                "Verify ddm_v4d_verify_decode.py; gate stage_v4d_realized_gate.sh.",
+        "seg_note": "seg is MEASURED at the gate; d_seg is a property of the "
+                    f"base token grid ({args.base_label}). cell_drop50 => "
+                    "d_seg 0.00431179 (v4c gate MEASURED).",
+        "note": f"tokens/renderer/selector/pose_stub = {args.base_label} verbatim; "
+                "only pose_warp.stp (v4d PFS1WPD1, +beta section) + manifest "
+                "change. When the base is NOT the base the pose was solved "
+                "against, the pose payload is a TRANSPLANT and d_pose is "
+                "UNMEASURED until the gate runs. Verify ddm_v4d_verify_decode.py; "
+                "gate stage_v4d_realized_gate.sh.",
     }
     (OUT / f"v4d_composed_{args.tag}_build_receipt.json").write_text(
         json.dumps(receipt, indent=1) + "\n")
@@ -260,6 +272,12 @@ def main() -> int:
                     help="the v4d final JSONL (pose+a,b+selector+beta_idx)")
     ap.add_argument("--dim0-offset", default="none",
                     help="auto (shared f16 mean) | none | <float>")
+    ap.add_argument("--base-archive", default=str(BASE),
+                    help="v3_warp-grammar seg base supplying tokens/renderer/"
+                         "selector/pose_stub AND the pose_warp.stp that carries "
+                         "st_coded (default: the cell_drop50 base)")
+    ap.add_argument("--base-label", default="cell_drop50",
+                    help="manifest['base'] label for the chosen base archive")
     args = ap.parse_args()
     build(args)
     return 0
