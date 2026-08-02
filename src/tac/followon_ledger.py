@@ -45,10 +45,11 @@ from __future__ import annotations
 
 import json as _json
 import re
+import subprocess as _subprocess
 import time as _time
 from collections import Counter
 from dataclasses import dataclass, field
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 
 from tac.scope_ledger import ScopeLedger
@@ -517,6 +518,28 @@ class ExecutionCorpus:
 
 _TASK_TEXT_FIELDS = ("title", "event_notes", "source_design_memo", "next_action", "evidence")
 
+# The SAME row, under the harness's own key names. MEASURED DEFECT (ddm_oh1, 2026-08-02), on shipped
+# code: the live harness emits ``TaskCreate`` with ``{"subject", "description", "activeForm"}`` --
+# verified by reading a raw event out of the session transcript -- and NONE of those keys is in
+# ``_TASK_TEXT_FIELDS``. So a caller handing this join its native rows got ``task_row_text() == ""``
+# on every one of them, hence ``UNKNOWN / "carries no text to join on" / joinable=False`` for 100% of
+# the population, silently.
+#
+# That is the vacuity genus at the FIELD level, and it is the worst version of it: the join does not
+# crash and does not warn, it just declines every row while emitting a normal-looking verdict, and
+# the ScopeLedger still reports a full ``examined`` count because the rows WERE walked. A reader sees
+# "N rows examined, all UNKNOWN" and concludes the population is undecidable, when in fact the
+# instrument never read a single character of it.
+#
+# Aliases, not a rename: both key-spaces are live (p2a's replayed rows use ``title``), so the reader
+# accepts either. Per design philosophy P1 ("one fact, one store, one key") the ALIAS TABLE is the
+# one place that knowledge lives -- callers must not each remember to map their own fields.
+_TASK_FIELD_ALIASES: dict[str, tuple[str, ...]] = {
+    "title": ("subject", "name", "summary"),
+    "evidence": ("description", "body", "detail"),
+    "next_action": ("activeForm", "active_form"),
+}
+
 # A RUN product is written BY an execution (a receipt, a report, a log). A BUILD product is an
 # INPUT an execution consumes (an archive, a weight bundle). Only the former can witness closure --
 # the same runner-vs-output distinction the memo join makes, one level up.
@@ -574,8 +597,21 @@ def refusal_receipt_reason(token: str, corpus: ExecutionCorpus) -> str | None:
 
 
 def task_row_text(task: dict) -> str:
-    """The searchable text of a task row: its titled fields plus any list-valued blockers."""
-    parts = [str(task.get(f) or "") for f in _TASK_TEXT_FIELDS]
+    """The searchable text of a task row: its titled fields plus any list-valued blockers.
+
+    Canonical field names AND their harness aliases are read, so a row in the live
+    ``TaskCreate`` shape (``subject``/``description``) joins identically to a replayed row
+    (``title``/``evidence``). See :data:`_TASK_FIELD_ALIASES` for the measured reason.
+    """
+    parts: list[str] = []
+    for f in _TASK_TEXT_FIELDS:
+        val = task.get(f)
+        if not val:
+            for alias in _TASK_FIELD_ALIASES.get(f, ()):
+                val = task.get(alias)
+                if val:
+                    break
+        parts.append(str(val or ""))
     blockers = task.get("blockers")
     if isinstance(blockers, (list, tuple)):
         parts.extend(str(b) for b in blockers)
@@ -832,22 +868,655 @@ def summarise(paired: list[tuple[FollowOn, ExecutionVerdict]]) -> dict[str, int]
     return {k: c.get(k, 0) for k in VALID_VERDICTS}
 
 
+# ===========================================================================
+# THE HANDOFF GRAPH (ddm_oh1). A DIFFERENT EDGE, INVISIBLE TO EVERYTHING ABOVE.
+# ===========================================================================
+#
+# The join above answers "did this follow-on produce its OUTPUT?" and is keyed to a filename the
+# row itself names. A HANDOFF names no output. It names a SUCCESSOR -- a task id, a sister arm, a
+# code site -- and says the work goes THERE. Nothing then joins "what an arm said was owed" to
+# "what was subsequently done", so the edge is invisible in both directions.
+#
+# TWO INSTANCES, MEASURED at the source, both of which the shipped extractor above CANNOT see:
+#
+#   (a) ``ddm_sv2_...20260802.md:350`` -- *"#539 (Build the POWER-DIAGRAM witness parametrization,
+#       in_progress) is the natural donor; this arm should hand off to it rather than fork a
+#       parallel surface."*  ``ACTION_RX`` does not match "should hand off" and ``CHEAP_RX`` matches
+#       nothing on the line, so the row is never extracted.
+#   (b) ``ddm_os1_...20260802.md:203`` -- *"No cure landed at pfs1 ... the fix ... is STAGED, not
+#       taken."*  Same: neither half of the conjunction fires.
+#
+# AND THE STRUCTURAL DEFECT THAT DECIDES THE DESIGN -- stated precisely, because an earlier draft
+# of this comment overclaimed it and the test written to pin the claim is what caught it.
+#
+# The two instances fail the shipped extractor for DIFFERENT reasons, and only one of them is
+# structural:
+#
+#   * (a) sv2 is a SCOPING failure. Its target ``#539`` sits on line 352 and its verb "hand off" on
+#     line 353. ``extract_followons`` iterates ``text.splitlines()``, so NO single line ever carries
+#     both halves -- no predicate whatsoever, however good, can see this row one line at a time.
+#     This is what item scoping fixes, and it is pinned by
+#     ``test_no_single_line_carries_both_halves_of_the_sv2_instance``.
+#   * (b) os1 is a PREDICATE failure only. "No cure landed at pfs1" and the slug ``pfs1`` share one
+#     line, so line scoping would suffice; it is invisible because ``ACTION_RX ∧ CHEAP_RX`` matches
+#     neither half of it.
+#
+# The scoping half is very likely a component of ``ddm_p1a``'s finding that all 86 UNKNOWN follow-on
+# rows carried the single reason "no artifact-shaped join token": a token stranded on the
+# neighbouring line reads exactly like a token that is absent. That remains INFERRED -- it is a
+# mechanism this arm demonstrated on one row, not a re-measurement of p1a's population.
+#
+# ``extract_followons`` is deliberately NOT switched to item scoping here. Its line-scoped
+# population is quoted by two landed memos (``ddm_fo1``, ``ddm_p1a``); silently changing it would
+# move their numbers underneath them. That is a supersession decision with an owner, so it is NAMED
+# (see this arm's memo) rather than taken unilaterally.
+
+# Deliberately NOT called DONE. A commit that TOUCHES the named site after the naming date proves
+# the successor MOVED there; it does not prove it did the named work. Naming this ``DONE`` would be
+# the false-closure direction that ``classify_task_execution`` already refuses -- and here it is
+# worse, because a handoff is precisely the state where somebody else's later edit is easy to
+# mistake for the owed one.
+ADVANCED = "ADVANCED"
+# Younger than the drain window: not orphaned, just not adjudicable yet.
+LIVE = "LIVE"
+# No artifact-level channel exists for this target kind (a bare task id with no ledger), or the
+# channel exists but could not be read (git unavailable). Never ORPHANED -- "no successor found"
+# and "I could not look for one" must not share a symbol.
+UNVERIFIABLE = "UNVERIFIABLE"
+HANDOFF_VERDICTS = (ORPHANED, LIVE, ADVANCED, UNVERIFIABLE)
+
+# How long a handoff gets before absence of successor activity means anything.
+#
+# DERIVED, with a named anchor: ``ddm_fo1_orphaned_followon_detector_20260801.md:26`` MEASURED that
+# "sister arms drain follow-ons within 24-72 h" -- the finding that its own orphan list was 5-of-6
+# stale. 72 h is that window's UPPER end, so it is the conservative choice: it can only move rows
+# OUT of ORPHANED, never into it. Day granularity because memo dates come from filenames, which
+# carry YYYYMMDD and no clock.
+#
+# RECESS MEASUREMENT that would sharpen it: the distribution of (handoff naming date -> first
+# successor-touch date) over the ADVANCED rows this instrument itself produces. That is a real
+# empirical drain curve rather than one arm's summary sentence, and it needs a population this
+# module can only produce after it has run. Named here so the constant is not mistaken for settled.
+LIVE_WINDOW_DAYS = 3
+
+# Section headings whose CONTENT is, by construction, a list of owed next-steps. MEASURED to be a
+# far better discriminator than any verb list: on a hand-inspected random sample of 8, heading
+# context scored ~7/8 while the explicit-frame stratum scored ~2/8. The frames misfire because
+# "hand-off" is also live DOMAIN vocabulary in this repo ("birth -> boundary hand-off is coherent
+# with the curriculum"), and "is the natural successor to" appears in architecture-comparison
+# tables. A heading cannot be confused for prose in the same way.
+#
+# This is not a coincidence: the subagent contract MANDATES ``NEXT-IF-RESUMED`` / ``LIVE-HYPOTHESES``
+# / ``DEAD-ENDS`` blocks, so the corpus has a real structural convention to exploit.
+#
+# ``handoff`` IS DELIBERATELY ABSENT FROM THIS PATTERN, and that is a MEASURED correction to this
+# arm's own first draft. With it included, the first live run returned 29 ORPHANED of which roughly
+# half were headings like "Serializer and exact-hash handoff", "Verification, triality, and handoff",
+# "Triality handoff" -- whose content is a SHA-256 custody manifest for files that LANDED, i.e. the
+# exact opposite of owed work. Enumerating every ``handoff`` heading in the corpus confirms the word
+# is a standard CUSTODY/VERIFICATION section name here ("Triality handoff" x3, "Self-review and MAIN
+# handoff" x2, "Law 5 -- label_floor_to_phase_tail_handoff_v1", "handoff_readiness.part_frac"), not a
+# transfer-of-owed-work marker. It survives in :data:`HANDOFF_FRAME_RX`, where it appears as a VERB
+# in a sentence and carries its ordinary meaning. Removing it costs a few true positives (e.g. a
+# "Reproducible execution handoff" command block) and removes a much larger false mass.
+OWED_HEADING_RX = re.compile(
+    r"NEXT-IF-RESUMED|LIVE-HYPOTHESES|what (?:this|it) owes|owes next|what i did not do|"
+    r"next steps?|follow[-\s]?ons?|\bowed\b|what remains|remaining work|"
+    r"not done|deferred|open items?|for a successor|operator[-\s]routable",
+    re.I,
+)
+# A markdown TABLE ROW is data, not a directive. MEASURED in this arm's round-1 review: with heading
+# context alone qualifying them, rows like ``| n64 | 61,087 | -0.001589 | ...`` under a heading named
+# "Scale ladder and c1 handoff" were reported ORPHANED -- the row is a measurement table, and ``n64``
+# and ``c1`` are simultaneously real arm slugs (``ddm_n64_*`` and ``ddm_c1_*`` both exist) and
+# ordinary scale/lane words. That ambiguity is the ``#829`` collision class arriving through a
+# channel the arm-corpus membership test cannot filter, because the tokens really are arms.
+#
+# Table rows are NOT dropped, because some of the richest owed queues in this corpus ARE tables (the
+# deferral ledger's ``| QA20 | ... | never run |`` rows). They are held to the STRICTER bar: a table
+# row must carry an explicit transfer FRAME in the row itself, and may never qualify on the section
+# heading alone.
+_TABLE_ROW_RX = re.compile(r"^\s*\|")
+# The explicit-transfer frames. Kept because they catch handoffs written OUTSIDE an owed section --
+# instance (b) is exactly that (it sits under "What I did NOT do", which the heading rx also
+# catches, but instance (a) sits under a numbered "WHAT THIS OWES NEXT" item whose verb is what
+# makes it a handoff rather than a plain next-step). Reported as a SEPARATE stratum because its
+# measured precision is much lower; a reader must be able to rank by which one fired.
+HANDOFF_FRAME_RX = re.compile(
+    r"hand(?:s|ed|ing)?[-\s]off|hand (?:it|this|them|the \w+) (?:off )?(?:to|over)|"
+    r"natural donor|is the (?:natural )?(?:donor|owner|successor)|"
+    r"staged,? not taken|staged (?:but )?(?:never|not) (?:taken|fired|run)|is STAGED, not|"
+    r"for a successor|a successor (?:should|must|would|finds)|successor should|"
+    r"no cure landed|did NOT do|I did not (?:do|land|wire|fire|take)",
+    re.I,
+)
+
+STRATUM_FRAME = "FRAME"
+STRATUM_HEADING = "HEADING"
+
+TARGET_TASK = "TASK"
+TARGET_ARM = "ARM"
+TARGET_PATH = "PATH"
+
+_TASK_TARGET_RX = re.compile(r"#(\d{3,4})\b")
+# An arm slug, with or without its ``ddm_`` prefix. Bare slugs like ``pfs1`` are exactly the short
+# alphanumerics the ``#829`` substring-collision bug class is about, so a slug is admitted ONLY if
+# it is a MEMBER of the real-arm corpus built from artifact filenames. Membership in a measured set
+# is not a substring grep: ``r2`` stays out unless ``ddm_r2_*`` actually exists on disk.
+_ARM_TARGET_RX = re.compile(r"\b(?:ddm_)?([a-z]{1,4}\d{1,2}[a-z]?)\b")
+_PATH_TARGET_RX = re.compile(r"\b((?:src|tools|experiments|scripts)/[\w./-]+\.(?:py|sh))\b")
+
+_MD_ITEM_START_RX = re.compile(r"^\s{0,6}(?:[-*+]\s|\d{1,2}[.)]\s|\|)")
+_MD_HEADING_RX = re.compile(r"^\s{0,3}#{1,6}\s+(.*)$")
+
+
+def iter_markdown_units(text: str, *, max_lines: int = 8):
+    """Yield ``(start_line, unit_text, heading)`` for markdown items and paragraphs.
+
+    The unit, not the line, is the extraction scope -- see the section comment above for the
+    measured reason (both controls MISS under line scoping and FIRE under this one).
+
+    ``max_lines`` caps a runaway unit so one unbroken block cannot swallow a whole document and
+    manufacture spurious frame/target co-occurrence across unrelated sentences.
+    """
+    lines = text.splitlines()
+    buf: list[str] = []
+    start = 0
+    heading = ""
+    for i, raw in enumerate(lines, 1):
+        stripped = raw.strip()
+        head_m = _MD_HEADING_RX.match(raw)
+        breaks = not stripped or bool(head_m) or bool(_MD_ITEM_START_RX.match(raw))
+        if breaks or (buf and i - start >= max_lines):
+            if buf:
+                yield start, " ".join(buf), heading
+            buf, start = [], 0
+        if head_m:
+            # The heading itself is CONTEXT for what follows, never a unit of its own.
+            heading = head_m.group(1).strip()
+            continue
+        if not stripped:
+            continue
+        if not buf:
+            start = i
+        buf.append(stripped)
+    if buf:
+        yield start, " ".join(buf), heading
+
+
+@dataclass(frozen=True)
+class HandoffTarget:
+    """Where a handoff says the work goes. ``key`` is a JOIN key, never a grep string."""
+
+    kind: str
+    key: str
+
+    def as_dict(self) -> dict[str, str]:
+        return {"kind": self.kind, "key": self.key}
+
+
+@dataclass(frozen=True)
+class Handoff:
+    """One named handoff edge: a producer memo, and the successor(s) it names."""
+
+    memo: str
+    anchor: str
+    line_no: int
+    text: str
+    memo_date: date | None
+    stratum: str
+    heading: str
+    targets: tuple[HandoffTarget, ...] = field(default=())
+
+    @property
+    def row_id(self) -> str:
+        """Memo-scoped identity, same discipline as :class:`FollowOn`."""
+        return f"{self.memo}#{self.anchor}"
+
+
+def real_arm_slugs(roots: tuple[Path, ...] | None = None) -> frozenset[str]:
+    """Arm slugs that ACTUALLY EXIST, derived from ``ddm_<slug>_*`` artifact filenames.
+
+    This set is what keeps the bare-slug target channel out of the ``#829`` collision class: a
+    two-to-five character token is admitted as an arm only if the campaign really produced an arm
+    by that name.
+    """
+    if roots is None:
+        roots = (
+            RESEARCH_ROOT,
+            _REPO_ROOT / "experiments",
+            _REPO_ROOT / "tools",
+            _REPO_ROOT / "src",
+        )
+    slugs: set[str] = set()
+    for d in roots:
+        if not d.exists():
+            continue
+        for p in d.rglob("ddm_*"):
+            m = re.match(r"ddm_([a-z]{1,4}\d{1,2}[a-z]?)_", p.name)
+            if m:
+                slugs.add(m.group(1))
+    return frozenset(slugs)
+
+
+def extract_targets(unit: str, arms: frozenset[str]) -> tuple[HandoffTarget, ...]:
+    """Named successors in one unit: task ids, existing arm slugs, repo-relative code paths."""
+    found: list[HandoffTarget] = []
+    seen: set[tuple[str, str]] = set()
+    for kind, keys in (
+        (TARGET_TASK, [f"#{n}" for n in _TASK_TARGET_RX.findall(unit)]),
+        (TARGET_ARM, [s for s in _ARM_TARGET_RX.findall(unit) if s in arms]),
+        (TARGET_PATH, _PATH_TARGET_RX.findall(unit)),
+    ):
+        for k in keys:
+            if (kind, k) not in seen:
+                seen.add((kind, k))
+                found.append(HandoffTarget(kind, k))
+    return tuple(found)
+
+
+def extract_handoffs(
+    root: Path | None = None,
+    *,
+    since: date | None = None,
+    memos: list[Path] | None = None,
+    arms: frozenset[str] | None = None,
+) -> tuple[tuple[Handoff, ...], ScopeLedger]:
+    """Handoff edges, with the denominator that makes an empty result legible.
+
+    A unit qualifies when it names at least one successor AND either sits under an owed-section
+    heading (:data:`OWED_HEADING_RX`) or carries an explicit transfer frame
+    (:data:`HANDOFF_FRAME_RX`). The stratum that fired travels with the row.
+    """
+    root = RESEARCH_ROOT if root is None else root
+    all_memos = _iter_memos(root) if memos is None else list(memos)
+    population = len(all_memos)
+    scoped = all_memos
+    if since is not None:
+        scoped = [p for p in all_memos if (memo_date(p) or date.min) >= since]
+    if arms is None:
+        arms = real_arm_slugs()
+
+    rows: list[Handoff] = []
+    examined = 0
+    for p in scoped:
+        try:
+            text = p.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            # Read total-but-LOUD: one unreadable memo stays out of `examined`, so the denominator
+            # reports the gap rather than hiding it.
+            continue
+        examined += 1
+        mdate = memo_date(p)
+        for start, unit, heading in iter_markdown_units(text):
+            if len(unit) < 40:
+                continue
+            targets = extract_targets(unit, arms)
+            if not targets:
+                continue
+            if HANDOFF_FRAME_RX.search(unit):
+                stratum = STRATUM_FRAME
+            elif OWED_HEADING_RX.search(heading) and not _TABLE_ROW_RX.match(unit):
+                stratum = STRATUM_HEADING
+            else:
+                continue
+            rows.append(
+                Handoff(
+                    memo=p.name,
+                    anchor=_anchor_for(unit, start),
+                    line_no=start,
+                    text=unit[:500],
+                    memo_date=mdate,
+                    stratum=stratum,
+                    heading=heading[:120],
+                    targets=targets,
+                )
+            )
+    ledger = ScopeLedger(
+        surface="handoff-extractor",
+        examined=examined,
+        declared=len(scoped),
+        population=population,
+        note=f"{len(rows)} handoff edges extracted",
+    )
+    return tuple(rows), ledger
+
+
+@dataclass(frozen=True)
+class SuccessorIndex:
+    """When each repo path was last TOUCHED by a commit — the successor-activity channel.
+
+    Built from ONE ``git log --name-only`` pass rather than a call per row (MEASURED: 2.3 s bounded
+    to a month, 21 s over the full 13.7k-commit history; per-row calls would be neither).
+
+    ``available`` is the vacuity guard and it is load-bearing. If git cannot be read, every path
+    looks untouched, and an instrument that trusted that would report the entire corpus ORPHANED --
+    manufacturing debt out of a dead subprocess. While ``available`` is False no row may be
+    ORPHANED.
+    """
+
+    touched: dict[str, date]
+    available: bool
+    since: date | None = None
+    reason: str = ""
+    # Every path git TRACKS. Empty means "not determined" -- see `tracks()`.
+    tracked: frozenset[str] = field(default=frozenset())
+
+    def tracks(self, path: str) -> bool | None:
+        """Is this path under version control? ``None`` when tracking could not be determined.
+
+        LOAD-BEARING, and it exists because of a MEASURED false ORPHANED in this arm's own round-1
+        review. ``margin_field_head_levers_...:77`` hands off a wire-in to
+        ``experiments/train_LEVELSET_witness_realized_through_R_mlx.py``, and the memo itself says
+        the file is "UNTRACKED / git-ignored in the repo". A commit-touch channel can NEVER see an
+        untracked file, so such a path is untouched by construction and would be reported ORPHANED
+        forever, no matter how much work went into it. That is the vacuity genus once more: "no
+        commit touched it" and "commits cannot touch it" are different facts wearing one symbol.
+        """
+        if not self.tracked:
+            return None
+        return path in self.tracked
+
+    @classmethod
+    def build(
+        cls,
+        *,
+        since: date | None = None,
+        repo_root: Path | None = None,
+        timeout_s: float = 180.0,
+    ) -> SuccessorIndex:
+        repo_root = _REPO_ROOT if repo_root is None else repo_root
+        cmd = ["git", "log", "--date=short", "--format=%x00%ad", "--name-only"]
+        if since is not None:
+            cmd.append(f"--since={since.isoformat()}")
+        try:
+            proc = _subprocess.run(
+                cmd, cwd=repo_root, capture_output=True, text=True, timeout=timeout_s, check=False
+            )
+        except (OSError, _subprocess.SubprocessError) as exc:
+            return cls({}, False, since, f"git unavailable: {type(exc).__name__}: {exc}")
+        if proc.returncode != 0:
+            return cls({}, False, since, f"git exited {proc.returncode}: {proc.stderr[:200]}")
+        touched: dict[str, date] = {}
+        cur: date | None = None
+        for line in proc.stdout.splitlines():
+            if line.startswith("\x00"):
+                try:
+                    cur = date.fromisoformat(line[1:].strip())
+                except ValueError:
+                    cur = None
+                continue
+            path = line.strip()
+            if not path or cur is None:
+                continue
+            prev = touched.get(path)
+            if prev is None or cur > prev:
+                touched[path] = cur
+        if not touched:
+            # An EMPTY index from a SUCCESSFUL git call is still vacuous for our purposes: it means
+            # the window contained no commits, so absence of a touch says nothing.
+            return cls({}, False, since, "git returned no touched paths in the scanned window")
+        tracked: frozenset[str] = frozenset()
+        try:
+            ls = _subprocess.run(
+                ["git", "ls-files"], cwd=repo_root, capture_output=True, text=True,
+                timeout=timeout_s, check=False,
+            )
+            if ls.returncode == 0:
+                tracked = frozenset(p for p in ls.stdout.splitlines() if p)
+        except (OSError, _subprocess.SubprocessError):
+            # Leaving `tracked` empty makes `tracks()` return None, i.e. "not determined" -- which
+            # the join treats as "cannot rule the path out", never as "untracked".
+            pass
+        return cls(touched, True, since, f"{len(touched)} paths indexed", tracked)
+
+    def last_touch(self, path: str) -> date | None:
+        """Latest commit date for an exact repo-relative path."""
+        return self.touched.get(path)
+
+    def last_touch_matching(self, needle: str) -> date | None:
+        """Latest commit date across every indexed path whose BASENAME contains ``needle``.
+
+        Used for the arm channel: an arm's activity shows up as commits to files named after it.
+        Basename-scoped on purpose -- matching the full path would let a directory name
+        (``experiments/results/ddm_sv2_.../anything.txt``) vote for an arm that merely owns a
+        folder.
+        """
+        best: date | None = None
+        for p, d in self.touched.items():
+            if needle in p.rsplit("/", 1)[-1] and (best is None or d > best):
+                best = d
+        return best
+
+
+def classify_handoff(
+    row: Handoff,
+    index: SuccessorIndex,
+    *,
+    today: date | None = None,
+    closed_task_ids: frozenset[str] | None = None,
+    live_window_days: int = LIVE_WINDOW_DAYS,
+) -> ExecutionVerdict:
+    """ADVANCED / LIVE / ORPHANED / UNVERIFIABLE for one handoff edge, with its evidence.
+
+    ``closed_task_ids`` is caller-supplied for the same reason ``audit_tasks`` takes its rows: the
+    harness task ledger has no on-disk mirror, so this module never pretends to enumerate it. With
+    it, a ``#NNN`` target becomes decidable; without it, task targets are honestly UNVERIFIABLE.
+    """
+    today = date.today() if today is None else today
+    if row.memo_date is None:
+        return ExecutionVerdict(
+            row.row_id, UNVERIFIABLE,
+            "the producing memo carries no date in its filename, so 'did anything happen AFTER "
+            "this was named' has no reference point",
+            joinable=False,
+        )
+
+    age_days = (today - row.memo_date).days
+    evidence: list[str] = []
+
+    for t in row.targets:
+        if t.kind == TARGET_PATH:
+            when = index.last_touch(t.key)
+            if when is not None and when >= row.memo_date:
+                evidence.append(f"path-touched-after:{t.key}@{when.isoformat()}")
+        elif t.kind == TARGET_ARM:
+            when = index.last_touch_matching(f"ddm_{t.key}")
+            if when is not None and when >= row.memo_date:
+                evidence.append(f"arm-active-after:ddm_{t.key}@{when.isoformat()}")
+        elif t.kind == TARGET_TASK and closed_task_ids is not None:
+            if t.key.lstrip("#") in closed_task_ids:
+                evidence.append(f"task-closed:{t.key}")
+
+    if evidence:
+        return ExecutionVerdict(
+            row.row_id, ADVANCED,
+            "the named successor shows ACTIVITY after this handoff was written. This is evidence "
+            "the successor MOVED, never proof it did the named work — deliberately not 'DONE', "
+            "because a false closure here silently deletes real debt",
+            tuple(evidence[:4]),
+        )
+
+    if age_days < live_window_days:
+        return ExecutionVerdict(
+            row.row_id, LIVE,
+            f"named {age_days}d ago, inside the {live_window_days}d drain window measured by "
+            "ddm_fo1 (sister arms drain follow-ons within 24–72 h) — too early for absence of "
+            "successor activity to mean anything",
+            tuple(f"target:{t.kind}:{t.key}" for t in row.targets[:4]),
+        )
+
+    if not index.available:
+        return ExecutionVerdict(
+            row.row_id, UNVERIFIABLE,
+            "the successor-activity channel could not be read "
+            f"({index.reason}) — 'nothing happened' and 'I could not look' are indistinguishable "
+            "here, so this is never ORPHANED",
+            tuple(f"target:{t.kind}:{t.key}" for t in row.targets[:4]),
+        )
+
+    # A path git does not track is invisible to the touch channel BY CONSTRUCTION, so its silence
+    # carries no information and it cannot support an ORPHANED verdict. See `SuccessorIndex.tracks`.
+    untracked = [t for t in row.targets
+                 if t.kind == TARGET_PATH and index.tracks(t.key) is False]
+    decidable = [
+        t for t in row.targets
+        if (t.kind != TARGET_TASK or closed_task_ids is not None)
+        and not (t.kind == TARGET_PATH and index.tracks(t.key) is False)
+    ]
+    if untracked and not decidable:
+        return ExecutionVerdict(
+            row.row_id, UNVERIFIABLE,
+            "every named successor path is UNTRACKED by git, so the commit-touch channel is blind "
+            "to it by construction — its silence is a property of the channel, not of the work",
+            tuple(f"untracked-path:{t.key}" for t in untracked[:4]),
+        )
+    if not decidable:
+        return ExecutionVerdict(
+            row.row_id, UNVERIFIABLE,
+            "every named successor is a bare task id and no task ledger was supplied — a task id "
+            "has no artifact-level closure channel, and 'a commit mentions the number' witnesses "
+            "NAMING, never closure",
+            tuple(f"target:{t.kind}:{t.key}" for t in row.targets[:4]),
+            joinable=False,
+        )
+
+    if index.since is not None and row.memo_date < index.since:
+        # The row predates the indexed window, so the index cannot see the successor activity that
+        # would clear it. Reporting ORPHANED here would be an artifact of the scan bound.
+        return ExecutionVerdict(
+            row.row_id, UNVERIFIABLE,
+            f"this handoff ({row.memo_date.isoformat()}) predates the indexed commit window "
+            f"(since {index.since.isoformat()}) — successor activity for it is outside what was "
+            "scanned, so absence of evidence here is a scan bound, not a finding",
+            tuple(f"target:{t.kind}:{t.key}" for t in row.targets[:4]),
+        )
+
+    return ExecutionVerdict(
+        row.row_id, ORPHANED,
+        f"named {age_days}d ago, past the {live_window_days}d drain window, and NO successor "
+        "activity was found for any decidable target in the scanned commit window",
+        tuple(f"no-activity-since-{row.memo_date.isoformat()}:{t.kind}:{t.key}"
+              for t in decidable[:4]),
+    )
+
+
+# The canary, per design philosophy P4. Structural, not procedural: `audit_handoffs` REFUSES to
+# return rows if it does not fire. The positive control is an edge whose successor path is
+# GUARANTEED touched in-window; the negative control names a path that cannot exist.
+_HANDOFF_POSITIVE_PATH = "src/tac/followon_ledger.py"
+_HANDOFF_NEGATIVE_PATH = "experiments/oh1_control_path_that_must_never_exist.py"
+
+
+def handoff_join_canary(index: SuccessorIndex, *, today: date | None = None) -> tuple[bool, str]:
+    """Prove the join FIRES on a path with known recent commits and STAYS SILENT on an absent one."""
+    today = date.today() if today is None else today
+    old = today - timedelta(days=365)
+
+    def _probe(path: str) -> ExecutionVerdict:
+        return classify_handoff(
+            Handoff(
+                memo="CANARY.md", anchor="L1", line_no=1,
+                text=f"hand off to `{path}`", memo_date=old,
+                stratum=STRATUM_FRAME, heading="NEXT-IF-RESUMED",
+                targets=(HandoffTarget(TARGET_PATH, path),),
+            ),
+            index, today=today,
+        )
+
+    pos = _probe(_HANDOFF_POSITIVE_PATH)
+    neg = _probe(_HANDOFF_NEGATIVE_PATH)
+    if pos.verdict != ADVANCED:
+        return False, (
+            f"POSITIVE CONTROL FAILED: {_HANDOFF_POSITIVE_PATH} has commits in the indexed window "
+            f"but the join returned {pos.verdict} ({pos.reason[:120]}) — the successor-activity "
+            "channel is not reading what it claims, so no verdict from this run is interpretable"
+        )
+    if neg.verdict == ADVANCED:
+        return False, "NEGATIVE CONTROL FAILED: the join found activity on a path that cannot exist"
+    return True, "canary OK: fires on a known-touched path, silent on a path that cannot exist"
+
+
+def audit_handoffs(
+    root: Path | None = None,
+    *,
+    since: date | None = None,
+    index: SuccessorIndex | None = None,
+    today: date | None = None,
+    closed_task_ids: frozenset[str] | None = None,
+) -> tuple[list[tuple[Handoff, ExecutionVerdict]], ScopeLedger, str]:
+    """Extract handoff edges and join them. Returns ``(paired, scope, canary_note)``.
+
+    Rows come back worst-first: ORPHANED, then LIVE, then ADVANCED, then UNVERIFIABLE.
+    """
+    root = RESEARCH_ROOT if root is None else root
+    rows, ledger = extract_handoffs(root, since=since)
+    if index is None:
+        index = SuccessorIndex.build(since=since)
+    ok, note = handoff_join_canary(index, today=today)
+    if not ok:
+        return [], ScopeLedger(
+            surface="handoff-join", examined=0, declared=len(rows),
+            population=ledger.population, note=f"REFUSED — {note}",
+        ), note
+    order = {v: i for i, v in enumerate(HANDOFF_VERDICTS)}
+    paired = [
+        (r, classify_handoff(r, index, today=today, closed_task_ids=closed_task_ids))
+        for r in rows
+    ]
+    paired.sort(key=lambda rv: (order[rv[1].verdict], rv[0].memo, rv[0].line_no))
+    return paired, ScopeLedger(
+        surface="handoff-join",
+        examined=len(paired),
+        declared=len(rows),
+        population=ledger.population,
+        note=note,
+    ), note
+
+
+def summarise_handoffs(paired: list[tuple[Handoff, ExecutionVerdict]]) -> dict[str, int]:
+    """Verdict histogram for the handoff graph."""
+    c = Counter(v.verdict for _, v in paired)
+    return {k: c.get(k, 0) for k in HANDOFF_VERDICTS}
+
+
 __all__ = [
+    "ADVANCED",
     "EXECUTED",
+    "HANDOFF_VERDICTS",
+    "LIVE",
+    "LIVE_WINDOW_DAYS",
     "ORPHANED",
+    "STRATUM_FRAME",
+    "STRATUM_HEADING",
+    "TARGET_ARM",
+    "TARGET_PATH",
+    "TARGET_TASK",
     "UNKNOWN",
+    "UNVERIFIABLE",
     "VALID_VERDICTS",
     "ExecutionCorpus",
     "ExecutionVerdict",
     "FollowOn",
+    "Handoff",
+    "HandoffTarget",
+    "SuccessorIndex",
     "audit",
+    "audit_handoffs",
     "audit_tasks",
     "build_doc_frequency",
     "classify_execution",
+    "classify_handoff",
     "classify_task_execution",
     "extract_followons",
+    "extract_handoffs",
+    "extract_targets",
+    "handoff_join_canary",
+    "iter_markdown_units",
     "memo_date",
+    "real_arm_slugs",
     "summarise",
+    "summarise_handoffs",
     "task_join_canary",
     "task_row_text",
 ]
