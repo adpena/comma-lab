@@ -26995,3 +26995,103 @@ a spec `.json` + `--grid-downsample 8`; the single cheapest Path-A item).
 
 **Owed, unstarted, needs an owner:** the `check_codex_findings_memos_consumed` 3-day scan window (0 of
 1,260 files in scope) and the Catalog #396 strict-flip (433 live / 108 in-window).
+
+## FEED-pw1/rg5/dc1 (2026-08-01) — THE POINTER MOVED, and the mechanism was a BINARY MENU
+
+**POINTER: own-vehicle v4d 0.9639878 → 0.9476091 (ΔS −0.0163787), MEASURED through
+`upstream/evaluate.py` n600 on archive 360,323 B [macOS-CPU advisory].**
+Decomposition (the rounded evaluate.py "0.95" field lies; recomputed from components):
+
+| axis | v4d | pw1 | Δ |
+|---|---:|---:|---:|
+| seg  | 0.4311790 | 0.4311790 | **+0.0000000** — same tokens, so this COMPOSES |
+| pose | 0.2929410 | 0.2765059 | **−0.0164351** |
+| rate | 0.2398677 | 0.2399243 | +0.0000566 (+85 B) |
+| **S** | **0.9639878** | **0.9476091** | **−0.0163787** |
+
+Byte-closed prediction 0.9476066 → measured error **+2.5e-06**; the fidelity anchor held.
+Gap to bar 0.172141: 0.7918468 → **0.7754681**. Own-vehicle line:
+20.27 → 1.5343 → 0.992972 → 0.9639878 → **0.9476091**.
+
+### The mechanism — and why it generalizes (operator 08-01: "any binary operations in the full stack are probably naive and toy")
+
+The entire win came from **freeing two clipping search menus** on the live v4d pose chain.
+`ddm_pw1` read the OCCUPANCY HISTOGRAM of the selected indices — data the solve already
+produced, at zero extra cost:
+
+* `_refine_dim0`: |move| histogram falls `103,93,67,39,51,34,46,28,15` then **JUMPS to 124
+  at the bound** (8.27× the last interior bin). 20.7% by count but **37.4% of pose mass**
+  (clipped pairs carry 2.3× the interior mean d_pose). SATURATED.
+* `_beta_select`: **76 pairs pinned** at the top of a 3-entry table with sign forced from
+  yaw = 26.4% of mass. SATURATED.
+* `s_t` (11-point grid): occupied 6–9 only, **terminal bin EMPTY**. NOT saturated —
+  the negative control that makes this specific rather than "our menus are all too small".
+
+**Bound-limited, not resolution-limited: 97.89% of arm A's gain lies OUTSIDE the old
+bracket's 0.054 reach** — unreachable at ANY refinement budget inside it. And arm B's
+dominant win (29 pairs, 0.2196 d) needed BOTH sign freedom AND magnitude > 1.0, so "sign
+from yaw" was a binding constraint, not a free modelling choice.
+
+The cure is NOT a bigger constant (that re-poses the same unfalsified question one notch
+out) but a **Swann outward bracket terminating by PROOF**, costing exactly 2 extra
+evaluations on a menu whose bound did not bind.
+
+### SECOND, INDEPENDENT INSTANCE — same day, different arm, different object class
+
+`ddm_dc1` found the same class on a **solver iteration cap**: `--max-quanta` default 4
+outranked a present-and-correct convergence test on **51/120 = 42.5%** of instances,
+producing **64.7% of all realized flips**; step histogram **spikes 2.68× at the cap
+instead of decaying**. Consequence: the 1,866-flip result is a strict LOWER bound, and
+"not reachable by this formulation class" was a verdict drawn on a **censored solve**.
+Cure landed: default 32, per-instance `stop_reason`, receipt-level `n_cap_saturated` so
+censoring can never again be invisible.
+
+Two arms, one day, independent objects → the law is not tuned to its own instance.
+
+### rg5 — a THREE-WAY split, and an escalation by TYPE
+
+`ddm_rg5`'s directional-derivative sweep (MAIN-verified from the 159-row artifact):
+1. **CONFIRMED** ρ = −0.7235 (entropy surrogate vs shipped SMEVR bytes over a trajectory).
+2. **CONFIRMED + NEWLY MEASURED** permutation blind subspace: the surrogate moves
+   ≤ **4.8e−07 bits** while real bytes move **+16,062…+18,339 B** — a ~16–18 kB
+   (**0.0107 S**) subspace the surrogate provably cannot see.
+3. **REFUTED** the inference "trains AGAINST rate": entropy DESCENT lowers bytes in
+   **72/76** rows and raises in **0**; ASCENT raises in **44/44**. Perfect sign separation.
+   `lv1` (ρ=+1.00) behaves IDENTICALLY to `r1c` (ρ=−0.72) — ρ carries no directional
+   information here at all.
+
+> **LAW: a trajectory rank correlation is not a gradient sign. Correlations rank; only
+> steps point.** The defect is a MISSING component, not a reversed one — the wrong
+> diagnosis pointed at the one repair (negate the term) that would have made it worse.
+
+### dc1 — the 0.264 S sign, repriced
+
+The QA03 composite is **1.4518** (not 1.4500). Splitting position from label on the same
+supports/coders: label costs **0.082–0.255 B/flip** (0.28–0.88× the blind 5-ary bound),
+and a GENERIC LZMA raster control BEATS the neighbour-conditioned coder at 6 of 7
+densities. Re-pricing ba31 §B.3: **−0.132 S (ja1) / −0.111 S (burn)** = 16.7% / 14.0% of
+the 0.7918468 gap — ba31's −0.204 was **over-stated by 55%, not inverted**. The band's
+lower edge moves **2.56×** (5.02e-4 → 1.285e-3). Idealised full-residual slope, not a
+realized move: QA03 reached 0.367% of the residual.
+
+### Triality legs landed with this FEED
+
+* **equations**: `ddm_pw1_menu_saturation_discriminator_v1` — the occupancy discriminator
+  with BOTH anchors (pw1 exact-eval + dc1 solver cap), a callable evaluator, and its own
+  measured false negative recorded in the docstring rather than smoothed away.
+  `ddm_dc1_correction_stream_label_cost_v1` — the label-cost curve + moved band edge.
+* **tasks**: #871 (binary-operations sweep, now CONFIRMED by an exact row), #870 (the
+  DEFCON follow-on class), #864 (scope-corrected), #832 (repriced), #862/#865/#866.
+* **DAG**: this block.
+
+### Honest limits
+
+The discriminator **refuses to certify** menus shorter than ~5 entries with no interior
+trend — which is exactly where `_beta_select` and the dc1 cap live. Both are REAL
+positives it cannot confirm from a marginal histogram alone. A bound that is a
+CONJUNCTION of constraints (beta needed sign AND magnitude) needs JOINT occupancy; no
+1-D histogram reaches it. That limit is in the law, in `sufficient_for_verdict`, and in
+the test suite as a pinned property.
+
+Pointer: contest submittable 0.1910828 UNMOVED; bar 0.172141. This is the OWN-VEHICLE
+line, `[macOS-CPU frozen-PoseNet advisory]`, `score_claim=false`, `promotable=false`.
