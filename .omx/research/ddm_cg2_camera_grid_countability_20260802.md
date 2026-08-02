@@ -201,10 +201,11 @@ the archive and paying for it there.
 **FORK: STRUCTURAL WASH — dominated.** A camera-resolution counted section should not be built.
 The blind pixels cannot be made "useful" (blind *means* zero authority); the non-blind ones are
 dominated by the scorer grid unconditionally (§3a) and are 2–3 orders of magnitude outside the
-byte budget (§4). Every steelman I could construct fails: PoseNet shares the same `D`; a
+byte budget (§4). The steelmen I could construct fail: PoseNet shares the same `D`; a
 "free side-channel" in blind output pixels is the §5 trap; structured addressing describes a
 *region* and should be priced at the region's own scale; sub-pixel placement is §6a below and
-needs no section.
+needs no section. **One steelman survives — the latent-program case, §7** — but it does not
+reopen the section question; it re-describes the vehicle we already run.
 
 **What IS real, and it is not a rate lever:**
 
