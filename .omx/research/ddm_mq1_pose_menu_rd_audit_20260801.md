@@ -341,3 +341,62 @@ and every unvisited pair keeps its shipped row. That subset is MEASURED and stat
   directive stands and should be used.
 - `NOT A NEGATIVE` — the search axis is OPEN and is where the remaining pose distortion lives
   (≥1.82% of the gap on 48 pairs, ≥33× the entire format axis).
+
+---
+
+## §9 The byte-closed candidate — BUILT and VERIFIED, staged for MAIN
+
+The chained refine (§6) was run on the mass-ordered pairs and a candidate was **built and
+decode-verified**, not merely predicted. Numbers below are MEASURED except the composed `S`, which
+is a byte-closed PREDICTION until MAIN fires the gate.
+
+| | pw1 (live best) | mq1 candidate |
+|---|---|---|
+| archive bytes | 360,323 | **360,702** (+379) |
+| rate term | 0.239924296 | 0.240176656 |
+| pose contribution `sqrt(10·d_pose)` | 0.276503 | **0.263923** |
+| `d_seg` | 0.00431179 | 0.00431179 (bit-identical — same tokens) |
+| **composed S** | **0.9476091** (exact-eval) | **0.9352782** (byte-closed prediction) |
+
+**Predicted ΔS = −0.0123309 = 1.590% of the gap**, from 37 replaced pairs. The `+379 B` is
+entirely the widened `rs_beta_mags` table plus its index entropy; the `p1`/`p2` improvements —
+the larger share of the gain — cost **zero bytes**, because those columns already ship as plain
+f16. Distinct beta values 44, uint8 headroom 212.
+
+**Decode verification (`ddm_v4d_verify_decode.py`, archive sha `dbab7eb2da62d0db…`, 360,702 B) —
+every leg PASSES:**
+
+- `A_ok` — the #417 receiver-consumption bijection over all 600 pairs (every byte consumed).
+- `B_ok` — `pose_reconstruct_exact`, `ab_bit_exact`, `selector_exact`, **`beta_exact`**: the
+  receiver reconstructs the encoder's solution exactly, including the extended 44-entry table,
+  with **no receiver change of any kind**.
+- `C_ok` — `recompute_byte_exact` on 24 sampled pairs, with `two_plane_does_work` and
+  `beta_path_exercised` both true (the changed paths are actually taken, not dead).
+
+**Staged for MAIN — NOT self-fired** (`stage_v4d_realized_gate.sh:3` forbids self-firing; MAIN owns
+the single n600 scorer slot). The archive already exists, so the gate is a one-liner:
+
+```bash
+bash experiments/stage_v4d_realized_gate.sh cpu mq1_partial
+```
+
+Accept/verify: `d_seg` UNCHANGED at ~0.004312; realized `S` below the pw1 row `0.9476091`;
+prediction error against `0.9352782` expected at the `~2.5e-06` scale the parent law records.
+
+**Still running at hand-off:** `tools/mq1_joint_pose_refine_emit.py --pairs 150` (resumable,
+caches per pair, writes `mq1_emit/final_mq1.jsonl` on completion). Gains are already deep into
+diminishing returns — the last 5 pairs added 0.0013 of 0.409 summed — so the fuller run is
+expected to improve the candidate only marginally. To rebuild from it:
+
+```bash
+.venv/bin/python experiments/ddm_v4d_build_composed_archive.py \
+    --final-jsonl /Volumes/VertigoDataTier/pact/ddm_v4d_20260731/mq1_emit/final_mq1.jsonl \
+    --dim0-offset auto --tag mq1
+bash experiments/stage_v4d_realized_gate.sh cpu mq1
+```
+
+**Honest limit on this candidate.** It is a monotone-safe CONTINUATION of the pw1 solution, not a
+re-solve: every arm started from the shipped point and accepted only strict decreases, so the
+improvement is realized. It is NOT the optimum — the positive control (§5) proved the search is
+start-dependent in argmin, and 3/16 wrong-init restarts beat the from-shipped search. The gain
+banked here is a floor, not a ceiling.
