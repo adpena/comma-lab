@@ -994,6 +994,56 @@ def section_duty_to_measure(term_current: dict[str, float] | None = None) -> tup
         return f"duty-to-measure: unavailable ({type(exc).__name__}: {exc})", None
 
 
+def section_orphaned_followons(days: int = 14) -> tuple[str, dict | None]:
+    """Named cheap follow-ons the campaign has NOT drained — the #870 duty-to-measure surface.
+
+    Sits BESIDE :func:`section_duty_to_measure` rather than beside a new registry: that function
+    ranks owed DSL LEVERS (a build/activation debt keyed by factory name), this one ranks owed
+    MEASUREMENTS an arm named in prose (a measurement debt keyed by memo+line). Same queue in
+    kind, different key-space, and per CLAUDE.md P1 neither reads the other's store.
+
+    Operator binding 2026-08-01: a named cheap follow-on has no budget, no scorer slot and no
+    operator-GO between it and the answer, so it outranks grade 5 as debt.
+
+    It reports STAGED separately from ORPHANED on purpose. STAGED means the runner exists but the
+    row names no output artifact, so execution is NOT decidable from artifacts -- the honest
+    answer, and the bucket a human should adjudicate first. Reporting it as ORPHANED would
+    manufacture debt (``ddm_gd5``'s measured failure mode); folding it into UNKNOWN would hide it.
+    """
+    try:
+        import datetime as _dt
+
+        from tac.followon_ledger import ORPHANED, STAGED, audit, cache_age_s, summarise
+
+        since = (_dt.datetime.now(_dt.UTC) - _dt.timedelta(days=days)).date()
+        # 6 h TTL: the SSD artifact walk is ~60 s cold, too slow for a SessionStart hook. The age
+        # is RENDERED, never hidden — a cached answer must be legibly cached.
+        paired, ledger = audit(since=since, cache_ttl_s=6 * 3600.0)
+        counts = summarise(paired)
+        age = cache_age_s()
+        head = [
+            f"{r.row_id} [{v.verdict}]"
+            for r, v in paired
+            if v.verdict in (ORPHANED, STAGED)
+        ][:_DUTY_TOP_N]
+        line = (
+            f"orphaned-follow-ons({days}d): {counts[ORPHANED]} ORPHANED · "
+            f"{counts[STAGED]} STAGED(adjudicate-first) · {counts['UNKNOWN']} UNKNOWN · "
+            f"{counts['EXECUTED']} EXECUTED | {ledger.verdict} "
+            f"{ledger.examined}/{ledger.declared_count} memos"
+            + (f" | artifact-index {age / 60.0:.0f}m old" if age else "")
+        )
+        if head:
+            line += " | " + " · ".join(head)
+        return line, {
+            "counts": counts,
+            "scope": ledger.as_dict(),
+            "adjudicate_first": head,
+        }
+    except Exception as exc:
+        return f"orphaned-follow-ons: unavailable ({type(exc).__name__}: {exc})", None
+
+
 def section_factorized_sense(run_dir: Path | None) -> tuple[list[str], dict | None]:
     """Factorized SENSE rows (organ upgrades A+B, 2026-07-17): the exact rank-4/ker(A)
     duty ranking recomputed from the latest persisted margin snapshot (an ALTERNATIVE
@@ -1931,6 +1981,13 @@ def build_digest(*, include_fm: bool = True) -> tuple[list[str], dict]:
         # P8 floor-aware: feed the live run's MEASURED current d_seg (annulus SENSE) so at-floor levers rank ~0.
         duty_line, data["duty_to_measure"] = section_duty_to_measure(_live_term_current(data.get("annulus")))
         lines.append(duty_line)
+
+        # #870 (2026-08-01): the SECOND duty queue — measurements arms NAMED in prose and nobody
+        # ran. Beside the lever queue above, never inside it: different key-space (memo+line vs
+        # factory name), same duty. Surfaced here because the operator's binding is that a $0
+        # follow-on has nothing between it and the answer except somebody reading the memo.
+        fo_line, data["orphaned_followons"] = section_orphaned_followons()
+        lines.append(fo_line)
 
         # A+B (2026-07-17): exact-factorized duty ranking (ALTERNATIVE beside the statistical
         # line above) + the realization-vs-gradient regime read — from persisted ledgers only.

@@ -58,7 +58,15 @@ time bash "${EVAL_ROOT}/evaluate.sh" \
 
 echo "[wr1 gate] report:"
 cat "${RUN_SUB}/report.txt"
-echo "[wr1 gate] parse report.txt -> ${WR1_DIR}/wr1_${CAND}_realized_gate_receipt.json"
-echo "  schema: ddm_wr1_realized_gate.v1"
-echo "  compare d_seg vs REF 0.00389011 ; d_pose vs REF 0.22144216 (pose-safety) ;"
-echo "  final S vs REF 2.256641 ; break-even: accept iff realized dS < 25*dB/37545489."
+
+# HARVEST. These four lines used to be `echo`s DESCRIBING this step, and nothing wrote the
+# receipt. Both candidates were then fired -- kneeA 2026-07-29 (9m41s) and kneeB 2026-07-30
+# (11m47s), ~22 min of real n600 scorer time -- and the answers survived only as stdout logs.
+# That is task #870's class in its most expensive form: not a follow-on nobody ran, but one that
+# ran and whose result never reached a machine-readable surface. A harvest step that only
+# NARRATES itself is an orphan generator, so it must execute or fail the run.
+"${REPO_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}/.venv/bin/python" \
+  "${REPO_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}/experiments/harvest_wr1_realized_gate_receipt.py" \
+  --candidate "$CAND" \
+  --report "${RUN_SUB}/report.txt" \
+  --out "${WR1_DIR}/wr1_${CAND}_realized_gate_receipt.json"
