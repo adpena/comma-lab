@@ -168,3 +168,18 @@ def test_hook_step_fails_open_loudly_if_the_guard_itself_is_broken(monkeypatch, 
 def test_hook_step_passes_on_the_live_clean_repo() -> None:
     hook = _load_hook()
     assert hook.run_hook_path_heavy_import_scan() == 0
+
+
+def test_hook_step_refuses_to_call_a_missing_target_a_pass(tmp_path, monkeypatch, capsys) -> None:
+    """ROUND-2: scan([]) on a MISSING target is byte-identical to a clean scan.
+
+    The round-1 suite blessed that ("missing file is a no-op, not a crash"), so a
+    wrong REPO_ROOT would have passed SILENTLY — the vacuity genus one layer under
+    the round-1 fix for the vacuity genus. Empty scope is VACUOUS, never a PASS.
+    """
+    hook = _load_hook()
+    monkeypatch.setattr(hook, "REPO_ROOT", tmp_path)
+    assert hook.run_hook_path_heavy_import_scan() == 0  # fail-open, consistent
+    err = capsys.readouterr().err
+    assert "VACUOUS" in err and "NOT a pass" in err
+    assert "0 files examined" in err

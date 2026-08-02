@@ -732,6 +732,21 @@ def run_hook_path_heavy_import_scan() -> int:
         )
         return 0
 
+    # ROUND-2 review, 2026-08-02: the scan returns [] for a MISSING target, which is
+    # byte-identical to a clean scan -- and the round-1 test suite blessed that as
+    # correct ("missing file is a no-op, not a crash"). So a wrong REPO_ROOT would
+    # pass SILENTLY: the vacuity genus one layer below the round-1 fix for the
+    # vacuity genus. An empty scope is VACUOUS, never a PASS -- report the
+    # DENOMINATOR instead of inferring cleanliness from an empty result.
+    target = REPO_ROOT / "src" / "tac" / "preflight.py"
+    if not target.is_file():
+        print(
+            f"[preflight-hook] heavy-import scan VACUOUS (failing OPEN): scan target "
+            f"{target} does not exist — 0 files examined. This is NOT a pass.",
+            file=sys.stderr,
+        )
+        return 0
+
     violations = scan(REPO_ROOT)
     if violations:
         print(
