@@ -251,7 +251,15 @@ measured precision is low. Nothing here supports a FAMILY-level statement about 
 
 ---
 
-**Landed:** `src/tac/followon_ledger.py` (handoff graph + field-alias fix) ·
-`src/tac/tests/test_followon_handoff_graph.py` (40 tests, all passing).
+**Landed:** `ac35da1929` — `src/tac/followon_ledger.py` (handoff graph + field-alias fix) ·
+`src/tac/tests/test_followon_handoff_graph.py` (**37 test items, all passing**, measured against the
+committed tree; committed content sha re-verified equal to the declared sha).
+
+**One further vacuity, observed at my own commit and reported not patched:** the pre-commit hook
+printed *"preflight examined 0 gates this commit (fast `--no-codebase` mode). This hook is NOT gate
+coverage."* That is the same genus as §5/§6 — a gate emitting a pass-shaped symbol over an empty
+scope — and the hook is now honest about it in its own output. Separately, the hook first BLOCKED
+with a 30 s timeout while consuming 0.26 s of CPU over 2 minutes, i.e. blocked on a lock rather than
+computing; it passed on retry once contention cleared. Both are another arm's surface.
 
 **CLOSING-ARTIFACT: .omx/research/ddm_oh1_orphaned_handoff_sweep_20260802.md**
