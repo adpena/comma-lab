@@ -219,6 +219,33 @@ not a discovery — and per the standing re-anchor discipline I am labelling it 
 than dressing it up. **Pricing its residual d_seg value requires the scorer ⇒ GATED**, named
 below.
 
+**And the headroom is now MEASURED at n600 (scorer-free).** Sweeping all 600 real camera
+frames (`gt_f1`), giving the live chain the *best possible* input — a **perfect** 384 render
+`r = y* = D(X_gt)` — and asking how well `D(clip(rint(U(r))))` lands back on `y*`:
+
+| quantity | n600 measured |
+|---|---|
+| frames covered | **600 / 600, contiguous, disjointness asserted** |
+| denominator (scorer values) | 353,894,400 |
+| mean abs realization error | **0.19815 LSB** |
+| RMS | 0.34517 LSB |
+| max | 29.844 LSB |
+| scorer values off by > 0.5 LSB | **8.233 %** |
+| scorer values off by > 1 LSB | 1.056 % |
+| **direct camera-res payload residual** | **0.0 (exact)** |
+
+So even from a *flawless* render, plain `rint` misplaces the scorer field on **8.2 % of scorer
+values by more than half an LSB**, with tails to ~30 LSB — while a camera-res uint8 payload
+hits the same target **exactly**. That asymmetry is the free lattice, and it is real.
+
+**Three caveats that bound this number honestly.** (1) `direct residual = 0.0` is *trivially*
+true — the GT frame is itself a camera-res payload realising its own downsample. It is a
+**positive control** proving the asymmetry exists, **not** a claim we can produce GT. (2) The
+sweep starts from the *ideal* render; the live vehicle's own render error may well dominate
+0.198 LSB, so this is an **UPPER BOUND** on what a perfect dither could recover, informative
+only if the vehicle's render error is of comparable size. (3) LSB → d_seg conversion **requires
+the scorer**. No d_seg claim is made here.
+
 **(b) A decode wall-clock note.** 22.6969 % of the camera-res upsample/warp output is never
 read by any scorer, so it need not be computed exactly — a compute saving inside the 30-min
 budget, **not** a rate saving. **DERIVED, not measured on the real receiver** — I did not time
@@ -242,10 +269,16 @@ budget, **not** a rate saving. **DERIVED, not measured on the real receiver** �
   I did not build the naive form (known-refuted) or the cured form (it is a *placement* rule,
   not a section, so it is out of this arm's scope and into #149's).
 - **Not measured:** actual decode wall-clock; any clustered-address camera-res encoding; the
-  realized d_seg value of the free amplitude lattice. (I attempted an n600 round-trip
-  realization-error sweep to size that last one; it died at exit 144 — the documented SIGURG
-  kill — and I am reporting it as not-run rather than quoting a partial. Nothing in this
-  artifact depends on it.)
+  **d_seg** value of the free amplitude lattice (its LSB magnitude *is* now measured at n600,
+  §6a; converting LSB → d_seg needs the scorer).
+- **On the n600 sweep's provenance.** It repeatedly died at exit 144 (the documented SIGURG
+  kill) as a single long job. I did not quote a partial and did not switch to a cheap subset:
+  I first proved the instrument sound (flat 0.37 GiB RSS, no leak — so the deaths were harness
+  process-lifetime, not the script), then made the sweep **chunked and resumable**, and
+  aggregated only after asserting the chunks were **disjoint and contiguous over 0–599**. An
+  early overlapping chunk (`[0,75)` under `[0,200)`) was dropped and the aggregator now
+  **refuses** overlapping ranges outright, because summing them would have silently
+  double-counted frames and corrupted the mean.
 - **The steelman that survives, stated precisely so the closure is not over-claimed.** What is
   dominated is **storing camera-grid VALUES**. A compact generative *program* whose output
   happens to be evaluated at camera resolution is **not** touched by §3 — `H(y) ≤ H(x)` bounds
@@ -261,8 +294,11 @@ budget, **not** a rate saving. **DERIVED, not measured on the real receiver** �
 **Does spending the free amplitude lattice move d_seg?** Replace the receiver's
 `clip(rint(up))` with the generic dither that minimises `‖D(clip(rint(cam))) − y*‖` per disjoint
 2×2 block, hold the archive **byte-identical** (the rule is rule-118 free), and re-measure d_seg
-through the frozen CPU-torch SegNet at n600. Zero rate risk by construction; the only question
-is whether the sub-LSB placement authority converts into argmax flips.
+through the frozen CPU-torch SegNet at n600. Zero rate risk by construction, and §6a has now
+sized the prize scorer-free: **0.198 LSB mean / 8.2 % of scorer values beyond half an LSB /
+tails to ~30 LSB**, all of it recoverable in principle at zero counted bytes. The only open
+question is what fraction converts into argmax flips — and each flip is worth exactly
+`W = 1.2731 B`, so the conversion rate is directly comparable against every rate lever.
 **GATE: needs the full-n600 scorer slot** — queued, not taken.
 
 ## §9 — triality

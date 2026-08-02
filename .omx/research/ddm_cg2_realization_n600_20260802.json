@@ -1,0 +1,12 @@
+{
+  "scope": "n600 scorer-FREE realization sweep over gt_f1 (real camera frames)",
+  "frames_covered": 600,
+  "contiguous_0_to_599": true,
+  "denominator_values": 353894400,
+  "mean_abs_err_LSB": 0.19815333303745353,
+  "rms_err_LSB": 0.3451697589141433,
+  "max_abs_err_LSB": 29.843729654947566,
+  "frac_gt_half_LSB": 0.08232733832465278,
+  "frac_gt_one_LSB": 0.010555205168547454,
+  "direct_camera_payload_residual_max": 0.0
+}
