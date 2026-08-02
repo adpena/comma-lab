@@ -207,6 +207,7 @@ def qa03_gn_solve(args) -> None:
     base_flip_cache: dict[int, int] = {}
     processed: set[tuple[int, int, int]] = set()
     net_flips = 0
+    n_cap_saturated = 0
     if jsonl.exists():
         for line in jsonl.read_text().splitlines():
             if not line.strip():
@@ -219,6 +220,10 @@ def qa03_gn_solve(args) -> None:
             for ch, sign, _q in r["accepted_steps"]:
                 rtp.codes[r["pair"], r["cell"][0], r["cell"][1], ch] += sign
             net_flips += r["net_flips"]
+            # legacy rows predate stop_reason; infer the cap from the step count
+            if r.get("stop_reason", "cap" if len(r["accepted_steps"]) >= args.max_quanta
+                     else "converged") == "cap":
+                n_cap_saturated += 1
         print(f"[resume] {len(processed)} instances, net so far {net_flips:+d}",
               flush=True)
 
@@ -233,21 +238,35 @@ def qa03_gn_solve(args) -> None:
         cur = base_flip_cache[p]
         pair_base = cur
         accepted_steps = []
-        # damped-Newton line search: repeat best single quantum while it helps.
+        # Greedy coordinate descent on the 4-channel integer lattice: repeat the best
+        # single quantum while it helps. `--max-quanta` is a SAFETY BOUND, not a target:
+        # the intended terminator is the convergence test below (no improving move).
+        # ddm_dc1 2026-08-01: the 2026-07-29 QA03 run used the old default of 4 and
+        # 51/120 instances (42.5%) stopped on the CAP, not on convergence, contributing
+        # 64.7% of the realized flips — the step histogram SPIKED 2.68x at the cap
+        # instead of decaying. `stop_reason` is recorded so that censoring can never
+        # again be invisible in the receipt.
+        stop_reason = "no_move"
         for _step in range(args.max_quanta):
             best = _best_single_quantum(rtp, p, gy, gx, cur)
             if best is None or best[0] >= cur:
+                stop_reason = "converged" if accepted_steps else "no_move"
                 break
             f, ch, sign = best
             rtp.codes[p, gy, gx, ch] += sign  # commit the accepted quantum
             accepted_steps.append([ch, sign, int(rtp.codes[p, gy, gx, ch])])
             cur = f
+        else:
+            stop_reason = "cap"  # loop exhausted -> still descending when cut off
         pair_net = pair_base - cur
         net_flips += pair_net
         base_flip_cache[p] = cur
+        if stop_reason == "cap":
+            n_cap_saturated += 1
         row = {"pair": p, "cell": [gy, gx], "atlas_flips": nflips,
                "pair_base_flips": int(pair_base), "pair_final_flips": int(cur),
-               "net_flips": int(pair_net), "accepted_steps": accepted_steps}
+               "net_flips": int(pair_net), "accepted_steps": accepted_steps,
+               "stop_reason": stop_reason}
         with jsonl.open("a") as fh:
             fh.write(json.dumps(row) + "\n")
         print(f"[p{p} ({gy},{gx}) atlas {nflips}] net {pair_net:+d} "
@@ -273,6 +292,12 @@ def qa03_gn_solve(args) -> None:
                             "order (ru1); true shipping price = r7 SMEVR coder (xi1 handoff)"),
         "top_k": args.top_k, "max_quanta_per_cell": args.max_quanta,
         "instances_processed": len(instances),
+        "n_cap_saturated": int(n_cap_saturated),
+        "cap_saturated_frac": n_cap_saturated / max(1, len(instances)),
+        "cap_saturated_note": ("instances that stopped on --max-quanta rather than on the "
+                               "convergence test: they were STILL DESCENDING when cut off, so "
+                               "net_flips_total is a strict LOWER BOUND on this formulation's "
+                               "converged yield. >0 here means the solve is CENSORED, not solved."),
         "net_flips_total": int(net_flips),
         "d_seg_delta": d_seg_delta, "seg_S_delta": s_delta_seg,
         "frac_of_minus0138_ceiling": net_flips / CEIL_TIER2_FLIPS,
@@ -479,7 +504,12 @@ def main() -> None:
     a = sub.add_parser("qa03", parents=[common])
     a.add_argument("--atlas", required=True, type=Path)
     a.add_argument("--top-k", type=int, default=120)
-    a.add_argument("--max-quanta", type=int, default=4)
+    a.add_argument("--max-quanta", type=int, default=32,
+                   help="SAFETY BOUND on the per-cell greedy descent, not a target. The "
+                        "intended terminator is the convergence test (no improving single "
+                        "quantum). ddm_dc1 2026-08-01 raised this from 4 after measuring that "
+                        "42.5%% of the 2026-07-29 QA03 instances stopped on the cap while still "
+                        "descending. Any run with n_cap_saturated>0 is CENSORED.")
 
     b = sub.add_parser("qa04", parents=[common])
     b.add_argument("--atlas", required=True, type=Path)
