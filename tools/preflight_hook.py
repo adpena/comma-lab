@@ -724,6 +724,7 @@ def run_hook_path_heavy_import_scan() -> int:
     """
 
     try:
+        from tac.preflight import _CHECK_184_HOOK_IMPORT_PATH_MODULES as targets
         from tac.preflight import _check_184_module_scope_heavy_imports as scan
     except Exception as exc:  # pragma: no cover - guard-broken path
         print(
@@ -748,23 +749,32 @@ def run_hook_path_heavy_import_scan() -> int:
     # A fourth existence check would repeat the mistake. Instead, establish the DENOMINATOR
     # independently: prove the target parses HERE, so an empty result means "examined 1 file,
     # found 0 violations" rather than "produced nothing, for one of three reasons."
-    target = REPO_ROOT / "src" / "tac" / "preflight.py"
+    # ROUND-8: the denominator must be DERIVED from the same source the scan iterates,
+    # never hardcoded beside it. It previously pinned "src/tac/preflight.py" literally
+    # while the scan walks the _CHECK_184_HOOK_IMPORT_PATH_MODULES TUPLE. They agree at
+    # len 1 — but adding a second module would make this claim "examined 1" while the scan
+    # covered 2, with the second never parse-verified: a SILENTLY WRONG denominator, which
+    # is exactly what a denominator exists to prevent. Coupled now, so it cannot drift.
     examined = 0
-    try:
-        ast.parse(target.read_text(encoding="utf-8"))
-        examined = 1
-    except FileNotFoundError:
-        reason = f"target {target} does not exist"
-    except SyntaxError as exc:
-        reason = f"target {target} does not parse ({exc.__class__.__name__}: {exc.msg})"
-    except Exception as exc:  # pragma: no cover - unreadable target
-        reason = f"target {target} unreadable ({exc.__class__.__name__}: {exc})"
+    reasons: list[str] = []
+    for rel in targets:
+        target = REPO_ROOT / rel
+        try:
+            ast.parse(target.read_text(encoding="utf-8"))
+            examined += 1
+        except FileNotFoundError:
+            reasons.append(f"{rel} does not exist")
+        except SyntaxError as exc:
+            reasons.append(f"{rel} does not parse ({exc.__class__.__name__}: {exc.msg})")
+        except Exception as exc:  # pragma: no cover - unreadable target
+            reasons.append(f"{rel} unreadable ({exc.__class__.__name__}: {exc})")
 
-    if examined == 0:
+    if examined != len(targets):
         print(
-            f"[preflight-hook] heavy-import scan VACUOUS (failing OPEN): {reason} — "
-            f"0 files examined. This is NOT a pass; an empty result here means the "
-            f"instrument produced nothing, not that the code is clean.",
+            f"[preflight-hook] heavy-import scan VACUOUS (failing OPEN): "
+            f"{'; '.join(reasons)} — {examined} of {len(targets)} files examined. This is "
+            f"NOT a pass; an empty result here means the instrument produced nothing, not "
+            f"that the code is clean.",
             file=sys.stderr,
         )
         return 0

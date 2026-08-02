@@ -189,7 +189,7 @@ def test_hook_step_refuses_to_call_a_missing_target_a_pass(tmp_path, monkeypatch
     assert hook.run_hook_path_heavy_import_scan() == 0  # fail-open, consistent
     err = capsys.readouterr().err
     assert "VACUOUS" in err and "NOT a pass" in err
-    assert "0 files examined" in err
+    assert "0 of 1 files examined" in err
 
 
 def test_hook_step_refuses_to_call_an_UNPARSEABLE_target_a_pass(tmp_path, monkeypatch, capsys) -> None:
@@ -203,7 +203,7 @@ def test_hook_step_refuses_to_call_an_UNPARSEABLE_target_a_pass(tmp_path, monkey
     monkeypatch.setattr(hook, "REPO_ROOT", tmp_path)
     assert hook.run_hook_path_heavy_import_scan() == 0
     err = capsys.readouterr().err
-    assert "VACUOUS" in err and "does not parse" in err and "0 files examined" in err
+    assert "VACUOUS" in err and "does not parse" in err and "0 of 1 files examined" in err
 
 
 def test_hook_step_reports_a_real_denominator_on_the_live_repo(capsys) -> None:
@@ -277,3 +277,19 @@ def test_END_TO_END_guard_fires_on_a_real_injected_violation(tmp_path, monkeypat
     # NEGATIVE side: the unmodified real file must pass, or the gate is unconditional.
     (d / "preflight.py").write_text(real.read_text(encoding="utf-8"), encoding="utf-8")
     assert hook_mod.run_hook_path_heavy_import_scan() == 0
+
+
+def test_denominator_is_DERIVED_from_the_scan_target_list_not_hardcoded() -> None:
+    """ROUND-8: the denominator must come from the SAME tuple the scan iterates.
+
+    It previously pinned "src/tac/preflight.py" as a literal beside the scan, which walks
+    _CHECK_184_HOOK_IMPORT_PATH_MODULES. Equal at len 1 — but a second entry would make the
+    hook claim 'examined 1' while the scan covered 2, the second never parse-verified: a
+    SILENTLY WRONG denominator, the exact defect a denominator exists to prevent."""
+    import inspect as _i
+
+    hook = _load_hook()
+    src = _i.getsource(hook.run_hook_path_heavy_import_scan)
+    assert "_CHECK_184_HOOK_IMPORT_PATH_MODULES" in src, "denominator not derived from the scan list"
+    assert "for rel in targets" in src, "denominator does not iterate the scan list"
+    assert "examined != len(targets)" in src, "denominator does not compare against the full list"
