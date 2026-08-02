@@ -769,7 +769,20 @@ def run_hook_path_heavy_import_scan() -> int:
         )
         return 0
 
-    violations = scan(REPO_ROOT)
+    # ROUND-5: scan() raising propagated UNCAUGHT and crashed the whole hook with a
+    # traceback — a bug INSIDE the guard would have blocked every commit in the repo,
+    # which is the same over-reach the two fail-opens above exist to avoid. Symmetry:
+    # a broken guard fails OPEN and LOUD wherever it breaks, never only where I predicted.
+    try:
+        violations = scan(REPO_ROOT)
+    except Exception as exc:  # pragma: no cover - guard-internal bug path
+        print(
+            f"[preflight-hook] heavy-import scan CRASHED (failing OPEN): "
+            f"{exc.__class__.__name__}: {exc} — 0 files examined. This is NOT a pass.",
+            file=sys.stderr,
+        )
+        return 0
+
     if violations:
         print(
             "[preflight-hook] Catalog #184: module-scope heavy import on the hook "

@@ -210,3 +210,34 @@ def test_hook_step_reports_a_real_denominator_on_the_live_repo(capsys) -> None:
     hook = _load_hook()
     assert hook.run_hook_path_heavy_import_scan() == 0
     assert "VACUOUS" not in capsys.readouterr().err
+
+
+def test_hook_step_survives_the_scan_itself_raising(monkeypatch, capsys) -> None:
+    """ROUND-5: scan() raising propagated UNCAUGHT and crashed the whole hook — a bug
+    INSIDE the guard would have blocked every commit in the repo. Symmetry with the other
+    two fail-opens: a broken guard fails OPEN and LOUD wherever it breaks."""
+    hook = _load_hook()
+    import tac.preflight as P
+
+    def _boom(_root):
+        raise RuntimeError("simulated scan bug")
+
+    monkeypatch.setattr(P, "_check_184_module_scope_heavy_imports", _boom)
+    assert hook.run_hook_path_heavy_import_scan() == 0
+    err = capsys.readouterr().err
+    assert "CRASHED" in err and "NOT a pass" in err and "simulated scan bug" in err
+
+
+def test_guard_runs_even_when_preflight_FAILS_end_to_end(monkeypatch) -> None:
+    """ROUND-5 EXECUTION control (not source order): drive main() with a FAILING preflight
+    and assert the guard already ran. Source-order asserts can be satisfied by dead code."""
+    hook = _load_hook()
+    order: list[str] = []
+    monkeypatch.setattr(hook, "_staged_py_files", lambda: [])
+    monkeypatch.setattr(hook, "run_ruff_undefined_name", lambda s: (order.append("ruff"), 0)[1])
+    monkeypatch.setattr(hook, "run_hook_path_heavy_import_scan", lambda: (order.append("scan"), 0)[1])
+    monkeypatch.setattr(hook, "run_preflight", lambda: (order.append("preflight"), 1)[1])
+    monkeypatch.setattr(hook, "run_ci_blind_tests", lambda s: (order.append("ci"), 0)[1])
+    monkeypatch.setattr(hook, "run_review_gate", lambda: (order.append("review"), 0)[1])
+    assert hook.main() == 1
+    assert order == ["ruff", "scan", "preflight"]
