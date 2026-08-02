@@ -13,6 +13,7 @@ import pytest
 from tac.confound_gates import CONFOUND_GATES, check_no_stub_lever_factories
 from tac.witness_dsl.activation_ledger import (
     BUILD_DESIGNED_STUB,
+    BUILD_GRADE_ORDER,
     BUILD_FIRED,
     BUILD_NEVER_FIRED,
     BUILD_NOT_DESIGNED,
@@ -165,9 +166,11 @@ def test_unknown_component_is_not_even_designed() -> None:
 def test_report_orders_worst_grade_first() -> None:
     """Debt is read first, never as a footnote under a wall of built levers."""
     rows = build_completeness_report()
-    order = {BUILD_NOT_DESIGNED: 0, BUILD_DESIGNED_STUB: 1, BUILD_NEVER_FIRED: 2, BUILD_FIRED: 3}
-    keys = [order[r["grade"]] for r in rows]
+    # Use the module's OWN order map: a hand-copied duplicate here went stale the moment a 5th
+    # grade landed, which is the drift class this assertion exists to catch elsewhere.
+    keys = [BUILD_GRADE_ORDER[r["grade"]] for r in rows]
     assert keys == sorted(keys)
+    assert set(BUILD_GRADE_ORDER) == set(VALID_BUILD_GRADES)
 
 
 # ── the required-component (grade 4) store ───────────────────────────────────────────
@@ -351,3 +354,113 @@ def test_legacy_surface_gate_rejects_placeholder_waiver(tmp_path) -> None:
     from tac.confound_gates import check_no_legacy_single_module_lever_surface_consumers as g
 
     assert len(g(repo_root=tmp_path, strict=False, verbose=False)) == 1
+
+
+# ---------------------------------------------------------------------------
+# BUILD_RETIRED — the BUILD axis's dormant-with-reactivation exit (ddm_wr2, #864).
+# The ACTIVATION axis has had STATE_RETIRED since the ledger landed; the BUILD axis
+# shipped without it, so a wire-or-retire adjudication could not record "retire".
+# ---------------------------------------------------------------------------
+
+
+def test_retired_is_a_valid_build_grade_and_distinct_from_the_other_four() -> None:
+    from tac.witness_dsl.activation_ledger import BUILD_RETIRED
+
+    assert BUILD_RETIRED in VALID_BUILD_GRADES
+    assert BUILD_RETIRED not in (
+        BUILD_FIRED, BUILD_NEVER_FIRED, BUILD_DESIGNED_STUB, BUILD_NOT_DESIGNED)
+    assert len(set(VALID_BUILD_GRADES)) == 5
+
+
+def test_retired_row_leaves_the_not_even_designed_debt_queue(tmp_path) -> None:
+    """The whole point: a retired component stops nagging as build debt."""
+    from tac.witness_dsl.activation_ledger import BUILD_RETIRED
+
+    p = tmp_path / "req.jsonl"
+    record_required_component(
+        "Wr2StillOwed", needed_by="cfgA", missing_mechanism="no recipient exists yet",
+        owner="someone", fire_order=1, consumer="trainer", path=p)
+    record_required_component(
+        "Wr2Retired", needed_by="cfgA", missing_mechanism="recipient cannot exist on tr1",
+        owner="ddm_wr2", fire_order=4, consumer="n/a", grade=BUILD_RETIRED,
+        notes="REACTIVATION: re-open iff tr1 grows the precondition it needs", path=p)
+
+    live = {r["component"] for r in not_even_designed(p)}
+    assert "Wr2StillOwed" in live
+    assert "Wr2Retired" not in live
+    # ...but it is NOT deleted: retirement is dormant-with-reactivation, never a kill.
+    assert "Wr2Retired" in {r["component"] for r in read_required_components(p)}
+
+
+def test_retirement_refuses_without_a_reactivation_trigger(tmp_path) -> None:
+    from tac.witness_dsl.activation_ledger import BUILD_RETIRED
+
+    p = tmp_path / "req.jsonl"
+    for bad_notes in ("", "   ", "x"):
+        with pytest.raises(ValueError, match="REACTIVATION TRIGGER"):
+            record_required_component(
+                "Wr2NoTrigger", needed_by="cfgA", missing_mechanism="recipient absent",
+                owner="ddm_wr2", fire_order=1, consumer="none on the live vehicle",
+                grade=BUILD_RETIRED, notes=bad_notes, path=p)
+    assert read_required_components(p) == []
+
+
+def test_report_keeps_the_retired_grade_instead_of_reasserting_the_debt(tmp_path) -> None:
+    """A retired row reported as not-even-designed silently becomes a build order again."""
+    from tac.witness_dsl.activation_ledger import BUILD_RETIRED
+
+    p = tmp_path / "req.jsonl"
+    record_required_component(
+        "Wr2ReportRetired", needed_by="cfgA", missing_mechanism="absent by construction",
+        owner="ddm_wr2", fire_order=4, consumer="n/a", grade=BUILD_RETIRED,
+        notes="REACTIVATION: a length/MCF term is added to the live loss", path=p)
+    rows = {r["component"]: r for r in build_completeness_report(p)}
+    assert rows["Wr2ReportRetired"]["grade"] == BUILD_RETIRED
+    assert "REACTIVATION" in (rows["Wr2ReportRetired"]["notes"] or "")
+    # retired sorts AFTER every real debt grade — debt stays the first thing read
+    grades = [r["grade"] for r in build_completeness_report(p)]
+    assert grades.index(BUILD_RETIRED) == len(grades) - 1
+
+
+def test_mutation_guard_retire_path_actually_branches(tmp_path) -> None:
+    """Would fail if BUILD_RETIRED were accepted but treated identically to NOT_DESIGNED."""
+    from tac.witness_dsl.activation_ledger import BUILD_RETIRED
+
+    p = tmp_path / "req.jsonl"
+    kw = dict(needed_by="cfgA", missing_mechanism="recipient absent", owner="ddm_wr2",
+              fire_order=2, consumer="none on the live vehicle", path=p)
+    record_required_component("WrTwinOpen", **kw)
+    record_required_component("WrTwinShut", grade=BUILD_RETIRED,
+                              notes="REACTIVATION: named measured fact", **kw)
+    rep = {r["component"]: r["grade"] for r in build_completeness_report(p)}
+    # Same charter fields, different grade => the two rows MUST diverge on both surfaces.
+    assert rep["WrTwinOpen"] != rep["WrTwinShut"]
+    assert len(not_even_designed(p)) == 1
+
+
+def test_retirement_is_per_charter_key_not_per_component(tmp_path) -> None:
+    """The (component, needed_by) key is deliberate: one component can be required by several
+    configs. Retiring it for ONE charter must not silently retire the others.
+
+    Regression: ddm_wr2's first pass recorded retirements under a NEW ``needed_by`` and so did
+    not supersede the open charters at all -- the queue looked adjudicated and was not.
+    """
+    from tac.witness_dsl.activation_ledger import BUILD_RETIRED
+
+    p = tmp_path / "req.jsonl"
+    common = dict(missing_mechanism="recipient absent on the live vehicle", owner="ddm_wr2",
+                  fire_order=1, consumer="none on the live vehicle", path=p)
+    record_required_component("WrShared", needed_by="cfgA", **common)
+    record_required_component("WrShared", needed_by="cfgB", **common)
+    assert len(not_even_designed(p)) == 2
+
+    # Retiring under a THIRD, unrelated key must drain neither.
+    record_required_component("WrShared", needed_by="cfgC", grade=BUILD_RETIRED,
+                              notes="REACTIVATION: named measured fact", **common)
+    assert len(not_even_designed(p)) == 2, "a new key must not supersede an existing charter"
+
+    # Retiring under cfgA's own key drains exactly cfgA.
+    record_required_component("WrShared", needed_by="cfgA", grade=BUILD_RETIRED,
+                              notes="REACTIVATION: named measured fact", **common)
+    remaining = [r["needed_by"] for r in not_even_designed(p)]
+    assert remaining == ["cfgB"]

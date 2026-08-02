@@ -635,7 +635,23 @@ BUILD_FIRED = "built-and-fired"
 BUILD_NEVER_FIRED = "built-never-fired"
 BUILD_DESIGNED_STUB = "designed-stub"
 BUILD_NOT_DESIGNED = "not-even-designed"
-VALID_BUILD_GRADES = (BUILD_FIRED, BUILD_NEVER_FIRED, BUILD_DESIGNED_STUB, BUILD_NOT_DESIGNED)
+# The BUILD axis's own dormant-with-reactivation state, mirroring STATE_RETIRED on the
+# ACTIVATION axis (which has had it since the ledger landed). Without it the required-component
+# queue can ONLY be drained by BUILDING, so a component that is architecturally absent on the
+# live vehicle -- no recipient mechanism can exist, so building one is wrong, not merely
+# deferred -- has no representation and nags forever. CLAUDE.md's "'Off' is a tracked queue"
+# names this exact state ("retired-with-reason") as mandatory. NO-FAKE: a retired row is NOT a
+# capability and NOT a kill; ``notes`` MUST carry the reactivation trigger (enforced by refusal
+# in ``record_required_component``), per CLAUDE.md's forbidden-premature-KILL rule.
+BUILD_RETIRED = "retired-with-reason"
+VALID_BUILD_GRADES = (BUILD_FIRED, BUILD_NEVER_FIRED, BUILD_DESIGNED_STUB, BUILD_NOT_DESIGNED,
+                      BUILD_RETIRED)
+# Worst-debt-first read order, exported so no consumer hand-copies it. A duplicated order map is
+# a drift generator: the copy in the test suite silently went stale the moment a 5th grade landed.
+BUILD_GRADE_ORDER: dict[str, int] = {
+    BUILD_NOT_DESIGNED: 0, BUILD_DESIGNED_STUB: 1, BUILD_NEVER_FIRED: 2, BUILD_FIRED: 3,
+    BUILD_RETIRED: 4,  # adjudicated closed -- never above live debt
+}
 
 # Canonical APPEND-ONLY fcntl-locked store for DECLARED required components (grade 4). Keyed by
 # (component, needed_by); latest row wins on read.
@@ -715,6 +731,11 @@ def record_required_component(
                 "without it cannot be actioned, which is the orphan this ledger exists to extinct")
     if not isinstance(fire_order, int) or fire_order < 0:
         raise ValueError(f"fire_order must be a non-negative int, got {fire_order!r}")
+    if grade == BUILD_RETIRED and (not isinstance(notes, str) or len(notes.strip()) < 3):
+        raise ValueError(
+            "grade=retired-with-reason requires substantive notes carrying the REACTIVATION "
+            "TRIGGER (what measured fact would re-open it); a retirement without one is a KILL, "
+            "which CLAUDE.md forbids as a resting state")
     row = {
         "component": component, "needed_by": needed_by, "grade": grade,
         "missing_mechanism": missing_mechanism, "owner": owner, "fire_order": fire_order,
@@ -747,14 +768,20 @@ def not_even_designed(path: Path | None = None) -> tuple[dict, ...]:
     """Declared required components that STILL have no lever factory — the live grade-4 debt.
 
     A declared component whose factory has since landed drops off automatically (the registry, not
-    a human, decides), so this list can only be drained by BUILDING, never by editing a memo.
+    a human, decides), so this list is drained by BUILDING, never by editing a memo.
+
+    The ONE other exit is an explicit ``BUILD_RETIRED`` row (``retired-with-reason``), which
+    requires a recorded reactivation trigger. It exists because "build it" is the wrong verdict
+    for a component whose recipient mechanism cannot exist on the live vehicle; without this exit
+    such a row nags forever and the queue trains its readers to ignore it.
     """
     idx = _build_index()
-    return tuple(r for r in read_required_components(path) if r["component"] not in idx)
+    return tuple(r for r in read_required_components(path)
+                 if r["component"] not in idx and r.get("grade") != BUILD_RETIRED)
 
 
 def build_completeness_report(path: Path | None = None) -> list[dict]:
-    """One row per lever factory AND per declared required component, four-graded.
+    """One row per lever factory AND per declared required component, five-graded.
 
     This is the operator-facing "what is hollow?" surface. Ordered worst-grade-first so the debt
     is the first thing read, never a footnote under a wall of built levers.
@@ -775,23 +802,30 @@ def build_completeness_report(path: Path | None = None) -> list[dict]:
     for r in read_required_components(path):
         if r["component"] in idx:
             continue  # it got built; the registry decides, not the declaration
+        # A retired row keeps its OWN grade: reporting it as not-even-designed would re-assert the
+        # debt this adjudication closed, which is how a retirement silently becomes a build order.
         rows.append({
-            "component": r["component"], "grade": BUILD_NOT_DESIGNED, "module": None,
+            "component": r["component"],
+            "grade": BUILD_RETIRED if r.get("grade") == BUILD_RETIRED else BUILD_NOT_DESIGNED,
+            "module": None,
             "trainer": None, "missing_flags": [], "label_drift": False,
             "activation_state": "not-registered", "needed_by": r.get("needed_by"),
             "owner": r.get("owner"), "fire_order": r.get("fire_order"),
             "missing_mechanism": r.get("missing_mechanism"), "consumer": r.get("consumer"),
+            "notes": r.get("notes"),
         })
-    order = {BUILD_NOT_DESIGNED: 0, BUILD_DESIGNED_STUB: 1, BUILD_NEVER_FIRED: 2, BUILD_FIRED: 3}
-    rows.sort(key=lambda r: (order.get(r["grade"], 9), r.get("fire_order", 0), r["component"]))
+    rows.sort(key=lambda r: (BUILD_GRADE_ORDER.get(r["grade"], 9), r.get("fire_order", 0),
+                             r["component"]))
     return rows
 
 
 __all__ = [
     "BUILD_DESIGNED_STUB",
     "BUILD_FIRED",
+    "BUILD_GRADE_ORDER",
     "BUILD_NEVER_FIRED",
     "BUILD_NOT_DESIGNED",
+    "BUILD_RETIRED",
     "EVENT_FIRED",
     "EVENT_MEASURED",
     "EVENT_RETIRED",
