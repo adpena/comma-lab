@@ -109,6 +109,7 @@ def test_live_repo_is_clean() -> None:
 # placement, which is the thing that was actually broken.
 # ---------------------------------------------------------------------------
 
+import ast
 import importlib.util
 import inspect
 
@@ -241,3 +242,38 @@ def test_guard_runs_even_when_preflight_FAILS_end_to_end(monkeypatch) -> None:
     monkeypatch.setattr(hook, "run_review_gate", lambda: (order.append("review"), 0)[1])
     assert hook.main() == 1
     assert order == ["ruff", "scan", "preflight"]
+
+
+def test_END_TO_END_guard_fires_on_a_real_injected_violation(tmp_path, monkeypatch, capsys) -> None:
+    """ROUND-6: the whole guard, on a REAL file, both directions — the control that proves
+    the chain (hook -> denominator -> scan -> message -> rc) actually works end to end.
+
+    Ran by hand first and it 'failed' (rc 0) — because I injected at line 5, which is INSIDE
+    src/tac/preflight.py's module docstring (lines 2-27), so I inserted a STRING, not an
+    import. The control was invalid, not the guard. Redone at genuine module scope it fires.
+    Persisted here so it is never a one-off hand-run again (the un-persisted-instrument genus).
+    """
+    real = Path(__file__).resolve().parents[3] / "src" / "tac" / "preflight.py"
+    d = tmp_path / "src" / "tac"
+    d.mkdir(parents=True)
+    lines = real.read_text(encoding="utf-8").splitlines(True)
+
+    # AST-verified module scope: insert after the __future__/first real import, never in the docstring.
+    tree = ast.parse("".join(lines))
+    first_real = next(n for n in tree.body if isinstance(n, (ast.Import, ast.ImportFrom)))
+    lines.insert(first_real.lineno, "import torch  # injected\n")
+    dirty = "".join(lines)
+    assert any(
+        isinstance(n, ast.Import) and any(a.name == "torch" for a in n.names)
+        for n in ast.parse(dirty).body
+    ), "positive control is INVALID: the injection is not module-scope"
+
+    (d / "preflight.py").write_text(dirty, encoding="utf-8")
+    monkeypatch.setattr(hook_mod := _load_hook(), "REPO_ROOT", tmp_path)
+    assert hook_mod.run_hook_path_heavy_import_scan() == 1
+    err = capsys.readouterr().err
+    assert "MODULE SCOPE" in err and "43.86s cold" in err
+
+    # NEGATIVE side: the unmodified real file must pass, or the gate is unconditional.
+    (d / "preflight.py").write_text(real.read_text(encoding="utf-8"), encoding="utf-8")
+    assert hook_mod.run_hook_path_heavy_import_scan() == 0
