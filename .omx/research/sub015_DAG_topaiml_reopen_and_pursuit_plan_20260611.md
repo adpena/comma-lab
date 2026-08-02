@@ -27434,3 +27434,80 @@ that merely exists; one cited an artifact that PREDATES the row).
   on the LARGER axis.
 - **REFUTED (answers the operator's lattice question):** `realize_factor2_uint8` is closed-form integer
   construction — no loop, no budget. RATE-DEAD needs **no** re-grading on censoring grounds.
+
+## FEED-os1 — the live pose START is censored at n600 (0 scorer evals), and loop-SHAPE ranking is MEASURED dead (2026-08-02)
+
+**Pointer: submittable 0.1910828242 UNMOVED · own-vehicle v4d 0.9476091 · bar 0.172141 · gap 0.7754681.**
+Nothing here moved it. One commit: `7559aa81fd`. Registry 419 → 420
+(`ddm_os1_termination_census_from_cost_proxy_v1`).
+
+### 1. The measurement — sv1's genus, one stage UPSTREAM, on the LARGER axis, for free
+
+`experiments/ddm_pfs1_ep_warp_pose_solve.py:183` (`solve_pair_gn`) is on the live chain:
+`ddm_v4c_resolve.py:61` imports it and `:68` consumes its D2 solve. **It produces the STARTING
+POINT that v4c's rung-B (a,b) GN then refines** — precisely the solve where `sv1` measured restarts
+beating bound-freeing **1.70×**. The inherited ordering ("the START dominates the BOUNDS and the
+MENUS") points here, and the site is censored:
+
+| state | pairs | % | d_pose mass |
+|---|---:|---:|---:|
+| **converged** (`d_pose_solved < 1e-6`) | **0** | **0.0%** | **0.0%** |
+| provably ladder-exhausted | 114 | 19.0% | 46.7% |
+| ladder OR relin — either way a bound | 486 | 81.0% | 53.3% |
+| **stopped on a BOUND** | **600** | **100.0%** | **100.0%** |
+| infeasible under the model | 0 | 0.0% | — |
+
+**ZERO new scorer evaluations** — reconstructed from `d2_ep_solve.partial.jsonl`, which already
+recorded `n_forwards`. sv1 spent **1,385** evals for the same answer on the 2-parameter (a,b) solve
+over 60 pairs; this is the **6-parameter pose** solve over **600**. The `converged = 0/600` leg is
+EXACT (objective read against the literal `1e-6`; closest pair **15.5×** above it), not inferred.
+`0 infeasible` is the cost model's own positive control: the reachable set has a **hole at 16–21**
+and 600 real rows put nothing in it. **Second independent instance:** `ddm_ps1` (same
+`solve_pair_gn`) → 0/600 converged, 600/600 bound; headline **invariant** to its unrecorded relin
+bound (3 vs 4), only the ladder/either split moves (98 vs 271).
+
+**Sharpest form:** the exits are **FUSED** — `if not accepted or cur < 1e-6: break` (`:212`).
+Convergence and ladder-exhaustion write the same absence. **Fusing a criterion and a bound into one
+predicate destroys the census at the point of WRITING, not of reading.**
+
+### 2. MEASURED NEGATIVE — loop-SHAPE analysis cannot rank this class `verdict_scope: family`
+
+A static classifier over **6,545 bounded loops** (6,045 files, 0 parse failures) returned the SAME
+verdict for sv1's **pre-cure** loop (`converged` provably unreachable, 0/60) and its **post-cure**
+replacement: **1 true positive, 1 false positive, discrimination ZERO.** The exit CONDITION is
+byte-identical across the cure (`if not accepted: break`); sv1's criterion lives in the stop-reason
+ASSIGNMENT inside the break body. **A convergence CRITERION and a convergence LABEL are different
+objects, and the exit shape carries neither.** Not patched to force agreement (failed control on a
+known case = STOP, not patch) — there is nothing to tune toward.
+
+**Second false positive, same scan:** `src/tac/optimization/terminal_pose_gn.py` reads SILENT but IS
+cured (stop-on-rejection, `admitted`, break at `:1210`). `ast.unparse` drops comments, and **the repo
+has NO canonical stop-reason vocabulary** — `stop_reason` / `n_cap_saturated` / `admitted` /
+`converged` are four names for one thing. A cured site is auditable only by someone who already knows
+its local name. That is a real cause of the class recurring.
+
+### 3. Seeds re-derived — three of five stale or wrong
+
+- `experiments/multi_pass_inflate_optimizer.py` is **ALREADY cured** (`:411`, emitted `:468`) — remove from the queue.
+- `tools/codec_op_cma_search.py` real default is **30** at `:972`; the docstring at `:48` shows 50.
+- `tools/click_polish_local.py:126` clips the library's own `max_rounds=40` (`click_polish.py:755`) to **1** — a 40× wrapper clip — but the loop at `:850` DOES log all three of its criteria, so it is a *bound* defect, not a *criterion* defect.
+- sv1's 98-file join re-derives to **831 files / 173 SEARCH-ish** under a broader token set. Flag-set dependence CONFIRMED: **the count is not the signal.** Replaced with a decidable one — 221 capped solver/search loops in 173 files, **79.6% emit no stop reason** (an UPPER bound on silence, given the false positives above).
+
+### 4. Reach, with denominators — and the cheap cure
+
+**0 of 21,700** `.omx/research` receipts and **19 of 8,204** SSD receipts (**0.23%**) carry any
+iteration/evaluation count. The retroactive method applies where the proxy exists and nowhere else —
+which is exactly why sv1 had to BUY the answer. **The cheap cure is not the law, it is the habit:
+record the cost proxy and the census stays recoverable forever.**
+
+### 5. Staged, not taken
+
+1. **Split pfs1's fused exit and emit `stop_reason`**, then free the ladder (the binding half: 114/600 provably, 46.7% of mass). Unreviewed new code on a live-chain solver; it changes the shipped solve.
+2. **Derive a restart set** for pfs1 (temporal-neighbour `p_star`, per-`s_t` median) rather than a generic displacement — sv1 measured restarts as the larger half downstream.
+3. `experiments/ddm_p3v2_optimal_form_pose_resolve.py:212` has **no criterion at all**, and its cure is written **10 lines below it**: `s1d_free_solve:246` documents *"Run to CONVERGENCE (not budget-truncate — the exact P3 mistake)"* with a `tol`.
+
+**Not claimed:** `ddm_v4c_resolve.py` / `ddm_v4d_resolve.py` (`ddm_uv1` owns them); `_refine_dim0` /
+`_beta_select` are **CLOSED** (pw1: `CLOSED_INTERIOR_OPTIMUM`, 0/600 at bound). No n600 scorer job
+fired. `[macOS-CPU frozen-PoseNet advisory]`, `score_claim=false`, `promotable=false`.
+
+CLOSING-ARTIFACT: .omx/research/ddm_os1_optimization_sweep_termination_census_20260802.md
