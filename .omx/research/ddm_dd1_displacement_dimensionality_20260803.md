@@ -39,12 +39,20 @@ Target = PR130 bar `0.172141`. **LIVE gap = 0.6189279.** `W = 1.273108215332` B/
    component is a **curve**: median minor axis **2.51 px**, aspect **25.5**. One perpendicular
    offset per component = **703 B** against the **250,403-flip** Road↔Lane mass (**34.30% of the
    live gap**) ⇒ **453× better than `W`** — 5.6× better than `mf1`'s 81.4×. Description only.
-6. **NEW — the `D`-null discount does not apply to any figure in this memo, and saying so is a
-   unit correction, not an omission.** `lstars` is already scorer-side; `D`'s 80.6742% nullity is
-   camera-side. But it bites hardest exactly on Lane: a 2.51 scorer-px dash is ≈5.7 camera px, of
-   which 22.6969% are blind ⇒ ≈**4.4 effective camera px** of realization width. **The class with
-   the cheapest description has the thinnest realization channel.**
-7. **Dimensionality:** the exact seg answer is describable in **216,395 B** (cheapest of three
+6. **The `D`-null discount applies to NOTHING here — and the second half of what I first wrote is
+   REFUTED by `rs2` (§3.3b).** Correct: `lstars` is scorer-side, so `D`'s nullity never discounted
+   my figures; `rs2` then showed `D∘U` is **near-isometric on `range(U)`** (gain [0.6866, 1.0283],
+   cond 1.22, **0.0%** attenuated below 1e-3), so it discounts **token-side** figures either.
+   **My "≈4.4 effective camera px of realization width for Lane" was wrong** — the blind pixels are
+   structurally unreachable from the token lattice, not a resource we lose. **The real limiter is
+   the `clip(rint())` amplitude floor, which no linear instrument can see.**
+7. **NEW — per-FRAME targeting is REFUTED for every edge that carries mass** (§3.4, live cx1).
+   Road↔Lane frame-Gini **0.108**; **256 of 600 frames** needed for 50% of its flips, **517** for
+   90%; top-60 frames capture **13.9%** against 10% for perfect uniformity. The four other big
+   edges run Gini 0.168–0.358. Only the *negligible* edges are frame-concentrated (Movable↔MyCar
+   Gini 0.990, 0.03% of flips). **But this negative is exactly what LICENSES `hs1`'s static cell
+   carrier** — a static address is correct precisely because the mass is temporally uniform.
+8. **Dimensionality:** the exact seg answer is describable in **216,395 B** (cheapest of three
    independent measurements) against a **647,553 B** buy threshold — **2.99× under**. We pay
    **499,689 B** of tokens, i.e. **2.31× the description of the exact answer**, and still carry
    all 508,639 flips. **The object we must ship is ~2.3× LOWER-dimensional than the object we
@@ -314,12 +322,94 @@ discounts the **camera-side realization**, which is precisely the 2.31× realiza
 > **Applying a 0.77 visibility factor to a scorer-side capture figure would be a unit error.** The
 > figures the coordinator flags (cell-mass capture) are camera-side-indexed and *do* need it.
 
-**Where it bites, and it bites hardest exactly on Lane.** A 2.51 scorer-px-wide dash is ≈**5.7
-camera px** wide (`1164/512 = 2.273`). With 22.6969% of camera pixels blind to both scorers, the
-encoder has ≈**4.4 effective camera px of width** to realize a lane dash. **The class with the
-cheapest description has the thinnest realization channel.** That is the sharpest form of the
-description/realization split this memo produces, and it is a prediction the §7-item-2 measurement
-can falsify.
+### 3.3b **REFUTED BY `ddm_rs2` (`84367be88e`) — and it was my own paragraph**
+
+The paragraph that stood here claimed: *"a 2.51 scorer-px dash is ≈5.7 camera px; with 22.6969% of
+camera pixels blind, the encoder has ≈4.4 effective camera px of width — the class with the
+cheapest description has the thinnest realization channel."* **That is wrong and I am striking it.**
+
+`rs2` computed `M = D∘U` in closed form (linear, separable; BLAS vs `einsum` difference **0.0**;
+`M` matches the real receiver to **1.7e-07** relative) and measured: full **196,608-dim** gain range
+**[0.6866, 1.0283]**, condition **1.22**, **0.0%** of directions attenuated below 1e-3.
+**`D∘U` annihilates nothing.** The 80.6742315% is exactly `1 − 196,608/1,017,336` — `D`'s null
+fraction on the **camera** plane — and our renderer emits into `range(U)`, where `D` is
+**near-isometric**.
+
+> **The null space is real but STRUCTURALLY UNREACHABLE FROM THE TOKEN LATTICE.** The blind camera
+> pixels are not pixels we were using and lost; they are pixels we cannot address in the first
+> place. **They therefore subtract nothing from a token-mechanism's realization width.** My "4.4
+> effective px" was a discount applied to a resource the mechanism never held.
+
+**Which of my claims were leaning on the refuted reading — stated plainly, as asked.** Exactly one:
+the struck paragraph above, and its §0 item 6 restatement. **§3.3's main conclusion is unaffected
+and is in fact strengthened** — I argued the `D`-null does *not* discount scorer-side figures
+because `lstars` is post-`D`; `rs2` shows it does not discount **token-side** figures either, for a
+stronger reason (near-isometry on `range(U)`). §3.1, §3.2, §4 and §5 contain no `D`-null term and
+are untouched. The 22.6969% blind fraction remains live **only for camera-plane carriers (`#401`)**.
+
+**The replacement limiter, and it is a different KIND of object.** `rs2`'s point that supersedes
+mine: the thing that destroys small signals is the `clip(rint())` **dead zone**, which is
+**amplitude-dependent, not direction-dependent** — and **a linearisation cannot represent a dead
+zone at all**, so every linear instrument (including gradient keys, and including `M` itself)
+is blind to it. **The lost directions are not a subspace; they are an amplitude floor.** For a
+2.51 px-wide Lane dash the operative question is therefore not "how many camera px can I reach"
+but **"does the dash's amplitude clear the quantiser"** — answerable only by a realized finite
+difference, never by a rank or nullity argument. That is the correct form of my §7 item 1b.
+
+### 3.4 PER-EDGE × PER-FRAME — MEASURED on the LIVE cx1 vehicle (operator's "individual frames")
+
+`experiments/ddm_dd1_edge_frame_concentration.py` → `.omx/research/ddm_dd1_edge_frame_concentration_n600.json`.
+Consumes `ddm_pu2`'s already-materialised per-pair 5×5 directed confusion tensor
+(`per_pair_directed.jsonl`, `/Volumes/VertigoDataTier/pact/ddm_pu2_20260803/argmax_cache/`).
+**No scorer pass, no decode.** Per `m91`: decomposed per **EDGE**, never per class. `as1` owns
+asymmetry composition and `hs1` owns cell-level Gini — both **cited, not re-measured**.
+
+**Instrument validation (fourth):** total flips **508,640** vs the charter's 508,639 (ratio
+1.000002); implied `d_seg` 0.004311795 vs 0.004311790; every frame's matrix sums to 196,608 and
+every off-diagonal reproduces the stored flip count (asserted, not eyeballed).
+
+| edge | flips | share | **frame-Gini** | frames@50% | frames@90% | top-60 capture | median/frame |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| **Road↔Lane** | 235,148 | **46.23%** | **0.108** | **256** | **517** | **13.9%** | 388 |
+| Road↔Undriv | 89,545 | 17.60% | 0.168 | 230 | 503 | 16.6% | 143 |
+| Road↔MyCar | 63,027 | 12.39% | 0.200 | 217 | 501 | 19.5% | 96 |
+| Undriv↔Movable | 61,892 | 12.17% | 0.358 | 149 | 452 | 27.5% | 77 |
+| Road↔Movable | 57,225 | 11.25% | 0.259 | 194 | 471 | 20.3% | 87 |
+| Lane↔MyCar | 903 | 0.18% | 0.787 | 46 | 157 | 58.5% | 0 |
+| Lane↔Movable | 681 | 0.13% | 0.746 | 52 | 202 | 53.6% | 0 |
+| Movable↔MyCar | 135 | 0.03% | **0.990** | **3** | 7 | 100% | 0 |
+| Lane↔Undriv | 84 | 0.02% | 0.981 | 5 | 14 | 100% | 0 |
+
+> **The answer to "can we target INDIVIDUAL FRAMES?" is NO for every edge that carries mass, and
+> the anti-correlation is near-perfect: frame-concentration rises exactly as flip share falls.**
+> Road↔Lane needs **256 of 600 frames** to reach half its flips (uniform would need 300) — a
+> frame-Gini of **0.108** is very nearly flat. The only frame-targetable edges (Gini 0.75–0.99) are
+> the four that together carry **0.36%** of all flips. A per-frame address buys essentially nothing
+> where the money is.
+
+**But the negative is the license.** `hs1` measured seg × **CELL** Gini **0.8581, STATIC** (static
+top-128 cells = **91.22% capture at 62 B**). Put beside my frame-Gini 0.108: the expensive flips
+are **spatially concentrated and temporally uniform**. **That combination is what makes a STATIC
+address correct** — the same cells are expensive in *every* frame, so one address amortises over
+600 frames instead of needing 600 of them. Had the mass been frame-concentrated, `hs1`'s static
+carrier would have been wrong for most frames. **Neither arm's number implies this alone; together
+they do.**
+
+**Re-priced Lane carrier — this CORRECTS my own §3.2, which used a tb1-vehicle share.**
+
+| source of the Road↔Lane share | flips | ΔS | % of live gap | 703 B carrier |
+|---|---:|---:|---:|---:|
+| `pc2` / tb1 (what §3.2 used) | 250,403 | 0.212269 | 34.30% | 453.5× `W` |
+| **cx1 / LIVE (measured here)** | **235,148** | **0.199337** | **32.21%** | **425.8× `W`** |
+
+**Cross-vehicle transfer check** — `pc2`'s tb1 shares vs cx1 measured: Road↔Lane **0.939**,
+Road↔Undriv 1.083, Road↔MyCar **1.138**, Undriv↔Movable 1.027, Road↔Movable 0.981. **They transfer
+to within 0.94–1.14×, not exactly.** Inheriting them uncritically is a real ≤14% error source —
+which is precisely the `mf1`-inherited-`sx1` failure mode of §1, and I committed the same one in
+§3.2. **Corrected here and the mechanism named rather than the number quietly swapped.**
+
+**§1's settlement is unaffected:** the Movable edges sum to **23.42%** on cx1 vs `pc2`'s 23.32%
+(ratio **1.004**) — the quantity `mf1` and `sx2` were both pricing transfers essentially exactly.
 
 ---
 
@@ -524,8 +614,35 @@ different code paths: boundary px **2,551,382** ≡ `sx1`; all five per-class co
 areas ≡ `mf1`; `sx1`'s H1 **253,341 B** ≡ to the digit. The measurements can be trusted more than
 my interpretations of them — which is the pattern of both review rounds.
 
-**Not clean.** **R1: four material findings. R2: three more, one of which refutes an R1 headline.**
-Counter at **0 of 3**.
+### R3 (after `ddm_rs2` `84367be88e` and the operator's class-interaction directive)
+
+**R3 finding — an external refutation of a claim I had already marked as a careful correction.**
+§3.3's *main* point (the `D`-null doesn't discount scorer-side figures) was right, and I flagged
+applying 0.77 as a "unit error." Then I **immediately committed a different error in the next
+paragraph** — applying the 22.6969% blind fraction as a *realization-width* discount on Lane. `rs2`
+refutes it: `D∘U` is near-isometric on `range(U)`, so those pixels were never ours to lose. **The
+pattern is the memo's own recurring one: I catch the unit error in the quantity I am examining and
+introduce a new one in the sentence justifying the catch.** Struck in place at §3.3b, not rewritten.
+
+**R3 finding — I repeated the exact failure mode I diagnosed in §1.** §1 convicts `mf1` of
+inheriting `sx1`'s 23.3% without re-measuring. **§3.2 then priced a Lane carrier on `pc2`'s tb1
+49.23%** — an inherited cross-vehicle share — when `pu2`'s cx1 tensor was on disk the whole time.
+Measured: **46.23%**, so 453× → **425.8×**. The diagnosis did not immunise me against the disease.
+
+**R3 finding — my best result today is a NEGATIVE, and its value is entirely relational.**
+Frame-Gini 0.108 kills per-frame targeting for 99.6% of flip mass. Alone that is a dead end; set
+against `hs1`'s static cell-Gini 0.8581 it becomes the *license* for the static carrier. **I would
+have reported it as a dead end had the coordinator not named `hs1` in the same message.** Cross-arm
+synthesis was not something I derived — it was handed to me, and I should say so.
+
+**Instrument confidence — now four exact reproductions** from independent code paths: boundary px
+2,551,382 ≡ `sx1`; all five per-class component censuses ≡ `mf1`; `sx1`'s H1 253,341 B to the digit;
+total flips 508,640 ≡ the charter's 508,639 (1.000002). **The measurements remain more trustworthy
+than my readings of them — the consistent finding of all three review rounds.**
+
+**Not clean.** **R1: four material findings. R2: three. R3: three, one an external refutation of my
+own paragraph and one a repeat of the failure I had just convicted another arm of.** Counter at
+**0 of 3**; memo stands **PROVISIONAL-PENDING-VERIFICATION**.
 Per the recursive protocol this memo is **PROVISIONAL-PENDING-VERIFICATION**, not sealed. The
 settlement in §1 is the most robust part (it is pure arithmetic on two arms' emitted numbers and
 reproduces to 1.0009); §3's gauge is derived but its validity condition is unmeasured; §5 is a
