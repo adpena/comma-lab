@@ -4087,7 +4087,7 @@ Yousfi (challenge creator) was Fridrich's PhD student at Binghamton DDE Lab. Eff
 
 **PoseNet**: FastViT-T12 backbone (NOT EfficientNet)
 - 12-channel input: 2 frames × YUV6 (4 luma + 2 chroma subsampled)
-- rgb_to_yuv6 → resize to (512,384) → normalize (mean=127.5, std=63.75)
+- **resize to (512,384) → rgb_to_yuv6 → normalize** (mean=127.5, std=63.75) — **CORRECTED 2026-08-03 (`ddm_pz1`, verified at source by MAIN).** This line previously read "rgb_to_yuv6 → resize", which is BACKWARDS. `upstream/modules.py:72-73` interpolates FIRST, then applies `rgb_to_yuv6`. **And the interpolate target is literally `segnet_model_input_size`** — PoseNet (`:73`) and SegNet (`:109`) make the IDENTICAL `interpolate(x, size=(segnet_model_input_size[1], segnet_model_input_size[0]), mode='bilinear')` call. **THE TWO SCORERS SHARE THE SAME `D`.** Consequence: any argument of the form "this perturbation is seg-invisible therefore it is cheap for pose" cannot rest on a different-resize premise — there isn't one. `ddm_pz1` measured the real mechanism: a `D`-null-space field built in frame_1's lattice is RESAMPLED by the pose warp onto a different lattice where `D` no longer annihilates it (measured attenuation only **1.662×**, so the frame_0 scorer-plane delta is **2.12×** the frame_1 debt being paid off). Null-space membership does not survive a change of lattice.
 - Hydra head: vision(2048) → summary(512) → ResBlock → 12-dim pose → first 6 used
 - Distortion = MSE on first 6 pose dimensions
 
