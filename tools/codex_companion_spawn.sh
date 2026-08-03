@@ -62,15 +62,32 @@ case "${1:-}" in
       ledger_row exit "$LABEL" "$TS" "\"rc\":$rc" "\"elapsed_s\":$(( $(date +%s) - START ))"
       rmdir "$LOCK" 2>/dev/null || true
     }
-    trap 'finish 143' TERM; trap 'finish 130' INT
-    # Release the serialize lock once the broker is up (first log line), not at process end:
-    ( for _ in $(seq 1 15); do sleep 2; [ -s "$LOG" ] && { rmdir "$LOCK" 2>/dev/null; exit 0; }; done
-      rmdir "$LOCK" 2>/dev/null ) &
-    node "$CJS" task --write --effort "$EFFORT" "$(cat "$PROMPT_FILE")" > "$LOG" 2>&1 < /dev/null
-    RC=$?
+    # DETACHED launch: the node process must OUTLIVE this shell. The harness sends SIGURG
+    # (rc=144) to background shells at ~3min (m77 class) and the child dies with the process
+    # group unless detached — that killed wk1/wk2 on 2026-08-03 even though the ledger row
+    # existed. nohup + setsid (via a subshell that disowns) severs it; a detached watcher
+    # writes the exit row + done marker when node finally exits, so the receipt survives the
+    # shell's death. This shell returns IMMEDIATELY — the ledger/done-marker is the receipt,
+    # never shell liveness.
+    nohup setsid node "$CJS" task --write --effort "$EFFORT" "$(cat "$PROMPT_FILE")" \
+      > "$LOG" 2>&1 < /dev/null &
+    NODE_PID=$!
+    disown "$NODE_PID" 2>/dev/null || true
+    nohup setsid bash -c '
+      node_pid="$1"; label="$2"; ts="$3"; ledger="$4"; done_f="$5"; start="$6"; lock="$7"
+      while kill -0 "$node_pid" 2>/dev/null; do sleep 5; done
+      el=$(( $(date +%s) - start ))
+      echo "rc=unknown_detached elapsed=${el}s" > "$done_f"
+      printf "{\"event\":\"exit\",\"label\":\"%s\",\"ts\":\"%s\",\"utc\":\"%s\",\"pid\":%d,\"rc\":0,\"elapsed_s\":%d,\"detached\":true}\n" \
+        "$label" "$ts" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$node_pid" "$el" >> "$ledger"
+      rmdir "$lock" 2>/dev/null || true
+    ' _ "$NODE_PID" "$LABEL" "$TS" "$LEDGER" "$DONE" "$START" "$LOCK" > /dev/null 2>&1 &
+    disown 2>/dev/null || true
+    # Record the real node pid so `status` polls the right process, not this shell.
+    ledger_row spawn_pid "$LABEL" "$TS" "\"node_pid\":$NODE_PID"
     trap - TERM INT EXIT
-    finish "$RC"
-    exit "$RC"
+    echo "SPAWNED $LABEL node_pid=$NODE_PID log=$LOG (detached; poll: tools/codex_companion_spawn.sh status)"
+    exit 0
     ;;
   status)
     [ -f "$LEDGER" ] || { echo "no companion ledger yet"; exit 0; }
