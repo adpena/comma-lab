@@ -552,10 +552,23 @@ def lever_reset_operator(arm: str = "B") -> Lever:
         n=20k sum; the reset_operator docstring's ~1203/~16.0/82% is a shorter-window read of
         the same quantity).
 
-    Arms A and C are OUT OF SCOPE for #824 by MEASURED verdict, not by preference:
-    ``ResetOperatorConfig.requires_persistence`` is True for both, and the persistence plumbing is
-    doubly dead — ``opt_flat`` has ONE repo-wide hit (the ``load_checkpoint`` return) that nothing
-    reads, and nothing writes it.  C is a BUILD, not a port; it must not gate this race.
+    Arms A and C were OUT OF SCOPE for #824 by MEASURED verdict, not by preference:
+    ``ResetOperatorConfig.requires_persistence`` is True for both, and the persistence plumbing was
+    doubly dead — ``opt_flat`` had ONE repo-wide hit (the ``load_checkpoint`` return) that nothing
+    read, and nothing wrote it.  C was a BUILD, not a port; it must not gate this race.
+
+    **SUPERSEDED 2026-08-03 (ddm_op2 OP2-1) — arm C is now BUILT.**  The #824 scoping was correct
+    *as a scoping of that race* and is preserved verbatim above; what changed is that the BUILD
+    became load-bearing.  ``ddm_gd5`` §3.6 MEASURED the omission's price on a live from-scratch
+    ds=32 run: the LIVE training signal jumps 1.912 -> 14.846 across a window boundary and takes
+    ~17 epochs to return, against this arm's own 16.167-epoch prediction from a different channel.
+    In 30-minute windows that is ~218 of a 666-epoch budget (33%) spent re-converging a
+    deliberately reset optimizer — plausibly why the incumbent lineage only ever existed as a
+    continuation.  ``--persist-optimizer-state on`` (args-only, DEFAULT OFF so ``config_hash``,
+    ``ema_decay`` and every checkpoint stay flag-invariant) saves and restores the moments;
+    MEASURED positive control: a restored boundary reproduces an uninterrupted run to max abs
+    param diff **0.0**, while the reset path diverges 5.5e-2.  Arm C therefore still must not GATE
+    this race — B vs B' is unchanged — but it is no longer unavailable.
 
     Falsifier (pre-registered): if the B' arm's boundary jump matches B's within the gate's own
     single-pixel resolution, the eta(t) impulse is NOT the mechanism behind the measured restart

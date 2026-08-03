@@ -860,7 +860,15 @@ class TestModule:
         # tuple's tail on main, where that gate is the last append and this
         # name set does not list it. ddm_vc1 (#842) adds the second:
         # check_verdict_surfaces_report_examined_count.
-        assert len(cg.CONFOUND_GATES) == 25
+        # 25 -> 26 on 2026-08-03: ddm_op2 (OP2-1) appends
+        # check_checkpoint_saves_do_not_silently_drop_optimizer_state, the second
+        # landing for the silently-dropped-optimizer-state class (all six trainer
+        # save_checkpoint callsites passed the bare `opt_state_flat={}` literal, so
+        # every resume was a full Adam moment reset -- #824 arm B, MEASURED at
+        # 16.167 epochs of re-convergence per boundary). It lands STRICT at
+        # live-count 0 WITH a registered positive control, so the uncovered
+        # ceiling does not move.
+        assert len(cg.CONFOUND_GATES) == 26
         names = {fn.__name__ for fn in cg.CONFOUND_GATES}
         assert names == {
             "check_no_spike_guard_defaults_to_deadlock_mode",
@@ -895,6 +903,7 @@ class TestModule:
             # scope must be able to report how many items it examined —
             # "vacuity is indistinguishable from PASS".
             "check_verdict_surfaces_report_examined_count",
+            "check_checkpoint_saves_do_not_silently_drop_optimizer_state",
         }
 
     def test_followon_gates_are_strict_flipped_in_preflight_all(self):
@@ -995,6 +1004,12 @@ class TestModule:
             # means a NEW verdict landed that cannot report its denominator —
             # fix it or waive it with a real rationale; do NOT raise this bound.
             "check_verdict_surfaces_report_examined_count": 0,
+            # ddm_op2 (OP2-1) STRICT from byte one: all six trainer callsites now
+            # pass the run's resolver or `no_opt_state("<reason>")`, and the three
+            # test-fixture callsites carry a stated OPT_STATE_DROP_OK waiver. A
+            # nonzero count here means a checkpoint write started silently dropping
+            # optimizer state again -- fix the callsite; do NOT raise this bound.
+            "check_checkpoint_saves_do_not_silently_drop_optimizer_state": 0,
         }
         v = fn(strict=False, verbose=False)
         assert len(v) <= bounds[fn.__name__], f"{fn.__name__} live-count grew: {v[:3]}"

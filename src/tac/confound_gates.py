@@ -3298,6 +3298,27 @@ POSITIVE_CONTROLS: tuple[PositiveControl, ...] = (
         must_mention="planted_run",
         why="CLAUDE.md-forbidden fixed-beta hosc (tanh saturation -> vanishing gradient).",
     ),
+    PositiveControl(
+        gate="check_checkpoint_saves_do_not_silently_drop_optimizer_state",
+        files={
+            "experiments/planted_trainer.py": (
+                "def save_checkpoint(path, *, model, opt_state_flat, epoch):\n"
+                "    return None\n"
+                "def train(model, optimizer):\n"
+                "    save_checkpoint('c.npz', model=model, opt_state_flat={}, epoch=7)\n"
+            )
+        },
+        must_mention="planted_trainer.py",
+        why=(
+            "ddm_op2 OP2-1: the EXACT pre-fix shape — a bare `opt_state_flat={}` at a "
+            "save_checkpoint callsite. All six trainer callsites carried it, so no checkpoint "
+            "on disk held optimizer state and every resume was a full Adam moment reset "
+            "(#824 arm B, MEASURED 16.167 epochs of re-convergence per boundary => ~218 of a "
+            "666-epoch budget). This control is what proves the detector still fires now that "
+            "the live count is 0 — the state in which a working gate and a gutted one print "
+            "the identical OK."
+        ),
+    ),
     # -----------------------------------------------------------------------
     # 2026-08-01 (task #831, ddm_gc16). The three gates below are the ORIGINAL
     # immune system from the 2026-07-05 confound hunt — Catalog #397 / #398 /
@@ -3403,7 +3424,7 @@ POSITIVE_CONTROLS: tuple[PositiveControl, ...] = (
 
 # RATCHET FLOOR: the number of DISTINCT gates carrying a positive control at landing. It may only
 # grow. Deleting or stranding a control drops coverage below this and the meta-gate refuses.
-MIN_POSITIVE_CONTROL_COVERAGE = 8  # 4 -> 5 (vc1, #842) -> 8 (ddm_gc16, #831: +#397/#398/#401)
+MIN_POSITIVE_CONTROL_COVERAGE = 9  # 4 -> 5 (vc1, #842) -> 8 (ddm_gc16, #831) -> 9 (ddm_op2: OP2-1)
 
 # RATCHET CEILING (added 2026-07-31, task #831). The floor above is on the NUMERATOR — the count
 # of gates that HAVE controls — so it can only ever fire when a control is REMOVED. Landing a new
@@ -3969,3 +3990,126 @@ def check_verdict_surfaces_report_examined_count(
 
 
 CONFOUND_GATES = (*CONFOUND_GATES, check_verdict_surfaces_report_examined_count)
+
+
+# ---------------------------------------------------------------------------
+# ddm_op2 (OP2-1) — A CHECKPOINT MAY NOT SILENTLY DROP OPTIMIZER STATE.
+#
+# MEASURED INCIDENT (2026-08-02/03). `experiments/train_tr1_partition_renderer_mlx.py` had SIX
+# `save_checkpoint(...)` callsites and every one of them passed the bare literal
+# `opt_state_flat={}`. No checkpoint on disk therefore carried optimizer state, so every
+# `--resume-from` constructed a fresh `optim.Adam` with both moments zeroed. That is the
+# pre-registered `#824` reset-operator ARM B, and the trainer's own `optimizer_arm` telemetry row
+# ships its price: `boundary_impulse_epochs_per_reset = 16.167`.
+#
+# WHAT IT COST, MEASURED: `ddm_gd5` §3.6 watched window_02's LIVE training signal jump 1.912 ->
+# 14.846 across a boundary and take ~17 epochs to return -- against the 16.167 prediction, from a
+# completely different channel. At ~46 epochs per 30-minute window a 666-epoch run pays that at
+# ~13.5 boundaries => ~218 epochs (33%) re-converging a deliberately reset optimizer, leaving ~450
+# effective epochs against an incumbent lineage that reached ep945.
+#
+# WHY A GATE AND NOT JUST THE FIX: `#824` closed arms A/C as "a BUILD, not a port" precisely
+# BECAUSE nothing read or wrote `opt_flat` -- the absence justified itself. Six identical bare
+# literals are what an omission looks like when it is never named at any callsite. The cure is not
+# "always persist" (the default must stay OFF so a sealed live chain keeps byte-identity); it is
+# that a callsite must SAY which it is. `no_opt_state("<reason>")` returns the same `{}` and
+# carries the rationale, so "none" is a decision instead of a lapse.
+#
+# DELIBERATELY NOT REFUSED: passing `{}` through a resolver, a variable, or `no_opt_state(...)`.
+# The gate refuses the BARE LITERAL only -- the shape an omission actually takes.
+# ---------------------------------------------------------------------------
+
+#: Roots scanned for `save_checkpoint(...)` callsites. Deliberately broad: the trainer is not the
+#: only place a checkpoint can be written, and a gate that scanned one file would print OK over a
+#: near-empty universe the moment the writer moved (the vacuity genus).
+_OPT_STATE_SCAN_ROOTS = ("experiments", "src/tac", "tools", "scripts")
+_OPT_STATE_KWARG = "opt_state_flat"
+_OPT_STATE_WAIVER = "OPT_STATE_DROP_OK"
+
+
+def _opt_state_candidate_files(root: Path) -> list[Path]:
+    """Every .py under the scan roots that mentions the kwarg at all (the DENOMINATOR)."""
+    out: list[Path] = []
+    for rel in _OPT_STATE_SCAN_ROOTS:
+        base = root / rel
+        if not base.is_dir():
+            continue
+        for path in sorted(base.rglob("*.py")):
+            if ".venv" in path.parts or "_intake_" in str(path):
+                continue
+            text = _read(path)
+            if text is not None and _OPT_STATE_KWARG in text:
+                out.append(path)
+    return out
+
+
+def check_checkpoint_saves_do_not_silently_drop_optimizer_state(
+    *,
+    repo_root: str | Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """ddm_op2 (OP2-1) — a ``save_checkpoint(..., opt_state_flat={})`` BARE LITERAL is refused.
+
+    A checkpoint that drops optimizer state turns every resume into a full Adam moment reset
+    (#824 arm B, MEASURED at 16.167 epochs of re-convergence per boundary). Dropping it may be
+    the RIGHT call -- the default is off precisely so a sealed live chain keeps byte-identity --
+    but it must be a STATED one. Pass the run's resolver, or ``no_opt_state("<rationale>")``,
+    which returns the same empty mapping and records why.
+
+    Per-line or per-file waiver: ``# OPT_STATE_DROP_OK:<rationale>`` (placeholder rejected).
+
+    STRICT from byte one: live count is 0 at landing (all six trainer callsites converted).
+    """
+    root = Path(repo_root or REPO_ROOT)
+    violations: list[str] = []
+    scanned = 0
+    callsites = 0
+    for path in _opt_state_candidate_files(root):
+        text = _read(path)
+        if text is None:
+            continue
+        scanned += 1
+        try:
+            tree = ast.parse(text)
+        except SyntaxError:
+            continue
+        lines = text.splitlines()
+        file_waived = _waiver_present(text, _OPT_STATE_WAIVER)
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call):
+                continue
+            for kw in node.keywords:
+                if kw.arg != _OPT_STATE_KWARG:
+                    continue
+                callsites += 1
+                # The bare-literal shape, and ONLY it: `opt_state_flat={}`.
+                if not (isinstance(kw.value, ast.Dict) and not kw.value.keys):
+                    continue
+                lineno = getattr(kw.value, "lineno", node.lineno)
+                line = lines[lineno - 1] if 0 < lineno <= len(lines) else ""
+                if file_waived or _waiver_present(line, _OPT_STATE_WAIVER):
+                    continue
+                rel = path.relative_to(root).as_posix()
+                violations.append(
+                    f"{rel}:{lineno}: `{_OPT_STATE_KWARG}={{}}` bare literal — this checkpoint "
+                    f"silently drops optimizer state, so every resume from it is a full Adam "
+                    f"moment reset (#824 arm B, MEASURED 16.167 epochs of re-convergence per "
+                    f"boundary; ~218 of 666 epochs in 30-minute windows). Pass the run's "
+                    f"optimizer-state resolver, or `no_opt_state(\"<rationale>\")` which returns "
+                    f"the same empty mapping WITH the reason, or add a "
+                    f"`# {_OPT_STATE_WAIVER}:<rationale>` waiver."
+                )
+    return _finish(
+        name="check_checkpoint_saves_do_not_silently_drop_optimizer_state",
+        tag="checkpoint-opt-state-not-silently-dropped",
+        violations=violations,
+        strict=strict,
+        verbose=verbose,
+        ok_detail=(f"{scanned} file(s) mentioning {_OPT_STATE_KWARG} scanned, "
+                   f"{callsites} keyword callsite(s) considered"),
+    )
+
+
+CONFOUND_GATES = (*CONFOUND_GATES,
+                  check_checkpoint_saves_do_not_silently_drop_optimizer_state)

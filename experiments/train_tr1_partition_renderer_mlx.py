@@ -1431,24 +1431,47 @@ def boundary_jump_row(parent_tail: list[dict[str, Any]], parent_ema_decay: float
     p_epoch, p_dseg = int(parent["epoch"]), float(parent["realized_gate_dseg_mean"])
     c_epoch, c_dseg = int(gate_row["epoch"]), float(gate_row["realized_gate_dseg_mean"])
     span = c_epoch - p_epoch
-    held = (parent_ema_decay is not None
-            and abs(float(parent_ema_decay) - float(child_ema_decay)) <= 1e-12)
+    # LEG 1 — the DECAY leg (the original condition): same averaging LENGTH.
+    decay_held = (parent_ema_decay is not None
+                  and abs(float(parent_ema_decay) - float(child_ema_decay)) <= 1e-12)
+    # LEG 2 — the BASIS leg (ddm_op2, 2026-08-03, MEASURED defect OP2-2): same OBJECT.
+    # The row already carried both basis fields and did not use them. `ema_basis_held` was
+    # computed from the decay ALONE, so it stamped `true` on window_02's boundary — where
+    # parent_gate_basis='live_ema_warmup' (window_01 gates on LIVE weights, global_step below
+    # the EMA warmup) and first_gate_basis='ema_shadow' (every RESUMED window sets
+    # global_step = ema_warmup_updates ⇒ "resume ⇒ warm shadow"). MEASURED: parent ep44 read
+    # 0.0157596 (live) against child ep49's 0.5118894 (shadow), a 32x apparent collapse
+    # certified as "commensurable" beside a boundary_dseg_delta of +0.496. The magnitude is
+    # fully explained by the sealed decay: 1/(1-0.9999199) = 12,487 updates = 166.5 epochs, so
+    # at ep46 the shadow still carries exp(-3450/12487) = 76% weight on INITIALIZATION.
+    # Matching decays are necessary and NOT sufficient — two shadows of equal length read off
+    # different weight sets are still two different quantities (the L1 "instrument reads the
+    # wrong quantity" class that `a1_smooth_excluding_delta_penalty` documents, one level up).
+    # FAIL-CLOSED on an unverifiable basis: an absent basis field cannot certify commensurability.
+    p_basis, c_basis = parent.get("gate_params"), gate_row.get("gate_params")
+    basis_held = (p_basis is not None and c_basis is not None and p_basis == c_basis)
+    held = bool(decay_held and basis_held)
     return {
         "event": "boundary_jump", "arm": arm,
         "parent_gate_epoch": p_epoch, "parent_gate_dseg": p_dseg,
-        "parent_gate_basis": parent.get("gate_params"),
+        "parent_gate_basis": p_basis,
         "first_gate_epoch": c_epoch, "first_gate_dseg": c_dseg,
-        "first_gate_basis": gate_row.get("gate_params"),
+        "first_gate_basis": c_basis,
         "resume_epoch": int(resume_epoch),
         "boundary_span_epochs": span,
         "boundary_dseg_delta": c_dseg - p_dseg,
         "boundary_dseg_per_epoch": (c_dseg - p_dseg) / span if span > 0 else None,
-        "ema_basis_held": bool(held),
+        "ema_basis_held": held,
+        # Which LEG failed, so a reader never has to re-derive it from the two basis strings.
+        "ema_decay_held": bool(decay_held),
+        "gate_basis_held": bool(basis_held),
         "parent_ema_decay": (None if parent_ema_decay is None else float(parent_ema_decay)),
         "child_ema_decay": float(child_ema_decay),
         "score_claim": False, "evidence_axis": "[macOS-CPU/MLX advisory]",
         "caveat": "ADVISORY realized-argmax gate on the fd2 gate subset, NOT an exact-eval row; "
-                  "commensurable with the parent reading ONLY when ema_basis_held is true",
+                  "commensurable with the parent reading ONLY when ema_basis_held is true "
+                  "(BOTH ema_decay_held — same averaging length — AND gate_basis_held — same "
+                  "object: live weights vs EMA shadow are not one series)",
     }
 
 
@@ -1657,8 +1680,33 @@ class ResumeGeometryMismatch(RuntimeError):
     """A checkpoint's parameter geometry does not match the live model (fail-closed)."""
 
 
+#: MLX ``Optimizer.state`` entries that are NOT per-parameter (scalars), so they carry no model
+#: geometry and are exempt from the shape check.  VERIFIED against the installed mlx 0.31.2
+#: (``tree_flatten(optim.Adam(...).state)`` after one update ⇒ ``step`` (uint64), ``learning_rate``
+#: (float32), then ``<param path>.m`` / ``<param path>.v`` at the parameter's own shape).
+OPT_STATE_SCALAR_KEYS = ("step", "learning_rate")
+#: Per-parameter Adam moment suffixes.  ``<param path>.m`` must have ``<param path>``'s shape.
+OPT_STATE_MOMENT_SUFFIXES = (".m", ".v")
+
+
+def opt_state_param_path(key: str) -> str | None:
+    """The model-parameter path a flattened optimizer-state key belongs to, or None for a scalar.
+
+    ``'tokens_base.m' -> 'tokens_base'``; ``'step' -> None``.  Pure; the single place that knows
+    the MLX state-key convention, so the guard and the restore path cannot disagree about it.
+    """
+    if key in OPT_STATE_SCALAR_KEYS:
+        return None
+    for suffix in OPT_STATE_MOMENT_SUFFIXES:
+        if key.endswith(suffix):
+            return key[: -len(suffix)]
+    return None
+
+
 def assert_resume_geometry_compatible(ckpt_param_shapes: dict[str, tuple[int, ...]],
-                                      model_param_shapes: dict[str, tuple[int, ...]]) -> list[str]:
+                                      model_param_shapes: dict[str, tuple[int, ...]],
+                                      ckpt_opt_shapes: dict[str, tuple[int, ...]] | None = None,
+                                      ) -> list[str]:
     """REFUSE a resume whose checkpoint params do not fit the live model.
 
     ddm_gd4 G1 (MEASURED defect, 2026-08-02): ``mlx.nn.Module.update`` assigns a
@@ -1676,12 +1724,31 @@ def assert_resume_geometry_compatible(ckpt_param_shapes: dict[str, tuple[int, ..
     params present in the model but absent from the checkpoint (the legitimate
     newly-introduced-lever case the caller backfills); raises on any shape conflict
     or on a checkpoint param the model does not have.
+
+    ``ckpt_opt_shapes`` (ddm_op2, OP2-1) extends the SAME guard over the persisted
+    optimizer-moment tree rather than letting that payload travel around it. Every
+    ``<param>.m`` / ``<param>.v`` carries the parameter's own shape, so a ds=16
+    moment tree is exactly as inadmissible in a ds=32 model as the params are —
+    and ``optimizer.state`` assignment is the same silent-reshape surface
+    ``Module.update`` is. Scalars (``step`` / ``learning_rate``) are geometry-free
+    and exempt. ``None`` (the default) ⇒ byte-identical behaviour to the pre-OP2-1
+    guard, so no existing caller changes.
     """
     shape_conflicts = sorted(
         f"{k}: ckpt{tuple(ckpt_param_shapes[k])} != model{tuple(model_param_shapes[k])}"
         for k in (ckpt_param_shapes.keys() & model_param_shapes.keys())
         if tuple(ckpt_param_shapes[k]) != tuple(model_param_shapes[k]))
     orphaned = sorted(ckpt_param_shapes.keys() - model_param_shapes.keys())
+    for _k, _shape in sorted((ckpt_opt_shapes or {}).items()):
+        _path = opt_state_param_path(_k)
+        if _path is None:
+            continue                      # step / learning_rate: geometry-free
+        if _path not in model_param_shapes:
+            orphaned.append(f"opt::{_k} (no model param {_path!r})")
+        elif tuple(_shape) != tuple(model_param_shapes[_path]):
+            shape_conflicts.append(
+                f"opt::{_k}: ckpt{tuple(_shape)} != model{tuple(model_param_shapes[_path])}")
+    shape_conflicts, orphaned = sorted(shape_conflicts), sorted(orphaned)
     if shape_conflicts or orphaned:
         raise ResumeGeometryMismatch(
             "resume REFUSED — checkpoint geometry does not match the live model "
@@ -1695,20 +1762,129 @@ def assert_resume_geometry_compatible(ckpt_param_shapes: dict[str, tuple[int, ..
     return sorted(model_param_shapes.keys() - ckpt_param_shapes.keys())
 
 
+def no_opt_state(reason: str) -> dict[str, np.ndarray]:
+    """An EXPLICIT "this checkpoint deliberately carries no optimizer state", with the reason.
+
+    ddm_op2 (OP2-1): a bare ``opt_state_flat={}`` literal cannot be told apart from a site that
+    silently forgot to thread the state — which is exactly how all six callsites came to drop it
+    (``#824`` recorded the result as reset-arm B, and ``ddm_gd5`` §3.6 measured its price at
+    16.167 epochs per boundary). Every callsite now passes either the run's resolver or this,
+    so "none" is a stated decision carrying its rationale, and the sister gate
+    ``check_tr1_save_checkpoint_threads_optimizer_state`` can refuse the bare literal.
+    """
+    if not isinstance(reason, str) or len(reason.strip()) < 8:
+        raise ValueError("no_opt_state(reason=...) needs a substantive rationale "
+                         "(placeholder/empty rejected)")
+    return {}
+
+
+def optimizer_state_to_flat(optimizer) -> dict[str, np.ndarray]:
+    """Flatten ``optimizer.state`` to the ``opt::``-prefixable numpy payload (ddm_op2, OP2-1).
+
+    Returns ``{}`` before the optimizer has any per-parameter state (a freshly constructed
+    optimizer that has neither ``.init()``-ed nor stepped carries only ``step`` /
+    ``learning_rate``); persisting a moment-free state would be a truthful-looking checkpoint
+    that restores nothing, which is the silent-drop class this whole fix exists to close.
+    """
+    from mlx.utils import tree_flatten
+
+    flat = {k: np.asarray(v) for k, v in tree_flatten(optimizer.state)}
+    if not any(opt_state_param_path(k) is not None for k in flat):
+        return {}
+    return flat
+
+
+class OptimizerStateRestoreError(RuntimeError):
+    """The persisted optimizer state cannot be restored onto the live optimizer (fail-closed)."""
+
+
+def restore_optimizer_state(optimizer, model, opt_flat: dict[str, np.ndarray]) -> dict[str, Any]:
+    """Restore persisted Adam moments onto ``optimizer``; returns a typed telemetry row.
+
+    THE DEFECT THIS CLOSES (ddm_op2 OP2-1, MEASURED by ``ddm_gd5`` §3.6 and corroborated here).
+    All six ``save_checkpoint`` callsites passed ``opt_state_flat={}``, so **no checkpoint on
+    disk carried optimizer state** and every resume constructed a fresh ``optim.Adam`` with both
+    moments zeroed — the pre-registered ``#824`` reset-operator **arm B**
+    (``what='both', to='zero', structure='uniform'``). The trainer's own ``optimizer_arm`` row
+    ships the price: ``boundary_impulse_epochs_per_reset = 16.167``. Executed in 30-minute
+    windows at the MEASURED ~46 epochs/window, a 666-epoch run pays that at ~13.5 boundaries
+    ⇒ **~218 of 666 epochs (33%) spent re-converging a deliberately reset Adam**, leaving
+    ~450 effective epochs against an incumbent lineage that reached ep945. ``#824`` scoped
+    arms A/C out as "a BUILD, not a port" because ``opt_flat`` had one repo-wide hit that
+    nothing read; the measurement made the BUILD load-bearing.
+
+    POSITIVE CONTROL (MEASURED, ddm_op2, mlx 0.31.2, in-tree as
+    ``test_ddm_op2_optimizer_state_persistence.py``): 3 steps → snapshot → rebuild → restore →
+    3 steps reproduces an uninterrupted 6-step run to **max abs param diff 0.0**, while the
+    reset path diverges by 5.5e-2. A boundary with persistence is a no-op on trained bytes;
+    that is the whole claim, and it is measured rather than argued.
+
+    ``learning_rate`` is deliberately NOT restored: the live ``cfg.lr`` must win, or a window
+    that changed ``--lr`` would silently keep the parent's (a silent-wrong of exactly the kind
+    the resume-geometry guard exists to refuse). A difference is reported on the row, LOUD.
+    """
+    import mlx.core as mx
+    from mlx.utils import tree_flatten, tree_unflatten
+
+    moments = {k: v for k, v in opt_flat.items() if opt_state_param_path(k) is not None}
+    if not moments:
+        raise OptimizerStateRestoreError(
+            "optimizer-state restore REFUSED — the checkpoint carries no per-parameter moments "
+            f"(keys: {sorted(opt_flat) or 'none'}). Resuming from it would silently be an "
+            "arm-B zero reset while claiming persistence.")
+    # Materialize the per-parameter state so the moments have somewhere to land: MLX creates
+    # it lazily on the first `update`, so a freshly constructed optimizer has only the scalars.
+    optimizer.init(model.trainable_parameters())
+    live = dict(tree_flatten(optimizer.state))
+    missing = sorted(k for k in live if opt_state_param_path(k) is not None and k not in opt_flat)
+    extra = sorted(k for k in moments if k not in live)
+    if extra:
+        raise OptimizerStateRestoreError(
+            f"optimizer-state restore REFUSED — checkpoint moments absent from the live "
+            f"optimizer: {extra}. Never assign optimizer state the live tree does not have.")
+    parent_lr = (float(opt_flat["learning_rate"]) if "learning_rate" in opt_flat else None)
+    live_lr = float(live["learning_rate"]) if "learning_rate" in live else None
+    for k, v in moments.items():
+        live[k] = mx.array(v)
+    if "step" in opt_flat:
+        live["step"] = mx.array(opt_flat["step"])
+    optimizer.state = tree_unflatten(list(live.items()))
+    mx.eval(optimizer.state)
+    return {
+        "event": "optimizer_state_restored", "arm": "ddm_op2",
+        "moments_restored": len(moments),
+        "step_restored": (int(np.asarray(opt_flat["step"]).reshape(-1)[0])
+                          if "step" in opt_flat else None),
+        # A param the checkpoint has no moment for (a lever introduced since) starts at zero
+        # moment BY DESIGN — that is the honest state, and it is NAMED rather than silent.
+        "moments_missing_start_at_zero": missing,
+        "parent_learning_rate": parent_lr, "live_learning_rate": live_lr,
+        "learning_rate_restored": False,
+        "learning_rate_differs": (parent_lr is not None and live_lr is not None
+                                  and abs(parent_lr - live_lr) > 1e-12),
+        "score_claim": False, "evidence_axis": "[macOS-CPU/MLX advisory]",
+        "note": "#824 arm C (persisted (m,v)): the boundary reset impulse "
+                "(16.167 epochs/reset) is not paid. learning_rate is NOT restored — the live "
+                "cfg.lr wins by design.",
+    }
+
+
 def load_checkpoint(path: Path, model) -> dict[str, Any]:
     import mlx.core as mx
     from mlx.utils import tree_flatten, tree_unflatten
 
     z = np.load(path, allow_pickle=False)
     params = [(k[len("param::"):], mx.array(z[k])) for k in z.files if k.startswith("param::")]
+    opt = {k[len("opt::"):]: z[k] for k in z.files if k.startswith("opt::")}
     # P0 fail-closed geometry guard BEFORE any assignment (see the docstring above).
+    # ddm_op2 (OP2-1): the optimizer-moment tree goes THROUGH this guard, never around it.
     new_params = assert_resume_geometry_compatible(
         {k: tuple(v.shape) for k, v in params},
         {k: tuple(np.asarray(v).shape)
-         for k, v in tree_flatten(model.trainable_parameters())})
+         for k, v in tree_flatten(model.trainable_parameters())},
+        {k: tuple(np.asarray(v).shape) for k, v in opt.items()})
     model.update(tree_unflatten(params))
     ema = {k[len("ema::"):]: mx.array(z[k]) for k in z.files if k.startswith("ema::")}
-    opt = {k[len("opt::"):]: z[k] for k in z.files if k.startswith("opt::")}
     meta = json.loads(bytes(z["meta::json"]).decode())
     return {"epoch": int(z["meta::epoch"][0]), "ema": ema, "opt_flat": opt, "meta": meta,
             "params_new_since_checkpoint": new_params}
@@ -1975,6 +2151,20 @@ def build_argparser() -> argparse.ArgumentParser:
                          "for the sealed r1c-lineage byte-identity guarantee (default-off-is-"
                          "orphan reconciliation: score-neutral telemetry is off here NOT by "
                          "orphaning but because a sealed live run demands trained-byte invariance)")
+    # ---- ddm_op2 (OP2-1) optimizer-state persistence — #824 arm C, the BUILD ----
+    ap.add_argument("--persist-optimizer-state", default="off", choices=("off", "on"),
+                    help="'on' saves Adam moments into every training checkpoint (opt:: keys) "
+                         "and restores them on --resume-from, so a window boundary is a NO-OP on "
+                         "trained bytes (MEASURED: restore reproduces an uninterrupted run to "
+                         "max-abs-diff 0.0; reset diverges 5.5e-2). Closes #824 arm C. DEFAULT "
+                         "'off' => BYTE-IDENTICAL trained/checkpoint bytes to every pre-OP2-1 "
+                         "run: the flag is threaded via args ONLY (never TR1Config => "
+                         "config_hash, ema_decay and the sealed ticket are all flag-invariant, "
+                         "the telemetry_v9_port precedent), and with it off save_checkpoint "
+                         "writes no opt:: keys at all. It is OFF rather than ON because a LIVE "
+                         "sealed chain is mid-flight and switching the reset arm underneath it "
+                         "would make its own windows incommensurable -- turn it ON for the next "
+                         "FROM-SCRATCH run, where it is worth ~218 of 666 epochs.")
     return ap
 
 
@@ -2210,7 +2400,11 @@ def main() -> int:
                         model=model,
                         ema={k: mx.array(v)
                              for k, v in tree_flatten(model.trainable_parameters())},
-                        opt_state_flat={}, epoch=-1, stage="solve_init_pretrain",
+                        opt_state_flat=no_opt_state(
+                            "solve-init pretrain uses its OWN local projection optimizer "
+                            "and the block is `args.resume_from is None`-gated, so no "
+                            "resume ever reads moments from it (ddm_op2 OP2-1)"),
+                        epoch=-1, stage="solve_init_pretrain",
                         cfg=cfg, telemetry_tail=[])
         del tgt, ds, tok
         # Scorer-loop Adam moments are created FRESH below (warm-start re-anchor
@@ -2244,7 +2438,19 @@ def main() -> int:
               BOUNDARY_IMPULSE_CONVERGENCE_STEPS, steps_per_epoch, RESET_ADAM_BETAS),
           "note": "arm B (bias_correction False) IS MLX's Adam default => trained bytes "
                   "identical to every pre-#824 run; arm B' removes the eta(t) reset impulse",
+          "persist_optimizer_state": args.persist_optimizer_state,
           "score_claim": False})
+
+    # ddm_op2 (OP2-1): the ONE place a training checkpoint's optimizer payload is resolved.
+    # OFF (default) => `{}` => zero `opt::` keys => checkpoint bytes identical to every
+    # pre-OP2-1 run, so the LIVE sealed chain is untouched. ON => #824 arm C.
+    _persist_opt = (args.persist_optimizer_state == "on")
+
+    def _opt_state() -> dict[str, np.ndarray]:
+        if not _persist_opt:
+            return no_opt_state("--persist-optimizer-state off (default): trained/checkpoint "
+                                "bytes stay identical to every pre-OP2-1 run (#824 arm B)")
+        return optimizer_state_to_flat(optimizer)
 
     # ddm_bp1 (#824) boundary instrument state (args-only, never TR1Config => trained bytes are
     # flag-invariant; the telemetry_v9_port precedent). Interval decomposition + the boundary_jump
@@ -2256,6 +2462,11 @@ def main() -> int:
     boundary_parent_ema_decay: float | None = None
     boundary_ema_held = True          # a fresh (non-resume) run has no basis to drift from
     boundary_jump_emitted = False
+    # ddm_op2 (OP2-2): the STRICT decay+basis verdict, known only once the first post-resume gate
+    # has run (the basis is a property of the READING, not of the resume). None until then, so the
+    # receipt can never present the decay-only leg as if it were the strict flag.
+    boundary_strict_basis_held: bool | None = None
+    boundary_gate_basis_held: bool | None = None
 
     ema: dict[str, Any] = {k: mx.array(v) for k, v in tree_flatten(model.trainable_parameters())}
     start_epoch = 0
@@ -2275,6 +2486,31 @@ def main() -> int:
         backfilled = [k for k in model_init if k not in ema]
         for k in backfilled:
             ema[k] = mx.array(model_init[k])
+        # ddm_op2 (OP2-1): restore the Adam moments, so the boundary is a no-op on trained bytes
+        # instead of a 16.167-epoch re-convergence impulse (#824 arm C; ddm_gd5 §3.6). The
+        # payload already passed the resume-geometry guard inside load_checkpoint.
+        _resume_opt_flat = st.get("opt_flat") or {}
+        if _persist_opt:
+            if _resume_opt_flat:
+                tlog({**restore_optimizer_state(optimizer, model, _resume_opt_flat),
+                      "epoch": start_epoch, "resume_from": str(args.resume_from)})
+            else:
+                # LOUD, never silent: persistence was REQUESTED but the parent has no moments,
+                # so this boundary IS an arm-B zero reset and must not be reported as arm C.
+                tlog({"event": "confound_alarm", "kind": "optimizer_state_absent_on_resume",
+                      "epoch": start_epoch, "resume_from": str(args.resume_from),
+                      "note": "--persist-optimizer-state on, but the parent checkpoint carries "
+                              "no opt:: keys (written before OP2-1, or by a run with the flag "
+                              "off). This boundary pays the full arm-B reset impulse "
+                              "(16.167 epochs); every LATER boundary in this chain will not."})
+        elif _resume_opt_flat:
+            # The mirror case: the parent persisted moments and this run is discarding them.
+            tlog({"event": "confound_alarm", "kind": "optimizer_state_discarded_on_resume",
+                  "epoch": start_epoch, "resume_from": str(args.resume_from),
+                  "moments_available": len(_resume_opt_flat),
+                  "note": "the parent checkpoint CARRIES optimizer moments and this run is "
+                          "resetting them (--persist-optimizer-state off) — a deliberate arm-B "
+                          "boundary, named here so it is never mistaken for arm C."})
         # §3.3(a) resume-past-knee: if the STE anneal already engaged (we resume in a post-CE
         # stage), re-engage it so the token forward matches the checkpointed lattice state.
         if cfg.token_quant_anneal == "at_knee" and stage != "seg_trunk_ce":
@@ -2314,6 +2550,12 @@ def main() -> int:
               "ema_backfilled_new_params": backfilled,
               "parent_ema_decay": boundary_parent_ema_decay,
               "child_ema_decay": cfg.ema_decay, "ema_basis_held": bool(boundary_ema_held),
+              # ddm_op2 (OP2-2): this row runs BEFORE any gate, so it can only know the DECAY
+              # leg. Named explicitly so no reader mistakes it for the strict decay+basis flag
+              # (that one is on the `boundary_jump` row, at the first post-resume gate).
+              "ema_decay_held": bool(boundary_ema_held),
+              "gate_basis_held": None,
+              "held_scope": "decay_only_gate_basis_not_yet_observable",
               "parent_gate_anchors": len(boundary_parent_tail)})
         if not boundary_ema_held:
             # L1 runtime alarm — LOUD, never silent (confound self-protection).
@@ -2660,7 +2902,7 @@ def main() -> int:
             rel = (w[0] - w[-1]) / max(abs(w[0]), 1e-12) / 3.0
             if rel < 0.01:
                 save_checkpoint(out_dir / "checkpoints" / "stage_seg_trunk_ce_exit.npz",
-                                model=model, ema=ema, opt_state_flat={}, epoch=epoch,
+                                model=model, ema=ema, opt_state_flat=_opt_state(), epoch=epoch,
                                 stage=stage, cfg=cfg, telemetry_tail=telemetry_tail)
                 state_form["form"] = "tau_softplus"
                 stage = "seg_trunk_tau"
@@ -2691,7 +2933,7 @@ def main() -> int:
         # never a stranded stage (recorded as fallback, distinct from the knee).
         if not knee_switched and state_form["form"] == "ce" and epoch >= cfg.epochs // 2:
             save_checkpoint(out_dir / "checkpoints" / "stage_seg_trunk_ce_exit.npz",
-                            model=model, ema=ema, opt_state_flat={}, epoch=epoch,
+                            model=model, ema=ema, opt_state_flat=_opt_state(), epoch=epoch,
                             stage=stage, cfg=cfg, telemetry_tail=telemetry_tail)
             state_form["form"] = "tau_softplus"
             stage = "seg_trunk_tau"
@@ -2793,6 +3035,22 @@ def main() -> int:
                     start_epoch, gate_row, resolve_arm_name(_reset_arm) or "unknown")
                 boundary_jump_emitted = True
                 if _bj is not None:
+                    boundary_strict_basis_held = bool(_bj["ema_basis_held"])
+                    boundary_gate_basis_held = bool(_bj["gate_basis_held"])
+                    if not _bj["gate_basis_held"]:
+                        # L1 runtime alarm — LOUD, never silent. The parent and child gate
+                        # readings came off DIFFERENT weight sets (live vs EMA shadow), so the
+                        # boundary_dseg_delta on this row is a BASIS SWITCH, not a training
+                        # change, and no cross-boundary d_seg comparison may use it.
+                        tlog({"event": "confound_alarm", "kind": "gate_basis_switch",
+                              "epoch": int(gate_row.get("epoch", start_epoch)),
+                              "parent_gate_basis": _bj["parent_gate_basis"],
+                              "first_gate_basis": _bj["first_gate_basis"],
+                              "boundary_dseg_delta": _bj["boundary_dseg_delta"],
+                              "note": "parent and child gate readings are taken off DIFFERENT "
+                                      "objects (live weights vs EMA shadow) — the apparent jump "
+                                      "is a readout basis switch. Compare SAME-basis windows "
+                                      "only; ema_basis_held is False on this boundary."})
                     # MEASUREMENT-BASIS invariant (round-2): a RESUMED run reports the ema_shadow
                     # basis from its FIRST gate while a FRESH run reads live_ema_warmup for U/2
                     # updates — so a fresh arm and a resumed arm are read on DIFFERENT instruments
@@ -2844,7 +3102,7 @@ def main() -> int:
                 tlog(_lg_row)
             prev_gate_row, prev_gate_smooth, prev_realized = gate_row, a1_smooth, realized_argmax
             save_checkpoint(out_dir / "checkpoints" / f"intra_{stage}_ep{epoch:05d}.npz",
-                            model=model, ema=ema, opt_state_flat={}, epoch=epoch,
+                            model=model, ema=ema, opt_state_flat=_opt_state(), epoch=epoch,
                             stage=stage, cfg=cfg, telemetry_tail=telemetry_tail)
 
             # ddm_tp1 (#804) v9 telemetry PORT emissions (READ-ONLY; gated => byte-identical
@@ -2930,7 +3188,7 @@ def main() -> int:
                 w = basin_window
                 if basin_entry_fires(w):
                     save_checkpoint(out_dir / "checkpoints" / "stage_basin_entry.npz",
-                                    model=model, ema=ema, opt_state_flat={}, epoch=epoch,
+                                    model=model, ema=ema, opt_state_flat=_opt_state(), epoch=epoch,
                                     stage="basin_entry", cfg=cfg,
                                     telemetry_tail=telemetry_tail)
                     handoff = {
@@ -2974,7 +3232,7 @@ def main() -> int:
 
     # Terminal stage checkpoint (distinct stage-encoded name; EMA shadow inside).
     save_checkpoint(out_dir / "checkpoints" / f"stage_{stage}_final.npz",
-                    model=model, ema=ema, opt_state_flat={}, epoch=len(ep_losses) + start_epoch,
+                    model=model, ema=ema, opt_state_flat=_opt_state(), epoch=len(ep_losses) + start_epoch,
                     stage=stage, cfg=cfg, telemetry_tail=telemetry_tail)
 
     receipt: dict[str, Any] = {
@@ -2994,7 +3252,16 @@ def main() -> int:
         "a1_alarms": a1_alarm_summary(telemetry_tail),
         "gate_basis_mode": ("resumed_warm_shadow" if args.resume_from is not None
                             else "fresh_live_then_shadow"),
-        "ema_basis_held": bool(boundary_ema_held),
+        # ddm_op2 (OP2-2): the receipt reports the STRICT decay+basis verdict once the first
+        # post-resume gate has observed the basis; before that it can only report the decay leg,
+        # and it says which one it is rather than presenting the weaker leg under the strict name.
+        "ema_basis_held": (bool(boundary_strict_basis_held)
+                           if boundary_strict_basis_held is not None
+                           else bool(boundary_ema_held)),
+        "ema_decay_held": bool(boundary_ema_held),
+        "gate_basis_held": boundary_gate_basis_held,
+        "held_scope": ("decay_and_gate_basis" if boundary_strict_basis_held is not None
+                       else "decay_only_no_post_resume_gate_observed"),
         "boundary_probe": args.boundary_probe,
     }
 

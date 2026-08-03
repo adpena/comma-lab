@@ -339,9 +339,13 @@ def main() -> int:
                                      "is now emitted per gate and summarized on the boundary row; "
                                      "if B' collapses the jump it should quieten too",
         },
-        "out_of_scope": "arm C (persisted (m,v)) — opt_flat has ONE repo-wide hit (the "
-                        "load_checkpoint return) that nothing reads, and nothing writes it; C is "
-                        "a BUILD, not a port, and must not gate this race",
+        "out_of_scope": "arm C (persisted (m,v)) — at #824 scoping time opt_flat had ONE "
+                        "repo-wide hit (the load_checkpoint return) that nothing read and "
+                        "nothing wrote; C was a BUILD, not a port, and must not gate this race. "
+                        "SUPERSEDED 2026-08-03 (ddm_op2 OP2-1): the BUILD landed as the "
+                        "args-only, DEFAULT-OFF --persist-optimizer-state after ddm_gd5 §3.6 "
+                        "MEASURED the omission at ~218 of 666 epochs; arm C is still not a "
+                        "gate on this B-vs-B' race, but it is no longer unavailable",
     }
     if not args.write:
         print(json.dumps(receipt, indent=2, sort_keys=True))

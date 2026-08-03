@@ -8,6 +8,10 @@ is made from these tests (NO-FAKE #3); realized evidence comes from the governed
 
 from __future__ import annotations
 
+# OPT_STATE_DROP_OK: test FIXTURE checkpoints written to exercise save/load shape; no live
+# resume ever reads them, so the #824 arm-B boundary impulse this gate prices cannot apply
+# here (ddm_op2 OP2-1).
+
 import sys
 from pathlib import Path
 

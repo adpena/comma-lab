@@ -13,6 +13,10 @@ No scorer claim is made anywhere here. Pointer 0.1910828242 [contest-CPU] UNMOVE
 
 from __future__ import annotations
 
+# OPT_STATE_DROP_OK: test FIXTURE checkpoints written to exercise save/load shape; no live
+# resume ever reads them, so the #824 arm-B boundary impulse this gate prices cannot apply
+# here (ddm_op2 OP2-1).
+
 import json
 import math
 import sys
