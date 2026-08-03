@@ -63,6 +63,19 @@ from tac.canonical_equations.ddm_fs1_coordinate_fit_staleness_20260802 import (
 V4C = Path("/Volumes/VertigoDataTier/pact/ddm_v4c_20260730")
 OUT = Path("/Volumes/VertigoDataTier/pact/ddm_v4d_20260731")
 PHOTO_JL = V4C / "photo_celldrop50_resolve.partial.jsonl"
+
+# ddm_rd2: the REFINE stage's base was five hardcoded bindings (three
+# ``build_oracle("celldrop50")`` call sites, the sf1 fit-context stamp, and this photo
+# path), and this module had NO base flag at all.  ddm_uv1 parametrized the v4c resolver
+# (``resolve_base`` + ``--base-archive``) but v4d was left literal, so the dim0-offset
+# refine + beta select -- the exact stage uv1 named as its own honesty limit ("the live
+# chain adds a dim0-offset refine and beta select on top of what I ran") -- was
+# STRUCTURALLY unreachable for any base but this one.  A REJECT that a stage cannot be run
+# against is scoped to the stages that WERE run, so this closes the gap between what uv1
+# could measure and what the live chain does.  Defaults are the shipped literals, so an
+# invocation with no new flags is byte-identical.
+_BASE_LABEL = "celldrop50"
+_BASE_ARCHIVE: str | None = None
 BETA_MAGS = (0.0, 0.5, 1.0)  # the SEED menu; ddm_pw1 extends it per pair
 GAIN_FD, BIAS_FD = 0.02, 2.0
 GN_RELINS_PHOTO = 4
@@ -333,7 +346,7 @@ def run_refine(args: argparse.Namespace) -> None:
     import torch
     torch.set_num_threads(1)
     OUT.mkdir(parents=True, exist_ok=True)
-    oracle = v4c.build_oracle("celldrop50", s_r=1.0)
+    oracle = v4c.build_oracle(_BASE_LABEL, s_r=1.0, archive=_BASE_ARCHIVE)
     comp = v4c.StaticComposer(oracle)
     photo = load_photo(PHOTO_JL)
     n = len(photo)
@@ -398,7 +411,7 @@ def run_refine(args: argparse.Namespace) -> None:
                    coefficient="ab_gain_bias",
                    partners={"beta": 0.0, "p0": float(pose[0]),
                              "p1": float(pose[1]), "p2": float(pose[2])},
-                   base="celldrop50",
+                   base=_BASE_LABEL,
                    fit_menu=BETA_MAGS,
                    # _beta_select pins beta = g*yaw_sign, g >= 0 (see its
                    # yaw_sign line): the menu was sampled at ONE sign, so an
@@ -554,7 +567,7 @@ def run_qa70(args: argparse.Namespace) -> None:
     import torch
     torch.set_num_threads(1)
     OUT.mkdir(parents=True, exist_ok=True)
-    oracle = v4c.build_oracle("celldrop50", s_r=1.0)
+    oracle = v4c.build_oracle(_BASE_LABEL, s_r=1.0, archive=_BASE_ARCHIVE)
     comp = v4c.StaticComposer(oracle)
     photo = load_photo(PHOTO_JL)
     n = len(photo)
@@ -720,7 +733,7 @@ def run_qa72a(args: argparse.Namespace) -> None:
     import torch
     torch.set_num_threads(1)
     OUT.mkdir(parents=True, exist_ok=True)
-    oracle = v4c.build_oracle("celldrop50", s_r=1.0)
+    oracle = v4c.build_oracle(_BASE_LABEL, s_r=1.0, archive=_BASE_ARCHIVE)
     comp = v4c.StaticComposer(oracle)
     photo = load_photo(PHOTO_JL)
     n = len(photo)
@@ -837,6 +850,41 @@ def run_resummarize(args: argparse.Namespace) -> None:
     _summarize_refine(photo, cache, offset)
 
 
+def _bind_base_context(args: argparse.Namespace) -> None:
+    """ddm_rd2: bind the base ONCE, before dispatch. Fail closed on cache collision.
+
+    Every stage reads ``_BASE_LABEL`` / ``_BASE_ARCHIVE`` / ``PHOTO_JL`` / ``OUT`` as
+    module globals at call time, so one bind point covers all five former literals.
+
+    The REFUSAL is the load-bearing part: a non-default base writing into the celldrop50
+    ``OUT`` would silently mix two bases' ``*.partial.jsonl`` resume caches, and the
+    resumed rows carry no base field -- a cross-base contamination that would read as a
+    clean resume. Requiring an explicit ``--out-dir`` makes that unrepresentable rather
+    than merely discouraged.
+    """
+    global _BASE_LABEL, _BASE_ARCHIVE, PHOTO_JL, OUT
+    label = str(args.base)
+    if label != _BASE_LABEL and not args.out_dir:
+        raise SystemExit(
+            f"--base {label!r} is not the default {_BASE_LABEL!r}: pass --out-dir to keep "
+            f"its caches separate. Reusing {OUT} would mix two bases' resume JSONLs, "
+            f"which carry no base field and would resume as if clean."
+        )
+    _BASE_LABEL = label
+    _BASE_ARCHIVE = args.base_archive
+    if args.photo_jl:
+        PHOTO_JL = Path(args.photo_jl)
+    elif label != "celldrop50":
+        PHOTO_JL = V4C / f"photo_{label}_resolve.partial.jsonl"
+    if args.out_dir:
+        OUT = Path(args.out_dir)
+    if not PHOTO_JL.exists():
+        raise SystemExit(
+            f"photo JSONL for base {label!r} not found: {PHOTO_JL}. Run the v4c photo "
+            f"stage against this base first (ddm_v4c_resolve.py --base/--base-archive)."
+        )
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--mode",
@@ -850,7 +898,18 @@ def main() -> int:
     ap.add_argument("--accept-eps", type=float, default=1e-9,
                     help="qa70: realized d equality tolerance for member swap")
     ap.add_argument("--resume", action=argparse.BooleanOptionalAction, default=True)
+    # ddm_rd2: base parametrization, mirroring the v4c resolver's ddm_uv1 contract.
+    ap.add_argument("--base", default=_BASE_LABEL,
+                    help="base label resolved by v4c.resolve_base; any label outside "
+                         "its BASES dict additionally requires --base-archive")
+    ap.add_argument("--base-archive", default=None,
+                    help="explicit v3_warp-grammar base archive (see v4c.resolve_base)")
+    ap.add_argument("--photo-jl", default=None,
+                    help="v4c photo JSONL for this base; default is the celldrop50 one")
+    ap.add_argument("--out-dir", default=None,
+                    help="output dir; REQUIRED when --base is not the default")
     args = ap.parse_args()
+    _bind_base_context(args)
     if args.mode == "qa66":
         run_qa66(args)
     elif args.mode == "refine":
