@@ -616,6 +616,50 @@ licensed by this memo.**
 
 ---
 
+## §9 THE CONTROL GROUP — is the defect tail-specific or population-wide?
+
+**Design, pre-committed before any scorer time** (seed 20260803): decile-stratified over the
+**594 non-tail pairs**, one pair per decile — `[235, 471, 298, 495, 318, 386, 34, 100, 387, 63]`.
+Rank-stratification is used so ratio-vs-`d_pose` dependence is *visible*, and each decile's `d_pose`
+mass is carried so the extrapolation uses proper weights rather than the sample's raw mean.
+
+**The matching diagnostic, reported both ways rather than picked.** Two estimands were in play and they
+demand different samples, so both are stated:
+
+| | value | ratio vs non-tail sub-pop (`0.0009790`) |
+|---|---:|---:|
+| sample **arithmetic** mean `d_pose` | 0.0007442 | **0.760** |
+| sample **mass-weighted** mean `d_pose` | 0.0014559 | 1.487 |
+
+Neither is 1.000, and that is a property of the population, not a design failure: **the non-tail is
+itself right-skewed** (mean/median 1.80×, max 0.0265 vs mean 0.00098), so no small sample matches the
+mean reliably — under the alternative equal-mass design the ratio was **4.05**. **I therefore do not
+rest the conclusion on the sample mean at all.** The question — *does multi-start recover a comparable
+FRACTION off-tail?* — is answered by **per-pair ratios**, which need no mean-matching, and the
+population estimate is a separately-weighted step.
+
+*(results — filled at seal)*
+
+## §10 F1 FOR `ddm_hg1` — the DIRECTED flip split on `cx1`'s OWN n600 argmax
+
+`hg1` reported that no per-pixel `cx1` argmax was cached anywhere, so its ≈15.2%-of-gap Road↔Lane
+figure was a **hypothesis that mixes vehicles**. This measures it on `cx1`'s own argmax and caches the
+planes so no future arm needs a scorer pass to ask a per-class question.
+
+**Method** (`experiments/ddm_pu2_cx1_argmax_directed_flips.py`, exact scorer path): per pair,
+`SegNet(GT frame_1)` and `SegNet(cx1 frame_1)` argmax at **384×512** (`x[:,-1,...]` then bilinear), and
+the full **5×5 DIRECTED** matrix `C[gt][rendered]`. Never pooled — `hg1` measured that pooling carries
+three pathologies (sign-cancellation, 12.17× mass dilution, Simpson reversal), and a directed count is
+the only form that survives them.
+
+**A GT-source bug this section exists because of.** The first draft read GT from `p3v2.load_pair`,
+which returns a **composed-vehicle reconstruction, not ground truth** (MEASURED: meanabs 12.5–27.9 vs
+the real decode, maxabs 253). It put per-pair `d_seg` at **0.042** against `cx1`'s evaluator row
+`0.00431179` — ~10× high. **The fail-closed positive control refused it rather than reporting.** GT now
+streams from `0.mkv` via `frame_utils.yuv420_to_rgb` (never PyAV `rgb24`); pair `i` = frames `(2i, 2i+1)`.
+
+*(results — filled at seal)*
+
 ## §8 NEXT-IF-RESUMED
 
 **STATE AT LAST WRITE.** Probe stopped at **6 completed pairs** (74, 67, 21, 523, 16, 71) to spend the
