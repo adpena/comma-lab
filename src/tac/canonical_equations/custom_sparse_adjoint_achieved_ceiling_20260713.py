@@ -21,13 +21,24 @@ import math
 from tac.canonical_equations.equation import (
     RECALIBRATE_ON_NEW_ANCHORS,
     CanonicalEquation,
+    EmpiricalAnchor,
 )
 from tac.provenance.builders import build_provenance_for_research_sidecar
 
 EQUATION_ID = "custom_sparse_adjoint_achieved_vs_ceiling_v1"
 MEMO = ".omx/research/custom_sparse_adjoint_kernel_20260713.md"
+MEASURED_MEMO = ".omx/research/custom_sparse_adjoint_metal_wall_MEASURED_20260714.md"
+MEASURED_RECEIPT = (
+    "experiments/results/custom_sparse_adjoint_kernel_metal_bench_20260714/"
+    "measurement_receipt.json"
+)
 AXIS = "[macOS-MLX research-signal; NumPy-fp32 parity authority; non-promotable MEANS]"
 DERIVED_FLAGSHIP_CEILING_X = 2.208577465069467
+# MEASURED 2026-07-14 (D43 Metal wall memo, 125-conv wall replay, parity GREEN 40/40):
+MEASURED_ACHIEVED_WALL_X = 0.7078  # whole-network SLOWDOWN vs the #212 dense Metal kernel
+MEASURED_ETA = 0.3205  # achieved / derived flagship ceiling
+MEASURED_DENSE_MEDIAN_MS = 65.356
+MEASURED_SPARSE_MEDIAN_MS = 92.342
 
 
 def _positive_finite(value: float, *, name: str) -> float:
@@ -154,10 +165,17 @@ def build_custom_sparse_adjoint_achieved_vs_ceiling_v1() -> CanonicalEquation:
                 "optimizer regret; live training; score or pointer authority"
             ),
             "flagship_derived_ceiling_x": DERIVED_FLAGSHIP_CEILING_X,
-            "empirical_status": "BLOCKED_NO_METAL_IN_CURRENT_SANDBOX",
+            # APPEND-ONLY history: the 2026-07-13 build registered
+            # "BLOCKED_NO_METAL_IN_CURRENT_SANDBOX"; the 2026-07-14 D43 memo
+            # MEASURED the wall on a live Metal device (parity GREEN 40/40,
+            # max abs dev 6.68e-6 vs #212 dense over 125 shapes).
+            "empirical_status": "METAL_WALL_MEASURED_20260714_WHOLE_NETWORK_SLOWDOWN_0p7078x",
+            "empirical_status_history": ("BLOCKED_NO_METAL_IN_CURRENT_SANDBOX",),
             "verdict_scope": (
-                "execution-substrate blocker only; source primitive built default-off; no kernel-wall "
-                "or sparse-adjoint-family verdict until the host parity/bench receipt exists"
+                "this custom per-input-site no-atomic compact Metal kernel schedule on this "
+                "substrate; whole-network wall 0.7078x is a SLOWDOWN, eta 0.3205 of the 2.2086x "
+                "derived ceiling; sparse pays only where support is genuinely sparse "
+                "(seg-head/decoder margins), never as a whole-network replacement"
             ),
             "req_R": (
                 "N=10 bit-identical cross-process parity plus measured 125-convolution wall replay; "
@@ -178,9 +196,51 @@ def build_custom_sparse_adjoint_achieved_vs_ceiling_v1() -> CanonicalEquation:
             "efficiency": "dimensionless_ratio",
             "residual_time": "seconds",
         },
-        empirical_anchors=(),
-        predicted_vs_empirical_residual={},
-        last_calibration_utc="2026-07-13T23:15:06Z",
+        empirical_anchors=(
+            EmpiricalAnchor(
+                anchor_id="metal_wall_125conv_replay_20260714",
+                measurement_utc="2026-07-15T02:18:53.573027Z",
+                inputs={
+                    "dense_median_ms": MEASURED_DENSE_MEDIAN_MS,
+                    "sparse_median_ms": MEASURED_SPARSE_MEDIAN_MS,
+                    "wall_replay_convolutions": 125,
+                    "parity_trials_bit_identical": "40/40 cross-process NumPy-fp32",
+                    "max_abs_dev_vs_212_dense": 6.68e-6,
+                },
+                predicted_output=DERIVED_FLAGSHIP_CEILING_X,
+                empirical_output=MEASURED_ACHIEVED_WALL_X,
+                residual=DERIVED_FLAGSHIP_CEILING_X - MEASURED_ACHIEVED_WALL_X,
+                source_artifact=MEASURED_RECEIPT,
+                measurement_method=(
+                    "125-convolution wall replay on a live Metal device via "
+                    "tools/bench_custom_sparse_adjoint_kernel.py; median-of-trials; "
+                    "sparse kernel parity-gated bit-identical to the NumPy-fp32 "
+                    "authority before timing (D43 memo "
+                    + MEASURED_MEMO
+                    + ")"
+                ),
+                provenance=build_provenance_for_research_sidecar(
+                    sidecar_path=MEASURED_MEMO,
+                    reactivation_criteria=(
+                        "hybrid layer-routing (sparse only on genuinely-sparse "
+                        "seg-head/decoder-margin layers) plus an admitted "
+                        "oracle-mask predictor; whole-network sparse replacement "
+                        "is measured-dominated at eta 0.3205"
+                    ),
+                    measurement_axis="[macOS-MLX/Metal research-signal; advisory NON-score]",
+                    hardware_substrate="Apple M5 Max, live Metal device, fp contract off",
+                    captured_at_utc="2026-07-15T02:18:53.573027Z",
+                ),
+                empirical_verification_status="VERIFIED_VIA_EMPIRICAL_ANCHOR",
+            ),
+        ),
+        predicted_vs_empirical_residual={
+            "achieved_wall_vs_derived_ceiling_x": (
+                DERIVED_FLAGSHIP_CEILING_X - MEASURED_ACHIEVED_WALL_X
+            ),
+            "eta_achieved_over_ceiling": MEASURED_ETA,
+        },
+        last_calibration_utc="2026-07-15T02:18:53.573027Z",
         next_recalibration_trigger=RECALIBRATE_ON_NEW_ANCHORS,
         canonical_consumers=(
             "tac.local_acceleration.metal_sparse_adjoint",
