@@ -21,7 +21,16 @@ tokens: "[no-triality] [p0-ledger-ok]"
 **Nothing here moved any score.** Pointer `0.1910828242 [contest-CPU]` UNMOVED; live own-vehicle
 best `S 0.7910689 [macOS-CPU advisory]`. This arm produced **no candidate, no archive, no run**.
 
-Three results are load-bearing, and two of them delete work rather than add it:
+**The one result that could move a score, stated with its blockers first:** `#826` **inverts back to a
+win at $0** — gr1's token codes are **bit-identical** to the live best's (**0 of 1,843,200** differ),
+so its +5,183 B is **coder generation** (`DR7T`→`IX2TOK01`), **not content**. Repacked, it is
+**352,048 B = 1,969 B under** the break-even target and **1,757 B smaller than the live best itself**
+(ΔS(seg+rate) **−0.0013110**; **−0.0011699 on the rate leg alone**, which does not depend on the seg
+question). **Two typed blockers stand between this and any score claim: receiver acceptance is
+UNPROVEN (no inflate run), and the seg leg is CROSS-INSTRUMENT (1.4 ppm, needs one exact eval).**
+`score_claim=false`. §4.8.
+
+Four further results are load-bearing, and three of them **delete** work rather than add it:
 
 1. **HEAD 1 — φ is not readable from the ms4d bundle at any cost.** gc15's "`$0` but needs the
    composite-R adjoint from the ms4d bundle — **a read, not a run**" is **FALSIFIED at the artifact
@@ -31,8 +40,36 @@ Three results are load-bearing, and two of them delete work rather than add it:
    live call sites, and receiver — and has been **on the shipping path since v4c**. p1a's P0
    grade-5 orphan claim is **REFUTED by mechanism-join**. QA55's container half is **already
    banked by the real builder**.
-3. **HEAD 3 — 9 of 16 T1 rows (56%) needed only a join, not work.** The never-named instrument
+3. **HEAD 3 — 9 of 16 T1 rows (56 %) needed only a join, not work.** The never-named instrument
    measures commit messages; it cannot see the parking store.
+4. **HEAD 4 — two of oh1's "ORPHANED" verdicts are FALSIFIED,** because `ddm_oh1` **never consulted
+   `.omx/state/deferral_ledger.md`** (0 hits in its own memo) — the one store whose header says *"no
+   deferral exists outside this file."* An orphan-detector made a negative-existence claim without
+   scanning the parking store. `deferral_ledger::D1` was `ARMED` against a **trigger the TR1 pivot
+   superseded** — an armed row that can never fire, which reads as parked and is strictly worse than
+   an open one. **Landed + resolved** (`819e7661f7`).
+
+**The through-line across all eight heads: every headline defect this arm found is one join key
+away.** filename-vs-mechanism (head 2), commit-message-vs-parking-store (heads 3, 4),
+line-scope-vs-intra-document-supersession (head 4), scorer-feature-space-vs-parameter-space (head 1),
+coder-generation-vs-content (head 6), position-vs-content (head 7). **Not one is a hard problem; every
+one produced a confidently wrong published claim.**
+
+---
+
+## §0.5 PER-HEAD DISPOSITION — every head exits OWNED
+
+| # | head | fired? | disposition | owner / fire-condition |
+|---|---|---|---|---|
+| **1** | p1a #1 φ from the composite-R adjoint | **FIRED** | **DONE-WITH-RECEIPT — premise FALSIFIED.** Not readable at any cost; **re-typed read → run**; inherits `R1B3_…_ABSENT`. No φ published (refused: wrong space). gc15 pre-registration undischarged **both** ways; arms D± **GATED**. | Whoever builds the r1b3 producer. Fire: that producer lands (also discharges p1a #25). |
+| **2** | p1a kl1 −880 B codec → QA55 | **FIRED** | **DONE-WITH-RECEIPT — claim REFUTED.** Codec is **wired** (encoder v4d:257-258 → `pose_warp.stp`; receiver parses `KL1_MAGIC`), shipping since v4c; byte-identical to the standalone on 4 shapes. **No wiring owed.** QA55 container half **already banked**. | QA55 owner: re-mark the ledger row. Nothing to build. |
+| **3** | p2a T1 grep tier | **FIRED** | **DONE — 16/16 owned**, 0 UNDECIDABLE. 5 closed · 6 typed-blocker · 4 parked · 1 superseded. **1 of my republished claims corrected (§3.1).** | Per-row owners in §3; `#860`'s remediation → `#670`/QD07. |
+| **4** | oh1 rows 3-6 re-aims | **FIRED** | **DONE — 2 of 4 ORPHANED verdicts FALSIFIED.** Row 4 landed **and** resolved (`819e7661f7`); row 5 CLOSED-MEASURED; row 3 re-aimed to a join; row 6 genuinely open, form re-aimed. | Row 3 → **codex/root**; row 6 → **MAIN**. |
+| **5** | qd1 hygiene marks | **FIRED (partial)** | **D52a LANDED** (`819e7661f7`). **`#874→#885` fold SPECIFIED** (append to existing law, target outside repo frontier). **`#904` SPECIFIED but BLOCKED.** qd1 §C correction specified. | `#904`: **parent**, fire = `ddm_op3` commits its 6 pending rows. |
+| **6** | op3 `#826` re-encode within 212 B | **FIRED** | **DONE-WITH-RECEIPT — spec SATISFIED at $0 with 1,969 B margin; row INVERTS to a win.** Budget **exactly invariant** under the baseline move. **2 typed blockers** before any score claim. | 6.4 receiver acceptance → **MAIN/v4d owner**; 6.5 exact seg eval → **scorer-slot holder**. |
+| **7** | mt1 ab_trace 5-LOC + `--mode photo` | **PARTIAL** | **Diff WRITTEN + anchor-verified (not applied — needs 2 review passes).** Re-run **BLOCKED ×2**: PoseNet forwards (1,507 s MEASURED) **and** it is a **silent no-op** as prescribed (dead `--resume` flag, `args.resume` referenced 0×). %-of-gap re-anchored. | Diff → **parent** (review passes); re-run → **scorer-slot holder**, after the 1-LOC dead-flag fix. |
+| **8** | VEHICLE-SCOPE-OWED (p1a 2/23/24/25/29) | **FIRED** | **DONE — all 5 answered.** #2 off-path (re-aim to `tokens.dr7t`) · #23 gate open, owed quantity re-typed to per-action · #24 retire-unless-reopened · #25 **folds into head 1** · #29 citation unresolved. | §4 table. |
+| **+** | p1a #28 Modal T4 (the one paid row) | **NOT FIRED — correctly** | **STAGING NOT VERIFIED.** 2-hop citation, no terminal artifact in 10,235 `.py`. **Not ready; not dispatched.** Sibling ua2-M2 verified ready but is a scorer forward ⇒ operator-GO. | Whoever asserts staging must name the file. |
 
 ---
 
@@ -120,6 +157,47 @@ rest on **15 pairs**. Converting the first to "1/φ ≈ 4" would land squarely i
 "strongly indicated, 2–5×" band, which is the **most dangerous kind of wrong**: a wrong-space
 number that confirms the hypothesis. **gc15's pre-registration is discharged in NEITHER direction.
 Arms D± remain GATED.**
+
+### §1.1 Downstream consequence — a live consumer of these fields, MEASURED
+
+The rank-1 finding is not academic. `src/tac/ddm_lambda_ranker.py` consumes this exact artifact:
+
+**(a) `adjoint_norm` is computed and never read — dead compute.** At `:593` it is initialised and at
+`:601` accumulated (`grouped[pair_id]["adjoint_norm"] += norm(adjoint)`). **Those are the only 2
+occurrences of the key in the file** (full-file count, not truncated). The 3 hits elsewhere in the
+tracked tree are a **different identifier** (`anchor_adjoint_norm_upper` in
+`src/tac/scorer_surrogate/costate_trust_region.py`) — a substring false-positive, not a consumer.
+Per `m68` (#417 unconsumed = INERT) this is a small but genuine orphan.
+
+Note it could never have been an independent feature anyway: per block `adjoint ≡ f` bitwise and
+`trace(gram) = c·‖f‖²`, so `fisher_trace` and `adjoint_norm` are **the same vector measured twice**.
+
+**(b) A 95 % confidence interval whose width is scale-convention-dependent by ~2–3 orders of
+magnitude, stamped as measured.** At `:1454-1462`:
+
+```python
+fisher_trace = row["direct_fisher_trace"]
+if fisher_trace is not None and float(fisher_trace) > 0.0:
+    nominal_standard_error = residual_sigma / math.sqrt(float(fisher_trace))
+    interval = [prediction - 1.96*standard_error, prediction + 1.96*standard_error]
+    precision_status = "DERIVED_FROM_MEASURED_DIRECT_MS4D_FISHER"
+```
+
+`SE = σ/√I` is the ordinary Cramér–Rao form and is **not wrong for a scalar target** — I am *not*
+claiming a bug. What I measured is that the inputs make the interval far more convention-dependent
+than the stamp suggests:
+
+| MEASURED | value | consequence for the CI |
+|---|---|---|
+| `gram` rank | **exactly 1** (25/25) | `trace(gram)` is its single nonzero eigenvalue — one-dimensional information, not 4-D |
+| scale factor `c` in `gram = c·f fᵀ` | **0.1002 … 20,836.85** = **2.08e5× spread** | SE ∝ 1/√trace ⇒ **~456× spread in interval width** from the scale convention alone |
+| Fisher-vs-Euclidean relation | cosine **±1** in 25/25; `‖f‖/‖e‖` spans **5.98e6×** | the two metrics differ by a *pure rescale* — feeding the other one moves the CI by orders of magnitude while changing no direction |
+| coverage | **15 of 600 pairs** have a block at all | `direct_fisher_trace is None` for the rest; the branch silently falls through |
+
+⇒ **The label `DERIVED_FROM_MEASURED_DIRECT_MS4D_FISHER` reads as convention-free and measured; the
+width is neither.** Recommendation: record which metric convention produced `trace`, and report the
+15/600 coverage alongside any interval. *Caveat: I verified the code path, not that this ranker is
+currently invoked by a live consumer — I did not trace its callers.*
 
 ### The re-type (this is the deliverable)
 
@@ -340,6 +418,182 @@ at $0. Reported as READY, deliberately **not fired**.
 
 ---
 
+## §4.6 HEAD 4 — oh1 rows 3-6: two "ORPHANED" verdicts FALSIFIED
+
+**The single biggest finding of this head: `ddm_oh1` never consulted `.omx/state/deferral_ledger.md`.**
+MEASURED: `grep -c "deferral_ledger"` on oh1's memo = **0**, and its STORES CONSULTED block does not
+list it. That file's own header states the governing rule — *"no deferral exists outside this file +
+a task with a named trigger."* **2 of oh1's 4 "real owed item" rows are already correctly parked or
+closed there.** oh1's *"6/9 point at a real owed item (67%)"* is an over-count: a negative-existence
+claim made without scanning the one store designed to hold the join — `m53`'s #1 false-claim class,
+committed by an instrument built to catch orphans.
+
+**A fourth false-ORPHANED class, beyond oh1's own three: intra-document supersession.** Row 5's cited
+line sits **37 lines above** `owed16_bounded_ab_and_drystart_20260710.md:178` — verbatim
+`## MEASURED VERDICT (2026-07-10, appended — supersedes OWED-BLOCKED above)`. A line-scoped extractor
+cannot see that a block it quotes has been superseded *in the same file*.
+
+| oh1 row | verdict | disposition / owner |
+|---|---|---|
+| **3** — g111 macro-release → `v6` | **Not orphan, not ADVANCED — BLOCKED.** `pact-g111-first-real-n600-capstone-run` = `blocked`, `launch_authorized:false`, **5 named blockers**. oh1 inferred "likely ADVANCED" from commit `ead282f6f0` — verified: that commit moved **G121 harvest machinery only** (4 files); the gating run `v6` never fired. `v6` is a **triple slug collision**. | **RE-AIM to a JOIN**, no new measurement. Owner **codex/root**. Fire: V9/taskspace resumes live AND the 5 blockers close. |
+| **4** — gpu-verdict Measurement 2 | **ORPHANED FALSIFIED** — it is `deferral_ledger::D1`, **ARMED**. Real defect = **STALE TRIGGER**. **LANDED + then RESOLVED — see below.** | **DONE-WITH-RECEIPT** (commit `819e7661f7`) |
+| **5** — owed-16 A/B | **ORPHANED FALSIFIED — CLOSED-MEASURED.** Both arms ran; realized directional contribution ≈ **ZERO** (\|Δ\|≤1.4 % at every matched cell); residual cell also measured (`+3.2e-05`, worse). Artifacts on disk. The −48 % is a **PROXY**, non-transferable — CLAUDE.md already forbids routing on it. | Retire. Residual (*from-scratch* A/B) is aimed at a DOF the shipped TR1 vehicle appears not to have. |
+| **6** — ORDER 2c council adjudication | **GENUINELY OPEN** (9 d). `ORDER 2c` in **2 of 7,019** memos; **0 hits** in the deferral ledger. But the *form* is the `m39` anti-pattern (13 convocations → 0 pointer). Consumer join MEASURED: **2 of 8 lineages live** (C1 via waterfill, C8 via pc2). | **RE-AIM the form**: 8 pre-registered falsifiers priced against 1 % of gap = **9,295 B / 7,301 flips**, not a 19th convocation. Owner **MAIN** (`m45`). |
+
+### D1 — flagged, then RESOLVED in-arm by the $0 read it named (commit `819e7661f7`)
+
+D1 was `ARMED (re-pointed)` against trigger *"#385 chosen-chain (v7.5.2\|v8) PRE-LAUNCH"* — **a chain
+the TR1 pivot superseded**. An armed row whose trigger can never fire is a **silent orphan** (`m37`),
+strictly worse than an open one because it reads as parked.
+
+I then ran the $0 code read it needed. **MEASURED: `verdict_device` / `--verdict-device` occurs in
+exactly 10 of 10,683 tracked `.py`, ALL in the levelset/witness family** (the two trainers,
+`witness_autoconfig.py`, `witness_control/gpu_verdict.py`, `witness_dsl/{curriculum_dsl,typed_config}.py`,
++4 tests). **All 12 TR1-line builders/receivers/probes** (`ddm_v4d_*`, `inflate_runner_v4{b,c,d}*`,
+`ddm_pu2_*`, `ddm_dc1_*`, `ddm_gr1_*`) score **0 hits**. ⇒ **the lever is stranded on the ancestor.**
+**DISPOSITION: RETIRE-WITH-REACTIVATION** (fire: a levelset-family trainer re-enters the live line).
+The separate *throughput-on-the-contended-evaluator-slot* need is real but needs a **fresh TR1-native
+row** — it is not this one.
+
+---
+
+## §4.7 HEAD 5 — qd1 hygiene: one landed, two specified, one blocked
+
+**(i) `D52a` — LANDED (commit `819e7661f7`).** qd1 **completed it itself** (`canonical_task_status.jsonl`
+at HEAD: `completed`, `2026-08-03T11:14:39Z`, `commit_shas:["0bfeb8733b"]`, `test_status: green`) and
+then listed it in its own NEXT-IF-RESUMED as still-owed — **self-stale**. But the file the row names
+as canonical, `.omx/state/deferral_ledger.md`, still said OPEN at **two** sites. Both now marked
+COMPLETED. Safety verified before mutating: the file is **not** registered in
+`artifact_kind_registry.yaml`, and in-cell status mutation is **its own convention** (D3/D4/D20 carry
+`**CLOSED-CONFIRMED 2026-07-09**` in-cell).
+
+**(ii) `#874 → #885` fold — SPECIFIED, unblocked, not landed here.** The fold **target already
+exists** (`vacuity_is_indistinguishable_from_pass_empty_scope_confound_20260801.md:174-200`), so this
+is a *local append to an existing law*, not new machinery — exactly what `m54` demands. The
+generalization: **a CAP and a TRUNCATION are ONE class — the instrument cannot emit its own limit.**
+A silent cap (`rtk`'s `-n 50`; a subset default; a timeout; a `head`; a governor ceiling) and a scan
+reporting completeness it never achieved are the same defect in two costumes. The obligation sits on
+the **producer**: emit `(n_returned, limit_applied, was_truncated)` or emit nothing. **Do not build a
+second cap detector.** *(Target lives outside this repo's mutation frontier — left for the parent
+with exact insertion text in the sub-arm receipt.)*
+
+**(iii) `#904` re-scope — SPECIFIED, BLOCKED on a live sibling.** Both halves of qd1's "diagnosis half
+wrong" VERIFIED at source: **Class A** — gd5's F1 was *already repo-wide* (**1,229 of 3,251** modules,
+38 %, REFUTED as too loud to be a queue), so **scope was not the cause**; **Class B** —
+`src/tac/v9_provenance_gates.py:922` `_trainer_consumers` ast-parses **exactly one file** (single
+caller `:1051`) and counts **any** `args.<dest>` Load *or* `getattr(args,"<dest>",…)` as proof, so
+`_x = float(getattr(args,"x",2.0))` reads as consumed — **scope AND predicate are both wrong**.
+**TYPED BLOCKER:** `.omx/state/canonical_task_status.jsonl` carries **6 uncommitted rows, all
+`event_actor: ddm_op3`** — a live sibling holds that file. **I did not touch it.** Owner: parent;
+fire-condition: `ddm_op3` commits.
+
+**(iv) Corrections owed to qd1 §C.** Its claim *"the entire `#874–#911` band is ABSENT from the repo
+store"* is **over-scoped**: `#882` and `#909` are both present and `completed`, both written
+`2026-08-03T04:37:56Z` by `ddm_pj2` — i.e. **before qd1's own run**. Max numeric id is **909**, not
+871. **The directional finding survives intact** (`#874`/`#885`/`#904` *are* genuinely absent; arms
+see only the repo store; cite CONTENT not ids) — only the universal quantifier fails.
+
+---
+
+## §4.8 HEAD 6 — op3's `#826`: the 212 B spec is SATISFIED at $0, and the row INVERTS back to a win
+
+**⚠ NOT A SCORE CLAIM. `[macOS-CPU advisory]`, `score_claim=false`, pointer UNMOVED.** This is a
+static container/coder byte measurement with **two typed blockers** standing between it and any
+score. Stated up front because the number is attractive and that is exactly when NO-FAKE binds.
+
+**Control first.** Re-running op3's own registered equation reproduced it exactly:
+`W = 1.2731082153320312` B/flip (`EXACT_INVARIANT`), ΔS `+0.0034632`, F 166.5, 32.52 B/flip, **25.5×W**,
+budget **211.9 B ≈ op3's 212**.
+
+**Re-anchored to the live best — the budget is EXACTLY INVARIANT.**
+
+| | at cx1 (op3's basis) | at pu2 (LIVE best) | moved |
+|---|---:|---:|---:|
+| break-even budget | 211.9 B | **211.9 B** | **±0.000 B** |
+| target archive size | 354,020 B | 354,017 B | −3 B |
+| ΔS(seg+rate) | +0.0034632 | +0.0034652 | +2.0e-06 |
+
+DERIVED: the budget is `F × W`; `W` is exactly invariant and `F` is unchanged because the base's
+d_seg is **bit-identical** across the whole chain (the entire cx1→pu2 move was pose + 3 bytes).
+
+**Why the spec is satisfiable: the excess is FORMAT, not CONTENT.** MEASURED —
+**gr1's token codes are BIT-IDENTICAL to the live best's: 0 of 1,843,200 entries differ** (both
+`(600,24,32,4)` uint8). Re-encoding gr1's decoded codes with `ix2.encode_token_frame` yields
+**exactly 341,295 B = pu2's bulk**, lossless round-trip verified. **The +5,183 B is coder generation
+(`DR7T` → `IX2TOK01`), not information.** gr1 also ships **6 ZIP members** (686 B overhead + 1,234 B
+JSON manifest) vs the live best's **1 member** `0.bin` (108 B overhead).
+
+Repack ladder, every rung verified section-bit-identical by `parse_payload` byte-compare:
+
+| rung | archive | vs 354,017 B target |
+|---|---:|---:|
+| A shipped-equivalent (DR7T, no config) | 357,161 | +3,144 |
+| B + ix2 token recode | 351,978 | **−2,039** |
+| **C + pu2-shaped config section** | **352,048** | **−1,969** |
+| D + pose sections merged as pu2 does | 352,021 | −1,996 |
+
+At rung C the repack is **1,757 B smaller than the live best itself** ⇒ ΔS(seg+rate) vs pu2 =
+**−0.0013110**; and **worst case, assuming gr1's entire seg advantage is instrument artifact,
+−0.0011699 on the rate leg alone**. **The rate leg does not depend on the seg question.**
+
+**BLOCKER 6.4 — receiver acceptance UNPROVEN.** `parse_payload` round-trip proves the *container* is
+faithful; it does **not** prove the modern `inflate_runner.py` consumes gr1-generation sections
+(gr1's `renderer.sec` 3,341 B vs pu2's 3,266 B; pose split `pose_stub`83+`pose_warp`6,864 vs a single
+8,751 B section). *Owner: MAIN / v4d build owner. Fire: before any gate or eval on a repacked gr1.*
+
+**BLOCKER 6.5 — the seg leg is CROSS-INSTRUMENT.** gr1's `d_seg 0.004310379` came from gr1's own
+realized harness, **not** `upstream/evaluate.py`; pu2's `0.00431179` did. The whole advantage is
+**166 flips in 117,964,800 cells = 1.4 ppm** — well inside cross-instrument drift. One exact eval
+settles it. *Owner: n600 scorer-slot holder.*
+
+**Spillover (DERIVED, one decode from MEASURED).** `gd3_CONTROL_identity_rebuild.zip` and
+`v4d_composed_pw1_archive.zip` also ship `state/tokens.dr7t` at **exactly 346,478 B**. If their codes
+are likewise identical, **every banked DR7T-generation archive** (dc1_fold 360,309 · ms8 360,374 ·
+pj2 360,406 · pb2 360,339 · mq1 360,702) is carrying **~5,183 B of dead format**. Proven for gr1 only.
+
+---
+
+## §4.9 HEAD 7 — mt1's `ab_trace` + `--mode photo`
+
+**mt1's line numbers have drifted — the exact failure mt1 itself warned about** (*"a triage keyed to
+a position in a live tree mis-attributes without saying so"*): `ab_trace` is at
+`experiments/ddm_v4d_resolve.py:385` (mt1 said :372); the v4c mirror at `ddm_v4c_resolve.py:926-930`
+(mt1 said :818-822); `--mode photo` is at `ddm_v4c_resolve.py:1036`. **The two halves of the ask live
+in different files** — `photo` is a v4c mode; v4d's modes are `qa66/refine/resummarize/qa72a`.
+
+**mt1's claim REPRODUCED:** `ab_trace` occurs **exactly once** in the 44,016 B v4d file — bound at
+`:385`, never read. And `{'ABSENT': 600}` reproduced exactly: 600 rows / 600 distinct pairs, with
+`ab_stop`/`ab_start`/`ab_starts_tried`/`ab_relins`/`ab_damp_used`/`obj_traj` absent on **600 of 600**.
+
+**The 5-LOC diff is written and diff-ready (NOT applied — `.py` edits need 2 recorded review passes;
+handed to the parent).** It inserts `ab_stop`/`ab_relins`/`ab_relins_bound`/`ab_damp_used`/
+`ab_obj_traj` into the emitted row at `ddm_v4d_resolve.py:402-403` (anchor verified unique). All five
+read state **already computed** — score-neutral, zero extra scorer evaluations, byte-identical shipped
+output. *Do not copy v4c's five verbatim: `start`/`starts_tried` are added by v4c at `:900` and are
+not in the returned trace.*
+
+**The `--mode photo` re-run is BLOCKED for TWO independent reasons — and the second one mt1 missed:**
+1. **Not $0.** `run_photo`'s `pose6()` is a live **PoseNet forward** (`ddm_v4c_resolve.py:876-878`)
+   inside `ab_damped_gn` (4 relins × 4 damp levels) + 2 rung-A evals per pair × 600. **MEASURED cost
+   of the original run: 1,507 s wall at n600.** Categorically forbidden by this charter.
+2. **As prescribed it is a SILENT NO-OP.** `run_photo` loads the existing 600-row cache
+   **unconditionally** (`:856 cache = _load_jl(jl)`) and `continue`s on `if pidx in cache`.
+   `--resume/--no-resume` is declared at `:1056` but **`args.resume` is referenced 0 times** in either
+   file (denominator: the full 52,264 B v4c + 44,016 B v4d). Run as written it skips all 600 pairs,
+   writes zero rows, **exits 0**, and leaves the census `{'ABSENT': 600}` — a **dead flag**
+   (CLAUDE.md "Forbidden CLI flag inventions") wearing the vacuity genus (**exit-0 == "done" ==
+   "nothing happened"**). Cure specified, 1 LOC: `cache = _load_jl(jl) if args.resume else {}`.
+
+**Re-anchoring mt1's %-of-gap (its token baseline is stale by 5,183 B — the same DR7T generation as
+head 6):** net saving 258,635 → **253,452 B**; ΔS_rate −0.172214 → **−0.168763**; gap denominator
+0.7262356 → **0.6189276**; **% of gap 23.71 % → 27.27 %**. **The percentage RISES while the absolute
+shrinks** — a second worked instance of op3's law that a %-of-gap claim is *under*-stated by its own
+drift. Honest bound: the ds=32 arms also ship DR7T, so if they gain proportionally the correction
+shrinks — **correction ∈ [0, +0.003451]**. mt1's §5 #1 remains the largest measured seg+rate row
+either way.
+
+---
+
 ## §5 Cross-findings
 
 **→ whoever schedules gc15's arms D±.** Do not schedule them as `$0`-gated. The gate is a **run**
@@ -412,6 +666,16 @@ magic variable name and comments — the emitted bytes do not.
 
 ## §7 NEXT-IF-RESUMED
 
+0. **HIGHEST VALUE — close `#826`'s two blockers (§4.8).** The byte spec is already SATISFIED with
+   **1,969 B of margin**, at $0, and the rate leg (**−0.0011699**) does **not** depend on the seg
+   question. Two steps, in order: **(a)** run `inflate_runner` on the rung-C repack to prove receiver
+   acceptance (an inflate run, **not** a scorer forward — cheap, and it is the gating unknown);
+   **(b)** one exact `upstream/evaluate.py` n600 row to settle the 1.4 ppm cross-instrument seg leg.
+   Until (a) passes, this is a container measurement and **nothing more** — do not quote it as a score.
+0b. **Then test the spillover, one decode (~2 min, $0).** `gd3_CONTROL_identity_rebuild.zip` and
+   `v4d_composed_pw1_archive.zip` ship `state/tokens.dr7t` at **exactly 346,478 B**. If their codes
+   are identical too, **every banked DR7T archive** (dc1_fold · ms8 · pj2 · pb2 · mq1) carries
+   ~5,183 B of dead format — a fleet-wide rate win from a format swap, with zero distortion risk.
 1. **Build the r1b3 receiver-coordinate Jacobian + realized-secant producer.** It is the single
    prerequisite that unblocks *both* gc15's φ preflight (arms D± gate) and p1a item 25. Read
    `r1b3_producers_20260720T185300Z.md` for the pre-registered reactivation criteria first. This is
@@ -434,6 +698,16 @@ magic variable name and comments — the emitted bytes do not.
    written for is not on the live vehicle.
 7. **Item 23**: the gate is open but wants **per-action** coder bytes; 37 `OWED_NOT_ADMITTED` rows
    are sized and waiting in the hb1 capacity table.
+8. **Land the mt1 5-LOC `ab_trace` diff** (§4.9) — written, anchor verified unique, score-neutral,
+   byte-identical output. Needs 2 recorded review passes (`tools/review_tracker.py`). **And fix the
+   1-LOC dead flag first** (`cache = _load_jl(jl) if args.resume else {}`), or the `--mode photo`
+   re-run silently skips all 600 pairs and exits 0.
+9. **Land the `#874 → #885` fold** as an append to the existing vacuity law (target and exact text in
+   §4.7) — **a cap and a truncation are one class**. Do **not** build a second cap detector.
+10. **`#904` re-scope** into its two measured classes — **blocked until `ddm_op3` commits** its 6
+   pending rows in `canonical_task_status.jsonl`. Do not race it.
+11. **Correct qd1 §C's band claim** (`#882`/`#909` are present, max id 909 not 871); its directional
+   finding survives and should be preserved.
 
 **Pointer honesty:** `0.1910828242 [contest-CPU]` **UNMOVED**. Zero scorer forwards, zero training
 launches, zero dispatch, zero paid spend. `score_claim=false`, `promotion_eligible=false`.
