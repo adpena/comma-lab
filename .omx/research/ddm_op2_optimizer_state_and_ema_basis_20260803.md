@@ -157,7 +157,21 @@ P1  config_hash recomputed from window_09's checkpoint cfg
 P2  opt:: keys written with the flag OFF                        0
 P3  real b4s ds=16 ep945 ckpt -> live ds=32 model               REFUSED (guard intact)
 P4  real ds=32 stage_seg_trunk_tau_final -> ds=32 model         ACCEPTED, new_params=[]
+P5  the GOVERNED LAUNCHER, --dry-run, against the LIVE sealed ticket, post-edit:
+      G0 venv custody / G1 seal freshness / G2 import custody / G3 memory   ALL PASS
+      G4 scorer slot                                                        REFUSE (window_11
+                                                                            pid 52363 — correct)
 ```
+
+**P5 is the one that had to be MEASURED rather than reasoned**, and it is the risk I nearly
+shipped unchecked. Committing the trainer means the chain's NEXT window runs the edited file, so
+if G1 (seal freshness — it recompiles the ticket's argv from the DSL and refuses on any drift) had
+keyed on anything my edit moved, the chain would have REFUSED at the next boundary and I would
+have stopped a 7-hour run. It does not: the DSL is untouched, and the launcher's
+`sealed argv emits undeclared flags` check compares `emitted − declared`, so ADDING an argparse
+flag can only shrink that set. The dry-run reaching G4 proves G0–G3 passed — and I verified the
+gates run in that ORDER before reading the result, because a refusal from an early gate would
+have proven nothing. The G4 REFUSE is the governor being right (gd5 §5's lesson), not a problem.
 
 **P1 is the load-bearing one.** The flag is threaded via `args` ONLY, never `TR1Config` — the
 `--telemetry-v9-port` precedent, which the trainer states verbatim (*"never TR1Config =>
