@@ -448,7 +448,19 @@ a store that does not contain the row. The cure is to **materialize harness rows
 id-citation and content-citation fail on harness-only items, and every subagent sweep inherits a
 ~25% ceiling on what it can even see.
 
-### R6 — What this arm does NOT claim
+### R6 — An INCOMPLETE scope, stated rather than quietly omitted
+
+Find-class 1 (**measured results that never reached a consumer** — a ΔS or measured quantity in a
+window-1 memo consumed by no equation, Lever, task row, config, or later memo) was delegated to a
+parallel scan that **had not returned when this memo was finalized**. That class is therefore
+**NOT covered here**, and §2's find tables are complete only for classes 2–4.
+
+Recording it because the alternative — presenting §2 as a finished harvest — would be the exact
+vacuity failure this memo documents: an unrun scope reported as a clean one. The correct reading of
+this memo's coverage is **4 of the 5 briefed find-classes**, with class 5 (stale-baseline ΔS)
+delegated to `ddm_qd1` by prior ownership and one instance found opportunistically (§5 row #8).
+
+### R7 — What this arm does NOT claim
 
 - Not claimed: that the 11 true orphans are dead. Scope is exactly *"did not find in the 1,158
   window-2 `.omx/research/*.md` memos, excluding audit/ledger memos."* They may live in code, state,
