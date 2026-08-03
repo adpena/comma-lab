@@ -237,14 +237,28 @@ whose flip counts span 3,320×). Block-reducing the same per-pixel measurement t
 > printed. The tie-inflated column is retained beside it to show the size of the trap.
 
 Guarded, the barrier **does** reorder — ρ = 0.90 at 1 px, 0.95 at `wr1`'s grain, ~8.5% of
-flip-bearing cells. **But the reordering lands where barrier mass is negligible**, so matched-byte
-damage is unmoved across the entire usable region. The control that grain-256 reproduces the
-independently-computed 768-cell ρ to 9 decimals (`0.996611192`) confirms the reduction is sound.
+flip-bearing cells. **But the reordering lands where it buys nothing, and that is MEASURED, not
+eyeballed:** matched-byte damage advantage is **0.0000% out to 30% of bytes freed** (0.0175% @50%,
+0.192% @70%), against a shuffled-key control costing **5.6–65.4%** — the instrument resolves effects
+~**1000×** smaller than the control's, and reads exactly zero. **Relative significance at the live
+operating point:** even the largest observed advantage (0.192% of the damage curve, at a depth past
+the usable region) is ≤ **0.0009 S ≈ 0.15% of the remaining gap 0.6189279** (1% of gap = 0.0061893 S);
+the measured value over the region any allocator would actually use is **0.0000%** of that. The
+control that grain-256 reproduces the independently-computed 768-cell ρ to 9 decimals
+(`0.996611192`) confirms the reduction is sound.
 
-**Mechanism:** barrier is a **per-side constant**, and flips are **spatially segregated by side**
-(pixels on a Road/Lane boundary flip `0→1` or `1→0`, not `2→3`). So barrier mass ≈ (locally constant)
-× flip count — a near-monotone rescaling, which barely reorders at any grain. **This kills the whole
-family of "re-weight the flip count by a per-class-pair scalar" cures**, not just this one.
+**Mechanism (DERIVED from the measurement, and it bounds the generalization):** barrier is a
+**per-side constant**, and flips are **spatially segregated by side** (pixels on a Road/Lane boundary
+flip `0→1` or `1→0`, not `2→3`). So barrier mass ≈ (locally constant) × flip count — a near-monotone
+rescaling, which barely reorders at any grain. **The generalization this licenses is FORMULATION-scoped,
+not FAMILY** (the typed verdict below is INSTANCE; the prose here previously over-claimed "kills the
+whole family" — corrected): any "re-weight the flip count by a per-class-pair scalar" cure inherits
+this null **wherever flips are side-segregated**, which is the measured regime on this vehicle
+(`pc2`: interiors 0.058%, 93.89% of flips within 3 px of the separatrix). **The un-collapsing
+measurement, named:** the family could still pay on the **mixed-edge subpopulation** (cells whose
+flips span ≥2 class-pairs, where "per-side constant" stops being locally constant) — that
+subpopulation's size and flip share are unmeasured; until measured, the family verdict stays
+FORMULATION (side-segregated regime), never PARADIGM.
 
 > **`verdict_scope: INSTANCE — the #766 waterfill on the live cx1 n600 at grains 1–256 px`:** F4
 > **REFUTED**, per its own pre-registered kill. `hg1`'s underlying finding — that `d_seg` is blind to
