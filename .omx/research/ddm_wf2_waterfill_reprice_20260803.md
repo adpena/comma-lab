@@ -258,7 +258,7 @@ The equal-marginal condition binds only where the objective is **concave**: `√
 | **`#766` / `wr1`** | `np.lexsort((-residual_mass, flip_mass))` — an implicit per-cell price `residual_mass / flip_mass` | **YES — MEASURED, and both legs are corrupted.** Bytes: `residual_mass` correlates **ρ = 0.513** with the real per-cell byte marginal over 384 exact re-encodes. Damage: the key's 16×16 tile (256 px) understates the MEASURED receptive field (84×82 = 6,192 px) by **24.2×**, so **144 of 486** "provably safe" zero-flip cells are not — the free tranche is **29.6% smaller** than Knee A claims. `rs2` has already **BUILT** the byte-matched A/B (274,631 vs 274,321 B, residual 310 B = 0.4%); at equal bytes the re-priced key carries **27.9% less ambient flip mass**. **Direction measured; ΔS owed (needs the scorer slot `pu2` holds).** |
 | **`c1` waterfill tables** (via EV2) | the C1 composition's pair-cell dual allocation | **NO — it allocated NOTHING.** EV2 *"conserves the C1 byte total by leaving **100% unallocated**: assigned pair-cell bytes are zero, all 162 duals are non-computable"*, exact verdict **`FORMULATION_MISPOSED_FOR_CURRENT_C1_COMPOSITION`** (`codex_findings_…366box…`). There is no price to re-price. |
 | **`rd1` λ-continuation frontier** | per-dimension duals `λ_bytes_per_D_dimension` over 162 cells | **NO — 162/162 prices are `None`.** Recomputed from `rd1_162_dual_backfill.json`: `actionable_cell_count = 0`, `lambda_measured_cell_count = 0`, `rung_measured_cell_count = 0`, `effective_quantum_D = 0.0` on **162/162**, `lambda_measurement_status = STILL_NULL_…` on **162/162**. `metric_context_cell_count = 162` — every cell has metric *context* and no *price*. |
-| **`#869` token-by-token** | **UNKNOWN** — not resolved | **Did not find in the named scope** {the four receipt dirs + `codex_findings_*` read this session}. A parallel extraction over `.omx/research`, `.omx/state`, `experiments/`, `src/` was dispatched and had not returned at seal. **Honestly open.** |
+| **`#869` token-by-token** | **UNRESOLVED — and the reason is diagnosed, §4.3** | **Did not find in the named scope** {`.omx/state/canonical_task_status.jsonl`, the four receipt dirs, `codex_findings_*`}. `869` is **not an id in the repo ledger** (42 ids, range 383–909; `869 ∉`). **Honestly open.** |
 | **`ms2r`/`r3` typed Fisher waterfill** | a **typed** (per-box) Fisher marginal — the "many prices" structure the operator's §1 asks for | **NO — IT NEVER FIRED.** From `priced_rung_table.json`: `measured_task_rungs = []` (**zero**), `knee = None`, `knee_status = NULL_NO_TYPED_HOMOTOPY_CURVE`, `preregistered_rung_status = NOT_EXECUTABLE_UNTIL_ALL_TYPED_PRECONDITIONS_CLOSE`; all six ladder rungs carry `epistemic_status = DERIVED_PREREGISTRATION_NOT_MEASURED` + `execution_status = BLOCKED_PRECONDITION_NOT_RUN`. `MS4D` records *"zero waterfilled rungs."* |
 | **`qd1` / `#826`** | `gr1_cell_drop50` vs a v4d-era reference | **Already inverted (`−0.0983 → +0.0035`) — but by a BASELINE move, not a price move.** My charter cited this as price-sensitivity evidence; it is not. It is the sister defect ("a ΔS without its baseline is unanchored"). Keeping the two apart is the point of §2.4. |
 | **the pose leg** | `dS/d(d_pose) = 40.223` at live best | **YES, and this is the ONE true waterfill.** `op3` measured this marginal has risen **1.73×** since `pw1`, so **banked pose levers are UNDER-priced, not stale.** Unlike `W`, it moves with every improvement. A 1% relative cut in `d_pose` is worth **933 B** at today's point — and *more* tomorrow. |
@@ -298,6 +298,20 @@ not the *measurement*.
 **Corroboration in passing:** the same table registers
 `pose_exchange_law = dS/dd_pose = 5/sqrt(10*d_pose)` — the campaign's own registered form of §1's
 pose marginal, which my 40.223 and `op3`'s 31.302 both evaluate.
+
+### 4.3 — Why `#869` could not be resolved: the task-ledger split, demonstrated live on this charter
+
+MEASURED from `.omx/state/canonical_task_status.jsonl`: **42 ids, range 383–909.**
+**`869 ∉` and `766 ∉`.** Both task numbers this arm was chartered against are **harness-TaskList
+ids that do not exist in the store arms can read** — the known split (*harness TaskList ~911 vs repo
+ledger; arms see ONLY the repo*). `#766` resolved **only because the charter also named its content
+(`wr1`)**; `#869` was given as a bare id plus three words and resolved to nothing.
+
+> **This is the bridge gap producing its predicted failure inside the very memo sent to find price
+> defects.** The one-line fix is the one already banked: **cite CONTENT, never a bare id.** For
+> `#869` that means an arm name or a file — with either, it would have taken one grep.
+> **"id not found" ≠ "row absent"; it is a missing JOIN**, and I am reporting it as such rather than
+> as a negative-existence claim about a token-by-token allocator.
 
 ---
 
@@ -371,7 +385,8 @@ verdict**. That is precisely `op3`'s genus: *argument loss, not arithmetic error
 2. **`mf1`'s `η`** — decode `cx1`, fit per-component `δ`, measure residual. `mf1` §5.4 blocker 1,
    escalated by `dd1` §2 from due-diligence to load-bearing. Break-even 1.23%.
 3. **`rs2`'s A/B ΔS** — built, byte-closed, blocked on the scorer slot (`pu2`).
-4. **The four allocator price bases** (§4.1) — `c1`, `rd1`, `#869`, `ms2r`/`r3`.
+4. **`#869`'s identity** — the ONLY allocator of the four still unresolved, and it is blocked on a
+   **JOIN**, not on analysis (§4.3). One arm name or file path unblocks it in one grep.
 5. **The contour radius-of-curvature distribution** on `lstars` n600 (`dd1` §3) — gates whether the
    normal-gauge halving (row #2) applies at the segment lengths we would actually ship.
 6. **A live-best reconciliation.** This memo's charter names `S = 0.7910689` / 353,805 B; `op3`'s
