@@ -18,10 +18,14 @@ Every number is recomputed from a named receipt in this session; none is re-type
    priced better than `W`"), not an equalization — and `W` is exactly invariant (`ddm_op3`).
    Differing mechanism prices are *expected and harmless* at the portfolio level.
    **The genuine waterfill lives at exactly one place: the concave pose leg `√(10·d_pose)`.**
-2. **The defect is real but it is INSIDE each allocator, not between them.** Where a fixed byte
-   budget is split across many channels, the greedy needs a correct **per-channel** price. `wr1`'s
-   is corrupted on **both legs** — bytes `ρ = 0.513`, damage support **24.2× too small** (`rs2`,
-   MEASURED). That is the operator's §1, precisely located.
+2. **The defect is real, it is INSIDE an allocator rather than between them, and it is confined to
+   ONE allocator.** Where a fixed byte budget is split across many channels the greedy needs a
+   correct **per-channel** price, and `wr1`'s is corrupted on **both legs** — bytes `ρ = 0.513`,
+   damage support **24.2× too small** (`rs2`, MEASURED). **The other three named allocations have
+   ZERO measured prices** and therefore cannot be re-priced at all: `c1`/EV2 is **100% unallocated**
+   (`FORMULATION_MISPOSED`), `rd1` has **162/162 null duals**, `ms2r`/`r3` executed **zero rungs**
+   with a **null knee** (§4.1, all recomputed from their own artifacts). **`wr1` is the only
+   allocator in scope that ever assigned bytes by a price — so it is the whole exposure.**
 3. **The quoted prices are NOT comparable as printed — five distinct incomparabilities**, §2. The
    sharpest: **`sx1`'s 0.5349 B/flip reproduces EXACTLY from its own artifact**
    (253,341 / 473,651 gap-flips = 0.5348684). `ddm_sx2`'s "defect found" is a **denominator
@@ -252,18 +256,48 @@ The equal-marginal condition binds only where the objective is **concave**: `√
 | allocation | what it actually prices | does re-pricing move it? |
 |---|---|---|
 | **`#766` / `wr1`** | `np.lexsort((-residual_mass, flip_mass))` — an implicit per-cell price `residual_mass / flip_mass` | **YES — MEASURED, and both legs are corrupted.** Bytes: `residual_mass` correlates **ρ = 0.513** with the real per-cell byte marginal over 384 exact re-encodes. Damage: the key's 16×16 tile (256 px) understates the MEASURED receptive field (84×82 = 6,192 px) by **24.2×**, so **144 of 486** "provably safe" zero-flip cells are not — the free tranche is **29.6% smaller** than Knee A claims. `rs2` has already **BUILT** the byte-matched A/B (274,631 vs 274,321 B, residual 310 B = 0.4%); at equal bytes the re-priced key carries **27.9% less ambient flip mass**. **Direction measured; ΔS owed (needs the scorer slot `pu2` holds).** |
-| **`c1` waterfill tables** | *(pending — see §4.1)* | *(pending)* |
-| **`rd1` λ-continuation frontier** | a continuation in `λ` = the seg↔rate multiplier | **Structurally NO.** A λ-continuation *sweeps* the exchange rate rather than fixing it, so it is the one surface already immune to a wrong `W`; what it needs is a correct **per-channel** cost inside each λ-step, i.e. the `wr1` defect, not a different λ. *(Confirm against §4.1.)* |
-| **`#869` token-by-token** | *(pending — see §4.1)* | *(pending)* |
-| **`ms2r`/`r3` typed Fisher waterfill** | a **typed** (per-box) Fisher marginal — i.e. it *already* carries per-channel prices | **Probably NO, and that is the informative case:** it is the one allocator whose price is per-type by construction. Its exposure is not "one `W` for all" but whether the typed Fisher marginal is the *right* per-type cost. *(Confirm against §4.1.)* |
+| **`c1` waterfill tables** (via EV2) | the C1 composition's pair-cell dual allocation | **NO — it allocated NOTHING.** EV2 *"conserves the C1 byte total by leaving **100% unallocated**: assigned pair-cell bytes are zero, all 162 duals are non-computable"*, exact verdict **`FORMULATION_MISPOSED_FOR_CURRENT_C1_COMPOSITION`** (`codex_findings_…366box…`). There is no price to re-price. |
+| **`rd1` λ-continuation frontier** | per-dimension duals `λ_bytes_per_D_dimension` over 162 cells | **NO — 162/162 prices are `None`.** Recomputed from `rd1_162_dual_backfill.json`: `actionable_cell_count = 0`, `lambda_measured_cell_count = 0`, `rung_measured_cell_count = 0`, `effective_quantum_D = 0.0` on **162/162**, `lambda_measurement_status = STILL_NULL_…` on **162/162**. `metric_context_cell_count = 162` — every cell has metric *context* and no *price*. |
+| **`#869` token-by-token** | **UNKNOWN** — not resolved | **Did not find in the named scope** {the four receipt dirs + `codex_findings_*` read this session}. A parallel extraction over `.omx/research`, `.omx/state`, `experiments/`, `src/` was dispatched and had not returned at seal. **Honestly open.** |
+| **`ms2r`/`r3` typed Fisher waterfill** | a **typed** (per-box) Fisher marginal — the "many prices" structure the operator's §1 asks for | **NO — IT NEVER FIRED.** From `priced_rung_table.json`: `measured_task_rungs = []` (**zero**), `knee = None`, `knee_status = NULL_NO_TYPED_HOMOTOPY_CURVE`, `preregistered_rung_status = NOT_EXECUTABLE_UNTIL_ALL_TYPED_PRECONDITIONS_CLOSE`; all six ladder rungs carry `epistemic_status = DERIVED_PREREGISTRATION_NOT_MEASURED` + `execution_status = BLOCKED_PRECONDITION_NOT_RUN`. `MS4D` records *"zero waterfilled rungs."* |
 | **`qd1` / `#826`** | `gr1_cell_drop50` vs a v4d-era reference | **Already inverted (`−0.0983 → +0.0035`) — but by a BASELINE move, not a price move.** My charter cited this as price-sensitivity evidence; it is not. It is the sister defect ("a ΔS without its baseline is unanchored"). Keeping the two apart is the point of §2.4. |
 | **the pose leg** | `dS/d(d_pose) = 40.223` at live best | **YES, and this is the ONE true waterfill.** `op3` measured this marginal has risen **1.73×** since `pw1`, so **banked pose levers are UNDER-priced, not stale.** Unlike `W`, it moves with every improvement. A 1% relative cut in `d_pose` is worth **933 B** at today's point — and *more* tomorrow. |
 
-### 4.1 — Owed (a parallel extraction over `c1` / `rd1` / `#869` / `ms2r` was dispatched and had
-not returned when this memo was sealed). The three cells above marked *pending/confirm* are
-**UNKNOWN**, not "no". They are named here so the gap is loud rather than silent, per the
-vacuity law (**empty scope is VACUOUS, never PASS**). The question each must answer is one line:
-*does its cost side come from ONE global scalar or a per-channel MEASURED quantity?*
+### 4.1 — **Three of the four named allocations have ZERO measured prices. That relocates the defect.**
+
+This is the sharpest thing §4 found, and it inverts the shape of the question. `c1`/EV2 allocated
+**100% unallocated**; `rd1` has **162/162 null duals**; `ms2r`/`r3` executed **zero rungs** with a
+**null knee**. **None of them can be "re-priced," because none of them was ever priced.**
+
+> **Therefore the operator's §1 defect is CONFINED to `wr1`/`#766` — because `wr1` is the only
+> allocator in the named scope that ever actually assigned bytes using a per-channel price.** And
+> that is precisely the one `rs2` proved is corrupted on **both** legs (`ρ = 0.513`; support 24.2×).
+> The defect is narrower than feared and it is already located, measured, and has a built replacement.
+
+**This is the `[[VACUITY == PASS]]` genus applied to allocators.** Three sophisticated typed
+allocators sit in the corpus reading like live machinery; their measured-rung denominators are
+`0`, `0`, and `0`. Reporting them as "waterfill surfaces" without their denominator is the same
+silent-instrument failure as a skipped gate emitting `PASS`.
+
+### 4.2 — The operator's §2 is ALREADY a typed field in the `rd1` schema
+
+`rd1_162_dual_backfill.json` carries **`scorer_visibility ∈ {ker(A)-invisible, seg-visible,
+pose-visible}`** per cell, and pairs `ker(A)-invisible` with
+`source_metric_status = STRUCTURAL_ZERO_SCORER_EFFECT_NO_TYPED_RATE_HOME`. **That is exactly the
+dimension tax, correctly instantiated:** a cell with zero scorer effect buys zero flips for any
+bytes ⇒ its price is `+∞` ⇒ non-actionable. The null `λ` on those cells is not a gap; it is the
+right answer.
+
+**Caveat, stated because it is the trap:** the split is **54 / 54 / 54** and the strata are
+**27 × 6** and the temporal classes **54 × 3** — a **preregistered factorial grid**, not a sampled
+population. **"33% of cells are `ker(A)`-invisible" is a DESIGN count, not a measured nullity.**
+Anyone quoting it as a population fraction has re-created the prefix-vs-population error
+(`bp2`). The measured nullities are the four in §3.1's table; this schema field is the *vocabulary*,
+not the *measurement*.
+
+**Corroboration in passing:** the same table registers
+`pose_exchange_law = dS/dd_pose = 5/sqrt(10*d_pose)` — the campaign's own registered form of §1's
+pose marginal, which my 40.223 and `op3`'s 31.302 both evaluate.
 
 ---
 
@@ -287,6 +321,13 @@ The directive asks for the distinction that costs money: *does the ordering chan
 nothing at the top of the list today.** What it costs is *inside* the rate lever, which is the
 campaign's largest byte axis: a 29.6%-overstated free tranche and a half-noise ordering within it.
 `rs2` has already built the replacement; it needs the scorer slot to price it.
+
+**And the exposure is bounded by a second, blunter fact (§4.1): three of the four named allocations
+have never priced anything.** `c1`/EV2 100% unallocated · `rd1` 162/162 null duals · `ms2r`/`r3`
+zero measured rungs, null knee. **`wr1` is the entire surface.** A defect that looked campaign-wide
+is one allocator deep — which is good news for the fix and bad news for the shelf, because it means
+the campaign's three most sophisticated allocators are not competing candidates for re-pricing;
+they are **unbuilt**, and §4.1 says so with their denominators attached.
 
 **And the sharpest thing in this memo is not a price at all.** It is that a "B/flip" figure has, in
 this corpus, silently carried **five** hidden arguments — direction, denominator, kind, base, and
