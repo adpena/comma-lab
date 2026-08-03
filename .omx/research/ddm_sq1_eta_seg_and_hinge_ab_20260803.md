@@ -316,8 +316,35 @@ residual `dY ~ 5e-8`.
 appears to buy ~**99% of the pose damage back for ~1/3 of the seg gain**, at a reduced solver
 budget. The n=32 run is in flight; §2.8 lands its pooled numbers.
 
-### 2.8 Job 1c (pose-null, n=32) — in flight, receipts land at
-`/Volumes/VertigoDataTier/pact/ddm_sq1_20260803/receipts/sq1_posenull_n32.json`
+### 2.8 Job 1c — the pose cure MEASURED (interim n=12 of 32; run in flight)
+
+Solver budget deliberately REDUCED vs Job 1b (15 steps / single start vs 25 / two starts), so
+every eta here is a **conservative FLOOR**, not the optimum.
+
+| quantity | value |
+|---|---|
+| `eta_net` pooled | **+0.5518** (per-pair +0.5486 ± 0.0606; 1/12 above 0.583) |
+| `d_pose` before -> after | 0.000914 -> **0.000927** = **1.0145x** |
+| pairs where d_pose IMPROVED | **4/12** |
+| fixed / introduced | 5,318 / 706 |
+| integer-residual `max|dY|` | mean 17.00, max 22.42 |
+| actuator inflation (snap tax) | **1.1725x** (priced band 0.0517 -> snapped 0.0607) |
+
+**The cure works, and its cost is legible.** Against the unconstrained solve it trades
+`eta 0.79 -> 0.55` (−30%) to take the pose collateral from **56.5x** down to **1.014x** — i.e.
+**~98% of the pose damage is bought back for ~30% of the seg gain.** And the integer caveat
+derived in §2.7 is confirmed as REAL and simultaneously as HARMLESS: `max|dY|` is 17–22 grey
+levels, so nullity is definitely not exact — yet `d_pose` moves only 1.4%, and on a third of
+pairs it moves the *right* way. **Q3's "exactly 0" does not survive an integer actuator; the
+useful statement is "pose-neutral to ~1.4%", which is what this unit can defend.**
+
+**Two honesty charges against this rung, stated rather than buried:**
+1. **Snap tax.** Two of the six constraints are block-mean, so the actuator must edit whole
+   2x2 blocks and touches **17.25% more pixels than gp1's priced address**. The eta above is
+   therefore *slightly optimistic* relative to row A3's byte count; the row would owe either
+   the extra address or a block-granular re-price.
+2. **n=12 of 32 at the time of writing**, and the F1 verdict in §2.0 does **not** rest on this
+   rung — F1 was answered at the full pre-registered n=32 in §2.4.
 
 ### 2.9 What this unit does NOT license
 
@@ -420,4 +447,64 @@ hinge A/B is still the decisive next seg measurement, or whether the measured re
 address-rate finding in §4.2 now dominate it. The seal is bo1's and MAIN's to reopen; this unit
 supplies the measurement that bears on it, and nothing more.
 
-## §4 NEXT-IF-RESUMED — pending
+## §4 WHERE THIS LEAVES THE SEG AXIS — and NEXT-IF-RESUMED
+
+### 4.1 The falsifier scoreboard (all thresholds pre-registered in §1.3, none moved after)
+
+| falsifier | threshold | verdict | scope |
+|---|---|---|---|
+| **F1** | eta <= 0.583, >=32 pairs, real receiver | **DOES NOT FIRE** for the cured realizer (**+0.7895**, 32/32 pairs above). **FIRES** for realizer v0 (−3.764, 0/32). | FORMULATION, per realizer |
+| **F2** | eta <= 0.594 on Road<->Lane | **FIRES for v0** (L0_RL −0.3548, L1_RL +0.1638). **Not separately run under the cure** — the cured solve corrected all classes in-band. Edge evidence: Road<->Lane flips **12,422 -> 4,813 (−61.3%)** under the cure, vs **-> 20,714 (+66.8%)** under v0. | FORMULATION |
+| **F4** | decoder's ACTUAL `L*` captures < 90% at r=1 | **FIRES: 86.68%** (gp1's proxy render claimed 97.26%; `rz1` 93.53%). Cure = band width, already priced (r=2 -> 90.05%). | INSTANCE, r=1 free band |
+
+### 4.2 The finding that should route the next unit: **the seg axis is now ADDRESS-LIMITED**
+
+With realization measured (eta 0.79 unconstrained / 0.55 pose-neutral) and pose neutralised to
+1.014x, the residual cost is the **rate of the address**, not the physics. Re-priced against the
+named gap (0.654355209; 1% = 0.0065436 S = 9,827 B):
+
+| row | bytes | rate S | eta | seg gain | **net S** | **% of gap** |
+|---|---:|---:|---:|---:|---:|---:|
+| A3 free band r=1 | 367,523 | 0.24472 | 0.7895 (pose-catastrophic) | 0.33110 | −0.08638 | +13.20% |
+| **A3 free band r=1** | 367,523 | 0.24472 | **0.554 (pose-neutral)** | 0.23234 | **+0.01238** | **−1.89% (DEAD as priced)** |
+| **A2 oracle band q=0.02** | 260,569 | 0.17350 | **0.554 (pose-neutral)** | 0.21780 | **−0.04430** | **+6.77% (LIVE)** |
+
+**The free band is too expensive and the oracle band is live.** The entire difference is
+gp1's R5 micro-student rung — the ordering-within-band worth 106,954 B that gp1 called
+"economically wide open" with **fidelity UNMEASURED**. gp1 could not close it because eta was
+unknown; **eta is now measured, so the student's break-even is a real number rather than a
+conditional one.** That is the decisive next lever on this route.
+
+**Independent convergence worth recording.** Sister arm `ph5o` registered the canonical equation
+`ddm_ph5o_blind_descent_is_address_limited_20260803` for the POSE axis in the `D`-blind
+subspace: *alignment YES, rate NO — "its address IS its information."* This unit reaches the
+same law on the SEG axis by a different route (a FREE address whose **size**, not whose naming,
+is the cost). **Two axes, two mechanisms, one binding term: the address.** That is a candidate
+cross-axis law and it belongs in the equations leg, not just in two memos.
+
+### 4.3 NEXT-IF-RESUMED (ordered by distance to a lower exact score)
+
+1. **Finish Job 1c to n=32** (in flight, resumable via `--resume`; receipts at
+   `sq1_posenull_n32.json`). Then re-run the §4.2 table on the final pooled eta.
+2. **Raise the pose-null solver to Job 1b's budget** (25 steps, 2 starts). Job 1c's eta is a
+   FLOOR at a deliberately reduced budget; the 0.55-vs-0.79 gap is partly budget, not physics.
+   Cheap, and it moves A2's net directly.
+3. **Measure gp1's F3 (student fidelity)** — now the decisive rung, because §4.2 shows the whole
+   A3-vs-A2 difference is the ordering. gp1's harness accepts a drop-in ranking; substitute a
+   candidate student's ranking for `distill_margin` and re-read the free->oracle gap.
+4. **Re-price with a block-granular address** to discharge the §2.8 snap tax honestly.
+5. **Do NOT** re-run realizer v0 or any band-local *content* substitution — measured
+   anti-productive at every band size to 79.3% of the field (§2.2).
+6. **Do NOT** re-derive: `D`-support privacy / 22.70% blind (`m86`, reproduced here); the pose
+   relativity of frame_1 edits (`m87`, reproduced here as P0 = 58.2); the rank-6 yuv6 null
+   (`ph5o`, reproduced here).
+7. **Job 2** — see §3: needs a Catalog #332/#351-conforming config landing plus 4 n600 solves,
+   and its premise now needs MAIN's re-adjudication given §3.5.
+
+### 4.4 Pointer honesty
+
+**The exact pointer did NOT move.** `0.1910828242 [contest-CPU]` UNMOVED; own-vehicle frontier
+unchanged. Everything in this memo is `[macOS-CPU frozen-scorer advisory]`, `score_claim=false`,
+`promotion_eligible=false`, n=32, and **not byte-closed**. A measured realizability contract and
+a re-priced ladder row are MEANS. No row here has been built into an archive, and until one is,
+this unit has not achieved the goal.
