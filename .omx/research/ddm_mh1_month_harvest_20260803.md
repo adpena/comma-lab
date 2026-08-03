@@ -7,8 +7,8 @@ or orphaned over the course of the past month, honestly."*
 
 **Headline (the unflattering answer the "honestly" asked for):** the month's signal loss is **not**
 mostly abandoned research. It is **status-rot in the tracking layer plus a structurally broken join**.
-Of 24 silently-parked window-1 ledger rows, **13 are rot** (the work continued under other names; the
-row was never closed) and **11 are true orphans**. And the repo-visible task ledger covers **4.8%** of
+Of 24 silently-parked window-1 ledger rows, **14 are rot** (the work continued under other names; the
+row was never closed) and **10 are true orphans**. And the repo-visible task ledger covers **4.8%** of
 the primary window's memos, of which only **9.8%** are reachable by the `task #N` convention arms use.
 A naive count would have reported "24 orphans" — that would have been a false claim, and §6 records it
 as the primary thing this arm refutes.
@@ -92,7 +92,7 @@ Of the 32: **8 carry a named blocker** (a legitimate exit under the operating ru
 Tested against all **1,158** window-2 memos, excluding audit/ledger memos (a mention inside a
 backlog-drain memo is *re-listing*, not consumption).
 
-**STATUS-ROT — work continued under another name, row never closed (13):**
+**STATUS-ROT — work continued under another name, row never closed (14):**
 
 | Row | Later substantive memos |
 |---|---:|
@@ -109,13 +109,16 @@ backlog-drain memo is *re-listing*, not consumption).
 | `jrd` witness rate-instrument route | 2 |
 | `phase_residual_carrier_store_half_359` | 2 |
 | `494` compute-substrate authority ladder | 1 |
+| `jrd` pose-decoupling R1 composition | 1 |
 
-**TRUE ORPHAN — no later substantive mention in 1,158 window-2 memos (11):**
+**TRUE ORPHAN — no later substantive mention in 1,158 window-2 memos (10):**
 
 `C1-WITNESS-CLEAN-STAGE-EMA` · `D45` AdamW optimality / MLX semantics gap · `D47` transported /
 event-triggered costate reuse · `D48a` YOPO validation cadence · `D48b` feature-ball suffix
 certification · `D48c` INSTANT native projected execution · `D50` ANE/CoreML advisory ·
 `D51` exact-integer megakernel · `jrd` n600 tensor prior · `jrd` training-time entropy edge route
+
+(8 of these 10 are D-series rows — see §3b.)
 
 Scope statement: "did not find in the 1,158 window-2 `.omx/research/*.md` memos, excluding
 audit/ledger memos." This is **not** a claim that no artifact anywhere references them.
@@ -124,6 +127,57 @@ audit/ledger memos." This is **not** a claim that no artifact anywhere reference
 `'ane '`, which matches "l**ane** ", "pl**ane** ", "membr**ane** " — it reported **607** later memos and
 would have classified D50 as healthy status-rot. Word-boundary `\bANE\b|\bCoreML\b` returns **0**.
 D50 is a true orphan. Control retained in the record: 607 (bad term) vs 0 (correct term).
+
+### 2d. Phantom arms — chartered, built, never fired
+
+Sub-sweep denominators: 199 charter-shaped window-1 filenames extracted, 198 testable; **99** had zero
+later-research-filename match, **7** zero commit-subject match, **6** zero on **both**. All 13,961
+commit subjects scanned via `git log --format=%s` (count verified against `git rev-list --count`);
+`experiments/results/` excluded.
+
+**Instrument note that changed the sweep:** the `ddm_xx1` arm-code convention **does not exist in this
+window** — the earliest `ddm_*` artifact is 2026-07-22, and **0 of 924** fall in 07-04→07-19. Window-1
+arms are named by charter-memo stem + task number. A generic `[a-z]{2}\d` regex returned 100 codes of
+which the top 60 were noise (`fp32`, `ep0`, `bf16`, `se3`); single-letter labels (939 distinct) were
+rejected as untestable — grepping `C1` matches anything mentioning it, the self-match trap.
+
+| # | Phantom | Chartered to measure | Evidence of no output | Conf |
+|---|---|---|---|---|
+| 1 | **#563 duty-queue fire chain** (4 tickets) | paired OFF/ON n600 ep725-fork A/B on d_seg for top-2 EV levers | all 4 `dry_start_receipt.json`: `trainer_or_governed_launch_executed:false`, rc=6; verdict cards say "no trainer was invoked". **Operator approved TRAINING GOs on 07-19; 2,040 commits since, zero further mention.** Not covered by `ddm_qd1` | HIGH |
+| 2 | **v7.5.3 increment** | 5 deltas incl. a 10-rung registered-OFF ladder | built 07-10 with a 22-test suite; last commit naming `v753` = **07-11**; vehicle jumped v9c→v10→TR1; ladder never launched | HIGH |
+| 3 | **ARM-C `LaneSkipBand` #524** | d_seg A/B of stride-2 skip-band supervision | **0 rows in `lever_activation_ledger.jsonl`** (37 levers tracked; `lane_skipband` absent); `arm_c_skiplever`/`ema_comparator` = 0 hits outside the charter | HIGH |
+| 4 | **P0 FORCES phase-2** (FORCE 1/2/3) | "one per crucible increment with a measured n600 A/B" | `temporal_screw_consistency` (13 rows), `margin_band_satisficing` (12), `tie_locus_displacement` (12) — **every row `verdict_ref: null`**; all events `fired`, never `measured` | HIGH |
+| 5 | **ARM-BASISPROD** | close 3 P0 build obligations without weakening V9 provenance | 8 files, **0 commit subjects**; all downstream hits are re-listings | HIGH |
+| 6 | **`modal_moneysafety`** | pre-paid-launch Modal money-path audit | 2 files repo-wide, neither a result | MED-HIGH |
+
+**`fired` does not mean `measured`.** The lever ledger holds 251 rows — 243 `fired`, 7 `measured`, 1
+`built` — where `fired` means *present in a launched config*. **29 of 37 levers carry `verdict_ref:
+null` on every row**: they ran and were never adjudicated. This is a distinct orphan class from
+"never ran," and it is invisible to any sweep that counts activations rather than verdicts.
+
+### 2e. Named-$0-follow-ons never run
+
+2,256 OWED/`$0` lines across 693 of 1,052 memos; **414** across 204 files name both a score axis and an
+action verb. The `default_off_decision_table_20260710.jsonl` holds 185 rows; **31** are dispositioned
+fire-now/measure-cheap with `ever_fired=false`; **26 of those 31 still show no lever-ledger firing**
+after 07-10 — a 24-day-undrained queue.
+
+**Two that transfer to the live TR1 line** (both rest on measured *scorer* facts, not vehicle facts):
+
+- **`blind_coordinate_generic_fill_401`** — generic-fill the ~230,904 camera px/frame that **no scorer
+  resize reads**. Rate-side, vehicle-independent: `m86` measured `D` as disjoint 2×2 sampling with
+  **22.70% of camera px blind to BOTH scorers**, and the lattice is unchanged by the vehicle pivot.
+- **ARM-C `lane_skipband`** — derives from measured SegNet structure (single 16-ch stride-2 skip at
+  (192,256); ablating it → 8,072 flips, **77% Road↔Lane**), and `m91` prices Road↔Lane at **22.1% of
+  the entire remaining gap**. The charter's finding that the witness carried only ~10% of GT's Lane
+  skip-band energy (1.68e-4 vs 1.70e-3) is **witness-scoped** and must be re-measured on TR1.
+
+**What explicitly does NOT transfer.** The #563 tickets carry HWM at *43.8% of remaining descent* and
+StepNative at *31.6%*, both labelled MEASURED. They were priced against the **0.19108 borrowed
+pointer on the witness vehicle**. Per `m07`/`L18` those are **hypotheses on TR1, not results**. The
+mechanisms remain aligned with the level-set physics; the EV numbers must be re-derived before any
+launch is routed on them. Recording this explicitly, because "MEASURED" labels on ancestor-vehicle
+numbers are exactly how a dead baseline gets divided by.
 
 ---
 
@@ -136,7 +190,7 @@ at once. These are the finds that justify a month-scale arm existing at all.
 
 Detecting "row says `pending`, work actually continued" requires the row (window-1) **and** the
 continuation (window-2). A window-1 sweep sees a pending row and calls it an orphan. A window-2 sweep
-sees active work and calls it healthy. **Both are wrong.** Only the join shows 13 rot / 11 orphan.
+sees active work and calls it healthy. **Both are wrong.** Only the join shows 14 rot / 10 orphan.
 This is the single largest correction in this memo (§6).
 
 ### 3b. The D-series lineage break — orphaning **by rename**
@@ -267,10 +321,10 @@ answer. An id-not-found is a **missing join**, never an absent row.
 ### R1 — "24 window-1 orphans" — REFUTED by this arm's own data (2.2× inflation)
 
 The natural output of a ledger-driven sweep is: *32 non-completed rows, 8 legitimately blocked,
-therefore **24 orphans**.* Tested against 1,158 window-2 memos, **13 of the 24 are status-rot** — the
-work continued under other names and only the row went stale. The true orphan count is **11**.
+therefore **24 orphans**.* Tested against 1,158 window-2 memos, **14 of the 24 are status-rot** — the
+work continued under other names and only the row went stale. The true orphan count is **10**.
 
-A naive count inflates by **2.2×**. This arm was on course to publish that number before running the
+A naive count inflates by **2.4×**. This arm was on course to publish that number before running the
 consumption test. **Any orphan count not paired with a forward-consumption test is inflated by
 construction**, and every one of the 16 tracking surfaces in §3c is a candidate for having done this.
 
