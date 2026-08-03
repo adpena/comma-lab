@@ -517,7 +517,11 @@ ledger; arms see ONLY the repo*). `#766` resolved **only because the charter als
 The directive asks for the distinction that costs money: *does the ordering change, or does the
 **top** of the list change?*
 
-**The top does not change. The ordering inside two families does.**
+**Answer: the top of the list does not change. The ORDERING inside the SELL family does, and — the
+one thing that costs us — its DEPTH does.**
+
+*(Revised after review. My first pass said "ordering only." `tw1`'s state-dependence is a
+depth error, not an ordering error, and depth is a decision.)*
 
 | claim | verdict | evidence |
 |---|---|---|
@@ -525,6 +529,8 @@ The directive asks for the distinction that costs money: *does the ordering chan
 | The SELL family's #1 ("drop zero-flip cells") is price-robust *as a strategy* | **YES** | no re-pricing makes a *nonzero*-flip cell preferable to a genuinely zero-flip one. |
 | …but its **membership** is not | **NO — 29.6% wrong** | 144 of 486 cells (`rs2`, MEASURED). The strategy survives; the tranche shrinks. |
 | The SELL family's *within-tranche* ordering is price-robust | **NO — half noise** | `ρ = 0.513` on the byte proxy (`rs2`, 384 exact re-encodes). |
+| The SELL family's **DEPTH** is price-robust | **NO — and this one moves the answer, not just the order** | `tw1` (#869): the marginal saving of a fixed cell **rises +13.1%** with drop depth (52/53 cells) and joint > singleton sum by **+7.0%**. `wr1` prices at `k=0` and drops 486–600. **Both corrections say the true optimum is DEEPER than `wr1`'s knee.** This is the one re-pricing in the memo that changes *what to do*, not merely *in what order*. |
+| The two keys that drive `#766` see the quantiser | **NO — structurally** | `clip(rint())`'s dead zone is amplitude-dependent and **a linearisation cannot represent a dead zone at all** (`rs2`). Both `wr1` keys are linearisations, so both are blind **exactly at the separatrix**. Fixable for ≈7 min of on-disk compute (§7.0). |
 | The description floor's absolute level | **25.7% soft** | the {description} × {denominator} 2×2, §2.2 — but it is a **slack** quantity (headroom 5.906 → 6.530 bits/gap-flip), and no decision keys off it. |
 | Any inversion attributable to **mechanism price** | **NONE FOUND** | Exhaustively, within the named scope {`sx1`, `sx2`, `rz1`, `mf1`, `qd1`, `rs2`, `wr1`}: the single measured inversion (`#826`) is baseline-driven (§2.4). **Did not find a price-driven inversion in that scope.** |
 
