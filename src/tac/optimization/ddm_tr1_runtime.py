@@ -1378,11 +1378,42 @@ def bicubic_up_to_camera_float(frame: np.ndarray) -> np.ndarray:
 def render_frame1_camera_uint8(
     parsed: ParsedTR1Packet,
     pair_index: int,
+    *,
+    window_solve: bool = False,
 ) -> np.ndarray:
-    """Render one deterministic camera-resolution uint8 frame1."""
+    """Render one deterministic camera-resolution uint8 frame1.
 
-    up = bicubic_up_to_camera_float(render_frame1_float(parsed, pair_index))
-    return np.ascontiguousarray(np.clip(np.rint(up), 0, 255).astype(np.uint8))
+    ``window_solve`` (default OFF, BYTE-IDENTICAL when off) engages the ddm_ll1
+    per-scorer-pixel window solve instead of plain ``clip(rint(U(r)))``.
+
+    WHY IT EXISTS.  The scorer downsample D is bilinear POINT SAMPLING with
+    ``antialias=False`` at stride 2.276 > 2, so consecutive 2x2 read-windows are
+    DISJOINT: each of the 196,608 scorer pixels owns 4 PRIVATE camera pixels and
+    230,904 camera pixels (22.70%) are read by neither scorer.  Rounding an
+    upsample therefore delivers ``r`` only approximately; solving each private
+    window for ``sum_ij w_ij c_ij = r`` delivers it almost exactly, at ZERO
+    counted bytes (generic receiver-side algorithm, rule-118 free).
+
+    MEASURED 2026-08-02 through the canonical DistortionNet path, n=3 real
+    frames, flips vs perfect delivery:
+        clip(rint(U(r)))     88 flips   d_seg 0.0001492
+        window solve          3 flips   d_seg 0.0000051   => Delta S -0.01441
+    96.6% of the realization debt. Cost 0.07 s/frame (n600 ~1.3 min 1-core).
+
+    DEFAULT REMAINS OFF pending the live-vehicle n600 gate: v4d warps frame_0
+    FROM frame_1's camera pixels, and the solve moves 37.7% of them (mean 0.657,
+    p99 6, MAX 175 LSB).  Scorer-invisible by construction, but the warp
+    resamples ACROSS private windows, so d_pose is UNMEASURED here.
+    """
+
+    render = render_frame1_float(parsed, pair_index)
+    up = bicubic_up_to_camera_float(render)
+    cam = np.ascontiguousarray(np.clip(np.rint(up), 0, 255).astype(np.uint8))
+    if not window_solve:
+        return cam
+    from tac.optimization.ddm_ll1_window_solve import solve_camera_windows
+
+    return solve_camera_windows(cam, np.asarray(render, dtype=np.float64))
 
 
 def render_pair_camera_uint8(
