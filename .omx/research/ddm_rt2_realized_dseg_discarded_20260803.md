@@ -274,3 +274,72 @@ instrument:
 2. **Hinge-activity probe** — cached `experiments/results/mlx_fleet_gt_cache/gt_n600.npz` `margins`,
    chunked 50 pairs at a time, reporting the full denominator (117,964,800 sites). Result §4. Control:
    `margin < 0` returns exactly 0, confirming the array is the GT-reference (target = `lstars`) margin.
+
+---
+
+## 9. ADDENDUM — **§5's C1 is REFUTED by my own follow-up measurement. The floor is right; the weight is the lever.**
+
+Landed after the sections above. Two corrections, both against my own committed text.
+
+### 9.1 A vacuous negative I nearly accepted
+
+A backgrounded `grep -rln "joint_descent" experiments/ src/ tools/` returned **no `joint_descent`
+matches**. That reading would have been **VACUOUS, not negative**: the command drowned in
+`experiments/results/**/source_bundle/` copies and was killed at 120 s **before ever reaching `src/`**
+— where `direct_description_joint_descent.py` plainly lives. Re-run bounded, with a denominator
+(**414 `.py` files** across `src/tac/optimization/` + `src/tac/boundary_math/`):
+
+- `margin_floor` appears in **3** source files: this module, `joint_p18_p19_waterfill.py`
+  (`margin_floor=1e-6`, a *denominator clamp* — different semantics, not the same knob), and
+  **`lane_guard.py`**.
+- The `mx.argmax`-realized-`d_seg` shape appears in **2**: this module and `frame1_seg_repair_atoms.py`.
+
+**So the §6 `INSTANCE` scope holds — the pattern is narrow, not family-wide.** Confirmed, not assumed.
+
+### 9.2 The repo already has the DERIVED floor — and it agrees with the shipped constant
+
+`lane_guard.py:547` exposes **`derive_margin_floor(lane_margins, pct=10.0)`**: the `pct`-th percentile
+of the margin field **restricted to GT-Lane pixels**, documented *"Data-derived per run, never a bare
+constant."* My §4/§5 used the **global** margin field — the wrong input distribution.
+
+Measured on the same cached n600 data, class **self-detected by area signature** (never luma-sorted,
+per CLAUDE.md); the repo's own `LANE_CLASS = 1` agrees:
+
+```
+class areas: 0=23.2332%  1=0.5855%  2=49.5176%  3=1.2379%  4=25.4258%
+SELF-DETECTED Lane = class 1 (rarest, 0.5855%) -- expected 1 @ ~0.59%: MATCH
+GT-Lane sites: 690,639  (0.5855% of 117,964,800)
+Lane-restricted margin percentiles: p1=0.0103  p5=0.0517  p10=0.1047  p25=0.2766  p50=0.6013
+
+DERIVED floor = derive_margin_floor(lane_margins, pct=10.0) = 0.104748
+  vs SHIPPED hardcoded margin_floor        = 0.1        -> ratio 1.047x
+  sites below DERIVED floor: 348,755 = 0.2956%   (vs 0.2824% below the shipped 0.1)
+```
+
+**The shipped `0.1` is within 5% of what the repo's own derived primitive produces.** Two independent
+routes — an fp32 cross-hardware drift guard (~0.096) and a Lane-margin p10 (0.1047) — land on
+essentially the same number.
+
+### 9.3 What this corrects
+
+- **§5 C1 as committed ("raise `margin_floor` toward the measured p5% = 2.0582") is REFUTED.** That
+  target came from the global field; against the derived Lane-restricted floor it is **~20× too high**,
+  and it would put the hinge on a large mass of sites whose survival is not in question — importing
+  exactly the *poor-allocator* pathology `er1` diagnosed in CE, merely relocated into the hinge.
+- **§4's "wrong floor for #888's job" is WITHDRAWN.** The floor is derived-equivalent and correct.
+- **The real lever is `margin_hinge_weight` (0.05), not `margin_floor` (0.1).** Moving the floor from
+  0.1 → 0.1047 changes activatable sites only 0.2824% → **0.2956%**. The hinge is inert **not** because
+  the floor is mis-set but because only ~0.3% of sites lie near the separatrix at all, so at weight
+  0.05 its contribution (7.06e-06) is swamped by CE. Concentrating gradient on that ~0.3% is a
+  **reweighting**, not a re-flooring.
+
+**Revised C1:** raise `margin_hinge_weight` (and expose both knobs through
+`DirectDescriptionJointDescentTypedConfigV1`, where neither appears today); hold `margin_floor` at its
+derived value and, better, *call* `derive_margin_floor` instead of hardcoding it, so the constant
+becomes a per-run derivation per the "derive LAWS, never bare constants" discipline. C2 is unchanged.
+The §5 falsifier still binds; drop the "degrades the L7 portability guard" kill for C1, since the
+revised C1 no longer moves the floor.
+
+**Method note.** Both corrections came from refusing to read a timed-out grep as a negative. The
+finding I was sent to check was an over-relayed line number; the finding I nearly shipped in its place
+was an under-derived constant. Same class, one hop later.
