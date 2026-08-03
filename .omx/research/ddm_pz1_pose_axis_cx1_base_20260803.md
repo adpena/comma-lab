@@ -21,10 +21,36 @@ of 52,364 B. The n600 evaluator slot was NOT spent and should not be.**
 **The rung's seg premise was the real error, and it was not a pose problem at all.** `ll1` measured
 *"88 flips **vs perfect delivery**"* — the argmax of our own **ideal render**, not GT. That is a real
 number honestly measured against the wrong target. `d_seg` is measured against **GT**, and the
-rasterization it removes turns out to be **orthogonal noise with respect to the GT error**: 43.3% of
-pairs improve, 49.3% worsen. Removing noise uncorrelated with your error does not reduce your error.
+rasterization it removes is **uncorrelated with the GT error**: 43.3% of pairs improve, 49.3% worsen.
 This fires `ra1` §5.4's own pre-registered falsifier (*retire if `Δd_seg × 100 > −0.010 S`*) —
 **RETIRE, not defer.**
+
+> ⚠ **RELATIVE-SIGNIFICANCE CORRECTION (MAIN, 2026-08-03, Stop-hook `check_no_unjustified_magnitude_dismissal` #404).**
+> The sentence originally here — *"removing noise uncorrelated with your error does not reduce your
+> error"* — dismissed the seg leg by EYEBALL, and it was also **wrong in a way that favoured us**.
+> Priced against the live gap **0.6543562** (`gap_decomposition_against_floor_20260802`):
+>
+> | leg | ΔS | **% of remaining gap** | bytes-equiv @ W=1.273108215332031 |
+> |---|---:|---:|---:|
+> | seg | +0.0003940 | **0.0602%** | 0.3 kB |
+> | pose | +0.0310217 | **4.7408%** | 24.4 kB |
+> | **net** | **+0.0314155** | **4.8010%** | **24.7 kB** |
+>
+> **Two things follow, and both strengthen the verdict rather than weakening it.**
+>
+> **(1) The seg leg is NOT noise — it is RESOLVABLE and HARMFUL.** This arm's own positive control puts
+> the instrument's reproducibility at **5.0e-07 S** (seg term 0.4311795 vs `report.txt` 0.4311790). The
+> measured +3.94e-04 S is **788× that floor.** So the honest statement is not "orthogonal noise, no
+> effect" (which implies ~zero) but **"a small, cleanly-resolved, WRONG-SIGNED effect."** Same verdict,
+> better-supported, and it removes a not-measured "≈0" that a later reader could have mined as headroom.
+>
+> **(2) The RETIRE does not rest on the dismissed leg at all.** Pose is **78.7× larger** than seg here.
+> Deleting the seg sentence entirely leaves +4.7408% of gap in the wrong direction — the verdict is
+> carried by pose alone and survives any re-reading of the seg leg.
+>
+> **verdict_scope: INSTANCE** — this prices ONE dismissal in ONE memo. It is not a finding about the
+> rasterization family, and it does not license magnitude-dismissal elsewhere. Sister law:
+> a ΔS must name its BASELINE *and* its TARGET *and* its share of the remaining gap.
 
 Five results, three of which correct load-bearing claims in the documents that sent me here — and
 one of which corrects the framing of my own charter.
