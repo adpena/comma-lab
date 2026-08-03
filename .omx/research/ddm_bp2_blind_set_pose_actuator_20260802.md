@@ -198,9 +198,17 @@ is bracketed and the bound is no longer loose on that side.
 ## 6. What would flip the sign — and the measurement that refutes the two cheapest candidates
 
 **The entire question reduces to: can the INDEX be made receiver-computable?** If it can, only the k
-sign bits are video-derived. At the k=5 arm that is 0.6 B/pair instead of 12 B/pair:
-`ΔS_rate +0.00025` against `ΔS_pose −0.00064` = **NET −0.00039**. The family flips from losing 7.3x to
-winning — the whole verdict rests on one substitution.
+sign bits are video-derived, and every arm flips sign at once:
+
+| arm | k | B/pair (signs only) | ΔS_rate | ΔS_pose | **NET ΔS** |
+|---|---:|---:|---:|---:|---:|
+| cheapest fixed | 5 | 0.6 | +0.00025 | −0.00064 | **−0.00039** |
+| mid | 241 | 30.1 | +0.01204 | −0.01422 | **−0.00218** |
+| **per-pair argmin** | 3,546 | 443.2 | +0.17709 | −0.29933 | **−0.12224** |
+
+The argmin envelope is the one that matters: a free index turns a +0.575 loss into a **−0.122 win**,
+because the sign bits are ~5x cheaper than naming the coordinates. **The whole verdict rests on this one
+substitution**, and the prize is ~0.12 S, not the ~0.0004 S the cheapest arm suggests.
 
 **So I measured it (n=12).** Two receiver-computable rankings (both need only `f1` and the homography
 the receiver already builds), each given the SAME true signs, scored on the canonical scorer through
@@ -214,8 +222,10 @@ the REAL re-rendered `f0`:
 
 (base 0.011944; INFL = warp→D influence column mass, GRAD = |Sobel(f1)| x influence.)
 
-There **is** signal — INFL runs 5–48x above chance — but capture is ≤6.9% and the proxy-selected arms
-are **effectively inert** (0.0119 -> 0.0114–0.0119) where the true index delivers −17% at k=1,000.
+There **is** signal — INFL runs **47.8x / 22.0x / 9.5x** above chance at k=200/1,000/5,000 and GRAD
+**15.9x / 4.8x / 3.6x** — but absolute capture is ≤6.9%, and the proxy-selected arms are **effectively
+inert** (0.0119 -> 0.0114–0.0119) where the true index delivers −17% at k=1,000. Lift is not capture:
+a ranking that is 48x better than chance still misses 98.6% of the coordinates that matter.
 **REFUTED at FORMULATION scope: two proxies, not the proxy family.**
 
 This independently re-derives `ddm_ll1`'s finding on a different surface — *"the free render-gradient
