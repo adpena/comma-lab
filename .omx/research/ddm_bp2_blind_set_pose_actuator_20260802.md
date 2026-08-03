@@ -322,11 +322,27 @@ seeding makes a sharded run bit-identical to an unsharded one (verified: 35/35 n
 `--resume` never repeats a measured pair, so restarting is always safe and always makes progress — it
 just needs re-firing until done. 181 of 600 pairs are banked in the shard sidecars.
 
-**Instrument warning, learned twice here the hard way:** `pgrep -f shard_worker.sh` returns a NONZERO
-count even when every worker is dead, because it matches the shell running the `pgrep` itself. Both
-times I used it as a liveness check it reported healthy workers that did not exist. Use
-`pgrep -f 'bash .*shard_worker'` / `pgrep -f 'ddm_bp2_blind_warp_reach.py'`, or check row counts
-advancing. A liveness probe that can never return 0 is not a liveness probe.
+**Instrument warning — the SYMPTOM is real, and my first stated MECHANISM was wrong.** Twice,
+`pgrep -f shard_worker.sh` reported live workers when every worker was dead. I wrote that up as "pgrep
+matches the shell running it." **That is REFUTED by control, in two independent harnesses:**
+
+- MEASURED (this arm's context): `pgrep -fl "ZZUNIQ_bp2_$$_selftest"` with the token literally in the
+  command line returns **rc=1**, and the probing shell's own pid does not appear in any match list.
+- MEASURED (MAIN's harness, same machine): a unique-token probe likewise returns **rc=1**.
+
+The actual mechanism, MEASURED here by reading the matched command lines: the loose pattern returned
+**10** matches = **6 real** `/bin/bash <path>/shard_worker.sh 6 J` workers **+ 4 of MY OWN leftover
+`zsh -c` monitor/waiter shells**, each of which carries `pgrep -f shard_worker.sh` inside its own loop
+body and therefore matches the pattern. Stale monitors accumulate; they are indistinguishable from
+workers under a loose pattern. Anchoring on the exec form
+(`pgrep -f '^/bin/bash /private.*shard_worker\.sh [0-9]'`) returns exactly **6**, the right answer.
+
+**LAW (survives both measurements, and needs no mechanism claim):** use **row-count / receipt-existence**
+for liveness, not a pattern-based process probe. A pattern probe can match processes that merely
+*mention* the pattern — most insidiously your own monitors — and from inside the probe you cannot tell
+which case you are in. If a process probe is unavoidable, anchor it on the executable form and print
+the matched command lines rather than a count. *(Scope: the self-match claim is refuted in these two
+contexts; whether some other shell invocation self-matches is untested and not relied on.)*
 
 To finish and re-derive §4–§5:
 
