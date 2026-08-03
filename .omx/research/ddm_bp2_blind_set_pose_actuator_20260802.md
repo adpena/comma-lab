@@ -21,7 +21,7 @@ decomposition + adjoint), `tools/ddm_bp2_blind_warp_reach.py` (3 modes), 26 test
 | | threshold | MEASURED | verdict |
 |---|---|---|---|
 | **F1** blind-set overlap with the frame_0 warp read-set | `< 5%` closes | **14.80%** (n600) | **REFUTED — does not close** |
-| **F2** achievable `abs(delta d_pose)` from a blind-only perturbation | `< 1e-4` closes | **0.628** (mean over pairs, per-pair max over arms) | **REFUTED by ~3.8 orders of magnitude** |
+| **F2** achievable `abs(delta d_pose)` from a blind-only perturbation | `< 1e-4` closes | **1.7158** (n600, mean over pairs of the per-pair max over arms) | **REFUTED by 4.2 orders of magnitude** |
 
 **Both legs of the charter's claim are confirmed.** The 230,904 blind pixels are exactly invisible to
 both scorers, they ARE read by v4d's frame_0 warp, and perturbing them moves `d_pose` violently at
@@ -29,10 +29,10 @@ literally zero seg cost.
 
 **And the family still does not pay.** The steering direction is video-derived, so it must be shipped,
 and at **every** measured operating point the rate cost of naming the coordinates exceeds the pose gain
-— by **7.3x at the cheapest fixed arm** and, at best, by **2.9x** at the per-pair argmin envelope. This is a
-**FORMULATION**-scope closure (explicit shipped blind-coordinate correction index), not a family kill;
-§6 names the one substitution that flips the sign and the measurement that refutes the two cheapest
-candidates for it.
+— by **17.8x at the cheapest fixed arm** and, at best, by **3.89x** at the per-pair argmin envelope
+(n600). **And it does not pay even if the index were FREE** (best arm NET +0.00001 S, argmin +0.152 S),
+which removes the one substitution that could have flipped it. This closes the shipped-correction
+formulation firmly; §7 scopes what remains open.
 
 ---
 
@@ -101,34 +101,19 @@ blind mass by construction (identity path), which is the whole of the gap.
 
 ## 4. F2 — the reach, and the mechanism (MEASURED)
 
-⚠ **SAMPLING SCOPE — §4 and §5 are PREFIX analysis, NOT n600 findings.** F1 (§3) is n600. F2's
-verdict clears its threshold by 3.8 orders of magnitude and does not turn on the sample. But every
-`d_pose` mean and every `ΔS` in §4–§5 is measured on **181 of 600 pairs**. The run is sharded 6 ways
-and resumable, but it is **NOT running** — this environment kills these processes (three independent
-launch strategies died: plain `nohup`+`disown`, a self-restarting supervisor, and 6 `os.setsid`
-double-forked shards, the last six all killed simultaneously at 29–31 rows each). §8 has the exact
-resume commands; treat finishing it as owed work, not as something in flight. That sample is
-**~2.4x harder than the population**: prefix mean `d_pose` 0.0204 vs the v4d refine receipt's n600 `mean_d_final = 0.00858414`.
-Per the n600 discipline these are **supplementary prefix numbers**, not evidence — read them for their
-SIGN and order of magnitude, not their value.
+**§4–§5 are now n600 — and the prefix I reported earlier was materially misleading.** The run
+completed as 6 resumable shards (600/600 unique pairs, zero duplicates, all 6 residues). The earlier
+prefix (n=73–181) had mean `d_pose` 0.0390 against the true population's **0.0076425** — it was
+**5.1x harder than the population**, and it *flattered the family*: it made the free-index escape look
+like a −0.122 S win when at n600 it is a **+0.152 S loss** (§6). The population is heavily skewed
+(median 0.0008154, p90 0.0049012, max 0.7749889), so a video-order prefix is not a sample of it.
+**This is the whole reason the n600 bar exists, and it changed a conclusion, not just a decimal.**
 
-**And I checked whether the sign is actually robust, on DISJOINT subsamples** (nested prefixes share
-data and would have flattered me). Cost/gain ratio, `>1` meaning *does not pay*, per-pair byte cost:
+Robustness at n600, on four disjoint quarters (argmin cost/gain, `>1` = does not pay):
+**2.47 · 17.57 · 25.67 · 4.78**, all 600 together **3.89**. The magnitude still swings an order of
+magnitude between quarters; the sign never does.
 
-| subsample | n | t=0.002 | t=0.01 | t=0.05 | per-pair argmin |
-|---|---:|---:|---:|---:|---:|
-| first half | 90 | 6.43 | 8.29 | 10.24 | 2.83 |
-| second half | 91 | 67.99 | ∞ (no gain) | ∞ | 3.81 |
-| even pairs | 91 | 10.09 | 15.11 | 50.51 | 2.77 |
-| odd pairs | 90 | 20.98 | 41.79 | ∞ | 1.72 |
-| **all measured** | **181** | **13.64** | **21.98** | **169.27** | **2.31** |
-
-**The MAGNITUDE is not stable — it swings an order of magnitude between disjoint halves.** What IS
-stable is the sign: across every arm and every disjoint subsample the minimum ratio is **1.72x**, and
-it is never below 1. **That is the load-bearing claim: the family does not pay, everywhere I looked.
-Any specific multiple quoted from this memo is a sample statistic with an order-of-magnitude error bar.**
-
-**d_seg is EXACTLY unchanged, in every arm, on every pair measured** — including under a full ±1 LSB
+**d_seg is EXACTLY unchanged, in every arm, on all 600 pairs** — including under a full ±1 LSB
 gradient-aligned sign step over all 692,712 blind coordinates, the largest structured 1-LSB
 perturbation the channel admits. Not "within tolerance": bit-identical `d_seg`. This is the
 zero-seg-cost claim, confirmed through the real frozen SegNet rather than argued from the geometry.
@@ -136,11 +121,12 @@ zero-seg-cost claim, confirmed through the real frozen SegNet rather than argued
 **The channel's gain is enormous and direction-selective:**
 
 ```
-mean d_pose base                                    0.0390414
-full +-1 LSB gradient-sign step, descent direction   0.28573    (x 7.3)
-full +-1 LSB gradient-sign step, ascent direction    0.64762    (x 16.6)
-mean max|delta d_pose| over all arms                 0.6281     (F2 threshold 1e-4)
-RANDOM-sign step at the SAME coordinate count       0.0390592  (+0.05%)  <- control
+mean d_pose base                                    0.0076425   (n600; pose term 0.276450)
+full +-1 LSB gradient-sign step, descent direction  0.88914     (x 116)
+full +-1 LSB gradient-sign step, ascent direction   1.17851     (x 154)
+mean max|delta d_pose| over all arms                1.7158      (F2 threshold 1e-4)
+RANDOM-sign step at the SAME coordinate count       0.0076892   (+0.61%)  <- control
+gradient L1 mass carried by the blind set            13.07%     of the whole frame's
 ```
 
 The random-sign control is the load-bearing guard: at the **same number of touched coordinates**,
@@ -188,24 +174,23 @@ unstructured subset. Measured on the real selected sets (brotli q11 / zlib-9 on 
 The selected coordinates **are** spatially structured — the honest floor is up to 1.6x below the
 combinatorial bound. The table below uses the **measured** cost (log-interpolated in k), not the bound.
 
-| target t | mean k | mean d_pose | ΔS_pose | B/pair | ΔS_rate | **NET ΔS** |
-|---:|---:|---:|---:|---:|---:|---:|
-| base | 0 | 0.0390414 | — | — | — | — |
-| 0.002 | 5 | 0.0389610 | −0.00064 | 12 | +0.00465 | **+0.00400** |
-| 0.01 | 29 | 0.0386820 | −0.00288 | 60 | +0.02388 | +0.02100 |
-| 0.05 | 241 | 0.0372846 | −0.01422 | 398 | +0.15883 | +0.14461 |
-| 0.15 | 1,222 | 0.0351669 | −0.03181 | 1,351 | +0.53983 | +0.50801 |
-| 0.35 | 5,138 | 0.0342468 | −0.03962 | 4,233 | +1.69128 | +1.65166 |
-| 0.7 | 23,505 | 0.0427030 | +0.02864 | 14,490 | +5.78886 | +5.81750 |
-| 1.0 | 78,582 | 0.0556551 | +0.12119 | 37,398 | +14.94092 | +15.06211 |
-| **per-pair argmin** | 3,546 | 0.0105952 | **−0.29933** | 2,189 | +0.87448 | **+0.57515** |
+| target t | mean k | mean d_pose | ΔS_pose | B/pair | ΔS_rate | **NET ΔS** | cost/gain |
+|---:|---:|---:|---:|---:|---:|---:|---:|
+| base | 0 | 0.0076425 | — | — | — | — | — |
+| 0.002 | 6 | 0.0076253 | −0.00031 | 14 | +0.00552 | **+0.00521** | 17.78x |
+| 0.01 | 43 | 0.0075956 | −0.00085 | 86 | +0.03430 | +0.03345 | 40.40x |
+| 0.05 | 397 | 0.0078952 | **+0.00453** | 575 | +0.22978 | +0.23432 | ∞ (no gain) |
+| 0.15 | 2,315 | 0.0117751 | +0.06670 | 2,249 | +0.89858 | +0.96528 | ∞ |
+| 0.35 | 19,330 | 0.0304178 | +0.27507 | 12,361 | +4.93823 | +5.21330 | ∞ |
+| 0.7 | 96,172 | 0.0880964 | +0.66215 | 43,432 | +17.35175 | +18.01390 | ∞ |
+| 1.0 | 181,337 | 0.1514290 | +0.95411 | 67,494 | +26.96507 | +27.91918 | ∞ |
+| **per-pair argmin** | 5,350 | 0.0026076 | **−0.11497** | 1,120 | +0.44738 | **+0.33241** | **3.89x** |
 
-98.6% of pairs improve under the per-pair argmin, and the envelope cuts `d_pose` by **73%**
-(0.0390 -> 0.0106, ΔS_pose −0.299). The arm index itself is negligible (3 bits/pair = 225 B total).
-**But NET ΔS is positive at every single operating point.** Cost/gain ratios: 7.27x (k=5) · 8.29x
-(k=29) · 11.17x (k=241) · 16.97x (k=1,222) · 42.69x (k=5,138). **The tightest deficit anywhere is
-2.92x, at the per-pair argmin envelope** — the envelope's much larger pose gain outruns its byte cost
-faster than any fixed arm does, so the cheapest arm is NOT the best-value arm.
+82.2% of pairs improve under the per-pair argmin, and the envelope cuts `d_pose` by **65.9%**
+(0.0076425 -> 0.0026076, ΔS_pose −0.115). The arm index itself is negligible (3 bits/pair = 225 B).
+**NET ΔS is positive at every single operating point.** At n600 only the two smallest arms produce any
+pose gain at all — from t=0.05 upward the "descent" step overshoots and *raises* `d_pose`. The tightest
+deficit anywhere is **3.89x**, at the argmin envelope.
 
 Per-pair argmin over a deterministic score is a *realizable encoder-side choice*, not selection on
 noise — d_pose is deterministic on fixed pairs and the choice is reproducible. The grid was widened
@@ -216,26 +201,23 @@ is bracketed and the bound is no longer loose on that side.
 
 ## 6. What would flip the sign — and the measurement that refutes the two cheapest candidates
 
-**The entire question reduces to: can the INDEX be made receiver-computable?** If it can, only the k
-sign bits are video-derived, and every arm flips sign at once:
+**The obvious escape — make the INDEX receiver-computable so only the k sign bits ship — DOES NOT
+WORK AT n600.** This is the conclusion the prefix got wrong, and it is worth stating plainly: on the
+n=73 prefix this substitution turned a +0.575 loss into a −0.122 *win*, and I wrote it up as "the whole
+verdict rests on one substitution." At n600 it does not:
 
 | arm | k | B/pair (signs only) | ΔS_rate | ΔS_pose | **NET ΔS** |
 |---|---:|---:|---:|---:|---:|
-| cheapest fixed | 5 | 0.6 | +0.00025 | −0.00064 | **−0.00039** |
-| mid | 241 | 30.1 | +0.01204 | −0.01422 | **−0.00218** |
-| **per-pair argmin** | 3,546 | 443.2 | +0.17709 | −0.29933 | **−0.12224** |
+| t=0.002 | 6 | 0.79 | +0.00032 | −0.00031 | **+0.00001** |
+| t=0.01 | 43 | 5.39 | +0.00215 | −0.00085 | +0.00130 |
+| **per-pair argmin** | 5,350 | 668.81 | +0.26720 | −0.11497 | **+0.15223** |
 
-The argmin envelope is the one that matters: a free index turns a +0.575 loss into a **−0.122 win**,
-because the sign bits are ~5x cheaper than naming the coordinates. **The whole verdict rests on this one
-substitution**, and the prize is ~0.12 S, not the ~0.0004 S the cheapest arm suggests.
-
-⚠ **This −0.122 is a PREFIX number and must not be lifted out of §4's caveat.** It is computed on a
-sample whose mean `d_pose` is 0.0390 against the v4d population's 0.00858. Re-scaling the same 73%
-relative reduction onto the population gives `sqrt(10*0.00232) - sqrt(10*0.00858) = 0.1523 - 0.2929 =`
-**−0.141** of pose gain, against a rate cost that also shrinks (k is chosen proportional to `d_pose`,
-so a 4.5x easier population buys a proportionally smaller and cheaper k). The **order of magnitude**
-— tenths of an S, not thousandths — is what survives the rescaling; the exact figure is owed to the
-n600 run.
+**Even with a perfectly free index the family does not pay.** The best arm lands at NET **+0.00001 S** —
+indistinguishable from zero, on an arm that touches 6 coordinates. The argmin still loses by 1.6x. The
+prefix was optimistic because a 5.1x-harder sample has far more pose headroom per shipped bit; the real
+population's `d_pose` is already small (median 8.2e-4), so there is very little left for the actuator to
+take. **The escape is closed by arithmetic, not by the proxy measurement below — which now serves as
+independent corroboration rather than the load-bearing leg.**
 
 **So I measured it (n=12).** Two receiver-computable rankings (both need only `f1` and the homography
 the receiver already builds), each given the SAME true signs, scored on the canonical scorer through
@@ -285,21 +267,28 @@ version to matter (at k=200 the Jacobi re-solve buys 8.3e-05 against a deficit m
 
 ## 7. Verdict scope and what is owed
 
-**CLOSED at FORMULATION scope (this vehicle, this steering):** shipping an explicit per-pair
-blind-coordinate correction index. Net ΔS positive at every measured k; best case (the per-pair argmin
-envelope) loses by 2.92x, the cheapest fixed arm by 7.27x.
+**CLOSED at FORMULATION scope (this vehicle, this steering), now on n600 evidence:** using the blind set
+as a shipped per-pair pose correction. NET ΔS positive at every k; best case 3.89x under water. **The
+free-index escape is closed too** — at n600 even a zero-cost index leaves the best arm at NET +0.00001 S.
+Two independent legs now agree: the arithmetic (§6) and the proxy measurement (§6, ≤6.9% capture).
+
+**Why it fails, in one line:** the actuator's reach is enormous (116x-154x) but almost entirely
+DESTRUCTIVE, and the population's `d_pose` is already small (median 8.2e-4) — there is very little left
+for a steering channel to take, and every bit of steering must be shipped.
 
 **NOT closed:**
-- **The family.** The actuator is real, exactly seg-free, direction-selective, and only ~2x under water.
-- **A receiver-computable index beyond the two proxies tested.** ≥~50% top-k capture would flip the
-  sign at small k. Untested: margin/curvature-style rankings, or a ranking derived from the shipped
-  pose payload itself.
-- **A Gauss-Seidel sign re-solve.** The Jacobi version is refuted (§6b); a one-coordinate-at-a-time
-  re-solve is k-times more expensive and would need ~90x the Jacobi gain to matter.
-- **n600 for §4–§5.** The reach run is resumable (`--resume`) and was at 109/600 when this section was
-  written; the economics table is a prefix number on a ~5x-harder-than-population sample. The run keeps
-  being killed after ~40 pairs by something outside the process (it now runs under a self-restarting
-  supervisor), so the prefix is a wall-clock artifact, not a design choice.
+- **The family.** The actuator is real, exactly seg-free, and direction-selective. What is refuted is
+  every *pricing* of it tried here.
+- **A cheaper description than per-coordinate.** Everything measured prices the correction per
+  coordinate. A *parametric* blind-set perturbation — one whose k coordinates and signs are generated
+  from a handful of shipped scalars — was never tested and is the only untried shape that could beat
+  the arithmetic. It needs a generator whose output correlates with the gradient far better than the
+  two rankings in §6 did.
+- **The Gauss-Seidel sign re-solve** (§6b refutes only the Jacobi form).
+- **The same actuator on a vehicle with LARGER `d_pose`.** The deficit scales with how much pose error
+  is available to remove; on the 5.1x-harder prefix the argmin was only 2.31x under water. A future
+  vehicle whose pose term is materially worse would move this verdict, and the measurement is cheap to
+  repeat — the tool takes an `--archive`.
 
 **Cross-cutting finding worth more than the verdict:** `d_pose` on this vehicle is a *relative* quantity
 between the two delivered frames (§4.1). The frame_0 objective is not "resemble GT frame_0" — a real GT
@@ -315,12 +304,19 @@ population), task #401 (blind-coordinate exploit, previously recorded but never 
 
 ---
 
-## 8. Harvesting the n600 (mechanical, but NOT currently in flight)
+## 8. Provenance of the n600 run
 
-⚠ **Nothing is running.** The reach dies every ~30–40 pairs regardless of launch strategy. Per-pair RNG
-seeding makes a sharded run bit-identical to an unsharded one (verified: 35/35 numeric keys), and
-`--resume` never repeats a measured pair, so restarting is always safe and always makes progress — it
-just needs re-firing until done. 181 of 600 pairs are banked in the shard sidecars.
+Completed as **6 resumable shards** (`--pair-stride 6 --pair-offset J`), merged to 600 unique pairs,
+zero duplicates, all six residues present. Per-pair RNG seeding makes a sharded run bit-identical to an
+unsharded one (verified: 35/35 numeric keys on a shared pair). The run had to be re-fired four times —
+three launch strategies (`nohup`+`disown`, a self-restarting supervisor, `os.setsid` double-fork) were
+all killed after ~30-40 pairs; `--resume` never repeats a measured pair, so each re-fire only added work.
+
+**Guards, all 600 pairs:** `d_seg` bit-identical under the full 1-LSB blind step — **600/600**;
+cached-GT fast path equals the authority — **600/600**; gradient surrogate within 1e-5 relative of the
+authority — **518/600** (max relative deviation **5.46e-04**, i.e. the surrogate agrees to ~3-4
+significant figures; the 1e-5 gate is tighter than fp32 graph-order noise warrants, and the surrogate is
+only ever a search direction — every reported number comes from the unpatched authority path).
 
 **Instrument warning — the SYMPTOM is real, and my first stated MECHANISM was wrong.** Twice,
 `pgrep -f shard_worker.sh` reported live workers when every worker was dead. I wrote that up as "pgrep
@@ -343,30 +339,3 @@ for liveness, not a pattern-based process probe. A pattern probe can match proce
 which case you are in. If a process probe is unavoidable, anchor it on the executable form and print
 the matched command lines rather than a count. *(Scope: the self-match claim is refuted in these two
 contexts; whether some other shell invocation self-matches is untested and not relied on.)*
-
-To finish and re-derive §4–§5:
-
-```bash
-# 1. shards live in <scratch>/shards/reach_shard_{0..5}.jsonl; each wants 100 pairs.
-#    Restart any that died:
-for j in 0 1 2 3 4 5; do
-  .venv/bin/python tools/ddm_bp2_blind_warp_reach.py --mode reach --resume \
-    --pair-stride 6 --pair-offset $j --pairs 600 --threads 2 \
-    --archive /Volumes/VertigoDataTier/pact/ddm_v4d_20260731/v4d_composed_pb2_bestof_archive.zip \
-    --stage <scratch>/shards/stage_$j --out <scratch>/shards/reach_shard_$j.json &
-done; wait
-
-# 2. merge (refuses on any duplicate or missing pair)
-cat <scratch>/shards/reach_shard_*.jsonl | sort -t: -k2 -n > reports/ddm_bp2/reach_n600.jsonl
-
-# 3. emit the canonical n600 receipt (all pairs present => it skips work and just aggregates)
-.venv/bin/python tools/ddm_bp2_blind_warp_reach.py --mode reach --resume --pairs 600 \
-  --archive /Volumes/VertigoDataTier/pact/ddm_v4d_20260731/v4d_composed_pb2_bestof_archive.zip \
-  --stage <scratch>/stage_n600 --out reports/ddm_bp2/reach_n600.json
-```
-
-**What the n600 can and cannot change.** It cannot change F1 (already n600) or F2 (3.8 OoM clear), and
-it cannot change the d_seg invariance (structural, and bit-identical on every pair measured). It CAN
-change every multiple in §5–§6 — including the −0.122 free-index figure — by an order of magnitude.
-Nothing in §7's verdict scope depends on which way it moves, because the sign held on all four disjoint
-subsamples.
