@@ -213,7 +213,7 @@ CONTENT.
 | verdict | rows |
 |---|---|
 | **ALREADY-CLOSED, drainable now (5)** | `#858` (receiver strict key-set + pinning test), `#450` (lens_engine, 5 modules landed), `#236` (dashboard + named tunnel all exist), `#860` (diagnosis half — gc16 states "6 of 25 gates RED, ~316 violations" verbatim), `#834` (reclaim↔spend contest settled: *"An exchange requires r < 0. The measured r is +0.212"*) |
-| **REAL-OPEN, typed blocker + owner (6)** | `#877` (REPORT 2-dec censoring cannot resolve 0.0044), `#859` (SMEVR −2,781 B, blocked on a format change — re-confirmed today), `#198` (`fleet.local.toml` exists; **0 of 13,888 `.py` load it** — the `m56` unwired-but-built genus), `#844` (triality drift detector is **path-prefix** based; the syntactic predicate does not exist), `#840` (cf1's unswept 91% = **1,260** `codex_findings_*.md`), `#833` (weakest — see caveat) |
+| **REAL-OPEN, typed blocker + owner (6)** | `#877` (REPORT 2-dec censoring cannot resolve 0.0044), `#859` (SMEVR −2,781 B, blocked on a format change — re-confirmed today), `#198` (**see correction §3.1 — narrower than first reported**), `#844` (triality drift detector is **path-prefix** based; the syntactic predicate does not exist), `#840` (cf1's unswept 91% = **1,260** `codex_findings_*.md`), `#833` (weakest — see caveat) |
 | **REAL-OPEN, parked with fire-conditions (4)** | `#716` (QD06), `#670` (QD07 — receives #860's 316 violations), `#706` (QE02/QE13, pre-arc), `#775` (behind sibling arm sb1) |
 | **SUPERSEDED (1)** | `#556` (QF02 cluster, V9→TR1 vehicle pivot) |
 | **UNDECIDABLE** | **0** |
@@ -229,6 +229,36 @@ degenerate-baseline control in 7,019 `.md` + 13,888 `.py`) — a different searc
 `#450`'s memo says "increment 1"; later increments may be owed. `#860` is **two things in one row**
 (closed measurement + open remediation) — split rather than forced. Row subjects come from p2a's
 transcription, so any scope lost there is inherited.
+
+### §3.1 CORRECTION — `#198`: I nearly published a false negative-existence claim, and caught it
+
+**As first reported (by the head-3 sub-arm, and republished by me):** *"`fleet.local.toml` exists but
+**0 of 13,888 `.py`** load it — the `m56` unwired-but-built genus."*
+
+**MEASURED, on spot-verification: that is WRONG. A loader exists.**
+`scripts/lane_watchdog.py:107` — `def load_fleet(path: Path = FLEET_TOML) -> dict[str, dict]:`,
+with `FLEET_TOML = REPO / "fleet.local.toml"` at `:57`, documented graceful degradation when the
+file is absent (`:54-56`), and a `--list-fleet` CLI flag at `:293`. Both `fleet.local.toml` (1,378 B)
+and `fleet.example.toml` (1,361 B) exist.
+
+**Root cause — the vacuity genus (`m50`), third instance in this arm.** The sub-arm's stated
+denominator was *"`src/` + `tools/` + `experiments/` (excl. `results/`) `*.py` = 13,888"*. **`scripts/`
+was never in that scope**, and the loader lives in `scripts/`. The sub-arm **declared its denominator
+honestly** — and then phrased the result as *"0 of 13,888 `.py` load it"*, which **reads as a global
+negative**. I republished it in that form. Per `m53` (negative-existence claims are the #1
+false-claim class), the honest phrasing is *"did not find in `src/`+`tools/`+`experiments/`"* — and
+that phrasing would have made the missing `scripts/` obvious immediately.
+
+**The row's surviving, narrower debt.** `#198`'s subject is a **canonical** fleet-config loader **plus
+preflight self-protect**. What exists is **one script's private loader**, not a canonical shared
+surface, and no preflight gate. Separately, `joint_descent_p0_launch_prep_20260708.md:106` records
+`scripts/bat00.py` still taking `BAT00_IP`/`BAT00_USER` from operator env rather than the fleet file
+— so a second consumer does bypass it. **REAL-OPEN stands; "no consumer exists" does not.**
+
+**Carried as a cross-finding:** a denominator stated in a methods line does not travel with the
+finding when the finding is quoted. **Put the scope inside the claim sentence, not beside it.**
+
+---
 
 Instrument receipts: positive control exit 0 / negative control exit 1 before any adjudication;
 **p2a §7 defect 3 reproduced live** (unquoted `--include=*.md` → `(eval):7: no matches found`, empty
@@ -312,6 +342,14 @@ A passing positive+negative control validates the *instrument*, never the *join 
 **→ the QA55 / v4c-grammar owner.** Mark QA55: container half already banked by the real builder
 (`DEFLATE_MEMBERS`), pose-member win already wired (`encode_kl1_field`). Carrying it as ~1.8 KB open
 overstates available rate by roughly the amount it claims.
+
+**→ everyone writing scoped negatives (this is the arm's most transferable finding).** A denominator
+stated in a *methods* line **does not travel with the claim when the claim is quoted**. `#198` was
+reported as *"0 of 13,888 `.py` load it"* by a sub-arm that had honestly declared its scope excluded
+`scripts/` — where the loader actually lives (§3.1). The honest form puts the scope **inside the
+claim sentence**: *"did not find in `src/`+`tools/`+`experiments/`"*. Three instrument failures in
+this arm (my `break`-truncated sample, my alternation-grep false lead, this) are **all the same
+genus**: a result that is true of the instrument's actual scope, read as true of the world.
 
 **→ anyone quoting the ms4d bundle.** Its four per-block metric fields reduce to two numbers; and
 its `pair_count: 600` / `full_n600` schedule entry do **not** mean 600 blocks are present — there
