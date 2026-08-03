@@ -160,6 +160,12 @@ On `REVIEW_GATE_OVERRIDE=1`: not used. All `.py` went through two recorded
 5. **Decode, simulated contest runtime** (`tac` blocked by a `MetaPathFinder`, which is what
    `inflate.sh`'s bare `python` actually sees): **before the fix `ModuleNotFoundError: 'tac'`;
    after the fix** full 600 pairs → the same `988785e7cadfd613…`, 3,662,409,600 B.
+6. **Second clean clone at the COMMITTED head `18c4a1ba`** (`…/ddm_cu1_cleanclone2_20260803`) —
+   the leg that was owed, now closed. All six runtime files byte-identical to the ones measured
+   above; rebuild → `1d3ab694c337…` / **353,808 B**; and the full 600-pair decode with `tac`
+   unimportable → `CLONE2_ISOLATED_FULL sha256=988785e7cadfd613…`, **3,662,409,600 B**.
+   **`git clone && build && decode` now reproduces the frontier bytes exactly, from tracked
+   sources alone, in the environment the contest actually runs.**
 
 **Still external, and why.** The chain is reproducible **given the solved artifacts**, which is the
 honest scope: `v4d_composed_pj2_archive.zip` is the input to `cx1`'s transform, and re-running
@@ -212,11 +218,20 @@ files are rebuildable evidence with recorded shas, not tracked files.
    `python tools/audit_untracked_source_artifacts.py --strict --disposition-manifest
    .omx/research/untracked_source_dispositions_20260505_codex.json`. Each row exits as **track** (2
    review passes) or **dispositioned with a reason** — no third option.
-2. **`ddm_cu1` owns:** re-running the clean-clone proof after this commit lands (the clone is at
-   the pre-fix HEAD; the fix is verified against main's working tree and against the simulated
-   contest runtime, but the *clone-at-new-HEAD* leg is owed).
-3. **`ddm_cu1` owns:** applying the same repo-is-source-of-truth staging to any sibling stager
-   still copying from `${EVAL_ROOT}/submissions/*` — not yet enumerated.
+2. ~~**`ddm_cu1` owns:** re-running the clean-clone proof after this commit lands.~~ **CLOSED** —
+   done at `18c4a1ba`, full 600-pair isolated decode byte-identical (proof leg 6 above).
+3. **`ddm_cu1` enumerated the sibling stagers — and deliberately did NOT rewrite them.** All four
+   carry the same seam: `stage_v4b_realized_gate.sh:44`, `stage_v4c_realized_gate.sh:42`,
+   `stage_ck1_composed_gate.sh:43`, and `stage_wr1_realized_gate.sh:59` — the last is the worst,
+   because it copies **`inflate_runner.py` itself** from `${TEMPLATE_SUB}`, so it uses no repo
+   receiver at all and carries the exact stale-receiver defect `ddm_cx1` fixed in v4d, unfixed.
+   Rewriting them is NOT obviously correct: they stage superseded bases (v4b/v4c/ck1/wr1), and
+   pointing them at today's newer repo modules would run *new* code against *old* archives, so a
+   re-run would no longer reproduce the row each one recorded. The right move is per-gate and needs
+   the owner of each base: either re-point and re-measure, or freeze the gate with its snapshot
+   shas pinned and printed. **Owner: whoever re-opens that base. Fire-condition: any attempt to
+   re-run one of these four gates** — until then they are frozen-by-neglect, which is exactly the
+   state that produced this arm's defect, so it is named here rather than left implicit.
 4. **Unowned-but-named:** five dotted imports resolve to files absent from disk entirely
    (`tac.scoring`, `tac.video`, `tac.scene_embedding_distiller`,
    `tac.local_acceleration.bench_scorer_ops`, `tac.findings_lagrangian_pp`) — dead imports in
