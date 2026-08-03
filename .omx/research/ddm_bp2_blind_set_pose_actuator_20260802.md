@@ -101,13 +101,29 @@ blind mass by construction (identity path), which is the whole of the gap.
 
 ## 4. F2 — the reach, and the mechanism (MEASURED)
 
-⚠ **Sampling caveat, stated once and carried everywhere below.** The reach measurement streams pairs in
-video order and had reached **75 of 600** when this memo was written (the run is resumable and still
-going; `--resume` carries completed rows). This prefix is **~5x harder than the population**: prefix
-mean `d_pose` **0.044373** vs the v4d refine receipt's n600 `mean_d_final = 0.00858414`. The prefix
-distribution is heavily skewed (median 0.000886, p90 0.128526, max 0.774989). **Every `d_pose` mean and
-every `delta S` in §4–§5 is a prefix number, not an n600 number.** F1 is n600; F2's verdict is 3.8
-orders of magnitude clear of its threshold and does not turn on the sample.
+⚠ **SAMPLING SCOPE — §4 and §5 are PREFIX analysis, NOT n600 findings.** F1 (§3) is n600. F2's
+verdict clears its threshold by 3.8 orders of magnitude and does not turn on the sample. But every
+`d_pose` mean and every `ΔS` in §4–§5 is measured on **181 of 600 pairs** (the run is sharded 6 ways,
+resumable, and still going; see §8 for the mechanical harvest). That sample is **~2.4x harder than the
+population**: prefix mean `d_pose` 0.0204 vs the v4d refine receipt's n600 `mean_d_final = 0.00858414`.
+Per the n600 discipline these are **supplementary prefix numbers**, not evidence — read them for their
+SIGN and order of magnitude, not their value.
+
+**And I checked whether the sign is actually robust, on DISJOINT subsamples** (nested prefixes share
+data and would have flattered me). Cost/gain ratio, `>1` meaning *does not pay*, per-pair byte cost:
+
+| subsample | n | t=0.002 | t=0.01 | t=0.05 | per-pair argmin |
+|---|---:|---:|---:|---:|---:|
+| first half | 90 | 6.43 | 8.29 | 10.24 | 2.83 |
+| second half | 91 | 67.99 | ∞ (no gain) | ∞ | 3.81 |
+| even pairs | 91 | 10.09 | 15.11 | 50.51 | 2.77 |
+| odd pairs | 90 | 20.98 | 41.79 | ∞ | 1.72 |
+| **all measured** | **181** | **13.64** | **21.98** | **169.27** | **2.31** |
+
+**The MAGNITUDE is not stable — it swings an order of magnitude between disjoint halves.** What IS
+stable is the sign: across every arm and every disjoint subsample the minimum ratio is **1.72x**, and
+it is never below 1. **That is the load-bearing claim: the family does not pay, everywhere I looked.
+Any specific multiple quoted from this memo is a sample statistic with an order-of-magnitude error bar.**
 
 **d_seg is EXACTLY unchanged, in every arm, on every pair measured** — including under a full ±1 LSB
 gradient-aligned sign step over all 692,712 blind coordinates, the largest structured 1-LSB
@@ -293,3 +309,36 @@ frame_0 scores 3–17 against the decoded pair's 0.0008.
 `inflate_runner_v4d.py` + `pfs1_warp_receiver.py` (the vehicle), `upstream/{modules,frame_utils,evaluate}.py`
 (scorer authority), `v4d_verify_receipt.json` + `refine_receipt.json` (archive custody + the n600 pose
 population), task #401 (blind-coordinate exploit, previously recorded but never composed with pose).
+
+---
+
+## 8. Harvesting the n600 (mechanical — the run is sharded, resumable, and self-restarting)
+
+The reach run keeps being killed after ~40 pairs by something outside the process, so it runs as 6
+self-restarting shards under `--pair-stride 6 --pair-offset J`. Per-pair RNG seeding makes a sharded
+run bit-identical to an unsharded one (verified: 35/35 numeric keys). To finish and re-derive §4–§5:
+
+```bash
+# 1. shards live in <scratch>/shards/reach_shard_{0..5}.jsonl; each wants 100 pairs.
+#    Restart any that died:
+for j in 0 1 2 3 4 5; do
+  .venv/bin/python tools/ddm_bp2_blind_warp_reach.py --mode reach --resume \
+    --pair-stride 6 --pair-offset $j --pairs 600 --threads 2 \
+    --archive /Volumes/VertigoDataTier/pact/ddm_v4d_20260731/v4d_composed_pb2_bestof_archive.zip \
+    --stage <scratch>/shards/stage_$j --out <scratch>/shards/reach_shard_$j.json &
+done; wait
+
+# 2. merge (refuses on any duplicate or missing pair)
+cat <scratch>/shards/reach_shard_*.jsonl | sort -t: -k2 -n > reports/ddm_bp2/reach_n600.jsonl
+
+# 3. emit the canonical n600 receipt (all pairs present => it skips work and just aggregates)
+.venv/bin/python tools/ddm_bp2_blind_warp_reach.py --mode reach --resume --pairs 600 \
+  --archive /Volumes/VertigoDataTier/pact/ddm_v4d_20260731/v4d_composed_pb2_bestof_archive.zip \
+  --stage <scratch>/stage_n600 --out reports/ddm_bp2/reach_n600.json
+```
+
+**What the n600 can and cannot change.** It cannot change F1 (already n600) or F2 (3.8 OoM clear), and
+it cannot change the d_seg invariance (structural, and bit-identical on every pair measured). It CAN
+change every multiple in §5–§6 — including the −0.122 free-index figure — by an order of magnitude.
+Nothing in §7's verdict scope depends on which way it moves, because the sign held on all four disjoint
+subsamples.
