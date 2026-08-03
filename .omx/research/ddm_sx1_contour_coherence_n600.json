@@ -1,0 +1,31 @@
+{
+ "total_components": 18839,
+ "per_frame": 31.398333333333333,
+ "size_median": 16.0,
+ "size_mean": 6261.733637666543,
+ "n_le4": 4581,
+ "n_le16": 9421,
+ "frac_px_le16": 0.00045477125379774305,
+ "per_class": {
+  "Road": {
+   "ncomp": 1088,
+   "area": 27407046
+  },
+  "Lane": {
+   "ncomp": 14323,
+   "area": 690639
+  },
+  "Undriv": {
+   "ncomp": 631,
+   "area": 58413281
+  },
+  "Movable": {
+   "ncomp": 2197,
+   "area": 1460325
+  },
+  "MyCar": {
+   "ncomp": 600,
+   "area": 29993509
+  }
+ }
+}

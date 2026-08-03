@@ -1,0 +1,51 @@
+{
+ "1": {
+  "cells_per_frame": 196608,
+  "total_cells": 117964800,
+  "bnd_cells": 2551382,
+  "occupancy": 0.02162833319769965,
+  "dense_over_sparse": 46.23564797431353
+ },
+ "2": {
+  "cells_per_frame": 49152,
+  "total_cells": 29491200,
+  "bnd_cells": 978386,
+  "occupancy": 0.033175523546006946,
+  "dense_over_sparse": 30.142704413186614
+ },
+ "4": {
+  "cells_per_frame": 12288,
+  "total_cells": 7372800,
+  "bnd_cells": 397530,
+  "occupancy": 0.05391845703125,
+  "dense_over_sparse": 18.546524790581845
+ },
+ "8": {
+  "cells_per_frame": 3072,
+  "total_cells": 1843200,
+  "bnd_cells": 168504,
+  "occupancy": 0.09141927083333333,
+  "dense_over_sparse": 10.938612733228885
+ },
+ "16": {
+  "cells_per_frame": 768,
+  "total_cells": 460800,
+  "bnd_cells": 74606,
+  "occupancy": 0.16190538194444445,
+  "dense_over_sparse": 6.176446934562904
+ },
+ "32": {
+  "cells_per_frame": 192,
+  "total_cells": 115200,
+  "bnd_cells": 32565,
+  "occupancy": 0.28268229166666664,
+  "dense_over_sparse": 3.5375403040073703
+ },
+ "64": {
+  "cells_per_frame": 48,
+  "total_cells": 28800,
+  "bnd_cells": 13042,
+  "occupancy": 0.45284722222222223,
+  "dense_over_sparse": 2.2082502683637477
+ }
+}
