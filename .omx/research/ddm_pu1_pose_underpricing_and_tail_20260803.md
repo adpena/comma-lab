@@ -711,3 +711,47 @@ tenth of the work.
 (the objective is linear, §2.5).
 
 **Scorer slot: RELEASED.** This arm ran no scorer job.
+
+---
+
+## APPENDIX — RELATIVE-SIGNIFICANCE, appended by MAIN 2026-08-03 (pays the #404 Stop hook on §1 row 2)
+
+The hook fired on **"Re-priced value: 0.0000000"** in row 2. It was right to. The dismissal is
+sound but the memo stated the CONCLUSION without the MECHANISM, and the excluded quantity is the
+largest number in this entire re-pricing.
+
+| quantity | absolute ΔS | **% of the live `cx1` gap 0.6543562** | vs the `pz1` instrument floor 5.0e-07 |
+|---|---:|---:|---:|
+| `pj2` triple — the rows re-priced to 0.0000000 | 0.0675451 | **10.3224%** | 135,090× |
+| `mq1` provisional (§1 row 3) | 0.0244312 | 3.7336% | 48,862× |
+| 6-pair informativeness target (§1 row 4) | 0.0410524 | 6.2737% | 82,105× |
+
+**The exclusion is NOT a magnitude dismissal — it is a DOUBLE-COUNT exclusion, and the distinction
+is the whole point.** `−0.0675451` is 10.32% of the remaining gap: it is the *second-largest banked
+move in the campaign* and it is 135,090× the measured instrument floor, so it is definitively
+resolved, not noise. It re-prices to zero for one reason and one reason only: **that run is already
+inside the `cx1` baseline.** Subtracting it again would be double-counting a win we already hold.
+Three ledger rows (#850/#873/#882) stamp ONE run's total, which is why the count of "real" rows
+(3) overstates the count of real *runs* (1).
+
+**Why this matters more than the arithmetic.** A future reader who greps "pose backlog: 0.0000000"
+will conclude the pose axis is worthless. The correct reading is the opposite: **the pose backlog
+is empty because it was already spent, and it was spent well.** That is the caveat-stripping class
+(`a_delta_without_its_baseline_is_unanchored_and_baselines_move_20260803`) — the ledger row is
+always the caveat-stripped copy of the memo, and the ledger is what a reader fires from.
+
+**Adversarial review of the exclusion, `verdict_scope: INSTANCE`** (one magnitude-based dismissal
+is not a kill, and this one is not even magnitude-based):
+- *Could the `pj2` triple be only PARTIALLY in `cx1`?* Not from these artifacts. `cx1` is
+  `pj2 × ix2-container` and its measured `S = 0.8264972` was PREDICTED to 1.25e-08 before the run —
+  a prediction that would have missed by ~0.0675 had any of the triple been outside the base.
+  That is a real cross-check, not an assumption.
+- *Could the three rows be three distinct effects that coincidentally sum to one run's total?*
+  `qd2` established the triple-stamping directly from the receipt lineage. Not re-derived here.
+- *Is `0.0000000` the right way to WRITE it?* No. It should read
+  `0.0000000 (already banked; the underlying −0.0675451 = 10.32% of gap is inside cx1)`.
+  Recorded so the next re-pricing inherits the mechanism instead of the number.
+
+**No exit criterion is claimed and none is needed** — nothing here is asserted un-recoverable. The
+one row that IS uncertain (`mq1`, 3.73% of gap) is already labelled PROVISIONAL in §1 row 3 with
+its availability explicitly NOT established, and `ddm_pu2` holds the measurement that settles it.
