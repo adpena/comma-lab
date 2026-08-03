@@ -360,3 +360,49 @@ fresh-eyes reviewed by another agent.
 
 Host: Primary.local (M-series, 128 GB), macOS. All work `$0`, local, scorer-free. No governed
 launcher engaged; no heavy/paid dispatch; no exact gate fired; pointer UNMOVED.
+
+---
+
+## §8 ADDENDUM — a 5th instance, found by this landing's own commit
+
+**R5: `subagent_commit_serializer --expected-content-sha256` is blind to absorption.**
+
+MEASURED, on this arm's own commit. I passed **6** files; the serializer reported
+`files=6` and `rc=0`; git reported **5 files changed**. The missing one was
+`experiments/train_tr1_partition_renderer_mlx.py` — the entire substance of this landing.
+
+Traced:
+
+* `git log -- <trainer>` newest entry is **`06fa0ad37d`** (a SIBLING arm's CLI-help fix), not my
+  `e4d41f7ede`.
+* `06fa0ad37d~1` contains **0** occurrences of `dseg_by_gt_class`; `06fa0ad37d` contains all of it.
+* `git show 06fa0ad37d:<trainer>` is **byte-identical** to my working tree
+  (sha256 `c529404affac772c`).
+
+So the sibling's commit **absorbed my in-flight trainer edit wholesale** — the catalogued
+absorption pattern (Catalog #314 / #340).
+
+**CONTENT INTEGRITY: INTACT.** HEAD's trainer is byte-identical to the version I tested and
+mutation-verified; the 23 bs3 tests and the bp1/tb1 suites are **76 passed** against committed
+HEAD. Nothing was lost. **Only attribution moved** — the cures are described in `e4d41f7ede`'s
+message but live in `06fa0ad37d`'s diff.
+
+**Why this belongs in this memo — it is the same genus.** The `--expected-content-sha256` check
+exists to catch exactly this. Its projection is:
+
+> "the working-tree bytes of file F at lock-acquire time equal the sha I declared"
+
+That is FULL SCOPE (every declared file is hashed) and the WRONG PROJECTION. Its kernel contains
+**"my content is already in HEAD under someone else's commit"** — because in that case the working
+tree still matches my declaration exactly, so the check passes. The check verifies *what the file
+contains*, never *whether this commit carries the delta*.
+
+The discriminating statistic is one line and already computable inside the lock: **compare the
+declared file list against the files that actually differ from HEAD**, and report both numbers.
+`files=6` and `5 files changed` were both printed, by two different components, and **nothing
+reconciled them** — the same "report the denominator" failure the vacuity rule names.
+
+**NOT FIXED HERE, deliberately.** `tools/subagent_commit_serializer.py` is the single most
+concurrency-sensitive file in the repo, and this landing has just DEMONSTRATED that sibling arms
+are committing concurrently right now. Editing it mid-flight is the highest-risk change available
+and is MAIN's call. Recorded with full evidence instead.
