@@ -88,11 +88,16 @@ from pathlib import Path
 __all__ = [
     "RUN_CONSTANT_RATCHET_BASELINE",
     "CanonicalConstantCopyViolation",
+    "GuardedConstantFrozenLiteralViolation",
+    "GuardedConstantScanScope",
     "RunConstantViolation",
     "check_no_canonical_equation_constant_copied_as_literal",
+    "check_no_frozen_literal_where_guarded_derivation_declared",
     "check_no_hardcoded_run_constants_in_consumers",
     "run_constant_ratchet",
+    "scan_guarded_constant_frozen_literals_with_scope",
     "scan_repo_for_canonical_constant_copies",
+    "scan_repo_for_guarded_constant_frozen_literals",
     "scan_repo_for_hardcoded_run_constants",
 ]
 
@@ -100,9 +105,25 @@ __all__ = [
 # ONLY thing standing between this module and the strict flip. Lower them as the debt drains;
 # raising one is a deliberate act that must be argued for in the commit, never a quiet edit.
 # Reproduce with: .venv/bin/python -m tac.run_constant_gates
+#: MEASURED at HEAD 2026-08-03 by this module's own scanner, in the landing commit.
+#: Reproduce with: .venv/bin/python -m tac.run_constant_gates
+#: Pre-migration the scanner measured 1 (exactly the canonical instance,
+#: ``margin_floor: float = 0.1`` on ``DirectDescriptionJointDescentMLXModule``,
+#: zero false positives).  The SAME landing migrated that site to consume
+#: ``guarded_constant_registry.MARGIN_FLOOR_INCUMBENT`` (byte-identical, proven
+#: at import), so the count at landing is 0 and the baseline is pinned there per
+#: the strict-flip atomicity rule: the RATCHET now refuses any NEW frozen
+#: literal at a declared site, which is the strict surface for this class.  The
+#: ``strict=`` parameter on the check function stays available for callers that
+#: want raise-on-any semantics.
+_P6_MEASURED_LIVE_COUNT_AT_LANDING = 0
+
 RUN_CONSTANT_RATCHET_BASELINE: dict[str, int] = {
     "hardcoded_run_constants": 10,
     "canonical_constant_copies": 2,
+    # P6 pinned by ddm_gk1 2026-08-03 in the same commit as the gate. See the P6
+    # block below for the measured live count and the strict-flip condition.
+    "guarded_constant_frozen_literals": _P6_MEASURED_LIVE_COUNT_AT_LANDING,
 }
 
 _WAIVER_TOKEN = "RUN_CONSTANT_OK:"
@@ -503,6 +524,304 @@ def check_no_canonical_equation_constant_copied_as_literal(
     return findings
 
 
+# ---------------------------------------------------------------------------
+# P6: a frozen literal at a site where a GuardedConstant DECLARES a live derivation.
+#
+# The class (ddm_gk1, operator directive 2026-08-03): a derivation exists in-repo,
+# is documented, and is NOT CALLED -- its output was frozen into a literal. The
+# value is right TODAY, so nothing fails and no test goes red; if the data moved,
+# nobody would find out. Such a constant passes every provenance check while
+# running none. Canonical instance: ``derive_margin_floor``
+# (``src/tac/optimization/lane_guard.py:547``, documented "data-derived per run,
+# never a bare constant") vs the frozen ``margin_floor: float = 0.1`` default on
+# ``DirectDescriptionJointDescentMLXModule.__init__``.
+#
+# DECLARATION-DRIVEN BY DESIGN, and this is the load-bearing design decision.
+# ddm_gd5 (task #864) BUILT the auto-derived version of this detector -- "is this
+# derivation reachable / is a better successor unwired?" -- and REFUTED it: the
+# import-reachability predicate fires on 1229 of 3251 modules, and the
+# "measured-better successor" relation exists only in memos with no representation
+# in code. So P6 does NOT infer its own targets. It scans ONLY for
+# ``<name> = <value>`` where BOTH the identifier name and the exact value are
+# declared by a GuardedConstant in ``tac.witness_dsl.guarded_constant_registry``
+# (``literal_site_names`` + ``incumbent_literal``). A constant nobody has declared
+# is invisible to this gate -- which is the honest scope, and the scope is
+# REPORTED (see ``describe``) rather than implied.
+#
+# Same-line waiver: ``# GUARDED_CONSTANT_OK:<real rationale>``.
+# ---------------------------------------------------------------------------
+_GUARDED_CONSTANT_WAIVER_TOKEN = "GUARDED_CONSTANT_OK:"
+#: A file that imports the registry is already routed through the guard.
+_GUARDED_REGISTRY_MODULE = "tac.witness_dsl.guarded_constant_registry"
+def _has_valid_guarded_constant_waiver(line: str) -> bool:
+    """Same shape as the P1-P4 / P5 waiver helpers (placeholder rationales rejected)."""
+    idx = line.find(_GUARDED_CONSTANT_WAIVER_TOKEN)
+    if idx < 0:
+        return False
+    rationale = line[idx + len(_GUARDED_CONSTANT_WAIVER_TOKEN):].strip().strip("'\")")
+    return rationale.lower() not in _PLACEHOLDER_RATIONALES and len(rationale) >= 4
+
+
+@dataclass(frozen=True)
+class GuardedConstantFrozenLiteralViolation:
+    """One frozen literal at a site a GuardedConstant declares a live derivation for."""
+
+    path: str
+    line: int
+    constant_id: str
+    site_name: str
+    value: float
+    derivation: str
+
+    def describe(self) -> str:
+        return (
+            f"{self.path}:{self.line} [P6] `{self.site_name} = {self.value!r}` is the frozen "
+            f"output of a LIVE derivation: GuardedConstant {self.constant_id!r} declares "
+            f"{self.derivation} with invocation_required=True, and this file never imports "
+            f"{_GUARDED_REGISTRY_MODULE}. The derivation therefore never runs here, so the "
+            f"value cannot adapt and nothing would go red if the data moved -- it presents "
+            f"as a provenanced constant while running no provenance at all. Fix: consume "
+            f"{_GUARDED_REGISTRY_MODULE}.{self.constant_id.upper()} and resolve it with the "
+            f"caller's own sample, or waive same-line with "
+            f"# {_GUARDED_CONSTANT_WAIVER_TOKEN}<rationale naming why the frozen value is "
+            f"acceptable at THIS call site>"
+        )
+
+
+@dataclass(frozen=True)
+class GuardedConstantScanScope:
+    """The DENOMINATOR of a P6 scan.  Reported, never implied.
+
+    P6 can return zero findings for two completely different reasons: the repo is
+    clean, or the gate never looked at anything.  At the findings layer those are
+    the same empty list, and the second one prints the clean symbol forever --
+    the ``vacuity == PASS`` genus this whole arm exists to extinct, reproduced
+    inside the guard itself.  This record is what tells them apart, so
+    :func:`run_constant_ratchet` can refuse an empty scope instead of passing it.
+    """
+
+    declared_constants: int
+    declared_site_names: int
+    files_scanned: int
+    files_exempt_already_routed: int
+    registry_import_ok: bool
+
+    @property
+    def is_vacuous(self) -> bool:
+        """True when a zero finding count carries NO information."""
+        return (
+            not self.registry_import_ok
+            or self.declared_site_names == 0
+            or self.files_scanned == 0
+        )
+
+    def describe(self) -> str:
+        if not self.registry_import_ok:
+            return (
+                f"scope VACUOUS: {_GUARDED_REGISTRY_MODULE} failed to import, so the gate "
+                "had ZERO declared targets and could not have found anything. A zero count "
+                "here means 'did not look', not 'clean'"
+            )
+        return (
+            f"{self.declared_constants} declared constant(s) -> "
+            f"{self.declared_site_names} site name(s); {self.files_scanned} file(s) scanned "
+            f"({'+'.join(_P5_SCANNED_SUBTREES)}, excluding "
+            f"{', '.join(_EXCLUDED_PATH_MARKERS)} and test_*), "
+            f"{self.files_exempt_already_routed} exempt as already routed through the registry"
+        )
+
+
+def _module_is_imported(tree: ast.AST, module: str) -> bool:
+    """True only for a REAL import of ``module`` (or a submodule of it).
+
+    Deliberately NOT a substring test over the file text: a mention in a comment,
+    a docstring or a string literal would otherwise exempt the whole file from the
+    gate.  ``mentions-it == is-guarded-by-it`` is the same confusion a bare
+    pattern probe makes when it counts its own watchers.
+    """
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom):
+            mod = node.module or ""
+            if mod == module or mod.startswith(f"{module}."):
+                return True
+        elif isinstance(node, ast.Import):
+            for alias in node.names:
+                if alias.name == module or alias.name.startswith(f"{module}."):
+                    return True
+    return False
+
+
+def _guarded_literal_targets() -> tuple[dict[str, list[tuple[str, float, str]]], bool]:
+    """``({site_name: [(constant_id, value, derivation_path), ...]}, registry_import_ok)``.
+
+    The bool is the load-bearing half.  An import failure yields an EMPTY target
+    set that is indistinguishable, at the findings layer, from a repo with nothing
+    to find -- so it is returned explicitly and surfaced by
+    :class:`GuardedConstantScanScope`, never swallowed.
+    """
+    try:
+        from tac.witness_dsl.guarded_constant_registry import REGISTRY
+    except Exception:  # pragma: no cover - import environment
+        return {}, False
+    targets: dict[str, list[tuple[str, float, str]]] = {}
+    for cid, const in REGISTRY.items():
+        deriv = getattr(const, "derivation", None)
+        if deriv is None or not getattr(deriv, "invocation_required", False):
+            continue
+        incumbent = getattr(const, "incumbent_literal", None)
+        if incumbent is None or isinstance(incumbent, str):
+            continue
+        for name in getattr(const, "literal_site_names", ()):  # declaration-driven
+            targets.setdefault(name, []).append((cid, float(incumbent), deriv.callable_path))
+    return targets, True
+
+
+def _p6_literal_sites(tree: ast.AST):
+    """Yield ``(name, value_node)`` for assignments, annotated assignments and
+    function-parameter defaults -- the three shapes a frozen default takes."""
+    for node in ast.walk(tree):
+        if isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name) and node.value:
+            yield node.target.id, node.value
+        elif isinstance(node, ast.Assign):
+            for tgt in node.targets:
+                if isinstance(tgt, ast.Name) and node.value is not None:
+                    yield tgt.id, node.value
+        elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            a = node.args
+            pos = list(a.posonlyargs) + list(a.args)
+            # strict=True is safe by construction: the slice length equals
+            # len(a.defaults), and ast guarantees len(kw_defaults) == len(kwonlyargs).
+            for arg, default in zip(pos[len(pos) - len(a.defaults):], a.defaults, strict=True):
+                yield arg.arg, default
+            for arg, default in zip(a.kwonlyargs, a.kw_defaults, strict=True):
+                if default is not None:
+                    yield arg.arg, default
+        elif isinstance(node, ast.Call):
+            for kw in node.keywords:
+                if kw.arg:
+                    yield kw.arg, kw.value
+
+
+def scan_guarded_constant_frozen_literals_with_scope(
+    repo_root: str | Path | None = None,
+) -> tuple[list[GuardedConstantFrozenLiteralViolation], GuardedConstantScanScope]:
+    """Scan for declared frozen-literal sites, WITH the denominator that makes a
+    zero count readable.  See :class:`GuardedConstantScanScope`."""
+    root = Path(repo_root) if repo_root is not None else Path(__file__).resolve().parents[2]
+    targets, import_ok = _guarded_literal_targets()
+    declared_constants = len({cid for cands in targets.values() for cid, _, _ in cands})
+    files_scanned = 0
+    files_routed = 0
+    out: list[GuardedConstantFrozenLiteralViolation] = []
+    for sub in _P5_SCANNED_SUBTREES:
+        base = root / sub
+        if not base.exists():
+            continue
+        for path in sorted(base.rglob("*.py")):
+            rel = str(path.relative_to(root))
+            if any(m in f"/{rel}" for m in _EXCLUDED_PATH_MARKERS):
+                continue
+            if path.name.startswith("test_"):
+                continue
+            try:
+                text = path.read_text(encoding="utf-8")
+            except (OSError, UnicodeDecodeError):
+                continue
+            try:
+                tree = ast.parse(text)
+            except SyntaxError:
+                continue
+            files_scanned += 1
+            if _module_is_imported(tree, _GUARDED_REGISTRY_MODULE):
+                files_routed += 1
+                continue  # already routed through the guard
+            if not targets:
+                continue
+            lines = text.splitlines()
+            for name, node in _p6_literal_sites(tree):
+                cands = targets.get(name)
+                if not cands:
+                    continue
+                if not (
+                    isinstance(node, ast.Constant)
+                    and isinstance(node.value, (int, float))
+                    and not isinstance(node.value, bool)
+                ):
+                    continue
+                lineno = getattr(node, "lineno", 0)
+                src_line = lines[lineno - 1] if 0 < lineno <= len(lines) else ""
+                if _has_valid_guarded_constant_waiver(src_line):
+                    continue
+                for cid, value, deriv in cands:
+                    if float(node.value) == value:
+                        out.append(
+                            GuardedConstantFrozenLiteralViolation(
+                                path=rel, line=lineno, constant_id=cid,
+                                site_name=name, value=value, derivation=deriv,
+                            )
+                        )
+                        break
+    scope = GuardedConstantScanScope(
+        declared_constants=declared_constants,
+        declared_site_names=len(targets),
+        files_scanned=files_scanned,
+        files_exempt_already_routed=files_routed,
+        registry_import_ok=import_ok,
+    )
+    return out, scope
+
+
+def scan_repo_for_guarded_constant_frozen_literals(
+    repo_root: str | Path | None = None,
+) -> list[GuardedConstantFrozenLiteralViolation]:
+    """Findings-only view of :func:`scan_guarded_constant_frozen_literals_with_scope`.
+
+    Kept because a zero-length list is the shape the ratchet's ``live`` map wants;
+    every caller that TURNS THAT INTO A VERDICT must use the ``_with_scope`` form
+    instead, because this return value alone cannot distinguish clean from unlooked.
+    """
+    findings, _scope = scan_guarded_constant_frozen_literals_with_scope(repo_root)
+    return findings
+
+
+def check_no_frozen_literal_where_guarded_derivation_declared(
+    strict: bool = False,
+    repo_root: str | Path | None = None,
+) -> list[GuardedConstantFrozenLiteralViolation]:
+    """WARN-ONLY gate for the frozen-derivation-output class (P6, see above).
+
+    Rule chain: a GuardedConstant that declares a LIVE derivation
+    (``invocation_required=True``) asserts that its value must be re-derived from
+    the caller's own data.  A bare literal of the same value, under the same
+    identifier, in a file that never imports the registry, silently defeats that
+    assertion -- the constant presents as provenanced while running no provenance.
+    Fix: consume the registry declaration, or waive same-line with a real rationale.
+
+    ``strict=True`` raises ``RuntimeError`` -- on findings, AND on an empty scope.
+    The second half matters as much as the first: a strict check that returns
+    clean because it had nothing to look at is making the same false statement as
+    one that missed a violation.  Kept WARN-ONLY at landing per the strict-flip
+    atomicity rule; the strict-flip condition is live count 0 (see
+    ``_P6_MEASURED_LIVE_COUNT_AT_LANDING``).
+    """
+    findings, scope = scan_guarded_constant_frozen_literals_with_scope(repo_root)
+    if strict and scope.is_vacuous:
+        raise RuntimeError(
+            "check_no_frozen_literal_where_guarded_derivation_declared: refusing to report "
+            f"a clean scan from an EMPTY scope -- {scope.describe()}. Zero findings from a "
+            "gate that looked at nothing is not a pass. Fix: restore "
+            f"{_GUARDED_REGISTRY_MODULE} so it imports and declares at least one constant "
+            "with invocation_required=True and literal_site_names."
+        )
+    if strict and findings:
+        detail = "\n".join(f.describe() for f in findings)
+        raise RuntimeError(
+            f"check_no_frozen_literal_where_guarded_derivation_declared: "
+            f"{len(findings)} frozen derivation output(s):\n{detail}"
+        )
+    return findings
+
+
 def run_constant_ratchet(
     repo_root: str | Path | None = None,
     baseline: dict[str, int] | None = None,
@@ -521,9 +840,11 @@ def run_constant_ratchet(
     ``RUN_CONSTANT_RATCHET_BASELINE`` in the same commit so the ratchet keeps its teeth.
     """
     pins = RUN_CONSTANT_RATCHET_BASELINE if baseline is None else baseline
+    p6_findings, p6_scope = scan_guarded_constant_frozen_literals_with_scope(repo_root)
     live = {
         "hardcoded_run_constants": scan_repo_for_hardcoded_run_constants(repo_root),
         "canonical_constant_copies": scan_repo_for_canonical_constant_copies(repo_root),
+        "guarded_constant_frozen_literals": p6_findings,
     }
     lines: list[str] = []
     ok = True
@@ -537,6 +858,19 @@ def run_constant_ratchet(
         else:
             verdict = "at baseline" if count == pin else f"BELOW baseline {pin} — re-pin it"
             lines.append(f"  - {key}: {count} ({verdict})")
+    # P6's DENOMINATOR is reported unconditionally, and an empty scope REFUSES.
+    # A gate pinned at 0 that never looked at anything prints exactly the same
+    # symbol as a clean repo; without this the pin would certify the silence.
+    lines.append(f"  · guarded_constant_frozen_literals scope: {p6_scope.describe()}")
+    if p6_scope.is_vacuous:
+        ok = False
+        lines.append(
+            "  ✗ guarded_constant_frozen_literals: VACUOUS, not PASS — the gate ran with an "
+            "empty scope, so its 0 findings carry no information. Fix: restore "
+            f"{_GUARDED_REGISTRY_MODULE} (it must import and declare at least one constant "
+            "with invocation_required=True and literal_site_names), or remove the P6 pin "
+            "rather than leaving a gate that cannot fire."
+        )
     head = ("run-constant ratchet: PASS" if ok else "run-constant ratchet: FAIL (new debt)")
     return ok, "\n".join([head, *lines])
 
@@ -558,7 +892,18 @@ def _main(argv: list[str] | None = None) -> int:
     for c in copies:
         print(f"WARN {c.describe()}")
     print(f"[run_constant_gates] P5 canonical-constant-copy live count = {len(copies)}")
-    return 1 if (args.strict and (findings or copies)) else 0
+    frozen, p6_scope = scan_guarded_constant_frozen_literals_with_scope(args.repo_root)
+    for f6 in frozen:
+        print(f"WARN {f6.describe()}")
+    # The count is printed WITH its denominator: "0" alone cannot distinguish a
+    # clean repo from a gate that looked at nothing.
+    print(
+        f"[run_constant_gates] P6 guarded-constant frozen-literal live count = {len(frozen)} "
+        f"[scope: {p6_scope.describe()}]"
+    )
+    if p6_scope.is_vacuous:
+        print("VACUOUS [run_constant_gates] P6 scope is empty — 0 findings carry NO information")
+    return 1 if (args.strict and (findings or copies or frozen or p6_scope.is_vacuous)) else 0
 
 
 if __name__ == "__main__":

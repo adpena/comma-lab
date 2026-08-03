@@ -209,8 +209,14 @@ def test_ratchet_baseline_keys_match_the_checks_it_runs() -> None:
     _, report = run_constant_ratchet(_REPO)
     for key in RUN_CONSTANT_RATCHET_BASELINE:
         assert key in report, f"baseline key {key!r} is pinned but never reported"
+    # ddm_gk1 2026-08-03: P6 joined the ratchet. This assertion is the reason the
+    # key set is pinned at all — adding a pin without adding it here would leave a
+    # scanner whose result nobody reads, so the pin is updated deliberately.
     assert set(RUN_CONSTANT_RATCHET_BASELINE) == {
-        "hardcoded_run_constants", "canonical_constant_copies"}
+        "hardcoded_run_constants",
+        "canonical_constant_copies",
+        "guarded_constant_frozen_literals",
+    }
 
 
 def test_ratchet_reports_a_drained_count_as_needing_a_re_pin() -> None:
@@ -247,3 +253,169 @@ def test_failure_report_names_the_derivation_fix_not_just_the_count() -> None:
     doc = run_constant_ratchet.__doc__ or ""
     assert "Rule chain" in doc
     assert "waive same-line" in doc or "re-derivation trigger" in doc
+
+
+# ---------------------------------------------------------------------------
+# P6 — frozen literal at a site a GuardedConstant declares a LIVE derivation for
+# (ddm_gk1, task #847, 2026-08-03).
+#
+# P6 is pinned at live count 0 BECAUSE the same landing migrated its only
+# instance. A gate at zero with no test showing it fire is indistinguishable
+# from a gate that CANNOT fire — the vacuity genus — so every test below exists
+# to make the difference observable. `_p6_repo` builds a synthetic repo carrying
+# the exact shape the canonical instance had before migration.
+# ---------------------------------------------------------------------------
+_P6_DECLARED_NAME = "margin_floor"      # from MARGIN_FLOOR.literal_site_names
+_P6_DECLARED_VALUE = "0.1"              # from MARGIN_FLOOR.incumbent_literal
+
+
+def _p6_findings(tmp_path: Path):
+    from tac.run_constant_gates import scan_repo_for_guarded_constant_frozen_literals
+
+    return scan_repo_for_guarded_constant_frozen_literals(tmp_path)
+
+
+def test_p6_positive_control_frozen_function_default_is_detected(tmp_path):
+    """POSITIVE CONTROL: the canonical instance's exact pre-migration shape.
+
+    `margin_floor: float = 0.1` as a function default, in a file that never
+    imports the registry, is the literal that froze the output of
+    `tac.optimization.lane_guard:derive_margin_floor`.
+    """
+    _mk_repo(tmp_path, "src/tac/optimization/mod.py",
+             f"def __init__(self, {_P6_DECLARED_NAME}: float = {_P6_DECLARED_VALUE}):\n"
+             "    return None\n")
+    f = _p6_findings(tmp_path)
+    assert len(f) == 1, [x.describe() for x in f]
+    assert f[0].site_name == _P6_DECLARED_NAME
+    assert f[0].constant_id == "seg_margin_hinge_floor"
+    assert "derive_margin_floor" in f[0].derivation
+
+
+def test_p6_positive_control_plain_assignment_is_detected(tmp_path):
+    _mk_repo(tmp_path, "tools/foo.py", f"{_P6_DECLARED_NAME} = {_P6_DECLARED_VALUE}\n")
+    assert len(_p6_findings(tmp_path)) == 1
+
+
+def test_p6_positive_control_call_keyword_is_detected(tmp_path):
+    _mk_repo(tmp_path, "tools/foo.py",
+             f"build(x, {_P6_DECLARED_NAME}={_P6_DECLARED_VALUE})\n")
+    assert len(_p6_findings(tmp_path)) == 1
+
+
+def test_p6_undeclared_name_is_not_flagged(tmp_path):
+    """The gate is DECLARATION-DRIVEN: an undeclared constant is out of scope by
+    design (ddm_gd5 refuted the auto-derived variant), and must not be guessed at."""
+    _mk_repo(tmp_path, "tools/foo.py", f"some_other_threshold = {_P6_DECLARED_VALUE}\n")
+    assert _p6_findings(tmp_path) == []
+
+
+def test_p6_declared_name_with_a_different_value_is_not_flagged(tmp_path):
+    """Both the name AND the exact value must match — this is what keeps the
+    false-positive rate at zero on a 5,000-file scan."""
+    _mk_repo(tmp_path, "tools/foo.py", f"{_P6_DECLARED_NAME} = 0.25\n")
+    assert _p6_findings(tmp_path) == []
+
+
+def test_p6_waiver_with_real_rationale_respected(tmp_path):
+    _mk_repo(tmp_path, "tools/foo.py",
+             f"{_P6_DECLARED_NAME} = {_P6_DECLARED_VALUE}  "
+             "# GUARDED_CONSTANT_OK:replay tool pinned to the 20260601 archive\n")
+    assert _p6_findings(tmp_path) == []
+
+
+def test_p6_placeholder_waiver_rejected(tmp_path):
+    _mk_repo(tmp_path, "tools/foo.py",
+             f"{_P6_DECLARED_NAME} = {_P6_DECLARED_VALUE}  # GUARDED_CONSTANT_OK:<rationale>\n")
+    assert len(_p6_findings(tmp_path)) == 1
+
+
+def test_p6_file_that_really_imports_the_registry_is_exempt(tmp_path):
+    _mk_repo(tmp_path, "tools/foo.py",
+             "from tac.witness_dsl.guarded_constant_registry import MARGIN_FLOOR_INCUMBENT\n"
+             f"{_P6_DECLARED_NAME} = {_P6_DECLARED_VALUE}\n")
+    assert _p6_findings(tmp_path) == []
+
+
+def test_p6_merely_mentioning_the_registry_does_not_exempt_a_file(tmp_path):
+    """Regression guard for `mentions-it == guarded-by-it`.
+
+    The exemption originally tested the raw file TEXT, so a comment naming the
+    registry silenced the gate for that whole file. Exemption is now an AST
+    import check: naming a guard is not being guarded by it.
+    """
+    _mk_repo(tmp_path, "tools/foo.py",
+             "# see tac.witness_dsl.guarded_constant_registry for the declaration\n"
+             f'DOC = "tac.witness_dsl.guarded_constant_registry"\n'
+             f"{_P6_DECLARED_NAME} = {_P6_DECLARED_VALUE}\n")
+    assert len(_p6_findings(tmp_path)) == 1
+
+
+def test_p6_strict_raises_with_the_rule_chain(tmp_path):
+    from tac.run_constant_gates import check_no_frozen_literal_where_guarded_derivation_declared
+
+    _mk_repo(tmp_path, "tools/foo.py", f"{_P6_DECLARED_NAME} = {_P6_DECLARED_VALUE}\n")
+    with pytest.raises(RuntimeError) as ei:
+        check_no_frozen_literal_where_guarded_derivation_declared(
+            strict=True, repo_root=tmp_path)
+    msg = str(ei.value)
+    assert "derive_margin_floor" in msg
+    assert "GUARDED_CONSTANT_OK:" in msg
+    assert "Fix:" in msg
+
+
+# ------------------------------------------------------------------ P6 anti-vacuity
+def test_p6_scope_reports_its_denominator_on_the_live_repo():
+    """A zero count is only readable NEXT TO the scope that produced it."""
+    from tac.run_constant_gates import scan_guarded_constant_frozen_literals_with_scope
+
+    findings, scope = scan_guarded_constant_frozen_literals_with_scope(_REPO)
+    assert findings == [], [f.describe() for f in findings]
+    assert not scope.is_vacuous, scope.describe()
+    assert scope.registry_import_ok
+    assert scope.declared_site_names >= 1
+    assert scope.files_scanned > 100, "the live scan must actually traverse the repo"
+
+
+def test_p6_empty_scope_is_vacuous_not_pass(monkeypatch):
+    """THE ANTI-VACUITY CONTROL. A broken registry import must NOT read as clean.
+
+    Without this, `_guarded_literal_targets` failing degrades to zero targets ->
+    zero findings -> "at baseline" -> PASS, forever, silently. That is precisely
+    the defect class this gate was built to extinct, so it is asserted against
+    the gate itself.
+    """
+    import tac.run_constant_gates as rcg
+
+    monkeypatch.setattr(rcg, "_guarded_literal_targets", lambda: ({}, False))
+    findings, scope = rcg.scan_guarded_constant_frozen_literals_with_scope(_REPO)
+    assert findings == []
+    assert scope.is_vacuous
+    assert "VACUOUS" in scope.describe()
+
+    ok, report = rcg.run_constant_ratchet(
+        _REPO,
+        baseline={"hardcoded_run_constants": 999, "canonical_constant_copies": 999,
+                  "guarded_constant_frozen_literals": 0},
+    )
+    assert not ok, "an empty P6 scope must REFUSE, not pass at baseline"
+    assert "VACUOUS" in report
+
+
+def test_p6_ratchet_reports_the_scope_even_when_passing():
+    """The denominator travels with every report, not only with failures."""
+    from tac.run_constant_gates import run_constant_ratchet
+
+    ok, report = run_constant_ratchet(_REPO)
+    assert ok, report
+    assert "guarded_constant_frozen_literals scope:" in report
+    assert "file(s) scanned" in report
+
+
+def test_p6_canonical_instance_stays_migrated():
+    """Regression guard on the migration itself: the one site P6 was built for
+    must keep consuming the registry, or the gate silently loses its instance."""
+    src = (_REPO / "src/tac/optimization/direct_description_joint_descent.py").read_text(
+        encoding="utf-8")
+    assert "from tac.witness_dsl.guarded_constant_registry import" in src
+    assert "margin_floor: float = _MARGIN_FLOOR_DEFAULT" in src

@@ -65,6 +65,22 @@ from tac.witness_control.sigma_min_plateau import (
     DEFAULT_HYSTERESIS,
     DEFAULT_SETTLE_WINDOW,
 )
+from tac.witness_dsl.guarded_constant_registry import (
+    MARGIN_FLOOR_INCUMBENT as _MARGIN_FLOOR_DEFAULT,
+)
+from tac.witness_dsl.guarded_constant_registry import (
+    MARGIN_FLOOR_MIGRATION_IS_BYTE_IDENTICAL as _MARGIN_FLOOR_BYTE_IDENTICAL,
+)
+
+# ddm_gk1 2026-08-03 migration invariant: converting a hardcoded literal to a
+# resolved constant is a BEHAVIOUR CHANGE unless byte-identity is PROVEN.  It is
+# asserted here, at the consuming module, so the proof travels with the consumer
+# and not only with the declaration.
+assert _MARGIN_FLOOR_BYTE_IDENTICAL and _MARGIN_FLOOR_DEFAULT == 0.1, (  # GUARDED_CONSTANT_OK:the migration invariant itself — this literal IS the byte-identity assertion, not a frozen use
+    "seg_margin_hinge_floor migration is not byte-identical: adopting it would "
+    f"change the shipped margin_floor from 0.1 to {_MARGIN_FLOOR_DEFAULT!r}. That is a "
+    "measurable behaviour change and must be measured, not landed silently."
+)
 
 TYPED_SCHEMA: Final = "DirectDescriptionJointDescentTypedConfigV1"
 TICKET_SCHEMA: Final = "ddm_joint_descent_witness_program_ticket.v1"
@@ -2278,7 +2294,17 @@ class DirectDescriptionJointDescentMLXModule:
         pose_targets: np.ndarray,
         margin_targets: np.ndarray | None = None,
         margin_hinge_weight: float = 0.05,
-        margin_floor: float = 0.1,
+        # ddm_gk1 2026-08-03: was the bare literal `0.1`.  Now the class-4 custodied
+        # value of the GuardedConstant `seg_margin_hinge_floor`, which also declares
+        # the LIVE derivation (tac.optimization.lane_guard:derive_margin_floor) this
+        # literal froze the output of.  MIGRATION IS BYTE-IDENTICAL — proven, not
+        # assumed, at registry import (MARGIN_FLOOR_MIGRATION_IS_BYTE_IDENTICAL) and
+        # re-asserted below, so this landing changes no shipped value.  A caller
+        # holding the GT-Lane-restricted margin field should instead resolve the
+        # constant live:
+        #     MARGIN_FLOOR.resolve(consumer_role=ROLE_THRESHOLD, sample=<lane margins>,
+        #                          sample_domain_id=LANE_MARGIN_DOMAIN.domain_id)
+        margin_floor: float = _MARGIN_FLOOR_DEFAULT,
     ) -> None:
         import mlx.core as mx
 
