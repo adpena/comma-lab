@@ -448,3 +448,128 @@ both numbers**."* That is the whole discipline in two sentences: report the subs
 of the governing quantity, and re-read your own interims when n grows.
 
 ---
+
+## §3 SOUND AS FILED — the honest non-reactivations
+
+An audit that reactivates everything is worth as little as one that reactivates nothing. These
+survived their lens and are **not** re-scoped.
+
+| # | negative | lens applied | why it survives |
+|---|---|---|---|
+| S1 | **RATE-DEAD at FAMILY scope** | L3 — and I flagged it as my top pierce, then **refuted myself** | The n48 **is** a contiguous prefix (receipt `pair_ids` = 0..47; the "four independent n12 streams" are chunks inside one block). But **the margin is ~758×** (334 KB/pair vs the 440.5 B/pair box) — I first misread 1.9×, which is the spread *among* 5 codec families. **A 2.6× prefix distortion cannot close 758×.** The scope-laundering (source says *"DERIVED, not measured at n600 … extrapolations non-authoritative"*, 52 docs hardened it to FAMILY) deserves a label; **the verdict is not overturned.** |
+| S2 | **basis / reversible lattice transforms** (`br1`, 264 evaluations, 0.83% to IDENT) | L4 | Sound **at source** — it self-scopes to FORMULATION with an explicit decoder-CNN carve-out, and supplies a *mechanism*, not just a null: every spatial predictor **raises** H₀ (3.4565 → 3.74/3.83) ⇒ *"neighbouring cells … are effectively independent; the only structure is **temporal**."* That legitimately closes the **generic pixel-domain** family. Only the downstream bare-"CLOSED" citation over-reaches. |
+| S3 | **cosine as a metric** | L4 | Not an open suspect — **raced and lost, 4/4**, and it is the standing law's own first instance (*"P3 cosine rank-deficient vs warp"*). |
+| S4 | **per-pixel TRUTH-content transport** | L0 | Genuinely dead, and now dead at the strongest possible form: `sq1` paid **oracle** content through the **real receiver** and got `eta_net = −3.7640`, **0/32**, flips amplified **4.26×**. This is the 4th independent NO-GO and the first with truth as the payload. |
+| S5 | **`br1` 1.0206× as "non-zero holonomy"** | geometry (`hg1`) | **ANTI-BUILD** — *"the holonomy is identically zero, and calling `ddm_br1`'s 1.0206× a holonomy is a **category error** … **Do not build it**."* |
+| S6 | `rv1`'s **X1–X12** stay-closed rows | conditional-validity | 12 rows including island/homotopy (*"**DISSOLVED**, not reactivated"*) and eikonal/viscosity (*"KNOWN-TAINTED / RETRACTED"*, with `rv1`'s honest note that **no reactivation venue exists** on the token vehicle). **Exception noted:** X6 (post-hoc/stored pose) keeps its *disposition* but its *evidence base* is downgraded by §2.5.3 — a disposition can stand while its evidence weakens. |
+| S7 | `na1`'s floors + survivors | scope-hardening / degeneracy | `FLOOR-384 = 1.875e-4`, `S_floor = 0.11797`, smooth-perturbative `S ≥ 0.2373`, `SPEC_v10` F5, the representation-axis TERMINAL_FINDING; plus `ba29`'s 19-coordinate coder sweep, `dc1`'s NOT-degenerate rulings, `sv1`/`os1` `converged = 0/600`, `ba31`'s 3 byte pools, and 8 STANDS. |
+| S8 | `a1`'s **6 finite forms** | naive/form-ladder | Fixed-width serialization; v7 raw solved-plane q8; v8 posthoc pixel correction over v6; v12's exact 4,096-atom inventory; v14 fixed role prototypes; v15's `1×1 × three-band × zero-collateral` feasible set. **Closed as finite forms** — which is exactly the right scope. |
+| S9 | the **live deferral ledger** | L3 | **CLEAN.** 148 rows, 6 with neg+small-n, 4 of which carry n600 too; 2 were regex false positives. `default_off_comprehensive_sweep` (103 rows): **0 levers held off by a small-n negative.** The rot is in the *research corpus*, not in the live actuation ledger. |
+
+---
+
+## §4 RANKED REACTIVATION HEAD
+
+Ranked by `exposure × cheapness × confidence`. **Every row is a measurement, not a build.** Nothing
+below reactivates until its measurement lands.
+
+| rank | action | why now | cost | owner |
+|---|---|---|---|---|
+| **1** | **Re-run the 4 pose-family verdicts on STRIDED indices at matched n** | Re-prices a **CLAUDE.md-level** "MEASURED DEAD" that rests on n8/n24 **prefix** in the axis where bias measures **2.5–4.2×** and `√(10·d_pose)` amplifies it to **≈+1.33 S**. `tools/build_strided_subset_gt.py` **already exists**. | **$0 CPU** | a pose arm |
+| **2** | **Re-measure `σ_eff` at n600** for the Lever-D bar | The whole flip-coding family is priced against **0.65 B/flip derived from 12 prefix pairs**; **the verdict flips at `σ_eff ≥ 0.644` (26%)**. Gates **8 files** + `dmtz`'s "don't spend". | **$0** | seg/rate arm |
+| **3** | **Fire the standalone `bias_correction` arm** at ≥3–4 β₂ τ, ≥2 seeds, magnitude-matched | Already registered and **pending**; the current verdict is a 2-of-5-arm diagonal with **n=1 and no noise floor**, and the mechanism costs **~33% of a 666-epoch budget**. | **$0, ~2h** | the burn owner |
+| **4** | **Race arms D± (frozen-scorer metric reset) against B** | The zero-reset is *"the maximally generic step there is"* and *"the biggest un-derived constant the campaign has been running"*; the derived substitute is **built and idle** at **zero extra wall-clock**. | ~free | optimizer arm |
+| **5** | **Code the GENERATOR, not the flip set** (P1/P2) | `a3061`'s own doc says the rank-547 flip set is generated by a **rank-1** ego-pitch curve and the *"where"* codes **213 B**; `sx1` prices a label field at **0.5349 B/flip** vs the **1.273** waterline, and `#72` already retracted the rate objection at **0.856**. | low | seg carrier arm |
+| **6** | **Run the per-region wavelet UNIWARD sister probe** (P4) | The **most-cited** pixel negative (33 citations) **names this successor itself** and it was never run. | $0–low | seg arm |
+| **7** | **Continue the multiscale collateral gradient to a semantic carrier** (P6) | Collateral falls **monotonically 96.8× → 2.23× (43×)** and the sweep **stopped while still descending**. | low | seg arm |
+| **8** | **Give the sampler a stride** (structural P0) | **110 tools slice `[:n]`, 0 stratified; 28 importers; 44 days open.** This is the *generator* of the entire L3 class — every future subset verdict inherits the defect until it is fixed. | low | apparatus |
+| **9** | **Register the anti-pattern classes** (generic-metric; diagonal-2×2) | The law is 4/4 measured but lives in memory + a census memo; `canonical_anti_patterns` has **0 registered classes** for it. This is the missing **self-protect** half of the two-landing rule. | $0 | apparatus |
+| **10** | **Restore the dropped scope qualifier** at the basis citation site | `br1` self-scoped to FORMULATION with a carve-out; the consuming doc re-cites bare **"CLOSED"**. One line. | $0 | doc fix |
+
+---
+
+## §5 THE LAWS
+
+### 5.1 LAW A — a negative measures the INSTRUMENT unless you prove otherwise
+
+**Every one of the five lenses is the same defect wearing a different coat: the instrument's limit
+reported as the object's limit.** Six measured instances, one per lens plus two:
+
+| instance | instrument capacity | object capacity | outcome |
+|---|---|---|---|
+| `pu1` "MODEL WALL" | **6-DOF** warp oracle | shipped receiver has **11 knobs** | **overturned** — −54.2% on the pair, **ΔS −0.0354283 = 5.414% of gap, at −3 bytes** |
+| `a3061` "uncodeable" | **pixel-indicator** basis → rank 547/600 | mechanism is **rank-1** (`v_h(t)` ego-pitch) | self-diagnosed, closure drawn anyway |
+| `sq1` v0 realizer | **paint truth** | argmax needs a **solve** | `η −3.764` → `+0.7895`, same bytes |
+| bp1 `bias_correction` | **2 of 5** arms, **3.0 τ**, n=1 | 5-arm magnitude-matched, ≥3–4 τ, ≥2 seeds | **UNGROUNDED** |
+| `br1` basis race | **11 generic** bases | scorer-derived basis untested | closes generic only (br1 said so) |
+| prefix verdicts | **contiguous scene block** | 600-pair drive, effective N **40.22** | pose bias **2.5–4.2×** |
+
+**The operational test — one line, checkable:**
+
+> **State the instrument's capacity in the same units as the claim. If instrument-capacity ≤ the
+> claimed limit, the verdict is INSTRUMENT-scoped, not OBJECT-scoped.**
+
+`pu2` states the counterfactual that makes this binding: re-pointing the specified 6-DOF oracle
+*"would have measured a 6-DOF floor on an 11-knob vehicle and reported it as a model wall — the exact
+false verdict this arm just overturned."*
+
+### 5.2 LAW B — the level is chosen per ROLE, not per object (refutes the broad reading of my charter)
+
+My charter made "pixel is the wrong level" the primary lens and said it outranks the others.
+**Measured, that is true for two roles and false for the third.** `sq1` ran both ends on the same
+band, same addresses, same byte row:
+
+| role | right rung | evidence |
+|---|---|---|
+| **OBJECTIVE** | **regional** (whole-frame flips; per **directed edge**, never per class) | `sq1` scores `eta_net` whole-frame because in-band accounting hides collateral; **100% of the debt localises to S4, the frozen net's regional response**; `pc2`: Road participates in **87.8%** of flips — per-class tables **hide** the hub |
+| **ADDRESS** | **supra-pixel** (band · component · token-cell; **16-px floor**) | finer grids cost **more** address bits with **smaller** blast radius; every measured δ ≤ 0.32 cells |
+| **ACTUATOR** | **per-pixel is CORRECT and is the best realizer we own** | `sq1` v1 SOLVED paint: **`η = +0.7895`, 32/32 pairs, sd 0.0545** — a per-pixel edit |
+
+**So the discriminating axis is not granularity — it is CONTENT vs SOLVE.** Pixel-level *truth
+transport* is dead 4×; pixel-level *actuation of a regional solve* is the best thing we have. A blanket
+ban on per-pixel work would delete `sq1` v1. **And the level ladder has ~7 rungs** (pixel · scorer-pixel ·
+token-cell · band/arc · component · directed edge · object/event); `rv1` collapsed it to **two**
+(pixel vs token) — **applying the level lens itself in a binary, which is LAW C's defect one level up.**
+
+### 5.3 LAW C — silence resolves to the DEFAULT, never to "unknown"
+
+A doc silent on selection mode is **not** unknown — it is **prefix**, because *the instrument can only
+produce prefixes* (110 tools, 0 stratified). A flag left unset is not neutral — it is the **library
+default** (`gd5`: *"arm B … **IS MLX's Adam default**"*). This is the same genus as [[m50]]: an empty
+scope emits the same symbol as a clean full scope. **Cure: report the DENOMINATOR and the DEFAULT, not
+the absence.**
+
+### 5.4 LAW D — subset bias is per-AXIS and per-ARCHIVE, and its SIGN is not universal
+
+`na1` measured it does not cancel in a difference (**13× between two archives, same instrument**).
+This audit adds: **it does not even keep its sign across axes** — seg **0.95–0.97×** (easier,
+conservative) vs pose **2.54–4.21×** (harder, **anti-conservative**). **Therefore "conservative for
+wall verdicts" must never be applied axis-blind.** Report the subset/population ratio *of the axis you
+are ruling on*.
+
+### 5.5 LAW E — never let a small-n negative gate the large-n test
+
+Three live verdicts make a small-n negative the **precondition** for running n600 (*"Never run n600
+unless the n16 … is positive"*, *"do NOT fire it"*, *"Do NOT spend n600/paid budget"*). **A prefix
+false-negative then becomes undetectable by construction** — the gate removes the only measurement
+that could refute the gate. Corollary, measured: **two nested prefixes agreeing is not independence,
+and shared-prefix agreement is not replication.**
+
+---
+
+## §6 WHAT THIS UNIT DOES NOT LICENSE
+
+- **No reactivation.** Every §2 row is a PROPOSAL with a named measurement. Nothing reopens until its
+  measurement lands.
+- **No sign flips.** Adopting `df1`'s framing: *"UNGROUNDED ≠ refuted. No sign is flipped. Each row
+  keeps its recorded direction as a hypothesis and loses its status as evidence."*
+- **No score, byte, or pointer claim.** This arm ran no scorer. Pointer `0.1910828242` [contest-CPU]
+  UNMOVED.
+- **No per-row claim about the 4,906 untagged docs.** They are counted, not read.
+- **Un-audited by two consecutive arms:** the `ba29`/`ba30`/`ba31` window (07-29→07-31). `na1` declined
+  it; so did I. It should not be assumed clean.
+- **Not measured here:** bytes/pair prefix bias. Seg and pose were measured; the **rate-axis** prefix
+  claim in S1 is **INFERRED from block structure, not measured** — which is why S1 rests on the 758×
+  margin and not on the sampling argument.
+
+---
