@@ -14,7 +14,7 @@ gated, no scorer slot taken, no paid dispatch. LIVE BEST is unchanged at `pj2` S
 | deliverable | state |
 |---|---|
 | **GD5-1 windows** | **window_01 COMPLETE + ADJUDICATED; window_02 FIRED; chain driver landed and self-tested.** 46 epochs / 30 min = **39.1 s/epoch** ⇒ the sealed 666 needs **~14.5 windows ≈ 7.2 h**. |
-| **GD5-1 budget** | **DERIVED, and the answer is "hold 666" — for a reason nobody had named.** `epochs` has exactly one load-bearing consumer beyond the loop bound, and changing it mid-chain is a *known* confound the trainer already documents. §2. |
+| **GD5-1 budget** | **DERIVED, and the answer is "hold 666" — for a reason nobody had named.** `epochs` has exactly one load-bearing consumer beyond the loop bound, and changing it mid-chain is a *known* confound the trainer already documents (§2). **But the budget buys less than it says: ~218 of the 666 epochs (33%) are spent re-converging a deliberately reset Adam at window boundaries — §3.6.** |
 | **GD5-2 falsifier** | **REACHABLE, not yet met.** ep44 d_seg **0.0157596 = 2.65× the bar**, `COUPLED_DESCENT`, descent *accelerating* (−12.45% last gate). **Two findings say the scalar everyone quotes cannot carry the verdict: §3.4 (the bar and the gate are different populations) and §3.5 (the gate silently changes which object it reads at every resume).** |
 | **GD5-3 guard** | **VERIFIED ON PRODUCTION BYTES.** It REFUSED a real `b4s` ds=16 ep945 checkpoint against the live ds=32 model, and ACCEPTED the legitimate ds=32 resume with `new_params=[]`. First refusal seen on real bytes rather than a fixture. §4. |
 | **GD5-4 endpoint** | Not reached. Pose re-solve NOT run (needs the scorer slot; `ddm_cx1` holds it). §6. |
@@ -227,6 +227,60 @@ it with the test.
    suggest.** Any early stop must therefore be reported on the live weights *and* explicitly
    flagged as not-shippable-as-is — not read off the shadow gate.
 
+### 3.6 **THIRD FINDING: the window boundary costs ~16 epochs of re-convergence, so the sealed 666-epoch budget buys only ~450 effective epochs**
+
+§3.5's basis switch is a *readout* artifact. This one is not. `ep_loss` contains no EMA at all — it
+is the live-weight training signal — and it jumped across the boundary:
+
+```
+window_01  ep44 1.840019   ep45 1.912496          <- 46 epochs of descent
+window_02  ep47 14.845633  <- 7.8x JUMP on the LIVE signal
+           ep49  5.262828   ep54 2.856726
+           ep59  2.267794  <- 13 epochs later, still ABOVE window_01's ep45
+```
+
+**Cause, MEASURED, and it is designed behaviour rather than a bug.** No checkpoint on disk carries
+optimizer state: `stage_seg_trunk_tau_final.npz` holds `{param: 23, ema: 23, meta: 2}` and **zero
+`opt::` keys**, because **all six `save_checkpoint` callsites pass `opt_state_flat={}`**. Every
+resume therefore constructs a fresh `optim.Adam` with both moments zeroed. `reset_arm_for` names
+this exactly — it is the pre-registered `#824` **reset-operator arm B**
+(`what='both', to='zero', structure='uniform'`, `bias_correction=False`), and the trainer's
+`optimizer_arm` telemetry row even ships the cost:
+
+```json
+{"arm": "B", "boundary_impulse_epochs_per_reset": 16.167649176608975, "requires_persistence": false,
+ "note": "arm B (bias_correction False) IS MLX's Adam default => trained bytes identical to every
+          pre-#824 run; arm B' removes the eta(t) reset impulse"}
+```
+
+**My measurement corroborates the prediction independently:** window_02 needs ~17 epochs to return
+to window_01's ep45 loss (2.268 at ep59, falling ~4%/epoch), against the predicted **16.17**.
+
+**The consequence for the budget (this is the part that is new).** At the MEASURED 46 epochs per
+30-minute window, a 666-epoch run is ~14.5 windows ⇒ **~13.5 boundaries × 16.17 = ~218 epochs spent
+re-converging Adam**. The loop still terminates at `cfg.epochs = 666`, so that time is not added —
+**it is taken out of the budget**:
+
+| | epochs |
+|---|---:|
+| sealed budget | 666 |
+| spent re-converging Adam at ~13.5 boundaries | **~218 (33%)** |
+| **effective training** | **~448** |
+
+So §2's "666 is more likely too short than too long" is stronger than I could show there: the
+inherited budget, executed in 30-minute windows, delivers roughly **450 effective epochs** against
+an incumbent lineage that reached **945**. Any endpoint miss must be scoped against ~450, not 666.
+
+**The obvious lever is longer windows** — halving the boundary count would return ~110 epochs to
+training at zero risk on memory (15.0 GiB peak vs 74–96 GiB free), and `max_wall_minutes` is **not**
+in `TR1Config`, so it changes neither `config_hash` nor `ema_decay` and would not break window
+comparability. **I did not pull it, and the reason matters:** `#824` treats the reset as a *studied
+arm*, not a defect — arm B′ exists specifically to remove the `eta(t)` reset impulse — so whether
+the boundary impulse costs or helps **final d_seg** is not settled by a loss-re-convergence
+measurement. Claiming "fewer resets is better" from `ep_loss` alone would be exactly the
+surrogate-for-authority substitution this campaign keeps paying for. It is a clean, cheap,
+pre-registerable A/B for whoever owns the next ds=32 run.
+
 ---
 
 ## §4 GD5-3 — THE RESUME GUARD, TESTED ON REAL BYTES
@@ -341,9 +395,15 @@ Fired detached. window_02 = pid 29425, all gates PASS, resume verified.
    carrier stale by construction (`f0 := a·warp(f1)+b` with `(a,b)`/`s_t`/selector/`beta` all fitted
    to the old decoded frame_1). Interrogate `_refine_dim0`'s `±0.048/±0.006` bounds; **do not**
    chase `#850`'s GN cap — `ddm_pw1` measured that path dead on this vehicle.
-4. **Scope any miss.** If the endpoint misses the bar, "under-trained at an inherited 666 (vs the
-   incumbent lineage's 945, from scratch, at a 4× coarser description)" is a live alternative to
-   "ds=32 is worse" — §2 pre-registers it.
+4. **Scope any miss.** If the endpoint misses the bar, "under-trained" is a live alternative to
+   "ds=32 is worse", and §3.6 sharpens it: the sealed 666 delivers only **~450 effective epochs**
+   after ~218 are spent re-converging Adam at ~13.5 boundaries, against an incumbent lineage that
+   reached **945**. Scope the verdict against ~450, not 666. §2 + §3.6 pre-register this.
+4b. **Pre-registerable A/B for the next ds=32 run:** window length. `max_wall_minutes` is not in
+   `TR1Config` (no `config_hash` / `ema_decay` change), memory has 5–6× headroom, and halving the
+   boundary count returns ~110 epochs to training. Not pulled here because `#824` treats the reset
+   as a studied arm (B vs B′) whose effect on **final d_seg** — not on `ep_loss` re-convergence — is
+   unsettled.
 5. **Still OWED from gd4:** the per-geometry launcher memory floor, and a STRICT preflight sister
    gate for the resume-geometry class (the runtime guard is now verified on production bytes; the
    static gate is the second landing CLAUDE.md's two-landing rule asks for).
