@@ -1,0 +1,148 @@
+{
+  "arm": "ddm_sx2",
+  "axis": "[macOS-CPU advisory]",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "scorer_forwards_run": 0,
+  "substrate": "lstars GT SegNet argmax n600; no decode, no vehicle",
+  "n_frames": 600,
+  "movable": {
+    "px_total": 1460325,
+    "px_share_of_area": 0.012379328409830729,
+    "components": 2197,
+    "components_per_frame": 3.6616666666666666,
+    "mean_area_px": 664.6904870277651,
+    "median_area_px": 105.0,
+    "perimeter_px_total": 142102,
+    "perimeter_per_frame": 236.83666666666667,
+    "mean_inradius_px": 7.453858922056355,
+    "median_inradius_px": 4.0
+  },
+  "dropout_signature": {
+    "changed_px_per_frame": 2433.875,
+    "frac_off_3px": 0.6736431958639344
+  },
+  "translation_profile": {
+    "1": {
+      "changed_px_total": 994622,
+      "changed_px_per_frame_per_dir": 207.21291666666667,
+      "frac_off_3px": 0.023273163070995816,
+      "frac_off_5px": 0.021556933186677955
+    },
+    "2": {
+      "changed_px_total": 1961142,
+      "changed_px_per_frame_per_dir": 408.57125,
+      "frac_off_3px": 0.023467449067941026,
+      "frac_off_5px": 0.02171438886118394
+    },
+    "3": {
+      "changed_px_total": 2884584,
+      "changed_px_per_frame_per_dir": 600.955,
+      "frac_off_3px": 0.037103097015028855,
+      "frac_off_5px": 0.02215640106164355
+    },
+    "4": {
+      "changed_px_total": 3749260,
+      "changed_px_per_frame_per_dir": 781.0958333333333,
+      "frac_off_3px": 0.08485007708187749,
+      "frac_off_5px": 0.022694078298117495
+    },
+    "5": {
+      "changed_px_total": 4547520,
+      "changed_px_per_frame_per_dir": 947.4,
+      "frac_off_3px": 0.1857700460910562,
+      "frac_off_5px": 0.040999269931743014
+    },
+    "6": {
+      "changed_px_total": 5280887,
+      "changed_px_per_frame_per_dir": 1100.1847916666666,
+      "frac_off_3px": 0.26889289621232193,
+      "frac_off_5px": 0.07366470822041828
+    },
+    "7": {
+      "changed_px_total": 5957418,
+      "changed_px_per_frame_per_dir": 1241.12875,
+      "frac_off_3px": 0.33520259951542763,
+      "frac_off_5px": 0.13810362140108348
+    },
+    "8": {
+      "changed_px_total": 6589767,
+      "changed_px_per_frame_per_dir": 1372.868125,
+      "frac_off_3px": 0.38838353465304615,
+      "frac_off_5px": 0.19833614754512566
+    },
+    "9": {
+      "changed_px_total": 7187368,
+      "changed_px_per_frame_per_dir": 1497.3683333333333,
+      "frac_off_3px": 0.431257172305634,
+      "frac_off_5px": 0.25056251467853047
+    },
+    "10": {
+      "changed_px_total": 7757764,
+      "changed_px_per_frame_per_dir": 1616.2008333333333,
+      "frac_off_3px": 0.46617324270240756,
+      "frac_off_5px": 0.2948711767978505
+    }
+  },
+  "pc2_inputs_being_inverted": {
+    "total_flips": 458738,
+    "displacement_share": 0.2332,
+    "displacement_flips": 106977.7016,
+    "off_3px_frac_lo": 0.179,
+    "off_3px_frac_hi": 0.197,
+    "vehicle": "tb1 ep399 -- NOT the live cx1 vehicle (ddm_sx1 A4, untested transfer)"
+  },
+  "inversion": {
+    "route_a_distance_profile_d_lo": 4.932916684799611,
+    "route_a_distance_profile_d_hi": 5.135100684018422,
+    "route_b_flip_count_d": 0.8604491081033799,
+    "routes_agree": false
+  },
+  "class_interior_reference_off3": {
+    "0": 0.8201335890048128,
+    "1": 0.0007268630934540332,
+    "2": 0.9772799785035188,
+    "3": 0.6736431958639344,
+    "4": 0.9589358484197364
+  },
+  "edge_decomposition": {
+    "Road<->Lane": {
+      "flip_share": 0.4923,
+      "observed_off3": 0.026,
+      "class_interior_reference_off3": 0.41043022604913343,
+      "deep_fraction": 0.06334816090491222,
+      "boundary_shaped_fraction": 0.9366518390950878
+    },
+    "Road<->Undriv": {
+      "flip_share": 0.1626,
+      "observed_off3": 0.021,
+      "class_interior_reference_off3": 0.8987067837541658,
+      "deep_fraction": 0.023366909407623194,
+      "boundary_shaped_fraction": 0.9766330905923768
+    },
+    "Undriv<->Movable": {
+      "flip_share": 0.1185,
+      "observed_off3": 0.197,
+      "class_interior_reference_off3": 0.8254615871837265,
+      "deep_fraction": 0.23865435176955468,
+      "boundary_shaped_fraction": 0.7613456482304453
+    },
+    "Road<->Movable": {
+      "flip_share": 0.1147,
+      "observed_off3": 0.179,
+      "class_interior_reference_off3": 0.7468883924343737,
+      "deep_fraction": 0.23966097453539964,
+      "boundary_shaped_fraction": 0.7603390254646003
+    },
+    "Road<->MyCar": {
+      "flip_share": 0.1089,
+      "observed_off3": 0.008,
+      "class_interior_reference_off3": 0.8895347187122746,
+      "deep_fraction": 0.008993465720574812,
+      "boundary_shaped_fraction": 0.9910065342794252
+    }
+  },
+  "seg_residual_deep_fraction": 0.09173480196404099,
+  "seg_residual_boundary_shaped_fraction": 0.9082651980359591
+}

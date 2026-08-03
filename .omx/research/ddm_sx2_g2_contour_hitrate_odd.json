@@ -1,0 +1,297 @@
+{
+  "arm": "ddm_sx2",
+  "gate": "G2",
+  "axis": "[macOS-CPU advisory]",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "scorer_forwards_run": 0,
+  "substrate": "GROUND-TRUTH frame_1 through SegNet.preprocess_input (CEILING, not decoded)",
+  "subset": "odd",
+  "n_frames_evaluated": 300,
+  "n_frames_available": 600,
+  "gt_boundary_density": 0.021664242214626737,
+  "static_prior_built_on_frames": 300,
+  "results": {
+    "sobel_luma": {
+      "frames": 300,
+      "gt_boundary_px": 1277809,
+      "pred_px": 1277700,
+      "rho_recall_pm1": 0.47249080261604043,
+      "recall_exact": 0.31625070726532684,
+      "precision_pm1": 0.49073804492447365,
+      "cells": {
+        "16": {
+          "n_cells": 230400,
+          "gt_occupancy": 0.16194010416666665,
+          "pred_occupancy": 0.20022569444444444,
+          "tp": 24968,
+          "fp": 21164,
+          "fn": 12343,
+          "tn": 171925,
+          "cell_recall": 0.6691860309292166,
+          "cell_precision": 0.5412295153039105,
+          "marginal_map_bytes": 18401.205982439642,
+          "residual_map_bytes": 13905.08516998021,
+          "map_bytes_saved": 4496.120812459432,
+          "map_free_fraction": 0.24433837742755027
+        },
+        "32": {
+          "n_cells": 57600,
+          "gt_occupancy": 0.2826736111111111,
+          "pred_occupancy": 0.36866319444444445,
+          "tp": 12682,
+          "fp": 8553,
+          "fn": 3600,
+          "tn": 32765,
+          "cell_recall": 0.7788969414076895,
+          "cell_precision": 0.5972215681657641,
+          "marginal_map_bytes": 6185.2915113600275,
+          "residual_map_bytes": 4698.898040401096,
+          "map_bytes_saved": 1486.3934709589312,
+          "map_free_fraction": 0.24031098101504056
+        }
+      }
+    },
+    "sobel_rgbmax": {
+      "frames": 300,
+      "gt_boundary_px": 1277809,
+      "pred_px": 1277700,
+      "rho_recall_pm1": 0.38667437778259506,
+      "recall_exact": 0.2459342515195933,
+      "precision_pm1": 0.37508883149409095,
+      "cells": {
+        "16": {
+          "n_cells": 230400,
+          "gt_occupancy": 0.16194010416666665,
+          "pred_occupancy": 0.30227864583333336,
+          "tp": 23090,
+          "fp": 46555,
+          "fn": 14221,
+          "tn": 146534,
+          "cell_recall": 0.6188523491731661,
+          "cell_precision": 0.33153851676358675,
+          "marginal_map_bytes": 18401.205982439642,
+          "residual_map_bytes": 16645.75555127504,
+          "map_bytes_saved": 1755.4504311646015,
+          "map_free_fraction": 0.09539866206811853
+        },
+        "32": {
+          "n_cells": 57600,
+          "gt_occupancy": 0.2826736111111111,
+          "pred_occupancy": 0.5144444444444445,
+          "tp": 12215,
+          "fp": 17417,
+          "fn": 4067,
+          "tn": 23901,
+          "cell_recall": 0.7502149613069647,
+          "cell_precision": 0.41222327213822896,
+          "marginal_map_bytes": 6185.2915113600275,
+          "residual_map_bytes": 5712.70730505565,
+          "map_bytes_saved": 472.5842063043774,
+          "map_free_fraction": 0.07640451633304912
+        }
+      }
+    },
+    "morph_gradient": {
+      "frames": 300,
+      "gt_boundary_px": 1277809,
+      "pred_px": 1277700,
+      "rho_recall_pm1": 0.42554247152743485,
+      "recall_exact": 0.31961427725113845,
+      "precision_pm1": 0.5090428113015575,
+      "cells": {
+        "16": {
+          "n_cells": 230400,
+          "gt_occupancy": 0.16194010416666665,
+          "pred_occupancy": 0.16954427083333334,
+          "tp": 22654,
+          "fp": 16409,
+          "fn": 14657,
+          "tn": 176680,
+          "cell_recall": 0.6071667872745303,
+          "cell_precision": 0.5799349768322966,
+          "marginal_map_bytes": 18401.205982439642,
+          "residual_map_bytes": 14122.422025514883,
+          "map_bytes_saved": 4278.783956924759,
+          "map_free_fraction": 0.23252736592416945
+        },
+        "32": {
+          "n_cells": 57600,
+          "gt_occupancy": 0.2826736111111111,
+          "pred_occupancy": 0.3196701388888889,
+          "tp": 11653,
+          "fp": 6760,
+          "fn": 4629,
+          "tn": 34558,
+          "cell_recall": 0.715698317160054,
+          "cell_precision": 0.6328680823331342,
+          "marginal_map_bytes": 6185.2915113600275,
+          "residual_map_bytes": 4749.465736598456,
+          "map_bytes_saved": 1435.8257747615717,
+          "map_free_fraction": 0.23213550600234545
+        }
+      }
+    },
+    "laplacian": {
+      "frames": 300,
+      "gt_boundary_px": 1277809,
+      "pred_px": 1277700,
+      "rho_recall_pm1": 0.4271851270416784,
+      "recall_exact": 0.2160588945609242,
+      "precision_pm1": 0.34633012444235733,
+      "cells": {
+        "16": {
+          "n_cells": 230400,
+          "gt_occupancy": 0.16194010416666665,
+          "pred_occupancy": 0.4173828125,
+          "tp": 25902,
+          "fp": 70263,
+          "fn": 11409,
+          "tn": 122826,
+          "cell_recall": 0.6942188630698721,
+          "cell_precision": 0.26934955545156763,
+          "marginal_map_bytes": 18401.205982439642,
+          "residual_map_bytes": 17143.170766019026,
+          "map_bytes_saved": 1258.035216420616,
+          "map_free_fraction": 0.06836699820768077
+        },
+        "32": {
+          "n_cells": 57600,
+          "gt_occupancy": 0.2826736111111111,
+          "pred_occupancy": 0.6461111111111111,
+          "tp": 13368,
+          "fp": 23848,
+          "fn": 2914,
+          "tn": 17470,
+          "cell_recall": 0.8210293575727797,
+          "cell_precision": 0.35920034393809114,
+          "marginal_map_bytes": 6185.2915113600275,
+          "residual_map_bytes": 5890.493336979296,
+          "map_bytes_saved": 294.7981743807313,
+          "map_free_fraction": 0.04766116097184736
+        }
+      }
+    },
+    "canny": {
+      "frames": 300,
+      "gt_boundary_px": 1277809,
+      "pred_px": 1277700,
+      "rho_recall_pm1": 0.6217705463023034,
+      "recall_exact": 0.2763347260819105,
+      "precision_pm1": 0.38444314001721847,
+      "cells": {
+        "16": {
+          "n_cells": 230400,
+          "gt_occupancy": 0.16194010416666665,
+          "pred_occupancy": 0.2658333333333333,
+          "tp": 29726,
+          "fp": 31522,
+          "fn": 7585,
+          "tn": 161567,
+          "cell_recall": 0.7967087454102008,
+          "cell_precision": 0.48533829676071055,
+          "marginal_map_bytes": 18401.205982439642,
+          "residual_map_bytes": 13234.646369449532,
+          "map_bytes_saved": 5166.55961299011,
+          "map_free_fraction": 0.2807728807514346
+        },
+        "32": {
+          "n_cells": 57600,
+          "gt_occupancy": 0.2826736111111111,
+          "pred_occupancy": 0.4640451388888889,
+          "tp": 14335,
+          "fp": 12394,
+          "fn": 1947,
+          "tn": 28924,
+          "cell_recall": 0.8804200958113254,
+          "cell_precision": 0.5363088779976805,
+          "marginal_map_bytes": 6185.2915113600275,
+          "residual_map_bytes": 4638.526188227337,
+          "map_bytes_saved": 1546.7653231326904,
+          "map_free_fraction": 0.2500715318416069
+        }
+      }
+    },
+    "random_control": {
+      "frames": 300,
+      "gt_boundary_px": 1277809,
+      "pred_px": 1277700,
+      "rho_recall_pm1": 0.17959491598509636,
+      "recall_exact": 0.021806075868928767,
+      "precision_pm1": 0.04405650778743054,
+      "cells": {
+        "16": {
+          "n_cells": 230400,
+          "gt_occupancy": 0.16194010416666665,
+          "pred_occupancy": 0.9962847222222222,
+          "tp": 37170,
+          "fp": 192374,
+          "fn": 141,
+          "tn": 715,
+          "cell_recall": 0.9962209536061751,
+          "cell_precision": 0.16192973896072213,
+          "marginal_map_bytes": 18401.205982439642,
+          "residual_map_bytes": 18401.201592366928,
+          "map_bytes_saved": 0.004390072714159032,
+          "map_free_fraction": 2.38575271538366e-07
+        },
+        "32": {
+          "n_cells": 57600,
+          "gt_occupancy": 0.2826736111111111,
+          "pred_occupancy": 1.0,
+          "tp": 16282,
+          "fp": 41318,
+          "fn": 0,
+          "tn": 0,
+          "cell_recall": 1.0,
+          "cell_precision": 0.2826736111111111,
+          "marginal_map_bytes": 6185.2915113600275,
+          "residual_map_bytes": 6185.2915113600275,
+          "map_bytes_saved": 0.0,
+          "map_free_fraction": 0.0
+        }
+      }
+    },
+    "static_prior_control": {
+      "frames": 300,
+      "gt_boundary_px": 1277809,
+      "pred_px": 1277700,
+      "rho_recall_pm1": 0.5961704761822776,
+      "recall_exact": 0.4336673164768757,
+      "precision_pm1": 0.6848892541285122,
+      "cells": {
+        "16": {
+          "n_cells": 230400,
+          "gt_occupancy": 0.16194010416666665,
+          "pred_occupancy": 0.14453125,
+          "tp": 28122,
+          "fp": 5178,
+          "fn": 9189,
+          "tn": 187911,
+          "cell_recall": 0.7537187424620085,
+          "cell_precision": 0.8445045045045045,
+          "marginal_map_bytes": 18401.205982439642,
+          "residual_map_bytes": 9293.0995269734,
+          "map_bytes_saved": 9108.106455466243,
+          "map_free_fraction": 0.49497334382095126
+        },
+        "32": {
+          "n_cells": 57600,
+          "gt_occupancy": 0.2826736111111111,
+          "pred_occupancy": 0.265625,
+          "tp": 13925,
+          "fp": 1375,
+          "fn": 2357,
+          "tn": 39943,
+          "cell_recall": 0.8552389141383122,
+          "cell_precision": 0.9101307189542484,
+          "marginal_map_bytes": 6185.2915113600275,
+          "residual_map_bytes": 2474.199192541148,
+          "map_bytes_saved": 3711.0923188188794,
+          "map_free_fraction": 0.5999866476790972
+        }
+      }
+    }
+  }
+}

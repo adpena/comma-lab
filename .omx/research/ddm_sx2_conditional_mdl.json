@@ -1,0 +1,32 @@
+{
+  "arm": "ddm_sx2",
+  "axis": "[macOS-CPU advisory]",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "scorer_forwards_run": 0,
+  "substrate": "lstars GT argmax + GT frame_1 through SegNet.preprocess_input (CEILING)",
+  "n_frames": 600,
+  "predictor_density": 0.02162833319769965,
+  "unconditional": {
+    "label": "unconditional order-4",
+    "data_bytes": 237329.60239784257,
+    "model_bytes": 1615.5303167708264,
+    "total_bytes": 238945.1327146134
+  },
+  "conditional_raw": {
+    "label": "order-4 + free canny indicator",
+    "data_bytes": 219325.41385109365,
+    "model_bytes": 2788.6332438865716,
+    "total_bytes": 222114.04709498023
+  },
+  "conditional_dilated": {
+    "label": "order-4 + free canny indicator, dilated +/-1px",
+    "data_bytes": 213646.6440289463,
+    "model_bytes": 2748.4125720997463,
+    "total_bytes": 216395.05660104603
+  },
+  "bits_bought_by_free_predictor_bytes": 22550.076113567367,
+  "fraction_of_description_bought": 0.09437344823633752,
+  "sx1_naive_formula_bytes": null
+}
