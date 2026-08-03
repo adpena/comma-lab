@@ -805,6 +805,73 @@ def run_hook_path_heavy_import_scan() -> int:
     return 0
 
 
+def run_subset_selection_scan(staged: list[str]) -> int:
+    """`ddm_ss1` landing 2 — refuse a NEWLY-ADDED silent pair/frame subset slice.
+
+    Same reasoning as the Catalog #184 scan directly above, and for the same
+    measured reason: `--no-codebase` (this hook's default) examines 0 of 27
+    preflight gates, so a gate registered only in `preflight_all()` never runs at
+    commit time. Verified 2026-08-03 — even Catalog #401, which is STRICT, does
+    not appear in this hook's output.
+
+    Scope is the staged diff's ADDED LINES. That is what lets it be STRICT
+    honestly: the repo carries 207 pre-existing sites (136 files, of 10,699
+    tracked in-scope .py, measured 2026-08-03), so a whole-repo strict flip would
+    refuse every commit. Added-lines scope makes the live count 0 on a clean
+    commit while still refusing every new one. The 207 stay visible as debt via
+    `tac.subset_selection_gate.scan_repo`.
+
+    Fail-OPEN and LOUD on a broken guard, matching the sibling above: blocking
+    every commit because the guard itself broke is worse than the bug it guards.
+    """
+    if os.environ.get("SUBSET_SELECTION_SCAN_ENABLED", "1") == "0":
+        print(
+            "[preflight-hook] subset-selection scan DISABLED by env — NOT a pass.",
+            file=sys.stderr,
+        )
+        return 0
+    try:
+        from tac.subset_selection_gate import scan_staged
+    except Exception as exc:  # pragma: no cover - guard-broken path
+        print(
+            f"[preflight-hook] subset-selection scan UNAVAILABLE (failing OPEN): {exc}",
+            file=sys.stderr,
+        )
+        return 0
+
+    if not staged:
+        # Report the DENOMINATOR rather than inferring cleanliness from silence.
+        return 0
+    try:
+        violations = scan_staged(
+            repo_root=REPO_ROOT, strict=False, verbose=False, files=staged
+        )
+    except Exception as exc:  # pragma: no cover - guard-internal bug path
+        print(
+            f"[preflight-hook] subset-selection scan CRASHED (failing OPEN): "
+            f"{exc.__class__.__name__}: {exc} — 0 files examined. This is NOT a pass.",
+            file=sys.stderr,
+        )
+        return 0
+
+    if violations:
+        print(
+            f"\n{RED}{BOLD}[preflight-hook] BLOCKED: new subset slice with no declared "
+            f"selection mode{RST}",
+            file=sys.stderr,
+        )
+        print(
+            "  A silent subset IS a video-order prefix, and a prefix measures "
+            "2.54-4.21x HARDER\n  than the population on the pose axis (ddm_na2) — "
+            "the false-negative shape.",
+            file=sys.stderr,
+        )
+        for v in violations:
+            print(f"[preflight-hook]   {v}", file=sys.stderr)
+        return 1
+    return 0
+
+
 def main() -> int:
     staged = _staged_py_files()
 
@@ -827,6 +894,13 @@ def main() -> int:
     # case and never the failure case. Running FIRST satisfies both, and additionally guards
     # preflight's own cost BEFORE preflight pays it. It costs ~30 ms.
     rc = run_hook_path_heavy_import_scan()
+    if rc != 0:
+        return rc
+
+    # Step 1c: `ddm_ss1` subset-selection guard. Placed here for the same reason as
+    # 1b — before run_preflight(), which early-returns on failure — so a preflight
+    # failure cannot skip it. ~AST parse of the staged files only; ~ms.
+    rc = run_subset_selection_scan(staged)
     if rc != 0:
         return rc
 

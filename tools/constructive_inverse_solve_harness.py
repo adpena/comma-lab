@@ -39,6 +39,8 @@ if str(REPO) not in sys.path:
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
+from tac.subset_selection import quantile_stratified_indices  # noqa: E402
+
 SCHEMA = "constructive_inverse_solve.v1"
 STATE_SCHEMA = "constructive_inverse_solve.state.v1"
 PAYLOAD_MAGIC = b"CIS1"
@@ -448,14 +450,12 @@ def _select_pairs(
     else:
         if not 1 <= sample_pairs <= 600:
             raise HarnessError("sample-pairs must be in [1,600]")
-        edges = np.linspace(0, 600, sample_pairs + 1, dtype=np.int64)
-        pair_ids = []
-        for s in range(sample_pairs):
-            members = np.arange(edges[s], edges[s + 1], dtype=np.int64)
-            order = np.lexsort((members, fragility[members]))
-            quantile = 0.25 if s % 2 == 0 else 0.75
-            pos = round(quantile * (len(members) - 1))
-            pair_ids.append(int(members[order[pos]]))
+        # Lifted to tac.subset_selection (ddm_ss1, 2026-08-03) -- see the sister
+        # note in tools/measure_uint8_lattice_feasibility.py. These two were
+        # verbatim copies; they now share one implementation. Equivalence to the
+        # previous inline code is MEASURED at every sample_pairs in 1..600 plus
+        # 2,160 random trials, so no selection in either tool changes.
+        pair_ids = list(quantile_stratified_indices(sample_pairs, 600, fragility))
         policy = (
             "all-600 temporal equal strata; fragility=mean(cached_margin<m_safe); alternating "
             "within-stratum 0.25/0.75 quantile; deterministic pair-index tie break; no candidate outcome peeking"

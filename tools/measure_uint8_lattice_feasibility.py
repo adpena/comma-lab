@@ -52,6 +52,7 @@ from tac.optimization.uint8_lattice_feasibility import (  # noqa: E402
     repair_with_hard_oracle,
     serialize_uint8_frame,
 )
+from tac.subset_selection import quantile_stratified_indices  # noqa: E402
 
 SCHEMA = "v10_uint8_lattice_feasibility_receipt.v1"
 STATE_SCHEMA = "v10_uint8_lattice_feasibility_state.v1"
@@ -385,14 +386,15 @@ def _select_pairs(
             raise MeasurementError("--pair-indices must be unique integers in [0,600)")
         policy = "explicit override; not the default stratified evidence selection"
     else:
-        edges = np.linspace(0, 600, sample_pairs + 1, dtype=np.int64)
-        pair_ids = []
-        for stratum in range(sample_pairs):
-            members = np.arange(edges[stratum], edges[stratum + 1], dtype=np.int64)
-            order = np.lexsort((members, fragility[members]))
-            quantile = 0.25 if stratum % 2 == 0 else 0.75
-            position = round(quantile * (len(members) - 1))
-            pair_ids.append(int(members[order[position]]))
+        # Lifted to tac.subset_selection (ddm_ss1, 2026-08-03). This selector and
+        # its verbatim twin in tools/constructive_inverse_solve_harness.py were the
+        # repo's ONLY stratified pair selection, and being private + duplicated they
+        # could not be reused -- part of why 110 other sites reached for [:n].
+        # Equivalence to the previous inline code is MEASURED, not assumed: identical
+        # output at every sample_pairs in 1..600 on the real fragility, plus 2,160
+        # random trials (heavy-tie / uniform / exponential). KNOWN_N6 below is
+        # unchanged and still guards this call.
+        pair_ids = list(quantile_stratified_indices(sample_pairs, 600, fragility))
         policy = (
             "all-600 equal temporal strata; fragility=mean(cached margin<m_safe); alternating "
             "within-stratum 0.25/0.75 quantile; deterministic pair-index tie break; no candidate "
