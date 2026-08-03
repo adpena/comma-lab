@@ -289,4 +289,162 @@ i.e. the loss is *regional*, which is precisely the rung the pixel formulation c
 | P6 | multiscale low-freq repair | **INSTANCE — sweep stopped mid-descent** on a monotone 43× gradient | continue the gradient to a **semantic** carrier | low | — |
 | P7 | `closure_reaudit` **`SOUND-KILL` / "do NOT reopen"** | **welded verdict** — pixel-blur preprocessing and the flip-pixel sidecar are **two mechanisms sharing one 36.9% survival number** | split the two | $0 | — |
 
+### 2.4 Lens L2 — NAIVE (largely already worked; two rows added)
+
+`ddm_a1` (07-23) already ran this lens hard: a **34-row matrix** on an explicit
+`NAIVE / PARTIAL / OPTIMAL-FORM` ladder, concluding the record *"does **not** support a family- or
+paradigm-level closure of the direct-description, chart-correction, realization, physical-BEV, or
+iterative joint-solve lines,"* with only **6 finite forms** genuinely closed. **na2 does not re-run
+that.** Two rows are added because they are newer than a1:
+
+| # | negative | new scope | resolving measurement | cost |
+|---|---|---|---|---|
+| N1 | *"band-local realization does not pay"* | **FORMULATION — naive realizer only.** `sq1` measured both ends on the same band/bytes: naive truth-paint `eta_net = −3.7640` (0/32) vs solved paint **`+0.7895` (32/32, sd 0.0545)** | already measured; what is owed is the **pose collateral** rider (`ETA_LOW_DEBT_NAMED(stage=S5, cure=P7 yuv6-null)`) | — |
+| N2 | `pu1` *"pair 74 is RIGID … the signature of a MODEL wall"* | **INSTANCE — search-limited, not model-limited.** `pu2` cut it **54.2%** via two distinct defects — **under-convergence** (pair 67 `0.157367 → 0.003968`, −97.5%) and **basin-trapping** (only a start **8.2× worse** escapes) | done; `pu2` §5.6 flags the **control group did not run**, so tail-vs-population is **UNANSWERED** | $0 |
+
+**`sd 0.0545` across 32 pairs** is the load-bearing fact in N1 — a tight, reproducible property, not
+a couple of lucky pairs.
+
+### 2.5 Lens L3 — TOY / non-n600
+
+`ddm_na1` (08-02) **minted** this lens and its governing law, which I adopt rather than restate:
+
+> *"**Prefix bias is CONSERVATIVE for an absolute-threshold WALL verdict** … **but UNCONTROLLED for
+> a COMPARATIVE verdict between two candidates** (the bias is a per-archive quantity and does not
+> cancel in the difference)."*
+
+with the measured demonstration that the bias is **per-archive**: same instrument, two archives,
+`+0.69%` vs `+9.21%` — *"**The bias differs by 13× between two archives measured by the same
+instrument.**"* And the screening threshold: *"any n48-based comparative verdict whose claimed effect
+is below ≈ **0.034 S** is not load-bearing."*
+
+**The finding is where the check has NOT been applied.**
+
+| # | corpus | status | why it matters |
+|---|---|---|---|
+| T1 | `ddm_rv1`'s **20 re-graded negatives** | **never subset-checked.** Exhaustive grep of that file for `subset\|population\|prefix\|skew\|pooled\|coverage\|n48\|n64\|n24\|n96` returns **zero hits** (it predates the law by 5 days) | its rows carry six-pair, n16, n64, 24/600 and 36-pair measurements, and its verdicts are **comparative** — exactly the uncontrolled case |
+| T2 | `ddm_a1`'s **34 rows** | flags **coverage denominators** (*"only 24/600 VJP coverage"*, *"measured 492 of 22,032"*, *"six selected pairs"*) but **never compares a subset mean to the population mean** | same |
+| T3 | the **sampler itself** | `decode_gt_frame1_pairs` *"still decodes from the container head and breaks on `yielded >= n_pairs`. **No stride. No representative sampler. 44 days after the first mint, 33 after the CRITICAL**"* — **28 caller files**, gate defaults `--n-frames 3` / `--n-pairs 4` / `--pair-idx 0` | **this is the generator.** Until it is fixed every new subset verdict is minted with the same defect |
+
+#### 2.5.1 NEW MEASURED LAW — the prefix bias has **opposite sign** on seg and pose
+
+Measured first-hand on n600 populations (`gt_n600.npz` margins; `d2_ep_solve.partial.jsonl`, 600 rows).
+Ratio = prefix mean ÷ population mean of the governing quantity:
+
+| axis | governing quantity | n=24 | n=48 | n=64 | n=96 | direction |
+|---|---|---:|---:|---:|---:|---|
+| **seg** | flip-prone pixel density | 0.97× | 0.95× | 0.96× | 0.97× | **EASIER by 3–5%** |
+| **pose** | `d_pose_shipped_f16` | 2.54× | 2.64× | 2.65× | **4.21×** | **HARDER by 154–321%** |
+
+Random-sample p95 at n=96 is **1.48×**, so the pose prefix sits far outside sampling noise. It holds
+on all three pose columns (`d_pose_warp` skew only 4.1×), so it is not a skew artifact. **Mechanism,
+measured:** pose difficulty per 60-pair block runs `0.41, 0.82, 0.08 … 0.010` — **the first 120 pairs
+are the two hardest blocks, 79× the easiest**. The seg block structure is flat (1.3× range).
+
+**This inverts half of `na1`'s law.** Prefix bias is conservative for an absolute WALL verdict **on
+seg** (3–5%). **On pose it is ANTI-conservative** — a pose NO-GO measured on a prefix is exactly the
+false-negative shape. Corroborated in-corpus: `ddm_p3v2:91` reports warp base **n24 0.589 vs n600
+0.393 = 1.50× harder**.
+
+**Pose screening threshold** (the analogue of na1's 0.034 S seg rule): because the contribution is
+`√(10·d_pose)`, an n≤96 prefix carries up to **2.05× multiplicative distortion ≈ +1.33 S absolute** —
+larger than several whole axis gaps.
+
+#### 2.5.2 The enabling finding — UNKNOWN resolves to PREFIX by construction
+
+**110 measurement/verdict tools slice `[:n]` on pairs/frames; ZERO also offer a stratified or random
+selector.** `src/tac/boundary_math/seg_core.py:80` `decode_gt_frame1_pairs(..., n_pairs: int = 4)`
+decodes from the container head and `break`s at `yielded >= n_pairs` — no stride, 28 importers.
+Verified: **`gt_n24.npz` is bit-identical to the first 24 pairs of `gt_n600.npz`.** Only 2 tools emit
+a `pair_selection` label at all, and the one remediated tool still **defaults to
+`video_order_prefix`**.
+
+⇒ A doc that is silent on selection mode is **not** unknown — it is **PREFIX**. That is what makes
+the measured silence rate actionable: **259 of 362 (71.5%)** same-line candidates are silent
+(74.9% across the looser 2,913), and three independent scans agreed at ~70–75%.
+
+Corollary: `gt_n96.npz` is described in-corpus as *"first ~10s, dense lead vehicle"* — **a named
+scene, not a sample**. `gt_strided_n200.npz` (full 60s drive) shares **only frame 0** with it.
+
+#### 2.5.3 The most serious hit — a CLAUDE.md-level closure on the wrong side of the sign
+
+CLAUDE.md asserts the post-hoc/stored pose carrier family is *"**MEASURED DEAD** — the cheap-carrier
+space was mapped shut across **5 formulations**."* The four 2026-07-08 formulation docs behind it are
+**all n8/n24 PREFIX**, on the axis where prefix bias is worst:
+
+| doc | verdict | n | its own internal warning |
+|---|---|---|---|
+| `pose_l2_truedepth_probe_measured_20260708` | *"the true-depth-flow formulation is FALSIFIED"* | n24 | median 0.878 vs mean 20.2 — **23× skew**, 3 catastrophic pairs of 24; n600 "OWED" |
+| `pose_carrier_arms_measured_20260708` | *"store-f0 DOUBLY DOMINATED … REFUTED"* | **n8** | the only doc that states indices — *"GT = gt_n24.npz (**pairs 0–7**)"* — and calls them *"**n8 high-motion pairs**"*, then retains verdicts drawn from those same 8 |
+| `pose_mladder_depthwarp_measured_20260708` | *"REFUTED at the formulation level"* | n24/n8 | mechanism rests on `corr = −0.446 (n24) / −0.676 (n8)` |
+| `pose_stratified_texture_probe_measured_20260708` | *"the T×D cell is FALSIFIED"* | n24 | diagnostic at n8 |
+
+**Uncited by any of them:** `600_pair_independence_test_result_20260519T211927Z_codex.md` measured
+**serial effective N = 40.22 of 600**, `independence_assumption_blocked` — **two months before** these
+verdicts. At effective-N 40, **n8 ≈ 0.5 effective samples and n24 ≈ 1.6.**
+
+**Re-scope: FORMULATION → INSTANCE-on-the-hardest-two-blocks, evidence status UNGROUNDED.** No sign is
+flipped and the family is not reopened here; what is lost is the word **MEASURED** in "MEASURED DEAD."
+
+#### 2.5.4 A threshold the whole family is priced against, derived from 12 prefix pairs
+
+`lever_d_nuanced_fullstack_20260612T223343Z.md` — *"HEADLINE VERDICT: NO-GO"* on **n=4 and n=12**
+(prefix, resolved from `probe_lever_d_selective_fullstack.py:268-277`). Its robustness check is **two
+nested prefixes agreeing**, which is not independence. Its `σ_eff ≈ 0.51` sets the family bar;
+arithmetic reproduced exactly: **0.51 × 1.27311 = 0.6493 ≈ 0.65 B/flip**. The n600 contour-string
+NO-GO (0.8201 B/flip) is then measured **against a threshold derived from 12 prefix pairs**.
+**The verdict flips if population `σ_eff ≥ 0.644` — a 26% change.** σ has **never** been re-measured
+at n600. Cited in **8 files** as why the family is closed; it also gates `dmtz` (*"do NOT spend
+n600/paid budget"*).
+
+#### 2.5.5 Self-sealing gates — the structural pathology
+
+Three verdicts make a **small-n negative the precondition for ever running n600**, so a prefix
+false-negative is **undetectable by construction**:
+
+- `r1b7_uint8_survival_carrier_build_spec_20260720`: *"**Never run n600 unless the n16 hard-oracle
+  recovery is positive** with a stated margin."*
+- `capacity_verdict_smaller_basis_by_rate_REFUTED_…_20260611` (n8): the n600 that would test it was
+  reframed — *"**do NOT fire it**."*
+- `dmtz_taskaware_rate_lever_design_20260709` (n8): *"**Do NOT spend n600/paid budget** on this
+  formulation."*
+
+Related: `compute_heavy_weight_tied_decoder_…_20260611` (n8) is treated as independent corroboration
+of the n8 capacity verdict but is explicitly *"apples-to-apples"* — **same 8 prefix pairs, same
+config**. **Shared-prefix agreement is not replication.**
+
+#### 2.5.6 Also flagged
+
+- `signal_processing_filter_levers_derived_20260701` — *"not a d_seg lever"* from a **synthetic
+  grating sweep, zero real pairs**; closes two lever IDs in two ledgers.
+- `grand_symposium_smallbasis_dag_verdict_20260616:39` — a **documented n96→n600 reversal**:
+  *"the 'SHARP soft_cosine adds real d_seg' claim is a 96-pair statement; at 600-pair plain CE already
+  beats oomph-96 … the SAME l235 confound resurrected at the pair-count level — **UNRESOLVED**."*
+  Second, distinct mechanism named there: at n96 the vehicle has ~per-pair latent capacity, so
+  **n96 measures memorization** (96 latents × 28-d vs 96 targets).
+- `negative_findings_reaudit_20260710:43` named **4 toy-born non-authoritative kills** with
+  "conditional reopen at n600". **`l235` has not been mentioned in any doc dated after 07-10 — 24 days;
+  the reopen never happened**, and its `FEED-06a` clause *"taints all n24-based eikonal verdicts"* was
+  written and never discharged.
+- `SPEC_v10_capstone_cold_start_seeded_20260717:76` — *"dash comb REFUTED"* from **7 hardest-selected
+  night pairs**; the source states the selection, the consuming SPEC **drops the qualifier**.
+- `frontier_latent_axis_waterfill_verdict_20260610` — *"L2/L3/L4 are KILLED LOCALLY"* on n48. Contains
+  the corpus's **best calibration** (n48 predicted +3.226e-3 vs n600 +2.885e-3, ~12%) — but that is
+  **one point on L1**, extrapolated to three unmeasured arms.
+
+#### 2.5.7 The cheapest repair already exists
+
+`tools/build_strided_subset_gt.py` **is already in the repo**; its docstring: *"strided = every Nth
+pair so it SPANS the whole continuous comma2k19 drive → scene diversity."* `gt_heldout_n400.npz`
+proves a non-prefix split was built at least once. **The repo already knows.** Re-running the four
+pose-family verdicts on strided indices at matched n is a **$0 CPU** measurement that re-prices the
+entire class — and it is the class where the bias measures **2.5–4.2×**.
+
+**The model of correct L3 conduct, quoted so it can be copied:** `ddm_sq1` §2.9 states
+*"**No population claim.** All numbers are n=32 … **The subset is 0.2692× population on `d_pose` and
+is reported as such**"* — and §2.8 catches its own earlier partial: *"the interim **n=12** reading …
+was **optimistic** (eta 0.5518 → 0.5406, pose 1.0145× → 1.0388×) … **the partial sample flattered
+both numbers**."* That is the whole discipline in two sentences: report the subset/population ratio
+of the governing quantity, and re-read your own interims when n grows.
+
 ---
