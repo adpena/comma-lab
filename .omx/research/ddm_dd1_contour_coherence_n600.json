@@ -1,0 +1,86 @@
+{
+ "arm": "ddm_dd1",
+ "axis": "[macOS-CPU advisory]",
+ "score_claim": false,
+ "promotion_eligible": false,
+ "rank_or_kill_eligible": false,
+ "scorer_forwards_run": 0,
+ "substrate": "GT lstars n600 (gt_n600_lstars_slim.npz); no decode/vehicle/scorer",
+ "n_frames": 600,
+ "grid": [
+  512,
+  384
+ ],
+ "smoothing_halfwidth_px": 2,
+ "boundary_px_total": 2551382,
+ "sx1_boundary_px_total": 2551382,
+ "orientation_coherence": {
+  "1": {
+   "mean_abs_dtheta_deg": 12.945296309643183,
+   "pairs": 11784652,
+   "kappa_eff_per_px": 0.22593804324954492,
+   "kappa_times_L": 0.22593804324954492
+  },
+  "2": {
+   "mean_abs_dtheta_deg": 20.003407110437823,
+   "pairs": 16127012,
+   "kappa_eff_per_px": 0.17456265784699249,
+   "kappa_times_L": 0.34912531569398497
+  },
+  "3": {
+   "mean_abs_dtheta_deg": 21.62812137245343,
+   "pairs": 11947912,
+   "kappa_eff_per_px": 0.12582730965675573,
+   "kappa_times_L": 0.3774819289702672
+  },
+  "4": {
+   "mean_abs_dtheta_deg": 25.19742486400544,
+   "pairs": 7909138,
+   "kappa_eff_per_px": 0.10994450672519485,
+   "kappa_times_L": 0.4397780269007794
+  },
+  "6": {
+   "mean_abs_dtheta_deg": 25.049600425296006,
+   "pairs": 6838468,
+   "kappa_eff_per_px": 0.07286633395506453,
+   "kappa_times_L": 0.4371980037303872
+  },
+  "8": {
+   "mean_abs_dtheta_deg": 29.656073147423065,
+   "pairs": 5160592,
+   "kappa_eff_per_px": 0.06469951495435128,
+   "kappa_times_L": 0.5175961196348102
+  },
+  "12": {
+   "mean_abs_dtheta_deg": 27.583817522402327,
+   "pairs": 3990254,
+   "kappa_eff_per_px": 0.04011903633626878,
+   "kappa_times_L": 0.48142843603522534
+  },
+  "16": {
+   "mean_abs_dtheta_deg": 27.717987204503476,
+   "pairs": 3292744,
+   "kappa_eff_per_px": 0.030235633671515282,
+   "kappa_times_L": 0.4837701387442445
+  },
+  "24": {
+   "mean_abs_dtheta_deg": 27.86753406697617,
+   "pairs": 2324924,
+   "kappa_eff_per_px": 0.020265842661684172,
+   "kappa_times_L": 0.4863802238804201
+  },
+  "32": {
+   "mean_abs_dtheta_deg": 28.811993392023975,
+   "pairs": 1797202,
+   "kappa_eff_per_px": 0.015714504648552115,
+   "kappa_times_L": 0.5028641487536677
+  }
+ },
+ "coherence_length_px_by_threshold_deg": {
+  "15.0": 1.2911124163884602,
+  "22.5": 3.2442713626370447,
+  "30.0": 32.0,
+  "45.0": 32.0
+ },
+ "note": "Euclidean separation approximates arc length; cross-contour pairs ADD decoherence, so L* is a LOWER bound (conservative: true usable L is >=)."
+}

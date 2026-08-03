@@ -1,0 +1,83 @@
+{
+ "arm": "ddm_dd1",
+ "axis": "[macOS-CPU advisory]",
+ "score_claim": false,
+ "promotion_eligible": false,
+ "rank_or_kill_eligible": false,
+ "scorer_forwards_run": 0,
+ "substrate": "GT lstars n600; 4-conn components; no decode/vehicle/scorer",
+ "n_frames": 600,
+ "connectivity": "4",
+ "per_class": {
+  "Road": {
+   "components": 1266,
+   "per_frame": 2.11,
+   "components_ge64": 933,
+   "ge64_per_frame": 1.555,
+   "area_px": 27407046,
+   "perimeter_px": 1251268,
+   "area_ge64": 27405400,
+   "perimeter_ge64": 1249671,
+   "median_major_px": 478.2797234465197,
+   "median_minor_px": 94.01916411472868,
+   "aspect_ratio": 5.087045050335586,
+   "area_over_perimeter": 21.930092000214458
+  },
+  "Lane": {
+   "components": 16581,
+   "per_frame": 27.635,
+   "components_ge64": 2813,
+   "ge64_per_frame": 4.6883333333333335,
+   "area_px": 690639,
+   "perimeter_px": 518278,
+   "area_ge64": 548504,
+   "perimeter_ge64": 389802,
+   "median_major_px": 64.0253604643964,
+   "median_minor_px": 2.512795179413455,
+   "aspect_ratio": 25.479737062907535,
+   "area_over_perimeter": 1.4071349043873556
+  },
+  "Undrivable": {
+   "components": 650,
+   "per_frame": 1.0833333333333333,
+   "components_ge64": 600,
+   "ge64_per_frame": 1.0,
+   "area_px": 58413281,
+   "perimeter_px": 331833,
+   "area_ge64": 58412894,
+   "perimeter_ge64": 331524,
+   "median_major_px": 523.5857745216358,
+   "median_minor_px": 192.09051584528623,
+   "aspect_ratio": 2.7257242358771263,
+   "area_over_perimeter": 176.19506883362894
+  },
+  "Movable": {
+   "components": 2207,
+   "per_frame": 3.6783333333333332,
+   "components_ge64": 1483,
+   "ge64_per_frame": 2.4716666666666667,
+   "area_px": 1460325,
+   "perimeter_px": 142102,
+   "area_ge64": 1437336,
+   "perimeter_ge64": 129846,
+   "median_major_px": 24.80844549529173,
+   "median_minor_px": 8.983517563524504,
+   "aspect_ratio": 2.761551398977688,
+   "area_over_perimeter": 11.06954392126057
+  },
+  "MyCar": {
+   "components": 600,
+   "per_frame": 1.0,
+   "components_ge64": 600,
+   "ge64_per_frame": 1.0,
+   "area_px": 29993509,
+   "perimeter_px": 307901,
+   "area_ge64": 29993509,
+   "perimeter_ge64": 307901,
+   "median_major_px": 508.09298556765805,
+   "median_minor_px": 97.78936692811524,
+   "aspect_ratio": 5.195789701155915,
+   "area_over_perimeter": 97.41283399534265
+  }
+ }
+}
