@@ -103,9 +103,12 @@ blind mass by construction (identity path), which is the whole of the gap.
 
 ⚠ **SAMPLING SCOPE — §4 and §5 are PREFIX analysis, NOT n600 findings.** F1 (§3) is n600. F2's
 verdict clears its threshold by 3.8 orders of magnitude and does not turn on the sample. But every
-`d_pose` mean and every `ΔS` in §4–§5 is measured on **181 of 600 pairs** (the run is sharded 6 ways,
-resumable, and still going; see §8 for the mechanical harvest). That sample is **~2.4x harder than the
-population**: prefix mean `d_pose` 0.0204 vs the v4d refine receipt's n600 `mean_d_final = 0.00858414`.
+`d_pose` mean and every `ΔS` in §4–§5 is measured on **181 of 600 pairs**. The run is sharded 6 ways
+and resumable, but it is **NOT running** — this environment kills these processes (three independent
+launch strategies died: plain `nohup`+`disown`, a self-restarting supervisor, and 6 `os.setsid`
+double-forked shards, the last six all killed simultaneously at 29–31 rows each). §8 has the exact
+resume commands; treat finishing it as owed work, not as something in flight. That sample is
+**~2.4x harder than the population**: prefix mean `d_pose` 0.0204 vs the v4d refine receipt's n600 `mean_d_final = 0.00858414`.
 Per the n600 discipline these are **supplementary prefix numbers**, not evidence — read them for their
 SIGN and order of magnitude, not their value.
 
@@ -312,11 +315,20 @@ population), task #401 (blind-coordinate exploit, previously recorded but never 
 
 ---
 
-## 8. Harvesting the n600 (mechanical — the run is sharded, resumable, and self-restarting)
+## 8. Harvesting the n600 (mechanical, but NOT currently in flight)
 
-The reach run keeps being killed after ~40 pairs by something outside the process, so it runs as 6
-self-restarting shards under `--pair-stride 6 --pair-offset J`. Per-pair RNG seeding makes a sharded
-run bit-identical to an unsharded one (verified: 35/35 numeric keys). To finish and re-derive §4–§5:
+⚠ **Nothing is running.** The reach dies every ~30–40 pairs regardless of launch strategy. Per-pair RNG
+seeding makes a sharded run bit-identical to an unsharded one (verified: 35/35 numeric keys), and
+`--resume` never repeats a measured pair, so restarting is always safe and always makes progress — it
+just needs re-firing until done. 181 of 600 pairs are banked in the shard sidecars.
+
+**Instrument warning, learned twice here the hard way:** `pgrep -f shard_worker.sh` returns a NONZERO
+count even when every worker is dead, because it matches the shell running the `pgrep` itself. Both
+times I used it as a liveness check it reported healthy workers that did not exist. Use
+`pgrep -f 'bash .*shard_worker'` / `pgrep -f 'ddm_bp2_blind_warp_reach.py'`, or check row counts
+advancing. A liveness probe that can never return 0 is not a liveness probe.
+
+To finish and re-derive §4–§5:
 
 ```bash
 # 1. shards live in <scratch>/shards/reach_shard_{0..5}.jsonl; each wants 100 pairs.
