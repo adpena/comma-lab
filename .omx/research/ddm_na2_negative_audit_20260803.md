@@ -138,4 +138,62 @@ full text of those two documents, exhaustively grepped for
 `pixel|granular|region-scale|token-granular|codimension|level-scoped|1x1|2x2`; 3 hits, none the lens.
 I do not claim these things are absent from the wider filesystem.
 
+### 1.6 The tractable surface vs the raw surface
+
+The **curated** negative surface is small: `#390`'s register
+(`.omx/research/negative_findings_register_20260709/`) is **51 auditor-A + 21 auditor-B rows**
+(~35 substantive per rv1's recall pass), plus rv1's **20** re-graded and a1's **34** — call it
+**~126 curated rows with heavy overlap**. The **raw** surface is 5,404 docs. Every audit in the last
+12 days worked the curated ~126; the raw 4,906-untagged remainder is untouched and, per §1.2,
+largely moot. **Naming these as two different denominators is itself a result** — "how many negatives
+are there" has no single answer, and quoting the big number to justify another enumeration pass is
+the re-anchor trap ([[m38]]).
+
+---
+
+## §2 THE RE-SCOPE TABLE
+
+Conventions: verdict ladder INSTANCE < FORMULATION < FAMILY < PARADIGM. **Every row is a PROPOSAL.**
+`|ΔS| as % of gap` uses gap = 0.6189279 and is quoted only where the source artifact supplies a
+number; **`—` means the artifact supplies none and I do not invent one.**
+
+### 2.1 Lens L1 — BINARY INTERPRETATION
+
+| # | negative, as filed | lens fired | new scope | resolving measurement | cost | ΔS / %gap |
+|---|---|---|---|---|---|---|
+| B1 | *"bias_correction OFF wins by ~0.012 S"* (`ddm_df1:363`, from the bp1 diagonal) | **L1** — 2 points on a **5-arm designed** continuum (`#815`: *"5-arm **magnitude-matched** reset-operator race"*), and the two arms are **not magnitude-matched**: `bias_correction` multiplies effective LR by `η(t)=(1−β₁ᵗ)/√(1−β₂ᵗ)` — measured `η(1)=3.1623×`, **peak 6.5685× at t=12**, mean 2.016× over 13 epochs (`gc15:123`). The arms differ in *integrated effective LR*, not only in the flag. | **UNGROUNDED, not refuted** — direction retained as hypothesis, status as evidence lost | fire the already-registered standalone arm at **≥3–4 β₂ τ** and **≥2 seeds** under `--deterministic-r`, magnitude-matched so only direction varies | **$0, ~2h** (already specified) | 0.012 claimed → **1.94%** if real; **n=1, no noise floor** — df1:205 finds the band used understates the floor **11.5×–55.8×** |
+| B2 | the `η(t)` transient **surface** | **L1** — a continuum-valued object inferred from **the same two runs**; `ddm_df1:113`: *"the 'surface' is the harvested bp1 diagonal; **no additional run exists**"* | **INSTANCE** (2 non-independent points) | blocked on B1 | — | — |
+| B3 | excursion-vs-cadence A/B | **L1** — `ddm_df1:363`: *"**never fired** — no verdict exists to grade"*; must vary **excursion magnitude**, not cadence. `gc15` ranking **demotes cadence 1st → 4th** | **NO VERDICT EXISTS** — nothing to overturn; registered and unfired | fire it varying excursion | $0 | — |
+| B4 | the bp1 **control** arm | **L1 ∩ L4** — the reference cell was never chosen: `ddm_gd5:252` verbatim, *"arm B (bias_correction False) **IS MLX's Adam default** ⇒ trained bytes identical to every pre-#824 run"* | the "control" is a **library default**, not a control | — | — | structural: `gd5:247` measures **16.17 epochs/boundary** re-converging Adam ⇒ **~218 of 666 epochs (33%)** |
+
+**Charter correction (mine, refuted by measurement).** My charter asserted the bias_correction window
+was *"only 1.56 β₂ time constants."* **Measured: 3.00 τ** (β₂=0.999 ⇒ τ=1,000 steps; 75 steps/epoch
+× 40 epochs = 3,000 steps). The concern **survives at the corrected value** — df1 specifies the
+resolving window as ≥3–4 τ and η converges to within 0.4% only at ~5 τ ≈ 67 epochs — but the number
+in my charter was wrong and is corrected here rather than repeated.
+
+**Not duplicated.** The operator's binary-naivety directive is being executed *right now* by a sister
+arm: ledger row *"binary/discrete-operations occupancy sweep (operator 2026-08-01: 'any binary
+operations are probably naive and toy')"*, `in_progress`, owner `ddm_bs2`, already carrying n600
+results (*"101/109 = 93% INCONSEQUENTIAL"*, *"NEITHER ENTRY RULE DOMINATES (measured)"*). **na2 defers
+to it and adds nothing there.**
+
+### 2.2 Lens L4 — GENERIC BASIS
+
+| # | negative / default, as filed | lens fired | new scope | resolving measurement | cost | ΔS / %gap |
+|---|---|---|---|---|---|---|
+| G1 | the **zero-reset** optimizer state (`v←0`, no bias correction) at every resume | **L4** — `gc15:35`: *"a `v=0` reset makes the first step `3.16·lr·sign(g)` — **a uniform-magnitude, sign-only, metric-free step: the maximally generic step there is** … **Nobody ever derived or raced the zero-reset. It arrived as a library default.**"*; `:70` types the standing law **VIOLATED, undetected until now** | **not a negative at all — an unraced generic default governing a 6.57× LR excursion**; `gc15:69` calls it *"the biggest un-derived constant the campaign has been running"* | race arms **D±** (frozen-scorer metric reset) magnitude-matched against B so only *direction* varies; gc15 flags the trap: *"the benefit may **be** the disorder"* | substitute is **built and idle**; gc15: *"costs **zero extra wall-clock because we are discarding the metric anyway**"* | governs the window in which `gc15:33` says *"the campaign's only measured seg descent this month is … an artifact of a missing bias correction"* |
+| G2 | *"basis is not the lever — every reversible re-expression within **0.83%** of IDENT; rate coding CLOSED"* | **L4** — the raced set is **entirely textbook**: `IDENT·MODE·MEDIAN·DPCM·SW·SN·CHAN·LOCO-I·HAAR-S·LG53`, 264 evaluations, 11 predictors × 6 layouts × 4 coders. **No scorer-derived basis entered.** | **SOUND AS FILED at source** — `br1:262` already scopes itself: *"**Verdict scope: FORMULATION.** … does **not** close the gt1 law's strongest reading, where the 'basis' is the **decoder CNN itself** … nothing here kills the basis family."* **The defect is DOWNSTREAM**: `bo1:123` re-cites it as bare *"**CLOSED**"* with the FORMULATION scope and the decoder-CNN carve-out **dropped** | restore the scope qualifier at the citing site; separately, race **the decoder CNN as the basis** (free-from-seed) | citation fix $0; CNN race needs retrain + scorer slot | — |
+| G3 | **cosine** as a live generic-basis suspect (my charter's framing) | **L4, and it refutes my charter** — cosine is **not open**: `gd1:30` records the law at **4/4 paid when raced**, with cosine as its **first** measured instance (*"P3 cosine rank-deficient vs warp"*), Euclidean-vs-Fisher sign-flip as another | **ALREADY RACED AND LOST** — no re-scope needed | **the live gap is ENFORCEMENT, not evidence**: `src/tac/canonical_anti_patterns/*.py` has **1 incidental docstring mention and 0 registered classes** for the generic-metric or diagonal-2×2 class | $0 — a registry landing | — (this is the two-landing fix+self-protect gap) |
+| G4 | 8 rows typed **GENERIC-UNRACED** in `gd1` §2 | **L4** — textbook defaults on the live path: T1 GELU activation & T2 `sigmoid(x)*255` squash (**riding seg 0.431**), S1 axis-aligned square 16×16 lattice (seg + rate), P2 bilinear warp kernel (**pose 0.293**), P8 global per-pair photometric scalar | open, typed, priced | per-row races already registered | $0 pre-checks named | T1/T2 ride **seg 0.431 ≈ 53% of gap-to-T_3** |
+
+**G4-T2 is the model of correct conduct and is quoted as the counter-example:** *"**TWO-SIDED, race
+registered, NO direction call** … The physics cuts BOTH ways; this row dismisses NOTHING."* That is
+what an honest un-raced default looks like — it refuses the binary verdict and names both mechanisms.
+
+**Cross-lens confirmation of [[m89]].** Two of the three L1 verdicts above are anchored to bare ids
+that **do not resolve** in `canonical_task_status.jsonl` (423 rows scanned; the cited ids return
+0 rows). One ledger note records the identical failure against itself. **This is why every row in
+this memo cites content, not ids.**
+
 ---
