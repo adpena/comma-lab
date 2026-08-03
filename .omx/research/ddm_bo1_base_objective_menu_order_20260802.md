@@ -14,20 +14,34 @@
 
 ## §0 The answer, first
 
-**The pair-coherence base term that `ddm_cv1` §1 named as the unexhausted move should NOT be built.
-My own measurement demotes it.** Two independent grounds, one measured here and one from the operator:
+> **§0 REVISED IN-SESSION after §7's reconciliation against `ddm_ja1` / `ddm_ea1` / `ddm_cr2r`.**
+> The first draft justified the verdict partly on "pose is therefore repairable". `ddm_cr2r`
+> **measured** the opposite on this vehicle (a seg-only base is pose-hostile by **6.36×** warp-base /
+> **148.98×** v4c two-plane). Both are true and §7.2 resolves them. The verdict survives; its
+> *reason* changed, and the change matters more than the verdict.
+
+**The pair-coherence base term that `ddm_cv1` §1 named as the unexhausted move should NOT be built —
+because the obstruction it was designed to fix is NOT in the base, and not in the scorer. It is in
+the CARRIER's reach.** Three grounds:
 
 1. **MEASURED (frozen-scorer structural):** across the frame_1 perturbation directions that carry
-   pose energy, **0.00% lie in directions where frame_0 cannot buy the pose damage back.** Median
-   cancellability 99.96%; even at p99 the unrestricted optimum removes 68.5%. Pose damage done by a
-   seg-driven frame_1 is, geometrically, *recoverable from frame_0 alone* — and frame_0 has an
-   **exactly zero** seg obligation (`modules.py:108`, `x[:, -1, ...]`).
-2. **Operator directive 2026-08-02:** seg and rate are the decision column; pose debt is repairable.
+   pose energy, **0.00% lie in directions where frame_0 cannot buy the pose damage back** — for a
+   δ_0 free to be *anything in range(A_0)*. Median cancellability 99.96%; at p99 the unrestricted
+   optimum still removes 68.5%. **The scorer imposes almost no obstruction.**
+2. **MEASURED (`ddm_cr2r` / `#889`), and this is the load-bearing one:** the *shipped* carrier
+   nonetheless leaves 6.36–148.98× of pose debt on a seg-only base. Since (1) says the scorer is not
+   the obstruction, **the obstruction is the gap between the shipped family F and range(A_0)**. A
+   loss term added to the base cannot close a gap that lives in the carrier's degrees of freedom.
+3. **Operator directive 2026-08-02:** seg and rate are the decision column; pose debt is admissible.
 
-So the base objective is **seg + rate only**, and the derivation's product is not a new loss term but
-a **placement law**: *which of the four control quarters each term is allowed to spend*. The base
-today has no knob that expresses this, which is a **missing dimension in the menu**, not a mis-set
-value.
+So the base objective is **seg + rate only**, and the derivation's two products are:
+
+- a **placement law** — *which of the four control quarters each term may spend* (§3.2). Frame_1's
+  Q3 (294,912 dims) is **exactly** seg-active and **exactly** pose-free, and no flag expresses it.
+  This is not a new principle: it is the measured instance of the already-canonical
+  *"gauge-split / range(A) projection FIRST — free, shrinks all downstream"* rule (§7.1).
+- a **redirect** — the P0 pose work is **widening F toward range(A_0)**, not adding a base term.
+  §5 F3 measures where F actually sits, and that number prices the whole redirect.
 
 The single highest-value thing this unit found that is not already in the config census:
 
@@ -278,11 +292,11 @@ The three actuators are exactly orthogonal in their scorer effects:
 
 | # | stage | why it is here, and what it must NOT do |
 |---|---|---|
-| **0** | **rate / format / codebook** | Rate prices the *description* of everything downstream, so it must be fixed before anything is described. It is also 15.5% of the gap and the only axis priced in bytes directly. Independent of §1 entirely — no ordering constraint from the pair geometry. |
+| **0** | **format / grammar / codebook CHOICE** (NOT the coder stage) | The description *language* prices everything later, so it is chosen first. **The coder STAGE is terminal, after stage 3** — `ddm_ja1`'s physical order and `oc1` both put entropy-coding last, and my first draft conflated the choice with the stage (§7.3). `oc1` measured the coder saturated (*"RAW wins 50/50"*) and the binding stage as QUANTIZE, so this is a cheap decision. No ordering constraint from the pair geometry. |
 | **1** | **seg in Q3 (pose-free)** | Exactly zero pose cost by construction. Any seg obtainable here is unconditionally free, so it must be exhausted before any priced move. **Constraint: must not leak into Q4** — the projection is what makes it free. |
 | **2** | **seg in Q4 (priced)** | The only place seg spends pose. Under directive (1) it is **admissible to spend freely** — but it should be *instrumented* with the repair price (§3.2 row 3), because that is what stage 4 inherits. **Constraint: no pose term in the loss here.** |
 | **3** | **realization / uint8 window solve** | Must come after 1–2: it solves for the uint8 preimage of a *chosen* field, so the field must be chosen first. `ddm_ll1` measured this closed (88→3 flips, solve 0.07 s/frame vs enumeration 2.04 s/frame). |
-| **4** | **pose repair in frame_0 (Q1+Q2)** | **LAST, as a repair, per directive (1).** Zero seg cost — exactly, not approximately — so it cannot undo stages 1–3. This is the structural content of *"pose falls out if everything else is done the right way in the right order"*: pose is solved on a channel that **cannot** damage seg, against a target whose irreducible part is 0.00% of pose energy. |
+| **4** | **pose repair in frame_0 (Q1+Q2)** | **LAST, as a repair.** This stage is NOT mine — it is the canonical staging law (`pose_is_a_terminal_six_equation_solve_on_conditioned_seg_base_20260728`), and §1 supplies only its mechanism and magnitude. Zero seg cost — exactly, not approximately — so it cannot undo stages 1–3. **But see §7.2: the repair is only as good as the carrier's reach, and `ddm_cr2r` measured that reach short by 6.36–148.98×.** "Pose falls out" is a statement about the scorer's geometry, not a promise about the current carrier. |
 | **5** | **resolver / base re-resolution** | `ddm_sf1`'s law: any SOLVED or FITTED quantity has a PARTNER it was solved against. Stage 4's solve is against stage 2's base; if the base moves, `(a,b)` are stale. `ddm_uv1` removed the capability limit (`BASES` was a hardcoded 2-entry dict). |
 
 **Ordering claims I am NOT making.** I derived constraints 1→2, 2→3, 3→4 (or 2→4), and 4→5 from the
@@ -328,9 +342,9 @@ not on the n600 scorer slot.** *Pre-registered prediction, from §2 KILLED #1:* 
 `--frame0-carrier-phase` becomes a P0 zero-byte lever; if < 0.01 the carrier is near-saturated and
 that row is DEAD.
 
-**F4 — order reconciliation.** Read `oc1` / `fc1` / `ddm_ar1` at source and diff their prescribed
-order against §4. *Falsifier:* any documented ordering constraint contradicting §4 that was derived
-from a measured coupling (not from cost) supersedes §4 at that edge. **Cost: $0, a read.**
+**F4 — order reconciliation. DISCHARGED in-session; see §7.** It found the canonical DAG I had not
+cited (`ddm_ja1`), one real contradiction in my §4 stage 0, and the `ddm_cr2r` tension that revised
+§0. Recorded here as fired rather than deleted, so the sequence is auditable.
 
 **Matched control for any base-objective A/B.** `ddm_cr2r`'s protocol: same solver, **74 matched
 pairs**, both arms resolved against their own base (`ddm_uv1`'s `resolve_base()` / `--base-archive`,
@@ -363,22 +377,116 @@ score, and it is not lower today.
 
 ---
 
-## §7 NEXT-IF-RESUMED
+## §7 F4 DISCHARGED — reconciliation against the existing order artifacts
 
-1. **F3 first** — it is the cheapest ($0, one conv on cached frames), it tests a prediction I have
-   already published, and it decides whether `--frame0-carrier-phase` is a P0 zero-byte lever or dead.
-2. **F1** — $0, and it is the *only* thing that can overturn §0. Do it before anyone builds on §0.
-3. **F4** — $0 read; do not let §4 stand unreconciled against `oc1`/`fc1`/`ar1`.
-4. **F2** — queue behind `ddm_pg1`'s slot. It is the quartering memo's own owed measurement and it
+I did not know about the canonical DAG when I wrote §4. Reading it changed three things.
+
+### 7.1 What already existed, and what §4 must therefore stop claiming
+
+- **`ddm_ja1_order_of_operations_dag_20260731.json` (+ `ddm_ja1_joint_atlas_waterfill_20260731.md`
+  §6) is THE canonical dependency DAG**, commissioned by ledger row QA73. Physical order:
+  `motion (ξ GN solve) → per-depth projection → photometric (a,b + rolling shutter) → uint8
+  (through-R) → coder (SMEVR)`, with **measured invalidation edges and re-solve wall-clock**
+  (`token_base` invalidates `pose_solve` + `photo_fit` + `selector`, ~1 h + ~30 min; `pose_solve`
+  invalidates `photo_fit`, ~30 min; `photo_fit` invalidates nothing).
+- **The staging law is canonical and predates me:**
+  `pose_is_a_terminal_six_equation_solve_on_conditioned_seg_base_20260728` —
+  *"scene carrier → seg corrections → ALL repaints → THEN `solve_pose(frozen_frames, t_p)` as the
+  LAST stream written."* **My §4 stage 4 IS this law.** I am not the source of it; §1's contribution
+  is the *mechanism and magnitude* under it (0.00% irreducible against range(A_0)), not the ordering.
+- **My "placement law" is an instance of an existing rule.** The 2026-07-27 operator memory
+  (`we_have_everything_combine_techniques_in_optimal_order…`) already says
+  *"GAUGE-SPLIT / range(A) projection FIRST — Free; shrinks all downstream → THAT is why first."*
+  Q3-first is that rule evaluated on the yuv6 kernel. **Independent arrival, not novelty** — which
+  strengthens it and obliges me to cite rather than claim it.
+
+### 7.2 The `ddm_cr2r` tension, and the resolution that revised §0
+
+`ddm_cr2r`/`#889`: a seg-only base is pose-hostile by **6.36×** (warp base) / **148.98×** (v4c
+two-plane), and *"post-hoc pose cannot recover what the burn never carried."* My §1.3: **0.00%** of
+pose energy is irreducible. These look contradictory. They are not, and the difference is the finding:
+
+> §1.3's optimum is over **range(A_0)** — δ_0 free to be anything. `cr2r`'s penalty is measured with
+> the **shipped carrier family F** (~8-dim: warp ξ + a,b). Both being true means the 6.36–148.98×
+> lives **entirely in the gap between F and range(A_0)**, not in the scorer's geometry.
+
+Consequences, stated plainly:
+- A **base loss term cannot close that gap** — it constrains δ_1, while the deficiency is in δ_0's
+  reachable set. This is now the primary reason to drop the pair-coherence term, and it is a stronger
+  reason than the one I first wrote.
+- The P0 pose lever is **more carrier DOF**, spent in Q1+Q2 (zero seg cost, exactly). Directive 3's
+  dimension rule bounds how much: pose quadratic ≤6-dim, head rank-4 — so the target is a *small*
+  widening, not a free-for-all.
+- **`ddm_cr2r`'s protocol stands unchanged** as the acceptance gate: matched base, ≥32 pairs
+  (74 available), before composing any seg base with any pose stream.
+
+### 7.3 The one place §4 was wrong
+
+**§4 stage 0 ("rate / format / codebook first") contradicts `ja1`/`oc1`, which both put the CODER
+LAST.** They are right about the object they name and I conflated two objects:
+
+- the **format / grammar / codebook CHOICE** (what description language exists) must be fixed early —
+  it prices every later description;
+- the **coder STAGE** (running the entropy coder over a produced field) is necessarily terminal.
+
+Corrected: **stage 0 = format/grammar CHOICE; the coder STAGE runs after stage 3, per `ja1`.**
+`oc1` further measured that the coder stage is *"saturated (RAW wins 50/50)"* and that the binding
+stage is **QUANTIZE, not PREDICT** — so stage 0 is a cheap decision, not a campaign.
+
+### 7.4 The scope limit I must carry — `ddm_ea1`
+
+`ddm_ea1_einsteinian_negative_audit_20260730` condemns *"polish sequence as global strategy (finish
+seg, then pose, then rate as independent campaigns)"* while explicitly **not** condemning
+*"the staging law WITHIN a burn."* Its reason is measured: bar-feasibility is a **JOINT co-location
+constraint** (seg+pose < 0.055897 at Gate-B-class rate), and *"sequential polish composes to ≥7–10×
+over from any measured endpoint."*
+
+> **Therefore §4 is a WITHIN-BUILD order and nothing more.** It is NOT a campaign strategy, and it
+> must not be read as "do seg this month, pose next month". The 2026-08-02 acceptance rule loosens
+> the *judging* of a move, not the *joint* feasibility constraint. Anyone citing §4 across builds is
+> citing it out of scope.
+
+### 7.5 Gaps the reconciliation confirmed
+
+- **The resolver has no placement in any prior order artifact** (it became a named surface only on
+  2026-08-02, in `ddm_cv1` §2). §4 stage 5 is therefore new and unreviewed by any prior pass.
+- **The realization/uint8 window solve has an exact measured geometry but no placement** in any
+  dependency order. §4 stage 3 is likewise new.
+- **A mis-citation to fix, not mine:** `ddm_ax1` §7 attributes the
+  *"solve → gauge-split → predict → quantize → truncate → entropy-code"* chain to `fc1`; that chain
+  is not in the fc1 memo (the token `gauge-split` does not occur in it) and belongs to `oc1` / the
+  2026-07-27 operator memory. Flagged for whoever owns `ax1`.
+
+---
+
+## §8 NEXT-IF-RESUMED
+
+1. **F3 first** — $0, one folded 3×3 conv on cached decoded frames. It is now the **highest-value**
+   item in this memo, not the cheapest curiosity: §7.2 concluded the whole pose obstruction lives in
+   the gap between the shipped family F and range(A_0), and F3 is the measurement that *prices that
+   gap*. Prediction already published (ratio < 1, cancelling regime).
+2. **F1** — $0, rung-3 re-measurement. Still the only thing that can overturn §1.3. Do it before
+   anyone builds on §0.
+3. **Widen F, not the loss** — the redirected P0. Add carrier DOF in Q1+Q2 (exactly zero seg cost),
+   bounded by directive 3's dimension rule (pose quadratic ≤6-dim, head rank-4). Gate with
+   `ddm_cr2r`'s matched-base protocol, ≥32 of the 74 pairs.
+4. **F2** — queue behind `ddm_pg1`'s slot; it is the quartering memo's own owed measurement and it
    gates `--seg-spend-quarter`.
-5. **Only then**: build `--seg-spend-quarter` as a DSL `Lever` factory in
-   `spec_tr1_renderer_20260728.py` (never a hand-added trainer flag), default `unconstrained` with a
-   recorded reason, registered with a duty-to-measure so "off" is a tracked queue state.
-6. **Do NOT** build a pair-coherence loss term unless F1 refutes §0.
+5. **Then** build `--seg-spend-quarter` as a DSL `Lever` factory in `spec_tr1_renderer_20260728.py`
+   (never a hand-added trainer flag), default `unconstrained` with a recorded reason, registered with
+   a duty-to-measure so "off" is a tracked queue state.
+6. **Do NOT** build a pair-coherence loss term unless F1 refutes §1.3 *and* F3 shows F already at the
+   bound (i.e. the obstruction really is in δ_1 after all). Both, not either.
+7. **Hand `ddm_ax1`'s owner the §7.5 mis-citation.**
 
 Cross-refs: `ddm_cv1_seven_surface_convocation_20260802` §1/§11/§12 ·
 `control_surface_exact_dof_quartering_q3_seg_only_pose_null_20260731` +
-`ddm_control_surface_exact_quartering_20260731` · `ddm_gd1_generic_default_census_20260731` ·
-`ddm_gd1_undecided_defaults_audit_20260731` · `ddm_b2b_burn2_composition_build_20260731` ·
-`ddm_b4s_burn4_charter_20260731` · `ddm_cr2r` · `ddm_bp2` · `ddm_sf1` · `ddm_uv1` · `ddm_fl1` ·
+`ddm_control_surface_exact_quartering_20260731` · `ddm_ja1_order_of_operations_dag_20260731` ·
+`pose_is_a_terminal_six_equation_solve_on_conditioned_seg_base_20260728` ·
+`ddm_ea1_einsteinian_negative_audit_20260730` · `ddm_oc1_xi_temporal_predict_measured_20260727` ·
+`ddm_fc1_assembly_capstone_flip_entropy_and_compose_20260728` ·
+`ddm_ar1_archetype_codec_priced_spec_20260728` · `ddm_ax1_all_axes_derivation_20260730` §7 ·
+`ddm_gd1_generic_default_census_20260731` · `ddm_gd1_undecided_defaults_audit_20260731` ·
+`ddm_b2b_burn2_composition_build_20260731` · `ddm_b4s_burn4_charter_20260731` ·
+`ddm_cr2r` / `#889` · `ddm_bp2` · `ddm_sf1` · `ddm_uv1` · `ddm_fl1` ·
 `src/tac/optimization/ddm_ll1_window_solve.py` · `upstream/modules.py` · `upstream/frame_utils.py`
