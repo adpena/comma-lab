@@ -1,0 +1,2666 @@
+{
+  "excluded_npz_keys": [
+    "meta::json"
+  ],
+  "excluded_telemetry_fields": [
+    "elapsed_s",
+    "elapsed_seconds",
+    "epoch_seconds",
+    "epoch_total_s",
+    "gate_wall_seconds",
+    "host",
+    "out_dir",
+    "peak_rss_gib",
+    "pid",
+    "rss_gib",
+    "seconds",
+    "t",
+    "timestamp",
+    "ts",
+    "utc",
+    "wall_minutes",
+    "wall_seconds",
+    "written_at_utc"
+  ],
+  "n_runs": 4,
+  "pairs": [
+    {
+      "checkpoints": [
+        {
+          "denominator": "40 of 41 compared DIFFER (1 identical; 0 only-in-A, 0 only-in-B)",
+          "file": "intra_seg_trunk_ce_ep00001.npz",
+          "n_compared": 41,
+          "n_differ": 40,
+          "n_identical": 1,
+          "n_only_a": 0,
+          "n_only_b": 0,
+          "verdict": "DIFFER",
+          "worst_deltas": [
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::tokens_base",
+              "max_abs": 0.027154794428497553,
+              "max_rel": 1.9905226877450697,
+              "max_ulp": 2438303520,
+              "rms": 0.003912161807409825,
+              "shape": [
+                24,
+                32,
+                4
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 0.9997287326388888,
+              "key": "param::tokens_delta",
+              "max_abs": 0.026981342118233442,
+              "max_rel": 1.9969344862570866,
+              "max_ulp": 2452346368,
+              "rms": 0.004010604849947049,
+              "shape": [
+                6,
+                24,
+                32,
+                4
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::s_up2",
+              "max_abs": 0.020205341279506683,
+              "max_rel": 1.9997768015209767,
+              "max_ulp": 2427885568,
+              "rms": 0.0030280176199014974,
+              "shape": [
+                24,
+                3,
+                3,
+                24
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 0.99951171875,
+              "key": "ema::tokens_delta",
+              "max_abs": 0.019603279419243336,
+              "max_rel": 1.9951340208370403,
+              "max_ulp": 2474572320,
+              "rms": 0.0022891977246811855,
+              "shape": [
+                6,
+                24,
+                32,
+                4
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::s_up0",
+              "max_abs": 0.019454266875982285,
+              "max_rel": 1.8613996518827098,
+              "max_ulp": 2418114880,
+              "rms": 0.003066415222804388,
+              "shape": [
+                24,
+                3,
+                3,
+                24
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::s_up1",
+              "max_abs": 0.01860799640417099,
+              "max_rel": 1.996990280995364,
+              "max_ulp": 2429036608,
+              "rms": 0.002811965584512467,
+              "shape": [
+                24,
+                3,
+                3,
+                24
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::s_conv0",
+              "max_abs": 0.01801469922065735,
+              "max_rel": 1.6346277005920717,
+              "max_ulp": 2391906240,
+              "rms": 0.0032299748468850088,
+              "shape": [
+                24,
+                3,
+                3,
+                4
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "ema::tokens_base",
+              "max_abs": 0.016999193467199802,
+              "max_rel": 1.9940127815674185,
+              "max_ulp": 2457841460,
+              "rms": 0.00217146566205681,
+              "shape": [
+                24,
+                32,
+                4
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::s_up3",
+              "max_abs": 0.014363676309585571,
+              "max_rel": 1.987666301151857,
+              "max_ulp": 2387496768,
+              "rms": 0.002829535079556739,
+              "shape": [
+                24,
+                3,
+                3,
+                24
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "ema::s_up2",
+              "max_abs": 0.011887267231941223,
+              "max_rel": 1.9721949893668846,
+              "max_ulp": 2395250880,
+              "rms": 0.001568565390063,
+              "shape": [
+                24,
+                3,
+                3,
+                24
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::g_up1",
+              "max_abs": 0.01182025671005249,
+              "max_rel": 0.012072619934034676,
+              "max_ulp": 198311,
+              "rms": 0.0034038716827445416,
+              "shape": [
+                24
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::s_head",
+              "max_abs": 0.011722464114427567,
+              "max_rel": 1.2449426593943416,
+              "max_ulp": 2388528680,
+              "rms": 0.0015533359810575974,
+              "shape": [
+                3,
+                3,
+                3,
+                24
+              ]
+            }
+          ]
+        },
+        {
+          "denominator": "40 of 41 compared DIFFER (1 identical; 0 only-in-A, 0 only-in-B)",
+          "file": "intra_seg_trunk_tau_ep00003.npz",
+          "n_compared": 41,
+          "n_differ": 40,
+          "n_identical": 1,
+          "n_only_a": 0,
+          "n_only_b": 0,
+          "verdict": "DIFFER",
+          "worst_deltas": [
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::s_conv0",
+              "max_abs": 0.08331786189228296,
+              "max_rel": 1.985956510457297,
+              "max_ulp": 2345175623,
+              "rms": 0.017081207691134866,
+              "shape": [
+                24,
+                3,
+                3,
+                4
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::tokens_base",
+              "max_abs": 0.08090708777308464,
+              "max_rel": 1.9995688580379767,
+              "max_ulp": 2384371825,
+              "rms": 0.018605418232708032,
+              "shape": [
+                24,
+                32,
+                4
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::tokens_delta",
+              "max_abs": 0.08045615814626217,
+              "max_rel": 1.9994848326822483,
+              "max_ulp": 2427458079,
+              "rms": 0.020421035890071822,
+              "shape": [
+                6,
+                24,
+                32,
+                4
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::s_up2",
+              "max_abs": 0.07821046561002731,
+              "max_rel": 1.9951004710581632,
+              "max_ulp": 2370060402,
+              "rms": 0.014626601318815487,
+              "shape": [
+                24,
+                3,
+                3,
+                24
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::s_up0",
+              "max_abs": 0.07235951721668243,
+              "max_rel": 1.999891589862769,
+              "max_ulp": 2371924206,
+              "rms": 0.01585491806111463,
+              "shape": [
+                24,
+                3,
+                3,
+                24
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "ema::s_conv0",
+              "max_abs": 0.06652895919978619,
+              "max_rel": 1.9862062521364365,
+              "max_ulp": 2338402934,
+              "rms": 0.01338808354266296,
+              "shape": [
+                24,
+                3,
+                3,
+                4
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "ema::tokens_base",
+              "max_abs": 0.0662703700363636,
+              "max_rel": 1.9963958665646742,
+              "max_ulp": 2415190355,
+              "rms": 0.014599578012208804,
+              "shape": [
+                24,
+                32,
+                4
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "ema::tokens_delta",
+              "max_abs": 0.0659673623740673,
+              "max_rel": 1.9996073638035112,
+              "max_ulp": 2395338834,
+              "rms": 0.01584013234289477,
+              "shape": [
+                6,
+                24,
+                32,
+                4
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::s_up1",
+              "max_abs": 0.06590176373720169,
+              "max_rel": 1.9941291348929104,
+              "max_ulp": 2372160687,
+              "rms": 0.015752878410437314,
+              "shape": [
+                24,
+                3,
+                3,
+                24
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "ema::s_up2",
+              "max_abs": 0.06227168254554272,
+              "max_rel": 1.9985864300875693,
+              "max_ulp": 2377761272,
+              "rms": 0.011582473249937164,
+              "shape": [
+                24,
+                3,
+                3,
+                24
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "ema::s_up0",
+              "max_abs": 0.061240325681865215,
+              "max_rel": 1.9937440110548157,
+              "max_ulp": 2409079432,
+              "rms": 0.01243358890943037,
+              "shape": [
+                24,
+                3,
+                3,
+                24
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "ema::s_up1",
+              "max_abs": 0.055484090000391006,
+              "max_rel": 1.9956284231310966,
+              "max_ulp": 2361551286,
+              "rms": 0.012398383685251216,
+              "shape": [
+                24,
+                3,
+                3,
+                24
+              ]
+            }
+          ]
+        },
+        {
+          "denominator": "40 of 41 compared DIFFER (1 identical; 0 only-in-A, 0 only-in-B)",
+          "file": "stage_seg_trunk_ce_exit.npz",
+          "n_compared": 41,
+          "n_differ": 40,
+          "n_identical": 1,
+          "n_only_a": 0,
+          "n_only_b": 0,
+          "verdict": "DIFFER",
+          "worst_deltas": [
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::tokens_base",
+              "max_abs": 0.05415983498096466,
+              "max_rel": 1.9981872710153088,
+              "max_ulp": 2373754334,
+              "rms": 0.011000312684860316,
+              "shape": [
+                24,
+                32,
+                4
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::tokens_delta",
+              "max_abs": 0.05397674813866615,
+              "max_rel": 1.9980543339891217,
+              "max_ulp": 2432448512,
+              "rms": 0.011449912899995316,
+              "shape": [
+                6,
+                24,
+                32,
+                4
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::s_up0",
+              "max_abs": 0.049204916693270206,
+              "max_rel": 1.9932087847921443,
+              "max_ulp": 2397940778,
+              "rms": 0.009469397316151923,
+              "shape": [
+                24,
+                3,
+                3,
+                24
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::s_conv0",
+              "max_abs": 0.048528172075748444,
+              "max_rel": 1.8933014982379062,
+              "max_ulp": 2351021780,
+              "rms": 0.009832500434555042,
+              "shape": [
+                24,
+                3,
+                3,
+                4
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::s_up1",
+              "max_abs": 0.046540532261133194,
+              "max_rel": 1.993903808911729,
+              "max_ulp": 2421476192,
+              "rms": 0.009551705377794074,
+              "shape": [
+                24,
+                3,
+                3,
+                24
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::s_up2",
+              "max_abs": 0.045347475446760654,
+              "max_rel": 1.9946792270369873,
+              "max_ulp": 2371123308,
+              "rms": 0.009085589489644302,
+              "shape": [
+                24,
+                3,
+                3,
+                24
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "ema::tokens_delta",
+              "max_abs": 0.04152614716440439,
+              "max_rel": 1.9964138295271279,
+              "max_ulp": 2443316237,
+              "rms": 0.007724277830544849,
+              "shape": [
+                6,
+                24,
+                32,
+                4
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "ema::tokens_base",
+              "max_abs": 0.04149018973112106,
+              "max_rel": 1.9966215204666509,
+              "max_ulp": 2376390185,
+              "rms": 0.007507555309523401,
+              "shape": [
+                24,
+                32,
+                4
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "ema::s_up0",
+              "max_abs": 0.03544924780726433,
+              "max_rel": 1.993122645142274,
+              "max_ulp": 2389557894,
+              "rms": 0.006371484099912559,
+              "shape": [
+                24,
+                3,
+                3,
+                24
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "ema::s_conv0",
+              "max_abs": 0.03470442816615105,
+              "max_rel": 1.986821017159172,
+              "max_ulp": 2349450388,
+              "rms": 0.006631605347917775,
+              "shape": [
+                24,
+                3,
+                3,
+                4
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::s_head",
+              "max_abs": 0.03463928401470184,
+              "max_rel": 1.9497269442921197,
+              "max_ulp": 2370394292,
+              "rms": 0.005895683792554052,
+              "shape": [
+                3,
+                3,
+                3,
+                24
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "ema::s_up1",
+              "max_abs": 0.03181399405002594,
+              "max_rel": 1.9824458364218165,
+              "max_ulp": 2376827140,
+              "rms": 0.0064084072048860435,
+              "shape": [
+                24,
+                3,
+                3,
+                24
+              ]
+            }
+          ]
+        },
+        {
+          "denominator": "40 of 41 compared DIFFER (1 identical; 0 only-in-A, 0 only-in-B)",
+          "file": "stage_seg_trunk_tau_final.npz",
+          "n_compared": 41,
+          "n_differ": 40,
+          "n_identical": 1,
+          "n_only_a": 0,
+          "n_only_b": 0,
+          "verdict": "DIFFER",
+          "worst_deltas": [
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::s_conv0",
+              "max_abs": 0.08331786189228296,
+              "max_rel": 1.985956510457297,
+              "max_ulp": 2345175623,
+              "rms": 0.017081207691134866,
+              "shape": [
+                24,
+                3,
+                3,
+                4
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::tokens_base",
+              "max_abs": 0.08090708777308464,
+              "max_rel": 1.9995688580379767,
+              "max_ulp": 2384371825,
+              "rms": 0.018605418232708032,
+              "shape": [
+                24,
+                32,
+                4
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::tokens_delta",
+              "max_abs": 0.08045615814626217,
+              "max_rel": 1.9994848326822483,
+              "max_ulp": 2427458079,
+              "rms": 0.020421035890071822,
+              "shape": [
+                6,
+                24,
+                32,
+                4
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::s_up2",
+              "max_abs": 0.07821046561002731,
+              "max_rel": 1.9951004710581632,
+              "max_ulp": 2370060402,
+              "rms": 0.014626601318815487,
+              "shape": [
+                24,
+                3,
+                3,
+                24
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::s_up0",
+              "max_abs": 0.07235951721668243,
+              "max_rel": 1.999891589862769,
+              "max_ulp": 2371924206,
+              "rms": 0.01585491806111463,
+              "shape": [
+                24,
+                3,
+                3,
+                24
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "ema::s_conv0",
+              "max_abs": 0.06652895919978619,
+              "max_rel": 1.9862062521364365,
+              "max_ulp": 2338402934,
+              "rms": 0.01338808354266296,
+              "shape": [
+                24,
+                3,
+                3,
+                4
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "ema::tokens_base",
+              "max_abs": 0.0662703700363636,
+              "max_rel": 1.9963958665646742,
+              "max_ulp": 2415190355,
+              "rms": 0.014599578012208804,
+              "shape": [
+                24,
+                32,
+                4
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "ema::tokens_delta",
+              "max_abs": 0.0659673623740673,
+              "max_rel": 1.9996073638035112,
+              "max_ulp": 2395338834,
+              "rms": 0.01584013234289477,
+              "shape": [
+                6,
+                24,
+                32,
+                4
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::s_up1",
+              "max_abs": 0.06590176373720169,
+              "max_rel": 1.9941291348929104,
+              "max_ulp": 2372160687,
+              "rms": 0.015752878410437314,
+              "shape": [
+                24,
+                3,
+                3,
+                24
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "ema::s_up2",
+              "max_abs": 0.06227168254554272,
+              "max_rel": 1.9985864300875693,
+              "max_ulp": 2377761272,
+              "rms": 0.011582473249937164,
+              "shape": [
+                24,
+                3,
+                3,
+                24
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "ema::s_up0",
+              "max_abs": 0.061240325681865215,
+              "max_rel": 1.9937440110548157,
+              "max_ulp": 2409079432,
+              "rms": 0.01243358890943037,
+              "shape": [
+                24,
+                3,
+                3,
+                24
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "ema::s_up1",
+              "max_abs": 0.055484090000391006,
+              "max_rel": 1.9956284231310966,
+              "max_ulp": 2361551286,
+              "rms": 0.012398383685251216,
+              "shape": [
+                24,
+                3,
+                3,
+                24
+              ]
+            }
+          ]
+        }
+      ],
+      "run": "experiments/results/ddm_dt1_determinism_20260803T005159Z/run_B",
+      "telemetry": {
+        "denominator": "48 of 142 compared DIFFER (94 identical; 0 only-in-A, 0 only-in-B)",
+        "dseg_rows": [
+          {
+            "abs": 0.04390801323784721,
+            "bit_identical": false,
+            "key": "a1_gate|ep1.realized_gate_dseg_mean",
+            "rel": 0.07970074521335442
+          },
+          {
+            "abs": 0.25986735026041663,
+            "bit_identical": false,
+            "key": "a1_gate|ep1.realized_gate_dseg_per_pair_max",
+            "rel": 0.338019596297742
+          },
+          {
+            "abs": 0.11926439073350686,
+            "bit_identical": false,
+            "key": "a1_gate|ep3.interval_dseg_delta",
+            "rel": 1.3600595491280303
+          },
+          {
+            "abs": 0.05963219536675343,
+            "bit_identical": false,
+            "key": "a1_gate|ep3.interval_dseg_per_epoch",
+            "rel": 1.3600595491280303
+          },
+          {
+            "abs": 0.07535637749565965,
+            "bit_identical": false,
+            "key": "a1_gate|ep3.realized_gate_dseg_mean",
+            "rel": 0.13991761774571038
+          },
+          {
+            "abs": 0.1027374267578125,
+            "bit_identical": false,
+            "key": "a1_gate|ep3.realized_gate_dseg_per_pair_max",
+            "rel": 0.15091675258887344
+          }
+        ],
+        "n_compared": 142,
+        "n_differ": 48,
+        "n_identical": 94,
+        "n_only_a": 0,
+        "n_only_b": 0,
+        "verdict": "DIFFER",
+        "worst_deltas": [
+          {
+            "abs": 247199.0,
+            "key": "a1_gate|ep3.realized_flips_vs_prev_gate",
+            "rel": 0.27508153997322615,
+            "ulp": 2123423241207808
+          },
+          {
+            "abs": 96548.0,
+            "key": "a1_gate|ep1.topology_per_class.smallest_surviving_gt_component_px.2",
+            "rel": 0.9999896425649152,
+            "ulp": 74188791169941504
+          },
+          {
+            "abs": 96548.0,
+            "key": "a1_gate|ep3.topology_per_class.smallest_surviving_gt_component_px.2",
+            "rel": 0.9999896425649152,
+            "ulp": 74188791169941504
+          },
+          {
+            "abs": 331.8388181349512,
+            "key": "epoch|ep3.gnorm_last_batch",
+            "rel": 0.4880710048397457,
+            "ulp": 4360918066542662
+          },
+          {
+            "abs": 120.42583801835872,
+            "key": "epoch|ep1.gnorm_last_batch",
+            "rel": 0.14636588243141757,
+            "ulp": 1059276873486836
+          },
+          {
+            "abs": 99.0,
+            "key": "a1_gate|ep3.topology_per_class.betti0_realized.2",
+            "rel": 0.39759036144578314,
+            "ulp": 3483252836794368
+          },
+          {
+            "abs": 90.0,
+            "key": "a1_gate|ep3.topology_per_class.betti0_realized.0",
+            "rel": 0.4639175257731959,
+            "ulp": 4011018418126848
+          },
+          {
+            "abs": 86.0,
+            "key": "a1_gate|ep3.topology_per_class.smallest_surviving_gt_component_px.4",
+            "rel": 0.0017088922006954794,
+            "ulp": 11819749998592
+          },
+          {
+            "abs": 21.0,
+            "key": "a1_gate|ep3.tokens_bytes_zlib",
+            "rel": 0.004309460291401601,
+            "ulp": 23089744183296
+          },
+          {
+            "abs": 18.0,
+            "key": "a1_gate|ep1.tokens_bytes_zlib",
+            "rel": 0.004610655737704918,
+            "ulp": 39582418599936
+          },
+          {
+            "abs": 16.0,
+            "key": "a1_gate|ep3.topology_per_class.betti0_realized.4",
+            "rel": 0.10191082802547771,
+            "ulp": 562949953421312
+          },
+          {
+            "abs": 10.0,
+            "key": "a1_gate|ep3.tokens_bytes",
+            "rel": 0.004668534080298786,
+            "ulp": 21990232555520
+          }
+        ]
+      }
+    },
+    {
+      "checkpoints": [
+        {
+          "denominator": "40 of 41 compared DIFFER (1 identical; 0 only-in-A, 0 only-in-B)",
+          "file": "intra_seg_trunk_ce_ep00001.npz",
+          "n_compared": 41,
+          "n_differ": 40,
+          "n_identical": 1,
+          "n_only_a": 0,
+          "n_only_b": 0,
+          "verdict": "DIFFER",
+          "worst_deltas": [
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 0.900390625,
+              "key": "param::tokens_delta",
+              "max_abs": 0.013930244371294975,
+              "max_rel": 0.5578061080189602,
+              "max_ulp": 9938670,
+              "rms": 0.00036927487787855685,
+              "shape": [
+                6,
+                24,
+                32,
+                4
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 0.8970269097222222,
+              "key": "ema::tokens_delta",
+              "max_abs": 0.006965121254324913,
+              "max_rel": 0.3730607057899582,
+              "max_ulp": 5843858,
+              "rms": 0.00018622750444463333,
+              "shape": [
+                6,
+                24,
+                32,
+                4
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::tokens_base",
+              "max_abs": 0.004143146798014641,
+              "max_rel": 1.81266350374673,
+              "max_ulp": 2428542464,
+              "rms": 0.0001850869761138485,
+              "shape": [
+                24,
+                32,
+                4
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "ema::tokens_base",
+              "max_abs": 0.0020715277642011642,
+              "max_rel": 1.3613395944144984,
+              "max_ulp": 2408020952,
+              "rms": 9.277191008157723e-05,
+              "shape": [
+                24,
+                32,
+                4
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::s_up0",
+              "max_abs": 0.0015927329659461975,
+              "max_rel": 1.8750865640922474,
+              "max_ulp": 2384900192,
+              "rms": 6.564145160404401e-05,
+              "shape": [
+                24,
+                3,
+                3,
+                24
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 0.9998070987654321,
+              "key": "param::s_up2",
+              "max_abs": 0.0011417604982852936,
+              "max_rel": 1.5389871039371423,
+              "max_ulp": 2436061568,
+              "rms": 5.0359799773118666e-05,
+              "shape": [
+                24,
+                3,
+                3,
+                24
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 0.9998070987654321,
+              "key": "param::s_up1",
+              "max_abs": 0.0009006112813949585,
+              "max_rel": 1.0543739565334231,
+              "max_ulp": 2391313744,
+              "rms": 5.527469815139089e-05,
+              "shape": [
+                24,
+                3,
+                3,
+                24
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 0.9996141975308642,
+              "key": "param::s_up3",
+              "max_abs": 0.0008308291435241699,
+              "max_rel": 1.5691440124431524,
+              "max_ulp": 2428959264,
+              "rms": 4.2538362565950805e-05,
+              "shape": [
+                24,
+                3,
+                3,
+                24
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 0.9998070987654321,
+              "key": "ema::s_up0",
+              "max_abs": 0.0007965415716171265,
+              "max_rel": 0.85453216374269,
+              "max_ulp": 23330816,
+              "rms": 3.288495400808318e-05,
+              "shape": [
+                24,
+                3,
+                3,
+                24
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::s_conv0",
+              "max_abs": 0.0005807541310787201,
+              "max_rel": 0.44253535021374546,
+              "max_ulp": 6957056,
+              "rms": 5.105170737851171e-05,
+              "shape": [
+                24,
+                3,
+                3,
+                4
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "ema::s_up2",
+              "max_abs": 0.0005718991160392761,
+              "max_rel": 0.4241423532018935,
+              "max_ulp": 7052256,
+              "rms": 2.528320176195739e-05,
+              "shape": [
+                24,
+                3,
+                3,
+                24
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 0.9994212962962963,
+              "key": "ema::s_up1",
+              "max_abs": 0.00045026466250419617,
+              "max_rel": 0.8342372655495219,
+              "max_ulp": 22033472,
+              "rms": 2.771922104795513e-05,
+              "shape": [
+                24,
+                3,
+                3,
+                24
+              ]
+            }
+          ]
+        },
+        {
+          "denominator": "40 of 41 compared DIFFER (1 identical; 0 only-in-A, 0 only-in-B)",
+          "file": "intra_seg_trunk_tau_ep00003.npz",
+          "n_compared": 41,
+          "n_differ": 40,
+          "n_identical": 1,
+          "n_only_a": 0,
+          "n_only_b": 0,
+          "verdict": "DIFFER",
+          "worst_deltas": [
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::tokens_delta",
+              "max_abs": 0.059276098385453224,
+              "max_rel": 1.996714908238215,
+              "max_ulp": 2391126336,
+              "rms": 0.008929175816003025,
+              "shape": [
+                6,
+                24,
+                32,
+                4
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 0.9999457465277778,
+              "key": "ema::tokens_delta",
+              "max_abs": 0.04772978508844972,
+              "max_rel": 1.9998365407374612,
+              "max_ulp": 2421607195,
+              "rms": 0.006188002006170394,
+              "shape": [
+                6,
+                24,
+                32,
+                4
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::tokens_base",
+              "max_abs": 0.042945679277181625,
+              "max_rel": 1.9882046027266866,
+              "max_ulp": 2488833912,
+              "rms": 0.0072603497520130995,
+              "shape": [
+                24,
+                32,
+                4
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::s_up0",
+              "max_abs": 0.03919193148612976,
+              "max_rel": 1.9998530664363465,
+              "max_ulp": 2370420421,
+              "rms": 0.005268923093256534,
+              "shape": [
+                24,
+                3,
+                3,
+                24
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "ema::tokens_base",
+              "max_abs": 0.03402186185121536,
+              "max_rel": 1.997643827830178,
+              "max_ulp": 2401867992,
+              "rms": 0.005051611810074401,
+              "shape": [
+                24,
+                32,
+                4
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "ema::s_up0",
+              "max_abs": 0.029102593660354614,
+              "max_rel": 1.9888253150011665,
+              "max_ulp": 2357947816,
+              "rms": 0.0035397209710518705,
+              "shape": [
+                24,
+                3,
+                3,
+                24
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::s_conv0",
+              "max_abs": 0.02556084981188178,
+              "max_rel": 1.9926071091144006,
+              "max_ulp": 2374526144,
+              "rms": 0.005658389651718964,
+              "shape": [
+                24,
+                3,
+                3,
+                4
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::s_up1",
+              "max_abs": 0.02471598982810974,
+              "max_rel": 1.9724261761656283,
+              "max_ulp": 2392628646,
+              "rms": 0.004473127630486999,
+              "shape": [
+                24,
+                3,
+                3,
+                24
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::s_up2",
+              "max_abs": 0.01974761113524437,
+              "max_rel": 1.9957657226225345,
+              "max_ulp": 2381139064,
+              "rms": 0.0033224691111848974,
+              "shape": [
+                24,
+                3,
+                3,
+                24
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "ema::s_conv0",
+              "max_abs": 0.019290417432785034,
+              "max_rel": 1.9361634257287625,
+              "max_ulp": 2359784256,
+              "rms": 0.0038077703174424662,
+              "shape": [
+                24,
+                3,
+                3,
+                4
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "ema::s_up1",
+              "max_abs": 0.017964759841561317,
+              "max_rel": 1.9956646968471363,
+              "max_ulp": 2386738932,
+              "rms": 0.0029944847280429124,
+              "shape": [
+                24,
+                3,
+                3,
+                24
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::g_up1",
+              "max_abs": 0.014034509658813477,
+              "max_rel": 0.0145714210037881,
+              "max_ulp": 235460,
+              "rms": 0.005041141274143467,
+              "shape": [
+                24
+              ]
+            }
+          ]
+        },
+        {
+          "denominator": "40 of 41 compared DIFFER (1 identical; 0 only-in-A, 0 only-in-B)",
+          "file": "stage_seg_trunk_ce_exit.npz",
+          "n_compared": 41,
+          "n_differ": 40,
+          "n_identical": 1,
+          "n_only_a": 0,
+          "n_only_b": 0,
+          "verdict": "DIFFER",
+          "worst_deltas": [
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 0.9999457465277778,
+              "key": "param::tokens_delta",
+              "max_abs": 0.04001182271167636,
+              "max_rel": 1.9988558707004758,
+              "max_ulp": 2447152768,
+              "rms": 0.0034539030626017982,
+              "shape": [
+                6,
+                24,
+                32,
+                4
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::tokens_base",
+              "max_abs": 0.029204930178821087,
+              "max_rel": 1.9251025633116383,
+              "max_ulp": 2428098560,
+              "rms": 0.0029299097210873713,
+              "shape": [
+                24,
+                32,
+                4
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "ema::tokens_delta",
+              "max_abs": 0.028365625301375985,
+              "max_rel": 1.9989105967613294,
+              "max_ulp": 2440951776,
+              "rms": 0.001941637821442742,
+              "shape": [
+                6,
+                24,
+                32,
+                4
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::s_up0",
+              "max_abs": 0.022194569930434227,
+              "max_rel": 1.911124358699384,
+              "max_ulp": 2386727589,
+              "rms": 0.0018983245541209135,
+              "shape": [
+                24,
+                3,
+                3,
+                24
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "ema::tokens_base",
+              "max_abs": 0.018397904932498932,
+              "max_rel": 1.9366356370745728,
+              "max_ulp": 2417416640,
+              "rms": 0.0018027073446044593,
+              "shape": [
+                24,
+                32,
+                4
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "ema::s_up0",
+              "max_abs": 0.014271833002567291,
+              "max_rel": 1.9911569707780656,
+              "max_ulp": 2386278542,
+              "rms": 0.0011614206392510477,
+              "shape": [
+                24,
+                3,
+                3,
+                24
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::s_conv0",
+              "max_abs": 0.013597268611192703,
+              "max_rel": 1.9025807873076883,
+              "max_ulp": 2372849344,
+              "rms": 0.002003048865305746,
+              "shape": [
+                24,
+                3,
+                3,
+                4
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::s_up1",
+              "max_abs": 0.012772589921951294,
+              "max_rel": 1.9633322193242535,
+              "max_ulp": 2396824352,
+              "rms": 0.00155233998192449,
+              "shape": [
+                24,
+                3,
+                3,
+                24
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::s_up2",
+              "max_abs": 0.00965096801519394,
+              "max_rel": 1.9996429098192037,
+              "max_ulp": 2403531040,
+              "rms": 0.0011508311666844132,
+              "shape": [
+                24,
+                3,
+                3,
+                24
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::b_conv0",
+              "max_abs": 0.00937307858839631,
+              "max_rel": 0.8107655638921535,
+              "max_ulp": 20214293,
+              "rms": 0.0031612561908008047,
+              "shape": [
+                24
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::g_conv0",
+              "max_abs": 0.009174108505249023,
+              "max_rel": 0.009247878916931797,
+              "max_ulp": 153916,
+              "rms": 0.00235005302144156,
+              "shape": [
+                24
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "ema::s_conv0",
+              "max_abs": 0.008544038981199265,
+              "max_rel": 1.4539861285874174,
+              "max_ulp": 2365104906,
+              "rms": 0.0012481242489407582,
+              "shape": [
+                24,
+                3,
+                3,
+                4
+              ]
+            }
+          ]
+        },
+        {
+          "denominator": "40 of 41 compared DIFFER (1 identical; 0 only-in-A, 0 only-in-B)",
+          "file": "stage_seg_trunk_tau_final.npz",
+          "n_compared": 41,
+          "n_differ": 40,
+          "n_identical": 1,
+          "n_only_a": 0,
+          "n_only_b": 0,
+          "verdict": "DIFFER",
+          "worst_deltas": [
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::tokens_delta",
+              "max_abs": 0.059276098385453224,
+              "max_rel": 1.996714908238215,
+              "max_ulp": 2391126336,
+              "rms": 0.008929175816003025,
+              "shape": [
+                6,
+                24,
+                32,
+                4
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 0.9999457465277778,
+              "key": "ema::tokens_delta",
+              "max_abs": 0.04772978508844972,
+              "max_rel": 1.9998365407374612,
+              "max_ulp": 2421607195,
+              "rms": 0.006188002006170394,
+              "shape": [
+                6,
+                24,
+                32,
+                4
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::tokens_base",
+              "max_abs": 0.042945679277181625,
+              "max_rel": 1.9882046027266866,
+              "max_ulp": 2488833912,
+              "rms": 0.0072603497520130995,
+              "shape": [
+                24,
+                32,
+                4
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::s_up0",
+              "max_abs": 0.03919193148612976,
+              "max_rel": 1.9998530664363465,
+              "max_ulp": 2370420421,
+              "rms": 0.005268923093256534,
+              "shape": [
+                24,
+                3,
+                3,
+                24
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "ema::tokens_base",
+              "max_abs": 0.03402186185121536,
+              "max_rel": 1.997643827830178,
+              "max_ulp": 2401867992,
+              "rms": 0.005051611810074401,
+              "shape": [
+                24,
+                32,
+                4
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "ema::s_up0",
+              "max_abs": 0.029102593660354614,
+              "max_rel": 1.9888253150011665,
+              "max_ulp": 2357947816,
+              "rms": 0.0035397209710518705,
+              "shape": [
+                24,
+                3,
+                3,
+                24
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::s_conv0",
+              "max_abs": 0.02556084981188178,
+              "max_rel": 1.9926071091144006,
+              "max_ulp": 2374526144,
+              "rms": 0.005658389651718964,
+              "shape": [
+                24,
+                3,
+                3,
+                4
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::s_up1",
+              "max_abs": 0.02471598982810974,
+              "max_rel": 1.9724261761656283,
+              "max_ulp": 2392628646,
+              "rms": 0.004473127630486999,
+              "shape": [
+                24,
+                3,
+                3,
+                24
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::s_up2",
+              "max_abs": 0.01974761113524437,
+              "max_rel": 1.9957657226225345,
+              "max_ulp": 2381139064,
+              "rms": 0.0033224691111848974,
+              "shape": [
+                24,
+                3,
+                3,
+                24
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "ema::s_conv0",
+              "max_abs": 0.019290417432785034,
+              "max_rel": 1.9361634257287625,
+              "max_ulp": 2359784256,
+              "rms": 0.0038077703174424662,
+              "shape": [
+                24,
+                3,
+                3,
+                4
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "ema::s_up1",
+              "max_abs": 0.017964759841561317,
+              "max_rel": 1.9956646968471363,
+              "max_ulp": 2386738932,
+              "rms": 0.0029944847280429124,
+              "shape": [
+                24,
+                3,
+                3,
+                24
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::g_up1",
+              "max_abs": 0.014034509658813477,
+              "max_rel": 0.0145714210037881,
+              "max_ulp": 235460,
+              "rms": 0.005041141274143467,
+              "shape": [
+                24
+              ]
+            }
+          ]
+        }
+      ],
+      "run": "experiments/results/ddm_dt1_determinism_20260803T005159Z/run_C",
+      "telemetry": {
+        "denominator": "37 of 142 compared DIFFER (105 identical; 0 only-in-A, 0 only-in-B)",
+        "dseg_rows": [
+          {
+            "abs": 2.9669867621540114e-05,
+            "bit_identical": false,
+            "key": "a1_gate|ep1.realized_gate_dseg_mean",
+            "rel": 5.385311332543675e-05
+          },
+          {
+            "abs": 0.00017801920572924068,
+            "bit_identical": false,
+            "key": "a1_gate|ep1.realized_gate_dseg_per_pair_max",
+            "rel": 0.00023150291693684963
+          },
+          {
+            "abs": 0.047635396321614565,
+            "bit_identical": false,
+            "key": "a1_gate|ep3.interval_dseg_delta",
+            "rel": 0.543221453153397
+          },
+          {
+            "abs": 0.023817698160807282,
+            "bit_identical": false,
+            "key": "a1_gate|ep3.interval_dseg_per_epoch",
+            "rel": 0.543221453153397
+          },
+          {
+            "abs": 0.047665066189236105,
+            "bit_identical": false,
+            "key": "a1_gate|ep3.realized_gate_dseg_mean",
+            "rel": 0.09329893058332571
+          },
+          {
+            "abs": 0.01250203450520837,
+            "bit_identical": false,
+            "key": "a1_gate|ep3.realized_gate_dseg_per_pair_max",
+            "rel": 0.021629136858407533
+          }
+        ],
+        "n_compared": 142,
+        "n_differ": 37,
+        "n_identical": 105,
+        "n_only_a": 0,
+        "n_only_b": 0,
+        "verdict": "DIFFER",
+        "worst_deltas": [
+          {
+            "abs": 140947.0,
+            "key": "a1_gate|ep3.realized_flips_vs_prev_gate",
+            "rel": 0.21636221294363256,
+            "ulp": 1329223658635264
+          },
+          {
+            "abs": 94.0,
+            "key": "a1_gate|ep3.topology_per_class.betti0_realized.0",
+            "rel": 0.4845360824742268,
+            "ulp": 4292493394837504
+          },
+          {
+            "abs": 86.0,
+            "key": "a1_gate|ep3.topology_per_class.smallest_surviving_gt_component_px.4",
+            "rel": 0.0017088922006954794,
+            "ulp": 11819749998592
+          },
+          {
+            "abs": 39.0,
+            "key": "a1_gate|ep3.tokens_bytes_zlib",
+            "rel": 0.008003283398317258,
+            "ulp": 42880953483264
+          },
+          {
+            "abs": 39.0,
+            "key": "a1_gate|ep3.topology_per_class.betti0_realized.4",
+            "rel": 0.21666666666666667,
+            "ulp": 1372190511464448
+          },
+          {
+            "abs": 20.571075503152713,
+            "key": "epoch|ep2.gnorm_last_batch",
+            "rel": 0.06504958389684433,
+            "ulp": 361890187385191
+          },
+          {
+            "abs": 14.0,
+            "key": "a1_gate|ep3.tokens_bytes",
+            "rel": 0.006535947712418301,
+            "ulp": 30786325577728
+          },
+          {
+            "abs": 14.0,
+            "key": "a1_gate|ep3.tokens_bytes_smevr",
+            "rel": 0.006535947712418301,
+            "ulp": 30786325577728
+          },
+          {
+            "abs": 14.0,
+            "key": "a1_gate|ep3.total_counted_bytes",
+            "rel": 0.0024813895781637717,
+            "ulp": 15393162788864
+          },
+          {
+            "abs": 8.0,
+            "key": "a1_gate|ep3.topology_per_class.betti0_realized.2",
+            "rel": 0.05063291139240506,
+            "ulp": 281474976710656
+          },
+          {
+            "abs": 7.559571414504489,
+            "key": "epoch|ep3.gnorm_last_batch",
+            "rel": 0.01111867393083152,
+            "ulp": 66494693370006
+          },
+          {
+            "abs": 4.09515380859375,
+            "key": "epoch|ep2.ep_loss",
+            "rel": 0.029406966091482422,
+            "ulp": 144085415362560
+          }
+        ]
+      }
+    },
+    {
+      "checkpoints": [
+        {
+          "denominator": "40 of 41 compared DIFFER (1 identical; 0 only-in-A, 0 only-in-B)",
+          "file": "intra_seg_trunk_ce_ep00001.npz",
+          "n_compared": 41,
+          "n_differ": 40,
+          "n_identical": 1,
+          "n_only_a": 0,
+          "n_only_b": 0,
+          "verdict": "DIFFER",
+          "worst_deltas": [
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 0.9994574652777778,
+              "key": "param::tokens_delta",
+              "max_abs": 0.03665086813271046,
+              "max_rel": 1.9980427557592737,
+              "max_ulp": 2452293376,
+              "rms": 0.003611238917616575,
+              "shape": [
+                6,
+                24,
+                32,
+                4
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::tokens_base",
+              "max_abs": 0.028597638476639986,
+              "max_rel": 1.9812210849378036,
+              "max_ulp": 2425017728,
+              "rms": 0.003973893438994968,
+              "shape": [
+                24,
+                32,
+                4
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 0.9992947048611112,
+              "key": "ema::tokens_delta",
+              "max_abs": 0.02590269036591053,
+              "max_rel": 1.997869584799619,
+              "max_ulp": 2456381696,
+              "rms": 0.0020551708650890814,
+              "shape": [
+                6,
+                24,
+                32,
+                4
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::s_up2",
+              "max_abs": 0.021463372744619846,
+              "max_rel": 1.9916070427363857,
+              "max_ulp": 2405730176,
+              "rms": 0.004697366053339769,
+              "shape": [
+                24,
+                3,
+                3,
+                24
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::s_up1",
+              "max_abs": 0.020968563854694366,
+              "max_rel": 1.9944696229048156,
+              "max_ulp": 2406127616,
+              "rms": 0.0038133628538080744,
+              "shape": [
+                24,
+                3,
+                3,
+                24
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "ema::tokens_base",
+              "max_abs": 0.017719688825309277,
+              "max_rel": 1.9508724768660888,
+              "max_ulp": 2420384608,
+              "rms": 0.002131590732228342,
+              "shape": [
+                24,
+                32,
+                4
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::s_up0",
+              "max_abs": 0.01725676655769348,
+              "max_rel": 1.9440956827555431,
+              "max_ulp": 2410462176,
+              "rms": 0.003750756900554301,
+              "shape": [
+                24,
+                3,
+                3,
+                24
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::s_conv0",
+              "max_abs": 0.01585344970226288,
+              "max_rel": 1.9602817433099304,
+              "max_ulp": 2392997408,
+              "rms": 0.0032910560356471386,
+              "shape": [
+                24,
+                3,
+                3,
+                4
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::s_up3",
+              "max_abs": 0.014181414619088173,
+              "max_rel": 1.993074911157235,
+              "max_ulp": 2434940800,
+              "rms": 0.003940211092873062,
+              "shape": [
+                24,
+                3,
+                3,
+                24
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::b_conv0",
+              "max_abs": 0.014087250456213951,
+              "max_rel": 0.6208646158554445,
+              "max_ulp": 11333222,
+              "rms": 0.0035133489771774114,
+              "shape": [
+                24
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::g_up2",
+              "max_abs": 0.013651013374328613,
+              "max_rel": 0.013270019927105452,
+              "max_ulp": 141641,
+              "rms": 0.006114996603651359,
+              "shape": [
+                24
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::g_up1",
+              "max_abs": 0.013214409351348877,
+              "max_rel": 0.013042993796575397,
+              "max_ulp": 127454,
+              "rms": 0.0041659756966583176,
+              "shape": [
+                24
+              ]
+            }
+          ]
+        },
+        {
+          "denominator": "40 of 41 compared DIFFER (1 identical; 0 only-in-A, 0 only-in-B)",
+          "file": "intra_seg_trunk_tau_ep00003.npz",
+          "n_compared": 41,
+          "n_differ": 40,
+          "n_identical": 1,
+          "n_only_a": 0,
+          "n_only_b": 0,
+          "verdict": "DIFFER",
+          "worst_deltas": [
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::tokens_delta",
+              "max_abs": 0.09337763860821724,
+              "max_rel": 1.9993483569227588,
+              "max_ulp": 2384637212,
+              "rms": 0.021340971078791578,
+              "shape": [
+                6,
+                24,
+                32,
+                4
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::tokens_base",
+              "max_abs": 0.08287053555250168,
+              "max_rel": 1.9967327428047241,
+              "max_ulp": 2396444426,
+              "rms": 0.02080384233321286,
+              "shape": [
+                24,
+                32,
+                4
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "ema::tokens_delta",
+              "max_abs": 0.08037761598825455,
+              "max_rel": 1.9996329619364483,
+              "max_ulp": 2386220216,
+              "rms": 0.016387662136618335,
+              "shape": [
+                6,
+                24,
+                32,
+                4
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::s_up0",
+              "max_abs": 0.07955846190452576,
+              "max_rel": 1.997295298001382,
+              "max_ulp": 2360781956,
+              "rms": 0.01988072983313086,
+              "shape": [
+                24,
+                3,
+                3,
+                24
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::s_conv0",
+              "max_abs": 0.07280456088483334,
+              "max_rel": 1.9737503237789018,
+              "max_ulp": 2341213071,
+              "rms": 0.020012396965628277,
+              "shape": [
+                24,
+                3,
+                3,
+                4
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "ema::tokens_base",
+              "max_abs": 0.0651446608826518,
+              "max_rel": 1.9988343566132238,
+              "max_ulp": 2375537089,
+              "rms": 0.016289590697124188,
+              "shape": [
+                24,
+                32,
+                4
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::s_up1",
+              "max_abs": 0.06317448616027832,
+              "max_rel": 1.9966785779252458,
+              "max_ulp": 2371338280,
+              "rms": 0.017640469020103373,
+              "shape": [
+                24,
+                3,
+                3,
+                24
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "ema::s_up0",
+              "max_abs": 0.062304653227329254,
+              "max_rel": 1.9888728745425321,
+              "max_ulp": 2362635632,
+              "rms": 0.015591106157073445,
+              "shape": [
+                24,
+                3,
+                3,
+                24
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::s_up2",
+              "max_abs": 0.06105675920844078,
+              "max_rel": 1.9992693487281257,
+              "max_ulp": 2358048840,
+              "rms": 0.016470276329183922,
+              "shape": [
+                24,
+                3,
+                3,
+                24
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "ema::s_conv0",
+              "max_abs": 0.05818561278283596,
+              "max_rel": 1.992027574178379,
+              "max_ulp": 2353449972,
+              "rms": 0.015461409182995932,
+              "shape": [
+                24,
+                3,
+                3,
+                4
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::s_up3",
+              "max_abs": 0.053401486948132515,
+              "max_rel": 1.999600205339913,
+              "max_ulp": 2363761912,
+              "rms": 0.017674063767502857,
+              "shape": [
+                24,
+                3,
+                3,
+                24
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "ema::s_up2",
+              "max_abs": 0.052478939294815063,
+              "max_rel": 1.992948688874965,
+              "max_ulp": 2398108180,
+              "rms": 0.013679118394047647,
+              "shape": [
+                24,
+                3,
+                3,
+                24
+              ]
+            }
+          ]
+        },
+        {
+          "denominator": "40 of 41 compared DIFFER (1 identical; 0 only-in-A, 0 only-in-B)",
+          "file": "stage_seg_trunk_ce_exit.npz",
+          "n_compared": 41,
+          "n_differ": 40,
+          "n_identical": 1,
+          "n_only_a": 0,
+          "n_only_b": 0,
+          "verdict": "DIFFER",
+          "worst_deltas": [
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::tokens_delta",
+              "max_abs": 0.0678144246339798,
+              "max_rel": 1.9992900849519024,
+              "max_ulp": 2440101896,
+              "rms": 0.0114812508456725,
+              "shape": [
+                6,
+                24,
+                32,
+                4
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "ema::tokens_delta",
+              "max_abs": 0.05364509858191013,
+              "max_rel": 1.9954740858903774,
+              "max_ulp": 2433997920,
+              "rms": 0.007561475017480536,
+              "shape": [
+                6,
+                24,
+                32,
+                4
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::tokens_base",
+              "max_abs": 0.04780486784875393,
+              "max_rel": 1.9980002418351552,
+              "max_ulp": 2378376898,
+              "rms": 0.012052332288112462,
+              "shape": [
+                24,
+                32,
+                4
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::s_up0",
+              "max_abs": 0.04759436473250389,
+              "max_rel": 1.9901937542688104,
+              "max_ulp": 2362534853,
+              "rms": 0.01172921685458401,
+              "shape": [
+                24,
+                3,
+                3,
+                24
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::s_up2",
+              "max_abs": 0.04411480575799942,
+              "max_rel": 1.9975046029448524,
+              "max_ulp": 2385582468,
+              "rms": 0.01179264908951836,
+              "shape": [
+                24,
+                3,
+                3,
+                24
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::s_conv0",
+              "max_abs": 0.04156094277277589,
+              "max_rel": 1.9591805994447822,
+              "max_ulp": 2345479696,
+              "rms": 0.011095909622199003,
+              "shape": [
+                24,
+                3,
+                3,
+                4
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::s_up1",
+              "max_abs": 0.04067181795835495,
+              "max_rel": 1.9995228074263398,
+              "max_ulp": 2440371584,
+              "rms": 0.011168307020591274,
+              "shape": [
+                24,
+                3,
+                3,
+                24
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::s_up3",
+              "max_abs": 0.039431484416127205,
+              "max_rel": 1.9940220499300056,
+              "max_ulp": 2389155142,
+              "rms": 0.009828388117281402,
+              "shape": [
+                24,
+                3,
+                3,
+                24
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "ema::tokens_base",
+              "max_abs": 0.033479029312729836,
+              "max_rel": 1.9995988566901648,
+              "max_ulp": 2386228040,
+              "rms": 0.008157467115812536,
+              "shape": [
+                24,
+                32,
+                4
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "ema::s_up0",
+              "max_abs": 0.03337591513991356,
+              "max_rel": 1.9989421585364944,
+              "max_ulp": 2361120716,
+              "rms": 0.008018108669155059,
+              "shape": [
+                24,
+                3,
+                3,
+                24
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::s_head",
+              "max_abs": 0.03238496743142605,
+              "max_rel": 1.8915410533187993,
+              "max_ulp": 2345870336,
+              "rms": 0.006818377460396568,
+              "shape": [
+                3,
+                3,
+                3,
+                24
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::g_up1",
+              "max_abs": 0.031508564949035645,
+              "max_rel": 0.031931161589583826,
+              "max_ulp": 528626,
+              "rms": 0.012430568426578102,
+              "shape": [
+                24
+              ]
+            }
+          ]
+        },
+        {
+          "denominator": "40 of 41 compared DIFFER (1 identical; 0 only-in-A, 0 only-in-B)",
+          "file": "stage_seg_trunk_tau_final.npz",
+          "n_compared": 41,
+          "n_differ": 40,
+          "n_identical": 1,
+          "n_only_a": 0,
+          "n_only_b": 0,
+          "verdict": "DIFFER",
+          "worst_deltas": [
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::tokens_delta",
+              "max_abs": 0.09337763860821724,
+              "max_rel": 1.9993483569227588,
+              "max_ulp": 2384637212,
+              "rms": 0.021340971078791578,
+              "shape": [
+                6,
+                24,
+                32,
+                4
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::tokens_base",
+              "max_abs": 0.08287053555250168,
+              "max_rel": 1.9967327428047241,
+              "max_ulp": 2396444426,
+              "rms": 0.02080384233321286,
+              "shape": [
+                24,
+                32,
+                4
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "ema::tokens_delta",
+              "max_abs": 0.08037761598825455,
+              "max_rel": 1.9996329619364483,
+              "max_ulp": 2386220216,
+              "rms": 0.016387662136618335,
+              "shape": [
+                6,
+                24,
+                32,
+                4
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::s_up0",
+              "max_abs": 0.07955846190452576,
+              "max_rel": 1.997295298001382,
+              "max_ulp": 2360781956,
+              "rms": 0.01988072983313086,
+              "shape": [
+                24,
+                3,
+                3,
+                24
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::s_conv0",
+              "max_abs": 0.07280456088483334,
+              "max_rel": 1.9737503237789018,
+              "max_ulp": 2341213071,
+              "rms": 0.020012396965628277,
+              "shape": [
+                24,
+                3,
+                3,
+                4
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "ema::tokens_base",
+              "max_abs": 0.0651446608826518,
+              "max_rel": 1.9988343566132238,
+              "max_ulp": 2375537089,
+              "rms": 0.016289590697124188,
+              "shape": [
+                24,
+                32,
+                4
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::s_up1",
+              "max_abs": 0.06317448616027832,
+              "max_rel": 1.9966785779252458,
+              "max_ulp": 2371338280,
+              "rms": 0.017640469020103373,
+              "shape": [
+                24,
+                3,
+                3,
+                24
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "ema::s_up0",
+              "max_abs": 0.062304653227329254,
+              "max_rel": 1.9888728745425321,
+              "max_ulp": 2362635632,
+              "rms": 0.015591106157073445,
+              "shape": [
+                24,
+                3,
+                3,
+                24
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::s_up2",
+              "max_abs": 0.06105675920844078,
+              "max_rel": 1.9992693487281257,
+              "max_ulp": 2358048840,
+              "rms": 0.016470276329183922,
+              "shape": [
+                24,
+                3,
+                3,
+                24
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "ema::s_conv0",
+              "max_abs": 0.05818561278283596,
+              "max_rel": 1.992027574178379,
+              "max_ulp": 2353449972,
+              "rms": 0.015461409182995932,
+              "shape": [
+                24,
+                3,
+                3,
+                4
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "param::s_up3",
+              "max_abs": 0.053401486948132515,
+              "max_rel": 1.999600205339913,
+              "max_ulp": 2363761912,
+              "rms": 0.017674063767502857,
+              "shape": [
+                24,
+                3,
+                3,
+                24
+              ]
+            },
+            {
+              "dtype": "float32",
+              "frac_elem_differ": 1.0,
+              "key": "ema::s_up2",
+              "max_abs": 0.052478939294815063,
+              "max_rel": 1.992948688874965,
+              "max_ulp": 2398108180,
+              "rms": 0.013679118394047647,
+              "shape": [
+                24,
+                3,
+                3,
+                24
+              ]
+            }
+          ]
+        }
+      ],
+      "run": "experiments/results/ddm_dt1_determinism_20260803T005159Z/run_D",
+      "telemetry": {
+        "denominator": "48 of 142 compared DIFFER (94 identical; 0 only-in-A, 0 only-in-B)",
+        "dseg_rows": [
+          {
+            "abs": 0.00693766276041663,
+            "bit_identical": false,
+            "key": "a1_gate|ep1.realized_gate_dseg_mean",
+            "rel": 0.012593074732143203
+          },
+          {
+            "abs": 0.0416259765625,
+            "bit_identical": false,
+            "key": "a1_gate|ep1.realized_gate_dseg_per_pair_max",
+            "rel": 0.05414453096572302
+          },
+          {
+            "abs": 0.01765611436631942,
+            "bit_identical": false,
+            "key": "a1_gate|ep3.interval_dseg_delta",
+            "rel": 0.1676001029998711
+          },
+          {
+            "abs": 0.00882805718315971,
+            "bit_identical": false,
+            "key": "a1_gate|ep3.interval_dseg_per_epoch",
+            "rel": 0.1676001029998711
+          },
+          {
+            "abs": 0.02459377712673605,
+            "bit_identical": false,
+            "key": "a1_gate|ep3.realized_gate_dseg_mean",
+            "rel": 0.05309303725772582
+          },
+          {
+            "abs": 0.06710306803385413,
+            "bit_identical": false,
+            "key": "a1_gate|ep3.realized_gate_dseg_per_pair_max",
+            "rel": 0.11609162024937737
+          }
+        ],
+        "n_compared": 142,
+        "n_differ": 48,
+        "n_identical": 94,
+        "n_only_a": 0,
+        "n_only_b": 0,
+        "verdict": "DIFFER",
+        "worst_deltas": [
+          {
+            "abs": 273593.0,
+            "key": "a1_gate|ep3.realized_flips_vs_prev_gate",
+            "rel": 0.4199818862826968,
+            "ulp": 3608064586416128
+          },
+          {
+            "abs": 50239.0,
+            "key": "a1_gate|ep1.topology_per_class.smallest_surviving_gt_component_px.4",
+            "rel": 1.0,
+            "ulp": 4677137609166684160
+          },
+          {
+            "abs": 408.0,
+            "key": "a1_gate|ep3.topology_per_class.smallest_surviving_gt_component_px.0",
+            "rel": 0.00916030534351145,
+            "ulp": 56075093016576
+          },
+          {
+            "abs": 305.1394876539786,
+            "key": "epoch|ep2.gnorm_last_batch",
+            "rel": 0.49107033721724674,
+            "ulp": 4405986196170698
+          },
+          {
+            "abs": 119.28544591441164,
+            "key": "epoch|ep3.gnorm_last_batch",
+            "rel": 0.1492590333907516,
+            "ulp": 1049245878458726
+          },
+          {
+            "abs": 117.0,
+            "key": "a1_gate|ep3.topology_per_class.betti0_realized.0",
+            "rel": 0.6030927835051546,
+            "ulp": 5910974510923776
+          },
+          {
+            "abs": 115.85662095361317,
+            "key": "epoch|ep1.gnorm_last_batch",
+            "rel": 0.16495643861107512,
+            "ulp": 1019085615146674
+          },
+          {
+            "abs": 109.0,
+            "key": "a1_gate|ep3.topology_per_class.betti0_realized.4",
+            "rel": 0.436,
+            "ulp": 3835096557682688
+          },
+          {
+            "abs": 86.0,
+            "key": "a1_gate|ep3.topology_per_class.smallest_surviving_gt_component_px.4",
+            "rel": 0.0017088922006954794,
+            "ulp": 11819749998592
+          },
+          {
+            "abs": 82.0,
+            "key": "a1_gate|ep3.topology_per_class.betti0_realized.2",
+            "rel": 0.5466666666666666,
+            "ulp": 4996180836614144
+          },
+          {
+            "abs": 30.303544998168945,
+            "key": "a1_gate|ep3.ep_loss",
+            "rel": 0.34840694754082174,
+            "ulp": 2647951088287744
+          },
+          {
+            "abs": 30.303544998168945,
+            "key": "epoch|ep3.ep_loss",
+            "rel": 0.34840694754082174,
+            "ulp": 2647951088287744
+          }
+        ]
+      }
+    }
+  ],
+  "reference_checkpoint_files": [
+    "intra_seg_trunk_ce_ep00001.npz",
+    "intra_seg_trunk_tau_ep00003.npz",
+    "stage_seg_trunk_ce_exit.npz",
+    "stage_seg_trunk_tau_final.npz"
+  ],
+  "reference_run": "experiments/results/ddm_dt1_determinism_20260803T005159Z/run_A"
+}

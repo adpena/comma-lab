@@ -1,0 +1,149 @@
+{
+  "device": "gpu",
+  "families": {
+    "conv2d_dense": {
+      "bytes_sha_prefix": "1308bbd08475c290",
+      "digest_repeat0": 11190.794908409842,
+      "max_abs": 0.0,
+      "max_frac_differ": 0.0,
+      "max_ulp": 0,
+      "n_elem": 524288,
+      "n_pairs_compared": 1,
+      "n_pairs_differ": 0,
+      "shape": [
+        4,
+        64,
+        64,
+        32
+      ],
+      "verdict": "IDENTICAL"
+    },
+    "conv2d_grouped_strided": {
+      "bytes_sha_prefix": "d2ea81e8b4988ae0",
+      "digest_repeat0": 960.6695521941638,
+      "max_abs": 0.0,
+      "max_frac_differ": 0.0,
+      "max_ulp": 0,
+      "n_elem": 131072,
+      "n_pairs_compared": 1,
+      "n_pairs_differ": 0,
+      "shape": [
+        4,
+        32,
+        32,
+        32
+      ],
+      "verdict": "IDENTICAL"
+    },
+    "elementwise": {
+      "bytes_sha_prefix": "f4e33937a07fe411",
+      "digest_repeat0": 140267.42677823093,
+      "max_abs": 0.0,
+      "max_frac_differ": 0.0,
+      "max_ulp": 0,
+      "n_elem": 524288,
+      "n_pairs_compared": 1,
+      "n_pairs_differ": 0,
+      "shape": [
+        4,
+        64,
+        64,
+        32
+      ],
+      "verdict": "IDENTICAL"
+    },
+    "grad_conv_chain": {
+      "bytes_sha_prefix": "57c5c2205d5fe898",
+      "digest_repeat0": -2212.126156538725,
+      "max_abs": 0.0,
+      "max_frac_differ": 0.0,
+      "max_ulp": 0,
+      "n_elem": 9216,
+      "n_pairs_compared": 1,
+      "n_pairs_differ": 0,
+      "shape": [
+        32,
+        3,
+        3,
+        32
+      ],
+      "verdict": "IDENTICAL"
+    },
+    "matmul": {
+      "bytes_sha_prefix": "39f6e0313cfe202a",
+      "digest_repeat0": 2729.336283862591,
+      "max_abs": 0.0,
+      "max_frac_differ": 0.0,
+      "max_ulp": 0,
+      "n_elem": 262144,
+      "n_pairs_compared": 1,
+      "n_pairs_differ": 0,
+      "shape": [
+        512,
+        512
+      ],
+      "verdict": "IDENTICAL"
+    },
+    "mlx_random_normal_seeded": {
+      "bytes_sha_prefix": "e7022b60342f0350",
+      "digest_repeat0": -358.9856997726638,
+      "max_abs": 0.0,
+      "max_frac_differ": 0.0,
+      "max_ulp": 0,
+      "n_elem": 65536,
+      "n_pairs_compared": 1,
+      "n_pairs_differ": 0,
+      "shape": [
+        256,
+        256
+      ],
+      "verdict": "IDENTICAL"
+    },
+    "reduction_mean_axis": {
+      "bytes_sha_prefix": "f58a9ba9100066a1",
+      "digest_repeat0": 0.038116735173389316,
+      "max_abs": 0.0,
+      "max_frac_differ": 0.0,
+      "max_ulp": 0,
+      "n_elem": 32,
+      "n_pairs_compared": 1,
+      "n_pairs_differ": 0,
+      "shape": [
+        32
+      ],
+      "verdict": "IDENTICAL"
+    },
+    "reduction_sum_1d_1M": {
+      "bytes_sha_prefix": "cb05949bec3a16e0",
+      "digest_repeat0": 249.5826416015625,
+      "max_abs": 0.0,
+      "max_frac_differ": 0.0,
+      "max_ulp": 0,
+      "n_elem": 1,
+      "n_pairs_compared": 1,
+      "n_pairs_differ": 0,
+      "shape": [],
+      "verdict": "IDENTICAL"
+    },
+    "softmax_ce_like": {
+      "bytes_sha_prefix": "b57ec7dda39dc0de",
+      "digest_repeat0": 1.9713218212127686,
+      "max_abs": 0.0,
+      "max_frac_differ": 0.0,
+      "max_ulp": 0,
+      "n_elem": 1,
+      "n_pairs_compared": 1,
+      "n_pairs_differ": 0,
+      "shape": [],
+      "verdict": "IDENTICAL"
+    }
+  },
+  "mlx_version": "0.31.2",
+  "n_families": 9,
+  "n_families_differ": 0,
+  "platform": "macOS-26.4-arm64-arm-64bit-Mach-O",
+  "python": "3.13.12",
+  "repeats": 2,
+  "seed": 0,
+  "within_process_verdict": "IDENTICAL"
+}

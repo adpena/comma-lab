@@ -1580,6 +1580,21 @@ def build_argparser() -> argparse.ArgumentParser:
     ap.add_argument("--verdict-chunk", type=int, default=32,
                     help="pairs per CPU SegNet verdict chunk (<=120 per the charter)")
     ap.add_argument("--mlx-device", default="gpu", choices=("gpu", "cpu"))
+    ap.add_argument("--deterministic-r", action="store_true",
+                    help="ddm_dt1 (#903): route the R operator through the atomics-free fused "
+                         "Metal kernel so the R VJP is run-to-run BIT-IDENTICAL. DEFAULT-OFF "
+                         "(absent => the historical mx.vjp scatter backward, byte-identical to "
+                         "every prior run). MEASURED 2026-08-03: the default backward is "
+                         "NON-deterministic even WITHIN one process (the upsample VJP is a "
+                         "scatter; the downsample VJP is clean), which makes 40/41 checkpoint "
+                         "arrays differ between two runs of the same seed+config+inputs. With "
+                         "this flag: 41/41 arrays and 134/134 telemetry fields bit-identical "
+                         "across 4 runs. The fused FORWARD is bit-identical to the reference "
+                         "(max|delta|=0 at the real 384x512->874x1164->384x512 geometry) and the "
+                         "grad differs from the reference by ~1 ULP -- i.e. it picks one FIXED "
+                         "member of the noise cloud the reference was already sampling from. "
+                         "Also ~4.5x faster on the R grad. Requires a Metal GPU: REFUSES rather "
+                         "than silently falling back.")
     ap.add_argument("--token-init-mode", default="zero", choices=("zero", "solve_project"),
                     help="lv1 B solve-init: v3 ANALYTIC projection of the materializable "
                          "solution-set member (GT frame_1 at the render plane, area-mean "
@@ -1834,6 +1849,41 @@ def main() -> int:
 
     mx.set_default_device(mx.gpu if args.mlx_device == "gpu" else mx.cpu)
     mx.random.seed(cfg.seed)
+
+    # ddm_dt1 (#903) DETERMINISM: the default MLX-GPU R backward is an atomics/scatter
+    # upsample VJP whose accumulation order varies run-to-run AND within one process
+    # (MEASURED .omx/research/ddm_dt1_determinism_floor_20260803.md). ~1 ULP in the
+    # gradient, but Adam's first step is essentially sign(g), so a 1-ULP gradient flip
+    # becomes a full lr-sized parameter step and then amplifies chaotically. Gated =>
+    # absent, this block is skipped and the run is byte-identical to every prior run.
+    # NOT silent either way: the chosen mode is always logged (no-silent-guard rule).
+    if args.deterministic_r:
+        from tac.local_acceleration.metal_fused_r_operator import metal_fused_r_available
+
+        from experiments.train_witness_realized_through_R_mlx import set_fused_r_kernel
+        if not metal_fused_r_available():
+            already_det = args.mlx_device == "cpu"
+            raise SystemExit(
+                "--deterministic-r REFUSED: the fused Metal R kernel needs a Metal GPU "
+                f"default device (current: {mx.default_device()}). Refusing rather than "
+                "silently running under a flag that promises determinism. "
+                + ("--mlx-device cpu is ALREADY run-to-run bit-identical (MEASURED "
+                   "2026-08-03, 3/3 windows, 41/41 arrays), so just DROP --deterministic-r."
+                   if already_det else
+                   "Either run on a Metal GPU, or use --mlx-device cpu (MEASURED "
+                   "deterministic, slower), or drop the flag and accept the MEASURED "
+                   "run-to-run floor."))
+        set_fused_r_kernel(True)
+    tlog({"event": "r_operator_mode", "deterministic_r": bool(args.deterministic_r),
+          "mlx_device": args.mlx_device,
+          "note": ("fused atomics-free Metal R VJP (run-to-run bit-identical)"
+                   if args.deterministic_r else
+                   "default mx.vjp scatter backward: MEASURED non-deterministic on GPU "
+                   "(deterministic on --mlx-device cpu); lever A/Bs that RETRAIN are inside "
+                   "the noise floor unless the delta clears it"),
+          "receipt": ".omx/research/ddm_dt1_determinism_floor_20260803.md",
+          "score_claim": False})
+
 
     # MLX scorer adapter (training-gradient device; NEVER a score) + canonical loss.
     upstream_root = str(Path(sys.modules["tac"].__file__).resolve().parents[2] / "upstream")

@@ -1,0 +1,327 @@
+{
+  "excluded_npz_keys": [
+    "meta::json"
+  ],
+  "excluded_telemetry_fields": [
+    "elapsed_s",
+    "elapsed_seconds",
+    "epoch_seconds",
+    "epoch_total_s",
+    "gate_wall_seconds",
+    "host",
+    "out_dir",
+    "peak_rss_gib",
+    "pid",
+    "rss_gib",
+    "seconds",
+    "t",
+    "t_wall",
+    "timestamp",
+    "ts",
+    "utc",
+    "wall_minutes",
+    "wall_seconds",
+    "written_at_utc"
+  ],
+  "n_runs": 4,
+  "pairs": [
+    {
+      "checkpoints": [
+        {
+          "denominator": "0 of 41 compared DIFFER (41 identical; 0 only-in-A, 0 only-in-B)",
+          "file": "intra_seg_trunk_ce_ep00001.npz",
+          "n_compared": 41,
+          "n_differ": 0,
+          "n_identical": 41,
+          "n_only_a": 0,
+          "n_only_b": 0,
+          "verdict": "IDENTICAL",
+          "worst_deltas": []
+        },
+        {
+          "denominator": "0 of 41 compared DIFFER (41 identical; 0 only-in-A, 0 only-in-B)",
+          "file": "intra_seg_trunk_tau_ep00003.npz",
+          "n_compared": 41,
+          "n_differ": 0,
+          "n_identical": 41,
+          "n_only_a": 0,
+          "n_only_b": 0,
+          "verdict": "IDENTICAL",
+          "worst_deltas": []
+        },
+        {
+          "denominator": "0 of 41 compared DIFFER (41 identical; 0 only-in-A, 0 only-in-B)",
+          "file": "stage_seg_trunk_ce_exit.npz",
+          "n_compared": 41,
+          "n_differ": 0,
+          "n_identical": 41,
+          "n_only_a": 0,
+          "n_only_b": 0,
+          "verdict": "IDENTICAL",
+          "worst_deltas": []
+        },
+        {
+          "denominator": "0 of 41 compared DIFFER (41 identical; 0 only-in-A, 0 only-in-B)",
+          "file": "stage_seg_trunk_tau_final.npz",
+          "n_compared": 41,
+          "n_differ": 0,
+          "n_identical": 41,
+          "n_only_a": 0,
+          "n_only_b": 0,
+          "verdict": "IDENTICAL",
+          "worst_deltas": []
+        }
+      ],
+      "run": "experiments/results/ddm_dt1_determinism_20260803T005159Z/fr_B",
+      "telemetry": {
+        "denominator": "0 of 134 compared DIFFER (134 identical; 0 only-in-A, 0 only-in-B)",
+        "dseg_rows": [
+          {
+            "abs": 0.0,
+            "bit_identical": true,
+            "key": "a1_gate|ep1.realized_gate_dseg_mean",
+            "rel": 0.0
+          },
+          {
+            "abs": 0.0,
+            "bit_identical": true,
+            "key": "a1_gate|ep1.realized_gate_dseg_per_pair_max",
+            "rel": 0.0
+          },
+          {
+            "abs": 0.0,
+            "bit_identical": true,
+            "key": "a1_gate|ep3.interval_dseg_delta",
+            "rel": 0.0
+          },
+          {
+            "abs": 0.0,
+            "bit_identical": true,
+            "key": "a1_gate|ep3.interval_dseg_per_epoch",
+            "rel": 0.0
+          },
+          {
+            "abs": 0.0,
+            "bit_identical": true,
+            "key": "a1_gate|ep3.realized_gate_dseg_mean",
+            "rel": 0.0
+          },
+          {
+            "abs": 0.0,
+            "bit_identical": true,
+            "key": "a1_gate|ep3.realized_gate_dseg_per_pair_max",
+            "rel": 0.0
+          }
+        ],
+        "n_compared": 134,
+        "n_differ": 0,
+        "n_identical": 134,
+        "n_only_a": 0,
+        "n_only_b": 0,
+        "verdict": "IDENTICAL",
+        "worst_deltas": []
+      }
+    },
+    {
+      "checkpoints": [
+        {
+          "denominator": "0 of 41 compared DIFFER (41 identical; 0 only-in-A, 0 only-in-B)",
+          "file": "intra_seg_trunk_ce_ep00001.npz",
+          "n_compared": 41,
+          "n_differ": 0,
+          "n_identical": 41,
+          "n_only_a": 0,
+          "n_only_b": 0,
+          "verdict": "IDENTICAL",
+          "worst_deltas": []
+        },
+        {
+          "denominator": "0 of 41 compared DIFFER (41 identical; 0 only-in-A, 0 only-in-B)",
+          "file": "intra_seg_trunk_tau_ep00003.npz",
+          "n_compared": 41,
+          "n_differ": 0,
+          "n_identical": 41,
+          "n_only_a": 0,
+          "n_only_b": 0,
+          "verdict": "IDENTICAL",
+          "worst_deltas": []
+        },
+        {
+          "denominator": "0 of 41 compared DIFFER (41 identical; 0 only-in-A, 0 only-in-B)",
+          "file": "stage_seg_trunk_ce_exit.npz",
+          "n_compared": 41,
+          "n_differ": 0,
+          "n_identical": 41,
+          "n_only_a": 0,
+          "n_only_b": 0,
+          "verdict": "IDENTICAL",
+          "worst_deltas": []
+        },
+        {
+          "denominator": "0 of 41 compared DIFFER (41 identical; 0 only-in-A, 0 only-in-B)",
+          "file": "stage_seg_trunk_tau_final.npz",
+          "n_compared": 41,
+          "n_differ": 0,
+          "n_identical": 41,
+          "n_only_a": 0,
+          "n_only_b": 0,
+          "verdict": "IDENTICAL",
+          "worst_deltas": []
+        }
+      ],
+      "run": "experiments/results/ddm_dt1_determinism_20260803T005159Z/fr_C",
+      "telemetry": {
+        "denominator": "0 of 134 compared DIFFER (134 identical; 0 only-in-A, 0 only-in-B)",
+        "dseg_rows": [
+          {
+            "abs": 0.0,
+            "bit_identical": true,
+            "key": "a1_gate|ep1.realized_gate_dseg_mean",
+            "rel": 0.0
+          },
+          {
+            "abs": 0.0,
+            "bit_identical": true,
+            "key": "a1_gate|ep1.realized_gate_dseg_per_pair_max",
+            "rel": 0.0
+          },
+          {
+            "abs": 0.0,
+            "bit_identical": true,
+            "key": "a1_gate|ep3.interval_dseg_delta",
+            "rel": 0.0
+          },
+          {
+            "abs": 0.0,
+            "bit_identical": true,
+            "key": "a1_gate|ep3.interval_dseg_per_epoch",
+            "rel": 0.0
+          },
+          {
+            "abs": 0.0,
+            "bit_identical": true,
+            "key": "a1_gate|ep3.realized_gate_dseg_mean",
+            "rel": 0.0
+          },
+          {
+            "abs": 0.0,
+            "bit_identical": true,
+            "key": "a1_gate|ep3.realized_gate_dseg_per_pair_max",
+            "rel": 0.0
+          }
+        ],
+        "n_compared": 134,
+        "n_differ": 0,
+        "n_identical": 134,
+        "n_only_a": 0,
+        "n_only_b": 0,
+        "verdict": "IDENTICAL",
+        "worst_deltas": []
+      }
+    },
+    {
+      "checkpoints": [
+        {
+          "denominator": "0 of 41 compared DIFFER (41 identical; 0 only-in-A, 0 only-in-B)",
+          "file": "intra_seg_trunk_ce_ep00001.npz",
+          "n_compared": 41,
+          "n_differ": 0,
+          "n_identical": 41,
+          "n_only_a": 0,
+          "n_only_b": 0,
+          "verdict": "IDENTICAL",
+          "worst_deltas": []
+        },
+        {
+          "denominator": "0 of 41 compared DIFFER (41 identical; 0 only-in-A, 0 only-in-B)",
+          "file": "intra_seg_trunk_tau_ep00003.npz",
+          "n_compared": 41,
+          "n_differ": 0,
+          "n_identical": 41,
+          "n_only_a": 0,
+          "n_only_b": 0,
+          "verdict": "IDENTICAL",
+          "worst_deltas": []
+        },
+        {
+          "denominator": "0 of 41 compared DIFFER (41 identical; 0 only-in-A, 0 only-in-B)",
+          "file": "stage_seg_trunk_ce_exit.npz",
+          "n_compared": 41,
+          "n_differ": 0,
+          "n_identical": 41,
+          "n_only_a": 0,
+          "n_only_b": 0,
+          "verdict": "IDENTICAL",
+          "worst_deltas": []
+        },
+        {
+          "denominator": "0 of 41 compared DIFFER (41 identical; 0 only-in-A, 0 only-in-B)",
+          "file": "stage_seg_trunk_tau_final.npz",
+          "n_compared": 41,
+          "n_differ": 0,
+          "n_identical": 41,
+          "n_only_a": 0,
+          "n_only_b": 0,
+          "verdict": "IDENTICAL",
+          "worst_deltas": []
+        }
+      ],
+      "run": "experiments/results/ddm_dt1_determinism_20260803T005159Z/fr_D",
+      "telemetry": {
+        "denominator": "0 of 134 compared DIFFER (134 identical; 0 only-in-A, 0 only-in-B)",
+        "dseg_rows": [
+          {
+            "abs": 0.0,
+            "bit_identical": true,
+            "key": "a1_gate|ep1.realized_gate_dseg_mean",
+            "rel": 0.0
+          },
+          {
+            "abs": 0.0,
+            "bit_identical": true,
+            "key": "a1_gate|ep1.realized_gate_dseg_per_pair_max",
+            "rel": 0.0
+          },
+          {
+            "abs": 0.0,
+            "bit_identical": true,
+            "key": "a1_gate|ep3.interval_dseg_delta",
+            "rel": 0.0
+          },
+          {
+            "abs": 0.0,
+            "bit_identical": true,
+            "key": "a1_gate|ep3.interval_dseg_per_epoch",
+            "rel": 0.0
+          },
+          {
+            "abs": 0.0,
+            "bit_identical": true,
+            "key": "a1_gate|ep3.realized_gate_dseg_mean",
+            "rel": 0.0
+          },
+          {
+            "abs": 0.0,
+            "bit_identical": true,
+            "key": "a1_gate|ep3.realized_gate_dseg_per_pair_max",
+            "rel": 0.0
+          }
+        ],
+        "n_compared": 134,
+        "n_differ": 0,
+        "n_identical": 134,
+        "n_only_a": 0,
+        "n_only_b": 0,
+        "verdict": "IDENTICAL",
+        "worst_deltas": []
+      }
+    }
+  ],
+  "reference_checkpoint_files": [
+    "intra_seg_trunk_ce_ep00001.npz",
+    "intra_seg_trunk_tau_ep00003.npz",
+    "stage_seg_trunk_ce_exit.npz",
+    "stage_seg_trunk_tau_final.npz"
+  ],
+  "reference_run": "experiments/results/ddm_dt1_determinism_20260803T005159Z/fr_A"
+}
