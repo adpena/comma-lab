@@ -29,7 +29,7 @@ literally zero seg cost.
 
 **And the family still does not pay.** The steering direction is video-derived, so it must be shipped,
 and at **every** measured operating point the rate cost of naming the coordinates exceeds the pose gain
-— by **1.9x at the cheapest arm** and by 2.9x at the per-pair argmin envelope. This is a
+— by **7.3x at the cheapest fixed arm** and, at best, by **2.9x** at the per-pair argmin envelope. This is a
 **FORMULATION**-scope closure (explicit shipped blind-coordinate correction index), not a family kill;
 §6 names the one substitution that flips the sign and the measurement that refutes the two cheapest
 candidates for it.
@@ -183,8 +183,10 @@ combinatorial bound. The table below uses the **measured** cost (log-interpolate
 
 98.6% of pairs improve under the per-pair argmin, and the envelope cuts `d_pose` by **73%**
 (0.0390 -> 0.0106, ΔS_pose −0.299). The arm index itself is negligible (3 bits/pair = 225 B total).
-**But NET ΔS is positive at every single operating point.** The tightest deficit is **1.9x at k=5**;
-the argmin envelope loses by 2.9x.
+**But NET ΔS is positive at every single operating point.** Cost/gain ratios: 7.27x (k=5) · 8.29x
+(k=29) · 11.17x (k=241) · 16.97x (k=1,222) · 42.69x (k=5,138). **The tightest deficit anywhere is
+2.92x, at the per-pair argmin envelope** — the envelope's much larger pose gain outruns its byte cost
+faster than any fixed arm does, so the cheapest arm is NOT the best-value arm.
 
 Per-pair argmin over a deterministic score is a *realizable encoder-side choice*, not selection on
 noise — d_pose is deterministic on fixed pairs and the choice is reproducible. The grid was widened
@@ -197,7 +199,7 @@ is bracketed and the bound is no longer loose on that side.
 
 **The entire question reduces to: can the INDEX be made receiver-computable?** If it can, only the k
 sign bits are video-derived. At the k=5 arm that is 0.6 B/pair instead of 12 B/pair:
-`ΔS_rate +0.00025` against `ΔS_pose −0.00064` = **NET −0.00039**. The family flips from losing 1.9x to
+`ΔS_rate +0.00025` against `ΔS_pose −0.00064` = **NET −0.00039**. The family flips from losing 7.3x to
 winning — the whole verdict rests on one substitution.
 
 **So I measured it (n=12).** Two receiver-computable rankings (both need only `f1` and the homography
@@ -239,15 +241,16 @@ iteration is free.
 **REFUTED.** At the economically relevant small k the one-shot gradient sign is *already the optimum*
 — 10 of 12 pairs are a fixed point after a single step, and re-solving buys exactly zero. At k=200 the
 trajectory 2-cycles (a Jacobi all-coordinates-at-once artifact) and the extra gain is 8.3e-05, ~0.7% of
-base — three orders of magnitude short of closing the 1.9x deficit. **The cheapest owed measurement
+base — nowhere near the 2.9x-to-7.3x deficit it would have to close. **The cheapest owed measurement
 came back negative; the deficit stands.** A Gauss-Seidel (one coordinate at a time) re-solve is
-untested and is k-times more expensive to run, but it would have to find ~90x more gain than the Jacobi
-version to matter.
+untested and is k-times more expensive to run, but it would have to find far more gain than the Jacobi
+version to matter (at k=200 the Jacobi re-solve buys 8.3e-05 against a deficit measured in whole ΔS units).
 
 ## 7. Verdict scope and what is owed
 
 **CLOSED at FORMULATION scope (this vehicle, this steering):** shipping an explicit per-pair
-blind-coordinate correction index. Net ΔS positive at every measured k; best case loses by 1.9x.
+blind-coordinate correction index. Net ΔS positive at every measured k; best case (the per-pair argmin
+envelope) loses by 2.92x, the cheapest fixed arm by 7.27x.
 
 **NOT closed:**
 - **The family.** The actuator is real, exactly seg-free, direction-selective, and only ~2x under water.
