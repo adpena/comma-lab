@@ -14,7 +14,7 @@ from typing import Any
 # MIRROR of ``experiments/train_levelset_witness_realized_through_R_mlx.py::LOSS_TERM_KEYS`` --
 # kept key-for-key identical by hand; see that module for the per-key provenance comments.
 LOSS_TERM_KEYS: tuple[str, ...] = (
-    "seg", "pose", "distill",
+    "seg", "pose", "distill", "existence",
     "eikonal", "length", "eik_steik", "boundary_distance",
     "lane_edge", "margin_saliency", "subpix", "chroma_boundary", "lane_skipband",
     "margin_satisfice", "horizon_margin", "temporal_screw", "phase_advect", "island_amplify",

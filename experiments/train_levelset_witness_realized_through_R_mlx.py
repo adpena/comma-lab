@@ -5221,7 +5221,7 @@ def _stage_rewarmup_factor(
 LOSS_TERM_KEYS: tuple[str, ...] = (
     # #304 item 4 per-term loss telemetry -- the canonical row schema. Order matches total_loss_fn's
     # additive composition: base (seg CE-form + pose sqrt-term) then every stacked lever term.
-    "seg", "pose", "distill",
+    "seg", "pose", "distill", "existence",
     "eikonal", "length", "eik_steik", "boundary_distance", "lane_edge",
     "margin_saliency", "subpix", "chroma_boundary", "lane_skipband",
     "margin_satisfice", "horizon_margin", "temporal_screw",
@@ -5233,6 +5233,11 @@ LOSS_TERM_KEYS: tuple[str, ...] = (
     # so they MUST be in the schema or the sum_minus_total confound-immune self-check breaks the
     # moment a P0 force is activated (SEAL R5 MAJOR-1 fix). Composition order: after chroma_boundary,
     # before island_amplify (matches total_loss_fn's additive order). Default-OFF => 0.0, byte-neutral.
+    # "existence" (ddm_p4x #920 LANE EXISTENCE primitive, 2026-08-03): the base trainer's loss_fn
+    # writes terms_out["existence"] when the COMPONENT-level existence hinge is armed. Registered
+    # here for the same reason margin_satisfice/temporal_screw were: sum_terms iterates this schema,
+    # so an unregistered key silently drops its addend and sum_minus_total stops sitting at fp
+    # tolerance the moment the term is active. Default-OFF (weight 0.0) => 0.0, byte-neutral.
     # "distill" (ddm_dw1 QA75 solve-frame distillation, 2026-07-30): the base trainer's base_loss
     # writes terms_out["distill"] AND adds distill_weight*distill_term to the returned total
     # (train_witness_realized_through_R_mlx.py ~L1528). It shipped UNREGISTERED for 2 days -- the

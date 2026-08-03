@@ -340,6 +340,22 @@ class TR1Config:
     # guard now SELF-REPORTS its inertness (inertness_alarm in the gate telemetry).
     lane_guard_ratchet: bool = False
     lane_guard_ratchet_horizon: int = 0   # 0 => self-derive max(mean_gates, gates_seen)
+    # ---- ddm_p4x (#920) LANE EXISTENCE PRIMITIVE + per-class BIRTH MATRIX ---------------
+    # A SEPARATE loss TERM at COMPONENT granularity -- NOT another seg_pixel_w addend.
+    # Every lane_guard mechanism above is a per-pixel weight, which is why the cg1r ledger
+    # records protection=ABSENT for the ANNIHILATE verb specifically: a rim-peel guard
+    # up-weights currently-WON support and does nothing for a whole component being lost.
+    # cg1r MEASURED per-flip depth as direction-SYMMETRIC (1.074x Road<->Lane) while the
+    # count asymmetry runs to 15.88x -- the discount is VOLUMETRIC, so protection must be
+    # existence/component-level. s(c) = logsumexp_beta(live margin over c) -> the word's
+    # WITNESS pixel; loss = mean_c w_c * relu(target - s(c)). O(#components) ~ 27.6/frame.
+    # DEFAULT-OFF (weight 0.0) => term never built => BYTE-IDENTICAL.
+    existence_hinge_weight: float = 0.0        # 0.0 => OFF
+    existence_hinge_classes: str = "lane,movable"  # measured: the only two with real annihilation
+    existence_hinge_beta: float = 0.0          # 0.0 => per-class DERIVED log(mean_area)/tolerance
+    existence_hinge_target: float = 0.0        # 0.0 => bare existence (the decision boundary)
+    existence_hinge_weight_policy: str = ""    # "" => per-class policy from the BIRTH_MATRIX
+    existence_hinge_connectivity: int = 8      # 8 = Rosenfeld/receiver; 4 = gt2's own grammar
     # ---- ddm_bp1 (#824) BOUNDARY RESET RACE — arm selector (default = arm B incumbent) ----
     adam_bias_correction: bool = False    # gc15 §7 / tac.optimization.reset_operator: False =
     # ARM_B_ZERO_RESET (MLX's own Adam default => arm A/control trains BIT-IDENTICALLY to every
@@ -1958,6 +1974,34 @@ def build_argparser() -> argparse.ArgumentParser:
     ap.add_argument("--lane-guard-ratchet-horizon", type=int, default=0,
                     help="bs2 #871 deadband horizon in gates (0 => self-derive from gates seen; "
                          "pass the run's planned gate count for a stationary deadband)")
+    # ---- ddm_p4x (#920) LANE EXISTENCE PRIMITIVE + per-class BIRTH MATRIX ---------------
+    ap.add_argument("--existence-hinge-weight", type=float, default=0.0,
+                    help="p4x #920: weight of the COMPONENT-level existence hinge "
+                         "s(c)=logsumexp_beta(live margin over GT component c); "
+                         "loss = mean_c w_c*relu(target - s(c)). 0.0 => OFF (byte-identical). "
+                         "This is a SEPARATE TERM, not a seg_pixel_w addend: cg1r MEASURED "
+                         "per-flip depth as direction-symmetric (1.074x), so the lane-erasure "
+                         "discount is VOLUMETRIC and per-pixel reweights are expected null on "
+                         "the ANNIHILATE verb.")
+    ap.add_argument("--existence-hinge-classes", default="lane,movable",
+                    help="p4x comma list of protected classes. MEASURED default: the only two "
+                         "with a materially non-zero word-annihilation rate (Lane 54.38%%, "
+                         "Movable 16.20%% at 8-conn); MyCar annihilates 0 words in 600 frames.")
+    ap.add_argument("--existence-hinge-beta", type=float, default=0.0,
+                    help="p4x softmax sharpness (0.0 => per-class DERIVED as "
+                         "log(mean_component_area)/tolerance; Lane 7.4587, Movable 12.9896). "
+                         "beta->inf recovers the exact witness pixel.")
+    ap.add_argument("--existence-hinge-target", type=float, default=0.0,
+                    help="p4x hinge target in margin units (0.0 = bare existence, i.e. the "
+                         "decision boundary itself; >0 adds a survival cushion)")
+    ap.add_argument("--existence-hinge-weight-policy", default="",
+                    choices=("", "uniform", "sqrt_area", "area"),
+                    help="p4x per-component weight w_c ('' => per-class BIRTH_MATRIX policy: "
+                         "Lane uniform (no interior), Movable sqrt_area (has interior)). RACED.")
+    ap.add_argument("--existence-hinge-connectivity", type=int, default=8, choices=(4, 8),
+                    help="p4x component grammar. 8 = Rosenfeld/receiver-consolidation (default, "
+                         "physical); 4 = gt2's own published grammar (MEASURED by p4x: gt2 is "
+                         "4-connected). Per-WORD rates are NOT comparable across grammars.")
     ap.add_argument("--token-temporal-mode", default="shared_base",
                     choices=("shared_base", "independent"),
                     help="shared_base = identity-xi advection (Einstein d_cov/d_gauge force)")
@@ -2315,6 +2359,12 @@ def main() -> int:
         lane_guard_lambda_max=args.lane_guard_lambda_max,
         lane_guard_born_weight=args.lane_guard_born_weight,
         lane_guard_margin_floor_weight=args.lane_guard_margin_floor_weight,
+        existence_hinge_weight=args.existence_hinge_weight,
+        existence_hinge_classes=args.existence_hinge_classes,
+        existence_hinge_beta=args.existence_hinge_beta,
+        existence_hinge_target=args.existence_hinge_target,
+        existence_hinge_weight_policy=args.existence_hinge_weight_policy,
+        existence_hinge_connectivity=args.existence_hinge_connectivity,
         lane_guard_lambda_init=args.lane_guard_lambda_init,
         lane_guard_ratchet=args.lane_guard_ratchet,
         lane_guard_ratchet_horizon=args.lane_guard_ratchet_horizon,
@@ -2714,6 +2764,63 @@ def main() -> int:
                       "outside sigma(class, GT margin) BY CONSTRUCTION (ddm_ti1). A/B owed "
                       "(needs GO); canonical effective-frontier pointer UNMOVED"})
 
+    # ---- ddm_p4x (#920) EXISTENCE primitive setup --------------------------------------
+    # GT is STATIC per pair index, so the component index is built ONCE per pair and cached
+    # (MEASURED 5.3 ms/frame, 3.2 s for the whole n600 corpus -- never on the hot path).
+    # The compact index is ~9 KB/pair => ~5.5 MB for n600, so no storage-tier decision.
+    # OFF => this whole block is skipped, nothing is imported, no state exists.
+    _exist_cfg = None
+    _exist_cache: dict[int, Any] = {}
+    if cfg.existence_hinge_weight > 0.0:
+        from tac.optimization import existence_hinge as _eh
+        _CLASS_IDS = {"road": _eh.ROAD, "lane": _eh.LANE, "undrivable": _eh.UNDRIVABLE,
+                      "movable": _eh.MOVABLE, "mycar": _eh.MYCAR}
+        _names = [s.strip().lower() for s in cfg.existence_hinge_classes.split(",") if s.strip()]
+        _unknown = [n for n in _names if n not in _CLASS_IDS]
+        if _unknown:
+            raise SystemExit(f"--existence-hinge-classes: unknown {_unknown}; "
+                             f"choose from {sorted(_CLASS_IDS)}")
+        _exist_cfg = _eh.ExistenceHingeConfig(
+            weight=float(cfg.existence_hinge_weight),
+            protected_classes=tuple(_CLASS_IDS[n] for n in _names),
+            beta_override=(cfg.existence_hinge_beta or None),
+            target_override=(cfg.existence_hinge_target or None),
+            weight_policy_override=(cfg.existence_hinge_weight_policy or None),
+        )
+        _exist_cfg.validate()
+        tlog({"event": "existence_hinge_init",
+              "weight": float(cfg.existence_hinge_weight),
+              "classes": _names,
+              "connectivity": int(cfg.existence_hinge_connectivity),
+              "betas": {_eh.BIRTH_MATRIX[c].class_name: _exist_cfg.policy_for(c).beta
+                        for c in _exist_cfg.protected_classes},
+              "weight_policies": {_eh.BIRTH_MATRIX[c].class_name:
+                                  _exist_cfg.policy_for(c).weight_policy
+                                  for c in _exist_cfg.protected_classes},
+              "annihilate_ceiling_s": _eh.protected_ceiling_s(
+                  _exist_cfg.protected_classes, int(cfg.existence_hinge_connectivity)),
+              "grammar_note": "gt2's published per-word rates are 4-CONNECTED (p4x MEASURED); "
+                              "per-word capture fractions are NOT comparable across grammars"})
+
+    def _existence_pack(idx: int):
+        """Per-pair (pixel_flat, mask, betas, targets, weights) as mx arrays; cached."""
+        pack = _exist_cache.get(idx)
+        if pack is None:
+            ci = _eh.build_component_index(
+                np.asarray(lstars[idx], dtype=np.int64),
+                _exist_cfg.protected_classes,
+                connectivity=int(cfg.existence_hinge_connectivity))
+            if ci.n_comp == 0:
+                pack = False  # sentinel: this pair has no protected words
+            else:
+                b, t = _eh.component_betas_targets(ci, _exist_cfg)
+                pack = (mx.array(ci.pixel_flat.astype(np.int32)),
+                        mx.array(_eh.membership_mask_np(ci)),
+                        mx.array(b), mx.array(t),
+                        mx.array(_eh.component_weights(ci, _exist_cfg)))
+            _exist_cache[idx] = pack
+        return None if pack is False else pack
+
     def pair_loss(mdl, idx: int, form: str):
         lstar = np.asarray(lstars[idx], dtype=np.int64)
         lstar_oh = mx.array((lstar[..., None] == np.arange(5)).astype(np.float32))[None]
@@ -2749,12 +2856,16 @@ def main() -> int:
         if distill_mm is not None:
             dl = np.asarray(distill_mm[idx], dtype=np.float32)         # (5,H,W)
             distill_logits = mx.array(np.transpose(dl, (1, 2, 0)))[None]  # (1,H,W,5)
+        # ddm_p4x (#920): COMPONENT-level existence term. None => never built => byte-identical.
+        existence_pack = _existence_pack(idx) if _exist_cfg is not None else None
         return loss_fn(mdl, None, idx, idx, lstar_oh, margin, pose_tgt,
                        cfg.w_seg, 0.0, 0.0, cfg.margin_target, seg_form=form,
                        seg_pixel_w=seg_pixel_w, compute_pose=False,
                        distill_logits=distill_logits, distill_weight=cfg.distill_weight,
                        distill_temp=cfg.distill_temp, distill_form=cfg.distill_form,
-                       distill_attack_temp=cfg.distill_attack_temp)
+                       distill_attack_temp=cfg.distill_attack_temp,
+                       existence_pack=existence_pack,
+                       existence_weight=cfg.existence_hinge_weight)
 
     state_form = {"form": cfg.seg_form_start}
 

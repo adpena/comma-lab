@@ -1382,7 +1382,7 @@ def make_loss_fn(
         b, t, h2, w2, c6 = yuv.shape
         return mx.reshape(mx.transpose(yuv, (0, 2, 3, 1, 4)), (b, h2, w2, t * c6))
 
-    def loss_fn(model, coord_feats, code0, code1, lstar_oh, margin, pose_tgt, w_seg, w_pose, hinge, margin_target, mw_active=True, mw_temp=None, seg_form=None, tau_override=None, l7_thr_override=None, seg_pixel_w=None, terms_out=None, compute_pose=True, distill_logits=None, distill_weight=0.0, distill_temp=2.0, distill_form="kd_logits", distill_attack_temp=0.0):
+    def loss_fn(model, coord_feats, code0, code1, lstar_oh, margin, pose_tgt, w_seg, w_pose, hinge, margin_target, mw_active=True, mw_temp=None, seg_form=None, tau_override=None, l7_thr_override=None, seg_pixel_w=None, terms_out=None, compute_pose=True, distill_logits=None, distill_weight=0.0, distill_temp=2.0, distill_form="kd_logits", distill_attack_temp=0.0, existence_pack=None, existence_weight=0.0):
         # ``terms_out`` (#304 item 4 per-term loss telemetry; ADDITIVE, default None => BYTE-IDENTICAL):
         # when given a dict, the WEIGHTED contributions {"seg": w_seg*seg_l, "pose": w_pose*pose_term}
         # are recorded as (lazy) mx arrays for the caller to eval OUTSIDE any grad transform. The
@@ -1520,15 +1520,38 @@ def make_loss_fn(
             distill_term = _solve_frame_distill_loss_mlx(
                 mx, seg_logits, distill_logits, lstar_oh, margin,
                 distill_form, distill_temp, distill_attack_temp)
+        # ``existence_pack`` (ddm_p4x #920 LANE EXISTENCE primitive; ADDITIVE, default OFF =>
+        # existence_pack None OR existence_weight 0.0 => this branch never builds => graph +
+        # loss + grads BYTE-IDENTICAL). Runs on the SAME ``seg_logits`` (no 2nd forward), like
+        # the distill path above.
+        #
+        # This is deliberately a SEPARATE TERM at COMPONENT granularity, NOT another
+        # ``seg_pixel_w`` addend. cg1r MEASURED that realized per-flip GT-margin depth is
+        # direction-symmetric on all nine edges (Road<->Lane 1.074x) while the COUNT asymmetry
+        # runs to 15.88x: the lane-erasure discount is VOLUMETRIC, so a per-pixel reweight is
+        # aimed at an already-symmetric quantity and is expected to measure null on the
+        # ANNIHILATE verb. Component-level is the shape that can see a whole word being lost.
+        existence_on = existence_pack is not None and existence_weight != 0.0
+        existence_term = None
+        if existence_on:
+            from tac.optimization.existence_hinge import existence_hinge_mlx
+            existence_term = existence_hinge_mlx(
+                seg_logits, lstar_oh, existence_pack[0], existence_pack[1],
+                existence_pack[2], existence_pack[3], existence_pack[4], mx)
         if terms_out is not None:
             # #304 item 4: record the weighted contributions (lazy; caller evals outside grad).
             terms_out["seg"] = w_seg * seg_l
             terms_out["pose"] = w_pose * pose_term
             if distill_on:
                 terms_out["distill"] = distill_weight * distill_term
+            if existence_on:
+                terms_out["existence"] = existence_weight * existence_term
+        total = seg_pose
         if distill_on:
-            return seg_pose + distill_weight * distill_term
-        return seg_pose
+            total = total + distill_weight * distill_term
+        if existence_on:
+            total = total + existence_weight * existence_term
+        return total
 
     return loss_fn
 
