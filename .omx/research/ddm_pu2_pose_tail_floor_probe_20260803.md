@@ -557,7 +557,15 @@ process exit, which for this job is unambiguous. **Fix for the instrument: `--mo
 write a distinct path from `--mode probe`'s terminal receipt.** Recorded rather than silently patched,
 because the *class* (one path, two writers, existence read as completion) is the reusable lesson.
 
-**Round 4 found one issue ⇒ counter resets to 0.**
+**And it happened a SECOND time, same genus, at the end of the arm.** My slot-release check was
+`pgrep -f 'ddm_pu2|evaluate.py'` — which matched **my own shell command line**, because that line
+*contains* the pattern. It reported "STILL RUNNING" against a true count of **zero**. Re-checked by
+exec form plus the three known PIDs: all gone. **A pattern probe matches anything that MENTIONS the
+pattern, most insidiously your own watchers** — and this arm hit that twice in three hours, once on a
+file-existence test and once on a process-name test. **The general cure is the same both times: read
+liveness from a receipt or a row count, never from "something matching X exists."**
+
+**Round 4 found two issues ⇒ counter resets to 0.**
 
 **SEAL STATUS: NOT SEALED — 0 of 3 clean passes.** **Four** rounds, **eleven** findings, every one
 folded into the text above rather than answered in the review. Two findings materially changed a
