@@ -179,7 +179,10 @@ rigid model. `mf1` asserted the agreement without ever evaluating the profile.
 
 ---
 
-## §3 THE NORMAL GAUGE — both arms over-count the DOF by 2× (new)
+## §3 THE NORMAL GAUGE — the displacement DOF count is set by ASPECT RATIO (new)
+
+*(Heading corrected in R2. It previously read "both arms over-count the DOF by 2×" — that was my
+R1 claim and §3.2 refutes it. Recorded rather than silently rewritten.)*
 
 A displacement carrier attached to a **boundary segment** has **one** degree of freedom, not two.
 
@@ -450,7 +453,24 @@ and I make no claim beyond it.
 
 ## §8 THE VEHICLE HANDLE
 
-*(Delegated to a read-only source investigation; findings appended below on return.)*
+**STATUS: PENDING — delegated, not returned before this memo landed. Handed to MAIN.**
+
+`mf1` §5.4 **blocker 2** — *"does TR1 expose a per-object handle?"* — is a **vehicle** question,
+not a geometry question, and it **gates §3.2 entirely**. Every carrier priced in this memo assumes
+the decoder can translate one component's contribution independently. If TR1's token grid is
+spatial (token `[i,j]` → a fixed output patch) the handle exists by construction and the §3.2
+carrier is buildable; if the tokens are global/entangled, **the 453× description is unrealizable
+in this vehicle at any price** and the correct next move is a vehicle change, not a carrier.
+
+I dispatched a read-only source investigation for: (1) where the live cx1/pu2/TR1 decoder source
+is; (2) whether the token grid is spatial, quoted at source; (3) what the 535 B selector indexes;
+(4) the "11 knobs". **I do not have its findings and I make no claim about them.** Nothing in
+§3.2/§5 should be built on until this is answered at source.
+
+**Negative-existence scope:** I did not myself search for the decoder source beyond two `grep`
+passes over `src/tac/`, `experiments/`, `tools/` for `np.repeat`+`sigmoid` co-occurrence, which
+returned only vendored/intake and unrelated hits. That is the only scope I personally searched; I
+assert nothing about what exists outside it.
 
 ---
 
