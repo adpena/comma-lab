@@ -124,6 +124,15 @@ written** trained/fit artifact: `stage_*.npz` · trainer `telemetry.jsonl` · `f
 `lg1`, `r1c`, `pj1`, `fp1`(head only), `dt1`. Everything else — the byte-close/eval/solve/atlas/
 coder/analysis population, **101 dirs** — wrote no trained artifact and re-runs no VJP.
 
+**A distinction I nearly let slide, so I am stating it explicitly: contamination lands on
+DELTAS ATTRIBUTED TO LEVERS, not on absolute measured S.** An exact `evaluate.py` row on a fixed
+archive is a fact about *those bytes* and stays a fact — nothing about #903 touches it. But the
+*checkpoint* those bytes came from was produced by a training run in the **12**. So:
+"archive X scores S" is **sound**; "this endpoint is the best reachable / the continuation
+dividend is −0.011 S / lever L is worse" are **single draws** from a cloud whose width was never
+measured. The own-vehicle line's *absolute* values are not impugned; the *attributions* along it
+are what §3 ranks. Row 5 of the ranking is exactly this case and is listed for that reason.
+
 MAIN's pre-cleared rows are consistent with the mechanical census and I did not re-litigate them:
 `ddm_v4d_20260731`, `ddm_ms8_20260802`, `ddm_cr1/cr2`, `ddm_ll1`, `ddm_gr1` all appear in the
 **101**, i.e. they contain no locally-written trained artifact at all.
@@ -361,6 +370,19 @@ loses its status as evidence.** Ordered by re-measurement priority = exposure ×
 | 11 | #815 bs1 A/B | **never fired** | no verdict exists to grade | when it fires it must run under `--deterministic-r` with N≥2 seeds, and per its own #815 note must vary **excursion magnitude**, not only cadence |
 | 12 | #815 bs1 ρ₀ preflight (flip-budget density 0.11091) | measured, scorer-free | **STANDS** | none — static atlas read, no checkpoint, no gradient |
 | 13 | #800 BR-D | AUTO-fired branch | **HALF-GROUNDED** (§6) | rows 1–2 are the resolving measurements. Do **not** re-run the convocation |
+
+**A blocker on those re-measurements, found while writing them down and FIXED in this unit
+(commit `06fa0ad37d`).** Every row above says *"re-run under `--deterministic-r`"* — and
+`experiments/train_tr1_partition_renderer_mlx.py --help` **CRASHED**
+(`TypeError: %o format: an integer is required, not dict`), so that flag was **invisible** on the
+trainer that needs it. Same crash on
+`experiments/train_levelset_witness_realized_through_R_mlx.py` (the canonical capstone θ* trainer
+CLAUDE.md names). Cause: argparse renders help as `text % params` with `params` a **dict**, so one
+unescaped `%` raises; nothing in CI ever calls `--help`. An AST sweep of all 10,591 tracked `.py`
+found **7 more** across 6 further files — the predicted 6–7× spread. All 10 escaped, repo-wide live
+count now **0** (2,718 files declaring `add_argument`, 10,428 literal help strings), guarded by
+`src/tac/tests/test_cli_help_strings_render.py` with a positive control, a negative control, and a
+denominator assertion so a collapsed scope cannot pass silently.
 
 **The one apparatus change that would retire this whole class** (naming it, not building it — that is
 a separate landing and I am not paying a new-machinery debt inside an audit): `DEFAULT_DSEG_NOISE_FLOOR`
