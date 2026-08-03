@@ -31,11 +31,23 @@ Every number is recomputed from a named receipt in this session; none is re-type
    (253,341 / 473,651 gap-flips = 0.5348684). `ddm_sx2`'s "defect found" is a **denominator
    substitution, not an arithmetic error** — and my charter inherited the mis-attribution.
    Correcting the correction: **§2.2.**
-4. **The dimension tax is real, per-mechanism, and MEASURED for exactly one mechanism.** It is
-   **1.000 by construction** for every description-space mechanism now at the top of the list, and
-   **2.07–2.17×** for `rz1`'s chroma actuator (efficacy 0.484 proxy / 0.460 corpus-direct). The
-   36× head-space tax (rank 4 of 144) applies to a space **no mechanism acts in**.
-   **Net: the tax prices one qualitative claim; it reorders nothing.**
+4. **The dimension tax is RETRACTED for token mechanisms — `ddm_rs2` MEASURED that `D∘U` annihilates
+   nothing.** Closed-form `M = D∘U` (validated: BLAS vs `einsum` differ by **0.0**; matches the real
+   receiver to **1.7e-07**) has full 196,608-dim gain range **[0.6866, 1.0283]**, cond **1.223**, and
+   **0.0%** of directions attenuated below 0.5 / 0.1 / 1e-2 / 1e-3. The **80.6742%** null is `D`'s
+   fraction **on the CAMERA plane**, structurally unreachable from the token lattice; our renderer
+   emits into `range(U)`, where `D` is near-isometric. **What survives is a BINARY on the acting
+   plane** (camera-plane carriers can use the 230,904 blind px/frame; token carriers cannot) plus one
+   **constraint** cost (`rz1`'s pose-null chroma, 2.07–2.17×). §3.1 carries the retraction and the
+   self-review of how I made the error — transporting a camera-plane number to mechanisms that never
+   touch that plane, the manual's *borrowed number*.
+   **In its place, a more useful column: HOW EACH PRICE WAS OBTAINED.** The `clip(rint())` dead zone
+   is **amplitude-dependent**, and **a linearisation cannot represent a dead zone at all** — so
+   gradient and geometric keys are blind to the quantiser **exactly at small amplitudes, i.e. the
+   separatrix**. Both of `wr1`'s keys are that class; both exact refutations (`rs2`, `tw1`) are
+   realized finite differences. **And the proxy is not cheaper:** 36.4 s (gradient, cached) vs
+   388.8 s = **1.01 s/cell** exact — **both `#766` axes can be made EXACT in ≈7 minutes from on-disk
+   data.** A proxy price here is a *wrong price at comparable cost*, which removes its only defence.
 
 5. **The one place re-pricing pays TODAY is the banked pose shelf.** `W` is identical to 1e-12
    across the two live-best baselines in circulation; `dS/d(d_pose)` moved **1.285×** between them
@@ -47,6 +59,41 @@ Every number is recomputed from a named receipt in this session; none is re-type
 **Honest bound (§4): the ordering changes WITHIN families; the top of the list does NOT change.**
 The one measured inversion in the campaign (`#826`, `−0.0983 → +0.0035`) was a **baseline** move,
 not a **price** move — and my charter conflated them.
+
+---
+
+## §0.5 THE WORKED EXAMPLE — `W`-as-cost, caught live, one message after this arm was chartered
+
+**This is the failure mode, in the wild, on the largest axis, costing an 81× verdict error.**
+
+`ddm_pu2` measured the Road↔Lane edge at **235,148 flips** on `cx1`'s own n600 argmax (fail-closed
+control rel **1.09e-06**; **508,640** flips). It then priced the repair at `235,148 × W` and the
+result was relayed to the operator as **"not buyable — must come from the base representation."**
+
+| priced at | bytes | as % of the 353,805 B archive | verdict it produces |
+|---|---:|---:|---|
+| **`W` = 1.2731082153** (the **exchange rate**) | **299,368.9** | **84.61%** | *"not buyable — must come from the base"* |
+| **`mf1` = 0.0156417** (a **measured mechanism cost**) | **3,678.1** | **1.04%** | *the cheapest open lever on the largest axis* |
+
+**Ratio: 81.39×.** Recomputed this session; both figures reproduce exactly.
+
+**`W` is what a flip is WORTH, not what any mechanism CHARGES.** Pricing a repair at `W` asks *"how
+many bytes would I be willing to pay?"* and then reports the answer as *"how many bytes it costs."*
+Those are the same number only for a mechanism that is exactly break-even — i.e. for the **worst**
+mechanism we would still accept. Using it as a cost systematically prices every repair at the
+worst admissible rate, which is why it produces a **closed** verdict on an **open** lever.
+
+**Two more measured prices show the spread is not an artifact of one lucky mechanism:**
+`ddm_sx2`'s static prior — **49 B removing 57.2% of a 36,798 B term = 21,048 B saved = 429.6×
+leverage**; `ddm_qd1`'s cell-drop at **32.5206 B/flip = 25.544× WORSE than `W`**. **Real mechanism
+prices span 0.0156 → 32.52 B/flip = 2,079×.** A single `W` cannot stand in for any of them.
+
+> **The rule this memo asks to bank, in one line:** *`W` may appear on the **right** side of a
+> comparison (is this mechanism worth doing?) and never on the **left** (what does this cost?).*
+
+*(Baseline note, non-material: `pu2`'s "30.46% of gap" uses `op3`'s gap 0.6543559; against this
+charter's 0.6189279 the same 0.1993374 S is **32.21%**. Both correct at their own baseline — §7.6 —
+and the verdict is unchanged either way.)*
 
 ---
 
@@ -156,18 +203,57 @@ difference quotient, not the marginal cost of any mechanism. **Its correct use i
 **508,639** (`cx1` live) · **473,651** (gap to PR130) · **458,738** (`pc2`/`tb1` burn, `d_seg`
 0.0038892). Any "B/flip" inherits whichever base its author had open. Spread 508,639/458,738 = 1.109.
 
+### 2.6 — OPERATION and ADDRESS: two more required columns, both from `ddm_hs1` (`9da1e4afa1`)
+
+**(a) Direction of operation is required, and it is NOT the same axis as §2.1's buy/sell.** `hs1`
+found the reconciliation on a **single cell index**: `sx2` reads **430× leverage** and `qd1` reads
+**25.5× worse**, and the resolution is not magnitude — **one ADDS a shared description, the other
+REMOVES per-pair payload.** That is orthogonal to buy/sell:
+
+| operation | spends | gains | example | price sense |
+|---|---|---|---|---|
+| ADD shared description | a few static bytes | many per-pair bytes | `sx2` static prior, 49 B → 21,048 B | **bytes-for-bytes**, no flip term at all |
+| REMOVE per-pair payload | flips | per-pair bytes | `qd1` cell-drop, 32.52 B/flip | SELL (§2.1) |
+| ADD per-pair correction | bytes | flips | `mf1` component carrier | BUY (§2.1) |
+
+**A bytes-for-bytes re-description is not on the flip axis at all** — quoting it as a "B/flip
+leverage" against `W` is a category error even before the sign question. `sx2`'s 430× is a
+**compression ratio**; `mf1`'s 81.4× is a **flip-purchase discount**. They are not the same 400-ish.
+
+**(b) ADDRESS cost must be separated from PAYLOAD cost, and it can DOMINATE.** `hs1` measured, at
+the same payload mechanism: **static top-128 = 91.22% capture for 62 B** of address vs **per-pair
+top-64 = 88.71% capture for 23,516 B** — **more capture at 379.3× less address.** So two mechanisms
+with *identical payload prices* differ by 379× in what it costs to point at them, and a
+single-number B/flip hides all of it. **The table needs `price = address + payload`, itemized** —
+and this distinction is **price-independent**, so it survives every re-pricing in this memo.
+
+**(c) ~~Every capture figure in (b) is an UPPER BOUND until the dimension correction is applied.~~
+RETRACTED — the correction is ZERO for these mechanisms.** `hs1`'s static/per-pair address figures
+are **token-lattice** quantities, and `rs2` measured `D∘U` near-isometric on the token lattice
+(§3.1). `cell-mass × visible-fraction` under `D`'s 80.6742% camera-plane null **does not apply**;
+these captures are **not** upper-bounds-pending-a-discount. **The 379× address ratio and the 91.22%
+capture stand as measured**, and the correct caveat on them is `tw1`'s state-dependence (§4.4), not
+a visibility fraction.
+
 ---
 
 ## §3 THE PRICE TABLE — with unit, direction, acting space, and measured overlap
 
 **RANKABLE rows** (a real marginal cost of a real mechanism, direction stated):
 
-| # | mechanism | receipt | recomputed price | unit | dir. | acting space | `range(A)` overlap | **effective price** | vs `W` |
-|---|---|---|---:|---|---|---|---:|---:|---|
-| 1 | **`mf1`** Movable per-component displacement | `ddm_mf1` §5.3 | **0.0156417** | B / flip bought | **BUY** | label-component (2-vector) | **1.000** by construction (translating `L*` regions *is* the seg-visible object) | **0.0156417** | **81.39× BETTER** |
-| 2 | **`sx2`** sub-pixel phase carrier, normal-gauge halved | `dd1` §3 | 1,098 B → **549 B** | B / carrier | **BUY** | boundary-segment **normal** | **0.500** in DOF terms (tangential `δ_t` is a gauge while `κL ≪ 4`) | **2× cheaper than as shipped** | not yet flip-denominated |
-| 3 | **`ba31`** drop-more | `rs2` §2.2 (n600) | **0.6498** | B / flip sold | **SELL** | token lattice cells | support **24.2× larger** than the key assumes (`rs2`) | 0.6498 | **dominated 1.959×** |
-| 4 | **`gr1`** cell sweep | `rs2` §2.2 (**n48 — PRIOR, not evidence**) | **0.6298** | B / flip sold | **SELL** | token lattice cells | as #3 | 0.6298 | **dominated 2.021×** |
+**Required columns, final (four of them added by review, one retracted):** `unit` · **`dir.`**
+(BUY/SELL, §2.1) · **`operation`** (ADD-shared / REMOVE-per-pair, §2.6a) · **`address | payload`**
+(§2.6b) · **`acting plane`** (token vs camera — the *binary* that replaced the retracted per-mechanism
+overlap, §3.1) · **`OBTAINED`** (realized finite difference vs linearisation, §3.1a).
+
+| # | mechanism | receipt | recomputed price | unit | dir. | operation | acting plane | **OBTAINED** | vs `W` |
+|---|---|---|---:|---|---|---|---|---|---|
+| 1 | **`mf1`** Movable per-component displacement | `ddm_mf1` §5.3 | **0.0156417** | B / flip bought | **BUY** | ADD per-pair correction | **token** (no discount) | numerator DERIVED-exact bit count; denominator MEASURED debt — but its **effectiveness model is a continuum linearisation, wrong 2.37×** (`dd1` §2) | **81.39× BETTER** |
+| 2 | **`sx2`** sub-pixel phase carrier, normal-gauge halved | `dd1` §3 | 1,098 B → **549 B** | B / carrier | **BUY** | ADD per-pair correction | **token** | DERIVED (DOF count: tangential `δ_t` is a gauge while `κL ≪ 4`) | not yet flip-denominated |
+| 3 | **`ba31`** drop-more | `rs2` §2.2 (n600) | **0.6498** | B / flip sold | **SELL** | REMOVE per-pair payload | **token** | realized n600 | **dominated 1.959×** |
+| 4 | **`gr1`** cell sweep | `rs2` §2.2 | **0.6298** | B / flip sold | **SELL** | REMOVE per-pair payload | **token** | **CORRECTED provenance:** the key `gr1_sensitivity_gabs.npy` is `(600,24,32,4)`, all 600 pairs nonzero — **the key IS n600**; the `n48` caveat applied only to `gr1`'s realized-`d_seg` rows. **Real caveat: ANCESTOR-LATTICE (pre-drop model).** Key class = **linearisation** ⇒ dead-zone-blind | **dominated 2.021×** |
+| 5 | **`sx2`** static prior | `hs1` / `sx2` | 49 B → **21,048 B saved = 429.6×** | **B / B** (compression ratio) | — | **ADD shared description** | **token** | measured byte counts | **not on the flip axis** (§2.6a) |
+| 6 | **`hs1`** address: static top-128 vs per-pair top-64 | `hs1` (`9da1e4afa1`) | **62 B @ 91.22%** vs **23,516 B @ 88.71%** = **379.3×** | B / address, at equal payload | — | ADD shared address | **token** | measured, n600 | **price-independent** — survives every re-pricing here |
 
 **NOT-RANKABLE rows** (recomputed and reported, but disqualified from ranking by §2):
 
@@ -178,51 +264,104 @@ difference quotient, not the marginal cost of any mechanism. **Its correct use i
 | `qd1`/`gr1_cell_drop50` | 32.5206 B/flip | **between-archive** difference quotient (§2.4) |
 | `rz1` A2 pose-free chroma steering | **B/flip UNMEASURED** | see §3.1 — the tax is measured, the price is not |
 | `wr1` Knee A "free" tranche | claimed ∞ (zero flips) | **falsified for 144 of 486 cells** by `rs2`; the true price is finite and unmeasured |
-| head rank-4 quotient (140 of 144 null) | tax 36.0× | `sx1`'s own caveat: lives in **decoder feature space**; exploiting it "requires inverting the encoder … not directly a byte lever" |
+| head rank-4 quotient (140 of 144 null) | ratio 36.0× (**not a tax** — see §3.1) | `sx1`'s own caveat: lives in **decoder feature space**; exploiting it "requires inverting the encoder … not directly a byte lever". Unaffected by the `D∘U` retraction (different, downstream operator) and still applies to **no mechanism** |
 
-### 3.1 — The dimension tax, derived per mechanism (operator §2)
+### 3.1 — The dimension tax: **RETRACTED for token mechanisms.** `ddm_rs2` measured `D∘U` and it annihilates nothing.
 
-The correction is `p_eff = p / overlap`, where `overlap` is the fraction of the mechanism's spend
-that lands in the **visible subspace of the space the mechanism acts in**. It is **not one number**,
-because the mechanisms do not act in one space. Four measured nullities, four different spaces:
+**I asserted a per-mechanism `p_eff = p / overlap` correction. For every token-lattice mechanism in
+this table that correction is ZERO, and the retraction is MEASURED, not argued.**
 
-| space | ambient | visible | nullity | isotropic tax | which mechanisms act here |
-|---|---:|---:|---:|---:|---|
-| SegNet head feature window | 144 | **4** (σ₅ = 3.7e-16, `sx1` §2.3) | 97.2% | **36.0×** | **NONE** — requires encoder inversion |
-| camera plane → scorer plane via `D` | 1,017,336 /frame | 196,608 | **80.6742%** (`rz1` R1b ≡ corpus #580 to 4 dp) | **5.174×** | any raw pixel-residual carrier |
-| — of which **blind to BOTH scorers** | 230,904 px | 0 | 100% | **∞** | must receive zero bits |
-| PoseNet `yuv6` per scorer block | 12 | 6 | 50% | 2× | `rz1` A2 (pose leg — the point is nullity, not tax) |
+`rs2` (`84367be88e`, `55a786f8db`) computed the render→scorer operator `M = D∘U` in **closed form**
+(it is linear and separable) and **validated before believing** — the result looked too clean and
+the matmul raised divide-by-zero flags, so: BLAS vs `einsum` differ by **0.0** (the flags were
+spurious) and **`M` matches the real receiver pipeline to 1.7e-07 relative.**
 
-**The decisive consequence, and it is the opposite of the intuition:** `D` is a **disjoint 4→1
-partition** (`rz1` R1: each scorer px reads a *private* 2×2 camera block, no cross-talk). So the
-5.174× is the tax on an **uncoordinated** camera-plane edit only. A **block-coordinated** edit pays
-**1.000** — "for any target scorer-plane value, setting the 4 private camera pixels to it realizes
-it exactly." **The tax is a property of the carrier's design, not of the operator.**
+| measured on `M = D∘U` | value |
+|---|---|
+| row / col singular values | [0.82899, 1.01417] cond **1.2234** / [0.82829, 1.01390] cond **1.2241** |
+| full **196,608-dim** gain range | **[0.6866, 1.0283]** |
+| directions attenuated below 0.5 / 0.1 / 1e-2 / 1e-3 | **0.0% / 0.0% / 0.0% / 0.0%** |
 
-**Measured overlap, the one mechanism that has one.** `rz1` §2.1 measures the pose-free chroma
-actuator retains **48.4%** of the discriminative direction (spatial-chain proxy, `INFERRED`), with
-the corpus's *direct* gradient measurement at **46.0%**:
+**`D∘U` ANNIHILATES NOTHING.** `rs2` reproduced **80.6742315%** exactly as `1 − 196,608/1,017,336`
+— confirming it is **`D`'s null fraction on the CAMERA plane**, and that our renderer emits into
+**`range(U)`, where `D` is near-isometric.** **The null space is real and STRUCTURALLY UNREACHABLE
+FROM THE TOKEN LATTICE.** ⇒ **no invisible complement, no discount, no tax** for token carriers.
 
-```
-tax = 1 / 0.484 = 2.066×      tax = 1 / 0.460 = 2.174×
-```
+**What survives is a BINARY on the acting plane, not a per-mechanism magnitude:**
 
-`rz1` already prices this itself — *"paying a 2× directional loss to buy exact pose-freeness"*
-against a **79× pose penalty** for luma edits. **The tax is 2.07–2.17× and the trade still clears by
-36×.** Its authority is separately MEASURED and large (isoluminant chroma at amp 32 moves
-`Δd_seg = 2.73e-3` at n96 = **68% of the entire 4.015e-3 seg gap**) — but **its B/flip is UNMEASURED**,
-so it cannot be ranked against `mf1` today. *That is the single highest-value owed price in this memo.*
+| acting plane | blind fraction usable? | mechanisms |
+|---|---|---|
+| **token lattice** (through `U`) | **NO — `D∘U` is near-isometric, cond 1.22** | `wr1`, `gr1`, `qd1`, `ms2r`, `mf1`'s realization, every carrier in §3 |
+| **camera plane** (direct) | **YES — 230,904 px/frame blind to both scorers** | `#401` blind-coordinate exploit; `rz1` A2 |
 
-**Why the tax reorders nothing today:** rows #1 and #2 act in **description space** — they emit a
-description of `L*` (a component translation; a boundary-segment phase), and `L*` *is* the object
-`d_seg` reads. Overlap 1.000 by construction. **A description-space mechanism cannot pay a
-visibility tax.** What it pays instead is a **realization** risk — and that is the same crux the
-campaign already named (`crux = REALIZATION`), now with a price attached:
+**Every "upper bound pending the visible-fraction correction" caveat in this memo is VOID for token
+mechanisms.** §2.6(c) is retracted on the same grounds. And the SegNet-head rank-4 row (4 of 144,
+`sx1` §2.3) is unaffected but still applies to **no mechanism** — it is a downstream feature-space
+fact requiring encoder inversion, not a property of `M`.
 
-> **The dimension tax and the realization crux are one object seen from two sides.** A carrier that
-> acts in camera space pays the tax *up front and measurably* (`rz1`: 2.07–2.17×). A carrier that
-> acts in description space defers the identical cost to *whether the decoder can realize the
-> description at all* — where it is **unmeasured**, and therefore looks free.
+**Self-review on my own retracted claim:** the error was §8.5 of the manual — *the borrowed number*.
+`rz1` measured `D`'s nullity **on the camera plane** and I transported it to mechanisms that never
+touch that plane. `rz1`'s number was right; my *transport* of it was the fake. The tell was
+available and I missed it: `rz1` R1(a) itself says `D` is *"neutral … this says where the wall is
+not."* I read a neutrality result as a tax.
+
+### 3.1a — What replaces it, and it is more useful: **how the price was OBTAINED**
+
+`rs2`'s replacement finding is a *mechanism-price* fact, not a geometry fact: **the `clip(rint())`
+dead zone is AMPLITUDE-dependent, not direction-dependent — and a linearisation cannot represent a
+dead zone at all.** Neither a gradient key nor a geometric key sees the quantiser; **only DRIVE — a
+realized finite difference — does.** So **any price derived from a linear surrogate is blind to the
+quantiser exactly where amplitudes are small, which is the separatrix** — i.e. precisely where all
+our flips live. **This is a required column.**
+
+| price | how OBTAINED | sees the dead zone? |
+|---|---|---|
+| `wr1` `residual_mass` byte key | **linearisation** (Σ\|signed delta\|) | **NO** → `ρ = 0.513` vs truth |
+| `wr1`/`gr1` gradient & 16×16 damage keys | **linearisation / geometry** | **NO** → support 24.2× wrong |
+| `rs2` exact per-cell byte marginal | **realized finite difference** (384 exact re-encodes) | **YES** |
+| `tw1` state-conditioned marginal | **realized finite difference** (real r7/SMEVR coder, 4/4 controls) | **YES** |
+| `mf1` 0.0156417 | numerator DERIVED-exact (bit count); denominator MEASURED debt | n/a — but its *effectiveness* model **is** a continuum linearisation, wrong by **2.37×** (`dd1` §2) |
+
+**And a proxy price is not even a cheaper price here.** `rs2` timed both: gradient **36.4 s** cached
+per-(pair,cell,channel); **exact byte marginal 388.8 s = 1.01 s/cell**. **Both axes of `#766`'s
+lexsort can be made EXACT from on-disk data in ≈7 minutes.** *A proxy price is a wrong price at
+comparable cost* — which removes the only defence `wr1`'s keys had.
+
+*(Provenance correction carried from `rs2`: `gr1_sensitivity_gabs.npy` is `(600,24,32,4)` with all
+600 pairs nonzero — **the key IS n600**; the `n_pairs_realized: 48` caveat applied only to `gr1`'s
+realized-`d_seg` rows. **The real caveat is different: it is an ANCESTOR-LATTICE measurement**
+(pre-drop model). §3's row #4 is corrected accordingly.)*
+
+### 3.1b — The one surviving measured efficacy, correctly scoped
+
+`rz1` §2.1's chroma figure is **not** a `D`-nullity tax (retracted above). It is a
+**subspace-restriction efficacy**: the *exactly pose-free* chroma subspace (294,912 of 1,017,336
+camera dims/frame) retains only part of SegNet's discriminative direction —
+
+**0.484** (spatial-chain proxy) / **0.460** (corpus direct gradient) ⇒ a **2.07–2.17× directional
+loss**, which `rz1` itself already prices — *"a 2× directional loss to buy exact pose-freeness"*
+against a **79× pose penalty** for luma edits, so **the trade still clears by ~36×.**
+
+**This is a constraint cost, not a geometry tax:** it is what you pay for *restricting the actuator
+to be exactly pose-null*, and it would exist even if `D` were the identity. It is the only measured
+efficacy discount in the table, and it is the correct scoped survivor of the operator's §2 —
+**paired with the acting-plane binary in §3.1, since `rz1` A2 is one of the two camera-plane
+mechanisms that can still use the 230,904 blind px/frame.** Its authority is separately MEASURED and
+large (isoluminant chroma at amp 32 moves `Δd_seg = 2.73e-3` at n96 = **68% of the entire 4.015e-3
+seg gap**) — but **its B/flip is UNMEASURED**, so it cannot be ranked against `mf1` today. *That is
+the single highest-value owed price in this memo.*
+
+**What the retraction does NOT dissolve — the realization risk.** Rows #1 and #2 act in
+**description space**: they emit a description of `L*` (a component translation; a boundary-segment
+phase), and `L*` *is* the object `d_seg` reads. With `D∘U` near-isometric there is no *visibility*
+question for them at all. But their price still prices the **description**, while what ships is the
+**realization**, and those are different objects:
+
+> **Corrected statement.** I claimed the dimension tax and the realization crux were one object.
+> **They are not** — `rs2` killed the tax and left the crux standing alone. The realization risk is
+> *not* a visibility discount and cannot be computed from any nullity; it is the empirical question
+> *"can the renderer produce the described change from the token lattice?"* — **which must be
+> MEASURED per carrier, and for `mf1` is exactly blocker A8.**
 
 **This is why `mf1` looks 81× better than everything.** Its 0.0156417 B/flip prices the
 **description** (a 2-vector per component). Its realization multiplier is exactly its blocker **A8**
@@ -256,9 +395,9 @@ The equal-marginal condition binds only where the objective is **concave**: `√
 | allocation | what it actually prices | does re-pricing move it? |
 |---|---|---|
 | **`#766` / `wr1`** | `np.lexsort((-residual_mass, flip_mass))` — an implicit per-cell price `residual_mass / flip_mass` | **YES — MEASURED, and both legs are corrupted.** Bytes: `residual_mass` correlates **ρ = 0.513** with the real per-cell byte marginal over 384 exact re-encodes. Damage: the key's 16×16 tile (256 px) understates the MEASURED receptive field (84×82 = 6,192 px) by **24.2×**, so **144 of 486** "provably safe" zero-flip cells are not — the free tranche is **29.6% smaller** than Knee A claims. `rs2` has already **BUILT** the byte-matched A/B (274,631 vs 274,321 B, residual 310 B = 0.4%); at equal bytes the re-priced key carries **27.9% less ambient flip mass**. **Direction measured; ΔS owed (needs the scorer slot `pu2` holds).** |
-| **`c1` waterfill tables** (via EV2) | the C1 composition's pair-cell dual allocation | **NO — it allocated NOTHING.** EV2 *"conserves the C1 byte total by leaving **100% unallocated**: assigned pair-cell bytes are zero, all 162 duals are non-computable"*, exact verdict **`FORMULATION_MISPOSED_FOR_CURRENT_C1_COMPOSITION`** (`codex_findings_…366box…`). There is no price to re-price. |
-| **`rd1` λ-continuation frontier** | per-dimension duals `λ_bytes_per_D_dimension` over 162 cells | **NO — 162/162 prices are `None`.** Recomputed from `rd1_162_dual_backfill.json`: `actionable_cell_count = 0`, `lambda_measured_cell_count = 0`, `rung_measured_cell_count = 0`, `effective_quantum_D = 0.0` on **162/162**, `lambda_measurement_status = STILL_NULL_…` on **162/162**. `metric_context_cell_count = 162` — every cell has metric *context* and no *price*. |
-| **`#869` token-by-token** | **UNRESOLVED — and the reason is diagnosed, §4.3** | **Did not find in the named scope** {`.omx/state/canonical_task_status.jsonl`, the four receipt dirs, `codex_findings_*`}. `869` is **not an id in the repo ledger** (42 ids, range 383–909; `869 ∉`). **Honestly open.** |
+| **`c1` waterfill tables** | **ONE global scalar** — `λ_B = 25/37,545,489 = 6.658589531221713e-7` S/byte (`spec:84`), rule *"allocate until `−dD/db ≤ λ_B`"* (`spec:87`). **`λ_B` IS `W` in disguise:** `(100/PX)/(25/DEN) = 1.27310821533` B/flip | **NO — nothing to re-price.** The cost side is DERIVED-exact; the **benefit side was never measured**: `ledger:/waterfill/current_status = NO_MEASURED_KKT_FEASIBLE_ALLOCATION_CLOSES_THE_BOX`, reserves 8–11 `DERIVED_COMPUTABLE_NOT_YET_COMPUTED`. EV2's realization leaves **100% unallocated**, verdict **`FORMULATION_MISPOSED_FOR_CURRENT_C1_COMPOSITION`**. |
+| **`rd1` λ-continuation frontier** | objective `counted_bytes + λ·(100·d_seg + √(10·d_pose))`, **λ swept over a 10-point ladder** | **NO — and it is the one surface STRUCTURALLY immune.** A λ-continuation *sweeps* the exchange rate instead of fixing it, so a wrong `W` cannot bias it (**my §4 prediction, now confirmed against the artifact**). Its per-cell refinement is null: `lambda_bytes_per_D_dimension = None` on **162/162** (`rd1_162_dual_backfill.json`: `actionable=0`, `lambda_measured=0`, `rung_measured=0`, `effective_quantum_D=0.0`; `metric_context_cell_count=162` — metric *context* on every cell, *price* on none). Its own note: *"valid scalarization controls, but not train-decision exchange rates."* |
+| **`#869` = `ddm_tw1`** | **measured marginal bytes per cell drop, CONDITIONED ON THE CURRENT DROP STATE** | **YES — and it has ALREADY MEASURED the operator's §1. See §4.4.** |
 | **`ms2r`/`r3` typed Fisher waterfill** | a **typed** (per-box) Fisher marginal — the "many prices" structure the operator's §1 asks for | **NO — IT NEVER FIRED.** From `priced_rung_table.json`: `measured_task_rungs = []` (**zero**), `knee = None`, `knee_status = NULL_NO_TYPED_HOMOTOPY_CURVE`, `preregistered_rung_status = NOT_EXECUTABLE_UNTIL_ALL_TYPED_PRECONDITIONS_CLOSE`; all six ladder rungs carry `epistemic_status = DERIVED_PREREGISTRATION_NOT_MEASURED` + `execution_status = BLOCKED_PRECONDITION_NOT_RUN`. `MS4D` records *"zero waterfilled rungs."* |
 | **`qd1` / `#826`** | `gr1_cell_drop50` vs a v4d-era reference | **Already inverted (`−0.0983 → +0.0035`) — but by a BASELINE move, not a price move.** My charter cited this as price-sensitivity evidence; it is not. It is the sister defect ("a ΔS without its baseline is unanchored"). Keeping the two apart is the point of §2.4. |
 | **the pose leg** | `dS/d(d_pose) = 40.223` at live best | **YES, and this is the ONE true waterfill.** `op3` measured this marginal has risen **1.73×** since `pw1`, so **banked pose levers are UNDER-priced, not stale.** Unlike `W`, it moves with every improvement. A 1% relative cut in `d_pose` is worth **933 B** at today's point — and *more* tomorrow. |
@@ -283,23 +422,81 @@ silent-instrument failure as a skipped gate emitting `PASS`.
 
 `rd1_162_dual_backfill.json` carries **`scorer_visibility ∈ {ker(A)-invisible, seg-visible,
 pose-visible}`** per cell, and pairs `ker(A)-invisible` with
-`source_metric_status = STRUCTURAL_ZERO_SCORER_EFFECT_NO_TYPED_RATE_HOME`. **That is exactly the
-dimension tax, correctly instantiated:** a cell with zero scorer effect buys zero flips for any
-bytes ⇒ its price is `+∞` ⇒ non-actionable. The null `λ` on those cells is not a gap; it is the
-right answer.
+`source_metric_status = STRUCTURAL_ZERO_SCORER_EFFECT_NO_TYPED_RATE_HOME`. **The PRINCIPLE is
+correctly instantiated** — a cell with zero scorer effect buys zero flips for any bytes ⇒ price
+`+∞` ⇒ non-actionable, so the null `λ` there is the right answer, not a gap.
 
-**Caveat, stated because it is the trap:** the split is **54 / 54 / 54** and the strata are
-**27 × 6** and the temporal classes **54 × 3** — a **preregistered factorial grid**, not a sampled
-population. **"33% of cells are `ker(A)`-invisible" is a DESIGN count, not a measured nullity.**
-Anyone quoting it as a population fraction has re-created the prefix-vs-population error
-(`bp2`). The measured nullities are the four in §3.1's table; this schema field is the *vocabulary*,
-not the *measurement*.
+**But after §3.1's retraction, the `ker(A)-invisible` LEVEL IS EMPTY ON THE TOKEN LATTICE.** `rs2`
+measured `D∘U` with **0.0%** of its 196,608 directions attenuated below 1e-3 — there is no
+structurally-zero-scorer-effect direction reachable from the lattice. So the schema encodes a real
+distinction that, for the plane our allocators act in, **has no members**. It is correct vocabulary
+over an empty class — and a schema level with no members is the sister of the vacuity trap: it
+*looks* like a live typology.
+
+**Second caveat, the arithmetic one:** the split is **54 / 54 / 54**, strata **27 × 6**, temporal
+classes **54 × 3** — a **preregistered factorial grid**, not a sampled population. **"33% of cells
+are `ker(A)`-invisible" is a DESIGN count, not a measured nullity.** Quoting it as a population
+fraction re-creates the prefix-vs-population error (`bp2`). Between the two caveats: the field is
+**vocabulary, not measurement**, and the only measurement that bears on it says the class is empty
+where we allocate.
 
 **Corroboration in passing:** the same table registers
 `pose_exchange_law = dS/dd_pose = 5/sqrt(10*d_pose)` — the campaign's own registered form of §1's
 pose marginal, which my 40.223 and `op3`'s 31.302 both evaluate.
 
-### 4.3 — Why `#869` could not be resolved: the task-ledger split, demonstrated live on this charter
+### 4.4 — `#869` = `ddm_tw1`: the operator's §1 is not a hypothesis. It was MEASURED on 2026-08-01.
+
+`.omx/research/ddm_tw1_token_waterfill_state_dependence_20260801.md` — *"the waterfill's per-unit
+byte price is a FUNCTION OF STATE, not a constant (task #869)"* — plus
+`experiments/ddm_tw1_token_waterfill_state_dependence.py`. It measures exactly the quantity `wr1`'s
+greedy assumes away: **marginal bytes saved by dropping a fixed cell, conditioned on how many cells
+are already dropped**, through the **real shipped r7/SMEVR coder**.
+
+| drop state | `k` cells dropped | mean marginal B/cell |
+|---|---:|---:|
+| base | 0 | **771.8** |
+| | 100 | 845.1 |
+| | 300 | 849.5 |
+| Knee A | 486 | 835.1 |
+| Knee B | 600 | **871.2** |
+
+- **TW1-1:** the marginal saving of a *fixed* cell **rises +13.1%** from `k=0` to Knee B, **on 52 of
+  53 cells**. Per-cell range **371–1029 B** (2.77× spread across cells at one state).
+- **TW1-2:** the cost is **superadditive** — joint saving exceeds the singleton sum by up to **7.0%**.
+- **Controls: 4/4 pass** (557,253/557,253; **261,590/261,590 reproducing `wr1`'s independent receipt
+  at k=486**; 161,835/161,835 at k=600). Denominator: **768 cells**; price samples **53 cells** (29×5
+  states + 24×3 states) — a sample, and labelled as one.
+
+**What this settles, and it is the memo's strongest result.** `wr1`'s greedy sorts once, on
+`residual_mass` evaluated at `k=0`, and then drops 486–600 cells as if that price still held.
+**`tw1` measured that it does not** — and both corrections point the same way:
+
+> **The marginal saving GROWS with depth (+13.1%) and joint > sum (+7.0%) ⇒ `wr1` systematically
+> UNDER-values deep drops ⇒ the true optimum is DEEPER than `wr1`'s knee, not shallower.**
+> This is a **directional, actionable** conclusion, and it is opposite to what `rs2`'s support
+> finding alone would suggest (which shrinks the *free* tranche). The two compose: **fewer cells are
+> genuinely free than `wr1` claims, and the ones that are, are worth more than `wr1` claims.**
+
+**So the four allocators resolve into a clean trichotomy** — and only one of them is exposed:
+
+| | allocator | status |
+|---|---|---|
+| **never priced** | `c1` (benefit side unmeasured, 100% unallocated) · `ms2r`/`r3` (zero rungs, null knee) | cannot be re-priced |
+| **immune by construction** | `rd1` (sweeps λ rather than fixing it) | not exposed |
+| **priced, and MEASURED WRONG** | **`wr1`/`#766`** — bytes `ρ=0.513` · support **24.2×** (`rs2`) · price **state-dependent +13.1%, superadditive +7.0%** (`tw1`) | **the entire exposure** |
+
+### 4.5 — Corpus-wide: the constant is not one constant
+
+The repo carries **~60 distinct numeric B/flip values**. Three are worth naming because they are
+*used* rather than reported: **`0.65`** is a **registered engineering GO bar** (59 hits) at
+`0.5106 × W`; **`0.905`** is hard-coded as `SIDECAR_BYTES_PER_FLIP` in
+`experiments/measure_symbolic_topological_partition_mdl.py:78` — an **ASSUMED** rate baked into
+code with no receipt; and **`1.2727`** appears in `ddm_iv3` as a region-merge solve's own analytic
+water level, **slightly but genuinely different from `W`**. Notably, **none of the four allocator
+directories spells `1.2731…` at all** — they carry it only as `6.658589531221714e-07` S/byte, which
+is why "we used one `W` everywhere" was not visible by grep.
+
+### 4.3 — Why `#869` was initially unresolvable: the task-ledger split, demonstrated on this charter
 
 MEASURED from `.omx/state/canonical_task_status.jsonl`: **42 ids, range 383–909.**
 **`869 ∉` and `766 ∉`.** Both task numbers this arm was chartered against are **harness-TaskList
@@ -369,19 +566,35 @@ verdict**. That is precisely `op3`'s genus: *argument loss, not arithmetic error
    priced object**. The realization multiplier is a *separate, unmeasured* factor — which is why §3.1
    presents `mf1` as an `η`-table rather than a single number. If a reader collapses that table back
    to "0.01564", they have re-created the exact fake this memo exists to prevent.
-3. **"Did you disprove the operator, or refine them?"** Refined — and I should say which. The
-   operator's §1 ("waterfill may not be optimal") is **correct at the allocator level and MEASURED
-   there** (`rs2`); it is *not* correct at the portfolio level, for a reason (linearity) that no
-   memo had stated. The operator's §2 (dimension tax) is **correct and I measured its magnitude**;
-   its practical bite today is smaller than it sounds, because the mechanisms that lead are already
-   in the scorer's own coordinates — **which is itself the reason they lead.**
+3. **"Did you disprove the operator, or refine them?"** Split verdict, and I should say which.
+   The operator's **§1 is CONFIRMED and was already MEASURED** — `tw1` (#869) measured the per-unit
+   byte price is state-dependent (+13.1%, superadditive +7.0%) on `wr1`'s own lattice, and `rs2`
+   measured both of `wr1`'s keys wrong. It is *not* correct at the portfolio level, for a reason
+   (linearity) that no memo had stated.
+   The operator's **§2 is REFUTED for token mechanisms** — `rs2` measured `D∘U` near-isometric
+   (0.0% attenuated below 1e-3); the 80.67% null is camera-plane and unreachable from the lattice.
+   **I initially confirmed §2 with a magnitude, which was wrong, and the error was mine, not the
+   operator's:** I transported `rz1`'s camera-plane nullity onto token carriers. **The retraction is
+   in §3.1 with the tell I missed.** What survives is a binary on the acting plane plus one
+   constraint cost — and the replacement (`OBTAINED`: realized-vs-linearised, §3.1a) is strictly more
+   useful, because it indicts the two keys that actually drive `#766`.
+4. **"Is a memo that retracts its own §3.1 mid-flight still coherent?"** Only if the retraction is
+   propagated, not appended. I propagated it to §0.4, §2.6(c), the §3 table's column set, §3.1b,
+   and §7 — and I am naming that as the check a reader should re-run, because a partially-propagated
+   retraction is worse than none: it leaves the killed claim alive in whichever section a reader
+   happens to open.
 
 ---
 
 ## §7 OWED, named
 
-1. **`rz1` A2's B/flip.** The only top-tier mechanism with a measured *tax* (2.07–2.17×) and no
-   measured *price*. Highest-value single number in this memo.
+0. **Make both `#766` axes EXACT — ≈7 minutes, on-disk, no scorer slot, no new build.** `rs2` timed
+   it: 388.8 s for the exact per-cell byte marginal (1.01 s/cell) vs 36.4 s cached gradient. This is
+   the highest ratio of *decision moved* to *cost* anywhere in this memo, and it retires **both**
+   linearised keys at once.
+1. **`rz1` A2's B/flip.** The only top-tier mechanism with a measured *efficacy discount*
+   (2.07–2.17×, a constraint cost — **not** the retracted geometry tax) and no measured *price*.
+   Highest-value single number in this memo after item 0.
 2. **`mf1`'s `η`** — decode `cx1`, fit per-component `δ`, measure residual. `mf1` §5.4 blocker 1,
    escalated by `dd1` §2 from due-diligence to load-bearing. Break-even 1.23%.
 3. **`rs2`'s A/B ΔS** — built, byte-closed, blocked on the scorer slot (`pu2`).
