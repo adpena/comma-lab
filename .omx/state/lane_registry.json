@@ -94229,6 +94229,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_ddm_dc1_20260802",
+      "name": "ddm_dc1 menu sweep + ms8/mq1 degeneracy reconciliation",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "tools/dc1_menu_sweep.py (4 modes) + src/tac/tests/test_ddm_dc1_menu_sweep.py (29 tests, 2 review passes); research_only=true, score_claim=false, no gate fired, pointer UNMOVED. Byte-closed advisory candidate v4d_composed_dc1_fold_archive.zip 360,309 B sha 9fb9f4e9e4; [macOS-CPU frozen-PoseNet advisory] NON-PROMOTABLE. Memo .omx/research/ddm_dc1_menu_sweep_and_ms8_mq1_reconciliation_20260802.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -94238,5 +94279,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-08-03T01:26:01Z"
+  "updated_at": "2026-08-03T02:18:46Z"
 }
