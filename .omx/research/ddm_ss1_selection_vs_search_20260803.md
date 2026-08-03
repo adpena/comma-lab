@@ -66,7 +66,27 @@ The iteration cap provably NEVER binds. The LINE SEARCH refuses. That inverts th
    after I corrected a first draft that overstated the saving as 5.3×). Falsifier pre-registered
    in §5.2. **The routing itself costs 0 scorer evaluations.**
 
-6. **HONEST NEGATIVE / SCOPE.** I fired **no** scorer job and **moved nothing**. Every number
+   **AND BOTH CURES ARE ALREADY BUILT AND SWITCHED OFF** (§5.-1): `ab_multistart_gn` exists at
+   `ddm_v4c_resolve.py:195` with `--ab-starts` defaulting to `"neutral"`, and the derived bounds
+   `AB_RELINS_DERIVED=32` / `AB_DAMP_LEVELS_DERIVED=12` exist at `:633,639` with **no live caller**.
+   Turning them on is **two CLI defaults, no new code** — but the supporting evidence is
+   **n=8 on the ep854 base that `uv1` subsequently REJECTED**, a caveat the relay dropped and
+   source inspection recovered. Cheap and correctly indicated; **not flippable blind.**
+
+6. **SCOPE CORRECTION I am making against my own headline (§2.3).** The two live pose solvers give
+   **OPPOSITE** diagnostics: D2's relin cap never binds, but `ab_damped_gn`'s binds on **~36 %** of
+   mass-carrying pairs (`sv1`, quoted in its own docstring: `converged 0% / damp_cap ~64% /
+   relin_cap ~36%`). Claim 1 is scoped to **the initializer**, not the chain. Two solvers, one
+   chain, opposite prescriptions — the best evidence that the §4.3 diagnostic does work rather
+   than restate a prior.
+
+7. **MY DENOMINATOR WAS TOO SMALL, and I report it as a defect of this arm (§2.2).** I hand-listed
+   **11** surfaces; a full call-graph census found **52** on the live chain — my table is a 21 %
+   sample. Full counts: **SINGLE_START 10, MULTI_START 2** (one off by default), REAL 44 / PROXY 4
+   / MIXED 4; **every damping ladder on the chain is BOUND_ONLY, 5 of 5.** Six files are
+   **VACUOUS** (zero surfaces) and are reported as VACUOUS, never as clean.
+
+8. **HONEST NEGATIVE / SCOPE.** I fired **no** scorer job and **moved nothing**. Every number
    here is reconstruction from receipts or source inspection. The routing fix in §5 is
    **priced and pre-registered, NOT paid** — paying it needs the n600 scorer slot, which `pu2`
    holds for its control group. It is handed over as a runnable recipe, not as a result.
@@ -149,6 +169,66 @@ across `src/tac` + `tools` + `experiments` returns **1,381 files** with a bounde
 §3 records that an independent repo-wide sweep of the *receiver + builder import closure alone*
 found **36 candidate menus, 19 reaching the archive**, against the 8 its own tool enumerated.
 **"Not on the live chain" is not "swept."** Anything outside these 11 rows is **UNKNOWN**, not clean.
+
+### §2.2 MY OWN DENOMINATOR WAS TOO SMALL — the full call-graph census is 52, not 11
+
+An independent full-call-graph enumeration (roots → imports, two hops into `src/tac` and `tools`)
+found **52 surfaces on the live chain**, against the 11 I hand-listed. **My §2 table is a 21 %
+sample and I am reporting that as a defect of this arm** — the same defect `dc1` §3 recorded about
+itself, one arm later. The full counts:
+
+| TERMINATION | n / 52 | | STARTS | n / 52 | | OBJECTIVE | n / 52 |
+|---|---:|---|---|---:|---|---|---:|
+| EXHAUSTIVE | 33 | | **SINGLE_START** | **10** | | REAL_OBJECTIVE | 44 |
+| BOUND_ONLY | **11** | | MULTI_START | **2** (one OFF by default) | | PROXY | 4 |
+| CRITERION_PRESENT | 8 | | N/A (start-free) | 40 | | MIXED | 4 |
+| UNCLEAR | 0 | | | | | | |
+
+**Six files are VACUOUS — zero surfaces — and that is reported as VACUOUS, never as clean**
+(`m50`): `inflate_runner_v4d.py` (pure decoder: table lookups, fixed-form warps),
+`ddm_v4d_build_composed_archive.py` and `cx1_build_ix2_container_archive.py` (first-party
+transform-only; cx1's docstring says so at `:12` — *"deliberately a TRANSFORM and never a
+solver"*), `ddm_tr1_runtime.py`, `ddm_fs1_coordinate_fit_staleness`, `argv_role.py`.
+
+**The three findings the bigger denominator bought — all VERIFIED by me at source, not relayed:**
+
+1. **Every damping ladder on the chain is BOUND_ONLY — 5 of 5** (`pfs1:193`, `v4c:436`, `v4c:489`,
+   `v4c:762`, and near-chain `p3v2:222`). Each is a bare `range(4)` whose only in-loop exit is
+   `if accepted: break`.
+2. **`AB_DAMP_LEVELS_DERIVED = 12` (`v4c:633`) and `AB_RELINS_DERIVED = 32` (`v4c:639`) exist and
+   have NO caller on the live chain** — the chain runs `AB_DAMP_LEVELS = 4` (`:617`) and
+   `GN_RELINS_PHOTO = 4` (`:86`). Their only consumer is
+   `ddm_pg1_pose_repair_recovery_curve.py:177-178`. **A measured-better successor that no live
+   caller reaches** — `m56`, and it is the cure for §2.3's ~36 %.
+3. **`ab_multistart_gn` (`v4c:195`) is BUILT and DEFAULT-OFF** — `--ab-starts` defaults to
+   `"neutral"` (`:1043`). Its `neutral`-first, ties-to-neutral construction makes it *"a strict
+   improvement on the shipped single-start solve or exactly equal to it"* and byte-identical until
+   opted in. See §5 — **with its evidence's caveat, which the relay dropped and I recovered.**
+
+### §2.3 THE DIAGNOSTIC INVERTS BETWEEN THE CHAIN'S TWO POSE SOLVERS — scope correction to §0
+
+`ab_damped_gn`'s own docstring (`ddm_v4c_resolve.py:678-684`) records `sv1`'s MEASURED census:
+
+```
+converged    0%
+damp_cap    ~64%   the `range(damp_levels)` ladder ran out
+relin_cap   ~36%   `relins` exhausted while still accepting steps
+```
+
+**So on the rung-B photometric solver the relinearization cap DOES bind — on ~36 % of the
+mass-carrying pairs — while on D2 it provably never binds (0/600, §3.2).** My §0 claim is scoped to
+**the initializer only**, and I am tightening it here rather than letting it read as a chain-wide
+result. *(`sv1`'s census is on **the hardest 60 pairs**, carrying 86.6 % of post-GN pose mass —
+a deliberately skewed subset, and per `m88` a subset of a skewed population is a different
+population. Labelled, not laundered.)*
+
+**This is the strongest available evidence that the §4.3 diagnostic is doing work rather than
+restating a prior: two solvers, one chain, opposite prescriptions.**
+
+| solver | converged | cap binds? | **diagnostic says** | the cure — **already built, default-off** |
+|---|---:|---|---|---|
+| D2 initializer (`pfs1`) | 0/600 | **never** (0/600, all bounds) | **PLACEMENT — re-initialize** | multi-start (`pu2` banked 6 pairs, −0.0354283) |
+| rung-B `ab_damped_gn` | 0 % | **~36 % relin_cap**, ~64 % damp_cap | **MIXED: ~36 % MORE-SEARCH, ~64 % PLACEMENT** | `AB_RELINS_DERIVED=32`/`AB_DAMP_LEVELS_DERIVED=12` **and** `--ab-starts derived` |
 
 ---
 
@@ -340,6 +420,37 @@ n600 (600 pairs, sha `cd857c69`), with **27.9 % lower ambient flip mass** in the
 change to `pu2`'s existing multi-start recipe**, using a partition that is already computable at
 $0 from a receipt already on disk.
 
+### §5.-1 THE CHEAPEST FIX IS CHEAPER THAN I THOUGHT — both cures are already built and default-OFF
+
+The 52-surface census (§2.2) found what my 11-row table missed: **the cures the §4.3 diagnostic
+prescribes for BOTH live pose solvers already exist in `ddm_v4c_resolve.py` and are switched off.**
+
+| diagnostic (§2.3) | the cure | where it lives | live state |
+|---|---|---|---|
+| D2 + rung-B's ~64 % damp_cap → **PLACEMENT** | `ab_multistart_gn` best-of-4 derived starts | `v4c:195-237` | **`--ab-starts` default `"neutral"`** (`:1043`) = OFF |
+| rung-B's ~36 % relin_cap → **MORE SEARCH** | `AB_RELINS_DERIVED=32`, `AB_DAMP_LEVELS_DERIVED=12` | `v4c:633,639` | **no live caller**; chain runs 4 / 4 |
+
+Both are byte-identical until opted in (`ab_multistart_gn` evaluates `neutral` first and ties go to
+it, so it is *"a strict improvement on the shipped single-start solve or exactly equal to it"*).
+**Cost of turning them on: two CLI defaults. No new code, no new surface** — this is paying the
+identified debt on the existing solver, which is the only move `m54` permits.
+
+**AND THE CAVEAT THAT THE RELAY DROPPED — recovered by reading the source myself.** The census
+reported *"5/8 winners NON-neutral"* as the supporting evidence. The docstring's full text
+(`v4c:170-180`) says that was measured by **`ddm_uv1`, 8 probe pairs, on the ep854 base**, and adds
+its own limit verbatim: *"NOT YET MEASURED ON THE LIVE gr1 CHAIN — that is a scorer campaign and is
+staged, not self-fired."* **`ddm_uv1` is the arm that then REJECTED the ep854 base outright**
+(d_pose 37.877 against a pre-registered break-even of 0.0131903, 2871× over). So the −11.8 % is
+**n=8 on a base that was subsequently rejected** — a borrowed number in `m88`/§8.5 terms, not
+transferable to the live base.
+
+**Verdict: the switch is cheap and correctly indicated by the diagnostic; its evidence is NOT
+sufficient to flip it blind.** It needs the n600 measurement its own docstring says is owed —
+which is exactly what §5.2's falsifier is for, and why §5.1's routing matters (it makes that
+measurement affordable). *(This is the failure my charter named: a one-line fix relayed through
+hops, each dropping a qualifier. It arrived at me stripped of both its `n` and its base. Verifying
+by execution/source rather than by reading the relay is what recovered it.)*
+
 ### §5.0 What the fix is
 
 `pu2` established that multi-start is the mechanism and banked **ΔS −0.0354283** on 6 tail pairs
@@ -473,9 +584,14 @@ a single bug cannot produce all three. The `min n_forwards = 15 = 1+6+8` identit
 it is an exact arithmetic coincidence under the correct parameters and an impossibility under the
 wrong ones.
 
-**Attack 5 — where I am weakest.** (a) **My denominator is the live chain, not the repo** (§2.1) —
-1,381 files carry a bounded loop and I inspected 11 surfaces. Everything else is UNKNOWN, not
-clean. (b) **`pu2`'s under-convergence evidence is n=4 probed pairs**, and its own control group has
+**Attack 5 — where I am weakest, and two of these fired after I first wrote this section.**
+(a) **My hand-built denominator was 11 against a true live-chain count of 52** — a 21 % sample
+(§2.2). It missed the two default-off cures that turned out to be the actual answer to §5. The
+lesson is not "enumerate harder"; it is that a hand-built denominator is a *sample* and must be
+labelled as one until a call-graph census bounds it. And 1,381 files carry a bounded loop
+repo-wide, so even 52 is live-chain-scoped: everything else is UNKNOWN, not clean.
+(a2) **My headline over-reached from one solver to the chain** and §2.3 walks it back — the
+rung-B solver's cap binds ~36 %. (b) **`pu2`'s under-convergence evidence is n=4 probed pairs**, and its own control group has
 not run; I inherited that scope and did not widen it. (c) **§4.3's `wr1` confirmation is on a
 proxy**, and I labelled it. (d) **I ran no scorer job**, so nothing here is an authority row.
 
@@ -505,6 +621,13 @@ which no arm was running.
    Sister: `pfs1_warp_receiver.py` is not in the repo at all (`dc1` §3).
 4. **Run the §5.2 falsifier**, sequenced **after** `pu2`'s control group. **Owner: `pu2` or its
    successor** (it owns the recipe and the slot).
+4b. **Measure `--ab-starts derived` and the derived bounds (`AB_RELINS_DERIVED=32`,
+   `AB_DAMP_LEVELS_DERIVED=12`) at n600 ON THE LIVE BASE** — both are built, both are default-off,
+   and both are indicated by the §2.3 diagnostic for the solver they serve. Their only evidence is
+   `uv1`'s **n=8 on the REJECTED ep854 base**; `ab_multistart_gn`'s own docstring names the gap
+   (*"NOT YET MEASURED ON THE LIVE gr1 CHAIN"*). **Do not flip either default without that row.**
+   **Owner: the same scorer-slot holder as row 4** — it is the same job on the same pairs, and
+   running them together costs one campaign instead of two.
 5. **Realized-`d_seg` A/B of `wr1`'s corrected ordering** — §4.3's confirmation is proxy-only.
    **Owner: `rs2`** (already named as its own owed row; recorded here so it is not re-derived).
 6. **UNKNOWN, not clean:** the ~1,370 bounded loops off the live chain, and the 11 archive-reaching
