@@ -316,35 +316,37 @@ residual `dY ~ 5e-8`.
 appears to buy ~**99% of the pose damage back for ~1/3 of the seg gain**, at a reduced solver
 budget. The n=32 run is in flight; §2.8 lands its pooled numbers.
 
-### 2.8 Job 1c — the pose cure MEASURED (interim n=12 of 32; run in flight)
+### 2.8 Job 1c — the pose cure MEASURED, **FULL n=32**
 
 Solver budget deliberately REDUCED vs Job 1b (15 steps / single start vs 25 / two starts), so
 every eta here is a **conservative FLOOR**, not the optimum.
 
-| quantity | value |
+| quantity | value (n=32) |
 |---|---|
-| `eta_net` pooled | **+0.5518** (per-pair +0.5486 ± 0.0606; 1/12 above 0.583) |
-| `d_pose` before -> after | 0.000914 -> **0.000927** = **1.0145x** |
-| pairs where d_pose IMPROVED | **4/12** |
-| fixed / introduced | 5,318 / 706 |
-| integer-residual `max|dY|` | mean 17.00, max 22.42 |
-| actuator inflation (snap tax) | **1.1725x** (priced band 0.0517 -> snapped 0.0607) |
+| `eta_net` pooled | **+0.5406** (per-pair +0.5371 ± 0.0563; min +0.3882, max +0.7189; 2/32 above 0.583) |
+| `d_pose` before -> after | 0.000687 -> **0.000713** = **1.0388x** |
+| pairs where d_pose IMPROVED | **7/32** |
+| fixed / introduced | 14,722 / 2,045 |
+| integer-residual `max|dY|` | mean 17.85, max 25.95 |
+| actuator inflation (snap tax) | **1.1744x** |
 
 **The cure works, and its cost is legible.** Against the unconstrained solve it trades
-`eta 0.79 -> 0.55` (−30%) to take the pose collateral from **56.5x** down to **1.014x** — i.e.
-**~98% of the pose damage is bought back for ~30% of the seg gain.** And the integer caveat
-derived in §2.7 is confirmed as REAL and simultaneously as HARMLESS: `max|dY|` is 17–22 grey
-levels, so nullity is definitely not exact — yet `d_pose` moves only 1.4%, and on a third of
-pairs it moves the *right* way. **Q3's "exactly 0" does not survive an integer actuator; the
-useful statement is "pose-neutral to ~1.4%", which is what this unit can defend.**
+`eta 0.7895 -> 0.5406` (−31.5%) to take the pose collateral from **56.5x** down to **1.039x** —
+**~96% of the pose damage bought back for ~32% of the seg gain.** The integer caveat derived in
+§2.7 is confirmed REAL and simultaneously near-HARMLESS: `max|dY|` is 18–26 grey levels, so
+nullity is emphatically not exact — yet `d_pose` moves only **3.9%**, and on **7/32** pairs it
+moves the *right* way. **`Q3`'s "exactly 0" does not survive an integer actuator; the defensible
+statement is "pose-neutral to ~4%".**
 
 **Two honesty charges against this rung, stated rather than buried:**
 1. **Snap tax.** Two of the six constraints are block-mean, so the actuator must edit whole
-   2x2 blocks and touches **17.25% more pixels than gp1's priced address**. The eta above is
-   therefore *slightly optimistic* relative to row A3's byte count; the row would owe either
-   the extra address or a block-granular re-price.
-2. **n=12 of 32 at the time of writing**, and the F1 verdict in §2.0 does **not** rest on this
-   rung — F1 was answered at the full pre-registered n=32 in §2.4.
+   2x2 blocks and touches **17.44% more pixels than gp1's priced address**. The eta above is
+   therefore *slightly optimistic* relative to row A3's byte count; the row owes either the
+   extra address or a block-granular re-price.
+2. **The interim n=12 reading in an earlier revision of this memo was optimistic** (eta 0.5518,
+   pose 1.0145x) versus the full n=32 (eta 0.5406, pose 1.0388x). Small, but recorded: the
+   partial sample flattered both numbers. The F1 verdict in §2.0 does **not** rest on this rung
+   — F1 was answered at the full pre-registered n=32 in §2.4.
 
 ### 2.9 What this unit does NOT license
 
@@ -466,8 +468,8 @@ named gap (0.654355209; 1% = 0.0065436 S = 9,827 B):
 | row | bytes | rate S | eta | seg gain | **net S** | **% of gap** |
 |---|---:|---:|---:|---:|---:|---:|
 | A3 free band r=1 | 367,523 | 0.24472 | 0.7895 (pose-catastrophic) | 0.33110 | −0.08638 | +13.20% |
-| **A3 free band r=1** | 367,523 | 0.24472 | **0.554 (pose-neutral)** | 0.23234 | **+0.01238** | **−1.89% (DEAD as priced)** |
-| **A2 oracle band q=0.02** | 260,569 | 0.17350 | **0.554 (pose-neutral)** | 0.21780 | **−0.04430** | **+6.77% (LIVE)** |
+| **A3 free band r=1** | 367,523 | 0.24472 | **0.5406 (pose-neutral, n=32)** | 0.22672 | **+0.01800** | **−2.75% (DEAD as priced)** |
+| **A2 oracle band q=0.02** | 260,569 | 0.17350 | **0.5406 (pose-neutral, n=32)** | 0.21253 | **−0.03903** | **+5.96% (LIVE)** |
 
 **The free band is too expensive and the oracle band is live.** The entire difference is
 gp1's R5 micro-student rung — the ordering-within-band worth 106,954 B that gp1 called
@@ -484,8 +486,8 @@ cross-axis law and it belongs in the equations leg, not just in two memos.
 
 ### 4.3 NEXT-IF-RESUMED (ordered by distance to a lower exact score)
 
-1. **Finish Job 1c to n=32** (in flight, resumable via `--resume`; receipts at
-   `sq1_posenull_n32.json`). Then re-run the §4.2 table on the final pooled eta.
+1. **Job 1c is COMPLETE at n=32** (receipts at
+   `sq1_posenull_n32.json`); §2.8/§4.2 carry its final pooled eta.
 2. **Raise the pose-null solver to Job 1b's budget** (25 steps, 2 starts). Job 1c's eta is a
    FLOOR at a deliberately reduced budget; the 0.55-vs-0.79 gap is partly budget, not physics.
    Cheap, and it moves A2's net directly.
