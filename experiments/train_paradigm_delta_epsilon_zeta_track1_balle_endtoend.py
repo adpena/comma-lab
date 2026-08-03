@@ -1895,7 +1895,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "AFTER apply_eval_roundtrip_during_training. Closes the "
             "pixels→bytes→pixels fidelity gap: the eval roundtrip simulates "
             "uint8 quant but NOT mp4 chroma 4:2:0 / DCT-quant losses. Predicted "
-            "proxy-auth gap closure ~0.5-2% PoseNet at PR106 r2. OFF by default "
+            "proxy-auth gap closure ~0.5-2%% PoseNet at PR106 r2. OFF by default "
             "for backward-compat; enable when training a new substrate where "
             "the eval pipeline includes mp4 reencoding."
         ),

@@ -651,7 +651,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--batch-size", type=int, default=2, help="Scorer batch size in pairs")
     parser.add_argument("--seg-guard-delta", type=float, default=0.0, help="Per-pair selector max allowed SegNet delta")
     parser.add_argument("--k-unified", type=int, default=16, help="Unified-menu size K for tier-split analysis")
-    parser.add_argument("--pose-null-quantile", type=float, default=0.10, help="Quantile of |d_pose| ascending to count as PoseNet-null (default bottom 10%)")
+    parser.add_argument("--pose-null-quantile", type=float, default=0.10, help="Quantile of |d_pose| ascending to count as PoseNet-null (default bottom 10%%)")
     return parser.parse_args(argv)
 
 

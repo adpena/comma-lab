@@ -329,6 +329,17 @@ class TR1Config:
     lane_guard_margin_floor_weight: float = 0.0   # 0.0 => margin-floor emphasis OFF
     lane_guard_lambda_init: float = 0.0   # warm-start dual (b4s rollback+raise-lambda path:
     # state resets at relaunch; the supervisor re-fires with the last lambda + one step)
+    # ---- ddm_bs2 (#871) BUDGET SCHEDULE: the constant budget can never bind -------------
+    # MEASURED on the burn-4 primary telemetry (64 lane_guard gate rows, windows 01-03):
+    # lambda_lane == 0.0 on 64/64 gates and g < 0 on 64/64, because budget_s was pinned at
+    # the ep641 STARTING level while realized Lane descended 0.122438 -> 0.072225.  The
+    # constant licensed the primal to give back ALL 0.050213 S-units of won Lane before the
+    # guard could respond.  ON: budget becomes a monotone non-increasing RATCHET that locks
+    # in won Lane, with a deadband whose sigma is measured online and whose k is calibrated
+    # against the null.  DEFAULT-OFF so sealed tickets recompile bit-identical; when off the
+    # guard now SELF-REPORTS its inertness (inertness_alarm in the gate telemetry).
+    lane_guard_ratchet: bool = False
+    lane_guard_ratchet_horizon: int = 0   # 0 => self-derive max(mean_gates, gates_seen)
     # ---- ddm_bp1 (#824) BOUNDARY RESET RACE — arm selector (default = arm B incumbent) ----
     adam_bias_correction: bool = False    # gc15 §7 / tac.optimization.reset_operator: False =
     # ARM_B_ZERO_RESET (MLX's own Adam default => arm A/control trains BIT-IDENTICALLY to every
@@ -926,6 +937,135 @@ def topology_per_class(realized: np.ndarray, gts: list[np.ndarray]) -> dict[str,
             "gt_components_erased": erased, "smallest_surviving_gt_component_px": min_surv}
 
 
+# ---------------------------------------------------------------------------
+# ddm_bs3 (#909) — the FULL-SCOPE / WRONG-PROJECTION cures for the two gate
+# scalars.  Both statistics below already ran over the FULL gate set; each was
+# structurally unable to register the defect it is trusted for, because it is a
+# contraction whose KERNEL is occupied on real data:
+#
+#   ``realized_gate_dseg_mean``      = mean over pairs of a per-pixel error RATE.
+#       Kernel: every redistribution of the SAME total error mass across CLASSES.
+#       The campaign's binding structure is per-class (lane erasure, the Undriv
+#       watch, the per-class floors), so that kernel is exactly where the live
+#       defects sit.  ``topology_per_class`` is per-class TOPOLOGY (component
+#       counts / erasures), never per-class error MASS -- it does not close this.
+#   ``realized_flips_vs_prev_gate``  = count of pixels with ``realized != prev``.
+#       Kernel: the SIGN of every flip.  wrong->right and right->wrong both add 1.
+#       MEASURED on the burn-4 gate series (61 consecutive gate pairs, real
+#       n600-cache GT, 36-pair gate, 7,077,888 px compared per gate): the NET
+#       error-pixel movement is a MEDIAN 5.4% of the counted flips -- i.e. ~94.6%
+#       of what this counter reports cancels, and the counter cannot say so.
+#
+# Both cures are EXACT PARTITIONS of the blind scalar (not new proxies), pure
+# numpy, score-neutral, default-on read-only telemetry (the "observability that
+# cannot change the bytes defaults ON" rule).  Cost is negligible against the
+# SegNet forward the gate already paid for.
+# ---------------------------------------------------------------------------
+# Every key the ddm_bs3 cures add to a gate row. These are telemetry.jsonl-ONLY:
+# they are stripped before the row enters ``telemetry_tail`` (baked into the
+# checkpoint meta), so this landing leaves checkpoint bytes untouched. Pinned
+# against the producing functions by ``test_ddm_bs3_gate_projection_kernel`` so a
+# future field cannot silently leak into the checkpoint.
+BS3_TELEMETRY_ONLY_KEYS = frozenset({
+    "realized_gate_dseg_per_pair_sd",
+    "realized_gate_dseg_by_gt_class",
+    "realized_flips_toward_gt",
+    "realized_flips_away_from_gt",
+    "realized_flips_lateral",
+    "realized_flips_net_error_px",
+    "realized_class_l1_rel_since_prev_gate",
+    "realized_mean_hid_class_motion",
+})
+
+
+def checkpoint_safe_telemetry_row(row: dict[str, Any]) -> dict[str, Any]:
+    """Any telemetry row MINUS the ddm_bs3 telemetry-only fields.
+
+    ``telemetry_tail`` is baked into the checkpoint meta, so anything appended to
+    it changes checkpoint bytes. The bs3 decomposition fields are pure read-only
+    observability and go to ``telemetry.jsonl`` via ``tlog`` only -- exactly the
+    rule the v9 telemetry port already follows. Kept as a named function (rather
+    than an inline comprehension) so a test can pin BOTH that the strip list is
+    complete AND that EVERY call site actually applies it.  Applied to the epoch
+    row too (where it is a no-op) so the invariant is TOTAL -- 'nothing entering
+    telemetry_tail carries a bs3 key' -- rather than true of one call site and
+    unchecked at the other."""
+    return {k: v for k, v in row.items() if k not in BS3_TELEMETRY_ONLY_KEYS}
+
+
+def dseg_by_gt_class(realized: np.ndarray, gts: list[np.ndarray],
+                     n_classes: int = 5) -> list[float]:
+    """EXACT partition of the gate's mean d_seg by GROUND-TRUTH class.
+
+    Every error pixel has exactly one GT class, so
+    ``sum(dseg_by_gt_class(...)) == mean(d_seg)`` identically (to fp rounding).
+    Element ``c`` is the share of the gate's realized d_seg owed to pixels whose
+    GT is class ``c`` -- the per-class error MASS the mean contracts away.
+
+    VACUITY: refuses an empty gate set rather than returning zeros, which would
+    be indistinguishable from a perfect gate."""
+    if realized.shape[0] == 0 or not gts:
+        raise ValueError("dseg_by_gt_class: empty gate set is VACUOUS, never 0.0")
+    if realized.shape[0] != len(gts):
+        raise ValueError(
+            f"dseg_by_gt_class: {realized.shape[0]} realized maps vs {len(gts)} GT maps")
+    n = len(gts)
+    out = [0.0] * n_classes
+    for i, g in enumerate(gts):
+        # (round-1 self-review) A GT label >= n_classes would be silently dropped
+        # from every bucket, so the partition would under-sum the very scalar it
+        # claims to decompose -- a wrong-projection defect introduced BY the cure.
+        # Refuse instead.
+        if g.size and int(np.max(g)) >= n_classes:
+            raise ValueError(
+                f"dseg_by_gt_class: GT label {int(np.max(g))} >= n_classes={n_classes}; "
+                "the partition would silently under-sum the mean it decomposes")
+        wrong = realized[i] != g
+        for c in range(n_classes):
+            out[c] += float(np.count_nonzero(wrong & (g == c))) / g.size
+    return [v / n for v in out]
+
+
+def flip_direction_counts(realized: np.ndarray, prev_realized: np.ndarray,
+                          gts: list[np.ndarray]) -> dict[str, int]:
+    """SIGN-RESOLVE ``realized_flips_vs_prev_gate`` into an exact 3-way partition.
+
+    A pixel that changed between gates is exactly one of:
+      ``toward_gt``  was wrong, now right      (improvement)
+      ``away_from_gt`` was right, now wrong    (regression)
+      ``lateral``    wrong before and after, but a DIFFERENT wrong class
+    (the fourth case -- right before and after -- forces ``prev == realized`` and
+    so is not a flip at all).  Therefore
+      ``toward + away + lateral == count(realized != prev)`` and
+      ``away - toward == `` the exact change in the gate's error-pixel count,
+    which is the pixel-unit d_seg movement.  The bare count is the sum of three
+    terms that routinely cancel; this reports them separately."""
+    if realized.shape[0] == 0 or not gts:
+        raise ValueError("flip_direction_counts: empty gate set is VACUOUS, never 0")
+    if realized.shape != prev_realized.shape:
+        raise ValueError(
+            f"flip_direction_counts: shape {realized.shape} vs prev {prev_realized.shape}")
+    # (round-1 self-review) The loop is over ``gts``; a short ``gts`` would silently
+    # count fewer pairs than the incumbent ``count(realized != prev)`` covers, so the
+    # 3-way partition would no longer sum to it -- and nothing would say so.
+    if len(gts) != realized.shape[0]:
+        raise ValueError(
+            f"flip_direction_counts: {len(gts)} GT maps vs {realized.shape[0]} realized "
+            "-- the partition would not cover the incumbent count's denominator")
+    toward = away = lateral = 0
+    for i, g in enumerate(gts):
+        err_prev = prev_realized[i] != g
+        err_cur = realized[i] != g
+        changed = realized[i] != prev_realized[i]
+        toward += int(np.count_nonzero(changed & err_prev & ~err_cur))
+        away += int(np.count_nonzero(changed & ~err_prev & err_cur))
+        lateral += int(np.count_nonzero(changed & err_prev & err_cur))
+    return {"realized_flips_toward_gt": toward,
+            "realized_flips_away_from_gt": away,
+            "realized_flips_lateral": lateral,
+            "realized_flips_net_error_px": away - toward}
+
+
 def realized_gate(model, gate_ids: tuple[int, ...], lstars, seg_cpu,
                   prev_realized: np.ndarray | None) -> dict[str, Any]:
     import mlx.core as mx
@@ -950,11 +1090,24 @@ def realized_gate(model, gate_ids: tuple[int, ...], lstars, seg_cpu,
         "gate_ids_n": len(gate_ids),
         "realized_gate_dseg_mean": float(np.mean(dsegs)),
         "realized_gate_dseg_per_pair_max": float(np.max(dsegs)),
+        # ddm_bs3 (#909): the mean's own DISPERSION over the gate pairs. A mean
+        # reported without its spread is a point estimate presented as a fact;
+        # every A/B on this quantity needs it (design philosophy P2).
+        "realized_gate_dseg_per_pair_sd": (
+            float(np.std(np.asarray(dsegs, dtype=np.float64), ddof=1))
+            if len(dsegs) > 1 else None),
+        # ddm_bs3 (#909): EXACT per-GT-class partition of the mean -- the kernel
+        # the scalar contracts away, and the axis the campaign actually watches.
+        "realized_gate_dseg_by_gt_class": dseg_by_gt_class(realized, gts),
         "gate_render_stream": "mlx_cpu_fp32",
         "gate_wall_seconds": time.monotonic() - t0,
     }
     if prev_realized is not None and prev_realized.shape == realized.shape:
         row["realized_flips_vs_prev_gate"] = int(np.count_nonzero(realized != prev_realized))
+        # ddm_bs3 (#909): sign-resolve that count. MEASURED on burn-4, ~94.6% of
+        # the flips it reports cancel; the bare magnitude cannot distinguish a
+        # gate that improved from one that regressed by the same amount.
+        row.update(flip_direction_counts(realized, prev_realized, gts))
     row["topology_per_class"] = topology_per_class(realized, gts)
     row["_realized_argmax"] = realized
     return row
@@ -1107,8 +1260,6 @@ def assert_spike_scalars_have_their_gate(seg_spike_reweight: bool, downweight: f
             f"--seg-spike-downweight {SEG_SPIKE_DOWNWEIGHT_RACE_START} (concession-priced) | "
             f"--seg-coherent-upweight {SEG_COHERENT_UPWEIGHT_RACE_START:.6f} "
             f"(risk-proportional = its MEASURED lift).")
-
-
 
 
 def reachable_seg_forms(seg_form_start: str) -> frozenset[str]:
@@ -1319,6 +1470,35 @@ def gate_interval_fields(prev: dict[str, Any] | None,
             "interval_dseg_per_epoch": (d / span if span > 0 else None)}
 
 
+def a1_class_motion_fields(prev: dict[str, Any], cur: dict[str, Any],
+                           rz_drop: float) -> dict[str, Any]:
+    """ddm_bs3 (#909) GUARD: refuse a FLAT realized MEAN to stand as "nothing moved".
+
+    A1's whole decision is a relative drop of ONE scalar (the gate d_seg mean).
+    By the triangle inequality the per-class L1 motion
+    ``sum_c |cur_c - prev_c| / rz_prev`` is ALWAYS >= ``|rz_drop|``; the gap
+    between them is exactly the motion the mean cancels. When the mean reads
+    flat (below ``A1_REALIZED_DROP_REL``) while the class composition moved at
+    or above that same threshold, the scalar's kernel is demonstrably occupied
+    for THIS gate and the flat reading is not evidence of a flat state.
+
+    ADDITIVE ONLY: this never changes ``a1_alarm`` or ``a1_classification`` --
+    it records that the sole-evidence scalar was insufficient here. Returns an
+    empty dict when either row predates the per-class vector (old telemetry),
+    so the qualification is absent rather than silently False."""
+    pv = prev.get("realized_gate_dseg_by_gt_class")
+    cv = cur.get("realized_gate_dseg_by_gt_class")
+    if not isinstance(pv, (list, tuple)) or not isinstance(cv, (list, tuple)) or len(pv) != len(cv):
+        return {}
+    denom = max(abs(float(sum(pv))), 1e-12)
+    l1_rel = sum(abs(float(b) - float(a)) for a, b in zip(pv, cv, strict=True)) / denom
+    flat_mean = abs(rz_drop) < A1_REALIZED_DROP_REL
+    return {
+        "realized_class_l1_rel_since_prev_gate": float(l1_rel),
+        "realized_mean_hid_class_motion": bool(flat_mean and l1_rel >= A1_REALIZED_DROP_REL),
+    }
+
+
 def a1_adjudicate(prev: dict[str, Any] | None, cur: dict[str, Any],
                   smooth_prev: float | None, smooth_cur: float) -> dict[str, Any]:
     """Typed A1 verdict per gate: coupled descent vs realization gap (never silent)."""
@@ -1331,6 +1511,7 @@ def a1_adjudicate(prev: dict[str, Any] | None, cur: dict[str, Any],
     rz_drop = (rz_prev - rz_cur) / max(abs(rz_prev), 1e-12)
     out["smooth_rel_drop_since_prev_gate"] = float(sm_drop)
     out["realized_rel_drop_since_prev_gate"] = float(rz_drop)
+    out.update(a1_class_motion_fields(prev, cur, rz_drop))
     if sm_drop >= A1_SMOOTH_DROP_REL and rz_drop < A1_REALIZED_DROP_REL:
         out["a1_alarm"] = True
         out["a1_classification"] = "A1_REALIZATION_GAP_ALARM"
@@ -1539,6 +1720,14 @@ def build_argparser() -> argparse.ArgumentParser:
                     help="lg1 low-margin Lane emphasis weight (0.0 => OFF; floor DERIVED from QA80 p10)")
     ap.add_argument("--lane-guard-lambda-init", type=float, default=0.0,
                     help="lg1 warm-start dual multiplier (supervisor rollback+raise-lambda relaunch)")
+    ap.add_argument("--lane-guard-ratchet", action="store_true",
+                    help="bs2 #871: make the Lane budget a monotone RATCHET that locks in won "
+                         "Lane (deadband sigma MEASURED online, k CALIBRATED vs the null). "
+                         "DEFAULT-OFF: the constant budget was MEASURED inert on burn-4 "
+                         "(lambda==0 on 64/64 gates), so off is the known-inert arm.")
+    ap.add_argument("--lane-guard-ratchet-horizon", type=int, default=0,
+                    help="bs2 #871 deadband horizon in gates (0 => self-derive from gates seen; "
+                         "pass the run's planned gate count for a stationary deadband)")
     ap.add_argument("--token-temporal-mode", default="shared_base",
                     choices=("shared_base", "independent"),
                     help="shared_base = identity-xi advection (Einstein d_cov/d_gauge force)")
@@ -1561,7 +1750,7 @@ def build_argparser() -> argparse.ArgumentParser:
                          "pre-#824 run); 'on' = ARM_BPRIME_BIAS_CORRECTED (bias_correction=True "
                          "=> the post-reset step is lr*sign(g), removing the eta(t) impulse "
                          "worth 1212.57 excess sign-steps = 16.168 epochs per boundary at 75 "
-                         "steps/epoch, 81.7% of it inside the first 13 epochs). "
+                         "steps/epoch, 81.7%% of it inside the first 13 epochs). "
                          "on|off is used (not store_true) so the DSL compiles a VALUED flag")
     ap.add_argument("--boundary-probe", default="off", choices=("off", "on"),
                     help="#824 boundary instrument (READ-ONLY; args-only, never TR1Config => "
@@ -1706,7 +1895,7 @@ def build_argparser() -> argparse.ArgumentParser:
                          "(quant_levels//4). base endpoint = --token-quant-levels")
     ap.add_argument("--token-delta-group-sparsity", default="off", choices=("off", "on"),
                     help="ax1 §4a: 'on' adds a group-L2 shrinkage on per-pair token deltas "
-                         "(98.806% image-stationarity has NO train-side force). Loss term => no param")
+                         "(98.806%% image-stationarity has NO train-side force). Loss term => no param")
     ap.add_argument("--delta-sparsity-weight", type=float, default=0.0,
                     help="w_delta_sparsity (additive to the seg loss); 0.0 => OFF. The TRAIN-side "
                          "twin of the export-side ν null-snap (gc10 F2)")
@@ -1809,6 +1998,8 @@ def main() -> int:
         lane_guard_born_weight=args.lane_guard_born_weight,
         lane_guard_margin_floor_weight=args.lane_guard_margin_floor_weight,
         lane_guard_lambda_init=args.lane_guard_lambda_init,
+        lane_guard_ratchet=args.lane_guard_ratchet,
+        lane_guard_ratchet_horizon=args.lane_guard_ratchet_horizon,
         adam_bias_correction=(args.adam_bias_correction == "on"),
     )
     (out_dir / "tr1_config.json").write_text(cfg.canonical_json() + "\n")
@@ -1883,7 +2074,6 @@ def main() -> int:
                    "the noise floor unless the delta clears it"),
           "receipt": ".omx/research/ddm_dt1_determinism_floor_20260803.md",
           "score_claim": False})
-
 
     # MLX scorer adapter (training-gradient device; NEVER a score) + canonical loss.
     upstream_root = str(Path(sys.modules["tac"].__file__).resolve().parents[2] / "upstream")
@@ -2163,6 +2353,8 @@ def main() -> int:
             lambda_max=cfg.lane_guard_lambda_max,
             born_protect_weight=cfg.lane_guard_born_weight,
             margin_floor_weight=cfg.lane_guard_margin_floor_weight,
+            budget_ratchet=cfg.lane_guard_ratchet,
+            ratchet_horizon_gates=cfg.lane_guard_ratchet_horizon,
         ).resolved()
         lane_guard_state = _lane_guard.LaneGuardState(
             lambda_lane=max(0.0, min(cfg.lane_guard_lambda_init,
@@ -2175,6 +2367,9 @@ def main() -> int:
               "born_protect_weight": lane_guard_cfg.born_protect_weight,
               "margin_floor_weight": lane_guard_cfg.margin_floor_weight,
               "lane_sensitivity_ratio": lane_guard_cfg.lane_sensitivity_ratio,
+              "budget_ratchet": lane_guard_cfg.budget_ratchet,
+              "ratchet_mean_gates": lane_guard_cfg.ratchet_mean_gates,
+              "ratchet_horizon_gates": lane_guard_cfg.ratchet_horizon_gates,
               "eta_provenance": _lane_guard.derive_eta_lambda()[1],
               "note": "lg1 CONSTRAIN-AND-PROTECT; realized-g read from a1 gate (zero new "
                       "scorer passes); score_neutral verdict authority unchanged"})
@@ -2447,7 +2642,7 @@ def main() -> int:
                 row["event_delta_sparsity_engage"] = {
                     "epoch": epoch, "trigger": "F2_midpoint_fallback"}
         tlog(row)
-        telemetry_tail.append(row)
+        telemetry_tail.append(checkpoint_safe_telemetry_row(row))
 
         # ddm_tp1 (#804) Q7 lever_engage COMPANIONS: for every event fired into the epoch
         # row this epoch, ALSO emit the canonical uniform {stage:lever_engage,...} row (v9
@@ -2544,7 +2739,13 @@ def main() -> int:
                     # self-review of my own instrumentation.)
                     _bj["a1_alarms"] = a1_alarm_summary([*telemetry_tail, gate_row])
                     tlog(_bj)
-            telemetry_tail.append(dict(gate_row.items()))
+            # ddm_bs3 (#909): the new decomposition fields go to telemetry.jsonl (tlog,
+            # above) ONLY -- never into telemetry_tail, which is BAKED INTO THE CHECKPOINT
+            # meta (:1602). Keeping them out preserves the trainer's standing
+            # checkpoint-byte-invariance law (the same reason the v9 telemetry port is
+            # tlog-only). Nothing is lost: prev_gate_row is the in-process local (:2726),
+            # so the guard still sees the previous gate's per-class vector.
+            telemetry_tail.append(checkpoint_safe_telemetry_row(gate_row))
             print(json.dumps({k: gate_row[k] for k in
                               ("epoch", "realized_gate_dseg_mean", "a1_classification",
                                "total_counted_bytes")}), flush=True)

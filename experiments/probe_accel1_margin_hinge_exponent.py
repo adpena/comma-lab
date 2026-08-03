@@ -308,7 +308,7 @@ def main() -> None:
     )
     ap.add_argument("--soft-cosine-temp", type=float, default=0.3, help="soft-cosine T (the gradient-alive sweet spot per the lever probes)")
     ap.add_argument("--margin-target", type=float, default=1.0, help="margin-hinge target margin (logit units)")
-    ap.add_argument("--road-lane-emphasis", type=float, default=2.0, help="margin-hinge road↔lane class emphasis (Probe E: 64% of flips)")
+    ap.add_argument("--road-lane-emphasis", type=float, default=2.0, help="margin-hinge road↔lane class emphasis (Probe E: 64%% of flips)")
     ap.add_argument("--out-json", type=str, default=None)
     ap.add_argument("--seed", type=int, default=0)
     args = ap.parse_args()

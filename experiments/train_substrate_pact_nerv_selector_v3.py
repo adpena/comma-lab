@@ -213,7 +213,7 @@ def _build_parser() -> argparse.ArgumentParser:
         default=3,
         help=(
             "Number of top-K tensors routed to FP4-QAT (parent memo: top-3 "
-            "cover 70.31% of decoder byte cost). Informational at this "
+            "cover 70.31%% of decoder byte cost). Informational at this "
             "wave; the canonical heterogeneous_bit_allocation helper uses "
             "its own DEFAULT_TOP_K_FP4=3 constant."
         ),

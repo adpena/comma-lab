@@ -278,7 +278,7 @@ def _build_parser() -> argparse.ArgumentParser:
         default=DEFAULT_DENSITY_PASS_THRESHOLD_PERCENT,
         help=(
             "Density above which the candidate is PASS (sub-frontier candidate "
-            "per the sister design memo §Predicted ΔS band). Default 5.0%."
+            "per the sister design memo §Predicted ΔS band). Default 5.0%%."
         ),
     )
     parser.add_argument(
@@ -287,7 +287,7 @@ def _build_parser() -> argparse.ArgumentParser:
         default=DEFAULT_DENSITY_OBSERVABILITY_THRESHOLD_PERCENT,
         help=(
             "Density above which the candidate is OBSERVABILITY_ONLY "
-            "(saturating composition per Catalog #227 alpha=0.5). Default 1.0%."
+            "(saturating composition per Catalog #227 alpha=0.5). Default 1.0%%."
         ),
     )
     parser.add_argument(

@@ -808,7 +808,7 @@ def main() -> None:
                              "of upstream/gt_poses.pt is intentionally NOT done — "
                              "explicit > implicit per CLAUDE.md FORBIDDEN PATTERNS. "
                              "See findings.md 'Lane F regression' (2026-04-27): "
-                             "the silent fallback to zero poses caused a +58% PoseNet "
+                             "the silent fallback to zero poses caused a +58%% PoseNet "
                              "regression on Lane F because the renderer was QAT-trained "
                              "against zero poses then deployed against real poses (per "
                              "memory project_baseline_poses_load_bearing).")

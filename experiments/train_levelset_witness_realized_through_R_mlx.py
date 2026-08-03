@@ -19364,7 +19364,7 @@ def main(argv: list[str] | None = None) -> int:
                     "confidently decided and flips are rare (non-reducible-by-us). The reducible + "
                     "stably-decided band is [lo, hi] = [0.3, 0.5] (MEASURED). Default 0.5.")
     ap.add_argument("--seg-horizon-row-lo", type=int, default=96,
-                    help="v7.5 B.5 (#169): the TOP SEG-grid row of the horizon band (inclusive). 97.8% of "
+                    help="v7.5 B.5 (#169): the TOP SEG-grid row of the horizon band (inclusive). 97.8%% of "
                     "the frontier d_seg lives in horizon rows ~96-288 (MEASURED; where sky/far meets the "
                     "ground classes). Clamped to [0, H). Default 96.")
     ap.add_argument("--seg-horizon-row-hi", type=int, default=288,
