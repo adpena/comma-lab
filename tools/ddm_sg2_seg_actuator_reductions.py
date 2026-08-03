@@ -154,6 +154,79 @@ def coarea_rho(margins: np.ndarray, lstars: np.ndarray) -> dict:
 
 
 # ---------------------------------------------------------------------------------------------
+# T5 -- the EXACT per-edge decomposition of the density law
+# ---------------------------------------------------------------------------------------------
+# MEASURED class indices (never luma-sorted -- the luma sort gives a different, WRONG order and
+# has bitten this campaign 3x):
+CLASS_NAMES = {0: "Road", 1: "Lane", 2: "Undrivable", 3: "Movable", 4: "MyCar"}
+
+
+def coarea_rho_by_edge(margins: np.ndarray, lstars: np.ndarray) -> dict:
+    """Decompose rho EXACTLY by class edge.
+
+    The local coarea estimator is a SUM over boundary crossings, and every crossing carries the
+    unordered class pair {a,b} it separates.  So
+
+        rho = sum over edges {a,b} of rho_{a,b},      rho_{a,b} = (1/N) * sum_{crossings of that
+                                                                   type} 2/g
+
+    is an EXACT additive decomposition -- not an attribution heuristic.  Combined with
+    d_seg ~= rho * r this gives the per-edge exchange rate directly: reducing the delivered reach
+    on edge {a,b} by a factor f removes rho_{a,b}/rho of the density-weighted seg debt.
+
+    This is the statistic that prices cross-class allocation, which is the one byte-neutral lever
+    the within-frame ceilings in this tool do NOT bound.  Per `ddm_pc2`, charging flips to a single
+    GT class splits one separatrix across two rows and hides the hub; an EDGE decomposition cannot.
+
+    The x-scan and the y-scan are each a COMPLETE estimator of rho (verified globally: 0.028576 vs
+    0.028677).  They are therefore AVERAGED, never summed -- summing would double-count by ~2x.
+    The per-edge x/y ratio is reported as a self-test: a well-behaved edge should give ~1.0 even
+    when its crossings are strongly anisotropic, because the 2/g weighting absorbs orientation.
+    """
+    P, H, W = margins.shape
+    n_px = P * H * W
+    acc: dict[tuple[int, int], list[float]] = {}
+    cnt: dict[tuple[int, int], list[int]] = {}
+    for i in range(P):
+        m = margins[i].astype(np.float64)
+        lab = lstars[i].astype(np.int64)
+        for ax, (a, b, g) in enumerate((
+            (lab[:, :-1], lab[:, 1:], m[:, 1:] + m[:, :-1]),
+            (lab[:-1, :], lab[1:, :], m[1:, :] + m[:-1, :]),
+        )):
+            sel = (a != b) & (g > 0)
+            if not np.any(sel):
+                continue
+            lo = np.minimum(a[sel], b[sel])
+            hi = np.maximum(a[sel], b[sel])
+            key = lo * 8 + hi                      # unordered pair -> single int
+            contrib = 2.0 / g[sel]
+            for k in np.unique(key):
+                mk = key == k
+                pair = (int(k // 8), int(k % 8))
+                acc.setdefault(pair, [0.0, 0.0])[ax] += float(contrib[mk].sum())
+                cnt.setdefault(pair, [0, 0])[ax] += int(np.count_nonzero(mk))
+    # per-edge rho = mean of the two complete per-axis estimators
+    per_edge = {p: 0.5 * (v[0] + v[1]) / n_px for p, v in acc.items()}
+    total = sum(per_edge.values())
+    rows = []
+    for pair, r in sorted(per_edge.items(), key=lambda kv: -kv[1]):
+        rx, ry = acc[pair][0] / n_px, acc[pair][1] / n_px
+        rows.append({
+            "edge": f"{CLASS_NAMES.get(pair[0], pair[0])}<->{CLASS_NAMES.get(pair[1], pair[1])}",
+            "class_pair": list(pair),
+            "rho_edge": r,
+            "share_of_rho": r / total if total else None,
+            "crossings_x": cnt[pair][0], "crossings_y": cnt[pair][1],
+            "crossing_anisotropy_y_over_x": (cnt[pair][1] / cnt[pair][0]) if cnt[pair][0] else None,
+            "selftest_rho_x_over_rho_y": (rx / ry) if ry else None,
+        })
+    return {"rho_total_from_edges": total, "n_edges": len(rows), "edges": rows,
+            "note": "EXACT additive decomposition of the coarea rho (per-axis estimators AVERAGED, "
+                    "not summed); shares sum to 1 by construction."}
+
+
+# ---------------------------------------------------------------------------------------------
 # T4 -- the actuator: how concentrated is the through-R leverage?
 # ---------------------------------------------------------------------------------------------
 def sr_concentration(sr: np.ndarray, *, quantiles: tuple[float, ...] = (0.01, 0.05, 0.10, 0.25, 0.50)) -> dict:
@@ -277,7 +350,7 @@ def sr_vs_margin(sr: np.ndarray, margins: np.ndarray, *, stride: int = 5) -> dic
 # ---------------------------------------------------------------------------------------------
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="ddm_sg2 $0 reductions: rho second anchor + seg actuator leverage.")
-    ap.add_argument("--task", choices=("rho", "coarea", "actuator", "all"), default="all")
+    ap.add_argument("--task", choices=("rho", "coarea", "actuator", "edges", "all"), default="all")
     ap.add_argument("--num-pairs", type=int, default=None, help="limit frames (default: all cached)")
     ap.add_argument("--json", action="store_true")
     args = ap.parse_args(argv)
@@ -331,6 +404,13 @@ def main(argv: list[str] | None = None) -> int:
         ca["coarea_over_histogram"] = ca["rho_coarea_mean"] / pooled
         ca["x_over_y_isotropy"] = ca["rho_coarea_x"] / ca["rho_coarea_y"]
         out["T3_coarea"] = ca
+        del m, lab
+
+    if args.task in ("edges", "all"):
+        n = args.num_pairs or 600
+        m = _load_member(GT_N600, "margins")[:n]
+        lab = _load_member(GT_N600, "lstars")[:n].astype(np.int16)
+        out["T5_edges"] = coarea_rho_by_edge(m, lab)
         del m, lab
 
     if args.task in ("actuator", "all"):

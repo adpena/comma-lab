@@ -11,7 +11,7 @@ backward was fired. The n600 evaluator slot (held by `ddm_cx1`) was not requeste
 (191,052 B). Gap **0.6587495**: **seg 0.4015 (60.9%)** · pose 0.1445 (21.9%) · rate 0.1127 (17.1%).
 
 **Reproducers — the durable evidence IS the command, both $0 and no scorer pass:**
-`.venv/bin/python tools/ddm_sg2_seg_actuator_reductions.py --task all` (≈6 min, n600)
+`.venv/bin/python tools/ddm_sg2_seg_actuator_reductions.py --task all` (n600; `--task edges` for §5)
 `.venv/bin/python tools/ddm_sg2_R_free_subspace.py` (<1 s, exact)
 Run receipts land at `experiments/results/ddm_sg2/{sg2_n600_full.json,R_spectrum.json}`, which is a
 **gitignored, rebuildable** path — deliberately not committed (serializer rc=13 gitignore guard),
@@ -72,12 +72,23 @@ receipt compared **203 numeric keys bit-identically** before and after the final
    **⇒ `r` is set by ‖δ‖ in scorer-visible directions, and that is bought with description
    efficiency. The seg axis is a description-efficiency problem, not a placement problem.** §4.
 
-6. **NOT claimed exhausted: allocation ACROSS the seg graph.** Every ceiling above is a
-   *within-frame, per-pixel* bound. Reallocating description capacity **across classes, edges and
-   pairs** at fixed total bytes is a byte-neutral lever that none of my measurements bounds, and
-   `ddm_pc2` has already localized it (**Road↔Lane = 49.2% of flips = 22.1% of the whole gap in one
-   edge**; MyCar sits **0.23× below** the area fit because it is static and free in `tokens_base`).
-   That is the one remaining free lever and it is the live `#766` waterfill / granularity rung. §5.
+6. **The one remaining byte-neutral lever is allocation ACROSS the seg graph — and it is now
+   PRICED.** Every ceiling above is a *within-frame* bound. The coarea estimator decomposes ρ
+   **exactly and additively by class edge**: **Road↔Lane = 40.96% of ρ**, Road↔MyCar 21.31%,
+   Road↔Undrivable 19.26%; Road participates in **89.35%**. Cross-checking against `ddm_pc2`'s
+   independently measured *realized flips* (cross-base, indicative): Road-participation agrees to
+   **2%** (89.35 vs 87.8) — **the source-margin geometry alone predicts which edges carry the
+   debt** — while Road↔Lane carries **1.20×** more flips than its density share, i.e. our delivered
+   reach is ~20% worse on that one edge. **Most of Road↔Lane's dominance is GEOMETRY, not
+   description quality**; only the 1.20× residual is winnable by reallocation. §5.
+
+7. **The `ll1` window solve is zero-byte, zero-build, ~1 min, worth 1.98–3.27% of gap — and must
+   not be fired blind.** Its blocker is §3.3 read from the other side: `D` is blind to the solve's
+   null space by construction, but the pose warp acts **before `D` at a finer sub-pixel lattice**,
+   so it launders the sub-window redistribution into frame_0 (rms **2.7496 LSB**, max 178.25,
+   58.8% px). **SEG-INVISIBLE ≠ POSE-INVISIBLE.** Derived tolerance at `pj2`: **+18.8% to +32.0%**
+   relative `d_pose` — and two measured effects say that is optimistic. No existing anchor brackets
+   a perturbation of this scale (the two that exist differ by ~7,300×). §6.
 
 ---
 
@@ -297,22 +308,35 @@ The unsampled-pixel count **reproduces the landed
 here as the identically-zero columns of an independently-constructed matrix. That is an
 independent corroboration of `m86` and a validation of my construction.
 
-### 3.3 What the big null space is and is not
+### 3.3 What the big null space is and is not — and an exact structural closure
 
-**80.674% of shipped-error directions are exactly invisible to SegNet.** This is genuinely large —
-and genuinely useless as a d_seg lever, for the reason that makes it large: `Dδ = 0` means the
-scorer's input is unchanged, so d_seg is unchanged *by construction*. Null(D) is seg-FREE capacity
-(room to carry pose or to save rate), never a way to reduce d_seg.
+**80.674% of shipped-error directions are exactly invisible to SegNet.** Moving error *into*
+Null(D) cannot lower d_seg, for the reason that makes the space large: `Dδ = 0` means the scorer's
+input is unchanged, so d_seg is unchanged *by construction*. As a place to **hide** error it is
+seg-free capacity (room to carry pose or save rate), never a d_seg lever.
 
-Two consistency checks that this framing passes:
+**But it is exactly the slack that makes the uint8 preimage problem SOLVABLE**, and that is a
+different and real use. `ddm_ll1`'s window solve does not hide error in Null(D); it *spends*
+Null(D)'s freedom to make `D(f1_cam)` hit the intended render exactly, driving realization error to
+≈0 (88 flips → 3, `ΔS = −0.01441`, n = 3). §6.
 
-- The 230,904 exactly-unsampled pixels are coordinate directions inside Null(D), i.e. the `m86`
-  blind set. `ddm_bp2` tested exactly this set as a *pose* actuator and measured "does not pay" —
-  consistent: it is free, not powerful.
-- The remaining ≈ 58% of null directions are not coordinate-aligned; realizing them requires
-  finding **integer (uint8)** vectors in Null(D). That is precisely what `ddm_ll1`'s window solve
-  does, and `ddm_ra1` priced that family at **2–3% of gap** — the magnitude class this analysis
-  predicts.
+**Exact closure between the two derivations.** `ddm_ll1` derives the geometry combinatorially:
+because both downsample strides exceed 2 (874/384 = 2.2760, 1164/512 = 2.2734) the 2×2 read
+windows cannot overlap, so each of the 196,608 scorer pixels owns a **private** 2×2 camera window
+with one linear constraint in four integers ⇒ **3 free dimensions per window**, plus the untouched
+pixels. That predicts
+
+```
+196,608 windows × 3 free dims  +  230,904 untouched px  =  820,728
+```
+
+which is **exactly** my SVD's `null_space_dim = 820,728`, to the integer. A continuous
+singular-value computation and a combinatorial window count, derived independently by two arms
+from two different starting points, agree exactly. Each validates the other.
+
+One more consistency check: the 230,904 exactly-unsampled pixels are coordinate directions inside
+Null(D), i.e. the `m86` blind set. `ddm_bp2` tested exactly that set as a *pose* actuator and
+measured "does not pay" — consistent: it is free, not powerful.
 
 **The d_seg-relevant number is the spread WITHIN the row space, and it is 1.987×** — so perfect
 frequency steering inside the visible subspace, at fixed error energy, is worth
@@ -369,27 +393,157 @@ already on the record, which is the strongest evidence for it:
 
 ---
 
-## 5. What is NOT closed — the one remaining byte-neutral lever
+## 5. The one remaining byte-neutral lever, now PRICED — ρ decomposes exactly by edge
 
 Every ceiling in §2–§3 is a **within-frame, per-pixel or per-frequency** bound. Reallocating
-description capacity **across classes, edges and pairs** at fixed total bytes is byte-neutral and
-**none of my measurements bounds it.** `ddm_pc2` has already localized where it would act:
+description capacity **across classes, edges and pairs** is byte-neutral and none of them bounds
+it. That lever is now priced, because **the coarea estimator decomposes ρ exactly by class edge**:
+each crossing carries the unordered class pair it separates, so
 
-- **Road participates in 87.8% of all 458,738 flips**; **Road↔Lane alone is 49.2% of flips =
-  22.1% of the whole gap** — one edge.
-- `err_rate ∝ area^−1.26` (r = −0.934): small classes are systematically worse per unit area.
-- **MyCar sits 0.23× BELOW the fit** because it is static and free in `tokens_base` — an
-  in-vehicle existence proof that a per-class carrier changes the exponent.
-- ρ's own **2.17× per-frame range** (§1.2) is a *per-pair* reallocation handle of the same kind:
-  scenes differ by 2× in how many pixels a given reach converts into flips.
+`ρ = Σ_{edges {a,b}} ρ_{a,b}` — an **exact additive** decomposition, not an attribution heuristic.
+
+With `d_seg ≈ ρ·r` this gives the per-edge exchange rate directly. MEASURED n600, class indices
+MEASURED (`0=Road 1=Lane 2=Undrivable 3=Movable 4=MyCar`, never luma-sorted):
+
+| edge | ρ_edge | **share of ρ** | crossings x / y | anisotropy y/x | self-test ρx/ρy |
+|---|---:|---:|---:|---:|---:|
+| **Road↔Lane** | 0.011726 | **40.96%** | 220,255 / 593,811 | 2.70× | 0.955 |
+| Road↔MyCar | 0.006102 | 21.31% | 14,658 / 303,021 | **20.67×** | 1.093 |
+| Road↔Undrivable | 0.005514 | 19.26% | 34,718 / 255,449 | 7.36× | 0.991 |
+| Undrivable↔Movable | 0.002923 | 10.21% | 34,392 / 65,138 | 1.89× | 1.011 |
+| Road↔Movable | 0.002236 | 7.81% | 34,169 / 56,153 | 1.64× | 0.989 |
+| Lane↔MyCar | 0.000057 | 0.20% | 418 / 4,694 | 11.23× | 0.648 |
+| Lane↔Undrivable | 0.000034 | 0.12% | 90 / 1,497 | 16.63× | 0.139 |
+| Lane↔Movable | 0.000031 | 0.11% | 925 / 372 | 0.40× | 1.777 |
+| Movable↔MyCar | 0.000003 | 0.01% | 24 / 133 | 5.54× | 0.611 |
+| **total** | **0.02862649** | 100% | — | — | — |
+
+`rho_total_from_edges = 0.02862649` closes exactly onto the undecomposed coarea mean
+**0.028626495**. **Road participates in 89.35% of ρ.**
+
+**Self-test.** The per-edge x/y ratio is a built-in validity check: the 2/g weighting should absorb
+orientation, so a well-measured edge gives ≈1.0 *even when strongly anisotropic*. Road↔MyCar — the
+hood line, **20.67×** more horizontal than vertical crossings — returns **1.093**. The three edges
+with poor self-tests (0.139, 0.648, 1.777) are precisely the three smallest, together **0.43%** of
+ρ, with crossing counts in the hundreds: the self-test correctly flags exactly where it is
+unreliable, and it is unreliable only where nothing is at stake.
+
+### 5.1 The density predicts the realized flip distribution — an independent cross-check
+
+`ddm_pc2` measured the *realized flip* distribution; I measure the *source-margin density*. These
+are different objects on different artifacts, so the comparison is a real test of whether the law
+has predictive content:
+
+| quantity | `pc2` realized flips | this arm, ρ share | ratio |
+|---|---:|---:|---:|
+| Road↔Lane | 49.2% | 40.96% | **1.20** |
+| Road participates | 87.8% | 89.35% | 0.98 |
+
+**Scope, stated because it matters:** `pc2`'s 458,738 flips corresponds to d_seg 0.003889 — the
+**burn ep399 base**, not live `pj2` (508,639 flips). This is a **cross-base** comparison and is
+indicative, not exact.
+
+Two readings, both useful:
+
+- **Road-participation agrees to 2%.** The geometry of the source margin field, alone, predicts
+  which edges carry the debt. That is the first time ρ has *predicted* an independently measured
+  quantity rather than described the array it came from.
+- **Road↔Lane carries 1.20× more flips than its density share.** Since flips_edge ≈ ρ_edge·r_edge,
+  the delivered reach on Road↔Lane is ≈**1.20× worse than average** — a measured per-edge
+  inefficiency, and the exchange rate a waterfill would act on. Note what this also says: **most of
+  Road↔Lane's dominance is GEOMETRY, not description quality.** 40.96 of the 49.2 points are
+  "that edge simply has the most low-margin boundary per unit area." Only the 1.20× residual is
+  ours to win by reallocation.
+
+This reframes `pc2`'s `err_rate ∝ area^−1.26`: a large part of the area exponent is the boundary
+geometry the density already encodes, not a description defect. And it keeps `pc2`'s MyCar
+observation intact and sharper — MyCar sits **0.23× below** the area fit because it is static and
+free in `tokens_base`, an in-vehicle existence proof that a per-class carrier changes the exponent,
+while Road↔MyCar is still **21.31% of ρ**.
 
 This is the live `#766` waterfill / granularity rung, which `m06` already names as a **rate** mover.
-**The finding of this arm is that it is simultaneously the only remaining free SEG mover** — the two
-axes are the same object, so a description-efficiency move there is paid for twice.
+**The finding of this arm is that it is simultaneously the only remaining free SEG mover** — the
+two axes are the same object, so a description-efficiency move there is paid for twice.
 
 ---
 
-## 6. Round-1 adversarial self-review — five attacks, all executed
+## 6. SG2-3 — the `ll1` rung, priced with its blocker
+
+Researched on my behalf against source and receipts; every number carries its path.
+
+**The lever.** `src/tac/optimization/ddm_ll1_window_solve.py` inverts `D` on the receiver side:
+using the 3 free integer dimensions per private window (§3.3), it chooses uint8 camera values whose
+`D`-image hits the intended render exactly. **Zero counted bytes** (generic algorithm, rule-118
+free), **~42 s–1.3 min for n600** (0.07 s/frame, well inside the 30-min budget), and **zero build
+cost — it is already written and already wired.**
+
+**Wiring state: grade-5 UNWIRED-BUT-BUILT (`m56`).** `ddm_tr1_runtime.py:1382`
+`window_solve: bool = False`; **no caller anywhere passes `True`** (scope searched:
+`src/ tools/ experiments/ scripts/`, plus the shipped submission tree — zero hits). The shipped
+receiver `v4d_dc1_fold/inflate_runner.py:171-172` calls
+`render_frame1_camera_uint8(self.packet, i)` without it. It is an unfired **kwarg**, not an
+unfired idea.
+
+**Seg upside.** 88 flips → 3, `d_seg 0.0001492 → 0.0000051`, **ΔS = −0.01441** — but that is an
+**n = 3 smoke against IDEAL targets**, not n600, not byte-closed, not `upstream/evaluate.py`.
+Re-measured on our actual shipped bytes (`ddm_ra1`, 4 strided pairs), our plane debt is **1.65×
+worse** than ll1's own baseline (rms 0.7994 vs 0.4841 — ra1's "our renders are smoother"
+hypothesis refuted), and the solve takes it to **0.0298 rms, 0.0000% of scorer pixels off by
+>0.5 LSB, 0 blind pixels touched**. Flip count is not linear in rms, so the honest range is
+**ΔS_seg ∈ [−0.0144, −0.0238] = 1.98–3.27% of the gap = 21,600–35,700 byte-equivalent.**
+
+**The blocker, and its mechanism — which is exactly §3.3 read from the other side.**
+`D` is blind to the solve's null space *by construction*. The pose path is **not**, because
+`f0 = warp_ground_rot(f1_cam, …)` is a homography applied **in camera space, before `D`, at a
+finer sub-pixel offset lattice**, so it mixes across the private window boundaries and launders
+the sub-window redistribution into `f0`. **SEG-INVISIBLE ≠ POSE-INVISIBLE.** Measured
+(`ddm_ra1_min_norm_window_solve_20260802.json`, 4 strided pairs on the shipped bytes): f0 delta
+**rms 2.7496283607320566 LSB, max 178.25, 58.8% of pixels changed** — the brief's figures
+confirmed exactly. Two scope corrections carried: these are **camera-domain** deltas and PoseNet
+reads `D(f0)`, so the scorer-plane delta is strictly smaller and **unmeasured**; and **both**
+PoseNet inputs move, not only f0.
+
+**Tolerance, DERIVED at `pj2`.** `contribution = √(10·d_pose)`, `d_pose = 0.00255143`:
+
+| seg win to defend | max tolerable d_pose | relative headroom |
+|---|---:|---:|
+| −0.0144 | 0.0030322 | **+18.8%** |
+| −0.0238 | 0.0033684 | **+32.0%** |
+
+**Two measured reasons the real tolerance is tighter than that.** (i) `ddm_cp1`'s law — *a
+representation change costs a TIGHTER solve relatively more* — points the wrong way for us:
+`pj2` is **2.02× tighter** than the `dc1_fold` base `ra1` priced against, and its marginal
+sensitivity `5/√(10·d_pose)` is **31.30 vs 22.00 = 1.42× higher**. The rung got *more* fragile
+between pricing and now. (ii) `pj2`'s win is **tail-concentrated** (top 1% of pairs carry 70.33%,
+median −11.70% vs a −50.62% mean) while the tolerance is quoted in mean terms — the `m88` genus.
+The tail pairs hold the most finely-tuned solutions and are the likeliest to be knocked off.
+
+**No anchor brackets this perturbation.** The two that exist differ by ~7,300×: an f16
+re-representation with **bit-identical frames** costs +0.099% relative `d_pose` (`cp1` §2.1),
+while a token change costs `d_pose` **37.877** transplanted / **11.590** after a *fresh full
+re-solve* (`cr2r`, 74 matched pairs) against break-even 0.0132. A 2.75-LSB frame change with the
+scene identical sits between them and **is unmeasured** — say that, do not interpolate.
+
+**If it regresses, the cure is priced and is NOT a training run.** `tools/pj2_pose_scale_joint_solve.py
+--mode solve` reads frames through `oracle.f1`, which *is* the shipped `Decoder.f1`, so flipping
+the bool changes what the solver optimizes against with no solver change. Measured cost from the
+run's own shard logs: **~1.76–1.96 h wall (6 parallel shards), ~11.2 CPU-hours, $0**, 115,280
+frozen-PoseNet evaluations, sharded and resumable.
+
+**Verdict on the rung.** Zero bytes, zero build, ~1 min decode, **1.98–3.27% of gap** on the
+largest axis, with a **fully unmeasured** pose risk against an **18.8–32.0%** tolerance that two
+measured effects say is optimistic. **Do not fire it blind and do not fire it on the n=3 smoke.**
+The decisive experiment is `ra1` §5.4, unchanged: two n600 passes on `pj2`, everything else
+byte-identical, reporting `Δd_seg` and `Δd_pose` **separately** on the **same** pairs.
+**Cheapest sharpening first, and it is free:** the f0 delta is camera-domain but PoseNet reads
+`D(f0)` — measuring the **scorer-plane** f0 delta needs no scorer pass at all and would tighten
+the risk estimate before spending an n600 slot. **Do NOT re-attempt** null-space re-allocation
+(dither order, allocation norm, init kernel): `ra1` §3 measured it shut four ways at FORMULATION
+scope, and the min-norm variant is identical to greedy in `frame0_max` to the digit (178.25).
+
+---
+
+## 7. Round-1 adversarial self-review — six attacks, all executed
 
 **A1 — my leading hypothesis was wrong, and I published the refutation.** I predicted the free
 directions were frequencies (§3 preamble). The exact spectrum says `R_lin` has condition 1.4975 and
@@ -415,7 +569,17 @@ cannot bound how much higher the true value is without the unnormalized S_R — 
 **A5 — is the byte-neutral family actually exhausted?** **No, and I nearly claimed it was.** My
 measurements bound only *within-frame* placement. Cross-class / cross-edge / cross-pair allocation
 is untouched by them, and `ddm_pc2` shows it is where the mass is. §5 exists because of this
-attack; the headline is scoped to "within-frame" throughout.
+attack; the headline is scoped to "within-frame" throughout. The attack then forced the §5
+measurement, which turned an unbounded hand-wave into an exact decomposition.
+
+**A6 — a real bug in my own new code, caught by its own closure test.** The first per-edge
+implementation **summed** the x- and y-axis estimators where `coarea_rho` **averages** them. Each
+axis is a *complete* estimator of ρ (0.028576 vs 0.028677), so summing double-counts: the edge
+total came out at 0.0563 against a coarea ρ of 0.0286, a clean 2×. Caught because I checked
+`rho_total_from_edges` against the undecomposed value instead of reporting shares alone — shares
+sum to 1 by construction and would have looked perfect while every absolute ρ_edge was 2× wrong.
+Fixed to average per axis; the total now closes to **0.02862649 vs 0.028626495**. The per-edge
+x/y self-test was added in the same fix so the estimator carries its own validity check per edge.
 
 **What this review did NOT close.** (i) No independent-**producer** anchor for ρ — the coarea test
 reads the same array and validates the *mechanism*, not the array (§1.4). (ii) The sR ceilings are
@@ -423,11 +587,12 @@ clip-limited lower bounds. (iii) `R_lin`'s spectrum is the STE linearization; a 
 perturbation can still cross a camera-resolution rounding boundary, so "free" is first-order —
 which is exactly the nonlinearity `ddm_ll1` manipulates. (iv) I did not measure our *actual* δ, so
 "the tilt is largely spent" is an inference from `gc14`'s zero slope, labeled as such, not a
-measurement.
+measurement. (v) §5.1's flip-vs-density comparison is **cross-base** (`pc2` on burn ep399, ρ on
+GT); the 1.20× is indicative, not an exact per-edge reach ratio.
 
 ---
 
-## 7. Verdict, scope, and what is owed
+## 8. Verdict, scope, and what is owed
 
 **VERDICT.** `verdict_scope: the frozen SegNet at its canonical 384×512 input on the cached n600 GT
 margins and the cached through-R sR map; exact linear algebra on the contest resample operators; no
@@ -449,33 +614,54 @@ new scorer execution.` **Pointer UNMOVED.**
    required **14.537×**. **The seg axis is a description-efficiency problem.** The seg gap is worth
    **603,009 B** at `W = 1.273108215332031` B/flip, against a 360,406 B archive that must shrink to
    191,052 B.
-6. The remaining free lever is **cross-class / cross-edge / cross-pair allocation**, unbounded by
-   anything here and localized by `ddm_pc2` to Road↔Lane (22.1% of the gap in one edge).
+6. ρ decomposes **exactly and additively by class edge** (total closes to 0.02862649 vs
+   0.028626495). **Road↔Lane = 40.96% of ρ; Road participates in 89.35%.** Against `pc2`'s realized
+   flips (cross-base): Road-participation agrees to 2%, Road↔Lane carries **1.20×** its density
+   share. **The density geometry predicts the edge debt; only the 1.20× residual is reallocatable.**
+7. The `ll1` rung is zero-byte / zero-build / ~1 min / **1.98–3.27% of gap**, blocked by an
+   **unmeasured** pose-staleness risk against a **+18.8–32.0%** derived tolerance that two measured
+   effects say is optimistic.
+8. `820,728 = 196,608 × 3 + 230,904` — my continuous SVD null-space dimension equals `ll1`'s
+   combinatorial window count exactly, two independent derivations validating each other.
 
 **OWED, in priority order:**
 
 - **A.** An independent-**producer** ρ anchor: recompute the margin array by a second path and
-  re-read the CDF. One scorer pass. Until then the density law has one artifact behind it and one
-  mechanism check on top of it.
-- **B.** Unnormalized `S_R` (or the stored per-frame p99 scale) on a subset, to convert §2.3's
-  ceilings from lower bounds into two-sided numbers. Cheap; blocked only on a scorer pass.
+  re-read the CDF. One scorer pass. Until then the density law has one artifact behind it and two
+  mechanism checks on top of it (§1.4 coarea, §5.1 edge-share prediction).
+- **B.** The **scorer-plane** f0 delta under the window solve. The measured 2.75 LSB is
+  camera-domain; PoseNet reads `D(f0)`, so the real number is strictly smaller. **$0, no scorer
+  pass, and it sharpens the §6 risk before any n600 slot is spent.** Cheapest owed item here.
 - **C.** Price the `#766` cross-class waterfill in **B/flip against W = 1.2731**, per edge, using
-  `pc2`'s edge decomposition. This is the only remaining byte-neutral seg lever and it is already a
-  live rate rung — the arm that measures it is measuring both axes at once.
-- **D.** Carried unchanged from tl1: its item A (mass share of ∂L/∂x outside the flip-capable set)
+  §5's exact ρ decomposition. Only remaining byte-neutral seg lever, and already a live rate rung —
+  the arm that measures it measures both axes at once.
+- **D.** Unnormalized `S_R` (or the stored per-frame p99 scale) on a subset, to convert §2.3's
+  ceilings from lower bounds into two-sided numbers.
+- **E.** Carried unchanged from tl1: its item A (mass share of ∂L/∂x outside the flip-capable set)
   is *complementary* to my §2, not replaced by it — mine measures leverage from the frozen scorer,
   tl1's would measure where the trainer's gradient actually goes.
 
-**NEXT-IF-RESUMED:** start at **C**. Do not re-derive §1–§4 — run the two reproducers. The single
-most valuable next measurement is the per-edge B/flip curve for cross-class allocation, because it
-is the only measured-unbounded byte-neutral lever left on the largest axis, and because it prices
-seg and rate simultaneously.
+**NEXT-IF-RESUMED:** run **B** first ($0, one afternoon's worth of arithmetic, no slot), then **C**.
+Do not re-derive §1–§5 — run the two reproducers. The single most valuable *measurement* is the
+per-edge B/flip curve for cross-class allocation: it is the only measured-unbounded byte-neutral
+lever left on the largest axis, and it prices seg and rate simultaneously.
 
-**Triality.** *DAG:* this memo (one law qualified, one hypothesis refuted, one actuator priced).
-*DSL:* no new lever compiled; §5's rung is `#766`, already held. *Equations:* the ρ law now has a
-second anchor of a **different statistic** but still **one producer** — per tl1's own bar, and my
-§6(i), that is not yet enough to mint, and I do not mint it. `W = 1.273108215332031` B/flip is
-re-derived here from components and matches the standing value to 12 digits.
+**Provenance note on the base.** `pj2 = S 0.8308905 / pose 0.1597320 / d_pose 0.00255143 /
+360,406 B` is single-sourced to `.omx/state/main_hot_state.md` and is the **measured own-vehicle
+gate** (real `evaluate.py`, n600, rc=0), not the `pj2` memo's prediction (0.8308849, miss
++5.6e-06). A digit collision at `0.8308905730878026` in
+`experiments/results/throughput_authority_ladder_20260714/*.json` is a `sqrt_10_d_pose` on an
+unrelated 2026-07-14 vehicle — **a different quantity, not a second anchor**; flagged so a future
+grep does not read it as corroboration.
+
+**Triality.** *DAG:* this memo (one law qualified + decomposed, one hypothesis refuted, two levers
+priced). *DSL:* no new lever compiled; §5's rung is `#766` (already held) and §6's is a single
+existing `bool` kwarg (`ddm_tr1_runtime.py:1382`) that must acquire a typed, resume-safe control
+before it is ever set. *Equations:* the ρ law now has **two mechanism checks of different
+statistics** (§1.4 local coarea; §5.1 edge-share predicting `pc2`'s realized flip distribution) but
+still **one producer** — per tl1's own bar and my §7(i) that is not yet enough to mint, and I do
+not mint it. `W = 1.273108215332031` B/flip is re-derived here from components and matches the
+standing value to 12 digits.
 
 ---
 
