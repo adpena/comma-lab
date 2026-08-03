@@ -2,8 +2,15 @@
 """Tests for the gap-decomposition denominator law (ddm_cv1, 2026-08-02).
 
 The REGRESSION this pins: on its first run the module contradicted a figure MAIN had
-already published to MEMORY.md ("1% of gap = 11,892 B"; the correct value is 10,908 B).
-That is the whole point of making the denominator executable, so it is a test.
+already published to MEMORY.md ("1% of gap = 11,892 B"; the correct value is 10,907 B at
+the corrected floor). That is the whole point of making the denominator executable.
+
+TWICE-CORRECTED, and the second correction came from a different direction than the first.
+Run 1 caught MAIN's arithmetic (11,892 -> 10,908). Then `ddm_na1` caught the INPUT: the
+PR130 floor is **191,052 B, not 190,952** — 190,952 yields floor 0.1720751, which does not
+reproduce PR130's published 0.172141, while 191,052 yields 0.1721417, which does. Corrected
+gap 0.7262358; 1% = 10,907 B. The equation was right both times; its inputs were not. That
+is the argument for sourcing every field and refusing unsourced rows.
 """
 from __future__ import annotations
 
@@ -36,9 +43,9 @@ def _floor() -> MeasuredScoreTriple:
     return MeasuredScoreTriple(
         d_seg=0.0002966,
         d_pose=2.3311e-5,
-        archive_bytes=190_952,
+        archive_bytes=191_052,
         rate_denominator_bytes=_DEN,
-        source_artifact="PR130 external row",
+        source_artifact="PR130 external row (191,052 B — CORRECTED by ddm_na1 2026-08-02; the prior 190,952 gives floor 0.1720751, which does not reproduce the published 0.172141)",
         axis_tag="[contest-CUDA]",
     )
 
@@ -53,7 +60,7 @@ def test_per_axis_gaps_and_ordering():
     gaps = g.per_axis()
     assert gaps["seg"] == pytest.approx(0.401519, abs=1e-6)
     assert gaps["pose"] == pytest.approx(0.2120156, abs=1e-6)
-    assert gaps["rate"] == pytest.approx(0.1127679, abs=1e-6)
+    assert gaps["rate"] == pytest.approx(0.1127013, abs=1e-6)
     # The ordering is a MEASURED OUTPUT. If a future row changes it, this test should
     # fail loudly rather than let a stale "seg is biggest" assumption ride.
     assert g.rank_by_gap() == ("seg", "pose", "rate")
@@ -74,10 +81,12 @@ def test_fraction_of_gap_sign_convention_and_the_dc1_row():
 
 
 def test_bytes_per_percent_regression_the_published_figure_was_wrong():
-    """PINNED: 10,908 B, not the 11,892 B MAIN published before this module existed."""
+    """PINNED: 10,907 B (at the CORRECTED 191,052 B floor), not the 11,892 B MAIN
+    published before this module existed. The figure moved 10,908 -> 10,907 when ddm_na1
+    corrected the PR130 byte count; both refute 11,892 by three orders of the tolerance."""
     g = GapDecomposition(ours=_ours(), floor=_floor())
     got = g.bytes_per_percent_of_gap()
-    assert got == pytest.approx(10_908, rel=1e-3)
+    assert got == pytest.approx(10_907, rel=1e-3)
     assert abs(got - 11_892) > 900, "the superseded figure must not silently pass"
 
 
@@ -87,7 +96,7 @@ def test_mismatched_rate_denominators_refuse():
     other = MeasuredScoreTriple(
         d_seg=0.0002966,
         d_pose=2.3311e-5,
-        archive_bytes=190_952,
+        archive_bytes=191_052,
         rate_denominator_bytes=_DEN + 4096,  # a stray ._* file
         source_artifact="PR130 with a polluted videos/ dir",
         axis_tag="[contest-CUDA]",
