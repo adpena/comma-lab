@@ -174,6 +174,56 @@ onto steepest descent — the very direction the readback shows the displacement
 So the ridge stays a declared gauge choice and the **radius is the only search handle** — but it
 needs RANGE, which is exactly what the condition number predicts.
 
+## §4b FISHER IS INFINITESIMAL, OUR STEPS ARE FINITE — what this instrument actually prices
+
+Operator, extending the metric correction: *"We also have Bregman and others."* The rule is
+**Fisher = the local quadratic form; Bregman = the exact finite-step form**, and our perturbations are
+finite by construction. Three things follow here, and the third is the one worth keeping.
+
+**1. The canonical binding is categorical, and my objective is not.** I bind to
+`tac.information_geometry.optimal_metric` and introduce no second metric. That law is explicit:
+`F(θ) = logsumexp(θ)` is the Bregman generator of the **softmax/categorical** family and `∇²F` is the
+categorical Fisher metric. That is the SEG side. **`d_pose` is not a softmax head** — it is
+`mean((PoseNet₆ − target₆)²)`, an MSE over six continuous regression outputs. The matching exponential
+family is Gaussian, whose Bregman generator is `F(x) = ½‖x‖²`, whose divergence **is** the squared
+Euclidean distance and whose Hessian is the identity. So **in the OUTPUT space, Bregman = Fisher =
+Euclidean exactly, and at finite steps** — there is no infinitesimal-vs-finite gap to price there.
+This is the same reason the correction itself keeps pb3's `d_pose = ‖e‖²/6` as a genuine bound "in the
+correct output norm."
+
+**2. The finite-step risk therefore lives entirely in the MAP, not the divergence.** What can be wrong
+at a full-quantum step is the linearization of θ ↦ PoseNet₆ — the Jacobian `J` — not the geometry of
+the loss on the outputs. `H = JᵀJ` is precisely that linearization pulled back to the shipped chart,
+so the object at risk is named and local to one place.
+
+**3. My instrument PRICES that risk by construction, and the census is the measurement.** Nothing in
+§7/§7b is extrapolated from a quadratic: every published number is a REALIZED finite step — quantized
+to the shipped float16 lattice, pushed through the real receiver and the frozen PoseNet, and accepted
+only if the realized value improved. The quadratic is used to propose a direction and a length; the
+finite evaluation is the judge. So linearization failure does not silently corrupt a price here — it
+shows up as a **rejection**, and rejections are counted:
+
+> **`trust_radius_cap` fired on 1,462 of 1,504 relinearizations (97.2 %).** In each, the GN model's
+> step failed to improve the REALIZED objective at *every* length from the full natural length down
+> through a 20-step halving ladder (≈ 1e-6 of it).
+
+That is a direct, quantitative statement that the local quadratic is a poor **finite-step** model on
+this surface — the correction's hypothesis, measured rather than assumed, on 917 recorded
+relinearizations.
+
+**The honest limit, and the measurement that would close it.** `trust_radius_cap` conflates two
+causes — model error, and genuinely sitting at a lattice-local optimum — and I did not store enough to
+separate them. The separating measurement is cheap and scorer-light: record the model's PREDICTED
+reduction alongside the realized one and report the trust-region ratio `ρ = actual/predicted` per
+step. `ρ ≪ 1` at accepted steps is linearization error; `ρ ≈ 1` with no accepted step is a true local
+optimum. I did not run it; it is the sharpest next thing on this surface and it is the same quantity
+pb3's OWED §5 needs.
+
+**Metric named on every ranking published here:** §7b is ranked in **realized ΔS per counted byte** —
+a metric-free quantity (the score's own arithmetic and the archive's own bytes), which is why it is
+robust to this correction. §4's direction diagnostics are ranked in **Fisher** (`H = JᵀJ`) with
+**Euclid reported alongside**; they disagree by 459× in magnitude and 0/917 in sign.
+
 ## §5 THE MEASURED DESCENT CURVE — the #850 question answered with a number
 
 Per-sweep mean relative gain, FULL n600:
