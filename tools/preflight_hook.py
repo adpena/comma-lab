@@ -840,7 +840,8 @@ def run_subset_selection_scan(staged: list[str]) -> int:
         return 0
 
     if not staged:
-        # Report the DENOMINATOR rather than inferring cleanliness from silence.
+        # No .py staged: nothing to examine. Silent by design — a doc-only commit
+        # is not a subset-selection event, and a line here would be pure noise.
         return 0
     try:
         violations = scan_staged(
@@ -869,6 +870,14 @@ def run_subset_selection_scan(staged: list[str]) -> int:
         for v in violations:
             print(f"[preflight-hook]   {v}", file=sys.stderr)
         return 1
+    # One terse line stating the DENOMINATOR. The sibling #184 scan is silent on
+    # success, but this landing's whole thesis is that a silent instrument is
+    # indistinguishable from one that examined nothing — so it says what it read.
+    print(
+        f"{GREEN}[preflight-hook] subset-selection: {len(staged)} staged .py "
+        f"examined, no new silent subsets{RST}",
+        file=sys.stderr,
+    )
     return 0
 
 
