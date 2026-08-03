@@ -643,7 +643,7 @@ population estimate is a separately-weighted step.
 | | n | median ratio | improved (>10% reduction) |
 |---|---:|---:|---:|
 | **TAIL** (mass-dominant pairs) | 6 | **0.2013** | **5 / 6** |
-| **CONTROL** (non-tail, decile-stratified) | 5 | **0.9446** | **1 / 5** |
+| **CONTROL** (non-tail, decile-stratified) | 6 | **0.9388** | **2 / 6** |
 
 Per-pair, sorted by `d_pose`:
 
@@ -659,6 +659,7 @@ Per-pair, sorted by `d_pose`:
 | 495 | 0.000348 | 0.9331 | 6.7% | ctrl | `rand1` |
 | 298 | 0.000267 | 0.9984 | 0.2% | ctrl | `shipped_knobs` |
 | 471 | 0.000208 | 0.5042 | 49.6% | ctrl | `rand2` |
+| 387 | 0.001491 | 0.6078 | 39.2% | ctrl | `rand1` |
 | 235 | 0.000109 | 0.9987 | 0.1% | ctrl | `shipped_knobs` |
 
 **Pair 63 is the decisive point.** It is the representative of the **top non-tail decile, which alone
@@ -676,21 +677,21 @@ mass (**54.2% of non-tail mass now covered by measurement**):
 | | `ΔS` | % of live gap |
 |---|---:|---:|
 | **MEASURED, tail only (the authority row, §5.7)** | −0.0354283 | **5.414%** |
-| **+ control-informed non-tail estimate** | −0.0368727 | **5.635%** |
+| **+ control-informed non-tail estimate** | −0.0391625 | **5.985%** |
 | §8 extrapolation, "conservative" branch | −0.0587388 | 8.98% |
 | §8 extrapolation, "optimistic" branch | −0.0818461 | 12.51% |
 
 **§8's whole range is REFUTED as too high — by 1.6× to 2.2×.** Its error was assuming the un-probed 594
-would behave like the tail; measured, they do not. The honest n600 figure is **~5.6% of gap**, barely
+would behave like the tail; measured, they do not. The honest n600 figure is **~6.0% of gap**, barely
 above what is already banked, because **the tail was essentially the whole prize.**
 
 This is the outcome that makes the published number trustworthy rather than the one that makes it look
 big, and it is exactly why the control was worth the scorer time: it removed a ~2× overstatement from
-the campaign's forward plan. **The n600 multi-start re-solve is therefore worth ~0.2% of gap beyond the
+the campaign's forward plan. **The n600 multi-start re-solve is therefore worth ~0.6% of gap beyond the
 banked row — NOT the 3.6–7.1% §8 implied — and should be priced as a low-value item, not a headline.**
 
-**Scope.** 5 of 10 control pairs; 54.2% of non-tail mass measured, 45.8% still estimated. The remaining
-deciles (387, 100, 34, 386, 318) are queued and would tighten but are unlikely to overturn: the single
+**Scope.** 6 of 10 control pairs; 68.8% of non-tail mass measured. The remaining
+deciles (100, 34, 386, 318) are queued and would tighten but are unlikely to overturn: the single
 highest-mass decile is already measured and yields 5.5%.
 
 ## §10 F1 FOR `ddm_hg1` — the DIRECTED flip split on `cx1`'s OWN n600 argmax
@@ -711,7 +712,73 @@ the real decode, maxabs 253). It put per-pair `d_seg` at **0.042** against `cx1`
 `0.00431179` — ~10× high. **The fail-closed positive control refused it rather than reporting.** GT now
 streams from `0.mkv` via `frame_utils.yuv420_to_rgb` (never PyAV `rgb24`); pair `i` = frames `(2i, 2i+1)`.
 
-*(results — filled at seal)*
+### 10.1 RESULT — n600 on `cx1`'s own argmax, positive control PASSED
+
+**Fail-closed control: `d_seg` = `0.00431179` vs the `cx1` evaluator row `0.00431179`, rel
+`1.09e-06` ⇒ `ARGMAX_VERIFIED`.** Total **508,640 flips**, **847.7 per pair** over 196,608 scorer
+pixels. So the per-flip price is `0.4311790 / 508,640` = **8.477e-07 S/flip**.
+
+**Undirected edges (n600, cx1's own argmax):**
+
+| edge | flips | % of all flips | S if ALL fixed | % of gap vs `cx1` | % of gap vs **live best** |
+|---|---:|---:|---:|---:|---:|
+| **Road↔Lane** | 235,148 | **46.23%** | **0.199337** | **30.46%** | **32.21%** |
+| Road↔Undrivable | 89,545 | 17.60% | 0.075908 | 11.60% | 12.26% |
+| Road↔MyCar | 63,027 | 12.39% | 0.053429 | 8.17% | 8.63% |
+| Undrivable↔Movable | 61,892 | 12.17% | 0.052466 | 8.02% | 8.48% |
+| Road↔Movable | 57,225 | 11.25% | 0.048510 | 7.41% | 7.84% |
+
+**Directed — and the direction is the finding:**
+
+| directed | flips | % of all flips | S if ALL fixed | % gap vs `cx1` | % gap vs live best |
+|---|---:|---:|---:|---:|---:|
+| **Lane → Road** | 184,613 | **36.30%** | **0.156498** | **23.92%** | **25.29%** |
+| Undrivable → Road | 56,144 | 11.04% | 0.047594 | 7.27% | 7.69% |
+| Road → Lane | 50,535 | 9.94% | 0.042839 | 6.55% | 6.92% |
+| Road → MyCar | 47,350 | 9.31% | 0.040139 | 6.13% | 6.49% |
+
+**Road↔Lane asymmetry = 3.65×, dominant direction `Lane→Road`.** `hg1`'s independent extent
+measurement (Lane shell 75.04%, the only truncating side) and this count agree on direction from two
+different observables.
+
+### 10.2 THE NET CLASS FLOW — `cx1` erases Lane and floods Road
+
+Pooling would have destroyed this. Per class, share of flips on the **GT** side vs the **rendered** side:
+
+| class | GT-side | rendered-side | **NET** |
+|---|---:|---:|---:|
+| **Lane** | 36.53% | 10.03% | **−26.50%** |
+| **Road** | 30.13% | 57.35% | **+27.22%** |
+| Movable | 15.50% | 8.08% | −7.42% |
+| MyCar | 3.16% | 9.44% | +6.28% |
+| Undrivable | 14.69% | 15.10% | +0.42% |
+
+**`cx1` systematically DESTROYS lane pixels and REPAINTS them as road**, and secondarily floods MyCar
+over Road and Road over Movable. This is *erasure*, not displacement — consistent with the campaign's
+standing "lane long-tail = ERASURE (not shift)" reading, now measured directly on `cx1`'s own argmax.
+
+### 10.3 THE ECONOMICS — big share, but NOT buyable as a correction stream
+
+At the invariant `W = 1.273108215332031` B/flip, fixing the whole Road↔Lane edge costs
+`235,148 × W` = **299,369 B at BREAK-EVEN — 84.6% of the entire 353,805 B archive**, to buy 0.199 S.
+**A correction stream cannot pay for this**, and that is the load-bearing consequence: Road↔Lane is the
+largest seg target *and* the one that must come from the **base representation**, not from stored
+corrections. (Sister evidence: `#826/gr1` bought seg flips at 32.52 B/flip = **25.5× underwater** vs `W`.)
+
+**On `hg1`'s ≈15.2% hypothesis.** Measured here, Road↔Lane is **30.46% of the gap vs `cx1`** (32.21% vs
+the live best), and `Lane→Road` alone is **23.92%**. Both exceed 15.2%, so the hypothesis appears to
+have **understated** the edge — but I cannot close that comparison because `hg1`'s denominator and
+scope are not stated in what I hold, and the two figures may not be the same quantity. **What is now
+MEASURED and no longer a vehicle-mixing hypothesis: the share, the direction, the asymmetry, and the
+byte price, all on `cx1`'s own n600 argmax.**
+
+### 10.4 The durable artifact
+
+`gt_argmax_n600.npy` and `cx1_argmax_n600.npy` — `(600, 384, 512)` uint8, 118 MB each, at
+`/Volumes/VertigoDataTier/pact/ddm_pu2_20260803/argmax_cache/`, plus `per_pair_directed.jsonl` (per-pair
+5×5 matrices) and `cx1_directed_flip_receipt.json`. **No future arm needs a scorer pass to ask a
+per-class or per-pixel question about `cx1`.** These are kept, not cleaned: they are the measurement,
+not rebuildable scratch.
 
 ## §8 NEXT-IF-RESUMED
 
