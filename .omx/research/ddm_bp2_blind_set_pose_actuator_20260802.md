@@ -210,6 +210,14 @@ The argmin envelope is the one that matters: a free index turns a +0.575 loss in
 because the sign bits are ~5x cheaper than naming the coordinates. **The whole verdict rests on this one
 substitution**, and the prize is ~0.12 S, not the ~0.0004 S the cheapest arm suggests.
 
+⚠ **This −0.122 is a PREFIX number and must not be lifted out of §4's caveat.** It is computed on a
+sample whose mean `d_pose` is 0.0390 against the v4d population's 0.00858. Re-scaling the same 73%
+relative reduction onto the population gives `sqrt(10*0.00232) - sqrt(10*0.00858) = 0.1523 - 0.2929 =`
+**−0.141** of pose gain, against a rate cost that also shrinks (k is chosen proportional to `d_pose`,
+so a 4.5x easier population buys a proportionally smaller and cheaper k). The **order of magnitude**
+— tenths of an S, not thousandths — is what survives the rescaling; the exact figure is owed to the
+n600 run.
+
 **So I measured it (n=12).** Two receiver-computable rankings (both need only `f1` and the homography
 the receiver already builds), each given the SAME true signs, scored on the canonical scorer through
 the REAL re-rendered `f0`:
