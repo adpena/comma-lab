@@ -573,3 +573,44 @@ and shared-prefix agreement is not replication.**
   margin and not on the sampling argument.
 
 ---
+
+## §7 WHAT I REFUTE IN MY OWN CHARTER
+
+The charter asked for this explicitly. Six items, in descending consequence.
+
+1. **"L0 outranks the other lenses" / pixel-is-the-wrong-level as a blanket — REFUTED for one of the
+   three roles.** Measured (§5.2): per-pixel **actuation of a regional solve** is the best realizer we
+   own (`η +0.7895`, 32/32). The discriminating axis is **CONTENT-vs-SOLVE, not granularity**. Taking
+   L0 broadly would delete `sq1` v1. The lens survives for **objectives** and **addresses**.
+
+2. **"the per-pixel-sidecar NO-GO fired three times" — MISIDENTIFIED and UNDERCOUNTED.** The canonical
+   trio is **`a127`/`aa98`/`a3061` (2026-06-23)**, and the true count is **7+ arms across 3 bases**
+   (§2.3). Correcting it makes the finding *stronger*, not weaker.
+
+3. **"the window is only 1.56 β₂ time constants" — WRONG.** Measured **3.00 τ** (β₂=0.999 ⇒ τ=1,000
+   steps; 75 steps/epoch × 40 epochs). The concern survives at the corrected value because the
+   resolving spec is ≥3–4 τ and η converges only at ~5 τ — but the charter's number was wrong.
+
+4. **"cosine … is a live generic-basis suspect" — REFUTED.** Cosine was **raced and LOST, 4/4**, and is
+   the standing law's own **first** measured instance. There is nothing to re-scope. **The live gap is
+   ENFORCEMENT**: `canonical_anti_patterns` has **0 registered classes** for the generic-metric or
+   diagonal-2×2 bug class (§2.2 G3) — the missing self-protect half of the two-landing rule.
+
+5. **"#918's basis closure — check whether it rode a derived or generic basis set" — the right target
+   is the CITATION, not the verdict.** It did ride 11 generic bases; but `br1` **self-scoped correctly**
+   to FORMULATION with an explicit decoder-CNN carve-out and supplied a mechanism (every spatial
+   predictor *raises* H₀). The over-reach is the **downstream bare "CLOSED"** (§2.2 G2, §3 S2).
+
+6. **The charter's prior-art list was incomplete, and the level lens is not new.** It named
+   rv1/a1/a2/gd1 and three register sweeps but omitted the **two closest priors** — `ddm_na1`
+   (yesterday) and `ddm_hg1` (today). And the wrong-level lens **already exists**: it is `rv1`'s R4/X2
+   and six `a1` rows, plus an explicit *too-low / right-level / too-high* table in
+   `solve_the_right_problem_kolmogorov_sweep_20260718`. **What is new is (a) applying it outside the
+   paint/template families and (b) noticing that `rv1` applied it as a BINARY** (pixel vs token) on a
+   ladder with ~7 rungs.
+
+**One prior-art law is also half-refuted (§2.5.1):** `na1`'s *"prefix bias is conservative for an
+absolute WALL verdict"* holds on **seg** and **inverts on pose**. That is a correction to a law minted
+yesterday, not to the charter.
+
+---
