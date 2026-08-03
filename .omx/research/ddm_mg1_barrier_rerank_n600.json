@@ -1,0 +1,339 @@
+{
+  "arm": "ddm_mg1",
+  "probe": "F4 barrier-integral re-rank of the #766 waterfill",
+  "git_head": "d802199d6d5b0f39a478dfe1da5d96bbe497bc88",
+  "axis": "[macOS-CPU scorer-free advisory] score_claim=false promotable=false",
+  "denominator": {
+    "pairs": 600,
+    "unwritten_pairs_excluded": 0,
+    "plane": [
+      384,
+      512
+    ],
+    "cells": 768,
+    "flips_total_live_cx1": 508640,
+    "flips_in_wr1_2026_07_29_atlas": 458738,
+    "note": "wr1's atlas is a DIFFERENT (2026-07-29 ru1) snapshot; the live cx1 flip mask is recomputed here and used for all mg1 keys"
+  },
+  "control_barrier_rederivation": {
+    "rows": [
+      {
+        "side": "2->0",
+        "published": 51.81,
+        "rederived": 51.8119,
+        "abs_diff": 0.0019
+      },
+      {
+        "side": "4->0",
+        "published": 55.29,
+        "rederived": 55.2907,
+        "abs_diff": 0.0007
+      },
+      {
+        "side": "2->3",
+        "published": 37.91,
+        "rederived": 37.909,
+        "abs_diff": 0.001
+      },
+      {
+        "side": "0->1",
+        "published": 51.26,
+        "rederived": 51.2628,
+        "abs_diff": 0.0028
+      },
+      {
+        "side": "0->4",
+        "published": 58.39,
+        "rederived": 58.3873,
+        "abs_diff": 0.0027
+      },
+      {
+        "side": "0->2",
+        "published": 33.26,
+        "rederived": 33.2625,
+        "abs_diff": 0.0025
+      },
+      {
+        "side": "0->3",
+        "published": 49.51,
+        "rederived": 49.5137,
+        "abs_diff": 0.0037
+      },
+      {
+        "side": "3->0",
+        "published": 55.04,
+        "rederived": 55.0397,
+        "abs_diff": 0.0003
+      },
+      {
+        "side": "1->0",
+        "published": 5.1,
+        "rederived": 5.1018,
+        "abs_diff": 0.0018
+      },
+      {
+        "side": "3->2",
+        "published": 51.31,
+        "rederived": 51.3087,
+        "abs_diff": 0.0013
+      },
+      {
+        "side": "4->1",
+        "published": 58.17,
+        "rederived": 58.1681,
+        "abs_diff": 0.0019
+      }
+    ],
+    "worst_abs_diff": 0.0037,
+    "agrees_within_0.01": true,
+    "formula": "barrier = sum(mean_margin_d for d where n_d >= 0.01 * n_depth1)",
+    "n_pixels_by_side": {
+      "0->1": 16355233,
+      "0->2": 1406205,
+      "0->3": 911958,
+      "0->4": 8733650,
+      "1->0": 683786,
+      "1->2": 398,
+      "1->3": 231,
+      "1->4": 6224,
+      "2->0": 33473082,
+      "2->1": 56058,
+      "2->3": 24884141,
+      "3->0": 773696,
+      "3->1": 9498,
+      "3->2": 675421,
+      "3->4": 1710,
+      "4->0": 29540458,
+      "4->1": 440302,
+      "4->3": 12749
+    }
+  },
+  "control_cell_tiling": {
+    "cells": 768,
+    "expected_cells": 768,
+    "px_per_cell_min": 256,
+    "px_per_cell_max": 256,
+    "covers_plane_exactly_once": true
+  },
+  "control_sides_without_a_published_barrier": {
+    "flips_dropped_to_zero_weight": 0,
+    "fraction_of_flips": 0.0
+  },
+  "side_flip_counts_live_cx1": {
+    "1->0": 184613,
+    "2->0": 56144,
+    "0->1": 50535,
+    "0->4": 47350,
+    "3->2": 43386,
+    "3->0": 35269,
+    "0->2": 33401,
+    "0->3": 21956,
+    "2->3": 18506,
+    "4->0": 15677,
+    "1->3": 630,
+    "1->4": 521,
+    "4->1": 382,
+    "3->4": 127,
+    "3->1": 51,
+    "2->1": 47,
+    "1->2": 37,
+    "4->3": 8
+  },
+  "barriers_rederived": {
+    "0->1": 51.2628,
+    "0->2": 33.2625,
+    "0->3": 49.5137,
+    "0->4": 58.3873,
+    "1->0": 5.1018,
+    "1->2": 0.6741,
+    "1->3": 0.3446,
+    "1->4": 7.9484,
+    "2->0": 51.8119,
+    "2->1": 50.7027,
+    "2->3": 37.909,
+    "3->0": 55.0397,
+    "3->1": 48.4436,
+    "3->2": 51.3087,
+    "3->4": 36.1278,
+    "4->0": 55.2907,
+    "4->1": 58.1681,
+    "4->3": 28.7695
+  },
+  "rank_correlations_spearman": {
+    "flip_count_vs_barrier_mass": 0.9966111915730371,
+    "flip_count_vs_margin_mass": 0.9975263075211072,
+    "flip_count_vs_wr1_atlas_flip_mass": 0.9994384066713127,
+    "flip_count_vs_residual_bytes": 0.652478180184899
+  },
+  "key_spreads": {
+    "flip_count_max_over_min_nonzero": 3319.5,
+    "flip_count_zero_cells": 486,
+    "barrier_spread_across_sides": 169.42451810460665
+  },
+  "grain_law": {
+    "note": "grain 256 px MUST reproduce the 768-cell numbers above (control)",
+    "rows": [
+      {
+        "cell_px": 1,
+        "n_cells": 196608,
+        "zero_flip_cells": 152810,
+        "flip_bearing_cells": 43798,
+        "mean_flips_per_nonzero_cell": 11.61331567651491,
+        "flip_count_spread_max_over_min_nonzero": 143.0,
+        "spearman_flip_vs_barrier_ALL_cells_TIE_INFLATED": 0.9979334667616289,
+        "spearman_flip_vs_barrier_flip_bearing_only": 0.8999246769888218,
+        "first_half_drop_overlap_flip_bearing_only": 0.8807708114525777,
+        "overlap_denominator_cells": 21899
+      },
+      {
+        "cell_px": 4,
+        "n_cells": 49152,
+        "zero_flip_cells": 36045,
+        "flip_bearing_cells": 13107,
+        "mean_flips_per_nonzero_cell": 38.80674448767834,
+        "flip_count_spread_max_over_min_nonzero": 533.0,
+        "spearman_flip_vs_barrier_ALL_cells_TIE_INFLATED": 0.9978690886681356,
+        "spearman_flip_vs_barrier_flip_bearing_only": 0.9318617274632083,
+        "first_half_drop_overlap_flip_bearing_only": 0.9130169388066535,
+        "overlap_denominator_cells": 6553
+      },
+      {
+        "cell_px": 16,
+        "n_cells": 12288,
+        "zero_flip_cells": 8472,
+        "flip_bearing_cells": 3816,
+        "mean_flips_per_nonzero_cell": 133.29140461215934,
+        "flip_count_spread_max_over_min_nonzero": 1505.0,
+        "spearman_flip_vs_barrier_ALL_cells_TIE_INFLATED": 0.9976331672656361,
+        "spearman_flip_vs_barrier_flip_bearing_only": 0.9468618992626617,
+        "first_half_drop_overlap_flip_bearing_only": 0.9302935010482181,
+        "overlap_denominator_cells": 1908
+      },
+      {
+        "cell_px": 64,
+        "n_cells": 3072,
+        "zero_flip_cells": 2019,
+        "flip_bearing_cells": 1053,
+        "mean_flips_per_nonzero_cell": 483.0389363722697,
+        "flip_count_spread_max_over_min_nonzero": 5233.0,
+        "spearman_flip_vs_barrier_ALL_cells_TIE_INFLATED": 0.997431251220838,
+        "spearman_flip_vs_barrier_flip_bearing_only": 0.9543238915522371,
+        "first_half_drop_overlap_flip_bearing_only": 0.9467680608365019,
+        "overlap_denominator_cells": 526
+      },
+      {
+        "cell_px": 256,
+        "n_cells": 768,
+        "zero_flip_cells": 486,
+        "flip_bearing_cells": 282,
+        "mean_flips_per_nonzero_cell": 1803.6879432624114,
+        "flip_count_spread_max_over_min_nonzero": 3319.5,
+        "spearman_flip_vs_barrier_ALL_cells_TIE_INFLATED": 0.9966111915730371,
+        "spearman_flip_vs_barrier_flip_bearing_only": 0.9488940265217668,
+        "first_half_drop_overlap_flip_bearing_only": 0.9148936170212766,
+        "overlap_denominator_cells": 141
+      }
+    ]
+  },
+  "matched_byte_drop": [
+    {
+      "byte_budget_fraction": 0.05,
+      "damage_flip_count_key": 0.0,
+      "damage_barrier_key": 0.0,
+      "damage_shuffled_key_control": 963535.3080701686,
+      "barrier_key_advantage_abs": 0.0,
+      "barrier_key_advantage_pct_of_total": 0.0,
+      "shuffle_control_penalty_pct_of_total": 5.609780290889315
+    },
+    {
+      "byte_budget_fraction": 0.1,
+      "damage_flip_count_key": 0.0,
+      "damage_barrier_key": 0.0,
+      "damage_shuffled_key_control": 1975667.2871868578,
+      "barrier_key_advantage_abs": 0.0,
+      "barrier_key_advantage_pct_of_total": 0.0,
+      "shuffle_control_penalty_pct_of_total": 11.502494320850026
+    },
+    {
+      "byte_budget_fraction": 0.2,
+      "damage_flip_count_key": 0.0,
+      "damage_barrier_key": 0.0,
+      "damage_shuffled_key_control": 4721854.409983317,
+      "barrier_key_advantage_abs": 0.0,
+      "barrier_key_advantage_pct_of_total": 0.0,
+      "shuffle_control_penalty_pct_of_total": 27.491017281583833
+    },
+    {
+      "byte_budget_fraction": 0.3,
+      "damage_flip_count_key": 0.0,
+      "damage_barrier_key": 0.0,
+      "damage_shuffled_key_control": 8047872.041875053,
+      "barrier_key_advantage_abs": 0.0,
+      "barrier_key_advantage_pct_of_total": 0.0,
+      "shuffle_control_penalty_pct_of_total": 46.855360240542474
+    },
+    {
+      "byte_budget_fraction": 0.5,
+      "damage_flip_count_key": 6285.584342922237,
+      "damage_barrier_key": 3271.5104795211337,
+      "damage_shuffled_key_control": 10284471.194036845,
+      "barrier_key_advantage_abs": 3014.073863401103,
+      "barrier_key_advantage_pct_of_total": 0.017548181174654776,
+      "shuffle_control_penalty_pct_of_total": 59.84042574925985
+    },
+    {
+      "byte_budget_fraction": 0.7,
+      "damage_flip_count_key": 936857.1184038536,
+      "damage_barrier_key": 903885.9992899422,
+      "damage_shuffled_key_control": 12170487.444918144,
+      "barrier_key_advantage_abs": 32971.11911391141,
+      "barrier_key_advantage_pct_of_total": 0.19196051522412358,
+      "shuffle_control_penalty_pct_of_total": 65.40310196523399
+    },
+    {
+      "byte_budget_fraction": 0.8999999999999999,
+      "damage_flip_count_key": 8495071.911573574,
+      "damage_barrier_key": 7682959.9088050155,
+      "damage_shuffled_key_control": 15799092.308932897,
+      "barrier_key_advantage_abs": 812112.0027685585,
+      "barrier_key_advantage_pct_of_total": 4.728181592276365,
+      "shuffle_control_penalty_pct_of_total": 42.52459596050006
+    }
+  ],
+  "drop_order_overlap": [
+    {
+      "first_k_cells": 32,
+      "jaccard": 1.0,
+      "overlap_fraction": 1.0
+    },
+    {
+      "first_k_cells": 64,
+      "jaccard": 1.0,
+      "overlap_fraction": 1.0
+    },
+    {
+      "first_k_cells": 128,
+      "jaccard": 1.0,
+      "overlap_fraction": 1.0
+    },
+    {
+      "first_k_cells": 256,
+      "jaccard": 1.0,
+      "overlap_fraction": 1.0
+    },
+    {
+      "first_k_cells": 384,
+      "jaccard": 1.0,
+      "overlap_fraction": 1.0
+    },
+    {
+      "first_k_cells": 512,
+      "jaccard": 0.9616858237547893,
+      "overlap_fraction": 0.98046875
+    }
+  ],
+  "totals": {
+    "total_byte_proxy": 2477111.0,
+    "total_barrier_damage": 17175990.112037346
+  }
+}

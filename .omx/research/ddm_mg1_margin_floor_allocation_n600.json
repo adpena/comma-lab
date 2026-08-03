@@ -1,0 +1,321 @@
+{
+  "arm": "ddm_mg1",
+  "git_head": "958c7d46172589b14e06228570a58be96ab929e2",
+  "axis": "[macOS-CPU scorer-free advisory] score_claim=false promotable=false",
+  "inputs": {
+    "gt_cache": "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+    "pu2_argmax_cache": "/Volumes/VertigoDataTier/pact/ddm_pu2_20260803/argmax_cache"
+  },
+  "denominator": {
+    "pairs": 600,
+    "h": 384,
+    "w": 512,
+    "sites_per_pair": 196608,
+    "total_sites": 117964800,
+    "pu2_cache_unwritten_pairs_excluded": 0,
+    "pu2_cache_note": "pairs beyond the written prefix are all-zero memmap fill, not argmax planes; excluded from BOTH numerator and denominator"
+  },
+  "control_q1_pu2_gt_vs_lstars": {
+    "disagreeing_sites": 0,
+    "agree": true,
+    "note": "MUST be 0; a nonzero value invalidates every cross-tab below"
+  },
+  "realized_flips": {
+    "n_flip": 508640,
+    "d_seg": 0.004311794704861111,
+    "seg_leg_100x": 0.4311794704861111
+  },
+  "control_gt_margin_sign": {
+    "gt_margin_negative_sites": 0,
+    "note": "MUST be 0; confirms `margins` is the GT-reference (self) margin"
+  },
+  "mean_gt_margin": {
+    "on_realized_flip_sites": 0.3010288006397267,
+    "on_correct_sites": 5.6345863484065175
+  },
+  "q2_hinge_numeric": {
+    "floor_0.1": {
+      "value": 0.4051,
+      "active_sites": 7,
+      "grad_per_active_site": -0.1,
+      "grad_absmax": 0.1,
+      "distinct_nonzero_grad_magnitudes": 1,
+      "flipped_sites_active": 3,
+      "flipped_sites_total": 3
+    },
+    "floor_2.0582": {
+      "value": 1.9374799999999996,
+      "active_sites": 9,
+      "grad_per_active_site": -0.1,
+      "grad_absmax": 0.1,
+      "distinct_nonzero_grad_magnitudes": 1,
+      "flipped_sites_active": 3,
+      "flipped_sites_total": 3
+    },
+    "limit_check": {
+      "floor": 1000000.0,
+      "hinge_value": 999999.4951,
+      "floor_minus_mean_margin": 999999.4951,
+      "abs_diff": 0.0
+    }
+  },
+  "q3_floor_grid": [
+    {
+      "floor": 0.01,
+      "gt_margin_active_sites": 33212,
+      "gt_margin_active_fraction": 0.00028154161241319444,
+      "of_which_realized_flips": 15566,
+      "flip_share_of_active": 0.4686860171022522,
+      "flip_coverage": 0.030603177099716893,
+      "hinge_value_on_gt_margins": 1.4079128630732544e-06,
+      "hinge_contribution_at_w0.05": 7.039564315366273e-08
+    },
+    {
+      "floor": 0.05,
+      "gt_margin_active_sites": 166700,
+      "gt_margin_active_fraction": 0.0014131334092881945,
+      "of_which_realized_flips": 75033,
+      "flip_share_of_active": 0.45010797840431915,
+      "flip_coverage": 0.14751690783265178,
+      "hinge_value_on_gt_margins": 3.524518704176039e-05,
+      "hinge_contribution_at_w0.05": 1.7622593520880194e-06
+    },
+    {
+      "floor": 0.1,
+      "gt_margin_active_sites": 333078,
+      "gt_margin_active_fraction": 0.002823537190755208,
+      "of_which_realized_flips": 140855,
+      "flip_share_of_active": 0.4228889329226187,
+      "flip_coverage": 0.27692474048442905,
+      "hinge_value_on_gt_margins": 0.0001412186205148929,
+      "hinge_contribution_at_w0.05": 7.060931025744645e-06
+    },
+    {
+      "floor": 0.2,
+      "gt_margin_active_sites": 663192,
+      "gt_margin_active_fraction": 0.0056219482421875,
+      "of_which_realized_flips": 245836,
+      "flip_share_of_active": 0.37068601551285296,
+      "flip_coverage": 0.48332022648631645,
+      "hinge_value_on_gt_margins": 0.0005637624814218423,
+      "hinge_contribution_at_w0.05": 2.8188124071092113e-05
+    },
+    {
+      "floor": 0.3552,
+      "gt_margin_active_sites": 1168479,
+      "gt_margin_active_fraction": 0.009905319213867187,
+      "of_which_realized_flips": 354748,
+      "flip_share_of_active": 0.30359809632864604,
+      "flip_coverage": 0.6974441648317081,
+      "hinge_value_on_gt_margins": 0.0017696262181517,
+      "hinge_contribution_at_w0.05": 8.8481310907585e-05
+    },
+    {
+      "floor": 0.5,
+      "gt_margin_active_sites": 1630790,
+      "gt_margin_active_fraction": 0.013824378119574652,
+      "of_which_realized_flips": 416406,
+      "flip_share_of_active": 0.25534004991445863,
+      "flip_coverage": 0.8186654608367411,
+      "hinge_value_on_gt_margins": 0.0034884702475493313,
+      "hinge_contribution_at_w0.05": 0.0001744235123774666
+    },
+    {
+      "floor": 1.0,
+      "gt_margin_active_sites": 3149890,
+      "gt_margin_active_fraction": 0.02670194837782118,
+      "of_which_realized_flips": 492676,
+      "flip_share_of_active": 0.15641054132049056,
+      "flip_coverage": 0.9686143441333753,
+      "hinge_value_on_gt_margins": 0.01366970694285505,
+      "hinge_contribution_at_w0.05": 0.0006834853471427525
+    },
+    {
+      "floor": 2.0582,
+      "gt_margin_active_sites": 5841626,
+      "gt_margin_active_fraction": 0.04952007717556424,
+      "of_which_realized_flips": 506622,
+      "flip_share_of_active": 0.08672619575440126,
+      "flip_coverage": 0.9960325574079899,
+      "hinge_value_on_gt_margins": 0.05435842761665406,
+      "hinge_contribution_at_w0.05": 0.0027179213808327034
+    },
+    {
+      "floor": 4.0,
+      "gt_margin_active_sites": 12152628,
+      "gt_margin_active_fraction": 0.10301910400390625,
+      "of_which_realized_flips": 508373,
+      "flip_share_of_active": 0.041832350994369286,
+      "flip_coverage": 0.9994750707769738,
+      "hinge_value_on_gt_margins": 0.19505427732539374,
+      "hinge_contribution_at_w0.05": 0.009752713866269688
+    },
+    {
+      "floor": 5.8934,
+      "gt_margin_active_sites": 59188510,
+      "gt_margin_active_fraction": 0.5017472161187067,
+      "of_which_realized_flips": 508633,
+      "flip_share_of_active": 0.008593441531135013,
+      "flip_coverage": 0.9999862378106322,
+      "hinge_value_on_gt_margins": 0.6295776803702497,
+      "hinge_contribution_at_w0.05": 0.03147888401851249
+    },
+    {
+      "floor": 10.0,
+      "gt_margin_active_sites": 117814828,
+      "gt_margin_active_fraction": 0.9987286716037327,
+      "of_which_realized_flips": 508640,
+      "flip_share_of_active": 0.0043172833898293345,
+      "flip_coverage": 1.0,
+      "hinge_value_on_gt_margins": 4.389575243745142,
+      "hinge_contribution_at_w0.05": 0.2194787621872571
+    },
+    {
+      "floor": 100.0,
+      "gt_margin_active_sites": 117964800,
+      "gt_margin_active_fraction": 1.0,
+      "of_which_realized_flips": 508640,
+      "flip_share_of_active": 0.004311794704861111,
+      "flip_coverage": 1.0,
+      "hinge_value_on_gt_margins": 94.38841085678601,
+      "hinge_contribution_at_w0.05": 4.7194205428393
+    }
+  ],
+  "q3_margin_bins": [
+    {
+      "lo": null,
+      "hi": -4.0,
+      "sites": 0,
+      "flips": 0,
+      "flip_rate_in_bin": null,
+      "share_of_all_flips": 0.0,
+      "share_of_all_sites": 0.0
+    },
+    {
+      "lo": -4.0,
+      "hi": -2.0,
+      "sites": 0,
+      "flips": 0,
+      "flip_rate_in_bin": null,
+      "share_of_all_flips": 0.0,
+      "share_of_all_sites": 0.0
+    },
+    {
+      "lo": -2.0,
+      "hi": -1.0,
+      "sites": 0,
+      "flips": 0,
+      "flip_rate_in_bin": null,
+      "share_of_all_flips": 0.0,
+      "share_of_all_sites": 0.0
+    },
+    {
+      "lo": -1.0,
+      "hi": -0.5,
+      "sites": 0,
+      "flips": 0,
+      "flip_rate_in_bin": null,
+      "share_of_all_flips": 0.0,
+      "share_of_all_sites": 0.0
+    },
+    {
+      "lo": -0.5,
+      "hi": -0.096,
+      "sites": 0,
+      "flips": 0,
+      "flip_rate_in_bin": null,
+      "share_of_all_flips": 0.0,
+      "share_of_all_sites": 0.0
+    },
+    {
+      "lo": -0.096,
+      "hi": 0.0,
+      "sites": 0,
+      "flips": 0,
+      "flip_rate_in_bin": null,
+      "share_of_all_flips": 0.0,
+      "share_of_all_sites": 0.0
+    },
+    {
+      "lo": 0.0,
+      "hi": 0.096,
+      "sites": 319903,
+      "flips": 136003,
+      "flip_rate_in_bin": 0.4251382450305249,
+      "share_of_all_flips": 0.2673855772255426,
+      "share_of_all_sites": 0.002711851331922743
+    },
+    {
+      "lo": 0.096,
+      "hi": 0.2,
+      "sites": 343289,
+      "flips": 109833,
+      "flip_rate_in_bin": 0.3199432548086306,
+      "share_of_all_flips": 0.21593464926077383,
+      "share_of_all_sites": 0.002910096910264757
+    },
+    {
+      "lo": 0.2,
+      "hi": 0.5,
+      "sites": 967598,
+      "flips": 170570,
+      "flip_rate_in_bin": 0.17628188565912703,
+      "share_of_all_flips": 0.3353452343504247,
+      "share_of_all_sites": 0.008202429877387153
+    },
+    {
+      "lo": 0.5,
+      "hi": 1.0,
+      "sites": 1519100,
+      "flips": 76270,
+      "flip_rate_in_bin": 0.050207359620828125,
+      "share_of_all_flips": 0.14994888329663417,
+      "share_of_all_sites": 0.012877570258246528
+    },
+    {
+      "lo": 1.0,
+      "hi": 2.0,
+      "sites": 2551621,
+      "flips": 13781,
+      "flip_rate_in_bin": 0.005400880459911562,
+      "share_of_all_flips": 0.02709381881094684,
+      "share_of_all_sites": 0.02163035922580295
+    },
+    {
+      "lo": 2.0,
+      "hi": 4.0,
+      "sites": 6451117,
+      "flips": 1916,
+      "flip_rate_in_bin": 0.0002970028291224605,
+      "share_of_all_flips": 0.0037669078326517773,
+      "share_of_all_sites": 0.054686796400282116
+    },
+    {
+      "lo": 4.0,
+      "hi": 8.0,
+      "sites": 103728616,
+      "flips": 267,
+      "flip_rate_in_bin": 2.5740245102662894e-06,
+      "share_of_all_flips": 0.0005249292230261088,
+      "share_of_all_sites": 0.879318372938368
+    },
+    {
+      "lo": 8.0,
+      "hi": 16.0,
+      "sites": 2083539,
+      "flips": 0,
+      "flip_rate_in_bin": 0.0,
+      "share_of_all_flips": 0.0,
+      "share_of_all_sites": 0.017662378946940106
+    },
+    {
+      "lo": 16.0,
+      "hi": null,
+      "sites": 17,
+      "flips": 0,
+      "flip_rate_in_bin": 0.0,
+      "share_of_all_flips": 0.0,
+      "share_of_all_sites": 1.4411078559027778e-07
+    }
+  ]
+}
