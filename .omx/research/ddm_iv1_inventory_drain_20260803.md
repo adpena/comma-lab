@@ -224,6 +224,21 @@ under QD06/QD07/QF02/QE02. p2a's never-named instrument could not see them becau
 rows **by content in a table cell**, not by `#N` in a commit message. **"Never-named" measures
 commit messages; it does not measure the parking store.** That is a second instrument, owed.
 
+### §3.2 Spot-verification of the other two negative-existence claims — both HOLD
+
+Having caught one false negative (§3.1), I re-derived the other two from primary artifacts rather
+than trusting the pattern:
+
+- **`#844` — HOLDS, and it is a *well-formed* scoped negative.** `tools/triality_drift_detector.py`
+  is **1,385 lines**; `syntactic` = **0** hits, `predicate` = **0** hits; detection is demonstrably
+  path-prefix based — `:176` `any((f or "").startswith(TRIALITY_PREFIXES) …)` and `:179-181`
+  `touched_dsl()` → `startswith("src/tac/witness_dsl/")`. The scope here is **one named file**, so
+  the negative is bounded by construction — which is exactly why it survived and `#198` did not.
+- **`#840` — HOLDS, with a denominator refinement.** `.omx/research/codex_findings_*.md` = **1,260**
+  (exactly as reported). But **repo-wide tracked = 1,313**. If cf1's sweep is scoped to
+  `.omx/research/` the figure is right; if it is meant repo-wide the unswept set is **1,313**.
+  Stated so the successor picks the scope deliberately rather than inheriting it.
+
 Honest limits carried forward: `#833` is a **scoped negative** (did not find a capacity/floor-probe
 degenerate-baseline control in 7,019 `.md` + 13,888 `.py`) — a different search key could flip it.
 `#450`'s memo says "increment 1"; later increments may be owed. `#860` is **two things in one row**
