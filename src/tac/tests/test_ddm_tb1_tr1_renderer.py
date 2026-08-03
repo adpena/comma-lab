@@ -287,3 +287,158 @@ def test_dsl_declared_flags_scan_finds_core_flags():
     for f in ("--variant", "--grid-downsample", "--token-ste", "--class-weight-lane",
               "--gate-every", "--max-wall-minutes", "--resume-from"):
         assert f in flags
+
+
+# ------------------------------------------- ddm_gd4: grid_downsample=32 ----
+# mt1 §5 #1 / gd3 §6.1: D=32 is the largest measured rate object on the vehicle
+# (archive 101,636 B, ΔS_rate −0.1722397 = 23.72% of the gap). gd3 proved its
+# d_seg half is unmeasurable at $0, so the row costs a training run — which means
+# the ds=32 code path itself must be verified, not assumed.
+def test_ds32_geometry_and_seven_conv_topology():
+    cfg = _cfg("lotto", grid_downsample=32)
+    assert (cfg.grid_h, cfg.grid_w, cfg.n_upsample) == (12, 16, 5)
+    from experiments.train_tr1_partition_renderer_mlx import _conv_shapes
+
+    names = [n for n, _ in _conv_shapes(cfg)]
+    assert names == ["conv0", "up0", "up1", "up2", "up3", "up4", "head"]
+    # the ds=16 incumbent stays a 6-conv decoder (no silent topology drift)
+    assert [n for n, _ in _conv_shapes(_cfg("lotto"))] == [
+        "conv0", "up0", "up1", "up2", "up3", "head"]
+
+
+def test_ds32_render_reaches_full_seg_resolution():
+    m = build_module(_cfg("lotto", grid_downsample=32))
+    assert tuple(np.asarray(m.render_frame(0)).shape) == (1, 384, 512, 3)
+
+
+def test_ds32_up4_is_trainable_and_not_inert():
+    """POSITIVE CONTROL — fails if ``up4`` exists but never receives gradient.
+
+    The inert-lever class: a layer that is constructed, checkpointed and reported
+    but bypassed or gradient-starved. Three independent legs, each of which the
+    inert case fails: registered as a trainable param, NONZERO loss gradient, and
+    a causal effect on the rendered output.
+    """
+    from mlx.utils import tree_flatten
+
+    cfg = _cfg("lotto", grid_downsample=32)
+    m = build_module(cfg)
+    names = {k for k, _ in tree_flatten(m.trainable_parameters())}
+    # leg 1: registered (lotto trains score + per-channel gain + bias)
+    assert {"s_up4", "g_up4", "b_up4"} <= names
+    # the fixed bank must NOT be trainable (it is generic PRNG expansion, rule-118 free)
+    assert not any(k.startswith("_bank") for k in names)
+
+    # leg 2: nonzero gradient on EVERY upsample conv, up4 included
+    def loss_fn(model):
+        return mx.mean(model.render_frame(0) ** 2)
+
+    _, grads = mx.value_and_grad(loss_fn)(m)
+    g = {k: np.asarray(v) for k, v in tree_flatten(grads)}
+    for k in range(cfg.n_upsample):
+        assert np.abs(g[f"s_up{k}"]).max() > 0.0, f"up{k} score gradient is identically zero"
+        assert np.abs(g[f"b_up{k}"]).max() > 0.0, f"up{k} bias gradient is identically zero"
+
+    # leg 3: causal — perturbing ONLY up4 must move the render
+    r0 = np.asarray(m.render_frame(0))
+    m.b_up4 = m.b_up4 + 1.0
+    assert np.abs(np.asarray(m.render_frame(0)) - r0).max() > 1e-3
+
+
+def test_ds16_has_no_up4_layer():
+    m = build_module(_cfg("lotto"))
+    assert not hasattr(m, "s_up4") and not hasattr(m, "b_up4")
+
+
+def test_dsl_token_grid_lever_admits_32_and_still_refuses_12():
+    dsl = _dsl()
+    lev = dsl.lever_token_grid(downsample=32, code_width=4)
+    assert lev.overrides["--grid-downsample"] == "32"
+    with pytest.raises(ValueError):
+        dsl.lever_token_grid(downsample=12)
+
+
+def test_argparse_admits_32_and_refuses_non_power_of_two():
+    from experiments.train_tr1_partition_renderer_mlx import build_argparser
+
+    ap = build_argparser()
+    base = ["--variant", "lotto", "--out-dir", "/dev/null"]
+    assert ap.parse_args([*base, "--grid-downsample", "32"]).grid_downsample == 32
+    assert ap.parse_args([*base, "--grid-downsample", "16"]).grid_downsample == 16
+    with pytest.raises(SystemExit):
+        ap.parse_args([*base, "--grid-downsample", "12"])
+
+
+# -------------------------------------- ddm_gd4: resume geometry fail-closed --
+def test_resume_refuses_cross_grid_downsample_checkpoint(tmp_path):
+    """MEASURED defect (gd4 G1): before this guard, a ds=16 checkpoint loaded into
+    a ds=32 model WITHOUT raising — ``tokens_delta`` silently took the ds=16 shape
+    and ``up4`` stayed at init, absorbed by the resume block's "new param since the
+    checkpoint" backfill, which logs a clean-looking line. ``mlx.nn.Module.update``
+    assigns a wrong-shaped array without complaint.
+    """
+    from experiments.train_tr1_partition_renderer_mlx import ResumeGeometryMismatch
+    from mlx.utils import tree_flatten
+
+    cfg16 = _cfg("lotto")
+    m16 = build_module(cfg16)
+    p = tmp_path / "ds16_stage_ce.npz"
+    save_checkpoint(p, model=m16,
+                    ema=dict(tree_flatten(m16.trainable_parameters())),
+                    opt_state_flat={}, epoch=3, stage="seg_trunk_ce", cfg=cfg16,
+                    telemetry_tail=[])
+    m32 = build_module(_cfg("lotto", grid_downsample=32))
+    with pytest.raises(ResumeGeometryMismatch, match="resume REFUSED"):
+        load_checkpoint(p, m32)
+
+
+@pytest.mark.parametrize("kw", [
+    {"grid_downsample": 32}, {"code_width": 4}, {"renderer_width": 16}, {"num_pairs": 6},
+])
+def test_resume_refuses_every_geometry_bearing_field(tmp_path, kw):
+    from experiments.train_tr1_partition_renderer_mlx import ResumeGeometryMismatch
+    from mlx.utils import tree_flatten
+
+    cfg = _cfg("lotto")
+    m = build_module(cfg)
+    p = tmp_path / "parent.npz"
+    save_checkpoint(p, model=m, ema=dict(tree_flatten(m.trainable_parameters())),
+                    opt_state_flat={}, epoch=1, stage="seg_trunk_ce", cfg=cfg,
+                    telemetry_tail=[])
+    with pytest.raises(ResumeGeometryMismatch):
+        load_checkpoint(p, build_module(_cfg("lotto", **kw)))
+
+
+def test_resume_still_allows_matched_geometry_and_reports_new_params(tmp_path):
+    """The guard must not break the legitimate resume: same geometry, changed
+    stage-level knobs (lr / w_seg / epochs / ema_decay), and a newly-introduced
+    trainable param is REPORTED (for EMA backfill) rather than refused."""
+    from mlx.utils import tree_flatten
+
+    cfg = _cfg("lotto")
+    m = build_module(cfg)
+    p = tmp_path / "parent.npz"
+    save_checkpoint(p, model=m, ema=dict(tree_flatten(m.trainable_parameters())),
+                    opt_state_flat={}, epoch=5, stage="seg_trunk_ce", cfg=cfg,
+                    telemetry_tail=[])
+    child = _cfg("lotto", lr=5e-4, w_seg=250.0, epochs=9, ema_decay=0.997)
+    st = load_checkpoint(p, build_module(child))
+    assert st["epoch"] == 5
+    assert st["params_new_since_checkpoint"] == []
+    # a newly-introduced lever param is reported, not refused
+    st2 = load_checkpoint(p, build_module(_cfg("lotto", head_range_relax="linear")))
+    assert st2["params_new_since_checkpoint"] == ["head_relax_gain"]
+
+
+def test_resume_geometry_helper_is_pure_and_symmetric():
+    from experiments.train_tr1_partition_renderer_mlx import (
+        ResumeGeometryMismatch,
+        assert_resume_geometry_compatible,
+    )
+
+    ok = assert_resume_geometry_compatible({"a": (2, 3)}, {"a": (2, 3), "b": (4,)})
+    assert ok == ["b"]                      # model-only param => reported for backfill
+    with pytest.raises(ResumeGeometryMismatch, match="shape conflicts"):
+        assert_resume_geometry_compatible({"a": (2, 3)}, {"a": (2, 4)})
+    with pytest.raises(ResumeGeometryMismatch, match="absent from the model"):
+        assert_resume_geometry_compatible({"a": (2, 3), "z": (1,)}, {"a": (2, 3)})

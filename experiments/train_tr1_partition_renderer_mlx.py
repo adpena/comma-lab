@@ -187,7 +187,7 @@ DUTY_TO_MEASURE: tuple[dict[str, str], ...] = (
 class TR1Config:
     variant: str  # "plain" | "lotto"
     num_pairs: int
-    grid_downsample: int          # D in {8, 16}: 384/D x 512/D token lattice
+    grid_downsample: int          # D in {8, 16, 32}: 384/D x 512/D token lattice
     code_width: int               # c in {2, 4, 6}
     renderer_width: int           # w
     token_quant_levels: int       # description-level lattice (eval_roundtrip at tokens)
@@ -1653,17 +1653,65 @@ def save_checkpoint(path: Path, *, model, ema: dict[str, Any], opt_state_flat: d
     os.replace(str(tmp), str(path))  # atomic tmp+rename (P0 resumability)
 
 
+class ResumeGeometryMismatch(RuntimeError):
+    """A checkpoint's parameter geometry does not match the live model (fail-closed)."""
+
+
+def assert_resume_geometry_compatible(ckpt_param_shapes: dict[str, tuple[int, ...]],
+                                      model_param_shapes: dict[str, tuple[int, ...]]) -> list[str]:
+    """REFUSE a resume whose checkpoint params do not fit the live model.
+
+    ddm_gd4 G1 (MEASURED defect, 2026-08-02): ``mlx.nn.Module.update`` assigns a
+    wrong-SHAPED array with no complaint, so a ds=16 checkpoint loaded into a ds=32
+    model silently produced ``tokens_delta`` (P,24,32,4) inside a renderer that
+    expects (P,12,16,4) — while ``up4`` stayed at init and was absorbed by the
+    resume block's ``backfilled`` "new param since the checkpoint" path, which
+    logs a truthful-looking line. A multi-day run whose first crash-recovery step
+    is ``--resume-from`` cannot carry that: the wrong stage checkpoint out of the
+    burn directory is one tab-completion away.
+
+    STRUCTURAL by construction (compares the checkpoint's ``param::`` tree against
+    the live ``model.trainable_parameters()``), so it needs no config argument and
+    protects EVERY caller, not just the trainer's resume block. Returns the list of
+    params present in the model but absent from the checkpoint (the legitimate
+    newly-introduced-lever case the caller backfills); raises on any shape conflict
+    or on a checkpoint param the model does not have.
+    """
+    shape_conflicts = sorted(
+        f"{k}: ckpt{tuple(ckpt_param_shapes[k])} != model{tuple(model_param_shapes[k])}"
+        for k in (ckpt_param_shapes.keys() & model_param_shapes.keys())
+        if tuple(ckpt_param_shapes[k]) != tuple(model_param_shapes[k]))
+    orphaned = sorted(ckpt_param_shapes.keys() - model_param_shapes.keys())
+    if shape_conflicts or orphaned:
+        raise ResumeGeometryMismatch(
+            "resume REFUSED — checkpoint geometry does not match the live model "
+            "(never silently reshape a warm start). "
+            f"shape conflicts: {shape_conflicts or 'none'}; "
+            f"checkpoint params absent from the model: {orphaned or 'none'}. "
+            "This is the geometry-bearing config set (grid_downsample / code_width / "
+            "renderer_width / num_pairs / variant / token_temporal_mode / "
+            "renderer_head_mode): a checkpoint may only resume into a model built "
+            "with the SAME values. Start a fresh run instead of resuming across it.")
+    return sorted(model_param_shapes.keys() - ckpt_param_shapes.keys())
+
+
 def load_checkpoint(path: Path, model) -> dict[str, Any]:
     import mlx.core as mx
-    from mlx.utils import tree_unflatten
+    from mlx.utils import tree_flatten, tree_unflatten
 
     z = np.load(path, allow_pickle=False)
     params = [(k[len("param::"):], mx.array(z[k])) for k in z.files if k.startswith("param::")]
+    # P0 fail-closed geometry guard BEFORE any assignment (see the docstring above).
+    new_params = assert_resume_geometry_compatible(
+        {k: tuple(v.shape) for k, v in params},
+        {k: tuple(np.asarray(v).shape)
+         for k, v in tree_flatten(model.trainable_parameters())})
     model.update(tree_unflatten(params))
     ema = {k[len("ema::"):]: mx.array(z[k]) for k in z.files if k.startswith("ema::")}
     opt = {k[len("opt::"):]: z[k] for k in z.files if k.startswith("opt::")}
     meta = json.loads(bytes(z["meta::json"]).decode())
-    return {"epoch": int(z["meta::epoch"][0]), "ema": ema, "opt_flat": opt, "meta": meta}
+    return {"epoch": int(z["meta::epoch"][0]), "ema": ema, "opt_flat": opt, "meta": meta,
+            "params_new_since_checkpoint": new_params}
 
 
 def ema_snapshot_swap(model, ema: dict[str, Any]):
@@ -1689,7 +1737,13 @@ def build_argparser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--variant", choices=("plain", "lotto"), required=True)
     ap.add_argument("--num-pairs", type=int, default=600)
-    ap.add_argument("--grid-downsample", type=int, default=16, choices=(8, 16))
+    # ddm_gd4 (mt1 §5 #1 / gd3 §6.1): 32 ADMITTED. The trainer was already ds=32-ready —
+    # grid_h/grid_w derive from SEG_H//D, SEG_W//D; n_upsample from log2(D); _conv_shapes,
+    # the param-registration loop and render_frame all iterate range(n_upsample) — so this
+    # argparse tuple was the entire blocker. MEASURED ds=32-ready (gd4 G1 probe): 7 convs,
+    # grid 12x16, render (1,384,512,3), up4 registered trainable with NONZERO gradient and a
+    # 79.33-absmax causal effect on the render (vs ds=16 up3's 76.08) — NOT an inert layer.
+    ap.add_argument("--grid-downsample", type=int, default=16, choices=(8, 16, 32))
     ap.add_argument("--code-width", type=int, default=4, choices=(2, 4, 6))
     ap.add_argument("--renderer-width", type=int, default=24)
     ap.add_argument("--token-quant-levels", type=int, default=16)
@@ -2238,6 +2292,18 @@ def main() -> int:
         # moves it: the burn ran U=49,950/60,450/70,950, a different decay at EVERY boundary).
         boundary_parent_tail = list(st["meta"].get("telemetry_tail") or [])
         _pcfg = st["meta"].get("cfg") or {}
+        # ddm_gd4 G1 sister guard: the LOTTO bank is generated from lotto_seed and is
+        # NOT a trainable param, so a seed change survives the structural geometry check
+        # with identical shapes while making every trained supermask meaningless (the
+        # masks index a different random bank). Fail closed on the one silent-wrong the
+        # shape check cannot see.
+        if cfg.variant == "lotto" and isinstance(_pcfg, dict) and "lotto_seed" in _pcfg:
+            if int(_pcfg["lotto_seed"]) != int(cfg.lotto_seed):
+                raise ResumeGeometryMismatch(
+                    f"resume REFUSED — lotto_seed {int(_pcfg['lotto_seed'])} (checkpoint) != "
+                    f"{int(cfg.lotto_seed)} (this run). The fixed bank is regenerated from the "
+                    "seed and is not checkpointed, so the trained supermasks would index a "
+                    "DIFFERENT random bank at identical shapes (silent-wrong).")
         boundary_parent_ema_decay = (float(_pcfg["ema_decay"])
                                      if isinstance(_pcfg, dict) and "ema_decay" in _pcfg
                                      else None)

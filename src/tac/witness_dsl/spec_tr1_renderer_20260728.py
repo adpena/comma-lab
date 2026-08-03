@@ -38,8 +38,11 @@ def lever_variant(variant: str) -> Lever:
 
 
 def lever_token_grid(downsample: int = 16, code_width: int = 4) -> Lever:
-    if downsample not in (8, 16):
-        raise ValueError("grid downsample raced over {8,16} (D=12 excluded: 512/12 "
+    if downsample not in (8, 16, 32):
+        # ddm_gd4: 32 ADMITTED (mt1 §5 #1 rate row = 101,636 B archive, 23.72% of the gap;
+        # gd3 §6.1 confirmed the trainer is ds=32-ready and the argparse/DSL menus were the
+        # whole blocker). 384/32=12, 512/32=16 are integer; D=12 stays EXCLUDED (512/12 is not).
+        raise ValueError("grid downsample raced over {8,16,32} (D=12 excluded: 512/12 "
                          "non-integer lattice — tb1 memo deviation from SPEC S1.2)")
     if code_width not in (2, 4, 6):
         raise ValueError("code width raced over {2,4,6} per SPEC S1.2")
