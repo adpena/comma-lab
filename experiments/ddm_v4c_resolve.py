@@ -194,7 +194,9 @@ def derive_ab_starts(f0_pre: np.ndarray, f1_f: np.ndarray, selector: int,
 
 def ab_multistart_gn(pose6, mse, cur6, d0: float, tp: np.ndarray,
                      starts: dict[str, tuple[float, float]], *,
-                     relins: int = GN_RELINS_PHOTO):
+                     relins: int = GN_RELINS_PHOTO,
+                     damp_levels: int | None = None,
+                     realized_acceptance: bool = False):
     """Best-of `ab_damped_gn` over the derived start set, at SHIPPED precision.
 
     Acceptance is on the f16-QUANTIZED (a,b) -- the values that actually ship --
@@ -204,14 +206,28 @@ def ab_multistart_gn(pose6, mse, cur6, d0: float, tp: np.ndarray,
 
     Returns ``(a_q, b_q, d, trace)``; ``trace['start']`` names the winner and
     ``trace['starts_tried']`` records the denominator.
+
+    ddm_pg1: ``damp_levels`` and ``realized_acceptance`` are passed through so
+    the ddm_uv1 restart cure and the ddm_pg1 lattice cure COMPOSE.  Without the
+    passthrough the multistart arm would keep solving off the shipped lattice
+    no matter what the caller asked for -- a better successor that could not be
+    reached, which is the orphan pattern rather than a fix.  Defaults are
+    unchanged, so `derived` remains byte-identical until a caller opts in.
     """
+    # `AB_DAMP_LEVELS` is defined below this function (next to the solver it
+    # documents), so it cannot be a def-time default here -- resolve at call
+    # time instead of reordering the module.
+    if damp_levels is None:
+        damp_levels = AB_DAMP_LEVELS
     best = None
     for name in sorted(starts, key=lambda k: (k != "neutral", k)):
         a0, b0 = starts[name]
         c6 = pose6(a0, b0) if name != "neutral" else cur6
         v0 = mse(c6) if name != "neutral" else d0
         a_p, b_p, _c6, _cv, tr = ab_damped_gn(pose6, mse, a0, b0, c6, v0, tp,
-                                              relins=relins)
+                                              relins=relins,
+                                              damp_levels=damp_levels,
+                                              realized_acceptance=realized_acceptance)
         a_q, b_q = float(np.float16(a_p)), float(np.float16(b_p))
         d_q = mse(pose6(a_q, b_q))
         if best is None or d_q < best[2]:
@@ -600,6 +616,28 @@ def _summarize_solve(base: str, cache: dict[int, dict], ship: dict[int, dict]) -
 #: This is a SAFETY BOUND, not a target -- see ``ab_damped_gn``.
 AB_DAMP_LEVELS = 4
 
+#: DERIVED damping-ladder depth (ddm_pg1, 2026-08-02).  The ladder multiplies
+#: ``lm`` by 8 per level and the LM step scales as 1/lm once ``lm`` dominates
+#: ``diag(JtJ)``, so driving a step below the shipped float16 resolution takes
+#: ``ceil(log8(||step0|| / half_ulp))`` levels.  Evaluated at the two operating
+#: points this solver actually visits:
+#:
+#:     gain `a` near 1.0 : half-ULP 4.883e-04, step ~1     -> 3.67 -> 4
+#:     bias `b` near 0.0 : half-ULP 2.980e-08, step ~100   -> 10.55 -> 11
+#:
+#: **The shipped ``AB_DAMP_LEVELS = 4`` is EXACTLY the gain-dim derivation**
+#: (3.67 -> 4) applied to both coordinates -- the bound is correct for `a` and
+#: is ~1/3 of the depth `b` needs.  The constant was derived for one coordinate
+#: and reused for the other, which is why ``damp_cap`` carried 67% of the pose
+#: mass in the ddm_sv1 census while ``converged`` was 0%.  12 = 11 + 1 margin.
+AB_DAMP_LEVELS_DERIVED = 12
+
+#: Safety bound only -- with ``realized_acceptance`` the f16 lattice terminates
+#: the loop.  ddm_sv1 measured max 17 relinearizations entered at bound 32 with
+#: 0/60 pairs at the bound (``CLOSED_INTERIOR_OPTIMUM``), so 32 is a
+#: MEASURED-sufficient bound rather than a guessed one.
+AB_RELINS_DERIVED = 32
+
 
 def _step_below_f16_resolution(a: float, b: float, step) -> bool:
     """True when neither half of ``step`` can move (a,b) at the SHIPPED precision.
@@ -626,7 +664,8 @@ def _step_below_f16_resolution(a: float, b: float, step) -> bool:
 def ab_damped_gn(pose6, mse, a0: float, b0: float, cur6: np.ndarray,
                  curB: float, tp: np.ndarray, *,
                  relins: int = GN_RELINS_PHOTO,
-                 damp_levels: int = AB_DAMP_LEVELS):
+                 damp_levels: int = AB_DAMP_LEVELS,
+                 realized_acceptance: bool = False):
     """The photometric (a,b) damped-Gauss-Newton, with its TERMINATION EMITTED.
 
     Single implementation shared by the v4c rung-B site and the v4d
@@ -649,9 +688,37 @@ def ab_damped_gn(pose6, mse, a0: float, b0: float, cur6: np.ndarray,
     ``tools/sb1_seg_batch.py`` and of the registered law
     ``tac.canonical_equations.ddm_pw1_menu_saturation_discriminator_v1``.
 
-    The defaults are UNCHANGED: this landing is observability only and is
+    The defaults are UNCHANGED: that landing was observability only and is
     byte-identical by construction.  Freeing the bounds changes the shipped
-    solve and is staged behind an exact gate, not taken here.
+    solve and was staged behind an exact gate, not taken there.
+
+    ``realized_acceptance`` (ddm_pg1, 2026-08-02) IS that gate, and it also
+    names the defect ddm_sv1 could only observe.  Two solvers run in this one
+    chain and they disagreed about what an accepted step is:
+
+    * ``ddm_pfs1_ep_warp_pose_solve.solve_pair_gn`` (the 6-dim warp pose)
+      rounds EVERY candidate to float16 before scoring it, so "the shipped
+      d_pose is monotone by construction (realized-acceptance discipline)";
+    * this loop solved in float64 and rounded ONCE at the end.
+
+    So this solver could accept a chain of float64 improvements that did not
+    survive shipping.  That is exactly why freeing the bounds made **10 of 60
+    pairs WORSE** in the sv1 sweep -- not a property of the longer ladder but
+    of optimizing off the lattice the answer ships on.  With
+    ``realized_acceptance=True`` every candidate is float16-rounded before it
+    is scored, which buys three things at once:
+
+    1. **monotone shipped d_pose** -- no pair can get worse, so the "monotone
+       guard" sv1 said any adoption would need is structural, not bolted on;
+    2. **a convergence PROOF with no tolerance constant** -- when every step
+       the ladder proposes rounds back onto the current point, no continuation
+       can change the shipped (a,b); that is ``converged``, and under the
+       shipped defaults it was unreachable (0% in the sv1 census);
+    3. **cheaper iterations** -- a candidate that rounds onto the current point
+       is skipped without paying a scorer evaluation.
+
+    Default is ``False`` so the shipped solve stays byte-identical and the
+    differential test keeps its verbatim reference.
 
     Returns ``(a, b, cur6, curB, trace)`` where ``trace`` carries
     ``stop_reason`` in {converged, damp_cap, relin_cap, singular},
@@ -663,14 +730,33 @@ def ab_damped_gn(pose6, mse, a0: float, b0: float, cur6: np.ndarray,
     stop = "relin_cap"
     n_relin = 0
     damp_used: list[int] = []
+    n_pose6 = 0
+    # Score-neutral observability: the objective after each relinearization.
+    # Reads state that already exists, changes no control flow, costs no scorer
+    # evaluation -- so it defaults ON (CLAUDE.md: "off is a tracked queue").
+    # This IS the recovery curve; without it "still descending when it stopped"
+    # is an assertion rather than a measurement.
+    obj_traj: list[float] = [float(curB)]
+    if realized_acceptance:
+        # Start ON the lattice.  `neutral` (1.0, 0.0) is f16-exact so this is a
+        # no-op there; a derived start that is not representable is re-scored
+        # once so `curB` is the value that would actually ship from it.
+        a_q, b_q = float(np.float16(a_p)), float(np.float16(b_p))
+        if (a_q, b_q) != (a_p, b_p):
+            a_p, b_p = a_q, b_q
+            cur6 = pose6(a_p, b_p)
+            curB = mse(cur6)
+            n_pose6 += 1
     for _ in range(relins):
         n_relin += 1
         p6a = pose6(a_p + GAIN_FD, b_p)
         p6b = pose6(a_p, b_p + BIAS_FD)
+        n_pose6 += 2
         jb = np.stack([(p6a - cur6) / GAIN_FD, (p6b - cur6) / BIAS_FD], 1)
         r = cur6 - tp
         accepted = False
         singular = False
+        moved_on_lattice = False
         used = 0
         last_step = None
         for _damp in range(damp_levels):
@@ -684,7 +770,18 @@ def ab_damped_gn(pose6, mse, a0: float, b0: float, cur6: np.ndarray,
             last_step = step
             for scale in (1.0, 0.5):
                 ca, cb = a_p + scale * step[0], b_p + scale * step[1]
+                if realized_acceptance:
+                    # ACCEPT AT THE SHIPPED QUANTIZATION.  (a,b) are float16 in
+                    # the archive, so a candidate is only real if it survives
+                    # rounding.  A step that rounds back onto the current point
+                    # cannot change what ships and is skipped WITHOUT paying a
+                    # scorer evaluation.
+                    ca, cb = float(np.float16(ca)), float(np.float16(cb))
+                    if (ca, cb) == (a_p, b_p):
+                        continue
+                    moved_on_lattice = True
                 c6 = pose6(ca, cb)
+                n_pose6 += 1
                 cv = mse(c6)
                 if cv < curB:
                     a_p, b_p, cur6, curB = ca, cb, c6, cv
@@ -695,14 +792,25 @@ def ab_damped_gn(pose6, mse, a0: float, b0: float, cur6: np.ndarray,
                 break
             lm *= 8.0
         damp_used.append(used)
+        obj_traj.append(float(curB))
         if not accepted:
-            stop = ("singular" if singular
-                    else "converged" if _step_below_f16_resolution(
-                        a_p, b_p, last_step) else "damp_cap")
+            if singular:
+                stop = "singular"
+            elif realized_acceptance and not moved_on_lattice:
+                # PROOF, not a tolerance: every step the whole damping ladder
+                # proposed rounded back onto the current float16 point, so no
+                # continuation of the ladder can change the shipped (a,b).
+                stop = "converged"
+            elif _step_below_f16_resolution(a_p, b_p, last_step):
+                stop = "converged"
+            else:
+                stop = "damp_cap"
             break
     trace = {"stop_reason": stop, "n_relin": n_relin,
              "damp_used": damp_used,
-             "relins_bound": int(relins), "damp_bound": int(damp_levels)}
+             "relins_bound": int(relins), "damp_bound": int(damp_levels),
+             "realized_acceptance": bool(realized_acceptance),
+             "n_pose6": n_pose6, "obj_traj": obj_traj}
     return a_p, b_p, cur6, curB, trace
 
 
