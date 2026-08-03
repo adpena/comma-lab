@@ -29,7 +29,25 @@ V4D_DIR="/Volumes/VertigoDataTier/pact/ddm_v4d_20260731"
 EVAL_ROOT="/Volumes/VertigoDataTier/pact/ddm_pfs1_20260729/d1/eval_root"
 TEMPLATE_SUB="${EVAL_ROOT}/submissions/pfs1"
 ARCHIVE="${V4D_DIR}/v4d_composed_${TAG}_archive.zip"
-RECEIVER="${V4D_DIR}/inflate_runner_v4d.py"
+
+# REPO IS THE SOURCE OF TRUTH FOR THE RECEIVER (ddm_cx1, 2026-08-03).  The SSD
+# copy was a deployment snapshot and had gone STALE: it was byte-identical to the
+# pre-ix2 repo receiver, i.e. it carried NO single-member-container path, so a
+# container archive staged through this script would have silently taken the
+# legacy 6-member branch and died on a missing manifest.json.  Prefer the repo
+# file, fall back to the SSD snapshot, and SAY which one is being used.
+REPO_ROOT="/Users/adpena/Projects/pact"
+if [ -f "${REPO_ROOT}/experiments/inflate_runner_v4d.py" ]; then
+  RECEIVER="${REPO_ROOT}/experiments/inflate_runner_v4d.py"
+  RECEIVER_SRC="repo"
+else
+  RECEIVER="${V4D_DIR}/inflate_runner_v4d.py"
+  RECEIVER_SRC="ssd-snapshot"
+fi
+# The ix2 container primitives are FREE generic decode code (rule-118): they are
+# vendored into the runtime tree, never counted, and copied from the repo so the
+# encoder and the decoder cannot drift.
+IX2_MODULE="${REPO_ROOT}/src/tac/optimization/ddm_ix2_archive_container.py"
 
 [ -f "$ARCHIVE" ] || { echo "missing byte-closed archive: $ARCHIVE" >&2; exit 1; }
 [ -f "$RECEIVER" ] || { echo "missing v4d receiver: $RECEIVER" >&2; exit 1; }
@@ -43,11 +61,13 @@ for f in inflate.sh pfs1_warp_receiver.py ddm_r7_token_coder.py \
   cp "${TEMPLATE_SUB}/${f}" "${RUN_SUB}/${f}"
 done
 cp "$RECEIVER" "${RUN_SUB}/inflate_runner.py"
+[ -f "$IX2_MODULE" ] && cp "$IX2_MODULE" "${RUN_SUB}/ddm_ix2_archive_container.py"
 cp "$ARCHIVE" "${RUN_SUB}/archive.zip"
 
 echo "[v4d gate] archive=$(basename "$ARCHIVE") device=${DEVICE}"
 echo "[v4d gate] archive.zip bytes: $(stat -f%z "${RUN_SUB}/archive.zip" 2>/dev/null || stat -c%s "${RUN_SUB}/archive.zip")"
-echo "[v4d gate] receiver=inflate_runner_v4d (frame0_policy=warp_two_plane_static_photo_beta_v4d)"
+echo "[v4d gate] receiver=inflate_runner_v4d [src=${RECEIVER_SRC}] (frame0_policy=warp_two_plane_static_photo_beta_v4d)"
+echo "[v4d gate] container form: $(unzip -Z1 "${RUN_SUB}/archive.zip" | tr '\n' ' ')"
 
 time bash "${EVAL_ROOT}/evaluate.sh" \
   --submission-dir "$RUN_SUB" \

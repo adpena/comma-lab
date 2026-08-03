@@ -81,9 +81,15 @@ __all__ = [
     "CODER_NAMES",
     "CONTAINER_MAGIC",
     "RENDERER_FRAME_MAGIC",
+    "TABLE_F16",
+    "TABLE_F32",
+    "TABLE_F64",
+    "TABLE_SCALED_INT",
     "TOKEN_FRAME_MAGIC",
     "IX2ContainerError",
     "build_payload",
+    "decode_exact_table",
+    "encode_exact_table",
     "build_single_member_zip",
     "classify_against_vendored",
     "code_block",
@@ -112,8 +118,26 @@ _LZMA_FILTERS: Final = [
 
 _TOKEN_HEADER: Final = struct.Struct("<BBBBHHHHII")
 _RENDERER_HEADER: Final = struct.Struct("<IIBI")
-_CONFIG_HEADER: Final = struct.Struct("<fBB")
+_CONFIG_HEADER: Final = struct.Struct("<fBBBB")
 _PAYLOAD_HEADER: Final = struct.Struct("<IB")
+
+# Counted-table encodings, tried in ascending size and admitted only when the
+# round-trip is EXACT in float64.  ``ddm_cx1``: on ``pj2`` the FITTED ``st_grid``
+# must be COUNTED (it is not the vendored ladder) and it is NOT representable in
+# f16 — 0.06 / 0.065 / 0.07 are decimal literals.  Rounding them would move
+# ``s_t``, hence the homography, hence the rendered frames, which would make this
+# line LOSSY and forfeit the whole "d_seg and d_pose invariant by construction"
+# exemption.  So the section carries a per-table FORMAT and refuses anything that
+# does not reproduce the shipped float64 bit for bit.
+TABLE_F16: Final = 0
+TABLE_F32: Final = 1
+TABLE_F64: Final = 2
+TABLE_SCALED_INT: Final = 3
+_MAX_DECIMAL_SCALE: Final = 9
+# Indexed by the width byte written into the lane; tried in ascending itemsize so
+# a non-negative table (``st_grid``) gets the unsigned lane rather than paying a
+# sign bit it never uses.
+_SCALED_INT_DTYPES: Final = ("<i1", "<u1", "<i2", "<u2", "<i4", "<u4")
 
 
 class IX2ContainerError(ValueError):
@@ -350,15 +374,102 @@ def classify_against_vendored(
     return "VIDEO_DERIVED"
 
 
-def _f16_exact(values: np.ndarray, label: str) -> np.ndarray:
+def _check_table(values: np.ndarray, label: str) -> np.ndarray:
     if values.ndim != 1 or not 1 <= values.size <= 255:
         raise IX2ContainerError(f"{label} must be 1-D with 1..255 entries")
-    if not np.array_equal(values.astype(np.float16).astype(np.float64), values):
-        raise IX2ContainerError(
-            f"{label} is not exactly representable in f16 — widen the section "
-            "rather than silently rounding a fitted codebook"
-        )
+    if not np.all(np.isfinite(values)):
+        raise IX2ContainerError(f"{label} carries a non-finite entry")
     return values
+
+
+def _scaled_int_candidate(values: np.ndarray) -> bytes | None:
+    """Smallest exact ``codes / 10**k`` encoding, or ``None`` when none exists.
+
+    Fitted ladders are authored as DECIMAL literals in the manifest, so the
+    natural exact lane is an integer over a power of ten — and it is also the
+    narrowest: ``pj2``'s 11-entry ``st_grid`` is 11 signed bytes at ``k=3``
+    against 22 B at f16 (which cannot represent it at all) and 88 B at f64.
+    Exactness is VERIFIED per entry (``code / 10**k == v`` in float64), never
+    assumed from integrality of ``v * 10**k`` — ``0.07 * 1000`` is
+    ``70.00000000000001``, so the integrality test alone would reject a lane that
+    is in fact exact, and a looser test would admit one that is not.
+    """
+
+    for k in range(_MAX_DECIMAL_SCALE + 1):
+        scale = float(10**k)
+        codes = np.rint(values * scale)
+        if not np.array_equal(codes / scale, values):
+            continue
+        order = sorted(
+            range(len(_SCALED_INT_DTYPES)),
+            key=lambda i: (np.dtype(_SCALED_INT_DTYPES[i]).itemsize, i),
+        )
+        for index in order:
+            dtype = _SCALED_INT_DTYPES[index]
+            info = np.iinfo(dtype)
+            if codes.min() < info.min or codes.max() > info.max:
+                continue
+            return bytes([k, index]) + codes.astype(dtype).tobytes()
+        return None
+    return None
+
+
+def encode_exact_table(values: Sequence[float]) -> tuple[int, bytes]:
+    """Return ``(format_id, payload)`` for the smallest EXACT encoding.
+
+    "Exact" means the decoded float64 tuple equals the input float64 tuple
+    element for element.  ``TABLE_F64`` always qualifies, so the ladder never
+    fails closed on a finite table — it only ever picks something narrower when
+    that narrower lane is provably lossless.
+    """
+
+    array = _check_table(np.asarray(values, dtype=np.float64), "table")
+    candidates: list[tuple[int, int, bytes]] = []
+    for fmt, dtype in ((TABLE_F16, "<f2"), (TABLE_F32, "<f4"), (TABLE_F64, "<f8")):
+        blob = array.astype(dtype).tobytes()
+        if np.array_equal(np.frombuffer(blob, dtype=dtype).astype(np.float64), array):
+            candidates.append((len(blob), fmt, blob))
+    scaled = _scaled_int_candidate(array)
+    if scaled is not None:
+        candidates.append((len(scaled), TABLE_SCALED_INT, scaled))
+    if not candidates:  # pragma: no cover - f64 is always exact for finite input
+        raise IX2ContainerError("no exact encoding for a finite table")
+    size, fmt, blob = min(candidates)
+    del size
+    return fmt, blob
+
+
+def decode_exact_table(
+    fmt: int, payload: bytes, count: int, offset: int = 0
+) -> tuple[tuple[float, ...], int]:
+    """Return ``(values, bytes_consumed)``; every width is computable from ``fmt``."""
+
+    if fmt == TABLE_SCALED_INT:
+        if len(payload) < offset + 2:
+            raise IX2ContainerError("scaled-int table header is truncated")
+        k = payload[offset]
+        index = payload[offset + 1]
+        if k > _MAX_DECIMAL_SCALE:
+            raise IX2ContainerError("scaled-int decimal scale out of range")
+        if index >= len(_SCALED_INT_DTYPES):
+            raise IX2ContainerError(f"scaled-int width id {index} is not supported")
+        dtype = _SCALED_INT_DTYPES[index]
+        need = 2 + np.dtype(dtype).itemsize * count
+        if len(payload) < offset + need:
+            raise IX2ContainerError("scaled-int table is truncated")
+        codes = np.frombuffer(
+            payload, dtype=dtype, count=count, offset=offset + 2
+        ).astype(np.float64)
+        return tuple(float(v) for v in codes / float(10**k)), need
+    dtype = {TABLE_F16: "<f2", TABLE_F32: "<f4", TABLE_F64: "<f8"}.get(fmt)
+    if dtype is None:
+        raise IX2ContainerError(f"unknown table format {fmt}")
+    width = np.dtype(dtype).itemsize
+    need = width * count
+    if len(payload) < offset + need:
+        raise IX2ContainerError("table is truncated")
+    values = np.frombuffer(payload, dtype=dtype, count=count, offset=offset)
+    return tuple(float(v) for v in values.astype(np.float64)), need
 
 
 def pack_config_section(
@@ -384,12 +495,14 @@ def pack_config_section(
     applied by guessing.
     """
 
-    mags = _f16_exact(np.asarray(beta_mags, dtype=np.float64), "beta_mags")
+    mags = _check_table(np.asarray(beta_mags, dtype=np.float64), "beta_mags")
     packed = np.float32(pose_dim0_offset)
     if float(packed) != float(pose_dim0_offset):
         raise IX2ContainerError("pose_dim0_offset is not exact in f32")
+    mags_fmt, mags_bytes = encode_exact_table(mags)
     grid_bytes = b""
     grid_count = 0
+    grid_fmt = TABLE_F16
     if st_grid is not None:
         if vendored_st_grid is None:
             raise IX2ContainerError(
@@ -398,12 +511,14 @@ def pack_config_section(
                 "decided without the reference table"
             )
         if classify_against_vendored(st_grid, vendored_st_grid) == "VIDEO_DERIVED":
-            grid = _f16_exact(np.asarray(st_grid, dtype=np.float64), "st_grid")
-            grid_bytes = grid.astype("<f2").tobytes()
+            grid = _check_table(np.asarray(st_grid, dtype=np.float64), "st_grid")
+            grid_fmt, grid_bytes = encode_exact_table(grid)
             grid_count = int(grid.size)
     return (
-        _CONFIG_HEADER.pack(float(packed), int(mags.size), grid_count)
-        + mags.astype("<f2").tobytes()
+        _CONFIG_HEADER.pack(
+            float(packed), int(mags.size), int(mags_fmt), grid_count, int(grid_fmt)
+        )
+        + mags_bytes
         + grid_bytes
     )
 
@@ -419,20 +534,18 @@ def unpack_config_section(
 
     if len(payload) < _CONFIG_HEADER.size:
         raise IX2ContainerError("config section is truncated")
-    offset, count, grid_count = _CONFIG_HEADER.unpack_from(payload, 0)
-    body = payload[_CONFIG_HEADER.size :]
-    if len(body) != 2 * (count + grid_count):
-        raise IX2ContainerError("config section does not close exactly")
-    mags = np.frombuffer(body[: 2 * count], dtype="<f2").astype(np.float64)
-    grid = (
-        tuple(
-            float(v)
-            for v in np.frombuffer(body[2 * count :], dtype="<f2").astype(np.float64)
-        )
-        if grid_count
-        else None
+    offset, count, mags_fmt, grid_count, grid_fmt = _CONFIG_HEADER.unpack_from(
+        payload, 0
     )
-    return float(offset), tuple(float(v) for v in mags), grid
+    body = payload[_CONFIG_HEADER.size :]
+    mags, used = decode_exact_table(mags_fmt, body, count)
+    grid: tuple[float, ...] | None = None
+    if grid_count:
+        grid, grid_used = decode_exact_table(grid_fmt, body, grid_count, used)
+        used += grid_used
+    if used != len(body):
+        raise IX2ContainerError("config section does not close exactly")
+    return float(offset), mags, grid
 
 
 # --------------------------------------------------------------------------- #

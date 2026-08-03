@@ -20,8 +20,13 @@ import numpy as np
 import pytest
 
 from tac.optimization.ddm_ix2_archive_container import (
+    _CONFIG_HEADER,
     CODER_NAMES,
     RENDERER_FRAME_MAGIC,
+    TABLE_F16,
+    TABLE_F32,
+    TABLE_F64,
+    TABLE_SCALED_INT,
     TOKEN_FRAME_MAGIC,
     IX2ContainerError,
     _factor_mode_delta,
@@ -32,8 +37,10 @@ from tac.optimization.ddm_ix2_archive_container import (
     classify_against_vendored,
     code_block,
     decode_block,
+    decode_exact_table,
     decode_renderer_frame,
     decode_token_frame,
+    encode_exact_table,
     encode_renderer_frame,
     encode_token_frame,
     pack_config_section,
@@ -302,11 +309,13 @@ def test_renderer_frame_refuses_trailing_bytes() -> None:
 def test_config_section_roundtrip_is_exact() -> None:
     mags = [-7.5, -3.5, -2.5, -1.5, -0.5, 0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.5, 4.5]
     payload = pack_config_section(32.125, mags)
-    assert len(payload) == 6 + 2 * len(mags)
     offset, got, grid = unpack_config_section(payload)
     assert offset == 32.125
     assert list(got) == mags
     assert grid is None
+    # the ladder must never be WIDER than the f16 lane it replaced: these are
+    # halves, so the scaled-int lane at k=1 carries them in one byte each.
+    assert len(payload) <= _CONFIG_HEADER.size + 2 * len(mags)
 
 
 def test_st_grid_verdict_is_a_field_archive_pair_property() -> None:
@@ -358,11 +367,110 @@ def test_payload_refuses_truncation() -> None:
         parse_payload(struct.pack("<IB", 10_000, 0) + b"ab")
 
 
-def test_config_section_refuses_silently_rounding_a_fitted_codebook() -> None:
-    """A fitted codebook must never be quietly re-quantised into the section."""
+def test_config_section_never_silently_rounds_a_fitted_codebook() -> None:
+    """A fitted codebook must never be quietly re-quantised into the section.
 
-    with pytest.raises(IX2ContainerError, match="f16"):
-        pack_config_section(0.0, [0.100000001490116119384765625e-6])
+    ``ddm_cx1``: the original guard REFUSED anything that was not f16-exact, which
+    was safe but could not express ``pj2``'s fitted ``st_grid`` at all.  The cure
+    is a ladder of EXACT encodings, so the invariant is now stated positively —
+    whatever lane is chosen, the decoded float64 equals the input float64.
+    """
+
+    awkward = [0.100000001490116119384765625e-6, 1.0 / 3.0, -2.718281828459045]
+    payload = pack_config_section(0.0, awkward)
+    assert list(unpack_config_section(payload)[1]) == awkward
+
+
+def test_exact_table_ladder_picks_the_narrowest_exact_lane() -> None:
+    """Each lane is admitted only when it round-trips exactly, cheapest first."""
+
+    halves = [-7.5, 0.0, 4.5]  # scaled-int at k=1 -> 1 byte per entry
+    fmt, blob = encode_exact_table(halves)
+    assert fmt == TABLE_SCALED_INT
+    assert len(blob) == 2 + len(halves)
+
+    dyadic = [0.0, 0.0625, 0.25]  # f16-exact and cheaper than any scaled lane
+    fmt, blob = encode_exact_table(dyadic)
+    assert fmt == TABLE_F16
+    assert len(blob) == 2 * len(dyadic)
+
+    irrational = [1.0 / 3.0, np.pi]  # only f64 is exact
+    fmt, blob = encode_exact_table(irrational)
+    assert fmt == TABLE_F64
+    assert len(blob) == 8 * len(irrational)
+
+    for values in (halves, dyadic, irrational):
+        fmt, blob = encode_exact_table(values)
+        got, used = decode_exact_table(fmt, blob, len(values))
+        assert list(got) == list(values)
+        assert used == len(blob)
+
+
+def test_exact_table_carries_the_live_pj2_fitted_st_grid() -> None:
+    """The live regression: ``pj2``'s FITTED ladder is NOT f16-representable.
+
+    MEASURED on ``v4d_composed_pj2_archive.zip``.  Rounding these decimals would
+    move ``s_t``, hence the homography, hence the rendered frames — which would
+    make the container LOSSY and forfeit the invariance exemption the whole line
+    rests on.  ``ms8``'s solver authored them as decimals, so the scaled-int lane
+    is exact at ``k=3``.
+    """
+
+    fitted = [0.06, 0.065, 0.07, 0.075, 0.08, 0.09, 0.1, 0.11, 0.12, 0.14, 0.16]
+    assert not np.array_equal(
+        np.asarray(fitted, dtype=np.float16).astype(np.float64),
+        np.asarray(fitted, dtype=np.float64),
+    )
+    fmt, blob = encode_exact_table(fitted)
+    assert fmt == TABLE_SCALED_INT
+    assert len(blob) == 2 + len(fitted)  # unsigned single-byte codes at k=3
+    got, used = decode_exact_table(fmt, blob, len(fitted))
+    assert list(got) == fitted
+    assert used == len(blob)
+
+
+def test_scaled_int_lane_admits_only_verified_exact_values() -> None:
+    """Integrality of ``v * 10**k`` is NOT the test; exact division back is.
+
+    MEASURED: ``1.001 * 1000`` is ``1000.9999999999999`` in float64, yet
+    ``round(...) / 1000`` reproduces ``1.001`` exactly.  An integrality test would
+    REJECT that lane even though it is lossless.  The guard runs the other way: a
+    value that cannot be reproduced by ``code / 10**k`` must fall through to a
+    wider lane rather than being admitted with a rounded code.
+
+    (My first version of this test asserted ``0.07 * 1000 != 70.0``; it is in fact
+    exactly ``70.0``, and the test caught my own wrong premise.)
+    """
+
+    assert 1.001 * 1000.0 != 1001.0  # integrality alone would reject an exact lane
+    fmt, blob = encode_exact_table([1.001])
+    assert fmt == TABLE_SCALED_INT
+    got, _ = decode_exact_table(fmt, blob, 1)
+    assert got[0] == 1.001
+
+    nearly = [np.nextafter(0.07, 1.0)]  # one ULP off the decimal: scaled lane must refuse
+    fmt, blob = encode_exact_table(nearly)
+    assert fmt in (TABLE_F32, TABLE_F64)
+    got, _ = decode_exact_table(fmt, blob, 1)
+    assert got[0] == nearly[0]
+
+
+def test_exact_table_refuses_non_finite() -> None:
+    with pytest.raises(IX2ContainerError, match="non-finite"):
+        encode_exact_table([0.0, float("nan")])
+    with pytest.raises(IX2ContainerError, match="non-finite"):
+        encode_exact_table([float("inf")])
+
+
+def test_decode_exact_table_refuses_unknown_format_and_truncation() -> None:
+    with pytest.raises(IX2ContainerError, match="unknown table format"):
+        decode_exact_table(99, b"\x00\x00", 1)
+    with pytest.raises(IX2ContainerError, match="truncated"):
+        decode_exact_table(TABLE_F64, b"\x00" * 4, 1)
+    with pytest.raises(IX2ContainerError, match="width id"):
+        decode_exact_table(TABLE_SCALED_INT, bytes([0, 200]) + b"\x00", 1)
+    with pytest.raises(IX2ContainerError, match="decimal scale"):
+        decode_exact_table(TABLE_SCALED_INT, bytes([200, 0]) + b"\x00", 1)
 
 
 def test_config_section_refuses_inexact_offset() -> None:

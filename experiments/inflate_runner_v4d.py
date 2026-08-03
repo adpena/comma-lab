@@ -66,12 +66,26 @@ from pfs1_warp_receiver import (
     warp_rgb,
 )
 
-from tac.optimization.ddm_ix2_archive_container import (
-    decode_renderer_frame,
-    decode_token_frame,
-    parse_payload,
-    unpack_config_section,
-)
+try:
+    # Decode-time layout: the container primitives are FREE generic code
+    # (rule-118) vendored into the runtime tree next to ddm_tr1_runtime.py, so
+    # the receiver never depends on the `tac` package being installed in the
+    # contest runtime.  ddm_cx1: the staging script copies this file straight
+    # from src/tac/optimization/, so the vendored copy cannot drift from the
+    # encoder's.
+    from ddm_ix2_archive_container import (
+        decode_renderer_frame,
+        decode_token_frame,
+        parse_payload,
+        unpack_config_section,
+    )
+except ModuleNotFoundError:  # repo/dev layout
+    from tac.optimization.ddm_ix2_archive_container import (
+        decode_renderer_frame,
+        decode_token_frame,
+        parse_payload,
+        unpack_config_section,
+    )
 
 MAGIC = b"PFS1WPD1"
 KL1_MAGIC = b"KL1PWF01"
