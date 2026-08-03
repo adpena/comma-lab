@@ -303,3 +303,55 @@ the pose-legibility law and the Road-at-floor ratio — point at the same missin
 
 **Owed:** the same join on the LIVE base (needs one per-class argmax pass; scorer slot
 currently held). Cross-endpoint transfer is LABELED STRUCTURE, never a number.
+
+---
+
+## §12 THE THIRD CURRENCY — first n600 verdict (ddm_bp2, same session)
+
+§3 conjectured the realization gauge as a **third currency** (seg-neutral by construction,
+pose- and rate-active) and named the 22.70% blind set as the first testable instance.
+`ddm_bp2` ran it to n600. **The mechanism is CONFIRMED; the economics are REFUTED.**
+
+| leg | prediction | MEASURED n600 | verdict |
+|---|---|---|---|
+| seg-neutral **by construction** | d_seg unchanged | **bit-identical on 600/600 pairs** under a full ±1 LSB gradient-sign step over all 692,712 blind coordinates | **CONFIRMED** |
+| F1 — disjoint from the frame_0 warp read-set | <5% overlap closes the family | **14.80%** | REFUTED |
+| F2 — achievable pose reach | <1e-4 closes the family | **1.7158** (4.2 orders over) | REFUTED |
+| does it PAY? | — | NET ΔS **positive at every arm**: 17.8× at the cheapest, **3.89× at the best** (per-pair argmin, which cuts d_pose 65.9%) | **DOES NOT PAY** |
+
+Reach is enormous and **direction-selective**: d_pose 0.00764 → 0.889/1.179 (116×/154×),
+while a random-sign step at the *same coordinate count* is inert (+0.61%). So this is a
+genuine actuator, not noise — it is priced out, not absent.
+
+**Correction to §3, stated plainly.** The sentence "a pose channel that costs zero seg by
+construction" is MEASURED TRUE. The implied "therefore spendable" is MEASURED FALSE at
+per-coordinate pricing. The third-currency framing survives and is now sharper: the gauge
+orbit is real and large, and the binding constraint is **description cost per coordinate**,
+not reachability. **FORMULATION scope, not family** — the untried shape is a **PARAMETRIC**
+blind-set perturbation (k coordinates + signs generated from a few shipped scalars), which
+is the only form that can beat the per-coordinate arithmetic. Also untried: Gauss-Seidel
+sign re-solve (only Jacobi was refuted), and the same actuator on a vehicle with materially
+larger d_pose.
+
+### The methodological finding — worth more than the verdict
+
+bp2's own §6 prefix conclusion was **overturned by its own n600**. On a video-order prefix
+(n=73–181) a free receiver-computable index looked like a **−0.122 S WIN**; at n600 the same
+arm is a **+0.152 S LOSS**, and the best arm lands at NET **+0.00001 S** — indistinguishable
+from zero.
+
+**Cause, measured:** the prefix's mean d_pose was **0.0390** against the population's
+**0.0076425** — **5.1× harder** — on a distribution whose median is **8.2e-4**. A
+video-order prefix of a heavily skewed population is not a small sample of it; it is a
+sample of a different, harder population, and it **flattered the family**.
+
+This is the measured instance of the SCOPE-censoring class (task #875): a subset default
+that silently under-samples the verdict. It generalizes past this arm — any prefix-scoped
+verdict on a skewed per-pair quantity inherits the same defect, and the campaign has many.
+
+*(Registered separately as a memory; #875 gains its first measured anchor.)*
+
+**Custody:** `604f7180b3` (module + 26 tests + tool), `378ff3fba9` (n600 memo + receipt),
+8 receipts under `reports/ddm_bp2/`. Guards: fast-path == authority on 600/600; gradient
+surrogate within 1e-5 on 518/600 (max deviation 5.46e-04 — used only as a search
+direction, never as authority). Pointer UNMOVED. `[macOS-CPU advisory]`, `score_claim=false`.
