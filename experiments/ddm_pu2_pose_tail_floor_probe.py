@@ -439,7 +439,8 @@ def run_probe(args) -> None:
     _summarize(cache, work, args)
 
 
-def _summarize(cache: dict[int, dict], work: Path, args) -> None:
+def _summarize(cache: dict[int, dict], work: Path, args,
+               out_name: str = "pu2_floor_probe_receipt.json") -> None:
     """n600 S-arithmetic from the measured per-pair floors.
 
     The population mean is REBUILT from pz1's full n600 array with the probed
@@ -509,8 +510,12 @@ def _summarize(cache: dict[int, dict], work: Path, args) -> None:
                 "actual inflate_runner.Decoder; the population mean is rebuilt by "
                 "substituting into pz1's full n600 array (never extrapolated).",
     }
-    (work / "pu2_floor_probe_receipt.json").write_text(
-        json.dumps(receipt, indent=1) + "\n")
+    # NOTE (ddm_pu2 §6 Round 4): the terminal probe receipt and an interim
+    # `--mode summarize` MUST NOT share a path.  They did, and a completion
+    # waiter keyed on "the receipt exists" fired while the probe was still
+    # running.  One path with two writers turns an existence test into a false
+    # positive -- the "probe that cannot return the negative" class.
+    (work / out_name).write_text(json.dumps(receipt, indent=1) + "\n")
     print(json.dumps(receipt, indent=1), flush=True)
 
 
@@ -693,7 +698,8 @@ def main() -> int:
             if ln.strip():
                 rr = json.loads(ln)
                 cache[int(rr["pair"])] = rr
-        _summarize(cache, args.work_dir, args)
+        _summarize(cache, args.work_dir, args,
+                   out_name="pu2_interim_summary.json")
     return 0
 
 

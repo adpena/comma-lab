@@ -30,7 +30,42 @@ tokens: [no-triality, p0-ledger-ok]
 
 ## §0 ANSWER FIRST
 
-*(filled at seal — see §5/§6)*
+**The pose tail is not walled. It is under-searched — and the fix costs negative bytes.**
+
+1. **`pu1`'s load-bearing MODEL-WALL verdict is REFUTED, on the pair that carries 30.92% of the whole
+   pose axis.** `pu1` inferred from `pz1`'s **frame_1 perturbation proxy** that pair 74 was *"RIGID
+   (ratio 0.981) … the signature of a MODEL wall"*. Direct search over the shipped `v4d` knobs cuts it
+   **54.2%** (`0.473295 → 0.216804`), **byte-closed through the real container**. Pair 74 is
+   **SEARCH-LIMITED**. And the pair that actually resists is **523** (only **−7.7%**), which the proxy
+   called *responsive* — `|ratio−1|` mis-ranks exactly these two (§4.1b).
+
+2. **MODEL vs SEARCH = SEARCH, on every probed pair, via two distinct defects** (§4.1): the shipped
+   `pj2` solve is **under-converged** on some pairs (plain GN continuation from the shipped point keeps
+   descending — pair 67 `0.157367 → 0.003968`, −97.5%) and **basin-trapped** on others (pair 74's
+   shipped point is stationary; only a start **8.2× worse** escapes it). Neither is a capacity limit.
+
+3. **The realised byte cost is ≤ 0 — the break-even question dissolves.** `pu1` priced this route
+   against **818–40,503 B/pair**. Measured: the rebuilt `archive.zip` is **19 bytes SMALLER**, because
+   the correct pose sits near the `dim0` offset so its f16 residual entropy-codes better (§4.2).
+   **Better pose and fewer bytes from the same mechanism.** No budget to clear.
+
+4. **Two BIT-EXACT positive controls** (`rel_err = 0.000e+00`, §2): the shipped receiver reproduces
+   `pz1`'s **per-pair** `d_pose` — closing `pu1` §7-R1-c, so the 30.92% allocation is **VERIFIED**, not
+   assumed — and the `pose_warp` payload **re-encodes byte-identically** (archive 353,808 B).
+
+5. **Measured so far (partial, probe in flight): 4 pairs ⇒ `ΔS = −0.0305813` = 4.67% of the live gap**,
+   at ≤ 0 bytes. Final figure at seal (§5.5).
+
+6. **The instrument was NOT what my charter specified, and that is a finding.** `pu1` §8 asked for a
+   ~30-line re-point of `pfs1`'s `WarpPoseOracle`. That oracle models a **6-DOF single warp**; the live
+   `cx1` receiver ships **11 knobs** (pose6 · `s_t` · `sel` · photometric `a,b` · rolling-shutter `β`).
+   Re-pointing it would have measured a 6-DOF floor on an 11-knob vehicle and reported it as a model
+   wall — the exact false verdict this arm just overturned. The probe drives **the shipped decoder
+   itself** (§1).
+
+**Pointer honesty: the exact contest pointer `0.1910828242` [contest-CPU] is UNMOVED. This arm fired no
+gate and produced no score.** Every aggregate `ΔS` here is `[macOS-CPU frozen-PoseNet advisory]` and
+**PROVISIONAL** until the end-to-end `upstream/evaluate.py` row lands (§6 R1-b, §7).
 
 ---
 
@@ -253,7 +288,62 @@ screened for free; it must be measured.**
 
 ## §5 THE FOUR ANSWERS
 
-*(filled: mq1 availability · realised B/pair · model-vs-search · per-pair allocation)*
+`pu1` §8 named four questions that one measurement was supposed to collapse. Taking them in the order
+of how firmly they are now settled.
+
+### 5.4 Per-pair allocation — **SETTLED, bit-exact**
+
+`pz1`'s per-pair array is correct, not merely correct-in-aggregate: the shipped receiver reproduces
+every probed pair's `d_pose_base` at `rel_err = 0.000e+00` (§2.1). **`pu1` §7-R1-c is closed.** Pair 74
+genuinely carries 30.92% of the pose axis, so every allocation-dependent statement in `pu1` §5 stands.
+
+### 5.3 Model vs search — **SETTLED: SEARCH, on every probed pair; one candidate exception**
+
+No model wall was found. The shipped solve fails in two distinct ways (§4.1) — **under-convergence**
+(GN simply continues downhill from the shipped point) and **basin-trapping** (the shipped point is
+stationary and only a worse start escapes) — and both are search defects. **`pu1`'s model-wall reading
+of pair 74 is refuted (§4.1b)**; the one genuine model-wall *candidate* is pair 523, and it is scoped
+INSTANCE-level pending a wider search.
+
+**What search would reach it, and at what cost.** The winning starts were `gt_target_rot0` (pair 74),
+plain continuation from `shipped_knobs` (pair 67), and a *random* restart (pair 21) — i.e. the cure is
+**multi-start initialization of the solver we already own**, not new capacity. Measured throughput:
+**0.55 s per evaluation**, ~550–650 forwards per pair for the 6-start form ⇒ **~250 s/pair**, and
+~30 s/pair for a single-start GN. **n600 single-start ≈ 5 h; 6-start ≈ 42 h**, per-pair independent and
+therefore parallelisable. No new bytes, no new mechanism.
+
+### 5.2 Realised B/pair — **the question dissolves: the measured cost is ≤ 0**
+
+`pu1` priced this route against a break-even budget of **818–40,503 B/pair**. Measured on pair 74, the
+rebuilt archive is **19 bytes SMALLER** (§4.2), because the correct pose sits near the `dim0` offset and
+its f16 residual entropy-codes better. **There is no break-even to clear.** The full-changed-set delta
+is reported in §5.5 — and per §6 R1-c I do **not** generalize the sign from `n = 1`.
+
+### 5.1 `mq1` availability — **partially settled, and the answer is per-knob**
+
+`mq1` claimed `≥1.82%`-of-gap search headroom across three coordinates (`p1` lateral, `p2` vertical,
+`beta` rolling-shutter), which `pu1` re-priced to **−0.0244312 S = 3.73% of the live gap** but could
+not establish had survived `pj2`. The probe splits it by knob:
+
+- **`beta`, `s_t`, `sel` (the shipped codebooks): NO headroom on pair 74** — a 285-combination sweep
+  (`2 sel × 13 beta_mags × 11 st_vals`) found exactly zero improvement. But this is **per-pair, not
+  global**: pair 67's stage A improved **−33%** (0.157367 → 0.104786) on categorical knobs alone
+  (§6 R1-e).
+- **The continuous pose dims: headroom REMAINS, and it is larger than `mq1`'s estimate.** The probed
+  pairs alone already exceed `mq1`'s whole re-priced row.
+
+⇒ **`mq1`'s "search headroom" framing was right and it survived `pj2` — but it lives in the continuous
+pose dims, not uniformly across its three named coordinates.**
+
+### 5.5 The measured total
+
+*(final numbers filled at seal; the 4-pair partial was `ΔS = −0.0305813 = 4.67%` of gap)*
+
+**Constant convention.** I recompute the baseline `d_pose` mean from `pz1`'s n600 array
+(`0.0025513987`) rather than the report's rounded `0.00255143`, giving `S = 0.8264962` and
+`gap = 0.6543552` against PR130's `0.172141`. That is **1.0e-6** below the campaign's carried
+`0.6543562` — the same floor-convention spread `pu1` §1 documented (~3e-7). Immaterial to every ranking
+here; stated so nobody re-litigates it.
 
 ---
 
@@ -343,6 +433,25 @@ different directions, and my structural derivation is the stronger form of the c
 because it needs no measurement at all.
 
 **Round 3 found two issues (both folded above) ⇒ counter resets to 0.**
+
+### Round 4 — a confound I caught in my own apparatus, mid-run
+
+Worth recording because it is the standing *"a probe that cannot return the negative"* genus, and it
+bit **me**, in this arm, today.
+
+I armed a completion waiter whose condition was *"the receipt JSON exists"*. Then I ran
+`--mode summarize` on the partial data — which **writes that same receipt path**. The waiter
+immediately fired **"PROBE FINISHED"** while the probe was still running (verified: pid alive, 22:21
+elapsed, CPU time advancing). A liveness check keyed on an artifact that a *different* code path also
+produces cannot distinguish "done" from "someone else touched the file".
+
+**Caught only because I checked the process as well as the file** — i.e. by the standing rule that
+liveness must be read from row-growth or process state, never from a single existence test. Re-armed on
+process exit, which for this job is unambiguous. **Fix for the instrument: `--mode summarize` should
+write a distinct path from `--mode probe`'s terminal receipt.** Recorded rather than silently patched,
+because the *class* (one path, two writers, existence read as completion) is the reusable lesson.
+
+**Round 4 found one issue ⇒ counter resets to 0.**
 
 **SEAL STATUS: NOT SEALED — 0 of 3 clean passes.** Three rounds, ten findings, all folded into the text
 above. The load-bearing open item is R1-b (the surrogate gap), which no further reading can close —

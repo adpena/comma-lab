@@ -34,10 +34,10 @@ for f in inflate.sh inflate_runner.py pfs1_warp_receiver.py ddm_tr1_runtime.py \
 done
 # archive.zip is rebuilt from the probe's winning knobs by the SAME deterministic
 # single-member STORED packer the encoder uses.
-.venv/bin/python - "$REBUILT" "$DST/archive.zip" <<'PY'
+/Users/adpena/Projects/pact/.venv/bin/python - "$REBUILT" "$DST/archive.zip" <<'PY'
 import sys
 from pathlib import Path
-sys.path.insert(0, "src")
+sys.path.insert(0, "/Users/adpena/Projects/pact/src")
 from tac.optimization.ddm_ix2_archive_container import build_single_member_zip
 payload = Path(sys.argv[1]).read_bytes()
 Path(sys.argv[2]).write_bytes(build_single_member_zip(payload))
@@ -55,8 +55,14 @@ unzip -o -q "$DST/archive.zip" -d "$DST/archive"
 bash "$DST/inflate.sh" "$DST/archive" "$DST/inflated" "$NAMES"
 
 echo "=== evaluate (n600, exact upstream) ==="
+# $UP has NO .venv of its own -- use the repo venv by ABSOLUTE path, and cd into
+# $UP so evaluate.py's sibling imports (frame_utils, modules) resolve.  DALI is
+# absent on this box, so frame_utils falls back to AVVideoDataset, which decodes
+# GT via yuv420_to_rgb (the correct path; PyAV rgb24 would manufacture ~100x
+# phantom pose per CLAUDE.md).
+PYBIN=/Users/adpena/Projects/pact/.venv/bin/python
 cd "$UP"
-.venv/bin/python "$UP/evaluate.py" \
+"$PYBIN" "$UP/evaluate.py" \
   --submission-dir "$DST" \
   --uncompressed-dir "$VIDEOS" \
   --video-names-file "$NAMES" \
@@ -64,3 +70,23 @@ cd "$UP"
   --report "$DST/report.txt"
 echo "=== report ==="
 cat "$DST/report.txt"
+
+# Disk hygiene (CLAUDE.md non-negotiable): the inflated tree is ~3.66 GB of
+# deterministically REBUILDABLE bytes (600 pairs x 2 frames x 874x1164x3).  It is
+# certified rebuildable by the archive sha + this script + the runtime tree, all
+# of which are retained, so the bytes may be deleted rather than cold-stored.
+INFLATED_BYTES=$(du -sk "$DST/inflated" 2>/dev/null | cut -f1 || echo 0)
+cat > "$DST/cleanup_certificate.json" <<EOF
+{
+  "schema": "ddm_pu2_rebuildable_cleanup.v1",
+  "deleted_path": "$DST/inflated",
+  "deleted_kib": $INFLATED_BYTES,
+  "rebuild_command": "bash experiments/ddm_pu2_stage_and_eval.sh",
+  "archive_sha256_file": "$DST/archive.sha256",
+  "retained": ["archive.zip", "archive.sha256", "report.txt", "runtime tree"],
+  "reason": "deterministic decode output; fully rebuildable from the retained archive bytes + runtime tree",
+  "score_claim": false
+}
+EOF
+rm -rf "$DST/inflated"
+echo "=== cleaned inflated tree (${INFLATED_BYTES} KiB); certificate written ==="
