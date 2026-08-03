@@ -173,7 +173,30 @@ portions of the D-series.
 `canonical_task_status.jsonl`**, the store subagents can actually read. A memo-only routing section
 would reproduce the exact failure this section documents.
 
-### 3d. Re-listing is not consumption
+### 3d. Three substantive memos are UNCOMMITTED — signal at literal risk
+
+`git ls-files --others --exclude-standard -- '.omx/research/*.md'` returns **3** files, ~54 KB, and
+`git check-ignore` confirms **none is gitignored** — they are simply never committed:
+
+| File | Size | Age | Note |
+|---|---:|---|---|
+| `ddm_cr1_composition_row_827_20260801.md` | 17.5 KB | **2 days** | Headline claim: *"the seg+rate prize is 2.4× larger than recorded, gated by a MEASURED pose wall"* |
+| `ddm_op3_canonical_operating_point_20260803.md` | 29.5 KB | same-day | one canonical live operating point |
+| `ddm_dn1x_IMPLEMENTATION_SPEC_20260803.md` | 7.2 KB | same-day | `dn1x` is one of the four arms recovered from transcripts on 08-03 |
+
+**Uncommitted is worse than orphaned.** An orphaned committed memo is at least *findable* by the next
+sweep; an uncommitted one is invisible to every subagent (they read the repo, not the working tree)
+and is lost outright on a clean checkout.
+
+Honest scoping: `op3` and `dn1x` are **same-day** and plausibly belong to still-live arms — not yet a
+failure. **`cr1` at 2 days is the real find**, and it carries a large substantive claim. Note the
+recursion: `dn1x`'s spec being uncommitted means the 08-03 phantom-arm *recovery* is itself
+incompletely landed.
+
+This arm did not commit them: `cr1` is explicitly protected from this arm's edits, and capturing a
+live arm's partial write would be worse than flagging it. Routed in §5 instead.
+
+### 3e. Re-listing is not consumption
 
 A mention inside a backlog-drain memo means an item was *re-noticed*, not *worked*. Counting those as
 consumption inflates health: for `jrd`, 2 of 11 later mentions are audit memos; for `PDW1`, 5 of 16.
