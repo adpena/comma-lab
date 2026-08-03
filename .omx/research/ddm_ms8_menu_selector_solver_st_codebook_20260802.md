@@ -79,6 +79,20 @@ not find any artifact deriving the 11 ST_GRID values, and no code comment justif
 `.omx/research/*.md`, the DAG, and every `ST_GRID` definition site. Absent such a derivation the
 ladder is a **generic default** — a CONTROL, not an optimum.
 
+**SCOPE CORRECTION (post-hoc, same unit).** When first written, that claim rested on the research
+corpus plus the live-chain definition sites; a repo-wide `ST_GRID` sweep then completed and I opened
+the four remaining files it named. The claim HOLDS — none of them derives the values — but the sweep
+surfaced a drift hazard worth recording: the ladder is **hand-duplicated in at least five places**
+(`ddm_pfs1_ep_warp_pose_solve.py:61`, `ddm_xi1_carried_xi_coder.py:81`,
+`ddm_p3v2_…:308`, `pfs1_recompose_warp_base_and_eval.py:75` **and** `:114` in the same file, plus the
+vendored `pfs1_warp_receiver`), and **one copy has already diverged**:
+`tools/pose_frame0_inverse_solve_probe.py:419` defines a **10-value** `_ST_GRID` that drops `0.0`,
+under a comment calling the fit "PROVEN". That probe is off the export path and handles `s=0.0`
+separately, so it is **not** a live off-by-one — but a table that ships as an *index* into a
+hand-copied list, already divergent across copies, is exactly the class that becomes one. The fix
+this unit landed (the receiver reading `manifest["st_grid"]`) removes the shipped path's dependence
+on any copy; the remaining copies are solver-side and unowned.
+
 ## §2 THE START IS THE LEVER — MEASURED, not inferred (#882)
 
 Three facts, each re-derived from the primary artifact, not from a memo:
