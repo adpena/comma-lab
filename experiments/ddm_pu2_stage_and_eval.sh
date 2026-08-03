@@ -49,10 +49,16 @@ shasum -a 256 "$DST/archive.zip" | tee "$DST/archive.sha256"
 ls -l "$DST/archive.zip"
 
 echo "=== inflate (exact contest entry point) ==="
+# inflate.sh calls bare `python`, which is NOT on this box's PATH (verified: the
+# bare name resolves to nothing).  Prepend the venv's bin so the SHIPPED
+# inflate.sh runs BYTE-IDENTICALLY rather than editing the runtime tree -- the
+# contest runtime supplies `python` itself; only this host does not.
+export PATH="/Users/adpena/Projects/pact/.venv/bin:$PATH"
+python -c "import brotli, numpy" || { echo "ERROR: inflate deps missing" >&2; exit 1; }
 rm -rf "$DST/archive" "$DST/inflated"
 mkdir -p "$DST/archive"
 unzip -o -q "$DST/archive.zip" -d "$DST/archive"
-bash "$DST/inflate.sh" "$DST/archive" "$DST/inflated" "$NAMES"
+time bash "$DST/inflate.sh" "$DST/archive" "$DST/inflated" "$NAMES"
 
 echo "=== evaluate (n600, exact upstream) ==="
 # $UP has NO .venv of its own -- use the repo venv by ABSOLUTE path, and cd into
