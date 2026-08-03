@@ -49,6 +49,9 @@ import numpy as np
 sys.path.insert(0, str(Path(__file__).parent))
 from ddm_r7_token_coder import decode_token_codes
 from ddm_tr1_runtime import (
+    RENDERER_FRAME_MAGIC,
+    RENDERER_RAW_HEADER,
+    _encode_brotli_frame,
     _encode_tokens,
     build_packet,
     parse_packet,
@@ -61,6 +64,13 @@ from pfs1_warp_receiver import (
     intrinsics_native,
     pose_to_homography,
     warp_rgb,
+)
+
+from tac.optimization.ddm_ix2_archive_container import (
+    decode_renderer_frame,
+    decode_token_frame,
+    parse_payload,
+    unpack_config_section,
 )
 
 MAGIC = b"PFS1WPD1"
@@ -116,27 +126,94 @@ def parse_pose_warp_v4d(payload: bytes):
     return n_pairs, tp, st_idx, sel, ab, beta_idx
 
 
+# ddm_ix2 container form.  The SECTION ORDER and the values below are the
+# receiver's compile-time knowledge — generic, so they cost zero counted bytes
+# (rule-118: generic ALGORITHM and generic TABLES are free in inflate.py; anything
+# fitted to the clip stays in the counted config section).  `st_grid` is migrated
+# here ONLY because the encoder PROVED the shipped table byte-equal to the vendored
+# ladder on this archive; a base whose `st_grid` is fitted ships it counted instead,
+# and `unpack_config_section` returns it.
+IX2_MEMBER = "0.bin"
+IX2_JOINT_ORDER = ("config", "renderer", "selector", "pose_warp")
+IX2_TR1_METADATA = {
+    "pointer_moved": False,
+    "pose_claim": False,
+    "research_only": True,
+    "schema": "ddm_tr1_four_section_packet.v1",
+    "score_claim": False,
+    "section_consumers": {
+        "lotto_renderer": "TR1Receiver.regenerate_bank_and_apply_mask_mods",
+        "pose_stub": "TR1Receiver.consume_inert_pose_declaration",
+        "selector": "TR1Receiver.select_decode_program",
+        "tokens": "TR1Receiver.decode_combined_tokens",
+    },
+    "section_order": ["tokens", "lotto_renderer", "selector", "pose_stub"],
+}
+IX2_POSE_STUB = json.dumps(
+    {
+        "inert": True,
+        "pose_claim": False,
+        "schema": "ddm_tr1_inert_pose_stub.v1",
+        "values": [],
+    },
+    sort_keys=True,
+    separators=(",", ":"),
+).encode()
+
+
+def _reframe_renderer(mask_bits: np.ndarray, floats_f16_be: bytes) -> bytes:
+    """Re-emit the TR1 renderer section from the ix2 field-split form.
+
+    Pure re-framing: ``parse_packet`` only needs a frame that DECODES to the same
+    mask and table, and the packet's own per-section digest is computed over
+    whatever bytes it is handed, so this need not reproduce the original frame byte
+    for byte — only its contents.
+    """
+
+    packed = np.packbits(np.asarray(mask_bits, dtype=np.uint8), bitorder="big")
+    raw = (
+        RENDERER_RAW_HEADER.pack(int(mask_bits.size), len(floats_f16_be) // 2)
+        + packed.tobytes()
+        + floats_f16_be
+    )
+    return _encode_brotli_frame(RENDERER_FRAME_MAGIC, raw)
+
+
 class Decoder:
     """Factored per-pair decoder (reused by the verify tool)."""
 
     def __init__(self, archive_dir: Path) -> None:
-        manifest = json.loads((archive_dir / "manifest.json").read_text())
-        if manifest["frame0_policy"] != FRAME0_POLICY:
-            raise SystemExit(f"v4d receiver requires frame0_policy={FRAME0_POLICY}")
-        self.dim0_offset = manifest.get("pose_dim0_offset", None)
-        self.beta_mags = tuple(manifest.get("rs_beta_mags", DEFAULT_BETA_MAGS))
-        codes = decode_token_codes((archive_dir / "state/tokens.dr7t").read_bytes())
+        blob = archive_dir / IX2_MEMBER
+        if blob.exists():
+            codes, sections, pose_warp = self._read_ix2(blob)
+            manifest = None
+        else:
+            manifest = json.loads((archive_dir / "manifest.json").read_text())
+            if manifest["frame0_policy"] != FRAME0_POLICY:
+                raise SystemExit(
+                    f"v4d receiver requires frame0_policy={FRAME0_POLICY}")
+            self.dim0_offset = manifest.get("pose_dim0_offset", None)
+            self.beta_mags = tuple(manifest.get("rs_beta_mags", DEFAULT_BETA_MAGS))
+            self.st_vals = np.asarray(manifest.get("st_grid", ST_GRID), np.float64)
+            codes = decode_token_codes(
+                (archive_dir / "state/tokens.dr7t").read_bytes())
+            sections = {
+                "lotto_renderer": (archive_dir / "state/renderer.sec").read_bytes(),
+                "selector": (archive_dir / "state/selector.sec").read_bytes(),
+                "pose_stub": (archive_dir / "state/pose_stub.sec").read_bytes(),
+            }
+            pose_warp = (archive_dir / "state/pose_warp.stp").read_bytes()
         token_payload = _encode_tokens(np.ascontiguousarray(codes, dtype=np.uint8))
-        packet_bytes = build_packet(manifest["tr1_metadata"], {
+        metadata = IX2_TR1_METADATA if manifest is None else manifest["tr1_metadata"]
+        packet_bytes = build_packet(metadata, {
             "tokens": token_payload,
-            "lotto_renderer": (archive_dir / "state/renderer.sec").read_bytes(),
-            "selector": (archive_dir / "state/selector.sec").read_bytes(),
-            "pose_stub": (archive_dir / "state/pose_stub.sec").read_bytes(),
+            "lotto_renderer": sections["lotto_renderer"],
+            "selector": sections["selector"],
+            "pose_stub": sections["pose_stub"],
         })
         self.packet = parse_packet(packet_bytes)
         (self.n_pairs, self.p_best, self.st_idx, self.sel, self.ab,
-         self.beta_idx) = parse_pose_warp_v4d(
-             (archive_dir / "state/pose_warp.stp").read_bytes())
+         self.beta_idx) = parse_pose_warp_v4d(pose_warp)
         if self.dim0_offset is not None:
             # dim0 column stored as f16 residual; reconstruct to full pose value.
             self.p_best = self.p_best.copy()
@@ -152,8 +229,9 @@ class Decoder:
         # parse-back verifier's denominator is pose_warp.stp only, so the
         # manifest was outside its scope).  Reading it is byte-identical on
         # every existing archive AND lets a FITTED codebook ship in a field
-        # the archive is already paying for.
-        self.st_vals = np.asarray(manifest.get("st_grid", ST_GRID), np.float64)
+        # the archive is already paying for.  ddm_ix2: in container form the same
+        # table arrives from the counted config section (or is the vendored ladder
+        # when the encoder proved equality), so ``st_vals`` is already set above.
         if self.st_vals.ndim != 1 or self.st_vals.size < 1:
             raise SystemExit("manifest st_grid must be a non-empty 1-D table")
         if int(self.st_idx.max()) >= self.st_vals.size:
@@ -167,6 +245,36 @@ class Decoder:
         self._far = (np.arange(CAMERA_H)[:, None] < self.v_row) & np.ones(
             (1, CAMERA_W), bool)
         self._alpha = (np.arange(CAMERA_H) / (CAMERA_H - 1.0))[:, None, None]
+
+    def _read_ix2(self, blob: Path):
+        """Parse the ddm_ix2 single-member container.
+
+        Fail-closed by construction: ``parse_payload`` / ``unpack_container`` /
+        every frame decoder assert ``offset == len(payload)``, so a counted section
+        the receiver does not consume cannot survive the parse (#417).
+        """
+
+        bulk, sections = parse_payload(blob.read_bytes())
+        if len(sections) != len(IX2_JOINT_ORDER):
+            raise SystemExit(
+                f"ix2 container holds {len(sections)} sections, "
+                f"expected {len(IX2_JOINT_ORDER)}")
+        config, renderer, selector, pose_warp = sections
+        offset, beta_mags, st_grid = unpack_config_section(config)
+        self.dim0_offset = offset
+        self.beta_mags = tuple(beta_mags)
+        self.st_vals = np.asarray(
+            ST_GRID if st_grid is None else st_grid, np.float64)
+        mask_bits, floats = decode_renderer_frame(renderer)
+        return (
+            decode_token_frame(bulk),
+            {
+                "lotto_renderer": _reframe_renderer(mask_bits, floats),
+                "selector": selector,
+                "pose_stub": IX2_POSE_STUB,
+            },
+            pose_warp,
+        )
 
     def f1(self, i: int) -> np.ndarray:
         return render_frame1_camera_uint8(self.packet, i)
