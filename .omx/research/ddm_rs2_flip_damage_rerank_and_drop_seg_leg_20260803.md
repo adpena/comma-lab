@@ -48,7 +48,7 @@ own drop perturbs.**
 | 7 | `br1`'s owed equations leg paid: 3 canonical equations + 31 behaviour tests | **LANDED** (§3) |
 | 8 | the full per-cell n600 DRIVE sweep **died silently at 24/36 groups** (loop-end-only save); and my process-state probe was wrong **three times in both directions** — corrected append-only | **HONEST NEGATIVE** (§1.6, §1.6b) |
 | 9 | **the coordinator's hypothesis for the residual 17% is REFUTED, exactly**: `D.U` annihilates NOTHING on the render plane (gains **[0.687, 1.028]**, 0% attenuated, operator validated to 1.7e-07 against the real receiver). The cited 80.6742% null fraction is reproduced — it lives on the CAMERA plane and is **structurally unreachable** from the token lattice | **MEASURED** (§5.2) |
-| 10 | what the gradient really carries: **median 3.34x channel anisotropy**, single-channel-dominated in **21.4%** of cells — and **`gr1`'s own key discards it** by summing over channels. Both axes of `#766`'s lexsort can be made EXACT from data already on disk (36.4 s + 388.8 s) | **MEASURED** (§5.3-§5.4) |
+| 10 | **the 14.8% residual is UNEXPLAINED.** Channel structure is real (chi-sq **228.7**, p<<0.001) but modest and does not account for it; my first headline for it was permutation-invariant noise and is retracted. Both axes of `#766`'s lexsort can be made EXACT from data on disk (36.4 s + 388.8 s) | **MEASURED + HONEST GAP** (§5.3-§5.4) |
 | 11 | `gr1`'s gradient key is **n600**, not n48 — concern dissolves at the artifact; the real caveat is that it is an **ancestor-lattice** measurement | **MEASURED** (§5.1) |
 | 12 | **the exact pointer did NOT move.** 0.1910828242 [contest-CPU] UNMOVED. Nothing here is a score. | — |
 
@@ -592,11 +592,21 @@ divide-by-zero warnings, so I refused it until it was checked): BLAS vs `einsum`
 | col singular values | [**0.82829**, **1.01390**], condition **1.2241** |
 | **full 196,608-dim gain range** | **[0.6866, 1.0283]** |
 | fraction of render directions attenuated below 0.5 | **0.0%** |
-| below 0.1 / 1e-2 / 1e-3 / the uint8 step | **0.0% / 0.0% / 0.0% / 0.0%** |
+| below 0.1 / 1e-2 / 1e-3 | **0.0% / 0.0% / 0.0%** |
 | max deviation of `M` from identity | 0.0955 |
 
 **`D.U` annihilates nothing.** Every render-space direction reaches the scorer with gain at
 least **0.687**.
+
+> **ROUND-4 RETRACTION.** My probe also reported a `frac_gain_below_uint8_step` row. **That row is
+> a category error and I retract it:** a gain is dimensionless and the uint8 step is an amplitude,
+> so comparing them is meaningless. The correct statement is that the shipped path's
+> `clip(rint(.))` dead zone is **amplitude-dependent, not direction-dependent** — no *direction*
+> is ever invisible, but a small enough *amplitude* is. Which has a sharp consequence worth more
+> than the retracted row: **a linearisation cannot represent a dead zone at all** (the derivative
+> of a step is zero or straight-through), so NEITHER the gradient key NOR my geometric key can see
+> it. Of the three instruments, **only DRIVE — a realized finite difference through the actual
+> `clip(rint(.))` — sees the quantiser.** That is a capability the gradient does not have.
 
 **Where the 80.6742% actually lives, and why we cannot use it.** I reproduced the cited figure
 to four decimals: `1 - 196,608/1,017,336 = ` **80.6742315%** — it is the null fraction of `D`
@@ -630,22 +640,37 @@ correction, buying +0.139 of rank correlation between h=0 and h≈28.**
 > **cannot discriminate** my directly-measured 84×82 footprint from 64 px. The support number
 > stands on the direct measurement, not on this curve.
 
-**Ceiling: even at the best box, rho = 0.8519 — so 14.8% of the gradient's ranking is explained
-by ambient flips at NO support.** That is the irreducible residual, and here is what is in it:
+**Ceiling: even at the best box, rho = 0.8519** — no ambient-flip proxy at ANY support reproduces
+the gradient's order. *(rho is a rank correlation; `1 - rho` is NOT a variance share, so I say
+"cannot reproduce the order", not "explains 85% of it".)* Two candidates for what is in the gap:
 
-**(b) CHANNEL anisotropy, which every key in play discards.** The gradient is per-(cell, channel);
-`wr1`'s key, my key, and **`gr1`'s own key** (`g_abs.sum(axis=(0,3))` — it sums over channels) are
-all per-cell. Measured on the n600 gradient:
+**(b) CHANNEL structure — real but MUCH weaker than my first pass claimed. ROUND-4 CORRECTION.**
+The gradient is per-(cell, channel); `wr1`'s key, my key, and **`gr1`'s own key**
+(`g_abs.sum(axis=(0,3))` — it sums over channels) are all per-cell. My first draft led with
+*"within-cell max/min channel ratio, median 3.34x"* and called it the residual's explanation.
 
-| | value |
-|---|---:|
-| within-cell max/min channel `|g|` ratio | **median 3.34x** |
-| dominant channel's share of a cell's `|g|` (0.25 = uniform) | **median 0.353**, max **1.000** |
-| cells where ONE channel carries **>50%** of the cell's gradient | **164 / 768 = 21.4%** |
+> **That statistic is worthless and I am recording why rather than deleting it.** Permuting the
+> four channels within a cell cannot change `max/sum` — the share statistic is
+> **permutation-invariant by construction**, and a 200-draw within-cell permutation null
+> reproduces the observed median **0.3531 exactly**. Four positive draws have a large max/min
+> ratio for free. It is evidence of nothing.
 
-*(The p90/max of the ratio statistic run to 1e298 because some channels have essentially zero
-gradient — division by ~0. The degenerate tail is reported as the SHARE statistic instead of a
-meaningless 1e298; that some channels are effectively dead is itself the finding.)*
+What DOES survive is the channel **identity**, which a permutation null does destroy:
+
+| test | observed | null |
+|---|---|---|
+| which channel dominates, over 768 live cells | **[126, 216, 75, 351]** | 192 each |
+| chi-squared vs uniform (3 dof) | **228.7** (p << 0.001) | 16.3 = p 0.001 |
+| per-cell fraction of the 600 pairs agreeing on the dominant channel | median **0.3958** | 0.25 |
+| cells with >50% temporal agreement | **215/768 = 28.0%** | — |
+| global per-channel share of total `|g|` | [0.2492, 0.2624, 0.2222, 0.2661] | 0.25 each |
+
+**Honest reading:** there IS statistically significant per-cell channel structure that every
+per-cell key discards (chi-squared 228.7), and it is **cell-specific, not a global gain imbalance**
+(the global shares are within 2.6% of uniform). But it is modest, and only **28%** of cells have a
+temporally stable dominant channel. **So this does NOT explain the residual** — it is a real
+unexploited axis, not the answer. **The 14.8% gap remains UNEXPLAINED, and saying so is the
+honest state of §5.**
 
 **(c) Temporal structure, also discarded by summing over pairs:** 250 of 600 pairs carry 50% of
 the total `|g|`, 444 carry 80%; per-pair max/median 3.09.
@@ -837,11 +862,28 @@ distinct objects, not a repack. **Bonus, and it points the same way as §2.3:** 
 arm B perturbs **11.1% fewer scorer pixels** than arm A — an independent DRIVE-side signal
 agreeing with the 27.9% susceptibility-side signal.
 
+### R4 — attacking the NEW §5 material. Three findings; the counter stays at 0.
+
+* **R4-a RETRACTED (category error):** my visibility probe reported a
+  `frac_gain_below_uint8_step` row comparing a dimensionless gain to an amplitude. Retracted in
+  §5.2, and the replacement is sharper: the quantiser dead zone is amplitude-dependent, and
+  **only DRIVE — a realized finite difference — can see it**; neither the gradient nor a
+  geometric key can, because a linearisation cannot represent a dead zone.
+* **R4-b CORRECTED (my headline statistic was noise):** I led §5.3(b) with a median 3.34x
+  within-cell channel ratio. It is **permutation-invariant by construction** and a 200-draw
+  within-cell permutation null reproduces it **exactly** (0.3531). Replaced by the channel
+  IDENTITY tests, which a permutation null does destroy (chi-squared **228.7**, p << 0.001) —
+  real structure, but modest, and **it does not explain the residual**. The 14.8% gap is
+  **UNEXPLAINED**, and §5 now says so.
+* **R4-c LOOSENED:** `1 - rho` is not a variance share. "explains 85% of the ranking" became
+  "cannot reproduce the order".
+
 ### Round 3 verdict, and the honest counter
 
-Round 3 found three more things. **The counter stands at 0 consecutive clean passes.** Rounds 1,
-2 and 3 found 4 + 3 + 3 = **10 items**, which per the bug-class-spread prior is evidence more
-exist, not that the surface is clean. Every §2 verdict is PROVISIONAL by construction anyway —
+Rounds 1-4 found 4 + 3 + 3 + 3 = **13 items**, three of them in the §5 material added last and
+two of those defects in my OWN headline statistics. **The counter stands at 0 consecutive clean
+passes** — per the bug-class-spread prior that is evidence more exist, not that the surface is
+clean. Every §2 verdict is PROVISIONAL by construction anyway —
 the realized flip cost is unmeasured — and the three §2.4 falsifiers are the mechanism that
 converts them. **I am not declaring a SEAL.**
 
