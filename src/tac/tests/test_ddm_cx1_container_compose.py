@@ -46,8 +46,23 @@ from tac.optimization.ddm_tr1_runtime import (  # noqa: E402
     RENDERER_RAW_HEADER,
     _encode_brotli_frame,
 )
+from tac.optimization.pfs1_warp_receiver import ST_GRID as _PFS1_ST_GRID  # noqa: E402
 
-VENDORED_ST_GRID = (0.0, 0.005, 0.01, 0.02, 0.03, 0.044, 0.06, 0.08, 0.12, 0.16, 0.24)
+# ANCHORED, not copied (ddm_qd1 2026-08-03).  This module previously carried its
+# own literal copy of the vendored grid, so it CERTIFIED ITSELF: had
+# ``pfs1_warp_receiver.ST_GRID`` drifted, every assertion here would still have
+# passed against the stale local literal while the receiver shipped something
+# else.  That matters because ddm_cx1 measured this exact constant to be the
+# rule-118 discriminator -- vendored-generic on dc1_fold, FITTED and
+# video-derived on pj2 -- so a silent drift is a compliance question, not a
+# style question.
+#
+# The receiver-side copies are deliberately NOT de-duplicated: pfs1_warp_receiver
+# documents itself as needing "NO tac dependency" because it is vendored whole
+# into the shipping decode path, and collapsing those copies would break that
+# self-containment.  Tests do not ship, so the verifier -- and only the verifier
+# -- anchors to the canonical constant.
+VENDORED_ST_GRID = tuple(float(v) for v in _PFS1_ST_GRID)
 FITTED_ST_GRID = [0.06, 0.065, 0.07, 0.075, 0.08, 0.09, 0.1, 0.11, 0.12, 0.14, 0.16]
 BETA_MAGS = [-7.5, -3.5, -2.5, -1.5, -0.5, 0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.5, 4.5]
 POLICY = "warp_two_plane_static_photo_beta_v4d"
