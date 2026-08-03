@@ -348,6 +348,33 @@ def _hash_head_blob_files(files: list[str]) -> dict[str, str]:
     return out
 
 
+def _files_recorded_by_head_commit() -> set[str] | None:
+    """Relpaths the JUST-LANDED commit actually changed, per git itself.
+
+    FIX-ATTRIBUTION (2026-08-02, task #911): the complement of every existing
+    check. ``_post_commit_content_check`` asks "is the right CONTENT at HEAD?"
+    — it cannot ask "did MY commit put it there?", because when a sibling has
+    already committed byte-identical content the HEAD blob matches and the
+    check passes by construction. That is exactly what happened: a sibling
+    absorbed 215 lines of another arm's trainer work; the serializer printed
+    ``files=6`` while git recorded 5 changed, and NOTHING compared the two
+    numbers.
+
+    Fail-open (returns ``None`` on any git/OS error or a root commit) so this
+    diagnostic can never break a real commit.
+    """
+    try:
+        proc = subprocess.run(
+            ["git", "show", "--pretty=format:", "--name-only", "HEAD"],
+            cwd=REPO_ROOT, capture_output=True, text=True, check=False,
+        )
+    except OSError:
+        return None
+    if proc.returncode != 0:
+        return None
+    return {ln.strip() for ln in proc.stdout.splitlines() if ln.strip()}
+
+
 def _base_content_check(
     base: dict[str, str],
 ) -> dict[str, tuple[str, str]]:
@@ -2180,8 +2207,57 @@ def main(rebind_root: bool = False) -> int:
                 )
                 return 7
 
+        # FIX-ATTRIBUTION (2026-08-02, task #911): reconcile REQUESTED files
+        # against what git RECORDED for this commit. Warn-only and fail-open —
+        # `absent` has a benign cause (a requested file whose content already
+        # matched HEAD produces no diff), so refusing here would block honest
+        # commits. The value is that the two counts are now COMPARED at all.
+        recorded = _files_recorded_by_head_commit()
+        recorded_n = "?" if recorded is None else str(len(recorded))
+        if recorded is not None:
+            requested = set(files)
+            absent = sorted(requested - recorded)   # sibling absorbed, or no-op edit
+            extra = sorted(recorded - requested)    # WE absorbed a sibling's work
+            if absent or extra:
+                _append_log({
+                    **base_record,
+                    "outcome": "post_commit_file_attribution_mismatch",
+                    "wait_seconds": wait_seconds,
+                    "commit_seconds": commit_seconds,
+                    "head_after": head_after,
+                    "requested_files": sorted(requested),
+                    "recorded_files": sorted(recorded),
+                    "requested_but_not_recorded": absent,
+                    "recorded_but_not_requested": extra,
+                    "temp_index": temp_index_path,
+                })
+                print(
+                    "[subagent-commit-serializer] ATTRIBUTION MISMATCH (warn, "
+                    f"rc=0): you requested {len(requested)} file(s); commit "
+                    f"{head_after} recorded {len(recorded)}.",
+                    file=sys.stderr,
+                )
+                if absent:
+                    print(
+                        "  REQUESTED BUT NOT RECORDED (a sibling may have "
+                        "already committed your content — check "
+                        f"`git log -S<your-symbol> --all`; or your edit was a "
+                        "no-op vs HEAD):\n"
+                        + "\n".join(f"    {f}" for f in absent),
+                        file=sys.stderr,
+                    )
+                if extra:
+                    print(
+                        "  RECORDED BUT NOT REQUESTED (YOUR commit carries "
+                        "files you did not ask for — the 2026-04-29 absorption "
+                        "direction; do NOT rewrite history, record the "
+                        "correction):\n"
+                        + "\n".join(f"    {f}" for f in extra),
+                        file=sys.stderr,
+                    )
+
         print(f"[subagent-commit-serializer] OK head={head_after} "
-              f"label={args.label} files={len(files)} "
+              f"label={args.label} files={len(files)} recorded={recorded_n} "
               f"wait={wait_seconds}s commit={commit_seconds}s "
               f"temp_index={'YES' if temp_index_path else 'NO (--no-stage)'}",
               file=sys.stderr)
