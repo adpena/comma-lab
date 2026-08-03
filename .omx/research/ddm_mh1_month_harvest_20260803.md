@@ -312,9 +312,46 @@ only the repo store.
 finds nothing. It is querying a store that, for 65% of ids and 95% of the primary window, cannot
 answer. An id-not-found is a **missing join**, never an absent row.
 
-## §5 — Ranked routing
+## §5 — Ranked routing (LANDED as ledger rows, not memo-only)
 
-*(populated below)*
+**Why this section is short and the ledger is long.** §3c measured that 16 tracking surfaces were
+created this month and that sweeps *create* surfaces instead of *draining* canonical stores. The
+proof, caught in the act: **`ddm_qd1` (08-03, today) dispositioned window-1 rows as "SUPERSEDED" in
+its memo and wrote ZERO ledger rows** — those rows still read `pending` with last events dated
+07-13/07-14/07-15. That is why I am the 4th arm to re-find the same D-series.
+
+So this arm wrote its routing **into `canonical_task_status.jsonl`** via the canonical writer
+(`register_task` / `append_note`, fcntl-locked, append-only):
+
+- **12 new task rows** registered, each with a **named owner** (no row exits "unowned" — `m45`).
+- **24 in-ledger annotations** on the parked window-1 rows: 14 tagged STATUS-ROT with their successor
+  evidence, 10 tagged TRUE-ORPHAN with exact scope. The next sweep inherits the evidence instead of
+  re-deriving it.
+- **2 arithmetic-correction notes** on this arm's own rows (13→14, 11→10), since ids are immutable.
+
+### Ranked head
+
+Ranking is by **gap-share of the axis touched × vehicle-transferability × cost**, not by novelty.
+Seg is the majority axis and rate is the cheapest; `$0` items outrank funded ones.
+
+| # | Row | Axis | Why ranked here |
+|---|---|---|---|
+| 1 | `mh1_materialize_harness_rows_into_repo_ledger` | apparatus | **Root cure.** Caps every subagent sweep at ~25% visibility until fixed. Everything below is re-findable only if this lands. |
+| 2 | `mh1_recover_lane_skipband_arm_c_524` | **seg** | Rests on measured SegNet structure; `m91` prices Road↔Lane at **22.1% of the entire gap**. Never fired — absent from all 37 tracked levers. |
+| 3 | `mh1_recover_blind_coordinate_generic_fill_401` | **rate** | `$0`, vehicle-independent (`m86`: 22.70% of camera px blind to BOTH scorers). Undrained 24 days. |
+| 4 | `mh1_redrain_default_off_table_and_lever_verdicts` | apparatus | 26/31 fire-now rows unfired; **29/37 levers never adjudicated**. A wired gate did not drain the queue. |
+| 5 | `mh1_close_13_status_rot_window1_rows` *(=14)* | apparatus | Removes the 2.4× inflation from every future sweep. Evidence already in-ledger; only adjudication remains. |
+| 6 | `mh1_adjudicate_563_duty_queue_fire_chain` | seg | Operator-approved TRAINING GO on 07-19, trainer never invoked, 2,040 commits silent. **EV numbers need re-derivation first** (ancestor rule). |
+| 7 | `mh1_commit_or_disposition_uncommitted_research_memos` | custody | `ddm_cr1` 2 days uncommitted carrying a "2.4× larger seg+rate prize" claim. Uncommitted is worse than orphaned. |
+| 8 | `mh1_gap_decomposition_mixed_denominators_recompute_at_pu2` | measurement | Cited shares sum to 109.6%. Owner `ddm_op3`. Cheap; prevents routing on a stale denominator. |
+| 9 | `mh1_reconcile_dseries_lineage_break_and_namespace` | apparatus | Two live D-series; will collide at D41. |
+| 10 | `mh1_adjudicate_11_true_orphans_window1` *(=10)* | mixed | Wire-or-retire; 8 of 10 are rename casualties. |
+| 11 | `mh1_consolidate_16_orphan_tracking_surfaces` | apparatus | The meta-fix; without it, sweep #18 re-finds all of this. |
+| 12 | `mh1_adjudicate_v753_ten_rung_ladder_never_launched` | — | Expected **RETIRE-with-lessons** (witness lineage, `m34` ban), not revival. Listed last deliberately. |
+
+**No ΔS is claimed for any row.** This arm ran no scorer (`$0`; the eval slot is held by `ob1`).
+Every row states its axis and its evidence; none states a predicted score delta, because a predicted
+delta without a re-derived baseline is exactly the class §6/R5 and row #8 exist to stop.
 
 ## §6 — What this arm refutes (including its own working hypotheses)
 
