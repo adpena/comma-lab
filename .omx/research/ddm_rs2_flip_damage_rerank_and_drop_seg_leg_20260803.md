@@ -43,10 +43,10 @@ own drop perturbs.**
 | 2 | its damage key's support is **24.2x too small**; **144 of 486** "provably safe" cells are not, monotone in the RF estimate, `half = 0` reproduces wr1 exactly | **MEASURED** (§1.2, §4 R1-a) |
 | 3 | its byte tie-break `residual_mass` correlates only **rho 0.513** with the real per-cell byte marginal (384 exact re-encodes) | **MEASURED** (§1.2c) |
 | 4 | an endpoint-FREE thin-margin key agrees with the corrected key at **rho 0.99** and with wr1's at 0.89 — two disjoint instruments, same verdict | **MEASURED** (§1.4) |
-| 5 | a byte-matched ordering **A/B is BUILT and byte-closed** (274,631 B vs 274,321 B); at equal bytes arm B is lower on BOTH halves of flip damage — **27.9% less** ambient flip mass and **11.3% fewer** perturbed scorer pixels | **BUILT + QUEUED** (§2.3-§2.5) |
+| 5 | a byte-matched ordering **A/B is BUILT and byte-closed** (274,631 B vs 274,321 B); at equal bytes arm B is lower on BOTH halves of flip damage — **27.9% less** ambient flip mass and, at **n600**, **11.25% fewer** perturbed scorer pixels | **BUILT + QUEUED** (§2.3-§2.5) |
 | 6 | `br1`'s `cell_drop63` byte leg is for a **different cell set**: gr1's own ordering saves **79,177 B**, not 72,544 | **MEASURED** (§2.1) |
 | 7 | `br1`'s owed equations leg paid: 3 canonical equations + 31 behaviour tests | **LANDED** (§3) |
-| 8 | the full per-cell n600 DRIVE sweep **died silently at 24/36 groups**; reported with both root causes (loop-end-only save, self-matching liveness probe) | **HONEST NEGATIVE** (§1.6) |
+| 8 | the full per-cell n600 DRIVE sweep **died silently at 24/36 groups** (loop-end-only save); and my process-state probe was wrong **three times in both directions** — corrected append-only | **HONEST NEGATIVE** (§1.6, §1.6b) |
 | 9 | **the exact pointer did NOT move.** 0.1910828242 [contest-CPU] UNMOVED. Nothing here is a score. | — |
 
 **NEXT-IF-RESUMED** — see §9. Written incrementally.
@@ -313,8 +313,29 @@ box decomposition is sound to float32 summation noise. Per-group wall time 60-10
 **What I did instead of a 45-minute re-run** (per §3 of the operating manual: rank by what a
 silent error would damage, and by what actually decides). The per-cell DRIVE map was a
 nice-to-have. The DRIVE number that **decides the queued gate** is the two arms against each
-other at n600, which is 3 x 600 renders and ~5 minutes — measured in §2.3b, checkpointed per
-chunk, and with the liveness probe anchored correctly this time.
+other at n600, which is 3 x 600 renders and ~4.3 minutes — landed in §2.3b at full n600.
+
+> ### §1.6b APPEND-ONLY CORRECTION — I declared TWO deaths that never happened
+>
+> Everything above about the 36-group sweep dying is **true and confirmed** (no `cell_drive.npz`,
+> no `receipt.json`). But I then wrote, and put in a commit message, that the sister script
+> `rs2_arm_drive_n600.py` *"was killed twice and lost nothing."* **That is FALSE and I am
+> correcting it rather than deleting it.** Its FIRST launch ran to completion — `n_pairs: 600`,
+> `elapsed_s: 259.4`, full JSON receipt. I called it dead because I read a lagging log tail
+> (200/600) and a `ps` check while it was still running, and I did the same thing again on the
+> relaunch at 150/600.
+>
+> **So the same instrument failed THREE times in one session, in both directions:** it reported
+> ALIVE when the process was gone (`pgrep` matching my own watcher shells) and DEAD twice when
+> the process was alive and finishing. The unifying law is sharper than "anchor on the exec form":
+>
+> > **Job state is only ever readable from a RECEIPT. The process table and a log tail are both
+> > lagging, self-matching, and unable to distinguish "finished" from "killed".**
+>
+> The `until [ -f <receipt> ]` waiter got it right **both** times and I overrode it with a worse
+> instrument each time. The commit message on `c423c153e4` carries the false "killed twice" claim;
+> this row is its append-only correction, and the conclusion it supported (checkpoint per chunk)
+> survives on the sweep's real death alone.
 
 ---
 
@@ -401,23 +422,34 @@ The ambient-flip difference in §2.3 is a SUSCEPTIBILITY signal. The DRIVE signa
 and I measured it directly: render base, A and B through the real receiver and count the scorer
 pixels whose input actually changed.
 
-| sample | pairs | B/A perturbed scorer px | B/A drive L1 |
-|---|---|---:|---:|
-| **scattered** (pairs 0, 137, 299, 411, 577 — spread across the clip) | 5 | **0.8890** | — |
-| **prefix** (pairs 0-249, checkpointed) | 250 | **0.8874** | 0.9665 |
+**n600, all 600 pairs, 259.4 s** (`rs2_arm_drive_n600.SEALED.json`, sha `cd857c694f88de16`):
 
-**Neither is an n600 claim** — the second is a video-order PREFIX, which the campaign's own law
-says is a different population. But the law also names the cure: compare the subset against
-another sample of the same quantity. **A scattered 5-pair sample and a 250-pair prefix agree to
-0.2% (0.8890 vs 0.8874), and the prefix's running value is flat to <0.1% across 50/100/150/200/250
-pairs.** So this particular ratio is measured to be insensitive to which pairs you take, which is
-the evidence the prefix trap demands before a subset number may be quoted at all.
+| B/A ratio | value | reading |
+|---|---:|---|
+| perturbed scorer px, **> 0 LSB** | **0.8875** | **11.25% fewer pixels perturbed at all** |
+| > 1 LSB | 0.8914 | |
+| > 2 LSB | 0.9050 | |
+| > 4 LSB | 0.9305 | |
+| > 8 LSB | 0.9683 | |
+| total drive L1 | 0.9657 | |
+
+**The advantage is concentrated in SMALL perturbations** — 11.3% fewer pixels touched at all, but
+only 3.2% fewer touched hard (>8 LSB). Which end of that curve decides flips is genuinely open:
+a flip needs to cross a thin margin, which favours the small-perturbation end mattering most, but
+a skeptic can argue large perturbations flip more reliably. **The whole curve is reported rather
+than the convenient end of it**, and §2.4's gate is what settles which end predicts.
+
+**Subset validation, done properly.** Before the n600 landed I quoted a 250-pair prefix at
+**0.8874** and a scattered 5-pair sample (pairs 0, 137, 299, 411, 577) at **0.8890**. The n600
+population value is **0.8875** — the prefix was right to **0.01%** and the scattered sample to
+0.17%. So for this quantity the prefix is *not* a different population, and that is now MEASURED
+against the population rather than argued from stability.
 
 **Read together with §2.3:** at equal bytes (arm B is 310 B *cheaper*), arm B is lower on BOTH
-halves of flip damage — **27.9% less** ambient flip mass in the real support, **11.3% fewer**
-perturbed scorer pixels. Two independent instruments, same direction. That is the strongest
-scorer-free case that can be made for the corrected ordering, and it is still not a flip count:
-converting it needs the scorer, which is §2.4's gate.
+halves of flip damage — **27.9% less** ambient flip mass in the real support, **11.25% fewer**
+perturbed scorer pixels at n600. Two independent instruments, same direction. That is the
+strongest scorer-free case that can be made for the corrected ordering, and it is still not a
+flip count: converting it needs the scorer, which is §2.4's gate.
 
 ### §2.4 THE PRE-REGISTERED GATE  (written before any scorer runs)
 
@@ -733,11 +765,12 @@ overlap graph rather than per cell — is the untested direction §1.5's per-cel
      lost 24 groups of completed n600 work to a silent kill. The sister script
      `rs2_arm_drive_n600.py` writes a JSONL row per chunk — it was killed twice and lost nothing
      both times. Three lines of difference.
-   * **Never probe liveness with a pattern your own watcher matches.** `pgrep -f <script>.py`
-     reported ALIVE for minutes after death because the watcher shells' command lines contain the
-     script name. Anchor on the EXEC form or on a receipt/checkpoint row whose mtime advances.
-     Detached jobs on this host are being reaped unpredictably (one survived 31 min, two died
-     inside 2 min), so **assume the kill and checkpoint for it.**
+   * **Job state is only readable from a RECEIPT.** In this one session the process-table probe
+     was wrong THREE times in BOTH directions: `pgrep -f <script>.py` reported ALIVE for minutes
+     after a real death (it matched my own watcher shells), and a lagging log tail plus `ps` made
+     me declare two deaths for a job that had already finished n600 (§1.6b). The
+     `until [ -f <receipt> ]` waiter was right every time and I overrode it every time. **Never
+     probe the process; poll the receipt.**
 6. **Owed, and deliberately so:** the `__init__` export + locked-registry `populate_*` for the
    three §3 equations, held back only because a sister session holds those files.
 7. Artifacts: `/Volumes/VertigoDataTier/pact/ddm_rs2_20260803/` —
