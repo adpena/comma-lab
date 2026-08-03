@@ -196,4 +196,97 @@ that **do not resolve** in `canonical_task_status.jsonl` (423 rows scanned; the 
 0 rows). One ledger note records the identical failure against itself. **This is why every row in
 this memo cites content, not ids.**
 
+### 2.3 Lens L0 — WRONG LEVEL (the primary lens, and the largest finding)
+
+**The canonical "per-pixel sidecar NO-GO ×3" is misidentified in my charter and in the corpus index,
+and the true count is not three.** The trio is **`a127` / `aa98` / `a3061`, all 2026-06-23**,
+sequential disjoint arms against the 0.19110 archive sharing one argmap cache
+(`b42730c360` 15:58 → `d18cb4fcc4` 16:02 → `5d6ae41cd7` 16:11). Counting every arm that ruled the
+linear per-pixel flip store dead: **seven-plus arms, three different bases, one granularity.**
+
+| arm | date | base | what it measured | level |
+|---|---|---|---|---|
+| #51 / #55 / #72 | 06-10 | 0.19110 | addressing floor; polytope solve; margin waterfill | pixel |
+| `witness_seg_boundary_decisive_probe` | 06-12 | HNeRV witness | flip count 884/pair, 1.02 B/flip | pixel |
+| **`a127` / `aa98` / `a3061`** | **06-23** | 0.19110 | pixel census; band sidecar; ego-parameterization | pixel |
+| `ddm_sq1` | **08-03** | TR1 receiver | truth-as-payload through the real receiver | pixel |
+
+**Not one was formulated above pixel level. None carries a `verdict_scope` tag** (the ladder
+postdates them all).
+
+#### 2.3.1 The smoking gun — the corpus diagnosed the confound and drew the opposite conclusion
+
+`a3061` measured the flip set to be **effective rank 547/600** and concluded
+*"uncodeable as a stored sidecar … **aa98's NO-GO is FINAL**."* The synthesis doc written the same
+day states, in the same breath, why that number is an artifact:
+
+> *"a3061 measured the flip-set has effective rank 547/600 → **uncodeable as a stored sidecar** …
+> **BUT the flips are *generated* by a rank-1 mechanism**: a known 1-D horizon edge
+> `v_h(t)=cy+fy·tan(pitch(t))` moving with ego-pitch, blurred by the decoder; **the high rank is
+> per-frame *content*, not mechanism.**"*
+
+and `a3061` itself measured that **the horizon line codes for 213 B** — *"the 'where' is cheap and
+the 'what' is the wall."*
+
+**A rank-1 generating mechanism reads as rank-547 in the pixel-indicator basis.** The verdict
+measured the *embedding's* capacity and reported it as the *object's* capacity. This is LAW A (§5.1)
+in its purest measured form, and it was written down in June with the closure drawn anyway.
+
+#### 2.3.2 The rate objection was already retracted — twice
+
+The family is widely cited as closed on **rate**. It is not:
+
+- `#72` **retracted `#51`'s rate objection**: *"**RATE side WINS**: conditional code cost
+  **0.856 B/flip** < 1.27 waterline"*, leaving *"**True frontier-base seg floor = receptive-field
+  COLLATERAL not code rate.**"*
+- `ddm_sx1` (08-03) measured the contour-coherence precondition (*"**VERDICT: strongly coherent**"*)
+  and prices a **label field at 0.5349 B/flip** — **2.38× under** the `W = 1.27310821533` B/flip
+  waterline.
+
+So the surviving objection is **receptive-field collateral alone** — and collateral is exactly the
+quantity the level ladder moves (§2.3.3).
+
+#### 2.3.3 The level gradient was MEASURED, monotone, and the experiment stopped early
+
+`multiscale_lowfreq_seg_repair_verdict_20260611.md`: collateral falls **monotonically as the basis
+gets coarser — 96.8× → 2.23×, a 43× reduction** — and the sweep **stopped at a 6×8 frequency grid
+while still trending down**, never trying a *semantic* carrier. A monotone trend abandoned
+mid-descent is not a wall; it is an unfinished sweep. (2 citations.)
+
+#### 2.3.4 Today's inversion — same description, same bytes, opposite sign
+
+`ddm_sq1` (08-03) holds address and byte row **fixed** and changes only the realizer's level of
+operation:
+
+> *"Margin-optimal prototype colours SOLVED from the frozen head … moves **the same band, same
+> addresses, same byte row** from `eta = -3.76` to **`eta = +0.79`**. **Nothing about the DESCRIPTION
+> changed. Only the realizer did.**"*
+
+and localises the debt: *"**100% of the debt localises to S4, the frozen net's regional response**"* —
+i.e. the loss is *regional*, which is precisely the rung the pixel formulation cannot address.
+
+#### 2.3.5 Two provenance defects found in the citation chain
+
+1. **A number from a different arm was welded into the trio's verdict.** The widely-propagated
+   *"rank 53/60"* comes from **island-MASK** measurement (*"island-mask effective rank (60-frame SVD)
+   | **52.9 / 60**"*), a **fourth arm** measuring a different object — not the flip residual
+   (`a3061`'s 547/600). A synthesis doc fused them (*"Three independent findings … are ONE fact"*)
+   and **two index rows inherited the weld**.
+2. **The cure memo is orphaned.** `contest_optimal_correction_representation_space_20260610.md` states
+   the reformulation outright — *"The d_seg residual is **NOT a set of pixel-flips — it is a
+   PARTITION-DELTA** … failed because it codes the area, not the boundary"* — and **13 docs propagate
+   "NO-GO ×3" while 0 cite this memo.** `contour_codec.py` is 3.8 KB beside 35–101 KB siblings.
+
+#### 2.3.6 The re-scope rows
+
+| # | negative, as filed | new scope | resolving measurement | cost | ΔS / %gap |
+|---|---|---|---|---|---|
+| P1 | `a3061` *"uncodeable as a stored sidecar … NO-GO is FINAL"* | **FORMULATION — pixel-indicator embedding**, refuted by its own doc's rank-1 mechanism note; the "where" codes 213 B | code the **generator** (`v_h(t)` ego-pitch curve), not the flip set | $0 — 213 B target already measured | — (artifact supplies no ΔS) |
+| P2 | `aa98` *"horizon-band flip-residual sidecar — NO-GO (decisive)"*, Δd_seg/byte −4.65e-9 < 6.659e-9 break-even | **FORMULATION — half-lifted**: location raised to band, **payload stayed per-pixel-class** (~1.8 B/symbol). The economics that kill it are per-pixel-**symbol** economics | re-price with an **arc/component label** payload; `sx1`'s 0.5349 B/flip and `#72`'s 0.856 B/flip are both under the 1.273 waterline | $0 re-price | — |
+| P3 | `a127` *"no always-wrong pixel/region a 0-byte clamp can target"* (max per-pixel flip freq 5.8%; 88.7% never flip) | **FORMULATION — a per-PIXEL census is silent on components**; a component can be reliably wrong while none of its pixels is | run the same census over **GT components** | $0 — `existence_hinge.py` already computes component stats | — |
+| P4 | per-pixel UNIWARD weight map — **`PARADIGM-NULL-NO-EFFECT`**, the **most-cited pixel negative (33 citations)** | **FORMULATION** — it **names its own successor and the successor was never run**: *"Sister probe (**per-region wavelet UNIWARD**) … different granularity may surface effects the per-pixel granularity hides"* | run the named sister probe | $0–low | — ; note its 6th-order follow-up diagnoses the mechanism (*"gradient flow may smooth out per-pixel weights through residual head's convolutional structure"*) and then goes **finer, not coarser** |
+| P5 | Yousfi detector-cost blind-spot — **FALSIFIED**, *"0.0% of flips are avoidable by staying interior"* | **FORMULATION** — pure pixel census, and it pivots to another **pixel** lever | re-ask at boundary-arc level | $0 | — |
+| P6 | multiscale low-freq repair | **INSTANCE — sweep stopped mid-descent** on a monotone 43× gradient | continue the gradient to a **semantic** carrier | low | — |
+| P7 | `closure_reaudit` **`SOUND-KILL` / "do NOT reopen"** | **welded verdict** — pixel-blur preprocessing and the flip-pixel sidecar are **two mechanisms sharing one 36.9% survival number** | split the two | $0 | — |
+
 ---
