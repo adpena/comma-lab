@@ -250,6 +250,32 @@ incompletely landed.
 This arm did not commit them: `cr1` is explicitly protected from this arm's edits, and capturing a
 live arm's partial write would be worse than flagging it. Routed in §5 instead.
 
+### 3f. The anti-forgetfulness apparatus is itself losing memories
+
+Checked because the arm needed to land a durable law and found it could not.
+
+- **`MEMORY.md` is at 17,402 B against its own stated 17,408 B budget — 6 bytes of headroom.** That
+  budget exists so the index **fully loads** at session start. At 99.97% capacity, any new law from
+  any arm either does not fit or pushes the index into partial loading — **silent memory loss for
+  every future session.** This is a P0 apparatus risk, not a formatting nit.
+- **Two of 90 keys are orphaned.** 88 keys are referenced from `MEMORY.md`; **`m64`** and **`m92`**
+  are not, though both files exist. An unreferenced key never loads, so the memory is effectively
+  lost. `m92` is the pointed one: its content is *"findings die with the arm — the crash-resume
+  checkpoint has no FINDINGS field."* **The law about lost findings is itself a lost finding.**
+- **Concurrency observed:** the on-disk `MEMORY.md` no longer contains the `(m64)` reference that
+  this session's context snapshot shows — `MEMORY.md` is being edited by a **concurrent live arm**.
+
+**What this arm did, and deliberately did not do.** It wrote the law file
+(`orphan_sweeps_that_do_not_write_the_store_are_the_disease_20260803.md`) and registered key **`m93`**
+in the low-contention keys file. It **did not edit `MEMORY.md`**: editing a 6-byte-headroom file
+under an active concurrent writer is the documented absorption / commit-swap bug class, and shaving
+bytes off other arms' laws under time pressure is not this arm's call. The index pass is OWED and
+routed (`mh1_memory_index_saturated_and_two_orphaned_keys`).
+
+Honest consequence: **this arm's own law file is, at the moment of writing, reachable only via the
+keys file — not from the loaded index.** That is the disease, and naming it is better than pretending
+the routing is complete.
+
 ### 3e. Re-listing is not consumption
 
 A mention inside a backlog-drain memo means an item was *re-noticed*, not *worked*. Counting those as
