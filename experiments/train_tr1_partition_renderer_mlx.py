@@ -2165,7 +2165,81 @@ def build_argparser() -> argparse.ArgumentParser:
                          "sealed chain is mid-flight and switching the reset arm underneath it "
                          "would make its own windows incommensurable -- turn it ON for the next "
                          "FROM-SCRATCH run, where it is worth ~218 of 666 epochs.")
+    # ---- ddm_pt2 (2026-08-03) THE PORT: make_loss_fn forces already in TR1's call path ----
+    # MEASURED: this trainer imports the SAME ``make_loss_fn`` the retired levelset trainer uses
+    # (line ~33 / the call below) but passes 5 of its 18 parameters. Four fully-implemented seg
+    # forces therefore sit INSIDE TR1's own loss graph, unreachable for one reason only: this
+    # argparse never declared their flags. Porting them is threading, not new machinery -- the
+    # ddm_tp2 row-3 precedent ("only the producer moves"), inverted: here only the PARAMETER moves.
+    #
+    # WHY THESE FOUR AND NOT ``margin_weight_fn``: focal / fisher-density / natural-grad fold into
+    # ``seg_pixel_w`` (or transform ``seg_logits``), the surface EVERY seg form honors before the
+    # mean -- including ``tau_softplus``, which the live burn lineage occupies ~100% of its epochs.
+    # ``margin_weight_fn`` is read only under ``apply_mw``, which ``tau_softplus`` ignores entirely
+    # (MARGIN_WEIGHTED_HONORING_SEG_FORMS above, ddm_tp2 row 2) -- porting it would ship a flag
+    # that is inert on the live vehicle, which is the genus this file already refuses.
+    #
+    # ARGS-ONLY, never TR1Config (the --persist-optimizer-state / --telemetry-v9-port precedent):
+    # ``canonical_json`` is ``asdict(self)``, so a new config field would move ``config_hash`` for
+    # EVERY run including the off case and break the sealed lineage's flag-invariance. Cost stated
+    # rather than hidden: two runs that differ only in these flags share a config_hash, so the
+    # ``ported_loss_forces`` telemetry row below (score-neutral => ALWAYS emitted) is what carries
+    # their state into the run record.
+    ap.add_argument("--seg-focal-gamma", type=float, default=0.0,
+                    help="ddm_pt2 PORT of the retired-trainer SegFocalGamma lever: focal per-pixel "
+                         "reweight (1-p_y)^gamma from the REALIZED softmax, stop-grad + mean-1 "
+                         "renormalized, folded MULTIPLICATIVELY into seg_pixel_w (so it applies to "
+                         "every seg form, tau_softplus included). 0.0 = OFF = byte-identical.")
+    ap.add_argument("--fisher-density-weight", type=float, default=0.0,
+                    help="ddm_pt2 PORT of FisherDensityWeight: blend lambda in [0,1] on the exact "
+                         "registered law tr g = (1/2)sech^2(m/2) as a per-pixel seg weight "
+                         "(fisher_curvature_equals_categorical_fisher_trace_caustic_v1, rho=0.978). "
+                         "Mean-1 renormalized + stop-grad => reallocates the gradient BUDGET, does "
+                         "not change the loss form. 0.0 = OFF = byte-identical.")
+    ap.add_argument("--fisher-density-source", default="model", choices=("model", "gt"),
+                    help="'model' = live signed top1-top2 margin of the realized logits (the "
+                         "Fisher-NATURAL choice: the metric at the current point of the flow); "
+                         "'gt' = the cached GT margin field (a stationary importance PRIOR). "
+                         "Requires --fisher-density-weight > 0.")
+    ap.add_argument("--head-natural-grad", default="off", choices=("off", "on"),
+                    help="ddm_pt2 PORT of HeadNaturalGradient: forward-IDENTITY / backward-g+ "
+                         "transform on seg_logits, so the seg descent direction becomes the Fisher "
+                         "natural gradient of the categorical head (exact rank-4 closed form, O(K) "
+                         "per pixel). Loss VALUE and every activation are unchanged; only the "
+                         "backward pass is preconditioned. 'off' = byte-identical.")
+    ap.add_argument("--head-natural-grad-eps", type=float, default=1e-3,
+                    help="damping added to p before the 1/p division (near-degenerate simplex "
+                         "corners). Requires --head-natural-grad on.")
+    ap.add_argument("--tau-softplus-tau", type=float, default=0.3,
+                    help="ddm_pt2 PORT: tau of the tau_softplus seg form, mean(tau*softplus(-m/tau)). "
+                         "This trainer previously took make_loss_fn's default with no way to set it, "
+                         "while the live burn lineage runs tau_softplus for ~100% of its epochs -- "
+                         "i.e. the ONE scalar shaping the live loss was unreachable. Default 0.3 == "
+                         "that same default => byte-identical.")
     return ap
+
+
+def assert_ported_force_scalars_have_their_gate(
+    fisher_density_weight: float, fisher_density_source: str,
+    head_natural_grad: str, head_natural_grad_eps: float) -> None:
+    """ddm_pt2, same genus as ``assert_spike_scalars_have_their_gate``: a value flag whose gate is
+    off is a SILENT no-op, and declared-on-but-inert is this file's own documented dominant defect.
+
+    Fail closed BEFORE training rather than let a run believe a force it declared was active.
+    """
+    inert: list[str] = []
+    if fisher_density_weight <= 0.0 and fisher_density_source != "model":
+        inert.append(f"--fisher-density-source {fisher_density_source}")
+    if head_natural_grad != "on" and float(head_natural_grad_eps) != 1e-3:
+        inert.append(f"--head-natural-grad-eps {head_natural_grad_eps}")
+    if inert:
+        raise SystemExit(
+            f"REFUSED: {inert} set without the gate that makes it read.\n"
+            f"  --fisher-density-source is read ONLY when --fisher-density-weight > 0.\n"
+            f"  --head-natural-grad-eps is read ONLY when --head-natural-grad on.\n"
+            f"  Arm the gate, or drop the value flag -- a declared-but-ignored force is the "
+            f"exact silent-artifact class this trainer already refuses for --margin-weighted-loss "
+            f"and --seg-spike-downweight.")
 
 
 def main() -> int:
@@ -2330,11 +2404,48 @@ def main() -> int:
     # ddm_tp2 row 3: same genus -- a magnitude with no gate would be silently ignored.
     assert_spike_scalars_have_their_gate(cfg.seg_spike_reweight, cfg.seg_spike_downweight,
                                          cfg.seg_coherent_upweight)
+    # ddm_pt2 row 4: same genus again -- a value with no gate would be silently ignored.
+    assert_ported_force_scalars_have_their_gate(
+        args.fisher_density_weight, args.fisher_density_source,
+        args.head_natural_grad, args.head_natural_grad_eps)
     loss_fn = make_loss_fn(adapter, SEG_H, SEG_W, score_domain=True,
                            seg_loss=cfg.seg_form_start,
                            margin_weighted=(cfg.margin_weighted_loss == "on"),
                            margin_weight_temp=cfg.margin_weight_temp,
-                           render_fn=make_render_fn())
+                           render_fn=make_render_fn(),
+                           # ---- ddm_pt2 THE PORT (args-only; every default reproduces the
+                           # pre-pt2 call exactly, so an unflagged run is byte-identical) ----
+                           tau_softplus_tau=args.tau_softplus_tau,
+                           focal_gamma=args.seg_focal_gamma,
+                           fisher_density_weight=args.fisher_density_weight,
+                           fisher_density_source=args.fisher_density_source,
+                           head_natural_grad=(args.head_natural_grad == "on"),
+                           head_natural_grad_eps=args.head_natural_grad_eps)
+    # Score-neutral observability => ALWAYS emitted ("off is a tracked queue" / the read-only
+    # telemetry rule). These forces are args-only, so config_hash cannot distinguish an armed run
+    # from a control; this row is what carries their state into the run record. It also states
+    # which forces are ACTIVE, so a reader never has to infer engagement from a flag's presence.
+    tlog({"event": "ported_loss_forces", "port": "ddm_pt2",
+          "tau_softplus_tau": float(args.tau_softplus_tau),
+          "seg_focal_gamma": float(args.seg_focal_gamma),
+          "fisher_density_weight": float(args.fisher_density_weight),
+          "fisher_density_source": args.fisher_density_source,
+          "head_natural_grad": args.head_natural_grad,
+          "head_natural_grad_eps": float(args.head_natural_grad_eps),
+          "active": sorted(n for n, on in (
+              ("seg_focal_gamma", args.seg_focal_gamma > 0.0),
+              ("fisher_density_weight", args.fisher_density_weight > 0.0),
+              ("head_natural_grad", args.head_natural_grad == "on"),
+              ("tau_softplus_tau_nondefault", float(args.tau_softplus_tau) != 0.3)) if on),
+          "seg_form_start": cfg.seg_form_start,
+          "reachable_seg_forms": sorted(reachable_seg_forms(cfg.seg_form_start)),
+          "note": "PORT of make_loss_fn parameters this trainer already imports but never passed "
+                  "(retired-trainer levers SegFocalGamma / FisherDensityWeight / "
+                  "HeadNaturalGradient + the tau_softplus scalar). focal + fisher fold into "
+                  "seg_pixel_w and natural-grad transforms seg_logits, so ALL of them are honored "
+                  "by every seg form including tau_softplus -- unlike --margin-weighted-loss. "
+                  "Args-only => config_hash flag-invariant. score_claim=False",
+          "score_claim": False})
 
     model = build_module(cfg)
     mx.eval(model.parameters())

@@ -1,0 +1,108 @@
+{
+  "ALL_CHECKS_PASS": true,
+  "arm": "ddm_pt2",
+  "checks": {
+    "fisher_exact_law": true,
+    "fisher_real_leg_allocators_agree": true,
+    "focal_mutation_control_fails": true,
+    "focal_prediction": true,
+    "ng_backward_changed": true,
+    "ng_forward_identity": true,
+    "tau_concentration_monotone": true
+  },
+  "control_tau_softplus_loss_unweighted": 0.002070050686597824,
+  "fisher_density": {
+    "EXACT_LAW_HOLDS": true,
+    "REAL_LEG_ALLOCATORS_AGREE_IN_DIRECTION": true,
+    "REGIME_LEG_IS_VACUOUS_ON_THIS_INPUT": true,
+    "blend": 1.0,
+    "exact_law_rel_err_source_gt": 4.5698142519025566e-07,
+    "loss_changed": true,
+    "off_loss": 0.002070050686597824,
+    "on_loss_source_model": 0.0326770581305027,
+    "real_leg_n_px": 28087,
+    "real_leg_spearman_focal_vs_fisher": 0.9157407389495587,
+    "regime_leg_closed_form_fisher_trace_at_m_0.05_0.5_2_6": [
+      0.4996876301529275,
+      0.470007424403189,
+      0.20998717080701304,
+      0.004933018582720096
+    ],
+    "regime_leg_closed_form_focal_at_p_y_0.9_0.5_0.2_0.02": [
+      0.009999999999999995,
+      0.25,
+      0.6400000000000001,
+      0.9603999999999999
+    ],
+    "regime_leg_denominator_px": 196608,
+    "regime_leg_median_abs_margin_of_wrong": 0.04296875,
+    "regime_leg_min_p_y_on_field": 0.3376924693584442,
+    "regime_leg_n_argmax_wrong_px": 189,
+    "regime_leg_n_confidently_wrong_px": 0,
+    "regime_leg_note": "FUNCTION-DOMAIN evaluation of the two closed forms, NOT a measurement on this vehicle: focal rises monotonically as p_y falls (up-weighting confidently-wrong px) while tr g falls monotonically as |m| grows (down-weighting them). Settling the COMPOSITION question needs a real mid-training TR1 logit field, which is a scorer pass this arm does not hold. Duty-to-measure, named rather than implied.",
+    "regime_leg_vacuity_reason": "the b2b solve field contains NO confidently-wrong pixels (min p_y 0.3377; all 189 wrong pixels are marginal), so the focal-vs-Fisher disagreement regime is absent from this input. Reported VACUOUS with its denominator rather than scored as pass or fail."
+  },
+  "focal": {
+    "MUTATION_CONTROL_FAILS_AS_REQUIRED": true,
+    "PREDICTION_HOLDS": true,
+    "closed_form_ratio_predicted": 5.828167856911435,
+    "gamma": 2.0,
+    "loss_changed": true,
+    "mutation_all_ones_rel_err": 0.8284194922742089,
+    "observed": 5.828067302703857,
+    "off_loss": 0.002070050686597824,
+    "on_loss": 0.07754819095134735,
+    "rel_err": 1.725314199009054e-05,
+    "weight_max": 85.16866302490234,
+    "weight_mean": 0.9999980926513672,
+    "weight_min": 4.0064051631816255e-08
+  },
+  "head_natural_grad": {
+    "BACKWARD_IS_CHANGED": true,
+    "FORWARD_IS_IDENTITY": true,
+    "forward_max_abs_diff": 0.0,
+    "grad_cosine_vs_euclidean": 0.9936022314774227,
+    "grad_max_abs_diff": 6.102555289544398e-06,
+    "note": "BOTH legs are required. Forward-identity alone would be satisfied by a no-op; a changed backward alone would not be the claimed forward-identity preconditioner."
+  },
+  "inputs": {
+    "gt": "experiments/results/mlx_fleet_gt_cache/gt_n96.npz",
+    "logits": "/Volumes/VertigoDataTier/pact/ddm_b2b_qa75_field_20260730/pair-000000.npz",
+    "note": "REAL cached SegNet logit field + REAL GT argmax/margin; no scorer forward is performed by this script",
+    "shape": [
+      1,
+      384,
+      512,
+      5
+    ]
+  },
+  "pair": 0,
+  "score_claim": false,
+  "tau_softplus_tau": {
+    "CONCENTRATION_MONOTONE_DECREASING_IN_TAU": true,
+    "LOSS_RESPONDS_TO_TAU": true,
+    "losses": [
+      0.00011634624388534576,
+      0.0005782203515991569,
+      0.002070050686597824,
+      0.007764923386275768,
+      0.023623879998922348
+    ],
+    "note": "PREDICTION: smaller tau => the surrogate approaches the hard top-2 margin => a LARGER share of gradient magnitude sits in the separatrix band. Monotonicity is the falsifiable part; the loss merely moving is not.",
+    "separatrix_band": "|live signed margin| < 1.0",
+    "separatrix_grad_share": [
+      1.0,
+      0.9985582232475281,
+      0.9584347605705261,
+      0.7781617045402527,
+      0.5006501078605652
+    ],
+    "taus": [
+      0.05,
+      0.15,
+      0.3,
+      0.6,
+      1.0
+    ]
+  }
+}
