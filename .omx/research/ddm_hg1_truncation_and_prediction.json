@@ -1,0 +1,299 @@
+{
+ "probe": "hg1_probe3_truncation_and_prediction",
+ "advisory": "[macOS-numpy advisory . NON-PROMOTABLE] pointer 0.1910828242 UNMOVED",
+ "profile_source": "ddm_hg1_signed_depth_profile_n600.json (GT, n600, vehicle-independent)",
+ "flip_rate_source": "q1_signed_asymmetry.json (WITNESS vehicle, 96 frames -- caveat travels)",
+ "truncation_ledger": {
+  "0->1": {
+   "from": "Road",
+   "to": "Lane",
+   "n_pixels": 16355233,
+   "n_at_depth1": 862273,
+   "depth_where_pop_below_1pct": null,
+   "depth_where_pop_below_0.1pct": null,
+   "barrier_integral_to_1pct": 51.262785838605666,
+   "margin_d1": 0.739088391925835
+  },
+  "0->2": {
+   "from": "Road",
+   "to": "Undrivable",
+   "n_pixels": 1406205,
+   "n_at_depth1": 284173,
+   "depth_where_pop_below_1pct": null,
+   "depth_where_pop_below_0.1pct": null,
+   "barrier_integral_to_1pct": 33.262539679493244,
+   "margin_d1": 0.49504649010893204
+  },
+  "0->3": {
+   "from": "Road",
+   "to": "Movable",
+   "n_pixels": 911958,
+   "n_at_depth1": 86714,
+   "depth_where_pop_below_1pct": null,
+   "depth_where_pop_below_0.1pct": null,
+   "barrier_integral_to_1pct": 49.51370126670325,
+   "margin_d1": 0.390703075929253
+  },
+  "0->4": {
+   "from": "Road",
+   "to": "MyCar",
+   "n_pixels": 8733650,
+   "n_at_depth1": 316256,
+   "depth_where_pop_below_1pct": null,
+   "depth_where_pop_below_0.1pct": null,
+   "barrier_integral_to_1pct": 58.387262126645545,
+   "margin_d1": 0.483635296959358
+  },
+  "1->0": {
+   "from": "Lane",
+   "to": "Road",
+   "n_pixels": 683786,
+   "n_at_depth1": 608532,
+   "depth_where_pop_below_1pct": 4,
+   "depth_where_pop_below_0.1pct": 5,
+   "barrier_integral_to_1pct": 5.101753624385484,
+   "margin_d1": 0.5926524452448305
+  },
+  "1->2": {
+   "from": "Lane",
+   "to": "Undrivable",
+   "n_pixels": 398,
+   "n_at_depth1": 392,
+   "depth_where_pop_below_1pct": null,
+   "depth_where_pop_below_0.1pct": null,
+   "barrier_integral_to_1pct": 0.6741352321035197,
+   "margin_d1": 0.35730100088581745
+  },
+  "1->3": {
+   "from": "Lane",
+   "to": "Movable",
+   "n_pixels": 231,
+   "n_at_depth1": 231,
+   "depth_where_pop_below_1pct": null,
+   "depth_where_pop_below_0.1pct": null,
+   "barrier_integral_to_1pct": 0.3446210901458542,
+   "margin_d1": 0.3446210901458542
+  },
+  "1->4": {
+   "from": "Lane",
+   "to": "MyCar",
+   "n_pixels": 6224,
+   "n_at_depth1": 3801,
+   "depth_where_pop_below_1pct": 5,
+   "depth_where_pop_below_0.1pct": 5,
+   "barrier_integral_to_1pct": 7.948431135375209,
+   "margin_d1": 0.7770554350727766
+  },
+  "2->0": {
+   "from": "Undrivable",
+   "to": "Road",
+   "n_pixels": 33473082,
+   "n_at_depth1": 290058,
+   "depth_where_pop_below_1pct": null,
+   "depth_where_pop_below_0.1pct": null,
+   "barrier_integral_to_1pct": 51.81189590482397,
+   "margin_d1": 0.5193221240347802
+  },
+  "2->1": {
+   "from": "Undrivable",
+   "to": "Lane",
+   "n_pixels": 56058,
+   "n_at_depth1": 1308,
+   "depth_where_pop_below_1pct": null,
+   "depth_where_pop_below_0.1pct": null,
+   "barrier_integral_to_1pct": 50.70266834832956,
+   "margin_d1": 0.5530373480068435
+  },
+  "2->3": {
+   "from": "Undrivable",
+   "to": "Movable",
+   "n_pixels": 24884141,
+   "n_at_depth1": 100429,
+   "depth_where_pop_below_1pct": null,
+   "depth_where_pop_below_0.1pct": null,
+   "barrier_integral_to_1pct": 37.9090418733267,
+   "margin_d1": 0.34970027484988425
+  },
+  "3->0": {
+   "from": "Movable",
+   "to": "Road",
+   "n_pixels": 773696,
+   "n_at_depth1": 88112,
+   "depth_where_pop_below_1pct": null,
+   "depth_where_pop_below_0.1pct": null,
+   "barrier_integral_to_1pct": 55.0397228661427,
+   "margin_d1": 0.3903432794717559
+  },
+  "3->1": {
+   "from": "Movable",
+   "to": "Lane",
+   "n_pixels": 9498,
+   "n_at_depth1": 1047,
+   "depth_where_pop_below_1pct": null,
+   "depth_where_pop_below_0.1pct": null,
+   "barrier_integral_to_1pct": 48.44357251100149,
+   "margin_d1": 0.5444587327347785
+  },
+  "3->2": {
+   "from": "Movable",
+   "to": "Undrivable",
+   "n_pixels": 675421,
+   "n_at_depth1": 91629,
+   "depth_where_pop_below_1pct": null,
+   "depth_where_pop_below_0.1pct": null,
+   "barrier_integral_to_1pct": 51.308650051055224,
+   "margin_d1": 0.33839112383840614
+  },
+  "3->4": {
+   "from": "Movable",
+   "to": "MyCar",
+   "n_pixels": 1710,
+   "n_at_depth1": 142,
+   "depth_where_pop_below_1pct": null,
+   "depth_where_pop_below_0.1pct": null,
+   "barrier_integral_to_1pct": 36.12784995500873,
+   "margin_d1": 0.37611620946669244
+  },
+  "4->0": {
+   "from": "MyCar",
+   "to": "Road",
+   "n_pixels": 29540458,
+   "n_at_depth1": 317708,
+   "depth_where_pop_below_1pct": null,
+   "depth_where_pop_below_0.1pct": null,
+   "barrier_integral_to_1pct": 55.29074891165693,
+   "margin_d1": 0.48580438040167534
+  },
+  "4->1": {
+   "from": "MyCar",
+   "to": "Lane",
+   "n_pixels": 440302,
+   "n_at_depth1": 4862,
+   "depth_where_pop_below_1pct": null,
+   "depth_where_pop_below_0.1pct": null,
+   "barrier_integral_to_1pct": 58.16813000859452,
+   "margin_d1": 0.7614904155166293
+  },
+  "4->3": {
+   "from": "MyCar",
+   "to": "Movable",
+   "n_pixels": 12749,
+   "n_at_depth1": 151,
+   "depth_where_pop_below_1pct": null,
+   "depth_where_pop_below_0.1pct": null,
+   "barrier_integral_to_1pct": 28.769499289823703,
+   "margin_d1": 0.4025894585034705
+  }
+ },
+ "p1_rows": [
+  {
+   "side": "0->1 Road->Lane",
+   "flip_rate": 0.0448447667878905,
+   "margin_d1": 0.739088391925835,
+   "mean_depth": 9.062434857080182,
+   "shell_fraction": 0.045654975001683876,
+   "barrier_integral": 51.262785838605666
+  },
+  {
+   "side": "0->2 Road->Undrivable",
+   "flip_rate": 0.06130848040763444,
+   "margin_d1": 0.49504649010893204,
+   "mean_depth": 9.062434857080182,
+   "shell_fraction": 0.045654975001683876,
+   "barrier_integral": 33.262539679493244
+  },
+  {
+   "side": "0->3 Road->Movable",
+   "flip_rate": 0.13164920242942002,
+   "margin_d1": 0.390703075929253,
+   "mean_depth": 9.062434857080182,
+   "shell_fraction": 0.045654975001683876,
+   "barrier_integral": 49.51370126670325
+  },
+  {
+   "side": "1->0 Lane->Road",
+   "flip_rate": 0.2625051864828731,
+   "margin_d1": 0.5926524452448305,
+   "mean_depth": 1.1342452424493839,
+   "shell_fraction": 0.7504325704166721,
+   "barrier_integral": 5.101753624385484
+  },
+  {
+   "side": "2->0 Undrivable->Road",
+   "flip_rate": 0.05835261204067359,
+   "margin_d1": 0.5193221240347802,
+   "mean_depth": 11.607266128399807,
+   "shell_fraction": 0.005680780026720293,
+   "barrier_integral": 51.81189590482397
+  },
+  {
+   "side": "2->3 Undrivable->Movable",
+   "flip_rate": 0.10532665741690293,
+   "margin_d1": 0.34970027484988425,
+   "mean_depth": 11.607266128399807,
+   "shell_fraction": 0.005680780026720293,
+   "barrier_integral": 37.9090418733267
+  },
+  {
+   "side": "3->0 Movable->Road",
+   "flip_rate": 0.1279916753381894,
+   "margin_d1": 0.3903432794717559,
+   "mean_depth": 7.267165185831921,
+   "shell_fraction": 0.09730847585297793,
+   "barrier_integral": 55.0397228661427
+  },
+  {
+   "side": "3->2 Movable->Undrivable",
+   "flip_rate": 0.16364753950175362,
+   "margin_d1": 0.33839112383840614,
+   "mean_depth": 7.267165185831921,
+   "shell_fraction": 0.09730847585297793,
+   "barrier_integral": 51.308650051055224
+  }
+ ],
+ "p1_spearman_vs_flip_rate": {
+  "margin_d1": -0.40476190476190477,
+  "mean_depth": -0.5238095238095238,
+  "shell_fraction": 0.8571428571428571,
+  "barrier_integral": -0.2619047619047619
+ },
+ "p1_n_sides": 8,
+ "p1_verdict": {
+  "best_predictor": "shell_fraction",
+  "best_abs_spearman": 0.8571428571428571,
+  "registered_refutation_band": "|rs| < 0.5 for ALL four => P1 REFUTED",
+  "refuted": false
+ },
+ "flip_rate_asymmetry_ratios": {
+  "Road<->Lane": {
+   "rate_0->1": 0.0448447667878905,
+   "rate_1->0": 0.2625051864828731,
+   "asymmetry_ratio_max_over_min": 5.8536414677878925,
+   "erosion_favours": "1->0"
+  },
+  "Road<->Undrivable": {
+   "rate_0->2": 0.06130848040763444,
+   "rate_2->0": 0.05835261204067359,
+   "asymmetry_ratio_max_over_min": 1.0506552879740931,
+   "erosion_favours": "0->2"
+  },
+  "Road<->Movable": {
+   "rate_0->3": 0.13164920242942002,
+   "rate_3->0": 0.1279916753381894,
+   "asymmetry_ratio_max_over_min": 1.0285762888997776,
+   "erosion_favours": "0->3"
+  },
+  "Road<->MyCar": {
+   "rate_0->4": 0.04574810038238099,
+   "rate_4->0": 0.02929942511936081,
+   "asymmetry_ratio_max_over_min": 1.5613992491665318,
+   "erosion_favours": "0->4"
+  },
+  "Undrivable<->Movable": {
+   "rate_2->3": 0.10532665741690293,
+   "rate_3->2": 0.16364753950175362,
+   "asymmetry_ratio_max_over_min": 1.5537143541354925,
+   "erosion_favours": "3->2"
+  }
+ }
+}

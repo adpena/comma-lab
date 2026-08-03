@@ -1,0 +1,73 @@
+{
+ "probe": "hg1_probe4_f2_scaling_law",
+ "advisory": "[macOS-numpy advisory . NON-PROMOTABLE] pointer 0.1910828242 UNMOVED",
+ "geometry_source": "ddm_sx1_separatrix_geometry_n600.json (GT n600)",
+ "flip_source": "q1_signed_asymmetry.json (WITNESS vehicle, 96 frames -- caveat travels)",
+ "rows": [
+  {
+   "class": "Road",
+   "area": 27407046,
+   "perimeter": 1512234,
+   "mean_width_2A_over_P": 36.24709667948214,
+   "flips_out": 27227,
+   "flips_per_perimeter": 0.01800448872330605,
+   "flips_per_area": 0.0009934306674276388
+  },
+  {
+   "class": "Lane",
+   "area": 690639,
+   "perimeter": 822062,
+   "mean_width_2A_over_P": 1.6802601263651646,
+   "flips_out": 28564,
+   "flips_per_perimeter": 0.03474677092482076,
+   "flips_per_area": 0.04135879960442431
+  },
+  {
+   "class": "Undrivable",
+   "area": 58413281,
+   "perimeter": 391284,
+   "mean_width_2A_over_P": 298.5722953149119,
+   "flips_out": 8937,
+   "flips_per_perimeter": 0.02284018768975987,
+   "flips_per_area": 0.00015299602842031764
+  },
+  {
+   "class": "Movable",
+   "area": 1460325,
+   "perimeter": 191306,
+   "mean_width_2A_over_P": 15.266902240389742,
+   "flips_out": 8102,
+   "flips_per_perimeter": 0.0423509978777456,
+   "flips_per_area": 0.005548080050673651
+  },
+  {
+   "class": "MyCar",
+   "area": 29993509,
+   "perimeter": 322948,
+   "mean_width_2A_over_P": 185.74822572054944,
+   "flips_out": 3082,
+   "flips_per_perimeter": 0.009543332053457523,
+   "flips_per_area": 0.00010275556621267622
+  }
+ ],
+ "cv_flips_per_perimeter": 0.4598395904978611,
+ "cv_flips_per_area": 1.6603249128764141,
+ "winning_model": "perimeter",
+ "lane_z_under_winning_model": 0.9598531288355973,
+ "f2_verdict": {
+  "registered": "REFUTED if Lane's flip count is better explained by interface length than by area",
+  "refuted": true
+ },
+ "road_lane_edge": {
+  "rate_Road_to_Lane": 0.0448447667878905,
+  "rate_Lane_to_Road": 0.2625051864828731,
+  "rate_asymmetry": 5.8536414677878925,
+  "annulus_pop_Road_side": 289822,
+  "annulus_pop_Lane_side": 108455,
+  "annulus_population_imbalance": 2.672278825319257,
+  "flips_Road_to_Lane": 12997,
+  "flips_Lane_to_Road": 28470,
+  "flip_mass_asymmetry": 2.1905055012695236,
+  "Lane_to_Road_share_of_edge": 0.6865700436491669
+ }
+}
