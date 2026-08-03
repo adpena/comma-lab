@@ -31,9 +31,23 @@ flip damage as the PRIMARY key with bytes only as a tie-break
 (`ddm_wr1_reverse_waterfill.py:93`, `np.lexsort((-residual_mass, flip_mass))`) — but the key is
 computed on the **wrong support**: it prices a cell's drop by the ambient flips inside that
 cell's own **16x16 tile (256 px)**, while the **MEASURED** receptive field of a cell drop in the
-SegNet's own input plane is **84 x 82 px = 6,192 px, 24.2x larger**. The 486-cell tranche wr1
-ships as *"safe-floor (all zero-flip)"* is therefore a claim about a support that is not the one
-the drop perturbs.
+SegNet's own input plane is **84 x 82 px = 6,192 px, 24.2x larger**, so **144 of the 486 cells it
+ships as the *"safe-floor (all zero-flip)"* tranche have ambient flips inside the region their
+own drop perturbs.**
+
+**What is in hand, in one screen:**
+
+| # | finding | status |
+|---|---|---|
+| 1 | `#766` already ranks by flip damage; the charter's premise is refuted at source | **MEASURED** (§1.1) |
+| 2 | its damage key's support is **24.2x too small**; **144 of 486** "provably safe" cells are not, monotone in the RF estimate, `half = 0` reproduces wr1 exactly | **MEASURED** (§1.2, §4 R1-a) |
+| 3 | its byte tie-break `residual_mass` correlates only **rho 0.513** with the real per-cell byte marginal (384 exact re-encodes) | **MEASURED** (§1.2c) |
+| 4 | an endpoint-FREE thin-margin key agrees with the corrected key at **rho 0.99** and with wr1's at 0.89 — two disjoint instruments, same verdict | **MEASURED** (§1.4) |
+| 5 | a byte-matched ordering **A/B is BUILT and byte-closed** (274,631 B vs 274,321 B); at equal bytes arm B is lower on BOTH halves of flip damage — **27.9% less** ambient flip mass and **11.3% fewer** perturbed scorer pixels | **BUILT + QUEUED** (§2.3-§2.5) |
+| 6 | `br1`'s `cell_drop63` byte leg is for a **different cell set**: gr1's own ordering saves **79,177 B**, not 72,544 | **MEASURED** (§2.1) |
+| 7 | `br1`'s owed equations leg paid: 3 canonical equations + 31 behaviour tests | **LANDED** (§3) |
+| 8 | the full per-cell n600 DRIVE sweep **died silently at 24/36 groups**; reported with both root causes (loop-end-only save, self-matching liveness probe) | **HONEST NEGATIVE** (§1.6) |
+| 9 | **the exact pointer did NOT move.** 0.1910828242 [contest-CPU] UNMOVED. Nothing here is a score. | — |
 
 **NEXT-IF-RESUMED** — see §9. Written incrementally.
 
@@ -274,11 +288,33 @@ byte marginal is flat and activity-uncorrelated, *every* cheap scalar anyone has
 lattice unit — bytes, activity — is measured to carry no ranking information. The information
 is in the drive x susceptibility product, and both factors have to be measured.
 
-The n600 sweep (36 disjoint-support groups, 384 live cells, `rs2_drive_sweep.py`) is running.
-Disjointness is VERIFIED per group, not assumed: the per-group leak (whole-plane L1 minus the
-sum of per-cell box L1s) is reported for every group and is **|leak| < 1.3 against per-group
-totals of order 1e8, i.e. ~1e-8 relative** — the boxes capture the perturbation to within float32
-summation noise, but the check is reported rather than the claim asserted.
+### §1.6 The full per-cell n600 sweep **DIED SILENTLY at 24 of 36 groups. Reported, not hidden.**
+
+The 36-group disjoint-support sweep (`rs2_drive_sweep.py`) ran 24 groups over 1,901 s and then
+**vanished with no traceback, no receipt, and no per-cell data.** Two failures caused it, both
+mine, both worth more than the data would have been:
+
+1. **Loop-end-only saving.** The script wrote its `cell_drive.npz` once, after all 36 groups.
+   CLAUDE.md forbids exactly this ("Loop-end-only saving is FORBIDDEN"), and it cost 32 minutes
+   of completed work that no artifact preserves. **A per-group append would have cost 3 lines.**
+2. **My liveness probe could not return the negative.** I checked the job with
+   `pgrep -f rs2_drive_sweep`, which matched **my own watcher shells** — their command lines
+   contain the script name. It reported ALIVE for minutes after the process was gone, with an
+   RSS of 3.3 MB for a job that should hold 1.35 GB. I only caught it by noticing the RSS was
+   impossible. **The fix is to anchor liveness on the EXEC form**
+   (`ps -eo args | awk '/[r]s2_..\.py/ && /python/'`) or on a receipt row, never on a pattern
+   that the watcher itself matches. This is the campaign's named
+   *"a probe that cannot return the NEGATIVE"* class, and it bit me inside the memo that cites it.
+
+**What survives, from the console log:** 24 groups, 240 live cells covered, per-group disjointness
+leaks in **[-1.83, +1.19] L1 against per-group totals of order 1e8 (~1e-8 relative)** — so the
+box decomposition is sound to float32 summation noise. Per-group wall time 60-103 s.
+
+**What I did instead of a 45-minute re-run** (per §3 of the operating manual: rank by what a
+silent error would damage, and by what actually decides). The per-cell DRIVE map was a
+nice-to-have. The DRIVE number that **decides the queued gate** is the two arms against each
+other at n600, which is 3 x 600 renders and ~5 minutes — measured in §2.3b, checkpointed per
+chunk, and with the liveness probe anchored correctly this time.
 
 ---
 
@@ -315,7 +351,7 @@ priors already bracket it:
 | prior | measurement | realized B/flip | vs `W` = 1.2731 |
 |---|---|---:|---|
 | `ddm_ba31` drop-more | **n600** | 0.6498 | **0.51x -> dominated 1.96x** |
-| `ddm_gr1` cell sweep | **n48** `cell_drop50` d_seg 0.003947 -> `cell_drop63` 0.0050128 | 0.630 | **0.49x -> dominated 2.03x** |
+| `ddm_gr1` cell sweep | **n48** `cell_drop50` d_seg 0.003947 -> `cell_drop63` 0.0050128 | 0.6298 | **0.49x -> dominated 2.02x** |
 
 `gr1`'s row is a direct read on the exact question (`gr1_sweep_cell_n48_receipt.json`):
 `dd_seg = 0.0010658` over the knee, i.e. **125,732 n600-equivalent flips** against the 62,192-flip
@@ -358,6 +394,30 @@ a bare `archive.zip`. Assembling that tree — `archive/0.bin` + `inflate.sh` + 
 runner + its flat dependencies — is the one remaining build step, and both halves of it are
 named in §2.5. I am not claiming the gate is a single command; I am claiming the bytes are
 final and proved.
+
+### §2.3b The DRIVE side of the A/B, measured — arm B perturbs **11.3% fewer scorer pixels**
+
+The ambient-flip difference in §2.3 is a SUSCEPTIBILITY signal. The DRIVE signal is independent
+and I measured it directly: render base, A and B through the real receiver and count the scorer
+pixels whose input actually changed.
+
+| sample | pairs | B/A perturbed scorer px | B/A drive L1 |
+|---|---|---:|---:|
+| **scattered** (pairs 0, 137, 299, 411, 577 — spread across the clip) | 5 | **0.8890** | — |
+| **prefix** (pairs 0-249, checkpointed) | 250 | **0.8874** | 0.9665 |
+
+**Neither is an n600 claim** — the second is a video-order PREFIX, which the campaign's own law
+says is a different population. But the law also names the cure: compare the subset against
+another sample of the same quantity. **A scattered 5-pair sample and a 250-pair prefix agree to
+0.2% (0.8890 vs 0.8874), and the prefix's running value is flat to <0.1% across 50/100/150/200/250
+pairs.** So this particular ratio is measured to be insensitive to which pairs you take, which is
+the evidence the prefix trap demands before a subset number may be quoted at all.
+
+**Read together with §2.3:** at equal bytes (arm B is 310 B *cheaper*), arm B is lower on BOTH
+halves of flip damage — **27.9% less** ambient flip mass in the real support, **11.3% fewer**
+perturbed scorer pixels. Two independent instruments, same direction. That is the strongest
+scorer-free case that can be made for the corrected ordering, and it is still not a flip count:
+converting it needs the scorer, which is §2.4's gate.
 
 ### §2.4 THE PRE-REGISTERED GATE  (written before any scorer runs)
 
@@ -543,12 +603,50 @@ Recorded as a bound rather than waved away: it means the seg leg is reproducible
 which is **375x smaller** than the ~62,000-flip decision thresholds in §2.4, so it is immaterial
 to the gate and material to anyone quoting `d_seg` to six figures.
 
-### Round 3
+### R3-a — the A/B does NOT test the wr1 finding. **SCOPE CORRECTION.**
 
-Not run. **This memo is at 0 consecutive clean passes** — round 1 found four things and round 2
-found three more, which per the bug-class-spread prior is evidence more exist. Every §2 verdict
-is PROVISIONAL by construction anyway (the realized flip cost is unmeasured); the three §2.4
-falsifiers are the mechanism that converts them.
+A reader could conflate two different things, so state them apart:
+
+* **§1's finding is about `wr1`'s tile key** and is established by direct measurement
+  (486 -> 342 zero-flip cells, monotone in RF half-width). It needs no A/B.
+* **The §2 A/B pits `gr1`'s GRADIENT key (arm A) against the RF-corrected key (arm B)** — because
+  `gr1`'s key is the one that actually selected the live base and the one `na1` P0-2 asks about.
+  `gr1`'s key is **support-correct by construction** (backprop carries the receptive field), so
+  the A/B is NOT a support test; it tests **a first-order linearisation of a large discrete step
+  against realized flip proximity.** That is a well-posed and separately useful question, but it
+  is not the same question as §1's.
+
+### R3-b — "27.9% less flip mass" is a RELATIVE index, not a flip count
+
+RF boxes overlap (84 px footprints on a 16 px pitch), so summing ambient flips over a cell set's
+boxes double-counts: the knee-A set's RF sum is 1,585,454 against 458,738 total flips in the clip
+— a ratio of **3.46**, which is the overlap, not a paradox. **Both arms are summed identically,
+so the 27.9% RATIO is meaningful and the absolute is not a flip count.** The §2.4 prediction that
+scales arm A's flips by that ratio inherits the proxy assumption and is labelled accordingly.
+
+### R3-c — NO-OP DETECTOR: the dropped bytes are actually consumed. MEASURED.
+
+An archive that parses and renders is not yet an archive that *differs*. Rendering base, A and B
+through the real receiver on 5 pairs (0, 137, 299, 411, 577) and differencing in the scorer plane:
+
+| pair of arms | max abs delta (LSB) | mean abs delta | scorer px changed |
+|---|---:|---:|---:|
+| base vs **A** | 172.8 | 2.647 | **576,040** / 983,040 (58.6%) |
+| base vs **B** | 175.4 | 2.531 | **512,053** / 983,040 (52.1%) |
+| **A** vs **B** | 150.1 | 1.456 | 429,364 / 983,040 (43.7%) |
+
+Catalog #105 satisfied: the bytes are structurally consumed and the two arms are genuinely
+distinct objects, not a repack. **Bonus, and it points the same way as §2.3:** at equal bytes
+arm B perturbs **11.1% fewer scorer pixels** than arm A — an independent DRIVE-side signal
+agreeing with the 27.9% susceptibility-side signal.
+
+### Round 3 verdict, and the honest counter
+
+Round 3 found three more things. **The counter stands at 0 consecutive clean passes.** Rounds 1,
+2 and 3 found 4 + 3 + 3 = **10 items**, which per the bug-class-spread prior is evidence more
+exist, not that the surface is clean. Every §2 verdict is PROVISIONAL by construction anyway —
+the realized flip cost is unmeasured — and the three §2.4 falsifiers are the mechanism that
+converts them. **I am not declaring a SEAL.**
 
 ---
 
@@ -557,6 +655,11 @@ falsifiers are the mechanism that converts them.
 | assumption | classification | note |
 |---|---|---|
 | `#766` ranks flip damage PRIMARY, bytes as tie-break | **VERIFIED_VIA_SOURCE_INSPECTION** | `ddm_wr1_reverse_waterfill.py:87-93,257` |
+| `gr1`'s key is a TRUE backprop gradient, so support-correct | **VERIFIED_VIA_SOURCE_INSPECTION** | `ddm_gr1_granularity_rerace.py:140-168`: `nn.value_and_grad` over a loss that renders and runs the real SegNet adapter; `grads["tokens_delta"]` |
+| every key here is POSE-BLIND | **VERIFIED_VIA_SOURCE_INSPECTION** | `ddm_gr1_granularity_rerace.py:151` `compute_pose=False`; my ambient/thin-margin keys are SegNet-only by construction |
+| `gr1`'s key is a smoothed SURROGATE of the flip count | **VERIFIED_VIA_SOURCE_INSPECTION** | `:142,150` `seg_loss="tau_softplus"` — a gradient of a smoothed proxy for a discontinuous count, which is a third proxy layer on top of the linearisation |
+| my `D` is the frozen scorer downsample | **VERIFIED_VIA_SOURCE_INSPECTION** + executed | matches `F.interpolate(..., bilinear, align_corners=False, antialias=False)` to 0.0101 of 255 |
+| the A/B arms are not a repack (bytes are consumed) | **VERIFIED_VIA_EMPIRICAL_ANCHOR** | no-op detector §4 R3-c: 512k-576k of 983k scorer px changed |
 | wr1 attributes flips to the cell's own 16x16 tile | **VERIFIED_VIA_SOURCE_INSPECTION** | `:89` |
 | a cell drop perturbs 84x82 = 6,192 scorer px | **VERIFIED_VIA_EMPIRICAL_ANCHOR** | real receiver + frozen `D`, cell (13,17); per-cell distribution in flight |
 | the live base is `gr1`'s `cell_drop50` | **VERIFIED_VIA_SOURCE_INSPECTION** | reproduced ordering matches `qa24_grid_keep_mask_50.npy` 768/768 AND the shipped lattice's live set |
@@ -582,8 +685,36 @@ overlap graph rather than per cell — is the untested direction §1.5's per-cel
 ## §9 — NEXT-IF-RESUMED
 
 1. **Do not "fix" the waterfill to rank by flips.** It already does (`ddm_wr1:93`). The fix is
-   the SUPPORT: replace `(y//16)*32 + (x//16)` binning with a receptive-field box sum. That is a
-   ~5-line change and the measured RF half-width is 34 px.
+   the SUPPORT. I did **not** land it in `experiments/ddm_wr1_reverse_waterfill.py` for one
+   stated reason: a sister session holds uncommitted edits in
+   `experiments/ddm_tw1_token_waterfill_state_dependence.py`, which **consumes wr1's
+   `drop_rank`**, so silently changing the ranking under it is the collision the guards exist to
+   prevent. The patch is written out here so applying it is mechanical, and `rf_half = 0`
+   reproduces today's behaviour **exactly** (verified: half=0 gives 486 and 0 in §4 R1-a), which
+   makes it a safe default-off lever with this memo as its duty-to-measure record:
+
+   ```python
+   # experiments/ddm_wr1_reverse_waterfill.py :: cell_sensitivity
+   def cell_sensitivity(delta, atlas_flat, *, rf_half: int = 34):   # 0 == today's behaviour
+       ...
+       atlas = np.load(atlas_flat)
+       y = atlas["y"].astype(np.int64)
+       x = atlas["x"].astype(np.int64)
+       dense = np.bincount(y * 512 + x, minlength=384 * 512).reshape(384, 512)
+       ii = np.zeros((385, 513), np.int64)
+       ii[1:, 1:] = dense.cumsum(0).cumsum(1)
+       flip_mass = np.empty(768, np.float64)
+       for r_ in range(24):
+           for c_ in range(32):
+               r0, r1 = max(0, r_ * 16 - rf_half), min(384, (r_ + 1) * 16 + rf_half)
+               c0, c1 = max(0, c_ * 16 - rf_half), min(512, (c_ + 1) * 16 + rf_half)
+               flip_mass[r_ * 32 + c_] = ii[r1, c1] - ii[r0, c1] - ii[r1, c0] + ii[r0, c0]
+   ```
+
+   `:131`'s `dseg_ceiling = REF_DSEG + dropped_flip_mass / TOTAL_PX` must ALSO be revisited: with
+   overlapping RF boxes the summed mass double-counts (§4 R3-b), so it is a relative index, not a
+   d_seg ceiling. And `--knee-a 486` should be re-described: **342** cells are zero-flip on the
+   real support, not 486.
 2. **The gate worth the slot is the byte-matched A/B in §2.3, not `cell_drop63` alone.** Both
    archives are built and byte-closed; the prediction and all three falsifiers are pre-registered
    in §2.4. Whichever way it lands it prices every future drop rung.
@@ -593,8 +724,20 @@ overlap graph rather than per cell — is the untested direction §1.5's per-cel
    endpoint-INDEPENDENT (no borrowed-vehicle caveat), and covers every pixel rather than only
    the already-wrong ones. Prefer it once the A/B calibrates which key predicts realized flips.
 5. **Cell drops are not independent** — 84 px footprints on a 16 px pitch overlap ~5x in each
-   axis. A greedy per-cell waterfill mis-prices the interaction. The per-cell RF map from the
-   n600 sweep is the input to pricing on the overlap graph instead.
+   axis. A greedy per-cell waterfill mis-prices the interaction. The per-cell RF map is the input
+   to pricing on the overlap graph instead; **it is still OWED** (§1.6), and re-running
+   `rs2_drive_sweep.py` needs the two fixes below FIRST or it will lose its work again.
+
+5b. **Two operational lessons, both mine, both cheap to fix and expensive to repeat:**
+   * **Append per group, never at the end.** `rs2_drive_sweep.py` saved once after 36 groups and
+     lost 24 groups of completed n600 work to a silent kill. The sister script
+     `rs2_arm_drive_n600.py` writes a JSONL row per chunk — it was killed twice and lost nothing
+     both times. Three lines of difference.
+   * **Never probe liveness with a pattern your own watcher matches.** `pgrep -f <script>.py`
+     reported ALIVE for minutes after death because the watcher shells' command lines contain the
+     script name. Anchor on the EXEC form or on a receipt/checkpoint row whose mtime advances.
+     Detached jobs on this host are being reaped unpredictably (one survived 31 min, two died
+     inside 2 min), so **assume the kill and checkpoint for it.**
 6. **Owed, and deliberately so:** the `__init__` export + locked-registry `populate_*` for the
    three §3 equations, held back only because a sister session holds those files.
 7. Artifacts: `/Volumes/VertigoDataTier/pact/ddm_rs2_20260803/` —
