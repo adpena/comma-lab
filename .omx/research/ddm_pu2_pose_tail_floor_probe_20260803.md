@@ -170,6 +170,45 @@ as the scene's autocorrelation length. Registration objectives are classically m
 textbook cure is coarse-to-fine or multi-start. The measurement is the predicted behaviour of the
 objective we actually shipped, not an anomaly.
 
+### 4.1b THE ATTRIBUTION INVERTS — pair 74 is SEARCH-LIMITED; pair 523 is the resistant one
+
+**This supersedes `pu1` §5.4's load-bearing inference, and it concerns the pair that carries 30.92% of
+the entire pose axis.** `pu1` wrote: *"pair 74 — 30.92% of all mass — is RIGID (ratio 0.981)… That is
+the signature of a MODEL wall"*, while listing pair 523 (ratio 1.234) among the **responsive** pairs.
+`pu1` labelled that inference `INFERRED`/`PROVISIONAL` and specified this exact probe to settle it.
+Settled, by direct measurement:
+
+| pair | `pz1` proxy ratio | `pu1`'s label | **this probe: floor/shipped** | direct verdict |
+|---:|---:|---|---:|---|
+| **74** | 0.981 | **"RIGID ⇒ model wall"** | **0.4581 (−54.2%)** | **SEARCH-LIMITED — reducible, byte-closed** |
+| 67 | 0.853 | responsive | 0.0252 (−97.5%) | search-limited |
+| 21 | 0.904 | responsive | 0.0159 (−98.4%) | search-limited |
+| **523** | 1.234 | **"responsive"** | **0.9231 (−7.7%)** | **RESISTANT to this search** |
+
+**Two corrections, and they matter differently:**
+
+1. **`pu1`'s MODEL-WALL reading of pair 74 is REFUTED.** A direct search over the shipped knobs cuts it
+   **54.2%**, and the result is byte-closed through the real container (§4.2). The largest single pose
+   target in the campaign is **reachable**, not walled. That is a materially better campaign state than
+   the one on record.
+2. **The pair that actually resists is 523** — `pu1`'s proxy called it responsive. So the proxy's
+   *responsiveness label* (`|ratio − 1|`) does **not** predict search-reducibility; on these two pairs
+   it points the wrong way.
+
+**Why the proxy misled, stated mechanically.** `pz1`'s ratio measures sensitivity to a **frame_1**
+perturbation — a seg-side change resampled into `f0`. My ratio measures reducibility under a direct
+search over the **pose knobs**. These are different perturbation directions, so low sensitivity to one
+never implied unreachability under the other. `pu1` said as much (*"responsiveness to a frame_1
+perturbation does not bound reachability within the pose-parameter family"*) and marked it
+PROVISIONAL; the probe confirms the caution was warranted.
+
+**Scope discipline, against my own headline.** With `n = 4` I do **not** claim the proxy is globally
+anti-correlated — ranked by *raw* ratio the four happen to order much like their direct reducibility.
+The established claim is narrower and sufficient: **`|ratio−1|` mis-ranks 74 and 523, and the
+model-wall verdict drawn from it for pair 74 is refuted.** Pair 523's resistance is scoped
+**INSTANCE-level — resistant to THIS search budget (6 starts × 5 relins)** — and is *not* a proven
+model wall. A wider search on 523 is a named open item (§7).
+
 ### 4.2 The bytes are FREE — measured, and negative
 
 `dim0` is **offset-coded** (`config.pose_dim0_offset = 32.1875`): the member stores an f16 **residual**.
@@ -313,4 +352,36 @@ only the end-to-end eval can, so continuing to review instead of running it woul
 
 ## §7 NEXT-IF-RESUMED
 
-*(filled)*
+**STATE AT LAST WRITE.** Probe running detached (`--mode probe`, 18 pairs: 10 tail + 8 stratified
+controls), resumable via `--resume` off
+`/Volumes/VertigoDataTier/pact/ddm_pu2_20260803/pu2_floor_probe.partial.jsonl`. Completed so far:
+**74, 67, 21, 523**. Instrument, both positive controls, and the byte path are all landed and verified.
+
+**IF I DIE, THE ORDER IS:**
+
+1. `--mode probe --resume` finishes the remaining pairs (~250 s/pair).
+2. `--mode summarize` → n600 S-arithmetic by substituting measured floors into `pz1`'s full array
+   (never extrapolate a tail subset — `#875`).
+3. `--mode bytes` → rebuilds the container, measures the **realised** archive delta for the full
+   changed set, and byte-closes every floor against a fresh `Decoder`.
+4. `experiments/ddm_pu2_stage_and_eval.sh` → the end-to-end `upstream/evaluate.py` n600 row. **This is
+   the only step that closes §6 R1-b (the surrogate gap) — until it runs, every aggregate `ΔS` in this
+   memo is PROVISIONAL.**
+
+**THE STANDING PRIZE, and it is bigger than this arm's charter.** The winning start on pair 74 was
+`gt_target_rot0` — the GT-target pose with rotation dims zeroed — and on pair 21 a *random* restart beat
+the shipped local optimum by 7.1×. The shipped `pj2` solve is under-converged on some pairs and
+basin-trapped on others. **The indicated next unit is an n600 multi-start re-solve of a solver we
+already own**: no new mechanism, no new bytes, and measured *negative* rate on pair 74. Cost estimate
+from measured throughput: a single-start GN is ~30 s/pair ⇒ **~5 h for n600** on this box; the 6-start
+form used here is ~250 s/pair ⇒ ~42 h (parallelisable per pair, and the per-pair jobs are independent).
+Sequencing: **verify the instrument on this 18-pair change FIRST** (step 4), then scale — running a
+5-hour solve against an unverified surrogate is the larger risk.
+
+**OPEN, NAMED:** (a) pair 523 resists at 7.7% under this budget — widen the search before calling it a
+model wall; it is the only genuine model-wall *candidate* found. (b) `st_grid` refit is untested — the
+receiver already reads the table from the counted config (`ms8`), so it is a live and separate lever.
+
+**DO NOT INHERIT:** `pu1` §5.4's "pair 74 is RIGID ⇒ model wall" (**refuted**, §4.1b) · `pu1`'s
+break-even table as this route's economics (measured realised cost is **≤ 0 B**, §4.2) ·
+`|pose − t_p|` as a headroom screen (**refuted**, r² ≈ 0.000, §4.4).
