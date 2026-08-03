@@ -1,0 +1,196 @@
+{
+ "schema": "ddm_pg1_recovery.v1",
+ "utc": "2026-08-03T04:10:13Z",
+ "arm": "ddm_pg1",
+ "base": "ep854",
+ "base_archive": "/Volumes/VertigoDataTier/pact/ddm_cr2_20260801/ep854_v3warp_base_archive.zip",
+ "base_archive_bytes": 283636,
+ "axis": "[macOS-CPU frozen-PoseNet advisory] NON-PROMOTABLE",
+ "score_claim": false,
+ "promotable": false,
+ "n_pairs": 102,
+ "pair_order": "index",
+ "pose_source": "resolve",
+ "repair_bounds": {
+  "relins": 32,
+  "damp_levels": 12,
+  "realized_acceptance": true
+ },
+ "shipped_bounds": {
+  "relins": 4,
+  "damp_levels": 4,
+  "realized_acceptance": false
+ },
+ "mean_d_ctrl": 20.60490230702544,
+ "mean_d_shipped": 10.691252657599886,
+ "mean_d_repair": 9.538215558346698,
+ "sum_d_shipped": 1090.5077710751884,
+ "sum_d_repair": 972.8979869513632,
+ "recovered_vs_shipped": 117.6097841238252,
+ "recovered_frac_of_shipped": 0.10784864376332466,
+ "pairs_repair_better": 73,
+ "pairs_repair_equal": 3,
+ "pairs_repair_worse": 26,
+ "monotone_vs_ctrl_repair": true,
+ "monotone_vs_ctrl_shipped": false,
+ "stop_census_shipped": {
+  "relin_cap": 55,
+  "damp_cap": 43,
+  "converged": 4
+ },
+ "stop_census_repair": {
+  "converged": 102
+ },
+ "mean_n_pose6_shipped": 23.284313725490197,
+ "mean_n_pose6_repair": 36.03921568627451,
+ "cost_ratio_evals": 1.5477894736842104,
+ "wall_shipped_s": 1465.6801567077637,
+ "wall_repair_s": 2283.3878552913666,
+ "recovery_curve_repair": [
+  {
+   "relin": 0,
+   "mean_d_pose": 20.60490230702544,
+   "sum_d_pose": 2101.700035316595,
+   "n_pairs": 102,
+   "n_still_descending": 102
+  },
+  {
+   "relin": 1,
+   "mean_d_pose": 15.714241364567872,
+   "sum_d_pose": 1602.852619185923,
+   "n_pairs": 102,
+   "n_still_descending": 102
+  },
+  {
+   "relin": 2,
+   "mean_d_pose": 11.536042059825249,
+   "sum_d_pose": 1176.6762901021755,
+   "n_pairs": 102,
+   "n_still_descending": 99
+  },
+  {
+   "relin": 3,
+   "mean_d_pose": 10.408464770872913,
+   "sum_d_pose": 1061.6634066290371,
+   "n_pairs": 102,
+   "n_still_descending": 90
+  },
+  {
+   "relin": 4,
+   "mean_d_pose": 9.718705417629419,
+   "sum_d_pose": 991.3079525982008,
+   "n_pairs": 102,
+   "n_still_descending": 76
+  },
+  {
+   "relin": 5,
+   "mean_d_pose": 9.597990559823048,
+   "sum_d_pose": 978.9950371019509,
+   "n_pairs": 102,
+   "n_still_descending": 55
+  },
+  {
+   "relin": 6,
+   "mean_d_pose": 9.578472725583593,
+   "sum_d_pose": 977.0042180095265,
+   "n_pairs": 102,
+   "n_still_descending": 31
+  },
+  {
+   "relin": 7,
+   "mean_d_pose": 9.566093390905104,
+   "sum_d_pose": 975.7415258723206,
+   "n_pairs": 102,
+   "n_still_descending": 21
+  },
+  {
+   "relin": 8,
+   "mean_d_pose": 9.56289654542664,
+   "sum_d_pose": 975.4154476335173,
+   "n_pairs": 102,
+   "n_still_descending": 10
+  },
+  {
+   "relin": 9,
+   "mean_d_pose": 9.548400778395681,
+   "sum_d_pose": 973.9368793963595,
+   "n_pairs": 102,
+   "n_still_descending": 5
+  },
+  {
+   "relin": 10,
+   "mean_d_pose": 9.541521370946874,
+   "sum_d_pose": 973.2351798365812,
+   "n_pairs": 102,
+   "n_still_descending": 2
+  },
+  {
+   "relin": 11,
+   "mean_d_pose": 9.541508070974809,
+   "sum_d_pose": 973.2338232394304,
+   "n_pairs": 102,
+   "n_still_descending": 2
+  },
+  {
+   "relin": 12,
+   "mean_d_pose": 9.538215572854911,
+   "sum_d_pose": 972.8979884312009,
+   "n_pairs": 102,
+   "n_still_descending": 2
+  },
+  {
+   "relin": 13,
+   "mean_d_pose": 9.538215558346698,
+   "sum_d_pose": 972.8979869513632,
+   "n_pairs": 102,
+   "n_still_descending": 1
+  },
+  {
+   "relin": 14,
+   "mean_d_pose": 9.538215558346698,
+   "sum_d_pose": 972.8979869513632,
+   "n_pairs": 102,
+   "n_still_descending": 0
+  }
+ ],
+ "recovery_curve_shipped": [
+  {
+   "relin": 0,
+   "mean_d_pose": 20.60490230702544,
+   "sum_d_pose": 2101.700035316595,
+   "n_pairs": 102,
+   "n_still_descending": 102
+  },
+  {
+   "relin": 1,
+   "mean_d_pose": 15.722454239614983,
+   "sum_d_pose": 1603.6903324407283,
+   "n_pairs": 102,
+   "n_still_descending": 100
+  },
+  {
+   "relin": 2,
+   "mean_d_pose": 11.536323906673093,
+   "sum_d_pose": 1176.7050384806555,
+   "n_pairs": 102,
+   "n_still_descending": 91
+  },
+  {
+   "relin": 3,
+   "mean_d_pose": 10.904937798365653,
+   "sum_d_pose": 1112.3036554332966,
+   "n_pairs": 102,
+   "n_still_descending": 70
+  },
+  {
+   "relin": 4,
+   "mean_d_pose": 10.65171899396352,
+   "sum_d_pose": 1086.475337384279,
+   "n_pairs": 102,
+   "n_still_descending": 0
+  }
+ ],
+ "bytes_added_by_repair": 0,
+ "bytes_note": "the repair changes the VALUES of the already-shipped f16 (a,b) pair per pair; it adds no section and no bytes.",
+ "note": "d_pose measured through the real receiver compose + uint8 + frozen CPU-torch PoseNet at the rung-B site. ADVISORY; only upstream/evaluate.py on byte-closed bytes is a score."
+}
