@@ -95,6 +95,10 @@ Every load-bearing premise re-verified at its own source, not inherited from the
 
 **Instrument:** `experiments/ddm_ph4_blind_set_pose_reach.py`.
 **Artifact:** `.omx/research/ddm_ph4_blind_set_pose_reach_cx1_20260803.json`.
+**Equations leg:** `src/tac/canonical_equations/ddm_ph4_blind_set_seg_free_pose_actuator_20260803.py`
+— `seg_delta_per_lsb` · `passthrough_gain` (refuses any support it has not MEASURED, so the
+non-additivity trap in §7 A5 cannot be repeated) · `null_space_claim_survives` (`pz1` §7.1 as an
+executable gate, refusing an empty consumer list as VACUOUS) · `actuator_overdetermination`.
 **Base:** `v4d_cx1_pj2ix2` (the newest submission directory on the SSD; the `pu2` row differs from it
 only in pose knobs on 6 tail pairs, so the *geometry* measured here is the live geometry — scope
 stated in §6).
