@@ -1,0 +1,182 @@
+{
+ "schema": "ddm_bp2_index_cost.v1",
+ "n_blind_coords": 692712,
+ "rows": [
+  {
+   "pair": 0,
+   "k": 200,
+   "comb_floor_B": 329.3696589771426,
+   "brotli_bitmap_B": 345,
+   "zlib_bitmap_B": 456,
+   "sign_brotli_B": 29,
+   "sign_raw_B": 25.0,
+   "best_index_B": 329.3696589771426,
+   "structure_gain_vs_comb": 1.0
+  },
+  {
+   "pair": 0,
+   "k": 1000,
+   "comb_floor_B": 1358.9321673449256,
+   "brotli_bitmap_B": 987,
+   "zlib_bitmap_B": 1222,
+   "sign_brotli_B": 129,
+   "sign_raw_B": 125.0,
+   "best_index_B": 987,
+   "structure_gain_vs_comb": 1.376830969954332
+  },
+  {
+   "pair": 0,
+   "k": 5000,
+   "comb_floor_B": 5343.85416080952,
+   "brotli_bitmap_B": 3464,
+   "zlib_bitmap_B": 3912,
+   "sign_brotli_B": 629,
+   "sign_raw_B": 625.0,
+   "best_index_B": 3464,
+   "structure_gain_vs_comb": 1.5426830718272286
+  },
+  {
+   "pair": 0,
+   "k": 20000,
+   "comb_floor_B": 16338.56557739052,
+   "brotli_bitmap_B": 10072,
+   "zlib_bitmap_B": 10927,
+   "sign_brotli_B": 2504,
+   "sign_raw_B": 2500.0,
+   "best_index_B": 10072,
+   "structure_gain_vs_comb": 1.6221768841730064
+  },
+  {
+   "pair": 1,
+   "k": 200,
+   "comb_floor_B": 329.3696589771426,
+   "brotli_bitmap_B": 301,
+   "zlib_bitmap_B": 407,
+   "sign_brotli_B": 29,
+   "sign_raw_B": 25.0,
+   "best_index_B": 301,
+   "structure_gain_vs_comb": 1.0942513587280485
+  },
+  {
+   "pair": 1,
+   "k": 1000,
+   "comb_floor_B": 1358.9321673449256,
+   "brotli_bitmap_B": 1035,
+   "zlib_bitmap_B": 1245,
+   "sign_brotli_B": 129,
+   "sign_raw_B": 125.0,
+   "best_index_B": 1035,
+   "structure_gain_vs_comb": 1.3129779394636962
+  },
+  {
+   "pair": 1,
+   "k": 5000,
+   "comb_floor_B": 5343.85416080952,
+   "brotli_bitmap_B": 3377,
+   "zlib_bitmap_B": 3834,
+   "sign_brotli_B": 629,
+   "sign_raw_B": 625.0,
+   "best_index_B": 3377,
+   "structure_gain_vs_comb": 1.5824264615959491
+  },
+  {
+   "pair": 1,
+   "k": 20000,
+   "comb_floor_B": 16338.56557739052,
+   "brotli_bitmap_B": 9874,
+   "zlib_bitmap_B": 10830,
+   "sign_brotli_B": 2504,
+   "sign_raw_B": 2500.0,
+   "best_index_B": 9874,
+   "structure_gain_vs_comb": 1.654705851467543
+  },
+  {
+   "pair": 2,
+   "k": 200,
+   "comb_floor_B": 329.3696589771426,
+   "brotli_bitmap_B": 330,
+   "zlib_bitmap_B": 445,
+   "sign_brotli_B": 29,
+   "sign_raw_B": 25.0,
+   "best_index_B": 329.3696589771426,
+   "structure_gain_vs_comb": 1.0
+  },
+  {
+   "pair": 2,
+   "k": 1000,
+   "comb_floor_B": 1358.9321673449256,
+   "brotli_bitmap_B": 1013,
+   "zlib_bitmap_B": 1222,
+   "sign_brotli_B": 129,
+   "sign_raw_B": 125.0,
+   "best_index_B": 1013,
+   "structure_gain_vs_comb": 1.3414927614461258
+  },
+  {
+   "pair": 2,
+   "k": 5000,
+   "comb_floor_B": 5343.85416080952,
+   "brotli_bitmap_B": 3570,
+   "zlib_bitmap_B": 4025,
+   "sign_brotli_B": 629,
+   "sign_raw_B": 625.0,
+   "best_index_B": 3570,
+   "structure_gain_vs_comb": 1.496877916193143
+  },
+  {
+   "pair": 2,
+   "k": 20000,
+   "comb_floor_B": 16338.56557739052,
+   "brotli_bitmap_B": 10627,
+   "zlib_bitmap_B": 11944,
+   "sign_brotli_B": 2504,
+   "sign_raw_B": 2500.0,
+   "best_index_B": 10627,
+   "structure_gain_vs_comb": 1.5374579446118868
+  },
+  {
+   "pair": 3,
+   "k": 200,
+   "comb_floor_B": 329.3696589771426,
+   "brotli_bitmap_B": 362,
+   "zlib_bitmap_B": 449,
+   "sign_brotli_B": 29,
+   "sign_raw_B": 25.0,
+   "best_index_B": 329.3696589771426,
+   "structure_gain_vs_comb": 1.0
+  },
+  {
+   "pair": 3,
+   "k": 1000,
+   "comb_floor_B": 1358.9321673449256,
+   "brotli_bitmap_B": 1073,
+   "zlib_bitmap_B": 1317,
+   "sign_brotli_B": 129,
+   "sign_raw_B": 125.0,
+   "best_index_B": 1073,
+   "structure_gain_vs_comb": 1.266479186714749
+  },
+  {
+   "pair": 3,
+   "k": 5000,
+   "comb_floor_B": 5343.85416080952,
+   "brotli_bitmap_B": 3660,
+   "zlib_bitmap_B": 4128,
+   "sign_brotli_B": 629,
+   "sign_raw_B": 625.0,
+   "best_index_B": 3660,
+   "structure_gain_vs_comb": 1.4600694428441312
+  },
+  {
+   "pair": 3,
+   "k": 20000,
+   "comb_floor_B": 16338.56557739052,
+   "brotli_bitmap_B": 10250,
+   "zlib_bitmap_B": 11182,
+   "sign_brotli_B": 2504,
+   "sign_raw_B": 2500.0,
+   "best_index_B": 10250,
+   "structure_gain_vs_comb": 1.5940063977941972
+  }
+ ]
+}

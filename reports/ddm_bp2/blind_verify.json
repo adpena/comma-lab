@@ -1,0 +1,45 @@
+{
+ "schema": "ddm_bp2_blind_pose_actuator.v1",
+ "axis": "[macOS-CPU advisory] frozen CPU-torch scorers; NON-PROMOTABLE",
+ "score_claim": false,
+ "promotion_eligible": false,
+ "mode": "blind-verify",
+ "n_pairs_requested": 600,
+ "result": {
+  "blind_count_autograd": 230904,
+  "blind_frac": 0.22696926089315625,
+  "read_count": 786432,
+  "read_count_equals_4x_scorer_px": true,
+  "agrees_with_ll1_blind_mask": true,
+  "max_column_sum": 0.9934997558594127,
+  "min_read_column_sum": 1.0172526041518637e-05,
+  "no_pixel_read_twice": true,
+  "column_sum_total": 196607.99999999997,
+  "blind_hard_perturb_px_changed": 461649,
+  "blind_hard_perturb_posenet_in_identical": true,
+  "blind_hard_perturb_segnet_in_identical": true,
+  "control_read_px_max_weight_posenet_in_identical": false,
+  "control_read_px_max_weight_segnet_in_identical": false,
+  "control_read_px_max_weight_yx": [
+   688,
+   12
+  ],
+  "control_read_px_max_weight_d_weight": 0.9934997558594127,
+  "control_read_px_min_weight_posenet_in_identical": false,
+  "control_read_px_min_weight_segnet_in_identical": false,
+  "control_read_px_min_weight_yx": [
+   689,
+   13
+  ],
+  "control_read_px_min_weight_d_weight": 1.0172526041518637e-05,
+  "control_blind_px_posenet_in_identical": true,
+  "control_blind_px_segnet_in_identical": true,
+  "control_blind_px_yx": [
+   437,
+   4
+  ],
+  "control_blind_px_d_weight": 0.0,
+  "POSITIVE_CONTROL_FIRED": true,
+  "VERDICT_blind_set_invisible": true
+ }
+}

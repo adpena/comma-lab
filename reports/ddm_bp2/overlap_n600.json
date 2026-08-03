@@ -1,0 +1,24 @@
+{
+ "schema": "ddm_bp2_blind_pose_actuator.v1",
+ "axis": "[macOS-CPU advisory] frozen CPU-torch scorers; NON-PROMOTABLE",
+ "score_claim": false,
+ "promotion_eligible": false,
+ "mode": "overlap",
+ "n_pairs_requested": 600,
+ "archive": "/Volumes/VertigoDataTier/pact/ddm_v4d_20260731/v4d_composed_pb2_bestof_archive.zip",
+ "archive_bytes": 360339,
+ "archive_sha256": "6e1b80e90109edd3c06f29fdfe37937dfb78eac7480c4e65adbc364a10e1e764",
+ "n_pairs_run": 600,
+ "result": {
+  "n_pairs": 600,
+  "blind_mass_frac_mean": 0.14799523830875305,
+  "blind_mass_frac_min": 0.03353978153356971,
+  "blind_mass_frac_max": 0.2220832750133582,
+  "blind_px_active_frac_mean": 0.6320107346198709,
+  "warp_valid_frac_mean": 0.6693526032697161,
+  "all_closure_ok": true,
+  "F1_falsifier_threshold": 0.05,
+  "F1_CLOSES_FAMILY": false
+ },
+ "per_pair_jsonl": "reports/ddm_bp2/overlap_n600.jsonl"
+}
