@@ -1,0 +1,123 @@
+{"_meta": "D4 BRIDGE DATA HALF (hv2-D4, task #880): MAIN-side export of the HARNESS TaskList for window #800-#921, 2026-08-03. The harness TaskList and repo canonical_task_status.jsonl are DIFFERENT STORES (m89); repo held 18 of ~105 window ids (measured, hv2 S3; damage: na1 10/14 empty hunts, oh1 53% blind). Arms: resolve bare task-id citations HERE. Statuses as of export; subjects paraphrased/trimmed for grep, cite CONTENT in charters.", "count": 122}
+{"task_id": 800, "status": "completed", "subject": "gc12 wall branch design from receipts (14th convocation)"}
+{"task_id": 801, "status": "completed", "subject": "QA92 lane-carrier receiver discriminator (recovery fractions O,F)"}
+{"task_id": 802, "status": "completed", "subject": "birth_completion typed gate key + solve-seeded-births harness + burn-4 skeleton"}
+{"task_id": 803, "status": "completed", "subject": "ddm_r1c rung-1 continuation-to-birth-plateau windowed warm tail"}
+{"task_id": 804, "status": "completed", "subject": "ddm_tp1 v9-to-TR1 telemetry port (flag-gated default-off)"}
+{"task_id": 805, "status": "completed", "subject": "ddm_fh1 forces harvest+adaptation R1-R14 for TR1 burn-4"}
+{"task_id": 806, "status": "completed", "subject": "ddm_xp1 QA92 base-pass exact P in S units on rung-1 ep641 render"}
+{"task_id": 807, "status": "in_progress", "subject": "ddm_b4s burn-4 compose+seal (arm matrix x force stack x telemetry)"}
+{"task_id": 808, "status": "completed", "subject": "ddm_lg1 lane-guard protection layer in scorer coordinates"}
+{"task_id": 809, "status": "completed", "subject": "ddm_cg1 per-class/edge guard LEDGER - LANDED ee848e88cd as cg1r"}
+{"task_id": 810, "status": "completed", "subject": "ddm_gc13 optimal control shape convocation (15th)"}
+{"task_id": 811, "status": "completed", "subject": "ddm_us1 fresh-eyes upstream re-read PREDICT-THEN-DIFF"}
+{"task_id": 812, "status": "completed", "subject": "dynamic rate-denominator guard (evaluate.py:64 rglob)"}
+{"task_id": 813, "status": "completed", "subject": "ddm_fl1 per-class GT-flicker distortion-floor decomposition"}
+{"task_id": 814, "status": "completed", "subject": "ddm_gc14 first-descent convocation (16th)"}
+{"task_id": 815, "status": "pending", "subject": "bs1 A/B owed - must vary EXCURSION not just cadence (rho0 law measured)"}
+{"task_id": 816, "status": "completed", "subject": "ddm_gc15 fresh-vs-warm convocation (17th)"}
+{"task_id": 817, "status": "completed", "subject": "ddm_gd1 undecided-defaults + stale-never-rules audit"}
+{"task_id": 818, "status": "completed", "subject": "ddm_cn3 week-scale consumption + coherence audit 07-24..31"}
+{"task_id": 819, "status": "completed", "subject": "ddm_sb2 complete-the-stubs build wave (3 orphan grades)"}
+{"task_id": 820, "status": "completed", "subject": "P0 wiring queue inventory: 10 adjudicated 0 confirmed"}
+{"task_id": 821, "status": "completed", "subject": "184 violations = ONE fact counted 184 times (fan-out 205x)"}
+{"task_id": 822, "status": "completed", "subject": "ladder measurably INERT - lambda_init is initial condition on contracting map; retire"}
+{"task_id": 823, "status": "pending", "subject": "recursive adversarial review cycle burn-4 endpoint + 07-31 wave (0/3 clean)"}
+{"task_id": 824, "status": "in_progress", "subject": "eta(t) transient response surface - not a bias_correction on/off verdict"}
+{"task_id": 825, "status": "completed", "subject": "duty-to-measure queue blind to 61 factories incl all 8 designed-stubs"}
+{"task_id": 826, "status": "completed", "subject": "cell_drop50 banked archive - DEAD per hv2 (dominated +0.0035 vs live base)"}
+{"task_id": 827, "status": "completed", "subject": "composition row ep854 seg x cell_drop50 rate -0.035996 S (pose re-solve blocker)"}
+{"task_id": 828, "status": "completed", "subject": "R6 rehearsal gate false BLOCKED verdicts (_quant_engaged) fixed"}
+{"task_id": 829, "status": "completed", "subject": "substring-scan slot-holder bug class (2 sites)"}
+{"task_id": 830, "status": "completed", "subject": "raw_virtual_memory_safety_basis 0-to-6 in a launcher"}
+{"task_id": 831, "status": "completed", "subject": "refusal-gate positive-control queue ratchet 4/23"}
+{"task_id": 832, "status": "completed", "subject": "aimed-correction sign swing 0.264 S - $0 test RAN (dc1+wd1); bound confirmed-superseded"}
+{"task_id": 833, "status": "pending", "subject": "two-landing degenerate-baseline control for capacity/floor probes (pj1 f, fp1 f-prime)"}
+{"task_id": 834, "status": "pending", "subject": "reclaim-spend asymmetry premise contested (gc12 2.7x vs gc14 r=+0.212)"}
+{"task_id": 835, "status": "pending", "subject": "30-min CI budget is a SURFACE not wall - decode term movable w/ ladder headroom"}
+{"task_id": 836, "status": "completed", "subject": "upstream nested-repo drift measured: scorer files mode-only"}
+{"task_id": 837, "status": "pending", "subject": "Q3: is exactly-pose-null frame_1 subspace SEG-reachable?"}
+{"task_id": 838, "status": "completed", "subject": "MEMORY.md 18095-to-12292 B consolidation"}
+{"task_id": 839, "status": "pending", "subject": "FAMILY-scope: scorer-invisible names FOUR quantities; one is a live rate column"}
+{"task_id": 840, "status": "pending", "subject": "ddm_cf1 extension - the unswept 91% registry-first"}
+{"task_id": 841, "status": "completed", "subject": "wr1 descent table missing own ceiling column (reverses past knee)"}
+{"task_id": 842, "status": "completed", "subject": "502/502 preflight gates skipped on normal commit - fixed via commit-hook custody"}
+{"task_id": 843, "status": "completed", "subject": "TR1 receiver Brotli-Q11 vs trainer SMEVR pricing - settled via #853 harvest"}
+{"task_id": 844, "status": "pending", "subject": "triality DSL-drift detector syntactic false-positives on witness_dsl utility modules"}
+{"task_id": 845, "status": "completed", "subject": "test_ddm_tb1_tr1_renderer counted-ledger-keys RED on main - fixed"}
+{"task_id": 846, "status": "pending", "subject": "verdict-scope re-grade: two FAMILY claims over-scoped + untagged-binary sweep"}
+{"task_id": 847, "status": "pending", "subject": "governance knobs unladdered - extend provenance ladder from CONSTANTS to CONTROL knobs"}
+{"task_id": 848, "status": "pending", "subject": "gc14 stopping rule conditioned on broken instrument (per-window rate cost is controllable)"}
+{"task_id": 849, "status": "pending", "subject": "Tilde Online-KL-Shampoo crosswalk - beta2 IS the bs1 excursion dial"}
+{"task_id": 850, "status": "completed", "subject": "pose solve truncated: GN capped 2-3 relins no convergence test"}
+{"task_id": 851, "status": "completed", "subject": "6 MLX-gated RED test modules triaged"}
+{"task_id": 852, "status": "completed", "subject": "commit hook runs zero gates - 4 custody bypasses closed"}
+{"task_id": 853, "status": "completed", "subject": "-0.0499 S rate half pose-independent - harvested alone"}
+{"task_id": 854, "status": "completed", "subject": "180s CI-blind timeout false-block fix landed"}
+{"task_id": 855, "status": "completed", "subject": "default MLX conv adapter flips 76 argmax px on real frames"}
+{"task_id": 856, "status": "pending", "subject": "12 import-time MLX device leakers + two-landing guard"}
+{"task_id": 857, "status": "pending", "subject": "1565 shared authority-disagreement pixels untouched by routing"}
+{"task_id": 858, "status": "pending", "subject": "receiver admits ABSENT token_codec (legacy Brotli indistinguishable) - STALE per qd1"}
+{"task_id": 859, "status": "pending", "subject": "SMEVR base-rule race -2781 B blocked on receiver/format change"}
+{"task_id": 860, "status": "pending", "subject": "6 of 25 dev gates RED ~316 violations - several POLICY not hygiene"}
+{"task_id": 861, "status": "completed", "subject": "premise inverted: warp-pose6 already live basis; rival = 3400x regression"}
+{"task_id": 862, "status": "pending", "subject": "rate gradient right way; defect = 16-18kB blind subspace surrogate cannot see (rg5)"}
+{"task_id": 863, "status": "completed", "subject": "bp1 A/B: bias-correction ON +0.0120 S worse (window 1.56 beta2 tau)"}
+{"task_id": 864, "status": "completed", "subject": "built-elsewhere-unwired scope corrected: harm clause needs RECIPIENT (pose pair only)"}
+{"task_id": 865, "status": "pending", "subject": "rate-surrogate race wrong hypothesis space - SUM arm does not exist"}
+{"task_id": 866, "status": "pending", "subject": "THE BINDING GAP rg5: d_seg price of entropy-descent step (break-even 8201 flips) - operator-GO race QA86a per hv2"}
+{"task_id": 867, "status": "pending", "subject": "retrieval hazard: #425 phase carrier names TWO modules"}
+{"task_id": 868, "status": "completed", "subject": "built-elsewhere-unwired = VALID_BUILD_GRADES[5] (ddm_wt1)"}
+{"task_id": 869, "status": "pending", "subject": "token-by-token waterfill 768 cells x 4 rungs - EXACT-KEY PREP DONE by hv2 (4 orders, receipt on VertigoDataTier)"}
+{"task_id": 870, "status": "in_progress", "subject": "NAMED-$0-FOLLOW-ON-NEVER-RUN class (DEF CON 1000) - partially drained by p1a/p2a/hv2/iv1"}
+{"task_id": 871, "status": "completed", "subject": "70-row discrete-menu inventory -> ONE triage rule; head fired"}
+{"task_id": 872, "status": "completed", "subject": "pointer moved twice v4d->pw1->ms8; seg untouched both times"}
+{"task_id": 873, "status": "completed", "subject": "dead codewords not mode-share; PLACEMENT beats SELECTION 5.7x; gate fired"}
+{"task_id": 874, "status": "pending", "subject": "censored caps: 31/31 cap-default files cannot report why they stopped (qd1 folded to #885 per hv2 D7)"}
+{"task_id": 875, "status": "pending", "subject": "scope censoring: subset defaults silently under-sample verdicts (first anchor bp2 m88)"}
+{"task_id": 876, "status": "pending", "subject": "record censoring: 16 non-main worktrees uncommitted - verify cs1 disposition"}
+{"task_id": 877, "status": "pending", "subject": "report censoring: unnamed consumers of evaluate.py 2-decimal Final score"}
+{"task_id": 878, "status": "pending", "subject": "arm final-message NEXT-IF-RESUMED structurally unpersisted - persistence fix 09fca46f37 landed; class open"}
+{"task_id": 879, "status": "pending", "subject": "84 UNKNOWN follow-on rows - p1a adjudicated 46/86; QA52 DEAD (kl1); residue in hv2 D7/iv1"}
+{"task_id": 880, "status": "pending", "subject": "TASK-LEDGER JOIN: detector corpus=memos backlog=task rows - THIS EXPORT is the D4 data half"}
+{"task_id": 881, "status": "completed", "subject": "-0.0866 S unlock - REFUTED as pose-re-solve unit by cr2r (46x over break-even); prize recast pose-carrying-base-only"}
+{"task_id": 882, "status": "pending", "subject": "s_t frozen pre-pose confirmed but dominated 5.7x by placement"}
+{"task_id": 883, "status": "pending", "subject": "two-landing: serializer repair path silently committed non-empty index"}
+{"task_id": 884, "status": "completed", "subject": "superseded by #892 (bimodal page-cache cost)"}
+{"task_id": 885, "status": "pending", "subject": "git log --oneline silent 274x undercount (returns 50 vs 13742)"}
+{"task_id": 886, "status": "pending", "subject": "p1a 29 open follow-on items - ~26 routable BUNDLED into hv2 D7 -> iv1"}
+{"task_id": 887, "status": "pending", "subject": "p2a 18 never-named rows - 15 T1 BUNDLED into hv2 D7 -> iv1"}
+{"task_id": 888, "status": "in_progress", "subject": "hinge-weight cure (rt2 reopened) - bo1 SEALED the A/B spec 07362ff659; fires on ph5o landing"}
+{"task_id": 889, "status": "pending", "subject": "seg-only training spends pose legibility - prize recast per cr2r: fires only on pose-carrying base; owner bo1 base axis"}
+{"task_id": 890, "status": "pending", "subject": "physics vs photometrics scorer-readout asymmetry - 3 censored items on v4c/v4d photometric stage"}
+{"task_id": 891, "status": "in_progress", "subject": "fiber-transport stale (a,b) instead of re-solving - $0 clip-fraction falsifier may retire most"}
+{"task_id": 892, "status": "completed", "subject": "push unblocked; cost bimodal 0.48s warm / 43.86s cold"}
+{"task_id": 893, "status": "completed", "subject": "stale-fit genus swept (15 quantities) + structurally fixed"}
+{"task_id": 894, "status": "pending", "subject": "lattice-solve rebase REFUTED (FAMILY): teacher is noisier copy of GT"}
+{"task_id": 895, "status": "completed", "subject": "refuted as filed - mq1 has __main__ guard; lr1 misattributed"}
+{"task_id": 896, "status": "pending", "subject": "camera-grid rate lever closed (structurally dominated)"}
+{"task_id": 897, "status": "in_progress", "subject": "96.6% realization flips cured (88->3); solver axis closed; remaining optimality elsewhere"}
+{"task_id": 898, "status": "completed", "subject": "instrument rebuilt with per-pixel field persisted (ddm_mp1 8fb17dcf05)"}
+{"task_id": 899, "status": "pending", "subject": "fail-open P0 gate: write-side FIXED; JSONL READ path still bypasses - dn1x (codex) owns"}
+{"task_id": 900, "status": "completed", "subject": "asymmetry priced -3.745e-05 composed (0.0048% of gap)"}
+{"task_id": 901, "status": "pending", "subject": "non-redundancy frontier is CROSS-PAIR; actuator shipped on wrong trainer never fired"}
+{"task_id": 902, "status": "completed", "subject": "importer count 27 not 16; none on frontier path (ddm_cu1)"}
+{"task_id": 903, "status": "completed", "subject": "upsample-VJP scatter x Adam sign(g) bisected + cured"}
+{"task_id": 904, "status": "pending", "subject": "DECLARED-ON-NEVER-READ cross-module N-hop class - dn1x (codex) owns detector"}
+{"task_id": 905, "status": "pending", "subject": "Catalog #184 gate never runs on commit; --no-codebase reason measurably gone"}
+{"task_id": 906, "status": "pending", "subject": "chroma siting mechanism for CPU/CUDA GT gap (DEFERRED: needs CUDA+DALI)"}
+{"task_id": 907, "status": "pending", "subject": "ST_GRID hand-duplicated x5 with one DIVERGED copy"}
+{"task_id": 908, "status": "completed", "subject": "#903 consequential: falsifier NOT MET both clauses both brackets"}
+{"task_id": 909, "status": "pending", "subject": "wall verdict discriminator already beaten by own live base 1.93x"}
+{"task_id": 910, "status": "completed", "subject": "pfs1_warp_receiver.py IS tracked (19839b98b5)"}
+{"task_id": 911, "status": "pending", "subject": "sister arm commit absorbed 215 unauthored lines; message materially false"}
+{"task_id": 912, "status": "pending", "subject": "OPUS depth wave 08-03: five arms three axes + instrument + lever archaeology"}
+{"task_id": 913, "status": "pending", "subject": "NO-FAKE: contour_codec.py dense-raster LZMA wearing boundary-edge codec name"}
+{"task_id": 914, "status": "pending", "subject": "de1 merge blocked by index-staged file from another session (live hazard)"}
+{"task_id": 915, "status": "pending", "subject": "tail-specific confirmed; forward value ~0.6% of gap not 3.6-7.1% (pu2 banked -0.0354283)"}
+{"task_id": 916, "status": "pending", "subject": "corrected x3: 0.4981 B/flip; 0.60 bits/band-pixel; 91-94% separatrix"}
+{"task_id": 917, "status": "pending", "subject": "lever instruments point at retired vehicle; 8 live-vehicle levers mis-filed"}
+{"task_id": 918, "status": "pending", "subject": "rate coding closed: basis 0.83% to IDENT; coder axis shut; drop knee = live base"}
+{"task_id": 919, "status": "pending", "subject": "chartered gate guards wrong field: 15 rows assert dS, invariant sees 1"}
+{"task_id": 920, "status": "pending", "subject": "cg1r protection debt head: Lane x ANNIHILATE 0.157 S + Road-Lane PHASE 0.110 S - hv2 R1-ranked, fires at bn1x landing"}
+{"task_id": 921, "status": "pending", "subject": "gk1o adoption-map head: Literal[200000] ceiling + thr_wall 3.275x loose + W-test 1.2742"}
