@@ -129,7 +129,57 @@ D50 is a true orphan. Control retained in the record: 607 (bad term) vs 0 (corre
 
 ## §3 — Cross-window finds the sub-window sweeps could not structurally see
 
-*(populated below)*
+A window-scoped sweep cannot see any of the following, because each requires holding **both** windows
+at once. These are the finds that justify a month-scale arm existing at all.
+
+### 3a. Status-rot is invisible to either window alone
+
+Detecting "row says `pending`, work actually continued" requires the row (window-1) **and** the
+continuation (window-2). A window-1 sweep sees a pending row and calls it an orphan. A window-2 sweep
+sees active work and calls it healthy. **Both are wrong.** Only the join shows 13 rot / 11 orphan.
+This is the single largest correction in this memo (§6).
+
+### 3b. The D-series lineage break — orphaning **by rename**
+
+Window-1 created deferral rows `D41`–`D53` in `canonical_task_status.jsonl`. Window-2 created a new
+surface, `ddm_deferral_queue_ledger_20260729.md`, which runs its **own fresh series** — `D1, D2, D5,
+D8, D16` — and carries only **2 of the 13** prior rows (`D42`, `D52c`).
+
+The other **11 D-rows were dropped at the rename** while remaining `pending` in the canonical ledger.
+That is precisely where §2c's true orphans concentrate: 8 of the 11 true orphans are D-series rows.
+
+**Orphaning by rename is a distinct mechanism** from orphaning by neglect. Nobody decided to drop
+`D48a`; a new ledger simply started counting from D1. Two live surfaces now share one namespace, and
+the new series counting upward will collide with the old at `D41`.
+
+### 3c. The tracking apparatus is the month's fastest-growing orphan generator
+
+Deferral/backlog/orphan-named memos created this month:
+
+| Window | Count | Files |
+|---|---:|---|
+| W1 07-04→07-19 | **10** | `sweep_C_task_research_orphan_lever_ledger` · `costate_controller_deorphan_inventory` · `owed1_repaired_pose_gate_build` · `v752_owed_gates_build` · `v752_owed15_isolation_runbook` · `owed16_bounded_ab_and_drystart` · `ladder_owed_measurables` (+DAG_FEED) · `consolidation_quarantine_orphan_tests` · `m5_burndown_orphan_trainers_incident` |
+| W2 07-20→08-03 | **6** | `ddm_deferral_queue_ledger` · `ddm_p2a_task_backlog_drain` · `ddm_fo1_orphaned_followon_detector` · `ddm_rs2_orphan_resumption` · `ddm_oh1_orphaned_handoff_sweep` · `ddm_qd1_backlog_drain` |
+
+**16 tracking surfaces in 31 days — one roughly every two days**, sustained across the whole month,
+plus `canonical_task_status.jsonl` plus the harness TaskList: ~18 competing answers to "what is owed."
+
+**This memo would be the 17th.** That is the finding, and it implicates this arm directly. Each sweep
+has *created a surface* rather than *draining a canonical one* — which is why the same items keep
+being re-found: `ddm_qd1`, `ddm_fo1`, `ddm_cn3` and now `ddm_mh1` have each independently re-listed
+portions of the D-series.
+
+**Binding consequence adopted for this arm's own §5:** routing lands as **rows in
+`canonical_task_status.jsonl`**, the store subagents can actually read. A memo-only routing section
+would reproduce the exact failure this section documents.
+
+### 3d. Re-listing is not consumption
+
+A mention inside a backlog-drain memo means an item was *re-noticed*, not *worked*. Counting those as
+consumption inflates health: for `jrd`, 2 of 11 later mentions are audit memos; for `PDW1`, 5 of 16.
+All §2c classifications exclude audit/ledger memos for this reason. Any future orphan sweep that
+greps for "is it mentioned later?" without this exclusion will report the backlog as healthier than
+it is — and will be counting *its own predecessors' re-lists* as progress.
 
 ## §4 — The join coverage number (task #880)
 
