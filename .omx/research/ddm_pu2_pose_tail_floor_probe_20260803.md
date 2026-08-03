@@ -690,7 +690,7 @@ big, and it is exactly why the control was worth the scorer time: it removed a ~
 the campaign's forward plan. **The n600 multi-start re-solve is therefore worth ~0.6% of gap beyond the
 banked row — NOT the 3.6–7.1% §8 implied — and should be priced as a low-value item, not a headline.**
 
-**Scope.** 6 of 10 control pairs; 68.8% of non-tail mass measured. The remaining
+**Scope, and why I stopped here.** **6 of 10 control pairs; 68.8% of non-tail `d_pose` mass MEASURED**, including the top decile (45% of it). I stopped the run with 4 pairs queued (deciles 8/7/6/5, the remaining 31% of mass) when box load hit **20.49 on 18 cores** from sister arms and a single pair had burned 11+ minutes against a ~200 s norm — the marginal pair was no longer worth the contention it was imposing on other arms. The queued pairs are `--resume`-able from `pu2_floor_probe.partial.jsonl` and would tighten the 5.985% figure, but **cannot plausibly overturn the verdict**: the single highest-mass decile is already measured at a 5.5% reduction, and the tail/control separation (0.2013 vs 0.9388 median) is not marginal. The remaining
 deciles (100, 34, 386, 318) are queued and would tighten but are unlikely to overturn: the single
 highest-mass decile is already measured and yields 5.5%.
 
