@@ -383,10 +383,10 @@ Be **absolutely allergic** to naive/toy implementations, smokes, probes, and n96
 - Measurements exist ONLY to feed an imminent real n600 exact row. Refuse the toy at the typing moment. Anchor: `allergic-to-non-n600-scale-no-toys`.
 
 ### 3. THE UNIFIED LEVEL-SET FLOW — one object, do NOT re-fragment into a grab-bag
-*"all of this is related and the math falls out and fits perfectly."* The witness is ONE object; every lever/loss/curriculum/optimizer/basis/substrate is a FACET. It is a **variational level-set flow of a Morse-Smale complex**:
+*"all of this is related and the math falls out and fits perfectly."* The witness is ONE object; every lever/loss/curriculum/optimizer/basis/substrate is a FACET. It is a **variational level-set flow on the FROZEN AFFINE HEAD's argmax-cell complex** — a power/Laguerre ≡ Bregman-Voronoi ≡ tropical regular subdivision, which are EXACT at the terminal-feature head. **⛔ The Morse–Smale reading is RETIRED (MEASURED 2026-08-03, `ddm_mf1` `40f26020d3`, n600, 3 of 5 pre-registered falsifiers fired):** at h=0 the argmax boundary→separatrix relation is **recall 89.3% / precision 5.0%** — the separatrix network is a **17.8× SUPERSET**, the argmax partition is a specific **5.6% selection**, and **nothing in Morse theory determines WHICH 5.6% — the affine head does.** Also measured: 43.551% of argmax components are ANNULAR (bar >1%), **85.74** local maxima per cell (bar >2.0), and boundary agreement only **83.26% even at a per-frame ORACLE threshold no decoder could pick** (bar <95%). RETIRED with it: separatrix-as-stable-manifold · index-1-saddle language · "lane dash = low-persistence MS *cell*" (the PHENOMENON stands, the mechanism does not). **SURVIVES with a measured warrant: persistent homology / merge trees / birth–death pairs — persistence never needed Morse, and mf1's F1b measured the diagram well-defined WITHOUT perturbation (0.00000% ties, 100% isolated). Cite F1b, never Morse–Smale.**
 - **Distortion = boundary geometry:** d_seg lives on the codim-1 **separatrix**; in the frozen-scorer **Fisher metric** the geometry is flat-interior (argmax stable → dark) + anisotropic on the boundary; Fisher curvature ↔ (−margin) Pearson **0.978** → the **margin field IS the Fisher surrogate**; **UNIWARD steg-cost = the same metric read as cost**.
 - **Representation = curvelets = rate:** the curved codim-1 singularity's optimal sparse basis (Candès-Donoho) minimizes distortion (boundary-aligned) AND rate (minimal-MDL N-term) — ONE basis.
-- **Curriculum = flow = scale = persistence = annealing:** CE→tau→l7→Muon IS coarse-to-fine curvelet scale = Morse-Smale persistence order = temperature annealing = the curvelet scaling curriculum; critical-slowing power-law near stage transitions.
+- **Curriculum = flow = scale = persistence = annealing:** CE→tau→l7→Muon IS coarse-to-fine curvelet scale = **persistence** order (persistence, NOT Morse–Smale — warranted by mf1's F1b, retired-clause above) = temperature annealing = the curvelet scaling curriculum; critical-slowing power-law near stage transitions.
 - **Dimensionality = the complex's DOF:** intrinsic dim ~8 (nonlinear) → Whitney ~17-19 = proper mod-dim (mod-16 under-embeds).
 - **Temporal/pose = the se(3) ego-screw — SOLVED, DUAL-USE, it all falls out:** the SAME ξ that warps the partition for d_seg IS the pose for d_pose (Chasles; d_pose = the twist ξ, identifiable up-to-affine). Encode ξ ONCE (canonicalize-to-ground-frame; SE(3) B-spline; engine `tac.lie`). Realized via the Quantizr/PR-style stored-target sidecar that is **FiLM-CONDITIONED** (the render CONSUMES the ~1–2KB stored twist → measured **d_pose ~3.4e-5**, √(10·d_pose)~0.018 — **ANCESTOR-vehicle number; see the 2026-07-10 CLARIFICATION in §Pose is SOLVED: on the witness, post-hoc/stored is measured DEAD (5 formulations, photometric wall), only JOINT descent crosses it; the live witness result is R1 d_pose 0.001610 / 7.2KB dxi = sidecar-shaped bytes, joint-descent values**). A NAIVE bolt-on the render doesn't consume does NOT lower d_pose; the n600 baseline's `w_pose=0` high d_pose is **pose-BLIND-by-design, not "unsolved."** Anchor: `pose-solved-screw-twist-dual-use-film-conditioned-sidecar`.
 - **Compute = MLX-first + custom Metal = shortest-train:** M5 Max MLX-GPU; fused-R (bit-identical) + grouped-backward (~17×, `TAC_MLX_CUSTOM_GROUPED_BACKWARD`) + mx.compile; numpy-fp32 = deterministic authority; MPS = gradient-only, NEVER a score.
@@ -682,6 +682,18 @@ plainly** and aim the next unit DIRECTLY at an exact-eval row that crosses the t
 5. **The session report leads with the exact pointer delta.** Every wrap-up states, first: did the exact
    frontier move, by how much, on which axis — then everything else. If it did not move, that is the
    headline.
+
+**Amendment (operator 2026-08-03) — end-of-turn line = OWN-VEHICLE frontier.** Per operator verbatim
+*"Let's replace the pointer with our current own frontier and only print that at the end of each turn"*:
+the PER-TURN sign-off prints the own-vehicle frontier (S + archive bytes + axis label, e.g.
+`[macOS-CPU advisory]`, + Δ when it moved that turn) — NOT the borrowed contest pointer. Rationale: the
+0.19108-lineage pointer is a borrowed PR110 recode, HARVEST-ONLY, never ships (only our own vehicle
+ships, operator 2026-08-01); repeating it each turn tracks a number the campaign does not move by
+design. The borrowed pointer is quoted ONLY when (a) it actually moves, or (b) a
+promotion/submission/exact-authority claim is made. Consequence 5 above continues to bind SESSION-level
+wrap-ups and every exact-eval claim; axis-label honesty + NO-FAKE #8 are UNCHANGED — an advisory
+own-vehicle number is never a score claim. Memory:
+`end_of_turn_frontier_line_is_own_vehicle_not_borrowed_pointer_20260803`.
 
 ### 10-year horizon + long-term autonomous research (operator 2026-06-10)
 Sub-0.15 is the near-term MILESTONE, not the terminus. The GOAL is a **10-year autonomous research
