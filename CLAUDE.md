@@ -216,8 +216,17 @@ ANCESTOR-VEHICLE number.** The measured facts as of 2026-07-10 (per L68 + `r1_dx
 CONSUMED the FiLM conditioning **during training** — i.e. even that result was JOINT-trained in the sense
 that matters. Per the L18 ancestor rule it does NOT transfer as a number to the witness; do not cite it as
 the witness's pose solution. (2) **On the witness vehicle the pure post-hoc/stored sidecar family is
-MEASURED DEAD** — the cheap-carrier space was mapped shut across 5 formulations (verdict_scope: formulation
-— post-hoc/stored corrections without pose in the training loop, on this vehicle); the wall is PHOTOMETRIC:
+DEAD ON THE EVIDENCE WE HAVE** — the cheap-carrier space was mapped shut across 5 formulations
+(verdict_scope: formulation — post-hoc/stored corrections without pose in the training loop, on this
+vehicle). ⚠ **LABEL CORRECTED 2026-08-03 (`ddm_na2`), NO-FAKE: the word "MEASURED" is withdrawn, the
+verdict is NOT flipped.** All four supporting docs are **n8/n24 CONTIGUOUS PREFIX** against a measured
+serial effective N of **40.22/600** — so n8 ≈ **0.5 effective samples**. And prefix bias is
+**anti-conservative ON THE POSE AXIS specifically**: pose prefixes measure **2.54–4.21× HARDER** than the
+population (seg prefixes are 0.95–0.97× *easier*), because the first 120 pairs are the two hardest 60-pair
+blocks — 79× the easiest. A pose NO-GO drawn on a prefix is exactly the FALSE-NEGATIVE shape. Treat this
+as a STANDING verdict on weak evidence: act on it, but any arm may reopen it with a seeded RANDOM-sample
+n≥120 re-test, and no arm may cite it as measured. See `[[prefix_bias_sign_inverts_between_seg_and_pose_20260803]]`
+([[m96]]) + `.omx/research/ddm_na2_negative_audit_20260803.md`. The claimed wall is PHOTOMETRIC:
 frames trained on seg alone do not carry pose-legible photometric signal, and no post-hoc storage fixes
 frames never shaped for it. **Only JOINT descent crosses that wall.** (3) The live witness pose result is
 **R1: d_pose 0.001610 through byte-close, contribution 0.127, shipping a 7.2KB dxi section** — sidecar-SHAPED
