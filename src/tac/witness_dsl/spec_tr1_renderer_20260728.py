@@ -914,6 +914,58 @@ def lever_lane_guard_margin_floor(weight: float, pct: float = 10.0) -> Lever:
         })
 
 
+def lever_lane_guard_ratchet(horizon_gates: int = 0) -> Lever:
+    """ddm_bs2 (#871) — the BUDGET SCHEDULE that makes piece 1 able to engage at all.
+
+    MEASURED DEFECT (re-derived at source from the burn-4 primary telemetry, 64
+    ``lane_guard`` gate rows over windows 01-03): ``lambda_lane == 0.0`` on 64/64 gates and
+    ``g < 0`` on 64/64, with ``budget_s_units`` taking exactly ONE value (0.12589) while
+    realized Lane descended 0.122438 -> 0.072225.  A budget pinned at the STARTING level is
+    slack at gate 1 and gets monotonically slacker as the primal wins, so the multiplier is
+    projected to zero forever — correct KKT on a mis-specified problem.  Concretely it
+    licensed the primal to give back ALL 0.050213 S-units of won Lane before piece 1 could
+    respond.  This lever replaces the constant with
+
+        budget(t) = min( budget(t-1),  mean(last m realized) + k*sigma )
+
+    a monotone non-increasing ratchet.  ``m`` = the dual's own integration time (matched
+    bandwidth, no loop resonance); ``sigma`` MEASURED online by the trend-agnostic
+    first-difference estimator (burn-4: 0.00142148 S, MAD twin 0.00146636 agreeing to 3.2%);
+    ``k`` CALIBRATED so noise alone cannot move the dual by more than one ``lambda_step_cap``
+    over the horizon.  The ratchet target is never an extrapolation — it is a level the run
+    has already held for ``m`` gates — so the constraint is feasible by construction.  It
+    also removes a second MEASURED defect: comparing a 36-of-600-pair gate estimate against
+    a 600-pair-measured constant carries gd1's +3.34% Lane design error, whereas a ratchet
+    compares the fixed-subset estimator only to itself and cancels the offset.
+
+    CONTROLS (both ran; the negative one FAILED first and forced the calibrator):
+      * NEGATIVE (200 stationary null trials x 64 gates at the measured sigma) — with the
+        analytic k the guard engaged on 36.20% of gates, 200/200 trials: a thrash generator.
+        With the calibrated k, E[max lambda] = 0.0657 <= the 0.1 step cap, 6.35% of gates.
+      * POSITIVE (descent then genuine erosion) — detects +0.005 S and above; +0.002 S sits
+        under the deadband and is correctly ignored.  The legacy constant budget detects
+        NOTHING up to +0.050 S (1 gate of 64, lambda 0.001).
+    Falsifier: a run where the ratcheted guard engages while every GT-referenced Lane cost
+    is falling => the ratchet is tracking optimizer noise, not erosion, and the deadband
+    calibration (not the ratchet form) is refuted."""
+    return Lever(
+        name="tr1_lane_guard_ratchet",
+        overrides={"--lane-guard": True, "--lane-guard-ratchet": True,
+                   "--lane-guard-ratchet-horizon": str(int(horizon_gates))},
+        notes="bs2 #871: monotone Lane-budget ratchet; sigma MEASURED online, k CALIBRATED "
+              "against the null (E[max lambda | no erosion] <= lambda_step_cap); guard also "
+              "self-reports inertness when the ratchet is OFF (inertness_alarm)",
+        constant_manifest={
+            "--lane-guard-ratchet-horizon": {
+                "value": int(horizon_gates),
+                "rung": "DERIVED_AT_CONFIG (0 => self-derive max(mean_gates, gates_seen))",
+                "provenance": "deadband horizon in gates; k grows ~sqrt(2 ln W), the "
+                              "Bonferroni-like scaling, so a longer horizon widens the "
+                              "deadband. 0 self-derives from gates seen; pass the run's "
+                              "planned gate count for a stationary deadband."},
+        })
+
+
 def default_t1_smoke_program(variant: str, out_dir: str, *, num_pairs: int = 24,
                              epochs: int = 60, max_wall_minutes: float = 75.0,
                              gt_cache: str | None = None) -> TR1RendererProgramV1:
