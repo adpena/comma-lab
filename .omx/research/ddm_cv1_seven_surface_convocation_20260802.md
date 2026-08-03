@@ -28,8 +28,19 @@ bar 0.172141), computed from the live `dc1_fold` row 0.8983775:
 → ms8 (0.8984335) → dc1_fold (0.8983775). **Four consecutive pointer moves, all pose or
 rate, ZERO seg movement.** This is what justifies the operator's addition of BASE.
 
-Denominator honesty: 1% of the gap = 11,892 B of rate, or 7.26e-5 of d_seg. Any ΔS quoted
-without this denominator is unanchored.
+Denominator honesty: **1% of the gap = 10,908 B of rate**, or 7.26e-5 of d_seg. Any ΔS
+quoted without this denominator is unanchored.
+
+*(CORRECTED same-session: I first wrote 11,892 B here and in MEMORY.md. The registered
+equation `gap_decomposition_against_floor_20260802.bytes_per_percent_of_gap` returned
+10,908 B on its first run and is right —* `0.007263 × 37,545,489 / 25` *. Pinned as a
+regression test. Making the denominator executable caught its author's own arithmetic
+within minutes, which is the entire argument for registering it.)*
+
+Table caveat: this table is computed from PR130's ROUNDED published contributions; the
+equation, fed PR130's measured **190,952 B**, returns total gap **0.7263025** and rate gap
+**0.1127679**. The equation's figures supersede the table's — it derives the rate term from
+bytes rather than inheriting a rounded value.
 
 ---
 
@@ -196,10 +207,14 @@ We are stopping a converging solver because of a hardcoded count, on an axis wor
    base never had. The ask is a pair-coherence **loss term**, not a better re-solve.
 2. **The realization gauge as a SPENDING currency** — seg-neutral by construction,
    pose- and rate-active; two of three currencies never spent.
-3. **The class decomposition of the LIVE seg gap.** `ddm_fl1` measured per-class GT-flicker
-   floors. The live **0.00431179 has never been decomposed against them.** Without that
-   chart, "seg is 55.3%" is a number without a mechanism — we cannot say how much is
-   irreducible floor and how much is ours.
+3. ~~**The class decomposition of the LIVE seg gap** has never been done.~~ **CORRECTED
+   SAME-SESSION — I over-stated this; the corpus partially refutes it.** `ddm_fl1` DID
+   perform the join, at the **ep641/r1c** endpoint (`ddm_xp1_20260731/xp1_verdict.json`),
+   and already named "residual-above-floor = Undriv/Movable". What is genuinely missing is
+   only the **re-join on the LIVE base** (d_seg 0.00431179 vs ep641's 0.004264052 — a
+   different endpoint; fl1 itself flags cross-endpoint use as *labeled structure transfer,
+   not a number transfer*). See §11 for the ratio table the existing join implies, which
+   had not been computed.
 4. **Denominators, everywhere.** 79 of 84 menu points unmeasured · 502 of 502 preflight
    gates skipped on a normal commit (#842) · 31 of 31 capped files unable to report why
    they stopped (#874). Today `grep -rilE` over `.omx/research` **timed out at 2 minutes** —
@@ -245,3 +260,46 @@ Cross-refs: `ddm_dc1_menu_sweep_and_ms8_mq1_reconciliation_20260802` ·
 `ddm_ms8_menu_selector_solver_st_codebook_20260802` · `ddm_uv1_ep854_pose_illegibility_reject_20260802` ·
 `ddm_sf1_stale_fit_genus_sweep_and_structural_fix_20260802` · `ddm_bs2_lane_guard_schedule_and_binary_occupancy_sweep_20260801` ·
 `ddm_fl1` · `src/tac/optimization/ddm_ll1_window_solve.py` · `SPEC_g17_unified_production_envelope_20260726`
+
+---
+
+## §11 The residual/floor RATIO table — computed here, not previously stated
+
+Joining `ddm_xp1` (ep641 r1c per-class residual, S-units) against `ddm_fl1` (per-class
+GT-flicker floor, S-units). Both vectors already existed; the RATIO had not been taken.
+
+| class | residual (ep641) | flicker floor | ratio | reading |
+|---|---:|---:|---:|---|
+| **Road** | 0.18845 | 0.1889 | **1.00** | sitting EXACTLY on its floor |
+| Lane | 0.12589 | 0.2316 | 0.54 | already BELOW floor (floor pierced) |
+| **Undriv** | 0.05574 | 0.0394 | **1.41** | ABOVE floor — ours to take |
+| **Movable** | 0.03792 | 0.0285 | **1.33** | ABOVE floor — ours to take |
+| MyCar | 0.01840 | 0.0434 | 0.42 | already BELOW floor |
+| **total** | **0.42640** | 0.53180 | 0.80 | aggregate already pierces |
+
+**What this changes about "seg is 55.3%".** The seg residual is NOT one homogeneous
+attackable mass:
+
+- **Road alone is 44% of the seg residual and sits at ratio 1.00** — exactly at its
+  GT-flicker floor. Attacking Road means piercing a floor, not closing a gap.
+- **Lane and MyCar are already BELOW their floors** (0.54, 0.42) — 34% of the residual is
+  in classes where we have already beaten the smooth-label reference.
+- **Only Undriv + Movable sit above floor** (1.41, 1.33), and together they are
+  **0.09366 S = 22% of the seg residual**, or **12.9% of the total remaining gap**.
+
+**Scope, stated honestly.** The floor is **FORMULATION-scoped, not a hard bound** — fl1
+records it as pierced by phase-faithful PR130 (2.966e-4) and by ep641 itself in aggregate
+(0.004264 total < 0.005318 total floor). So ratio ≥ 1.00 does not mean "unreachable"; it
+means "reaching it requires phase-faithfulness the smooth-label reference does not have."
+The floor's live value is a **RANKING of phase-faithfulness debt**, which is exactly how
+fl1 labelled it (binding debt: Lane #1 at 13.1× corner-C).
+
+**The correction this forces to §1.** BASE remains 55.3% of the gap and remains the
+surface no post-base move has touched. But "attack seg" is now two different asks:
+(a) the **22% above-floor** portion (Undriv/Movable) is ordinary optimization; (b) the
+**44% Road-at-floor** portion is a phase-faithfulness problem, which is the SAME
+pair-coherence axis §1 identified from the pose side. Two independent lines of evidence —
+the pose-legibility law and the Road-at-floor ratio — point at the same missing property.
+
+**Owed:** the same join on the LIVE base (needs one per-class argmax pass; scorer slot
+currently held). Cross-endpoint transfer is LABELED STRUCTURE, never a number.
