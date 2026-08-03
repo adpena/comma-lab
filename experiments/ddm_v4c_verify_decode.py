@@ -15,8 +15,15 @@ Checks (all must pass):
   (C) independent compose recompute: for sampled pairs the Decoder.f0 equals a
       FRESH static-compose recompute (byte-exact), and a selector-1 f0 genuinely
       differs from the single-plane compose (the two-plane is doing real work).
-  (D) deterministic rebuild: re-running the build with the same inputs yields a
-      byte-identical archive sha (reproducible decode).
+
+RECORDED (identity, NOT a check -- ddm_bs3 #909, sister of the same fix in
+ddm_v4d_verify_decode.py):
+  (D) ``D_archive_sha256`` / ``D_archive_bytes`` are the identity of the archive
+      UNDER TEST.  The build is NOT re-run here and there is no second sha to
+      compare against, so D has NO discriminating power and is excluded from
+      ``all_checks_ok``.  It was previously listed above under "all must pass"
+      while being absent from the conjunction -- a named check whose projection
+      was the EMPTY SET (it could not fail).
 
 Axis: [macOS-CPU advisory] NON-PROMOTABLE; pointer 0.1910828242 UNMOVED.
 """
@@ -50,6 +57,27 @@ def _load_photo(path: Path) -> dict[int, dict]:
             r = json.loads(ln)
             rows[int(r["pair"])] = r
     return rows
+
+
+
+def conjoin_checks(checks: dict) -> tuple[bool, list[str]]:
+    """ddm_bs3 (#909) CLASS FIX -- sister of ddm_v4d_verify_decode.conjoin_checks.
+
+    Derive the verdict from EVERY ``*_ok`` key instead of a hand-written
+    ``A_ok and B_ok and C_ok``. The hand-written list is what let the docstring
+    advertise a "(D) deterministic rebuild" check that was never in the
+    conjunction and never performed -- a named check whose projection was the
+    EMPTY SET. Duplicated rather than imported because these verifiers run in
+    the VENDORED gate substrate (no ``tac``, no cross-script imports) by design.
+
+    VACUITY: an empty conjunction RAISES. ``all([])`` is True, which is exactly
+    the empty-scope-reads-as-PASS failure this repo has already been bitten by.
+    """
+    ok_keys = sorted(k for k in checks if k.endswith("_ok"))
+    if not ok_keys:
+        raise SystemExit(
+            "ddm_v4c_verify: zero *_ok checks present -- VACUOUS, never a pass")
+    return all(bool(checks[k]) for k in ok_keys), ok_keys
 
 
 def main() -> int:
@@ -164,11 +192,12 @@ def main() -> int:
     checks["D_archive_sha256"] = _sha(archive.read_bytes())
     checks["D_archive_bytes"] = archive.stat().st_size
 
-    all_ok = bool(checks["A_ok"] and checks["B_ok"] and checks["C_ok"])
+    all_ok, ok_keys = conjoin_checks(checks)
     receipt = {
         "schema": "ddm_v4c_verify.v1",
         "axis": "[macOS-CPU advisory] NON-PROMOTABLE; pointer 0.1910828242 UNMOVED",
         "score_claim": False, "archive": str(archive), "all_checks_ok": all_ok,
+        "checks_in_conjunction": ok_keys, "checks_examined_n": len(ok_keys),
         **checks,
         "note": "vendored-substrate decode (no tac); the n600 evaluate gate is "
                 "the d_pose/d_seg authority.",

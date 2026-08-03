@@ -441,9 +441,27 @@ def test_window_receipt_and_boundary_row_carry_the_new_channels():
     assert '_bj["a1_alarms"] = a1_alarm_summary([*telemetry_tail, gate_row])' in src
     assert '_bj["gate_basis_mode"] = "resumed_warm_shadow"' in src
     # ...and the append really does come after (the reason the splice is needed).
-    boundary_at = src.index('_bj["a1_alarms"]')
-    append_at = src.index("telemetry_tail.append(dict(gate_row.items()))")
-    assert append_at > boundary_at
+    # ddm_bs3 (#909): located STRUCTURALLY (the parsed call node), not by matching the
+    # append's exact argument text. The old locator was
+    # ``src.index("telemetry_tail.append(dict(gate_row.items()))")`` -- a substring that
+    # pinned the ARGUMENT EXPRESSION while the invariant under test is ORDERING, so a
+    # semantically identical rewrite of the argument broke it (it did). Same
+    # wrong-projection shape this suite exists to catch, one level up.
+    import ast
+
+    tree = ast.parse(src)
+    gate_appends = [
+        n.lineno for n in ast.walk(tree)
+        if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)
+        and n.func.attr == "append"
+        and isinstance(n.func.value, ast.Name) and n.func.value.id == "telemetry_tail"
+        and "gate_row" in ast.dump(n)
+    ]
+    assert gate_appends, "no telemetry_tail.append(... gate_row ...) found -- VACUOUS, not a pass"
+    boundary_lineno = src[: src.index('_bj["a1_alarms"]')].count("\n") + 1
+    assert min(gate_appends) > boundary_lineno, (
+        f"gate-row append at line {min(gate_appends)} must come AFTER the boundary block "
+        f"at line {boundary_lineno}")
 
 
 def test_trainer_actually_wires_the_arm_into_its_optimizer():

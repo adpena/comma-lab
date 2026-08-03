@@ -15,7 +15,16 @@ Checks (all must pass):
   (C) independent compose recompute on sampled pairs (incl one beta!=0 pair to
       exercise the rolling-shutter path), byte-exact vs a fresh recompute; and
       a selector-1 f0 genuinely differs from the single-plane compose.
-  (D) deterministic rebuild: archive sha stable (reproducible decode).
+
+RECORDED (identity, NOT a check -- ddm_bs3 #909):
+  (D) ``D_archive_sha256`` / ``D_archive_bytes`` are the identity of the archive
+      UNDER TEST.  Nothing is rebuilt here and there is no second sha to compare
+      against, so D has NO discriminating power and is deliberately excluded
+      from ``all_checks_ok``.  It was previously listed above under "all must
+      pass" while being absent from the conjunction -- a named check whose
+      projection was the EMPTY SET (it could not fail).  Deterministic rebuild
+      IS verified, elsewhere and for real, by re-running the builder and
+      diffing shas (the ``*_rebuildcheck_archive.zip`` artifacts).
 
 Axis: [macOS-CPU advisory] NON-PROMOTABLE; pointer 0.1910828242 UNMOVED.
 """
@@ -45,6 +54,28 @@ BETA_MAGS = (0.0, 0.5, 1.0)
 
 def _sha(b: bytes) -> str:
     return hashlib.sha256(b).hexdigest()
+
+
+def conjoin_checks(checks: dict) -> tuple[bool, list[str]]:
+    """ddm_bs3 (#909) CLASS FIX: derive the verdict from EVERY ``*_ok`` key.
+
+    The verdict was a HAND-WRITTEN conjunction ``A_ok and B_ok and C_ok``. That
+    is what let the module docstring advertise a "(D) deterministic rebuild"
+    check under "Checks (all must pass)" while D was absent from the
+    conjunction and nothing was ever rebuilt -- a named check whose projection
+    was the EMPTY SET, structurally unable to fail. Any future ``E_ok`` would
+    have drifted the same way. Deriving the conjunction from the keys makes the
+    denominator follow the checks automatically.
+
+    Returns ``(all_ok, ok_keys)``. VACUITY: an empty conjunction RAISES rather
+    than returning True -- ``all([])`` is True, which is exactly the empty-scope
+    -reads-as-PASS failure this repo has already been bitten by."""
+    ok_keys = sorted(k for k in checks if k.endswith("_ok"))
+    if not ok_keys:
+        raise SystemExit(
+            "ddm_v4d_verify: zero *_ok checks present -- VACUOUS, never a pass "
+            "(all([]) is True; refusing to report that as all_checks_ok)")
+    return all(bool(checks[k]) for k in ok_keys), ok_keys
 
 
 def _load_final(path: Path) -> dict[int, dict]:
@@ -200,11 +231,12 @@ def main() -> int:
     checks["D_archive_sha256"] = _sha(archive.read_bytes())
     checks["D_archive_bytes"] = archive.stat().st_size
 
-    all_ok = bool(checks["A_ok"] and checks["B_ok"] and checks["C_ok"])
+    all_ok, ok_keys = conjoin_checks(checks)
     receipt = {
         "schema": "ddm_v4d_verify.v1",
         "axis": "[macOS-CPU advisory] NON-PROMOTABLE; pointer 0.1910828242 UNMOVED",
         "score_claim": False, "archive": str(archive), "all_checks_ok": all_ok,
+        "checks_in_conjunction": ok_keys, "checks_examined_n": len(ok_keys),
         **checks,
         "note": "vendored-substrate decode (no tac); the n600 evaluate gate is "
                 "the d_pose/d_seg authority.",
