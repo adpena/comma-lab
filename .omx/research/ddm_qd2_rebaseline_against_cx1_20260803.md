@@ -44,8 +44,8 @@ have `cell_drop50` as their **REFERENCE** (so they *shed* it → they SHRINK by 
 **But that re-pricing is moot, because the row underneath them is already measured at full S and it
 is a catastrophe.** `v4d_cr2_ep854/report.txt` — the #827 composition, 285,529 B — recomputes to
 **S = 20.0465770**, i.e. **+19.2200798 against `cx1`**. The advertised "−0.0866 S UNLOCK" is a
-**seg+rate-only partial composite**; its missing pose term is measured at **+19.30**, which is
-**232× the seg+rate prize it was advertising**.
+**seg+rate-only partial composite**; its missing pose term is measured at **+19.302316**, which is
+**234.7× the seg+rate prize it was advertising** (0.0822362, measured leg).
 
 **And the ledger's only live nonzero own-vehicle ΔS is stamped on three rows and is already spent:**
 `−0.0675451` appears under **#850, #873 and #882** — three *distinct* task scopes (GN termination /
@@ -160,8 +160,11 @@ was measured on 2026-08-02:
 | `cx1` | 0.431179 | 0.159732 | 0.235586 | **0.8264972** |
 | `v4d_cr2_ep854` (#827) | 0.394407 | **19.462048** | 0.190122 | **20.0465770** |
 
-**Re-priced full-S: +19.2200798.** The pose penalty (**+19.30**) is **232× the seg+rate prize
-(0.0822)** the row was advertising. `ddm_uv1` rejected it by pre-registered arithmetic and
+**Re-priced full-S: +19.2200798.** The pose penalty (**+19.302316**) is **234.7× the seg+rate prize
+(0.0822362)** the row was advertising — both legs from the same measured row. *(On `cr1`'s derived
+leg 0.0831938 the ratio is 232.0×; quoting 232.0 against the measured 0.0822362, as this memo's first
+draft did, is exactly the mixed-convention slip §5(c) warns about, caught in round-1 review.)*
+`ddm_uv1` rejected it by pre-registered arithmetic and
 `ddm_cr2r` proved with a **matched control** on 74 shared pairs that the defect is the **base**, not
 the solver (celldrop50 base mean `d_best_static` 0.0778 vs ep854 base 11.5904; ep854 better on
 1/74). #881's premise — *"pose must be re-solved against ep854"* — **was executed and refuted**;
