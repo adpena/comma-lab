@@ -683,6 +683,18 @@ plainly** and aim the next unit DIRECTLY at an exact-eval row that crosses the t
    frontier move, by how much, on which axis — then everything else. If it did not move, that is the
    headline.
 
+**Amendment (operator 2026-08-03) — end-of-turn line = OWN-VEHICLE frontier.** Per operator verbatim
+*"Let's replace the pointer with our current own frontier and only print that at the end of each turn"*:
+the PER-TURN sign-off prints the own-vehicle frontier (S + archive bytes + axis label, e.g.
+`[macOS-CPU advisory]`, + Δ when it moved that turn) — NOT the borrowed contest pointer. Rationale: the
+0.19108-lineage pointer is a borrowed PR110 recode, HARVEST-ONLY, never ships (only our own vehicle
+ships, operator 2026-08-01); repeating it each turn tracks a number the campaign does not move by
+design. The borrowed pointer is quoted ONLY when (a) it actually moves, or (b) a
+promotion/submission/exact-authority claim is made. Consequence 5 above continues to bind SESSION-level
+wrap-ups and every exact-eval claim; axis-label honesty + NO-FAKE #8 are UNCHANGED — an advisory
+own-vehicle number is never a score claim. Memory:
+`end_of_turn_frontier_line_is_own_vehicle_not_borrowed_pointer_20260803`.
+
 ### 10-year horizon + long-term autonomous research (operator 2026-06-10)
 Sub-0.15 is the near-term MILESTONE, not the terminus. The GOAL is a **10-year autonomous research
 program**: build the proof-carrying evaluator-equivalent program compiler into a general system, and
