@@ -262,6 +262,60 @@ answer. An id-not-found is a **missing join**, never an absent row.
 
 *(populated below)*
 
-## §6 — What this arm refutes
+## §6 — What this arm refutes (including its own working hypotheses)
 
-*(populated below)*
+### R1 — "24 window-1 orphans" — REFUTED by this arm's own data (2.2× inflation)
+
+The natural output of a ledger-driven sweep is: *32 non-completed rows, 8 legitimately blocked,
+therefore **24 orphans**.* Tested against 1,158 window-2 memos, **13 of the 24 are status-rot** — the
+work continued under other names and only the row went stale. The true orphan count is **11**.
+
+A naive count inflates by **2.2×**. This arm was on course to publish that number before running the
+consumption test. **Any orphan count not paired with a forward-consumption test is inflated by
+construction**, and every one of the 16 tracking surfaces in §3c is a candidate for having done this.
+
+### R2 — This arm's own D50 probe was a false positive (607 → 0)
+
+Probing `D50 ANE/CoreML` with the substring `'ane '` matched "l**ane** ", "pl**ane** ", "membr**ane** "
+and returned **607** later memos, classifying a true orphan as healthy. Word-boundary
+`\bANE\b|\bCoreML\b` returns **0**. The implausibility of 607 is what triggered the recheck — a
+plausible-looking wrong number (say, 12) would have passed silently.
+
+**Sub-lesson:** short/common-substring probes are the orphan-sweep analogue of the vacuity law. A probe
+that cannot distinguish its target from a common English fragment reports *health it did not measure*.
+
+### R3 — "Research memo output collapsed after 07-19" — REFUTED as an instrument artifact
+
+Date-filtered `git log` reported 1,087 memos in window-1 vs **25** in window-2, suggesting a 43×
+collapse in output. The true counts from a full-history pass are **1,052 vs 1,158** — output slightly
+*increased*. The "collapse" was `--since/--until` truncating graph traversal.
+
+### R4 — "The primary window went unswept because no one got to it" — REFUTED
+
+It went unswept because **there was nothing to sweep from**: the repo ledger holds 51 rows against
+1,052 memos (**4.8%**), and only 5 are reachable by the `task #N` convention (**9.8%**). A
+ledger-driven sweep of window-1 would have returned near-empty and — per the vacuity law — that empty
+result would have read as "clean."
+
+### R5 — "Cite CONTENT, never bare ids" is NECESSARY BUT NOT SUFFICIENT — sharpened
+
+The standing cure (m89) is correct as far as it goes: 65% of repo ids contain no integer a `task #N`
+lookup can match, so id-citation is structurally broken. **But content-citation fails on the same
+items.** The phrase `named-$0-follow-on` returns **0 hits** across `.omx/state/`, `.omx/research/`,
+`src/tac/`, `tools/`. An arm told to sweep that class *by content* also finds nothing, because the
+class exists only in the harness TaskList.
+
+**The binding conclusion is therefore stronger than a citation-style rule:** citation style cannot fix
+a store that does not contain the row. The cure is to **materialize harness rows into
+`canonical_task_status.jsonl`** — the only store subagents can read. Until that exists, both
+id-citation and content-citation fail on harness-only items, and every subagent sweep inherits a
+~25% ceiling on what it can even see.
+
+### R6 — What this arm does NOT claim
+
+- Not claimed: that the 11 true orphans are dead. Scope is exactly *"did not find in the 1,158
+  window-2 `.omx/research/*.md` memos, excluding audit/ledger memos."* They may live in code, state,
+  commits, or the harness.
+- Not claimed: any ΔS. This arm ran no scorer; it is `[audit]`, `score_claim=false`, pointer UNMOVED.
+- Not claimed: that ~921 is the exact harness row count — it is the briefing's figure, used only for
+  the order-of-magnitude J2 ratio, and J1/J3/J4 do not depend on it.
