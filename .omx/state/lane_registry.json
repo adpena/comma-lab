@@ -94188,6 +94188,47 @@
         "post-burn exporter integrates the winner and proves counted archive parse-back",
         "exact contest CPU-CUDA evaluation remains separately governed"
       ]
+    },
+    {
+      "id": "lane_ddm_ms8_20260802",
+      "name": "ddm_ms8 s_t codebook RD redesign",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "tools/ms8_st_codebook_race.py + inflate_runner_v4d/ddm_v4d_build_composed_archive; 25 tests green; byte-close 360374 B sha 48e0f31b [macOS-CPU frozen-PoseNet advisory]; research_only=true, no exact gate fired, pointer UNMOVED; reactivation = MAIN fires stage_v4d_realized_gate.sh cpu ms8"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -94197,5 +94238,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-29T10:41:12Z"
+  "updated_at": "2026-08-03T01:26:01Z"
 }
