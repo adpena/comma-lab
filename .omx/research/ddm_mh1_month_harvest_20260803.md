@@ -10,6 +10,9 @@ mostly abandoned research. It is **status-rot in the tracking layer plus a struc
 Of 24 silently-parked window-1 ledger rows, **14 are rot** (the work continued under other names; the
 row was never closed) and **10 are true orphans**. And the repo-visible task ledger covers **4.8%** of
 the primary window's memos, of which only **9.8%** are reachable by the `task #N` convention arms use.
+Separately, **68.6% of distinct measured numbers in the window reach no consumer at all** (2,798 hard
+orphans), and the mechanism there is **split banks** — the headline number gets banked, the rest of
+the same measurement does not.
 A naive count would have reported "24 orphans" — that would have been a false claim, and §6 records it
 as the primary thing this arm refutes.
 
@@ -127,6 +130,63 @@ audit/ledger memos." This is **not** a claim that no artifact anywhere reference
 `'ane '`, which matches "l**ane** ", "pl**ane** ", "membr**ane** " — it reported **607** later memos and
 would have classified D50 as healthy status-rot. Word-boundary `\bANE\b|\bCoreML\b` returns **0**.
 D50 is a true orphan. Control retained in the record: 607 (bad term) vs 0 (correct term).
+
+### 2c-bis. Measured results that never reached a consumer
+
+Denominators: **1,052** memos / **188,811** lines scanned; **8,351** distinct measured numbers
+extracted, of which **5,590** are Class A (a decimal that is a measured quantity). Consumer scope:
+**13,263 files / 14.7M lines** — `src/tac`, `.omx/state`, `tools`, `scripts`, `configs`, `docs`,
+recipes, top-level `experiments/*.py`. **Excluded and stated:** `experiments/results/` (227,387
+vendored files) and `.claude/` (994,424 plugin files).
+
+| Result | Count |
+|---|---:|
+| Class A numbers reaching a consumer | 1,753 / 5,590 = **31.4%** |
+| Class A numbers reaching **nothing** | 3,837 / 5,590 = **68.6%** |
+| **HARD orphans** (absent from consumer scope **AND** in exactly 1 memo of all 7,470) | **2,798** |
+| Score-relevant measured orphan lines | 143 (~85 numbers hand-verified) |
+
+Instrument controls run: a **positive control** (the known-consumed `1.27310821533` B/flip) correctly
+resolved to `src/tac/witness_dsl/guarded_constant_registry.py`; **3 false positives were caught and
+removed** — `0.8201 B/flip` *is* consumed as `b_contour_alone`; three byte counts were substring hits
+inside longer decimals; and `0.000127156576` matches later receipts by **arithmetic coincidence**
+(= 25/196608 per-pair quantum), not citation.
+
+**Highest-value orphan — and the one that most needs the ancestor gate.** `int8_training_rungs_20260713.md:14`
+records post-hoc int8 **lowering** d_seg by **−4.301114e-4** *while also cutting bytes* — both axes
+improve, so it is not a seg↔rate trade. At 100×d_seg that is ≈**0.043 S**, ~7% of the current gap.
+It is labelled `MEASURED_N600`. **Consumed by nothing**: `0.0004301114` has 0 hits across `src/tac`,
+`tools`, `configs`, `docs`, `scripts`, `.omx/state`; its absolutes appear only in
+`subagent_progress.jsonl`, a **transcript, not a consumer**.
+
+**The gate, applied against this arm's own interest.** v7.5.2 is the **witness** vehicle. Per
+`m07`/`L18` the −4.301114e-4 is a **hypothesis on TR1, not a result** — exactly the ruling this memo
+applied to #563's HWM 43.8% / StepNative 31.6%. It would be easy to headline "0.043 S sitting
+unclaimed"; that would be the ancestor-number error with a more attractive number attached. The
+**mechanism** transfers and must be re-measured on TR1; the number does not.
+
+Other ranked orphans: the **seg-RD secant curve data** (9 operating points, real Brotli-Q11 bytes
+after exact parse-back); **d_seg 9.006924099392361e-7** over 96 pairs; **chroma-HF** moving d_seg
+3.86e-3 → 1.71e-3 at n48 on the axis CLAUDE.md names a *primary* seg lever; the **n600 Bayes floor
+0.02650 / churn floor 0.01242**, never canonicalized — an uncanonicalized floor is precisely the
+`ddm_pc2` "floor you divide by" failure waiting to recur; a measured **refutation** (`clip(round(real
+solve))` is not a realization solver) that never became a gate; and a **CoreML/ANE teacher path**
+that passed the fidelity bar at 3.609× wall-clock.
+
+**The structural pattern — SPLIT BANKS — is worth more than any single row.** In 4 of the top 15, a
+sibling number *from the same experiment* reached code while the stronger or more general one did
+not:
+
+| Banked | Dropped |
+|---|---|
+| seg-RD **law** (150,181,956 B/unit d_seg) → in code | its **curve data** → the law cannot be waterfilled to a point |
+| n6 pose-plane result → canonical equation | the **96-pair** d_seg receipt |
+| compact-shearlet `0.4288604312` → in code | the **curvelet-vs-Fourier** comparison |
+| on-policy K=4 `2.6229493094` → in code | the **whole-window** 2.107791× / 3.861003861× |
+
+The failure is **not** "results were ignored." It is that **whichever number the write-up put in its
+headline got banked, and the rest of the same measurement did not.** That is cheap to gate: check
+consumption **per receipt**, not per claim.
 
 ### 2d. Phantom arms — chartered, built, never fired
 
@@ -349,7 +409,7 @@ its memo and wrote ZERO ledger rows** — those rows still read `pending` with l
 So this arm wrote its routing **into `canonical_task_status.jsonl`** via the canonical writer
 (`register_task` / `append_note`, fcntl-locked, append-only):
 
-- **12 new task rows** registered, each with a **named owner** (no row exits "unowned" — `m45`).
+- **18 new task rows** registered, each with a **named owner** (no row exits "unowned" — `m45`).
 - **24 in-ledger annotations** on the parked window-1 rows: 14 tagged STATUS-ROT with their successor
   evidence, 10 tagged TRUE-ORPHAN with exact scope. The next sweep inherits the evidence instead of
   re-deriving it.
@@ -374,6 +434,18 @@ Seg is the majority axis and rate is the cheapest; `$0` items outrank funded one
 | 10 | `mh1_adjudicate_11_true_orphans_window1` *(=10)* | mixed | Wire-or-retire; 8 of 10 are rename casualties. |
 | 11 | `mh1_consolidate_16_orphan_tracking_surfaces` | apparatus | The meta-fix; without it, sweep #18 re-finds all of this. |
 | 12 | `mh1_adjudicate_v753_ten_rung_ladder_never_launched` | — | Expected **RETIRE-with-lessons** (witness lineage, `m34` ban), not revival. Listed last deliberately. |
+
+### Ranked head — measured-result orphans (added after the class-1 scan returned)
+
+Kept as a separate block rather than renumbering, so the sequencing stays visible.
+
+| # | Row | Axis | Why ranked here |
+|---|---|---|---|
+| A1 | `mh1_split_bank_gate_check_consumption_per_receipt_not_per_claim` | apparatus | **Ranks above the individual orphans it explains.** 68.6% of measured decimals reach no consumer; gating per *receipt* instead of per *headline claim* is the one cheap change that stops the class. |
+| A2 | `mh1_orphan_int8_posthoc_lowers_dseg_and_bytes` | **seg + rate** | Largest single orphan (≈0.043 S, ~7% of gap, **both axes improve**). Ranked **below** A1 because it is **gated**: witness-vehicle number, mechanism-only transfer. |
+| A3 | `mh1_orphan_seg_rd_secant_curve_data_never_banked` | seg/rate | Cheap; the banked law is **unusable for point-selection** without it. |
+| A4 | `mh1_orphan_chroma_hf_dseg_actuator` | **seg** | On the axis CLAUDE.md names a primary seg lever; n48 + witness-era, so re-measure, don't transfer. |
+| A5 | `mh1_orphan_bayes_and_churn_seg_floors_uncanonicalized` | measurement | An uncanonicalized floor is the `ddm_pc2` "floor you divide by" failure waiting to recur. |
 
 **No ΔS is claimed for any row.** This arm ran no scorer (`$0`; the eval slot is held by `ob1`).
 Every row states its axis and its evidence; none states a predicted score delta, because a predicted
@@ -448,17 +520,20 @@ a store that does not contain the row. The cure is to **materialize harness rows
 id-citation and content-citation fail on harness-only items, and every subagent sweep inherits a
 ~25% ceiling on what it can even see.
 
-### R6 — An INCOMPLETE scope, stated rather than quietly omitted
+### R6 — A scope that was incomplete, then closed (recorded, not silently backfilled)
 
-Find-class 1 (**measured results that never reached a consumer** — a ΔS or measured quantity in a
-window-1 memo consumed by no equation, Lever, task row, config, or later memo) was delegated to a
-parallel scan that **had not returned when this memo was finalized**. That class is therefore
-**NOT covered here**, and §2's find tables are complete only for classes 2–4.
+Find-class 1 (**measured results that never reached a consumer**) was delegated and **had not
+returned when §1–§6 were first committed**. That state was written into the memo and committed
+(`ddm_mh1 (9/n)`) rather than left implicit, because presenting §2 as a finished harvest would have
+been the exact vacuity failure this memo documents.
 
-Recording it because the alternative — presenting §2 as a finished harvest — would be the exact
-vacuity failure this memo documents: an unrun scope reported as a clean one. The correct reading of
-this memo's coverage is **4 of the 5 briefed find-classes**, with class 5 (stale-baseline ΔS)
-delegated to `ddm_qd1` by prior ownership and one instance found opportunistically (§5 row #8).
+The scan **has since returned** and class 1 is now covered in **§2c-bis**: 68.6% of distinct measured
+decimals reach no consumer; 2,798 are hard orphans. **Coverage is now 5 of 5 briefed find-classes**
+(class 5 remains owned by `ddm_qd1`, with one instance found opportunistically — §5 row #8).
+
+The commit history retains the incomplete state deliberately. A memo that only ever showed the final
+number would hide that the harvest shipped a stated gap and closed it — and "was it complete when you
+said it was?" is precisely the question this arm exists to ask of everyone else.
 
 ### R7 — What this arm does NOT claim
 
