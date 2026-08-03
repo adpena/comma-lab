@@ -7,7 +7,25 @@ research_only: true
 score_claim: false
 promotion_eligible: false
 pointer_moved: false   # exact contest pointer 0.1910828242 [contest-CPU] UNMOVED. This arm fired no gate.
-verdict_scope: FORMULATION
+verdict_scope:   # THREE distinct REFUTED claims, at THREE different rungs. No blanket label.
+  - claim: "pu1 §5.4: pair 74 is RIGID => a MODEL wall"
+    verdict: REFUTED
+    scope: "INSTANCE - pair 74, under a direct multi-start search over the shipped v4d knobs"
+    why_not_higher: "pair 523 RESISTS at ratio 0.9231 under the SAME search. The tail is two regimes;
+      one pair yielding does not refute the model-wall reading for the tail as a FAMILY. (5 of 6 probed
+      pairs are search-limited, which CORROBORATES but does not widen the scope of THIS claim.)"
+  - claim: "|pose_shipped - t_p| as a cheap headroom screen"
+    verdict: REFUTED
+    scope: "FORMULATION - this specific screening proxy, on this base, against the direct search (r2 = 0.000)"
+    why_not_higher: "no other screening statistic was measured; proxy-screening as a FAMILY is untested"
+  - claim: "the '> ~600 B/pair' tail falsifier"
+    verdict: REFUTED_AS_A_THRESHOLD
+    scope: "FORMULATION - the FIXED-threshold FORM, not tail-correction economics"
+    why_not_higher: "break-even is k-DEPENDENT (40,503 B/pair at k=1 - 10,258 at k=10 - 818 at k=200),
+      so a single fixed number is the wrong FORM. Tail-correction economics as a FAMILY remain fully
+      OPEN - this arm measures them and finds the realised cost <= 0."
+verdict_scope_ladder: "INSTANCE < FORMULATION < FAMILY < PARADIGM. None of the three reaches FAMILY.
+  NOTHING in this memo licenses a FAMILY-level negative on the pose tail."
 axis: "[macOS-CPU frozen-PoseNet advisory] NON-PROMOTABLE. Every d_pose here is REALIZED through the
   shipped cx1 receiver (inflate_runner.Decoder) at the shipped v4d quantization. No archive rebuilt,
   no training, no paid dispatch, no pointer mutation."
@@ -18,10 +36,13 @@ consumes:
   - experiments/ddm_p3v2_optimal_form_pose_resolve.py             (frozen PoseNet + targets + d_pose_u8)
   - upstream/modules.py                                           (PoseNet.preprocess_input, compute_distortion; SegNet.preprocess_input)
 produces:
-  - experiments/ddm_pu2_pose_tail_floor_probe.py
-  - /Volumes/VertigoDataTier/pact/ddm_pu2_20260803/pu2_positive_control.json
-  - /Volumes/VertigoDataTier/pact/ddm_pu2_20260803/pu2_floor_probe_receipt.json
-  - /Volumes/VertigoDataTier/pact/ddm_pu2_20260803/pu2_floor_probe.partial.jsonl
+  - experiments/ddm_pu2_pose_tail_floor_probe.py            (the probe; smoke/probe/summarize/bytes modes)
+  - experiments/ddm_pu2_stage_and_eval.sh                   (stage rebuilt archive + end-to-end upstream eval)
+  - /Volumes/VertigoDataTier/pact/ddm_pu2_20260803/pu2_positive_control.json      (BIT-EXACT per-pair control)
+  - /Volumes/VertigoDataTier/pact/ddm_pu2_20260803/pu2_floor_probe.partial.jsonl  (per-pair floors, resumable)
+  - /Volumes/VertigoDataTier/pact/ddm_pu2_20260803/pu2_interim_summary.json       (n600 S-arithmetic)
+  - /Volumes/VertigoDataTier/pact/ddm_pu2_20260803/pu2_realised_bytes.json        (realised bytes + byte-close verify)
+  - /Volumes/VertigoDataTier/pact/ddm_pu2_20260803/submission_pu2/                (rebuilt archive.zip + sha256 + report.txt)
 consumers: [MAIN]
 tokens: [no-triality, p0-ledger-ok]
 ---
@@ -60,7 +81,7 @@ tokens: [no-triality, p0-ledger-ok]
 
    *Scope actually achieved:* 6 of a planned 10 tail pairs; **the control group did not run**, so
    "is this tail-specific or population-wide?" is **UNANSWERED** and my tail framing is untested from
-   that direction (§5.6, §7).
+   that direction (§5.6, §8).
 
 6. **The instrument was NOT what my charter specified, and that is a finding.** `pu1` §8 asked for a
    ~30-line re-point of `pfs1`'s `WarpPoseOracle`. That oracle models a **6-DOF single warp**; the live
@@ -535,7 +556,39 @@ first entries in §7.
 
 ---
 
-## §7 NEXT-IF-RESUMED
+## §7 VERDICT SCOPES — what this arm did and did NOT kill
+
+Three claims are REFUTED here and they sit at **three different rungs**. A single blanket
+`verdict_scope` cannot name *which* formulation, and one of the three is not even at that rung — so
+they are separated. Ladder: **INSTANCE < FORMULATION < FAMILY < PARADIGM.**
+
+**1. `pu1` §5.4 — "pair 74 is RIGID ⇒ a MODEL wall" — REFUTED at INSTANCE.**
+`pu1` inferred rigidity from a **frame_1 perturbation PROXY** (ratio 0.981); mine is the **direct**
+search over the shipped knobs and it cuts pair 74 by **54.2%**, byte-closed. **The pair carrying 30.92%
+of all pose mass is REACHABLE** — a materially better campaign state than what was on record.
+*Why only INSTANCE:* **pair 523 resists at 0.9231 under the identical search.** The tail is at least two
+regimes, so one pair yielding does not refute the model-wall reading for the tail as a **family**. Five
+of six probed pairs being search-limited *corroborates* the direction but does not widen this claim.
+
+**2. `|pose_shipped − t_p|` as a cheap headroom screen — REFUTED at FORMULATION.**
+`r² = 0.000`, and pair 74 ranks 231/600 on it (§4.4). Refutes **this** screen; **proxy-screening as a
+family is untested** because no other screening statistic was measured. Note it is the **same genus as
+claim 1** — a quantity measured through a stand-in and reported as if measured directly. That genus
+bit this campaign twice on the same axis, in opposite directions.
+
+**3. The "> ~600 B/pair" tail falsifier — REFUTED as a THRESHOLD, at FORMULATION.**
+Break-even is **k-dependent** — 40,503 B/pair at k=1, 10,258 at k=10, 818 at k=200 — so a single fixed
+number is the wrong **form**, and the original 600 was set when the pose marginal was 1.73× cheaper.
+**Tail-correction economics as a FAMILY remain fully OPEN**, and this arm measures them: the realised
+cost is **≤ 0** (§4.2, §5.5). Left unexamined, the fixed threshold would have killed a live route.
+
+**Not killed by anything here:** the pose tail as a family · the model-wall reading for pair 523 or for
+the tail generally · proxy screening as a family · any seg-side route. **No FAMILY-level negative is
+licensed by this memo.**
+
+---
+
+## §8 NEXT-IF-RESUMED
 
 **STATE AT LAST WRITE.** Probe stopped at **6 completed pairs** (74, 67, 21, 523, 16, 71) to spend the
 remaining budget on the authority row. All artifacts landed and verified:
