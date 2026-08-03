@@ -310,7 +310,18 @@ am recording it as owed rather than half-wiring it in a slot that cannot test it
 1. **The weight A/B — the one that can move the pointer.** `margin_hinge_weight` 0.05 → the §3
    derived band, matched seed and description budget, n600 through the real byte-close, reporting
    **d_seg *and* d_pose *and* bytes** against `S = 0.7910689` / seg leg `0.4311790`.
-   **Pre-registered kills:** (a) Δd_seg ≤ single-seed noise; (b) proxy margin improves but realized
+   **Pre-registered kills:** (a) **INADMISSIBLE AS FIRST WRITTEN — corrected here.** The original
+   read "Δd_seg ≤ single-seed noise," which is a threshold against a quantity **nobody has
+   measured on this vehicle**: there is no seed-repeat noise floor for the TR1 seg leg on record.
+   A kill fired against an unmeasured floor is the `m50` vacuity genus — the criterion cannot
+   distinguish "no effect" from "no instrument." **The corrected criterion is RELATIVE and its
+   denominator is stated:** at the live operating point `S = 0.7910689` the gap to the PR130 bar
+   (0.172141) is **0.6189279**, so **1% of the remaining gap = 0.0061893 S = 6.189e-05 in `d_seg`
+   = 7,301 flips**; against the seg leg alone (`0.4311790` → `0.02966`, gap **0.4015190**, **64.9%**
+   of the total) **1% = 0.0040152 S = 4,737 flips**. The A/B therefore reports Δd_seg **as a
+   percentage of the remaining gap**, and (a) may only fire on a **measured** ≥2-seed repeat floor
+   run in the same window — otherwise the outcome is `UNRESOLVED_NO_NOISE_FLOOR`, never a kill.
+   Verdict scope on any (a) outcome: **INSTANCE**. (b) proxy margin improves but realized
    `d_seg` does not; (c) **d_pose regresses** — a seg-only A/B is forbidden, `uv1` measured a 3,019×
    d_pose separation between bases under an identical solver; (d) **the L7 cross-hardware
    portability guard degrades** — raising the *weight* strengthens margins so it should not, and
