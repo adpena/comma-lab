@@ -339,6 +339,85 @@ Receipts (SSD, rebuildable from the committed scripts + existing caches):
 `sq1_posenull_n32.json`, `sq1_regression_check.json` (post-cleanup script reproduces the
 committed receipt on 92/92 keys).
 
-## §3 JOB 2 RESULT — pending
+## §3 JOB 2 — the sealed mg1 hinge A/B: NOT FIRED THIS SLOT, with the blocker MEASURED and
+the premise CORRECTED
+
+**Typed outcome: `BLOCKED_BUILD_NOT_MEASUREMENT(scope=config-surface landing + 4 n600 solves)`.
+Not deferred for want of effort — the A/B is not runnable without a gated landing that this
+slot could not honestly complete, and shortcutting it would violate a named non-negotiable.**
+
+### 3.1 The blocker, established by inspection (evidence, not estimate)
+
+`margin_hinge_weight` is a **bare constructor default on the MLX module**
+(`direct_description_joint_descent.py:2296`, used at `:2437-2438`). It is:
+
+| surface | state | evidence |
+|---|---|---|
+| launcher argparse (`tools/launch_ddm_joint_descent.py`) | **absent** — 26 flags, none is the hinge | `grep add_argument`, lines 2896-2922 |
+| typed config `DirectDescriptionJointDescentTypedConfigV1` | **no hinge field at all** | `git grep hinge` in the module returns only the constructor + the guarded-constant assert |
+| the default ticket `ddm_j5_366_realized_acceptance_warmstart_20260723.json` | **no `hinge` key anywhere** (case-insensitive) | parsed this unit |
+| a DSL `Lever` owning it | **not for this module** (`curriculum_dsl.py` holds a hinge for the *capstone* trainer, a different surface) | `git grep -l margin_hinge -- src/tac/witness_dsl/` |
+
+So there is **no path from ticket -> config -> module**, and arm B (`w=0.65`) cannot be
+expressed. bo1 §4 anticipated this in one clause — *"Same change wires `margin_targets` +
+`derive_margin_floor`"* — but that clause is a **landing**, not a flag.
+
+### 3.2 Why I did not just add the flag
+
+CLAUDE.md is explicit and this is exactly the case it names: *"A new/changed lever MUST land as
+a `Lever` factory in the DSL — NOT a hand-added trainer flag at finalize time"* (the
+config-orphan confound). A conforming landing must satisfy **Catalog #332** (one DSL Lever
+owner; raw-DSL token/type custody *and* separate argparse-normalized runtime custody; one
+`Lever.constant_refs` LawRef + canonical compiler record; a reviewed value-provenance rung;
+executable trainer-consumer locations; a runtime receipt schema) and **Catalog #351** (LawRef
+value custody: an executable registry evaluator for a derivation, a content-hashed artifact for
+a measured anchor, or typed `HardcodedWaiverCustody`). `w=0.65` is bo1's "band centre" — that is
+a **class-4 value needing custody**, not a derived one.
+
+Adding a bare flag to clear my own queue would have been the `m54` built-instead-of-paid poison
+and a #332 violation. **A REFUSE is information.**
+
+### 3.3 Second, independent blocker: the launcher governor
+
+`tools/launch_ddm_joint_descent.py:2902-2903` raises
+`REFUSE_EVENT_CONTINUATION_EXECUTION_DISABLED_PENDING_MAIN_REVIEW` for `--bounded-smoke` /
+`--full-run` when the ticket carries an event-continuation schedule. The default ticket does not
+carry one, so this may not bind — but it is a **live governor on the exact execution mode the
+A/B needs** and MAIN should confirm it before the run is scheduled.
+
+### 3.4 Cost, stated so it can be scheduled rather than re-discovered
+
+1 gated config landing (#332 + #351, with tests) **+ 4 n600 MLX solves**: arm A `w=0.05`, arm B
+`w=0.65`, arm A seed-2 (gc16 revision (a), the noise floor that cures
+`UNRESOLVED_NO_NOISE_FLOOR`), and the edge-weighted branch (gc16 revision (c)) — each followed
+by a **pose re-solve against its own decoded base** (`uv1 resolve_base`, `sf1` partner law;
+seg-only A/B forbidden). bo1's arm-A reuse clause (*"iff config-hash-identical"*) **cannot be
+exercised**: no receipt for this module at any hinge weight exists under
+`/Volumes/VertigoDataTier/pact/` (`ls | grep -iE 'mg1|pt2|j10|joint'` returns only unrelated
+families), so arm A must be run.
+
+### 3.5 What Job 1 CHANGES about this A/B — the part that matters most
+
+bo1 §4 pre-registered the null branch as: *"null-with-telemetry => the P0 seg lane becomes the
+sub-cell realization instrument (dd1 Lane perpendicular offset through real R->uint8->argmax),
+and no further objective work is admissible on this vehicle until that instrument exists."*
+
+**That instrument now EXISTS and has returned a reading.** Job 1b/1c is precisely a sub-cell
+realization instrument through the real `R -> uint8 -> frozen argmax`, and it measured:
+
+- **bo1's H2 ("realization dead zone") is FALSE** for band-local corrections — realization is
+  not dead, it was **under-engineered**. The same description moved from `eta = -3.76` to
+  `eta = +0.79` with no change to the addressing or the bytes.
+- Therefore the A/B's H1-vs-H2 discriminator is **weaker than the seal assumed**: a null on the
+  hinge weight can no longer be read as evidence for a realization dead zone, because the dead
+  zone has been measured open. The telemetry clause in bo1 §4 (hinge-share up, theta moved,
+  flips unmoved => H2) needs this correction before the arms are interpreted.
+- And the binding seg term is now **not the objective weight at all** (§2.4/§4.2): with
+  realization solved and pose neutralised, the residual cost is the **address rate**.
+
+**Recommendation to MAIN (not a decision I am authorised to take):** re-adjudicate whether the
+hinge A/B is still the decisive next seg measurement, or whether the measured realizer + the
+address-rate finding in §4.2 now dominate it. The seal is bo1's and MAIN's to reopen; this unit
+supplies the measurement that bears on it, and nothing more.
 
 ## §4 NEXT-IF-RESUMED — pending
