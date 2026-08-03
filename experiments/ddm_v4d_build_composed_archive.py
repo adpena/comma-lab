@@ -140,6 +140,72 @@ def derive_beta_table(final: dict, n_pairs: int):
     return table, idx
 
 
+def load_st_override(path: str | None, n_pairs: int):
+    """Load a ddm_ms8 fitted s_t codebook + per-pair index stream.
+
+    ``None`` keeps ``_st_coded_from_base`` verbatim, so a rebuild with no new
+    flag is BYTE-IDENTICAL (the regression guard).  The JSON carries
+    ``{"st_grid": [...], "st_idx": [...]}``; the receiver reads the table from
+    ``manifest['st_grid']`` (``inflate_runner_v4d.py``) and indexes it with the
+    coded stream, so a fitted table needs no receiver change.
+    """
+    if path is None:
+        return None, None
+    doc = json.loads(Path(path).read_text())
+    grid = [float(x) for x in doc["st_grid"]]
+    idx = np.asarray(doc["st_idx"], np.int64)
+    if idx.shape != (n_pairs,):
+        raise SystemExit(f"st_idx has {idx.shape}, expected ({n_pairs},)")
+    if not 2 <= len(grid) <= 16:
+        # ``ddm_r7_token_coder._codes`` admits only 2 <= levels <= 16; a
+        # 1-entry codebook is degenerate and would carry no index information.
+        raise SystemExit(f"st_grid has {len(grid)} entries, expected 2..16")
+    if idx.min() < 0 or idx.max() >= len(grid):
+        raise SystemExit(
+            f"st_idx range [{idx.min()},{idx.max()}] outside st_grid of "
+            f"{len(grid)} entries")
+    if len(set(grid)) != len(grid) or list(grid) != sorted(grid):
+        raise SystemExit("st_grid must be strictly increasing and unique")
+    return grid, idx.astype(np.uint8)
+
+
+def vendored_st_grid() -> list[float]:
+    import sys
+    sys.path.insert(0, str(Path(__file__).parent))
+    from ddm_pfs1_ep_warp_pose_solve import ST_GRID
+    return [float(x) for x in ST_GRID]
+
+
+def assert_inherited_st_grid_is_vendored(manifest: dict) -> None:
+    """Fail closed when a copied index stream would meet a foreign table.
+
+    ``inflate_runner_v4d`` now READS ``manifest['st_grid']``.  With no fitted
+    override the ``st_coded`` stream is copied verbatim from the base, and that
+    stream was indexed against the VENDORED ladder -- so an inherited manifest
+    carrying a different table would silently decode every pair at the wrong
+    ``s_t``.  Refuse instead.
+    """
+    if "st_grid" not in manifest:
+        return
+    inherited = [float(x) for x in manifest["st_grid"]]
+    vendored = vendored_st_grid()
+    if inherited != vendored:
+        raise SystemExit(
+            f"base manifest st_grid {inherited} differs from the vendored "
+            f"ladder {vendored}; the copied st_coded stream was indexed "
+            "against the vendored table. Pass --st-override to ship a fitted "
+            "codebook explicitly.")
+
+
+def encode_st_stream(idx: np.ndarray, levels: int) -> bytes:
+    """Re-encode the s_t index stream with the SHIPPED r7 coder."""
+    import sys
+    sys.path.insert(0, str(Path(__file__).parent))
+    from ddm_r7_token_coder import encode_token_codes
+    codes = np.ascontiguousarray(idx, np.uint8).reshape(len(idx), 1, 1, 1)
+    return encode_token_codes(codes, levels=int(levels), codec="auto")
+
+
 def build(args: argparse.Namespace) -> None:
     # ddm_cr2: the seg base is a PARAMETER, not a module constant.  Default is
     # the cell_drop50 base this builder shipped with, so a rebuild with no new
@@ -168,6 +234,11 @@ def build(args: argparse.Namespace) -> None:
     # derived table and the index remap are both the identity -- so an archive
     # rebuilt from a pre-pw1 final JSONL is byte-identical.
     beta_mags, beta_idx = derive_beta_table(final, n_pairs)
+    # ddm_ms8: an optional FITTED s_t codebook replaces the copied stream.
+    st_grid_override, st_idx_override = load_st_override(
+        args.st_override, n_pairs)
+    if st_grid_override is not None:
+        st_coded = encode_st_stream(st_idx_override, len(st_grid_override))
     for i in range(n_pairs):
         poses[i] = np.asarray(final[i]["p"], np.float64)
         ab[i] = [float(final[i]["a"]), float(final[i]["b"])]
@@ -205,6 +276,18 @@ def build(args: argparse.Namespace) -> None:
     manifest["beta_idx_counts"] = [int((beta_idx == k).sum())
                                    for k in range(len(beta_mags))]
     manifest["base"] = args.base_label
+    if st_grid_override is not None:
+        # ddm_ms8: the TABLE ships (the receiver indexes it) but the OCCUPANCY
+        # does NOT.  Counts are derivable from the coded index stream, so a
+        # manifest copy is counted-but-inert payload -- the exact defect this
+        # arm measured elsewhere in the container.  They go in the build
+        # receipt, which is not part of the archive.
+        manifest["st_grid"] = list(st_grid_override)
+        st_idx_counts = [int((st_idx_override == k).sum())
+                         for k in range(len(st_grid_override))]
+    else:
+        st_idx_counts = None
+        assert_inherited_st_grid_is_vendored(manifest)
     if dim0_offset is not None:
         manifest["pose_dim0_offset"] = dim0_offset
     new_manifest = (json.dumps(manifest, sort_keys=True, separators=(",", ":"))
@@ -236,6 +319,8 @@ def build(args: argparse.Namespace) -> None:
         "grammar": "v4d_static_photo_beta", "dim0_offset": dim0_offset,
         "final_jsonl": args.final_jsonl, "n_selector_two": int(sel.sum()),
         "beta_idx_counts": manifest["beta_idx_counts"],
+        "st_grid": list(st_grid_override) if st_grid_override else None,
+        "st_idx_counts": st_idx_counts,
         "archive_zip": str(out_zip), "archive_bytes": len(archive_bytes),
         "archive_sha256": _sha(archive_bytes),
         "base_archive_bytes": base_b, "v4c_archive_bytes": v4c_b,
@@ -276,6 +361,10 @@ def main() -> int:
                     help="v3_warp-grammar seg base supplying tokens/renderer/"
                          "selector/pose_stub AND the pose_warp.stp that carries "
                          "st_coded (default: the cell_drop50 base)")
+    ap.add_argument("--st-override", default=None,
+                    help="ddm_ms8 fitted s_t codebook JSON "
+                         "{'st_grid':[...],'st_idx':[...]}; omit to copy the "
+                         "base st_coded verbatim (byte-identical rebuild)")
     ap.add_argument("--base-label", default="cell_drop50",
                     help="manifest['base'] label for the chosen base archive")
     args = ap.parse_args()

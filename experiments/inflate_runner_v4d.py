@@ -143,7 +143,23 @@ class Decoder:
             self.p_best[:, 0] = float(self.dim0_offset) + self.p_best[:, 0]
         if int(self.packet.selector["num_pairs"]) != self.n_pairs:
             raise SystemExit("pose_warp n_pairs differs from selector")
-        self.st_vals = np.asarray(ST_GRID, np.float64)
+        # ddm_ms8: the s_t codebook is READ from the manifest, with the
+        # vendored generic ladder as the fallback for archives whose manifest
+        # predates the key.  MEASURED on the live pw1 archive: the manifest
+        # already ships ``st_grid`` EQUAL to the vendored table and this
+        # receiver never read it -- 34 counted deflated bytes that no decode
+        # step consumed (the #417 counted-but-inert class; the existing
+        # parse-back verifier's denominator is pose_warp.stp only, so the
+        # manifest was outside its scope).  Reading it is byte-identical on
+        # every existing archive AND lets a FITTED codebook ship in a field
+        # the archive is already paying for.
+        self.st_vals = np.asarray(manifest.get("st_grid", ST_GRID), np.float64)
+        if self.st_vals.ndim != 1 or self.st_vals.size < 1:
+            raise SystemExit("manifest st_grid must be a non-empty 1-D table")
+        if int(self.st_idx.max()) >= self.st_vals.size:
+            raise SystemExit(
+                f"st_idx max {int(self.st_idx.max())} outside st_grid of "
+                f"{self.st_vals.size} entries")
         self.K = intrinsics_native()
         self.Kinv = np.linalg.inv(self.K)
         self.grid = _target_grid(CAMERA_H, CAMERA_W)
