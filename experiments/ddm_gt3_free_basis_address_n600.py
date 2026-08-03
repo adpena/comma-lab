@@ -37,7 +37,8 @@ THE EXACT ACCOUNTING (per free bin j, all independent -- so per-bin greedy IS th
 There is NO address term. That is the whole point: the receiver recomputes the bin.
 
 Break-even in one line: a bin pays iff   density_j * eta * W  >  H_j / 8   bytes/site,
-i.e.  density_j > H_j / (8 * eta * W).   With W = 1.27310821533203125 B/flip.
+i.e.  density_j > H_j / (8 * eta * W).   With W = 1.273108215332031 B/flip
+(recomputed from components; = the banked m66 W to 1 ULP).
 
 WHAT IS FREE HERE (rule-118, gt1 three-way test)
 ------------------------------------------------
@@ -85,7 +86,7 @@ NC = 5
 # ---- the score arithmetic, recomputed from components, never a rounded field -------------
 RATE_PER_BYTE = 25.0 / 37_545_489.0
 S_PER_FLIP = 100.0 / (N_PAIRS * PIX_PER_PAIR)
-W_BYTES_PER_FLIP = S_PER_FLIP / RATE_PER_BYTE          # 1.27310821533203125
+W_BYTES_PER_FLIP = S_PER_FLIP / RATE_PER_BYTE          # 1.273108215332031 (= banked m66 W to 1 ULP)
 
 # live best (pu2, archive sha c72ef357) and the PR130 bar
 LIVE_BEST_S = 0.7910689

@@ -10,7 +10,7 @@ pointer: "0.1910828242 [contest-CPU] UNMOVED"
 own_vehicle_frontier: "S = 0.7910689 @ 353,805 B [macOS-CPU advisory] UNMOVED this unit"
 axis: "[macOS-CPU cache-derived + certified-decode advisory] NON-PROMOTABLE"
 slot: "held the n600 scorer slot; ZERO scorer forwards fired -- the decisive measurement turned out to be cache-derived. Slot returned unspent."
-baseline_named: "live best S = 0.7910689 @ 353,805 B (pu2, archive sha c72ef357); gap to the PR130 bar 0.172141 = 0.6189279; 1% of gap = 0.0061893 S = 9,295 B; W = 1.27310821533203125 B/flip"
+baseline_named: "live best S = 0.7910689 @ 353,805 B (pu2, archive sha c72ef357); gap to the PR130 bar 0.172141 = 0.6189279; 1% of gap = 0.0061893 S = 9,295 B; W = 1.273108215332031 B/flip (recomputed from components; agrees with the banked m66 value 1.2731082153320312 to 1 ULP -- a float-repr artifact, not a disagreement)"
 verdict_scope: "FORMULATION (photometric+geometric free features on decoded RGB). NOT the free-basis family."
 consumes:
   - ".omx/research/ddm_ob1_band_price_n600_and_ordering_break_even_20260803.md (the receiver audit + the 544,499 B hand-built legal floor I beat by 13.1%)"
