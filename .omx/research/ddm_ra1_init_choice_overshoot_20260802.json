@@ -1,0 +1,234 @@
+{
+  "arm": "ddm_ra1",
+  "axis": "[macOS-CPU advisory] NON-PROMOTABLE",
+  "score_claim": false,
+  "pairs_sampled": [
+    0,
+    200,
+    400
+  ],
+  "clipped_camera_frac_mean": 0.0012292453580287689,
+  "render_saturated_frac_mean": 0.002361156322337963,
+  "debt_with_clip_rms": 0.8012330485754191,
+  "debt_rounding_only_rms": 0.7988239335404227,
+  "inits": {
+    "bicubic_clip": {
+      "plane_after_solve_rms": 0.029902414436819045,
+      "camera_move_rms": 3.4632328810402355,
+      "frame0_delta_rms": 2.900500046196044,
+      "frame0_delta_max": 183.0
+    },
+    "bilinear": {
+      "plane_after_solve_rms": 0.029341324918608663,
+      "camera_move_rms": 3.9381201324676502,
+      "frame0_delta_rms": 3.3790229787614297,
+      "frame0_delta_max": 181.66666666666666
+    },
+    "nearest": {
+      "plane_after_solve_rms": 0.029934860372699792,
+      "camera_move_rms": 6.145753265567508,
+      "frame0_delta_rms": 5.451358843348996,
+      "frame0_delta_max": 181.33333333333334
+    }
+  },
+  "rows": [
+    {
+      "pair": 0,
+      "clipped_camera_frac": 0.0012260780443563712,
+      "render_saturated_frac": 0.0022786458333333335,
+      "debt_with_clip": {
+        "rms": 0.8002931255868632,
+        "p99": 2.624023590087865,
+        "max_abs": 20.411422729492188
+      },
+      "debt_rounding_only_unrealizable": {
+        "rms": 0.797832910489057,
+        "p99": 2.621534118652349,
+        "max_abs": 20.411422729492188
+      },
+      "init_bicubic_clip": {
+        "plane_after_solve": {
+          "rms": 0.02991792184122622,
+          "p99": 0.09426879882831252,
+          "max_abs": 0.4774576822916856
+        },
+        "camera_move_vs_shipped": {
+          "rms": 3.4501274395216344,
+          "p99": 10.0,
+          "max_abs": 188.0
+        },
+        "frame0_delta_vs_shipped": {
+          "rms": 2.819674453214884,
+          "p99": 9.0,
+          "max_abs": 181.0
+        }
+      },
+      "init_bilinear": {
+        "plane_after_solve": {
+          "rms": 0.029368623101284786,
+          "p99": 0.09322540760039535,
+          "max_abs": 0.4495408535003662
+        },
+        "camera_move_vs_shipped": {
+          "rms": 3.9242253788817942,
+          "p99": 14.0,
+          "max_abs": 188.0
+        },
+        "frame0_delta_vs_shipped": {
+          "rms": 3.320498006315063,
+          "p99": 12.0,
+          "max_abs": 184.0
+        }
+      },
+      "init_nearest": {
+        "plane_after_solve": {
+          "rms": 0.029962847000679457,
+          "p99": 0.09523743947346353,
+          "max_abs": 0.4774576822916856
+        },
+        "camera_move_vs_shipped": {
+          "rms": 6.150060373657011,
+          "p99": 24.0,
+          "max_abs": 190.0
+        },
+        "frame0_delta_vs_shipped": {
+          "rms": 5.450590897316116,
+          "p99": 21.0,
+          "max_abs": 184.0
+        }
+      }
+    },
+    {
+      "pair": 200,
+      "clipped_camera_frac": 0.0012228015129711325,
+      "render_saturated_frac": 0.0022939046223958335,
+      "debt_with_clip": {
+        "rms": 0.7953569957482965,
+        "p99": 2.588252334594775,
+        "max_abs": 20.411422729492188
+      },
+      "debt_rounding_only_unrealizable": {
+        "rms": 0.792875292748709,
+        "p99": 2.587266413371038,
+        "max_abs": 20.411422729492188
+      },
+      "init_bicubic_clip": {
+        "plane_after_solve": {
+          "rms": 0.02987877374309875,
+          "p99": 0.09430154234173689,
+          "max_abs": 0.47328489025426546
+        },
+        "camera_move_vs_shipped": {
+          "rms": 3.4463245652104852,
+          "p99": 10.0,
+          "max_abs": 188.0
+        },
+        "frame0_delta_vs_shipped": {
+          "rms": 3.130439674648261,
+          "p99": 9.0,
+          "max_abs": 187.0
+        }
+      },
+      "init_bilinear": {
+        "plane_after_solve": {
+          "rms": 0.029297772388453137,
+          "p99": 0.09330084482830328,
+          "max_abs": 0.458671897649765
+        },
+        "camera_move_vs_shipped": {
+          "rms": 3.918091050479727,
+          "p99": 14.0,
+          "max_abs": 187.0
+        },
+        "frame0_delta_vs_shipped": {
+          "rms": 3.5989794579191314,
+          "p99": 13.0,
+          "max_abs": 186.0
+        }
+      },
+      "init_nearest": {
+        "plane_after_solve": {
+          "rms": 0.02990020047172836,
+          "p99": 0.09496307373046875,
+          "max_abs": 0.48293384909626047
+        },
+        "camera_move_vs_shipped": {
+          "rms": 6.069712701336853,
+          "p99": 24.0,
+          "max_abs": 186.0
+        },
+        "frame0_delta_vs_shipped": {
+          "rms": 5.68271503898314,
+          "p99": 22.0,
+          "max_abs": 185.0
+        }
+      }
+    },
+    {
+      "pair": 400,
+      "clipped_camera_frac": 0.0012388565167588028,
+      "render_saturated_frac": 0.002510918511284722,
+      "debt_with_clip": {
+        "rms": 0.8080490243910978,
+        "p99": 2.6840386327107275,
+        "max_abs": 20.411422729492188
+      },
+      "debt_rounding_only_unrealizable": {
+        "rms": 0.8057635973835021,
+        "p99": 2.681970583598633,
+        "max_abs": 20.411422729492188
+      },
+      "init_bicubic_clip": {
+        "plane_after_solve": {
+          "rms": 0.029910547726132167,
+          "p99": 0.09440109372139,
+          "max_abs": 0.47328489025426546
+        },
+        "camera_move_vs_shipped": {
+          "rms": 3.4932466383885874,
+          "p99": 10.0,
+          "max_abs": 189.0
+        },
+        "frame0_delta_vs_shipped": {
+          "rms": 2.7513860107249872,
+          "p99": 9.0,
+          "max_abs": 181.0
+        }
+      },
+      "init_bilinear": {
+        "plane_after_solve": {
+          "rms": 0.029357579266088063,
+          "p99": 0.09309631983440975,
+          "max_abs": 0.4673336446285248
+        },
+        "camera_move_vs_shipped": {
+          "rms": 3.972043968041429,
+          "p99": 14.0,
+          "max_abs": 188.0
+        },
+        "frame0_delta_vs_shipped": {
+          "rms": 3.2175914720500933,
+          "p99": 12.0,
+          "max_abs": 175.0
+        }
+      },
+      "init_nearest": {
+        "plane_after_solve": {
+          "rms": 0.02994153364569156,
+          "p99": 0.09510011037189993,
+          "max_abs": 0.47328489025426546
+        },
+        "camera_move_vs_shipped": {
+          "rms": 6.21748672170866,
+          "p99": 25.0,
+          "max_abs": 188.0
+        },
+        "frame0_delta_vs_shipped": {
+          "rms": 5.220770593747732,
+          "p99": 20.0,
+          "max_abs": 175.0
+        }
+      }
+    }
+  ]
+}
