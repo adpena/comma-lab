@@ -32,6 +32,17 @@ from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 
+# EXPLICIT trainer binding for the package-wide registry scan (ddm_lr2, 2026-08-03). This #515
+# wave is a genuine v9/levelset-era module — 7 of its 8 emitted flags exist on the retired pair
+# and its laws cite the v9 witness dry-start below — so the registry's silent default was
+# already correct here. Declaring it says so ON PURPOSE, which is the difference the sister gate
+# refuses on: an undeclared module graded as a stub cannot be told apart from one whose author
+# never considered which vehicle it targets.
+TRAINER_RELPATHS = (
+    "experiments/train_levelset_witness_realized_through_R_mlx.py",
+    "experiments/train_witness_realized_through_R_mlx.py",
+)
+
 # The live dry-start this wave must not disturb (HARD CONSTRAINT, 2026-07-15).
 LIVE_DRY_START_PID = 31576
 

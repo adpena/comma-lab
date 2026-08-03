@@ -981,6 +981,26 @@ def section_duty_to_measure(term_current: dict[str, float] | None = None) -> tup
         tgt = ranked[0].get("s_target", 0.15) if ranked else 0.15
         n_at_floor = sum(1 for r in ranked if r.get("floor_status") == "AT_FLOOR")
         n_capped = sum(1 for r in ranked if r.get("floor_status") == "HEADROOM_CAPPED")
+        # The activation states in this ranking come from the ledger, so the ledger's BASIS
+        # must travel with them (ddm_lr2, 2026-08-03). MEASURED: the ledger's only writer is
+        # the RETIRED vehicle's launcher, so 31 governed live-vehicle launches produced zero
+        # rows and every "*" never-fired marker above is an artifact of the writer, not a fact
+        # about the lever. Printing the marker without the basis is how "178 never-fired" got
+        # quoted as a backlog. Fail-open: a SENSE row must never break the digest.
+        cov_d: dict | None = None
+        try:
+            from tac.witness_dsl.activation_ledger import ledger_coverage
+
+            cov = ledger_coverage()
+            cov_d = cov.to_dict()
+            if cov.is_vacuous:
+                line += (
+                    f"\n  ⚠ activation states above are VACUOUS — {cov.vacuity_reason} "
+                    f"(ledger covers {cov.levers_with_any_row}/{cov.known_levers} levers, "
+                    f"last write {cov.last_write_utc})"
+                )
+        except Exception as exc:  # fail-open by contract: a SENSE row never breaks the digest
+            line += f"\n  ⚠ activation-ledger basis unavailable ({type(exc).__name__})"
         return line, {
             "ranked_top": ranked[:_DUTY_TOP_N],
             "owed_registered": sum(1 for r in ranked if r.get("in_duty_queue")),
@@ -989,6 +1009,7 @@ def section_duty_to_measure(term_current: dict[str, float] | None = None) -> tup
             "n_headroom_capped": n_capped,
             "s_current": s_cur,
             "s_target": tgt,
+            "ledger_coverage": cov_d,
         }
     except Exception as exc:
         return f"duty-to-measure: unavailable ({type(exc).__name__}: {exc})", None
@@ -1196,8 +1217,12 @@ def section_dsl_orphan_flags() -> tuple[str | None, dict | None]:
             return None, {"unmapped_count": 0, "unmapped_sample": [],
                           "false_orphans_netted": n_false}
         sample = list(unmapped)[:6]
+        # The vehicle label is NOT decoration (ddm_lr2, 2026-08-03): this call scopes to the
+        # RETIRED levelset trainer by default, and its reassuring coverage has been read as a
+        # live-vehicle health number. A coverage count with no vehicle attached is unanchored.
+        vehicle = getattr(comp, "vehicle_label", "[vehicle UNKNOWN]")
         line = (
-            f"dsl-orphan ({len(unmapped)} trainer flag(s) NOT held by a DSL Lever "
+            f"dsl-orphan {vehicle} ({len(unmapped)} trainer flag(s) NOT held by a DSL Lever "
             f"— #332 SoT debt; fold per-lever via emit_stub_lever ONLY with swept "
             f"intent, never N-by-hand"
             + (f"; {n_false} sibling-module false orphan(s) netted out" if n_false else "")

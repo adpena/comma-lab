@@ -341,11 +341,20 @@ def activation_report(known: tuple[str, ...] | None = None, path: Path | None = 
     (default OFF by construction for score-affecting levers), with its activation state + reason-to-be
     (that the controller, not the operator, holds the queue)."""
     names = known if known is not None else known_levers()
+    # EVERY row cites the store its state was read from (ddm_lr2, 2026-08-03). MEASURED
+    # cross-store contradiction: four levers are labelled never-fired by one 08-02 survey while
+    # the deferral-queue ledger records them FIRED — two of them fired-and-LOST. Neither survey
+    # was careless; they consulted DIFFERENT STORES and nothing joins them. A fired-and-lost
+    # lever re-listed as never-fired invites a wasted run; a never-fired lever mislabelled fired
+    # stays orphaned forever. Same genus as the harness-TaskList-vs-repo-task-ledger split, whose
+    # cure is the same: cite CONTENT and its SOURCE, never a bare label.
+    store = str(Path(path) if path is not None else LEDGER_PATH)
     rows = []
     for name in names:
         st = activation_status(name, path)
         rows.append({
             "lever": name,
+            "state_store": store,
             "default": "off",  # score-affecting levers default off by construction (safety)
             "state": st.state,
             "ever_fired": st.ever_fired,
@@ -359,6 +368,204 @@ def activation_report(known: tuple[str, ...] | None = None, path: Path | None = 
     _order = {STATE_NEVER_FIRED: 0, STATE_FIRED_UNMEASURED: 1, STATE_MEASURED: 2, STATE_RETIRED: 3}
     rows.sort(key=lambda r: (_order.get(r["state"], 9), r["lever"]))
     return rows
+
+
+# ── VACUITY SELF-REPORT: the ledger must state its own denominator (ddm_lr2, 2026-08-03) ────────
+# THE INCIDENT, MEASURED. ``never_fired()`` returned 178 of 180 levers and that number was read as
+# evidence of a huge orphan backlog. It was an INSTRUMENT ARTIFACT. Three measurements, each
+# independently sufficient to void it:
+#
+#   1. The ledger's ONLY non-test writer is ``tools/launch_witness_run.py`` — the launcher of the
+#      RETIRED vehicle. ``tools/launch_tr1_run.py``, the governed launcher of the vehicle we
+#      actually ship, never imports ``record_activation``.
+#   2. The ledger's last write is 2026-07-27T21:17:34Z. ``launch_tr1_run.py`` was added
+#      2026-07-28. The ledger did not go stale from disuse — it stopped on the day the vehicle
+#      changed launchers, which is the SAME bug class as the lever modules that kept binding to
+#      the retired trainer (see ``lever_registry.module_declares_trainer``).
+#   3. 31 governed TR1 launch receipts exist on the SSD tier and produced ZERO ledger rows.
+#
+# So "178 never-fired" says nothing about levers; it says the writer is bound to a dead vehicle.
+# An empty scope emitting the same symbol as a clean full scope is the vacuity genus this campaign
+# keeps paying for, and the cure is always the same: REPORT THE DENOMINATOR. These helpers do not
+# change what ``never_fired()`` returns (its consumers depend on that contract) — they make it
+# impossible to quote the number without its basis.
+_TR1_RECEIPT_SCHEMA = "ddm_lv1_tr1_governed_launch_receipt.v1"
+# SSD-first per CLAUDE.md storage discipline; run bulk lives off local disk, so the receipts do
+# too. A root that is not mounted is reported as UNSCANNED, never as "found nothing" — an
+# unmounted volume returning 0 would otherwise read exactly like a clean tree.
+LIVE_LAUNCH_ROOTS: tuple[str, ...] = (
+    "/Volumes/VertigoDataTier/pact",
+    "/Volumes/APDataStore/pact",
+    "experiments/results",
+)
+
+
+@dataclass(frozen=True)
+class LedgerCoverage:
+    """What the activation ledger can and cannot see — its basis, stated with the answer."""
+
+    known_levers: int
+    levers_with_any_row: int
+    rows: int
+    last_write_utc: str | None
+    live_launch_receipts: int
+    live_receipts_joined_to_ledger: int
+    roots_scanned: tuple[str, ...]
+    roots_unavailable: tuple[str, ...]
+    is_vacuous: bool
+    vacuity_reason: str
+
+    @property
+    def lever_coverage_fraction(self) -> float:
+        """Fraction of known levers the ledger has ANY row for. 0.0 on an empty known set —
+        never 1.0, because "nothing known" must not read as "everything covered"."""
+        return (self.levers_with_any_row / self.known_levers) if self.known_levers else 0.0
+
+    def to_dict(self) -> dict:
+        return {
+            "known_levers": self.known_levers,
+            "levers_with_any_row": self.levers_with_any_row,
+            "lever_coverage_fraction": round(self.lever_coverage_fraction, 4),
+            "rows": self.rows,
+            "last_write_utc": self.last_write_utc,
+            "live_launch_receipts": self.live_launch_receipts,
+            "live_receipts_joined_to_ledger": self.live_receipts_joined_to_ledger,
+            "roots_scanned": list(self.roots_scanned),
+            "roots_unavailable": list(self.roots_unavailable),
+            "is_vacuous": self.is_vacuous,
+            "vacuity_reason": self.vacuity_reason,
+        }
+
+
+def live_launch_receipts(roots: tuple[str, ...] | None = None) -> tuple[list[dict], tuple[str, ...], tuple[str, ...]]:
+    """Governed LIVE-vehicle launch receipts, plus which roots were actually readable.
+
+    Returns ``(receipts, roots_scanned, roots_unavailable)``. The third element is the honest
+    part: an unmounted SSD must never be silently indistinguishable from a tier with no runs.
+    """
+    scanned: list[str] = []
+    unavailable: list[str] = []
+    out: list[dict] = []
+    for root in (roots if roots is not None else LIVE_LAUNCH_ROOTS):
+        base = Path(root)
+        if not base.is_absolute():
+            base = _REPO_ROOT / base
+        if not base.is_dir():
+            unavailable.append(str(root))
+            continue
+        scanned.append(str(root))
+        for depth in ("*/launch_receipt.json", "*/*/launch_receipt.json", "*/*/*/launch_receipt.json"):
+            for p in base.glob(depth):
+                try:
+                    row = json.loads(p.read_text(encoding="utf-8"))
+                except (OSError, json.JSONDecodeError, ValueError):
+                    continue
+                if isinstance(row, dict) and row.get("schema") == _TR1_RECEIPT_SCHEMA:
+                    row = dict(row)
+                    row["_receipt_path"] = str(p)
+                    row["_run_dir"] = str(p.parent)
+                    out.append(row)
+    out.sort(key=lambda r: str(r.get("_receipt_path")))
+    return out, tuple(scanned), tuple(unavailable)
+
+
+def ledger_coverage(path: Path | None = None,
+                    roots: tuple[str, ...] | None = None) -> LedgerCoverage:
+    """The ledger's own basis — call this BEFORE quoting :func:`never_fired`.
+
+    ``is_vacuous`` is True when the ledger cannot see the live vehicle at all: governed live
+    launches exist on a readable tier and NONE of them has a ledger row. In that state
+    ``never_fired()`` is measuring the writer, not the levers, and any orphan count read off it
+    is unanchored.
+    """
+    events = _read_events(path)
+    with_rows = {e["lever"] for e in events}
+    last = max((e.get("ts") or "" for e in events), default="") or None
+    receipts, scanned, unavailable = live_launch_receipts(roots)
+    fired_refs = [str(e.get("run_ref") or "") for e in events if e.get("run_ref")]
+    joined = sum(
+        1 for r in receipts
+        if any(_run_ref_matches(ref, str(r.get("_run_dir"))) for ref in fired_refs)
+    )
+    if not scanned:
+        vacuous, reason = True, (
+            "no launch-provenance root was readable "
+            f"(unavailable: {', '.join(unavailable) or 'none configured'}) — coverage UNKNOWN, "
+            "not zero"
+        )
+    elif receipts and joined == 0:
+        vacuous, reason = True, (
+            f"{len(receipts)} governed live-vehicle launch receipt(s) exist and NONE has a "
+            "ledger row: the ledger's only writer is the RETIRED vehicle's launcher "
+            "(tools/launch_witness_run.py); tools/launch_tr1_run.py does not record activation. "
+            "never_fired() is measuring the writer, not the levers."
+        )
+    elif not events:
+        vacuous, reason = True, "ledger is empty: every lever reads never-fired by construction"
+    else:
+        vacuous, reason = False, ""
+    return LedgerCoverage(
+        known_levers=len(known_levers()),
+        levers_with_any_row=len(with_rows),
+        rows=len(events),
+        last_write_utc=last,
+        live_launch_receipts=len(receipts),
+        live_receipts_joined_to_ledger=joined,
+        roots_scanned=scanned,
+        roots_unavailable=unavailable,
+        is_vacuous=vacuous,
+        vacuity_reason=reason,
+    )
+
+
+def live_launch_lever_names(roots: tuple[str, ...] | None = None) -> tuple[dict[str, int], dict]:
+    """Lever names the LIVE vehicle actually launched, read from governed receipts' sealed tickets.
+
+    This is the live-vehicle answer the ledger cannot give, and it also MEASURES the join defect
+    that makes naively wiring ``record_activation`` into the live launcher insufficient:
+
+    the DSL's lever universe (:func:`known_levers`) is keyed by FACTORY name, while a ticket
+    records the constructed ``Lever.name``, and the live spec builds those names with f-strings
+    parameterised by the factory's own arguments (``Lever(name=f"tr1_token_grid_D{downsample}_
+    c{code_width}")``). The instance-name space is therefore not statically enumerable at all,
+    and MEASURED overlap with ``known_levers()`` is 0 of 20 on a live ticket. Recording ticket
+    names into the ledger as-is would leave ``never_fired()`` reporting every factory as
+    never-fired forever, while the rows piled up under keys nothing joins to — the cross-store
+    defect, newly manufactured. Returns ``(name -> launch count, diagnostics)``.
+    """
+    receipts, scanned, unavailable = live_launch_receipts(roots)
+    counts: dict[str, int] = {}
+    tickets_read = tickets_missing = 0
+    for r in receipts:
+        tp = r.get("ticket_path")
+        p = Path(str(tp)) if tp else None
+        if p is None or not p.is_file():
+            tickets_missing += 1
+            continue
+        try:
+            ticket = json.loads(p.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError, ValueError):
+            tickets_missing += 1
+            continue
+        tickets_read += 1
+        for lev in ticket.get("levers") or []:
+            nm = (lev or {}).get("name")
+            if nm:
+                counts[str(nm)] = counts.get(str(nm), 0) + 1
+    known = set(known_levers())
+    joinable = sorted(n for n in counts if n in known)
+    diagnostics = {
+        "receipts": len(receipts),
+        "tickets_read": tickets_read,
+        "tickets_missing": tickets_missing,
+        "distinct_lever_instance_names": len(counts),
+        "joinable_to_known_levers": len(joinable),
+        "unjoinable_to_known_levers": len(counts) - len(joinable),
+        "roots_scanned": list(scanned),
+        "roots_unavailable": list(unavailable),
+        "namespace_join_is_broken": bool(counts) and not joinable,
+    }
+    return dict(sorted(counts.items())), diagnostics
 
 
 # ── RELATIVE-SIGNIFICANCE: store + metric + value-ranked duty-to-measure ─────────────────────────

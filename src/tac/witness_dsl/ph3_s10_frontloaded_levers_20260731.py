@@ -21,6 +21,13 @@ from __future__ import annotations
 
 from tac.witness_dsl.curriculum_dsl import Lever
 
+# The trainer these levers were DESIGNED FOR (ddm_lr2, 2026-08-03). The docstring above names
+# ``spec_tr1_renderer_20260728`` as the supersession target, i.e. TR1 — but without this line
+# the registry silently defaulted both factories to the RETIRED levelset trainer, hiding them
+# from every TR1-scoped query. Declaring it does not build them (their flags exist on NEITHER
+# trainer, MEASURED); it attributes their debt to the vehicle we actually ship.
+TRAINER_RELPATH = "experiments/train_tr1_partition_renderer_mlx.py"
+
 # ph3 §10.1 Qa75SolveFrameDistill was the DESIGNED-STUB; its real implementation LANDED in
 # ddm_dw1 (2026-07-30) and superseded it per this module's own fold-and-delete note. The live
 # lever is ``tac.witness_dsl.spec_tr1_renderer_20260728.lever_solve_frame_distill`` (raced forms

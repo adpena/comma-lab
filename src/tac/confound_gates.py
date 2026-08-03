@@ -3021,6 +3021,211 @@ def check_no_legacy_single_module_lever_surface_consumers(
     )
 
 
+# ── CATALOG #351 SCOPE EXTENSION (ddm_lr2, 2026-08-03) ───────────────────────────────────────
+# NOT a new catalog number. Catalog #351 is the fake-claim-guard row — CLAUDE.md records it
+# refusing "a selected-pose marker without an authenticated receiver/parse-back byte effect",
+# i.e. exactly a marker ASSERTED where the work was never done — and it already carries a
+# documented scope extension ("This is a Catalog #351 scope extension, not a new gate or number,
+# per the post-#400 Catalog #299 consolidation rule"). This is the same class at the packet-IR
+# readiness-field surface, so it rides that row rather than claiming a number past the #400 cap.
+#
+# THE INCIDENT (surfaced by ddm_la1 §6.3 HIT 1, adjudicated + fixed here).
+# ``inverse_steganalysis_operation_set_compiler`` emitted
+# ``"byte_closed_operation_count": len(operations)`` and
+# ``"chosen_operation_sequence_is_permutation": True`` — declaring both properties while the
+# 241-line module performed no byte accounting and no permutation comparison at all. Its SIBLING
+# producer in ``byte_shaving_campaign`` computes BOTH for real, and — the part that makes this
+# load-bearing rather than cosmetic — both producers' rows land in the same
+# ``packet_ir_operation_sets`` list and are SUMMED into ``packet_ir_byte_closed_operation_count``,
+# a readiness figure. An unchecked value was being added to a total a reader takes as checked,
+# across five production importers. NO-FAKE forbidden class 1 (canonical markers without the
+# work) AND class 4 (a declared value in a canonical data field), simultaneously.
+#
+# The judgement is STRUCTURAL and deliberately narrow: for the two readiness keys, an ASSERTION
+# FORM as the dict value is refused — a bare ``True``/``False`` literal for the permutation
+# predicate, or a bare ``len(...)`` for the byte-closed count. Both say "all of them, by
+# construction". A call to a helper, a comparison, a comprehension or a name are all accepted:
+# the gate refuses the shape that CANNOT have done the work, and never tries to judge whether a
+# real computation is correct. Scope is the packet-IR producer surface (files that reference
+# ``PACKET_IR_OPERATION_SET_SCHEMA``), because that is where the summed figure is built.
+#
+# STRICT FROM BYTE ONE: live count is 0 in this landing (the one violation is fixed in the same
+# commit), per the Strict-flip atomicity rule.
+#
+# Waiver: same-line ``# ASSERTED_READINESS_FIELD_OK:<rationale>`` on the offending line (a bare
+# ``<rationale>`` placeholder does not self-waive, Catalog #287 sister).
+_ASSERTED_READINESS_KEYS = {
+    "byte_closed_operation_count": "a COUNT of operations proven byte-closed",
+    "chosen_operation_sequence_is_permutation": "a DECISION that the sequence is a permutation",
+}
+
+
+def _asserted_readiness_violations(root: Path) -> list[str]:
+    import ast as _ast
+
+    out: list[str] = []
+    for rel_dir in ("src/tac/optimization", "src/tac/packet_compiler"):
+        base = root / rel_dir
+        if not base.is_dir():
+            continue
+        for path in sorted(base.rglob("*.py")):
+            try:
+                text = path.read_text(encoding="utf-8")
+            except OSError:
+                continue
+            if "PACKET_IR_OPERATION_SET_SCHEMA" not in text:
+                continue
+            try:
+                tree = _ast.parse(text)
+            except SyntaxError:
+                continue
+            lines = text.splitlines()
+            for node in _ast.walk(tree):
+                if not isinstance(node, _ast.Dict):
+                    continue
+                for key, value in zip(node.keys, node.values, strict=False):
+                    if not (isinstance(key, _ast.Constant) and isinstance(key.value, str)):
+                        continue
+                    meaning = _ASSERTED_READINESS_KEYS.get(key.value)
+                    if meaning is None:
+                        continue
+                    asserted = (
+                        isinstance(value, _ast.Constant) and isinstance(value.value, bool)
+                    ) or (
+                        isinstance(value, _ast.Call)
+                        and isinstance(value.func, _ast.Name)
+                        and value.func.id == "len"
+                    )
+                    if not asserted:
+                        continue
+                    lineno = getattr(value, "lineno", key.lineno)
+                    src_line = lines[lineno - 1] if 0 < lineno <= len(lines) else ""
+                    if _waiver_present(src_line, "ASSERTED_READINESS_FIELD_OK"):
+                        continue
+                    form = "a bare literal" if isinstance(value, _ast.Constant) else "bare len(...)"
+                    out.append(
+                        f"{path.relative_to(root)}:{lineno}: readiness field {key.value!r} is "
+                        f"ASSERTED via {form} — the field means {meaning}, and this shape cannot "
+                        f"have done that work. Its value is summed with genuinely-checked sibling "
+                        f"rows into packet_ir_byte_closed_operation_count, so an unchecked value "
+                        f"enters a total readers take as checked (NO-FAKE forbidden classes 1+4). "
+                        f"Compute it (see byte_shaving_campaign's sibling producer), or add "
+                        f"`# ASSERTED_READINESS_FIELD_OK:<rationale>` on this line."
+                    )
+    return out
+
+
+def check_no_asserted_packet_ir_readiness_fields(
+    *,
+    repo_root: str | Path | None = None,
+    strict: bool = True,
+    verbose: bool = True,
+) -> list[str]:
+    """REFUSE a packet-IR readiness field DECLARED rather than DECIDED (Catalog #351 scope)."""
+    root = Path(repo_root or REPO_ROOT)
+    return _finish(
+        name="check_no_asserted_packet_ir_readiness_fields",
+        tag="no-asserted-packet-ir-readiness-fields",
+        violations=_asserted_readiness_violations(root),
+        strict=strict,
+        verbose=verbose,
+        ok_detail="every packet-IR readiness field is computed from the operations it describes",
+    )
+
+
+# ── SCOPE EXTENSION (ddm_lr2, 2026-08-03) ────────────────────────────────────────────────────
+# NOT a new catalog number: per CLAUDE.md "Gate consolidation discipline" (#299) a new strict
+# gate past #400 must retire or replace one. This is the SAME bug class as
+# ``check_no_stub_lever_factories`` one layer BELOW it — that gate refuses a lever whose
+# mechanism does not exist; this one refuses a lever whose *stub verdict was decided by a
+# trainer binding nobody declared* — so it rides the same catalog row, the third extension on
+# it (after ddm_rg5's consumer-side extension above).
+#
+# THE INCIDENT (MEASURED, ddm_lr2 §1). ``spec_tr1_renderer_20260728`` was the ONLY module in the
+# whole package that declared ``TRAINER_RELPATH``. Every other lever module silently inherited
+# the RETIRED levelset trainer — including three whose own docstrings name the TR1 vehicle
+# ("the v8/v9/v10 forces ADAPTED to the TR1 vehicle"). Their 8 factories were therefore graded
+# against a trainer they were never written for, and — the part that cost real signal — no
+# TR1-scoped query could surface them at all. That is the concrete mechanism behind ddm_gd1's
+# unexplained meta-finding that "nothing forces a never-fired row to be drained": a queue cannot
+# drain a lever filed under the wrong vehicle. Re-homing them moved the census from 149/31 to
+# 141/39 (MEASURED). It did NOT make them fireable — their flags exist on NEITHER trainer — and
+# this gate deliberately does not pretend otherwise; ``check_no_stub_lever_factories`` owns the
+# build debt, this gate owns the ATTRIBUTION of it.
+#
+# WHY THE SCOPE IS NARROW, and why that is a measurement not a preference. The refusable set is
+# "graded a stub AND undeclared" rather than "undeclared", because a factory whose flags all
+# exist needs no binding argument to be graded — its verdict is the same under either trainer.
+# The obvious worry is a blind spot: a TR1-targeted module whose flags happen to exist on the
+# retired trainer would grade clean and stay mis-bound. MEASURED on this tree (ddm_lr2 §1): for
+# every one of the 11 undeclared factory-bearing modules, its flags sit on the retired trainer
+# and essentially none on TR1 (curriculum_dsl 297/300 retired vs 4 TR1; spec_v9c3 65 vs 4;
+# spec_v9_cgauge 18 vs 0), consistent with the default they inherit. The blind spot has live
+# count 0 today — stated as a scoped negative, not an existential one.
+#
+# STRICT FROM BYTE ONE: live count is 0 in this landing (the three TR1 modules now declare
+# ``TRAINER_RELPATH``; the two genuinely retired modules that still graded stubs —
+# ``constants_telemetry_build_wave`` and ``curriculum_dsl`` — now declare the retired pair
+# explicitly via ``TRAINER_RELPATHS``, which the registry test pins as behaviour-identical). The
+# Strict-flip atomicity rule is satisfied here rather than deferred to warn-only purgatory.
+#
+# Waiver: same-line ``# UNDECLARED_TRAINER_BINDING_OK:<rationale>`` on the factory's ``def``
+# line (a bare ``<rationale>`` placeholder does not self-waive, Catalog #287 sister).
+def check_lever_module_declares_its_trainer(
+    *,
+    repo_root: str | Path | None = None,
+    strict: bool = True,
+    verbose: bool = True,
+) -> list[str]:
+    """REFUSE a DESIGNED-STUB verdict that rests on an UNDECLARED trainer binding.
+
+    A lever module that does not state its trainer is not "bound to the levelset trainer" — it
+    is bound to whatever the default happens to be, and no reader can tell an intentional
+    binding from an author who never considered the question. When such a module's factory is
+    graded a stub, the grade is an artifact of that unchosen default: the flag may be missing
+    only because it was checked against the wrong vehicle.
+
+    A silent default is an orphan generator (CLAUDE.md, "'Off' is a tracked queue, never a
+    forgotten default"): the state must be TRACKED, REASONED and SURFACED, never inherited in
+    silence. Declaring ``TRAINER_RELPATH = "..."`` (or ``TRAINER_RELPATHS = (...)`` for a
+    genuine multi-trainer module) is the whole fix — one line, no behaviour change.
+    """
+    from tac.witness_dsl.lever_registry import build_completeness
+
+    root = Path(repo_root or REPO_ROOT)
+    # Scan the caller's tree when it carries a witness_dsl package (the positive-control fixture
+    # path); otherwise the installed package. Without this the gate could only ever be OBSERVED
+    # returning zero on a clean tree — indistinguishable from a gate that cannot fire.
+    pkg_dir = root / "src" / "tac" / "witness_dsl"
+    violations: list[str] = []
+    bc = build_completeness(pkg_dir if pkg_dir.is_dir() else None)
+    for fb in bc.verdict_relevant_undeclared:
+        src_path = pkg_dir / fb.module
+        if _factory_waived_for(src_path, fb.factory, "UNDECLARED_TRAINER_BINDING_OK"):
+            continue
+        violations.append(
+            f"src/tac/witness_dsl/{fb.module}: Lever factory {fb.factory!r} is graded a "
+            f"DESIGNED-STUB (missing {list(fb.missing_flags)}) against {fb.trainer}, but its "
+            f"module never declares which trainer it targets — the grade rests on an inherited "
+            f"default nobody chose, so the flag may be 'missing' only because it was checked "
+            f"against the wrong vehicle. Add `TRAINER_RELPATH = \"experiments/<trainer>.py\"` "
+            f"(or `TRAINER_RELPATHS = (...)` for a real multi-trainer module) at module level, "
+            f"or put `# UNDECLARED_TRAINER_BINDING_OK:<rationale>` on the factory's def line."
+        )
+    return _finish(
+        name="check_lever_module_declares_its_trainer",
+        tag="lever-module-declares-its-trainer",
+        violations=violations,
+        strict=strict,
+        verbose=verbose,
+        ok_detail=(
+            f"every stub-graded lever factory has a DECLARED trainer binding "
+            f"({len(bc.undeclared_trainer_factories)}/{bc.total} factories still inherit the "
+            f"default, all of them graded BUILT so the binding does not decide their verdict)"
+        ),
+    )
+
+
 # ── SCOPE EXTENSION (ddm_rg5, task #825, 2026-07-31) ──────────────────────────────────────────
 # NOT a new catalog number: per CLAUDE.md "Gate consolidation discipline" (#299) the catalog is
 # past #400 (next=408), so a new strict gate must retire or replace one. This gate is the same
@@ -3146,8 +3351,13 @@ def _legacy_single_module_lever_consumers(root: Path) -> list[str]:
     return out
 
 
-def _factory_waived(path: Path, factory: str) -> bool:
-    """True when the factory's own ``def`` line carries a non-placeholder waiver marker."""
+def _factory_waived_for(path: Path, factory: str, marker: str) -> bool:
+    """True when the factory's own ``def`` line carries a non-placeholder ``marker`` waiver.
+
+    Generalised from :func:`_factory_waived` (ddm_lr2, 2026-08-03) so sister gates on the same
+    catalog row share ONE line-locating implementation rather than each re-deriving "which line
+    is this factory's def" — the duplicated-predicate class.
+    """
     try:
         text = path.read_text(encoding="utf-8")
     except OSError:
@@ -3155,8 +3365,13 @@ def _factory_waived(path: Path, factory: str) -> bool:
     for line in text.splitlines():
         stripped = line.lstrip()
         if stripped.startswith(("def ", "async def ")) and f" {factory}(" in f" {stripped}":
-            return _waiver_present(line, "DESIGNED_STUB_OK")
+            return _waiver_present(line, marker)
     return False
+
+
+def _factory_waived(path: Path, factory: str) -> bool:
+    """True when the factory's own ``def`` line carries a non-placeholder waiver marker."""
+    return _factory_waived_for(path, factory, "DESIGNED_STUB_OK")
 
 
 # The two automatable eightfold gates (P1 + P4), for the preflight wire-in + tests.
@@ -3190,6 +3405,8 @@ CONFOUND_GATES = (
     check_no_duplicate_canonical_spec_across_refs,
     check_no_stub_lever_factories,
     check_no_legacy_single_module_lever_surface_consumers,
+    check_lever_module_declares_its_trainer,
+    check_no_asserted_packet_ir_readiness_fields,
 )
 
 
@@ -3418,6 +3635,50 @@ POSITIVE_CONTROLS: tuple[PositiveControl, ...] = (
             "full scan prints — vacuity indistinguishable from PASS. If a future "
             "prefilter narrows the detector (e.g. it stops treating rglob as "
             "enumeration, or stops walking tools/), this control stops firing."
+        ),
+    ),
+    PositiveControl(
+        gate="check_no_asserted_packet_ir_readiness_fields",
+        files={
+            "src/tac/optimization/planted_asserted_readiness.py": (
+                "PACKET_IR_OPERATION_SET_SCHEMA = 'packet_ir_operation_set.v1'\n"
+                "def build(operations):\n"
+                "    return {\n"
+                "        'schema': PACKET_IR_OPERATION_SET_SCHEMA,\n"
+                "        'chosen_operation_sequence_is_permutation': True,\n"
+                "        'byte_closed_operation_count': len(operations),\n"
+                "    }\n"
+            )
+        },
+        must_mention="planted_asserted_readiness.py",
+        why=(
+            "The measured NO-FAKE incident in miniature: DECLARE a readiness property instead "
+            "of DECIDING it. `len(operations)` says every operation is byte-closed while no "
+            "byte accounting exists, and the bare `True` says the sequence is a permutation "
+            "while nothing is compared. Both values are SUMMED with a sibling producer's "
+            "genuinely-checked rows into packet_ir_byte_closed_operation_count, so an unchecked "
+            "value enters a total readers take as checked. If a future change stops walking "
+            "src/tac/optimization, stops keying on PACKET_IR_OPERATION_SET_SCHEMA, or starts "
+            "accepting bare literals for these keys, this control stops firing."
+        ),
+    ),
+    PositiveControl(
+        gate="check_lever_module_declares_its_trainer",
+        files={
+            "src/tac/witness_dsl/planted_undeclared_lever.py": (
+                "from tac.witness_dsl.curriculum_dsl import Lever\n"
+                "def PlantedStub() -> Lever:\n"
+                "    return Lever('planted', overrides={'--planted-flag-that-does-not-exist': True})\n"
+            )
+        },
+        must_mention="planted_undeclared_lever.py",
+        why=(
+            "A lever module that never states its trainer, whose factory is then graded a STUB "
+            "against whatever the default happens to be. This is the shape that filed eight "
+            "TR1-targeted factories under the RETIRED vehicle for a week, where no TR1-scoped "
+            "query could surface them for drainage. If a future change makes the gate scan only "
+            "the installed package (ignoring repo_root), or stops treating an undeclared "
+            "binding as verdict-relevant, this control stops firing."
         ),
     ),
 )

@@ -23,6 +23,15 @@ from __future__ import annotations
 
 from tac.witness_dsl.curriculum_dsl import Lever
 
+# The trainer these levers were DESIGNED FOR (ddm_lr2, 2026-08-03). Without this line the
+# registry's per-module resolution silently defaulted every factory below to the RETIRED
+# levelset trainer, so no TR1-scoped query could surface them — they were graded against a
+# vehicle they were never written for. The module docstring above states the target verbatim
+# ("the v8/v9/v10 forces ADAPTED to the TR1 vehicle"); this declaration makes that binding
+# machine-readable instead of a comment. It does NOT make the stubs fireable: the flags below
+# exist on NEITHER trainer (MEASURED). It makes their debt correctly ATTRIBUTED to TR1.
+TRAINER_RELPATH = "experiments/train_tr1_partition_renderer_mlx.py"
+
 
 def TieLocusEdgeWeighted(window: int = 0) -> Lever:  # stub — burn-4 owner real impl supersedes
     """fh1 R1+R4: tie-locus sub-pixel displacement x per-class-PAIR edge weight.

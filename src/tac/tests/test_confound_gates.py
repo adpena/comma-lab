@@ -868,7 +868,16 @@ class TestModule:
         # 16.167 epochs of re-convergence per boundary). It lands STRICT at
         # live-count 0 WITH a registered positive control, so the uncovered
         # ceiling does not move.
-        assert len(cg.CONFOUND_GATES) == 26
+        # 26 -> 28 on 2026-08-03: ddm_lr2 appends the two landings for the
+        # instruments-point-at-a-retired-vehicle class —
+        # check_lever_module_declares_its_trainer (a DESIGNED-STUB verdict may not
+        # rest on a trainer binding nobody declared; the mechanism that filed 8
+        # TR1-targeted factories under the retired vehicle) and
+        # check_no_asserted_packet_ir_readiness_fields (a readiness field DECLARED
+        # instead of DECIDED, whose value is summed into a total readers take as
+        # checked). Both land STRICT at live-count 0 WITH registered positive
+        # controls, so the uncovered ceiling does not move.
+        assert len(cg.CONFOUND_GATES) == 28
         names = {fn.__name__ for fn in cg.CONFOUND_GATES}
         assert names == {
             "check_no_spike_guard_defaults_to_deadlock_mode",
@@ -904,6 +913,8 @@ class TestModule:
             # "vacuity is indistinguishable from PASS".
             "check_verdict_surfaces_report_examined_count",
             "check_checkpoint_saves_do_not_silently_drop_optimizer_state",
+            "check_lever_module_declares_its_trainer",
+            "check_no_asserted_packet_ir_readiness_fields",
         }
 
     def test_followon_gates_are_strict_flipped_in_preflight_all(self):
@@ -1010,6 +1021,16 @@ class TestModule:
             # nonzero count here means a checkpoint write started silently dropping
             # optimizer state again -- fix the callsite; do NOT raise this bound.
             "check_checkpoint_saves_do_not_silently_drop_optimizer_state": 0,
+            # ddm_lr2 2026-08-03, both STRICT from byte one at live count 0.
+            # A nonzero count here means a lever module started deciding a
+            # DESIGNED-STUB verdict from an inherited trainer binding again --
+            # declare TRAINER_RELPATH on the module; do NOT raise this bound.
+            "check_lever_module_declares_its_trainer": 0,
+            # A nonzero count means a packet-IR readiness field is being ASSERTED
+            # (bare `True` / bare `len(...)`) instead of computed, and is being
+            # summed into packet_ir_byte_closed_operation_count as if checked.
+            # Compute it like byte_shaving_campaign's sibling does; do NOT raise.
+            "check_no_asserted_packet_ir_readiness_fields": 0,
         }
         v = fn(strict=False, verbose=False)
         assert len(v) <= bounds[fn.__name__], f"{fn.__name__} live-count grew: {v[:3]}"

@@ -43,7 +43,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from functools import lru_cache
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
 from tac.witness_dsl import curriculum_dsl as _cd
 from tac.witness_dsl.curriculum_dsl import BASELINE, real_trainer_flags
@@ -125,28 +125,72 @@ def _module_source(path: Path | None = None) -> str:
 # verbatim so its existing consumers are unaffected.
 _PKG_DIR = Path(__file__).resolve().parent
 _TRAINER_RELPATH_RE = re.compile(r'^TRAINER_RELPATH\s*=\s*"([^"]+)"', re.MULTILINE)
+# Plural form (ddm_lr2, 2026-08-03): a module that legitimately binds to MORE THAN ONE trainer
+# — ``curriculum_dsl`` holds flags from the levelset entry point AND the base it imports its
+# primitives from (MEASURED: 35 flags live only on the base) — could not declare that fact, so
+# it was forced to rely on the silent default. Forcing it into the singular form would have
+# dropped those 35 flags and manufactured false "missing flag" grades: a false FAIL replacing a
+# silent PASS, the exact trade this registry's own repair note refuses. ``TRAINER_RELPATH``
+# stays the one-trainer spelling; neither regex can match the other (``TRAINER_RELPATHS`` has
+# no ``=`` where the singular pattern demands one).
+_TRAINER_RELPATHS_RE = re.compile(r"^TRAINER_RELPATHS\s*=\s*\(([^)]*)\)", re.MULTILINE)
+_QUOTED_RE = re.compile(r'"([^"]+)"')
 _REPO_ROOT = _PKG_DIR.parents[2]
 # A factory whose docstring/body announces itself as a stub. Detected but never TRUSTED: the
 # authoritative grade is whether the emitted flags exist on the module's trainer.
 _STUB_MARKER_RE = re.compile(r"DESIGNED-STUB|AUTO-STUB")
 
 
-def package_lever_modules() -> tuple[Path, ...]:
-    """Every ``witness_dsl`` module that could define a ``Lever`` factory (sorted, deterministic)."""
-    return tuple(sorted(p for p in _PKG_DIR.glob("*.py") if not p.name.startswith("_")))
+def package_lever_modules(pkg_dir: Path | None = None) -> tuple[Path, ...]:
+    """Every ``witness_dsl`` module that could define a ``Lever`` factory (sorted, deterministic).
+
+    ``pkg_dir`` overrides the scanned directory. It exists so the sister refusal gate can be
+    exercised against a SYNTHETIC fixture (ddm_lr2, 2026-08-03): a gate whose scan surface is
+    hard-wired to the installed package can only ever be observed returning zero on a clean
+    tree, which is indistinguishable from a gate that cannot fire at all. Default is unchanged.
+    """
+    base = Path(pkg_dir) if pkg_dir is not None else _PKG_DIR
+    if not base.is_dir():
+        return ()
+    return tuple(sorted(p for p in base.glob("*.py") if not p.name.startswith("_")))
+
+
+def module_declares_trainer(path: Path) -> bool:
+    """Whether a lever module states its own trainer binding, instead of inheriting the default.
+
+    The distinction this exposes is the whole point (ddm_lr2, 2026-08-03). An UNDECLARED module
+    is not "bound to the levelset trainer" — it is bound to *whatever the default happens to be*,
+    and the reader cannot tell an intentional levelset binding from an author who never
+    considered the question. MEASURED consequence: three modules written FOR the TR1 vehicle
+    (``fh1_adapted_force_levers``, ``ph3_s10_frontloaded_levers``, ``ax1_derived_levers`` — each
+    naming TR1 in its own docstring) were graded against the RETIRED trainer, so no TR1-scoped
+    query could surface their 8 factories at all. A silent default is an orphan generator, per
+    CLAUDE.md "'Off' is a tracked queue, never a forgotten default"; this predicate is what makes
+    the defaulted state TRACKED rather than invisible.
+    """
+    src = _module_source(path)
+    return bool(_TRAINER_RELPATH_RE.search(src) or _TRAINER_RELPATHS_RE.search(src))
 
 
 def module_trainer_paths(path: Path) -> tuple[Path, ...]:
     """The trainer(s) a lever module's flags must exist on.
 
     A module that declares its own ``TRAINER_RELPATH`` (the ``spec_tr1_renderer`` pattern) binds
-    to that trainer; every other module binds to the canonical levelset entry point plus the base
-    it imports its primitives from. Resolving this per-module is what keeps the widened scan
-    HONEST rather than merely louder.
+    to that trainer; ``TRAINER_RELPATHS = (...)`` declares a multi-trainer binding explicitly;
+    every other module falls back to the canonical levelset entry point plus the base it imports
+    its primitives from. Resolving this per-module is what keeps the widened scan HONEST rather
+    than merely louder. Use :func:`module_declares_trainer` to tell a DECLARED binding from a
+    defaulted one — the two are indistinguishable in this function's return value, and that
+    indistinguishability is the bug class it once hid.
     """
-    m = _TRAINER_RELPATH_RE.search(_module_source(path))
+    src = _module_source(path)
+    m = _TRAINER_RELPATH_RE.search(src)
     if m:
         return (_REPO_ROOT / m.group(1),)
+    plural = _TRAINER_RELPATHS_RE.search(src)
+    if plural:
+        rels = _QUOTED_RE.findall(plural.group(1))
+        return tuple(_REPO_ROOT / r for r in rels)
     from tac.witness_dsl.curriculum_dsl import TRAINER_PATH
     base = TRAINER_PATH.parent / "train_witness_realized_through_R_mlx.py"
     return tuple(p for p in (TRAINER_PATH, base) if p.is_file())
@@ -170,6 +214,11 @@ class FactoryBuild:
     missing_flags: tuple[str, ...]   # emitted flags absent from THIS module's trainer argparse
     trainer: str
     stub_marker: bool                # the factory SAYS it is a stub
+    # Did the module STATE that trainer, or merely inherit the default? (ddm_lr2, 2026-08-03.)
+    # Without this field a defaulted binding and a declared one are byte-identical to every
+    # reader, which is how 8 TR1-targeted factories were graded against the retired trainer for
+    # a week. Default True so any pre-existing positional construction keeps its meaning.
+    trainer_declared: bool = True
 
     @property
     def is_stub(self) -> bool:
@@ -190,8 +239,22 @@ class FactoryBuild:
             "module": self.module, "factory": self.factory, "flags": list(self.flags),
             "missing_flags": list(self.missing_flags), "trainer": self.trainer,
             "stub_marker": self.stub_marker, "is_stub": self.is_stub,
-            "label_drift": self.label_drift,
+            "label_drift": self.label_drift, "trainer_declared": self.trainer_declared,
+            "trainer_binding_is_verdict_relevant": self.trainer_binding_is_verdict_relevant,
         }
+
+    @property
+    def trainer_binding_is_verdict_relevant(self) -> bool:
+        """The factory's build GRADE depends on which trainer it was resolved against.
+
+        True exactly when the factory is graded a stub while its module never stated its
+        trainer: the ``is_stub`` verdict is then an artifact of a default nobody chose. This is
+        the narrow, live-checkable scope the sister gate refuses on — narrow because a factory
+        whose flags all exist needs no binding argument to be graded, and MEASURED to have no
+        blind spot on this tree (every undeclared module's flags sit on the retired trainer,
+        consistent with its default; see ddm_lr2 §1).
+        """
+        return self.is_stub and not self.trainer_declared
 
 
 def _factories_in_source(src: str) -> dict[str, tuple[frozenset[str], bool]]:
@@ -227,10 +290,10 @@ def _factories_in_source(src: str) -> dict[str, tuple[frozenset[str], bool]]:
     return out
 
 
-def _mtime_fingerprint() -> tuple[tuple[str, int, int], ...]:
+def _mtime_fingerprint(pkg_dir: Path | None = None) -> tuple[tuple[str, int, int], ...]:
     """(name, size, mtime_ns) per scanned module — the cache key, so an edit invalidates it."""
     out = []
-    for p in package_lever_modules():
+    for p in package_lever_modules(pkg_dir):
         try:
             st = p.stat()
         except OSError:
@@ -240,11 +303,12 @@ def _mtime_fingerprint() -> tuple[tuple[str, int, int], ...]:
 
 
 @lru_cache(maxsize=8)
-def _package_lever_factories_cached(_fingerprint: object) -> tuple[FactoryBuild, ...]:
-    return _scan_package_lever_factories()
+def _package_lever_factories_cached(_fingerprint: object,
+                                    pkg_dir: str | None = None) -> tuple[FactoryBuild, ...]:
+    return _scan_package_lever_factories(Path(pkg_dir) if pkg_dir else None)
 
 
-def package_lever_factories() -> tuple[FactoryBuild, ...]:
+def package_lever_factories(pkg_dir: Path | None = None) -> tuple[FactoryBuild, ...]:
     """EVERY lever factory in the whole ``witness_dsl`` package, graded against ITS OWN trainer.
 
     This is the surface the stub sweep needs and the one the registry never had. Deterministic
@@ -256,12 +320,14 @@ def package_lever_factories() -> tuple[FactoryBuild, ...]:
     bug survived in the first place. An edit to any scanned module changes the fingerprint and
     invalidates the entry, so the cache can never serve a stale grade.
     """
-    return _package_lever_factories_cached(_mtime_fingerprint())
+    return _package_lever_factories_cached(
+        _mtime_fingerprint(pkg_dir), str(pkg_dir) if pkg_dir is not None else None
+    )
 
 
-def _scan_package_lever_factories() -> tuple[FactoryBuild, ...]:
+def _scan_package_lever_factories(pkg_dir: Path | None = None) -> tuple[FactoryBuild, ...]:
     out: list[FactoryBuild] = []
-    for mod in package_lever_modules():
+    for mod in package_lever_modules(pkg_dir):
         try:
             src = _module_source(mod)
             facs = _factories_in_source(src)
@@ -270,6 +336,7 @@ def _scan_package_lever_factories() -> tuple[FactoryBuild, ...]:
         if not facs:
             continue
         trainers = module_trainer_paths(mod)
+        declared = module_declares_trainer(mod)
         tflags = _flags_of(trainers)
         tname = ", ".join(str(t.relative_to(_REPO_ROOT)) if t.is_relative_to(_REPO_ROOT) else str(t)
                           for t in trainers)
@@ -277,7 +344,7 @@ def _scan_package_lever_factories() -> tuple[FactoryBuild, ...]:
             out.append(FactoryBuild(
                 module=mod.name, factory=name, flags=tuple(sorted(flags)),
                 missing_flags=tuple(sorted(f for f in flags if f not in tflags)),
-                trainer=tname, stub_marker=marker,
+                trainer=tname, stub_marker=marker, trainer_declared=declared,
             ))
     return tuple(sorted(out, key=lambda f: (f.module, f.factory)))
 
@@ -309,6 +376,29 @@ class BuildCompleteness:
     def modules_scanned(self) -> int:
         return len({f.module for f in self.factories})
 
+    @property
+    def undeclared_trainer_factories(self) -> tuple[FactoryBuild, ...]:
+        """Factories whose module never STATED its trainer (ddm_lr2, 2026-08-03).
+
+        Reported as a tracked state, not an error: for most of these the default is correct
+        (MEASURED — their flags all live on the retired trainer). The point is that "correct by
+        default" and "correct by intent" are now distinguishable to a reader.
+        """
+        return tuple(f for f in self.factories if not f.trainer_declared)
+
+    @property
+    def verdict_relevant_undeclared(self) -> tuple[FactoryBuild, ...]:
+        """The refusable subset: graded a STUB *because of* a trainer binding nobody declared."""
+        return tuple(f for f in self.factories if f.trainer_binding_is_verdict_relevant)
+
+    def by_trainer(self) -> dict[str, int]:
+        """Factory count per resolved trainer — the vehicle census a reader needs before quoting
+        any coverage number. A total with no vehicle attached is the defect this answers."""
+        out: dict[str, int] = {}
+        for f in self.factories:
+            out[f.trainer] = out.get(f.trainer, 0) + 1
+        return dict(sorted(out.items()))
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "total_factories": self.total,
@@ -317,13 +407,19 @@ class BuildCompleteness:
             "stub_count": len(self.stubs),
             "silent_stub_count": len(self.silent_stubs),
             "label_drift_count": len(self.label_drift),
+            "undeclared_trainer_factory_count": len(self.undeclared_trainer_factories),
+            "verdict_relevant_undeclared_count": len(self.verdict_relevant_undeclared),
+            "factories_by_trainer": self.by_trainer(),
             "stubs": [f.to_dict() for f in self.stubs],
         }
 
 
-def build_completeness() -> BuildCompleteness:
-    """Grade every lever factory in the package as BUILT or DESIGNED-STUB. Deterministic."""
-    return BuildCompleteness(package_lever_factories())
+def build_completeness(pkg_dir: Path | None = None) -> BuildCompleteness:
+    """Grade every lever factory in the package as BUILT or DESIGNED-STUB. Deterministic.
+
+    ``pkg_dir`` overrides the scanned directory (see :func:`package_lever_modules`); the default
+    is unchanged, so every existing caller keeps its exact behaviour."""
+    return BuildCompleteness(package_lever_factories(pkg_dir))
 
 
 def _flags_in_node(node: ast.AST) -> frozenset[str]:
@@ -453,10 +549,31 @@ class Completeness:
     mapped: list[str] = field(default_factory=list)      # trainer flags the DSL references
     unmapped: list[str] = field(default_factory=list)    # trainer flags NO DSL construct references (GAPS)
     stale: list[str] = field(default_factory=list)       # DSL-EMITTED flags absent from the trainer (drift)
+    # WHICH VEHICLE this coverage describes (ddm_lr2, 2026-08-03). The default call scopes to the
+    # RETIRED levelset trainer and reports a reassuring ~82% that has been read as a live-vehicle
+    # health number. The number is a correct computation about a vehicle we no longer ship; what
+    # was missing is that it never said so. Defaults to "" so any positional construction keeps
+    # working, and ``describes_live_vehicle`` fails CLOSED (unknown vehicle is not live).
+    trainer_path: str = ""
+
+    # The vehicle we actually ship. One place, so a reader and a gate cannot disagree.
+    LIVE_TRAINER_BASENAME: ClassVar[str] = "train_tr1_partition_renderer_mlx.py"
 
     @property
     def coverage_frac(self) -> float:
         return len(self.mapped) / max(self.trainer_total, 1)
+
+    @property
+    def describes_live_vehicle(self) -> bool:
+        """Whether this coverage number is about the vehicle we ship. Fails closed on unknown."""
+        return Path(self.trainer_path).name == self.LIVE_TRAINER_BASENAME if self.trainer_path else False
+
+    @property
+    def vehicle_label(self) -> str:
+        """A label a reader cannot drop: every coverage number carries the vehicle it measured."""
+        if not self.trainer_path:
+            return "[vehicle UNKNOWN]"
+        return f"[{'LIVE' if self.describes_live_vehicle else 'RETIRED'} vehicle: {Path(self.trainer_path).name}]"
 
 
 def completeness(trainer_path: str | Path | None = None) -> Completeness:
@@ -474,12 +591,14 @@ def completeness(trainer_path: str | Path | None = None) -> Completeness:
     trainer = {f for f in real_trainer_flags(tp) if not _NO_ARTIFACT.match(f)}
     referenced = set(dsl_referenced_flags())
     emitted = set(dsl_emitted_flags())
+    from tac.witness_dsl.curriculum_dsl import TRAINER_PATH
     return Completeness(
         trainer_total=len(trainer),
         dsl_referenced=len(referenced),
         mapped=sorted(trainer & referenced),
         unmapped=sorted(trainer - referenced),
         stale=sorted(emitted - trainer),
+        trainer_path=str(tp if tp is not None else TRAINER_PATH),
     )
 
 

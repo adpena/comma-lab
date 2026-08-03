@@ -33,6 +33,14 @@ from __future__ import annotations
 
 from tac.witness_dsl.curriculum_dsl import Lever
 
+# The trainer this module's levers were DESIGNED FOR (ddm_lr2, 2026-08-03). VERIFIED at source
+# rather than inferred: the FOLD-AND-DELETE LOG above names ``spec_tr1_renderer_20260728`` as
+# the supersession target for three of this module's own factories, so the module's disposition
+# path is TR1. Without this line the registry silently defaulted the remaining stub to the
+# RETIRED levelset trainer. Declaring it does not build the stub (its flag exists on NEITHER
+# trainer, MEASURED); it attributes the debt to the vehicle we ship.
+TRAINER_RELPATH = "experiments/train_tr1_partition_renderer_mlx.py"
+
 
 def Ax1Frame0CarriedWarp(window: int = 100) -> Lever:  # stub — Pool C, own arm supersedes
     """ax1 §4b: frame_0 = receiver-side carried-ξ warp of rendered frame_1 (replaces zeros stub).

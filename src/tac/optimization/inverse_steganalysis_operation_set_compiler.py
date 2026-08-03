@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections import Counter
 from collections.abc import Mapping, Sequence
 from typing import Any
 
@@ -24,6 +25,49 @@ OPERATION_SET_COMPILER_HINT_SCHEMA = "inverse_action_operation_set_compiler_hint
 
 def _as_list(value: Any) -> list[Any]:
     return value if isinstance(value, list) else []
+
+
+# The blocker prefix that marks an operation as NOT byte-closed. Same string the sibling
+# producer in ``byte_shaving_campaign`` keys on, so the two producers cannot drift apart while
+# their outputs are summed into one figure.
+_NOT_BYTE_CLOSED_BLOCKER_PREFIX = "packetir_operation_not_byte_closed"
+
+
+def _byte_closed_operation_count(operations: Sequence[Mapping[str, Any]]) -> int:
+    """Operations with NO not-byte-closed blocker — COUNTED, never assumed.
+
+    NO-FAKE two-landing fix (ddm_lr2, 2026-08-03; surfaced by ddm_la1 §6.3 HIT 1). This
+    module previously emitted ``"byte_closed_operation_count": len(operations)`` — asserting
+    that EVERY operation is byte-closed while performing no byte accounting anywhere in the
+    module (forbidden class 1: canonical markers without the work; forbidden class 4: a declared
+    value in a canonical data field). The number is not inert: it is summed with the sibling
+    producer's genuinely-checked rows at ``byte_shaving_campaign`` into
+    ``packet_ir_byte_closed_operation_count``, a readiness figure, so an unchecked value was
+    being added to a total a reader takes as checked. This performs the sibling's check.
+    """
+    return sum(
+        1
+        for operation in operations
+        if not any(
+            str(blocker).startswith(_NOT_BYTE_CLOSED_BLOCKER_PREFIX)
+            for blocker in _as_list(operation.get("blockers"))
+        )
+    )
+
+
+def _sequence_is_permutation(
+    chosen_sequence: Sequence[Mapping[str, Any]],
+    operations: Sequence[Mapping[str, Any]],
+) -> bool:
+    """Whether the chosen sequence really is a permutation of the selected operations.
+
+    Sister half of the same NO-FAKE fix: the field was hardcoded ``True``. It is now DECIDED —
+    a permutation is an exact multiset match on ``operation_id`` (same members, same
+    multiplicities, so neither a dropped operation nor a duplicated one can pass).
+    """
+    return Counter(str(item.get("operation_id")) for item in chosen_sequence) == Counter(
+        str(operation.get("operation_id")) for operation in operations
+    )
 
 
 def _sha256_text(value: str) -> str:
@@ -219,11 +263,13 @@ def packet_ir_operation_set_from_compiler_hint(
         "chosen_operation_sequence": chosen_sequence,
         "chosen_operation_sequence_sha256": _sequence_hash(chosen_sequence),
         "chosen_operation_sequence_source": "inverse_action_operation_set_compiler_hint_order",
-        "chosen_operation_sequence_is_permutation": True,
+        "chosen_operation_sequence_is_permutation": _sequence_is_permutation(
+            chosen_sequence, operations
+        ),
         "requires_atomic_materialization": True,
         "partial_materialization_allowed": False,
         "operation_count": len(operations),
-        "byte_closed_operation_count": len(operations),
+        "byte_closed_operation_count": _byte_closed_operation_count(operations),
         "operations": operations,
         "blockers": [
             "packetir_operation_set_requires_materializer_contexts",

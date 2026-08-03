@@ -47,6 +47,18 @@ if TYPE_CHECKING:
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 TRAINER_REL = "experiments/train_levelset_witness_realized_through_R_mlx.py"
 TRAINER_PATH = _REPO_ROOT / TRAINER_REL
+# EXPLICIT two-trainer binding for the package-wide registry scan (ddm_lr2, 2026-08-03).
+# This module's levers legitimately span the levelset entry point AND the base it imports its
+# primitives from (MEASURED: 35 of its flags exist ONLY on the base), so it is one of the rare
+# genuine multi-trainer modules. It previously relied on the registry's silent default, which
+# happens to resolve to exactly this pair — but "correct by default" and "correct by intent"
+# were indistinguishable to every reader, and that indistinguishability is what let three
+# TR1-targeted modules be graded against the retired vehicle unnoticed. Stating it changes NO
+# behaviour (same two paths, verified by test); it makes the binding auditable.
+TRAINER_RELPATHS = (
+    "experiments/train_levelset_witness_realized_through_R_mlx.py",
+    "experiments/train_witness_realized_through_R_mlx.py",
+)
 
 
 def real_trainer_flags(trainer_path: Path | None = None) -> frozenset[str]:
