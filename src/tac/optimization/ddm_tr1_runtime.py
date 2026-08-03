@@ -1411,7 +1411,12 @@ def render_frame1_camera_uint8(
     cam = np.ascontiguousarray(np.clip(np.rint(up), 0, 255).astype(np.uint8))
     if not window_solve:
         return cam
-    from tac.optimization.ddm_ll1_window_solve import solve_camera_windows
+    try:  # contest runtime tree: vendored flat, no `tac` package (ddm_cu1)
+        from ddm_ll1_window_solve import (  # type: ignore[no-redef]
+            solve_camera_windows,
+        )
+    except ModuleNotFoundError:  # repo/dev layout
+        from tac.optimization.ddm_ll1_window_solve import solve_camera_windows
 
     return solve_camera_windows(cam, np.asarray(render, dtype=np.float64))
 

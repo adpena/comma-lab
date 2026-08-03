@@ -11,12 +11,13 @@ ignored explicitly.
 from __future__ import annotations
 
 import argparse
+import ast
 import hashlib
 import json
 import os
 import subprocess
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 try:
@@ -29,6 +30,15 @@ ensure_repo_imports(REPO_ROOT)
 
 from tac.audit_contract import AuditReport, audit_exit_code  # noqa: E402
 from tac.repo_io import json_text, repo_relative  # noqa: E402
+
+# Import-graph scan skips vendored/pinned trees: their imports describe THEIR
+# layout, not ours, and the upstream snapshot is immutable (ddm_cu1).
+_VENDORED_IMPORT_SCAN_SKIP = (
+    "upstream/",
+    "reverse_engineering/",
+    "submissions/",
+    "experiments/results/",
+)
 
 SOURCE_SUFFIXES = {
     ".c",
@@ -597,6 +607,65 @@ def find_runtime_source_custody_blockers(
     return blockers, baseline_summaries
 
 
+def find_clone_breaking_untracked_imports(
+    repo_root: Path,
+    untracked_paths: set[str],
+    tracked_files: set[str],
+) -> tuple[str, ...]:
+    """Return ``importer -> target`` edges where a TRACKED module imports an UNTRACKED one.
+
+    This is the ONE untracked-source subclass that provably breaks a fresh
+    clone: the importer ships, the imported module does not, so ``git clone &&
+    import`` raises ``ModuleNotFoundError`` even though every test passes in the
+    working tree that authored it.  It exists to RANK the audit's undispositioned
+    rows, not to detect a new thing -- the rows are already blockers; this says
+    which ones a clean checkout cannot survive, so the queue can be drained
+    worst-first instead of as an undifferentiated wall (ddm_cu1, 2026-08-03).
+
+    High precision by construction: an edge is reported only when the target file
+    EXISTS on disk and is untracked.  A dotted import naming nothing on disk is a
+    dead import, a different class, and is deliberately not reported here.
+    """
+
+    def _resolve(module: str, importer: str) -> str | None:
+        if module.startswith("tac."):
+            stem = "src/" + module.replace(".", "/")
+        else:  # flat sibling import, as used inside vendored runtime trees
+            stem = str(PurePosixPath(importer).parent / module.replace(".", "/"))
+        for cand in (f"{stem}.py", f"{stem}/__init__.py"):
+            if cand in untracked_paths and (repo_root / cand).exists():
+                return cand
+            if cand in tracked_files:
+                return None
+        return None
+
+    edges: list[str] = []
+    for importer in sorted(tracked_files):
+        if not importer.endswith(".py") or importer.startswith(_VENDORED_IMPORT_SCAN_SKIP):
+            continue
+        source = repo_root / importer
+        if not source.is_file():
+            continue
+        try:
+            tree = ast.parse(source.read_text(encoding="utf-8", errors="replace"))
+        except (OSError, SyntaxError, ValueError):
+            continue
+        modules: set[str] = set()
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                modules.update(alias.name for alias in node.names)
+            elif isinstance(node, ast.ImportFrom) and node.level == 0 and node.module:
+                modules.add(node.module)
+        for module in sorted(modules):
+            target = _resolve(module, importer)
+            if target is not None:
+                edges.append(
+                    f"{importer}: clone_breaking_import: imports {module!r} which "
+                    f"resolves to UNTRACKED {target}"
+                )
+    return tuple(edges)
+
+
 def audit_untracked_source_artifacts(
     repo_root: Path,
     *,
@@ -656,8 +725,24 @@ def audit_untracked_source_artifacts(
         repo_root=repo_root,
     )
 
+    # RANKING, not a new blocker class: which undispositioned rows a fresh clone
+    # provably cannot survive, so the queue drains worst-first (ddm_cu1).
+    clone_breaking_edges = find_clone_breaking_untracked_imports(
+        repo_root, untracked_paths, tracked_files
+    )
+    clone_breaking_targets = sorted(
+        {edge.rsplit(" UNTRACKED ", 1)[1] for edge in clone_breaking_edges}
+    )
     blockers = tuple(
-        [f"{r.path}: {r.classification}: undispositioned source-like artifact" for r in undispositioned]
+        [
+            f"{r.path}: {r.classification}: undispositioned source-like artifact"
+            + (
+                " [CLONE-BREAKING: a tracked module imports it]"
+                if r.path in set(clone_breaking_targets)
+                else ""
+            )
+            for r in undispositioned
+        ]
         + [f"{path}: disposition entry does not match a live untracked source path" for path in invalid_disposition_paths]
         + runtime_source_blockers
     )
@@ -669,6 +754,10 @@ def audit_untracked_source_artifacts(
         summary={
             "by_class": by_class,
             "by_disposition": by_disposition,
+            "clone_breaking_import_edges": list(clone_breaking_edges[:200]),
+            "clone_breaking_import_edge_count": len(clone_breaking_edges),
+            "clone_breaking_untracked_target_count": len(clone_breaking_targets),
+            "clone_breaking_untracked_targets": clone_breaking_targets,
             "disposition_manifest": str(disposition_manifest) if disposition_manifest else None,
             "disposition_exact_entry_count": sum(
                 1 for entry in dispositions.values() if entry.get("path_kind", "exact") == "exact"
@@ -758,8 +847,13 @@ def main() -> int:
         print(
             "untracked source audit: "
             f"{report.summary['untracked_source_like_count']} source-like untracked file(s); "
-            f"{report.summary['undispositioned_count']} undispositioned"
+            f"{report.summary['undispositioned_count']} undispositioned; "
+            f"{report.summary['clone_breaking_untracked_target_count']} CLONE-BREAKING "
+            f"({report.summary['clone_breaking_import_edge_count']} import edge(s))"
         )
+        # Worst-first: a clone-breaking target is one a fresh checkout cannot import.
+        for target in report.summary["clone_breaking_untracked_targets"]:
+            print(f"  ! CLONE-BREAKING untracked: {target}")
         for record in report.summary["sample"]:
             print(f"  - {record['path']}: {record['classification']}")
     if args.strict:

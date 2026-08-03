@@ -13,7 +13,20 @@ import struct
 from collections.abc import Mapping
 from typing import Any
 
-from tac.repo_io import sha256_bytes
+try:
+    from tac.repo_io import sha256_bytes
+except ModuleNotFoundError:  # contest runtime tree: no `tac` package (ddm_cu1)
+    from hashlib import sha256 as _sha256
+
+    def sha256_bytes(data: bytes) -> str:
+        """Return the SHA-256 hex digest of an in-memory byte payload.
+
+        Byte-identical to ``tac.repo_io.sha256_bytes``; duplicated only so this
+        module stays importable when it is VENDORED FLAT into a contest runtime
+        tree, where ``tac`` is not installed.
+        """
+
+        return _sha256(data).hexdigest()
 
 RANGE_CODER_PROTOTYPE_MAGIC = b"TACRNG1\0"
 ANS_CODER_PROTOTYPE_MAGIC = b"TACANS1\0"

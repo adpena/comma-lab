@@ -7,6 +7,7 @@ from tools.audit_untracked_source_artifacts import (
     _generated_source_filesystem_records_via_walk,
     build_runtime_source_baseline,
     classify_untracked_path,
+    find_clone_breaking_untracked_imports,
     find_disposition_for_path,
     find_invalid_disposition_paths,
     find_runtime_source_custody_blockers,
@@ -374,3 +375,71 @@ def test_disposition_entries_remain_valid_after_tracking() -> None:
         live_untracked_paths={"src/tac/new_codec.py"},
         tracked_source_like_paths={"docs/runbooks/new.md"},
     ) == ["tools/missing.py"]
+
+
+def _write(root, rel: str, body: str) -> None:
+    path = root / rel
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(body)
+
+
+def test_clone_breaking_import_edge_is_reported(tmp_path) -> None:
+    """A TRACKED module importing an UNTRACKED one is what a fresh clone cannot survive."""
+
+    _write(tmp_path, "src/tac/w/importer.py", "from tac.w.stranded import thing\n")
+    _write(tmp_path, "src/tac/w/stranded.py", "thing = 1\n")
+
+    edges = find_clone_breaking_untracked_imports(
+        tmp_path,
+        untracked_paths={"src/tac/w/stranded.py"},
+        tracked_files={"src/tac/w/importer.py"},
+    )
+
+    assert len(edges) == 1
+    assert edges[0].startswith("src/tac/w/importer.py: clone_breaking_import:")
+    assert "src/tac/w/stranded.py" in edges[0]
+
+
+def test_clone_breaking_ignores_tracked_and_absent_targets(tmp_path) -> None:
+    """Precision: a tracked target is fine, and a dotted import naming nothing is a
+    DIFFERENT class (dead import) that this helper must not claim."""
+
+    _write(tmp_path, "src/tac/w/importer.py",
+           "from tac.w.landed import a\nfrom tac.w.never_existed import b\n")
+    _write(tmp_path, "src/tac/w/landed.py", "a = 1\n")
+
+    assert find_clone_breaking_untracked_imports(
+        tmp_path,
+        untracked_paths=set(),
+        tracked_files={"src/tac/w/importer.py", "src/tac/w/landed.py"},
+    ) == ()
+
+
+def test_clone_breaking_resolves_flat_sibling_imports(tmp_path) -> None:
+    """Vendored runtime trees import flat siblings, not dotted packages."""
+
+    _write(tmp_path, "experiments/runner.py", "from helper_mod import go\n")
+    _write(tmp_path, "experiments/helper_mod.py", "def go(): return 1\n")
+
+    edges = find_clone_breaking_untracked_imports(
+        tmp_path,
+        untracked_paths={"experiments/helper_mod.py"},
+        tracked_files={"experiments/runner.py"},
+    )
+
+    assert len(edges) == 1
+    assert "experiments/helper_mod.py" in edges[0]
+
+
+def test_clone_breaking_skips_vendored_and_pinned_trees(tmp_path) -> None:
+    """The upstream snapshot is immutable and vendored trees describe THEIR layout."""
+
+    _write(tmp_path, "upstream/thing.py", "from tac.w.stranded import x\n")
+    _write(tmp_path, "submissions/s/thing.py", "from tac.w.stranded import x\n")
+    _write(tmp_path, "src/tac/w/stranded.py", "x = 1\n")
+
+    assert find_clone_breaking_untracked_imports(
+        tmp_path,
+        untracked_paths={"src/tac/w/stranded.py"},
+        tracked_files={"upstream/thing.py", "submissions/s/thing.py"},
+    ) == ()

@@ -39,10 +39,23 @@ try:
 except ImportError:  # pragma: no cover - optional race arm
     brotli = None  # type: ignore[assignment]
 
-from tac.optimization.repair_entropy_coder_runtime_adapters import (
-    ans_rans_prototype_decode,
-    ans_rans_prototype_encode,
-)
+try:
+    # Contest runtime layout (ddm_cu1): inflate.sh runs bare `python` against a
+    # FLAT directory of vendored decode modules and there is no `tac` package
+    # installed, so the package-qualified import below raises.  Try the flat
+    # sibling first -- same pattern as inflate_runner_v4d.py.  Before this, the
+    # repo copy of this module could not be dropped into a runtime tree at all
+    # and a hand-de-`tac`-ified snapshot had to be maintained off-repo, which is
+    # how the tracked source silently stopped being the source of truth.
+    from repair_entropy_coder_runtime_adapters import (  # type: ignore[no-redef]
+        ans_rans_prototype_decode,
+        ans_rans_prototype_encode,
+    )
+except ModuleNotFoundError:  # repo/dev layout
+    from tac.optimization.repair_entropy_coder_runtime_adapters import (
+        ans_rans_prototype_decode,
+        ans_rans_prototype_encode,
+    )
 
 
 class DDMR7CoderError(ValueError):
