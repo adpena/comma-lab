@@ -57,6 +57,11 @@ a new field.
 4. `hg1`'s ≈15.2%-of-gap hypothesis is **closed exactly** (§2.3), and the closure exposes a
    **quantity conflation** that would otherwise have propagated.
 
+**The `Road↔Lane` cell table is §8** — mechanism × fraction × place × time, with a decisive new
+PLACE fact (**the shipped receiver has ZERO class awareness**, exhaustive over 6 files) and a new
+FRACTION measurement (**F-CELL-1**: a static 16×16 gate is profitable but only **−0.001678 S**,
+because **Lane's deficit is spatially DIFFUSE while Movable's is not**).
+
 **One sign correction (§5.3):** "`Road↔Lane` costs 299,369 B = 84.6% of the archive ⇒ not buyable
 as corrections" reads a **CEILING ON SPEND** as a cost. It says a correction carrier **may spend
 up to 10.185 bits per flip**. `hs1`'s static top-128 index (62 B for 91.22%) sits three orders of
@@ -424,6 +429,90 @@ not follow from the byte arithmetic, and the two justifications must not be merg
 
 ---
 
+## §8 THE `Road↔Lane` CELL TABLE — mechanism × fraction × place × time
+
+Added after the coordinator's retraction of *"not buyable"* (which §5.3 had independently
+corrected). Its charter: **enumerate the cells, and treat "closed" as requiring a measurement AT
+THAT CELL, never an extrapolation from another.** Prices are `wf2`'s (cited, not re-derived).
+
+### 8.1 A decisive PLACE fact, measured here
+
+**The shipped cx1 receiver contains ZERO SegNet-class awareness.** Exhaustive search of the
+submission dir `v4d_cx1_pj2ix2` — **denominator: all 6 `.py` files** — for
+`argmax|segnet|per_class|class_bias|n_classes`:
+
+| file | hits | what they are |
+|---|---:|---|
+| `ddm_tr1_runtime.py` (1,292 lines, 50 defs) | **0** | — |
+| `inflate_runner.py` | **0** | — |
+| `pfs1_warp_receiver.py` | **0** | — |
+| `repair_entropy_coder_runtime_adapters.py` | **0** | — |
+| `ddm_ix2_archive_container.py` | 1 | `np.bincount(...).argmax()` — token-histogram mode |
+| `ddm_r7_token_coder.py` | 2 | same, plus its tie-break comment |
+
+*(Positive control: the grep is working and the scope is non-empty — the same pattern set returns
+50 `def` matches on the same file. This is a measured zero, not a vacuous one.)*
+
+> **The receiver decodes tokens → renders RGB. The five classes exist ONLY inside the frozen
+> scorer, downstream. So a per-class or per-edge operation has NO PLACE to live in the receiver
+> today.** Building one is *legal and FREE* — an argmax over our **own decoded RGB** is a generic
+> algorithm, not video-derived data (rule 118) — but **it does not exist**, and §3/§8.2 bound what
+> it would be worth if built. This is the architectural form of `rz1`'s realization wall: every
+> class-level intent must be expressed as an **RGB** perturbation and handed to the frozen scorer.
+
+### 8.2 F-CELL-1 — the FRACTION dimension, measured at the `hs1`/`sx2` index
+
+Does restricting the gate to a **static** 16×16 cell subset (768 cells; the same index `sx2`
+priced at **49 B zlib** and `hs1` at **62 B** for top-128) lift precision over `p* = 0.500`?
+200 SPREAD frames, subset/population ratio **0.9986**:
+
+| grow X into Y | p (all) | cells p>0.5 | N above | K above | **ΔS if taken** | p_max | p99 | p95 | p90 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| **Movable into Road** | 0.364 | **7** | 3,719 | 2,068 | **−0.001060** | 0.612 | 0.593 | 0.519 | 0.488 |
+| **Movable into Undriv** | 0.355 | **13** | 1,659 | 930 | **−0.000511** | 0.779 | 0.774 | 0.670 | **0.569** |
+| **Lane into Road** | 0.208 | **3** | 160 | 94 | **−0.000071** | 0.727 | 0.566 | 0.425 | 0.334 |
+| Undriv into Road | 0.218 | 1 | 42 | 28 | −0.000036 | 0.667 | 0.506 | 0.352 | 0.331 |
+| Road into MyCar | 0.146 | **0** | 0 | 0 | +0.000000 | 0.422 | 0.414 | 0.355 | 0.324 |
+
+**F-CELL-1 does NOT fire** — profitable static cells exist. But the mass is **two orders below
+what the edge is worth**: total **−0.001678 S** (upper bound, overlaps not deduped) against a
+49 B address costing **+0.000033 S** ⇒ net **≈ −0.001645 S = 0.27% of the gap**.
+
+> **The FRACTION dimension splits the classes, and this is new.** **Movable's** deficit *is*
+> spatially concentrated enough to clear break-even (7 + 13 cells; `p90 = 0.569` on
+> `Movable into Undriv` — the 90th-percentile cell is already profitable). **Lane's is NOT** —
+> 3 cells holding 160 candidates, median cell `p = 0.212`, and `p95 = 0.425` still below the
+> line. **At 16×16 granularity, Lane's erasure is spatially DIFFUSE.** That is a measurement at
+> the cell, so it closes *that* cell — and it is the exact opposite of what `hs1`'s "seg
+> concentrates in SPACE" would let you extrapolate: `hs1`'s concentration is of **flip mass**;
+> what a gate needs is concentration of **precision**, and for Lane the two come apart.
+
+### 8.3 The table
+
+Cells for `Road↔Lane` (**0.199337 S**, 46.23% of all flips). MEASURED = a measurement exists at
+*this* cell. **CLOSED means measured-and-negative at this cell, never extrapolated.**
+
+| mechanism | fraction | place | time | verdict |
+|---|---|---|---|---|
+| unconditional area move | all | receiver | terminal | **CLOSED** — F-ACT-1, `+0.2459 S` (§3.2) |
+| gated area move | static 16×16 cells | receiver | terminal | **CLOSED, small** — F-CELL-1: `−0.000071 S`, 3 cells, 160 cands (§8.2) |
+| gated area move | static ≤8×8 cells | receiver | terminal | **OPEN** — precision rises with finer cells, address grows ~4×; not measured |
+| gated area move | per-component | receiver | terminal | **OPEN** — `dd1` owns Lane-component decomposability |
+| displacement 2-vector | per-component | receiver | terminal | **CLOSED for Lane** — 56.92% of its flip mass is area-changing, hence displacement-blind (§S2) |
+| region-paint primitive | any | receiver | terminal | **CLOSED** — `rz1`: Lane has no interior (6.92% ≥2 px) |
+| directional prior | all edges | coder entropy model | terminal | **OPEN, priced** — `10,565 B` (§S1); needs a direction-coding field, §5.1 |
+| loss weighting | all | **in-training (0 counted bytes)** | during descent | **OPEN — `mg1` owns the hinge-weight cure.** §2.1's constraint binds it: **depth-weight, not margin-weight** |
+| chroma / isoluminant | all | base tokens | terminal | **OPEN** — `rz1`'s `Q3`; §S3 prices the dominant-edge penalty at only `1.254×` |
+| base representation | all | base tokens | during descent | **OPEN** — the erasure argument (§S5), NOT the byte argument (§5.3) |
+
+> **The honest headline: `Road↔Lane` is not walled, but every cell I could measure at $0 came
+> back small or negative, and every cell that is still OPEN is owned by another arm
+> (`mg1` loss-weighting, `dd1` component decomposability, `wf2` price, `ph4` chroma). This arm's
+> contribution to those cells is the CONSTRAINTS they must satisfy — §2.1 depth-not-margin,
+> §S2 56.92% displacement-blind, §8.1 no receiver-side class stage exists, §3.3 `p* = 0.500`.**
+
+---
+
 ## §6 CLAIM LEDGER (verdict scope per claim)
 
 | # | claim | status | scope |
@@ -439,7 +528,10 @@ not follow from the byte arithmetic, and the two justifications must not be merg
 | A9 | chroma penalty on the dominant edge = 1.254× | **DERIVED** from `rz1`'s 48.4%/55.0% + my 46.23% | arithmetic only; `rz1`'s retentions are its own |
 | A10 | `hg1` 15.2% ⇒ 20.35% headroom-basis; 32.21% is a different quantity | **MEASURED + DERIVED** | chain reproduces `hg1` to 15.17% |
 | A11 | translation is area-preserving ⇒ purely symmetric | **PARTIALLY FALSIFIED, corrected** | holds for **compact interior** components (antisym 0.74–2.29%) and for **horizontal** shifts (1.65%); **fails** for frame-touching strata (Road 98.71%, MyCar 99.43%) and for compact objects crossing a background transition (Movable vertical 48.77%). A8 uses only the *global* area-conservation form, which survives. |
-| A12 | "84.6% of archive ⇒ not buyable" is a ceiling, not a cost | **DERIVED** | arithmetic; the *erasure* argument for the same conclusion is untouched |
+| A12 | "84.6% of archive ⇒ not buyable" is a ceiling, not a cost | **DERIVED** | arithmetic; the *erasure* argument for the same conclusion is untouched. Coordinator independently retracted the same claim; the two corrections agree and were reached separately. |
+| A13 | shipped cx1 receiver has ZERO SegNet-class awareness | **VERIFIED_VIA_SOURCE_INSPECTION** | exhaustive over all 6 `.py` files of `v4d_cx1_pj2ix2`; 3 hits are all `bincount().argmax()` token-mode; positive control passed (§8.1). Scope: **this submission dir only** — I did not search `src/tac/` for an unwired class stage. |
+| A14 | F-CELL-1: static 16×16 gate is profitable but small (−0.001678 S) | **MEASURED** | 200 SPREAD frames, ratio 0.9986. CELL-scoped: closes 16×16; **does not** close finer cells or per-component. |
+| A15 | Lane's deficit is spatially DIFFUSE at 16×16; Movable's is not | **MEASURED** | §8.2. Contradicts a naive extrapolation from `hs1` — flip-mass concentration ≠ precision concentration. |
 
 ## §7 REPRODUCTION
 
