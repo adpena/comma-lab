@@ -1050,11 +1050,40 @@ def not_even_designed(path: Path | None = None) -> tuple[dict, ...]:
     * ``BUILD_ELSEWHERE_UNWIRED`` — the component is already BUILT, so "not even designed" is simply
       false about it. Its debt is real but it is a WIRING debt, drained by :func:`built_elsewhere_unwired`.
       Leaving it here would mis-state the work as a build and hide the measured harm.
+
+    THE RETIREMENT EXIT IS EVIDENCE-GATED (ddm_qd1, #899 residual, 2026-08-03). ``BUILD_RETIRED``
+    is the only exit that is a true DRAIN: a retired row leaves this queue and appears in no other
+    one. MEASURED before this fix — a ``retired-with-reason`` row whose mandatory reactivation
+    trigger was MISSING (a shape :func:`record_required_component` REFUSES on write) still exited,
+    so a hand-appended unverified retirement silently drained real debt. The exit now requires
+    ``record_integrity == RECORD_VERIFIED``, i.e. the row must re-pass the write-path predicate NOW.
+
+    This is the same fail-closed principle as :func:`_effective_grade_rank`, applied to the other
+    thing evidence buys: there it gates a RANK, here it gates an EXIT. The grade-5 exit deliberately
+    stays unconditional because it is not a drain — an unverified grade-5 row remains visible in
+    :func:`built_elsewhere_unwired` (sorted last, typed by ``record_integrity``), which is MEASURED,
+    so gating it here would only hide it twice rather than once.
     """
     idx = _build_index()
     return tuple(r for r in read_required_components(path)
                  if r["component"] not in idx
-                 and r.get("grade") not in (BUILD_RETIRED, BUILD_ELSEWHERE_UNWIRED))
+                 and not _exits_debt_queue(r))
+
+
+def _exits_debt_queue(row: dict) -> bool:
+    """Whether a declared row has EARNED its exit from the grade-4 debt queue.
+
+    Split out of :func:`not_even_designed` so the two exits can be reasoned about separately: one
+    is a hand-off to a sibling queue, the other is a drain, and only a drain needs evidence.
+    """
+    grade = row.get("grade")
+    if grade == BUILD_ELSEWHERE_UNWIRED:
+        # Hand-off, not a drain: the row stays visible in built_elsewhere_unwired().
+        return True
+    if grade == BUILD_RETIRED:
+        # Drain: it leaves every queue, so it must still re-pass the write-path predicate.
+        return row.get("record_integrity") == RECORD_VERIFIED
+    return False
 
 
 def built_elsewhere_unwired(path: Path | None = None) -> tuple[dict, ...]:

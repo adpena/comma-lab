@@ -401,6 +401,77 @@ def test_retired_row_leaves_the_not_even_designed_debt_queue(tmp_path) -> None:
     assert "Wr2Retired" in {r["component"] for r in read_required_components(p)}
 
 
+def test_hand_appended_unverified_retirement_cannot_drain_the_debt_queue(tmp_path) -> None:
+    """A retirement that does not re-pass the write-path predicate keeps nagging.
+
+    #899 residual (ddm_qd1, 2026-08-03). ``BUILD_RETIRED`` is the only exit from
+    ``not_even_designed`` that is a true DRAIN -- a retired row leaves this queue and appears in
+    no other one, unlike a grade-5 row which stays visible in ``built_elsewhere_unwired``.
+
+    The sibling test above plants a VALID retirement written through the write path. Nothing
+    planted an INVALID one, so this was uncovered: the queue filtered on ``grade`` alone, and a
+    row hand-appended to the JSONL with its mandatory reactivation trigger MISSING -- exactly the
+    shape ``record_required_component`` refuses on write, asserted by the test below -- still
+    exited. Debt could be drained by appending a line the writer would have rejected.
+    """
+    from tac.witness_dsl.activation_ledger import (
+        BUILD_RETIRED,
+        RECORD_DECLARED_UNVERIFIED,
+        RECORD_VERIFIED,
+    )
+
+    p = tmp_path / "req.jsonl"
+    record_required_component(
+        "QdValidRetired", needed_by="cfgA", missing_mechanism="recipient cannot exist",
+        owner="ddm_qd1", fire_order=1, consumer="n/a", grade=BUILD_RETIRED,
+        notes="REACTIVATION: re-open iff the recipient lands", path=p)
+    # Bypass the writer, exactly as a human editing the ledger by hand would.
+    with p.open("a", encoding="utf-8") as fh:
+        fh.write(json.dumps({
+            "component": "QdUnverifiedRetired", "needed_by": "cfgA",
+            "grade": BUILD_RETIRED, "declared_by": "hand", "declared_at_utc": "2026-08-03T00:00:00Z",
+        }) + "\n")
+
+    integrity = {r["component"]: r.get("record_integrity") for r in read_required_components(p)}
+    assert integrity["QdValidRetired"] == RECORD_VERIFIED
+    assert integrity["QdUnverifiedRetired"] == RECORD_DECLARED_UNVERIFIED
+
+    live = {r["component"] for r in not_even_designed(p)}
+    assert "QdValidRetired" not in live, "an earned retirement must still drain"
+    assert "QdUnverifiedRetired" in live, (
+        "an unverified retirement must NOT drain: it exits every queue, so its exit has to be "
+        "re-earned at read time"
+    )
+
+
+def test_unverified_grade5_row_stays_visible_rather_than_being_gated_twice(tmp_path) -> None:
+    """The grade-5 exit stays unconditional ON PURPOSE -- it is a hand-off, not a drain.
+
+    Guards against over-correcting the fix above. An unverified grade-5 row leaves
+    ``not_even_designed`` but remains visible in ``built_elsewhere_unwired`` (sorted last and
+    typed by ``record_integrity``), so gating that exit too would hide the row twice instead of
+    once. Dropping rows is signal loss; demoting and typing them is not.
+    """
+    from tac.witness_dsl.activation_ledger import (
+        BUILD_ELSEWHERE_UNWIRED,
+        built_elsewhere_unwired,
+    )
+
+    p = tmp_path / "req.jsonl"
+    with p.open("a", encoding="utf-8") as fh:
+        fh.write(json.dumps({
+            "component": "QdUnverifiedGrade5", "needed_by": "cfgA",
+            "grade": BUILD_ELSEWHERE_UNWIRED, "declared_by": "hand",
+            "declared_at_utc": "2026-08-03T00:00:00Z",
+        }) + "\n")
+
+    assert "QdUnverifiedGrade5" not in {r["component"] for r in not_even_designed(p)}
+    still_visible = {r["component"] for r in built_elsewhere_unwired(p)}
+    assert "QdUnverifiedGrade5" in still_visible, (
+        "an unverified grade-5 row must remain readable somewhere; it is demoted, never dropped"
+    )
+
+
 def test_retirement_refuses_without_a_reactivation_trigger(tmp_path) -> None:
     from tac.witness_dsl.activation_ledger import BUILD_RETIRED
 
