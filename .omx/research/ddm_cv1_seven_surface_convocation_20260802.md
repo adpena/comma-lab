@@ -355,3 +355,70 @@ verdict on a skewed per-pair quantity inherits the same defect, and the campaign
 8 receipts under `reports/ddm_bp2/`. Guards: fast-path == authority on 600/600; gradient
 surrogate within 1e-5 on 518/600 (max deviation 5.46e-04 — used only as a search
 direction, never as authority). Pointer UNMOVED. `[macOS-CPU advisory]`, `score_claim=false`.
+
+---
+
+## §13 OPERATOR DIRECTIVES 2026-08-02 — four rule changes, two of which CORRECT THIS MEMO
+
+Landed same-session, after §0–§12 were written. Recorded verbatim; memory
+`operating_directives_20260802_acceptance_rule_and_no_floors`.
+
+### D1 — THE ACCEPTANCE RULE (corrects §12's verdict and re-opens closed negatives)
+
+> *"don't judge moves that produce significant wins on segment and rate if they hurt pose because
+> pose can be fixed later using techniques and methods that we already know."*
+
+⇒ A joint-ΔS-positive verdict **driven by a pose regression is NOT a rejection**. **§12's
+"DOES NOT PAY"** on the blind set was a JOINT judgment and is re-scoped accordingly: the blind-set
+actuator is pose-only and exactly seg-free, so its decision column is d_pose-vs-bytes alone — but
+the general rule now stands campaign-wide. Report **seg+rate ΔS as the decision column** and
+**pose debt separately as repairable**. Every negative closed on a joint ΔS whose seg/rate half
+improved is a re-open candidate. Two known instances: §12's blind-set close, and the
+`#881`/`#827`/`#889` **−0.0866 S composition stranded on a pose re-solve — now UNBLOCKED**.
+
+### D2 — EVERY FORMULATION-/INSTANCE-SCOPED NEGATIVE'S FOLLOW-ON IS P0
+
+> *"Each of those suggested more optimal follow ons that we must pursue is p zero, including
+> parametric blind set perturbation."*
+
+A sub-FAMILY negative is a POINTER to a better formulation, not a closure. §12's named survivor
+(the parametric blind-set perturbation) is now P0 and owned by arm `ddm_pb3`.
+
+### D3 — AXIS PRIORITY: pose is a CONSEQUENCE
+
+> *"Rate and SEG are extremely important, and pose falls out if everything else is done the right
+> way in the right order."*
+
+Independently confirms §1's derivation from the opposite side. Pose is not a campaign axis; pose
+work's value is **repair tooling**. §1's pair-coherence term is correspondingly LOOSENED — it no
+longer must hold pose in-loop, only make pose repair cheap downstream.
+
+### D4 — THERE ARE NO FLOORS (corrects §11's language directly)
+
+> *"there are no floors. It's all a matter of proper deep math and engineering."*
+
+**§11 called Road "sitting exactly at its floor". That framing is DEMOTED.** A floor is a property
+of a FORMULATION, never of the problem — `ddm_fl1` already scoped its own GT-flicker floor that way
+(pierced by PR130 at 2.966e-4 and by ep641 in aggregate). **Read ratio ≥ 1.00 as "this formulation
+is exhausted — change the representation", never as "irreducible".** Road's 44% of the seg residual
+(≈24% of the total gap) is therefore a REPRESENTATION problem with a named signal source: the
+operator points at **SPEC_v8** (edge-centric per-class carriers · merge→diff→correct
+chroma-first/luma-reserved reconciliation) plus `#382`'s per-class-PAIR anisotropic σ_cc′. And the
+decomposition must go **per EDGE**, not only per class — the operator named *interactions and edges
+and boundaries*. Owned by arm `ddm_pc2`; harness by `ddm_rd2`.
+
+### D5 — the recalled lessons, binding on every arm's derivation
+
+> *"Remember the contiguous scene block and cell and correct level and dimensions and coordinate
+> lessons that we've learned throughout the months of research and work."*
+
+CELL not pixel · "meet it where it lives" (correct level) · description/scorer/quotient coordinates
+never raw RGB · temporal contiguity is STRUCTURE · never exceed the geometry's true DOF. Full text
+in the memory file. These are why the naive per-coordinate blind-set shape lost, and they constrain
+the parametric successor.
+
+**Swarm dispatched under these directives:** `ddm_na1` (negatives audit, +joint-ΔS-veto lens) ·
+`ddm_mt1` (79 unmeasured menu points) · `ddm_pg1` (pose GN convergence → repair tooling; holds the
+scorer slot) · `ddm_cb2` (codebook/selector/rate) · `ddm_bo1` (base objective + base menu + ORDER) ·
+`ddm_rd2` (resolver backcast + live-base per-class/per-EDGE re-join + the −0.0866 unlock) ·
+`ddm_pb3` (parametric blind set, P0-by-name) · `ddm_pc2` (per-class/edge representation → Road).
