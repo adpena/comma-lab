@@ -394,14 +394,49 @@ Four arms, four instruments, one mechanism:
 
 ### 5.1 Named actuators
 
+**The sweep returned.** Denominator: **10,260 `.py` files** — `src/tac/` 7,259 · `tools/` 2,095 ·
+`experiments/` 906 (excl. `results/`, `manim_levelset/`) · `submissions/` 155 · the live cx1
+closure 6. It **independently confirms §8.1** at 1,700× my denominator, and it names three things.
+
 | asymmetry | actuator | status |
 |---|---|---|
-| S1 directional prior | needs a **direction-coding field** in the coder's entropy model | **pending** — an `Explore` sweep of `src/tac/`, `experiments/`, `tools/` and the submission dirs was dispatched for exactly this; it had not returned when this memo was written. **I do not assert either way.** |
+| S1 directional prior | `_row` / `_update` in `ddm_r7_token_coder.py` — a per-context adaptive count table keyed by an **arbitrary integer context**, so an edge id can be mixed into the key without touching the arithmetic coder | **EXISTS BUT DORMANT ON THE LIVE PATH.** `decode_token_codes` is not called for `0.bin`; the live bulk goes through `decode_token_frame`. Using it means re-routing the bulk. **Precedent for a new field:** `sel_coded` (n raw bits → packbits → brotli) already ships. **Precedent for not coding a sign at all:** `beta`'s sign is **derived free at decode** from pose dim 5. |
 | S2 displacement | per-component 2-vector, ~1.25 B/component, `sx2`/`mf1` | **cited, owned by `sx2`/`mf1`** — this arm contributes only the ≤68.5% ceiling |
 | S3 chroma | `Q3` frame_1-yuv6-null (`d_pose` EXACTLY 0) | exists; `ph4` owns physics/photometrics |
 | S4 pose tail | direct per-pair re-solve | exists and has a **measured row** (`pu2`, −0.0354261 S) |
 | S5 Lane presence | **NONE. Plainly: no shipped primitive addresses an area-changing defect on a no-interior class.** | this is the gap the law names |
-| §3 area imbalance | **NONE, and none should be built** — F-ACT-1 | measured dead |
+| §3 area imbalance | **`src/tac/mask_prior.py:144 apply_prior_weighting`** — literally `logits += alpha·log(prior)`, a class-prior shift at the argmax | **UNWIRED** (sole importer `src/tac/tests/test_mask_class_prior.py:15`) **and now MEASURED DEAD in its unconditional form** — F-ACT-1 *is* the test of exactly this mechanism |
+
+### 5.1a Three consequences of the sweep
+
+1. **An orphan gets a measured disposition instead of a queue slot.** `mask_prior.apply_prior_weighting`
+   is the exact mechanism F-ACT-1 tested. Per the `unwired-but-built = P0 debt` discipline, an
+   unwired module is never neutral status — but the right resolution here is not "wire it," it is
+   **"measured: unconditional form loses 3:1 (+0.2459 S); gated-at-16×16 form is worth at most
+   −0.001678 S."** That is a disposition, not a deferral, and it should close the row.
+2. **My §2.4 refutation REACTIVATES a named carrier.**
+   `src/tac/boundary_math/road_undriv_bulk_field.py` is a **per-EDGE directional carrier** — one
+   signed `phi_bulk` lifted to two per-class SDF channels by a **signed per-side scale**, argmax
+   parity proved exact for any `s_R, s_U > 0`. It is `research_only=True`, gated on **probe P-C
+   (UNRUN)**. `hg1`'s claim 4 said `Road↔Undriv` is **1.05× symmetric** — under which a signed
+   per-side carrier there has nothing to carry. **This arm measured 1.681× on the live vehicle,
+   so the carrier's premise HOLDS.** Its blocking probe is unrun and it is scorer-free-adjacent.
+   **This is the single most concrete positive lead the arm produced.**
+3. **The displacement carrier does not exist as code** — priced but unbuilt across all 10,260
+   files. `mf1` names the real gate itself (*"a per-object translation means a decoder-side
+   spatial re-index of that object's tokens… cheap in bytes, unbuilt in mechanism"*), and `sx2`
+   **refutes the integer-offset form** (the displacement is sub-pixel, i.e. a **phase** shift).
+   §S2's ≤68.5% ceiling therefore constrains a carrier that is still a specification.
+
+### 5.1b A provenance flag, reported not acted on (not mine to fix)
+
+The sweep found the live submission's vendored `ddm_tr1_runtime.py` (sha `f3b9370…`) and
+`ddm_r7_token_coder.py` (`2a9c5a3…`) have **DRIFTED** from their repo originals (`99e2a64…`,
+`914a1ca…`) — while `experiments/inflate_runner_v4d.py:72-75` documents that staging copies them
+straight from `src/tac/optimization/`. The other four files are byte-identical. **This does not
+affect any number in this memo** (every measurement here reduces cached argmax planes, and the
+positive control against cx1's own evaluator row passed at `4.70e-09`). Flagged for whoever owns
+the staging path.
 
 ### 5.2 What I did NOT measure (stated, not hidden)
 
@@ -411,7 +446,8 @@ Four arms, four instruments, one mechanism:
 - **Anything requiring a scorer forward.** 0 scorer forwards; `pu2` held the slot throughout.
 - **Lane component decomposability** — `dd1` owns it; §5.5's law is a constraint on its answer,
   not an answer.
-- The `Explore` sweep for direction-coding fields in shipped code (§5.1) — dispatched, unreturned.
+- Probe **P-C**, the unrun gate on `road_undriv_bulk_field.py` (§5.1a-2). I identified that my
+  measurement reactivates its premise; I did not run it.
 
 ### 5.3 A sign correction on a load-bearing framing
 
@@ -532,6 +568,10 @@ Cells for `Road↔Lane` (**0.199337 S**, 46.23% of all flips). MEASURED = a meas
 | A13 | shipped cx1 receiver has ZERO SegNet-class awareness | **VERIFIED_VIA_SOURCE_INSPECTION** | exhaustive over all 6 `.py` files of `v4d_cx1_pj2ix2`; 3 hits are all `bincount().argmax()` token-mode; positive control passed (§8.1). Scope: **this submission dir only** — I did not search `src/tac/` for an unwired class stage. |
 | A14 | F-CELL-1: static 16×16 gate is profitable but small (−0.001678 S) | **MEASURED** | 200 SPREAD frames, ratio 0.9986. CELL-scoped: closes 16×16; **does not** close finer cells or per-component. |
 | A15 | Lane's deficit is spatially DIFFUSE at 16×16; Movable's is not | **MEASURED** | §8.2. Contradicts a naive extrapolation from `hs1` — flip-mass concentration ≠ precision concentration. |
+| A16 | no per-class/per-edge handle exists in the receiver or the archive grammar | **VERIFIED_VIA_SOURCE_INSPECTION** | independent sweep, denominator **10,260 `.py` files**; confirms A13 at 1,700× my scope |
+| A17 | `mask_prior.apply_prior_weighting` is the mechanism F-ACT-1 killed | **VERIFIED_VIA_SOURCE_INSPECTION + MEASURED** | the code is `logits += alpha·log(prior)`; F-ACT-1 is its morphological equivalent. FORMULATION scope — kills the *unconditional* form, bounds the gated form at −0.001678 S. |
+| A18 | §2.4 reactivates `road_undriv_bulk_field.py`'s premise | **DERIVED** from A4 + the module's own `research_only` header | I did **not** run its blocking probe P-C, and I did not verify the carrier works — only that the fact which would have made it pointless is false on the live vehicle |
+| A19 | two vendored receiver files drifted from their repo originals | **VERIFIED_VIA_SOURCE_INSPECTION** (sweep) | reported, not acted on; affects no number here (§5.1b) |
 
 ## §7 REPRODUCTION
 
