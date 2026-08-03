@@ -53,8 +53,14 @@ tokens: [no-triality, p0-ledger-ok]
    `pz1`'s **per-pair** `d_pose` — closing `pu1` §7-R1-c, so the 30.92% allocation is **VERIFIED**, not
    assumed — and the `pose_warp` payload **re-encodes byte-identically** (archive 353,808 B).
 
-5. **Measured so far (partial, probe in flight): 4 pairs ⇒ `ΔS = −0.0305813` = 4.67% of the live gap**,
-   at ≤ 0 bytes. Final figure at seal (§5.5).
+5. **MEASURED: 6 pairs ⇒ `ΔS = −0.0354261` = 5.41% of the live gap, at −3 archive bytes** (§5.5). Every
+   floor realized at shipped quantization and byte-closed against a fresh `Decoder` (`rel_err = 0.0`,
+   all six). **No single start dominates** — `gt_target_rot0` ×2, `shipped_knobs`, a *random* restart,
+   `stageA_best` ×2 — so **multi-start is the mechanism, not a refinement.**
+
+   *Scope actually achieved:* 6 of a planned 10 tail pairs; **the control group did not run**, so
+   "is this tail-specific or population-wide?" is **UNANSWERED** and my tail framing is untested from
+   that direction (§5.6, §7).
 
 6. **The instrument was NOT what my charter specified, and that is a finding.** `pu1` §8 asked for a
    ~30-line re-point of `pfs1`'s `WarpPoseOracle`. That oracle models a **6-DOF single warp**; the live
@@ -335,9 +341,43 @@ not establish had survived `pj2`. The probe splits it by knob:
 ⇒ **`mq1`'s "search headroom" framing was right and it survived `pj2` — but it lives in the continuous
 pose dims, not uniformly across its three named coordinates.**
 
-### 5.5 The measured total
+### 5.5 The measured total — 6 pairs, `ΔS = −0.0354261` = **5.41% of the live gap**, at **−3 bytes**
 
-*(final numbers filled at seal; the 4-pair partial was `ΔS = −0.0305813 = 4.67%` of gap)*
+Every floor below is **REALIZED** at the shipped `v4d` quantization and **byte-closed** against a fresh
+`Decoder` over the rebuilt container (`rel_err = 0.000e+00`, all six). The population mean is rebuilt by
+substituting these floors into `pz1`'s **full n600 array** — never extrapolated from the subset (`#875`).
+
+| pair | shipped | floor | floor/shipped | `ΔS` alone | % of gap | winning start |
+|---:|---:|---:|---:|---:|---:|---|
+| 74 | 0.473295 | 0.216804 | 0.4581 | −0.0139944 | **2.139%** | `gt_target_rot0` |
+| 67 | 0.157367 | 0.003968 | 0.0252 | −0.0082142 | 1.255% | `shipped_knobs` |
+| 21 | 0.113356 | 0.001799 | 0.0159 | −0.0059301 | 0.906% | `rand2` |
+| 71 | 0.044155 | 0.001397 | 0.0316 | −0.0022465 | 0.343% | `gt_target_rot0` |
+| 16 | 0.049147 | 0.018229 | 0.3709 | −0.0016213 | 0.248% | `stageA_best` |
+| 523 | 0.112023 | 0.103409 | **0.9231** | −0.0004500 | 0.069% | `stageA_best` |
+| **total** | `d_pose` 0.0025514 | **0.0015452** | — | **−0.0354261** | **5.414%** | — |
+
+**NO SINGLE START DOMINATES** — `gt_target_rot0` wins twice, `shipped_knobs` once, a *random* restart
+once, `stageA_best` twice. **Multi-start is not a refinement here; it is the mechanism.** A re-solve
+that keeps `pj2`'s single initialization would recover only a fraction of this.
+
+**The realised byte delta for the full changed set is −3 B** (353,808 → 353,805), i.e. `ΔS_rate =
+−2.0e-06`. Note this is **not** 6 × the −19 B measured on pair 74 alone: the `dim0` residual field is
+entropy-coded jointly, so per-pair byte effects are **sub-additive** and partially cancel. That is
+exactly the R1-c caution paying off — **the sign held, the magnitude did not.** The honest statement is
+**"the byte cost is ≤ 0"**, not "each pair refunds 19 B".
+
+### 5.6 Scope actually achieved, stated plainly
+
+The probe was designed for 10 tail + 8 stratified control pairs. **6 tail pairs completed** before I
+stopped it to spend the remaining budget on the authority row (§5.7), which closes a NO-FAKE-class
+concern affecting *every* number here. Consequences, stated rather than glossed:
+
+- The 6 probed pairs carry **~59%** of all pose mass, so §5.5 captures most of the tail's prize but is a
+  **floor on the tail total**, not the total.
+- **The control group did NOT run.** So `§6 R1-d` — *"is this defect tail-specific or population-wide?"*
+  — is **UNANSWERED**, and my tail-framed headline has **not** been adversarially tested from that
+  direction. It is the first item in §7. I flag this rather than let a tail framing stand unchallenged.
 
 **Constant convention.** I recompute the baseline `d_pose` mean from `pz1`'s n600 array
 (`0.0025513987`) rather than the report's rounded `0.00255143`, giving `S = 0.8264962` and
@@ -461,21 +501,22 @@ only the end-to-end eval can, so continuing to review instead of running it woul
 
 ## §7 NEXT-IF-RESUMED
 
-**STATE AT LAST WRITE.** Probe running detached (`--mode probe`, 18 pairs: 10 tail + 8 stratified
-controls), resumable via `--resume` off
-`/Volumes/VertigoDataTier/pact/ddm_pu2_20260803/pu2_floor_probe.partial.jsonl`. Completed so far:
-**74, 67, 21, 523**. Instrument, both positive controls, and the byte path are all landed and verified.
+**STATE AT LAST WRITE.** Probe stopped at **6 completed pairs** (74, 67, 21, 523, 16, 71) to spend the
+remaining budget on the authority row. All artifacts landed and verified:
+`pu2_positive_control.json` · `pu2_interim_summary.json` · `pu2_realised_bytes.json` ·
+`pu2_floor_probe.partial.jsonl` (resumable) · rebuilt container at `verify_archive/0.bin`.
+End-to-end eval launched via `experiments/ddm_pu2_stage_and_eval.sh`; its row is §5.7.
 
-**IF I DIE, THE ORDER IS:**
+**RESUME ORDER, highest value first:**
 
-1. `--mode probe --resume` finishes the remaining pairs (~250 s/pair).
-2. `--mode summarize` → n600 S-arithmetic by substituting measured floors into `pz1`'s full array
-   (never extrapolate a tail subset — `#875`).
-3. `--mode bytes` → rebuilds the container, measures the **realised** archive delta for the full
-   changed set, and byte-closes every floor against a fresh `Decoder`.
-4. `experiments/ddm_pu2_stage_and_eval.sh` → the end-to-end `upstream/evaluate.py` n600 row. **This is
-   the only step that closes §6 R1-b (the surrogate gap) — until it runs, every aggregate `ΔS` in this
-   memo is PROVISIONAL.**
+1. **THE CONTROL GROUP — this is the top item, because it can overturn this memo's framing.**
+   `--mode probe --resume --pairs 241 340 318 91 96 450 456 184` (stratified across the `d_pose`
+   quantiles; `0.325×` the population mean, 0.434% of mass). If ordinary pairs improve by comparable
+   ratios, the finding is **not** "the tail is under-searched" but **"the solver is under-searched
+   everywhere"** — a much larger prize under a different name. ~250 s/pair; ~35 min for all eight.
+2. `--mode probe --resume --pairs 44 42 275 18` finishes the planned tail.
+3. `--mode summarize` (writes `pu2_interim_summary.json`) → `--mode bytes` (rebuild + byte-close) →
+   `experiments/ddm_pu2_stage_and_eval.sh` (authority row).
 
 **THE STANDING PRIZE, and it is bigger than this arm's charter.** The winning start on pair 74 was
 `gt_target_rot0` — the GT-target pose with rotation dims zeroed — and on pair 21 a *random* restart beat
