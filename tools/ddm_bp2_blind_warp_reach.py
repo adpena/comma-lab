@@ -340,7 +340,14 @@ def _apply_blind_step(f1_u8: np.ndarray, blind: np.ndarray, step_flat: np.ndarra
 
 
 def mode_reach(
-    decoder, blind: np.ndarray, n_pairs: int, sink, done: list[dict] | None = None
+    decoder,
+    blind: np.ndarray,
+    n_pairs: int,
+    sink,
+    done: list[dict] | None = None,
+    *,
+    stride: int = 1,
+    offset: int = 0,
 ) -> dict:
     from tac.optimization.ddm_bp2_blind_pose_actuator import (
         adjoint_taps,
@@ -348,12 +355,11 @@ def mode_reach(
     )
 
     scorers = Scorers(torch.get_num_threads())
-    rng = np.random.default_rng(20260802)
     rows = list(done or [])
     already = {int(r["pair"]) for r in rows}
     t_start = time.time()
     for i, gt0, gt1 in gt_pair_stream(REPO_ROOT / "upstream" / "videos" / "0.mkv", n_pairs):
-        if i in already:
+        if i % stride != offset or i in already:
             continue
         gt = np.stack([gt0, gt1])
         f1 = decoder.f1(i)
@@ -411,6 +417,13 @@ def mode_reach(
 
         # CONTROL A: same coordinate count, RANDOM signs.  If this moves d_pose as
         # much as the gradient arm, the "steering" is not steering.
+        #
+        # Seeded PER PAIR, not once per process: a process-level RNG makes this arm
+        # depend on which pairs the process happened to visit, so resuming or
+        # sharding silently changes it (MEASURED: the only key that differed between
+        # a sharded and an unsharded run).  Per-pair seeding makes every row
+        # reproducible from the pair index alone.
+        rng = np.random.default_rng(20260802 + i)
         step = np.zeros(mag.size, dtype=np.int16)
         step[order[:k_last]] = rng.choice([-1, 1], size=k_last).astype(np.int16)
         pert = _apply_blind_step(f1, blind, step)
@@ -505,6 +518,19 @@ def main() -> int:
     ap.add_argument("--pairs", type=int, default=600, help="n600 is the evidence bar")
     ap.add_argument("--threads", type=int, default=8)
     ap.add_argument(
+        "--pair-stride",
+        type=int,
+        default=1,
+        help=(
+            "reach only: shard the pair set N ways.  A single process leaves ~85%% of "
+            "the CPU idle (the adjoint is single-threaded numpy), so N shards with "
+            "disjoint --out paths cut wall-clock ~linearly; merge the sidecar .jsonl "
+            "files afterwards.  Sharding cannot change any per-pair number: every pair "
+            "is measured independently against its own GT."
+        ),
+    )
+    ap.add_argument("--pair-offset", type=int, default=0, help="reach only: this shard's residue")
+    ap.add_argument(
         "--resume",
         action="store_true",
         help=(
@@ -558,7 +584,17 @@ def main() -> int:
             if args.mode == "overlap":
                 receipt["result"] = mode_overlap(decoder, blind, n, sink)
             else:
-                receipt["result"] = mode_reach(decoder, blind, n, sink, done)
+                receipt["pair_stride"] = args.pair_stride
+                receipt["pair_offset"] = args.pair_offset
+                receipt["result"] = mode_reach(
+                    decoder,
+                    blind,
+                    n,
+                    sink,
+                    done,
+                    stride=args.pair_stride,
+                    offset=args.pair_offset,
+                )
         receipt["per_pair_jsonl"] = str(jsonl)
 
     args.out.parent.mkdir(parents=True, exist_ok=True)
