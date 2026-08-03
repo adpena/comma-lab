@@ -145,9 +145,11 @@ predicts a first-order decrease of `t * d_pose`.
    more like GT" objective is aimed at the wrong target on this vehicle.**
 2. **Non-adversarial (incidental) sensitivity is mild** (n=24, random signs, whole blind set):
    `±1 LSB -> x1.0070 · ±2 -> x1.0050 · ±4 -> x1.0276 · ±8 -> x1.0338 · ±16 -> x1.2614 · ±64 -> x13.43`.
-   The violence is entirely in the ALIGNMENT, not the magnitude. Note this bounds the **blind**-channel
-   risk only; `ddm_ll1`'s window solve provably never writes blind pixels, so its frame_0 coupling runs
-   through the READ set and is a different, larger channel that this memo does not price.
+   The violence is entirely in the ALIGNMENT, not the magnitude. **This bounds the BLIND-channel risk
+   only.** I re-verified `ddm_ll1`'s claim rather than repeat it: its window solve on a real frame
+   changes **567,524 camera pixels, of which ZERO are blind** (blind pixels byte-identical), i.e. it
+   moves **72.2% of the READ set**. So ll1's frame_0 coupling is a different and much larger channel
+   than the one measured here, and nothing in this memo prices it — the #897 n600 gate still owes that.
 
 ## 5. The economics — the actual verdict (MEASURED gain, MEASURED index cost, DERIVED table)
 
