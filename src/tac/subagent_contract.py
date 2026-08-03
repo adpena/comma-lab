@@ -27,6 +27,7 @@ __all__ = [
     "ANTI_GOLDPLATING",
     "AUTONOMOUS_REFORMULATION",
     "CITATION_CLAUSE",
+    "CHECKPOINT_FINDINGS",
     "COMMIT_DISCIPLINE",
     "CONFIRMED_VS_PLAUSIBLE",
     "CONTRACT_CONSTANT_NAMES",
@@ -208,6 +209,16 @@ COMMIT_DISCIPLINE = (
     "preflight.py, the DAG, CLAUDE.md), shared-file edits use --patch-file "
     "(supply exactly your hunks — the serializer applies them to a clean index "
     "and ignores the working tree, so no sibling hunk is absorbed)."
+)
+
+#: `ddm_rs2` 2026-08-03 — the checkpoint store answers "where do I resume" and never
+#: "what did we learn", so a killed arm's hard-won insight dies with its context.
+CHECKPOINT_FINDINGS = (
+    "CHECKPOINT A FINDING EVERY TIME: every tools/subagent_checkpoint.py write carries at "
+    "least one --finding — a one-line thing you LEARNED at that step (a measured number, a "
+    "refuted assumption, a structural blocker), not what you are about to do next. "
+    "next_action tells a successor where to resume; only findings tell them what you "
+    "already know, and an arm killed mid-flight takes everything else with it."
 )
 
 #: The eight design philosophies (operator 2026-07-09 "Encode all"; memory
@@ -513,6 +524,7 @@ CONTRACT_CONSTANT_NAMES: tuple[str, ...] = (
     "CORRECT_OVER_EASY",
     "RETAINED_REASONING",
     "RESEARCH_ORIGINAL_DESIGN_AUTHORITY",
+    "CHECKPOINT_FINDINGS",
 )
 
 #: Review-dispatch-only constants: composed by ``review_contract()``, deliberately NOT
@@ -566,6 +578,7 @@ KEY_PHRASES: dict[str, str] = {
     "RESEARCH_ORIGINAL_DESIGN_AUTHORITY": (
         "derive and engineer and iterate and optimize our own variants or original"
     ),
+    "CHECKPOINT_FINDINGS": "every tools/subagent_checkpoint.py write carries at least one --finding",
 }
 
 
@@ -607,6 +620,7 @@ def standard_contract(*, review: bool = True, triality: bool = True) -> str:
         CORRECT_OVER_EASY,
         RESEARCH_ORIGINAL_DESIGN_AUTHORITY,
         RETAINED_REASONING,
+        CHECKPOINT_FINDINGS,
         FRESH_CONTEXT_VERIFIER,
         RECURSION_CLAUSE,
         CONTROL_LAW_CLAUSE,

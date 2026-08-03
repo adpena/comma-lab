@@ -41,6 +41,7 @@ record is one line of JSON with these fields::
         "status": <"in_progress" | "blocked" | "complete">,
         "files_touched": ["<repo-relative path>", ...],
         "next_action": "<one-line description of what comes next>",
+        "findings": ["<one-line thing LEARNED at this step>", ...],
         "notes": "<freeform>",
         "written_at_utc": "<ISO-8601 timestamp>",
         "pid": <integer>,
@@ -61,11 +62,18 @@ Write a checkpoint::
         --status in_progress \
         --files-touched src/tac/foo.py,src/tac/tests/test_foo.py \
         --next-action "wire foo() into preflight_all() and add 5 more tests" \
+        --finding "foo() is called from 3 sites, not 1 - the docstring is stale" \
         --notes "completed 12 of estimated 25 tool uses"
 
 Read latest checkpoints for a subagent::
 
     .venv/bin/python tools/subagent_checkpoint.py read \
+        --subagent-id WAVE-7-FOO-SUBAGENT
+
+Read the running knowledge log — what was LEARNED, not where to resume::
+
+    .venv/bin/python tools/subagent_checkpoint.py read --findings
+    .venv/bin/python tools/subagent_checkpoint.py read --findings \
         --subagent-id WAVE-7-FOO-SUBAGENT
 
 Read raises ``SystemExit(2)`` if no records exist for the subagent (so
@@ -161,6 +169,13 @@ def _validate_record(record: dict) -> None:
     if not isinstance(notes, str):
         raise ValueError("notes must be a string")
 
+    findings = record.get("findings")
+    if findings is not None and (
+        not isinstance(findings, list)
+        or not all(isinstance(f, str) for f in findings)
+    ):
+        raise ValueError("findings must be None or a list of strings")
+
 
 def append_checkpoint(
     *,
@@ -174,6 +189,7 @@ def append_checkpoint(
     lane_id: str | None = None,
     respawn_context: str | None = None,
     expected_outputs: list[str] | None = None,
+    findings: list[str] | None = None,
 ) -> dict:
     """Append a single checkpoint record under the fcntl lock.
 
@@ -192,6 +208,23 @@ def append_checkpoint(
     predecessor (task#, spec paths, protocol); ``expected_outputs`` names the
     files/artifacts the in-flight agent was going to produce. Records written
     before these fields still load — readers use ``.get(...)``.
+
+    ``findings`` (`ddm_rs2`, 2026-08-03) is an OPTIONAL, additive,
+    legacy-compatible list of one-line things the agent LEARNED at this step.
+    It closes the store's original blind spot: every prior field answers
+    *"where do I resume"* and none answers *"what did we learn"*. When four
+    arms were killed mid-flight by a provider usage limit on 2026-08-03,
+    ``ddm_gd2``'s checkpoint recorded only a next action ("verify mt1 rate
+    ladder; determine whether a no-train ds=32 archive yields a meaningful
+    d_seg") and not the structural blocker it had already found. The cost is
+    measured and it is not "the finding was lost": a sister arm, ``ddm_gd3``,
+    spent a whole unit RE-DERIVING it (commit ``db3abc5b4a``). The bug class
+    this field extincts is therefore PAID REDISCOVERY, not permanent loss —
+    which is the cheaper claim and the true one. Findings are per-step and APPEND-ONLY: a
+    later step never rewrites an earlier step's finding, so the JSONL is a
+    running knowledge log a successor (or a harvester) can read end-to-end
+    without replaying the transcript. Records written before this field still
+    load — readers use ``.get("findings") or []``.
     """
     # Validate BEFORE the list() coercion below so callers passing a string
     # (or other non-list) for ``files_touched`` get a clear error rather than
@@ -207,6 +240,11 @@ def append_checkpoint(
         raise ValueError("expected_outputs must be None or a list of strings")
     if respawn_context is not None and not isinstance(respawn_context, str):
         raise ValueError("respawn_context must be None or a string")
+    if findings is not None and (
+        not isinstance(findings, list)
+        or not all(isinstance(f, str) for f in findings)
+    ):
+        raise ValueError("findings must be None or a list of strings")
     record = {
         "subagent_id": subagent_id,
         "parent_id_or_session": parent_id_or_session,
@@ -215,6 +253,7 @@ def append_checkpoint(
         "status": status,
         "files_touched": list(files_touched),
         "next_action": next_action,
+        "findings": list(findings) if findings is not None else None,
         "notes": notes,
         "respawn_context": respawn_context,
         "expected_outputs": (
@@ -368,6 +407,35 @@ def latest_incomplete_for_lane(lane_id: str) -> dict | None:
     return None
 
 
+def read_findings(subagent_id: str | None = None) -> list[dict]:
+    """Return the running knowledge log: every recorded finding, in order.
+
+    ``ddm_rs2``, 2026-08-03. This is the query the store could not answer
+    before the ``findings`` field existed. Each returned row is::
+
+        {"subagent_id": ..., "step": ..., "written_at_utc": ..., "finding": "<one line>"}
+
+    one row PER FINDING (a checkpoint carrying three findings yields three
+    rows), so a successor or harvester can read what was learned without
+    replaying any transcript. Records that pre-date the field contribute
+    nothing rather than raising — the log is simply shorter for them, which
+    is the honest representation of the fact that their findings were never
+    captured.
+    """
+    out: list[dict] = []
+    for rec in read_checkpoints(subagent_id):
+        for finding in rec.get("findings") or []:
+            out.append(
+                {
+                    "subagent_id": rec.get("subagent_id"),
+                    "step": rec.get("step"),
+                    "written_at_utc": rec.get("written_at_utc"),
+                    "finding": finding,
+                }
+            )
+    return out
+
+
 def _parse_files_touched(raw: str | None) -> list[str]:
     if raw is None:
         return []
@@ -449,6 +517,16 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Print only the most recent record (default: all records).",
     )
+    read_p.add_argument(
+        "--findings",
+        action="store_true",
+        help=(
+            "Print the running knowledge log (one row per recorded finding) "
+            "instead of full records. Answers 'what did we learn', which the "
+            "resume fields cannot. May be used with --subagent-id, or with NO "
+            "query mode at all to read the whole fleet's findings."
+        ),
+    )
 
     # Default (write) flags directly on the top-level parser
     parser.add_argument(
@@ -495,6 +573,19 @@ def main(argv: list[str] | None = None) -> int:
         ),
     )
     parser.add_argument(
+        "--finding",
+        action="append",
+        default=None,
+        dest="finding",
+        help=(
+            "One-line thing you LEARNED at this step. Repeat the flag for "
+            "multiple findings. Deliberately NOT comma-split: findings are "
+            "prose and prose contains commas. Required in spirit by the "
+            "standard subagent contract — every checkpoint should carry at "
+            "least one."
+        ),
+    )
+    parser.add_argument(
         "--respawn-context",
         default=None,
         help=(
@@ -526,10 +617,11 @@ def main(argv: list[str] | None = None) -> int:
             )
             if v
         )
-        if query_modes == 0:
+        if query_modes == 0 and not args.findings:
             parser.error(
                 "'read' requires one of: --subagent-id, "
-                "--parent-id-or-session, --lane-id, --latest-incomplete"
+                "--parent-id-or-session, --lane-id, --latest-incomplete "
+                "(or --findings alone for the whole-fleet knowledge log)"
             )
         if query_modes > 1:
             parser.error(
@@ -537,6 +629,32 @@ def main(argv: list[str] | None = None) -> int:
                 "got multiple: --subagent-id / --parent-id-or-session / "
                 "--lane-id / --latest-incomplete"
             )
+
+        if args.findings:
+            # The knowledge log. Works with --subagent-id or with no query
+            # mode at all (whole fleet). Other query modes are not supported
+            # here because a finding belongs to an agent, not to a lane.
+            if args.parent_id_or_session or args.lane_id or args.latest_incomplete:
+                parser.error(
+                    "--findings supports --subagent-id or no query mode; "
+                    "it does not compose with --parent-id-or-session / "
+                    "--lane-id / --latest-incomplete"
+                )
+            rows = read_findings(args.subagent_id)
+            if not rows:
+                label = (
+                    f"--subagent-id={args.subagent_id!r}"
+                    if args.subagent_id
+                    else "the whole fleet"
+                )
+                print(
+                    f"[subagent-checkpoint] no findings recorded for {label}",
+                    file=sys.stderr,
+                )
+                return 2
+            for row in rows[-1:] if args.latest_only else rows:
+                print(json.dumps(row, sort_keys=True))
+            return 0
 
         records: list[dict]
         query_label: str
@@ -590,6 +708,7 @@ def main(argv: list[str] | None = None) -> int:
         lane_id=args.lane_id,
         respawn_context=args.respawn_context,
         expected_outputs=expected_outputs,
+        findings=args.finding,
     )
     print(json.dumps(record, sort_keys=True))
     return 0
