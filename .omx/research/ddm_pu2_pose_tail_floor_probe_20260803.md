@@ -638,7 +638,60 @@ rest the conclusion on the sample mean at all.** The question — *does multi-st
 FRACTION off-tail?* — is answered by **per-pair ratios**, which need no mean-matching, and the
 population estimate is a separately-weighted step.
 
-*(results — filled at seal)*
+### 9.1 RESULT — the defect is TAIL-SPECIFIC, and this REFUTES my own §8 extrapolation
+
+| | n | median ratio | improved (>10% reduction) |
+|---|---:|---:|---:|
+| **TAIL** (mass-dominant pairs) | 6 | **0.2013** | **5 / 6** |
+| **CONTROL** (non-tail, decile-stratified) | 5 | **0.9446** | **1 / 5** |
+
+Per-pair, sorted by `d_pose`:
+
+| pair | `d_pose` | ratio | reduction | set | winning start |
+|---:|---:|---:|---:|---|---|
+| 74 | 0.473295 | 0.4581 | 54.2% | TAIL | `gt_target_rot0` |
+| 67 | 0.157367 | 0.0252 | 97.5% | TAIL | `shipped_knobs` |
+| 21 | 0.113356 | 0.0159 | 98.4% | TAIL | `rand2` |
+| 523 | 0.112023 | 0.9231 | 7.7% | TAIL | `stageA_best` |
+| 16 | 0.049147 | 0.3709 | 62.9% | TAIL | `stageA_best` |
+| 71 | 0.044155 | 0.0316 | 96.8% | TAIL | `gt_target_rot0` |
+| **63** | 0.002149 | **0.9446** | **5.5%** | ctrl | `rand1` |
+| 495 | 0.000348 | 0.9331 | 6.7% | ctrl | `rand1` |
+| 298 | 0.000267 | 0.9984 | 0.2% | ctrl | `shipped_knobs` |
+| 471 | 0.000208 | 0.5042 | 49.6% | ctrl | `rand2` |
+| 235 | 0.000109 | 0.9987 | 0.1% | ctrl | `shipped_knobs` |
+
+**Pair 63 is the decisive point.** It is the representative of the **top non-tail decile, which alone
+holds 45% of all non-tail `d_pose` mass** — and it yields only **5.5%**. It was deliberately moved to
+the FRONT of the run order mid-arm, precisely so the highest-mass decile would be measured even if the
+run had to stop early.
+
+**⇒ The multi-start defect is TAIL-SPECIFIC. It is NOT population-wide.**
+
+### 9.2 THIS SUPERSEDES §8 — my extrapolation was too OPTIMISTIC, not conservative
+
+Substituting the measured tail floors and weighting the measured control deciles by their own `d_pose`
+mass (**54.2% of non-tail mass now covered by measurement**):
+
+| | `ΔS` | % of live gap |
+|---|---:|---:|
+| **MEASURED, tail only (the authority row, §5.7)** | −0.0354283 | **5.414%** |
+| **+ control-informed non-tail estimate** | −0.0368727 | **5.635%** |
+| §8 extrapolation, "conservative" branch | −0.0587388 | 8.98% |
+| §8 extrapolation, "optimistic" branch | −0.0818461 | 12.51% |
+
+**§8's whole range is REFUTED as too high — by 1.6× to 2.2×.** Its error was assuming the un-probed 594
+would behave like the tail; measured, they do not. The honest n600 figure is **~5.6% of gap**, barely
+above what is already banked, because **the tail was essentially the whole prize.**
+
+This is the outcome that makes the published number trustworthy rather than the one that makes it look
+big, and it is exactly why the control was worth the scorer time: it removed a ~2× overstatement from
+the campaign's forward plan. **The n600 multi-start re-solve is therefore worth ~0.2% of gap beyond the
+banked row — NOT the 3.6–7.1% §8 implied — and should be priced as a low-value item, not a headline.**
+
+**Scope.** 5 of 10 control pairs; 54.2% of non-tail mass measured, 45.8% still estimated. The remaining
+deciles (387, 100, 34, 386, 318) are queued and would tighten but are unlikely to overturn: the single
+highest-mass decile is already measured and yields 5.5%.
 
 ## §10 F1 FOR `ddm_hg1` — the DIRECTED flip split on `cx1`'s OWN n600 argmax
 
@@ -700,6 +753,8 @@ differently in either direction. It is a planning range, and its value is that t
 | conservative — all reach pair 74's ratio (0.4581) | −0.0587388 | 8.98% |
 | median of the six observed ratios (0.2013) | −0.0719219 | 10.99% |
 | optimistic — all reach 0.0316 (the 3rd-best observed) | −0.0818461 | 12.51% |
+
+> ⚠ **SUPERSEDED BY MEASUREMENT (§9.2).** The control group measured the non-tail directly and the whole table below is **too high by 1.6–2.2×**; the control-informed figure is **5.635% of gap**. The table's error was assuming the un-probed 594 behave like the tail. Retained as the record of a labelled extrapolation that measurement then overturned.
 
 **Even the conservative branch is ~9% of the gap, and every branch costs ≤ 0 bytes.** The spread is
 narrow because the tail dominates the mean and the tail is already measured — so this estimate is far
