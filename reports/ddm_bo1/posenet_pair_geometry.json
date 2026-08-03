@@ -1,0 +1,113 @@
+{
+  "arm": "ddm_bo1",
+  "what": "frozen-PoseNet stem pair geometry: frame_0's ability to cancel frame_1's pose damage",
+  "score_claim": false,
+  "promotable": false,
+  "axis_tag": "[frozen-scorer structural]",
+  "instrument_rung": "rung-2 (L2 energy, isotropic delta_1); rung-3 margin/Fisher-weighted is OWED",
+  "provenance": {
+    "git_hash": "58e3d6b34bffa8789a449d7c8a1030049cf2bb79",
+    "upstream_modules_sha256": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa",
+    "upstream_frame_utils_sha256": "d689aca7d263997cb2fb980d6098d503f955e56e8642cd0a04cc437f0ffdab90",
+    "posenet_safetensors_sha256": "0f3a0874c5c387f990d7b88bd1d7e1f6de35d98b45f2a289989db2c77b9b6576",
+    "seed": 0,
+    "dtype": "float64"
+  },
+  "stem_structure": {
+    "in_chans": 12,
+    "out_chans": 64,
+    "affine_fold_max_abs_err_vs_live_module": 1.0678073209646755e-05,
+    "identity_branch_present": false,
+    "note": "z = A_0 u_0 + A_1 u_1 + c is EXACT; z == z* => d_pose == 0 with no linearisation"
+  },
+  "channel_block_norms": {
+    "frame0_fro": 25.344689463323522,
+    "frame1_fro": 25.773680140376957,
+    "cosine_frame0_frame1": 0.8294555724339641,
+    "symmetric_part_fro": 24.445243043999525,
+    "antisymmetric_part_fro": 7.466460239308379,
+    "per_channel": {
+      "y00": {
+        "frame0_fro": 4.861241317946861,
+        "frame1_fro": 4.556166736331315,
+        "cosine": -0.06765368975393699,
+        "share_of_frame1_energy": 0.031249735737353117
+      },
+      "y10": {
+        "frame0_fro": 4.443180795986007,
+        "frame1_fro": 4.552789982884907,
+        "cosine": -0.13413331018174765,
+        "share_of_frame1_energy": 0.031203432098583363
+      },
+      "y01": {
+        "frame0_fro": 4.118442144495032,
+        "frame1_fro": 4.505665231673777,
+        "cosine": -0.2802370753602471,
+        "share_of_frame1_energy": 0.030560817861708185
+      },
+      "y11": {
+        "frame0_fro": 4.4790407557920116,
+        "frame1_fro": 4.66426438334535,
+        "cosine": 0.01662439481566196,
+        "share_of_frame1_energy": 0.03275016180079278
+      },
+      "U": {
+        "frame0_fro": 5.960282752503448,
+        "frame1_fro": 6.344936318518418,
+        "cosine": 0.7913130722418308,
+        "share_of_frame1_energy": 0.06060405257432304
+      },
+      "V": {
+        "frame0_fro": 22.94409333523074,
+        "frame1_fro": 23.24825665974206,
+        "cosine": 0.9766611103936578,
+        "share_of_frame1_energy": 0.8136317999272403
+      }
+    }
+  },
+  "cancellability": {
+    "m1_worst_conditioning_sigma_min_over_sigma_max": 0.0027490493268723434,
+    "optimal_in_range_A0": {
+      "mean_ratio": 0.021960274811461372,
+      "energy_weighted_quantiles": {
+        "p10": 0.0003435230593620171,
+        "p25": 0.0003669923856977089,
+        "p50": 0.00041026754293365563,
+        "p75": 0.00047328041211436474,
+        "p90": 0.07483833352894315,
+        "p99": 0.314976907982468
+      },
+      "share_of_pose_energy_worse_than_leaving_frame0_alone": 0.0
+    },
+    "delta0_plus": {
+      "mean_ratio": 3.5982873451416357,
+      "energy_weighted_quantiles": {
+        "p10": 2.415310773211826,
+        "p25": 3.7564910881514995,
+        "p50": 3.7599328138356674,
+        "p75": 3.7638062437033226,
+        "p90": 3.766480287917852,
+        "p99": 4.681026924888436
+      },
+      "share_of_pose_energy_worse_than_leaving_frame0_alone": 0.9994419588502022,
+      "closed_form_crosscheck": 3.598287345141628
+    },
+    "delta0_minus": {
+      "mean_ratio": 0.33568863320548437,
+      "energy_weighted_quantiles": {
+        "p10": 0.031003517943800712,
+        "p25": 0.031246843107012735,
+        "p50": 0.03182637778002901,
+        "p75": 0.032688565879317094,
+        "p90": 0.6900045017492573,
+        "p99": 3.6553381246826975
+      },
+      "share_of_pose_energy_worse_than_leaving_frame0_alone": 0.098852730605427,
+      "closed_form_crosscheck": 0.3356886332054844
+    }
+  },
+  "grid": [
+    192,
+    256
+  ]
+}
