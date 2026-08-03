@@ -711,3 +711,136 @@ magic variable name and comments — the emitted bytes do not.
 
 **Pointer honesty:** `0.1910828242 [contest-CPU]` **UNMOVED**. Zero scorer forwards, zero training
 launches, zero dispatch, zero paid spend. `score_claim=false`, `promotion_eligible=false`.
+
+---
+
+# §8 APPEND (2026-08-03, MAIN-authorized follow-up) — custody persisted, and **`#826` is REFUTED**
+
+*Supersedes nothing. §4.8's byte arithmetic is REPRODUCED EXACTLY; its **conclusion** is overturned by
+the two checks §4.8 never made — receiver acceptance and pose-content normalisation.*
+
+## §8.0 Answer first
+
+**The coordinator's catch was right and it is the reason the error was caught.** My five commits
+persisted **prose only** — the rung archives existed nowhere on disk. Building them for real, and
+then running the receiver against them, **refuted the row.**
+
+**`#826` does not invert. It is REFUTED on two independent grounds, either sufficient alone:**
+
+1. **Every rung is REJECTED by the live-best receiver** (positive control ACCEPTED, so the harness is
+   trusted). gr1's **original** archive is rejected too — on *both* receiver paths.
+2. **Pose-normalised, the "win" evaporates.** gr1 carries **1,804 B less pose content** than the live
+   best. That exceeds the entire apparent −1,757 B, leaving rung C at **+47 B on the wrong side**.
+
+**Routing consequence — act on this:** the `#826` inversion should **NOT** enter gc16's P2 rate lane.
+It is not a rate win awaiting an eval; it is an apples-to-apples artefact. **Cost to have learned this:
+$0.** Cost of *not* having built the bytes: a wrong row would have consumed the scorer slot the moment
+`ph5o` released it.
+
+## §8.1 PERSIST — custody landed (the gap that was left)
+
+Builder: **`experiments/ddm_iv1_repack_rungs.py`** (ruff-clean; 2 recorded review passes; 9/9 entities).
+Cold store: **`/Volumes/VertigoDataTier/pact/ddm_iv1_20260803/`** — 4 rung archives + a manifest
+carrying bytes, sha256, full source shas, and the exact rebuild command (certify-or-block satisfied).
+
+**Byte-verification against §4.8: all four rungs reproduce the memo EXACTLY.**
+
+| rung | rebuilt | memo §4.8 | delta | vs live best | receiver |
+|---|---:|---:|---:|---:|---|
+| A shipped-equivalent (DR7T) | 357,161 | 357,161 | **+0** | +3,356 | REJECTED |
+| B + ix2 token recode | 351,978 | 351,978 | **+0** | −1,827 | REJECTED |
+| C + pu2-shaped config | 352,048 | 352,048 | **+0** | −1,757 | REJECTED |
+| D + pose merged | 352,021 | 352,021 | **+0** | −1,784 | REJECTED |
+
+The premise re-derived independently and is **stronger than §4.8 stated**: the ix2 re-encode of gr1's
+decoded codes is not merely the same *size* as the live best's bulk — it is **byte-identical** to it.
+Codes differ in **0 of 1,843,200** entries; round-trip lossless; format excess exactly **5,183 B**.
+
+## §8.2 RECEIVER ACCEPTANCE (blocker 6.4) — typed verdicts: **ALL REJECTED**
+
+Harness: the live-best submission's **own** `inflate_runner.py`. **Positive control ACCEPTED
+(`n_pairs=600`)** — the test can return both answers.
+
+| case | verdict | exact error |
+|---|---|---|
+| **ctl — pu2 live best** | **ACCEPTED_CONSTRUCT** | `n_pairs=600` |
+| rung A | REJECTED | `IX2ContainerError: unknown table format 78` |
+| rung B | REJECTED | `IX2ContainerError: unknown table format 78` |
+| rung C | REJECTED | `SystemExit: ix2 container holds 5 sections, expected 4` |
+| rung D | REJECTED | `IX2ContainerError: renderer frame magic differs` |
+| **gr1 ORIGINAL 6-member** | REJECTED | `SystemExit: v4d receiver requires frame0_policy=warp_two_plane_static_photo_beta_v4d` |
+
+**The coordinator's hypothesis is explicitly REFUTED.** The guess was that C's split pose sections are
+the blocker and D (pu2-merged grammar) would pass. **D does clear the section-count and config checks —
+and then fails on the RENDERER.** The blocker is **renderer generation, not pose split.**
+
+**Root cause, measured: gr1 is a superseded vehicle generation on THREE independent axes.**
+
+| axis | gr1 | live best |
+|---|---|---|
+| renderer magic | `TR1REN1!` (3,341 B) | `IX2REN01` (3,266 B) |
+| pose grammar | `PFS1WPB1` (6,947 B incl. inert stub) | `PFS1WPD1` (8,751 B) |
+| `frame0_policy` | not `warp_two_plane_static_photo_beta_v4d` | — |
+
+**No rung is a candidate. There is no `−1,996` number to carry.**
+
+## §8.3 The apples-to-apples check §4.8 never made — and it alone kills the row
+
+CLAUDE.md's discipline is explicit: never compare archives that do not hold the same thing. **gr1
+predates the pose work the live best carries.**
+
+| rung | raw vs live best | **pose-normalised** | still a win? |
+|---|---:|---:|---|
+| A | +3,356 | +5,160 | no |
+| B | −1,827 | −23 | *marginal* — but B has **no config section at all** and is REJECTED |
+| **C** | **−1,757** | **+47** | **NO** |
+| D | −1,784 | +20 | **NO** |
+
+**The entire apparent −1,757 B is gr1 not having 1,804 B of pose.** The live best's extra pose bytes
+are what *bought* the d_pose descent that produced most of its advantage. Comparing on total bytes
+while ignoring that is the classic apples-to-apples failure — and it is, once more, **a join key never
+checked** ("same pose content?").
+
+## §8.4 SPILLOVER (§7 item 0b) — real, and **already banked**
+
+| archive | total | `tokens.dr7t` | dead format | codes ≡ live best | renderer |
+|---|---:|---:|---:|---|---|
+| `gd3_CONTROL_identity_rebuild.zip` | 360,309 | 346,478 | **5,183 B** | **yes** | `TR1REN1!` |
+| `v4d_composed_pw1_archive.zip` | 360,323 | 346,478 | **5,183 B** | **yes** | `TR1REN1!` |
+
+The 5,183 B is confirmed on current-generation archives with bit-identical codes. **But it is NOT
+harvestable rate on the live line: the live best ALREADY ships ix2 tokens at 341,295 B — it banked
+this saving.** Both archives are ~6.5 KB *larger* than the live best and carry the legacy renderer.
+**Correct reading: the 5,183 B measures how STALE the gen-1 archives are, not headroom on the frontier.**
+§7 item 0b's "fleet-wide rate win" framing is **withdrawn**.
+
+## §8.5 Self-protect finding from my own round-2 review
+
+The submission **vendors its own `ddm_r7_token_coder.py` and it is NOT byte-identical to the repo copy**
+(39,404 B vs 61,695 B, different sha256), while `inflate_runner.py:50` imports it **by bare name**. My
+script imports the repo copy at module load, so it **shadows** the vendored one via `sys.modules`.
+
+**Verdicts here are unaffected** — every rung verdict is produced inside the ix2 path (which never calls
+r7; and `ddm_ix2_archive_container.py` **is** byte-identical between repo and submission), and the one
+legacy case is refused at the `frame0_policy` check before any token decode. **But the harness must not
+be able to mislead silently**, so it now emits a `_module_binding` receipt recording which copy actually
+bound, whether it was the vendored one, and why that does or does not matter. *A future caller reaching
+the legacy DR7T path would otherwise exercise the wrong coder with no warning.*
+
+## §8.6 NEXT-IF-RESUMED (supersedes §7 items 0 and 0b)
+
+1. ~~Close `#826`'s blockers~~ — **DONE: the row is REFUTED.** Remove it from the P2 rate lane. Do
+   **not** spend the scorer slot on it. Blocker 6.5 (the 1.4 ppm seg leg) is **moot**: there is no
+   receiver-valid candidate for it to adjudicate.
+2. **The genuinely open question this leaves** — the live best's renderer is `IX2REN01` at 3,266 B
+   while every gen-1 archive carries `TR1REN1!` at 3,341 B. **Is any *current* work still being built
+   on the gen-1 grammar?** If so it is 6.5 KB behind before it starts, and that is a real, cheap,
+   fleet-wide check (`$0`, container-level).
+3. **Transferable law for the successor:** *an archive-size comparison across vehicles is void until
+   the content is normalised.* This arm produced two instances in one day — mt1's stale token baseline
+   (§4.9) and this one. Both were "smaller archive ⇒ better" read off vehicles holding different things.
+4. Items 1–11 of §7 stand unchanged.
+
+**Pointer honesty (§8):** `0.1910828242 [contest-CPU]` **UNMOVED**. This follow-up ran **zero scorer
+forwards**, zero training launches, zero dispatch, $0. Archive decodes and container arithmetic only.
+`score_claim=false`. **A smaller archive was never a score — and this one was not even smaller.**
