@@ -219,6 +219,29 @@ proxy captures only 18.68% of margin<2.0 px at top-5% (3.74x lift) — no free g
 worked."* Two unrelated surfaces, same wall: **the scorer's own sensitivity ordering is not cheaply
 predictable from the render.**
 
+## 6b. The zero-byte escape, measured and REFUTED (n=12)
+
+The other way to flip the sign is to buy more `d_pose` at the SAME byte cost: fix the coordinate set
+(the expensive part of the payload) from the initial gradient and **re-solve only the k one-bit
+signs**, iterating the gradient at the perturbed point. Signs are always a single ±1 step from the
+ORIGINAL `f1` (never accumulated), so the payload stays exactly 1 bit/coordinate — every extra
+iteration is free.
+
+| k | one-shot signs | best of 5 re-solves | **extra gain from re-solving** | already a fixed point at iter 1 | beats base |
+|---:|---:|---:|---:|---:|---:|
+| 5 | 0.0119042 (−4.00e-05) | 0.0119042 (−4.00e-05) | **+0.00e+00** | **10/12** | 12/12 |
+| 200 | 0.0109449 (−9.99e-04) | 0.0108617 (−1.08e-03) | **−8.32e-05** | 2/12 | 4/12 |
+
+(n=12, mean base `d_pose` 0.0119441.)
+
+**REFUTED.** At the economically relevant small k the one-shot gradient sign is *already the optimum*
+— 10 of 12 pairs are a fixed point after a single step, and re-solving buys exactly zero. At k=200 the
+trajectory 2-cycles (a Jacobi all-coordinates-at-once artifact) and the extra gain is 8.3e-05, ~0.7% of
+base — three orders of magnitude short of closing the 1.9x deficit. **The cheapest owed measurement
+came back negative; the deficit stands.** A Gauss-Seidel (one coordinate at a time) re-solve is
+untested and is k-times more expensive to run, but it would have to find ~90x more gain than the Jacobi
+version to matter.
+
 ## 7. Verdict scope and what is owed
 
 **CLOSED at FORMULATION scope (this vehicle, this steering):** shipping an explicit per-pair
@@ -229,11 +252,12 @@ blind-coordinate correction index. Net ΔS positive at every measured k; best ca
 - **A receiver-computable index beyond the two proxies tested.** ≥~50% top-k capture would flip the
   sign at small k. Untested: margin/curvature-style rankings, or a ranking derived from the shipped
   pose payload itself.
-- **Iterating the signs at FIXED k.** I took ONE gradient and one step. Re-solving the signs on the
-  *same* k coordinates costs **zero additional bytes** and could raise the gain at fixed rate. This is
-  the single cheapest owed measurement and it directly attacks the 1.9x.
-- **n600 for §4–§5.** The reach run is resumable and at 75/600; the economics table is a prefix number
-  on a ~5x-harder-than-population sample.
+- **A Gauss-Seidel sign re-solve.** The Jacobi version is refuted (§6b); a one-coordinate-at-a-time
+  re-solve is k-times more expensive and would need ~90x the Jacobi gain to matter.
+- **n600 for §4–§5.** The reach run is resumable (`--resume`) and was at 109/600 when this section was
+  written; the economics table is a prefix number on a ~5x-harder-than-population sample. The run keeps
+  being killed after ~40 pairs by something outside the process (it now runs under a self-restarting
+  supervisor), so the prefix is a wall-clock artifact, not a design choice.
 
 **Cross-cutting finding worth more than the verdict:** `d_pose` on this vehicle is a *relative* quantity
 between the two delivered frames (§4.1). The frame_0 objective is not "resemble GT frame_0" — a real GT
