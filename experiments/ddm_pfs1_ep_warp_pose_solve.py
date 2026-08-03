@@ -144,33 +144,50 @@ class WarpPoseOracle:
 
 def solve_pair_gn(oracle: WarpPoseOracle, pidx: int, s_t0: float, *,
                   relins: int, lm0: float = 1.0) -> dict:
-    """Damped GN over θ=[warp_pose(6), s_t] from (t_p, s_t0)."""
+    """Damped GN over θ = warp_pose(6) at FIXED s_t (the D1 grid value).
+
+    s_t is NOT co-optimized: s_t·dim0 is a scale-degenerate ridge — co-opt let
+    GN walk to extreme pose values where the shipped float16 quantization
+    exploded d_pose (measured: pair 0, 0.146 f64-solved -> 10.22 f16-shipped).
+    ACCEPTANCE IS AT SHIPPED QUANTIZATION: every line-search candidate is
+    f16-rounded before scoring, so the shipped d_pose is monotone by
+    construction (realized-acceptance discipline).
+    """
     tp = oracle.targets64[pidx].copy()
     f1 = oracle.f1(pidx)
+    s_t = float(s_t0)
 
-    def pose6_of(warp_pose, s_t):
-        f0 = oracle.recv.warp_base_f0(f1, warp_pose, float(s_t))
+    def q16(p):
+        return np.asarray(p, np.float64).astype(np.float16).astype(np.float64)
+
+    def pose6_of(warp_pose):
+        H = oracle.recv.pose_to_homography(np.asarray(warp_pose, np.float64),
+                                           oracle.K, oracle.Kinv, s_t,
+                                           oracle.s_r, 0.0)
+        f0 = oracle.recv._to_uint8(oracle.recv.warp_rgb(
+            np.asarray(f1, np.float64), H, oracle.grid))
         return oracle.p3v2.pose6_u8(oracle.posenet, f0, f1)
 
-    theta_p = tp.copy()
-    theta_st = float(s_t0)
-    cur6 = pose6_of(theta_p, theta_st)
+    # START = t_p translation dims with ROTATION DIMS ZEROED: expmap(0)=I, so
+    # the start is EXACTLY the D1 s_r=0 warp point (measured: raw t_p rotation
+    # dims through expmap are 74x WORSE — PoseNet dims 3-5 are not raw metric
+    # rotations; rotation enters as GN-grown capacity FROM ZERO).
+    p0 = tp.copy()
+    p0[3:] = 0.0
+    theta_p = q16(p0)               # start AT the shipped quantization
+    cur6 = pose6_of(theta_p)
     cur = float(np.mean((cur6 - tp) ** 2))
     d0 = cur
     lm = lm0
     n_fwd = 1
     for _ in range(relins):
-        # numerical Jacobian: 7 forwards
-        J = np.zeros((6, 7), np.float64)
+        # numerical Jacobian: 6 forwards (f64 steps; gradient estimate only)
+        J = np.zeros((6, 6), np.float64)
         for k in range(6):
             dp = theta_p.copy()
             dp[k] += FD_STEPS[k]
-            J[:, k] = (pose6_of(dp, theta_st) - cur6) / FD_STEPS[k]
-        st_hi = min(max(theta_st + FD_STEP_ST, 0.0), 0.32)
-        dst = st_hi - theta_st
-        if dst > 1e-9:
-            J[:, 6] = (pose6_of(theta_p, st_hi) - cur6) / dst
-        n_fwd += 7
+            J[:, k] = (pose6_of(dp) - cur6) / FD_STEPS[k]
+        n_fwd += 6
         r = cur6 - tp
         accepted = False
         for _damp in range(4):
@@ -180,13 +197,12 @@ def solve_pair_gn(oracle: WarpPoseOracle, pidx: int, s_t0: float, *,
             except np.linalg.LinAlgError:
                 break
             for scale in (1.0, 0.5):
-                cp = theta_p + scale * step[:6]
-                cst = float(np.clip(theta_st + scale * step[6], 0.0, 0.32))
-                c6 = pose6_of(cp, cst)
+                cp = q16(theta_p + scale * step)   # SHIPPED quantization
+                c6 = pose6_of(cp)
                 n_fwd += 1
                 cval = float(np.mean((c6 - tp) ** 2))
                 if cval < cur:
-                    theta_p, theta_st, cur6, cur = cp, cst, c6, cval
+                    theta_p, cur6, cur = cp, c6, cval
                     lm = max(lm * 0.3, 1e-4)
                     accepted = True
                     break
@@ -195,11 +211,9 @@ def solve_pair_gn(oracle: WarpPoseOracle, pidx: int, s_t0: float, *,
             lm *= 8.0
         if not accepted or cur < 1e-6:
             break
-    d_shipped = oracle.d_pose_shipped(pidx, f1, theta_p, theta_st)
-    n_fwd += 1
     return {"pair": pidx, "d_pose_warp": d0, "d_pose_solved": cur,
-            "d_pose_shipped_f16": float(d_shipped),
-            "p_star": [float(x) for x in theta_p], "s_t": theta_st,
+            "d_pose_shipped_f16": cur,  # theta_p is f16-representable throughout
+            "p_star": [float(x) for x in theta_p], "s_t": s_t,
             "n_forwards": n_fwd}
 
 
