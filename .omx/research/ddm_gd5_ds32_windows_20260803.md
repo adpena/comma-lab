@@ -13,7 +13,7 @@ gated, no scorer slot taken, no paid dispatch. LIVE BEST is unchanged at `pj2` S
 
 | deliverable | state |
 |---|---|
-| **GD5-1 windows** | **window_01 COMPLETE + ADJUDICATED; window_02 FIRED; chain driver landed and self-tested.** 46 epochs / 30 min = **39.1 s/epoch** ⇒ the sealed 666 needs **~14.5 windows ≈ 7.2 h**. |
+| **GD5-1 windows** | **window_01 COMPLETE + ADJUDICATED; windows 02–03 fired; chain driver landed, self-tested, running (pid 29389).** 46 epochs / 30 min = **39.1 s/epoch**. **But window_02 delivered only 13 epochs — the trainer refused itself (§3.7), and that refuse is a false positive built out of §3.5 + §3.6.** |
 | **GD5-1 budget** | **DERIVED, and the answer is "hold 666" — for a reason nobody had named.** `epochs` has exactly one load-bearing consumer beyond the loop bound, and changing it mid-chain is a *known* confound the trainer already documents (§2). **But the budget buys less than it says: ~218 of the 666 epochs (33%) are spent re-converging a deliberately reset Adam at window boundaries — §3.6.** |
 | **GD5-2 falsifier** | **REACHABLE, not yet met.** ep44 d_seg **0.0157596 = 2.65× the bar**, `COUPLED_DESCENT`, descent *accelerating* (−12.45% last gate). **Two findings say the scalar everyone quotes cannot carry the verdict: §3.4 (the bar and the gate are different populations) and §3.5 (the gate silently changes which object it reads at every resume).** |
 | **GD5-3 guard** | **VERIFIED ON PRODUCTION BYTES.** It REFUSED a real `b4s` ds=16 ep945 checkpoint against the live ds=32 model, and ACCEPTED the legitimate ds=32 resume with `new_params=[]`. First refusal seen on real bytes rather than a fixture. §4. |
@@ -281,6 +281,62 @@ measurement. Claiming "fewer resets is better" from `ep_loss` alone would be exa
 surrogate-for-authority substitution this campaign keeps paying for. It is a clean, cheap,
 pre-registerable A/B for whoever owns the next ds=32 run.
 
+### 3.7 The three findings COMPOSE into a false-positive that stops windows early — the trainer refuses itself
+
+**window_02 did not hit the wall clock. The trainer stopped it: `stop_reason:
+a1_realization_gap_refuse`, at ep59 — 13 epochs into a 46-epoch window.**
+
+The cascade is §3.6 → §3.5 → the A1 predicate, and every link is measured:
+
+1. Adam's moments are zeroed at the boundary (§3.6) ⇒ the live weights take a large excursion
+   (`ep_loss` 1.912 → 14.846) and then re-converge fast (→ 2.268 in 13 epochs).
+2. The EMA shadow **absorbs that excursion**, so shadow-basis d_seg *rises*:
+   0.5119 → 0.6134 → 0.7294, with Lane falling back to fully erased (985/985).
+3. The A1 gate reads the **shadow** on a resumed window (§3.5) while its smooth input is `ep_loss`
+   on the **live** weights. Its alarm predicate is *"smooth fell ≥ threshold while realized fell
+   < threshold"* — which is **exactly** what a re-converging optimizer plus a lagging shadow
+   produces. Two consecutive alarms ⇒ `a1_realization_gap_refuse`.
+
+So the refuse is a **FALSE POSITIVE**: the instrument is built to catch "the loss improves but the
+argmax doesn't", and at every resume boundary it instead catches "Adam is recovering while the
+shadow lags". It is the same L1 *instrument-reads-the-wrong-quantity* class the trainer's own
+`a1_smooth_excluding_delta_penalty` docstring documents — the smooth and realized channels are
+being read off **different weight sets**.
+
+**Degraded, not dead — and the evidence is window_03.** Its first gate reads **0.275569**, down
+from window_02's 0.729438, and its boundary impulse was far smaller (`ep_loss` 2.268 → ~2.9 vs
+1.912 → 14.846). The shadow is catching up and the impulse shrinks as the run matures. But the tax
+is real: window_02 delivered 13 epochs where window_01 delivered 46.
+
+**Verdict for the chain: keep running, do not re-tune.** The driver treats a refuse-exit as a normal
+window exit and continues; the run is recovering; and the honest fix is upstream (§3.5's basis
+check, §3.6's optimizer persistence), not a threshold tweak on a gate that is reading the wrong
+object. Softening the A1 thresholds to stop the false positives would disable a real confound guard
+to hide a real confound.
+
+### 3.8 A fourth instance of the probe genus — this one mine, and it caused a duplicate launch
+
+`ps -axo pid,command | grep -F 'ddm_gd5_ds32_window_chain.sh'` returned **empty** while the driver
+was alive (pid 29389, 14 min elapsed), so I concluded it had died and relaunched — briefly running
+**two** chain drivers. Reproduced cleanly on the trainer as well:
+
+```
+ps -axo pid,command | grep -c 'train_tr1_partition_renderer_mlx.py'   ->  0
+pgrep -f              'train_tr1_partition_renderer_mlx.py' | wc -l   ->  1     (it IS running)
+```
+
+`ps -axo command` truncates to terminal width, so a pattern living deep in a long argv is invisible.
+`m50` records this instrument over-matching (a loose pattern counts your own monitors); this is the
+**same instrument under-matching** — a false negative on a real process. Both directions come from
+text-scanning a *truncated view* instead of issuing an anchored query. **`ps -p <pid>` and
+`pgrep -f` were correct throughout; the grep-over-`ps` was not.** The duplicate was removed; one
+driver (29389) and one trainer (40440) remain. The driver itself never used this pattern — it polls
+`ps -p "$PID"` on the exact pid — so the chain was never at risk from it; only my manual check was.
+
+**Root cause of the relaunch:** the first driver was started as `nohup bash script &` **without
+`< /dev/null`**, which CLAUDE.md's detach Pattern A requires. It survived, but the missing stdin
+redirect is a real defect in how I launched it; the relaunch used the full Pattern A form.
+
 ---
 
 ## §4 GD5-3 — THE RESUME GUARD, TESTED ON REAL BYTES
@@ -378,9 +434,17 @@ Fired detached. window_02 = pid 29425, all gates PASS, resume verified.
 
 ## §8 NEXT-IF-RESUMED
 
-1. **Watch the chain.** `gd5_chain_ledger.jsonl` (one row per window) and
-   `gd5_chain_driver.log`. The driver stops itself on plateau/liveness alarms; it will not burn
-   8 h confirming a flat curve.
+1. **Watch the chain.** `gd5_chain_ledger.jsonl` (one row per window, now carrying `gate_basis`)
+   and `gd5_chain_driver.log`. Driver pid 29389, trainer pid 40440 at hand-off. The driver stops
+   itself on plateau/liveness alarms and waits on a governor REFUSE rather than forcing.
+   **Expect short windows** until §3.7's false-positive refuse is addressed upstream.
+1b. **The two upstream fixes, in priority order, both OWNED by `ddm_gd5` and deferred only behind
+   the live chain:** (i) `ema_basis_held` must also require `parent_gate_basis == first_gate_basis`
+   (§3.5) — one condition plus a test; (ii) persist optimizer state (§3.6) — `#824` scoped arms A/C
+   out because `opt_flat` has one repo-wide hit and nothing reads or writes it, calling C "a BUILD,
+   not a port". That BUILD is now load-bearing: without it every windowed **from-scratch** run pays
+   ~16 epochs and a false refuse per boundary, which is plausibly why the incumbent lineage only
+   ever existed as a continuation.
 2. **Adjudicate the falsifier on n600 byte-closed, NOT on the gate scalar — for two independent
    reasons.** (§3.4) the bar `d_seg < 0.00594179` was written against an n600 archive-level base
    while `realized_gate_dseg_mean` is a 36-pair reading on a set 40.5% heavier in Movable and 3.3%
