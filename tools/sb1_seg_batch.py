@@ -49,6 +49,11 @@ except ImportError:  # pragma: no cover - exercised when run as `python tools/<t
     from argv_role import process_table_entrypoint_holders  # type: ignore
 
 REPO = Path("/Users/adpena/projects/pact")
+
+if str(REPO / "src") not in sys.path:  # canonical tac lib (SegRuntime re-inserts later)
+    sys.path.insert(0, str(REPO / "src"))
+from tac.single_writer_lock import single_writer_lock  # noqa: E402
+
 LEVELS = 16
 SHAPE = (600, 24, 32, 4)
 GRID_H, GRID_W = 24, 32
@@ -91,6 +96,93 @@ def _atomic_write_text(path: Path, text: str) -> None:
     tmp = path.with_suffix(path.suffix + ".tmp")
     tmp.write_text(text)
     tmp.replace(path)
+
+
+def classify_persisted_stop_reason(row: dict, *, legacy_cap: int | None = None) -> str:
+    """Censoring class of an ALREADY-PERSISTED instance row, or ``"unknown"``.
+
+    ddm_sm1 2026-08-03 -- the defect this replaces, and why it is a confound and not a
+    typo. The old resume path read::
+
+        r.get("stop_reason", "cap" if len(r["accepted_steps"]) >= args.max_quanta
+              else "converged")
+
+    The fallback classifies the WRITER's data using the READER's ``--max-quanta``. Rows
+    never recorded the bound they ran under, so replaying the shipped 120-row cap-4
+    QA03 store yields ``n_cap_saturated = 51`` (frac 0.425) at ``--max-quanta 4`` and
+    **0 (frac 0.000000) at 8, 12, 32 or 48** -- verified by reproduction. The receipt's
+    own note reads ">0 here means the solve is CENSORED, not solved", so 0.0 reads as
+    SOLVED. Since ``dc1`` raised the default 4 -> 32 precisely to cure the censoring,
+    the obvious next action -- resume the existing run at the new default -- makes the
+    censoring detector certify itself clean having done no work.
+
+    That is the meta-confound shape CLAUDE.md names (the instrument built to catch the
+    trouble certifies the trouble absent), and the general bug class is: **a derived
+    label computed from a parameter that is not co-recorded with the data.**
+
+    Resolution order, most authoritative first:
+
+    1. ``stop_reason`` written by the solver itself (post-cure rows);
+    2. ``max_quanta_at_write`` co-recorded with the row;
+    3. ``legacy_cap`` supplied EXPLICITLY by the caller as external provenance;
+    4. ``"unknown"`` -- never silently "converged".
+
+    Returns one of ``{"cap", "cap_conflated", "converged_at_bound", "converged",
+    "no_move", "unknown"}``.
+
+    ``"cap_conflated"`` is the third defect, found reviewing the fix for the first two.
+    Rows written by the pre-cure solver carry ``stop_reason == "cap"`` under the OLD
+    unconditional semantics, which ddm_sm1 measured to be 58.3% convergence
+    coincidences. Summing those with post-cure ``"cap"`` (which now means genuinely
+    still-descending, because the solver probes once more) would silently average two
+    different quantities. They are distinguishable -- pre-cure rows lack
+    ``max_quanta_at_write`` -- so they get their own label and are excluded from the
+    censoring fraction rather than quietly inflating it.
+    """
+    # `max_quanta_at_write` is the marker of the POST-CURE writer -- the one that probes
+    # once more before labelling. Its absence means any cap-hit on this row is the OLD
+    # conflated label, however that hit was determined (own stop_reason, or a cap the
+    # caller declared). Applying the rule uniformly matters: the first draft of this fix
+    # conflated only the `stop_reason == "cap"` branch and left the `legacy_cap` branch
+    # returning a bare "cap", which would have re-mixed the two semantics through the
+    # other door.
+    precise = "max_quanta_at_write" in row and row["max_quanta_at_write"] is not None
+
+    stop = row.get("stop_reason")
+    if stop is not None:
+        cls = str(stop)
+    else:
+        n_steps = len(row.get("accepted_steps", []))
+        cap = row.get("max_quanta_at_write")
+        if cap is None:
+            cap = legacy_cap
+        if cap is None:
+            return "unknown"
+        cls = ("cap" if n_steps >= int(cap)
+               else "converged" if n_steps else "no_move")
+
+    return "cap_conflated" if (cls == "cap" and not precise) else cls
+
+
+def legacy_cap_is_vacuous(rows: list[dict], legacy_cap: int | None) -> bool:
+    """True if ``legacy_cap`` cannot bind ANY row, making the censoring count vacuous.
+
+    The third-order form of the same defect, found on the second review pass. Once the
+    reader's ``--max-quanta`` no longer leaks into classification, an operator can still
+    DECLARE a ``--legacy-cap`` larger than any row's step count -- at which point every
+    legacy row classifies "converged" by construction and ``cap_saturated_frac`` reports
+    a clean 0.0 having tested nothing. That is `m50` (VACUITY == PASS): a check that
+    cannot return a negative is not a check. Concretely, declaring ``--legacy-cap 32``
+    over the shipped cap-4 store (max 4 accepted steps) reproduces the exact 0.000000
+    this whole fix exists to prevent.
+    """
+    if legacy_cap is None:
+        return False
+    legacy = [r for r in rows
+              if r.get("stop_reason") is None and r.get("max_quanta_at_write") is None]
+    if not legacy:
+        return False
+    return max(len(r.get("accepted_steps", [])) for r in legacy) < int(legacy_cap)
 
 
 class SegRuntime:
@@ -208,11 +300,17 @@ def qa03_gn_solve(args) -> None:
     processed: set[tuple[int, int, int]] = set()
     net_flips = 0
     n_cap_saturated = 0
+    n_cap_unknown = 0
     if jsonl.exists():
-        for line in jsonl.read_text().splitlines():
-            if not line.strip():
-                continue
-            r = json.loads(line)
+        _rows = [json.loads(line) for line in jsonl.read_text().splitlines()
+                 if line.strip()]
+        _vacuous = legacy_cap_is_vacuous(_rows, args.legacy_cap)
+        if _vacuous:
+            print(f"[warn] --legacy-cap {args.legacy_cap} cannot bind any legacy row "
+                  f"(their max accepted-step count is lower), so the censoring count "
+                  f"would be 0 by CONSTRUCTION. Treating those rows as undetermined.",
+                  flush=True)
+        for r in _rows:
             processed.add((r["pair"], r["cell"][0], r["cell"][1]))
             # work state replays all edits; the current whole-pair flips is the
             # LAST recorded final for this pair (rows are in processing order).
@@ -220,11 +318,17 @@ def qa03_gn_solve(args) -> None:
             for ch, sign, _q in r["accepted_steps"]:
                 rtp.codes[r["pair"], r["cell"][0], r["cell"][1], ch] += sign
             net_flips += r["net_flips"]
-            # legacy rows predate stop_reason; infer the cap from the step count
-            if r.get("stop_reason", "cap" if len(r["accepted_steps"]) >= args.max_quanta
-                     else "converged") == "cap":
+            cls = classify_persisted_stop_reason(
+                r, legacy_cap=None if _vacuous else args.legacy_cap)
+            if cls == "cap":
                 n_cap_saturated += 1
-        print(f"[resume] {len(processed)} instances, net so far {net_flips:+d}",
+            elif cls in ("unknown", "cap_conflated"):
+                # cap_conflated is NOT counted as censoring: under the pre-cure
+                # semantics 58.3% of those labels were convergence coincidences.
+                n_cap_unknown += 1
+        print(f"[resume] {len(processed)} instances, net so far {net_flips:+d}"
+              + (f" ({n_cap_unknown} rows of UNDETERMINED censoring status)"
+                 if n_cap_unknown else ""),
               flush=True)
 
     t0 = time.time()
@@ -257,7 +361,16 @@ def qa03_gn_solve(args) -> None:
             accepted_steps.append([ch, sign, int(rtp.codes[p, gy, gx, ch])])
             cur = f
         else:
-            stop_reason = "cap"  # loop exhausted -> still descending when cut off
+            # Loop exhaustion is NOT proof of censoring: the solve may have converged
+            # EXACTLY at the bound. ddm_sm1 2026-08-03 measured 7 of 12 cap-4 "cap"
+            # instances to be at a coordinate-wise local minimum already -- 58.3%
+            # FALSE-CENSORED -- so the old unconditional label inflated
+            # cap_saturated_frac and, through it, dc1's "42.5% still descending".
+            # One extra probe (<=8 evals, score-neutral: _best_single_quantum restores
+            # the codes it tries) separates truncation from coincidence.
+            probe = _best_single_quantum(rtp, p, gy, gx, cur)
+            stop_reason = ("cap" if probe is not None and probe[0] < cur
+                           else "converged_at_bound")
         pair_net = pair_base - cur
         net_flips += pair_net
         base_flip_cache[p] = cur
@@ -266,7 +379,11 @@ def qa03_gn_solve(args) -> None:
         row = {"pair": p, "cell": [gy, gx], "atlas_flips": nflips,
                "pair_base_flips": int(pair_base), "pair_final_flips": int(cur),
                "net_flips": int(pair_net), "accepted_steps": accepted_steps,
-               "stop_reason": stop_reason}
+               "stop_reason": stop_reason,
+               # Co-record the bound the row was WRITTEN under. Without it a reader
+               # must guess, and the old resume path guessed with its OWN --max-quanta
+               # (see classify_persisted_stop_reason).
+               "max_quanta_at_write": int(args.max_quanta)}
         with jsonl.open("a") as fh:
             fh.write(json.dumps(row) + "\n")
         print(f"[p{p} ({gy},{gx}) atlas {nflips}] net {pair_net:+d} "
@@ -293,11 +410,23 @@ def qa03_gn_solve(args) -> None:
         "top_k": args.top_k, "max_quanta_per_cell": args.max_quanta,
         "instances_processed": len(instances),
         "n_cap_saturated": int(n_cap_saturated),
-        "cap_saturated_frac": n_cap_saturated / max(1, len(instances)),
-        "cap_saturated_note": ("instances that stopped on --max-quanta rather than on the "
-                               "convergence test: they were STILL DESCENDING when cut off, so "
-                               "net_flips_total is a strict LOWER BOUND on this formulation's "
-                               "converged yield. >0 here means the solve is CENSORED, not solved."),
+        "n_cap_unknown": int(n_cap_unknown),
+        "censoring_determinable": n_cap_unknown == 0,
+        # FAIL CLOSED: with any row of undetermined censoring status the fraction is
+        # not a measurement, and emitting 0.0 would read as "solved" (ddm_sm1).
+        "cap_saturated_frac": (None if n_cap_unknown
+                               else n_cap_saturated / max(1, len(instances))),
+        "cap_saturated_note": ("instances GENUINELY truncated: the loop exhausted "
+                               "--max-quanta AND one further probe found an improving move, "
+                               "so they were still descending when cut off and "
+                               "net_flips_total is a strict LOWER BOUND on this "
+                               "formulation's converged yield. >0 means CENSORED, not solved. "
+                               "Instances that exhausted the loop having just converged are "
+                               "labelled `converged_at_bound` and are NOT counted here "
+                               "(ddm_sm1 2026-08-03 measured 58.3% of the pre-cure "
+                               "unconditional `cap` labels to be that coincidence). "
+                               "`cap_saturated_frac` is null, never 0.0, when any resumed "
+                               "row's censoring status is undetermined."),
         "net_flips_total": int(net_flips),
         "d_seg_delta": d_seg_delta, "seg_S_delta": s_delta_seg,
         "frac_of_minus0138_ceiling": net_flips / CEIL_TIER2_FLIPS,
@@ -500,10 +629,19 @@ def main() -> None:
     common.add_argument("--gt-cache", required=True, type=Path)
     common.add_argument("--out-dir", required=True, type=Path)
     common.add_argument("--skip-slot-check", action="store_true")
+    common.add_argument("--skip-writer-lock", action="store_true",
+                        help="bypass the single-writer lock on --out-dir (test "
+                             "harnesses only; two writers corrupt the JSONL silently)")
 
     a = sub.add_parser("qa03", parents=[common])
     a.add_argument("--atlas", required=True, type=Path)
     a.add_argument("--top-k", type=int, default=120)
+    a.add_argument("--legacy-cap", type=int, default=None,
+                   help="EXTERNAL provenance for pre-cure resumed rows that carry "
+                        "neither `stop_reason` nor `max_quanta_at_write`: the "
+                        "--max-quanta they were WRITTEN under. Without it such rows "
+                        "are classified `unknown` and cap_saturated_frac is emitted "
+                        "as null rather than a misleading 0.0.")
     a.add_argument("--max-quanta", type=int, default=32,
                    help="SAFETY BOUND on the per-cell greedy descent, not a target. The "
                         "intended terminator is the convergence test (no improving single "
@@ -523,12 +661,19 @@ def main() -> None:
     c.add_argument("--amps", type=int, nargs="+", default=[-2, -1, 1, 2])
 
     args = ap.parse_args()
-    if args.cmd == "qa03":
-        qa03_gn_solve(args)
-    elif args.cmd == "qa04":
-        qa04_attack_search(args)
-    elif args.cmd == "qa05":
-        qa05_renderer_rank1(args)
+    # Every subcommand resumes from an append-only JSONL in --out-dir. A SECOND
+    # concurrent copy of the same job silently produces duplicate keys and a broken
+    # pair-state chain (ddm_sm1 2026-08-03 lost a 26-row store this way, after a
+    # launcher reported exit 144 while the child kept running). The slot check above
+    # guards against OTHER scorer jobs; this guards against THIS one.
+    with single_writer_lock(args.out_dir, label=f"sb1_seg_batch {args.cmd}",
+                            skip=args.skip_writer_lock):
+        if args.cmd == "qa03":
+            qa03_gn_solve(args)
+        elif args.cmd == "qa04":
+            qa04_attack_search(args)
+        elif args.cmd == "qa05":
+            qa05_renderer_rank1(args)
 
 
 if __name__ == "__main__":
