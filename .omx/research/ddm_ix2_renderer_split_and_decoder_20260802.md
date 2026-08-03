@@ -224,10 +224,23 @@ bit-identical. Any rung of this line that goes lossy or re-quantizes an already-
 that law, and it lands hardest on our best-solved members. Stated in the module docstring so the next
 caller cannot miss it.
 
-**What is OWED before promotion:** the `IX2CNT01`/`IX2TOK01`/`IX2REN01` reader must land in the real
-`inflate_runner_v4d.py` (a `parse_payload` + transpose + unpack, generic and rule-118 free), the five
-migrated manifest values must land as `inflate.py` constants, and one confirmation exact eval must close
-it. **Pointer UNMOVED until then.**
+### 6b. THE RECEIVER IS LANDED AND PARITY-VERIFIED (commit `bed39893b4`)
+
+`experiments/inflate_runner_v4d.py` now reads the single-member container. The path is **additive**:
+it selects on the existence of `0.bin`, so every legacy 6-member archive keeps decoding unchanged.
+
+**FULL n600 frame parity: 0 mismatched pairs of 600.** Every `frame_0` and `frame_1` rendered from the
+ix2 container is **bit-identical** to the one rendered from the legacy archive, through the real
+receiver — not a spot check, the whole clip. Every decoder state array also compares equal
+(`p_best`, `st_idx`, `sel`, `ab`, `beta_idx`, `st_vals`, `beta_mags`, `dim0_offset`, `n_pairs`).
+
+Migrated to `inflate.py` as generic constants: `frame0_policy`, `tr1_metadata`, the inert `pose_stub`
+string, the section order, and `st_grid` **only because the encoder proved it byte-equal to the vendored
+ladder on this base**. Counted in the config section: `pose_dim0_offset` and the fitted β codebook.
+
+**What is still OWED before promotion:** vendor `ddm_ix2_archive_container.py` into the archive's runtime
+tree next to `ddm_tr1_runtime.py` (free generic code, no counted bytes), then one confirmation exact eval
+on the rebuilt `archive.zip`. **Pointer UNMOVED until then.**
 
 ---
 
@@ -256,10 +269,10 @@ Four attacks, all run, all closed:
 and the shared-coder gain. The fix (`build_payload`'s two-tier bulk/joint split) is now the structural
 form of the finding rather than a scratchpad accident.
 
-**Remaining incomplete coverage, named:** (a) the reader is not yet in `inflate_runner_v4d.py`, so the
-bytes are measured but not banked; (b) `pj2 × ix1` (`ddm_cp1`: 354,331 B, ΔS −0.0715 = 9.85% of gap) is
-DERIVED and still needs this same reader — I built the receiver primitives it is blocked on, but did not
-run the composition; (c) the f16 mantissa-width solve on the 8,203 B of pose fields is LOSSY and was not
+**Remaining incomplete coverage, named:** (a) the reader IS now landed and n600 parity-verified (§6b),
+but the module is not yet vendored into the archive's runtime tree and no confirmation exact eval has
+run, so the bytes are measured, decodable, and NOT yet banked; (b) `pj2 × ix1` (`ddm_cp1`: 354,331 B,
+ΔS −0.0715 = 9.85% of gap) is DERIVED and I did not run the composition — I unblocked it; (c) the f16 mantissa-width solve on the 8,203 B of pose fields is LOSSY and was not
 touched, per §6's law; (d) codegen/straight-line decoders were **not run** — with the LOC cap deleted and
 no time term, they have no rate effect and I do not believe they are worth an arm.
 
@@ -267,21 +280,26 @@ no time term, they have no rate effect and I do not believe they are worth an ar
 
 ## 8. NEXT-IF-RESUMED (ranked by measured addressable bytes)
 
-1. **Land the reader in `inflate_runner_v4d.py` and bank the −6,604 B.** Everything is built and tested;
-   this is `parse_payload` + `decode_token_frame` + `decode_renderer_frame` + five `inflate.py` constants,
-   then one confirmation exact eval. **It also unblocks `ddm_cp1`'s `pj2 × ix1` = 9.85% of gap**, which is
-   ~15× larger than this arm's own row and is waiting on exactly this decoder.
-2. **Do NOT re-race the token member.** 6 layouts × 4 coders × 3 transforms × 5 context models, all
+1. **Run `ddm_cp1`'s `pj2 × ix1` composition — 354,331 B, ΔS −0.0715 = 9.85% of gap — through this
+   receiver.** It was blocked on exactly this decoder and the decoder now exists and is n600
+   parity-verified. **This is ~16× larger than this arm's own row and is the single highest-value item
+   on the board.** Two cautions carried from §5 and §6: (a) `st_grid` is FITTED on `pj2`, so
+   `classify_against_vendored` will return `VIDEO_DERIVED` there and the encoder will correctly COUNT
+   it — do not reuse this memo's `dc1_fold` migration number; (b) `pj2` is the tighter solve, so if any
+   part of that composition re-quantizes rather than re-frames, cp1's +0.099% law applies.
+2. **Vendor `ddm_ix2_archive_container.py` into the runtime tree and take one confirmation exact eval**
+   to bank the −6,604 B on `dc1_fold`. The reader is landed (§6b); this is packaging plus one eval.
+3. **Do NOT re-race the token member.** 6 layouts × 4 coders × 3 transforms × 5 context models, all
    measured, all lose to cell-major nibble + brotli. Closed at 341,294 B.
-3. **Do NOT re-race `renderer.sec` or `pose_warp.stp`.** Measured zeros: the lottery mask is 1 B above its
+4. **Do NOT re-race `renderer.sec` or `pose_warp.stp`.** Measured zeros: the lottery mask is 1 B above its
    combinatorial floor, and the shipped `kl1` byte-plane beats every alternative layout on both f16 fields.
-4. **Do NOT quote an oracle conditional entropy as realizable headroom** (§4). The next arm that wants a
+5. **Do NOT quote an oracle conditional entropy as realizable headroom** (§4). The next arm that wants a
    coder win must measure the *sequential* code length, which charges the model cost the way a real coder
    does.
-5. **Delete the six manifest hashes rather than migrating them** (§5), and if custody verification is
+6. **Delete the six manifest hashes rather than migrating them** (§5), and if custody verification is
    wanted, make it a receiver-read fail-closed check that earns its bytes — two of the six are currently
    false.
-6. **The remaining lossless headroom on this vehicle is ~50 B** (colex on `sel_coded`, order-0 arithmetic
+7. **The remaining lossless headroom on this vehicle is ~50 B** (colex on `sel_coded`, order-0 arithmetic
    on `beta_coded`, `pose_warp` framing). **The lossless axis is now essentially exhausted at
    353,705 B.** Everything past this point is LOSSY and inherits §6's tighter-solve-costs-more law.
 
