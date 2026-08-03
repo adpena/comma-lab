@@ -1,0 +1,83 @@
+{
+  "stage_a_loader": {
+    "gt_decode_path": "AVVideoDataset -> frame_utils.yuv420_to_rgb",
+    "gt_rgb_shape": [
+      2,
+      874,
+      1164,
+      3
+    ],
+    "gt_rgb_dtype": "uint8",
+    "gt_pixfmt": "yuv420p",
+    "gt_plane_shapes_yuv": [
+      [
+        874,
+        1184
+      ],
+      [
+        437,
+        592
+      ],
+      [
+        437,
+        592
+      ]
+    ],
+    "gt_source_scalars_luma": 1017336,
+    "gt_source_scalars_chroma": 508668,
+    "gt_source_scalars_total": 1526004,
+    "our_source_scalars_total": 3052008,
+    "gt_bits_per_camera_pixel": 12.0,
+    "our_bits_per_camera_pixel": 24.0,
+    "dof_ratio_ours_over_gt": 2.0
+  },
+  "stage_d_bijection": {
+    "max_abs_roundtrip_err_y": 4.132628964725882e-05,
+    "max_abs_roundtrip_err_u": 2.385429584927934e-05,
+    "max_abs_roundtrip_err_v": 3.0149652088917733e-05
+  },
+  "stage_d_collapse": {
+    "claim": "D(decode(y,u,v)) == decode(D y, D u, D v) when no channel clamps",
+    "max_abs_err": 1.7053025658242404e-13
+  },
+  "stage_c_real_gt_frames": [
+    {
+      "pixels": 1017336,
+      "in_yuv_box_frac": 1.0,
+      "y_out_of_box_frac": 0.0,
+      "u_out_of_box_frac": 0.0,
+      "v_out_of_box_frac": 0.0,
+      "luma_lattice_resid_mean": 0.14925882998225112,
+      "luma_lattice_resid_p99": 0.4592705882352952,
+      "luma_lattice_resid_max": 0.499976470588237
+    },
+    {
+      "pixels": 1017336,
+      "in_yuv_box_frac": 1.0,
+      "y_out_of_box_frac": 0.0,
+      "u_out_of_box_frac": 0.0,
+      "v_out_of_box_frac": 0.0,
+      "luma_lattice_resid_mean": 0.14775182101904905,
+      "luma_lattice_resid_p99": 0.45260000000000034,
+      "luma_lattice_resid_max": 0.4999058823529481
+    }
+  ],
+  "stage_b_gamut_continuous_chroma": {
+    "chroma_model": "continuous",
+    "reachable_triples": 14463730,
+    "cube_triples": 16777216,
+    "reachable_fraction_full_cube": 0.8621054887771606,
+    "reachable_interior": 14073578,
+    "interior_total": 16387064,
+    "reachable_fraction_interior": 0.8588224223692542
+  },
+  "stage_b_gamut_integer_chroma": {
+    "chroma_model": "integer",
+    "reachable_triples": 2950307,
+    "cube_triples": 16777216,
+    "reachable_fraction_full_cube": 0.1758520007133484,
+    "reachable_interior": 2566074,
+    "interior_total": 16387064,
+    "reachable_fraction_interior": 0.15659144310414605
+  }
+}
