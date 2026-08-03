@@ -26,9 +26,13 @@ verdict_scope:   # THREE distinct REFUTED claims, at THREE different rungs. No b
       OPEN - this arm measures them and finds the realised cost <= 0."
 verdict_scope_ladder: "INSTANCE < FORMULATION < FAMILY < PARADIGM. None of the three reaches FAMILY.
   NOTHING in this memo licenses a FAMILY-level negative on the pose tail."
-axis: "[macOS-CPU frozen-PoseNet advisory] NON-PROMOTABLE. Every d_pose here is REALIZED through the
-  shipped cx1 receiver (inflate_runner.Decoder) at the shipped v4d quantization. No archive rebuilt,
-  no training, no paid dispatch, no pointer mutation."
+axis: "[macOS-CPU advisory] NON-PROMOTABLE - NOT contest-CPU (that requires Linux x86_64).
+  Every d_pose is REALIZED through the shipped cx1 receiver (inflate_runner.Decoder) at the shipped
+  v4d quantization, and the headline row is a real end-to-end upstream/evaluate.py n600 run on the
+  exact rebuilt archive bytes (inflated by the byte-identical shipped inflate.sh). A research archive
+  WAS rebuilt (353,805 B, sha c72ef357) and evaluated; it is a delta against the cx1 RESEARCH vehicle
+  (S 0.8265), never against the contest pointer, and is not a submission candidate. No training, no
+  paid dispatch, no pointer mutation."
 consumes:
   - /Volumes/VertigoDataTier/pact/ddm_pfs1_20260729/d1/eval_root/submissions/v4d_cx1_pj2ix2/  (the live cx1 submission: archive.zip + inflate_runner.py + pfs1_warp_receiver.py + ddm_tr1_runtime.py)
   - .omx/research/ddm_pu1_pose_underpricing_and_tail_20260803.md  (the charter; its §8 is this arm's whole job)
@@ -74,9 +78,13 @@ tokens: [no-triality, p0-ledger-ok]
    `pz1`'s **per-pair** `d_pose` — closing `pu1` §7-R1-c, so the 30.92% allocation is **VERIFIED**, not
    assumed — and the `pose_warp` payload **re-encodes byte-identically** (archive 353,808 B).
 
-5. **MEASURED: 6 pairs ⇒ `ΔS = −0.0354261` = 5.41% of the live gap, at −3 archive bytes** (§5.5). Every
-   floor realized at shipped quantization and byte-closed against a fresh `Decoder` (`rel_err = 0.0`,
-   all six). **No single start dominates** — `gt_target_rot0` ×2, `shipped_knobs`, a *random* restart,
+5. **MEASURED END-TO-END BY THE AUTHORITY — `ΔS = −0.0354283` = 5.414% of the live gap, at −3 archive
+   bytes** (§5.7). The rebuilt archive was inflated by the **byte-identical shipped `inflate.sh`** and
+   scored by the exact `upstream/evaluate.py` over 600 samples: **`S 0.8264972 → 0.7910689`**.
+   All three pre-registered predictions held — **`d_seg` came back BIT-EXACT (`0.00431179`)**, confirming
+   §1.1 by measurement; `d_pose 0.00154519` vs predicted `0.0015452` (**rel 6.5e-06**); bytes exactly
+   353,805. **§6 R1-b (the surrogate trap) is CLOSED.**
+   **No single start dominates** — `gt_target_rot0` ×2, `shipped_knobs`, a *random* restart,
    `stageA_best` ×2 — so **multi-start is the mechanism, not a refinement.**
 
    *Scope actually achieved:* 6 of a planned 10 tail pairs; **the control group did not run**, so
@@ -90,9 +98,13 @@ tokens: [no-triality, p0-ledger-ok]
    wall — the exact false verdict this arm just overturned. The probe drives **the shipped decoder
    itself** (§1).
 
-**Pointer honesty: the exact contest pointer `0.1910828242` [contest-CPU] is UNMOVED. This arm fired no
-gate and produced no score.** Every aggregate `ΔS` here is `[macOS-CPU frozen-PoseNet advisory]` and
-**PROVISIONAL** until the end-to-end `upstream/evaluate.py` row lands (§6 R1-b, §7).
+**Pointer honesty.** The exact contest pointer `0.1910828242` [contest-CPU] is **UNMOVED**, and this arm
+did not move it. The row above is a **real end-to-end `upstream/evaluate.py` n600 measurement on the
+exact archive bytes**, but on **macOS CPU**, so its axis is `[macOS-CPU advisory]` — **NOT contest-CPU**,
+which requires Linux x86_64. It is **NON-PROMOTABLE** and is a delta against the `cx1` research vehicle
+(`S 0.8265`), not against the contest pointer. `cx1` itself is 4.3× above the pointer, so nothing here
+is a submission candidate. What *is* now settled is that the win survives the authority, not just my
+instrument.
 
 ---
 
@@ -391,24 +403,28 @@ entropy-coded jointly, so per-pair byte effects are **sub-additive** and partial
 exactly the R1-c caution paying off — **the sign held, the magnitude did not.** The honest statement is
 **"the byte cost is ≤ 0"**, not "each pair refunds 19 B".
 
-### 5.7 THE AUTHORITY ROW — end-to-end `upstream/evaluate.py`, n600
+### 5.7 THE AUTHORITY ROW — end-to-end `upstream/evaluate.py`, n600 — **MEASURED**
 
-*(pending — the run is in flight; this section is the ONLY thing that closes §6 R1-b. Custody:
-`archive.zip` sha256 `c72ef357416b66e716b2863c4c49360306b80cc0fafd094e02394c8a4dd37209`, **353,805 B**,
-staged at `ddm_pu2_20260803/submission_pu2/`, inflated by the **byte-identical shipped `inflate.sh`**.)*
+Custody: `archive.zip` sha256 `c72ef357416b66e716b2863c4c49360306b80cc0fafd094e02394c8a4dd37209`,
+**353,805 B**, inflated by the **byte-identical shipped `inflate.sh`**, scored by the exact upstream
+evaluator (`--device cpu --batch-size 16 --num-threads 2`, GT via `AVVideoDataset`/`yuv420_to_rgb`).
 
-**Predictions, recorded BEFORE the row lands** — so the comparison is a real test rather than a
-post-hoc fit:
+| leg | **predicted (pre-registered)** | **MEASURED** | agreement |
+|---|---:|---:|---|
+| `d_seg` | 0.00431179 | **0.00431179** | **EXACT — §1.1 structural derivation CONFIRMED** |
+| `d_pose` | 0.0015452 | **0.0015452** | rel 6.47e-06 |
+| bytes | 353,805 | **353,805** | exact |
+| **S** | 0.7910693 | **0.7910689** | Δ -0.0000004 |
 
-| leg | predicted | basis |
-|---|---:|---|
-| `d_seg` | **exactly 0.00431179** | §1.1: all five knobs are read only by `f0`; SegNet reads frame_1 |
-| `d_pose` | **0.0015452** | §5.5, substituted into `pz1`'s n600 array |
-| bytes | **353,805** | measured, rebuilt container |
-| **S** | **≈ 0.791069** | `0.431179 + 0.124306 + 0.235584` |
+**vs the `cx1` baseline (`S = 0.8264972`): `ΔS = -0.0354283` = 5.414% of the live gap, at -3 archive bytes.**
 
-**If `d_seg` moves at all, my §1.1 structural derivation is wrong.** If `d_pose` differs materially
-from `0.0015452`, my instrument carries a bias and every aggregate here is compromised (R1-b fires).
+**§6 R1-b — the surrogate gap — is now CLOSED.** The knob set was optimized against my own frozen-PoseNet
+instantiation; the authority re-scored the exact archive bytes and returned `d_pose` within
+**6.47e-06** of the prediction. The improvement is not an artifact of the instrument.
+
+**§1.1 is confirmed by measurement, not only by reading:** `d_seg` came back **bit-identical to the cx1 baseline** — the five pose
+knobs are read only by `f0`, SegNet reads frame_1, so the seg leg cannot move. The whole route is
+`d_seg`-neutral **by construction**, now with an end-to-end receipt.
 
 **Decode budget, measured in passing:** the shipped `inflate.sh` reconstructed all 600 pairs in
 **4 m 24 s** wall (`user 3 m 20 s`) on this box — comfortably inside the contest's 30-minute decode
@@ -454,8 +470,10 @@ that leg is **not independent**. Optimizing a knob set against an instrument tha
 authority by ~1e-5 is exactly the NO-FAKE *surrogate-optimized-but-not-exact-authority-verified* class.
 Two things blunt it but do not close it: the measured reductions (54%, 97.5%) are **4 orders of
 magnitude larger** than the discrepancy, and the winning knobs are byte-closed through the real
-container. **Only an end-to-end `upstream/evaluate.py` run on the rebuilt archive closes it** — §7
-records whether that landed. Until it does, every aggregate `ΔS` here is **PROVISIONAL**.
+container. **Only an end-to-end `upstream/evaluate.py` run on the rebuilt archive closes it.**
+**IT RAN, AND IT CLOSED (§5.7):** the authority returned `d_pose = 0.00154519` against my predicted
+`0.0015452` — **rel 6.5e-06** — and `d_seg` **bit-exact**. The win is not an instrument artifact.
+Aggregate `ΔS` is therefore **MEASURED, not provisional**, on the `[macOS-CPU advisory]` axis.
 
 **R1-c. The −19 B is `n = 1`.** It was measured with **one** pair changed. Moving many pairs' `dim0`
 toward `t_p` need not shrink the residual field — the offset is centred on the *shipped* values
@@ -547,12 +565,14 @@ headline (R1-d forced the control group into the design; Round 4 found a false-p
 completion waiter), and one — the two-defect split in §4.1 — overturned my own first reading of pair 74
 within the same arm.
 
-I am stopping the review here deliberately, not because it converged: the load-bearing open item is
-**R1-b (the surrogate gap)**, and no additional reading can close it — only the end-to-end authority row
-(§5.7) can. Continuing to review instead of running it would be polish-hoarding. The **second**
-open item, the un-run control group (§5.6), likewise needs compute rather than argument.
-**Every aggregate `ΔS` in this memo is PROVISIONAL to exactly that degree**, and the two items are the
-first entries in §7.
+I stopped the review deliberately rather than because it converged: its load-bearing open item was
+**R1-b (the surrogate gap)**, which no additional reading could close — only the end-to-end authority
+row could, so I ran it instead of reviewing further. **R1-b is now CLOSED by measurement (§5.7).**
+
+**The one substantive item still open is the un-run control group (§5.6)** — *is the defect
+tail-specific or population-wide?* That needs compute, not argument, and it is the first entry in §8.
+Until it runs, the **tail framing** of this memo is untested from the direction that could most
+plausibly overturn it. The measured numbers do not depend on it; the *story* around them does.
 
 ---
 
