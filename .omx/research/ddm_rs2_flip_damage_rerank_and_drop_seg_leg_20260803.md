@@ -47,7 +47,10 @@ own drop perturbs.**
 | 6 | `br1`'s `cell_drop63` byte leg is for a **different cell set**: gr1's own ordering saves **79,177 B**, not 72,544 | **MEASURED** (§2.1) |
 | 7 | `br1`'s owed equations leg paid: 3 canonical equations + 31 behaviour tests | **LANDED** (§3) |
 | 8 | the full per-cell n600 DRIVE sweep **died silently at 24/36 groups** (loop-end-only save); and my process-state probe was wrong **three times in both directions** — corrected append-only | **HONEST NEGATIVE** (§1.6, §1.6b) |
-| 9 | **the exact pointer did NOT move.** 0.1910828242 [contest-CPU] UNMOVED. Nothing here is a score. | — |
+| 9 | **the coordinator's hypothesis for the residual 17% is REFUTED, exactly**: `D.U` annihilates NOTHING on the render plane (gains **[0.687, 1.028]**, 0% attenuated, operator validated to 1.7e-07 against the real receiver). The cited 80.6742% null fraction is reproduced — it lives on the CAMERA plane and is **structurally unreachable** from the token lattice | **MEASURED** (§5.2) |
+| 10 | what the gradient really carries: **median 3.34x channel anisotropy**, single-channel-dominated in **21.4%** of cells — and **`gr1`'s own key discards it** by summing over channels. Both axes of `#766`'s lexsort can be made EXACT from data already on disk (36.4 s + 388.8 s) | **MEASURED** (§5.3-§5.4) |
+| 11 | `gr1`'s gradient key is **n600**, not n48 — concern dissolves at the artifact; the real caveat is that it is an **ancestor-lattice** measurement | **MEASURED** (§5.1) |
+| 12 | **the exact pointer did NOT move.** 0.1910828242 [contest-CPU] UNMOVED. Nothing here is a score. | — |
 
 **NEXT-IF-RESUMED** — see §9. Written incrementally.
 
@@ -147,6 +150,13 @@ risk of every drop, and cannot certify any cell "safe".**
 84 x 82 = 6,888 px, the **nonzero** perturbed set inside it is 6,192 px, and the **box the
 corrected key integrates over** is (2 x 34 + 16)^2 = 84 x 84 = 7,056 px. The 24.19x ratio is on
 the nonzero basis — the conservative one; the box basis gives 27.56x.)*
+
+**The single-cell anchor GENERALISES — measured on 49 cells (§1.6).** The resumable n600 sweep
+has 49 of 384 live cells on disk so far (**denominator stated: 12.8%**) and every one of them has
+a receptive field of **84 rows** (min = median = max = 84) and **84 columns** (median 84, min 49
+at a clipped image edge), median area **7,056 px = 27.56x the tile**. The 84-px extent is not a
+box artifact: the measurement box allows up to 96 px. So the support correction rests on a
+distribution now, not on one probe.
 
 ### §1.2b The consequence, measured: 144 of wr1's 486 "provably safe" cells are not safe
 
@@ -535,6 +545,161 @@ edits in `src/tac/canonical_equations/__init__.py` (and in the registry JSONL), 
 into this commit would be the absorption-pattern bug class CLAUDE.md names. This is the same
 discipline `ddm_b2b_rowband_flip_mass_20260731` records for the same reason. The exact owed
 patch is three import lines plus three `__all__` entries.
+
+---
+
+## §5 — THE GRADIENT KEY, PURSUED (the finding my §1 used as corroboration and under-read)
+
+**Re-anchored baseline for this section.** Live best is now **S = 0.7910689, 353,805 B**
+(seg **0.4311790** unchanged, rate 0.2355842, pose 0.1243057 → d_pose 0.00154519,
+`dS/d(d_pose)` = **40.223**), gap to the PR130 bar **0.6189279**, 1% of gap = **9,295.2 B =
+7,301.2 flips**. The move from my charter's 0.8264972 base is **entirely POSE** (−0.0354) and
+**−3 archive bytes**: the seg leg and the token lattice are identical, so every §1/§2 seg and
+support result stands unchanged and every rate delta shifts by 3 B.
+
+### §5.1 ASK 2 FIRST, because it dissolves: `gr1`'s key is **n600**, not n48
+
+I was told to re-measure or scope it. Neither was needed — the artifact settles it.
+`gr1_sensitivity_gabs.npy` is **(600, 24, 32, 4) float64** with **all 600 pairs carrying nonzero
+gradient**, and `cell_gsum` reproduces from it **exactly** (max rel diff 0.0). `gr1`'s
+`n_pairs_realized: 48` applies to its *realized d_seg* rows, **not** to the sensitivity map.
+
+**The real scope caveat is a different one, and it is mine to state:** the gradient was computed
+on the **pre-drop** model (gr1's ref archive, 569,996 B), because its purpose was to CHOOSE the
+drop. The live `cx1` lattice is the post-`cell_drop50` result. So the key is n600 but on the
+**ancestor lattice** — an ancestor-vehicle caveat, not a subset caveat.
+
+### §5.2 ASK 1: the 17% is **NOT** the resampling visibility structure. REFUTED, exactly.
+
+The hypothesis: a gradient lives in the space the score sees, so it carries `D`'s null structure
+for free. That is testable **exactly and scorer-free**, because the operator between the
+renderer's output and the scorer's input is linear AND separable:
+
+```
+render [384,512] --U--> camera [874,1164] --D--> scorer input [384,512]
+M = D.U  factorises as  M_row (384x384)  and  M_col (512x512)
+```
+
+**Validated before use** (the result was suspiciously clean and the matmul emitted
+divide-by-zero warnings, so I refused it until it was checked): BLAS vs `einsum` differ by
+**0.0**; the warnings are spurious FP-flag noise. `M` applied to a real render matches the
+**actual receiver pipeline** (`bicubic_up_to_camera_float` → the frozen `D`) to
+**4.42e-05 on a 0..255 range = 1.7e-07 relative**. It is the real operator.
+
+| | measured |
+|---|---:|
+| row singular values | [**0.82899**, **1.01417**], condition **1.2234** |
+| col singular values | [**0.82829**, **1.01390**], condition **1.2241** |
+| **full 196,608-dim gain range** | **[0.6866, 1.0283]** |
+| fraction of render directions attenuated below 0.5 | **0.0%** |
+| below 0.1 / 1e-2 / 1e-3 / the uint8 step | **0.0% / 0.0% / 0.0% / 0.0%** |
+| max deviation of `M` from identity | 0.0955 |
+
+**`D.U` annihilates nothing.** Every render-space direction reaches the scorer with gain at
+least **0.687**.
+
+**Where the 80.6742% actually lives, and why we cannot use it.** I reproduced the cited figure
+to four decimals: `1 - 196,608/1,017,336 = ` **80.6742315%** — it is the null fraction of `D`
+**on the CAMERA plane**, which is 1,017,336-dimensional. But our renderer emits into a
+**196,608-dimensional** render plane and reaches the camera only through `U`. The measurement
+above says `D` restricted to `range(U)` is **near-isometric**. So the enormous null space is
+real and **structurally unreachable from the token lattice** — a token change cannot hide in it.
+*(This concerns the render→scorer resampling only. The separate rank-4 "140 of 144 dims
+invisible" result is about a different space and is another arm's; I neither re-derive nor
+contradict it.)*
+
+**Verdict: the coordinator's hypothesis for the 17% is REFUTED at FORMULATION scope** — for the
+resampling layer, on a validated operator. That closes a plausible explanation rather than
+confirming it, which is the more useful outcome.
+
+### §5.3 So what IS the residual? Two things the gradient sees — and **`gr1` throws both away**
+
+**(a) The support curve, from the gradient's own point of view.** Correlating `gr1`'s key against
+the ambient-flip mass at every box half-width:
+
+| half-width px | 0 (wr1's tile) | 8 | 16 | 24 | 28 | **34 (measured RF)** | 48 | **64** | 80 | 160 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| rho vs `gr1_gsum` | **0.6950** | 0.7543 | 0.7916 | 0.8206 | 0.8341 | **0.8288** | 0.8456 | **0.8519** | 0.8478 | 0.5799 |
+
+Monotone from the tile to a broad plateau: **the gradient independently confirms the support
+correction, buying +0.139 of rank correlation between h=0 and h≈28.**
+
+> **Do NOT read the argmax as a support estimate — I nearly did.** Widening the box also DENOISES
+> a sparse flip field, so the argmax is the best *smoothed* estimator, not the true support. The
+> curve is flat within 0.8% across h ∈ [34, 80]; it corroborates "much bigger than a tile" and
+> **cannot discriminate** my directly-measured 84×82 footprint from 64 px. The support number
+> stands on the direct measurement, not on this curve.
+
+**Ceiling: even at the best box, rho = 0.8519 — so 14.8% of the gradient's ranking is explained
+by ambient flips at NO support.** That is the irreducible residual, and here is what is in it:
+
+**(b) CHANNEL anisotropy, which every key in play discards.** The gradient is per-(cell, channel);
+`wr1`'s key, my key, and **`gr1`'s own key** (`g_abs.sum(axis=(0,3))` — it sums over channels) are
+all per-cell. Measured on the n600 gradient:
+
+| | value |
+|---|---:|
+| within-cell max/min channel `|g|` ratio | **median 3.34x** |
+| dominant channel's share of a cell's `|g|` (0.25 = uniform) | **median 0.353**, max **1.000** |
+| cells where ONE channel carries **>50%** of the cell's gradient | **164 / 768 = 21.4%** |
+
+*(The p90/max of the ratio statistic run to 1e298 because some channels have essentially zero
+gradient — division by ~0. The degenerate tail is reported as the SHARE statistic instead of a
+meaningless 1e298; that some channels are effectively dead is itself the finding.)*
+
+**(c) Temporal structure, also discarded by summing over pairs:** 250 of 600 pairs carry 50% of
+the total `|g|`, 444 carry 80%; per-pair max/median 3.09.
+
+**The sharp consequence.** The gradient's residual advantage is not visibility — it is that the
+gradient is a **richer object than the key built from it**. `gr1` computes a per-(pair, cell,
+channel) tensor and then flattens it to 768 numbers, discarding a median-3.3x channel anisotropy
+that is single-channel-dominated in 21.4% of cells. **`br1` already measured the byte side at the
+UNIT (cell x channel) grain — 1,528 live units.** Both halves of a **per-unit** waterfill
+therefore already exist on disk; the per-cell formulation is a lossy projection of data we have.
+
+### §5.4 ASK 3: cost and reach — the exact instruments are **cheaper than the proxies**
+
+| instrument | what it produces | cost | on disk? |
+|---|---|---:|---|
+| `gr1` backprop gradient | per-(pair, cell, channel) damage, n600 | **36.4 s** | **yes** |
+| my geometric RF key | per-cell damage proxy | ~ms, **but** needs an RF measurement (24 s) **and** an atlas that cost a full n600 scorer run | yes |
+| exact per-cell byte marginal | the real `Delta b`, 384 cells | **388.8 s (1.01 s/cell)** | **yes** |
+| `wr1`'s `residual_mass` byte proxy | rho **0.513** vs the exact marginal | ~ms | yes |
+
+**The gradient key is ~10x cheaper than the byte marginals I measured exactly, and produces a
+strictly richer object.** And the second half of the ask has a cleaner answer than "find a
+gradient for bytes": bytes come from a discrete entropy coder and are not differentiable, **but
+they do not need to be — the exact answer costs 1.01 s/cell and is already measured.**
+
+> **Both axes of `#766`'s `lexsort` can be replaced by exact measurements that exist on disk
+> today**: damage from `gr1`'s cached n600 gradient (36.4 s), bytes from the encoder (388.8 s).
+> Total ~7 minutes for an exactly-keyed waterfill, versus a primary key on 4% of the wrong
+> support and a tie-break at rho 0.513.
+
+### §5.5 ASK 4: the general form — the class, with five instances
+
+> **A hand-built proxy stands in for a quantity that an exact instrument ALREADY RUNS in the live
+> path. The proxy's calibration is then silently sized for a different question than the one it
+> is now answering.**
+
+| # | proxy | the exact instrument already in the path | measured gap |
+|---|---|---|---|
+| 1 | `wr1` `flip_mass` on a 16x16 tile | backprop through the decoder carries the true support | rho 0.695 → 0.852; **144/486 false-safe** |
+| 2 | `wr1` `residual_mass` byte proxy | **the encoder**, 1.01 s/cell | **rho 0.513** |
+| 3 | **my own `rs2_rf` box** | the same gradient | rho 0.829; **I built a geometric proxy where a gradient existed** |
+| 4 | `rt2` `margin_floor = 0.1` (cited, not mine) | derived for the L7 fp32 drift guard (~0.096); the separatrix scale here is 2.0582 | median margin **59x** the floor |
+| 5 | `clip(rint(U(r)))` delivery | `ll1`'s exact per-window solve | 88 flips → 3 flips (**96.6%** of the realization debt) |
+
+**The diagnostic, in one question:** *does an exact instrument for this quantity already run
+somewhere in the live path?* If yes, the proxy owes a measured rank correlation against it, or it
+is noise wearing a number. Instances 1–3 are all in the SAME 4-line `lexsort`, which is the
+strongest evidence this is a class and not three coincidences.
+
+**Self-indictment, stated plainly:** instance 3 is mine. I spent this arm measuring a receptive
+field by finite differences to hand-build a support model — three calibration choices, each a
+chance to be 24.2x wrong — when the chain rule computes that support exactly, for free, and
+`gr1` had already cached it at n600. **The correction I landed was right; the instrument I chose
+to land it with was the same class of mistake I was correcting.**
 
 ---
 
