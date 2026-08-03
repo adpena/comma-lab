@@ -1,0 +1,32 @@
+{
+  "probe": "is the blind descent support shared across pairs?",
+  "n_pairs": 16,
+  "pairs": [
+    0,
+    40,
+    80,
+    120,
+    160,
+    200,
+    240,
+    280,
+    319,
+    359,
+    399,
+    439,
+    479,
+    519,
+    559,
+    599
+  ],
+  "top_n": 12,
+  "jaccard_mean": 0.00557124035384905,
+  "jaccard_max": 0.14285714285714285,
+  "jaccard_frac_pairs_with_any_overlap": 0.1,
+  "distinct_pixels_used": 180,
+  "pixels_used_by_more_than_one_pair": 10,
+  "consensus_set_mean_coverage_of_per_pair_support": 0.125,
+  "consensus_sign_agreement_mean_abs": 0.18229166666666666,
+  "axis": "[macOS-CPU advisory]",
+  "score_claim": false
+}

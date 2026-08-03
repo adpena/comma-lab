@@ -1,0 +1,157 @@
+{
+  "arm": "ddm_ph5o",
+  "question": "O1 -- can the D-blind camera subspace be AIMED at d_pose?",
+  "base_submission": "/Volumes/VertigoDataTier/pact/ddm_pu2_20260803/submission_pu2",
+  "base_archive_bytes": 353805,
+  "base_d_pose_n600_report_txt": 0.00154519,
+  "base_d_seg_n600_report_txt": 0.00431179,
+  "n_pairs_total": 600,
+  "n_pairs_measured": 12,
+  "is_n600": false,
+  "rank_k": 6,
+  "fd_step_lsb": 1.0,
+  "gn_iters": 2,
+  "t1_amps": [
+    1,
+    2,
+    4
+  ],
+  "controls": {
+    "C1_blind_px": 230904,
+    "C1_blind_frac": 0.22696926089315625,
+    "C1_pass": true,
+    "C2_blind_edit_D_delta_max": 0.0,
+    "C2_pass": true,
+    "C3_visible_edit_D_delta_min": 3.0000076293945312,
+    "C3_pass": true,
+    "C4_adjoint_dot_product_rel_err": 1.894982276397332e-15,
+    "C4_pass": true,
+    "C5a_warp_float_vs_shipped_max_abs": 8.526512829121202e-14,
+    "C5a_warp_float_ulps_at_255": 1.5058823529411764,
+    "C5a_pass": true,
+    "C5b_chain_uint8_vs_Decoder_f0_max_abs": 0.0,
+    "C5b_pass": true,
+    "C5_pass": true,
+    "C6_d_pose_bit_reproducible": true,
+    "C6_pass": true,
+    "probe_pairs": [
+      0,
+      300,
+      599
+    ]
+  },
+  "m88_guard": {
+    "subset_mean_base_d_pose": 0.0006135955464887778,
+    "population_d_pose_report_txt": 0.00154519,
+    "subset_over_population": 0.39710038667657555,
+    "subset_is_representative": false
+  },
+  "KILL_seg_bit_identical_all_pairs": true,
+  "KILL_seg_worst_D_plane_delta": 0.0,
+  "d_pose_base_mean": 0.0006135955464887778,
+  "d_pose_T2_float_mean": 0.0006135955464887778,
+  "d_pose_T2_quantised_mean": 0.0006135955464887778,
+  "rel_delta_T2_quantised": 0.0,
+  "frac_pairs_T2q_improved": 0.0,
+  "T1": {
+    "n_pairs": 12,
+    "pairs": [
+      0,
+      54,
+      109,
+      163,
+      218,
+      272,
+      327,
+      381,
+      436,
+      490,
+      545,
+      599
+    ],
+    "d_pose_base_mean": 0.0006135955464887778,
+    "d_pose_T1_best_mean": 0.4269528260806405,
+    "rel_delta": 694.8212596617161,
+    "frac_improved": 0.0,
+    "per_amp_rel_delta": {
+      "+1": 40900.4375944273,
+      "+2": 128655.8831992767,
+      "+4": 168599.19146756202,
+      "-1": 8276.70316137945,
+      "-2": 28969.449922338605,
+      "-4": 128922.21625856386
+    },
+    "ALIGNMENT_DISCRIMINATOR": {
+      "note": "predicted_drop_amp1 is the FIRST-ORDER drop the measured gradient promises for a +-1 LSB sign step (= A * sum|g| over the blind set).  If it dwarfs the measured delta the actuator is ALIGNED but QUANTISATION-FLOORED (the second-order f0/f1 consistency penalty already dominates at the smallest realisable step).  If both are tiny the actuator is MISALIGNED.",
+      "predicted_drop_amp1_mean": 0.002784167731419596,
+      "measured_delta_amp1_mean": 0.42633923053415174,
+      "predicted_over_measured_abs": 0.006530404738807097
+    }
+  },
+  "probe_unit_constant_mode": {
+    "n_pairs": 12,
+    "frames_provably_changed": 12,
+    "mean_rel_delta": 1.0908714573327598,
+    "frac_improved": 0.0
+  },
+  "t2_frac_rows_coef_all_zero": 1.0,
+  "S_pose_base": 0.07833233984050124,
+  "S_pose_T2_quantised": 0.07833233984050124,
+  "byte_benefit_curve": [
+    {
+      "top_n": 1,
+      "coeff_bytes": 6,
+      "selector_bytes": 1,
+      "total_bytes": 7,
+      "d_pose_mean": 0.0006135955464887778,
+      "delta_S_pose": 0.0,
+      "delta_S_rate": 4.661012671855199e-06,
+      "delta_S_joint": 4.661012671855199e-06
+    },
+    {
+      "top_n": 3,
+      "coeff_bytes": 18,
+      "selector_bytes": 2,
+      "total_bytes": 20,
+      "d_pose_mean": 0.0006135955464887778,
+      "delta_S_pose": 0.0,
+      "delta_S_rate": 1.3317179062443427e-05,
+      "delta_S_joint": 1.3317179062443427e-05
+    },
+    {
+      "top_n": 6,
+      "coeff_bytes": 36,
+      "selector_bytes": 3,
+      "total_bytes": 39,
+      "d_pose_mean": 0.0006135955464887778,
+      "delta_S_pose": 0.0,
+      "delta_S_rate": 2.5968499171764683e-05,
+      "delta_S_joint": 2.5968499171764683e-05
+    },
+    {
+      "top_n": 12,
+      "coeff_bytes": 72,
+      "selector_bytes": 0,
+      "total_bytes": 72,
+      "d_pose_mean": 0.0006135955464887778,
+      "delta_S_pose": 0.0,
+      "delta_S_rate": 4.794184462479634e-05,
+      "delta_S_joint": 4.794184462479634e-05
+    },
+    {
+      "top_n": 12,
+      "coeff_bytes": 72,
+      "selector_bytes": 0,
+      "total_bytes": 72,
+      "d_pose_mean": 0.0006135955464887778,
+      "delta_S_pose": 0.0,
+      "delta_S_rate": 4.794184462479634e-05,
+      "delta_S_joint": 4.794184462479634e-05
+    }
+  ],
+  "axis": "[macOS-CPU advisory]",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "rows_path": "/Volumes/VertigoDataTier/pact/ddm_ph5o_20260803/smoke_k6.rows.jsonl"
+}

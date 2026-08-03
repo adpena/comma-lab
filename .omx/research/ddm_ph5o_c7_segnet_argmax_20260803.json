@@ -1,0 +1,127 @@
+{
+  "control": "C7 end-to-end SegNet argmax identity under a D-blind edit",
+  "scorer": "frozen upstream SegNet, CPU torch fp32",
+  "C7_blind_argmax_bit_identical_all_cells": true,
+  "C7_control_visible_edit_DOES_move_argmax": true,
+  "C7_pass": true,
+  "rows": [
+    {
+      "pair": 0,
+      "treatments": {
+        "blind_amp1": {
+          "camera_px_changed": 692712,
+          "argmax_px_differing": 0,
+          "argmax_bit_identical": true,
+          "d_seg_delta_exact": 0.0
+        },
+        "blind_amp8": {
+          "camera_px_changed": 692712,
+          "argmax_px_differing": 0,
+          "argmax_bit_identical": true,
+          "d_seg_delta_exact": 0.0
+        },
+        "blind_amp64": {
+          "camera_px_changed": 692712,
+          "argmax_px_differing": 0,
+          "argmax_bit_identical": true,
+          "d_seg_delta_exact": 0.0
+        },
+        "CONTROL_visible_amp1": {
+          "camera_px_changed": 692712,
+          "argmax_px_differing": 13,
+          "argmax_bit_identical": false,
+          "d_seg_delta_exact": 6.612141927083333e-05
+        }
+      }
+    },
+    {
+      "pair": 200,
+      "treatments": {
+        "blind_amp1": {
+          "camera_px_changed": 692712,
+          "argmax_px_differing": 0,
+          "argmax_bit_identical": true,
+          "d_seg_delta_exact": 0.0
+        },
+        "blind_amp8": {
+          "camera_px_changed": 692712,
+          "argmax_px_differing": 0,
+          "argmax_bit_identical": true,
+          "d_seg_delta_exact": 0.0
+        },
+        "blind_amp64": {
+          "camera_px_changed": 692712,
+          "argmax_px_differing": 0,
+          "argmax_bit_identical": true,
+          "d_seg_delta_exact": 0.0
+        },
+        "CONTROL_visible_amp1": {
+          "camera_px_changed": 692712,
+          "argmax_px_differing": 18,
+          "argmax_bit_identical": false,
+          "d_seg_delta_exact": 9.1552734375e-05
+        }
+      }
+    },
+    {
+      "pair": 399,
+      "treatments": {
+        "blind_amp1": {
+          "camera_px_changed": 692712,
+          "argmax_px_differing": 0,
+          "argmax_bit_identical": true,
+          "d_seg_delta_exact": 0.0
+        },
+        "blind_amp8": {
+          "camera_px_changed": 692712,
+          "argmax_px_differing": 0,
+          "argmax_bit_identical": true,
+          "d_seg_delta_exact": 0.0
+        },
+        "blind_amp64": {
+          "camera_px_changed": 692712,
+          "argmax_px_differing": 0,
+          "argmax_bit_identical": true,
+          "d_seg_delta_exact": 0.0
+        },
+        "CONTROL_visible_amp1": {
+          "camera_px_changed": 692712,
+          "argmax_px_differing": 27,
+          "argmax_bit_identical": false,
+          "d_seg_delta_exact": 0.0001373291015625
+        }
+      }
+    },
+    {
+      "pair": 599,
+      "treatments": {
+        "blind_amp1": {
+          "camera_px_changed": 692712,
+          "argmax_px_differing": 0,
+          "argmax_bit_identical": true,
+          "d_seg_delta_exact": 0.0
+        },
+        "blind_amp8": {
+          "camera_px_changed": 692712,
+          "argmax_px_differing": 0,
+          "argmax_bit_identical": true,
+          "d_seg_delta_exact": 0.0
+        },
+        "blind_amp64": {
+          "camera_px_changed": 692712,
+          "argmax_px_differing": 0,
+          "argmax_bit_identical": true,
+          "d_seg_delta_exact": 0.0
+        },
+        "CONTROL_visible_amp1": {
+          "camera_px_changed": 692712,
+          "argmax_px_differing": 18,
+          "argmax_bit_identical": false,
+          "d_seg_delta_exact": 9.1552734375e-05
+        }
+      }
+    }
+  ],
+  "axis": "[macOS-CPU advisory]",
+  "score_claim": false
+}
