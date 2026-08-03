@@ -150,7 +150,194 @@ an empty or misaligned scope must report VACUOUS, never PASS).
 
 ---
 
-## §2 JOB 1 RESULT — pending
+## §2 JOB 1 RESULT — INTERIM, committed before Job 2
+
+### 2.0 ANSWER FIRST
+
+**F1 does NOT fire.** `eta_net = +0.7895` pooled over 32 pairs (per-pair mean 0.7879, sd
+0.0545, **32/32 pairs above the 0.583 line**) — but only for a realizer that pays the cure the
+playbook already names. **Typed outcome: `ETA_HIGH_ROW_FIREABLE` for the seg axis of gp1 row A3,
+with `ETA_LOW_DEBT_NAMED(stage=S5_pose_collateral, cure=P7 yuv6-null projection, bound
+RETAINED)` carried forward.**
+
+The headline is not a number, it is a **relocation**. Three separate things were true at once
+and only the decomposition separates them:
+
+1. **The naive realizer is not weak, it is ANTI-PRODUCTIVE.** Pasting the *true camera pixels*
+   into the free band — the strongest possible content edit — gives `eta_net = -3.7640`,
+   **0/32** pairs positive, and amplifies flips **4.26x** (27,055 -> 115,273). This is the
+   4th independent NO-GO of the store-the-flip-pixels family and the first measured through the
+   real receiver with truth as the payload.
+2. **The realization chain is not lossy where the playbook assumed.** S1 paint / S2 R·D / S3
+   uint8 are **EXACT — max abs error 0.0 on band and off band, all 32 pairs.** So three named
+   cure candidates (AA coverage, camera-res placement, uint8 amplitude floor) are **measured
+   NON-BINDING here**, and **100% of the debt localises to S4, the frozen net's regional
+   response.**
+3. **The S4 cure clears it.** Margin-optimal prototype colours SOLVED from the frozen head,
+   with multi-start (`pu2`) and in-loop REALIZED-flip best-iterate retention (`fd2`/`tb1`),
+   moves the same band, same addresses, same byte row from `eta = -3.76` to **`eta = +0.79`**.
+   Nothing about the DESCRIPTION changed. Only the realizer did.
+
+**gp1 row A3 re-priced at the measured eta: net `-0.08639 S` = 13.20% of gap** (vs the
+`-0.17466 S` / 28.22% bound at the assumed eta=1). The bound is RETAINED, not spent: the
+remaining 15.0 pp is the named debt in §2.5/§2.6, not a kill.
+
+### 2.1 Positive controls — all PASS (nothing below is admissible without these)
+
+| # | control | result |
+|---|---|---|
+| C1 | per-pair flip cache reproduces gp1/pu2 | **PASS** 508,640 flips, d_seg 0.004311794704861111 |
+| C2 | recomputed `L*` on decoded frames == `cx1_argmax_n600.npy` | **PASS exact, 32/32** |
+| C3 | recomputed GT argmax == `gt_argmax_n600.npy` | **PASS exact, 32/32** |
+| C4 | full-frame GT paste | **PASS eta = 1.000000, flips_after = 0, 32/32** |
+| C5 | `D`-support privacy + blind fraction | **PASS** 22.6969% blind, reproduces `m86` 22.70% from first principles |
+| m88 | subset vs population mean flips/pair | **0.997329** (a prefix would have been 0.9160) |
+
+`C4` is the load-bearing one: it proves decode alignment, the `D` operator, the scorer weights
+and the GT cache are all wired correctly, because restoring truth everywhere returns argmax to
+GT exactly. Any eta below is measured on an instrument that passes its own positive control.
+
+### 2.2 S0 ADDRESS — **gp1 falsifier F4 FIRES**, with a priced cure
+
+Measured on the **decoder's ACTUAL `L*`** (gp1 §1 flagged its own band as a near-GT proxy):
+
+| r | band % of field | flip capture | v0 eta |
+|---:|---:|---:|---:|
+| **1** | **5.2%** | **0.8668** | −3.7620 |
+| 2 | 8.1% | 0.9005 | −5.5942 |
+| 3 | 10.9% | 0.9198 | −6.5831 |
+| 13 | 34.1% | 0.9880 | −3.9813 |
+| 55 | 79.3% | 1.0000 | +0.1622 |
+
+**Capture 86.68% < 90% ⇒ F4 fires.** gp1's proxy render reported 97.26% and `rz1` 93.53%; on
+the real decoder's own label field it is **86.68%**. Scope: this falsifies the *r=1 free band's
+capture claim*, NOT the free-band family — r=2 reaches 0.9005 (at the line) and r=13 reaches
+0.9880. The cure is band width and its rate is already priced by gp1 (A4 r=2 = 408,244 B).
+**13.32% of flips are not addressed at all at r=1**, and that is an upper bound on what any
+r=1 realizer can ever fix — independent of eta.
+
+**The v0 locality curve is a genuine measured shape, not noise**: eta gets *worse* out to r=8
+(−9.18) before recovering, and is still only **+0.16 at 79.3% of the field**. A band-local
+*content* substitution does not become productive at any band size short of owning the frame.
+
+### 2.3 S1 paint / S2 R·D / S3 uint8 — **EXACT, zero loss** (three cures retired)
+
+`max_abs_err_on_band = 0.0`, `max_abs_err_off_band = 0.0`, **32/32 pairs.**
+
+Derived and then verified: `D`'s bilinear supports are **private** (scale 2.276 > 2, asserted
+fail-closed in the harness) and its four weights sum to 1, so painting all four camera pixels
+of a scorer pixel with one uint8 value reproduces that value **bit-exactly** at the scorer
+lattice and perturbs **no** neighbouring scorer pixel. Consequence: **the paint/AA/uint8 cure
+family cannot be the binding one for band-local edits on this vehicle.** That is a real
+negative and it narrows the search rather than widening it.
+
+### 2.4 S4 ARGMAX — the whole debt, and the cure that pays it
+
+| realizer | eta_net pooled | per-pair mean ± sd | pairs > 0.583 | fixed | introduced | d_pose after |
+|---|---:|---:|---:|---:|---:|---:|
+| **v0** truth paint | **−3.7640** | −3.8408 ± 1.3770 | **0/32** | 11,307 | 99,573 | 6.4546 |
+| **v1** SOLVED paint | **+0.7895** | +0.7879 ± 0.0545 | **32/32** | 20,198 | 1,684 | 0.0388 |
+
+The v1 solver is the v14 playbook item with both riders attached: **multi-start** (`dec` and
+`truth` inits, `pu2` mechanism) and **in-loop REALIZED-flip validation with best-iterate
+retention** (`fd2`/`tb1`) — the proxy CE never picks the iterate. Proxy and realized flip counts
+agreed to within a few counts per pair, and the uint8 round sometimes *helped*.
+
+**sd 0.0545 across 32 pairs is the strongest single fact here**: this is not a couple of lucky
+pairs, it is a tight, reproducible property of the band + frozen head.
+
+### 2.5 Per-EDGE decomposition (`pc2` hub law — never per class alone)
+
+Pooled flips (gt -> rendered), before | v0 | SOLVED:
+
+| edge | before | v0 | SOLVED |
+|---|---:|---:|---:|
+| Lane->Road | 9,625 | 18,562 (**+8,937**) | 4,640 (**−4,985**) |
+| Undrivable->Road | 3,241 | 1,016 (−2,225) | 526 (−2,715) |
+| Road->Lane | 2,797 | 2,152 (−645) | 173 (−2,624) |
+| Movable->Undrivable | 2,744 | 5,182 (+2,438) | 1,144 (−1,600) |
+| Road->MyCar | 2,336 | 19,843 (**+17,507**) | 122 (−2,214) |
+| Road->Undrivable | 1,579 | 52,879 (**+51,300**) | 684 (−895) |
+| MyCar->Road | 745 | 6,477 (+5,732) | 115 (−630) |
+
+**Every edge improves under the solved paint; v0 wrecks nearly every edge**, catastrophically on
+`Road->Undrivable` (+51,300) and `Road->MyCar` (+17,507) — i.e. inserting true texture into a
+thin band makes the net hallucinate *large-area* classes. This is the region-not-pixel law
+(`CLAUDE.md`) measured at edge granularity. The residual after the cure is concentrated in
+`Lane->Road` (4,640 of 6,857 remaining), consistent with `pc2`'s hub finding and with Lane being
+the low-persistence long tail.
+
+### 2.6 POSE collateral — the debt's new address
+
+Scoped hard: the 32 pairs are representative on the **seg** governing quantity (0.9973) but are
+**0.2692x** of population on `d_pose` — a *different* population (`gp1` measured 4.6x pose skew).
+So these are **reported, never extrapolated to n600**.
+
+| realizer | d_pose after (subset mean) | x subset baseline (0.00068679) |
+|---|---:|---:|
+| v0 truth paint | 6.4546 | 9,398x |
+| **v1 SOLVED paint** | **0.0388** | **56.5x** |
+| P0 full-frame GT paste | 58.199 | 84,741x |
+
+`P0` is worth stating plainly: **restoring frame_1 to truth while frame_0 stays decoded is a
+pose CATASTROPHE (58.2)** even though it is a seg PERFECTION (eta = 1.000). It independently
+reproduces `m87` — d_pose is *relative between the two delivered frames*, so any single-frame
+edit is priced against a term that is exquisitely sensitive to inter-frame coherence. **The seg
+and pose axes are in direct, measured tension through frame_1**, and `sf1`/`uv1`'s ban on
+seg-only verdicts is vindicated here in the sharpest possible form.
+
+At the current `dS/d(d_pose) = 31.3027` (K3: never a shelf price), a pose regression of this
+order is the same magnitude as the seg gain. **Hence the row is NOT fireable on seg alone**, and
+the cure below is required, not optional.
+
+### 2.7 The named pose cure — DERIVED, verified, and its hidden caveat
+
+From `upstream/frame_utils.py:51`, per 2x2 block of scorer pixels there are 12 RGB DOF and
+exactly 6 pose constraints (4 per-pixel `dY=0`; block-mean `dR=0` kills `dV`; block-mean `dB=0`
+kills `dU`), so **the frame_1 yuv6-null subspace is REAL rank 6 of 12** — independently
+reproducing `ph5o`'s rank-6 generic basis. Projector verified idempotent, `|A·P| < 1e-10`,
+residual `dY ~ 5e-8`.
+
+**Two things this unit refuses to let the corpus keep assuming:**
+
+1. **The projection does not commute with a pixel-granular mask.** Two of the six constraints
+   are BLOCK-mean, so masking a projected delta at pixel resolution destroys exactly those two
+   (measured: `dU` residual 0.381 instead of 6e-8). The band must be snapped to whole 2x2
+   blocks. Caught in review, fixed, unit-checked.
+2. **`Q3`'s "d_pose EXACTLY 0" is a REAL-valued statement, and our actuator is INTEGER.** All
+   four camera pixels of a scorer pixel carry one uint8 value, and `dY=0` with coefficients
+   .299/.587/.114 has no nontrivial integer solution — so **exact nullity is unreachable by this
+   actuator.** The achievable object is a minimum-|Δyuv6| integer lattice point whose residual
+   `d_pose` is an **open measurement**, not zero by construction.
+
+**First measurement (1-pair smoke, 15 steps, single start — a conservative FLOOR):**
+`eta = +0.5450` with `d_pose 0.000787 -> 0.000834` (**+6%, essentially neutral**) at
+`max|dY| = 12.79`. So the integer residual is real and yet PoseNet barely moves: the cure
+appears to buy ~**99% of the pose damage back for ~1/3 of the seg gain**, at a reduced solver
+budget. The n=32 run is in flight; §2.8 lands its pooled numbers.
+
+### 2.8 Job 1c (pose-null, n=32) — in flight, receipts land at
+`/Volumes/VertigoDataTier/pact/ddm_sq1_20260803/receipts/sq1_posenull_n32.json`
+
+### 2.9 What this unit does NOT license
+
+- **No row is dead.** Every negative here is `verdict_scope: FORMULATION` against a *named
+  realizer*, per Catalog #307 and the operator steer. gp1's A3 bound is RETAINED.
+- **No population claim.** All numbers are n=32, `[macOS-CPU frozen-scorer advisory]`,
+  `score_claim=false`. Nothing here is byte-closed and nothing touches the pointer.
+- **No pose extrapolation.** The subset is 0.2692x population on d_pose and is reported as such.
+
+### 2.10 Artifacts
+
+Scripts (committed): `experiments/ddm_sq1_eta_seg_realization.py` (`a1dd02b7c0`),
+`experiments/ddm_sq1_stage_decomposition_and_solved_paint.py` (`a1dd02b7c0`),
+`experiments/ddm_sq1_aggregate.py` (`649679b873`),
+`experiments/ddm_sq1_pose_null_constrained_paint.py` (`c5ba2888c1`).
+Receipts (SSD, rebuildable from the committed scripts + existing caches):
+`/Volumes/VertigoDataTier/pact/ddm_sq1_20260803/receipts/` — `sq1_pair_selection.json`,
+`sq1_eta_seg_n32.json`, `sq1_stage_n32.json`, `sq1_aggregate_n32.json`, `sq1_null_smoke.json`,
+`sq1_posenull_n32.json`, `sq1_regression_check.json` (post-cleanup script reproduces the
+committed receipt on 92/92 keys).
 
 ## §3 JOB 2 RESULT — pending
 
