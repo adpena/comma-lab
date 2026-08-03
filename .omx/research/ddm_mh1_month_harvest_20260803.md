@@ -379,6 +379,26 @@ Seg is the majority axis and rate is the cheapest; `$0` items outrank funded one
 Every row states its axis and its evidence; none states a predicted score delta, because a predicted
 delta without a re-derived baseline is exactly the class §6/R5 and row #8 exist to stop.
 
+### Why the parked rows were annotated and NOT cancelled
+
+The arm attempted to drain the 14 status-rot rows to a terminal status. The ledger **refused**
+`pending → deferred` (legal: `blocked`, `cancelled`, `in_progress`) — and that refusal was
+information, not an obstacle. It forced the distinction the arm had been about to elide:
+
+> **"the line is alive" ≠ "this task is complete."**
+
+The measured evidence is that the *research line* continued (e.g. `costate_organ` has 35 later
+substantive memos). It is **not** evidence that the specific chartered task was finished. Cancelling
+on that basis would assert something the arm did not measure — a NO-FAKE violation dressed as
+tidiness, and `D50`'s 607→0 false positive is the standing proof that these term-matches can be
+wrong. So each row carries its evidence as an in-ledger note and the per-row judgement is routed.
+
+**Ownership (m45).** All 13 rows initially read `unassigned-arm` — deferral wearing a tracking label,
+which the rule forbids. Each now carries an explicit **FIRE-CONDITION** note (the third sanctioned
+exit: deferred with blocker + fire-condition), naming what triggers it and, where relevant, the gate
+that must clear first (e.g. #2 requires re-measuring the Lane skip-band ratio on TR1; #6 requires
+re-deriving the ancestor EV numbers before any launch).
+
 ## §6 — What this arm refutes (including its own working hypotheses)
 
 ### R1 — "24 window-1 orphans" — REFUTED by this arm's own data (2.2× inflation)
