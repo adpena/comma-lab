@@ -18,7 +18,7 @@ gated, no scorer slot taken, no paid dispatch. LIVE BEST is unchanged at `pj2` S
 | **GD5-2 falsifier** | **REACHABLE, not yet met.** ep44 d_seg **0.0157596 = 2.65× the bar**, `COUPLED_DESCENT`, descent *accelerating* (−12.45% last gate). **Two findings say the scalar everyone quotes cannot carry the verdict: §3.4 (the bar and the gate are different populations) and §3.5 (the gate silently changes which object it reads at every resume).** |
 | **GD5-3 guard** | **VERIFIED ON PRODUCTION BYTES.** It REFUSED a real `b4s` ds=16 ep945 checkpoint against the live ds=32 model, and ACCEPTED the legitimate ds=32 resume with `new_params=[]`. First refusal seen on real bytes rather than a fixture. §4. |
 | **GD5-4 endpoint** | Not reached. Pose re-solve NOT run (needs the scorer slot; `ddm_cx1` holds it). §6. |
-| **Instrument catches** | **Two, both of the "stale view" genus, both caught by measuring rather than believing.** §5. |
+| **Instrument catches** | **Four.** Two "stale view" (§5: `run.log` lags telemetry — I nearly stopped the run early off it; and a stale "already exited" brief that the governor correctly refused). Two probe failures (§3.8: `grep`-over-`ps` false-negatived a live driver and caused a duplicate launch; and a missing `< /dev/null` on the first detach). |
 
 ---
 
