@@ -164,6 +164,9 @@ cancels exactly.
 
 ---
 
+*(§3 was folded into §2 — the positive controls and their results are one story, so they are told once.
+The §5 subsections are likewise ordered by how firmly each question is settled, not by number.)*
+
 ## §4 RESULTS — the floor probe
 
 ### 4.1 The mechanism: TWO search defects, not one
@@ -367,6 +370,30 @@ entropy-coded jointly, so per-pair byte effects are **sub-additive** and partial
 exactly the R1-c caution paying off — **the sign held, the magnitude did not.** The honest statement is
 **"the byte cost is ≤ 0"**, not "each pair refunds 19 B".
 
+### 5.7 THE AUTHORITY ROW — end-to-end `upstream/evaluate.py`, n600
+
+*(pending — the run is in flight; this section is the ONLY thing that closes §6 R1-b. Custody:
+`archive.zip` sha256 `c72ef357416b66e716b2863c4c49360306b80cc0fafd094e02394c8a4dd37209`, **353,805 B**,
+staged at `ddm_pu2_20260803/submission_pu2/`, inflated by the **byte-identical shipped `inflate.sh`**.)*
+
+**Predictions, recorded BEFORE the row lands** — so the comparison is a real test rather than a
+post-hoc fit:
+
+| leg | predicted | basis |
+|---|---:|---|
+| `d_seg` | **exactly 0.00431179** | §1.1: all five knobs are read only by `f0`; SegNet reads frame_1 |
+| `d_pose` | **0.0015452** | §5.5, substituted into `pz1`'s n600 array |
+| bytes | **353,805** | measured, rebuilt container |
+| **S** | **≈ 0.791069** | `0.431179 + 0.124306 + 0.235584` |
+
+**If `d_seg` moves at all, my §1.1 structural derivation is wrong.** If `d_pose` differs materially
+from `0.0015452`, my instrument carries a bias and every aggregate here is compromised (R1-b fires).
+
+**Decode budget, measured in passing:** the shipped `inflate.sh` reconstructed all 600 pairs in
+**4 m 24 s** wall (`user 3 m 20 s`) on this box — comfortably inside the contest's 30-minute decode
+budget, with the pose knobs changed. Recorded because a pose re-solve changes *values*, never the
+decode's shape, so this headroom is invariant under the §7 n600 re-solve.
+
 ### 5.6 Scope actually achieved, stated plainly
 
 The probe was designed for 10 tail + 8 stratified control pairs. **6 tail pairs completed** before I
@@ -493,9 +520,18 @@ because the *class* (one path, two writers, existence read as completion) is the
 
 **Round 4 found one issue ⇒ counter resets to 0.**
 
-**SEAL STATUS: NOT SEALED — 0 of 3 clean passes.** Three rounds, ten findings, all folded into the text
-above. The load-bearing open item is R1-b (the surrogate gap), which no further reading can close —
-only the end-to-end eval can, so continuing to review instead of running it would be polish-hoarding.
+**SEAL STATUS: NOT SEALED — 0 of 3 clean passes.** **Four** rounds, **eleven** findings, every one
+folded into the text above rather than answered in the review. Two findings materially changed a
+headline (R1-d forced the control group into the design; Round 4 found a false-positive in my own
+completion waiter), and one — the two-defect split in §4.1 — overturned my own first reading of pair 74
+within the same arm.
+
+I am stopping the review here deliberately, not because it converged: the load-bearing open item is
+**R1-b (the surrogate gap)**, and no additional reading can close it — only the end-to-end authority row
+(§5.7) can. Continuing to review instead of running it would be polish-hoarding. The **second**
+open item, the un-run control group (§5.6), likewise needs compute rather than argument.
+**Every aggregate `ΔS` in this memo is PROVISIONAL to exactly that degree**, and the two items are the
+first entries in §7.
 
 ---
 
@@ -527,6 +563,25 @@ from measured throughput: a single-start GN is ~30 s/pair ⇒ **~5 h for n600** 
 form used here is ~250 s/pair ⇒ ~42 h (parallelisable per pair, and the per-pair jobs are independent).
 Sequencing: **verify the instrument on this 18-pair change FIRST** (step 4), then scale — running a
 5-hour solve against an unverified surrogate is the larger risk.
+
+**WHAT THE n600 RE-SOLVE IS WORTH — an EXTRAPOLATION, explicitly labelled.** The 6 measured floors are
+held fixed and the 594 un-probed pairs are assigned a single assumed ratio. **This is NOT a
+measurement**; a tail subset is a different population (`#875`) and the un-probed pairs may behave
+differently in either direction. It is a planning range, and its value is that the range is *narrow*:
+
+| assumption for the 594 un-probed pairs | `ΔS` | % of gap |
+|---|---:|---:|
+| no improvement at all (⇒ the MEASURED row) | −0.0354281 | **5.41%** |
+| conservative — all reach pair 74's ratio (0.4581) | −0.0587388 | 8.98% |
+| median of the six observed ratios (0.2013) | −0.0719219 | 10.99% |
+| optimistic — all reach 0.0316 (the 3rd-best observed) | −0.0818461 | 12.51% |
+
+**Even the conservative branch is ~9% of the gap, and every branch costs ≤ 0 bytes.** The spread is
+narrow because the tail dominates the mean and the tail is already measured — so this estimate is far
+less assumption-sensitive than a typical extrapolation. **The decision it supports:** the n600
+multi-start re-solve is worth ~5 h of single-start compute (or ~42 h at this arm's 6-start budget,
+per-pair parallel), and **sequencing it AFTER the §5.7 authority row is the right order** — running a
+multi-hour solve against an unverified surrogate is the larger risk.
 
 **OPEN, NAMED:** (a) pair 523 resists at 7.7% under this budget — widen the search before calling it a
 model wall; it is the only genuine model-wall *candidate* found. (b) `st_grid` refit is untested — the
