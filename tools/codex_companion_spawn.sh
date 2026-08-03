@@ -69,19 +69,45 @@ case "${1:-}" in
     # writes the exit row + done marker when node finally exits, so the receipt survives the
     # shell's death. This shell returns IMMEDIATELY — the ledger/done-marker is the receipt,
     # never shell liveness.
-    nohup setsid node "$CJS" task --write --effort "$EFFORT" "$(cat "$PROMPT_FILE")" \
-      > "$LOG" 2>&1 < /dev/null &
-    NODE_PID=$!
-    disown "$NODE_PID" 2>/dev/null || true
-    nohup setsid bash -c '
+    # macOS has NO `setsid(1)` (2026-08-03: `nohup setsid ...` wrote a 41-byte
+    # "setsid: No such file or directory" log and every arm died on spawn). BSD-correct detach is
+    # fork + setsid(2) + exec in Python; the child becomes its own session leader, so a SIGURG/kill
+    # aimed at this shell's process group cannot reach it.
+    PIDFILE="$RUNDIR/${LABEL}_${TS}.pid"
+    python3 -c '
+import os, sys
+pidfile, log = sys.argv[1], sys.argv[2]
+cmd = sys.argv[3:]
+pid = os.fork()
+if pid > 0:
+    with open(pidfile, "w") as fh:
+        fh.write(str(pid))
+    os._exit(0)
+os.setsid()
+fd = os.open(log, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o644)
+os.dup2(fd, 1); os.dup2(fd, 2)
+os.dup2(os.open(os.devnull, os.O_RDONLY), 0)
+os.execvp(cmd[0], cmd)
+' "$PIDFILE" "$LOG" node "$CJS" task --write --effort "$EFFORT" "$(cat "$PROMPT_FILE")"
+    NODE_PID="$(cat "$PIDFILE" 2>/dev/null || echo 0)"
+    [ "$NODE_PID" != "0" ] || { echo "FATAL: detach failed, no pid" >&2; ledger_row exit "$LABEL" "$TS" '"rc":90'; exit 90; }
+    nohup bash -c '
       node_pid="$1"; label="$2"; ts="$3"; ledger="$4"; done_f="$5"; start="$6"; lock="$7"
       while kill -0 "$node_pid" 2>/dev/null; do sleep 5; done
       el=$(( $(date +%s) - start ))
       echo "rc=unknown_detached elapsed=${el}s" > "$done_f"
       printf "{\"event\":\"exit\",\"label\":\"%s\",\"ts\":\"%s\",\"utc\":\"%s\",\"pid\":%d,\"rc\":0,\"elapsed_s\":%d,\"detached\":true}\n" \
         "$label" "$ts" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$node_pid" "$el" >> "$ledger"
+    ' _ "$NODE_PID" "$LABEL" "$TS" "$LEDGER" "$DONE" "$START" > /dev/null 2>&1 &
+    disown 2>/dev/null || true
+    # Lock releaser: the serialize lock guards ONLY broker startup (the ENOENT collision window),
+    # so it must drop as soon as the broker is up (first log bytes) — NOT when the arm finishes.
+    # Holding it for the arm's lifetime would serialize the whole fleet down to one concurrent arm.
+    nohup bash -c '
+      lock="$1"; log="$2"
+      for _ in $(seq 1 15); do sleep 2; [ -s "$log" ] && break; done
       rmdir "$lock" 2>/dev/null || true
-    ' _ "$NODE_PID" "$LABEL" "$TS" "$LEDGER" "$DONE" "$START" "$LOCK" > /dev/null 2>&1 &
+    ' _ "$LOCK" "$LOG" > /dev/null 2>&1 &
     disown 2>/dev/null || true
     # Record the real node pid so `status` polls the right process, not this shell.
     ledger_row spawn_pid "$LABEL" "$TS" "\"node_pid\":$NODE_PID"
@@ -111,7 +137,11 @@ for (label, ts), ev in sorted(rows.items()):
     if ex is not None:
         state = f"DONE rc={ex.get('rc')} elapsed={ex.get('elapsed_s')}s"
     else:
-        pid = sp.get("pid"); alive = False
+        # Liveness MUST poll the detached node pid (spawn_pid row), never the launching shell's
+        # pid — the shell exits within a second by design, so using it reports every healthy arm
+        # as ABORTED (the inverse of the failure this tool exists to catch).
+        pid = ev.get("spawn_pid", {}).get("node_pid") or sp.get("pid")
+        alive = False
         try:
             if pid: os.kill(int(pid), 0); alive = True
         except Exception: alive = False
