@@ -52,7 +52,15 @@ Target = PR130 bar `0.172141`. **LIVE gap = 0.6189279.** `W = 1.273108215332` B/
    edges run Gini 0.168–0.358. Only the *negligible* edges are frame-concentrated (Movable↔MyCar
    Gini 0.990, 0.03% of flips). **But this negative is exactly what LICENSES `hs1`'s static cell
    carrier** — a static address is correct precisely because the mass is temporally uniform.
-8. **Dimensionality:** the exact seg answer is describable in **216,395 B** (cheapest of three
+8. **NEW — the TR1 per-object handle EXISTS and is 3.1–16.8× TOO COARSE** (§8, source-verified).
+   The token grid provably tiles the frame (`24×32 × 16 px`, parse-time invariant) and decode is
+   local + weight-shared with a **seed-derived, untrained** weight bank — so a block re-index needs
+   no retraining. **But the cell is 16 px and every displacement priced in this memo is ≤0.32 of a
+   cell** (measured `d ≈ 0.95 px` = 0.060 cells; a Lane dash is 0.157 cells across). **Re-indexing
+   cannot express any of them** ⇒ realization must be sub-cell **amplitude**, which is exactly
+   `rs2`'s `clip(rint())` dead zone. Two independent findings meet on one slot. The 535 B selector
+   is verified byte-exact and indexes **nothing** per-region; `token_cell_mask` is build-time only.
+9. **Dimensionality:** the exact seg answer is describable in **216,395 B** (cheapest of three
    independent measurements) against a **647,553 B** buy threshold — **2.99× under**. We pay
    **499,689 B** of tokens, i.e. **2.31× the description of the exact answer**, and still carry
    all 508,639 flips. **The object we must ship is ~2.3× LOWER-dimensional than the object we
@@ -543,7 +551,81 @@ and I make no claim beyond it.
 
 ## §8 THE VEHICLE HANDLE
 
-**STATUS: PENDING — delegated, not returned before this memo landed. Handed to MAIN.**
+**STATUS: ANSWERED AT SOURCE.** The delegated read-only investigation returned. `mf1` §5.4
+**blocker 2** is now closed, and the answer **relocates every carrier in this memo**.
+
+### 8.1 The handle EXISTS structurally — three source facts
+
+| fact | source |
+|---|---|
+| The token grid **tiles the output exactly**, enforced at parse time: `if (grid_h*downsample, grid_w*downsample) != (SEG_H, SEG_W): raise` | `src/tac/optimization/ddm_tr1_runtime.py:331-332` |
+| Decode is **local + weight-shared only** — 3×3 "same" convs and `np.repeat(...,2,axis=1/2)` nearest upsamples. No attention, no FC | `ddm_tr1_runtime.py:1300-1323`, `_conv2d_nhwc:1247-1276` |
+| Renderer weights are a **fixed seed-derived bank**, `np.random.default_rng(lotto_seed).choice([-1,1],...)` × shipped mask/gain — **not a trained object at decode time** | `_fixed_lotto_weights:1231-1244` |
+
+Live archive decoded (sha `c72ef357…`, 353,805 B, `report.txt` recomputes to 0.791078 ✓):
+`grid_downsample=16, grid_h=24, grid_w=32, code_width=4` ⇒ **`token_codes` is `(600, 24, 32, 4)`**
+and `token[i,j]` is a 4-vector owning one **16×16** block of the 384×512 frame.
+
+⇒ Moving a block of token codes and re-running the *same* `render_frame1_float` would move the
+corresponding output region **with no retraining**. **But it is an architectural possibility, not a
+feature: no such callable exists** (the investigation grepped the decode path for
+`connected.component|per.object|per.region|bbox|translate.*token` — one unrelated Betti-0 *metric*
+hit). Also: 3×3 kernels **bleed at block edges**, so it is not exact isolation.
+
+**And the negatives are sharp.** The **535 B selector is verified byte-exact** and is a flat global
+scalar config (`activation, grid_*, lotto_seed, num_pairs, …`) — **it indexes nothing per-region.**
+The renderer's masks are **per-weight-channel**, spatially shared. The closest real per-cell
+parameter, `token_cell_mask` `(grid_h, grid_w)`, is **build-time only** — multiplied into the
+checkpoint *before* quantisation (`ddm_tr1_runtime.py:1131-1143`), absent from the shipped packet.
+The **frame_0 warp path has no per-object handle at all**: one homography per pair over the whole
+frame, split only by a fixed horizon row-band (`inflate_runner_v4d.py:296-305`). The **11 knobs**
+are confirmed as 6 pose + `s_t` idx + `sel` + (a,b) + `beta_idx`.
+
+### 8.2 …and it is at the WRONG GRANULARITY. This is the finding.
+
+The lattice cell is **16×16 px**. Every displacement priced anywhere in this memo:
+
+| quantity | px | **in token cells** |
+|---|---:|---:|
+| Lane dash **width** (median minor axis) | 2.51 | **0.157** |
+| Movable median minor axis | 8.98 | 0.561 |
+| separatrix band thickness | ~1.0 | 0.062 |
+| `sx2` route B, deep-corrected `d` | 0.654 | **0.041** |
+| measured-profile `d` on the cx1 flip total | 0.954 | **0.060** |
+| `mf1` model-implied `d` (itself refuted, §2) | 2.26 | 0.141 |
+| `sx2` route A `d` (the upper end) | 5.14 | 0.321 |
+
+**Minimum re-index step = 1 cell = 16 px.** Against the measured `d ≈ 0.95 px` that **overshoots by
+16.8×**; against even the largest priced displacement, **3.1×**.
+
+> **The per-object handle exists and cannot express a single displacement this memo priced.** A Lane
+> dash spans **4.0 cells lengthwise but 0.157 cells across** — the perpendicular offset my §3.2
+> carrier ships is a **sub-cell** motion, and re-indexing has no sub-cell step. Every δ we care
+> about is **≤0.32 of one cell**.
+
+### 8.3 Where this leaves the carriers — relocated, not killed
+
+Realization cannot be a token **re-index**; it must be a token **VALUE** change — i.e. **amplitude
+modulation of a 4-vector at 4 bits/level** (`token_quant_levels=16`). **That lands exactly on
+`rs2`'s replacement limiter:** the `clip(rint())` dead zone, amplitude-dependent, invisible to every
+linear instrument. **The two independent findings meet on the same slot**, from opposite directions
+— `rs2` from the operator algebra, this from the lattice geometry.
+
+**Consequences, stated as scope not as a verdict** (per the no-binary discipline — I am not calling
+these carriers dead, and one price at one granularity is not a kill):
+
+1. **§3.2's 425.8× Lane carrier is a DESCRIPTION price whose realization channel is now named**: not
+   re-indexing, but sub-cell amplitude. Its gate is the dead zone, not the byte cost.
+2. **`mf1`'s §5.4 blocker 2 is answered: the handle is real but 7.1× too coarse** for its own
+   model-implied 2.26 px — and that model is separately refuted in §2. Its blocker 1 remains.
+3. **The §5 per-segment family (`L=32 px`) is the one construct that MATCHES the lattice** — 32 px =
+   2 cells. It is the only carrier here whose native scale is ≥ the addressable unit. That was not
+   designed for; it fell out, and it is the honest lead.
+4. **The owed measurement is now precisely specified**: a realized finite difference — perturb a
+   token 4-vector by ±1 quantisation level and measure whether the Lane dash boundary moves at all.
+   Scorer pass required. **A linear or rank argument cannot answer it** (`rs2`).
+
+*(Original PENDING text retained below for provenance.)*
 
 `mf1` §5.4 **blocker 2** — *"does TR1 expose a per-object handle?"* — is a **vehicle** question,
 not a geometry question, and it **gates §3.2 entirely**. Every carrier priced in this memo assumes
