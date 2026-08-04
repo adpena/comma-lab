@@ -298,6 +298,7 @@ def _expected_uploaded_runtime_tree_sha256(
     return (
         str(projected.get("runtime_tree_sha256") or ""),
         str(projected.get("runtime_content_tree_sha256") or ""),
+        str(local_manifest.get("runtime_files_sha256") or ""),
     )
 
 
@@ -309,31 +310,43 @@ def _validate_uploaded_runtime_tree_expectation(
 ) -> tuple[str, str]:
     expected_runtime_tree_sha256 = str(expected_runtime_tree_sha256 or "").strip().lower()
     if submission_dir_path is None:
-        return expected_runtime_tree_sha256, ""
-    if not expected_runtime_tree_sha256:
-        raise SystemExit(
-            "FATAL: --expected-runtime-tree-sha256 is required when "
-            "--submission-dir is uploaded. Compute the Modal-projected runtime "
-            "tree hash with the canonical runtime manifest helper before "
-            "dispatch, or pass --expected-runtime-tree-sha256 auto to bind "
-            "the computed Modal upload tree hash."
+        return "", "", expected_runtime_tree_sha256
+    remote_tree_sha256, content_tree_sha256, files_sha256 = (
+        _expected_uploaded_runtime_tree_sha256(
+            submission_dir_path=submission_dir_path,
+            inflate_sh_rel=inflate_sh_rel,
         )
-    remote_tree_sha256, content_tree_sha256 = _expected_uploaded_runtime_tree_sha256(
-        submission_dir_path=submission_dir_path,
-        inflate_sh_rel=inflate_sh_rel,
     )
-    if expected_runtime_tree_sha256 == "auto":
-        return remote_tree_sha256, content_tree_sha256
-    if expected_runtime_tree_sha256 != remote_tree_sha256:
+    if not files_sha256:
         raise SystemExit(
-            "FATAL: --expected-runtime-tree-sha256 does not match the Modal "
-            "uploaded --submission-dir runtime tree. Modal extracts uploaded "
-            f"runtimes under {REMOTE_OUT / 'submission_dir'}, so the expected "
-            f"runtime_tree_sha256 is {remote_tree_sha256}; got "
-            f"{expected_runtime_tree_sha256}. "
-            f"runtime_content_tree_sha256={content_tree_sha256}"
+            "FATAL: could not derive the runtime FILES digest from the local "
+            "--submission-dir; refusing to dispatch without a portable custody "
+            "expectation."
         )
-    return expected_runtime_tree_sha256, content_tree_sha256
+    # 2026-08-04 r9m deadlock (permanent fix): the projected tree hash and the
+    # remote's own tree hash CANNOT be made to agree in general — both bake in
+    # environment-coupled fields (runtime_root_name, absolute paths, and the
+    # repo-local tac import scan, which resolves differently against Modal's
+    # mount layout). Any forwarded tree-hash expectation therefore deadlocks:
+    # one side or the other must reject it. Custody on the Modal axis is
+    # carried instead by (a) the transport-zip sha256, verified fail-closed on
+    # the remote BEFORE extraction, and (b) the environment-free runtime FILES
+    # digest below, validated remotely by contest_auth_eval against the
+    # extracted tree. Tree-hash expectations are refused with guidance rather
+    # than silently dropped.
+    if expected_runtime_tree_sha256 in ("", "auto", files_sha256):
+        return files_sha256, content_tree_sha256, ""
+    raise SystemExit(
+        "FATAL: --expected-runtime-tree-sha256 cannot be validated on the "
+        "Modal uploaded --submission-dir axis (the tree hash is path- and "
+        "environment-dependent; local projection and remote computation "
+        "structurally disagree — the 2026-08-04 r9m deadlock). Omit the flag "
+        "or pass 'auto': custody is enforced via the transport zip sha256 "
+        "(remote fail-closed) plus the environment-free runtime FILES digest "
+        f"{files_sha256}, which the remote validates against the extracted "
+        f"tree. (projected tree={remote_tree_sha256} "
+        f"content={content_tree_sha256} — informational only)"
+    )
 
 
 def _probe_cpu_environment() -> dict[str, Any]:
@@ -511,6 +524,7 @@ def _run_auth_eval_inner(
     scorer_input_cache_tensor_large_pair_threshold: int = 64,
     allow_large_scorer_input_cache_tensor_export: bool = False,
     scorer_input_cache_tensor_volume_run_id: str = "",
+    expected_runtime_files_sha256: str = "",
 ) -> dict[str, Any]:
     import os
     import shutil
@@ -572,6 +586,7 @@ def _run_auth_eval_inner(
             "source_repo_commit": source_repo_commit,
             "canonical_path": "archive.zip -> inflate.sh -> upstream/evaluate.py --device cpu",
             "expected_runtime_tree_sha256": expected_runtime_tree_sha256,
+            "expected_runtime_files_sha256": expected_runtime_files_sha256,
             "scorer_input_cache_hashes_requested": bool(scorer_input_cache_hashes),
             "scorer_input_cache_hash_batch_pairs": int(scorer_input_cache_hash_batch_pairs),
             "scorer_input_cache_tensors_requested": bool(scorer_input_cache_tensors),
@@ -730,6 +745,8 @@ def _run_auth_eval_inner(
     )
     if inner_expectation:
         cmd.extend(["--expected-runtime-tree-sha256", inner_expectation])
+    if expected_runtime_files_sha256:
+        cmd.extend(["--expected-runtime-files-sha256", expected_runtime_files_sha256])
     if scorer_input_cache_hashes:
         cmd.extend(
             [
@@ -960,6 +977,7 @@ def _run_auth_eval_cpu_fail_closed(
     scorer_input_cache_tensor_large_pair_threshold: int = 64,
     allow_large_scorer_input_cache_tensor_export: bool = False,
     scorer_input_cache_tensor_volume_run_id: str = "",
+    expected_runtime_files_sha256: str = "",
 ) -> dict[str, Any]:
     try:
         return _run_auth_eval_inner(
@@ -985,6 +1003,7 @@ def _run_auth_eval_cpu_fail_closed(
                 allow_large_scorer_input_cache_tensor_export
             ),
             scorer_input_cache_tensor_volume_run_id=scorer_input_cache_tensor_volume_run_id,
+            expected_runtime_files_sha256=expected_runtime_files_sha256,
         )
     except Exception as exc:  # pragma: no cover - remote diagnostic path
         return fail_closed_remote_exception_result(
@@ -1028,6 +1047,7 @@ def run_auth_eval_cpu(
     scorer_input_cache_tensor_large_pair_threshold: int = 64,
     allow_large_scorer_input_cache_tensor_export: bool = False,
     scorer_input_cache_tensor_volume_run_id: str = "",
+    expected_runtime_files_sha256: str = "",
 ) -> dict[str, Any]:
     """Run the canonical CPU auth eval on Modal Linux x86_64."""
 
@@ -1050,6 +1070,7 @@ def run_auth_eval_cpu(
         scorer_input_cache_tensor_large_pair_threshold=scorer_input_cache_tensor_large_pair_threshold,
         allow_large_scorer_input_cache_tensor_export=allow_large_scorer_input_cache_tensor_export,
         scorer_input_cache_tensor_volume_run_id=scorer_input_cache_tensor_volume_run_id,
+        expected_runtime_files_sha256=expected_runtime_files_sha256,
     )
 
 
@@ -1142,12 +1163,14 @@ def main(
         )
     except ModalAuthEvalPairingError as exc:
         raise SystemExit(f"FATAL: {exc}") from exc
-    expected_runtime_tree_sha256, expected_runtime_content_tree_sha256 = (
-        _validate_uploaded_runtime_tree_expectation(
-            expected_runtime_tree_sha256=expected_runtime_tree_sha256,
-            submission_dir_path=submission_dir_path,
-            inflate_sh_rel=inflate_sh_rel,
-        )
+    (
+        expected_runtime_files_sha256,
+        expected_runtime_content_tree_sha256,
+        expected_runtime_tree_sha256,
+    ) = _validate_uploaded_runtime_tree_expectation(
+        expected_runtime_tree_sha256=expected_runtime_tree_sha256,
+        submission_dir_path=submission_dir_path,
+        inflate_sh_rel=inflate_sh_rel,
     )
 
     local_summary = {
@@ -1165,6 +1188,7 @@ def main(
         "source_repo_commit": source_repo_commit,
         "expected_runtime_tree_sha256": expected_runtime_tree_sha256,
         "expected_runtime_content_tree_sha256": expected_runtime_content_tree_sha256,
+        "expected_runtime_files_sha256": expected_runtime_files_sha256,
         "scorer_input_cache_hashes_requested": bool(scorer_input_cache_hashes),
         "scorer_input_cache_hash_batch_pairs": int(scorer_input_cache_hash_batch_pairs),
         "scorer_input_cache_tensors_requested": bool(scorer_input_cache_tensors),
@@ -1235,6 +1259,7 @@ def main(
         int(scorer_input_cache_tensor_large_pair_threshold),
         bool(allow_large_scorer_input_cache_tensor_export),
         tensor_volume_run_id,
+        expected_runtime_files_sha256,
     )
     if claim_policy_normalized == "require_active":
         require_active_modal_auth_eval_claim(repo_root=Path.cwd(), spec=claim_spec)

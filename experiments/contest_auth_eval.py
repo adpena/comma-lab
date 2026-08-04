@@ -525,12 +525,38 @@ def _runtime_dependency_manifest(
     content_tree_sha = hashlib.sha256(
         json.dumps(content_payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
     ).hexdigest()
+    # Environment-free custody digest: ONLY the runtime files' (relative_path,
+    # bytes, sha256) plus the upstream evaluate.py identity. Deliberately
+    # excludes runtime_root_name, absolute paths, external dependency roots,
+    # and the repo-local tac import scan — all of which legitimately differ
+    # between the local packer and a provider host (Modal extracts under a
+    # different root and resolves repo-local imports against a different
+    # mount layout), so any digest that includes them cannot be validated
+    # consistently across environments (the 2026-08-04 r9m deadlock).
+    files_payload = {
+        "files": sorted(
+            (
+                {
+                    "relative_path": f["relative_path"],
+                    "bytes": f["bytes"],
+                    "sha256": f["sha256"],
+                }
+                for f in files
+            ),
+            key=lambda row: str(row["relative_path"]),
+        ),
+        "upstream_evaluate_py": upstream_eval,
+    }
+    runtime_files_sha = hashlib.sha256(
+        json.dumps(files_payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
     return {
         "schema": "contest_auth_eval_runtime_dependency_manifest_v1",
         "runtime_root": str(root),
         "runtime_file_count": len(files),
         "runtime_tree_sha256": tree_sha,
         "runtime_content_tree_sha256": content_tree_sha,
+        "runtime_files_sha256": runtime_files_sha,
         "files": files,
         "external_dependency_roots": external_dependency_roots,
         "repo_local_tac_import_manifest": repo_local_tac,
@@ -950,6 +976,28 @@ def _validate_expected_runtime_tree(prov: dict, expected_runtime_tree_sha256: st
         raise RuntimeError(
             "inflate runtime tree hash mismatch: "
             f"expected={expected_runtime_tree_sha256} actual={actual}"
+        )
+
+
+def _validate_expected_runtime_files(
+    prov: dict, expected_runtime_files_sha256: str | None
+) -> None:
+    """Fail closed when the runtime FILES digest differs from the expectation.
+
+    Unlike the tree hash, this digest is path- and environment-independent
+    (relative paths + file sha256s + evaluate.py identity only), so a value
+    computed by the local packer is valid on any host that extracted the same
+    bytes. This is the custody channel remote dispatch wrappers should use.
+    """
+
+    if not expected_runtime_files_sha256:
+        return
+    manifest = prov.get("inflate_runtime_manifest")
+    actual = manifest.get("runtime_files_sha256") if isinstance(manifest, dict) else None
+    if actual != expected_runtime_files_sha256:
+        raise RuntimeError(
+            "inflate runtime files digest mismatch: "
+            f"expected={expected_runtime_files_sha256} actual={actual}"
         )
 
 
@@ -2039,6 +2087,11 @@ def main() -> int:
                         help="Don't delete work dir on success (for debugging)")
     parser.add_argument("--expected-runtime-tree-sha256", default=None,
                         help="Fail if the inflate runtime dependency tree hash differs.")
+    parser.add_argument("--expected-runtime-files-sha256", default=None,
+                        help="Fail if the environment-free runtime FILES digest "
+                             "(relative paths + file sha256s + evaluate.py) differs. "
+                             "Use this channel for cross-host custody; the tree hash "
+                             "is path-dependent and not portable across hosts.")
     parser.add_argument(
         "--inflate-env",
         action="append",
@@ -2243,6 +2296,7 @@ def main() -> int:
             prov["inflate_env_overrides"] = inflate_env_overrides
             prov["inflate_env_override_mode"] = "diagnostic_non_promotable"
         _validate_expected_runtime_tree(prov, args.expected_runtime_tree_sha256)
+        _validate_expected_runtime_files(prov, args.expected_runtime_files_sha256)
         print(f"[contest_auth_eval] provenance saved: {work_dir / 'provenance.json'}")
         print(f"[contest_auth_eval] archive sha256: {prov['archive_sha256']}")
 
