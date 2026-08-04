@@ -221,9 +221,11 @@ the best **net**, which is why the discriminator had to price all three legs rat
 one.
 
 **Honest n.** η is **n=4** pooled (stratified, cap-pinned floors, replicating et1's 0.4817). The
-k=4 carriage is **n=1 measured (pair 48) at the time of writing**, with a second pair and an 8-pair
-extension in flight (`js1_k4_more.json`, resumable, checkpointed per pair). **The k=4 row is a
-MECHANISM result at n=1, not a population claim**, and the memo says so wherever it is quoted.
+k=4 carriage is **n=10** (stratified pairs 48/20/115/154/170/179/180/195/196/211), **10 of 10
+below shipped, 0 all-zero**, median ratio 0.9513. This is a population-scale carriage result on
+the subset (still subset-scoped for the pose axis per m96, not folded into net S). The two owed
+gates below (int16 quantiser re-score; the cap-pinned-floor caveat) still stand — n is no longer
+one of them.
 
 ## §4b Why ARM C is dominated, and ARM B mis-framed
 
@@ -297,26 +299,35 @@ generated ⇒ **FREE** under rule 118; only `k²·3` int16 coefficients per pair
 | DCT k=8 | `dct8@40` | 0.872× | **NO** | 384 |
 | DCT k=32 | `identity@0` | 1.064× | **YES** | 6,144 |
 
-**k=4 across both measured pairs (96 B/pair, inside budget):**
+**k=4 across the full n=10 measured population (96 B/pair, inside budget):**
 
 | pair | stage-1 damage | k=4 d_pose vs **shipped** | damage removed | all-zero? |
 |---|---:|---:|---:|:--:|
 | 48 | 3.654× | **0.3149×** | **91.4%** | no |
 | 115 | 2.097× | **0.9692×** | 53.8% | no |
+| 211 | 1.743× | **0.9511×** | 45.4% | no |
+| 170 | 1.530× | **0.9902×** | 35.3% | no |
+| 195 | 1.473× | **0.9515×** | 35.4% | no |
 | 154 | 1.452× | **0.9531×** | 34.4% | no |
 | 20 | 1.190× | **0.8483×** | 28.7% | no |
+| 180 | 1.181× | **0.9542×** | 19.2% | no |
+| 179 | 1.120× | **0.9149×** | 18.3% | no |
+| 196 | 0.999× | **0.9372×** | 6.1% | no |
 
-**4 of 4 land below shipped and none solves to all-zero** — so at 96 B/pair the cheap basis both
-pays for itself and leaves pose no worse than what we ship, *while* the seg gain is banked. Note
-the ordering: the repair removes MORE of the damage where the damage is LARGER (91.4% at 3.654×,
-28.7% at 1.190×), which is the useful direction for a heavy-tailed damage distribution — the tail
-is where the pose budget is actually at risk, and it is where k=4 works best.
+**10 of 10 land below shipped and NONE solves to all-zero** (mean 0.8785, median 0.9513) — so at
+96 B/pair the cheap generic basis pays for itself and leaves pose **no worse than shipped on every
+pair**, *while* the seg gain is banked. This is now a population-scale carriage result (n=10,
+still subset-scoped per m96), not a single-pair mechanism note. The repair removes MORE of the
+damage where the damage is LARGER (91.4% at 3.654×, tapering to 6–19% near 1.0×) — so the bulk
+gains are modest but the **heavy tail**, where the pose budget is actually at risk (et1's 123.8×
+class), is where k=4 does its heaviest work. The mean is dominated by pair 48; the median 0.9513
+is the honest "typical pair" figure.
 
-**The efficiency is nonetheless not uniform**,
-and on pair 20 the free-form arm did *better* (0.223×) than k=4 (0.848×) while on pair 48 the
-reverse held. That is the signature of **two differently under-converged solvers**, not of a
-capacity ordering, and it is the reason every η and every repair here is labelled a **FLOOR**
-rather than an optimum. The k=4 mean is not quoted as a population statistic at n=2.
+**The efficiency is nonetheless not uniform across arms**,
+and on pair 20 the free-form arm did *better* (0.223×) than k=4 (0.848×) while on pair 115 the
+free-form arm found **nothing** (0.0%) where k=4 repaired 53.8%. That is the signature of
+**differently under-converged solvers**, not of a capacity ordering, and it is the reason every η
+and every repair here is labelled a **FLOOR** rather than an optimum.
 
 **Three things this settles.**
 
@@ -329,16 +340,17 @@ rather than an optimum. The k=4 mean is not quoted as a population statistic at 
    under a well-scaled lr converge; 589,824 under a shared lr do not. **The free-form byte figure
    in §5 is an INSTRUMENT artifact and must not be cited as the cost of the repair.**
 
-   **Two decisive instances, pairs 115 and 154**, each run on the identical staged frame: free-form
-   repaired **0.0%** of the damage (115: 2.097×→2.097×; 154: 1.452×→1.452× — the solver found
-   *nothing* both times), while **k=4 repaired 53.8% and 34.4%** (→ 0.9692×, → 0.9531×) with 48
-   coefficients. A basis strictly contained in the free arm's search space succeeded exactly where
-   the free arm failed outright, **twice**. That is not a capacity ordering — it is a
+   **Free-form found NOTHING (0.0% repair) on 6 of the 10 pairs it was measured on**, each run on
+   the identical staged frame where the k=4 arm demonstrably repaired the same pair (e.g. 115:
+   free-form 0.0% vs k=4 53.8%; 154: 0.0% vs 34.4%). A basis strictly contained in the free arm's
+   search space succeeded exactly where the free arm failed outright — a **majority** of the time.
+   That is not a capacity ordering (rank-4 ⊂ free cannot beat free at its optimum) — it is a
    **conditioning failure**, and it means the free-form arm is not merely inefficient but
-   **unreliable**: it silently returns "no repair possible" on pairs where a repair demonstrably
-   exists. Any verdict this unit might have drawn from free-form alone — including the fatal
-   carriage verdict I had begun to write — would have been a false negative of exactly the shape
-   this program calls m50.
+   **unreliable**: it silently returns "no repair possible" on the majority of pairs where a
+   repair demonstrably exists. Any verdict this unit might have drawn from free-form alone —
+   including the fatal carriage verdict I had begun to write — would have been a false negative of
+   exactly the shape this program calls m50. **The 6/10 free-form failure rate is the single
+   strongest argument for the k=4 arm: it never once failed (10/10 repaired, 0 all-zero).**
 3. **k=32's all-zero is the same defect at the other end** (1024 coefficients, shared lr,
    overshoot into the clamp) — a false negative inside the arm built to detect false negatives.
    `verdict_scope: INSTRUMENT` on both.
