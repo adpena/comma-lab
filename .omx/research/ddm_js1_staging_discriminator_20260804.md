@@ -161,8 +161,15 @@ d_pose is **verified from the real camera pair**; seg-exactness is **measured pe
 | seg exactly preserved | — | **ALL pairs ✅** | — |
 | net S (seg + rate only) | **−0.05605 = 9.06% of gap** | **−0.05605** | — |
 
-**η replicates et1 independently.** Pooled 0.4814 against et1's published 0.4817 on the same
-stratified pairs — a cross-check that licenses the comparison, since stage 1 is shared machinery.
+**η replicates et1 independently.** Pooled 0.4814 (n=4; 0.4865 at n=5) against et1's published
+0.4817 on the same stratified pairs — a cross-check that licenses the comparison, since stage 1 is
+shared machinery.
+
+**On η retention, read the per-pair fact, not the pooled ratio.** The aggregator's
+`eta_retained_vs_stage1` prints 0.989 once the receipts carry unequal n (stage 1 at n=5, C-PRIME
+at n=4) — an **unmatched-denominator artifact of pooling**, not a measured seg loss. Per pair the
+retention is exactly **1.000**, and provably so: `seg_exactly_preserved = True` ⇒ the argmax field
+is identical ⇒ `flips_after` is identical ⇒ η is identical. Pair 48 shows it directly, 558/558.
 
 **C-PRIME costs exactly nothing in seg: η retention 1.000, seg preserved on every pair.** And its
 absolute Δd_pose is **negative** — the staged pair is better on pose than what we ship. Per m96 /
@@ -286,6 +293,26 @@ generated ⇒ **FREE** under rule 118; only `k²·3` int16 coefficients per pair
 | DCT k=8 | `dct8@40` | 0.872× | **NO** | 384 |
 | DCT k=32 | `identity@0` | 1.064× | **YES** | 6,144 |
 
+**k=4 across both measured pairs (96 B/pair, inside budget):**
+
+| pair | stage-1 damage | k=4 d_pose vs **shipped** | damage removed | all-zero? |
+|---|---:|---:|---:|:--:|
+| 48 | 3.654× | **0.3149×** | **91.4%** | no |
+| 115 | 2.097× | **0.9692×** | 53.8% | no |
+| 20 | 1.190× | **0.8483×** | 28.7% | no |
+
+**3 of 3 land below shipped and none solves to all-zero** — so at 96 B/pair the cheap basis both
+pays for itself and leaves pose no worse than what we ship, *while* the seg gain is banked. Note
+the ordering: the repair removes MORE of the damage where the damage is LARGER (91.4% at 3.654×,
+28.7% at 1.190×), which is the useful direction for a heavy-tailed damage distribution — the tail
+is where the pose budget is actually at risk, and it is where k=4 works best.
+
+**The efficiency is nonetheless not uniform**,
+and on pair 20 the free-form arm did *better* (0.223×) than k=4 (0.848×) while on pair 48 the
+reverse held. That is the signature of **two differently under-converged solvers**, not of a
+capacity ordering, and it is the reason every η and every repair here is labelled a **FLOOR**
+rather than an optimum. The k=4 mean is not quoted as a population statistic at n=2.
+
 **Three things this settles.**
 
 1. **A smooth generic basis CAN aim at d_pose here**, and does so *well*: k=4 removes **91.4%** of
@@ -299,6 +326,15 @@ generated ⇒ **FREE** under rule 118; only `k²·3` int16 coefficients per pair
 3. **k=32's all-zero is the same defect at the other end** (1024 coefficients, shared lr,
    overshoot into the clamp) — a false negative inside the arm built to detect false negatives.
    `verdict_scope: INSTRUMENT` on both.
+
+**⚠ AN UNMEASURED STEP IN MY OWN PRICE, named rather than left implicit.** The 96 B/pair figure
+counts 48 coefficients as int16, but the solver returns **floats** and the repair was **never
+re-scored after quantising them**. The magnitudes make the rounding almost certainly negligible
+(an orthonormal DCT of a delta with mean |δ|≈9 over 384×512 puts the low modes in the 10³–10⁴
+range, so ±0.5 integer rounding is ~10⁻⁴ relative) — but *almost certainly* is not *measured*,
+and a payload whose value has not been re-measured **through its own quantiser** is exactly the
+byte-close discipline this program refuses to skip. **The k=4 net therefore carries one owed
+step**, and it is fire-order-1 below, not a footnote.
 
 **A smooth generic basis CAN aim at d_pose here.** k=8 repairs to 0.872× — below shipped, not
 all-zero. So ph5o's rank-6 all-zero result does **not** transfer naively to this actuator and this
@@ -362,15 +398,21 @@ apply to them by construction.
   pose at **zero** seg cost because frame_0 is outside SegNet's input. Q3 on this field would be
   measuring the price of something now obtainable free. et1's fire-order-3 (budget) is likewise
   folded: its coupling law is broken by the staging, not traded along.
-- **QUEUED, fire order 1 — the k≤4 admissible-rank close.** The only carriage rank inside the
-  157.7 B/pair budget. Fire condition: none, it is running. If k=4 repairs the **heavy tail**
-  (pair 48 at 3.654×, and et1's 123.8× class) the row banks; if it solves to all-zero at k=4 the
-  cheap-basis family is closed **on price-and-capacity jointly** and the next carrier must be
-  something other than a generic smooth basis.
-- **QUEUED, fire order 2 — re-run k=32 with per-rank lr conditioning.** Its all-zero is a measured
-  instrument defect (§5b), and leaving a known false negative in the record is the m50 class. It
-  cannot bank (39× over budget) so this is hygiene, not a candidate — but the row must not stand
-  as evidence.
+- **QUEUED, fire order 1 — re-score the k=4 repair THROUGH its own int16 quantiser.** The 96 B
+  price is counted but its *value* was measured on unquantised floats (§5b ⚠). Until the repair
+  survives its own carriage arithmetic the k=4 net is a projection, not a row. Cheapest owed
+  step, and it gates everything below. Fire condition: none — it is a re-score of receipts
+  already on disk.
+- **QUEUED, fire order 2 — finish the k=4 ladder to honest n on the DAMAGE TAIL.** Running as
+  `js1_k4_more.json` (8 pairs, resumable, checkpointed per pair). The pairs that decide this are
+  the high-damage ones (et1's 123.8× class), because that is where a repair either holds or does
+  not; a k=4 mean over low-damage pairs would be uninformative. Sweep k ∈ {2,3,4,5} at the same
+  time — the budget admits up to ~5 and nothing above it, so the ladder is short and bounded.
+- **QUEUED, fire order 3 — re-run free-form and k=32 with per-rank lr conditioning.** Both are
+  measured instrument defects (§5b); leaving a known false negative in the record is the m50
+  class. Neither can bank (2293× and 39× over budget), so this is hygiene — but the free-form
+  361,708 B figure must not be citable as "the cost of the repair", and the k=32 all-zero must
+  not be citable as a capacity result.
 - **QUEUED, fire order 3 — the token-absorption carriage path, UNPRICED and unexamined here.**
   Our vehicle is **99.0% tokens** (m08/TR1). frame_0's pixels are produced by the renderer from
   the token stream, so the repair's true marginal cost may be the **token-stream delta**, not a
