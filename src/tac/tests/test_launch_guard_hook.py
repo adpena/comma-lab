@@ -331,3 +331,22 @@ def test_allows_read_only_process_inspection():
 
 def test_codex_spawn_block_honours_the_escape_hatch():
     assert _guard().decide("codex exec 'go'", {"TAC_LAUNCH_GUARD_OK": "1"})[0] is True
+
+
+def test_inline_escape_hatch_overrides_the_codex_spawn_block():
+    """The block message advertises `set TAC_LAUNCH_GUARD_OK=1`; an inline env
+    assignment reaches decide() only via the command string. Round-1 ordering
+    checked codex-spawn BEFORE safe tokens, making the advertised hatch a
+    no-op — caught by dogfooding (a python heredoc merely containing the
+    words was blocked twice)."""
+    allow, _ = hook.decide("TAC_LAUNCH_GUARD_OK=1 python3 edit_text_mentioning_codex_exec.py", {})
+    assert allow is True
+
+
+def test_heredoc_text_manipulation_mentioning_codex_exec_still_blocked_without_hatch():
+    """Conservative default stands: without the hatch, a non-readonly command
+    containing `codex exec` is still refused (false positives are the price;
+    the hatch is the documented exception)."""
+    allow, reason = hook.decide("python3 - <<'EOF'\nprint('codex exec')\nEOF", {})
+    assert allow is False
+    assert "KEEPER" in reason
