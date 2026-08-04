@@ -38,6 +38,7 @@ receiver-consumption bijection (#417).
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import lzma
 import struct
@@ -93,6 +94,20 @@ KL1_MAGIC = b"KL1PWF01"
 CAMERA_H, CAMERA_W = 874, 1164
 FRAME0_POLICY = "warp_two_plane_static_photo_beta_v4d"
 DEFAULT_BETA_MAGS = (0.0, 0.5, 1.0)  # rung-A magnitude table (sign from yaw)
+BD1_CLASS_FIELD_MAGIC = b"BD1CLF1!"
+BD1_CLASS_FIELD_HEADER = struct.Struct("<8sBHHHBBBBBII32s")
+BD1_CLASS_FIELD_VERSION = 1
+_BD1_RAW = 0
+_BD1_LZMA1_RAW = 1
+_BD1_BROTLI_Q11 = 2
+_BD1_SMEVR_R7_NIBBLE = 3
+_BD1_LZMA_FILTERS = [{"id": lzma.FILTER_LZMA1, "dict_size": 1 << 22,
+                       "lc": 0, "lp": 0, "pb": 0}]
+_BD1_PAINT_ROAD_LANE_RGB = 1
+_BD1_ROAD_CLASS = 0
+_BD1_LANE_CLASS = 1
+_BD1_ROAD_RGB = np.array([30, 39, 72], dtype=np.uint8)
+_BD1_LANE_RGB = np.array([77, 87, 119], dtype=np.uint8)
 
 
 def geometric_horizon_row(K: np.ndarray) -> int:
@@ -248,6 +263,144 @@ def _f0pr_apply(u8: np.ndarray, coef_i16: np.ndarray, atoms: np.ndarray,
     return out
 
 
+def _bd1_unpack_bits(payload: bytes, count: int) -> np.ndarray:
+    need = (count + 7) // 8
+    if len(payload) != need:
+        raise SystemExit("BD1 class-field bit payload length mismatch")
+    bits = np.unpackbits(np.frombuffer(payload, dtype=np.uint8), bitorder="big")
+    if np.any(bits[count:] != 0):
+        raise SystemExit("BD1 class-field bit payload has nonzero padding")
+    return np.ascontiguousarray(bits[:count].astype(bool))
+
+
+def _bd1_nibbles_to_bytes(nibbles: np.ndarray) -> np.ndarray:
+    if nibbles.ndim != 3 or nibbles.shape[2] != 2:
+        raise SystemExit("BD1 SMEVR nibble matrix shape mismatch")
+    return ((nibbles[:, :, 0].astype(np.uint16) << 4)
+            | nibbles[:, :, 1].astype(np.uint16)).astype(np.uint8)
+
+
+def _bd1_unsmevr_records(payload: bytes) -> list[bytes]:
+    if payload[:5] != b"CGSV1":
+        raise SystemExit("BD1 SMEVR class-field magic differs")
+    if len(payload) < 15:
+        raise SystemExit("BD1 SMEVR class-field header is truncated")
+    n, cols_total, chunk_count = struct.unpack("<IIH", payload[5:15])
+    off = 15
+    parts = []
+    for _ in range(chunk_count):
+        if len(payload) < off + 4:
+            raise SystemExit("BD1 SMEVR chunk length is truncated")
+        (length,) = struct.unpack_from("<I", payload, off)
+        off += 4
+        frame = payload[off:off + length]
+        off += length
+        if len(frame) != length:
+            raise SystemExit("BD1 SMEVR chunk is truncated")
+        decoded = np.asarray(decode_token_codes(frame), dtype=np.uint8)
+        if decoded.shape[0] != n or decoded.shape[2] != 2:
+            raise SystemExit("BD1 SMEVR decoded chunk shape differs")
+        parts.append(_bd1_nibbles_to_bytes(
+            decoded.reshape(decoded.shape[0], decoded.shape[1], 2)))
+    if off != len(payload):
+        raise SystemExit("BD1 SMEVR class-field has trailing bytes")
+    matrix = (
+        np.concatenate(parts, axis=1)[:, :cols_total]
+        if parts else np.zeros((n, 0), dtype=np.uint8)
+    )
+    records: list[bytes] = []
+    for row in matrix:
+        if row.size < 4:
+            raise SystemExit("BD1 SMEVR record lacks a length prefix")
+        (length,) = struct.unpack("<I", row[:4].tobytes())
+        if length > max(0, cols_total - 4):
+            raise SystemExit("BD1 SMEVR record length exceeds row width")
+        records.append(row[4:4 + length].tobytes())
+    return records
+
+
+def _bd1_decode_body(codec: int, payload: bytes) -> bytes:
+    if codec == _BD1_RAW:
+        return bytes(payload)
+    if codec == _BD1_LZMA1_RAW:
+        return lzma.decompress(payload, format=lzma.FORMAT_RAW, filters=_BD1_LZMA_FILTERS)
+    if codec == _BD1_BROTLI_Q11:
+        return brotli.decompress(payload)
+    if codec == _BD1_SMEVR_R7_NIBBLE:
+        return b"".join(_bd1_unsmevr_records(payload))
+    raise SystemExit(f"unknown BD1 class-field codec id {codec}")
+
+
+def _bd1_parse_class_field(blob: bytes):
+    """Parse a counted Road/Lane r1-band class field, closing on the final byte."""
+    if len(blob) < BD1_CLASS_FIELD_HEADER.size:
+        raise SystemExit("BD1 class-field section header truncated")
+    (magic, version, seg_h, seg_w, n_pairs, radius, road_cls, lane_cls, paint_mode,
+     codec, raw_len, band_bytes, raw_sha) = BD1_CLASS_FIELD_HEADER.unpack_from(blob, 0)
+    if magic != BD1_CLASS_FIELD_MAGIC:
+        raise SystemExit("BD1 class-field magic differs")
+    if version != BD1_CLASS_FIELD_VERSION:
+        raise SystemExit("BD1 class-field version differs")
+    if radius != 1:
+        raise SystemExit("BD1 class-field receiver currently serves only r1 bands")
+    if road_cls != _BD1_ROAD_CLASS or lane_cls != _BD1_LANE_CLASS:
+        raise SystemExit("BD1 class-field Road/Lane class ids differ")
+    if paint_mode != _BD1_PAINT_ROAD_LANE_RGB:
+        raise SystemExit("BD1 class-field paint mode differs")
+    if band_bytes != (int(seg_h) * int(seg_w) + 7) // 8:
+        raise SystemExit("BD1 class-field band bitmap width differs")
+    raw = _bd1_decode_body(int(codec), blob[BD1_CLASS_FIELD_HEADER.size:])
+    if len(raw) != int(raw_len):
+        raise SystemExit("BD1 class-field raw length differs")
+    if hashlib.sha256(raw).digest() != raw_sha:
+        raise SystemExit("BD1 class-field raw SHA-256 differs")
+
+    bands = []
+    lane_bits = []
+    pair_counts = []
+    off = 0
+    slots = int(seg_h) * int(seg_w)
+    for _ in range(int(n_pairs)):
+        band_payload = raw[off:off + int(band_bytes)]
+        off += int(band_bytes)
+        band = _bd1_unpack_bits(band_payload, slots)
+        count = int(band.sum())
+        side_bytes = (count + 7) // 8
+        side = _bd1_unpack_bits(raw[off:off + side_bytes], count)
+        off += side_bytes
+        bands.append(np.flatnonzero(band.reshape(-1)).astype(np.int32))
+        lane_bits.append(side)
+        pair_counts.append(count)
+    if off != len(raw):
+        raise SystemExit("BD1 class-field raw body has trailing bytes")
+    return {
+        "seg_h": int(seg_h),
+        "seg_w": int(seg_w),
+        "bands": tuple(bands),
+        "lane_bits": tuple(lane_bits),
+        "pair_counts": tuple(pair_counts),
+    }
+
+
+def _bd1_apply_class_field(u8: np.ndarray, field, pair_index: int) -> np.ndarray:
+    band = field["bands"][pair_index]
+    if int(band.size) == 0:
+        return u8
+    lane = field["lane_bits"][pair_index]
+    rows = band // field["seg_w"]
+    cols = band % field["seg_w"]
+    rlo, rhi, _rw = _f0pr_bilinear_axis(field["seg_h"], u8.shape[0])
+    clo, chi, _cw = _f0pr_bilinear_axis(field["seg_w"], u8.shape[1])
+    colors = np.where(
+        lane[:, None], _BD1_LANE_RGB[None, :], _BD1_ROAD_RGB[None, :]
+    ).astype(np.uint8)
+    out = u8.copy()
+    for rr in (rlo[rows], rhi[rows]):
+        for cc in (clo[cols], chi[cols]):
+            out[rr, cc] = colors
+    return out
+
+
 def parse_pose_warp_v4d(payload: bytes):
     if payload[:8] != MAGIC:
         raise SystemExit("pose_warp magic differs (expected v4d PFS1WPD1)")
@@ -332,6 +485,7 @@ class Decoder:
 
     def __init__(self, archive_dir: Path) -> None:
         self._f0_repair = None          # (coefs, atoms, seg_h, seg_w) when F0PR1 ships
+        self._bd1_class_field = None    # Road/Lane r1-band class-field modulation
         blob = archive_dir / IX2_MEMBER
         if blob.exists():
             codes, sections, pose_warp = self._read_ix2(blob)
@@ -404,17 +558,31 @@ class Decoder:
         """
 
         bulk, sections = parse_payload(blob.read_bytes())
-        if len(sections) == len(IX2_JOINT_ORDER) + 1:
-            # v5 joint group: the 5th section is the F0PR1 frame_0 pose-repair stream.
-            config, renderer, selector, pose_warp, f0pr = sections
+        if len(sections) == len(IX2_JOINT_ORDER) + 2:
+            # bd1 appends a tagged Road/Lane class field after the existing F0PR1 stream.
+            config, renderer, selector, pose_warp, f0pr, class_field = sections
+            if f0pr[:8] != F0PR_MAGIC or class_field[:8] != BD1_CLASS_FIELD_MAGIC:
+                raise SystemExit("ix2 optional sections are not F0PR1 then BD1CLF1")
             k, seg_h, seg_w, coefs = _f0pr_parse(f0pr)
             self._f0_repair = (coefs, _f0pr_dct_atoms(k, seg_h, seg_w), seg_h, seg_w)
+            self._bd1_class_field = _bd1_parse_class_field(class_field)
+        elif len(sections) == len(IX2_JOINT_ORDER) + 1:
+            # v5 joint group: the 5th section is the F0PR1 frame_0 pose-repair stream.
+            config, renderer, selector, pose_warp, extra = sections
+            if extra[:8] == F0PR_MAGIC:
+                k, seg_h, seg_w, coefs = _f0pr_parse(extra)
+                self._f0_repair = (coefs, _f0pr_dct_atoms(k, seg_h, seg_w), seg_h, seg_w)
+            elif extra[:8] == BD1_CLASS_FIELD_MAGIC:
+                self._bd1_class_field = _bd1_parse_class_field(extra)
+            else:
+                raise SystemExit("ix2 optional section magic is neither F0PR1 nor BD1CLF1")
         elif len(sections) == len(IX2_JOINT_ORDER):
             config, renderer, selector, pose_warp = sections
         else:
             raise SystemExit(
                 f"ix2 container holds {len(sections)} sections, "
-                f"expected {len(IX2_JOINT_ORDER)} or {len(IX2_JOINT_ORDER) + 1}")
+                f"expected {len(IX2_JOINT_ORDER)}, {len(IX2_JOINT_ORDER) + 1}, "
+                f"or {len(IX2_JOINT_ORDER) + 2}")
         offset, beta_mags, st_grid = unpack_config_section(config)
         self.dim0_offset = offset
         self.beta_mags = tuple(beta_mags)
@@ -432,7 +600,10 @@ class Decoder:
         )
 
     def f1(self, i: int) -> np.ndarray:
-        return render_frame1_camera_uint8(self.packet, i)
+        frame = render_frame1_camera_uint8(self.packet, i)
+        if self._bd1_class_field is not None:
+            frame = _bd1_apply_class_field(frame, self._bd1_class_field, i)
+        return frame
 
     def _warp_pair(self, f1_f: np.ndarray, pose: np.ndarray, s_t: float,
                    sel: int, rot: float) -> np.ndarray:

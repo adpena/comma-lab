@@ -1,0 +1,175 @@
+{
+  "axis": "[macOS-CPU advisory / scorer-free receiver-byte custody]",
+  "base": {
+    "archive_bytes": 357836,
+    "archive_sha256": "d5e814d5b9f65c3094b0e65fecdd7771734d03c420c63d1d2033a671b766986a",
+    "axis": "[macOS-CPU advisory]",
+    "joint_section_count": 5,
+    "own_vehicle_S": 0.7539807296911207,
+    "payload_sha256": "bd6da15ec41030762e4510555f12d3d141d3c71f495af701666a769b12f0b036",
+    "submission_dir": "/Volumes/VertigoDataTier/pact/ddm_qo1_20260804/sub_auto_pairbit"
+  },
+  "boundaries": [
+    "No SegNet/PoseNet forward was run.",
+    "No upstream/ files were edited.",
+    "No /tmp evidence is cited.",
+    "The field is video-derived counted payload.",
+    "Survival through scorer cells is not measured or claimed."
+  ],
+  "built_at_utc": "2026-08-04T22:54:48.941905+00:00",
+  "candidate": {
+    "archive_bytes": 726027,
+    "archive_sha256": "88a535164d4cfcf124f2252714cc4846e90d6d6ddaa9005900e34ace68f73d0e",
+    "delta_bytes_vs_qo1": 368191,
+    "label": "RECEIVER-CLOSED, SURVIVAL-UNMEASURED, score_claim=false",
+    "payload_sha256": "c2cf3c4813c1041a826af38ddbe0ddf83187263ea59ab11675b436128be190ef",
+    "rate_delta_S_vs_qo1": 0.24516327380900538,
+    "submission_dir": "/Volumes/VertigoDataTier/pact/ddm_bd1_20260805/sub_auto_pairbit_class_field_r2"
+  },
+  "candidate_parse_back": {
+    "archive_bytes": 726027,
+    "archive_sha256": "88a535164d4cfcf124f2252714cc4846e90d6d6ddaa9005900e34ace68f73d0e",
+    "bulk_bytes": 341295,
+    "joint_section_count": 6,
+    "joint_sections": [
+      {
+        "index": 0,
+        "magic": "\u0000\u0000B\r\u0003\u000b\u0003",
+        "name": "config",
+        "raw_bytes": 36,
+        "sha256": "fc4f23ac9e31ba266ace26131319eb5b574d69e1d505fb1fc20a9dbc79a240d6"
+      },
+      {
+        "index": 1,
+        "magic": "IX2REN01",
+        "name": "renderer",
+        "raw_bytes": 3266,
+        "sha256": "3b8eb0c24f9e6d8b547a23a5db29a1dbbd03db474fbba3638b0c3dd858ca7009"
+      },
+      {
+        "index": 2,
+        "magic": "{\"activa",
+        "name": "selector",
+        "raw_bytes": 535,
+        "sha256": "8fc5c3fc65eb051b65ebf01d4b008e52d606097194c57884e739eae2ad8382e1"
+      },
+      {
+        "index": 3,
+        "magic": "PFS1WPD1",
+        "name": "pose_warp",
+        "raw_bytes": 8751,
+        "sha256": "d1d073e55aacf991491365d13716fededb169854b78bb203c34c84ca880c25db"
+      },
+      {
+        "index": 4,
+        "magic": "F0PR1!\u0000\u0000",
+        "name": "frame0_pose_repair",
+        "raw_bytes": 4081,
+        "sha256": "b5874d32324a46dc76cb1fc0beb7cda5fdaca2f59ebae6acbb08283206e8e7a2"
+      },
+      {
+        "index": 5,
+        "magic": "BD1CLF1!",
+        "name": "road_lane_class_field",
+        "raw_bytes": 367929,
+        "sha256": "d9504b93b1e8c2255795222d02bac3b8a7698818edb343086120b6dd878a51a4"
+      }
+    ],
+    "payload_bytes": 725919,
+    "payload_reencodes_identically": true,
+    "zip_members": [
+      {
+        "compress_type": 0,
+        "compressed_bytes": 725919,
+        "name": "0.bin",
+        "uncompressed_bytes": 725919
+      }
+    ]
+  },
+  "class_field_pricing": {
+    "band_pixels": 1479802,
+    "best_body_bytes": 367869,
+    "best_body_sha256": "3fb4116a5135a667d4d6a4bed5a020932712a5da63e0ddfdc96aa2ca7a6b4fed",
+    "best_codec": "brotli-q11",
+    "coder_race": [
+      {
+        "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_bd1_20260805/class_field_payloads/bd1_r1_road_lane_class_field.brotli-q11.bin",
+        "bytes": 367869,
+        "codec": "brotli-q11",
+        "sha256": "3fb4116a5135a667d4d6a4bed5a020932712a5da63e0ddfdc96aa2ca7a6b4fed"
+      },
+      {
+        "artifact_path": null,
+        "bytes": 404407,
+        "codec": "lzma1-raw",
+        "sha256": "36c5a11910e620f89cf683c96eef9b81448dd1aa3ab7bea53f28a0c7829a84f3"
+      },
+      {
+        "artifact_path": null,
+        "bytes": 421705,
+        "codec": "smevr-r7-nibble",
+        "sha256": "3e16bf118eea5f33e474440ca9f35977bfbd328a5f21780460e2b79ed06099f3"
+      }
+    ],
+    "field_schema": "r1 Road/Lane band bitmap per pair + Road/Lane side bits over raster-order band coordinates",
+    "lane_side_bits": 609398,
+    "raw_bytes": 14930846,
+    "raw_sha256": "265cabe9964864806cc537d69e7f654eb81c65b96897dfc7766c4cab871ab2d3",
+    "records": 600,
+    "road_side_bits": 870404,
+    "section_bytes": 367929,
+    "section_magic": "BD1CLF1!",
+    "section_sha256": "d9504b93b1e8c2255795222d02bac3b8a7698818edb343086120b6dd878a51a4",
+    "version": 1
+  },
+  "comparison": {
+    "cq2_thresholds": {
+      "25KB_student_explicit_direction": 0.611747,
+      "25KB_student_side_implied": 0.51681,
+      "75KB_student_explicit_direction": 0.854688,
+      "75KB_student_side_implied": 0.759752
+    },
+    "se3_captured_flips": 161660,
+    "se3_explicit_direction_stream_bytes": 100904,
+    "se3_side_implied_stream_bytes": 81365
+  },
+  "inputs": {
+    "class_order": {
+      "Lane": 1,
+      "Road": 0
+    },
+    "gt_cache": "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+    "gt_cache_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6",
+    "lstars_member": "lstars.npy",
+    "selection_mode": "n600 all pairs; no prefix",
+    "shape": [
+      600,
+      384,
+      512
+    ]
+  },
+  "n600_scorer_job": false,
+  "old_archive_identity_proof": {
+    "byte_identical_to_qo1_shipped_decode": true,
+    "command": "/Users/adpena/Projects/pact/.venv/bin/python /Volumes/VertigoDataTier/pact/ddm_bd1_20260805/qo1_identity_extended_receiver_r2/inflate_runner.py /Volumes/VertigoDataTier/pact/ddm_bd1_20260805/qo1_identity_extended_receiver_r2/archive /Volumes/VertigoDataTier/pact/ddm_bd1_20260805/qo1_identity_extended_receiver_r2/inflated /Volumes/VertigoDataTier/pact/ddm_bd1_20260805/qo1_identity_extended_receiver_r2/names.txt",
+    "expected_raw_bytes": 3662409600,
+    "expected_raw_sha256": "3ce7d269a7080a4024a576694cd0ddc697099c64cd02fdd2bb879339e4b03f31",
+    "output_raw": "/Volumes/VertigoDataTier/pact/ddm_bd1_20260805/qo1_identity_extended_receiver_r2/inflated/0.raw",
+    "raw_bytes": 3662409600,
+    "raw_sha256": "3ce7d269a7080a4024a576694cd0ddc697099c64cd02fdd2bb879339e4b03f31",
+    "wall_seconds": 209.0
+  },
+  "own_vehicle_frontier_line": "S = 0.7539807296911207 @ 357836 B [macOS-CPU advisory]",
+  "promotion_eligible": false,
+  "receiver_smoke": {
+    "band_pixels_this_pair": 2960,
+    "camera_pixels_changed": 11840,
+    "frame1_after_sha256": "fb0ec8c7e9ee8cc2b3f630088b90865b9f78531d2bab8bd7bab2114d7df14102",
+    "frame1_before_sha256": "4bd5d651172308b377136a983f50c49ba5019ad9f5fd01759775650756086536",
+    "mutated": true,
+    "pair": 0,
+    "receiver_class_field_present": true
+  },
+  "schema": "ddm_bd1_class_field_receiver.v1",
+  "score_claim": false
+}
