@@ -21,6 +21,7 @@ import pytest
 
 from tac.optimization.ddm_ix2_archive_container import (
     _CONFIG_HEADER,
+    _TOKEN_HEADER,
     CODER_NAMES,
     RENDERER_FRAME_MAGIC,
     TABLE_F16,
@@ -214,6 +215,42 @@ def test_mode_factorisation_matches_r7() -> None:
     r7_base, r7_delta = r7.factor_mode_delta(codes, 16)
     assert np.array_equal(base, r7_base)
     assert np.array_equal(delta, r7_delta)
+
+
+def test_token_frame_decode_is_base_rule_agnostic() -> None:
+    """The base is SHIPPED, so decode must reconstruct under ANY base, not just the mode.
+
+    ``encode_token_frame`` picks the per-cell temporal mode, but ``decode_token_frame``
+    only does ``(base + delta) % levels`` over a base it reads from the frame.  That
+    asymmetry is what makes a base-rule race a $0 ENCODER-SIDE experiment needing no
+    receiver change -- the property ``ddm_sv2`` relied on when it re-raced the rh1
+    family (30 arms) on the live ``IX2TOK01`` field and measured the incumbent mode as
+    the minimum.
+
+    Guarded against vacuity two ways: the chosen base is asserted to actually DIFFER
+    from the mode (otherwise this would silently re-test the incumbent), and the frame
+    is asserted to differ from the canonical one (otherwise no alternative was encoded).
+    """
+
+    codes = _lattice()
+    levels = 16
+    mode_base, _ = _factor_mode_delta(codes, levels)
+    # A deliberately non-mode base: shift every cell one symbol up.
+    alt_base = ((mode_base.astype(np.int16) + 1) % levels).astype(np.uint8)
+    assert not np.array_equal(alt_base, mode_base), "alt base collapsed onto the mode"
+
+    p, r, c, k = codes.shape
+    delta = ((codes.astype(np.int16) - alt_base[None].astype(np.int16)) % levels).astype(np.uint8)
+    residual = np.ascontiguousarray(np.transpose(delta, (1, 2, 3, 0)))
+    coder_r, block_r = code_block(_pack_nibbles(residual.reshape(-1)))
+    coder_b, block_b = code_block(_pack_nibbles(alt_base.reshape(-1)))
+    header = _TOKEN_HEADER.pack(
+        levels, coder_r, coder_b, 0, p, r, c, k, len(block_r), len(block_b)
+    )
+    frame = TOKEN_FRAME_MAGIC + header + block_r + block_b
+
+    assert frame != encode_token_frame(codes, levels=levels), "no alternative was encoded"
+    assert np.array_equal(decode_token_frame(frame), codes)
 
 
 def test_cell_major_layout_must_beat_aos() -> None:
