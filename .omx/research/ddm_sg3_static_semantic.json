@@ -1,0 +1,27 @@
+{
+ "gt_islands_Lane": {
+  "n": 16581,
+  "per_frame": 27.635,
+  "med": 7.0,
+  "p90": 147.0,
+  "flips": 185801.0,
+  "top1pct_share": 0.10362161667590594
+ },
+ "gt_islands_Movable": {
+  "n": 2207,
+  "per_frame": 3.6783333333333332,
+  "med": 104.0,
+  "p90": 2129.8000000000025,
+  "flips": 78833.0,
+  "top1pct_share": 0.07569165197315846
+ },
+ "static_artifact": {
+  "px": 43798,
+  "map_B": 3997,
+  "label_B": 269,
+  "total_B": 4266,
+  "rate_S": 0.002840554294019183,
+  "purity_mean": 0.8840770721435547,
+  "breakeven_survival": 0.0065878699902310895
+ }
+}
