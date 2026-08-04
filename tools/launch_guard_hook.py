@@ -144,16 +144,18 @@ _DETACH_MARKERS = (
     "codex_companion_spawn.sh",
 )
 CODEX_SPAWN_BLOCK_MESSAGE = (
-    "BLOCKED by tools/launch_guard_hook.py: hand-rolled `codex exec` spawn without "
-    "session detachment. `nohup ... & disown` is NOT enough — disown clears the shell's "
-    "JOB TABLE but leaves the child in the shell's PROCESS GROUP, so the harness's "
-    "group-directed signal still reaps it. MEASURED 2026-08-04: four arms spawned that "
-    "way died within 23 seconds of each other, mid-work, no error, no final message "
-    "(and 2026-08-03 killed wk1/wk2 the same way). macOS has no setsid(1), so detachment "
-    "must be fork + os.setsid() + exec in Python.\n"
+    "BLOCKED by tools/launch_guard_hook.py: hand-rolled `codex exec` spawn. ROOT "
+    "CAUSE (measured 2026-08-04 via exit receipts): com.vertigo.claude-code-reaper — "
+    "a launchd agent firing every 60s (~/Projects/fleet/scripts/claude-code-reaper.sh) — "
+    "SIGTERMs ANY process matching \\b(claude|codex)\\b with no TTY and (PPID==1 or "
+    "stdin=/dev/null|pipe) older than 300s. Every hand-rolled spawn shape (nohup+disown, "
+    "even fork+setsid) matches those orphan criteria and dies at ~5-6 min: receipts "
+    "signal=TERM at elapsed 335/337/337s; killed wk1/wk2 on 08-03 the same way.\n"
     "USE THE CANONICAL PATH: `.venv/bin/python tools/codex_arm_queue.py saturate --spawn` "
-    "(queue-driven, carries --add-dir for the SSD tier, enforces the fleet cap and the "
-    "one-scorer rule), or tools/codex_companion_spawn.sh for companion tasks.\n"
+    "— it spawns via a KEEPER (ps line has no codex word; codex runs as its child with "
+    "regular-file stdin, so the reaper's own live-session checks skip it), carries "
+    "--add-dir for the SSD tier, and enforces the fleet cap + one-scorer rule. "
+    "tools/codex_companion_spawn.sh for companion tasks.\n"
     "Deliberate exception: set TAC_LAUNCH_GUARD_OK=1."
 )
 

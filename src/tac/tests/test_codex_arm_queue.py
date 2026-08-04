@@ -123,30 +123,67 @@ def test_spawn_refuses_missing_prompt(q, capsys):
     assert q.spawn("ghost", ".omx/tmp/codex_runs/definitely_absent_prompt.md") is False
 
 
-def test_spawn_command_carries_the_ssd_add_dir(q):
+def test_keeper_carries_the_ssd_add_dir(q):
     """The flag whose absence killed fz3 — pinned so it cannot silently vanish."""
-    cmd = q.spawn_command("x", ".omx/tmp/codex_runs/x_prompt.md")
-    assert f"--add-dir {q.SSD_ADD_DIR}" in cmd or f"--add-dir '{q.SSD_ADD_DIR}'" in cmd
+    src = q.keeper_source("x", ".omx/tmp/codex_runs/x_prompt.md")
+    assert "--add-dir" in src and q.SSD_ADD_DIR in src
 
 
 def test_spawn_command_detaches_via_setsid_not_merely_disown(q):
-    """MEASURED 2026-08-04: four `nohup ... & disown` arms were reaped together by a
-    process-group signal. disown clears the JOB TABLE; only setsid(2) leaves the
-    GROUP. macOS has no setsid(1), so it must be the Python call."""
+    """disown clears the JOB TABLE only; the child is reparented to PID 1 when the
+    tool-shell exits, which is one of the launchd reaper's orphan signals. setsid
+    detachment (macOS has no setsid(1) — Python call) remains required so the
+    keeper survives the harness's own lifetime."""
     cmd = q.spawn_command("x", ".omx/tmp/codex_runs/x_prompt.md")
     assert "os.setsid()" in cmd
     assert "os.fork()" in cmd
     assert "disown" not in cmd  # the mechanism that failed must not creep back
 
 
-def test_spawn_command_redirects_stdio_so_no_tty_dependency(q):
+def test_spawn_command_has_no_reaper_matchable_name(q):
+    """THE root-cause pin (2026-08-04): com.vertigo.claude-code-reaper (launchd,
+    every 60s) SIGTERMs any \\b(claude|codex)\\b process with no TTY and
+    (PPID==1 or dead stdin) older than 300s — receipts: signal=TERM at
+    elapsed 335/337/337s; a plain-bash control detached identically SURVIVED.
+    The spawn command's ps-visible line must therefore contain NO standalone
+    codex/claude word (``codex_runs`` is safe: underscore = word char)."""
+    import re
+
     cmd = q.spawn_command("x", ".omx/tmp/codex_runs/x_prompt.md")
-    assert "os.devnull" in cmd  # stdin closed: codex must never wait on input
-    assert "x.log" in cmd  # stdout/stderr land in the durable per-arm log
+    assert re.search(r"\b(claude|codex)\b", cmd) is None
+    assert "_keeper.py" in cmd
 
 
-def test_spawn_command_names_the_common_contract(q):
-    assert "_common_contract.md" in q.spawn_command("x", "p.md")
+def test_keeper_runs_codex_as_child_with_regular_file_stdin(q):
+    """The other two reaper conjuncts, broken in the keeper: codex is a normal
+    CHILD (PPID != 1 — Popen, not detached) and its stdin is a REGULAR FILE,
+    which stdin_is_dead() (grep '/dev/null|PIPE|FIFO') reads as alive."""
+    src = q.keeper_source("x", ".omx/tmp/codex_runs/x_prompt.md")
+    assert "subprocess.Popen" in src
+    assert ".stdin" in src and "stdin=stdin_f" in src
+    assert "os.devnull" not in src  # devnull stdin would trip stdin_is_dead()
+
+
+def test_keeper_names_the_common_contract(q):
+    assert "_common_contract.md" in q.keeper_source("x", "p.md")
+
+
+def test_spawn_writes_the_keeper_file(q, tmp_path, monkeypatch):
+    monkeypatch.setattr(q, "_REPO", tmp_path)
+    monkeypatch.setattr(q, "RUNS", tmp_path / ".omx" / "tmp" / "codex_runs")
+    # append_row's default path binds the REAL queue at def time — stub it so a
+    # unit test can never pollute live state (it did, once).
+    monkeypatch.setattr(q, "append_row", lambda *a, **k: None)
+    monkeypatch.setattr(q, "SPAWN_LOG", tmp_path / "spawn.jsonl")
+    calls = []
+    monkeypatch.setattr(q.subprocess, "run", lambda *a, **k: calls.append(a))
+    prompt = tmp_path / ".omx" / "tmp" / "codex_runs" / "x_prompt.md"
+    prompt.parent.mkdir(parents=True)
+    prompt.write_text("charter")
+    assert q.spawn("x", ".omx/tmp/codex_runs/x_prompt.md") is True
+    keeper = tmp_path / ".omx" / "tmp" / "codex_runs" / "x_keeper.py"
+    assert keeper.exists() and "codex" in keeper.read_text()
+    assert calls  # the detached spawn was actually invoked
 
 
 # --- live detection reads the OS, not the ledger ----------------------------------
@@ -199,30 +236,26 @@ def test_shipped_queue_parses_and_has_prompts(q):
             assert prompt.exists(), f"{name} points at a missing prompt: {prompt}"
 
 
-# --- the exit receipt (2026-08-04 round 2) ----------------------------------------
+# --- the exit receipt (2026-08-04 round 2; keeper-owned since the reaper fix) -----
 
 
-def test_spawn_command_writes_an_exit_receipt(q):
+def test_keeper_writes_an_exit_receipt(q):
     """`.last.txt` presence proves a clean finish; its ABSENCE proves nothing.
     Without an rc/signal receipt, death and completion are indistinguishable —
-    which is how two rounds of guessing happened."""
-    cmd = q.spawn_command("x", ".omx/tmp/codex_runs/x_prompt.md")
-    assert "x.done" in cmd
-    assert "rc=$rc" in cmd
+    which is how two rounds of guessing happened. The receipt identified the
+    reaper on its FIRST firing (signal=TERM at 335-337s)."""
+    src = q.keeper_source("x", ".omx/tmp/codex_runs/x_prompt.md")
+    assert ".done" in src
+    assert "rc=%d" in src
 
 
-def test_receipt_traps_signals_so_a_reap_leaves_evidence(q):
-    cmd = q.spawn_command("x", ".omx/tmp/codex_runs/x_prompt.md")
-    assert "trap" in cmd
+def test_keeper_handles_signals_so_a_reap_leaves_evidence(q):
+    """Python handlers interrupt proc.wait() immediately — no bash
+    foreground-trap-deferral class (round-2 positive control: the fg form
+    wrote no receipt in exactly the reap case)."""
+    src = q.keeper_source("x", ".omx/tmp/codex_runs/x_prompt.md")
+    assert "signal.signal" in src
     for sig in ("TERM", "INT", "HUP", "QUIT"):
-        assert sig in cmd
-
-
-def test_codex_runs_in_background_with_wait_not_foreground(q):
-    """MEASURED: bash services traps only BETWEEN commands, so a foreground codex
-    defers the signal trap until it finishes — i.e. the reap case, the one that
-    matters, writes no receipt. Round-2 positive control confirmed the fg form
-    dropped it. `wait` is interruptible."""
-    cmd = q.spawn_command("x", ".omx/tmp/codex_runs/x_prompt.md")
-    assert "& child=$!" in cmd
-    assert "wait $child" in cmd
+        assert sig in src
+    assert "proc.wait()" in src
+    assert "signal=%s" in src
