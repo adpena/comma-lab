@@ -179,16 +179,19 @@ def decide(command: str, env: dict | None = None) -> tuple[bool, str]:
         return True, ""
     if environ.get("TAC_LAUNCH_GUARD_OK"):
         return True, ""
-    # Safe tokens BEFORE the codex-spawn check: the block message advertises
-    # `set TAC_LAUNCH_GUARD_OK=1` as the escape hatch, and an inline env
-    # assignment reaches decide() only through the command string — checking
-    # codex-spawn first made the advertised hatch a no-op (caught by
-    # dogfooding 2026-08-04: a python heredoc merely CONTAINING the words was
-    # blocked twice with no working override).
-    if any(tok in command for tok in _SAFE_TOKENS):
+    # ONLY the explicit hatch token overrides the codex-spawn block. Round-2
+    # ordering made the advertised inline hatch a no-op (dogfooding: a python
+    # heredoc containing the words was blocked twice); round-3's fix of that
+    # let ANY trainer safe-token bypass the codex block — executed control
+    # confirmed `nohup codex exec "review tools/launch_witness_run.py" &
+    # disown` (the exact killed-arm shape) was allowed. Trainer tokens scope
+    # the trainer gate only; they move back below the codex check.
+    if "TAC_LAUNCH_GUARD_OK" in command:
         return True, ""
     if _is_hand_rolled_codex_spawn(command):
         return False, CODEX_SPAWN_BLOCK_MESSAGE
+    if any(tok in command for tok in _SAFE_TOKENS):
+        return True, ""
     # Whole-command pass FIRST (additive: can only add blocks, never new
     # allows): catches `bash -c "python trainer.py | tee log"`, where the
     # coarse pipe-split below would break the quoted payload before shlex

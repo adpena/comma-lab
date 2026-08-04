@@ -259,3 +259,24 @@ def test_keeper_handles_signals_so_a_reap_leaves_evidence(q):
         assert sig in src
     assert "proc.wait()" in src
     assert "signal=%s" in src
+
+
+def test_spawn_clears_stale_receipts_from_a_previous_generation(tmp_path, monkeypatch):
+    """Review finding (executed control 2026-08-04): a leftover `.done` death
+    receipt or `.last.txt` clean-finish marker from a prior generation
+    survived respawn, so the next death-vs-completion read would consume
+    GHOST evidence — the exact ambiguity the receipt instrument exists to
+    remove. spawn() must unlink both before launching the keeper."""
+    q = _load()
+    monkeypatch.setattr(q, "_REPO", tmp_path)
+    monkeypatch.setattr(q, "RUNS", tmp_path / ".omx/tmp/codex_runs")
+    monkeypatch.setattr(q, "SPAWN_LOG", tmp_path / "spawn.jsonl")
+    monkeypatch.setattr(q, "append_row", lambda *a, **k: None)
+    monkeypatch.setattr(q.subprocess, "run", lambda *a, **k: None)
+    q.RUNS.mkdir(parents=True)
+    (q.RUNS / "x_prompt.md").write_text("charter")
+    (q.RUNS / "x.done").write_text("signal=TERM elapsed=335")
+    (q.RUNS / "x.last.txt").write_text("stale final message")
+    assert q.spawn("x", ".omx/tmp/codex_runs/x_prompt.md") is True
+    assert not (q.RUNS / "x.done").exists(), "stale death receipt survived respawn"
+    assert not (q.RUNS / "x.last.txt").exists(), "stale finish marker survived respawn"

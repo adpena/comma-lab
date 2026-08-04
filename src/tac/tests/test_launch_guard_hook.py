@@ -350,3 +350,24 @@ def test_heredoc_text_manipulation_mentioning_codex_exec_still_blocked_without_h
     allow, reason = hook.decide("python3 - <<'EOF'\nprint('codex exec')\nEOF", {})
     assert allow is False
     assert "KEEPER" in reason
+
+
+def test_trainer_safe_tokens_do_not_bypass_the_codex_spawn_block():
+    """Round-3 review finding (executed control 2026-08-04): after the hatch
+    ordering fix, ALL of _SAFE_TOKENS preceded the codex check — so a
+    hand-rolled spawn whose charter text merely MENTIONED a trainer tool
+    (`nohup codex exec "review tools/launch_witness_run.py" & disown`, the
+    exact killed-arm shape) sailed through. Only TAC_LAUNCH_GUARD_OK may
+    override the codex block; trainer tokens scope the trainer gate alone."""
+    for tok in ("safe_run", "launch_witness_run", "--skip-admission-gate"):
+        cmd = f'nohup codex exec "review {tok} for bugs" & disown'
+        allow, reason = hook.decide(cmd, {})
+        assert allow is False, f"trainer token {tok!r} bypassed the codex block"
+        assert "KEEPER" in reason
+
+
+def test_trainer_safe_tokens_still_allow_governed_trainer_launches():
+    """The re-ordering must not break the tokens' real job: a governed
+    trainer invocation (launch_witness_run) still passes without a hatch."""
+    allow, _ = hook.decide(".venv/bin/python tools/launch_witness_run.py --dry-run", {})
+    assert allow is True

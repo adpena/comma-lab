@@ -281,6 +281,12 @@ def spawn(name: str, prompt_path: str) -> bool:
     if not (_REPO / prompt_path).exists():
         print(f"  REFUSED {name}: prompt file missing ({prompt_path})", file=sys.stderr)
         return False
+    # Clear STALE evidence from a previous generation: a leftover `.done`
+    # (death receipt) or `.last.txt` (clean-finish marker) would corrupt the
+    # next death-vs-completion read — the exact ambiguity the receipt exists
+    # to remove. Confirmed by executed control 2026-08-04 review round.
+    for stale in (RUNS / f"{name}.done", RUNS / f"{name}.last.txt"):
+        stale.unlink(missing_ok=True)
     (_REPO / keeper_path(name)).write_text(keeper_source(name, prompt_path), encoding="utf-8")
     subprocess.run(["bash", "-c", spawn_command(name, prompt_path)], cwd=_REPO, check=False)
     append_row({"name": name, "prompt_path": prompt_path, "status": "live", "event": "spawned"})
