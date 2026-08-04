@@ -388,6 +388,56 @@ Evaluator `dc_projection_residual()` verifies ‖P·(c⊗1₄)‖∞ = 0 (measur
 EmpiricalAnchor is the 32/32 vacuous-DC receipt (residual 0.0). Consumers declared: the FO-3/
 AC arm, m85's integer-actuator caveat, the burn-spec pose-price arithmetic.
 
+## §12 QUEUE-HEAD ADDENDUM (coordinator-fired) — the waterfill fit and the band's legal value-realizer
+
+### §12.1 The band anchor-paint measurement — the legal value-realizer is DEAD at n=32
+
+The price-matched legal realizer for sg3's 81,365 B Road↔Lane band (class-anchor paint: anchors
+computed ENCODE-side from the decoder's own field, SHIPPED as a 15 B counted table; the receiver
+paints each band px's 4 private camera px with its STORED target label's anchor — zero scorer
+weights at decode, zero oracle values):
+
+| variant (n=32 stratified, no solve, 4 s/pair) | pooled survival (bar 0.3956) | neg pairs | dpx med/max |
+|---|---:|---:|---|
+| **AP_pair** flat anchor paint (+pose stream) | **−1.0190** | **32/32** | 371× / 10,476× |
+| **AP_null** projected, stream-free, pose-neutral | +0.0501 | 2/32 | **1.0× / 1.1×** |
+
+**The band route is CLOSED at sg3's price point.** The legal CONTENT realizer roughly doubles
+the flips it touches (the 5th independent no-go of content substitution in thin bands — sq1's
+truth-paint −3.76, my §11.3 far-field collateral law, now anchors too); the pose-neutral
+projection of it is near-inert (+0.05 vs the 0.3956 bar). The family's realization headroom
+lives entirely in SOLVED values (the §11.3 oracle ceiling 1.14–1.34), and solved values at
+band-px granularity cost ~12 KB/pair — which is precisely why the cheap solved-value carrier
+is the per-block params family (C0), closing the circle: **the band route and the block-param
+route are the same family at different value granularities, and the block-param end is the
+live one.** `verdict_scope: FORMULATION` (content-anchor values on label-addressed thin bands,
+this vehicle, n=32).
+
+### §12.2 The waterfill-M fit ($0, from the n=32 receipts) — the first allocation that projects negative THROUGH a split-sample control
+
+Per-pair ON/OFF allocation of the M32_U static cell (ON iff the pair's measured gain covers
+its OWN marginal bytes: params_lzma1 + 96 B pose; mask 75 B + block list 64 B shipped once):
+
+| fit | ON pairs | projected n600 net |
+|---|---:|---:|
+| in-sample (selection-biased, labelled) | 13/32 | **−0.0081 S** |
+| **split-sample** (rule fit on half, evaluated on held-out half; break-even 152 flips) | 7/16 | **−0.0058 S** |
+
+The uniform-M32 cell lost by +0.0053; per-pair selection flips the sign and SURVIVES the
+split-sample control — the first legal, fully-priced allocation in this family to project
+negative out-of-sample. **This is a PROJECTION, not a row**: the pre-registered confirming
+measurement is the FIXED rule (ON iff gain > 152 flips at M32_U-static-int8) applied to FRESH
+stratified pairs, then byte-close via `tac.submission_chain` + `frame0_pose_repair_stream`.
+Pose gate input (per-pair damage on the 13 ON pairs): median ~23×, **one pair (485) at 1261.9×
+(d_pose 0.765)** — outside the proven k=4 envelope; the pose-safe variant drops it for
+−2.1e-5 S of margin, leaving 12 ON pairs all within the proven ≤123.85× repair range.
+
+**Revised queue after this addendum:** fire-order-1 = the fresh-pair confirmation of the FIXED
+waterfill rule (pose-safe variant) → byte-close path as §6; fire-order-2 = the per-base k=4
+repair on the 12 ON pairs' edited frames (all within proven range); the band family and
+feature-matched AC atoms drop BEHIND those (the band route closed at §12.1; AC atoms remain
+the stream-free escape).
+
 ## §10 Pointer honesty
 
 **The exact pointer did NOT move.** `0.1910828242 [contest-CPU]` UNMOVED. Own-vehicle frontier

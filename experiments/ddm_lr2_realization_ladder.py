@@ -1145,10 +1145,141 @@ def run_tx(args, sc, dec, raw, gt_frames, pairs) -> None:
 
 
 # ================================================================================================
+# subcommand: band  (queue head item 2: the PRICE-MATCHED LEGAL value-realizer for the
+#                    Road<->Lane band -- class-anchor paint, NO solve, NO oracle values)
+# ================================================================================================
+def run_band(args, sc, dec, raw, gt_frames, pairs) -> None:
+    """sg3 priced the Road<->Lane r=1 band ADDRESS (positions + target labels) at 81,365 B with
+    break-even survival 39.56%.  ddm_lr2 §11.3 measured the VALUE-ORACLE ceiling (solved paint,
+    eta 1.14-1.34).  This measures the missing number: the LEGAL deterministic value-realizer.
+
+    Realizer: CLASS-ANCHOR paint.  Anchor colors are computed ENCODE-side (mean decoded camera
+    RGB of each class's stable interior, per the decoder's own field) and SHIPPED as a counted
+    table -- 15 B/pair (AP-pair) or one 15 B global table (AP-global).  The receiver paints
+    each band pixel's 4 private camera px with the anchor of its STORED target label.  Zero
+    scorer weights at decode, zero oracle pixel values (mirage-law clean).
+
+    Variants per pair (1 SegNet + 1 PoseNet forward each -- no solve, so n=32 is direct):
+      AP_pair    per-pair anchors (15 B/pair)
+      AP_global  one anchor table for the video (sample-mean approximation, labelled)
+      AP_null    the same AP_pair paint delta projected into the rank-6 pose-null subspace
+                 (band snapped to 2x2 cells -- the projection/mask commute rule), additive
+                 realization: the STREAM-FREE pose-neutral variant.
+    Reported per variant: whole-frame realized gain, survival vs band-captured flips (sg3's
+    39.56% bar), collateral at BOTH crossovers, d_pose (+ratio) -- the per-pair damage
+    distribution feeds the per-base pose-repair gate."""
+    import ddm_tr1_runtime as tr1
+    from ddm_sq1_eta_seg_realization import COL_SUP, ROW_SUP, dilate
+    from ddm_sq1_pose_null_constrained_paint import (
+        pose_null_projector,
+        project_null,
+        snap_band_to_blocks,
+    )
+
+    P12 = pose_null_projector()
+    out = base_header("band")
+    out["band_address_bytes_sg3"] = 81_365
+    out["crossovers"] = {"superseded": 0.01035, "corrected_2583e0f155": 0.006285}
+    out["rows"] = []
+
+    for n, p in enumerate(pairs):
+        t_pair = time.time()
+        ctx = PairCtx(sc, dec.packet, raw, gt_frames, p)
+        cam_base = tr1.render_frame1_camera_uint8(dec.packet, p)
+        base_s = resize_to_scorer(cam_base)[0].permute(1, 2, 0).numpy()   # (384,512,3) float
+        ls = ctx.lstar
+
+        road_lane_edge = np.zeros((SEG_H, SEG_W), dtype=bool)
+        for dy, dx in ((0, 1), (1, 0)):
+            a_sl = ls[dy:, dx:]
+            b_sl = ls[: SEG_H - dy, : SEG_W - dx]
+            e = ((a_sl == 0) & (b_sl == 1)) | ((a_sl == 1) & (b_sl == 0))
+            road_lane_edge[dy:, dx:] |= e
+            road_lane_edge[: SEG_H - dy, : SEG_W - dx] |= e
+        band = dilate(road_lane_edge, 1)
+        band_snapped = snap_band_to_blocks(band)
+        captured = int(((ctx.lstar != ctx.lgt) & band).sum())
+
+        # encode-side per-pair anchors from the decoder's own field (stable interior)
+        anchors = np.zeros((5, 3), dtype=np.float32)
+        for c in range(5):
+            interior = (ls == c) & ~band
+            if interior.sum() < 16:
+                interior = ls == c
+            if interior.sum() == 0:
+                continue
+            cam_mask = scorer_mask_to_camera(interior)
+            anchors[c] = cam_base[cam_mask].reshape(-1, 3).mean(axis=0)
+        anchors_u8 = np.clip(np.round(anchors), 0, 255).astype(np.uint8)
+
+        def paint_scorer(anch: np.ndarray) -> np.ndarray:
+            paint = base_s.copy()
+            ii, jj = np.nonzero(band)
+            paint[ii, jj] = anch[ctx.lgt[ii, jj]]
+            return paint
+
+        row = {"pair": p, "flips_before": ctx.flips0, "n_described": ctx.nd,
+               "band_px": int(band.sum()), "band_captured_flips": captured,
+               "anchors_pair_u8": anchors_u8.tolist(),
+               "d_pose_shipped": ctx.d_pose_shipped, "arms": {}}
+
+        # ---- AP_pair: flat 4-px paint with per-pair anchors --------------------------------
+        pnt = paint_scorer(anchors_u8.astype(np.float32))
+        cam_e = realize_scorer_paint_to_camera(
+            cam_base, band, np.clip(np.round(pnt), 0, 255).astype(np.uint8))
+        scr = ctx.score_f1(sc, cam_e, region=band)
+        row["arms"]["AP_pair"] = {
+            **scr,
+            "survival_vs_captured": ((ctx.flips0 - scr["flips_after"]) / captured
+                                     if captured else None),
+            "anchor_table_bytes": 15}
+
+        # ---- AP_null: the same paint delta through the rank-6 projector (stream-free) ------
+        delta = (pnt - base_s) * band_snapped[..., None]
+        d_t = torch.from_numpy(np.ascontiguousarray(
+            delta.transpose(2, 0, 1)[None], dtype=np.float32))
+        d_proj = project_null(d_t, P12)[0].permute(1, 2, 0).numpy()
+        cam_f = cam_base.astype(np.float32).copy()
+        ii, jj = np.nonzero(band_snapped)
+        vals = d_proj[ii, jj]
+        for a2 in range(2):
+            r = ROW_SUP[ii, a2]
+            for b2 in range(2):
+                c2 = COL_SUP[jj, b2]
+                cam_f[r, c2] = cam_f[r, c2] + vals
+        cam_e = np.clip(np.rint(cam_f), 0, 255).astype(np.uint8)
+        scr = ctx.score_f1(sc, cam_e, region=band_snapped)
+        row["arms"]["AP_null"] = {
+            **scr,
+            "survival_vs_captured": ((ctx.flips0 - scr["flips_after"]) / captured
+                                     if captured else None),
+            "anchor_table_bytes": 15}
+
+        row["wall_s"] = round(time.time() - t_pair, 1)
+        out["rows"].append(row)
+        checkpoint(args.out, out)
+        ap_ = row["arms"]["AP_pair"]
+        an_ = row["arms"]["AP_null"]
+        print(f"[band] pair {p:3d} ({n+1}/{len(pairs)}) band {row['band_px']:5d}px "
+              f"cap {captured:4d} | AP eta {ap_['eta']:.3f} surv "
+              f"{ap_['survival_vs_captured']:.3f} dpx {ap_['d_pose_ratio_vs_shipped']:.1f} "
+              f"| APnull eta {an_['eta']:.3f} dpx {an_['d_pose_ratio_vs_shipped']:.2f} "
+              f"[{row['wall_s']}s]", flush=True)
+
+    # AP_global: one anchor table = mean of the per-pair tables (sample approximation)
+    glob = np.clip(np.round(np.mean(
+        [r["anchors_pair_u8"] for r in out["rows"]], axis=0)), 0, 255).astype(np.uint8)
+    out["anchors_global_u8"] = glob.tolist()
+    checkpoint(args.out, out)
+    print(f"[band] done; global anchor table (sample-mean, labelled) {glob.tolist()}",
+          flush=True)
+
+
+# ================================================================================================
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("cmd", choices=("transport", "response", "solve", "solve0", "keys", "fo1",
-                                    "tx"))
+                                    "tx", "band"))
     ap.add_argument("--pairs", type=str, default="0,20,48,115,154,170,179,180")
     ap.add_argument("--gt-mkv", type=Path, default=REPO / "upstream/videos/0.mkv")
     ap.add_argument("--raw", type=Path, default=SUB_PU2 / "inflated/0.raw")
@@ -1190,6 +1321,8 @@ def main() -> int:
         run_fo1(args, sc, dec, raw, gt_frames, pairs)
     elif args.cmd == "tx":
         run_tx(args, sc, dec, raw, gt_frames, pairs)
+    elif args.cmd == "band":
+        run_band(args, sc, dec, raw, gt_frames, pairs)
     else:
         run_solve(args, sc, dec, raw, gt_frames, pairs)
     print(f"[lr2:{args.cmd}] done t={time.time()-t0:.1f}s -> {args.out}", flush=True)
