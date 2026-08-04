@@ -1,0 +1,709 @@
+{
+ "schema": "ddm_qo1_repair_stream_optimal_form.v1",
+ "axis": "[macOS-CPU frozen-scorer advisory] for <=32 changed-pair forwards; no full n600",
+ "score_claim": false,
+ "source_archive": "/Volumes/VertigoDataTier/pact/ddm_fz1_20260804/rowB/sub_final/archive.zip",
+ "source_archive_bytes": 358084,
+ "source_archive_sha256": "ad5dd0e4fbe5b13ab53a5995a6d77cc558c25f40b63f894ea50ad336bd50fb66",
+ "source_f0pr_section_ledger": {
+  "name": "frame0_pose_repair",
+  "magic": "F0PR1!",
+  "counted_bytes": 4312,
+  "sha256": "00954c240425a82449d5eb70d567a69e87b2a9ecac417682cf6f27c026be9043",
+  "k": 6,
+  "coder_id": 1,
+  "coder": "lzma1_raw",
+  "n_pairs_repaired": 21,
+  "bytes_per_pair_raw": 216,
+  "counted_bytes_per_repaired_pair": 205.33333333333334,
+  "note": "int16 k*k*3 coefficients per repaired pair; generic DCT basis is FREE (rule 118)"
+ },
+ "live_best_baseline": {
+  "S": 0.7541458627114951,
+  "archive_bytes": 358084,
+  "d_seg": 0.00431179,
+  "d_pose": 0.00071459,
+  "axis": "[macOS-CPU advisory]"
+ },
+ "recomputed_current_from_damage_table": {
+  "S": 0.7541459639616046,
+  "d_pose_mean": 0.0007145917118047388,
+  "archive_bytes": 358084,
+  "delta_vs_live_best": 1.0125010951878011e-07
+ },
+ "coder_race_on_current_21_pair_body": [
+  {
+   "coder": "pair_bitpack",
+   "body_bytes": 3980,
+   "section_bytes": 4081,
+   "receiver_supported": true,
+   "note": "lossless adaptive signed bit width per repaired pair",
+   "delta_bytes_vs_best": 0
+  },
+  {
+   "coder": "brotli_q11",
+   "body_bytes": 4021,
+   "section_bytes": 4122,
+   "receiver_supported": true,
+   "delta_bytes_vs_best": 41
+  },
+  {
+   "coder": "lzma1_raw",
+   "body_bytes": 4211,
+   "section_bytes": 4312,
+   "receiver_supported": true,
+   "delta_bytes_vs_best": 231
+  },
+  {
+   "coder": "smevr_nibble",
+   "body_bytes": 4442,
+   "section_bytes": 4543,
+   "receiver_supported": false,
+   "note": "real SMEVR token coder over repair-body nibbles; not a shipped F0PR coder",
+   "delta_bytes_vs_best": 462
+  },
+  {
+   "coder": "raw_int16",
+   "body_bytes": 4536,
+   "section_bytes": 4637,
+   "receiver_supported": true,
+   "delta_bytes_vs_best": 556
+  }
+ ],
+ "selective_pair_waterfill": {
+  "selection_order": [
+   74,
+   523,
+   18,
+   44,
+   16,
+   22,
+   42,
+   9,
+   275,
+   94,
+   539,
+   10,
+   58,
+   164,
+   67,
+   142,
+   197,
+   90,
+   106,
+   129,
+   144,
+   108,
+   105,
+   165
+  ],
+  "selected_pairs": [
+   74,
+   523,
+   18,
+   44,
+   16,
+   22,
+   42,
+   9,
+   275,
+   94,
+   539,
+   10,
+   58,
+   164,
+   67,
+   142,
+   197,
+   90,
+   106,
+   129,
+   144
+  ],
+  "first_rejected": {
+   "pair": 108,
+   "gain_d_pose": 0.0012719060759991407,
+   "trial_S": 0.7539965470143868,
+   "trial_archive_bytes": 358048,
+   "accepted": false
+  },
+  "trace": [
+   {
+    "pair": 74,
+    "gain_d_pose": 0.21619442937662825,
+    "trial_S": 0.775764013359971,
+    "trial_archive_bytes": 354030,
+    "accepted": true
+   },
+   {
+    "pair": 523,
+    "gain_d_pose": 0.10286241490393877,
+    "trial_S": 0.7677081219552573,
+    "trial_archive_bytes": 354220,
+    "accepted": true
+   },
+   {
+    "pair": 18,
+    "gain_d_pose": 0.0262744399078656,
+    "trial_S": 0.765630960991535,
+    "trial_archive_bytes": 354403,
+    "accepted": true
+   },
+   {
+    "pair": 44,
+    "gain_d_pose": 0.020691690740932245,
+    "trial_S": 0.7640011671792215,
+    "trial_archive_bytes": 354609,
+    "accepted": true
+   },
+   {
+    "pair": 16,
+    "gain_d_pose": 0.01768467406509444,
+    "trial_S": 0.7625988287779825,
+    "trial_archive_bytes": 354810,
+    "accepted": true
+   },
+   {
+    "pair": 22,
+    "gain_d_pose": 0.01591383252525702,
+    "trial_S": 0.7613034999364644,
+    "trial_archive_bytes": 354973,
+    "accepted": true
+   },
+   {
+    "pair": 42,
+    "gain_d_pose": 0.015552028024103492,
+    "trial_S": 0.7600487741590147,
+    "trial_archive_bytes": 355180,
+    "accepted": true
+   },
+   {
+    "pair": 9,
+    "gain_d_pose": 0.013272060226881877,
+    "trial_S": 0.7589707264320753,
+    "trial_archive_bytes": 355371,
+    "accepted": true
+   },
+   {
+    "pair": 275,
+    "gain_d_pose": 0.012768491491442546,
+    "trial_S": 0.7579238401580272,
+    "trial_archive_bytes": 355563,
+    "accepted": true
+   },
+   {
+    "pair": 94,
+    "gain_d_pose": 0.010270591476000845,
+    "trial_S": 0.7571061730570806,
+    "trial_archive_bytes": 355771,
+    "accepted": true
+   },
+   {
+    "pair": 539,
+    "gain_d_pose": 0.008689010639500339,
+    "trial_S": 0.7564256571752765,
+    "trial_archive_bytes": 355976,
+    "accepted": true
+   },
+   {
+    "pair": 10,
+    "gain_d_pose": 0.007991776335984468,
+    "trial_S": 0.7557546898008862,
+    "trial_archive_bytes": 356107,
+    "accepted": true
+   },
+   {
+    "pair": 58,
+    "gain_d_pose": 0.007442267204169184,
+    "trial_S": 0.7551751749525711,
+    "trial_archive_bytes": 356306,
+    "accepted": true
+   },
+   {
+    "pair": 164,
+    "gain_d_pose": 0.005048700899351388,
+    "trial_S": 0.7548086615973442,
+    "trial_archive_bytes": 356486,
+    "accepted": true
+   },
+   {
+    "pair": 67,
+    "gain_d_pose": 0.0034813634119927883,
+    "trial_S": 0.7546155053295083,
+    "trial_archive_bytes": 356702,
+    "accepted": true
+   },
+   {
+    "pair": 142,
+    "gain_d_pose": 0.0031536213937215507,
+    "trial_S": 0.7544169718609571,
+    "trial_archive_bytes": 356864,
+    "accepted": true
+   },
+   {
+    "pair": 197,
+    "gain_d_pose": 0.0029948008013889194,
+    "trial_S": 0.7542634801841623,
+    "trial_archive_bytes": 357072,
+    "accepted": true
+   },
+   {
+    "pair": 90,
+    "gain_d_pose": 0.0027516400441527367,
+    "trial_S": 0.7541068443593637,
+    "trial_archive_bytes": 357241,
+    "accepted": true
+   },
+   {
+    "pair": 106,
+    "gain_d_pose": 0.002201712573878467,
+    "trial_S": 0.7540373463424401,
+    "trial_archive_bytes": 357461,
+    "accepted": true
+   },
+   {
+    "pair": 129,
+    "gain_d_pose": 0.001657045097090304,
+    "trial_S": 0.7539989432620535,
+    "trial_archive_bytes": 357648,
+    "accepted": true
+   },
+   {
+    "pair": 144,
+    "gain_d_pose": 0.0014544847654178739,
+    "trial_S": 0.7539808627720316,
+    "trial_archive_bytes": 357836,
+    "accepted": true
+   },
+   {
+    "pair": 108,
+    "gain_d_pose": 0.0012719060759991407,
+    "trial_S": 0.7539965470143868,
+    "trial_archive_bytes": 358048,
+    "accepted": false
+   }
+  ],
+  "section_ledger": {
+   "name": "frame0_pose_repair",
+   "magic": "F0PR1!",
+   "counted_bytes": 4081,
+   "sha256": "b5874d32324a46dc76cb1fc0beb7cda5fdaca2f59ebae6acbb08283206e8e7a2",
+   "k": 6,
+   "coder_id": 3,
+   "coder": "pair_bitpack",
+   "n_pairs_repaired": 21,
+   "bytes_per_pair_raw": 216,
+   "counted_bytes_per_repaired_pair": 194.33333333333334,
+   "note": "int16 k*k*3 coefficients per repaired pair; generic DCT basis is FREE (rule 118)"
+  },
+  "archive_bytes_pred": 357836,
+  "d_pose_mean_pred_from_probe": 0.0007145922499588172,
+  "S_pred_from_probe": 0.7539808627720316
+ },
+ "best_candidate": {
+  "archive": "/Volumes/VertigoDataTier/pact/ddm_qo1_20260804/sub_auto_pairbit/archive.zip",
+  "archive_bytes": 357836,
+  "archive_sha256": "d5e814d5b9f65c3094b0e65fecdd7771734d03c420c63d1d2033a671b766986a",
+  "byte_ledger": {
+   "archive_path": "/Volumes/VertigoDataTier/pact/ddm_qo1_20260804/sub_auto_pairbit/archive.zip",
+   "archive_sha256": "d5e814d5b9f65c3094b0e65fecdd7771734d03c420c63d1d2033a671b766986a",
+   "archive_bytes": 357836,
+   "zip_members": [
+    {
+     "name": "0.bin",
+     "uncompressed_bytes": 357728,
+     "compressed_bytes": 357728,
+     "compress_type": 0,
+     "sha256": "bd6da15ec41030762e4510555f12d3d141d3c71f495af701666a769b12f0b036"
+    }
+   ],
+   "zip_framing_bytes": 108,
+   "payload_bytes": 357728,
+   "payload_header_bytes": 5,
+   "bulk_bytes": 341295,
+   "bulk_sha256": "cbd4b49fe6d678de68772ba29797e8663d847242641b1cb4fe39abcd91c5d9be",
+   "joint_count_byte": 1,
+   "joint_coded_bytes": 16427,
+   "joint_raw_bytes": 16669,
+   "joint_coder_saving_bytes": 242,
+   "sections": [
+    {
+     "index": 0,
+     "name": "config",
+     "raw_bytes": 36,
+     "sha256": "fc4f23ac9e31ba266ace26131319eb5b574d69e1d505fb1fc20a9dbc79a240d6",
+     "magic": null,
+     "counted": true
+    },
+    {
+     "index": 1,
+     "name": "renderer",
+     "raw_bytes": 3266,
+     "sha256": "3b8eb0c24f9e6d8b547a23a5db29a1dbbd03db474fbba3638b0c3dd858ca7009",
+     "magic": "IX2REN01",
+     "counted": true
+    },
+    {
+     "index": 2,
+     "name": "selector",
+     "raw_bytes": 535,
+     "sha256": "8fc5c3fc65eb051b65ebf01d4b008e52d606097194c57884e739eae2ad8382e1",
+     "magic": "{\"activa",
+     "counted": true
+    },
+    {
+     "index": 3,
+     "name": "pose_warp",
+     "raw_bytes": 8751,
+     "sha256": "d1d073e55aacf991491365d13716fededb169854b78bb203c34c84ca880c25db",
+     "magic": "PFS1WPD1",
+     "counted": true
+    },
+    {
+     "index": 4,
+     "name": "frame0_pose_repair",
+     "raw_bytes": 4081,
+     "sha256": "b5874d32324a46dc76cb1fc0beb7cda5fdaca2f59ebae6acbb08283206e8e7a2",
+     "magic": null,
+     "counted": true
+    }
+   ],
+   "predicted_framing_bytes": 108,
+   "accounted_bytes": 357836,
+   "residual_bytes": 0,
+   "payload_reencodes_identically": true
+  },
+  "d_pose_mean_pred_from_changed_pair_forwards": 0.0007145917118047388,
+  "S_pred_advisory": 0.7539808309412304,
+  "delta_vs_live_best": -0.00016503177026472304,
+  "changed_pair_forwards": [
+   {
+    "pair": 74,
+    "d_pose": 0.0006094241980463266,
+    "seg_equal_to_zero_f0_control": true
+   },
+   {
+    "pair": 523,
+    "d_pose": 0.0005474535282701254,
+    "seg_equal_to_zero_f0_control": true
+   },
+   {
+    "pair": 18,
+    "d_pose": 0.0002703039499465376,
+    "seg_equal_to_zero_f0_control": true
+   },
+   {
+    "pair": 44,
+    "d_pose": 0.00011169700155733153,
+    "seg_equal_to_zero_f0_control": true
+   },
+   {
+    "pair": 16,
+    "d_pose": 0.0005425014533102512,
+    "seg_equal_to_zero_f0_control": true
+   },
+   {
+    "pair": 22,
+    "d_pose": 0.0004963225219398737,
+    "seg_equal_to_zero_f0_control": true
+   },
+   {
+    "pair": 42,
+    "d_pose": 0.0006502807955257595,
+    "seg_equal_to_zero_f0_control": true
+   },
+   {
+    "pair": 9,
+    "d_pose": 0.00011589783389354125,
+    "seg_equal_to_zero_f0_control": true
+   },
+   {
+    "pair": 275,
+    "d_pose": 0.00045339783537201583,
+    "seg_equal_to_zero_f0_control": null
+   },
+   {
+    "pair": 94,
+    "d_pose": 0.0005872371839359403,
+    "seg_equal_to_zero_f0_control": null
+   },
+   {
+    "pair": 539,
+    "d_pose": 6.631625001318753e-05,
+    "seg_equal_to_zero_f0_control": null
+   },
+   {
+    "pair": 10,
+    "d_pose": 0.00045131109072826803,
+    "seg_equal_to_zero_f0_control": null
+   },
+   {
+    "pair": 58,
+    "d_pose": 0.0005208272486925125,
+    "seg_equal_to_zero_f0_control": null
+   },
+   {
+    "pair": 164,
+    "d_pose": 0.0008066198788583279,
+    "seg_equal_to_zero_f0_control": null
+   },
+   {
+    "pair": 67,
+    "d_pose": 0.0004876348830293864,
+    "seg_equal_to_zero_f0_control": null
+   },
+   {
+    "pair": 142,
+    "d_pose": 0.0008467600564472377,
+    "seg_equal_to_zero_f0_control": null
+   },
+   {
+    "pair": 197,
+    "d_pose": 0.0013515438186004758,
+    "seg_equal_to_zero_f0_control": null
+   },
+   {
+    "pair": 90,
+    "d_pose": 0.0008285436779260635,
+    "seg_equal_to_zero_f0_control": null
+   },
+   {
+    "pair": 106,
+    "d_pose": 0.0014949551550671458,
+    "seg_equal_to_zero_f0_control": null
+   },
+   {
+    "pair": 129,
+    "d_pose": 0.0010860486654564738,
+    "seg_equal_to_zero_f0_control": null
+   },
+   {
+    "pair": 144,
+    "d_pose": 0.0016509316628798842,
+    "seg_equal_to_zero_f0_control": null
+   }
+  ],
+  "seg_control_n": 8,
+  "seg_control_all_equal": true
+ },
+ "kcrop_uniform_k1_to_k6_small_batch": {
+  "results": [
+   {
+    "k": 1,
+    "section_bytes": 227,
+    "archive_bytes": 353973,
+    "section_ledger": {
+     "name": "frame0_pose_repair",
+     "magic": "F0PR1!",
+     "counted_bytes": 227,
+     "sha256": "3eb3472ecb2f135d4e3f17e01070eb843c75eb7e76c74719e7803494d8ce6c84",
+     "k": 1,
+     "n_pairs_repaired": 21,
+     "bytes_per_pair_raw": 6,
+     "counted_bytes_per_repaired_pair": 10.80952380952381,
+     "note": "int16 k*k*3 coefficients per repaired pair; generic DCT basis is FREE (rule 118)"
+    },
+    "d_pose_changed_mean": 0.02729205326509795,
+    "d_pose_n600_mean_pred": 0.0016465202282673393,
+    "S_pred_advisory": 0.7951918955794017,
+    "delta_vs_live": 0.041046032867906646,
+    "seg_control_pairs": [
+     9,
+     10,
+     16,
+     18,
+     22,
+     42,
+     44,
+     58
+    ],
+    "seg_control_all_equal": true,
+    "archive": "/Volumes/VertigoDataTier/pact/ddm_qo1_20260804/kcrop_probe/k1/archive.zip",
+    "archive_sha256": "fa1efeda2a1f1a1eb58b0ffe22dfdba15a2eb20c3060126cb6383cc1400547a7",
+    "ledger_closes": true,
+    "ledger_residual": 0
+   },
+   {
+    "k": 2,
+    "section_bytes": 591,
+    "archive_bytes": 354346,
+    "section_ledger": {
+     "name": "frame0_pose_repair",
+     "magic": "F0PR1!",
+     "counted_bytes": 591,
+     "sha256": "d8e435ad2e64002f3b2fd6b2a5bf11a0dd6fd9e0d0ff6da1b1ad34f1aa9b7600",
+     "k": 2,
+     "n_pairs_repaired": 21,
+     "bytes_per_pair_raw": 24,
+     "counted_bytes_per_repaired_pair": 28.142857142857142,
+     "note": "int16 k*k*3 coefficients per repaired pair; generic DCT basis is FREE (rule 118)"
+    },
+    "d_pose_changed_mean": 0.035076174386111755,
+    "d_pose_n600_mean_pred": 0.0019189644675028225,
+    "S_pred_advisory": 0.8056501496084864,
+    "delta_vs_live": 0.05150428689699127,
+    "seg_control_pairs": [
+     9,
+     10,
+     16,
+     18,
+     22,
+     42,
+     44,
+     58
+    ],
+    "seg_control_all_equal": true,
+    "archive": "/Volumes/VertigoDataTier/pact/ddm_qo1_20260804/kcrop_probe/k2/archive.zip",
+    "archive_sha256": "f11ff93483c694aca616d20727bf72b38ce19bb422d8fc1a8c1ad7df0c4105d6",
+    "ledger_closes": true,
+    "ledger_residual": 0
+   },
+   {
+    "k": 3,
+    "section_bytes": 1181,
+    "archive_bytes": 354944,
+    "section_ledger": {
+     "name": "frame0_pose_repair",
+     "magic": "F0PR1!",
+     "counted_bytes": 1181,
+     "sha256": "613be4f9cfd3e520a60b2a7bc3c368f2176e59d3fe1d66ca3bb66511d41d219d",
+     "k": 3,
+     "n_pairs_repaired": 21,
+     "bytes_per_pair_raw": 54,
+     "counted_bytes_per_repaired_pair": 56.23809523809524,
+     "note": "int16 k*k*3 coefficients per repaired pair; generic DCT basis is FREE (rule 118)"
+    },
+    "d_pose_changed_mean": 0.14262210320503937,
+    "d_pose_n600_mean_pred": 0.00568307197616529,
+    "S_pred_advisory": 0.9059135859297743,
+    "delta_vs_live": 0.15176772321827925,
+    "seg_control_pairs": [
+     9,
+     10,
+     16,
+     18,
+     22,
+     42,
+     44,
+     58
+    ],
+    "seg_control_all_equal": true,
+    "archive": "/Volumes/VertigoDataTier/pact/ddm_qo1_20260804/kcrop_probe/k3/archive.zip",
+    "archive_sha256": "028d99dcb8b66226a844ad1905910fa35bd2aaab17c9e7cde17f49acf00c3786",
+    "ledger_closes": true,
+    "ledger_residual": 0
+   },
+   {
+    "k": 4,
+    "section_bytes": 1998,
+    "archive_bytes": 355769,
+    "section_ledger": {
+     "name": "frame0_pose_repair",
+     "magic": "F0PR1!",
+     "counted_bytes": 1998,
+     "sha256": "3056d2fb33d879908b2440662914bd60538ddad77add8f0490e4d0691a6de6bd",
+     "k": 4,
+     "n_pairs_repaired": 21,
+     "bytes_per_pair_raw": 96,
+     "counted_bytes_per_repaired_pair": 95.14285714285714,
+     "note": "int16 k*k*3 coefficients per repaired pair; generic DCT basis is FREE (rule 118)"
+    },
+    "d_pose_changed_mean": 0.09328090043397554,
+    "d_pose_n600_mean_pred": 0.003956129879178055,
+    "S_pred_advisory": 0.8669711971002869,
+    "delta_vs_live": 0.11282533438879183,
+    "seg_control_pairs": [
+     9,
+     10,
+     16,
+     18,
+     22,
+     42,
+     44,
+     58
+    ],
+    "seg_control_all_equal": true,
+    "archive": "/Volumes/VertigoDataTier/pact/ddm_qo1_20260804/kcrop_probe/k4/archive.zip",
+    "archive_sha256": "960793597c1c26edbc7daec113f0c3f87e0ec4217732be9e967c8698659a97e6",
+    "ledger_closes": true,
+    "ledger_residual": 0
+   },
+   {
+    "k": 5,
+    "section_bytes": 3043,
+    "archive_bytes": 356794,
+    "section_ledger": {
+     "name": "frame0_pose_repair",
+     "magic": "F0PR1!",
+     "counted_bytes": 3043,
+     "sha256": "a279e2525b5dceb8279c1088c9129aab88aa621f4e4c8aa3d0a2898751fb184c",
+     "k": 5,
+     "n_pairs_repaired": 21,
+     "bytes_per_pair_raw": 150,
+     "counted_bytes_per_repaired_pair": 144.9047619047619,
+     "note": "int16 k*k*3 coefficients per repaired pair; generic DCT basis is FREE (rule 118)"
+    },
+    "d_pose_changed_mean": 0.03326754077127026,
+    "d_pose_n600_mean_pred": 0.00185566229098337,
+    "S_pred_advisory": 0.8049761753361478,
+    "delta_vs_live": 0.05083031262465276,
+    "seg_control_pairs": [
+     9,
+     10,
+     16,
+     18,
+     22,
+     42,
+     44,
+     58
+    ],
+    "seg_control_all_equal": true,
+    "archive": "/Volumes/VertigoDataTier/pact/ddm_qo1_20260804/kcrop_probe/k5/archive.zip",
+    "archive_sha256": "362971d324789677a5c3b16ddb5d4adf897a5e7e334897ff6d4b01cf3cc1a67e",
+    "ledger_closes": true,
+    "ledger_residual": 0
+   },
+   {
+    "k": 6,
+    "section_bytes": 4312,
+    "archive_bytes": 358084,
+    "section_ledger": {
+     "name": "frame0_pose_repair",
+     "magic": "F0PR1!",
+     "counted_bytes": 4312,
+     "sha256": "00954c240425a82449d5eb70d567a69e87b2a9ecac417682cf6f27c026be9043",
+     "k": 6,
+     "n_pairs_repaired": 21,
+     "bytes_per_pair_raw": 216,
+     "counted_bytes_per_repaired_pair": 205.33333333333334,
+     "note": "int16 k*k*3 coefficients per repaired pair; generic DCT basis is FREE (rule 118)"
+    },
+    "d_pose_changed_mean": 0.000665524223309365,
+    "d_pose_n600_mean_pred": 0.0007145917118047388,
+    "S_pred_advisory": 0.7541459639616046,
+    "delta_vs_live": 1.0125010951878011e-07,
+    "seg_control_pairs": [
+     9,
+     10,
+     16,
+     18,
+     22,
+     42,
+     44,
+     58
+    ],
+    "seg_control_all_equal": true,
+    "archive": "/Volumes/VertigoDataTier/pact/ddm_qo1_20260804/kcrop_probe/k6/archive.zip",
+    "archive_sha256": "ad5dd0e4fbe5b13ab53a5995a6d77cc558c25f40b63f894ea50ad336bd50fb66",
+    "ledger_closes": true,
+    "ledger_residual": 0
+   }
+  ]
+ },
+ "boundaries": [
+  "No full-n600 scorer job launched; sg4/fleet owner must fire queued verdict.",
+  "d_seg is held constant by construction and by an 8-pair SegNet zero-frame0 control.",
+  "Uniform k<=4 rows are cropped-current-coef variants, not new quant-aware lower-k solves.",
+  "SMEVR row is a real token-coder round trip over repair-body nibbles, but not a shipped F0PR coder."
+ ]
+}

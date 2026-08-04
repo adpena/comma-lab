@@ -14,6 +14,20 @@ the verdict (baselines move; a stale byte delta is not a receipt).
 
 ## (arms append below)
 
+## C — qo1 pair-bitpack F0PR1 repair stream, queued n600 verdict
+
+Candidate archive:
+`/Volumes/VertigoDataTier/pact/ddm_qo1_20260804/sub_auto_pairbit/archive.zip`
+(`d5e814d5b9f65c3094b0e65fecdd7771734d03c420c63d1d2033a671b766986a`).
+
+Pre-score ledger: 357,836 B, byte ledger closes with residual 0 and payload re-encodes identically.
+Predicted components with seg held constant: d_seg 0.00431179, d_pose 0.0007145917, rate term
+`25*357836/37545489`; predicted S 0.75398083, delta -0.00016503 vs live own-vehicle baseline.
+
+Fire order when the scorer slot frees: run the exact n600 upstream/evaluate.py row on the archive
+above, recompute S from components, and compare against fz4 `sub_final` 0.7541459 @ 358,084 B
+[`macOS-CPU advisory`]. Do not promote from this queued note alone.
+
 ## FZ5 — cr2_ep854 + partial F0PR k6 repair (byte-closed negative; do not spend slot for pointer movement)
 
 Status: **FOLDED for frontier movement before n600**. This section is the owed

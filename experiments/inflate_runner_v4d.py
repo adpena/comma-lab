@@ -39,6 +39,7 @@ receiver-consumption bijection (#417).
 from __future__ import annotations
 
 import json
+import lzma
 import struct
 import sys
 from pathlib import Path, PurePosixPath
@@ -112,6 +113,139 @@ def decode_kl1_field(member: bytes) -> np.ndarray:
     lo = np.frombuffer(raw[half:2 * half], dtype=np.uint8).astype(np.uint16)
     cm = ((hi << 8) | lo).reshape(d, n)  # (d,n) uint16
     return np.ascontiguousarray(cm.T).view(np.float16)  # (n,d)
+
+
+# ---- frame_0 pose-repair stream (F0PR1; OPTIONAL 5th joint section, ddm_fz1) --------------
+# SegNet reads only the LAST frame (upstream/modules.py: ``x = x[:, -1, ...]``), so an additive
+# frame_0 correction is structurally seg-invisible; PoseNet reads both frames, so the repair
+# restores the pose readout the seg-only palette destroyed.  The DCT synthesis basis and the
+# bilinear resize D are DETERMINISTICALLY GENERATED here (rule-118-free generic code); only the
+# int16 coefficients in the counted section carry video-derived signal.
+F0PR_MAGIC = b"F0PR1!\x00\x00"
+_F0PR_LZMA_FILTERS = [{"id": lzma.FILTER_LZMA1, "dict_size": 1 << 22,
+                       "lc": 0, "lp": 0, "pb": 0}]
+_F0PR_RAW_INT16 = 0
+_F0PR_LZMA1_RAW = 1
+_F0PR_BROTLI_Q11 = 2
+_F0PR_PAIR_BITPACK = 3
+
+
+def _f0pr_unpack_pair_widths(payload: bytes, count: int):
+    width_bytes = (count + 1) // 2
+    if len(payload) < width_bytes:
+        raise SystemExit("F0PR pair-bitpack payload is truncated before widths")
+    widths = []
+    for byte in payload[:width_bytes]:
+        widths.append((byte >> 4) + 1)
+        if len(widths) < count:
+            widths.append((byte & 15) + 1)
+    return widths, payload[width_bytes:]
+
+
+def _f0pr_read_bits(payload: bytes, bitpos: int, width: int):
+    out = 0
+    for _ in range(width):
+        if bitpos >= len(payload) * 8:
+            raise SystemExit("F0PR pair-bitpack payload ended mid-value")
+        byte = payload[bitpos // 8]
+        out = (out << 1) | ((byte >> (7 - (bitpos % 8))) & 1)
+        bitpos += 1
+    return out, bitpos
+
+
+def _f0pr_decode_pair_bitpack(payload: bytes, count: int, k2: int) -> bytes:
+    widths, bits = _f0pr_unpack_pair_widths(payload, count)
+    expected_bits = sum(widths) * 3 * k2
+    expected_bytes = (expected_bits + 7) // 8
+    if len(bits) != expected_bytes:
+        raise SystemExit("F0PR pair-bitpack body length mismatch")
+    out = np.empty((count, 3, k2), dtype="<i2")
+    flat = out.reshape(count, -1)
+    bitpos = 0
+    for i, width in enumerate(widths):
+        sign = 1 << (width - 1)
+        full = 1 << width
+        for j in range(3 * k2):
+            code, bitpos = _f0pr_read_bits(bits, bitpos, width)
+            flat[i, j] = code - full if code & sign else code
+    if bitpos != expected_bits:
+        raise SystemExit("F0PR pair-bitpack bit cursor did not close")
+    if expected_bits % 8:
+        padding_mask = (1 << (8 - expected_bits % 8)) - 1
+        if bits[-1] & padding_mask:
+            raise SystemExit("F0PR pair-bitpack payload has nonzero padding")
+    return out.tobytes()
+
+
+def _f0pr_parse(blob: bytes):
+    """Parse the F0PR1 stream, closing exactly on the final byte (#417)."""
+    if blob[:8] != F0PR_MAGIC:
+        raise SystemExit("bad frame_0 pose repair magic")
+    k, seg_h, seg_w, count, coder = struct.unpack_from("<HHHHB", blob, 8)
+    off = 17
+    pairs = [struct.unpack_from("<I", blob, off + 4 * i)[0] for i in range(count)]
+    off += 4 * count
+    body = blob[off:]
+    if coder == _F0PR_LZMA1_RAW:
+        body = lzma.decompress(body, format=lzma.FORMAT_RAW, filters=_F0PR_LZMA_FILTERS)
+    elif coder == _F0PR_BROTLI_Q11:
+        body = brotli.decompress(body)
+    elif coder == _F0PR_PAIR_BITPACK:
+        body = _f0pr_decode_pair_bitpack(body, count, k * k)
+    elif coder != _F0PR_RAW_INT16:
+        raise SystemExit(f"unknown F0PR coder id {coder}")
+    k2 = k * k
+    if len(body) != count * k2 * 3 * 2:
+        raise SystemExit("F0PR body length mismatch")
+    arr = np.frombuffer(body, dtype="<i2").reshape(count, 3, k2)
+    return k, seg_h, seg_w, {int(p): arr[i] for i, p in enumerate(pairs)}
+
+
+def _f0pr_dct_atoms(k: int, h: int, w: int) -> np.ndarray:
+    """Generic separable 2-D DCT-III synthesis atoms (orthonormal), float64->float32."""
+    def basis(n: int, size: int) -> np.ndarray:
+        y = np.arange(size, dtype=np.float64)
+        v = np.cos(np.pi * (2.0 * y + 1.0) * n / (2.0 * size))
+        return v * np.sqrt((1.0 if n == 0 else 2.0) / size)
+    ath = np.stack([basis(a, h) for a in range(k)])
+    atw = np.stack([basis(b, w) for b in range(k)])
+    return np.einsum("ah,bw->abhw", ath, atw).reshape(k * k, h, w).astype(np.float32)
+
+
+def _f0pr_bilinear_axis(n_out: int, n_in: int):
+    src = (np.arange(n_out, dtype=np.float64) + 0.5) * (n_in / n_out) - 0.5
+    lo = np.clip(np.floor(src).astype(np.int64), 0, n_in - 1)
+    hi = np.clip(lo + 1, 0, n_in - 1)
+    w_hi = np.clip(src - np.floor(src), 0.0, 1.0)
+    return lo, hi, w_hi
+
+
+def _f0pr_apply(u8: np.ndarray, coef_i16: np.ndarray, atoms: np.ndarray,
+                seg_h: int, seg_w: int) -> np.ndarray:
+    """round(clamp(D(f0) + coef @ A)) written back through D's private 2x2 supports.
+
+    Deterministic and receiver-local; scale 874/384 = 2.276 > 2 makes every scorer
+    pixel's 4 support pixels PRIVATE, so D reproduces the paint exactly.
+    """
+    h, w = u8.shape[0], u8.shape[1]
+    rlo, rhi, rw = _f0pr_bilinear_axis(seg_h, h)
+    clo, chi, cw = _f0pr_bilinear_axis(seg_w, w)
+    x = u8.astype(np.float64)
+    rows = x[rlo] * (1.0 - rw)[:, None, None] + x[rhi] * rw[:, None, None]
+    base = rows[:, clo] * (1.0 - cw)[None, :, None] + rows[:, chi] * cw[None, :, None]
+    # macOS Accelerate raises a SPURIOUS FPE flag for this matmul shape even though inputs are
+    # finite and the output is verified against the float reference (bz1 precedent, asserted in
+    # the compose acceptance).  Silence the platform quirk locally, never globally.
+    with np.errstate(divide="ignore", over="ignore", invalid="ignore"):
+        delta = (coef_i16.astype(np.float64)
+                 @ atoms.reshape(atoms.shape[0], -1).astype(np.float64))
+    delta = delta.reshape(3, seg_h, seg_w).transpose(1, 2, 0)
+    paint = np.rint(np.clip(base + delta, 0.0, 255.0)).astype(np.uint8)
+    out = u8.copy()
+    for r_idx in (rlo, rhi):
+        for c_idx in (clo, chi):
+            out[r_idx[:, None], c_idx[None, :]] = paint
+    return out
 
 
 def parse_pose_warp_v4d(payload: bytes):
@@ -197,6 +331,7 @@ class Decoder:
     """Factored per-pair decoder (reused by the verify tool)."""
 
     def __init__(self, archive_dir: Path) -> None:
+        self._f0_repair = None          # (coefs, atoms, seg_h, seg_w) when F0PR1 ships
         blob = archive_dir / IX2_MEMBER
         if blob.exists():
             codes, sections, pose_warp = self._read_ix2(blob)
@@ -269,11 +404,17 @@ class Decoder:
         """
 
         bulk, sections = parse_payload(blob.read_bytes())
-        if len(sections) != len(IX2_JOINT_ORDER):
+        if len(sections) == len(IX2_JOINT_ORDER) + 1:
+            # v5 joint group: the 5th section is the F0PR1 frame_0 pose-repair stream.
+            config, renderer, selector, pose_warp, f0pr = sections
+            k, seg_h, seg_w, coefs = _f0pr_parse(f0pr)
+            self._f0_repair = (coefs, _f0pr_dct_atoms(k, seg_h, seg_w), seg_h, seg_w)
+        elif len(sections) == len(IX2_JOINT_ORDER):
+            config, renderer, selector, pose_warp = sections
+        else:
             raise SystemExit(
                 f"ix2 container holds {len(sections)} sections, "
-                f"expected {len(IX2_JOINT_ORDER)}")
-        config, renderer, selector, pose_warp = sections
+                f"expected {len(IX2_JOINT_ORDER)} or {len(IX2_JOINT_ORDER) + 1}")
         offset, beta_mags, st_grid = unpack_config_section(config)
         self.dim0_offset = offset
         self.beta_mags = tuple(beta_mags)
@@ -324,7 +465,12 @@ class Decoder:
             f0f = self._warp_pair(f1_f, pose, s_t, sel, 1.0)
         if a != 1.0 or b != 0.0:
             f0f = a * f0f + b
-        return _to_uint8(f0f)
+        u = _to_uint8(f0f)
+        if self._f0_repair is not None:
+            coefs, atoms, seg_h, seg_w = self._f0_repair
+            if i in coefs:
+                u = _f0pr_apply(u, coefs[i], atoms, seg_h, seg_w)
+        return u
 
 
 def main() -> None:

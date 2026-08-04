@@ -84,8 +84,18 @@ def test_int16_range_enforced():
 
 
 def test_coder_never_over_counts():
-    """The section chooses the smaller of stored/LZMA1, so it never over-counts vs raw."""
+    """The section chooses the smallest supported lossless coder, so it never over-counts vs raw."""
     coefs = _rng_coefs(list(range(30)), seed=3)
     blob = encode_pose_repair_stream(coefs, k=K, seg_h=H, seg_w=W)
     raw = 8 + 9 + 4 * 30 + 30 * K * K * 3 * 2
     assert len(blob) <= raw
+
+
+def test_forced_lossless_coders_round_trip_exact():
+    coefs = _rng_coefs([3, 7, 11], seed=11)
+    for coder in ("raw_int16", "lzma1_raw", "brotli_q11", "pair_bitpack"):
+        blob = encode_pose_repair_stream(coefs, k=K, seg_h=H, seg_w=W, coder=coder)
+        sec = decode_pose_repair_stream(blob)
+        assert sec.coder_name == coder
+        for p in coefs:
+            assert np.array_equal(sec.coefs[p], coefs[p])
