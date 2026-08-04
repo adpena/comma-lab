@@ -95,7 +95,8 @@ def confusion(gt: np.ndarray, rd: np.ndarray) -> np.ndarray:
 
 def solve_margin_optimal_paint(segnet, dec_f1: np.ndarray, gt_f1: np.ndarray,
                                band: np.ndarray, lgt: np.ndarray, *, steps: int, lr: float,
-                               eval_every: int) -> tuple:
+                               eval_every: int, convergence_patience_evals: int = 0,
+                               convergence_min_improvement: int = 1) -> tuple:
     """S4 cure: solve the in-band scorer-lattice colours against the FROZEN head.
 
     Two starts (pu2 multi-start rider): the decoded colours, and the truth colours.
@@ -108,12 +109,30 @@ def solve_margin_optimal_paint(segnet, dec_f1: np.ndarray, gt_f1: np.ndarray,
     m = torch.from_numpy(band)[None, None].float()        # (1,1,384,512)
 
     best = None
+    diagnostics = {
+        "steps_requested": int(steps),
+        "lr": float(lr),
+        "eval_every": int(eval_every),
+        "convergence_patience_evals": int(convergence_patience_evals),
+        "convergence_min_improvement": int(convergence_min_improvement),
+        "starts": [],
+    }
     # Scorer.__init__ disables grad process-wide (inference harness); the solve needs it back.
     with torch.enable_grad():
         for start_name, start in (("dec", base), ("truth", truth)):
             x = start.clone().detach()
             delta = torch.zeros_like(base, requires_grad=True)
             opt = torch.optim.Adam([delta], lr=lr)
+            start_diag = {
+                "start": start_name,
+                "curve": [],
+                "stop_reason": "iteration_cap",
+                "steps_run": 0,
+                "best_step": None,
+                "best_proxy_flips": None,
+            }
+            start_best = None
+            evals_since_best = 0
             for it in range(steps + 1):
                 cur = torch.clamp(base * (1 - m) + (x + delta) * m, 0.0, 255.0)
                 if it % eval_every == 0 or it == steps:
@@ -121,17 +140,55 @@ def solve_margin_optimal_paint(segnet, dec_f1: np.ndarray, gt_f1: np.ndarray,
                     with torch.no_grad():
                         lam = segnet(q).argmax(dim=1)[0].numpy().astype(np.uint8)
                     n_bad = int((lam != lgt).sum())
+                    start_diag["curve"].append({"step": int(it), "proxy_flips": n_bad})
+                    start_diag["steps_run"] = int(it)
+                    improved = (
+                        start_best is None
+                        or int(start_best[0]) - n_bad >= max(1, int(convergence_min_improvement))
+                    )
+                    if improved:
+                        start_best = (n_bad, int(it))
+                        start_diag["best_step"] = int(it)
+                        start_diag["best_proxy_flips"] = n_bad
+                        evals_since_best = 0
+                    else:
+                        evals_since_best += 1
                     if best is None or n_bad < best[0]:
                         best = (n_bad, q[0].permute(1, 2, 0).numpy().astype(np.uint8),
-                                f"{start_name}@{it}")
+                                f"{start_name}@{it}", start_name)
+                    if (
+                        convergence_patience_evals > 0
+                        and evals_since_best >= convergence_patience_evals
+                        and it < steps
+                    ):
+                        start_diag["stop_reason"] = "plateau_no_proxy_improvement"
+                        break
                 if it == steps:
+                    if start_diag["best_step"] == steps:
+                        start_diag["stop_reason"] = "iteration_cap_best_at_cap"
+                    elif convergence_patience_evals <= 0:
+                        start_diag["stop_reason"] = "iteration_cap_no_convergence_test"
+                    else:
+                        start_diag["stop_reason"] = "iteration_cap_before_plateau"
                     break
                 logits = segnet(cur)
                 loss = torch.nn.functional.cross_entropy(logits, tgt)
                 opt.zero_grad()
                 loss.backward()
                 opt.step()
-    return best  # (proxy_flips_at_scorer_lattice, paint_u8 HWC, tag)
+            diagnostics["starts"].append(start_diag)
+    selected_start = best[3]
+    selected_diag = next(d for d in diagnostics["starts"] if d["start"] == selected_start)
+    diagnostics["selected"] = {
+        "start": selected_start,
+        "tag": best[2],
+        "best_step": int(best[2].rsplit("@", 1)[1]),
+        "best_proxy_flips": int(best[0]),
+        "stop_reason": selected_diag["stop_reason"],
+        "steps_run": selected_diag["steps_run"],
+        "curve": selected_diag["curve"],
+    }
+    return best[:3] + (diagnostics,)  # proxy flips, paint_u8 HWC, tag, diagnostics
 
 
 def main() -> int:
@@ -144,6 +201,10 @@ def main() -> int:
     ap.add_argument("--steps", type=int, default=25)
     ap.add_argument("--lr", type=float, default=4.0)
     ap.add_argument("--eval-every", type=int, default=5)
+    ap.add_argument("--convergence-patience-evals", type=int, default=0,
+                    help="stop a start after this many eval points without proxy-flip improvement")
+    ap.add_argument("--convergence-min-improvement", type=int, default=1,
+                    help="minimum proxy-flip drop that resets the convergence patience")
     ap.add_argument("--limit", type=int, default=0)
     ap.add_argument("--resume", action="store_true")
     args = ap.parse_args()
@@ -214,11 +275,19 @@ def main() -> int:
         rec.update(score_camera(cam_edit, "S4_truthpaint"))
 
         # ---- the named S4 CURE: margin-optimal solved paint, multi-start, best-realized ----
-        nbad, paint, tag = solve_margin_optimal_paint(
+        nbad, paint, tag, solve_diag = solve_margin_optimal_paint(
             segnet, dec[1], gt[1], band, lgt,
-            steps=args.steps, lr=args.lr, eval_every=args.eval_every)
+            steps=args.steps, lr=args.lr, eval_every=args.eval_every,
+            convergence_patience_evals=args.convergence_patience_evals,
+            convergence_min_improvement=args.convergence_min_improvement)
         rec["solved_start_tag"] = tag
         rec["solved_proxy_flips_scorer_lattice"] = int(nbad)
+        rec["solved_stop_reason"] = solve_diag["selected"]["stop_reason"]
+        rec["solved_best_step"] = solve_diag["selected"]["best_step"]
+        rec["solved_steps_run"] = solve_diag["selected"]["steps_run"]
+        rec["solved_best_start"] = solve_diag["selected"]["start"]
+        rec["solved_convergence_curve"] = solve_diag["selected"]["curve"]
+        rec["solved_all_start_diagnostics"] = solve_diag["starts"]
         cam_solved = realize_scorer_paint_to_camera(dec[1], band, paint)
         rec.update(score_camera(cam_solved, "S4_solvedpaint"))
 
@@ -227,7 +296,8 @@ def main() -> int:
         print(f"[sq1b] pair {p:3d} ({n+1}/{len(pairs)}) desc {d:5d} | S123err band {err_band:.3g} "
               f"off {err_off:.3g} | truthpaint after {rec['S4_truthpaint_flips_after']:5d} "
               f"| SOLVED proxy {nbad:5d} realized {rec['S4_solvedpaint_flips_after']:5d} "
-              f"(was {rec['flips_before']:5d}) [{time.time()-tp:.1f}s]", flush=True)
+              f"(was {rec['flips_before']:5d}) {rec['solved_stop_reason']} "
+              f"best@{rec['solved_best_step']} [{time.time()-tp:.1f}s]", flush=True)
 
         args.out.parent.mkdir(parents=True, exist_ok=True)
         with open(args.out, "w") as f:
@@ -238,6 +308,10 @@ def main() -> int:
                        "class_names": CLASS_NAMES,
                        "solver": {"steps": args.steps, "lr": args.lr,
                                   "eval_every": args.eval_every,
+                                  "convergence_patience_evals":
+                                  args.convergence_patience_evals,
+                                  "convergence_min_improvement":
+                                  args.convergence_min_improvement,
                                   "starts": ["dec", "truth"],
                                   "riders": ["multi_start_pu2", "in_loop_realized_flip_fd2_tb1"]},
                        "pairs": pairs, "rows": rows}, f, indent=1)

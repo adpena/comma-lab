@@ -32,8 +32,10 @@ def main() -> int:
     if len(sys.argv) != 4:
         print("usage: ddm_sq1_aggregate.py <v0_receipt.json> <v1_receipt.json> <out.json>")
         return 2
-    v0 = json.loads(Path(sys.argv[1]).read_text())["rows"]
-    v1 = json.loads(Path(sys.argv[2]).read_text())["rows"]
+    v0_obj = json.loads(Path(sys.argv[1]).read_text())
+    v1_obj = json.loads(Path(sys.argv[2]).read_text())
+    v0 = v0_obj["rows"]
+    v1 = v1_obj["rows"]
     out: dict = {"schema": "ddm_sq1_aggregate.v1", "score_claim": False,
                  "pointer": "0.1910828242 [contest-CPU] UNMOVED",
                  "axis": "[macOS-CPU frozen-scorer advisory] NON-PROMOTABLE"}
@@ -95,6 +97,49 @@ def main() -> int:
               f"pairs>0.583 {(per>0.583).sum()}/{len(per)}  "
               f"fixed {fx.sum():.0f} introduced {ip.sum():.0f}  d_pose {dp.mean():.6f}")
     out["S4_residual"] = s4
+
+    # ---- cap-artifact census ----------------------------------------------------------------
+    solver = v1_obj.get("solver", {})
+    requested_steps = int(solver.get("steps", -1))
+    explicit = [r for r in v1 if "solved_stop_reason" in r]
+    if explicit:
+        reason_counts = {}
+        best_at_cap = 0
+        for r in explicit:
+            reason = str(r["solved_stop_reason"])
+            reason_counts[reason] = reason_counts.get(reason, 0) + 1
+            if int(r.get("solved_best_step", -1)) == requested_steps:
+                best_at_cap += 1
+        cap_census = {
+            "n_pairs": len(v1),
+            "explicit_stop_reason_rows": len(explicit),
+            "requested_steps": requested_steps,
+            "reason_counts": reason_counts,
+            "best_at_requested_cap": best_at_cap,
+        }
+    else:
+        # Back-compat for the original n32 receipt: no explicit stop reason existed, so the
+        # only honest reading is "best landed at the cap", not "converged".
+        tags = [str(r.get("solved_start_tag", "")) for r in v1]
+        best_at_cap = sum(t.endswith(f"@{requested_steps}") for t in tags)
+        cap_census = {
+            "n_pairs": len(v1),
+            "explicit_stop_reason_rows": 0,
+            "requested_steps": requested_steps,
+            "reason_counts": {},
+            "best_at_requested_cap": best_at_cap,
+            "legacy_inference": (
+                "receipt has no stop_reason; tag-at-cap is cap-artifact evidence only"
+            ),
+        }
+    print("\n--- cap-artifact census (sq1 solved-paint loop) ---")
+    print(f"  denominator n={cap_census['n_pairs']} explicit_stop_reason_rows="
+          f"{cap_census['explicit_stop_reason_rows']} requested_steps="
+          f"{cap_census['requested_steps']} best_at_cap={cap_census['best_at_requested_cap']}")
+    if cap_census["reason_counts"]:
+        for reason, count in sorted(cap_census["reason_counts"].items()):
+            print(f"  {reason:36s} {count:3d}/{cap_census['n_pairs']}")
+    out["cap_artifact_census"] = cap_census
 
     # ---- per-EDGE (pc2: never per class alone) ------------------------------------------------
     C0 = np.sum([np.array(r["C_before"]) for r in v1], axis=0)
