@@ -1,0 +1,13 @@
+{
+  "byte_identical_to_qo1_shipped_decode": true,
+  "captured_at_utc": "2026-08-04T23:22:22Z",
+  "command": "/Users/adpena/Projects/pact/.venv/bin/python /Volumes/VertigoDataTier/pact/ddm_bf1_20260805/qo1_identity_bf1_v2_receiver/inflate_runner.py /Volumes/VertigoDataTier/pact/ddm_bf1_20260805/qo1_identity_bf1_v2_receiver/archive /Volumes/VertigoDataTier/pact/ddm_bf1_20260805/qo1_identity_bf1_v2_receiver/inflated /Volumes/VertigoDataTier/pact/ddm_bf1_20260805/qo1_identity_bf1_v2_receiver/names.txt",
+  "expected_raw_bytes": 3662409600,
+  "expected_raw_sha256": "3ce7d269a7080a4024a576694cd0ddc697099c64cd02fdd2bb879339e4b03f31",
+  "inflate_runner_sha256": "956b04852c7c99f5bd93f881d7dc6f935bf84659eab316a5b1025fb236e6c8da",
+  "output_raw": "/Volumes/VertigoDataTier/pact/ddm_bf1_20260805/qo1_identity_bf1_v2_receiver/inflated/0.raw",
+  "proof_dir": "/Volumes/VertigoDataTier/pact/ddm_bf1_20260805/qo1_identity_bf1_v2_receiver",
+  "raw_bytes": 3662409600,
+  "raw_sha256": "3ce7d269a7080a4024a576694cd0ddc697099c64cd02fdd2bb879339e4b03f31",
+  "wall_seconds": 207.4
+}

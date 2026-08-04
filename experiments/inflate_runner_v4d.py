@@ -96,7 +96,9 @@ FRAME0_POLICY = "warp_two_plane_static_photo_beta_v4d"
 DEFAULT_BETA_MAGS = (0.0, 0.5, 1.0)  # rung-A magnitude table (sign from yaw)
 BD1_CLASS_FIELD_MAGIC = b"BD1CLF1!"
 BD1_CLASS_FIELD_HEADER = struct.Struct("<8sBHHHBBBBBII32s")
+BD1_CLASS_FIELD_HEADER_V2 = struct.Struct("<8sBHHHBBBBBBII32s")
 BD1_CLASS_FIELD_VERSION = 1
+BD1_CLASS_FIELD_VERSION_V2 = 2
 _BD1_RAW = 0
 _BD1_LZMA1_RAW = 1
 _BD1_BROTLI_Q11 = 2
@@ -104,6 +106,9 @@ _BD1_SMEVR_R7_NIBBLE = 3
 _BD1_LZMA_FILTERS = [{"id": lzma.FILTER_LZMA1, "dict_size": 1 << 22,
                        "lc": 0, "lp": 0, "pb": 0}]
 _BD1_PAINT_ROAD_LANE_RGB = 1
+_BD1_REPR_DENSE_BITMAP = 0
+_BD1_REPR_ROW_RUNS = 1
+_BD1_REPR_LANE_CROP = 2
 _BD1_ROAD_CLASS = 0
 _BD1_LANE_CLASS = 1
 _BD1_ROAD_RGB = np.array([30, 39, 72], dtype=np.uint8)
@@ -331,48 +336,37 @@ def _bd1_decode_body(codec: int, payload: bytes) -> bytes:
     raise SystemExit(f"unknown BD1 class-field codec id {codec}")
 
 
-def _bd1_parse_class_field(blob: bytes):
-    """Parse a counted Road/Lane r1-band class field, closing on the final byte."""
-    if len(blob) < BD1_CLASS_FIELD_HEADER.size:
-        raise SystemExit("BD1 class-field section header truncated")
-    (magic, version, seg_h, seg_w, n_pairs, radius, road_cls, lane_cls, paint_mode,
-     codec, raw_len, band_bytes, raw_sha) = BD1_CLASS_FIELD_HEADER.unpack_from(blob, 0)
-    if magic != BD1_CLASS_FIELD_MAGIC:
-        raise SystemExit("BD1 class-field magic differs")
-    if version != BD1_CLASS_FIELD_VERSION:
-        raise SystemExit("BD1 class-field version differs")
-    if radius != 1:
-        raise SystemExit("BD1 class-field receiver currently serves only r1 bands")
-    if road_cls != _BD1_ROAD_CLASS or lane_cls != _BD1_LANE_CLASS:
-        raise SystemExit("BD1 class-field Road/Lane class ids differ")
-    if paint_mode != _BD1_PAINT_ROAD_LANE_RGB:
-        raise SystemExit("BD1 class-field paint mode differs")
-    if band_bytes != (int(seg_h) * int(seg_w) + 7) // 8:
-        raise SystemExit("BD1 class-field band bitmap width differs")
-    raw = _bd1_decode_body(int(codec), blob[BD1_CLASS_FIELD_HEADER.size:])
-    if len(raw) != int(raw_len):
-        raise SystemExit("BD1 class-field raw length differs")
-    if hashlib.sha256(raw).digest() != raw_sha:
-        raise SystemExit("BD1 class-field raw SHA-256 differs")
+def _bd1_read_varint(payload: bytes, offset: int) -> tuple[int, int]:
+    shift = 0
+    value = 0
+    while True:
+        if offset >= len(payload):
+            raise SystemExit("BD1 varint is truncated")
+        byte = int(payload[offset])
+        offset += 1
+        value |= (byte & 0x7F) << shift
+        if (byte & 0x80) == 0:
+            return value, offset
+        shift += 7
+        if shift > 63:
+            raise SystemExit("BD1 varint is too long")
 
+
+def _bd1_field_from_pairs(seg_h: int, seg_w: int, pair_data):
     bands = []
     lane_bits = []
     pair_counts = []
-    off = 0
     slots = int(seg_h) * int(seg_w)
-    for _ in range(int(n_pairs)):
-        band_payload = raw[off:off + int(band_bytes)]
-        off += int(band_bytes)
-        band = _bd1_unpack_bits(band_payload, slots)
-        count = int(band.sum())
-        side_bytes = (count + 7) // 8
-        side = _bd1_unpack_bits(raw[off:off + side_bytes], count)
-        off += side_bytes
-        bands.append(np.flatnonzero(band.reshape(-1)).astype(np.int32))
-        lane_bits.append(side)
-        pair_counts.append(count)
-    if off != len(raw):
-        raise SystemExit("BD1 class-field raw body has trailing bytes")
+    for indices, lane in pair_data:
+        indices = np.asarray(indices, dtype=np.int64).reshape(-1)
+        lane = np.asarray(lane, dtype=bool).reshape(-1)
+        if indices.size != lane.size:
+            raise SystemExit("BD1 class-field index/side count differs")
+        if indices.size and (int(indices.min()) < 0 or int(indices.max()) >= slots):
+            raise SystemExit("BD1 class-field index outside scorer grid")
+        bands.append(indices.astype(np.int32))
+        lane_bits.append(lane)
+        pair_counts.append(int(indices.size))
     return {
         "seg_h": int(seg_h),
         "seg_w": int(seg_w),
@@ -380,6 +374,141 @@ def _bd1_parse_class_field(blob: bytes):
         "lane_bits": tuple(lane_bits),
         "pair_counts": tuple(pair_counts),
     }
+
+
+def _bd1_decode_dense_bitmap(raw: bytes, seg_h: int, seg_w: int, n_pairs: int, band_bytes: int):
+    pair_data = []
+    off = 0
+    slots = int(seg_h) * int(seg_w)
+    for _ in range(int(n_pairs)):
+        band_payload = raw[off:off + int(band_bytes)]
+        off += int(band_bytes)
+        band = _bd1_unpack_bits(band_payload, slots)
+        indices = np.flatnonzero(band.reshape(-1))
+        count = int(indices.size)
+        side_bytes = (count + 7) // 8
+        side = _bd1_unpack_bits(raw[off:off + side_bytes], count)
+        off += side_bytes
+        pair_data.append((indices, side))
+    if off != len(raw):
+        raise SystemExit("BD1 dense class-field raw body has trailing bytes")
+    return _bd1_field_from_pairs(seg_h, seg_w, pair_data)
+
+
+def _bd1_decode_row_runs(raw: bytes, seg_h: int, seg_w: int, n_pairs: int):
+    pair_data = []
+    off = 0
+    slots = int(seg_h) * int(seg_w)
+    for _ in range(int(n_pairs)):
+        run_count, off = _bd1_read_varint(raw, off)
+        indices = []
+        prev_start = 0
+        prev_end = 0
+        total = 0
+        for run_index in range(run_count):
+            start_delta, off = _bd1_read_varint(raw, off)
+            length, off = _bd1_read_varint(raw, off)
+            if length == 0:
+                raise SystemExit("BD1 row-run length is zero")
+            start = start_delta if run_index == 0 else prev_start + start_delta
+            end = start + length
+            if start < 0 or end > slots:
+                raise SystemExit("BD1 row-run outside scorer grid")
+            if run_index and start < prev_end:
+                raise SystemExit("BD1 row-runs are not strictly ordered")
+            indices.extend(range(start, end))
+            prev_start = start
+            prev_end = end
+            total += length
+        side_bytes = (total + 7) // 8
+        side = _bd1_unpack_bits(raw[off:off + side_bytes], total)
+        off += side_bytes
+        pair_data.append((np.asarray(indices, dtype=np.int64), side))
+    if off != len(raw):
+        raise SystemExit("BD1 row-run raw body has trailing bytes")
+    return _bd1_field_from_pairs(seg_h, seg_w, pair_data)
+
+
+def _bd1_dilate_3x3(mask: np.ndarray) -> np.ndarray:
+    padded = np.pad(np.asarray(mask, dtype=bool), 1, mode="constant")
+    out = np.zeros(mask.shape, dtype=bool)
+    for dy in range(3):
+        for dx in range(3):
+            out |= padded[dy:dy + mask.shape[0], dx:dx + mask.shape[1]]
+    return out
+
+
+def _bd1_decode_lane_crop(raw: bytes, seg_h: int, seg_w: int, n_pairs: int):
+    pair_data = []
+    off = 0
+    for _ in range(int(n_pairs)):
+        if off + 8 > len(raw):
+            raise SystemExit("BD1 Lane-crop record header is truncated")
+        y0, x0, height, width = struct.unpack_from("<HHHH", raw, off)
+        off += 8
+        if y0 + height > seg_h or x0 + width > seg_w:
+            raise SystemExit("BD1 Lane crop exceeds scorer grid")
+        lane = np.zeros((int(seg_h), int(seg_w)), dtype=bool)
+        bit_count = int(height) * int(width)
+        payload_bytes = (bit_count + 7) // 8
+        if bit_count:
+            crop = _bd1_unpack_bits(raw[off:off + payload_bytes], bit_count).reshape(
+                int(height), int(width)
+            )
+            lane[int(y0):int(y0) + int(height), int(x0):int(x0) + int(width)] = crop
+        off += payload_bytes
+        band = _bd1_dilate_3x3(lane)
+        indices = np.flatnonzero(band.reshape(-1))
+        side = lane.reshape(-1)[indices]
+        pair_data.append((indices, side))
+    if off != len(raw):
+        raise SystemExit("BD1 Lane-crop raw body has trailing bytes")
+    return _bd1_field_from_pairs(seg_h, seg_w, pair_data)
+
+
+def _bd1_parse_class_field(blob: bytes):
+    """Parse a counted Road/Lane r1-band class field, closing on the final byte."""
+    if len(blob) < 9:
+        raise SystemExit("BD1 class-field section header truncated")
+    version = int(blob[8])
+    if version == BD1_CLASS_FIELD_VERSION:
+        if len(blob) < BD1_CLASS_FIELD_HEADER.size:
+            raise SystemExit("BD1 class-field section header truncated")
+        (magic, version, seg_h, seg_w, n_pairs, radius, road_cls, lane_cls, paint_mode,
+         codec, raw_len, band_bytes, raw_sha) = BD1_CLASS_FIELD_HEADER.unpack_from(blob, 0)
+        repr_kind = _BD1_REPR_DENSE_BITMAP
+        payload_offset = BD1_CLASS_FIELD_HEADER.size
+    elif version == BD1_CLASS_FIELD_VERSION_V2:
+        if len(blob) < BD1_CLASS_FIELD_HEADER_V2.size:
+            raise SystemExit("BD1 class-field v2 section header truncated")
+        (magic, version, seg_h, seg_w, n_pairs, radius, road_cls, lane_cls, paint_mode,
+         repr_kind, codec, raw_len, band_bytes, raw_sha) = BD1_CLASS_FIELD_HEADER_V2.unpack_from(blob, 0)
+        payload_offset = BD1_CLASS_FIELD_HEADER_V2.size
+    else:
+        raise SystemExit("BD1 class-field version differs")
+    if magic != BD1_CLASS_FIELD_MAGIC:
+        raise SystemExit("BD1 class-field magic differs")
+    if radius != 1:
+        raise SystemExit("BD1 class-field receiver currently serves only r1 bands")
+    if road_cls != _BD1_ROAD_CLASS or lane_cls != _BD1_LANE_CLASS:
+        raise SystemExit("BD1 class-field Road/Lane class ids differ")
+    if paint_mode != _BD1_PAINT_ROAD_LANE_RGB:
+        raise SystemExit("BD1 class-field paint mode differs")
+    if repr_kind == _BD1_REPR_DENSE_BITMAP and band_bytes != (int(seg_h) * int(seg_w) + 7) // 8:
+        raise SystemExit("BD1 class-field band bitmap width differs")
+    raw = _bd1_decode_body(int(codec), blob[payload_offset:])
+    if len(raw) != int(raw_len):
+        raise SystemExit("BD1 class-field raw length differs")
+    if hashlib.sha256(raw).digest() != raw_sha:
+        raise SystemExit("BD1 class-field raw SHA-256 differs")
+    if repr_kind == _BD1_REPR_DENSE_BITMAP:
+        return _bd1_decode_dense_bitmap(raw, int(seg_h), int(seg_w), int(n_pairs), int(band_bytes))
+    if repr_kind == _BD1_REPR_ROW_RUNS:
+        return _bd1_decode_row_runs(raw, int(seg_h), int(seg_w), int(n_pairs))
+    if repr_kind == _BD1_REPR_LANE_CROP:
+        return _bd1_decode_lane_crop(raw, int(seg_h), int(seg_w), int(n_pairs))
+    raise SystemExit(f"unknown BD1 class-field representation kind {int(repr_kind)}")
+
 
 
 def _bd1_apply_class_field(u8: np.ndarray, field, pair_index: int) -> np.ndarray:

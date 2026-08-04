@@ -1,0 +1,554 @@
+{
+  "absent_section_identity_proof": {
+    "byte_identical_to_qo1_shipped_decode": true,
+    "captured_at_utc": "2026-08-04T23:22:22Z",
+    "command": "/Users/adpena/Projects/pact/.venv/bin/python /Volumes/VertigoDataTier/pact/ddm_bf1_20260805/qo1_identity_bf1_v2_receiver/inflate_runner.py /Volumes/VertigoDataTier/pact/ddm_bf1_20260805/qo1_identity_bf1_v2_receiver/archive /Volumes/VertigoDataTier/pact/ddm_bf1_20260805/qo1_identity_bf1_v2_receiver/inflated /Volumes/VertigoDataTier/pact/ddm_bf1_20260805/qo1_identity_bf1_v2_receiver/names.txt",
+    "expected_raw_bytes": 3662409600,
+    "expected_raw_sha256": "3ce7d269a7080a4024a576694cd0ddc697099c64cd02fdd2bb879339e4b03f31",
+    "inflate_runner_sha256": "956b04852c7c99f5bd93f881d7dc6f935bf84659eab316a5b1025fb236e6c8da",
+    "output_raw": "/Volumes/VertigoDataTier/pact/ddm_bf1_20260805/qo1_identity_bf1_v2_receiver/inflated/0.raw",
+    "proof_dir": "/Volumes/VertigoDataTier/pact/ddm_bf1_20260805/qo1_identity_bf1_v2_receiver",
+    "raw_bytes": 3662409600,
+    "raw_sha256": "3ce7d269a7080a4024a576694cd0ddc697099c64cd02fdd2bb879339e4b03f31",
+    "wall_seconds": 207.4
+  },
+  "axis": "[macOS-CPU advisory / scorer-free receiver-byte custody]",
+  "base": {
+    "archive_bytes": 357836,
+    "archive_sha256": "d5e814d5b9f65c3094b0e65fecdd7771734d03c420c63d1d2033a671b766986a",
+    "axis": "[macOS-CPU advisory]",
+    "joint_section_count": 5,
+    "own_vehicle_S": 0.7539807296911207,
+    "payload_sha256": "bd6da15ec41030762e4510555f12d3d141d3c71f495af701666a769b12f0b036",
+    "submission_dir": "/Volumes/VertigoDataTier/pact/ddm_qo1_20260804/sub_auto_pairbit"
+  },
+  "bd1_versioning": {
+    "header": "<8sBHHHBBBBBBII32s",
+    "old_absent_path": "qo1 base keeps 5 sections; receiver only parses BF1 when tagged section is present",
+    "representations": {
+      "0": "dense_bitmap",
+      "1": "row_runs",
+      "2": "lane_crop"
+    },
+    "section_magic": "BD1CLF1!",
+    "version": 2
+  },
+  "boundaries": [
+    "No SegNet/PoseNet forward was run.",
+    "No upstream/ files were edited.",
+    "No /tmp evidence is cited.",
+    "All BF1 sections are video-derived counted payload.",
+    "The byte winner is lossy in mask domain and is not a score improvement claim.",
+    "Candidate survival through scorer cells is unmeasured."
+  ],
+  "built_at_utc": "2026-08-04T23:24:41.558129+00:00",
+  "candidate": {
+    "archive_bytes": 563256,
+    "archive_sha256": "4741bfc91e3c013ea63435edd578933ef346540e998b71c368ff88f0b7bfa13a",
+    "delta_bytes_vs_qo1": 205420,
+    "label": "RECEIVER-CLOSED / SURVIVAL-UNMEASURED / score_claim=false",
+    "parse_back": {
+      "archive_bytes": 563256,
+      "archive_sha256": "4741bfc91e3c013ea63435edd578933ef346540e998b71c368ff88f0b7bfa13a",
+      "bulk_bytes": 341295,
+      "joint_section_count": 6,
+      "joint_sections": [
+        {
+          "index": 0,
+          "magic": "\u0000\u0000B\r\u0003\u000b\u0003",
+          "name": "config",
+          "raw_bytes": 36,
+          "sha256": "fc4f23ac9e31ba266ace26131319eb5b574d69e1d505fb1fc20a9dbc79a240d6"
+        },
+        {
+          "index": 1,
+          "magic": "IX2REN01",
+          "name": "renderer",
+          "raw_bytes": 3266,
+          "sha256": "3b8eb0c24f9e6d8b547a23a5db29a1dbbd03db474fbba3638b0c3dd858ca7009"
+        },
+        {
+          "index": 2,
+          "magic": "{\"activa",
+          "name": "selector",
+          "raw_bytes": 535,
+          "sha256": "8fc5c3fc65eb051b65ebf01d4b008e52d606097194c57884e739eae2ad8382e1"
+        },
+        {
+          "index": 3,
+          "magic": "PFS1WPD1",
+          "name": "pose_warp",
+          "raw_bytes": 8751,
+          "sha256": "d1d073e55aacf991491365d13716fededb169854b78bb203c34c84ca880c25db"
+        },
+        {
+          "index": 4,
+          "magic": "F0PR1!\u0000\u0000",
+          "name": "frame0_pose_repair",
+          "raw_bytes": 4081,
+          "sha256": "b5874d32324a46dc76cb1fc0beb7cda5fdaca2f59ebae6acbb08283206e8e7a2"
+        },
+        {
+          "index": 5,
+          "magic": "BD1CLF1!",
+          "name": "bf1_band_field",
+          "raw_bytes": 205196,
+          "sha256": "cc9336fc5f654090496b498211de12e2e9b4c40018d7163d5f245ac96750c171"
+        }
+      ],
+      "payload_bytes": 563148,
+      "payload_reencodes_identically": true,
+      "zip_members": [
+        {
+          "compress_type": 0,
+          "compressed_bytes": 563148,
+          "name": "0.bin",
+          "uncompressed_bytes": 563148
+        }
+      ]
+    },
+    "payload_sha256": "e6b04e9fa4b7a8e3ca1045c73d95f1bdf480ede36db66034233d8634693510fa",
+    "rate_delta_S_vs_qo1": 0.13678074615035643,
+    "receiver_smoke": {
+      "band_pixels_this_pair": 3102,
+      "camera_pixels_changed": 12408,
+      "frame1_after_sha256": "d4508b00ede2a65c6ff3a29059ceae03e15930360dd24842f58fdb70b4e93ebe",
+      "frame1_before_sha256": "4bd5d651172308b377136a983f50c49ba5019ad9f5fd01759775650756086536",
+      "mutated": true,
+      "pair": 0,
+      "receiver_class_field_present": true
+    },
+    "submission_dir": "/Volumes/VertigoDataTier/pact/ddm_bf1_20260805/sub_auto_pairbit_bf1_rl1_lane_crop_r3"
+  },
+  "cq2_thresholds": {
+    "25KB_student_explicit_direction": 0.611747,
+    "25KB_student_side_implied": 0.51681,
+    "75KB_student_explicit_direction": 0.854688,
+    "75KB_student_side_implied": 0.759752
+  },
+  "external_rows_cited_not_rerun": [
+    {
+      "archive_bytes": 726027,
+      "id": "bd1_dense_v1_baseline",
+      "reason": "baseline cited, not recomputed",
+      "section_bytes": 367929,
+      "source": ".omx/research/ddm_bd1_20260805/BD1_RECEIPT_20260805.md"
+    },
+    {
+      "body_bytes_explicit_direction": 100904,
+      "body_bytes_side_implied": 81365,
+      "id": "se3_prior_assumption_scoped",
+      "reason": "requires receiver-derived chart; RF1 failed on qo1, so BF1 also reports receiver-closed sparse-support price",
+      "source": ".omx/research/ddm_se3_20260804/se3_receipt.md"
+    },
+    {
+      "id": "sp1_explicit_contour_support",
+      "lzma_support_bytes": 421366,
+      "reason": "explicit support contour formulation already measured worse than the BF1 top rows",
+      "source": ".omx/research/ddm_sp1_contour_support_coder_20260728.md",
+      "support_bytes": 444394
+    }
+  ],
+  "follow_on_disposition": [
+    {
+      "action": "use `rl1_lane_crop_bf1` n600 section/body/candidate bytes as the real re-price; realization/scorer survival remains owed.",
+      "id": "#939-description-half",
+      "status": "SETTLED"
+    },
+    {
+      "action": "explicit contour support stays formulation-negative for this BF1 field race; do not rerun unless a new contour decoder beats row-run/Lane-crop bytes.",
+      "id": "sp1-contour",
+      "status": "FOLDED"
+    },
+    {
+      "action": "when a qo1 successor carries a legal receiver-side class chart, rerun the 81KB/101KB SE3 rows against that chart and then append a scorer-slot job behind sq2.",
+      "id": "se3-rf-chart",
+      "status": "QUEUED-WITH-FIRE-ORDER"
+    },
+    {
+      "action": "after BF1 survival is known, test one receiver-realized generator/address source at a time; require BD1 section parse-back plus mask-domain table before scorer dispatch.",
+      "id": "phase-worldsheet-g4-pf3-successors",
+      "status": "QUEUED-WITH-FIRE-ORDER"
+    },
+    {
+      "action": "do not fire while sq2 owns the scorer slot; candidate is ready only as receiver-closed/survival-unmeasured input.",
+      "id": "n600-scorer",
+      "status": "QUEUED-WITH-FIRE-ORDER"
+    }
+  ],
+  "inputs": {
+    "class_order": {
+      "Lane": 1,
+      "Road": 0
+    },
+    "current_argmax": "/Volumes/VertigoDataTier/pact/ddm_pu2_20260803/argmax_cache/cx1_argmax_n600.npy",
+    "current_argmax_sha256": "5e903de650e60ec6a64b34eb455fa1bc911223551d0b31e9ae45cc906e1490be",
+    "gt_cache": "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+    "gt_cache_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6",
+    "selection_mode": "n600 all pairs; no prefix",
+    "shape": [
+      600,
+      384,
+      512
+    ]
+  },
+  "n600_scorer_job": false,
+  "next_if_resumed": "Start from bf1_repr_race_receipt.json and the candidate archive under the SSD directory. If scorer slot is free, run exactly one n600 scorer job on the receiver-closed lane-crop candidate or first replace it with a legal SE3 receiver-chart row if RF closure has landed.",
+  "own_vehicle_frontier_line": "S = 0.7539807296911207 @ 357836 B [macOS-CPU advisory]",
+  "promotion_eligible": false,
+  "recall_evidence": [
+    {
+      "finding": "beyond the charter seeds, the live corpus has regional phase, g4 spatial context, v13 worldsheet, PF3/recursive coordinate, BN-stratum, and row-band address families.",
+      "plan_impact": "only receiver-decodeable band fields were raced now; non-field carriers are queued with fire orders instead of priced by implication.",
+      "source": "rg over .omx/research for sy1/g4/ph1/#941/pf3/#725/worldsheet/m91 plus canonical equation list"
+    },
+    {
+      "finding": "qo1 has no legal receiver-derived Road/Lane chart, and local public comma10k model custody was absent.",
+      "plan_impact": "prior SE3 81KB/101KB rows remain cited targets; BF1 built a receiver-closed sparse-support control that pays the chart explicitly.",
+      "source": ".omx/research/ddm_rf1_20260804/RF1_RECEIPT_20260804.md"
+    },
+    {
+      "finding": "regional phase block16/block8 is a large argmax-field lever but not yet a receiver-realized BD1 field.",
+      "plan_impact": "queued for scorer/receiver realization, not admitted into this section-byte race.",
+      "source": ".omx/research/ddm_ph1_phase_mass_reach_ceiling_20260803.md"
+    },
+    {
+      "finding": "worldsheet/g4 are shared-context generators and stationarity priors, not immediate class-field record formats.",
+      "plan_impact": "queued as successor address/generator sources after BD1 field survival is measured.",
+      "source": ".omx/research/codex_findings_ddm_v13_worldsheet_event_predictor_20260722_codex.md and ddm_g4_spatial_stationarity receipt"
+    }
+  ],
+  "representation_rows": [
+    {
+      "archive_projection": {
+        "joint_section_count": 6,
+        "payload_bytes": 555510,
+        "payload_sha256": "f9e4f0d1eaf6b0572d4293352fb45e13501c5306d411e27bfb20988b55270393",
+        "projected_archive_bytes": 555618,
+        "projected_archive_sha256": "624f3ce2f73bf1429a75d63b046eb20f99f3baef2bb22486f3284d9cf4ac846f"
+      },
+      "best_body_bytes": 197497,
+      "best_body_sha256": "7c73051a75e6fddca030a5d7d7586d3eb3c345bed4973aa5c87acc98b47db380",
+      "best_codec": "brotli-q11",
+      "body_bits_per_source_band_pixel": 1.067694191520217,
+      "candidate_kind": "receiver-closed sparse Road/Lane correction positions plus target side bits",
+      "claim_label": "MEASURED n600 coder bytes and MASK-domain reconstruction; scorer-free",
+      "coder_race": [
+        {
+          "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_bf1_20260805/payloads/se3_receiver_closed_sparse_corrections.brotli-q11.bin",
+          "bytes": 197497,
+          "codec": "brotli-q11",
+          "sha256": "7c73051a75e6fddca030a5d7d7586d3eb3c345bed4973aa5c87acc98b47db380"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 212012,
+          "codec": "lzma1-raw",
+          "sha256": "689d7cb9e9d7880b34ec43b54d94913e8f42c9dc05ce7d1f93b0434f22f4098d"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 271846,
+          "codec": "smevr-r7-nibble",
+          "sha256": "e262af1000b32a36758610df3c21e61b807bbaff83d999c127e4999fba31f124"
+        }
+      ],
+      "cq2_composed_archive_bytes": {
+        "leaves_75KB_student_lane_open_vs_bd1_dense_candidate": true,
+        "with_25KB_student": 580618,
+        "with_75KB_student": 630618
+      },
+      "mask_domain_fidelity": {
+        "band_pixel_precision": 0.9821899399527106,
+        "band_pixel_recall": 0.15607493434932512,
+        "decoded_band_pixels": 235148,
+        "false_negative_pixels_by_gt_class": {
+          "0": 817611,
+          "1": 426038,
+          "2": 1255,
+          "3": 1940,
+          "4": 1998
+        },
+        "false_positive_pixels_by_gt_class": {
+          "0": 2935,
+          "1": 1253
+        },
+        "lossless_mask_domain": false,
+        "per_class_decoded_pixels": {
+          "Lane": 184613,
+          "Road_side": 50535
+        },
+        "per_class_iou": {
+          "Lane": 0.30026971215964604,
+          "Road": 0.05450346314546814
+        },
+        "per_class_source_pixels": {
+          "Lane": 609398,
+          "Road_side": 870404
+        },
+        "per_pair_support_recall_mean": 0.15768144160436837,
+        "per_pair_support_recall_min": 0.11557985162046076,
+        "source_band_pixels": 1479802,
+        "support_false_negative_pixels": 1248842,
+        "support_false_positive_pixels": 4188,
+        "support_intersection_pixels": 230960,
+        "support_iou": 0.15563447193040383
+      },
+      "raw_bytes": 365766,
+      "raw_sha256": "2209d06e8a3f2de5bc1c0d8450c665d54609d4341c73ccc4d739b88f26ea4556",
+      "records": 600,
+      "representation_kind": "row_runs",
+      "scope_note": "pays absolute correction support to close the RF1 blocker; not the prior 81KB/101KB assumption-scoped SE3 chart stream",
+      "section_bits_per_source_band_pixel": 1.0680239653683399,
+      "section_bytes": 197558,
+      "section_sha256": "abaa5c15df383f6cdc2c402a996ff0c277770553ba2044a8bbec2f885f890eb8",
+      "surface_id": "se3_receiver_closed_sparse_corrections",
+      "vs_0p60_bits_per_band_pixel": 1.7800399422805666
+    },
+    {
+      "archive_projection": {
+        "joint_section_count": 6,
+        "payload_bytes": 563148,
+        "payload_sha256": "e6b04e9fa4b7a8e3ca1045c73d95f1bdf480ede36db66034233d8634693510fa",
+        "projected_archive_bytes": 563256,
+        "projected_archive_sha256": "4741bfc91e3c013ea63435edd578933ef346540e998b71c368ff88f0b7bfa13a"
+      },
+      "best_body_bytes": 205135,
+      "best_body_sha256": "6b8e8926a1f09f64bf4871a67977c723ffcca737e7075410a87d71e334963f1d",
+      "best_codec": "brotli-q11",
+      "body_bits_per_source_band_pixel": 1.1089862022081332,
+      "candidate_kind": "lossy per-pair Lane crop; receiver derives band as 3x3 Lane dilation",
+      "claim_label": "MEASURED n600 coder bytes and MASK-domain reconstruction; scorer-free",
+      "coder_race": [
+        {
+          "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_bf1_20260805/payloads/rl1_lane_crop_bf1.brotli-q11.bin",
+          "bytes": 205135,
+          "codec": "brotli-q11",
+          "sha256": "6b8e8926a1f09f64bf4871a67977c723ffcca737e7075410a87d71e334963f1d"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 219502,
+          "codec": "lzma1-raw",
+          "sha256": "92e802f3f7f562f0f00ea99093fc86d75f863365bd0300a83f4a87776e5e960f"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 252417,
+          "codec": "smevr-r7-nibble",
+          "sha256": "f656de8421bd88c5dbcb232beb9edc668af112a0849dd51cc4933c3582c0326c"
+        }
+      ],
+      "cq2_composed_archive_bytes": {
+        "leaves_75KB_student_lane_open_vs_bd1_dense_candidate": true,
+        "with_25KB_student": 588256,
+        "with_75KB_student": 638256
+      },
+      "mask_domain_fidelity": {
+        "band_pixel_precision": 0.9446392846336416,
+        "band_pixel_recall": 1.0,
+        "decoded_band_pixels": 1566526,
+        "false_negative_pixels_by_gt_class": {},
+        "false_positive_pixels_by_gt_class": {
+          "1": 81241,
+          "2": 919,
+          "3": 490,
+          "4": 4074
+        },
+        "lossless_mask_domain": false,
+        "per_class_decoded_pixels": {
+          "Lane": 690639,
+          "Road_side": 875887
+        },
+        "per_class_iou": {
+          "Lane": 0.8823683574197229,
+          "Road": 0.9937400600762427
+        },
+        "per_class_source_pixels": {
+          "Lane": 609398,
+          "Road_side": 870404
+        },
+        "per_pair_support_recall_mean": 1.0,
+        "per_pair_support_recall_min": 1.0,
+        "source_band_pixels": 1479802,
+        "support_false_negative_pixels": 0,
+        "support_false_positive_pixels": 86724,
+        "support_intersection_pixels": 1479802,
+        "support_iou": 0.9446392846336416
+      },
+      "raw_bytes": 3591443,
+      "raw_sha256": "2bab32aa7fe16b3f651735249f54e89c1eb564f7591a38d7cbf455608faf9527",
+      "records": 600,
+      "representation_kind": "lane_crop",
+      "scope_note": "settles #939 description-half at n600; loss is false-positive band expansion, not missed source band",
+      "section_bits_per_source_band_pixel": 1.109315976056256,
+      "section_bytes": 205196,
+      "section_sha256": "cc9336fc5f654090496b498211de12e2e9b4c40018d7163d5f245ac96750c171",
+      "surface_id": "rl1_lane_crop_bf1",
+      "vs_0p60_bits_per_band_pixel": 1.8488599600937603
+    },
+    {
+      "archive_projection": {
+        "joint_section_count": 6,
+        "payload_bytes": 693391,
+        "payload_sha256": "7c73f04b405115a9ef7dcb1c4e8338e4ae2701e420a79c9b1d54a412979490c3",
+        "projected_archive_bytes": 693499,
+        "projected_archive_sha256": "b00ddcdaa10a7dfa1d4505dcdfe44e53efa32ee3db61ab80ae2df250472d6927"
+      },
+      "best_body_bytes": 335340,
+      "best_body_sha256": "c9f000152840f9ec5bbf67abb7da9458841e7038c321aba6343b5dc83d549b6d",
+      "best_codec": "brotli-q11",
+      "body_bits_per_source_band_pixel": 1.8128911840908446,
+      "candidate_kind": "lossless row-bounded runs over the Road/Lane band plus side bits",
+      "claim_label": "MEASURED n600 coder bytes and MASK-domain reconstruction; scorer-free",
+      "coder_race": [
+        {
+          "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_bf1_20260805/payloads/lossless_row_runs.brotli-q11.bin",
+          "bytes": 335340,
+          "codec": "brotli-q11",
+          "sha256": "c9f000152840f9ec5bbf67abb7da9458841e7038c321aba6343b5dc83d549b6d"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 358987,
+          "codec": "lzma1-raw",
+          "sha256": "9419492bdf619cb40cc6f86e9bb3ac307496b16274c07c86639b6ad766accbd4"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 509169,
+          "codec": "smevr-r7-nibble",
+          "sha256": "02fe5e2d0f9b4f91a66eeb4e6c0c14ca66665f8a7c9a6398b64f3b06aae1235e"
+        }
+      ],
+      "cq2_composed_archive_bytes": {
+        "leaves_75KB_student_lane_open_vs_bd1_dense_candidate": false,
+        "with_25KB_student": 718499,
+        "with_75KB_student": 768499
+      },
+      "mask_domain_fidelity": {
+        "band_pixel_precision": 1.0,
+        "band_pixel_recall": 1.0,
+        "decoded_band_pixels": 1479802,
+        "false_negative_pixels_by_gt_class": {},
+        "false_positive_pixels_by_gt_class": {},
+        "lossless_mask_domain": true,
+        "per_class_decoded_pixels": {
+          "Lane": 609398,
+          "Road_side": 870404
+        },
+        "per_class_iou": {
+          "Lane": 1.0,
+          "Road": 1.0
+        },
+        "per_class_source_pixels": {
+          "Lane": 609398,
+          "Road_side": 870404
+        },
+        "per_pair_support_recall_mean": 1.0,
+        "per_pair_support_recall_min": 1.0,
+        "source_band_pixels": 1479802,
+        "support_false_negative_pixels": 0,
+        "support_false_positive_pixels": 0,
+        "support_intersection_pixels": 1479802,
+        "support_iou": 1.0
+      },
+      "raw_bytes": 609602,
+      "raw_sha256": "8c8ae3122d18c43501c64d2e6fbafa0345ef41947e4998a21cc3cbdd30996aba",
+      "records": 600,
+      "representation_kind": "row_runs",
+      "scope_note": "lossless full source band; receiver-closed without scorer-derived chart",
+      "section_bits_per_source_band_pixel": 1.8132209579389675,
+      "section_bytes": 335401,
+      "section_sha256": "6a808235489b743f00600ab5a57c22d3d820b8696b3ba9aceb4fdd38b1d9a747",
+      "surface_id": "lossless_row_runs",
+      "vs_0p60_bits_per_band_pixel": 3.0220349298982794
+    },
+    {
+      "archive_projection": {
+        "joint_section_count": 6,
+        "payload_bytes": 725920,
+        "payload_sha256": "c142276ad19abc7510bf8e1933fb48db36a9528434292b8066d1f6826caaac20",
+        "projected_archive_bytes": 726028,
+        "projected_archive_sha256": "54434248344b5eb2ef947661254afdb7c405dc4cce471e4d193fc9bfe7a6b503"
+      },
+      "best_body_bytes": 367869,
+      "best_body_sha256": "3fb4116a5135a667d4d6a4bed5a020932712a5da63e0ddfdc96aa2ca7a6b4fed",
+      "best_codec": "brotli-q11",
+      "body_bits_per_source_band_pixel": 1.9887471431988875,
+      "candidate_kind": "lossless dense scorer-grid band bitmap plus Road/Lane side bits",
+      "claim_label": "MEASURED n600 coder bytes and MASK-domain reconstruction; scorer-free",
+      "coder_race": [
+        {
+          "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_bf1_20260805/payloads/dense_band_bitmap_v2.brotli-q11.bin",
+          "bytes": 367869,
+          "codec": "brotli-q11",
+          "sha256": "3fb4116a5135a667d4d6a4bed5a020932712a5da63e0ddfdc96aa2ca7a6b4fed"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 404407,
+          "codec": "lzma1-raw",
+          "sha256": "36c5a11910e620f89cf683c96eef9b81448dd1aa3ab7bea53f28a0c7829a84f3"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 421705,
+          "codec": "smevr-r7-nibble",
+          "sha256": "3e16bf118eea5f33e474440ca9f35977bfbd328a5f21780460e2b79ed06099f3"
+        }
+      ],
+      "cq2_composed_archive_bytes": {
+        "leaves_75KB_student_lane_open_vs_bd1_dense_candidate": false,
+        "with_25KB_student": 751028,
+        "with_75KB_student": 801028
+      },
+      "mask_domain_fidelity": {
+        "band_pixel_precision": 1.0,
+        "band_pixel_recall": 1.0,
+        "decoded_band_pixels": 1479802,
+        "false_negative_pixels_by_gt_class": {},
+        "false_positive_pixels_by_gt_class": {},
+        "lossless_mask_domain": true,
+        "per_class_decoded_pixels": {
+          "Lane": 609398,
+          "Road_side": 870404
+        },
+        "per_class_iou": {
+          "Lane": 1.0,
+          "Road": 1.0
+        },
+        "per_class_source_pixels": {
+          "Lane": 609398,
+          "Road_side": 870404
+        },
+        "per_pair_support_recall_mean": 1.0,
+        "per_pair_support_recall_min": 1.0,
+        "source_band_pixels": 1479802,
+        "support_false_negative_pixels": 0,
+        "support_false_positive_pixels": 0,
+        "support_intersection_pixels": 1479802,
+        "support_iou": 1.0
+      },
+      "raw_bytes": 14930846,
+      "raw_sha256": "265cabe9964864806cc537d69e7f654eb81c65b96897dfc7766c4cab871ab2d3",
+      "records": 600,
+      "representation_kind": "dense_bitmap",
+      "scope_note": "lossless full source band; BD1 v1-equivalent content under v2 header",
+      "section_bits_per_source_band_pixel": 1.9890769170470104,
+      "section_bytes": 367930,
+      "section_sha256": "4bd02a45533ec2eadd6b9962b2be74e321a06dfa60ea55ccc6790c476f201200",
+      "surface_id": "dense_band_bitmap_v2",
+      "vs_0p60_bits_per_band_pixel": 3.315128195078351
+    }
+  ],
+  "schema": "ddm_bf1_band_field_repr_race.v1",
+  "score_claim": false,
+  "winner": {
+    "loss_status": "lossy",
+    "projected_archive_bytes": 563256,
+    "section_bytes": 205196,
+    "selection_rule": "smallest measured BD1CLF1-v2 section bytes among rows with source-band recall >= 0.99; scorer-free, no survival claim",
+    "surface_id": "rl1_lane_crop_bf1"
+  }
+}
