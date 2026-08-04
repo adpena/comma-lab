@@ -1,0 +1,112 @@
+{
+  "axis": "[scorer-free receiver-archive parse / local public-model custody audit]",
+  "boundaries": [
+    "No SegNet/PoseNet forward was run by RF1.",
+    "No archive was built.",
+    "No full-n600 scorer spec was appended.",
+    "No GT argmax or cx1 stand-in was used as a receiver-derived field.",
+    "No web search or model download was attempted."
+  ],
+  "disposition": {
+    "archive_build": "NOT_BUILT_RF_PASS_CONDITION_DID_NOT_CLEAR",
+    "leg_b": "QUEUED_WITH_BLOCKER_NO_LOCAL_PUBLIC_DATA_ONLY_SEGMENTER",
+    "rf_closure": "FAIL_SOURCE_GATE_NO_LEGAL_RECEIVER_CLASS_FIELD",
+    "scorer_spec": "NOT_APPENDED_NO_RECEIVER_CLOSED_ARCHIVE"
+  },
+  "frontier_line": {
+    "S": 0.7539807296911207,
+    "archive_bytes": 357836,
+    "axis": "[macOS-CPU advisory]",
+    "source": "main_hot_state qo1 sub_auto_pairbit"
+  },
+  "input_custody": {
+    "archive": {
+      "bytes": 357836,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_qo1_20260804/sub_auto_pairbit/archive.zip",
+      "sha256": "d5e814d5b9f65c3094b0e65fecdd7771734d03c420c63d1d2033a671b766986a"
+    },
+    "inflated_raw": {
+      "bytes": 3662409600,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_qo1_20260804/sub_auto_pairbit/inflated/0.raw",
+      "sha256": "3ce7d269a7080a4024a576694cd0ddc697099c64cd02fdd2bb879339e4b03f31"
+    },
+    "zip_members": [
+      {
+        "bytes": 357728,
+        "name": "0.bin"
+      }
+    ]
+  },
+  "leg_b_custody_audit": {
+    "hf_hub_comma10k_dirs_found": 0,
+    "legal_public_segmenter_available": false,
+    "scoped_absence": [
+      "/Users/adpena/.cache/huggingface/hub directories named *comma10k*",
+      "repo/SSD search for comma10k-segnet references found docs/references only, no usable weights in searched scope"
+    ],
+    "upstream_segnet_excluded": true
+  },
+  "prior_se3_assumption_rows": [
+    {
+      "bytes": 81365,
+      "captured_flips": 161660,
+      "row": "road_lane_band_r1_edit_bits_side_implied",
+      "scope": "ASSUMPTION(receiver-field), cx1_argmax_n600"
+    },
+    {
+      "bytes": 100904,
+      "captured_flips": 161660,
+      "row": "road_lane_band_r1_edit_plus_direction_bits",
+      "scope": "ASSUMPTION(receiver-field), cx1_argmax_n600"
+    },
+    {
+      "bytes": 110689,
+      "captured_flips": 176895,
+      "row": "road_lane_band_r3_edit_bits_side_implied",
+      "scope": "ASSUMPTION(receiver-field), cx1_argmax_n600"
+    }
+  ],
+  "receiver_parse": {
+    "bulk_bytes": 341295,
+    "class_field_present": false,
+    "derived_section_roles": [
+      "config",
+      "renderer",
+      "selector",
+      "pose_warp",
+      "F0PR1_frame0_pose_repair"
+    ],
+    "section_bytes": [
+      36,
+      3266,
+      535,
+      8751,
+      4081
+    ],
+    "section_count": 5
+  },
+  "receiver_row_table": [
+    {
+      "bytes": null,
+      "captured_flips": null,
+      "row": "road_lane_band_r1_edit_bits_side_implied",
+      "status": "NOT_RUN_NO_LEGAL_RECEIVER_CLASS_FIELD"
+    },
+    {
+      "bytes": null,
+      "captured_flips": null,
+      "row": "road_lane_band_r1_edit_plus_direction_bits",
+      "status": "NOT_RUN_NO_LEGAL_RECEIVER_CLASS_FIELD"
+    },
+    {
+      "bytes": null,
+      "captured_flips": null,
+      "row": "road_lane_band_r2_r3_variants",
+      "status": "NOT_RUN_NO_LEGAL_RECEIVER_CLASS_FIELD"
+    }
+  ],
+  "schema": "ddm_rf1_receipt.v1",
+  "score_claim": false,
+  "verdict": "FAIL",
+  "verdict_scope": "INSTANCE(qo1 sub_auto_pairbit receiver grammar)"
+}
