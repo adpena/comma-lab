@@ -1,12 +1,12 @@
 # ddm_qj1 follow-on backlog join
 
-Generated: 2026-08-04T16:12:08.599600Z
+Generated: 2026-08-04T16:24:23.692797Z
 Axis: [macOS-CPU advisory; scorer-free backlog join; no scorer forwards]
 
 ## Answer first
 
-Memo follow-ons: {'ORPHANED': 1, 'STAGED': 6, 'UNKNOWN': 140, 'EXECUTED': 14}; task rows: {'EXECUTED': 18, 'UNKNOWN': 172}; handoffs: {'ORPHANED': 23, 'LIVE': 125, 'ADVANCED': 278, 'UNVERIFIABLE': 0}.
-Queued rows with owner: 389; unowned queued rows: 0.
+Memo follow-ons: {'ORPHANED': 1, 'STAGED': 6, 'UNKNOWN': 141, 'EXECUTED': 14}; task rows: {'EXECUTED': 18, 'UNKNOWN': 172}; handoffs: {'ORPHANED': 23, 'LIVE': 125, 'ADVANCED': 278, 'UNVERIFIABLE': 0}.
+Queued rows with owner: 390; unowned queued rows: 0.
 
 ## Disposition Head
 

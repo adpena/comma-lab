@@ -302,8 +302,8 @@
     {
       "disposition": "QUEUED-WITH-FIRE-ORDER",
       "evidence": [
-        "build-product-present:gt_n600.npz",
-        "build-product-present:gt_n24.npz"
+        "build-product-present:gt_n24.npz",
+        "build-product-present:gt_n600.npz"
       ],
       "fire_order": "Task remains open or artifact-undecidable. Owner must append a CLOSING-ARTIFACT, typed blocker, or explicit fold.",
       "owner": "apparatus",
@@ -7249,6 +7249,21 @@
       "disposition": "QUEUED-WITH-FIRE-ORDER",
       "evidence": [],
       "fire_order": "No artifact-shaped join token. Register a canonical task row or append a CLOSING-ARTIFACT before treating this as closed.",
+      "line_no": 7,
+      "memo": "ddm_wk3_residue_disposition_20260804.md",
+      "owner": "codex-qj1-followon-drain",
+      "reason": "no artifact-shaped join token \u2014 the row names no file the join could check for. Joining on its incidental identifiers is the #829 substring-collision failure and was MEASURED to mis-classify in this arm's own round-1 review",
+      "source": "memo_followon",
+      "source_id": "ddm_wk3_residue_disposition_20260804.md#L7",
+      "task_matches": [],
+      "task_refs": [],
+      "text": "This was a scorer-free/no-n600 rescue pass. I did not run a full evaluator, did",
+      "verdict": "UNKNOWN"
+    },
+    {
+      "disposition": "QUEUED-WITH-FIRE-ORDER",
+      "evidence": [],
+      "fire_order": "No artifact-shaped join token. Register a canonical task row or append a CLOSING-ARTIFACT before treating this as closed.",
       "line_no": 142,
       "memo": "ddm_wr1_reverse_waterfill_20260729.md",
       "owner": "codex-qj1-followon-drain",
@@ -7557,9 +7572,9 @@
     {
       "disposition": "FOLDED",
       "evidence": [
-        "output-present:review_pass_3_v5.json",
         "output-present:review_pass_2_v5.json",
-        "output-present:review_pass_1_v5.json"
+        "output-present:review_pass_1_v5.json",
+        "output-present:review_pass_3_v5.json"
       ],
       "fire_order": "Task is closed by status or by a present run artifact; keep the artifact citation with the closure.",
       "owner": "codex",
@@ -17096,7 +17111,7 @@
       "verdict": "EXECUTED"
     }
   ],
-  "generated_at_utc": "2026-08-04T16:12:08.599600Z",
+  "generated_at_utc": "2026-08-04T16:24:23.692797Z",
   "promotion_eligible": false,
   "ready_for_exact_eval_dispatch": false,
   "registry": {
@@ -17123,11 +17138,11 @@
     },
     "handoff_extraction": {
       "acknowledged": false,
-      "declared": 1304,
-      "examined": 1304,
+      "declared": 1305,
+      "examined": 1305,
       "filtered_out": 6194,
       "note": "426 handoff edges extracted",
-      "population": 7498,
+      "population": 7499,
       "skipped_scopes": [],
       "surface": "handoff-extractor",
       "unexamined": 0,
@@ -17136,17 +17151,17 @@
     "handoff_join": {
       "declared": 426,
       "examined": 426,
-      "note": "16340 paths indexed",
-      "population": 7498,
+      "note": "16346 paths indexed",
+      "population": 7499,
       "surface": "handoff-join"
     },
     "memo_followons": {
       "acknowledged": false,
-      "declared": 1304,
-      "examined": 1304,
+      "declared": 1305,
+      "examined": 1305,
       "filtered_out": 6194,
-      "note": "161 follow-on rows extracted",
-      "population": 7498,
+      "note": "162 follow-on rows extracted",
+      "population": 7499,
       "skipped_scopes": [],
       "surface": "followon-extractor",
       "unexamined": 0,
@@ -17165,7 +17180,7 @@
   "summaries": {
     "dispositions": {
       "FOLDED": 388,
-      "QUEUED-WITH-FIRE-ORDER": 389
+      "QUEUED-WITH-FIRE-ORDER": 390
     },
     "handoff_verdicts": {
       "ADVANCED": 278,
@@ -17177,12 +17192,12 @@
       "EXECUTED": 14,
       "ORPHANED": 1,
       "STAGED": 6,
-      "UNKNOWN": 140
+      "UNKNOWN": 141
     },
     "memo_rows_with_repo_task_match": 4,
     "memo_rows_with_task_refs": 26,
     "memo_task_ref_coverage": 0.15384615384615385,
-    "queued_with_owner": 389,
+    "queued_with_owner": 390,
     "task_execution_verdicts": {
       "EXECUTED": 18,
       "UNKNOWN": 172
