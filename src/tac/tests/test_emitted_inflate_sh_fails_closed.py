@@ -40,6 +40,10 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 EMITTERS = (
     ("pb1_p5", REPO_ROOT / "tools" / "pb1_p5_byte_close_and_eval.py", r'INFLATE_SH = """(.*?)"""'),
     ("rehearse_tr1", REPO_ROOT / "tools" / "rehearse_ddm_tr1_runtime.py", r'INFLATE_SH = b"""\\\n(.*?)"""'),
+    # On the frontier arc's own authority path: this emitter produced the
+    # canonical ``v4d_cx1_pj2ix2`` decode that ob1 compared its independent
+    # inflate against.
+    ("pfs1", REPO_ROOT / "tools" / "pfs1_recompose_warp_base_and_eval.py", r'INFLATE_SH = """(.*?)"""'),
 )
 
 # A runner whose exit code the control chooses, so rc propagation is observable.

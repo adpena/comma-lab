@@ -61,7 +61,12 @@ LOCKED_PY = Path("/Volumes/VertigoDataTier/pact/evidence/"
                  "ddm_e4_brotli_declared_dep_20260724/env_brotli/bin/python")
 UPSTREAM_VIDEO = REPO / "upstream/videos/0.mkv"
 SSD_OUT = Path("/Volumes/VertigoDataTier/pact/ddm_pfs1_20260729")
-SEG_ARCHIVE = Path("/Volumes/VertigoDataTier/pact/ddm_pb1_20260729/p2c_aimed_archive.zip")
+DEFAULT_SEG_ARCHIVE = Path(
+    "/Volumes/VertigoDataTier/pact/ddm_pb1_20260729/p2c_aimed_archive.zip")
+# Rebound from ``--seg-archive`` in main(); the pose warp is ALWAYS re-solved on
+# whichever base is selected, because a warp fitted to one base's renders does
+# not transfer to another's (this tool's own docstring, D1 provenance).
+SEG_ARCHIVE = DEFAULT_SEG_ARCHIVE
 TARGETS = Path(
     "/Volumes/VertigoDataTier/pact/"
     "ddm_ms4_metric_producers_and_measurement_20260724T042005Z/"
@@ -81,10 +86,32 @@ COMPOSED_MEMBERS = (
     "state/pose_warp.stp",
 )
 
+# Resolve the interpreter explicitly and fail CLOSED.  A bare ``python`` is
+# not portable: on a host that ships only ``python3`` it dies with
+# "python: command not found", and a backgrounding wrapper then reports the
+# LAUNCHER's rc=0 instead of that 127 -- the failure and the success carry the
+# same symbol.  Measured live by ddm_ob1 2026-08-03 (task #929).  This emitter
+# is on the frontier arc's own authority path: it produced the canonical
+# ``v4d_cx1_pj2ix2`` decode that ob1's independent inflate was compared
+# against.  ``exec`` keeps the runner's own exit status as this script's exit
+# status, so no rc can be swallowed here either.
 INFLATE_SH = """#!/usr/bin/env bash
 set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-python "$HERE/inflate_runner.py" "$1" "$2" "$3"
+PY="${PYTHON:-}"
+if [ -z "${PY}" ]; then
+  for candidate in python3 python; do
+    if command -v "${candidate}" >/dev/null 2>&1; then
+      PY="${candidate}"
+      break
+    fi
+  done
+fi
+if [ -z "${PY}" ]; then
+  echo "inflate.sh: FATAL: no Python interpreter (tried PYTHON env var, python3, python)" >&2
+  exit 127
+fi
+exec "${PY}" "$HERE/inflate_runner.py" "$1" "$2" "$3"
 """
 
 # --- vendored warp receiver (rule 118: generic deterministic numpy; constants are
@@ -604,14 +631,20 @@ def build(args: argparse.Namespace) -> None:
         "seg_archive_sha256": _sha(tr1_bytes), "frame0_policy": "warp_base",
         "warp_vendored_vs_original_max_abs_pixel": max_warp_mismatch,
         "instrument_rate_term": rate,
+        "seg_archive_path": str(SEG_ARCHIVE),
+        "seg_archive_is_default_pb1_base": SEG_ARCHIVE == DEFAULT_SEG_ARCHIVE,
         "instrument_composed_prediction": {
             "note": "seg(pb1 endpoint) + pose(solve d_pose on shipped f1) + rate; "
-                    "eval MEASURES seg+pose live.",
-            "seg_from_pb1": 0.38901,
+                    "eval MEASURES seg+pose live.  The 0.38901 seg constant is "
+                    "the pb1 p2c endpoint's measured seg term and is VALID ONLY "
+                    "for the default base; on any other --seg-archive the seg "
+                    "prediction is withheld (None) rather than carried over.",
+            "seg_from_pb1": (0.38901 if SEG_ARCHIVE == DEFAULT_SEG_ARCHIVE else None),
             "pose_d_pose_solve": solve["d_pose_mean"],
             "pose_contribution": solve["pose_contribution"],
             "rate": rate,
-            "S_pred": 0.38901 + solve["pose_contribution"] + rate,
+            "S_pred": ((0.38901 + solve["pose_contribution"] + rate)
+                       if SEG_ARCHIVE == DEFAULT_SEG_ARCHIVE else None),
         },
         "vendored": vend, "evidence_axis": "[macOS-CPU advisory]", "score_claim": False,
     }
@@ -683,6 +716,11 @@ def parse_args() -> argparse.Namespace:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--mode", choices=("solve", "build", "eval"), required=True)
     ap.add_argument("--work-dir", type=Path, default=SSD_OUT / "d1")
+    ap.add_argument("--seg-archive", type=Path, default=DEFAULT_SEG_ARCHIVE,
+                    help="TR1 seg-endpoint archive.zip to recompose onto. The "
+                         "warp pose is re-solved on THIS archive's own shipped "
+                         "frame_1, so a non-default base is a controlled "
+                         "base-swap (same grammar, same pose mechanism).")
     ap.add_argument("--n-pairs", type=int, default=600)
     ap.add_argument("--max-seconds", type=float, default=0.0)
     ap.add_argument("--resume", action=argparse.BooleanOptionalAction, default=True)
@@ -690,7 +728,12 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> int:
+    global SEG_ARCHIVE
     args = parse_args()
+    seg = Path(args.seg_archive)
+    if not seg.is_file():
+        raise SystemExit(f"--seg-archive not a file: {seg}")
+    SEG_ARCHIVE = seg
     _refuse_tmp(args.work_dir)
     if args.mode == "solve":
         run_solve(args)
