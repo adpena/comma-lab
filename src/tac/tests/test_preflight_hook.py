@@ -267,6 +267,35 @@ def test_ci_blind_step_is_wired_into_main_not_orphaned() -> None:
     assert "run_ci_blind_tests(staged)" in main_body
 
 
+def test_followon_regrow_scan_warns_with_live_count(monkeypatch, capsys) -> None:
+    monkeypatch.setattr(
+        preflight_hook,
+        "_staged_added_lines",
+        lambda staged_docs: [
+            (
+                ".omx/research/new.md",
+                "NEXT-IF-RESUMED: $0 follow-on should be run with owner sq2.",
+            ),
+            (".omx/research/new.md", "ordinary line"),
+        ],
+    )
+
+    assert preflight_hook.run_followon_regrow_scan([".omx/research/new.md"]) == 0
+    err = capsys.readouterr().err
+    assert "1 staged .md" in err
+    assert "2 added lines" in err
+    assert "1 new cheap follow-on lines" in err
+
+
+def test_followon_regrow_step_is_wired_before_preflight() -> None:
+    src = (preflight_hook.REPO_ROOT / "tools" / "preflight_hook.py").read_text(
+        encoding="utf-8")
+    main_body = src.split("def main()", 1)[1]
+    assert "run_followon_regrow_scan(staged_docs)" in main_body
+    assert main_body.index("run_followon_regrow_scan(staged_docs)") < main_body.index(
+        "rc = run_preflight()")
+
+
 # ---------------------------------------------------------------------------
 # CI-blind GATE SCOPE (task #854).
 #

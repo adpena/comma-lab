@@ -1,0 +1,69 @@
+# ddm_qj1 follow-on backlog join
+
+Generated: 2026-08-04T21:59:09.656421Z
+Axis: [macOS-CPU advisory; scorer-free backlog join; no scorer forwards]
+
+## Answer first
+
+Memo follow-ons: {'ORPHANED': 1, 'STAGED': 6, 'UNKNOWN': 167, 'EXECUTED': 14}; task rows: {'EXECUTED': 18, 'UNKNOWN': 172}; handoffs: {'ORPHANED': 23, 'LIVE': 124, 'ADVANCED': 286, 'UNVERIFIABLE': 0}.
+Ranked head rows: 47/47 parsed; dispositions: {'QUEUED-WITH-FIRE-ORDER': 45, 'FOLDED': 2}.
+Queued rows with owner: 460; unowned queued rows: 0.
+
+## Disposition Head
+
+| source | id | verdict | disposition | owner | fire order |
+|---|---|---|---|---|---|
+| ranked_followon_head | ddm_p1a_followon_unknown_adjudication_20260801.md#p1a-item-01 | OPEN-RANKED-BY-COST-TO-FALSIFY | QUEUED-WITH-FIRE-ORDER | ddm_gc15 | Read the ms4d composite-R adjoint through a registered phi reducer. If no reducer exists, land that reducer first; do not design or fire D+/- from a guessed scalar. |
+| ranked_followon_head | ddm_p2a_task_backlog_drain_20260801.md#p2a-never-named-198 | NEVER-NAMED-IN-13736-COMMITS | QUEUED-WITH-FIRE-ORDER | codex-qj1-followon-drain | One controlled grep/read: either locate a closing artifact or append a typed blocker/fold. |
+| ranked_followon_head | ddm_p1a_followon_unknown_adjudication_20260801.md#p1a-item-02 | OPEN-RANKED-BY-COST-TO-FALSIFY | QUEUED-WITH-FIRE-ORDER | codex-qj1-followon-drain | First adjudicate whether the row still applies to the live own-vehicle line; then fire or fold with the vehicle-scope reason. |
+| ranked_followon_head | ddm_p2a_task_backlog_drain_20260801.md#p2a-never-named-236 | NEVER-NAMED-IN-13736-COMMITS | QUEUED-WITH-FIRE-ORDER | codex-qj1-followon-drain | One controlled grep/read: either locate a closing artifact or append a typed blocker/fold. |
+| ranked_followon_head | ddm_p1a_followon_unknown_adjudication_20260801.md#p1a-item-03 | OPEN-RANKED-BY-COST-TO-FALSIFY | QUEUED-WITH-FIRE-ORDER | ddm_tw1 | Fire the named zero-dollar/local check if still applicable, or append a typed fold/blocker with the cited source row. |
+| ranked_followon_head | ddm_p1a_followon_unknown_adjudication_20260801.md#p1a-item-04 | OPEN-RANKED-BY-COST-TO-FALSIFY | QUEUED-WITH-FIRE-ORDER | ddm_cn3 | Fire the named zero-dollar/local check if still applicable, or append a typed fold/blocker with the cited source row. |
+| ranked_followon_head | ddm_p2a_task_backlog_drain_20260801.md#p2a-never-named-450 | NEVER-NAMED-IN-13736-COMMITS | QUEUED-WITH-FIRE-ORDER | codex-qj1-followon-drain | One controlled grep/read: either locate a closing artifact or append a typed blocker/fold. |
+| ranked_followon_head | ddm_p1a_followon_unknown_adjudication_20260801.md#p1a-item-05 | OPEN-RANKED-BY-COST-TO-FALSIFY | QUEUED-WITH-FIRE-ORDER | ddm_lv1 | Fire the named zero-dollar/local check if still applicable, or append a typed fold/blocker with the cited source row. |
+| ranked_followon_head | ddm_p2a_task_backlog_drain_20260801.md#p2a-never-named-556 | NEVER-NAMED-IN-13736-COMMITS | QUEUED-WITH-FIRE-ORDER | codex-qj1-followon-drain | One controlled grep/read: either locate a closing artifact or append a typed blocker/fold. |
+| ranked_followon_head | ddm_p1a_followon_unknown_adjudication_20260801.md#p1a-item-06 | OPEN-RANKED-BY-COST-TO-FALSIFY | QUEUED-WITH-FIRE-ORDER | ddm_gc13 | Fire the named zero-dollar/local check if still applicable, or append a typed fold/blocker with the cited source row. |
+| ranked_followon_head | ddm_p2a_task_backlog_drain_20260801.md#p2a-never-named-670 | NEVER-NAMED-IN-13736-COMMITS | QUEUED-WITH-FIRE-ORDER | codex-qj1-followon-drain | One controlled grep/read: either locate a closing artifact or append a typed blocker/fold. |
+| ranked_followon_head | ddm_p1a_followon_unknown_adjudication_20260801.md#p1a-item-07 | OPEN-RANKED-BY-COST-TO-FALSIFY | QUEUED-WITH-FIRE-ORDER | ddm_fp1 | Queue behind the active scorer owner with the exact source row and falsifier; qj1 does not own the n600 slot. |
+| ranked_followon_head | ddm_p2a_task_backlog_drain_20260801.md#p2a-never-named-706 | NEVER-NAMED-IN-13736-COMMITS | QUEUED-WITH-FIRE-ORDER | codex-qj1-followon-drain | One controlled grep/read: either locate a closing artifact or append a typed blocker/fold. |
+| ranked_followon_head | ddm_p1a_followon_unknown_adjudication_20260801.md#p1a-item-08 | OPEN-RANKED-BY-COST-TO-FALSIFY | QUEUED-WITH-FIRE-ORDER | deferral-ledger | Fire the named zero-dollar/local check if still applicable, or append a typed fold/blocker with the cited source row. |
+| ranked_followon_head | ddm_p2a_task_backlog_drain_20260801.md#p2a-never-named-716 | NEVER-NAMED-IN-13736-COMMITS | QUEUED-WITH-FIRE-ORDER | codex-qj1-followon-drain | One controlled grep/read: either locate a closing artifact or append a typed blocker/fold. |
+| ranked_followon_head | ddm_p1a_followon_unknown_adjudication_20260801.md#p1a-item-09 | OPEN-RANKED-BY-COST-TO-FALSIFY | QUEUED-WITH-FIRE-ORDER | ddm_fu1 | Queue behind the active scorer owner with the exact source row and falsifier; qj1 does not own the n600 slot. |
+| ranked_followon_head | ddm_p2a_task_backlog_drain_20260801.md#p2a-never-named-775 | NEVER-NAMED-IN-13736-COMMITS | QUEUED-WITH-FIRE-ORDER | codex-qj1-followon-drain | One controlled grep/read: either locate a closing artifact or append a typed blocker/fold. |
+| ranked_followon_head | ddm_p1a_followon_unknown_adjudication_20260801.md#p1a-item-10 | OPEN-RANKED-BY-COST-TO-FALSIFY | QUEUED-WITH-FIRE-ORDER | ddm_gc5 | Fire the named zero-dollar/local check if still applicable, or append a typed fold/blocker with the cited source row. |
+| ranked_followon_head | ddm_p2a_task_backlog_drain_20260801.md#p2a-never-named-833 | NEVER-NAMED-IN-13736-COMMITS | QUEUED-WITH-FIRE-ORDER | codex-qj1-followon-drain | One controlled grep/read: either locate a closing artifact or append a typed blocker/fold. |
+| ranked_followon_head | ddm_p1a_followon_unknown_adjudication_20260801.md#p1a-item-11 | OPEN-RANKED-BY-COST-TO-FALSIFY | QUEUED-WITH-FIRE-ORDER | ddm_pn1 | Fire the named zero-dollar/local check if still applicable, or append a typed fold/blocker with the cited source row. |
+| ranked_followon_head | ddm_p2a_task_backlog_drain_20260801.md#p2a-never-named-834 | NEVER-NAMED-IN-13736-COMMITS | QUEUED-WITH-FIRE-ORDER | codex-qj1-followon-drain | One controlled grep/read: either locate a closing artifact or append a typed blocker/fold. |
+| ranked_followon_head | ddm_p1a_followon_unknown_adjudication_20260801.md#p1a-item-12 | OPEN-RANKED-BY-COST-TO-FALSIFY | QUEUED-WITH-FIRE-ORDER | ddm_ba31 | Fire the named zero-dollar/local check if still applicable, or append a typed fold/blocker with the cited source row. |
+| ranked_followon_head | ddm_p2a_task_backlog_drain_20260801.md#p2a-never-named-840 | NEVER-NAMED-IN-13736-COMMITS | QUEUED-WITH-FIRE-ORDER | codex-qj1-followon-drain | One controlled grep/read: either locate a closing artifact or append a typed blocker/fold. |
+| ranked_followon_head | ddm_p1a_followon_unknown_adjudication_20260801.md#p1a-item-13 | OPEN-RANKED-BY-COST-TO-FALSIFY | QUEUED-WITH-FIRE-ORDER | ddm_pm1 | Fire the named zero-dollar/local check if still applicable, or append a typed fold/blocker with the cited source row. |
+| ranked_followon_head | ddm_p1a_followon_unknown_adjudication_20260801.md#p1a-item-14 | OPEN-RANKED-BY-COST-TO-FALSIFY | QUEUED-WITH-FIRE-ORDER | ddm_fu1 | Fire the named zero-dollar/local check if still applicable, or append a typed fold/blocker with the cited source row. |
+| ranked_followon_head | ddm_p2a_task_backlog_drain_20260801.md#p2a-never-named-844 | NEVER-NAMED-IN-13736-COMMITS | QUEUED-WITH-FIRE-ORDER | codex-qj1-followon-drain | One controlled grep/read: either locate a closing artifact or append a typed blocker/fold. |
+| ranked_followon_head | ddm_p1a_followon_unknown_adjudication_20260801.md#p1a-item-15 | OPEN-RANKED-BY-COST-TO-FALSIFY | QUEUED-WITH-FIRE-ORDER | ddm_gc15 | Fire the named zero-dollar/local check if still applicable, or append a typed fold/blocker with the cited source row. |
+| ranked_followon_head | ddm_p2a_task_backlog_drain_20260801.md#p2a-never-named-858 | NEVER-NAMED-IN-13736-COMMITS | QUEUED-WITH-FIRE-ORDER | codex-qj1-followon-drain | One controlled grep/read: either locate a closing artifact or append a typed blocker/fold. |
+| ranked_followon_head | ddm_p1a_followon_unknown_adjudication_20260801.md#p1a-item-16 | OPEN-RANKED-BY-COST-TO-FALSIFY | QUEUED-WITH-FIRE-ORDER | ddm_gc15 | Fire the named zero-dollar/local check if still applicable, or append a typed fold/blocker with the cited source row. |
+| ranked_followon_head | ddm_p2a_task_backlog_drain_20260801.md#p2a-never-named-859 | NEVER-NAMED-IN-13736-COMMITS | QUEUED-WITH-FIRE-ORDER | codex-qj1-followon-drain | One controlled grep/read: either locate a closing artifact or append a typed blocker/fold. |
+| ranked_followon_head | ddm_p1a_followon_unknown_adjudication_20260801.md#p1a-item-17 | OPEN-RANKED-BY-COST-TO-FALSIFY | QUEUED-WITH-FIRE-ORDER | deferral-ledger | Fire the named zero-dollar/local check if still applicable, or append a typed fold/blocker with the cited source row. |
+| ranked_followon_head | ddm_p2a_task_backlog_drain_20260801.md#p2a-never-named-860 | NEVER-NAMED-IN-13736-COMMITS | QUEUED-WITH-FIRE-ORDER | codex-qj1-followon-drain | One controlled grep/read: either locate a closing artifact or append a typed blocker/fold. |
+| ranked_followon_head | ddm_p1a_followon_unknown_adjudication_20260801.md#p1a-item-18 | OPEN-RANKED-BY-COST-TO-FALSIFY | QUEUED-WITH-FIRE-ORDER | deferral-ledger | Fire the named zero-dollar/local check if still applicable, or append a typed fold/blocker with the cited source row. |
+| ranked_followon_head | ddm_p2a_task_backlog_drain_20260801.md#p2a-never-named-877 | NEVER-NAMED-IN-13736-COMMITS | QUEUED-WITH-FIRE-ORDER | codex-qj1-followon-drain | One controlled grep/read: either locate a closing artifact or append a typed blocker/fold. |
+| ranked_followon_head | ddm_p1a_followon_unknown_adjudication_20260801.md#p1a-item-19 | OPEN-RANKED-BY-COST-TO-FALSIFY | QUEUED-WITH-FIRE-ORDER | deferral-ledger | Fire the named zero-dollar/local check if still applicable, or append a typed fold/blocker with the cited source row. |
+| ranked_followon_head | ddm_p1a_followon_unknown_adjudication_20260801.md#p1a-item-20 | OPEN-RANKED-BY-COST-TO-FALSIFY | QUEUED-WITH-FIRE-ORDER | deferral-ledger | Fire the named zero-dollar/local check if still applicable, or append a typed fold/blocker with the cited source row. |
+| ranked_followon_head | ddm_p1a_followon_unknown_adjudication_20260801.md#p1a-item-21 | OPEN-RANKED-BY-COST-TO-FALSIFY | QUEUED-WITH-FIRE-ORDER | ddm_gc10 | Fire the named zero-dollar/local check if still applicable, or append a typed fold/blocker with the cited source row. |
+| ranked_followon_head | ddm_p1a_followon_unknown_adjudication_20260801.md#p1a-item-22 | OPEN-RANKED-BY-COST-TO-FALSIFY | QUEUED-WITH-FIRE-ORDER | ddm_gc15 | Fire the named zero-dollar/local check if still applicable, or append a typed fold/blocker with the cited source row. |
+| ranked_followon_head | ddm_p1a_followon_unknown_adjudication_20260801.md#p1a-item-23 | OPEN-RANKED-BY-COST-TO-FALSIFY | QUEUED-WITH-FIRE-ORDER | ddm_rg3 | First adjudicate whether the row still applies to the live own-vehicle line; then fire or fold with the vehicle-scope reason. |
+| ranked_followon_head | ddm_p1a_followon_unknown_adjudication_20260801.md#p1a-item-24 | OPEN-RANKED-BY-COST-TO-FALSIFY | QUEUED-WITH-FIRE-ORDER | ddm_c2 | First adjudicate whether the row still applies to the live own-vehicle line; then fire or fold with the vehicle-scope reason. |
+| ranked_followon_head | ddm_p1a_followon_unknown_adjudication_20260801.md#p1a-item-25 | OPEN-RANKED-BY-COST-TO-FALSIFY | QUEUED-WITH-FIRE-ORDER | codex-qj1-followon-drain | First adjudicate whether the row still applies to the live own-vehicle line; then fire or fold with the vehicle-scope reason. |
+| ranked_followon_head | ddm_p1a_followon_unknown_adjudication_20260801.md#p1a-item-26 | OPEN-RANKED-BY-COST-TO-FALSIFY | QUEUED-WITH-FIRE-ORDER | deferral-ledger | Fire the named zero-dollar/local check if still applicable, or append a typed fold/blocker with the cited source row. |
+| ranked_followon_head | ddm_p1a_followon_unknown_adjudication_20260801.md#p1a-item-27 | OPEN-RANKED-BY-COST-TO-FALSIFY | QUEUED-WITH-FIRE-ORDER | ddm_round3 | Fire the named zero-dollar/local check if still applicable, or append a typed fold/blocker with the cited source row. |
+| ranked_followon_head | ddm_p1a_followon_unknown_adjudication_20260801.md#p1a-item-28 | OPEN-RANKED-BY-COST-TO-FALSIFY | QUEUED-WITH-FIRE-ORDER | ddm_ua2 | Fire the named zero-dollar/local check if still applicable, or append a typed fold/blocker with the cited source row. |
+| ranked_followon_head | ddm_p1a_followon_unknown_adjudication_20260801.md#p1a-item-29 | OPEN-RANKED-BY-COST-TO-FALSIFY | QUEUED-WITH-FIRE-ORDER | codex-qj1-followon-drain | First adjudicate whether the row still applies to the live own-vehicle line; then fire or fold with the vehicle-scope reason. |
+| ranked_followon_head | ddm_p2a_task_backlog_drain_20260801.md#p2a-never-named-375 | ALREADY-CLOSED | FOLDED | codex-qj1-followon-drain | Append or preserve the closing artifact citation; no fire order remains for the original row. |
+| ranked_followon_head | ddm_p2a_task_backlog_drain_20260801.md#p2a-never-named-841 | ALREADY-CLOSED | FOLDED | codex-qj1-followon-drain | Append or preserve the closing artifact citation; no fire order remains for the original row. |
+
+## Boundaries
+
+- This is a repo-visible join, not the live harness TaskList.
+- The ranked-head denominator is parsed from p1a/p2a source memos; rows outside those source tables are not silently adjudicated.
+- `EXECUTED`/`ADVANCED` are candidate closure signals, not proof without hand verification.
+- Score pointer is not touched; `score_claim=false`.

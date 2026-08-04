@@ -1021,6 +1021,96 @@ def run_negative_verdict_scan(staged_docs: list[str]) -> int:
     return 0
 
 
+def _staged_added_lines(files: list[str]) -> list[tuple[str, str]]:
+    """Return staged added lines as ``(path, line)`` pairs for exact diff scope."""
+    if not files:
+        return []
+    result = subprocess.run(
+        ["git", "diff", "--cached", "--unified=0", "--", *files],
+        cwd=REPO_ROOT,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(result.stderr.strip() or "git diff --cached failed")
+
+    added: list[tuple[str, str]] = []
+    current_path: str | None = None
+    for raw in result.stdout.splitlines():
+        if raw.startswith("+++ b/"):
+            current_path = raw.removeprefix("+++ b/")
+            continue
+        if raw.startswith("+++ /dev/null"):
+            current_path = None
+            continue
+        if current_path and raw.startswith("+") and not raw.startswith("+++"):
+            added.append((current_path, raw[1:]))
+    return added
+
+
+def run_followon_regrow_scan(staged_docs: list[str]) -> int:
+    """`ddm_fo1` — warn when new cheap follow-ons enter docs without a typed closeout.
+
+    This is deliberately warn-only: prose follow-ons are real work queues, but a
+    hook cannot honestly prove the owner/fire-order/result join by parsing one
+    sentence. The guard's job is to make the regrowth visible at the commit
+    surface and print its denominator; the durable closeout lives in the fo1
+    typed ledger / join receipts.
+    """
+    if os.environ.get("FOLLOWON_REGROW_SCAN_ENABLED", "1") == "0":
+        print(
+            "[preflight-hook] follow-on regrow scan DISABLED by env — NOT a pass.",
+            file=sys.stderr,
+        )
+        return 0
+    if not staged_docs:
+        return 0
+    try:
+        from tac.followon_ledger import ACTION_RX, CHEAP_RX
+    except Exception as exc:  # pragma: no cover - guard-broken path
+        print(
+            f"[preflight-hook] follow-on regrow scan UNAVAILABLE (failing OPEN): {exc}",
+            file=sys.stderr,
+        )
+        return 0
+    try:
+        added_lines = _staged_added_lines(staged_docs)
+    except Exception as exc:  # pragma: no cover - guard-internal bug path
+        print(
+            f"[preflight-hook] follow-on regrow scan CRASHED (failing OPEN): "
+            f"{exc.__class__.__name__}: {exc} — 0 added lines examined. This is NOT a pass.",
+            file=sys.stderr,
+        )
+        return 0
+
+    matches = [
+        (path, line)
+        for path, line in added_lines
+        if ACTION_RX.search(line) and CHEAP_RX.search(line)
+    ]
+    if matches:
+        print(
+            f"{YELLOW}[preflight-hook] follow-on regrow: {len(staged_docs)} staged .md, "
+            f"{len(added_lines)} added lines, {len(matches)} new cheap follow-on lines. "
+            f"Ensure FIRED/FOLDED/QUEUED-WITH-FIRE-ORDER plus owner before handoff.{RST}",
+            file=sys.stderr,
+        )
+        for path, line in matches[:10]:
+            print(
+                f"[preflight-hook]   {path}: {line.strip()[:180]}",
+                file=sys.stderr,
+            )
+        return 0
+    print(
+        f"{GREEN}[preflight-hook] follow-on regrow: {len(staged_docs)} staged .md, "
+        f"{len(added_lines)} added lines, no new cheap follow-ons{RST}",
+        file=sys.stderr,
+    )
+    return 0
+
+
 def run_guarded_constant_frozen_literal_scan(staged: list[str]) -> int:
     """`ddm_gk1` landing 2 — refuse a NEWLY-ADDED frozen output of a live derivation.
 
@@ -1147,8 +1237,14 @@ def main() -> int:
     if rc != 0:
         return rc
 
-    # Step 1e: `ddm_gk1` guarded-constant frozen-derivation guard. Same placement
-    # rationale as 1b/1c/1d — before run_preflight(), which early-returns on failure.
+    # Step 1e: `ddm_fo1` follow-on regrow guard. Warn-only by design; it makes
+    # newly-added cheap follow-ons visible before they become ownerless backlog.
+    rc = run_followon_regrow_scan(staged_docs)
+    if rc != 0:
+        return rc
+
+    # Step 1f: `ddm_gk1` guarded-constant frozen-derivation guard. Same placement
+    # rationale as 1b/1c/1d/1e — before run_preflight(), which early-returns on failure.
     rc = run_guarded_constant_frozen_literal_scan(staged)
     if rc != 0:
         return rc
