@@ -140,12 +140,30 @@ def live_arm_names() -> set[str]:
 
 
 def next_charters(rows: list[dict], live: set[str], slots: int, scorer_taken: bool) -> list[dict]:
-    """Rank-ordered charters that may fire right now, honouring the scorer rule."""
+    """Rank-ordered charters that may fire right now, honouring the scorer rule.
+
+    A live-marked row with NO process but a CLEAN ``rc=0`` exit receipt is a
+    FINISHED arm awaiting harvest — NOT died-resumable. Auto-respawning it
+    re-runs a completed charter (measured 2026-08-04: rf1 respawned after its
+    harvest because the row was never marked landed; the duplicate had to be
+    killed). Clean finishes need an explicit ``mark --status queued`` (or a
+    fresh ``add``) to run again; only receipt-less or nonzero/signal exits
+    remain implicitly resumable.
+    """
     latest = latest_by_name(rows)
+
+    def _finished_clean(r: dict) -> bool:
+        if r.get("status") != "live":
+            return False
+        receipt = _done_receipt(r.get("name", ""))
+        return receipt is not None and receipt.startswith("rc=0")
+
     ready = [
         r
         for r in latest.values()
-        if r.get("status") in _LIVE_STATUSES and r.get("name") not in live
+        if r.get("status") in _LIVE_STATUSES
+        and r.get("name") not in live
+        and not _finished_clean(r)
     ]
     ready.sort(key=lambda r: (r.get("rank", 999), r.get("name", "")))
     picked: list[dict] = []

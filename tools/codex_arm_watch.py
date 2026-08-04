@@ -18,9 +18,19 @@ reintroducing the poll-on-request regime.
 from __future__ import annotations
 
 import argparse
+import signal
 import sys
 import time
 from pathlib import Path
+
+# The session harness delivers SIGURG to long-lived children (~minutes cadence);
+# an unhardened watcher dies rc=144 — measured 2026-08-04 on the first armed
+# Monitor. Same kill class that felled bare codex spawns (CLAUDE.md pattern-A).
+for _sig in ("SIGURG", "SIGPIPE"):
+    try:
+        signal.signal(getattr(signal, _sig), signal.SIG_IGN)
+    except (AttributeError, OSError, ValueError):
+        pass
 
 RUNS = Path(".omx/tmp/codex_runs")
 HEARTBEAT = RUNS / "_watcher.alive"

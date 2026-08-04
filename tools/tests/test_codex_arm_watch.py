@@ -74,3 +74,26 @@ def test_queue_done_receipt_and_watcher_line(tmp_path: Path, monkeypatch) -> Non
     old = time.time() - 300
     os.utime(hb, (old, old))
     assert "STALE" in queue_mod._watcher_line()
+
+
+def test_clean_finish_never_auto_respawns(tmp_path: Path, monkeypatch) -> None:
+    """The rf1-duplicate incident (2026-08-04): a live-marked processless row
+    with an rc=0 receipt is FINISHED (awaiting harvest), not died-resumable —
+    next_charters must skip it. Nonzero/signal exits and receipt-less rows
+    stay implicitly resumable."""
+    import codex_arm_queue as queue_mod
+
+    monkeypatch.setattr(queue_mod, "RUNS", tmp_path)
+    _write(tmp_path, "fin.done", "launched pid=1 t=0\nrc=0 elapsed=300 gen=1\n")
+    _write(tmp_path, "crashed.done", "launched pid=2 t=0\nrc=1 elapsed=50 gen=1\n")
+    _write(tmp_path, "killed.done", "launched pid=3 t=0\nsignal=TERM elapsed=31\n")
+    rows = [
+        {"name": "fin", "status": "live", "rank": 1, "prompt_path": "p"},
+        {"name": "crashed", "status": "live", "rank": 2, "prompt_path": "p"},
+        {"name": "killed", "status": "live", "rank": 3, "prompt_path": "p"},
+        {"name": "ghost", "status": "live", "rank": 4, "prompt_path": "p"},
+        {"name": "queued1", "status": "queued", "rank": 5, "prompt_path": "p"},
+    ]
+    picked = {r["name"] for r in queue_mod.next_charters(rows, set(), 10, False)}
+    assert "fin" not in picked  # clean finish: explicit re-queue required
+    assert {"crashed", "killed", "ghost", "queued1"} <= picked
