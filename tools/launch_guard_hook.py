@@ -63,6 +63,57 @@ BLOCK_MESSAGE = (
     "run set TAC_LAUNCH_GUARD_OK=1 in the command."
 )
 
+SIGURG_BLOCK_MESSAGE = (
+    "BLOCKED by tools/launch_guard_hook.py: SIGURG/rc=144 kill class (operator "
+    "permanent-fix 2026-08-04; recurring since 2026-04-28). Hand-rolled "
+    "nohup/&-disown detach and long-running background Bash BOTH die to the "
+    "session reaper — the canonical launcher already exists: "
+    ".venv/bin/python tools/launch_detached_process.py --output-dir <run_dir> "
+    "--done-receipt <name> -- <cmd...>  (true start_new_session detach + "
+    "manifest + the .done receipt lands in .omx/tmp/codex_runs/ so the fleet "
+    "watcher NOTIFIES MAIN on completion). Codex arms: codex_arm_queue.py "
+    "saturate --spawn. Deliberate override: TAC_LAUNCH_GUARD_OK=1."
+)
+
+# Canonical detach surfaces — their presence means the launch is already immune.
+_DETACH_SAFE_MARKERS = (
+    "launch_detached_process.py",
+    "spawn_durable_daemon.py",
+    "codex_arm_queue.py",
+    "_keeper.py",
+    "claude_cli_delegate",
+)
+# Long-runner command shapes that die at the harness reaper when run through
+# Bash run_in_background (measured: comma10k git clone rc=144, 2026-08-04).
+_LONG_RUNNER_RE = re.compile(
+    r"(?:^|[;&|]\s*|\s)(git\s+clone|rsync\s|wget\s|curl\s+[^|;]*(?:-O|-L)|"
+    r"huggingface-cli\s+download)"
+)
+
+
+def _is_hand_rolled_detach(command: str) -> bool:
+    """True for nohup/&-disown incantations outside the canonical launchers.
+
+    codex_arm_queue.py:184 has documented since July that ``nohup ... &
+    disown`` is NOT sufficient (disown clears the job table; the child stays
+    in the killable group unless setsid'd) — yet the pattern kept being
+    hand-typed. This makes the documented insufficiency ENFORCED."""
+    if any(marker in command for marker in _DETACH_SAFE_MARKERS):
+        return False
+    stripped = command.strip()
+    if "nohup" not in stripped:
+        return False
+    return "disown" in stripped or stripped.endswith("&") or "& disown" in stripped
+
+
+def _is_backgrounded_long_runner(command: str, run_in_background: bool) -> bool:
+    """True when a known long-runner rides Bash run_in_background (reaped ~144)."""
+    if not run_in_background:
+        return False
+    if any(marker in command for marker in _DETACH_SAFE_MARKERS):
+        return False
+    return bool(_LONG_RUNNER_RE.search(command))
+
 
 def _split_segments(command: str) -> list[str]:
     """Split a shell command on ; && || | and newlines (coarse, conservative)."""
@@ -172,7 +223,9 @@ def _is_hand_rolled_codex_spawn(command: str) -> bool:
     return True
 
 
-def decide(command: str, env: dict | None = None) -> tuple[bool, str]:
+def decide(
+    command: str, env: dict | None = None, run_in_background: bool = False
+) -> tuple[bool, str]:
     """(allow, reason) — PURE. allow=True means the Bash call proceeds."""
     environ = os.environ if env is None else env
     if not command or not command.strip():
@@ -190,6 +243,12 @@ def decide(command: str, env: dict | None = None) -> tuple[bool, str]:
         return True, ""
     if _is_hand_rolled_codex_spawn(command):
         return False, CODEX_SPAWN_BLOCK_MESSAGE
+    # SIGURG kill class — like the codex block, only the explicit hatch
+    # overrides (trainer safe-tokens must not bypass a detach violation).
+    if _is_hand_rolled_detach(command) or _is_backgrounded_long_runner(
+        command, run_in_background
+    ):
+        return False, SIGURG_BLOCK_MESSAGE
     if any(tok in command for tok in _SAFE_TOKENS):
         return True, ""
     # Whole-command pass FIRST (additive: can only add blocks, never new
@@ -255,7 +314,9 @@ def main() -> int:
             return 0
         tool_input = payload.get("tool_input") or {}
         command = tool_input.get("command") or ""
-        allow, reason = decide(command)
+        allow, reason = decide(
+            command, run_in_background=bool(tool_input.get("run_in_background"))
+        )
         if not allow:
             print(
                 json.dumps(

@@ -76,6 +76,16 @@ def parse_args() -> argparse.Namespace:
         help="Environment override for the child. May be repeated.",
     )
     parser.add_argument(
+        "--done-receipt",
+        default=None,
+        metavar="NAME",
+        help=(
+            "Write .omx/tmp/codex_runs/<NAME>.done (rc=<rc> elapsed=<s>) when the "
+            "child exits — the fleet watcher (tools/codex_arm_watch.py) turns it "
+            "into a MAIN notification, same channel as codex-arm completions."
+        ),
+    )
+    parser.add_argument(
         "--dry-run",
         action="store_true",
         help="Write manifest without launching the child process.",
@@ -131,13 +141,36 @@ def main() -> int:
         "argv": [str(part) for part in args.cmd],
         "dry_run": bool(args.dry_run),
     }
+    launch_argv = [str(part) for part in args.cmd]
+    if args.done_receipt:
+        # Wrap in a detached supervisor that writes the watcher-visible exit
+        # receipt (same format as codex-arm keepers). The fleet watcher
+        # (tools/codex_arm_watch.py) turns the receipt into a MAIN
+        # notification — no polling, ever (operator permanent-fix 2026-08-04).
+        runs_dir = Path.cwd() / ".omx" / "tmp" / "codex_runs"
+        runs_dir.mkdir(parents=True, exist_ok=True)
+        done_path = runs_dir / f"{args.done_receipt}.done"
+        supervisor_src = (
+            "import signal,subprocess,sys,time,pathlib\n"
+            "for _s in ('SIGURG','SIGPIPE'):\n"
+            "    try: signal.signal(getattr(signal,_s), signal.SIG_IGN)\n"
+            "    except Exception: pass\n"
+            "done=pathlib.Path(sys.argv[1]); argv=sys.argv[2:]\n"
+            "t0=time.time(); rc=subprocess.call(argv)\n"
+            "tmp=done.with_suffix('.done.tmp')\n"
+            "tmp.write_text('rc=%d elapsed=%d detached-job\\n' % (rc, int(time.time()-t0)))\n"
+            "tmp.replace(done)\n"
+            "sys.exit(rc)\n"
+        )
+        launch_argv = [sys.executable, "-c", supervisor_src, str(done_path), *launch_argv]
+        payload["done_receipt_path"] = done_path.as_posix()
     if args.dry_run:
         _write_json(manifest_path, payload)
         print(json.dumps({"dry_run": True, "manifest_path": manifest_path.as_posix()}))
         return 0
     with open(log_path, "ab", buffering=0) as log:
         proc = subprocess.Popen(
-            [str(part) for part in args.cmd],
+            launch_argv,
             cwd=cwd,
             env=env,
             stdout=log,
