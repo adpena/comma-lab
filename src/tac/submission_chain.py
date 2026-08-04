@@ -926,6 +926,8 @@ def run_upstream_evaluate(
     require_n600: bool = True,
     timeout: int = 24 * 3600,
     python_bin: str | None = None,
+    report_path: str | Path | None = None,
+    preserve_existing_report: bool = True,
 ) -> EvaluateResult:
     """Run the REAL contest scorer on the exact staged bytes and recompute S.
 
@@ -946,7 +948,18 @@ def run_upstream_evaluate(
     if not (sub / "archive.zip").exists():
         raise SubmissionChainError(f"missing {sub / 'archive.zip'} (NO-FAKE).")
 
-    report_path = sub / "report.txt"
+    # A submission dir is usually a DURABLE evidence directory that already holds
+    # the report of the run that produced the row.  Writing straight to
+    # ``report.txt`` silently destroys that artifact -- measured live on
+    # 2026-08-04, when this function was about to overwrite the ddm_pu2 report
+    # that ddm_si1 had cited hours earlier.  Default: side-step the existing file
+    # rather than clobber it.
+    report_path = Path(report_path) if report_path else (sub / "report.txt")
+    if preserve_existing_report and report_path.exists() and report_path == sub / "report.txt":
+        from datetime import UTC, datetime
+
+        stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
+        report_path = sub / f"report_{stamp}.txt"
     cmd = [
         python_bin or sys.executable,
         str(evaluate_py),

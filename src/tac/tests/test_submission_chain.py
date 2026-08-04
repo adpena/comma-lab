@@ -10,6 +10,7 @@ FORBIDDEN' + the vacuity-equals-pass class).
 from __future__ import annotations
 
 import zipfile
+from pathlib import Path
 
 import pytest
 
@@ -428,3 +429,80 @@ def test_receipt_refuses_a_tmp_destination():
     r = ChainReceipt()
     with pytest.raises(SubmissionChainError, match="transient tmp root"):
         r.write("/tmp/receipt.json")
+
+
+# --------------------------------------------------------------------------- #
+# report custody -- do not clobber a prior run's evidence
+# --------------------------------------------------------------------------- #
+def test_evaluate_does_not_clobber_an_existing_report(tmp_path, monkeypatch):
+    """POSITIVE CONTROL, from a live near-miss.
+
+    On 2026-08-04 this function was about to overwrite the ddm_pu2 ``report.txt``
+    that ddm_si1 had cited hours earlier, because the path was hardcoded. A
+    submission dir is DURABLE evidence, not scratch.
+    """
+    import subprocess as _sp
+
+    from tac.submission_chain import run_upstream_evaluate
+
+    sub = tmp_path / "sub"
+    sub.mkdir()
+    (sub / "archive.zip").write_bytes(b"PK\x05\x06" + b"\x00" * 18)
+    original = sub / "report.txt"
+    original.write_text("ORIGINAL EVIDENCE -- must survive\n")
+    up = tmp_path / "upstream"
+    up.mkdir()
+    (up / "evaluate.py").write_text("# stub\n")
+    (tmp_path / "videos").mkdir()
+    (tmp_path / "names.txt").write_text("0\n")
+
+    report_text = (
+        "Evaluation results over 600 samples\n"
+        "Average PoseNet Distortion: 0.00154519\n"
+        "Average SegNet Distortion: 0.00431179\n"
+        "Compression Rate: 0.00942337\n"
+        "Final score = 0.79\n"
+    )
+    monkeypatch.setattr(
+        _sp, "run",
+        lambda cmd, **kw: _sp.CompletedProcess(cmd, 0, report_text, ""),
+    )
+    res = run_upstream_evaluate(
+        sub, upstream_dir=up, videos_dir=tmp_path / "videos",
+        video_names_file=tmp_path / "names.txt", archive_bytes=353805, device="cpu",
+    )
+    assert original.read_text() == "ORIGINAL EVIDENCE -- must survive\n"
+    assert Path(res.report_path) != original
+    # ...and the components are recomputed, reproducing the live frontier row.
+    assert res.recomputed_score == pytest.approx(0.7910689, abs=1e-6)
+
+
+def test_evaluate_honours_an_explicit_report_path(tmp_path, monkeypatch):
+    import subprocess as _sp
+
+    from tac.submission_chain import run_upstream_evaluate
+
+    sub = tmp_path / "sub"
+    sub.mkdir()
+    (sub / "archive.zip").write_bytes(b"PK\x05\x06" + b"\x00" * 18)
+    up = tmp_path / "upstream"
+    up.mkdir()
+    (up / "evaluate.py").write_text("# stub\n")
+    (tmp_path / "videos").mkdir()
+    (tmp_path / "names.txt").write_text("0\n")
+    want = tmp_path / "custom_report.txt"
+    monkeypatch.setattr(
+        _sp, "run",
+        lambda cmd, **kw: _sp.CompletedProcess(
+            cmd, 0,
+            "Evaluation results over 600 samples\nAverage PoseNet Distortion: 1e-3\n"
+            "Average SegNet Distortion: 1e-3\nCompression Rate: 1e-3\nFinal score = 0.2\n",
+            "",
+        ),
+    )
+    res = run_upstream_evaluate(
+        sub, upstream_dir=up, videos_dir=tmp_path / "videos",
+        video_names_file=tmp_path / "names.txt", archive_bytes=1, device="cpu",
+        report_path=want,
+    )
+    assert Path(res.report_path) == want
