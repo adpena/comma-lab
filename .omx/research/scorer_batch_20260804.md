@@ -101,3 +101,50 @@ Fire order when the scorer slot frees:
 Do not promote from this queued note. If the convergence-tested candidate cannot
 produce a byte-closed row with a plausible `S < 0.7541459` pre-score, fold it
 before spending the n600 slot.
+
+## ED1 - Road/Lane per-edge separatrix carrier, queued n600 verdict
+
+Status: **QUEUED MEASUREMENT SPEC**, not a promoted candidate. ED1 built a
+receiver-consumed byte-closed candidate, but did not run SegNet/PoseNet because
+the single full-n600 scorer slot is owned by sg4/sb1 under this batch contract.
+
+Candidate archive:
+`/Volumes/VertigoDataTier/pact/ddm_ed1_20260804/sub_final_per_edge_centerline/archive.zip`
+(`a18c1a8c1fe4cab5fe675f661f3433b4b0013c2b4f51e764119d819b2fd86b89`).
+
+Byte ledger:
+`/Volumes/VertigoDataTier/pact/ddm_ed1_20260804/sub_final_per_edge_centerline/ed1_byte_ledger.json`.
+Receiver smoke:
+`/Volumes/VertigoDataTier/pact/ddm_ed1_20260804/sub_final_per_edge_centerline/ed1_receiver_smoke.json`.
+
+Measured byte side on `sub_final` base:
+
+| field | value |
+|---|---:|
+| base archive bytes | 358,084 |
+| candidate archive bytes | 527,435 |
+| archive delta | +169,351 |
+| ED1 section bytes | 169,149 |
+| Road/Lane cached target cells | 235,148 |
+| centerline-band captured target cells | 191,005 |
+| cache capture fraction | 0.8122756732 |
+| own byte-closed break-even survival, no collateral | 0.6964303814 |
+| charter sg3 falsifier survival | 0.3956 |
+| projected S at sg3 survival, no collateral | 0.8028554362 |
+| projected S at 100% survival, no collateral | 0.7049928349 |
+
+Fire order when the scorer slot frees:
+
+```bash
+.venv/bin/python experiments/ddm_fz2_byteclose_and_eval.py \
+  --sub-dir /Volumes/VertigoDataTier/pact/ddm_ed1_20260804/sub_final_per_edge_centerline \
+  --out /Volumes/VertigoDataTier/pact/ddm_ed1_20260804/sub_final_per_edge_centerline/ed1_n600_eval_receipt.json \
+  --inflate-out /Volumes/VertigoDataTier/pact/ddm_ed1_20260804/sub_final_per_edge_centerline/ed1_n600_eval_inflated \
+  --device cpu --batch-size 16 --num-threads 4
+```
+
+Verdict fields owed by the scorer row: exact d_seg, d_pose, bytes, recomputed S,
+realized Road/Lane survival against both the charter falsifier `0.3956` and the
+actual byte-closed break-even `0.6964303814`, per-class flip deltas
+Road->Lane/Lane->Road, and any collateral flips outside the Road/Lane target
+set. The R8 pose-bank guard applies; do not promote from this queued note.
