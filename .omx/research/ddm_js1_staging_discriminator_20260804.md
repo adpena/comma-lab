@@ -127,13 +127,17 @@ Two controls close it:
 | control | measured |
 |---|---|
 | **C5** — scorer-lattice pose path vs canonical **camera** path, per pair | **abs_diff 0.0** |
-| **realization gap** — predicted d_pose vs verified-from-camera d_pose | **0.0 on most pairs; worst observed −4.62e-05** |
+| **realization gap** — predicted d_pose vs verified-from-camera d_pose | **≈0 on most pairs; worst observed +2.12e-04** |
 
-**The gap is not identically zero and the memo should not say so.** Worst observed is −4.62e-05
-(pair 115; −6.14e-06 on pair 32) — one to four orders of magnitude below d_pose (~1e-3), and
-explained: D's four private bilinear weights sum to 1 only to **fp32 precision**, so writing a
-single value into all four camera pixels reproduces it to float rounding rather than exactly.
-Benign, bounded, and reported rather than rounded away.
+**The gap is not identically zero and the memo should not say so.** Worst observed is **+2.12e-04**
+(n32 free-form pair 154; −4.62e-05 on k=4 pair 115; −6.14e-06 on pair 32) — one to three orders of
+magnitude below d_pose (~1e-3). Two mechanisms, both benign and both reported rather than rounded
+away: (a) D's four private bilinear weights sum to 1 only to **fp32 precision**; (b) the larger
++2.12e-04 sits on the **free-form full-frame realization**, which *flattens* every camera 2×2 block
+to a single rounded value (§8 defect 5) and so re-quantizes the whole of frame_0 rather than a
+band — the **additive** realization would eliminate it, and the k=4 carriage arm's gaps stayed
+≤ 5e-5. The gap is largest on precisely the arm already scoped INSTRUMENT, which is the reassuring
+direction: the payable arm realizes cleanly.
 
 Every d_pose in this memo is therefore re-scored **from the real camera pair**, never from the
 solve's own coordinates.
@@ -299,9 +303,10 @@ generated ⇒ **FREE** under rule 118; only `k²·3` int16 coefficients per pair
 |---|---:|---:|---:|:--:|
 | 48 | 3.654× | **0.3149×** | **91.4%** | no |
 | 115 | 2.097× | **0.9692×** | 53.8% | no |
+| 154 | 1.452× | **0.9531×** | 34.4% | no |
 | 20 | 1.190× | **0.8483×** | 28.7% | no |
 
-**3 of 3 land below shipped and none solves to all-zero** — so at 96 B/pair the cheap basis both
+**4 of 4 land below shipped and none solves to all-zero** — so at 96 B/pair the cheap basis both
 pays for itself and leaves pose no worse than what we ship, *while* the seg gain is banked. Note
 the ordering: the repair removes MORE of the damage where the damage is LARGER (91.4% at 3.654×,
 28.7% at 1.190×), which is the useful direction for a heavy-tailed damage distribution — the tail
@@ -324,15 +329,16 @@ rather than an optimum. The k=4 mean is not quoted as a population statistic at 
    under a well-scaled lr converge; 589,824 under a shared lr do not. **The free-form byte figure
    in §5 is an INSTRUMENT artifact and must not be cited as the cost of the repair.**
 
-   **The decisive instance is pair 115**, where the two arms were run on the identical staged
-   frame: free-form repaired **0.0%** of the damage (2.097× → 2.097×, the solver found *nothing*),
-   while **k=4 repaired 53.8%** (→ 0.9692×) with 48 coefficients. A basis strictly contained in
-   the free arm's search space succeeded exactly where the free arm failed outright. That is not
-   a capacity ordering — it is a **conditioning failure**, and it means the free-form arm is not
-   merely inefficient but **unreliable**: it silently returns "no repair possible" on pairs where
-   a repair demonstrably exists. Any verdict this unit might have drawn from free-form alone —
-   including the fatal carriage verdict I had begun to write — would have been a false negative of
-   exactly the shape this program calls m50.
+   **Two decisive instances, pairs 115 and 154**, each run on the identical staged frame: free-form
+   repaired **0.0%** of the damage (115: 2.097×→2.097×; 154: 1.452×→1.452× — the solver found
+   *nothing* both times), while **k=4 repaired 53.8% and 34.4%** (→ 0.9692×, → 0.9531×) with 48
+   coefficients. A basis strictly contained in the free arm's search space succeeded exactly where
+   the free arm failed outright, **twice**. That is not a capacity ordering — it is a
+   **conditioning failure**, and it means the free-form arm is not merely inefficient but
+   **unreliable**: it silently returns "no repair possible" on pairs where a repair demonstrably
+   exists. Any verdict this unit might have drawn from free-form alone — including the fatal
+   carriage verdict I had begun to write — would have been a false negative of exactly the shape
+   this program calls m50.
 3. **k=32's all-zero is the same defect at the other end** (1024 coefficients, shared lr,
    overshoot into the clamp) — a false negative inside the arm built to detect false negatives.
    `verdict_scope: INSTRUMENT` on both.
