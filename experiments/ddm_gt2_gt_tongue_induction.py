@@ -19,7 +19,8 @@ line did not have:
       SPOKEN vs as written, so flips/verbs are measurable per edge;
   (2) REAL-coder pricing (lzma/brotli/zlib actual outputs), never an entropy
       estimate alone -- the estimate-vs-coder gap is itself reported;
-  (3) the VERB decomposition ddm_cg1r consumes as force-ledger columns.
+  (3) the VERB decomposition ddm_cg1 (#809) consumes as force-ledger columns;
+  (4) the F7 temporal/phase axis, which g1/dv2 did not induce at all.
 
 TYPING DISCIPLINE (rule-118; this is a hard gate, see the memo's Symbol Table)
 -----------------------------------------------------------------------------
@@ -36,12 +37,18 @@ on every priced row.
 
 STAGES (each writes its own JSON; re-runnable independently)
   control - reproduce pu2's flip/d_seg row from the corpus (FAIL-CLOSED)
-  depth   - per-class depth profile + the flip-vs-depth conjugation diagnosis
+  verbs   - EDGE-indexed verb decomposition (DISPLACE/TRANSFER/ERODE/GOUGE/
+            ANNIHILATE/BIRTH/FRAGMENT) + the per-class depth profile
   mdl     - real-coder MDL of L* vs sx1's entropy estimate
   split   - static-lexicon / per-pair-sentence split, ADDRESS priced apart
             from PAYLOAD
-  lane    - Lane production rules: region-paint vs curve-native, priced at
-            matched fidelity
+  lane    - Lane production rules: raster vs contour, priced at matched fidelity
+  phase   - F7: does an explicit per-pair positional DOF pay?
+
+SAMPLE SCOPE
+  Every headline number is n = 600, selection_mode = FULL_POPULATION.  `--frames`
+  below 600 yields a CONTIGUOUS PREFIX, which is a different population from the
+  corpus (prefix bias, m88/m96) and is a SMOKE only -- never evidence.
 
 USAGE
   .venv/bin/python experiments/ddm_gt2_gt_tongue_induction.py --stage control
@@ -916,9 +923,150 @@ def stage_lane(frames: int = 600, epsilons=(0.0, 0.5, 1.0, 1.5, 2.0, 3.0)) -> di
     }
 
 
+def stage_phase(frames: int = 600, radius: int = 10) -> dict:
+    """F7: does an explicit PER-PAIR POSITIONAL DOF (phase) pay for itself?
+
+    g1 (#620) and dv2 (#651) induced a SPATIAL vocabulary from this same
+    bit-identical corpus (verified: sha f2c8be94774780bd).  Neither induced a
+    TEMPORAL / cross-pair production, and F7 (temporal/phase) is the largest
+    un-owned seg family.  This stage measures three productions of increasing
+    grammatical power on the SAME corpus with the SAME real coder:
+
+      P0  INDEPENDENT   code each L_t alone                (no temporal rule)
+      P1  CARRY         code (L_t != L_{t-1}) + the changed values
+                        -- the receiver already holds L_{t-1}, so the rule is
+                        "carry the previous sentence forward and patch it"
+      P2  CARRY+PHASE   same, but after shifting L_{t-1} by the integer
+                        (dy,dx) that minimises disagreement.  The shift is a
+                        PER-PAIR symbol: 2 counted bytes of positional DOF.
+
+    P2 - P1 is the measured value of the phase axis.  If P2 does not beat P1 by
+    more than the 2 B/pair the symbol costs, an integer-translation phase
+    production does not pay ON THIS CORPUS, and that is a real negative with a
+    named scope (integer whole-frame translation, radius +-`radius` px).
+    """
+    gt, _ = _load(mmap=True)
+    n = min(frames, gt.shape[0])
+    h, w = gt.shape[1], gt.shape[2]
+
+    # Streams are CONCATENATED and coded once.  Coding each frame's stream
+    # separately would charge ~60 B of lzma container per frame per stream
+    # (~72 KB over the corpus) and would compare grammars on their header
+    # overhead rather than on their structure.  stage_split does the same.
+    a1: list[bytes] = []
+    v1: list[bytes] = []
+    a2: list[bytes] = []
+    v2: list[bytes] = []
+    p0_raw: list[bytes] = []
+    shifts: list[tuple[int, int]] = []
+    resid1 = resid2 = 0
+
+    t0 = time.time()
+    prev = np.asarray(gt[0])
+    p0_raw.append(prev.tobytes())
+    for t in range(1, n):
+        cur = np.asarray(gt[t])
+        p0_raw.append(cur.tobytes())
+
+        # P1: plain carry-forward
+        d1 = cur != prev
+        resid1 += int(d1.sum())
+        a1.append(np.packbits(d1.ravel()).tobytes())
+        v1.append(cur[d1].tobytes())
+
+        # P2: best integer shift of prev, then carry-forward
+        best = (1 << 62, 0, 0)
+        for dy in range(-radius, radius + 1):
+            ys0, ys1 = max(0, dy), min(h, h + dy)
+            yp0, yp1 = max(0, -dy), min(h, h - dy)
+            for dx in range(-radius, radius + 1):
+                xs0, xs1 = max(0, dx), min(w, w + dx)
+                xp0, xp1 = max(0, -dx), min(w, w - dx)
+                bad = int(
+                    np.count_nonzero(
+                        cur[ys0:ys1, xs0:xs1] != prev[yp0:yp1, xp0:xp1]
+                    )
+                ) + (h * w - (ys1 - ys0) * (xs1 - xs0))
+                if bad < best[0]:
+                    best = (bad, dy, dx)
+        _, dy, dx = best
+        shifts.append((dy, dx))
+        sh = np.roll(np.roll(prev, dy, axis=0), dx, axis=1)
+        d2 = cur != sh
+        resid2 += int(d2.sum())
+        a2.append(np.packbits(d2.ravel()).tobytes())
+        v2.append(cur[d2].tobytes())
+
+        prev = cur
+        if t % 100 == 0:
+            print(f"[gt2:phase] {t}/{n} {time.time()-t0:.0f}s", flush=True)
+
+    p0 = _codec_bytes(b"".join(p0_raw), "lzma9e")
+    p1_addr = _codec_bytes(b"".join(a1), "lzma9e")
+    p1_val = _codec_bytes(b"".join(v1), "lzma9e")
+    p2_addr = _codec_bytes(b"".join(a2), "lzma9e")
+    p2_val = _codec_bytes(b"".join(v2), "lzma9e")
+    phase_symbol_bytes = 2 * len(shifts)
+    p1_tot = p1_addr + p1_val
+    p2_tot = p2_addr + p2_val + phase_symbol_bytes
+    nz = sum(1 for s in shifts if s != (0, 0))
+
+    return {
+        "stage": "phase",
+        "frames": n,
+        "search_radius_px": radius,
+        "family": "F7 temporal/phase - the axis g1(#620)/dv2(#651) did NOT induce",
+        "corpus_identity_verified": "gt_argmax_n600.npy == gt_n600.npz::lstars, BIT-IDENTICAL, sha256 f2c8be94774780bd",
+        "productions": {
+            "P0_whole_corpus_lzma": {
+                "symbol_type": "FITTED",
+                "bytes": p0,
+                "temporal_rule": None,
+            },
+            "P1_carry": {
+                "symbol_type": "FITTED",
+                "address_bytes": p1_addr,
+                "payload_bytes": p1_val,
+                "bytes": p1_tot,
+                "residual_px": resid1,
+                "residual_px_per_pair": resid1 / max(n - 1, 1),
+                "address_share": p1_addr / p1_tot if p1_tot else None,
+                "gain_vs_P0": p0 - p1_tot,
+                "gain_vs_P0_pct": 100.0 * (p0 - p1_tot) / p0 if p0 else None,
+            },
+            "P2_carry_plus_phase": {
+                "symbol_type": "FITTED",
+                "address_bytes": p2_addr,
+                "payload_bytes": p2_val,
+                "phase_symbol_bytes": phase_symbol_bytes,
+                "phase_symbol_note": "2 counted bytes per pair = the per-pair POSITIONAL DOF; the shift OPERATOR that applies it is GENERIC and free",
+                "bytes": p2_tot,
+                "residual_px": resid2,
+                "residual_px_per_pair": resid2 / max(n - 1, 1),
+                "gain_vs_P1": p1_tot - p2_tot,
+                "gain_vs_P1_pct": 100.0 * (p1_tot - p2_tot) / p1_tot if p1_tot else None,
+                "nonzero_shifts": nz,
+                "nonzero_shift_frac": nz / len(shifts) if shifts else None,
+                "shift_histogram": {
+                    f"{dy},{dx}": shifts.count((dy, dx))
+                    for (dy, dx) in sorted(set(shifts))
+                },
+                "residual_reduction_px": resid1 - resid2,
+                "residual_reduction_pct": (
+                    100.0 * (resid1 - resid2) / resid1 if resid1 else None
+                ),
+            },
+        },
+        "phase_pays": p2_tot < p1_tot,
+        "verdict_scope_if_negative": "FORMULATION - integer WHOLE-FRAME translation at radius +-{}, on the GT argmax lattice. Does NOT refute sub-pixel, per-region, or projective phase productions, which argmax cannot resolve.".format(radius),
+        "elapsed_s": time.time() - t0,
+    }
+
+
 STAGES = {
     "control": (stage_control, "gt2_control.json"),
     "verbs": (stage_verbs, "gt2_verbs.json"),
+    "phase": (stage_phase, "gt2_phase.json"),
     "mdl": (stage_mdl, "gt2_mdl.json"),
     "split": (stage_split, "gt2_split.json"),
     "temporal": (stage_temporal, "gt2_temporal.json"),
