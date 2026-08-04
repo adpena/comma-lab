@@ -10,6 +10,16 @@
             "timeout": 20
           }
         ]
+      },
+      {
+        "matcher": "Agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR/.venv/bin/python\" \"$CLAUDE_PROJECT_DIR/tools/agent_model_routing_guard_hook.py\"",
+            "timeout": 20
+          }
+        ]
       }
     ],
     "Stop": [
