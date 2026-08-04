@@ -384,7 +384,14 @@ VERDICT_SCOPE_LADDER = (
     "INSTANCE < FORMULATION < FAMILY < PARADIGM. Default to the narrowest supported scope; one "
     "failed formulation never kills a family. A family verdict requires a proved bound or at least "
     "two materially distinct optimal-form formulations, while a paradigm verdict requires explicit "
-    "operator/council authority. Record the still-open reformulations with every narrower negative."
+    "operator/council authority. Record the still-open reformulations with every narrower negative. "
+    "RECORD IT THROUGH THE TYPED PRODUCER, not as prose: call "
+    "tac.verdicts.emit_verdict(..., scope=VerdictScope(level=ScopeLevel.<LEVEL>, scoped_to=...), "
+    "is_negative=True, reformulation_queue=[...]) — it REFUSES a family/paradigm scope that carries "
+    "no family_evidence and a negative that carries no reformulation queue, so the ladder binds at "
+    "write time instead of being audited after the fact. A scope token that exists only as prose in "
+    "a memo is unqueryable: no consumer can count it, so it neither protects the killed signal nor "
+    "survives the next agent's recall."
 )
 
 #: The archive-gravity guard: content lineage + crux alignment declared up front (operator 2026-07-20).

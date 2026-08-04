@@ -191,3 +191,35 @@ def test_contract_integrity_empty_composer_cannot_fail_open() -> None:
     violations = check_subagent_contract_module_integrity(_module=drifted)
     assert any("grounded-progress phrase" in violation for violation in violations)
     assert sum("workflow-v2 block" in violation for violation in violations) == 5
+    # An empty composer also loses the typed-producer name (no fail-open there either).
+    assert any("typed verdict producer" in violation for violation in violations)
+
+
+def test_contract_names_typed_verdict_producer() -> None:
+    """#936: the ladder block must NAME tac.verdicts.emit_verdict, not just state the ladder.
+
+    MEASURED at landing: emit_verdict had 0 production call sites while the ladder prose
+    already reached every dispatch — a stated discipline whose producer is unnamed is how
+    the typed surface stayed orphaned. This pins the producer name into the composed text.
+    """
+    import tac.subagent_contract as real
+    from tac.preflight import _SUBAGENT_CONTRACT_VERDICT_PRODUCER_PHRASE as PRODUCER
+
+    assert PRODUCER in real.VERDICT_SCOPE_LADDER
+    assert PRODUCER in real.standard_contract()
+    # The ladder key phrase must survive alongside it (the workflow-v2 leg still binds).
+    assert "INSTANCE < FORMULATION < FAMILY < PARADIGM" in real.VERDICT_SCOPE_LADDER
+
+    # MUTATION: strip only the producer name; the gate must fire on exactly that.
+    stripped = real.VERDICT_SCOPE_LADDER.replace(PRODUCER, "the typed producer")
+    mutant = SimpleNamespace(
+        KEY_PHRASES=real.KEY_PHRASES,
+        standard_contract=lambda **kw: real.standard_contract(**kw).replace(
+            real.VERDICT_SCOPE_LADDER, stripped
+        ),
+        review_contract=real.review_contract,
+        **{name: getattr(real, name) for name in real.CONTRACT_CONSTANT_NAMES},
+    )
+    violations = check_subagent_contract_module_integrity(_module=mutant)
+    assert len(violations) == 1
+    assert "typed verdict producer" in violations[0]

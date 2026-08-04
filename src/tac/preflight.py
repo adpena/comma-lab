@@ -88515,6 +88515,12 @@ _SUBAGENT_CONTRACT_GROUNDING_PHRASE = (
 # review_contract() must keep the manual-§3 risk-ranking phrase (the load-bearing
 # fragment of the review method) — hardcoded gate-side, same anti-self-waive design.
 _SUBAGENT_CONTRACT_RISK_RANKING_PHRASE = "probability × blast-radius × SILENCE"
+# standard_contract() must NAME the typed verdict producer, not merely state the ladder
+# as prose (task #936, ddm_vw1). MEASURED at landing: tac.verdicts.emit_verdict had 0
+# production call sites while the ladder prose already reached every dispatch — a stated
+# discipline with no named producer is exactly how the typed surface stayed orphaned, so
+# the producer name is pinned gate-side (anti-self-waive, like the two phrases above).
+_SUBAGENT_CONTRACT_VERDICT_PRODUCER_PHRASE = "tac.verdicts.emit_verdict"
 
 
 def check_subagent_contract_module_integrity(
@@ -88596,6 +88602,13 @@ def check_subagent_contract_module_integrity(
                     f"{_SUBAGENT_CONTRACT_REL}: standard_contract() output lost the "
                     f"grounded-progress phrase ({_SUBAGENT_CONTRACT_GROUNDING_PHRASE!r}) — "
                     "the highest-value harvest adoption must always be composed in.")
+            if _SUBAGENT_CONTRACT_VERDICT_PRODUCER_PHRASE not in composed:
+                violations.append(
+                    f"{_SUBAGENT_CONTRACT_REL}: standard_contract() output no longer NAMES "
+                    f"the typed verdict producer ({_SUBAGENT_CONTRACT_VERDICT_PRODUCER_PHRASE!r}) "
+                    "— stating the scope ladder as prose without naming the surface that "
+                    "records it is how the typed producer was orphaned (0 production call "
+                    "sites at task #936). Restore the producer name in VERDICT_SCOPE_LADDER.")
             for name, phrase in _SUBAGENT_CONTRACT_REQUIRED_KEY_PHRASES.items():
                 if phrase not in composed:
                     violations.append(
