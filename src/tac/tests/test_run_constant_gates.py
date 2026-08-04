@@ -330,10 +330,36 @@ def test_p6_placeholder_waiver_rejected(tmp_path):
     assert len(_p6_findings(tmp_path)) == 1
 
 
-def test_p6_file_that_really_imports_the_registry_is_exempt(tmp_path):
+def test_p6_importing_the_registry_does_NOT_launder_a_frozen_literal(tmp_path):
+    """INVERTED 2026-08-03 (ddm_gk1) by sm1's GAUGE SELF-TEST — deliberately.
+
+    This test previously asserted that a file which imports the registry is
+    EXEMPT. Ask the gauge question: what does the gate read if the cure is
+    applied and nothing else changes? Adding an import is the cosmetic cure, so
+    the old exemption made the gate read "cured" while the frozen literal sat
+    untouched -- it measured the knob, not the condition.
+
+    The exemption was also redundant: the scan only flags ``ast.Constant``, so a
+    GENUINELY migrated site (whose default is a Name) is already invisible --
+    asserted by the sibling test below. Removing it additionally closes the
+    recorded blind spot that ``run_constant_gates.py`` exempted ITSELF by
+    importing REGISTRY.
+
+    A file that imports the registry AND still hardcodes the value is exactly
+    the case worth catching.
+    """
     _mk_repo(tmp_path, "tools/foo.py",
              "from tac.witness_dsl.guarded_constant_registry import MARGIN_FLOOR_INCUMBENT\n"
              f"{_P6_DECLARED_NAME} = {_P6_DECLARED_VALUE}\n")
+    assert len(_p6_findings(tmp_path)) == 1
+
+
+def test_p6_a_genuinely_migrated_site_is_invisible(tmp_path):
+    """The REAL cure -- the value becomes a Name -- is what silences the gate."""
+    _mk_repo(tmp_path, "tools/foo.py",
+             "from tac.witness_dsl.guarded_constant_registry import MARGIN_FLOOR_INCUMBENT\n"
+             f"def f({_P6_DECLARED_NAME}: float = MARGIN_FLOOR_INCUMBENT):\n"
+             f"    return {_P6_DECLARED_NAME}\n")
     assert _p6_findings(tmp_path) == []
 
 
@@ -419,3 +445,90 @@ def test_p6_canonical_instance_stays_migrated():
         encoding="utf-8")
     assert "from tac.witness_dsl.guarded_constant_registry import" in src
     assert "margin_floor: float = _MARGIN_FLOOR_DEFAULT" in src
+
+
+# ---------------------------------------------------------------------------
+# ddm_gk1 2026-08-03 — the STAGED surface + the actionable-message contract.
+#
+# These are the tests the repo-wide P6 tests above do not cover: the gate is
+# only real if it fires at COMMIT, and its message is only actionable if the
+# symbol it names exists.
+# ---------------------------------------------------------------------------
+def test_p6_refusal_message_names_a_registry_symbol_that_actually_exists():
+    """"Fix: consume X" is worthless if X does not exist.
+
+    The first draft upper-cased the ``constant_id``, producing
+    ``SEG_MARGIN_HINGE_FLOOR`` -- while the real attribute is ``MARGIN_FLOOR``.
+    The name is now derived from the registry module's own namespace.
+    """
+    import ast as _ast
+
+    from tac.run_constant_gates import _guarded_literal_targets, _p6_scan_one_file
+    from tac.witness_dsl import guarded_constant_registry as reg
+
+    targets, ok = _guarded_literal_targets()
+    assert ok
+    src = f"{_P6_DECLARED_NAME} = {_P6_DECLARED_VALUE}\n"
+    v = _p6_scan_one_file("probe.py", src, _ast.parse(src), targets)[0]
+    assert hasattr(reg, v.registry_attr), (
+        f"describe() points at {v.registry_attr!r}, absent from the registry"
+    )
+    msg = v.describe()
+    assert f"guarded_constant_registry.{v.registry_attr}" in msg
+    assert "derive_margin_floor" in msg          # the rule that fired
+    assert "Fix:" in msg                          # the fix
+
+
+def test_p6_only_lines_none_means_every_line_not_no_lines():
+    """``None`` is 'diff unavailable'; ``set()`` is 'nothing added'.
+
+    Conflating them would filter out every site and pass SILENTLY -- the
+    vacuity-equals-pass genus inside the guard built to close it.
+    """
+    import ast as _ast
+
+    from tac.run_constant_gates import _guarded_literal_targets, _p6_scan_one_file
+
+    targets, _ = _guarded_literal_targets()
+    src = f"{_P6_DECLARED_NAME} = {_P6_DECLARED_VALUE}\n"
+    tree = _ast.parse(src)
+    assert len(_p6_scan_one_file("p.py", src, tree, targets, only_lines=None)) == 1
+    assert _p6_scan_one_file("p.py", src, tree, targets, only_lines=set()) == []
+    assert len(_p6_scan_one_file("p.py", src, tree, targets, only_lines={1})) == 1
+
+
+def test_p6_staged_scanner_names_unexamined_files_instead_of_swallowing_them():
+    """A caller must never report clean over files it could not read."""
+    from tac.run_constant_gates import scan_staged_for_guarded_constant_frozen_literals
+
+    violations, unexamined = scan_staged_for_guarded_constant_frozen_literals(
+        repo_root=_REPO, files=["src/tac/does_not_exist_ddm_gk1.py"]
+    )
+    assert violations == []
+    assert any("unreadable" in u for u in unexamined), unexamined
+
+
+def test_p6_is_wired_into_the_hook_that_actually_fires_not_only_preflight_all():
+    """MEASURED (ddm_ss1): ``--no-codebase`` -- this hook's default -- examines 0
+    of 27 preflight gates, which is why STRICT Catalog #307/#308 have never run
+    at commit. A gate registered only in ``preflight_all()`` is decoration.
+
+    Also asserts ORDER: the step must precede ``run_preflight()``, which
+    early-returns on failure and would otherwise skip it.
+    """
+    import inspect
+    import re as _re
+
+    import tools.preflight_hook as hook
+
+    assert hasattr(hook, "run_guarded_constant_frozen_literal_scan")
+    main_src = inspect.getsource(hook.main)
+    # Compare CALL SITES, not substring offsets: main()'s comments mention
+    # `run_preflight()` in prose long before it is called, and a naive .index()
+    # matched the prose (caught by this test's own first run).
+    calls = _re.findall(r"^\s+rc = (\w+)\(", main_src, _re.M)
+    assert "run_guarded_constant_frozen_literal_scan" in calls, calls
+    assert calls.index("run_guarded_constant_frozen_literal_scan") < calls.index(
+        "run_preflight"
+    ), calls
+

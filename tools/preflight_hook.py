@@ -1006,6 +1006,92 @@ def run_negative_verdict_scan(staged_docs: list[str]) -> int:
     return 0
 
 
+def run_guarded_constant_frozen_literal_scan(staged: list[str]) -> int:
+    """`ddm_gk1` landing 2 — refuse a NEWLY-ADDED frozen output of a live derivation.
+
+    The class: a derivation exists in-repo, is documented, and is NOT CALLED —
+    its output was frozen into a literal. The value is right TODAY, so nothing
+    fails and no test goes red; if the data moved, nobody would find out. Such a
+    constant passes every provenance check while running none. Canonical
+    instance: `derive_margin_floor` (`src/tac/optimization/lane_guard.py:547`,
+    documented "data-derived per run, never a bare constant") vs the frozen
+    `margin_floor: float = 0.1` default it produced.
+
+    Placement rationale, same as steps 1c/1d and for the same MEASURED reason:
+    `--no-codebase` is this hook's default and examines 0 of 27 preflight gates
+    (ddm_ss1), which is why two STRICT kill-verdict gates (Catalog #307/#308)
+    have never fired at commit. A gate registered only in `preflight_all()` is
+    decoration. Placed before `run_preflight()`, which early-returns on failure.
+
+    Scope is the staged diff's ADDED LINES, which is what lets it be STRICT
+    honestly. The whole-repo live count is 0 at landing (the one pre-existing
+    site was migrated byte-identically in the same commit), so added-lines scope
+    costs no coverage here and prevents an unrelated edit to a file from dragging
+    an old site in.
+
+    DECLARATION-DRIVEN: it fires only on `<name> = <value>` where BOTH the
+    identifier and the exact value are declared by a GuardedConstant in
+    `tac.witness_dsl.guarded_constant_registry`. ddm_gd5 (#864) BUILT and
+    REFUTED the auto-derived version (import-reachability fires on 1229 of 3251
+    modules), so this one does not infer its own targets — and the honest cost is
+    that a constant nobody has declared is invisible to it. The denominator is
+    printed for exactly that reason.
+
+    Fail-OPEN and LOUD on a broken guard, matching the siblings above.
+    """
+    if os.environ.get("GUARDED_CONSTANT_SCAN_ENABLED", "1") == "0":
+        print(
+            "[preflight-hook] guarded-constant scan DISABLED by env — NOT a pass.",
+            file=sys.stderr,
+        )
+        return 0
+    try:
+        from tac.run_constant_gates import scan_staged_for_guarded_constant_frozen_literals
+    except Exception as exc:  # pragma: no cover - guard-broken path
+        print(
+            f"[preflight-hook] guarded-constant scan UNAVAILABLE (failing OPEN): {exc}",
+            file=sys.stderr,
+        )
+        return 0
+    if not staged:
+        return 0
+    try:
+        violations, unexamined = scan_staged_for_guarded_constant_frozen_literals(
+            repo_root=REPO_ROOT, files=staged
+        )
+    except Exception as exc:  # pragma: no cover - guard-internal bug path
+        print(
+            f"[preflight-hook] guarded-constant scan CRASHED (failing OPEN): "
+            f"{exc.__class__.__name__}: {exc} — 0 files examined. This is NOT a pass.",
+            file=sys.stderr,
+        )
+        return 0
+
+    for note in unexamined:
+        print(f"{YELLOW}[preflight-hook]   UNEXAMINED: {note}{RST}", file=sys.stderr)
+    if violations:
+        print(
+            f"\n{RED}{BOLD}[preflight-hook] BLOCKED: new frozen output of a live "
+            f"derivation{RST}",
+            file=sys.stderr,
+        )
+        print(
+            "  A derivation that exists and never runs cannot adapt, and nothing "
+            "goes red when\n  the data moves — it presents as a provenanced constant "
+            "while running no provenance.",
+            file=sys.stderr,
+        )
+        for v in violations:
+            print(f"[preflight-hook]   {v.describe()}", file=sys.stderr)
+        return 1
+    print(
+        f"{GREEN}[preflight-hook] guarded-constant: {len(staged)} staged .py examined "
+        f"({len(unexamined)} unexamined), no new frozen derivation outputs{RST}",
+        file=sys.stderr,
+    )
+    return 0
+
+
 def main() -> int:
     staged = _staged_py_files()
     staged_docs = _staged_doc_files()
@@ -1043,6 +1129,12 @@ def main() -> int:
     # 1b/1c — before run_preflight(), which early-returns on failure. This one
     # additionally covers .md, the surface no commit-time check read before.
     rc = run_negative_verdict_scan(staged_docs)
+    if rc != 0:
+        return rc
+
+    # Step 1e: `ddm_gk1` guarded-constant frozen-derivation guard. Same placement
+    # rationale as 1b/1c/1d — before run_preflight(), which early-returns on failure.
+    rc = run_guarded_constant_frozen_literal_scan(staged)
     if rc != 0:
         return rc
 

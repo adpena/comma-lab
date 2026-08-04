@@ -197,3 +197,122 @@ guard. Its cure is the memo-side price law (`wf2`), not this class.
 - **No constant from §6 has been migrated.** The charter asked for a MAP, and this is the map;
   each row is a separate landing with its own byte-identity proof.
 - Pointer UNMOVED. Nothing here is a score claim.
+
+---
+
+# §9 — FOURTH CUSTODIAN (2026-08-03, post-limit resume). The gate now FIRES.
+
+**Correction to my own framing first:** the class, the registry, the migration and the 29 class
+tests were already LANDED by the previous custodian in commit `02994479ef`. I re-derived them from
+scratch before checking `git status` and briefly believed I had authored them. I had not. The
+working tree matched HEAD byte-for-byte for all four files. **Verified, not assumed** — per the
+coordinator's absorption warning, and it is exactly why that warning exists.
+
+This segment's contribution is the half §8 left owed: **making the gate fire at commit**, plus
+three defects found by applying two of today's sibling laws to my own work.
+
+## 9.1 The placement defect — the gate was decoration (CRITICAL)
+
+P6 was pinned into the Gate #38 ratchet in `tools/all_lanes_preflight.py`. That is a
+**pre-dispatch** surface, not a commit surface. MEASURED by `ddm_ss1`: `--no-codebase` — the
+pre-commit hook's default — examines **0 of 27** preflight gates, which is why the two STRICT
+kill-verdict gates (Catalog #307/#308) have **never executed at commit**. A gate that only lives
+there cannot refuse the commit that introduces the bug.
+
+**Fixed:** P6 is now **step 1e of `tools/preflight_hook.py`**, over the **staged diff's ADDED
+lines**, placed *before* `run_preflight()` — which early-returns on failure and would otherwise
+skip it (the same ordering bug the hook's own step-1b comment records). Fail-OPEN and LOUD if the
+guard itself breaks, matching siblings 1b/1c/1d. New:
+`scan_staged_for_guarded_constant_frozen_literals`, which **reuses** `ss1`'s
+`tac.subset_selection_gate.added_lines` rather than reimplementing diff parsing, and returns
+`(violations, unexamined)` so a caller can never report clean over files it could not read.
+Ordering is asserted by `test_p6_is_wired_into_the_hook_that_actually_fires_not_only_preflight_all`.
+
+## 9.2 The gauge defect — the gate measured its own knob (closes §8's "exempts itself")
+
+**sm1's law:** *ask what the gate reads if the cure is applied and nothing else changes; if it
+reads "cured", it measures the knob.*
+
+The previous custodian had already hardened the "already routed" exemption from a raw-TEXT
+substring test to an AST import check (a real fix, §4.2). But the exemption itself does not survive
+the gauge question: **adding an import is the cosmetic cure**, and it silenced the gate for the
+whole file while the frozen literal sat untouched.
+
+The exemption was also **redundant** — the scan only flags `ast.Constant`, so a genuinely migrated
+site (whose default is a `Name`) is already invisible. **Removed entirely.** Consequences:
+
+* A file that imports the registry **and still hardcodes the value** is now caught.
+* §8's recorded blind spot — *"the gate exempts itself"*, because `run_constant_gates.py` imports
+  `REGISTRY` — is **CLOSED**. That item can come off the owed list.
+* The scope field is renamed `files_exempt_already_routed` → `files_also_importing_registry`
+  (COUNTED, not exempted), so the denominator line no longer claims an exemption that is gone.
+* `test_p6_file_that_really_imports_the_registry_is_exempt` **asserted the defective behaviour**.
+  It is INVERTED, deliberately and with the reason recorded in its docstring, to
+  `test_p6_importing_the_registry_does_NOT_launder_a_frozen_literal`, with a new sibling
+  `test_p6_a_genuinely_migrated_site_is_invisible` proving the real cure still silences it.
+  Inverting a passing test is exactly the deliberate act that must be argued for, so it is argued
+  for here and in the test body.
+
+**Live count unchanged at 0 with the exemption gone** — which is the substantive point: the
+migration is real (the site is a `Name`), not import-laundered.
+
+## 9.3 The message defect — "Fix: consume X" named an X that does not exist
+
+`describe()` built the fix target by upper-casing the `constant_id`, emitting
+`guarded_constant_registry.SEG_MARGIN_HINGE_FLOOR`. **The real attribute is `MARGIN_FLOOR`.** An
+unresolvable symbol in the fix line violates the preflight-message non-negotiable (name the rule,
+the value, AND the fix). Now derived from the registry module's own namespace and asserted by
+`test_p6_refusal_message_names_a_registry_symbol_that_actually_exists`, which checks `hasattr`.
+
+## 9.4 MUTATION CHECK (si1's law) — the gate can go RED
+
+*A green that cannot go red is the same bug wearing a lab coat.* Reverted the migration in place
+(`margin_floor: float = _MARGIN_FLOOR_DEFAULT` → `= 0.1`), re-ran: live count **1**. Restored:
+**0**. Patched and restored in-process — **no `git stash`** was used on the shared worktree at any
+point (per the `ks1` near-miss).
+
+## 9.5 A duplicate I created and then removed
+
+I wrote `src/tac/tests/test_guarded_constant_gate.py` (17 tests) before discovering the previous
+custodian's **14 P6 tests already in `src/tac/tests/test_run_constant_gates.py`**. Ten of mine were
+duplicates. **Deleted the file**; folded only the four genuinely-new tests into the existing
+module (task #533, REUSE-NOT-REBUILD — which applies to test surfaces too). Suite: **40 → 45
+passing**. Class suite unchanged at 29. Ruff clean on every touched file.
+
+## 9.6 Would this have surfaced `#933` (the ±1.0 token range)? **No.**
+
+`#933` is a `±1.0` token-range literal pinning **33.3% of token mass**, with no flag, no menu, no
+DSL lever. P6 would not have found it, for two structural reasons worth stating plainly:
+
+1. P6 is **declaration-driven** — it fires only on constants already declared in the registry with
+   `literal_site_names`. A value nobody declared is invisible to it. That is the deliberate price
+   of avoiding `ddm_gd5`/#864's REFUTED auto-detector (import-reachability fires on 1229 of 3251
+   modules), and the printed denominator exists so the blindness is visible rather than implied.
+2. More fundamentally, ±1.0 is **not instance (a)**. Instance (a) is *"a derivation exists and is
+   not called."* For ±1.0 **there is no derivation at all** — it is the *unladdered governance
+   knob* class (`m51` / task #847): a value that CONTROLS an outcome and was never put on the
+   ladder. This is the same structural limit §6 #3 already recorded for `W`.
+
+**What would find it:** not a literal scanner but a **consumption-side coverage sweep** —
+enumerate the values the receiver/objective actually READS at decode time and check each has a
+ladder rung. That is `ddm_ca1`'s axis (463 scalar-returning derivations, 57 zero-callsite, 329
+self-module-only), not this one's.
+
+**What this arm does contribute:** `GuardedConstant` is the correct *destination* once ±1.0 is
+found — `role=scale`, `units` in token units, `domain` = the token distribution it was fitted on.
+The moment it is declared with `literal_site_names=("token_range",)`, P6 refuses any NEW
+re-freezing of it across `src/tac` + `tools`. **The class holds it; the gate keeps it held;
+neither finds it.**
+
+## 9.7 State after this segment
+
+| item | state |
+|---|---|
+| P6 live count | **0** over **5,078** files scanned; 1 file also imports the registry (counted, not exempted) |
+| P6 surface | pre-commit hook step 1e (staged ADDED lines) **+** Gate #38 ratchet (repo-wide debt view) |
+| tests | `test_run_constant_gates.py` **45** (was 40) · `test_guarded_constant.py` **29** |
+| ruff | clean on every touched file (`--select F` and full) |
+| §8 owed item "the gate exempts itself" | **CLOSED** (9.2) |
+| §8 owed items: strict-flip, `experiments/` scope, 1.2742-vs-1.2731, no §6 constant migrated | **still owed, unchanged** |
+| pointer | **UNMOVED.** Own-vehicle frontier **S = 0.7910689 @ 353,805 B** `[macOS-CPU advisory]`, gap 0.6189279. No score claim. |
+

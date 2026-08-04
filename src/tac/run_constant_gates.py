@@ -99,6 +99,7 @@ __all__ = [
     "scan_repo_for_canonical_constant_copies",
     "scan_repo_for_guarded_constant_frozen_literals",
     "scan_repo_for_hardcoded_run_constants",
+    "scan_staged_for_guarded_constant_frozen_literals",
 ]
 
 # MEASURED live counts at HEAD on 2026-08-01 (ddm_wt1, task #868) — the ratchet's pins, and the
@@ -572,6 +573,7 @@ class GuardedConstantFrozenLiteralViolation:
     site_name: str
     value: float
     derivation: str
+    registry_attr: str
 
     def describe(self) -> str:
         return (
@@ -581,7 +583,7 @@ class GuardedConstantFrozenLiteralViolation:
             f"{_GUARDED_REGISTRY_MODULE}. The derivation therefore never runs here, so the "
             f"value cannot adapt and nothing would go red if the data moved -- it presents "
             f"as a provenanced constant while running no provenance at all. Fix: consume "
-            f"{_GUARDED_REGISTRY_MODULE}.{self.constant_id.upper()} and resolve it with the "
+            f"{_GUARDED_REGISTRY_MODULE}.{self.registry_attr} and resolve it with the "
             f"caller's own sample, or waive same-line with "
             f"# {_GUARDED_CONSTANT_WAIVER_TOKEN}<rationale naming why the frozen value is "
             f"acceptable at THIS call site>"
@@ -603,7 +605,7 @@ class GuardedConstantScanScope:
     declared_constants: int
     declared_site_names: int
     files_scanned: int
-    files_exempt_already_routed: int
+    files_also_importing_registry: int
     registry_import_ok: bool
 
     @property
@@ -627,7 +629,7 @@ class GuardedConstantScanScope:
             f"{self.declared_site_names} site name(s); {self.files_scanned} file(s) scanned "
             f"({'+'.join(_P5_SCANNED_SUBTREES)}, excluding "
             f"{', '.join(_EXCLUDED_PATH_MARKERS)} and test_*), "
-            f"{self.files_exempt_already_routed} exempt as already routed through the registry"
+            f"{self.files_also_importing_registry} also import the registry (COUNTED, not exempted)"
         )
 
 
@@ -660,7 +662,18 @@ def _guarded_literal_targets() -> tuple[dict[str, list[tuple[str, float, str]]],
     :class:`GuardedConstantScanScope`, never swallowed.
     """
     try:
-        from tac.witness_dsl.guarded_constant_registry import REGISTRY
+        from tac.witness_dsl import guarded_constant_registry as _reg
+
+        REGISTRY = _reg.REGISTRY
+        # The fix message must name a symbol that EXISTS. Deriving it from the
+        # module namespace (rather than upper-casing the constant_id) keeps the
+        # message actionable when the two differ, as they do for MARGIN_FLOOR
+        # vs constant_id 'seg_margin_hinge_floor'.
+        _attr_of = {
+            c.constant_id: nm
+            for nm, c in vars(_reg).items()
+            if nm.isupper() and getattr(c, "constant_id", None)
+        }
     except Exception:  # pragma: no cover - import environment
         return {}, False
     targets: dict[str, list[tuple[str, float, str]]] = {}
@@ -672,7 +685,9 @@ def _guarded_literal_targets() -> tuple[dict[str, list[tuple[str, float, str]]],
         if incumbent is None or isinstance(incumbent, str):
             continue
         for name in getattr(const, "literal_site_names", ()):  # declaration-driven
-            targets.setdefault(name, []).append((cid, float(incumbent), deriv.callable_path))
+            targets.setdefault(name, []).append(
+                (cid, float(incumbent), deriv.callable_path, _attr_of.get(cid, cid.upper()))
+            )
     return targets, True
 
 
@@ -702,6 +717,108 @@ def _p6_literal_sites(tree: ast.AST):
                     yield kw.arg, kw.value
 
 
+def _p6_scan_one_file(
+    rel: str,
+    text: str,
+    tree: ast.AST,
+    targets: dict,
+    only_lines: set[int] | None = None,
+) -> list[GuardedConstantFrozenLiteralViolation]:
+    """The single P6 per-file implementation, shared by the repo and staged scans.
+
+    ``only_lines`` restricts findings to those line numbers (the staged diff's
+    ADDED lines).  ``None`` means every line -- NOT "no lines"; the caller that
+    could not obtain a diff must say so rather than passing an empty set, which
+    would filter out every site and pass silently (the vacuity-equals-pass genus).
+    """
+    out: list[GuardedConstantFrozenLiteralViolation] = []
+    lines = text.splitlines()
+    for name, node in _p6_literal_sites(tree):
+        cands = targets.get(name)
+        if not cands:
+            continue
+        if not (
+            isinstance(node, ast.Constant)
+            and isinstance(node.value, (int, float))
+            and not isinstance(node.value, bool)
+        ):
+            continue
+        lineno = getattr(node, "lineno", 0)
+        if only_lines is not None and lineno not in only_lines:
+            continue
+        src_line = lines[lineno - 1] if 0 < lineno <= len(lines) else ""
+        if _has_valid_guarded_constant_waiver(src_line):
+            continue
+        for cid, value, deriv, attr in cands:
+            if float(node.value) == value:
+                out.append(
+                    GuardedConstantFrozenLiteralViolation(
+                        path=rel, line=lineno, constant_id=cid, site_name=name,
+                        value=value, derivation=deriv, registry_attr=attr,
+                    )
+                )
+                break
+    return out
+
+
+def scan_staged_for_guarded_constant_frozen_literals(
+    *,
+    repo_root: str | Path | None = None,
+    files: list[str] | None = None,
+) -> tuple[list[GuardedConstantFrozenLiteralViolation], list[str]]:
+    """P6 over the STAGED diff's ADDED lines.  Returns ``(violations, unexamined)``.
+
+    THIS is the surface that actually fires.  A gate registered only inside
+    ``preflight_all()`` does not run at commit: ``--no-codebase`` is the hook's
+    default and examines 0 of 27 gates (ddm_ss1, measured 2026-08-03), which is
+    why two STRICT kill-verdict gates (Catalog #307/#308) have never executed
+    there.  The repo-wide scan above remains the debt view; this one is the guard.
+
+    ``unexamined`` names every staged file whose added-line range could not be
+    obtained.  It is returned rather than swallowed so a caller can never report
+    "clean" over files it did not actually read.
+    """
+    root = Path(repo_root) if repo_root is not None else Path(__file__).resolve().parents[2]
+    targets, import_ok = _guarded_literal_targets()
+    unexamined: list[str] = []
+    if not import_ok:
+        return [], [f"{_GUARDED_REGISTRY_MODULE} failed to import — 0 constants declared"]
+    if not targets:
+        return [], []
+    try:
+        from tac.subset_selection_gate import added_lines  # reuse, do not reimplement
+    except Exception as exc:  # pragma: no cover - import environment
+        return [], [f"added-line helper unavailable: {exc}"]
+
+    out: list[GuardedConstantFrozenLiteralViolation] = []
+    for rel in files or []:
+        if not rel.endswith(".py"):
+            continue
+        if any(m in f"/{rel}" for m in _EXCLUDED_PATH_MARKERS):
+            continue
+        if Path(rel).name.startswith("test_"):
+            continue
+        path = root / rel
+        try:
+            text = path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            unexamined.append(f"{rel} unreadable")
+            continue
+        try:
+            tree = ast.parse(text)
+        except SyntaxError:
+            unexamined.append(f"{rel} unparseable")
+            continue
+        # No import-based exemption here either -- see the gauge-self-test note in
+        # the repo scan. The site's own AST decides: a Constant is frozen, a Name is not.
+        scope = added_lines(root, rel)
+        if scope is None:
+            unexamined.append(f"{rel} added-line range unavailable (git diff failed)")
+            continue
+        out.extend(_p6_scan_one_file(rel, text, tree, targets, only_lines=scope))
+    return out, unexamined
+
+
 def scan_guarded_constant_frozen_literals_with_scope(
     repo_root: str | Path | None = None,
 ) -> tuple[list[GuardedConstantFrozenLiteralViolation], GuardedConstantScanScope]:
@@ -709,7 +826,7 @@ def scan_guarded_constant_frozen_literals_with_scope(
     zero count readable.  See :class:`GuardedConstantScanScope`."""
     root = Path(repo_root) if repo_root is not None else Path(__file__).resolve().parents[2]
     targets, import_ok = _guarded_literal_targets()
-    declared_constants = len({cid for cands in targets.values() for cid, _, _ in cands})
+    declared_constants = len({cid for cands in targets.values() for cid, _, _, _ in cands})
     files_scanned = 0
     files_routed = 0
     out: list[GuardedConstantFrozenLiteralViolation] = []
@@ -733,39 +850,21 @@ def scan_guarded_constant_frozen_literals_with_scope(
                 continue
             files_scanned += 1
             if _module_is_imported(tree, _GUARDED_REGISTRY_MODULE):
+                # COUNTED, NOT EXEMPTED. Gauge self-test (sm1, 2026-08-03): if adding
+                # an import made the gate read "cured", the gate would be measuring the
+                # knob rather than the condition. It is also unnecessary -- the scan
+                # only flags ast.Constant, so a genuinely migrated site (whose default
+                # is a Name) is already invisible. A file that imports the registry AND
+                # still hardcodes the value is exactly the case worth catching.
                 files_routed += 1
-                continue  # already routed through the guard
             if not targets:
                 continue
-            lines = text.splitlines()
-            for name, node in _p6_literal_sites(tree):
-                cands = targets.get(name)
-                if not cands:
-                    continue
-                if not (
-                    isinstance(node, ast.Constant)
-                    and isinstance(node.value, (int, float))
-                    and not isinstance(node.value, bool)
-                ):
-                    continue
-                lineno = getattr(node, "lineno", 0)
-                src_line = lines[lineno - 1] if 0 < lineno <= len(lines) else ""
-                if _has_valid_guarded_constant_waiver(src_line):
-                    continue
-                for cid, value, deriv in cands:
-                    if float(node.value) == value:
-                        out.append(
-                            GuardedConstantFrozenLiteralViolation(
-                                path=rel, line=lineno, constant_id=cid,
-                                site_name=name, value=value, derivation=deriv,
-                            )
-                        )
-                        break
+            out.extend(_p6_scan_one_file(rel, text, tree, targets))
     scope = GuardedConstantScanScope(
         declared_constants=declared_constants,
         declared_site_names=len(targets),
         files_scanned=files_scanned,
-        files_exempt_already_routed=files_routed,
+        files_also_importing_registry=files_routed,
         registry_import_ok=import_ok,
     )
     return out, scope
