@@ -427,3 +427,119 @@ basis-dependent and are now re-scoped; one is withdrawn outright.**
   unrun and is now the cheapest untested thing on this ladder.
 
 **No scorer slot consumed.**
+
+---
+
+# APPENDIX B — PROBE P-C FIRED + the receiver-field stamp, partially closed
+
+*Appended 2026-08-04. Firing my own named follow-on rather than leaving it as a named-$0-never-run
+row. Evidence `.omx/research/ddm_sg3_probe_pc.json`, script `ddm_sg3_scripts/probe_pc.py`. $0.*
+
+## B.0 First: P-C's ORIGINAL question was already answered in A.1
+
+`src/tac/boundary_math/road_undriv_bulk_field.py:7,46` defines probe **P-C** as the
+**"interiors near-free" go/no-go** — whether the boundary representation can drop the interiors and
+pay only for an annulus. **§A.1 already measures this: YES, 2.44×** (Road↔Lane full-volume 198,468 B
+→ boundary-band 81,365 B; all five interfaces 1.54–2.52×). The scaffold's own gate is **GREEN** and
+its "20–50 KB CONJECTURED" band is now bounded by a MEASURED 81,365 B at 68.7% capture. I record
+this before running the coordinator's different (bulk-verb-address) reading of P-C, so the scaffold's
+actual blocker is not left standing after it has been cleared.
+
+## B.1 P-C as bulk-verb ADDRESS — the result
+
+Verb = dilate component by δ∈{0,1,2,3} (2 bits) + component index (4.27 bits measured). Enumerating
+components of **all five** classes makes dilation cover both boundary directions (dilating B into A
+== eroding A). Encoder picks δ using GT and **ships it as counted bits** — ordinary encoding, not an
+oracle; the decoder never sees GT.
+
+| quantity | MEASURED |
+|---|---:|
+| components enumerated | 11,542 (19.2/frame) → index **4.27 bits** |
+| components with any positive net | **488 = 4.2%** |
+| best-δ histogram | **δ=0: 11,054** · δ=1: 459 · δ=2: 21 · δ=3: 8 |
+| NET flips fixed (ceiling) | **4,866 = 0.96%** of 508,640 |
+| seg recovered | 0.00412 S |
+| address bytes (sparse) | 1,825 B = 0.00122 S |
+| **NET S (free realizer)** | **−0.00291 S — a WIN, but 0.47% of the gap** |
+| B/flip | 0.3750 = **0.29× W** |
+
+**Per-class net:** Movable **4,205** · Lane 598 · Road 36 · Undriv 27 · MyCar **0**.
+
+**The result is a technical win and a strategic dead end.** The address is comfortably profitable
+*per flip it reaches* (0.29× W) — but **95.8% of components choose δ=0**, so it reaches only 0.96%
+of the flip mass. It is not unprofitable; it is **out of reach**.
+
+## B.2 The cg1 reconciliation — scope `{both}`, with the mechanism named
+
+`cg1`'s ledger: **aggregate ACTUATORS 0-for-11** (whole-class / per-side SCALARS fail as training
+forces). My P-C is the **same SHAPE, different ROLE**: a decode-time geometric ADDRESS for
+corrections, not a scalar force. The two laws do not collide — they compose:
+
+> **SCOPE: `{both}`.** The aggregate handle fails in the actuator-role (`cg1`, 0/11) *and* in the
+> address-role (this probe, 0.96% reach). **But the failure mode is REACH, not profitability**, and
+> that is a strict extension of the 0/11 law, not a blur: `cg1`'s scalars were not merely weak
+> forces — an aggregate handle has **no coherent target to act on** in 95.8% of regions.
+
+**And the law has a measured boundary, which is why this extends rather than blurs it.** Aggregate
+handles work **exactly where the region is coherent** and fail where the error is dust:
+
+| class | net flips fixed | share of P-C's total gain | `as1`/§2.1 morphology |
+|---|---:|---:|---|
+| **Movable** | **4,205** | **86.4%** | coherent blobs, median 104 px, p90 2,130 px |
+| Lane | 598 | 12.3% | dust, median island 1 px |
+| Road / Undriv / MyCar | 63 | 1.3% | — |
+
+**86.4% of the entire bulk-verb gain is Movable.** This independently reproduces, from a *third*
+instrument (a geometric verb probe), `as1`'s "Movable's deficit is spatially CONCENTRATED
+(p90 = 0.569) while Lane's is DIFFUSE." Three disjoint methods now agree on that split.
+
+**Consequence for `road_undriv_bulk_field.py`:** its target edge is **Road↔Undrivable**, where P-C
+measures **36 + 27 = 63 net flips across 1,280 components**. Its interiors-near-free gate (B.0) is
+green, but its *actuator* has essentially no reach on its own edge. **Predicted dead as a
+scalar/bulk carrier on Road↔Undriv — confirming `cg1`'s prediction by an independent route.** If it
+is rebuilt, it should be pointed at **Movable**, not Road↔Undriv.
+
+## B.3 The receiver-field stamp — PARTIALLY closed, and the news is bad-then-good
+
+**BAD (MEASURED, and it strengthens the stamp rather than removing it): the live vehicle has NO
+class field.** `cx1_build_receipt.json` members are `state/tokens.dr7t` (346,478 B = 96%),
+`state/renderer.sec` (3,341), `state/selector.sec` (535), `state/pose_warp.stp` (8,752),
+`state/pose_stub.sec` (83), `manifest.json` (1,451). **There is no class/segmentation member.** The
+vehicle is a token+renderer producing RGB. So the receiver cannot enumerate components of "its own
+class field" — there isn't one. A deterministic proxy segmenter on decoded RGB inside `inflate.py`
+is legal and free (rule-118 generic algorithm) and satisfies the agreement requirement, but its
+components would **not** be SegNet's.
+
+**GOOD (MEASURED): the byte number is field-sensitive; the VERDICT is not.** Re-pricing the
+Road↔Lane band from a genuinely different class field (GT argmax instead of the `cx1` stand-in):
+
+| band source field | band px | capture | bytes | rate S | seg@100% | **break-even** |
+|---|---:|---:|---:|---:|---:|---:|
+| `cx1` argmax (stand-in) | 1,173,933 | 68.7% | 81,365 | 0.05418 | 0.13704 | **39.53%** |
+| GT argmax (different field) | 1,479,802 | 98.2% | 104,602 | 0.06965 | 0.19579 | **35.57%** |
+
+**Bytes spread 1.286× — SENSITIVE. Break-even survival spreads only 1.11×, and BOTH sit far below
+`cg3`'s measured 0.555.** So the **−0.02183 S row's conclusion survives the field choice even
+though its byte count does not.** The A.2 withdrawal of KILL-1 does not rest on the stand-in; only
+its precise magnitude does.
+
+**Stamp status:** `ASSUMPTION-SCOPED(receiver-field)` → **PARTIALLY CLOSED**. Robust: the verdict.
+Still open: the magnitude. **Fully closing it is NOT cheap and I will not pretend otherwise** — it
+needs decoded RGB for all 600 frames (an `inflate.sh` run inside the 30-min budget) plus a proxy
+segmenter written and simulated on both sides. That is a realization-path artifact on `lr2`'s
+ladder, not a $0 cache query. **Denominator: 0 of the 6 archive members carry a class field, so
+there is nothing on disk to read — it must be generated.** Handed to `lr2`.
+
+## B.4 Scope stamps on this appendix's own new rows
+
+| row | basis | scope |
+|---|---|---|
+| P-C reach 0.96% | population over all 11,542 components, all 600 frames | **POPULATION-MEASURED** — basis-independent |
+| P-C profitability 0.29× W | `INSTANCE(dilate δ∈{0..3}, 8-connectivity)` | a richer verb alphabet (anisotropic / per-boundary-segment offsets) is **untested** and could raise reach |
+| Movable = 86.4% of gain | population-measured | basis-independent; agrees with `as1` + §2.1 |
+| no-class-field | direct read of the shipped archive manifest | **MEASURED FACT** about the live vehicle |
+| field-sensitivity 1.286× / 1.11× | two fields only (`cx1`, GT) | **n=2** — a third field could widen it; stated as indicative, not a bound |
+
+**The honest headline: P-C is fired, it pays −0.00291 S, and it is 0.47% of the gap. I am reporting
+a win too small to matter rather than dressing it up — and the useful output is not the win, it is
+the measured boundary of the aggregate-handle law.**
