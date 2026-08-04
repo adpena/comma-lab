@@ -1,9 +1,23 @@
-"""Force x (class|edge) x verb representation ledger — task #809 (ddm_cg1 / ddm_cg1r).
+"""Force x (class|edge) x verb representation ledger — task #809 (ddm_cg1 / ddm_cg1r),
+extended by ddm_fl2 (task #920/#921 recovery).
 
 Operator directives (2026-07-31, twice): *"account for which forces positively improve
 their representation and also semantics and verbs... and which harms them and need to
 be protected against or constrained"* + *"targets/caps/dynamic forces per
 class+edge+saddle vs real outcome+telemetry+archive."*
+
+ddm_fl2 additions (2026-08-04):
+    - The 8 remaining edges of the LIVE objective (tr1_seg_leg_composite) from cg1r n600
+      -> the 9 unordered edges now sum to the whole 0.431 S seg gap, per-edge accountable.
+    - magnitude_kind on every magnitude-bearing row: DESCRIPTION_GAP (a ceiling / flip-mass)
+      vs REALIZED_THROUGH_R (a measured actuation delta). Conflating them is how a gap gets
+      quoted as a win (m66/m46). The two #920 head primitives carry explicit REALIZATION-HALF
+      rows: both realized prices are UNMEASURED (~0) because their carriers are ABSENT.
+    - The two #921 adoption-map constants (total_archive_ceiling_bytes=200000, thr_wall) as
+      accountable FORCE rows so the ledger HOLDS ca1's provenance finding.
+    - coverage() now reports the HONEST denominator alongside the naive 616: the naive count
+      treats N_A per-scope cells of GLOBAL/FAMILY forces as owed debt (the m50 confound
+      INVERTED). See .omx/research/ddm_fl2_force_ledger_recovery_20260804.md.
 
 Row shape (charter):
     (class | edge | directed-edge | global) x force x VERB
@@ -113,6 +127,17 @@ PROTECTIONS: tuple[str, ...] = (
     "N_A",            # protection is not meaningful for this row
 )
 
+# fl2 (task #920/#921, deliverable #2): what magnitude_s MEASURES. The operator's
+# binding distinction (m66/m46): "a description price != a realized-through-R correction
+# price" and "a ΔS without its baseline is unanchored." A flip-mass / flicker-share is a
+# CEILING on what a perfect carrier could recover; a measured actuation delta is what a
+# BUILT actuator actually moved. Conflating them is the #1 way a gap is quoted as a win.
+MAGNITUDE_KINDS: tuple[str, ...] = (
+    "description_gap",     # magnitude_s = the SIZE of the gap/flip-mass (a CEILING, not recoverable as-is)
+    "realized_through_R",  # magnitude_s = a MEASURED delta actually realized through the real decode/actuator
+    "N_A",                 # no magnitude on this row
+)
+
 FORCE_KINDS: tuple[str, ...] = (
     "OBJECTIVE",       # a loss/metric term
     "LEVER",           # a config knob on an objective
@@ -146,6 +171,7 @@ class ForceLedgerRow:
     protection: str
     protection_ref: str = ""
     magnitude_s: float | None = None  # |effect| in S units where known (ranking key)
+    magnitude_kind: str = "N_A"       # what magnitude_s MEASURES (fl2); see MAGNITUDE_KINDS
 
     def __post_init__(self) -> None:
         if self.scope_kind not in _SCOPE_KINDS:
@@ -175,6 +201,13 @@ class ForceLedgerRow:
         ):
             raise ValueError(
                 f"{self.row_id}: signed verdict requires measured=True or DERIVATION scope"
+            )
+        if self.magnitude_kind not in MAGNITUDE_KINDS:
+            raise ValueError(f"{self.row_id}: bad magnitude_kind {self.magnitude_kind!r}")
+        if self.magnitude_s is not None and self.magnitude_kind == "N_A":
+            raise ValueError(
+                f"{self.row_id}: magnitude_s={self.magnitude_s} set but magnitude_kind is N_A — "
+                "declare description_gap (a ceiling) or realized_through_R (a measured delta)"
             )
 
 
@@ -308,6 +341,7 @@ LEDGER: tuple[ForceLedgerRow, ...] = (
             "exists (see as1.lane_presence_gap)."
         ),
         magnitude_s=0.1575,  # Lane's total flip mass: 185,801 x 8.477e-7 S/flip
+        magnitude_kind="description_gap",
     ),
     _r(
         row_id="tr1.lane_to_road.transfer",
@@ -339,6 +373,7 @@ LEDGER: tuple[ForceLedgerRow, ...] = (
             "to +0.050 S), has NEVER FIRED."
         ),
         magnitude_s=0.157,  # 184,613 flips / 117,964,800 * 100
+        magnitude_kind="description_gap",
     ),
     _r(
         row_id="tr1.lane.erode",
@@ -440,6 +475,7 @@ LEDGER: tuple[ForceLedgerRow, ...] = (
         protection="ABSENT",
         protection_ref="no Movable-specific guard exists; mf1's component-native production (81.4x) is the designed cure, unbuilt on the live path",
         magnitude_s=0.0668,
+        magnitude_kind="description_gap",
     ),
     _r(
         row_id="tr1.mycar.hold",
@@ -475,6 +511,172 @@ LEDGER: tuple[ForceLedgerRow, ...] = (
         protection="BUILT",
         protection_ref="lane_guard (lg1) covers the Lane side only",
         magnitude_s=0.199,
+        magnitude_kind="description_gap",
+    ),
+    # ------------------------------------------------------------------ #
+    # 1b. THE LIVE OBJECTIVE'S REMAINING 8 EDGES (fl2, task #920):
+    #     completes the per-edge map for tr1_seg_leg_composite. Source =
+    #     cg1r n600 (ddm_cg1_directed_edge_margin_n600.json, git 4e108ccb59,
+    #     scorer_forwards_run=0). The 9 unordered edges sum to 508,640 flips =
+    #     0.431183 S = m06's whole seg gap on the live cx1 vehicle. magnitude_s
+    #     = 100 * edge_flips / 117,964,800 (a DESCRIPTION gap, not a realized
+    #     correction). VERB CAVEAT: DISPLACE is the mass-conserving NULL — the
+    #     TRANSFER/DISPLACE verb-mass split is gt2's per-edge measurement and is
+    #     UNMEASURED for these edges; only count/depth asymmetry is measured here,
+    #     and law.asymmetry_vehicle_transfer forbids inferring TRANSFER from count.
+    # ------------------------------------------------------------------ #
+    _r(
+        row_id="tr1.road_undrivable.edge",
+        scope_kind="EDGE",
+        scope="Road<->Undrivable",
+        force="tr1_seg_leg_composite",
+        force_kind="OBJECTIVE",
+        verb="DISPLACE",
+        verdict="HARMS",
+        measured=True,
+        evidence=(
+            "89,545 flips = 17.60% of all flips = 0.075909 S (2nd-largest edge). count_asym 1.68x "
+            "(Undrivable->Road dominant, 56,144 vs 33,401); per-site depth asym 1.039x (near-symmetric "
+            "-> DISPLACE-leaning, but verb-mass split UNMEASURED, gt2-owned). Mean GT margins "
+            "0.242/0.252 — a shallow, balanced separatrix."
+        ),
+        evidence_source=_CG1R,
+        verdict_scope="INSTANCE",
+        protection="BUILT_UNFIRED",
+        protection_ref=(
+            "road_undriv_bulk_field.py (probe P-C, BUILT_UNFIRED) is the designed per-edge carrier; "
+            "per_edge_tie_calibration MEASURED -0.046 dS on this edge (pc2.tie_calibration, IMPROVES)"
+        ),
+        magnitude_s=0.075909,
+        magnitude_kind="description_gap",
+    ),
+    _r(
+        row_id="tr1.road_mycar.edge",
+        scope_kind="EDGE",
+        scope="Road<->MyCar",
+        force="tr1_seg_leg_composite",
+        force_kind="OBJECTIVE",
+        verb="DISPLACE",
+        verdict="HARMS",
+        measured=True,
+        evidence=(
+            "63,027 flips = 12.39% of all flips = 0.053429 S. count_asym 3.02x (Road->MyCar dominant, "
+            "47,350 vs 15,677 — Road hallucinated over the hood boundary); per-site depth asym 1.306x "
+            "(deeper MyCar->Road). MyCar's own core is the best-held class (tr1.mycar.hold NEUTRAL); "
+            "the harm is Road ENCROACHING the static-hood boundary, not MyCar failing."
+        ),
+        evidence_source=_CG1R,
+        verdict_scope="INSTANCE",
+        protection="ABSENT",
+        protection_ref="no Road<->MyCar boundary guard; the #139 static-hood core protects MyCar's interior, not its Road-facing rim",
+        magnitude_s=0.053429,
+        magnitude_kind="description_gap",
+    ),
+    _r(
+        row_id="tr1.undrivable_movable.edge",
+        scope_kind="EDGE",
+        scope="Undrivable<->Movable",
+        force="tr1_seg_leg_composite",
+        force_kind="OBJECTIVE",
+        verb="DISPLACE",
+        verdict="HARMS",
+        measured=True,
+        evidence=(
+            "61,892 flips = 12.17% of all flips = 0.052466 S. count_asym 2.34x (Movable->Undrivable "
+            "dominant, 43,386 vs 18,506 — cars dissolving into sky/undrivable); per-site depth asym "
+            "1.019x (near-symmetric). The Movable-side loss corroborates tr1.movable.gouge."
+        ),
+        evidence_source=f"{_CG1R}; {_GT2}",
+        verdict_scope="INSTANCE",
+        protection="ABSENT",
+        protection_ref="mf1 component-existence production (Movable, IMPROVES 81.4x) is the designed cure, unbuilt on the live path",
+        magnitude_s=0.052466,
+        magnitude_kind="description_gap",
+    ),
+    _r(
+        row_id="tr1.road_movable.edge",
+        scope_kind="EDGE",
+        scope="Road<->Movable",
+        force="tr1_seg_leg_composite",
+        force_kind="OBJECTIVE",
+        verb="DISPLACE",
+        verdict="HARMS",
+        measured=True,
+        evidence=(
+            "57,225 flips = 11.25% of all flips = 0.048510 S. count_asym 1.61x (Movable->Road "
+            "dominant, 35,269 vs 21,956); per-site depth asym 1.011x (the MOST symmetric of all 9 "
+            "edges) at the deepest mean GT margins (0.412/0.407) — a deep, balanced separatrix."
+        ),
+        evidence_source=_CG1R,
+        verdict_scope="INSTANCE",
+        protection="ABSENT",
+        protection_ref="no Road<->Movable guard; shares the Movable-existence debt with mf1",
+        magnitude_s=0.048510,
+        magnitude_kind="description_gap",
+    ),
+    _r(
+        row_id="tr1.lane_mycar.edge",
+        scope_kind="EDGE",
+        scope="Lane<->MyCar",
+        force="tr1_seg_leg_composite",
+        force_kind="OBJECTIVE",
+        verb="DISPLACE",
+        verdict="HARMS",
+        measured=True,
+        evidence="903 flips = 0.178% of all flips = 0.000765 S (negligible). count_asym 1.36x; per-site depth asym 1.633x (the LARGEST depth asym of any edge, but on a tiny mass).",
+        evidence_source=_CG1R,
+        verdict_scope="INSTANCE",
+        protection="N_A",
+        magnitude_s=0.000765,
+        magnitude_kind="description_gap",
+    ),
+    _r(
+        row_id="tr1.lane_movable.edge",
+        scope_kind="EDGE",
+        scope="Lane<->Movable",
+        force="tr1_seg_leg_composite",
+        force_kind="OBJECTIVE",
+        verb="DISPLACE",
+        verdict="HARMS",
+        measured=True,
+        evidence="681 flips = 0.134% of all flips = 0.000577 S (negligible). count_asym 12.35x (Lane->Movable, 630 vs 51) — a large directed imbalance on a tiny mass; the m94 lesson that COUNT asym runs high while depth stays ~symmetric.",
+        evidence_source=_CG1R,
+        verdict_scope="INSTANCE",
+        protection="N_A",
+        magnitude_s=0.000577,
+        magnitude_kind="description_gap",
+    ),
+    _r(
+        row_id="tr1.movable_mycar.edge",
+        scope_kind="EDGE",
+        scope="Movable<->MyCar",
+        force="tr1_seg_leg_composite",
+        force_kind="OBJECTIVE",
+        verb="DISPLACE",
+        verdict="HARMS",
+        measured=True,
+        evidence="135 flips = 0.0265% of all flips = 0.000114 S (negligible). count_asym 15.875x (Movable->MyCar, 127 vs 8) — the HIGHEST count asymmetry of any edge, on the smallest-but-one mass; per-site depth asym only 1.186x.",
+        evidence_source=_CG1R,
+        verdict_scope="INSTANCE",
+        protection="N_A",
+        magnitude_s=0.000114,
+        magnitude_kind="description_gap",
+    ),
+    _r(
+        row_id="tr1.lane_undrivable.edge",
+        scope_kind="EDGE",
+        scope="Lane<->Undrivable",
+        force="tr1_seg_leg_composite",
+        force_kind="OBJECTIVE",
+        verb="DISPLACE",
+        verdict="HARMS",
+        measured=True,
+        evidence="84 flips = 0.0165% of all flips = 0.0000712 S (the smallest edge). count_asym 1.27x (Undrivable->Lane, 47 vs 37) — the most balanced edge; per-site depth asym 1.285x.",
+        evidence_source=_CG1R,
+        verdict_scope="INSTANCE",
+        protection="N_A",
+        magnitude_s=0.0000712,
+        magnitude_kind="description_gap",
     ),
     # ------------------------------------------------------------------ #
     # 2. OBJECTIVE-COMPONENT FORCES (levers on the seg leg)
@@ -659,6 +861,7 @@ LEDGER: tuple[ForceLedgerRow, ...] = (
         verdict_scope="FORMULATION",
         protection="N_A",
         magnitude_s=0.2459,
+        magnitude_kind="realized_through_R",
     ),
     # ------------------------------------------------------------------ #
     # 5. PRODUCTION FORCES (how a class is representable at all)
@@ -795,6 +998,7 @@ LEDGER: tuple[ForceLedgerRow, ...] = (
         protection="ABSENT",
         protection_ref="no contour DOF anywhere in the live representation (49 config keys: lane_render_band/per_class/carrier all ABSENT)",
         magnitude_s=0.110,
+        magnitude_kind="description_gap",
     ),
     _r(
         row_id="pc2.tie_calibration",
@@ -815,6 +1019,7 @@ LEDGER: tuple[ForceLedgerRow, ...] = (
         verdict_scope="INSTANCE",
         protection="N_A",
         magnitude_s=0.046,
+        magnitude_kind="realized_through_R",
     ),
     # ------------------------------------------------------------------ #
     # 6. PER-SIDE PREDICTORS / WEIGHT FAMILIES (hg1 + as1)
@@ -925,6 +1130,7 @@ LEDGER: tuple[ForceLedgerRow, ...] = (
         verdict_scope="FORMULATION",
         protection="N_A",
         magnitude_s=0.2459,
+        magnitude_kind="realized_through_R",
     ),
     _r(
         row_id="as1.gated_area_move.movable",
@@ -945,6 +1151,7 @@ LEDGER: tuple[ForceLedgerRow, ...] = (
         verdict_scope="INSTANCE",
         protection="N_A",
         magnitude_s=0.0016,
+        magnitude_kind="realized_through_R",
     ),
     _r(
         row_id="as1.gated_area_move.lane",
@@ -1388,6 +1595,131 @@ LEDGER: tuple[ForceLedgerRow, ...] = (
         verdict_scope="FORMULATION",
         protection="N_A",
     ),
+    # ------------------------------------------------------------------ #
+    # 12. THE #920 HEAD, REALIZATION HALVES (fl2, deliverable #2):
+    #     the two ranked protection-debt primitives are priced ABOVE as
+    #     DESCRIPTION gaps (ceilings). These rows account the REALIZATION half:
+    #     what a BUILT carrier would actually recover through R. Both realized
+    #     prices are UNMEASURED and ~0 with current actuators (the carriers are
+    #     ABSENT). A description gap is NOT a recoverable delta. Consumers named:
+    #     #934 (Lane existence hinge A/B) and bz1 (phase-field row).
+    # ------------------------------------------------------------------ #
+    _r(
+        row_id="tr1.lane.annihilate.realization",
+        scope_kind="CLASS",
+        scope="Lane",
+        force="lane_existence_hinge_934",
+        force_kind="DERIVED_FORCE",
+        verb="ANNIHILATE",
+        verdict="UNMEASURED",
+        measured=False,
+        evidence=(
+            "REALIZATION HALF of tr1.lane.annihilate (0.1575 S DESCRIPTION gap = Lane's total flip "
+            "mass, a CEILING). The realized-through-R correction price is UNMEASURED and ~0 with every "
+            "BUILT actuator: aggregate re-inflation is MEASURED +0.2459 S HARMS (as1.grow_lane), "
+            "gated-16x16 area-move on Lane is NEUTRAL (3/160 profitable cells, diffuse), and the "
+            "existence-carrying primitive is ABSENT on all paths (as1.lane_presence_gap, 10,260-file "
+            "sweep). The recoverable fraction is decided by #934 (Lane existence hinge A/B), which is "
+            "the OWED realization and MUST be pose-vetoed (staging law #383: pose after frozen seg). "
+            "Do not quote 0.1575 as a win — it is the ceiling #934 aims at, not a delta in hand."
+        ),
+        evidence_source=f"{_AS1} §4 S5; {_GT2} §2.4; ddm_fl2 (this arm)",
+        verdict_scope="N_A",
+        protection="ABSENT",
+        protection_ref="the description gap is a CEILING; no existence carrier is built (#934 is the owed realization)",
+        magnitude_s=None,
+        magnitude_kind="realized_through_R",
+    ),
+    _r(
+        row_id="pc2.tr1_phase_dof.road_lane.realization",
+        scope_kind="EDGE",
+        scope="Road<->Lane",
+        force="phase_field_contour_carrier_bz1",
+        force_kind="DERIVED_FORCE",
+        verb="PHASE",
+        verdict="UNMEASURED",
+        measured=False,
+        evidence=(
+            "REALIZATION HALF of pc2.tr1_phase_dof.road_lane (0.110 S DESCRIPTION gap = the "
+            "flicker-typed 57.6% of the Road<->Lane edge, a CEILING). The realized-through-R price is "
+            "UNMEASURED and ~0 with current carriers: there is NO per-pair positional/contour DOF "
+            "anywhere in the live representation (tokens_delta is 4 AMPLITUDE numbers per 16x16 cell, "
+            "no phase; 49 config keys, all carrier/lane_render_band ABSENT). bz1's phase-field row is "
+            "the OWED realization; pose-vetoed (#383). 0.110 is the ceiling bz1 aims at, not a delta."
+        ),
+        evidence_source=f"{_PC2}; ddm_fl2 (this arm)",
+        verdict_scope="N_A",
+        protection="ABSENT",
+        protection_ref="no contour/positional DOF in the live representation; bz1 phase-field is the owed carrier",
+        magnitude_s=None,
+        magnitude_kind="realized_through_R",
+    ),
+    # ------------------------------------------------------------------ #
+    # 13. THE #921 ADOPTION-MAP HEAD (fl2, deliverable #3): calibration
+    #     constants encoded as accountable FORCES so the ledger HOLDS ca1's
+    #     finding (results become system intelligence, not a chat/memo). Neither
+    #     is on the shipped decode's numeric path today (ca1 §6: 0 live ΔS), so
+    #     magnitude_s is None. Sister of m51 (unladdered governance knobs) + gk1.
+    # ------------------------------------------------------------------ #
+    _r(
+        row_id="ceiling.archive_200000_unladdered",
+        scope_kind="GLOBAL",
+        scope="ALL",
+        force="total_archive_ceiling_bytes_200000",
+        force_kind="ALLOCATOR",
+        verb="AGGREGATE",
+        verdict="HARMS",
+        measured=True,
+        evidence=(
+            "UNLADDERED FROZEN LITERAL (ladder class 4): total_archive_ceiling_bytes = Literal[200000] "
+            "(direct_description_carrier_compose.py:1334,:1441), NO derivation exists. Sized for the "
+            "~52.5 KB-base era (added_budget max 147,456 => implied base <=52,544 B); at the live base "
+            "353,805 B, run_ddm_v9_carrier_compose.py:2371 computes max(0, 200000-353805) = 0 => every "
+            "ladder rung collapses to a 0-byte budget and the composer admits NOTHING, then :2513's "
+            "plateau_falsifier reads that starvation as a genuine plateau => a false KILL. It is a "
+            "pydantic Literal, NOT config-overridable; must be edited. 200000 is also used repo-wide as "
+            "the round 'approx_receiver_closed_target_bytes' box, ~4.7% LOOSER than PR130's real "
+            "191,052 B floor. DORMANT today (composer blocked, fails own tests, last moved 2026-07-22): "
+            "0 live ΔS. An ARMED landmine for whoever re-fires the composer."
+        ),
+        evidence_source=".omx/research/ddm_ca1_calibration_audit_20260803.md §3 row 1 + §4.1 (O2); direct_description_carrier_compose.py:1334,:1441",
+        verdict_scope="INSTANCE",
+        protection="ABSENT",
+        protection_ref=(
+            "PROVENANCE RUNG = unladdered (no derivation, frozen Literal). ca1 O2: delete or re-derive "
+            "from the live base before the composer is re-fired; KILL the concern if the composer is "
+            "formally retired. Cannot edit here (compose file is edit-protected from this arm)."
+        ),
+        magnitude_s=None,
+        magnitude_kind="N_A",
+    ),
+    _r(
+        row_id="thr_wall.pose_gate_3275x",
+        scope_kind="GLOBAL",
+        scope="ALL",
+        force="thr_wall_pose_adoption_gate",
+        force_kind="GUARD",
+        verb="AGGREGATE",
+        verdict="UNMEASURED",
+        measured=False,
+        evidence=(
+            "CORRECT ARITHMETIC, POSSIBLY-STALE TARGET (ca1 rank 3, gk1 row 2): thr_wall = 2.5e-4 with "
+            "the inline note 'contribution 0.05'; sqrt(10*2.5e-4) = 0.050000 recomputes exactly. But "
+            "0.05 is 3.275x the PR130 pose bar (0.015268) and 10.72x looser in d_pose units (bar "
+            "d_pose = 0.015268^2/10 = 2.3311e-05) — a config can PASS the wall and still be 3.275x "
+            "short of the competitive pose term. Whether the wall is deliberately formulation-scoped "
+            "(binding at 0.05) or should bind at the bar is an OWED adjudication (ca1 O4), NOT a "
+            "measured defect. gk1: the read-sites live in experiments/ (ddm_p3v2_optimal_form_pose_"
+            "resolve.py:606 + ddm_p3v2_finalize_from_cache.py:110) — OUTSIDE the guard's scanned "
+            "subtrees, so it is unguarded. INSTANCE-scoped to those two read-sites."
+        ),
+        evidence_source=".omx/research/ddm_ca1_calibration_audit_20260803.md §3 row 3 + §4.3 (O4); .omx/research/ddm_gk1_guarded_constant_20260803.md row 2",
+        verdict_scope="N_A",
+        protection="ABSENT",
+        protection_ref="PROVENANCE RUNG = correct-derivation/stale-target; owed adjudication (ca1 O4): confirm the consumer wants 0.05 vs the bar's 2.3311e-05. Unguarded (gk1: outside scanned subtrees).",
+        magnitude_s=None,
+        magnitude_kind="N_A",
+    ),
 )
 
 
@@ -1442,14 +1774,32 @@ def coverage(rows: tuple[ForceLedgerRow, ...] = LEDGER) -> dict:
     GLOBAL/FAMILY rows cover their force at the aggregate level only and are
     reported separately — they do NOT count as per-class/per-edge coverage.
     """
+    def _unordered_edge(scope: str, scope_kind: str) -> str:
+        """Collapse a DIRECTED_EDGE (Lane->Road) to its unordered edge (Road<->Lane)
+        so a directed side and its undirected parent count as ONE of the 9 edge cells,
+        never two (else edge_cells_covered can exceed len(EDGES))."""
+        if scope_kind != "DIRECTED_EDGE":
+            return scope
+        a, _, b = scope.partition("->")
+        for e in EDGES:
+            x, _, y = e.partition("<->")
+            if {a, b} == {x, y}:
+                return e
+        return scope
+
     per_force: dict[str, dict] = {}
     for f in forces(rows):
         f_rows = by_force(f, rows)
         class_cells = {r.scope for r in f_rows if r.scope_kind == "CLASS"}
-        edge_cells = {r.scope for r in f_rows if r.scope_kind in ("EDGE", "DIRECTED_EDGE")}
+        edge_cells = {
+            _unordered_edge(r.scope, r.scope_kind)
+            for r in f_rows
+            if r.scope_kind in ("EDGE", "DIRECTED_EDGE")
+        }
         measured_cells = sum(
             1 for r in f_rows if r.scope_kind in ("CLASS", "EDGE", "DIRECTED_EDGE") and r.measured
         )
+        kinds = {r.force_kind for r in f_rows}
         per_force[f] = {
             "rows": len(f_rows),
             "class_cells_covered": len(class_cells),
@@ -1460,12 +1810,35 @@ def coverage(rows: tuple[ForceLedgerRow, ...] = LEDGER) -> dict:
             "has_global_or_family_row": any(
                 r.scope_kind in ("GLOBAL", "FAMILY") for r in f_rows
             ),
+            "force_kinds": sorted(kinds),
         }
     n_forces = len(per_force)
     cells_possible = n_forces * (len(CLASSES) + len(EDGES))
     cells_covered = sum(
         v["class_cells_covered"] + v["edge_cells_covered"] for v in per_force.values()
     )
+
+    # --- fl2 (deliverable #1): the HONEST denominator ---------------------- #
+    # The naive 616 = forces x 14 counts a per-class/per-edge cell for EVERY force,
+    # including the ~2/3 that are structurally GLOBAL/FAMILY (a metric aggregate, a
+    # family verdict, a single global scalar). Those forces have NO per-scope channel
+    # by construction: their per-class cells are N_A, not owed. Counting them as
+    # UNMEASURED-implicit reports a debt that does not exist — the m50 vacuity confound
+    # INVERTED (an N_A cell dressed as an owed cell). The honest denominator counts
+    # only forces PROVEN to act per-scope (>=1 CLASS/EDGE/DIRECTED_EDGE row).
+    per_scope_forces = [
+        f for f, v in per_force.items()
+        if v["class_cells_covered"] + v["edge_cells_covered"] > 0
+    ]
+    # Of the global/family-only forces, split N_A (structurally aggregate) from a
+    # genuinely-owed subset (global-as-applied LEVERs that COULD be measured per-class).
+    _AGG_KINDS = {"METRIC", "FAMILY"}
+    global_only = [f for f in per_force if f not in per_scope_forces]
+    structurally_aggregate = [
+        f for f in global_only if set(per_force[f]["force_kinds"]) <= _AGG_KINDS
+    ]
+    global_lever_owed = [f for f in global_only if f not in structurally_aggregate]
+    honest_possible = len(per_scope_forces) * (len(CLASSES) + len(EDGES))
     return {
         "forces": n_forces,
         "rows": len(rows),
@@ -1476,6 +1849,23 @@ def coverage(rows: tuple[ForceLedgerRow, ...] = LEDGER) -> dict:
             f"{cells_covered}/{cells_possible} (force x class|edge) cells carry an explicit row; "
             f"the remaining {cells_possible - cells_covered} are UNMEASURED-implicit. An empty cell "
             "is VACUOUS, never PASS (m50)."
+        ),
+        # fl2 honest denominator (does NOT replace the naive 616 above; both stand):
+        "per_scope_acting_forces": len(per_scope_forces),
+        "global_or_family_only_forces": len(global_only),
+        "structurally_aggregate_forces_na": len(structurally_aggregate),
+        "global_lever_owed_forces": len(global_lever_owed),
+        "honest_scope_cells_possible": honest_possible,
+        "honest_scope_cells_covered": cells_covered,
+        "honest_denominator_statement": (
+            f"HONEST coverage = {cells_covered}/{honest_possible} cells among the "
+            f"{len(per_scope_forces)} forces PROVEN to act per-scope. The naive {cells_possible} "
+            f"overstates the debt ~{cells_possible / honest_possible:.1f}x: "
+            f"{len(structurally_aggregate)} forces are structurally aggregate "
+            "(METRIC/FAMILY -> per-scope cells are N_A, not owed) and "
+            f"{len(global_lever_owed)} are global-as-applied LEVERs (per-class-decomposable in "
+            "principle -> a genuinely-owed subset, distinct from N_A). An empty cell is VACUOUS "
+            "(m50); an N_A cell is NOT a debt (m50 inverted)."
         ),
         "per_force": per_force,
     }
