@@ -402,6 +402,9 @@ I did not know about the canonical DAG when I wrote §4. Reading it changed thre
 
 ### 7.2 The `ddm_cr2r` tension, and the resolution that revised §0
 
+> **Superseded in precision by §9** (coordinator-directed reconciliation, 2026-08-03, written
+> after re-reading every receipt at source). §7.2's direction stands; §9 corrects its emphasis.
+
 `ddm_cr2r`/`#889`: a seg-only base is pose-hostile by **6.36×** (warp base) / **148.98×** (v4c
 two-plane), and *"post-hoc pose cannot recover what the burn never carried."* My §1.3: **0.00%** of
 pose energy is irreducible. These look contradictory. They are not, and the difference is the finding:
@@ -467,9 +470,12 @@ over from any measured endpoint."*
    gap*. Prediction already published (ratio < 1, cancelling regime).
 2. **F1** — $0, rung-3 re-measurement. Still the only thing that can overturn §1.3. Do it before
    anyone builds on §0.
-3. **Widen F, not the loss** — the redirected P0. Add carrier DOF in Q1+Q2 (exactly zero seg cost),
-   bounded by directive 3's dimension rule (pose quadratic ≤6-dim, head rank-4). Gate with
-   `ddm_cr2r`'s matched-base protocol, ≥32 of the 74 pairs.
+3. **Route per §9.5, not "widen F" alone** — §9 demoted family-widening to the SECOND branch:
+   the carrier family already passes break-even on the in-lineage base (cr1's control), so the
+   primary cure is keeping the burn's damage in-span (Q3-constrained placement, gated on F2, or
+   joint descent, the corpus-named FAMILY-OPEN alternative). Any widening is priced in bytes and
+   must beat the per-coordinate arithmetic `ddm_bp2` already refuted. Gate every composition with
+   `ddm_cr2r`'s matched-base protocol (≥32 pairs, both bases, refuse above ~10×).
 4. **F2** — queue behind `ddm_pg1`'s slot; it is the quartering memo's own owed measurement and it
    gates `--seg-spend-quarter`.
 5. **Then** build `--seg-spend-quarter` as a DSL `Lever` factory in `spec_tr1_renderer_20260728.py`
@@ -490,3 +496,53 @@ Cross-refs: `ddm_cv1_seven_surface_convocation_20260802` §1/§11/§12 ·
 `ddm_b2b_burn2_composition_build_20260731` · `ddm_b4s_burn4_charter_20260731` ·
 `ddm_cr2r` / `#889` · `ddm_bp2` · `ddm_sf1` · `ddm_uv1` · `ddm_fl1` ·
 `src/tac/optimization/ddm_ll1_window_solve.py` · `upstream/modules.py` · `upstream/frame_utils.py`
+
+---
+
+## §9 RECONCILIATION ADDENDUM (2026-08-03, coordinator-directed) — "0.00% irreducible" vs the measured 6.36–148.98× pose-hostility
+
+Written after re-reading every receipt AT SOURCE (`ddm_cr2r_ep854_pose_resolve_refuted_matched_control_20260802.md` · `ddm_cr1_composition_row_827_20260801.md` §4 · DAG `FEED-cr2r` · `experiments/ddm_v4c_resolve.py` `BASES` block), not from working memory. Zero `sq1`/`sm1` citations exist in this memo (checked; none of §0–§8 leans on sq1 base-quality numbers).
+
+### 9.1 The two quantities, named precisely
+
+They are **different quantities**, and both survive — the mg1-vs-sg2 / sq1-vs-gp1 resolution pattern.
+
+| | quantity | feasible set for the repair | δ_1 it faces | metric | scope |
+|---|---|---|---|---|---|
+| **A (mine, §1.3)** | **unrestricted-δ_0 stem-level cancellability**: `min over δ_0 ∈ range(A_0)` of `‖A_0δ_0+A_1δ_1‖²/‖A_1δ_1‖²` | ALL of frame_0's pixel freedom (≈589,824 raw dims; 24 per frequency block) | **isotropic average** (rung 2) | stem pre-activation L2; d_pose-proportionality ASSUMED | frozen-scorer STRUCTURAL — a **ceiling** on any repair |
+| **B (#889's anchors)** | **in-family post-hoc repair residual**: d_pose after per-pair solve of a **finite-DOF shipped carrier** against the base's own renders | ρ=6.36: the warp carrier (cr1 §4, n=61, selection_mode=video-order prefix pairs 0–60, unanimous 61/61) · ρ=148.98: the v4c static two-plane carrier (cr2r, n=74, selection_mode=intersection of two partial covers, ep854 arm ordered hardest-first, r=−0.016 uninformative) | the **actual burn-shaped δ_1** (seg-argmax-driven, `w_seg 100.0 / no pose term` — cr1 read the config) | exact d_pose through the full frozen PoseNet | vehicle-MEASURED — an **achieved value** |
+
+A is what repair COULD do with unlimited frame_0 description; B is what the shipped ≤O(10)-knob families DID against this damage profile. A ceiling of 0.0004 (median) and an achieved 11.59 do not contradict; their gap is the finding.
+
+### 9.2 Where the 6.36–148.98× actually lives — four axes, one dominant
+
+1. **Family-span vs damage-profile mismatch (DOMINANT — proven by cr2r's own controls).** The solver is HEALTHY (celldrop50 solve mean 0.0273/250 rows) and the SAME family PASSES break-even on the in-lineage base (photo stage 0.00953 < break-even 0.0132). So neither solver nor family is defective per se. The seg-only burn's δ_1 is argmax-driven texture destruction — NOT ego-motion-shaped — so its required repair `δ_0* = −A_0⁺A_1δ_1` is a high-complexity field that a global few-knob carrier cannot span. On celldrop50 the damage is small and ego-consistent → in-span. **ρ is carrier-dependent (6.36 vs 148.98 on the SAME base) exactly because ρ measures the family-damage MATCH, not the scorer or the base alone.** The DAG already registered this: "rho does NOT transfer across carrier classes — only the sign and the mechanism do."
+2. **Direction weighting**: A is rung-2 isotropic; the burn's δ_1 is adversarially concentrated. (F1 is the owed rung-3 re-measurement.)
+3. **Metric**: stem L2 vs exact d_pose; proportionality untested (§2 limit 2).
+4. **Amplitude**: the stem identity is exact at any amplitude, but Φ downstream is nonlinear and the burn's damage is LARGE (transplant d_pose 37.877).
+
+### 9.3 Which claim survives, at what scope
+
+- **A SURVIVES** — scope: frozen-scorer STRUCTURAL, rung-2, stem metric. Correct use: the pose-hostility of seg-only bases is **not a property of the scorer's pair geometry**; the scorer imposes ~no obstruction to frame_0 repair in principle. FORBIDDEN use: quoting 0.00%/99.96% as if it priced any BUILDABLE repair — the unrestricted δ_0 is a full image field whose description cost is exactly what `ddm_bp2` measured as priced-out at per-coordinate rates.
+- **B SURVIVES UNCHANGED** — scope: FORMULATION (post-hoc pose repair, finite shipped carriers, on a seg-only-burned base) REFUTED; INSTANCE anchors ρ=6.36 (n=61, prefix — per m88 label INSTANCE; the ratio is same-prefix matched-pair so prefix hardness partially cancels, but per na2 pose-prefixes run 2.5–4.2× hard, so the absolute levels are not population numbers) and ρ=148.98 (n=74). FAMILY stays OPEN exactly as cr2r wrote it: joint/in-loop descent on ep854 untested.
+- **REVISED FROM MY §0/§7.2**: "the obstruction is the gap between F and range(A_0), therefore widen F" over-weighted widening. cr1's control shows the family suffices when the damage is in-span. The cheaper cure is to *not create out-of-span damage*: **the #889 law is placement-conditional.** "Seg-only training spends pose legibility" is measured for UNCONSTRAINED-placement seg burns (spending Q4 freely). A burn constrained to spend Q3 first cannot create pose damage there AT ALL (exact kernel, any amplitude) — the placement-constrained variant of the law is UNBUILT/UNMEASURED, gated on F2 (does Q3 move argmax?).
+
+### 9.4 The named consumer: #881's stranded −0.0866789 S
+
+- **The "one pose re-solve vs ep854" is NOT the blocker anymore — it is REFUTED, completion-independent** (cr2r floor: granting the 526 unsolved pairs exact zero still leaves ≥4.04 S against 0.0867 to defend, 46×). Do not re-fire `ddm_v4c_resolve.py --base ep854`.
+- **Can a seg-only base ever carry the composition?** Post-hoc: NO (FORMULATION-refuted; my A does not reopen it, per the forbidden-use clause above). The composition unstrands only via a **pose-carrying base**: (i) joint/in-loop pose descent during the burn — corpus-named, FAMILY OPEN; or (ii) a placement-constrained seg burn (Q3-first) that never spends the pose channel — UNBUILT, and the cheaper of the two if F2 passes, because it needs no pose term, no pose gradient, and no new hyperparameter.
+- Either way, apply cr2r's mandatory guard before composing: matched-control solve on ≥32 pairs of BOTH bases; refuse above ~10×.
+
+### 9.5 F3/F4 routing (eleven-family taxonomy)
+
+The defect class is the **BASE/VEHICLE axis (F3)**: a base property (damage profile out of repair-span) read as a solver property until the matched control separated them. It is NOT search-at-terminal (F4) — cr2r's control shows terminal search healthy, consistent with F4 being closed at INSTANCE (~0.06% of gap). Routing: F3 owns the cure; the two F3 moves are (i) joint-descent base and (ii) Q3-constrained placement (this memo §3.2/§3.4), with F2 as the shared gate.
+
+### 9.6 Baseline re-stamp (qd1 law: a ΔS without its baseline is unanchored, and baselines move)
+
+§6's table was computed at `dc1_fold` 0.8983775 with floor bytes 190,952. Both moved: live best is **pu2 0.7910689 @ 353,805 B** `[macOS-CPU advisory]`, and na1 corrected the PR130 floor to **191,052 B** (the byte count that actually reproduces the published row). Recomputed with the canonical module (`gap_decomposition_against_demonstrated_floor_v1`, executed, not transcribed): total gap **0.618927** — seg **0.401519 (64.9%)** · pose 0.109038 (17.6%) · rate 0.108371 (17.5%). (pose/rate split back-solved assuming pu2's d_seg is unchanged at 0.00431179, per the seg-constant law; if pu2 moved seg at the 8th dp the split shifts, the total does not.) Every §6 share is superseded by these; the memo's central fact only sharpens — **seg is constant to 7 dp through a FIFTH consecutive pointer move and is now 64.9% of what remains.**
+
+### 9.7 What this addendum changes in the standing record
+
+- #889's law gains a precise scope: **placement-conditional** (unconstrained-spend burns measured; Q3-constrained burns unmeasured). One sentence, but it converts the law from "seg and pose trade off" into "seg and pose trade off ONLY in Q4," which is buildable.
+- §8 item 3 ("widen F") is demoted to second branch; §9.4's two-branch routing replaces it.
+- The re-solve at `ddm_v4c_resolve.py` `BASES['ep854']` should carry a tombstone comment pointing at cr2r before anyone re-fires it (owed to whoever next touches that file — NOT edited here; the file is on another arm's surface).
