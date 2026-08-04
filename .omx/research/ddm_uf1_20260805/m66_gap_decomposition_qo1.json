@@ -1,0 +1,46 @@
+{
+  "archive_sha256": "d5e814d5b9f65c3094b0e65fecdd7771734d03c420c63d1d2033a671b766986a",
+  "axis": "[macOS-CPU advisory]",
+  "cross_axis_warning": "CROSS-AXIS: ours='[macOS-CPU advisory]' vs floor='[contest-CUDA]'. The gap ranks axes correctly but its low-order digits are not a paired same-instrument comparison.",
+  "floor": {
+    "S": 0.17214129749189644,
+    "archive_bytes": 191052,
+    "axis": "[contest-CUDA]",
+    "d_pose": 2.331e-05,
+    "d_seg": 0.0002966,
+    "source_artifact": ".omx/research/pr86_pr130_fullstack_intake_20260728.md:140 (PR130 bot row, official rail). Bytes CORRECTED 190,952 -> 191,052 by ddm_na1 2026-08-02: 190,952 is the inner 'p' payload, 191,052 is archive.zip, and evaluate.py:63 charges archive.zip. 190,952 gives 0.1720747, which does not reproduce the published 0.172141."
+  },
+  "gap": {
+    "W_bytes_per_argmax_flip": 1.2731082153320312,
+    "bytes_per_percent_of_gap": 8738.17840056089,
+    "pose": 0.06926581256169609,
+    "rank_by_gap": [
+      "seg",
+      "rate",
+      "pose"
+    ],
+    "rate": 0.11105461963752822,
+    "seg": 0.401519,
+    "shares": {
+      "pose": 0.11904626728354702,
+      "rate": 0.1908681562158246,
+      "seg": 0.6900855765006284
+    },
+    "total": 0.5818394321992243
+  },
+  "n_samples": 600,
+  "ours": {
+    "S": 0.7539807296911207,
+    "archive_bytes": 357836,
+    "d_pose": 0.00071459,
+    "d_seg": 0.00431179,
+    "pose_contribution": 0.08453342534169546,
+    "rate_contribution": 0.2382683043494253,
+    "rate_denominator_bytes": 37545489,
+    "seg_contribution": 0.43117900000000003
+  },
+  "promotion_eligible": false,
+  "schema": "ddm_uf1_m66_gap_refresh.v1",
+  "score_claim": false,
+  "source_artifact": ".omx/research/ddm_sb1_20260804/sb1_rows.jsonl:1"
+}

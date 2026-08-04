@@ -1,0 +1,31 @@
+{
+  "current_qo1_archive_sha256": "d5e814d5b9f65c3094b0e65fecdd7771734d03c420c63d1d2033a671b766986a",
+  "current_qo1_score": 0.7539807296911207,
+  "denominators": {
+    "current_rows": 1,
+    "exact_invariants": 1,
+    "fiber_input_blockers_queued": 1,
+    "heavy_refreshes_queued": 8,
+    "quantities_found": 12,
+    "scorer_free_refreshed": 1,
+    "with_consumers": 12,
+    "with_known_validity_radius": 2,
+    "with_triggers": 12
+  },
+  "freshness_guard": {
+    "consumption_refusals": {
+      "r9m_advisory_to_contest_cpu_calibration_prior": "r9m_advisory_to_contest_cpu_calibration_prior: QUEUED_HEAVY_REFRESH; route=full_recompute; trigger=archive sha moved fz4 -> qo1; projection is not consumed unchecked; owner=queue:next_modal_contest_cpu_row"
+    },
+    "current_qo1_archive_sha256": "d5e814d5b9f65c3094b0e65fecdd7771734d03c420c63d1d2033a671b766986a",
+    "passed_current_or_invariant": [
+      "m66_gap_decomposition_inputs_qo1",
+      "W_bytes_per_flip_exchange"
+    ],
+    "promotion_eligible": false,
+    "schema": "ddm_uf1_freshness_guard_receipt.v1",
+    "score_claim": false
+  },
+  "promotion_eligible": false,
+  "schema": "ddm_uf1_refresh_summary.v1",
+  "score_claim": false
+}
