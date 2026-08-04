@@ -737,9 +737,418 @@ def run_keys(args, sc, dec, raw, gt_frames, pairs) -> None:
 
 
 # ================================================================================================
+# subcommand: fo1  (fire-order-1: budget x M sweep on the STATIC key; U vs AC arms)
+# ================================================================================================
+def run_fo1(args, sc, dec, raw, gt_frames, pairs) -> None:
+    """FO-1 (coordinator-fired): the +0.0045 S static-cell gap on an UNCAPPED solver.
+
+    Arms per (pair, M):
+      U   unconstrained per-block DC shifts (3 int8/block), carrier includes the 57,600 B
+          frame_0 pose stream (DC is 100% pose-visible -- the AC-only law).
+      AC  per-block coefficients on a CONTENT-ADAPTIVE AC atom pushed through the rank-6
+          frame_1 yuv6-null projector: delta = P( c_b * g_b ), g_b = the block's own rendered
+          zero-mean unit-normalised luma pattern (receiver re-derives g_b deterministically
+          from its own render; P is free code; only c_b ships -- 3 int8/block, SAME rate as U).
+          Pose-neutral BY CONSTRUCTION up to uint8 rounding (m85 integer-actuator caveat --
+          measured, not assumed); carrier EXCLUDES the pose stream.
+    Solver: Adam, realized-argmax best-iterate, EARLY-STOP on realized-flip patience (never a
+    step bound as the stop); the convergence curve ships in the receipt so 'floor' claims die.
+    Entropy trim: params re-quantised to step-2 / step-4 int8 lattices, re-realized, re-scored,
+    LZMA1-priced (quantization-toolbox 'aware' form: quantise -> re-eval realized).
+    """
+    import ddm_tr1_runtime as tr1
+    from ddm_sq1_eta_seg_realization import COL_SUP, ROW_SUP
+    from ddm_sq1_pose_null_constrained_paint import pose_null_projector, project_null
+
+    nby, nbx = SEG_H // BLOCK, SEG_W // BLOCK
+    argmax_dir = Path("/Volumes/VertigoDataTier/pact/ddm_pu2_20260803/argmax_cache")
+    gt_c = np.load(argmax_dir / "gt_argmax_n600.npy", mmap_mode="r")
+    cx_c = np.load(argmax_dir / "cx1_argmax_n600.npy", mmap_mode="r")
+    static_set = np.zeros((SEG_H, SEG_W), dtype=bool)
+    for q in range(gt_c.shape[0]):
+        static_set |= np.asarray(gt_c[q]) != np.asarray(cx_c[q])
+    static_mass = static_set.reshape(nby, BLOCK, nbx, BLOCK).sum(axis=(1, 3)).ravel()
+    m_list = [int(x) for x in args.m_list.split(",")]
+    P12 = pose_null_projector()
+
+    out = base_header("fo1")
+    out["solver"] = {"max_steps": args.max_steps, "lr": args.lr,
+                     "eval_every": args.eval_every, "patience_evals": args.patience}
+    out["static_set_px"] = int(static_set.sum())
+    out["m_list"] = m_list
+    out["rows"] = []
+    segnet = sc.net.segnet
+    blk_of_px = (np.arange(SEG_H)[:, None] // BLOCK) * nbx + (np.arange(SEG_W)[None, :] // BLOCK)
+
+    for n, p in enumerate(pairs):
+        t_pair = time.time()
+        ctx = PairCtx(sc, dec.packet, raw, gt_frames, p)
+        cam_base = tr1.render_frame1_camera_uint8(dec.packet, p)
+        base_s = resize_to_scorer(cam_base)
+        tgt = torch.from_numpy(ctx.lgt.astype(np.int64))[None]
+        luma_s = (0.299 * base_s[0, 0] + 0.587 * base_s[0, 1] + 0.114 * base_s[0, 2]).numpy()
+
+        row = {"pair": p, "flips_before": ctx.flips0, "n_described": ctx.nd,
+               "d_pose_shipped": ctx.d_pose_shipped, "cells": {}}
+        for M in m_list:
+            sel_blocks = np.argsort(-static_mass)[:M].astype(np.int64)
+            region = np.isin(blk_of_px, sel_blocks)
+            px_to_param = np.full((SEG_H, SEG_W), -1, dtype=np.int64)
+            for k, b in enumerate(sel_blocks):
+                px_to_param[blk_of_px == b] = k
+            pmap = torch.from_numpy(px_to_param)
+            gather = torch.where(pmap >= 0, pmap, 0)
+            inband = (pmap >= 0)[None, None].float()
+            cam_param = np.full((CAM_H, CAM_W), -1, dtype=np.int64)
+            for k, b in enumerate(sel_blocks):
+                cam_param[scorer_mask_to_camera(blk_of_px == b)] = k
+            cam_valid = cam_param >= 0
+            # AC atom per block: zero-mean unit-max luma pattern of the block's own render
+            g = np.zeros((SEG_H, SEG_W), dtype=np.float32)
+            for b in sel_blocks:
+                mask_b = blk_of_px == b
+                v = luma_s[mask_b]
+                v = v - v.mean()
+                amp = np.abs(v).max()
+                g[mask_b] = (v / amp) if amp > 1e-6 else 0.0
+            g_t = torch.from_numpy(g)[None, None]
+
+            def field_of(sh_t, ac: bool):
+                f = sh_t[gather].permute(2, 0, 1)[None] * inband
+                if ac:
+                    return project_null(f * g_t, P12)
+                return f
+
+            def realize(shift_i8: np.ndarray, ac: bool) -> np.ndarray:
+                if not ac:
+                    cam = cam_base.astype(np.int16).copy()
+                    cam[cam_valid] = (cam[cam_valid]
+                                      + shift_i8.astype(np.int16)[cam_param[cam_valid]])
+                    return np.clip(cam, 0, 255).astype(np.uint8)
+                sh_t = torch.from_numpy(shift_i8.astype(np.float32))
+                d = field_of(sh_t, True)[0].permute(1, 2, 0).numpy()
+                cam = cam_base.astype(np.float32).copy()
+                ii, jj = np.nonzero(px_to_param >= 0)
+                vals = d[ii, jj]
+                for a in range(2):
+                    r = ROW_SUP[ii, a]
+                    for b2 in range(2):
+                        c2 = COL_SUP[jj, b2]
+                        cam[r, c2] = cam[r, c2] + vals
+                return np.clip(np.rint(cam), 0, 255).astype(np.uint8)
+
+            arm_list = [a.strip() for a in args.arms.split(",")]
+            for ac, arm in ((False, "U"), (True, "AC")):
+                if arm not in arm_list:
+                    continue
+                best = None
+                curve = []
+                stop_reason = "cap"
+                with torch.enable_grad():
+                    sh = torch.zeros((M, 3), requires_grad=True)
+                    opt = torch.optim.Adam([sh], lr=args.lr)
+                    since_best = 0
+                    for it in range(args.max_steps + 1):
+                        cur = torch.clamp(base_s + field_of(sh, ac), 0.0, 255.0)
+                        if it % args.eval_every == 0 or it == args.max_steps:
+                            s_i8 = np.clip(np.round(sh.detach().numpy()), -127, 127
+                                           ).astype(np.int8)
+                            lam = sc.seg_argmax(np.stack([ctx.dec[0], realize(s_i8, ac)]
+                                                         ).astype(np.uint8))
+                            fa = int((lam != ctx.lgt).sum())
+                            curve.append([it, fa])
+                            if best is None or fa < best[0]:
+                                best = (fa, s_i8.copy())
+                                since_best = 0
+                            else:
+                                since_best += 1
+                            if since_best >= args.patience:
+                                stop_reason = "converged"
+                                break
+                        if it == args.max_steps:
+                            break
+                        loss = torch.nn.functional.cross_entropy(segnet(cur), tgt)
+                        opt.zero_grad()
+                        loss.backward()
+                        opt.step()
+                _fa, shifts = best
+                depths = {}
+                for dname, step_q in (("int8", 1), ("step2", 2), ("step4", 4)):
+                    sq = (np.round(shifts.astype(np.float32) / step_q) * step_q
+                          ).astype(np.int8)
+                    scr = ctx.score_f1(sc, realize(sq, ac), region=region)
+                    depths[dname] = {**scr,
+                                     "params_lzma1": lzma1_raw(sq.astype(np.int8).tobytes()),
+                                     "params_raw": int(sq.size)}
+                row["cells"][f"M{M}_{arm}"] = {
+                    "depths": depths, "convergence_curve": curve,
+                    "stop_reason": stop_reason, "steps_run": curve[-1][0]}
+        row["wall_s"] = round(time.time() - t_pair, 1)
+        out["rows"].append(row)
+        checkpoint(args.out, out)
+        parts = []
+        for cell, c8 in row["cells"].items():
+            parts.append(f"{cell} {c8['depths']['int8']['eta']:.3f}"
+                         f"@{c8['steps_run']}s/{c8['stop_reason'][:4]}")
+        print(f"[fo1] pair {p:3d} ({n+1}/{len(pairs)}) | " + " | ".join(parts)
+              + f" [{row['wall_s']}s]", flush=True)
+
+
+# ================================================================================================
+# subcommand: tx  (operator steer: FEATURE-BEARING paint arm + band-address arm + collateral
+#                  spatial profile; sg3 corrected crossover 0.6285% measured alongside 1.035%)
+# ================================================================================================
+def _region_boundary_rings(region: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """Rings around the edit-region boundary: (within 1 px, within 2-4 px), both sides."""
+    from ddm_sq1_eta_seg_realization import dilate
+
+    near = dilate(region, 1) & dilate(~region, 1)              # <=1 px from the boundary
+    mid = dilate(region, 4) & dilate(~region, 4) & ~near       # 2..4 px from the boundary
+    return near, mid
+
+
+def run_tx(args, sc, dec, raw, gt_frames, pairs) -> None:
+    """Race, at matched accounting on the same pairs (each arm vs its OWN bar):
+      U_flat   per-block DC shifts, static key M32 (3 int8/blk; + pose stream)   [re-solve]
+      TX       FEATURE-BEARING pose-null paint: per-block coefficients on k=4 zero-mean AC
+               atoms (the block's own luma pattern + DCT(0,1),(1,0),(1,1)) through the rank-6
+               projector.  12 int8/blk; NO pose stream (AC-only law).  M16 direct + nested M8.
+      BAND     Road<->Lane boundary-band arm (sg3's 4th address): region = r=1 dilation of the
+               live field's Road<->Lane interface; FREE per-px solved paint (sq1 mechanics).
+               Priced at sg3's 81,365 B band address + pose stream.
+    Diagnostic per arm: collateral spatial profile -- introduced flips within 1 px / 2-4 px of
+    the edit-region boundary vs farther (the operator's flat-paint-discontinuity mechanism).
+    Collateral reported against BOTH crossover operating points (1.035% superseded; 0.6285%
+    corrected, sg3 2583e0f155)."""
+    import ddm_tr1_runtime as tr1
+    from ddm_sq1_eta_seg_realization import dilate
+    from ddm_sq1_pose_null_constrained_paint import pose_null_projector, project_null
+    from ddm_sq1_stage_decomposition_and_solved_paint import solve_margin_optimal_paint
+
+    nby, nbx = SEG_H // BLOCK, SEG_W // BLOCK
+    argmax_dir = Path("/Volumes/VertigoDataTier/pact/ddm_pu2_20260803/argmax_cache")
+    gt_c = np.load(argmax_dir / "gt_argmax_n600.npy", mmap_mode="r")
+    cx_c = np.load(argmax_dir / "cx1_argmax_n600.npy", mmap_mode="r")
+    static_set = np.zeros((SEG_H, SEG_W), dtype=bool)
+    for q in range(gt_c.shape[0]):
+        static_set |= np.asarray(gt_c[q]) != np.asarray(cx_c[q])
+    static_mass = static_set.reshape(nby, BLOCK, nbx, BLOCK).sum(axis=(1, 3)).ravel()
+    P12 = pose_null_projector()
+
+    # fixed zero-mean unit-max DCT atoms over a 16x16 block (deterministic, rule-118 free)
+    yy, xx = np.meshgrid(np.arange(BLOCK), np.arange(BLOCK), indexing="ij")
+    dct_atoms = []
+    for u, v in ((0, 1), (1, 0), (1, 1)):
+        at = (np.cos(np.pi * (yy + 0.5) * u / BLOCK)
+              * np.cos(np.pi * (xx + 0.5) * v / BLOCK)).astype(np.float32)
+        at -= at.mean()
+        dct_atoms.append(at / np.abs(at).max())
+
+    out = base_header("tx")
+    out["solver"] = {"max_steps": args.max_steps, "lr": args.lr,
+                     "eval_every": args.eval_every, "patience_evals": args.patience}
+    out["band_address_bytes_sg3"] = 81_365
+    out["crossovers"] = {"superseded": 0.01035, "corrected_2583e0f155": 0.006285}
+    out["rows"] = []
+    segnet = sc.net.segnet
+    blk_of_px = (np.arange(SEG_H)[:, None] // BLOCK) * nbx + (np.arange(SEG_W)[None, :] // BLOCK)
+
+    def profile(scr_region: np.ndarray, lam: np.ndarray, ctx) -> dict:
+        near, mid = _region_boundary_rings(scr_region)
+        intro = (ctx.lstar == ctx.lgt) & (lam != ctx.lgt)
+        tot = int(intro.sum())
+        return {"introduced_total": tot,
+                "introduced_within_1px_of_region_boundary": int((intro & near).sum()),
+                "introduced_2_to_4px": int((intro & mid).sum()),
+                "introduced_beyond_4px": int((intro & ~(near | mid)).sum())}
+
+    for n, p in enumerate(pairs):
+        t_pair = time.time()
+        ctx = PairCtx(sc, dec.packet, raw, gt_frames, p)
+        cam_base = tr1.render_frame1_camera_uint8(dec.packet, p)
+        base_s = resize_to_scorer(cam_base)
+        tgt = torch.from_numpy(ctx.lgt.astype(np.int64))[None]
+        luma_s = (0.299 * base_s[0, 0] + 0.587 * base_s[0, 1] + 0.114 * base_s[0, 2]).numpy()
+        row = {"pair": p, "flips_before": ctx.flips0, "n_described": ctx.nd,
+               "d_pose_shipped": ctx.d_pose_shipped, "arms": {}}
+
+        # ---------------- shared static-key block machinery (M = 32 superset) -----------------
+        sel32 = np.argsort(-static_mass)[:32].astype(np.int64)
+        region32 = np.isin(blk_of_px, sel32)
+        px_to_param = np.full((SEG_H, SEG_W), -1, dtype=np.int64)
+        for k, b in enumerate(sel32):
+            px_to_param[blk_of_px == b] = k
+        pmap = torch.from_numpy(px_to_param)
+        gather = torch.where(pmap >= 0, pmap, 0)
+        inband = (pmap >= 0)[None, None].float()
+        cam_param = np.full((CAM_H, CAM_W), -1, dtype=np.int64)
+        for k, b in enumerate(sel32):
+            cam_param[scorer_mask_to_camera(blk_of_px == b)] = k
+        cam_valid = cam_param >= 0
+
+        # per-block atom stack: (32, 4, H, W) sparse via block masks; built as full-frame fields
+        atom_fields = np.zeros((4, SEG_H, SEG_W), dtype=np.float32)
+        for k, b in enumerate(sel32):
+            mask_b = blk_of_px == b
+            v = luma_s[mask_b].reshape(BLOCK, BLOCK)
+            v = v - v.mean()
+            amp = np.abs(v).max()
+            atom_fields[0][mask_b] = (v / amp).ravel() if amp > 1e-6 else 0.0
+            for a in range(3):
+                atom_fields[1 + a][mask_b] = dct_atoms[a].ravel()
+        atoms_t = torch.from_numpy(atom_fields)[None]            # (1,4,H,W)
+
+        def solve_arm(make_field, n_par, realize, label):
+            best, curve, stop = None, [], "cap"
+            with torch.enable_grad():
+                cc = torch.zeros(n_par, requires_grad=True)
+                opt = torch.optim.Adam([cc], lr=args.lr)
+                since = 0
+                for it in range(args.max_steps + 1):
+                    cur = torch.clamp(base_s + make_field(cc), 0.0, 255.0)
+                    if it % args.eval_every == 0 or it == args.max_steps:
+                        c_i8 = np.clip(np.round(cc.detach().numpy()), -127, 127).astype(np.int8)
+                        lam = sc.seg_argmax(np.stack([ctx.dec[0], realize(c_i8)]
+                                                     ).astype(np.uint8))
+                        fa = int((lam != ctx.lgt).sum())
+                        curve.append([it, fa])
+                        if best is None or fa < best[0]:
+                            best, since = (fa, c_i8.copy()), 0
+                        else:
+                            since += 1
+                        if since >= args.patience:
+                            stop = "converged"
+                            break
+                    if it == args.max_steps:
+                        break
+                    loss = torch.nn.functional.cross_entropy(segnet(cur), tgt)
+                    opt.zero_grad()
+                    loss.backward()
+                    opt.step()
+            return best, curve, stop
+
+        # ---------------- U_flat M32 (re-solve; keeps params for the diagnostic) --------------
+        def u_field(cc):
+            return cc.reshape(32, 3)[gather].permute(2, 0, 1)[None] * inband
+
+        def u_realize(c_i8):
+            cam = cam_base.astype(np.int16).copy()
+            cam[cam_valid] = (cam[cam_valid]
+                              + c_i8.reshape(32, 3).astype(np.int16)[cam_param[cam_valid]])
+            return np.clip(cam, 0, 255).astype(np.uint8)
+
+        (fa_u, cu), curve_u, stop_u = solve_arm(u_field, (32, 3), u_realize, "U")
+        cam_u = u_realize(cu)
+        lam_u = sc.seg_argmax(np.stack([ctx.dec[0], cam_u]).astype(np.uint8))
+        scr_u = ctx.score_f1(sc, cam_u, region=region32)
+        row["arms"]["U_flat_M32"] = {
+            **scr_u, "params_lzma1": lzma1_raw(cu.astype(np.int8).tobytes()),
+            "profile": profile(region32, lam_u, ctx), "stop_reason": stop_u,
+            "steps_run": curve_u[-1][0]}
+
+        # ---------------- TX M16 direct (+ nested M8), 12 int8/blk, through P -----------------
+        sel16 = np.argsort(-static_mass)[:16].astype(np.int64)
+        keep16 = np.isin(sel32, sel16)
+        keep16_t = torch.from_numpy(keep16.astype(np.float32))[:, None, None]
+
+        def tx_field_np(c_np: np.ndarray) -> torch.Tensor:
+            return tx_field_t(torch.from_numpy(c_np.reshape(-1).astype(np.float32)),
+                              keep=None)
+
+        def tx_field_t(cc: torch.Tensor, keep) -> torch.Tensor:
+            c = cc.reshape(32, 4, 3)
+            if keep is not None:
+                c = c * keep
+            f = torch.zeros(1, 3, SEG_H, SEG_W)
+            for a in range(4):
+                coef = c[:, a, :][gather].permute(2, 0, 1)[None] * inband
+                f = f + coef * atoms_t[:, a:a + 1]
+            return project_null(f, P12)
+
+        def tx_mask(cc_np, keep_mask):
+            c = cc_np.reshape(32, 4, 3).astype(np.float32).copy()
+            c[~keep_mask] = 0.0
+            return c
+
+        def tx_realize_from(c_np):
+            from ddm_sq1_eta_seg_realization import COL_SUP, ROW_SUP
+
+            d = tx_field_np(c_np)[0].permute(1, 2, 0).numpy()
+            cam = cam_base.astype(np.float32).copy()
+            ii, jj = np.nonzero(px_to_param >= 0)
+            vals = d[ii, jj]
+            for a2 in range(2):
+                r = ROW_SUP[ii, a2]
+                for b2 in range(2):
+                    c2 = COL_SUP[jj, b2]
+                    cam[r, c2] = cam[r, c2] + vals
+            return np.clip(np.rint(cam), 0, 255).astype(np.uint8)
+
+        def tx_field_m16(cc):
+            return tx_field_t(cc, keep16_t)
+
+        def tx_realize_m16(c_i8):
+            return tx_realize_from(tx_mask(c_i8, keep16))
+
+        (fa_t, ct), curve_t, stop_t = solve_arm(tx_field_m16, (32, 4, 3), tx_realize_m16, "TX")
+        ct_m16 = tx_mask(ct, keep16)
+        region16 = np.isin(blk_of_px, sel16)
+        cam_t = tx_realize_from(ct_m16)
+        lam_t = sc.seg_argmax(np.stack([ctx.dec[0], cam_t]).astype(np.uint8))
+        scr_t = ctx.score_f1(sc, cam_t, region=region16)
+        p16 = ct_m16[keep16].astype(np.int8)                    # 16 blocks x 4 atoms x 3 ch
+        row["arms"]["TX_ac4_M16"] = {
+            **scr_t, "params_lzma1": lzma1_raw(p16.tobytes()),
+            "profile": profile(region16, lam_t, ctx), "stop_reason": stop_t,
+            "steps_run": curve_t[-1][0]}
+        # nested M8 (labelled UNDER-measure per §3 instrument note)
+        sel8 = np.argsort(-static_mass)[:8].astype(np.int64)
+        keep8 = np.isin(sel32, sel8)
+        ct_m8 = tx_mask(ct, keep8)
+        cam_t8 = tx_realize_from(ct_m8)
+        scr_t8 = ctx.score_f1(sc, cam_t8, region=np.isin(blk_of_px, sel8))
+        row["arms"]["TX_ac4_M8_nested"] = {
+            **scr_t8, "params_lzma1": lzma1_raw(ct_m8[keep8].astype(np.int8).tobytes())}
+
+        # ---------------- BAND arm: Road<->Lane r=1 interface, free per-px solved paint -------
+        road_lane_edge = np.zeros((SEG_H, SEG_W), dtype=bool)
+        ls = ctx.lstar
+        for dy, dx in ((0, 1), (1, 0)):
+            a_sl = ls[dy:, dx:] if dy or dx else ls
+            b_sl = ls[: SEG_H - dy, : SEG_W - dx]
+            e = ((a_sl == 0) & (b_sl == 1)) | ((a_sl == 1) & (b_sl == 0))
+            road_lane_edge[dy:, dx:] |= e
+            road_lane_edge[: SEG_H - dy, : SEG_W - dx] |= e
+        band = dilate(road_lane_edge, 1)
+        _nb, paint, tag = solve_margin_optimal_paint(
+            segnet, cam_base, ctx.gt[1], band, ctx.lgt,
+            steps=args.max_steps // 2, lr=args.lr, eval_every=args.eval_every)
+        cam_b = realize_scorer_paint_to_camera(cam_base, band, paint)
+        lam_b = sc.seg_argmax(np.stack([ctx.dec[0], cam_b]).astype(np.uint8))
+        scr_b = ctx.score_f1(sc, cam_b, region=band)
+        rl_flips = int((road_lane_edge & (ctx.lstar != ctx.lgt)).sum())
+        row["arms"]["BAND_road_lane"] = {
+            **scr_b, "band_px": int(band.sum()),
+            "capture_of_pair_flips": float(((ctx.lstar != ctx.lgt) & band).sum()
+                                           / max(ctx.flips0, 1)),
+            "road_lane_edge_flips": rl_flips,
+            "profile": profile(band, lam_b, ctx), "solver_tag": tag}
+
+        row["wall_s"] = round(time.time() - t_pair, 1)
+        out["rows"].append(row)
+        checkpoint(args.out, out)
+        print(f"[tx] pair {p:3d} ({n+1}/{len(pairs)}) "
+              f"| U {scr_u['eta']:.3f} | TX16 {scr_t['eta']:.3f} dpx "
+              f"{scr_t['d_pose_ratio_vs_shipped']:.2f} | TX8n {scr_t8['eta']:.3f} "
+              f"| BAND {scr_b['eta']:.3f} cap {row['arms']['BAND_road_lane']['capture_of_pair_flips']:.2f} "
+              f"[{row['wall_s']}s]", flush=True)
+
+
+# ================================================================================================
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=("transport", "response", "solve", "solve0", "keys"))
+    ap.add_argument("cmd", choices=("transport", "response", "solve", "solve0", "keys", "fo1",
+                                    "tx"))
     ap.add_argument("--pairs", type=str, default="0,20,48,115,154,170,179,180")
     ap.add_argument("--gt-mkv", type=Path, default=REPO / "upstream/videos/0.mkv")
     ap.add_argument("--raw", type=Path, default=SUB_PU2 / "inflated/0.raw")
@@ -751,6 +1160,10 @@ def main() -> int:
     ap.add_argument("--eval-every", type=int, default=5)
     ap.add_argument("--m-max", type=int, default=64)
     ap.add_argument("--m-keys", type=int, default=32)
+    ap.add_argument("--m-list", type=str, default="32,64")
+    ap.add_argument("--max-steps", type=int, default=150)
+    ap.add_argument("--patience", type=int, default=6)
+    ap.add_argument("--arms", type=str, default="U,AC")
     args = ap.parse_args()
 
     t0 = time.time()
@@ -773,6 +1186,10 @@ def main() -> int:
         run_solve0(args, sc, dec, raw, gt_frames, pairs)
     elif args.cmd == "keys":
         run_keys(args, sc, dec, raw, gt_frames, pairs)
+    elif args.cmd == "fo1":
+        run_fo1(args, sc, dec, raw, gt_frames, pairs)
+    elif args.cmd == "tx":
+        run_tx(args, sc, dec, raw, gt_frames, pairs)
     else:
         run_solve(args, sc, dec, raw, gt_frames, pairs)
     print(f"[lr2:{args.cmd}] done t={time.time()-t0:.1f}s -> {args.out}", flush=True)

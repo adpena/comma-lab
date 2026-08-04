@@ -141,6 +141,30 @@ def main() -> int:
     except FileNotFoundError:
         print("solve0 receipt missing")
 
+    for fo1_file in ("lr2_fo1_m32_n8.json", "lr2_fo1_m64_n8.json"):
+        try:
+            f1 = j(fo1_file)["rows"]
+        except FileNotFoundError:
+            continue
+        cells = sorted(f1[0]["cells"])
+        for cell in cells:
+            M = int(cell.split("_")[0][1:])
+            arm = cell.split("_")[1]
+            addr_b = 2 * M                        # ONE static block list, shipped once
+            pose_b = POSE_STREAM_N600 if arm == "U" else 0
+            n_cap = sum(1 for r in f1 if r["cells"][cell]["stop_reason"] == "cap")
+            for depth in ("int8", "step2", "step4"):
+                eF, *_ = pooled(f1, lambda r, cell=cell, depth=depth:
+                                r["cells"][cell]["depths"][depth]["flips_after"])
+                pb = sum(r["cells"][cell]["depths"][depth]["params_lzma1"] for r in f1) * scale
+                dpx = med_dpx(f1, lambda r, cell=cell, depth=depth:
+                              r["cells"][cell]["depths"][depth])
+                n_out.append(verdict_row(
+                    f"FO1 static {cell} {depth}", eF, addr_b, pb,
+                    f"{pb/600:.0f} B/pair; {n_cap}/8 cap-hit"
+                    + ("; NO pose stream (AC pose-null)" if arm == "AC" else ""),
+                    pose_b=pose_b, dpx=dpx))
+
     try:
         ky = j("lr2_keys_n8.json")["rows"]
         for key, addr_b, label in (

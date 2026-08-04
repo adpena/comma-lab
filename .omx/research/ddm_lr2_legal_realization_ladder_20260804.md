@@ -27,13 +27,14 @@ high (solved paint, η 0.5–1.6) don't need the offsets at all.** The phase-fie
 the offset CARRIER of it is the dead leg. The best measured cell of the whole ladder is the
 no-offset, STATIC-addressed descendant (the sg3 composition, MEASURED not projected):
 **C0-keys M32 addr=static — one 64 B block list shared by all 600 pairs + 96 B/pair solved
-shifts + the pose stream: η 0.3999 vs its own bar 0.4246 → net +0.0045 S.** Still LOSES, but
-**12× closer than the naive realizer's +0.0553**, on a 30-step cap-pinned solver FLOOR, with
-collateral **0.62% med / 1.00% max — below sg3's 1.035% crossover on 8/8 pairs at M32** — and
-three named, unmeasured levers each plausibly worth more than the remaining 0.0045 (§6
-fire-order-1). cg1's encode/decode key-gap unknown is CLOSED with numbers (§5): the STATIC
-GT-derived key retains 80% of the per-pair GT key's η; the 0-byte decoder-derivable proxy
-retains only 41%.
+shifts + the pose stream.** FO-1 (fired in-unit, §11) then uncapped the solver: the cell
+**BANKED on n=8 (η 0.4406 vs bar 0.4260, net −0.0026)** and **REVERSED at the pre-registered
+n=32 gate (η 0.3990 vs bar 0.4282, net +0.0053 — LOSES)** — the m88/m96 subset trap caught
+before any byte-close was attempted. Final family state: **no measured cell banks at n=32**;
+the closest legal cell sits 1.2% of gross from zero, per-pair η spans 0.24–1.09 (uniform-M
+waterfill headroom named), collateral qualifies static addressing on 29/32 pairs even at
+sg3's corrected 0.6285% crossover, and cg1's key-gap unknown is CLOSED with numbers (§5):
+static GT-derived key = 80% of per-pair-GT η; 0-byte decoder proxy = 41%.
 
 | rung (all n=8, bz1's pairs, whole-frame η) | legal η (scorer path) | d_pose ratio (subset med) | carrier n600 | own bar η | net ΔS | verdict |
 |---|---:|---:|---:|---:|---:|---|
@@ -212,25 +213,27 @@ fold-in, cg1's named unknown), as a three-way address-key A/B at matched M=32, s
   vacuity derivation + 8-pair confirmation · the sg3 collateral crossover measurement · the
   3-way address-key A/B (coordinator fold-in; cg1's unknown closed) · the matched
   transport-as-preconditioner A/B · every rung's own recomputed bar.
-- **QUEUED, fire-order-1 — close the +0.0045 S static-cell gap, then byte-close.** Three named
-  levers, each measured elsewhere as live: (a) solver budget — every η here is a 30-step
-  cap-pinned FLOOR (et1 §7 measured η still rising at 50 steps; sweep budget×M on the STATIC
-  key, pick by net including pose); (b) M sweep on the static key (the static list stays 2 B/
-  block ONCE — M=48 costs +32 B total address, +48 B/pair params); (c) params entropy — int8
-  triplets LZMA'd at ~96 B/pair barely compress; a fitted small codebook (L29 pattern) or
-  int6 depth could save 20–40% of the params line. Fire condition: any (η, bytes) cell with
-  net < −0.005 S on n=8 → extend to n=32 stratified → byte-close ONLY through
-  `tac.submission_chain` (canonical, never a probe script) with the frame_0 k=4 pose stream
-  composed via `frame0_pose_repair_stream` (§5 of bz1).
-- **QUEUED, fire-order-2 — the per-base pose-repair gate for the winning cell.** The static-key
-  M32 damage (med 17.4×, abs ~0.01–0.03) sits at the edge of the k=4 repair's proven range
-  (≤123.85×, repaired to ≤ shipped); run the bz1 G1/G2 harness on 3–4 of THESE edited pairs
-  before any byte-close. Fire condition: fire-order-1 finds a banking cell.
-- **QUEUED, fire-order-3 — pose-neutral paint via AC parameterization.** The §4 law says DC
-  is 100% pose-visible; a per-block 3-param WITHIN-BLOCK pattern basis (fixed deterministic
-  AC atoms through the rank-6 projector) could carry seg flips with near-zero pose damage and
-  drop the 57,600 B pose stream — the carrier line that now dominates every C0 bar. This is a
-  design+measure unit (the atoms must move argmax through P), cheap at n=4 first.
+- **FIRED IN-UNIT via §11 (superseding the original fire-orders 1 and 3 below):** the uncapped
+  budget×M sweep + n=32 gate (§11.1–11.2), the params-entropy trim (does not pay), the AC
+  pose-null arm at 1 and 4 atoms (pose-neutral confirmed; seg-weak), the collateral spatial
+  profile (§11.3), the triality registration (§11.4).
+- **QUEUED, fire-order-1 (revised) — per-pair WATERFILL of block budget on the static key.**
+  Per-pair η spans 0.24–1.09 at uniform M=32; allocate blocks per pair by measured response
+  (ja1/QA73 atlas+waterfill machinery), per-pair M index ~1 B/pair. The n=32 receipts already
+  hold per-pair (η, bytes, curves) — the allocator fits for $0 with no new scorer forward.
+  Fire condition: fitted allocation projects net < −0.005 S at n=32 → byte-close ONLY through
+  `tac.submission_chain` + `frame0_pose_repair_stream` (coordinate with fz1's chain wiring;
+  the F0PR1/seg-base PROFILES entries remain owed there; n600 waits behind fz1's census).
+- **QUEUED, fire-order-2 — the per-base pose-repair gate, now REQUIRED not precautionary.**
+  n=32 damage max **1261.9×** exceeds the k=4 repair's proven ≤123.85× envelope; run the bz1
+  G1/G2 harness on the worst 3–4 edited pairs of any banking variant before byte-close.
+- **QUEUED, fire-order-3 (revised) — the band family's price-matched legal realizer.** Measure
+  class-anchor paint (sq1 L1 form, zero value bytes) on the Road↔Lane r=1 band against sg3's
+  81,365 B address price; the solved-value ceiling (η 1.14–1.34, §11.3) says the family is
+  worth one honest measurement; the mirage law says the ceiling is not the row.
+- **QUEUED, fire-order-4 — feature-matched AC atoms.** The pose-null basis fails through
+  cosine/luma atoms (η ~0.1); atoms fit to the frozen head's features (curvelet/learned,
+  through P) are the one unexhausted pose-null escape. Design+measure, n=4 first.
 - **NOT QUEUED, with reasons** — B's influence-ranked sparsifier (B is dominated by C at every
   measured equal-rate cell); token-space actuation (A1/A3-tok: MECHANISM-dead on this
   renderer); offset-field re-solve variants beyond A3 (the field is net-negative even as a
@@ -268,6 +271,12 @@ fold-in, cg1's named unknown), as a three-way address-key A/B at matched M=32, s
 - The keys arms' params pricing assumes the receiver orders params by the shipped/derived
   ranking (no per-pair indices for static/proxy); the static arm additionally assumes ONE
   64 B block list — both are grammar facts a byte-close must realize, not physics risks.
+- **FO-1 phase (§11):** the deepest sample is n=32 (stratified, repr 0.9973); no byte-close
+  was attempted — correctly, since no cell banks at n=32. The §11.3 four-arm race is PARTIAL
+  (n=2 of 8 at landing; the run continues checkpointed into `lr2_tx_n8.json` pair by pair —
+  the successor pools the full receipt). The TX negative is scoped to cosine/luma atoms; the
+  BAND numbers are VALUE-ORACLE-scoped (the mirage law, applied to my own arm). The n=32
+  pose-damage max (1261.9×) makes the per-base repair gate REQUIRED for any banking variant.
 
 ## §9 Receipts + STORES CONSULTED
 
@@ -286,6 +295,98 @@ Stores consulted: bz1/et1/js1/sq1/ph1/gp1/pu2/g4/sg3 memos + receipts · m95/m96
 `ddm_pu2_20260803/submission_pu2/{ddm_tr1_runtime.py,inflate_runner.py}` (the shipped receiver,
 imported not re-implemented) · `ddm_sq1_pose_null_constrained_paint.py` (rank-6 projector) ·
 CLAUDE.md authority ladder + realization mirage law.
+
+## §11 FO-1 ADDENDUM (coordinator-fired, same unit) — the uncapped sweep, the n=8→n=32 reversal, and the four-arm race
+
+**Charter:** fire my own §6 fire-order-1 — uncap the solver (convergence-tested, curve shipped),
+params-entropy trim, fold FO-3's AC lever in as sweep arms, best cell at n=32; plus the
+operator's feature-bearing-paint steer and sg3's corrected crossover + band-address arm.
+
+### §11.1 The uncapped sweep (n=8, static key, U vs AC, M ∈ {32, 64})
+
+Convergence discipline: Adam with realized-flip patience early-stop (never a step bound as the
+stop); per-cell curves in the receipts. Outcome: most cells CONVERGE well before the 150-step
+safety bound (6/8 M32_U, 8/8 M64 and AC cells; the 2 cap-hits have near-flat tails, shipped).
+
+| cell (n=8) | pooled η | dpx med | carrier | bar | net ΔS |
+|---|---:|---:|---:|---:|---:|
+| **M32_U int8** (+pose stream) | **0.4406** | 32.5 | 115,414 B | 0.4260 | **−0.00263 (banked on n=8)** |
+| M32_U step2 / step4 | 0.4258 / 0.4139 | ~33 | 115.3/113.7 KB | 0.426/0.420 | −0.00005 / +0.00103 |
+| M64_U int8 | 0.5487 | 53.4 | 159,053 B | 0.5871 | +0.00693 |
+| M32_AC int8 (NO pose stream) | 0.1159 | **1.0** | 59,164 B | 0.2184 | +0.01849 |
+| M64_AC int8 (NO pose stream) | 0.1862 | **1.0** | 110,153 B | 0.4066 | +0.03975 |
+
+- Uncapping moved M32_U pooled η 0.3999 → 0.4406 (+0.041) — the cap-artifact was real and it
+  crossed zero ON n=8. Params-entropy trim (step2/step4) does NOT pay: LZMA already absorbs
+  the low-entropy tail; int8 is the best depth everywhere.
+- The AC arm realizes the law's constructive half PERFECTLY — d_pose ratio 1.000–1.003 on
+  every pair, stream-free carrier — but its seg power through the single content atom is ~4×
+  too weak for its own (much lower) bar. `verdict_scope: FORMULATION` (this 1-atom AC basis).
+
+### §11.2 The n=32 verdict — the banking cell REVERSES, and that is the finding
+
+Best cell (M32_U int8) extended to the full stratified 32 (repr 0.9973, m88/m96-compliant):
+
+| n | pooled η | carrier | bar | net ΔS | verdict |
+|---:|---:|---:|---:|---:|---|
+| 8 | 0.4406 | 115,414 B | 0.4260 | −0.00263 | banked |
+| **32** | **0.3990** | 115,995 B | 0.4282 | **+0.00526** | **LOSES** |
+
+**The n=8 window was optimistic for this realizer and the pre-registered n=32 gate caught it
+before a single byte-close was attempted** — the exact failure m88/m96 names, working as
+designed. No cell banks at n=32. Supporting facts at n=32: collateral med 0.420%, max 1.007%
+(0/32 above the superseded 1.035% crossover; **3/32 above sg3's corrected 0.6285%**
+(`2583e0f155`) — the realizer still qualifies for static addressing on 29/32 pairs);
+d_pose ratio med 30.3× but **max 1261.9×** — one extension pair exceeds the k=4 repair's
+proven ≤123.85× envelope, so the per-base repair gate (fire-order-2) is REQUIRED, not
+precautionary, for any future banking variant. Per-pair η spans 0.24–1.09: the uniform-M
+allocation is leaving large per-pair headroom unspent — the named successor lever is a
+per-pair WATERFILL of block budget by measured response (ja1/QA73 machinery), not more
+uniform budget.
+
+### §11.3 The four-arm race (operator steer: feature-bearing paint; sg3: band address) — PARTIAL (n=2 of 8; run checkpointed per pair, receipts fill as it completes)
+
+Arms at matched accounting, same pairs, each vs its OWN bar (`lr2_tx_*.json`):
+
+| arm (pairs 0, 20 so far) | η | dpx | collateral | params/pair | reading |
+|---|---|---|---|---|---|
+| U_flat M32 (re-solve control) | 0.331 / 0.242 | 93.8 / 3.0 | 0.15–0.28% | ~96 B | matches §11.1 |
+| **TX feature-bearing** (4 AC atoms through P, M16) | 0.116 / 0.096 | **1.00–1.01** | 0.05–0.13% | ~200 B (incompressible) | pose-neutral CONFIRMED again; seg-weak |
+| TX M8 nested | 0.085 / 0.059 | 1.00 | 0.05–0.10% | ~107 B | under U at matched bytes |
+| **BAND Road↔Lane r=1** (solved per-px paint) | **1.338 / 1.137** | 52.4 / 2.1 | 0.43–0.62% | — | **VALUE-ORACLE — see below** |
+
+- **The feature-bearing steer's first measurement is NEGATIVE at this basis size (PROVISIONAL,
+  n=2):** enriching the pose-null basis from 1 content atom to 4 (luma pattern + 3 low-order
+  DCT, all through P) lifts η only 0.116 vs 0.44 for flat DC at HALF the params rate. The
+  pose-null subspace's seg-power through per-block low-order atoms remains ~4× too weak for
+  its bar. The race is honest at matched bytes: TX M8 (~107 B/pair, stream-free, bar ≈0.32)
+  η 0.06–0.09; U M32 (~96 B/pair + stream, bar 0.428) η 0.24–0.33. **Flat-DC + pose stream
+  still dominates AC + no stream at every measured cell.** The unexhausted escape: atoms
+  matched to the head's features (learned/curvelet AC atoms), not cosine/luma ones.
+- **The collateral spatial profile REFUTES the flat-paint-discontinuity mechanism at this
+  granularity:** introduced flips within 1 px of the edit-region boundary are only 2–10% of
+  collateral (U arm; 0–20% TX); 41–68% sit BEYOND 4 px. Collateral is far-field regional
+  response (SegNet-sees-regions), not boundary-discontinuity dust. So texture will not cure
+  collateral by smoothing patch seams — its value must come through feature alignment.
+- **The BAND arm's big numbers (η 1.14–1.34, capture 0.40–0.46) are VALUE-ORACLE-scoped
+  against sg3's 81,365 B price, by the mirage law applied to my own arm:** the solve is
+  encode-side legal, but the 81,365 B carrier holds band POSITIONS + target labels — not the
+  solved VALUES my realizer painted. The price-matched legal realizer (class-anchor paint from
+  the stored labels, sq1's L1 form, zero extra value bytes) is the arm whose η actually prices
+  that carrier, and it is UNMEASURED — the single named next measurement of the band family.
+  Priced-value alternative: ~3 B × ~4,050 band px/pair ≈ 12 KB/pair — dead. Both crossover
+  operating points reported: U/TX collateral is below even the corrected 0.6285%
+  (`2583e0f155`) on these pairs; BAND sits at 0.43–0.62% — at the corrected line.
+
+### §11.4 Triality debt — DISCHARGED
+
+`pose_null_subspace_is_ac_only_v1` registered in `tac.canonical_equations`
+(`src/tac/canonical_equations/pose_null_subspace_is_ac_only_20260804.py`, 7 tests pass,
+ledger row appended via the canonical registry helper; commit of record in this unit's chain).
+Evaluator `dc_projection_residual()` verifies ‖P·(c⊗1₄)‖∞ = 0 (measured 2.9e-13); helper
+`ac_energy_fraction()` prices the pose-visibility of any candidate paint pattern; the
+EmpiricalAnchor is the 32/32 vacuous-DC receipt (residual 0.0). Consumers declared: the FO-3/
+AC arm, m85's integer-actuator caveat, the burn-spec pose-price arithmetic.
 
 ## §10 Pointer honesty
 
