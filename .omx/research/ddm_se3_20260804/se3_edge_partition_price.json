@@ -1,0 +1,651 @@
+{
+  "axis": "[macOS-CPU advisory / cache-derived description bytes]",
+  "best_candidate_id": "road_lane_band_r1_edit_bits_side_implied",
+  "boundaries": [
+    "No SegNet/PoseNet scorer forward was run.",
+    "No archive.zip was built.",
+    "Band coordinates are ASSUMPTION(receiver-field), not a closed receiver proof.",
+    "Direction-free rows assume target side is implied by the partition; explicit-direction rows price the safer stream."
+  ],
+  "candidate_rows": [
+    {
+      "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_se3_20260804/edge_partition_payloads/road_lane_band_r1_edit_bits_side_implied.brotli-q11.bin",
+      "band_pixels": 1173933,
+      "band_precision": 0.1377080293338717,
+      "best_bytes": 81365,
+      "best_codec": "brotli-q11",
+      "best_sha256": "abac9e719d6938a9390314ff417c60eeb727e54181b7da2c9792679d9d96d7af",
+      "break_even_survival_no_pose_no_collateral": 0.39533906761411075,
+      "bytes_per_captured_flip": 0.5033094148212297,
+      "candidate_kind": "implicit arclength edit bitstream; target side implied by receiver partition",
+      "capture_fraction": 0.6874819262762175,
+      "captured_flips": 161660,
+      "claim_label": "MEASURED description bytes; DERIVED break-even arithmetic; scorer-free",
+      "coder_race": [
+        {
+          "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_se3_20260804/edge_partition_payloads/road_lane_band_r1_edit_bits_side_implied.brotli-q11.bin",
+          "bytes": 81365,
+          "codec": "brotli-q11",
+          "sha256": "abac9e719d6938a9390314ff417c60eeb727e54181b7da2c9792679d9d96d7af"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 82448,
+          "codec": "lzma1-raw",
+          "sha256": "2874b9eb79153c15066e7c811e6277c2956d18b9f2cacb9db0b672de8524bc95"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 89405,
+          "codec": "smevr-r7-nibble",
+          "sha256": "9a26636aa9c1355b00ea54887613472727b9b649d8a2735fd617ffa97cc7c19c"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 91091,
+          "codec": "zlib-9",
+          "sha256": "24ede97494e657ee9659b0f2d7231ad526d882d396541432283eed05501c7af2"
+        }
+      ],
+      "direction_bits": "not counted; ASSUMED side is implied by generator-pair partition",
+      "gross_S_if_100pct_survival": 0.13704087999131945,
+      "net_S_if_100pct_survival_no_pose_no_collateral": -0.08286326627053398,
+      "radius": 1,
+      "rate_S": 0.05417761372078547,
+      "raw_bytes": 147011,
+      "raw_sha256": "9043d5541e422b4136f8686335128acd71462e68bd0986b5757a4969eb41cf0a",
+      "surface_id": "road_lane_band_r1_edit_bits_side_implied",
+      "total_road_lane_flips": 235148,
+      "verdict_scope": "ASSUMPTION(receiver-field) for band coordinate derivation; INSTANCE for this serialized stream"
+    },
+    {
+      "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_se3_20260804/edge_partition_payloads/road_lane_band_r2_edit_bits_side_implied.brotli-q11.bin",
+      "band_pixels": 1979246,
+      "band_precision": 0.08661328606954366,
+      "best_bytes": 97345,
+      "best_codec": "brotli-q11",
+      "best_sha256": "9d9607728f5c40ba00659f4a97c56abcd0fde8b1c52cee6c0b35a9645e9caff7",
+      "break_even_survival_no_pose_no_collateral": 0.44602996578276194,
+      "bytes_per_captured_flip": 0.567844413722299,
+      "candidate_kind": "implicit arclength edit bitstream; target side implied by receiver partition",
+      "capture_fraction": 0.7290259751305561,
+      "captured_flips": 171429,
+      "claim_label": "MEASURED description bytes; DERIVED break-even arithmetic; scorer-free",
+      "coder_race": [
+        {
+          "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_se3_20260804/edge_partition_payloads/road_lane_band_r2_edit_bits_side_implied.brotli-q11.bin",
+          "bytes": 97345,
+          "codec": "brotli-q11",
+          "sha256": "9d9607728f5c40ba00659f4a97c56abcd0fde8b1c52cee6c0b35a9645e9caff7"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 100927,
+          "codec": "lzma1-raw",
+          "sha256": "50c1b314390b0d33088d2f8a92b01b493bb8ba962bb3099659fcf325d2a6d828"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 107866,
+          "codec": "smevr-r7-nibble",
+          "sha256": "e0d3d5aa44037e92e84ed6c80d17ad85fceaa1f010a096e794d37bd193507911"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 114547,
+          "codec": "zlib-9",
+          "sha256": "e386c635b0ac0b332e5f71d4b6a0885b6ced8912a80f9f63fe43bcbe78b365e4"
+        }
+      ],
+      "direction_bits": "not counted; ASSUMED side is implied by generator-pair partition",
+      "gross_S_if_100pct_survival": 0.1453221638997396,
+      "net_S_if_100pct_survival_no_pose_no_collateral": -0.08050412410806182,
+      "radius": 2,
+      "rate_S": 0.06481803979167777,
+      "raw_bytes": 247673,
+      "raw_sha256": "bdecc04b1b9bd472e45c528df8bd41681a9ceaaf0fb234290ad83e4ed5ad20f8",
+      "surface_id": "road_lane_band_r2_edit_bits_side_implied",
+      "total_road_lane_flips": 235148,
+      "verdict_scope": "ASSUMPTION(receiver-field) for band coordinate derivation; INSTANCE for this serialized stream"
+    },
+    {
+      "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_se3_20260804/edge_partition_payloads/road_lane_band_r1_sparse_varint_arclength.brotli-q11.bin",
+      "band_pixels": 1173933,
+      "band_precision": 0.1377080293338717,
+      "best_bytes": 100741,
+      "best_codec": "brotli-q11",
+      "best_sha256": "6deb31d2affe24a75ba224e4f0bb7d0751ff7c27ad38db1411c527024fc555d7",
+      "break_even_survival_no_pose_no_collateral": 0.4894838445340519,
+      "bytes_per_captured_flip": 0.6231659037486081,
+      "candidate_kind": "sparse varint arclength edit indices plus target-side bits",
+      "capture_fraction": 0.6874819262762175,
+      "captured_flips": 161660,
+      "claim_label": "MEASURED description bytes; DERIVED break-even arithmetic; scorer-free",
+      "coder_race": [
+        {
+          "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_se3_20260804/edge_partition_payloads/road_lane_band_r1_sparse_varint_arclength.brotli-q11.bin",
+          "bytes": 100741,
+          "codec": "brotli-q11",
+          "sha256": "6deb31d2affe24a75ba224e4f0bb7d0751ff7c27ad38db1411c527024fc555d7"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 111182,
+          "codec": "lzma1-raw",
+          "sha256": "d30e4812324ac6292dfa61e978fd2aed564bcb41a194c58b3f9920b272247bd2"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 115513,
+          "codec": "smevr-r7-nibble",
+          "sha256": "1a4a10917d464baf17e6e93206ee971b51b23b0ca6204ca312ea929a15f6b145"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 117834,
+          "codec": "zlib-9",
+          "sha256": "dce11ac3cef0e0a03f73a32babd84289a78d74346c442137716947adc604d1ed"
+        }
+      ],
+      "gross_S_if_100pct_survival": 0.13704087999131945,
+      "net_S_if_100pct_survival_no_pose_no_collateral": -0.06996158319483878,
+      "radius": 1,
+      "rate_S": 0.06707929679648067,
+      "raw_bytes": 184556,
+      "raw_sha256": "8f92c0f85f19313b2d598540aba0b3595d9550c17e4771ff71dbb5ada12da63b",
+      "surface_id": "road_lane_band_r1_sparse_varint_arclength",
+      "total_road_lane_flips": 235148,
+      "verdict_scope": "ASSUMPTION(receiver-field) for band coordinate derivation; INSTANCE for this serialized stream"
+    },
+    {
+      "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_se3_20260804/edge_partition_payloads/road_lane_band_r1_edit_plus_direction_bits.brotli-q11.bin",
+      "band_pixels": 1173933,
+      "band_precision": 0.1377080293338717,
+      "best_bytes": 100904,
+      "best_codec": "brotli-q11",
+      "best_sha256": "8dd8f8eb6e741d7dcded0d201fb574a9f612fb4c3e1fdbc430a812704d9dd4d1",
+      "break_even_survival_no_pose_no_collateral": 0.49027583455459023,
+      "bytes_per_captured_flip": 0.6241741927502165,
+      "candidate_kind": "implicit arclength edit bitstream plus explicit target-side bits",
+      "capture_fraction": 0.6874819262762175,
+      "captured_flips": 161660,
+      "claim_label": "MEASURED description bytes; DERIVED break-even arithmetic; scorer-free",
+      "coder_race": [
+        {
+          "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_se3_20260804/edge_partition_payloads/road_lane_band_r1_edit_plus_direction_bits.brotli-q11.bin",
+          "bytes": 100904,
+          "codec": "brotli-q11",
+          "sha256": "8dd8f8eb6e741d7dcded0d201fb574a9f612fb4c3e1fdbc430a812704d9dd4d1"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 107536,
+          "codec": "lzma1-raw",
+          "sha256": "db9f4955e7cb1723209e11026ffbab32d3fbdf5abd26d4bfc6a9f01b90727294"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 114558,
+          "codec": "zlib-9",
+          "sha256": "59b13b9c3eb1f46d6a2460b976e018a4069fc8e5c41fb5c43738cf8d6c759b3f"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 118276,
+          "codec": "smevr-r7-nibble",
+          "sha256": "e1a52e34b3ae6c14897b592f4ce28b20086a6a47568a205dbb8aedfb388fe955"
+        }
+      ],
+      "direction_bits": "counted for every edited band coordinate",
+      "gross_S_if_100pct_survival": 0.13704087999131945,
+      "net_S_if_100pct_survival_no_pose_no_collateral": -0.06985304818547987,
+      "radius": 1,
+      "rate_S": 0.06718783180583958,
+      "raw_bytes": 167478,
+      "raw_sha256": "3a8e28521c334bb7b385f1f27f6c9b347f46e04dfb993597e7226fae35eea2de",
+      "surface_id": "road_lane_band_r1_edit_plus_direction_bits",
+      "total_road_lane_flips": 235148,
+      "verdict_scope": "ASSUMPTION(receiver-field) for band coordinate derivation; INSTANCE for this serialized stream"
+    },
+    {
+      "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_se3_20260804/edge_partition_payloads/road_lane_band_r3_edit_bits_side_implied.brotli-q11.bin",
+      "band_pixels": 2775154,
+      "band_precision": 0.06374240852940052,
+      "best_bytes": 110689,
+      "best_codec": "brotli-q11",
+      "best_sha256": "072cd95712c46c8d177b592dc894940fa742512757ab857924e4e398c593ff48",
+      "break_even_survival_no_pose_no_collateral": 0.49150007186873657,
+      "bytes_per_captured_flip": 0.6257327793323723,
+      "candidate_kind": "implicit arclength edit bitstream; target side implied by receiver partition",
+      "capture_fraction": 0.752270910235256,
+      "captured_flips": 176895,
+      "claim_label": "MEASURED description bytes; DERIVED break-even arithmetic; scorer-free",
+      "coder_race": [
+        {
+          "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_se3_20260804/edge_partition_payloads/road_lane_band_r3_edit_bits_side_implied.brotli-q11.bin",
+          "bytes": 110689,
+          "codec": "brotli-q11",
+          "sha256": "072cd95712c46c8d177b592dc894940fa742512757ab857924e4e398c593ff48"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 118389,
+          "codec": "lzma1-raw",
+          "sha256": "76fe4e0164a1bf45757e1c6808db22210d961a324d70adb34a3715e08d434aad"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 118673,
+          "codec": "smevr-r7-nibble",
+          "sha256": "11973e7c59c1e1979d71bcc584eac971616877bf5c14f7162e8481f0a312e905"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 129401,
+          "codec": "zlib-9",
+          "sha256": "51250e5d43560e3f8131fa12078893e73767c7ad034606aa90f59e98b5499b7f"
+        }
+      ],
+      "direction_bits": "not counted; ASSUMED side is implied by generator-pair partition",
+      "gross_S_if_100pct_survival": 0.14995574951171875,
+      "net_S_if_100pct_survival_no_pose_no_collateral": -0.07625248784957872,
+      "radius": 3,
+      "rate_S": 0.07370326166214003,
+      "raw_bytes": 347161,
+      "raw_sha256": "d29b0344ffa970c4834ceaad68b439bdf901e6f1d3cbc8832a3b7516ebbfd312",
+      "surface_id": "road_lane_band_r3_edit_bits_side_implied",
+      "total_road_lane_flips": 235148,
+      "verdict_scope": "ASSUMPTION(receiver-field) for band coordinate derivation; INSTANCE for this serialized stream"
+    },
+    {
+      "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_se3_20260804/edge_partition_payloads/road_lane_band_r2_sparse_varint_arclength.brotli-q11.bin",
+      "band_pixels": 1979246,
+      "band_precision": 0.08661328606954366,
+      "best_bytes": 117023,
+      "best_codec": "brotli-q11",
+      "best_sha256": "e7cff1dc172d1b20d53b0ef120dd75638c2879e263e6c7907cd2852d101050bb",
+      "break_even_survival_no_pose_no_collateral": 0.5361935865817058,
+      "bytes_per_captured_flip": 0.6826324600855165,
+      "candidate_kind": "sparse varint arclength edit indices plus target-side bits",
+      "capture_fraction": 0.7290259751305561,
+      "captured_flips": 171429,
+      "claim_label": "MEASURED description bytes; DERIVED break-even arithmetic; scorer-free",
+      "coder_race": [
+        {
+          "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_se3_20260804/edge_partition_payloads/road_lane_band_r2_sparse_varint_arclength.brotli-q11.bin",
+          "bytes": 117023,
+          "codec": "brotli-q11",
+          "sha256": "e7cff1dc172d1b20d53b0ef120dd75638c2879e263e6c7907cd2852d101050bb"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 126811,
+          "codec": "lzma1-raw",
+          "sha256": "363283f372ccbb4e73d4c96c5952179ff46a625fc36fe7d49ad5ad864b2efca8"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 133694,
+          "codec": "zlib-9",
+          "sha256": "734218377d567691d329192bdabab4d03337145bc7b5a7772d1896a0343e853a"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 138807,
+          "codec": "smevr-r7-nibble",
+          "sha256": "0b65b9e7c89b3e9c2890048cc224bfb0678aaca2a0a99f03fbef00d6d34caa52"
+        }
+      ],
+      "gross_S_if_100pct_survival": 0.1453221638997396,
+      "net_S_if_100pct_survival_no_pose_no_collateral": -0.06740135162852373,
+      "radius": 2,
+      "rate_S": 0.07792081227121586,
+      "raw_bytes": 195576,
+      "raw_sha256": "e539ce8a108e3d0bcd6f6b1dd39bcc6a6eea48979d841f479b407ae128388e41",
+      "surface_id": "road_lane_band_r2_sparse_varint_arclength",
+      "total_road_lane_flips": 235148,
+      "verdict_scope": "ASSUMPTION(receiver-field) for band coordinate derivation; INSTANCE for this serialized stream"
+    },
+    {
+      "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_se3_20260804/edge_partition_payloads/road_lane_band_r1_run_arclength.lzma1-raw.bin",
+      "band_pixels": 1173933,
+      "band_precision": 0.1377080293338717,
+      "best_bytes": 117152,
+      "best_codec": "lzma1-raw",
+      "best_sha256": "2371445916ad7d2c0f6a27d96068d53a611da416e1964dcb84f94bfdc621a5fb",
+      "break_even_survival_no_pose_no_collateral": 0.5692221772153666,
+      "bytes_per_captured_flip": 0.7246814301620685,
+      "candidate_kind": "run-length arclength edit intervals plus target-side bits",
+      "capture_fraction": 0.6874819262762175,
+      "captured_flips": 161660,
+      "claim_label": "MEASURED description bytes; DERIVED break-even arithmetic; scorer-free",
+      "coder_race": [
+        {
+          "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_se3_20260804/edge_partition_payloads/road_lane_band_r1_run_arclength.lzma1-raw.bin",
+          "bytes": 117152,
+          "codec": "lzma1-raw",
+          "sha256": "2371445916ad7d2c0f6a27d96068d53a611da416e1964dcb84f94bfdc621a5fb"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 119658,
+          "codec": "brotli-q11",
+          "sha256": "207f621945e2d0025515844a9e9bd3d690353f95524db8d3288da747bcfee59f"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 129533,
+          "codec": "zlib-9",
+          "sha256": "a19052d83638061228a4e7be72fe223d5f62ba481cf3851ff135ef1a8058941b"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 134375,
+          "codec": "smevr-r7-nibble",
+          "sha256": "8b92d9bc00884336b0d3707f258aee37dfc52476f063ee9e785d18c4b3a701fe"
+        }
+      ],
+      "gross_S_if_100pct_survival": 0.13704087999131945,
+      "net_S_if_100pct_survival_no_pose_no_collateral": -0.059034171915150827,
+      "radius": 1,
+      "rate_S": 0.07800670807616862,
+      "raw_bytes": 248157,
+      "raw_sha256": "32ae2800d38747e9982cac27283d51a9867799213bdf45979040f66457fa3337",
+      "surface_id": "road_lane_band_r1_run_arclength",
+      "total_road_lane_flips": 235148,
+      "verdict_scope": "ASSUMPTION(receiver-field) for band coordinate derivation; INSTANCE for this serialized stream"
+    },
+    {
+      "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_se3_20260804/edge_partition_payloads/road_lane_band_r2_edit_plus_direction_bits.brotli-q11.bin",
+      "band_pixels": 1979246,
+      "band_precision": 0.08661328606954366,
+      "best_bytes": 117333,
+      "best_codec": "brotli-q11",
+      "best_sha256": "636394b9d4d4eeb5f206d629121827cb315712bac32922a036aab3aede310c1d",
+      "break_even_survival_no_pose_no_collateral": 0.5376139912187458,
+      "bytes_per_captured_flip": 0.6844407888980277,
+      "candidate_kind": "implicit arclength edit bitstream plus explicit target-side bits",
+      "capture_fraction": 0.7290259751305561,
+      "captured_flips": 171429,
+      "claim_label": "MEASURED description bytes; DERIVED break-even arithmetic; scorer-free",
+      "coder_race": [
+        {
+          "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_se3_20260804/edge_partition_payloads/road_lane_band_r2_edit_plus_direction_bits.brotli-q11.bin",
+          "bytes": 117333,
+          "codec": "brotli-q11",
+          "sha256": "636394b9d4d4eeb5f206d629121827cb315712bac32922a036aab3aede310c1d"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 130516,
+          "codec": "lzma1-raw",
+          "sha256": "135037c5c1600d5d7f88c158cd4b80ec1a6eb69e166f03f821ad35cf4f0b4784"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 139638,
+          "codec": "zlib-9",
+          "sha256": "d62a5da215c505b5ca2563e2aab4762dc9d028dcc8568b2d68900427bb4e1c17"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 141009,
+          "codec": "smevr-r7-nibble",
+          "sha256": "850b43efd4409eca43586459728583005d8fc70542d4a25d2252d0d08975ca70"
+        }
+      ],
+      "direction_bits": "counted for every edited band coordinate",
+      "gross_S_if_100pct_survival": 0.1453221638997396,
+      "net_S_if_100pct_survival_no_pose_no_collateral": -0.06719493535305586,
+      "radius": 2,
+      "rate_S": 0.07812722854668373,
+      "raw_bytes": 269357,
+      "raw_sha256": "2163f165a60a6e09225114be6bb3e41458d7a5741edd68f262c0f53b9a6a9285",
+      "surface_id": "road_lane_band_r2_edit_plus_direction_bits",
+      "total_road_lane_flips": 235148,
+      "verdict_scope": "ASSUMPTION(receiver-field) for band coordinate derivation; INSTANCE for this serialized stream"
+    },
+    {
+      "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_se3_20260804/edge_partition_payloads/road_lane_band_r3_sparse_varint_arclength.brotli-q11.bin",
+      "band_pixels": 2775154,
+      "band_precision": 0.06374240852940052,
+      "best_bytes": 126427,
+      "best_codec": "brotli-q11",
+      "best_sha256": "7edb0132721ded057178b885a2a51fc9dfedad910547f28eeec1c2695c85f79d",
+      "break_even_survival_no_pose_no_collateral": 0.5613826088061936,
+      "bytes_per_captured_flip": 0.714700811215693,
+      "candidate_kind": "sparse varint arclength edit indices plus target-side bits",
+      "capture_fraction": 0.752270910235256,
+      "captured_flips": 176895,
+      "claim_label": "MEASURED description bytes; DERIVED break-even arithmetic; scorer-free",
+      "coder_race": [
+        {
+          "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_se3_20260804/edge_partition_payloads/road_lane_band_r3_sparse_varint_arclength.brotli-q11.bin",
+          "bytes": 126427,
+          "codec": "brotli-q11",
+          "sha256": "7edb0132721ded057178b885a2a51fc9dfedad910547f28eeec1c2695c85f79d"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 135752,
+          "codec": "lzma1-raw",
+          "sha256": "b87bba522426b4afc9cda534a50063fd33ed621659c3bf3d3cb26e1724f3cc38"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 143223,
+          "codec": "zlib-9",
+          "sha256": "99aefc390e29efca619a81fe414c2a58d40ad08551970ac36b0b9ce1a2c3f392"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 150363,
+          "codec": "smevr-r7-nibble",
+          "sha256": "e9f1565108d3f3c6e4123c5c66b47b0921dea85f064d0ddcedaac5feb91256ea"
+        }
+      ],
+      "gross_S_if_100pct_survival": 0.14995574951171875,
+      "net_S_if_100pct_survival_no_pose_no_collateral": -0.06577319964534199,
+      "radius": 3,
+      "rate_S": 0.08418254986637676,
+      "raw_bytes": 201940,
+      "raw_sha256": "912b6358ac4ab77d4bffa185a0fd2f8b4066eeed711e4895b4823dc1161746f1",
+      "surface_id": "road_lane_band_r3_sparse_varint_arclength",
+      "total_road_lane_flips": 235148,
+      "verdict_scope": "ASSUMPTION(receiver-field) for band coordinate derivation; INSTANCE for this serialized stream"
+    },
+    {
+      "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_se3_20260804/edge_partition_payloads/road_lane_band_r3_edit_plus_direction_bits.brotli-q11.bin",
+      "band_pixels": 2775154,
+      "band_precision": 0.06374240852940052,
+      "best_bytes": 131098,
+      "best_codec": "brotli-q11",
+      "best_sha256": "b561de51f0c010bd75bd7313f6ead297255bd6b22a4a135f376b8ecba6030e14",
+      "break_even_survival_no_pose_no_collateral": 0.5821235752590378,
+      "bytes_per_captured_flip": 0.7411063060007349,
+      "candidate_kind": "implicit arclength edit bitstream plus explicit target-side bits",
+      "capture_fraction": 0.752270910235256,
+      "captured_flips": 176895,
+      "claim_label": "MEASURED description bytes; DERIVED break-even arithmetic; scorer-free",
+      "coder_race": [
+        {
+          "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_se3_20260804/edge_partition_payloads/road_lane_band_r3_edit_plus_direction_bits.brotli-q11.bin",
+          "bytes": 131098,
+          "codec": "brotli-q11",
+          "sha256": "b561de51f0c010bd75bd7313f6ead297255bd6b22a4a135f376b8ecba6030e14"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 142743,
+          "codec": "lzma1-raw",
+          "sha256": "25e6f3ffaeb2c2b6b47853e01db4856e8760b2cc43e7fb48b66b17587edaad91"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 153393,
+          "codec": "smevr-r7-nibble",
+          "sha256": "23437355bc2a49c4131eb3e1992fde91f46bbb8f0472e8b70857da0db3a7bd68"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 155066,
+          "codec": "zlib-9",
+          "sha256": "4200754aacc8b515b79c55fa3dd39aa9c47c80166a1ba931a702111649922141"
+        }
+      ],
+      "direction_bits": "counted for every edited band coordinate",
+      "gross_S_if_100pct_survival": 0.14995574951171875,
+      "net_S_if_100pct_survival_no_pose_no_collateral": -0.06266297247530833,
+      "radius": 3,
+      "rate_S": 0.08729277703641042,
+      "raw_bytes": 369537,
+      "raw_sha256": "d76def4950574176676833765f503c4e33582f26fa691a74cdfb1a4efde75ebe",
+      "surface_id": "road_lane_band_r3_edit_plus_direction_bits",
+      "total_road_lane_flips": 235148,
+      "verdict_scope": "ASSUMPTION(receiver-field) for band coordinate derivation; INSTANCE for this serialized stream"
+    },
+    {
+      "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_se3_20260804/edge_partition_payloads/road_lane_band_r2_run_arclength.lzma1-raw.bin",
+      "band_pixels": 1979246,
+      "band_precision": 0.08661328606954366,
+      "best_bytes": 134935,
+      "best_codec": "lzma1-raw",
+      "best_sha256": "afedc171cf18f5e57174ce2ec6438dc63e4041affca67c7a7e78c5b03e617407",
+      "break_even_survival_no_pose_no_collateral": 0.6182654828999639,
+      "bytes_per_captured_flip": 0.7871188655361695,
+      "candidate_kind": "run-length arclength edit intervals plus target-side bits",
+      "capture_fraction": 0.7290259751305561,
+      "captured_flips": 171429,
+      "claim_label": "MEASURED description bytes; DERIVED break-even arithmetic; scorer-free",
+      "coder_race": [
+        {
+          "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_se3_20260804/edge_partition_payloads/road_lane_band_r2_run_arclength.lzma1-raw.bin",
+          "bytes": 134935,
+          "codec": "lzma1-raw",
+          "sha256": "afedc171cf18f5e57174ce2ec6438dc63e4041affca67c7a7e78c5b03e617407"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 135459,
+          "codec": "brotli-q11",
+          "sha256": "37b0c54f8e748df92f1d7a347f989456aa1b95adef6bf5f2faa7fb86c6080b9a"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 148111,
+          "codec": "zlib-9",
+          "sha256": "238b12b55a2be492d0a4db08fe87a1760e53e306491690658dd832b93dff85b0"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 160904,
+          "codec": "smevr-r7-nibble",
+          "sha256": "e273a6a413367c769af4350ac012e273f562106451d74ed1a8c45770d0010c5d"
+        }
+      ],
+      "gross_S_if_100pct_survival": 0.1453221638997396,
+      "net_S_if_100pct_survival_no_pose_no_collateral": -0.055474486060199404,
+      "radius": 2,
+      "rate_S": 0.08984767783954019,
+      "raw_bytes": 253262,
+      "raw_sha256": "a7f8bba2ce89b3c33613816f4afa1de72b8d14d8f5a84050159163d22d0b03bc",
+      "surface_id": "road_lane_band_r2_run_arclength",
+      "total_road_lane_flips": 235148,
+      "verdict_scope": "ASSUMPTION(receiver-field) for band coordinate derivation; INSTANCE for this serialized stream"
+    },
+    {
+      "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_se3_20260804/edge_partition_payloads/road_lane_band_r3_run_arclength.brotli-q11.bin",
+      "band_pixels": 2775154,
+      "band_precision": 0.06374240852940052,
+      "best_bytes": 142561,
+      "best_codec": "brotli-q11",
+      "best_sha256": "3d956e84e93430bb796617bf7d8a1fadf6d2c2f647f39887b693cca79a64bc18",
+      "break_even_survival_no_pose_no_collateral": 0.6330235321095949,
+      "bytes_per_captured_flip": 0.8059074592272252,
+      "candidate_kind": "run-length arclength edit intervals plus target-side bits",
+      "capture_fraction": 0.752270910235256,
+      "captured_flips": 176895,
+      "claim_label": "MEASURED description bytes; DERIVED break-even arithmetic; scorer-free",
+      "coder_race": [
+        {
+          "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_se3_20260804/edge_partition_payloads/road_lane_band_r3_run_arclength.brotli-q11.bin",
+          "bytes": 142561,
+          "codec": "brotli-q11",
+          "sha256": "3d956e84e93430bb796617bf7d8a1fadf6d2c2f647f39887b693cca79a64bc18"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 146332,
+          "codec": "lzma1-raw",
+          "sha256": "f917ddf8cbf903479b6f4927dc35b89b17b224049dd28455f9a9c0f071cd490c"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 159042,
+          "codec": "zlib-9",
+          "sha256": "6e506fd2675fa759ae2870cd3819c90f1299fc3c02f720bb53462b8862582787"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 178737,
+          "codec": "smevr-r7-nibble",
+          "sha256": "e5894e1a0328234ac5c2b617d54b054fd93a004c98877244027ff1ca5b98ff50"
+        }
+      ],
+      "gross_S_if_100pct_survival": 0.14995574951171875,
+      "net_S_if_100pct_survival_no_pose_no_collateral": -0.05503023129566888,
+      "radius": 3,
+      "rate_S": 0.09492551821604987,
+      "raw_bytes": 256026,
+      "raw_sha256": "6fc9c8ba97ba3b1f8b014b213434f23a173fa6a718e5e6efffe6fc0549a79367",
+      "surface_id": "road_lane_band_r3_run_arclength",
+      "total_road_lane_flips": 235148,
+      "verdict_scope": "ASSUMPTION(receiver-field) for band coordinate derivation; INSTANCE for this serialized stream"
+    }
+  ],
+  "comparison_baselines": {
+    "ed1_section": {
+      "archive_delta_bytes": 169351,
+      "break_even_survival_no_pose_no_collateral": 0.6964303814414221,
+      "bytes": 169149,
+      "captured_flips": 191005,
+      "scope": "byte-closed receiver-consumed candidate; scorer-unvalidated",
+      "source": ".omx/research/ddm_ed1_per_edge_carrier_20260804.md"
+    },
+    "sg3_band_k1": {
+      "break_even_survival_no_pose_no_collateral": 0.39533906761411075,
+      "bytes": 81365,
+      "captured_flips": 161660,
+      "scope": "ASSUMPTION(receiver-field), side-implied edit bits",
+      "source": ".omx/research/ddm_sg3_cheap_addr.json"
+    }
+  },
+  "coordinate_chart": {
+    "closure_requirement": "rerun against the live generator class field; if the receiver cannot derive this chart, use full-position rows instead",
+    "description": "receiver-derived Road/Lane band from current argmax stand-in, ordered by deterministic band raster/arclength coordinates",
+    "no_absolute_xy_counted": true
+  },
+  "inputs": {
+    "class_order": {
+      "Lane": 1,
+      "Road": 0
+    },
+    "current_argmax": "/Volumes/VertigoDataTier/pact/ddm_pu2_20260803/argmax_cache/cx1_argmax_n600.npy",
+    "current_argmax_sha256": "5e903de650e60ec6a64b34eb455fa1bc911223551d0b31e9ae45cc906e1490be",
+    "gt_argmax": "/Volumes/VertigoDataTier/pact/ddm_pu2_20260803/argmax_cache/gt_argmax_n600.npy",
+    "gt_argmax_sha256": "b74a14b226a5aceb5824899898bcb06e5413c54b7db2441268da7bc91a10db5d"
+  },
+  "meta": {
+    "pairs": 600,
+    "rate_exchange_bytes_per_flip": 1.2731082153320312,
+    "seg_h": 384,
+    "seg_w": 512,
+    "slots": 117964800,
+    "total_road_lane_flips": 235148
+  },
+  "n600_scorer_job": false,
+  "promotion_eligible": false,
+  "schema": "ddm_se3_edge_partition_price.v1",
+  "score_claim": false,
+  "selection_mode": "n600 all pairs; no prefix"
+}
