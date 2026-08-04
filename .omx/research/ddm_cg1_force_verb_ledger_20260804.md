@@ -278,3 +278,56 @@ with the barrier result. Control: `d_seg` rel_err **0.0**, tiling covers the pla
 its error check). Rather than silence it, finiteness of both the inputs and the result is **asserted
 and recorded** in the receipt, so a real fault cannot later hide behind a warning we learned to ignore.
 `[macOS-CPU advisory]`, **0 scorer forwards**, no pointer moved, nothing bankable as a score.
+
+---
+
+# APPENDIX B — F2: `oracle_assisted` + the consumption gate (from `xa2`'s mirage sweep, `dc447d8c21`)
+
+`xa2` queued F2 to "the ledger owner"; that is this arm, since `cg1` owns the annotation layer on
+`fl2`'s schema. Landed in `src/tac/witness_control/force_class_edge_ledger.py`.
+
+## B.1 The third kind
+
+`MAGNITUDE_KINDS` gains **`oracle_assisted`** beside `description_gap` / `realized_through_R`.
+
+The reason it needs its *own* kind rather than a demotion: per `bz1`'s mirage law, an η priced
+through a scorer-**guided** realizer is a real measurement made with **an instrument the shipped
+decoder does not have**. Calling it a `description_gap` *understates* it (it is not a ceiling — it was
+actually achieved); calling it `realized_through_R` *banks* it (it cannot be reproduced by the legal
+receiver). Neither existing kind is honest, so a third was the only non-lossy option.
+
+## B.2 The gate — a magnitude cannot be read without its kind
+
+`consume_magnitude(row, *, accept_kinds=BANKABLE_MAGNITUDE_KINDS)` is now the only way to get a
+magnitude out of the module for composition. It **defaults to strict** (`realized_through_R` only);
+widening is explicit and greppable. `composed_candidate_total` sums through the same gate and
+**refuses the whole sum if any part fails** rather than skipping it — a silently-skipped part is how
+a composed total stops meaning its name. A mistyped kind in `accept_kinds` (e.g. the British
+`realised_through_R`) raises rather than silently matching nothing.
+
+**Live census — this is why the gate matters:** of 69 rows, 17 carry a magnitude —
+**13 `description_gap`, 4 `realized_through_R`, 0 `oracle_assisted`.** Only **4 of 17 (23.5%) are
+bankable.** A consumer that read `magnitude_s` and ignored `magnitude_kind` would sum roughly **4×**
+the recoverable total. The oracle set being empty is now *measured* empty (`oracle_assisted_row_ids`
+is reported alongside its denominator), not merely unlooked-at — which is the field's standing job.
+
+## B.3 Caught in my own second pass
+
+`composed_candidate_total([])` returned **0.0**. An empty composition is a filtering bug, but it read
+as a clean zero-delta candidate — `m50` vacuity-equals-pass at the composition layer, in code I had
+just written to prevent exactly that class elsewhere. It now refuses with an explicit message. Test
+added.
+
+## B.4 Coverage and scope
+
+`fl2` shipped `magnitude_kind` — its headline addition — with **zero test coverage**. That gap is now
+closed: 19 tests in `src/tac/witness_control/tests/test_force_ledger_magnitude_kind.py` covering the
+schema, construction-time refusals, the gate, composition, and the census. `fl2`'s own 32 tests still
+pass; total 73 green across the three force-ledger suites.
+
+**Not mine, reported not fixed:** 17 tests fail elsewhere in `src/tac/witness_control/tests/`
+(`test_costate_live_ingest`, `test_costate_requential_curriculum`, `test_costate_warmstart_cluster`,
+`test_polyak_finisher`, `test_taskspace_g112_exact_checkpoint_partition_v1`,
+`test_taskspace_single_stage_score_attempt_v1`). **Proven pre-existing**: the identical 17 fail with
+my change stashed, none of the six modules imports the force ledger, and the package `__init__` does
+not import it either. They belong to other arms.

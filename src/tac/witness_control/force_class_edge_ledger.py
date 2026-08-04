@@ -135,8 +135,31 @@ PROTECTIONS: tuple[str, ...] = (
 MAGNITUDE_KINDS: tuple[str, ...] = (
     "description_gap",     # magnitude_s = the SIZE of the gap/flip-mass (a CEILING, not recoverable as-is)
     "realized_through_R",  # magnitude_s = a MEASURED delta actually realized through the real decode/actuator
+    "oracle_assisted",     # magnitude_s = priced through a SCORER-GUIDED realizer -- an ORACLE number (cg1/xa2 F2)
     "N_A",                 # no magnitude on this row
 )
+
+# cg1 (xa2 F2): the third kind exists because of `bz1`'s MIRAGE LAW -- any eta/gain
+# priced through a scorer-GUIDED realizer is an oracle number; only the LEGAL
+# deterministic receiver produces a bankable price. An oracle magnitude is not a
+# lie and is not a description gap: it is a real measurement made with an
+# instrument the shipped decoder does not have. It therefore needs its own kind,
+# not a demotion to description_gap (which would understate it) and not
+# realized_through_R (which would bank it).
+#
+# The sweep found only TWO oracle-assisted magnitudes campaign-wide -- bz1's
+# phase-field eta (since re-priced dead) and rd1's honestly-labelled
+# c1_exact_solved. The field's job is to KEEP it that way at CONSUMPTION time:
+# a consumer that reads magnitude_s without reading magnitude_kind is the mirage
+# bug at the table layer, so `consume_magnitude` below refuses to hand one over
+# unless the caller has declared which kinds it accepts.
+ORACLE_ASSISTED_KINDS: frozenset[str] = frozenset({"oracle_assisted"})
+
+# What a COMPOSED CANDIDATE may bank by default. A composed candidate is a
+# submission-shaped sum of parts, so every part must be priced through the same
+# legal receiver; description gaps are ceilings and oracle numbers used an
+# instrument the decoder lacks. Both are excluded unless opted into explicitly.
+BANKABLE_MAGNITUDE_KINDS: frozenset[str] = frozenset({"realized_through_R"})
 
 FORCE_KINDS: tuple[str, ...] = (
     "OBJECTIVE",       # a loss/metric term
@@ -1724,6 +1747,98 @@ LEDGER: tuple[ForceLedgerRow, ...] = (
 
 
 # --------------------------------------------------------------------------- #
+# consumption gate (cg1 / xa2 F2) -- a magnitude may not be read without its kind
+# --------------------------------------------------------------------------- #
+
+class MagnitudeKindError(ValueError):
+    """Raised when a magnitude is consumed without honouring its kind."""
+
+
+def consume_magnitude(
+    row: ForceLedgerRow,
+    *,
+    accept_kinds: frozenset[str] | set[str] | tuple[str, ...] = BANKABLE_MAGNITUDE_KINDS,
+) -> float:
+    """Read ``row.magnitude_s``, but only against a DECLARED set of kinds.
+
+    This is the table-layer half of `bz1`'s mirage law. There is no way to get a
+    magnitude out of this module for composition without saying, at the call
+    site, what kind of price you are willing to bank -- so a description ceiling
+    or an oracle-assisted number cannot be summed into a composed candidate by a
+    consumer that simply forgot the kind field existed.
+
+    Defaults to ``BANKABLE_MAGNITUDE_KINDS`` (realized-through-R only), i.e. the
+    safe default is the strict one; widening is explicit and greppable.
+
+    Raises `MagnitudeKindError` if the row carries no magnitude, or carries one
+    whose kind the caller did not accept.
+    """
+    accept = frozenset(accept_kinds)
+    unknown = accept - set(MAGNITUDE_KINDS)
+    if unknown:
+        raise MagnitudeKindError(f"unknown magnitude kinds requested: {sorted(unknown)}")
+    if row.magnitude_s is None:
+        raise MagnitudeKindError(f"{row.row_id}: no magnitude_s to consume")
+    if row.magnitude_kind not in accept:
+        raise MagnitudeKindError(
+            f"{row.row_id}: magnitude_kind={row.magnitude_kind!r} is not in the accepted set "
+            f"{sorted(accept)}. A {row.magnitude_kind!r} magnitude may not be banked as if it "
+            "were realized through the legal receiver -- widen accept_kinds deliberately, or "
+            "price this row through the real decode first."
+        )
+    return float(row.magnitude_s)
+
+
+def composed_candidate_total(
+    rows: tuple[ForceLedgerRow, ...] | list[ForceLedgerRow],
+    *,
+    accept_kinds: frozenset[str] | set[str] | tuple[str, ...] = BANKABLE_MAGNITUDE_KINDS,
+) -> float:
+    """Sum magnitudes for a composed candidate, fail-closed on kind.
+
+    Every part of a composed candidate must be priced through the same receiver,
+    so this refuses the whole sum if ANY part fails the kind gate rather than
+    silently skipping it -- a silently-skipped part is how a composed total
+    quietly stops meaning what its name says.
+
+    An EMPTY composition also refuses rather than returning 0.0: a filter that
+    dropped every part would otherwise read as a clean zero-delta candidate,
+    which is the vacuity-equals-pass failure (`m50`) at the composition layer.
+    """
+    rows = list(rows)
+    if not rows:
+        raise MagnitudeKindError(
+            "composed candidate has no parts; refusing to report a 0.0 total. An empty "
+            "composition is a filtering bug, not a measured zero -- pass the parts, or "
+            "report 'no bankable parts' explicitly."
+        )
+    return sum(consume_magnitude(r, accept_kinds=accept_kinds) for r in rows)
+
+
+def magnitude_kind_census(rows: tuple[ForceLedgerRow, ...] = LEDGER) -> dict:
+    """How many magnitudes of each kind exist, and which are oracle-assisted.
+
+    Reports the DENOMINATOR so an empty oracle set reads as 'measured empty',
+    never as 'nobody looked'.
+    """
+    with_mag = [r for r in rows if r.magnitude_s is not None]
+    by_kind: dict[str, int] = {}
+    for r in with_mag:
+        by_kind[r.magnitude_kind] = by_kind.get(r.magnitude_kind, 0) + 1
+    oracle = [r.row_id for r in with_mag if r.magnitude_kind in ORACLE_ASSISTED_KINDS]
+    return {
+        "rows_total": len(rows),
+        "rows_with_magnitude": len(with_mag),
+        "by_kind": dict(sorted(by_kind.items())),
+        "bankable_rows": sum(
+            1 for r in with_mag if r.magnitude_kind in BANKABLE_MAGNITUDE_KINDS
+        ),
+        "oracle_assisted_row_ids": sorted(oracle),
+        "oracle_assisted_count": len(oracle),
+    }
+
+
+# --------------------------------------------------------------------------- #
 # queries
 # --------------------------------------------------------------------------- #
 
@@ -1903,7 +2018,7 @@ def main(argv: list[str] | None = None) -> int:
     elif args.scope:
         picked = by_scope(args.scope)
 
-    if args.coverage or picked is None and not args.jsonl:
+    if args.coverage or (picked is None and not args.jsonl):
         print(json.dumps(coverage(), indent=1))
     if picked is not None:
         for r in picked:
