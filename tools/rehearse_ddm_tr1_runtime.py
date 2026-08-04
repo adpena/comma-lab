@@ -65,11 +65,32 @@ target.parent.mkdir(parents=True, exist_ok=True)
 target.write_bytes(pair.tobytes())
 """
 
+# Resolve the interpreter explicitly and fail CLOSED.  A bare ``python`` is
+# not portable: on a host that ships only ``python3`` it dies with
+# "python: command not found", and a backgrounding wrapper then reports the
+# LAUNCHER's rc=0 instead of that 127 -- the failure and the success carry the
+# same symbol.  Measured live by ddm_ob1 2026-08-03 (task #929): an inflate of
+# the shipped pu2 archive reported exit 0 having produced nothing, caught only
+# by reading a zero-byte log.  ``exec`` keeps the runner's own exit status as
+# this script's exit status, so no rc can be swallowed here either.
 INFLATE_SH = b"""\
 #!/usr/bin/env bash
 set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-python "$HERE/inflate_runner.py" "$1" "$2" "$3"
+PY="${PYTHON:-}"
+if [ -z "${PY}" ]; then
+  for candidate in python3 python; do
+    if command -v "${candidate}" >/dev/null 2>&1; then
+      PY="${candidate}"
+      break
+    fi
+  done
+fi
+if [ -z "${PY}" ]; then
+  echo "inflate.sh: FATAL: no Python interpreter (tried PYTHON env var, python3, python)" >&2
+  exit 127
+fi
+exec "${PY}" "$HERE/inflate_runner.py" "$1" "$2" "$3"
 """
 
 
