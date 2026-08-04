@@ -14,12 +14,19 @@ This hook moves the law to the spawn site: an ``Agent`` call that does not name
 an allowed model is REFUSED, so the expensive default can no longer be reached
 by omission.
 
+THE LIVE RULE (operator 2026-08-04, superseding the above remedy): Claude
+subagents are OFF entirely — codex arms only, via the canonical detached
+``codex exec`` Pattern A, which runs through Bash and draws no Claude quota.
+``ALLOWED_MODELS`` is therefore empty and every Agent spawn refuses. The
+model-omission history is retained because it explains WHY the guard exists and
+what reverting the allow-set would re-expose.
+
 Scope notes:
-  * ``subagent_type: "fork"`` ALWAYS inherits the parent model by design (the
-    tool contract ignores ``model`` for forks) — forks are exempt, since there
-    is no override that could be passed.
-  * ``TAC_AGENT_MODEL_GUARD_OK=1`` is the deliberate escape hatch for a
-    genuinely-intended non-default routing (record the reason in the prompt).
+  * Forks are NOT exempt. A fork inherits the parent model by tool contract, but
+    it is still a Claude subagent on the same quota, so under the codex-only
+    directive it is refused like any other spawn.
+  * ``TAC_AGENT_MODEL_GUARD_OK=1`` is the deliberate escape hatch (record the
+    reason in the prompt).
 
 Design invariants (mirroring ``tools/launch_guard_hook.py``):
   * FAIL-OPEN — any exception ⇒ allow (exit 0, no output). A PreToolUse hook
@@ -43,39 +50,40 @@ from pathlib import Path
 _REPO = Path(__file__).resolve().parents[1]
 _ERROR_LOG = _REPO / ".omx" / "state" / "agent_model_routing_guard_errors.log"
 
-# Models an arm may be routed to WITHOUT tripping the guard. The routing law
-# names Opus; haiku is allowed for genuinely trivial mechanical arms because
-# naming it is still an explicit, deliberate choice (the bug was OMISSION).
-ALLOWED_MODELS = frozenset({"opus", "sonnet", "haiku"})
-# Forks inherit by contract — `model` is ignored for them, so there is nothing
-# to enforce and refusing would be unactionable.
-_INHERITING_SUBAGENT_TYPES = frozenset({"fork"})
+# OPERATOR DIRECTIVE 2026-08-04 (superseding the 07-31 "Opus for all arms" law):
+# CODEX ARMS ONLY. No Claude subagent may be spawned — not Opus, not Sonnet, not
+# Haiku, and not a fork (a fork is still a Claude subagent drawing the same
+# quota). The empty allow-set is the enforcement: `decide` refuses every Agent
+# spawn. If a future directive re-opens Claude arms, add the permitted model
+# names here and the guard reverts to enforcing explicit routing.
+ALLOWED_MODELS: frozenset[str] = frozenset()
 _ESCAPE_ENV = "TAC_AGENT_MODEL_GUARD_OK"
 
 BLOCK_MESSAGE = (
-    "BLOCKED by tools/agent_model_routing_guard_hook.py: this Agent spawn names no "
-    "`model`, so the subagent INHERITS the parent session model (client default: "
-    "fable). That omission burned weeks of Fable-5 rate limit in one day on "
-    "2026-08-04 across six concurrent arms. The standing routing law (operator "
-    "2026-07-31) is Opus for MAIN and all arms. Pass model=\"opus\" explicitly "
-    "(or another allowed model: {allowed}). Forks are exempt (they inherit by "
-    "contract). Deliberate exception: set {escape}=1."
+    "BLOCKED by tools/agent_model_routing_guard_hook.py: CLAUDE SUBAGENTS ARE OFF. "
+    "Operator directive 2026-08-04: codex arms only, spawned via the canonical "
+    "detached `codex exec` Pattern A (nohup + bash -c + disown, "
+    "-s workspace-write -m gpt-5.5 -c model_reasoning_effort=xhigh -o <last.txt>), "
+    "which runs through Bash and does not draw Claude quota. Context: omitting "
+    "`model` made every arm inherit the fable session default and burned weeks of "
+    "rate limit in one day on 2026-08-04; the operator's remedy is codex, not a "
+    "different Claude model. Deliberate exception: set {escape}=1."
 )
 
 
 def decide(tool_input: dict, env: dict) -> tuple[bool, str]:
-    """Return ``(blocked, reason)`` for one Agent tool_input. Pure."""
+    """Return ``(blocked, reason)`` for one Agent tool_input. Pure.
+
+    With ``ALLOWED_MODELS`` empty (the live 2026-08-04 directive) every spawn is
+    refused regardless of ``model`` or ``subagent_type`` — forks included, since
+    a fork is still a Claude subagent on the same quota.
+    """
     if env.get(_ESCAPE_ENV) == "1":
         return False, ""
-    subagent_type = tool_input.get("subagent_type")
-    if isinstance(subagent_type, str) and subagent_type.strip().lower() in _INHERITING_SUBAGENT_TYPES:
-        return False, ""
     model = tool_input.get("model")
-    if isinstance(model, str) and model.strip().lower() in ALLOWED_MODELS:
+    if ALLOWED_MODELS and isinstance(model, str) and model.strip().lower() in ALLOWED_MODELS:
         return False, ""
-    return True, BLOCK_MESSAGE.format(
-        allowed=", ".join(sorted(ALLOWED_MODELS)), escape=_ESCAPE_ENV
-    )
+    return True, BLOCK_MESSAGE.format(escape=_ESCAPE_ENV)
 
 
 def _log_error(exc: BaseException) -> None:

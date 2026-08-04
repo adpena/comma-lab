@@ -1,10 +1,11 @@
 # SPDX-License-Identifier: MIT
 """Tests for the Agent-model routing guard PreToolUse hook.
 
-The guard exists because on 2026-08-04 every subagent silently inherited the
-parent session model (Fable-5) and burned weeks of rate limit in a day. The
-decision surface is pure; these tests pin the exact allow/deny boundary plus
-the fail-open contract.
+Live law (operator 2026-08-04): CODEX ARMS ONLY — no Claude subagent may be
+spawned. ``ALLOWED_MODELS`` is empty, so every Agent spawn refuses regardless of
+``model`` or ``subagent_type``. These tests pin that, plus the fail-open contract
+(a PreToolUse hook must never brick a session) and the allow-set mechanism that a
+future directive would use to re-open Claude arms.
 """
 from __future__ import annotations
 
@@ -33,19 +34,24 @@ def hook():
     return _load()
 
 
-# --- the bug this guard extincts -------------------------------------------------
+# --- the live law: every Claude subagent spawn refuses ---------------------------
+
+
+def test_allow_set_is_empty_under_the_codex_only_directive(hook):
+    assert hook.ALLOWED_MODELS == frozenset()
 
 
 def test_omitted_model_is_blocked(hook):
     blocked, reason = hook.decide({"prompt": "do a thing"}, {})
     assert blocked is True
-    assert "model" in reason
+    assert reason
 
 
-def test_blocked_reason_names_the_incident_and_the_fix(hook):
-    _, reason = hook.decide({"prompt": "x"}, {})
-    assert "2026-08-04" in reason
-    assert 'model="opus"' in reason
+@pytest.mark.parametrize("model", ["opus", "sonnet", "haiku", "fable", "opuss", ""])
+def test_every_named_model_is_blocked(hook, model):
+    """Naming a model no longer helps — Claude subagents are off entirely."""
+    blocked, _ = hook.decide({"model": model, "prompt": "x"}, {})
+    assert blocked is True
 
 
 def test_none_model_is_blocked(hook):
@@ -53,52 +59,30 @@ def test_none_model_is_blocked(hook):
     assert blocked is True
 
 
-def test_empty_string_model_is_blocked(hook):
-    blocked, _ = hook.decide({"model": "", "prompt": "x"}, {})
-    assert blocked is True
-
-
-def test_unknown_model_name_is_blocked(hook):
-    """A typo must not silently pass — it would fall back to inheritance."""
-    blocked, _ = hook.decide({"model": "opuss", "prompt": "x"}, {})
-    assert blocked is True
-
-
-def test_fable_is_blocked_even_when_explicit(hook):
-    """`fable` is not in ALLOWED_MODELS: naming the expensive default still refuses."""
-    blocked, _ = hook.decide({"model": "fable", "prompt": "x"}, {})
-    assert blocked is True
-
-
-# --- the allow paths -------------------------------------------------------------
-
-
-@pytest.mark.parametrize("model", ["opus", "sonnet", "haiku"])
-def test_allowed_models_pass(hook, model):
-    blocked, reason = hook.decide({"model": model, "prompt": "x"}, {})
-    assert blocked is False
-    assert reason == ""
-
-
-def test_allowed_model_is_case_and_space_insensitive(hook):
-    blocked, _ = hook.decide({"model": "  Opus "}, {})
-    assert blocked is False
-
-
-def test_fork_subagent_type_is_exempt(hook):
-    """Forks inherit by tool contract — `model` is ignored, so refusing is unactionable."""
+def test_fork_subagent_type_is_blocked(hook):
+    """A fork inherits by tool contract but is still a Claude subagent on our quota."""
     blocked, _ = hook.decide({"subagent_type": "fork", "prompt": "x"}, {})
-    assert blocked is False
+    assert blocked is True
 
 
-def test_fork_exemption_is_case_insensitive(hook):
-    blocked, _ = hook.decide({"subagent_type": "FORK"}, {})
-    assert blocked is False
-
-
-def test_non_fork_subagent_type_still_needs_a_model(hook):
+def test_general_purpose_subagent_type_is_blocked(hook):
     blocked, _ = hook.decide({"subagent_type": "general-purpose"}, {})
     assert blocked is True
+
+
+def test_blocked_reason_names_the_directive_and_the_alternative(hook):
+    _, reason = hook.decide({"prompt": "x"}, {})
+    assert "2026-08-04" in reason
+    assert "codex exec" in reason
+    assert "CLAUDE SUBAGENTS ARE OFF" in reason
+
+
+def test_blocked_reason_has_no_unformatted_placeholders(hook):
+    _, reason = hook.decide({"prompt": "x"}, {})
+    assert "{" not in reason and "}" not in reason
+
+
+# --- the escape hatch ------------------------------------------------------------
 
 
 def test_escape_hatch_env_allows(hook):
@@ -107,9 +91,20 @@ def test_escape_hatch_env_allows(hook):
 
 
 def test_escape_hatch_requires_exactly_one(hook):
-    """A truthy-looking value that is not "1" must not open the hatch."""
     blocked, _ = hook.decide({"prompt": "x"}, {"TAC_AGENT_MODEL_GUARD_OK": "true"})
     assert blocked is True
+
+
+# --- the re-open mechanism (what a future directive would flip) ------------------
+
+
+def test_nonempty_allow_set_would_permit_a_named_model(hook, monkeypatch):
+    """If Claude arms re-open, the guard reverts to enforcing EXPLICIT routing."""
+    monkeypatch.setattr(hook, "ALLOWED_MODELS", frozenset({"opus"}))
+    assert hook.decide({"model": "opus"}, {})[0] is False
+    assert hook.decide({"model": "  Opus "}, {})[0] is False  # case/space tolerant
+    assert hook.decide({"prompt": "x"}, {})[0] is True  # omission still refuses
+    assert hook.decide({"model": "fable"}, {})[0] is True  # the expensive default
 
 
 # --- end-to-end process contract -------------------------------------------------
@@ -137,14 +132,14 @@ def test_process_denies_agent_spawn_without_model():
     emitted = json.loads(proc.stdout)
     assert emitted["hookSpecificOutput"]["permissionDecision"] == "deny"
     assert emitted["decision"] == "block"
-    # legacy + current shapes must carry the same reason
     assert emitted["reason"] == emitted["hookSpecificOutput"]["permissionDecisionReason"]
 
 
-def test_process_allows_agent_spawn_with_model():
+def test_process_denies_agent_spawn_with_model_opus():
+    """The 08-04 flip: naming opus used to pass, now refuses."""
     proc = _run({"tool_name": "Agent", "tool_input": {"model": "opus", "prompt": "x"}})
     assert proc.returncode == 0
-    assert proc.stdout.strip() == ""
+    assert json.loads(proc.stdout)["decision"] == "block"
 
 
 def test_process_ignores_other_tools():
@@ -160,13 +155,26 @@ def test_process_fails_open_on_garbage_stdin():
 
 
 def test_process_fails_open_on_empty_stdin():
+    """Regression: empty stdin once fell through to a DENY on nothing."""
     proc = _run("")
+    assert proc.returncode == 0
+    assert proc.stdout.strip() == ""
+
+
+def test_process_fails_open_on_empty_tool_input():
+    proc = _run({"tool_name": "Agent", "tool_input": {}})
     assert proc.returncode == 0
     assert proc.stdout.strip() == ""
 
 
 def test_process_fails_open_on_non_dict_tool_input():
     proc = _run({"tool_name": "Agent", "tool_input": ["not", "a", "dict"]})
+    assert proc.returncode == 0
+    assert proc.stdout.strip() == ""
+
+
+def test_process_fails_open_on_non_dict_payload():
+    proc = _run(["not", "a", "dict"])
     assert proc.returncode == 0
     assert proc.stdout.strip() == ""
 
