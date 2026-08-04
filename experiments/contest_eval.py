@@ -17,6 +17,7 @@ Usage:
 This is the ONLY valid way to measure a contest-compliant score. All other
 eval scripts (auth_eval_renderer.py, modal_auth_eval.py) are proxies.
 """
+
 import argparse
 import math
 import os
@@ -26,7 +27,6 @@ import sys
 import tempfile
 import time
 from pathlib import Path
-
 
 # Upstream constants (from frame_utils.py)
 OUT_W, OUT_H = 1164, 874
@@ -193,15 +193,22 @@ def parse_report(report_path: Path) -> dict:
         elif "Compression Rate" in line:
             result["rate"] = float(line.split(":")[-1].strip())
         elif "Final score" in line:
-            result["score"] = float(line.split("=")[-1].strip())
+            result["reported_final_score_display_rounded"] = float(line.split("=")[-1].strip())
 
-    required = ["posenet_dist", "segnet_dist", "rate", "score"]
+    required = ["posenet_dist", "segnet_dist", "rate"]
     missing = [k for k in required if k not in result]
     if missing:
         raise ValueError(
             f"FATAL: Failed to parse upstream report — missing fields: {missing}\n"
             f"Report contents:\n{text}"
         )
+    result["score_recomputed_from_components"] = (
+        100 * result["segnet_dist"]
+        + math.sqrt(10 * result["posenet_dist"])
+        + 25 * result["rate"]
+    )
+    result["score"] = result["score_recomputed_from_components"]
+    result["canonical_score_source"] = "score_recomputed_from_components"
     return result
 
 
@@ -327,7 +334,7 @@ def main():
         posenet_d = results.get("posenet_dist", 0)
         segnet_d = results.get("segnet_dist", 0)
         rate = results.get("rate", archive_bytes / gt_bytes)
-        score = results.get("score", 100 * segnet_d + math.sqrt(10 * posenet_d) + 25 * rate)
+        score = 100 * segnet_d + math.sqrt(10 * posenet_d) + 25 * rate
 
         print(f"  PoseNet dist:  {posenet_d:.8f}  →  √(10×d) = {math.sqrt(10 * posenet_d):.4f}")
         print(f"  SegNet dist:   {segnet_d:.8f}  →  100×d   = {100 * segnet_d:.4f}")
@@ -345,6 +352,11 @@ def main():
         # Write structured JSON
         structured = {
             "score": score,
+            "score_recomputed_from_components": score,
+            "canonical_score_source": "score_recomputed_from_components",
+            "reported_final_score_display_rounded": results.get(
+                "reported_final_score_display_rounded"
+            ),
             "posenet_dist": posenet_d,
             "segnet_dist": segnet_d,
             "archive_bytes": archive_bytes,

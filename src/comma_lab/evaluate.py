@@ -305,7 +305,10 @@ def evaluate_submission(
         archive_bytes = int(parsed["submission_bytes"])
         original_bytes = int(parsed["original_bytes"])
         current_rate = float(parsed["rate"])
-        current_score = float(parsed["final_score"])
+        # upstream/evaluate.py prints "Final score" rounded for display. The
+        # score that flows into workflow state must be recomputed from the
+        # unrounded component lines.
+        current_score = _score(seg, pose, current_rate)
 
         rule_bytes = _rule_faithful_bundle_bytes(name, submission_dir)
         rule_paths = _rule_faithful_bundle_paths(name, submission_dir)

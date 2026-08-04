@@ -332,10 +332,20 @@ FIXTURE = (
     / "subset_selection"
     / "gt_n600_per_pair_population.json"
 )
+POSE_FIXTURE = (
+    Path(__file__).resolve().parent
+    / "fixtures"
+    / "subset_selection"
+    / "pfs1_d2_pose_population.json"
+)
 
 
 def load_fixture() -> dict:
     return json.loads(FIXTURE.read_text(encoding="utf-8"))
+
+
+def load_pose_fixture() -> dict:
+    return json.loads(POSE_FIXTURE.read_text(encoding="utf-8"))
 
 
 def test_quantile_stratified_reproduces_known_n6() -> None:
@@ -436,19 +446,33 @@ def test_real_seg_prefix_is_flagged_at_n96() -> None:
     assert sel.ratios[0].verdict == VERDICT_DIFFERENT_POPULATION, sel.ratios[0].summary()
 
 
-def test_pose_magnitude_bias_is_flagged_even_at_n8() -> None:
-    """The axis that actually matters: na2's pose prefix is 2.54-4.21x.
+def test_real_pose_prefix_bias_rederives_mi1_receipt() -> None:
+    """ddm_mi1 re-derivation of na2's pose ratios from the PFS1 D2 receipt."""
+    fx = load_pose_fixture()
+    assert fx["derivation_source_sha256"] == (
+        "d2853c92090c28ebe558ece4a21b2847b55e25c9d768bef167bcba9dc67b72e5"
+    )
+    gov = fx["values"]
+    expected = {
+        24: (2.535475579649216, VERDICT_MATCHED),
+        48: (2.640181689154513, VERDICT_DIFFERENT_POPULATION),
+        64: (2.6477688499984713, VERDICT_DIFFERENT_POPULATION),
+        96: (4.206770932037034, VERDICT_DIFFERENT_POPULATION),
+    }
+    for n, (ratio, verdict) in expected.items():
+        r = governing_ratio(range(n), gov, seed=1, n_bootstrap=2000)
+        assert r.ratio == pytest.approx(ratio)
+        assert r.verdict == verdict, r.summary()
 
-    A bias of that size is caught at every n INCLUDING n=8 -- which is the size of
-    the smallest prefix behind the CLAUDE.md "post-hoc/stored pose carrier MEASURED
-    DEAD" closure. Where seg detection is marginal, pose detection is overwhelming,
-    and that asymmetry is the whole reason prefix bias is anti-conservative on pose.
-    """
-    for n in (8, 24, 96):
-        gov = [3.0] * n + [1.0] * (600 - n)
-        r = governing_ratio(range(n), gov, seed=1, n_bootstrap=800)
-        assert r.verdict == VERDICT_DIFFERENT_POPULATION, r.summary()
-        assert r.ratio is not None and r.ratio > 2.0
+
+def test_real_pose_prefix_n8_is_not_bankable_population_evidence() -> None:
+    """The actual n=8 prefix is too small for a population verdict."""
+    gov = load_pose_fixture()["values"]
+    r = governing_ratio(range(8), gov, seed=1, n_bootstrap=2000)
+    assert r.ratio == pytest.approx(1.2789847387169815)
+    assert r.verdict == VERDICT_MATCHED, r.summary()
+    assert r.null_p05 is not None and r.null_p95 is not None
+    assert r.null_p05 < r.ratio < r.null_p95
 
 
 def test_real_seg_stratified_and_random_are_matched() -> None:

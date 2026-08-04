@@ -215,6 +215,8 @@ class ReportMetrics:
     avg_posenet_dist: float | None = None
     avg_segnet_dist: float | None = None
     compression_rate: float | None = None
+    # Rounded human display parsed from upstream/evaluate.py's "Final score" line.
+    # Do not use it as the canonical score when components are present.
     final_score: float | None = None
     n_samples: int = 600  # upstream default when not reported
     submission_file_size: int | None = None
@@ -247,15 +249,16 @@ class ReportMetrics:
 
     @property
     def best_score(self) -> float:
-        """Best available score: parsed from report, or recomputed, or inf.
+        """Best available score: recomputed from components, or display line, or inf.
 
-        Prefers the score directly parsed from evaluate.py output (most
-        authoritative), falls back to recomputation, then to infinity.
+        upstream/evaluate.py rounds the printed "Final score" line for human
+        display. Component lines carry the precision needed for ranking, so
+        recomputation wins whenever it is possible.
         """
-        if self.final_score is not None:
-            return self.final_score
         if self.computed_score is not None:
             return self.computed_score
+        if self.final_score is not None:
+            return self.final_score
         return float("inf")
 
 

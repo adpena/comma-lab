@@ -35,21 +35,26 @@ d_seg/d_pose SCORE, and only after byte-close + contest-CPU/CUDA exact eval.
 
 from __future__ import annotations
 
+import re
 import sys
 import warnings
 from pathlib import Path
 
 __all__ = [
-    "FEASIBILITY_ONLY_TAG",
-    "FEASIBILITY_ONLY_MARKER",
-    "REALIZED_HARNESS_TOKENS",
-    "PROXY_DSEG_SIGNATURE_TOKENS",
-    "GT_ARGMAX_TOKENS",
-    "VALIDATION_LEDGER_REL",
     "CONTEST_FAITHFUL_R_FN",
+    "FEASIBILITY_ONLY_MARKER",
+    "FEASIBILITY_ONLY_TAG",
+    "GIT_LOG_WC_COUNT_PATTERN",
+    "GT_ARGMAX_TOKENS",
+    "PROXY_DSEG_SIGNATURE_TOKENS",
+    "REALIZED_HARNESS_TOKENS",
     "STALE_SWAP_R_FN",
-    "warn_feasibility_only_dseg",
+    "VALIDATION_LEDGER_REL",
+    "assert_no_git_log_wc_count_consumers",
+    "find_git_log_wc_count_consumers",
+    "validation_ledger_path",
     "warn_ema_only_dseg",
+    "warn_feasibility_only_dseg",
     "warn_stale_swap_roundtrip",
 ]
 
@@ -103,6 +108,42 @@ STALE_SWAP_R_FN = "apply_eval_roundtrip_nhwc"
 
 # Validation ledger (proof the realized harness == the contest oracle).
 VALIDATION_LEDGER_REL = "reports/realized_harness_vs_oracle_validation.json"
+
+# ddm_mi1 / task #885: formatted `git log` output is not a count authority.
+# In at least one runner path (`rtk`) the pipe capped at 50 rows while
+# `git rev-list --count` returned the true five-digit count. Treat the shell
+# pipeline as a measurement-integrity hazard wherever it is newly introduced.
+GIT_LOG_WC_COUNT_PATTERN = re.compile(
+    r"\bgit\s+log\b[^\n|]*\\?\|\s*wc\s+-l\b",
+    re.IGNORECASE,
+)
+
+
+def find_git_log_wc_count_consumers(text: str, relpath: str = "<text>") -> list[str]:
+    """Return lines that count commits via `git log ... | wc -l`.
+
+    Use `git rev-list --count <range>` instead. This check is deliberately about
+    the shell pipeline, not every possible Git invocation: it targets the exact
+    instrument that silently undercounted in ddm_mi1's input receipt.
+    """
+
+    hits: list[str] = []
+    for lineno, line in enumerate(text.splitlines(), 1):
+        if GIT_LOG_WC_COUNT_PATTERN.search(line):
+            hits.append(f"{relpath}:{lineno}: {line.strip()}")
+    return hits
+
+
+def assert_no_git_log_wc_count_consumers(text: str, relpath: str = "<text>") -> None:
+    """Raise if `text` contains the non-authoritative git-log line-count idiom."""
+
+    hits = find_git_log_wc_count_consumers(text, relpath)
+    if hits:
+        joined = "\n".join(hits)
+        raise AssertionError(
+            "non-authoritative commit count: use `git rev-list --count` instead of "
+            f"`git log ... | wc -l`\n{joined}"
+        )
 
 
 def _banner(lines: list[str]) -> None:
