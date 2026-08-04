@@ -212,7 +212,10 @@ their break-even is achievable; they are listed for completeness of the ladder.
 
 ### KILL-1 (bankable) — Road↔Lane as an explicitly shipped per-slot mask
 
-This is the operator's named interface and it is **dead by address floor alone, for every realizer.**
+This is the operator's named interface. It is **dead for every realizer whose survival is ≤ 66.30%**
+— and the only survival ever measured on it is `cg3`'s **55.5%**. The kill is *conditional on that
+survival*, and I state the condition rather than hiding it: the address floor does not kill the row
+at survival > 66.30%, it kills it at the survival we have actually observed.
 
 ```
 address floor            198,468 B = 0.132152 S rate      (MEASURED, real coder, lower bound)
@@ -224,8 +227,10 @@ cg3 MEASURED survival                       55.50%        short by 1.195x
 
 **This independently reproduces `cg3`'s net loss (+0.130073 S) from a different instrument** —
 `cg3` priced a camera-paint *realization*; I priced only the *address*, and the address alone
-already exceeds the achievable seg. Two arms, disjoint methods, same verdict. `cg3`'s loss is
-therefore **not** an artifact of its chosen realizer: no realizer rescues this row at this address.
+already exceeds the achievable seg **at cg3's measured survival**. Two arms, disjoint methods, same
+verdict. This matters for attribution: `cg3`'s loss is **not** merely an artifact of its chosen
+paint mechanism — swapping realizers rescues this row only by moving survival past 66.30%, which is
+a **1.195× improvement on the best survival anyone has measured here**, not a free re-roll.
 
 **SPEC (not a kill of the family):** needs the **survival × address-efficiency product improved
 1.195×**. Either survival 0.555 → **>0.663**, or address 198,468 → **<166,100 B**, or any product
