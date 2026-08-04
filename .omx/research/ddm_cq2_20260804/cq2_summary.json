@@ -1,0 +1,81 @@
+{
+  "arm": "ddm_cq2_20260804",
+  "status": "BLOCKED_DATASET_ABSENT_OR_INCOMPLETE",
+  "axis": "macOS-CPU advisory / public-data custody preflight / scorer-free",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "n600_scorer_job": false,
+  "checked_utc": "2026-08-04T22:27:28Z",
+  "repo_head": "2c5fda118298429b7a262b1c13048818ee614634",
+  "own_vehicle_frontier": {
+    "S": 0.7539807296911207,
+    "bytes": 357836,
+    "axis": "macOS-CPU advisory"
+  },
+  "teacher": {
+    "path": "/Volumes/VertigoDataTier/pact/public_models/comma10k_segnet",
+    "model_sha256": "8208672861ad1b111dc98f3a7c54196d29875b709c7353e2dd1b7614343fb3a8",
+    "albumentations_config_eval_sha256": "d260853fe0a993e23613ff38039fdce59264f5fe31f729c1fa65f8c3e5fde913",
+    "config_sha256": "2b8f16dbad9bd85386609386a9cb5dedc6e0c518253a9af484e0a128d9463c88"
+  },
+  "dataset": {
+    "path": "/Volumes/VertigoDataTier/pact/public_datasets/comma10k",
+    "remote_url": "https://github.com/commaai/comma10k",
+    "rev_parse_head_rc": 128,
+    "rev_parse_head_stderr": "fatal: ambiguous argument 'HEAD': unknown revision or path not in the working tree.",
+    "symbolic_ref_head_rc": 128,
+    "symbolic_ref_head_stderr": "fatal: No such ref: HEAD",
+    "maxdepth_2_file_count": 4,
+    "maxdepth_4_file_count": 20,
+    "non_git_data_files_found_maxdepth_4": 0,
+    "lock_marker": "/Volumes/VertigoDataTier/pact/public_datasets/comma10k/.git/shallow.lock",
+    "pack_marker": "/Volumes/VertigoDataTier/pact/public_datasets/comma10k/.git/objects/pack/tmp_pack_xkG6pP"
+  },
+  "cq1_predecessor": {
+    "overlap_fraction": 0.9970011534,
+    "overlap_numerator": 8644,
+    "overlap_denominator": 8670,
+    "teacher_argmax_npy_sha256": "249ad030e60025ad46464fa78ff7957753b056371761140e2891978107a0d44a"
+  },
+  "se3_prices": {
+    "W_bytes_per_flip": 1.2731082153320312,
+    "captured_flips": 161660,
+    "side_implied_stream_bytes": 81365,
+    "explicit_direction_stream_bytes": 100904,
+    "ed1_section_baseline_bytes": 169149,
+    "derived_thresholds": [
+      {
+        "student_counted_bytes": 25000,
+        "side_implied_total_bytes": 106365,
+        "side_implied_break_even_survival": 0.5168099296598647,
+        "explicit_direction_total_bytes": 125904,
+        "explicit_direction_break_even_survival": 0.6117466966003442
+      },
+      {
+        "student_counted_bytes": 75000,
+        "side_implied_total_bytes": 156365,
+        "side_implied_break_even_survival": 0.7597516537513725,
+        "explicit_direction_total_bytes": 175904,
+        "explicit_direction_break_even_survival": 0.854688420691852
+      },
+      {
+        "student_counted_bytes": 150000,
+        "side_implied_total_bytes": 231365,
+        "side_implied_break_even_survival": 1.1241642398886345,
+        "explicit_direction_total_bytes": 250904,
+        "explicit_direction_break_even_survival": 1.219101006829114
+      }
+    ]
+  },
+  "measurements_not_performed": [
+    "comma10k train/val split",
+    "student training",
+    "student compression",
+    "comma10k-val Road/Lane IoU",
+    "CQ1 overlap remeasurement",
+    "contest SegNet/PoseNet forward",
+    "upstream/evaluate.py",
+    "archive.zip"
+  ],
+  "follow_on_disposition": "QUEUED-WITH-FIRE-ORDER"
+}
