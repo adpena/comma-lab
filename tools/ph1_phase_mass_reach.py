@@ -186,6 +186,59 @@ def _shifted_gather(realized: np.ndarray, ys: np.ndarray, xs: np.ndarray, dy: in
     return realized[yy, xx]
 
 
+def _cell_normal_allowed(
+    ys: np.ndarray,
+    xs: np.ndarray,
+    lab: np.ndarray,
+    ncell: int,
+    shifts: list[tuple[int, int]],
+    tol_px: float,
+) -> np.ndarray:
+    """allowed[cell, shift]: restrict each cell's offset to its own boundary NORMAL.
+
+    WHY THIS IS FREE TO ADDRESS.  The direction is computed from the boundary geometry of the
+    DECODED field, which the receiver already holds -- so the encoder transmits only the
+    scalar magnitude along it, not the 2-D vector.  That is the 'rank-into-receiver-field'
+    idea applied to direction: the receiver derives WHERE-and-WHICH-WAY, the stream carries
+    HOW-FAR.
+
+    The tangent is the principal axis of the cell's band-pixel coordinates (a boundary is
+    locally a curve, so PCA of its support recovers its direction); the normal is its
+    perpendicular.  A shift is allowed when its TANGENTIAL component is under ``tol_px``.
+    The zero shift is always allowed, so this rung can never score worse than 'no correction'.
+    """
+    del tol_px  # superseded: the allowed set is now the exact 1-DOF ladder round(m * normal)
+    allowed = np.zeros((ncell, len(shifts)), dtype=bool)
+    shift_index = {s: i for i, s in enumerate(shifts)}
+    rmax = max(abs(s[0]) for s in shifts)
+    order = np.argsort(lab, kind="stable")
+    lab_s, ys_s, xs_s = lab[order], ys[order].astype(np.float64), xs[order].astype(np.float64)
+    bounds = np.searchsorted(lab_s, np.arange(ncell + 1))
+    zero_i = shift_index[(0, 0)]
+    for c in range(ncell):
+        a, b = bounds[c], bounds[c + 1]
+        allowed[c, zero_i] = True
+        if b - a < 2:
+            continue
+        cy, cx = ys_s[a:b], xs_s[a:b]
+        cy = cy - cy.mean()
+        cx = cx - cx.mean()
+        # Principal axis via the 2x2 scatter matrix (closed form, no SVD needed).
+        sxx, syy, sxy = float((cx * cx).sum()), float((cy * cy).sum()), float((cx * cy).sum())
+        theta = 0.5 * np.arctan2(2.0 * sxy, sxx - syy)
+        ty, tx = np.sin(theta), np.cos(theta)  # unit tangent
+        ny, nx = -tx, ty  # unit normal
+        # EXACTLY one scalar DOF: the offset is round(m * normal) for integer m.  This is the
+        # honest 1-DOF alphabet (2*rmax+1 symbols), not an angular tolerance band -- the
+        # earlier tolerance form rejected large oblique shifts and understated the rung.
+        for m in range(-rmax, rmax + 1):
+            key = (round(m * ny), round(m * nx))
+            j = shift_index.get(key)
+            if j is not None:
+                allowed[c, j] = True
+    return allowed
+
+
 def _block_labels(ys: np.ndarray, xs: np.ndarray, k: int) -> tuple[np.ndarray, int]:
     """Label band pixels by which KxK grid cell they fall in."""
     ncol = (W_PIX + k - 1) // k
@@ -194,7 +247,12 @@ def _block_labels(ys: np.ndarray, xs: np.ndarray, k: int) -> tuple[np.ndarray, i
 
 
 def sweep_pair(
-    gt_p: np.ndarray, realized_p: np.ndarray, rmax: int, block_sizes: tuple[int, ...]
+    gt_p: np.ndarray,
+    realized_p: np.ndarray,
+    rmax: int,
+    block_sizes: tuple[int, ...],
+    normal_blocks: tuple[int, ...] = (),
+    normal_tol_px: float = 0.75,
 ) -> dict:
     """Run the full translation sweep for one pair over every partition granularity.
 
@@ -230,6 +288,14 @@ def sweep_pair(
         best[name] = np.full(ncell, np.iinfo(np.int64).max, dtype=np.int64)
         best_shift_idx[name] = np.zeros(ncell, dtype=np.int32)
 
+    # Full per-cell x per-shift tables, kept only for the block sizes that also get the
+    # normal-restricted variant (the restriction is a mask over shifts, so it needs the table).
+    full_tab: dict[str, np.ndarray] = {
+        f"block{k}": np.zeros((len(shifts), partitions[f"block{k}"][1]), dtype=np.int64)
+        for k in normal_blocks
+        if f"block{k}" in partitions
+    }
+
     pixel_always_flip = np.ones(n_band, dtype=bool)
     rung0 = -1
     for si, (dy, dx) in enumerate(shifts):
@@ -240,6 +306,8 @@ def sweep_pair(
         pixel_always_flip &= isflip
         for name, (lab, ncell) in partitions.items():
             cur = np.bincount(lab[isflip], minlength=ncell) if isflip.any() else np.zeros(ncell, np.int64)
+            if name in full_tab:
+                full_tab[name][si] = cur
             better = cur < best[name]
             best_shift_idx[name][better] = si
             np.minimum(best[name], cur, out=best[name])
@@ -268,6 +336,34 @@ def sweep_pair(
             full[occupied] = shift_arr[best_shift_idx[name][occupied]]
             offsets[name] = full
 
+    # --- normal-restricted variant: 1 receiver-derived DOF per cell instead of 2 ----------
+    # Estimate the normal from the TRUE argmax discontinuity pixels, not the rmax-dilated
+    # band: the band is thickened by rmax, which destroys the local curve structure PCA needs
+    # at 8-16 px cell scale (an 8 px cell's dilated band fills the cell and its principal axis
+    # is noise).  Cells with too few true-boundary pixels keep the full 2-DOF alphabet rather
+    # than being handed a fabricated direction.
+    bnd = np.zeros_like(realized_p, dtype=bool)
+    bnd[:-1, :] |= realized_p[:-1, :] != realized_p[1:, :]
+    bnd[1:, :] |= realized_p[:-1, :] != realized_p[1:, :]
+    bnd[:, :-1] |= realized_p[:, :-1] != realized_p[:, 1:]
+    bnd[:, 1:] |= realized_p[:, :-1] != realized_p[:, 1:]
+    on_bnd = bnd[ys, xs]
+    for name, tab in full_tab.items():
+        lab, ncell = partitions[name]
+        allowed = _cell_normal_allowed(
+            ys[on_bnd], xs[on_bnd], lab[on_bnd], ncell, shifts, normal_tol_px
+        )
+        masked = np.where(allowed.T, tab, np.iinfo(np.int64).max)
+        occupied = np.bincount(lab, minlength=ncell) > 0
+        n_occ = int(occupied.sum())
+        out_parts[f"{name}_normal"] = {
+            "flips": int(masked.min(axis=0)[occupied].sum()),
+            "n_cells_occupied": n_occ,
+            "frac_on_rim": 0.0,
+            "frac_cells_choosing_zero_shift": 0.0,
+            "mean_allowed_alphabet": float(allowed[occupied].sum(axis=1).mean()) if n_occ else 0.0,
+        }
+
     # Per-EDGE baseline decomposition (m91: decompose per EDGE, never per class).
     base_flip = gt_band != realized_p[ys, xs]
     edges_base: dict[str, int] = {}
@@ -294,6 +390,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--atlas", type=Path, required=True)
     ap.add_argument("--rmax", type=int, default=5)
     ap.add_argument("--block-sizes", type=str, default="64,32,16,8,4")
+    ap.add_argument("--normal-blocks", type=str, default="",
+                    help="block sizes that also get the normal-restricted (1-DOF) rung")
+    ap.add_argument("--normal-tol-px", type=float, default=0.75)
     ap.add_argument("--pairs", type=int, default=0, help="0 = all 600")
     ap.add_argument(
         "--selection-mode",
@@ -342,10 +441,11 @@ def main(argv: list[str] | None = None) -> int:
         sel = np.arange(N_PAIRS_FULL)
 
     block_sizes = tuple(int(k) for k in args.block_sizes.split(",") if k.strip())
+    normal_blocks = tuple(int(k) for k in args.normal_blocks.split(",") if k.strip())
     per_pair: list[dict] = []
     offset_stacks: dict[str, list[np.ndarray]] = {f"block{k}": [] for k in block_sizes}
     for k, p in enumerate(sel):
-        s = sweep_pair(gt[p], realized[p], args.rmax, block_sizes)
+        s = sweep_pair(gt[p], realized[p], args.rmax, block_sizes, normal_blocks, args.normal_tol_px)
         s["pair"] = int(p)
         for nm, arr in s.pop("_offsets", {}).items():
             offset_stacks[nm].append(arr)
@@ -370,7 +470,8 @@ def main(argv: list[str] | None = None) -> int:
     n_alpha = (2 * args.rmax + 1) ** 2
     raw_bytes_per_cell = np.log2(n_alpha) / 8.0
 
-    part_names = ["global", "component"] + [f"block{k}" for k in block_sizes]
+    part_names = (["global", "component"] + [f"block{k}" for k in block_sizes]
+                  + [f"block{k}_normal" for k in normal_blocks])
     rungs: list[dict] = []
     for name in part_names:
         flips = int(sum(d["partitions"][name]["flips"] for d in per_pair))

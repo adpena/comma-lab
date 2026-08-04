@@ -224,6 +224,48 @@ The §0 table is a reach ceiling with a named, unmeasured realization step (§6)
 
 ---
 
+## §8b FIRE ORDER 1 — FIRED, and it refutes my own prediction
+
+I predicted in §8 that restricting the offset to the local boundary **normal** would halve the
+alphabet at near-equal reach ("the tangential component is pure waste"), moving block8 from
++0.112 toward +0.17. **Measured, that is wrong.** The direction is receiver-computable (free),
+so only the scalar magnitude is transmitted — but the reach collapses:
+
+| rung (n120 stratified seed 7, rmax=5) | 2-DOF reach | 1-DOF normal-restricted | retained |
+|---|---:|---:|---:|
+| block16 | 40.19% | 13.26% *(v1)* / **9.56%** *(v2)* | 33% / 24% |
+| block8 | 59.16% | 21.53% *(v1)* / **18.88%** *(v2)* | 36% / 32% |
+
+Two independent instrument variants, both losing: **v1** = angular-tolerance band (±0.75 px
+tangential) with the normal from the rmax-dilated band; **v2** = the exact 1-DOF ladder
+`round(m·n̂)` with the normal from the TRUE argmax-discontinuity pixels. I built v2
+specifically because v1's instrument was defective (an 8 px cell's rmax-dilated band fills the
+cell, so its principal axis is noise). v2 is the better instrument and the result is *worse*,
+so the negative is not an artifact of either construction.
+
+**The tangential component is not waste — it carries roughly two-thirds of the value.**
+
+**Mechanism (this is the useful part).** A block cell is not a single boundary. It typically
+contains several differently-oriented segments, so *one* normal per cell cannot serve them;
+PCA over the cell returns an average direction that fits none of them. The failure is not
+"phase isn't normal displacement" — it is **"a block is the wrong partition to hang a
+direction on."**
+
+> **verdict_scope: FORMULATION (one PCA normal per BLOCK cell, n120 stratified seed 7, rmax=5,
+> two variants).** This does NOT refute δ(s)-along-the-separatrix. It refutes hanging a single
+> direction on a *block*. The cure is to partition by **segment**, not by block — which is
+> precisely the diagram-native form the operator named: one offset per generator-PAIR edge,
+> positioned by 1-D arc-length along that bisector. Each segment then has exactly one
+> well-defined normal by construction, and the pathology measured here cannot arise.
+
+**Revised fire order 1 → per-EDGE (segment) partition**, replacing the block partition:
+label the true-boundary pixels by their `(gt_class, realized_class)` edge type *and*
+connected segment, then fit one offset per segment. Cheap (reuses this sweep; only the
+partition changes), and it is the direct discrete precursor to the generator-pair + arc-length
+carrier.
+
+---
+
 ## §9 What I refute in my own charter
 
 1. **"the cheapest per-pair positional carrier"** presumes per-*pair* granularity. Measured:
