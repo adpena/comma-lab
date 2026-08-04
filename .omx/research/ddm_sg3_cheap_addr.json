@@ -1,0 +1,170 @@
+{
+ "meta": {
+  "F": 600,
+  "H": 384,
+  "W": 512,
+  "slots": 117964800,
+  "W_bytes_per_flip": 1.2731082153320312,
+  "total_flips": 508640
+ },
+ "rung_a": {
+  "comps_per_frame": 24.133333333333333,
+  "index_bits": 4.592955291474687,
+  "vs_bbox_47bit": 10.233062814097073
+ },
+ "band_Road_Lane_k1": {
+  "band_px": 1173933,
+  "capture": 0.6874819262762175,
+  "flips": 161660,
+  "bytes": 81365,
+  "b_per_flip": 0.5033094148212297,
+  "vs_W": 0.3953390676141107,
+  "vs_naive": 2.439230627419652,
+  "coder": "brotli"
+ },
+ "band_Road_Lane_k2": {
+  "band_px": 1979246,
+  "capture": 0.7290259751305561,
+  "flips": 171429,
+  "bytes": 97345,
+  "b_per_flip": 0.567844413722299,
+  "vs_W": 0.44602996578276194,
+  "vs_naive": 2.038810416559659,
+  "coder": "brotli"
+ },
+ "band_Road_Lane_k3": {
+  "band_px": 2775154,
+  "capture": 0.752270910235256,
+  "flips": 176895,
+  "bytes": 110689,
+  "b_per_flip": 0.6257327793323723,
+  "vs_W": 0.4915000718687365,
+  "vs_naive": 1.793023697024998,
+  "coder": "brotli"
+ },
+ "band_Road_Undriv_k1": {
+  "band_px": 585955,
+  "capture": 0.9629571723714334,
+  "flips": 86228,
+  "bytes": 30585,
+  "b_per_flip": 0.3546991696432713,
+  "vs_W": 0.27860881374547136,
+  "vs_naive": 1.9269576589831616,
+  "coder": "brotli"
+ },
+ "band_Road_Undriv_k2": {
+  "band_px": 1191411,
+  "capture": 0.9910771120665587,
+  "flips": 88746,
+  "bytes": 39627,
+  "b_per_flip": 0.44652153336488404,
+  "vs_W": 0.35073336892137613,
+  "vs_naive": 1.4872687813864285,
+  "coder": "brotli"
+ },
+ "band_Road_Undriv_k3": {
+  "band_px": 1816747,
+  "capture": 0.9959685074543526,
+  "flips": 89184,
+  "bytes": 43084,
+  "b_per_flip": 0.48309113742375315,
+  "vs_W": 0.37945803161576586,
+  "vs_naive": 1.36793241110389,
+  "coder": "lzma"
+ },
+ "band_Road_Movable_k1": {
+  "band_px": 177139,
+  "capture": 0.8173176059414592,
+  "flips": 46771,
+  "bytes": 16311,
+  "b_per_flip": 0.34874174167753524,
+  "vs_W": 0.2739293780981392,
+  "vs_naive": 2.2762552878425604,
+  "coder": "brotli"
+ },
+ "band_Road_Movable_k2": {
+  "band_px": 366849,
+  "capture": 0.9581476627348187,
+  "flips": 54830,
+  "bytes": 21888,
+  "b_per_flip": 0.3991975196060551,
+  "vs_W": 0.31356134128939145,
+  "vs_naive": 1.6962719298245614,
+  "coder": "brotli"
+ },
+ "band_Road_Movable_k3": {
+  "band_px": 568916,
+  "capture": 0.9811096548711228,
+  "flips": 56144,
+  "bytes": 25127,
+  "b_per_flip": 0.4475455970361926,
+  "vs_W": 0.35153774961657214,
+  "vs_naive": 1.4776137222907628,
+  "coder": "brotli"
+ },
+ "band_Road_MyCar_k1": {
+  "band_px": 635646,
+  "capture": 0.9731067637679089,
+  "flips": 61332,
+  "bytes": 20615,
+  "b_per_flip": 0.3361214374225527,
+  "vs_W": 0.2640163918311461,
+  "vs_naive": 1.5356779044385156,
+  "coder": "brotli"
+ },
+ "band_Road_MyCar_k2": {
+  "band_px": 1277769,
+  "capture": 0.9850064258175067,
+  "flips": 62082,
+  "bytes": 23472,
+  "b_per_flip": 0.3780806030733546,
+  "vs_W": 0.29697444295789877,
+  "vs_naive": 1.3487559645535105,
+  "coder": "lzma"
+ },
+ "band_Road_MyCar_k3": {
+  "band_px": 1922935,
+  "capture": 0.9897504244212798,
+  "flips": 62381,
+  "bytes": 24884,
+  "b_per_flip": 0.3989035122873952,
+  "vs_W": 0.31333040466113066,
+  "vs_naive": 1.2722231152547823,
+  "coder": "lzma"
+ },
+ "band_Undriv_Movable_k1": {
+  "band_px": 177108,
+  "capture": 0.6808634395398436,
+  "flips": 42140,
+  "bytes": 15803,
+  "b_per_flip": 0.3750118652112008,
+  "vs_W": 0.2945640132511409,
+  "vs_naive": 2.516547490982725,
+  "coder": "brotli"
+ },
+ "band_Undriv_Movable_k2": {
+  "band_px": 365371,
+  "capture": 0.8023169391843857,
+  "flips": 49657,
+  "bytes": 21073,
+  "b_per_flip": 0.4243711863382806,
+  "vs_W": 0.3333347324505349,
+  "vs_naive": 1.887201632420633,
+  "coder": "brotli"
+ },
+ "band_Undriv_Movable_k3": {
+  "band_px": 563822,
+  "capture": 0.8391876171395334,
+  "flips": 51939,
+  "bytes": 23918,
+  "b_per_flip": 0.4605017424286182,
+  "vs_W": 0.3617145321055977,
+  "vs_naive": 1.662722635671879,
+  "coder": "brotli"
+ },
+ "rung_c": {
+  "raw_B": 163304,
+  "delta_B": 216996,
+  "ratio": 0.7525668675920294
+ }
+}

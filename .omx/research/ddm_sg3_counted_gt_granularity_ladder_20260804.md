@@ -296,3 +296,134 @@ seg). Needs a 2.77×/1.78× byte cut. **Not worth revisiting**; correctly ignore
   needs **1.195×**.
 
 **No scorer slot consumed. `fz1`'s n600 slot untouched.**
+
+---
+---
+
+# APPENDIX A — OPERATOR CORRECTION 2026-08-04: **KILL-1 IS WITHDRAWN**
+
+*Appended, never mutating §1–§7. Everything above stands as written, including the errors this
+appendix corrects — that is the point of append-only.*
+
+**Operator (binding):** *"Per island, addressing can be done more cheaply as well. Negative results
+for a naive or toy are binary interpretation or generic basis."*
+
+**The operator is right and the measurement confirms it.** My KILL-1 floor of 198,468 B was computed
+on **47-bit absolute bbox headers** — a generic addressing basis I chose and then let an
+instance-scoped result wear a family-scoped name. This is the *exact* failure mode §6 of this memo
+claims to guard against, committed in §5 of the same memo. Evidence:
+`.omx/research/ddm_sg3_cheap_addr.json`, script `ddm_sg3_scripts/cheap_addr.py`.
+
+**BASIS STAMP on every number below — `ASSUMPTION-SCOPED(receiver-field)`.** The receiver cannot run
+SegNet (strict scorer rule), so the enumeration/boundary objects are computed here from `cx1`'s
+SegNet argmax as a **stand-in** for the receiver's own deterministic class field. This is legitimate
+for an *address* because an address needs only **encoder/decoder AGREEMENT on a deterministic
+enumeration, not correctness** — and our task-space generator emits a 5-class field natively — but
+the byte counts inherit that field's granularity. **Closing it = re-run against the live generator's
+own class field.** Still DESCRIPTION-ONLY; no realizer priced; no scorer forward; `fz1`'s slot untouched.
+
+## A.1 The cheap-addressing ladder — MEASURED
+
+**Rung (b)+(d) — boundary-band addressing.** The band (pixels within *k* of the receiver's own
+interface) is **free** to the receiver, so only the flip/no-flip bits *at band positions* are counted.
+This is my own §3 finding turned into an encoding: the dust lives on the separatrix, so address it
+in the separatrix's coordinates.
+
+| interface | k | band px | capture | **bytes** | B/flip | vs W | **vs naive bbox** |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| **Road↔Lane** | 1 | 1,173,933 | 68.7% | **81,365** | 0.5033 | 0.40× | **2.44×** |
+| Road↔Lane | 2 | 1,979,246 | 72.9% | 97,345 | 0.5678 | 0.45× | 2.04× |
+| Road↔Undriv | 1 | 585,955 | 96.3% | 30,585 | 0.3547 | 0.28× | 1.93× |
+| Road↔Movable | 1 | 177,139 | 81.7% | 16,311 | 0.3487 | 0.27× | 2.28× |
+| Road↔MyCar | 1 | 635,646 | 97.3% | 20,615 | 0.3361 | 0.26× | 1.54× |
+| Undriv↔Movable | 1 | 177,108 | 68.1% | 15,803 | 0.3750 | 0.29× | **2.52×** |
+
+**Rung (a) — decoder-derived component index.** The receiver's field carries **24 components/frame**
+(median 22, max 45) → an index is **4.59 bits vs 47 bits = 10.23× cheaper per address**. **But it
+cannot address dust:** 24 components cannot name 112,077 dust islands. **Rung (a) is an address for
+BULK PER-COMPONENT VERBS, not for corrections** — which is exactly the shape of the built-but-unrun
+`src/tac/boundary_math/road_undriv_bulk_field.py` (one index + one signed per-side scale).
+
+**Rung (c) — temporal delta: NEGATIVE, and my negative is itself naive-basis.** XOR-delta of the
+band mask costs **216,996 B vs 163,304 B raw = 0.75× (delta LOSES)**. Addresses are not temporally
+redundant *under XOR*. **I tested XOR, not ξ-transport** — which is what the operator actually
+proposed. So this negative is `INSTANCE-scoped(XOR-delta)` and does **not** kill ξ-warped address
+delta-coding. I am flagging my own new negative under the same rule I was just corrected by.
+
+## A.2 KILL-1 WITHDRAWN — the recomputed bars
+
+| interface | naive B | band B (k=1) | cheaper | flips captured | rate S | seg@100% | **break-even** | *was* |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| **Road↔Lane** | 198,468 | **81,365** | 2.44× | 161,547 | 0.05418 | 0.13694 | **39.56%** | *66.30%* |
+| Road↔Undriv | 58,936 | 30,585 | 1.93× | 86,232 | 0.02037 | 0.07310 | **27.86%** | *51.70%* |
+| Road↔Movable | 37,128 | 16,311 | 2.28× | 46,753 | 0.01086 | 0.03963 | **27.40%** | *50.96%* |
+| Road↔MyCar | 31,658 | 20,615 | 1.54× | 61,325 | 0.01373 | 0.05199 | **26.40%** | *39.45%* |
+| Undriv↔Movable | 39,769 | 15,803 | 2.52× | 42,148 | 0.01052 | 0.03573 | **29.45%** | *50.47%* |
+| **ALL FIVE** | — | **164,679** | — | **398,005** | 0.10965 | 0.33739 | **32.50%** | — |
+
+**Road↔Lane at the only survival ever measured (`cg3` = 0.555):**
+
+```
+rate 0.05418 - seg 0.07600  =  NET -0.02183 S   <-- a WIN, not a loss
+break-even survival 39.56%  (bar dropped 1.68x)   cg3 measured 55.5% > 39.56%
+```
+
+**KILL-1 is WITHDRAWN.** It was `INSTANCE-scoped(47-bit-absolute-bbox)`, never a family verdict on
+per-island or per-interface addressing. The interface the operator named is **live**, and it wins by
+**−0.02183 S** at `cg3`'s own measured survival — the same survival I used to kill it. My floor was
+2.44× too expensive, and the whole kill lived in that factor.
+
+Net at other survivals: 0.40 → **−0.00060 S** (still a win); 0.50 → **−0.01429 S**; 0.663 → **−0.03662 S**.
+`lr2`'s legal η 0.40 static / 0.50 GT-key both clear the 39.56% bar.
+
+## A.3 My crossover was basis-dependent too — and the fork is a TIE
+
+§3 stated **1.035% collateral** as though it were a property of the problem. It is a property of my
+*encoding* (whole-volume exact address, 343,592 B). Recomputed on the cheap basis:
+
+| exact-address basis | premium | crossover |
+|---|---:|---:|
+| naive whole-volume (343,592 B) | 339,326 B = 0.22594 S | **1.0343%** |
+| cheap boundary-band k=1 (164,679 B) | 161,341 B = 0.10743 S | **0.6285%** |
+
+`lr2` MEASURED collateral **0.618%**, which sits **within 2%** of the cheap-basis crossover 0.6285%.
+**That is a tie, not a verdict.** Under the naive basis it looked like a comfortable 1.7× margin for
+static addressing; under the cheap basis it is a coin-flip. **`lr2` must measure the realizer at both
+operating points** — my single number should never have been quoted as decisive.
+
+## A.4 SCOPE-STAMP SWEEP of every negative row in this memo
+
+Applying the operator's second clause to my own work, exhaustively over §2–§5:
+
+| row | basis | verdict |
+|---|---|---|
+| **KILL-1** Road↔Lane explicit mask | `INSTANCE(47-bit-abs-bbox)` | **WITHDRAWN** (A.2) |
+| **KILL-2** per-island crop addressing | `INSTANCE(47-bit-abs-bbox)` | **RE-SCOPED.** The conclusion "don't address dust island-by-island *with absolute bbox headers*" survives — but the operator's claim is **VINDICATED**: per-island addressing *is* cheaper, realized as **band-relative coding (2.44×)** rather than as a smaller header. The cure was a different address *space*, not a cheaper header. |
+| **KILL-3** per-frame selection (Gini 0.1089) | **POPULATION-MEASURED** | **STANDS — basis-independent.** Gini is a property of the flip distribution across 600 frames, not of any encoding. No basis can concentrate a distribution that is not concentrated. Explicitly safe. |
+| **KILL-4** Lane↔Movable / Lane↔MyCar | `INSTANCE(full-volume mask)` | **RE-SCOPED but IMMATERIAL.** Basis-dependent; both would get cheaper under a band. Combined 1,584 flips = **0.31% of seg**. Not worth re-measuring either way — and I say so rather than quietly leaving a stale kill. |
+| semantic-island head (top 1% = 10.4%) | **POPULATION-MEASURED** | **STANDS — basis-independent.** A concentration statistic over 16,581 GT components. Explicitly safe. |
+| flip-set dust (median island 1 px) | **POPULATION-MEASURED** | **STANDS.** A morphological fact about the flip set. It is *why* band addressing beats crops. |
+| §3 crossover 1.035% | `INSTANCE(whole-volume exact addr)` | **RE-SCOPED → 0.6285%; now a TIE** (A.3). |
+| rung (c) XOR-delta loses 0.75× | `INSTANCE(XOR-delta)` | **NEW, and self-flagged.** Does not kill ξ-transport of addresses. |
+| i.i.d. bound 1.72× pessimistic | — | stands (§6); it is the same lesson one level down. |
+
+**Two of my eight negative rows were population-measured and basis-independent; five were
+basis-dependent and are now re-scoped; one is withdrawn outright.**
+
+## A.5 UPDATED HANDOFFS
+
+- **`lr2`** — Road↔Lane is **live at 39.56% break-even**; your η 0.40/0.50 both clear it. And the
+  static-vs-precision fork is a **tie** (your 0.618% vs crossover 0.6285%) — please measure the
+  realizer at **both** operating points rather than inheriting my 1.035%.
+- **`ph1`** — rung (b) is band-relative 1D addressing and composes with your per-EDGE partition head
+  (#941). Your ξ negative was on *pixels*; my rung-(c) negative is on *XOR of addresses*. **Neither
+  kills ξ-transport of addresses** — that remains unmeasured and is the open cheap-address rung.
+- **`wf2`** — address floors drop 1.54×–2.52×; every interface break-even in §4 should be replaced by
+  the A.2 column.
+- **`cg3`** — your camera-paint net loss is **no longer explained by an address floor**. At the band
+  basis your measured 0.555 survival is a **win** (−0.02183 S). The loss is now attributable to the
+  realization mechanism's own byte cost, not to addressing.
+- **`road_undriv_bulk_field.py`** — rung (a) gives it a **4.59-bit** address. Probe **P-C** is still
+  unrun and is now the cheapest untested thing on this ladder.
+
+**No scorer slot consumed.**
