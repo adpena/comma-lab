@@ -2170,9 +2170,11 @@ def _model_identity_stamp() -> str:
     except Exception:
         pass
     return (
-        f"MODEL ROUTING (operator 2026-07-31): Opus for MAIN and all arms — the 2026-07-21 "
-        f"Fable-only rule is RETIRED. Client default: {default!r}. Say so once if you are NOT "
-        f"Opus-class, so a silent reroute is visible immediately rather than mid-session."
+        f"MODEL ROUTING (operator 2026-08-04): FABLE 5 on the MAIN thread ONLY; CODEX arms for "
+        f"ALL subagent work (Claude subagents OFF incl. forks — the 08-04 quota catastrophe). "
+        f"Spawn arms ONLY via tools/codex_arm_queue.py saturate --spawn (keeper mechanism — "
+        f"hand-rolled codex exec dies at ~5-6min to the fleet launchd reaper). Client default: "
+        f"{default!r}. Say so once if MAIN is NOT Fable-class, so a silent reroute is visible."
     )
 
 
