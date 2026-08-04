@@ -24,6 +24,13 @@ fire for a hand-rolled JSON again:
 Write is atomic (tmp + ``os.replace``) so a crash mid-write never leaves a
 truncated verdict JSON.
 
+:func:`verdict_payload` is the EMBEDDABLE half — the same validation, returning the
+payload dict instead of writing a file — for producers that must carry the verdict
+INSIDE a larger artifact. It exists because the write-only API was measured (task #936,
+2026-08-03) to be the reason adoption failed: 474 of 10,728 tracked ``.py`` files
+hand-roll a ``"verdict_scope"`` key while ``emit_verdict`` had 0 production callers.
+``emit_verdict`` is a thin write-wrapper around it, so the two cannot drift.
+
 #389 WIRED: on a successful atomic write, :func:`emit_verdict` posts a
 ``verdict_landed`` bulletin event to the session_bus (fail-open, like
 ``tac.review_counter.record_round``) so sibling agents learn a verdict LANDED
@@ -51,6 +58,7 @@ __all__ = [
     "VerdictEmitError",
     "VerdictScope",
     "emit_verdict",
+    "verdict_payload",
 ]
 
 # Bump when the on-disk JSON shape changes in a consumer-breaking way.
@@ -225,6 +233,55 @@ def _coerce_composition(composition: Composition | str | None) -> Composition:
     )
 
 
+def verdict_payload(
+    *,
+    verdict: str,
+    scope: VerdictScope,
+    rows: Sequence[MeasurementRow] = (),
+    composition: Composition | str | None = None,
+    constraint_carved: str,
+    is_negative: bool = False,
+    reformulation_queue: Sequence[str] | None = None,
+    reformulation_empty_reason: str | None = None,
+    measured: bool = True,
+    stores_consulted: Sequence[str] | None = None,
+    extra: dict | None = None,
+) -> dict:
+    """Validate a verdict and return its canonical payload dict — WITHOUT writing.
+
+    This is the EMBEDDABLE half of the canonical surface, and it exists because of a
+    measured adoption failure (task #936, 2026-08-03): ``"verdict_scope"`` is hand-rolled
+    as a raw dict key in **474 of 10,728 tracked .py files**, while :func:`emit_verdict`
+    has **0 production call sites**. The discipline was adopted almost universally; the
+    producer was bypassed almost universally. The mechanism is not ignorance — e.g.
+    ``canonical_equations/v8_geometric_rate_decomposition_20260709.py`` hand-rolls a
+    correctly-scoped FORMULATION verdict WITH a populated reformulation queue — it is
+    that ``emit_verdict`` offered only a whole-file atomic write, so a producer needing
+    the verdict EMBEDDED inside a larger artifact (an equation payload, a batch summary,
+    a receipt) had no path to the typed validation at all.
+
+    Same refusal semantics as :func:`emit_verdict` (that function is now a thin
+    write-wrapper around this one, so the two can never drift): a FAMILY/PARADIGM scope
+    without ``family_evidence`` refuses, a MEASURED claim with no rows refuses, and a
+    negative without a reformulation queue refuses.
+
+    Returns the payload dict; embed it under whatever key the host artifact uses.
+    """
+    return _build_verdict_payload(
+        verdict=verdict,
+        scope=scope,
+        rows=rows,
+        composition=composition,
+        constraint_carved=constraint_carved,
+        is_negative=is_negative,
+        reformulation_queue=reformulation_queue,
+        reformulation_empty_reason=reformulation_empty_reason,
+        measured=measured,
+        stores_consulted=stores_consulted,
+        extra=extra,
+    )
+
+
 def emit_verdict(
     path: str | os.PathLike,
     *,
@@ -241,6 +298,9 @@ def emit_verdict(
     extra: dict | None = None,
 ) -> Path:
     """Atomically write a validated verdict JSON to ``path``; return the ``Path``.
+
+    Use :func:`verdict_payload` instead when the verdict must be EMBEDDED in a larger
+    artifact rather than written as its own file — same validation, no write.
 
     Parameters
     ----------
@@ -273,6 +333,64 @@ def emit_verdict(
     VerdictEmitError:
         If any required honesty field is missing/malformed.
     """
+    payload = _build_verdict_payload(
+        verdict=verdict,
+        scope=scope,
+        rows=rows,
+        composition=composition,
+        constraint_carved=constraint_carved,
+        is_negative=is_negative,
+        reformulation_queue=reformulation_queue,
+        reformulation_empty_reason=reformulation_empty_reason,
+        measured=measured,
+        stores_consulted=stores_consulted,
+        extra=extra,
+    )
+
+    out = Path(path)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    tmp = out.with_name(out.name + f".tmp.{os.getpid()}")
+    text = json.dumps(payload, indent=2, sort_keys=True) + "\n"
+    try:
+        tmp.write_text(text)
+        os.replace(tmp, out)
+    finally:
+        # If os.replace already consumed tmp this is a no-op; on failure it cleans up.
+        try:
+            tmp.unlink()
+        except FileNotFoundError:
+            pass
+    # #389: broadcast the landing AFTER the durable write (fail-open). Read back from the
+    # validated payload so the bulletin can never describe a different verdict than the
+    # one on disk.
+    _post_bulletin_verdict_landed(
+        out,
+        payload["verdict"],
+        payload["scope"]["scoped_to"],
+        payload["scope"]["level"],
+        payload["composition"]["sign"],
+        payload["is_negative"],
+        len(payload["rows"]),
+    )
+    return out
+
+
+def _build_verdict_payload(
+    *,
+    verdict: str,
+    scope: VerdictScope,
+    rows: Sequence[MeasurementRow],
+    composition: Composition | str | None,
+    constraint_carved: str,
+    is_negative: bool,
+    reformulation_queue: Sequence[str] | None,
+    reformulation_empty_reason: str | None,
+    measured: bool,
+    stores_consulted: Sequence[str] | None,
+    extra: dict | None,
+) -> dict:
+    """The ONE validation + payload path shared by :func:`verdict_payload` and
+    :func:`emit_verdict`, so the embeddable and file-writing surfaces cannot drift."""
     # --- verdict text ---
     if not isinstance(verdict, str) or not verdict.strip():
         raise VerdictEmitError("verdict must be a non-empty string")
@@ -346,30 +464,15 @@ def emit_verdict(
         "stores_consulted": list(stores_consulted) if stores_consulted else [],
         "extra": dict(extra) if extra else {},
     }
-
-    out = Path(path)
-    out.parent.mkdir(parents=True, exist_ok=True)
-    tmp = out.with_name(out.name + f".tmp.{os.getpid()}")
-    text = json.dumps(payload, indent=2, sort_keys=True) + "\n"
-    try:
-        tmp.write_text(text)
-        os.replace(tmp, out)
-    finally:
-        # If os.replace already consumed tmp this is a no-op; on failure it cleans up.
-        try:
-            tmp.unlink()
-        except FileNotFoundError:
-            pass
-    # #389: broadcast the landing AFTER the durable write (fail-open).
-    _post_bulletin_verdict_landed(out, verdict, scope, comp, is_negative, len(rows))
-    return out
+    return payload
 
 
 def _post_bulletin_verdict_landed(
     out: Path,
     verdict: str,
-    scope: VerdictScope,
-    comp: Composition,
+    scoped_to: str,
+    scope_level: str,
+    composition_sign: str | None,
     is_negative: bool,
     n_rows: int,
 ) -> None:
@@ -381,7 +484,7 @@ def _post_bulletin_verdict_landed(
     must NEVER break the (already-completed) verdict write, so any exception is
     swallowed. This is an intentional silent guard on a non-authoritative notification
     path AFTER the durable write, not on a safety/score surface (operating manual §8.9).
-    The ``subject`` is ``scope.scoped_to`` — the thing the verdict binds to — so a
+    The ``subject`` is the payload's ``scope.scoped_to`` — the thing the verdict binds to — so a
     seal-round ``staleness_check`` on that surface picks the landing up.
     """
     try:
@@ -389,13 +492,13 @@ def _post_bulletin_verdict_landed(
 
         post_event(
             kind=EVENT_VERDICT_LANDED,
-            subject=scope.scoped_to,
+            subject=scoped_to,
             payload={
                 "verdict": verdict,
-                "scope_level": scope.level.value,
+                "scope_level": scope_level,
                 "is_negative": bool(is_negative),
                 "n_rows": int(n_rows),
-                "composition_sign": comp.sign.value if comp.sign is not None else None,
+                "composition_sign": composition_sign,
                 "path": str(out),
             },
             agent_label="emit_verdict",

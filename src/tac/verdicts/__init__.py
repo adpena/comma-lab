@@ -32,6 +32,7 @@ from tac.verdicts.emit import (
     VerdictEmitError,
     VerdictScope,
     emit_verdict,
+    verdict_payload,
 )
 from tac.verdicts.measurement_row import (
     AxisTag,
@@ -53,4 +54,5 @@ __all__ = [
     "VerdictEmitError",
     "VerdictScope",
     "emit_verdict",
+    "verdict_payload",
 ]

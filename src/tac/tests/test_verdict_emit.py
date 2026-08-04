@@ -22,6 +22,7 @@ from tac.verdicts import (
     VerdictEmitError,
     VerdictScope,
     emit_verdict,
+    verdict_payload,
 )
 
 
@@ -201,3 +202,76 @@ def test_emit_overwrite_is_atomic_replace(tmp_path):
     p2 = _emit(tmp_path, verdict="PROCEED", is_negative=False)
     assert p1 == p2
     assert json.loads(p2.read_text())["verdict"] == "PROCEED"
+
+
+# --- verdict_payload: the EMBEDDABLE surface (#936, ddm_vw1) -----------------------------
+
+
+def test_verdict_payload_returns_validated_dict_without_writing(tmp_path):
+    """The embeddable half: same validation, no file. Motivated by a MEASURED adoption
+    failure — 474 of 10,728 tracked .py files hand-roll a "verdict_scope" key while
+    emit_verdict had 0 production callers, because embedding had no typed path."""
+    payload = verdict_payload(
+        verdict="NO-GO",
+        scope=VerdictScope(level=ScopeLevel.FORMULATION, scoped_to="this coder on this residual"),
+        composition=Composition.deferred(),
+        constraint_carved="pins the axis-aligned offset coder as non-viable",
+        measured=False,
+        is_negative=True,
+        reformulation_queue=["true Euclidean-normal offset", "joint 2-D context model"],
+    )
+    assert isinstance(payload, dict)
+    assert payload["schema_version"] == "verdict.v1"
+    assert payload["scope"]["level"] == "formulation"
+    assert payload["is_negative"] is True
+    assert len(payload["reformulation_queue"]) == 2
+    # It writes NOTHING: the whole point is embedding in a host artifact.
+    assert list(tmp_path.iterdir()) == []
+    # And it is embeddable + serializable as-is.
+    import json as _json
+    host = {"equation_id": "v8_geometric", "verdict": payload}
+    assert _json.loads(_json.dumps(host))["verdict"]["scope"]["level"] == "formulation"
+
+
+def test_verdict_payload_enforces_the_same_refusals_as_emit():
+    """The embeddable path must not be a validation bypass — that would make it a
+    laundering channel for exactly the claims emit_verdict refuses."""
+    # FAMILY scope without family_evidence refuses at VerdictScope construction.
+    with pytest.raises(VerdictEmitError):
+        VerdictScope(level=ScopeLevel.FAMILY, scoped_to="the whole family")
+    # A negative with no reformulation queue refuses.
+    with pytest.raises(VerdictEmitError):
+        verdict_payload(
+            verdict="KILL",
+            scope=VerdictScope(level=ScopeLevel.INSTANCE, scoped_to="one config"),
+            composition=Composition.deferred(),
+            constraint_carved="x",
+            measured=False,
+            is_negative=True,
+        )
+    # A measured claim with no rows refuses.
+    with pytest.raises(VerdictEmitError):
+        verdict_payload(
+            verdict="PROCEED",
+            scope=VerdictScope(level=ScopeLevel.INSTANCE, scoped_to="one config"),
+            composition=Composition.deferred(),
+            constraint_carved="x",
+            measured=True,
+        )
+
+
+def test_emit_verdict_and_verdict_payload_share_one_validation_path(tmp_path):
+    """emit_verdict must be a thin write-wrapper: identical payload modulo timestamp."""
+    import json as _json
+
+    kw = dict(
+        verdict="DEFER",
+        scope=VerdictScope(level=ScopeLevel.INSTANCE, scoped_to="one config"),
+        composition=Composition.deferred(),
+        constraint_carved="pins nothing yet",
+        measured=False,
+    )
+    direct = verdict_payload(**kw)
+    written = _json.loads(emit_verdict(tmp_path / "v.json", **kw).read_text())
+    direct.pop("emitted_at_utc"), written.pop("emitted_at_utc")
+    assert direct == written

@@ -17,8 +17,28 @@ asymmetry was built a month ago. What is missing is adoption, measured
 * ``emit_verdict`` production (non-test) call sites: **0**. The only
   ``emit_verdict(`` outside tests is its own ``def``.
 * ``is_negative=True``: **5** occurrences in tracked ``.py``, **all 5 in tests**.
-* **0 of 36** tracked ``verdict.v1``-matching JSONs carry the ``"level"`` key
-  that ``VerdictScope.to_json_dict()`` unconditionally writes.
+* ⚠ **WITHDRAWN 2026-08-03 (`ddm_vw1`, task #936) — the third bullet as landed read
+  "0 of 36 tracked ``verdict.v1``-matching JSONs carry the ``level`` key", and that is
+  FALSE.** Re-measured twice independently: the ``36`` denominator reproduces exactly,
+  but it counts tracked ``.json`` files that merely MENTION the string ``verdict.v1``
+  (fixtures, dashboards, the ``frontier_rate_attack_feedback`` corpus) — not
+  ``verdict.v1`` DOCUMENTS. **5 of those 36 do carry ``level``**, and under the strict
+  matcher ``"schema_version": "verdict.v1"`` the tracked population is **5, of which
+  5 carry ``scope.level`` — 100%**. Counting untracked copies the ratio is 12/12.
+  The bullet was a numerator reported against the wrong denominator, which is the
+  repo's own named poison; it is corrected here rather than silently deleted.
+
+  **The correction inverts the diagnosis, and that matters more than the number.**
+  ``emit_verdict`` did not fail at WRITE time — every verdict it ever wrote is
+  correctly scoped. It was exercised on ONE day (2026-07-10, commits ``1352982bac``
+  + ``f6fd9d81de``), produced 12 conforming documents, and was never called again:
+  nothing has emitted a ``verdict.v1`` in the 24 days since. So this is ADOPTION
+  DECAY, not a defective record — and the measured reasons are (a) the format has
+  **0 readers** outside its own package (exhaustive over 10,728 tracked ``.py``), so
+  emitting bought the author nothing, and (b) until #936 the API offered ONLY a
+  whole-file write, so the 486 non-test hand-rolled verdict-JSON producers (0 of
+  which import ``tac.verdicts``) had no embeddable path. See
+  ``tac.verdicts.verdict_payload``.
 
 Meanwhile negatives are written in MARKDOWN, and markdown has no path to that
 record and no gate at all: ``tools/preflight_hook.py`` collects only staged
