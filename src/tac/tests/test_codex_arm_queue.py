@@ -197,3 +197,32 @@ def test_shipped_queue_parses_and_has_prompts(q):
         if row.get("status") in {"queued", "live"}:
             prompt = _REPO / row.get("prompt_path", "")
             assert prompt.exists(), f"{name} points at a missing prompt: {prompt}"
+
+
+# --- the exit receipt (2026-08-04 round 2) ----------------------------------------
+
+
+def test_spawn_command_writes_an_exit_receipt(q):
+    """`.last.txt` presence proves a clean finish; its ABSENCE proves nothing.
+    Without an rc/signal receipt, death and completion are indistinguishable —
+    which is how two rounds of guessing happened."""
+    cmd = q.spawn_command("x", ".omx/tmp/codex_runs/x_prompt.md")
+    assert "x.done" in cmd
+    assert "rc=$rc" in cmd
+
+
+def test_receipt_traps_signals_so_a_reap_leaves_evidence(q):
+    cmd = q.spawn_command("x", ".omx/tmp/codex_runs/x_prompt.md")
+    assert "trap" in cmd
+    for sig in ("TERM", "INT", "HUP", "QUIT"):
+        assert sig in cmd
+
+
+def test_codex_runs_in_background_with_wait_not_foreground(q):
+    """MEASURED: bash services traps only BETWEEN commands, so a foreground codex
+    defers the signal trap until it finishes — i.e. the reap case, the one that
+    matters, writes no receipt. Round-2 positive control confirmed the fg form
+    dropped it. `wait` is interruptible."""
+    cmd = q.spawn_command("x", ".omx/tmp/codex_runs/x_prompt.md")
+    assert "& child=$!" in cmd
+    assert "wait $child" in cmd

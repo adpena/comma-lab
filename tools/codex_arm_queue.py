@@ -184,27 +184,53 @@ _DETACH_PY = (
 
 
 def spawn_command(name: str, prompt_path: str) -> str:
-    """The canonical session-detached spawn command for one arm."""
+    """The canonical session-detached spawn command for one arm.
+
+    The detached child is a WRAPPER, not codex itself, so every termination
+    leaves a typed receipt at ``<name>.done``:
+
+        rc=0            -> codex finished cleanly
+        rc=N (N>0)      -> codex exited with an error of its own
+        signal=TERM|INT|HUP -> something REAPED it (trap fired)
+        no .done file   -> SIGKILL, or the wrapper itself vanished
+
+    Without this the four states are indistinguishable, which is exactly how
+    2026-08-04 produced two rounds of guessing: `.last.txt` presence proves a
+    clean finish but its ABSENCE proves nothing. The canonical
+    codex_companion_spawn.sh has carried an rc receipt since 08-03; this
+    dispatcher shipped without one.
+    """
     q = shlex.quote
+    log = f".omx/tmp/codex_runs/{name}.log"
+    done = f".omx/tmp/codex_runs/{name}.done"
     instruction = (
         f"Read and execute the charter at {prompt_path} in full, plus the common "
         f"contract it points to at .omx/tmp/codex_runs/_common_contract.md. "
         f"Follow every constraint in both."
     )
-    return " ".join(
-        [
-            "python3 -c",
-            q(_DETACH_PY),
-            q(f".omx/tmp/codex_runs/{name}.log"),
-            "codex exec --skip-git-repo-check -s workspace-write",
-            "--add-dir",
-            q(SSD_ADD_DIR),
-            "-m gpt-5.5 -c model_reasoning_effort=xhigh",
-            "-o",
-            q(f".omx/tmp/codex_runs/{name}.last.txt"),
-            q(instruction),
-        ]
+    # codex runs in the BACKGROUND and the wrapper `wait`s on it. This is not
+    # cosmetic: bash services traps only BETWEEN commands, so with codex in the
+    # foreground a SIGTERM is deferred until codex finishes — i.e. exactly the
+    # reap case produces no receipt. MEASURED 2026-08-04 round 2: the fg form
+    # wrote rc=0 correctly and dropped the signal receipt entirely. `wait` is
+    # interruptible, so the trap fires immediately.
+    inner = (
+        f"start=$(date +%s); "
+        f"codex exec --skip-git-repo-check -s workspace-write "
+        f"--add-dir {q(SSD_ADD_DIR)} "
+        f"-m gpt-5.5 -c model_reasoning_effort=xhigh "
+        f"-o {q(f'.omx/tmp/codex_runs/{name}.last.txt')} "
+        f"{q(instruction)} & "
+        f"child=$!; "
+        f"for s in TERM INT HUP QUIT; do "
+        f'trap "kill \\$child 2>/dev/null; '
+        f'echo signal=$s elapsed=\\$(( \\$(date +%s) - $start )) > {q(done)}; '
+        f'exit 143" $s; '
+        f"done; "
+        f"wait $child; rc=$?; "
+        f"echo rc=$rc elapsed=$(( $(date +%s) - start )) > {q(done)}"
     )
+    return " ".join(["python3 -c", q(_DETACH_PY), q(log), "bash", "-c", q(inner)])
 
 
 def spawn(name: str, prompt_path: str) -> bool:
