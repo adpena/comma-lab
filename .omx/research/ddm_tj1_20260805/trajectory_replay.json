@@ -1,0 +1,406 @@
+{
+  "controls": [
+    {
+      "curve": [
+        {
+          "objective": 27084.0,
+          "step": 0.0
+        },
+        {
+          "objective": 15237.0,
+          "step": 5.0
+        },
+        {
+          "objective": 11784.0,
+          "step": 10.0
+        },
+        {
+          "objective": 10242.0,
+          "step": 15.0
+        },
+        {
+          "objective": 9151.0,
+          "step": 20.0
+        },
+        {
+          "objective": 8553.0,
+          "step": 25.0
+        }
+      ],
+      "decision": {
+        "bound_reported": true,
+        "candidate_fits": [
+          {
+            "asymptote": 0.0,
+            "current_objective": 8553.0,
+            "fit_quality_flag": "accepted",
+            "intercept": 10.226448484134668,
+            "kind": "power_law",
+            "last_compute": 25.0,
+            "origin_compute": 0.0,
+            "projected_marginal_objective_gain_per_compute": 118.53082778102406,
+            "projected_remaining_objective_gain": 8553.0,
+            "r2": 0.9968359757925918,
+            "slope": -0.35704136175482426
+          },
+          {
+            "asymptote": 8367.69,
+            "current_objective": 8553.0,
+            "fit_quality_flag": "accepted",
+            "intercept": 9.861387268257179,
+            "kind": "geometric",
+            "last_compute": 25.0,
+            "origin_compute": 0.0,
+            "projected_marginal_objective_gain_per_compute": 44.3129727444561,
+            "projected_remaining_objective_gain": 185.3099999999995,
+            "r2": 0.9920908491647276,
+            "slope": -0.1725131100104681
+          }
+        ],
+        "current_compute": 25.0,
+        "current_objective": 8553.0,
+        "law_ref": "trajectory_derived_stopping_law_v1",
+        "marginal_score_gain_per_compute": 0.00010047982769523116,
+        "n_points": 6,
+        "projected_remaining_score_gain": 0.007250467936197916,
+        "safety_bound_compute": 25.0,
+        "selected_fit": {
+          "asymptote": 0.0,
+          "current_objective": 8553.0,
+          "fit_quality_flag": "accepted",
+          "intercept": 10.226448484134668,
+          "kind": "power_law",
+          "last_compute": 25.0,
+          "origin_compute": 0.0,
+          "projected_marginal_objective_gain_per_compute": 118.53082778102406,
+          "projected_remaining_objective_gain": 8553.0,
+          "r2": 0.9968359757925918,
+          "slope": -0.35704136175482426
+        },
+        "should_stop": true,
+        "stop_reason": "safety_bound_REPORTED",
+        "threshold_score_gain_per_compute": 6.658589531221714e-07
+      },
+      "max_step": 25,
+      "name": "sq1_prefix_25_from_cw1_50_step_receipt",
+      "pass": true,
+      "realized": {
+        "aggregate_eta_matches_rows": true,
+        "described_in_band": 23450,
+        "eta_from_aggregate": 0.7895095948827292,
+        "eta_from_rows": 0.7895095948827292,
+        "flips_after_realized": 8541,
+        "flips_before": 27055,
+        "n_pairs": 32
+      }
+    },
+    {
+      "curve": [
+        {
+          "objective": 27084.0,
+          "step": 0.0
+        },
+        {
+          "objective": 15237.0,
+          "step": 5.0
+        },
+        {
+          "objective": 11784.0,
+          "step": 10.0
+        },
+        {
+          "objective": 10242.0,
+          "step": 15.0
+        },
+        {
+          "objective": 9151.0,
+          "step": 20.0
+        },
+        {
+          "objective": 8553.0,
+          "step": 25.0
+        },
+        {
+          "objective": 8030.0,
+          "step": 30.0
+        },
+        {
+          "objective": 7660.0,
+          "step": 35.0
+        },
+        {
+          "objective": 7366.0,
+          "step": 40.0
+        },
+        {
+          "objective": 7118.0,
+          "step": 45.0
+        },
+        {
+          "objective": 6861.0,
+          "step": 50.0
+        }
+      ],
+      "decision": {
+        "bound_reported": true,
+        "candidate_fits": [
+          {
+            "asymptote": 0.0,
+            "current_objective": 6861.0,
+            "fit_quality_flag": "accepted",
+            "intercept": 10.223839301650012,
+            "kind": "power_law",
+            "last_compute": 50.0,
+            "origin_compute": 0.0,
+            "projected_marginal_objective_gain_per_compute": 47.45471031311185,
+            "projected_remaining_objective_gain": 6861.0,
+            "r2": 0.9979299592644902,
+            "slope": -0.35571776131621163
+          },
+          {
+            "asymptote": 6840.777,
+            "current_objective": 6861.0,
+            "fit_quality_flag": "accepted",
+            "intercept": 9.879645289297612,
+            "kind": "geometric",
+            "last_compute": 50.0,
+            "origin_compute": 0.0,
+            "projected_marginal_objective_gain_per_compute": 10.239071016539713,
+            "projected_remaining_objective_gain": 20.222999999999956,
+            "r2": 0.9600285754431823,
+            "slope": -0.10622471916088354
+          }
+        ],
+        "current_compute": 50.0,
+        "current_objective": 6861.0,
+        "law_ref": "trajectory_derived_stopping_law_v1",
+        "marginal_score_gain_per_compute": 4.02278563716565e-05,
+        "n_points": 11,
+        "projected_remaining_score_gain": 0.005816141764322916,
+        "safety_bound_compute": 50.0,
+        "selected_fit": {
+          "asymptote": 0.0,
+          "current_objective": 6861.0,
+          "fit_quality_flag": "accepted",
+          "intercept": 10.223839301650012,
+          "kind": "power_law",
+          "last_compute": 50.0,
+          "origin_compute": 0.0,
+          "projected_marginal_objective_gain_per_compute": 47.45471031311185,
+          "projected_remaining_objective_gain": 6861.0,
+          "r2": 0.9979299592644902,
+          "slope": -0.35571776131621163
+        },
+        "should_stop": true,
+        "stop_reason": "safety_bound_REPORTED",
+        "threshold_score_gain_per_compute": 6.658589531221714e-07
+      },
+      "max_step": 50,
+      "name": "sq1_full_50_cw1_receipt",
+      "pass": true,
+      "realized": {
+        "aggregate_eta_matches_rows": true,
+        "described_in_band": 23450,
+        "eta_from_aggregate": 0.8620042643923241,
+        "eta_from_rows": 0.8620042643923241,
+        "flips_after_realized": 6841,
+        "flips_before": 27055,
+        "n_pairs": 32
+      }
+    }
+  ],
+  "frontier_status": {
+    "contest_pointer": "S = 0.1910828242 [contest-CPU] borrowed/unmoved",
+    "main_hot_state_excerpt_found": true,
+    "own_vehicle": "S = 0.7539807296911207 @ 357,836 B [macOS-CPU advisory]"
+  },
+  "law_ref": "trajectory_derived_stopping_law_v1",
+  "ng1_class_map": [
+    {
+      "cap_value": "25 steps",
+      "existing_cure_surface": "trajectory-derived stop law plus adaptive depth allocation",
+      "family": "cap_bound_floor_not_converged",
+      "fire_order": "extend or waterfill before any convergence/promotion wording",
+      "id": "sq1_25_step_solved_paint",
+      "last_delta_evidence": "cw1 reran the same n32 denominator at 50 steps and every pair improved; aggregate flips fell 8541 to 6841 and eta rose 0.789509594883 to 0.862004264392",
+      "recipient": "sq1 solved-paint loop",
+      "regrade": "FLOOR-NOT-CONVERGED",
+      "source_path": ".omx/research/ddm_cw1_cap_artifact_uncap_and_guard_20260804.md"
+    },
+    {
+      "cap_value": "50 steps",
+      "existing_cure_surface": "trajectory-derived stop law plus adaptive depth allocation",
+      "family": "cap_bound_floor_not_converged",
+      "fire_order": "extend or waterfill before any convergence/promotion wording",
+      "id": "sq1_50_step_uncap_cw1",
+      "last_delta_evidence": "32/32 explicit stop reasons; 31 iteration_cap_best_at_cap and 1 iteration_cap_before_plateau; converged 0/32",
+      "recipient": "sq1 solved-paint loop",
+      "regrade": "FLOOR-NOT-CONVERGED",
+      "source_path": ".omx/research/ddm_cw1_cap_artifact_uncap_and_guard_20260804.md"
+    },
+    {
+      "cap_value": "50 steps",
+      "existing_cure_surface": "trajectory-derived stop law plus adaptive depth allocation",
+      "family": "cap_bound_floor_not_converged",
+      "fire_order": "extend or waterfill before any convergence/promotion wording",
+      "id": "q31_50_step_q3_constrained",
+      "last_delta_evidence": "latest local source reports 22/22 cap_bound_rows with iteration_cap_best_at_cap; target survival 0.226831 remains below ED1, but cap censoring prevents convergence wording",
+      "recipient": "q31 Q3 constrained paint",
+      "regrade": "FLOOR-NOT-CONVERGED",
+      "source_path": ".omx/research/ddm_q31_20260804/q31_summary.json"
+    },
+    {
+      "cap_value": "handed premise: 2-3 relinearisations; current measured shipped bound 4, repaired bound 32",
+      "existing_cure_surface": "consume current cured surface, do not rerun stale cap premise",
+      "family": "genuine_stop_or_stale_off_chain",
+      "fire_order": "FOLDED_STALE_OFF_CHAIN",
+      "id": "gn_pose_solve_850",
+      "last_delta_evidence": "positive-control phrase found: 13-23% per iteration still descending; current pg1/ss1 source remeasures the marginal at shipped bound as about 1.2% per relin and finds terminal_pose_gn cured/off live chain",
+      "recipient": "terminal_pose_gn marginal floor",
+      "regrade": "GENUINE",
+      "source_path": ".omx/research/ddm_cw1_cap_artifact_uncap_and_guard_20260804.md"
+    },
+    {
+      "cap_value": "budget ladder 10,25,50",
+      "existing_cure_surface": "trajectory-derived stop law plus adaptive depth allocation",
+      "family": "cap_bound_floor_not_converged",
+      "fire_order": "extend or waterfill before any convergence/promotion wording",
+      "id": "et1_budget_ladder_eta_floor",
+      "last_delta_evidence": "eta rises 0.3345 to 0.4085 to 0.4613 while d_pose ratio also rises 1.003 to 1.064 to 1.368; all still budget/pose-coupled at 50",
+      "recipient": "ET1 budget ladder",
+      "regrade": "FLOOR-NOT-CONVERGED",
+      "source_path": ".omx/research/ddm_et1_eta_on_the_priced_band_20260803.md"
+    },
+    {
+      "cap_value": "initial 30-step floors; uncapping moves n8 M32_U over zero",
+      "existing_cure_surface": "trajectory-derived stop law plus adaptive depth allocation",
+      "family": "cap_bound_floor_not_converged",
+      "fire_order": "extend or waterfill before any convergence/promotion wording",
+      "id": "na3_lr2_solved_paint_ladder",
+      "last_delta_evidence": "na3 records cap artifact real but no n32 bank; fresh-pair/waterfill gate is required before any score row",
+      "recipient": "NA3 solved-paint ladder",
+      "regrade": "FLOOR-NOT-CONVERGED",
+      "source_path": ".omx/research/ddm_na3_negative_audit_20260804.md"
+    }
+  ],
+  "positive_controls_pass": true,
+  "prefix25_projection_to_step50": {
+    "eta_high": 0.8643476079878595,
+    "eta_low": 0.7967534799344995,
+    "fits_used": [
+      "power_law",
+      "geometric"
+    ],
+    "measured_step50_eta": 0.8620042643923241,
+    "measured_step50_inside_interval": true,
+    "measured_step50_realized_flips_after": 6841.0,
+    "objective_high": 8371.130895535987,
+    "objective_low": 6786.048592684697,
+    "target_compute": 50.0
+  },
+  "promotion_eligible": false,
+  "schema": "ddm_tj1_trajectory_replay.v1",
+  "score_claim": false,
+  "scorer_forwards_executed": 0,
+  "source_receipts": {
+    "aggregate25": "/Volumes/VertigoDataTier/pact/ddm_sq1_20260803/receipts/sq1_aggregate_n32.json",
+    "aggregate50": "/Volumes/VertigoDataTier/pact/ddm_sq1_20260803/receipts/sq1_aggregate_n32_uncap50_cw1.json",
+    "ng1_cap_sweep": "/Users/adpena/Projects/pact/.omx/research/ddm_ng1_20260805/cap_artifact_sweep.jsonl",
+    "sq2_partial": "/Volumes/VertigoDataTier/pact/ddm_sq1_20260803/receipts/sq1_stage_n32_uncap100_sq2.json",
+    "stage25": "/Volumes/VertigoDataTier/pact/ddm_sq1_20260803/receipts/sq1_stage_n32.json",
+    "stage50": "/Volumes/VertigoDataTier/pact/ddm_sq1_20260803/receipts/sq1_stage_n32_uncap50_cw1.json"
+  },
+  "sq2_validation_target": {
+    "eta_high": 0.9261998938051528,
+    "eta_low": 0.861993485407387,
+    "fits_used": [
+      "power_law",
+      "geometric"
+    ],
+    "objective_high": 6841.252767196777,
+    "objective_low": 5335.6124902691645,
+    "partial": {
+      "complete": false,
+      "partial_curve_last": {
+        "objective": 3313.0,
+        "step": 100.0
+      },
+      "partial_stop_decision": {
+        "bound_reported": true,
+        "candidate_fits": [
+          {
+            "asymptote": 0.0,
+            "current_objective": 3313.0,
+            "fit_quality_flag": "accepted",
+            "intercept": 9.69399129605496,
+            "kind": "power_law",
+            "last_compute": 100.0,
+            "origin_compute": 0.0,
+            "projected_marginal_objective_gain_per_compute": 11.147470342006443,
+            "projected_remaining_objective_gain": 3313.0,
+            "r2": 0.9966438727440557,
+            "slope": -0.35144223114930173
+          },
+          {
+            "asymptote": 3299.947,
+            "current_objective": 3313.0,
+            "fit_quality_flag": "low_r2",
+            "intercept": 8.945839361965263,
+            "kind": "geometric",
+            "last_compute": 100.0,
+            "origin_compute": 0.0,
+            "projected_marginal_objective_gain_per_compute": 2.696126546029392,
+            "projected_remaining_objective_gain": 13.052999999999884,
+            "r2": 0.8178230165932932,
+            "slope": -0.0494779508570266
+          }
+        ],
+        "current_compute": 100.0,
+        "current_objective": 3313.0,
+        "law_ref": "trajectory_derived_stopping_law_v1",
+        "marginal_score_gain_per_compute": 9.449827696063947e-06,
+        "n_points": 21,
+        "projected_remaining_score_gain": 0.002808464898003472,
+        "safety_bound_compute": 100.0,
+        "selected_fit": {
+          "asymptote": 0.0,
+          "current_objective": 3313.0,
+          "fit_quality_flag": "accepted",
+          "intercept": 9.69399129605496,
+          "kind": "power_law",
+          "last_compute": 100.0,
+          "origin_compute": 0.0,
+          "projected_marginal_objective_gain_per_compute": 11.147470342006443,
+          "projected_remaining_objective_gain": 3313.0,
+          "r2": 0.9966438727440557,
+          "slope": -0.35144223114930173
+        },
+        "should_stop": true,
+        "stop_reason": "safety_bound_REPORTED",
+        "threshold_score_gain_per_compute": 6.658589531221714e-07
+      },
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sq1_20260803/receipts/sq1_stage_n32_uncap100_sq2.json",
+      "present": true,
+      "rows_expected": 32,
+      "rows_present": 21,
+      "solver": {
+        "convergence_min_improvement": 1,
+        "convergence_patience_evals": 3,
+        "eval_every": 5,
+        "lr": 4.0,
+        "riders": [
+          "multi_start_pu2",
+          "in_loop_realized_flip_fd2_tb1"
+        ],
+        "starts": [
+          "dec",
+          "truth"
+        ],
+        "steps": 100
+      }
+    },
+    "status": "PENDING_COMPLETE_RECEIPT",
+    "target_compute": 100.0,
+    "validation_rule": "when complete n32 SQ2 lands, realized flips_after and eta must be compared to this interval before any convergence wording"
+  }
+}

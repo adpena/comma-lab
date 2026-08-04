@@ -36,6 +36,12 @@ from typing import Any
 
 import numpy as np
 
+from tac.optimization.trajectory_stopping import (
+    TrajectoryPoint,
+    TrajectoryStopConfig,
+    evaluate_trajectory_stop,
+)
+
 FULL_N600_POSE_AUTHORITY_MARKER = "FULL_N600_TERMINAL_POSE_JOINT_ACTION"
 STALE_POSE_REHEARSAL_AUTHORITY_MARKER = "STALE_POSE_MECHANISM_ONLY"
 FULL_N600_SAMPLE_COUNT = 600
@@ -1208,41 +1214,34 @@ def solve_terminal_pose_gn(
             # disagreement (`verdict pose MSE differs after validation`). A scorer that could
             # make the repeat behave differently is one this solver already rejects.
             break
-        if config.marginal_value_floor is not None:
-            # EVENT-GATED SOFT STOP, extrapolated by the iteration's own decay law.
-            #
-            # Stop-on-rejection above catches the HARD wall -- no representable step
-            # improves. It cannot catch the SOFT one: a solve that keeps accepting while
-            # its gain decays toward nothing still pays 2*rank + line-search evaluations
-            # per iteration for an ever-smaller return. That is the case this gate reads.
-            #
-            # THE DECAY LAW (why extrapolation is legitimate, not a guess): a damped
-            # Gauss-Newton iteration on a locally-quadratic objective contracts the error
-            # GEOMETRICALLY -- e_{k+1} ~ rho * e_k, with rho set by the damping-to-curvature
-            # ratio. So the per-iteration gain sequence is geometric, and one-step-ahead
-            # prediction is the ratio extrapolation. Nothing is fitted beyond that.
-            #
-            # THE AVERAGE IS GEOMETRIC, NOT ARITHMETIC: a multiplicative sequence averages
-            # in log space. The arithmetic mean of ratios would be biased upward by a single
-            # noisy iteration and would keep a dead solve alive. This is the rolling estimate
-            # of rho over every ratio observed so far.
-            realized = [t.marginal_value for t in traces if t.marginal_value is not None]
-            if realized:
-                predicted_next = realized[-1]
-                if len(realized) >= 2:
-                    ratios = [
-                        realized[i] / realized[i - 1]
-                        for i in range(1, len(realized))
-                        if realized[i - 1] > 0.0 and realized[i] > 0.0
-                    ]
-                    if ratios:
-                        rho = math.exp(sum(math.log(r) for r in ratios) / len(ratios))
-                        # rho >= 1 means the sequence is NOT decaying -- the solve is still
-                        # finding its stride, so extrapolating a stop would be premature.
-                        if rho < 1.0:
-                            predicted_next = realized[-1] * rho
-                if predicted_next < config.marginal_value_floor:
-                    break
+        if config.marginal_value_floor is not None and config.marginal_value_floor > 0.0:
+            # EVENT-GATED SOFT STOP via the shared trajectory-derived law.  The objective
+            # here is already JOINT-ACTION S, so score_units_per_objective=1.0 and the
+            # caller's floor remains the common waterfill multiplier in S/evaluation.
+            cumulative_evaluations = 0
+            trajectory = [TrajectoryPoint(0.0, initial_evaluation.joint_action)]
+            for prior in traces:
+                cumulative_evaluations += int(prior.evaluations_spent)
+                trajectory.append(
+                    TrajectoryPoint(
+                        float(cumulative_evaluations),
+                        float(prior.joint_action_after),
+                    )
+                )
+            stop_decision = evaluate_trajectory_stop(
+                trajectory,
+                TrajectoryStopConfig(
+                    score_units_per_objective=1.0,
+                    marginal_score_gain_per_compute=config.marginal_value_floor,
+                    min_fit_points=3,
+                    objective_floor=0.0,
+                ),
+            )
+            if stop_decision.should_stop and stop_decision.stop_reason in {
+                "converged_projected",
+                "marginal_below_bar",
+            }:
+                break
 
     strict_improvement = current_mse < initial_mse and current_evaluation.joint_action < initial_evaluation.joint_action
     external_governor_review_required = (

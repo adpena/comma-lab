@@ -1,0 +1,6 @@
+{
+  "equation_id": "trajectory_derived_stopping_law_v1",
+  "registered": true,
+  "schema": "ddm_tj1_canonical_equation_registration.v1",
+  "source_receipt": ".omx/research/ddm_tj1_20260805/trajectory_replay.json"
+}

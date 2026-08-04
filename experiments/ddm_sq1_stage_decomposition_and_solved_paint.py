@@ -60,6 +60,23 @@ from ddm_sq1_eta_seg_realization import (  # noqa: E402
     label_boundary_band,
     seq_len,
 )
+from tac.optimization.trajectory_stopping import (  # noqa: E402
+    TrajectoryPoint,
+    TrajectoryStopConfig,
+    byte_score_units,
+    evaluate_trajectory_stop,
+    seg_flip_score_units,
+)
+
+SQ1_TRAJECTORY_STOP_CONFIG = TrajectoryStopConfig(
+    score_units_per_objective=seg_flip_score_units(
+        n_pairs=N_PAIRS_TOTAL,
+        height=SEG_H,
+        width=SEG_W,
+    ),
+    # Derived bar: one counted archive byte per solver step in the exact score law.
+    marginal_score_gain_per_compute=byte_score_units(),
+)
 
 
 def resize_to_scorer(cam_u8: np.ndarray) -> torch.Tensor:
@@ -127,6 +144,7 @@ def solve_margin_optimal_paint(segnet, dec_f1: np.ndarray, gt_f1: np.ndarray,
                 "start": start_name,
                 "curve": [],
                 "stop_reason": "iteration_cap",
+                "trajectory_stop": None,
                 "steps_run": 0,
                 "best_step": None,
                 "best_proxy_flips": None,
@@ -156,6 +174,27 @@ def solve_margin_optimal_paint(segnet, dec_f1: np.ndarray, gt_f1: np.ndarray,
                     if best is None or n_bad < best[0]:
                         best = (n_bad, q[0].permute(1, 2, 0).numpy().astype(np.uint8),
                                 f"{start_name}@{it}", start_name)
+                    if len(start_diag["curve"]) >= SQ1_TRAJECTORY_STOP_CONFIG.min_fit_points:
+                        stop_decision = evaluate_trajectory_stop(
+                            [
+                                TrajectoryPoint(
+                                    compute=float(point["step"]),
+                                    objective=float(point["proxy_flips"]),
+                                )
+                                for point in start_diag["curve"]
+                            ],
+                            SQ1_TRAJECTORY_STOP_CONFIG,
+                            safety_bound_compute=float(steps),
+                        )
+                        start_diag["trajectory_stop"] = stop_decision.to_payload()
+                        if (
+                            stop_decision.should_stop
+                            and stop_decision.stop_reason
+                            in {"converged_projected", "marginal_below_bar"}
+                            and it < steps
+                        ):
+                            start_diag["stop_reason"] = stop_decision.stop_reason
+                            break
                     if (
                         convergence_patience_evals > 0
                         and evals_since_best >= convergence_patience_evals
@@ -164,6 +203,19 @@ def solve_margin_optimal_paint(segnet, dec_f1: np.ndarray, gt_f1: np.ndarray,
                         start_diag["stop_reason"] = "plateau_no_proxy_improvement"
                         break
                 if it == steps:
+                    if len(start_diag["curve"]) >= SQ1_TRAJECTORY_STOP_CONFIG.min_fit_points:
+                        stop_decision = evaluate_trajectory_stop(
+                            [
+                                TrajectoryPoint(
+                                    compute=float(point["step"]),
+                                    objective=float(point["proxy_flips"]),
+                                )
+                                for point in start_diag["curve"]
+                            ],
+                            SQ1_TRAJECTORY_STOP_CONFIG,
+                            safety_bound_compute=float(steps),
+                        )
+                        start_diag["trajectory_stop"] = stop_decision.to_payload()
                     if start_diag["best_step"] == steps:
                         start_diag["stop_reason"] = "iteration_cap_best_at_cap"
                     elif convergence_patience_evals <= 0:
@@ -185,6 +237,7 @@ def solve_margin_optimal_paint(segnet, dec_f1: np.ndarray, gt_f1: np.ndarray,
         "best_step": int(best[2].rsplit("@", 1)[1]),
         "best_proxy_flips": int(best[0]),
         "stop_reason": selected_diag["stop_reason"],
+        "trajectory_stop": selected_diag["trajectory_stop"],
         "steps_run": selected_diag["steps_run"],
         "curve": selected_diag["curve"],
     }
@@ -283,6 +336,11 @@ def main() -> int:
         rec["solved_start_tag"] = tag
         rec["solved_proxy_flips_scorer_lattice"] = int(nbad)
         rec["solved_stop_reason"] = solve_diag["selected"]["stop_reason"]
+        if solve_diag["selected"].get("trajectory_stop") is not None:
+            rec["solved_trajectory_stop"] = solve_diag["selected"]["trajectory_stop"]
+            rec["solved_trajectory_stop_reason"] = solve_diag["selected"]["trajectory_stop"][
+                "stop_reason"
+            ]
         rec["solved_best_step"] = solve_diag["selected"]["best_step"]
         rec["solved_steps_run"] = solve_diag["selected"]["steps_run"]
         rec["solved_best_start"] = solve_diag["selected"]["start"]

@@ -141,6 +141,29 @@ def main() -> int:
             print(f"  {reason:36s} {count:3d}/{cap_census['n_pairs']}")
     out["cap_artifact_census"] = cap_census
 
+    trajectory_explicit = [r for r in v1 if "solved_trajectory_stop_reason" in r]
+    if trajectory_explicit:
+        trajectory_counts = {}
+        trajectory_bound = 0
+        for r in trajectory_explicit:
+            reason = str(r["solved_trajectory_stop_reason"])
+            trajectory_counts[reason] = trajectory_counts.get(reason, 0) + 1
+            if reason == "safety_bound_REPORTED":
+                trajectory_bound += 1
+        trajectory_census = {
+            "n_pairs": len(v1),
+            "explicit_trajectory_stop_rows": len(trajectory_explicit),
+            "reason_counts": trajectory_counts,
+            "safety_bound_reported": trajectory_bound,
+            "law_ref": trajectory_explicit[0]["solved_trajectory_stop"].get("law_ref"),
+        }
+        print("\n--- trajectory-derived stop census (canonical tj1 law) ---")
+        print(f"  denominator n={trajectory_census['n_pairs']} "
+              f"explicit_trajectory_stop_rows={len(trajectory_explicit)}")
+        for reason, count in sorted(trajectory_counts.items()):
+            print(f"  {reason:36s} {count:3d}/{trajectory_census['n_pairs']}")
+        out["trajectory_stop_census"] = trajectory_census
+
     # ---- per-EDGE (pc2: never per class alone) ------------------------------------------------
     C0 = np.sum([np.array(r["C_before"]) for r in v1], axis=0)
     print("\n--- per-EDGE flips (gt -> rendered), pooled; pc2 hub law ---")
