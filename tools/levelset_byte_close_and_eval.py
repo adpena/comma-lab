@@ -80,7 +80,6 @@ import argparse
 import hashlib
 import json
 import os
-import re
 import struct
 import subprocess
 import sys
@@ -3542,29 +3541,34 @@ def _read_blob_bytes(
 #   d_seg + d_pose + rate + S, cross-checked against tac.contest_score.compute_contest_score.
 # This is the exact-eval path that turns the advisory realized-parity into a REAL evaluate.py row.
 # ---------------------------------------------------------------------------
-_EVAL_REPORT_PATTERNS = {
-    "d_pose": r"Average PoseNet Distortion:\s*([0-9.eE+\-]+)",
-    "d_seg": r"Average SegNet Distortion:\s*([0-9.eE+\-]+)",
-    "rate": r"Compression Rate:\s*([0-9.eE+\-]+)",
-    "final_score": r"Final score[^=]*=\s*([0-9.eE+\-]+)",
-    "n_samples": r"Evaluation results over\s*([0-9]+)\s*samples",
-}
+# CONSOLIDATED 2026-08-04 (ddm_sub1). The report-pattern table and the parse
+# lived here as ONE OF >=6 live private twins of the same authority-path step
+# (levelset, contest_eval, contest_auth_eval, mask_rate_sweep, proxy_eval, ...).
+# Six regex tables for one report format means six ways to silently disagree
+# about what a score IS. The patterns now live once, in
+# tac.submission_chain._EVAL_REPORT_PATTERNS; this is a thin adapter that
+# preserves THIS tool's exception contract (ValueError), which the canonical
+# module raises as SubmissionChainError. Pinned by
+# tools/tests/test_levelset_evaluate_wrapper_consolidation.py, written
+# characterization-first against the pre-consolidation behaviour.
+from tac.submission_chain import (  # noqa: E402
+    parse_evaluate_report as _canonical_parse_evaluate_report,
+)
 
 
 def _parse_evaluate_report(text: str) -> dict[str, Any]:
     """Parse upstream/evaluate.py's report block (printed lines 93-101) into a structured dict.
-    NO-FAKE: a missing required field raises (never fabricate a score)."""
-    out: dict[str, Any] = {}
-    for key, pat in _EVAL_REPORT_PATTERNS.items():
-        mobj = re.search(pat, text)
-        if mobj is None:
-            if key == "n_samples":
-                out[key] = None
-                continue
-            raise ValueError(f"evaluate.py report missing {key!r} (pattern {pat!r}); refusing to "
-                             "fabricate a score (NO-FAKE). Report text:\n" + text[:2000])
-        out[key] = int(mobj.group(1)) if key == "n_samples" else float(mobj.group(1))
-    return out
+    NO-FAKE: a missing required field raises (never fabricate a score).
+
+    Delegates to the canonical parser; re-raises as ``ValueError`` so this tool's
+    long-standing exception contract is unchanged by the consolidation.
+    """
+    from tac.submission_chain import SubmissionChainError
+
+    try:
+        return _canonical_parse_evaluate_report(text)
+    except SubmissionChainError as exc:
+        raise ValueError(str(exc)) from exc
 
 
 def _require_full_600_samples(n_samples: Any, report_path: Path) -> None:
