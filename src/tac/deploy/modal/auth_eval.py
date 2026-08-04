@@ -51,6 +51,12 @@ SENSITIVE_RUNTIME_UPLOAD_NAMES = {
     "id_ed25519",
     "id_rsa",
 }
+# Reviewed video-token codec modules the "token" secrets-marker false-positives
+# on (exact basenames only — see validate_runtime_upload_file for the contract).
+RUNTIME_UPLOAD_BASENAME_ALLOWLIST = frozenset({
+    "ddm_r7_token_coder.py",
+})
+
 SENSITIVE_RUNTIME_UPLOAD_SUBSTRINGS = (
     "apikey",
     "api_key",
@@ -346,6 +352,15 @@ def validate_runtime_upload_file(path: Path, rel: str) -> None:
     if lowered_parts & SENSITIVE_RUNTIME_UPLOAD_NAMES:
         raise ValueError(f"refusing secret-looking file in uploaded runtime tree: {rel}")
     lowered_rel = rel.lower()
+    # Exact-basename allowlist BEFORE the substring scan: the "token" marker
+    # collides with this domain's core noun (VIDEO tokens). Each entry is a
+    # reviewed in-repo source file with no secrets; the allowlist is exact
+    # basenames only, never patterns, so it cannot widen silently. False
+    # positive that motivated it (2026-08-04): ddm_r7_token_coder.py — the
+    # receiver's video-token entropy coder, a REQUIRED decode module imported
+    # by inflate_runner.py — blocked the first own-vehicle contest-CPU row.
+    if rel_path.name.lower() in RUNTIME_UPLOAD_BASENAME_ALLOWLIST:
+        return
     if any(marker in lowered_rel for marker in SENSITIVE_RUNTIME_UPLOAD_SUBSTRINGS):
         raise ValueError(f"refusing secret-looking file in uploaded runtime tree: {rel}")
 
