@@ -1,0 +1,90 @@
+{
+  "schema": "ddm_r9m_ready_to_fire_receipt.v1",
+  "date_utc": "2026-08-04T18:39:30Z",
+  "arm": "ddm_r9m",
+  "status": "READY_FOR_MAIN_FIRE",
+  "contest_cpu_measured": false,
+  "call_id": null,
+  "score_claim": false,
+  "promotion_eligible": false,
+  "pointer_moved": false,
+  "reason_not_dispatched": "Modal provider verification was unavailable from this sandbox: `.venv/bin/modal app list` produced no output within 40 seconds and was interrupted before any dispatch boundary.",
+  "charter_id": "ddm_r9m",
+  "common_contract_id": "codex_runs_common_contract",
+  "mission": "First own-vehicle Modal contest-CPU exact row for fz4 sub_final.",
+  "advisory_reference": {
+    "axis": "[macOS-CPU advisory]",
+    "submission_dir": "/Volumes/VertigoDataTier/pact/ddm_fz1_20260804/rowB/sub_final",
+    "archive": "/Volumes/VertigoDataTier/pact/ddm_fz1_20260804/rowB/sub_final/archive.zip",
+    "archive_bytes": 358084,
+    "archive_sha256": "ad5dd0e4fbe5b13ab53a5995a6d77cc558c25f40b63f894ea50ad336bd50fb66",
+    "d_seg": 0.00431179,
+    "d_pose": 0.00071459,
+    "seg_term": 0.43117900000000003,
+    "pose_term": 0.08453342534169546,
+    "rate_term": 0.2384334373697996,
+    "recomputed_score": 0.7541458627114951,
+    "n_samples": 600,
+    "receipt": "/Volumes/VertigoDataTier/pact/ddm_fz1_20260804/rowB/sub_final/fz2_byteclose_receipt.json",
+    "receipt_sha256": "d7285e918b359597f57f613c543f8d4a615aebf5680577fc26122588e6c097ce",
+    "report": "/Volumes/VertigoDataTier/pact/ddm_fz1_20260804/rowB/sub_final/report.txt",
+    "report_sha256": "f7eb9d21bff94092ff623d452d0d6b456b69645982acb5fd8417d3842ad60b30"
+  },
+  "custody_gates": {
+    "archive_sha256_verified": true,
+    "archive_bytes_verified": true,
+    "byte_ledger_closes": true,
+    "byte_ledger_residual_bytes": 0,
+    "payload_reencodes_identically": true,
+    "inflate_rc": 0,
+    "inflate_raw_bytes": 3662409600,
+    "upstream_immutable": true,
+    "mps_used": false,
+    "tmp_evidence_persisted": false
+  },
+  "runtime_upload": {
+    "submission_dir": "/Volumes/VertigoDataTier/pact/ddm_fz1_20260804/rowB/sub_final",
+    "inflate_sh_rel": "inflate.sh",
+    "inflate_sh_sha256": "a867293d116506d601d91c7ee4a02078fde8405cbec6b44ae66fbcec2fe07ca8",
+    "inflate_runner_sha256": "930bf44b81a51f967a47def47c31a3700ced934732087e361e55ef173e314ee9",
+    "modal_projected_runtime_tree_sha256": "3ea13f96213785d6db7751849334b8ceba285560255f3fce6552c6ab1584c523",
+    "modal_projected_runtime_content_tree_sha256": "8214d97e17cdea8dd69a41ad6c4701dbfbde29dec268e20e3c603b1493ef3150"
+  },
+  "upstream_snapshot": {
+    "git_commit": "11ad728f563d8970929e8947a1cf6124ee6303e4",
+    "git_status_short": "",
+    "evaluate_py_sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b",
+    "evaluate_sh_sha256": "9612284ce6e9585aefcf636f3027808a56160ffd572edffdf4b8622a65fac917",
+    "modules_py_sha256": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa",
+    "frame_utils_py_sha256": "d689aca7d263997cb2fb980d6098d503f955e56e8642cd0a04cc437f0ffdab90",
+    "segnet_safetensors_sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6",
+    "posenet_safetensors_sha256": "0f3a0874c5c387f990d7b88bd1d7e1f6de35d98b45f2a289989db2c77b9b6576",
+    "source_video_sha256": "2611f5f3e186f3529777749f97bd4cce3a208d6b3559e137bd45d256980d2fa9",
+    "public_test_video_names_sha256": "7ff99d08c8351dd8167ec09213b758da5bbb705dedabe361ba881217374029a8"
+  },
+  "dispatch_gate_checks": {
+    "modal_client_version": "1.5.1",
+    "claim_summary": "CLAIM_SUMMARY active=0 stale_nonterminal=32 terminal_latest=1529 unparsable_timestamp=0 invalid_lane_id=4",
+    "single_flight_reconcile": "MODAL RECONCILE: 0 live ledger call_id(s), 0 active Modal claim(s); OK: dual-ledger consistent (single-flight satisfied).",
+    "claim_dry_run_rc": 0,
+    "claim_dry_run_row": "| 2026-08-04T18:39:30Z | codex:r9m | lane_ddm_r9m_first_own_vehicle_contest_cpu_20260804 | modal | ddm_r9m_sub_final_contest_cpu_20260804a |  | eval | READY_TO_FIRE dry-run only; actual experiments/modal_auth_eval_cpu.py command owns real claim; archive ad5dd0e4fbe5b13ab53a5995a6d77cc558c25f40b63f894ea50ad336bd50fb66 358084B; single-flight reconcile clean |",
+    "cloud_provider_probe": "`.venv/bin/modal app list` did not return within 40 seconds; interrupted with rc=1 after printing `Aborted!`.",
+    "real_claim_owner": "experiments/modal_auth_eval_cpu.py writes the actual active and spawned claim rows when the ready-to-fire command is run."
+  },
+  "ready_to_fire": {
+    "command_file": ".omx/research/ddm_r9m_first_contest_cpu_row_20260804/r9m_ready_to_fire_command.txt",
+    "output_dir": ".omx/research/ddm_r9m_first_contest_cpu_row_20260804/modal_exact_eval_results/contest_cpu",
+    "lane_id": "lane_ddm_r9m_first_own_vehicle_contest_cpu_20260804",
+    "instance_job_id": "ddm_r9m_sub_final_contest_cpu_20260804a",
+    "budget_cap_usd": 2.0,
+    "single_axis_waiver_reason": "R9 charter requests first own-vehicle contest-CPU ordering-transfer calibration only; CUDA sibling is not required for promotion",
+    "required_harvest_command": ".venv/bin/python tools/recover_modal_auth_eval.py --output-dir .omx/research/ddm_r9m_first_contest_cpu_row_20260804/modal_exact_eval_results/contest_cpu"
+  },
+  "boundaries": [
+    "No [contest-CPU] score was measured in this sandbox.",
+    "No Modal call_id was created.",
+    "No frontier promotion or pointer movement is claimed.",
+    "The advisory row remains S=0.7541458627114951 @ 358084 B [macOS-CPU advisory].",
+    "The borrowed contest pointer 0.1910828242 remains unmoved."
+  ]
+}

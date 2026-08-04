@@ -1,0 +1,19 @@
+PATH="$PWD/.venv/bin:$PATH" PYTHONPATH=src:upstream:$PWD .venv/bin/modal run --detach experiments/modal_auth_eval_cpu.py \
+  --archive /Volumes/VertigoDataTier/pact/ddm_fz1_20260804/rowB/sub_final/archive.zip \
+  --expected-archive-sha256 ad5dd0e4fbe5b13ab53a5995a6d77cc558c25f40b63f894ea50ad336bd50fb66 \
+  --inflate-sh inflate.sh \
+  --submission-dir /Volumes/VertigoDataTier/pact/ddm_fz1_20260804/rowB/sub_final \
+  --expected-runtime-tree-sha256 3ea13f96213785d6db7751849334b8ceba285560255f3fce6552c6ab1584c523 \
+  --output-dir .omx/research/ddm_r9m_first_contest_cpu_row_20260804/modal_exact_eval_results/contest_cpu \
+  --detach \
+  --provider-detach-ack \
+  --single-axis-waiver-reason "R9 charter requests first own-vehicle contest-CPU ordering-transfer calibration only; CUDA sibling is not required for promotion" \
+  --lane-id lane_ddm_r9m_first_own_vehicle_contest_cpu_20260804 \
+  --instance-job-id ddm_r9m_sub_final_contest_cpu_20260804a \
+  --claim-agent codex:r9m \
+  --claim-notes "R9 first own-vehicle contest-CPU exact row; archive ad5dd0e4fbe5b13ab53a5995a6d77cc558c25f40b63f894ea50ad336bd50fb66 358084B; advisory S=0.7541458627114951; budget <=2 USD of #381 envelope; harvest same run"
+
+Harvest after the detached call is accepted:
+
+.venv/bin/python tools/recover_modal_auth_eval.py \
+  --output-dir .omx/research/ddm_r9m_first_contest_cpu_row_20260804/modal_exact_eval_results/contest_cpu
