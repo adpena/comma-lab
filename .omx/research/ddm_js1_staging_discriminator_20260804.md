@@ -397,6 +397,38 @@ pose axis is 2.5–4.2× skewed on non-population subsets and et1 measured this 
 at **0.2692×** of population on d_pose. Seg reach/gross are n600 with no subsetting, so m96 cannot
 apply to them by construction.
 
+## §6b THE BANKING ROUTE — named, because C-PRIME + k=4 clears net-negative
+
+The charter requires the byte-close path be named if an arm wins net-positive. It does
+(−0.01769 S), so here it is — as a **route with a gate in front of it**, not a claim.
+
+**Composed S projection (advisory, NOT a row):**
+
+| leg | ΔS | note |
+|---|---:|---|
+| seg, block16 phase field at η 0.4814 | **−0.086840** | n600 gross × pooled η floor |
+| rate, offset field 46,247 B | **+0.030794** | et1's measured LZMA1 coder-closed price |
+| rate, k=4 pose stream 96 B/pair | **+0.038353** | 57,600 B at n600 |
+| **composed** | **−0.017692** | **2.86% of gap ⇒ S 0.7910689 → 0.773377** |
+
+pose is **NOT** a term here (subset-scoped gate; measured non-damaging, 3/3 below shipped).
+
+**The chain**, in order, through the canonical surface (`tac.submission_chain` — never a probe
+script): `stage_submission` → `run_inflate` → `audit_runtime_tree` + `build_byte_ledger` (the
+offset section and the k=4 coefficient section both need a PROFILES grammar entry; neither exists
+yet) → `run_upstream_evaluate` → `parse_evaluate_report`, on the **exact archive bytes**, CPU and
+CUDA as separate axes.
+
+**Three gates stand in front of it, and none is optional.**
+1. **The int16 quantiser re-score** (§5b ⚠) — the 96 B price is counted but its value is not yet
+   measured through its own carriage arithmetic. Until then the table above is a projection.
+2. **Honest n on the damage tail** — k=4 is n=3; et1's 123.8× class is unrepresented.
+3. **The two solvers are cap-pinned floors**, so η and the repair are both lower bounds; the
+   composed number is conservative in the good direction but is not converged.
+
+**No archive was built and no byte was closed in this unit.** The route is written down so the
+successor does not have to re-derive it, not because it has been walked.
+
 ## §7 Follow-ons — FIRED / FOLDED / QUEUED-WITH-FIRE-ORDER
 
 - **FIRED** — the staging discriminator itself (§4) · the C-PRIME vs C structural verdict (§4b) ·
