@@ -1,0 +1,117 @@
+{
+ "axis": "[macOS-CPU advisory] for upstream evaluate rows; [macOS-CPU frozen-scorer advisory] for component censuses",
+ "census": {
+  "ep854_evaluator_mean_control": 37.87713242,
+  "ep854_mean_d_pose": 37.87706250833425,
+  "ep854_n": 600,
+  "map_mean_d_pose": 0.1688459936386183,
+  "map_n": 600,
+  "map_pairs_pose_better_vs_pu2": 12,
+  "map_pairs_pose_worse_gt_1e_3_vs_pu2": 523,
+  "pu2_mean_d_pose": 0.0015451773764668057,
+  "pu2_n": 600,
+  "sub_final_repaired_pairs": 21,
+  "sub_map_repair_repaired_pairs": 4
+ },
+ "k4_envelope": {
+  "beyond_threshold_all_escalated_to_k_ge_5": true,
+  "measured_pairs_beyond_threshold": [
+   0,
+   1,
+   3,
+   511
+  ],
+  "pairs_requiring_k5_or_exclusion": [],
+  "ratio_threshold": 123.85
+ },
+ "promotion_eligible": false,
+ "ranking": [
+  {
+   "S": 0.7541458627114951,
+   "archive_bytes": 358084,
+   "d_pose": 0.00071459,
+   "d_seg": 0.00431179,
+   "evidence_class": "MEASURED n600 upstream/evaluate.py on exact archive bytes",
+   "notes": "Current own-vehicle frontier row; commit 4dcfd24870 records local receipt/report, SSD receipt has clean run_inflate custody.",
+   "rank_by_current_byteclosed_evidence": 1,
+   "row": "standalone-live / pu2 + selective F0PR1 tail repair (map dropped)",
+   "score_axis": "[macOS-CPU advisory]"
+  },
+  {
+   "S_estimate_range": [
+    0.757,
+    0.783
+   ],
+   "archive_bytes": null,
+   "base_rate_term": 0.190122,
+   "d_seg_term": 0.394407,
+   "evidence_class": "ESTIMATE from n600 damage census + n=29 k-ladder/stratified repairs; not byteclosed/evaluated as final archive",
+   "notes": "Needs all-600 solve plus receiver wiring before it can outrank measured rows.",
+   "rank_by_current_byteclosed_evidence": 2,
+   "row": "#827 composition / cr2_ep854 plus mixed-k F0PR1 stream",
+   "score_axis": "[macOS-CPU frozen-scorer advisory estimate]"
+  },
+  {
+   "S_estimate_floor_from_hot_state": 0.74279,
+   "archive_bytes": null,
+   "evidence_class": "ESTIMATE / stranded; #881 seg prize quoted as -0.0866789 S but no separate pose-carrying byteclosed row evaluated here",
+   "notes": "Potentially best estimated score if the #881 seg prize composes; ranked below measured standalone-live until byteclosed receiver custody exists.",
+   "rank_by_current_byteclosed_evidence": 3,
+   "row": "ep854 standalone (#881) plus F0PR1-compatible pose repair",
+   "score_axis": "[macOS-CPU frozen-scorer advisory estimate]"
+  }
+ ],
+ "schema": "ddm_fz4_per_pair_damage_summary.v1",
+ "score_claim": false,
+ "source_artifacts": {
+  "ep854_census": "/Volumes/VertigoDataTier/pact/ddm_fz1_20260804/fz1_n600_census.json",
+  "ext_a": "/Volumes/VertigoDataTier/pact/ddm_fz1_20260804/fz1_ext_a.json",
+  "ext_b": "/Volumes/VertigoDataTier/pact/ddm_fz1_20260804/fz1_ext_b.json",
+  "kladder": "/Volumes/VertigoDataTier/pact/ddm_fz1_20260804/fz1_kladder.json",
+  "map_collateral": "/Volumes/VertigoDataTier/pact/ddm_fz1_20260804/rowB/map_collateral.json",
+  "pu2_census": "/Volumes/VertigoDataTier/pact/ddm_fz1_20260804/fz1_pu2_n600_census.json",
+  "repair8": "/Volumes/VertigoDataTier/pact/ddm_fz1_20260804/fz1_census_repair.json",
+  "sub_final_compose": "/Volumes/VertigoDataTier/pact/ddm_fz1_20260804/rowB/sub_final/compose_receipt.json",
+  "sub_final_eval": "/Volumes/VertigoDataTier/pact/ddm_fz1_20260804/rowB/sub_final/fz2_byteclose_receipt.json",
+  "sub_map_repair_compose": "/Volumes/VertigoDataTier/pact/ddm_fz1_20260804/rowB/sub_map_repair/compose_receipt.json",
+  "sub_map_repair_report": "/Volumes/VertigoDataTier/pact/ddm_fz1_20260804/rowB/sub_map_repair/report.txt"
+ },
+ "with_map_vs_without_map": {
+  "delta_with_map_minus_without": {
+   "S": 1.214897564882913,
+   "bytes": -117092,
+   "d_pose": 0.16639862000000002,
+   "d_seg": 0.0008467499999999994,
+   "pose_term": 1.2081893214218944,
+   "rate_term": -0.0779667565389813,
+   "seg_term": 0.08467499999999994
+  },
+  "map_pays": false,
+  "seg_break_even_delta": 0.000756,
+  "verdict_scope": "FORMULATION: tz1 [16,12,8,4] margin-coupled map plus current selective F0PR1 repair on this pu2 vehicle",
+  "with_map_repair": {
+   "S": 1.969043427594408,
+   "archive_bytes": 240992,
+   "d_pose": 0.16711321,
+   "d_seg": 0.00515854,
+   "pose_term": 1.2927227467635898,
+   "rate_term": 0.16046668083081833,
+   "repaired_pairs": [
+    18,
+    44,
+    74,
+    523
+   ],
+   "seg_term": 0.5158539999999999
+  },
+  "without_map": {
+   "S": 0.7541458627114951,
+   "archive_bytes": 358084,
+   "d_pose": 0.00071459,
+   "d_seg": 0.00431179,
+   "pose_term": 0.08453342534169546,
+   "rate_term": 0.23843343736979963,
+   "seg_term": 0.43117900000000003
+  }
+ }
+}

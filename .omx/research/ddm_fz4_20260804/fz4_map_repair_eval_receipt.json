@@ -1,0 +1,308 @@
+{
+ "axis": "[macOS-CPU advisory]",
+ "boundaries": [
+  "No contest-CPU/CUDA authority eval was run; macOS CPU is advisory only.",
+  "The fz3 committed receipt boundary note remains historical; the SSD fz2 receipt and this fz4 inflate receipt provide clean run_inflate custody for sub_final and sub_map_repair respectively.",
+  "Map verdict is formulation-scoped, not a kill for gentler or pose-aware maps.",
+  "The with-map n600 report pre-existed this agent turn under the active fz4 claim; this turn did not spend a second n600 evaluate and did rerun the clean inflate wrapper."
+ ],
+ "deltas_with_map_minus_without": {
+  "bytes": -117092,
+  "d_pose": 0.16639862000000002,
+  "d_seg": 0.0008467499999999994,
+  "pose_term": 1.2081893214218944,
+  "rate_term": -0.0779667565389813,
+  "score": 1.214897564882913,
+  "seg_term": 0.08467499999999994
+ },
+ "k4_envelope": {
+  "beyond_threshold_all_escalated_to_k_ge_5": true,
+  "measured_pairs_beyond_threshold": [
+   0,
+   1,
+   3,
+   511
+  ],
+  "pairs_requiring_k5_or_exclusion": [],
+  "ratio_threshold": 123.85
+ },
+ "per_pair_damage_summary": "/Users/adpena/Projects/pact/.omx/research/ddm_fz4_20260804/fz4_per_pair_damage_summary.json",
+ "per_pair_damage_table": "/Users/adpena/Projects/pact/.omx/research/ddm_fz4_20260804/fz4_per_pair_damage_table.csv",
+ "pre_registered_map_break_even": {
+  "observed_delta_d_seg": 0.0008467499999999994,
+  "pays_iff_delta_d_seg_lt": 0.000756,
+  "seg_leg_passed": false
+ },
+ "promotion_eligible": false,
+ "ranking": [
+  {
+   "S": 0.7541458627114951,
+   "archive_bytes": 358084,
+   "d_pose": 0.00071459,
+   "d_seg": 0.00431179,
+   "evidence_class": "MEASURED n600 upstream/evaluate.py on exact archive bytes",
+   "notes": "Current own-vehicle frontier row; commit 4dcfd24870 records local receipt/report, SSD receipt has clean run_inflate custody.",
+   "rank_by_current_byteclosed_evidence": 1,
+   "row": "standalone-live / pu2 + selective F0PR1 tail repair (map dropped)",
+   "score_axis": "[macOS-CPU advisory]"
+  },
+  {
+   "S_estimate_range": [
+    0.757,
+    0.783
+   ],
+   "archive_bytes": null,
+   "base_rate_term": 0.190122,
+   "d_seg_term": 0.394407,
+   "evidence_class": "ESTIMATE from n600 damage census + n=29 k-ladder/stratified repairs; not byteclosed/evaluated as final archive",
+   "notes": "Needs all-600 solve plus receiver wiring before it can outrank measured rows.",
+   "rank_by_current_byteclosed_evidence": 2,
+   "row": "#827 composition / cr2_ep854 plus mixed-k F0PR1 stream",
+   "score_axis": "[macOS-CPU frozen-scorer advisory estimate]"
+  },
+  {
+   "S_estimate_floor_from_hot_state": 0.74279,
+   "archive_bytes": null,
+   "evidence_class": "ESTIMATE / stranded; #881 seg prize quoted as -0.0866789 S but no separate pose-carrying byteclosed row evaluated here",
+   "notes": "Potentially best estimated score if the #881 seg prize composes; ranked below measured standalone-live until byteclosed receiver custody exists.",
+   "rank_by_current_byteclosed_evidence": 3,
+   "row": "ep854 standalone (#881) plus F0PR1-compatible pose repair",
+   "score_axis": "[macOS-CPU frozen-scorer advisory estimate]"
+  }
+ ],
+ "schema": "ddm_fz4_map_repair_eval_receipt.v1",
+ "score_claim": false,
+ "verdict": "MAP_REPAIR_DOES_NOT_PAY",
+ "verdict_scope": "FORMULATION: tz1 [16,12,8,4] margin-coupled map plus current selective F0PR1 repair on pu2 vehicle",
+ "with_map_repair": {
+  "archive": "/Volumes/VertigoDataTier/pact/ddm_fz1_20260804/rowB/sub_map_repair/archive.zip",
+  "archive_bytes": 240992,
+  "archive_sha256": "eada9fe852ac8ee505fa3094fc602b4178fab2719ee990887a4533a2eccf0c7f",
+  "byte_ledger": {
+   "closes": true,
+   "members": [],
+   "payload_reencodes_identically": true,
+   "residual_bytes": 0,
+   "sections": [
+    {
+     "counted": true,
+     "index": 0,
+     "magic": null,
+     "name": "config",
+     "raw_bytes": 36,
+     "sha256": "fc4f23ac9e31ba266ace26131319eb5b574d69e1d505fb1fc20a9dbc79a240d6"
+    },
+    {
+     "counted": true,
+     "index": 1,
+     "magic": "IX2REN01",
+     "name": "renderer",
+     "raw_bytes": 3266,
+     "sha256": "3b8eb0c24f9e6d8b547a23a5db29a1dbbd03db474fbba3638b0c3dd858ca7009"
+    },
+    {
+     "counted": true,
+     "index": 2,
+     "magic": "{\"activa",
+     "name": "selector",
+     "raw_bytes": 535,
+     "sha256": "8fc5c3fc65eb051b65ebf01d4b008e52d606097194c57884e739eae2ad8382e1"
+    },
+    {
+     "counted": true,
+     "index": 3,
+     "magic": "PFS1WPD1",
+     "name": "pose_warp",
+     "raw_bytes": 8751,
+     "sha256": "d1d073e55aacf991491365d13716fededb169854b78bb203c34c84ca880c25db"
+    },
+    {
+     "counted": true,
+     "index": 4,
+     "magic": null,
+     "name": "frame0_pose_repair",
+     "raw_bytes": 842,
+     "sha256": "d760ee9f315a4c18f071eafed4b4fc6aded53cf4bd328a2a91f870c20633350b"
+    }
+   ]
+  },
+  "byteclose_inflate_receipt": "/Volumes/VertigoDataTier/pact/ddm_fz1_20260804/rowB/sub_map_repair/fz4_byteclose_inflate_receipt.json",
+  "byteclose_inflate_receipt_sha256": "695ef78027d2c569941dcca57a60ce18ebab5e8e1844279a8504eb98d284e471",
+  "clean_inflate_raw": "/Volumes/VertigoDataTier/pact/ddm_fz1_20260804/rowB/sub_map_repair/fz4_clean_inflated/0.raw",
+  "clean_inflate_raw_bytes": 3662409600,
+  "clean_inflate_raw_sha256": "3e7fb620e961aa73d5c445872deb8d56213863ca7b422bb219fdd64d3cb868cb",
+  "compose_receipt": "/Volumes/VertigoDataTier/pact/ddm_fz1_20260804/rowB/sub_map_repair/compose_receipt.json",
+  "compose_receipt_sha256": "fd63093f60c227270b16ad5125b8b4bc9abf0854b0b1324d84206e4596253169",
+  "evaluate": {
+   "archive_bytes_scored": 240992,
+   "authority": "advisory",
+   "d_pose": 0.16711321,
+   "d_seg": 0.00515854,
+   "device": "cpu",
+   "evaluate_final_score": 1.97,
+   "n_samples": 600,
+   "promotion_eligible": false,
+   "ran": true,
+   "rate_from_evaluate": 0.00641867,
+   "recomputed_score": 1.969043427594408,
+   "recomputed_vs_evaluate_delta": 0.0009565724055919933,
+   "score_axis": "[macOS-CPU advisory]",
+   "score_claim": false
+  },
+  "inflate": {
+   "out_dir": "/Volumes/VertigoDataTier/pact/ddm_fz1_20260804/rowB/sub_map_repair/fz4_clean_inflated",
+   "raw_bytes": 3662409600,
+   "raw_files": 1,
+   "returncode": 0,
+   "seconds": 204.40336799621582,
+   "stderr_tail": "",
+   "stdout_tail": ""
+  },
+  "repaired_pairs": [
+   18,
+   44,
+   74,
+   523
+  ],
+  "report_path": "/Volumes/VertigoDataTier/pact/ddm_fz1_20260804/rowB/sub_map_repair/report.txt",
+  "report_sha256": "8cde7dc405d081e0a8acbf825a1924f5f13ba9d57344b6f32f9414752738fa57",
+  "runtime_custody": {
+   "diverged_count": 3,
+   "entry_module": "inflate_runner",
+   "entry_script": "inflate.sh",
+   "files": [
+    {
+     "divergence_reason": null,
+     "reached": true,
+     "repo_path": "src/tac/optimization/ddm_ix2_archive_container.py",
+     "repo_sha256": "e77039e2a60ac3d11f79285e75f5b98e509f8f9546d13ea138a3e40a23fa0d99",
+     "staged_bytes": 29213,
+     "staged_name": "ddm_ix2_archive_container.py",
+     "staged_sha256": "e77039e2a60ac3d11f79285e75f5b98e509f8f9546d13ea138a3e40a23fa0d99",
+     "verdict": "IDENTICAL"
+    },
+    {
+     "divergence_reason": "staged bytes differ from the repo counterpart; the shipped receiver is a PINNED vendored copy and repo HEAD has moved. Re-staging from HEAD would ship a different receiver.",
+     "reached": true,
+     "repo_path": "experiments/ddm_r7_token_coder.py",
+     "repo_sha256": "914a1cfac561a3cabcbb2911b0de724c4887333eb321a0a93fff1c344c755fdf",
+     "staged_bytes": 39404,
+     "staged_name": "ddm_r7_token_coder.py",
+     "staged_sha256": "2a9c5a3a0b113eb0217c6549d057bc92df4bc76b0a311f72782a954936836136",
+     "verdict": "DIVERGED"
+    },
+    {
+     "divergence_reason": "staged bytes differ from the repo counterpart; the shipped receiver is a PINNED vendored copy and repo HEAD has moved. Re-staging from HEAD would ship a different receiver.",
+     "reached": true,
+     "repo_path": "src/tac/optimization/ddm_tr1_runtime.py",
+     "repo_sha256": "99e2a6408826f4f2d2125520904deefc9e8a506728078ad81a7866e74806a05c",
+     "staged_bytes": 48443,
+     "staged_name": "ddm_tr1_runtime.py",
+     "staged_sha256": "f3b93708b542e53d7a135233d8ba51bd406a5f6b6a55a7b80855369e9cebb2e9",
+     "verdict": "DIVERGED"
+    },
+    {
+     "divergence_reason": null,
+     "reached": true,
+     "repo_path": null,
+     "repo_sha256": null,
+     "staged_bytes": 139,
+     "staged_name": "inflate.sh",
+     "staged_sha256": "a867293d116506d601d91c7ee4a02078fde8405cbec6b44ae66fbcec2fe07ca8",
+     "verdict": "UNMAPPED"
+    },
+    {
+     "divergence_reason": null,
+     "reached": true,
+     "repo_path": "experiments/inflate_runner_v4d.py",
+     "repo_sha256": "930bf44b81a51f967a47def47c31a3700ced934732087e361e55ef173e314ee9",
+     "staged_bytes": 20221,
+     "staged_name": "inflate_runner.py",
+     "staged_sha256": "930bf44b81a51f967a47def47c31a3700ced934732087e361e55ef173e314ee9",
+     "verdict": "IDENTICAL"
+    },
+    {
+     "divergence_reason": null,
+     "reached": true,
+     "repo_path": "src/tac/optimization/pfs1_warp_receiver.py",
+     "repo_sha256": "ddfb9f9c24e3c95f37f946191909291e2ebc16b3a48a971e230785606a50062a",
+     "staged_bytes": 3926,
+     "staged_name": "pfs1_warp_receiver.py",
+     "staged_sha256": "ddfb9f9c24e3c95f37f946191909291e2ebc16b3a48a971e230785606a50062a",
+     "verdict": "IDENTICAL"
+    },
+    {
+     "divergence_reason": "staged bytes differ from the repo counterpart; the shipped receiver is a PINNED vendored copy and repo HEAD has moved. Re-staging from HEAD would ship a different receiver.",
+     "reached": true,
+     "repo_path": "src/tac/optimization/repair_entropy_coder_runtime_adapters.py",
+     "repo_sha256": "3d1cbb1c69f620684e4909fd2e195371ace84f667c8a6a5b300af0ee1c6df64e",
+     "staged_bytes": 11255,
+     "staged_name": "repair_entropy_coder_runtime_adapters.py",
+     "staged_sha256": "8ef8520d5ed5ccb7ce83d5b4faf7f3dc580c7f9de6c90f55e32854346421a14e",
+     "verdict": "DIVERGED"
+    }
+   ],
+   "identical_count": 3,
+   "reached_modules": [
+    "ddm_ix2_archive_container",
+    "ddm_r7_token_coder",
+    "ddm_tr1_runtime",
+    "inflate_runner",
+    "pfs1_warp_receiver",
+    "repair_entropy_coder_runtime_adapters"
+   ],
+   "staged_dir": "/Volumes/VertigoDataTier/pact/ddm_fz1_20260804/rowB/sub_map_repair",
+   "unmapped_count": 1,
+   "unreached_files": []
+  },
+  "submission_dir": "/Volumes/VertigoDataTier/pact/ddm_fz1_20260804/rowB/sub_map_repair"
+ },
+ "without_map_reference": {
+  "archive_bytes": 358084,
+  "archive_sha256": "ad5dd0e4fbe5b13ab53a5995a6d77cc558c25f40b63f894ea50ad336bd50fb66",
+  "clean_inflate_receipt": "/Volumes/VertigoDataTier/pact/ddm_fz1_20260804/rowB/sub_final/fz2_byteclose_receipt.json",
+  "clean_inflate_receipt_sha256": "d7285e918b359597f57f613c543f8d4a615aebf5680577fc26122588e6c097ce",
+  "evaluate": {
+   "archive_bytes_scored": 358084,
+   "authority": "advisory",
+   "d_pose": 0.00071459,
+   "d_seg": 0.00431179,
+   "device": "cpu",
+   "evaluate_final_score": 0.75,
+   "n_samples": 600,
+   "promotion_eligible": false,
+   "ran": true,
+   "rate_from_evaluate": 0.00953734,
+   "recomputed_score": 0.7541458627114951,
+   "recomputed_vs_evaluate_delta": 0.004145862711495085,
+   "report_path": "/Volumes/VertigoDataTier/pact/ddm_fz1_20260804/rowB/sub_final/report.txt",
+   "score_axis": "[macOS-CPU advisory]",
+   "score_claim": false
+  },
+  "fz3_committed_receipt_boundary_note_superseded_by_ssd_clean_inflate": true,
+  "repaired_pairs": [
+   9,
+   10,
+   16,
+   18,
+   22,
+   42,
+   44,
+   58,
+   67,
+   74,
+   90,
+   94,
+   106,
+   129,
+   142,
+   144,
+   164,
+   197,
+   275,
+   523,
+   539
+  ],
+  "submission_dir": "/Volumes/VertigoDataTier/pact/ddm_fz1_20260804/rowB/sub_final"
+ }
+}
