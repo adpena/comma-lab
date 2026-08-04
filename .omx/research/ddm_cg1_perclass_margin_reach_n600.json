@@ -1,0 +1,674 @@
+{
+ "arm": "ddm_cg1",
+ "probe": "per-class reach of the free per-site GT-margin key (mg1's key, conditioned on class)",
+ "axis": "[macOS-CPU scorer-free advisory]",
+ "score_claim": false,
+ "promotion_eligible": false,
+ "rank_or_kill_eligible": false,
+ "scorer_forwards_run": 0,
+ "git_head": "26412a36b0166b4c0186750b762023b255166660",
+ "inputs": {
+  "gt_argmax": "/Volumes/VertigoDataTier/pact/ddm_pu2_20260803/argmax_cache/gt_argmax_n600.npy",
+  "gt_argmax_sha256_first_64MiB": "7d2969d5d4891049bd5df840d3f91448a28a1be6e0d484d606b10359cdf1d5c0",
+  "cx1_argmax": "/Volumes/VertigoDataTier/pact/ddm_pu2_20260803/argmax_cache/cx1_argmax_n600.npy",
+  "cx1_argmax_sha256_first_64MiB": "dbb8b5e711aee6d08af24c0556872bb5067c6c73ab8f7d6f8d9ac0838cd3ac0d",
+  "gt_npz": "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz"
+ },
+ "denominator": {
+  "pairs": 600,
+  "h": 384,
+  "w": 512,
+  "total_sites": 117964800,
+  "n_flip": 508640
+ },
+ "positive_control": {
+  "d_seg_measured": 0.004311794704861111,
+  "d_seg_expected": 0.004311794704861111,
+  "rel_err": 0.0,
+  "verdict": "ARGMAX_VERIFIED",
+  "gt_margin_negative_sites": 0,
+  "gt_margin_sign_note": "MUST be 0; confirms margins is the GT self-margin"
+ },
+ "population_margin_bins": [
+  {
+   "bin": "[0, 0.096)",
+   "sites": 319903,
+   "flips": 136003,
+   "precision": 0.4251382450305249,
+   "enrichment_vs_population_base": 98.59890698210299
+  },
+  {
+   "bin": "[0.096, 0.25)",
+   "sites": 507099,
+   "flips": 151152,
+   "precision": 0.298071974111564,
+   "enrichment_vs_population_base": 69.12944481691535
+  },
+  {
+   "bin": "[0.25, 0.5)",
+   "sites": 803788,
+   "flips": 129251,
+   "precision": 0.160802350868637,
+   "enrichment_vs_population_base": 37.293600896014055
+  },
+  {
+   "bin": "[0.5, 1)",
+   "sites": 1519100,
+   "flips": 76270,
+   "precision": 0.050207359620828125,
+   "enrichment_vs_population_base": 11.644190657830814
+  },
+  {
+   "bin": "[1, 2)",
+   "sites": 2551621,
+   "flips": 13781,
+   "precision": 0.005400880459911562,
+   "enrichment_vs_population_base": 1.2525829334644847
+  },
+  {
+   "bin": "[2, 4)",
+   "sites": 6451117,
+   "flips": 1916,
+   "precision": 0.0002970028291224605,
+   "enrichment_vs_population_base": 0.06888148658553246
+  },
+  {
+   "bin": "[4, 8)",
+   "sites": 103728616,
+   "flips": 267,
+   "precision": 2.5740245102662894e-06,
+   "enrichment_vs_population_base": 0.0005969728817015193
+  },
+  {
+   "bin": "[8, inf)",
+   "sites": 2083556,
+   "flips": 0,
+   "precision": 0.0,
+   "enrichment_vs_population_base": 0.0
+  }
+ ],
+ "per_class": {
+  "Road": {
+   "gt_class_index": 0,
+   "sites": 27407046,
+   "flips": 153242,
+   "area_share_of_plane": 0.23233240763346355,
+   "share_of_all_flips": 0.30127791758414596,
+   "base_flip_rate": 0.005591335892237347,
+   "margin_bins": [
+    {
+     "bin": "[0, 0.096)",
+     "sites": 145439,
+     "flips": 47840,
+     "precision": 0.3289351549446847,
+     "enrichment_vs_own_base": 58.82943920456599,
+     "share_of_class_flips": 0.31218595424230955
+    },
+    {
+     "bin": "[0.096, 0.25)",
+     "sites": 236855,
+     "flips": 48203,
+     "precision": 0.20351269764201727,
+     "enrichment_vs_own_base": 36.397866550024524,
+     "share_of_class_flips": 0.3145547565288889
+    },
+    {
+     "bin": "[0.25, 0.5)",
+     "sites": 387867,
+     "flips": 34652,
+     "precision": 0.08933990259547732,
+     "enrichment_vs_own_base": 15.978275016443051,
+     "share_of_class_flips": 0.22612599678939194
+    },
+    {
+     "bin": "[0.5, 1)",
+     "sites": 772661,
+     "flips": 17661,
+     "precision": 0.022857372120503042,
+     "enrichment_vs_own_base": 4.087998389121418,
+     "share_of_class_flips": 0.1152490831495282
+    },
+    {
+     "bin": "[1, 2)",
+     "sites": 1503408,
+     "flips": 3974,
+     "precision": 0.002643327692815257,
+     "enrichment_vs_own_base": 0.47275422971549325,
+     "share_of_class_flips": 0.025932838255830648
+    },
+    {
+     "bin": "[2, 4)",
+     "sites": 3852760,
+     "flips": 806,
+     "precision": 0.0002092006769173268,
+     "enrichment_vs_own_base": 0.03741515103890783,
+     "share_of_class_flips": 0.005259654663864998
+    },
+    {
+     "bin": "[4, 8)",
+     "sites": 19074816,
+     "flips": 106,
+     "precision": 5.557065399739636e-06,
+     "enrichment_vs_own_base": 0.00099387078630971,
+     "share_of_class_flips": 0.0006917163701857193
+    },
+    {
+     "bin": "[8, inf)",
+     "sites": 1433240,
+     "flips": 0,
+     "precision": 0.0,
+     "enrichment_vs_own_base": 0.0,
+     "share_of_class_flips": 0.0
+    }
+   ]
+  },
+  "Lane": {
+   "gt_class_index": 1,
+   "sites": 690639,
+   "flips": 185801,
+   "area_share_of_plane": 0.005854619344075521,
+   "share_of_all_flips": 0.3652897923875433,
+   "base_flip_rate": 0.2690276685793881,
+   "margin_bins": [
+    {
+     "bin": "[0, 0.096)",
+     "sites": 63436,
+     "flips": 43468,
+     "precision": 0.6852260546062173,
+     "enrichment_vs_own_base": 2.5470467711539944,
+     "share_of_class_flips": 0.23394922524636574
+    },
+    {
+     "bin": "[0.096, 0.25)",
+     "sites": 93880,
+     "flips": 53805,
+     "precision": 0.5731252662974009,
+     "enrichment_vs_own_base": 2.130358075523655,
+     "share_of_class_flips": 0.2895840173088412
+    },
+    {
+     "bin": "[0.25, 0.5)",
+     "sites": 136330,
+     "flips": 52648,
+     "precision": 0.3861805912124991,
+     "enrichment_vs_own_base": 1.4354679325429311,
+     "share_of_class_flips": 0.28335692488199743
+    },
+    {
+     "bin": "[0.5, 1)",
+     "sites": 219594,
+     "flips": 32315,
+     "precision": 0.14715793691995227,
+     "enrichment_vs_own_base": 0.5469992647857596,
+     "share_of_class_flips": 0.17392263766072302
+    },
+    {
+     "bin": "[1, 2)",
+     "sites": 132197,
+     "flips": 3187,
+     "precision": 0.024107960089865883,
+     "enrichment_vs_own_base": 0.08961145229845309,
+     "share_of_class_flips": 0.017152760211193697
+    },
+    {
+     "bin": "[2, 4)",
+     "sites": 45096,
+     "flips": 378,
+     "precision": 0.008382118147951038,
+     "enrichment_vs_own_base": 0.031157085783083818,
+     "share_of_class_flips": 0.002034434690878951
+    },
+    {
+     "bin": "[4, 8)",
+     "sites": 106,
+     "flips": 0,
+     "precision": 0.0,
+     "enrichment_vs_own_base": 0.0,
+     "share_of_class_flips": 0.0
+    },
+    {
+     "bin": "[8, inf)",
+     "sites": 0,
+     "flips": 0,
+     "precision": 0.0,
+     "enrichment_vs_own_base": 0.0,
+     "share_of_class_flips": 0.0
+    }
+   ]
+  },
+  "Undrivable": {
+   "gt_class_index": 2,
+   "sites": 58413281,
+   "flips": 74697,
+   "area_share_of_plane": 0.49517551845974395,
+   "share_of_all_flips": 0.14685632274300095,
+   "base_flip_rate": 0.0012787674090760284,
+   "margin_bins": [
+    {
+     "bin": "[0, 0.096)",
+     "sites": 48062,
+     "flips": 21309,
+     "precision": 0.44336482044026465,
+     "enrichment_vs_own_base": 346.71263694514806,
+     "share_of_class_flips": 0.28527250090365075
+    },
+    {
+     "bin": "[0.096, 0.25)",
+     "sites": 77452,
+     "flips": 23672,
+     "precision": 0.3056344574704333,
+     "enrichment_vs_own_base": 239.00707454787968,
+     "share_of_class_flips": 0.3169069708288151
+    },
+    {
+     "bin": "[0.25, 0.5)",
+     "sites": 124514,
+     "flips": 18664,
+     "precision": 0.14989479094720273,
+     "enrichment_vs_own_base": 117.2181820425882,
+     "share_of_class_flips": 0.24986277896033307
+    },
+    {
+     "bin": "[0.5, 1)",
+     "sites": 244646,
+     "flips": 9287,
+     "precision": 0.03796097218021141,
+     "enrichment_vs_own_base": 29.68559560619398,
+     "share_of_class_flips": 0.12432895564748249
+    },
+    {
+     "bin": "[1, 2)",
+     "sites": 436246,
+     "flips": 1418,
+     "precision": 0.003250459603067994,
+     "enrichment_vs_own_base": 2.541869287563881,
+     "share_of_class_flips": 0.018983359438799415
+    },
+    {
+     "bin": "[2, 4)",
+     "sites": 1399712,
+     "flips": 271,
+     "precision": 0.00019361125717290415,
+     "enrichment_vs_own_base": 0.15140459148297947,
+     "share_of_class_flips": 0.003627990414608351
+    },
+    {
+     "bin": "[4, 8)",
+     "sites": 56057286,
+     "flips": 76,
+     "precision": 1.355755967208259e-06,
+     "enrichment_vs_own_base": 0.001060205286423321,
+     "share_of_class_flips": 0.0010174438063108291
+    },
+    {
+     "bin": "[8, inf)",
+     "sites": 25363,
+     "flips": 0,
+     "precision": 0.0,
+     "enrichment_vs_own_base": 0.0,
+     "share_of_class_flips": 0.0
+    }
+   ]
+  },
+  "Movable": {
+   "gt_class_index": 3,
+   "sites": 1460325,
+   "flips": 78833,
+   "area_share_of_plane": 0.012379328409830729,
+   "share_of_all_flips": 0.1549878106322743,
+   "base_flip_rate": 0.05398318867375413,
+   "margin_bins": [
+    {
+     "bin": "[0, 0.096)",
+     "sites": 28820,
+     "flips": 16271,
+     "precision": 0.5645732130464954,
+     "enrichment_vs_own_base": 10.458315392565593,
+     "share_of_class_flips": 0.20639833572234978
+    },
+    {
+     "bin": "[0.096, 0.25)",
+     "sites": 44724,
+     "flips": 20268,
+     "precision": 0.4531795009390931,
+     "enrichment_vs_own_base": 8.394826464918005,
+     "share_of_class_flips": 0.25710045285603744
+    },
+    {
+     "bin": "[0.25, 0.5)",
+     "sites": 67798,
+     "flips": 20840,
+     "precision": 0.307383698634178,
+     "enrichment_vs_own_base": 5.694063396140652,
+     "share_of_class_flips": 0.26435629748962997
+    },
+    {
+     "bin": "[0.5, 1)",
+     "sites": 117002,
+     "flips": 16300,
+     "precision": 0.13931385788277123,
+     "enrichment_vs_own_base": 2.5806896796095278,
+     "share_of_class_flips": 0.2067662019712557
+    },
+    {
+     "bin": "[1, 2)",
+     "sites": 173021,
+     "flips": 4899,
+     "precision": 0.028314482057091337,
+     "enrichment_vs_own_base": 0.5245055498334695,
+     "share_of_class_flips": 0.0621440259789682
+    },
+    {
+     "bin": "[2, 4)",
+     "sites": 234625,
+     "flips": 228,
+     "precision": 0.000971763452317528,
+     "enrichment_vs_own_base": 0.01800122364372273,
+     "share_of_class_flips": 0.0028921898189844353
+    },
+    {
+     "bin": "[4, 8)",
+     "sites": 398514,
+     "flips": 27,
+     "precision": 6.775169755642211e-05,
+     "enrichment_vs_own_base": 0.0012550517896576575,
+     "share_of_class_flips": 0.00034249616277447263
+    },
+    {
+     "bin": "[8, inf)",
+     "sites": 395821,
+     "flips": 0,
+     "precision": 0.0,
+     "enrichment_vs_own_base": 0.0,
+     "share_of_class_flips": 0.0
+    }
+   ]
+  },
+  "MyCar": {
+   "gt_class_index": 4,
+   "sites": 29993509,
+   "flips": 16067,
+   "area_share_of_plane": 0.2542581261528863,
+   "share_of_all_flips": 0.03158815665303555,
+   "base_flip_rate": 0.0005356825705188413,
+   "margin_bins": [
+    {
+     "bin": "[0, 0.096)",
+     "sites": 34146,
+     "flips": 7115,
+     "precision": 0.20836994084226557,
+     "enrichment_vs_own_base": 388.98025119698514,
+     "share_of_class_flips": 0.44283313624198667
+    },
+    {
+     "bin": "[0.096, 0.25)",
+     "sites": 54188,
+     "flips": 5204,
+     "precision": 0.09603602273566103,
+     "enrichment_vs_own_base": 179.27785599341843,
+     "share_of_class_flips": 0.32389369515155286
+    },
+    {
+     "bin": "[0.25, 0.5)",
+     "sites": 87279,
+     "flips": 2447,
+     "precision": 0.028036526541321508,
+     "enrichment_vs_own_base": 52.33794803920243,
+     "share_of_class_flips": 0.15229974481857222
+    },
+    {
+     "bin": "[0.5, 1)",
+     "sites": 165197,
+     "flips": 707,
+     "precision": 0.004279738736175596,
+     "enrichment_vs_own_base": 7.989318622090706,
+     "share_of_class_flips": 0.04400323644737661
+    },
+    {
+     "bin": "[1, 2)",
+     "sites": 306749,
+     "flips": 303,
+     "precision": 0.0009877782812657905,
+     "enrichment_vs_own_base": 1.843961957375367,
+     "share_of_class_flips": 0.018858529906018547
+    },
+    {
+     "bin": "[2, 4)",
+     "sites": 918924,
+     "flips": 233,
+     "precision": 0.00025355742150602226,
+     "enrichment_vs_own_base": 0.4733352090594182,
+     "share_of_class_flips": 0.014501773822119873
+    },
+    {
+     "bin": "[4, 8)",
+     "sites": 28197894,
+     "flips": 58,
+     "precision": 2.0568911990377723e-06,
+     "enrichment_vs_own_base": 0.0038397575583718315,
+     "share_of_class_flips": 0.0036098836123731872
+    },
+    {
+     "bin": "[8, inf)",
+     "sites": 229132,
+     "flips": 0,
+     "precision": 0.0,
+     "enrichment_vs_own_base": 0.0,
+     "share_of_class_flips": 0.0
+    }
+   ]
+  }
+ },
+ "global_rank_budgets": [
+  {
+   "budget_sites": 10000,
+   "per_class": {
+    "Road": {
+     "sites_picked": 4474,
+     "flips_captured": 1665,
+     "precision_within_class": 0.3721502011622709,
+     "recall_of_class_flips": 0.010865167512822856,
+     "share_of_budget": 0.4474
+    },
+    "Lane": {
+     "sites_picked": 1978,
+     "flips_captured": 1433,
+     "precision_within_class": 0.724469160768453,
+     "recall_of_class_flips": 0.007712552677326817,
+     "share_of_budget": 0.1978
+    },
+    "Undrivable": {
+     "sites_picked": 1518,
+     "flips_captured": 761,
+     "precision_within_class": 0.5013175230566534,
+     "recall_of_class_flips": 0.010187825481612381,
+     "share_of_budget": 0.1518
+    },
+    "Movable": {
+     "sites_picked": 928,
+     "flips_captured": 550,
+     "precision_within_class": 0.5926724137931034,
+     "recall_of_class_flips": 0.006976773686146664,
+     "share_of_budget": 0.0928
+    },
+    "MyCar": {
+     "sites_picked": 1102,
+     "flips_captured": 319,
+     "precision_within_class": 0.2894736842105263,
+     "recall_of_class_flips": 0.01985435986805253,
+     "share_of_budget": 0.1102
+    }
+   },
+   "captured_flips_total": 4728,
+   "precision_total": 0.4728
+  },
+  {
+   "budget_sites": 100000,
+   "per_class": {
+    "Road": {
+     "sites_picked": 45182,
+     "flips_captured": 16607,
+     "precision_within_class": 0.36755787703067594,
+     "recall_of_class_flips": 0.10837107320447396,
+     "share_of_budget": 0.45182
+    },
+    "Lane": {
+     "sites_picked": 20088,
+     "flips_captured": 14222,
+     "precision_within_class": 0.7079848665870171,
+     "recall_of_class_flips": 0.07654425971873133,
+     "share_of_budget": 0.20088
+    },
+    "Undrivable": {
+     "sites_picked": 14972,
+     "flips_captured": 7211,
+     "precision_within_class": 0.48163238044349455,
+     "recall_of_class_flips": 0.09653667483299196,
+     "share_of_budget": 0.14972
+    },
+    "Movable": {
+     "sites_picked": 9073,
+     "flips_captured": 5429,
+     "precision_within_class": 0.5983687865094236,
+     "recall_of_class_flips": 0.06886709880380044,
+     "share_of_budget": 0.09073
+    },
+    "MyCar": {
+     "sites_picked": 10685,
+     "flips_captured": 2724,
+     "precision_within_class": 0.25493682732802997,
+     "recall_of_class_flips": 0.16954005103628556,
+     "share_of_budget": 0.10685
+    }
+   },
+   "captured_flips_total": 46193,
+   "precision_total": 0.46193
+  },
+  {
+   "budget_sites": 500000,
+   "per_class": {
+    "Road": {
+     "sites_picked": 228605,
+     "flips_captured": 68392,
+     "precision_within_class": 0.29917105925067256,
+     "recall_of_class_flips": 0.4463006225447332,
+     "share_of_budget": 0.45721
+    },
+    "Lane": {
+     "sites_picked": 97844,
+     "flips_captured": 64854,
+     "precision_within_class": 0.6628306283471649,
+     "recall_of_class_flips": 0.3490508662493743,
+     "share_of_budget": 0.195688
+    },
+    "Undrivable": {
+     "sites_picked": 75452,
+     "flips_captured": 31013,
+     "precision_within_class": 0.4110295287069925,
+     "recall_of_class_flips": 0.41518401006733874,
+     "share_of_budget": 0.150904
+    },
+    "Movable": {
+     "sites_picked": 44748,
+     "flips_captured": 24145,
+     "precision_within_class": 0.5395771878072763,
+     "recall_of_class_flips": 0.30628036482183857,
+     "share_of_budget": 0.089496
+    },
+    "MyCar": {
+     "sites_picked": 53351,
+     "flips_captured": 9509,
+     "precision_within_class": 0.17823470975239453,
+     "recall_of_class_flips": 0.5918341943113213,
+     "share_of_budget": 0.106702
+    }
+   },
+   "captured_flips_total": 197913,
+   "precision_total": 0.395826
+  },
+  {
+   "budget_sites": 1000000,
+   "per_class": {
+    "Road": {
+     "sites_picked": 464611,
+     "flips_captured": 106673,
+     "precision_within_class": 0.22959637201874256,
+     "recall_of_class_flips": 0.6961081165737852,
+     "share_of_budget": 0.464611
+    },
+    "Lane": {
+     "sites_picked": 187751,
+     "flips_captured": 111611,
+     "precision_within_class": 0.594462879025944,
+     "recall_of_class_flips": 0.6007018261473297,
+     "share_of_budget": 0.187751
+    },
+    "Undrivable": {
+     "sites_picked": 152054,
+     "flips_captured": 50648,
+     "precision_within_class": 0.33309219093216885,
+     "recall_of_class_flips": 0.6780459723951431,
+     "share_of_budget": 0.152054
+    },
+    "Movable": {
+     "sites_picked": 88647,
+     "flips_captured": 42186,
+     "precision_within_class": 0.47588750888354936,
+     "recall_of_class_flips": 0.5351312267705148,
+     "share_of_budget": 0.088647
+    },
+    "MyCar": {
+     "sites_picked": 106937,
+     "flips_captured": 13197,
+     "precision_within_class": 0.1234091100367506,
+     "recall_of_class_flips": 0.8213730005601544,
+     "share_of_budget": 0.106937
+    }
+   },
+   "captured_flips_total": 324315,
+   "precision_total": 0.324315
+  },
+  {
+   "budget_sites": 5000000,
+   "per_class": {
+    "Road": {
+     "sites_picked": 2618053,
+     "flips_captured": 151841,
+     "precision_within_class": 0.05799767995529502,
+     "recall_of_class_flips": 0.9908575977865076,
+     "share_of_budget": 0.5236106
+    },
+    "Lane": {
+     "sites_picked": 621855,
+     "flips_captured": 185175,
+     "precision_within_class": 0.2977784210145452,
+     "recall_of_class_flips": 0.996630803924629,
+     "share_of_budget": 0.124371
+    },
+    "Undrivable": {
+     "sites_picked": 810722,
+     "flips_captured": 74212,
+     "precision_within_class": 0.09153815981310486,
+     "recall_of_class_flips": 0.9935071020255164,
+     "share_of_budget": 0.1621444
+    },
+    "Movable": {
+     "sites_picked": 387712,
+     "flips_captured": 78284,
+     "precision_within_class": 0.2019127599867943,
+     "recall_of_class_flips": 0.993035911356919,
+     "share_of_budget": 0.0775424
+    },
+    "MyCar": {
+     "sites_picked": 561658,
+     "flips_captured": 15729,
+     "precision_within_class": 0.02800458642091807,
+     "recall_of_class_flips": 0.9789630920520321,
+     "share_of_budget": 0.1123316
+    }
+   },
+   "captured_flips_total": 505241,
+   "precision_total": 0.1010482
+  }
+ ]
+}
