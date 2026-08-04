@@ -55,7 +55,7 @@ import argparse
 import hashlib
 import json
 import time
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
@@ -186,69 +186,106 @@ def _shifted_gather(realized: np.ndarray, ys: np.ndarray, xs: np.ndarray, dy: in
     return realized[yy, xx]
 
 
-def sweep_pair(
-    gt_p: np.ndarray, realized_p: np.ndarray, rmax: int
-) -> tuple[dict, np.ndarray, np.ndarray]:
-    """Run the full translation sweep for one pair.
+def _block_labels(ys: np.ndarray, xs: np.ndarray, k: int) -> tuple[np.ndarray, int]:
+    """Label band pixels by which KxK grid cell they fall in."""
+    ncol = (W_PIX + k - 1) // k
+    nrow = (H + k - 1) // k
+    return (ys // k) * ncol + (xs // k), nrow * ncol
 
-    Returns (per-pair summary, per-component-per-shift flip counts, component sizes).
+
+def sweep_pair(
+    gt_p: np.ndarray, realized_p: np.ndarray, rmax: int, block_sizes: tuple[int, ...]
+) -> dict:
+    """Run the full translation sweep for one pair over every partition granularity.
+
+    All partitions share ONE gather per shift (the dominant cost), so the whole ladder is
+    measured in a single pass.  Every count is a full-field count (the band restriction is
+    exact, see the module docstring).
     """
     mask = _active_mask(realized_p, gt_p, rmax)
     ys, xs = np.nonzero(mask)
     n_band = ys.size
     gt_band = gt_p[ys, xs]
+    if n_band == 0:
+        return {"n_band": 0, "rung0": 0, "partitions": {}, "edges_base": {}}
 
-    # Connected components of the active band define the regional partition for rungB.
-    # The partition is fixed at zero shift, so per-component minima compose into a valid
-    # receiver (each component carries its own offset).
-    labels, n_comp = ndimage.label(mask, structure=np.ones((3, 3), dtype=np.int64))
-    lab_band = labels[ys, xs].astype(np.int64)
-    comp_sizes = np.bincount(lab_band, minlength=n_comp + 1)
+    # Partition ladder.  'component' = connected components of the active band (a region
+    # whose boundary moves together); 'block<K>' = a fixed KxK grid, which is what a
+    # shippable per-region offset stream would actually address.
+    labels_cc, n_cc = ndimage.label(mask, structure=np.ones((3, 3), dtype=np.int64))
+    partitions: dict[str, tuple[np.ndarray, int]] = {
+        "component": (labels_cc[ys, xs].astype(np.int64), n_cc + 1)
+    }
+    for k in block_sizes:
+        partitions[f"block{k}"] = _block_labels(ys, xs, k)
+    # 'global' = one cell for the whole pair == the whole-frame rigid model gt2x refuted.
+    partitions["global"] = (np.zeros(n_band, dtype=np.int64), 1)
 
     shifts = [(dy, dx) for dy in range(-rmax, rmax + 1) for dx in range(-rmax, rmax + 1)]
-    n_shift = len(shifts)
-    comp_flips = np.zeros((n_shift, n_comp + 1), dtype=np.int64)
-    total_flips = np.zeros(n_shift, dtype=np.int64)
-    # rungC: per-pixel best over shifts.  Track a running per-pixel AND of "is a flip".
-    pixel_always_flip = np.ones(n_band, dtype=bool)
+    zero_idx = shifts.index((0, 0))
 
+    best: dict[str, np.ndarray] = {}
+    best_shift_idx: dict[str, np.ndarray] = {}
+    for name, (_lab, ncell) in partitions.items():
+        best[name] = np.full(ncell, np.iinfo(np.int64).max, dtype=np.int64)
+        best_shift_idx[name] = np.zeros(ncell, dtype=np.int32)
+
+    pixel_always_flip = np.ones(n_band, dtype=bool)
+    rung0 = -1
     for si, (dy, dx) in enumerate(shifts):
         got = _shifted_gather(realized_p, ys, xs, dy, dx)
         isflip = got != gt_band
-        total_flips[si] = int(isflip.sum())
-        if isflip.any():
-            comp_flips[si] = np.bincount(lab_band[isflip], minlength=n_comp + 1)
+        if si == zero_idx:
+            rung0 = int(isflip.sum())
         pixel_always_flip &= isflip
+        for name, (lab, ncell) in partitions.items():
+            cur = np.bincount(lab[isflip], minlength=ncell) if isflip.any() else np.zeros(ncell, np.int64)
+            better = cur < best[name]
+            best_shift_idx[name][better] = si
+            np.minimum(best[name], cur, out=best[name])
 
-    zero_idx = shifts.index((0, 0))
-    rung0 = int(total_flips[zero_idx])
-    a_idx = int(np.argmin(total_flips))
-    rungA = int(total_flips[a_idx])
-    best_per_comp = comp_flips.min(axis=0)
-    rungB = int(best_per_comp[1:].sum())  # label 0 is background (outside band)
-    rungC = int(pixel_always_flip.sum())
+    shift_arr = np.array(shifts, dtype=np.int8)
+    out_parts: dict[str, dict] = {}
+    offsets: dict[str, np.ndarray] = {}
+    for name, (lab, ncell) in partitions.items():
+        occupied = np.bincount(lab, minlength=ncell) > 0
+        n_occ = int(occupied.sum())
+        chosen = best_shift_idx[name][occupied]
+        sh = np.array([shifts[i] for i in chosen], dtype=np.int64) if n_occ else np.zeros((0, 2))
+        on_rim = float((np.abs(sh).max(axis=1) == rmax).mean()) if n_occ else 0.0
+        n_zero = int((np.abs(sh).max(axis=1) == 0).sum()) if n_occ else 0
+        out_parts[name] = {
+            "flips": int(best[name][occupied].sum()),
+            "n_cells_occupied": n_occ,
+            "frac_on_rim": on_rim,
+            "frac_cells_choosing_zero_shift": (n_zero / n_occ) if n_occ else 0.0,
+        }
+        # The ACTUAL symbol stream a receiver would have to be told, in grid raster order.
+        # Unoccupied cells carry the zero offset (nothing to correct there), which is what a
+        # real encoder would emit and is what makes the stream compressible.
+        if name.startswith("block"):
+            full = np.zeros((ncell, 2), dtype=np.int8)
+            full[occupied] = shift_arr[best_shift_idx[name][occupied]]
+            offsets[name] = full
 
-    a_dy, a_dx = shifts[a_idx]
-    b_arg = comp_flips[:, 1:].argmin(axis=0) if n_comp else np.zeros(0, dtype=np.int64)
-    b_shifts = np.array([shifts[i] for i in b_arg], dtype=np.int64) if n_comp else np.zeros((0, 2))
+    # Per-EDGE baseline decomposition (m91: decompose per EDGE, never per class).
+    base_flip = gt_band != realized_p[ys, xs]
+    edges_base: dict[str, int] = {}
+    if base_flip.any():
+        g = gt_band[base_flip].astype(np.int64)
+        r = realized_p[ys, xs][base_flip].astype(np.int64)
+        for code, n in zip(*np.unique(g * 5 + r, return_counts=True), strict=True):
+            edges_base[f"{CLASS_NAMES[code // 5]}->{CLASS_NAMES[code % 5]}"] = int(n)
 
-    def _on_rim(sh: np.ndarray) -> float:
-        if sh.size == 0:
-            return 0.0
-        return float((np.abs(sh).max(axis=1) == rmax).mean())
-
-    summary = {
+    return {
         "n_band": int(n_band),
-        "n_components": int(n_comp),
+        "n_components": int(n_cc),
         "rung0": rung0,
-        "rungA": rungA,
-        "rungB": rungB,
-        "rungC": rungC,
-        "rungA_shift": [int(a_dy), int(a_dx)],
-        "rungA_on_rim": bool(max(abs(a_dy), abs(a_dx)) == rmax),
-        "rungB_frac_on_rim": _on_rim(b_shifts),
+        "rungC_per_pixel_oracle": int(pixel_always_flip.sum()),
+        "partitions": out_parts,
+        "edges_base": edges_base,
+        "_offsets": offsets,
     }
-    return summary, b_shifts, comp_sizes
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -256,6 +293,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--lstars", type=Path, required=True)
     ap.add_argument("--atlas", type=Path, required=True)
     ap.add_argument("--rmax", type=int, default=5)
+    ap.add_argument("--block-sizes", type=str, default="64,32,16,8,4")
     ap.add_argument("--pairs", type=int, default=0, help="0 = all 600")
     ap.add_argument(
         "--selection-mode",
@@ -266,6 +304,12 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--rate-denominator-bytes", type=int, default=DEFAULT_RATE_DENOMINATOR_BYTES)
     ap.add_argument("--out", type=Path, required=True)
+    ap.add_argument(
+        "--dump-offsets",
+        type=Path,
+        default=None,
+        help="npz path for the per-cell offset symbol streams (input to the real-coder race).",
+    )
     args = ap.parse_args(argv)
 
     t0 = time.time()
@@ -297,40 +341,102 @@ def main(argv: list[str] | None = None) -> int:
     else:
         sel = np.arange(N_PAIRS_FULL)
 
+    block_sizes = tuple(int(k) for k in args.block_sizes.split(",") if k.strip())
     per_pair: list[dict] = []
+    offset_stacks: dict[str, list[np.ndarray]] = {f"block{k}": [] for k in block_sizes}
     for k, p in enumerate(sel):
-        s, _bsh, _cs = sweep_pair(gt[p], realized[p], args.rmax)
+        s = sweep_pair(gt[p], realized[p], args.rmax, block_sizes)
         s["pair"] = int(p)
+        for nm, arr in s.pop("_offsets", {}).items():
+            offset_stacks[nm].append(arr)
         per_pair.append(s)
         if (k + 1) % 25 == 0:
             print(f"  ...{k + 1}/{sel.size} pairs  ({time.time() - t0:.0f}s)", flush=True)
 
-    tot = {k: int(sum(d[k] for d in per_pair)) for k in ("rung0", "rungA", "rungB", "rungC")}
-    n_band_tot = int(sum(d["n_band"] for d in per_pair))
-    n_comp_tot = int(sum(d["n_components"] for d in per_pair))
-    scored = sel.size * H * W_PIX
-    w = seg_rate_exchange_bytes_per_flip(args.rate_denominator_bytes)
-
-    def mk(name: str, flips: int, dof: int) -> RungResult:
-        d_seg = flips / scored
-        return RungResult(
-            name=name,
-            flips=flips,
-            dof_params=dof,
-            reach_frac=(tot["rung0"] - flips) / tot["rung0"] if tot["rung0"] else 0.0,
-            d_seg=d_seg,
-            delta_s_seg=100.0 * (tot["rung0"] - flips) / scored,
+    if args.dump_offsets:
+        args.dump_offsets.parent.mkdir(parents=True, exist_ok=True)
+        np.savez_compressed(
+            args.dump_offsets,
+            **{nm: np.stack(v) for nm, v in offset_stacks.items() if v},
+            pairs=sel.astype(np.int32),
         )
 
-    rungs = [
-        mk("rung0_no_correction", tot["rung0"], 0),
-        mk("rungA_global_per_pair", tot["rungA"], 2 * sel.size),
-        mk("rungB_per_component", tot["rungB"], 2 * n_comp_tot),
-        mk("rungC_per_pixel_oracle", tot["rungC"], 2 * n_band_tot),
-    ]
+    rung0_tot = int(sum(d["rung0"] for d in per_pair))
+    n_band_tot = int(sum(d["n_band"] for d in per_pair))
+    scored = sel.size * H * W_PIX
+    w = seg_rate_exchange_bytes_per_flip(args.rate_denominator_bytes)
+    # Raw cost of ONE offset symbol from the sweep alphabet, before any entropy coding.
+    # Reported alongside a coded estimate so the ladder is priced, not asserted.
+    n_alpha = (2 * args.rmax + 1) ** 2
+    raw_bytes_per_cell = np.log2(n_alpha) / 8.0
 
-    rim_A = float(np.mean([d["rungA_on_rim"] for d in per_pair]))
-    rim_B = float(np.mean([d["rungB_frac_on_rim"] for d in per_pair]))
+    part_names = ["global", "component"] + [f"block{k}" for k in block_sizes]
+    rungs: list[dict] = []
+    for name in part_names:
+        flips = int(sum(d["partitions"][name]["flips"] for d in per_pair))
+        cells = int(sum(d["partitions"][name]["n_cells_occupied"] for d in per_pair))
+        removed = rung0_tot - flips
+        cost_raw = cells * raw_bytes_per_cell
+        rungs.append(
+            {
+                "name": name,
+                "flips": flips,
+                "flips_removed": removed,
+                "reach_frac": removed / rung0_tot if rung0_tot else 0.0,
+                "n_cells": cells,
+                "d_seg": flips / scored,
+                "delta_s_seg": 100.0 * removed / scored,
+                "raw_offset_bytes": cost_raw,
+                "budget_bytes_at_W": removed * w,
+                "pays_raw": bool(cost_raw < removed * w),
+                "raw_bytes_per_flip_removed": (cost_raw / removed) if removed else float("inf"),
+                "frac_cells_choosing_zero_shift": float(
+                    np.mean([d["partitions"][name]["frac_cells_choosing_zero_shift"] for d in per_pair])
+                ),
+                "frac_on_rim": float(
+                    np.mean([d["partitions"][name]["frac_on_rim"] for d in per_pair])
+                ),
+            }
+        )
+    oracle_flips = int(sum(d["rungC_per_pixel_oracle"] for d in per_pair))
+    rungs.append(
+        {
+            "name": "per_pixel_oracle_NOT_SHIPPABLE",
+            "flips": oracle_flips,
+            "flips_removed": rung0_tot - oracle_flips,
+            "reach_frac": (rung0_tot - oracle_flips) / rung0_tot if rung0_tot else 0.0,
+            "n_cells": n_band_tot,
+            "d_seg": oracle_flips / scored,
+            "delta_s_seg": 100.0 * (rung0_tot - oracle_flips) / scored,
+            "raw_offset_bytes": n_band_tot * raw_bytes_per_cell,
+            "budget_bytes_at_W": (rung0_tot - oracle_flips) * w,
+            "pays_raw": False,
+            "raw_bytes_per_flip_removed": (
+                n_band_tot * raw_bytes_per_cell / (rung0_tot - oracle_flips)
+                if rung0_tot - oracle_flips
+                else float("inf")
+            ),
+            "frac_cells_choosing_zero_shift": 0.0,
+            "frac_on_rim": 0.0,
+            "caveat": (
+                "NEAR-TAUTOLOGICAL BOUND, not a lever: it asserts only that a correct-class "
+                "pixel exists within rmax, which is implied by 93.9% of flips lying on a GT "
+                "boundary (ru1 receipt). Its offset alphabet (log2(n_alpha) bits) is also "
+                "WIDER than simply transmitting the class (log2(5)=2.32 bits), so it is "
+                "dominated by direct class transmission at every pixel. Quoted as the "
+                "translation family's ceiling, never as achievable headroom."
+            ),
+        }
+    )
+
+    edges_base: dict[str, int] = {}
+    for d in per_pair:
+        for kk, vv in d["edges_base"].items():
+            edges_base[kk] = edges_base.get(kk, 0) + vv
+    edges_sorted = dict(sorted(edges_base.items(), key=lambda kv: -kv[1]))
+
+    rim_A = float(np.mean([d["partitions"]["global"]["frac_on_rim"] for d in per_pair]))
+    rim_B = float(np.mean([d["partitions"]["component"]["frac_on_rim"] for d in per_pair]))
 
     receipt = {
         "schema": SCHEMA,
@@ -354,7 +460,10 @@ def main(argv: list[str] | None = None) -> int:
         },
         "seg_rate_exchange_bytes_per_flip": w,
         "rate_denominator_bytes": args.rate_denominator_bytes,
-        "rungs": [asdict(r) for r in rungs],
+        "raw_bytes_per_offset_symbol": raw_bytes_per_cell,
+        "rung0_total_flips": rung0_tot,
+        "rungs": rungs,
+        "edges_baseline": edges_sorted,
         "per_pair": per_pair,
         "elapsed_sec": time.time() - t0,
     }
@@ -367,10 +476,15 @@ def main(argv: list[str] | None = None) -> int:
     print(f"positive control: recon={ctrl['reconstructed_flip_count']} "
           f"atlas={ctrl['atlas_flip_count']} absdiff={ctrl['absdiff']} "
           f"mutation_went_red={ctrl['mutation_check_went_red']}")
+    print(f"{'partition':>28s} {'flips':>9s} {'reach%':>7s} {'cells':>8s} "
+          f"{'rawB':>10s} {'budgetB':>10s} {'B/flip':>8s} pays?")
     for r in rungs:
-        print(f"  {r.name:26s} flips={r.flips:9d}  reach={r.reach_frac * 100:6.2f}%  "
-              f"dof={r.dof_params:8d}  dS_seg={r.delta_s_seg:+.5f}")
-    print(f"instrument: rungA on-rim {rim_A * 100:.1f}%  rungB on-rim {rim_B * 100:.1f}%")
+        print(f"  {r['name']:>26s} {r['flips']:9d} {r['reach_frac'] * 100:7.2f} "
+              f"{r['n_cells']:8d} {r['raw_offset_bytes']:10.0f} {r['budget_bytes_at_W']:10.0f} "
+              f"{r['raw_bytes_per_flip_removed']:8.2f} {'YES' if r['pays_raw'] else 'no'}")
+    print(f"instrument: global on-rim {rim_A * 100:.1f}%  component on-rim {rim_B * 100:.1f}%")
+    print(f"top edges (baseline): "
+          f"{list(edges_sorted.items())[:4]}")
     print(f"W = {w:.10f} B/flip   ->  wrote {args.out}")
     return 0
 
