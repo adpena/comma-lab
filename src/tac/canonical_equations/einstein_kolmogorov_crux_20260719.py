@@ -13,6 +13,7 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import stat
 import subprocess
 from dataclasses import dataclass, replace
 from decimal import ROUND_CEILING, Decimal, localcontext
@@ -137,10 +138,37 @@ def _canonical_producer_reference(
     """Bind producer custody to the exact canonical path, not byte aliases."""
 
     candidate = Path(value)
+    canonical_relative = Path(canonical_path)
+    if (
+        canonical_relative.is_absolute()
+        or not canonical_relative.parts
+        or ".." in canonical_relative.parts
+        or ".." in candidate.parts
+    ):
+        raise ValueError("canonical producer paths must be non-empty repo-relative paths without parent traversal")
     requested = candidate.absolute() if candidate.is_absolute() else (REPO_ROOT / candidate).absolute()
-    expected_requested = (REPO_ROOT / canonical_path).absolute()
+    expected_requested = (REPO_ROOT / canonical_relative).absolute()
     if requested != expected_requested:
         raise ValueError(f"canonical producer path must resolve to {canonical_path!r}; got {str(requested)!r}")
+    current = REPO_ROOT.absolute()
+    root_lstat = current.lstat()
+    if stat.S_ISLNK(root_lstat.st_mode):
+        raise ValueError("canonical producer repo root must not be a symlink")
+    if not stat.S_ISDIR(root_lstat.st_mode):
+        raise ValueError("canonical producer repo root must be a directory")
+    for part in canonical_relative.parts:
+        current = current / part
+        current_lstat = current.lstat()
+        if stat.S_ISLNK(current_lstat.st_mode):
+            raise ValueError(f"canonical producer path {canonical_path!r} has a symlinked component")
+        if current == expected_requested:
+            if not stat.S_ISREG(current_lstat.st_mode):
+                raise ValueError(f"canonical producer path {canonical_path!r} must be a regular file")
+        elif not stat.S_ISDIR(current_lstat.st_mode):
+            raise ValueError(f"canonical producer ancestor for {canonical_path!r} must be a directory")
+    canonical_stat = expected_requested.stat()
+    if canonical_stat.st_nlink != 1:
+        raise ValueError(f"canonical producer path {canonical_path!r} must have exactly one hard link")
     resolved = requested.resolve()
     expected = expected_requested.resolve()
     if resolved != expected:
