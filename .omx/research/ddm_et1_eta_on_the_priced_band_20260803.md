@@ -154,8 +154,28 @@ is exactly why realization had to be measured rather than assumed.
   **EXACT**, so the sm1/#874 class cannot apply to it.
 - **The paint solve** (inherited from sq1) is Adam + best-realized-iterate under a **step cap**,
   **cap-pinned in 100% of runs**. Every η here is a **FLOOR**. Per #874 the cap is not
-  raised-and-quoted; the budget **response** is measured: η rose **0.3345 (10 steps) → 0.4085 (25
-  steps)** on the same pair — **STILL-RISING**, reported as a floor, never as converged.
+  raised-and-quoted; the budget **response** is measured on one pair at three budgets:
+
+| steps | η | fidelity IN BAND | fidelity whole-frame | **d_pose** |
+|---:|---:|---:|---:|---:|
+| 10 | +0.3345 | 0.3168 | 0.9981 | 1.003× |
+| 25 | +0.4085 | 0.4679 | 0.9984 | 1.064× |
+| 50 | +0.4613 | 0.5259 | 0.9986 | **1.368×** |
+
+**STILL-RISING at 50** — so every η in this memo is a floor, never an optimum.
+
+**Two things this ladder settles that were previously assumptions.**
+
+1. **η and pose damage are COUPLED, monotonically.** d_pose climbs 1.003 → 1.064 → **1.368×**
+   as the solver is given more room. The seg gain is *bought with* pose, on this realizer.
+   **Consequence: raising the budget is not a free lever** — it moves along a seg/pose tradeoff
+   rather than up a pure-gain curve. This also explains §5's per-pair pose scatter: pairs where
+   the solve found more useful descent are the pairs that pay more pose. Fire-order-3 (budget)
+   and fire-order-1 (pose) are therefore **the same axis, not independent** — re-ordered in §10.
+2. **The whole-frame fidelity metric is provably blind.** It sits at 0.998x across *all three*
+   budgets while the band-restricted metric moves 0.3168 → 0.5259. A metric that cannot
+   distinguish a 66% improvement in the thing being measured is not a weak metric, it is a
+   non-metric. `verdict_scope: INSTRUMENT`.
 
 ## §8 Denominators
 
@@ -192,8 +212,13 @@ cannot apply there by construction**; η is n=3–4 on sq1's **stratified system
   `/Volumes/VertigoDataTier/pact/ddm_et1_20260803/et1_b16_realization_n32.json` — the harness
   checkpoints after **every** pair, so harvest is pooling over `rows`; nothing is lost if killed.
   Relaunch command is in `et1_b16_n32.log`'s header; **single writer only.**
-- **QUEUED, fire order 3** — raise the paint budget until the η slope flattens (§7: still rising
-  at 25). Cheapest remaining gain on a live rung, and it moves the block8 crossover.
+- **QUEUED, fire order 3 — RE-FRAMED by §7's ladder, do NOT fire independently.** "Raise the paint
+  budget until the η slope flattens" was queued as the cheapest remaining gain. The measured
+  ladder **refutes that framing**: d_pose rises monotonically with budget (1.003 → 1.064 →
+  1.368×), so budget is **not** a free lever — it walks a seg/pose tradeoff. Fire it **only as a
+  joint sweep with fire-order-1**, reporting the (η, d_pose) pair at each budget, and pick the
+  budget by *net* S rather than by η. Firing it alone would buy seg and silently sell pose —
+  precisely the seg-only verdict `sf1`/`uv1` forbid.
 - **NOT QUEUED, with reason** — truth-paint at any band size (measured anti-productive to 79.3%
   of the field) · re-deriving D-support privacy / 22.70% blind (m86), frame_1 pose relativity
   (m87), the rank-6 yuv6 null (ph5o) — all reproduced here.
