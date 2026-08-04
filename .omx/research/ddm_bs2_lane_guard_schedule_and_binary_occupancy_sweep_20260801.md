@@ -22,8 +22,15 @@ tokens: [no-triality, p0-ledger-ok]
 ## §0 POINTER HONESTY
 
 **The exact frontier did NOT move.** This unit ran ZERO training and ZERO scorer jobs. Every number is
-`[macOS-CPU advisory]`, `score_claim=false`. Relative significance throughout: gap-to-bar **0.7918468**
-from `S_current = 0.9639878` (own-vehicle v4d); **1% of gap = 0.0079185 S = 11,892 B**.
+`[macOS-CPU advisory]`, `score_claim=false`.
+
+**BASELINE REPRICED (a ΔS without its baseline is unanchored, and baselines move).** My charter priced
+against `S_current = 0.9639878`, gap 0.7918468, 1% = 11,892 B. The live own-vehicle best moved while this
+arm ran: **S = 0.7910689 @ 353,805 B `[macOS-CPU advisory]`, gap-to-bar 0.6189279, 1% of gap = 0.0061893 S
+= 9,296 B.** Every percentage below is against the CURRENT gap. Note the byte measurements in §5.2 were
+taken on the **v4d/pw1 composed archive** (360,238 B total, 346,478 B tokens) — the current best is a
+different, smaller archive whose token section I did not re-measure, so the ΔB figures are exact for the
+stream measured and indicative, not exact, for the current best.
 
 ## §1 TWO SEED FACTS WERE STALE — corrected at source before anything was built
 
@@ -70,9 +77,9 @@ occupancy 1 (one value, 64 gates) while the signal it constrains moved 39% of it
 the slack region.
 
 **Quantified hole:** a budget pinned at the *starting* level licenses the primal to give back **all
-0.050213 S-units** of won Lane before the guard can respond. That is **6.34% of the gap-to-bar**
-(75,400 B equivalent). It is the size of the hole, **not** a ΔS anyone can bank — a guard pays only if
-erosion actually occurs.
+0.050213 S-units** of won Lane before the guard can respond. That is **8.11% of the current gap-to-bar**
+(0.6189279). It is the size of the hole, **not** a ΔS anyone can bank — a guard pays only if erosion
+actually occurs.
 
 ## §4 THE DERIVED SCHEDULE
 
@@ -173,26 +180,45 @@ is auditing.**
 | **`ST_GRID` per-pair translation scale** (`pfs1_warp_receiver.py:18`) | 11 values, 0.0…0.24 | idx 6/7/8/9 = 22 / **364** / 156 / 58; **0 at idx 0–5 and 0 at idx 10** | **INTERIOR — HONESTLY CLOSED.** Independently reproduces pw1's s_t result at source. *Sub-finding: 60.67% pile on one value (0.08); the defect here would be resolution starvation at the mode, not clipping. 11→16 points is **byte-free** (the index is one byte / 4 bits either way), so refining inside 0.06–0.16 is a zero-rate lever.* |
 | **`AUTO_CODECS`** (`ddm_r7_token_coder.py:55`) — `auto` races 2 of 9 `CODEC_IDS` | 9 codecs | **raced all 9 byte-exact on the live 346,478 B stream**: smevr **346,478** (live, winner) · brotli11 +14.42% · lzma1 +14.88% · kt_o8_prev5_backoff +15.02% · kt_prev1 +17.22% · cae_inspired +21.76% · rans_o0 +37.12% · huffman_nibble +50.00% · rans_o0_adj +54.83%. All 9 verified lossless. | **CLOSED — the narrow menu costs nothing.** argmin over 9 == argmin over the 2 searched; best excluded codec is +51,546 B worse. |
 | **`selector` ∈ {0 single-plane, 1 two-plane}** (`inflate_runner_v4d.py:163`) | 2 | 376 (62.67%) / **224 (37.33%)**, n=600 | **INTERIOR** — both values carry real mass. *Note: no partial/blended compose is representable; a scaled move does not exist in the receiver.* |
-| **`token_quant_levels = 16`** at hard bound `2 ≤ levels ≤ 16` (`ddm_r7_token_coder.py:1454`, `ddm_tr1_runtime.py:83`) | 16 lattice levels | interior decay levels 5→14 is **monotone**, then level 15 **jumps 5.65×** (10,222 → 57,708). **Per-channel: ch3 ratio 8.30× (level-15 mass 9.46%), ch2 7.60×, ch1 2.28×, ch0 1.26×.** | **CLIPPING-SUSPECTED, NOT RESOLVED — see §5.1** |
+| **token lattice: `token_quant_levels = 16` at bound `2 ≤ levels ≤ 16`, AND the `±1.0` range literal** (`ddm_r7_token_coder.py:1454`; `train_tr1_partition_renderer_mlx.py:624,711`) | 16 levels over a hardcoded ±1 range | interior decay 5→14 **monotone**, then level 15 **jumps 5.65×** (10,222→57,708); per-channel ch3 **8.30×**, ch2 7.60×, ch1 2.28×, ch0 1.26×. **33.30% of all token mass pinned at the two bounds** (lvl0 30.165% + lvl15 3.131%). | **CLIPPING — CONFIRMED AT SOURCE (§5.1).** The clipped knob is the **range literal**, which has no flag, no menu and no DSL lever at all. |
 | **`beta_mag` / `dim0`** | — | ddm_pw1 (5ea9cd3f0a) measured CLIPPING and fixed both | **already closed by pw1 — not re-run** |
 | **`token_ste` ∈ {round, dither}** (`ddm_tr1_runtime.py:344`) | 2 | live = `round`; `dither` **never swept anywhere in the chain** | **UNMEASURED** |
 | **GN line-search `scale ∈ (1.0, 0.5)`** — 5 independent sites | 2 | **no code path records which scale won** | **UNMEASURED — and unmeasurable without adding telemetry** |
 | **first-improving bracket direction** (`ddm_v4d_resolve.py:216-218`, `:334-336`) | ±1 | `break` after the `+1.0` probe ⇒ `−1.0` is **never evaluated** when `+1.0` improves at all | **UNMEASURED (premature-closure class, not menu width)** |
 
-### §5.1 The one row at a bound, and why I am NOT calling it clipping
+### §5.1 ADJUDICATED — CLIPPING CONFIRMED, and the clipped knob is not the one I first suspected
 
-The pw1 discriminator's standard — monotone decay, then a jump at the terminal bin — **is met** (5.65×
-overall, 8.30× on ch3). But pw1's cases were **search brackets**, where no physical mechanism can pile mass
-at an endpoint, so the signature was diagnostic. Here the tokens are a quantised **`sigmoid_times_255`**
-output, and a saturating nonlinearity genuinely piles mass at both extremes — it predicts the *same*
-signature. The channel-localisation (ch3 8.30× vs ch0 1.26×) is consistent with either a channel that
-truly wants the top bin or a channel that is clamped.
+The statistical signature (monotone interior decay 5→14, then a 5.65× jump at the terminal bin; 8.30× on
+ch3) is ambiguous on its own: a saturating nonlinearity predicts exactly the same shape. **Eyeballing the
+histogram cannot decide it. Reading the source can.**
 
-**The discriminator is the pre-quantisation activation distribution, which requires the trained model.
-Not resolvable at $0. Classified CLIPPING-SUSPECTED, not CLIPPING.**
+| candidate generator | source check | verdict |
+|---|---|---|
+| sigmoid saturation | `sigmoid(x)*255` exists at `train_tr1_partition_renderer_mlx.py:471,478` but is the **RGB/photo head**, not the token path | **REFUTED — there is no sigmoid on the token path** |
+| explicit hard clip | `raw_tokens` = `tokens_base + tokens_delta[idx]` (`:612-621`) is a **free unbounded learned parameter**; `quantized_tokens` applies `mx.clip(raw_tokens, -1.0, 1.0)` at `:624`, and the export path applies the identical `np.clip(tokens, -1.0, 1.0)` at `:711` | **CONFIRMED** |
 
-Cheapest probe of the same mechanism: **`token_ste = dither`**, which changes exactly how near-edge values
-quantise. `token_ste` and `token_quant_levels` are coupled and both are currently 1-of-2 / at-bound.
+**VERDICT: CLIPPING, MEASURED AND SOURCE-CONFIRMED.** The token latent is an unbounded free parameter
+hard-clamped to ±1 by an explicit literal. **33.30% of all token mass sits pinned at the two clip bounds**
+(level 0: 30.165%, level 15: 3.131%) — the optimizer is driving these parameters past the clamp and being
+cut off. (Train and export clip **identically**, so there is no train/export mismatch — I checked for one
+and did not find it.)
+
+**But the clipped knob is the RANGE, not `token_quant_levels`.** These are two separate knobs that the
+at-bound signature conflates:
+
+* **`token_quant_levels = 16`** at its bound `2 ≤ levels ≤ 16` is a **RESOLUTION** ladder over a fixed
+  range. The 16 ceiling is the 4-bit nibble-packing boundary (`pack_nibbles`), a representation choice.
+* **The range `±1.0`** is a **hardcoded literal with no flag, no menu, and no DSL lever at all** — it is
+  not even a discrete choice, so no occupancy sweep would ever have surfaced it. It is the knob the mass
+  is actually piling against.
+
+That distinction is the finding. Widening the range trades clamping against coarser resolution at fixed
+levels; adding levels trades bytes against resolution at fixed range. Which one pays cannot be settled at
+$0 — it needs a retrain, because the clamped parameters' *desired* values do not exist in any artifact.
+
+Cheapest probe of the same mechanism, already in the tree and never swept: **`token_ste = dither`**
+(`:637`), which changes exactly how near-edge values quantise. `token_ste` and the range literal are
+coupled.
 
 ### §5.2 What the rate curve prices (MEASURED byte-exact; the distortion side is NOT measured)
 
@@ -201,11 +227,11 @@ quantise. `token_ste` and `token_quant_levels` are coupled and both are currentl
 
 | L | bytes | saves vs L=16 | ΔS_rate | % of gap | **pays iff Δd_seg <** | (rel. to live d_seg 0.00431179) |
 |---|---|---|---|---|---|---|
-| 15 | 330,748 | 15,730 | −0.010474 | 1.32% | 1.047e-04 | 2.43% |
-| 14 | 322,823 | 23,655 | −0.015751 | 1.99% | 1.575e-04 | 3.65% |
-| 12 | 297,789 | 48,689 | −0.032420 | 4.09% | 3.242e-04 | 7.52% |
-| 10 | 267,889 | 78,589 | −0.052329 | 6.61% | 5.233e-04 | 12.14% |
-| 8 | 240,824 | 105,654 | −0.070351 | 8.88% | 7.035e-04 | 16.32% |
+| 15 | 330,748 | 15,730 | −0.010474 | 1.69% | 1.047e-04 | 2.43% |
+| 14 | 322,823 | 23,655 | −0.015751 | 2.54% | 1.575e-04 | 3.65% |
+| 12 | 297,789 | 48,689 | −0.032420 | 5.24% | 3.242e-04 | 7.52% |
+| 10 | 267,889 | 78,589 | −0.052329 | 8.46% | 5.233e-04 | 12.14% |
+| 8 | 240,824 | 105,654 | −0.070351 | 11.37% | 7.035e-04 | 16.32% |
 
 Widening (L=17) costs ≈ **+15,730 B = +0.010474 S**, so it must buy **> 1.047e-04 d_seg** to pay.
 

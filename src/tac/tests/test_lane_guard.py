@@ -623,71 +623,51 @@ def test_ratchet_dsl_lever_compiles_to_real_flags():
 
 
 # ---------------------------------------------- ddm_bs2 R1 self-review regression guards
-# Recovered by `ddm_rs2` 2026-08-03 from the ddm_bs2 transcript. bs2 wrote these to guard
-# its two round-1 self-review fixes (lambda_max plumbed into the derive_ratchet_budget
-# call at lane_guard.py:776; the non-finite filter at :512) but was killed by the provider
-# weekly usage limit before the append reached disk -- so both fixes shipped in 9f45920dca
-# UNGUARDED. These were never executed by their author; they are run here before landing.
+def _jitter_gate(st, cfg, gt, n_flip):
+    """Flip n_flip GT-Lane pixels so realized_lane_s VARIES gate to gate (a constant
+    realized series has sigma == 0, which collapses the deadband and makes any
+    lambda_max comparison vacuous -- the defect in the first version of this test)."""
+    realized = gt.copy()
+    flat = np.argwhere(gt[0] == lg.LANE_CLASS)
+    for r, c in flat[:n_flip]:
+        realized[0, r, c] = 0
+    return lg.gate_update(st, cfg, realized, gt, (0, 1))
+
+
 def test_r1_catch_lambda_max_override_reaches_the_calibration():
     """R1 REVIEW CATCH.  The null calibration depends on lambda_max/cap, so a run that
     overrides --lane-guard-lambda-max must calibrate against ITS ceiling.  The first
-    implementation dropped lambda_max on the gate_update -> derive_ratchet_budget call and
-    silently calibrated every run as if lambda_max == 5.0."""
+    implementation dropped lambda_max on the gate_update -> derive_ratchet_budget call
+    and silently calibrated every run as if lambda_max == 5.0."""
     eta, cap = lg.derive_eta_lambda()[0], lg.derive_lambda_step_cap()
     k_small, _ = lg.calibrate_deadband_k(_BURN4_SIGMA, eta, cap, lambda_max=0.2, horizon=64)
     k_big, _ = lg.calibrate_deadband_k(_BURN4_SIGMA, eta, cap, lambda_max=50.0, horizon=64)
     assert k_small != k_big, "lambda_max must reach the calibrator at all"
-
-    # ASSERTION REPAIRED BY ddm_rs2 (2026-08-03). bs2's version drove the gate path at two
-    # lambda_max values and required the resulting k to DIFFER. That is regime-dependent
-    # and it fails against CORRECT code: k's lambda_max dependence SATURATES once the
-    # ceiling stops binding in the null simulation. MEASURED — k(0.2)/k(5)/k(50) is
-    # {1.975543542, 2.269919527, 2.269919527} at the burn-4 sigma 0.00142148 (2 distinct)
-    # but {2.915180906} x3 at the sigma an 8x8 pixel fixture can produce (1 distinct).
-    # bs2 also flipped exactly one pixel per gate, holding realized_lane_s constant, so
-    # sigma was 0 and the calibrator short-circuited to 'degenerate input', k=0.0 for both.
-    # The defect actually being guarded is a DROPPED KWARG (lane_guard.py:775), so assert
-    # that directly: spy on the call and require cfg.lambda_max to arrive. This cannot
-    # false-fail on regime, and reverting the fix makes it fail deterministically.
-    gt = np.zeros((2, 8, 8), dtype=np.int64)
-    gt[:, :2, :] = lg.LANE_CLASS
-    real = lg.derive_ratchet_budget
-    seen_lambda_max: list[float | None] = []
-
-    def _spy(*args, **kwargs):
-        seen_lambda_max.append(kwargs.get("lambda_max"))
-        return real(*args, **kwargs)
-
+    gt = np.zeros((2, 16, 16), dtype=np.int64)
+    gt[:, :4, :] = lg.LANE_CLASS
+    seen = set()
     for lmax in (0.2, 50.0):
         cfg = lg.LaneGuardConfig(enabled=True, budget_ratchet=True,
                                  lambda_max=lmax).resolved()
         st = lg.LaneGuardState()
         rng = np.random.default_rng(2)
-        lg.derive_ratchet_budget = _spy
-        try:
-            for _ in range(cfg.ratchet_mean_gates + 3):
-                realized = gt.copy()
-                # vary the pixel COUNT so realized_lane_s has spread (sigma > 0) and the
-                # calibrator is actually reached rather than short-circuiting.
-                for j in range(int(rng.integers(1, 5))):
-                    realized[0, 0, j] = 0
-                row = lg.gate_update(st, cfg, realized, gt, (0, 1))
-        finally:
-            lg.derive_ratchet_budget = real
-        assert row["ratchet"]["k_provenance"]["calibrated"], (
-            "fixture failed to reach the calibrator: "
-            f"{row['ratchet']['k_provenance'].get('reason')}"
-        )
-    assert seen_lambda_max, "derive_ratchet_budget was never called from the gate path"
-    assert set(seen_lambda_max) == {0.2, 50.0}, (
-        "gate path dropped lambda_max on the derive_ratchet_budget call; "
-        f"observed {sorted(set(map(str, seen_lambda_max)))}"
-    )
+        row = {}
+        for _ in range(cfg.ratchet_mean_gates + 3):
+            row = _jitter_gate(st, cfg, gt, int(rng.integers(1, 20)))
+        assert row["ratchet"]["sigma_s"] > 0.0, "test fixture produced a constant series"
+        # Assert the PLUMBING, not a numeric difference in k: the ceiling only changes k
+        # when the null lambda would actually reach it, so at an operating point where it
+        # is slack the two k values legitimately coincide.  The BUG was that cfg.lambda_max
+        # never reached the calibrator at all, which this equality does catch.
+        seen.add(round(row["ratchet"]["k_provenance"]["lambda_max_rel"], 9))
+        assert row["ratchet"]["k_provenance"]["lambda_max_rel"] == (
+            cfg.lambda_max / cfg.lambda_step_cap)
+    assert len(seen) == 2, f"gate path ignored cfg.lambda_max; saw only {seen}"
 
 
 def test_r1_catch_non_finite_realized_does_not_poison_the_budget():
     """R1 REVIEW CATCH.  derive_noise_floor filtered non-finite values but the trailing
-    MEAN did not, so one nan would flow into min(prev, nan) - order-dependent."""
+    MEAN did not, so one nan would flow into min(prev, nan) -- order-dependent."""
     hist = [0.10] * 6 + [float("nan")] + [0.10] * 6
     b, prov = lg.derive_ratchet_budget(hist, 0.12589, 66.2, 0.1)
     assert np.isfinite(b), f"non-finite realized poisoned the budget: {b}"
