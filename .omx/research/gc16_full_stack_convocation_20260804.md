@@ -80,3 +80,64 @@ learned line." Both recorded; neither blocks PROCEED.
 
 SYNERGY MAP: R2 makes R3+R4 pose-safe · sg4 feeds R3 · R1 decides R3-vs-burn routing ·
 R6 folds into qo1 · R8 guards everything · R9 converts the wave into the first exact row.
+
+## GC16-R2 (Fable deep round — corpus-grounded, R1 EXECUTED)
+
+### R1 TYPED VERDICT: **NOT-A-CONTRADICTION / BR-D LADDER STANDS / gc16-R1's "learned line reopens" framing WITHDRAWN — the learned line was never closed**
+
+Object identity established from receipts (m94 discipline — units and object BEFORE comparing):
+
+1. **What f′ = 0.008305 measured** (`ddm_fp1_class_field_projection_20260731.md:13-26,47,60-62`):
+   F1 = the **FLAT-PROTOTYPE-PAINT receiver floor** — paint the *perfect GT argmax* with
+   margin-optimally-solved flat prototype colors → contest-exact R → frozen CPU-torch SegNet →
+   d_seg 0.008305 (n600). Airtight lower bound **by construction** for any vehicle whose output
+   stage is flat paint of a class field. fp1's OWN scope ledger: **FORMULATION
+   (flat-prototype-paint class-field-output vehicle), "NOT the renderer paradigm."** Its falsifier
+   bar was **0.0051** (BR-B graft → INSTANCE-dead, 1.63× margin). The 2e-3 figure is one conjunct
+   of gc12's BR-D condition, not fp1's bar.
+2. **What #909's "live base beats it 1.93×" measures**: the live base d_seg 0.00431179 (fz4
+   sub_final, seg untouched from the pu2 token-vehicle lineage). Arithmetic verified:
+   0.008305 / 0.00431179 = **1.926**. Same units (n600 d_seg, same R + frozen SegNet authority),
+   **different output family** — the TRAINED TEXTURED renderer (TR1) + solve corrections, not
+   flat paint.
+3. **Adjudication**: the live base beating the flat-paint floor is NOT a contradiction and does
+   NOT stale BR-B (still dead by construction) or the BR-D LADDER (whose rungs — r1c
+   continuation, QA92, burn-4 — in fact RUN ON the trained-texture lineage; gc12's own
+   Assumption-Adversary had already flagged "fp1 only measured the ALL-FLAT receiver...
+   paint-on-texture genuinely unmeasured", `ddm_gc12_wall_branch_convocation_20260731.md:14-17`).
+   What IS cured: any downstream reading of f′ as "the renderer-class capacity floor." **There
+   is no measured floor above 0.00431179 for the family we actually ship.** Consequence for
+   routing: the flat-paint floor licenses NEITHER a renderer wall NOR a carrier preference —
+   **carriers (R3/ed1) and continued learned descent (burn-4/r1c lineage) are a RACE, not a
+   settled fork.** Sutton's bitter-lesson caution is NOT gated off by f′.
+4. **#848 fold**: distinct instrument (per-window rate cost treated as constant), same CLASS
+   (decision conditioned on a mis-scoped quantity). Stays open with its named fix — re-derive
+   gc14's stopping rule with rate-per-window as a controllable. Related: df1 row 3 already
+   graded dw1's fork discriminator UNGROUNDED (0.91×/0.19× of the deterministic-R floor,
+   `ddm_df1_retrain_contamination_classification_20260803.md:154,362`) — resolving measurement
+   = N≥3 matched windows under `--deterministic-r`.
+
+### Corpus-grounding corrections to the R1-R9 local pass
+- **C1 (R1 text)**: "if stale, the learned-renderer line reopens" — WITHDRAWN as above; the
+  line was never closed. R1's routing consequence is replaced by the RACE framing.
+- **C2 (synthesis text)**: "the burn's renderer measured f=0.008305 floor, 4× above need" —
+  WRONG OBJECT; f′ is the flat-paint family's floor, not the burn renderer's. The burn
+  renderer's live output is 0.00431179 with no measured floor above it.
+- **C3 (pc2 citations)**: the Road-hub/22.1% figures were quoted from memory-index (m91), not
+  re-derived this round — flagged NOT-REGROUNDED; the FRESHER priced per-edge surface is sg3
+  (`ddm_sg3_counted_gt_granularity_ladder_20260804.md:333-364`), which supersedes them as R3's
+  input.
+
+### NEW op-routable (ranks between R3 and R4): **R3a — the per-edge carrier has a measured GO-signal**
+sg3's band table: Road↔Lane band k=1 = **81,365 B addressing 161,547 flips, break-even survival
+39.56%**, vs the only survival ever measured **cg3 = 0.555** → clears break-even **1.40×**
+(all-five-interface stack: 164,679 B, 398,005 flips, break-even 32.50% → 1.71×). This is the
+priced, measured entry condition gc16-R3 lacked. FOLD INTO ed1's charter: build the Road↔Lane
+band carrier against sg3's exact byte/flip/break-even rows; falsifier = realized survival at
+n600 < 0.3956.
+
+### Single highest-EV next fire for MAIN
+Unchanged in identity, upgraded in content: **fire the scorer batch when sg4 frees the slot**
+(Q3 #837 + sq1 uncap #935 + rt1 rate verify + the R8 pose-bank guard), now carrying the R2
+routing caveat — carriers-vs-burn-4 is a live RACE; neither route may be starved on the strength
+of f′.
