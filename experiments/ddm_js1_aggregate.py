@@ -62,15 +62,23 @@ def main() -> int:
     ap.add_argument("--out", type=Path, required=True)
     args = ap.parse_args()
 
-    rows: list[dict] = []
-    seen: set[int] = set()
+    # MERGE by pair, never take-first: a pair may be measured in several receipts, each carrying
+    # a DIFFERENT arm (the n32 run carries cprime/poseonly, the cheapdct runs carry the carriage
+    # arms).  Deduping by pair id and keeping the first row silently DROPS every arm measured in
+    # a later receipt -- a defect this aggregator shipped with and which hid the entire k=4
+    # carriage result on its first run.
+    by_pair: dict[int, dict] = {}
     for r in args.receipts:
         if not r.exists():
             continue
         for row in json.loads(r.read_text()).get("rows", []):
-            if int(row["pair"]) not in seen:
-                seen.add(int(row["pair"]))
-                rows.append(row)
+            p = int(row["pair"])
+            if p in by_pair:
+                for k, v in row.items():
+                    by_pair[p].setdefault(k, v)
+            else:
+                by_pair[p] = dict(row)
+    rows = [by_pair[p] for p in sorted(by_pair)]
     if not rows:
         raise SystemExit("no rows")
 
@@ -164,6 +172,36 @@ def main() -> int:
             "pose_breakeven_ratio_vs_population": (
                 1.0 + (-net2 / DS_DDPOSE_NOW) / D_POSE_POP),
             "frame0_stream_bytes": "OPEN -- NOT PRICED (see memo); this net excludes it",
+        }
+
+    # ---- pose-only CONTROL (isolates unharvested frame_0 headroom from the staging) ---------
+    po = [(r, r["arm_poseonly_control"]) for r in rows if "arm_poseonly_control" in r]
+    if po:
+        rat_po, sd_po, n_po = pool([x["d_pose_ratio_vs_before"] for _, x in po])
+        out["arms"]["POSEONLY_control_no_seg_solve"] = {
+            "n": n_po, "d_pose_ratio_mean_SUBSET": rat_po, "sd": sd_po,
+            "seg_unchanged_ALL": all(x["seg_unchanged_vs_shipped"] for _, x in po),
+            "interpretation": (
+                "pu2 solved frame_0 on only 6 pairs, so a ratio <1.0 here is headroom the "
+                "STAGING did not create.  staging-attributable pose = cprime_ratio - this."),
+        }
+
+    # ---- cheap generic-basis carriage arms --------------------------------------------------
+    for key in sorted({k for r in rows for k in r if k.startswith("arm_cprime_cheap_dct")}):
+        a = [(r, r[key]) for r in rows if key in r]
+        rat, sd, n2 = pool([x["d_pose_ratio_vs_before"] for _, x in a])
+        vs1, _, _ = pool([x["d_pose_ratio_vs_stage1_damage"] for _, x in a])
+        b = a[0][1]
+        out["arms"][key] = {
+            "n": n2, "k": b["k"],
+            "d_pose_ratio_mean_SUBSET": rat, "sd": sd,
+            "d_pose_ratio_vs_stage1_damage_mean": vs1,
+            "solved_to_all_zero_frac": sum(1 for _, x in a if x["solved_to_all_zero"]) / len(a),
+            "counted_bytes_per_pair": b["counted_bytes_per_pair"],
+            "counted_bytes_n600": b["counted_bytes_n600"],
+            "rate_cost_S_n600": b["rate_cost_S_n600"],
+            "note": ("SOLVED WITHIN the generic DCT basis (free under rule 118), not projected "
+                     "onto it -- p3v2: the free win is BASIS-ADVERSARIAL"),
         }
 
     out["per_pair"] = rows
