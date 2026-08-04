@@ -366,6 +366,40 @@ def spawn(name: str, prompt_path: str) -> bool:
 # --- CLI -------------------------------------------------------------------------
 
 
+def _done_receipt(name: str) -> str | None:
+    """Terminal receipt line for an arm, or None if no ``.done`` exists.
+
+    The old status labeled every live-marked-but-processless arm ``[DIED]``
+    without reading receipts — rc=0 finishes showed as deaths (the known
+    instrument mislabel). The ``.done`` file is the keeper's exit receipt and
+    is the authority on how the arm actually ended.
+    """
+    try:
+        content = (RUNS / f"{name}.done").read_text(errors="replace").strip()
+    except OSError:
+        return None
+    return content.splitlines()[-1] if content else "(empty receipt)"
+
+
+def _watcher_line() -> str:
+    """Fleet-watcher liveness from the heartbeat file (codex_arm_watch.py).
+
+    Surfaced at every queue interaction so an unarmed watcher is visible —
+    without it, arm completions silently revert to poll-on-request.
+    """
+    hb = RUNS / "_watcher.alive"
+    try:
+        age = time.time() - hb.stat().st_mtime
+    except OSError:
+        return (
+            "fleet watcher: NOT RUNNING — arm completions will NOT notify MAIN "
+            "(arm via Monitor: .venv/bin/python tools/codex_arm_watch.py, persistent)"
+        )
+    if age > 90:  # codex_arm_watch.HEARTBEAT_STALE_S
+        return f"fleet watcher: STALE (heartbeat {int(age)}s ago) — re-arm the Monitor"
+    return f"fleet watcher: ALIVE (heartbeat {int(age)}s ago)"
+
+
 def cmd_status(args) -> int:
     rows = load_rows()
     live = live_arm_names()
@@ -381,15 +415,33 @@ def cmd_status(args) -> int:
         ),
         key=lambda r: (r.get("rank", 999), r.get("name", "")),
     )
-    n_stale = sum(1 for r in spawnable if r.get("status") == "live")
+    # Split processless-live rows by their .done receipt: FINISHED-unharvested
+    # (keeper wrote an exit receipt) vs truly DIED (no receipt at all).
+    n_finished = sum(
+        1
+        for r in spawnable
+        if r.get("status") == "live" and _done_receipt(r.get("name", "")) is not None
+    )
+    n_stale = (
+        sum(1 for r in spawnable if r.get("status") == "live") - n_finished
+    )
     scorer_live = any(latest.get(n, {}).get("owns_scorer") for n in live)
     print(f"codex arms live: {len(live)}/{args.cap}  {sorted(live) if live else ''}")
     print(f"scorer slot: {'TAKEN' if scorer_live else 'free'}")
+    print(_watcher_line())
     print(f"spawnable charters: {len(spawnable)} of {len(latest)} tracked", end="")
-    print(f"  ({n_stale} marked live but DEAD — resumable)" if n_stale else "")
+    tail = []
+    if n_finished:
+        tail.append(f"{n_finished} FINISHED (unharvested — read .done)")
+    if n_stale:
+        tail.append(f"{n_stale} marked live but DEAD — resumable")
+    print(f"  ({'; '.join(tail)})" if tail else "")
     for row in spawnable[: args.limit]:
         flag = " [SCORER]" if row.get("owns_scorer") else ""
-        stale = " [DIED]" if row.get("status") == "live" else ""
+        stale = ""
+        if row.get("status") == "live":
+            receipt = _done_receipt(row.get("name", ""))
+            stale = f" [FINISHED {receipt}]" if receipt is not None else " [DIED]"
         print(
             f"  rank {row.get('rank', '?'):>3}  {row.get('name')}{flag}{stale}"
             f" — {row.get('note', '')[:80]}"
@@ -446,6 +498,8 @@ def cmd_saturate(args) -> int:
             time.sleep(2)
     if not args.spawn:
         print("dry run — pass --spawn to actually fire")
+    else:
+        print(_watcher_line())
     return 0
 
 
