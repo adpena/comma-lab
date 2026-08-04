@@ -1,0 +1,414 @@
+{
+ "schema": "ddm_td1_token_drop_guided_surface.v1",
+ "score_claim": false,
+ "promotion_eligible": false,
+ "evidence_axis": "[macOS-CPU advisory inputs; no scorer forward pass run]",
+ "task": "td1 TOKEN-DROP AT OPTIMAL FORM (#869)",
+ "seconds": 650.9831728935242,
+ "baseline": {
+  "source": "ddm_sb1 C RESULT / main_hot_state live own-vehicle row",
+  "archive_bytes": 357836,
+  "archive_sha256": "d5e814d5b9f65c3094b0e65fecdd7771734d03c420c63d1d2033a671b766986a",
+  "d_seg": 0.00431179,
+  "d_pose": 0.00071459,
+  "score": 0.7539807296911207,
+  "axis": "[macOS-CPU advisory]"
+ },
+ "rt1_negative_calibration": {
+  "source": "/Volumes/VertigoDataTier/pact/ddm_sb1_20260804/B_rt1_margin_16_12_8_4_n600_eval_receipt.json",
+  "archive_bytes": 244436,
+  "delta_archive_bytes": -113400,
+  "d_seg": 0.00515854,
+  "d_pose": 0.16815221,
+  "score": 1.9753490686354727,
+  "delta_d_seg": 0.0008467499999999994,
+  "delta_d_pose": 0.16743762
+ },
+ "scorer_slot": {
+  "td1_owns_full_n600_slot": false,
+  "observed_live_owner": "sq2 [SCORER] in .omx/state/main_hot_state.md",
+  "action": "byte surface measured; scorer subset/full-n600 must be queued"
+ },
+ "base_archive": {
+  "path": "/Volumes/VertigoDataTier/pact/ddm_qo1_20260804/sub_auto_pairbit/archive.zip",
+  "sha256": "d5e814d5b9f65c3094b0e65fecdd7771734d03c420c63d1d2033a671b766986a",
+  "bytes": 357836,
+  "token_bulk_bytes": 341295,
+  "token_bulk_reencodes": true,
+  "token_source_path": "/Volumes/VertigoDataTier/pact/ddm_br1_20260803/cx1_tokens.npy",
+  "token_source_sha256": "d4eacbf619d09aeda1c15a5015b0cd45ab2d3de33d349c881b7e0f59dc803a56",
+  "token_source_equal_to_archive": true,
+  "tokens_sha256": "f6055f3159ce080f1d8b89dce618d7286d11bd3853d6bb0380cba9fac9801146",
+  "section_bytes_preserved": [
+   36,
+   3266,
+   535,
+   8751,
+   4081
+  ],
+  "section_sha256_preserved": [
+   "fc4f23ac9e31ba266ace26131319eb5b574d69e1d505fb1fc20a9dbc79a240d6",
+   "3b8eb0c24f9e6d8b547a23a5db29a1dbbd03db474fbba3638b0c3dd858ca7009",
+   "8fc5c3fc65eb051b65ebf01d4b008e52d606097194c57884e739eae2ad8382e1",
+   "d1d073e55aacf991491365d13716fededb169854b78bb203c34c84ca880c25db",
+   "b5874d32324a46dc76cb1fc0beb7cda5fdaca2f59ebae6acbb08283206e8e7a2"
+  ]
+ },
+ "instrument_sources": {
+  "gt_argmax": {
+   "path": "/Volumes/VertigoDataTier/pact/ddm_pu2_20260803/argmax_cache/gt_argmax_n600.npy",
+   "sha256": "b74a14b226a5aceb5824899898bcb06e5413c54b7db2441268da7bc91a10db5d",
+   "shape": [
+    600,
+    384,
+    512
+   ]
+  },
+  "cx1_argmax": {
+   "path": "/Volumes/VertigoDataTier/pact/ddm_pu2_20260803/argmax_cache/cx1_argmax_n600.npy",
+   "sha256": "5e903de650e60ec6a64b34eb455fa1bc911223551d0b31e9ae45cc906e1490be",
+   "shape": [
+    600,
+    384,
+    512
+   ]
+  },
+  "g3_jsonl": {
+   "path": "/Volumes/VertigoDataTier/pact/ddm_g3_score_atlas_n600_20260722T204000Z/ddm_g3_score_atlas_n600.jsonl",
+   "sha256": "faaff7299d86aa49c97e25e9cce2eeb0201f64e919f110015d31708788bcec09",
+   "rows": 600
+  },
+  "g4_recurrence": {
+   "path": "/Volumes/VertigoDataTier/pact/ddm_g4_spatial_stationarity_n600_20260722T212138Z/stage_checkpoints/01_recurrence_arrays.npz",
+   "sha256": "dbc85e7a4f593ab9b7a7f4ed017dbb63a064cb681df806d0bb93277ae8f42451"
+  },
+  "sg1_cell_flip_mass": {
+   "path": "/Volumes/VertigoDataTier/pact/ddm_sg1_20260731/cell_flip_mass.npy",
+   "sha256": "31586a87e2f82662602fda554f5a6bf286dceeea5ec9b4a062929f67f58d184d",
+   "shape": [
+    24,
+    32
+   ]
+  },
+  "formula": {
+   "seg_guard": "0.45*norm(g3_score_weighted_argmax_errors)+0.25*norm(cx1_argmax_errors)+0.20*norm(sg1_cell_flip_mass)+0.10*norm(g4_flip_recurrence)",
+   "pose_guard": "0.70*norm(g3_pose_weighted_token_mode_residual)+0.30*norm(token_mode_activity)",
+   "joint_guard": "0.72*seg_guard+0.28*pose_guard",
+   "authority": "DERIVED instrument ledger only; scorer forward pass not run by td1"
+  }
+ },
+ "field_hashes": [
+  {
+   "name": "cell_error",
+   "sha256_of_float64": "c158a8cdc52262689894c38f0ae69eeefd18e52ba2f02b8bb88f9712662e138e"
+  },
+  {
+   "name": "cell_score_weighted_error",
+   "sha256_of_float64": "57ab7c394fe6bed3d9ce1efbc79ce68841d626403bfead9237ceb8eeb65f5781"
+  },
+  {
+   "name": "g4_cell_recurrence",
+   "sha256_of_float64": "c792eb0e6ab1a036a9ac6ad0f1b700b9f0a65a98b37a7d5088bce9936c0153cf"
+  },
+  {
+   "name": "sg1_cell_flip_mass",
+   "sha256_of_float64": "d41da4d45b80786bff40bbeeb7dfb15e569a2f83ee839094ab1bee184c016e9d"
+  },
+  {
+   "name": "activity",
+   "sha256_of_float64": "494904e2aa3b13d78b8f9a8be28bdf15f9abc360158a079459237ffb4ec551a7"
+  },
+  {
+   "name": "pose_tube_proxy",
+   "sha256_of_float64": "85648608bd981d9372fc61bef132631828a855594637d74bb01e69f2b6faa64a"
+  },
+  {
+   "name": "seg_guard",
+   "sha256_of_float64": "2f249427bf324c94bda7cb00ff4d15f809dc6fe234c3ed774e1c4d1e0cbc691e"
+  },
+  {
+   "name": "pose_guard",
+   "sha256_of_float64": "ed7a564937057d05f8e72b511aff7ac4239978776f35e7338d07034278ae9b5c"
+  },
+  {
+   "name": "joint_guard",
+   "sha256_of_float64": "af793906ad74df46e2813477b7a613cba0858b464cb627ffe1f00c05ef1ce495"
+  }
+ ],
+ "candidate_maps_npz": {
+  "path": "/Volumes/VertigoDataTier/pact/ddm_td1_20260804/td1_candidate_maps_and_fields.npz",
+  "sha256": "6952df26d008c19f4dc6f3ae4b78d595d1d63621818af0a07324b195ee7cc4d3",
+  "bytes": 11075
+ },
+ "cell_rung_ledger": {
+  "path": "/Users/adpena/Projects/pact/.omx/research/ddm_td1_20260804/td1_cell_rung_ledger.jsonl",
+  "rows": 3072,
+  "sha256": "f280dd98f4a53f5093a51d4daab59bcec813e3164818583c15020838b89f228a"
+ },
+ "candidates_ranked_by_inferred_projection": [
+  {
+   "name": "td1_joint_guard_16_14_12_10",
+   "candidate_dir": "/Volumes/VertigoDataTier/pact/ddm_td1_20260804/td1_joint_guard_16_14_12_10",
+   "archive": "/Volumes/VertigoDataTier/pact/ddm_td1_20260804/td1_joint_guard_16_14_12_10/archive.zip",
+   "archive_sha256": "aecfbd6f09774ba587588eec6b8a17454902f20f5e156a395202d911d2857c8b",
+   "archive_bytes": 334401,
+   "level_counts": {
+    "10": 384,
+    "12": 160,
+    "14": 128,
+    "16": 96
+   },
+   "map_sha256_of_int64": "34ca420c6d91e36deef2e020eb09e46a55ec5327b630bd662220b992cf3ea412",
+   "codes_sha256": "6b7158e794d6ffa1f3dbf4803967cdcfe6feafabab04c19a3af10979bc787077",
+   "token_frame_sha256": "4aa68088147b9d406b0f337ebb1ec62872c25ced20c975846c953c75f101cfd4",
+   "token_coder_surface": {
+    "ix2_token_frame_bytes": 317860,
+    "r7_smevr_token_frame_bytes": 328859,
+    "r7_brotli11_token_frame_bytes": 395392,
+    "r7_auto_token_frame_bytes": 328859,
+    "r7_auto_winner": "smevr",
+    "levels_argument": 16,
+    "note": "candidate is kept in the live IX2 global-levels=16 format; per-cell sublattices are data values, not a new counted map"
+   },
+   "byte_ledger": {
+    "closes": true,
+    "residual_bytes": 0,
+    "payload_reencodes_identically": true,
+    "bulk_bytes": 317860,
+    "joint_coded_bytes": 16427,
+    "archive_bytes": 334401,
+    "archive_sha256": "aecfbd6f09774ba587588eec6b8a17454902f20f5e156a395202d911d2857c8b"
+   },
+   "receiver_close": {
+    "ran": true,
+    "returncode": 0,
+    "out_dir": "/Volumes/VertigoDataTier/pact/ddm_td1_20260804/td1_joint_guard_16_14_12_10/inflated",
+    "raw_files": 1,
+    "raw_bytes": 3662409600,
+    "seconds": 202.9822132587433,
+    "stdout_tail": "",
+    "stderr_tail": ""
+   },
+   "delta_archive_bytes_vs_qo1": -23435,
+   "rate_delta_S_measured_bytes": -0.015604404566418085,
+   "exposure": {
+    "seg_guard_drop_exposure": 1.4999774955758713,
+    "pose_guard_drop_exposure": 44.65379709370629,
+    "rt1_seg_guard_drop_exposure": 7.960603470707621,
+    "rt1_pose_guard_drop_exposure": 159.3308582218127,
+    "calibration_source": "/Volumes/VertigoDataTier/pact/ddm_sb1_20260804/B_rt1_margin_16_12_8_4_n600_eval_receipt.json"
+   },
+   "rt1_calibrated_projection": {
+    "status": "INFERRED_NOT_A_SCORE",
+    "delta_d_seg": 0.0001595489524195542,
+    "delta_d_pose": 0.04692578445114733,
+    "projected_d_seg": 0.004471338952419555,
+    "projected_d_pose": 0.047640374451147334,
+    "projected_score": 1.3600178646487555,
+    "projected_delta_S_vs_qo1": 0.6060371349576348,
+    "R8_pose_term_erosion": 0.6056866442820973,
+    "R8_pass_projected": false,
+    "warning": "calibrated from one measured negative; scorer-realized subset was not run"
+   }
+  },
+  {
+   "name": "td1_joint_guard_16_14_12_8",
+   "candidate_dir": "/Volumes/VertigoDataTier/pact/ddm_td1_20260804/td1_joint_guard_16_14_12_8",
+   "archive": "/Volumes/VertigoDataTier/pact/ddm_td1_20260804/td1_joint_guard_16_14_12_8/archive.zip",
+   "archive_sha256": "05b09f9ea7c8c30717b58d453fd3a7fc065664dffdcb4cefc3e7ccaa3faea5b3",
+   "archive_bytes": 332119,
+   "level_counts": {
+    "8": 384,
+    "12": 192,
+    "14": 96,
+    "16": 96
+   },
+   "map_sha256_of_int64": "5cf46d9c79fb979811a93d7c59946e0b24bb13af808aa55be10b98db42e7bffd",
+   "codes_sha256": "832020e87f912a0bb3b92d86c87bf98eea205101fa38ae33f0007bab45bf52c1",
+   "token_frame_sha256": "7d13497f49d449fa5159aa8ab33d052811a43fb7db7dae0f447049b940d00e58",
+   "token_coder_surface": {
+    "ix2_token_frame_bytes": 315578,
+    "r7_smevr_token_frame_bytes": 325037,
+    "r7_brotli11_token_frame_bytes": 393938,
+    "r7_auto_token_frame_bytes": 325037,
+    "r7_auto_winner": "smevr",
+    "levels_argument": 16,
+    "note": "candidate is kept in the live IX2 global-levels=16 format; per-cell sublattices are data values, not a new counted map"
+   },
+   "byte_ledger": {
+    "closes": true,
+    "residual_bytes": 0,
+    "payload_reencodes_identically": true,
+    "bulk_bytes": 315578,
+    "joint_coded_bytes": 16427,
+    "archive_bytes": 332119,
+    "archive_sha256": "05b09f9ea7c8c30717b58d453fd3a7fc065664dffdcb4cefc3e7ccaa3faea5b3"
+   },
+   "receiver_close": {
+    "ran": true,
+    "returncode": 0,
+    "out_dir": "/Volumes/VertigoDataTier/pact/ddm_td1_20260804/td1_joint_guard_16_14_12_8/inflated",
+    "raw_files": 1,
+    "raw_bytes": 3662409600,
+    "seconds": 200.84450912475586,
+    "stdout_tail": "",
+    "stderr_tail": ""
+   },
+   "delta_archive_bytes_vs_qo1": -25717,
+   "rate_delta_S_measured_bytes": -0.017123894697442882,
+   "exposure": {
+    "seg_guard_drop_exposure": 1.5567848801576576,
+    "pose_guard_drop_exposure": 48.456455388025994,
+    "rt1_seg_guard_drop_exposure": 7.960603470707621,
+    "rt1_pose_guard_drop_exposure": 159.3308582218127,
+    "calibration_source": "/Volumes/VertigoDataTier/pact/ddm_sb1_20260804/B_rt1_margin_16_12_8_4_n600_eval_receipt.json"
+   },
+   "rt1_calibrated_projection": {
+    "status": "INFERRED_NOT_A_SCORE",
+    "delta_d_seg": 0.00016559141554080192,
+    "delta_d_pose": 0.05092192218353661,
+    "projected_d_seg": 0.004477381415540802,
+    "projected_d_pose": 0.05163651218353661,
+    "projected_score": 1.38746805191935,
+    "projected_delta_S_vs_qo1": 0.6334873222282293,
+    "R8_pose_term_erosion": 0.634052075371592,
+    "R8_pass_projected": false,
+    "warning": "calibrated from one measured negative; scorer-realized subset was not run"
+   }
+  },
+  {
+   "name": "global_L14",
+   "candidate_dir": "/Volumes/VertigoDataTier/pact/ddm_td1_20260804/global_L14",
+   "archive": "/Volumes/VertigoDataTier/pact/ddm_td1_20260804/global_L14/archive.zip",
+   "archive_sha256": "5d60380fbbd0b897611642ef7143a8d976142004ee1da0fd9494467c80d2ba06",
+   "archive_bytes": 334221,
+   "level_counts": {
+    "14": 768
+   },
+   "map_sha256_of_int64": "267e8e994fc2f2f0cae9ab8866fa7b80bc5faba817e84dad1798541c5258ddcf",
+   "codes_sha256": "e32113cd5b2807038e0d17cd3cd800c95e8e9eb4a8ad4091a08f1d310a262a91",
+   "token_frame_sha256": "ba43640cd03dbc295b8e4e6c3644d4c50d55345efd1adda5dd60368731f8a052",
+   "token_coder_surface": {
+    "ix2_token_frame_bytes": 317680,
+    "r7_smevr_token_frame_bytes": 323189,
+    "r7_brotli11_token_frame_bytes": 397048,
+    "r7_auto_token_frame_bytes": 323189,
+    "r7_auto_winner": "smevr",
+    "levels_argument": 16,
+    "note": "candidate is kept in the live IX2 global-levels=16 format; per-cell sublattices are data values, not a new counted map"
+   },
+   "byte_ledger": {
+    "closes": true,
+    "residual_bytes": 0,
+    "payload_reencodes_identically": true,
+    "bulk_bytes": 317680,
+    "joint_coded_bytes": 16427,
+    "archive_bytes": 334221,
+    "archive_sha256": "5d60380fbbd0b897611642ef7143a8d976142004ee1da0fd9494467c80d2ba06"
+   },
+   "receiver_close": {
+    "ran": true,
+    "returncode": 0,
+    "out_dir": "/Volumes/VertigoDataTier/pact/ddm_td1_20260804/global_L14/inflated",
+    "raw_files": 1,
+    "raw_bytes": 3662409600,
+    "seconds": 200.43788719177246,
+    "stdout_tail": "",
+    "stderr_tail": ""
+   },
+   "delta_archive_bytes_vs_qo1": -23615,
+   "rate_delta_S_measured_bytes": -0.015724259177980076,
+   "exposure": {
+    "seg_guard_drop_exposure": 6.44299664726003,
+    "pose_guard_drop_exposure": 41.590253100141005,
+    "rt1_seg_guard_drop_exposure": 7.960603470707621,
+    "rt1_pose_guard_drop_exposure": 159.3308582218127,
+    "calibration_source": "/Volumes/VertigoDataTier/pact/ddm_sb1_20260804/B_rt1_margin_16_12_8_4_n600_eval_receipt.json"
+   },
+   "rt1_calibrated_projection": {
+    "status": "INFERRED_NOT_A_SCORE",
+    "delta_d_seg": 0.0006853258589178888,
+    "delta_d_pose": 0.043706367190909146,
+    "projected_d_seg": 0.004997115858917889,
+    "projected_d_pose": 0.04442095719090915,
+    "projected_score": 1.3887461200494549,
+    "projected_delta_S_vs_qo1": 0.6347653903583341,
+    "R8_pose_term_erosion": 0.5819570636445252,
+    "R8_pass_projected": false,
+    "warning": "calibrated from one measured negative; scorer-realized subset was not run"
+   }
+  },
+  {
+   "name": "td1_joint_guard_16_12_8_4",
+   "candidate_dir": "/Volumes/VertigoDataTier/pact/ddm_td1_20260804/td1_joint_guard_16_12_8_4",
+   "archive": "/Volumes/VertigoDataTier/pact/ddm_td1_20260804/td1_joint_guard_16_12_8_4/archive.zip",
+   "archive_sha256": "f73b7517c97a93149e28d8320d92f2dcb556d15cb1456678c085b3445fc05e4e",
+   "archive_bytes": 246371,
+   "level_counts": {
+    "4": 552,
+    "8": 87,
+    "12": 86,
+    "16": 43
+   },
+   "map_sha256_of_int64": "2057c68460aa8c7e39f21bcc676d71f84f6af47809e497cdc300949fdb49a3b2",
+   "codes_sha256": "aa544ad625dbed3ced2b45c5c3d9010efc4341ae13f5ddfb28e3f4669c48478d",
+   "token_frame_sha256": "0883b52ae49cd6af2ff8f5df90649f985dd9df209552314edab7b64d95576f08",
+   "token_coder_surface": {
+    "ix2_token_frame_bytes": 229830,
+    "r7_smevr_token_frame_bytes": 249405,
+    "r7_brotli11_token_frame_bytes": 304126,
+    "r7_auto_token_frame_bytes": 249405,
+    "r7_auto_winner": "smevr",
+    "levels_argument": 16,
+    "note": "candidate is kept in the live IX2 global-levels=16 format; per-cell sublattices are data values, not a new counted map"
+   },
+   "byte_ledger": {
+    "closes": true,
+    "residual_bytes": 0,
+    "payload_reencodes_identically": true,
+    "bulk_bytes": 229830,
+    "joint_coded_bytes": 16427,
+    "archive_bytes": 246371,
+    "archive_sha256": "f73b7517c97a93149e28d8320d92f2dcb556d15cb1456678c085b3445fc05e4e"
+   },
+   "receiver_close": {
+    "ran": false,
+    "reason": "not selected"
+   },
+   "delta_archive_bytes_vs_qo1": -111465,
+   "rate_delta_S_measured_bytes": -0.07421996820976283,
+   "exposure": {
+    "seg_guard_drop_exposure": 8.427526298268715,
+    "pose_guard_drop_exposure": 155.6969023321878,
+    "rt1_seg_guard_drop_exposure": 7.960603470707621,
+    "rt1_pose_guard_drop_exposure": 159.3308582218127,
+    "calibration_source": "/Volumes/VertigoDataTier/pact/ddm_sb1_20260804/B_rt1_margin_16_12_8_4_n600_eval_receipt.json"
+   },
+   "rt1_calibrated_projection": {
+    "status": "INFERRED_NOT_A_SCORE",
+    "delta_d_seg": 0.000896415443793573,
+    "delta_d_pose": 0.16361876825882188,
+    "projected_d_seg": 0.0052082054437935735,
+    "projected_d_pose": 0.16433335825882187,
+    "projected_score": 1.9667946126065767,
+    "projected_delta_S_vs_qo1": 1.212813882915456,
+    "R8_pose_term_erosion": 1.1973923067458616,
+    "R8_pass_projected": false,
+    "warning": "calibrated from one measured negative; scorer-realized subset was not run"
+   }
+  }
+ ],
+ "measured": {
+  "coder_surface": "MEASURED real IX2 archive bytes plus R7 smevr/brotli token frame bytes for each map",
+  "receiver_close": "MEASURED inflate only for top 3 ranked candidate(s)"
+ },
+ "not_measured": {
+  "subset_d_seg_d_pose": "QUEUED: td1 did not own scorer slot; no SegNet/PoseNet forward pass run",
+  "full_n600": "NOT RUN: sq2 owns scorer slot"
+ },
+ "next_if_resumed": [
+  "Run <=32-pair matched-base subset scorer on the first receiver-closed td1 candidate and qo1 base.",
+  "Reject immediately if R8 pose-term erosion exceeds 0.005 or if subset projection cannot beat S=0.7539807296911207.",
+  "Only append/fire full-n600 scorer spec for a receiver-closed candidate after the subset passes."
+ ]
+}

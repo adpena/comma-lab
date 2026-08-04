@@ -1,0 +1,53 @@
+{
+  "schema": "ddm_td1_inflated_raw_manifest.v1",
+  "created_utc": "2026-08-04T20:49:14Z",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "axis": "[receiver-closed local inflate only; no scorer forward pass]",
+  "command": ".venv/bin/python experiments/ddm_td1_token_drop_guided_surface.py --receiver-close-top 3",
+  "bulk_root": "/Volumes/VertigoDataTier/pact/ddm_td1_20260804",
+  "receipt": {
+    "path": ".omx/research/ddm_td1_20260804/td1_surface_receipt.json",
+    "sha256": "9967ec9afc731e54f4e6d4032567fc2b3752dccd6a74fed4a395bd604854fe15"
+  },
+  "raw_outputs": [
+    {
+      "candidate": "td1_joint_guard_16_14_12_10",
+      "archive_path": "/Volumes/VertigoDataTier/pact/ddm_td1_20260804/td1_joint_guard_16_14_12_10/archive.zip",
+      "archive_bytes": 334401,
+      "archive_sha256": "aecfbd6f09774ba587588eec6b8a17454902f20f5e156a395202d911d2857c8b",
+      "raw_path": "/Volumes/VertigoDataTier/pact/ddm_td1_20260804/td1_joint_guard_16_14_12_10/inflated/0.raw",
+      "raw_bytes": 3662409600,
+      "raw_sha256": "b55ae5a8b2c5edbef939a4f8794e2cc95f19fc699bcfd0519128a10d54718929",
+      "inflate_returncode": 0,
+      "inflate_seconds": 202.9822132587433
+    },
+    {
+      "candidate": "td1_joint_guard_16_14_12_8",
+      "archive_path": "/Volumes/VertigoDataTier/pact/ddm_td1_20260804/td1_joint_guard_16_14_12_8/archive.zip",
+      "archive_bytes": 332119,
+      "archive_sha256": "05b09f9ea7c8c30717b58d453fd3a7fc065664dffdcb4cefc3e7ccaa3faea5b3",
+      "raw_path": "/Volumes/VertigoDataTier/pact/ddm_td1_20260804/td1_joint_guard_16_14_12_8/inflated/0.raw",
+      "raw_bytes": 3662409600,
+      "raw_sha256": "143133a5e49ab0af7c04efb929381bd2f2dec1152688a18c5c77d28626927f31",
+      "inflate_returncode": 0,
+      "inflate_seconds": 200.84450912475586
+    },
+    {
+      "candidate": "global_L14",
+      "archive_path": "/Volumes/VertigoDataTier/pact/ddm_td1_20260804/global_L14/archive.zip",
+      "archive_bytes": 334221,
+      "archive_sha256": "5d60380fbbd0b897611642ef7143a8d976142004ee1da0fd9494467c80d2ba06",
+      "raw_path": "/Volumes/VertigoDataTier/pact/ddm_td1_20260804/global_L14/inflated/0.raw",
+      "raw_bytes": 3662409600,
+      "raw_sha256": "dc0aba152db9966ea84ae46d391d1d892cf1336e90bcd46e5096e42455a30985",
+      "inflate_returncode": 0,
+      "inflate_seconds": 200.43788719177246
+    }
+  ],
+  "cleanup_status": {
+    "bytes_kept": true,
+    "reason": "inflated raws are td1 receiver-closure evidence on the SSD tier",
+    "safe_to_delete_after": "a successor receipt records the same archive sha256 plus raw sha256, or the operator explicitly discards td1 receiver evidence"
+  }
+}
