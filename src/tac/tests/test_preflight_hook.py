@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import re
 import subprocess
+from pathlib import Path
 
 import tools.preflight_hook as preflight_hook
 
@@ -128,6 +129,37 @@ def test_module_reference_tokens_for_top_level_package() -> None:
 
 def test_module_reference_tokens_empty_path_is_empty() -> None:
     assert preflight_hook._module_reference_tokens("") == set()
+
+
+def test_module_reference_tokens_package_init_resolves_to_the_package(tmp_path) -> None:
+    """#936 (`ddm_vw1`): a package `__init__.py` must yield PACKAGE names, never a bare
+    `__init__` stem — the old behavior was wrong in BOTH directions.
+
+    OVER-match: `\\b__init__\\b` is a whole-word hit in essentially every Python file, so
+    staging one 2-line `__init__.py` selected 14 heavy MLX GPU modules, 14/14 matched
+    solely by that token and 0/14 referencing the staged package.
+    UNDER-match (the failure this step exists to prevent): a test doing
+    `from tac.verdicts import X` was never matched by the token `tac.verdicts.__init__`.
+    """
+    assert preflight_hook._module_reference_tokens(
+        "src/tac/verdicts/__init__.py") == {"tac.verdicts", "verdicts"}
+    # The bare stem must be gone — it is the universal false positive.
+    assert "__init__" not in preflight_hook._module_reference_tokens(
+        "src/tac/verdicts/__init__.py")
+    # A degenerate top-level "__init__.py" keeps its only name (no empty token).
+    assert preflight_hook._module_reference_tokens("__init__.py") == {"__init__"}
+    # Non-package modules are untouched.
+    assert preflight_hook._module_reference_tokens("src/tac/verdicts/emit.py") == {
+        "tac.verdicts.emit", "verdicts.emit", "emit"}
+
+
+def test_package_init_does_not_select_unrelated_mlx_modules() -> None:
+    """The regression itself: staging tac/verdicts/__init__.py must not drag in MLX GPU
+    modules that never reference it (they crashed under concurrent-MLX GPU contention)."""
+    selected = preflight_hook._select_ci_blind_tests(["src/tac/verdicts/__init__.py"])
+    modules = {s.split("::")[0] for s in selected}
+    offenders = [m for m in modules if "tac.verdicts" not in Path(m).read_text()]
+    assert offenders == [], f"selected modules that never reference tac.verdicts: {offenders}"
 
 
 def test_select_ci_blind_tests_empty_staged_selects_nothing() -> None:

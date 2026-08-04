@@ -375,12 +375,27 @@ def _module_reference_tokens(rel_path: str) -> set[str]:
     All trailing sub-paths are included because `src/` is on sys.path and tests import by
     package path, by sub-package, or by bare module name depending on their own sys.path
     surgery. No heuristics/thresholds: an extra match only costs runtime, never silence.
+
+    A package `__init__.py` resolves to its PACKAGE names, not to `...__init__`
+    (`src/tac/verdicts/__init__.py` -> {"tac.verdicts", "verdicts"}). Measured 2026-08-03
+    (`ddm_vw1`, task #936): keeping the trailing component was wrong in BOTH directions.
+    It over-matched, because the bare stem `__init__` is a whole-word hit in essentially
+    every Python file — staging one 2-line `__init__.py` selected 14 heavy MLX GPU test
+    modules, and `14 of 14` were matched SOLELY by that token while `0 of 14` referenced
+    the staged package at all. Under GPU contention from a concurrent MLX run that
+    surfaced as a `Fatal Python error: Bus error`, i.e. a flaky hard block on every
+    `__init__.py` edit. It also UNDER-matched, which is the failure this step exists to
+    prevent: a test doing `from tac.verdicts import X` was never matched by the token
+    `tac.verdicts.__init__`, so real importers were silently skipped. Dropping the
+    trailing component fixes the silence and removes the universal false positive.
     """
     if not rel_path:
         return set()
     parts = Path(rel_path).with_suffix("").parts
     if parts and parts[0] == "src":
         parts = parts[1:]
+    if len(parts) > 1 and parts[-1] == "__init__":
+        parts = parts[:-1]
     return {".".join(parts[i:]) for i in range(len(parts))}
 
 
