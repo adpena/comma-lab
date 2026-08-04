@@ -197,3 +197,84 @@ probe is n600 with both controls exact, but it is `[macOS-CPU advisory]` and mov
 this unit is bankable as a score**. Granularity classifications record HOW a force actuates (readable
 from construction), never WHETHER it works — and the `per_edge_tie_calibration` episode shows a
 name-based classification can be wrong; each is a judgment open to the same adjudication.
+
+---
+
+# APPENDIX A — the pre-registered measurement, FIRED (2026-08-04)
+
+`experiments/ddm_cg1_precision_vs_enrichment_waterfill_key.py` →
+`.omx/research/ddm_cg1_waterfill_key_swap_n600.json`
+
+Turf resolved (`wf2` not live; scorer slot remains `fz1`'s and this touches **0 scorer forwards**),
+so §7's specified measurement was run rather than left as a named-$0-never-run row.
+
+## A.1 Verdict: FALSIFIER FIRED — the harm row downgrades, as pre-registered
+
+| bytes freed | shipped `flip_count` damage | precision adv. | **enrichment adv.** | shuffled control |
+|---:|---:|---:|---:|---:|
+| 10% | 0 | — | — | — |
+| 30% | 0 | — | — | — |
+| 50% | 246 | **+0.000000%** | −4.88% | −120,345.5% |
+| 70% | 23,414 | **+0.000000%** | **−126.04%** | −1,404.8% |
+| 90% | 232,467 | **+0.000000%** | −40.73% | −99.0% |
+
+*(positive = less damage admitted = better. The 10%/30% budgets admit zero damage under the shipped
+key, so no key can separate there; the verdict uses only the three budgets with discriminating power.)*
+
+**Precision-ranking gives 0.000000% advantage and a BIT-IDENTICAL drop order.** The reason is
+structural and I had not seen it until I read the harness: **all 768 `wr1` cells hold an identical
+site count** (16×16×600), so flips-per-site is `flip_count` divided by a constant. **The shipped `#766`
+key already IS the precision key.** The class-level inversion cannot reach this allocator. Per the
+pre-registration (`<1%` ⇒ downgrade), `cg1.enrichment_key.inverts` moves **HARMS → NEUTRAL at
+FORMULATION scope**. Honored without renegotiation.
+
+## A.2 But the harm is real where it *can* reach — so the row becomes a guard, not a corpse
+
+The pre-registration anticipated only "real but already priced." The run measured something it did
+not anticipate: the **true enrichment analogue** — flips normalized by the flips *expected* from each
+cell's own GT class composition at population base rates — is up to **−126.04% worse**, more than
+doubling admitted damage at the 70% budget. Instrument power is not in doubt (shuffled control
+−120,345%).
+
+So the correct disposition is neither "confirmed" nor "dead" (the never-binary rule): the row converts
+into a **STANDING GUARD with a measured price**. `#766` is protected *by construction* — equal-site
+cells make normalization impossible. The guard binds any **future** allocator whose units differ in
+site count (per-component, per-class, or variable-grain carriers), where normalizing by a per-class
+base rate costs up to **126% more damage at matched bytes**. `protection: ABSENT → BUILT`.
+
+## A.3 Composition with `sg3` (commits `e7a15a6577` / `cf20d4efa1`)
+
+`sg3` measured Lane error as boundary **DUST** for explicit addressing: 112,077 components, median
+**1 px** — address floors kill explicit Lane masks. `cg1` measured Lane as having the **highest
+per-site precision of any class** (0.6852) for a margin-keyed selector.
+
+**These compose; they do not conflict.** They are statements about two different costs:
+
+- *Addressing* Lane is unaffordable — 112,077 median-1px components cannot carry per-component addresses.
+- *Fixing* a Lane site is the cheapest of any class once you are already looking at it.
+
+The form that satisfies both is therefore forced: **a decoder-derived key (free context, zero address
+bytes) × precision ranking.** A.1 supplies the missing half of that statement — **the precision-ranking
+half is already shipped and already optimal at `#766`'s grain.** So the open work is entirely the
+*other* half.
+
+And that sharpens the next rung to one question. The key `cg1` measured is the **GT self-margin**, which
+is encode-side only — a decoder cannot compute it. The live question is therefore:
+
+> **Is there a decoder-derivable proxy for the GT margin — computable at decode from the render the
+> decoder already holds, costing zero address bytes — that preserves the per-site ranking?**
+
+That is $0 and scorer-free to test (correlate a render-derived margin against the cached GT margin on
+the same n600 sites), and it is the single measurement that would turn the Lane result from a
+diagnosis into a carrier. It is **not** claimed here and is left as the named next rung with its
+fire-condition, not as a promise.
+
+## A.4 Honest limits on the appendix
+
+Drop rule imported verbatim from `ddm_mg1_barrier_rerank_probe` so the comparison is apples-to-apples
+with the barrier result. Control: `d_seg` rel_err **0.0**, tiling covers the plane exactly once. The
+`class_sites @ base_rate` matmul emits divide-by-zero/overflow/invalid `RuntimeWarning`s on this BLAS
+**even for finite inputs** — reproduced on clean random data, so spurious (stale FP flags leaking into
+its error check). Rather than silence it, finiteness of both the inputs and the result is **asserted
+and recorded** in the receipt, so a real fault cannot later hide behind a warning we learned to ignore.
+`[macOS-CPU advisory]`, **0 scorer forwards**, no pointer moved, nothing bankable as a score.

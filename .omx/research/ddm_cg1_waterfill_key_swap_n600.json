@@ -1,0 +1,123 @@
+{
+ "arm": "ddm_cg1",
+ "probe": "precision vs enrichment as the #766 waterfill primary key",
+ "axis": "[macOS-CPU scorer-free advisory]",
+ "score_claim": false,
+ "promotion_eligible": false,
+ "rank_or_kill_eligible": false,
+ "scorer_forwards_run": 0,
+ "git_head": "dc447d8c21ad7c58dba6720fa8bd1f7db1dc5ffd",
+ "pre_registered_in": ".omx/research/ddm_cg1_force_verb_ledger_20260804.md sec 7 (commit 44923cbb8d)",
+ "drop_rule": "np.lexsort((-residual_mass, key)) -- imported from ddm_mg1_barrier_rerank_probe",
+ "denominator": {
+  "pairs": 600,
+  "cells": 768,
+  "grid": [
+   24,
+   32
+  ],
+  "cell_px": [
+   16,
+   16
+  ],
+  "sites_per_cell_over_all_pairs": 153600.0,
+  "total_sites": 117964800.0,
+  "n_flip": 508640
+ },
+ "controls": {
+  "tiling_covers_plane_exactly_once": true,
+  "d_seg_measured": 0.004311794704861111,
+  "d_seg_expected": 0.004311794704861111,
+  "d_seg_rel_err": 0.0,
+  "verdict": "ARGMAX_VERIFIED",
+  "shuffled_key_max_abs_advantage_pct": 120345.52845528456,
+  "instrument_has_power": true,
+  "enrichment_denominator_inputs_finite": true,
+  "enrichment_denominator_finite": true,
+  "matmul_runtimewarning_is_spurious": "This BLAS raises divide-by-zero/overflow/invalid on a finite matmul (reproduced on clean random data); finiteness asserted above instead.",
+  "budgets_with_discriminating_power": [
+   0.5,
+   0.7,
+   0.9
+  ],
+  "budgets_with_zero_baseline_damage": [
+   0.1,
+   0.3
+  ]
+ },
+ "per_class_base_rate": {
+  "Road": 0.005591335892237347,
+  "Lane": 0.2690276685793881,
+  "Undrivable": 0.0012787674090760284,
+  "Movable": 0.05398318867375413,
+  "MyCar": 0.0005356825705188413
+ },
+ "degeneracy_control": {
+  "precision_is_monotone_transform_of_flip_count": true,
+  "spearman_flip_count_vs_precision": 1.0,
+  "spearman_flip_count_vs_enrichment": 0.9824595295689414,
+  "drop_order_identical_flip_vs_precision": true,
+  "note": "All 768 cells hold an identical number of sites, so flips-per-site is flip_count divided by a constant. The shipped key IS the precision key."
+ },
+ "matched_byte_rows": [
+  {
+   "bytes_freed_frac": 0.1,
+   "damage_flip_count_key_shipped": 0.0,
+   "damage_precision_key": 0.0,
+   "damage_enrichment_key": 0.0,
+   "damage_shuffled_key_control": 56331.0,
+   "precision_advantage_pct": 0.0,
+   "enrichment_advantage_pct": 0.0,
+   "shuffled_advantage_pct": 0.0
+  },
+  {
+   "bytes_freed_frac": 0.3,
+   "damage_flip_count_key_shipped": 0.0,
+   "damage_precision_key": 0.0,
+   "damage_enrichment_key": 0.0,
+   "damage_shuffled_key_control": 240162.0,
+   "precision_advantage_pct": 0.0,
+   "enrichment_advantage_pct": 0.0,
+   "shuffled_advantage_pct": 0.0
+  },
+  {
+   "bytes_freed_frac": 0.5,
+   "damage_flip_count_key_shipped": 246.0,
+   "damage_precision_key": 246.0,
+   "damage_enrichment_key": 258.0,
+   "damage_shuffled_key_control": 296296.0,
+   "precision_advantage_pct": 0.0,
+   "enrichment_advantage_pct": -4.878048780487805,
+   "shuffled_advantage_pct": -120345.52845528456
+  },
+  {
+   "bytes_freed_frac": 0.7,
+   "damage_flip_count_key_shipped": 23414.0,
+   "damage_precision_key": 23414.0,
+   "damage_enrichment_key": 52925.0,
+   "damage_shuffled_key_control": 352338.0,
+   "precision_advantage_pct": 0.0,
+   "enrichment_advantage_pct": -126.03997608268558,
+   "shuffled_advantage_pct": -1404.8176304774922
+  },
+  {
+   "bytes_freed_frac": 0.9,
+   "damage_flip_count_key_shipped": 232467.0,
+   "damage_precision_key": 232467.0,
+   "damage_enrichment_key": 327140.0,
+   "damage_shuffled_key_control": 462582.0,
+   "precision_advantage_pct": 0.0,
+   "enrichment_advantage_pct": -40.725350264768764,
+   "shuffled_advantage_pct": -98.98824349262476
+  }
+ ],
+ "summary": {
+  "total_damage_flips": 508640.0,
+  "total_bytes_proxy": 2477111.0,
+  "max_abs_precision_advantage_pct": 0.0,
+  "worst_enrichment_advantage_pct": -126.03997608268558,
+  "falsifier_threshold_pct": 1.0,
+  "falsifier_fired": true,
+  "verdict": "DOWNGRADE cg1.enrichment_key.inverts HARMS -> NEUTRAL at FORMULATION scope: the shipped #766 key is already the precision key, so the inversion cannot reach this allocator."
+ }
+}
