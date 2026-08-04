@@ -51,12 +51,15 @@ _REPO = Path(__file__).resolve().parents[1]
 _ERROR_LOG = _REPO / ".omx" / "state" / "agent_model_routing_guard_errors.log"
 
 # OPERATOR DIRECTIVE 2026-08-04 (superseding the 07-31 "Opus for all arms" law):
-# CODEX ARMS ONLY. No Claude subagent may be spawned — not Opus, not Sonnet, not
-# Haiku, and not a fork (a fork is still a Claude subagent drawing the same
-# quota). The empty allow-set is the enforcement: `decide` refuses every Agent
-# spawn. If a future directive re-opens Claude arms, add the permitted model
-# names here and the guard reverts to enforcing explicit routing.
-ALLOWED_MODELS: frozenset[str] = frozenset()
+# CODEX ARMS ONLY by default. No Claude subagent may be spawned — not Opus, not
+# Sonnet, not Haiku, and not a fork (a fork is still a Claude subagent drawing
+# the same quota). CARVE-OUT (operator 2026-08-04, later the same day, verbatim
+# "You can use fable for that" — convocation-class deep work): an explicit
+# `model: "fable"` spawn is permitted. The explicitness is the point — the
+# 08-04 quota burn came from spawns that OMITTED `model` and silently inherited
+# fable; a spawn that NAMES fable is a deliberate operator-authorized act, and
+# forks (which always run the parent model) must still declare it to pass.
+ALLOWED_MODELS: frozenset[str] = frozenset({"fable"})
 _ESCAPE_ENV = "TAC_AGENT_MODEL_GUARD_OK"
 
 BLOCK_MESSAGE = (
