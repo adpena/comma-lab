@@ -1,0 +1,190 @@
+{
+ "schema": "ddm_fz3_sub_final_eval_receipt.v1",
+ "axis": "[macOS-CPU advisory]",
+ "score_claim": false,
+ "promotion_eligible": false,
+ "host_platform": "macOS-26.4-arm64-arm-64bit-Mach-O",
+ "submission_dir": "/Users/adpena/Projects/pact/.omx/research/ddm_fz3_20260804/sub_final_eval_01",
+ "archive_source": "/Volumes/VertigoDataTier/pact/ddm_fz1_20260804/rowB/sub_final/archive.zip",
+ "archive_bytes": 358084,
+ "archive_sha256": "ad5dd0e4fbe5b13ab53a5995a6d77cc558c25f40b63f894ea50ad336bd50fb66",
+ "inflated_raw_symlink": "/Users/adpena/Projects/pact/.omx/research/ddm_fz3_20260804/sub_final_eval_01/inflated/0.raw",
+ "inflated_raw_target": "/Volumes/VertigoDataTier/pact/ddm_fz1_20260804/rowB/sub_final/inflated/0.raw",
+ "inflate_reuse_evidence": "/Volumes/VertigoDataTier/pact/ddm_fz1_20260804/rowB/sub_final/fz2_byteclose.log",
+ "byte_ledger": {
+  "archive_path": "/Users/adpena/Projects/pact/.omx/research/ddm_fz3_20260804/sub_final_eval_01/archive.zip",
+  "archive_sha256": "ad5dd0e4fbe5b13ab53a5995a6d77cc558c25f40b63f894ea50ad336bd50fb66",
+  "archive_bytes": 358084,
+  "zip_members": [
+   {
+    "name": "0.bin",
+    "uncompressed_bytes": 357976,
+    "compressed_bytes": 357976,
+    "compress_type": 0,
+    "sha256": "dceb04f2029bc1130d92032c216fd766afaf01f639a3842cf1f18fc6f05eedce"
+   }
+  ],
+  "zip_framing_bytes": 108,
+  "payload_bytes": 357976,
+  "payload_header_bytes": 5,
+  "bulk_bytes": 341295,
+  "bulk_sha256": "cbd4b49fe6d678de68772ba29797e8663d847242641b1cb4fe39abcd91c5d9be",
+  "joint_count_byte": 1,
+  "joint_coded_bytes": 16675,
+  "joint_raw_bytes": 16900,
+  "joint_coder_saving_bytes": 225,
+  "sections": [
+   {
+    "index": 0,
+    "name": "config",
+    "raw_bytes": 36,
+    "sha256": "fc4f23ac9e31ba266ace26131319eb5b574d69e1d505fb1fc20a9dbc79a240d6",
+    "magic": null,
+    "counted": true
+   },
+   {
+    "index": 1,
+    "name": "renderer",
+    "raw_bytes": 3266,
+    "sha256": "3b8eb0c24f9e6d8b547a23a5db29a1dbbd03db474fbba3638b0c3dd858ca7009",
+    "magic": "IX2REN01",
+    "counted": true
+   },
+   {
+    "index": 2,
+    "name": "selector",
+    "raw_bytes": 535,
+    "sha256": "8fc5c3fc65eb051b65ebf01d4b008e52d606097194c57884e739eae2ad8382e1",
+    "magic": "{\"activa",
+    "counted": true
+   },
+   {
+    "index": 3,
+    "name": "pose_warp",
+    "raw_bytes": 8751,
+    "sha256": "d1d073e55aacf991491365d13716fededb169854b78bb203c34c84ca880c25db",
+    "magic": "PFS1WPD1",
+    "counted": true
+   },
+   {
+    "index": 4,
+    "name": "frame0_pose_repair",
+    "raw_bytes": 4312,
+    "sha256": "00954c240425a82449d5eb70d567a69e87b2a9ecac417682cf6f27c026be9043",
+    "magic": null,
+    "counted": true
+   }
+  ],
+  "predicted_framing_bytes": 108,
+  "accounted_bytes": 358084,
+  "residual_bytes": 0,
+  "payload_reencodes_identically": true
+ },
+ "runtime_custody": {
+  "staged_dir": "/Users/adpena/Projects/pact/.omx/research/ddm_fz3_20260804/sub_final_eval_01",
+  "entry_script": "inflate.sh",
+  "entry_module": "inflate_runner",
+  "files": [
+   {
+    "staged_name": "ddm_ix2_archive_container.py",
+    "staged_sha256": "e77039e2a60ac3d11f79285e75f5b98e509f8f9546d13ea138a3e40a23fa0d99",
+    "staged_bytes": 29213,
+    "repo_path": "src/tac/optimization/ddm_ix2_archive_container.py",
+    "repo_sha256": "e77039e2a60ac3d11f79285e75f5b98e509f8f9546d13ea138a3e40a23fa0d99",
+    "verdict": "IDENTICAL",
+    "reached": true,
+    "divergence_reason": null
+   },
+   {
+    "staged_name": "ddm_r7_token_coder.py",
+    "staged_sha256": "2a9c5a3a0b113eb0217c6549d057bc92df4bc76b0a311f72782a954936836136",
+    "staged_bytes": 39404,
+    "repo_path": "experiments/ddm_r7_token_coder.py",
+    "repo_sha256": "914a1cfac561a3cabcbb2911b0de724c4887333eb321a0a93fff1c344c755fdf",
+    "verdict": "DIVERGED",
+    "reached": true,
+    "divergence_reason": "staged bytes differ from the repo counterpart; the shipped receiver is a PINNED vendored copy and repo HEAD has moved. Re-staging from HEAD would ship a different receiver."
+   },
+   {
+    "staged_name": "ddm_tr1_runtime.py",
+    "staged_sha256": "f3b93708b542e53d7a135233d8ba51bd406a5f6b6a55a7b80855369e9cebb2e9",
+    "staged_bytes": 48443,
+    "repo_path": "src/tac/optimization/ddm_tr1_runtime.py",
+    "repo_sha256": "99e2a6408826f4f2d2125520904deefc9e8a506728078ad81a7866e74806a05c",
+    "verdict": "DIVERGED",
+    "reached": true,
+    "divergence_reason": "staged bytes differ from the repo counterpart; the shipped receiver is a PINNED vendored copy and repo HEAD has moved. Re-staging from HEAD would ship a different receiver."
+   },
+   {
+    "staged_name": "inflate.sh",
+    "staged_sha256": "a867293d116506d601d91c7ee4a02078fde8405cbec6b44ae66fbcec2fe07ca8",
+    "staged_bytes": 139,
+    "repo_path": null,
+    "repo_sha256": null,
+    "verdict": "UNMAPPED",
+    "reached": true,
+    "divergence_reason": null
+   },
+   {
+    "staged_name": "inflate_runner.py",
+    "staged_sha256": "930bf44b81a51f967a47def47c31a3700ced934732087e361e55ef173e314ee9",
+    "staged_bytes": 20221,
+    "repo_path": "experiments/inflate_runner_v4d.py",
+    "repo_sha256": "930bf44b81a51f967a47def47c31a3700ced934732087e361e55ef173e314ee9",
+    "verdict": "IDENTICAL",
+    "reached": true,
+    "divergence_reason": null
+   },
+   {
+    "staged_name": "pfs1_warp_receiver.py",
+    "staged_sha256": "ddfb9f9c24e3c95f37f946191909291e2ebc16b3a48a971e230785606a50062a",
+    "staged_bytes": 3926,
+    "repo_path": "src/tac/optimization/pfs1_warp_receiver.py",
+    "repo_sha256": "ddfb9f9c24e3c95f37f946191909291e2ebc16b3a48a971e230785606a50062a",
+    "verdict": "IDENTICAL",
+    "reached": true,
+    "divergence_reason": null
+   },
+   {
+    "staged_name": "repair_entropy_coder_runtime_adapters.py",
+    "staged_sha256": "8ef8520d5ed5ccb7ce83d5b4faf7f3dc580c7f9de6c90f55e32854346421a14e",
+    "staged_bytes": 11255,
+    "repo_path": "src/tac/optimization/repair_entropy_coder_runtime_adapters.py",
+    "repo_sha256": "3d1cbb1c69f620684e4909fd2e195371ace84f667c8a6a5b300af0ee1c6df64e",
+    "verdict": "DIVERGED",
+    "reached": true,
+    "divergence_reason": "staged bytes differ from the repo counterpart; the shipped receiver is a PINNED vendored copy and repo HEAD has moved. Re-staging from HEAD would ship a different receiver."
+   }
+  ],
+  "reached_modules": [
+   "ddm_ix2_archive_container",
+   "ddm_r7_token_coder",
+   "ddm_tr1_runtime",
+   "inflate_runner",
+   "pfs1_warp_receiver",
+   "repair_entropy_coder_runtime_adapters"
+  ],
+  "unreached_files": [],
+  "identical_count": 3,
+  "diverged_count": 3,
+  "unmapped_count": 1
+ },
+ "evaluate": {
+  "ran": true,
+  "device": "cpu",
+  "score_axis": "[macOS-CPU advisory]",
+  "authority": "advisory",
+  "d_seg": 0.00431179,
+  "d_pose": 0.00071459,
+  "rate_from_evaluate": 0.00953734,
+  "evaluate_final_score": 0.75,
+  "recomputed_score": 0.7541458627114951,
+  "recomputed_vs_evaluate_delta": 0.004145862711495085,
+  "n_samples": 600,
+  "archive_bytes_scored": 358084,
+  "report_path": "/Users/adpena/Projects/pact/.omx/research/ddm_fz3_20260804/fz3_sub_final_eval_report.txt",
+  "score_claim": false,
+  "promotion_eligible": false
+ },
+ "boundary_note": "Evaluation used tac.submission_chain.run_upstream_evaluate on an identical local archive copy with inflated/0.raw symlinked to the prior canonical run_inflate output because the sandbox could not create new receipt/report paths under /Volumes/VertigoDataTier."
+}

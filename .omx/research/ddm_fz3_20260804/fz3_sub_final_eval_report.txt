@@ -1,0 +1,17 @@
+=== Evaluation config ===
+  batch_size: 16
+  device: cpu
+  num_threads: 6
+  prefetch_queue_depth: 4
+  report: /Users/adpena/Projects/pact/.omx/research/ddm_fz3_20260804/fz3_sub_final_eval_report.txt
+  seed: 1234
+  submission_dir: /Users/adpena/Projects/pact/.omx/research/ddm_fz3_20260804/sub_final_eval_01
+  uncompressed_dir: /Users/adpena/Projects/pact/upstream/videos
+  video_names_file: /Users/adpena/Projects/pact/upstream/public_test_video_names.txt
+=== Evaluation results over 600 samples ===
+  Average PoseNet Distortion: 0.00071459
+  Average SegNet Distortion: 0.00431179
+  Submission file size: 358,084 bytes
+  Original uncompressed size: 37,545,489 bytes
+  Compression Rate: 0.00953734
+  Final score: 100*segnet_dist + √(10*posenet_dist) + 25*rate = 0.75
