@@ -1,0 +1,22 @@
+{
+  "artifact": "ddm_tm1_crossrun_frames_20260804.jsonl",
+  "cold_store_path": "/Volumes/VertigoDataTier/pact/ddm_tm1_20260804/ddm_tm1_crossrun_frames_20260804.jsonl",
+  "bytes": 534677413,
+  "sha256": "c2f0ebd0892a307949e0be617421344251aa31c26c00e1b5349ed52a8f5b1985",
+  "summary_path": ".omx/research/ddm_tm1_crossrun_summary_20260804.json",
+  "summary_bytes": 103027,
+  "summary_sha256": "200ae1e6ac137e27f700d155a2fc08793fb439d9b0d3ec02fff0d99f507e5ead",
+  "command": ".venv/bin/python tools/harvest_crossrun_trajectories.py --root experiments/results --root .omx/research --root /Volumes/VertigoDataTier/pact --frames-jsonl /Volumes/VertigoDataTier/pact/ddm_tm1_20260804/ddm_tm1_crossrun_frames_20260804.jsonl --summary-json .omx/research/ddm_tm1_crossrun_summary_20260804.json --max-bytes-per-file 8000000 --max-records-per-file 50000",
+  "scope": {
+    "candidate_files_considered": 26749,
+    "files_parsed": 26687,
+    "files_skipped_too_large": 62,
+    "records_parsed": 360012,
+    "bad_records": 1005,
+    "frames_emitted": 670186,
+    "run_ids": 4818
+  },
+  "reason_for_ssd": "Frame JSONL is a bulky generated analysis artifact and belongs on the SSD tier; the local repo keeps only the small summary and manifests.",
+  "score_claim": false,
+  "new_scorer_evaluations": 0
+}

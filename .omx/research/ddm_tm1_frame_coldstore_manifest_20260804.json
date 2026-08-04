@@ -1,0 +1,12 @@
+{
+  "artifact": "ddm_tm1_crossrun_frames_cap10000_20260804.jsonl",
+  "original_path": ".omx/research/ddm_tm1_crossrun_frames_20260804.jsonl",
+  "cold_store_path": "/Volumes/VertigoDataTier/pact/ddm_tm1_20260804/ddm_tm1_crossrun_frames_cap10000_20260804.jsonl",
+  "bytes": 321413838,
+  "sha256": "f874a1f0dcc9f05d5cf4c23003183cbd74da7bf02d3f2fb0c2c33581892ae5d1",
+  "command": ".venv/bin/python tools/harvest_crossrun_trajectories.py --root experiments/results --root .omx/research --root /Volumes/VertigoDataTier/pact --frames-jsonl .omx/research/ddm_tm1_crossrun_frames_20260804.jsonl --summary-json .omx/research/ddm_tm1_crossrun_summary_20260804.json --max-files 10000 --max-bytes-per-file 8000000 --max-records-per-file 50000",
+  "move_action": "moved local bulk frame output to SSD cold store after before/after sha256 match; renamed with cap10000 after candidate-file enumeration proved the cap bound",
+  "reason_rebuildable": "The JSONL is a deterministic normalization of persisted source artifacts scanned by the command above. It is an analysis artifact, not a scorer output, and can be regenerated from the source roots.",
+  "score_claim": false,
+  "new_scorer_evaluations": 0
+}

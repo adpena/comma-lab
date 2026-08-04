@@ -1,0 +1,10 @@
+{
+  "artifact": ".omx/research/ddm_tm1_crossrun_frames_20260804.jsonl",
+  "bytes": 1034740723,
+  "sha256": "b13e1857515b23bb50b8e307abaf89040d8b2b026bcb8affe9c893b652463347",
+  "command": ".venv/bin/python tools/harvest_crossrun_trajectories.py --root experiments/results --root .omx/research --root /Volumes/VertigoDataTier/pact --frames-jsonl .omx/research/ddm_tm1_crossrun_frames_20260804.jsonl --summary-json .omx/research/ddm_tm1_crossrun_summary_20260804.json --max-bytes-per-file 8000000 --max-records-per-file 50000",
+  "cleanup_action": "deleted local interrupted scratch output after sha256 certification",
+  "reason_rebuildable": "The file is a deterministic JSONL normalization of persisted source artifacts under experiments/results, .omx/research, and /Volumes/VertigoDataTier/pact. The run was interrupted during in-memory analysis and emitted no completed summary, so the partial frames file is not load-bearing evidence.",
+  "score_claim": false,
+  "new_scorer_evaluations": 0
+}
