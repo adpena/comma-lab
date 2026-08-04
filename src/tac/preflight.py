@@ -3822,6 +3822,13 @@ def preflight_all(
             ),
             strict=False,
         )
+        # ddm_dn1x / #899 residual (2026-08-03): the required-component JSONL
+        # reader validates every row before returning it. Keep future production
+        # consumers from quietly reopening a raw-read bypass. WARN-ONLY while
+        # the live backlog is classified.
+        check_no_unvalidated_required_component_jsonl_readers(
+            strict=False, verbose=verbose,
+        )
         # 2026-05-09 Track 4 bug-class fix (#123): weight-domain saliency
         # proxies such as mean(theta^2) are forbidden on score-gradient
         # substrates unless the file exposes the canonical score-gradient
@@ -89813,6 +89820,188 @@ def check_levelset_checkpoint_save_paths_preserve_periodic_full_state(
         raise PreflightError(
             "check_levelset_checkpoint_save_paths_preserve_periodic_full_state found "
             f"{len(violations)} violation(s):\n  " + "\n  ".join(violations)
+        )
+    return violations
+
+
+_REQUIRED_COMPONENT_JSONL_NAME = "required_component_ledger.jsonl"
+_REQUIRED_COMPONENT_PATH_SYMBOL = "REQUIRED_COMPONENT_PATH"
+_REQUIRED_COMPONENT_VALIDATED_READERS = frozenset({
+    "read_required_components",
+    "required_component_integrity_summary",
+    "verify_required_component_row",
+})
+_REQUIRED_COMPONENT_JSONL_OWNER = Path("src/tac/witness_dsl/activation_ledger.py")
+_REQUIRED_COMPONENT_JSONL_WAIVER = "REQUIRED_COMPONENT_JSONL_READ_OK:"
+
+
+def _required_component_jsonl_python_scope(root: Path) -> tuple[Path, ...]:
+    """Return the bounded production-Python denominator for the #899 guard."""
+
+    paths: set[Path] = set()
+    for base in (root / "src" / "tac", root / "tools"):
+        if base.is_dir():
+            paths.update(path for path in base.rglob("*.py") if path.is_file())
+    experiments = root / "experiments"
+    if experiments.is_dir():
+        paths.update(path for path in experiments.glob("*.py") if path.is_file())
+
+    def is_production(path: Path) -> bool:
+        rel = path.relative_to(root)
+        return (
+            "tests" not in rel.parts
+            and not path.name.startswith("test_")
+            and "results" not in rel.parts
+        )
+
+    return tuple(sorted((path for path in paths if is_production(path)), key=str))
+
+
+def _required_component_expr_mentions_store(
+    node: ast.AST,
+    tainted_names: set[str],
+) -> bool:
+    for child in ast.walk(node):
+        if (
+            isinstance(child, ast.Constant)
+            and isinstance(child.value, str)
+            and _REQUIRED_COMPONENT_JSONL_NAME in child.value
+        ):
+            return True
+        if isinstance(child, ast.Name) and child.id in tainted_names:
+            return True
+        if (
+            isinstance(child, ast.Attribute)
+            and child.attr == _REQUIRED_COMPONENT_PATH_SYMBOL
+        ):
+            return True
+    return False
+
+
+def _required_component_jsonl_waiver_valid(line: str) -> bool:
+    if _REQUIRED_COMPONENT_JSONL_WAIVER not in line:
+        return False
+    rationale = line.split(_REQUIRED_COMPONENT_JSONL_WAIVER, 1)[1].strip()
+    lowered = rationale.lower().strip(" .#")
+    return len(rationale) >= 8 and lowered not in {
+        "<reason>",
+        "<rationale>",
+        "reason",
+        "rationale",
+        "placeholder",
+        "todo",
+        "tbd",
+        "n/a",
+        "none",
+    }
+
+
+def _required_component_raw_read_lines(tree: ast.AST) -> list[int]:
+    """Return AST-proven raw store-read lines, conservatively and deterministically."""
+
+    tainted_names = {_REQUIRED_COMPONENT_PATH_SYMBOL}
+    changed = True
+    while changed:
+        changed = False
+        for node in ast.walk(tree):
+            if not isinstance(node, (ast.Assign, ast.AnnAssign)):
+                continue
+            value = node.value
+            if value is None or not _required_component_expr_mentions_store(value, tainted_names):
+                continue
+            targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+            for target in targets:
+                for child in ast.walk(target):
+                    if isinstance(child, ast.Name) and child.id not in tainted_names:
+                        tainted_names.add(child.id)
+                        changed = True
+
+    lines: set[int] = set()
+    raw_methods = {"open", "read_text", "read_bytes"}
+    json_methods = {"load", "loads"}
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        func = node.func
+        is_raw = False
+        if isinstance(func, ast.Name) and func.id == "open" and node.args:
+            is_raw = _required_component_expr_mentions_store(node.args[0], tainted_names)
+        elif isinstance(func, ast.Attribute) and func.attr in raw_methods:
+            is_raw = _required_component_expr_mentions_store(func.value, tainted_names)
+        elif isinstance(func, ast.Attribute) and func.attr in json_methods and node.args:
+            is_raw = _required_component_expr_mentions_store(node.args[0], tainted_names)
+        if is_raw:
+            lines.add(node.lineno)
+    return sorted(lines)
+
+
+def check_no_unvalidated_required_component_jsonl_readers(
+    *,
+    repo_root: Path | str | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Find raw production readers that bypass validated required-component APIs.
+
+    The canonical activation-ledger owner is exempt. A consumer that actually
+    calls one of the validated read surfaces is routed and passes. Waivers are
+    deliberately same-line-only and require a substantive rationale.
+    """
+
+    root = Path(repo_root or REPO_ROOT).resolve()
+    owner = (root / _REQUIRED_COMPONENT_JSONL_OWNER).resolve()
+    paths = _required_component_jsonl_python_scope(root)
+    violations: list[str] = []
+    parsed = 0
+    parse_errors = 0
+
+    for path in paths:
+        if path.resolve() == owner:
+            continue
+        rel = path.relative_to(root).as_posix()
+        try:
+            source = path.read_text(encoding="utf-8")
+            tree = ast.parse(source, filename=rel)
+        except (OSError, UnicodeDecodeError, SyntaxError) as exc:
+            parse_errors += 1
+            violations.append(f"{rel}: unable to AST-audit required-component reads: {exc}")
+            continue
+        parsed += 1
+        helper_called = any(
+            isinstance(node, ast.Call)
+            and (
+                (isinstance(node.func, ast.Name) and node.func.id in _REQUIRED_COMPONENT_VALIDATED_READERS)
+                or (
+                    isinstance(node.func, ast.Attribute)
+                    and node.func.attr in _REQUIRED_COMPONENT_VALIDATED_READERS
+                )
+            )
+            for node in ast.walk(tree)
+        )
+        if helper_called:
+            continue
+        lines = source.splitlines()
+        for lineno in _required_component_raw_read_lines(tree):
+            line = lines[lineno - 1] if lineno <= len(lines) else ""
+            if _required_component_jsonl_waiver_valid(line):
+                continue
+            violations.append(
+                f"{rel}:{lineno}: raw read of {_REQUIRED_COMPONENT_JSONL_NAME} "
+                "bypasses read_required_components / required_component_integrity_summary / "
+                "verify_required_component_row; route through a validated surface or add "
+                "same-line # REQUIRED_COMPONENT_JSONL_READ_OK:<substantive real rationale>"
+            )
+
+    if verbose:
+        print(
+            "  [required-component-jsonl-read-validation] "
+            f"{len(violations)} violation(s); scanned {len(paths)} production Python file(s), "
+            f"parsed {parsed}, parse errors {parse_errors}"
+        )
+    if strict and violations:
+        raise PreflightError(
+            "check_no_unvalidated_required_component_jsonl_readers found "
+            f"{len(violations)} violation(s):\n  " + "\n  ".join(violations[:20])
         )
     return violations
 
