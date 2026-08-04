@@ -190,8 +190,33 @@ def test_git_failure_is_reported_as_unknown_not_as_no_added_lines(tmp_path: Path
     like a clean file. `None` is the distinct 'we could not tell' channel, and
     `scan_staged` must then count the file as NOT examined.
     """
-    assert staged_py_files(tmp_path) == []
     assert added_lines(tmp_path, "nope.py") is None
+    # ddm_si1 (task #929): this line previously asserted ``== []``, i.e. the
+    # test that NAMES this bug class also pinned the uncured neighbour four
+    # lines above the cure. An unanswerable git is not an empty stage.
+    assert staged_py_files(tmp_path) is None
+    assert in_scope_py_files(tmp_path) is None
+
+
+def test_scan_staged_refuses_when_git_cannot_enumerate_the_staged_set(
+    tmp_path: Path,
+) -> None:
+    """Executed control: a broken git must REFUSE, not report a vacuous pass.
+
+    Before ddm_si1 this path returned ``[]`` from ``staged_py_files`` and the
+    gate printed ``VACUOUS: 0 staged .py files`` -- a false statement (git had
+    broken; the commit was not empty) carrying the same symbol as a real pass.
+    """
+    from tac.preflight import PreflightError
+
+    # tmp_path is not a git repo, so enumeration genuinely fails.
+    with pytest.raises(PreflightError, match="UNKNOWN"):
+        scan_staged(repo_root=tmp_path, strict=True, verbose=False)
+
+    # And warn-mode must still surface it as a violation rather than silence.
+    violations = scan_staged(repo_root=tmp_path, strict=False, verbose=False)
+    assert len(violations) == 1, violations
+    assert "UNKNOWN" in violations[0]
 
 
 def test_scan_staged_reports_files_it_could_not_examine(tmp_path: Path, capsys) -> None:

@@ -214,8 +214,17 @@ def _waiver_on_line(source_line: str) -> bool:
     return bool(m and _rationale_ok(m.group(1)))
 
 
-def staged_py_files(repo_root: Path) -> list[str]:
-    """Staged ``.py`` paths, repo-relative. Empty on any git failure."""
+def staged_py_files(repo_root: Path) -> list[str] | None:
+    """Staged ``.py`` paths, repo-relative, or ``None`` if git could not tell us.
+
+    ``None`` means the staged set is UNKNOWN, which is NOT the same as "nothing
+    was staged" -- ddm_si1 review, task #929. This function previously returned
+    ``[]`` on git failure, four lines above :func:`added_lines`, which had
+    already been given exactly this ``None`` channel for exactly this reason.
+    The empty list flowed into :func:`scan_staged` as a zero denominator and
+    printed ``VACUOUS: 0 staged .py files``: a false statement about the world
+    (git broke; the commit was not empty) wearing the shape of an honest one.
+    """
     try:
         out = subprocess.check_output(
             ["git", "diff", "--cached", "--name-only", "--diff-filter=ACM"],
@@ -223,7 +232,7 @@ def staged_py_files(repo_root: Path) -> list[str]:
             text=True,
         )
     except (subprocess.CalledProcessError, OSError):
-        return []
+        return None
     return [line for line in out.splitlines() if line.endswith(".py")]
 
 
@@ -276,6 +285,23 @@ def scan_staged(
     """
     root = Path(repo_root or REPO_ROOT)
     rels = list(files) if files is not None else staged_py_files(root)
+    if rels is None:
+        # git could not enumerate the staged set, so the scope is UNKNOWN.
+        # Passing here would make a broken git indistinguishable from a clean
+        # commit -- the exact genus this gate exists to close -- and reporting
+        # it as "0 staged files" would additionally be untrue. Refuse.
+        return _finish(
+            name="check_subset_selection_mode_declared_staged",
+            tag="subset-selection-mode-staged",
+            violations=[
+                "git could not enumerate staged .py files: the staged scope is "
+                "UNKNOWN, which is not the same as empty, so this gate examined "
+                "nothing and must not report a pass"
+            ],
+            strict=strict,
+            verbose=verbose,
+            ok_detail="",
+        )
     violations: list[str] = []
     examined = 0
     unexamined: list[str] = []
@@ -322,7 +348,7 @@ def scan_staged(
     )
 
 
-def in_scope_py_files(repo_root: Path) -> list[str]:
+def in_scope_py_files(repo_root: Path) -> list[str] | None:
     """Git-TRACKED ``.py`` files, excluding vendored public-PR intake trees.
 
     Scope note, measured 2026-08-03: on disk ``experiments/results/`` holds 49,131
@@ -332,13 +358,17 @@ def in_scope_py_files(repo_root: Path) -> list[str]:
     whereas a filesystem walk would need the exclusion to avoid a 78% vendored
     denominator. Both numbers are true about different universes; this function
     picks the git one and says so.
+
+    Returns ``None`` -- never ``[]`` -- when git could not answer, for the same
+    reason as :func:`staged_py_files`: an empty in-scope list would make a
+    broken git read as "the whole repo is clean" (ddm_si1, task #929).
     """
     try:
         out = subprocess.check_output(
             ["git", "ls-files", "*.py"], cwd=repo_root, text=True
         )
     except (subprocess.CalledProcessError, OSError):
-        return []
+        return None
     return [
         line
         for line in out.splitlines()
@@ -364,6 +394,19 @@ def scan_repo(
     """
     root = Path(repo_root or REPO_ROOT)
     rels = list(files) if files is not None else in_scope_py_files(root)
+    if rels is None:
+        # Same channel as scan_staged: an unanswerable git is not an empty repo.
+        return _finish(
+            name="check_subset_selection_mode_declared_repo",
+            tag="subset-selection-mode-repo",
+            violations=[
+                "git could not enumerate tracked .py files: the repo scope is "
+                "UNKNOWN, not empty, so this sweep examined nothing"
+            ],
+            strict=strict,
+            verbose=verbose,
+            ok_detail="",
+        )
     violations: list[str] = []
     examined = 0
     for rel in rels:
