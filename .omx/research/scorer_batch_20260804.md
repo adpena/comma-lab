@@ -69,3 +69,35 @@ must first produce a byte-closed archive with predicted `S < 0.7541459`. Current
 section format is single-k; the fz1/fz4 estimate called for mixed k6/k8, so the
 successor must either choose one k globally or land a receiver-closed mixed-k
 section before claiming that estimate.
+
+## R4/#935 - sq1 realizer uncap and convergence test (cap-artifact class)
+
+Status: **QUEUED MEASUREMENT SPEC**, not a promoted candidate. This section is
+the na3/gc16 cap-artifact append for the single scorer batch after sg4 releases
+the slot.
+
+Source receipts:
+
+- `ddm_sm1_seg_search_transfer_20260803.md` source-verifies
+  `/Volumes/VertigoDataTier/pact/ddm_sq1_20260803/receipts/sq1_stage_n32.json`:
+  the `truth` start won 0/32, while 31/32 winners were `dec@25`, the terminal
+  25-step iterate.
+- `gc16_full_stack_convocation_20260804.md` R4 orders: uncap, run to a
+  convergence test, and join the scorer batch.
+- `ddm_et1_eta_on_the_priced_band_20260803.md` shows the same paint-solve
+  budget axis is not free: eta rises with more steps and d_pose rises with it.
+
+Fire order when the scorer slot frees:
+
+1. Re-run the sq1 realizer with the step cap removed or raised behind an
+   explicit convergence criterion, recording per-pair stop reasons. A terminal
+   safety bound is allowed only as a safety bound, not as the quoted stop reason.
+2. Build the receiver-closed candidate from the converged sq1 realizer output.
+3. Run the exact n600 scorer row against the current own-vehicle baseline,
+   reporting d_seg, d_pose, bytes, and recomputed S. The R8 pose-bank guard
+   applies: refuse composition if the pose term erodes the bank by more than
+   the batch threshold.
+
+Do not promote from this queued note. If the convergence-tested candidate cannot
+produce a byte-closed row with a plausible `S < 0.7541459` pre-score, fold it
+before spending the n600 slot.
