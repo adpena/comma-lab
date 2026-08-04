@@ -1,0 +1,1357 @@
+{
+  "axis": "[macOS-CPU advisory / CPU Torch SegNet+PoseNet bounded n32]",
+  "baseline": {
+    "archive": "/Volumes/VertigoDataTier/pact/ddm_qo1_20260804/sub_auto_pairbit/archive.zip",
+    "archive_sha256": "d5e814d5b9f65c3094b0e65fecdd7771734d03c420c63d1d2033a671b766986a",
+    "base_raw": "/Volumes/VertigoDataTier/pact/ddm_qo1_20260804/sub_auto_pairbit/inflated/0.raw",
+    "base_raw_bytes": 3662409600,
+    "base_raw_sha256_head_1MiB": "a80617c2740de0a0820c28bf1a444952df59b35c024fe235149f3b5e8109815a",
+    "d_pose": 0.00071459,
+    "d_seg": 0.00431179,
+    "own_vehicle_frontier": "S = 0.7539807296911207 @ 357836 B [macOS-CPU advisory]"
+  },
+  "boundaries": [
+    "Bounded n32 stratified sample, not n600 and not prefix.",
+    "CPU Torch frozen scorer path; no MPS.",
+    "No byte-closed variant archive was built.",
+    "No full-n600 scorer job was run or claimed.",
+    "Q3 projection is applied to this prototype-paint formulation only."
+  ],
+  "captured_at_utc": "2026-08-04T20:29:48.394348Z",
+  "controls": {
+    "baseline_argmax_matches_cached_current": true,
+    "baseline_argmax_mismatch_cells": 0,
+    "qo1_fz4_frame_sha_spot_check": [
+      {
+        "frame_index": 62,
+        "frame_offset": 0,
+        "fz4_frame_sha256": "bfe36b885fc16898829905c65d22001ed5b7527322f7ed5a7c7f2b43bcec3000",
+        "match": true,
+        "pair": 31,
+        "qo1_frame_sha256": "bfe36b885fc16898829905c65d22001ed5b7527322f7ed5a7c7f2b43bcec3000"
+      },
+      {
+        "frame_index": 63,
+        "frame_offset": 1,
+        "fz4_frame_sha256": "d21d313712986a7b565a5644332fee072ce80d5ee18a50cd124d77d292cd6411",
+        "match": true,
+        "pair": 31,
+        "qo1_frame_sha256": "d21d313712986a7b565a5644332fee072ce80d5ee18a50cd124d77d292cd6411"
+      },
+      {
+        "frame_index": 1162,
+        "frame_offset": 0,
+        "fz4_frame_sha256": "362f8b4cb599609d51f1836037a7086b59bd80b4fc87750cfd1b216ba93a5ea2",
+        "match": true,
+        "pair": 581,
+        "qo1_frame_sha256": "362f8b4cb599609d51f1836037a7086b59bd80b4fc87750cfd1b216ba93a5ea2"
+      },
+      {
+        "frame_index": 1163,
+        "frame_offset": 1,
+        "fz4_frame_sha256": "7754d7675e07a43a7f3d371f93e91cdfe1076e676de4e3ef6eb717cd8eaee4e3",
+        "match": true,
+        "pair": 581,
+        "qo1_frame_sha256": "7754d7675e07a43a7f3d371f93e91cdfe1076e676de4e3ef6eb717cd8eaee4e3"
+      }
+    ],
+    "target_definition": "Road<->Lane cells where cached current argmax differs from cached GT argmax"
+  },
+  "derivation": {
+    "condition": "For target scorer cell u and target class c, a camera-plane paint guarantees the input-plane part of a flip only if all private support pixels of u are moved so the resized RGB x'_u has target-class logit margin m_c(x') > 0 under the regional SegNet stem. Private support controls x'_u, but it does not isolate the downstream receptive field, so the sufficient condition is a coherent neighborhood whose induced feature response clears the class margin.",
+    "schema": "ddm_se2_survival_condition_derivation.v1",
+    "source_facts": {
+      "D_private_supports": "scale 874/384 and 1164/512 are both >2, giving disjoint 2x2 camera supports per scorer-grid pixel for align_corners=False bilinear resize",
+      "PoseNet_preprocess": "upstream/modules.py PoseNet.preprocess_input resizes both RGB frames to 384x512 then rgb_to_yuv6",
+      "SegNet_frame": "upstream/modules.py SegNet.preprocess_input uses only frame_1 then bilinear resize to 384x512",
+      "blind_camera_fraction": 0.227
+    },
+    "status": "DERIVED_FROM_SOURCE_AND_MEASURED_D_STRUCTURE",
+    "taxonomy_prediction": {
+      "R_attenuation": "Private supports make bilinear-D exact at edited scorer pixels; predicted not to explain cg3/se2 failure.",
+      "amplitude_timidity": "Low max_delta paints fail if full-color same-radius paint corrects the cell.",
+      "receptive_field_veto": "Full-color private-support paint still fails because the stride-2/regional SegNet context vetoes the local color.",
+      "uint8_floor": "Only active when requested camera deltas round to no byte movement; measured as zero for emitted delta>=1 paints."
+    }
+  },
+  "failure_taxonomy": {
+    "coherence_radius_rescue_from_private_full_color": {
+      "rescued_by_r1_full_color": 1347,
+      "rescued_by_r2_full_color": 696
+    },
+    "r0_delta_1": {
+      "amplitude_timidity_cells": 4366,
+      "failed_target_cells": 12238,
+      "notes": {
+        "amplitude_timidity": "Failed here but corrected by full-color paint at the same coherence radius.",
+        "r_attenuation": "Measured as zero for the F0PR private supports: all edited support pixels are written after uint8 snap and D reads private supports.",
+        "receptive_field_veto": "Nonzero target input movement, yet full-color same-radius paint still failed the target argmax."
+      },
+      "r_attenuation_cells": 0,
+      "receptive_field_veto_cells": 7872,
+      "uint8_floor_cells": 0
+    },
+    "r0_delta_16": {
+      "amplitude_timidity_cells": 2663,
+      "failed_target_cells": 10306,
+      "notes": {
+        "amplitude_timidity": "Failed here but corrected by full-color paint at the same coherence radius.",
+        "r_attenuation": "Measured as zero for the F0PR private supports: all edited support pixels are written after uint8 snap and D reads private supports.",
+        "receptive_field_veto": "Nonzero target input movement, yet full-color same-radius paint still failed the target argmax."
+      },
+      "r_attenuation_cells": 0,
+      "receptive_field_veto_cells": 7643,
+      "uint8_floor_cells": 0
+    },
+    "r0_delta_32": {
+      "amplitude_timidity_cells": 1587,
+      "failed_target_cells": 9141,
+      "notes": {
+        "amplitude_timidity": "Failed here but corrected by full-color paint at the same coherence radius.",
+        "r_attenuation": "Measured as zero for the F0PR private supports: all edited support pixels are written after uint8 snap and D reads private supports.",
+        "receptive_field_veto": "Nonzero target input movement, yet full-color same-radius paint still failed the target argmax."
+      },
+      "r_attenuation_cells": 0,
+      "receptive_field_veto_cells": 7554,
+      "uint8_floor_cells": 0
+    },
+    "r0_delta_4": {
+      "amplitude_timidity_cells": 4020,
+      "failed_target_cells": 11834,
+      "notes": {
+        "amplitude_timidity": "Failed here but corrected by full-color paint at the same coherence radius.",
+        "r_attenuation": "Measured as zero for the F0PR private supports: all edited support pixels are written after uint8 snap and D reads private supports.",
+        "receptive_field_veto": "Nonzero target input movement, yet full-color same-radius paint still failed the target argmax."
+      },
+      "r_attenuation_cells": 0,
+      "receptive_field_veto_cells": 7814,
+      "uint8_floor_cells": 0
+    },
+    "r0_delta_64": {
+      "amplitude_timidity_cells": 781,
+      "failed_target_cells": 8555,
+      "notes": {
+        "amplitude_timidity": "Failed here but corrected by full-color paint at the same coherence radius.",
+        "r_attenuation": "Measured as zero for the F0PR private supports: all edited support pixels are written after uint8 snap and D reads private supports.",
+        "receptive_field_veto": "Nonzero target input movement, yet full-color same-radius paint still failed the target argmax."
+      },
+      "r_attenuation_cells": 0,
+      "receptive_field_veto_cells": 7774,
+      "uint8_floor_cells": 0
+    },
+    "r0_full_color": {
+      "amplitude_timidity_cells": 0,
+      "failed_target_cells": 7887,
+      "notes": {
+        "amplitude_timidity": "Failed here but corrected by full-color paint at the same coherence radius.",
+        "r_attenuation": "Measured as zero for the F0PR private supports: all edited support pixels are written after uint8 snap and D reads private supports.",
+        "receptive_field_veto": "Nonzero target input movement, yet full-color same-radius paint still failed the target argmax."
+      },
+      "r_attenuation_cells": 0,
+      "receptive_field_veto_cells": 7887,
+      "uint8_floor_cells": 0
+    },
+    "r1_delta_16": {
+      "amplitude_timidity_cells": 1158,
+      "failed_target_cells": 7821,
+      "notes": {
+        "amplitude_timidity": "Failed here but corrected by full-color paint at the same coherence radius.",
+        "r_attenuation": "Measured as zero for the F0PR private supports: all edited support pixels are written after uint8 snap and D reads private supports.",
+        "receptive_field_veto": "Nonzero target input movement, yet full-color same-radius paint still failed the target argmax."
+      },
+      "r_attenuation_cells": 0,
+      "receptive_field_veto_cells": 6663,
+      "uint8_floor_cells": 0
+    },
+    "r1_delta_32": {
+      "amplitude_timidity_cells": 441,
+      "failed_target_cells": 7357,
+      "notes": {
+        "amplitude_timidity": "Failed here but corrected by full-color paint at the same coherence radius.",
+        "r_attenuation": "Measured as zero for the F0PR private supports: all edited support pixels are written after uint8 snap and D reads private supports.",
+        "receptive_field_veto": "Nonzero target input movement, yet full-color same-radius paint still failed the target argmax."
+      },
+      "r_attenuation_cells": 0,
+      "receptive_field_veto_cells": 6916,
+      "uint8_floor_cells": 0
+    },
+    "r1_delta_64": {
+      "amplitude_timidity_cells": 166,
+      "failed_target_cells": 7611,
+      "notes": {
+        "amplitude_timidity": "Failed here but corrected by full-color paint at the same coherence radius.",
+        "r_attenuation": "Measured as zero for the F0PR private supports: all edited support pixels are written after uint8 snap and D reads private supports.",
+        "receptive_field_veto": "Nonzero target input movement, yet full-color same-radius paint still failed the target argmax."
+      },
+      "r_attenuation_cells": 0,
+      "receptive_field_veto_cells": 7445,
+      "uint8_floor_cells": 0
+    },
+    "r1_full_color": {
+      "amplitude_timidity_cells": 0,
+      "failed_target_cells": 7817,
+      "notes": {
+        "amplitude_timidity": "Failed here but corrected by full-color paint at the same coherence radius.",
+        "r_attenuation": "Measured as zero for the F0PR private supports: all edited support pixels are written after uint8 snap and D reads private supports.",
+        "receptive_field_veto": "Nonzero target input movement, yet full-color same-radius paint still failed the target argmax."
+      },
+      "r_attenuation_cells": 0,
+      "receptive_field_veto_cells": 7817,
+      "uint8_floor_cells": 0
+    },
+    "r2_delta_16": {
+      "amplitude_timidity_cells": 621,
+      "failed_target_cells": 9135,
+      "notes": {
+        "amplitude_timidity": "Failed here but corrected by full-color paint at the same coherence radius.",
+        "r_attenuation": "Measured as zero for the F0PR private supports: all edited support pixels are written after uint8 snap and D reads private supports.",
+        "receptive_field_veto": "Nonzero target input movement, yet full-color same-radius paint still failed the target argmax."
+      },
+      "r_attenuation_cells": 0,
+      "receptive_field_veto_cells": 8514,
+      "uint8_floor_cells": 0
+    },
+    "r2_delta_32": {
+      "amplitude_timidity_cells": 173,
+      "failed_target_cells": 9165,
+      "notes": {
+        "amplitude_timidity": "Failed here but corrected by full-color paint at the same coherence radius.",
+        "r_attenuation": "Measured as zero for the F0PR private supports: all edited support pixels are written after uint8 snap and D reads private supports.",
+        "receptive_field_veto": "Nonzero target input movement, yet full-color same-radius paint still failed the target argmax."
+      },
+      "r_attenuation_cells": 0,
+      "receptive_field_veto_cells": 8992,
+      "uint8_floor_cells": 0
+    },
+    "r2_delta_64": {
+      "amplitude_timidity_cells": 59,
+      "failed_target_cells": 9480,
+      "notes": {
+        "amplitude_timidity": "Failed here but corrected by full-color paint at the same coherence radius.",
+        "r_attenuation": "Measured as zero for the F0PR private supports: all edited support pixels are written after uint8 snap and D reads private supports.",
+        "receptive_field_veto": "Nonzero target input movement, yet full-color same-radius paint still failed the target argmax."
+      },
+      "r_attenuation_cells": 0,
+      "receptive_field_veto_cells": 9421,
+      "uint8_floor_cells": 0
+    },
+    "r2_full_color": {
+      "amplitude_timidity_cells": 0,
+      "failed_target_cells": 9575,
+      "notes": {
+        "amplitude_timidity": "Failed here but corrected by full-color paint at the same coherence radius.",
+        "r_attenuation": "Measured as zero for the F0PR private supports: all edited support pixels are written after uint8 snap and D reads private supports.",
+        "receptive_field_veto": "Nonzero target input movement, yet full-color same-radius paint still failed the target argmax."
+      },
+      "r_attenuation_cells": 0,
+      "receptive_field_veto_cells": 9575,
+      "uint8_floor_cells": 0
+    }
+  },
+  "git": "97ea3ae2468b4e420739667d115343d10e180176",
+  "inputs": {
+    "current_argmax": "/Volumes/VertigoDataTier/pact/ddm_pu2_20260803/argmax_cache/cx1_argmax_n600.npy",
+    "current_argmax_sha256": "5e903de650e60ec6a64b34eb455fa1bc911223551d0b31e9ae45cc906e1490be",
+    "gt_argmax": "/Volumes/VertigoDataTier/pact/ddm_pu2_20260803/argmax_cache/gt_argmax_n600.npy",
+    "gt_argmax_sha256": "b74a14b226a5aceb5824899898bcb06e5413c54b7db2441268da7bc91a10db5d",
+    "gt_mkv": "upstream/videos/0.mkv",
+    "segnet_weights": "/Users/adpena/Projects/pact/upstream/models/segnet.safetensors",
+    "segnet_weights_sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6"
+  },
+  "margin_bins": [
+    {
+      "baseline_target_margin_hi": -0.9970307350158691,
+      "baseline_target_margin_lo": -11.22191572189331,
+      "bin": 0,
+      "eligible_target_cells": 3102
+    },
+    {
+      "baseline_target_margin_hi": -0.482851505279541,
+      "baseline_target_margin_lo": -0.9970307350158691,
+      "bin": 1,
+      "eligible_target_cells": 3101
+    },
+    {
+      "baseline_target_margin_hi": -0.19918513298034668,
+      "baseline_target_margin_lo": -0.482851505279541,
+      "bin": 2,
+      "eligible_target_cells": 3102
+    },
+    {
+      "baseline_target_margin_hi": -2.6702880859375e-05,
+      "baseline_target_margin_lo": -0.19918513298034668,
+      "bin": 3,
+      "eligible_target_cells": 3102
+    }
+  ],
+  "n600_run": false,
+  "n_pairs": 32,
+  "pairs": [
+    31,
+    43,
+    62,
+    82,
+    94,
+    118,
+    147,
+    165,
+    167,
+    182,
+    185,
+    200,
+    237,
+    241,
+    247,
+    259,
+    272,
+    286,
+    288,
+    292,
+    296,
+    306,
+    327,
+    382,
+    390,
+    419,
+    473,
+    488,
+    525,
+    555,
+    560,
+    581
+  ],
+  "promotion_eligible": false,
+  "q3_projection": {
+    "aggregate": {
+      "baseline_flips_subset": 26054,
+      "break_even_survival": 0.6964303814,
+      "clears_ed1_break_even_by_retained_global_reach": false,
+      "clears_ed1_break_even_by_target_survival": false,
+      "d_pose_before_mean": 0.000648285704698992,
+      "d_pose_q3_delta_mean": 1.7158113791992946e-06,
+      "d_pose_q3_projected_mean": 0.0006500015160781913,
+      "d_pose_q3_ratio_vs_before": 1.0026466901348627,
+      "d_pose_unprojected_delta_mean": 0.00449608404898072,
+      "d_pose_unprojected_mean": 0.005144369753679712,
+      "eligible_target_cells": 12407,
+      "q3_global_net_flip_reduction": 60,
+      "q3_projected_flips_subset": 25994,
+      "q3_projected_target_survival": 0.017006528572579994,
+      "retained_global_seg_reach": 0.03838771593090211,
+      "retained_target_survival_fraction": 0.0646050214329455,
+      "unprojected_flips_subset": 24491,
+      "unprojected_global_net_flip_reduction": 1563,
+      "unprojected_target_survival": 0.26323849439832353,
+      "verdict_scope": "FORMULATION: Q3-projected private-support prototype paints on n32 stratified qo1 decode; not n600, not contest authority"
+    },
+    "rows_path": "/Users/adpena/Projects/pact/.omx/research/ddm_se2_20260804/se2_q3_rows.jsonl",
+    "winner_variant": "r0_delta_32"
+  },
+  "runtime": {
+    "argv": [
+      ".omx/research/ddm_se2_20260804/measure_se2_survival_q3.py",
+      "--n-pairs",
+      "32",
+      "--batch-size",
+      "4",
+      "--torch-threads",
+      "4"
+    ],
+    "elapsed_seconds": 390.9227146245539,
+    "platform": "macOS-26.4-arm64-arm-64bit-Mach-O",
+    "python": "3.13.12 (main, Mar 10 2026, 18:26:32) [Clang 21.1.4 ]",
+    "torch": "2.12.1",
+    "torch_threads": 4
+  },
+  "schema": "ddm_se2_survival_q3_measurement.v1",
+  "score_claim": false,
+  "seed": 20260804,
+  "selection_mode": "stratified-random non-prefix quartiles by Road/Lane target count",
+  "target_cells_selected": 12407,
+  "target_cells_total_n600": 235148,
+  "variants": [
+    {
+      "by_baseline_margin_quartile": [
+        {
+          "baseline_target_margin_hi": -0.9970307350158691,
+          "baseline_target_margin_lo": -11.22191572189331,
+          "bin": 0,
+          "corrected_target_cells": 0,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.0
+        },
+        {
+          "baseline_target_margin_hi": -0.482851505279541,
+          "baseline_target_margin_lo": -0.9970307350158691,
+          "bin": 1,
+          "corrected_target_cells": 0,
+          "eligible_target_cells": 3101,
+          "target_survival": 0.0
+        },
+        {
+          "baseline_target_margin_hi": -0.19918513298034668,
+          "baseline_target_margin_lo": -0.482851505279541,
+          "bin": 2,
+          "corrected_target_cells": 0,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.0
+        },
+        {
+          "baseline_target_margin_hi": -2.6702880859375e-05,
+          "baseline_target_margin_lo": -0.19918513298034668,
+          "bin": 3,
+          "corrected_target_cells": 169,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.054480980012894906
+        }
+      ],
+      "camera_channel_values_changed": 148102,
+      "camera_support_writes": 49628,
+      "coherence_radius": 0,
+      "corrected_target_cells": 169,
+      "eligible_target_cells": 12407,
+      "failed_uint8_floor_cells": 0,
+      "global_baseline_flips_subset": 26054,
+      "global_collateral_new_wrong_non_target": 96,
+      "global_flip_delta_vs_baseline": -114,
+      "global_variant_flips_subset": 25940,
+      "input_delta_linf_at_targets": {
+        "max": 1.0000152587890625,
+        "median": 1.0,
+        "min": 0.296875,
+        "p90": 1.0
+      },
+      "max_delta": 1,
+      "scorer_grid_cells_touched_with_duplicates": 12407,
+      "still_wrong_target_cells": 12238,
+      "subset_dseg_delta": -1.811981201171875e-05,
+      "subset_seg_score_delta": -0.001811981201171875,
+      "target_survival": 0.01362134279036028,
+      "unique_scorer_grid_cells_touched": 12407,
+      "variant": "r0_delta_1",
+      "verdict_scope": "FORMULATION: private-support prototype Road/Lane paints on n32 stratified qo1 decode; not n600, not contest authority"
+    },
+    {
+      "by_baseline_margin_quartile": [
+        {
+          "baseline_target_margin_hi": -0.9970307350158691,
+          "baseline_target_margin_lo": -11.22191572189331,
+          "bin": 0,
+          "corrected_target_cells": 0,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.0
+        },
+        {
+          "baseline_target_margin_hi": -0.482851505279541,
+          "baseline_target_margin_lo": -0.9970307350158691,
+          "bin": 1,
+          "corrected_target_cells": 1,
+          "eligible_target_cells": 3101,
+          "target_survival": 0.0003224766204450177
+        },
+        {
+          "baseline_target_margin_hi": -0.19918513298034668,
+          "baseline_target_margin_lo": -0.482851505279541,
+          "bin": 2,
+          "corrected_target_cells": 9,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.0029013539651837525
+        },
+        {
+          "baseline_target_margin_hi": -2.6702880859375e-05,
+          "baseline_target_margin_lo": -0.19918513298034668,
+          "bin": 3,
+          "corrected_target_cells": 563,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.18149580915538363
+        }
+      ],
+      "camera_channel_values_changed": 148102,
+      "camera_support_writes": 49628,
+      "coherence_radius": 0,
+      "corrected_target_cells": 573,
+      "eligible_target_cells": 12407,
+      "failed_uint8_floor_cells": 0,
+      "global_baseline_flips_subset": 26054,
+      "global_collateral_new_wrong_non_target": 345,
+      "global_flip_delta_vs_baseline": -390,
+      "global_variant_flips_subset": 25664,
+      "input_delta_linf_at_targets": {
+        "max": 4.0000152587890625,
+        "median": 4.0,
+        "min": 1.1875,
+        "p90": 4.0
+      },
+      "max_delta": 4,
+      "scorer_grid_cells_touched_with_duplicates": 12407,
+      "still_wrong_target_cells": 11834,
+      "subset_dseg_delta": -6.198883056640625e-05,
+      "subset_seg_score_delta": -0.006198883056640625,
+      "target_survival": 0.04618360602885468,
+      "unique_scorer_grid_cells_touched": 12407,
+      "variant": "r0_delta_4",
+      "verdict_scope": "FORMULATION: private-support prototype Road/Lane paints on n32 stratified qo1 decode; not n600, not contest authority"
+    },
+    {
+      "by_baseline_margin_quartile": [
+        {
+          "baseline_target_margin_hi": -0.9970307350158691,
+          "baseline_target_margin_lo": -11.22191572189331,
+          "bin": 0,
+          "corrected_target_cells": 38,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.012250161186331399
+        },
+        {
+          "baseline_target_margin_hi": -0.482851505279541,
+          "baseline_target_margin_lo": -0.9970307350158691,
+          "bin": 1,
+          "corrected_target_cells": 110,
+          "eligible_target_cells": 3101,
+          "target_survival": 0.03547242824895195
+        },
+        {
+          "baseline_target_margin_hi": -0.19918513298034668,
+          "baseline_target_margin_lo": -0.482851505279541,
+          "bin": 2,
+          "corrected_target_cells": 463,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.14925854287556414
+        },
+        {
+          "baseline_target_margin_hi": -2.6702880859375e-05,
+          "baseline_target_margin_lo": -0.19918513298034668,
+          "bin": 3,
+          "corrected_target_cells": 1490,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.4803352675693101
+        }
+      ],
+      "camera_channel_values_changed": 148102,
+      "camera_support_writes": 49628,
+      "coherence_radius": 0,
+      "corrected_target_cells": 2101,
+      "eligible_target_cells": 12407,
+      "failed_uint8_floor_cells": 0,
+      "global_baseline_flips_subset": 26054,
+      "global_collateral_new_wrong_non_target": 1474,
+      "global_flip_delta_vs_baseline": -1387,
+      "global_variant_flips_subset": 24667,
+      "input_delta_linf_at_targets": {
+        "max": 16.000015258789062,
+        "median": 16.0,
+        "min": 6.179962158203125,
+        "p90": 16.0
+      },
+      "max_delta": 16,
+      "scorer_grid_cells_touched_with_duplicates": 12407,
+      "still_wrong_target_cells": 10306,
+      "subset_dseg_delta": -0.00022045771280924478,
+      "subset_seg_score_delta": -0.02204577128092448,
+      "target_survival": 0.16933988877246717,
+      "unique_scorer_grid_cells_touched": 12407,
+      "variant": "r0_delta_16",
+      "verdict_scope": "FORMULATION: private-support prototype Road/Lane paints on n32 stratified qo1 decode; not n600, not contest authority"
+    },
+    {
+      "by_baseline_margin_quartile": [
+        {
+          "baseline_target_margin_hi": -0.9970307350158691,
+          "baseline_target_margin_lo": -11.22191572189331,
+          "bin": 0,
+          "corrected_target_cells": 165,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.05319148936170213
+        },
+        {
+          "baseline_target_margin_hi": -0.482851505279541,
+          "baseline_target_margin_lo": -0.9970307350158691,
+          "bin": 1,
+          "corrected_target_cells": 430,
+          "eligible_target_cells": 3101,
+          "target_survival": 0.13866494679135763
+        },
+        {
+          "baseline_target_margin_hi": -0.19918513298034668,
+          "baseline_target_margin_lo": -0.482851505279541,
+          "bin": 2,
+          "corrected_target_cells": 955,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.30786589297227596
+        },
+        {
+          "baseline_target_margin_hi": -2.6702880859375e-05,
+          "baseline_target_margin_lo": -0.19918513298034668,
+          "bin": 3,
+          "corrected_target_cells": 1716,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.5531914893617021
+        }
+      ],
+      "camera_channel_values_changed": 148102,
+      "camera_support_writes": 49628,
+      "coherence_radius": 0,
+      "corrected_target_cells": 3266,
+      "eligible_target_cells": 12407,
+      "failed_uint8_floor_cells": 0,
+      "global_baseline_flips_subset": 26054,
+      "global_collateral_new_wrong_non_target": 3081,
+      "global_flip_delta_vs_baseline": -1563,
+      "global_variant_flips_subset": 24491,
+      "input_delta_linf_at_targets": {
+        "max": 32.00001525878906,
+        "median": 32.0,
+        "min": 7.174560546875,
+        "p90": 32.000003814697266
+      },
+      "max_delta": 32,
+      "scorer_grid_cells_touched_with_duplicates": 12407,
+      "still_wrong_target_cells": 9141,
+      "subset_dseg_delta": -0.0002484321594238281,
+      "subset_seg_score_delta": -0.024843215942382812,
+      "target_survival": 0.26323849439832353,
+      "unique_scorer_grid_cells_touched": 12407,
+      "variant": "r0_delta_32",
+      "verdict_scope": "FORMULATION: private-support prototype Road/Lane paints on n32 stratified qo1 decode; not n600, not contest authority"
+    },
+    {
+      "by_baseline_margin_quartile": [
+        {
+          "baseline_target_margin_hi": -0.9970307350158691,
+          "baseline_target_margin_lo": -11.22191572189331,
+          "bin": 0,
+          "corrected_target_cells": 283,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.0912314635718891
+        },
+        {
+          "baseline_target_margin_hi": -0.482851505279541,
+          "baseline_target_margin_lo": -0.9970307350158691,
+          "bin": 1,
+          "corrected_target_cells": 658,
+          "eligible_target_cells": 3101,
+          "target_survival": 0.21218961625282168
+        },
+        {
+          "baseline_target_margin_hi": -0.19918513298034668,
+          "baseline_target_margin_lo": -0.482851505279541,
+          "bin": 2,
+          "corrected_target_cells": 1187,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.38265635074145715
+        },
+        {
+          "baseline_target_margin_hi": -2.6702880859375e-05,
+          "baseline_target_margin_lo": -0.19918513298034668,
+          "bin": 3,
+          "corrected_target_cells": 1724,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.5557704706640877
+        }
+      ],
+      "camera_channel_values_changed": 148102,
+      "camera_support_writes": 49628,
+      "coherence_radius": 0,
+      "corrected_target_cells": 3852,
+      "eligible_target_cells": 12407,
+      "failed_uint8_floor_cells": 0,
+      "global_baseline_flips_subset": 26054,
+      "global_collateral_new_wrong_non_target": 5075,
+      "global_flip_delta_vs_baseline": -733,
+      "global_variant_flips_subset": 25321,
+      "input_delta_linf_at_targets": {
+        "max": 64.00001525878906,
+        "median": 63.39482116699219,
+        "min": 7.174560546875,
+        "p90": 64.0
+      },
+      "max_delta": 64,
+      "scorer_grid_cells_touched_with_duplicates": 12407,
+      "still_wrong_target_cells": 8555,
+      "subset_dseg_delta": -0.00011650721232096355,
+      "subset_seg_score_delta": -0.011650721232096354,
+      "target_survival": 0.3104698960264367,
+      "unique_scorer_grid_cells_touched": 12407,
+      "variant": "r0_delta_64",
+      "verdict_scope": "FORMULATION: private-support prototype Road/Lane paints on n32 stratified qo1 decode; not n600, not contest authority"
+    },
+    {
+      "by_baseline_margin_quartile": [
+        {
+          "baseline_target_margin_hi": -0.9970307350158691,
+          "baseline_target_margin_lo": -11.22191572189331,
+          "bin": 0,
+          "corrected_target_cells": 446,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.14377820760799484
+        },
+        {
+          "baseline_target_margin_hi": -0.482851505279541,
+          "baseline_target_margin_lo": -0.9970307350158691,
+          "bin": 1,
+          "corrected_target_cells": 897,
+          "eligible_target_cells": 3101,
+          "target_survival": 0.2892615285391809
+        },
+        {
+          "baseline_target_margin_hi": -0.19918513298034668,
+          "baseline_target_margin_lo": -0.482851505279541,
+          "bin": 2,
+          "corrected_target_cells": 1392,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.44874274661508706
+        },
+        {
+          "baseline_target_margin_hi": -2.6702880859375e-05,
+          "baseline_target_margin_lo": -0.19918513298034668,
+          "bin": 3,
+          "corrected_target_cells": 1785,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.5754352030947776
+        }
+      ],
+      "camera_channel_values_changed": 148102,
+      "camera_support_writes": 49628,
+      "coherence_radius": 0,
+      "corrected_target_cells": 4520,
+      "eligible_target_cells": 12407,
+      "failed_uint8_floor_cells": 0,
+      "global_baseline_flips_subset": 26054,
+      "global_collateral_new_wrong_non_target": 6790,
+      "global_flip_delta_vs_baseline": -22,
+      "global_variant_flips_subset": 26032,
+      "input_delta_linf_at_targets": {
+        "max": 218.66445922851562,
+        "median": 65.24534606933594,
+        "min": 7.174560546875,
+        "p90": 132.80949096679686
+      },
+      "max_delta": null,
+      "scorer_grid_cells_touched_with_duplicates": 12407,
+      "still_wrong_target_cells": 7887,
+      "subset_dseg_delta": -3.4968058268229165e-06,
+      "subset_seg_score_delta": -0.0003496805826822917,
+      "target_survival": 0.36431046989602645,
+      "unique_scorer_grid_cells_touched": 12407,
+      "variant": "r0_full_color",
+      "verdict_scope": "FORMULATION: private-support prototype Road/Lane paints on n32 stratified qo1 decode; not n600, not contest authority"
+    },
+    {
+      "by_baseline_margin_quartile": [
+        {
+          "baseline_target_margin_hi": -0.9970307350158691,
+          "baseline_target_margin_lo": -11.22191572189331,
+          "bin": 0,
+          "corrected_target_cells": 427,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.13765312701482915
+        },
+        {
+          "baseline_target_margin_hi": -0.482851505279541,
+          "baseline_target_margin_lo": -0.9970307350158691,
+          "bin": 1,
+          "corrected_target_cells": 950,
+          "eligible_target_cells": 3101,
+          "target_survival": 0.30635278942276684
+        },
+        {
+          "baseline_target_margin_hi": -0.19918513298034668,
+          "baseline_target_margin_lo": -0.482851505279541,
+          "bin": 2,
+          "corrected_target_cells": 1408,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.45390070921985815
+        },
+        {
+          "baseline_target_margin_hi": -2.6702880859375e-05,
+          "baseline_target_margin_lo": -0.19918513298034668,
+          "bin": 3,
+          "corrected_target_cells": 1801,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.5805931656995487
+        }
+      ],
+      "camera_channel_values_changed": 1175826,
+      "camera_support_writes": 446004,
+      "coherence_radius": 1,
+      "corrected_target_cells": 4586,
+      "eligible_target_cells": 12407,
+      "failed_uint8_floor_cells": 0,
+      "global_baseline_flips_subset": 26054,
+      "global_collateral_new_wrong_non_target": 10076,
+      "global_flip_delta_vs_baseline": 2431,
+      "global_variant_flips_subset": 28485,
+      "input_delta_linf_at_targets": {
+        "max": 118.55003356933594,
+        "median": 32.00001525878906,
+        "min": 7.174560546875,
+        "p90": 64.0
+      },
+      "max_delta": 16,
+      "scorer_grid_cells_touched_with_duplicates": 111501,
+      "still_wrong_target_cells": 7821,
+      "subset_dseg_delta": 0.0003863970438639323,
+      "subset_seg_score_delta": 0.03863970438639323,
+      "target_survival": 0.3696300475538003,
+      "unique_scorer_grid_cells_touched": 62100,
+      "variant": "r1_delta_16",
+      "verdict_scope": "FORMULATION: private-support prototype Road/Lane paints on n32 stratified qo1 decode; not n600, not contest authority"
+    },
+    {
+      "by_baseline_margin_quartile": [
+        {
+          "baseline_target_margin_hi": -0.9970307350158691,
+          "baseline_target_margin_lo": -11.22191572189331,
+          "bin": 0,
+          "corrected_target_cells": 581,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.18729851708575113
+        },
+        {
+          "baseline_target_margin_hi": -0.482851505279541,
+          "baseline_target_margin_lo": -0.9970307350158691,
+          "bin": 1,
+          "corrected_target_cells": 1192,
+          "eligible_target_cells": 3101,
+          "target_survival": 0.38439213157046115
+        },
+        {
+          "baseline_target_margin_hi": -0.19918513298034668,
+          "baseline_target_margin_lo": -0.482851505279541,
+          "bin": 2,
+          "corrected_target_cells": 1530,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.4932301740812379
+        },
+        {
+          "baseline_target_margin_hi": -2.6702880859375e-05,
+          "baseline_target_margin_lo": -0.19918513298034668,
+          "bin": 3,
+          "corrected_target_cells": 1747,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.5631850419084462
+        }
+      ],
+      "camera_channel_values_changed": 1030279,
+      "camera_support_writes": 446004,
+      "coherence_radius": 1,
+      "corrected_target_cells": 5050,
+      "eligible_target_cells": 12407,
+      "failed_uint8_floor_cells": 0,
+      "global_baseline_flips_subset": 26054,
+      "global_collateral_new_wrong_non_target": 18845,
+      "global_flip_delta_vs_baseline": 9975,
+      "global_variant_flips_subset": 36029,
+      "input_delta_linf_at_targets": {
+        "max": 185.92840576171875,
+        "median": 58.88275146484375,
+        "min": 7.174560546875,
+        "p90": 95.99999237060547
+      },
+      "max_delta": 32,
+      "scorer_grid_cells_touched_with_duplicates": 111501,
+      "still_wrong_target_cells": 7357,
+      "subset_dseg_delta": 0.0015854835510253906,
+      "subset_seg_score_delta": 0.15854835510253906,
+      "target_survival": 0.40702829048118,
+      "unique_scorer_grid_cells_touched": 62100,
+      "variant": "r1_delta_32",
+      "verdict_scope": "FORMULATION: private-support prototype Road/Lane paints on n32 stratified qo1 decode; not n600, not contest authority"
+    },
+    {
+      "by_baseline_margin_quartile": [
+        {
+          "baseline_target_margin_hi": -0.9970307350158691,
+          "baseline_target_margin_lo": -11.22191572189331,
+          "bin": 0,
+          "corrected_target_cells": 574,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.18504190844616378
+        },
+        {
+          "baseline_target_margin_hi": -0.482851505279541,
+          "baseline_target_margin_lo": -0.9970307350158691,
+          "bin": 1,
+          "corrected_target_cells": 1180,
+          "eligible_target_cells": 3101,
+          "target_survival": 0.38052241212512095
+        },
+        {
+          "baseline_target_margin_hi": -0.19918513298034668,
+          "baseline_target_margin_lo": -0.482851505279541,
+          "bin": 2,
+          "corrected_target_cells": 1466,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.47259832366215343
+        },
+        {
+          "baseline_target_margin_hi": -2.6702880859375e-05,
+          "baseline_target_margin_lo": -0.19918513298034668,
+          "bin": 3,
+          "corrected_target_cells": 1576,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.5080593165699548
+        }
+      ],
+      "camera_channel_values_changed": 854217,
+      "camera_support_writes": 446004,
+      "coherence_radius": 1,
+      "corrected_target_cells": 4796,
+      "eligible_target_cells": 12407,
+      "failed_uint8_floor_cells": 0,
+      "global_baseline_flips_subset": 26054,
+      "global_collateral_new_wrong_non_target": 28827,
+      "global_flip_delta_vs_baseline": 19943,
+      "global_variant_flips_subset": 45997,
+      "input_delta_linf_at_targets": {
+        "max": 207.3950958251953,
+        "median": 63.99999237060547,
+        "min": 7.174560546875,
+        "p90": 119.32776794433592
+      },
+      "max_delta": 64,
+      "scorer_grid_cells_touched_with_duplicates": 111501,
+      "still_wrong_target_cells": 7611,
+      "subset_dseg_delta": 0.003169854482014974,
+      "subset_seg_score_delta": 0.3169854482014974,
+      "target_survival": 0.38655597646489886,
+      "unique_scorer_grid_cells_touched": 62100,
+      "variant": "r1_delta_64",
+      "verdict_scope": "FORMULATION: private-support prototype Road/Lane paints on n32 stratified qo1 decode; not n600, not contest authority"
+    },
+    {
+      "by_baseline_margin_quartile": [
+        {
+          "baseline_target_margin_hi": -0.9970307350158691,
+          "baseline_target_margin_lo": -11.22191572189331,
+          "bin": 0,
+          "corrected_target_cells": 567,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.1827852998065764
+        },
+        {
+          "baseline_target_margin_hi": -0.482851505279541,
+          "baseline_target_margin_lo": -0.9970307350158691,
+          "bin": 1,
+          "corrected_target_cells": 1129,
+          "eligible_target_cells": 3101,
+          "target_survival": 0.364076104482425
+        },
+        {
+          "baseline_target_margin_hi": -0.19918513298034668,
+          "baseline_target_margin_lo": -0.482851505279541,
+          "bin": 2,
+          "corrected_target_cells": 1401,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.45164410058027077
+        },
+        {
+          "baseline_target_margin_hi": -2.6702880859375e-05,
+          "baseline_target_margin_lo": -0.19918513298034668,
+          "bin": 3,
+          "corrected_target_cells": 1493,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.4813023855577047
+        }
+      ],
+      "camera_channel_values_changed": 776984,
+      "camera_support_writes": 446004,
+      "coherence_radius": 1,
+      "corrected_target_cells": 4590,
+      "eligible_target_cells": 12407,
+      "failed_uint8_floor_cells": 0,
+      "global_baseline_flips_subset": 26054,
+      "global_collateral_new_wrong_non_target": 35925,
+      "global_flip_delta_vs_baseline": 27150,
+      "global_variant_flips_subset": 53204,
+      "input_delta_linf_at_targets": {
+        "max": 218.66445922851562,
+        "median": 64.80302429199219,
+        "min": 7.174560546875,
+        "p90": 132.51382446289062
+      },
+      "max_delta": null,
+      "scorer_grid_cells_touched_with_duplicates": 111501,
+      "still_wrong_target_cells": 7817,
+      "subset_dseg_delta": 0.004315376281738281,
+      "subset_seg_score_delta": 0.4315376281738281,
+      "target_survival": 0.36995244619972595,
+      "unique_scorer_grid_cells_touched": 62100,
+      "variant": "r1_full_color",
+      "verdict_scope": "FORMULATION: private-support prototype Road/Lane paints on n32 stratified qo1 decode; not n600, not contest authority"
+    },
+    {
+      "by_baseline_margin_quartile": [
+        {
+          "baseline_target_margin_hi": -0.9970307350158691,
+          "baseline_target_margin_lo": -11.22191572189331,
+          "bin": 0,
+          "corrected_target_cells": 263,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.08478401031592521
+        },
+        {
+          "baseline_target_margin_hi": -0.482851505279541,
+          "baseline_target_margin_lo": -0.9970307350158691,
+          "bin": 1,
+          "corrected_target_cells": 698,
+          "eligible_target_cells": 3101,
+          "target_survival": 0.22508868107062238
+        },
+        {
+          "baseline_target_margin_hi": -0.19918513298034668,
+          "baseline_target_margin_lo": -0.482851505279541,
+          "bin": 2,
+          "corrected_target_cells": 1023,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.32978723404255317
+        },
+        {
+          "baseline_target_margin_hi": -2.6702880859375e-05,
+          "baseline_target_margin_lo": -0.19918513298034668,
+          "bin": 3,
+          "corrected_target_cells": 1288,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.4152159896840748
+        }
+      ],
+      "camera_channel_values_changed": 2905353,
+      "camera_support_writes": 1237520,
+      "coherence_radius": 2,
+      "corrected_target_cells": 3272,
+      "eligible_target_cells": 12407,
+      "failed_uint8_floor_cells": 0,
+      "global_baseline_flips_subset": 26054,
+      "global_collateral_new_wrong_non_target": 24516,
+      "global_flip_delta_vs_baseline": 17113,
+      "global_variant_flips_subset": 43167,
+      "input_delta_linf_at_targets": {
+        "max": 169.17916870117188,
+        "median": 49.466156005859375,
+        "min": 0.389373779296875,
+        "p90": 80.00000762939453
+      },
+      "max_delta": 16,
+      "scorer_grid_cells_touched_with_duplicates": 309380,
+      "still_wrong_target_cells": 9135,
+      "subset_dseg_delta": 0.002720038096110026,
+      "subset_seg_score_delta": 0.2720038096110026,
+      "target_survival": 0.26372209236721206,
+      "unique_scorer_grid_cells_touched": 120261,
+      "variant": "r2_delta_16",
+      "verdict_scope": "FORMULATION: private-support prototype Road/Lane paints on n32 stratified qo1 decode; not n600, not contest authority"
+    },
+    {
+      "by_baseline_margin_quartile": [
+        {
+          "baseline_target_margin_hi": -0.9970307350158691,
+          "baseline_target_margin_lo": -11.22191572189331,
+          "bin": 0,
+          "corrected_target_cells": 338,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.10896196002578981
+        },
+        {
+          "baseline_target_margin_hi": -0.482851505279541,
+          "baseline_target_margin_lo": -0.9970307350158691,
+          "bin": 1,
+          "corrected_target_cells": 775,
+          "eligible_target_cells": 3101,
+          "target_survival": 0.24991938084488874
+        },
+        {
+          "baseline_target_margin_hi": -0.19918513298034668,
+          "baseline_target_margin_lo": -0.482851505279541,
+          "bin": 2,
+          "corrected_target_cells": 1013,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.32656350741457124
+        },
+        {
+          "baseline_target_margin_hi": -2.6702880859375e-05,
+          "baseline_target_margin_lo": -0.19918513298034668,
+          "bin": 3,
+          "corrected_target_cells": 1116,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.3597678916827853
+        }
+      ],
+      "camera_channel_values_changed": 2395357,
+      "camera_support_writes": 1237520,
+      "coherence_radius": 2,
+      "corrected_target_cells": 3242,
+      "eligible_target_cells": 12407,
+      "failed_uint8_floor_cells": 0,
+      "global_baseline_flips_subset": 26054,
+      "global_collateral_new_wrong_non_target": 49951,
+      "global_flip_delta_vs_baseline": 42214,
+      "global_variant_flips_subset": 68268,
+      "input_delta_linf_at_targets": {
+        "max": 207.3950958251953,
+        "median": 61.7733154296875,
+        "min": 6.2747955322265625,
+        "p90": 104.2059326171875
+      },
+      "max_delta": 32,
+      "scorer_grid_cells_touched_with_duplicates": 309380,
+      "still_wrong_target_cells": 9165,
+      "subset_dseg_delta": 0.006709734598795573,
+      "subset_seg_score_delta": 0.6709734598795573,
+      "target_survival": 0.2613041025227694,
+      "unique_scorer_grid_cells_touched": 120261,
+      "variant": "r2_delta_32",
+      "verdict_scope": "FORMULATION: private-support prototype Road/Lane paints on n32 stratified qo1 decode; not n600, not contest authority"
+    },
+    {
+      "by_baseline_margin_quartile": [
+        {
+          "baseline_target_margin_hi": -0.9970307350158691,
+          "baseline_target_margin_lo": -11.22191572189331,
+          "bin": 0,
+          "corrected_target_cells": 324,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.10444874274661509
+        },
+        {
+          "baseline_target_margin_hi": -0.482851505279541,
+          "baseline_target_margin_lo": -0.9970307350158691,
+          "bin": 1,
+          "corrected_target_cells": 712,
+          "eligible_target_cells": 3101,
+          "target_survival": 0.22960335375685262
+        },
+        {
+          "baseline_target_margin_hi": -0.19918513298034668,
+          "baseline_target_margin_lo": -0.482851505279541,
+          "bin": 2,
+          "corrected_target_cells": 915,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.29497098646034814
+        },
+        {
+          "baseline_target_margin_hi": -2.6702880859375e-05,
+          "baseline_target_margin_lo": -0.19918513298034668,
+          "bin": 3,
+          "corrected_target_cells": 976,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.31463571889103803
+        }
+      ],
+      "camera_channel_values_changed": 1855752,
+      "camera_support_writes": 1237520,
+      "coherence_radius": 2,
+      "corrected_target_cells": 2927,
+      "eligible_target_cells": 12407,
+      "failed_uint8_floor_cells": 0,
+      "global_baseline_flips_subset": 26054,
+      "global_collateral_new_wrong_non_target": 77378,
+      "global_flip_delta_vs_baseline": 69777,
+      "global_variant_flips_subset": 95831,
+      "input_delta_linf_at_targets": {
+        "max": 218.66445922851562,
+        "median": 64.0,
+        "min": 7.174560546875,
+        "p90": 122.28715820312499
+      },
+      "max_delta": 64,
+      "scorer_grid_cells_touched_with_duplicates": 309380,
+      "still_wrong_target_cells": 9480,
+      "subset_dseg_delta": 0.011090755462646484,
+      "subset_seg_score_delta": 1.1090755462646484,
+      "target_survival": 0.23591520915612155,
+      "unique_scorer_grid_cells_touched": 120261,
+      "variant": "r2_delta_64",
+      "verdict_scope": "FORMULATION: private-support prototype Road/Lane paints on n32 stratified qo1 decode; not n600, not contest authority"
+    },
+    {
+      "by_baseline_margin_quartile": [
+        {
+          "baseline_target_margin_hi": -0.9970307350158691,
+          "baseline_target_margin_lo": -11.22191572189331,
+          "bin": 0,
+          "corrected_target_cells": 320,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.1031592520954223
+        },
+        {
+          "baseline_target_margin_hi": -0.482851505279541,
+          "baseline_target_margin_lo": -0.9970307350158691,
+          "bin": 1,
+          "corrected_target_cells": 689,
+          "eligible_target_cells": 3101,
+          "target_survival": 0.22218639148661723
+        },
+        {
+          "baseline_target_margin_hi": -0.19918513298034668,
+          "baseline_target_margin_lo": -0.482851505279541,
+          "bin": 2,
+          "corrected_target_cells": 891,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.2872340425531915
+        },
+        {
+          "baseline_target_margin_hi": -2.6702880859375e-05,
+          "baseline_target_margin_lo": -0.19918513298034668,
+          "bin": 3,
+          "corrected_target_cells": 932,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.3004513217279175
+        }
+      ],
+      "camera_channel_values_changed": 1650458,
+      "camera_support_writes": 1237520,
+      "coherence_radius": 2,
+      "corrected_target_cells": 2832,
+      "eligible_target_cells": 12407,
+      "failed_uint8_floor_cells": 0,
+      "global_baseline_flips_subset": 26054,
+      "global_collateral_new_wrong_non_target": 93623,
+      "global_flip_delta_vs_baseline": 86040,
+      "global_variant_flips_subset": 112094,
+      "input_delta_linf_at_targets": {
+        "max": 218.66445922851562,
+        "median": 64.84552001953125,
+        "min": 7.174560546875,
+        "p90": 129.3743896484375
+      },
+      "max_delta": null,
+      "scorer_grid_cells_touched_with_duplicates": 309380,
+      "still_wrong_target_cells": 9575,
+      "subset_dseg_delta": 0.013675689697265625,
+      "subset_seg_score_delta": 1.3675689697265625,
+      "target_survival": 0.22825824131538647,
+      "unique_scorer_grid_cells_touched": 120261,
+      "variant": "r2_full_color",
+      "verdict_scope": "FORMULATION: private-support prototype Road/Lane paints on n32 stratified qo1 decode; not n600, not contest authority"
+    }
+  ],
+  "winner_selection": {
+    "best_target_survival_variant": {
+      "by_baseline_margin_quartile": [
+        {
+          "baseline_target_margin_hi": -0.9970307350158691,
+          "baseline_target_margin_lo": -11.22191572189331,
+          "bin": 0,
+          "corrected_target_cells": 581,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.18729851708575113
+        },
+        {
+          "baseline_target_margin_hi": -0.482851505279541,
+          "baseline_target_margin_lo": -0.9970307350158691,
+          "bin": 1,
+          "corrected_target_cells": 1192,
+          "eligible_target_cells": 3101,
+          "target_survival": 0.38439213157046115
+        },
+        {
+          "baseline_target_margin_hi": -0.19918513298034668,
+          "baseline_target_margin_lo": -0.482851505279541,
+          "bin": 2,
+          "corrected_target_cells": 1530,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.4932301740812379
+        },
+        {
+          "baseline_target_margin_hi": -2.6702880859375e-05,
+          "baseline_target_margin_lo": -0.19918513298034668,
+          "bin": 3,
+          "corrected_target_cells": 1747,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.5631850419084462
+        }
+      ],
+      "camera_channel_values_changed": 1030279,
+      "camera_support_writes": 446004,
+      "coherence_radius": 1,
+      "corrected_target_cells": 5050,
+      "eligible_target_cells": 12407,
+      "failed_uint8_floor_cells": 0,
+      "global_baseline_flips_subset": 26054,
+      "global_collateral_new_wrong_non_target": 18845,
+      "global_flip_delta_vs_baseline": 9975,
+      "global_variant_flips_subset": 36029,
+      "input_delta_linf_at_targets": {
+        "max": 185.92840576171875,
+        "median": 58.88275146484375,
+        "min": 7.174560546875,
+        "p90": 95.99999237060547
+      },
+      "max_delta": 32,
+      "scorer_grid_cells_touched_with_duplicates": 111501,
+      "still_wrong_target_cells": 7357,
+      "subset_dseg_delta": 0.0015854835510253906,
+      "subset_seg_score_delta": 0.15854835510253906,
+      "target_survival": 0.40702829048118,
+      "unique_scorer_grid_cells_touched": 62100,
+      "variant": "r1_delta_32",
+      "verdict_scope": "FORMULATION: private-support prototype Road/Lane paints on n32 stratified qo1 decode; not n600, not contest authority"
+    },
+    "clears_0p9": false,
+    "clears_ed1_break_even": false,
+    "ed1_break_even_survival": 0.6964303814,
+    "minimal_amplitude_radius_clearing_0p9": [],
+    "mode": "min global_variant_flips_subset; target survival is secondary",
+    "winner": {
+      "by_baseline_margin_quartile": [
+        {
+          "baseline_target_margin_hi": -0.9970307350158691,
+          "baseline_target_margin_lo": -11.22191572189331,
+          "bin": 0,
+          "corrected_target_cells": 165,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.05319148936170213
+        },
+        {
+          "baseline_target_margin_hi": -0.482851505279541,
+          "baseline_target_margin_lo": -0.9970307350158691,
+          "bin": 1,
+          "corrected_target_cells": 430,
+          "eligible_target_cells": 3101,
+          "target_survival": 0.13866494679135763
+        },
+        {
+          "baseline_target_margin_hi": -0.19918513298034668,
+          "baseline_target_margin_lo": -0.482851505279541,
+          "bin": 2,
+          "corrected_target_cells": 955,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.30786589297227596
+        },
+        {
+          "baseline_target_margin_hi": -2.6702880859375e-05,
+          "baseline_target_margin_lo": -0.19918513298034668,
+          "bin": 3,
+          "corrected_target_cells": 1716,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.5531914893617021
+        }
+      ],
+      "camera_channel_values_changed": 148102,
+      "camera_support_writes": 49628,
+      "coherence_radius": 0,
+      "corrected_target_cells": 3266,
+      "eligible_target_cells": 12407,
+      "failed_uint8_floor_cells": 0,
+      "global_baseline_flips_subset": 26054,
+      "global_collateral_new_wrong_non_target": 3081,
+      "global_flip_delta_vs_baseline": -1563,
+      "global_variant_flips_subset": 24491,
+      "input_delta_linf_at_targets": {
+        "max": 32.00001525878906,
+        "median": 32.0,
+        "min": 7.174560546875,
+        "p90": 32.000003814697266
+      },
+      "max_delta": 32,
+      "scorer_grid_cells_touched_with_duplicates": 12407,
+      "still_wrong_target_cells": 9141,
+      "subset_dseg_delta": -0.0002484321594238281,
+      "subset_seg_score_delta": -0.024843215942382812,
+      "target_survival": 0.26323849439832353,
+      "unique_scorer_grid_cells_touched": 12407,
+      "variant": "r0_delta_32",
+      "verdict_scope": "FORMULATION: private-support prototype Road/Lane paints on n32 stratified qo1 decode; not n600, not contest authority"
+    }
+  }
+}
