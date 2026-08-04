@@ -22,7 +22,7 @@ one up.
 | rung | published | what it was really measured on | **re-measured on OUR shipped vehicle** | verdict |
 |---|---|---|---|---|
 | gp1 A3 free band r=1 | 97.264% capture, −0.17466 S | a band seeded from a field **99.884% GT-agreeing** | capture **83.334%**, break-even η **0.61491** | **DEAD** (η = 0.3017 pose-viable) |
-| ph1 block16 phase | +0.11186 S net | the **burn/ep399** field (458,739 flips) | gross **0.18039 S**, break-even η **0.1707** | **seg-LIVE** (η = 0.4817), **pose-BLOCKED** |
+| ph1 block16 phase | +0.11186 S net | the **burn/ep399** field (458,739 flips) | gross **0.18039 S**, break-even η **0.1707** | **seg-LIVE** (η = 0.5267, n=8), **pose-BLOCKED** |
 
 **Why one died and one lived is price, not physics.** The band's address costs 331,824 B; the
 phase field's costs 46,247 B. Break-even η is `rate/gross`, so the band must clear **0.61491**
@@ -116,11 +116,17 @@ to fix.
 Same instrument as §3, pointed at the phase field. Target is the **translated field** (what the
 46,247 B buys), never GT; realizer is solve-from-frozen-head, never truth-paint (sq1's −3.764).
 
-**Pooled η = +0.4817** (per-pair 0.4806 ± 0.0513, **n=4 of 32 at time of writing**) — **2.8×
-above the 0.1707 bar.** Seg-only net **−0.05610 S = 9.06% of gap**, projecting S ≈ **0.7350**.
+**Pooled η = +0.5267** (per-pair 0.5210 ± 0.0616, min 0.4085 max 0.6061, **n=8 of 32**) —
+**3.09× above the 0.1707 bar, and 8/8 pairs clear it individually.** Seg-only net
+**−0.06422 S = 10.38% of gap**, projecting S ≈ **0.7268**. *(Superseded reading: at n=4 this was
+0.4817 / −0.05610. η rose with n; §6's knee verdict moved with it — recorded rather than
+silently overwritten.)*
 
-**Pose does NOT hold, and this blocks the row.** Ratios **[1.064, 1.190, 1.000, 3.652]**. The
-smoke's 1.003× was **not** representative: one pair in four costs **3.65×**. Quoted as a
+**Pose does NOT hold, and this blocks the row — and at n=8 it is SYSTEMATIC, not outliers.**
+Ratios **[1.064, 1.190, 1.000, 3.652, 2.094, 1.452, 1.530, 1.120]**: mean **1.638×**, median
+**1.321×**, **6/8 above 1.1×** and **3/8 above 1.5×**. My own n=4 framing ("one pair in four is
+an outlier") is **withdrawn** — the damage is the norm, and only one pair of eight is actually
+neutral. The smoke's 1.003× was not merely unrepresentative, it was the best case. Quoted as a
 **subset-scoped gate, never folded into net S** — these pairs are 0.2692× of population on d_pose
 (pose axis 4.6× skewed vs 1.05× for seg), so a subset pose delta cannot become a population ΔS.
 **Consequence:** the phase-field row is **seg-LIVE and pose-BLOCKED**; it is not bankable until
@@ -140,12 +146,23 @@ misleading key is retained in the receipt as `fidelity_whole_frame_MISLEADING`.
 | block16 (re-solved) | 41.84% | 0.18039 | 46,247 | **0.1707** |
 | block8 (re-solved) | 60.03% | 0.25886 | 104,450 | 0.2687 |
 
-Marginal: **+58,203 B buys +0.07847 gross**, so they cross at **η = 0.4939**. Measured η =
-**0.4817 ± 0.0513** — *inside one sd of the crossover*. At the measured value block16 wins by
-0.001 S (−0.05610 vs −0.05515): **not decisive**. block16 is the right pick because it is **2.3×
-cheaper in bytes at statistically indistinguishable net** — ph1's risk-adjusted conclusion,
-reached here for a sharper reason: **the knee is a function of the realizer's efficiency**, which
-is exactly why realization had to be measured rather than assumed.
+Marginal: **+58,203 B buys +0.07847 gross**, so they cross at **η = 0.4939**.
+
+**This verdict FLIPPED between n=4 and n=8 and I am recording both, because the flip is the
+finding.** At n=4, η = 0.4817 sat *below* the crossover and block16 won (−0.05610 vs −0.05515).
+At n=8, η = **0.5267** sits *above* it and **block8 wins** (−0.06422 vs −0.06679). The point
+estimate crossed; the **uncertainty did not** — the gap to the crossover (0.0328) is still
+**inside one sd (0.0616)**, so neither rung is decisively the knee at n=8 either.
+
+**What is robust, at both n:** the knee is **a function of the realizer's efficiency**, not a
+property of the partition — which is precisely why realization had to be measured instead of
+assumed, and why quoting a block ladder without an η is meaningless. **What is NOT yet decided:**
+which side of 0.4939 the population η lands on. Two forces push opposite ways and both are
+measured: η is a **floor** (8/8 cap-pinned, and §7's ladder is still rising at 50 steps), which
+pushes *up* toward block8 — but §7 also shows d_pose rises with the same budget, so buying that η
+costs pose. **Do not pick the block size until the joint (η, d_pose) sweep in §10 fire-order-1/3
+resolves it.** block16 remains the lower-risk default on bytes (2.3× cheaper) if a choice must be
+forced before then.
 
 ## §7 Convergence — a criterion, not a cap
 
