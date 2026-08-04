@@ -131,6 +131,45 @@ def _segment_executes_trainer(segment: str, depth: int = 0) -> bool:
     return False
 
 
+_CODEX_EXEC_RE = re.compile(r"\bcodex\s+exec\b")
+# Commands that only READ the process table / files may name `codex exec` freely.
+_READONLY_HEADS = frozenset(
+    {"ps", "pgrep", "grep", "rg", "awk", "sed", "echo", "cat", "tail", "head", "wc"}
+)
+# Either mechanism proves session detachment: the canonical spawners, or an
+# inline fork+setsid (what those spawners do).
+_DETACH_MARKERS = (
+    "os.setsid",
+    "codex_arm_queue.py",
+    "codex_companion_spawn.sh",
+)
+CODEX_SPAWN_BLOCK_MESSAGE = (
+    "BLOCKED by tools/launch_guard_hook.py: hand-rolled `codex exec` spawn without "
+    "session detachment. `nohup ... & disown` is NOT enough — disown clears the shell's "
+    "JOB TABLE but leaves the child in the shell's PROCESS GROUP, so the harness's "
+    "group-directed signal still reaps it. MEASURED 2026-08-04: four arms spawned that "
+    "way died within 23 seconds of each other, mid-work, no error, no final message "
+    "(and 2026-08-03 killed wk1/wk2 the same way). macOS has no setsid(1), so detachment "
+    "must be fork + os.setsid() + exec in Python.\n"
+    "USE THE CANONICAL PATH: `.venv/bin/python tools/codex_arm_queue.py saturate --spawn` "
+    "(queue-driven, carries --add-dir for the SSD tier, enforces the fleet cap and the "
+    "one-scorer rule), or tools/codex_companion_spawn.sh for companion tasks.\n"
+    "Deliberate exception: set TAC_LAUNCH_GUARD_OK=1."
+)
+
+
+def _is_hand_rolled_codex_spawn(command: str) -> bool:
+    """True when the command starts a codex arm that a group signal could reap."""
+    if not _CODEX_EXEC_RE.search(command):
+        return False
+    if any(marker in command for marker in _DETACH_MARKERS):
+        return False  # canonical spawner, or an inline fork+setsid
+    head = command.strip().split()[0].rsplit("/", 1)[-1] if command.strip() else ""
+    if head in _READONLY_HEADS:
+        return False  # inspecting the process table, not spawning
+    return True
+
+
 def decide(command: str, env: dict | None = None) -> tuple[bool, str]:
     """(allow, reason) — PURE. allow=True means the Bash call proceeds."""
     environ = os.environ if env is None else env
@@ -138,6 +177,8 @@ def decide(command: str, env: dict | None = None) -> tuple[bool, str]:
         return True, ""
     if environ.get("TAC_LAUNCH_GUARD_OK"):
         return True, ""
+    if _is_hand_rolled_codex_spawn(command):
+        return False, CODEX_SPAWN_BLOCK_MESSAGE
     if any(tok in command for tok in _SAFE_TOKENS):
         return True, ""
     # Whole-command pass FIRST (additive: can only add blocks, never new

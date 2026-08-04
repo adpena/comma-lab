@@ -276,3 +276,58 @@ def test_collect_status_flags_dead_and_stale(tmp_path):
     )
     assert fresh["warnings"] == []
     assert "0.005" in checkin.human_line(fresh)
+
+
+# --- codex-arm spawn detachment (2026-08-04) ---------------------------------------
+# Four arms spawned with `nohup ... & disown` were reaped together by one
+# process-group signal. disown clears the shell's JOB TABLE; only setsid(2) leaves
+# the GROUP. These pin the block so the killer form cannot come back.
+
+
+def _guard():
+    import importlib.util
+    from pathlib import Path
+
+    path = Path(__file__).resolve().parents[3] / "tools" / "launch_guard_hook.py"
+    spec = importlib.util.spec_from_file_location("_lgh_codex", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_blocks_nohup_disown_codex_spawn_the_measured_killer():
+    g = _guard()
+    cmd = "nohup bash -c 'codex exec -m gpt-5.5 -o a.last.txt \"go\"' < /dev/null & disown"
+    allow, reason = g.decide(cmd, {})
+    assert allow is False
+    assert "setsid" in reason  # the message must name the actual mechanism
+
+
+def test_blocks_bare_foreground_codex_exec():
+    assert _guard().decide("codex exec --skip-git-repo-check 'go'", {})[0] is False
+
+
+def test_allows_inline_fork_setsid():
+    g = _guard()
+    cmd = "python3 -c 'import os; os.setsid()' codex exec -m gpt-5.5 'go'"
+    assert g.decide(cmd, {})[0] is True
+
+
+def test_allows_the_canonical_spawners():
+    g = _guard()
+    for cmd in (
+        ".venv/bin/python tools/codex_arm_queue.py saturate --spawn",
+        "tools/codex_companion_spawn.sh spawn lbl xhigh prompt.md",
+    ):
+        assert g.decide(cmd, {})[0] is True, cmd
+
+
+def test_allows_read_only_process_inspection():
+    """`ps`/`pgrep`/`grep` may name `codex exec` — they inspect, they don't spawn."""
+    g = _guard()
+    for cmd in ("ps -eo pid,command | grep 'codex exec'", "pgrep -af 'codex exec'"):
+        assert g.decide(cmd, {})[0] is True, cmd
+
+
+def test_codex_spawn_block_honours_the_escape_hatch():
+    assert _guard().decide("codex exec 'go'", {"TAC_LAUNCH_GUARD_OK": "1"})[0] is True
