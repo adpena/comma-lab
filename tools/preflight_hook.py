@@ -69,6 +69,33 @@ def _staged_py_files() -> list[str]:
     return [f for f in out.splitlines() if f.endswith(".py") and (REPO_ROOT / f).exists()]
 
 
+def _staged_doc_files() -> list[str]:
+    """Staged .md files.
+
+    Separate from :func:`_staged_py_files` because that one is `.py`-only by
+    contract (ruff and the subset-selection AST scan both need real Python). The
+    negative-verdict scan needs markdown: measured 2026-08-03, labelled negative
+    verdict assertions occur on 80 lines across 53 tracked `.md`, and until this
+    landing no commit-time check read a `.md` file at all.
+
+    `.py` is deliberately NOT included -- see `tac.negative_verdict_gate.
+    staged_files` for the measured precision reason.
+    """
+    try:
+        out = subprocess.check_output(
+            ["git", "diff", "--cached", "--name-only", "--diff-filter=ACMR"],
+            cwd=REPO_ROOT,
+            text=True,
+        )
+    except subprocess.CalledProcessError:
+        return []
+    return [
+        f
+        for f in out.splitlines()
+        if f.endswith(".md") and (REPO_ROOT / f).exists()
+    ]
+
+
 def run_ruff_undefined_name(staged: list[str]) -> int:
     """Run ruff on staged .py files, fail on F821 (undefined name) only.
 
@@ -666,10 +693,25 @@ def _preflight_timeout_seconds() -> int:
 
 
 def run_review_gate() -> int:
-    """Hand off to the existing review-tracker gate hook."""
+    """Hand off to the existing review-tracker gate hook.
+
+    An ABSENT gate is not a PASSING gate (ddm_si1, task #929). Both early
+    returns below used to hand back ``0`` -- the same value a clean review
+    returns -- so a deleted/renamed ``review_gate_hook.py`` or a missing
+    interpreter silently retired a CLAUDE.md non-negotiable with no output at
+    all. The second case is the ddm_ob1 shape exactly: the interpreter is not
+    there and the wrapper reports success. Both now refuse and say why.
+    Live count at landing: 0 (both paths present).
+    """
     hook = REPO_ROOT / "tools" / "review_gate_hook.py"
     if not hook.exists():
-        return 0
+        print(
+            f"[preflight-hook] REFUSE: review gate missing at {hook}. An absent "
+            "gate is not a passing gate; restore it or run the review "
+            "explicitly.",
+            file=sys.stderr,
+        )
+        return 1
     env = os.environ.copy()
     if _is_pre_push_invocation():
         env.setdefault("REVIEW_GATE_MODE", "pre-push")
@@ -682,7 +724,13 @@ def run_review_gate() -> int:
             env=env,
         )
     except FileNotFoundError:
-        return 0
+        print(
+            "[preflight-hook] REFUSE: could not launch the review gate "
+            "(.venv/bin/python not found). The gate did not run, which is not "
+            "the same as the gate passing.",
+            file=sys.stderr,
+        )
+        return 1
     return result.returncode
 
 
@@ -881,8 +929,86 @@ def run_subset_selection_scan(staged: list[str]) -> int:
     return 0
 
 
+def run_negative_verdict_scan(staged_docs: list[str]) -> int:
+    """`ddm_ks1` — refuse a NEWLY-ASSERTED negative verdict with no declared scope.
+
+    Why this is a hook step and not a preflight gate: two STRICT kill-verdict
+    gates already exist — Catalog #307
+    (`check_kill_verdict_distinguishes_paradigm_vs_implementation_falsification`)
+    and #308 (`check_kill_verdict_enumerates_alternative_probe_methodologies`) —
+    and both are registered inside `preflight_all()`'s `if check_codebase:` block.
+    `--no-codebase` is THIS hook's default mode, so neither has ever executed at
+    commit time. Measured 2026-08-03: within their own filename+date scope they
+    can refuse 9 of 221 negative-bearing docs, because their trigger list is 15
+    exact phrases — a memo saying `REFUTED at the formulation level` or a bare
+    `FALSIFIED` does not trip either one.
+
+    This step is deliberately narrower in what it demands (a declared scope, and
+    for FAMILY/PARADIGM the evidence that breadth costs) and much broader in what
+    it reaches — including `.md`, which the hook did not previously collect at
+    all, and which is where negatives are actually written.
+
+    Fail-OPEN and LOUD on a broken guard, matching the siblings above: blocking
+    every commit because the guard itself broke is worse than the bug it guards.
+    """
+    if os.environ.get("NEGATIVE_VERDICT_SCAN_ENABLED", "1") == "0":
+        print(
+            "[preflight-hook] negative-verdict scan DISABLED by env — NOT a pass.",
+            file=sys.stderr,
+        )
+        return 0
+    try:
+        from tac.negative_verdict_gate import scan_staged
+    except Exception as exc:  # pragma: no cover - guard-broken path
+        print(
+            f"[preflight-hook] negative-verdict scan UNAVAILABLE (failing OPEN): {exc}",
+            file=sys.stderr,
+        )
+        return 0
+
+    if not staged_docs:
+        return 0
+    try:
+        violations = scan_staged(
+            repo_root=REPO_ROOT, strict=False, verbose=False, files=staged_docs
+        )
+    except Exception as exc:  # pragma: no cover - guard-internal bug path
+        print(
+            f"[preflight-hook] negative-verdict scan CRASHED (failing OPEN): "
+            f"{exc.__class__.__name__}: {exc} — 0 files examined. This is NOT a pass.",
+            file=sys.stderr,
+        )
+        return 0
+
+    if violations:
+        print(
+            f"\n{RED}{BOLD}[preflight-hook] BLOCKED: new negative verdict with no "
+            f"declared scope{RST}",
+            file=sys.stderr,
+        )
+        print(
+            "  The narrowest scope the evidence supports is the honest one "
+            "(instance<formulation<family<paradigm).\n"
+            "  An INSTANCE kill costs only the declaration; a FAMILY/PARADIGM kill "
+            "costs more, on purpose.\n"
+            "  Canonical record: tac.verdicts.emit_verdict(is_negative=True) — it "
+            "already enforces the same ladder.",
+            file=sys.stderr,
+        )
+        for v in violations:
+            print(f"[preflight-hook]   {v}", file=sys.stderr)
+        return 1
+    print(
+        f"{GREEN}[preflight-hook] negative-verdict scope: {len(staged_docs)} staged "
+        f".md examined, no new unscoped negatives{RST}",
+        file=sys.stderr,
+    )
+    return 0
+
+
 def main() -> int:
     staged = _staged_py_files()
+    staged_docs = _staged_doc_files()
 
     # Step 1: ruff F821 on staged files only (fast, ~50ms per file)
     rc = run_ruff_undefined_name(staged)
@@ -910,6 +1036,13 @@ def main() -> int:
     # 1b — before run_preflight(), which early-returns on failure — so a preflight
     # failure cannot skip it. ~AST parse of the staged files only; ~ms.
     rc = run_subset_selection_scan(staged)
+    if rc != 0:
+        return rc
+
+    # Step 1d: `ddm_ks1` negative-verdict scope guard. Same placement rationale as
+    # 1b/1c — before run_preflight(), which early-returns on failure. This one
+    # additionally covers .md, the surface no commit-time check read before.
+    rc = run_negative_verdict_scan(staged_docs)
     if rc != 0:
         return rc
 

@@ -293,3 +293,37 @@ def test_denominator_is_DERIVED_from_the_scan_target_list_not_hardcoded() -> Non
     assert "_CHECK_184_HOOK_IMPORT_PATH_MODULES" in src, "denominator not derived from the scan list"
     assert "for rel in targets" in src, "denominator does not iterate the scan list"
     assert "examined != len(targets)" in src, "denominator does not compare against the full list"
+
+
+# --- ddm_si1 (task #929): an absent gate is not a passing gate --------------
+
+
+def test_review_gate_refuses_when_the_gate_file_is_absent(tmp_path, capsys) -> None:
+    """Executed control: a missing review_gate_hook.py must REFUSE, not return 0.
+
+    It previously returned ``0`` -- byte-identical to a clean review -- so
+    deleting or renaming the gate silently retired a CLAUDE.md non-negotiable
+    with no output at all.
+    """
+    hook = _load_hook()
+    hook.REPO_ROOT = tmp_path  # no tools/review_gate_hook.py here
+    rc = hook.run_review_gate()
+    assert rc == 1, "an absent review gate reported a pass"
+    assert "REFUSE" in capsys.readouterr().err
+
+
+def test_review_gate_refuses_when_the_interpreter_is_missing(capsys) -> None:
+    """Executed control: the ddm_ob1 shape -- interpreter absent, report success.
+
+    ``subprocess.run`` raising FileNotFoundError used to return ``0``, i.e. the
+    gate not running was encoded exactly like the gate passing.
+    """
+    hook = _load_hook()
+
+    def _boom(*_a, **_k):
+        raise FileNotFoundError(".venv/bin/python")
+
+    hook.subprocess.run = _boom
+    rc = hook.run_review_gate()
+    assert rc == 1, "a review gate that could not launch reported a pass"
+    assert "did not run" in capsys.readouterr().err
