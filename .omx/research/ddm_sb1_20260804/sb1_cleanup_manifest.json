@@ -1,0 +1,42 @@
+{
+  "schema": "ddm_sb1_cleanup_manifest.v1",
+  "created_utc": "2026-08-04T20:00:00Z",
+  "entries": [
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sb1_20260804/C_qo1_pairbit_inflated/0.raw",
+      "bytes": 3662409600,
+      "sha256": "3ce7d269a7080a4024a576694cd0ddc697099c64cd02fdd2bb879339e4b03f31",
+      "source_archive": "/Volumes/VertigoDataTier/pact/ddm_qo1_20260804/sub_auto_pairbit/archive.zip",
+      "source_archive_sha256": "d5e814d5b9f65c3094b0e65fecdd7771734d03c420c63d1d2033a671b766986a",
+      "rebuild_command": ".venv/bin/python experiments/ddm_fz2_byteclose_and_eval.py --sub-dir /Volumes/VertigoDataTier/pact/ddm_qo1_20260804/sub_auto_pairbit --out /Volumes/VertigoDataTier/pact/ddm_sb1_20260804/C_qo1_pairbit_n600_eval_receipt.json --inflate-out /Volumes/VertigoDataTier/pact/ddm_sb1_20260804/C_qo1_pairbit_inflated --videos /Volumes/VertigoDataTier/pact/ddm_sb1_20260804/C_qo1_pairbit_inflated --device cpu --batch-size 16 --num-threads 4",
+      "duplicate_of": "/Volumes/VertigoDataTier/pact/ddm_qo1_20260804/sub_auto_pairbit/inflated/0.raw",
+      "duplicate_sha256": "3ce7d269a7080a4024a576694cd0ddc697099c64cd02fdd2bb879339e4b03f31",
+      "cleanup_decision": "delete_after_manifest",
+      "deleted_utc": "2026-08-04T20:05:00Z",
+      "reason": "Redundant failed-attempt inflated raw output on the same SSD tier; candidate-local inflated raw with identical bytes is retained as the evaluated upstream path."
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_qo1_20260804/sub_auto_pairbit/inflated/0.raw",
+      "bytes": 3662409600,
+      "sha256": "3ce7d269a7080a4024a576694cd0ddc697099c64cd02fdd2bb879339e4b03f31",
+      "source_archive": "/Volumes/VertigoDataTier/pact/ddm_qo1_20260804/sub_auto_pairbit/archive.zip",
+      "source_archive_sha256": "d5e814d5b9f65c3094b0e65fecdd7771734d03c420c63d1d2033a671b766986a",
+      "eval_receipt": "/Volumes/VertigoDataTier/pact/ddm_sb1_20260804/C_qo1_pairbit_n600_eval_receipt.json",
+      "rebuild_command": ".venv/bin/python experiments/ddm_fz2_byteclose_and_eval.py --sub-dir /Volumes/VertigoDataTier/pact/ddm_qo1_20260804/sub_auto_pairbit --out /Volumes/VertigoDataTier/pact/ddm_sb1_20260804/C_qo1_pairbit_n600_eval_receipt.json --inflate-out /Volumes/VertigoDataTier/pact/ddm_qo1_20260804/sub_auto_pairbit/inflated --videos /Users/adpena/Projects/pact/upstream/videos --device cpu --batch-size 16 --num-threads 4",
+      "cleanup_decision": "retain_evidence_on_ssd",
+      "reason": "Evaluated candidate-local inflated raw for C; retained as byte-identical decode evidence for the measured n600 row."
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sb1_20260804/B_rt1_margin_coupled_16_12_8_4_sub_final/inflated/0.raw",
+      "bytes": 3662409600,
+      "sha256": "f3acbe28877c028ee606365ce08d4219e80b59d4bb76720b1b89953ac126deb9",
+      "source_archive": "/Volumes/VertigoDataTier/pact/ddm_sb1_20260804/B_rt1_margin_coupled_16_12_8_4_sub_final/archive.zip",
+      "source_archive_sha256": "bc34987c711cdce91b33708bb98998f86832e3bc3db25ab2b4aada5e58711060",
+      "eval_receipt": "/Volumes/VertigoDataTier/pact/ddm_sb1_20260804/B_rt1_margin_16_12_8_4_n600_eval_receipt.json",
+      "per_class_receipt": "/Volumes/VertigoDataTier/pact/ddm_sb1_20260804/B_rt1_margin_16_12_8_4_per_class_seg_decomp.json",
+      "rebuild_command": ".venv/bin/python experiments/ddm_fz2_byteclose_and_eval.py --sub-dir /Volumes/VertigoDataTier/pact/ddm_sb1_20260804/B_rt1_margin_coupled_16_12_8_4_sub_final --out /Volumes/VertigoDataTier/pact/ddm_sb1_20260804/B_rt1_margin_16_12_8_4_n600_eval_receipt.json --inflate-out /Volumes/VertigoDataTier/pact/ddm_sb1_20260804/B_rt1_margin_coupled_16_12_8_4_sub_final/inflated --videos /Users/adpena/Projects/pact/upstream/videos --device cpu --batch-size 16 --num-threads 4",
+      "cleanup_decision": "retain_evidence_on_ssd",
+      "reason": "Evaluated inflated raw for the B formulation-negative n600 row and follow-on SegNet per-class decomposition; retained on SSD as receipt evidence."
+    }
+  ]
+}

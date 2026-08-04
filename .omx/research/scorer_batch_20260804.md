@@ -148,3 +148,112 @@ realized Road/Lane survival against both the charter falsifier `0.3956` and the
 actual byte-closed break-even `0.6964303814`, per-class flip deltas
 Road->Lane/Lane->Road, and any collateral flips outside the Road/Lane target
 set. The R8 pose-bank guard applies; do not promote from this queued note.
+
+## C RESULT — qo1 pair-bitpack F0PR1 repair stream
+
+Status: **MEASURED n600 row, PASS small rate win**.
+
+| field | value |
+|---|---:|
+| archive | `/Volumes/VertigoDataTier/pact/ddm_qo1_20260804/sub_auto_pairbit/archive.zip` |
+| archive sha256 | `d5e814d5b9f65c3094b0e65fecdd7771734d03c420c63d1d2033a671b766986a` |
+| archive bytes | 357,836 |
+| axis | `[macOS-CPU advisory]` |
+| n | 600 |
+| d_seg | 0.00431179 |
+| d_pose | 0.00071459 |
+| rate term | 0.00953073 |
+| recomputed S | 0.7539807296911207 |
+| delta vs fz4 baseline | -0.0001651330203744 |
+| R8 pose-bank guard | PASS (`sqrt(10*d_pose)=0.084533425342`, erosion +0.000033425342 vs 0.0845) |
+
+Receipt:
+`/Volumes/VertigoDataTier/pact/ddm_sb1_20260804/C_qo1_pairbit_n600_eval_receipt.json`.
+
+Boundary: first two fires failed before scoring because the upstream evaluate
+path contract was mis-bound (`submission_dir/inflated/0.raw` is mandatory for
+compressed raw; `--uncompressed-dir` is the GT video directory). The measured
+row is the corrected candidate-local inflated run. Score claim remains false;
+contest-CPU/CUDA pointer unmoved.
+
+## B RESULT - rt1 adaptive-margin [16,12,8,4] on fz4 sub_final
+
+Status: **MEASURED n600 row, FORMULATION NEGATIVE**.
+
+Byte receipt:
+`/Volumes/VertigoDataTier/pact/ddm_sb1_20260804/B_rt1_subfinal_adaptive_byte_receipt.json`.
+Eval receipt:
+`/Volumes/VertigoDataTier/pact/ddm_sb1_20260804/B_rt1_margin_16_12_8_4_n600_eval_receipt.json`.
+Per-class decomposition:
+`/Volumes/VertigoDataTier/pact/ddm_sb1_20260804/B_rt1_margin_16_12_8_4_per_class_seg_decomp.json`.
+
+| field | value |
+|---|---:|
+| archive | `/Volumes/VertigoDataTier/pact/ddm_sb1_20260804/B_rt1_margin_coupled_16_12_8_4_sub_final/archive.zip` |
+| archive sha256 | `bc34987c711cdce91b33708bb98998f86832e3bc3db25ab2b4aada5e58711060` |
+| archive bytes | 244,436 |
+| axis | `[macOS-CPU advisory]` |
+| n | 600 |
+| d_seg | 0.00515854 |
+| d_pose | 0.16815221 |
+| rate term | 0.00651040 |
+| recomputed S | 1.9753490686354727 |
+| delta vs fz4 baseline | +1.2212032059239775 |
+| decomp delta d_seg | +0.0008467525906032986 |
+| pre-registered bound | `< 0.0007561161342178816` |
+| R8 pose-bank guard | FAIL (`sqrt(10*d_pose)=1.2967351695701015`, erosion +1.2122351695701015 vs 0.0845) |
+
+Per-class SegNet-only decomposition of the collateral:
+
+| class | delta errors | global delta d_seg |
+|---|---:|---:|
+| Road | +63,053 | +0.0005345069037543403 |
+| Lane markings | +19,516 | +0.0001654391818576389 |
+| Undrivable | +14,284 | +0.00012108696831597222 |
+| Movable | +3,186 | +0.000027008056640625 |
+| MyCar | -152 | -0.0000012885199652777778 |
+
+Verdict: the byte saving is real, but this rt1 adaptive-margin formulation on
+the fz4 base violates the pre-registered seg bound and destroys the R8 pose
+bank. The derived fallback was byte-closed but not scored because its
+pre-registered break-even bound is tighter and the selected margin row already
+failed. Score claim remains false; contest-CPU/CUDA pointer unmoved.
+
+## Q3 BLOCKER - pose-null projected reach
+
+Status: **BLOCKED_BY_SINGLE_WRITER_INCOMPLETE_Q3_RECEIPT**.
+
+SB1 did not relaunch Q3 because `.omx/state/main_hot_state.md` marks q3x as a
+continuing single-writer lane and says not to relaunch. Durable state found by
+SB1: `.omx/tmp/codex_runs/q3x_canonical.log` contains only an n=2 strided smoke
+with retained fractions 0.30612244897959184 and 0.25075528700906347 against
+threshold 0.9073878056818256; it wrote the smoke JSON to `/tmp`, which is not
+acceptable persisted evidence. The expected durable
+`.omx/research/ddm_q3x_q3_convergence_measurement_20260803.json` and
+`.omx/tmp/codex_runs/q3x_canonical.last.txt` were absent in the searched scope.
+
+Disposition: no n600 row. This is a custody/ownership blocker, not a Q3 family
+negative. Fire order: recover or terminally close the q3x single-writer lane,
+then run the >=32 matched-base Q3 reach receipt to durable non-`/tmp` custody
+before any n600 spend.
+
+## sq1 BLOCKER - uncap convergence test
+
+Status: **BLOCKED_CAP_ARTIFACT_NOT_CONVERGED**.
+
+Existing durable receipts consumed:
+
+- `/Volumes/VertigoDataTier/pact/ddm_sq1_20260803/receipts/sq1_aggregate_n32.json`:
+  25-step solved paint, `eta_net_pooled=0.7895095948827292`, no explicit
+  convergence stop reason.
+- `/Volumes/VertigoDataTier/pact/ddm_sq1_20260803/receipts/sq1_aggregate_n32_uncap50_cw1.json`:
+  50-step convergence-patience run, `eta_net_pooled=0.8620042643923241`,
+  `d_pose_after_mean=0.04925062965230609`, cap census `31/32`
+  `iteration_cap_best_at_cap` and `1/32` `iteration_cap_before_plateau`.
+
+Disposition: no n600 row. The uncap50 receipt improves eta but is still
+cap-bound, so it does not satisfy the charter's convergence-tested stop
+requirement and is not a plausible R8-safe scorer spend. Fire order: rerun the
+same 32 pairs to an explicit non-cap convergence stop, aggregate, then build
+and score only if the pose-bank-accounted pre-score can beat the current
+own-vehicle best.
