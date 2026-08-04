@@ -114,6 +114,20 @@ payload re-encodes  : True  (canonical encoder reproduces the shipped payload by
 Raw section size ≠ rate cost: the joint group's **counted** cost is 12,396 B, not the 12,588 B raw
 sum. The ledger keeps the two named apart so neither can be quoted as the other.
 
+**The inflate leg, exercised END-TO-END on the real archive through the canonical chain** (not a
+unit fixture):
+
+```
+rc          : 0            (job's own rc, recorded separately from the launcher's per si1)
+raw files   : 1  (0.raw)
+raw bytes   : 3,662,409,600
+seconds     : 200.5
+```
+
+3,662,409,600 B = 1200 frames × 874 × 1164 × 3 **exactly** — the decode is structurally correct for
+600 pairs, not merely non-empty. This closes the gap that the unit controls alone could not: a guard
+that has only ever run on a fixture has not been shown to run on the real thing.
+
 **Vendored-runtime custody on the shipped tree:** 3 IDENTICAL · **3 DIVERGED** · 1 UNMAPPED.
 `ddm_r7_token_coder.py` (549 lines differ), `ddm_tr1_runtime.py` (262), and
 `repair_entropy_coder_runtime_adapters.py` (15) all differ from HEAD — HEAD has moved forward
