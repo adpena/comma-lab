@@ -51,6 +51,9 @@ def main() -> int:
     ap.add_argument("--runtime", type=Path, required=True)
     ap.add_argument("--dest", type=Path, required=True)
     ap.add_argument("--gt-mkv", type=Path, required=True)
+    ap.add_argument("--d-seg", type=float, default=None,
+                    help="measured base d_seg override; default preserves the pu2 rowB behavior")
+    ap.add_argument("--live-best-s", type=float, default=LIVE_BEST_S)
     ap.add_argument("--k", type=int, default=6)
     ap.add_argument("--threads", type=int, default=4)
     args = ap.parse_args()
@@ -64,16 +67,33 @@ def main() -> int:
     bulk, sections = parse_payload(payload)
 
     census = json.loads(args.mapped_census.read_text())["rows"]
+    d_seg_source = "mapped-census flips_vs_gt"
+    if args.d_seg is not None:
+        if args.d_seg < 0.0:
+            raise SystemExit("--d-seg must be non-negative")
+        d_seg_override = float(args.d_seg)
+    else:
+        d_seg_override = None
+
     if census and "d_pose_mapped" in census[0]:
         d_map = {int(r["pair"]): float(r["d_pose_mapped"]) for r in census}
-        flips = sum(int(r["flips_vs_gt"]) for r in census)
-        d_seg_mapped = flips / (600 * 384 * 512)
+        if d_seg_override is None:
+            flips = sum(int(r["flips_vs_gt"]) for r in census)
+            d_seg_mapped = flips / (600 * 384 * 512)
+        else:
+            d_seg_mapped = d_seg_override
+            d_seg_source = "cli --d-seg override"
     else:
         # repair-only row on the UNMAPPED base: pose census schema; the token member is
         # byte-identical to the live archive, and the repair edits only frame_0 (outside
         # SegNet's input), so d_seg is the live n600-exact value BY CONSTRUCTION.
         d_map = {int(r["pair"]): float(r["d_pose_delivered"]) for r in census}
-        d_seg_mapped = 0.00431179
+        if d_seg_override is None:
+            d_seg_mapped = 0.00431179
+            d_seg_source = "pu2 live constant"
+        else:
+            d_seg_mapped = d_seg_override
+            d_seg_source = "cli --d-seg override"
 
     probe = []
     for pj in str(args.probe_json).split(","):
@@ -182,13 +202,14 @@ def main() -> int:
         "runner_true_d_pose": {str(p): runner_true[p] for p in sorted(sel)},
         "d_pose_mean_advisory": float(np.mean(list(v.values()))),
         "S_pred_advisory": s_final,
-        "S_live_best": LIVE_BEST_S,
-        "delta_pred": s_final - LIVE_BEST_S,
+        "d_seg_source": d_seg_source,
+        "S_live_best": args.live_best_s,
+        "delta_pred": s_final - args.live_best_s,
         "ledger_sections": [getattr(s, "__dict__", s) for s in getattr(ledger, "sections", ())] or None,
     }
     (args.dest / "compose_receipt.json").write_text(json.dumps(out, indent=1))
     print(f"[compose] S_pred_advisory {s_final:.7f}  delta vs live best "
-          f"{s_final - LIVE_BEST_S:+.7f}  t={time.time()-t0:.0f}s", flush=True)
+          f"{s_final - args.live_best_s:+.7f}  t={time.time()-t0:.0f}s", flush=True)
     return 0
 
 
