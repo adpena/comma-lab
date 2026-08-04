@@ -339,7 +339,10 @@ class TR1Config:
     # against the null.  DEFAULT-OFF so sealed tickets recompile bit-identical; when off the
     # guard now SELF-REPORTS its inertness (inertness_alarm in the gate telemetry).
     lane_guard_ratchet: bool = False
-    lane_guard_ratchet_horizon: int = 0   # 0 => self-derive max(mean_gates, gates_seen)
+    lane_guard_ratchet_horizon: int = 0   # 0 => DERIVE the run's planned gate total
+                                          # (ddm_lp1 #934; was "gates seen", which
+                                          # under-priced the deadband early: 3/64 false
+                                          # positives MEASURED on the burn-4 series)
     # ---- ddm_p4x (#920) LANE EXISTENCE PRIMITIVE + per-class BIRTH MATRIX ---------------
     # A SEPARATE loss TERM at COMPONENT granularity -- NOT another seg_pixel_w addend.
     # Every lane_guard mechanism above is a per-pixel weight, which is why the cg1r ledger
@@ -1972,8 +1975,11 @@ def build_argparser() -> argparse.ArgumentParser:
                          "DEFAULT-OFF: the constant budget was MEASURED inert on burn-4 "
                          "(lambda==0 on 64/64 gates), so off is the known-inert arm.")
     ap.add_argument("--lane-guard-ratchet-horizon", type=int, default=0,
-                    help="bs2 #871 deadband horizon in gates (0 => self-derive from gates seen; "
-                         "pass the run's planned gate count for a stationary deadband)")
+                    help="bs2 #871 deadband horizon in gates. 0 => DERIVED from this run's "
+                         "epochs/gate_every (the planned gate TOTAL), which is the correct "
+                         "multiple-comparisons burden and gives a stationary deadband. "
+                         "ddm_lp1 #934 replaced the old 0 => 'gates seen' default, MEASURED "
+                         "to fire 3/64 false positives on the burn-4 series.")
     # ---- ddm_p4x (#920) LANE EXISTENCE PRIMITIVE + per-class BIRTH MATRIX ---------------
     ap.add_argument("--existence-hinge-weight", type=float, default=0.0,
                     help="p4x #920: weight of the COMPONENT-level existence hinge "
@@ -2875,6 +2881,13 @@ def main() -> int:
     lane_guard_cfg = lane_guard_state = None
     if cfg.lane_guard:
         from tac.optimization import lane_guard as _lane_guard
+        # ddm_lp1 #934: the deadband horizon is a MULTIPLE-COMPARISONS burden and must be
+        # the run's TOTAL gate count, not the elapsed one.  Leaving --lane-guard-ratchet-
+        # horizon at 0 now derives that total from this run's own gate cadence; the old
+        # 0 => "max(mean_gates, gates_seen)" fallback under-priced the burden early and
+        # was MEASURED to produce 3/64 false-positive engagements on the burn-4 series.
+        _rh, _rh_prov = _lane_guard.derive_planned_gate_horizon(cfg.epochs, cfg.gate_every)
+        _ratchet_horizon = int(cfg.lane_guard_ratchet_horizon or _rh)
         lane_guard_cfg = _lane_guard.LaneGuardConfig(
             enabled=True,
             budget_s=(cfg.lane_guard_budget_s or _lane_guard.LANE_BUDGET_S_UNITS),
@@ -2884,7 +2897,7 @@ def main() -> int:
             born_protect_weight=cfg.lane_guard_born_weight,
             margin_floor_weight=cfg.lane_guard_margin_floor_weight,
             budget_ratchet=cfg.lane_guard_ratchet,
-            ratchet_horizon_gates=cfg.lane_guard_ratchet_horizon,
+            ratchet_horizon_gates=_ratchet_horizon,
         ).resolved()
         lane_guard_state = _lane_guard.LaneGuardState(
             lambda_lane=max(0.0, min(cfg.lane_guard_lambda_init,
@@ -2900,6 +2913,10 @@ def main() -> int:
               "budget_ratchet": lane_guard_cfg.budget_ratchet,
               "ratchet_mean_gates": lane_guard_cfg.ratchet_mean_gates,
               "ratchet_horizon_gates": lane_guard_cfg.ratchet_horizon_gates,
+              "ratchet_horizon_provenance": _rh_prov,
+              "ratchet_horizon_source": ("operator --lane-guard-ratchet-horizon"
+                                         if cfg.lane_guard_ratchet_horizon
+                                         else "derived from epochs/gate_every (ddm_lp1 #934)"),
               "eta_provenance": _lane_guard.derive_eta_lambda()[1],
               "note": "lg1 CONSTRAIN-AND-PROTECT; realized-g read from a1 gate (zero new "
                       "scorer passes); score_neutral verdict authority unchanged"})

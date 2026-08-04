@@ -251,6 +251,57 @@ def derive_noise_floor(
     }
 
 
+def derive_planned_gate_horizon(epochs: int, gate_every: int) -> tuple[int, dict[str, Any]]:
+    """The number of a1 gates the run WILL fire, derived from the trainer's own gate
+    predicate ``(epoch+1) % gate_every == 0 or epoch == epochs-1``.
+
+    WHY THIS EXISTS (ddm_lp1 #934, measured — this is a CORRECTION, not a new knob).
+    ``derive_deadband_k`` prices the deadband against the condition *"noise alone must
+    not move the dual by more than one ``lambda_step_cap`` OVER THE HORIZON"*.  The
+    horizon in that condition is the run's TOTAL number of chances for a spurious
+    exceedance — it is a multiple-comparisons burden, and a multiple-comparisons
+    correction must be paid against the number of comparisons the run WILL MAKE, not
+    the number it has made so far.
+
+    The shipped default (``ratchet_horizon_gates=0`` => ``max(mean_gates, len(history))``)
+    used gates ELAPSED, which under-prices that burden at every point before the last
+    gate, giving a too-narrow deadband early in the run.  MEASURED on the real burn-4
+    series (n=64 lane_guard rows, selection_mode=ALL rows in windows 01-03, ep644->945):
+
+        horizon = elapsed (shipped default) : lambda>0 on 3/64, max lambda 0.119376
+        horizon = 64 (the run's true total) : lambda>0 on 0/64, max g -0.000285
+
+    and the same series' rises sit at percentile 0.7 of its own iid-noise null
+    (observed sum-of-rises +0.029133 vs null mean +0.050097, MC n=20000), i.e. burn-4
+    contains LESS give-back than noise alone.  So those 3 engagements were FALSE
+    POSITIVES and the elapsed-horizon default is the mechanism that produced them.
+
+    Fails SAFE: a non-positive or unparsable cadence returns ``N_GATES_TO_ENGAGE_DEFAULT``
+    so the caller still gets a finite, conservative horizon rather than 0.
+    """
+    e, ge = int(epochs), int(gate_every)
+    if e <= 0 or ge <= 0:
+        return N_GATES_TO_ENGAGE_DEFAULT, {
+            "derived": False, "reason": "non-positive epochs or gate_every",
+            "epochs": e, "gate_every": ge, "value": N_GATES_TO_ENGAGE_DEFAULT,
+        }
+    # Exactly the trainer's predicate, counted rather than simulated: one gate per
+    # cadence boundary, plus a final gate on the last epoch when it is not already one.
+    n = e // ge
+    if (e - 1 + 1) % ge != 0:          # last epoch index e-1 => (epoch+1) = e
+        n += 1
+    n = max(1, n)
+    return n, {
+        "derived": True,
+        "value": n,
+        "epochs": e,
+        "gate_every": ge,
+        "predicate": "(epoch+1) % gate_every == 0 or epoch == epochs-1",
+        "rationale": "deadband horizon = the run's TOTAL spurious-exceedance chances "
+                     "(a multiple-comparisons burden), never the elapsed count",
+    }
+
+
 def _std_normal_pdf(x: float) -> float:
     return math.exp(-0.5 * x * x) / math.sqrt(2.0 * math.pi)
 

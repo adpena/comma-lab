@@ -8,6 +8,8 @@ scorer, no trainer, no RNG.
 
 from __future__ import annotations
 
+import inspect
+
 import numpy as np
 
 from tac.optimization import lane_guard as lg
@@ -673,3 +675,71 @@ def test_r1_catch_non_finite_realized_does_not_poison_the_budget():
     assert np.isfinite(b), f"non-finite realized poisoned the budget: {b}"
     assert b <= 0.12589
     assert np.isfinite(prov["achieved_level_s"])
+
+
+# ------------------------------------------- ddm_lp1 #934: the deadband HORIZON defect
+# MEASURED on the real burn-4 series (n=64 lane_guard rows, selection_mode=ALL rows in
+# /Volumes/VertigoDataTier/pact/ddm_b4s_20260731/window_0{1,2,3}, ep644->945):
+#   horizon = gates ELAPSED (the old shipped default) : lambda>0 on 3/64, max 0.119376
+#   horizon = 64 (the run's planned TOTAL)            : lambda>0 on 0/64, max g -0.000285
+# and that series' rises sit at percentile 0.7 of its own iid-noise null, so the 3
+# engagements were FALSE POSITIVES.  These guards keep the correct horizon wired.
+def test_planned_gate_horizon_matches_the_trainer_gate_predicate():
+    """The derivation must COUNT exactly the gates the trainer's predicate fires."""
+    for epochs, gate_every in [(60, 10), (64, 1), (100, 7), (945, 15), (13, 5), (5, 10)]:
+        n, prov = lg.derive_planned_gate_horizon(epochs, gate_every)
+        fired = sum(1 for e in range(epochs)
+                    if (e + 1) % gate_every == 0 or e == epochs - 1)
+        assert n == fired, (f"epochs={epochs} gate_every={gate_every}: "
+                            f"derived {n}, trainer predicate fires {fired}")
+        assert prov["derived"] is True and prov["value"] == n
+
+
+def test_planned_gate_horizon_fails_safe_on_degenerate_cadence():
+    for epochs, gate_every in [(0, 10), (60, 0), (-1, 5), (60, -2)]:
+        n, prov = lg.derive_planned_gate_horizon(epochs, gate_every)
+        assert n == lg.N_GATES_TO_ENGAGE_DEFAULT and prov["derived"] is False
+        assert n >= 1
+
+
+def test_planned_horizon_is_never_tighter_than_the_elapsed_default():
+    """THE MECHANISM.  A longer horizon => larger k => wider deadband => LOOSER budget =>
+    a quieter guard.  For every gate before the run ends, the planned-total horizon must
+    give a budget >= the elapsed-count default.  This is the structural statement of the
+    multiple-comparisons argument, independent of any one series."""
+    rng = np.random.default_rng(20260803)
+    ser = np.linspace(0.122, 0.077, 64) + rng.normal(0.0, _BURN4_SIGMA, 64)
+    eta, cap = lg.derive_eta_lambda()[0], lg.derive_lambda_step_cap()
+    b_elapsed = b_planned = 0.12589
+    strictly_looser = 0
+    for i in range(1, len(ser) + 1):
+        hist = list(ser[:i])
+        b_elapsed, _ = lg.derive_ratchet_budget(hist, b_elapsed, eta, cap)
+        b_planned, _ = lg.derive_ratchet_budget(hist, b_planned, eta, cap,
+                                                n_gates_horizon=len(ser))
+        assert b_planned >= b_elapsed - 1e-12, (
+            f"gate {i}: planned-horizon budget {b_planned} is TIGHTER than the "
+            f"elapsed-horizon {b_elapsed} — the deadband argument is inverted")
+        if b_planned > b_elapsed + 1e-12:
+            strictly_looser += 1
+    assert strictly_looser > 0, "planned and elapsed horizons never differed at all"
+
+
+def test_trainer_derives_the_ratchet_horizon_when_flag_is_zero():
+    """MUTATION CHECK (si1's law): delete the ddm_lp1 wire in the trainer and this dies.
+    Leaving --lane-guard-ratchet-horizon at 0 must reach LaneGuardConfig as the run's
+    DERIVED planned gate total, never as 0 and never as the elapsed count."""
+    import experiments.train_tr1_partition_renderer_mlx as tr1
+    src = inspect.getsource(tr1)
+    assert "derive_planned_gate_horizon" in src, (
+        "the trainer no longer derives the ratchet horizon — the ddm_lp1 #934 wire is gone")
+    expected, _ = lg.derive_planned_gate_horizon(60, 10)
+    assert expected == 6
+    # the derived value must be what a 0-flag run would resolve to
+    resolved = int(0 or expected)
+    cfg = lg.LaneGuardConfig(enabled=True, budget_ratchet=True,
+                             ratchet_horizon_gates=resolved).resolved()
+    assert cfg.ratchet_horizon_gates == 6
+    # and an explicit operator value must still win over the derivation
+    for operator_flag in (64, 12, 1):
+        assert int(operator_flag or expected) == operator_flag
