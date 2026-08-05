@@ -34,9 +34,14 @@ import sys
 import time
 import zipfile
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 
+REPO = Path(__file__).resolve().parents[1]
+for _p in (REPO / "src", REPO):
+    if str(_p) not in sys.path:
+        sys.path.insert(0, str(_p))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from ddm_r7_token_coder import (
     decode_token_codes,
@@ -44,6 +49,7 @@ from ddm_r7_token_coder import (
     factor_mode_delta,
     reconstruct_mode_delta,
 )
+from tac.subset_selection import MODE_PREFIX, MODE_STRATIFIED, Selection, select
 
 POINTER = "0.1910828242 [contest-CPU] UNMOVED"
 LEVELS = 16
@@ -65,14 +71,107 @@ ARCHIVE = ("/Volumes/VertigoDataTier/pact/ddm_pfs1_20260729/d1/eval_root/"
            "submissions/pfs1/archive.zip")
 GT = ("/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz")
 OUTDIR = Path("/Volumes/VertigoDataTier/pact/ddm_gr1_20260730")
+SELECTION_POPULATION = 600
+DEFAULT_SELECTION_SEED = 20260805
+SELECTION_BOOTSTRAP = 2000
+SEG_GOVERNING_TABLE = REPO / "src/tac/tests/fixtures/subset_selection/gt_n600_per_pair_population.json"
 
 
 def _sha(b: bytes) -> str:
     return hashlib.sha256(b).hexdigest()
 
 
+def _sha_path(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
 def rate_term(archive_bytes: int) -> float:
     return 25.0 * archive_bytes / UNCOMPRESSED
+
+
+def _load_seg_governing_table(path: Path = SEG_GOVERNING_TABLE) -> tuple[list[float], dict[str, Any]]:
+    rec = json.loads(path.read_text())
+    if int(rec.get("n_pairs", -1)) != SELECTION_POPULATION:
+        raise ValueError(
+            f"{path} has n_pairs={rec.get('n_pairs')} but GR1 selection population is "
+            f"{SELECTION_POPULATION}"
+        )
+    vals = [float(v) for v in rec["seg_flip_density"]]
+    if len(vals) != SELECTION_POPULATION:
+        raise ValueError(
+            f"{path} seg_flip_density has {len(vals)} entries, expected "
+            f"{SELECTION_POPULATION}"
+        )
+    meta = {
+        "path": str(path),
+        "sha256": _sha_path(path),
+        "quantity": "seg_flip_density",
+        "source_npz": rec.get("source_npz"),
+        "derivation": rec.get("derivation_seg_flip_density"),
+        "population": SELECTION_POPULATION,
+    }
+    return vals, meta
+
+
+def _selector_mode(cli_mode: str) -> str:
+    if cli_mode == "prefix":
+        return MODE_PREFIX
+    if cli_mode == "stratified":
+        return MODE_STRATIFIED
+    raise ValueError(f"unknown --selection-mode {cli_mode!r}")
+
+
+def build_selection_scope(
+    n_pairs: int,
+    selection_mode: str,
+    selection_seed: int | None,
+    *,
+    n_bootstrap: int = SELECTION_BOOTSTRAP,
+) -> tuple[Selection, dict[str, Any]]:
+    governing, table_meta = _load_seg_governing_table()
+    mode = _selector_mode(selection_mode)
+    seed = int(selection_seed) if mode == MODE_STRATIFIED else None
+    sel = select(
+        int(n_pairs),
+        SELECTION_POPULATION,
+        mode=mode,
+        seed=seed,
+        governing=governing,
+        governing_name="seg_flip_density",
+        n_bootstrap=int(n_bootstrap),
+    )
+    prov = sel.provenance()
+    prov["indices"] = list(sel.indices)
+    rec = {
+        "schema": "ddm_gr1.selection_scope.v1",
+        "score_claim": False,
+        "scorer_forwards_run": 0,
+        "selection_args": {
+            "selection_mode": selection_mode,
+            "selection_seed": seed,
+            "n_pairs": int(n_pairs),
+        },
+        "selection": prov,
+        "summary": sel.summary(),
+        "governing_table": table_meta,
+        "scope_proof": {
+            "default_prefix_preserved": bool(mode == MODE_PREFIX),
+            "selection_is_explicit": True,
+            "population_match_checked": bool(sel.ratios),
+            "population_matched": sel.population_matched,
+            "axis": "seg",
+        },
+    }
+    return sel, rec
+
+
+def write_selection_receipt(outdir: Path, selection_mode: str, selection_rec: dict[str, Any]) -> Path:
+    n_pairs = int(selection_rec["selection"]["n"])
+    seed = selection_rec["selection_args"]["selection_seed"]
+    seed_tag = "noseed" if seed is None else f"seed{seed}"
+    out = outdir / f"gr1_selection_{selection_mode}_n{n_pairs}_{seed_tag}.json"
+    out.write_text(json.dumps(selection_rec, indent=1) + "\n")
+    return out
 
 
 # ---------------------------------------------------------------- coarsening
@@ -170,7 +269,7 @@ def sensitivity_map(model, cfg, gt_cache: str) -> tuple[np.ndarray, float]:
 
 
 def realized_dseg(model, cfg, codes: np.ndarray, gt_cache: str,
-                  n_pairs: int, chunk: int = 120) -> tuple[float, float]:
+                  pair_indices, chunk: int = 120) -> tuple[float, float]:
     """Inject coarsened codes -> render -> frozen CPU SegNet argmax vs GT -> mean d_seg."""
     import mlx.core as mx
 
@@ -178,6 +277,7 @@ def realized_dseg(model, cfg, codes: np.ndarray, gt_cache: str,
     from tac.boundary_math.power_diagram_witness import open_stored_npy_memmap
     from tac.boundary_math.seg_core import load_real_segnet
 
+    indices = tuple(int(i) for i in pair_indices)
     lstars = open_stored_npy_memmap(Path(gt_cache), "lstars")
     seg_cpu = load_real_segnet("cpu")
     base_arr = np.asarray(model.tokens_base, dtype=np.float32)
@@ -188,10 +288,11 @@ def realized_dseg(model, cfg, codes: np.ndarray, gt_cache: str,
     mx.eval(model.parameters())
     dsegs: list[float] = []
     t0 = time.monotonic()
-    for c0 in range(0, n_pairs, chunk):
+    for c0 in range(0, len(indices), chunk):
         cams, gts = [], []
+        chunk_indices = indices[c0:c0 + chunk]
         with mx.stream(mx.cpu):
-            for i in range(c0, min(c0 + chunk, n_pairs)):
+            for i in chunk_indices:
                 rgb = model.render_frame(i)
                 mx.eval(rgb)
                 cams.append(_torch_R_to_camera_uint8(np.asarray(rgb, dtype=np.float32)[0]))
@@ -285,7 +386,7 @@ def predict_dseg_flips(g_abs: np.ndarray, signed: np.ndarray, step_map: np.ndarr
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--mode", choices=["verify", "sweep", "confirm"], default="sweep")
+    ap.add_argument("--mode", choices=["selection", "verify", "sweep", "confirm"], default="sweep")
     ap.add_argument("--family", choices=["token", "cell"], default="token")
     ap.add_argument("--pairs", type=int, default=48)
     ap.add_argument("--chunk", type=int, default=120)
@@ -294,10 +395,25 @@ def main() -> int:
                     help="confirm: also write a valid byte-closed archive for hand-off")
     ap.add_argument("--gt-cache", default=GT)
     ap.add_argument("--outdir", type=Path, default=OUTDIR)
+    ap.add_argument("--selection-mode", choices=["prefix", "stratified"], default="prefix",
+                    help="prefix preserves historical video-order [:n]; stratified uses the "
+                    "canonical seeded block selector and records population-ratio provenance")
+    ap.add_argument("--selection-seed", type=int, default=DEFAULT_SELECTION_SEED,
+                    help="seed used only with --selection-mode=stratified")
     args = ap.parse_args()
     if args.chunk > 120:
         raise SystemExit("chunk must be <= 120 (charter law)")
     args.outdir.mkdir(parents=True, exist_ok=True)
+
+    selection, selection_rec = build_selection_scope(
+        args.pairs,
+        args.selection_mode,
+        args.selection_seed,
+    )
+    selection_path = write_selection_receipt(args.outdir, args.selection_mode, selection_rec)
+    if args.mode == "selection":
+        print(json.dumps({"selection_receipt": str(selection_path), **selection_rec}, indent=1), flush=True)
+        return 0
 
     frame = zipfile.ZipFile(ARCHIVE).read("state/tokens.dr7t")
     codes = np.asarray(decode_token_codes(frame), dtype=np.uint8)
@@ -324,10 +440,11 @@ def main() -> int:
 
     if args.mode == "verify":
         # baseline: inject the ARCHIVE codes and confirm d_seg ~= pfs1 D1 (0.00389).
-        d, wall = realized_dseg(model, cfg, codes, args.gt_cache, args.pairs, args.chunk)
+        d, wall = realized_dseg(model, cfg, codes, args.gt_cache, selection.indices, args.chunk)
         rec = {"schema": "ddm_gr1_verify.v1", "pointer": POINTER, "score_claim": False,
                "n_pairs": args.pairs, "baseline_realized_dseg": d,
-               "ref_evaluate_py_dseg": REF_DSEG, "delta": d - REF_DSEG, "wall_s": wall}
+               "ref_evaluate_py_dseg": REF_DSEG, "delta": d - REF_DSEG, "wall_s": wall,
+               "selection": selection_rec}
         print(json.dumps(rec, indent=1), flush=True)
         (args.outdir / f"gr1_verify_n{args.pairs}.json").write_text(json.dumps(rec, indent=1))
         return 0
@@ -341,7 +458,7 @@ def main() -> int:
             sm = allocs[args.candidate]
             cand_codes = residual_to_codes(base, coarsen_alloc(signed, sm))
         cand_bytes = smevr_bytes(cand_codes)
-        d, wall = realized_dseg(model, cfg, cand_codes, args.gt_cache, args.pairs, args.chunk)
+        d, wall = realized_dseg(model, cfg, cand_codes, args.gt_cache, selection.indices, args.chunk)
         arch_b = ARCHIVE_FLOOR + cand_bytes
         rec = {"schema": "ddm_gr1_confirm.v1", "pointer": POINTER, "score_claim": False,
                "candidate": args.candidate, "n_pairs": args.pairs,
@@ -349,7 +466,7 @@ def main() -> int:
                "realized_dseg": d, "rate_term": rate_term(arch_b),
                "seg_term": 100 * d, "seg_plus_rate": 100 * d + rate_term(arch_b),
                "ref_seg_plus_rate": 100 * REF_DSEG + rate_term(REF_ARCHIVE_BYTES),
-               "wall_s": wall}
+               "wall_s": wall, "selection": selection_rec}
         rec["dominates_ref_segrate"] = bool(rec["seg_plus_rate"] < rec["ref_seg_plus_rate"])
         if args.byte_close and args.candidate != "ref":
             out_zip = args.outdir / f"gr1_{args.candidate}_archive.zip"
@@ -380,7 +497,7 @@ def main() -> int:
           f"family={args.family}", flush=True)
     # baseline realized d_seg at this n_pairs (apples-to-apples ranking anchor).
     base_dseg, base_wall = realized_dseg(model, cfg, codes, args.gt_cache,
-                                         args.pairs, args.chunk)
+                                         selection.indices, args.chunk)
     print(json.dumps({"baseline": True, f"dseg_n{args.pairs}": round(base_dseg, 7),
                       "wall_s": base_wall}), flush=True)
     allocs = build_allocations(g_abs, args.family)
@@ -394,7 +511,7 @@ def main() -> int:
         arch_b = ARCHIVE_FLOOR + cand_bytes
         n_coarsened = int((sm != 1).sum())
         d_real, wall = realized_dseg(model, cfg, cand_codes, args.gt_cache,
-                                     args.pairs, args.chunk)
+                                     selection.indices, args.chunk)
         row = {
             "name": name, "n_coarsened": n_coarsened,
             "tokens_bytes": cand_bytes, "tokens_saved": REF_TOKENS_BYTES - cand_bytes,
@@ -415,11 +532,13 @@ def main() -> int:
                           f"dseg_n{args.pairs}": round(d_real, 6),
                           "segrate": round(100 * d_real + rate_term(arch_b), 4),
                           "B/flip": row["b_per_flip_vs_base"]}), flush=True)
-        _dump_sweep(args.outdir, meta, rows, args.pairs, map_wall, base_dseg, args.family)
+        _dump_sweep(args.outdir, meta, rows, args.pairs, map_wall, base_dseg,
+                    args.family, selection_rec)
     return 0
 
 
-def _dump_sweep(outdir: Path, meta, rows, pairs, map_wall, base_dseg, family="token") -> None:
+def _dump_sweep(outdir: Path, meta, rows, pairs, map_wall, base_dseg,
+                family="token", selection_rec: dict[str, Any] | None = None) -> None:
     ref_segrate = 100 * REF_DSEG + rate_term(REF_ARCHIVE_BYTES)
     rec = {
         "schema": "ddm_gr1_granularity_rerace.v1", "pointer": POINTER,
@@ -433,6 +552,7 @@ def _dump_sweep(outdir: Path, meta, rows, pairs, map_wall, base_dseg, family="to
         "water_B_per_flip": round(WATER_B_PER_FLIP, 4),
         "family": family,
         "sensitivity_map_wall_s": map_wall, "n_pairs_realized": pairs,
+        "selection": selection_rec,
         "rows": rows,
     }
     (outdir / f"gr1_sweep_{family}_n{pairs}_receipt.json").write_text(

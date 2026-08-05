@@ -1,0 +1,266 @@
+{
+ "schema": "ddm_ub1.pose_family_923_fire_orders.v1",
+ "score_claim": false,
+ "scorer_runs_by_ub1": 0,
+ "selection": {
+  "schema": "pact.subset_selection.v1",
+  "pair_selection": "stratified_blocks",
+  "n": 120,
+  "population": 600,
+  "seed": 20260805,
+  "params": {
+   "block_count": 10
+  },
+  "indices": [
+   8,
+   10,
+   18,
+   28,
+   32,
+   34,
+   45,
+   46,
+   47,
+   48,
+   52,
+   57,
+   64,
+   71,
+   83,
+   85,
+   88,
+   96,
+   99,
+   104,
+   105,
+   109,
+   111,
+   114,
+   121,
+   123,
+   129,
+   140,
+   141,
+   151,
+   156,
+   162,
+   163,
+   173,
+   176,
+   178,
+   182,
+   185,
+   196,
+   204,
+   209,
+   214,
+   216,
+   217,
+   222,
+   228,
+   231,
+   234,
+   240,
+   241,
+   251,
+   268,
+   269,
+   272,
+   276,
+   278,
+   279,
+   290,
+   293,
+   294,
+   300,
+   302,
+   306,
+   313,
+   315,
+   326,
+   332,
+   339,
+   342,
+   348,
+   358,
+   359,
+   360,
+   371,
+   374,
+   376,
+   387,
+   390,
+   396,
+   402,
+   406,
+   409,
+   414,
+   417,
+   420,
+   422,
+   430,
+   431,
+   435,
+   437,
+   456,
+   463,
+   464,
+   469,
+   477,
+   478,
+   480,
+   485,
+   495,
+   503,
+   506,
+   508,
+   510,
+   516,
+   523,
+   526,
+   527,
+   535,
+   541,
+   543,
+   547,
+   559,
+   563,
+   565,
+   571,
+   574,
+   581,
+   582,
+   588,
+   599
+  ],
+  "representative_mode": true,
+  "population_matched": true,
+  "governing_ratios": [
+   {
+    "name": "d_pose_shipped_f16",
+    "subset_mean": 0.16042673247414185,
+    "population_mean": 0.15950891917937635,
+    "ratio": 1.0057539935665503,
+    "n_subset": 120,
+    "n_population": 600,
+    "verdict": "MATCHED",
+    "null_p05": 0.5357086950651611,
+    "null_p95": 1.5802082483144484,
+    "n_bootstrap": 2000,
+    "reason": ""
+   }
+  ]
+ },
+ "selection_path": "/Users/adpena/Projects/pact/.omx/research/ddm_na3_20260805/stratified_pose_selection_923.json",
+ "selection_sha256": "6f7ba6dde77500f09923ecfa7c85a7b977bda1e9f3332e416f6fe05c7bca06f7",
+ "gt_cache": {
+  "path": "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+  "exists": true,
+  "bytes": 5078017610,
+  "sha256": null,
+  "sha256_status": "skipped_large_input_over_64000000_bytes"
+ },
+ "checkpoint": {
+  "path": "/Users/adpena/Projects/pact/experiments/results/levelset_n600_crucible_v6_run1_20260708T095730Z/levelset_witness_ema_mlx.npz",
+  "sha256": "a94ec6bd171da3fcaeccec92a0a6258788c791e62609e7facae406379a97a124",
+  "xi_effective_available": true,
+  "self_orient_overrides": {
+   "freq_across": 32.0,
+   "freq_along": 4.0,
+   "tau": 4.0,
+   "iters": 4
+  }
+ },
+ "source_receipts": [
+  {
+   "item": "pose_l2_truedepth",
+   "path": ".omx/research/pose_l2_truedepth_probe_measured_20260708.md",
+   "exists": true,
+   "sha256": "39b84b28b3eb47debac9dc199e13dd260d156eebedb596d8bee60bc545d5cb12"
+  },
+  {
+   "item": "pose_carrier_arms",
+   "path": ".omx/research/pose_carrier_arms_measured_20260708.md",
+   "exists": true,
+   "sha256": "d2ebf07e473c14be738653e32175dad72e5a1baef7bdde23a5fc5072855e8821"
+  },
+  {
+   "item": "pose_mladder_depthwarp",
+   "path": ".omx/research/pose_mladder_depthwarp_measured_20260708.md",
+   "exists": true,
+   "sha256": "259bf0bd94c1e154e0b70134732450e10da6582e131902188fba41a63fda0706"
+  },
+  {
+   "item": "pose_stratified_texture",
+   "path": ".omx/research/pose_stratified_texture_probe_measured_20260708.md",
+   "exists": true,
+   "sha256": "026dbcf5aa198ec30663d14ee0a59d21dee0e3df794298db50ff85ef004cd6e8"
+  }
+ ],
+ "lost_artifacts_searched": {
+  "pose_l2_truedepth": [
+   "pose_l2_truedepth_probe.py",
+   "l2_n24.json",
+   "l2_n8.json",
+   "l2_depths_n24.npz"
+  ],
+  "pose_carrier_arms": [
+   "pose_mladder.py",
+   "renders_n24.npz"
+  ],
+  "pose_mladder_depthwarp": [
+   "pose_mladder.py",
+   "a2_n24.jsonl",
+   "a2plus_n8.jsonl",
+   "renders_n24.npz"
+  ],
+  "pose_stratified_texture": [
+   "pose_stratified_texture_probe.py",
+   "pose_aperture_probe.py",
+   "a1t_grid_n24.json",
+   "scale_sweep_n24.json",
+   "renders_n24.npz"
+  ]
+ },
+ "fire_orders": [
+  {
+   "id": "gr1_stratified_n48_selector_then_rerace",
+   "status": "READY_SELECTOR_BUILT_NOT_RUN",
+   "exact_argv": ".venv/bin/python experiments/ddm_gr1_granularity_rerace.py --mode sweep --pairs 48 --selection-mode stratified --selection-seed 20260805 --outdir /Volumes/VertigoDataTier/pact/ddm_gr1_20260730",
+   "notes": "Scorer-consuming command; UB1 only builds selector metadata."
+  },
+  {
+   "id": "pose923_oracle_render_cache_n120",
+   "status": "READY_CACHE_BUILD_NOT_RUN",
+   "exact_argv": ".venv/bin/python experiments/ddm_ub1_pose_family_923_harness.py build-render-cache --selection /Users/adpena/Projects/pact/.omx/research/ddm_na3_20260805/stratified_pose_selection_923.json --checkpoint /Users/adpena/Projects/pact/experiments/results/levelset_n600_crucible_v6_run1_20260708T095730Z/levelset_witness_ema_mlx.npz --out-cache /Users/adpena/Projects/pact/.omx/research/ddm_ub1_20260805/pose923_run1_stratified_n120_oracle_render_cache.npz",
+   "notes": "Scorer-free but expensive; builds selected uint8 camera frames through the byte-close oracle."
+  },
+  {
+   "id": "pose_carrier_arms_stratified_n120_retest",
+   "status": "READY_REBUILT_FROM_RECEIPT_NOT_RUN",
+   "exact_argv": ".venv/bin/python experiments/ddm_ub1_pose_family_923_harness.py score --selection /Users/adpena/Projects/pact/.omx/research/ddm_na3_20260805/stratified_pose_selection_923.json --gt-cache /Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz --render-cache /Users/adpena/Projects/pact/.omx/research/ddm_ub1_20260805/pose923_run1_stratified_n120_oracle_render_cache.npz --item pose_carrier_arms",
+   "source_path": ".omx/research/pose_carrier_arms_measured_20260708.md"
+  },
+  {
+   "id": "pose_mladder_depthwarp_a0_stratified_n120_retest",
+   "status": "PARTIAL_READY_A0_REBUILT_FROM_RECEIPT_NOT_RUN",
+   "exact_argv": ".venv/bin/python experiments/ddm_ub1_pose_family_923_harness.py score --selection /Users/adpena/Projects/pact/.omx/research/ddm_na3_20260805/stratified_pose_selection_923.json --gt-cache /Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz --render-cache /Users/adpena/Projects/pact/.omx/research/ddm_ub1_20260805/pose923_run1_stratified_n120_oracle_render_cache.npz --item pose_mladder_depthwarp --rungs A0",
+   "source_path": ".omx/research/pose_mladder_depthwarp_measured_20260708.md",
+   "bounded_gap": "A2/A2+ solve logs and original solver harness were not recovered in searched scope."
+  },
+  {
+   "id": "pose_l2_truedepth_stratified_n120_retest",
+   "status": "BLOCKED_DEPTH_CACHE_ABSENT",
+   "exact_argv": ".venv/bin/python experiments/ddm_ub1_pose_family_923_harness.py score --selection /Users/adpena/Projects/pact/.omx/research/ddm_na3_20260805/stratified_pose_selection_923.json --gt-cache /Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz --render-cache /Users/adpena/Projects/pact/.omx/research/ddm_ub1_20260805/pose923_run1_stratified_n120_oracle_render_cache.npz --item pose_l2_truedepth --depth-cache <RECOVERED_L2_DEPTHS_N600_NPZ>",
+   "source_path": ".omx/research/pose_l2_truedepth_probe_measured_20260708.md",
+   "bounded_gap": "l2_depths_n24.npz and true-depth flow harness were not recovered in searched scope."
+  },
+  {
+   "id": "pose_stratified_texture_stratified_n120_retest",
+   "status": "BLOCKED_TEXTURE_GRID_ABSENT",
+   "exact_argv": ".venv/bin/python experiments/ddm_ub1_pose_family_923_harness.py score --selection /Users/adpena/Projects/pact/.omx/research/ddm_na3_20260805/stratified_pose_selection_923.json --gt-cache /Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz --render-cache /Users/adpena/Projects/pact/.omx/research/ddm_ub1_20260805/pose923_run1_stratified_n120_oracle_render_cache.npz --item pose_stratified_texture --texture-grid <RECOVERED_A1T_GRID_JSON>",
+   "source_path": ".omx/research/pose_stratified_texture_probe_measured_20260708.md",
+   "bounded_gap": "a1t_grid_n24.json, scale_sweep_n24.json, and texture harness were not recovered in searched scope."
+  }
+ ]
+}
