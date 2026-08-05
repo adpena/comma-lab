@@ -431,3 +431,35 @@ not reasoned; scored quantities land in the receipt.
 ROUND 1 = CLEAN PASS (0 findings). Counter 1/3 for cycle 2. Reviewer-vs-author: MAIN authored
 the probe variant + plateau policy, so rounds 2+ go to the fresh-eyes arm (rr1 respawn) before
 the counter can advance on those artifacts. The jd4 fire remains gated on the review clearing.
+
+## N600 BOTH-BASES ENDPOINT RECEIPT + ADJUDICATION (MAIN, 2026-08-05 ~16:0xZ)
+
+Probe r2 COMPLETE (rc=0, 1293s, pid 52792; receipt
+/Volumes/VertigoDataTier/pact/ddm_jd3_20260805/jd3_endpoint_n600_both_bases_verdict.json,
+status=complete). Endpoint ckpt = the ep1405 snapshot (sha 2c3bd24455…), n600, [macOS-CPU/MLX
+frozen-scorer advisory], score_claim=false. Both bases on the SAME checkpoint file:
+
+| basis | d_seg (n600) | d_pose (n600) | √(10·d_pose) | joint partial-S (seg+pose) |
+|---|---|---|---|---|
+| LIVE | 0.0071503 | 0.57409 | 2.3960 | 3.1111 |
+| EMA (smoke-decay U=1200 shadow) | 0.0057480 | 0.12885 | 1.1351 | 1.7099 |
+
+**THE MEASURED FACT: the EMA basis beats LIVE on BOTH axes — seg −19.6%, pose 4.46× — worth
+−1.401 joint partial-S at this endpoint.** The live weights under joint pose descent are NOISY
+(per-pair pose max 7.654 live vs 6.179 EMA); the shadow's averaging, not its lag, dominates at
+this operating point. Note the R4-relabeled smoke decay (τ≈2 ep) is the basis that produced
+this: a SHORT-horizon EMA both tracked the 151.8→~0.1 pose collapse AND still suppressed 4.5×
+of pose noise. Scope note: the n36 gd1 designed-gate set read 0.004801 (EMA) vs population
+0.005748 — the designed set reads 0.835× of n600; cite per-scope, never interchangeably.
+Rate context: counted bytes at window end 301,761 → rate term 0.2009; advisory composed
+arithmetic (NOT byte-closed) ≈ 1.911.
+
+### Adjudication under the PLATEAU POLICY (Case 0 first)
+
+Neither axis is plateaued: seg gate still descending at the endpoint (−4.28e-5/ep,
+COUPLED_DESCENT, 0 rollbacks) and pose needs ~86× more descent (0.1289 → ~1.5e-3 for the ≤0.12
+contribution target). No Case A/B/C fires. **VERDICT: CONTINUE — fire the sealed jd4 ticket
+(51c64222…) once review cycle 2 clears.** The operator steer "will need more descent" is
+confirmed by the numbers. Watch item for the jd4 window: slow-EMA warmup ends ~ep1466 and
+τ=30 ep — the endpoint at ep1526 gives the shadow only ~2τ of maturity past warmup; gates read
+LIVE throughout (policy), and the endpoint probe must again measure BOTH bases.
