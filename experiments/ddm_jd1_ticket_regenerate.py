@@ -38,6 +38,11 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--winner-dir", type=Path, required=True,
                     help="the adjudicated TP1 winner run dir (full_birth_lane_on_w4 | _w4m)")
+    ap.add_argument("--winner-ckpt", type=Path, default=None,
+                    help="override the resume checkpoint (e.g. an INTERIOR-min intra ckpt "
+                         "when the adjudicated best state is not the window endpoint — "
+                         "never-weaker-state m40); default = <winner-dir>/checkpoints/"
+                         "stage_seg_trunk_tau_final.npz")
     ap.add_argument("--out-ticket", type=Path, default=None)
     args = ap.parse_args()
 
@@ -75,10 +80,10 @@ def main() -> int:
             f"!= sealed {sealed_decay!r} — the sealed decay law is not what this script "
             "reconstructed; re-derive by hand, do not fire.")
 
-    # Winner endpoint.
-    winner_ckpt = args.winner_dir / "checkpoints" / "stage_seg_trunk_tau_final.npz"
+    # Winner state (endpoint by default; --winner-ckpt overrides for interior-min states).
+    winner_ckpt = args.winner_ckpt or (args.winner_dir / "checkpoints" / "stage_seg_trunk_tau_final.npz")
     if not winner_ckpt.exists():
-        raise SystemExit(f"winner endpoint checkpoint missing: {winner_ckpt}")
+        raise SystemExit(f"winner checkpoint missing: {winner_ckpt}")
     zw = np.load(winner_ckpt, allow_pickle=False)
     win_ep = int(zw["meta::epoch"][0])
 
@@ -89,6 +94,17 @@ def main() -> int:
     put("--ema-decay", repr(new_decay))
     put("--out-dir", out_dir)
 
+    # SEG-HOLD FLOOR CALIBRATION CURE (recursive pass 2026-08-05, MEASURED defect):
+    # the sealed floor source `checkpoint_tail_ep_loss` latches the PARENT tail ep_loss,
+    # but the parent arm may run a DIFFERENT loss form than the child (w4m margin-ON tail
+    # ep_loss 1.598 vs margin-OFF 0.480 at MATCHED d_seg ~0.0039 => the margin weighting
+    # inflates the loss SCALE 3.33x without changing quality). A cross-form floor is ~3.3x
+    # too loose: pose descent could triple seg before the hinge resists. Cure (no invented
+    # constants): force ONE seg-only calibration epoch (start_epoch = resume+2) and latch
+    # the floor from the child's OWN measured seg-only epoch loss under ITS OWN loss form.
+    put("--jd1-pose-finish-start-epoch", str(win_ep + 2))
+    put("--jd1-seg-hold-floor-source", "last_pre_pose_epoch_loss")
+
     regen = dict(t)
     regen["argv"] = argv
     regen["child_resume_from"] = str(winner_ckpt)
@@ -96,6 +112,8 @@ def main() -> int:
     regen["regenerated_from"] = {
         "sealed_ticket_hash": t.get("ticket_hash"),
         "winner_dir": str(args.winner_dir), "winner_epoch": win_ep,
+        "winner_ckpt": str(winner_ckpt),
+        "winner_ckpt_is_override": args.winner_ckpt is not None,
         "old_resume_epoch": old_ep, "window_epochs": window,
         "ema_decay_rederivation": {
             "law": "decay derived from PARENT-CHAIN accumulated updates at the resume "
@@ -104,6 +122,16 @@ def main() -> int:
                    "epoch before applying the same law to the winner",
             "sealed_value_reproduced": sealed_decay, "sealed_check": check,
             "new_value": new_decay, "provenance": decay_prov,
+        },
+        "seg_hold_floor_calibration_cure": {
+            "defect": "cross-form floor scale: parent margin-ON tail ep_loss 1.598 vs "
+                      "margin-OFF 0.480 at matched d_seg ~0.0039 (3.33x) — sealed "
+                      "checkpoint_tail_ep_loss floor would be ~3.3x too loose for a "
+                      "margin-OFF child (MEASURED, recursive pass 2026-08-05)",
+            "cure": "one seg-only calibration epoch (start_epoch=resume+2) + floor from "
+                    "last_pre_pose_epoch_loss (child's OWN loss form, no invented constants)",
+            "flags_changed_from_sealed": ["--jd1-pose-finish-start-epoch",
+                                          "--jd1-seg-hold-floor-source"],
         },
         "steer": "seg-uncapped-pose-proper-time-order-20260805 (operator 2026-08-05)",
     }
