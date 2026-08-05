@@ -3839,6 +3839,11 @@ def preflight_all(
         # unless they emit a typed stop/convergence receipt. WARN-ONLY while
         # the legacy backlog is triaged.
         check_no_silent_cap_defaults(strict=False, verbose=verbose)
+        # ddm_ss1 / #875 follow-on (2026-08-05): keep subset-default verdict
+        # emitters visible unless they carry n, selection mode, and subset/
+        # population or axis-bias scope fields. WARN-ONLY while the legacy
+        # backlog is triaged.
+        check_subset_default_scope_fields(strict=False, verbose=verbose)
         # 2026-05-09 Track 4 bug-class fix (#123): weight-domain saliency
         # proxies such as mean(theta^2) are forbidden on score-gradient
         # substrates unless the file exposes the canonical score-gradient
@@ -90146,6 +90151,61 @@ def check_no_silent_cap_defaults(
         raise PreflightError(
             "check_no_silent_cap_defaults found "
             f"{len(violations)} silent cap default site(s) and "
+            f"{len(parse_errors)} parse error(s):\n  "
+            + "\n  ".join((violations + parse_errors)[:20])
+        )
+    return violations + parse_errors
+
+
+def check_subset_default_scope_fields(
+    *,
+    repo_root: Path | str | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Warn on subset-default verdict emitters that omit subset scope fields."""
+
+    root = Path(repo_root or REPO_ROOT).resolve()
+    roots = [root / "experiments", root / "tools", root / "src" / "tac"]
+    try:
+        from tools.check_subset_default_scope_fields import scan_subset_default_scope_fields
+
+        report = scan_subset_default_scope_fields(roots, include_tests=False)
+    except Exception as exc:
+        msg = f"check_subset_default_scope_fields: unable to scan subset defaults: {exc}"
+        if strict:
+            raise PreflightError(msg) from exc
+        if verbose:
+            print(f"  [subset-default-scope-fields] {msg}")
+        return [msg]
+
+    violations = [
+        (
+            f"{site['path']}:{site['line']}: subset default {site['hint']} "
+            "emits a verdict/receipt without n + selection_mode + "
+            "subset/population or axis-bias scope fields"
+        )
+        for site in report["sites"]
+        if site["status"] == "silent_verdict_subset_default"
+    ]
+    parse_errors = [
+        f"{item['path']}: unable to AST-audit subset defaults: {item['error']}"
+        for item in report.get("parse_errors", [])
+    ]
+
+    if verbose:
+        print(
+            "  [subset-default-scope-fields] "
+            f"{len(violations)} silent verdict site(s); "
+            f"scanned {report['files_scanned']} file(s), "
+            f"matched files {report['files_matched']}, "
+            f"subset sites {report['subset_default_sites']}, "
+            f"parse errors {len(parse_errors)}"
+        )
+    if strict and (violations or parse_errors):
+        raise PreflightError(
+            "check_subset_default_scope_fields found "
+            f"{len(violations)} silent subset-default verdict site(s) and "
             f"{len(parse_errors)} parse error(s):\n  "
             + "\n  ".join((violations + parse_errors)[:20])
         )
