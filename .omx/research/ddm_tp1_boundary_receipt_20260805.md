@@ -618,3 +618,63 @@ convenience (an existing smoke budget) rather than DERIVED from the treatment's 
 constant — window length joins decay/floor/hold on the cross-regime derive-at-scope list (m: 
 cross-regime-constant-transfer genus, instance #5: A/B WINDOW LENGTH must be derived from the
 treatment's measured break-even horizon, never inherited from the vehicle's smoke budget).
+
+## JD4 ENDPOINT FULL-TELEMETRY HARVEST (2026-08-05, operator-directed "audit and harvest and interpret ALL incoming signal") — MAIN
+
+**Census**: 235 telemetry rows, 19 event types; prior reads covered only a1_gate + jd1_live_basis_gate.
+Window ep1406→1526, rc=0, final ckpt preserved. Axis for everything below:
+[macOS-CPU frozen-scorer advisory, training-vehicle semantics], score_claim=false.
+
+### H1 — POSE IS A CAP-STOP, NOT A PLATEAU (the decisive finding; caps-genus applied)
+Pose term reconstructed as `ep_loss − itemized{seg,rate,delta_sparsity}` (25 joined epochs):
+0.51597@ep1409 → 0.37236@ep1525 (−27.8%), minimum AT the final epoch, endpoint slope
+−0.0012562/ep vs window-average −0.001238/ep (**ratio 1.01 — zero flattening**). The epoch budget
+stopped pose descent, not convergence. CROSS-VALIDATED by the n600 probe ema row: d_pose
+0.128853→0.090731 (−29.6%). Case-A (d_pose ≤ 0.00144) is 63× away — OUT.
+
+### H2 — SEG IS GENUINELY EXHAUSTED (policy channel)
+LIVE basis_gate: min 0.0049040@ep1504, +3.99e-6/ep ascending since (last-8). EMA channel −2.79e-6/ep
+residual = shadow lag. Seg LOSS term: min 0.397267 → last 0.408251, last-6 slope +0.0015/row RISING.
+Flip decomposition at the end: toward≈away (ep1524: 4143 toward vs 4489 away) — churn, no net progress.
+param_delta_rms halved (0.0219→0.0116).
+
+### H3 — FIVE realization-gap alarms, not one (corrects MAIN's pre-compaction "single transient ep1424")
+A1_REALIZATION_GAP_ALARM at ep1424, 1469, 1479, 1489, 1499 (census: 12 COUPLED_DESCENT / 7 FLAT /
+5 ALARM / 1 FIRST_GATE). Back half alternated FLAT↔ALARM — smooth loss improving while realized d_seg
+did not follow. Stale-headline instance #7 of 08-05; corrected here at source.
+
+### H4 — PER-CLASS: gains on the Road hub, erosion on Undriv+MyCar
+(36-gate EMA sample) Road −0.000538 · Lane −0.000288 · Movable −0.000235 (minima late, g18-21) vs
+Undriv +0.000151 (min at g6, then rose — continues the burn-4 Undriv-erosion watch) · MyCar +0.000089
+(eroded from window start). Erosion cost ≈ 0.024 S vs pose gain ≈ 0.18 S — 7.5× favorable exchange.
+
+### H5 — LANE TOPOLOGY: the dash long-tail is UNMOVED
+Last gate: Lane betti0 GT 985 vs realized 614; **487 GT Lane components still ERASED** (Road 6,
+Movable 17). This window did not touch the lane-dash erasure deficit.
+
+### H6 — RATE in-window: tokens 298,071→291,500 (−6,571 B, SMEVR selected; zlib alternative ~514K
+dominated). total_counted 301,571→295,000. Loss rate term 0.1571→0.1532, pinned at end.
+
+### H7 — lane_guard: λ_Lane 0.0 entire window, ratchet DELIBERATELY disabled (#934 false-positive
+finding); g_s_units improving −0.0107→−0.0394 (lane_s 0.115→0.086); inertness alarm firing from
+~ep1469 = the alarm channel works, inertness expected-by-design while disabled.
+
+### H8 — TELEMETRY PORT GAP (two-landing candidate, next trainer-touching landing)
+telemetry_v9_port declares loss_term_keys=[seg, rate, delta_sparsity] — the POSE term (this stage's
+headline) is invisible to term-level telemetry and to gate rows; the in-window pose trajectory had to
+be reconstructed by subtraction. FIX: declare pose in loss_term_keys when jd1_pose_finish is active.
+
+### H9 — ENDPOINT COMPOSED ARITHMETIC (ema basis, probe partial; live basis pending)
+seg 100×0.0052305=0.52305 + pose √(10×0.090731)=0.9525 + rate 25×295,000/37,545,489=0.19643
+→ **S_vehicle ≈ 1.672** vs ep1405-equivalent ≈ 1.911: window bought ≈ **−0.239 S** (advisory,
+training-vehicle). NOTE: this is the TR1 joint-descent lineage (the pose-carrying-base program,
+#889/#934/#827 consumer), NOT the shipping composition (qo1 0.7539807).
+
+### H10 — ADJUDICATION SHAPE (pre-registered before live basis lands)
+Seg exhausted + pose in full-rate descent at the cap ⇒ typed exit = **Case-0-ON-POSE: pose-dominant
+CONTINUATION window** (regenerate jd5 ticket from ep1526; seg-hold active, floor 0.4771 vs seg term
+0.408 comfortable). Expected value ≈ −0.18 S/window at current pose rate — DOMINATES all three
+boundary A/B candidates on expected |ΔS|; single-variable discipline: no stacked treatment on the
+continuation; dy2 tail-average anchors at a plateau, pose has none yet → A/B deferred to the next
+plateau boundary. Custody (gc20 rank-3) proceeds in parallel — endpoint ckpts preserved, continuation
+resumes without destroying them.
