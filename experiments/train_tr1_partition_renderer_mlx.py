@@ -76,7 +76,7 @@ import sys
 import time
 import zipfile
 import zlib
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
@@ -2846,6 +2846,11 @@ def build_argparser() -> argparse.ArgumentParser:
                     help="JD3 observability. on additionally logs a live-weight realized "
                          "d_seg row at each gate while leaving the EMA gate row/checkpoint "
                          "tail unchanged.")
+    ap.add_argument("--jd1-force-ema-reanchor-on-resume", action="store_true",
+                    help="JD4 continuation guard. Default off preserves legacy resume bytes; "
+                         "when set on a JD1 window resume, ignore a carried "
+                         "stage_ema_reanchored latch and re-derive the stage EMA decay from "
+                         "the new window geometry.")
     ap.add_argument("--token-temporal-mode", default="shared_base",
                     choices=("shared_base", "independent"),
                     help="shared_base = identity-xi advection (Einstein d_cov/d_gauge force)")
@@ -3157,6 +3162,55 @@ def derive_jd1_stage_ema_decay(remaining_epochs: int, steps_per_epoch: int) -> t
     return decay, f"JD3 stage-scoped window EMA: {prov}"
 
 
+def jd1_forced_resume_start_epoch(
+    *,
+    saved_epoch: int,
+    checkpoint_tail: Sequence[dict[str, Any]],
+    force_reanchor_on_resume: bool,
+) -> tuple[int, dict[str, Any] | None]:
+    """Return the resume epoch, preserving legacy saved_epoch+1 unless forced.
+
+    Final checkpoints are written with an exclusive epoch, while intra-stage checkpoints
+    use the measured epoch.  JD4 force mode is a continuation-only repair: it may use the
+    parent telemetry tail to recover the next training epoch for the new window geometry.
+    """
+    legacy_start = int(saved_epoch) + 1
+    if not force_reanchor_on_resume:
+        return legacy_start, None
+    tail_epochs = [
+        int(row["epoch"])
+        for row in checkpoint_tail
+        if isinstance(row, dict) and row.get("epoch") is not None
+    ]
+    if not tail_epochs:
+        return legacy_start, None
+    tail_next = max(tail_epochs) + 1
+    if tail_next >= legacy_start:
+        return legacy_start, None
+    return tail_next, {
+        "event": "jd1_force_resume_epoch_reanchor",
+        "saved_epoch": int(saved_epoch),
+        "legacy_start_epoch": int(legacy_start),
+        "tail_last_epoch": int(max(tail_epochs)),
+        "forced_start_epoch": int(tail_next),
+        "score_claim": False,
+    }
+
+
+def jd1_should_reanchor_stage_ema(args: Any, state: Mapping[str, Any], *, reason: str) -> bool:
+    """Pure JD1 stage-EMA reanchor predicate for ticket and resume tests."""
+    if args.jd1_ema_stage_scope != "window":
+        return False
+    if not (jd1_pose_finish_armed(args) and state.get("engaged")):
+        return False
+    if not bool(state.get("stage_ema_reanchored")):
+        return True
+    return bool(
+        args.jd1_force_ema_reanchor_on_resume
+        and str(reason) == "resume_inside_joint_pose_finish"
+    )
+
+
 def derive_jd1_realized_hold_max_retreats(value: int) -> tuple[int, str]:
     if int(value) > 0:
         return int(value), f"EXPLICIT --jd1-realized-hold-max-retreats {int(value)}"
@@ -3240,6 +3294,8 @@ def validate_jd1_pose_finish_args(args: Any) -> None:
             inert.append("--jd1-ema-stage-scope")
         if args.jd1_live_gate_telemetry != "off":
             inert.append("--jd1-live-gate-telemetry")
+        if args.jd1_force_ema_reanchor_on_resume:
+            inert.append("--jd1-force-ema-reanchor-on-resume")
         if inert:
             raise SystemExit(
                 "REFUSED: JD1 value flags set while --jd1-pose-finish-mode off: "
@@ -3256,6 +3312,12 @@ def validate_jd1_pose_finish_args(args: Any) -> None:
             raise SystemExit("--jd1-seg-hold-space realized requires --jd1-seg-hold-weight > 0")
         if args.jd1_live_gate_telemetry != "on":
             raise SystemExit("--jd1-seg-hold-space realized requires --jd1-live-gate-telemetry on")
+    if args.jd1_force_ema_reanchor_on_resume:
+        if args.resume_from is None:
+            raise SystemExit("--jd1-force-ema-reanchor-on-resume requires --resume-from")
+        if args.jd1_ema_stage_scope != "window":
+            raise SystemExit(
+                "--jd1-force-ema-reanchor-on-resume requires --jd1-ema-stage-scope window")
     if float(args.jd1_seg_hold_weight) > 0.0:
         if args.jd1_seg_hold_floor_source == "off":
             raise SystemExit("--jd1-seg-hold-weight requires --jd1-seg-hold-floor-source != off")
@@ -3559,6 +3621,7 @@ def main() -> int:
           "realized_hold_pose_retreat": float(args.jd1_realized_hold_pose_retreat),
           "realized_hold_max_retreats": int(args.jd1_realized_hold_max_retreats),
           "ema_stage_scope": args.jd1_ema_stage_scope,
+          "force_ema_reanchor_on_resume": bool(args.jd1_force_ema_reanchor_on_resume),
           "live_gate_telemetry": args.jd1_live_gate_telemetry,
           "gt_poses_loaded": bool(gt_poses is not None),
           "active": False,
@@ -3794,6 +3857,7 @@ def main() -> int:
         "active_ema_decay": float(active_ema_decay),
         "active_ema_decay_provenance": active_ema_decay_provenance,
         "stage_ema_reanchored": False,
+        "force_ema_reanchor_on_resume": bool(args.jd1_force_ema_reanchor_on_resume),
         "live_gate_telemetry": args.jd1_live_gate_telemetry,
     }
 
@@ -3806,6 +3870,7 @@ def main() -> int:
             "active_ema_decay": float(active_ema_decay),
             "active_ema_decay_provenance": active_ema_decay_provenance,
             "ema_stage_scope": args.jd1_ema_stage_scope,
+            "force_ema_reanchor_on_resume": bool(args.jd1_force_ema_reanchor_on_resume),
             "live_gate_telemetry": args.jd1_live_gate_telemetry,
             "seg_hold_space": args.jd1_seg_hold_space,
         })
@@ -3834,6 +3899,8 @@ def main() -> int:
                 active_ema_decay_provenance = str(
                     _saved_jd1.get("active_ema_decay_provenance",
                                    active_ema_decay_provenance))
+            jd1_pose_finish_state["force_ema_reanchor_on_resume"] = bool(
+                args.jd1_force_ema_reanchor_on_resume)
         if (stage == "joint_pose_finish" and _jd1_pose_finish_enabled
                 and not jd1_pose_finish_state.get("engaged")):
             jd1_pose_finish_state.update({
@@ -3849,6 +3916,7 @@ def main() -> int:
                 "ema_stage_scope": args.jd1_ema_stage_scope,
                 "active_ema_decay": float(active_ema_decay),
                 "active_ema_decay_provenance": active_ema_decay_provenance,
+                "force_ema_reanchor_on_resume": bool(args.jd1_force_ema_reanchor_on_resume),
             })
         if (jd1_pose_finish_state.get("engaged")
                 and float(args.jd1_seg_hold_weight) > 0.0
@@ -3907,6 +3975,14 @@ def main() -> int:
         # (derive_ema_decay consumes epochs*(num_pairs//batch_pairs) ⇒ an --epochs change alone
         # moves it: the burn ran U=49,950/60,450/70,950, a different decay at EVERY boundary).
         boundary_parent_tail = list(st["meta"].get("telemetry_tail") or [])
+        _forced_start_epoch, _forced_start_row = jd1_forced_resume_start_epoch(
+            saved_epoch=int(st["epoch"]),
+            checkpoint_tail=boundary_parent_tail,
+            force_reanchor_on_resume=bool(args.jd1_force_ema_reanchor_on_resume),
+        )
+        if _forced_start_row is not None:
+            start_epoch = int(_forced_start_epoch)
+            tlog({**_forced_start_row, "resume_from": str(args.resume_from)})
         _pcfg = st["meta"].get("cfg") or {}
         # ddm_gd4 G1 sister guard: the LOTTO bank is generated from lotto_seed and is
         # NOT a trainable param, so a seed change survives the structural geometry check
@@ -4254,12 +4330,12 @@ def main() -> int:
     def _apply_jd1_stage_ema_reanchor(*, epoch: int, reason: str) -> None:
         nonlocal ema, active_ema_decay, active_ema_decay_provenance
         nonlocal ema_warmup_updates, global_step
-        if args.jd1_ema_stage_scope != "window":
+        if not jd1_should_reanchor_stage_ema(args, jd1_pose_finish_state, reason=reason):
             return
-        if not (_jd1_pose_finish_enabled and jd1_pose_finish_state.get("engaged")):
-            return
-        if bool(jd1_pose_finish_state.get("stage_ema_reanchored")):
-            return
+        old_carried_decay = jd1_pose_finish_state.get("active_ema_decay")
+        old_carried_prov = jd1_pose_finish_state.get("active_ema_decay_provenance")
+        old_reanchor_epoch = jd1_pose_finish_state.get("stage_ema_reanchored_epoch")
+        forced = bool(jd1_pose_finish_state.get("stage_ema_reanchored"))
         parent_ema = _copy_mx_tree(ema)
         remaining_epochs = max(1, int(cfg.epochs) - int(epoch))
         new_decay, new_prov = derive_jd1_stage_ema_decay(remaining_epochs, steps_per_epoch)
@@ -4272,6 +4348,11 @@ def main() -> int:
             "stage_ema_reanchored": True,
             "stage_ema_reanchored_epoch": int(epoch),
             "stage_ema_reanchor_reason": reason,
+            "stage_ema_reanchor_forced_from_resume": bool(forced),
+            "stage_ema_reanchor_previous_epoch": old_reanchor_epoch,
+            "stage_ema_reanchor_previous_decay": (None if old_carried_decay is None
+                                                  else float(old_carried_decay)),
+            "stage_ema_reanchor_previous_provenance": old_carried_prov,
             "parent_ema_preserved_key_prefix": "jd1_parent_ema::",
             "active_ema_decay": float(active_ema_decay),
             "active_ema_decay_provenance": active_ema_decay_provenance,
@@ -4284,6 +4365,12 @@ def main() -> int:
                         extra_npz_arrays=_jd1_parent_shadow_payload(parent_ema))
         tlog({"event": "jd1_stage_ema_reanchor",
               "epoch": int(epoch), "stage": stage, "reason": reason,
+              "forced_from_resume": bool(forced),
+              "old_carried_decay": (None if old_carried_decay is None
+                                    else float(old_carried_decay)),
+              "old_carried_decay_provenance": old_carried_prov,
+              "new_derived_decay": float(active_ema_decay),
+              "new_derived_decay_provenance": active_ema_decay_provenance,
               "parent_shadow_preserved_prefix": "jd1_parent_ema::",
               "active_ema_decay": float(active_ema_decay),
               "active_ema_decay_provenance": active_ema_decay_provenance,
@@ -4492,6 +4579,7 @@ def main() -> int:
                 "ema_stage_scope": args.jd1_ema_stage_scope,
                 "active_ema_decay": float(active_ema_decay),
                 "active_ema_decay_provenance": active_ema_decay_provenance,
+                "force_ema_reanchor_on_resume": bool(args.jd1_force_ema_reanchor_on_resume),
                 "live_gate_telemetry": args.jd1_live_gate_telemetry,
             })
             stage = "joint_pose_finish"
@@ -4519,6 +4607,7 @@ def main() -> int:
                   "seg_hold_margin": float(args.jd1_seg_hold_margin),
                   "seg_hold_space": args.jd1_seg_hold_space,
                   "ema_stage_scope": args.jd1_ema_stage_scope,
+                  "force_ema_reanchor_on_resume": bool(args.jd1_force_ema_reanchor_on_resume),
                   "active_ema_decay": float(active_ema_decay),
                   "checkpoint": "checkpoints/stage_joint_pose_finish_entry.npz",
                   "note": "JD1 joint pose-finish is now active: pair_loss consumes gt_poses "
@@ -5069,6 +5158,7 @@ def main() -> int:
             "ema_stage_scope": args.jd1_ema_stage_scope,
             "active_ema_decay": float(active_ema_decay),
             "active_ema_decay_provenance": active_ema_decay_provenance,
+            "force_ema_reanchor_on_resume": bool(args.jd1_force_ema_reanchor_on_resume),
             "live_gate_telemetry": args.jd1_live_gate_telemetry,
             "score_claim": False,
         },

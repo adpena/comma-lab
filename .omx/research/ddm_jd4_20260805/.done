@@ -1,0 +1,7 @@
+status=done
+artifact=.omx/research/ddm_jd4_20260805/RECEIPT.md
+ticket=/Volumes/VertigoDataTier/pact/ddm_jd4_20260805/jd4_ticket_cont_ep1406.json
+ticket_hash=51c64222b432b1abfac8cdb0d72ba39622573ce8a27c8e868e7144df26f93076
+score_claim=false
+launch_now=false
+frontier=S = 0.7539807296911207 @ 357,836 B [macOS-CPU advisory]; contest pointer borrowed/unmoved

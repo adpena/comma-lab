@@ -40,6 +40,8 @@ from experiments.train_tr1_partition_renderer_mlx import (  # noqa: E402
     derive_jd1_stage_ema_decay,
     derive_ema_decay,
     gate_interval_fields,
+    jd1_forced_resume_start_epoch,
+    jd1_should_reanchor_stage_ema,
     load_checkpoint,
     reset_arm_for,
     save_checkpoint,
@@ -584,6 +586,101 @@ def test_jd3_stage_ema_uses_remaining_window_not_parent_chain():
     assert decay == expected
     assert decay != parent_chain
     assert "stage-scoped window" in prov
+
+
+def test_jd4_force_ema_reanchor_flag_fails_closed_when_inert():
+    off_args = build_argparser().parse_args([
+        "--variant", "plain",
+        "--out-dir", str(WORKTREE / "scratchpad/jd4-test"),
+        "--jd1-force-ema-reanchor-on-resume",
+    ])
+    with pytest.raises(SystemExit, match="JD1 value flags set"):
+        validate_jd1_pose_finish_args(off_args)
+
+    no_resume = build_argparser().parse_args([
+        "--variant", "plain",
+        "--out-dir", str(WORKTREE / "scratchpad/jd4-test"),
+        "--jd1-pose-finish-mode", "joint_loss",
+        "--jd1-pose-finish-engage-on", "start_epoch",
+        "--jd1-pose-finish-start-epoch", "1",
+        "--jd1-w-pose", "1.0",
+        "--jd1-seg-hold-weight", "0.25",
+        "--jd1-seg-hold-floor-source", "last_pre_pose_epoch_loss",
+        "--jd1-ema-stage-scope", "window",
+        "--jd1-force-ema-reanchor-on-resume",
+    ])
+    with pytest.raises(SystemExit, match="requires --resume-from"):
+        validate_jd1_pose_finish_args(no_resume)
+
+    wrong_scope = build_argparser().parse_args([
+        "--variant", "plain",
+        "--out-dir", str(WORKTREE / "scratchpad/jd4-test"),
+        "--resume-from", "parent.npz",
+        "--jd1-pose-finish-mode", "joint_loss",
+        "--jd1-pose-finish-engage-on", "start_epoch",
+        "--jd1-pose-finish-start-epoch", "1",
+        "--jd1-w-pose", "1.0",
+        "--jd1-seg-hold-weight", "0.25",
+        "--jd1-seg-hold-floor-source", "last_pre_pose_epoch_loss",
+        "--jd1-force-ema-reanchor-on-resume",
+    ])
+    with pytest.raises(SystemExit, match="requires --jd1-ema-stage-scope window"):
+        validate_jd1_pose_finish_args(wrong_scope)
+
+
+def test_jd4_force_ema_reanchor_ignores_carried_latch_only_on_resume():
+    base = [
+        "--variant", "plain",
+        "--out-dir", str(WORKTREE / "scratchpad/jd4-test"),
+        "--resume-from", "parent.npz",
+        "--jd1-pose-finish-mode", "joint_loss",
+        "--jd1-pose-finish-engage-on", "start_epoch",
+        "--jd1-pose-finish-start-epoch", "1",
+        "--jd1-w-pose", "1.0",
+        "--jd1-seg-hold-weight", "0.25",
+        "--jd1-seg-hold-floor-source", "last_pre_pose_epoch_loss",
+        "--jd1-ema-stage-scope", "window",
+    ]
+    legacy = build_argparser().parse_args(base)
+    forced = build_argparser().parse_args([*base, "--jd1-force-ema-reanchor-on-resume"])
+    state = {"engaged": True, "stage_ema_reanchored": True}
+
+    validate_jd1_pose_finish_args(legacy)
+    validate_jd1_pose_finish_args(forced)
+    assert not jd1_should_reanchor_stage_ema(
+        legacy, state, reason="resume_inside_joint_pose_finish")
+    assert jd1_should_reanchor_stage_ema(
+        forced, state, reason="resume_inside_joint_pose_finish")
+    assert not jd1_should_reanchor_stage_ema(
+        forced, state, reason="fresh_joint_pose_engagement")
+
+
+def test_jd4_forced_resume_start_epoch_uses_terminal_tail_geometry():
+    start, row = jd1_forced_resume_start_epoch(
+        saved_epoch=1406,
+        checkpoint_tail=[{"epoch": 1402}, {"epoch": 1405}],
+        force_reanchor_on_resume=True,
+    )
+    assert start == 1406
+    assert row is not None
+    assert row["legacy_start_epoch"] == 1407
+    assert row["forced_start_epoch"] == 1406
+
+    legacy_start, legacy_row = jd1_forced_resume_start_epoch(
+        saved_epoch=1406,
+        checkpoint_tail=[{"epoch": 1405}],
+        force_reanchor_on_resume=False,
+    )
+    assert legacy_start == 1407
+    assert legacy_row is None
+
+    intra_start, intra_row = jd1_forced_resume_start_epoch(
+        saved_epoch=1404,
+        checkpoint_tail=[{"epoch": 1404}],
+        force_reanchor_on_resume=True,
+    )
+    assert intra_start == 1405
+    assert intra_row is None
 
 
 def test_jd3_realized_hold_flags_fail_closed_when_declared_but_unread():
