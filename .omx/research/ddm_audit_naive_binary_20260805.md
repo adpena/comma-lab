@@ -71,3 +71,50 @@ the narrative is corrected in hot state this turn.
    the 0.0845 bank) — per tp1's packet, unchanged.
 
 S = 0.7539807296911207 @ 357,836 B [macOS-CPU advisory]; contest pointer borrowed/unmoved.
+
+## AMENDMENT (2026-08-05, operator-corrected ×3 — supersedes F2's cure and EXTENDS the findings)
+
+### F2 → RESOLVED AT $0 FROM EXISTING TRACES; dq1's flip REVERSES at projected convergence
+dq1's partial JSONL carries per-iteration `free_traj` for all 120 pairs — the audit's
+queued scorer rerun was unnecessary (m44: the instrument already held the answer).
+MEASURED: 34/120 pairs still descending at iter 159 (end-ratio <0.98); top tail pairs
+141/129/114/151 descending 1.1–2.3%/10it at the cap. Population mean at 160 iters:
+4.934e-4 → term 0.070240 (dq1's number, reproduced). Geometric projection at 10×
+budget: 1.173e-4 → term **0.034246 — PASSES the ≤0.05 wall bar**. Conservative bound
+(unconverged tail → converged-median): term 0.058196, marginal. RE-SCOPE: the p3v2
+wall refutation is **BUDGET-CONDITIONAL** — true at 160 iters/pair, projected FALSE at
+convergence. The free-frame pose upper-bound family is ALIVE. Confirmation owed: a
+converged rerun of the ~17 tail pairs (>1e-3) — bounded scorer work, arm-queued.
+This is #850's genus striking the SAME solver family a second time; projections are
+labeled PROJECTED, not measured.
+
+### F5 (operator-caught, the audit's own deepest miss) — R8-ON-INTERMEDIATES IS A STAGING-LAW VIOLATION
+The audit graded et1's "R8 FAIL +0.105" as a survivor ("scoped, family not killed") —
+WRONG LENS. Per the order-of-operations law (pose = TERMINAL 6-eq solve AFTER frozen
+seg; m09/#383; the burn itself trains seg-only with pose as terminal solve), pose
+erosion on a seg-corrected base BEFORE re-running the terminal pose solve is the
+EXPECTED mid-pipeline state, not a verdict. et1 block16 (+0.105 erosion) and sq2
+uncap100 (projected S 1.413 = charging +0.797 erosion as permanent) were both killed
+at the WRONG STAGE — neither was ever composed with the terminal pose re-solve on the
+corrected base. The real open question is pose LEGIBILITY of the corrected frames
+(#889: erosion is Q4-spending-conditional), which is exactly the unmeasured quantity.
+CONSEQUENCE: the "elimination proof" shrinks to full-frame paint (seg realization
+wall, 3×) + grammar-labels-as-targets (lc1, seg-axis). Head-solve and block16 lines
+REOPEN pending composition measurement: seg correction → terminal 6-eq pose re-solve
+→ R8 on the COMPOSED object. TR1-primary routing unchanged (lc1 fired on seg
+evidence) but reads PRIMARY-plus-complements; RGB-texture/chroma boundary edits
+remain the hybrid finisher surface (#508: RGB = finisher at edges/annulus/long-tail).
+
+### F6 (operator-caught) — INERT-LEVER ABANDONMENT = IMPROPER ENGINEERING, not lever death
+Dropping `tr1_seg_margin_weight` from the TP1 tickets was correct for A/B byte-
+fidelity (b4s effectively ran without it) but WRONG as a resting state: the guard
+fired because margin-hinge weighting is UNBUILT for the tau_softplus seg form — the
+#925 config-orphan and #888's named cure ("the cure is the HINGE WEIGHT, not the
+floor") are the same object. An inert lever is an un-engineered lever; the exit is a
+BUILD (wire margin-hinge weighting into the tau_softplus loss as a DSL lever with a
+real consumer + A/B fire-order), never a silent drop. A same-genus sweep is owed:
+every lever/force dropped-or-refused-as-inert in the 08-01→08-05 window (fh1 force
+adaptations, lg1 lane-guard wiring, #824's inert-guard config) gets an
+{engineering-gap → build → fire-order} row or an honest derived-exclusion.
+
+S = 0.7539807296911207 @ 357,836 B [macOS-CPU advisory]; contest pointer borrowed/unmoved.
