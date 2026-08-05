@@ -175,3 +175,32 @@ epochs 1345→1406 (60-epoch outer bound; typed event exits inside), wall cap 16
 `full_v3_entry_cont_mainlaunch_r2` (first attempt rc=126: ticket argv lacks the interpreter —
 launcher execs argv[0] directly; relaunched with `.venv/bin/python` prepended; regenerator debt:
 emit the interpreter in argv).
+
+### RECURSIVE ADVERSARIAL REVIEW — ROUND 1 (MAIN, 2026-08-05, operator-directed)
+
+Findings (counter 0/3; fresh-eyes codex arm owns rounds 2+):
+- **F1 (MEDIUM, honesty wording + instrument gap).** The committed v2 3-ckpt endpoint receipt is
+  EMA-BASIS ONLY (correctly labeled `ema_basis: true`); v2 LIVE values exist only at entry/final.
+  Therefore the matched-epoch v2@1344-vs-v3@1344 controller A/B is NOT derivable from existing
+  data. Since v3's controllers never intervened (0 rollbacks, floor never breached), the entry
+  smoke is in effect a Metal-nondeterministic RESEED of v2's epochs 1337-1344; its toll peak
+  (live 0.0076 @1339) attributes to reseed noise, NOT to the controllers. CORRECTION to the
+  adjudication wording above: the realized hold "STOOD GUARD (0 rollbacks; would have bounded
+  further erosion)" — it did not measurably bound this window's toll. No decision changes: the
+  entry-vs-final pick compared same-instrument/same-basis states and stands.
+- **F2 (MEDIUM, controller design — watch item for gc20/v4).** The realized floor is STATIC
+  (latched at first post-engagement gate), not ratcheting: the live window may regress from the
+  current 0.0061 back up to floor 0.00712+margin without tripping the hold. A1-refuse still
+  guards persistent ascent (2 consecutive alarms). A ratcheting floor (min-of-gates) is the
+  candidate v4 refinement; risk = over-constraining beneficial transients — needs its own A/B,
+  not a silent stack.
+- **F3 (LOW).** Budget asymmetry in the adjudication (entry 8 joint-epochs vs final's lineage 27):
+  the decision criterion (best available state + endpoint slopes) is unaffected, but forward
+  projections from the two smokes are not budget-matched.
+- **F4 (LOW, scope labeling).** The adjudication ran on the n36 designed gate sample (advisory,
+  m96); training is n600; the endpoint decision + byte-close measure n600. Stated here so the
+  winner-pick is never later cited as an n600 result.
+Assumption-challenge axis: the operating assumption is "the n36 designed sample ranks candidates
+whose differences concentrate in the hard tail" — internally valid for the pick (same set both
+sides); the n600 endpoint read is the check. Measured-runnability axis: satisfied (both smokes +
+the live window EXECUTED at the real config; gates emitting; peak memory unremarkable).
