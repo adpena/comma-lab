@@ -21,9 +21,11 @@ SegNet argmax) on a pre-registered gate set as periodic in-training telemetry AN
 stage-exit gate. Smooth-loss descent without realized-flip improvement = the inherited
 gap → typed ``A1_REALIZATION_GAP_ALARM`` (never silent) + stage-exit REFUSE.
 
-Pose: TERMINAL (#383) — ``pose_objective_weight=0`` on the seg trunk; NO PoseNet in
-this trainer. frame_1-only rendering (SegNet reads the last frame; frame_0 is
-structurally seg-free).
+Pose: TERMINAL (#383) — default ``pose_objective_weight=0`` on the seg trunk.
+JD1 adds an args-only, default-off joint pose-finish gate that enters only after
+the seg/constrain boundary and then uses the same scorer-native PoseNet path as
+``make_loss_fn``. frame_1-only seg rendering remains; frame_0 is structurally
+seg-free and is rendered only when the JD1 pose gate is armed.
 
 Evidence axis: ``[macOS-CPU/MLX advisory]`` — score_claim=False, promotion_eligible=
 False. Realized d_seg rows here are ADVISORY (frozen CPU-torch scorer on macOS); the
@@ -119,6 +121,15 @@ CHEAPDCT4_STAGE2_SECTION_NAMES = (
     "od8_stage2_cheapdct4_synthetic",
 )
 CONTEST_DENOMINATOR_BYTES = 37_545_489
+JD1_POSE_FINISH_SCHEMA = "ddm_jd1_tr1_joint_pose_finish_runtime.v1"
+JD1_POSE_FINISH_MODES = ("off", "joint_loss")
+JD1_POSE_FINISH_ENGAGE_ON = ("post_knee", "start_epoch")
+JD1_SEG_HOLD_FLOOR_SOURCES = (
+    "off",
+    "last_pre_pose_epoch_loss",
+    "checkpoint_tail_ep_loss",
+    "explicit",
+)
 
 # Pre-registered A1 alarm thresholds (tb1 charter T1: "never scale a loop whose
 # realized-flip telemetry is flat"). Smooth descended but realized did not:
@@ -2370,7 +2381,8 @@ def _tree_to_flat(params: dict[str, Any]) -> dict[str, np.ndarray]:
 
 
 def save_checkpoint(path: Path, *, model, ema: dict[str, Any], opt_state_flat: dict[str, np.ndarray],
-                    epoch: int, stage: str, cfg: TR1Config, telemetry_tail: list[dict]) -> None:
+                    epoch: int, stage: str, cfg: TR1Config, telemetry_tail: list[dict],
+                    extra_meta: dict[str, Any] | None = None) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     payload: dict[str, np.ndarray] = {}
     for k, v in _tree_to_flat(model.trainable_parameters()).items():
@@ -2380,8 +2392,11 @@ def save_checkpoint(path: Path, *, model, ema: dict[str, Any], opt_state_flat: d
     for k, v in opt_state_flat.items():
         payload[f"opt::{k}"] = v
     payload["meta::epoch"] = np.array([epoch], dtype=np.int64)
-    meta = json.dumps({"stage": stage, "cfg": asdict(cfg), "config_hash": cfg.config_hash(),
-                       "telemetry_tail": telemetry_tail[-4:]}).encode()
+    meta_payload = {"stage": stage, "cfg": asdict(cfg), "config_hash": cfg.config_hash(),
+                    "telemetry_tail": telemetry_tail[-4:]}
+    if extra_meta:
+        meta_payload.update(extra_meta)
+    meta = json.dumps(meta_payload).encode()
     payload["meta::json"] = np.frombuffer(meta, dtype=np.uint8)
     tmp = path.parent / (path.name + ".tmp.npz")  # endswith .npz => savez keeps the name
     np.savez(tmp, **payload)
@@ -2733,6 +2748,41 @@ def build_argparser() -> argparse.ArgumentParser:
                          "through learned trust gates. No target replacement loss exists.")
     # ---- ddm_tk1 (2026-08-05) cheapdct4 pose-carriage accounting ---------------------
     # Accounting, not a full in-loop renderer consumption: it decodes OD9's stage2 qcoeffs and
+    # ---- ddm_jd1 (2026-08-05) TR1 joint pose-finish + stage-2 constrain ----------------
+    # Args-only: OFF must preserve TR1Config/config_hash/checkpoint bytes. ON consumes the
+    # GT cache's real gt_poses through make_loss_fn's existing PoseNet path, after the seg
+    # stage has reached the constrain boundary. No scorer result is claimed by this build.
+    ap.add_argument("--jd1-pose-finish-mode", default="off",
+                    choices=JD1_POSE_FINISH_MODES,
+                    help="JD1 pose gate. off = existing TR1 seg-only path; joint_loss = after "
+                         "the configured engage condition, thread gt_poses into make_loss_fn "
+                         "with compute_pose=True and --jd1-w-pose.")
+    ap.add_argument("--jd1-pose-finish-engage-on", default="post_knee",
+                    choices=JD1_POSE_FINISH_ENGAGE_ON,
+                    help="JD1 engagement predicate. post_knee waits until the CE->tau/base-"
+                         "stable boundary; start_epoch uses only --jd1-pose-finish-start-epoch.")
+    ap.add_argument("--jd1-pose-finish-start-epoch", type=int, default=0,
+                    help="JD1 minimum epoch before pose-finish may engage. 0 is allowed only "
+                         "with post_knee, which still waits for the seg/constrain boundary.")
+    ap.add_argument("--jd1-w-pose", type=float, default=0.0,
+                    help="JD1 score-domain pose weight passed to make_loss_fn after engagement. "
+                         "0.0 means the pose path is off and must be paired with mode=off.")
+    ap.add_argument("--jd1-pose-eps", type=float, default=1e-8,
+                    help="JD1 pose sqrt epsilon passed to make_loss_fn; default mirrors the "
+                         "shared loss function.")
+    ap.add_argument("--jd1-seg-hold-weight", type=float, default=0.0,
+                    help="JD1 stage-2 constrain hinge. When pose-finish is active, add "
+                         "weight*relu(seg_proxy_batch - (floor + margin)); 0.0 = off.")
+    ap.add_argument("--jd1-seg-hold-floor-source", default="off",
+                    choices=JD1_SEG_HOLD_FLOOR_SOURCES,
+                    help="JD1 seg-hold floor source. last_pre_pose_epoch_loss latches the final "
+                         "seg-only epoch loss at engagement; checkpoint_tail_ep_loss reads the "
+                         "parent checkpoint telemetry tail on resume; explicit reads "
+                         "--jd1-seg-hold-floor.")
+    ap.add_argument("--jd1-seg-hold-floor", type=float, default=0.0,
+                    help="JD1 explicit seg-hold floor, required when floor-source=explicit.")
+    ap.add_argument("--jd1-seg-hold-margin", type=float, default=0.0,
+                    help="JD1 non-negative slack added to the seg-hold floor.")
     # reports OD9's measured subset pose term in composed-S receipts.
     ap.add_argument("--cheapdct4-pose-cache", type=Path, default=None,
                     help="TK1 cheapdct4 pose-accounting cache: OD9_RECEIPT.json. The receipt's "
@@ -3032,6 +3082,107 @@ def validate_tk1_consumer_args(args: Any) -> None:
         raise SystemExit("--pe3-conditioning-mode conditioning_only requires --pe3-conditioning-cache")
     if args.pe3_conditioning_mode == "off" and args.pe3_conditioning_cache is not None:
         raise SystemExit("--pe3-conditioning-cache was provided while --pe3-conditioning-mode off")
+def jd1_pose_finish_armed(args: Any) -> bool:
+    """Whether JD1 may ever build a PoseNet graph for this run."""
+    return str(args.jd1_pose_finish_mode) != "off"
+
+
+def validate_jd1_pose_finish_args(args: Any) -> None:
+    """Fail closed on JD1 value flags that would otherwise be declared-but-unread."""
+    if int(args.jd1_pose_finish_start_epoch) < 0:
+        raise SystemExit("--jd1-pose-finish-start-epoch must be >= 0")
+    if float(args.jd1_w_pose) < 0.0:
+        raise SystemExit("--jd1-w-pose must be >= 0")
+    if float(args.jd1_pose_eps) <= 0.0:
+        raise SystemExit("--jd1-pose-eps must be > 0")
+    if float(args.jd1_seg_hold_weight) < 0.0:
+        raise SystemExit("--jd1-seg-hold-weight must be >= 0")
+    if float(args.jd1_seg_hold_floor) < 0.0:
+        raise SystemExit("--jd1-seg-hold-floor must be >= 0")
+    if float(args.jd1_seg_hold_margin) < 0.0:
+        raise SystemExit("--jd1-seg-hold-margin must be >= 0")
+
+    inert: list[str] = []
+    if not jd1_pose_finish_armed(args):
+        if int(args.jd1_pose_finish_start_epoch) != 0:
+            inert.append("--jd1-pose-finish-start-epoch")
+        if float(args.jd1_w_pose) != 0.0:
+            inert.append("--jd1-w-pose")
+        if float(args.jd1_pose_eps) != 1e-8:
+            inert.append("--jd1-pose-eps")
+        if float(args.jd1_seg_hold_weight) != 0.0:
+            inert.append("--jd1-seg-hold-weight")
+        if args.jd1_seg_hold_floor_source != "off":
+            inert.append("--jd1-seg-hold-floor-source")
+        if float(args.jd1_seg_hold_floor) != 0.0:
+            inert.append("--jd1-seg-hold-floor")
+        if float(args.jd1_seg_hold_margin) != 0.0:
+            inert.append("--jd1-seg-hold-margin")
+        if inert:
+            raise SystemExit(
+                "REFUSED: JD1 value flags set while --jd1-pose-finish-mode off: "
+                f"{sorted(inert)}. Arm --jd1-pose-finish-mode joint_loss or drop the values.")
+        return
+
+    if float(args.jd1_w_pose) <= 0.0:
+        raise SystemExit("--jd1-pose-finish-mode joint_loss requires --jd1-w-pose > 0")
+    if (args.jd1_pose_finish_engage_on == "start_epoch"
+            and int(args.jd1_pose_finish_start_epoch) <= 0):
+        raise SystemExit("--jd1-pose-finish-engage-on start_epoch requires a positive start epoch")
+    if float(args.jd1_seg_hold_weight) > 0.0:
+        if args.jd1_seg_hold_floor_source == "off":
+            raise SystemExit("--jd1-seg-hold-weight requires --jd1-seg-hold-floor-source != off")
+        if (args.jd1_seg_hold_floor_source == "explicit"
+                and float(args.jd1_seg_hold_floor) <= 0.0):
+            raise SystemExit("--jd1-seg-hold-floor-source explicit requires --jd1-seg-hold-floor > 0")
+        if args.jd1_seg_hold_floor_source == "checkpoint_tail_ep_loss" and args.resume_from is None:
+            raise SystemExit("--jd1-seg-hold-floor-source checkpoint_tail_ep_loss requires --resume-from")
+    elif args.jd1_seg_hold_floor_source != "off" or float(args.jd1_seg_hold_floor) != 0.0:
+        raise SystemExit("JD1 seg-hold floor flags require --jd1-seg-hold-weight > 0")
+
+
+def jd1_pose_finish_should_engage(args: Any, *, epoch: int, stage: str) -> bool:
+    """The JD1 stage predicate, kept pure for tests and ticket validation."""
+    if not jd1_pose_finish_armed(args):
+        return False
+    if int(epoch) < int(args.jd1_pose_finish_start_epoch):
+        return False
+    if args.jd1_pose_finish_engage_on == "post_knee":
+        return str(stage) != SEG_TRUNK_CE_STAGE
+    return True
+
+
+def jd1_resolve_seg_hold_floor(
+    args: Any,
+    *,
+    ep_losses: Sequence[float],
+    checkpoint_tail: Sequence[dict[str, Any]],
+) -> float | None:
+    """Resolve the JD1 seg-hold floor at the exact pose-engagement boundary."""
+    if float(args.jd1_seg_hold_weight) <= 0.0:
+        return None
+    source = str(args.jd1_seg_hold_floor_source)
+    if source == "explicit":
+        floor = float(args.jd1_seg_hold_floor)
+    elif source == "last_pre_pose_epoch_loss":
+        if not ep_losses:
+            raise RuntimeError("JD1 seg-hold floor source last_pre_pose_epoch_loss has no local history")
+        floor = float(ep_losses[-1])
+    elif source == "checkpoint_tail_ep_loss":
+        floor = math.nan
+        for row in reversed(tuple(checkpoint_tail)):
+            if isinstance(row, dict) and row.get("ep_loss") is not None:
+                floor = float(row["ep_loss"])
+                break
+        if not math.isfinite(floor):
+            raise RuntimeError("JD1 seg-hold floor source checkpoint_tail_ep_loss found no ep_loss")
+    else:
+        raise RuntimeError(f"JD1 seg-hold floor source {source!r} is not armed")
+    if not math.isfinite(floor) or floor < 0.0:
+        raise RuntimeError(f"JD1 seg-hold floor resolved invalid value {floor!r}")
+    return floor
+
+
     if args.pe3_conditioning_cache is not None and not args.pe3_conditioning_cache.is_file():
         raise SystemExit(f"--pe3-conditioning-cache missing: {args.pe3_conditioning_cache}")
     if args.cheapdct4_pose_mode == "accounting" and args.cheapdct4_pose_cache is None:
@@ -3140,12 +3291,21 @@ def main() -> int:
           "cfg": asdict(cfg), "pid": os.getpid()})
 
     try:
+    validate_jd1_pose_finish_args(args)
+    _jd1_pose_finish_enabled = jd1_pose_finish_armed(args)
         parse_tr1_birth_seed_classes(args.tr1_birth_seed_classes)
     except ValueError as exc:
         raise SystemExit(str(exc)) from exc
     if float(args.tr1_birth_seed_weight) < 0.0:
         raise SystemExit("--tr1-birth-seed-weight must be >= 0")
     if float(args.tr1_birth_amplify_weight) < 0.0:
+    gt_poses = None
+    if _jd1_pose_finish_enabled:
+        gt_poses = open_stored_npy_memmap(args.gt_cache, "gt_poses")
+        if gt_poses.shape[0] < cfg.num_pairs or gt_poses.shape[1] < 6:
+            raise SystemExit(
+                f"gt cache gt_poses shape {gt_poses.shape} incompatible with --num-pairs "
+                f"{cfg.num_pairs} and PoseNet-6 targets")
         raise SystemExit("--tr1-birth-amplify-weight must be >= 0")
     if float(args.tr1_birth_amplify_weight) > 0.0 and float(args.tr1_birth_seed_weight) <= 0.0:
         raise SystemExit("--tr1-birth-amplify-weight requires --tr1-birth-seed-weight > 0")
@@ -3217,6 +3377,7 @@ def main() -> int:
     # §3.2 boundary-annulus form fix: 100% of realized flips sit in the bottom GT-margin decile
     # (sg1 §1.3) => reweight the per-pixel seg loss toward the small-margin boundary annulus.
     # ddm_tp2 row 2: fail closed BEFORE any training if the flag would be inert for a form
+                           pose_eps=float(args.jd1_pose_eps),
     # this run will occupy (declared-on + silently-ignored is the day's dominant genus).
     assert_margin_weighted_loss_is_honored(cfg.seg_form_start, cfg.margin_weighted_loss)
     # ddm_tp2 row 3: same genus -- a magnitude with no gate would be silently ignored.
@@ -3255,6 +3416,23 @@ def main() -> int:
               ("fisher_density_weight", args.fisher_density_weight > 0.0),
               ("head_natural_grad", args.head_natural_grad == "on"),
               ("tau_softplus_tau_nondefault", float(args.tau_softplus_tau) != 0.3)) if on),
+    tlog({"event": "jd1_joint_pose_finish_config",
+          "schema": JD1_POSE_FINISH_SCHEMA,
+          "mode": args.jd1_pose_finish_mode,
+          "engage_on": args.jd1_pose_finish_engage_on,
+          "start_epoch": int(args.jd1_pose_finish_start_epoch),
+          "w_pose": float(args.jd1_w_pose),
+          "pose_eps": float(args.jd1_pose_eps),
+          "seg_hold_weight": float(args.jd1_seg_hold_weight),
+          "seg_hold_floor_source": args.jd1_seg_hold_floor_source,
+          "seg_hold_floor": float(args.jd1_seg_hold_floor),
+          "seg_hold_margin": float(args.jd1_seg_hold_margin),
+          "gt_poses_loaded": bool(gt_poses is not None),
+          "active": False,
+          "note": "JD1 is args-only: off preserves TR1Config/config_hash/checkpoint bytes; "
+                  "joint_loss consumes the gt_poses memmap through make_loss_fn with "
+                  "compute_pose=True only after the engagement predicate fires.",
+          "score_claim": False})
           "seg_form_start": cfg.seg_form_start,
           "reachable_seg_forms": sorted(reachable_seg_forms(cfg.seg_form_start)),
           "note": "PORT of make_loss_fn parameters this trainer already imports but never passed "
@@ -3444,11 +3622,54 @@ def main() -> int:
     boundary_parent_ema_decay: float | None = None
     boundary_ema_held = True          # a fresh (non-resume) run has no basis to drift from
     boundary_jump_emitted = False
+    jd1_pose_finish_state: dict[str, Any] = {
+        "schema": JD1_POSE_FINISH_SCHEMA,
+        "enabled": bool(_jd1_pose_finish_enabled),
+        "engaged": False,
+        "engaged_epoch": None,
+        "engaged_stage": None,
+        "engaged_global_step": None,
+        "seg_hold_floor": None,
+        "seg_hold_floor_source": args.jd1_seg_hold_floor_source,
+        "seg_hold_margin": float(args.jd1_seg_hold_margin),
+        "w_pose": float(args.jd1_w_pose),
+    }
+
+    def _jd1_checkpoint_extra_meta() -> dict[str, Any] | None:
+        if not (_jd1_pose_finish_enabled and jd1_pose_finish_state.get("engaged")):
+            return None
+        return {"jd1_pose_finish": dict(jd1_pose_finish_state)}
+
     # ddm_op2 (OP2-2): the STRICT decay+basis verdict, known only once the first post-resume gate
     # has run (the basis is a property of the READING, not of the resume). None until then, so the
     # receipt can never present the decay-only leg as if it were the strict flag.
     boundary_strict_basis_held: bool | None = None
     boundary_gate_basis_held: bool | None = None
+        _saved_jd1 = st["meta"].get("jd1_pose_finish")
+        if _saved_jd1 is not None:
+            if not isinstance(_saved_jd1, dict) or _saved_jd1.get("schema") != JD1_POSE_FINISH_SCHEMA:
+                raise SystemExit("resume REFUSED: checkpoint JD1 pose-finish metadata schema differs")
+            if bool(_saved_jd1.get("engaged")) and not _jd1_pose_finish_enabled:
+                raise SystemExit(
+                    "resume REFUSED: checkpoint is inside JD1 joint_pose_finish but this launch "
+                    "sets --jd1-pose-finish-mode off")
+            jd1_pose_finish_state.update(_saved_jd1)
+        if (stage == "joint_pose_finish" and _jd1_pose_finish_enabled
+                and not jd1_pose_finish_state.get("engaged")):
+            jd1_pose_finish_state.update({
+                "engaged": True,
+                "engaged_epoch": start_epoch,
+                "engaged_stage": stage,
+                "engaged_global_step": None,
+                "seg_hold_floor": (float(args.jd1_seg_hold_floor)
+                                   if args.jd1_seg_hold_floor_source == "explicit" else None),
+            })
+        if (jd1_pose_finish_state.get("engaged")
+                and float(args.jd1_seg_hold_weight) > 0.0
+                and jd1_pose_finish_state.get("seg_hold_floor") is None):
+            raise SystemExit(
+                "resume REFUSED: JD1 seg-hold is armed but the checkpoint lacks a latched "
+                "seg_hold_floor")
 
     ema: dict[str, Any] = {k: mx.array(v) for k, v in tree_flatten(model.trainable_parameters())}
     start_epoch = 0
@@ -3521,6 +3742,7 @@ def main() -> int:
                     f"resume REFUSED — lotto_seed {int(_pcfg['lotto_seed'])} (checkpoint) != "
                     f"{int(cfg.lotto_seed)} (this run). The fixed bank is regenerated from the "
                     "seed and is not checkpointed, so the trained supermasks would index a "
+              "jd1_pose_finish": dict(jd1_pose_finish_state),
                     "DIFFERENT random bank at identical shapes (silent-wrong).")
         boundary_parent_ema_decay = (float(_pcfg["ema_decay"])
                                      if isinstance(_pcfg, dict) and "ema_decay" in _pcfg
@@ -3642,11 +3864,22 @@ def main() -> int:
             _exist_cache[idx] = pack
         return None if pack is False else pack
 
-    def pair_loss(mdl, idx: int, form: str):
+    def pair_loss(mdl, idx: int, form: str, *, pose_active: bool | None = None):
+        if pose_active is None:
+            pose_active = bool(jd1_pose_finish_state.get("engaged"))
         lstar = np.asarray(lstars[idx], dtype=np.int64)
         lstar_oh = mx.array((lstar[..., None] == np.arange(5)).astype(np.float32))[None]
         margin = mx.array(np.asarray(margins[idx], dtype=np.float32))
-        pose_tgt = mx.zeros((6,))
+        if pose_active:
+            if gt_poses is None:
+                raise RuntimeError("JD1 pose finish active without gt_poses memmap")
+            pose_tgt = mx.array(np.asarray(gt_poses[idx], dtype=np.float32)[:6])
+            w_pose = float(args.jd1_w_pose)
+            pose_code0 = max(int(idx) - 1, 0)
+        else:
+            pose_tgt = mx.zeros((6,))
+            w_pose = 0.0
+            pose_code0 = int(idx)
         # sn1 ASYMMETRY lever: per-GT-class weight on Lane pixels (class index 1 —
         # canonical comma10k order, MEASURED; NEVER luma-sort re-derived).
         seg_pixel_w = None
@@ -3679,9 +3912,9 @@ def main() -> int:
             distill_logits = mx.array(np.transpose(dl, (1, 2, 0)))[None]  # (1,H,W,5)
         # ddm_p4x (#920): COMPONENT-level existence term. None => never built => byte-identical.
         existence_pack = _existence_pack(idx) if _exist_cfg is not None else None
-        return loss_fn(mdl, None, idx, idx, lstar_oh, margin, pose_tgt,
-                       cfg.w_seg, 0.0, 0.0, cfg.margin_target, seg_form=form,
-                       seg_pixel_w=seg_pixel_w, compute_pose=False,
+        return loss_fn(mdl, None, pose_code0, idx, lstar_oh, margin, pose_tgt,
+                       cfg.w_seg, w_pose, 0.0, cfg.margin_target, seg_form=form,
+                       seg_pixel_w=seg_pixel_w, compute_pose=bool(pose_active),
                        distill_logits=distill_logits, distill_weight=cfg.distill_weight,
                        distill_temp=cfg.distill_temp, distill_form=cfg.distill_form,
                        distill_attack_temp=cfg.distill_attack_temp,
@@ -3779,6 +4012,19 @@ def main() -> int:
         if mdl._delta_sparsity_weight_field is not None:
             wf = mx.take(mx.reshape(mdl._delta_sparsity_weight_field.tensors["w"], (-1,)),
                          keep_idx, axis=0)                     # (n_kept,)
+        if (jd1_pose_finish_state.get("engaged")
+                and float(args.jd1_seg_hold_weight) > 0.0):
+            floor = jd1_pose_finish_state.get("seg_hold_floor")
+            if floor is None:
+                raise RuntimeError("JD1 seg-hold active without a latched floor")
+            seg_acc = None
+            for i in ids:
+                sli = pair_loss(mdl, int(i), state_form["form"], pose_active=False)
+                seg_acc = sli if seg_acc is None else seg_acc + sli
+            seg_acc = seg_acc / len(ids)
+            floor_with_margin = float(floor) + float(args.jd1_seg_hold_margin)
+            acc = acc + float(args.jd1_seg_hold_weight) * mx.maximum(
+                seg_acc - floor_with_margin, 0.0)
             g = g * wf[None]
         return mx.mean(g)
 
@@ -3899,6 +4145,46 @@ def main() -> int:
               "termdom_frac": TR1_TERMDOM_FRAC, "termdom_min_rows": TR1_TERMDOM_MIN_ROWS,
               "termdom_scored_term": TR1_SCORED_TERM,
               "termdom_scored_floor": TR1_SCORED_FLOOR,
+        if (not jd1_pose_finish_state.get("engaged")
+                and jd1_pose_finish_should_engage(args, epoch=epoch, stage=stage)):
+            _prev_stage = stage
+            _seg_hold_floor = jd1_resolve_seg_hold_floor(
+                args, ep_losses=ep_losses, checkpoint_tail=boundary_parent_tail)
+            jd1_pose_finish_state.update({
+                "enabled": True,
+                "engaged": True,
+                "engaged_epoch": int(epoch),
+                "engaged_stage": "joint_pose_finish",
+                "engaged_global_step": int(global_step),
+                "previous_stage": _prev_stage,
+                "seg_hold_floor": _seg_hold_floor,
+                "seg_hold_floor_source": args.jd1_seg_hold_floor_source,
+                "seg_hold_margin": float(args.jd1_seg_hold_margin),
+                "w_pose": float(args.jd1_w_pose),
+            })
+            stage = "joint_pose_finish"
+            prev_gate_smooth = None
+            save_checkpoint(out_dir / "checkpoints" / "stage_joint_pose_finish_entry.npz",
+                            model=model, ema=ema, opt_state_flat=_opt_state(), epoch=epoch,
+                            stage=stage, cfg=cfg, telemetry_tail=telemetry_tail,
+                            extra_meta=_jd1_checkpoint_extra_meta())
+            tlog({"event": "jd1_pose_finish_engage",
+                  "schema": JD1_POSE_FINISH_SCHEMA,
+                  "epoch": epoch,
+                  "global_step": int(global_step),
+                  "previous_stage": _prev_stage,
+                  "stage": stage,
+                  "engage_on": args.jd1_pose_finish_engage_on,
+                  "start_epoch": int(args.jd1_pose_finish_start_epoch),
+                  "w_pose": float(args.jd1_w_pose),
+                  "seg_hold_weight": float(args.jd1_seg_hold_weight),
+                  "seg_hold_floor": _seg_hold_floor,
+                  "seg_hold_floor_source": args.jd1_seg_hold_floor_source,
+                  "seg_hold_margin": float(args.jd1_seg_hold_margin),
+                  "checkpoint": "checkpoints/stage_joint_pose_finish_entry.npz",
+                  "note": "JD1 joint pose-finish is now active: pair_loss consumes gt_poses "
+                          "and builds make_loss_fn's PoseNet path; A1 smooth baseline rebased.",
+                  "score_claim": False})
               "note": "additive read-only rows; trained/checkpoint bytes flag-invariant "
                       "(flag via args not cfg; new rows via tlog not telemetry_tail)",
               "score_neutral": True})
@@ -3940,7 +4226,9 @@ def main() -> int:
         ep_losses.append(ep_loss)
         row = {"event": "epoch", "epoch": epoch, "stage": stage, "seg_form": state_form["form"],
                "ep_loss": ep_loss, "weights_stepped": steps > 0, "steps": steps,
-               "gnorm_last_batch": last_gnorm}
+               "gnorm_last_batch": last_gnorm,
+               "jd1_pose_finish_active": bool(jd1_pose_finish_state.get("engaged")),
+               "jd1_seg_hold_floor": jd1_pose_finish_state.get("seg_hold_floor")}
         # Confound immune system (day-one, L1 runtime alarms — LOUD, never silent):
         if ep_loss == 0.0:
             tlog({"event": "confound_alarm", "kind": "frozen_epoch", "epoch": epoch,
@@ -3959,7 +4247,8 @@ def main() -> int:
             if rel < 0.01:
                 save_checkpoint(out_dir / "checkpoints" / "stage_seg_trunk_ce_exit.npz",
                                 model=model, ema=ema, opt_state_flat=_opt_state(), epoch=epoch,
-                                stage=stage, cfg=cfg, telemetry_tail=telemetry_tail)
+                                stage=stage, cfg=cfg, telemetry_tail=telemetry_tail,
+                                extra_meta=_jd1_checkpoint_extra_meta())
                 state_form["form"] = "tau_softplus"
                 stage = "seg_trunk_tau"
                 knee_switched = True
@@ -3990,7 +4279,8 @@ def main() -> int:
         if not knee_switched and state_form["form"] == "ce" and epoch >= cfg.epochs // 2:
             save_checkpoint(out_dir / "checkpoints" / "stage_seg_trunk_ce_exit.npz",
                             model=model, ema=ema, opt_state_flat=_opt_state(), epoch=epoch,
-                            stage=stage, cfg=cfg, telemetry_tail=telemetry_tail)
+                            stage=stage, cfg=cfg, telemetry_tail=telemetry_tail,
+                            extra_meta=_jd1_checkpoint_extra_meta())
             state_form["form"] = "tau_softplus"
             stage = "seg_trunk_tau"
             knee_switched = True
@@ -4159,7 +4449,8 @@ def main() -> int:
             prev_gate_row, prev_gate_smooth, prev_realized = gate_row, a1_smooth, realized_argmax
             save_checkpoint(out_dir / "checkpoints" / f"intra_{stage}_ep{epoch:05d}.npz",
                             model=model, ema=ema, opt_state_flat=_opt_state(), epoch=epoch,
-                            stage=stage, cfg=cfg, telemetry_tail=telemetry_tail)
+                            stage=stage, cfg=cfg, telemetry_tail=telemetry_tail,
+                            extra_meta=_jd1_checkpoint_extra_meta())
 
             # ddm_tp1 (#804) v9 telemetry PORT emissions (READ-ONLY; gated => byte-identical
             # when off). Params are LIVE here (the EMA-shadow gate swap was restored in the
@@ -4170,7 +4461,8 @@ def main() -> int:
             if _tel_v9:
                 _tp_ids = [int(i) for i in _tel_strata]
                 _tp_seg = float(mx.mean(mx.stack(
-                    [pair_loss(model, i, state_form["form"]) for i in _tp_ids])))
+                    [pair_loss(model, i, state_form["form"], pose_active=False)
+                     for i in _tp_ids])))
                 _tp_rate = (float(cfg.w_rate * token_rate_term(model, _tp_ids))
                             if cfg.w_rate > 0.0 else 0.0)
                 _tp_ds = (float(cfg.delta_sparsity_weight
@@ -4246,7 +4538,8 @@ def main() -> int:
                     save_checkpoint(out_dir / "checkpoints" / "stage_basin_entry.npz",
                                     model=model, ema=ema, opt_state_flat=_opt_state(), epoch=epoch,
                                     stage="basin_entry", cfg=cfg,
-                                    telemetry_tail=telemetry_tail)
+                                    telemetry_tail=telemetry_tail,
+                                    extra_meta=_jd1_checkpoint_extra_meta())
                     handoff = {
                         "schema": "ddm_lv1_basin_handoff_receipt.v1",
                         "fired_epoch": epoch, "window": w,
@@ -4289,7 +4582,8 @@ def main() -> int:
     # Terminal stage checkpoint (distinct stage-encoded name; EMA shadow inside).
     save_checkpoint(out_dir / "checkpoints" / f"stage_{stage}_final.npz",
                     model=model, ema=ema, opt_state_flat=_opt_state(), epoch=len(ep_losses) + start_epoch,
-                    stage=stage, cfg=cfg, telemetry_tail=telemetry_tail)
+                    stage=stage, cfg=cfg, telemetry_tail=telemetry_tail,
+                    extra_meta=_jd1_checkpoint_extra_meta())
 
     receipt: dict[str, Any] = {
         "schema": "ddm_tb1_tr1_window_receipt.v1",
@@ -4320,6 +4614,13 @@ def main() -> int:
                        else "decay_only_no_post_resume_gate_observed"),
         "boundary_probe": args.boundary_probe,
         "pe3_conditioning": (
+        "jd1_pose_finish": {
+            **dict(jd1_pose_finish_state),
+            "mode": args.jd1_pose_finish_mode,
+            "engage_on": args.jd1_pose_finish_engage_on,
+            "seg_hold_weight": float(args.jd1_seg_hold_weight),
+            "score_claim": False,
+        },
             pe3_conditioning_summary
             if pe3_conditioning_summary is not None
             else {"active": False, "mode": "off", "score_claim": False}

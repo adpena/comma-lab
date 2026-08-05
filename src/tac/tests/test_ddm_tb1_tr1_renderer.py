@@ -34,11 +34,14 @@ from experiments.train_tr1_partition_renderer_mlx import (  # noqa: E402
     build_tr1_birth_seed_bank,
     counted_bytes_ledger,
     derive_ema_decay,
+    jd1_pose_finish_should_engage,
+    jd1_resolve_seg_hold_floor,
     load_checkpoint,
     parse_tr1_birth_seed_classes,
     resolve_gate_ids,
     save_checkpoint,
     tr1_birth_amplify_term,
+    validate_jd1_pose_finish_args,
     token_stream_bytes,
 )
 
@@ -82,6 +85,65 @@ def test_ema_decay_derived_from_run_geometry():
     d2, _ = derive_ema_decay(2000)
     assert "DERIVED" in prov
     assert 0.9 <= d1 < d2 <= 0.9995  # monotone in U, clamped
+
+
+def test_jd1_pose_finish_defaults_are_args_only(tmp_path):
+    ns = build_argparser().parse_args(["--variant", "plain", "--out-dir", str(tmp_path)])
+    assert ns.jd1_pose_finish_mode == "off"
+    assert ns.jd1_w_pose == 0.0
+    validate_jd1_pose_finish_args(ns)
+    assert not any("jd1" in f or "pose_finish" in f for f in TR1Config.__dataclass_fields__)
+
+
+def test_jd1_pose_finish_refuses_declared_but_unread_values(tmp_path):
+    off_with_weight = build_argparser().parse_args([
+        "--variant", "plain", "--out-dir", str(tmp_path), "--jd1-w-pose", "1.0",
+    ])
+    with pytest.raises(SystemExit, match="mode off"):
+        validate_jd1_pose_finish_args(off_with_weight)
+
+    armed_without_weight = build_argparser().parse_args([
+        "--variant", "plain", "--out-dir", str(tmp_path), "--jd1-pose-finish-mode",
+        "joint_loss",
+    ])
+    with pytest.raises(SystemExit, match="requires --jd1-w-pose > 0"):
+        validate_jd1_pose_finish_args(armed_without_weight)
+
+    checkpoint_floor_without_resume = build_argparser().parse_args([
+        "--variant", "plain", "--out-dir", str(tmp_path), "--jd1-pose-finish-mode",
+        "joint_loss", "--jd1-w-pose", "1.0", "--jd1-seg-hold-weight", "0.25",
+        "--jd1-seg-hold-floor-source", "checkpoint_tail_ep_loss",
+    ])
+    with pytest.raises(SystemExit, match="requires --resume-from"):
+        validate_jd1_pose_finish_args(checkpoint_floor_without_resume)
+
+
+def test_jd1_pose_finish_engages_only_after_registered_boundary(tmp_path):
+    ns = build_argparser().parse_args([
+        "--variant", "plain", "--out-dir", str(tmp_path), "--jd1-pose-finish-mode",
+        "joint_loss", "--jd1-w-pose", "1.0", "--jd1-pose-finish-start-epoch", "3",
+    ])
+    validate_jd1_pose_finish_args(ns)
+    assert not jd1_pose_finish_should_engage(ns, epoch=2, stage="seg_trunk_tau")
+    assert not jd1_pose_finish_should_engage(ns, epoch=3, stage="seg_trunk_ce")
+    assert jd1_pose_finish_should_engage(ns, epoch=3, stage="seg_trunk_tau")
+
+
+def test_jd1_seg_hold_floor_resolves_from_parent_checkpoint_tail(tmp_path):
+    ns = build_argparser().parse_args([
+        "--variant", "plain", "--out-dir", str(tmp_path), "--resume-from", "parent.npz",
+        "--jd1-pose-finish-mode", "joint_loss", "--jd1-w-pose", "1.0",
+        "--jd1-seg-hold-weight", "0.25",
+        "--jd1-seg-hold-floor-source", "checkpoint_tail_ep_loss",
+    ])
+    validate_jd1_pose_finish_args(ns)
+    floor = jd1_resolve_seg_hold_floor(
+        ns,
+        ep_losses=(),
+        checkpoint_tail=({"event": "epoch", "ep_loss": 12.5},
+                         {"event": "a1_gate", "ep_loss": 11.75}),
+    )
+    assert floor == pytest.approx(11.75)
 
 
 # ---------------------------------------------------------------- model -----
@@ -363,6 +425,24 @@ def test_checkpoint_roundtrip(tmp_path):
     assert st["epoch"] == 7 and st["meta"]["stage"] == "seg_trunk_ce"
     np.testing.assert_array_equal(np.asarray(st["ema"]["tokens_base"]),
                                   ref["tokens_base"] + 1.0)
+
+
+def test_jd1_checkpoint_extra_meta_roundtrips(tmp_path):
+    class DummyModel:
+        def trainable_parameters(self):
+            return {}
+
+    cfg = _cfg("plain")
+    p = tmp_path / "stage_jd1.npz"
+    meta = {"jd1_pose_finish": {"schema": "ddm_jd1_tr1_joint_pose_finish_runtime.v1",
+                                "engaged": True, "seg_hold_floor": 11.75}}
+    save_checkpoint(p, model=DummyModel(), ema={}, opt_state_flat={}, epoch=9,
+                    stage="joint_pose_finish",
+                    cfg=cfg, telemetry_tail=[], extra_meta=meta)
+    with np.load(p, allow_pickle=False) as z:
+        payload = __import__("json").loads(bytes(z["meta::json"]).decode())
+    assert payload["stage"] == "joint_pose_finish"
+    assert payload["jd1_pose_finish"]["seg_hold_floor"] == pytest.approx(11.75)
 
 
 # ------------------------------------------------------------------- DSL ----

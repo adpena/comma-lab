@@ -355,6 +355,78 @@ def lever_composed_s_verdict(subset: int, subset_ids_path: str | None = None,
                        "changed no decision (record; keep it — the correct instrument)")
 
 
+def lever_jd1_joint_pose_finish(
+    *,
+    w_pose: float,
+    start_epoch: int = 0,
+    engage_on: str = "post_knee",
+    seg_hold_weight: float = 0.0,
+    seg_hold_floor_source: str = "off",
+    seg_hold_floor: float = 0.0,
+    seg_hold_margin: float = 0.0,
+) -> Lever:
+    """JD1: TR1 joint pose-finish after the seg/constrain boundary.
+
+    This is the TR1-side consumer for the #383/R1 pose-finish physics: after the configured
+    engagement predicate fires, the trainer loads ``gt_poses`` from the frozen GT cache and sends
+    those 6D targets through ``make_loss_fn`` with ``compute_pose=True``.  The seg-hold term is a
+    real hinge on the same seg proxy used by the trunk, so the pose descent cannot silently erase
+    the stage-2 seg floor.  It is still a duty-to-measure lever: this factory makes the build
+    reachable and sealed; it asserts no d_seg/d_pose improvement.
+    """
+    if w_pose <= 0.0:
+        raise ValueError("JD1 joint pose-finish requires w_pose > 0")
+    if start_epoch < 0:
+        raise ValueError("start_epoch must be >= 0")
+    if engage_on not in ("post_knee", "start_epoch"):
+        raise ValueError("engage_on must be post_knee|start_epoch")
+    if engage_on == "start_epoch" and start_epoch <= 0:
+        raise ValueError("start_epoch engagement requires a positive start_epoch")
+    if seg_hold_weight < 0.0 or seg_hold_floor < 0.0 or seg_hold_margin < 0.0:
+        raise ValueError("seg-hold weight/floor/margin must be non-negative")
+    if seg_hold_floor_source not in (
+        "off", "last_pre_pose_epoch_loss", "checkpoint_tail_ep_loss", "explicit",
+    ):
+        raise ValueError("seg_hold_floor_source is off|last_pre_pose_epoch_loss|"
+                         "checkpoint_tail_ep_loss|explicit")
+    if seg_hold_weight > 0.0 and seg_hold_floor_source == "off":
+        raise ValueError("seg_hold_weight requires a non-off floor source")
+    if seg_hold_floor_source == "explicit" and seg_hold_floor <= 0.0:
+        raise ValueError("explicit floor source requires seg_hold_floor > 0")
+    overrides = {
+        "--jd1-pose-finish-mode": "joint_loss",
+        "--jd1-pose-finish-engage-on": engage_on,
+        "--jd1-pose-finish-start-epoch": str(int(start_epoch)),
+        "--jd1-w-pose": repr(float(w_pose)),
+    }
+    if seg_hold_weight > 0.0:
+        overrides.update({
+            "--jd1-seg-hold-weight": repr(float(seg_hold_weight)),
+            "--jd1-seg-hold-floor-source": seg_hold_floor_source,
+            "--jd1-seg-hold-margin": repr(float(seg_hold_margin)),
+        })
+        if seg_hold_floor_source == "explicit":
+            overrides["--jd1-seg-hold-floor"] = repr(float(seg_hold_floor))
+    return Lever(
+        name="tr1_jd1_joint_pose_finish",
+        overrides=overrides,
+        notes="JD1 TR1 joint pose-finish: consumes gt_poses via make_loss_fn/PoseNet after "
+              "post-knee constrain, with optional seg-hold hinge. Default trainer flags are "
+              "off, so this is a sealed duty-to-measure arm, not a score claim.",
+        constant_manifest={
+            "--jd1-w-pose": {
+                "value": float(w_pose),
+                "rung": "RACED-NOT-ASSERTED (terminal pose-finish weight)",
+                "provenance": "TR1 consumes the existing score-domain sqrt(10*d_pose) pose term; "
+                              "the first live value is a race start, not an optimum."},
+            "--jd1-seg-hold-weight": {
+                "value": float(seg_hold_weight),
+                "rung": "RACED-NOT-ASSERTED (stage-2 constrain strength)",
+                "provenance": "Hinge on the latched seg proxy floor; prevents pose descent from "
+                              "silently spending the seg win. Strength requires post-TP1 A/B."},
+        })
+
+
 def lever_solve_frame_distill(field_cache: str, *, form: str = "kd_logits",
                               weight: float = 100.0, temp: float = 2.0,
                               attack_temp: float = 0.0) -> Lever:
