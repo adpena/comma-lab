@@ -49,6 +49,7 @@ if str(_REPO / "tools") not in sys.path:
 # The historical witness artifact contract is imported lazily only inside the
 # legacy fallback.  A complete DDM fleet never initializes that lineage.
 _POINTER_JSON = _REPO / ".omx" / "state" / "canonical_frontier_pointer.json"
+_ARM_NEXT_IF_RESUMED = _REPO / ".omx" / "state" / "codex_arm_queue.next_if_resumed.jsonl"
 _DAG_GLOB = str(_REPO / ".omx" / "research" / "sub015_DAG_topaiml_reopen_and_pursuit_plan_*.md")
 _DESIGN_DOC = ".omx/research/costate_controller_design_20260705.md"
 _DISPATCH_DOC = ".omx/research/organ_regime_conditional_dispatch_436_20260711.md"
@@ -156,6 +157,13 @@ def _last_jsonl_row(path: Path) -> dict | None:
         return row if isinstance(row, dict) else None
     except Exception:
         return None
+
+
+def _repo_rel(path: Path) -> str:
+    try:
+        return str(path.resolve().relative_to(_REPO))
+    except ValueError:
+        return str(path)
 
 
 # ─────────────────────────── sections (each fail-open) ───────────────────────────
@@ -1063,6 +1071,57 @@ def section_orphaned_followons(days: int = 14) -> tuple[str, dict | None]:
         }
     except Exception as exc:
         return f"orphaned-follow-ons: unavailable ({type(exc).__name__}: {exc})", None
+
+
+def section_arm_next_if_resumed(
+    path: Path | None = None,
+    *,
+    top_n: int = _DUTY_TOP_N,
+) -> tuple[str, dict | None]:
+    """Read the codex arm queue's durable NEXT_IF_RESUMED plan-of-record surface.
+
+    This is a queue-side reader, not a second disposition engine. The broader
+    orphaned-follow-on detector still decides EXECUTED/STAGED/UNKNOWN from
+    memos and artifacts; this section makes fresh arm plans visible to the
+    costate SENSE loop as soon as the keeper or harvest extractor writes them.
+    """
+    path = _ARM_NEXT_IF_RESUMED if path is None else path
+    try:
+        rows: list[dict] = []
+        if path.exists():
+            for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+                if not line.strip():
+                    continue
+                try:
+                    row = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if row.get("schema") == "codex_arm_queue.next_if_resumed.v1":
+                    rows.append(row)
+        counts: dict[str, int] = {}
+        for row in rows:
+            provenance = str(row.get("provenance") or "unknown")
+            counts[provenance] = counts.get(provenance, 0) + 1
+        head = [
+            f"{row.get('name')}:{row.get('source_path')}:{row.get('line_start')}"
+            for row in rows[-top_n:]
+        ]
+        line = (
+            f"arm-next-if-resumed: {len(rows)} plan row(s) | "
+            f"surface {_repo_rel(path)}"
+        )
+        if counts:
+            line += " | " + ", ".join(f"{k}={v}" for k, v in sorted(counts.items()))
+        if head:
+            line += " | latest " + " · ".join(head)
+        return line, {
+            "surface": _repo_rel(path),
+            "rows": len(rows),
+            "counts_by_provenance": counts,
+            "latest": rows[-top_n:],
+        }
+    except Exception as exc:
+        return f"arm-next-if-resumed: unavailable ({type(exc).__name__}: {exc})", None
 
 
 def section_factorized_sense(run_dir: Path | None) -> tuple[list[str], dict | None]:
@@ -2013,6 +2072,9 @@ def build_digest(*, include_fm: bool = True) -> tuple[list[str], dict]:
         # follow-on has nothing between it and the answer except somebody reading the memo.
         fo_line, data["orphaned_followons"] = section_orphaned_followons()
         lines.append(fo_line)
+
+        arm_next_line, data["arm_next_if_resumed"] = section_arm_next_if_resumed()
+        lines.append(arm_next_line)
 
         # A+B (2026-07-17): exact-factorized duty ranking (ALTERNATIVE beside the statistical
         # line above) + the realization-vs-gradient regime read — from persisted ledgers only.

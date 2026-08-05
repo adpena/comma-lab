@@ -64,3 +64,30 @@ def test_build_digest_never_raises_with_telemetry_binding_wired() -> None:
     lines, data = cd.build_digest()
     assert isinstance(lines, list) and lines
     assert "telemetry_binding" in data  # key present even when None (no live run)
+
+
+def test_section_arm_next_if_resumed_reads_schema_rows(tmp_path) -> None:
+    path = tmp_path / "next.jsonl"
+    path.write_text(
+        json.dumps(
+            {
+                "schema": "codex_arm_queue.next_if_resumed.v1",
+                "name": "au1",
+                "provenance": "positive-control",
+                "source_path": ".omx/research/ddm_au1_20260805/AU1_RECEIPT.md",
+                "line_start": 48,
+            }
+        )
+        + "\n"
+        + json.dumps({"schema": "unrelated", "name": "ignored"})
+        + "\n",
+        encoding="utf-8",
+    )
+
+    line, data = cd.section_arm_next_if_resumed(path)
+
+    assert line.startswith("arm-next-if-resumed: 1 plan row(s)")
+    assert "positive-control=1" in line
+    assert data is not None
+    assert data["rows"] == 1
+    assert data["latest"][0]["name"] == "au1"

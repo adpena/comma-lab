@@ -39,23 +39,270 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import fcntl
+import hashlib
 import json
 import os
+import re
 import shlex
 import subprocess
 import sys
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 
 _REPO = Path(__file__).resolve().parents[1]
 QUEUE = _REPO / ".omx" / "state" / "codex_arm_queue.jsonl"
 RUNS = _REPO / ".omx" / "tmp" / "codex_runs"
 SPAWN_LOG = _REPO / ".omx" / "state" / "codex_arm_spawn_log.jsonl"
+FINAL_MESSAGES = _REPO / ".omx" / "research" / "arm_final_messages"
+FINAL_MESSAGE_INDEX = _REPO / ".omx" / "state" / "codex_arm_queue.final_messages.jsonl"
+NEXT_IF_RESUMED = _REPO / ".omx" / "state" / "codex_arm_queue.next_if_resumed.jsonl"
 
 DEFAULT_CAP = 4
 SSD_ADD_DIR = "/Volumes/VertigoDataTier/pact"
 KILL_SWITCH = "TAC_CODEX_SATURATE_OFF"
 _LIVE_STATUSES = frozenset({"queued", "live"})
+_NEXT_SCHEMA = "codex_arm_queue.next_if_resumed.v1"
+_FINAL_SCHEMA = "codex_arm_queue.final_message.v1"
+_HEADING_RX = re.compile(r"^(#{1,6})\s+(.*)$")
+
+
+def _rel(path: Path) -> str:
+    try:
+        return str(path.resolve().relative_to(_REPO))
+    except ValueError:
+        return str(path)
+
+
+def _sha256_bytes(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
+
+
+def _sha256_file(path: Path) -> str:
+    return _sha256_bytes(path.read_bytes())
+
+
+def _json_key(row: dict, key_fields: tuple[str, ...]) -> tuple:
+    return tuple(row.get(k) for k in key_fields)
+
+
+def _append_jsonl_once(path: Path, row: dict, key_fields: tuple[str, ...]) -> bool:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    key = _json_key(row, key_fields)
+    with path.open("a+", encoding="utf-8") as handle:
+        fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+        handle.seek(0)
+        for line in handle:
+            if not line.strip():
+                continue
+            try:
+                existing = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if _json_key(existing, key_fields) == key:
+                return False
+        handle.write(json.dumps(row, sort_keys=True) + "\n")
+        return True
+
+
+def _utcstamp() -> str:
+    return datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+
+
+def _normalize_phrase(text: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "", text.lower())
+
+
+def _is_next_if_resumed_phrase(text: str) -> bool:
+    alpha = re.sub(r"[^a-z]+", "", text.lower())
+    return (
+        alpha.startswith("nextifresumed")
+        or alpha.endswith("nextifresumed")
+        or ("livehypotheses" in alpha and "nextifresumed" in alpha)
+    )
+
+
+def _inline_next_starts_line(line: str) -> bool:
+    stripped = line.strip()
+    stripped = re.sub(r"^(?:[-*+>]|\d+[.)])\s+", "", stripped)
+    stripped = stripped.strip("*_` ")
+    return _normalize_phrase(stripped).startswith("nextifresumed")
+
+
+def next_if_resumed_blocks(text: str) -> list[dict]:
+    """Extract Markdown-ish NEXT_IF_RESUMED blocks without inventing rows.
+
+    Accepts the contract spellings (``NEXT_IF_RESUMED`` / ``NEXT-IF-RESUMED``)
+    and the title-case receipt form (``Next If Resumed``). Heading blocks run
+    until the next heading of the same or higher level. Inline contract lines
+    run until the next blank line or heading.
+    """
+    lines = text.splitlines()
+    blocks: list[dict] = []
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        heading = _HEADING_RX.match(line)
+        if heading and _is_next_if_resumed_phrase(heading.group(2)):
+            level = len(heading.group(1))
+            j = i + 1
+            while j < len(lines):
+                next_heading = _HEADING_RX.match(lines[j])
+                if next_heading and len(next_heading.group(1)) <= level:
+                    break
+                j += 1
+            block_text = "\n".join(lines[i:j]).strip()
+            if block_text:
+                blocks.append(
+                    {
+                        "line_start": i + 1,
+                        "line_end": j,
+                        "heading": heading.group(2).strip(),
+                        "text": block_text,
+                    }
+                )
+            i = j
+            continue
+        if not heading and _inline_next_starts_line(line):
+            j = i + 1
+            while j < len(lines):
+                if not lines[j].strip() or _HEADING_RX.match(lines[j]):
+                    break
+                j += 1
+            block_text = "\n".join(lines[i:j]).strip()
+            if block_text:
+                blocks.append(
+                    {
+                        "line_start": i + 1,
+                        "line_end": j,
+                        "heading": "NEXT-IF-RESUMED",
+                        "text": block_text,
+                    }
+                )
+            i = j
+            continue
+        i += 1
+    return blocks
+
+
+def _infer_arm_name(path: Path) -> str:
+    rel = _rel(path)
+    if "arm_final_messages/" in rel:
+        stem = path.stem
+        match = re.match(r"(.+)_20\d{6}T\d{6}Z$", stem)
+        return match.group(1) if match else stem
+    for part in reversed(path.parts):
+        match = re.match(r"ddm_([a-z0-9]+)_20\d{6}", part)
+        if match:
+            return match.group(1)
+    stem = path.stem.lower()
+    match = re.match(r"ddm_([a-z0-9]+)_", stem)
+    if match:
+        return match.group(1)
+    match = re.match(r"([a-z0-9]+)[_-]", stem)
+    return match.group(1) if match else stem
+
+
+def extract_next_if_resumed(
+    sources: list[Path],
+    *,
+    provenance: str,
+    name: str | None = None,
+    out_path: Path = NEXT_IF_RESUMED,
+) -> dict:
+    """Append NEXT_IF_RESUMED blocks from source files to the arm queue surface."""
+    written = 0
+    seen = 0
+    files_with_rows = 0
+    for source in sources:
+        try:
+            text = source.read_text(encoding="utf-8", errors="replace")
+            source_sha256 = _sha256_file(source)
+        except OSError:
+            continue
+        blocks = next_if_resumed_blocks(text)
+        if blocks:
+            files_with_rows += 1
+        arm_name = name or _infer_arm_name(source)
+        source_rel = _rel(source)
+        source_kind = (
+            "persisted_final_message"
+            if "arm_final_messages/" in source_rel
+            else "arm_receipt"
+        )
+        for block in blocks:
+            seen += 1
+            block_sha256 = _sha256_bytes(block["text"].encode("utf-8"))
+            row_id = _sha256_bytes(
+                "|".join(
+                    [
+                        _NEXT_SCHEMA,
+                        arm_name,
+                        source_rel,
+                        str(block["line_start"]),
+                        block_sha256,
+                    ]
+                ).encode("utf-8")
+            )
+            row = {
+                "schema": _NEXT_SCHEMA,
+                "row_id": row_id,
+                "name": arm_name,
+                "provenance": provenance,
+                "source_kind": source_kind,
+                "source_path": source_rel,
+                "source_sha256": source_sha256,
+                "line_start": block["line_start"],
+                "line_end": block["line_end"],
+                "heading": block["heading"],
+                "text": block["text"],
+                "block_sha256": block_sha256,
+                "written_at_utc": datetime.now(timezone.utc).isoformat(),
+                "reader_main_harvest": _rel(NEXT_IF_RESUMED),
+                "reader_costate_digest": "tools/costate_digest.py section_arm_next_if_resumed",
+                "score_claim": False,
+            }
+            if _append_jsonl_once(out_path, row, ("row_id",)):
+                written += 1
+    return {"sources": len(sources), "blocks_seen": seen, "written": written, "files_with_rows": files_with_rows}
+
+
+def persist_final_message(name: str, rc: int, elapsed: int, last_path: Path | None = None) -> dict | None:
+    """Copy the full codex ``-o`` final message into research custody and index it."""
+    source = last_path or (RUNS / f"{name}.last.txt")
+    try:
+        data = source.read_bytes()
+    except OSError:
+        return None
+    if not data.strip():
+        return None
+    safe_name = re.sub(r"[^A-Za-z0-9_.-]+", "_", name).strip("._") or "arm"
+    FINAL_MESSAGES.mkdir(parents=True, exist_ok=True)
+    dest = FINAL_MESSAGES / f"{safe_name}_{_utcstamp()}.md"
+    counter = 1
+    while dest.exists():
+        dest = FINAL_MESSAGES / f"{safe_name}_{_utcstamp()}_{counter}.md"
+        counter += 1
+    dest.write_bytes(data)
+    sha256 = _sha256_bytes(data)
+    row = {
+        "schema": _FINAL_SCHEMA,
+        "name": name,
+        "rc": int(rc),
+        "elapsed": int(elapsed),
+        "path": _rel(dest),
+        "sha256": sha256,
+        "source_path": _rel(source),
+        "written_at_utc": datetime.now(timezone.utc).isoformat(),
+        "score_claim": False,
+    }
+    row["row_id"] = _sha256_bytes(
+        f"{_FINAL_SCHEMA}|{row['name']}|{row['path']}|{row['sha256']}".encode("utf-8")
+    )
+    _append_jsonl_once(FINAL_MESSAGE_INDEX, row, ("row_id",))
+    extract_next_if_resumed([dest], provenance="harvested-final", name=name, out_path=NEXT_IF_RESUMED)
+    return row
 
 
 # --- queue state (pure-ish) ------------------------------------------------------
@@ -345,8 +592,15 @@ def keeper_source(name: str, prompt_path: str) -> str:
         "        f.write('relay gen=%d->%d rc=%d gen_elapsed=%d progressed=%s\\n'\n"
         "                % (gen, gen + 1, rc, int(time.time() - gen_start), progressed))\n"
         "    gen += 1\n"
+        "elapsed = int(time.time() - start)\n"
+        "try:\n"
+        "    subprocess.run([sys.executable, 'tools/codex_arm_queue.py', 'persist-final',\n"
+        "                    '--name', NAME, '--rc', str(rc), '--elapsed', str(elapsed),\n"
+        "                    '--last', LAST], check=False)\n"
+        "except Exception:\n"
+        "    pass\n"
         "with open(DONE, 'w') as f:\n"
-        "    f.write('rc=%d elapsed=%d gen=%d\\n' % (rc, int(time.time() - start), gen))\n"
+        "    f.write('rc=%d elapsed=%d gen=%d\\n' % (rc, elapsed, gen))\n"
         "sys.exit(rc)\n"
     )
 
@@ -424,6 +678,13 @@ def _watcher_line() -> str:
     return f"fleet watcher: ALIVE (heartbeat {int(age)}s ago)"
 
 
+def _surface_line() -> str:
+    return (
+        f"final messages: {_rel(FINAL_MESSAGES)} ; "
+        f"NEXT_IF_RESUMED surface: {_rel(NEXT_IF_RESUMED)}"
+    )
+
+
 def cmd_status(args) -> int:
     rows = load_rows()
     live = live_arm_names()
@@ -453,6 +714,7 @@ def cmd_status(args) -> int:
     print(f"codex arms live: {len(live)}/{args.cap}  {sorted(live) if live else ''}")
     print(f"scorer slot: {'TAKEN' if scorer_live else 'free'}")
     print(_watcher_line())
+    print(_surface_line())
     print(f"spawnable charters: {len(spawnable)} of {len(latest)} tracked", end="")
     tail = []
     if n_finished:
@@ -527,6 +789,28 @@ def cmd_saturate(args) -> int:
     return 0
 
 
+def cmd_persist_final(args) -> int:
+    row = persist_final_message(args.name, args.rc, args.elapsed, Path(args.last))
+    if row is None:
+        print(f"no final message persisted for {args.name}: {args.last}")
+        return 1
+    print(json.dumps(row, sort_keys=True))
+    return 0
+
+
+def cmd_extract_next(args) -> int:
+    sources = [Path(p) for p in args.source]
+    for pattern in args.source_glob:
+        sources.extend(sorted(_REPO.glob(pattern)))
+    summary = extract_next_if_resumed(
+        sources,
+        provenance=args.provenance,
+        name=args.name,
+    )
+    print(json.dumps(summary, sort_keys=True))
+    return 0
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--cap", type=int, default=DEFAULT_CAP)
@@ -542,6 +826,18 @@ def main(argv=None) -> int:
     p.add_argument("--status", required=True, choices=["queued", "live", "landed", "dropped"])
     p.set_defaults(fn=cmd_mark)
     p = sub.add_parser("saturate"); p.add_argument("--spawn", action="store_true"); p.set_defaults(fn=cmd_saturate)
+    p = sub.add_parser("persist-final")
+    p.add_argument("--name", required=True)
+    p.add_argument("--rc", type=int, required=True)
+    p.add_argument("--elapsed", type=int, required=True)
+    p.add_argument("--last", required=True)
+    p.set_defaults(fn=cmd_persist_final)
+    p = sub.add_parser("extract-next")
+    p.add_argument("--source", action="append", default=[])
+    p.add_argument("--source-glob", action="append", default=[])
+    p.add_argument("--provenance", default="manual")
+    p.add_argument("--name")
+    p.set_defaults(fn=cmd_extract_next)
 
     args = parser.parse_args(argv)
     return args.fn(args)

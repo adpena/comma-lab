@@ -247,6 +247,8 @@ def test_keeper_writes_an_exit_receipt(q):
     src = q.keeper_source("x", ".omx/tmp/codex_runs/x_prompt.md")
     assert ".done" in src
     assert "rc=%d" in src
+    assert "persist-final" in src
+    assert "--last" in src
 
 
 def test_keeper_handles_signals_so_a_reap_leaves_evidence(q):
@@ -280,3 +282,114 @@ def test_spawn_clears_stale_receipts_from_a_previous_generation(tmp_path, monkey
     assert q.spawn("x", ".omx/tmp/codex_runs/x_prompt.md") is True
     assert not (q.RUNS / "x.done").exists(), "stale death receipt survived respawn"
     assert not (q.RUNS / "x.last.txt").exists(), "stale finish marker survived respawn"
+
+
+def test_next_if_resumed_parser_accepts_contract_and_title_case(q):
+    text = """# Receipt
+
+## NEXT_IF_RESUMED
+
+1. First action.
+
+## Boundary
+
+Measured nothing.
+
+## Next If Resumed
+
+1. Title-case receipt block.
+2. Still in the block.
+
+## Later
+
+Done.
+"""
+    blocks = q.next_if_resumed_blocks(text)
+    assert [b["heading"] for b in blocks] == ["NEXT_IF_RESUMED", "Next If Resumed"]
+    assert "Boundary" not in blocks[0]["text"]
+    assert "Still in the block" in blocks[1]["text"]
+    assert "Later" not in blocks[1]["text"]
+
+
+def test_next_if_resumed_parser_ignores_incidental_title_mentions(q):
+    text = """# NP1 Receipt - Arm Final-Message Persistence And NEXT_IF_RESUMED Surface
+
+## Answer First
+
+This describes the surface, not a resumable plan block.
+
+## NEXT_IF_RESUMED
+
+1. Resume here.
+"""
+    blocks = q.next_if_resumed_blocks(text)
+    assert len(blocks) == 1
+    assert blocks[0]["line_start"] == 7
+    assert "Answer First" not in blocks[0]["text"]
+
+
+def test_extract_next_if_resumed_is_idempotent_and_has_no_phantom(q, tmp_path):
+    out = tmp_path / "next.jsonl"
+    receipt = tmp_path / "ddm_au1_20260805" / "AU1_RECEIPT.md"
+    receipt.parent.mkdir()
+    receipt.write_text(
+        "# AU1\n\n## NEXT_IF_RESUMED\n\n1. Triage the candidates.\n",
+        encoding="utf-8",
+    )
+    no_block = tmp_path / "ddm_none_20260805" / "NO_BLOCK_RECEIPT.md"
+    no_block.parent.mkdir()
+    no_block.write_text("# Receipt\n\n## Boundary\n\nNo continuation block.\n", encoding="utf-8")
+
+    first = q.extract_next_if_resumed([receipt, no_block], provenance="positive-control", out_path=out)
+    second = q.extract_next_if_resumed([receipt, no_block], provenance="positive-control", out_path=out)
+
+    assert first == {"sources": 2, "blocks_seen": 1, "written": 1, "files_with_rows": 1}
+    assert second == {"sources": 2, "blocks_seen": 1, "written": 0, "files_with_rows": 1}
+    rows = [json.loads(line) for line in out.read_text(encoding="utf-8").splitlines()]
+    assert len(rows) == 1
+    assert rows[0]["name"] == "au1"
+    assert rows[0]["provenance"] == "positive-control"
+    assert rows[0]["source_kind"] == "arm_receipt"
+    assert "Triage the candidates" in rows[0]["text"]
+
+
+def test_infer_arm_name_from_standalone_ddm_memo(q, tmp_path):
+    path = tmp_path / "ddm_dw1_qa75_distill_window_20260730.md"
+    path.write_text("# memo\n", encoding="utf-8")
+    assert q._infer_arm_name(path) == "dw1"
+
+
+def test_persist_final_message_copies_full_text_indexes_and_extracts_next(q, tmp_path, monkeypatch):
+    monkeypatch.setattr(q, "FINAL_MESSAGES", tmp_path / "arm_final_messages")
+    monkeypatch.setattr(q, "FINAL_MESSAGE_INDEX", tmp_path / "final_messages.jsonl")
+    monkeypatch.setattr(q, "NEXT_IF_RESUMED", tmp_path / "next_if_resumed.jsonl")
+    final_text = "# Final\n\nFull message body.\n\n## NEXT_IF_RESUMED\n\n1. Resume here.\n"
+    last = tmp_path / "x.last.txt"
+    last.write_text(final_text, encoding="utf-8")
+
+    row = q.persist_final_message("x", 0, 12, last)
+
+    assert row is not None
+    persisted = Path(row["path"])
+    assert persisted.read_text(encoding="utf-8") == final_text
+    index_rows = [
+        json.loads(line)
+        for line in (tmp_path / "final_messages.jsonl").read_text(encoding="utf-8").splitlines()
+    ]
+    assert len(index_rows) == 1
+    assert {k: index_rows[0][k] for k in ("name", "rc", "elapsed", "path", "sha256")} == {
+        "name": "x",
+        "rc": 0,
+        "elapsed": 12,
+        "path": row["path"],
+        "sha256": row["sha256"],
+    }
+    next_rows = [
+        json.loads(line)
+        for line in (tmp_path / "next_if_resumed.jsonl").read_text(encoding="utf-8").splitlines()
+    ]
+    assert len(next_rows) == 1
+    assert next_rows[0]["name"] == "x"
+    assert next_rows[0]["provenance"] == "harvested-final"
+    assert next_rows[0]["source_kind"] == "persisted_final_message"
+    assert "Resume here" in next_rows[0]["text"]
