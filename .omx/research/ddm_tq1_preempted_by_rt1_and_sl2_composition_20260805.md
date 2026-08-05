@@ -72,3 +72,26 @@ subset-exact baseline not in this receipt):
   extend w4 | converged → jd1 (#366) regenerates against the winner.
 - Scorer slot FREE (tq1 killed). Next scorer use decided at the w3 boundary; margin-weight A/B
   (#925, bo1 §4) queues behind the jd1 decision at that boundary.
+
+## 5. CORRECTION (same-day, from SL2_RECEIPT.md 31d313f026) — the §3 framing was wrong-SCALE
+
+§3 treated the n32 pairs as "the 32 worst." The receipt shows they are **stratified-systematic
+(median of each of 32 flip-strata; subset/population flip ratio 0.9973)** — a REPRESENTATIVE
+sample, so the meaningful projection is FULL-POPULATION, not the 32-pair compose:
+
+- Full-population projection (per the receipt's own "composed packet-only action 0.38797"):
+  seg 0.4312→0.1002 (**−0.331 S**) + pose 0.0845→0.2875 (**+0.203 S**) = **net −0.128 S**
+  seg+pose, BEFORE carriage bytes. The §3 "+0.0036 net loss" is correct ONLY for a 32-pair
+  compose.
+- **Scale-crossover law (derived, register candidate):** with erosion mean 0.0082654 and seg win
+  0.0032988/pair, a k-pair compose nets f(k) = −(k/600)·0.32988 + √(10·(0.00071459 +
+  (k/600)·0.00755)) − 0.084533 → **positive (LOSS) below k≈110, increasingly negative (WIN)
+  above.** The √-term's concavity amortizes pose erosion only at scale — partial pose-eroding
+  seg treatments are structurally net-negative; the same treatment at full population is the
+  largest live seg-line number (−0.128 S).
+- Both gates UNCHANGED: (a) CARRIAGE — ship-the-solve measured rate-dead (od-line 1,214,007 B
+  projected ≈ +0.81 S); a carrier reproducing the solved frames within the ~90 KB corridor
+  (+0.06 S) would net ≈ **−0.07 S**; the carrier RACE (grammar vs TR1 vs distill, #909) inherits
+  this prize. (b) erosion-at-scale must hold (n32 stratified evidence, advisory).
+- Routing unchanged, magnitude corrected: sl2 = the priced TEACHER for the carriage race + the
+  jd1 pose-carrying base; not a row by itself.
