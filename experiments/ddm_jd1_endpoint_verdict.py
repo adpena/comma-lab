@@ -99,9 +99,17 @@ def main() -> int:
         b, t, h2, w2, c6 = yuv.shape
         return mx.reshape(mx.transpose(yuv, (0, 2, 3, 1, 4)), (b, h2, w2, t * c6))
 
+    # RR1-C2-R2-F1 class fix: the denominator label is DERIVED from the actual pair
+    # list, never a literal — a copied variant that edits GATE_PAIR_IDS inherits a
+    # truthful axis automatically (the n600 both-bases receipt shipped with this
+    # instrument's stale "36 gd1-designed" literal; correction manifest at
+    # .omx/research/ddm_rr1_20260805/jd3_endpoint_n600_axis_correction.json).
+    _axis_set_desc = ("all 600 pair ids (0..599)"
+                      if sorted(GATE_PAIR_IDS) == list(range(600))
+                      else f"{len(GATE_PAIR_IDS)} gd1-designed gate pairs")
     receipt: dict = {
         "schema": "ddm_jd1_endpoint_verdict.v1",
-        "axis": "[macOS-CPU frozen-scorer advisory] 36 gd1-designed gate pairs, NON-PROMOTABLE",
+        "axis": f"[macOS-CPU frozen-scorer advisory] {_axis_set_desc}, NON-PROMOTABLE",
         "score_claim": False,
         "task": 958,
         "pose_semantics": "training-vehicle window objective: pair=(render(max(idx-1,0)),render(idx)) "
