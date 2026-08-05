@@ -51,3 +51,20 @@ Consequences (binding on slot allocation under the standing GO):
    bytes both still falling at w3 ep~1195; solve floor 0.0010 is EXISTENCE-proven by sl2).
 4. sl2's persisted frames remain the TEACHER/verifier surface (in-loop targets, NOT KD — dw1
    scopes the KD death to teacher-imitation objectives; jd1's in-loop scorer loss is not that).
+
+## 4. Consequence appendix (same-day): mg1 hinge A/B DEPRIORITIZED; the boundary A/B is the BURN-side margin flag
+
+- **bo1 §4's sealed mg1 hinge-weight A/B targets the CORRECTION SOLVER** (leg A). §1-§3 above
+  eliminated the solver's shipping path — its product cannot ride any explicit carriage. mg1 is
+  therefore deprioritized-with-reason (consumer eliminated), NOT fired at the ep1224 boundary;
+  it would tune a teacher instrument, not a frontier mover. Reactivation: a new amortized
+  consumer of solver output (e.g. jd1 in-loop targets) that measurably benefits from hinge
+  re-tuning.
+- **The live boundary A/B is the BURN-side `--margin-weighted-loss on`** (en1 fix #925; r1c
+  window_01 DESIGNED it on, the flag was silently broken — tp2 measured; the w-windows have been
+  margin-OFF by bug legacy, not design). Staged: `launch_w4m_margin_on_staged.sh` (single
+  variable vs w3; w3 = adjacent-window control at matched epochs). This serves the settled
+  weights-as-carrier route directly.
+- **Window productivity context for the boundary**: w3 spent 139 epochs to hold seg ≈ w2's
+  endpoint (min 0.0038842 vs 0.0038835) while bytes fell ~2.0 KB → composed window gain ≈
+  −0.0013 S / ~4h. Plain continuation is CRAWLING; the margin lever is the named slope-changer.
