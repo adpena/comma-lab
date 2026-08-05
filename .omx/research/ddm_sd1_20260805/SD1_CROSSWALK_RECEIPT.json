@@ -1,0 +1,181 @@
+{
+  "schema": "ddm_sd1_crosswalk_receipt.v1",
+  "arm": "sd1",
+  "date": "2026-08-05",
+  "title": "Crosswalk for arXiv 2608.02624 as a Pact boundary-refinement packet grammar",
+  "status": {
+    "score_claim": false,
+    "frontier_promoted": false,
+    "scorer_forwards_run": 0,
+    "contest_eval_run": false,
+    "n600_scorer_job_run": false,
+    "lane_claimed": false,
+    "upstream_mutated": false
+  },
+  "live_frontier_line": "S = 0.7539807296911207 @ 357,836 B [macOS-CPU advisory]; contest pointer borrowed/unmoved.",
+  "paper_custody": {
+    "arxiv_id": "2608.02624",
+    "url": "https://arxiv.org/abs/2608.02624",
+    "title": "Neural network realization of binary refinement iterates via a two-chart atlas selector",
+    "authors": [
+      "Tsogtgerel Gantumur"
+    ],
+    "submitted": "2026-07-21",
+    "version": "v1",
+    "pages": 30,
+    "subjects": [
+      "math.NA",
+      "cs.LG",
+      "stat.ML"
+    ],
+    "custody_level": "abstract_metadata_only",
+    "local_pdf_sha256": null,
+    "local_source_sha256": null,
+    "custody_limit": "PDF/source custody was not established locally in this turn; mechanism claims beyond the abstract are marked inferred."
+  },
+  "recall_evidence": [
+    {
+      "scope": "hot_state",
+      "path": ".omx/state/main_hot_state.md",
+      "used_for": "live pointer and scorer-slot constraint"
+    },
+    {
+      "scope": "gc18",
+      "path": ".omx/research/ddm_gc18_20260805/GC18_CONVOCATION_RECEIPT.md",
+      "used_for": "replacement task-description route and 45-90 KB coherent-boundary corridor"
+    },
+    {
+      "scope": "pe3",
+      "path": ".omx/research/ddm_pe3_20260805/PE3_RECEIPT_20260805.md",
+      "used_for": "74,408 B section with 0.831522 Road/Lane flip recall"
+    },
+    {
+      "scope": "od6",
+      "path": ".omx/research/ddm_od6_20260805/OD6_DECODER_LEGAL_RECEIPT.md",
+      "used_for": "decoder-legal feature surface and projected 76,304 B n600 row"
+    },
+    {
+      "scope": "od8",
+      "path": ".omx/research/ddm_od8_20260805/OD8_NATIVE_DOF_RECEIPT.md",
+      "used_for": "native sparse RGB paint size falsifier"
+    },
+    {
+      "scope": "g2cs1_g2g2",
+      "paths": [
+        ".omx/research/g2g_chart_symbol_receiver_REUSE_MANIFEST_20260721T161523Z.md",
+        ".omx/research/g2g2_joint_multichart_solve_20260721T174416Z.md"
+      ],
+      "used_for": "existing chart-symbol receiver discipline and bounded multichart negative"
+    },
+    {
+      "scope": "spline_substrate",
+      "paths": [
+        "src/tac/boundary_math/xi_spline_residual_coder.py",
+        "src/tac/lie/se3_bspline.py"
+      ],
+      "used_for": "existing smooth predictor machinery and xi spline scoped negative"
+    },
+    {
+      "scope": "tropical_substrate",
+      "paths": [
+        ".omx/research/tropical_d_seg_solver_design_memo_20260518.md",
+        ".omx/research/tropnnc_311_20260712T010936Z.md",
+        "src/tac/contest_exploits/tropical_argmax_boundary_grammar.py"
+      ],
+      "used_for": "argmax-boundary framing and dense-trunk pruning caution"
+    }
+  ],
+  "derived_arithmetic": {
+    "label": "DERIVED",
+    "decode_budget_seconds": 1800.0,
+    "od7_projected_decode_seconds": 197.5,
+    "remaining_decode_headroom_seconds": 1602.5,
+    "total_decode_time_multiplier": 9.113924050632912,
+    "incremental_decode_time_multiplier": 8.113924050632912,
+    "additional_binary_refinement_levels_if_one_level_costs_one_baseline": 8,
+    "subdivision_factor_after_additional_levels": 256,
+    "subdivision_factor_counting_baseline_as_level": 512
+  },
+  "per_seed_verdicts": [
+    {
+      "seed": "subdivision_as_boundary_generator",
+      "verdict": "ADOPT_WITH_ALREADY_EMBODIED_SUBSTRATE",
+      "evidence_label": "INFERRED",
+      "named_consumers": [
+        "OD5 generator/worldsheet coordinate closure",
+        "PE3 child section",
+        "G2CS1-style chart packet"
+      ],
+      "falsifier": "A receiver-consumed n32 CPWL packet cannot parse-back deterministically, cannot represent the Road/Lane boundary family, or projects above the 90 KB coherent-boundary corridor at PE3-like recall."
+    },
+    {
+      "seed": "depth_free_width_counted_lever",
+      "verdict": "ADOPT_AS_BOUND_NOT_SCORE",
+      "evidence_label": "DERIVED",
+      "named_consumers": [
+        "future sd1_cpwl_refinement_packet benchmark"
+      ],
+      "falsifier": "Decode timing exceeds the 30-minute envelope or counted bytes grow per refinement level through video-derived masks/tables."
+    },
+    {
+      "seed": "exactness_integer_safety",
+      "verdict": "ADOPT_AS_GATE",
+      "evidence_label": "INFERRED",
+      "named_consumers": [
+        "chart receiver tests",
+        "deterministic double-decode",
+        "canonical packet compiler"
+      ],
+      "falsifier": "The selector relies on floating seams, variable multiplication, or host-dependent branch decisions."
+    },
+    {
+      "seed": "relu_realization_as_archive_vehicle",
+      "verdict": "REFUSE_BY_DEFAULT",
+      "evidence_label": "DERIVED",
+      "named_consumers": [
+        "review preflight for SD1 child implementations"
+      ],
+      "falsifier": "A byte-closed archive proves counted learned parameters beat the same target under the exact receiver."
+    },
+    {
+      "seed": "curvelet_shearlet_tropical_adjacency",
+      "verdict": "FOLD_INTO_EXISTING_BOUNDARY_GRAMMAR_NO_LAUNCH",
+      "evidence_label": "RECALLED",
+      "named_consumers": [
+        "tropical boundary grammar helper",
+        "OD5 representation choice"
+      ],
+      "falsifier": "A low-temperature high-saturation checkpoint produces byte-closed exact argmax evidence for dense-trunk reduction."
+    }
+  ],
+  "equation_policy": {
+    "new_canonical_equation_registered": false,
+    "reason": "This unit is a research crosswalk and establishes no new empirical law.",
+    "reuse_or_point_to_existing": [
+      "tropnnc_dense_trunk_exact_dseg_reduction_empty_v1 for the scoped dense-trunk caution",
+      "existing stopping-law registry entries for future depth benchmarks"
+    ]
+  },
+  "followons": [
+    {
+      "status": "QUEUED-WITH-FIRE-ORDER",
+      "name": "sd1_cpwl_refinement_packet",
+      "fire_order": "After od3 releases scorer slot and OD5/OD8 persistence facts are available, build scorer-free receiver packet first; require exact bytes, packet hash, parse-back equality, double-decode equality, projected n600 bytes with denominator, and 45-90 KB corridor falsifier."
+    },
+    {
+      "status": "FOLDED",
+      "name": "generic_spline_predictor_task",
+      "reason": "Existing xi spline evidence says generic smooth trajectory prediction is not the main rate lever."
+    },
+    {
+      "status": "FOLDED",
+      "name": "dense_relu_tropnnc_pruning_from_sd1",
+      "reason": "Existing #311 scoped negative supplies the reactivation gate."
+    },
+    {
+      "status": "QUEUED-WITH-FIRE-ORDER",
+      "name": "sd1_scorer_consumer",
+      "fire_order": "Only after a receiver packet exists and a scorer lane is claimed; consume serialized packet exactly and report public-wire d_seg/rate deltas."
+    }
+  ]
+}
