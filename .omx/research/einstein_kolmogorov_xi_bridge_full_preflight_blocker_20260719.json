@@ -1,0 +1,60 @@
+{
+  "schema": "einstein_kolmogorov_xi_bridge_preflight_blocker.v2",
+  "utc": "2026-07-19T23:26:53Z",
+  "status": "BLOCKED_LOCAL_FILESYSTEM_POLICY_BEFORE_BACKEND",
+  "authority": "zero-cost local governed-full n600 preflight; no score authority",
+  "execution_mode": "governed_full",
+  "max_pairs": 600,
+  "operator_authorization_reference": "/Users/adpena/Projects/pact/.omx/tmp/codex_inbox/einstein_kolmogorov_crux.jsonl#2026-07-19T21:26:22Z-zero-cost-local-full",
+  "command": [
+    "PYTHONPATH=src",
+    "/Users/adpena/Projects/pact/.venv/bin/python",
+    "tools/probe_einstein_kolmogorov_xi_bridge.py",
+    "--config",
+    "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_xi_bridge_config_20260719.json"
+  ],
+  "exit_code": 1,
+  "config": {
+    "path": ".omx/research/einstein_kolmogorov_xi_bridge_config_20260719.json",
+    "sha256": "ae1f80b5de3712bf436e45fcd2deeac71ae7d1b91847dc8b942433d980d442d8",
+    "fingerprint_sha256": "69329c6e51b317c3d8dde02c8217f457528eb535a6e3450b8f0408786e8fe7b5"
+  },
+  "storage_preflight": {
+    "policy": "operator_storage_waterfall.v1",
+    "tier_order": [
+      "/Volumes/VertigoDataTier/pact",
+      "/Volumes/APDataStore/pact"
+    ],
+    "selected_root": "/Volumes/VertigoDataTier/pact",
+    "packet_output_dir": "/Volumes/VertigoDataTier/pact/evidence/einstein_kolmogorov_crux_20260719_xi_bridge_packet",
+    "derived_minimum_free_bytes": 15723380224,
+    "required_free_bytes": 15723380224,
+    "selected_root_free_bytes": 786851270656,
+    "selected_root_capacity_qualifies": true,
+    "local_fallback": false
+  },
+  "first_blocker": {
+    "type": "PacketOutputFilesystemCustodyError",
+    "classification": "permission_denied",
+    "errno": 1,
+    "detail": "Operation not permitted",
+    "parent": "/Volumes/VertigoDataTier/pact/evidence"
+  },
+  "input_hash_receipt": {
+    "path": ".omx/research/einstein_kolmogorov_xi_bridge_hash_receipt_20260719.json",
+    "sha256": "855ef64cab70865f97744bd1105c068ed3c84c281c194be650226dac5848ac8f",
+    "bytes": 4624,
+    "backend_started": false,
+    "output_storage_probed": false
+  },
+  "backend_started": false,
+  "packet_output_created": false,
+  "result_json_created": false,
+  "uncertified_bytes_deleted": false,
+  "pointer_moved": false,
+  "downstream_guard": {
+    "status": "BLOCKED_PENDING_EXPLICIT_RESUME_CONTRACT",
+    "reason": "The delegated full byte-close backend is monolithic and exposes no stage-resume contract. Filesystem access alone must not authorize a future n600 backend launch."
+  },
+  "verdict_scope": "Execution-surface blocker only; not evidence against the xi family, the composed checkpoint, or any contest-axis score."
+}

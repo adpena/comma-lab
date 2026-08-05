@@ -1,0 +1,37 @@
+{
+  "receipt_id": "ddm_ek2_worktree_harvest_20260810",
+  "generated_utc": "2026-08-05T16:04:30Z",
+  "source_worktree_head": "6a78ee8209e4a335dde64eb512ddcd361f6d33b6",
+  "assigned_branch": "codexwt/ddm_ek2_worktree_harvest",
+  "cold_store_root": "/Volumes/VertigoDataTier/pact/cold_store/ddm_ek2_worktree_harvest_20260810",
+  "action": "certified_move_to_ssd_cold_store",
+  "deleted_without_certification": false,
+  "items": [
+    {
+      "original_relative_path": ".omx/research/einstein_kolmogorov_crux_runs_20260719",
+      "cold_store_path": "/Volumes/VertigoDataTier/pact/cold_store/ddm_ek2_worktree_harvest_20260810/einstein_kolmogorov_crux_runs_20260719",
+      "classification": "rebuildable-bulk",
+      "file_count": 1476,
+      "bytes": 18763542,
+      "du_kib": 21056,
+      "relative_path_list_sha256": "8a086f97d9fb40497c79d00e25dec448a533805e50a8c6514f6e18aa1df39a08",
+      "content_tree_sha256": "cc7f176d9163200d2a9b17e0dfb221150681a400552b5d4a2de3f53f7acd7778",
+      "reason": "rebuildable run-output residue from the EK scoped crux worktree; preserved under SSD cold store instead of committing bulk"
+    },
+    {
+      "original_relative_path": ".omx/research/einstein_kolmogorov_crux_runs_20260719_pre_review_invalid",
+      "cold_store_path": "/Volumes/VertigoDataTier/pact/cold_store/ddm_ek2_worktree_harvest_20260810/einstein_kolmogorov_crux_runs_20260719_pre_review_invalid",
+      "classification": "rebuildable-bulk",
+      "file_count": 81,
+      "bytes": 768853,
+      "du_kib": 904,
+      "relative_path_list_sha256": "19a4ec7b587f9fa273b34fb4ad9f7f7d4b19e27655db918a228aeba657a99551",
+      "content_tree_sha256": "9649f5c249df985bc9695e287c21367715e8d126846082cbefeb59343d5ccb8a",
+      "reason": "pre-review invalid run-output residue; preserved under SSD cold store with content certification"
+    }
+  ],
+  "verification": {
+    "before_move_counts_and_hashes_matched_after_move": true,
+    "durable_manifest": ".omx/research/ddm_ek2_worktree_harvest_20260810/cold_store_manifest.json"
+  }
+}

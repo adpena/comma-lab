@@ -1,0 +1,11 @@
+rc=0
+finished_utc=2026-08-05T16:04:30Z
+receipt=.omx/research/ddm_ek2_worktree_harvest_20260810/DISPOSITION.md
+cold_store_manifest=.omx/research/ddm_ek2_worktree_harvest_20260810/cold_store_manifest.json
+assigned_branch=codexwt/ddm_ek2_worktree_harvest
+git_ref_write_blocked=1
+commit=BLOCKED
+tests=121 passed in 3.89s
+scorer_launch=0
+paid_dispatch=0
+frontier_moved=0

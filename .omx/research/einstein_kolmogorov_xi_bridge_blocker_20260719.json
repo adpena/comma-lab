@@ -1,0 +1,45 @@
+{
+  "schema": "einstein_kolmogorov_xi_bridge_blocker.v1",
+  "utc": "2026-07-19T22:26:27Z",
+  "authority": "[macOS-CPU advisory] diagnostic-only",
+  "research_only": true,
+  "launch": false,
+  "paid_dispatch": false,
+  "pointer": "0.1910828242 [contest-CPU Linux x86_64] UNMOVED",
+  "config": {
+    "path": ".omx/research/einstein_kolmogorov_xi_bridge_config_20260719.json",
+    "sha256": "bb781754f67c3890e00a340bb9f982e73d5ea35ae3c91b1c95ab375fc9d4e9b6"
+  },
+  "command": "PYTHONPATH=src /Users/adpena/Projects/pact/.venv/bin/python tools/probe_einstein_kolmogorov_xi_bridge.py --config /Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_xi_bridge_config_20260719.json",
+  "exit_code": 1,
+  "blocker": {
+    "exception": "PacketOutputFilesystemCustodyError",
+    "classification": "permission_denied",
+    "errno": 1,
+    "detail": "Operation not permitted",
+    "parent": "/Volumes/VertigoDataTier/pact/evidence",
+    "verdict_scope": "this managed sandbox cannot create the mandatory SSD-backed packet; it is not a negative verdict on the xi composition family or on a writable local-Mac execution surface"
+  },
+  "fail_closed_evidence": {
+    "preflight_before_checkpoint_load": true,
+    "packet_output_absent": true,
+    "result_receipt_absent": true,
+    "bulky_local_or_tmp_fallback_used": false
+  },
+  "source_custody": {
+    "dsl_sha256": "4082df3fbcc533c9d52dcb14499899b294057d1bb6eaf52fe3f6bcd116ef5609",
+    "probe_sha256": "4fc945ae9e1f66286393773e63922b602fb8381f903baa01cb997adb5ea83d6b",
+    "tests_sha256": "741eb1271ca3d3261a714851ddb9da697fc7a9a963f5877d3a350cc958d5dc52"
+  },
+  "prepared_binding": {
+    "generator_npz_sha256": "b0a431e9259cd3c54ae53b677076823f36e096b27eb0d9ba74ed7c54c9113cef",
+    "donor_r1_npz_sha256": "5d18042eba3ac262200a7bb3fb905846cd9e1d4ea956dee6f65da8984ddd6e95",
+    "gt_n600_npz_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6",
+    "max_pairs": 24,
+    "pose_carrier_mode": "store_nothing",
+    "xi_coder": "delta_ar",
+    "xi_q_levels": 4096,
+    "bit_exact_pairs": 2,
+    "exact_eval_requested": false
+  }
+}
