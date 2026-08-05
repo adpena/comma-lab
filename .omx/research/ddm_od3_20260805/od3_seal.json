@@ -1,0 +1,16 @@
+{
+  "aggregate": ".omx/research/ddm_od3_20260805/OD3_AGGREGATE.json",
+  "capacity_sweeps": [
+    "/Volumes/VertigoDataTier/pact/ddm_od3_20260805/od3_capacity_sweep_k8_worst4.json",
+    "/Volumes/VertigoDataTier/pact/ddm_od3_20260805/od3_capacity_sweep_k12_worst4.json"
+  ],
+  "created_utc": "2026-08-05T04:58:13Z",
+  "frontier_line": "S = 0.7539807296911207 @ 357,836 B [macOS-CPU advisory]; contest pointer borrowed/unmoved.",
+  "next_if_resumed": ".omx/research/ddm_od3_20260805/NEXT_IF_RESUMED.md",
+  "promotion_eligible": false,
+  "receipt": ".omx/research/ddm_od3_20260805/OD3_TERMINALITY_RECEIPT.md",
+  "schema": "ddm_od3_seal.v1",
+  "score_claim": false,
+  "status": "OD3_MEASURED_ADVISORY_NOT_FRONTIER_MOVE",
+  "terminal_raw": "/Volumes/VertigoDataTier/pact/ddm_od3_20260805/od3_js1_n32_terminal_seg100_cprime_k4.json"
+}

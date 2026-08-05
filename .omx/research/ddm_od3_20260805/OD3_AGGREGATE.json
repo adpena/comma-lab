@@ -1,0 +1,462 @@
+{
+  "axis": "[macOS-CPU frozen-scorer advisory] NON-PROMOTABLE",
+  "capacity_sweep_on_registered_prediction_miss": {
+    "rows": [
+      {
+        "bytes_per_pair_per_1e_minus_4_d_pose_recovered": null,
+        "counted_bytes_per_pair": 96,
+        "d_pose_mean_panel": 0.002103622246067971,
+        "d_pose_mean_recovered_vs_k4": 0.0,
+        "extra_bytes_per_pair_vs_k4": 0,
+        "k": 4,
+        "panel_extra_rate_S_vs_k4": 0.0,
+        "panel_pairs": [
+          198,
+          119,
+          423,
+          411
+        ],
+        "per_pair": [
+          {
+            "d_pose_before": 0.0025681934785097837,
+            "d_pose_k": 0.0024203057400882244,
+            "d_pose_stage1": 0.011131512932479382,
+            "pair": 198
+          },
+          {
+            "d_pose_before": 0.002261098939925432,
+            "d_pose_k": 0.002223836723715067,
+            "d_pose_stage1": 0.011892489157617092,
+            "pair": 119
+          },
+          {
+            "d_pose_before": 0.0018699754728004336,
+            "d_pose_k": 0.0019114931346848607,
+            "d_pose_stage1": 0.005207799840718508,
+            "pair": 423
+          },
+          {
+            "d_pose_before": 0.001142296358011663,
+            "d_pose_k": 0.001858853385783732,
+            "d_pose_stage1": 0.518949568271637,
+            "pair": 411
+          }
+        ],
+        "pose_contribution_panel": 0.14503869297770064,
+        "projected_full_n600_extra_rate_S_vs_k4": 0.0,
+        "seg_preserved_pairs": 4
+      },
+      {
+        "bytes_per_pair_per_1e_minus_4_d_pose_recovered": 106.05921386558838,
+        "counted_bytes_per_pair": 384,
+        "d_pose_mean_panel": 0.001832075824495405,
+        "d_pose_mean_recovered_vs_k4": 0.00027154642157256603,
+        "extra_bytes_per_pair_vs_k4": 288,
+        "k": 8,
+        "panel_extra_rate_S_vs_k4": 0.0007670695139967414,
+        "panel_pairs": [
+          198,
+          119,
+          423,
+          411
+        ],
+        "per_pair": [
+          {
+            "d_pose_before": 0.0025681934785097837,
+            "d_pose_k": 0.002444349927827716,
+            "d_pose_stage1": 0.011131512932479382,
+            "pair": 198
+          },
+          {
+            "d_pose_before": 0.002261098939925432,
+            "d_pose_k": 0.0022020870819687843,
+            "d_pose_stage1": 0.011892489157617092,
+            "pair": 119
+          },
+          {
+            "d_pose_before": 0.0018699754728004336,
+            "d_pose_k": 0.0015669051790609956,
+            "d_pose_stage1": 0.005207799840718508,
+            "pair": 423
+          },
+          {
+            "d_pose_before": 0.001142296358011663,
+            "d_pose_k": 0.001114961109124124,
+            "d_pose_stage1": 0.518949568271637,
+            "pair": 411
+          }
+        ],
+        "pose_contribution_panel": 0.13535419552032382,
+        "projected_full_n600_extra_rate_S_vs_k4": 0.11506042709951121,
+        "seg_preserved_pairs": 4
+      },
+      {
+        "bytes_per_pair_per_1e_minus_4_d_pose_recovered": 2594.8427275870717,
+        "counted_bytes_per_pair": 864,
+        "d_pose_mean_panel": 0.002074025076581165,
+        "d_pose_mean_recovered_vs_k4": 2.9597169486805797e-05,
+        "extra_bytes_per_pair_vs_k4": 768,
+        "k": 12,
+        "panel_extra_rate_S_vs_k4": 0.0020455187039913106,
+        "panel_pairs": [
+          198,
+          119,
+          423,
+          411
+        ],
+        "per_pair": [
+          {
+            "d_pose_before": 0.0025681934785097837,
+            "d_pose_k": 0.002409530570730567,
+            "d_pose_stage1": 0.011131512932479382,
+            "pair": 198
+          },
+          {
+            "d_pose_before": 0.002261098939925432,
+            "d_pose_k": 0.002141247969120741,
+            "d_pose_stage1": 0.011892489157617092,
+            "pair": 119
+          },
+          {
+            "d_pose_before": 0.0018699754728004336,
+            "d_pose_k": 0.0015549099771305919,
+            "d_pose_stage1": 0.005207799840718508,
+            "pair": 423
+          },
+          {
+            "d_pose_before": 0.001142296358011663,
+            "d_pose_k": 0.002190411789342761,
+            "d_pose_stage1": 0.518949568271637,
+            "pair": 411
+          }
+        ],
+        "pose_contribution_panel": 0.14401475884718085,
+        "projected_full_n600_extra_rate_S_vs_k4": 0.3068278055986966,
+        "seg_preserved_pairs": 4
+      }
+    ],
+    "run_paths": {
+      "k12_source": "/Volumes/VertigoDataTier/pact/ddm_od3_20260805/od3_capacity_sweep_k12_worst4.json",
+      "k4_source": "/Volumes/VertigoDataTier/pact/ddm_od3_20260805/od3_js1_n32_terminal_seg100_cprime_k4.json",
+      "k8_source": "/Volumes/VertigoDataTier/pact/ddm_od3_20260805/od3_capacity_sweep_k8_worst4.json"
+    },
+    "scope": "fallback branch for OD3 preregistered k4 target miss; worst four rows by OD3 k4 verified d_pose",
+    "verdict": "k8 restores part of the worst-panel pose margin at 288 extra B/pair; k12 is worse than k8 on this panel and is not a monotone capacity win.",
+    "verdict_scope": "INSTANCE on worst-row panel; does not replace n32 k4 projection"
+  },
+  "charter": "od3_prompt.md Stage-1 terminality close plus carriage re-proof at terminal",
+  "competitive_pointer": {
+    "S": 0.1910828242,
+    "axis": "[contest-CPU]",
+    "status": "BORROWED_UNMOVED"
+  },
+  "created_utc": "2026-08-05T04:58:13Z",
+  "current_own_vehicle_frontier": {
+    "S": 0.7539807296911207,
+    "archive_bytes": 357836,
+    "axis": "[macOS-CPU advisory]"
+  },
+  "denominators": {
+    "height": 384,
+    "n_pairs": 32,
+    "population_pairs": 600,
+    "rate_denominator_bytes": 37545489,
+    "seg_denominator_pixels": 6291456,
+    "selection_mode": "OD2 stratified_blocks seeded random, block_count=10, seed=20260805",
+    "width": 512
+  },
+  "evaluate_py_run": false,
+  "full_n600_scorer_job": false,
+  "git_head_after_js1_telemetry_commit": "b958a3c5335c32ff6d614f2d5dce2816b72a1033",
+  "pair_selection": {
+    "m96_flag": "pose-EASY subset 0.426x population; seg leg matched 1.010x",
+    "pairs": [
+      8,
+      32,
+      46,
+      57,
+      70,
+      107,
+      112,
+      119,
+      148,
+      154,
+      168,
+      198,
+      225,
+      234,
+      244,
+      251,
+      284,
+      328,
+      336,
+      349,
+      383,
+      399,
+      411,
+      423,
+      445,
+      465,
+      481,
+      516,
+      536,
+      561,
+      582,
+      583
+    ],
+    "pose_ratio_population": 0.42628664334579025,
+    "seg_ratio_population": 1.0099888594483923
+  },
+  "promotion_eligible": false,
+  "recall_evidence": {
+    "beyond_charter_findings": [
+      "OD3 preregistered prediction addendum existed and changed the plan: a k4 miss vs OD2 required a k=4/8/12 worst-row capacity sweep.",
+      "Canonical trajectory law treats marginal_below_bar as a semantic stop for future allocation, so OD3 can retire cap ambiguity without calling safety caps convergence.",
+      "ST2 receipt did not overlap OD2 pair ids, so ST2 could not be used as an applied ranking prior for this exact pair set."
+    ],
+    "sources_searched": [
+      {
+        "query": "trajectory_derived_stopping_law_v1 OR marginal_below_bar OR safety_bound_REPORTED",
+        "scope": "src/tac/optimization/trajectory_stopping.py; .omx/state/canonical_equations_registry.jsonl; .omx/research/ddm_tj1_20260805"
+      },
+      {
+        "query": "frame_0 OR k=4 OR C-PRIME OR staged OR pose-EASY OR 0.426 OR 1.010",
+        "scope": "OD1/OD2/ST2/XA2 research receipts"
+      },
+      {
+        "query": "OD3 OR od3 OR ddm_od3 OR reserved scorer",
+        "scope": "main_hot_state, codex_arm_queue, research index, DAG feeds"
+      },
+      {
+        "command": ".venv/bin/python tools/list_canonical_equations.py --json",
+        "output": "/Volumes/VertigoDataTier/pact/ddm_od3_20260805/canonical_equations_snapshot.json"
+      }
+    ]
+  },
+  "receiver_closed_archive_build": false,
+  "schema": "ddm_od3_terminality_aggregate.v1",
+  "score_claim": false,
+  "sha256": [
+    {
+      "bytes": 4673,
+      "path": ".omx/tmp/codex_runs/od3_prompt.md",
+      "sha256": "62c135170736ee8c1f5f8242b8e659e1bbd2b75dcd1ece74b94ab9e2cccfe88c"
+    },
+    {
+      "bytes": 4124,
+      "path": ".omx/tmp/codex_runs/_common_contract.md",
+      "sha256": "eeae9e0035582e6bdd65fd837e4aa35a65e064fd09900b9c212d41ac02086771"
+    },
+    {
+      "bytes": 4940,
+      "path": ".omx/research/ddm_od2_20260805/OD2_STAGE12_RECEIPT.md",
+      "sha256": "60596412949f1eb88a2d75fb7d7858651f1454d982b35d9e11a793c7a77bb0d9"
+    },
+    {
+      "bytes": 2694,
+      "path": ".omx/research/ddm_od2_20260805/NEXT_IF_RESUMED.md",
+      "sha256": "bb5242544526e0ad6f2f242c495202900766ca49e0ab4763c9b18eac0f87cdc1"
+    },
+    {
+      "bytes": 31831,
+      "path": ".omx/research/ddm_od2_20260805/OD2_AGGREGATE.json",
+      "sha256": "43c97e844c23c00b5ad7367e147735587e00dec21b2f274ebfef7770b32a3ace"
+    },
+    {
+      "bytes": 2388,
+      "path": ".omx/research/ddm_od2_20260805/PAIR_SELECTION.json",
+      "sha256": "0a8ac26a1cd39c7dc425dbb4922d0dda6f71227b205241d3d771ea9791c2d4f9"
+    },
+    {
+      "bytes": 384,
+      "path": ".omx/research/ddm_od2_20260805/od2_pairs_n32_seed20260805.npy",
+      "sha256": "8b4aa8d47787757ca9a29cb1d176670ad2f39c15b7daf97f25615006c98a3f94"
+    },
+    {
+      "bytes": 143947,
+      "path": ".omx/research/ddm_st2_20260805/ddm_st2_receipt.json",
+      "sha256": "b6e6a3cce7ca4fbc74430f9088accbdad888a600774a3331a7a808b50bb0e75c"
+    },
+    {
+      "bytes": 5988,
+      "path": ".omx/research/ddm_st2_20260805/ST2_RECEIPT_20260805.md",
+      "sha256": "c5231d5866e8112f98988ce1c44620bbc840285fbd9851e19263f8f3547bcd93"
+    },
+    {
+      "bytes": 1004,
+      "path": ".omx/research/ddm_od3_20260805/CHARTER_ADDENDUM_PREREGISTERED_PREDICTION.md",
+      "sha256": "aa1d63c1f9a7ba5af0ee6b417bf7f4392f6970e927fd19d84ede1f33d0a9c4c4"
+    },
+    {
+      "bytes": 312293,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od3_20260805/od3_js1_n32_terminal_seg100_cprime_k4.json",
+      "sha256": "5f7f934e6bafa440572577509e0e733ab3c5e80940d8cf11178e91ecb93bd4ca"
+    },
+    {
+      "bytes": 40292,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od3_20260805/od3_capacity_sweep_k8_worst4.json",
+      "sha256": "f16b2f62c531f2c1e694ba543a387c789192519eb70812eac9a7e543eade68c4"
+    },
+    {
+      "bytes": 40312,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od3_20260805/od3_capacity_sweep_k12_worst4.json",
+      "sha256": "b9b5ea03810124d4fd99ca266f4427b57431bc768c250ab08251d540d8211581"
+    },
+    {
+      "bytes": 3112071,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od3_20260805/canonical_equations_snapshot.json",
+      "sha256": "8245131517b229bd2a589985608fabe329dae16f552afb6061717473a1ae2f68"
+    },
+    {
+      "bytes": 6141,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od3_20260805/od3_st2_pair_order.json",
+      "sha256": "92e0f04decf4f6034f44edcccb94db4802dae0bcef98af8d98b24ae00bd18fff"
+    },
+    {
+      "bytes": 906,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od3_20260805/od3_st2_pair_order_od2_intersection.json",
+      "sha256": "8b2d47c8261f3c248bab7200944ee61b9959da9cde5c10f7adb3b3b9fc4fb690"
+    },
+    {
+      "bytes": 33782,
+      "path": "experiments/ddm_js1_staging_discriminator.py",
+      "sha256": "5cc6386d3ad222174b2aa7a4ee0ca4700c0966ee4a9856ee8b514d1f1019955e"
+    },
+    {
+      "bytes": 19868,
+      "path": "src/tac/optimization/trajectory_stopping.py",
+      "sha256": "ec193396ba8d15f5c83ab0c7035e77f477991aece555a04354f7c6da5f3b005e"
+    }
+  ],
+  "source_run": "/Volumes/VertigoDataTier/pact/ddm_od3_20260805/od3_js1_n32_terminal_seg100_cprime_k4.json",
+  "st2_iteration_prior": {
+    "intersection_path": "/Volumes/VertigoDataTier/pact/ddm_od3_20260805/od3_st2_pair_order_od2_intersection.json",
+    "missing_st2_pairs": [
+      8,
+      32,
+      46,
+      57,
+      70,
+      107,
+      112,
+      119,
+      148,
+      154,
+      168,
+      198,
+      225,
+      234,
+      244,
+      251,
+      284,
+      328,
+      336,
+      349,
+      383,
+      399,
+      411,
+      423,
+      445,
+      465,
+      481,
+      516,
+      536,
+      561,
+      582,
+      583
+    ],
+    "od2_pair_overlap_rows": 0,
+    "plan_effect": "No legal row reorder was applied because the ST2 table did not contain the OD2 n32 pair ids; OD3 used the charter-mandated OD2 pair set/order.",
+    "ranking_attempt_path": "/Volumes/VertigoDataTier/pact/ddm_od3_20260805/od3_st2_pair_order.json",
+    "source": ".omx/research/ddm_st2_20260805/ddm_st2_receipt.json"
+  },
+  "stage1_terminality": {
+    "best_step_at_derived_ceiling_rows": 0,
+    "blocker_status": "CLOSED_ZERO_CAP_DEFAULT_AMBIGUITY",
+    "bound_reported_rows": 0,
+    "d_seg_after_subset": 0.0032601356506347656,
+    "d_seg_before_subset": 0.004331270853678386,
+    "delta_S_seg_subset": -0.10711352030436198,
+    "delta_d_seg_subset": -0.0010711352030436199,
+    "derived_ceiling_basis": "OD2 4085s at seg_steps=25 projected seg_steps 150-200 above five hours, so OD3 used seg_steps=100 as hard derived ceiling; canonical trajectory law stopped all rows earlier by marginal S/compute < rate_per_byte.",
+    "derived_ceiling_steps": 100,
+    "eta_max": 0.7425149700598802,
+    "eta_mean": 0.6003650261990962,
+    "eta_min": 0.36554621848739494,
+    "eta_pooled": 0.6048828650929001,
+    "eta_sd": 0.09432278538238399,
+    "flips_after": 20511,
+    "flips_before": 27250,
+    "n_described": 11141,
+    "raw_stop_reason_counts": {
+      "marginal_below_bar": 32
+    },
+    "required_stop_census": {
+      "cap_best_at_derived_ceiling": 0,
+      "converged": 32,
+      "failed": 0,
+      "mapping_note": "converged counts canonical semantic stops: converged_projected or marginal_below_bar; all OD3 selected rows stopped by marginal_below_bar before the derived ceiling.",
+      "n_pairs": 32,
+      "pre_plateau": 0
+    },
+    "safety_bound_REPORTED_rows": 0,
+    "steps_run_counts": {
+      "25": 1,
+      "30": 1,
+      "35": 5,
+      "45": 3,
+      "50": 4,
+      "55": 1,
+      "60": 6,
+      "65": 4,
+      "70": 6,
+      "75": 1
+    },
+    "steps_run_max": 75,
+    "steps_run_mean": 54.21875,
+    "steps_run_min": 25,
+    "terminality_kind": "economic_terminality_marginal_below_bar",
+    "trajectory_stop_reason_counts": {
+      "marginal_below_bar": 32
+    }
+  },
+  "stage2_frame0_k4_carriage_at_terminal": {
+    "basis": "generic separable DCT k=4 on frame_0, int16 coefficients measured through quantizer",
+    "counted_bytes_per_pair": 96,
+    "d_pose_after_k4_mean_subset": 0.0007918090370822028,
+    "d_pose_after_k4_sd_subset": 0.0006804502142626867,
+    "d_pose_before_mean_subset": 0.0008014285623403339,
+    "d_pose_before_sd_subset": 0.0006775025433302267,
+    "d_pose_ratio_k4_vs_before_mean_subset": 1.0043892102267582,
+    "d_pose_ratio_k4_vs_stage1_mean_subset": 0.19743618331865656,
+    "d_pose_ratio_stage1_vs_before_mean_subset": 48.91891933580351,
+    "d_pose_stage1_mean_subset": 0.03310610652442847,
+    "d_pose_stage1_sd_subset": 0.09637142358565431,
+    "delta_pose_contribution_k4_vs_before_subset": -0.0005388902759561609,
+    "delta_pose_contribution_k4_vs_stage1_subset": -0.48639540995544184,
+    "delta_pose_contribution_stage1_vs_before_subset": 0.4858565196794857,
+    "delta_vs_od2_registered_target": 3.293920372016146e-05,
+    "od2_registered_target_k4_mean_subset": 0.0007588698333620414,
+    "pass_gate_reason": "terminal k4 mean d_pose is below same-row baseline and repairs the Stage-1 transient while preserving seg 32/32; it misses the OD2 preregistered k4 target by 3.29392037201614e-05.",
+    "pass_gate_vs_same_rows": "PASS",
+    "pose_contribution_after_k4_subset": 0.08898365226726777,
+    "pose_contribution_before_subset": 0.08952254254322393,
+    "pose_contribution_stage1_subset": 0.5753790622227096,
+    "projected_counted_bytes_n600": 57600,
+    "projected_rate_cost_S_n600": 0.038353475699837075,
+    "registered_prediction_result": "MISS_VS_OD2_TARGET_BUT_PASS_VS_SAME_ROW_BASELINE",
+    "seg_preserved_all_pairs": true,
+    "seg_preserved_pairs": 32
+  },
+  "staged_composition_projection": {
+    "delta_S_pose_vs_before_subset": -0.0005388902759561609,
+    "delta_S_rate_projected_n600_bytes": 0.038353475699837075,
+    "delta_S_seg_subset": -0.10711352030436198,
+    "delta_S_total_subset_projection_vs_current_own_vehicle": -0.06929893488048107,
+    "moves_frontier": false,
+    "projected_S_vs_current_own_vehicle": 0.6846817948106396,
+    "reason": "subset advisory projection only; no receiver-closed archive, no full n600 scorer job, no evaluate.py contest-axis authority",
+    "selection_scope": "n32 stratified-random subset projection, not n600 authority"
+  },
+  "storage_tier": "/Volumes/VertigoDataTier/pact/ddm_od3_20260805"
+}
