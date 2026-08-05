@@ -322,3 +322,26 @@ DISPOSITION:
 Pattern note: the SAME genus shape again — inherited-without-re-derivation metadata surviving a
 lane change (values → flags → now PATH TEMPLATES). The regenerator is the common factory; its
 debt list is now the single cure surface. Counter 0/3; round 7 next.
+
+### RECURSIVE REVIEW — ROUND 7 (rr1, counter 0/3) + CYCLE PAUSE AT THE ENDPOINT BOUNDARY
+RR1-R7-F1 (MED, verified): the regenerator's v3 branch updates argv/child paths but NEVER rebuilds
+`levers[*].overrides` — the fired ticket's value ledger claims epochs 1076/wall 130/stale
+ema-decay/stale floor-source while argv says 1406/168/... . The RUN is valid (argv is consumed);
+the machine-readable provenance ledger is not value-custodied. INHERITANCE GENUS SHAPE #4
+(values → flags → path templates → value LEDGERS). DISPOSITION: regenerator debt #5 = rebuild
+levers[*].overrides from final argv (or demote the ledger non-authoritative) + refuse on
+declared-vs-argv mismatch across the WHOLE emitted surface. All 5 debts land together in the
+continuation-prep build (jd4) — the regenerator is ONE factory, cured once.
+CYCLE PAUSE (honest): counter 0/3 after 7 rounds / 15 findings, all dispositioned. The state
+under review is superseded THIS HOUR by the window endpoint + continuation; rounds 8+ resume
+over the NEW state (endpoint receipt + fixed regenerator + continuation fire) rather than
+burning passes on a state about to change. Pause recorded, not a seal claim.
+
+### FULL V3 WINDOW ENDPOINT (2026-08-05, stop_reason=epochs_complete, rc=0, 3316s)
+60 epochs ep1345→1405 completed inside wall cap. Final gate ep1405 (n36 designed, EMA basis):
+seg 0.004801 — DESCENDING AT THE ENDPOINT (interval delta −4.28e-5/epoch, COUPLED_DESCENT), no
+rollbacks/retreats all window, counted bytes 301,761 (down from 306,891). Loss-terms row shows
+seg term 0.4371 (w100). Endpoint custody snapshot: full_v3_endpoint_ep1405_snapshot/ (final ckpt
+sha recorded there + receipt + ep1404 intra). NEXT (operator steer "will need more descent"):
+n600 both-bases endpoint probe → continuation window from the endpoint with the FIXED regenerator
+(all 5 debts) + correct U-derived EMA re-anchor. No byte-close before the probe.
