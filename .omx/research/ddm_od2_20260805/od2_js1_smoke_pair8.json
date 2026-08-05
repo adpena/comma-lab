@@ -1,0 +1,91 @@
+{
+ "schema": "ddm_js1_staging_discriminator.v1",
+ "axis": "[macOS-CPU frozen-scorer advisory] NON-PROMOTABLE",
+ "score_claim": false,
+ "promotion_eligible": false,
+ "verdict_scope_default": "FORMULATION",
+ "pointer": "0.1910828242 [contest-CPU] UNMOVED",
+ "own_vehicle_frontier": "S = 0.7910689 @ 353,805 B [macOS-CPU advisory]",
+ "block": 16,
+ "rmax": 5,
+ "arms": [
+  "cheapdct"
+ ],
+ "budget": {
+  "seg_steps": 5,
+  "seg_lr": 2.0,
+  "pose_steps": 5,
+  "pose_lr": 2.0,
+  "pose_linf": 0.0,
+  "eval_every": 5
+ },
+ "denominators": {
+  "gap_S": 0.6189279,
+  "S_per_flip": 8.477105034722222e-07,
+  "rate_per_byte": 6.658589531221714e-07,
+  "dS_dd_pose_at_operating_point": 31.3026
+ },
+ "yuv6_patch": {
+  "patched": true,
+  "yuv6_equivalence_passed": true,
+  "yuv6_max_abs_error": 0.0,
+  "gradient_live": true,
+  "gradient_probe_abs_sum": 393216.03125
+ },
+ "D_geometry": {
+  "rows_private": true,
+  "cols_private": true,
+  "camera_px_touched_by_D": 786432,
+  "camera_px_total": 1017336,
+  "frac_blind_to_scorers": 0.22696926089315628
+ },
+ "pairs_requested": [
+  8
+ ],
+ "rows": [
+  {
+   "pair": 8,
+   "C2_lstar_matches_cache": true,
+   "C3_lgt_matches_cache": true,
+   "flips_before": 732,
+   "d_pose_before": 0.0003892929817084223,
+   "C5_scorer_lattice_pose_matches_camera": {
+    "camera": 0.0003892929817084223,
+    "scorer_lattice": 0.0003892929817084223,
+    "abs_diff": 0.0,
+    "rel_diff": 0.0
+   },
+   "band_px": 466,
+   "n_described": 272,
+   "stage1": {
+    "solve_tag": "dec@5",
+    "cap_pinned": true,
+    "stop_reason": "iteration_cap_best_at_cap",
+    "trajectory_stop": null,
+    "steps_run": 5,
+    "best_step": 5,
+    "flips_after": 632,
+    "eta_realized": 0.36764705882352944,
+    "d_pose_after": 0.00040510459803044796,
+    "d_pose_ratio": 1.0406162378079256,
+    "target_fidelity_in_band": 0.296137339055794
+   },
+   "control_frame0_is_seg_free": true,
+   "arm_cprime_cheap_dct4": {
+    "tag": "identity@0",
+    "k": 4,
+    "d_pose_verified_from_camera": 0.00040510459803044796,
+    "d_pose_ratio_vs_before": 1.0406162378079256,
+    "d_pose_ratio_vs_stage1_damage": 1.0,
+    "solved_to_all_zero": true,
+    "seg_exactly_preserved": true,
+    "counted_bytes_per_pair": 96,
+    "counted_bytes_n600": 57600,
+    "rate_cost_S_n600": 0.038353475699837075,
+    "value_measured_through_int16_quantiser": true,
+    "max_abs_int16_coefficient": 0.0,
+    "int16_range_ok": true
+   }
+  }
+ ]
+}

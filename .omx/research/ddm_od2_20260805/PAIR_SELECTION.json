@@ -1,0 +1,113 @@
+{
+  "additional_governing_ratios": [
+    {
+      "n_bootstrap": 2000,
+      "n_population": 600,
+      "n_subset": 32,
+      "name": "d_pose_shipped_f16",
+      "null_p05": 0.21378683938242218,
+      "null_p95": 2.3980707705614677,
+      "population_mean": 0.15950891917937635,
+      "ratio": 0.42628664334579025,
+      "reason": "",
+      "subset_mean": 0.06799652174069129,
+      "verdict": "MATCHED"
+    }
+  ],
+  "axis": "[macOS-CPU frozen-scorer advisory] selection receipt",
+  "charter": "od2_prompt.md requires n>=32 stratified-random, never prefix",
+  "created_utc": "2026-08-05T00:55:49Z",
+  "n": 32,
+  "pairs": [
+    8,
+    32,
+    46,
+    57,
+    70,
+    107,
+    112,
+    119,
+    148,
+    154,
+    168,
+    198,
+    225,
+    234,
+    244,
+    251,
+    284,
+    328,
+    336,
+    349,
+    383,
+    399,
+    411,
+    423,
+    445,
+    465,
+    481,
+    516,
+    536,
+    561,
+    582,
+    583
+  ],
+  "pairs_npy": {
+    "bytes": 384,
+    "path": ".omx/research/ddm_od2_20260805/od2_pairs_n32_seed20260805.npy",
+    "sha256": "8b4aa8d47787757ca9a29cb1d176670ad2f39c15b7daf97f25615006c98a3f94"
+  },
+  "population": 600,
+  "schema": "ddm_od2_pair_selection.v1",
+  "seed": 20260805,
+  "selection": {
+    "governing_ratios": [
+      {
+        "n_bootstrap": 2000,
+        "n_population": 600,
+        "n_subset": 32,
+        "name": "seg_flip_density",
+        "null_p05": 0.9264234312898952,
+        "null_p95": 1.0726601077923643,
+        "population_mean": 0.00028154161241319444,
+        "ratio": 1.0099888594483923,
+        "reason": "",
+        "subset_mean": 0.00028435389200846356,
+        "verdict": "MATCHED"
+      }
+    ],
+    "indices_head": [
+      8,
+      32,
+      46,
+      57,
+      70,
+      107,
+      112,
+      119,
+      148,
+      154,
+      168,
+      198,
+      225,
+      234,
+      244,
+      251
+    ],
+    "n": 32,
+    "pair_selection": "stratified_blocks",
+    "params": {
+      "block_count": 10
+    },
+    "population": 600,
+    "population_matched": true,
+    "representative_mode": true,
+    "schema": "pact.subset_selection.v1",
+    "seed": 20260805
+  },
+  "source_tables": {
+    "pose": "src/tac/tests/fixtures/subset_selection/pfs1_d2_pose_population.json",
+    "seg": "src/tac/tests/fixtures/subset_selection/gt_n600_per_pair_population.json"
+  },
+  "strata": "10 contiguous temporal blocks, largest-remainder allocation, seeded within block"
+}

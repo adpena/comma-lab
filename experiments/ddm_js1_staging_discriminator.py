@@ -231,7 +231,7 @@ def solve_pose_repair_frame0_cheap_dct(sc: Scorer, dec_f0: np.ndarray, edited_f1
         with torch.no_grad():
             return float(d_pose_t(posenet, pose_gt, pose_forward_grad(posenet, q, f1_s)))
 
-    best = (realized_dpose(base0), None, "identity@0")
+    best = (realized_dpose(base0), None, "identity@0", 0.0)
     coef = torch.zeros(3, k * k, requires_grad=True)
     opt = torch.optim.Adam([coef], lr=lr)
     with torch.enable_grad():
@@ -239,10 +239,20 @@ def solve_pose_repair_frame0_cheap_dct(sc: Scorer, dec_f0: np.ndarray, edited_f1
             d = (coef @ A).reshape(1, 3, SEG_H, SEG_W)
             cur = torch.clamp(base0 + d, 0.0, 255.0)
             if it % eval_every == 0 or it == steps:
-                dp = realized_dpose(cur)
+                # EVALUATE THE PAYLOAD WE WOULD ACTUALLY SHIP.  The counted object is k*k*3
+                # INT16 coefficients, so the best-iterate must be selected on the QUANTISED
+                # synthesis -- otherwise the reported value belongs to a float payload nobody
+                # can carry, and the price would be counted against a value never measured
+                # through its own quantiser.  This makes the byte-close gate hold BY
+                # CONSTRUCTION rather than as an owed follow-on.
+                cq = torch.round(coef.detach()).clamp(-32768, 32767)
+                dq = (cq @ A).reshape(1, 3, SEG_H, SEG_W)
+                curq = torch.clamp(base0 + dq, 0.0, 255.0)
+                dp = realized_dpose(curq)
                 if dp < best[0]:
-                    q = torch.round(torch.clamp(cur, 0.0, 255.0)).detach()
-                    best = (dp, q[0].permute(1, 2, 0).numpy().astype(np.uint8), f"dct{k}@{it}")
+                    q = torch.round(curq).detach()
+                    best = (dp, q[0].permute(1, 2, 0).numpy().astype(np.uint8), f"dct{k}q@{it}",
+                            float(cq.abs().max()))
             if it == steps:
                 break
             out = pose_forward_grad(posenet, cur, f1_s)
@@ -251,7 +261,7 @@ def solve_pose_repair_frame0_cheap_dct(sc: Scorer, dec_f0: np.ndarray, edited_f1
             loss.backward()
             opt.step()
     # counted payload = k*k*3 int16 coefficients per pair (the basis itself is generic => free)
-    return best[0], best[1], best[2], int(coef.detach().numel() * 2)
+    return best[0], best[1], best[2], int(coef.detach().numel() * 2), best[3]
 
 
 def solve_pose_repair_frame1_cellconstrained(sc: Scorer, edited_f1: np.ndarray,
@@ -474,7 +484,7 @@ def main() -> int:
         rec["n_described"] = nd
 
         # ---- STAGE 1: deep UNCONSTRAINED seg solve on frame_1 -------------------------------
-        _, paint, tag = solve_margin_optimal_paint(
+        _, paint, tag, solve_diag = solve_margin_optimal_paint(
             sc.net.segnet, dec[1], gt[1], band, target,
             steps=args.seg_steps, lr=args.seg_lr, eval_every=args.eval_every)
         edited_f1 = realize_scorer_paint_to_camera(dec[1], band, paint)
@@ -485,6 +495,10 @@ def main() -> int:
         rec["stage1"] = {
             "solve_tag": tag,
             "cap_pinned": bool(str(tag).rsplit("@", 1)[-1] == str(args.seg_steps)),
+            "stop_reason": solve_diag["selected"]["stop_reason"],
+            "trajectory_stop": solve_diag["selected"].get("trajectory_stop"),
+            "steps_run": solve_diag["selected"]["steps_run"],
+            "best_step": solve_diag["selected"]["best_step"],
             "flips_after": fa,
             "eta_realized": ((flips0 - fa) / nd) if nd else None,
             "d_pose_after": dp_s1,
@@ -533,7 +547,7 @@ def main() -> int:
 
         if "cheapdct" in arms:
             for k in (int(x) for x in str(args.dct_k).split(",")):
-                dp_c, paint0c, tagc, cbytes = solve_pose_repair_frame0_cheap_dct(
+                dp_c, paint0c, tagc, cbytes, cmax = solve_pose_repair_frame0_cheap_dct(
                     sc, dec[0], edited_f1, pose_gt, k=k, steps=args.pose_steps,
                     lr=args.dct_lr, eval_every=args.eval_every)
                 if paint0c is not None:
@@ -552,6 +566,10 @@ def main() -> int:
                     "counted_bytes_per_pair": cbytes,
                     "counted_bytes_n600": cbytes * N_PAIRS_TOTAL,
                     "rate_cost_S_n600": cbytes * N_PAIRS_TOTAL * RATE_PER_BYTE,
+                    # byte-close gate: the value above was measured ON the int16 payload
+                    "value_measured_through_int16_quantiser": True,
+                    "max_abs_int16_coefficient": cmax,
+                    "int16_range_ok": bool(cmax <= 32767),
                 }
 
         # ---- CONTROL ARM: pose-only, NO seg solve -------------------------------------------

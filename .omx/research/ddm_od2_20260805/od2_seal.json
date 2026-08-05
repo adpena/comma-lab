@@ -1,0 +1,72 @@
+{
+  "axis": "[macOS-CPU frozen-scorer advisory] NON-PROMOTABLE",
+  "blockers": {
+    "OD1_BLOCKER_FRAME0_CARRIAGE_POPULATION": "CLOSED_ON_N32_STRATIFIED_RANDOM_ADVISORY",
+    "OD1_BLOCKER_SEG_BASE_CAP_BOUND": "NOT_CLOSED_CAP_BOUND"
+  },
+  "created_utc": "2026-08-05T02:20:00Z",
+  "current_own_vehicle_frontier": {
+    "archive_bytes": 357836,
+    "axis": "[macOS-CPU advisory]",
+    "score": 0.7539807296911207
+  },
+  "full_n600_scorer_job": false,
+  "outputs": {
+    "aggregate": {
+      "bytes": 31831,
+      "path": ".omx/research/ddm_od2_20260805/OD2_AGGREGATE.json",
+      "sha256": "43c97e844c23c00b5ad7367e147735587e00dec21b2f274ebfef7770b32a3ace"
+    },
+    "pair_selection": {
+      "bytes": 2388,
+      "path": ".omx/research/ddm_od2_20260805/PAIR_SELECTION.json",
+      "sha256": "0a8ac26a1cd39c7dc425dbb4922d0dda6f71227b205241d3d771ea9791c2d4f9"
+    },
+    "raw_receipt": {
+      "bytes": 103690,
+      "path": ".omx/research/ddm_od2_20260805/od2_js1_n32_cprime_k4.json",
+      "sha256": "fd1016751e4668ff786692f52f91d924be97081a70a20d11e470150aaf85c6af"
+    }
+  },
+  "promotion_eligible": false,
+  "score_claim": false,
+  "selection": {
+    "block_count": 10,
+    "mode": "stratified_blocks",
+    "n": 32,
+    "population": 600,
+    "seed": 20260805
+  },
+  "stage1": {
+    "blocker_status": "NOT_CLOSED_CAP_BOUND",
+    "d_seg_after_subset": 0.003349463144938151,
+    "d_seg_before_subset": 0.004331270853678386,
+    "delta_S_seg_subset": -0.09818077087402348,
+    "eta_pooled": 0.554438560272866,
+    "stop_census": {
+      "cap_best": 29,
+      "converged": 3,
+      "failed": 0,
+      "pre_plateau": 0
+    }
+  },
+  "stage2": {
+    "basis": "frame_0_generic_DCT_k4_int16",
+    "counted_bytes_per_pair": 96,
+    "d_pose_after_k4_mean_subset": 0.0007588698333620414,
+    "d_pose_before_mean_subset": 0.0008014285623403339,
+    "d_pose_stage1_mean_subset": 0.0058411338650330435,
+    "pass_gate_vs_same_rows": "PASS",
+    "projected_counted_bytes_n600": 57600,
+    "projected_rate_cost_S_n600": 0.03835347569983707,
+    "seg_preserved_all_pairs": true
+  },
+  "staged_projection": {
+    "delta_S_pose_vs_before_subset": -0.0024094072901496427,
+    "delta_S_rate_projected_n600_bytes": 0.03835347569983707,
+    "delta_S_seg_subset": -0.09818077087402348,
+    "delta_S_total_subset_projection_vs_current_own_vehicle": -0.062236702464336054,
+    "projected_S_vs_current_own_vehicle": 0.6917440272267846,
+    "scope": "n32 stratified-random advisory projection, not authority"
+  }
+}
