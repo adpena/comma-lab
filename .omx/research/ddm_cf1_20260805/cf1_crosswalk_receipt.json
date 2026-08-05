@@ -1,0 +1,179 @@
+{
+  "schema": "ddm_cf1_crosswalk_receipt.v1",
+  "run_id": "ddm_cf1_20260805",
+  "date": "2026-08-05",
+  "task": "CF1 Conformal Anomaly Detection in Python nonconform arXiv 2605.13642 crosswalk",
+  "verdict": "ADOPT_CLASS_WITH_INSTANCE_ALREADY_EMBODIED",
+  "authority": {
+    "score_claim": false,
+    "promotion_eligible": false,
+    "scorer_forwards": 0,
+    "evaluate_py_runs": 0,
+    "n600_runs": 0,
+    "launches": 0,
+    "paid_dispatch": false,
+    "protected_files_edited": false
+  },
+  "frontier_line": "S = 0.7539807296911207 @ 357,836 B [macOS-CPU advisory]; contest pointer borrowed/unmoved.",
+  "paper_package_custody": {
+    "arxiv_abs_url": "https://arxiv.org/abs/2605.13642",
+    "arxiv_pdf_url": "https://arxiv.org/pdf/2605.13642",
+    "arxiv_revision_note": "Abstract page displayed latest revision 2026-07-24 while the inspected PDF footer displayed arXiv:2605.13642v3 [stat.ML] 4 Aug 2026; no local hash claimed.",
+    "pypi_url": "https://pypi.org/project/nonconform/",
+    "pypi_visible_version": "1.0.1",
+    "pypi_visible_upload_date": "2026-05-20",
+    "python_requires": ">=3.12",
+    "github_package_url": "https://github.com/OliverHennhoefer/nonconform",
+    "github_paper_url": "https://github.com/OliverHennhoefer/nonconform-paper",
+    "docs_url": "https://oliverhennhoefer.github.io/nonconform/",
+    "local_hash_claimed": false
+  },
+  "recall_evidence": [
+    {
+      "source": ".omx/research/ddm_lp1_lane_program_20260803.md",
+      "finding": "#934 ratchet default engaged 3/64 at elapsed horizon but 0/64 at true horizon; n=20000 null placed observed sum-rises at percentile 0.7 and rise-count at percentile 0.6.",
+      "impact": "Specific #934 fires already classified as false positives; CF1 still generalizes p-value/FDR handling."
+    },
+    {
+      "source": ".omx/research/ddm_gd1_undecided_defaults_audit_20260731.md",
+      "finding": "Undecided defaults included estimator, window, cadence, seed, dependency and anchor choices; A1 unweighted gate mean over-weighted the block 16.67x.",
+      "impact": "Calibration must declare horizon/cadence/sampling surfaces and cannot fix wrong estimands."
+    },
+    {
+      "source": ".omx/research/ddm_gc14_first_descent_20260731.md",
+      "finding": "Alarm predicates are per-vehicle calibration objects; first fire is a calibration event; UNDRIV lacked a GT-reference term.",
+      "impact": "Conformal calibration applies only after the statistic is semantically correct and scoped."
+    },
+    {
+      "source": ".omx/research/ddm_df1_retrain_contamination_classification_20260803.md",
+      "finding": "Within-run statistic was used as between-run threshold; real between-run floors were 11.5x to 67.9x larger; bias-correction result was n=1 and diagonal-only.",
+      "impact": "Shift-aware conformal tools can invalidate stale nulls but cannot replace experimental design."
+    },
+    {
+      "source": ".omx/research/ddm_na3_20260805/ddm_na3_receipt.md",
+      "finding": "Prefix sampling was axis-biased while stratified n120 matched population.",
+      "impact": "Calibration rows must come from the target alarm population, not prefix defaults."
+    },
+    {
+      "source": ".omx/state/main_hot_state.md",
+      "finding": "Own-vehicle pointer remained S = 0.7539807296911207 @ 357,836 B [macOS-CPU advisory]; contest pointer borrowed/unmoved.",
+      "impact": "CF1 is apparatus-only and pointer-unmoved."
+    }
+  ],
+  "seed_verdicts": [
+    {
+      "seed": "CALIBRATE_L1_ALARM_BANK",
+      "grade": "ADOPT",
+      "consumer": "confound gates, burn supervisor, run monitor",
+      "falsifier": "No held-out or block-calibrated null yields super-uniform p-values.",
+      "notes": "Each alarm family needs score direction, calibration population, exchangeability scope, p-value direction, FDR family, consumer, and falsifier."
+    },
+    {
+      "seed": "REREAD_934_LP1_RATCHET",
+      "grade": "INSTANCE_ALREADY_EMBODIED_CLASS_ADOPT",
+      "consumer": "#934 successor fire order and lane guard",
+      "falsifier": "A preregistered conformal p-value at the derived true horizon becomes significant and survives BH on fresh matched data.",
+      "notes": "The 3/64 elapsed-horizon fires would be suppressed; the true-horizon/noise-null analysis already did the instance-level correction."
+    },
+    {
+      "seed": "SHIFT_AWARE_EXTENSIONS",
+      "grade": "ADOPT_AS_INVALIDATION_GUARD",
+      "consumer": "GC14 stop-rule recalibration, #848 audits, ratchet deadband horizon derivation",
+      "falsifier": "Alarm stream too sparse or nonstationary for a meaningful calibration window.",
+      "notes": "Useful for stale-null detection, not for n=1 treatment design or missing off-diagonal cells."
+    },
+    {
+      "seed": "HARD_BOUNDARY",
+      "grade": "ADOPT",
+      "consumer": "promotion gates and pointer updates",
+      "falsifier": "none",
+      "notes": "Conformal p-values cannot authorize a score or replace frozen scorer/evaluator authority."
+    },
+    {
+      "seed": "BEYOND_SEED_DEPENDENCY_DECISION",
+      "grade": "FOLD_IMPORT_ADOPT_INTERNAL_CORE",
+      "consumer": "future L1 alarm registry",
+      "falsifier": "Internal implementation grows beyond split-conformal p-values plus BH or diverges from paper/package semantics.",
+      "notes": "Do not import nonconform now; implement the small in-repo scorer-free core first."
+    }
+  ],
+  "per_alarm_calibration": [
+    {
+      "surface": "lane_guard.ratchet/inertness_alarm",
+      "exchangeability_grade": "conditional_yes_if_stationary",
+      "procedure": "Conformal p-value for max or sum rises over derived true horizon; BH across active guard alarms.",
+      "consumer": "#934 successor, b4s burn reseal, lane guard fire order",
+      "falsifier": "Held-out null p-values not super-uniform or stationarity invalidated."
+    },
+    {
+      "surface": "term_domination",
+      "exchangeability_grade": "partial_stage_scoped",
+      "procedure": "Split-conformal p-value per term family using same-stage term-share rows; BH over monitored terms.",
+      "consumer": "v9 telemetry port and burn supervisor",
+      "falsifier": "Fire explained by unmodeled stage transition."
+    },
+    {
+      "surface": "term_inert",
+      "exchangeability_grade": "partial_block_calibration_required",
+      "procedure": "Block-calibrated conformal score on term movement or residual debt.",
+      "consumer": "force-stack and curriculum gates",
+      "falsifier": "Alarm disappears under block calibration or null p-values bunch low."
+    },
+    {
+      "surface": "gnorm_hijack",
+      "exchangeability_grade": "partial_fragile",
+      "procedure": "Conformal p-value for excess gradient-norm share; optional martingale for drift.",
+      "consumer": "force caps and optimizer watchdogs",
+      "falsifier": "Nonstationary gradients invalidate the calibration before the fire."
+    },
+    {
+      "surface": "frozen_epoch",
+      "exchangeability_grade": "none_degenerate_invariant",
+      "procedure": "Fail fast as semantic liveness invariant; do not assign conformal p-value.",
+      "consumer": "witness run monitor",
+      "falsifier": "none"
+    },
+    {
+      "surface": "A1_REALIZATION_GAP_ALARM",
+      "exchangeability_grade": "partial_after_estimator_repair",
+      "procedure": "Use HT/per-pair vector, then calibrate realized-vs-loss gap score by stage.",
+      "consumer": "A1 and realization-gap gates",
+      "falsifier": "Old biased estimator remains in calibration population."
+    },
+    {
+      "surface": "UNDRIV_EROSION/class_topology",
+      "exchangeability_grade": "none_until_statistic_fixed_then_partial",
+      "procedure": "Repair GT-reference/topology statistic first; calibrate per-class p-values and apply BH.",
+      "consumer": "GC14/R2 alarm recalibration",
+      "falsifier": "Statistic still lacks reference term or aliases oscillation."
+    }
+  ],
+  "follow_ons": [
+    {
+      "id": "cf1_calibrate_lane_guard_ratchet_null",
+      "status": "QUEUED_WITH_FIRE_ORDER",
+      "fire_order": "After #934 existence-hinge A/B or next live lane-guard rise, compute preregistered conformal p-values over derived true horizon and apply BH across active guard alarms."
+    },
+    {
+      "id": "cf1_l1_alarm_calibration_table",
+      "status": "QUEUED_WITH_FIRE_ORDER",
+      "fire_order": "Before next guard-bank expansion, add alarm registry fields for score direction, calibration population, exchangeability scope, consumer, and FDR family."
+    },
+    {
+      "id": "import_nonconform_now",
+      "status": "FOLDED",
+      "fire_order": "Do not import now; first pass is a small in-repo calibrator."
+    },
+    {
+      "id": "cf1_shift_martingale_gate",
+      "status": "QUEUED",
+      "fire_order": "Use only as calibration-validity monitor for p-value streams; never as score authority."
+    }
+  ],
+  "next_if_resumed": [
+    "Build scorer-free alarm-calibration registry schema.",
+    "Add internal split-conformal p-value plus BH utility for L1 alarm rows.",
+    "Apply first to lane-guard ratchet null and A1 realization-gap alarm after statistic and estimator repair.",
+    "Keep outputs advisory/apparatus-only unless a separate exact byte-closed row moves the pointer."
+  ]
+}
