@@ -1,0 +1,4327 @@
+{
+  "allow_scorer": true,
+  "axis": "[macOS-CPU frozen-scorer advisory] NON-PROMOTABLE",
+  "block": 16,
+  "budget": {
+    "dct_lr": 20.0,
+    "eval_every": 5,
+    "pose_steps": 40,
+    "seg_lr": 2.0,
+    "seg_steps": 100
+  },
+  "dct_k": 4,
+  "packet_out": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/od9_native_dof_n32_cprime_k4.od5.raw_packet",
+  "promotion_eligible": false,
+  "rmax": 5,
+  "rows": [
+    {
+      "native_payload": {
+        "stage1_band_sha256": "0aef76908a57dc6d38ad560ff0cace43776547eecebcc2bf00bc5c5ac3f9daed",
+        "stage1_rgb_sha256": "b7802eb2d92a62fe4b353be55d3aedf313c2893309017026f2762071a7a942ff",
+        "stage1_support_count": 466,
+        "stage2_coeff_sha256": "47b8a6c497b74ecddba934d2d343a641bb1869d575be69a41796eb675c14d1b7",
+        "stage2_k": 4
+      },
+      "pair": 8,
+      "stage1": {
+        "band_px": 466,
+        "d_pose_after_stage1": 0.0015953285619616508,
+        "flips_before": 732,
+        "n_described": 272,
+        "solve_diag_selected": {
+          "best_proxy_flips": 291,
+          "best_step": 50,
+          "curve": [
+            {
+              "proxy_flips": 636,
+              "step": 0
+            },
+            {
+              "proxy_flips": 531,
+              "step": 5
+            },
+            {
+              "proxy_flips": 440,
+              "step": 10
+            },
+            {
+              "proxy_flips": 393,
+              "step": 15
+            },
+            {
+              "proxy_flips": 364,
+              "step": 20
+            },
+            {
+              "proxy_flips": 342,
+              "step": 25
+            },
+            {
+              "proxy_flips": 323,
+              "step": 30
+            },
+            {
+              "proxy_flips": 311,
+              "step": 35
+            },
+            {
+              "proxy_flips": 298,
+              "step": 40
+            },
+            {
+              "proxy_flips": 292,
+              "step": 45
+            },
+            {
+              "proxy_flips": 291,
+              "step": 50
+            }
+          ],
+          "start": "truth",
+          "steps_run": 50,
+          "stop_reason": "marginal_below_bar",
+          "tag": "truth@50",
+          "trajectory_stop": {
+            "bound_reported": false,
+            "candidate_fits": [
+              {
+                "asymptote": 284.1,
+                "current_objective": 291.0,
+                "fit_quality_flag": "accepted",
+                "intercept": 5.930259166940029,
+                "kind": "geometric",
+                "last_compute": 50.0,
+                "origin_compute": 0.0,
+                "projected_marginal_objective_gain_per_compute": 0.5439807184114468,
+                "projected_remaining_objective_gain": 6.899999999999977,
+                "r2": 0.9926200314822823,
+                "slope": -0.08035632292313749
+              },
+              {
+                "asymptote": 0.0,
+                "current_objective": 291.0,
+                "fit_quality_flag": "low_r2",
+                "intercept": 6.548714398896974,
+                "kind": "power_law",
+                "last_compute": 50.0,
+                "origin_compute": 0.0,
+                "projected_marginal_objective_gain_per_compute": 1.267462379660578,
+                "projected_remaining_objective_gain": 291.0,
+                "r2": 0.9302948194925375,
+                "slope": -0.21881357421545414
+              }
+            ],
+            "current_compute": 50.0,
+            "current_objective": 291.0,
+            "law_ref": "trajectory_derived_stopping_law_v1",
+            "marginal_score_gain_per_compute": 4.611381686837487e-07,
+            "n_points": 11,
+            "projected_remaining_score_gain": 5.849202473958313e-06,
+            "safety_bound_compute": 100.0,
+            "selected_fit": {
+              "asymptote": 284.1,
+              "current_objective": 291.0,
+              "fit_quality_flag": "accepted",
+              "intercept": 5.930259166940029,
+              "kind": "geometric",
+              "last_compute": 50.0,
+              "origin_compute": 0.0,
+              "projected_marginal_objective_gain_per_compute": 0.5439807184114468,
+              "projected_remaining_objective_gain": 6.899999999999977,
+              "r2": 0.9926200314822823,
+              "slope": -0.08035632292313749
+            },
+            "should_stop": true,
+            "stop_reason": "marginal_below_bar",
+            "threshold_score_gain_per_compute": 6.658589531221714e-07
+          }
+        },
+        "solve_tag": "truth@50"
+      },
+      "stage2_cheapdct": {
+        "counted_bytes_per_pair": 96,
+        "d_pose_verified_from_camera": 0.00034530062112025917,
+        "max_abs_int16_coefficient": 265.0,
+        "tag": "dct4q@35"
+      }
+    },
+    {
+      "native_payload": {
+        "stage1_band_sha256": "d64dec169ed380664834abc1af39bb840fe23cc264769c32054d4108a9efc5d9",
+        "stage1_rgb_sha256": "a4cd28723f178c57178914e5b3cb517805b1c397f1836923dcdfa1eb7a34f1d2",
+        "stage1_support_count": 544,
+        "stage2_coeff_sha256": "55aac4e31bc72adb67c6422ee7de00ea2edfee7a19840320bac4ea0b4e473566",
+        "stage2_k": 4
+      },
+      "pair": 32,
+      "stage1": {
+        "band_px": 544,
+        "d_pose_after_stage1": 0.04053646698594093,
+        "flips_before": 781,
+        "n_described": 305,
+        "solve_diag_selected": {
+          "best_proxy_flips": 323,
+          "best_step": 45,
+          "curve": [
+            {
+              "proxy_flips": 636,
+              "step": 0
+            },
+            {
+              "proxy_flips": 523,
+              "step": 5
+            },
+            {
+              "proxy_flips": 474,
+              "step": 10
+            },
+            {
+              "proxy_flips": 426,
+              "step": 15
+            },
+            {
+              "proxy_flips": 389,
+              "step": 20
+            },
+            {
+              "proxy_flips": 366,
+              "step": 25
+            },
+            {
+              "proxy_flips": 349,
+              "step": 30
+            },
+            {
+              "proxy_flips": 343,
+              "step": 35
+            },
+            {
+              "proxy_flips": 333,
+              "step": 40
+            },
+            {
+              "proxy_flips": 323,
+              "step": 45
+            },
+            {
+              "proxy_flips": 325,
+              "step": 50
+            }
+          ],
+          "start": "truth",
+          "steps_run": 50,
+          "stop_reason": "marginal_below_bar",
+          "tag": "truth@45",
+          "trajectory_stop": {
+            "bound_reported": false,
+            "candidate_fits": [
+              {
+                "asymptote": 309.45,
+                "current_objective": 325.0,
+                "fit_quality_flag": "accepted",
+                "intercept": 5.705706994988139,
+                "kind": "geometric",
+                "last_compute": 50.0,
+                "origin_compute": 0.0,
+                "projected_marginal_objective_gain_per_compute": 0.7805120439662768,
+                "projected_remaining_objective_gain": 15.550000000000011,
+                "r2": 0.9918439993000003,
+                "slope": -0.06413491457807857
+              },
+              {
+                "asymptote": 0.0,
+                "current_objective": 325.0,
+                "fit_quality_flag": "low_r2",
+                "intercept": 6.528481024130805,
+                "kind": "power_law",
+                "last_compute": 50.0,
+                "origin_compute": 0.0,
+                "projected_marginal_objective_gain_per_compute": 1.203768887501307,
+                "projected_remaining_objective_gain": 325.0,
+                "r2": 0.943367283931289,
+                "slope": -0.18749694828077626
+              }
+            ],
+            "current_compute": 50.0,
+            "current_objective": 325.0,
+            "law_ref": "trajectory_derived_stopping_law_v1",
+            "marginal_score_gain_per_compute": 6.616482577567857e-07,
+            "n_points": 11,
+            "projected_remaining_score_gain": 1.3181898328993065e-05,
+            "safety_bound_compute": 100.0,
+            "selected_fit": {
+              "asymptote": 309.45,
+              "current_objective": 325.0,
+              "fit_quality_flag": "accepted",
+              "intercept": 5.705706994988139,
+              "kind": "geometric",
+              "last_compute": 50.0,
+              "origin_compute": 0.0,
+              "projected_marginal_objective_gain_per_compute": 0.7805120439662768,
+              "projected_remaining_objective_gain": 15.550000000000011,
+              "r2": 0.9918439993000003,
+              "slope": -0.06413491457807857
+            },
+            "should_stop": true,
+            "stop_reason": "marginal_below_bar",
+            "threshold_score_gain_per_compute": 6.658589531221714e-07
+          }
+        },
+        "solve_tag": "truth@45"
+      },
+      "stage2_cheapdct": {
+        "counted_bytes_per_pair": 96,
+        "d_pose_verified_from_camera": 0.00043632311280816793,
+        "max_abs_int16_coefficient": 386.0,
+        "tag": "dct4q@20"
+      }
+    },
+    {
+      "native_payload": {
+        "stage1_band_sha256": "5227ced5af3b149d0699e90faeb7c414636adf72a412f0563ccdf041149000fb",
+        "stage1_rgb_sha256": "4123916c91ab15340d0283c4e5f6f4dfad9988c19d071a9019c1eac9a311c5c7",
+        "stage1_support_count": 504,
+        "stage2_coeff_sha256": "d1b69baf0f1e7b2864886356f31c6e21c1f8ef83b08e0f2a35b1aa59e22d6dde",
+        "stage2_k": 4
+      },
+      "pair": 46,
+      "stage1": {
+        "band_px": 504,
+        "d_pose_after_stage1": 0.008834394626319408,
+        "flips_before": 689,
+        "n_described": 268,
+        "solve_diag_selected": {
+          "best_proxy_flips": 297,
+          "best_step": 55,
+          "curve": [
+            {
+              "proxy_flips": 503,
+              "step": 0
+            },
+            {
+              "proxy_flips": 394,
+              "step": 5
+            },
+            {
+              "proxy_flips": 376,
+              "step": 10
+            },
+            {
+              "proxy_flips": 352,
+              "step": 15
+            },
+            {
+              "proxy_flips": 340,
+              "step": 20
+            },
+            {
+              "proxy_flips": 325,
+              "step": 25
+            },
+            {
+              "proxy_flips": 311,
+              "step": 30
+            },
+            {
+              "proxy_flips": 312,
+              "step": 35
+            },
+            {
+              "proxy_flips": 306,
+              "step": 40
+            },
+            {
+              "proxy_flips": 301,
+              "step": 45
+            },
+            {
+              "proxy_flips": 299,
+              "step": 50
+            },
+            {
+              "proxy_flips": 297,
+              "step": 55
+            }
+          ],
+          "start": "dec",
+          "steps_run": 55,
+          "stop_reason": "marginal_below_bar",
+          "tag": "dec@55",
+          "trajectory_stop": {
+            "bound_reported": false,
+            "candidate_fits": [
+              {
+                "asymptote": 0.0,
+                "current_objective": 297.0,
+                "fit_quality_flag": "accepted",
+                "intercept": 6.226074169341169,
+                "kind": "power_law",
+                "last_compute": 55.0,
+                "origin_compute": 0.0,
+                "projected_marginal_objective_gain_per_compute": 0.7061924202036022,
+                "projected_remaining_objective_gain": 297.0,
+                "r2": 0.9945211204691032,
+                "slope": -0.13421057934239983
+              },
+              {
+                "asymptote": 294.94,
+                "current_objective": 297.0,
+                "fit_quality_flag": "accepted",
+                "intercept": 5.231324597218169,
+                "kind": "geometric",
+                "last_compute": 55.0,
+                "origin_compute": 0.0,
+                "projected_marginal_objective_gain_per_compute": 0.21283093783145182,
+                "projected_remaining_objective_gain": 2.0600000000000023,
+                "r2": 0.9651639508376986,
+                "slope": -0.07651472015250924
+              }
+            ],
+            "current_compute": 55.0,
+            "current_objective": 297.0,
+            "law_ref": "trajectory_derived_stopping_law_v1",
+            "marginal_score_gain_per_compute": 5.986467320790627e-07,
+            "n_points": 12,
+            "projected_remaining_score_gain": 0.00025177001953125,
+            "safety_bound_compute": 100.0,
+            "selected_fit": {
+              "asymptote": 0.0,
+              "current_objective": 297.0,
+              "fit_quality_flag": "accepted",
+              "intercept": 6.226074169341169,
+              "kind": "power_law",
+              "last_compute": 55.0,
+              "origin_compute": 0.0,
+              "projected_marginal_objective_gain_per_compute": 0.7061924202036022,
+              "projected_remaining_objective_gain": 297.0,
+              "r2": 0.9945211204691032,
+              "slope": -0.13421057934239983
+            },
+            "should_stop": true,
+            "stop_reason": "marginal_below_bar",
+            "threshold_score_gain_per_compute": 6.658589531221714e-07
+          }
+        },
+        "solve_tag": "dec@55"
+      },
+      "stage2_cheapdct": {
+        "counted_bytes_per_pair": 96,
+        "d_pose_verified_from_camera": 6.856935942778364e-05,
+        "max_abs_int16_coefficient": 395.0,
+        "tag": "dct4q@35"
+      }
+    },
+    {
+      "native_payload": {
+        "stage1_band_sha256": "5173b1b5e35cb8df15e51d2d3793feff94ca99f5c56804d04b487e8dc95e5b70",
+        "stage1_rgb_sha256": "443933abbcbe59da0946f65e9df3b12376595f3e57738071890a2bf4f7829d66",
+        "stage1_support_count": 668,
+        "stage2_coeff_sha256": "4abc087296d73d3a3f83f42fb0279f98d8a7b6234077f60a531f16c2f063a2a8",
+        "stage2_k": 4
+      },
+      "pair": 57,
+      "stage1": {
+        "band_px": 668,
+        "d_pose_after_stage1": 0.014119233004748821,
+        "flips_before": 834,
+        "n_described": 386,
+        "solve_diag_selected": {
+          "best_proxy_flips": 295,
+          "best_step": 55,
+          "curve": [
+            {
+              "proxy_flips": 676,
+              "step": 0
+            },
+            {
+              "proxy_flips": 457,
+              "step": 5
+            },
+            {
+              "proxy_flips": 410,
+              "step": 10
+            },
+            {
+              "proxy_flips": 372,
+              "step": 15
+            },
+            {
+              "proxy_flips": 338,
+              "step": 20
+            },
+            {
+              "proxy_flips": 334,
+              "step": 25
+            },
+            {
+              "proxy_flips": 314,
+              "step": 30
+            },
+            {
+              "proxy_flips": 316,
+              "step": 35
+            },
+            {
+              "proxy_flips": 308,
+              "step": 40
+            },
+            {
+              "proxy_flips": 299,
+              "step": 45
+            },
+            {
+              "proxy_flips": 297,
+              "step": 50
+            },
+            {
+              "proxy_flips": 295,
+              "step": 55
+            },
+            {
+              "proxy_flips": 297,
+              "step": 60
+            }
+          ],
+          "start": "dec",
+          "steps_run": 60,
+          "stop_reason": "marginal_below_bar",
+          "tag": "dec@55",
+          "trajectory_stop": {
+            "bound_reported": false,
+            "candidate_fits": [
+              {
+                "asymptote": 145.4,
+                "current_objective": 297.0,
+                "fit_quality_flag": "accepted",
+                "intercept": 6.293648638126364,
+                "kind": "power_law",
+                "last_compute": 60.0,
+                "origin_compute": 0.0,
+                "projected_marginal_objective_gain_per_compute": 0.7600090409710247,
+                "projected_remaining_objective_gain": 151.6,
+                "r2": 0.9947717472055675,
+                "slope": -0.32229264697443544
+              },
+              {
+                "asymptote": 293.21,
+                "current_objective": 297.0,
+                "fit_quality_flag": "low_r2",
+                "intercept": 5.655325886795506,
+                "kind": "geometric",
+                "last_compute": 60.0,
+                "origin_compute": 0.0,
+                "projected_marginal_objective_gain_per_compute": 0.17111235719880727,
+                "projected_remaining_objective_gain": 3.7900000000000205,
+                "r2": 0.9233860948561692,
+                "slope": -0.08199424182650887
+              }
+            ],
+            "current_compute": 60.0,
+            "current_objective": 297.0,
+            "law_ref": "trajectory_derived_stopping_law_v1",
+            "marginal_score_gain_per_compute": 6.442676467649881e-07,
+            "n_points": 13,
+            "projected_remaining_score_gain": 0.00012851291232638887,
+            "safety_bound_compute": 100.0,
+            "selected_fit": {
+              "asymptote": 145.4,
+              "current_objective": 297.0,
+              "fit_quality_flag": "accepted",
+              "intercept": 6.293648638126364,
+              "kind": "power_law",
+              "last_compute": 60.0,
+              "origin_compute": 0.0,
+              "projected_marginal_objective_gain_per_compute": 0.7600090409710247,
+              "projected_remaining_objective_gain": 151.6,
+              "r2": 0.9947717472055675,
+              "slope": -0.32229264697443544
+            },
+            "should_stop": true,
+            "stop_reason": "marginal_below_bar",
+            "threshold_score_gain_per_compute": 6.658589531221714e-07
+          }
+        },
+        "solve_tag": "dec@55"
+      },
+      "stage2_cheapdct": {
+        "counted_bytes_per_pair": 96,
+        "d_pose_verified_from_camera": 0.0004457445756997913,
+        "max_abs_int16_coefficient": 314.0,
+        "tag": "dct4q@30"
+      }
+    },
+    {
+      "native_payload": {
+        "stage1_band_sha256": "950f99ee2f59fde936c09c21965bc35b1cf8505da77dd4a44fa8f970ec69273d",
+        "stage1_rgb_sha256": "b0dde2e35f909c67a16795cba13dde969424084a2a497279e26f3d0e493c39ec",
+        "stage1_support_count": 867,
+        "stage2_coeff_sha256": "de79e16caaa26219b0aa7e6151d95ff3200604f42a894f5783fffc39055e3a05",
+        "stage2_k": 4
+      },
+      "pair": 70,
+      "stage1": {
+        "band_px": 867,
+        "d_pose_after_stage1": 0.0008000927045941353,
+        "flips_before": 1408,
+        "n_described": 489,
+        "solve_diag_selected": {
+          "best_proxy_flips": 404,
+          "best_step": 70,
+          "curve": [
+            {
+              "proxy_flips": 870,
+              "step": 0
+            },
+            {
+              "proxy_flips": 607,
+              "step": 5
+            },
+            {
+              "proxy_flips": 535,
+              "step": 10
+            },
+            {
+              "proxy_flips": 503,
+              "step": 15
+            },
+            {
+              "proxy_flips": 493,
+              "step": 20
+            },
+            {
+              "proxy_flips": 467,
+              "step": 25
+            },
+            {
+              "proxy_flips": 451,
+              "step": 30
+            },
+            {
+              "proxy_flips": 438,
+              "step": 35
+            },
+            {
+              "proxy_flips": 421,
+              "step": 40
+            },
+            {
+              "proxy_flips": 410,
+              "step": 45
+            },
+            {
+              "proxy_flips": 410,
+              "step": 50
+            },
+            {
+              "proxy_flips": 406,
+              "step": 55
+            },
+            {
+              "proxy_flips": 406,
+              "step": 60
+            },
+            {
+              "proxy_flips": 409,
+              "step": 65
+            },
+            {
+              "proxy_flips": 404,
+              "step": 70
+            }
+          ],
+          "start": "dec",
+          "steps_run": 70,
+          "stop_reason": "marginal_below_bar",
+          "tag": "dec@70",
+          "trajectory_stop": {
+            "bound_reported": false,
+            "candidate_fits": [
+              {
+                "asymptote": 217.6,
+                "current_objective": 404.0,
+                "fit_quality_flag": "accepted",
+                "intercept": 6.497732456847376,
+                "kind": "power_law",
+                "last_compute": 70.0,
+                "origin_compute": 0.0,
+                "projected_marginal_objective_gain_per_compute": 0.775538350390534,
+                "projected_remaining_objective_gain": 186.4,
+                "r2": 0.9960660525375238,
+                "slope": -0.30670129595946
+              },
+              {
+                "asymptote": 403.534,
+                "current_objective": 404.0,
+                "fit_quality_flag": "low_r2",
+                "intercept": 6.04236387135002,
+                "kind": "geometric",
+                "last_compute": 70.0,
+                "origin_compute": 0.0,
+                "projected_marginal_objective_gain_per_compute": 0.09644858967838249,
+                "projected_remaining_objective_gain": 0.4660000000000082,
+                "r2": 0.9483553633433335,
+                "slope": -0.08441584027738559
+              }
+            ],
+            "current_compute": 70.0,
+            "current_objective": 404.0,
+            "law_ref": "trajectory_derived_stopping_law_v1",
+            "marginal_score_gain_per_compute": 6.574320054715762e-07,
+            "n_points": 15,
+            "projected_remaining_score_gain": 0.00015801323784722223,
+            "safety_bound_compute": 100.0,
+            "selected_fit": {
+              "asymptote": 217.6,
+              "current_objective": 404.0,
+              "fit_quality_flag": "accepted",
+              "intercept": 6.497732456847376,
+              "kind": "power_law",
+              "last_compute": 70.0,
+              "origin_compute": 0.0,
+              "projected_marginal_objective_gain_per_compute": 0.775538350390534,
+              "projected_remaining_objective_gain": 186.4,
+              "r2": 0.9960660525375238,
+              "slope": -0.30670129595946
+            },
+            "should_stop": true,
+            "stop_reason": "marginal_below_bar",
+            "threshold_score_gain_per_compute": 6.658589531221714e-07
+          }
+        },
+        "solve_tag": "dec@70"
+      },
+      "stage2_cheapdct": {
+        "counted_bytes_per_pair": 96,
+        "d_pose_verified_from_camera": 0.0003815170202869922,
+        "max_abs_int16_coefficient": 325.0,
+        "tag": "dct4q@40"
+      }
+    },
+    {
+      "native_payload": {
+        "stage1_band_sha256": "300554494e2870d6ee6146f14337590caaab666298257acc27f5013d09874719",
+        "stage1_rgb_sha256": "26c01df338339f835a50389853f43af36175de61d3a32ab9cfddd552c9bb0d6e",
+        "stage1_support_count": 572,
+        "stage2_coeff_sha256": "0897e075ab3f9094338b491fedf30647c0ce5a8d9d3be3c79e0b66e2282ef58d",
+        "stage2_k": 4
+      },
+      "pair": 107,
+      "stage1": {
+        "band_px": 572,
+        "d_pose_after_stage1": 0.0034061726182699203,
+        "flips_before": 853,
+        "n_described": 373,
+        "solve_diag_selected": {
+          "best_proxy_flips": 365,
+          "best_step": 65,
+          "curve": [
+            {
+              "proxy_flips": 687,
+              "step": 0
+            },
+            {
+              "proxy_flips": 544,
+              "step": 5
+            },
+            {
+              "proxy_flips": 489,
+              "step": 10
+            },
+            {
+              "proxy_flips": 450,
+              "step": 15
+            },
+            {
+              "proxy_flips": 435,
+              "step": 20
+            },
+            {
+              "proxy_flips": 419,
+              "step": 25
+            },
+            {
+              "proxy_flips": 408,
+              "step": 30
+            },
+            {
+              "proxy_flips": 403,
+              "step": 35
+            },
+            {
+              "proxy_flips": 398,
+              "step": 40
+            },
+            {
+              "proxy_flips": 389,
+              "step": 45
+            },
+            {
+              "proxy_flips": 378,
+              "step": 50
+            },
+            {
+              "proxy_flips": 382,
+              "step": 55
+            },
+            {
+              "proxy_flips": 380,
+              "step": 60
+            },
+            {
+              "proxy_flips": 365,
+              "step": 65
+            },
+            {
+              "proxy_flips": 365,
+              "step": 70
+            }
+          ],
+          "start": "truth",
+          "steps_run": 70,
+          "stop_reason": "marginal_below_bar",
+          "tag": "truth@65",
+          "trajectory_stop": {
+            "bound_reported": false,
+            "candidate_fits": [
+              {
+                "asymptote": 0.0,
+                "current_objective": 365.0,
+                "fit_quality_flag": "accepted",
+                "intercept": 6.542393351347838,
+                "kind": "power_law",
+                "last_compute": 70.0,
+                "origin_compute": 0.0,
+                "projected_marginal_objective_gain_per_compute": 0.7757079828661936,
+                "projected_remaining_objective_gain": 365.0,
+                "r2": 0.9950029454853153,
+                "slope": -0.15118996212329838
+              },
+              {
+                "asymptote": 363.39,
+                "current_objective": 365.0,
+                "fit_quality_flag": "accepted",
+                "intercept": 5.6865665235382075,
+                "kind": "geometric",
+                "last_compute": 70.0,
+                "origin_compute": 0.0,
+                "projected_marginal_objective_gain_per_compute": 0.22508217305309772,
+                "projected_remaining_objective_gain": 1.6100000000000136,
+                "r2": 0.9572539697609717,
+                "slope": -0.06305977150029378
+              }
+            ],
+            "current_compute": 70.0,
+            "current_objective": 365.0,
+            "law_ref": "trajectory_derived_stopping_law_v1",
+            "marginal_score_gain_per_compute": 6.575758047029229e-07,
+            "n_points": 15,
+            "projected_remaining_score_gain": 0.00030941433376736107,
+            "safety_bound_compute": 100.0,
+            "selected_fit": {
+              "asymptote": 0.0,
+              "current_objective": 365.0,
+              "fit_quality_flag": "accepted",
+              "intercept": 6.542393351347838,
+              "kind": "power_law",
+              "last_compute": 70.0,
+              "origin_compute": 0.0,
+              "projected_marginal_objective_gain_per_compute": 0.7757079828661936,
+              "projected_remaining_objective_gain": 365.0,
+              "r2": 0.9950029454853153,
+              "slope": -0.15118996212329838
+            },
+            "should_stop": true,
+            "stop_reason": "marginal_below_bar",
+            "threshold_score_gain_per_compute": 6.658589531221714e-07
+          }
+        },
+        "solve_tag": "truth@65"
+      },
+      "stage2_cheapdct": {
+        "counted_bytes_per_pair": 96,
+        "d_pose_verified_from_camera": 0.0011443604016676545,
+        "max_abs_int16_coefficient": 275.0,
+        "tag": "dct4q@30"
+      }
+    },
+    {
+      "native_payload": {
+        "stage1_band_sha256": "dac3da832e7b50990395996fb0b7cd8adb4203aca449d346ca9e8dab6d04f8b9",
+        "stage1_rgb_sha256": "b53b5501b6f4b08fbbca337e4bf23f9d64e5e6977c1a8eac9dca92176eb32bc5",
+        "stage1_support_count": 562,
+        "stage2_coeff_sha256": "8a47eab001d1ed87de131b78854231d05699c4a60c0b52030cf29fb830f8be59",
+        "stage2_k": 4
+      },
+      "pair": 112,
+      "stage1": {
+        "band_px": 562,
+        "d_pose_after_stage1": 0.018448686227202415,
+        "flips_before": 897,
+        "n_described": 335,
+        "solve_diag_selected": {
+          "best_proxy_flips": 388,
+          "best_step": 75,
+          "curve": [
+            {
+              "proxy_flips": 678,
+              "step": 0
+            },
+            {
+              "proxy_flips": 602,
+              "step": 5
+            },
+            {
+              "proxy_flips": 573,
+              "step": 10
+            },
+            {
+              "proxy_flips": 546,
+              "step": 15
+            },
+            {
+              "proxy_flips": 514,
+              "step": 20
+            },
+            {
+              "proxy_flips": 474,
+              "step": 25
+            },
+            {
+              "proxy_flips": 461,
+              "step": 30
+            },
+            {
+              "proxy_flips": 449,
+              "step": 35
+            },
+            {
+              "proxy_flips": 442,
+              "step": 40
+            },
+            {
+              "proxy_flips": 429,
+              "step": 45
+            },
+            {
+              "proxy_flips": 414,
+              "step": 50
+            },
+            {
+              "proxy_flips": 401,
+              "step": 55
+            },
+            {
+              "proxy_flips": 398,
+              "step": 60
+            },
+            {
+              "proxy_flips": 394,
+              "step": 65
+            },
+            {
+              "proxy_flips": 391,
+              "step": 70
+            },
+            {
+              "proxy_flips": 388,
+              "step": 75
+            }
+          ],
+          "start": "truth",
+          "steps_run": 75,
+          "stop_reason": "marginal_below_bar",
+          "tag": "truth@75",
+          "trajectory_stop": {
+            "bound_reported": false,
+            "candidate_fits": [
+              {
+                "asymptote": 373.5,
+                "current_objective": 388.0,
+                "fit_quality_flag": "accepted",
+                "intercept": 5.719170972868689,
+                "kind": "geometric",
+                "last_compute": 75.0,
+                "origin_compute": 0.0,
+                "projected_marginal_objective_gain_per_compute": 0.5796227248373185,
+                "projected_remaining_objective_gain": 14.5,
+                "r2": 0.9934180483751112,
+                "slope": -0.04090837975144229
+              },
+              {
+                "asymptote": 0.0,
+                "current_objective": 388.0,
+                "fit_quality_flag": "low_r2",
+                "intercept": 6.624566669603882,
+                "kind": "power_law",
+                "last_compute": 75.0,
+                "origin_compute": 0.0,
+                "projected_marginal_objective_gain_per_compute": 0.7698006321099679,
+                "projected_remaining_objective_gain": 388.0,
+                "r2": 0.8934519303993109,
+                "slope": -0.14638999726767396
+              }
+            ],
+            "current_compute": 75.0,
+            "current_objective": 388.0,
+            "law_ref": "trajectory_derived_stopping_law_v1",
+            "marginal_score_gain_per_compute": 4.913522718957845e-07,
+            "n_points": 16,
+            "projected_remaining_score_gain": 1.2291802300347221e-05,
+            "safety_bound_compute": 100.0,
+            "selected_fit": {
+              "asymptote": 373.5,
+              "current_objective": 388.0,
+              "fit_quality_flag": "accepted",
+              "intercept": 5.719170972868689,
+              "kind": "geometric",
+              "last_compute": 75.0,
+              "origin_compute": 0.0,
+              "projected_marginal_objective_gain_per_compute": 0.5796227248373185,
+              "projected_remaining_objective_gain": 14.5,
+              "r2": 0.9934180483751112,
+              "slope": -0.04090837975144229
+            },
+            "should_stop": true,
+            "stop_reason": "marginal_below_bar",
+            "threshold_score_gain_per_compute": 6.658589531221714e-07
+          }
+        },
+        "solve_tag": "truth@75"
+      },
+      "stage2_cheapdct": {
+        "counted_bytes_per_pair": 96,
+        "d_pose_verified_from_camera": 0.0017445655539631844,
+        "max_abs_int16_coefficient": 489.0,
+        "tag": "dct4q@40"
+      }
+    },
+    {
+      "native_payload": {
+        "stage1_band_sha256": "83ca509f70ed17883f9e832410546cb6e91f3dad85c755203feedbdbfd1d551b",
+        "stage1_rgb_sha256": "20569228bbcfe765c94bb7d04dd68d83243a2075b469ed03b0a8bae28a634be5",
+        "stage1_support_count": 481,
+        "stage2_coeff_sha256": "439d3fa418601e86e33f89227da0528a115a65b01993a522acc4c212547fd6e0",
+        "stage2_k": 4
+      },
+      "pair": 119,
+      "stage1": {
+        "band_px": 481,
+        "d_pose_after_stage1": 0.011892489157617092,
+        "flips_before": 734,
+        "n_described": 321,
+        "solve_diag_selected": {
+          "best_proxy_flips": 251,
+          "best_step": 50,
+          "curve": [
+            {
+              "proxy_flips": 496,
+              "step": 0
+            },
+            {
+              "proxy_flips": 397,
+              "step": 5
+            },
+            {
+              "proxy_flips": 364,
+              "step": 10
+            },
+            {
+              "proxy_flips": 336,
+              "step": 15
+            },
+            {
+              "proxy_flips": 313,
+              "step": 20
+            },
+            {
+              "proxy_flips": 293,
+              "step": 25
+            },
+            {
+              "proxy_flips": 282,
+              "step": 30
+            },
+            {
+              "proxy_flips": 270,
+              "step": 35
+            },
+            {
+              "proxy_flips": 267,
+              "step": 40
+            },
+            {
+              "proxy_flips": 257,
+              "step": 45
+            },
+            {
+              "proxy_flips": 251,
+              "step": 50
+            }
+          ],
+          "start": "dec",
+          "steps_run": 50,
+          "stop_reason": "marginal_below_bar",
+          "tag": "dec@50",
+          "trajectory_stop": {
+            "bound_reported": false,
+            "candidate_fits": [
+              {
+                "asymptote": 246.1,
+                "current_objective": 251.0,
+                "fit_quality_flag": "accepted",
+                "intercept": 5.540567957189392,
+                "kind": "geometric",
+                "last_compute": 50.0,
+                "origin_compute": 0.0,
+                "projected_marginal_objective_gain_per_compute": 0.5340164966961614,
+                "projected_remaining_objective_gain": 4.900000000000006,
+                "r2": 0.9819606413955818,
+                "slope": -0.07024165464038962
+              },
+              {
+                "asymptote": 0.0,
+                "current_objective": 251.0,
+                "fit_quality_flag": "accepted",
+                "intercept": 6.2664995817200095,
+                "kind": "power_law",
+                "last_compute": 50.0,
+                "origin_compute": 0.0,
+                "projected_marginal_objective_gain_per_compute": 0.9150522023320271,
+                "projected_remaining_objective_gain": 251.0,
+                "r2": 0.9610682484489966,
+                "slope": -0.17943577591046397
+              }
+            ],
+            "current_compute": 50.0,
+            "current_objective": 251.0,
+            "law_ref": "trajectory_derived_stopping_law_v1",
+            "marginal_score_gain_per_compute": 4.526913932767752e-07,
+            "n_points": 11,
+            "projected_remaining_score_gain": 4.153781467013894e-06,
+            "safety_bound_compute": 100.0,
+            "selected_fit": {
+              "asymptote": 246.1,
+              "current_objective": 251.0,
+              "fit_quality_flag": "accepted",
+              "intercept": 5.540567957189392,
+              "kind": "geometric",
+              "last_compute": 50.0,
+              "origin_compute": 0.0,
+              "projected_marginal_objective_gain_per_compute": 0.5340164966961614,
+              "projected_remaining_objective_gain": 4.900000000000006,
+              "r2": 0.9819606413955818,
+              "slope": -0.07024165464038962
+            },
+            "should_stop": true,
+            "stop_reason": "marginal_below_bar",
+            "threshold_score_gain_per_compute": 6.658589531221714e-07
+          }
+        },
+        "solve_tag": "dec@50"
+      },
+      "stage2_cheapdct": {
+        "counted_bytes_per_pair": 96,
+        "d_pose_verified_from_camera": 0.002223836723715067,
+        "max_abs_int16_coefficient": 423.0,
+        "tag": "dct4q@30"
+      }
+    },
+    {
+      "native_payload": {
+        "stage1_band_sha256": "1b3f53effb34a729b2362a3abba0f089db34debcbf098b3de60914662664b53b",
+        "stage1_rgb_sha256": "45a364d37bc0912a8f65c9a691604efff03f988134f93806d212ab80262152c4",
+        "stage1_support_count": 548,
+        "stage2_coeff_sha256": "c8067265a844b7da4fabd5bea366ca5d3f32766d189d4b6cd95030e919d23464",
+        "stage2_k": 4
+      },
+      "pair": 148,
+      "stage1": {
+        "band_px": 548,
+        "d_pose_after_stage1": 0.003095746273174882,
+        "flips_before": 827,
+        "n_described": 334,
+        "solve_diag_selected": {
+          "best_proxy_flips": 293,
+          "best_step": 35,
+          "curve": [
+            {
+              "proxy_flips": 553,
+              "step": 0
+            },
+            {
+              "proxy_flips": 427,
+              "step": 5
+            },
+            {
+              "proxy_flips": 369,
+              "step": 10
+            },
+            {
+              "proxy_flips": 331,
+              "step": 15
+            },
+            {
+              "proxy_flips": 325,
+              "step": 20
+            },
+            {
+              "proxy_flips": 313,
+              "step": 25
+            },
+            {
+              "proxy_flips": 299,
+              "step": 30
+            },
+            {
+              "proxy_flips": 293,
+              "step": 35
+            }
+          ],
+          "start": "dec",
+          "steps_run": 35,
+          "stop_reason": "marginal_below_bar",
+          "tag": "dec@35",
+          "trajectory_stop": {
+            "bound_reported": false,
+            "candidate_fits": [
+              {
+                "asymptote": 287.8,
+                "current_objective": 293.0,
+                "fit_quality_flag": "accepted",
+                "intercept": 5.522631062247179,
+                "kind": "geometric",
+                "last_compute": 35.0,
+                "origin_compute": 0.0,
+                "projected_marginal_objective_gain_per_compute": 0.6791372645346744,
+                "projected_remaining_objective_gain": 5.199999999999989,
+                "r2": 0.9902305336577693,
+                "slope": -0.10424408278330569
+              },
+              {
+                "asymptote": 0.0,
+                "current_objective": 293.0,
+                "fit_quality_flag": "accepted",
+                "intercept": 6.336156298066406,
+                "kind": "power_law",
+                "last_compute": 35.0,
+                "origin_compute": 0.0,
+                "projected_marginal_objective_gain_per_compute": 1.4871944832306745,
+                "projected_remaining_objective_gain": 293.0,
+                "r2": 0.9881283602384006,
+                "slope": -0.18210638367895254
+              }
+            ],
+            "current_compute": 35.0,
+            "current_objective": 293.0,
+            "law_ref": "trajectory_derived_stopping_law_v1",
+            "marginal_score_gain_per_compute": 5.757117924454366e-07,
+            "n_points": 8,
+            "projected_remaining_score_gain": 4.408094618055546e-06,
+            "safety_bound_compute": 100.0,
+            "selected_fit": {
+              "asymptote": 287.8,
+              "current_objective": 293.0,
+              "fit_quality_flag": "accepted",
+              "intercept": 5.522631062247179,
+              "kind": "geometric",
+              "last_compute": 35.0,
+              "origin_compute": 0.0,
+              "projected_marginal_objective_gain_per_compute": 0.6791372645346744,
+              "projected_remaining_objective_gain": 5.199999999999989,
+              "r2": 0.9902305336577693,
+              "slope": -0.10424408278330569
+            },
+            "should_stop": true,
+            "stop_reason": "marginal_below_bar",
+            "threshold_score_gain_per_compute": 6.658589531221714e-07
+          }
+        },
+        "solve_tag": "dec@35"
+      },
+      "stage2_cheapdct": {
+        "counted_bytes_per_pair": 96,
+        "d_pose_verified_from_camera": 0.0018361164256930351,
+        "max_abs_int16_coefficient": 107.0,
+        "tag": "dct4q@10"
+      }
+    },
+    {
+      "native_payload": {
+        "stage1_band_sha256": "19009a4b3f5b1f2894238f7c5c7d3854b38520b6d458ba8417ca704621eb5cbc",
+        "stage1_rgb_sha256": "32582ac7de7a26a570c20d95fc8d8b7f3745824110c3dcc4ab65b987ec5716f4",
+        "stage1_support_count": 672,
+        "stage2_coeff_sha256": "d8b660c30c94ba2fe9d9c9f48404dcb60ccea3cf597334a9cab58f5ec4eeface",
+        "stage2_k": 4
+      },
+      "pair": 154,
+      "stage1": {
+        "band_px": 672,
+        "d_pose_after_stage1": 0.02536584623157978,
+        "flips_before": 962,
+        "n_described": 429,
+        "solve_diag_selected": {
+          "best_proxy_flips": 335,
+          "best_step": 60,
+          "curve": [
+            {
+              "proxy_flips": 785,
+              "step": 0
+            },
+            {
+              "proxy_flips": 627,
+              "step": 5
+            },
+            {
+              "proxy_flips": 542,
+              "step": 10
+            },
+            {
+              "proxy_flips": 501,
+              "step": 15
+            },
+            {
+              "proxy_flips": 469,
+              "step": 20
+            },
+            {
+              "proxy_flips": 424,
+              "step": 25
+            },
+            {
+              "proxy_flips": 398,
+              "step": 30
+            },
+            {
+              "proxy_flips": 376,
+              "step": 35
+            },
+            {
+              "proxy_flips": 375,
+              "step": 40
+            },
+            {
+              "proxy_flips": 357,
+              "step": 45
+            },
+            {
+              "proxy_flips": 353,
+              "step": 50
+            },
+            {
+              "proxy_flips": 343,
+              "step": 55
+            },
+            {
+              "proxy_flips": 335,
+              "step": 60
+            }
+          ],
+          "start": "truth",
+          "steps_run": 60,
+          "stop_reason": "marginal_below_bar",
+          "tag": "truth@60",
+          "trajectory_stop": {
+            "bound_reported": false,
+            "candidate_fits": [
+              {
+                "asymptote": 326.0,
+                "current_objective": 335.0,
+                "fit_quality_flag": "accepted",
+                "intercept": 6.079235612040048,
+                "kind": "geometric",
+                "last_compute": 60.0,
+                "origin_compute": 0.0,
+                "projected_marginal_objective_gain_per_compute": 0.7267156293831051,
+                "projected_remaining_objective_gain": 9.0,
+                "r2": 0.9911131504130118,
+                "slope": -0.05965449891470844
+              },
+              {
+                "asymptote": 0.0,
+                "current_objective": 335.0,
+                "fit_quality_flag": "low_r2",
+                "intercept": 6.764371251186731,
+                "kind": "power_law",
+                "last_compute": 60.0,
+                "origin_compute": 0.0,
+                "projected_marginal_objective_gain_per_compute": 1.2662085884509915,
+                "projected_remaining_objective_gain": 335.0,
+                "r2": 0.9407322451153552,
+                "slope": -0.22257131126010996
+              }
+            ],
+            "current_compute": 60.0,
+            "current_objective": 335.0,
+            "law_ref": "trajectory_derived_stopping_law_v1",
+            "marginal_score_gain_per_compute": 6.160444720654848e-07,
+            "n_points": 13,
+            "projected_remaining_score_gain": 7.62939453125e-06,
+            "safety_bound_compute": 100.0,
+            "selected_fit": {
+              "asymptote": 326.0,
+              "current_objective": 335.0,
+              "fit_quality_flag": "accepted",
+              "intercept": 6.079235612040048,
+              "kind": "geometric",
+              "last_compute": 60.0,
+              "origin_compute": 0.0,
+              "projected_marginal_objective_gain_per_compute": 0.7267156293831051,
+              "projected_remaining_objective_gain": 9.0,
+              "r2": 0.9911131504130118,
+              "slope": -0.05965449891470844
+            },
+            "should_stop": true,
+            "stop_reason": "marginal_below_bar",
+            "threshold_score_gain_per_compute": 6.658589531221714e-07
+          }
+        },
+        "solve_tag": "truth@60"
+      },
+      "stage2_cheapdct": {
+        "counted_bytes_per_pair": 96,
+        "d_pose_verified_from_camera": 0.0004967580316588283,
+        "max_abs_int16_coefficient": 359.0,
+        "tag": "dct4q@20"
+      }
+    },
+    {
+      "native_payload": {
+        "stage1_band_sha256": "90567e5ffc560bd3144c8f48fe912c1b04d0e63eb36b0cb8f583fe55ce25d004",
+        "stage1_rgb_sha256": "a9d71622b96c24bfba478022083e025a8eb44911229ca9e07129f897798c84f9",
+        "stage1_support_count": 597,
+        "stage2_coeff_sha256": "337d35feadee22eec70cd0c6842575da5239f690cc372563ed02c140c115704c",
+        "stage2_k": 4
+      },
+      "pair": 168,
+      "stage1": {
+        "band_px": 597,
+        "d_pose_after_stage1": 0.008970397524535656,
+        "flips_before": 828,
+        "n_described": 351,
+        "solve_diag_selected": {
+          "best_proxy_flips": 305,
+          "best_step": 65,
+          "curve": [
+            {
+              "proxy_flips": 600,
+              "step": 0
+            },
+            {
+              "proxy_flips": 466,
+              "step": 5
+            },
+            {
+              "proxy_flips": 422,
+              "step": 10
+            },
+            {
+              "proxy_flips": 399,
+              "step": 15
+            },
+            {
+              "proxy_flips": 388,
+              "step": 20
+            },
+            {
+              "proxy_flips": 368,
+              "step": 25
+            },
+            {
+              "proxy_flips": 357,
+              "step": 30
+            },
+            {
+              "proxy_flips": 342,
+              "step": 35
+            },
+            {
+              "proxy_flips": 340,
+              "step": 40
+            },
+            {
+              "proxy_flips": 325,
+              "step": 45
+            },
+            {
+              "proxy_flips": 320,
+              "step": 50
+            },
+            {
+              "proxy_flips": 319,
+              "step": 55
+            },
+            {
+              "proxy_flips": 313,
+              "step": 60
+            },
+            {
+              "proxy_flips": 305,
+              "step": 65
+            }
+          ],
+          "start": "dec",
+          "steps_run": 65,
+          "stop_reason": "marginal_below_bar",
+          "tag": "dec@65",
+          "trajectory_stop": {
+            "bound_reported": false,
+            "candidate_fits": [
+              {
+                "asymptote": 0.0,
+                "current_objective": 305.0,
+                "fit_quality_flag": "accepted",
+                "intercept": 6.424412753226279,
+                "kind": "power_law",
+                "last_compute": 65.0,
+                "origin_compute": 0.0,
+                "projected_marginal_objective_gain_per_compute": 0.7689397014580165,
+                "projected_remaining_objective_gain": 305.0,
+                "r2": 0.991558642892498,
+                "slope": -0.16270171517722098
+              },
+              {
+                "asymptote": 302.05,
+                "current_objective": 305.0,
+                "fit_quality_flag": "accepted",
+                "intercept": 5.572096276000717,
+                "kind": "geometric",
+                "last_compute": 65.0,
+                "origin_compute": 0.0,
+                "projected_marginal_objective_gain_per_compute": 0.3837358476440555,
+                "projected_remaining_objective_gain": 2.9499999999999886,
+                "r2": 0.9536825736658318,
+                "slope": -0.056158868841263206
+              }
+            ],
+            "current_compute": 65.0,
+            "current_objective": 305.0,
+            "law_ref": "trajectory_derived_stopping_law_v1",
+            "marginal_score_gain_per_compute": 6.518382614627554e-07,
+            "n_points": 14,
+            "projected_remaining_score_gain": 0.00025855170355902775,
+            "safety_bound_compute": 100.0,
+            "selected_fit": {
+              "asymptote": 0.0,
+              "current_objective": 305.0,
+              "fit_quality_flag": "accepted",
+              "intercept": 6.424412753226279,
+              "kind": "power_law",
+              "last_compute": 65.0,
+              "origin_compute": 0.0,
+              "projected_marginal_objective_gain_per_compute": 0.7689397014580165,
+              "projected_remaining_objective_gain": 305.0,
+              "r2": 0.991558642892498,
+              "slope": -0.16270171517722098
+            },
+            "should_stop": true,
+            "stop_reason": "marginal_below_bar",
+            "threshold_score_gain_per_compute": 6.658589531221714e-07
+          }
+        },
+        "solve_tag": "dec@65"
+      },
+      "stage2_cheapdct": {
+        "counted_bytes_per_pair": 96,
+        "d_pose_verified_from_camera": 0.0009351175394840539,
+        "max_abs_int16_coefficient": 259.0,
+        "tag": "dct4q@40"
+      }
+    },
+    {
+      "native_payload": {
+        "stage1_band_sha256": "bd0698942af4499d16b69e2157285a6a69d3a4f484f364b32e5e8addb0358860",
+        "stage1_rgb_sha256": "37e030f4da849fe631b6d8aaff24afb4ebd94402b3b6e94432d2af14399ce83e",
+        "stage1_support_count": 551,
+        "stage2_coeff_sha256": "1bfb82a0392cb3e41999d6c1ae8a10027c4a4c2251bc5454cf42b1f12cf78599",
+        "stage2_k": 4
+      },
+      "pair": 198,
+      "stage1": {
+        "band_px": 551,
+        "d_pose_after_stage1": 0.011131512932479382,
+        "flips_before": 838,
+        "n_described": 342,
+        "solve_diag_selected": {
+          "best_proxy_flips": 362,
+          "best_step": 65,
+          "curve": [
+            {
+              "proxy_flips": 675,
+              "step": 0
+            },
+            {
+              "proxy_flips": 562,
+              "step": 5
+            },
+            {
+              "proxy_flips": 521,
+              "step": 10
+            },
+            {
+              "proxy_flips": 496,
+              "step": 15
+            },
+            {
+              "proxy_flips": 477,
+              "step": 20
+            },
+            {
+              "proxy_flips": 458,
+              "step": 25
+            },
+            {
+              "proxy_flips": 430,
+              "step": 30
+            },
+            {
+              "proxy_flips": 409,
+              "step": 35
+            },
+            {
+              "proxy_flips": 404,
+              "step": 40
+            },
+            {
+              "proxy_flips": 384,
+              "step": 45
+            },
+            {
+              "proxy_flips": 375,
+              "step": 50
+            },
+            {
+              "proxy_flips": 370,
+              "step": 55
+            },
+            {
+              "proxy_flips": 365,
+              "step": 60
+            },
+            {
+              "proxy_flips": 362,
+              "step": 65
+            }
+          ],
+          "start": "truth",
+          "steps_run": 65,
+          "stop_reason": "marginal_below_bar",
+          "tag": "truth@65",
+          "trajectory_stop": {
+            "bound_reported": false,
+            "candidate_fits": [
+              {
+                "asymptote": 346.35,
+                "current_objective": 362.0,
+                "fit_quality_flag": "accepted",
+                "intercept": 5.734448661917828,
+                "kind": "geometric",
+                "last_compute": 65.0,
+                "origin_compute": 0.0,
+                "projected_marginal_objective_gain_per_compute": 0.7167420693116859,
+                "projected_remaining_objective_gain": 15.649999999999977,
+                "r2": 0.9803420316592169,
+                "slope": -0.04596240677435442
+              },
+              {
+                "asymptote": 0.0,
+                "current_objective": 362.0,
+                "fit_quality_flag": "low_r2",
+                "intercept": 6.591574694869396,
+                "kind": "power_law",
+                "last_compute": 65.0,
+                "origin_compute": 0.0,
+                "projected_marginal_objective_gain_per_compute": 0.9024141161354525,
+                "projected_remaining_objective_gain": 362.0,
+                "r2": 0.9368541526783478,
+                "slope": -0.1591929882468884
+              }
+            ],
+            "current_compute": 65.0,
+            "current_objective": 362.0,
+            "law_ref": "trajectory_derived_stopping_law_v1",
+            "marginal_score_gain_per_compute": 6.075897804359316e-07,
+            "n_points": 14,
+            "projected_remaining_score_gain": 1.3266669379340258e-05,
+            "safety_bound_compute": 100.0,
+            "selected_fit": {
+              "asymptote": 346.35,
+              "current_objective": 362.0,
+              "fit_quality_flag": "accepted",
+              "intercept": 5.734448661917828,
+              "kind": "geometric",
+              "last_compute": 65.0,
+              "origin_compute": 0.0,
+              "projected_marginal_objective_gain_per_compute": 0.7167420693116859,
+              "projected_remaining_objective_gain": 15.649999999999977,
+              "r2": 0.9803420316592169,
+              "slope": -0.04596240677435442
+            },
+            "should_stop": true,
+            "stop_reason": "marginal_below_bar",
+            "threshold_score_gain_per_compute": 6.658589531221714e-07
+          }
+        },
+        "solve_tag": "truth@65"
+      },
+      "stage2_cheapdct": {
+        "counted_bytes_per_pair": 96,
+        "d_pose_verified_from_camera": 0.0024203057400882244,
+        "max_abs_int16_coefficient": 370.0,
+        "tag": "dct4q@35"
+      }
+    },
+    {
+      "native_payload": {
+        "stage1_band_sha256": "2ca4e077bf479fc634c1d6ebb1a1f3163d930716483d0d1c3174916db6bfe10c",
+        "stage1_rgb_sha256": "b7dbd06ced809b84f4ea4804e18cb48c852c964084879b3c47c3e1a1f0cde584",
+        "stage1_support_count": 405,
+        "stage2_coeff_sha256": "1a9e01bffffb306fd6c815416177565de6f91bc7b33f6d1b15beaac973112057",
+        "stage2_k": 4
+      },
+      "pair": 225,
+      "stage1": {
+        "band_px": 405,
+        "d_pose_after_stage1": 0.003366736928001046,
+        "flips_before": 714,
+        "n_described": 238,
+        "solve_diag_selected": {
+          "best_proxy_flips": 292,
+          "best_step": 30,
+          "curve": [
+            {
+              "proxy_flips": 406,
+              "step": 0
+            },
+            {
+              "proxy_flips": 341,
+              "step": 5
+            },
+            {
+              "proxy_flips": 327,
+              "step": 10
+            },
+            {
+              "proxy_flips": 320,
+              "step": 15
+            },
+            {
+              "proxy_flips": 310,
+              "step": 20
+            },
+            {
+              "proxy_flips": 298,
+              "step": 25
+            },
+            {
+              "proxy_flips": 292,
+              "step": 30
+            },
+            {
+              "proxy_flips": 295,
+              "step": 35
+            }
+          ],
+          "start": "dec",
+          "steps_run": 35,
+          "stop_reason": "marginal_below_bar",
+          "tag": "dec@30",
+          "trajectory_stop": {
+            "bound_reported": false,
+            "candidate_fits": [
+              {
+                "asymptote": 0.0,
+                "current_objective": 295.0,
+                "fit_quality_flag": "accepted",
+                "intercept": 6.005530508595481,
+                "kind": "power_law",
+                "last_compute": 35.0,
+                "origin_compute": 0.0,
+                "projected_marginal_objective_gain_per_compute": 0.7413409812961816,
+                "projected_remaining_objective_gain": 295.0,
+                "r2": 0.9914256996779169,
+                "slope": -0.09122861144285224
+              },
+              {
+                "asymptote": 289.45,
+                "current_objective": 295.0,
+                "fit_quality_flag": "accepted",
+                "intercept": 4.661394325115131,
+                "kind": "geometric",
+                "last_compute": 35.0,
+                "origin_compute": 0.0,
+                "projected_marginal_objective_gain_per_compute": 0.3353583775855892,
+                "projected_remaining_objective_gain": 5.550000000000011,
+                "r2": 0.9610268792857726,
+                "slope": -0.09804686035949257
+              }
+            ],
+            "current_compute": 35.0,
+            "current_objective": 295.0,
+            "law_ref": "trajectory_derived_stopping_law_v1",
+            "marginal_score_gain_per_compute": 6.284425364991774e-07,
+            "n_points": 8,
+            "projected_remaining_score_gain": 0.00025007459852430556,
+            "safety_bound_compute": 100.0,
+            "selected_fit": {
+              "asymptote": 0.0,
+              "current_objective": 295.0,
+              "fit_quality_flag": "accepted",
+              "intercept": 6.005530508595481,
+              "kind": "power_law",
+              "last_compute": 35.0,
+              "origin_compute": 0.0,
+              "projected_marginal_objective_gain_per_compute": 0.7413409812961816,
+              "projected_remaining_objective_gain": 295.0,
+              "r2": 0.9914256996779169,
+              "slope": -0.09122861144285224
+            },
+            "should_stop": true,
+            "stop_reason": "marginal_below_bar",
+            "threshold_score_gain_per_compute": 6.658589531221714e-07
+          }
+        },
+        "solve_tag": "dec@30"
+      },
+      "stage2_cheapdct": {
+        "counted_bytes_per_pair": 96,
+        "d_pose_verified_from_camera": 0.0002284710790263489,
+        "max_abs_int16_coefficient": 221.0,
+        "tag": "dct4q@40"
+      }
+    },
+    {
+      "native_payload": {
+        "stage1_band_sha256": "8bc649bfe1ed3cdecf20d561fe53557683d8ddc98aaaa5d71823da1e01b91094",
+        "stage1_rgb_sha256": "e088bd71ff1ba78f0e295c89cef8e477746e673f13df91d78d6abfea41572d64",
+        "stage1_support_count": 423,
+        "stage2_coeff_sha256": "2821cd522016580500a34ddbcbde99a313f02d2f87ee35deed9f459abc1bb587",
+        "stage2_k": 4
+      },
+      "pair": 234,
+      "stage1": {
+        "band_px": 423,
+        "d_pose_after_stage1": 0.0043159122578799725,
+        "flips_before": 767,
+        "n_described": 295,
+        "solve_diag_selected": {
+          "best_proxy_flips": 251,
+          "best_step": 45,
+          "curve": [
+            {
+              "proxy_flips": 476,
+              "step": 0
+            },
+            {
+              "proxy_flips": 405,
+              "step": 5
+            },
+            {
+              "proxy_flips": 355,
+              "step": 10
+            },
+            {
+              "proxy_flips": 327,
+              "step": 15
+            },
+            {
+              "proxy_flips": 306,
+              "step": 20
+            },
+            {
+              "proxy_flips": 290,
+              "step": 25
+            },
+            {
+              "proxy_flips": 273,
+              "step": 30
+            },
+            {
+              "proxy_flips": 263,
+              "step": 35
+            },
+            {
+              "proxy_flips": 253,
+              "step": 40
+            },
+            {
+              "proxy_flips": 251,
+              "step": 45
+            }
+          ],
+          "start": "truth",
+          "steps_run": 45,
+          "stop_reason": "marginal_below_bar",
+          "tag": "truth@45",
+          "trajectory_stop": {
+            "bound_reported": false,
+            "candidate_fits": [
+              {
+                "asymptote": 239.75,
+                "current_objective": 251.0,
+                "fit_quality_flag": "accepted",
+                "intercept": 5.489145419082305,
+                "kind": "geometric",
+                "last_compute": 45.0,
+                "origin_compute": 0.0,
+                "projected_marginal_objective_gain_per_compute": 0.7677980849691213,
+                "projected_remaining_objective_gain": 11.25,
+                "r2": 0.9958594317539594,
+                "slope": -0.06816911693659865
+              },
+              {
+                "asymptote": 0.0,
+                "current_objective": 251.0,
+                "fit_quality_flag": "low_r2",
+                "intercept": 6.241780218262796,
+                "kind": "power_law",
+                "last_compute": 45.0,
+                "origin_compute": 0.0,
+                "projected_marginal_objective_gain_per_compute": 1.0056662287110207,
+                "projected_remaining_objective_gain": 251.0,
+                "r2": 0.9305068073803975,
+                "slope": -0.17798955659240231
+              }
+            ],
+            "current_compute": 45.0,
+            "current_objective": 251.0,
+            "law_ref": "trajectory_derived_stopping_law_v1",
+            "marginal_score_gain_per_compute": 6.508705011741819e-07,
+            "n_points": 10,
+            "projected_remaining_score_gain": 9.5367431640625e-06,
+            "safety_bound_compute": 100.0,
+            "selected_fit": {
+              "asymptote": 239.75,
+              "current_objective": 251.0,
+              "fit_quality_flag": "accepted",
+              "intercept": 5.489145419082305,
+              "kind": "geometric",
+              "last_compute": 45.0,
+              "origin_compute": 0.0,
+              "projected_marginal_objective_gain_per_compute": 0.7677980849691213,
+              "projected_remaining_objective_gain": 11.25,
+              "r2": 0.9958594317539594,
+              "slope": -0.06816911693659865
+            },
+            "should_stop": true,
+            "stop_reason": "marginal_below_bar",
+            "threshold_score_gain_per_compute": 6.658589531221714e-07
+          }
+        },
+        "solve_tag": "truth@45"
+      },
+      "stage2_cheapdct": {
+        "counted_bytes_per_pair": 96,
+        "d_pose_verified_from_camera": 0.0002393308241153136,
+        "max_abs_int16_coefficient": 244.0,
+        "tag": "dct4q@35"
+      }
+    },
+    {
+      "native_payload": {
+        "stage1_band_sha256": "fc14dc93cdc5052450c721131c8e2e9561526021e8d7af055271a9eaa68041c3",
+        "stage1_rgb_sha256": "797f40cbac45e7ca45036dcb1e67e0989c14be582e74e82705a978101aec4fc2",
+        "stage1_support_count": 433,
+        "stage2_coeff_sha256": "17bc80b975e1c0b860e45a25688fe4b50db5c7fe8b46db82fa57442018244519",
+        "stage2_k": 4
+      },
+      "pair": 244,
+      "stage1": {
+        "band_px": 433,
+        "d_pose_after_stage1": 0.007211918011307716,
+        "flips_before": 684,
+        "n_described": 298,
+        "solve_diag_selected": {
+          "best_proxy_flips": 232,
+          "best_step": 25,
+          "curve": [
+            {
+              "proxy_flips": 441,
+              "step": 0
+            },
+            {
+              "proxy_flips": 324,
+              "step": 5
+            },
+            {
+              "proxy_flips": 262,
+              "step": 10
+            },
+            {
+              "proxy_flips": 253,
+              "step": 15
+            },
+            {
+              "proxy_flips": 237,
+              "step": 20
+            },
+            {
+              "proxy_flips": 232,
+              "step": 25
+            }
+          ],
+          "start": "dec",
+          "steps_run": 25,
+          "stop_reason": "marginal_below_bar",
+          "tag": "dec@25",
+          "trajectory_stop": {
+            "bound_reported": false,
+            "candidate_fits": [
+              {
+                "asymptote": 227.82,
+                "current_objective": 232.0,
+                "fit_quality_flag": "accepted",
+                "intercept": 5.318348019693218,
+                "kind": "geometric",
+                "last_compute": 25.0,
+                "origin_compute": 0.0,
+                "projected_marginal_objective_gain_per_compute": 0.6642838101963434,
+                "projected_remaining_objective_gain": 4.180000000000007,
+                "r2": 0.9937770103800823,
+                "slope": -0.15435600860768123
+              },
+              {
+                "asymptote": 0.0,
+                "current_objective": 232.0,
+                "fit_quality_flag": "accepted",
+                "intercept": 6.098971448876773,
+                "kind": "power_law",
+                "last_compute": 25.0,
+                "origin_compute": 0.0,
+                "projected_marginal_objective_gain_per_compute": 1.7981723799760831,
+                "projected_remaining_objective_gain": 232.0,
+                "r2": 0.988213628253031,
+                "slope": -0.20411133616920793
+              }
+            ],
+            "current_compute": 25.0,
+            "current_objective": 232.0,
+            "law_ref": "trajectory_derived_stopping_law_v1",
+            "marginal_score_gain_per_compute": 5.631203631899883e-07,
+            "n_points": 6,
+            "projected_remaining_score_gain": 3.5434299045138943e-06,
+            "safety_bound_compute": 100.0,
+            "selected_fit": {
+              "asymptote": 227.82,
+              "current_objective": 232.0,
+              "fit_quality_flag": "accepted",
+              "intercept": 5.318348019693218,
+              "kind": "geometric",
+              "last_compute": 25.0,
+              "origin_compute": 0.0,
+              "projected_marginal_objective_gain_per_compute": 0.6642838101963434,
+              "projected_remaining_objective_gain": 4.180000000000007,
+              "r2": 0.9937770103800823,
+              "slope": -0.15435600860768123
+            },
+            "should_stop": true,
+            "stop_reason": "marginal_below_bar",
+            "threshold_score_gain_per_compute": 6.658589531221714e-07
+          }
+        },
+        "solve_tag": "dec@25"
+      },
+      "stage2_cheapdct": {
+        "counted_bytes_per_pair": 96,
+        "d_pose_verified_from_camera": 0.0006245433469302952,
+        "max_abs_int16_coefficient": 300.0,
+        "tag": "dct4q@40"
+      }
+    },
+    {
+      "native_payload": {
+        "stage1_band_sha256": "8d682e6af7a81a8216fc1c99a355ad0dcad934cc84f868ff03af1a2b1a4835a9",
+        "stage1_rgb_sha256": "63113bae01a4be24741032cd34fc39b5ffb1402bf510f82e37dbd4c295fcda25",
+        "stage1_support_count": 602,
+        "stage2_coeff_sha256": "adac643e68f9b505833b15c1b9fb2faa150ee5a511e49cf3f3b10b145c214c10",
+        "stage2_k": 4
+      },
+      "pair": 251,
+      "stage1": {
+        "band_px": 602,
+        "d_pose_after_stage1": 0.0005223348853178322,
+        "flips_before": 922,
+        "n_described": 409,
+        "solve_diag_selected": {
+          "best_proxy_flips": 284,
+          "best_step": 60,
+          "curve": [
+            {
+              "proxy_flips": 604,
+              "step": 0
+            },
+            {
+              "proxy_flips": 512,
+              "step": 5
+            },
+            {
+              "proxy_flips": 455,
+              "step": 10
+            },
+            {
+              "proxy_flips": 405,
+              "step": 15
+            },
+            {
+              "proxy_flips": 381,
+              "step": 20
+            },
+            {
+              "proxy_flips": 351,
+              "step": 25
+            },
+            {
+              "proxy_flips": 330,
+              "step": 30
+            },
+            {
+              "proxy_flips": 318,
+              "step": 35
+            },
+            {
+              "proxy_flips": 310,
+              "step": 40
+            },
+            {
+              "proxy_flips": 300,
+              "step": 45
+            },
+            {
+              "proxy_flips": 296,
+              "step": 50
+            },
+            {
+              "proxy_flips": 287,
+              "step": 55
+            },
+            {
+              "proxy_flips": 284,
+              "step": 60
+            }
+          ],
+          "start": "truth",
+          "steps_run": 60,
+          "stop_reason": "marginal_below_bar",
+          "tag": "truth@60",
+          "trajectory_stop": {
+            "bound_reported": false,
+            "candidate_fits": [
+              {
+                "asymptote": 277.6,
+                "current_objective": 284.0,
+                "fit_quality_flag": "accepted",
+                "intercept": 5.833262296490717,
+                "kind": "geometric",
+                "last_compute": 60.0,
+                "origin_compute": 0.0,
+                "projected_marginal_objective_gain_per_compute": 0.5020456820678403,
+                "projected_remaining_objective_gain": 6.399999999999977,
+                "r2": 0.9947395179984738,
+                "slope": -0.062494039386328915
+              },
+              {
+                "asymptote": 0.0,
+                "current_objective": 284.0,
+                "fit_quality_flag": "low_r2",
+                "intercept": 6.512966143240908,
+                "kind": "power_law",
+                "last_compute": 60.0,
+                "origin_compute": 0.0,
+                "projected_marginal_objective_gain_per_compute": 0.9734032715926829,
+                "projected_remaining_objective_gain": 284.0,
+                "r2": 0.9166581531813953,
+                "slope": -0.20300931726986327
+              }
+            ],
+            "current_compute": 60.0,
+            "current_objective": 284.0,
+            "law_ref": "trajectory_derived_stopping_law_v1",
+            "marginal_score_gain_per_compute": 4.255893979117841e-07,
+            "n_points": 13,
+            "projected_remaining_score_gain": 5.425347222222203e-06,
+            "safety_bound_compute": 100.0,
+            "selected_fit": {
+              "asymptote": 277.6,
+              "current_objective": 284.0,
+              "fit_quality_flag": "accepted",
+              "intercept": 5.833262296490717,
+              "kind": "geometric",
+              "last_compute": 60.0,
+              "origin_compute": 0.0,
+              "projected_marginal_objective_gain_per_compute": 0.5020456820678403,
+              "projected_remaining_objective_gain": 6.399999999999977,
+              "r2": 0.9947395179984738,
+              "slope": -0.062494039386328915
+            },
+            "should_stop": true,
+            "stop_reason": "marginal_below_bar",
+            "threshold_score_gain_per_compute": 6.658589531221714e-07
+          }
+        },
+        "solve_tag": "truth@60"
+      },
+      "stage2_cheapdct": {
+        "counted_bytes_per_pair": 96,
+        "d_pose_verified_from_camera": 5.623301331070252e-05,
+        "max_abs_int16_coefficient": 170.0,
+        "tag": "dct4q@25"
+      }
+    },
+    {
+      "native_payload": {
+        "stage1_band_sha256": "f88f026e11a83f304254f6d881bae7a51c01e65bceb63faf50269b044fee63fb",
+        "stage1_rgb_sha256": "126b7c51a09a4b53a5989089aa986e9f84f053a30f6cc522a52261d0814a8a03",
+        "stage1_support_count": 696,
+        "stage2_coeff_sha256": "7c9f9e81c1d7282a950f40177b1e9ebf65f1b1973ee98c29835f6ddc34ed3ce6",
+        "stage2_k": 4
+      },
+      "pair": 284,
+      "stage1": {
+        "band_px": 696,
+        "d_pose_after_stage1": 0.008363278582692146,
+        "flips_before": 910,
+        "n_described": 416,
+        "solve_diag_selected": {
+          "best_proxy_flips": 336,
+          "best_step": 60,
+          "curve": [
+            {
+              "proxy_flips": 699,
+              "step": 0
+            },
+            {
+              "proxy_flips": 500,
+              "step": 5
+            },
+            {
+              "proxy_flips": 442,
+              "step": 10
+            },
+            {
+              "proxy_flips": 410,
+              "step": 15
+            },
+            {
+              "proxy_flips": 402,
+              "step": 20
+            },
+            {
+              "proxy_flips": 391,
+              "step": 25
+            },
+            {
+              "proxy_flips": 370,
+              "step": 30
+            },
+            {
+              "proxy_flips": 365,
+              "step": 35
+            },
+            {
+              "proxy_flips": 358,
+              "step": 40
+            },
+            {
+              "proxy_flips": 357,
+              "step": 45
+            },
+            {
+              "proxy_flips": 346,
+              "step": 50
+            },
+            {
+              "proxy_flips": 345,
+              "step": 55
+            },
+            {
+              "proxy_flips": 336,
+              "step": 60
+            }
+          ],
+          "start": "dec",
+          "steps_run": 60,
+          "stop_reason": "marginal_below_bar",
+          "tag": "dec@60",
+          "trajectory_stop": {
+            "bound_reported": false,
+            "candidate_fits": [
+              {
+                "asymptote": 190.79999999999998,
+                "current_objective": 336.0,
+                "fit_quality_flag": "accepted",
+                "intercept": 6.249592561104989,
+                "kind": "power_law",
+                "last_compute": 60.0,
+                "origin_compute": 0.0,
+                "projected_marginal_objective_gain_per_compute": 0.7404250263114914,
+                "projected_remaining_objective_gain": 145.20000000000002,
+                "r2": 0.997344479468776,
+                "slope": -0.3025450114650399
+              },
+              {
+                "asymptote": 335.637,
+                "current_objective": 336.0,
+                "fit_quality_flag": "low_r2",
+                "intercept": 5.810370976598198,
+                "kind": "geometric",
+                "last_compute": 60.0,
+                "origin_compute": 0.0,
+                "projected_marginal_objective_gain_per_compute": 0.23335349663298913,
+                "projected_remaining_objective_gain": 0.36299999999999955,
+                "r2": 0.9324263119707468,
+                "slope": -0.07873086254470725
+              }
+            ],
+            "current_compute": 60.0,
+            "current_objective": 336.0,
+            "law_ref": "trajectory_derived_stopping_law_v1",
+            "marginal_score_gain_per_compute": 6.276660718379478e-07,
+            "n_points": 13,
+            "projected_remaining_score_gain": 0.00012308756510416666,
+            "safety_bound_compute": 100.0,
+            "selected_fit": {
+              "asymptote": 190.79999999999998,
+              "current_objective": 336.0,
+              "fit_quality_flag": "accepted",
+              "intercept": 6.249592561104989,
+              "kind": "power_law",
+              "last_compute": 60.0,
+              "origin_compute": 0.0,
+              "projected_marginal_objective_gain_per_compute": 0.7404250263114914,
+              "projected_remaining_objective_gain": 145.20000000000002,
+              "r2": 0.997344479468776,
+              "slope": -0.3025450114650399
+            },
+            "should_stop": true,
+            "stop_reason": "marginal_below_bar",
+            "threshold_score_gain_per_compute": 6.658589531221714e-07
+          }
+        },
+        "solve_tag": "dec@60"
+      },
+      "stage2_cheapdct": {
+        "counted_bytes_per_pair": 96,
+        "d_pose_verified_from_camera": 0.0010405145585536957,
+        "max_abs_int16_coefficient": 257.0,
+        "tag": "dct4q@25"
+      }
+    },
+    {
+      "native_payload": {
+        "stage1_band_sha256": "abb27d19d89507f4396f927a335ecb1fc7c0c15a16056f1734044591594405f0",
+        "stage1_rgb_sha256": "0c8349a149308bc5b96989978cd86279875ec655fd5fed9cddb6d82627a6317a",
+        "stage1_support_count": 542,
+        "stage2_coeff_sha256": "eeb1eea47715e3918e8265c7cb606006ac7380f1efe6dbee4ec8fbce0a52795e",
+        "stage2_k": 4
+      },
+      "pair": 328,
+      "stage1": {
+        "band_px": 542,
+        "d_pose_after_stage1": 0.0012524545891210437,
+        "flips_before": 748,
+        "n_described": 304,
+        "solve_diag_selected": {
+          "best_proxy_flips": 287,
+          "best_step": 45,
+          "curve": [
+            {
+              "proxy_flips": 535,
+              "step": 0
+            },
+            {
+              "proxy_flips": 381,
+              "step": 5
+            },
+            {
+              "proxy_flips": 337,
+              "step": 10
+            },
+            {
+              "proxy_flips": 321,
+              "step": 15
+            },
+            {
+              "proxy_flips": 323,
+              "step": 20
+            },
+            {
+              "proxy_flips": 305,
+              "step": 25
+            },
+            {
+              "proxy_flips": 297,
+              "step": 30
+            },
+            {
+              "proxy_flips": 295,
+              "step": 35
+            },
+            {
+              "proxy_flips": 291,
+              "step": 40
+            },
+            {
+              "proxy_flips": 287,
+              "step": 45
+            }
+          ],
+          "start": "dec",
+          "steps_run": 45,
+          "stop_reason": "marginal_below_bar",
+          "tag": "dec@45",
+          "trajectory_stop": {
+            "bound_reported": false,
+            "candidate_fits": [
+              {
+                "asymptote": 187.8,
+                "current_objective": 287.0,
+                "fit_quality_flag": "accepted",
+                "intercept": 5.837392288629021,
+                "kind": "power_law",
+                "last_compute": 45.0,
+                "origin_compute": 0.0,
+                "projected_marginal_objective_gain_per_compute": 0.6971224276991491,
+                "projected_remaining_objective_gain": 99.19999999999999,
+                "r2": 0.9962600527124497,
+                "slope": -0.32671956404359803
+              },
+              {
+                "asymptote": 286.752,
+                "current_objective": 287.0,
+                "fit_quality_flag": "low_r2",
+                "intercept": 5.500806091990082,
+                "kind": "geometric",
+                "last_compute": 45.0,
+                "origin_compute": 0.0,
+                "projected_marginal_objective_gain_per_compute": 0.14365530667214407,
+                "projected_remaining_objective_gain": 0.24799999999999045,
+                "r2": 0.947354699006683,
+                "slope": -0.11783773066082559
+              }
+            ],
+            "current_compute": 45.0,
+            "current_objective": 287.0,
+            "law_ref": "trajectory_derived_stopping_law_v1",
+            "marginal_score_gain_per_compute": 5.909580041666235e-07,
+            "n_points": 10,
+            "projected_remaining_score_gain": 8.409288194444443e-05,
+            "safety_bound_compute": 100.0,
+            "selected_fit": {
+              "asymptote": 187.8,
+              "current_objective": 287.0,
+              "fit_quality_flag": "accepted",
+              "intercept": 5.837392288629021,
+              "kind": "power_law",
+              "last_compute": 45.0,
+              "origin_compute": 0.0,
+              "projected_marginal_objective_gain_per_compute": 0.6971224276991491,
+              "projected_remaining_objective_gain": 99.19999999999999,
+              "r2": 0.9962600527124497,
+              "slope": -0.32671956404359803
+            },
+            "should_stop": true,
+            "stop_reason": "marginal_below_bar",
+            "threshold_score_gain_per_compute": 6.658589531221714e-07
+          }
+        },
+        "solve_tag": "dec@45"
+      },
+      "stage2_cheapdct": {
+        "counted_bytes_per_pair": 96,
+        "d_pose_verified_from_camera": 0.0008674603886902332,
+        "max_abs_int16_coefficient": 319.0,
+        "tag": "dct4q@35"
+      }
+    },
+    {
+      "native_payload": {
+        "stage1_band_sha256": "540e210b81db7f2637ba155aa359a46cb72aa1254e1e81afc7edc66aaea3229c",
+        "stage1_rgb_sha256": "b48b0714d416fe771dfb3fb800a63eb398be1f8586a61582c629e3003652ab68",
+        "stage1_support_count": 461,
+        "stage2_coeff_sha256": "11892d6ef0ccb9585afe2a8d41497e52f91bcd92df6064e942f87433d22b9955",
+        "stage2_k": 4
+      },
+      "pair": 336,
+      "stage1": {
+        "band_px": 461,
+        "d_pose_after_stage1": 0.0011543371947482228,
+        "flips_before": 652,
+        "n_described": 276,
+        "solve_diag_selected": {
+          "best_proxy_flips": 267,
+          "best_step": 35,
+          "curve": [
+            {
+              "proxy_flips": 463,
+              "step": 0
+            },
+            {
+              "proxy_flips": 337,
+              "step": 5
+            },
+            {
+              "proxy_flips": 310,
+              "step": 10
+            },
+            {
+              "proxy_flips": 299,
+              "step": 15
+            },
+            {
+              "proxy_flips": 288,
+              "step": 20
+            },
+            {
+              "proxy_flips": 284,
+              "step": 25
+            },
+            {
+              "proxy_flips": 275,
+              "step": 30
+            },
+            {
+              "proxy_flips": 267,
+              "step": 35
+            }
+          ],
+          "start": "dec",
+          "steps_run": 35,
+          "stop_reason": "marginal_below_bar",
+          "tag": "dec@35",
+          "trajectory_stop": {
+            "bound_reported": false,
+            "candidate_fits": [
+              {
+                "asymptote": 188.6,
+                "current_objective": 267.0,
+                "fit_quality_flag": "accepted",
+                "intercept": 5.615242171984155,
+                "kind": "power_law",
+                "last_compute": 35.0,
+                "origin_compute": 0.0,
+                "projected_marginal_objective_gain_per_compute": 0.7684931810628388,
+                "projected_remaining_objective_gain": 78.4,
+                "r2": 0.9986143875761275,
+                "slope": -0.3365581201040894
+              },
+              {
+                "asymptote": 266.02,
+                "current_objective": 267.0,
+                "fit_quality_flag": "accepted",
+                "intercept": 5.228637471960026,
+                "kind": "geometric",
+                "last_compute": 35.0,
+                "origin_compute": 0.0,
+                "projected_marginal_objective_gain_per_compute": 0.3325014657921045,
+                "projected_remaining_objective_gain": 0.9800000000000182,
+                "r2": 0.9520487251678054,
+                "slope": -0.1203555212317619
+              }
+            ],
+            "current_compute": 35.0,
+            "current_objective": 267.0,
+            "law_ref": "trajectory_derived_stopping_law_v1",
+            "marginal_score_gain_per_compute": 6.514597414337487e-07,
+            "n_points": 8,
+            "projected_remaining_score_gain": 6.646050347222223e-05,
+            "safety_bound_compute": 100.0,
+            "selected_fit": {
+              "asymptote": 188.6,
+              "current_objective": 267.0,
+              "fit_quality_flag": "accepted",
+              "intercept": 5.615242171984155,
+              "kind": "power_law",
+              "last_compute": 35.0,
+              "origin_compute": 0.0,
+              "projected_marginal_objective_gain_per_compute": 0.7684931810628388,
+              "projected_remaining_objective_gain": 78.4,
+              "r2": 0.9986143875761275,
+              "slope": -0.3365581201040894
+            },
+            "should_stop": true,
+            "stop_reason": "marginal_below_bar",
+            "threshold_score_gain_per_compute": 6.658589531221714e-07
+          }
+        },
+        "solve_tag": "dec@35"
+      },
+      "stage2_cheapdct": {
+        "counted_bytes_per_pair": 96,
+        "d_pose_verified_from_camera": 0.0009909216314554214,
+        "max_abs_int16_coefficient": 480.0,
+        "tag": "dct4q@40"
+      }
+    },
+    {
+      "native_payload": {
+        "stage1_band_sha256": "63b6b32f12d467204f2b617e4601d174d9a302637fbf3dc78ba668e578c9b07e",
+        "stage1_rgb_sha256": "9b8d8c3ebcf95756b5403b28aa998e51760646b6f527ed739c1d016a4d5066f2",
+        "stage1_support_count": 478,
+        "stage2_coeff_sha256": "9a8afa82f8a3ab76ad00f9bb9800c14652433dc84e24b667ba880c26e91aed21",
+        "stage2_k": 4
+      },
+      "pair": 349,
+      "stage1": {
+        "band_px": 478,
+        "d_pose_after_stage1": 0.0014498800737783313,
+        "flips_before": 686,
+        "n_described": 269,
+        "solve_diag_selected": {
+          "best_proxy_flips": 282,
+          "best_step": 35,
+          "curve": [
+            {
+              "proxy_flips": 479,
+              "step": 0
+            },
+            {
+              "proxy_flips": 383,
+              "step": 5
+            },
+            {
+              "proxy_flips": 352,
+              "step": 10
+            },
+            {
+              "proxy_flips": 329,
+              "step": 15
+            },
+            {
+              "proxy_flips": 308,
+              "step": 20
+            },
+            {
+              "proxy_flips": 287,
+              "step": 25
+            },
+            {
+              "proxy_flips": 287,
+              "step": 30
+            },
+            {
+              "proxy_flips": 282,
+              "step": 35
+            }
+          ],
+          "start": "dec",
+          "steps_run": 35,
+          "stop_reason": "marginal_below_bar",
+          "tag": "dec@35",
+          "trajectory_stop": {
+            "bound_reported": false,
+            "candidate_fits": [
+              {
+                "asymptote": 272.15,
+                "current_objective": 282.0,
+                "fit_quality_flag": "accepted",
+                "intercept": 5.251697005382622,
+                "kind": "geometric",
+                "last_compute": 35.0,
+                "origin_compute": 0.0,
+                "projected_marginal_objective_gain_per_compute": 0.7759529174603417,
+                "projected_remaining_objective_gain": 9.850000000000023,
+                "r2": 0.9844542751053589,
+                "slope": -0.08778588118933298
+              },
+              {
+                "asymptote": 0.0,
+                "current_objective": 282.0,
+                "fit_quality_flag": "accepted",
+                "intercept": 6.196818924134296,
+                "kind": "power_law",
+                "last_compute": 35.0,
+                "origin_compute": 0.0,
+                "projected_marginal_objective_gain_per_compute": 1.2066439817359642,
+                "projected_remaining_objective_gain": 282.0,
+                "r2": 0.9815461322654918,
+                "slope": -0.15304699655727083
+              }
+            ],
+            "current_compute": 35.0,
+            "current_objective": 282.0,
+            "law_ref": "trajectory_derived_stopping_law_v1",
+            "marginal_score_gain_per_compute": 6.577834383310459e-07,
+            "n_points": 8,
+            "projected_remaining_score_gain": 8.349948459201408e-06,
+            "safety_bound_compute": 100.0,
+            "selected_fit": {
+              "asymptote": 272.15,
+              "current_objective": 282.0,
+              "fit_quality_flag": "accepted",
+              "intercept": 5.251697005382622,
+              "kind": "geometric",
+              "last_compute": 35.0,
+              "origin_compute": 0.0,
+              "projected_marginal_objective_gain_per_compute": 0.7759529174603417,
+              "projected_remaining_objective_gain": 9.850000000000023,
+              "r2": 0.9844542751053589,
+              "slope": -0.08778588118933298
+            },
+            "should_stop": true,
+            "stop_reason": "marginal_below_bar",
+            "threshold_score_gain_per_compute": 6.658589531221714e-07
+          }
+        },
+        "solve_tag": "dec@35"
+      },
+      "stage2_cheapdct": {
+        "counted_bytes_per_pair": 96,
+        "d_pose_verified_from_camera": 0.0002996127586811781,
+        "max_abs_int16_coefficient": 195.0,
+        "tag": "dct4q@30"
+      }
+    },
+    {
+      "native_payload": {
+        "stage1_band_sha256": "08e7708fce6761be8b99d0d91356c1269a3021757c632cee80c05b892b833154",
+        "stage1_rgb_sha256": "5644be05ff662b6d2fef3e6172dba31d4c9521a2f1c07dcac14ec6b422a92ab1",
+        "stage1_support_count": 597,
+        "stage2_coeff_sha256": "f61c5441a5b3bf9754735f9a7fa139da9966c7cde615c7b540b4a44f5a2071ee",
+        "stage2_k": 4
+      },
+      "pair": 383,
+      "stage1": {
+        "band_px": 597,
+        "d_pose_after_stage1": 0.001971348188817501,
+        "flips_before": 781,
+        "n_described": 334,
+        "solve_diag_selected": {
+          "best_proxy_flips": 289,
+          "best_step": 65,
+          "curve": [
+            {
+              "proxy_flips": 598,
+              "step": 0
+            },
+            {
+              "proxy_flips": 473,
+              "step": 5
+            },
+            {
+              "proxy_flips": 417,
+              "step": 10
+            },
+            {
+              "proxy_flips": 397,
+              "step": 15
+            },
+            {
+              "proxy_flips": 369,
+              "step": 20
+            },
+            {
+              "proxy_flips": 358,
+              "step": 25
+            },
+            {
+              "proxy_flips": 341,
+              "step": 30
+            },
+            {
+              "proxy_flips": 326,
+              "step": 35
+            },
+            {
+              "proxy_flips": 318,
+              "step": 40
+            },
+            {
+              "proxy_flips": 306,
+              "step": 45
+            },
+            {
+              "proxy_flips": 304,
+              "step": 50
+            },
+            {
+              "proxy_flips": 300,
+              "step": 55
+            },
+            {
+              "proxy_flips": 299,
+              "step": 60
+            },
+            {
+              "proxy_flips": 289,
+              "step": 65
+            },
+            {
+              "proxy_flips": 290,
+              "step": 70
+            }
+          ],
+          "start": "dec",
+          "steps_run": 70,
+          "stop_reason": "marginal_below_bar",
+          "tag": "dec@65",
+          "trajectory_stop": {
+            "bound_reported": false,
+            "candidate_fits": [
+              {
+                "asymptote": 0.0,
+                "current_objective": 290.0,
+                "fit_quality_flag": "accepted",
+                "intercept": 6.444463667918153,
+                "kind": "power_law",
+                "last_compute": 70.0,
+                "origin_compute": 0.0,
+                "projected_marginal_objective_gain_per_compute": 0.7414189008027384,
+                "projected_remaining_objective_gain": 290.0,
+                "r2": 0.9807666066858123,
+                "slope": -0.18086554667051802
+              },
+              {
+                "asymptote": 286.92,
+                "current_objective": 290.0,
+                "fit_quality_flag": "accepted",
+                "intercept": 5.722891306536127,
+                "kind": "geometric",
+                "last_compute": 70.0,
+                "origin_compute": 0.0,
+                "projected_marginal_objective_gain_per_compute": 0.23997163788375594,
+                "projected_remaining_objective_gain": 3.079999999999984,
+                "r2": 0.9711270830645264,
+                "slope": -0.06254697851948124
+              }
+            ],
+            "current_compute": 70.0,
+            "current_objective": 290.0,
+            "law_ref": "trajectory_derived_stopping_law_v1",
+            "marginal_score_gain_per_compute": 6.285085896833109e-07,
+            "n_points": 15,
+            "projected_remaining_score_gain": 0.00024583604600694444,
+            "safety_bound_compute": 100.0,
+            "selected_fit": {
+              "asymptote": 0.0,
+              "current_objective": 290.0,
+              "fit_quality_flag": "accepted",
+              "intercept": 6.444463667918153,
+              "kind": "power_law",
+              "last_compute": 70.0,
+              "origin_compute": 0.0,
+              "projected_marginal_objective_gain_per_compute": 0.7414189008027384,
+              "projected_remaining_objective_gain": 290.0,
+              "r2": 0.9807666066858123,
+              "slope": -0.18086554667051802
+            },
+            "should_stop": true,
+            "stop_reason": "marginal_below_bar",
+            "threshold_score_gain_per_compute": 6.658589531221714e-07
+          }
+        },
+        "solve_tag": "dec@65"
+      },
+      "stage2_cheapdct": {
+        "counted_bytes_per_pair": 96,
+        "d_pose_verified_from_camera": 0.00011717984307324514,
+        "max_abs_int16_coefficient": 305.0,
+        "tag": "dct4q@40"
+      }
+    },
+    {
+      "native_payload": {
+        "stage1_band_sha256": "7cc93e5f64468b5bbfa797f9a96743852d40f8f25bdfc0a44938bdeb46ccc880",
+        "stage1_rgb_sha256": "21650b428a1e43b587c1ffa844d9f9323b2c9ca8992128a20a7986e74be82dd9",
+        "stage1_support_count": 558,
+        "stage2_coeff_sha256": "f622fcdb23fc7e80f7755f79414ab6295d015656ce2e7a060a980539e3b62098",
+        "stage2_k": 4
+      },
+      "pair": 399,
+      "stage1": {
+        "band_px": 558,
+        "d_pose_after_stage1": 0.001965400530025363,
+        "flips_before": 819,
+        "n_described": 351,
+        "solve_diag_selected": {
+          "best_proxy_flips": 321,
+          "best_step": 30,
+          "curve": [
+            {
+              "proxy_flips": 560,
+              "step": 0
+            },
+            {
+              "proxy_flips": 435,
+              "step": 5
+            },
+            {
+              "proxy_flips": 382,
+              "step": 10
+            },
+            {
+              "proxy_flips": 349,
+              "step": 15
+            },
+            {
+              "proxy_flips": 336,
+              "step": 20
+            },
+            {
+              "proxy_flips": 328,
+              "step": 25
+            },
+            {
+              "proxy_flips": 321,
+              "step": 30
+            }
+          ],
+          "start": "dec",
+          "steps_run": 30,
+          "stop_reason": "marginal_below_bar",
+          "tag": "dec@30",
+          "trajectory_stop": {
+            "bound_reported": false,
+            "candidate_fits": [
+              {
+                "asymptote": 316.22,
+                "current_objective": 321.0,
+                "fit_quality_flag": "accepted",
+                "intercept": 5.454190648987754,
+                "kind": "geometric",
+                "last_compute": 30.0,
+                "origin_compute": 0.0,
+                "projected_marginal_objective_gain_per_compute": 0.6743864029307246,
+                "projected_remaining_objective_gain": 4.779999999999973,
+                "r2": 0.9966949645677526,
+                "slope": -0.12584900815334207
+              },
+              {
+                "asymptote": 0.0,
+                "current_objective": 321.0,
+                "fit_quality_flag": "accepted",
+                "intercept": 6.3411289272833,
+                "kind": "power_law",
+                "last_compute": 30.0,
+                "origin_compute": 0.0,
+                "projected_marginal_objective_gain_per_compute": 1.7263527110093606,
+                "projected_remaining_objective_gain": 321.0,
+                "r2": 0.9917882393471588,
+                "slope": -0.1678295998552539
+              }
+            ],
+            "current_compute": 30.0,
+            "current_objective": 321.0,
+            "law_ref": "trajectory_derived_stopping_law_v1",
+            "marginal_score_gain_per_compute": 5.716844371632254e-07,
+            "n_points": 7,
+            "projected_remaining_score_gain": 4.052056206597199e-06,
+            "safety_bound_compute": 100.0,
+            "selected_fit": {
+              "asymptote": 316.22,
+              "current_objective": 321.0,
+              "fit_quality_flag": "accepted",
+              "intercept": 5.454190648987754,
+              "kind": "geometric",
+              "last_compute": 30.0,
+              "origin_compute": 0.0,
+              "projected_marginal_objective_gain_per_compute": 0.6743864029307246,
+              "projected_remaining_objective_gain": 4.779999999999973,
+              "r2": 0.9966949645677526,
+              "slope": -0.12584900815334207
+            },
+            "should_stop": true,
+            "stop_reason": "marginal_below_bar",
+            "threshold_score_gain_per_compute": 6.658589531221714e-07
+          }
+        },
+        "solve_tag": "dec@30"
+      },
+      "stage2_cheapdct": {
+        "counted_bytes_per_pair": 96,
+        "d_pose_verified_from_camera": 0.0006410908536054194,
+        "max_abs_int16_coefficient": 184.0,
+        "tag": "dct4q@40"
+      }
+    },
+    {
+      "native_payload": {
+        "stage1_band_sha256": "0445778bb251a46c358a8bbc9674fec09c34913217f0a01d309bec832569510d",
+        "stage1_rgb_sha256": "813a3e64d15b79eed12dcb4dd8515b039b0efa2ffb530ea818e5e0414fa05227",
+        "stage1_support_count": 569,
+        "stage2_coeff_sha256": "1f03964b03b926e58b17bacf1abddd8db9c6cd746303d5c784f5efb6c8e35dba",
+        "stage2_k": 4
+      },
+      "pair": 411,
+      "stage1": {
+        "band_px": 569,
+        "d_pose_after_stage1": 0.518949568271637,
+        "flips_before": 786,
+        "n_described": 375,
+        "solve_diag_selected": {
+          "best_proxy_flips": 322,
+          "best_step": 45,
+          "curve": [
+            {
+              "proxy_flips": 634,
+              "step": 0
+            },
+            {
+              "proxy_flips": 540,
+              "step": 5
+            },
+            {
+              "proxy_flips": 462,
+              "step": 10
+            },
+            {
+              "proxy_flips": 410,
+              "step": 15
+            },
+            {
+              "proxy_flips": 381,
+              "step": 20
+            },
+            {
+              "proxy_flips": 357,
+              "step": 25
+            },
+            {
+              "proxy_flips": 344,
+              "step": 30
+            },
+            {
+              "proxy_flips": 334,
+              "step": 35
+            },
+            {
+              "proxy_flips": 334,
+              "step": 40
+            },
+            {
+              "proxy_flips": 322,
+              "step": 45
+            }
+          ],
+          "start": "truth",
+          "steps_run": 45,
+          "stop_reason": "marginal_below_bar",
+          "tag": "truth@45",
+          "trajectory_stop": {
+            "bound_reported": false,
+            "candidate_fits": [
+              {
+                "asymptote": 315.76,
+                "current_objective": 322.0,
+                "fit_quality_flag": "accepted",
+                "intercept": 5.797367086142483,
+                "kind": "geometric",
+                "last_compute": 45.0,
+                "origin_compute": 0.0,
+                "projected_marginal_objective_gain_per_compute": 0.6804394335934634,
+                "projected_remaining_objective_gain": 6.240000000000009,
+                "r2": 0.9979334411032541,
+                "slope": -0.0817360858251253
+              },
+              {
+                "asymptote": 0.0,
+                "current_objective": 322.0,
+                "fit_quality_flag": "low_r2",
+                "intercept": 6.52903191108787,
+                "kind": "power_law",
+                "last_compute": 45.0,
+                "origin_compute": 0.0,
+                "projected_marginal_objective_gain_per_compute": 1.3699381867964668,
+                "projected_remaining_objective_gain": 322.0,
+                "r2": 0.9296268624328048,
+                "slope": -0.1918076832735311
+              }
+            ],
+            "current_compute": 45.0,
+            "current_objective": 322.0,
+            "law_ref": "trajectory_derived_stopping_law_v1",
+            "marginal_score_gain_per_compute": 5.768156548338685e-07,
+            "n_points": 10,
+            "projected_remaining_score_gain": 5.2897135416666745e-06,
+            "safety_bound_compute": 100.0,
+            "selected_fit": {
+              "asymptote": 315.76,
+              "current_objective": 322.0,
+              "fit_quality_flag": "accepted",
+              "intercept": 5.797367086142483,
+              "kind": "geometric",
+              "last_compute": 45.0,
+              "origin_compute": 0.0,
+              "projected_marginal_objective_gain_per_compute": 0.6804394335934634,
+              "projected_remaining_objective_gain": 6.240000000000009,
+              "r2": 0.9979334411032541,
+              "slope": -0.0817360858251253
+            },
+            "should_stop": true,
+            "stop_reason": "marginal_below_bar",
+            "threshold_score_gain_per_compute": 6.658589531221714e-07
+          }
+        },
+        "solve_tag": "truth@45"
+      },
+      "stage2_cheapdct": {
+        "counted_bytes_per_pair": 96,
+        "d_pose_verified_from_camera": 0.001858853385783732,
+        "max_abs_int16_coefficient": 191.0,
+        "tag": "dct4q@10"
+      }
+    },
+    {
+      "native_payload": {
+        "stage1_band_sha256": "38ab9963325cec841ab1137fe7f40bb464b92a8646de08181cf3b6b507f20251",
+        "stage1_rgb_sha256": "3203605d862d76a8977753486ee718298062132be0ed5fa656af7ecae99b1b4b",
+        "stage1_support_count": 635,
+        "stage2_coeff_sha256": "99beedf729686ad9168de47e23bb4cdad6f07953a25020471be01cf66c17ae4a",
+        "stage2_k": 4
+      },
+      "pair": 423,
+      "stage1": {
+        "band_px": 635,
+        "d_pose_after_stage1": 0.005207799840718508,
+        "flips_before": 814,
+        "n_described": 356,
+        "solve_diag_selected": {
+          "best_proxy_flips": 305,
+          "best_step": 70,
+          "curve": [
+            {
+              "proxy_flips": 629,
+              "step": 0
+            },
+            {
+              "proxy_flips": 477,
+              "step": 5
+            },
+            {
+              "proxy_flips": 420,
+              "step": 10
+            },
+            {
+              "proxy_flips": 397,
+              "step": 15
+            },
+            {
+              "proxy_flips": 369,
+              "step": 20
+            },
+            {
+              "proxy_flips": 359,
+              "step": 25
+            },
+            {
+              "proxy_flips": 356,
+              "step": 30
+            },
+            {
+              "proxy_flips": 343,
+              "step": 35
+            },
+            {
+              "proxy_flips": 339,
+              "step": 40
+            },
+            {
+              "proxy_flips": 331,
+              "step": 45
+            },
+            {
+              "proxy_flips": 323,
+              "step": 50
+            },
+            {
+              "proxy_flips": 315,
+              "step": 55
+            },
+            {
+              "proxy_flips": 313,
+              "step": 60
+            },
+            {
+              "proxy_flips": 312,
+              "step": 65
+            },
+            {
+              "proxy_flips": 305,
+              "step": 70
+            }
+          ],
+          "start": "dec",
+          "steps_run": 70,
+          "stop_reason": "marginal_below_bar",
+          "tag": "dec@70",
+          "trajectory_stop": {
+            "bound_reported": false,
+            "candidate_fits": [
+              {
+                "asymptote": 0.0,
+                "current_objective": 305.0,
+                "fit_quality_flag": "accepted",
+                "intercept": 6.452478270289169,
+                "kind": "power_law",
+                "last_compute": 70.0,
+                "origin_compute": 0.0,
+                "projected_marginal_objective_gain_per_compute": 0.7372014590670762,
+                "projected_remaining_objective_gain": 305.0,
+                "r2": 0.9974312846677983,
+                "slope": -0.17120072413053095
+              },
+              {
+                "asymptote": 303.38,
+                "current_objective": 305.0,
+                "fit_quality_flag": "low_r2",
+                "intercept": 5.588116744404622,
+                "kind": "geometric",
+                "last_compute": 70.0,
+                "origin_compute": 0.0,
+                "projected_marginal_objective_gain_per_compute": 0.26560764060308206,
+                "projected_remaining_objective_gain": 1.6200000000000045,
+                "r2": 0.9395060351603949,
+                "slope": -0.05812390944935976
+              }
+            ],
+            "current_compute": 70.0,
+            "current_objective": 305.0,
+            "law_ref": "trajectory_derived_stopping_law_v1",
+            "marginal_score_gain_per_compute": 6.24933420026208e-07,
+            "n_points": 15,
+            "projected_remaining_score_gain": 0.00025855170355902775,
+            "safety_bound_compute": 100.0,
+            "selected_fit": {
+              "asymptote": 0.0,
+              "current_objective": 305.0,
+              "fit_quality_flag": "accepted",
+              "intercept": 6.452478270289169,
+              "kind": "power_law",
+              "last_compute": 70.0,
+              "origin_compute": 0.0,
+              "projected_marginal_objective_gain_per_compute": 0.7372014590670762,
+              "projected_remaining_objective_gain": 305.0,
+              "r2": 0.9974312846677983,
+              "slope": -0.17120072413053095
+            },
+            "should_stop": true,
+            "stop_reason": "marginal_below_bar",
+            "threshold_score_gain_per_compute": 6.658589531221714e-07
+          }
+        },
+        "solve_tag": "dec@70"
+      },
+      "stage2_cheapdct": {
+        "counted_bytes_per_pair": 96,
+        "d_pose_verified_from_camera": 0.0019114931346848607,
+        "max_abs_int16_coefficient": 391.0,
+        "tag": "dct4q@40"
+      }
+    },
+    {
+      "native_payload": {
+        "stage1_band_sha256": "b9cbd4a6b8993ada81202a47344e63c4d09f29311350bf94d50cdd83e794f9ba",
+        "stage1_rgb_sha256": "5971f43759f899bb1a659f06395fa4b4e47f900816c423bffa4bb9f14f1f03dd",
+        "stage1_support_count": 500,
+        "stage2_coeff_sha256": "354891c193a2dede067d373d24dc4d5707e0b360e32ee561f784c44df518f95f",
+        "stage2_k": 4
+      },
+      "pair": 445,
+      "stage1": {
+        "band_px": 500,
+        "d_pose_after_stage1": 0.001770432572811842,
+        "flips_before": 734,
+        "n_described": 300,
+        "solve_diag_selected": {
+          "best_proxy_flips": 255,
+          "best_step": 55,
+          "curve": [
+            {
+              "proxy_flips": 503,
+              "step": 0
+            },
+            {
+              "proxy_flips": 385,
+              "step": 5
+            },
+            {
+              "proxy_flips": 353,
+              "step": 10
+            },
+            {
+              "proxy_flips": 325,
+              "step": 15
+            },
+            {
+              "proxy_flips": 303,
+              "step": 20
+            },
+            {
+              "proxy_flips": 292,
+              "step": 25
+            },
+            {
+              "proxy_flips": 283,
+              "step": 30
+            },
+            {
+              "proxy_flips": 269,
+              "step": 35
+            },
+            {
+              "proxy_flips": 263,
+              "step": 40
+            },
+            {
+              "proxy_flips": 259,
+              "step": 45
+            },
+            {
+              "proxy_flips": 259,
+              "step": 50
+            },
+            {
+              "proxy_flips": 255,
+              "step": 55
+            },
+            {
+              "proxy_flips": 260,
+              "step": 60
+            }
+          ],
+          "start": "dec",
+          "steps_run": 60,
+          "stop_reason": "marginal_below_bar",
+          "tag": "dec@55",
+          "trajectory_stop": {
+            "bound_reported": false,
+            "candidate_fits": [
+              {
+                "asymptote": 0.0,
+                "current_objective": 260.0,
+                "fit_quality_flag": "accepted",
+                "intercept": 6.246067226939137,
+                "kind": "power_law",
+                "last_compute": 60.0,
+                "origin_compute": 0.0,
+                "projected_marginal_objective_gain_per_compute": 0.7202300658101394,
+                "projected_remaining_objective_gain": 260.0,
+                "r2": 0.9892904550603949,
+                "slope": -0.17437673138845378
+              },
+              {
+                "asymptote": 247.85,
+                "current_objective": 260.0,
+                "fit_quality_flag": "low_r2",
+                "intercept": 5.214893885842125,
+                "kind": "geometric",
+                "last_compute": 60.0,
+                "origin_compute": 0.0,
+                "projected_marginal_objective_gain_per_compute": 0.3549939622712631,
+                "projected_remaining_objective_gain": 12.150000000000006,
+                "r2": 0.9145350481441817,
+                "slope": -0.05619312553676308
+              }
+            ],
+            "current_compute": 60.0,
+            "current_objective": 260.0,
+            "law_ref": "trajectory_derived_stopping_law_v1",
+            "marginal_score_gain_per_compute": 6.10546591703745e-07,
+            "n_points": 13,
+            "projected_remaining_score_gain": 0.00022040473090277775,
+            "safety_bound_compute": 100.0,
+            "selected_fit": {
+              "asymptote": 0.0,
+              "current_objective": 260.0,
+              "fit_quality_flag": "accepted",
+              "intercept": 6.246067226939137,
+              "kind": "power_law",
+              "last_compute": 60.0,
+              "origin_compute": 0.0,
+              "projected_marginal_objective_gain_per_compute": 0.7202300658101394,
+              "projected_remaining_objective_gain": 260.0,
+              "r2": 0.9892904550603949,
+              "slope": -0.17437673138845378
+            },
+            "should_stop": true,
+            "stop_reason": "marginal_below_bar",
+            "threshold_score_gain_per_compute": 6.658589531221714e-07
+          }
+        },
+        "solve_tag": "dec@55"
+      },
+      "stage2_cheapdct": {
+        "counted_bytes_per_pair": 96,
+        "d_pose_verified_from_camera": 0.0012896928237751126,
+        "max_abs_int16_coefficient": 118.0,
+        "tag": "dct4q@35"
+      }
+    },
+    {
+      "native_payload": {
+        "stage1_band_sha256": "f239322d59e7683eff90cf5ce7ba1349cfe231a9ef3f485ced4c45ebdfb46827",
+        "stage1_rgb_sha256": "0d94977a8aa94afe1b8c23b437d9784c0d99641d6131dc9f8ee965c88233d97a",
+        "stage1_support_count": 660,
+        "stage2_coeff_sha256": "c94b0421b41a85c9e964166243095289d35880ce00c49e7beda0a5fc947e4ac5",
+        "stage2_k": 4
+      },
+      "pair": 465,
+      "stage1": {
+        "band_px": 660,
+        "d_pose_after_stage1": 0.02273288369178772,
+        "flips_before": 945,
+        "n_described": 411,
+        "solve_diag_selected": {
+          "best_proxy_flips": 328,
+          "best_step": 70,
+          "curve": [
+            {
+              "proxy_flips": 659,
+              "step": 0
+            },
+            {
+              "proxy_flips": 501,
+              "step": 5
+            },
+            {
+              "proxy_flips": 464,
+              "step": 10
+            },
+            {
+              "proxy_flips": 421,
+              "step": 15
+            },
+            {
+              "proxy_flips": 394,
+              "step": 20
+            },
+            {
+              "proxy_flips": 376,
+              "step": 25
+            },
+            {
+              "proxy_flips": 366,
+              "step": 30
+            },
+            {
+              "proxy_flips": 358,
+              "step": 35
+            },
+            {
+              "proxy_flips": 354,
+              "step": 40
+            },
+            {
+              "proxy_flips": 352,
+              "step": 45
+            },
+            {
+              "proxy_flips": 343,
+              "step": 50
+            },
+            {
+              "proxy_flips": 339,
+              "step": 55
+            },
+            {
+              "proxy_flips": 333,
+              "step": 60
+            },
+            {
+              "proxy_flips": 334,
+              "step": 65
+            },
+            {
+              "proxy_flips": 328,
+              "step": 70
+            }
+          ],
+          "start": "dec",
+          "steps_run": 70,
+          "stop_reason": "marginal_below_bar",
+          "tag": "dec@70",
+          "trajectory_stop": {
+            "bound_reported": false,
+            "candidate_fits": [
+              {
+                "asymptote": 0.0,
+                "current_objective": 328.0,
+                "fit_quality_flag": "accepted",
+                "intercept": 6.504098949585895,
+                "kind": "power_law",
+                "last_compute": 70.0,
+                "origin_compute": 0.0,
+                "projected_marginal_objective_gain_per_compute": 0.7735860450145445,
+                "projected_remaining_objective_gain": 328.0,
+                "r2": 0.9931616446735142,
+                "slope": -0.1690677536504298
+              },
+              {
+                "asymptote": 327.669,
+                "current_objective": 328.0,
+                "fit_quality_flag": "accepted",
+                "intercept": 5.780043700323247,
+                "kind": "geometric",
+                "last_compute": 70.0,
+                "origin_compute": 0.0,
+                "projected_marginal_objective_gain_per_compute": 0.16214885778902927,
+                "projected_remaining_objective_gain": 0.3310000000000173,
+                "r2": 0.960846068783607,
+                "slope": -0.07071744591373351
+              }
+            ],
+            "current_compute": 70.0,
+            "current_objective": 328.0,
+            "law_ref": "trajectory_derived_stopping_law_v1",
+            "marginal_score_gain_per_compute": 6.557770156983647e-07,
+            "n_points": 15,
+            "projected_remaining_score_gain": 0.0002780490451388889,
+            "safety_bound_compute": 100.0,
+            "selected_fit": {
+              "asymptote": 0.0,
+              "current_objective": 328.0,
+              "fit_quality_flag": "accepted",
+              "intercept": 6.504098949585895,
+              "kind": "power_law",
+              "last_compute": 70.0,
+              "origin_compute": 0.0,
+              "projected_marginal_objective_gain_per_compute": 0.7735860450145445,
+              "projected_remaining_objective_gain": 328.0,
+              "r2": 0.9931616446735142,
+              "slope": -0.1690677536504298
+            },
+            "should_stop": true,
+            "stop_reason": "marginal_below_bar",
+            "threshold_score_gain_per_compute": 6.658589531221714e-07
+          }
+        },
+        "solve_tag": "dec@70"
+      },
+      "stage2_cheapdct": {
+        "counted_bytes_per_pair": 96,
+        "d_pose_verified_from_camera": 0.0002476836962159723,
+        "max_abs_int16_coefficient": 344.0,
+        "tag": "dct4q@35"
+      }
+    },
+    {
+      "native_payload": {
+        "stage1_band_sha256": "2e23ff85ff8a591d707ce856254a49bdb4b529030a0ab0608b22bad12c5347bd",
+        "stage1_rgb_sha256": "afb2f81259484c1594bea4bfbb2e12ae8890592929b15554b61fbb8de87ce3d7",
+        "stage1_support_count": 565,
+        "stage2_coeff_sha256": "91b3449f4f2a18b5b468abf2217b00bb4e3dda78ce34ba231ed633c4cc3f3ccf",
+        "stage2_k": 4
+      },
+      "pair": 481,
+      "stage1": {
+        "band_px": 565,
+        "d_pose_after_stage1": 0.13485996425151825,
+        "flips_before": 848,
+        "n_described": 314,
+        "solve_diag_selected": {
+          "best_proxy_flips": 304,
+          "best_step": 60,
+          "curve": [
+            {
+              "proxy_flips": 567,
+              "step": 0
+            },
+            {
+              "proxy_flips": 460,
+              "step": 5
+            },
+            {
+              "proxy_flips": 423,
+              "step": 10
+            },
+            {
+              "proxy_flips": 402,
+              "step": 15
+            },
+            {
+              "proxy_flips": 381,
+              "step": 20
+            },
+            {
+              "proxy_flips": 368,
+              "step": 25
+            },
+            {
+              "proxy_flips": 361,
+              "step": 30
+            },
+            {
+              "proxy_flips": 347,
+              "step": 35
+            },
+            {
+              "proxy_flips": 333,
+              "step": 40
+            },
+            {
+              "proxy_flips": 321,
+              "step": 45
+            },
+            {
+              "proxy_flips": 318,
+              "step": 50
+            },
+            {
+              "proxy_flips": 309,
+              "step": 55
+            },
+            {
+              "proxy_flips": 304,
+              "step": 60
+            },
+            {
+              "proxy_flips": 309,
+              "step": 65
+            }
+          ],
+          "start": "dec",
+          "steps_run": 65,
+          "stop_reason": "marginal_below_bar",
+          "tag": "dec@60",
+          "trajectory_stop": {
+            "bound_reported": false,
+            "candidate_fits": [
+              {
+                "asymptote": 0.0,
+                "current_objective": 309.0,
+                "fit_quality_flag": "accepted",
+                "intercept": 6.389324196725778,
+                "kind": "power_law",
+                "last_compute": 65.0,
+                "origin_compute": 0.0,
+                "projected_marginal_objective_gain_per_compute": 0.7300243544675025,
+                "projected_remaining_objective_gain": 309.0,
+                "r2": 0.972941094527598,
+                "slope": -0.1547265059009774
+              },
+              {
+                "asymptote": 296.1,
+                "current_objective": 309.0,
+                "fit_quality_flag": "accepted",
+                "intercept": 5.478659536509749,
+                "kind": "geometric",
+                "last_compute": 65.0,
+                "origin_compute": 0.0,
+                "projected_marginal_objective_gain_per_compute": 0.47204509423604635,
+                "projected_remaining_objective_gain": 12.899999999999977,
+                "r2": 0.9683561540241751,
+                "slope": -0.049635139274965524
+              }
+            ],
+            "current_compute": 65.0,
+            "current_objective": 309.0,
+            "law_ref": "trajectory_derived_stopping_law_v1",
+            "marginal_score_gain_per_compute": 6.188493130726305e-07,
+            "n_points": 14,
+            "projected_remaining_score_gain": 0.00026194254557291663,
+            "safety_bound_compute": 100.0,
+            "selected_fit": {
+              "asymptote": 0.0,
+              "current_objective": 309.0,
+              "fit_quality_flag": "accepted",
+              "intercept": 6.389324196725778,
+              "kind": "power_law",
+              "last_compute": 65.0,
+              "origin_compute": 0.0,
+              "projected_marginal_objective_gain_per_compute": 0.7300243544675025,
+              "projected_remaining_objective_gain": 309.0,
+              "r2": 0.972941094527598,
+              "slope": -0.1547265059009774
+            },
+            "should_stop": true,
+            "stop_reason": "marginal_below_bar",
+            "threshold_score_gain_per_compute": 6.658589531221714e-07
+          }
+        },
+        "solve_tag": "dec@60"
+      },
+      "stage2_cheapdct": {
+        "counted_bytes_per_pair": 96,
+        "d_pose_verified_from_camera": 0.0007676042150706053,
+        "max_abs_int16_coefficient": 415.0,
+        "tag": "dct4q@35"
+      }
+    },
+    {
+      "native_payload": {
+        "stage1_band_sha256": "78e18ed0c38ce9d8cc218c3b3a33fc148afbc445b98bd20cf1aaea772fc4d00c",
+        "stage1_rgb_sha256": "35396790b52ed77ff6e0ab9b3fb737fcbb55628e3e4fbdc2769cd19cb3aaf691",
+        "stage1_support_count": 972,
+        "stage2_coeff_sha256": "a23ec3826d0081a2f5e5c5d811700f64e31bafa7d313afbbc341641e13093e51",
+        "stage2_k": 4
+      },
+      "pair": 516,
+      "stage1": {
+        "band_px": 972,
+        "d_pose_after_stage1": 0.17695049941539764,
+        "flips_before": 1307,
+        "n_described": 517,
+        "solve_diag_selected": {
+          "best_proxy_flips": 531,
+          "best_step": 65,
+          "curve": [
+            {
+              "proxy_flips": 1080,
+              "step": 0
+            },
+            {
+              "proxy_flips": 874,
+              "step": 5
+            },
+            {
+              "proxy_flips": 775,
+              "step": 10
+            },
+            {
+              "proxy_flips": 719,
+              "step": 15
+            },
+            {
+              "proxy_flips": 676,
+              "step": 20
+            },
+            {
+              "proxy_flips": 662,
+              "step": 25
+            },
+            {
+              "proxy_flips": 641,
+              "step": 30
+            },
+            {
+              "proxy_flips": 611,
+              "step": 35
+            },
+            {
+              "proxy_flips": 584,
+              "step": 40
+            },
+            {
+              "proxy_flips": 564,
+              "step": 45
+            },
+            {
+              "proxy_flips": 549,
+              "step": 50
+            },
+            {
+              "proxy_flips": 548,
+              "step": 55
+            },
+            {
+              "proxy_flips": 537,
+              "step": 60
+            },
+            {
+              "proxy_flips": 531,
+              "step": 65
+            }
+          ],
+          "start": "truth",
+          "steps_run": 65,
+          "stop_reason": "marginal_below_bar",
+          "tag": "truth@65",
+          "trajectory_stop": {
+            "bound_reported": false,
+            "candidate_fits": [
+              {
+                "asymptote": 520.02,
+                "current_objective": 531.0,
+                "fit_quality_flag": "accepted",
+                "intercept": 6.25659051132986,
+                "kind": "geometric",
+                "last_compute": 65.0,
+                "origin_compute": 0.0,
+                "projected_marginal_objective_gain_per_compute": 0.7745167142773908,
+                "projected_remaining_objective_gain": 10.980000000000018,
+                "r2": 0.9774435966967204,
+                "slope": -0.05578141596374038
+              },
+              {
+                "asymptote": 0.0,
+                "current_objective": 531.0,
+                "fit_quality_flag": "accepted",
+                "intercept": 7.0476086640492746,
+                "kind": "power_law",
+                "last_compute": 65.0,
+                "origin_compute": 0.0,
+                "projected_marginal_objective_gain_per_compute": 1.4743119251030699,
+                "projected_remaining_objective_gain": 531.0,
+                "r2": 0.9691622649360987,
+                "slope": -0.17939917482448625
+              }
+            ],
+            "current_compute": 65.0,
+            "current_objective": 531.0,
+            "law_ref": "trajectory_derived_stopping_law_v1",
+            "marginal_score_gain_per_compute": 6.565659538077382e-07,
+            "n_points": 14,
+            "projected_remaining_score_gain": 9.307861328125015e-06,
+            "safety_bound_compute": 100.0,
+            "selected_fit": {
+              "asymptote": 520.02,
+              "current_objective": 531.0,
+              "fit_quality_flag": "accepted",
+              "intercept": 6.25659051132986,
+              "kind": "geometric",
+              "last_compute": 65.0,
+              "origin_compute": 0.0,
+              "projected_marginal_objective_gain_per_compute": 0.7745167142773908,
+              "projected_remaining_objective_gain": 10.980000000000018,
+              "r2": 0.9774435966967204,
+              "slope": -0.05578141596374038
+            },
+            "should_stop": true,
+            "stop_reason": "marginal_below_bar",
+            "threshold_score_gain_per_compute": 6.658589531221714e-07
+          }
+        },
+        "solve_tag": "truth@65"
+      },
+      "stage2_cheapdct": {
+        "counted_bytes_per_pair": 96,
+        "d_pose_verified_from_camera": 0.0006363348802551627,
+        "max_abs_int16_coefficient": 458.0,
+        "tag": "dct4q@30"
+      }
+    },
+    {
+      "native_payload": {
+        "stage1_band_sha256": "fe7e19de18fac9ac3015ef2c33301f467ca28051a2e46f61268fcf200befecf2",
+        "stage1_rgb_sha256": "92e24b94e607ac1e2f5f47e23c4f7127605d4ad890cc60c7f9882a072ba4592a",
+        "stage1_support_count": 632,
+        "stage2_coeff_sha256": "384450c7a2abfef9d26d04d256105fa5da2b591cb29de6eeb49106a9d9ebc042",
+        "stage2_k": 4
+      },
+      "pair": 536,
+      "stage1": {
+        "band_px": 632,
+        "d_pose_after_stage1": 0.0015917570563033223,
+        "flips_before": 908,
+        "n_described": 328,
+        "solve_diag_selected": {
+          "best_proxy_flips": 352,
+          "best_step": 35,
+          "curve": [
+            {
+              "proxy_flips": 641,
+              "step": 0
+            },
+            {
+              "proxy_flips": 510,
+              "step": 5
+            },
+            {
+              "proxy_flips": 442,
+              "step": 10
+            },
+            {
+              "proxy_flips": 402,
+              "step": 15
+            },
+            {
+              "proxy_flips": 382,
+              "step": 20
+            },
+            {
+              "proxy_flips": 370,
+              "step": 25
+            },
+            {
+              "proxy_flips": 361,
+              "step": 30
+            },
+            {
+              "proxy_flips": 352,
+              "step": 35
+            }
+          ],
+          "start": "dec",
+          "steps_run": 35,
+          "stop_reason": "marginal_below_bar",
+          "tag": "dec@35",
+          "trajectory_stop": {
+            "bound_reported": false,
+            "candidate_fits": [
+              {
+                "asymptote": 346.22,
+                "current_objective": 352.0,
+                "fit_quality_flag": "accepted",
+                "intercept": 5.660795173228771,
+                "kind": "geometric",
+                "last_compute": 35.0,
+                "origin_compute": 0.0,
+                "projected_marginal_objective_gain_per_compute": 0.7615422585379819,
+                "projected_remaining_objective_gain": 5.779999999999973,
+                "r2": 0.9979004271766582,
+                "slope": -0.10517304401370121
+              },
+              {
+                "asymptote": 0.0,
+                "current_objective": 352.0,
+                "fit_quality_flag": "accepted",
+                "intercept": 6.490532692084747,
+                "kind": "power_law",
+                "last_compute": 35.0,
+                "origin_compute": 0.0,
+                "projected_marginal_objective_gain_per_compute": 1.7068008828357142,
+                "projected_remaining_objective_gain": 352.0,
+                "r2": 0.9822463684276019,
+                "slope": -0.17392577305450493
+              }
+            ],
+            "current_compute": 35.0,
+            "current_objective": 352.0,
+            "law_ref": "trajectory_derived_stopping_law_v1",
+            "marginal_score_gain_per_compute": 6.455673714006057e-07,
+            "n_points": 8,
+            "projected_remaining_score_gain": 4.899766710069421e-06,
+            "safety_bound_compute": 100.0,
+            "selected_fit": {
+              "asymptote": 346.22,
+              "current_objective": 352.0,
+              "fit_quality_flag": "accepted",
+              "intercept": 5.660795173228771,
+              "kind": "geometric",
+              "last_compute": 35.0,
+              "origin_compute": 0.0,
+              "projected_marginal_objective_gain_per_compute": 0.7615422585379819,
+              "projected_remaining_objective_gain": 5.779999999999973,
+              "r2": 0.9979004271766582,
+              "slope": -0.10517304401370121
+            },
+            "should_stop": true,
+            "stop_reason": "marginal_below_bar",
+            "threshold_score_gain_per_compute": 6.658589531221714e-07
+          }
+        },
+        "solve_tag": "dec@35"
+      },
+      "stage2_cheapdct": {
+        "counted_bytes_per_pair": 96,
+        "d_pose_verified_from_camera": 0.00021774556080345064,
+        "max_abs_int16_coefficient": 208.0,
+        "tag": "dct4q@25"
+      }
+    },
+    {
+      "native_payload": {
+        "stage1_band_sha256": "f278abb0d7b1cbfd60984e0d2887ca336b642ef9e55efbf5309fad8f84106248",
+        "stage1_rgb_sha256": "fb5172d3866d02b6239a475e2e6421b188462be058ba6551aadda01af3cdf9b2",
+        "stage1_support_count": 565,
+        "stage2_coeff_sha256": "035c5bea43d4cb09c35e5ed28f32400617844a8d4a2f3d58f5011273210eb6bf",
+        "stage2_k": 4
+      },
+      "pair": 561,
+      "stage1": {
+        "band_px": 565,
+        "d_pose_after_stage1": 0.001369951292872429,
+        "flips_before": 847,
+        "n_described": 349,
+        "solve_diag_selected": {
+          "best_proxy_flips": 342,
+          "best_step": 60,
+          "curve": [
+            {
+              "proxy_flips": 570,
+              "step": 0
+            },
+            {
+              "proxy_flips": 473,
+              "step": 5
+            },
+            {
+              "proxy_flips": 436,
+              "step": 10
+            },
+            {
+              "proxy_flips": 410,
+              "step": 15
+            },
+            {
+              "proxy_flips": 400,
+              "step": 20
+            },
+            {
+              "proxy_flips": 382,
+              "step": 25
+            },
+            {
+              "proxy_flips": 385,
+              "step": 30
+            },
+            {
+              "proxy_flips": 375,
+              "step": 35
+            },
+            {
+              "proxy_flips": 363,
+              "step": 40
+            },
+            {
+              "proxy_flips": 359,
+              "step": 45
+            },
+            {
+              "proxy_flips": 344,
+              "step": 50
+            },
+            {
+              "proxy_flips": 344,
+              "step": 55
+            },
+            {
+              "proxy_flips": 342,
+              "step": 60
+            }
+          ],
+          "start": "dec",
+          "steps_run": 60,
+          "stop_reason": "marginal_below_bar",
+          "tag": "dec@60",
+          "trajectory_stop": {
+            "bound_reported": false,
+            "candidate_fits": [
+              {
+                "asymptote": 0.0,
+                "current_objective": 342.0,
+                "fit_quality_flag": "accepted",
+                "intercept": 6.367940575963248,
+                "kind": "power_law",
+                "last_compute": 60.0,
+                "origin_compute": 0.0,
+                "projected_marginal_objective_gain_per_compute": 0.7204494640871343,
+                "projected_remaining_objective_gain": 342.0,
+                "r2": 0.9889632600207114,
+                "slope": -0.1271869549168495
+              },
+              {
+                "asymptote": 337.44,
+                "current_objective": 342.0,
+                "fit_quality_flag": "accepted",
+                "intercept": 5.37627162847198,
+                "kind": "geometric",
+                "last_compute": 60.0,
+                "origin_compute": 0.0,
+                "projected_marginal_objective_gain_per_compute": 0.344897671117466,
+                "projected_remaining_objective_gain": 4.560000000000002,
+                "r2": 0.9625612018738519,
+                "slope": -0.060630314457812896
+              }
+            ],
+            "current_compute": 60.0,
+            "current_objective": 342.0,
+            "law_ref": "trajectory_derived_stopping_law_v1",
+            "marginal_score_gain_per_compute": 6.107325779275973e-07,
+            "n_points": 13,
+            "projected_remaining_score_gain": 0.0002899169921875,
+            "safety_bound_compute": 100.0,
+            "selected_fit": {
+              "asymptote": 0.0,
+              "current_objective": 342.0,
+              "fit_quality_flag": "accepted",
+              "intercept": 6.367940575963248,
+              "kind": "power_law",
+              "last_compute": 60.0,
+              "origin_compute": 0.0,
+              "projected_marginal_objective_gain_per_compute": 0.7204494640871343,
+              "projected_remaining_objective_gain": 342.0,
+              "r2": 0.9889632600207114,
+              "slope": -0.1271869549168495
+            },
+            "should_stop": true,
+            "stop_reason": "marginal_below_bar",
+            "threshold_score_gain_per_compute": 6.658589531221714e-07
+          }
+        },
+        "solve_tag": "dec@60"
+      },
+      "stage2_cheapdct": {
+        "counted_bytes_per_pair": 96,
+        "d_pose_verified_from_camera": 0.00015861271822359413,
+        "max_abs_int16_coefficient": 261.0,
+        "tag": "dct4q@30"
+      }
+    },
+    {
+      "native_payload": {
+        "stage1_band_sha256": "846e288b67c29d8b6a92d6c06ea399a63e4084f02d5e2acda71e9b0aef9bc41e",
+        "stage1_rgb_sha256": "a4aa20ec340b3cc25e3cb6156da2ff7e9a5736fac5135c477129dbd36ee231a9",
+        "stage1_support_count": 699,
+        "stage2_coeff_sha256": "aa674ad2a1b48c068b85c36c6485ec129380030709ce79fae7bd68ec80c25339",
+        "stage2_k": 4
+      },
+      "pair": 582,
+      "stage1": {
+        "band_px": 699,
+        "d_pose_after_stage1": 0.0028979871422052383,
+        "flips_before": 993,
+        "n_described": 423,
+        "solve_diag_selected": {
+          "best_proxy_flips": 412,
+          "best_step": 50,
+          "curve": [
+            {
+              "proxy_flips": 891,
+              "step": 0
+            },
+            {
+              "proxy_flips": 735,
+              "step": 5
+            },
+            {
+              "proxy_flips": 616,
+              "step": 10
+            },
+            {
+              "proxy_flips": 526,
+              "step": 15
+            },
+            {
+              "proxy_flips": 482,
+              "step": 20
+            },
+            {
+              "proxy_flips": 464,
+              "step": 25
+            },
+            {
+              "proxy_flips": 450,
+              "step": 30
+            },
+            {
+              "proxy_flips": 443,
+              "step": 35
+            },
+            {
+              "proxy_flips": 427,
+              "step": 40
+            },
+            {
+              "proxy_flips": 413,
+              "step": 45
+            },
+            {
+              "proxy_flips": 412,
+              "step": 50
+            }
+          ],
+          "start": "truth",
+          "steps_run": 50,
+          "stop_reason": "marginal_below_bar",
+          "tag": "truth@50",
+          "trajectory_stop": {
+            "bound_reported": false,
+            "candidate_fits": [
+              {
+                "asymptote": 407.21,
+                "current_objective": 412.0,
+                "fit_quality_flag": "accepted",
+                "intercept": 6.246541549916113,
+                "kind": "geometric",
+                "last_compute": 50.0,
+                "origin_compute": 0.0,
+                "projected_marginal_objective_gain_per_compute": 0.5254434368623723,
+                "projected_remaining_objective_gain": 4.7900000000000205,
+                "r2": 0.9927714896520606,
+                "slope": -0.08953959968367485
+              },
+              {
+                "asymptote": 0.0,
+                "current_objective": 412.0,
+                "fit_quality_flag": "low_r2",
+                "intercept": 6.867668207614146,
+                "kind": "power_law",
+                "last_compute": 50.0,
+                "origin_compute": 0.0,
+                "projected_marginal_objective_gain_per_compute": 1.7396764478712232,
+                "projected_remaining_objective_gain": 412.0,
+                "r2": 0.9412900287327579,
+                "slope": -0.21544269979653524
+              }
+            ],
+            "current_compute": 50.0,
+            "current_objective": 412.0,
+            "law_ref": "trajectory_derived_stopping_law_v1",
+            "marginal_score_gain_per_compute": 4.4542392040877636e-07,
+            "n_points": 11,
+            "projected_remaining_score_gain": 4.060533311631962e-06,
+            "safety_bound_compute": 100.0,
+            "selected_fit": {
+              "asymptote": 407.21,
+              "current_objective": 412.0,
+              "fit_quality_flag": "accepted",
+              "intercept": 6.246541549916113,
+              "kind": "geometric",
+              "last_compute": 50.0,
+              "origin_compute": 0.0,
+              "projected_marginal_objective_gain_per_compute": 0.5254434368623723,
+              "projected_remaining_objective_gain": 4.7900000000000205,
+              "r2": 0.9927714896520606,
+              "slope": -0.08953959968367485
+            },
+            "should_stop": true,
+            "stop_reason": "marginal_below_bar",
+            "threshold_score_gain_per_compute": 6.658589531221714e-07
+          }
+        },
+        "solve_tag": "truth@50"
+      },
+      "stage2_cheapdct": {
+        "counted_bytes_per_pair": 96,
+        "d_pose_verified_from_camera": 5.7217799621867016e-05,
+        "max_abs_int16_coefficient": 215.0,
+        "tag": "dct4q@40"
+      }
+    },
+    {
+      "native_payload": {
+        "stage1_band_sha256": "01dc8c6f2cbcd326438bc84afac5bd8420675246acda0507f1cf9dd76705c2ce",
+        "stage1_rgb_sha256": "9c4d132fb2d73dd3355b1eab24ed664362380362f2228a8c97f58d8f14162cbc",
+        "stage1_support_count": 710,
+        "stage2_coeff_sha256": "28d44a686411b467a92a65a3c301d4b9238e4d79d54a8d3d98712829f6ca9e53",
+        "stage2_k": 4
+      },
+      "pair": 583,
+      "stage1": {
+        "band_px": 710,
+        "d_pose_after_stage1": 0.013294597156345844,
+        "flips_before": 1002,
+        "n_described": 373,
+        "solve_diag_selected": {
+          "best_proxy_flips": 385,
+          "best_step": 70,
+          "curve": [
+            {
+              "proxy_flips": 711,
+              "step": 0
+            },
+            {
+              "proxy_flips": 562,
+              "step": 5
+            },
+            {
+              "proxy_flips": 496,
+              "step": 10
+            },
+            {
+              "proxy_flips": 478,
+              "step": 15
+            },
+            {
+              "proxy_flips": 456,
+              "step": 20
+            },
+            {
+              "proxy_flips": 440,
+              "step": 25
+            },
+            {
+              "proxy_flips": 423,
+              "step": 30
+            },
+            {
+              "proxy_flips": 417,
+              "step": 35
+            },
+            {
+              "proxy_flips": 415,
+              "step": 40
+            },
+            {
+              "proxy_flips": 411,
+              "step": 45
+            },
+            {
+              "proxy_flips": 405,
+              "step": 50
+            },
+            {
+              "proxy_flips": 402,
+              "step": 55
+            },
+            {
+              "proxy_flips": 400,
+              "step": 60
+            },
+            {
+              "proxy_flips": 389,
+              "step": 65
+            },
+            {
+              "proxy_flips": 385,
+              "step": 70
+            }
+          ],
+          "start": "dec",
+          "steps_run": 70,
+          "stop_reason": "marginal_below_bar",
+          "tag": "dec@70",
+          "trajectory_stop": {
+            "bound_reported": false,
+            "candidate_fits": [
+              {
+                "asymptote": 0.0,
+                "current_objective": 385.0,
+                "fit_quality_flag": "accepted",
+                "intercept": 6.566615786935953,
+                "kind": "power_law",
+                "last_compute": 70.0,
+                "origin_compute": 0.0,
+                "projected_marginal_objective_gain_per_compute": 0.7812671540321554,
+                "projected_remaining_objective_gain": 385.0,
+                "r2": 0.9954100644229624,
+                "slope": -0.1443718368710545
+              },
+              {
+                "asymptote": 384.674,
+                "current_objective": 385.0,
+                "fit_quality_flag": "low_r2",
+                "intercept": 5.735223856380408,
+                "kind": "geometric",
+                "last_compute": 70.0,
+                "origin_compute": 0.0,
+                "projected_marginal_objective_gain_per_compute": 0.19836286941498582,
+                "projected_remaining_objective_gain": 0.32600000000002183,
+                "r2": 0.9447887722660221,
+                "slope": -0.06626932863529714
+              }
+            ],
+            "current_compute": 70.0,
+            "current_objective": 385.0,
+            "law_ref": "trajectory_derived_stopping_law_v1",
+            "marginal_score_gain_per_compute": 6.622883724909086e-07,
+            "n_points": 15,
+            "projected_remaining_score_gain": 0.00032636854383680556,
+            "safety_bound_compute": 100.0,
+            "selected_fit": {
+              "asymptote": 0.0,
+              "current_objective": 385.0,
+              "fit_quality_flag": "accepted",
+              "intercept": 6.566615786935953,
+              "kind": "power_law",
+              "last_compute": 70.0,
+              "origin_compute": 0.0,
+              "projected_marginal_objective_gain_per_compute": 0.7812671540321554,
+              "projected_remaining_objective_gain": 385.0,
+              "r2": 0.9954100644229624,
+              "slope": -0.1443718368710545
+            },
+            "should_stop": true,
+            "stop_reason": "marginal_below_bar",
+            "threshold_score_gain_per_compute": 6.658589531221714e-07
+          }
+        },
+        "solve_tag": "dec@70"
+      },
+      "stage2_cheapdct": {
+        "counted_bytes_per_pair": 96,
+        "d_pose_verified_from_camera": 0.0006087775691412389,
+        "max_abs_int16_coefficient": 402.0,
+        "tag": "dct4q@30"
+      }
+    }
+  ],
+  "schema": "ddm_od8_js1_persist.v1",
+  "score_claim": false,
+  "yuv6_patch": {
+    "gradient_live": true,
+    "gradient_probe_abs_sum": 393216.03125,
+    "patched": true,
+    "yuv6_equivalence_passed": true,
+    "yuv6_max_abs_error": 0.0
+  }
+}

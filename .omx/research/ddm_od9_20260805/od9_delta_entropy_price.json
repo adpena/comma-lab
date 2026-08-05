@@ -1,0 +1,761 @@
+{
+  "axis": "[macOS-CPU byte-only persisted-native pricing]",
+  "baselines": {
+    "current_own_bytes": 357836,
+    "gc18_corridor_floor_high_bytes": 90000,
+    "gc18_corridor_floor_low_bytes": 45000,
+    "od6_projected_n600_bytes": 76304,
+    "od8_base_rgb_proxy_projected_n600_bytes": 1245600,
+    "pe3_projected_n600_bytes": 74408,
+    "tr1_stated_ceiling_bytes": 190000
+  },
+  "best_any": {
+    "best_coder": {
+      "blocker": null,
+      "bytes": 2157,
+      "codec": "brotli-q11",
+      "parseback_exact": true,
+      "sha256": "276c39a3b9734542a5640e4542ebadaddd3d9e71730663586a3fc6b87f23f198"
+    },
+    "coder_race": [
+      {
+        "blocker": null,
+        "bytes": 2157,
+        "codec": "brotli-q11",
+        "parseback_exact": true,
+        "sha256": "276c39a3b9734542a5640e4542ebadaddd3d9e71730663586a3fc6b87f23f198"
+      },
+      {
+        "blocker": null,
+        "bytes": 2457,
+        "codec": "lzma1-raw",
+        "parseback_exact": true,
+        "sha256": "91d655f0e0ff01d06e87ca6c0535665918e99d48402972e8ebb9209ff18a8d4f"
+      }
+    ],
+    "name": "stage2_only_cheapdct4_qcoeffs",
+    "od5_parseback_exact": true,
+    "projected_n600_bytes_linear": 40444,
+    "projected_n600_rate_s": 0.0269299995000731,
+    "raw_packet_bytes": 3292,
+    "raw_packet_path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/od9_stage2_only_cheapdct4_qcoeffs.od5.raw_packet",
+    "raw_packet_sha256": "1fcc86ffbed0a9634cc8392f92c7d343e39c2ad06fa25b04295e4252d70310b1",
+    "section_count": 1,
+    "sections": [
+      {
+        "name": "od9_stage2_cheapdct4_qcoeffs",
+        "payload_bytes": 3206,
+        "payload_sha256": "d235863a09bb0b630d04d3ba4c00272b8308437fbf7622c0c833deacccfdfd8c"
+      }
+    ],
+    "vs": {
+      "current_own_bytes": -317392,
+      "gc18_corridor_floor_high_bytes": -49556,
+      "gc18_corridor_floor_low_bytes": -4556,
+      "od6_projected_n600_bytes": -35860,
+      "od8_base_rgb_proxy_projected_n600_bytes": -1205156,
+      "pe3_projected_n600_bytes": -33964,
+      "tr1_stated_ceiling_bytes": -149556
+    }
+  },
+  "best_combined": {
+    "best_coder": {
+      "blocker": null,
+      "bytes": 66785,
+      "codec": "brotli-q11",
+      "parseback_exact": true,
+      "sha256": "b8d484050a8d9717d827819d15f2aef6c8ddbfd4f8f948b55a040461830d17a9"
+    },
+    "coder_race": [
+      {
+        "blocker": null,
+        "bytes": 66785,
+        "codec": "brotli-q11",
+        "parseback_exact": true,
+        "sha256": "b8d484050a8d9717d827819d15f2aef6c8ddbfd4f8f948b55a040461830d17a9"
+      },
+      {
+        "blocker": null,
+        "bytes": 68308,
+        "codec": "lzma1-raw",
+        "parseback_exact": true,
+        "sha256": "00e534065e6c840ffb7393759e39bbfabc1afe5434401cb423bc3f9fea4ed162"
+      }
+    ],
+    "name": "combined_stage1_absolute_u8_plus_stage2_cheapdct4",
+    "od5_parseback_exact": true,
+    "projected_n600_bytes_linear": 1252219,
+    "projected_n600_rate_s": 0.8338012324196924,
+    "raw_packet_bytes": 82958,
+    "raw_packet_path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/od9_combined_absolute_u8_plus_stage2_cheapdct4.od5.raw_packet",
+    "raw_packet_sha256": "ad996c55aa26bfe194063bcefbb854f6d281a94b85664efd25290835aa8dcfdb",
+    "section_count": 2,
+    "sections": [
+      {
+        "name": "od9_stage1_absolute_u8",
+        "payload_bytes": 79640,
+        "payload_sha256": "be17ad5de9d50e560398fd1073261c8efd28b3b5a786ec0f2b0cabb25dc82f48"
+      },
+      {
+        "name": "od9_stage2_cheapdct4_qcoeffs",
+        "payload_bytes": 3206,
+        "payload_sha256": "d235863a09bb0b630d04d3ba4c00272b8308437fbf7622c0c833deacccfdfd8c"
+      }
+    ],
+    "vs": {
+      "current_own_bytes": 894383,
+      "gc18_corridor_floor_high_bytes": 1162219,
+      "gc18_corridor_floor_low_bytes": 1207219,
+      "od6_projected_n600_bytes": 1175915,
+      "od8_base_rgb_proxy_projected_n600_bytes": 6619,
+      "pe3_projected_n600_bytes": 1177811,
+      "tr1_stated_ceiling_bytes": 1062219
+    }
+  },
+  "best_stage1": {
+    "best_coder": {
+      "blocker": null,
+      "bytes": 64747,
+      "codec": "brotli-q11",
+      "parseback_exact": true,
+      "sha256": "ec61582248ce746cd62fc56af8e474dd489a4ff3ecc46122178bd4194e79b514"
+    },
+    "coder_race": [
+      {
+        "blocker": null,
+        "bytes": 64747,
+        "codec": "brotli-q11",
+        "parseback_exact": true,
+        "sha256": "ec61582248ce746cd62fc56af8e474dd489a4ff3ecc46122178bd4194e79b514"
+      },
+      {
+        "blocker": null,
+        "bytes": 65874,
+        "codec": "lzma1-raw",
+        "parseback_exact": true,
+        "sha256": "58793cb1e8980df2c0b1173e0f45efd7afe96def56ff4ff483dc5f8cd1f157e2"
+      }
+    ],
+    "name": "stage1_only_absolute_u8",
+    "od5_parseback_exact": true,
+    "projected_n600_bytes_linear": 1214007,
+    "projected_n600_rate_s": 0.8083574301029879,
+    "raw_packet_bytes": 79721,
+    "raw_packet_path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/od9_stage1_only_absolute_u8.od5.raw_packet",
+    "raw_packet_sha256": "b615df3dc390bb8246233153254507720ef5ed7d39e34a5425cace3a60860464",
+    "section_count": 1,
+    "sections": [
+      {
+        "name": "od9_stage1_absolute_u8",
+        "payload_bytes": 79640,
+        "payload_sha256": "be17ad5de9d50e560398fd1073261c8efd28b3b5a786ec0f2b0cabb25dc82f48"
+      }
+    ],
+    "vs": {
+      "current_own_bytes": 856171,
+      "gc18_corridor_floor_high_bytes": 1124007,
+      "gc18_corridor_floor_low_bytes": 1169007,
+      "od6_projected_n600_bytes": 1137703,
+      "od8_base_rgb_proxy_projected_n600_bytes": -31593,
+      "pe3_projected_n600_bytes": 1139599,
+      "tr1_stated_ceiling_bytes": 1024007
+    }
+  },
+  "created_utc": "2026-08-05T07:11:51.523678+00:00",
+  "delta_stats": {
+    "channels": 56202,
+    "max": 239,
+    "mean_abs": 38.223141525212625,
+    "median_abs": 30.0,
+    "min": -252,
+    "within_pm16_fraction": 0.2773744706594071,
+    "within_pm1_fraction": 0.02464325112985303,
+    "within_pm4_fraction": 0.07544215508344898,
+    "zero_fraction": 0.00861179317462012
+  },
+  "final_frontier_line_required": "S = 0.7539807296911207 @ 357,836 B [macOS-CPU advisory]; contest pointer borrowed/unmoved.",
+  "fork_verdict": "LARGE_DELTA_ENTROPY_SHIP_THE_SOLVE_RATE_DEAD",
+  "n_pairs": 32,
+  "pairs": [
+    8,
+    32,
+    46,
+    57,
+    70,
+    107,
+    112,
+    119,
+    148,
+    154,
+    168,
+    198,
+    225,
+    234,
+    244,
+    251,
+    284,
+    328,
+    336,
+    349,
+    383,
+    399,
+    411,
+    423,
+    445,
+    465,
+    481,
+    516,
+    536,
+    561,
+    582,
+    583
+  ],
+  "projection_scope": "exact n32 packet bytes with linear n600 byte projection; no n600 archive.zip and no upstream/evaluate.py authority",
+  "promotion_eligible": false,
+  "results": [
+    {
+      "best_coder": {
+        "blocker": null,
+        "bytes": 64747,
+        "codec": "brotli-q11",
+        "parseback_exact": true,
+        "sha256": "ec61582248ce746cd62fc56af8e474dd489a4ff3ecc46122178bd4194e79b514"
+      },
+      "coder_race": [
+        {
+          "blocker": null,
+          "bytes": 64747,
+          "codec": "brotli-q11",
+          "parseback_exact": true,
+          "sha256": "ec61582248ce746cd62fc56af8e474dd489a4ff3ecc46122178bd4194e79b514"
+        },
+        {
+          "blocker": null,
+          "bytes": 65874,
+          "codec": "lzma1-raw",
+          "parseback_exact": true,
+          "sha256": "58793cb1e8980df2c0b1173e0f45efd7afe96def56ff4ff483dc5f8cd1f157e2"
+        }
+      ],
+      "name": "stage1_only_absolute_u8",
+      "od5_parseback_exact": true,
+      "projected_n600_bytes_linear": 1214007,
+      "projected_n600_rate_s": 0.8083574301029879,
+      "raw_packet_bytes": 79721,
+      "raw_packet_path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/od9_stage1_only_absolute_u8.od5.raw_packet",
+      "raw_packet_sha256": "b615df3dc390bb8246233153254507720ef5ed7d39e34a5425cace3a60860464",
+      "section_count": 1,
+      "sections": [
+        {
+          "name": "od9_stage1_absolute_u8",
+          "payload_bytes": 79640,
+          "payload_sha256": "be17ad5de9d50e560398fd1073261c8efd28b3b5a786ec0f2b0cabb25dc82f48"
+        }
+      ],
+      "vs": {
+        "current_own_bytes": 856171,
+        "gc18_corridor_floor_high_bytes": 1124007,
+        "gc18_corridor_floor_low_bytes": 1169007,
+        "od6_projected_n600_bytes": 1137703,
+        "od8_base_rgb_proxy_projected_n600_bytes": -31593,
+        "pe3_projected_n600_bytes": 1139599,
+        "tr1_stated_ceiling_bytes": 1024007
+      }
+    },
+    {
+      "best_coder": {
+        "blocker": null,
+        "bytes": 65232,
+        "codec": "brotli-q11",
+        "parseback_exact": true,
+        "sha256": "dcdafa0145144f874fa6303668396f7c095a679919397eb87f754d57cafc4a01"
+      },
+      "coder_race": [
+        {
+          "blocker": null,
+          "bytes": 65232,
+          "codec": "brotli-q11",
+          "parseback_exact": true,
+          "sha256": "dcdafa0145144f874fa6303668396f7c095a679919397eb87f754d57cafc4a01"
+        },
+        {
+          "blocker": null,
+          "bytes": 66554,
+          "codec": "lzma1-raw",
+          "parseback_exact": true,
+          "sha256": "4b68cf62d19a72d82544c949bd58cc9c42fa2c59d59d0ba94de8f1ad73fe8209"
+        }
+      ],
+      "name": "stage1_only_base_delta_mod_u8",
+      "od5_parseback_exact": true,
+      "projected_n600_bytes_linear": 1223100,
+      "projected_n600_rate_s": 0.8144120855637278,
+      "raw_packet_bytes": 79726,
+      "raw_packet_path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/od9_stage1_only_base_delta_mod_u8.od5.raw_packet",
+      "raw_packet_sha256": "688de75e9b8b67f8a9ce87f071174912aceae54d6a50aeeece06c0b146767294",
+      "section_count": 1,
+      "sections": [
+        {
+          "name": "od9_stage1_base_delta_mod_u8",
+          "payload_bytes": 79639,
+          "payload_sha256": "fc6c225fb5bf066f2e419814a4ac49995ce5540bdb62a3fa5ad42fbae6a6c912"
+        }
+      ],
+      "vs": {
+        "current_own_bytes": 865264,
+        "gc18_corridor_floor_high_bytes": 1133100,
+        "gc18_corridor_floor_low_bytes": 1178100,
+        "od6_projected_n600_bytes": 1146796,
+        "od8_base_rgb_proxy_projected_n600_bytes": -22500,
+        "pe3_projected_n600_bytes": 1148692,
+        "tr1_stated_ceiling_bytes": 1033100
+      }
+    },
+    {
+      "best_coder": {
+        "blocker": null,
+        "bytes": 72302,
+        "codec": "brotli-q11",
+        "parseback_exact": true,
+        "sha256": "60ad1a50bf7b0045008d62da49474c54e75755b7cf1d4ea3660519dceacc6d6b"
+      },
+      "coder_race": [
+        {
+          "blocker": null,
+          "bytes": 72302,
+          "codec": "brotli-q11",
+          "parseback_exact": true,
+          "sha256": "60ad1a50bf7b0045008d62da49474c54e75755b7cf1d4ea3660519dceacc6d6b"
+        },
+        {
+          "blocker": null,
+          "bytes": 78248,
+          "codec": "lzma1-raw",
+          "parseback_exact": true,
+          "sha256": "d071e80e4981045900681c17ad1dea22d4f3afc39393e486b8d29be25f88bdef"
+        }
+      ],
+      "name": "stage1_only_base_delta_i16_raw",
+      "od5_parseback_exact": true,
+      "projected_n600_bytes_linear": 1355663,
+      "projected_n600_rate_s": 0.9026803459664623,
+      "raw_packet_bytes": 135930,
+      "raw_packet_path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/od9_stage1_only_base_delta_i16_raw.od5.raw_packet",
+      "raw_packet_sha256": "58624138b7bb56b1a15e71ee7bf061de90d30c17390406d16920031a0ee6f507",
+      "section_count": 1,
+      "sections": [
+        {
+          "name": "od9_stage1_base_delta_i16_raw",
+          "payload_bytes": 135842,
+          "payload_sha256": "b8792be6adda847345620e31ab39b68df272b733fd46f769829359b4b57c3f82"
+        }
+      ],
+      "vs": {
+        "current_own_bytes": 997827,
+        "gc18_corridor_floor_high_bytes": 1265663,
+        "gc18_corridor_floor_low_bytes": 1310663,
+        "od6_projected_n600_bytes": 1279359,
+        "od8_base_rgb_proxy_projected_n600_bytes": 110063,
+        "pe3_projected_n600_bytes": 1281255,
+        "tr1_stated_ceiling_bytes": 1165663
+      }
+    },
+    {
+      "best_coder": {
+        "blocker": null,
+        "bytes": 66452,
+        "codec": "brotli-q11",
+        "parseback_exact": true,
+        "sha256": "9c0c3a18cc78ded4a671595df1dab5bdb3fc328ea137c027677ef3a762c48bad"
+      },
+      "coder_race": [
+        {
+          "blocker": null,
+          "bytes": 66452,
+          "codec": "brotli-q11",
+          "parseback_exact": true,
+          "sha256": "9c0c3a18cc78ded4a671595df1dab5bdb3fc328ea137c027677ef3a762c48bad"
+        },
+        {
+          "blocker": null,
+          "bytes": 70954,
+          "codec": "lzma1-raw",
+          "parseback_exact": true,
+          "sha256": "4a09c1b30d6ce2d64d662d45618c935a897db11255c7225d0d16c839922451c4"
+        }
+      ],
+      "name": "stage1_only_base_delta_zigzag_varint",
+      "od5_parseback_exact": true,
+      "projected_n600_bytes_linear": 1245975,
+      "projected_n600_rate_s": 0.8296436091163975,
+      "raw_packet_bytes": 88222,
+      "raw_packet_path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/od9_stage1_only_base_delta_zigzag_varint.od5.raw_packet",
+      "raw_packet_sha256": "0318e5c1da95ef2fdccc802752ebeafb0d07c6e383f1caefadeb7f6ffe73a1de",
+      "section_count": 1,
+      "sections": [
+        {
+          "name": "od9_stage1_base_delta_zigzag_varint",
+          "payload_bytes": 88128,
+          "payload_sha256": "d20832c36fd327a712d0deb47dec0993ba7f98a7412975ae53b45679651838d6"
+        }
+      ],
+      "vs": {
+        "current_own_bytes": 888139,
+        "gc18_corridor_floor_high_bytes": 1155975,
+        "gc18_corridor_floor_low_bytes": 1200975,
+        "od6_projected_n600_bytes": 1169671,
+        "od8_base_rgb_proxy_projected_n600_bytes": 375,
+        "pe3_projected_n600_bytes": 1171567,
+        "tr1_stated_ceiling_bytes": 1055975
+      }
+    },
+    {
+      "best_coder": {
+        "blocker": null,
+        "bytes": 2157,
+        "codec": "brotli-q11",
+        "parseback_exact": true,
+        "sha256": "276c39a3b9734542a5640e4542ebadaddd3d9e71730663586a3fc6b87f23f198"
+      },
+      "coder_race": [
+        {
+          "blocker": null,
+          "bytes": 2157,
+          "codec": "brotli-q11",
+          "parseback_exact": true,
+          "sha256": "276c39a3b9734542a5640e4542ebadaddd3d9e71730663586a3fc6b87f23f198"
+        },
+        {
+          "blocker": null,
+          "bytes": 2457,
+          "codec": "lzma1-raw",
+          "parseback_exact": true,
+          "sha256": "91d655f0e0ff01d06e87ca6c0535665918e99d48402972e8ebb9209ff18a8d4f"
+        }
+      ],
+      "name": "stage2_only_cheapdct4_qcoeffs",
+      "od5_parseback_exact": true,
+      "projected_n600_bytes_linear": 40444,
+      "projected_n600_rate_s": 0.0269299995000731,
+      "raw_packet_bytes": 3292,
+      "raw_packet_path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/od9_stage2_only_cheapdct4_qcoeffs.od5.raw_packet",
+      "raw_packet_sha256": "1fcc86ffbed0a9634cc8392f92c7d343e39c2ad06fa25b04295e4252d70310b1",
+      "section_count": 1,
+      "sections": [
+        {
+          "name": "od9_stage2_cheapdct4_qcoeffs",
+          "payload_bytes": 3206,
+          "payload_sha256": "d235863a09bb0b630d04d3ba4c00272b8308437fbf7622c0c833deacccfdfd8c"
+        }
+      ],
+      "vs": {
+        "current_own_bytes": -317392,
+        "gc18_corridor_floor_high_bytes": -49556,
+        "gc18_corridor_floor_low_bytes": -4556,
+        "od6_projected_n600_bytes": -35860,
+        "od8_base_rgb_proxy_projected_n600_bytes": -1205156,
+        "pe3_projected_n600_bytes": -33964,
+        "tr1_stated_ceiling_bytes": -149556
+      }
+    },
+    {
+      "best_coder": {
+        "blocker": null,
+        "bytes": 66785,
+        "codec": "brotli-q11",
+        "parseback_exact": true,
+        "sha256": "b8d484050a8d9717d827819d15f2aef6c8ddbfd4f8f948b55a040461830d17a9"
+      },
+      "coder_race": [
+        {
+          "blocker": null,
+          "bytes": 66785,
+          "codec": "brotli-q11",
+          "parseback_exact": true,
+          "sha256": "b8d484050a8d9717d827819d15f2aef6c8ddbfd4f8f948b55a040461830d17a9"
+        },
+        {
+          "blocker": null,
+          "bytes": 68308,
+          "codec": "lzma1-raw",
+          "parseback_exact": true,
+          "sha256": "00e534065e6c840ffb7393759e39bbfabc1afe5434401cb423bc3f9fea4ed162"
+        }
+      ],
+      "name": "combined_stage1_absolute_u8_plus_stage2_cheapdct4",
+      "od5_parseback_exact": true,
+      "projected_n600_bytes_linear": 1252219,
+      "projected_n600_rate_s": 0.8338012324196924,
+      "raw_packet_bytes": 82958,
+      "raw_packet_path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/od9_combined_absolute_u8_plus_stage2_cheapdct4.od5.raw_packet",
+      "raw_packet_sha256": "ad996c55aa26bfe194063bcefbb854f6d281a94b85664efd25290835aa8dcfdb",
+      "section_count": 2,
+      "sections": [
+        {
+          "name": "od9_stage1_absolute_u8",
+          "payload_bytes": 79640,
+          "payload_sha256": "be17ad5de9d50e560398fd1073261c8efd28b3b5a786ec0f2b0cabb25dc82f48"
+        },
+        {
+          "name": "od9_stage2_cheapdct4_qcoeffs",
+          "payload_bytes": 3206,
+          "payload_sha256": "d235863a09bb0b630d04d3ba4c00272b8308437fbf7622c0c833deacccfdfd8c"
+        }
+      ],
+      "vs": {
+        "current_own_bytes": 894383,
+        "gc18_corridor_floor_high_bytes": 1162219,
+        "gc18_corridor_floor_low_bytes": 1207219,
+        "od6_projected_n600_bytes": 1175915,
+        "od8_base_rgb_proxy_projected_n600_bytes": 6619,
+        "pe3_projected_n600_bytes": 1177811,
+        "tr1_stated_ceiling_bytes": 1062219
+      }
+    },
+    {
+      "best_coder": {
+        "blocker": null,
+        "bytes": 67315,
+        "codec": "brotli-q11",
+        "parseback_exact": true,
+        "sha256": "eeec62cbab03f61bfc4a6dd6492a307adac49f141e7d65e67e0c3ebce84211a2"
+      },
+      "coder_race": [
+        {
+          "blocker": null,
+          "bytes": 67315,
+          "codec": "brotli-q11",
+          "parseback_exact": true,
+          "sha256": "eeec62cbab03f61bfc4a6dd6492a307adac49f141e7d65e67e0c3ebce84211a2"
+        },
+        {
+          "blocker": null,
+          "bytes": 68953,
+          "codec": "lzma1-raw",
+          "parseback_exact": true,
+          "sha256": "9288032e767da38469c11dc0f5e0e7d404424528d7fd7c1b3c52ddf04165cefb"
+        }
+      ],
+      "name": "combined_stage1_base_delta_mod_u8_plus_stage2_cheapdct4",
+      "od5_parseback_exact": true,
+      "projected_n600_bytes_linear": 1262157,
+      "projected_n600_rate_s": 0.8404185386958205,
+      "raw_packet_bytes": 82963,
+      "raw_packet_path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/od9_combined_base_delta_mod_u8_plus_stage2_cheapdct4.od5.raw_packet",
+      "raw_packet_sha256": "43a241507ab90f43a4bf2004f6a6821cfb3d31395e5cdc8a4e9c776681ad66b4",
+      "section_count": 2,
+      "sections": [
+        {
+          "name": "od9_stage1_base_delta_mod_u8",
+          "payload_bytes": 79639,
+          "payload_sha256": "fc6c225fb5bf066f2e419814a4ac49995ce5540bdb62a3fa5ad42fbae6a6c912"
+        },
+        {
+          "name": "od9_stage2_cheapdct4_qcoeffs",
+          "payload_bytes": 3206,
+          "payload_sha256": "d235863a09bb0b630d04d3ba4c00272b8308437fbf7622c0c833deacccfdfd8c"
+        }
+      ],
+      "vs": {
+        "current_own_bytes": 904321,
+        "gc18_corridor_floor_high_bytes": 1172157,
+        "gc18_corridor_floor_low_bytes": 1217157,
+        "od6_projected_n600_bytes": 1185853,
+        "od8_base_rgb_proxy_projected_n600_bytes": 16557,
+        "pe3_projected_n600_bytes": 1187749,
+        "tr1_stated_ceiling_bytes": 1072157
+      }
+    },
+    {
+      "best_coder": {
+        "blocker": null,
+        "bytes": 72271,
+        "codec": "brotli-q11",
+        "parseback_exact": true,
+        "sha256": "12877696beb6531ed9246b79df0f16e1b76cf9c162a3f6ec56d83c5e35823110"
+      },
+      "coder_race": [
+        {
+          "blocker": null,
+          "bytes": 72271,
+          "codec": "brotli-q11",
+          "parseback_exact": true,
+          "sha256": "12877696beb6531ed9246b79df0f16e1b76cf9c162a3f6ec56d83c5e35823110"
+        },
+        {
+          "blocker": null,
+          "bytes": 80211,
+          "codec": "lzma1-raw",
+          "parseback_exact": true,
+          "sha256": "8ce8ba79991f193a0923b0d92d47f22048d21906952fe7620eeb2c8f010a0fdb"
+        }
+      ],
+      "name": "combined_stage1_base_delta_i16_raw_plus_stage2_cheapdct4",
+      "od5_parseback_exact": true,
+      "projected_n600_bytes_linear": 1355082,
+      "projected_n600_rate_s": 0.9022934819146983,
+      "raw_packet_bytes": 139167,
+      "raw_packet_path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/od9_combined_base_delta_i16_raw_plus_stage2_cheapdct4.od5.raw_packet",
+      "raw_packet_sha256": "fb72cbebbcc65fab8012202e01563cb0b96e88a19303e8db167f7e2249422186",
+      "section_count": 2,
+      "sections": [
+        {
+          "name": "od9_stage1_base_delta_i16_raw",
+          "payload_bytes": 135842,
+          "payload_sha256": "b8792be6adda847345620e31ab39b68df272b733fd46f769829359b4b57c3f82"
+        },
+        {
+          "name": "od9_stage2_cheapdct4_qcoeffs",
+          "payload_bytes": 3206,
+          "payload_sha256": "d235863a09bb0b630d04d3ba4c00272b8308437fbf7622c0c833deacccfdfd8c"
+        }
+      ],
+      "vs": {
+        "current_own_bytes": 997246,
+        "gc18_corridor_floor_high_bytes": 1265082,
+        "gc18_corridor_floor_low_bytes": 1310082,
+        "od6_projected_n600_bytes": 1278778,
+        "od8_base_rgb_proxy_projected_n600_bytes": 109482,
+        "pe3_projected_n600_bytes": 1280674,
+        "tr1_stated_ceiling_bytes": 1165082
+      }
+    },
+    {
+      "best_coder": {
+        "blocker": null,
+        "bytes": 68409,
+        "codec": "brotli-q11",
+        "parseback_exact": true,
+        "sha256": "e547ed6adcc2807c98fd66d916c8407e856ec733c99c085517ae6411354fda3e"
+      },
+      "coder_race": [
+        {
+          "blocker": null,
+          "bytes": 68409,
+          "codec": "brotli-q11",
+          "parseback_exact": true,
+          "sha256": "e547ed6adcc2807c98fd66d916c8407e856ec733c99c085517ae6411354fda3e"
+        },
+        {
+          "blocker": null,
+          "bytes": 73349,
+          "codec": "lzma1-raw",
+          "parseback_exact": true,
+          "sha256": "7374b9a6c3ceae631e9ab16360269acae628ffb4f97690b68657d37692a8bd75"
+        }
+      ],
+      "name": "combined_stage1_base_delta_zigzag_varint_plus_stage2_cheapdct4",
+      "od5_parseback_exact": true,
+      "projected_n600_bytes_linear": 1282669,
+      "projected_n600_rate_s": 0.8540766375422625,
+      "raw_packet_bytes": 91459,
+      "raw_packet_path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/od9_combined_base_delta_zigzag_varint_plus_stage2_cheapdct4.od5.raw_packet",
+      "raw_packet_sha256": "b2f22def87dbfd235e55952e614140e7628c591665c427478e247569f36fbded",
+      "section_count": 2,
+      "sections": [
+        {
+          "name": "od9_stage1_base_delta_zigzag_varint",
+          "payload_bytes": 88128,
+          "payload_sha256": "d20832c36fd327a712d0deb47dec0993ba7f98a7412975ae53b45679651838d6"
+        },
+        {
+          "name": "od9_stage2_cheapdct4_qcoeffs",
+          "payload_bytes": 3206,
+          "payload_sha256": "d235863a09bb0b630d04d3ba4c00272b8308437fbf7622c0c833deacccfdfd8c"
+        }
+      ],
+      "vs": {
+        "current_own_bytes": 924833,
+        "gc18_corridor_floor_high_bytes": 1192669,
+        "gc18_corridor_floor_low_bytes": 1237669,
+        "od6_projected_n600_bytes": 1206365,
+        "od8_base_rgb_proxy_projected_n600_bytes": 37069,
+        "pe3_projected_n600_bytes": 1208261,
+        "tr1_stated_ceiling_bytes": 1092669
+      }
+    }
+  ],
+  "rule118_split": {
+    "counted_archive_zip_side": [
+      "support flat-index gaps for all edited scorer-lattice pixels",
+      "video-derived RGB absolute values or base-relative deltas for those support pixels",
+      "video-derived cheapdct4 int16 qcoefficients"
+    ],
+    "free_generic_decode_side": [
+      "OD5 parser/inflate.py algorithm",
+      "base raw decode already produced by the submitted generator/codec",
+      "deterministic camera-to-scorer resize for base lattice",
+      "delta add/reconstruct logic",
+      "fixed cheapdct4 basis and inverse transform algorithm"
+    ]
+  },
+  "schema": "ddm_od9_stage1_delta_entropy_price.v1",
+  "score_claim": false,
+  "scorer_forwards_run": 0,
+  "selection": "OD2 n32 seed20260805 stratified pair set inherited by OD3/OD9",
+  "source_artifacts": {
+    "absolute_persisted_packet": {
+      "bytes": 82955,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/od9_native_dof_n32_cprime_k4.od5.raw_packet",
+      "sha256": "7219f6442c06ea00ba4793f905b38bb9ad8b98e37d8b4d9da2a0ebe039f5c18f"
+    },
+    "base_decoded_raw": {
+      "bytes": 3662409600,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_pu2_20260803/submission_pu2/inflated/0.raw",
+      "sha256": "0323386f54f52d04aeb9126791ff211787e2ae8ffcb22409e3656b1497d8ac36"
+    },
+    "pair_payload_dir": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/pair_payloads",
+    "persist_json": {
+      "bytes": 142330,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_od9_20260805/od9_js1_persist_n32_cprime_k4.json",
+      "sha256": "ed3420f40b89136040663584e9d0540cef3c6070c5ef1bce18f418920aee1ea6"
+    }
+  },
+  "stage1_payload_bytes": {
+    "absolute_u8": 79640,
+    "base_delta_i16_raw": 135842,
+    "base_delta_mod_u8": 79639,
+    "base_delta_zigzag_varint": 88128
+  },
+  "stage2_payload_bytes": 3206,
+  "support": {
+    "per_pair": {
+      "107": 572,
+      "112": 562,
+      "119": 481,
+      "148": 548,
+      "154": 672,
+      "168": 597,
+      "198": 551,
+      "225": 405,
+      "234": 423,
+      "244": 433,
+      "251": 602,
+      "284": 696,
+      "32": 544,
+      "328": 542,
+      "336": 461,
+      "349": 478,
+      "383": 597,
+      "399": 558,
+      "411": 569,
+      "423": 635,
+      "445": 500,
+      "46": 504,
+      "465": 660,
+      "481": 565,
+      "516": 972,
+      "536": 632,
+      "561": 565,
+      "57": 668,
+      "582": 699,
+      "583": 710,
+      "70": 867,
+      "8": 466
+    },
+    "raw_i16_delta_bytes": 112404,
+    "raw_rgb_values_bytes": 56202,
+    "stage2_raw_int16_coeff_bytes": 3072,
+    "total_points": 18734
+  }
+}

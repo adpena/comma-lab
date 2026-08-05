@@ -1,0 +1,224 @@
+{
+  "command_that_materialized_pair_payloads": ".venv/bin/python experiments/ddm_od8_js1_persist.py solve-persist --allow-scorer --sub-dir /Volumes/VertigoDataTier/pact/ddm_pu2_20260803/submission_pu2 --gt-mkv upstream/videos/0.mkv --pairs-npy .omx/research/ddm_od2_20260805/od2_pairs_n32_seed20260805.npy --argmax-cache /Volumes/VertigoDataTier/pact/ddm_pu2_20260803/argmax_cache --out .omx/research/ddm_od9_20260805/od9_js1_persist_n32_cprime_k4.json --packet-out /Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/od9_native_dof_n32_cprime_k4.od5.raw_packet --block 16 --rmax 5 --seg-steps 100 --pose-steps 40 --eval-every 5 --dct-k 4 --threads 4 --resume",
+  "command_that_priced_delta_packets": ".venv/bin/python inline_od9_delta_entropy_price_script using OD5 parse-back, Brotli q11/LZMA1 races, and /Volumes/VertigoDataTier/pact/ddm_pu2_20260803/submission_pu2/inflated/0.raw as decoded base",
+  "created_utc": "2026-08-05T07:15:38.729692+00:00",
+  "entry_count": 42,
+  "no_tmp_persisted_evidence": true,
+  "packet_files": [
+    {
+      "bytes": 82958,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/od9_combined_absolute_u8_plus_stage2_cheapdct4.od5.raw_packet",
+      "sha256": "ad996c55aa26bfe194063bcefbb854f6d281a94b85664efd25290835aa8dcfdb"
+    },
+    {
+      "bytes": 139167,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/od9_combined_base_delta_i16_raw_plus_stage2_cheapdct4.od5.raw_packet",
+      "sha256": "fb72cbebbcc65fab8012202e01563cb0b96e88a19303e8db167f7e2249422186"
+    },
+    {
+      "bytes": 82963,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/od9_combined_base_delta_mod_u8_plus_stage2_cheapdct4.od5.raw_packet",
+      "sha256": "43a241507ab90f43a4bf2004f6a6821cfb3d31395e5cdc8a4e9c776681ad66b4"
+    },
+    {
+      "bytes": 91459,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/od9_combined_base_delta_zigzag_varint_plus_stage2_cheapdct4.od5.raw_packet",
+      "sha256": "b2f22def87dbfd235e55952e614140e7628c591665c427478e247569f36fbded"
+    },
+    {
+      "bytes": 82955,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/od9_native_dof_n32_cprime_k4.od5.raw_packet",
+      "sha256": "7219f6442c06ea00ba4793f905b38bb9ad8b98e37d8b4d9da2a0ebe039f5c18f"
+    },
+    {
+      "bytes": 79721,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/od9_stage1_only_absolute_u8.od5.raw_packet",
+      "sha256": "b615df3dc390bb8246233153254507720ef5ed7d39e34a5425cace3a60860464"
+    },
+    {
+      "bytes": 135930,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/od9_stage1_only_base_delta_i16_raw.od5.raw_packet",
+      "sha256": "58624138b7bb56b1a15e71ee7bf061de90d30c17390406d16920031a0ee6f507"
+    },
+    {
+      "bytes": 79726,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/od9_stage1_only_base_delta_mod_u8.od5.raw_packet",
+      "sha256": "688de75e9b8b67f8a9ce87f071174912aceae54d6a50aeeece06c0b146767294"
+    },
+    {
+      "bytes": 88222,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/od9_stage1_only_base_delta_zigzag_varint.od5.raw_packet",
+      "sha256": "0318e5c1da95ef2fdccc802752ebeafb0d07c6e383f1caefadeb7f6ffe73a1de"
+    },
+    {
+      "bytes": 3292,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/od9_stage2_only_cheapdct4_qcoeffs.od5.raw_packet",
+      "sha256": "1fcc86ffbed0a9634cc8392f92c7d343e39c2ad06fa25b04295e4252d70310b1"
+    }
+  ],
+  "pair_payload_files": [
+    {
+      "bytes": 2971,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/pair_payloads/pair_0008.npz",
+      "sha256": "4f4fb394d4e85ac024eb78b1325b6c2d0a0df07f7ec1ca15064190d94f27d4cf"
+    },
+    {
+      "bytes": 3329,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/pair_payloads/pair_0032.npz",
+      "sha256": "04e6bcbe82b9edaffa41db12d3f5f9381db88d6b40fc38133550063817585c11"
+    },
+    {
+      "bytes": 3257,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/pair_payloads/pair_0046.npz",
+      "sha256": "dbf657f4ba66784cb738c4376a906183de316a42edf4d15a6a7bfa9dc57042b0"
+    },
+    {
+      "bytes": 4024,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/pair_payloads/pair_0057.npz",
+      "sha256": "f8e86c60d9b370de58675a18ffe3d47d7a1b1e419193b134fb69b4ad93c1e153"
+    },
+    {
+      "bytes": 4895,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/pair_payloads/pair_0070.npz",
+      "sha256": "30cdbe1535a513ebde262aaf9956a43c6fee81c5345463ff41fe4bb2cde186c2"
+    },
+    {
+      "bytes": 3416,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/pair_payloads/pair_0107.npz",
+      "sha256": "bfc260c9a17ecaf43ae7885b234bd094f0866dab40210a5ab58db1e3bb17d94a"
+    },
+    {
+      "bytes": 3339,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/pair_payloads/pair_0112.npz",
+      "sha256": "86aa5ed1ccee7c7e331ef0836cf03049f88084e376772a6417e3b1fd7ff54fed"
+    },
+    {
+      "bytes": 3224,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/pair_payloads/pair_0119.npz",
+      "sha256": "1b361ec2f63c0c773c1e11d4f229bd2d7f3c5fcf9233ba52410f632a05e06846"
+    },
+    {
+      "bytes": 3456,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/pair_payloads/pair_0148.npz",
+      "sha256": "c901b785c7fa98954aa95d9c382e230aa16dcd9e26255affc8e63c9ab61ad348"
+    },
+    {
+      "bytes": 3862,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/pair_payloads/pair_0154.npz",
+      "sha256": "df9470ad7a876f4f8553823c36a0e57ac2615d2157b73503cb972bc275db0107"
+    },
+    {
+      "bytes": 3748,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/pair_payloads/pair_0168.npz",
+      "sha256": "60a21d0141502e38a877bf8363c1e2d1bf577aef00bca75f2e690363a94736f1"
+    },
+    {
+      "bytes": 3286,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/pair_payloads/pair_0198.npz",
+      "sha256": "5e498132c19c5dee65407f24b62cfe56f2fed93ade496ac4274b0701541c4ecc"
+    },
+    {
+      "bytes": 2814,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/pair_payloads/pair_0225.npz",
+      "sha256": "39065ce9a9bc120751aee5fc6d7b16a7cbe577c0bf031b329ec91e7dc1dcab79"
+    },
+    {
+      "bytes": 2730,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/pair_payloads/pair_0234.npz",
+      "sha256": "af83483811d2d5ee070d62317b804268a25cc91c20e190a79b12dbeaf3f20a34"
+    },
+    {
+      "bytes": 2892,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/pair_payloads/pair_0244.npz",
+      "sha256": "5978b9d3b1e4d29f3142a3c815cac2944cbe47b8e79c9ab9eb1ac5b89cf4d7af"
+    },
+    {
+      "bytes": 3476,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/pair_payloads/pair_0251.npz",
+      "sha256": "e6968d5b2414457d34e5db1e2c17b1686dfb3eb577f1dcdff816e5bbbe1356cb"
+    },
+    {
+      "bytes": 4182,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/pair_payloads/pair_0284.npz",
+      "sha256": "9a2b5b122fc66daf240a2d96be6363fa421e48360aacb10da8d01a8613e6868e"
+    },
+    {
+      "bytes": 3434,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/pair_payloads/pair_0328.npz",
+      "sha256": "fbf2b12652179ae7d4bf99cb58893990d3b2b16793b4c4d1fd513d4177fac148"
+    },
+    {
+      "bytes": 3084,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/pair_payloads/pair_0336.npz",
+      "sha256": "9f6c1d3e78753bf6402f460d2e81764bad0c0aaaff251eac3278e60b32ef02fe"
+    },
+    {
+      "bytes": 3169,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/pair_payloads/pair_0349.npz",
+      "sha256": "df4e85a19b64a1f05b01c41522e2706b0feebc9be36a46db7e49ba8b617325d0"
+    },
+    {
+      "bytes": 3699,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/pair_payloads/pair_0383.npz",
+      "sha256": "403eea32a9a91eff50f9c2131ba30e6c6fbcc42375639f7dfdd98800071aac8e"
+    },
+    {
+      "bytes": 3539,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/pair_payloads/pair_0399.npz",
+      "sha256": "6fa4d8b056d75c3d92faabfe1f2f7e0d48d446129b812e7f879b4bf63d75183c"
+    },
+    {
+      "bytes": 3397,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/pair_payloads/pair_0411.npz",
+      "sha256": "1aecea130aff23cc4ecb4b3d7e7a50cb8f0adb3a8fc12940060da63af175ebdc"
+    },
+    {
+      "bytes": 3911,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/pair_payloads/pair_0423.npz",
+      "sha256": "07aed454d7b555e54b5329d908958568f3e24ffeded7f4efa0ac297bad3ee5b6"
+    },
+    {
+      "bytes": 3213,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/pair_payloads/pair_0445.npz",
+      "sha256": "286bd287f3e368350d8f8219b2193bffcb85f3f1ed555b78d09ea1f564802df2"
+    },
+    {
+      "bytes": 4017,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/pair_payloads/pair_0465.npz",
+      "sha256": "6edde8b92dc636ace0093afe23eaa0af9189b9d8e0d1445cb307fd369aa56170"
+    },
+    {
+      "bytes": 3574,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/pair_payloads/pair_0481.npz",
+      "sha256": "6928d50b5542ae86dcfeb1e698ff0dc65fe07815fca9859a5b3ad3442ff66986"
+    },
+    {
+      "bytes": 5194,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/pair_payloads/pair_0516.npz",
+      "sha256": "32301a71d5c9beb2f0b1963e0422326724e9481851cdf32f2b9229e003d1b3d7"
+    },
+    {
+      "bytes": 3886,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/pair_payloads/pair_0536.npz",
+      "sha256": "f9d5a6348c568845c5e0ea488120e4823795b9ffee931fef3bbe291ffec5d449"
+    },
+    {
+      "bytes": 3568,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/pair_payloads/pair_0561.npz",
+      "sha256": "cd336ddcdb08e723f474b3c5020e3833e1274477997314c094f9ea916277234e"
+    },
+    {
+      "bytes": 3963,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/pair_payloads/pair_0582.npz",
+      "sha256": "5e8e6673a7c268abeb36187e13414316e435bd1de26251322205e287652021b0"
+    },
+    {
+      "bytes": 4225,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/pair_payloads/pair_0583.npz",
+      "sha256": "cd4cbb8838d8bf1a5af8c4d54332bc049c8f4109001d6cb3562059c8bfa64144"
+    }
+  ],
+  "schema": "ddm_od9_ssd_payload_manifest.v1",
+  "ssd_root": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof",
+  "tree_sha256": "7a127223953ab330f5539d48ceefd4173972d5728d0d71f6803fb0567c63c4a8"
+}

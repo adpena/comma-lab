@@ -1,0 +1,58 @@
+{
+  "axis": "[macOS-CPU byte-only persisted-native pricing]",
+  "best_coder": {
+    "blocker": null,
+    "bytes": 66794,
+    "codec": "brotli-q11",
+    "parseback_exact": true,
+    "sha256": "4fd37d024186400f6dd6b3ba984281c74a9817401497820523714c80be390e67"
+  },
+  "coder_race": [
+    {
+      "blocker": null,
+      "bytes": 66794,
+      "codec": "brotli-q11",
+      "parseback_exact": true,
+      "sha256": "4fd37d024186400f6dd6b3ba984281c74a9817401497820523714c80be390e67"
+    },
+    {
+      "blocker": null,
+      "bytes": 68271,
+      "codec": "lzma1-raw",
+      "parseback_exact": true,
+      "sha256": "1c004f8f5f0959d3d0fe5e62aceb6534beccbb10a5e21d46feff77034f64ffec"
+    }
+  ],
+  "created_utc": "2026-08-05T07:07:41.432900+00:00",
+  "n_pairs": 32,
+  "packet": {
+    "bytes": 82955,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/od9_native_dof_n32_cprime_k4.od5.raw_packet",
+    "sha256": "7219f6442c06ea00ba4793f905b38bb9ad8b98e37d8b4d9da2a0ebe039f5c18f"
+  },
+  "packet_parseback_exact": true,
+  "persist_json": {
+    "bytes": 142330,
+    "path": ".omx/research/ddm_od9_20260805/od9_js1_persist_n32_cprime_k4.json",
+    "sha256": "ed3420f40b89136040663584e9d0540cef3c6070c5ef1bce18f418920aee1ea6"
+  },
+  "projected_n600_bytes_linear": 1252388,
+  "projection_scope": "exact persisted n-pair packet bytes with linear n600 projection; byte-only",
+  "promotion_eligible": false,
+  "schema": "ddm_od8_persisted_native_dof_price.v1",
+  "score_claim": false,
+  "scorer_forwards_run": 0,
+  "section_count": 2,
+  "sections": [
+    {
+      "name": "od8_stage1_solved_paint_u8",
+      "payload_bytes": 79637,
+      "payload_sha256": "5939a8218d541d5f695bc9b04b9f4b806db36edd31f5a9e473f5be6be7c23b83"
+    },
+    {
+      "name": "od8_stage2_cheapdct4_qcoeffs",
+      "payload_bytes": 3202,
+      "payload_sha256": "f3ea8f47cf22dc3a0faacb80e64d961c04f3e69fe3d95e192fefd14f117046a7"
+    }
+  ]
+}

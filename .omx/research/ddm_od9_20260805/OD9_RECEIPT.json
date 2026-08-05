@@ -1,0 +1,281 @@
+{
+  "artifacts": {
+    "absolute_persisted_packet": {
+      "bytes": 82955,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/od9_native_dof_n32_cprime_k4.od5.raw_packet",
+      "sha256": "7219f6442c06ea00ba4793f905b38bb9ad8b98e37d8b4d9da2a0ebe039f5c18f"
+    },
+    "best_combined_packet": {
+      "bytes": 82958,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/od9_combined_absolute_u8_plus_stage2_cheapdct4.od5.raw_packet",
+      "sha256": "ad996c55aa26bfe194063bcefbb854f6d281a94b85664efd25290835aa8dcfdb"
+    },
+    "best_stage1_packet": {
+      "bytes": 79721,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/od9_stage1_only_absolute_u8.od5.raw_packet",
+      "sha256": "b615df3dc390bb8246233153254507720ef5ed7d39e34a5425cace3a60860464"
+    },
+    "delta_entropy_price_json": {
+      "bytes": 26315,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_od9_20260805/od9_delta_entropy_price.json",
+      "sha256": "cdd94808c9f58f3382eeb6b96bbc2c353f50c3bd758ca482f718e6f208b0aa5f"
+    },
+    "persist_json": {
+      "bytes": 142330,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_od9_20260805/od9_js1_persist_n32_cprime_k4.json",
+      "sha256": "ed3420f40b89136040663584e9d0540cef3c6070c5ef1bce18f418920aee1ea6"
+    },
+    "persisted_native_price_json": {
+      "bytes": 1913,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_od9_20260805/od9_persisted_native_dof_price.json",
+      "sha256": "f77869d3c401ed9b43222d230650eddadc819e9f7e96e662c00e913b30f7ed46"
+    },
+    "ssd_payload_manifest": {
+      "bytes": 10817,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_od9_20260805/od9_ssd_payload_manifest.json",
+      "sha256": "a409cd3598e99d9af9ffd891bbf84c815b733079837e9d94b31cb26c641175e8"
+    }
+  },
+  "axis": {
+    "pricing": "[macOS-CPU byte-only persisted-native pricing]",
+    "solve": "[macOS-CPU frozen-scorer advisory] NON-PROMOTABLE"
+  },
+  "combined_table": [
+    [
+      "combined_stage1_absolute_u8_plus_stage2_cheapdct4",
+      66785,
+      1252219,
+      1175915,
+      1177811,
+      1162219
+    ],
+    [
+      "combined_stage1_base_delta_mod_u8_plus_stage2_cheapdct4",
+      67315,
+      1262157,
+      1185853,
+      1187749,
+      1172157
+    ],
+    [
+      "combined_stage1_base_delta_zigzag_varint_plus_stage2_cheapdct4",
+      68409,
+      1282669,
+      1206365,
+      1208261,
+      1192669
+    ],
+    [
+      "combined_stage1_base_delta_i16_raw_plus_stage2_cheapdct4",
+      72271,
+      1355082,
+      1278778,
+      1280674,
+      1265082
+    ],
+    [
+      "stage2_only_cheapdct4_qcoeffs",
+      2157,
+      40444,
+      -35860,
+      -33964,
+      -49556
+    ]
+  ],
+  "created_utc": "2026-08-05T07:15:38.731204+00:00",
+  "delta_stats": {
+    "channels": 56202,
+    "max": 239,
+    "mean_abs": 38.223141525212625,
+    "median_abs": 30.0,
+    "min": -252,
+    "within_pm16_fraction": 0.2773744706594071,
+    "within_pm1_fraction": 0.02464325112985303,
+    "within_pm4_fraction": 0.07544215508344898,
+    "zero_fraction": 0.00861179317462012
+  },
+  "denominator": {
+    "measured_pairs": 32,
+    "projection_pairs": 600,
+    "projection_policy": "linear n32-to-n600 byte projection only"
+  },
+  "final_frontier_line_required": "S = 0.7539807296911207 @ 357,836 B [macOS-CPU advisory]; contest pointer borrowed/unmoved.",
+  "followons": [
+    {
+      "disposition": "QUEUED-WITH-FIRE-ORDER",
+      "fire_order": "Only after a shared/task-description carrier emits a lower-entropy stream; compare acceleration-coded residual against OD9 best absolute and base-delta packets with exact decode equality.",
+      "id": "AM1-smooth-residual-packet"
+    },
+    {
+      "disposition": "QUEUED-WITH-FIRE-ORDER",
+      "fire_order": "Use this persisted n32 stream as the independent baseline; fire a shared-context/generator packet only if the same decoded output parses back and projects below the 90 KB to 190 KB corridor.",
+      "id": "IG1-shared-context-vanishing-AB"
+    },
+    {
+      "disposition": "QUEUED-WITH-FIRE-ORDER",
+      "fire_order": "Build scorer-free receiver packet first, require exact bytes, packet hash, parse-back equality, double-decode equality, and explicit 45-90 KB corridor falsifier before any scorer slot.",
+      "id": "SD1-CPWL-task-description-packet"
+    },
+    {
+      "disposition": "QUEUED-WITH-FIRE-ORDER",
+      "fire_order": "Do not fire n600 from flat solved paint. Fire only after a shared/task-description packet is receiver-closed and under the TR1 190 KB ceiling with a concrete archive path.",
+      "id": "OD9-Leg-C-receiver-closed-archive"
+    }
+  ],
+  "pose_subset_scope": {
+    "d_pose_after_stage1_mean_n32": 0.03310610652442847,
+    "d_pose_after_stage2_cheapdct_mean_n32": 0.0007918090370822028,
+    "not_projected_to_n600": true,
+    "od3_m96_pose_easy_population_factor": 0.42628664334579025,
+    "od3_m96_seg_population_factor": 1.0099888594483923
+  },
+  "promotion_eligible": false,
+  "recall_evidence": [
+    {
+      "finding": "No OD9-specific prior memory hit found in the quick pass; Pact memory did flag #899/#904 and live Pact discipline as separate apparatus context.",
+      "plan_impact": "Kept OD9 as a fresh price/receipt unit and did not import #899/#904 apparatus claims into the representation verdict.",
+      "query": "MEMORY.md OD9 OD8 #899 #904 Pact",
+      "source": "/Users/adpena/.codex/memories/MEMORY.md"
+    },
+    {
+      "finding": "Scorer slot discipline, rule-118 split, and live own frontier line bind this unit; OD9 scope is scorer-free pricing first.",
+      "plan_impact": "Did not launch n600 or upstream/evaluate.py; measured packet bytes and kept score_claim=false.",
+      "query": "common contract plus CLAUDE AGENTS PROGRAM operating manual main_hot_state",
+      "source": ".omx/tmp/codex_runs/_common_contract.md, CLAUDE.md, AGENTS.md, PROGRAM.md, docs/operating_manual_craft_handoff.md, .omx/state/main_hot_state.md"
+    },
+    {
+      "finding": "OD3 closed terminality but persisted outcome rows only, not native stage1/stage2 payload fields.",
+      "plan_impact": "Re-ran solve-persist on the same OD2 n32 pair set and stored real solved values on SSD before pricing.",
+      "query": "OD3 terminality all five files native payload fields",
+      "source": ".omx/research/ddm_od3_20260805/{OD3_TERMINALITY_RECEIPT.md,NEXT_IF_RESUMED.md,CHARTER_ADDENDUM_PREREGISTERED_PREDICTION.md,OD3_AGGREGATE.json,od3_seal.json}"
+    },
+    {
+      "finding": "Baselines are OD4 104,775 B projected, OD6 76,304 B, PE3 74,408 B, OD8 proxy 1,245,600 B, and GC18 45-90 KB coherent boundary corridor.",
+      "plan_impact": "Compared the real persisted OD9 packets against all four measured/preregistered byte bars instead of against the OD8 proxy alone.",
+      "query": "OD4 OD6 PE3 OD8 GC18 Stage-1 native packet corridor",
+      "source": ".omx/research/ddm_od4_20260805, ddm_od6_20260805, ddm_pe3_20260805, ddm_od8_20260805, ddm_gc18_20260805"
+    },
+    {
+      "finding": "AM1 and IG1 name post-OD3 persistence as producer for smooth/shared-context A/Bs; SD1 queues a receiver CPWL/task-description packet against the 45-90 KB corridor.",
+      "plan_impact": "Flat/base-delta OD9 is rate-dead, so follow-ons are queued behind shared/task-description carrier routes rather than treated as OD-line ship-the-solve polish.",
+      "query": "AM1 IG1 SD1 OD8 post-OD3 persisted values shared context fire order",
+      "source": ".omx/research/ddm_am1_20260805, .omx/research/ddm_ig1_20260805, .omx/research/ddm_sd1_20260805"
+    },
+    {
+      "finding": "No OD9-specific equation found; relevant registry context warns entropy-coded archives require post-decompress grain rather than raw-byte locality assumptions.",
+      "plan_impact": "Used receiver packet parse-back plus real Brotli/LZMA coder races; did not infer rate from raw array size or byte-gradient heuristics.",
+      "query": "canonical equations receiver native format coefficient payload decoder counted entropy",
+      "source": ".venv/bin/python tools/list_canonical_equations.py --json"
+    },
+    {
+      "finding": "Found prior rate-dead direct-correction family cautions and TR1/shared-carrier routing context; no completed OD9 persisted-delta receipt existed before this unit.",
+      "plan_impact": "Scoped the negative to this flat/base-delta persisted solved-paint formulation and did not kill shared carrier or task-description families.",
+      "query": "CANONICAL_RESEARCH_INDEX sub015_DAG OD8 delta entropy TR1 rate-dead scorer-free",
+      "source": ".omx/research/CANONICAL_RESEARCH_INDEX*, .omx/research/sub015_DAG_*"
+    }
+  ],
+  "rule118_split": {
+    "counted_archive_zip_side": [
+      "support flat-index gaps for all edited scorer-lattice pixels",
+      "video-derived RGB absolute values or base-relative deltas for those support pixels",
+      "video-derived cheapdct4 int16 qcoefficients"
+    ],
+    "free_generic_decode_side": [
+      "OD5 parser/inflate.py algorithm",
+      "base raw decode already produced by the submitted generator/codec",
+      "deterministic camera-to-scorer resize for base lattice",
+      "delta add/reconstruct logic",
+      "fixed cheapdct4 basis and inverse transform algorithm"
+    ]
+  },
+  "schema": "ddm_od9_receipt.v1",
+  "score_claim": false,
+  "selection": "OD2 n32 seed20260805 stratified pair set inherited by OD3/OD9",
+  "stage1_table": [
+    [
+      "absolute_u8",
+      "brotli-q11",
+      64747,
+      1214007,
+      1124007,
+      true
+    ],
+    [
+      "base_delta_mod_u8",
+      "brotli-q11",
+      65232,
+      1223100,
+      1133100,
+      true
+    ],
+    [
+      "base_delta_zigzag_varint",
+      "brotli-q11",
+      66452,
+      1245975,
+      1155975,
+      true
+    ],
+    [
+      "base_delta_i16_raw",
+      "brotli-q11",
+      72302,
+      1355663,
+      1265663,
+      true
+    ]
+  ],
+  "summary": {
+    "best_combined_n32_coded_bytes": 66785,
+    "best_combined_name": "combined_stage1_absolute_u8_plus_stage2_cheapdct4",
+    "best_combined_projected_n600_bytes": 1252219,
+    "best_combined_vs_90kb": 1162219,
+    "best_combined_vs_od6": 1175915,
+    "best_combined_vs_pe3": 1177811,
+    "best_stage1_n32_coded_bytes": 64747,
+    "best_stage1_name": "stage1_only_absolute_u8",
+    "best_stage1_projected_n600_bytes": 1214007,
+    "delta_entropy_fork": "LARGE_DELTA_ENTROPY_SHIP_THE_SOLVE_RATE_DEAD",
+    "stage1_inside_gc18_45_90kb_corridor": false
+  },
+  "support": {
+    "per_pair": {
+      "107": 572,
+      "112": 562,
+      "119": 481,
+      "148": 548,
+      "154": 672,
+      "168": 597,
+      "198": 551,
+      "225": 405,
+      "234": 423,
+      "244": 433,
+      "251": 602,
+      "284": 696,
+      "32": 544,
+      "328": 542,
+      "336": 461,
+      "349": 478,
+      "383": 597,
+      "399": 558,
+      "411": 569,
+      "423": 635,
+      "445": 500,
+      "46": 504,
+      "465": 660,
+      "481": 565,
+      "516": 972,
+      "536": 632,
+      "561": 565,
+      "57": 668,
+      "582": 699,
+      "583": 710,
+      "70": 867,
+      "8": 466
+    },
+    "raw_i16_delta_bytes": 112404,
+    "raw_rgb_values_bytes": 56202,
+    "stage2_raw_int16_coeff_bytes": 3072,
+    "total_points": 18734
+  }
+}
