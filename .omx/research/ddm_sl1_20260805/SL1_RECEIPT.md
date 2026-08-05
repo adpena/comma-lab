@@ -131,3 +131,23 @@ No `upstream/evaluate.py` was run. No full n600 authority score, contest-CPU row
 ```
 
 S = 0.7539807296911207 @ 357,836 B [macOS-CPU advisory]; contest pointer borrowed/unmoved.
+
+## ADDENDUM (MAIN, same day — operator correction "beware pessimism/binary/naive/toy/generic basis" applied to this receipt's conclusions)
+
+1. **Leg 2 re-scope — "still above 0.05" is a BINARY read of a descending curve.** Measured
+   points {160 it: 0.0702, 1600 it: 0.0583}, 16/17 pairs still descending at the new cap
+   (1/17 plateau) → the asymptote is UNMEASURED; the trace projection (~0.034, passing)
+   remains the live estimate. Encode budget is contest-free. Corrected scope: the p3v2
+   free-frame pose term is a monotone-decreasing function of solve budget with an
+   unmeasured asymptote — family ALIVE; sl2 rung-3 (worst-3 pairs) bounds the asymptote.
+2. **The 0.05 bar is a WORKING ALLOCATION, not a derived wall** (provenance traced: the
+   composed-arithmetic sheet's pose budget √(10·d_pose)≤0.05 ⇔ d_pose≤2.5e-4, inherited
+   p3v2→dq1→here; PR130's own pose term is 0.0153). An allocation on the waterfill is
+   re-derivable at any operating point (m66/#921); it must not kill a live family at a
+   censored budget point. Any future citation says "vs the 0.05 ALLOCATION", never "the bar".
+3. **Leg 3 re-scope — "globally negative" is GENERATOR-scoped, not class-scoped.** Both
+   mixture components are negative AT THIS CLAIM GEOMETRY; the receipt's own Lane-to-Road
+   number (109,412 introduced px) names the engineering exit — grammar-v2's over-claim fix
+   (#941). Target-label substitution as a CLASS stays open pending that build; the
+   107-record trust gate is the oracle cue (as the receipt already routes). Not "closed
+   clean" — closed FOR THESE TWO GENERATORS at this base.
