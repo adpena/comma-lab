@@ -254,6 +254,12 @@ def keeper_source(name: str, prompt_path: str) -> str:
         f"charter at {prompt_path} plus the common contract at "
         f".omx/tmp/codex_runs/_common_contract.md."
     )
+    # gpt-5.5 @ xhigh IS the sol-ultra profile. OPERATOR LAW (2026-08-05): every
+    # CONVOCATION arm (gc*/pantheon passes) runs at sol-ultra — if per-arm profile
+    # tiers are ever added here, convocation-class arms MUST pin to the maximum.
+    # For the MOST IMPORTANT convocations (operator-flagged or route-changing
+    # adjudications), MAIN ALSO runs a parallel FABLE leg (Agent tool,
+    # model:"fable" carve-out) on the same charter and reconciles both receipts.
     argv_prefix = [
         "codex", "exec", "--skip-git-repo-check", "-s", "workspace-write",
         "--add-dir", SSD_ADD_DIR,
