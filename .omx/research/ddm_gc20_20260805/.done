@@ -1,0 +1,6 @@
+ddm_gc20_20260805 complete
+axis: [macOS-CPU advisory, scorer-free research]
+run_mutation: false
+scorer_use: none
+promotion_claim: false
+S = 0.7539807296911207 @ 357,836 B [macOS-CPU advisory]; contest pointer borrowed/unmoved.
