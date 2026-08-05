@@ -678,3 +678,37 @@ boundary A/B candidates on expected |ΔS|; single-variable discipline: no stacke
 continuation; dy2 tail-average anchors at a plateau, pose has none yet → A/B deferred to the next
 plateau boundary. Custody (gc20 rank-3) proceeds in parallel — endpoint ckpts preserved, continuation
 resumes without destroying them.
+
+## JD4 ENDPOINT ADJUDICATION (FINAL) + JD5 FIRE RECORD — MAIN, 2026-08-05
+
+**Probe complete** (jd4_endpoint_n600_both_bases.json, instrument 9abd0c64db, 1287s, n600 both bases):
+- ema (shipped): d_seg 0.0052305 (Δ−0.000518 vs ep1405) · d_pose 0.090731 (Δ−0.038122, −29.6%) · pose_term 0.9525
+- live: d_seg 0.0054997 (Δ−0.001651) · d_pose 0.091572 (Δ−0.482520) · pose_term 0.9569
+- **live/ema pose CONVERGED** (0.0916 vs 0.0907; at ep1405 they were 0.574 vs 0.129) — the R4 reanchor
+  cure verified working at n600. Live median 0.0396 < ema median 0.0558 (shadow smooths tail spikes).
+- Case-A strict bar: NOT met (0.090731 vs 0.00144, 63×).
+- Instrument note: gate-36 controls land +0.0005/+0.0003 above the run's final gate rows (both bases,
+  direction-consistent) — probe reads the ep1526 FINAL ckpt vs gates measured mid-train at ep1525.
+  Same-instrument deltas vs the jd3 baseline are unaffected.
+
+**ADJUDICATION = CASE-0-ON-POSE (as pre-registered in H10)**: seg exhausted + pose cap-stopped in
+full-rate descent ⇒ pose-dominant continuation, no stacked treatments, A/B menu deferred to the next
+plateau. Endpoint composed S_vehicle (ema): 0.52305 + 0.9525 + 0.19643 = **1.672** vs ep1405 ≈ 1.911
+→ window bought **−0.239 S** [macOS-CPU frozen-scorer advisory, training-vehicle semantics].
+
+**JD5 FIRED**: ticket jd5_ticket_cont_ep1526.json (hash 8c8c2295…), epochs 1526→1646, out-dir
+tr1_jd4_cont_ep1526, pid 50645, done-receipt jd5_cont_ep1526.
+- **Poison-alarm false positive, resolved by derivation**: the regenerator dropped
+  --jd1-force-ema-reanchor-on-resume — DERIVED behavior (maybe_force_window_reanchor: reanchor only
+  when window geometry changes; jd5 keeps U=18000, parsed from the parent ckpt's own provenance).
+- **Decay custody verified at three levels**: (1) trainer :4069-4073 restores active_ema_decay from
+  ckpt jd1 state; (2) GOTCHA — the `resume` telemetry event shows the PRE-restore argv decay
+  (0.99996) because the jd1-state restore runs after its emission and the no-reanchor path emits no
+  event carrying the restored value (small telemetry-ordering debt, sister of H8); (3) the FIRST
+  EPOCH ROW is the authoritative observable: **active_ema_decay 0.9997777777777778 CONFIRMED**,
+  jd1_pose_finish_active, w_pose=1, ep_loss 0.9581 (resume bump within the priced ~tax envelope).
+
+**Next boundary (ep1646)**: same probe instrument (edit --ckpt-tag/defaults for the jd5 dirs), same
+adjudication frame; re-check tail-concentration (#775 repriced table) + tail-EMA A/B candidacy as
+pose rate decays; conflict-controller condition re-check per the derived fire condition
+(pose rate < ~0.03 S/window).
