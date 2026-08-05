@@ -272,3 +272,25 @@ full-window stage-scoped-EMA v3 result as fired:
   EMA rows before checkpoint selection.
 
 Counter remains 0/3; round 5 = next fresh pass.
+
+### RECURSIVE REVIEW — ROUND 4 (rr1, counter 0/3): RR1-R4-F1 CRITICAL + MAIN disposition
+FINDING (verified from telemetry): the full-v3 continuation carries the SMOKE's EMA decay
+0.9966666667 (U=1200 provenance, re-anchor event ep1337 only) into the U=9000 full window
+(correct derived value 0.9995555556) — the resume carried `stage_ema_reanchored=true`, which
+SUPPRESSED the boundary re-derivation. Cross-regime constant-transfer genus INSTANCE #4,
+via a NEW mechanism (state-flag latch, not value latch); memory file updated same-turn.
+DISPOSITION (binding on the endpoint boundary):
+1. The window RUNS ON (dirs sacred; live basis unaffected by construction; killing discards
+   banked descent — never-weaker-state). No mid-run mutation.
+2. RELABEL: this run is a `smoke-EMA continuation` (fast EMA, τ≈2 ep) — NEVER cite it as
+   "full-window stage-scoped EMA" evidence. The EMA-basis endpoint number is a valid fast-EMA
+   measurement, honestly labeled.
+3. Endpoint adjudication measures BOTH bases via the n600 endpoint probes on ACTUAL checkpoint
+   weights (unaffected by the label) — the byte-close candidate is whichever measured basis wins.
+4. dy1 merge condition EXTENDED (#961): scope-law resolution keys on the window's OWN geometry
+   (inputs hash), never a boolean done-flag; plus rr1's production check — declared EMA scope vs
+   resolved active-EMA row compared before checkpoint selection, refuse on mismatch.
+5. Regenerator debt EXTENDED: continuation tickets that change window geometry MUST force a fresh
+   re-anchor (clear/ignore the carried flag). Joins the argv-interpreter + unique-out-dir items.
+Counter 0/3. The genus audit lesson: value-audits (cx1) cannot catch flag-latches — only
+telemetry-reads at the resume row can. Round 5 = next fresh pass.
