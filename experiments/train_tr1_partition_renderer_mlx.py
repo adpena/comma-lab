@@ -98,6 +98,12 @@ POINTER_LINE = "0.1910828242 [contest-CPU] UNMOVED"
 GATE_BLOCK_PAIRS = (447, 448, 449, 450)
 GATE_OFFBLOCK_SAMPLE = 32
 
+# BI1 (#924) birth seed/amplify path.  These are intentionally argparse-only
+# runtime knobs so the default-OFF arm preserves TR1Config, config_hash,
+# telemetry schema, and checkpoint bytes.  ON-only telemetry carries provenance.
+TR1_BIRTH_SEED_CLASS_IDS: dict[str, int] = {"lane": 1, "movable": 3}
+TR1_BIRTH_SEED_DEFAULT_CLASSES = "lane"
+
 # Pre-registered A1 alarm thresholds (tb1 charter T1: "never scale a loop whose
 # realized-flip telemetry is flat"). Smooth descended but realized did not:
 A1_SMOOTH_DROP_REL = 0.02      # smooth loss fell >= 2% since previous gate ...
@@ -675,6 +681,175 @@ def build_module(cfg: TR1Config):
             return out
 
     return TR1Module()
+
+
+def parse_tr1_birth_seed_classes(raw: str) -> tuple[str, ...]:
+    """Parse BI1 class names in a stable order; fail closed on unknown classes."""
+    names = tuple(dict.fromkeys(s.strip().lower() for s in str(raw).split(",") if s.strip()))
+    if not names:
+        raise ValueError("--tr1-birth-seed-classes must name at least one class")
+    unknown = [n for n in names if n not in TR1_BIRTH_SEED_CLASS_IDS]
+    if unknown:
+        raise ValueError(
+            f"--tr1-birth-seed-classes unknown {unknown}; choose from "
+            f"{sorted(TR1_BIRTH_SEED_CLASS_IDS)}"
+        )
+    return names
+
+
+def _tr1_birth_token_pattern(class_id: int, code_width: int, weight: float) -> np.ndarray:
+    """Class-distinct deterministic token direction; generic code, no learned table."""
+    idx = np.arange(int(code_width), dtype=np.int32)
+    signs = np.where(((idx + int(class_id)) % 2) == 0, 1.0, -1.0).astype(np.float32)
+    return (float(weight) * signs).astype(np.float32)
+
+
+def _downsample_birth_weight(weight: np.ndarray, cfg: TR1Config) -> np.ndarray:
+    """Max-pool a scorer-plane birth support to the TR1 token lattice."""
+    w = np.asarray(weight, dtype=np.float32)
+    if w.shape != (SEG_H, SEG_W):
+        raise ValueError(f"birth weight shape {w.shape} != {(SEG_H, SEG_W)}")
+    d = int(cfg.grid_downsample)
+    return w.reshape(cfg.grid_h, d, cfg.grid_w, d).max(axis=(1, 3)).astype(np.float32)
+
+
+def build_tr1_birth_seed_bank(
+    cfg: TR1Config,
+    lstars: Any,
+    *,
+    weight: float,
+    classes: str = TR1_BIRTH_SEED_DEFAULT_CLASSES,
+    dilate_px: int = 1,
+    persist: str = "inverse_thickness",
+) -> tuple[dict[str, np.ndarray] | None, dict[str, Any]]:
+    """Build the BI1 scorer-free token birth bank from GT argmax islands.
+
+    The bank is a train-time initialization/anchor target on the token field.  It
+    does not call SegNet/PoseNet and is never an inflate-time payload.
+    """
+    w0 = float(weight)
+    names = parse_tr1_birth_seed_classes(classes)
+    if w0 <= 0.0:
+        return None, {
+            "active": False,
+            "classes": list(names),
+            "seed_weight": w0,
+            "reason": "weight<=0",
+        }
+    if int(dilate_px) < 0:
+        raise ValueError("--tr1-birth-seed-dilate-px must be >= 0")
+    if persist not in ("uniform", "inverse_thickness"):
+        raise ValueError("--tr1-birth-amplify-persist must be uniform|inverse_thickness")
+    if getattr(cfg, "token_cell_mask", None) is not None:
+        raise ValueError("BI1 birth seed currently requires the dense token lattice; "
+                         "--token-cell-mask would make some seeded targets gradient-dead")
+    if getattr(cfg, "token_rowband_spec", None) is not None:
+        raise ValueError("BI1 birth seed currently requires untied token cells; "
+                         "--token-rowband-spec needs an explicit tied-target projection")
+
+    from tac.boundary_math.island_protection import eased_island_masks, island_persistence_weight
+
+    target = np.zeros((cfg.num_pairs, cfg.grid_h, cfg.grid_w, cfg.code_width), dtype=np.float32)
+    mask = np.zeros((cfg.num_pairs, cfg.grid_h, cfg.grid_w, 1), dtype=np.float32)
+    seeded_by_class = dict.fromkeys(names, 0)
+    seeded_pairs: set[int] = set()
+    class_ids = {n: TR1_BIRTH_SEED_CLASS_IDS[n] for n in names}
+    lane_cls = class_ids.get("lane")
+    movable_cls = class_ids.get("movable")
+
+    for pair_idx in range(int(cfg.num_pairs)):
+        im = eased_island_masks(
+            np.asarray(lstars[pair_idx], dtype=np.int64),
+            lane_cls,
+            movable_cls,
+            dilate_px=int(dilate_px),
+        )
+        masks = {"lane": im.lane_mask, "movable": im.movable_mask}
+        for name in names:
+            cmask = masks[name]
+            if cmask is None or not np.asarray(cmask, bool).any():
+                continue
+            px_weight = island_persistence_weight(np.asarray(cmask, bool), kind=persist)
+            cell_w = _downsample_birth_weight(px_weight, cfg)
+            active = cell_w > 0.0
+            n_cells = int(active.sum())
+            if n_cells == 0:
+                continue
+            seeded_by_class[name] += n_cells
+            seeded_pairs.add(pair_idx)
+            pattern = _tr1_birth_token_pattern(class_ids[name], cfg.code_width, w0)
+            target[pair_idx] += cell_w[..., None] * pattern[None, None, :]
+            mask[pair_idx, ..., 0] = np.maximum(mask[pair_idx, ..., 0], cell_w)
+
+    np.clip(target, -1.0, 1.0, out=target)
+    summary = {
+        "active": True,
+        "mechanism": "BI1 token-lattice birth seed plus scorer-free amplify anchor",
+        "classes": list(names),
+        "seed_weight": w0,
+        "dilate_px": int(dilate_px),
+        "persist": persist,
+        "pairs_with_seed": len(seeded_pairs),
+        "seeded_cells_total": int(sum(seeded_by_class.values())),
+        "seeded_cells_by_class": seeded_by_class,
+        "target_abs_sum": float(np.abs(target).sum()),
+        "mask_sum": float(mask.sum()),
+        "score_claim": False,
+    }
+    if summary["target_abs_sum"] <= 0.0:
+        raise ValueError("BI1 birth seed produced zero token target; refusing an inert ON arm")
+    return {"target": target, "mask": mask}, summary
+
+
+def attach_tr1_birth_seed_bank(
+    model: Any,
+    cfg: TR1Config,
+    lstars: Any,
+    *,
+    weight: float,
+    classes: str = TR1_BIRTH_SEED_DEFAULT_CLASSES,
+    dilate_px: int = 1,
+    persist: str = "inverse_thickness",
+    apply_live_seed: bool = True,
+) -> dict[str, Any]:
+    """Attach BI1 target/mask banks and optionally seed the live token field."""
+    bank_np, summary = build_tr1_birth_seed_bank(
+        cfg, lstars, weight=weight, classes=classes, dilate_px=dilate_px, persist=persist
+    )
+    if bank_np is None:
+        return summary
+    import mlx.core as mx
+
+    bank = _FixedBank({k: mx.array(v) for k, v in bank_np.items()})
+    model._tr1_birth_seed = bank
+    if apply_live_seed:
+        target = bank.tensors["target"]
+        if cfg.token_temporal_mode == "shared_base":
+            model.tokens_delta = model.tokens_delta + target
+        else:
+            model.tokens = model.tokens + target
+        mx.eval(model.parameters())
+    summary["applied_to_live_tokens"] = bool(apply_live_seed)
+    return summary
+
+
+def tr1_birth_amplify_term(mdl: Any, ids: Sequence[int]):
+    """Scorer-free BI1 anchor: keep seeded token support from washing out."""
+    import mlx.core as mx
+
+    bank = getattr(mdl, "_tr1_birth_seed", None)
+    if bank is None or not ids:
+        return mx.array(0.0)
+    target = bank.tensors["target"]
+    mask = bank.tensors["mask"]
+    acc = None
+    for idx in ids:
+        i = int(idx)
+        diff = (mdl.raw_tokens(i) - target[i]) * mask[i]
+        denom = mx.sum(mask[i]) * diff.shape[-1] + 1e-8
+        term = mx.sum(diff * diff) / denom
+        acc = term if acc is None else acc + term
+    return acc / len(ids)
 
 
 def make_render_fn():
@@ -2072,6 +2247,23 @@ def build_argparser() -> argparse.ArgumentParser:
                     help="p4x component grammar. 8 = Rosenfeld/receiver-consolidation (default, "
                          "physical); 4 = gt2's own published grammar (MEASURED by p4x: gt2 is "
                          "4-connected). Per-WORD rates are NOT comparable across grammars.")
+    # ---- ddm_bi1 (#924) TR1 BIRTH seed/amplify path -------------------------------
+    # Args-only by design: OFF must preserve TR1Config/config_hash/checkpoint bytes. ON emits
+    # its own telemetry row and is a duty-to-measure lever, not a score claim.
+    ap.add_argument("--tr1-birth-seed-weight", type=float, default=0.0,
+                    help="BI1: initialize TR1 token cells on GT Lane/Movable birth supports. "
+                         "0.0 => OFF and byte-identical. Lane is the default first rung.")
+    ap.add_argument("--tr1-birth-seed-classes", default=TR1_BIRTH_SEED_DEFAULT_CLASSES,
+                    help="BI1 comma list from {lane,movable}; default lane super-nuclei first.")
+    ap.add_argument("--tr1-birth-seed-dilate-px", type=int, default=1,
+                    help="BI1 scorer-plane support growth before token-grid max-pool.")
+    ap.add_argument("--tr1-birth-amplify-weight", type=float, default=0.0,
+                    help="BI1 scorer-free token-anchor weight that keeps seeded supports from "
+                         "being immediately erased. Requires --tr1-birth-seed-weight > 0.")
+    ap.add_argument("--tr1-birth-amplify-persist", default="inverse_thickness",
+                    choices=("uniform", "inverse_thickness"),
+                    help="BI1 seed/amplify support weighting; inverse_thickness emphasizes "
+                         "lowest-persistence island pixels.")
     ap.add_argument("--token-temporal-mode", default="shared_base",
                     choices=("shared_base", "independent"),
                     help="shared_base = identity-xi advection (Einstein d_cov/d_gauge force)")
@@ -2453,6 +2645,17 @@ def main() -> int:
           "evidence_axis": "[macOS-CPU/MLX advisory]", "config_hash": cfg.config_hash(),
           "cfg": asdict(cfg), "pid": os.getpid()})
 
+    try:
+        parse_tr1_birth_seed_classes(args.tr1_birth_seed_classes)
+    except ValueError as exc:
+        raise SystemExit(str(exc)) from exc
+    if float(args.tr1_birth_seed_weight) < 0.0:
+        raise SystemExit("--tr1-birth-seed-weight must be >= 0")
+    if float(args.tr1_birth_amplify_weight) < 0.0:
+        raise SystemExit("--tr1-birth-amplify-weight must be >= 0")
+    if float(args.tr1_birth_amplify_weight) > 0.0 and float(args.tr1_birth_seed_weight) <= 0.0:
+        raise SystemExit("--tr1-birth-amplify-weight requires --tr1-birth-seed-weight > 0")
+
     # GT: memmapped lstars/margins from the shared frozen-authority cache; frozen CPU SegNet.
     lstars = open_stored_npy_memmap(args.gt_cache, "lstars")
     margins = open_stored_npy_memmap(args.gt_cache, "margins")
@@ -2641,6 +2844,29 @@ def main() -> int:
         # Scorer-loop Adam moments are created FRESH below (warm-start re-anchor
         # law #517/#518); the EMA shadow initializes from the post-projection params
         # (fresh warmup window => live-basis gates until W, same as the control).
+
+    birth_seed_amplify_weight = 0.0
+    if float(args.tr1_birth_seed_weight) > 0.0:
+        _birth_seed_summary = attach_tr1_birth_seed_bank(
+            model,
+            cfg,
+            lstars,
+            weight=float(args.tr1_birth_seed_weight),
+            classes=args.tr1_birth_seed_classes,
+            dilate_px=int(args.tr1_birth_seed_dilate_px),
+            persist=args.tr1_birth_amplify_persist,
+            apply_live_seed=(args.resume_from is None),
+        )
+        birth_seed_amplify_weight = float(args.tr1_birth_amplify_weight)
+        tlog({"event": "tr1_birth_seed_init",
+              **_birth_seed_summary,
+              "amplify_weight": birth_seed_amplify_weight,
+              "resume_from_checkpoint": bool(args.resume_from is not None),
+              "note": "BI1 #924 builds p4x's previously-unbuilt TR1 seed/amplify BIRTH "
+                      "path. Runtime flags are args-only so OFF preserves config_hash and "
+                      "checkpoint bytes; ON initializes GT birth support in the token lattice "
+                      "and adds a scorer-free anchor term. No SegNet/PoseNet forward is used "
+                      "by this mechanism; score_claim=False."})
 
     # ddm_bp1 (#824) reset-race arm selector. REUSES the levelset trainer's already-unit-tested
     # gate (never reimplemented): _adam_bias_correction_for(beta2, reference_semantics=) returns
@@ -3043,6 +3269,8 @@ def main() -> int:
         # weight>0 => byte-identical to the control until engagement (gc10 F2 twin of the ν snap).
         if mdl._delta_sparsity_engaged and cfg.delta_sparsity_weight > 0.0:
             acc = acc + cfg.delta_sparsity_weight * delta_sparsity_term(mdl, ids)
+        if birth_seed_amplify_weight > 0.0:
+            acc = acc + birth_seed_amplify_weight * tr1_birth_amplify_term(mdl, ids)
         return acc
 
     vg = nn.value_and_grad(model, batch_loss)

@@ -28,12 +28,17 @@ from experiments.train_tr1_partition_renderer_mlx import (  # noqa: E402
     GATE_BLOCK_PAIRS,
     TR1Config,
     a1_adjudicate,
+    attach_tr1_birth_seed_bank,
+    build_argparser,
     build_module,
+    build_tr1_birth_seed_bank,
     counted_bytes_ledger,
     derive_ema_decay,
     load_checkpoint,
+    parse_tr1_birth_seed_classes,
     resolve_gate_ids,
     save_checkpoint,
+    tr1_birth_amplify_term,
     token_stream_bytes,
 )
 
@@ -50,6 +55,13 @@ def _cfg(variant: str = "plain", **kw) -> TR1Config:
         "token_ste": "round", "class_weight_lane": 1.0, "margin_target": 1.0}
     base.update(kw)
     return TR1Config(**base)
+
+
+def _birth_lstars(num_pairs: int) -> np.ndarray:
+    lstars = np.zeros((num_pairs, 384, 512), dtype=np.int64)
+    lstars[:, 176:180, 210:330] = 1      # Lane, thin super-nucleus support.
+    lstars[:, 210:244, 270:316] = 3      # Movable, available for the second rung.
+    return lstars
 
 
 # ---------------------------------------------------------------- config ----
@@ -149,6 +161,91 @@ def test_lotto_mask_is_hard_and_score_grad_flows():
 
     _, grads = nn.value_and_grad(m, f)(m)
     assert float(np.abs(np.asarray(grads["s_conv0"])).sum()) > 0.0  # STE through mask
+
+
+def test_bi1_birth_seed_flags_are_args_only_and_default_off():
+    ns = build_argparser().parse_args(["--variant", "plain", "--out-dir", "unused"])
+    assert ns.tr1_birth_seed_weight == 0.0
+    assert ns.tr1_birth_seed_classes == "lane"
+    cfg_fields = set(TR1Config.__dataclass_fields__)
+    assert not any("birth_seed" in name or "birth_amplify" in name for name in cfg_fields)
+    assert parse_tr1_birth_seed_classes("lane,movable,lane") == ("lane", "movable")
+    with pytest.raises(ValueError):
+        parse_tr1_birth_seed_classes("road")
+
+
+def test_bi1_birth_seed_off_does_not_mutate_tokens():
+    cfg = _cfg("plain", num_pairs=2)
+    m = object()
+    summary = attach_tr1_birth_seed_bank(
+        m, cfg, _birth_lstars(2), weight=0.0, classes="lane", apply_live_seed=True
+    )
+    assert summary["active"] is False
+    assert not hasattr(m, "_tr1_birth_seed")
+
+
+def test_bi1_birth_seed_bank_pure_numpy_smoke():
+    cfg = _cfg("plain", num_pairs=2)
+    bank, summary = build_tr1_birth_seed_bank(
+        cfg, _birth_lstars(2), weight=0.5, classes="lane", dilate_px=1,
+        persist="inverse_thickness"
+    )
+    assert bank is not None
+    assert bank["target"].shape == (2, cfg.grid_h, cfg.grid_w, cfg.code_width)
+    assert bank["mask"].shape == (2, cfg.grid_h, cfg.grid_w, 1)
+    assert summary["pairs_with_seed"] == 2
+    assert summary["seeded_cells_by_class"]["lane"] > 0
+    assert np.count_nonzero(bank["target"] * bank["mask"]) > 0
+    assert summary["score_claim"] is False
+
+
+def test_bi1_birth_seed_refuses_unprojected_token_geometry():
+    lstars = _birth_lstars(1)
+    with pytest.raises(ValueError, match="dense token lattice"):
+        build_tr1_birth_seed_bank(
+            _cfg("plain", num_pairs=1, token_cell_mask="cells.npy"), lstars,
+            weight=0.5, classes="lane"
+        )
+    with pytest.raises(ValueError, match="untied token cells"):
+        build_tr1_birth_seed_bank(
+            _cfg("plain", num_pairs=1, token_rowband_spec='{"bands": []}'), lstars,
+            weight=0.5, classes="lane"
+        )
+
+
+def test_bi1_birth_seed_on_creates_token_islands_and_anchor_grad():
+    cfg = _cfg("plain", num_pairs=2)
+    m = build_module(cfg)
+    bank, summary = build_tr1_birth_seed_bank(
+        cfg, _birth_lstars(2), weight=0.5, classes="lane", dilate_px=1,
+        persist="inverse_thickness"
+    )
+    assert bank is not None
+    assert summary["pairs_with_seed"] == 2
+    assert summary["seeded_cells_by_class"]["lane"] > 0
+    assert summary["target_abs_sum"] > 0.0
+
+    applied = attach_tr1_birth_seed_bank(
+        m, cfg, _birth_lstars(2), weight=0.5, classes="lane", dilate_px=1,
+        persist="inverse_thickness", apply_live_seed=True
+    )
+    assert applied["applied_to_live_tokens"] is True
+    seeded = np.asarray(m.tokens_delta)
+    assert np.count_nonzero(seeded[0]) > 0
+    mask = np.asarray(m._tr1_birth_seed.tensors["mask"])
+    assert np.count_nonzero(seeded[0] * mask[0]) > 0
+
+    m.tokens_delta = mx.zeros_like(m.tokens_delta)
+    val = float(tr1_birth_amplify_term(m, [0]))
+    assert val > 0.0
+
+    import mlx.nn as nn
+
+    def f(model):
+        return tr1_birth_amplify_term(model, [0])
+
+    _, grads = nn.value_and_grad(m, f)(m)
+    assert np.count_nonzero(np.asarray(grads["tokens_delta"])[0] * mask[0]) > 0
 
 
 # ---------------------------------------------------------------- ledger ----
