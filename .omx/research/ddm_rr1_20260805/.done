@@ -1,6 +1,6 @@
 status=done
 artifact=.omx/research/ddm_rr1_20260805/RECEIPT.md
-round=cycle2_round5
-clean_counter=1/3
-new_finding=none; R4 correction verified; JD4 R4-cure telemetry and EMA tau arithmetic verified; ep1424 A1 alarm recovered at ep1429 with no typed exit/refuse
+round=cycle2_round7
+clean_counter=1/3_not_advanced_fix_first
+new_findings=RR1-C2-R7-F1 H1 residual includes active birth_amplify; RR1-C2-R7-F2 JD5 boundary_jump compares parent cfg EMA to child active EMA; RR1-C2-R7-F3 gate36 positive control is cross-instrument, not one-epoch
 frontier=S = 0.7539807296911207 @ 357,836 B [macOS-CPU advisory]; contest pointer borrowed/unmoved
