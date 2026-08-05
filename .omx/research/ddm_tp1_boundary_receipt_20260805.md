@@ -76,3 +76,58 @@ the operator's "plain cosine never optimal" correction was material — the two 
 mean). Reading: in scorer geometry the per-class trunk gradients are anti-aligned on average → supports the
 per-class split premise (m91 one-graph-one-hub decomposition) and validates the jd1 seg-hold floor during
 in-loop pose engagement. Advisory only.
+
+## JD1 V2 ENDPOINT RECORD (2026-08-05 ~18:40Z, task #958 — the gc19 predicate consumption)
+
+**Exit:** ep1354 (20 epochs, 1793s), rc=0, `stop_reason=a1_realization_gap_refuse` (2 consecutive
+A1 alarms ep1349/1354; typed note "fd2 inherited gap signature — REROUTE, never scale"). NOT the
+wall cap. Receipt: `tr1_window_receipt.json`; window ckpts entry_ep1336 / intra_ep1344 (COUPLED_
+DESCENT interior min) / final_ep1354 all preserved.
+
+**Endpoint discriminator (experiments/ddm_jd1_endpoint_verdict.py, 36 gd1-designed gate pairs,
+exact jd1 loss physics; + live-vs-EMA falsifier probes n6 pose / n36 seg). Positive control
+PASSED: probe EMA seg 0.0039072/0.0041096 vs gate 0.0038478/0.0041397 (within #855 basis drift).**
+
+| basis | d_seg entry→final | d_pose entry→final | pose term √(10·d) |
+|---|---|---|---|
+| LIVE | 0.0035696 → 0.0059919 (+0.242 S_seg) | ~146 → 0.278016 (n6) | 38.3 → 1.67 |
+| EMA (shipping) | 0.0039248 → 0.0041096 (+0.018 S_seg) | 146.479 → 76.603 (n36) | 38.27 → 27.68 |
+
+**Predicate: P2 (pose-alive, seg-harmed) — with TWO measured controller defects:**
+1. **Seg-hold guards the wrong SPACE.** Seg-only loss 0.4737 stayed BELOW the calibrated floor
+   0.4771088596 the entire window (hinge never fired, correctly by its own definition) while LIVE
+   realized d_seg rose 68%. Flips live at near-zero margin where the smooth surrogate barely
+   moves. Cure = REALIZED-quantity hold: consume the a1 gate's realized_gate_dseg_mean (already
+   computed every 5 epochs) with rollback-to-prev-gate-checkpoint + w_pose retreat on rise.
+   (#888 sharpened a third time: not floor, not weight — SPACE.)
+2. **EMA decay mis-scoped for a finishing stage.** decay 0.99996 (horizon ~25,000 steps, the
+   parent-chain warm-start law U=resume_epoch×parent_steps) vs a 1,500-step window → the
+   shipping basis absorbed ~none of the pose descent (live 0.278 vs EMA 76.6 = 308×) AND
+   muffled the live seg damage 13× (gate saw +0.018 S of a live +0.242 S). Stage-scoped law:
+   the SAME derivation with U = WINDOW steps (130ep×75 = 9,750 → decay 0.99959), EMA
+   RE-ANCHORED at live weights at window entry.
+
+**What the window PROVED (the #366 thesis, first realized numbers):** in-loop joint pose descent
+on the live TR1 vehicle is FAST and REAL — live training-objective d_pose ~146 → 0.278 in 19
+epochs, monotone (the operator's pose-descends-quickly law measured in-vehicle). What it COSTS
+uncontrolled: live seg +0.242 S. What blocked promotion: both gains and damage were invisible
+to the shipping basis under the mis-scoped EMA.
+
+**Bonus finding (chain-wide):** live entry seg 0.0035696 BEATS the chain's EMA-reported minimum
+0.0038332 — the whole w4m chain's telemetry (EMA basis) has understated its own live seg quality;
+any future byte-close basis decision must measure BOTH bases.
+
+**Confound GENUS (third instance in ONE window, one class):** cross-regime constant/control
+transfer — (i) floor latched at margin-ON scale consumed margin-OFF (3.33×, caught pre-launch);
+(ii) loss-space hold consumed against realized-space erosion; (iii) parent-chain EMA horizon
+consumed in a 20-epoch finishing window. One genus: a constant/control derived in regime A,
+consumed in regime B, inside the same launch. Every finishing-stage config element must be
+re-derived AT THE WINDOW'S OWN SCOPE (floor: own-form calibration epoch — done; hold: own-space
+realized quantity — owed; EMA: own-length horizon + re-anchor — owed).
+
+**Routing (A1 note "REROUTE, never scale"):** jd1 v3 build = realized-quantity seg-hold +
+stage-scoped re-anchored EMA + ticket regeneration + re-smoke; resume candidates adjudicated at
+build time on BOTH bases (entry live-seg-best 0.00357 vs final live-pose-best 0.278/seg 0.00599 —
+the od2/SL2 conditioned-base laws inform which). Byte-close does NOT fire on any v2 checkpoint
+(EMA pose 76.6–146 → pose term 27.7–38.3, not shippable). Receipts:
+`/Volumes/VertigoDataTier/pact/ddm_jd1_20260805/jd1_endpoint_verdict_3ckpt.json` + probe log.
