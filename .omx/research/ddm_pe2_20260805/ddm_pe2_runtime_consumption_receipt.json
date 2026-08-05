@@ -1,0 +1,296 @@
+{
+ "axis": "[macOS-CPU advisory / scorer-free receiver-byte custody]",
+ "candidates": [
+  {
+   "archive_bytes": 478612,
+   "archive_sha256": "51e2e5b78d2c83b3cb357206c2e3a006ba3a51e2ba5661fcee364c39762a0416",
+   "kind": "pe1",
+   "label": "PE1 full explicit_curve_k8",
+   "ledger": {
+    "archive_bytes": 478612,
+    "archive_sha256": "51e2e5b78d2c83b3cb357206c2e3a006ba3a51e2ba5661fcee364c39762a0416",
+    "bulk_bytes": 341295,
+    "joint_section_count": 6,
+    "joint_sections": [
+     {
+      "index": 0,
+      "magic": "\u0000\u0000B\r\u0003\u000b\u0003",
+      "name": "config",
+      "raw_bytes": 36,
+      "sha256": "fc4f23ac9e31ba266ace26131319eb5b574d69e1d505fb1fc20a9dbc79a240d6"
+     },
+     {
+      "index": 1,
+      "magic": "IX2REN01",
+      "name": "renderer",
+      "raw_bytes": 3266,
+      "sha256": "3b8eb0c24f9e6d8b547a23a5db29a1dbbd03db474fbba3638b0c3dd858ca7009"
+     },
+     {
+      "index": 2,
+      "magic": "{\"activa",
+      "name": "selector",
+      "raw_bytes": 535,
+      "sha256": "8fc5c3fc65eb051b65ebf01d4b008e52d606097194c57884e739eae2ad8382e1"
+     },
+     {
+      "index": 3,
+      "magic": "PFS1WPD1",
+      "name": "pose_warp",
+      "raw_bytes": 8751,
+      "sha256": "d1d073e55aacf991491365d13716fededb169854b78bb203c34c84ca880c25db"
+     },
+     {
+      "index": 4,
+      "magic": "F0PR1!\u0000\u0000",
+      "name": "frame0_pose_repair",
+      "raw_bytes": 4081,
+      "sha256": "b5874d32324a46dc76cb1fc0beb7cda5fdaca2f59ebae6acbb08283206e8e7a2"
+     },
+     {
+      "index": 5,
+      "magic": "PE1EDGE1",
+      "name": "pe1_edge_partition_full_explicit_curve_k8",
+      "raw_bytes": 120577,
+      "sha256": "492943cf199639c20f362ca8069affad2d183327970dda4186d632c7181b06fb"
+     }
+    ],
+    "payload_bytes": 478504,
+    "payload_reencodes_identically": true,
+    "zip_members": [
+     {
+      "compress_type": 0,
+      "compressed_bytes": 478504,
+      "name": "0.bin",
+      "uncompressed_bytes": 478504
+     }
+    ]
+   },
+   "receiver_copy": "/Volumes/VertigoDataTier/pact/ddm_pe2_20260805/sub_auto_pairbit_pe2_pe1_full_explicit_curve_k8_receiver",
+   "runtime_consumption": {
+    "camera_pixels_changed": 30952,
+    "component_records": 22338,
+    "deterministic_raster_hash_first": "a9b1b80cca1d6e79bcc28a16904b5903fc6a32bc77b004a595161c46c85f03bd",
+    "deterministic_raster_hash_second": "a9b1b80cca1d6e79bcc28a16904b5903fc6a32bc77b004a595161c46c85f03bd",
+    "deterministic_raster_match": true,
+    "frame1_with_field_sha256": "97c8e8f7facfd1769ef6417d978a20e7b97457c26f6961dd11aabd344f2d080e",
+    "frame1_without_field_sha256": "4bd5d651172308b377136a983f50c49ba5019ad9f5fd01759775650756086536",
+    "kind": "explicit_curve_spline",
+    "mutated": true,
+    "painted_pairs": 600,
+    "painted_pixels_total": 5064597,
+    "raw_bytes": 401351,
+    "raw_sha256": "ed5dee749b1bf5a3da93978b8a1b497f7ce64d498012483a4dc29a9fc656a316",
+    "section_bytes": 120577,
+    "section_sha256": "492943cf199639c20f362ca8069affad2d183327970dda4186d632c7181b06fb",
+    "smoke_pair": 0,
+    "smoke_pair_painted_pixels": 7738
+   },
+   "slug": "pe1_full_explicit_curve_k8",
+   "source_sub": "/Volumes/VertigoDataTier/pact/ddm_pe1_20260805/pe1_20260805T030000Z/sub_auto_pairbit_pe1_full"
+  },
+  {
+   "archive_bytes": 425627,
+   "archive_sha256": "90de4c14887156fe462ead76163303bacefc3bbffec54bea10296ea104ff929a",
+   "kind": "pe1",
+   "label": "PE1 surgical generator-pair waterfill 75kb",
+   "ledger": {
+    "archive_bytes": 425627,
+    "archive_sha256": "90de4c14887156fe462ead76163303bacefc3bbffec54bea10296ea104ff929a",
+    "bulk_bytes": 341295,
+    "joint_section_count": 6,
+    "joint_sections": [
+     {
+      "index": 0,
+      "magic": "\u0000\u0000B\r\u0003\u000b\u0003",
+      "name": "config",
+      "raw_bytes": 36,
+      "sha256": "fc4f23ac9e31ba266ace26131319eb5b574d69e1d505fb1fc20a9dbc79a240d6"
+     },
+     {
+      "index": 1,
+      "magic": "IX2REN01",
+      "name": "renderer",
+      "raw_bytes": 3266,
+      "sha256": "3b8eb0c24f9e6d8b547a23a5db29a1dbbd03db474fbba3638b0c3dd858ca7009"
+     },
+     {
+      "index": 2,
+      "magic": "{\"activa",
+      "name": "selector",
+      "raw_bytes": 535,
+      "sha256": "8fc5c3fc65eb051b65ebf01d4b008e52d606097194c57884e739eae2ad8382e1"
+     },
+     {
+      "index": 3,
+      "magic": "PFS1WPD1",
+      "name": "pose_warp",
+      "raw_bytes": 8751,
+      "sha256": "d1d073e55aacf991491365d13716fededb169854b78bb203c34c84ca880c25db"
+     },
+     {
+      "index": 4,
+      "magic": "F0PR1!\u0000\u0000",
+      "name": "frame0_pose_repair",
+      "raw_bytes": 4081,
+      "sha256": "b5874d32324a46dc76cb1fc0beb7cda5fdaca2f59ebae6acbb08283206e8e7a2"
+     },
+     {
+      "index": 5,
+      "magic": "PE1EDGE1",
+      "name": "pe1_edge_partition_surgical_generator_pair_waterfill_75kb",
+      "raw_bytes": 67607,
+      "sha256": "e07fc131765776d6c427250b6c6477b8aa49d44a25e6caec5599149fc8e0285f"
+     }
+    ],
+    "payload_bytes": 425519,
+    "payload_reencodes_identically": true,
+    "zip_members": [
+     {
+      "compress_type": 0,
+      "compressed_bytes": 425519,
+      "name": "0.bin",
+      "uncompressed_bytes": 425519
+     }
+    ]
+   },
+   "receiver_copy": "/Volumes/VertigoDataTier/pact/ddm_pe2_20260805/sub_auto_pairbit_pe2_pe1_surgical_generator_pair_waterfill_75kb_receiver",
+   "runtime_consumption": {
+    "camera_pixels_changed": 2896,
+    "component_records": 7894,
+    "deterministic_raster_hash_first": "331a4d3db864f300148c0f594b80ca2a8b284918fd96c8f074024117db0028f6",
+    "deterministic_raster_hash_second": "331a4d3db864f300148c0f594b80ca2a8b284918fd96c8f074024117db0028f6",
+    "deterministic_raster_match": true,
+    "frame1_with_field_sha256": "735880634875636f06e8a672af9931460e4c763bc221738c43eb970fd9edde4f",
+    "frame1_without_field_sha256": "4bd5d651172308b377136a983f50c49ba5019ad9f5fd01759775650756086536",
+    "kind": "generator_pair_bisector",
+    "mutated": true,
+    "painted_pairs": 600,
+    "painted_pixels_total": 470586,
+    "raw_bytes": 150586,
+    "raw_sha256": "cb9e355c2534e89d586e5f87a9632ec31a8f073d7c0a9c8fbe5077af2fe5f198",
+    "section_bytes": 67607,
+    "section_sha256": "e07fc131765776d6c427250b6c6477b8aa49d44a25e6caec5599149fc8e0285f",
+    "smoke_pair": 0,
+    "smoke_pair_painted_pixels": 724
+   },
+   "slug": "pe1_surgical_generator_pair_waterfill_75kb",
+   "source_sub": "/Volumes/VertigoDataTier/pact/ddm_pe1_20260805/pe1_20260805T030000Z/sub_auto_pairbit_pe1_surgical_75kb"
+  },
+  {
+   "archive_bytes": 563256,
+   "archive_sha256": "4741bfc91e3c013ea63435edd578933ef346540e998b71c368ff88f0b7bfa13a",
+   "kind": "bf1",
+   "label": "BF1 lane-crop r3",
+   "ledger": {
+    "archive_bytes": 563256,
+    "archive_sha256": "4741bfc91e3c013ea63435edd578933ef346540e998b71c368ff88f0b7bfa13a",
+    "bulk_bytes": 341295,
+    "joint_section_count": 6,
+    "joint_sections": [
+     {
+      "index": 0,
+      "magic": "\u0000\u0000B\r\u0003\u000b\u0003",
+      "name": "config",
+      "raw_bytes": 36,
+      "sha256": "fc4f23ac9e31ba266ace26131319eb5b574d69e1d505fb1fc20a9dbc79a240d6"
+     },
+     {
+      "index": 1,
+      "magic": "IX2REN01",
+      "name": "renderer",
+      "raw_bytes": 3266,
+      "sha256": "3b8eb0c24f9e6d8b547a23a5db29a1dbbd03db474fbba3638b0c3dd858ca7009"
+     },
+     {
+      "index": 2,
+      "magic": "{\"activa",
+      "name": "selector",
+      "raw_bytes": 535,
+      "sha256": "8fc5c3fc65eb051b65ebf01d4b008e52d606097194c57884e739eae2ad8382e1"
+     },
+     {
+      "index": 3,
+      "magic": "PFS1WPD1",
+      "name": "pose_warp",
+      "raw_bytes": 8751,
+      "sha256": "d1d073e55aacf991491365d13716fededb169854b78bb203c34c84ca880c25db"
+     },
+     {
+      "index": 4,
+      "magic": "F0PR1!\u0000\u0000",
+      "name": "frame0_pose_repair",
+      "raw_bytes": 4081,
+      "sha256": "b5874d32324a46dc76cb1fc0beb7cda5fdaca2f59ebae6acbb08283206e8e7a2"
+     },
+     {
+      "index": 5,
+      "magic": "BD1CLF1!",
+      "name": "bd1_lane_crop_r3",
+      "raw_bytes": 205196,
+      "sha256": "cc9336fc5f654090496b498211de12e2e9b4c40018d7163d5f245ac96750c171"
+     }
+    ],
+    "payload_bytes": 563148,
+    "payload_reencodes_identically": true,
+    "zip_members": [
+     {
+      "compress_type": 0,
+      "compressed_bytes": 563148,
+      "name": "0.bin",
+      "uncompressed_bytes": 563148
+     }
+    ]
+   },
+   "receiver_copy": "/Volumes/VertigoDataTier/pact/ddm_pe2_20260805/sub_auto_pairbit_pe2_bf1_lane_crop_r3_receiver",
+   "runtime_consumption": {
+    "band_pixels_this_pair": 3102,
+    "camera_pixels_changed": 12408,
+    "frame1_after_sha256": "d4508b00ede2a65c6ff3a29059ceae03e15930360dd24842f58fdb70b4e93ebe",
+    "frame1_before_sha256": "4bd5d651172308b377136a983f50c49ba5019ad9f5fd01759775650756086536",
+    "mutated": true,
+    "pair": 0,
+    "receiver_class_field_present": true
+   },
+   "slug": "bf1_lane_crop_r3",
+   "source_sub": "/Volumes/VertigoDataTier/pact/ddm_bf1_20260805/sub_auto_pairbit_bf1_rl1_lane_crop_r3"
+  }
+ ],
+ "created_utc": "2026-08-05T00:35:19.517028+00:00",
+ "n600_scorer_job": false,
+ "old_archive_identity_proof": {
+  "byte_identical_to_qo1_shipped_decode": true,
+  "command": "/Users/adpena/Projects/pact/.venv/bin/python /Volumes/VertigoDataTier/pact/ddm_pe2_20260805/qo1_identity_pe2_extended_receiver/inflate_runner.py /Volumes/VertigoDataTier/pact/ddm_pe2_20260805/qo1_identity_pe2_extended_receiver/archive /Volumes/VertigoDataTier/pact/ddm_pe2_20260805/qo1_identity_pe2_extended_receiver/inflated /Volumes/VertigoDataTier/pact/ddm_pe2_20260805/qo1_identity_pe2_extended_receiver/names.txt",
+  "expected_raw_bytes": 3662409600,
+  "expected_raw_sha256": "3ce7d269a7080a4024a576694cd0ddc697099c64cd02fdd2bb879339e4b03f31",
+  "output_raw": "/Volumes/VertigoDataTier/pact/ddm_pe2_20260805/qo1_identity_pe2_extended_receiver/inflated/0.raw",
+  "raw_bytes": 3662409600,
+  "raw_sha256": "3ce7d269a7080a4024a576694cd0ddc697099c64cd02fdd2bb879339e4b03f31",
+  "wall_seconds": 204.9
+ },
+ "own_vehicle_frontier": {
+  "S": 0.7539807296911207,
+  "archive_bytes": 357836,
+  "axis": "[macOS-CPU advisory]",
+  "pointer_moved": false
+ },
+ "promotion_eligible": false,
+ "schema": "ddm_pe2_runtime_consumption_receipt.v1",
+ "score_claim": false,
+ "staged_scorer_job": {
+  "manifest": "/Users/adpena/Projects/pact/.omx/research/ddm_pe2_20260805/pe2_three_candidate_scorer_manifest.json",
+  "queue_note": "/Users/adpena/Projects/pact/.omx/research/ddm_pe2_20260805/PE2_QUEUE_NOTE.md",
+  "run_by_pe2": false,
+  "scorer_out_dir": "/Volumes/VertigoDataTier/pact/ddm_pe2_20260805/scorer_batch",
+  "script": "/Users/adpena/Projects/pact/.omx/research/ddm_pe2_20260805/stage_pe2_three_candidate_scorer_batch.sh",
+  "status": "QUEUED-WITH-FIRE-ORDER"
+ },
+ "storage_preflight": {
+  "free_bytes": 145964781568,
+  "ok": true,
+  "path": "/Volumes/VertigoDataTier/pact/ddm_pe2_20260805",
+  "required_free_bytes": 4662409600,
+  "total_bytes": 2000189177856,
+  "used_bytes": 1854224396288
+ }
+}

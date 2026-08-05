@@ -113,6 +113,28 @@ _BD1_ROAD_CLASS = 0
 _BD1_LANE_CLASS = 1
 _BD1_ROAD_RGB = np.array([30, 39, 72], dtype=np.uint8)
 _BD1_LANE_RGB = np.array([77, 87, 119], dtype=np.uint8)
+PE1_EDGE_MAGIC = b"PE1EDGE1"
+PE1_EDGE_HEADER = struct.Struct("<8sBHHHBBII32s")
+PE1_EDGE_VERSION = 1
+_PE1_CURVE = 1
+_PE1_GENERATOR = 2
+_PE1_GENERATOR_TRANSPORT = 3
+_PE1_KIND_NAMES = {
+    _PE1_CURVE: "explicit_curve_spline",
+    _PE1_GENERATOR: "generator_pair_bisector",
+    _PE1_GENERATOR_TRANSPORT: "generator_pair_xi_transport",
+}
+_PE1_GENERATOR_RECORD = struct.Struct("<BBHHHHhhhh")
+_PE1_CLASS_RGB = np.array(
+    [
+        [30, 39, 72],    # Road
+        [77, 87, 119],   # Lane
+        [95, 70, 45],    # Undriv
+        [126, 50, 68],   # Movable
+        [24, 24, 24],    # MyCar
+    ],
+    dtype=np.uint8,
+)
 
 
 def geometric_horizon_row(K: np.ndarray) -> int:
@@ -530,6 +552,296 @@ def _bd1_apply_class_field(u8: np.ndarray, field, pair_index: int) -> np.ndarray
     return out
 
 
+def _pe1_decode_body(codec: int, payload: bytes) -> bytes:
+    if codec == _BD1_RAW:
+        return bytes(payload)
+    if codec == _BD1_LZMA1_RAW:
+        return lzma.decompress(payload, format=lzma.FORMAT_RAW, filters=_BD1_LZMA_FILTERS)
+    if codec == _BD1_BROTLI_Q11:
+        return brotli.decompress(payload)
+    if codec == _BD1_SMEVR_R7_NIBBLE:
+        return b"".join(_bd1_unsmevr_records(payload))
+    raise SystemExit(f"unknown PE1 edge-field codec id {codec}")
+
+
+def _pe1_read_varint(payload: bytes, offset: int) -> tuple[int, int]:
+    shift = 0
+    value = 0
+    while True:
+        if offset >= len(payload):
+            raise SystemExit("PE1 edge-field varint is truncated")
+        byte = int(payload[offset])
+        offset += 1
+        value |= (byte & 0x7F) << shift
+        if (byte & 0x80) == 0:
+            return value, offset
+        shift += 7
+        if shift > 63:
+            raise SystemExit("PE1 edge-field varint is too long")
+
+
+def _pe1_read_zigzag(payload: bytes, offset: int) -> tuple[int, int]:
+    value, offset = _pe1_read_varint(payload, offset)
+    return (int(value) >> 1) ^ -(int(value) & 1), offset
+
+
+def _pe1_validate_edge(a: int, b: int) -> None:
+    if a < 0 or b < 0 or a >= b or b >= int(_PE1_CLASS_RGB.shape[0]):
+        raise SystemExit("PE1 edge-field class ids are invalid")
+
+
+def _pe1_curve_indices(record: bytes, seg_h: int, seg_w: int) -> tuple[np.ndarray, np.ndarray]:
+    if len(record) < 3:
+        raise SystemExit("PE1 curve record truncated before class/axis")
+    a = int(record[0])
+    b = int(record[1])
+    axis = int(record[2])
+    _pe1_validate_edge(a, b)
+    offset = 3
+    half_width, offset = _pe1_read_varint(record, offset)
+    primary_start, offset = _pe1_read_varint(record, offset)
+    primary_count, offset = _pe1_read_varint(record, offset)
+    knot_stride, offset = _pe1_read_varint(record, offset)
+    knot_count, offset = _pe1_read_varint(record, offset)
+    if axis not in (0, 1) or primary_count < 1 or knot_stride < 1 or knot_count < 1:
+        raise SystemExit("PE1 curve record header invalid")
+    primary_limit = int(seg_h) if axis == 0 else int(seg_w)
+    secondary_limit = int(seg_w) if axis == 0 else int(seg_h)
+    if primary_start + primary_count > primary_limit:
+        raise SystemExit("PE1 curve record exceeds scorer grid")
+    knots: list[int] = []
+    prev = 0
+    for i in range(int(knot_count)):
+        value, offset = _pe1_read_zigzag(record, offset)
+        knot = value if i == 0 else prev + value
+        knots.append(int(knot))
+        prev = int(knot)
+    if offset != len(record):
+        raise SystemExit("PE1 curve record has trailing bytes")
+    knot_positions = list(range(0, int(primary_count), int(knot_stride)))
+    if not knot_positions or knot_positions[-1] != int(primary_count) - 1:
+        knot_positions.append(int(primary_count) - 1)
+    if len(knot_positions) != len(knots):
+        raise SystemExit("PE1 curve knot positions/count differ")
+    centers = np.interp(
+        np.arange(int(primary_count), dtype=np.float64),
+        np.asarray(knot_positions, dtype=np.float64),
+        np.asarray(knots, dtype=np.float64),
+    )
+    indices: list[int] = []
+    classes: list[int] = []
+    for i, center in enumerate(centers.tolist()):
+        primary = int(primary_start) + i
+        c = round(float(center))
+        lo = max(0, c - int(half_width))
+        hi = min(secondary_limit - 1, c + int(half_width))
+        if lo > hi:
+            continue
+        if axis == 0:
+            row = primary
+            for col in range(lo, hi + 1):
+                indices.append(row * int(seg_w) + col)
+                classes.append(a if col <= c else b)
+        else:
+            col = primary
+            for row in range(lo, hi + 1):
+                indices.append(row * int(seg_w) + col)
+                classes.append(a if row <= c else b)
+    return (
+        np.asarray(indices, dtype=np.int32),
+        np.asarray(classes, dtype=np.uint8),
+    )
+
+
+def _pe1_generator_indices_from_fields(
+    a: int,
+    b: int,
+    y0: int,
+    x0: int,
+    height: int,
+    width: int,
+    gen_a_y_q4: int,
+    gen_a_x_q4: int,
+    gen_b_y_q4: int,
+    gen_b_x_q4: int,
+    seg_h: int,
+    seg_w: int,
+) -> tuple[np.ndarray, np.ndarray]:
+    _pe1_validate_edge(a, b)
+    if height < 1 or width < 1 or y0 + height > seg_h or x0 + width > seg_w:
+        raise SystemExit("PE1 generator record geometry invalid")
+    yy, xx = np.indices((int(height), int(width)), dtype=np.float64)
+    yy += int(y0)
+    xx += int(x0)
+    ay, ax = (float(gen_a_y_q4) / 4.0, float(gen_a_x_q4) / 4.0)
+    by, bx = (float(gen_b_y_q4) / 4.0, float(gen_b_x_q4) / 4.0)
+    da = (yy - ay) ** 2 + (xx - ax) ** 2
+    db = (yy - by) ** 2 + (xx - bx) ** 2
+    side = da <= db
+    local = np.zeros(side.shape, dtype=bool)
+    vert = side[:-1, :] != side[1:, :]
+    local[:-1, :] |= vert
+    local[1:, :] |= vert
+    horiz = side[:, :-1] != side[:, 1:]
+    local[:, :-1] |= horiz
+    local[:, 1:] |= horiz
+    local_flat = np.flatnonzero(local.reshape(-1))
+    rows = local_flat // int(width) + int(y0)
+    cols = local_flat % int(width) + int(x0)
+    indices = (rows * int(seg_w) + cols).astype(np.int32)
+    classes = np.where(side.reshape(-1)[local_flat], a, b).astype(np.uint8)
+    return indices, classes
+
+
+def _pe1_generator_indices(record: bytes, seg_h: int, seg_w: int) -> tuple[np.ndarray, np.ndarray]:
+    if len(record) != _PE1_GENERATOR_RECORD.size:
+        raise SystemExit("PE1 generator record length differs")
+    fields = _PE1_GENERATOR_RECORD.unpack(record)
+    return _pe1_generator_indices_from_fields(*map(int, fields), seg_h, seg_w)
+
+
+def _pe1_generator_transport_indices(
+    record: bytes,
+    previous_by_track: dict[int, tuple[int, ...]],
+    seg_h: int,
+    seg_w: int,
+) -> tuple[np.ndarray, np.ndarray]:
+    if len(record) < 4:
+        raise SystemExit("PE1 generator-transport record truncated")
+    a = int(record[0])
+    b = int(record[1])
+    _pe1_validate_edge(a, b)
+    track_id, offset = _pe1_read_varint(record, 2)
+    if offset >= len(record):
+        raise SystemExit("PE1 generator-transport record missing mode")
+    mode = int(record[offset])
+    offset += 1
+    values: list[int] = []
+    for _ in range(8):
+        value, offset = _pe1_read_zigzag(record, offset)
+        values.append(int(value))
+    if offset != len(record):
+        raise SystemExit("PE1 generator-transport record has trailing bytes")
+    if mode == 0:
+        fields = tuple(values)
+    elif mode == 1:
+        previous = previous_by_track.get(int(track_id))
+        if previous is None:
+            raise SystemExit("PE1 generator-transport delta without prior track state")
+        fields = tuple(prev + delta for prev, delta in zip(previous, values, strict=True))
+    else:
+        raise SystemExit("PE1 generator-transport mode differs")
+    previous_by_track[int(track_id)] = fields
+    y0, x0, height, width, gay, gax, gby, gbx = fields
+    return _pe1_generator_indices_from_fields(
+        a, b, y0, x0, height, width, gay, gax, gby, gbx, seg_h, seg_w
+    )
+
+
+def _pe1_raster_sha256(field) -> str:
+    digest = hashlib.sha256()
+    digest.update(struct.pack("<HHH", field["seg_h"], field["seg_w"], len(field["bands"])))
+    for pair_index, (band, classes) in enumerate(zip(field["bands"], field["classes"], strict=True)):
+        digest.update(struct.pack("<II", pair_index, int(band.size)))
+        digest.update(np.asarray(band, dtype="<i4").tobytes())
+        digest.update(np.asarray(classes, dtype=np.uint8).tobytes())
+    return digest.hexdigest()
+
+
+def _pe1_parse_edge_field(blob: bytes):
+    """Parse a counted PE1 per-edge partition section into receiver-consumed bands."""
+    if len(blob) < PE1_EDGE_HEADER.size:
+        raise SystemExit("PE1 edge-field section header truncated")
+    (magic, version, seg_h, seg_w, n_pairs, kind, codec, raw_len,
+     frame_record_count, raw_sha) = PE1_EDGE_HEADER.unpack_from(blob, 0)
+    if magic != PE1_EDGE_MAGIC:
+        raise SystemExit("PE1 edge-field magic differs")
+    if version != PE1_EDGE_VERSION:
+        raise SystemExit("PE1 edge-field version differs")
+    if int(seg_h) < 1 or int(seg_w) < 1 or int(n_pairs) < 1:
+        raise SystemExit("PE1 edge-field geometry invalid")
+    if int(kind) not in _PE1_KIND_NAMES:
+        raise SystemExit(f"unknown PE1 edge-field representation kind {int(kind)}")
+    raw = _pe1_decode_body(int(codec), blob[PE1_EDGE_HEADER.size:])
+    if len(raw) != int(raw_len):
+        raise SystemExit("PE1 edge-field raw length differs")
+    if hashlib.sha256(raw).digest() != raw_sha:
+        raise SystemExit("PE1 edge-field raw SHA-256 differs")
+    if int(frame_record_count) != int(n_pairs):
+        raise SystemExit("PE1 edge-field frame record count differs")
+    slots = int(seg_h) * int(seg_w)
+    bands = []
+    classes = []
+    pair_counts = []
+    component_records = 0
+    offset = 0
+    previous_by_track: dict[int, tuple[int, ...]] = {}
+    for _pair in range(int(n_pairs)):
+        count, offset = _pe1_read_varint(raw, offset)
+        component_records += int(count)
+        class_by_index = np.full(slots, -1, dtype=np.int16)
+        for _ in range(int(count)):
+            length, offset = _pe1_read_varint(raw, offset)
+            record = raw[offset:offset + int(length)]
+            if len(record) != int(length):
+                raise SystemExit("PE1 edge-field component record truncated")
+            offset += int(length)
+            if int(kind) == _PE1_CURVE:
+                indices, cls = _pe1_curve_indices(record, int(seg_h), int(seg_w))
+            elif int(kind) == _PE1_GENERATOR:
+                indices, cls = _pe1_generator_indices(record, int(seg_h), int(seg_w))
+            else:
+                indices, cls = _pe1_generator_transport_indices(
+                    record, previous_by_track, int(seg_h), int(seg_w)
+                )
+            if int(indices.size) != int(cls.size):
+                raise SystemExit("PE1 edge-field index/class count differs")
+            if indices.size:
+                if int(indices.min()) < 0 or int(indices.max()) >= slots:
+                    raise SystemExit("PE1 edge-field index outside scorer grid")
+                class_by_index[indices.astype(np.int64)] = cls.astype(np.int16)
+        band = np.flatnonzero(class_by_index >= 0).astype(np.int32)
+        bands.append(band)
+        classes.append(class_by_index[band].astype(np.uint8))
+        pair_counts.append(int(band.size))
+    if offset != len(raw):
+        raise SystemExit("PE1 edge-field raw body has trailing bytes")
+    field = {
+        "seg_h": int(seg_h),
+        "seg_w": int(seg_w),
+        "kind": int(kind),
+        "kind_name": _PE1_KIND_NAMES[int(kind)],
+        "codec": int(codec),
+        "raw_bytes": int(raw_len),
+        "raw_sha256": hashlib.sha256(raw).hexdigest(),
+        "section_bytes": len(blob),
+        "section_sha256": hashlib.sha256(blob).hexdigest(),
+        "component_records": int(component_records),
+        "bands": tuple(bands),
+        "classes": tuple(classes),
+        "pair_counts": tuple(pair_counts),
+    }
+    field["raster_sha256"] = _pe1_raster_sha256(field)
+    return field
+
+
+def _pe1_apply_edge_field(u8: np.ndarray, field, pair_index: int) -> np.ndarray:
+    band = field["bands"][pair_index]
+    if int(band.size) == 0:
+        return u8
+    classes = field["classes"][pair_index]
+    rows = band // field["seg_w"]
+    cols = band % field["seg_w"]
+    rlo, rhi, _rw = _f0pr_bilinear_axis(field["seg_h"], u8.shape[0])
+    clo, chi, _cw = _f0pr_bilinear_axis(field["seg_w"], u8.shape[1])
+    colors = _PE1_CLASS_RGB[classes]
+    out = u8.copy()
+    for rr in (rlo[rows], rhi[rows]):
+        for cc in (clo[cols], chi[cols]):
+            out[rr, cc] = colors
+    return out
+
+
 def parse_pose_warp_v4d(payload: bytes):
     if payload[:8] != MAGIC:
         raise SystemExit("pose_warp magic differs (expected v4d PFS1WPD1)")
@@ -615,6 +927,7 @@ class Decoder:
     def __init__(self, archive_dir: Path) -> None:
         self._f0_repair = None          # (coefs, atoms, seg_h, seg_w) when F0PR1 ships
         self._bd1_class_field = None    # Road/Lane r1-band class-field modulation
+        self._pe1_edge_field = None     # PE1 all-class edge partition modulation
         blob = archive_dir / IX2_MEMBER
         if blob.exists():
             codes, sections, pose_warp = self._read_ix2(blob)
@@ -687,31 +1000,29 @@ class Decoder:
         """
 
         bulk, sections = parse_payload(blob.read_bytes())
-        if len(sections) == len(IX2_JOINT_ORDER) + 2:
-            # bd1 appends a tagged Road/Lane class field after the existing F0PR1 stream.
-            config, renderer, selector, pose_warp, f0pr, class_field = sections
-            if f0pr[:8] != F0PR_MAGIC or class_field[:8] != BD1_CLASS_FIELD_MAGIC:
-                raise SystemExit("ix2 optional sections are not F0PR1 then BD1CLF1")
-            k, seg_h, seg_w, coefs = _f0pr_parse(f0pr)
-            self._f0_repair = (coefs, _f0pr_dct_atoms(k, seg_h, seg_w), seg_h, seg_w)
-            self._bd1_class_field = _bd1_parse_class_field(class_field)
-        elif len(sections) == len(IX2_JOINT_ORDER) + 1:
-            # v5 joint group: the 5th section is the F0PR1 frame_0 pose-repair stream.
-            config, renderer, selector, pose_warp, extra = sections
+        if len(sections) < len(IX2_JOINT_ORDER):
+            raise SystemExit(
+                f"ix2 container holds {len(sections)} sections, "
+                f"expected at least {len(IX2_JOINT_ORDER)}")
+        config, renderer, selector, pose_warp = sections[:len(IX2_JOINT_ORDER)]
+        for extra in sections[len(IX2_JOINT_ORDER):]:
             if extra[:8] == F0PR_MAGIC:
+                if self._f0_repair is not None:
+                    raise SystemExit("ix2 container has duplicate F0PR1 optional sections")
                 k, seg_h, seg_w, coefs = _f0pr_parse(extra)
                 self._f0_repair = (coefs, _f0pr_dct_atoms(k, seg_h, seg_w), seg_h, seg_w)
             elif extra[:8] == BD1_CLASS_FIELD_MAGIC:
+                if self._bd1_class_field is not None:
+                    raise SystemExit("ix2 container has duplicate BD1CLF1 optional sections")
                 self._bd1_class_field = _bd1_parse_class_field(extra)
+            elif extra[:8] == PE1_EDGE_MAGIC:
+                if self._pe1_edge_field is not None:
+                    raise SystemExit("ix2 container has duplicate PE1EDGE1 optional sections")
+                self._pe1_edge_field = _pe1_parse_edge_field(extra)
             else:
-                raise SystemExit("ix2 optional section magic is neither F0PR1 nor BD1CLF1")
-        elif len(sections) == len(IX2_JOINT_ORDER):
-            config, renderer, selector, pose_warp = sections
-        else:
-            raise SystemExit(
-                f"ix2 container holds {len(sections)} sections, "
-                f"expected {len(IX2_JOINT_ORDER)}, {len(IX2_JOINT_ORDER) + 1}, "
-                f"or {len(IX2_JOINT_ORDER) + 2}")
+                raise SystemExit(
+                    "ix2 optional section magic is not F0PR1, BD1CLF1, or PE1EDGE1"
+                )
         offset, beta_mags, st_grid = unpack_config_section(config)
         self.dim0_offset = offset
         self.beta_mags = tuple(beta_mags)
@@ -732,6 +1043,8 @@ class Decoder:
         frame = render_frame1_camera_uint8(self.packet, i)
         if self._bd1_class_field is not None:
             frame = _bd1_apply_class_field(frame, self._bd1_class_field, i)
+        if self._pe1_edge_field is not None:
+            frame = _pe1_apply_edge_field(frame, self._pe1_edge_field, i)
         return frame
 
     def _warp_pair(self, f1_f: np.ndarray, pose: np.ndarray, s_t: float,
