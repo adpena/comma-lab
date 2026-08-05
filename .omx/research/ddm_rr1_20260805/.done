@@ -1,6 +1,6 @@
 status=done
 artifact=.omx/research/ddm_rr1_20260805/RECEIPT.md
-round=6
+round=cycle2_round2
 clean_counter=0/3
-new_finding=RR1-R6-F1 MEDIUM stale recursive continuation fire-order points at old JD1 path; fix/supersede before any full-v3 continuation
+new_finding=RR1-C2-R2-F1 MEDIUM completed n600 both-bases probe receipt has 600 pairs but stale 36-pair axis label; correct/supersede before endpoint adjudication or JD4 fire
 frontier=S = 0.7539807296911207 @ 357,836 B [macOS-CPU advisory]; contest pointer borrowed/unmoved

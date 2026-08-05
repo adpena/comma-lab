@@ -1,6 +1,6 @@
 # ddm_rr1 recursive adversarial review receipt
 
-Status: REVIEW arm, rounds 2-6 fresh-eyes pass over the JD3 v3 chain and DY1 scope-law resolver. I ran no scorer, no Metal/MLX launch, no archive build, and no exact evaluation. Live full-v3 dirs/files were read-only.
+Status: REVIEW arm. Cycle 1 covered rounds 2-7 fresh-eyes over the JD3 v3 chain and DY1 scope-law resolver; cycle 2 round 2 reviewed the JD4 landing wave, n600 both-bases probe variant, sealed JD4 ticket, and plateau policy. I ran no scorer, no Metal/MLX launch, no archive build, and no exact evaluation. Live full-v3 dirs/files were read-only.
 
 Axis: source/receipt/telemetry review plus derived arithmetic. Any score arithmetic below is non-promotable `[macOS-CPU/MLX advisory]` or derived from existing receipts; `score_claim=false`.
 
@@ -18,6 +18,8 @@ Axis: source/receipt/telemetry review plus derived arithmetic. Any score arithme
 | Canonical equations | `tools/list_canonical_equations.py --json`, plus source grep for `ema_decay_run_geometry_v1` and `src/tac/canonical_equations/evaluators.py` | EMA law is executable; JD3 stage EMA derivation is `d = 1 - 2/(0.5*1200) = 0.9966666667`. | Re-derived EMA seed-retention rather than trusting the receipt wording. |
 | Source and receipts | TP1 receipt, cx1 receipt, JD3 smoke telemetry/verdicts, fired ticket, launcher manifests, DY1 clone at `a9eac92166` | Rounds 2-4 found artifact/status and enforcement gaps; round 5 found no new gap in the searched scope. | Counter is now 1/3; fixes remain recommended unless explicitly marked implemented. |
 | Source and receipts, round 6 update | Fired full ticket plus live continuation manifest/telemetry and trainer receipt-write source | Round 6 found one new follow-on fire-order defect in the machine-readable recursive loop metadata; no completed endpoint was consumed. | Counter is now 0/3; next clean pass is round 7. |
+| Round-7 recall refresh | Re-read `NEXT_IF_RESUMED.md`, TP1 round-6 disposition, the old JD1 ticket, all three regenerated JD3 tickets, `experiments/ddm_jd1_ticket_regenerate.py`, the r2 launch manifest, `tools/launch_detached_process.py`, live telemetry, and current `.done` absence; targeted `rg` for `recursive_encode_pass_loop`, `pass0_input`, `next_resume_from_template`, `winner_dir`, `smoke_epochs`, `full_confirm`, and `full_v3_entry_cont`; ran a structured `argv` vs `levers[*].overrides` diff. | TP1's consumption contract voids the stale recursive resume template for the fired ticket, and `launch_detached_process.py` consumes only final argv. New gap: the regenerator updates argv/child paths but leaves the inherited `levers[*].overrides` value ledger stale across all JD3 regenerated tickets. | Raised RR1-R7-F1; counter remains 0/3. |
+| Cycle-2 round-2 recall refresh | Read `rr1_prompt.md` cycle-2 addendum, `_common_contract.md`, `PROGRAM.md`, `CLAUDE.md`/`AGENTS.md`, craft handoff, hot state, TP1 cycle-2 round 1, JD4 receipt, sealed JD4 ticket, `experiments/ddm_jd1_ticket_regenerate.py`, trainer force-reanchor source, the n600 probe variant, launch manifest/log, and completed `jd3_endpoint_n600_both_bases_verdict.json`; diffed probe variant vs committed source and checked ticket lever overrides. | JD4 ticket repairs are real in the emitted artifact (`0` lever mismatches; recursive template under child out-dir; forced reanchor flag present). New gap: the completed n600 probe receipt has 600 pair ids and both live/EMA rows, but its `axis` still says `36 gd1-designed gate pairs`. | Raised RR1-C2-R2-F1; cycle-2 counter resets to `0/3`. |
 
 ## ROUND 2 FINDINGS
 
@@ -64,6 +66,32 @@ Counter state after this round: **0/3 clean passes**. This round found a new iss
 |---|---|---|---|---|
 | RR1-R6-F1 | MEDIUM | The fired full-v3 ticket carries a stale recursive continuation fire-order. If the current full window exits by `epochs_complete` or `max_wall_minutes` and someone follows the ticket's `recursive_encode_pass_loop`, the next pass template points to `/Volumes/VertigoDataTier/pact/ddm_jd1_20260805/tr1_joint_pose_finish_after_tp1_lane_on/checkpoints/stage_joint_pose_finish_final.npz`, while the actual fired JD3 continuation runs in `/Volumes/VertigoDataTier/pact/ddm_jd3_20260805/tr1_jd3_v3_smoke_entry_ep1336`. This is not a current-run physics bug and not a completed-endpoint claim, but it is orphan-prone follow-on metadata: the machine-readable continuation route is neither FOLDED nor a valid fire-order for this lane. | `jq` on `jd3_ticket_v3_full_entry_cont.json` shows `child_out_dir=/Volumes/VertigoDataTier/pact/ddm_jd3_20260805/tr1_jd3_v3_smoke_entry_ep1336` and `child_resume_from=.../tr1_jd3_v3_smoke_entry_ep1336/checkpoints/stage_joint_pose_finish_final.npz`, but `recursive_encode_pass_loop.continue_policy.next_resume_from_template=/Volumes/VertigoDataTier/pact/ddm_jd1_20260805/tr1_joint_pose_finish_after_tp1_lane_on/checkpoints/stage_joint_pose_finish_final.npz`; the old `.omx/research/ddm_jd1_20260805/JD1_TICKET.json` has that same template, so this is inherited stale JD1 metadata. The r2 launch manifest confirms the actual full-v3 trainer out-dir/resume path. | Before any continuation or recursive pass from the full-v3 endpoint, replace or supersede the ticket's recursive loop with a JD3-specific fire-order: next resume source must be the actual completed full-v3 endpoint checkpoint (or explicitly FOLD continuation). Add a cheap preflight/refuse in the ticket regenerator or launch gate: if `recursive_encode_pass_loop.next_resume_from_template` is present, it must resolve under the ticket's actual `child_out_dir` or a declared new continuation out-dir, never an unrelated ancestor lane. |
 
+## ROUND 7 FINDINGS
+
+Counter state after this round: **0/3 clean passes**. This round found a new issue, so it is not a clean pass.
+
+| ID | Severity | Finding | Evidence | Required disposition |
+|---|---|---|---|---|
+| RR1-R7-F1 | MEDIUM | The JD3 ticket regenerator leaves the inherited `levers[*].overrides` value ledger stale after changing final argv. The launched command uses the argv and is not invalidated by this finding, but the ticket's machine-readable provenance no longer binds the values it claims. This is the same inheritance genus at the value-ledger surface, not just path templates. | In `experiments/ddm_jd1_ticket_regenerate.py`, the v3 branch does `regen = dict(t)`, updates `argv`, `child_resume_from`, `child_out_dir`, and `regenerated_from`, but never rebuilds `levers`. Structured diff against the fired full ticket shows substantive mismatches: `tr1_window_ep1076_b4 --epochs` says `1076` while argv says `1406`; `--max-wall-minutes` says `130.0` while argv says `168`; `tr1_ema_decay_parent_tp1_pinned --ema-decay` says `0.9999436222692036` while argv says `0.999960019990005`; `tr1_jd1_joint_pose_finish --jd1-seg-hold-floor-source` says `checkpoint_tail_ep_loss` while argv says `last_pre_pose_epoch_loss`. The two smoke tickets have the same stale fields with argv epochs `1345`/`1364` and wall `23`. Boolean `--lane-guard` case-only differences were ignored. | Do not merge or consume future regenerator output as value-custodied until it either rebuilds `levers[*].overrides` from final argv or explicitly demotes/removes that ledger as non-authoritative. Add a cheap refuse check: for every flag declared in `levers[*].overrides`, the declared value must match the final argv value after all lane/geometry rewrites. The regenerator cure should validate the whole emitted ticket surface, not only `recursive_encode_pass_loop.next_resume_from_template`. Current fired ticket remains hash-custodied; supersede rather than mutate it. |
+
+## CYCLE 2 ROUND 2 FINDINGS
+
+Counter state after this round: **0/3 clean passes** for cycle 2. This round found a new issue, so it is not a clean pass.
+
+| ID | Severity | Finding | Evidence | Required disposition |
+|---|---|---|---|---|
+| RR1-C2-R2-F1 | MEDIUM | The completed JD3 n600 both-bases probe receipt has the wrong denominator/axis label. The run measured all 600 pair ids and wrote both `endpoint_ep1405_live` and `endpoint_ep1405_ema`, but the receipt and source variant still say `[macOS-CPU frozen-scorer advisory] 36 gd1-designed gate pairs, NON-PROMOTABLE`. That is a false denominator label on the exact artifact MAIN is supposed to consume before firing JD4. | `jd3_endpoint_n600_both_bases.py` sets `GATE_PAIR_IDS = list(range(600))` at line 46, but line 101 still hardcodes the 36-pair axis string and line 61 still defaults `--out` to the old JD1 3-ckpt path. The r2 launch manifest did override `--out` to `jd3_endpoint_n600_both_bases_verdict.json`, so the path default did not corrupt this run. The completed JSON has `status=complete`, `pair_count=600`, `ckpt_keys=[endpoint_ep1405_ema, endpoint_ep1405_live]`, live d_seg `0.0071503364`, live d_pose `0.5740917290`, EMA d_seg `0.0057479858`, EMA d_pose `0.1288530915`, and the stale 36-pair axis string. | Before MAIN consumes the probe for endpoint adjudication or fires JD4, supersede or correct the receipt so the axis/denominator says n600/all-600-pairs, and patch/preserve the variant with a correct default output path and axis string. Treat the numeric rows as existing `[macOS-CPU frozen-scorer advisory] n600 training-vehicle objective` evidence only after that label correction; still not archive-byte-closed or contest authority. |
+
+## CYCLE 2 ROUND 1 DISPOSITION RE-VERIFIED IN ROUND 2
+
+| Prior item | Round-2 state | Evidence |
+|---|---|---|
+| JD4 force-reanchor repair | Verified in the emitted ticket and source. The ticket has `--jd1-force-ema-reanchor-on-resume`, resume start `1406`, `new_window_u=18000`, derived stage EMA decay `0.9997777777777778`, and zero lever-vs-argv mismatches. | `/Volumes/VertigoDataTier/pact/ddm_jd4_20260805/jd4_ticket_cont_ep1406.json` SHA-256 `a22783a...`; structured argv/lever check returned `mismatches 0`. Trainer predicate allows forced reanchor only for `resume_inside_joint_pose_finish` under window scope. |
+| Recursive template and out-dir | Verified. The JD4 recursive template resolves under `/Volumes/VertigoDataTier/pact/ddm_jd4_20260805/tr1_jd4_cont_ep1406/checkpoints/`, and the child out-dir is unique in the ticket. | JSON field `recursive_encode_pass_loop.continue_policy.next_resume_from_template` points under the JD4 child out-dir. |
+| Wall cap arithmetic | Verified as derived from the measured full-v3 timing, not a stale constant. | TP1 records full-v3 endpoint `3316s` over 60 epochs = `55.27 s/epoch`; JD4 wall cap computes `55 s/epoch * 120 * 1.5 / 60 = 165 min`. |
+| Plateau-policy slow-EMA arithmetic | Verified. For `U=18000`, decay is `1 - 4/U = 0.9997777778`; code warmup `ceil(2/(1-decay)) = 9000` steps, which is 60 epochs at 150 steps/epoch. | `derive_jd1_stage_ema_decay(120, 150)` and `ema_warmup_updates` formula in the trainer source. |
+| Probe status semantics | Partially verified. The receipt writes `status=running` during incremental rows and `status=complete` at the end; hot state explicitly says not to consume partial rows. The final receipt is complete now. | The completed receipt mtime is 2026-08-05 15:47 local, `.omx/tmp/codex_runs/jd3_endpoint_n600_probe_r2.done` exists, and run log printed both endpoint rows plus deltas. The remaining issue is RR1-C2-R2-F1's stale axis label. |
+
 ## ROUND 2 DISPOSITIONS RE-VERIFIED IN ROUND 3
 
 | Prior item | Round-3 state | Evidence |
@@ -101,6 +129,13 @@ Counter state after this round: **0/3 clean passes**. This round found a new iss
 | RR1-R5-clean wrong-label sweep | Still no completed endpoint consumed, and the governing label boundary remains intact for the searched surfaces. | Main hot state and TP1 still require `smoke-EMA continuation` handling and no byte-close before endpoint probes. The live r2 manifest records `.omx/tmp/codex_runs/jd3_full_v3_entry_cont.done`, but that marker was absent at 2026-08-05 15:06 CDT; telemetry/log were updating through epoch 1395. |
 | Mixed top-level smoke/full directory | Covered by RR1-R3-F1, not a new Round-6 finding by itself. | `tr1_window_receipt.json` in the mixed top-level dir still has the smoke receipt mtime/content while `telemetry.jsonl` has full-continuation rows through epoch 1395. Trainer source writes `tr1_window_receipt.json` only at terminal exit; consumers must wait for the `.done` marker and use `SCOPE_MARKER.md`/`smoke_snapshot_ep1344/` split. |
 | Endpoint follow-on fire-order | Not clean: RR1-R6-F1 found the stale recursive continuation template. | Fired full ticket's actual `child_out_dir` is the JD3 smoke-entry dir; its `next_resume_from_template` still points to the old JD1 `tr1_joint_pose_finish_after_tp1_lane_on` dir. |
+
+## ROUND 6 DISPOSITION RE-VERIFIED IN ROUND 7
+
+| Prior item | Round-7 state | Evidence |
+|---|---|---|
+| RR1-R6-F1 stale continuation template | Dispositioned as a consumption contract in TP1, not code-fixed. The current fired ticket remains unmutated and hash-custodied; any continuation from the full-v3 endpoint must derive from the actual endpoint checkpoint, not the ticket's stale template. | TP1 round-6 disposition declares the template VOID and adds regenerator debt item #4. `tools/launch_detached_process.py` consumes only the final command argv for the current run, so the recursive loop did not affect the launched physics. |
+| Regenerator emission-surface sweep | Not clean: RR1-R7-F1 found stale inherited `levers[*].overrides` values in the same regenerated tickets. | All three JD3 tickets update final argv values but keep old lever override metadata for epochs, wall cap, EMA decay, and seg-hold floor source. |
 
 ## ROUND 1 F1-F4 VERIFICATION
 
@@ -182,6 +217,18 @@ Shared assumption: machine-readable follow-on metadata in a regenerated ticket i
 
 Would violating it unlock breakthrough? It will not move the score by itself, but it prevents an endpoint-governance failure: stale continuation templates can silently route the next pass away from the measured full-v3 endpoint or into an ancestor lane. Follow-on fire-orders must be validated as executable artifacts even when the current run is still live.
 
+## ROUND 7 ASSUMPTION-CHALLENGE AXIS
+
+Shared assumption: final argv is the only machine-readable value authority, so inherited lever metadata can be treated as documentation.
+
+Would violating it unlock breakthrough? Not directly on score, but it closes a NO-FAKE provenance hole. This project uses tickets as value-custody artifacts; if `levers[*].overrides` remains present, downstream checks and readers can reasonably treat it as authoritative. The cure is structural: either the regenerator makes the value ledger match final argv after rewrites, or it removes/demotes that ledger so it cannot pass as value custody.
+
+## CYCLE 2 ROUND 2 ASSUMPTION-CHALLENGE AXIS
+
+Shared assumption: a probe copied from a 36-pair discriminator can safely become an n600 endpoint probe through CKPTS/pair-list edits alone.
+
+Would violating it unlock breakthrough? Not directly on score, but it prevents denominator laundering at the artifact boundary. For endpoint governance, the receipt's denominator label is part of the measured claim; changing the population requires updating the source-level axis, output default, and receipt schema, not only the pair list.
+
 ## MEASURED-RUNNABILITY AND MEASURED-SCORED-QUANTITY AXIS
 
 - MEASURED from existing artifacts: both v3 smokes executed at `num_pairs=600`, `batch_pairs=4`, emitted gates, and preserved checkpoints. The full-window retry launched with `.venv/bin/python` prepended.
@@ -206,14 +253,26 @@ Would violating it unlock breakthrough? It will not move the score by itself, bu
 - NOT MEASURED by this arm: process liveness via `ps` (`operation not permitted`), peak RSS/VRAM, a completed full-window endpoint, any new scorer output, archive bytes, or contest CPU/CUDA score.
 - Measured scored quantity in round 6: none new. The finding is a follow-on metadata/fire-order defect, not a scored result.
 
+## ROUND 7 MEASURED-RUNNABILITY AND MEASURED-SCORED-QUANTITY AXIS
+
+- MEASURED from existing artifacts: the r2 launch manifest, ticket SHA-256s, structured ticket-field diffs, absence of `.omx/tmp/codex_runs/jd3_full_v3_entry_cont.done`, and live telemetry through epoch 1402 in this sandbox check.
+- NOT MEASURED by this arm: process liveness via `ps`, peak RSS/VRAM, a completed full-window endpoint, any new scorer output, archive bytes, or contest CPU/CUDA score.
+- Measured scored quantity in round 7: none new. The finding is a ticket value-custody/provenance defect, not a scored result.
+
+## CYCLE 2 ROUND 2 MEASURED-RUNNABILITY AND MEASURED-SCORED-QUANTITY AXIS
+
+- MEASURED from existing artifacts: JD4 ticket fields, trainer/regenerator source, n600 probe launch manifest, completed probe log, completed probe JSON, and SHA-256s for the probe script/receipt/ticket.
+- Existing scored quantities consumed for review only: n600 all-pair training-vehicle objective rows from `jd3_endpoint_n600_both_bases_verdict.json`: live d_seg `0.0071503364`, live d_pose `0.5740917290`, live pose term `2.3960211372`; EMA d_seg `0.0057479858`, EMA d_pose `0.1288530915`, EMA pose term `1.1351347562`. These are `[macOS-CPU frozen-scorer advisory]`, non-promotable, not byte-closed archive rows, and currently denominator-mislabeled in the source receipt.
+- NOT MEASURED by this arm: no new scorer output, no Metal/MLX launch, no peak RSS/VRAM, no archive bytes, no byte-close, and no contest CPU/CUDA score.
+
 ## BOUNDARIES
 
 - No `.py` file was edited; no review override was used.
 - No protected file was touched.
 - The existing dirty worktree was left intact.
 - Live full-v3 SSD artifacts were read-only.
-- The scorer slot remained with the live full-v3 window; I did not claim or queue scorer work.
-- The full-v3 endpoint was not consumed; no byte-close, archive build, or exact eval was run.
+- The scorer slot was not claimed by this arm; I only inspected the existing completed n600 probe artifact.
+- No byte-close, archive build, or exact eval was run.
 - The contest pointer remains borrowed/unmoved.
 
 S = 0.7539807296911207 @ 357,836 B [macOS-CPU advisory]; contest pointer borrowed/unmoved.
