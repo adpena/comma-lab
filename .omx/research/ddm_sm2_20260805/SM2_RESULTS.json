@@ -1,0 +1,384 @@
+{
+  "authority": {
+    "archive_mutations": 0,
+    "byte_authority": "lossless R7 encode_token_codes(codec=smevr)",
+    "score_axis": "none",
+    "scorer_forwards": 0,
+    "upstream_evaluate_calls": 0
+  },
+  "config": {
+    "cell_limit": null,
+    "codec": "smevr",
+    "levels": 16,
+    "random_perms": 8,
+    "seed": 865,
+    "temp": 0.15,
+    "tile_h": 4,
+    "tile_w": 4
+  },
+  "created_at_utc": "2026-08-05T07:38:00.554195+00:00",
+  "fit": {
+    "models": {
+      "absolute_entropy": {
+        "coefficients": {
+          "surr_entropy_bits": 511772.4039557047
+        },
+        "intercept": -1272824.9259197232,
+        "mae": 32716.02165537214,
+        "max_abs_error": 127400.32060389128,
+        "n_rows": 152,
+        "name": "absolute_entropy",
+        "predictors": [
+          "surr_entropy_bits"
+        ],
+        "r2": 0.8785106453269789,
+        "rmse": 44986.33799897332,
+        "target": "smevr_bytes"
+      },
+      "absolute_fixed_sum": {
+        "coefficients": {
+          "surr_fixed_sum_bits": 324556.98966840655
+        },
+        "intercept": -1393904.6101778657,
+        "mae": 61047.01529254827,
+        "max_abs_error": 166457.02957394347,
+        "n_rows": 152,
+        "name": "absolute_fixed_sum",
+        "predictors": [
+          "surr_fixed_sum_bits"
+        ],
+        "r2": 0.6714707877228766,
+        "rmse": 73977.30834754113,
+        "target": "smevr_bytes"
+      },
+      "absolute_smevr": {
+        "coefficients": {
+          "surr_smevr_surrogate_bits": 157569.1567521638
+        },
+        "intercept": 7495.797582095783,
+        "mae": 113904.2452004546,
+        "max_abs_error": 201768.90159494145,
+        "n_rows": 152,
+        "name": "absolute_smevr",
+        "predictors": [
+          "surr_smevr_surrogate_bits"
+        ],
+        "r2": 0.055508446947964085,
+        "rmse": 125432.64156783638,
+        "target": "smevr_bytes"
+      },
+      "absolute_sum_affine": {
+        "coefficients": {
+          "surr_entropy_bits": 503680.1483209055,
+          "surr_smevr_surrogate_bits": 69195.79078757178
+        },
+        "intercept": -1399886.867721654,
+        "mae": 30676.644428258343,
+        "max_abs_error": 119233.06839737645,
+        "n_rows": 152,
+        "name": "absolute_sum_affine",
+        "predictors": [
+          "surr_entropy_bits",
+          "surr_smevr_surrogate_bits"
+        ],
+        "r2": 0.8889957318495612,
+        "rmse": 43001.27852108386,
+        "target": "smevr_bytes"
+      },
+      "delta_entropy": {
+        "coefficients": {
+          "d_surr_entropy": 238155.38623013112
+        },
+        "intercept": 15451.078862102533,
+        "mae": 25361.055514526885,
+        "max_abs_error": 139474.24600605422,
+        "n_rows": 152,
+        "name": "delta_entropy",
+        "predictors": [
+          "d_surr_entropy"
+        ],
+        "r2": 0.06629702784123148,
+        "rmse": 41866.23564246348,
+        "target": "d_bytes"
+      },
+      "delta_fixed_sum": {
+        "coefficients": {
+          "d_surr_fixed_sum": 61338.393811082635
+        },
+        "intercept": 15858.098037802576,
+        "mae": 25631.324370496262,
+        "max_abs_error": 149683.40646014322,
+        "n_rows": 152,
+        "name": "delta_fixed_sum",
+        "predictors": [
+          "d_surr_fixed_sum"
+        ],
+        "r2": 0.05157011243691412,
+        "rmse": 42195.11341505778,
+        "target": "d_bytes"
+      },
+      "delta_smevr": {
+        "coefficients": {
+          "d_surr_smevr": 43052.681080080736
+        },
+        "intercept": 15139.732836875113,
+        "mae": 25824.689845303343,
+        "max_abs_error": 153759.7230847871,
+        "n_rows": 152,
+        "name": "delta_smevr",
+        "predictors": [
+          "d_surr_smevr"
+        ],
+        "r2": 0.024211557341279333,
+        "rmse": 42799.37015509589,
+        "target": "d_bytes"
+      },
+      "delta_sum_affine": {
+        "coefficients": {
+          "d_surr_entropy": 248937.2266144767,
+          "d_surr_smevr": 48051.07582292472
+        },
+        "intercept": 16551.464777781344,
+        "mae": 25277.88999146798,
+        "max_abs_error": 139080.51103789968,
+        "n_rows": 152,
+        "name": "delta_sum_affine",
+        "predictors": [
+          "d_surr_entropy",
+          "d_surr_smevr"
+        ],
+        "r2": 0.09632095333984281,
+        "rmse": 41187.61543953058,
+        "target": "d_bytes"
+      }
+    },
+    "quadratic_check": {
+      "linear": {
+        "coefficients": {
+          "d_surr_entropy": 248937.2266144767,
+          "d_surr_smevr": 48051.07582292472
+        },
+        "intercept": 16551.464777781344,
+        "mae": 25277.88999146798,
+        "max_abs_error": 139080.51103789968,
+        "n_rows": 152,
+        "name": "delta_sum_affine",
+        "predictors": [
+          "d_surr_entropy",
+          "d_surr_smevr"
+        ],
+        "r2": 0.09632095333984281,
+        "rmse": 41187.61543953058,
+        "target": "d_bytes"
+      },
+      "quadratic": {
+        "coefficients": {
+          "d_surr_cross": -212136.95648112573,
+          "d_surr_entropy": 377745.1266798835,
+          "d_surr_entropy_sq": 822053.8076200883,
+          "d_surr_smevr": 87896.23175013986,
+          "d_surr_smevr_sq": -380549.1392403059
+        },
+        "intercept": 25695.88596165226,
+        "mae": 24306.784275241007,
+        "max_abs_error": 124644.65425446554,
+        "n_rows": 152,
+        "name": "delta_sum_quadratic",
+        "predictors": [
+          "d_surr_entropy",
+          "d_surr_smevr",
+          "d_surr_entropy_sq",
+          "d_surr_smevr_sq",
+          "d_surr_cross"
+        ],
+        "r2": 0.18731037388786187,
+        "rmse": 39059.070220351,
+        "target": "d_bytes"
+      },
+      "quadratic_rmse_over_linear_rmse": 0.9483207465043808,
+      "quadratic_rmse_reduction_fraction": 0.05167925349561919
+    },
+    "rg5_absolute_rows": 152,
+    "rg5_delta_rows": 152
+  },
+  "inputs": {
+    "rg5_rows": "/Users/adpena/Projects/pact/.omx/research/ddm_rg5_rows_20260801.jsonl",
+    "rg5_rows_sha256": "fced85c73bd759e0f161c4b669af461530d932441444c127cf978ac78a8603f7",
+    "token_dtype": "uint8",
+    "token_max": 15,
+    "token_min": 0,
+    "token_npy": "/Volumes/VertigoDataTier/pact/ddm_sb1_20260804/B_rt1_subfinal_tokens/sub_final_tokens.npy",
+    "token_npy_sha256": "d4eacbf619d09aeda1c15a5015b0cd45ab2d3de33d349c881b7e0f59dc803a56",
+    "token_shape": [
+      600,
+      24,
+      32,
+      4
+    ]
+  },
+  "live": {
+    "base_full_entropy_bits": 3.4578174448717753,
+    "base_full_smevr_bytes": 346478,
+    "base_full_smevr_surrogate_bits": 1.9758948033409225,
+    "full_pair_permutation_rows": 14,
+    "metrics": {
+      "full_pair_permutation_deltas": {
+        "delta_entropy": {
+          "mae": 7763.150290675586,
+          "max_abs_error": 15451.078862102533,
+          "n_rows": 14,
+          "pearson": 0.6098428669906474,
+          "rmse": 10209.44987683711,
+          "spearman": 0.5526109077644397
+        },
+        "delta_fixed_sum": {
+          "mae": 15379.098742652113,
+          "max_abs_error": 15858.380594058215,
+          "n_rows": 14,
+          "pearson": 0.9999561855587742,
+          "rmse": 15384.594898041572,
+          "spearman": 0.8206825648192402
+        },
+        "delta_smevr": {
+          "mae": 12511.66504393931,
+          "max_abs_error": 15139.732836875113,
+          "n_rows": 14,
+          "pearson": 0.9999561855587744,
+          "rmse": 12714.63233441146,
+          "spearman": 0.8162821221124347
+        },
+        "delta_sum_affine": {
+          "mae": 14510.844290804738,
+          "max_abs_error": 16551.464777781344,
+          "n_rows": 14,
+          "pearson": 0.9999561855587745,
+          "rmse": 14616.687206377617,
+          "spearman": 0.8206825648192402
+        }
+      },
+      "per_cell_absolute_bytes": {
+        "absolute_entropy": {
+          "mae": 546972.5862896,
+          "max_abs_error": 1265707.6882976824,
+          "n_rows": 768,
+          "pearson": 0.9391983895350913,
+          "rmse": 583608.2107671496,
+          "spearman": 0.8585621880282875
+        },
+        "absolute_fixed_sum": {
+          "mae": 579754.5771292235,
+          "max_abs_error": 1064851.65841194,
+          "n_rows": 768,
+          "pearson": 0.9762912985555184,
+          "rmse": 599614.750860252,
+          "spearman": 0.9074221556391181
+        },
+        "absolute_smevr": {
+          "mae": 277640.315492063,
+          "max_abs_error": 477129.58819243044,
+          "n_rows": 768,
+          "pearson": 0.9902630148646946,
+          "rmse": 300713.80833611166,
+          "spearman": 0.9762320309101606
+        },
+        "absolute_sum_affine": {
+          "mae": 588116.8507570139,
+          "max_abs_error": 1323685.294490165,
+          "n_rows": 768,
+          "pearson": 0.948530015854474,
+          "rmse": 623698.0853055863,
+          "spearman": 0.8706769560497881
+        }
+      },
+      "spatial_tile_absolute_bytes": {
+        "absolute_entropy": {
+          "mae": 374790.00570176216,
+          "max_abs_error": 686576.3677445992,
+          "n_rows": 48,
+          "pearson": 0.9381589540726009,
+          "rmse": 444296.5221301684,
+          "spearman": 0.8773748830340325
+        },
+        "absolute_fixed_sum": {
+          "mae": 384099.0917500751,
+          "max_abs_error": 654683.8621963239,
+          "n_rows": 48,
+          "pearson": 0.9819493648331102,
+          "rmse": 431724.0255669091,
+          "spearman": 0.9597220770922289
+        },
+        "absolute_smevr": {
+          "mae": 280119.5568955536,
+          "max_abs_error": 409389.90961474157,
+          "n_rows": 48,
+          "pearson": 0.9873903310589394,
+          "rmse": 297018.0629400412,
+          "spearman": 0.9496955564454068
+        },
+        "absolute_sum_affine": {
+          "mae": 366702.49286074046,
+          "max_abs_error": 695286.652935633,
+          "n_rows": 48,
+          "pearson": 0.9535596639851638,
+          "rmse": 446060.48844935873,
+          "spearman": 0.9058734175630722
+        }
+      }
+    },
+    "pair_permutation_entropy_blind_max_abs_delta_bits": 1.3766765505351941e-14,
+    "per_cell_rows": 768,
+    "spatial_tile_rows": 48,
+    "summaries": {
+      "full_d_bytes": {
+        "max": 13466.0,
+        "mean": 8279.307692307691,
+        "median": 13397.0,
+        "min": 13.0,
+        "n_rows": 13,
+        "p25": 50.0,
+        "p75": 13444.0
+      },
+      "full_d_surr_entropy": {
+        "max": 1.3766765505351941e-14,
+        "mean": 7.344552316751036e-15,
+        "median": 7.105427357601002e-15,
+        "min": -4.440892098500626e-16,
+        "n_rows": 13,
+        "p25": 6.661338147750939e-15,
+        "p75": 1.0658141036401503e-14
+      },
+      "full_d_surr_smevr": {
+        "max": 0.2068092774404131,
+        "mean": 0.12656774680864102,
+        "median": 0.20417993422627045,
+        "min": -3.552713678800501e-15,
+        "n_rows": 13,
+        "p25": 0.0005342431220576316,
+        "p75": 0.20582619859082296
+      },
+      "per_cell_smevr_bytes": {
+        "max": 1179.0,
+        "mean": 547.31640625,
+        "median": 214.5,
+        "min": 78.0,
+        "n_rows": 768,
+        "p25": 78.0,
+        "p75": 1049.75
+      },
+      "tile_smevr_bytes": {
+        "max": 16603.0,
+        "mean": 7553.5625,
+        "median": 8748.5,
+        "min": 120.0,
+        "n_rows": 48,
+        "p25": 137.0,
+        "p75": 14178.5
+      }
+    }
+  },
+  "routing": {
+    "migration_policy": "queue C_sum_affine behind current two-arm entropy/smevr surfaces; no hot-swap",
+    "verdict_scope": "FORMULATION: scorer-free token-stream byte surrogate selection"
+  },
+  "schema": "ddm_sm2_sum_surrogate_race.v1"
+}
