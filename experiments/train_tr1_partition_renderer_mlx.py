@@ -67,9 +67,11 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import os
 import sys
 import time
+import zipfile
 import zlib
 from collections.abc import Sequence
 from dataclasses import asdict, dataclass
@@ -103,6 +105,20 @@ GATE_OFFBLOCK_SAMPLE = 32
 # telemetry schema, and checkpoint bytes.  ON-only telemetry carries provenance.
 TR1_BIRTH_SEED_CLASS_IDS: dict[str, int] = {"lane": 1, "movable": 3}
 TR1_BIRTH_SEED_DEFAULT_CLASSES = "lane"
+
+# TK1 (2026-08-05): PE3 and cheapdct4 consumers are args-only runtime knobs.
+# OFF must preserve TR1Config/config_hash/checkpoint bytes.  ON-only telemetry
+# records the active cache custody and score_claim=False.  The PE3 SHA is the
+# receiver-closed LC1/PK1 section this arm is contracted to consume.
+PE3_CONDITIONING_EXPECTED_SECTION_SHA256 = (
+    "5cc024ad32df7fedb18afb75dbed6be9c1af948dac826a1736cb1084949855c2"
+)
+PE3_CONDITIONING_MODE_ORDER = ("generator_pair_bisector", "depth_conditioned_curve")
+CHEAPDCT4_STAGE2_SECTION_NAMES = (
+    "od8_stage2_cheapdct4_qcoeffs",
+    "od8_stage2_cheapdct4_synthetic",
+)
+CONTEST_DENOMINATOR_BYTES = 37_545_489
 
 # Pre-registered A1 alarm thresholds (tb1 charter T1: "never scale a loop whose
 # realized-flip telemetry is flat"). Smooth descended but realized did not:
@@ -626,6 +642,11 @@ def build_module(cfg: TR1Config):
                 t = self.tokens_base + self.tokens_delta[idx]
             else:
                 t = self.tokens[idx]
+            pe3 = getattr(self, "_pe3_conditioning", None)
+            if pe3 is not None:
+                feats = pe3.tensors["features"][:, int(idx)]  # (mode, gh, gw, c)
+                gates = self.pe3_conditioning_gate.reshape((-1, 1, 1, 1))
+                t = t + mx.sum(gates * mx.stop_gradient(feats), axis=0)
             # §3.1 coarse-from-birth: zero the inactive cells (fixed {0,1} mask, stop-grad).
             t = t * mx.stop_gradient(self._cell_mask.tensors["keep"])
             if self._rowband is not None:  # QA84 §4.2: tie bulk 2x2 blocks (D16-effective)
@@ -850,6 +871,417 @@ def tr1_birth_amplify_term(mdl: Any, ids: Sequence[int]):
         term = mx.sum(diff * diff) / denom
         acc = term if acc is None else acc + term
     return acc / len(ids)
+
+
+def _sha256_bytes(blob: bytes) -> str:
+    return hashlib.sha256(blob).hexdigest()
+
+
+def _sha256_path(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as f:
+        for chunk in iter(lambda: f.read(1 << 20), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def _load_single_member_zip_or_raw(path: Path) -> bytes:
+    if not path.is_file():
+        raise ValueError(f"cache path does not exist: {path}")
+    if path.suffix == ".zip":
+        with zipfile.ZipFile(path, "r") as zf:
+            names = [name for name in zf.namelist() if not name.endswith("/")]
+            for name in ("archive/0.bin", "0.bin"):
+                if name in names:
+                    return zf.read(name)
+            if len(names) == 1:
+                return zf.read(names[0])
+            raise ValueError(f"cannot identify single payload member in {path}: {names}")
+    return path.read_bytes()
+
+
+def _extract_pe3_conditioning_section(cache_path: Path) -> tuple[bytes, dict[str, Any]]:
+    """Reuse the PE3 receiver parser and fail closed on the LC1/PK1 section SHA."""
+    blob = _load_single_member_zip_or_raw(cache_path)
+    import inflate_runner_v4d as receiver
+
+    if blob.startswith(receiver.PE3_EDGE_MAGIC):
+        section = blob
+    else:
+        from tac.optimization.ddm_ix2_archive_container import parse_payload
+
+        _bulk, sections = parse_payload(blob)
+        matches = [
+            bytes(section)
+            for section in sections
+            if bytes(section).startswith(receiver.PE3_EDGE_MAGIC)
+        ]
+        if len(matches) != 1:
+            raise ValueError(
+                f"expected exactly one PE3EDGE1 section in {cache_path}, found {len(matches)}"
+            )
+        section = matches[0]
+    meta = dict(receiver._pe3_parse_edge_field(section))
+    got_sha = str(meta.get("section_sha256") or _sha256_bytes(section))
+    if got_sha != PE3_CONDITIONING_EXPECTED_SECTION_SHA256:
+        raise ValueError(
+            "PE3 conditioning cache SHA mismatch: "
+            f"{got_sha} != {PE3_CONDITIONING_EXPECTED_SECTION_SHA256}"
+        )
+    return section, meta
+
+
+def _parse_pe3_conditioning_components(section: bytes) -> tuple[list[list[dict[str, Any]]], dict[str, Any]]:
+    """Parse PE3 components via the receiver's record decoders, preserving mode identity."""
+    import inflate_runner_v4d as receiver
+
+    if len(section) < receiver.PE3_EDGE_HEADER.size:
+        raise ValueError("PE3 section header truncated")
+    (
+        magic,
+        version,
+        seg_h,
+        seg_w,
+        n_pairs,
+        kind,
+        codec,
+        raw_len,
+        frame_record_count,
+        raw_sha,
+    ) = receiver.PE3_EDGE_HEADER.unpack_from(section, 0)
+    if magic != receiver.PE3_EDGE_MAGIC or version != receiver.PE3_EDGE_VERSION:
+        raise ValueError("PE3 section magic/version differs")
+    if int(kind) != receiver._PE3_HYBRID:
+        raise ValueError("PE3 section kind differs")
+    if int(frame_record_count) != int(n_pairs):
+        raise ValueError("PE3 frame record count differs")
+    raw = receiver._pe1_decode_body(int(codec), section[receiver.PE3_EDGE_HEADER.size:])
+    if len(raw) != int(raw_len):
+        raise ValueError("PE3 raw body length differs")
+    if hashlib.sha256(raw).digest() != raw_sha:
+        raise ValueError("PE3 raw body SHA differs")
+
+    rows: list[list[dict[str, Any]]] = []
+    mode_counts = dict.fromkeys(PE3_CONDITIONING_MODE_ORDER, 0)
+    component_count = 0
+    offset = 0
+    for _pair in range(int(n_pairs)):
+        count, offset = receiver._pe1_read_varint(raw, offset)
+        pair_rows: list[dict[str, Any]] = []
+        for _ in range(int(count)):
+            length, offset = receiver._pe1_read_varint(raw, offset)
+            record = raw[offset:offset + int(length)]
+            if len(record) != int(length):
+                raise ValueError("PE3 component record truncated")
+            offset += int(length)
+            if not record:
+                raise ValueError("PE3 empty component record")
+            mode = int(record[0])
+            payload = record[1:]
+            if mode == receiver._PE3_MODE_CURVE:
+                indices, classes = receiver._pe1_curve_indices(payload, int(seg_h), int(seg_w))
+            elif mode == receiver._PE3_MODE_GENERATOR:
+                indices, classes = receiver._pe1_generator_indices(payload, int(seg_h), int(seg_w))
+            else:
+                raise ValueError(f"unknown PE3 component mode {mode}")
+            mode_name = receiver._PE3_MODE_NAMES[mode]
+            if mode_name not in mode_counts:
+                raise ValueError(f"unexpected PE3 mode name {mode_name!r}")
+            if int(indices.size) != int(classes.size):
+                raise ValueError("PE3 component index/class length differs")
+            mode_counts[mode_name] += 1
+            component_count += 1
+            pair_rows.append({
+                "mode_name": mode_name,
+                "indices": np.asarray(indices, dtype=np.int32),
+                "classes": np.asarray(classes, dtype=np.uint8),
+                "record_bytes": int(length),
+            })
+        rows.append(pair_rows)
+    if offset != len(raw):
+        raise ValueError("PE3 raw body has trailing bytes")
+    meta = {
+        "seg_h": int(seg_h),
+        "seg_w": int(seg_w),
+        "n_pairs": int(n_pairs),
+        "raw_bytes": int(raw_len),
+        "raw_sha256": hashlib.sha256(raw).hexdigest(),
+        "section_bytes": len(section),
+        "section_sha256": _sha256_bytes(section),
+        "component_records": int(component_count),
+        "mode_counts": mode_counts,
+    }
+    return rows, meta
+
+
+def _pe3_class_pattern(classes: np.ndarray, code_width: int) -> np.ndarray:
+    cls = np.asarray(classes, dtype=np.int32).reshape(-1)
+    channels = np.arange(int(code_width), dtype=np.int32).reshape(1, -1)
+    signs = np.where(((cls.reshape(-1, 1) + channels) % 2) == 0, 1.0, -1.0)
+    scale = (cls.reshape(-1, 1).astype(np.float32) + 1.0) / 5.0
+    return (signs.astype(np.float32) * scale).astype(np.float32)
+
+
+def _token_grid_proximity(active: np.ndarray) -> np.ndarray:
+    active = np.asarray(active, dtype=bool)
+    out = np.zeros(active.shape, dtype=np.float32)
+    pts = np.argwhere(active)
+    if pts.size == 0:
+        return out
+    yy, xx = np.indices(active.shape, dtype=np.float32)
+    best = np.full(active.shape, np.inf, dtype=np.float32)
+    for r, c in pts:
+        d2 = (yy - float(r)) ** 2 + (xx - float(c)) ** 2
+        best = np.minimum(best, d2)
+    out = 1.0 / (1.0 + np.sqrt(best, dtype=np.float32))
+    out[active] = 1.0
+    return out.astype(np.float32)
+
+
+def pe3_conditioning_features_from_components(
+    cfg: TR1Config,
+    components_by_pair: Sequence[Sequence[dict[str, Any]]],
+) -> tuple[np.ndarray, dict[str, Any]]:
+    """Build per-mode PE3 prior channels on the TR1 token lattice.
+
+    These channels are INPUT conditioning only.  They never replace labels or
+    targets; learned mode gates decide whether each grammar mode is trusted.
+    """
+    if len(components_by_pair) < int(cfg.num_pairs):
+        raise ValueError(
+            f"PE3 cache has {len(components_by_pair)} pairs < --num-pairs {cfg.num_pairs}"
+        )
+    mode_index = {name: i for i, name in enumerate(PE3_CONDITIONING_MODE_ORDER)}
+    features = np.zeros(
+        (len(PE3_CONDITIONING_MODE_ORDER), cfg.num_pairs, cfg.grid_h, cfg.grid_w, cfg.code_width),
+        dtype=np.float32,
+    )
+    counts = np.zeros((*features.shape[:-1], 1), dtype=np.float32)
+    described_pixels = dict.fromkeys(PE3_CONDITIONING_MODE_ORDER, 0)
+    pairs_by_mode = {name: set() for name in PE3_CONDITIONING_MODE_ORDER}
+    d = int(cfg.grid_downsample)
+    slots = SEG_H * SEG_W
+    for pair_idx in range(int(cfg.num_pairs)):
+        for comp in components_by_pair[pair_idx]:
+            mode_name = str(comp["mode_name"])
+            if mode_name not in mode_index:
+                raise ValueError(f"unknown PE3 conditioning mode {mode_name!r}")
+            indices = np.asarray(comp["indices"], dtype=np.int64).reshape(-1)
+            classes = np.asarray(comp["classes"], dtype=np.uint8).reshape(-1)
+            if indices.size != classes.size:
+                raise ValueError("PE3 conditioning component index/class length differs")
+            if indices.size == 0:
+                continue
+            if int(indices.min()) < 0 or int(indices.max()) >= slots:
+                raise ValueError("PE3 conditioning index outside scorer grid")
+            mi = mode_index[mode_name]
+            rr = (indices // SEG_W) // d
+            cc = (indices % SEG_W) // d
+            rr = np.clip(rr, 0, cfg.grid_h - 1).astype(np.int64)
+            cc = np.clip(cc, 0, cfg.grid_w - 1).astype(np.int64)
+            vals = _pe3_class_pattern(classes, cfg.code_width)
+            for ch in range(int(cfg.code_width)):
+                np.add.at(features[mi, pair_idx, :, :, ch], (rr, cc), vals[:, ch])
+            np.add.at(counts[mi, pair_idx, :, :, 0], (rr, cc), 1.0)
+            described_pixels[mode_name] += int(indices.size)
+            pairs_by_mode[mode_name].add(pair_idx)
+    active = counts[..., 0] > 0.0
+    features = np.divide(features, np.maximum(counts, 1.0), out=features, where=counts > 0.0)
+    for mi in range(len(PE3_CONDITIONING_MODE_ORDER)):
+        for pair_idx in range(int(cfg.num_pairs)):
+            prox = _token_grid_proximity(active[mi, pair_idx])
+            features[mi, pair_idx, :, :, 0] += 0.25 * prox
+    np.clip(features, -1.0, 1.0, out=features)
+    summary = {
+        "active": True,
+        "mechanism": "TK1 PE3 conditioning-only prior channels with learned per-mode trust gates",
+        "mode_order": list(PE3_CONDITIONING_MODE_ORDER),
+        "gate_init": "zeros",
+        "pairs": int(cfg.num_pairs),
+        "grid": [int(cfg.grid_h), int(cfg.grid_w)],
+        "channels_per_mode": int(cfg.code_width),
+        "described_pixels_by_mode": described_pixels,
+        "pairs_with_signal_by_mode": {
+            name: len(pairs_by_mode[name]) for name in PE3_CONDITIONING_MODE_ORDER
+        },
+        "feature_abs_sum_by_mode": {
+            name: float(np.abs(features[i]).sum())
+            for i, name in enumerate(PE3_CONDITIONING_MODE_ORDER)
+        },
+        "score_claim": False,
+        "label_replacement": False,
+    }
+    return features, summary
+
+
+def build_pe3_conditioning_bank(cfg: TR1Config, cache_path: Path) -> tuple[dict[str, np.ndarray], dict[str, Any]]:
+    section, parseback_meta = _extract_pe3_conditioning_section(cache_path)
+    rows, component_meta = _parse_pe3_conditioning_components(section)
+    features, summary = pe3_conditioning_features_from_components(cfg, rows)
+    summary.update({
+        "cache_path": str(cache_path),
+        "section_bytes": int(parseback_meta["section_bytes"]),
+        "section_sha256": str(parseback_meta["section_sha256"]),
+        "raw_sha256": str(parseback_meta["raw_sha256"]),
+        "component_records": int(component_meta["component_records"]),
+        "mode_counts": dict(component_meta["mode_counts"]),
+        "raster_sha256": str(parseback_meta.get("raster_sha256", "")),
+    })
+    return {"features": features}, summary
+
+
+def attach_pe3_conditioning_bank(model: Any, cfg: TR1Config, cache_path: Path) -> dict[str, Any]:
+    bank_np, summary = build_pe3_conditioning_bank(cfg, cache_path)
+    import mlx.core as mx
+
+    model._pe3_conditioning = _FixedBank({k: mx.array(v) for k, v in bank_np.items()})
+    model.pe3_conditioning_gate = mx.zeros((len(PE3_CONDITIONING_MODE_ORDER),), dtype=mx.float32)
+    mx.eval(model.parameters())
+    return summary
+
+
+def _read_varint(payload: bytes, offset: int) -> tuple[int, int]:
+    value = 0
+    shift = 0
+    while True:
+        if offset >= len(payload):
+            raise ValueError("varint is truncated")
+        byte = int(payload[offset])
+        offset += 1
+        value |= (byte & 0x7F) << shift
+        if (byte & 0x80) == 0:
+            return value, offset
+        shift += 7
+        if shift > 63:
+            raise ValueError("varint is too long")
+
+
+def decode_cheapdct4_stage2_payload(payload: bytes) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    magic = b"OD8S2C1\0"
+    if not payload.startswith(magic):
+        raise ValueError("cheapdct4 stage2 payload magic mismatch")
+    offset = len(magic)
+    n_records, offset = _read_varint(payload, offset)
+    k, offset = _read_varint(payload, offset)
+    source_len, offset = _read_varint(payload, offset)
+    source_b = payload[offset:offset + source_len]
+    if len(source_b) != source_len:
+        raise ValueError("cheapdct4 stage2 source is truncated")
+    offset += source_len
+    records: list[dict[str, Any]] = []
+    for _ in range(int(n_records)):
+        pair, offset = _read_varint(payload, offset)
+        count, offset = _read_varint(payload, offset)
+        if count != 3 * int(k) * int(k):
+            raise ValueError(f"cheapdct4 qcoeff count {count} != {3 * int(k) * int(k)}")
+        qbytes = payload[offset:offset + count * 2]
+        if len(qbytes) != count * 2:
+            raise ValueError("cheapdct4 qcoeff payload truncated")
+        offset += count * 2
+        q = np.frombuffer(qbytes, dtype="<i2").reshape(3, int(k) * int(k)).astype(np.int16, copy=True)
+        records.append({
+            "pair": int(pair),
+            "k": int(k),
+            "qcoeffs": q,
+            "coeff_sha256": _sha256_bytes(qbytes),
+        })
+    if offset != len(payload):
+        raise ValueError("cheapdct4 stage2 payload has trailing bytes")
+    return records, {
+        "record_count": int(n_records),
+        "k": int(k),
+        "source": source_b.decode("ascii", errors="replace"),
+        "raw_int16_coeff_bytes": int(sum(r["qcoeffs"].size * 2 for r in records)),
+        "payload_sha256": _sha256_bytes(payload),
+    }
+
+
+def _extract_cheapdct4_stage2_from_od5_packet(packet_path: Path) -> tuple[bytes, dict[str, Any]]:
+    if not packet_path.is_file():
+        raise ValueError(f"cheapdct4 packet path does not exist: {packet_path}")
+    from tac.optimization import ddm_od4_weak_stage1_packet as od4
+
+    packet = packet_path.read_bytes()
+    parsed = od4.parse_od5_packet(packet)
+    matches = [section for section in parsed.sections if section.name in CHEAPDCT4_STAGE2_SECTION_NAMES]
+    if len(matches) != 1:
+        raise ValueError(
+            f"expected exactly one cheapdct4 stage2 section in {packet_path}, found {len(matches)}"
+        )
+    section = matches[0]
+    return section.payload, {
+        "packet_path": str(packet_path),
+        "packet_bytes": len(packet),
+        "packet_sha256": _sha256_bytes(packet),
+        "packet_sections": [s.name for s in parsed.sections],
+        "stage2_section_name": section.name,
+    }
+
+
+def load_cheapdct4_pose_accounting_cache(cache_path: Path) -> dict[str, Any]:
+    """Decode OD9 stage2 qcoeffs and bind them to OD9's measured n32 pose term."""
+    if not cache_path.is_file():
+        raise ValueError(f"cheapdct4 pose cache does not exist: {cache_path}")
+    if cache_path.suffix != ".json":
+        raise ValueError("cheapdct4 pose accounting requires the OD9 receipt JSON cache")
+    receipt = json.loads(cache_path.read_text())
+    artifacts = receipt.get("artifacts") or {}
+    packet_info = artifacts.get("best_combined_packet") or artifacts.get("absolute_persisted_packet")
+    if not isinstance(packet_info, dict) or not packet_info.get("path") or not packet_info.get("sha256"):
+        raise ValueError("OD9 receipt lacks a packet path+sha for cheapdct4 stage2 consumption")
+    packet_path = Path(str(packet_info["path"]))
+    expected_packet_sha = str(packet_info["sha256"])
+    got_packet_sha = _sha256_path(packet_path)
+    if got_packet_sha != expected_packet_sha:
+        raise ValueError(
+            f"cheapdct4 packet SHA mismatch: {got_packet_sha} != {expected_packet_sha}"
+        )
+    payload, packet_meta = _extract_cheapdct4_stage2_from_od5_packet(packet_path)
+    records, stage2_meta = decode_cheapdct4_stage2_payload(payload)
+    pose_scope = receipt.get("pose_subset_scope") or {}
+    d_pose = pose_scope.get("d_pose_after_stage2_cheapdct_mean_n32")
+    if d_pose is None:
+        raise ValueError("OD9 receipt lacks d_pose_after_stage2_cheapdct_mean_n32")
+    stage2_row = None
+    for row in receipt.get("combined_table") or []:
+        if row and row[0] == "stage2_only_cheapdct4_qcoeffs":
+            stage2_row = row
+            break
+    if stage2_row is None:
+        raise ValueError("OD9 receipt lacks stage2_only_cheapdct4_qcoeffs byte row")
+    d_pose_f = float(d_pose)
+    projected_bytes = int(stage2_row[2])
+    return {
+        "schema": "tk1_cheapdct4_pose_accounting.v1",
+        "mode": "accounting",
+        "cache_path": str(cache_path),
+        "cache_sha256": _sha256_path(cache_path),
+        **packet_meta,
+        **stage2_meta,
+        "record_pairs": [int(r["pair"]) for r in records],
+        "coeff_sha256_head": [str(r["coeff_sha256"]) for r in records[:4]],
+        "n32_coded_bytes": int(stage2_row[1]),
+        "projected_n600_bytes": projected_bytes,
+        "d_pose_after_stage2_cheapdct_mean_n32": d_pose_f,
+        "pose_contribution_n32": math.sqrt(10.0 * d_pose_f),
+        "rate_contribution_projected_n600": 25.0 * projected_bytes / CONTEST_DENOMINATOR_BYTES,
+        "not_projected_to_n600": bool(pose_scope.get("not_projected_to_n600", True)),
+        "axis": receipt.get("axis", {}),
+        "selection": receipt.get("selection"),
+        "score_claim": False,
+        "full_in_loop_consumption": False,
+        "accounting_scope": "decoded OD9 cheapdct4 qcoeff carriage plus OD9 measured n32 pose term",
+    }
+
+
+def attach_cheapdct4_accounting_to_receipt(receipt: dict[str, Any],
+                                           accounting: dict[str, Any] | None) -> None:
+    if accounting is None:
+        return
+    receipt["cheapdct4_pose_accounting"] = accounting
+    composed = receipt.get("composed_s_verdict")
+    if isinstance(composed, dict):
+        composed["cheapdct4_pose_accounting"] = accounting
 
 
 def make_render_fn():
@@ -2264,6 +2696,30 @@ def build_argparser() -> argparse.ArgumentParser:
                     choices=("uniform", "inverse_thickness"),
                     help="BI1 seed/amplify support weighting; inverse_thickness emphasizes "
                          "lowest-persistence island pixels.")
+    # ---- ddm_tk1 (2026-08-05) PE3 conditioning-only slot ----------------------------
+    # Args-only by contract: OFF preserves TR1Config/config_hash/checkpoint bytes. ON parses
+    # the receiver-closed PE3EDGE1 section and attaches fixed prior channels plus learnable
+    # per-mode trust gates. It is NEVER a label-replacement target.
+    ap.add_argument("--pe3-conditioning-cache", type=Path, default=None,
+                    help="TK1 PE3 conditioning cache: raw PE3EDGE1 section, IX2 payload, or "
+                         "single-member archive carrying the LC1/PK1 PE3 section. Required when "
+                         "--pe3-conditioning-mode conditioning_only; refused on SHA mismatch.")
+    ap.add_argument("--pe3-conditioning-mode", default="off",
+                    choices=("off", "conditioning_only"),
+                    help="TK1 PE3 consumer mode. off = byte-identical control; conditioning_only "
+                         "= feed PE3 boundary/mode/transition prior channels into the TR1 trunk "
+                         "through learned trust gates. No target replacement loss exists.")
+    # ---- ddm_tk1 (2026-08-05) cheapdct4 pose-carriage accounting ---------------------
+    # Accounting, not a full in-loop renderer consumption: it decodes OD9's stage2 qcoeffs and
+    # reports OD9's measured subset pose term in composed-S receipts.
+    ap.add_argument("--cheapdct4-pose-cache", type=Path, default=None,
+                    help="TK1 cheapdct4 pose-accounting cache: OD9_RECEIPT.json. The receipt's "
+                         "packet SHA is rechecked, then the stage2_qcoeffs section is decoded.")
+    ap.add_argument("--cheapdct4-pose-mode", default="off",
+                    choices=("off", "accounting"),
+                    help="TK1 cheapdct4 consumer mode. off = byte-identical control; accounting "
+                         "= decode OD9 stage2_qcoeffs and attach the measured n32 pose term to "
+                         "trainer/composed-S receipts. Does not claim full joint descent.")
     ap.add_argument("--token-temporal-mode", default="shared_base",
                     choices=("shared_base", "independent"),
                     help="shared_base = identity-xi advection (Einstein d_cov/d_gauge force)")
@@ -2548,6 +3004,22 @@ def assert_ported_force_scalars_have_their_gate(
             f"and --seg-spike-downweight.")
 
 
+def validate_tk1_consumer_args(args: Any) -> None:
+    """Fail-closed guards for TK1 args-only consumers."""
+    if args.pe3_conditioning_mode == "conditioning_only" and args.pe3_conditioning_cache is None:
+        raise SystemExit("--pe3-conditioning-mode conditioning_only requires --pe3-conditioning-cache")
+    if args.pe3_conditioning_mode == "off" and args.pe3_conditioning_cache is not None:
+        raise SystemExit("--pe3-conditioning-cache was provided while --pe3-conditioning-mode off")
+    if args.pe3_conditioning_cache is not None and not args.pe3_conditioning_cache.is_file():
+        raise SystemExit(f"--pe3-conditioning-cache missing: {args.pe3_conditioning_cache}")
+    if args.cheapdct4_pose_mode == "accounting" and args.cheapdct4_pose_cache is None:
+        raise SystemExit("--cheapdct4-pose-mode accounting requires --cheapdct4-pose-cache")
+    if args.cheapdct4_pose_mode == "off" and args.cheapdct4_pose_cache is not None:
+        raise SystemExit("--cheapdct4-pose-cache was provided while --cheapdct4-pose-mode off")
+    if args.cheapdct4_pose_cache is not None and not args.cheapdct4_pose_cache.is_file():
+        raise SystemExit(f"--cheapdct4-pose-cache missing: {args.cheapdct4_pose_cache}")
+
+
 def main() -> int:
     args = build_argparser().parse_args()
     if args.verdict_chunk > 120:
@@ -2655,6 +3127,7 @@ def main() -> int:
         raise SystemExit("--tr1-birth-amplify-weight must be >= 0")
     if float(args.tr1_birth_amplify_weight) > 0.0 and float(args.tr1_birth_seed_weight) <= 0.0:
         raise SystemExit("--tr1-birth-amplify-weight requires --tr1-birth-seed-weight > 0")
+    validate_tk1_consumer_args(args)
 
     # GT: memmapped lstars/margins from the shared frozen-authority cache; frozen CPU SegNet.
     lstars = open_stored_npy_memmap(args.gt_cache, "lstars")
@@ -2867,6 +3340,36 @@ def main() -> int:
                       "checkpoint bytes; ON initializes GT birth support in the token lattice "
                       "and adds a scorer-free anchor term. No SegNet/PoseNet forward is used "
                       "by this mechanism; score_claim=False."})
+
+    pe3_conditioning_summary = None
+    if args.pe3_conditioning_mode == "conditioning_only":
+        try:
+            pe3_conditioning_summary = attach_pe3_conditioning_bank(
+                model, cfg, args.pe3_conditioning_cache
+            )
+        except Exception as exc:
+            raise SystemExit(f"PE3 conditioning cache refused: {exc}") from exc
+        tlog({"event": "pe3_conditioning_init",
+              **pe3_conditioning_summary,
+              "mode": args.pe3_conditioning_mode,
+              "note": "TK1 consumes PE3 as conditioning-only prior channels. The grammar is "
+                      "not a target replacement; learned per-mode gates can down-weight "
+                      "generator_pair_bisector independently of depth_conditioned_curve. "
+                      "score_claim=False."})
+
+    cheapdct4_pose_accounting = None
+    if args.cheapdct4_pose_mode == "accounting":
+        try:
+            cheapdct4_pose_accounting = load_cheapdct4_pose_accounting_cache(
+                args.cheapdct4_pose_cache
+            )
+        except Exception as exc:
+            raise SystemExit(f"cheapdct4 pose accounting cache refused: {exc}") from exc
+        tlog({"event": "cheapdct4_pose_accounting_init",
+              **cheapdct4_pose_accounting,
+              "note": "TK1 decodes OD9 stage2_qcoeffs and reports OD9's measured n32 "
+                      "pose term for composed-S accounting. This is not full in-loop "
+                      "joint-descent consumption; score_claim=False."})
 
     # ddm_bp1 (#824) reset-race arm selector. REUSES the levelset trainer's already-unit-tested
     # gate (never reimplemented): _adam_bias_correction_for(beta2, reference_semantics=) returns
@@ -3794,6 +4297,16 @@ def main() -> int:
         "held_scope": ("decay_and_gate_basis" if boundary_strict_basis_held is not None
                        else "decay_only_no_post_resume_gate_observed"),
         "boundary_probe": args.boundary_probe,
+        "pe3_conditioning": (
+            pe3_conditioning_summary
+            if pe3_conditioning_summary is not None
+            else {"active": False, "mode": "off", "score_claim": False}
+        ),
+        "cheapdct4_pose_accounting": (
+            cheapdct4_pose_accounting
+            if cheapdct4_pose_accounting is not None
+            else {"active": False, "mode": "off", "score_claim": False}
+        ),
     }
 
     # Optional full realized confirm (chunked <=120; EMA shadow).
@@ -3890,6 +4403,8 @@ def main() -> int:
                     sub_ids, cams, dseg_sub, total_bytes)
         except Exception as exc:  # advisory instrument NEVER crashes the burn
             receipt["composed_s_verdict"] = {"error": repr(exc), "score_claim": False}
+
+    attach_cheapdct4_accounting_to_receipt(receipt, cheapdct4_pose_accounting)
 
     rp = out_dir / "tr1_window_receipt.json"
     tmp = rp.with_suffix(".json.tmp")
