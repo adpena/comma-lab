@@ -36,7 +36,7 @@ for _path in (REPO, REPO / "src", REPO / "experiments", REPO / "upstream"):
     if str(_path) not in sys.path:
         sys.path.insert(0, str(_path))
 
-from ddm_sq1_eta_seg_realization import (  # noqa: E402
+from ddm_sq1_eta_seg_realization import (
     CAM_H,
     CAM_W,
     N_PAIRS_TOTAL,
@@ -47,13 +47,13 @@ from ddm_sq1_eta_seg_realization import (  # noqa: E402
     label_boundary_band,
     seq_len,
 )
-from ddm_sq1_stage_decomposition_and_solved_paint import (  # noqa: E402
+from ddm_sq1_stage_decomposition_and_solved_paint import (
     SQ1_TRAJECTORY_STOP_CONFIG,
     realize_scorer_paint_to_camera,
     resize_to_scorer,
 )
-from tac.optimization.terminal_pose_gn import (  # noqa: E402
-    STALE_POSE_REHEARSAL_AUTHORITY_MARKER,
+
+from tac.optimization.terminal_pose_gn import (
     CandidateArtifactScope,
     PoseAuthorityMode,
     PoseJointEvaluation,
@@ -63,7 +63,7 @@ from tac.optimization.terminal_pose_gn import (  # noqa: E402
     serialize_terminal_pose_packet,
     solve_terminal_pose_gn,
 )
-from tac.optimization.trajectory_stopping import (  # noqa: E402
+from tac.optimization.trajectory_stopping import (
     TrajectoryPoint,
     evaluate_trajectory_stop,
 )
@@ -535,13 +535,16 @@ def run_terminal_pose(args: argparse.Namespace, stage1: dict[str, Any], sc: Scor
                 scope=CandidateArtifactScope.TERMINAL_SECTION_ONLY,
             )
 
+        parent_frame1 = parent[1].copy()
+
         def score_candidate(
             realized_pair: np.ndarray,
             artifact: TerminalPoseCandidateArtifact,
             _target: np.ndarray = target,
             _others: float = pose_sum_others,
+            _parent_frame1: np.ndarray = parent_frame1,
         ) -> PoseJointEvaluation:
-            if not np.array_equal(realized_pair[1], parent[1]):
+            if not np.array_equal(realized_pair[1], _parent_frame1):
                 raise SL2Error("terminal pose changed persisted frame_1")
             pose6 = _pose6(sc, realized_pair)
             d_pose_i = float(np.mean((pose6 - _target) ** 2, dtype=np.float64))
