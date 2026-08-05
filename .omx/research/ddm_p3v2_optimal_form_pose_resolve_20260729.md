@@ -16,6 +16,29 @@ consumers: [E2_node_N1, v10_SPEC_row12_pose_in_burn, ddm_deferral_queue_ledger_Q
 
 # ddm_p3v2 — OPTIMAL-FORM terminal pose re-solve (the RANK-1 arm)
 
+## 2026-08-05 DQ1 correction - population-fair p3v2 free-frame rerun
+
+DQ1 supersedes the population relevance of this memo's n24 prefix free-frame
+headline. The historical n24 prefix result remains recorded below, but it must
+not be cited as a population-fair pose-wall refutation or candidate-line proof.
+
+DQ1 reran the same p3v2-class free-frame upper-bound measurement on NA3's
+stratified n120 selector (`selection_mode=stratified_blocks`, seed 20260805,
+120/600 non-prefix pairs). The rerun measured mean `d_pose =
+0.0004933684543601322`, pose term `sqrt(10*d_pose) = 0.07024019179644458`,
+versus this memo's n24 prefix `d_pose = 9.123412205850626e-05`, pose term
+`0.030204986689863777`. The binding `<=0.05` free-frame wall rule therefore
+FLIPS at FORMULATION scope for p3v2's unpriced free-frame upper-bound row.
+
+Consumer correction: GC17/AU1 and any p3v2 free-wall/candidate-line citation
+must use `.omx/research/ddm_dq1_20260805/DQ1_RECEIPT.md` and the SSD receipt
+`/Volumes/VertigoDataTier/pact/ddm_dq1_20260805/dq1_p3v2_free_upper_bound_n120_receipt.json`
+(SHA-256 `ba26725cba24c898603e2879ed5759acf7587039feff9111d1b53b209525ac1a`).
+The DQ1 receipt landed as commit `694a4b5ddc`.
+This correction does not kill the pose family, does not change the old n600
+warp-base row, and does not overwrite later pose-in-burn evidence. It only
+downgrades the old n24-prefix free-frame headline to historical prefix evidence.
+
 ## §0 THE PRE-REGISTERED DECISION — which side of the rule the vehicle lands on (plainly, first)
 
 **The photometric wall is REFUTED. The vehicle is a CANDIDATE LINE, NOT a calibration instrument.**
