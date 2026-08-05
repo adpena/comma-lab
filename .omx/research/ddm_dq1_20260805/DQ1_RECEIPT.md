@@ -174,3 +174,25 @@ For #923, recover or re-land the four missing harness/render-cache surfaces, the
 ```
 
 S = 0.7539807296911207 @ 357,836 B [macOS-CPU advisory]; contest pointer borrowed/unmoved.
+
+## 2026-08-05 OA1 correction - p3v2 and ET1 verdict wording
+
+This append-only correction preserves the DQ1 measurements above but supersedes
+two verdict readings.
+
+1. `p3v2` at-cap: the n120 stratified 160-iter result above measured pose term
+   `0.07024019179644458`, but the same DQ1 partial trace later showed 34/120
+   pairs still descending at the cap. MAIN's amendment projected the trace to a
+   10x geometric budget at pose term `0.034246` and a conservative tail bound of
+   `0.058196`. Corrected statement: p3v2 is BUDGET-CONDITIONAL at 160 iters/pair,
+   not a measured final formulation kill.
+2. `ET1 block16` and same-genus SQ2 pose reads: the R8 erosion above was measured
+   on a seg-corrected intermediate before the terminal pose re-solve / joint
+   descent stage. Per the 2026-08-05 staging-law correction, that is expected
+   mid-pipeline pose spend, not a final-stage R8 verdict. Corrected statement:
+   the seg gain is BANKED as a stage-1 signal pending constrain plus terminal
+   pose/joint-descent composition; no seg-only promotion is allowed, but the
+   line is reopened for composed-stage measurement rather than killed by this
+   intermediate R8 read.
+
+S = 0.7539807296911207 @ 357,836 B [macOS-CPU advisory]; contest pointer borrowed/unmoved.

@@ -39,6 +39,24 @@ This correction does not kill the pose family, does not change the old n600
 warp-base row, and does not overwrite later pose-in-burn evidence. It only
 downgrades the old n24-prefix free-frame headline to historical prefix evidence.
 
+## 2026-08-05 OA1 correction - DQ1 wall flip is budget-conditional
+
+This append-only correction supersedes the DQ1 correction above only where that
+section reads as a final formulation wall flip. OA1 re-read MAIN's later audit
+amendment and DQ1's own partial trace summary: the n120 DQ1 row at 160 iters
+measured pose term `0.07024019179644458`, but DQ1's per-iteration `free_traj`
+evidence showed 34/120 pairs still descending at the cap. MAIN's amendment
+projected the same trace to a 10x geometric budget at mean `d_pose =
+1.173e-4`, pose term `0.034246`, with a conservative converged-tail bound of
+`0.058196`.
+
+Corrected statement: the old n24 prefix result remains non-population evidence,
+and the DQ1 n120 at-cap result is a BUDGET-CONDITIONAL failure of this p3v2
+free-frame upper-bound formulation at 160 iters/pair. It is not a measured final
+formulation kill and not a pose-family kill. The owed confirmation is the
+already-routed converged rerun of the tail pairs or an equivalent terminal
+solver trace under the same stratified selection discipline.
+
 ## §0 THE PRE-REGISTERED DECISION — which side of the rule the vehicle lands on (plainly, first)
 
 **The photometric wall is REFUTED. The vehicle is a CANDIDATE LINE, NOT a calibration instrument.**
