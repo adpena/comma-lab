@@ -22,6 +22,7 @@ from experiments.train_tr1_partition_renderer_mlx import (  # noqa: E402
     jd1_ema_initial_state,
     jd1_ema_tail_average_active,
     jd1_ema_tail_average_live_weight,
+    refuse_declared_vs_resolved_jd1_ema_decay,
     save_checkpoint,
     TR1Config,
     validate_jd1_pose_finish_args,
@@ -137,6 +138,13 @@ def test_tail_average_closed_form_matches_running_mean():
         w = jd1_ema_tail_average_live_weight(k)
         ema = ema + w * (live - ema)
     assert ema == pytest.approx(sum([0.0, *live_values]) / 4.0)
+
+
+def test_literal_ema_decay_must_match_scope_law_resolution():
+    refuse_declared_vs_resolved_jd1_ema_decay(None, 0.996, resolution_hash="abc")
+    refuse_declared_vs_resolved_jd1_ema_decay(0.996, 0.996, resolution_hash="abc")
+    with pytest.raises(SystemExit, match="conflicts with the JD1 stage scope-law"):
+        refuse_declared_vs_resolved_jd1_ema_decay(0.997, 0.996, resolution_hash="abc")
 
 
 def test_tail_initial_state_and_checkpoint_payload_are_resumable():

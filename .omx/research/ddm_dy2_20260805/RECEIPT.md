@@ -21,7 +21,9 @@ Found beyond charter seeds:
 Changed plan:
 
 - Added a local TR1 helper family and DSL lever now, without depending on dy1.
-- Added a `FORMALIZATION_PENDING` waiver for the tail-average law registration, with fire order below.
+- Updated by dy1r: the tail-average law is now registered as the
+  `jd1_plateau_tail_average_ema_v1` canonical equation and declared through
+  the `T3_LIVE_ADAPTED` scope-law surface.
 
 ## Build
 
@@ -48,13 +50,14 @@ Fireable now:
 ## Triality
 
 - DSL: `lever_jd1_plateau_tail_average_ema`.
-- Equations: pre-anchor fixed law remains `ema_decay_run_geometry_v1`; tail-average law is `FORMALIZATION_PENDING` until dy1 scope-law merge.
+- Equations: pre-anchor fixed law remains `ema_decay_run_geometry_v1`; tail-average law is `jd1_plateau_tail_average_ema_v1` under the dy1r `T3_LIVE_ADAPTED` scope-law merge.
 - DAG/artifact: this receipt and `NEXT_IF_RESUMED.md`; no score/pointer DAG advancement claimed.
 
-Formalization waiver:
+Formalization closure:
 
 - The implemented law is explicit and tested: `shadow_{n+1} = shadow_n + (live_n - shadow_n)/(n+2)` after an anchor sample.
-- Canonical registration is queued, not skipped, because the charter says dy1's `T3_LIVE_ADAPTED` scope-law module is unmerged.
+- dy1r registered the canonical equation as `jd1_plateau_tail_average_ema_v1`
+  and linked the scope-law declaration to that equation id.
 
 ## Verification
 
@@ -98,16 +101,16 @@ Attempted broader guard:
 - Pointer: unmoved.
 - No edits to common forbidden files.
 - No scorer slot used.
-- `T3_LIVE_ADAPTED` scope-law registration remains queued for dy1 merge.
+- `T3_LIVE_ADAPTED` scope-law registration is closed by dy1r; no queued
+  tail-average formalization waiver remains.
 
 ## Follow-Ons
 
 QUEUED-WITH-A-FIRE-ORDER:
 
-1. When dy1 scope-law module merges, register the tail-average law under the `T3_LIVE_ADAPTED` scope and point this receipt at the canonical equation id.
-2. MAIN at the jd4/tp1 boundary selects the explicit anchor epoch from the tp1 Case-0 plateau detector and fires the A/B via DSL, not hand flags.
-3. On a Metal-capable host, run a true `save_checkpoint` -> `load_checkpoint` JD1 tail-state round-trip and compare resumed state before launch.
-4. If classifier-triggered anchor is still desired, build it as a separate fully flagged, default-off, tested lever.
+1. MAIN at the jd4/tp1 boundary selects the explicit anchor epoch from the tp1 Case-0 plateau detector and fires the A/B via DSL, not hand flags.
+2. On a Metal-capable host, run a true `save_checkpoint` -> `load_checkpoint` JD1 tail-state round-trip and compare resumed state before launch.
+3. If classifier-triggered anchor is still desired, build it as a separate fully flagged, default-off, tested lever.
 
 ## File Hashes
 

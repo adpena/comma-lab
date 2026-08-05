@@ -16,13 +16,12 @@ Evidence axis: config-generation only; score_claim=False.
 from __future__ import annotations
 
 import ast
-import hashlib
-import json
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 from tac.witness_dsl.curriculum_dsl import Lever
+from tac.witness_dsl.scope_laws import ticket_payload_hash, validate_ticket_scope_laws
 
 TRAINER_RELPATH = "experiments/train_tr1_partition_renderer_mlx.py"
 
@@ -467,7 +466,12 @@ def lever_jd1_plateau_tail_average_ema(*, anchor_epoch: int) -> Lever:
             "jd1_ema_mode": "typed telemetry row at JD1 engage/resume",
             "jd1_ema_tail_average_anchor": "typed telemetry row when explicit anchor fires",
         },
-        policy_contracts={"score_claim": False, "requires_jd1_pose_finish": True},
+        policy_contracts={
+            "score_claim": False,
+            "requires_jd1_pose_finish": True,
+            "scope_laws": ["jd1_plateau_tail_average_ema"],
+            "canonical_equation": "jd1_plateau_tail_average_ema_v1",
+        },
     )
 
 
@@ -845,6 +849,7 @@ class TR1RendererProgramV1:
     gt_cache: str | None = None
     resume_from: str | None = None
     full_confirm: bool = False
+    scope_laws: tuple[dict[str, Any], ...] = ()
 
     def merged_overrides(self) -> dict[str, str]:
         merged: dict[str, str] = {}
@@ -896,6 +901,8 @@ class TR1RendererProgramV1:
             raise ValueError(
                 f"TR1 DSL validate FAIL-CLOSED (never-invent-flags): {invented} not "
                 f"declared by {TRAINER_RELPATH} argparse; declared={sorted(declared)}")
+        if self.scope_laws:
+            validate_ticket_scope_laws(self.scope_laws)
 
     def sealed_ticket(self) -> dict[str, Any]:
         """The sealed DSL ticket for a governed T2 window (committed before launch)."""
@@ -908,8 +915,9 @@ class TR1RendererProgramV1:
                        for lv in self.levers],
             "score_claim": False,
         }
-        blob = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
-        payload["ticket_hash"] = hashlib.sha256(blob).hexdigest()
+        if self.scope_laws:
+            payload["scope_laws"] = [dict(row) for row in self.scope_laws]
+        payload["ticket_hash"] = ticket_payload_hash(payload)
         return payload
 
 

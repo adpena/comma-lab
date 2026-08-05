@@ -93,6 +93,7 @@ for _p in (str(WORKTREE), str(WORKTREE / "src")):
         sys.path.insert(0, _p)
 
 from tac.optimization.ddm_gd1_gate_estimator import GateDesign, horvitz_thompson_mean
+from tac.witness_dsl.scope_laws import resolve_scope_law, scope_law_geometry_hash
 
 SEG_H, SEG_W = 384, 512
 DEFAULT_GT_CACHE = "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz"
@@ -3177,11 +3178,46 @@ def jd1_pose_finish_armed(args: Any) -> bool:
     return str(args.jd1_pose_finish_mode) != "off"
 
 
-def derive_jd1_stage_ema_decay(remaining_epochs: int, steps_per_epoch: int) -> tuple[float, str]:
+def derive_jd1_stage_ema_decay(
+    remaining_epochs: int,
+    steps_per_epoch: int,
+    *,
+    horizon_epochs: int | None = None,
+) -> tuple[float, str]:
     """JD3 stage-window EMA law: same LawRef, but U is the joint-pose window."""
-    updates = max(1, int(remaining_epochs)) * max(1, int(steps_per_epoch))
-    decay, prov = derive_ema_decay(updates)
-    return decay, f"JD3 stage-scoped window EMA: {prov}"
+    window_epochs = max(1, int(remaining_epochs))
+    steps = max(1, int(steps_per_epoch))
+    horizon = max(1, int(horizon_epochs if horizon_epochs is not None else window_epochs))
+    row = resolve_scope_law("jd3_stage_ema_decay", {
+        "remaining_epochs": window_epochs,
+        "steps_per_epoch": steps,
+        "run_geometry_hash": scope_law_geometry_hash(
+            steps_per_epoch=steps,
+            horizon_epochs=horizon,
+            window_epochs=window_epochs,
+        ),
+    })
+    return float(row["resolved_value"]), str(row["provenance"])
+
+
+def refuse_declared_vs_resolved_jd1_ema_decay(
+    declared_decay: float | None,
+    resolved_decay: float,
+    *,
+    resolution_hash: str,
+) -> None:
+    """Fail closed when a literal EMA flag disagrees with the live scope law."""
+    if declared_decay is None:
+        return
+    if abs(float(declared_decay) - float(resolved_decay)) <= 1e-12:
+        return
+    raise SystemExit(
+        "REFUSED: --ema-decay declares a literal EMA decay that conflicts with "
+        "the JD1 stage scope-law resolution "
+        f"({float(declared_decay)} != {float(resolved_decay)}; "
+        f"resolution_hash={resolution_hash}). Drop the literal "
+        "or make it match the resolved-at-consumption value."
+    )
 
 
 def jd1_ema_tail_anchor_epoch(value: int) -> int | None:
@@ -3253,7 +3289,8 @@ def jd1_ema_tail_average_live_weight(updates_since_anchor: int) -> float:
     k = int(updates_since_anchor)
     if k < 0:
         raise ValueError("updates_since_anchor must be >= 0")
-    return 1.0 / float(k + 2)
+    row = resolve_scope_law("jd1_plateau_tail_average_ema", {"updates_since_anchor": k})
+    return float(row["resolved_value"])
 
 
 def jd1_ema_gate_basis_label(
@@ -3314,36 +3351,27 @@ def jd1_should_reanchor_stage_ema(args: Any, state: Mapping[str, Any], *, reason
 
 
 def derive_jd1_realized_hold_max_retreats(value: int) -> tuple[int, str]:
-    if int(value) > 0:
-        return int(value), f"EXPLICIT --jd1-realized-hold-max-retreats {int(value)}"
-    return A1_CONSECUTIVE_REFUSE, (
-        "DERIVED from A1_CONSECUTIVE_REFUSE: allow the same number of rollback+retreat "
-        "events that would otherwise terminate the stage")
+    row = resolve_scope_law("jd3_max_retreats_a1_policy", {
+        "explicit_max_retreats": int(value),
+        "a1_consecutive_refuse": A1_CONSECUTIVE_REFUSE,
+    })
+    return int(row["resolved_value"]), str(row["provenance"])
 
 
 def derive_jd1_realized_hold_pose_retreat(value: float) -> tuple[float, str]:
-    if float(value) > 0.0:
-        return float(value), f"EXPLICIT --jd1-realized-hold-pose-retreat {float(value)}"
-    return 0.5, "DERIVED bisection retreat of pose-pressure interval (0.5)"
+    row = resolve_scope_law("jd3_pose_retreat_bisection", {
+        "explicit_pose_retreat": float(value),
+    })
+    return float(row["resolved_value"]), str(row["provenance"])
 
 
 def derive_jd1_realized_hold_margin(args: Any, gate_row: dict[str, Any]) -> tuple[float, str]:
-    if float(args.jd1_realized_hold_margin) > 0.0:
-        return (float(args.jd1_realized_hold_margin),
-                f"EXPLICIT --jd1-realized-hold-margin {float(args.jd1_realized_hold_margin)}")
-    sd = gate_row.get("realized_gate_dseg_per_pair_sd")
-    ids = gate_row.get("realized_gate_pair_ids")
-    if sd is None or ids is None:
-        raise RuntimeError(
-            "JD3 realized-hold margin derivation needs realized_gate_dseg_per_pair_sd "
-            "and realized_gate_pair_ids on the first post-engagement gate")
-    n = len(ids)
-    if n <= 0:
-        raise RuntimeError("JD3 realized-hold margin derivation received an empty gate set")
-    margin = float(sd) / math.sqrt(float(n))
-    return margin, (
-        "DERIVED first post-engagement realized gate uncertainty: "
-        f"sd(per-pair d_seg)={float(sd):.12g}/sqrt(n_gate={n}) -> {margin:.12g}")
+    row = resolve_scope_law("jd3_realized_hold_margin", {
+        "explicit_margin": float(args.jd1_realized_hold_margin),
+        "realized_gate_dseg_per_pair_sd": gate_row.get("realized_gate_dseg_per_pair_sd"),
+        "realized_gate_pair_ids": gate_row.get("realized_gate_pair_ids"),
+    })
+    return float(row["resolved_value"]), str(row["provenance"])
 
 
 def validate_jd1_pose_finish_args(args: Any) -> None:
@@ -3604,6 +3632,13 @@ def main() -> int:
     validate_tk1_consumer_args(args)
     validate_jd1_pose_finish_args(args)
     _jd1_pose_finish_enabled = jd1_pose_finish_armed(args)
+    resolved_scope_laws: list[dict[str, Any]] = []
+
+    def _resolve_scope_law(name: str, inputs: dict[str, Any]) -> dict[str, Any]:
+        row = resolve_scope_law(name, inputs)
+        resolved_scope_laws.append(dict(row))
+        tlog({"event": "scope_law_resolution", **row})
+        return row
 
     # GT: memmapped lstars/margins from the shared frozen-authority cache; frozen CPU SegNet.
     lstars = open_stored_npy_memmap(args.gt_cache, "lstars")
@@ -3959,6 +3994,7 @@ def main() -> int:
         "max_retreats_provenance": _jd1_realized_max_retreats_prov,
         "retreats": 0,
         "history": [],
+        "scope_law_resolution_hashes": [],
     }
     ema: dict[str, Any] = {k: mx.array(v) for k, v in tree_flatten(model.trainable_parameters())}
     start_epoch = 0
@@ -3983,6 +4019,7 @@ def main() -> int:
         "stage_ema_reanchored": False,
         "force_ema_reanchor_on_resume": bool(args.jd1_force_ema_reanchor_on_resume),
         "live_gate_telemetry": args.jd1_live_gate_telemetry,
+        "resolved_scope_laws": list(resolved_scope_laws),
     }
     jd1_pose_finish_state.update(jd1_ema_initial_state(args))
 
@@ -3998,6 +4035,7 @@ def main() -> int:
             "force_ema_reanchor_on_resume": bool(args.jd1_force_ema_reanchor_on_resume),
             "live_gate_telemetry": args.jd1_live_gate_telemetry,
             "seg_hold_space": args.jd1_seg_hold_space,
+            "resolved_scope_laws": list(resolved_scope_laws),
             **jd1_ema_checkpoint_payload(args, jd1_pose_finish_state),
         })
         return {"jd1_pose_finish": dict(jd1_pose_finish_state)}
@@ -4026,6 +4064,8 @@ def main() -> int:
                 jd1_effective_w_pose = float(_saved_jd1["effective_w_pose"])
             if isinstance(_saved_jd1.get("realized_hold"), dict):
                 jd1_realized_hold_state.update(_saved_jd1["realized_hold"])
+            if isinstance(_saved_jd1.get("resolved_scope_laws"), list):
+                resolved_scope_laws[:] = [dict(row) for row in _saved_jd1["resolved_scope_laws"]]
             if _saved_jd1.get("active_ema_decay") is not None:
                 active_ema_decay = float(_saved_jd1["active_ema_decay"])
                 active_ema_decay_provenance = str(
@@ -4049,6 +4089,7 @@ def main() -> int:
                 "active_ema_decay": float(active_ema_decay),
                 "active_ema_decay_provenance": active_ema_decay_provenance,
                 "force_ema_reanchor_on_resume": bool(args.jd1_force_ema_reanchor_on_resume),
+                "resolved_scope_laws": list(resolved_scope_laws),
             })
         if (jd1_pose_finish_state.get("engaged")
                 and float(args.jd1_seg_hold_weight) > 0.0
@@ -4165,6 +4206,30 @@ def main() -> int:
         # NOTE: Adam moments are re-anchored fresh (warm-start re-anchor law #517/#518):
         # a bounded-window resume restarts moment estimation at the resume geometry. WHICH reset
         # operator that is, is now the DSL-selected #824 arm (see `optimizer_arm` above).
+
+    if _jd1_pose_finish_enabled and args.jd1_seg_hold_space == "realized":
+        _resolved_names = {str(row.get("name")) for row in resolved_scope_laws}
+        if "jd3_pose_retreat_bisection" not in _resolved_names:
+            _row = _resolve_scope_law("jd3_pose_retreat_bisection", {
+                "explicit_pose_retreat": float(args.jd1_realized_hold_pose_retreat),
+            })
+            jd1_realized_hold_state["pose_retreat_factor"] = float(_row["resolved_value"])
+            jd1_realized_hold_state["pose_retreat_provenance"] = str(_row["provenance"])
+            jd1_realized_hold_state.setdefault("scope_law_resolution_hashes", []).append(
+                _row["resolution_hash"]
+            )
+        if "jd3_max_retreats_a1_policy" not in _resolved_names:
+            _row = _resolve_scope_law("jd3_max_retreats_a1_policy", {
+                "explicit_max_retreats": int(args.jd1_realized_hold_max_retreats),
+                "a1_consecutive_refuse": A1_CONSECUTIVE_REFUSE,
+            })
+            jd1_realized_hold_state["max_retreats"] = int(_row["resolved_value"])
+            jd1_realized_hold_state["max_retreats_provenance"] = str(_row["provenance"])
+            jd1_realized_hold_state.setdefault("scope_law_resolution_hashes", []).append(
+                _row["resolution_hash"]
+            )
+        jd1_pose_finish_state["realized_hold"] = dict(jd1_realized_hold_state)
+        jd1_pose_finish_state["resolved_scope_laws"] = list(resolved_scope_laws)
 
     # Gate set (pre-registered): all pairs when num_pairs < 600, else fd2 geometry.
     gate_ids = resolve_gate_ids(cfg.num_pairs)
@@ -4470,7 +4535,22 @@ def main() -> int:
         forced = bool(jd1_pose_finish_state.get("stage_ema_reanchored"))
         parent_ema = _copy_mx_tree(ema)
         remaining_epochs = max(1, int(cfg.epochs) - int(epoch))
-        new_decay, new_prov = derive_jd1_stage_ema_decay(remaining_epochs, steps_per_epoch)
+        ema_resolution = _resolve_scope_law("jd3_stage_ema_decay", {
+            "remaining_epochs": remaining_epochs,
+            "steps_per_epoch": steps_per_epoch,
+            "run_geometry_hash": scope_law_geometry_hash(
+                steps_per_epoch=steps_per_epoch,
+                horizon_epochs=int(cfg.epochs),
+                window_epochs=remaining_epochs,
+            ),
+        })
+        new_decay = float(ema_resolution["resolved_value"])
+        new_prov = str(ema_resolution["provenance"])
+        refuse_declared_vs_resolved_jd1_ema_decay(
+            args.ema_decay,
+            new_decay,
+            resolution_hash=str(ema_resolution["resolution_hash"]),
+        )
         ema = _copy_mx_tree(dict(tree_flatten(model.trainable_parameters())))
         active_ema_decay = float(new_decay)
         active_ema_decay_provenance = str(new_prov)
@@ -4489,6 +4569,8 @@ def main() -> int:
             "active_ema_decay": float(active_ema_decay),
             "active_ema_decay_provenance": active_ema_decay_provenance,
             "ema_warmup_updates": int(ema_warmup_updates),
+            "stage_ema_scope_law_resolution_hash": ema_resolution["resolution_hash"],
+            "resolved_scope_laws": list(resolved_scope_laws),
             **jd1_ema_initial_state(args),
         })
         save_checkpoint(out_dir / "checkpoints" / "stage_joint_pose_finish_entry.npz",
@@ -4507,6 +4589,7 @@ def main() -> int:
               "parent_shadow_preserved_prefix": "jd1_parent_ema::",
               "active_ema_decay": float(active_ema_decay),
               "active_ema_decay_provenance": active_ema_decay_provenance,
+              "scope_law_resolution_hash": ema_resolution["resolution_hash"],
               "ema_mode": args.jd1_ema_mode,
               "ema_tail_anchor_epoch": int(args.jd1_ema_tail_anchor_epoch),
               "ema_warmup_updates": int(ema_warmup_updates),
@@ -4831,11 +4914,19 @@ def main() -> int:
             flat = tree_flatten(model.trainable_parameters())
             if jd1_ema_tail_average_active(jd1_pose_finish_state):
                 _tail_k = int(jd1_pose_finish_state.get("ema_tail_update_count", 0))
-                _live_w = jd1_ema_tail_average_live_weight(_tail_k)
+                _tail_row = _resolve_scope_law(
+                    "jd1_plateau_tail_average_ema",
+                    {"updates_since_anchor": _tail_k},
+                )
+                _live_w = float(_tail_row["resolved_value"])
                 for k, v in flat:
                     ema[k] = ema[k] + _live_w * (v - ema[k])
                 jd1_pose_finish_state["ema_tail_update_count"] = _tail_k + 1
                 jd1_pose_finish_state["ema_tail_last_live_weight"] = float(_live_w)
+                jd1_pose_finish_state["ema_tail_last_scope_law_resolution_hash"] = (
+                    _tail_row["resolution_hash"]
+                )
+                jd1_pose_finish_state["resolved_scope_laws"] = list(resolved_scope_laws)
             else:
                 for k, v in flat:
                     ema[k] = active_ema_decay * ema[k] + (1.0 - active_ema_decay) * v
@@ -5086,20 +5177,41 @@ def main() -> int:
             if (jd1_realized_hold_state.get("active")
                     and jd1_pose_finish_state.get("engaged")):
                 if jd1_realized_hold_state.get("floor") is None:
-                    _margin, _margin_prov = derive_jd1_realized_hold_margin(args, gate_row)
+                    _floor_row = _resolve_scope_law("jd3_realized_hold_floor_latch", {
+                        "realized_gate_dseg_mean": gate_row["realized_gate_dseg_mean"],
+                    })
+                    _margin_row = _resolve_scope_law("jd3_realized_hold_margin", {
+                        "explicit_margin": float(args.jd1_realized_hold_margin),
+                        "realized_gate_dseg_per_pair_sd": gate_row.get(
+                            "realized_gate_dseg_per_pair_sd"),
+                        "realized_gate_pair_ids": gate_row.get("realized_gate_pair_ids"),
+                    })
                     jd1_realized_hold_state.update({
-                        "floor": float(gate_row["realized_gate_dseg_mean"]),
+                        "floor": float(_floor_row["resolved_value"]),
                         "floor_epoch": int(epoch),
                         "floor_gate_basis": gate_basis,
-                        "margin": float(_margin),
-                        "margin_provenance": _margin_prov,
+                        "margin": float(_margin_row["resolved_value"]),
+                        "margin_provenance": str(_margin_row["provenance"]),
+                        "floor_provenance": str(_floor_row["provenance"]),
+                        "scope_law_resolution_hashes": [
+                            *list(jd1_realized_hold_state.get(
+                                "scope_law_resolution_hashes") or []),
+                            _floor_row["resolution_hash"],
+                            _margin_row["resolution_hash"],
+                        ],
                     })
                     jd1_pose_finish_state["realized_hold"] = dict(jd1_realized_hold_state)
+                    jd1_pose_finish_state["resolved_scope_laws"] = list(resolved_scope_laws)
                     tlog({"event": "jd1_realized_hold_latch",
                           "epoch": epoch,
                           "floor": float(jd1_realized_hold_state["floor"]),
                           "margin": float(jd1_realized_hold_state["margin"]),
                           "margin_provenance": jd1_realized_hold_state["margin_provenance"],
+                          "floor_provenance": jd1_realized_hold_state["floor_provenance"],
+                          "scope_law_resolution_hashes": [
+                              _floor_row["resolution_hash"],
+                              _margin_row["resolution_hash"],
+                          ],
                           "gate_basis": gate_basis,
                           "score_claim": False})
                 else:

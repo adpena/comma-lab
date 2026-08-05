@@ -4,6 +4,8 @@ State as of 2026-08-05T22:16:26Z:
 
 - Plateau-tail JD1 EMA mode is implemented in the trainer.
 - DSL lever `lever_jd1_plateau_tail_average_ema(anchor_epoch=...)` is implemented.
+- dy1r registered the tail-average law as canonical equation
+  `jd1_plateau_tail_average_ema_v1` under the `T3_LIVE_ADAPTED` scope-law surface.
 - Focused tests pass: 18 passed.
 - Full boundary-reset file has 6 Metal-device failures unrelated to dy2 logic in this sandbox.
 
@@ -24,6 +26,5 @@ If resuming after commit:
    - `lever_jd1_joint_pose_finish(...)`
    - `lever_jd1_plateau_tail_average_ema(anchor_epoch=<tp1_case0_epoch>)`
 4. On a Metal-capable host, run the true JD1 tail-state `save_checkpoint` -> `load_checkpoint` resume round-trip before launch.
-5. After dy1 scope-law merge, register the tail-average law under `T3_LIVE_ADAPTED`.
 
 Frontier line: S = 0.7539807296911207 @ 357,836 B [macOS-CPU advisory]; contest pointer borrowed/unmoved.

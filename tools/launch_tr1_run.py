@@ -160,6 +160,18 @@ def main() -> int:
     from tac.witness_dsl.spec_tr1_renderer_20260728 import (  # noqa: E402
         TR1RendererProgramV1, trainer_declared_flags)
     from tac.witness_dsl.curriculum_dsl import Lever  # noqa: E402
+    from tac.witness_dsl.scope_laws import (  # noqa: E402
+        ticket_payload_hash, validate_ticket_scope_laws,
+    )
+    scope_laws = tuple(dict(row) for row in ticket.get("scope_laws") or ())
+    if scope_laws:
+        validate_ticket_scope_laws(scope_laws)
+        recomputed_ticket_hash = ticket_payload_hash(ticket)
+        if ticket.get("ticket_hash") != recomputed_ticket_hash:
+            return refuse(
+                "STALE SEAL: declared scope_laws are not included in the sealed "
+                f"ticket_hash ({ticket.get('ticket_hash')} != {recomputed_ticket_hash})"
+            )
     levers = tuple(Lever(name=d["name"], overrides=dict(d["overrides"]),
                          notes=d.get("notes", "")) for d in ticket["levers"])
     sealed_argv = list(ticket["argv"])
@@ -174,7 +186,8 @@ def main() -> int:
         seed=int(_get("--seed", sealed_argv) or 0),
         gt_cache=_get("--gt-cache", sealed_argv),
         resume_from=str(args.resume_from) if args.resume_from else None,
-        full_confirm="--full-confirm" in sealed_argv)
+        full_confirm="--full-confirm" in sealed_argv,
+        scope_laws=scope_laws)
     recompiled = prog.compile_trainer_argv()  # fail-closed never-invent-flags
 
     def _norm(argv: list[str]) -> list[str]:

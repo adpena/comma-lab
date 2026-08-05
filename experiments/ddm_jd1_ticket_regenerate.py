@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import argparse
 import copy
-import hashlib
 import json
 import math
 import re
@@ -25,6 +24,13 @@ REPO = Path(__file__).resolve().parents[1]
 for p in (str(REPO), str(REPO / "src")):
     if p not in sys.path:
         sys.path.insert(0, p)
+
+from tac.witness_dsl.scope_laws import (  # noqa: E402
+    jd1_tail_average_scope_law_refs,
+    jd3_default_scope_law_refs,
+    ticket_payload_hash,
+    validate_ticket_scope_laws,
+)
 
 TRAINER_SCRIPT = "experiments/train_tr1_partition_renderer_mlx.py"
 VENV_PYTHON = str(REPO / ".venv/bin/python")
@@ -140,6 +146,31 @@ def validate_lever_overrides_match_argv(ticket: dict[str, Any]) -> None:
         raise SystemExit(f"declared-vs-argv mismatch in emitted ticket: {joined}")
 
 
+def _merged_scope_laws(*groups: Any) -> list[dict[str, Any]]:
+    by_name: dict[str, dict[str, Any]] = {}
+    for group in groups:
+        for row in group or []:
+            name = str(row.get("name", ""))
+            if not name:
+                raise SystemExit("scope law row is missing name")
+            by_name[name] = dict(row)
+    rows = list(by_name.values())
+    if rows:
+        validate_ticket_scope_laws(rows)
+    return rows
+
+
+def sync_ticket_scope_laws_from_argv(regen: dict[str, Any], argv: list[str]) -> None:
+    scope_laws = list(regen.get("scope_laws") or [])
+    argv_values = argv_value_map(argv)
+    if argv_values.get("--jd1-ema-mode") == "plateau_tail_average":
+        scope_laws = _merged_scope_laws(scope_laws, jd1_tail_average_scope_law_refs())
+    if scope_laws:
+        regen["scope_laws"] = _merged_scope_laws(scope_laws)
+    else:
+        regen.pop("scope_laws", None)
+
+
 def _is_under(path: Path, root: Path) -> bool:
     try:
         path.resolve(strict=False).relative_to(root.resolve(strict=False))
@@ -249,9 +280,9 @@ def finalize_ticket(
     validate_recursive_resume_template(regen, child_out_dir=child_out_dir)
     regen["levers"] = rebuild_lever_overrides_from_argv(regen.get("levers", []), final_argv)
     validate_lever_overrides_match_argv(regen)
+    sync_ticket_scope_laws_from_argv(regen, final_argv)
     regen.pop("ticket_hash", None)
-    body = json.dumps(regen, indent=1, sort_keys=True)
-    regen["ticket_hash"] = hashlib.sha256(body.encode()).hexdigest()
+    regen["ticket_hash"] = ticket_payload_hash(regen)
     out_ticket.parent.mkdir(parents=True, exist_ok=True)
     out_ticket.write_text(json.dumps(regen, indent=1, sort_keys=True) + "\n")
     return regen
@@ -431,6 +462,7 @@ def main() -> int:
             "ticket_version": "jd3_v3",
             "steer": "ddm_jd3 2026-08-05 #366 reroute",
         }
+        regen["scope_laws"] = jd3_default_scope_law_refs()
         out_ticket = args.out_ticket or (
             JD1_V2_RUN_DIR.parent / f"jd3_ticket_v3_{args.start_candidate}.json")
         regen = finalize_ticket(
