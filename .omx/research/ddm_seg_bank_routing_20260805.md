@@ -77,3 +77,24 @@ and the A/B reads:
    of the description), never the solve's raw d_seg (which is known-achievable).
 
 S = 0.7539807296911207 @ 357,836 B [macOS-CPU advisory]; contest pointer borrowed/unmoved.
+
+## AMENDMENT 3 (operator, same day): LET IT DESCEND — window caps on descending runs are CENSORED CAPS
+Operator: *"We should let it descend as far as it can possibly go. Remember?"* Applied
+to the LIVE object: the TP1 birth-ON arm is in COUPLED_DESCENT at ep889 (0.00456 →
+0.00442 over its window) and the inherited ep-946 cap is an UNDERIVED constant that
+would cut it mid-descent — the #850/#935/ca1 censored-cap genus about to recur on the
+live run. BINDING RULE (extends the "solves run to convergence" clause to TRAINING
+windows): a window that ends while still descending (a1 COUPLED_DESCENT, or slope
+above the plateau criterion) is a CENSORED endpoint — it gets WARM CONTINUATION
+windows from its own checkpoint (the r1c precedent: windowed warm tail, extension-
+while-descending, adjudicated between windows) until a measured plateau (ar5's
+two-sided lens: residue washing out + slope below criterion). Consequences:
+1. The matched-epoch A/B read at ep946 is UNCHANGED (clean comparison, answers the
+   birth question at matched budget) — but it is a BUDGET-CONDITIONAL read and says so.
+2. ADOPTION endpoints = CONVERGED endpoints. The ON arm continues in 139-epoch warm
+   windows (persist-optimizer-state on, same sealed lever set, ticket regenerated per
+   window from the live endpoint) while COUPLED_DESCENT persists; MAIN adjudicates at
+   each window receipt. OFF ran FLAT its whole window (settled trunk) — its cap
+   endpoint is plausibly its plateau; re-check its endpoint slope at the A/B read and
+   extend it too if the stricter criterion says un-plateaued.
+3. jd1's joint window fires from the CONVERGED winning endpoint, not the ep-946 one.
