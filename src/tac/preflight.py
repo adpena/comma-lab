@@ -1530,7 +1530,24 @@ def _has_substantive_same_line_waiver(line: str, token: str) -> bool:
     if marker not in line:
         return False
     rationale = line.split(marker, 1)[1].strip()
-    return bool(len(rationale) >= 4 and rationale.lower() not in {"<rationale>", "<reason>", "todo", "tbd", "none"})
+    placeholder = rationale.lower().strip(" .#")
+    return bool(
+        len(rationale) >= 4
+        and placeholder
+        not in {
+            "<rationale>",
+            "<reason>",
+            "reason",
+            "rationale",
+            "placeholder",
+            "todo",
+            "tbd",
+            "fixme",
+            "xxx",
+            "n/a",
+            "none",
+        }
+    )
 
 
 def _check_351_call_name(node: ast.AST) -> str:
@@ -1544,6 +1561,9 @@ def _check_351_call_name(node: ast.AST) -> str:
 def _check_351_exact_helper_is_closed(helper: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
     """Verify that the producer helper rejects aliases and returns canonical labels."""
 
+    stricter_helper = globals().get("_check_351_gate_debt_exact_helper_is_closed")
+    if callable(stricter_helper) and stricter_helper(helper):
+        return True
     arg_names = {
         arg.arg
         for arg in (
@@ -1656,6 +1676,729 @@ def _check_351_sha_is_revalidated(
         if has_constant and has_source_sha:
             return True
     return False
+
+
+def _check_351_gate_debt_if_directly_raises(node: ast.If) -> bool:
+    """Return whether an ``if`` refuses immediately on its selected path."""
+
+    return bool(node.body and isinstance(node.body[0], ast.Raise))
+
+
+_CHECK_351_GATE_DEBT_EXACT_HELPER_SOURCE = """
+def _canonical_producer_reference(value, *, canonical_path):
+    candidate = Path(value)
+    canonical_relative = Path(canonical_path)
+    if (
+        canonical_relative.is_absolute()
+        or not canonical_relative.parts
+        or ".." in canonical_relative.parts
+        or ".." in candidate.parts
+    ):
+        raise ValueError("invalid canonical path")
+    requested = candidate.absolute() if candidate.is_absolute() else (REPO_ROOT / candidate).absolute()
+    expected_requested = (REPO_ROOT / canonical_relative).absolute()
+    if requested != expected_requested:
+        raise ValueError("caller alias refused")
+    current = REPO_ROOT.absolute()
+    root_lstat = current.lstat()
+    if stat.S_ISLNK(root_lstat.st_mode):
+        raise ValueError("symlinked repo root refused")
+    if not stat.S_ISDIR(root_lstat.st_mode):
+        raise ValueError("non-directory repo root refused")
+    for part in canonical_relative.parts:
+        current = current / part
+        current_lstat = current.lstat()
+        if stat.S_ISLNK(current_lstat.st_mode):
+            raise ValueError("symlinked component refused")
+        if current == expected_requested:
+            if not stat.S_ISREG(current_lstat.st_mode):
+                raise ValueError("non-regular producer refused")
+        elif not stat.S_ISDIR(current_lstat.st_mode):
+            raise ValueError("non-directory ancestor refused")
+    canonical_stat = expected_requested.stat()
+    if canonical_stat.st_nlink != 1:
+        raise ValueError("hardlinked producer refused")
+    resolved = requested.resolve()
+    expected = expected_requested.resolve()
+    if resolved != expected:
+        raise ValueError("resolved identity drift refused")
+    return expected, canonical_path
+"""
+
+
+def _check_351_gate_debt_ast_structure(node: object) -> object:
+    """Return an exact AST key while treating exception prose as non-semantic."""
+
+    if isinstance(node, ast.Raise):
+        return ("Raise", node.exc is not None, node.cause is not None)
+    if isinstance(node, ast.AST):
+        return (
+            type(node).__name__,
+            tuple(
+                (field, _check_351_gate_debt_ast_structure(value))
+                for field, value in ast.iter_fields(node)
+            ),
+        )
+    if isinstance(node, list):
+        return tuple(_check_351_gate_debt_ast_structure(value) for value in node)
+    return node
+
+
+def _check_351_gate_debt_exact_helper_is_closed(
+    helper: ast.FunctionDef | ast.AsyncFunctionDef,
+) -> bool:
+    """Verify the complete, review-sealed canonical-path helper AST."""
+
+    if not isinstance(helper, ast.FunctionDef) or helper.decorator_list:
+        return False
+    if (
+        helper.args.posonlyargs
+        or [arg.arg for arg in helper.args.args] != ["value"]
+        or [arg.arg for arg in helper.args.kwonlyargs] != ["canonical_path"]
+        or helper.args.vararg is not None
+        or helper.args.kwarg is not None
+        or helper.args.defaults
+        or helper.args.kw_defaults != [None]
+    ):
+        return False
+    expected = ast.parse(_CHECK_351_GATE_DEBT_EXACT_HELPER_SOURCE).body[0]
+    assert isinstance(expected, ast.FunctionDef)
+    body = list(helper.body)
+    if (
+        body
+        and isinstance(body[0], ast.Expr)
+        and isinstance(body[0].value, ast.Constant)
+        and isinstance(body[0].value.value, str)
+    ):
+        body = body[1:]
+    return _check_351_gate_debt_ast_structure(body) == _check_351_gate_debt_ast_structure(expected.body)
+
+
+def _check_351_gate_debt_sha_operand(node: ast.AST) -> str | None:
+    if (
+        isinstance(node, ast.Attribute)
+        and node.attr == "source_sha256"
+        and isinstance(node.value, ast.Name)
+    ):
+        return node.value.id
+    return None
+
+
+def _check_351_gate_debt_exact_sha_guard_pairs(node: ast.AST) -> list[tuple[str, str]] | None:
+    """Parse only ``provenance.source_sha256 != SOURCE_*_SHA256`` OR trees."""
+
+    if isinstance(node, ast.BoolOp) and isinstance(node.op, ast.Or):
+        pairs: list[tuple[str, str]] = []
+        for value in node.values:
+            parsed = _check_351_gate_debt_exact_sha_guard_pairs(value)
+            if parsed is None:
+                return None
+            pairs.extend(parsed)
+        return pairs
+    if not (
+        isinstance(node, ast.Compare)
+        and len(node.ops) == 1
+        and isinstance(node.ops[0], ast.NotEq)
+        and len(node.comparators) == 1
+    ):
+        return None
+    left_provenance = _check_351_gate_debt_sha_operand(node.left)
+    right_provenance = _check_351_gate_debt_sha_operand(node.comparators[0])
+    if left_provenance is not None and isinstance(node.comparators[0], ast.Name):
+        return [(left_provenance, node.comparators[0].id)]
+    if right_provenance is not None and isinstance(node.left, ast.Name):
+        return [(right_provenance, node.left.id)]
+    return None
+
+
+def _check_351_gate_debt_module_imports_canonical_builder(tree: ast.Module) -> bool:
+    name = "build_provenance_for_research_sidecar"
+    imports = [
+        alias
+        for node in tree.body
+        if isinstance(node, ast.ImportFrom) and node.module == "tac.provenance.builders"
+        for alias in node.names
+        if alias.name == name
+    ]
+    if len(imports) != 1 or imports[0].asname is not None:
+        return False
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Store) and node.id == name:
+            return False
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) and node.name == name:
+            return False
+        if isinstance(node, (ast.Import, ast.ImportFrom)):
+            for alias in node.names:
+                bound = alias.asname or alias.name.rsplit(".", 1)[-1]
+                if bound == name and not (
+                    isinstance(node, ast.ImportFrom)
+                    and node.module == "tac.provenance.builders"
+                    and alias.name == name
+                    and alias.asname is None
+                ):
+                    return False
+    return True
+
+
+def _check_351_gate_debt_function_defaults(
+    function: ast.FunctionDef | ast.AsyncFunctionDef,
+) -> dict[str, ast.AST]:
+    positional = (*function.args.posonlyargs, *function.args.args)
+    positional_defaults: dict[str, ast.AST] = {}
+    if function.args.defaults:
+        start = len(positional) - len(function.args.defaults)
+        positional_defaults = {
+            positional[start + index].arg: value
+            for index, value in enumerate(function.args.defaults)
+        }
+    keyword_defaults = {
+        arg.arg: value
+        for arg, value in zip(function.args.kwonlyargs, function.args.kw_defaults, strict=True)
+        if value is not None
+    }
+    return {**positional_defaults, **keyword_defaults}
+
+
+def _check_351_gate_debt_top_level_bindings(
+    function: ast.FunctionDef | ast.AsyncFunctionDef,
+) -> dict[str, tuple[str, str, str, int, ast.Name]]:
+    """Map caller argument to its exact top-level guard binding and source."""
+
+    bindings: dict[str, tuple[str, str, str, int, ast.Name]] = {}
+    duplicates: set[str] = set()
+    for statement_index, statement in enumerate(function.body):
+        if not (
+            isinstance(statement, ast.Assign)
+            and len(statement.targets) == 1
+            and isinstance(statement.targets[0], (ast.Tuple, ast.List))
+            and len(statement.targets[0].elts) == 2
+            and all(isinstance(item, ast.Name) for item in statement.targets[0].elts)
+            and isinstance(statement.value, ast.Call)
+            and isinstance(statement.value.func, ast.Name)
+            and statement.value.func.id == "_canonical_producer_reference"
+        ):
+            continue
+        call = statement.value
+        caller = call.args[0] if call.args else next(
+            (keyword.value for keyword in call.keywords if keyword.arg == "value"),
+            None,
+        )
+        canonical = next(
+            (keyword.value for keyword in call.keywords if keyword.arg == "canonical_path"),
+            None,
+        )
+        if not (
+            len(call.args) <= 1
+            and not any(keyword.arg is None for keyword in call.keywords)
+            and sum(keyword.arg == "value" for keyword in call.keywords) <= 1
+            and sum(keyword.arg == "canonical_path" for keyword in call.keywords) == 1
+            and len(call.keywords) <= (2 if not call.args else 1)
+            and isinstance(caller, ast.Name)
+            and isinstance(canonical, ast.Name)
+            and canonical.id.startswith("SOURCE_")
+            and not canonical.id.endswith("SHA256")
+        ):
+            continue
+        resolved, label = statement.targets[0].elts
+        assert isinstance(resolved, ast.Name) and isinstance(label, ast.Name)
+        if caller.id in bindings:
+            duplicates.add(caller.id)
+        bindings[caller.id] = (
+            resolved.id,
+            label.id,
+            canonical.id,
+            statement_index,
+            caller,
+        )
+    for name in duplicates:
+        bindings.pop(name, None)
+    return bindings
+
+
+def _check_351_gate_debt_provenance_bindings(
+    function: ast.FunctionDef | ast.AsyncFunctionDef,
+) -> dict[str, tuple[str, int, ast.stmt]]:
+    """Map resolved paths to exact canonical-builder assignment custody."""
+
+    result: dict[str, tuple[str, int, ast.stmt]] = {}
+    duplicates: set[str] = set()
+    for statement_index, statement in enumerate(function.body):
+        if not isinstance(statement, (ast.Assign, ast.AnnAssign)) or statement.value is None:
+            continue
+        targets = statement.targets if isinstance(statement, ast.Assign) else (statement.target,)
+        if len(targets) != 1 or not isinstance(targets[0], ast.Name):
+            continue
+        builder_calls = [
+            node
+            for node in ast.walk(statement.value)
+            if isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Name)
+            and node.func.id == "build_provenance_for_research_sidecar"
+        ]
+        if len(builder_calls) != 1:
+            continue
+        sidecar = next(
+            (keyword.value for keyword in builder_calls[0].keywords if keyword.arg == "sidecar_path"),
+            builder_calls[0].args[0] if builder_calls[0].args else None,
+        )
+        if not isinstance(sidecar, ast.Name):
+            continue
+        if sidecar.id in result:
+            duplicates.add(sidecar.id)
+        result[sidecar.id] = (targets[0].id, statement_index, statement)
+    for name in duplicates:
+        result.pop(name, None)
+    return result
+
+
+def _check_351_gate_debt_own_nodes(
+    function: ast.FunctionDef | ast.AsyncFunctionDef,
+) -> list[ast.AST]:
+    """Walk a function body without laundering evidence through nested scopes."""
+
+    result: list[ast.AST] = []
+    pending: list[ast.AST] = list(reversed(function.body))
+    while pending:
+        node = pending.pop()
+        result.append(node)
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda)):
+            continue
+        pending.extend(reversed(list(ast.iter_child_nodes(node))))
+    return result
+
+
+def _check_351_gate_debt_is_candidate(function: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
+    nodes = _check_351_gate_debt_own_nodes(function)
+    has_producer_output = any(
+        (isinstance(node, ast.keyword) and node.arg == "canonical_producers")
+        or (isinstance(node, ast.Constant) and node.value == "canonical_producers")
+        for node in nodes
+    )
+    if not has_producer_output:
+        return False
+    defaults = _check_351_gate_debt_function_defaults(function)
+    has_source_default = any(
+        isinstance(value, ast.Name)
+        and value.id.startswith("SOURCE_")
+        and not value.id.endswith("SHA256")
+        for value in defaults.values()
+    )
+    call_names = {
+        _check_351_call_name(node.func)
+        for node in nodes
+        if isinstance(node, ast.Call)
+    }
+    has_source_sha = any(
+        isinstance(node, ast.Name)
+        and node.id.startswith("SOURCE_")
+        and node.id.endswith("SHA256")
+        for node in nodes
+    )
+    return bool(
+        has_source_default
+        or has_source_sha
+        or "_canonical_producer_reference" in call_names
+        or "build_provenance_for_research_sidecar" in call_names
+    )
+
+
+def _check_351_gate_debt_simple_string_constants(tree: ast.Module) -> tuple[dict[str, str], set[str]]:
+    values: dict[str, str] = {}
+    duplicates: set[str] = set()
+    for statement in tree.body:
+        if not isinstance(statement, (ast.Assign, ast.AnnAssign)) or statement.value is None:
+            continue
+        targets = statement.targets if isinstance(statement, ast.Assign) else (statement.target,)
+        if len(targets) != 1 or not isinstance(targets[0], ast.Name):
+            continue
+        name = targets[0].id
+        if name in values:
+            duplicates.add(name)
+            continue
+        if isinstance(statement.value, ast.Constant) and isinstance(statement.value.value, str):
+            values[name] = statement.value.value
+    for name in duplicates:
+        values.pop(name, None)
+    return values, duplicates
+
+
+def _check_351_gate_debt_direct_final_producers(
+    function: ast.FunctionDef | ast.AsyncFunctionDef,
+) -> tuple[list[str] | None, str | None]:
+    if not function.body or not isinstance(function.body[-1], ast.Return):
+        return None, "verified producer does not end in its sole return"
+    final_return = function.body[-1]
+    if any(
+        isinstance(node, (ast.Return, ast.Yield, ast.YieldFrom))
+        for statement in function.body[:-1]
+        for node in ast.walk(statement)
+    ):
+        return None, "verified producer has an early or nested return/yield"
+    if not (
+        isinstance(final_return.value, ast.Call)
+        and isinstance(final_return.value.func, ast.Name)
+        and final_return.value.func.id in {"CanonicalEquation", "dict"}
+        and not any(keyword.arg is None for keyword in final_return.value.keywords)
+    ):
+        return None, "verified producer final return is not a direct auditable constructor"
+    keywords = [
+        keyword
+        for keyword in final_return.value.keywords
+        if keyword.arg == "canonical_producers"
+    ]
+    if len(keywords) != 1:
+        return None, "canonical_producers is not a unique direct final-constructor keyword"
+    value = keywords[0].value
+    if not isinstance(value, (ast.Tuple, ast.List)) or not all(
+        isinstance(item, ast.Name) for item in value.elts
+    ):
+        return None, "canonical_producers is not an exact tuple/list of guarded labels"
+    labels = [item.id for item in value.elts if isinstance(item, ast.Name)]
+    return labels, None
+
+
+def _check_351_canonical_producer_identity_backfill_debt(
+    repo_root: Path,
+    *,
+    include_denominator: bool = False,
+) -> list[str] | tuple[list[str], int]:
+    """Warn-only Catalog #351 backfill scanner for verified producer debt.
+
+    This is GB1/EK1's stricter #351 surface.  It intentionally remains separate
+    from the already-strict ``_check_351_canonical_producer_identity`` until the
+    #670 / p0_332 backfill drives the live debt to zero.
+    """
+
+    package = repo_root / "src/tac/canonical_equations"
+    if not package.is_dir():
+        return ([], 0) if include_denominator else []
+    violations: list[str] = []
+    scanned = 0
+    for path in sorted(package.rglob("*.py")):
+        scanned += 1
+        try:
+            source = path.read_text(encoding="utf-8", errors="replace")
+            tree = ast.parse(source)
+        except (OSError, SyntaxError) as exc:
+            violations.append(f"{path.relative_to(repo_root)}: canonical producer source is unreadable: {exc}")
+            continue
+        lines = source.splitlines()
+        constants, duplicate_constants = _check_351_gate_debt_simple_string_constants(tree)
+        sha_constants = {
+            name
+            for name, value in constants.items()
+            if name.startswith("SOURCE_")
+            and name.endswith("SHA256")
+            and len(value) == 64
+            and all(character in "0123456789abcdef" for character in value)
+        }
+        top_level_functions = [
+            node
+            for node in tree.body
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        ]
+        helper_defs = [
+            node
+            for node in top_level_functions
+            if node.name == "_canonical_producer_reference"
+        ]
+        helper = helper_defs[0] if len(helper_defs) == 1 else None
+        helper_shadowed = any(
+            (
+                isinstance(node, ast.Name)
+                and isinstance(node.ctx, ast.Store)
+                and node.id == "_canonical_producer_reference"
+            )
+            or (
+                isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
+                and node.name == "_canonical_producer_reference"
+                and node not in helper_defs
+            )
+            for node in ast.walk(tree)
+        )
+        all_functions = [
+            node
+            for node in ast.walk(tree)
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        ]
+        for function in all_functions:
+            if not _check_351_gate_debt_is_candidate(function):
+                continue
+            argument_names = {
+                arg.arg
+                for arg in (*function.args.posonlyargs, *function.args.args, *function.args.kwonlyargs)
+            }
+            own_nodes = _check_351_gate_debt_own_nodes(function)
+            calls = [node for node in own_nodes if isinstance(node, ast.Call)]
+            definition_line = lines[function.lineno - 1] if function.lineno <= len(lines) else ""
+            if _has_substantive_same_line_waiver(definition_line, "CANONICAL_PRODUCER_IDENTITY_OK"):
+                continue
+            defects: list[str] = []
+            if function not in top_level_functions:
+                defects.append("verified producer is not a top-level function")
+            if any(
+                isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda))
+                for statement in function.body
+                for node in ast.walk(statement)
+            ):
+                defects.append("verified producer contains a nested scope")
+            if not _check_351_gate_debt_module_imports_canonical_builder(tree):
+                defects.append("provenance builder is not the canonical unshadowed import")
+            if helper is None or helper_shadowed or not _check_351_gate_debt_exact_helper_is_closed(helper):
+                defects.append("missing fail-closed exact-path helper")
+            for critical_name in (
+                "_canonical_producer_reference",
+                "build_provenance_for_research_sidecar",
+            ):
+                if critical_name in argument_names or any(
+                    isinstance(node, ast.Name)
+                    and isinstance(node.ctx, ast.Store)
+                    and node.id == critical_name
+                    for node in own_nodes
+                ):
+                    defects.append(f"{critical_name} is shadowed inside the verified producer")
+            bindings = _check_351_gate_debt_top_level_bindings(function)
+            provenance_bindings = _check_351_gate_debt_provenance_bindings(function)
+            defaults = _check_351_gate_debt_function_defaults(function)
+            producer_args = {
+                name
+                for name, default in defaults.items()
+                if isinstance(default, ast.Name)
+                and default.id.startswith("SOURCE_")
+                and not default.id.endswith("SHA256")
+            }
+            producer_args.update(bindings)
+            for call in calls:
+                if _check_351_call_name(call.func) != "build_provenance_for_research_sidecar":
+                    continue
+                sidecar = next(
+                    (keyword.value for keyword in call.keywords if keyword.arg == "sidecar_path"),
+                    call.args[0] if call.args else None,
+                )
+                if isinstance(sidecar, ast.Name) and sidecar.id in argument_names:
+                    producer_args.add(sidecar.id)
+            producer_labels, producer_error = _check_351_gate_debt_direct_final_producers(function)
+            if producer_error is not None:
+                defects.append(producer_error)
+            producer_mentions = [
+                node
+                for node in own_nodes
+                if (isinstance(node, ast.keyword) and node.arg == "canonical_producers")
+                or (isinstance(node, ast.Constant) and node.value == "canonical_producers")
+            ]
+            if len(producer_mentions) != 1:
+                defects.append("canonical_producers has decoy, indirect, or duplicate emissions")
+            if not producer_args:
+                defects.append("verified producer inputs are not statically identifiable")
+            expected_labels: list[str] = []
+            expected_sha_pairs: list[tuple[str, str]] = []
+            provenance_statement_indexes: list[int] = []
+            ordered_producer_args = sorted(
+                producer_args,
+                key=lambda name: (
+                    bindings[name][3],
+                    name,
+                )
+                if name in bindings
+                else (10**9, name),
+            )
+            for arg_name in ordered_producer_args:
+                binding = bindings.get(arg_name)
+                if binding is None:
+                    defects.append(f"{arg_name} bypasses exact canonical-path binding")
+                    continue
+                resolved_name, label_name, source_name, binding_index, caller_node = binding
+                expected_labels.append(label_name)
+                default = defaults.get(arg_name)
+                if not isinstance(default, ast.Name) or default.id != source_name:
+                    defects.append(f"{arg_name} default does not match {source_name}")
+                source_value = constants.get(source_name)
+                source_path = Path(source_value) if source_value is not None else None
+                if (
+                    source_name in duplicate_constants
+                    or source_path is None
+                    or source_path.is_absolute()
+                    or not source_path.parts
+                    or ".." in source_path.parts
+                ):
+                    defects.append(f"{source_name} is not a unique repo-relative path constant")
+                arg_loads = [
+                    node
+                    for statement in function.body
+                    for node in ast.walk(statement)
+                    if isinstance(node, ast.Name)
+                    and isinstance(node.ctx, ast.Load)
+                    and node.id == arg_name
+                ]
+                if len(arg_loads) != 1 or arg_loads[0] is not caller_node:
+                    defects.append(f"{arg_name} caller value leaks outside its exact-path guard")
+                for bound_name in (resolved_name, label_name):
+                    stores = [
+                        node
+                        for node in own_nodes
+                        if isinstance(node, ast.Name)
+                        and isinstance(node.ctx, ast.Store)
+                        and node.id == bound_name
+                    ]
+                    if len(stores) != 1:
+                        defects.append(f"{bound_name} is reassigned after exact-path binding")
+                provenance_binding = provenance_bindings.get(resolved_name)
+                if provenance_binding is None:
+                    defects.append(f"{arg_name} exact path is not consumed by provenance")
+                    provenance_name = None
+                else:
+                    provenance_name, provenance_index, provenance_statement = provenance_binding
+                    provenance_statement_indexes.append(provenance_index)
+                    if provenance_index <= binding_index:
+                        defects.append(f"{arg_name} provenance is built before its exact-path guard")
+                    provenance_stores = [
+                        node
+                        for node in own_nodes
+                        if isinstance(node, ast.Name)
+                        and isinstance(node.ctx, ast.Store)
+                        and node.id == provenance_name
+                    ]
+                    if len(provenance_stores) != 1:
+                        defects.append(f"{provenance_name} is reassigned after canonical provenance construction")
+                    source_path_keywords = [
+                        node
+                        for node in ast.walk(provenance_statement)
+                        if isinstance(node, ast.keyword) and node.arg == "source_path"
+                    ]
+                    if any(
+                        not isinstance(keyword.value, ast.Name)
+                        or keyword.value.id != label_name
+                        for keyword in source_path_keywords
+                    ):
+                        defects.append(f"{arg_name} provenance source_path is not its guarded canonical label")
+                constant_name = f"{source_name}_SHA256"
+                if constant_name not in sha_constants:
+                    defects.append(f"{constant_name} is not cited by the verified producer")
+                elif provenance_name is not None:
+                    expected_sha_pairs.append((provenance_name, constant_name))
+            if producer_labels is not None and producer_labels != expected_labels:
+                defects.append("canonical_producers does not exactly match guarded labels in argument order")
+            exact_builder_calls = [
+                call
+                for call in calls
+                if isinstance(call.func, ast.Name)
+                and call.func.id == "build_provenance_for_research_sidecar"
+            ]
+            named_builder_calls = [
+                call
+                for call in calls
+                if _check_351_call_name(call.func) == "build_provenance_for_research_sidecar"
+            ]
+            if len(exact_builder_calls) != len(bindings) or len(named_builder_calls) != len(exact_builder_calls):
+                defects.append("provenance calls are not one exact canonical call per guarded producer")
+            actual_sha_pairs: list[tuple[str, str]] = []
+            sha_guard_indexes: list[int] = []
+            expected_constant_names = {constant for _provenance, constant in expected_sha_pairs}
+            expected_provenance_names = {provenance for provenance, _constant in expected_sha_pairs}
+            for statement_index, statement in enumerate(function.body):
+                if not isinstance(statement, ast.If):
+                    continue
+                relevant = any(
+                    (isinstance(node, ast.Name) and node.id in expected_constant_names)
+                    or (
+                        isinstance(node, ast.Attribute)
+                        and node.attr == "source_sha256"
+                        and isinstance(node.value, ast.Name)
+                        and node.value.id in expected_provenance_names
+                    )
+                    for node in ast.walk(statement.test)
+                )
+                if not relevant:
+                    continue
+                parsed_pairs = _check_351_gate_debt_exact_sha_guard_pairs(statement.test)
+                if not (
+                    parsed_pairs is not None
+                    and len(statement.body) == 1
+                    and isinstance(statement.body[0], ast.Raise)
+                    and not statement.orelse
+                ):
+                    defects.append("producer SHA guard is not an exact immediate fail-closed comparison")
+                    continue
+                actual_sha_pairs.extend(parsed_pairs)
+                sha_guard_indexes.append(statement_index)
+            if sorted(actual_sha_pairs) != sorted(expected_sha_pairs):
+                defects.append("producer SHA guards do not exactly cover the canonical provenance/source pairs")
+            if len(actual_sha_pairs) != len(set(actual_sha_pairs)):
+                defects.append("producer SHA guards contain duplicate or decoy comparisons")
+            for provenance_name, constant_name in expected_sha_pairs:
+                constant_loads = [
+                    node
+                    for node in own_nodes
+                    if isinstance(node, ast.Name)
+                    and isinstance(node.ctx, ast.Load)
+                    and node.id == constant_name
+                ]
+                source_sha_loads = [
+                    node
+                    for node in own_nodes
+                    if isinstance(node, ast.Attribute)
+                    and node.attr == "source_sha256"
+                    and isinstance(node.value, ast.Name)
+                    and node.value.id == provenance_name
+                ]
+                if len(constant_loads) != 1 or len(source_sha_loads) != 1:
+                    defects.append(f"{constant_name} has a decoy or missing SHA use")
+            if sha_guard_indexes and provenance_statement_indexes and min(sha_guard_indexes) <= max(
+                provenance_statement_indexes
+            ):
+                defects.append("producer SHA guard executes before all canonical provenance is built")
+            allowed_raises = {
+                id(statement.body[0])
+                for statement in function.body
+                if isinstance(statement, ast.If)
+                and _check_351_gate_debt_exact_sha_guard_pairs(statement.test) is not None
+                and len(statement.body) == 1
+                and isinstance(statement.body[0], ast.Raise)
+                and not statement.orelse
+            }
+            if any(isinstance(node, ast.Raise) and id(node) not in allowed_raises for node in own_nodes):
+                defects.append("verified producer contains a non-SHA or unreachable explicit raise")
+            if defects:
+                violations.append(
+                    f"{path.relative_to(repo_root)}:{function.lineno}: parameterized verified canonical producer "
+                    + "; ".join(defects)
+                    + ". Rule chain: Catalog #351 LawRef/value custody + #332 provenance bijection + "
+                    "#505 P0 anti-fake + Catalog #273-#278 observability/waiver discipline. "
+                    "Route through an exact repo-path guard and reject zero/alias provenance, or add same-line "
+                    "# CANONICAL_PRODUCER_IDENTITY_OK:<rationale>."
+                )
+    return (violations, scanned) if include_denominator else violations
+
+
+def check_evidence_authority_claims_producer_identity_backfill_ready(
+    repo_root: Path | None = None, *, strict: bool = False, verbose: bool = True
+) -> list[str]:
+    """Warn on the stricter #351 producer-custody debt EK1 found live."""
+
+    root = Path(repo_root or Path(__file__).resolve().parents[2])
+    violations, scanned = _check_351_canonical_producer_identity_backfill_debt(
+        root,
+        include_denominator=True,
+    )
+    if verbose:
+        if violations:
+            print(
+                "  [catalog-351-producer-identity-backfill] WARN: "
+                f"{len(violations)} violation(s); scanned {scanned} canonical-equation file(s). "
+                "STRICT-FLIP TRIGGER: p0_332_provenance_bijection_backfill / #670 drives this count to 0."
+            )
+        else:
+            print(
+                "  [catalog-351-producer-identity-backfill] OK "
+                f"(0 violation(s); scanned {scanned} canonical-equation file(s))"
+            )
+    if violations and strict:
+        raise PreflightError(
+            "check_evidence_authority_claims_producer_identity_backfill_ready found "
+            f"{len(violations)} Catalog #351 backfill violation(s):\n  "
+            + "\n  ".join(item[:500] for item in violations[:10])
+        )
+    return violations
 
 
 def _check_351_canonical_producer_identity(repo_root: Path) -> list[str]:
@@ -6883,6 +7626,13 @@ def preflight_all(
         check_v9_fake_claim_guards(strict=True, verbose=verbose)  # CLAUDE_MD_ENTRY_OK: canonically documented in CLAUDE.md V9 §2026-07-14 amendment (Catalog #351 LawRef/value custody); strict since 3afe37ddbe at measured live-count-0; standalone numbered catalog row deferred
         check_no_fourier_basis_in_witness_representation(strict=False, verbose=verbose)
         check_evidence_authority_claims_are_custodied(strict=True, verbose=verbose)  # CLAUDE_MD_ENTRY_OK: canonically documented in CLAUDE.md V9 §2026-07-14 amendment (Catalog #351 LawRef/value custody); strict since 3afe37ddbe at measured live-count-0; standalone numbered catalog row deferred
+        # GB1/EK1 #351-adjacent guard bundle: WARN-ONLY because the current-main
+        # census is non-zero. Strict-flip trigger is explicit: the #670 /
+        # p0_332_provenance_bijection_backfill owner drives this count to 0,
+        # then flips this callsite in a separate landing.
+        check_evidence_authority_claims_producer_identity_backfill_ready(
+            strict=False, verbose=verbose
+        )
 
         # 2026-07-15 Catalog #406 — the DSL compile hash is a load-bearing
         # admission prerequisite at BOTH the launcher and governor.  WARN-ONLY
