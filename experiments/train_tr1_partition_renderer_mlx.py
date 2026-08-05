@@ -67,6 +67,7 @@ THREE MEASURED DESIGN FORCES (operator recall directive 2026-07-28, wired at T0)
 from __future__ import annotations
 
 import argparse
+import copy
 import hashlib
 import json
 import math
@@ -130,6 +131,9 @@ JD1_SEG_HOLD_FLOOR_SOURCES = (
     "checkpoint_tail_ep_loss",
     "explicit",
 )
+JD1_SEG_HOLD_SPACES = ("loss", "realized")
+JD1_EMA_STAGE_SCOPES = ("off", "window")
+JD1_LIVE_GATE_TELEMETRY = ("off", "on")
 
 # Pre-registered A1 alarm thresholds (tb1 charter T1: "never scale a loop whose
 # realized-flip telemetry is flat"). Smooth descended but realized did not:
@@ -2398,7 +2402,8 @@ def _tree_to_flat(params: dict[str, Any]) -> dict[str, np.ndarray]:
 
 def save_checkpoint(path: Path, *, model, ema: dict[str, Any], opt_state_flat: dict[str, np.ndarray],
                     epoch: int, stage: str, cfg: TR1Config, telemetry_tail: list[dict],
-                    extra_meta: dict[str, Any] | None = None) -> None:
+                    extra_meta: dict[str, Any] | None = None,
+                    extra_npz_arrays: dict[str, np.ndarray] | None = None) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     payload: dict[str, np.ndarray] = {}
     for k, v in _tree_to_flat(model.trainable_parameters()).items():
@@ -2414,6 +2419,10 @@ def save_checkpoint(path: Path, *, model, ema: dict[str, Any], opt_state_flat: d
         meta_payload.update(extra_meta)
     meta = json.dumps(meta_payload).encode()
     payload["meta::json"] = np.frombuffer(meta, dtype=np.uint8)
+    for k, v in (extra_npz_arrays or {}).items():
+        if k.startswith(("param::", "ema::", "opt::", "meta::")):
+            raise ValueError(f"extra checkpoint payload key {k!r} uses a reserved prefix")
+        payload[k] = np.asarray(v)
     tmp = path.parent / (path.name + ".tmp.npz")  # endswith .npz => savez keeps the name
     np.savez(tmp, **payload)
     os.replace(str(tmp), str(path))  # atomic tmp+rename (P0 resumability)
@@ -2808,6 +2817,35 @@ def build_argparser() -> argparse.ArgumentParser:
                     help="JD1 explicit seg-hold floor, required when floor-source=explicit.")
     ap.add_argument("--jd1-seg-hold-margin", type=float, default=0.0,
                     help="JD1 non-negative slack added to the seg-hold floor.")
+    ap.add_argument("--jd1-seg-hold-space", default="loss",
+                    choices=JD1_SEG_HOLD_SPACES,
+                    help="JD1 seg guard surface. loss = legacy differentiable hinge on "
+                         "seg_proxy_batch. realized = jd3 gate-space controller: latch "
+                         "realized d_seg at the first post-engagement gate, then rollback "
+                         "to the previous gate checkpoint and retreat pose pressure when "
+                         "later realized gates exceed floor+margin.")
+    ap.add_argument("--jd1-realized-hold-margin", type=float, default=0.0,
+                    help="JD3 realized-space hold slack. 0.0 derives from the first "
+                         "post-engagement gate as sd(per-pair d_seg)/sqrt(n_gate); "
+                         ">0 is an explicit d_seg-rate margin.")
+    ap.add_argument("--jd1-realized-hold-pose-retreat", type=float, default=0.0,
+                    help="JD3 pose-pressure retreat factor after a realized-hold breach. "
+                         "0.0 derives the bisection factor 0.5; explicit values must be "
+                         "in (0,1).")
+    ap.add_argument("--jd1-realized-hold-max-retreats", type=int, default=0,
+                    help="JD3 maximum rollback+retreat events. 0 derives from the A1 "
+                         "consecutive-refuse count.")
+    ap.add_argument("--jd1-ema-stage-scope", default="off",
+                    choices=JD1_EMA_STAGE_SCOPES,
+                    help="JD3 EMA scope. off = legacy run/parent-chain EMA. window = "
+                         "at joint-pose engagement or engaged resume, preserve the parent "
+                         "shadow in the entry checkpoint and re-anchor EMA to live weights "
+                         "with decay derived from the remaining stage window.")
+    ap.add_argument("--jd1-live-gate-telemetry", default="off",
+                    choices=JD1_LIVE_GATE_TELEMETRY,
+                    help="JD3 observability. on additionally logs a live-weight realized "
+                         "d_seg row at each gate while leaving the EMA gate row/checkpoint "
+                         "tail unchanged.")
     ap.add_argument("--token-temporal-mode", default="shared_base",
                     choices=("shared_base", "independent"),
                     help="shared_base = identity-xi advection (Einstein d_cov/d_gauge force)")
@@ -3112,6 +3150,46 @@ def jd1_pose_finish_armed(args: Any) -> bool:
     return str(args.jd1_pose_finish_mode) != "off"
 
 
+def derive_jd1_stage_ema_decay(remaining_epochs: int, steps_per_epoch: int) -> tuple[float, str]:
+    """JD3 stage-window EMA law: same LawRef, but U is the joint-pose window."""
+    updates = max(1, int(remaining_epochs)) * max(1, int(steps_per_epoch))
+    decay, prov = derive_ema_decay(updates)
+    return decay, f"JD3 stage-scoped window EMA: {prov}"
+
+
+def derive_jd1_realized_hold_max_retreats(value: int) -> tuple[int, str]:
+    if int(value) > 0:
+        return int(value), f"EXPLICIT --jd1-realized-hold-max-retreats {int(value)}"
+    return A1_CONSECUTIVE_REFUSE, (
+        "DERIVED from A1_CONSECUTIVE_REFUSE: allow the same number of rollback+retreat "
+        "events that would otherwise terminate the stage")
+
+
+def derive_jd1_realized_hold_pose_retreat(value: float) -> tuple[float, str]:
+    if float(value) > 0.0:
+        return float(value), f"EXPLICIT --jd1-realized-hold-pose-retreat {float(value)}"
+    return 0.5, "DERIVED bisection retreat of pose-pressure interval (0.5)"
+
+
+def derive_jd1_realized_hold_margin(args: Any, gate_row: dict[str, Any]) -> tuple[float, str]:
+    if float(args.jd1_realized_hold_margin) > 0.0:
+        return (float(args.jd1_realized_hold_margin),
+                f"EXPLICIT --jd1-realized-hold-margin {float(args.jd1_realized_hold_margin)}")
+    sd = gate_row.get("realized_gate_dseg_per_pair_sd")
+    ids = gate_row.get("realized_gate_pair_ids")
+    if sd is None or ids is None:
+        raise RuntimeError(
+            "JD3 realized-hold margin derivation needs realized_gate_dseg_per_pair_sd "
+            "and realized_gate_pair_ids on the first post-engagement gate")
+    n = len(ids)
+    if n <= 0:
+        raise RuntimeError("JD3 realized-hold margin derivation received an empty gate set")
+    margin = float(sd) / math.sqrt(float(n))
+    return margin, (
+        "DERIVED first post-engagement realized gate uncertainty: "
+        f"sd(per-pair d_seg)={float(sd):.12g}/sqrt(n_gate={n}) -> {margin:.12g}")
+
+
 def validate_jd1_pose_finish_args(args: Any) -> None:
     """Fail closed on JD1 value flags that would otherwise be declared-but-unread."""
     if int(args.jd1_pose_finish_start_epoch) < 0:
@@ -3126,6 +3204,13 @@ def validate_jd1_pose_finish_args(args: Any) -> None:
         raise SystemExit("--jd1-seg-hold-floor must be >= 0")
     if float(args.jd1_seg_hold_margin) < 0.0:
         raise SystemExit("--jd1-seg-hold-margin must be >= 0")
+    if float(args.jd1_realized_hold_margin) < 0.0:
+        raise SystemExit("--jd1-realized-hold-margin must be >= 0")
+    if int(args.jd1_realized_hold_max_retreats) < 0:
+        raise SystemExit("--jd1-realized-hold-max-retreats must be >= 0")
+    if (float(args.jd1_realized_hold_pose_retreat) < 0.0
+            or float(args.jd1_realized_hold_pose_retreat) >= 1.0):
+        raise SystemExit("--jd1-realized-hold-pose-retreat must be 0.0 or in (0,1)")
 
     inert: list[str] = []
     if not jd1_pose_finish_armed(args):
@@ -3143,6 +3228,18 @@ def validate_jd1_pose_finish_args(args: Any) -> None:
             inert.append("--jd1-seg-hold-floor")
         if float(args.jd1_seg_hold_margin) != 0.0:
             inert.append("--jd1-seg-hold-margin")
+        if args.jd1_seg_hold_space != "loss":
+            inert.append("--jd1-seg-hold-space")
+        if float(args.jd1_realized_hold_margin) != 0.0:
+            inert.append("--jd1-realized-hold-margin")
+        if float(args.jd1_realized_hold_pose_retreat) != 0.0:
+            inert.append("--jd1-realized-hold-pose-retreat")
+        if int(args.jd1_realized_hold_max_retreats) != 0:
+            inert.append("--jd1-realized-hold-max-retreats")
+        if args.jd1_ema_stage_scope != "off":
+            inert.append("--jd1-ema-stage-scope")
+        if args.jd1_live_gate_telemetry != "off":
+            inert.append("--jd1-live-gate-telemetry")
         if inert:
             raise SystemExit(
                 "REFUSED: JD1 value flags set while --jd1-pose-finish-mode off: "
@@ -3154,6 +3251,11 @@ def validate_jd1_pose_finish_args(args: Any) -> None:
     if (args.jd1_pose_finish_engage_on == "start_epoch"
             and int(args.jd1_pose_finish_start_epoch) <= 0):
         raise SystemExit("--jd1-pose-finish-engage-on start_epoch requires a positive start epoch")
+    if args.jd1_seg_hold_space == "realized":
+        if float(args.jd1_seg_hold_weight) <= 0.0:
+            raise SystemExit("--jd1-seg-hold-space realized requires --jd1-seg-hold-weight > 0")
+        if args.jd1_live_gate_telemetry != "on":
+            raise SystemExit("--jd1-seg-hold-space realized requires --jd1-live-gate-telemetry on")
     if float(args.jd1_seg_hold_weight) > 0.0:
         if args.jd1_seg_hold_floor_source == "off":
             raise SystemExit("--jd1-seg-hold-weight requires --jd1-seg-hold-floor-source != off")
@@ -3452,6 +3554,12 @@ def main() -> int:
           "seg_hold_floor_source": args.jd1_seg_hold_floor_source,
           "seg_hold_floor": float(args.jd1_seg_hold_floor),
           "seg_hold_margin": float(args.jd1_seg_hold_margin),
+          "seg_hold_space": args.jd1_seg_hold_space,
+          "realized_hold_margin": float(args.jd1_realized_hold_margin),
+          "realized_hold_pose_retreat": float(args.jd1_realized_hold_pose_retreat),
+          "realized_hold_max_retreats": int(args.jd1_realized_hold_max_retreats),
+          "ema_stage_scope": args.jd1_ema_stage_scope,
+          "live_gate_telemetry": args.jd1_live_gate_telemetry,
           "gt_poses_loaded": bool(gt_poses is not None),
           "active": False,
           "note": "JD1 is args-only: off preserves TR1Config/config_hash/checkpoint bytes; "
@@ -3644,6 +3752,27 @@ def main() -> int:
     boundary_strict_basis_held: bool | None = None
     boundary_gate_basis_held: bool | None = None
 
+    active_ema_decay = float(cfg.ema_decay)
+    active_ema_decay_provenance = str(cfg.ema_decay_provenance)
+    jd1_effective_w_pose = float(args.jd1_w_pose)
+    _jd1_realized_retreat, _jd1_realized_retreat_prov = (
+        derive_jd1_realized_hold_pose_retreat(float(args.jd1_realized_hold_pose_retreat)))
+    _jd1_realized_max_retreats, _jd1_realized_max_retreats_prov = (
+        derive_jd1_realized_hold_max_retreats(int(args.jd1_realized_hold_max_retreats)))
+    jd1_realized_hold_state: dict[str, Any] = {
+        "active": bool(args.jd1_seg_hold_space == "realized"),
+        "floor": None,
+        "floor_epoch": None,
+        "floor_gate_basis": None,
+        "margin": None,
+        "margin_provenance": None,
+        "pose_retreat_factor": float(_jd1_realized_retreat),
+        "pose_retreat_provenance": _jd1_realized_retreat_prov,
+        "max_retreats": int(_jd1_realized_max_retreats),
+        "max_retreats_provenance": _jd1_realized_max_retreats_prov,
+        "retreats": 0,
+        "history": [],
+    }
     ema: dict[str, Any] = {k: mx.array(v) for k, v in tree_flatten(model.trainable_parameters())}
     start_epoch = 0
     stage = initial_stage_label(cfg.seg_form_start)
@@ -3658,11 +3787,28 @@ def main() -> int:
         "seg_hold_floor_source": args.jd1_seg_hold_floor_source,
         "seg_hold_margin": float(args.jd1_seg_hold_margin),
         "w_pose": float(args.jd1_w_pose),
+        "effective_w_pose": float(jd1_effective_w_pose),
+        "seg_hold_space": args.jd1_seg_hold_space,
+        "realized_hold": dict(jd1_realized_hold_state),
+        "ema_stage_scope": args.jd1_ema_stage_scope,
+        "active_ema_decay": float(active_ema_decay),
+        "active_ema_decay_provenance": active_ema_decay_provenance,
+        "stage_ema_reanchored": False,
+        "live_gate_telemetry": args.jd1_live_gate_telemetry,
     }
 
     def _jd1_checkpoint_extra_meta() -> dict[str, Any] | None:
         if not (_jd1_pose_finish_enabled and jd1_pose_finish_state.get("engaged")):
             return None
+        jd1_pose_finish_state.update({
+            "effective_w_pose": float(jd1_effective_w_pose),
+            "realized_hold": dict(jd1_realized_hold_state),
+            "active_ema_decay": float(active_ema_decay),
+            "active_ema_decay_provenance": active_ema_decay_provenance,
+            "ema_stage_scope": args.jd1_ema_stage_scope,
+            "live_gate_telemetry": args.jd1_live_gate_telemetry,
+            "seg_hold_space": args.jd1_seg_hold_space,
+        })
         return {"jd1_pose_finish": dict(jd1_pose_finish_state)}
 
     if args.resume_from is not None:
@@ -3679,6 +3825,15 @@ def main() -> int:
                     "resume REFUSED: checkpoint is inside JD1 joint_pose_finish but this launch "
                     "sets --jd1-pose-finish-mode off")
             jd1_pose_finish_state.update(_saved_jd1)
+            if _saved_jd1.get("effective_w_pose") is not None:
+                jd1_effective_w_pose = float(_saved_jd1["effective_w_pose"])
+            if isinstance(_saved_jd1.get("realized_hold"), dict):
+                jd1_realized_hold_state.update(_saved_jd1["realized_hold"])
+            if _saved_jd1.get("active_ema_decay") is not None:
+                active_ema_decay = float(_saved_jd1["active_ema_decay"])
+                active_ema_decay_provenance = str(
+                    _saved_jd1.get("active_ema_decay_provenance",
+                                   active_ema_decay_provenance))
         if (stage == "joint_pose_finish" and _jd1_pose_finish_enabled
                 and not jd1_pose_finish_state.get("engaged")):
             jd1_pose_finish_state.update({
@@ -3688,6 +3843,12 @@ def main() -> int:
                 "engaged_global_step": None,
                 "seg_hold_floor": (float(args.jd1_seg_hold_floor)
                                    if args.jd1_seg_hold_floor_source == "explicit" else None),
+                "effective_w_pose": float(jd1_effective_w_pose),
+                "seg_hold_space": args.jd1_seg_hold_space,
+                "realized_hold": dict(jd1_realized_hold_state),
+                "ema_stage_scope": args.jd1_ema_stage_scope,
+                "active_ema_decay": float(active_ema_decay),
+                "active_ema_decay_provenance": active_ema_decay_provenance,
             })
         if (jd1_pose_finish_state.get("engaged")
                 and float(args.jd1_seg_hold_weight) > 0.0
@@ -3890,7 +4051,7 @@ def main() -> int:
             if gt_poses is None:
                 raise RuntimeError("JD1 pose finish active without gt_poses memmap")
             pose_tgt = mx.array(np.asarray(gt_poses[idx], dtype=np.float32)[:6])
-            w_pose = float(args.jd1_w_pose)
+            w_pose = float(jd1_effective_w_pose)
             pose_code0 = max(int(idx) - 1, 0)
         else:
             pose_tgt = mx.zeros((6,))
@@ -4038,7 +4199,8 @@ def main() -> int:
             acc = li if acc is None else acc + li
         acc = acc / len(ids)
         if (jd1_pose_finish_state.get("engaged")
-                and float(args.jd1_seg_hold_weight) > 0.0):
+                and float(args.jd1_seg_hold_weight) > 0.0
+                and args.jd1_seg_hold_space == "loss"):
             floor = jd1_pose_finish_state.get("seg_hold_floor")
             if floor is None:
                 raise RuntimeError("JD1 seg-hold active without a latched floor")
@@ -4072,15 +4234,152 @@ def main() -> int:
     # 0.842 — WORSE than gray init — firing a FALSE A1 alarm chain). The law's own
     # warmup boundary W = 2/(1-d) decides the gate basis: LIVE params before W,
     # EMA shadow after; the basis change REBASES the A1 comparison (one gate).
-    ema_warmup_updates = int(np.ceil(2.0 / max(1.0 - cfg.ema_decay, 1e-9)))
+    ema_warmup_updates = int(np.ceil(2.0 / max(1.0 - active_ema_decay, 1e-9)))
     global_step = 0 if args.resume_from is None else ema_warmup_updates  # resume => warm shadow
     ep_losses: list[float] = []
     telemetry_tail: list[dict] = []
     gnorm_hist: list[float] = []
     basin_window: list[dict] = []  # basin-entry detector state (basin_handoff == "on")
     gate_param_snapshot: dict[str, np.ndarray] | None = None
+    prev_gate_snapshot: dict[str, Any] | None = None
     order_rng = np.random.default_rng(cfg.seed + 1)
     knee_switched = stage != SEG_TRUNK_CE_STAGE
+
+    def _copy_mx_tree(tree: dict[str, Any]) -> dict[str, Any]:
+        return {k: mx.array(np.asarray(v).copy()) for k, v in tree.items()}
+
+    def _jd1_parent_shadow_payload(parent_ema: dict[str, Any]) -> dict[str, np.ndarray]:
+        return {f"jd1_parent_ema::{k}": np.asarray(v).copy() for k, v in parent_ema.items()}
+
+    def _apply_jd1_stage_ema_reanchor(*, epoch: int, reason: str) -> None:
+        nonlocal ema, active_ema_decay, active_ema_decay_provenance
+        nonlocal ema_warmup_updates, global_step
+        if args.jd1_ema_stage_scope != "window":
+            return
+        if not (_jd1_pose_finish_enabled and jd1_pose_finish_state.get("engaged")):
+            return
+        if bool(jd1_pose_finish_state.get("stage_ema_reanchored")):
+            return
+        parent_ema = _copy_mx_tree(ema)
+        remaining_epochs = max(1, int(cfg.epochs) - int(epoch))
+        new_decay, new_prov = derive_jd1_stage_ema_decay(remaining_epochs, steps_per_epoch)
+        ema = _copy_mx_tree(dict(tree_flatten(model.trainable_parameters())))
+        active_ema_decay = float(new_decay)
+        active_ema_decay_provenance = str(new_prov)
+        ema_warmup_updates = int(np.ceil(2.0 / max(1.0 - active_ema_decay, 1e-9)))
+        global_step = max(int(global_step), int(ema_warmup_updates))
+        jd1_pose_finish_state.update({
+            "stage_ema_reanchored": True,
+            "stage_ema_reanchored_epoch": int(epoch),
+            "stage_ema_reanchor_reason": reason,
+            "parent_ema_preserved_key_prefix": "jd1_parent_ema::",
+            "active_ema_decay": float(active_ema_decay),
+            "active_ema_decay_provenance": active_ema_decay_provenance,
+            "ema_warmup_updates": int(ema_warmup_updates),
+        })
+        save_checkpoint(out_dir / "checkpoints" / "stage_joint_pose_finish_entry.npz",
+                        model=model, ema=ema, opt_state_flat=_opt_state(), epoch=epoch,
+                        stage=stage, cfg=cfg, telemetry_tail=telemetry_tail,
+                        extra_meta=_jd1_checkpoint_extra_meta(),
+                        extra_npz_arrays=_jd1_parent_shadow_payload(parent_ema))
+        tlog({"event": "jd1_stage_ema_reanchor",
+              "epoch": int(epoch), "stage": stage, "reason": reason,
+              "parent_shadow_preserved_prefix": "jd1_parent_ema::",
+              "active_ema_decay": float(active_ema_decay),
+              "active_ema_decay_provenance": active_ema_decay_provenance,
+              "ema_warmup_updates": int(ema_warmup_updates),
+              "checkpoint": "checkpoints/stage_joint_pose_finish_entry.npz",
+              "score_claim": False})
+
+    def _capture_jd1_gate_snapshot(epoch: int) -> dict[str, Any]:
+        return {
+            "epoch": int(epoch),
+            "model": _copy_mx_tree(dict(tree_flatten(model.trainable_parameters()))),
+            "ema": _copy_mx_tree(ema),
+            "opt_flat": optimizer_state_to_flat(optimizer),
+            "global_step": int(global_step),
+            "ep_losses": list(ep_losses),
+            "telemetry_tail": copy.deepcopy(telemetry_tail),
+            "gnorm_hist": list(gnorm_hist),
+            "basin_window": copy.deepcopy(basin_window),
+            "gate_param_snapshot": (None if gate_param_snapshot is None
+                                    else {k: v.copy() for k, v in gate_param_snapshot.items()}),
+            "prev_gate_row": copy.deepcopy(prev_gate_row),
+            "prev_gate_smooth": prev_gate_smooth,
+            "prev_realized": (None if prev_realized is None else prev_realized.copy()),
+            "prev_gate_basis": prev_gate_basis,
+            "a1_consecutive": int(a1_consecutive),
+            "order_rng_state": copy.deepcopy(order_rng.bit_generator.state),
+            "knee_switched": bool(knee_switched),
+            "stage": stage,
+            "state_form": dict(state_form),
+            "boundary_jump_emitted": bool(boundary_jump_emitted),
+            "boundary_strict_basis_held": boundary_strict_basis_held,
+            "boundary_gate_basis_held": boundary_gate_basis_held,
+            "jd1_pose_finish_state": copy.deepcopy(jd1_pose_finish_state),
+            "jd1_realized_hold_state": copy.deepcopy(jd1_realized_hold_state),
+            "jd1_effective_w_pose": float(jd1_effective_w_pose),
+            "active_ema_decay": float(active_ema_decay),
+            "active_ema_decay_provenance": active_ema_decay_provenance,
+            "ema_warmup_updates": int(ema_warmup_updates),
+            "model_quant_engaged": bool(model._quant_engaged),
+            "model_delta_sparsity_engaged": bool(model._delta_sparsity_engaged),
+            "lane_guard_state": copy.deepcopy(lane_guard_state),
+        }
+
+    def _restore_jd1_gate_snapshot(snapshot: dict[str, Any]) -> None:
+        nonlocal ema, global_step, ep_losses, telemetry_tail, gnorm_hist, basin_window
+        nonlocal gate_param_snapshot, prev_gate_row, prev_gate_smooth, prev_realized
+        nonlocal prev_gate_basis, a1_consecutive, knee_switched, stage
+        nonlocal boundary_jump_emitted, boundary_strict_basis_held, boundary_gate_basis_held
+        nonlocal jd1_pose_finish_state, jd1_realized_hold_state, jd1_effective_w_pose
+        nonlocal active_ema_decay, active_ema_decay_provenance, ema_warmup_updates
+        nonlocal lane_guard_state
+        from mlx.utils import tree_unflatten
+
+        model.update(tree_unflatten(list(snapshot["model"].items())))
+        ema = _copy_mx_tree(snapshot["ema"])
+        opt_flat = snapshot.get("opt_flat") or {}
+        if opt_flat:
+            restore_optimizer_state(optimizer, model, opt_flat)
+        elif args.jd1_seg_hold_space == "realized":
+            raise RuntimeError("JD3 rollback requires optimizer state in the gate snapshot")
+        global_step = int(snapshot["global_step"])
+        ep_losses = list(snapshot["ep_losses"])
+        telemetry_tail = copy.deepcopy(snapshot["telemetry_tail"])
+        gnorm_hist = list(snapshot["gnorm_hist"])
+        basin_window = copy.deepcopy(snapshot["basin_window"])
+        gate_param_snapshot = (None if snapshot["gate_param_snapshot"] is None
+                               else {k: v.copy()
+                                     for k, v in snapshot["gate_param_snapshot"].items()})
+        prev_gate_row = copy.deepcopy(snapshot["prev_gate_row"])
+        prev_gate_smooth = snapshot["prev_gate_smooth"]
+        prev_realized = (None if snapshot["prev_realized"] is None
+                         else snapshot["prev_realized"].copy())
+        prev_gate_basis = snapshot["prev_gate_basis"]
+        a1_consecutive = int(snapshot["a1_consecutive"])
+        order_rng.bit_generator.state = copy.deepcopy(snapshot["order_rng_state"])
+        knee_switched = bool(snapshot["knee_switched"])
+        stage = str(snapshot["stage"])
+        state_form.clear()
+        state_form.update(snapshot["state_form"])
+        boundary_jump_emitted = bool(snapshot["boundary_jump_emitted"])
+        boundary_strict_basis_held = snapshot["boundary_strict_basis_held"]
+        boundary_gate_basis_held = snapshot["boundary_gate_basis_held"]
+        jd1_pose_finish_state = copy.deepcopy(snapshot["jd1_pose_finish_state"])
+        jd1_realized_hold_state = copy.deepcopy(snapshot["jd1_realized_hold_state"])
+        jd1_effective_w_pose = float(snapshot["jd1_effective_w_pose"])
+        active_ema_decay = float(snapshot["active_ema_decay"])
+        active_ema_decay_provenance = str(snapshot["active_ema_decay_provenance"])
+        ema_warmup_updates = int(snapshot["ema_warmup_updates"])
+        model._quant_engaged = bool(snapshot["model_quant_engaged"])
+        model._delta_sparsity_engaged = bool(snapshot["model_delta_sparsity_engaged"])
+        lane_guard_state = copy.deepcopy(snapshot["lane_guard_state"])
+        mx.eval(model.parameters(), optimizer.state, *ema.values())
+
+    if jd1_pose_finish_state.get("engaged"):
+        _apply_jd1_stage_ema_reanchor(epoch=start_epoch,
+                                      reason="resume_inside_joint_pose_finish")
     if knee_switched and state_form["form"] == "ce":
         # #517-twin re-anchor (2026-07-30 qa86 EMA-resume incident): the form state
         # machine must position to the RESTORED stage, not --seg-form-start. Without
@@ -4165,7 +4464,8 @@ def main() -> int:
                       "(flag via args not cfg; new rows via tlog not telemetry_tail)",
               "score_neutral": True})
 
-    for epoch in range(start_epoch, cfg.epochs):
+    epoch = start_epoch
+    while epoch < cfg.epochs:
         if time.monotonic() > deadline:
             stop_reason = "max_wall_minutes"
             tlog({"event": "wall_clock_stop", "epoch": epoch})
@@ -4186,13 +4486,23 @@ def main() -> int:
                 "seg_hold_floor_source": args.jd1_seg_hold_floor_source,
                 "seg_hold_margin": float(args.jd1_seg_hold_margin),
                 "w_pose": float(args.jd1_w_pose),
+                "effective_w_pose": float(jd1_effective_w_pose),
+                "seg_hold_space": args.jd1_seg_hold_space,
+                "realized_hold": dict(jd1_realized_hold_state),
+                "ema_stage_scope": args.jd1_ema_stage_scope,
+                "active_ema_decay": float(active_ema_decay),
+                "active_ema_decay_provenance": active_ema_decay_provenance,
+                "live_gate_telemetry": args.jd1_live_gate_telemetry,
             })
             stage = "joint_pose_finish"
             prev_gate_smooth = None
-            save_checkpoint(out_dir / "checkpoints" / "stage_joint_pose_finish_entry.npz",
-                            model=model, ema=ema, opt_state_flat=_opt_state(), epoch=epoch,
-                            stage=stage, cfg=cfg, telemetry_tail=telemetry_tail,
-                            extra_meta=_jd1_checkpoint_extra_meta())
+            if args.jd1_ema_stage_scope == "window":
+                _apply_jd1_stage_ema_reanchor(epoch=epoch, reason="fresh_joint_pose_engagement")
+            else:
+                save_checkpoint(out_dir / "checkpoints" / "stage_joint_pose_finish_entry.npz",
+                                model=model, ema=ema, opt_state_flat=_opt_state(), epoch=epoch,
+                                stage=stage, cfg=cfg, telemetry_tail=telemetry_tail,
+                                extra_meta=_jd1_checkpoint_extra_meta())
             tlog({"event": "jd1_pose_finish_engage",
                   "schema": JD1_POSE_FINISH_SCHEMA,
                   "epoch": epoch,
@@ -4202,10 +4512,14 @@ def main() -> int:
                   "engage_on": args.jd1_pose_finish_engage_on,
                   "start_epoch": int(args.jd1_pose_finish_start_epoch),
                   "w_pose": float(args.jd1_w_pose),
+                  "effective_w_pose": float(jd1_effective_w_pose),
                   "seg_hold_weight": float(args.jd1_seg_hold_weight),
                   "seg_hold_floor": _seg_hold_floor,
                   "seg_hold_floor_source": args.jd1_seg_hold_floor_source,
                   "seg_hold_margin": float(args.jd1_seg_hold_margin),
+                  "seg_hold_space": args.jd1_seg_hold_space,
+                  "ema_stage_scope": args.jd1_ema_stage_scope,
+                  "active_ema_decay": float(active_ema_decay),
                   "checkpoint": "checkpoints/stage_joint_pose_finish_entry.npz",
                   "note": "JD1 joint pose-finish is now active: pair_loss consumes gt_poses "
                           "and builds make_loss_fn's PoseNet path; A1 smooth baseline rebased.",
@@ -4228,7 +4542,7 @@ def main() -> int:
             global_step += 1
             flat = tree_flatten(model.trainable_parameters())
             for k, v in flat:
-                ema[k] = cfg.ema_decay * ema[k] + (1.0 - cfg.ema_decay) * v
+                ema[k] = active_ema_decay * ema[k] + (1.0 - active_ema_decay) * v
             if b0 + cfg.batch_pairs >= cfg.num_pairs:  # last batch: gnorm telemetry
                 from mlx.utils import tree_flatten as _tf
 
@@ -4244,7 +4558,10 @@ def main() -> int:
                "ep_loss": ep_loss, "weights_stepped": steps > 0, "steps": steps,
                "gnorm_last_batch": last_gnorm,
                "jd1_pose_finish_active": bool(jd1_pose_finish_state.get("engaged")),
-               "jd1_seg_hold_floor": jd1_pose_finish_state.get("seg_hold_floor")}
+               "jd1_seg_hold_floor": jd1_pose_finish_state.get("seg_hold_floor"),
+               "jd1_effective_w_pose": (float(jd1_effective_w_pose)
+                                        if jd1_pose_finish_state.get("engaged") else 0.0),
+               "active_ema_decay": float(active_ema_decay)}
         # Confound immune system (day-one, L1 runtime alarms — LOUD, never silent):
         if ep_loss == 0.0:
             tlog({"event": "confound_alarm", "kind": "frozen_epoch", "epoch": epoch,
@@ -4339,6 +4656,20 @@ def main() -> int:
         if (epoch + 1) % cfg.gate_every == 0 or epoch == cfg.epochs - 1:
             gate_basis = "ema_shadow" if global_step >= ema_warmup_updates else "live_ema_warmup"
             live_np = {k: np.asarray(v) for k, v in tree_flatten(model.trainable_parameters())}
+            if args.jd1_live_gate_telemetry == "on":
+                live_gate_row = realized_gate(model, gate_ids, lstars, seg_cpu, None)
+                live_gate_row.pop("_realized_argmax", None)
+                tlog({
+                    "event": "jd1_live_basis_gate",
+                    "epoch": epoch,
+                    "stage": stage,
+                    "gate_params": "live_weights",
+                    "active_ema_decay": float(active_ema_decay),
+                    "effective_w_pose": (float(jd1_effective_w_pose)
+                                         if jd1_pose_finish_state.get("engaged") else 0.0),
+                    "score_claim": False,
+                    **live_gate_row,
+                })
             live = ema_snapshot_swap(model, ema) if gate_basis == "ema_shadow" else None
             try:
                 gate_row = realized_gate(model, gate_ids, lstars, seg_cpu, prev_realized)
@@ -4393,7 +4724,7 @@ def main() -> int:
             # readout averages it into ~140 training epochs and dilutes it below resolution.
             if not boundary_jump_emitted and args.resume_from is not None:
                 _bj = boundary_jump_row(
-                    boundary_parent_tail, boundary_parent_ema_decay, cfg.ema_decay,
+                    boundary_parent_tail, boundary_parent_ema_decay, active_ema_decay,
                     start_epoch, gate_row, resolve_arm_name(_reset_arm) or "unknown")
                 boundary_jump_emitted = True
                 if _bj is not None:
@@ -4435,6 +4766,88 @@ def main() -> int:
             print(json.dumps({k: gate_row[k] for k in
                               ("epoch", "realized_gate_dseg_mean", "a1_classification",
                                "total_counted_bytes")}), flush=True)
+            if (jd1_realized_hold_state.get("active")
+                    and jd1_pose_finish_state.get("engaged")):
+                if jd1_realized_hold_state.get("floor") is None:
+                    _margin, _margin_prov = derive_jd1_realized_hold_margin(args, gate_row)
+                    jd1_realized_hold_state.update({
+                        "floor": float(gate_row["realized_gate_dseg_mean"]),
+                        "floor_epoch": int(epoch),
+                        "floor_gate_basis": gate_basis,
+                        "margin": float(_margin),
+                        "margin_provenance": _margin_prov,
+                    })
+                    jd1_pose_finish_state["realized_hold"] = dict(jd1_realized_hold_state)
+                    tlog({"event": "jd1_realized_hold_latch",
+                          "epoch": epoch,
+                          "floor": float(jd1_realized_hold_state["floor"]),
+                          "margin": float(jd1_realized_hold_state["margin"]),
+                          "margin_provenance": jd1_realized_hold_state["margin_provenance"],
+                          "gate_basis": gate_basis,
+                          "score_claim": False})
+                else:
+                    _floor = float(jd1_realized_hold_state["floor"])
+                    _margin = float(jd1_realized_hold_state["margin"] or 0.0)
+                    _limit = _floor + _margin
+                    _current = float(gate_row["realized_gate_dseg_mean"])
+                    if _current > _limit:
+                        _retreats = int(jd1_realized_hold_state.get("retreats", 0))
+                        _max_retreats = int(jd1_realized_hold_state.get("max_retreats", 0))
+                        if prev_gate_snapshot is None:
+                            tlog({"event": "jd1_realized_hold_refuse",
+                                  "epoch": epoch,
+                                  "reason": "breach_without_previous_gate_snapshot",
+                                  "realized_dseg": _current,
+                                  "limit": _limit,
+                                  "score_claim": False})
+                            stop_reason = "jd1_realized_hold_no_previous_snapshot"
+                            break
+                        if _retreats >= _max_retreats:
+                            tlog({"event": "jd1_realized_hold_refuse",
+                                  "epoch": epoch,
+                                  "reason": "max_retreats_exhausted",
+                                  "retreats": _retreats,
+                                  "max_retreats": _max_retreats,
+                                  "realized_dseg": _current,
+                                  "limit": _limit,
+                                  "score_claim": False})
+                            stop_reason = "jd1_realized_hold_exhausted"
+                            break
+                        _rollback_epoch = int(prev_gate_snapshot["epoch"])
+                        _old_w_pose = float(jd1_effective_w_pose)
+                        _new_w_pose = _old_w_pose * float(
+                            jd1_realized_hold_state["pose_retreat_factor"])
+                        _restore_jd1_gate_snapshot(prev_gate_snapshot)
+                        jd1_effective_w_pose = float(_new_w_pose)
+                        jd1_realized_hold_state["retreats"] = (
+                            int(jd1_realized_hold_state.get("retreats", 0)) + 1)
+                        jd1_realized_hold_state.setdefault("history", []).append({
+                            "breach_epoch": int(epoch),
+                            "rollback_to_epoch": _rollback_epoch,
+                            "breach_dseg": _current,
+                            "limit": _limit,
+                            "old_w_pose": _old_w_pose,
+                            "new_w_pose": float(jd1_effective_w_pose),
+                        })
+                        jd1_pose_finish_state.update({
+                            "effective_w_pose": float(jd1_effective_w_pose),
+                            "realized_hold": dict(jd1_realized_hold_state),
+                        })
+                        tlog({"event": "jd1_realized_hold_rollback",
+                              "breach_epoch": int(epoch),
+                              "rollback_to_epoch": _rollback_epoch,
+                              "next_epoch": _rollback_epoch + 1,
+                              "breach_dseg": _current,
+                              "limit": _limit,
+                              "old_w_pose": _old_w_pose,
+                              "new_w_pose": float(jd1_effective_w_pose),
+                              "retreat_factor": float(
+                                  jd1_realized_hold_state["pose_retreat_factor"]),
+                              "retreats": int(jd1_realized_hold_state["retreats"]),
+                              "max_retreats": int(jd1_realized_hold_state["max_retreats"]),
+                              "score_claim": False})
+                        epoch = _rollback_epoch + 1
+                        continue
             if a1["a1_alarm"]:
                 a1_consecutive += 1
                 if a1_consecutive >= A1_CONSECUTIVE_REFUSE:
@@ -4467,6 +4880,7 @@ def main() -> int:
                             model=model, ema=ema, opt_state_flat=_opt_state(), epoch=epoch,
                             stage=stage, cfg=cfg, telemetry_tail=telemetry_tail,
                             extra_meta=_jd1_checkpoint_extra_meta())
+            prev_gate_snapshot = _capture_jd1_gate_snapshot(epoch)
 
             # ddm_tp1 (#804) v9 telemetry PORT emissions (READ-ONLY; gated => byte-identical
             # when off). Params are LIVE here (the EMA-shadow gate swap was restored in the
@@ -4595,6 +5009,8 @@ def main() -> int:
                     stop_reason = "basin_entry_handoff"
                     break
 
+        epoch += 1
+
     # Terminal stage checkpoint (distinct stage-encoded name; EMA shadow inside).
     save_checkpoint(out_dir / "checkpoints" / f"stage_{stage}_final.npz",
                     model=model, ema=ema, opt_state_flat=_opt_state(), epoch=len(ep_losses) + start_epoch,
@@ -4647,6 +5063,13 @@ def main() -> int:
             "mode": args.jd1_pose_finish_mode,
             "engage_on": args.jd1_pose_finish_engage_on,
             "seg_hold_weight": float(args.jd1_seg_hold_weight),
+            "seg_hold_space": args.jd1_seg_hold_space,
+            "effective_w_pose": float(jd1_effective_w_pose),
+            "realized_hold": dict(jd1_realized_hold_state),
+            "ema_stage_scope": args.jd1_ema_stage_scope,
+            "active_ema_decay": float(active_ema_decay),
+            "active_ema_decay_provenance": active_ema_decay_provenance,
+            "live_gate_telemetry": args.jd1_live_gate_telemetry,
             "score_claim": False,
         },
     }

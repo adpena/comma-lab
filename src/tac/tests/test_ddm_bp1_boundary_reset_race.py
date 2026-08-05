@@ -36,10 +36,14 @@ from experiments.train_tr1_partition_renderer_mlx import (  # noqa: E402
     TR1Config,
     boundary_jump_row,
     build_argparser,
+    derive_jd1_realized_hold_margin,
+    derive_jd1_stage_ema_decay,
+    derive_ema_decay,
     gate_interval_fields,
     load_checkpoint,
     reset_arm_for,
     save_checkpoint,
+    validate_jd1_pose_finish_args,
 )
 from tac.optimization.reset_operator import (  # noqa: E402
     ARM_B_ZERO_RESET,
@@ -548,3 +552,62 @@ def test_eta_impulse_is_a_converged_sum_not_a_window_artifact():
     assert cumulative_excess_sign_steps(20_000) == pytest.approx(
         cumulative_excess_sign_steps(40_000), rel=1e-6)
     assert math.isclose(cumulative_excess_sign_steps(20_000), 1212.57, abs_tol=0.05)
+
+
+# --------------------------------------------------------------- jd3 reroute ----
+def test_jd3_realized_hold_margin_derives_from_first_gate_uncertainty():
+    args = build_argparser().parse_args([
+        "--variant", "plain",
+        "--out-dir", str(WORKTREE / "scratchpad/jd3-test"),
+        "--jd1-pose-finish-mode", "joint_loss",
+        "--jd1-pose-finish-engage-on", "start_epoch",
+        "--jd1-pose-finish-start-epoch", "1",
+        "--jd1-w-pose", "1.0",
+        "--jd1-seg-hold-weight", "0.25",
+        "--jd1-seg-hold-floor-source", "last_pre_pose_epoch_loss",
+        "--jd1-seg-hold-space", "realized",
+        "--jd1-live-gate-telemetry", "on",
+    ])
+    gate_row = {
+        "realized_gate_pair_ids": list(range(36)),
+        "realized_gate_dseg_per_pair_sd": 0.00072,
+    }
+    margin, prov = derive_jd1_realized_hold_margin(args, gate_row)
+    assert margin == pytest.approx(0.00072 / 6.0)
+    assert "sqrt(n_gate=36)" in prov
+
+
+def test_jd3_stage_ema_uses_remaining_window_not_parent_chain():
+    decay, prov = derive_jd1_stage_ema_decay(remaining_epochs=8, steps_per_epoch=150)
+    expected, _ = derive_ema_decay(8 * 150)
+    parent_chain, _ = derive_ema_decay(1336 * 75)
+    assert decay == expected
+    assert decay != parent_chain
+    assert "stage-scoped window" in prov
+
+
+def test_jd3_realized_hold_flags_fail_closed_when_declared_but_unread():
+    args = build_argparser().parse_args([
+        "--variant", "plain",
+        "--out-dir", str(WORKTREE / "scratchpad/jd3-test"),
+        "--jd1-seg-hold-space", "realized",
+        "--jd1-live-gate-telemetry", "on",
+    ])
+    with pytest.raises(SystemExit, match="JD1 value flags set"):
+        validate_jd1_pose_finish_args(args)
+
+
+def test_jd3_realized_hold_requires_live_basis_telemetry():
+    args = build_argparser().parse_args([
+        "--variant", "plain",
+        "--out-dir", str(WORKTREE / "scratchpad/jd3-test"),
+        "--jd1-pose-finish-mode", "joint_loss",
+        "--jd1-pose-finish-engage-on", "start_epoch",
+        "--jd1-pose-finish-start-epoch", "1",
+        "--jd1-w-pose", "1.0",
+        "--jd1-seg-hold-weight", "0.25",
+        "--jd1-seg-hold-floor-source", "last_pre_pose_epoch_loss",
+        "--jd1-seg-hold-space", "realized",
+    ])
+    with pytest.raises(SystemExit, match="requires --jd1-live-gate-telemetry on"):
+        validate_jd1_pose_finish_args(args)
