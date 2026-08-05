@@ -1,0 +1,63 @@
+{
+  "schema": "ddm_rz1_receipt.v1",
+  "axis": "[macOS-CPU frozen-scorer advisory] NON-PROMOTABLE",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "status": "stopped_at_n3_smoke_negative",
+  "verdict_scope": "INSTANCE/SMOKE",
+  "family_falsifier_fired": false,
+  "reason_family_falsifier_not_fired": "pre-registered falsifier required n>=32; n3 smoke failed first",
+  "checkpoint": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_rz1_20260805/rz1_pe3_headsolve_smoke_n3.json",
+    "sha256": "d243ea6fa0d8f18f3684f28a4aa0d358e4c9c69082ad4321045380397f725b17"
+  },
+  "selection": {
+    "mode": "stratified_blocks_from_na3_n120_seeded_without_prefix",
+    "pairs": [104, 151, 464],
+    "seed": 20260805,
+    "derived_seed": 20260808,
+    "denominator_pixels": 589824
+  },
+  "pe3": {
+    "section_bytes": 74408,
+    "section_sha256": "5cc024ad32df7fedb18afb75dbed6be9c1af948dac826a1736cb1084949855c2",
+    "component_records": 8644,
+    "effective_component_class_slots_n600": 16944,
+    "band_px_n600": 540058,
+    "raster_sha256": "1661535005f09a8dcd864fb54d20d18be618455bb7cf0c5801fec3c4efe83818"
+  },
+  "aggregate": {
+    "base": {
+      "flips": 2919,
+      "d_seg": 0.004948933919270833,
+      "d_pose": 0.0005340956170887997
+    },
+    "ideal_pe3_target": {
+      "flips": 4219,
+      "d_seg": 0.007152981228298611,
+      "net_fixed_vs_base": -1300
+    },
+    "dense_headsolve": {
+      "flips": 2928,
+      "d_seg": 0.004964192708333333,
+      "d_pose": 0.0005326335764645288,
+      "net_fixed_vs_base": -9
+    },
+    "regional_prototype": {
+      "flips": 3528,
+      "d_seg": 0.0059814453125,
+      "d_pose": 0.031715443513045706,
+      "net_fixed_vs_base": -609,
+      "projected_bytes": 165684,
+      "projected_s": 1.2716313668004533,
+      "delta_vs_live": 0.5176506371093326
+    }
+  },
+  "next_if_resumed": {
+    "rz1_n32_gate_for_this_exact_target_realizer": "FOLDED",
+    "rz1_n600_gate": "FOLDED",
+    "target_label_ceiling_audit": "QUEUED-WITH-FIRE-ORDER",
+    "tr1_learned_carrier_primary": "QUEUED-WITH-FIRE-ORDER"
+  },
+  "frontier_line": "S = 0.7539807296911207 @ 357,836 B [macOS-CPU advisory]; contest pointer borrowed/unmoved."
+}
