@@ -1,5 +1,6 @@
 status=done
 artifact=.omx/research/ddm_rr1_20260805/RECEIPT.md
-round=3
+round=4
 clean_counter=0/3
+new_finding=RR1-R4-F1 full-v3 continuation inherited smoke EMA; endpoint-blocking unless relabeled or reanchored
 frontier=S = 0.7539807296911207 @ 357,836 B [macOS-CPU advisory]; contest pointer borrowed/unmoved

@@ -250,3 +250,25 @@ gated-not-fixed; chain-sweep caveat holds). Two NEW findings:
   +1 (meta::epoch 1337/1356). Gate-to-gate slope arithmetic (1339→1344, 1359→1363) is unaffected;
   future tables split source_checkpoint_epoch from saved_reanchor_checkpoint_epoch.
 Counter 0/3; round 4 = next fresh pass.
+
+### RECURSIVE REVIEW — ROUND 4 (rr1, counter 0/3) + endpoint-blocking disposition
+Round 4 found a new CRITICAL control-transfer issue in the fired full-v3 continuation, not in the
+two-smoke adjudication. The two-smoke entry-vs-final pick still stands on `smoke_snapshot_ep1344/`
+and the preserved pose verdicts. The full continuation, however, cannot be consumed as a
+full-window stage-scoped-EMA v3 result as fired:
+
+- **RR1-R4-F1 (CRITICAL): full continuation inherited the smoke EMA law.** The full ticket/manifest
+  runs to `--epochs 1406` from the entry-smoke final checkpoint; at the continuation resume event
+  (epoch 1346) telemetry reports `stage_ema_reanchored=true`, `active_ema_decay=0.9966666667`,
+  provenance `U=1200`, and there is no second `jd1_stage_ema_reanchor` event. A 60-epoch
+  continuation at 150 steps/epoch would re-derive `U=9000`, `active_ema_decay=0.9995555556`,
+  warmup 4500 updates. The top-level `tr1_window_receipt.json` still records the smoke reanchor
+  epoch 1337 and warmup 601 updates.
+- **DISPOSITION:** do NOT byte-close, promote, or endpoint-route the full continuation as a
+  full-window EMA-cured v3 result. If the owner harvests it, label it explicitly as a
+  `smoke-EMA continuation` and probe live/EMA endpoint bases; otherwise regenerate/restart in a
+  unique out-dir or force a fresh full-window reanchor at continuation resume. DY1/#961 must wire a
+  production inertness/refuse check comparing declared full-window EMA scope to resolved active
+  EMA rows before checkpoint selection.
+
+Counter remains 0/3; round 5 = next fresh pass.
