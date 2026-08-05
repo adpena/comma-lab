@@ -20,3 +20,14 @@ math is the sleeper best."*
 Canonical home: directive memo addendum 7.
 
 S = 0.7539807296911207 @ 357,836 B [macOS-CPU advisory]; contest pointer borrowed/unmoved.
+
+## Extension (operator, minutes later): TWO crush targets
+
+*"Against our archive or even against the inflated video that it produces."* Target A =
+payload crush (as above). Target B = fit a compact model to OUR DECODED OUTPUT within
+its scorer-equivalence box — the output is by-construction low-entropy; the pipeline
+becomes compress-time machinery; archive = bytes(model)+residual, rule-118 counted,
+30-min decode bound. For territory 1: budget BOTH variants. For territory 3 (vehicle
+question): Target B is a candidate ANSWER — the "vehicle" that ships may be the crush
+of the staged line's output, dissolving the base-substrate dichotomy. Prior floors are
+formulation-scoped to flat paint (fp1 f′, #909); the composed output is a new target.

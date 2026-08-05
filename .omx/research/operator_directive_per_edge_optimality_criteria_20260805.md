@@ -231,3 +231,27 @@ the PR lineage's own L26/L31 Wang–Rudin colex ranks were exactly this class).
 **Disposition:** QUEUED-WITH-FIRE-ORDER — fires when od5/od3 land the composed payload
 formats (the crush needs its true target object); gc18's 131KB budget design includes
 the stage as a line item NOW. Ledger row tracks the fire-order.
+
+### Addendum 7 extension (operator, minutes later) — TWO CRUSH TARGETS
+
+Operator verbatim: *"Against our archive or even against the inflated video that it
+produces."*
+
+- **Target A — the archive (payload crush):** as above; meta-compression of the counted
+  description bytes.
+- **Target B — the INFLATED VIDEO (output crush), the deeper move:** fit a compact
+  generative model (HNeRV-class INR or other) to OUR OWN DECODED OUTPUT — which is by
+  construction low-entropy (task-lossy, solved/painted structure, far simpler than
+  natural video) — and ship the model instead of the pipeline's payload. The tolerance
+  is the SCORER-EQUIVALENCE BOX, not exact frames (the weakness doctrine applies: the
+  crush may land anywhere in the box). Under Target B the entire staged pipeline
+  becomes COMPRESS-TIME machinery (unlimited compute, TTO doctrine) and the archive is
+  bytes(model)+residual; rule-118 counts the fitted weights, the bet is total-counted
+  win, decode must fit the 30-min budget. Prior receipts in this family (recall, don't
+  re-derive): fp1's f′=0.008305 class-field floor is FORMULATION-scoped to flat-paint
+  targets (#909: no measured floor above live d_seg for the shipped family); pj1/dw1
+  measured token-fit and distill-window variants; S5 solve-frame distillation named by
+  pn1. The composed output (richer than flat paint: carriage pose content +
+  photometrics) is a NEW fitting target none of those measured.
+- Race rule unchanged: both targets race the incumbent archive at total counted bytes,
+  same falsifier discipline, fire at the composed-candidate boundary.
