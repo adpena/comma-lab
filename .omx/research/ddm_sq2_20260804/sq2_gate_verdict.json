@@ -1,0 +1,51 @@
+{
+  "schema": "ddm_sq2_gate_verdict.v1",
+  "axis": "[macOS-CPU frozen-scorer advisory] NON-PROMOTABLE",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "verdict_scope": "INSTANCE",
+  "instance": "sq1 #935 solved-paint selected n32, steps=100, convergence-patience=3",
+  "status": "BLOCKED_CAP_ARTIFACT_NOT_CONVERGED_AND_R8_POSE_GUARD_FAIL",
+  "inputs": {
+    "stage_receipt": {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sq1_20260803/receipts/sq1_stage_n32_uncap100_sq2.json",
+      "bytes": 188487,
+      "sha256": "dc7ecfe5c1578cc6a7f2668c070f04251b7e570a3e288d2789364d4e8ecead0b"
+    },
+    "aggregate_receipt": {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sq1_20260803/receipts/sq1_aggregate_n32_uncap100_sq2.json",
+      "bytes": 6285,
+      "sha256": "f6d5ef091fd574d34fbc06cf4230c13a4b1654db94600b6fcf822d221f1c113a"
+    }
+  },
+  "measured": {
+    "n_pairs": 32,
+    "eta_net_pooled": 0.9112579957356077,
+    "d_pose_after_subset_mean": 0.07768548923741037,
+    "subset_d_pose_before_mean": 0.0006867916985129341,
+    "pose_term_after_subset": 0.8813937215422536,
+    "pose_term_before_subset": 0.08287289656533879,
+    "stop_reason_counts": {
+      "iteration_cap_best_at_cap": 21,
+      "iteration_cap_before_plateau": 11
+    },
+    "converged_stop_count": 0
+  },
+  "derived_gate": {
+    "net_delta_s_before_pose": -0.13744489822327935,
+    "r8_pose_bank_term": 0.0845,
+    "r8_allowed_erosion": 0.005,
+    "pose_erosion_vs_r8_bank": 0.7968937215422536,
+    "pose_term_threshold": 0.0895,
+    "pose_term_excess_over_threshold": 0.7918937215422536,
+    "pose_accounted_delta_s_vs_r8_bank": 0.6594488233189743,
+    "projected_s_vs_prompt_baseline_0_7539807296911207": 1.413429553010095,
+    "projected_s_vs_live_advisory_0_7541459": 1.4135947233189744
+  },
+  "disposition": {
+    "full_n600_candidate_built": false,
+    "full_n600_scorer_run": false,
+    "reason": "The 100-step n32 receipt is still cap-class on every row and the measured subset pose term violates the R8 bank by far more than the allowed 0.005.",
+    "next_if_resumed": "Optional 200-step rung only if wall-clock budget is explicitly available; use the same selected n32 pairs, a new sq1_stage_n32_uncap200 receipt, aggregate before any n600 spend, and refuse promotion unless both non-cap convergence and R8 pose-bank accounting pass."
+  }
+}

@@ -257,3 +257,37 @@ requirement and is not a plausible R8-safe scorer spend. Fire order: rerun the
 same 32 pairs to an explicit non-cap convergence stop, aggregate, then build
 and score only if the pose-bank-accounted pre-score can beat the current
 own-vehicle best.
+
+### sq2 follow-up, uncap100 n32
+
+Status: **MEASURED n32 FLOOR, INSTANCE NEGATIVE**.
+
+Receipts:
+
+- `/Volumes/VertigoDataTier/pact/ddm_sq1_20260803/receipts/sq1_stage_n32_uncap100_sq2.json`
+  (`dc7ecfe5c1578cc6a7f2668c070f04251b7e570a3e288d2789364d4e8ecead0b`, 188,487 bytes)
+- `/Volumes/VertigoDataTier/pact/ddm_sq1_20260803/receipts/sq1_aggregate_n32_uncap100_sq2.json`
+  (`f6d5ef091fd574d34fbc06cf4230c13a4b1654db94600b6fcf822d221f1c113a`, 6,285 bytes)
+- `.omx/research/ddm_sq2_20260804/sq2_gate_verdict.json`
+
+Measured eta curve, same selected n32 pairs:
+
+| cap | eta_net_pooled | stop census |
+|---:|---:|---|
+| 25 | 0.7895095948827292 | no explicit stop reason; legacy cap artifact |
+| 50 | 0.8620042643923241 | 31/32 `iteration_cap_best_at_cap`; 1/32 `iteration_cap_before_plateau` |
+| 100 | 0.9112579957356077 | 21/32 `iteration_cap_best_at_cap`; 11/32 `iteration_cap_before_plateau`; 0/32 converged |
+
+Gate arithmetic:
+
+- DERIVED pre-pose delta S from A3 repricing: `-0.13744489822327935`.
+- MEASURED subset pose mean after solved paint: `0.07768548923741037`, so `sqrt(10*d_pose)=0.8813937215422536`.
+- R8 guard: FAIL. Erosion vs the `0.0845` pose bank is `+0.7968937215422536`, far above the `+0.005` allowance.
+- Pose-accounted projected S vs prompt baseline `0.7539807296911207`: `1.413429553010095`.
+
+Disposition: no receiver-closed n600 build and no full-n600 scorer row. The
+uncap100 result is a higher floor, not a convergence receipt, and it fails the
+R8 pose-bank gate on the measured subset. Optional continuation is a 200-step
+rung with the same selected pairs and a new receipt, but only as another floor
+measurement; no n600 spend before non-cap convergence and R8-safe pose
+accounting both pass.
