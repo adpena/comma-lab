@@ -210,26 +210,36 @@
     {
       "item": "full_learned_mcf_scorer",
       "disposition": "FOLDED",
+      "owner": "none",
+      "consumer": "score_promotion_review_boundary",
       "reason": "Authority use invalid and existing instruments already cover the scorer-relevant fixed maps."
     },
     {
       "item": "ci1_contrast_receipt_next_completed_ab",
       "disposition": "QUEUED_WITH_FIRE_ORDER",
+      "owner": "next_matched_ab_lane",
+      "consumer": "ddm_g3_score_atlas_force_ledger_verdict_clearance_receipt",
       "fire_order": "After a completed matched A/B has persisted decoded/argmax/margin/edge fields, run a scorer-free contrast report over predeclared feature families. No frozen-scorer forward."
     },
     {
       "item": "canonical_equation_registration",
       "disposition": "FOLDED",
+      "owner": "none",
+      "consumer": "canonical_equation_registry_review",
       "reason": "Existing canonical equations cover this crosswalk and no new measurement/law was derived."
     },
     {
       "item": "824_863_reinterpretation",
       "disposition": "FOLDED_INTO_EXISTING_RESOLUTION",
+      "owner": "existing_bp1_reset_race_lane_if_resumed",
+      "consumer": "tools/build_ddm_bp1_arm_tickets.py",
       "reason": "Use the corrected 3.00 beta2 tau and the existing ungrounded n=1 diagonal verdict."
     },
     {
       "item": "931_prevention",
       "disposition": "ALREADY_EMBODIED",
+      "owner": "subset_selection_apparatus",
+      "consumer": "src/tac/subset_selection.py src/tac/subset_selection_gate.py src/tac/canonical_anti_patterns/na3_subset_bias_builders.py",
       "reason": "subset_selection, subset_selection_gate, and NA3 anti-patterns already mechanize the cure."
     }
   ],

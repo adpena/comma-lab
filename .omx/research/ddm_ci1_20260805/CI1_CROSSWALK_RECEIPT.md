@@ -120,13 +120,13 @@ consumer then measures the real score cell it claims to explain.
 
 ## Follow-On Disposition
 
-| item | disposition | fire order |
-|---|---|---|
-| Build a full learned MCF scorer now | **FOLDED** | Folded because scorer authority would be invalid, the full CI1 text was not available, and existing instruments already cover the fixed feature maps needed for a zero-scorer report. |
-| CI1 contrast receipt over the next completed A/B | **QUEUED-WITH-FIRE-ORDER** | After a completed matched A/B has persisted decoded/argmax/margin/edge fields, run a scorer-free report over predeclared features: edge x verb x pair difficulty x margin bin x axis x selection mode. No new frozen-scorer forward. The report may only choose a diagnostic contrast and route the next measurement. |
-| Canonical equation registration | **FOLDED** | Existing canonical equations cover the crosswalk. No new empirical law was derived here. |
-| #863/#824 reinterpretation under CI1 | **FOLDED INTO EXISTING RESOLUTION** | Treat the current verdict as underpowered/diagonal/confounded, with the charter duration corrected to 3.00 beta2 tau per `ddm_na2`; fire only the already registered magnitude-matched race if that lane resumes. |
-| #931 prevention | **ALREADY-EMBODIED** | `subset_selection`, `subset_selection_gate`, and NA3 anti-patterns already mechanize the prevention. CI1 only supplies vocabulary: population exchangeability and covariate-dependent strata. |
+| item | disposition | owner / consumer | fire order |
+|---|---|---|---|
+| Build a full learned MCF scorer now | **FOLDED** | none; score/promotion review boundary | Folded because scorer authority would be invalid, the full CI1 text was not available, and existing instruments already cover the fixed feature maps needed for a zero-scorer report. |
+| CI1 contrast receipt over the next completed A/B | **QUEUED-WITH-FIRE-ORDER** | owner: next matched-A/B lane; consumers: `ddm_g3_score_atlas`, force ledger, verdict-clearance receipt | After a completed matched A/B has persisted decoded/argmax/margin/edge fields, run a scorer-free report over predeclared features: edge x verb x pair difficulty x margin bin x axis x selection mode. No new frozen-scorer forward. The report may only choose a diagnostic contrast and route the next measurement. |
+| Canonical equation registration | **FOLDED** | none; canonical equation registry review | Existing canonical equations cover the crosswalk. No new empirical law was derived here. |
+| #863/#824 reinterpretation under CI1 | **FOLDED INTO EXISTING RESOLUTION** | owner: existing bp1/reset-race lane if resumed; consumer: `tools/build_ddm_bp1_arm_tickets.py` | Treat the current verdict as underpowered/diagonal/confounded, with the charter duration corrected to 3.00 beta2 tau per `ddm_na2`; fire only the already registered magnitude-matched race if that lane resumes. |
+| #931 prevention | **ALREADY-EMBODIED** | owner: subset-selection apparatus; consumers: `src/tac/subset_selection.py`, `src/tac/subset_selection_gate.py`, NA3 anti-patterns | `subset_selection`, `subset_selection_gate`, and NA3 anti-patterns already mechanize the prevention. CI1 only supplies vocabulary: population exchangeability and covariate-dependent strata. |
 
 ## Canonical Equation Registration
 
