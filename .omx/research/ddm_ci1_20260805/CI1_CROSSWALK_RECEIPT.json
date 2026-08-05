@@ -1,0 +1,254 @@
+{
+  "schema": "ddm_ci1_crosswalk_receipt.v1",
+  "arm": "ddm_ci1",
+  "date_utc": "2026-08-05",
+  "paper": {
+    "title": "Causal Inference with Unstructured Outcomes",
+    "authors": [
+      "Kevin Christian Wibisono",
+      "Yixin Wang"
+    ],
+    "arxiv_id": "2608.03085",
+    "url": "https://arxiv.org/abs/2608.03085",
+    "submitted": "2026-08-04",
+    "source_status": "abstract_page_available_full_pdf_unavailable_in_current_toolchain",
+    "claim_scope": "ABSTRACT_GROUNDED_OR_INFERRED_FROM_ABSTRACT"
+  },
+  "related_unstructured_treatment_source": {
+    "title": "Causal Inference with Unstructured Treatments",
+    "arxiv_id": "2608.00657",
+    "url": "https://arxiv.org/abs/2608.00657",
+    "used_for": "limited cross-check of unstructured-treatment extension vocabulary",
+    "not_a_substitute_for_ci1_fulltext": true
+  },
+  "execution": {
+    "score_claim": false,
+    "promotion_eligible": false,
+    "scorer_forwards_run": 0,
+    "evaluate_run": false,
+    "n600_job_run": false,
+    "launches_run": 0,
+    "frozen_scorer_forward_run": false,
+    "pointer_moved": false,
+    "protected_files_touched": false,
+    "upstream_touched": false
+  },
+  "headline_verdict": {
+    "verdict": "ADOPT_DIAGNOSTIC_ONLY_WITH_ALREADY_EMBODIED_INSTRUMENTS",
+    "summary": "Use MCF-style scoring only as a constrained post-measurement contrast report over existing persisted decoded/argmax/margin/edge fields; never as score authority or archive ranking currency."
+  },
+  "recall_evidence": [
+    {
+      "query": "#931 na3 prefix bias sign inversion subset selection",
+      "sources": [
+        "src/tac/subset_selection.py",
+        "src/tac/subset_selection_gate.py",
+        "src/tac/canonical_anti_patterns/na3_subset_bias_builders.py",
+        ".omx/research/ddm_na2_negative_audit_20260803.md",
+        ".omx/research/ddm_ng1_20260805/ng1_negative_results_audit.md",
+        ".omx/research/ddm_p4x_lane_existence_birth_matrix_20260803.md"
+      ],
+      "finding": "Prefix subsets are not exchangeable with the population; pose prefixes are 2.54x to 4.21x harder while seg prefixes are modestly easier; n8 banks nothing.",
+      "plan_impact": "HTE/stratum claims require explicit selection mode, seed/stride, denominators, and population-ratio checks."
+    },
+    {
+      "query": "m91 pc2 Road Lane per-edge",
+      "sources": [
+        ".omx/research/ddm_pc2_perclass_road_edges_20260802.md",
+        "src/tac/witness_control/force_class_edge_ledger.py"
+      ],
+      "finding": "Per-edge accounting is load-bearing; Road<->Lane carries 49.2% of flips and Road-incident edges carry 87.8%.",
+      "plan_impact": "MCF feature families should be edge/verb keyed rather than class-only."
+    },
+    {
+      "query": "g3 score atlas hard-pair registry",
+      "sources": [
+        ".omx/research/codex_findings_ddm_g3_score_atlas_20260722T204813Z_codex.md",
+        ".omx/research/ddm_g3_score_atlas_n600_20260722T204000Z/ddm_g3_score_atlas_receipt.json",
+        "tools/build_ddm_g3_score_atlas.py",
+        "src/tac/optimization/ddm_g3_score_atlas.py"
+      ],
+      "finding": "Existing atlas persists typed n600 pair/frame score-debt fields and hard-pair diagnostics; it is advisory and non-promotable.",
+      "plan_impact": "CI1 consumes existing atlas fields; it does not request a new scorer pass."
+    },
+    {
+      "query": "mp1 per-pixel field margin saliency",
+      "sources": [
+        ".omx/research/ddm_mp1_lsb_misplacement_margin_join_20260802.md",
+        "src/tac/margin_saliency_map.py"
+      ],
+      "finding": "Per-pixel misplacement and margin-saliency instruments are already diagnostic/loss-weighting assets, never authority.",
+      "plan_impact": "MCF reports must carry provenance and authority labels for consumed fields."
+    },
+    {
+      "query": "#824 #863 eta(t) reset operator confound",
+      "sources": [
+        "src/tac/witness_dsl/spec_tr1_renderer_20260728.py",
+        "tools/build_ddm_bp1_arm_tickets.py",
+        "src/tac/confound_gates.py",
+        ".omx/research/ddm_df1_retrain_contamination_classification_20260803.md",
+        ".omx/research/ddm_na2_negative_audit_20260803.md"
+      ],
+      "finding": "The charter's 1.56 beta2 time-constant statement is superseded by ddm_na2's correction to 3.00 tau; the verdict remains underpowered because it is n=1, diagonal-only, non-independent, and dose-confounded.",
+      "plan_impact": "Identification failure is recorded as exchangeability/dose/control incompleteness, not the stale 1.56-tau duration."
+    },
+    {
+      "query": "canonical equations margin stratum score quotient",
+      "sources": [
+        "local query_equations listing",
+        ".omx/state/canonical_equations_registry.jsonl"
+      ],
+      "finding": "Existing canonical equation ids cover this crosswalk.",
+      "plan_impact": "No canonical equation registration."
+    }
+  ],
+  "seed_verdicts": [
+    {
+      "seed": "ab_attribution_instrument",
+      "verdict": "ADOPT_PLUS_ALREADY_EMBODIED",
+      "honesty_labels": [
+        "ABSTRACT_GROUNDED",
+        "REPO_MEASURED",
+        "NO_BUILD"
+      ],
+      "conclusion": "Specify a constrained MCF-style contrast report over existing persisted feature fields; existing instruments already provide most fixed maps.",
+      "falsifier": "If existing g3/mp1/force-ledger outputs already reproduce the same maximum-contrast feature with provenance, the wrapper is redundant; if the selected feature has no exact argmax/margin change, it is folded.",
+      "consumers": [
+        "tools/build_ddm_g3_score_atlas.py",
+        "src/tac/optimization/ddm_g3_score_atlas.py",
+        "src/tac/witness_control/force_class_edge_ledger.py"
+      ]
+    },
+    {
+      "seed": "hte_per_stratum_verdict_problem",
+      "verdict": "ADOPT",
+      "honesty_labels": [
+        "ABSTRACT_GROUNDED",
+        "REPO_MEASURED",
+        "DESIGN_RULE_ONLY"
+      ],
+      "conclusion": "Use covariate-dependent scoring to require edge/verb/pair/margin/axis/selection-mode strata before aggregate claims; it does not lower n floors.",
+      "falsifier": "If stratified random n120 still sign-inverts outside declared null bands, or if features are selected post hoc without predeclared families/cross-fitting, fold the design.",
+      "consumers": [
+        "src/tac/subset_selection.py",
+        "src/tac/subset_selection_gate.py",
+        "src/tac/canonical_anti_patterns/na3_subset_bias_builders.py"
+      ]
+    },
+    {
+      "seed": "identification_conditions_x_confound_apparatus",
+      "verdict": "ALREADY_EMBODIED_PLUS_SMALL_CURE",
+      "honesty_labels": [
+        "REPO_MEASURED",
+        "DERIVED_DESIGN"
+      ],
+      "conclusion": "Existing gates encode most hygiene; add an explicit assumption row naming exchangeability basis, overlap, receiver consistency, and hidden dose variables.",
+      "falsifier": "A matched A/B with same checkpoint, selection, seed policy, window, dose variables, and required controls still shows the contrast.",
+      "consumers": [
+        "src/tac/confound_gates.py",
+        "tools/build_ddm_bp1_arm_tickets.py",
+        "src/tac/witness_dsl/spec_tr1_renderer_20260728.py"
+      ]
+    },
+    {
+      "seed": "exact_scorer_authority_boundary",
+      "verdict": "ADOPT_AS_REFUSAL",
+      "honesty_labels": [
+        "GOVERNANCE_BOUNDARY",
+        "NO_SCORE_CLAIM"
+      ],
+      "conclusion": "MCF learned scalars are diagnostics only, never score authority, promotion evidence, or archive ranking currency.",
+      "falsifier": "Only an official contest-oracle rule change can supersede this boundary.",
+      "consumers": [
+        "tools/preflight_hook.py",
+        "src/tac/preflight.py",
+        "score and promotion receipts"
+      ]
+    },
+    {
+      "seed": "unstructured_treatments_extension",
+      "verdict": "N_A_LIMITED_TRANSFER",
+      "honesty_labels": [
+        "SIBLING_PAPER_CROSSCHECK",
+        "NOT_CI1_FULLTEXT"
+      ],
+      "conclusion": "Pact treatments are mostly structured DSL flags and archive programs; unstructured-treatment ideas transfer only as modifiability/overlap caution.",
+      "falsifier": "A future genuinely unstructured treatment with reproducible treatment provenance and overlap checks can reopen the extension.",
+      "consumers": [
+        "src/tac/witness_dsl/",
+        "src/tac/followon_backlog_join.py"
+      ]
+    }
+  ],
+  "identification_crosswalk": [
+    {
+      "assumption": "conditional_exchangeability",
+      "pact_failure_mode": "Different parent checkpoint, seed, window, runtime state, or hidden effective dose between treatment/control arms.",
+      "existing_apparatus": "reset-race DSL, optimizer-state gate, confound gates, L3 clearance",
+      "cheap_cure": "receipt row naming exchangeability_basis with checkpoint, seed, window, selection, and dose variables"
+    },
+    {
+      "assumption": "positivity_overlap",
+      "pact_failure_mode": "A stratum exists in one arm but not the other, or a prefix samples a scene block instead of the population.",
+      "existing_apparatus": "subset selector, subset gate, NA3 anti-patterns",
+      "cheap_cure": "per-stratum denominators and population-ratio checks before reading treatment effect"
+    },
+    {
+      "assumption": "consistency_unit_stability",
+      "pact_failure_mode": "Receiver/archive changes redefine the outcome unit.",
+      "existing_apparatus": "receiver parse-back, byte-close receipts, force-ledger magnitude kinds",
+      "cheap_cure": "require shared receiver grammar and decoded-unit definition for treatment/control"
+    },
+    {
+      "assumption": "no_post_treatment_feature_leakage",
+      "pact_failure_mode": "Diagnostic feature chases treatment-specific artifacts unrelated to scorer cells.",
+      "existing_apparatus": "exact scorer authority boundary and margin/argmax checks",
+      "cheap_cure": "predeclare feature families and cross-fit or report on held-out/already-measured fields"
+    }
+  ],
+  "follow_ons": [
+    {
+      "item": "full_learned_mcf_scorer",
+      "disposition": "FOLDED",
+      "reason": "Authority use invalid and existing instruments already cover the scorer-relevant fixed maps."
+    },
+    {
+      "item": "ci1_contrast_receipt_next_completed_ab",
+      "disposition": "QUEUED_WITH_FIRE_ORDER",
+      "fire_order": "After a completed matched A/B has persisted decoded/argmax/margin/edge fields, run a scorer-free contrast report over predeclared feature families. No frozen-scorer forward."
+    },
+    {
+      "item": "canonical_equation_registration",
+      "disposition": "FOLDED",
+      "reason": "Existing canonical equations cover this crosswalk and no new measurement/law was derived."
+    },
+    {
+      "item": "824_863_reinterpretation",
+      "disposition": "FOLDED_INTO_EXISTING_RESOLUTION",
+      "reason": "Use the corrected 3.00 beta2 tau and the existing ungrounded n=1 diagonal verdict."
+    },
+    {
+      "item": "931_prevention",
+      "disposition": "ALREADY_EMBODIED",
+      "reason": "subset_selection, subset_selection_gate, and NA3 anti-patterns already mechanize the cure."
+    }
+  ],
+  "canonical_equation_registration": {
+    "registered_new_equation": false,
+    "reason": "No new empirical law; CI1 maps onto existing canonical surfaces.",
+    "existing_equations": [
+      "ddm_score_quotient_functional_v1",
+      "closed_scorer_taskspace_variational_functional_v1",
+      "margin_saliency_reachability_replaces_texture_proxy_v1",
+      "perclass_stratum_residual_carrier_taxonomy_v1",
+      "ddm_v4b_composed_gate_instrument_fidelity_v1"
+    ]
+  },
+  "authority_boundary": "MCF scalar scores are diagnostic projections only. They cannot rank archives, promote rows, replace frozen scorer cells, or move a pointer.",
+  "next_if_resumed": [
+    "Refresh against full CI1 PDF if access becomes available.",
+    "Run a zero-scorer contrast receipt only over already persisted matched-A/B fields.",
+    "Reject any MCF score/promotion claim unless it points back to exact archive bytes and official scorer evidence."
+  ],
+  "frontier_line": "S = 0.7539807296911207 @ 357,836 B [macOS-CPU advisory]; contest pointer borrowed/unmoved."
+}
