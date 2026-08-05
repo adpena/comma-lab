@@ -131,10 +131,16 @@ frames or pairs or certain classes or edges or boundaries or even specific ones.
   boundaries, even individual instances. Generic-corpus training graded against a surgical
   target is a category error, not a measurement.
 - **RE-GRADES under this law (2026-08-05)**:
-  (a) cq2r tiny-student → RECIPE-scoped (generic comma10k recipe, no lane weighting → Lane IoU
-  0.000 = majority-class collapse, never aimed at the flip set → overlap 0/8,670 is the
-  recipe's failure not the family's; the >1.0 break-even kill is SIZE-scoped at ≥124,765 B —
-  a band-only/edge-only surgical student lives in a different size class entirely).
+  (a) cq2r tiny-student → RECIPE-scoped, verdict_scope: RECIPE (adversarially re-reviewed
+  under the magnitude-dismissal gate). RELATIVE SIGNIFICANCE: the route's stake is the
+  Road↔Lane budget ≈ 0.2216 × 0.5818394 ≈ **0.1289 S ≈ 22.1% of the remaining gap** (m91/pc2)
+  — far too large to family-kill on one recipe, which is exactly why st1 re-fires it surgical.
+  MEASURED UN-RECOVERABILITY at the tested size class only: break-even survival 1.001552
+  (side_implied 206,130 B) exceeds the definitional maximum survival of 1.0 — a measured exit
+  criterion (cq2_summary.json), valid for full-frame students at ≥124,765 B; it says NOTHING
+  about band-only models in a smaller size class. Lane IoU 0.000 + overlap 0/8,670 = the
+  generic recipe's failure (majority-class collapse, never aimed at the flip set), not the
+  family's.
   (b) pe4 conditional transport → FORMULATION-scoped (per-track stream-SPLIT selector destroys
   cross-track coder context, the exact #859 LZ-match-structure mechanism; the untested
   reformulation = ONE stream + transport-prediction as a coding CONTEXT — adds information
