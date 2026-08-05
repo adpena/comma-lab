@@ -396,3 +396,38 @@ ARCHIVE-IMPACT NOTE (why stage choice moves bytes, not just distortion): rate-in
 model shrank counted bytes 306,891→301,761 DURING the window; quant-anneal engages at_knee;
 terminal solves move distortion at ~0 byte cost; the coder is chosen per-surface at export. Every
 plateau branch above states its byte consequence through this chain, never assumes rate constant.
+
+## RECURSIVE ADVERSARIAL REVIEW — CYCLE 2 (the jd4 landing + n600 probe variant + plateau policy), ROUND 1 (MAIN, 2026-08-05 ~15:4xZ)
+
+Operator request (verbatim): "Might be around for recursive adversarial review right now of all
+that just landed because it's mission critical." Scope: jd4 landing fae7193a85 (5 regenerator
+debts + trainer force-reanchor flag + exclusive-epoch fix), the sealed jd4 ticket
+(51c64222b432…), the n600 both-bases probe variant, the tp1 plateau policy. FIRE GATE: the jd4
+continuation fires only after (a) the probe receipt + endpoint adjudication AND (b) this review
+clears the landing.
+
+### Round 1 checks (all axes; measured, not reasoned)
+
+| # | Check | Result |
+|---|---|---|
+| 1 | `--jd1-force-ema-reanchor-on-resume` exists in argparse (:2849), fail-closed (:3315 requires --resume-from + window scope); sealed ticket argv exact (interpreter argv0, trainer argv1, flag present, epochs 1526, unique out-dir) | VERIFIED |
+| 2 | Forced-resume tail source = checkpoint's OWN baked meta (`telemetry_tail`, last ≤4 gate rows, :2404-2417) — snapshot resume works WITHOUT telemetry.jsonl. Snapshot meta parse via the trainer's canonical idiom `json.loads(bytes(z['meta::json']).decode())` (:2640) | VERIFIED — tail epochs [1404,1404,1405,1405], meta::epoch=1406 EXCLUSIVE |
+| 3 | Forced-start arithmetic: legacy 1407 vs forced max(tail)+1=1406 → chosen 1406; remaining 1526−1406=120 ep → U=18000 → decay 1−4/U=0.9997777777777778 == the sealed ticket's derived decay | VERIFIED (recomputed) |
+| 4 | The R4 latch is LIVE in the snapshot (`jd1_pose_finish.stage_ema_reanchored=True`, carried `active_ema_decay=0.9966667` w/ U=1200 provenance string) AND the predicate `jd1_should_reanchor_stage_ema` (:3200) overrides it: forced branch fires on force-flag ∧ reason=="resume_inside_joint_pose_finish". Without the flag the continuation would run 120 ep at the smoke decay — the exact hazard, confirmed present, confirmed cured | VERIFIED at source |
+| 5 | Probe basis semantics: ckpt stores 20 `ema::` arrays SEPARATE from 20 live param arrays; `load_checkpoint` loads LIVE params; `ema_snapshot_swap` applied only when `use_ema=True` → the `endpoint_ep1405_live` tag measures the true LIVE basis (per the plateau policy: slow-EMA warmup ≈ U/2 = 9000 steps = 60 ep, so continuation gates MUST read LIVE) | VERIFIED |
+| 6 | Sealed ticket lever ledger: 23 levers, 0 lever-vs-argv mismatches (declared-vs-argv refuse = regenerator debt #5; live cross-check on the actual ticket) | VERIFIED — 0 mismatches |
+
+Axis 8 (assumption-challenge): the shared assumption under review is "the checkpoint's baked
+telemetry_tail is a faithful proxy for the run's endpoint geometry." Verified rather than
+assumed: tail max epoch 1405 == the window receipt's final telemetry epoch; meta::epoch
+exclusive semantics confirmed against the writer (:2415). If this assumption were wrong the
+forced start would silently shift by ±1 epoch — the check above measures it instead.
+Axis 9 (measured-runnability): the probe variant is EXECUTING the real config now (n600, real
+gt, both bases; pid 52792, status=running, 600-pair sweep in progress) — runnability measured,
+not reasoned; scored quantities land in the receipt.
+
+### Verdict
+
+ROUND 1 = CLEAN PASS (0 findings). Counter 1/3 for cycle 2. Reviewer-vs-author: MAIN authored
+the probe variant + plateau policy, so rounds 2+ go to the fresh-eyes arm (rr1 respawn) before
+the counter can advance on those artifacts. The jd4 fire remains gated on the review clearing.
