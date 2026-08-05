@@ -1,6 +1,6 @@
 # ddm_rr1 recursive adversarial review receipt
 
-Status: REVIEW arm. Cycle 1 covered rounds 2-7 fresh-eyes over the JD3 v3 chain and DY1 scope-law resolver; cycle 2 rounds 2-3 reviewed the JD4 landing wave, n600 both-bases probe variant, sealed JD4 ticket, fire record, and plateau policy. I ran no scorer, no Metal/MLX launch, no archive build, and no exact evaluation. Live full-v3/JD4 dirs/files were read-only.
+Status: REVIEW arm. Cycle 1 covered rounds 2-7 fresh-eyes over the JD3 v3 chain and DY1 scope-law resolver; cycle 2 rounds 2-4 reviewed the JD4 landing wave, n600 both-bases probe variant, sealed JD4 ticket, fire record, plateau policy, and endpoint exit paths. I ran no scorer, no Metal/MLX launch, no archive build, and no exact evaluation. Live full-v3/JD4 dirs/files were read-only.
 
 Axis: source/receipt/telemetry review plus derived arithmetic. Any score arithmetic below is non-promotable `[macOS-CPU/MLX advisory]` or derived from existing receipts; `score_claim=false`.
 
@@ -21,6 +21,7 @@ Axis: source/receipt/telemetry review plus derived arithmetic. Any score arithme
 | Round-7 recall refresh | Re-read `NEXT_IF_RESUMED.md`, TP1 round-6 disposition, the old JD1 ticket, all three regenerated JD3 tickets, `experiments/ddm_jd1_ticket_regenerate.py`, the r2 launch manifest, `tools/launch_detached_process.py`, live telemetry, and current `.done` absence; targeted `rg` for `recursive_encode_pass_loop`, `pass0_input`, `next_resume_from_template`, `winner_dir`, `smoke_epochs`, `full_confirm`, and `full_v3_entry_cont`; ran a structured `argv` vs `levers[*].overrides` diff. | TP1's consumption contract voids the stale recursive resume template for the fired ticket, and `launch_detached_process.py` consumes only final argv. New gap: the regenerator updates argv/child paths but leaves the inherited `levers[*].overrides` value ledger stale across all JD3 regenerated tickets. | Raised RR1-R7-F1; counter remains 0/3. |
 | Cycle-2 round-2 recall refresh | Read `rr1_prompt.md` cycle-2 addendum, `_common_contract.md`, `PROGRAM.md`, `CLAUDE.md`/`AGENTS.md`, craft handoff, hot state, TP1 cycle-2 round 1, JD4 receipt, sealed JD4 ticket, `experiments/ddm_jd1_ticket_regenerate.py`, trainer force-reanchor source, the n600 probe variant, launch manifest/log, and completed `jd3_endpoint_n600_both_bases_verdict.json`; diffed probe variant vs committed source and checked ticket lever overrides. | JD4 ticket repairs are real in the emitted artifact (`0` lever mismatches; recursive template under child out-dir; forced reanchor flag present). New gap: the completed n600 probe receipt has 600 pair ids and both live/EMA rows, but its `axis` still says `36 gd1-designed gate pairs`. | Raised RR1-C2-R2-F1; cycle-2 counter resets to `0/3`. |
 | Cycle-2 round-3 recall refresh | Re-read `rr1_prompt.md` round-3 addendum, `_common_contract.md`, `PROGRAM.md`, `CLAUDE.md`/`AGENTS.md` recursive-review lines, craft handoff, hot state, TP1 fire record, JD4 receipt/NEXT, sealed JD4 ticket, JD4 launch manifest, first JD4 telemetry, `tools/launch_detached_process.py`, fixed committed endpoint instrument, stale SSD n600 variant, correction manifest, canonical EMA evaluator, regenerator source/tests, and targeted full-corpus `rg` over `.omx/research`, `.omx/state`, docs, reports, tools, experiments, and src for `jd4`, `jd3_endpoint_n600`, `RR1-C2-R2-F1`, `51c64222`, `6e4a6e24`, and force-reanchor terms. | The committed endpoint class fix is real; the stale SSD variant remains append-only/correction-only and is explicitly barred by TP1 for future probes. JD4 ticket/launch custody matches the fire record, the R4 cure is verified in live telemetry, and I found no consumer in searched current decision surfaces that routes future endpoint probes through the stale SSD source. Process liveness remained unmeasured because `kill -0` is sandbox-blocked and `.done` is absent. | No new finding; cycle-2 clean counter advances to `1/3`. |
+| Cycle-2 round-4 recall refresh | Re-read `rr1_prompt.md` round-4 addendum, `_common_contract.md`, `PROGRAM.md`, `CLAUDE.md`/`AGENTS.md`, craft handoff, hot state, TP1 plateau policy/fire record, JD4 receipt/NEXT, sealed JD4 ticket, JD4 launch manifest, live telemetry, trainer exit/receipt source, launcher done-receipt source, fixed endpoint instrument, stale SSD n600 variant/correction manifest, and targeted `rg` over `.omx/research`, `.omx/state`, docs, reports, tools, experiments, and src for `jd4`, `plateau policy`, `1.5e-3`, `0.00144`, `max_wall_minutes`, `stop_reason`, `tr1_window_receipt`, and `jd4_cont_ep1406`. | The JD4 landing fixes remained real; the live window had gates through ep1414 and no `.done`/terminal receipt. New low-severity record gap: TP1's Case A pose satisficing shorthand treated `d_pose <= ~1.5e-3` as `<=0.12`, but exact arithmetic gives `sqrt(10*0.0015)=0.122474`; the hard `<=0.12` gate is `d_pose <=0.00144`. | Raised RR1-C2-R4-F1 and appended the TP1 correction note; cycle-2 counter resets to `0/3`. |
 
 ## ROUND 2 FINDINGS
 
@@ -297,12 +298,40 @@ Would violating it unlock breakthrough? Not directly on score, but it would tigh
 - Existing scored quantities consumed for review only: same n600 all-pair training-vehicle objective rows from the corrected JD3 endpoint receipt as round 2; no new score was produced.
 - NOT MEASURED by this arm: process liveness (`kill -0` blocked by sandbox `operation not permitted`), completed JD4 endpoint, peak RSS/VRAM, any new scorer output, archive bytes, byte-close, or contest CPU/CUDA score.
 
+## CYCLE 2 ROUND 4 FINDINGS
+
+Counter state after this round: **0/3 clean passes**. This round found one low-severity record issue, so it is not a clean pass.
+
+| ID | Severity | Finding | Evidence | Required disposition |
+|---|---|---|---|---|
+| RR1-C2-R4-F1 | LOW | The TP1 plateau policy's Case A pose satisficing bar has a small exact-arithmetic overclaim. The text says `d_pose <= ~1.5e-3 -> contribution <=0.12`, but the formula is `sqrt(10*d_pose)`: at `d_pose=0.0015`, the pose contribution is `0.1224744871`, not `<=0.12`. The strict `<=0.12` cutoff is `d_pose <= 0.00144`. This does not invalidate the live CONTINUE decision because the endpoint d_pose is still ~86x above the neighborhood; it only affects the future hard threshold wording. | `.venv/bin/python` derivation: `sqrt(10*0.0015)=0.1224744871391589`; `0.12**2/10=0.00144`. TP1 Case A used the shorthand in the plateau policy. | Appended a TP1 correction note. Future hard gates should use `d_pose <=0.00144` for `pose_term <=0.12`, and may call `1.5e-3` only an approximate satisficing neighborhood (~0.1225 S). |
+
+## CYCLE 2 ROUND 4 ENDPOINT-PATH CHECK
+
+| Exit path | Artifact consumed | Geometry / done verdict |
+|---|---|---|
+| `epochs_complete` at ep1526 | Wait for `.omx/tmp/codex_runs/jd4_cont_ep1406.done`, then read `tr1_window_receipt.json` first and `checkpoints/stage_joint_pose_finish_final.npz` second. Endpoint probe must run from the fixed committed `experiments/ddm_jd1_endpoint_verdict.py` copied/adapted after the completed receipt, not from the stale SSD n600 variant. | Source writes the terminal checkpoint before the terminal receipt; the checkpoint embeds `telemetry_tail[-4:]`. With final tail max ep1525 and `meta::epoch=1526`, future force-resume geometry resolves from tail+1 = 1526, so the exclusive-epoch mismatch remains covered. Launcher supervisor writes the `.done` marker on child exit. |
+| `max_wall_minutes` at 165 min | Same consumption order: `.done` marker, then terminal receipt, then final checkpoint if the receipt declares a usable endpoint. | The trainer checks wall cap at the top of the epoch loop, then still saves `stage_joint_pose_finish_final.npz` and writes `tr1_window_receipt.json` with `stop_reason=max_wall_minutes`. Baked tail geometry remains tied to the last completed gate; the next forced resume should derive from the tail, not blindly from `meta::epoch+1`. `.done` fires through the launcher supervisor for any child rc. |
+| typed exits (`a1_realization_gap_refuse`, realized-hold refusal, `nonfinite_loss`, or basin handoff) | Receipt is the authority. Do not treat `stage_joint_pose_finish_final.npz` alone as an endpoint row; branch by `stop_reason` before any probe/continuation. `basin_entry_handoff` has its own handoff receipt; refusal/nonfinite paths are fold/refuse evidence unless a later adjudicator records a bounded-positive reason. | Source still writes a terminal checkpoint and receipt after typed breaks, and the supervisor still writes `.done`. For nonfinite, no endpoint score should be consumed without an explicit safety adjudication because the break happens after the batch update path; receipt-first branching is mandatory. This is a boundary rule, not a new JD4 finding because the current live window has not reached a typed exit. |
+
+## CYCLE 2 ROUND 4 ASSUMPTION-CHALLENGE AXIS
+
+Shared assumption: plateau-policy thresholds can be carried as rounded operational bands without changing future hard gates.
+
+Would violating it unlock breakthrough? Not directly on score, but it prevents threshold drift at the exact branch where training stops and terminal solvers take over. The hard branch predicate should use the exact formula (`d_pose <=0.00144` for pose contribution `<=0.12`); rounded neighborhoods are acceptable only when explicitly labeled approximate.
+
+## CYCLE 2 ROUND 4 MEASURED-RUNNABILITY AND MEASURED-SCORED-QUANTITY AXIS
+
+- MEASURED from existing artifacts: JD4 ticket SHA/fields, launch manifest schema/argv, live telemetry through ep1414, force-reanchor telemetry, committed endpoint source diff against the stale SSD variant, stale raw n600 receipt plus correction manifest, trainer terminal checkpoint/receipt source, launcher `.done` supervisor source, and the exact arithmetic above.
+- Existing scored quantities consumed for review only: the previously completed n600 training-vehicle live/EMA endpoint rows from `jd3_endpoint_n600_both_bases_verdict.json`; no new scorer output was produced.
+- NOT MEASURED by this arm: process liveness (`ps` is sandbox-blocked with `operation not permitted`), completed JD4 endpoint, peak RSS/VRAM, any new scorer output, archive bytes, byte-close, or contest CPU/CUDA score.
+
 ## BOUNDARIES
 
 - No `.py` file was edited; no review override was used.
 - No protected file was touched.
 - The existing dirty worktree was left intact.
-- Live full-v3 SSD artifacts were read-only.
+- Live full-v3/JD4 SSD artifacts were read-only.
 - The scorer slot was not claimed by this arm; I only inspected the existing completed n600 probe artifact.
 - No byte-close, archive build, or exact eval was run.
 - The contest pointer remains borrowed/unmoved.

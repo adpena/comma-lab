@@ -1,6 +1,6 @@
 status=done
 artifact=.omx/research/ddm_rr1_20260805/RECEIPT.md
-round=cycle2_round3
-clean_counter=1/3
-new_finding=NONE; clean pass after re-verifying RR1-C2-R2-F1 source class fix, JD4 fire custody, fire-gate adjudication, and live R4 cure telemetry
+round=cycle2_round4
+clean_counter=0/3
+new_finding=RR1-C2-R4-F1 LOW; TP1 Case A exact pose contribution bar corrected (d_pose 0.0015 -> sqrt(10*d)=0.122474, strict <=0.12 requires d_pose <=0.00144)
 frontier=S = 0.7539807296911207 @ 357,836 B [macOS-CPU advisory]; contest pointer borrowed/unmoved

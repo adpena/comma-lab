@@ -397,6 +397,12 @@ model shrank counted bytes 306,891→301,761 DURING the window; quant-anneal eng
 terminal solves move distortion at ~0 byte cost; the coder is chosen per-surface at export. Every
 plateau branch above states its byte consequence through this chain, never assumes rate constant.
 
+RR1-C2-R4 arithmetic correction (2026-08-05): the Case A shorthand
+`d_pose <= ~1.5e-3 -> contribution <=0.12` is approximate, not an exact inequality.
+Exact arithmetic is `sqrt(10 * 0.0015) = 0.1224744871`; the hard `<=0.12` bar is
+`d_pose <= 0.00144`. Use `0.00144` for a strict gate, and treat `1.5e-3` as the
+rounded satisficing neighborhood (~0.1225 S pose contribution).
+
 ## RECURSIVE ADVERSARIAL REVIEW — CYCLE 2 (the jd4 landing + n600 probe variant + plateau policy), ROUND 1 (MAIN, 2026-08-05 ~15:4xZ)
 
 Operator request (verbatim): "Might be around for recursive adversarial review right now of all
