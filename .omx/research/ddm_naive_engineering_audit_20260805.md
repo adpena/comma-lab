@@ -56,3 +56,23 @@ fine as arithmetic, advisory as a law. No cure owed beyond the label.
   honest closure the first ledger claimed prematurely).
 - The chain (w4/w4m → jd1) remains THE route regardless — pq1 decides whether an explicit
   stream COMPOSES with it, not whether it runs.
+
+## 5. RESOLUTION (same-day): pq1 MEASURED the corner — the family closes HONESTLY now, with mechanism
+
+pq1 (4 pairs × 18 cells, real SegNet+PoseNet, receipt ddm_pq1_20260805/pq1_prune_quantize_rows.json):
+- **Gate 0 PASSED**: band_derivable=True on 4/4 pairs — positions ARE free (the audit's §1(a) was right).
+- **Support pruning INVERTS — the collective-field hypothesis is MEASURED, not assumed**: every
+  pruned cell (k=4096→512) fixes NEGATIVE flips (−100% to −437% retention). The solved paint is a
+  COHERENT boundary displacement; keeping only high-saliency sites breaks the coherence at the
+  painted/unpainted seams and mints NEW flips. Support is effectively irreducible.
+- **Value quantization collapses**: b=3 full-support retains 22–65% at ~5–6 KB/pair (18× over the
+  320 B/pair break-even at halved benefit); b=2 inverts everywhere.
+- **ZERO of 72 cells under break-even.** The cheapest (~460–600 B, k=256) fix ≈nothing.
+
+**VERDICT: the explicit-carriage family is CLOSED at its MEASURED optimal corner** — free
+positions granted, support pruning measured-destructive, precision floor ≥~8 bit. The first
+ledger's conclusion stands, but now on the family's optimum instead of the solver's artifacts —
+the difference between a lucky closure and an earned one. The weights-as-carrier chain
+(w4/w4m → jd1) keeps sole-route status with the evidence chain now complete.
+Bonus row banked: full-repaint pose erosion is strongly pair-heterogeneous (0.206/0.088/0.060/
+0.081 across the 4 pairs) — feeds the terminal-solve derived-basis race (§2).
