@@ -6,6 +6,9 @@ CQ2 now has a measured public-data tiny-student curve at comma10k sha
 Selected student: `150k`, counted bytes `124765`,
 payload `/Volumes/VertigoDataTier/pact/ddm_cq2_20260804/cq2r_20260805/150k_student_weights.bin`.
 
+Bulk custody manifest: `.omx/research/ddm_cq2_20260804/cq2_bulk_manifest.jsonl`,
+19 entries, sha256 `b9af9ab359146ec644deac64f994d34df49f6c53cbe1c7dd7428227ffa25bbcb`.
+
 Next fire order:
 
 1. Do not reselect using CQ1 overlap. Selection is already frozen by comma10k-val metrics.

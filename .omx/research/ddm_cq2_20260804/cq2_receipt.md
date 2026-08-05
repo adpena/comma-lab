@@ -65,6 +65,14 @@ decodeable tensor package and reloaded before final validation/overlap.
 | payload sha256 | `df2258a7ee74738674a9433e093e39559414c9104d1af3e334b29dfcab309e80` |
 | selected status | `NO_PASS_SELECTED_BEST_PUBLIC_VAL_DIAGNOSTIC` |
 
+## Bulk Manifest
+
+Machine-readable SSD custody manifest:
+`.omx/research/ddm_cq2_20260804/cq2_bulk_manifest.jsonl`, `19` entries, sha256
+`b9af9ab359146ec644deac64f994d34df49f6c53cbe1c7dd7428227ffa25bbcb`.
+It covers the resumable checkpoints, compressed student payloads, and selected n32 argmax cache
+under `/Volumes/VertigoDataTier/pact/ddm_cq2_20260804/cq2r_20260805/`.
+
 ## Final CQ1 Overlap Read
 
 Selected-student CQ1 overlap verdict: **POOR-OVERLAP**.
@@ -75,6 +83,9 @@ Selected-student CQ1 overlap verdict: **POOR-OVERLAP**.
 | selected-student overlap numerator | `0` |
 | selected-student overlap fraction | `0.0000000000` |
 | GOOD threshold | `0.8` |
+
+Pair-row artifact: `.omx/research/ddm_cq2_20260804/cq2_selected_overlap_pair_rows.jsonl`,
+`32` rows, sha256 `c1fef19c29f9e5fdd41e51bd2750be91f4a89c8ab9d2be5c347f491d027b1d37`.
 
 ## Economics
 
