@@ -499,6 +499,8 @@ def main() -> int:
             "trajectory_stop": solve_diag["selected"].get("trajectory_stop"),
             "steps_run": solve_diag["selected"]["steps_run"],
             "best_step": solve_diag["selected"]["best_step"],
+            "selected_curve": solve_diag["selected"].get("curve", []),
+            "start_diagnostics": solve_diag.get("starts", []),
             "flips_after": fa,
             "eta_realized": ((flips0 - fa) / nd) if nd else None,
             "d_pose_after": dp_s1,
