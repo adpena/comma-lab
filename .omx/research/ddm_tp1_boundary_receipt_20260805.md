@@ -131,3 +131,47 @@ build time on BOTH bases (entry live-seg-best 0.00357 vs final live-pose-best 0.
 the od2/SL2 conditioned-base laws inform which). Byte-close does NOT fire on any v2 checkpoint
 (EMA pose 76.6–146 → pose term 27.7–38.3, not shippable). Receipts:
 `/Volumes/VertigoDataTier/pact/ddm_jd1_20260805/jd1_endpoint_verdict_3ckpt.json` + probe log.
+
+## JD3 V3 TWO-SMOKE ADJUDICATION + FULL-WINDOW FIRE (2026-08-05, MAIN)
+
+Both v3 bounded smokes ran clean on MAIN's Metal host (8 epochs each, 0 A1 alarms, 0 rollbacks,
+realized floors latched w/ derived margins, window-scoped EMA decay 0.996667 DERIVED at runtime).
+Pose measured by scratch variants of `experiments/ddm_jd1_endpoint_verdict.py` (CKPTS dict +
+REPO path edits only; physics untouched); receipts
+`/Volumes/VertigoDataTier/pact/ddm_jd3_20260805/jd3_smoke_{entry,final}_pose_verdict.json`.
+All numbers n36 gd1 hard-gate set, shipping (re-anchored window-EMA) basis,
+[macOS-CPU/MLX frozen-scorer advisory], score_claim=false.
+
+| candidate | seg start→end | pose start→end | pose_term end | joint partial-S end |
+|---|---|---|---|---|
+| entry_ep1336 | 0.00357→0.00732→**0.00682** (3-ep toll, then floor-held + recovering) | 151.8→**0.101** | 1.0058 | **1.688** |
+| refuse_final_ep1354 | 0.00599→**0.00557** (falling) | 0.180→**0.158** | 1.2558 | 1.813 |
+
+**WINNER: entry_ep1336.** Lower joint partial-S AND steeper endpoint slopes on BOTH axes. The
+measured mechanism: pose⊗seg antagonism is a TRANSIENT OF THE UNCONDITIONED STATE (a one-time
+3-epoch toll the realized hold bounds), not structural — once pose conditions, the axes descend
+together (the od2 addendum-6 law, now measured in-vehicle from both directions). The fresh entry
+start re-pays a bounded toll and buys the STEEP phase of pose descent (151.8→0.101 in 8 ep vs the
+final candidate's decelerating 0.180→0.158).
+
+Controller-design note (watch item, cx1 FG2 refinement): the realized floor latches at the FIRST
+post-engagement gate, so pre-gate transient damage (ep1337-1339) is grandfathered into the floor.
+Accepted as designed (a floor-from-resume would strangle engagement via immediate rollback); the
+full window watches whether recovery continues below the grandfathered level (od2's below-baseline
+recovery law predicts yes).
+
+cx1 fire-gates at FIRE time: FG1 lane-guard ratchet — NOT TRIGGERED (Lane fell on both bases in
+both smokes); FG2 realized-hold rows — SATISFIED both smokes; FG3 rollback — n/a (0 rollbacks);
+FG4 deterministic-R — RECORDED DECISION: training on Metal accepted (nondeterministic GPU
+accumulation, standing L70 practice) with gate renders on the deterministic mlx_cpu_fp32 stream
+and byte-close/authority always CPU; FG5 v4 riders (SL2 distill · PE3 conditioning · en1
+margin-weight) — held OUT of v3, queued for v4.
+
+**FULL WINDOW FIRED** under the standing GO: ticket
+`/Volumes/VertigoDataTier/pact/ddm_jd1_20260805/jd3_ticket_v3_full_entry_cont.json`
+(hash 96f7f8ff148c9994…), resume = the entry SMOKE's endpoint ckpt (never-weaker-state m40: pose
+0.101 banked; snapshot custody `smoke_snapshot_ep1344/`, resume-source sha 1721cab65dd1093e…),
+epochs 1345→1406 (60-epoch outer bound; typed event exits inside), wall cap 168 min, launcher dir
+`full_v3_entry_cont_mainlaunch_r2` (first attempt rc=126: ticket argv lacks the interpreter —
+launcher execs argv[0] directly; relaunched with `.venv/bin/python` prepended; regenerator debt:
+emit the interpreter in argv).
