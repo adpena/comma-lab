@@ -561,3 +561,31 @@ Disposition per protocol: a found defect resets the counter regardless of who fo
 5's clean is INVALIDATED on the live-A1-status axis (the arm read the a1_gate rows carrying the
 contradicting basis label without flagging it). **Counter honestly RESET 0/3.** Round 6 verifies
 this correction at source (:4314/:4342/:4346 + the telemetry rows) and continues the fresh sweep.
+
+## BI1 BIRTH-SEED ON-vs-OFF MATCHED-EPOCHS READ (MAIN, 2026-08-05, #924/#954 owed adjudication)
+
+Both arms exited `epochs_complete` at ep820 (matched by construction). Axis: [macOS-MLX
+research-signal] n36 designed-gate realized d_seg, ema_shadow basis, score_claim=false.
+
+| arm | first gate ep809 | endpoint ep820 | trajectory |
+|---|---|---|---|
+| birth OFF (`smoke_birth_off`) | 0.0039732 | **0.0040446** | ascending/FLAT (A1 alarm ep814) |
+| birth ON + union mask (`smoke_birth_lane_on`) | 0.0046221 | 0.0045341 | COUPLED_DESCENT → stalls FLAT at ep820 (last interval +8.5e-6) |
+
+**Verdict (INSTANCE scope — this base, this window length, this basis):** birth-seeding ON loses
+the matched-epochs endpoint by **+4.90e-4 realized d_seg (≈ +0.049 S_seg)** — ~10× the w4m
+margin-A/B endpoint gap. The ON slope argument is weaker than w4m's: ON's descent DECELERATES
+and flips positive at the endpoint. The ep809 first-gate gap (+6.5e-4) shows the treatment's
+up-front seg cost; the window did not buy it back. lane_guard g_s_units near-identical
+(−0.0352 vs −0.0362).
+
+**Cross-base caveat (m85 — matched-base controls):** the LIVE jd4 lineage (w4m→jd1→jd3→jd4)
+carries birth_lane_on throughout — this A/B ran on a DIFFERENT (smoke-continuation) base and
+does NOT transfer as a verdict on the live lineage. Routing: (a) WATCH item for the jd4
+endpoint — if endpoint seg underperforms, the birth-seed cost is a named candidate mechanism;
+(b) the decisive test is a matched-base A/B on the jd4-lineage endpoint, QUEUED as a
+window-boundary candidate (competes with the dynamic-EMA A/B and margin-weight A/B for the
+next single-variable slot — three queued single-variable A/Bs now exist; the boundary
+adjudication picks by expected |ΔS| per window); (c) #924's "opposite-signs-same-cells"
+hypothesis stays REFUTED (union added ONE cell); the mechanism under test here is the
+birth-seed amplify anchor, not the mask.
