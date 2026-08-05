@@ -10,6 +10,7 @@ Status: BLOCKED-BEFORE-SMOKE by local MLX/Metal access, after build + ticket res
 - Refreshed `.omx/state/main_hot_state.md`: live task is ddm_jd3 #366 reroute from jd1 v2, with own-vehicle pointer `S = 0.7539807296911207 @ 357,836 B [macOS-CPU advisory]`.
 - Read `.omx/research/ddm_tp1_boundary_receipt_20260805.md` and the jd1 v2 receipt/telemetry on SSD: v2 failed through live realized seg erosion while loss-space hold stayed below floor; EMA basis was parent-horizon scoped.
 - Read `.omx/research/ddm_gc19_20260805/OP_ROUTABLES.md`, `.omx/research/operator_directive_per_edge_optimality_criteria_20260805.md`, and `.omx/research/ddm_sl2_20260805/SL2_RECEIPT.md`: seg must be held in the realized surface, pose is only admissible after conditioned seg, and MAIN owns full FIRE/exact promotion.
+- Read `.omx/research/ddm_jd3_20260805/MAIN_ADDENDUM_OPTIMAL_CONVERSION.md`: do not silently stack extra treatments into v3; queue SL2 solved-frame teacher and PE3 conditioning as separate v4 riders, and use MAIN's both-bases sweep if it lands before resume-start adjudication.
 - Memory recall checked `MEMORY.md` for #366/frontier dispatch context before edits; no full exact/contest score claim is made here.
 
 ## Build
@@ -76,7 +77,9 @@ QUEUED-WITH-FIRE-ORDER:
 
 1. On a Metal-access host, re-run the entry ticket with `tools/launch_detached_process.py`; require at least one post-engagement realized gate and a latched jd3 floor.
 2. Then re-run the refused-final ticket with the same launcher; do not run concurrently.
-3. Compare realized-gate trajectories, rollback history, effective pose weight, live-vs-EMA basis rows, and final receipts. Pick only after both smokes produce real gates.
-4. If a candidate preserves realized seg while improving pose, hand MAIN the selected ticket for full FIRE/exact replay. If both fail with real gate evidence, fold jd3 v3 and route the next #366 controller.
+3. If `/Volumes/VertigoDataTier/pact/ddm_jd1_20260805/chain_both_bases_sweep.json` exists before adjudication, include it in resume-start choice; otherwise proceed with the two charter candidates.
+4. Compare realized-gate trajectories, rollback history, effective pose weight, live-vs-EMA basis rows, and final receipts. Pick only after both smokes produce real gates.
+5. If a candidate preserves realized seg while improving pose, hand MAIN the selected ticket for full FIRE/exact replay. If both fail with real gate evidence, fold jd3 v3 and route the next #366 controller.
+6. Keep SL2 solved-frame teacher distill, PE3 conditioning, and EN1 margin-weight as separately-flagged v4 riders. Do not silently stack them into v3.
 
 Final line: S = 0.7539807296911207 @ 357,836 B [macOS-CPU advisory]; contest pointer borrowed/unmoved.
