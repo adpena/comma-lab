@@ -1,0 +1,755 @@
+{
+  "axis": "[macOS-CPU byte-only persisted-native pricing]",
+  "best_overall": {
+    "probe1_best": {
+      "bytes": 1917,
+      "codec": "brotli-q11",
+      "parseback_exact": true,
+      "sha256": "0a00affb89c223c8e4091c91f951f909427dbd30115dc53e9980f25b47f44c53",
+      "variant": "flat"
+    },
+    "probe2_best": {
+      "bytes": 66497,
+      "codec": "brotli-q11",
+      "parseback_exact": true,
+      "projected_n600_bytes_linear": 1246819,
+      "projected_n600_rate_s": 0.8302055940728326,
+      "sha256": "9a039e81ec576bc76d828efc6f13d6e162c2aca3acd47aa8cd254a2ecd216788",
+      "variant": "shared_context"
+    }
+  },
+  "command": ".venv/bin/python inline_pa2_persisted_stream_pricing_v1 (scorer-free; reads od9 SSD pair_payload NPZ files; writes PA2_RECEIPT.json)",
+  "created_utc": "2026-08-05T07:26:09.320227+00:00",
+  "evaluate_py_run": false,
+  "final_frontier_line_required": "S = 0.7539807296911207 @ 357,836 B [macOS-CPU advisory]; contest pointer borrowed/unmoved.",
+  "input_streams": {
+    "stage1_flat_total_points": 18734,
+    "stage1_rgb_values": 56202,
+    "stage2_qcoeff_shape": [
+      32,
+      48
+    ],
+    "xi_dxi_bounded_absence": "No xi/dxi-named sections or NPZ keys were found in od9_ssd_payload_manifest.json or the 32 pair_payload NPZ files; PA2 used stage2_qcoeffs as the persisted pose/carriage stream.",
+    "xi_dxi_sections_found_in_od9_manifest": []
+  },
+  "manifest_verification": {
+    "all_declared_sha256_and_bytes_match": true,
+    "checked_entry_count": 42,
+    "declared_entry_count": 42,
+    "errors": [],
+    "manifest": {
+      "bytes": 10817,
+      "path": ".omx/research/ddm_od9_20260805/od9_ssd_payload_manifest.json",
+      "sha256": "a409cd3598e99d9af9ffd891bbf84c815b733079837e9d94b31cb26c641175e8"
+    },
+    "no_tmp_persisted_evidence": true,
+    "total_checked_payload_bytes": 981167,
+    "tree_sha256_recorded": "7a127223953ab330f5539d48ceefd4173972d5728d0d71f6803fb0567c63c4a8"
+  },
+  "n_pairs": 32,
+  "paid_launches": 0,
+  "pair_payload_files": [
+    {
+      "bytes": 2971,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/pair_payloads/pair_0008.npz",
+      "sha256": "4f4fb394d4e85ac024eb78b1325b6c2d0a0df07f7ec1ca15064190d94f27d4cf"
+    },
+    {
+      "bytes": 3329,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/pair_payloads/pair_0032.npz",
+      "sha256": "04e6bcbe82b9edaffa41db12d3f5f9381db88d6b40fc38133550063817585c11"
+    },
+    {
+      "bytes": 3257,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/pair_payloads/pair_0046.npz",
+      "sha256": "dbf657f4ba66784cb738c4376a906183de316a42edf4d15a6a7bfa9dc57042b0"
+    },
+    {
+      "bytes": 4024,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/pair_payloads/pair_0057.npz",
+      "sha256": "f8e86c60d9b370de58675a18ffe3d47d7a1b1e419193b134fb69b4ad93c1e153"
+    },
+    {
+      "bytes": 4895,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/pair_payloads/pair_0070.npz",
+      "sha256": "30cdbe1535a513ebde262aaf9956a43c6fee81c5345463ff41fe4bb2cde186c2"
+    },
+    {
+      "bytes": 3416,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/pair_payloads/pair_0107.npz",
+      "sha256": "bfc260c9a17ecaf43ae7885b234bd094f0866dab40210a5ab58db1e3bb17d94a"
+    },
+    {
+      "bytes": 3339,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/pair_payloads/pair_0112.npz",
+      "sha256": "86aa5ed1ccee7c7e331ef0836cf03049f88084e376772a6417e3b1fd7ff54fed"
+    },
+    {
+      "bytes": 3224,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/pair_payloads/pair_0119.npz",
+      "sha256": "1b361ec2f63c0c773c1e11d4f229bd2d7f3c5fcf9233ba52410f632a05e06846"
+    },
+    {
+      "bytes": 3456,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/pair_payloads/pair_0148.npz",
+      "sha256": "c901b785c7fa98954aa95d9c382e230aa16dcd9e26255affc8e63c9ab61ad348"
+    },
+    {
+      "bytes": 3862,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/pair_payloads/pair_0154.npz",
+      "sha256": "df9470ad7a876f4f8553823c36a0e57ac2615d2157b73503cb972bc275db0107"
+    },
+    {
+      "bytes": 3748,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/pair_payloads/pair_0168.npz",
+      "sha256": "60a21d0141502e38a877bf8363c1e2d1bf577aef00bca75f2e690363a94736f1"
+    },
+    {
+      "bytes": 3286,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/pair_payloads/pair_0198.npz",
+      "sha256": "5e498132c19c5dee65407f24b62cfe56f2fed93ade496ac4274b0701541c4ecc"
+    },
+    {
+      "bytes": 2814,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/pair_payloads/pair_0225.npz",
+      "sha256": "39065ce9a9bc120751aee5fc6d7b16a7cbe577c0bf031b329ec91e7dc1dcab79"
+    },
+    {
+      "bytes": 2730,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/pair_payloads/pair_0234.npz",
+      "sha256": "af83483811d2d5ee070d62317b804268a25cc91c20e190a79b12dbeaf3f20a34"
+    },
+    {
+      "bytes": 2892,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/pair_payloads/pair_0244.npz",
+      "sha256": "5978b9d3b1e4d29f3142a3c815cac2944cbe47b8e79c9ab9eb1ac5b89cf4d7af"
+    },
+    {
+      "bytes": 3476,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/pair_payloads/pair_0251.npz",
+      "sha256": "e6968d5b2414457d34e5db1e2c17b1686dfb3eb577f1dcdff816e5bbbe1356cb"
+    },
+    {
+      "bytes": 4182,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/pair_payloads/pair_0284.npz",
+      "sha256": "9a2b5b122fc66daf240a2d96be6363fa421e48360aacb10da8d01a8613e6868e"
+    },
+    {
+      "bytes": 3434,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/pair_payloads/pair_0328.npz",
+      "sha256": "fbf2b12652179ae7d4bf99cb58893990d3b2b16793b4c4d1fd513d4177fac148"
+    },
+    {
+      "bytes": 3084,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/pair_payloads/pair_0336.npz",
+      "sha256": "9f6c1d3e78753bf6402f460d2e81764bad0c0aaaff251eac3278e60b32ef02fe"
+    },
+    {
+      "bytes": 3169,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/pair_payloads/pair_0349.npz",
+      "sha256": "df4e85a19b64a1f05b01c41522e2706b0feebc9be36a46db7e49ba8b617325d0"
+    },
+    {
+      "bytes": 3699,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/pair_payloads/pair_0383.npz",
+      "sha256": "403eea32a9a91eff50f9c2131ba30e6c6fbcc42375639f7dfdd98800071aac8e"
+    },
+    {
+      "bytes": 3539,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/pair_payloads/pair_0399.npz",
+      "sha256": "6fa4d8b056d75c3d92faabfe1f2f7e0d48d446129b812e7f879b4bf63d75183c"
+    },
+    {
+      "bytes": 3397,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/pair_payloads/pair_0411.npz",
+      "sha256": "1aecea130aff23cc4ecb4b3d7e7a50cb8f0adb3a8fc12940060da63af175ebdc"
+    },
+    {
+      "bytes": 3911,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/pair_payloads/pair_0423.npz",
+      "sha256": "07aed454d7b555e54b5329d908958568f3e24ffeded7f4efa0ac297bad3ee5b6"
+    },
+    {
+      "bytes": 3213,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/pair_payloads/pair_0445.npz",
+      "sha256": "286bd287f3e368350d8f8219b2193bffcb85f3f1ed555b78d09ea1f564802df2"
+    },
+    {
+      "bytes": 4017,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/pair_payloads/pair_0465.npz",
+      "sha256": "6edde8b92dc636ace0093afe23eaa0af9189b9d8e0d1445cb307fd369aa56170"
+    },
+    {
+      "bytes": 3574,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/pair_payloads/pair_0481.npz",
+      "sha256": "6928d50b5542ae86dcfeb1e698ff0dc65fe07815fca9859a5b3ad3442ff66986"
+    },
+    {
+      "bytes": 5194,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/pair_payloads/pair_0516.npz",
+      "sha256": "32301a71d5c9beb2f0b1963e0422326724e9481851cdf32f2b9229e003d1b3d7"
+    },
+    {
+      "bytes": 3886,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/pair_payloads/pair_0536.npz",
+      "sha256": "f9d5a6348c568845c5e0ea488120e4823795b9ffee931fef3bbe291ffec5d449"
+    },
+    {
+      "bytes": 3568,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/pair_payloads/pair_0561.npz",
+      "sha256": "cd336ddcdb08e723f474b3c5020e3833e1274477997314c094f9ea916277234e"
+    },
+    {
+      "bytes": 3963,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/pair_payloads/pair_0582.npz",
+      "sha256": "5e8e6673a7c268abeb36187e13414316e435bd1de26251322205e287652021b0"
+    },
+    {
+      "bytes": 4225,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od9_20260805/native_dof/pair_payloads/pair_0583.npz",
+      "sha256": "cd4cbb8838d8bf1a5af8c4d54332bc049c8f4109001d6cb3562059c8bfa64144"
+    }
+  ],
+  "pairs": [
+    8,
+    32,
+    46,
+    57,
+    70,
+    107,
+    112,
+    119,
+    148,
+    154,
+    168,
+    198,
+    225,
+    234,
+    244,
+    251,
+    284,
+    328,
+    336,
+    349,
+    383,
+    399,
+    411,
+    423,
+    445,
+    465,
+    481,
+    516,
+    536,
+    561,
+    582,
+    583
+  ],
+  "probe1_am1_acceleration_residual": {
+    "by_codec": {
+      "brotli-q11": {
+        "delta2_minus_delta1_bytes": 158,
+        "rows": [
+          {
+            "bytes": 1917,
+            "codec": "brotli-q11",
+            "parseback_exact": true,
+            "sha256": "0a00affb89c223c8e4091c91f951f909427dbd30115dc53e9980f25b47f44c53",
+            "variant": "flat"
+          },
+          {
+            "bytes": 2014,
+            "codec": "brotli-q11",
+            "parseback_exact": true,
+            "sha256": "9b03b6f8fbb3588b364105b1d3bf8eace8fe30fbc5b4fbecae44fd0ace240c37",
+            "variant": "delta1"
+          },
+          {
+            "bytes": 2172,
+            "codec": "brotli-q11",
+            "parseback_exact": true,
+            "sha256": "7c2c2721f792e18b0ce981437cca3c149ed76a0b3147d3f43576e998fdcf855b",
+            "variant": "delta2"
+          }
+        ],
+        "runner_up": "delta1",
+        "runner_up_bytes": 2014,
+        "winner": "flat",
+        "winner_bytes": 1917,
+        "winner_margin_bytes": 97
+      },
+      "lzma1-raw": {
+        "delta2_minus_delta1_bytes": 174,
+        "rows": [
+          {
+            "bytes": 2161,
+            "codec": "lzma1-raw",
+            "parseback_exact": true,
+            "sha256": "e03f6ba29d4ccb52a900b33966ea00a5e556bcc031c49723880262ebec19accd",
+            "variant": "flat"
+          },
+          {
+            "bytes": 2303,
+            "codec": "lzma1-raw",
+            "parseback_exact": true,
+            "sha256": "12973e0f90efd248a627deec0ce60cbc134e1f266acc60042459d1853a2c32bc",
+            "variant": "delta1"
+          },
+          {
+            "bytes": 2477,
+            "codec": "lzma1-raw",
+            "parseback_exact": true,
+            "sha256": "8695eeeb4032a7e054fde7b635ab1dd1954aeafca92f5054371871fece67a7c4",
+            "variant": "delta2"
+          }
+        ],
+        "runner_up": "delta1",
+        "runner_up_bytes": 2303,
+        "winner": "flat",
+        "winner_bytes": 2161,
+        "winner_margin_bytes": 142
+      }
+    },
+    "prior_law_prediction_m38": "FIRED: delta2 was predicted to lose to delta1 on the pose/carriage stream, and it did under both coders.",
+    "results": [
+      {
+        "best_coder": {
+          "bytes": 1917,
+          "codec": "brotli-q11",
+          "parseback_exact": true,
+          "sha256": "0a00affb89c223c8e4091c91f951f909427dbd30115dc53e9980f25b47f44c53"
+        },
+        "coder_race": [
+          {
+            "bytes": 1917,
+            "codec": "brotli-q11",
+            "parseback_exact": true,
+            "sha256": "0a00affb89c223c8e4091c91f951f909427dbd30115dc53e9980f25b47f44c53"
+          },
+          {
+            "bytes": 2161,
+            "codec": "lzma1-raw",
+            "parseback_exact": true,
+            "sha256": "e03f6ba29d4ccb52a900b33966ea00a5e556bcc031c49723880262ebec19accd"
+          }
+        ],
+        "decode_equal": true,
+        "projected_n600_bytes_linear_best": 35944,
+        "raw_packet_bytes": 2636,
+        "raw_packet_sha256": "ee7dae9eb9c37a40d59caec261be4ab2006a44f7be0b0916c639e663ffb8bb56",
+        "residual_stats": {
+          "count": 1536,
+          "max": 489,
+          "mean_abs": 133.875,
+          "median_abs": 107.0,
+          "min": -480,
+          "within_pm16_fraction": 0.09830729166666667,
+          "within_pm1_fraction": 0.0078125,
+          "within_pm4_fraction": 0.027994791666666668,
+          "zero_fraction": 0.001953125
+        },
+        "transform": "signed-varint qcoeff values in ascending pair-id order",
+        "variant": "flat"
+      },
+      {
+        "best_coder": {
+          "bytes": 2014,
+          "codec": "brotli-q11",
+          "parseback_exact": true,
+          "sha256": "9b03b6f8fbb3588b364105b1d3bf8eace8fe30fbc5b4fbecae44fd0ace240c37"
+        },
+        "coder_race": [
+          {
+            "bytes": 2014,
+            "codec": "brotli-q11",
+            "parseback_exact": true,
+            "sha256": "9b03b6f8fbb3588b364105b1d3bf8eace8fe30fbc5b4fbecae44fd0ace240c37"
+          },
+          {
+            "bytes": 2303,
+            "codec": "lzma1-raw",
+            "parseback_exact": true,
+            "sha256": "12973e0f90efd248a627deec0ce60cbc134e1f266acc60042459d1853a2c32bc"
+          }
+        ],
+        "decode_equal": true,
+        "projected_n600_bytes_linear_best": 37763,
+        "raw_packet_bytes": 2770,
+        "raw_packet_sha256": "f13911d01c6c600495b5a85315d6c0a69c7ddea9dc2b51220c4e0b8d9fb1a91e",
+        "residual_stats": {
+          "count": 1536,
+          "max": 767,
+          "mean_abs": 189.4609375,
+          "median_abs": 163.0,
+          "min": -745,
+          "within_pm16_fraction": 0.06315104166666667,
+          "within_pm1_fraction": 0.00390625,
+          "within_pm4_fraction": 0.011067708333333334,
+          "zero_fraction": 0.0013020833333333333
+        },
+        "transform": "first pair signed-varint values, then pair-axis first differences per coefficient",
+        "variant": "delta1"
+      },
+      {
+        "best_coder": {
+          "bytes": 2172,
+          "codec": "brotli-q11",
+          "parseback_exact": true,
+          "sha256": "7c2c2721f792e18b0ce981437cca3c149ed76a0b3147d3f43576e998fdcf855b"
+        },
+        "coder_race": [
+          {
+            "bytes": 2172,
+            "codec": "brotli-q11",
+            "parseback_exact": true,
+            "sha256": "7c2c2721f792e18b0ce981437cca3c149ed76a0b3147d3f43576e998fdcf855b"
+          },
+          {
+            "bytes": 2477,
+            "codec": "lzma1-raw",
+            "parseback_exact": true,
+            "sha256": "8695eeeb4032a7e054fde7b635ab1dd1954aeafca92f5054371871fece67a7c4"
+          }
+        ],
+        "decode_equal": true,
+        "projected_n600_bytes_linear_best": 40725,
+        "raw_packet_bytes": 2923,
+        "raw_packet_sha256": "11a884da8f6041a8382fb1c18057ef9d1b8dfca68ca3b54e57984abc7daa28bc",
+        "residual_stats": {
+          "count": 1536,
+          "max": 1435,
+          "mean_abs": 326.970703125,
+          "median_abs": 268.5,
+          "min": -1322,
+          "within_pm16_fraction": 0.038411458333333336,
+          "within_pm1_fraction": 0.004557291666666667,
+          "within_pm4_fraction": 0.009765625,
+          "zero_fraction": 0.0006510416666666666
+        },
+        "transform": "first pair values, first pair-axis delta, then pair-axis second differences per coefficient",
+        "variant": "delta2"
+      }
+    ],
+    "same_residual_coder": "signed zigzag varint residual packet plus outer Brotli q11 / LZMA1 raw coder",
+    "surface": "stage2_qcoeffs pose/carriage stream, 32 pairs x 48 int16 qcoeffs, ascending pair-id order",
+    "verdict": "ACCELERATION_PRIOR_DEAD_ON_THIS_STREAM: flat wins; delta2 loses to delta1 at matched coder under both Brotli q11 and LZMA1 raw."
+  },
+  "probe2_ig1_shared_context": {
+    "by_codec": {
+      "brotli-q11": {
+        "rows": [
+          {
+            "bytes": 66497,
+            "codec": "brotli-q11",
+            "parseback_exact": true,
+            "projected_n600_bytes_linear": 1246819,
+            "projected_n600_rate_s": 0.8302055940728326,
+            "sha256": "9a039e81ec576bc76d828efc6f13d6e162c2aca3acd47aa8cd254a2ecd216788",
+            "variant": "shared_context"
+          },
+          {
+            "bytes": 66541,
+            "codec": "brotli-q11",
+            "parseback_exact": true,
+            "projected_n600_bytes_linear": 1247644,
+            "projected_n600_rate_s": 0.8307549277091584,
+            "sha256": "e0c49923934d79ff1bc0b1353e532669b00c85178a28e851544cddfa2fb41e05",
+            "variant": "xi_conditioned_shared"
+          },
+          {
+            "bytes": 70472,
+            "codec": "brotli-q11",
+            "parseback_exact": true,
+            "projected_n600_bytes_linear": 1321350,
+            "projected_n600_rate_s": 0.8798327277079812,
+            "sha256_of_member_coder_sha256s": "54738ae8e575eae2a262c67bb578a2250df93e657ea7037ba2480f8017af333c",
+            "variant": "independent_per_pair"
+          }
+        ],
+        "runner_up": "xi_conditioned_shared",
+        "runner_up_bytes": 66541,
+        "shared_vs_independent_saved_bytes": 3975,
+        "shared_vs_independent_saved_fraction": 0.0564053808604836,
+        "winner": "shared_context",
+        "winner_bytes": 66497,
+        "winner_margin_bytes": 44,
+        "xi_conditioned_minus_shared_bytes": 44
+      },
+      "lzma1-raw": {
+        "rows": [
+          {
+            "bytes": 67946,
+            "codec": "lzma1-raw",
+            "parseback_exact": true,
+            "projected_n600_bytes_linear": 1273988,
+            "projected_n600_rate_s": 0.8482963159702088,
+            "sha256": "984255573719ecbd2ef919cebcaca23124b61e68efdf56049532c699a0d6b30e",
+            "variant": "shared_context"
+          },
+          {
+            "bytes": 68047,
+            "codec": "lzma1-raw",
+            "parseback_exact": true,
+            "projected_n600_bytes_linear": 1275882,
+            "projected_n600_rate_s": 0.8495574528274222,
+            "sha256": "50e1c014d798d95f053da92a59ff2b4e31cd0a1ea35f72905a297132ddd9099a",
+            "variant": "xi_conditioned_shared"
+          },
+          {
+            "bytes": 69013,
+            "codec": "lzma1-raw",
+            "parseback_exact": true,
+            "projected_n600_bytes_linear": 1293994,
+            "projected_n600_rate_s": 0.861617490186371,
+            "sha256_of_member_coder_sha256s": "b964ffa31da96f3ed8bd9694627d48bddc89993baf9de8011d8cdd791bbef162",
+            "variant": "independent_per_pair"
+          }
+        ],
+        "runner_up": "xi_conditioned_shared",
+        "runner_up_bytes": 68047,
+        "shared_vs_independent_saved_bytes": 1067,
+        "shared_vs_independent_saved_fraction": 0.015460855201193977,
+        "winner": "shared_context",
+        "winner_bytes": 67946,
+        "winner_margin_bytes": 101,
+        "xi_conditioned_minus_shared_bytes": 101
+      }
+    },
+    "results": [
+      {
+        "best_coder": {
+          "bytes": 69013,
+          "codec": "lzma1-raw",
+          "parseback_exact": true,
+          "projected_n600_bytes_linear": 1293994,
+          "projected_n600_rate_s": 0.861617490186371,
+          "sha256_of_member_coder_sha256s": "b964ffa31da96f3ed8bd9694627d48bddc89993baf9de8011d8cdd791bbef162"
+        },
+        "coder_race": [
+          {
+            "bytes": 70472,
+            "codec": "brotli-q11",
+            "parseback_exact": true,
+            "projected_n600_bytes_linear": 1321350,
+            "projected_n600_rate_s": 0.8798327277079812,
+            "sha256_of_member_coder_sha256s": "54738ae8e575eae2a262c67bb578a2250df93e657ea7037ba2480f8017af333c"
+          },
+          {
+            "bytes": 69013,
+            "codec": "lzma1-raw",
+            "parseback_exact": true,
+            "projected_n600_bytes_linear": 1293994,
+            "projected_n600_rate_s": 0.861617490186371,
+            "sha256_of_member_coder_sha256s": "b964ffa31da96f3ed8bd9694627d48bddc89993baf9de8011d8cdd791bbef162"
+          }
+        ],
+        "decode_equal": true,
+        "definition": "each pair encoded as a standalone PA2P1 member and compressed independently; coded bytes are summed across 32 members",
+        "order": "ascending_pair_id",
+        "projected_n600_bytes_linear_best": 1293994,
+        "raw_packet_bytes": 82397,
+        "raw_packet_sha256": "2e02c95cd262784e63f5ba47359fe999a3424799448e6e63b43ce83bd4e2db56",
+        "variant": "independent_per_pair"
+      },
+      {
+        "best_coder": {
+          "bytes": 66497,
+          "codec": "brotli-q11",
+          "parseback_exact": true,
+          "projected_n600_bytes_linear": 1246819,
+          "projected_n600_rate_s": 0.8302055940728326,
+          "sha256": "9a039e81ec576bc76d828efc6f13d6e162c2aca3acd47aa8cd254a2ecd216788"
+        },
+        "coder_race": [
+          {
+            "bytes": 66497,
+            "codec": "brotli-q11",
+            "parseback_exact": true,
+            "projected_n600_bytes_linear": 1246819,
+            "projected_n600_rate_s": 0.8302055940728326,
+            "sha256": "9a039e81ec576bc76d828efc6f13d6e162c2aca3acd47aa8cd254a2ecd216788"
+          },
+          {
+            "bytes": 67946,
+            "codec": "lzma1-raw",
+            "parseback_exact": true,
+            "projected_n600_bytes_linear": 1273988,
+            "projected_n600_rate_s": 0.8482963159702088,
+            "sha256": "984255573719ecbd2ef919cebcaca23124b61e68efdf56049532c699a0d6b30e"
+          }
+        ],
+        "decode_equal": true,
+        "definition": "one PA2IG1 stream in ascending pair-id order; global pair-id list once; per-pair stage1 support/rgb plus stage2 qcoeffs",
+        "order": "ascending_pair_id",
+        "order_pair_ids": [
+          8,
+          32,
+          46,
+          57,
+          70,
+          107,
+          112,
+          119,
+          148,
+          154,
+          168,
+          198,
+          225,
+          234,
+          244,
+          251,
+          284,
+          328,
+          336,
+          349,
+          383,
+          399,
+          411,
+          423,
+          445,
+          465,
+          481,
+          516,
+          536,
+          561,
+          582,
+          583
+        ],
+        "projected_n600_bytes_linear_best": 1246819,
+        "raw_packet_bytes": 82198,
+        "raw_packet_sha256": "56090999417f38632212f9a41f6f882f154eca41aad88ec8b4f3d6508f2e9e41",
+        "variant": "shared_context"
+      },
+      {
+        "best_coder": {
+          "bytes": 66541,
+          "codec": "brotli-q11",
+          "parseback_exact": true,
+          "projected_n600_bytes_linear": 1247644,
+          "projected_n600_rate_s": 0.8307549277091584,
+          "sha256": "e0c49923934d79ff1bc0b1353e532669b00c85178a28e851544cddfa2fb41e05"
+        },
+        "coder_race": [
+          {
+            "bytes": 66541,
+            "codec": "brotli-q11",
+            "parseback_exact": true,
+            "projected_n600_bytes_linear": 1247644,
+            "projected_n600_rate_s": 0.8307549277091584,
+            "sha256": "e0c49923934d79ff1bc0b1353e532669b00c85178a28e851544cddfa2fb41e05"
+          },
+          {
+            "bytes": 68047,
+            "codec": "lzma1-raw",
+            "parseback_exact": true,
+            "projected_n600_bytes_linear": 1275882,
+            "projected_n600_rate_s": 0.8495574528274222,
+            "sha256": "50e1c014d798d95f053da92a59ff2b4e31cd0a1ea35f72905a297132ddd9099a"
+          }
+        ],
+        "decode_equal": true,
+        "definition": "one PA2IG1 stream ordered by stage2 absolute qcoeff energy then pair id; global pair-id list once; stage2 qcoeffs stored first as delta1 residuals and stage1 support/rgb follows in that conditioned order",
+        "order": "stage2_abs_energy_then_pair",
+        "order_pair_ids": [
+          148,
+          445,
+          251,
+          561,
+          349,
+          399,
+          582,
+          383,
+          8,
+          244,
+          70,
+          225,
+          536,
+          336,
+          423,
+          168,
+          107,
+          234,
+          328,
+          284,
+          411,
+          198,
+          46,
+          57,
+          481,
+          583,
+          465,
+          119,
+          154,
+          112,
+          32,
+          516
+        ],
+        "projected_n600_bytes_linear_best": 1247644,
+        "raw_packet_bytes": 82165,
+        "raw_packet_sha256": "6b62324b85203379a9897fc09aa32d625d8b35ca27533fdc9ac54d6bbef824df",
+        "variant": "xi_conditioned_shared"
+      }
+    ],
+    "routing_consequence": "The 5.64% Brotli shared-context win over independent is evidence for shared parametrization/TR1 direction, but it is too small to rescue flat solved-paint shipping; pk1 still needs a receiver-closed boundary grammar under the 45-90 KB corridor.",
+    "surface": "full persisted per-pair packets: stage1 support/rgb plus stage2 qcoeff carriage",
+    "verdict": "SHARED_CONTEXT_WINS_MODESTLY; XI_CONDITIONED_ORDERING_DOES_NOT_BEAT_PLAIN_SHARED_CONTEXT."
+  },
+  "projection_scope": "exact n32 coded bytes projected linearly to n600 for byte-routing only; no n600 archive.zip and no upstream/evaluate.py authority",
+  "promotion_eligible": false,
+  "schema": "ddm_pa2_persisted_stream_pricing_receipt.v1",
+  "score_claim": false,
+  "scorer_forwards_run": 0,
+  "selection": "OD2 n32 seed20260805 stratified pair set inherited by OD3/OD9",
+  "source_files": [
+    {
+      "bytes": 13354,
+      "path": ".omx/research/ddm_am1_20260805/AM1_CROSSWALK_RECEIPT.md",
+      "sha256": "4a13d1dfcbcad25e74bd1146e2fc3d79a5affa292c604ba9574350ac6eb9ff58"
+    },
+    {
+      "bytes": 15393,
+      "path": ".omx/research/ddm_ig1_20260805/IG1_CROSSWALK_RECEIPT.md",
+      "sha256": "da2d7d7714562355f0b525edcbbb137fcae38ec6bc7fe2350f71a518e5df4335"
+    },
+    {
+      "bytes": 10837,
+      "path": ".omx/research/ddm_od9_20260805/OD9_RECEIPT.md",
+      "sha256": "1f9c405d50b870a8070bba86d5316dfa771e65c4787bd6e5ed83c7f1c6f4c93b"
+    },
+    {
+      "bytes": 26315,
+      "path": ".omx/research/ddm_od9_20260805/od9_delta_entropy_price.json",
+      "sha256": "cdd94808c9f58f3382eeb6b96bbc2c353f50c3bd758ca482f718e6f208b0aa5f"
+    },
+    {
+      "bytes": 10817,
+      "path": ".omx/research/ddm_od9_20260805/od9_ssd_payload_manifest.json",
+      "sha256": "a409cd3598e99d9af9ffd891bbf84c815b733079837e9d94b31cb26c641175e8"
+    },
+    {
+      "bytes": 15895,
+      "path": ".omx/state/main_hot_state.md",
+      "sha256": "e0517c6b776d9d2e095d994c0e529eca8098233cc4d5b333cdebb04a1f849a9d"
+    },
+    {
+      "bytes": 5784,
+      "path": "PROGRAM.md",
+      "sha256": "a6d5f79f3241ca1ae17b2587afd9940e1a4ea598804fd9efa152f2330e15db82"
+    },
+    {
+      "bytes": 431055,
+      "path": "CLAUDE.md",
+      "sha256": "65da6dd8dcf6b11c0ecdd352938570fd5589c5e5e014d97acd63297f82a8c47c"
+    },
+    {
+      "bytes": 431055,
+      "path": "AGENTS.md",
+      "sha256": "65da6dd8dcf6b11c0ecdd352938570fd5589c5e5e014d97acd63297f82a8c47c"
+    },
+    {
+      "bytes": 15577,
+      "path": "docs/operating_manual_craft_handoff.md",
+      "sha256": "40d157a039d4dd242bfb189d53e6b82abcc5d037adceb0a52c9bb2956903f212"
+    }
+  ],
+  "subset_caveat": "OD2 n32 set; pose-easy 0.42628664334579025x population and seg-matched 1.0099888594483923x per OD3/OD9; PA2 measures bytes only."
+}
