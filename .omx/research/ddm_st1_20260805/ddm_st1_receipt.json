@@ -1,0 +1,1068 @@
+{
+ "axis": "[macOS-CPU advisory / scorer-free mask-domain real-coder pricing]",
+ "boundaries": [
+  "No SegNet/PoseNet scorer forward was run.",
+  "No upstream/evaluate.py run was performed.",
+  "No archive score claim is made.",
+  "Leg A is mask-domain targeting evidence, not a legal RGB receiver.",
+  "Leg B is real-coder byte pricing over generator records, not scorer survival.",
+  "No /tmp evidence."
+ ],
+ "created_utc": "2026-08-05T01:35:04.859388+00:00",
+ "custody": {
+  "all_flip_frequency_nonzero_pixels": 43798,
+  "current_argmax": {
+   "bytes": 117964928,
+   "path": "/Volumes/VertigoDataTier/pact/ddm_pu2_20260803/argmax_cache/cx1_argmax_n600.npy",
+   "sha256": "5e903de650e60ec6a64b34eb455fa1bc911223551d0b31e9ae45cc906e1490be"
+  },
+  "gt_argmax": {
+   "bytes": 117964928,
+   "path": "/Volumes/VertigoDataTier/pact/ddm_pu2_20260803/argmax_cache/gt_argmax_n600.npy",
+   "sha256": "b74a14b226a5aceb5824899898bcb06e5413c54b7db2441268da7bc91a10db5d"
+  },
+  "road_lane_frequency_nonzero_pixels": 24469
+ },
+ "leg_a_surgical_student": {
+  "axis": "[macOS-CPU advisory / scorer-free mask-domain]",
+  "charter_band_definition": "cq1.band_for(cx1_argmax, radius=1)",
+  "charter_reference_denominator": 8670,
+  "eval_charter_cq1_captured_flips_computed": 8670,
+  "eval_pair_rows": [
+   {
+    "band_pixels": 2581,
+    "charter_cq1_captured_target_flips": 306,
+    "gt_endpoint_band_target_flips": 451,
+    "pair": 31,
+    "target_flips": 306
+   },
+   {
+    "band_pixels": 2365,
+    "charter_cq1_captured_target_flips": 286,
+    "gt_endpoint_band_target_flips": 412,
+    "pair": 43,
+    "target_flips": 286
+   },
+   {
+    "band_pixels": 1637,
+    "charter_cq1_captured_target_flips": 274,
+    "gt_endpoint_band_target_flips": 434,
+    "pair": 62,
+    "target_flips": 274
+   },
+   {
+    "band_pixels": 1279,
+    "charter_cq1_captured_target_flips": 173,
+    "gt_endpoint_band_target_flips": 335,
+    "pair": 82,
+    "target_flips": 173
+   },
+   {
+    "band_pixels": 1327,
+    "charter_cq1_captured_target_flips": 161,
+    "gt_endpoint_band_target_flips": 293,
+    "pair": 94,
+    "target_flips": 161
+   },
+   {
+    "band_pixels": 1833,
+    "charter_cq1_captured_target_flips": 219,
+    "gt_endpoint_band_target_flips": 308,
+    "pair": 118,
+    "target_flips": 219
+   },
+   {
+    "band_pixels": 2014,
+    "charter_cq1_captured_target_flips": 260,
+    "gt_endpoint_band_target_flips": 344,
+    "pair": 147,
+    "target_flips": 260
+   },
+   {
+    "band_pixels": 1922,
+    "charter_cq1_captured_target_flips": 322,
+    "gt_endpoint_band_target_flips": 432,
+    "pair": 165,
+    "target_flips": 322
+   },
+   {
+    "band_pixels": 1933,
+    "charter_cq1_captured_target_flips": 220,
+    "gt_endpoint_band_target_flips": 280,
+    "pair": 167,
+    "target_flips": 220
+   },
+   {
+    "band_pixels": 2564,
+    "charter_cq1_captured_target_flips": 403,
+    "gt_endpoint_band_target_flips": 470,
+    "pair": 182,
+    "target_flips": 403
+   },
+   {
+    "band_pixels": 1954,
+    "charter_cq1_captured_target_flips": 217,
+    "gt_endpoint_band_target_flips": 314,
+    "pair": 185,
+    "target_flips": 217
+   },
+   {
+    "band_pixels": 2296,
+    "charter_cq1_captured_target_flips": 312,
+    "gt_endpoint_band_target_flips": 496,
+    "pair": 200,
+    "target_flips": 312
+   },
+   {
+    "band_pixels": 1825,
+    "charter_cq1_captured_target_flips": 226,
+    "gt_endpoint_band_target_flips": 271,
+    "pair": 237,
+    "target_flips": 226
+   },
+   {
+    "band_pixels": 1639,
+    "charter_cq1_captured_target_flips": 219,
+    "gt_endpoint_band_target_flips": 350,
+    "pair": 241,
+    "target_flips": 219
+   },
+   {
+    "band_pixels": 1976,
+    "charter_cq1_captured_target_flips": 274,
+    "gt_endpoint_band_target_flips": 409,
+    "pair": 247,
+    "target_flips": 274
+   },
+   {
+    "band_pixels": 2204,
+    "charter_cq1_captured_target_flips": 263,
+    "gt_endpoint_band_target_flips": 362,
+    "pair": 259,
+    "target_flips": 263
+   },
+   {
+    "band_pixels": 1650,
+    "charter_cq1_captured_target_flips": 222,
+    "gt_endpoint_band_target_flips": 295,
+    "pair": 272,
+    "target_flips": 222
+   },
+   {
+    "band_pixels": 2089,
+    "charter_cq1_captured_target_flips": 257,
+    "gt_endpoint_band_target_flips": 353,
+    "pair": 286,
+    "target_flips": 257
+   },
+   {
+    "band_pixels": 2293,
+    "charter_cq1_captured_target_flips": 333,
+    "gt_endpoint_band_target_flips": 414,
+    "pair": 288,
+    "target_flips": 333
+   },
+   {
+    "band_pixels": 2167,
+    "charter_cq1_captured_target_flips": 276,
+    "gt_endpoint_band_target_flips": 384,
+    "pair": 292,
+    "target_flips": 276
+   },
+   {
+    "band_pixels": 2294,
+    "charter_cq1_captured_target_flips": 288,
+    "gt_endpoint_band_target_flips": 393,
+    "pair": 296,
+    "target_flips": 288
+   },
+   {
+    "band_pixels": 2105,
+    "charter_cq1_captured_target_flips": 285,
+    "gt_endpoint_band_target_flips": 365,
+    "pair": 306,
+    "target_flips": 285
+   },
+   {
+    "band_pixels": 1912,
+    "charter_cq1_captured_target_flips": 264,
+    "gt_endpoint_band_target_flips": 343,
+    "pair": 327,
+    "target_flips": 264
+   },
+   {
+    "band_pixels": 2105,
+    "charter_cq1_captured_target_flips": 233,
+    "gt_endpoint_band_target_flips": 315,
+    "pair": 382,
+    "target_flips": 233
+   },
+   {
+    "band_pixels": 2610,
+    "charter_cq1_captured_target_flips": 332,
+    "gt_endpoint_band_target_flips": 416,
+    "pair": 390,
+    "target_flips": 332
+   },
+   {
+    "band_pixels": 1637,
+    "charter_cq1_captured_target_flips": 158,
+    "gt_endpoint_band_target_flips": 250,
+    "pair": 419,
+    "target_flips": 158
+   },
+   {
+    "band_pixels": 2434,
+    "charter_cq1_captured_target_flips": 328,
+    "gt_endpoint_band_target_flips": 428,
+    "pair": 473,
+    "target_flips": 328
+   },
+   {
+    "band_pixels": 2653,
+    "charter_cq1_captured_target_flips": 378,
+    "gt_endpoint_band_target_flips": 504,
+    "pair": 488,
+    "target_flips": 378
+   },
+   {
+    "band_pixels": 2097,
+    "charter_cq1_captured_target_flips": 336,
+    "gt_endpoint_band_target_flips": 409,
+    "pair": 525,
+    "target_flips": 336
+   },
+   {
+    "band_pixels": 1803,
+    "charter_cq1_captured_target_flips": 348,
+    "gt_endpoint_band_target_flips": 442,
+    "pair": 555,
+    "target_flips": 348
+   },
+   {
+    "band_pixels": 1619,
+    "charter_cq1_captured_target_flips": 240,
+    "gt_endpoint_band_target_flips": 326,
+    "pair": 560,
+    "target_flips": 240
+   },
+   {
+    "band_pixels": 1826,
+    "charter_cq1_captured_target_flips": 257,
+    "gt_endpoint_band_target_flips": 405,
+    "pair": 581,
+    "target_flips": 257
+   }
+  ],
+  "eval_pairs": [
+   31,
+   43,
+   62,
+   82,
+   94,
+   118,
+   147,
+   165,
+   167,
+   182,
+   185,
+   200,
+   237,
+   241,
+   247,
+   259,
+   272,
+   286,
+   288,
+   292,
+   296,
+   306,
+   327,
+   382,
+   390,
+   419,
+   473,
+   488,
+   525,
+   555,
+   560,
+   581
+  ],
+  "eval_target_flips_computed": 8670,
+  "negative_population_train_pairs": 956300,
+  "positive_population_train_pairs": 152990,
+  "rows": [
+   {
+    "bucket_count": 65536,
+    "economics_vs_carriers": [
+     {
+      "break_even_survival_n600_road_lane": 0.3686027960923523,
+      "carrier": "pe3_hybrid_75kb_section",
+      "carrier_bytes": 74408,
+      "matched_byte_delta_vs_carrier": -42695,
+      "student_bytes": 31713,
+      "total_bytes": 106121
+     },
+     {
+      "break_even_survival_n600_road_lane": 0.4799502186979868,
+      "carrier": "pe1_explicit_curve_k16_full",
+      "carrier_bytes": 106465,
+      "matched_byte_delta_vs_carrier": -74752,
+      "student_bytes": 31713,
+      "total_bytes": 138178
+     },
+     {
+      "break_even_survival_n600_road_lane": 0.5289671207103621,
+      "carrier": "pe1_explicit_curve_k8_full",
+      "carrier_bytes": 120577,
+      "matched_byte_delta_vs_carrier": -88864,
+      "student_bytes": 31713,
+      "total_bytes": 152290
+     },
+     {
+      "break_even_survival_n600_road_lane": 0.6826798461678206,
+      "carrier": "pe4_independent_generator",
+      "carrier_bytes": 164831,
+      "matched_byte_delta_vs_carrier": -133118,
+      "student_bytes": 31713,
+      "total_bytes": 196544
+     },
+     {
+      "break_even_survival_n600_road_lane": 0.8228844415284731,
+      "carrier": "bf1_lane_crop",
+      "carrier_bytes": 205196,
+      "matched_byte_delta_vs_carrier": -173483,
+      "student_bytes": 31713,
+      "total_bytes": 236909
+     }
+    ],
+    "eval_n32": {
+     "band_iou": 0.16163594470046083,
+     "charter_denominator": 8670,
+     "charter_hits": 5612,
+     "charter_inside_gt_band_denominator": 8670,
+     "charter_overlap_fraction": 0.6472895040369089,
+     "f1": 0.2782901914112863,
+     "hits": 5612,
+     "precision": 0.17724717326763945,
+     "predicted_pixels": 31662,
+     "probability_max": 0.995216965675354,
+     "probability_min": 0.08079154044389725,
+     "recall": 0.6472895040369089,
+     "target_flips": 8670
+    },
+    "feature": {
+     "kind": "hashed current-argmax local context crop plus y/x bins and G4 flip-frequency bin",
+     "radius": 2,
+     "source": "cx1 cached frozen-scorer argmax only; target is GT-vs-cx1 Road/Lane flip set inside CQ1 SE3 r1 Road/Lane band"
+    },
+    "params": 65536,
+    "payload": {
+     "all_coders": [
+      {
+       "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_st1_20260805/surgical_student_payloads/st1_bucket_65536.lzma1-raw.bin",
+       "bytes": 31713,
+       "codec": "lzma1-raw",
+       "sha256": "8683afd402a8585ba4241c2f249462b0e1150b9cd92f31122cbe5a6eee7174bd"
+      },
+      {
+       "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_st1_20260805/surgical_student_payloads/st1_bucket_65536.brotli-q11.bin",
+       "bytes": 32737,
+       "codec": "brotli-q11",
+       "sha256": "c42b338bdafb5a7b9185a0d8d661e13f0c90e1858457d11fbf72803dda4a8fc0"
+      },
+      {
+       "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_st1_20260805/surgical_student_payloads/st1_bucket_65536.zlib-9.bin",
+       "bytes": 38010,
+       "codec": "zlib-9",
+       "sha256": "8b96d78efd6913f4646244f9f5019ebccbdf52acf85e411961f3c4d92ae00350"
+      }
+     ],
+     "best": {
+      "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_st1_20260805/surgical_student_payloads/st1_bucket_65536.lzma1-raw.bin",
+      "bytes": 31713,
+      "codec": "lzma1-raw",
+      "sha256": "8683afd402a8585ba4241c2f249462b0e1150b9cd92f31122cbe5a6eee7174bd"
+     },
+     "decoded_header": {
+      "body_bytes": 131072,
+      "bucket_count": 65536,
+      "dtype": "int16-le-logit",
+      "qscale": 512.0,
+      "radius": 2,
+      "schema": "ddm_st1_bucket_student_payload.v1"
+     },
+     "raw_bytes": 131227
+    },
+    "threshold_from_train_holdout": {
+     "f1": 0.43692749144686016,
+     "hits": 3959,
+     "precision": 0.3268659180977543,
+     "predicted": 12112,
+     "recall": 0.6587354409317804,
+     "threshold": 0.7272012233734131
+    }
+   },
+   {
+    "bucket_count": 32768,
+    "economics_vs_carriers": [
+     {
+      "break_even_survival_n600_road_lane": 0.3345111795070729,
+      "carrier": "pe3_hybrid_75kb_section",
+      "carrier_bytes": 74408,
+      "matched_byte_delta_vs_carrier": -52510,
+      "student_bytes": 21898,
+      "total_bytes": 96306
+     },
+     {
+      "break_even_survival_n600_road_lane": 0.4458586021127074,
+      "carrier": "pe1_explicit_curve_k16_full",
+      "carrier_bytes": 106465,
+      "matched_byte_delta_vs_carrier": -84567,
+      "student_bytes": 21898,
+      "total_bytes": 128363
+     },
+     {
+      "break_even_survival_n600_road_lane": 0.49487550412508263,
+      "carrier": "pe1_explicit_curve_k8_full",
+      "carrier_bytes": 120577,
+      "matched_byte_delta_vs_carrier": -98679,
+      "student_bytes": 21898,
+      "total_bytes": 142475
+     },
+     {
+      "break_even_survival_n600_road_lane": 0.6485882295825413,
+      "carrier": "pe4_independent_generator",
+      "carrier_bytes": 164831,
+      "matched_byte_delta_vs_carrier": -142933,
+      "student_bytes": 21898,
+      "total_bytes": 186729
+     },
+     {
+      "break_even_survival_n600_road_lane": 0.7887928249431937,
+      "carrier": "bf1_lane_crop",
+      "carrier_bytes": 205196,
+      "matched_byte_delta_vs_carrier": -183298,
+      "student_bytes": 21898,
+      "total_bytes": 227094
+     }
+    ],
+    "eval_n32": {
+     "band_iou": 0.1509652405697208,
+     "charter_denominator": 8670,
+     "charter_hits": 5607,
+     "charter_inside_gt_band_denominator": 8670,
+     "charter_overlap_fraction": 0.6467128027681661,
+     "f1": 0.26232806213156173,
+     "hits": 5607,
+     "precision": 0.16453430365631785,
+     "predicted_pixels": 34078,
+     "probability_max": 0.9944342970848083,
+     "probability_min": 0.07654563337564468,
+     "recall": 0.6467128027681661,
+     "target_flips": 8670
+    },
+    "feature": {
+     "kind": "hashed current-argmax local context crop plus y/x bins and G4 flip-frequency bin",
+     "radius": 2,
+     "source": "cx1 cached frozen-scorer argmax only; target is GT-vs-cx1 Road/Lane flip set inside CQ1 SE3 r1 Road/Lane band"
+    },
+    "params": 32768,
+    "payload": {
+     "all_coders": [
+      {
+       "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_st1_20260805/surgical_student_payloads/st1_bucket_32768.lzma1-raw.bin",
+       "bytes": 21898,
+       "codec": "lzma1-raw",
+       "sha256": "d404ba767f8e3c019e99de18f5f71b519f082ad467483cea93ead0b3fb67018f"
+      },
+      {
+       "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_st1_20260805/surgical_student_payloads/st1_bucket_32768.brotli-q11.bin",
+       "bytes": 22356,
+       "codec": "brotli-q11",
+       "sha256": "67ddbbd04871846f2a65a3930692cb91a31b299fc2b098dc9cb4d1e6ad93ae19"
+      },
+      {
+       "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_st1_20260805/surgical_student_payloads/st1_bucket_32768.zlib-9.bin",
+       "bytes": 26370,
+       "codec": "zlib-9",
+       "sha256": "e94cc43196580ebf125bd4e241d26ea0779d0b2b26345c790d157881681bb0be"
+      }
+     ],
+     "best": {
+      "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_st1_20260805/surgical_student_payloads/st1_bucket_32768.lzma1-raw.bin",
+      "bytes": 21898,
+      "codec": "lzma1-raw",
+      "sha256": "d404ba767f8e3c019e99de18f5f71b519f082ad467483cea93ead0b3fb67018f"
+     },
+     "decoded_header": {
+      "body_bytes": 65536,
+      "bucket_count": 32768,
+      "dtype": "int16-le-logit",
+      "qscale": 512.0,
+      "radius": 2,
+      "schema": "ddm_st1_bucket_student_payload.v1"
+     },
+     "raw_bytes": 65690
+    },
+    "threshold_from_train_holdout": {
+     "f1": 0.4194223524487233,
+     "hits": 4008,
+     "precision": 0.30590749503892534,
+     "predicted": 13102,
+     "recall": 0.6668885191347754,
+     "threshold": 0.6302298903465271
+    }
+   },
+   {
+    "bucket_count": 16384,
+    "economics_vs_carriers": [
+     {
+      "break_even_survival_n600_road_lane": 0.3094921357715897,
+      "carrier": "pe3_hybrid_75kb_section",
+      "carrier_bytes": 74408,
+      "matched_byte_delta_vs_carrier": -59713,
+      "student_bytes": 14695,
+      "total_bytes": 89103
+     },
+     {
+      "break_even_survival_n600_road_lane": 0.4208395583772242,
+      "carrier": "pe1_explicit_curve_k16_full",
+      "carrier_bytes": 106465,
+      "matched_byte_delta_vs_carrier": -91770,
+      "student_bytes": 14695,
+      "total_bytes": 121160
+     },
+     {
+      "break_even_survival_n600_road_lane": 0.46985646038959944,
+      "carrier": "pe1_explicit_curve_k8_full",
+      "carrier_bytes": 120577,
+      "matched_byte_delta_vs_carrier": -105882,
+      "student_bytes": 14695,
+      "total_bytes": 135272
+     },
+     {
+      "break_even_survival_n600_road_lane": 0.623569185847058,
+      "carrier": "pe4_independent_generator",
+      "carrier_bytes": 164831,
+      "matched_byte_delta_vs_carrier": -150136,
+      "student_bytes": 14695,
+      "total_bytes": 179526
+     },
+     {
+      "break_even_survival_n600_road_lane": 0.7637737812077104,
+      "carrier": "bf1_lane_crop",
+      "carrier_bytes": 205196,
+      "matched_byte_delta_vs_carrier": -190501,
+      "student_bytes": 14695,
+      "total_bytes": 219891
+     }
+    ],
+    "eval_n32": {
+     "band_iou": 0.1389574534218273,
+     "charter_denominator": 8670,
+     "charter_hits": 7600,
+     "charter_inside_gt_band_denominator": 8670,
+     "charter_overlap_fraction": 0.8765859284890427,
+     "f1": 0.2440081550093911,
+     "hits": 7600,
+     "precision": 0.14173022770080004,
+     "predicted_pixels": 53623,
+     "probability_max": 0.9933459758758545,
+     "probability_min": 0.06928940862417221,
+     "recall": 0.8765859284890427,
+     "target_flips": 8670
+    },
+    "feature": {
+     "kind": "hashed current-argmax local context crop plus y/x bins and G4 flip-frequency bin",
+     "radius": 2,
+     "source": "cx1 cached frozen-scorer argmax only; target is GT-vs-cx1 Road/Lane flip set inside CQ1 SE3 r1 Road/Lane band"
+    },
+    "params": 16384,
+    "payload": {
+     "all_coders": [
+      {
+       "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_st1_20260805/surgical_student_payloads/st1_bucket_16384.lzma1-raw.bin",
+       "bytes": 14695,
+       "codec": "lzma1-raw",
+       "sha256": "bd1c92b475cc13671698657e59ca37248f7058dccce433b0499fe89ba2eaf679"
+      },
+      {
+       "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_st1_20260805/surgical_student_payloads/st1_bucket_16384.brotli-q11.bin",
+       "bytes": 15267,
+       "codec": "brotli-q11",
+       "sha256": "d31dc93be73d8a36509b8b92b1a8a3380ecca72791afe2e01edbf70853d8dfa6"
+      },
+      {
+       "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_st1_20260805/surgical_student_payloads/st1_bucket_16384.zlib-9.bin",
+       "bytes": 17479,
+       "codec": "zlib-9",
+       "sha256": "0161a70cd55bc66bf9afc50b964e7ccda81419f444bf23e5034a334de2943510"
+      }
+     ],
+     "best": {
+      "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_st1_20260805/surgical_student_payloads/st1_bucket_16384.lzma1-raw.bin",
+      "bytes": 14695,
+      "codec": "lzma1-raw",
+      "sha256": "bd1c92b475cc13671698657e59ca37248f7058dccce433b0499fe89ba2eaf679"
+     },
+     "decoded_header": {
+      "body_bytes": 32768,
+      "bucket_count": 16384,
+      "dtype": "int16-le-logit",
+      "qscale": 512.0,
+      "radius": 2,
+      "schema": "ddm_st1_bucket_student_payload.v1"
+     },
+     "raw_bytes": 32922
+    },
+    "threshold_from_train_holdout": {
+     "f1": 0.4094186224881117,
+     "hits": 5338,
+     "precision": 0.26602212698096284,
+     "predicted": 20066,
+     "recall": 0.8881863560732113,
+     "threshold": 0.29098084568977356
+    }
+   },
+   {
+    "bucket_count": 8192,
+    "economics_vs_carriers": [
+     {
+      "break_even_survival_n600_road_lane": 0.2922049247940109,
+      "carrier": "pe3_hybrid_75kb_section",
+      "carrier_bytes": 74408,
+      "matched_byte_delta_vs_carrier": -64690,
+      "student_bytes": 9718,
+      "total_bytes": 84126
+     },
+     {
+      "break_even_survival_n600_road_lane": 0.4035523473996454,
+      "carrier": "pe1_explicit_curve_k16_full",
+      "carrier_bytes": 106465,
+      "matched_byte_delta_vs_carrier": -96747,
+      "student_bytes": 9718,
+      "total_bytes": 116183
+     },
+     {
+      "break_even_survival_n600_road_lane": 0.45256924941202065,
+      "carrier": "pe1_explicit_curve_k8_full",
+      "carrier_bytes": 120577,
+      "matched_byte_delta_vs_carrier": -110859,
+      "student_bytes": 9718,
+      "total_bytes": 130295
+     },
+     {
+      "break_even_survival_n600_road_lane": 0.6062819748694792,
+      "carrier": "pe4_independent_generator",
+      "carrier_bytes": 164831,
+      "matched_byte_delta_vs_carrier": -155113,
+      "student_bytes": 9718,
+      "total_bytes": 174549
+     },
+     {
+      "break_even_survival_n600_road_lane": 0.7464865702301317,
+      "carrier": "bf1_lane_crop",
+      "carrier_bytes": 205196,
+      "matched_byte_delta_vs_carrier": -195478,
+      "student_bytes": 9718,
+      "total_bytes": 214914
+     }
+    ],
+    "eval_n32": {
+     "band_iou": 0.13550946095324792,
+     "charter_denominator": 8670,
+     "charter_hits": 8336,
+     "charter_inside_gt_band_denominator": 8670,
+     "charter_overlap_fraction": 0.9614763552479816,
+     "f1": 0.2386760579510966,
+     "hits": 8336,
+     "precision": 0.1362492236278644,
+     "predicted_pixels": 61182,
+     "probability_max": 0.9890764951705933,
+     "probability_min": 0.05592617020010948,
+     "recall": 0.9614763552479816,
+     "target_flips": 8670
+    },
+    "feature": {
+     "kind": "hashed current-argmax local context crop plus y/x bins and G4 flip-frequency bin",
+     "radius": 2,
+     "source": "cx1 cached frozen-scorer argmax only; target is GT-vs-cx1 Road/Lane flip set inside CQ1 SE3 r1 Road/Lane band"
+    },
+    "params": 8192,
+    "payload": {
+     "all_coders": [
+      {
+       "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_st1_20260805/surgical_student_payloads/st1_bucket_8192.brotli-q11.bin",
+       "bytes": 9718,
+       "codec": "brotli-q11",
+       "sha256": "06d4d60d83233558c5db377797918515f49c3a2fa04198161028967d15e254f8"
+      },
+      {
+       "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_st1_20260805/surgical_student_payloads/st1_bucket_8192.lzma1-raw.bin",
+       "bytes": 9811,
+       "codec": "lzma1-raw",
+       "sha256": "84747530fec407a66ea2b20542d38e05b3ebc210ad10f0122e4f2950a793a11c"
+      },
+      {
+       "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_st1_20260805/surgical_student_payloads/st1_bucket_8192.zlib-9.bin",
+       "bytes": 10728,
+       "codec": "zlib-9",
+       "sha256": "04e3dedab6a0b4bd500fec9cf14438e8b17c6440b338bcbdd30f182b698bdee6"
+      }
+     ],
+     "best": {
+      "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_st1_20260805/surgical_student_payloads/st1_bucket_8192.brotli-q11.bin",
+      "bytes": 9718,
+      "codec": "brotli-q11",
+      "sha256": "06d4d60d83233558c5db377797918515f49c3a2fa04198161028967d15e254f8"
+     },
+     "decoded_header": {
+      "body_bytes": 16384,
+      "bucket_count": 8192,
+      "dtype": "int16-le-logit",
+      "qscale": 512.0,
+      "radius": 2,
+      "schema": "ddm_st1_bucket_student_payload.v1"
+     },
+     "raw_bytes": 16537
+    },
+    "threshold_from_train_holdout": {
+     "f1": 0.40103824191036513,
+     "hits": 5794,
+     "precision": 0.2531789381691064,
+     "predicted": 22885,
+     "recall": 0.9640599001663893,
+     "threshold": 0.16158466041088104
+    }
+   }
+  ],
+  "sampled_training_points": 120000,
+  "sampled_training_positive": 30000,
+  "schema": "ddm_st1_surgical_student_leg.v1",
+  "selected": {
+   "bucket_count": 8192,
+   "economics_vs_carriers": [
+    {
+     "break_even_survival_n600_road_lane": 0.2922049247940109,
+     "carrier": "pe3_hybrid_75kb_section",
+     "carrier_bytes": 74408,
+     "matched_byte_delta_vs_carrier": -64690,
+     "student_bytes": 9718,
+     "total_bytes": 84126
+    },
+    {
+     "break_even_survival_n600_road_lane": 0.4035523473996454,
+     "carrier": "pe1_explicit_curve_k16_full",
+     "carrier_bytes": 106465,
+     "matched_byte_delta_vs_carrier": -96747,
+     "student_bytes": 9718,
+     "total_bytes": 116183
+    },
+    {
+     "break_even_survival_n600_road_lane": 0.45256924941202065,
+     "carrier": "pe1_explicit_curve_k8_full",
+     "carrier_bytes": 120577,
+     "matched_byte_delta_vs_carrier": -110859,
+     "student_bytes": 9718,
+     "total_bytes": 130295
+    },
+    {
+     "break_even_survival_n600_road_lane": 0.6062819748694792,
+     "carrier": "pe4_independent_generator",
+     "carrier_bytes": 164831,
+     "matched_byte_delta_vs_carrier": -155113,
+     "student_bytes": 9718,
+     "total_bytes": 174549
+    },
+    {
+     "break_even_survival_n600_road_lane": 0.7464865702301317,
+     "carrier": "bf1_lane_crop",
+     "carrier_bytes": 205196,
+     "matched_byte_delta_vs_carrier": -195478,
+     "student_bytes": 9718,
+     "total_bytes": 214914
+    }
+   ],
+   "eval_n32": {
+    "band_iou": 0.13550946095324792,
+    "charter_denominator": 8670,
+    "charter_hits": 8336,
+    "charter_inside_gt_band_denominator": 8670,
+    "charter_overlap_fraction": 0.9614763552479816,
+    "f1": 0.2386760579510966,
+    "hits": 8336,
+    "precision": 0.1362492236278644,
+    "predicted_pixels": 61182,
+    "probability_max": 0.9890764951705933,
+    "probability_min": 0.05592617020010948,
+    "recall": 0.9614763552479816,
+    "target_flips": 8670
+   },
+   "feature": {
+    "kind": "hashed current-argmax local context crop plus y/x bins and G4 flip-frequency bin",
+    "radius": 2,
+    "source": "cx1 cached frozen-scorer argmax only; target is GT-vs-cx1 Road/Lane flip set inside CQ1 SE3 r1 Road/Lane band"
+   },
+   "params": 8192,
+   "payload": {
+    "all_coders": [
+     {
+      "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_st1_20260805/surgical_student_payloads/st1_bucket_8192.brotli-q11.bin",
+      "bytes": 9718,
+      "codec": "brotli-q11",
+      "sha256": "06d4d60d83233558c5db377797918515f49c3a2fa04198161028967d15e254f8"
+     },
+     {
+      "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_st1_20260805/surgical_student_payloads/st1_bucket_8192.lzma1-raw.bin",
+      "bytes": 9811,
+      "codec": "lzma1-raw",
+      "sha256": "84747530fec407a66ea2b20542d38e05b3ebc210ad10f0122e4f2950a793a11c"
+     },
+     {
+      "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_st1_20260805/surgical_student_payloads/st1_bucket_8192.zlib-9.bin",
+      "bytes": 10728,
+      "codec": "zlib-9",
+      "sha256": "04e3dedab6a0b4bd500fec9cf14438e8b17c6440b338bcbdd30f182b698bdee6"
+     }
+    ],
+    "best": {
+     "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_st1_20260805/surgical_student_payloads/st1_bucket_8192.brotli-q11.bin",
+     "bytes": 9718,
+     "codec": "brotli-q11",
+     "sha256": "06d4d60d83233558c5db377797918515f49c3a2fa04198161028967d15e254f8"
+    },
+    "decoded_header": {
+     "body_bytes": 16384,
+     "bucket_count": 8192,
+     "dtype": "int16-le-logit",
+     "qscale": 512.0,
+     "radius": 2,
+     "schema": "ddm_st1_bucket_student_payload.v1"
+    },
+    "raw_bytes": 16537
+   },
+   "threshold_from_train_holdout": {
+    "f1": 0.40103824191036513,
+    "hits": 5794,
+    "precision": 0.2531789381691064,
+    "predicted": 22885,
+    "recall": 0.9640599001663893,
+    "threshold": 0.16158466041088104
+   }
+  },
+  "selection_rule": "max CQ1 SE3 r1 n32 flip-set hits, then band IoU, then smaller real-coded payload",
+  "train_pairs": 568,
+  "verdict_scope": "FORMULATION-scoped mask-domain local-context hashed student; no RGB receiver and no scorer claim. A loss here is not a neural-student family kill."
+ },
+ "leg_b_context_transport": {
+  "axis": "[macOS-CPU advisory / scorer-free real-coder byte pricing]",
+  "component_count": 22338,
+  "rows": [
+   {
+    "all_coders": [
+     {
+      "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_st1_20260805/transport_payloads/st1_transport_independent.lzma1-raw.bin",
+      "bytes": 164831,
+      "codec": "lzma1-raw",
+      "sha256": "236c550370601659943ba1fd511ba4367efbb396c2d27f447e7119c40ca25520"
+     },
+     {
+      "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_st1_20260805/transport_payloads/st1_transport_independent.brotli-q11.bin",
+      "bytes": 189671,
+      "codec": "brotli-q11",
+      "sha256": "b9f921eab56a1421bcde38108f2bde4ecff152ef06150c61c34f116d4c330699"
+     },
+     {
+      "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_st1_20260805/transport_payloads/st1_transport_independent.smevr-r7-nibble.bin",
+      "bytes": 216676,
+      "codec": "smevr-r7-nibble",
+      "sha256": "ee31b7d22650f4dbb4fd986dbea493303228a1519d8d2672b3b435e445b0b54d"
+     }
+    ],
+    "best": {
+     "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_st1_20260805/transport_payloads/st1_transport_independent.lzma1-raw.bin",
+     "bytes": 164831,
+     "codec": "lzma1-raw",
+     "sha256": "236c550370601659943ba1fd511ba4367efbb396c2d27f447e7119c40ca25520"
+    },
+    "delta_vs_independent_bytes": 0,
+    "raw_bytes": 425022,
+    "stream": "independent_164831_reference_recomputed"
+   },
+   {
+    "all_coders": [
+     {
+      "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_st1_20260805/transport_payloads/st1_transport_context_conditioned_single_stream.lzma1-raw.bin",
+      "bytes": 187939,
+      "codec": "lzma1-raw",
+      "sha256": "88ec01c302a6b3170fee3fc904b566b3aed364df575db091254642c08583dca2"
+     },
+     {
+      "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_st1_20260805/transport_payloads/st1_transport_context_conditioned_single_stream.brotli-q11.bin",
+      "bytes": 188362,
+      "codec": "brotli-q11",
+      "sha256": "ba520719370dd70711c584d54f5ba057e78b52aff91927f09ddcb106926eff42"
+     },
+     {
+      "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_st1_20260805/transport_payloads/st1_transport_context_conditioned_single_stream.smevr-r7-nibble.bin",
+      "bytes": 268825,
+      "codec": "smevr-r7-nibble",
+      "sha256": "1e001636d92937fdbc651c6b91b5131eb5db5dac79ce83cff06aa05f15658adf"
+     }
+    ],
+    "best": {
+     "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_st1_20260805/transport_payloads/st1_transport_context_conditioned_single_stream.lzma1-raw.bin",
+     "bytes": 187939,
+     "codec": "lzma1-raw",
+     "sha256": "88ec01c302a6b3170fee3fc904b566b3aed364df575db091254642c08583dca2"
+    },
+    "delta_vs_independent_bytes": 23108,
+    "raw_bytes": 345628,
+    "stream": "context_conditioned_single_stream"
+   },
+   {
+    "best": {
+     "artifact_path": [
+      "/Volumes/VertigoDataTier/pact/ddm_st1_20260805/transport_payloads/st1_transport_stratum_static.brotli-q11.bin",
+      "/Volumes/VertigoDataTier/pact/ddm_st1_20260805/transport_payloads/st1_transport_stratum_transient.brotli-q11.bin"
+     ],
+     "bytes": 188582,
+     "codec": "static:brotli-q11+transient:brotli-q11+container16",
+     "sha256": "8a67b06c6de42c94a90021c8e1a0aefe6577fda5b3c4060f69b3aadd4370e42b"
+    },
+    "delta_vs_independent_bytes": 23751,
+    "raw_bytes": 346228,
+    "static_all_coders": [
+     {
+      "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_st1_20260805/transport_payloads/st1_transport_stratum_static.brotli-q11.bin",
+      "bytes": 186105,
+      "codec": "brotli-q11",
+      "sha256": "2afaf807476295ae5529915de9228ab3387a8c83ee12b8af53b5d3826f8a4728"
+     },
+     {
+      "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_st1_20260805/transport_payloads/st1_transport_stratum_static.lzma1-raw.bin",
+      "bytes": 186526,
+      "codec": "lzma1-raw",
+      "sha256": "45966a754df5ff0e93af8ccaca14b5fb6e325b92456768ea83d3e8019c778e79"
+     },
+     {
+      "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_st1_20260805/transport_payloads/st1_transport_stratum_static.smevr-r7-nibble.bin",
+      "bytes": 265781,
+      "codec": "smevr-r7-nibble",
+      "sha256": "f473b893c79a13cc46e83f28cc3c8e50f70a3bcdf3e459258a2a769606982893"
+     }
+    ],
+    "static_best": {
+     "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_st1_20260805/transport_payloads/st1_transport_stratum_static.brotli-q11.bin",
+     "bytes": 186105,
+     "codec": "brotli-q11",
+     "sha256": "2afaf807476295ae5529915de9228ab3387a8c83ee12b8af53b5d3826f8a4728"
+    },
+    "stream": "g4_static_transient_two_stream",
+    "transient_all_coders": [
+     {
+      "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_st1_20260805/transport_payloads/st1_transport_stratum_transient.brotli-q11.bin",
+      "bytes": 2461,
+      "codec": "brotli-q11",
+      "sha256": "999e7c2e37c833be33b7ea303dfd912af1229ae7d1b6a2cd7b8c72563b0ee85a"
+     },
+     {
+      "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_st1_20260805/transport_payloads/st1_transport_stratum_transient.lzma1-raw.bin",
+      "bytes": 2519,
+      "codec": "lzma1-raw",
+      "sha256": "e19f972aa65ccffbc3af634840c1bf4dab7e96ea47eba241c75f01abaa855898"
+     },
+     {
+      "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_st1_20260805/transport_payloads/st1_transport_stratum_transient.smevr-r7-nibble.bin",
+      "bytes": 3474,
+      "codec": "smevr-r7-nibble",
+      "sha256": "4aad6818ab20f74fd4a5d73ecefd8a8f8d7545a71df278c15e62bfcdb4686e2c"
+     }
+    ],
+    "transient_best": {
+     "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_st1_20260805/transport_payloads/st1_transport_stratum_transient.brotli-q11.bin",
+     "bytes": 2461,
+     "codec": "brotli-q11",
+     "sha256": "999e7c2e37c833be33b7ea303dfd912af1229ae7d1b6a2cd7b8c72563b0ee85a"
+    }
+   }
+  ],
+  "schema": "ddm_st1_context_transport_leg.v1",
+  "selection_mode": "n600 all PE1 generator tracks; scorer-free; no prefix",
+  "static_tracks": 5049,
+  "track_count": 5164,
+  "transient_tracks": 115,
+  "verdict_scope": "FORMULATION-scoped to PE1 generator-parameter records and G4 same-pixel flip-frequency strata; scorer-free byte pricing only."
+ },
+ "n600_scorer_job": false,
+ "own_vehicle_frontier_line": "S = 0.7539807296911207 @ 357,836 B [macOS-CPU advisory]; contest pointer borrowed/unmoved.",
+ "parameters": {
+  "bucket_sizes": [
+   65536,
+   32768,
+   16384,
+   8192
+  ],
+  "max_positive": 30000,
+  "negative_ratio": 3,
+  "positive_weight": 8.0,
+  "qscale": 512.0,
+  "radius": 2,
+  "seed": 20260805,
+  "smoothing": 2.0
+ },
+ "promotion_eligible": false,
+ "recall_evidence": [
+  {
+   "changed_plan": "CQ2/PE4 negatives are re-run only as surgical, targeted, scorer-free reformulations.",
+   "query": "SURGICAL-FORM/addendum 5",
+   "sources": [
+    ".omx/tmp/codex_runs/_common_contract.md",
+    ".omx/tmp/codex_runs/st1_prompt.md",
+    ".omx/research/operator_directive_per_edge_optimality_criteria_20260805.md",
+    ".omx/state/main_hot_state.md"
+   ]
+  },
+  {
+   "changed_plan": "Target Road/Lane band cells, sample by flip-frequency, and split transport only by static/transient structure.",
+   "query": "g3/g4/pc2/fl1 Road Lane transport student",
+   "sources": [
+    ".omx/research/codex_findings_ddm_g3_score_atlas_20260722T204813Z_codex.md",
+    ".omx/research/codex_findings_ddm_g4_spatial_stationarity_20260722T212138Z_codex.md",
+    ".omx/research/ddm_pc2_perclass_road_edges_20260802.md",
+    ".omx/research/ddm_fl1_perclass_flicker_floors_20260731.md"
+   ]
+  },
+  {
+   "changed_plan": "Use measured real-coder carrier bytes as the comparison bar; do not compare against entropy projections.",
+   "query": "PE1 PE3 PE4 BF1 carrier prices",
+   "sources": [
+    ".omx/research/ddm_pe1_20260805/PE1_RECEIPT_20260805.md",
+    ".omx/research/ddm_pe3_20260805/PE3_RECEIPT_20260805.md",
+    ".omx/research/ddm_pe4_20260805/PE4_RECEIPT_20260805.md",
+    ".omx/research/ddm_bf1_20260805/BF1_RECEIPT_20260805.md"
+   ]
+  },
+  {
+   "changed_plan": "No current equation already settles ST1's surgical student or context-stream transport rows.",
+   "query": "canonical equation list --json",
+   "sources": [
+    "tools/list_canonical_equations.py --json; targeted grep during recall"
+   ]
+  }
+ ],
+ "schema": "ddm_st1_surgical_reformulations_receipt.v1",
+ "score_claim": false,
+ "script": "experiments/ddm_st1_surgical_reformulations.py",
+ "script_sha256": "629b61752318d94a191cda366ba04f0fb55abb4e2fd7ff7672001fa641c7f907",
+ "storage_preflight": {
+  "free_bytes": 127629459456,
+  "ok": true,
+  "path": "/Volumes/VertigoDataTier/pact/ddm_st1_20260805",
+  "required_free_bytes": 268435456,
+  "total_bytes": 2000189177856,
+  "used_bytes": 1872559718400
+ },
+ "wall_seconds": 23.682
+}
