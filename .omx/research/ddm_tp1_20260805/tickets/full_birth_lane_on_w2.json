@@ -44,10 +44,6 @@
     "0.002",
     "--margin-target",
     "1.0",
-    "--margin-weight-temp",
-    "1.0",
-    "--margin-weighted-loss",
-    "on",
     "--max-wall-minutes",
     "130.0",
     "--persist-optimizer-state",
@@ -61,7 +57,7 @@
     "--telemetry-v9-port",
     "on",
     "--token-cell-mask",
-    "/Volumes/VertigoDataTier/pact/ddm_sg1_20260731/qa24_grid_keep_mask_50.npy",
+    "/Volumes/VertigoDataTier/pact/ddm_tp1_20260805/qa24_keep50_union_bi1_lane_seeds.npy",
     "--token-init-mode",
     "solve_project",
     "--token-quant-anneal",
@@ -164,18 +160,10 @@
       }
     },
     {
-      "name": "tr1_token_cell_mask",
-      "notes": "\u00a73.1 coarse-from-birth keep-set (gr1 cell_drop50 -0.098 post-hoc bound; falsifier: re-burn endpoint d_seg >= 0.004310 at matched bytes => coarse-from-birth closes at INSTANCE, solve-distillation leads)",
+      "name": "tr1_token_cell_mask_union_bi1",
+      "notes": "\u00a73.1 coarse-from-birth keep-set (gr1 cell_drop50 -0.098 post-hoc bound; falsifier: re-burn endpoint d_seg >= 0.004310 at matched bytes => coarse-from-birth closes at INSTANCE, solve-distillation leads) | ON-arm union mask: qa24_keep50 \u222a bi1 lane seeds (226/227 already kept; +1 cell, sha 49e26f70\u2026)",
       "overrides": {
-        "--token-cell-mask": "/Volumes/VertigoDataTier/pact/ddm_sg1_20260731/qa24_grid_keep_mask_50.npy"
-      }
-    },
-    {
-      "name": "tr1_seg_margin_weight",
-      "notes": "\u00a73.2 inverse-margin reweight (make_loss_fn margin_weighted); falsifier: margin-weighted endpoint d_seg >= uniform at matched epoch => close at INSTANCE (does not help THIS renderer)",
-      "overrides": {
-        "--margin-weight-temp": "1.0",
-        "--margin-weighted-loss": "on"
+        "--token-cell-mask": "/Volumes/VertigoDataTier/pact/ddm_tp1_20260805/qa24_keep50_union_bi1_lane_seeds.npy"
       }
     },
     {
@@ -254,7 +242,7 @@
     },
     {
       "name": "tr1_persist_optimizer_state_on",
-      "notes": "ddm_op2 OP2-1 optimizer-state persistence; w2 continuation inherits live moments from the ON endpoint.",
+      "notes": "ddm_op2 OP2-1 optimizer-state persistence; parent b4s ckpt has no moments.",
       "overrides": {
         "--persist-optimizer-state": "on"
       }
@@ -273,6 +261,6 @@
   ],
   "schema": "ddm_tb1_tr1_sealed_ticket.v1",
   "score_claim": false,
-  "ticket_hash": "aa2d7bbf693aabbaad6a00eb4d24057efa1025c0d4c50b440ac526b673e7f1f9",
+  "ticket_hash": "c2c197bd34878908f92850aa613a00a5d4da8792e86537c88f7ed5e030ed2bae",
   "trainer": "experiments/train_tr1_partition_renderer_mlx.py"
 }
