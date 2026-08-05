@@ -223,3 +223,17 @@ negligible for this pick"). New findings + dispositions:
 - RR1-F5 (LOW): scratch probe variants copied to the SSD receipt dir (config-only-edit claim now
   source-custodied).
 Counter remains 0/3; round 3 = fresh pass after these fixes.
+
+### MAGNITUDE-DISMISSAL COMPLIANCE NOTE (Stop-hook, 2026-08-05) — the RR1-F4 "negligible" quantified
+The dismissed quantity is the candidate-selection rate delta 0.000794 S (25×1,193 B / 37,545,489).
+Both relative numbers, stated explicitly: (a) vs the DECISION gap it could have flipped:
+0.000794 / 0.125096 = **0.63%** — 157× too small to change the entry-vs-final pick even at full
+adverse sign; (b) vs the REMAINING goal gap at the current operating point:
+0.000794 / 0.5818394 = **0.136%** of the live gap to the PR130 bar. verdict_scope: INSTANCE —
+this dismissal applies ONLY to the candidate-selection decision. NOTHING IS ORPHANED: the byte
+axis is not a banked lever being dropped — checkpoint payload deltas are transient training
+state, and the rate term re-enters IN FULL at byte-close (n600, real coder, counted archive
+bytes), where 1,193 B ≡ 0.000794 S would be a real waterfill row if it persisted to export.
+Same scoping applies to rr1's RR1-F4 row (the arm's phrasing "far below the partial-S gap" =
+the 0.63% ratio above). The flagged RR1-F2 row is an evidence-absence correction, not a
+magnitude dismissal — no ΔS was dismissed there.
