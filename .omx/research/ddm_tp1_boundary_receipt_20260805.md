@@ -303,3 +303,22 @@ state-flag CLASS swept (no second instance found in the searched scope). Honest 
 regenerator production debts are GATED, not fixed — round 5 correctly refuses to count them
 until code/launch gates enforce. Rounds 6-7 = the remaining consecutive clean passes to SEAL the
 pre-endpoint state.
+
+### RECURSIVE REVIEW — ROUND 6 (rr1, counter resets 0/3): RR1-R6-F1 MEDIUM + MAIN disposition
+FINDING (verified from the fired ticket JSON): `recursive_encode_pass_loop.continue_policy.
+next_resume_from_template` = the ANCESTOR JD1 lane's path (ddm_jd1_20260805/
+tr1_joint_pose_finish_after_tp1_lane_on/...) — stale metadata inherited from JD1_TICKET.json by
+the regenerator; the actual fired continuation runs in ddm_jd3_20260805/tr1_jd3_v3_smoke_entry_
+ep1336. Orphan-prone follow-on metadata, NOT a current-run physics bug.
+DISPOSITION:
+1. The fired ticket file is NOT mutated (hash custody). The template is declared VOID by this
+   consumption contract: ANY continuation from the full-v3 endpoint derives its resume source
+   from the ACTUAL endpoint checkpoint in the ACTUAL out-dir, adjudicated by MAIN at the
+   boundary — never from the ticket's recursive-loop template. (No automatic consumer exists;
+   the jd-line already regenerates tickets per-winner at each boundary.)
+2. Regenerator debt item #4: refuse emission when next_resume_from_template does not resolve
+   under the ticket's child_out_dir or a declared new continuation out-dir (rr1's check).
+   Joins: argv interpreter · unique continuation out-dirs · force-reanchor-on-geometry-change.
+Pattern note: the SAME genus shape again — inherited-without-re-derivation metadata surviving a
+lane change (values → flags → now PATH TEMPLATES). The regenerator is the common factory; its
+debt list is now the single cure surface. Counter 0/3; round 7 next.
