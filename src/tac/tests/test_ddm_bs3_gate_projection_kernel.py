@@ -328,6 +328,8 @@ def test_bs3_keys_constant_covers_every_field_the_cures_emit():
     prev, cur = _maps(31), _maps(32)
     emitted = set(T.flip_direction_counts(cur, prev, gts))
     emitted |= {"realized_gate_dseg_by_gt_class", "realized_gate_dseg_per_pair_sd"}
+    gd1_fields = T.gd1_realized_gate_dseg_fields(tuple(range(36)), [0.001] * 36, 36)
+    emitted |= set(gd1_fields) & set(T.BS3_TELEMETRY_ONLY_KEYS)
     emitted |= set(T.a1_class_motion_fields(
         {"realized_gate_dseg_by_gt_class": [1.0, 0, 0, 0, 0]},
         {"realized_gate_dseg_by_gt_class": [0.0, 1.0, 0, 0, 0]}, 0.0))
@@ -380,3 +382,12 @@ def test_incumbent_gate_row_keys_are_not_stripped():
               "realized_flips_vs_prev_gate", "topology_per_class", "gate_ids_n",
               "a1_alarm", "a1_classification", "epoch", "gate_params"):
         assert k not in T.BS3_TELEMETRY_ONLY_KEYS
+
+
+def test_gd1_repaired_gate_observability_fields_are_checkpoint_stripped():
+    """Per-pair/HT A1 repair fields go to telemetry.jsonl, not checkpoint meta."""
+    for k in ("realized_gate_pair_ids", "realized_gate_dseg_per_pair",
+              "realized_gate_dseg_mean_ht", "realized_gate_dseg_mean_ht_design",
+              "realized_gate_dseg_per_pair_q95",
+              "realized_gate_dseg_per_pair_gt_2x_mean_n"):
+        assert k in T.BS3_TELEMETRY_ONLY_KEYS

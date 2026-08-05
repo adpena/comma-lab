@@ -207,6 +207,34 @@ def default_alarm_registry() -> tuple[AlarmRegistryRow, ...]:
             notes="Worked example for AL1; diagnostic-only and scorer-free.",
         ),
         AlarmRegistryRow(
+            alarm_id="A1_REALIZATION_GAP_ALARM",
+            surface="TR1 realized_gate / A1 smooth-vs-realized realization gap",
+            score=(
+                "smooth_rel_drop_since_prev_gate with realized_rel_drop_since_prev_gate "
+                "recomputed from realized_gate_dseg_mean_ht and qualified by "
+                "realized_gate_dseg_per_pair heavy-tail fields"
+            ),
+            p_value_direction="greater",
+            calibration_population=(
+                "same vehicle, same gate geometry, same stage/window A1 gate intervals; "
+                "fd2 block+SRS gate is nonexchangeable and needs block/window calibration"
+            ),
+            exchangeability_grade="weak_nonexchangeable_until_block_calibrated",
+            block_calibration_required=True,
+            fdr_family="realization_gap",
+            consumer="TR1 a1_adjudicate stage-exit guard and burn supervisor",
+            falsifier=(
+                "HT/per-pair repaired A1 scores are not super-uniform under matched "
+                "same-window/block nulls, or the alarm disappears when full n600 anchors "
+                "replace the gate statistic"
+            ),
+            calibration_status="producer_ready_requires_same_window_block_calibration",
+            notes=(
+                "Producer key is experiments/train_tr1_partition_renderer_mlx.py "
+                "realized_gate_dseg_mean_ht plus realized_gate_dseg_per_pair; diagnostic-only."
+            ),
+        ),
+        AlarmRegistryRow(
             alarm_id="term_domination",
             surface="TR1 loss term domination",
             score="max non-scored post-weight share, or scored-term deficit below the derived floor",

@@ -16,15 +16,19 @@ from tac.alarm_calibration import (
 )
 
 
-def test_registry_has_cf1_named_alarm_rows_and_excludes_unrepaired_a1():
+def test_registry_has_cf1_named_alarm_rows_and_repaired_a1():
     rows = {row.alarm_id: row for row in default_alarm_registry()}
     assert {
+        "A1_REALIZATION_GAP_ALARM",
         "lane_guard.ratchet",
         "term_domination",
         "term_inert",
         "gnorm_hijack",
     } <= set(rows)
-    assert "A1_REALIZATION_GAP_ALARM" not in rows
+    assert rows["A1_REALIZATION_GAP_ALARM"].fdr_family == "realization_gap"
+    assert rows["A1_REALIZATION_GAP_ALARM"].block_calibration_required is True
+    assert rows["A1_REALIZATION_GAP_ALARM"].statistic_status == "ready"
+    assert "realized_gate_dseg_mean_ht" in rows["A1_REALIZATION_GAP_ALARM"].score
     assert rows["lane_guard.ratchet"].block_calibration_required is True
     assert rows["term_domination"].exchangeability_grade == "partial_stage_scoped"
     assert rows["term_inert"].fdr_family == "loss_term"
@@ -36,8 +40,13 @@ def test_registry_json_is_queryable_not_just_memo_text():
     assert payload["schema"] == "tac_l1_alarm_registry.v1"
     assert "diagnostic alarm calibration only" in payload["authority_boundary"]
     consumers = rows_for_consumer("burn supervisor")
-    assert {row.alarm_id for row in consumers} == {"term_domination"}
-    assert {row.alarm_id for row in rows_for_consumer("burn-supervisor")} == {"term_domination"}
+    assert {row.alarm_id for row in consumers} == {
+        "A1_REALIZATION_GAP_ALARM",
+        "term_domination",
+    }
+    assert {row.alarm_id for row in rows_for_consumer("a1 stage-exit")} == {
+        "A1_REALIZATION_GAP_ALARM"
+    }
     with pytest.raises(ValueError, match="consumer_query"):
         rows_for_consumer("")
 

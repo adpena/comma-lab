@@ -71,6 +71,7 @@ import os
 import sys
 import time
 import zlib
+from collections.abc import Sequence
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
@@ -85,6 +86,8 @@ WORKTREE = _HERE.parents[1]
 for _p in (str(WORKTREE), str(WORKTREE / "src")):
     if _p not in sys.path:
         sys.path.insert(0, _p)
+
+from tac.optimization.ddm_gd1_gate_estimator import GateDesign, horvitz_thompson_mean
 
 SEG_H, SEG_W = 384, 512
 DEFAULT_GT_CACHE = "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz"
@@ -986,7 +989,15 @@ def topology_per_class(realized: np.ndarray, gts: list[np.ndarray]) -> dict[str,
 # against the producing functions by ``test_ddm_bs3_gate_projection_kernel`` so a
 # future field cannot silently leak into the checkpoint.
 BS3_TELEMETRY_ONLY_KEYS = frozenset({
+    "realized_gate_pair_ids",
+    "realized_gate_dseg_per_pair",
+    "realized_gate_dseg_mean_ht",
+    "realized_gate_dseg_mean_ht_design",
     "realized_gate_dseg_per_pair_sd",
+    "realized_gate_dseg_per_pair_q50",
+    "realized_gate_dseg_per_pair_q90",
+    "realized_gate_dseg_per_pair_q95",
+    "realized_gate_dseg_per_pair_gt_2x_mean_n",
     "realized_gate_dseg_by_gt_class",
     "realized_flips_toward_gt",
     "realized_flips_away_from_gt",
@@ -1043,6 +1054,66 @@ def dseg_by_gt_class(realized: np.ndarray, gts: list[np.ndarray],
         for c in range(n_classes):
             out[c] += float(np.count_nonzero(wrong & (g == c))) / g.size
     return [v / n for v in out]
+
+
+def gd1_realized_gate_dseg_fields(
+    gate_ids: Sequence[int],
+    dsegs: Sequence[float],
+    n_population: int,
+) -> dict[str, Any]:
+    """GD1 A1 repair fields: old mean plus per-pair and HT telemetry.
+
+    The legacy ``realized_gate_dseg_mean`` remains the exact unweighted mean so
+    current consumers and historical series stay comparable.  The repaired
+    statistic is emitted under a new key, ``realized_gate_dseg_mean_ht``.
+    """
+    ids = tuple(int(i) for i in gate_ids)
+    vals = np.asarray(dsegs, dtype=np.float64)
+    if vals.ndim != 1:
+        raise ValueError(f"gd1_realized_gate_dseg_fields: expected 1D dsegs, got {vals.shape}")
+    if len(ids) != vals.shape[0]:
+        raise ValueError(
+            f"gd1_realized_gate_dseg_fields: {len(ids)} gate ids vs {vals.shape[0]} dsegs")
+    if vals.shape[0] == 0:
+        raise ValueError("gd1_realized_gate_dseg_fields: empty gate set is VACUOUS")
+    mean = float(np.mean(vals))
+    ht_design = "legacy_mean_noncanonical"
+    ht_mean = mean
+    if len(ids) == int(n_population):
+        ht_design = "full_population_exact_mean"
+    elif int(n_population) >= (max(GATE_BLOCK_PAIRS) + 1):
+        block_set = set(GATE_BLOCK_PAIRS)
+        id_set = set(ids)
+        srs_ids = tuple(i for i in ids if i not in block_set)
+        if (
+            block_set.issubset(id_set)
+            and len(srs_ids) == GATE_OFFBLOCK_SAMPLE
+            and len(ids) == len(GATE_BLOCK_PAIRS) + GATE_OFFBLOCK_SAMPLE
+        ):
+            design = GateDesign(
+                n_population=int(n_population),
+                block_ids=GATE_BLOCK_PAIRS,
+                srs_ids=srs_ids,
+            )
+            gate_values = {i: float(v) for i, v in zip(ids, vals, strict=True)}
+            ht_mean = horvitz_thompson_mean(design, gate_values)
+            ht_design = "gd1_block_plus_srs_horvitz_thompson"
+    return {
+        "realized_gate_pair_ids": list(ids),
+        "realized_gate_dseg_per_pair": [float(v) for v in vals],
+        "realized_gate_dseg_mean": mean,
+        "realized_gate_dseg_mean_ht": float(ht_mean),
+        "realized_gate_dseg_mean_ht_design": ht_design,
+        "realized_gate_dseg_per_pair_max": float(np.max(vals)),
+        "realized_gate_dseg_per_pair_sd": (
+            float(np.std(vals, ddof=1)) if vals.shape[0] > 1 else None),
+        "realized_gate_dseg_per_pair_q50": float(np.quantile(vals, 0.50)),
+        "realized_gate_dseg_per_pair_q90": float(np.quantile(vals, 0.90)),
+        "realized_gate_dseg_per_pair_q95": float(np.quantile(vals, 0.95)),
+        "realized_gate_dseg_per_pair_gt_2x_mean_n": int(
+            np.count_nonzero(vals > (2.0 * mean)) if mean > 0.0
+            else np.count_nonzero(vals > 0.0)),
+    }
 
 
 def flip_direction_counts(realized: np.ndarray, prev_realized: np.ndarray,
@@ -1107,14 +1178,7 @@ def realized_gate(model, gate_ids: tuple[int, ...], lstars, seg_cpu,
     realized = np.asarray(realized)
     row: dict[str, Any] = {
         "gate_ids_n": len(gate_ids),
-        "realized_gate_dseg_mean": float(np.mean(dsegs)),
-        "realized_gate_dseg_per_pair_max": float(np.max(dsegs)),
-        # ddm_bs3 (#909): the mean's own DISPERSION over the gate pairs. A mean
-        # reported without its spread is a point estimate presented as a fact;
-        # every A/B on this quantity needs it (design philosophy P2).
-        "realized_gate_dseg_per_pair_sd": (
-            float(np.std(np.asarray(dsegs, dtype=np.float64), ddof=1))
-            if len(dsegs) > 1 else None),
+        **gd1_realized_gate_dseg_fields(gate_ids, dsegs, len(lstars)),
         # ddm_bs3 (#909): EXACT per-GT-class partition of the mean -- the kernel
         # the scalar contracts away, and the axis the campaign actually watches.
         "realized_gate_dseg_by_gt_class": dseg_by_gt_class(realized, gts),

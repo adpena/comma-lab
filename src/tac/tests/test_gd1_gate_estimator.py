@@ -95,6 +95,48 @@ def test_ht_mean_from_gate_values_matches_decomposition():
     assert horvitz_thompson_mean(d, gv) == pytest.approx(bias_decomposition(d, x).horvitz_thompson)
 
 
+def test_tr1_gate_fields_keep_legacy_mean_and_emit_ht_per_pair_repair():
+    from experiments.train_tr1_partition_renderer_mlx import (
+        gd1_realized_gate_dseg_fields,
+    )
+
+    d = _live_like_design()
+    values = dict.fromkeys((*d.block_ids, *d.srs_ids), 0.001)
+    for i in d.block_ids:
+        values[i] = 0.09
+    gate_ids = (*d.block_ids, *d.srs_ids)
+    dsegs = [values[i] for i in gate_ids]
+    fields = gd1_realized_gate_dseg_fields(gate_ids, dsegs, 600)
+
+    assert fields["realized_gate_dseg_mean"] == pytest.approx(float(np.mean(dsegs)))
+    assert fields["realized_gate_dseg_mean_ht"] == pytest.approx(
+        horvitz_thompson_mean(d, values)
+    )
+    assert fields["realized_gate_dseg_mean_ht"] < 0.2 * fields["realized_gate_dseg_mean"]
+    assert fields["realized_gate_pair_ids"] == list(gate_ids)
+    assert fields["realized_gate_dseg_per_pair"] == pytest.approx(dsegs)
+    assert fields["realized_gate_dseg_per_pair_max"] == pytest.approx(0.09)
+    assert fields["realized_gate_dseg_mean_ht_design"] == "gd1_block_plus_srs_horvitz_thompson"
+
+
+def test_tr1_gate_fields_flag_pair_tail_even_when_mean_is_small():
+    from experiments.train_tr1_partition_renderer_mlx import (
+        gd1_realized_gate_dseg_fields,
+    )
+
+    d = _live_like_design()
+    gate_ids = (*d.block_ids, *d.srs_ids)
+    dsegs = [0.001] * len(gate_ids)
+    dsegs[-1] = 0.015
+    dsegs[-2] = 0.015
+    fields = gd1_realized_gate_dseg_fields(gate_ids, dsegs, 600)
+
+    assert fields["realized_gate_dseg_mean"] < 0.002
+    assert fields["realized_gate_dseg_per_pair_max"] == pytest.approx(0.015)
+    assert fields["realized_gate_dseg_per_pair_gt_2x_mean_n"] == 2
+    assert fields["realized_gate_dseg_per_pair_q95"] > fields["realized_gate_dseg_mean"]
+
+
 def test_ht_is_unbiased_in_expectation_over_the_srs_draw():
     """Averaging HT over many SRS draws converges to the population mean; averaging the
     UNWEIGHTED mean does not (it keeps the block over-weight term)."""
