@@ -17,6 +17,7 @@ from tac.witness_dsl.spec_tr1_renderer_20260728 import (
     default_t1_smoke_program,
     lever_jd1_joint_pose_finish,
     lever_jd1_plateau_tail_average_ema,
+    lever_seg_grad_q3_project,
     trainer_declared_flags,
 )
 
@@ -99,3 +100,26 @@ def test_jd1_factory_refuses_inert_or_invalid_shapes():
             seg_hold_weight=0.1,
             seg_hold_floor_source="explicit",
         )
+
+
+def test_pg1_q3_lever_emits_real_tr1_flag_and_parses():
+    lv = lever_seg_grad_q3_project()
+    base = default_t1_smoke_program("plain", "/unused")
+    prog = TR1RendererProgramV1(levers=base.levers + (lv,), num_pairs=24, out_dir="/unused")
+    argv = prog.compile_trainer_argv()
+    assert argv[0] == TRAINER_RELPATH
+    assert "--seg-grad-q3-project" in argv
+    ns = build_argparser().parse_args(argv[1:])
+    assert ns.seg_grad_q3_project == "on"
+
+
+def test_pg1_q3_lever_flags_are_declared_by_the_live_trainer():
+    lv = lever_seg_grad_q3_project()
+    missing = sorted(set(lv.overrides) - trainer_declared_flags())
+    assert not missing
+    assert (_REPO / TRAINER_RELPATH).is_file()
+
+
+def test_pg1_q3_factory_refuses_inert_off_state():
+    with pytest.raises(ValueError, match="omit the lever"):
+        lever_seg_grad_q3_project("off")

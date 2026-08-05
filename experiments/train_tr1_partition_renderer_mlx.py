@@ -98,6 +98,11 @@ from tac.witness_dsl.scope_laws import resolve_scope_law, scope_law_geometry_has
 SEG_H, SEG_W = 384, 512
 DEFAULT_GT_CACHE = "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz"
 POINTER_LINE = "0.1910828242 [contest-CPU] UNMOVED"
+PG1_SEG_GRAD_Q3_MODES = ("off", "on")
+
+# ddm_pg1: canonical frame_1 yuv6 pose-null projector. This is the same 6x12
+# block constraint matrix as experiments/ddm_sq1_pose_null_constrained_paint.py.
+_YUV6_LUMA_WEIGHTS = (0.299, 0.587, 0.114)
 
 # Pre-registered A1 gate geometry (fd2 instrument geometry: block 447-450 + 32 rng(0)
 # off-block samples). At --num-pairs below 600 the gate set is ALL training pairs.
@@ -1334,13 +1339,95 @@ def attach_cheapdct4_accounting_to_receipt(receipt: dict[str, Any],
         composed["cheapdct4_pose_accounting"] = accounting
 
 
-def make_render_fn():
+def pose_null_projector_np() -> np.ndarray:
+    """Return sq1's (12,12) projector onto the frame_1 yuv6-null subspace."""
+    a = np.zeros((6, 12), dtype=np.float64)
+    for p in range(4):
+        a[p, 3 * p: 3 * p + 3] = _YUV6_LUMA_WEIGHTS
+        a[4, 3 * p + 0] = 0.25
+        a[5, 3 * p + 2] = 0.25
+    p = np.eye(12, dtype=np.float64) - np.linalg.pinv(a) @ a
+    if not (np.allclose(p @ p, p) and np.abs(a @ p).max() < 1e-10):
+        raise RuntimeError("pose-null projector construction failed its algebraic checks")
+    if np.linalg.matrix_rank(p) != 6:
+        raise RuntimeError("pose-null projector rank drifted from 6")
+    return p
+
+
+def project_frame1_pose_null_nhwc_np(delta: np.ndarray,
+                                     projector: np.ndarray | None = None) -> np.ndarray:
+    """Project an NHWC scorer-lattice frame delta blockwise through sq1's P."""
+    x = np.asarray(delta)
+    if x.ndim != 4 or x.shape[-1] != 3:
+        raise ValueError(f"expected NHWC RGB delta, got shape {x.shape}")
+    b, h, w, c = x.shape
+    if h % 2 or w % 2:
+        raise ValueError(f"height/width must be even for yuv6 2x2 blocks, got {(h, w)}")
+    p = pose_null_projector_np() if projector is None else np.asarray(projector, dtype=np.float64)
+    y = x.reshape(b, h // 2, 2, w // 2, 2, c)
+    y = y.transpose(0, 1, 3, 2, 4, 5).reshape(b, h // 2, w // 2, 12)
+    y = y @ p.T
+    y = y.reshape(b, h // 2, w // 2, 2, 2, c).transpose(0, 1, 3, 2, 4, 5)
+    return y.reshape(x.shape).astype(x.dtype, copy=False)
+
+
+def project_frame1_pose_null_nhwc_mlx(delta, projector=None):
+    """MLX twin of project_frame1_pose_null_nhwc_np for cotangent projection."""
+    import mlx.core as mx
+
+    p = mx.array(pose_null_projector_np().astype(np.float32)) if projector is None else projector
+    b, h, w, c = delta.shape
+    if c != 3 or h % 2 or w % 2:
+        raise ValueError(f"expected even NHWC RGB delta, got shape {delta.shape}")
+    y = mx.reshape(delta, (b, h // 2, 2, w // 2, 2, c))
+    y = mx.transpose(y, (0, 1, 3, 2, 4, 5))
+    y = mx.reshape(y, (b, h // 2, w // 2, 12))
+    y = y @ mx.transpose(p)
+    y = mx.reshape(y, (b, h // 2, w // 2, 2, 2, c))
+    y = mx.transpose(y, (0, 1, 3, 2, 4, 5))
+    return mx.reshape(y, (b, h, w, c))
+
+
+def q3_project_seg_gradient_identity(frame):
+    """Forward identity whose VJP projects the frame cotangent through Q3.
+
+    This is the pg1 training-time constraint: rendered frame_1 bytes are unchanged,
+    but the SEG loss gradient entering the renderer is restricted to sq1's exact
+    float yuv6-null subspace. Pose loss calls must use the unwrapped render path.
+    """
+    import mlx.core as mx
+
+    @mx.custom_function
+    def _identity(x):
+        return x
+
+    @_identity.vjp
+    def _identity_vjp(primals, cotangent, output):
+        return (project_frame1_pose_null_nhwc_mlx(cotangent),)
+
+    return _identity(frame)
+
+
+def apply_seg_grad_q3_project(frame, mode: str):
+    """Apply the default-off pg1 seg-gradient projector to a rendered frame."""
+    if mode == "off":
+        return frame
+    if mode == "on":
+        return q3_project_seg_gradient_identity(frame)
+    raise ValueError(f"seg_grad_q3_project must be off|on, got {mode!r}")
+
+
+def make_render_fn(seg_grad_q3_project: str = "off"):
     """render_fn for the canonical ``make_loss_fn`` hook:
     (model, coord_feats, code_idx, render_h, render_w) -> R(render) (1,384,512,3)."""
     from experiments.train_witness_realized_through_R_mlx import _apply_R
 
+    if seg_grad_q3_project not in PG1_SEG_GRAD_Q3_MODES:
+        raise ValueError(f"seg_grad_q3_project must be off|on, got {seg_grad_q3_project!r}")
+
     def render_fn(model, coord_feats, code_idx, render_h, render_w):
-        return _apply_R(model.render_frame(int(code_idx)))
+        frame = _apply_R(model.render_frame(int(code_idx)))
+        return apply_seg_grad_q3_project(frame, seg_grad_q3_project)
 
     return render_fn
 
@@ -2149,9 +2236,64 @@ def tail_slope_adjudication(gate_rows: list[dict[str, Any]]) -> dict[str, Any]:
     return payload
 
 
+def parent_boundary_ema_decay_fields(meta: Mapping[str, Any]) -> dict[str, Any]:
+    """Return the parent decay basis used by cross-boundary telemetry."""
+    cfg_meta = meta.get("cfg") if isinstance(meta, Mapping) else None
+    jd1_meta = meta.get("jd1_pose_finish") if isinstance(meta, Mapping) else None
+    parent_cfg_ema_decay = (
+        float(cfg_meta["ema_decay"])
+        if isinstance(cfg_meta, Mapping) and cfg_meta.get("ema_decay") is not None
+        else None
+    )
+    parent_active_ema_decay = (
+        float(jd1_meta["active_ema_decay"])
+        if isinstance(jd1_meta, Mapping) and jd1_meta.get("active_ema_decay") is not None
+        else None
+    )
+    if parent_active_ema_decay is not None:
+        parent_boundary_ema_decay = parent_active_ema_decay
+        source = "checkpoint jd1_pose_finish.active_ema_decay"
+    else:
+        parent_boundary_ema_decay = parent_cfg_ema_decay
+        source = "checkpoint cfg.ema_decay fallback"
+    return {
+        "parent_ema_decay": parent_boundary_ema_decay,
+        "parent_boundary_ema_decay": parent_boundary_ema_decay,
+        "parent_boundary_ema_decay_source": source,
+        "parent_cfg_ema_decay": parent_cfg_ema_decay,
+        "parent_active_ema_decay": parent_active_ema_decay,
+        "parent_active_ema_decay_provenance": (
+            str(jd1_meta.get("active_ema_decay_provenance", ""))
+            if isinstance(jd1_meta, Mapping) else None
+        ),
+    }
+
+
+def resume_ema_decay_fields(parent_fields: Mapping[str, Any], *,
+                            child_cfg_ema_decay: float,
+                            active_ema_decay: float,
+                            active_ema_decay_provenance: str) -> dict[str, Any]:
+    """Return resume-event fields after JD1 checkpoint state has been restored."""
+    parent_decay = parent_fields.get("parent_boundary_ema_decay")
+    held = (
+        parent_decay is not None
+        and abs(float(parent_decay) - float(active_ema_decay)) <= 1e-12
+    )
+    return {
+        **dict(parent_fields),
+        "child_ema_decay": float(active_ema_decay),
+        "child_cfg_ema_decay": float(child_cfg_ema_decay),
+        "post_restore_active_ema_decay": float(active_ema_decay),
+        "post_restore_active_ema_decay_provenance": str(active_ema_decay_provenance),
+        "ema_basis_held": bool(held),
+        "ema_decay_held": bool(held),
+    }
+
+
 def boundary_jump_row(parent_tail: list[dict[str, Any]], parent_ema_decay: float | None,
                       child_ema_decay: float, resume_epoch: int,
-                      gate_row: dict[str, Any], arm: str) -> dict[str, Any] | None:
+                      gate_row: dict[str, Any], arm: str, *,
+                      parent_cfg_ema_decay: float | None = None) -> dict[str, Any] | None:
     """The #824 BOUNDARY-JUMP typed row: the resume interval, isolated (pure; $0 unit-testable).
 
     WHY this and not an end-state read-out (MEASURED, R1-C, 64 gate readings → 63 intervals):
@@ -2222,6 +2364,9 @@ def boundary_jump_row(parent_tail: list[dict[str, Any]], parent_ema_decay: float
         "ema_decay_held": bool(decay_held),
         "gate_basis_held": bool(basis_held),
         "parent_ema_decay": (None if parent_ema_decay is None else float(parent_ema_decay)),
+        "parent_cfg_ema_decay": (
+            None if parent_cfg_ema_decay is None else float(parent_cfg_ema_decay)
+        ),
         "child_ema_decay": float(child_ema_decay),
         "score_claim": False, "evidence_axis": "[macOS-CPU/MLX advisory]",
         "caveat": "ADVISORY realized-argmax gate on the fd2 gate subset, NOT an exact-eval row; "
@@ -2304,7 +2449,7 @@ def a1_adjudicate(prev: dict[str, Any] | None, cur: dict[str, Any],
 # ---------------------------------------------------------------------------
 # ddm_tp1 (#804) — v9-line confound-cure TELEMETRY PORT (vh1 row 7; burn-4 §3.1).
 # Pure / MLX-free / unit-tested row + alarm builders. Emitted by main() ONLY when
-# ``--telemetry-v9-port on`` (default off => byte-identical trained/checkpoint bytes;
+# ``--telemetry-v9-port on`` (default on => score-neutral observability is not hidden;
 # the flag is threaded via ``args`` ONLY, never TR1Config, and new rows go to the
 # telemetry.jsonl via ``tlog`` ONLY — never ``telemetry_tail`` (which is baked into
 # the checkpoint meta), so checkpoints are FLAG-INVARIANT).  The reusable Q1-Q7
@@ -2313,10 +2458,14 @@ def a1_adjudicate(prev: dict[str, Any] | None, cur: dict[str, Any],
 # #404 positive-control canary in ``tac.witness_control.verdict_trend_alarm`` — this
 # is a PORT (reuse the v9 producers), not a reimplementation.  READ-ONLY / score-neutral.
 # ---------------------------------------------------------------------------
-# The exact top-level addends of ``batch_loss`` (mean per-pair seg distortion +
-# w_rate*rate surrogate + delta_sparsity_weight*group-L2).  "seg" is the distortion
-# term (KD distill, when active, folds into it — it is added inside ``pair_loss``).
-TR1_LOSS_TERM_KEYS: tuple[str, ...] = ("seg", "rate", "delta_sparsity")
+# The exact top-level addends of ``batch_loss``.  "seg" is the distortion term
+# (KD distill, when active, folds into it — it is added inside ``pair_loss``).
+TR1_BASE_LOSS_TERM_KEYS: tuple[str, ...] = ("seg", "rate", "delta_sparsity")
+TR1_LOSS_TERM_KEYS: tuple[str, ...] = (
+    *TR1_BASE_LOSS_TERM_KEYS,
+    "pose",
+    "birth_amplify",
+)
 # (#321) term_domination — INTENT-RESTORED predicate (b4s first-fire calibration
 # 2026-07-31, MAIN adjudication of the burn4 window_01 FALSE POSITIVE): the v9 alarm
 # exists to catch a NON-scored term crowding out the SCORED objective ("the scored seg
@@ -2335,19 +2484,41 @@ TR1_LOSS_TERM_KEYS: tuple[str, ...] = ("seg", "rate", "delta_sparsity")
 TR1_TERMDOM_FRAC = 0.40
 TR1_TERMDOM_MIN_ROWS = 3
 TR1_SCORED_TERM = "seg"  # the scored objective on this seg-only vehicle (pose #383 terminal)
+TR1_POSE_TERM = "pose"
 TR1_SCORED_FLOOR = 1.0 - TR1_TERMDOM_FRAC
+
+
+def tr1_active_loss_term_keys(*, jd1_pose_finish_active: bool = False,
+                              birth_amplify_active: bool = False) -> tuple[str, ...]:
+    optional = {
+        "pose": bool(jd1_pose_finish_active),
+        "birth_amplify": bool(birth_amplify_active),
+    }
+    return tuple(
+        key for key in TR1_LOSS_TERM_KEYS
+        if key in TR1_BASE_LOSS_TERM_KEYS or optional.get(key, False)
+    )
+
+
+def tr1_active_scored_terms(*, jd1_pose_finish_active: bool = False) -> tuple[str, ...]:
+    return (
+        (TR1_SCORED_TERM, TR1_POSE_TERM)
+        if jd1_pose_finish_active else (TR1_SCORED_TERM,)
+    )
 
 
 def tr1_loss_terms_row(terms: dict[str, float], total: float, *, ep: int,
                        accum_batch: int, accepted_frac: float, weights_stepped: bool,
-                       stage: str, seg_form: str) -> dict[str, Any]:
+                       stage: str, seg_form: str,
+                       loss_term_keys: Sequence[str] | None = None) -> dict[str, Any]:
     """(#304) Canonical per-term ``loss_terms`` row for the TR1 top-level loss
     decomposition.  Stable complete key set (missing terms -> 0.0 so the schema is
     config-stable); ``sum_terms`` + ``sum_minus_total`` make the breakdown
     self-checking; ``accepted_frac`` + ``weights_stepped`` are the C6 LIVENESS stamps
     (#402 — a reader can tell a frozen epoch from a converging one).  Pure / MLX-free /
     unit-tested; score-neutral."""
-    t = {k: float(terms.get(k, 0.0)) for k in TR1_LOSS_TERM_KEYS}
+    keys = tuple(loss_term_keys or TR1_BASE_LOSS_TERM_KEYS)
+    t = {k: float(terms.get(k, 0.0)) for k in keys}
     ssum = float(sum(t.values()))
     return {
         "stage": "loss_terms", "ep": int(ep), "accum_batch": int(accum_batch),
@@ -2366,6 +2537,8 @@ def tr1_term_domination_alarms(terms: dict[str, float], total: float,
                                frac: float = TR1_TERMDOM_FRAC,
                                min_rows: int = TR1_TERMDOM_MIN_ROWS,
                                scored_term: str = TR1_SCORED_TERM,
+                               scored_terms: Sequence[str] | None = None,
+                               loss_term_keys: Sequence[str] | None = None,
                                scored_floor: float = TR1_SCORED_FLOOR) -> list[dict[str, Any]]:
     """(#321) term_domination, INTENT-RESTORED (see the constants block above): the
     SCORED term is EXEMPT from the ceiling (it dominating a seg-only burn is the
@@ -2377,19 +2550,37 @@ def tr1_term_domination_alarms(terms: dict[str, float], total: float,
     every row).  Pure / unit-tested."""
     tot_abs = abs(float(total)) + 1e-12
     rows: list[dict[str, Any]] = []
-    for name in TR1_LOSS_TERM_KEYS:
-        share = abs(float(terms.get(name, 0.0))) / tot_abs
-        if name == scored_term:
-            violated = share < float(scored_floor)
-            predicate = "scored_below_floor"
-            note = ("the SCORED seg share fell below the caps-law floor — non-scored "
+    keys = tuple(loss_term_keys or TR1_BASE_LOSS_TERM_KEYS)
+    scored_set = set(scored_terms or (scored_term,))
+    scored_label = "+".join(k for k in keys if k in scored_set) or str(scored_term)
+    scored_share = (
+        sum(abs(float(terms.get(k, 0.0))) for k in keys if k in scored_set) / tot_abs
+    )
+    scored_streak_key = f"{scored_label}::__scored_floor"
+    scored_violated = scored_share < float(scored_floor)
+    scored_streak = int(streaks.get(scored_streak_key, 0))
+    scored_streak = scored_streak + 1 if scored_violated else 0
+    streaks[scored_streak_key] = scored_streak
+    if scored_streak == int(min_rows):
+        rows.append({
+            "event": "confound_alarm", "kind": "term_domination",
+            "term": scored_label,
+            "predicate": "scored_below_floor",
+            "frac_of_loss": round(float(scored_share), 4),
+            "sustained_rows": int(scored_streak),
+            "note": "the SCORED term share fell below the caps-law floor — non-scored "
                     "terms crowd the scored objective (seg-as-passenger; v9 #321 "
-                    "intent, b4s 2026-07-31 first-fire calibration)")
-        else:
-            violated = share > float(frac)
-            predicate = "nonscored_above_ceiling"
-            note = ("a NON-scored post-weight term exceeds the v9 caps-law single-term "
-                    "ceiling; the scored seg signal may be a passenger (v9 #321 port)")
+                    "intent, b4s 2026-07-31 first-fire calibration)",
+            "score_neutral": True,
+        })
+    for name in keys:
+        if name in scored_set:
+            continue
+        share = abs(float(terms.get(name, 0.0))) / tot_abs
+        violated = share > float(frac)
+        predicate = "nonscored_above_ceiling"
+        note = ("a NON-scored post-weight term exceeds the v9 caps-law single-term "
+                "ceiling; the scored seg signal may be a passenger (v9 #321 port)")
         streak = int(streaks.get(name, 0))
         streak = streak + 1 if violated else 0
         streaks[name] = streak
@@ -2966,6 +3157,12 @@ def build_argparser() -> argparse.ArgumentParser:
                          f"{SEG_COHERENT_UPWEIGHT_RACE_START:.6f} == its MEASURED stratified "
                          f"flip-risk lift (ddm_ti1 n600). Raced SEPARATELY from the spike scalar "
                          f"-- the two are asymmetric. Requires --seg-spike-reweight.")
+    ap.add_argument("--seg-grad-q3-project", default="off", choices=PG1_SEG_GRAD_Q3_MODES,
+                    help="PG1/#889: when on, the SEG loss gradient entering rendered frame_1 is "
+                         "projected blockwise through sq1's exact float yuv6 pose-null projector "
+                         "P (Q3). Forward pixels are unchanged. The JD1 pose path uses the "
+                         "unwrapped render loss, so pose gradients are untouched. Args-only; "
+                         "default off is byte-identical and carries no resumable state.")
     ap.add_argument("--margin-weight-temp", type=float, default=1.0,
                     help="inverse-margin reweight temperature (make_loss_fn margin_weight_temp)")
     ap.add_argument("--w-rate", type=float, default=0.0,
@@ -3054,19 +3251,17 @@ def build_argparser() -> argparse.ArgumentParser:
                     help="ax1 §5: 'xi_informed' relaxes shrinkage on dynamic (lane/movable) cells, "
                          "tightens on the static mass (DERIVED from the QA80 winner-class field)")
     # ---- ddm_tp1 (#804) v9-line confound-cure telemetry PORT (vh1 row 7; burn-4 §3.1) ----
-    ap.add_argument("--telemetry-v9-port", default="off", choices=("off", "on"),
+    ap.add_argument("--telemetry-v9-port", default="on", choices=("off", "on"),
                     help="v9 telemetry port: 'on' emits ADDITIVE read-only rows to "
                          "telemetry.jsonl — per-term loss_terms (#304), term_domination + "
                          "term_inert alarms (#321), a #404 positive-control sentinel, and "
-                         "canonical lever_engage companions (Q7). DEFAULT 'off' => BYTE-IDENTICAL "
-                         "trained/checkpoint bytes: the flag is threaded via args ONLY (never "
+                         "canonical lever_engage companions (Q7). DEFAULT 'on' because this is "
+                         "score-neutral observability: the flag is threaded via args ONLY (never "
                          "TR1Config => config_hash + every checkpoint stay flag-invariant) and "
                          "new rows go to tlog/JSONL ONLY (never telemetry_tail, the checkpoint-"
                          "baked tail). READ-ONLY: no grad, no RNG advance (fixed dither bank + "
-                         "isolated order_rng), no model/opt-state mutation. The flag exists ONLY "
-                         "for the sealed r1c-lineage byte-identity guarantee (default-off-is-"
-                         "orphan reconciliation: score-neutral telemetry is off here NOT by "
-                         "orphaning but because a sealed live run demands trained-byte invariance)")
+                         "isolated order_rng), no model/opt-state mutation. Use 'off' only for "
+                         "explicit sealed-lineage log equivalence checks.")
     # ---- ddm_op2 (OP2-1) optimizer-state persistence — #824 arm C, the BUILD ----
     ap.add_argument("--persist-optimizer-state", default="off", choices=("off", "on"),
                     help="'on' saves Adam moments into every training checkpoint (opt:: keys) "
@@ -3722,20 +3917,50 @@ def main() -> int:
     assert_ported_force_scalars_have_their_gate(
         args.fisher_density_weight, args.fisher_density_source,
         args.head_natural_grad, args.head_natural_grad_eps)
-    loss_fn = make_loss_fn(adapter, SEG_H, SEG_W, score_domain=True,
-                           pose_eps=float(args.jd1_pose_eps),
-                           seg_loss=cfg.seg_form_start,
-                           margin_weighted=(cfg.margin_weighted_loss == "on"),
-                           margin_weight_temp=cfg.margin_weight_temp,
-                           render_fn=make_render_fn(),
-                           # ---- ddm_pt2 THE PORT (args-only; every default reproduces the
-                           # pre-pt2 call exactly, so an unflagged run is byte-identical) ----
-                           tau_softplus_tau=args.tau_softplus_tau,
-                           focal_gamma=args.seg_focal_gamma,
-                           fisher_density_weight=args.fisher_density_weight,
-                           fisher_density_source=args.fisher_density_source,
-                           head_natural_grad=(args.head_natural_grad == "on"),
-                           head_natural_grad_eps=args.head_natural_grad_eps)
+    def _build_loss_fn_for_render(render_fn):
+        return make_loss_fn(adapter, SEG_H, SEG_W, score_domain=True,
+                            pose_eps=float(args.jd1_pose_eps),
+                            seg_loss=cfg.seg_form_start,
+                            margin_weighted=(cfg.margin_weighted_loss == "on"),
+                            margin_weight_temp=cfg.margin_weight_temp,
+                            render_fn=render_fn,
+                            # ---- ddm_pt2 THE PORT (args-only; every default reproduces the
+                            # pre-pt2 call exactly, so an unflagged run is byte-identical) ----
+                            tau_softplus_tau=args.tau_softplus_tau,
+                            focal_gamma=args.seg_focal_gamma,
+                            fisher_density_weight=args.fisher_density_weight,
+                            fisher_density_source=args.fisher_density_source,
+                            head_natural_grad=(args.head_natural_grad == "on"),
+                            head_natural_grad_eps=args.head_natural_grad_eps)
+
+    loss_fn = _build_loss_fn_for_render(make_render_fn(args.seg_grad_q3_project))
+    # PG1: if JD1 pose finish is active, pose loss must see the original frame_1 cotangent.
+    # Split seg and pose through two canonical make_loss_fn instances instead of duplicating
+    # scorer logic. When PG1 is off, aliasing preserves the legacy single-call path.
+    pose_loss_fn = (
+        loss_fn if args.seg_grad_q3_project == "off"
+        else _build_loss_fn_for_render(make_render_fn("off"))
+    )
+    _pg1_projector = pose_null_projector_np()
+    tlog({"event": "seg_grad_q3_project_config",
+          "port": "ddm_pg1",
+          "mode": args.seg_grad_q3_project,
+          "active": bool(args.seg_grad_q3_project == "on"),
+          "projector_sha256": hashlib.sha256(
+              np.ascontiguousarray(_pg1_projector).tobytes()).hexdigest(),
+          "projector_rank": int(np.linalg.matrix_rank(_pg1_projector)),
+          "projector_idempotence_max_abs": float(np.max(np.abs(_pg1_projector @ _pg1_projector
+                                                               - _pg1_projector))),
+          "forward_identity": True,
+          "pose_grad_path": ("legacy_single_loss_fn"
+                             if args.seg_grad_q3_project == "off"
+                             else "unwrapped_pose_loss_fn_when_jd1_pose_active"),
+          "resumable_state": "none_args_only",
+          "scope_law_status": "FORMALIZATION_PENDING_NOT_APPLICABLE_BINARY_FLAG",
+          "scope_law_fire_order": ("register a T3_LIVE_ADAPTED law only if a future dynamic "
+                                   "q3_first schedule or live scalar value is introduced"),
+          "canonical_equation": "pose_null_subspace_is_ac_only_v1",
+          "score_claim": False})
     # Score-neutral observability => ALWAYS emitted ("off is a tracked queue" / the read-only
     # telemetry rule). These forces are args-only, so config_hash cannot distinguish an armed run
     # from a control; this row is what carries their state into the run record. It also states
@@ -3973,6 +4198,7 @@ def main() -> int:
     # receipt can never present the decay-only leg as if it were the strict flag.
     boundary_strict_basis_held: bool | None = None
     boundary_gate_basis_held: bool | None = None
+    boundary_parent_cfg_ema_decay: float | None = None
 
     active_ema_decay = float(cfg.ema_decay)
     active_ema_decay_provenance = str(cfg.ema_decay_provenance)
@@ -4169,29 +4395,31 @@ def main() -> int:
                     f"{int(cfg.lotto_seed)} (this run). The fixed bank is regenerated from the "
                     "seed and is not checkpointed, so the trained supermasks would index a "
                     "DIFFERENT random bank at identical shapes (silent-wrong).")
-        boundary_parent_ema_decay = (float(_pcfg["ema_decay"])
-                                     if isinstance(_pcfg, dict) and "ema_decay" in _pcfg
-                                     else None)
-        boundary_ema_held = (boundary_parent_ema_decay is not None
-                             and abs(boundary_parent_ema_decay - cfg.ema_decay) <= 1e-12)
+        _parent_decay_fields = parent_boundary_ema_decay_fields(st["meta"])
+        boundary_parent_ema_decay = _parent_decay_fields["parent_boundary_ema_decay"]
+        boundary_parent_cfg_ema_decay = _parent_decay_fields["parent_cfg_ema_decay"]
+        _resume_decay_fields = resume_ema_decay_fields(
+            _parent_decay_fields,
+            child_cfg_ema_decay=cfg.ema_decay,
+            active_ema_decay=active_ema_decay,
+            active_ema_decay_provenance=active_ema_decay_provenance,
+        )
+        boundary_ema_held = bool(_resume_decay_fields["ema_decay_held"])
         tlog({"event": "resume", "resume_from": str(args.resume_from), "epoch": start_epoch,
               "stage": stage, "quant_engaged": bool(model._quant_engaged),
               "ema_backfilled_new_params": backfilled,
               "jd1_pose_finish": dict(jd1_pose_finish_state),
-              "parent_ema_decay": boundary_parent_ema_decay,
-              "child_ema_decay": cfg.ema_decay, "ema_basis_held": bool(boundary_ema_held),
+              **_resume_decay_fields,
               # ddm_op2 (OP2-2): this row runs BEFORE any gate, so it can only know the DECAY
               # leg. Named explicitly so no reader mistakes it for the strict decay+basis flag
               # (that one is on the `boundary_jump` row, at the first post-resume gate).
-              "ema_decay_held": bool(boundary_ema_held),
               "gate_basis_held": None,
               "held_scope": "decay_only_gate_basis_not_yet_observable",
               "parent_gate_anchors": len(boundary_parent_tail)})
         if not boundary_ema_held:
             # L1 runtime alarm — LOUD, never silent (confound self-protection).
             tlog({"event": "confound_alarm", "kind": "ema_basis_drift",
-                  "epoch": start_epoch, "parent_ema_decay": boundary_parent_ema_decay,
-                  "child_ema_decay": cfg.ema_decay,
+                  "epoch": start_epoch, **_resume_decay_fields,
                   "note": "the realized gate reads the EMA shadow; parent and child resolved "
                           "DIFFERENT decays ⇒ the shadow's averaging length drifted under the "
                           "measurement and cross-boundary gate readings are NOT commensurable. "
@@ -4201,7 +4429,7 @@ def main() -> int:
                 # the measurement basis as well as the optimizer cannot be read at all.
                 raise SystemExit(
                     "#824 --boundary-probe on REFUSES: EMA basis drift across the resume "
-                    f"(parent {boundary_parent_ema_decay} != child {cfg.ema_decay}). Pin an "
+                    f"(parent {boundary_parent_ema_decay} != child {active_ema_decay}). Pin an "
                     "explicit --ema-decay equal to the parent's, or hold --epochs identical.")
         # NOTE: Adam moments are re-anchored fresh (warm-start re-anchor law #517/#518):
         # a bounded-window resume restarts moment estimation at the resume geometry. WHICH reset
@@ -4314,7 +4542,8 @@ def main() -> int:
             _exist_cache[idx] = pack
         return None if pack is False else pack
 
-    def pair_loss(mdl, idx: int, form: str, *, pose_active: bool | None = None):
+    def pair_loss(mdl, idx: int, form: str, *, pose_active: bool | None = None,
+                  terms_out: dict[str, Any] | None = None):
         if pose_active is None:
             pose_active = bool(jd1_pose_finish_state.get("engaged"))
         lstar = np.asarray(lstars[idx], dtype=np.int64)
@@ -4362,9 +4591,37 @@ def main() -> int:
             distill_logits = mx.array(np.transpose(dl, (1, 2, 0)))[None]  # (1,H,W,5)
         # ddm_p4x (#920): COMPONENT-level existence term. None => never built => byte-identical.
         existence_pack = _existence_pack(idx) if _exist_cfg is not None else None
+        if args.seg_grad_q3_project == "on" and pose_active:
+            seg_terms: dict[str, Any] | None = {} if terms_out is not None else None
+            pose_terms: dict[str, Any] | None = {} if terms_out is not None else None
+            seg_loss = loss_fn(
+                mdl, None, idx, idx, lstar_oh, margin, pose_tgt,
+                cfg.w_seg, 0.0, 0.0, cfg.margin_target, seg_form=form,
+                seg_pixel_w=seg_pixel_w, compute_pose=False,
+                terms_out=seg_terms,
+                distill_logits=distill_logits, distill_weight=cfg.distill_weight,
+                distill_temp=cfg.distill_temp, distill_form=cfg.distill_form,
+                distill_attack_temp=cfg.distill_attack_temp,
+                existence_pack=existence_pack,
+                existence_weight=cfg.existence_hinge_weight)
+            pose_loss = pose_loss_fn(
+                mdl, None, pose_code0, idx, lstar_oh, margin, pose_tgt,
+                0.0, w_pose, 0.0, cfg.margin_target, seg_form=form,
+                seg_pixel_w=None, compute_pose=True,
+                terms_out=pose_terms,
+                distill_logits=None, distill_weight=0.0,
+                distill_temp=cfg.distill_temp, distill_form=cfg.distill_form,
+                distill_attack_temp=cfg.distill_attack_temp,
+                existence_pack=None, existence_weight=0.0)
+            if terms_out is not None:
+                terms_out.update(seg_terms or {})
+                if pose_terms is not None and "pose" in pose_terms:
+                    terms_out["pose"] = pose_terms["pose"]
+            return seg_loss + pose_loss
         return loss_fn(mdl, None, pose_code0, idx, lstar_oh, margin, pose_tgt,
                        cfg.w_seg, w_pose, 0.0, cfg.margin_target, seg_form=form,
                        seg_pixel_w=seg_pixel_w, compute_pose=bool(pose_active),
+                       terms_out=terms_out,
                        distill_logits=distill_logits, distill_weight=cfg.distill_weight,
                        distill_temp=cfg.distill_temp, distill_form=cfg.distill_form,
                        distill_attack_temp=cfg.distill_attack_temp,
@@ -4813,6 +5070,13 @@ def main() -> int:
     _tel_term_inert_rows = None
     _tel_strata: tuple[int, ...] = ()
     _tel_pos_ctrl_emitted = False
+    _tel_loss_term_keys = tr1_active_loss_term_keys(
+        jd1_pose_finish_active=_jd1_pose_finish_enabled,
+        birth_amplify_active=(birth_seed_amplify_weight > 0.0),
+    )
+    _tel_scored_terms = tr1_active_scored_terms(
+        jd1_pose_finish_active=_jd1_pose_finish_enabled,
+    )
     if _tel_v9:
         from tac.witness_control.telemetry_producers import (
             ProducerResumeState as _TelResumeState,
@@ -4823,9 +5087,10 @@ def main() -> int:
         _tel_inert_state = _TelResumeState()
         _tel_strata = _tel_det_strata(cfg.num_pairs, min(8, cfg.num_pairs))
         tlog({"event": "telemetry_v9_port", "status": "on",
-              "strata_ids": list(_tel_strata), "loss_term_keys": list(TR1_LOSS_TERM_KEYS),
+              "strata_ids": list(_tel_strata), "loss_term_keys": list(_tel_loss_term_keys),
               "termdom_frac": TR1_TERMDOM_FRAC, "termdom_min_rows": TR1_TERMDOM_MIN_ROWS,
               "termdom_scored_term": TR1_SCORED_TERM,
+              "termdom_scored_terms": list(_tel_scored_terms),
               "termdom_scored_floor": TR1_SCORED_FLOOR,
               "note": "additive read-only rows; trained/checkpoint bytes flag-invariant "
                       "(flag via args not cfg; new rows via tlog not telemetry_tail)",
@@ -5133,7 +5398,8 @@ def main() -> int:
             if not boundary_jump_emitted and args.resume_from is not None:
                 _bj = boundary_jump_row(
                     boundary_parent_tail, boundary_parent_ema_decay, active_ema_decay,
-                    start_epoch, gate_row, resolve_arm_name(_reset_arm) or "unknown")
+                    start_epoch, gate_row, resolve_arm_name(_reset_arm) or "unknown",
+                    parent_cfg_ema_decay=boundary_parent_cfg_ema_decay)
                 boundary_jump_emitted = True
                 if _bj is not None:
                     boundary_strict_basis_held = bool(_bj["ema_basis_held"])
@@ -5319,30 +5585,58 @@ def main() -> int:
             # written is byte-identical to an off run.
             if _tel_v9:
                 _tp_ids = [int(i) for i in _tel_strata]
-                _tp_seg = float(mx.mean(mx.stack(
-                    [pair_loss(model, i, state_form["form"], pose_active=False)
-                     for i in _tp_ids])))
+                _tp_pair_terms: dict[str, Any] = {}
+                _tp_pose_active = bool(jd1_pose_finish_state.get("engaged"))
+                for i in _tp_ids:
+                    _one_terms: dict[str, Any] = {}
+                    pair_loss(
+                        model, i, state_form["form"],
+                        pose_active=_tp_pose_active,
+                        terms_out=_one_terms,
+                    )
+                    for _name, _value in _one_terms.items():
+                        _tp_pair_terms[_name] = (
+                            _value if _name not in _tp_pair_terms
+                            else _tp_pair_terms[_name] + _value
+                        )
+                _tp_terms = {
+                    _name: float(_value / max(len(_tp_ids), 1))
+                    for _name, _value in _tp_pair_terms.items()
+                }
                 _tp_rate = (float(cfg.w_rate * token_rate_term(model, _tp_ids))
                             if cfg.w_rate > 0.0 else 0.0)
                 _tp_ds = (float(cfg.delta_sparsity_weight
                                 * delta_sparsity_term(model, _tp_ids))
                           if (model._delta_sparsity_engaged
                               and cfg.delta_sparsity_weight > 0.0) else 0.0)
-                _tp_terms = {"seg": _tp_seg, "rate": _tp_rate, "delta_sparsity": _tp_ds}
-                _tp_total = _tp_seg + _tp_rate + _tp_ds
+                _tp_birth = (
+                    float(birth_seed_amplify_weight * tr1_birth_amplify_term(model, _tp_ids))
+                    if birth_seed_amplify_weight > 0.0 else 0.0
+                )
+                _tp_terms["rate"] = _tp_rate
+                _tp_terms["delta_sparsity"] = _tp_ds
+                if birth_seed_amplify_weight > 0.0:
+                    _tp_terms["birth_amplify"] = _tp_birth
+                _tp_total = sum(float(_tp_terms.get(k, 0.0)) for k in _tel_loss_term_keys)
                 tlog(tr1_loss_terms_row(
                     _tp_terms, _tp_total, ep=epoch, accum_batch=steps,
                     accepted_frac=(1.0 if steps > 0 else 0.0),
                     weights_stepped=(steps > 0), stage=stage,
-                    seg_form=state_form["form"]))
+                    seg_form=state_form["form"],
+                    loss_term_keys=_tel_loss_term_keys))
                 for _dom in tr1_term_domination_alarms(_tp_terms, _tp_total,
-                                                       _tel_termdom_streaks):
+                                                       _tel_termdom_streaks,
+                                                       loss_term_keys=_tel_loss_term_keys,
+                                                       scored_terms=_tel_scored_terms):
                     tlog(_dom)
                 _tp_engaged = {
                     "seg": True,
                     "rate": bool(cfg.w_rate > 0.0),
                     "delta_sparsity": bool(model._delta_sparsity_engaged
                                            and cfg.delta_sparsity_weight > 0.0),
+                    "pose": bool(_jd1_pose_finish_enabled
+                                 and jd1_pose_finish_state.get("engaged")),
+                    "birth_amplify": bool(birth_seed_amplify_weight > 0.0),
                 }
                 for _inert in _tel_term_inert_rows(
                         _tp_terms, engaged=_tp_engaged, epoch=epoch,

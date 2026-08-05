@@ -44,12 +44,27 @@ def _metal_available() -> bool:
         from tac.local_acceleration.metal_fused_r_operator import metal_fused_r_available
     except Exception:  # noqa: BLE001 - absent MLX/Metal is a skip, not a failure
         return False
+    prev = mx.default_device()
     mx.set_default_device(mx.gpu)
-    return bool(metal_fused_r_available())
+    try:
+        return bool(metal_fused_r_available())
+    finally:
+        mx.set_default_device(prev)
 
 
 requires_metal = pytest.mark.skipif(
     not _metal_available(), reason="fused Metal R kernel requires a Metal GPU default device")
+
+
+@pytest.fixture(autouse=True)
+def _restore_mlx_default_device():
+    """These tests intentionally flip the PROCESS-WIDE default device to GPU for the
+    nondeterminism contrast; restore it so sister modules in the same pytest run
+    (e.g. the tb1 pg1 CPU-authority parity tests) are not silently moved to GPU."""
+    mx = importlib.import_module("mlx.core")
+    prev = mx.default_device()
+    yield
+    mx.set_default_device(prev)
 
 
 @requires_metal

@@ -26,8 +26,10 @@ for _p in (str(WORKTREE), str(WORKTREE / "src")):
 
 from experiments.train_tr1_partition_renderer_mlx import (  # noqa: E402
     GATE_BLOCK_PAIRS,
+    PG1_SEG_GRAD_Q3_MODES,
     TR1Config,
     a1_adjudicate,
+    apply_seg_grad_q3_project,
     attach_tr1_birth_seed_bank,
     build_argparser,
     build_module,
@@ -38,6 +40,10 @@ from experiments.train_tr1_partition_renderer_mlx import (  # noqa: E402
     jd1_resolve_seg_hold_floor,
     load_checkpoint,
     parse_tr1_birth_seed_classes,
+    pose_null_projector_np,
+    project_frame1_pose_null_nhwc_mlx,
+    project_frame1_pose_null_nhwc_np,
+    q3_project_seg_gradient_identity,
     resolve_gate_ids,
     save_checkpoint,
     tr1_birth_amplify_term,
@@ -46,6 +52,19 @@ from experiments.train_tr1_partition_renderer_mlx import (  # noqa: E402
 )
 
 mx = pytest.importorskip("mlx.core")
+mx.set_default_device(mx.cpu)
+
+
+def _require_pg1_mlx_array_runtime() -> None:
+    # Re-pin CPU per test, not just at import: a sister module in the same pytest
+    # process may flip the process-wide default device (the dt1 GPU-contrast tests
+    # did exactly this), and the numpy-parity assertions below are CPU-authority.
+    mx.set_default_device(mx.cpu)
+    try:
+        probe = mx.array(np.zeros((1,), dtype=np.float32))
+        mx.eval(probe)
+    except RuntimeError as exc:
+        pytest.skip(f"MLX array runtime unavailable on this host: {exc}")
 
 
 def _cfg(variant: str = "plain", **kw) -> TR1Config:
@@ -65,6 +84,25 @@ def _birth_lstars(num_pairs: int) -> np.ndarray:
     lstars[:, 176:180, 210:330] = 1      # Lane, thin super-nucleus support.
     lstars[:, 210:244, 270:316] = 3      # Movable, available for the second rung.
     return lstars
+
+
+def _pg1_constraint_matrix() -> np.ndarray:
+    a = np.zeros((6, 12), dtype=np.float64)
+    ky = np.array([0.299, 0.587, 0.114], dtype=np.float64)
+    for p in range(4):
+        a[p, 3 * p: 3 * p + 3] = ky
+        a[4, 3 * p + 0] = 0.25
+        a[5, 3 * p + 2] = 0.25
+    return a
+
+
+def _pg1_blocks_nhwc(x: np.ndarray) -> np.ndarray:
+    b, h, w, c = x.shape
+    return (
+        x.reshape(b, h // 2, 2, w // 2, 2, c)
+        .transpose(0, 1, 3, 2, 4, 5)
+        .reshape(b, h // 2, w // 2, 12)
+    )
 
 
 # ---------------------------------------------------------------- config ----
@@ -129,6 +167,21 @@ def test_jd1_pose_finish_engages_only_after_registered_boundary(tmp_path):
     assert jd1_pose_finish_should_engage(ns, epoch=3, stage="seg_trunk_tau")
 
 
+def test_pg1_q3_flag_defaults_off_and_args_only(tmp_path):
+    ns = build_argparser().parse_args(["--variant", "plain", "--out-dir", str(tmp_path)])
+    assert PG1_SEG_GRAD_Q3_MODES == ("off", "on")
+    assert ns.seg_grad_q3_project == "off"
+    assert not any("seg_grad_q3" in name for name in TR1Config.__dataclass_fields__)
+
+
+def test_pg1_q3_flag_refuses_unknown_mode(tmp_path):
+    with pytest.raises(SystemExit):
+        build_argparser().parse_args([
+            "--variant", "plain", "--out-dir", str(tmp_path),
+            "--seg-grad-q3-project", "maybe",
+        ])
+
+
 def test_jd1_seg_hold_floor_resolves_from_parent_checkpoint_tail(tmp_path):
     ns = build_argparser().parse_args([
         "--variant", "plain", "--out-dir", str(tmp_path), "--resume-from", "parent.npz",
@@ -144,6 +197,126 @@ def test_jd1_seg_hold_floor_resolves_from_parent_checkpoint_tail(tmp_path):
                          {"event": "a1_gate", "ep_loss": 11.75}),
     )
     assert floor == pytest.approx(11.75)
+
+
+def test_pg1_q3_projector_matches_sq1_canonical():
+    pytest.importorskip("torch")
+    from experiments.ddm_sq1_pose_null_constrained_paint import pose_null_projector
+
+    sq1_p = np.asarray(pose_null_projector().numpy(), dtype=np.float64)
+    np.testing.assert_allclose(pose_null_projector_np(), sq1_p, rtol=0.0, atol=2e-8)
+
+
+def test_pg1_q3_projector_rank_idempotent_and_kernel():
+    p = pose_null_projector_np()
+    a = _pg1_constraint_matrix()
+    assert np.linalg.matrix_rank(p) == 6
+    np.testing.assert_allclose(p @ p, p, atol=1e-12, rtol=0.0)
+    assert float(np.abs(a @ p).max()) < 1e-10
+
+
+def test_pg1_q3_projector_is_symmetric_orthogonal_projector():
+    p = pose_null_projector_np()
+    np.testing.assert_allclose(p.T, p, atol=1e-12, rtol=0.0)
+    assert np.linalg.matrix_rank(np.eye(12) - p) == 6
+
+
+def test_pg1_q3_numpy_projection_matches_sq1_project_null():
+    torch = pytest.importorskip("torch")
+    from experiments.ddm_sq1_pose_null_constrained_paint import project_null, pose_null_projector
+
+    delta = np.random.default_rng(7).normal(size=(1, 4, 6, 3)).astype(np.float32)
+    got = project_frame1_pose_null_nhwc_np(delta)
+    sq1_in = torch.from_numpy(delta.transpose(0, 3, 1, 2))
+    sq1_out = project_null(sq1_in, pose_null_projector()).numpy().transpose(0, 2, 3, 1)
+    np.testing.assert_allclose(got, sq1_out, rtol=1e-6, atol=1e-6)
+
+
+def test_pg1_q3_numpy_projection_outputs_null_blocks():
+    delta = np.random.default_rng(9).normal(size=(1, 4, 6, 3)).astype(np.float32)
+    got = project_frame1_pose_null_nhwc_np(delta)
+    residual = _pg1_blocks_nhwc(got) @ _pg1_constraint_matrix().T
+    assert float(np.abs(residual).max()) < 2e-6
+
+
+def test_pg1_q3_numpy_projection_refuses_odd_or_non_rgb_shapes():
+    with pytest.raises(ValueError, match="NHWC RGB"):
+        project_frame1_pose_null_nhwc_np(np.zeros((1, 4, 4), dtype=np.float32))
+    with pytest.raises(ValueError, match="height/width"):
+        project_frame1_pose_null_nhwc_np(np.zeros((1, 5, 4, 3), dtype=np.float32))
+
+
+def test_pg1_q3_mlx_projection_matches_numpy_fixture():
+    _require_pg1_mlx_array_runtime()
+    delta = np.random.default_rng(11).normal(size=(1, 4, 6, 3)).astype(np.float32)
+    got = project_frame1_pose_null_nhwc_mlx(mx.array(delta))
+    mx.eval(got)
+    np.testing.assert_allclose(np.asarray(got), project_frame1_pose_null_nhwc_np(delta),
+                               rtol=1e-6, atol=1e-6)
+
+
+def test_pg1_q3_custom_vjp_forward_identity():
+    _require_pg1_mlx_array_runtime()
+    x_np = np.random.default_rng(13).normal(size=(1, 4, 6, 3)).astype(np.float32)
+    x = mx.array(x_np)
+    y = q3_project_seg_gradient_identity(x)
+    mx.eval(y)
+    np.testing.assert_array_equal(np.asarray(y), x_np)
+
+
+def test_pg1_q3_custom_vjp_projects_seg_cotangent():
+    _require_pg1_mlx_array_runtime()
+    x_np = np.random.default_rng(15).normal(size=(1, 4, 6, 3)).astype(np.float32)
+    w_np = np.random.default_rng(16).normal(size=(1, 4, 6, 3)).astype(np.float32)
+    x = mx.array(x_np)
+    w = mx.array(w_np)
+    grad = mx.grad(lambda z: mx.sum(q3_project_seg_gradient_identity(z) * w))(x)
+    mx.eval(grad)
+    got = np.asarray(grad)
+    np.testing.assert_allclose(got, project_frame1_pose_null_nhwc_np(w_np), rtol=1e-6, atol=1e-6)
+    residual = _pg1_blocks_nhwc(got) @ _pg1_constraint_matrix().T
+    assert float(np.abs(residual).max()) < 2e-6
+    assert not np.array_equal(got, w_np)
+
+
+def test_pg1_q3_off_path_forward_backward_byte_identical_fixture():
+    _require_pg1_mlx_array_runtime()
+    x_np = np.random.default_rng(17).normal(size=(1, 4, 6, 3)).astype(np.float32)
+    w_np = np.random.default_rng(18).normal(size=(1, 4, 6, 3)).astype(np.float32)
+    x = mx.array(x_np)
+    w = mx.array(w_np)
+    off = apply_seg_grad_q3_project(x, "off")
+    mx.eval(off)
+    np.testing.assert_array_equal(np.asarray(off), x_np)
+    g_plain = mx.grad(lambda z: mx.sum(z * w))(x)
+    g_off = mx.grad(lambda z: mx.sum(apply_seg_grad_q3_project(z, "off") * w))(x)
+    mx.eval(g_plain, g_off)
+    np.testing.assert_array_equal(np.asarray(g_off), np.asarray(g_plain))
+
+
+def test_pg1_q3_pose_grad_path_unwrapped_synthetic():
+    _require_pg1_mlx_array_runtime()
+    x_np = np.random.default_rng(19).normal(size=(1, 4, 6, 3)).astype(np.float32)
+    seg_w_np = np.random.default_rng(20).normal(size=(1, 4, 6, 3)).astype(np.float32)
+    pose_w_np = np.random.default_rng(21).normal(size=(1, 4, 6, 3)).astype(np.float32)
+    x = mx.array(x_np)
+    seg_w = mx.array(seg_w_np)
+    pose_w = mx.array(pose_w_np)
+
+    def split_loss(z):
+        seg_side = mx.sum(q3_project_seg_gradient_identity(z) * seg_w)
+        pose_side = mx.sum(z * pose_w)
+        return seg_side + pose_side
+
+    grad = mx.grad(split_loss)(x)
+    mx.eval(grad)
+    expected = project_frame1_pose_null_nhwc_np(seg_w_np) + pose_w_np
+    np.testing.assert_allclose(np.asarray(grad), expected, rtol=1e-6, atol=1e-6)
+
+
+def test_pg1_q3_apply_refuses_unknown_mode():
+    with pytest.raises(ValueError, match="seg_grad_q3_project"):
+        apply_seg_grad_q3_project(object(), "bad")
 
 
 # ---------------------------------------------------------------- model -----

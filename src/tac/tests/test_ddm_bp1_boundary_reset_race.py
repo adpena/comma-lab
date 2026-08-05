@@ -44,7 +44,9 @@ from experiments.train_tr1_partition_renderer_mlx import (  # noqa: E402
     jd1_forced_resume_start_epoch,
     jd1_should_reanchor_stage_ema,
     load_checkpoint,
+    parent_boundary_ema_decay_fields,
     reset_arm_for,
+    resume_ema_decay_fields,
     save_checkpoint,
     validate_jd1_pose_finish_args,
 )
@@ -228,6 +230,48 @@ def test_boundary_jump_flags_ema_basis_drift():
     assert held["ema_basis_held"] is True
     assert drift["ema_basis_held"] is False
     assert boundary_jump_row(_TAIL, None, 0.99994362, 947, _gate(), "B")["ema_basis_held"] is False
+
+
+def test_boundary_jump_uses_parent_active_jd1_decay_not_cfg_decay():
+    meta = {
+        "cfg": {"ema_decay": 0.999960019990005},
+        "jd1_pose_finish": {
+            "active_ema_decay": 0.9997777777777778,
+            "active_ema_decay_provenance": "JD1 stage-scoped U=18000",
+        },
+    }
+    fields = parent_boundary_ema_decay_fields(meta)
+    assert fields["parent_cfg_ema_decay"] == pytest.approx(0.999960019990005)
+    assert fields["parent_ema_decay"] == pytest.approx(0.9997777777777778)
+    row = boundary_jump_row(
+        _TAIL,
+        fields["parent_boundary_ema_decay"],
+        0.9997777777777778,
+        947,
+        _gate(),
+        "B",
+        parent_cfg_ema_decay=fields["parent_cfg_ema_decay"],
+    )
+    assert row["ema_decay_held"] is True
+    assert row["ema_basis_held"] is True
+    assert row["parent_cfg_ema_decay"] == pytest.approx(0.999960019990005)
+
+
+def test_resume_event_fields_carry_post_restore_active_decay():
+    parent = parent_boundary_ema_decay_fields({
+        "cfg": {"ema_decay": 0.999960019990005},
+        "jd1_pose_finish": {"active_ema_decay": 0.9997777777777778},
+    })
+    row = resume_ema_decay_fields(
+        parent,
+        child_cfg_ema_decay=0.999960019990005,
+        active_ema_decay=0.9997777777777778,
+        active_ema_decay_provenance="restored from checkpoint jd1 state",
+    )
+    assert row["child_cfg_ema_decay"] == pytest.approx(0.999960019990005)
+    assert row["post_restore_active_ema_decay"] == pytest.approx(0.9997777777777778)
+    assert row["child_ema_decay"] == pytest.approx(0.9997777777777778)
+    assert row["ema_decay_held"] is True
 
 
 def test_boundary_jump_returns_none_without_an_anchor():

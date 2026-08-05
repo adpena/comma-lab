@@ -271,6 +271,48 @@ def lever_seg_margin_weight(temp: float = 1.0) -> Lever:
                  })
 
 
+def lever_seg_grad_q3_project(state: str = "on") -> Lever:
+    """PG1/#889: constrain SEG descent to the frame_1 yuv6 pose-null Q3 subspace.
+
+    The trainer implementation is a forward-identity custom VJP on the rendered frame_1:
+    pixels and archive bytes are unchanged, but the SEG cotangent is projected blockwise through
+    sq1's canonical P before it reaches the renderer.  The JD1 pose branch remains unwrapped.
+    Omit this lever for the control arm; an explicit ``state='off'`` would be an inert lever and
+    is refused.
+    """
+    if state != "on":
+        raise ValueError("PG1 q3 projection lever has only the active state; omit the lever for off")
+    return Lever(
+        name="tr1_seg_grad_q3_project",
+        overrides={"--seg-grad-q3-project": "on"},
+        notes="PG1/#889 Q3-constrained SEG burn: forward identity; SEG frame_1 cotangent "
+              "projected through sq1's exact float yuv6 pose-null projector P; JD1 pose "
+              "gradients use the unwrapped render path. Build-only duty-to-measure lever.",
+        constant_manifest={
+            "--seg-grad-q3-project": {
+                "value": "on",
+                "rung": "STRUCTURAL-KERNEL-BUILD (ddm_pg1, not measured)",
+                "provenance": "bo1 #889: Q3-frame_1-yuv6-null is the pose-null SEG-only "
+                              "subspace; sq1 pose_null_projector is the canonical P; "
+                              "pose_null_subspace_is_ac_only_v1 says DC is not in the null "
+                              "and exact nullity is float-only until uint8 realization is measured.",
+            },
+        },
+        runtime_receipt_schemas={
+            "seg_grad_q3_project_config": "trainer telemetry row with projector sha/rank and "
+                                          "resumable_state=none_args_only",
+        },
+        policy_contracts={
+            "score_claim": False,
+            "scope_law_status": "FORMALIZATION_PENDING_NOT_APPLICABLE_BINARY_FLAG",
+            "scope_law_fire_order": "register a T3_LIVE_ADAPTED law only for a future dynamic "
+                                    "q3_first schedule or live scalar value",
+            "canonical_equation": "pose_null_subspace_is_ac_only_v1",
+            "measurement_name": "Q3-constrained window A/B at a boundary slot",
+        },
+    )
+
+
 def lever_rate_in_loss(w_rate: float, rate_model: str = "entropy") -> Lever:
     """§3.4 rate-in-loss (stl1 row-8 LAW, first application to the renderer burn): a
     differentiable token code-length/entropy surrogate added to the seg loss. The explicit

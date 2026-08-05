@@ -28,6 +28,7 @@ for _p in (str(WORKTREE), str(WORKTREE / "src")):
         sys.path.insert(0, _p)
 
 from experiments.train_tr1_partition_renderer_mlx import (  # noqa: E402
+    TR1_BASE_LOSS_TERM_KEYS,
     TR1_LOSS_TERM_KEYS,
     TR1_SCORED_FLOOR,
     TR1_SCORED_TERM,
@@ -35,6 +36,8 @@ from experiments.train_tr1_partition_renderer_mlx import (  # noqa: E402
     TR1_TERMDOM_MIN_ROWS,
     TR1Config,
     build_argparser,
+    tr1_active_loss_term_keys,
+    tr1_active_scored_terms,
     tr1_loss_terms_row,
     tr1_term_domination_alarms,
 )
@@ -60,7 +63,7 @@ def test_loss_terms_row_schema_and_self_check():
                              weights_stepped=True, stage="seg_trunk_tau", seg_form="tau_softplus")
     assert row["stage"] == "loss_terms"
     # stable complete key set
-    assert set(row["terms"]) == set(TR1_LOSS_TERM_KEYS)
+    assert set(row["terms"]) == set(TR1_BASE_LOSS_TERM_KEYS)
     assert row["sum_terms"] == 12.5
     assert abs(row["sum_minus_total"]) < 1e-6  # self-checking addend breakdown
     # C6 LIVENESS stamps present (satisfies Catalog #402 within the emitter window)
@@ -75,6 +78,44 @@ def test_loss_terms_row_missing_terms_are_zero_stable_schema():
     assert row["terms"] == {"seg": 3.0, "rate": 0.0, "delta_sparsity": 0.0}
     assert row["weights_stepped"] is False
     assert row["accepted_frac"] == 0.5
+
+
+def test_loss_terms_row_itemizes_active_jd1_pose_and_birth_amplify():
+    keys = tr1_active_loss_term_keys(
+        jd1_pose_finish_active=True,
+        birth_amplify_active=True,
+    )
+    assert keys == TR1_LOSS_TERM_KEYS
+    terms = {
+        "seg": 10.0,
+        "pose": 1.25,
+        "rate": 2.0,
+        "delta_sparsity": 0.5,
+        "birth_amplify": 0.75,
+    }
+    total = sum(terms.values())
+    row = tr1_loss_terms_row(
+        terms, total, ep=1409, accum_batch=75, accepted_frac=1.0,
+        weights_stepped=True, stage="joint_pose_finish", seg_form="tau_softplus",
+        loss_term_keys=keys,
+    )
+    assert row["terms"] == terms
+    assert row["sum_terms"] == total
+    assert abs(row["sum_minus_total"]) < 1e-8
+
+
+def test_term_domination_treats_jd1_pose_as_scored_when_active():
+    keys = tr1_active_loss_term_keys(jd1_pose_finish_active=True)
+    scored_terms = tr1_active_scored_terms(jd1_pose_finish_active=True)
+    streaks: dict[str, int] = {}
+    pose_heavy = {"seg": 2.0, "pose": 7.0, "rate": 0.5, "delta_sparsity": 0.5}
+    for _ in range(TR1_TERMDOM_MIN_ROWS + 1):
+        rows = tr1_term_domination_alarms(
+            pose_heavy, 10.0, streaks,
+            loss_term_keys=keys,
+            scored_terms=scored_terms,
+        )
+        assert rows == []
 
 
 def test_liveness_token_literal_present_for_catalog_402():
@@ -198,12 +239,14 @@ def test_flag_absent_from_config_so_checkpoint_bytes_are_flag_invariant():
     assert "telemetry" not in cfg.canonical_json()
 
 
-def test_argparse_default_is_off_and_choices_off_on():
+def test_argparse_default_is_on_and_choices_off_on():
     req = ["--variant", "plain", "--out-dir", "/tmp/tp1_test_unused"]
     ns = build_argparser().parse_args(req)
-    assert ns.telemetry_v9_port == "off"
+    assert ns.telemetry_v9_port == "on"
     ns_on = build_argparser().parse_args([*req, "--telemetry-v9-port", "on"])
     assert ns_on.telemetry_v9_port == "on"
+    ns_off = build_argparser().parse_args([*req, "--telemetry-v9-port", "off"])
+    assert ns_off.telemetry_v9_port == "off"
 
 
 # --------------------------------------------------------------- DSL lever ----

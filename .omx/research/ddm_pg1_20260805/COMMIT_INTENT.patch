@@ -1,0 +1,664 @@
+--- a/experiments/train_tr1_partition_renderer_mlx.py
++++ b/experiments/train_tr1_partition_renderer_mlx.py
+@@ -98,6 +98,11 @@
+ SEG_H, SEG_W = 384, 512
+ DEFAULT_GT_CACHE = "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz"
+ POINTER_LINE = "0.1910828242 [contest-CPU] UNMOVED"
++PG1_SEG_GRAD_Q3_MODES = ("off", "on")
++
++# ddm_pg1: canonical frame_1 yuv6 pose-null projector. This is the same 6x12
++# block constraint matrix as experiments/ddm_sq1_pose_null_constrained_paint.py.
++_YUV6_LUMA_WEIGHTS = (0.299, 0.587, 0.114)
+ 
+ # Pre-registered A1 gate geometry (fd2 instrument geometry: block 447-450 + 32 rng(0)
+ # off-block samples). At --num-pairs below 600 the gate set is ALL training pairs.
+@@ -1334,13 +1339,95 @@
+         composed["cheapdct4_pose_accounting"] = accounting
+ 
+ 
+-def make_render_fn():
++def pose_null_projector_np() -> np.ndarray:
++    """Return sq1's (12,12) projector onto the frame_1 yuv6-null subspace."""
++    a = np.zeros((6, 12), dtype=np.float64)
++    for p in range(4):
++        a[p, 3 * p: 3 * p + 3] = _YUV6_LUMA_WEIGHTS
++        a[4, 3 * p + 0] = 0.25
++        a[5, 3 * p + 2] = 0.25
++    p = np.eye(12, dtype=np.float64) - np.linalg.pinv(a) @ a
++    if not (np.allclose(p @ p, p) and np.abs(a @ p).max() < 1e-10):
++        raise RuntimeError("pose-null projector construction failed its algebraic checks")
++    if np.linalg.matrix_rank(p) != 6:
++        raise RuntimeError("pose-null projector rank drifted from 6")
++    return p
++
++
++def project_frame1_pose_null_nhwc_np(delta: np.ndarray,
++                                     projector: np.ndarray | None = None) -> np.ndarray:
++    """Project an NHWC scorer-lattice frame delta blockwise through sq1's P."""
++    x = np.asarray(delta)
++    if x.ndim != 4 or x.shape[-1] != 3:
++        raise ValueError(f"expected NHWC RGB delta, got shape {x.shape}")
++    b, h, w, c = x.shape
++    if h % 2 or w % 2:
++        raise ValueError(f"height/width must be even for yuv6 2x2 blocks, got {(h, w)}")
++    p = pose_null_projector_np() if projector is None else np.asarray(projector, dtype=np.float64)
++    y = x.reshape(b, h // 2, 2, w // 2, 2, c)
++    y = y.transpose(0, 1, 3, 2, 4, 5).reshape(b, h // 2, w // 2, 12)
++    y = y @ p.T
++    y = y.reshape(b, h // 2, w // 2, 2, 2, c).transpose(0, 1, 3, 2, 4, 5)
++    return y.reshape(x.shape).astype(x.dtype, copy=False)
++
++
++def project_frame1_pose_null_nhwc_mlx(delta, projector=None):
++    """MLX twin of project_frame1_pose_null_nhwc_np for cotangent projection."""
++    import mlx.core as mx
++
++    p = mx.array(pose_null_projector_np().astype(np.float32)) if projector is None else projector
++    b, h, w, c = delta.shape
++    if c != 3 or h % 2 or w % 2:
++        raise ValueError(f"expected even NHWC RGB delta, got shape {delta.shape}")
++    y = mx.reshape(delta, (b, h // 2, 2, w // 2, 2, c))
++    y = mx.transpose(y, (0, 1, 3, 2, 4, 5))
++    y = mx.reshape(y, (b, h // 2, w // 2, 12))
++    y = y @ mx.transpose(p)
++    y = mx.reshape(y, (b, h // 2, w // 2, 2, 2, c))
++    y = mx.transpose(y, (0, 1, 3, 2, 4, 5))
++    return mx.reshape(y, (b, h, w, c))
++
++
++def q3_project_seg_gradient_identity(frame):
++    """Forward identity whose VJP projects the frame cotangent through Q3.
++
++    This is the pg1 training-time constraint: rendered frame_1 bytes are unchanged,
++    but the SEG loss gradient entering the renderer is restricted to sq1's exact
++    float yuv6-null subspace. Pose loss calls must use the unwrapped render path.
++    """
++    import mlx.core as mx
++
++    @mx.custom_function
++    def _identity(x):
++        return x
++
++    @_identity.vjp
++    def _identity_vjp(primals, cotangent, output):
++        return (project_frame1_pose_null_nhwc_mlx(cotangent),)
++
++    return _identity(frame)
++
++
++def apply_seg_grad_q3_project(frame, mode: str):
++    """Apply the default-off pg1 seg-gradient projector to a rendered frame."""
++    if mode == "off":
++        return frame
++    if mode == "on":
++        return q3_project_seg_gradient_identity(frame)
++    raise ValueError(f"seg_grad_q3_project must be off|on, got {mode!r}")
++
++
++def make_render_fn(seg_grad_q3_project: str = "off"):
+     """render_fn for the canonical ``make_loss_fn`` hook:
+     (model, coord_feats, code_idx, render_h, render_w) -> R(render) (1,384,512,3)."""
+     from experiments.train_witness_realized_through_R_mlx import _apply_R
++
++    if seg_grad_q3_project not in PG1_SEG_GRAD_Q3_MODES:
++        raise ValueError(f"seg_grad_q3_project must be off|on, got {seg_grad_q3_project!r}")
+ 
+     def render_fn(model, coord_feats, code_idx, render_h, render_w):
+-        return _apply_R(model.render_frame(int(code_idx)))
++        frame = _apply_R(model.render_frame(int(code_idx)))
++        return apply_seg_grad_q3_project(frame, seg_grad_q3_project)
+ 
+     return render_fn
+ 
+@@ -2966,6 +3053,12 @@
+                          f"{SEG_COHERENT_UPWEIGHT_RACE_START:.6f} == its MEASURED stratified "
+                          f"flip-risk lift (ddm_ti1 n600). Raced SEPARATELY from the spike scalar "
+                          f"-- the two are asymmetric. Requires --seg-spike-reweight.")
++    ap.add_argument("--seg-grad-q3-project", default="off", choices=PG1_SEG_GRAD_Q3_MODES,
++                    help="PG1/#889: when on, the SEG loss gradient entering rendered frame_1 is "
++                         "projected blockwise through sq1's exact float yuv6 pose-null projector "
++                         "P (Q3). Forward pixels are unchanged. The JD1 pose path uses the "
++                         "unwrapped render loss, so pose gradients are untouched. Args-only; "
++                         "default off is byte-identical and carries no resumable state.")
+     ap.add_argument("--margin-weight-temp", type=float, default=1.0,
+                     help="inverse-margin reweight temperature (make_loss_fn margin_weight_temp)")
+     ap.add_argument("--w-rate", type=float, default=0.0,
+@@ -3722,20 +3815,50 @@
+     assert_ported_force_scalars_have_their_gate(
+         args.fisher_density_weight, args.fisher_density_source,
+         args.head_natural_grad, args.head_natural_grad_eps)
+-    loss_fn = make_loss_fn(adapter, SEG_H, SEG_W, score_domain=True,
+-                           pose_eps=float(args.jd1_pose_eps),
+-                           seg_loss=cfg.seg_form_start,
+-                           margin_weighted=(cfg.margin_weighted_loss == "on"),
+-                           margin_weight_temp=cfg.margin_weight_temp,
+-                           render_fn=make_render_fn(),
+-                           # ---- ddm_pt2 THE PORT (args-only; every default reproduces the
+-                           # pre-pt2 call exactly, so an unflagged run is byte-identical) ----
+-                           tau_softplus_tau=args.tau_softplus_tau,
+-                           focal_gamma=args.seg_focal_gamma,
+-                           fisher_density_weight=args.fisher_density_weight,
+-                           fisher_density_source=args.fisher_density_source,
+-                           head_natural_grad=(args.head_natural_grad == "on"),
+-                           head_natural_grad_eps=args.head_natural_grad_eps)
++    def _build_loss_fn_for_render(render_fn):
++        return make_loss_fn(adapter, SEG_H, SEG_W, score_domain=True,
++                            pose_eps=float(args.jd1_pose_eps),
++                            seg_loss=cfg.seg_form_start,
++                            margin_weighted=(cfg.margin_weighted_loss == "on"),
++                            margin_weight_temp=cfg.margin_weight_temp,
++                            render_fn=render_fn,
++                            # ---- ddm_pt2 THE PORT (args-only; every default reproduces the
++                            # pre-pt2 call exactly, so an unflagged run is byte-identical) ----
++                            tau_softplus_tau=args.tau_softplus_tau,
++                            focal_gamma=args.seg_focal_gamma,
++                            fisher_density_weight=args.fisher_density_weight,
++                            fisher_density_source=args.fisher_density_source,
++                            head_natural_grad=(args.head_natural_grad == "on"),
++                            head_natural_grad_eps=args.head_natural_grad_eps)
++
++    loss_fn = _build_loss_fn_for_render(make_render_fn(args.seg_grad_q3_project))
++    # PG1: if JD1 pose finish is active, pose loss must see the original frame_1 cotangent.
++    # Split seg and pose through two canonical make_loss_fn instances instead of duplicating
++    # scorer logic. When PG1 is off, aliasing preserves the legacy single-call path.
++    pose_loss_fn = (
++        loss_fn if args.seg_grad_q3_project == "off"
++        else _build_loss_fn_for_render(make_render_fn("off"))
++    )
++    _pg1_projector = pose_null_projector_np()
++    tlog({"event": "seg_grad_q3_project_config",
++          "port": "ddm_pg1",
++          "mode": args.seg_grad_q3_project,
++          "active": bool(args.seg_grad_q3_project == "on"),
++          "projector_sha256": hashlib.sha256(
++              np.ascontiguousarray(_pg1_projector).tobytes()).hexdigest(),
++          "projector_rank": int(np.linalg.matrix_rank(_pg1_projector)),
++          "projector_idempotence_max_abs": float(np.max(np.abs(_pg1_projector @ _pg1_projector
++                                                               - _pg1_projector))),
++          "forward_identity": True,
++          "pose_grad_path": ("legacy_single_loss_fn"
++                             if args.seg_grad_q3_project == "off"
++                             else "unwrapped_pose_loss_fn_when_jd1_pose_active"),
++          "resumable_state": "none_args_only",
++          "scope_law_status": "FORMALIZATION_PENDING_NOT_APPLICABLE_BINARY_FLAG",
++          "scope_law_fire_order": ("register a T3_LIVE_ADAPTED law only if a future dynamic "
++                                   "q3_first schedule or live scalar value is introduced"),
++          "canonical_equation": "pose_null_subspace_is_ac_only_v1",
++          "score_claim": False})
+     # Score-neutral observability => ALWAYS emitted ("off is a tracked queue" / the read-only
+     # telemetry rule). These forces are args-only, so config_hash cannot distinguish an armed run
+     # from a control; this row is what carries their state into the run record. It also states
+@@ -4362,6 +4485,25 @@
+             distill_logits = mx.array(np.transpose(dl, (1, 2, 0)))[None]  # (1,H,W,5)
+         # ddm_p4x (#920): COMPONENT-level existence term. None => never built => byte-identical.
+         existence_pack = _existence_pack(idx) if _exist_cfg is not None else None
++        if args.seg_grad_q3_project == "on" and pose_active:
++            seg_loss = loss_fn(
++                mdl, None, idx, idx, lstar_oh, margin, pose_tgt,
++                cfg.w_seg, 0.0, 0.0, cfg.margin_target, seg_form=form,
++                seg_pixel_w=seg_pixel_w, compute_pose=False,
++                distill_logits=distill_logits, distill_weight=cfg.distill_weight,
++                distill_temp=cfg.distill_temp, distill_form=cfg.distill_form,
++                distill_attack_temp=cfg.distill_attack_temp,
++                existence_pack=existence_pack,
++                existence_weight=cfg.existence_hinge_weight)
++            pose_loss = pose_loss_fn(
++                mdl, None, pose_code0, idx, lstar_oh, margin, pose_tgt,
++                0.0, w_pose, 0.0, cfg.margin_target, seg_form=form,
++                seg_pixel_w=None, compute_pose=True,
++                distill_logits=None, distill_weight=0.0,
++                distill_temp=cfg.distill_temp, distill_form=cfg.distill_form,
++                distill_attack_temp=cfg.distill_attack_temp,
++                existence_pack=None, existence_weight=0.0)
++            return seg_loss + pose_loss
+         return loss_fn(mdl, None, pose_code0, idx, lstar_oh, margin, pose_tgt,
+                        cfg.w_seg, w_pose, 0.0, cfg.margin_target, seg_form=form,
+                        seg_pixel_w=seg_pixel_w, compute_pose=bool(pose_active),
+diff --git a/src/tac/tests/test_ddm_tb1_tr1_renderer.py b/src/tac/tests/test_ddm_tb1_tr1_renderer.py
+index a7f2f73c85..6b0ca2ef45 100644
+--- a/src/tac/tests/test_ddm_tb1_tr1_renderer.py
++++ b/src/tac/tests/test_ddm_tb1_tr1_renderer.py
+@@ -26,8 +26,10 @@ for _p in (str(WORKTREE), str(WORKTREE / "src")):
+ 
+ from experiments.train_tr1_partition_renderer_mlx import (  # noqa: E402
+     GATE_BLOCK_PAIRS,
++    PG1_SEG_GRAD_Q3_MODES,
+     TR1Config,
+     a1_adjudicate,
++    apply_seg_grad_q3_project,
+     attach_tr1_birth_seed_bank,
+     build_argparser,
+     build_module,
+@@ -38,6 +40,10 @@ from experiments.train_tr1_partition_renderer_mlx import (  # noqa: E402
+     jd1_resolve_seg_hold_floor,
+     load_checkpoint,
+     parse_tr1_birth_seed_classes,
++    pose_null_projector_np,
++    project_frame1_pose_null_nhwc_mlx,
++    project_frame1_pose_null_nhwc_np,
++    q3_project_seg_gradient_identity,
+     resolve_gate_ids,
+     save_checkpoint,
+     tr1_birth_amplify_term,
+@@ -46,6 +52,15 @@ from experiments.train_tr1_partition_renderer_mlx import (  # noqa: E402
+ )
+ 
+ mx = pytest.importorskip("mlx.core")
++mx.set_default_device(mx.cpu)
++
++
++def _require_pg1_mlx_array_runtime() -> None:
++    try:
++        probe = mx.array(np.zeros((1,), dtype=np.float32))
++        mx.eval(probe)
++    except RuntimeError as exc:
++        pytest.skip(f"MLX array runtime unavailable on this host: {exc}")
+ 
+ 
+ def _cfg(variant: str = "plain", **kw) -> TR1Config:
+@@ -67,6 +82,25 @@ def _birth_lstars(num_pairs: int) -> np.ndarray:
+     return lstars
+ 
+ 
++def _pg1_constraint_matrix() -> np.ndarray:
++    a = np.zeros((6, 12), dtype=np.float64)
++    ky = np.array([0.299, 0.587, 0.114], dtype=np.float64)
++    for p in range(4):
++        a[p, 3 * p: 3 * p + 3] = ky
++        a[4, 3 * p + 0] = 0.25
++        a[5, 3 * p + 2] = 0.25
++    return a
++
++
++def _pg1_blocks_nhwc(x: np.ndarray) -> np.ndarray:
++    b, h, w, c = x.shape
++    return (
++        x.reshape(b, h // 2, 2, w // 2, 2, c)
++        .transpose(0, 1, 3, 2, 4, 5)
++        .reshape(b, h // 2, w // 2, 12)
++    )
++
++
+ # ---------------------------------------------------------------- config ----
+ def test_grid_props_and_hash_stable():
+     cfg = _cfg()
+@@ -129,6 +163,21 @@ def test_jd1_pose_finish_engages_only_after_registered_boundary(tmp_path):
+     assert jd1_pose_finish_should_engage(ns, epoch=3, stage="seg_trunk_tau")
+ 
+ 
++def test_pg1_q3_flag_defaults_off_and_args_only(tmp_path):
++    ns = build_argparser().parse_args(["--variant", "plain", "--out-dir", str(tmp_path)])
++    assert PG1_SEG_GRAD_Q3_MODES == ("off", "on")
++    assert ns.seg_grad_q3_project == "off"
++    assert not any("seg_grad_q3" in name for name in TR1Config.__dataclass_fields__)
++
++
++def test_pg1_q3_flag_refuses_unknown_mode(tmp_path):
++    with pytest.raises(SystemExit):
++        build_argparser().parse_args([
++            "--variant", "plain", "--out-dir", str(tmp_path),
++            "--seg-grad-q3-project", "maybe",
++        ])
++
++
+ def test_jd1_seg_hold_floor_resolves_from_parent_checkpoint_tail(tmp_path):
+     ns = build_argparser().parse_args([
+         "--variant", "plain", "--out-dir", str(tmp_path), "--resume-from", "parent.npz",
+@@ -146,6 +195,126 @@ def test_jd1_seg_hold_floor_resolves_from_parent_checkpoint_tail(tmp_path):
+     assert floor == pytest.approx(11.75)
+ 
+ 
++def test_pg1_q3_projector_matches_sq1_canonical():
++    pytest.importorskip("torch")
++    from experiments.ddm_sq1_pose_null_constrained_paint import pose_null_projector
++
++    sq1_p = np.asarray(pose_null_projector().numpy(), dtype=np.float64)
++    np.testing.assert_allclose(pose_null_projector_np(), sq1_p, rtol=0.0, atol=2e-8)
++
++
++def test_pg1_q3_projector_rank_idempotent_and_kernel():
++    p = pose_null_projector_np()
++    a = _pg1_constraint_matrix()
++    assert np.linalg.matrix_rank(p) == 6
++    np.testing.assert_allclose(p @ p, p, atol=1e-12, rtol=0.0)
++    assert float(np.abs(a @ p).max()) < 1e-10
++
++
++def test_pg1_q3_projector_is_symmetric_orthogonal_projector():
++    p = pose_null_projector_np()
++    np.testing.assert_allclose(p.T, p, atol=1e-12, rtol=0.0)
++    assert np.linalg.matrix_rank(np.eye(12) - p) == 6
++
++
++def test_pg1_q3_numpy_projection_matches_sq1_project_null():
++    torch = pytest.importorskip("torch")
++    from experiments.ddm_sq1_pose_null_constrained_paint import project_null, pose_null_projector
++
++    delta = np.random.default_rng(7).normal(size=(1, 4, 6, 3)).astype(np.float32)
++    got = project_frame1_pose_null_nhwc_np(delta)
++    sq1_in = torch.from_numpy(delta.transpose(0, 3, 1, 2))
++    sq1_out = project_null(sq1_in, pose_null_projector()).numpy().transpose(0, 2, 3, 1)
++    np.testing.assert_allclose(got, sq1_out, rtol=1e-6, atol=1e-6)
++
++
++def test_pg1_q3_numpy_projection_outputs_null_blocks():
++    delta = np.random.default_rng(9).normal(size=(1, 4, 6, 3)).astype(np.float32)
++    got = project_frame1_pose_null_nhwc_np(delta)
++    residual = _pg1_blocks_nhwc(got) @ _pg1_constraint_matrix().T
++    assert float(np.abs(residual).max()) < 2e-6
++
++
++def test_pg1_q3_numpy_projection_refuses_odd_or_non_rgb_shapes():
++    with pytest.raises(ValueError, match="NHWC RGB"):
++        project_frame1_pose_null_nhwc_np(np.zeros((1, 4, 4), dtype=np.float32))
++    with pytest.raises(ValueError, match="height/width"):
++        project_frame1_pose_null_nhwc_np(np.zeros((1, 5, 4, 3), dtype=np.float32))
++
++
++def test_pg1_q3_mlx_projection_matches_numpy_fixture():
++    _require_pg1_mlx_array_runtime()
++    delta = np.random.default_rng(11).normal(size=(1, 4, 6, 3)).astype(np.float32)
++    got = project_frame1_pose_null_nhwc_mlx(mx.array(delta))
++    mx.eval(got)
++    np.testing.assert_allclose(np.asarray(got), project_frame1_pose_null_nhwc_np(delta),
++                               rtol=1e-6, atol=1e-6)
++
++
++def test_pg1_q3_custom_vjp_forward_identity():
++    _require_pg1_mlx_array_runtime()
++    x_np = np.random.default_rng(13).normal(size=(1, 4, 6, 3)).astype(np.float32)
++    x = mx.array(x_np)
++    y = q3_project_seg_gradient_identity(x)
++    mx.eval(y)
++    np.testing.assert_array_equal(np.asarray(y), x_np)
++
++
++def test_pg1_q3_custom_vjp_projects_seg_cotangent():
++    _require_pg1_mlx_array_runtime()
++    x_np = np.random.default_rng(15).normal(size=(1, 4, 6, 3)).astype(np.float32)
++    w_np = np.random.default_rng(16).normal(size=(1, 4, 6, 3)).astype(np.float32)
++    x = mx.array(x_np)
++    w = mx.array(w_np)
++    grad = mx.grad(lambda z: mx.sum(q3_project_seg_gradient_identity(z) * w))(x)
++    mx.eval(grad)
++    got = np.asarray(grad)
++    np.testing.assert_allclose(got, project_frame1_pose_null_nhwc_np(w_np), rtol=1e-6, atol=1e-6)
++    residual = _pg1_blocks_nhwc(got) @ _pg1_constraint_matrix().T
++    assert float(np.abs(residual).max()) < 2e-6
++    assert not np.array_equal(got, w_np)
++
++
++def test_pg1_q3_off_path_forward_backward_byte_identical_fixture():
++    _require_pg1_mlx_array_runtime()
++    x_np = np.random.default_rng(17).normal(size=(1, 4, 6, 3)).astype(np.float32)
++    w_np = np.random.default_rng(18).normal(size=(1, 4, 6, 3)).astype(np.float32)
++    x = mx.array(x_np)
++    w = mx.array(w_np)
++    off = apply_seg_grad_q3_project(x, "off")
++    mx.eval(off)
++    np.testing.assert_array_equal(np.asarray(off), x_np)
++    g_plain = mx.grad(lambda z: mx.sum(z * w))(x)
++    g_off = mx.grad(lambda z: mx.sum(apply_seg_grad_q3_project(z, "off") * w))(x)
++    mx.eval(g_plain, g_off)
++    np.testing.assert_array_equal(np.asarray(g_off), np.asarray(g_plain))
++
++
++def test_pg1_q3_pose_grad_path_unwrapped_synthetic():
++    _require_pg1_mlx_array_runtime()
++    x_np = np.random.default_rng(19).normal(size=(1, 4, 6, 3)).astype(np.float32)
++    seg_w_np = np.random.default_rng(20).normal(size=(1, 4, 6, 3)).astype(np.float32)
++    pose_w_np = np.random.default_rng(21).normal(size=(1, 4, 6, 3)).astype(np.float32)
++    x = mx.array(x_np)
++    seg_w = mx.array(seg_w_np)
++    pose_w = mx.array(pose_w_np)
++
++    def split_loss(z):
++        seg_side = mx.sum(q3_project_seg_gradient_identity(z) * seg_w)
++        pose_side = mx.sum(z * pose_w)
++        return seg_side + pose_side
++
++    grad = mx.grad(split_loss)(x)
++    mx.eval(grad)
++    expected = project_frame1_pose_null_nhwc_np(seg_w_np) + pose_w_np
++    np.testing.assert_allclose(np.asarray(grad), expected, rtol=1e-6, atol=1e-6)
++
++
++def test_pg1_q3_apply_refuses_unknown_mode():
++    with pytest.raises(ValueError, match="seg_grad_q3_project"):
++        apply_seg_grad_q3_project(object(), "bad")
++
++
+ # ---------------------------------------------------------------- model -----
+ def test_plain_render_shape_range_determinism():
+     cfg = _cfg("plain")
+diff --git a/src/tac/witness_dsl/spec_tr1_renderer_20260728.py b/src/tac/witness_dsl/spec_tr1_renderer_20260728.py
+index c89a95dbb7..c9d426a821 100644
+--- a/src/tac/witness_dsl/spec_tr1_renderer_20260728.py
++++ b/src/tac/witness_dsl/spec_tr1_renderer_20260728.py
+@@ -271,6 +271,48 @@ def lever_seg_margin_weight(temp: float = 1.0) -> Lever:
+                  })
+ 
+ 
++def lever_seg_grad_q3_project(state: str = "on") -> Lever:
++    """PG1/#889: constrain SEG descent to the frame_1 yuv6 pose-null Q3 subspace.
++
++    The trainer implementation is a forward-identity custom VJP on the rendered frame_1:
++    pixels and archive bytes are unchanged, but the SEG cotangent is projected blockwise through
++    sq1's canonical P before it reaches the renderer.  The JD1 pose branch remains unwrapped.
++    Omit this lever for the control arm; an explicit ``state='off'`` would be an inert lever and
++    is refused.
++    """
++    if state != "on":
++        raise ValueError("PG1 q3 projection lever has only the active state; omit the lever for off")
++    return Lever(
++        name="tr1_seg_grad_q3_project",
++        overrides={"--seg-grad-q3-project": "on"},
++        notes="PG1/#889 Q3-constrained SEG burn: forward identity; SEG frame_1 cotangent "
++              "projected through sq1's exact float yuv6 pose-null projector P; JD1 pose "
++              "gradients use the unwrapped render path. Build-only duty-to-measure lever.",
++        constant_manifest={
++            "--seg-grad-q3-project": {
++                "value": "on",
++                "rung": "STRUCTURAL-KERNEL-BUILD (ddm_pg1, not measured)",
++                "provenance": "bo1 #889: Q3-frame_1-yuv6-null is the pose-null SEG-only "
++                              "subspace; sq1 pose_null_projector is the canonical P; "
++                              "pose_null_subspace_is_ac_only_v1 says DC is not in the null "
++                              "and exact nullity is float-only until uint8 realization is measured.",
++            },
++        },
++        runtime_receipt_schemas={
++            "seg_grad_q3_project_config": "trainer telemetry row with projector sha/rank and "
++                                          "resumable_state=none_args_only",
++        },
++        policy_contracts={
++            "score_claim": False,
++            "scope_law_status": "FORMALIZATION_PENDING_NOT_APPLICABLE_BINARY_FLAG",
++            "scope_law_fire_order": "register a T3_LIVE_ADAPTED law only for a future dynamic "
++                                    "q3_first schedule or live scalar value",
++            "canonical_equation": "pose_null_subspace_is_ac_only_v1",
++            "measurement_name": "Q3-constrained window A/B at a boundary slot",
++        },
++    )
++
++
+ def lever_rate_in_loss(w_rate: float, rate_model: str = "entropy") -> Lever:
+     """§3.4 rate-in-loss (stl1 row-8 LAW, first application to the renderer burn): a
+     differentiable token code-length/entropy surrogate added to the seg loss. The explicit
+diff --git a/src/tac/witness_dsl/tests/test_jd1_joint_pose_finish_lever.py b/src/tac/witness_dsl/tests/test_jd1_joint_pose_finish_lever.py
+index 8fe1906f51..764e750047 100644
+--- a/src/tac/witness_dsl/tests/test_jd1_joint_pose_finish_lever.py
++++ b/src/tac/witness_dsl/tests/test_jd1_joint_pose_finish_lever.py
+@@ -17,6 +17,7 @@ from tac.witness_dsl.spec_tr1_renderer_20260728 import (
+     default_t1_smoke_program,
+     lever_jd1_joint_pose_finish,
+     lever_jd1_plateau_tail_average_ema,
++    lever_seg_grad_q3_project,
+     trainer_declared_flags,
+ )
+ 
+@@ -99,3 +100,26 @@ def test_jd1_factory_refuses_inert_or_invalid_shapes():
+             seg_hold_weight=0.1,
+             seg_hold_floor_source="explicit",
+         )
++
++
++def test_pg1_q3_lever_emits_real_tr1_flag_and_parses():
++    lv = lever_seg_grad_q3_project()
++    base = default_t1_smoke_program("plain", "/unused")
++    prog = TR1RendererProgramV1(levers=base.levers + (lv,), num_pairs=24, out_dir="/unused")
++    argv = prog.compile_trainer_argv()
++    assert argv[0] == TRAINER_RELPATH
++    assert "--seg-grad-q3-project" in argv
++    ns = build_argparser().parse_args(argv[1:])
++    assert ns.seg_grad_q3_project == "on"
++
++
++def test_pg1_q3_lever_flags_are_declared_by_the_live_trainer():
++    lv = lever_seg_grad_q3_project()
++    missing = sorted(set(lv.overrides) - trainer_declared_flags())
++    assert not missing
++    assert (_REPO / TRAINER_RELPATH).is_file()
++
++
++def test_pg1_q3_factory_refuses_inert_off_state():
++    with pytest.raises(ValueError, match="omit the lever"):
++        lever_seg_grad_q3_project("off")
+diff --git a/.omx/research/ddm_pg1_20260805/RECEIPT.md b/.omx/research/ddm_pg1_20260805/RECEIPT.md
+new file mode 100644
+index 0000000000..da91d4a902
+--- /dev/null
++++ b/.omx/research/ddm_pg1_20260805/RECEIPT.md
+@@ -0,0 +1,104 @@
++# ddm_pg1 Q3 Seg-Gradient Projector Receipt
++
++Date: 2026-08-05
++
++Axis: build-only, scorer-free. No scorer run, no training launch, no live run dir touched. Own-vehicle frontier remains:
++
++`S = 0.7539807296911207 @ 357,836 B [macOS-CPU advisory]`
++
++Contest pointer remains borrowed/unmoved: `0.1910828242 [contest-CPU]`.
++
++## Build
++
++Built default-off `--seg-grad-q3-project {off,on}` in `experiments/train_tr1_partition_renderer_mlx.py`.
++
++When `on`, frame_1 forward pixels are unchanged. The backward cotangent from the SEG loss is projected blockwise through sq1's canonical frame_1 yuv6 pose-null projector P before reaching the renderer. JD1 pose-finish uses an unwrapped loss/render path when pose is active, so the pose gradient path is not projected.
++
++Added DSL Lever factory `lever_seg_grad_q3_project()` in `src/tac/witness_dsl/spec_tr1_renderer_20260728.py`. The control arm is omission of the lever; explicit inert `off` is refused by the factory.
++
++Resumable state: none beyond the args-only flag. The flag is not part of `TR1Config`, config hash, checkpoint state, or archive grammar. Telemetry row `seg_grad_q3_project_config` records mode, projector SHA/rank, `resumable_state=none_args_only`, `score_claim=False`, and scope-law status.
++
++Scope-law status: `FORMALIZATION_PENDING_NOT_APPLICABLE_BINARY_FLAG`. dy1r's `T3_LIVE_ADAPTED` surface is for dynamic runtime values; pg1 is a binary structural switch. Fire order: if a future dynamic `q3_first` schedule or live scalar threshold is introduced, register a `T3_LIVE_ADAPTED` law before launch.
++
++## Projector Parity
++
++Canonical source: `experiments/ddm_sq1_pose_null_constrained_paint.py::pose_null_projector`.
++
++Measured on synthetic/projector-only fixtures:
++
++- Projector SHA-256: `4fd2121c5a91ee09798aa54bc32fd2425302c59c107efc4bbf143c95d15185fc`
++- Max abs difference vs sq1 float32-returned P: `1.2885450928479258e-08`
++- Rank: `6`
++- Idempotence max abs `|P@P-P|`: `4.163336342344337e-16`
++- Kernel residual max abs `|A@P|`: `2.393918396847994e-16`
++
++The float-null property is exact at the training-gradient surface. The m85 integer caveat remains binding: uint8 realization residual is a later measurement, not assumed zero.
++
++## Byte-Identity Proof Method
++
++Off path method implemented in tests: `apply_seg_grad_q3_project(frame, "off")` returns the same object path without wrapping; synthetic forward/backward fixture compares plain `sum(frame*w)` to `sum(apply_seg_grad_q3_project(frame,"off")*w)` for exact equality when MLX arrays are available.
++
++On this host, MLX imports but array allocation attempts Metal and raises `No Metal device available`, so the MLX forward/backward fixture tests are present but skipped. Pure numpy/sq1 projector tests and DSL/argparse tests passed here. The skipped tests must be rerun on an MLX-capable host before any launch.
++
++## Recall Evidence
++
++Commands/scopes searched beyond the charter seeds:
++
++- `rg --files .omx/research | rg 'ddm_bo1|ddm_sq1|ddm_jd1|q3|pose_null|dy1r'`
++- `rg --files experiments src/tac tests | rg 'sq1|pose_null|q3|tr1_partition|spec_tr1'`
++- `.venv/bin/python tools/list_canonical_equations.py --json | rg 'pose_null|jd1|T3_LIVE_ADAPTED|q3'`
++- Governing reads: `PROGRAM.md`, `CLAUDE.md`, `AGENTS.md`, `docs/operating_manual_craft_handoff.md`, `.omx/state/main_hot_state.md`, the pg1 charter, and common contract.
++
++Findings beyond the seed list that changed the build:
++
++- `ddm_dy1r_20260805/RECEIPT.md`: scope-law registration is not appropriate for this static binary flag; recorded a formalization-pending waiver with the future dynamic-fire order instead of inventing a law.
++- `ddm_jd1_20260805/JD1_RECEIPT.md`: JD1 pose-finish exists in this trainer, so pg1 must split the active pose case and keep pose gradients unwrapped.
++- `ddm_q31_20260804` and `ddm_se2_20260804`: prior Q3 negatives are formulation-scoped solve/prototype measurements, not a kill of this trainer-gradient structural build.
++- `pose_null_subspace_is_ac_only_v1`: DC is not in the pose-null subspace; the build uses the sq1 projector and does not assert an integer/uint8 null.
++
++## Tests
++
++Commands run:
++
++- `.venv/bin/python -m py_compile experiments/train_tr1_partition_renderer_mlx.py src/tac/witness_dsl/spec_tr1_renderer_20260728.py src/tac/tests/test_ddm_tb1_tr1_renderer.py src/tac/witness_dsl/tests/test_jd1_joint_pose_finish_lever.py`
++- `.venv/bin/python -m pytest src/tac/tests/test_ddm_tb1_tr1_renderer.py -k pg1 -q`
++- `.venv/bin/python -m pytest src/tac/witness_dsl/tests/test_jd1_joint_pose_finish_lever.py -k pg1 -q`
++- `git diff --check -- experiments/train_tr1_partition_renderer_mlx.py src/tac/witness_dsl/spec_tr1_renderer_20260728.py src/tac/tests/test_ddm_tb1_tr1_renderer.py src/tac/witness_dsl/tests/test_jd1_joint_pose_finish_lever.py`
++
++Results:
++
++- Py compile: pass.
++- Trainer pg1 focused tests: `9 passed, 5 skipped, 41 deselected`. The 5 skipped tests are MLX custom-VJP/array-runtime checks skipped because this host cannot allocate MLX arrays without Metal.
++- DSL pg1 focused tests: `3 passed, 6 deselected`.
++- Total focused pg1 active pass count: 12.
++- `git diff --check`: pass.
++
++Clean patch verification:
++
++- Final serializer intent patch applies to a clean `HEAD` archive.
++- The same py-compile and focused pg1 tests pass from that clean patched tree when the real checkout's `upstream/` is supplied on `PYTHONPATH` for sq1's `frame_utils` import.
++
++## Serializer Status
++
++Commit was attempted through `tools/subagent_commit_serializer.py` with `--patch-file`, `--no-co-author`, required tags, and post-edit `--expected-content-sha256` values computed from the clean patched tree.
++
++Attempt 1 refused with rc=8 because fx1 had a recent in-flight checkpoint overlapping `experiments/train_tr1_partition_renderer_mlx.py`.
++
++Attempt 2 used the paired-env checkpoint override with rationale: patch-file intent manifest against `HEAD`, expected shas, and no whole-file staging. It then failed before commit with rc=128:
++
++`git apply --cached failed ... error: unable to create temporary file: Operation not permitted ... unable to create backing store for newly created file experiments/train_tr1_partition_renderer_mlx.py`
++
++Real staged index after the failed attempt: empty (`git diff --cached --stat` printed no entries). This is a sandbox/Git-object-write blocker, not a code/test failure.
++
++Exact intended commit patch is persisted at `.omx/research/ddm_pg1_20260805/COMMIT_INTENT.patch`.
++
++## Measurement Not Run
++
++Pre-registered next measurement name: Q3-constrained window A/B at a boundary slot.
++
++Falsifier pair:
++
++- If Q3-constrained seg descent is materially slower than unconstrained under matched boundary conditions, Q4 spend was load-bearing.
++- If descent is comparable while pose damage stays at zero/within measured pose-null residual, pg1 is the win path.
++
++Disposition: `QUEUED-WITH-A-FIRE-ORDER`. Fire only from a scorer-owner boundary slot, after rerunning the skipped MLX VJP tests on an MLX-capable host.
+diff --git a/.omx/research/ddm_pg1_20260805/NEXT_IF_RESUMED.md b/.omx/research/ddm_pg1_20260805/NEXT_IF_RESUMED.md
+new file mode 100644
+index 0000000000..594b1ce6d4
+--- /dev/null
++++ b/.omx/research/ddm_pg1_20260805/NEXT_IF_RESUMED.md
+@@ -0,0 +1,23 @@
++# ddm_pg1 Next If Resumed
++
++Status: build landed in the working tree; serializer commit is blocked by sandbox Git-object writes. No scorer and no launch performed.
++
++Do next:
++
++1. Commit the exact intent patch once Git writes are available:
++   - `.omx/research/ddm_pg1_20260805/COMMIT_INTENT.patch`
++   - Use serializer with `[no-triality] [p0-ledger-ok]`, `--no-co-author`, and post-edit shas.
++2. Rerun the focused pg1 MLX tests on an MLX-capable host:
++   - `.venv/bin/python -m pytest src/tac/tests/test_ddm_tb1_tr1_renderer.py -k 'pg1_q3_mlx or pg1_q3_custom_vjp or pg1_q3_off_path or pg1_q3_pose_grad' -q`
++3. If those pass, queue the Q3-constrained window A/B at the next owned boundary slot.
++4. Measure both arms under matched seed, schedule, parent checkpoint, and boundary conditions.
++5. Bank only typed outcomes:
++   - Q3 slower: Q4 spend was load-bearing.
++   - Q3 comparable with zero/measured pose-null residual damage: pg1 wins.
++
++Do not:
++
++- Do not run scorer from this build-only lane.
++- Do not touch jd5 live run dirs.
++- Do not claim pose nullity after uint8/realization without measuring the integer residual.
++- Do not treat this as a pointer-moving result; the frontier remains `S = 0.7539807296911207 @ 357,836 B [macOS-CPU advisory]`.
