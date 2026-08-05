@@ -1,0 +1,207 @@
+{
+  "schema": "ddm_pk1_receipt.v1",
+  "created_utc": "2026-08-05T07:41:35Z",
+  "charter": ".omx/tmp/codex_runs/pk1_prompt.md",
+  "common_contract": ".omx/tmp/codex_runs/_common_contract.md",
+  "axis": {
+    "scorer": "[macOS-CPU advisory]",
+    "byte": "[macOS-CPU advisory / scorer-free receiver-byte custody]"
+  },
+  "score_claim": false,
+  "promotion_eligible": false,
+  "verdict": "BYTE_POSITIVE_REPRESENTATION_SCORER_NEGATIVE_REALIZATION",
+  "own_vehicle_frontier": {
+    "S": 0.7539807296911207,
+    "archive_bytes": 357836,
+    "axis": "[macOS-CPU advisory]",
+    "contest_pointer": "borrowed/unmoved",
+    "pointer_moved": false
+  },
+  "byte_race": {
+    "pe3_segmentation_grammar": {
+      "denominator": "n600 all pairs; no prefix; PE3EDGE1 section",
+      "section_bytes": 74408,
+      "section_sha256": "5cc024ad32df7fedb18afb75dbed6be9c1af948dac826a1736cb1084949855c2",
+      "best_body_bytes": 74351,
+      "best_body_codec": "lzma1-raw",
+      "best_body_sha256": "792697d0ddf3692a9242fbecf4aa374cbeb293f97b0cf9de3416e4329d7ce0a8",
+      "inside_gc18_45_90kb": true,
+      "delta_vs_od6_76304_bytes": -1896
+    },
+    "od9_pose_cheapdct4": {
+      "denominator": "n32 measured, linear n32-to-n600 projection",
+      "n32_bytes": 2157,
+      "projected_n600_bytes": 40444,
+      "projection_only": true
+    },
+    "composed_seg_plus_pose_projection": {
+      "bytes": 114852,
+      "delta_vs_90000": 24852,
+      "inside_gc18_90_155kb": true,
+      "hard_90kb_gate_pass": false
+    },
+    "od9_flat_solve_paint": {
+      "best_stage1_projected_n600_bytes": 1214007,
+      "best_combined_projected_n600_bytes": 1252219,
+      "disposition": "FOLDED"
+    },
+    "pe4_conditional_transport": {
+      "independent_bytes": 164831,
+      "subset_conditional_bytes": 180190,
+      "encoded_delta_vs_independent_bytes": 15359,
+      "conditional_wins": false,
+      "disposition": "FOLDED"
+    }
+  },
+  "receiver_closure": {
+    "source_candidate": "/Volumes/VertigoDataTier/pact/ddm_pe4_20260805_r2/sub_auto_pairbit_pe4_pe3_hybrid_75kb_receiver",
+    "scorer_receipt": "/Volumes/VertigoDataTier/pact/ddm_pe4_20260805_r2/scorer_batch/pe3_hybrid_75kb_n600_cpu.json",
+    "archive_bytes": 432428,
+    "archive_sha256": "3f08c7fdd1c2746fa456ef8b6d8005e850d1a3acac5665a5d08b2ef17585b5e0",
+    "byte_ledger_closes": true,
+    "payload_reencodes_identically": true,
+    "residual_bytes": 0,
+    "section": {
+      "magic": "PE3EDGE1",
+      "bytes": 74408,
+      "sha256": "5cc024ad32df7fedb18afb75dbed6be9c1af948dac826a1736cb1084949855c2",
+      "raw_bytes": 169975,
+      "raw_sha256": "beecc444dac58e7b345df3783a8b38e20c8c74e8b011ac82bd4cb02c24e697a8",
+      "component_records": 8644,
+      "frame_records": 600,
+      "mode_counts": {
+        "generator_pair_bisector": 7894,
+        "depth_conditioned_curve": 750
+      }
+    },
+    "runtime_consumption": {
+      "painted_pairs": 600,
+      "painted_pixels_total": 540058,
+      "smoke_pair": 0,
+      "smoke_pair_painted_pixels": 724,
+      "camera_pixels_changed": 2896,
+      "deterministic_raster_match": true,
+      "deterministic_raster_hash": "1661535005f09a8dcd864fb54d20d18be618455bb7cf0c5801fec3c4efe83818",
+      "old_qo1_absent_section_identity": true
+    },
+    "double_decode": {
+      "match": true,
+      "raw_bytes": 3662409600,
+      "first_raw_sha256": "0c6c7e68ee1364d78241d2d5ba00cae7109eb171e7bf35720291094e829316df",
+      "second_raw_sha256": "0c6c7e68ee1364d78241d2d5ba00cae7109eb171e7bf35720291094e829316df",
+      "second_receipt": "/Volumes/VertigoDataTier/pact/ddm_pk1_20260805/double_decode/pe3_hybrid_75kb_second_inflate_skip_eval.json",
+      "second_inflate_seconds": 194.8257291316986
+    },
+    "runtime_custody_caveat": "The scored receiver uses pinned vendored staged copies for ddm_r7_token_coder.py, ddm_tr1_runtime.py, and repair_entropy_coder_runtime_adapters.py; restaging from current repo HEAD would be a different receiver."
+  },
+  "coverage": {
+    "representation_not_realization": true,
+    "flip_mass": {
+      "numerator": 383557,
+      "denominator": 461271,
+      "fraction": 0.8315220336851872
+    },
+    "components": {
+      "numerator": 8644,
+      "denominator": 22338,
+      "fraction": 0.38696391798728624
+    },
+    "source_band_pixels": {
+      "numerator": 102968,
+      "denominator": 2569387,
+      "fraction": 0.04007492837785822
+    },
+    "section_bits_per_band_px": 0.23167549302615761,
+    "where_tax_choice": "Sparse per-edge component records plus generator-coordinate values; no dense raster-order payload."
+  },
+  "scorer_gate": {
+    "predecessor_batch_harvested": true,
+    "command": "bash .omx/research/ddm_pe4_20260805/stage_pe4_fourth_candidate_scorer_batch.sh cpu",
+    "pe4_pe3_hybrid_75kb_receiver": {
+      "archive_bytes": 432428,
+      "n_samples": 600,
+      "d_seg": 0.00660216,
+      "d_pose": 0.08182466,
+      "rate_ratio": 0.011517442215228572,
+      "rate_contribution": 0.2879360553807143,
+      "seg_contribution": 0.660216,
+      "pose_contribution": 0.9045698425218475,
+      "recomputed_score": 1.852721897902562,
+      "score_axis": "[macOS-CPU advisory]",
+      "score_claim": false,
+      "promotion_eligible": false
+    },
+    "pe2_v2_context": [
+      {
+        "candidate": "pe1_full_explicit_curve_k8",
+        "archive_bytes": 478612,
+        "d_seg": 0.01733365,
+        "d_pose": 1.64659417,
+        "recomputed_score": 6.109877835060689
+      },
+      {
+        "candidate": "pe1_surgical_generator_pair_waterfill_75kb",
+        "archive_bytes": 425627,
+        "d_seg": 0.00638793,
+        "d_pose": 0.03455114,
+        "recomputed_score": 1.510002726247929
+      },
+      {
+        "candidate": "bf1_lane_crop_r3",
+        "archive_bytes": 563256,
+        "d_seg": 0.00677187,
+        "d_pose": 1.66379786,
+        "recomputed_score": 5.131203885626703
+      }
+    ]
+  },
+  "recall_evidence": [
+    {
+      "source": ".omx/tmp/codex_runs/_common_contract.md and .omx/tmp/codex_runs/pk1_prompt.md",
+      "finding": "PK1 required receiver closure, explicit denominators, byte race, and bounded scorer gate."
+    },
+    {
+      "source": "/Users/adpena/.codex/memories/MEMORY.md",
+      "finding": "Road-Lane and measurement/pricing memory required real-coder denominators and scoped projections."
+    },
+    {
+      "source": ".omx/research/ddm_od9_20260805/OD9_RECEIPT.json",
+      "finding": "Flat solved paint is rate-dead; cheapdct4 pose carriage is the only OD9 component composed here."
+    },
+    {
+      "source": ".omx/research/ddm_pe3_20260805/ddm_pe3_hybrid_receipt.json",
+      "finding": "PE3 75KB packet is parse-back byte-positive and scorer-free before PE4."
+    },
+    {
+      "source": ".omx/research/ddm_pe4_20260805/ddm_pe4_runtime_transport_receipt.json",
+      "finding": "PE4 runtime consumption landed and conditional transport encoded bytes are negative."
+    },
+    {
+      "source": "/Volumes/VertigoDataTier/pact/ddm_pe4_20260805_r2/scorer_batch/pe3_hybrid_75kb_n600_cpu.json",
+      "finding": "PK1 scorer gate is a local advisory negative."
+    }
+  ],
+  "followons": [
+    {
+      "id": "PE3-receiver-scorer-gate",
+      "disposition": "FIRED",
+      "fire_order": "Completed by PK1 through the PE4 staged script after PE2 v2 harvest."
+    },
+    {
+      "id": "PE3-current-realization",
+      "disposition": "FOLDED",
+      "fire_order": "Do not spend another n600 slot on this exact receiver packet."
+    },
+    {
+      "id": "PE4-conditional-transport",
+      "disposition": "FOLDED",
+      "fire_order": "No PE3-r2 archive promotion unless a future encoded stream beats independent coding."
+    },
+    {
+      "id": "next-boundary-grammar-realization",
+      "disposition": "QUEUED-WITH-FIRE-ORDER",
+      "fire_order": "Fire only after a receiver-closed n>=32 scorer-survival probe proves R/uint8/SegNet improvement over current own-vehicle d_seg; then stage one n600 advisory row with exact archive bytes."
+    }
+  ],
+  "final_frontier_line_required": "S = 0.7539807296911207 @ 357,836 B [macOS-CPU advisory]; contest pointer borrowed/unmoved."
+}
