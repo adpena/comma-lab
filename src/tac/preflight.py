@@ -3822,6 +3822,12 @@ def preflight_all(
             ),
             strict=False,
         )
+        # DN1 / #904 (2026-08-05): declared-on-never-read is cross-module.
+        # Run the detector's own positive/negative controls before trusting
+        # any hit list; keep warn-only while the scoped namespace is triaged.
+        check_cross_module_declared_never_read_paths(
+            strict=False, verbose=verbose,
+        )
         # ddm_dn1x / #899 residual (2026-08-03): the required-component JSONL
         # reader validates every row before returning it. Keep future production
         # consumers from quietly reopening a raw-read bypass. WARN-ONLY while
@@ -90024,6 +90030,75 @@ def check_no_unvalidated_required_component_jsonl_readers(
         raise PreflightError(
             "check_no_unvalidated_required_component_jsonl_readers found "
             f"{len(violations)} violation(s):\n  " + "\n  ".join(violations[:20])
+        )
+    return violations
+
+
+def check_cross_module_declared_never_read_paths(
+    *,
+    repo_root: Path | str | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Warn on cross-module declarations whose stored value is never read.
+
+    The implementation lives in ``tools/audit_cross_module_declared_never_read.py``
+    so the detector can run standalone with its positive control before
+    preflight consumes the result.
+    """
+
+    root = Path(repo_root or REPO_ROOT).resolve()
+    try:
+        from tools.audit_cross_module_declared_never_read import (
+            audit_repository,
+            controls_failure_text,
+        )
+    except Exception as exc:
+        message = f"check_cross_module_declared_never_read_paths: unable to import detector: {exc}"
+        if strict:
+            raise PreflightError(message) from exc
+        if verbose:
+            print(f"  [cross-module-declared-never-read] {message}")
+        return [message]
+
+    try:
+        report = audit_repository(root)
+    except Exception as exc:
+        message = f"check_cross_module_declared_never_read_paths: unable to scan: {exc}"
+        if strict:
+            raise PreflightError(message) from exc
+        if verbose:
+            print(f"  [cross-module-declared-never-read] {message}")
+        return [message]
+
+    controls = report.get("controls", {})
+    violations: list[str] = []
+    if not controls.get("passed", False):
+        violations.append(
+            "DN1/#904 detector controls failed: " + controls_failure_text(controls)
+        )
+    for hit in report.get("hits", []):
+        decl = hit.get("declaration", {})
+        violations.append(
+            f"{hit.get('key')}: declared-on-never-read at "
+            f"{decl.get('path')}:{decl.get('line')} "
+            f"(kind={hit.get('kind')}, rank={hit.get('blast_radius_rank')})"
+        )
+
+    if verbose:
+        denom = report.get("denominator", {})
+        print(
+            "  [cross-module-declared-never-read] "
+            f"{len(violations)} warning(s); controls="
+            f"{'PASS' if controls.get('passed') else 'FAIL'}; "
+            f"files {denom.get('files_total', 0)}, parsed {denom.get('parsed_files', 0)}, "
+            f"parse errors {denom.get('parse_error_count', 0)}, "
+            f"none-path rows {denom.get('none_path_rows', 0)}"
+        )
+    if strict and violations:
+        raise PreflightError(
+            "check_cross_module_declared_never_read_paths found "
+            f"{len(violations)} warning(s):\n  " + "\n  ".join(violations[:20])
         )
     return violations
 

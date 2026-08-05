@@ -1,0 +1,221 @@
+{
+  "controls": {
+    "negatives": [
+      {
+        "expected": "not_hit",
+        "key": "tac.optimization.direct_description_joint_descent.DirectDescriptionJointDescentMLXModule.seg_targets",
+        "passed": true
+      },
+      {
+        "expected": "not_hit",
+        "key": "tac.optimization.direct_description_joint_descent.DirectDescriptionJointDescentMLXModule.pose_targets",
+        "passed": true
+      },
+      {
+        "expected": "not_hit",
+        "key": "tac.optimization.direct_description_joint_descent.DirectDescriptionJointDescentMLXModule.margin_hinge_weight",
+        "passed": true
+      }
+    ],
+    "passed": true,
+    "positive": {
+      "expected": "hit",
+      "key": "tac.optimization.direct_description_joint_descent.DirectDescriptionJointDescentMLXModule.margin_targets",
+      "passed": true
+    }
+  },
+  "denominator": {
+    "argparse_declarations": 483,
+    "argparse_none_path_rows": 0,
+    "chains_traced": 73,
+    "constructor_field_declarations": 55,
+    "constructor_field_none_path_rows": 1,
+    "excluded_results_files": 0,
+    "files_total": 183,
+    "none_path_rows": 1,
+    "parse_error_count": 0,
+    "parse_errors": [],
+    "parsed_files": 183,
+    "production_files": 183,
+    "roots": {
+      "experiments/trainer_argparse": 1,
+      "src/tac/optimization_controls": 2,
+      "src/tac/witness_dsl": 176,
+      "tools/direct_description_callers": 4
+    },
+    "scope": "dn1",
+    "test_files": 0,
+    "test_read_classification_enabled": false
+  },
+  "hits": [
+    {
+      "blast_radius_rank": 103,
+      "class": "tac.optimization.direct_description_joint_descent.DirectDescriptionJointDescentMLXModule",
+      "constructor_param": "margin_targets",
+      "declaration": {
+        "assignment_line": 2316,
+        "line": 2295,
+        "path": "src/tac/optimization/direct_description_joint_descent.py"
+      },
+      "external_constructor_calls": [
+        {
+          "bindings": {
+            "lift": "explicit-keyword",
+            "margin_floor": "defaulted",
+            "margin_hinge_weight": "defaulted",
+            "margin_targets": "defaulted",
+            "pose_targets": "explicit-keyword",
+            "scorer_adapter": "explicit-keyword",
+            "seg_targets": "explicit-keyword"
+          },
+          "import_hops": [
+            "tac.optimization.direct_description_joint_descent"
+          ],
+          "line": 481,
+          "module": "tools.launch_ddm_joint_descent",
+          "path": "tools/launch_ddm_joint_descent.py"
+        },
+        {
+          "bindings": {
+            "lift": "explicit-keyword",
+            "margin_floor": "defaulted",
+            "margin_hinge_weight": "defaulted",
+            "margin_targets": "defaulted",
+            "pose_targets": "explicit-keyword",
+            "scorer_adapter": "explicit-keyword",
+            "seg_targets": "explicit-keyword"
+          },
+          "import_hops": [
+            "tac.optimization.direct_description_joint_descent"
+          ],
+          "line": 1201,
+          "module": "tools.launch_ddm_joint_descent",
+          "path": "tools/launch_ddm_joint_descent.py"
+        },
+        {
+          "bindings": {
+            "lift": "explicit-keyword",
+            "margin_floor": "defaulted",
+            "margin_hinge_weight": "defaulted",
+            "margin_targets": "defaulted",
+            "pose_targets": "explicit-keyword",
+            "scorer_adapter": "explicit-keyword",
+            "seg_targets": "explicit-keyword"
+          },
+          "import_hops": [
+            "tac.optimization.direct_description_joint_descent"
+          ],
+          "line": 1543,
+          "module": "tools.launch_ddm_joint_descent",
+          "path": "tools/launch_ddm_joint_descent.py"
+        },
+        {
+          "bindings": {
+            "lift": "explicit-keyword",
+            "margin_floor": "defaulted",
+            "margin_hinge_weight": "defaulted",
+            "margin_targets": "defaulted",
+            "pose_targets": "explicit-keyword",
+            "scorer_adapter": "explicit-keyword",
+            "seg_targets": "explicit-keyword"
+          },
+          "import_hops": [
+            "tac.optimization.direct_description_joint_descent"
+          ],
+          "line": 2601,
+          "module": "tools.launch_ddm_joint_descent",
+          "path": "tools/launch_ddm_joint_descent.py"
+        },
+        {
+          "bindings": {
+            "lift": "explicit-keyword",
+            "margin_floor": "defaulted",
+            "margin_hinge_weight": "defaulted",
+            "margin_targets": "defaulted",
+            "pose_targets": "explicit-keyword",
+            "scorer_adapter": "explicit-keyword",
+            "seg_targets": "explicit-keyword"
+          },
+          "import_hops": [
+            "tac.optimization.direct_description_joint_descent"
+          ],
+          "line": 455,
+          "module": "tools.run_ddm_j12_receiver_coordinate_custody",
+          "path": "tools/run_ddm_j12_receiver_coordinate_custody.py"
+        },
+        {
+          "bindings": {
+            "lift": "explicit-keyword",
+            "margin_floor": "defaulted",
+            "margin_hinge_weight": "defaulted",
+            "margin_targets": "defaulted",
+            "pose_targets": "explicit-keyword",
+            "scorer_adapter": "explicit-keyword",
+            "seg_targets": "explicit-keyword"
+          },
+          "import_hops": [
+            "tac.optimization.direct_description_joint_descent"
+          ],
+          "line": 1772,
+          "module": "tools.run_ddm_j12_receiver_coordinate_custody",
+          "path": "tools/run_ddm_j12_receiver_coordinate_custody.py"
+        },
+        {
+          "bindings": {
+            "lift": "explicit-keyword",
+            "margin_floor": "defaulted",
+            "margin_hinge_weight": "defaulted",
+            "margin_targets": "defaulted",
+            "pose_targets": "explicit-keyword",
+            "scorer_adapter": "explicit-keyword",
+            "seg_targets": "explicit-keyword"
+          },
+          "import_hops": [
+            "tools.launch_ddm_joint_descent",
+            "tac.optimization.direct_description_joint_descent"
+          ],
+          "line": 156,
+          "module": "tools.measure_ddm_fd2_posenull_gn_disambiguation",
+          "path": "tools/measure_ddm_fd2_posenull_gn_disambiguation.py"
+        },
+        {
+          "bindings": {
+            "lift": "explicit-keyword",
+            "margin_floor": "defaulted",
+            "margin_hinge_weight": "defaulted",
+            "margin_targets": "defaulted",
+            "pose_targets": "explicit-keyword",
+            "scorer_adapter": "explicit-keyword",
+            "seg_targets": "explicit-keyword"
+          },
+          "import_hops": [
+            "tac.optimization.direct_description_joint_descent"
+          ],
+          "line": 59,
+          "module": "tools.smoke_ddm_fd1_gn_engine",
+          "path": "tools/smoke_ddm_fd1_gn_engine.py"
+        }
+      ],
+      "field": "margin_targets",
+      "key": "tac.optimization.direct_description_joint_descent.DirectDescriptionJointDescentMLXModule.margin_targets",
+      "kind": "constructor_field",
+      "production_reads": [],
+      "rank_formula": "10*external_calls + 3*max_import_hops + 2*defaulted_calls + 1_if_no_test_read",
+      "routing": {
+        "cheapest_rewire_or_retire": "read self.margin_targets on the live consumer path, or remove the margin_targets parameter from external callers and docs",
+        "owner_surface": "tac.optimization.direct_description_joint_descent.DirectDescriptionJointDescentMLXModule",
+        "severed_at": "src/tac/optimization/direct_description_joint_descent.py:2316"
+      },
+      "shortest_import_hops": 1,
+      "test_only_reads": []
+    }
+  ],
+  "limitations": [
+    "Constructor-field detection is intentionally scoped to __init__ params assigned to self fields.",
+    "A production self/instance attribute load is treated as a conservative read, not proof of score effect.",
+    "Dynamic imports, reflection, setattr/getattr on arbitrary instances, and whole-repo dataflow are out of scope.",
+    "Argparse support is a namespace-read screen; it does not prove behavioral influence after the read."
+  ],
+  "repo_root": "/Users/adpena/Projects/pact",
+  "schema": "cross_module_declared_never_read.v1"
+}
