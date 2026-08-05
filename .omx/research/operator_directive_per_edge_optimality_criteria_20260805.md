@@ -85,6 +85,38 @@ decomposition and further iteration and optimization."
   too (the kt1 matrix's row-7 gap confirmed): sweep each win's class, don't bank it
   instance-only. Sisters: m48 NEG↔CURE · L8 negatives=signal · m83 rich-problem reframe.
 
+## Operator addendum 4 (2026-08-05, RULING on the sq2 verdict — verbatim intent): "Pose erosion
+is okay, though, because that can be brought down via joint descent afterwards. Seg has gotta
+come first based on everything we've learned... harvest all of our signal and focus on the
+order of operations and upstream and all of the dynamics that we've learned from v7, 8, 9, 10,
+and since."
+- **THE ORDERING LAW (binding)**: SEG FIRST → JOINT-DESCENT POSE RECOVERY AFTER. sq2's +0.797 S
+  pose erosion is a TRANSIENT cost of the seg solve, not a route kill — pose trains
+  monotone-easy from a conditioned base (R1 MEASURED d_pose 12.94→0.0009; #383's pose-finish
+  gate engages only once the seg trunk is conditioned; the staging law sh1/fd1 §12: pose-early
+  vetoes seg, seg-first does not veto pose). The solved field is the SEG BASE for the
+  joint-descent finish, never a direct ship. The R8 gate stays (it correctly prevents shipping
+  an unrecovered composition); what changes is the ROUTE: solved-field → joint-recover → gate.
+- Operator (same directive, minutes later, verbatim): "pose also descends relatively quickly and
+  monotonically" — the operator's own statement of the R1-measured mechanism (d_pose 12.94→0.0009
+  monotone) that LICENSES the ordering law: seg's transient pose spend is recoverable because
+  pose descent is fast + monotone from a conditioned base, while seg plateaus.
+- Operator (same directive, minutes later, verbatim): "If we're coming up on a big composition of
+  all lessons and tools and signal and research and everything, we should use a Codex Sol Ultra
+  agent for that." — the od1 composition arm below is chartered at the sol-ultra profile.
+- Operator (same directive, minutes later, verbatim): "We just need to engineer correctly and in
+  the right order and in the right dimensions at the right place, time, how when and why what."
+  — the unifying statement of the whole arc: correctness (NO-FAKE) × ORDER (seg→joint-pose) ×
+  DIMENSIONS (five criteria + hybrid per-level) × PLACE (Q3-vs-Q4 placement-conditionality,
+  per-edge surgical targeting) × TIME (event-driven schedule, tj1 adaptive stopping) ×
+  HOW/WHEN/WHY (the v7–v10 forces/dynamics corpus below).
+- **Order-of-operations + v7–v10 dynamics = the design inputs**: fh1 forces harvest · vh1
+  v8/v9/v10 untransferred lessons · sched1 derived event-driven schedule · gc15 fresh-vs-warm ·
+  ws1/ws2/ws3 seg-lexicographic warm-start lineage (W_seg 0.024124510 @138,031B materialized)
+  · the burn endpoints + #383 gate + lg1 lane-guard (seg protection DURING pose descent) ·
+  tj1's per-pair adaptive stopping (makes the n600 solve tractable — most pairs stop early,
+  the tail gets the steps).
+
 ## Measured anchors at issue time
 bf1 winner (rl1 Lane crop, full band): 205,196 B @ 1.109 bits/band-px, recall 1.0.
 Per-edge currency (#916): 0.60 bits/band-px → the per-edge partition projects ~45% below the
