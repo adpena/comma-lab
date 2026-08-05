@@ -84,7 +84,7 @@ Found beyond charter seeds:
 - PASS: `.venv/bin/python -m pytest src/tac/tests/test_check_351_producer_identity_backfill_ready.py` — 25 passed.
 - PASS: existing strict static #351 scanner remains green: `_check_351_canonical_producer_identity(Path.cwd())` returned 0.
 - PASS: `git diff --check -- src/tac/preflight.py src/tac/tests/test_check_351_producer_identity_backfill_ready.py`
-- BOUNDARY: the broader legacy `test_check_351_canonical_producer_identity_scope_extension.py` file still has two runtime builder failures on this checkout because `.omx/research/einstein_kolmogorov_crux_measurement_20260719.json` currently has `st_nlink=2`, not the builder-required exactly-one hard link; GB1 did not edit that canonical equation or evidence file.
+- BOUNDARY: the broader legacy `test_check_351_canonical_producer_identity_scope_extension.py` file still has two runtime builder failures on this checkout because `.omx/research/einstein_kolmogorov_crux_measurement_20260719.json` does not satisfy the builder-required exactly-one-hard-link custody check; GB1 did not edit that canonical equation or evidence file.
 
 Positive controls fired after the guard-order false positive was fixed: unrouted path arguments, missing exact helper, resolve-only alias laundering, guarded path not feeding provenance, guarded label not feeding `canonical_producers`, non-fail-closed SHA equality, wrong provenance/SHA pairing, renamed `_file` parameter, nested module scope, local provenance-builder shadowing, assignment shadowing, and placeholder waiver all produce violations.
 
