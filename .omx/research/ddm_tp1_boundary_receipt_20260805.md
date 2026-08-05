@@ -509,3 +509,13 @@ from the FIXED committed instrument (never the stale copies) · plateau policy C
 gates read LIVE through warmup (ends ~ep1466; shadow ~2τ mature by ep1526) · dynamic-EMA A/B
 (fixed 1−4/U vs plateau-anchored tail average) queued as the next-window decision per the
 operator's dynamic-EMA question.
+
+## CYCLE-2 ROUND 3 (fresh-eyes rr1, ad06cc10ef): CLEAN PASS — counter 1/3
+
+Verified by the arm from code/bytes (not commit messages): the axis-label class fix is real
+(derived-label path), JD4 ticket/launch custody matches the fire record, the FIRE-GATE
+ADJUDICATION was audited for gate-bending and PASSED CLEAN, and the live R4-cure telemetry
+(forced_start 1406 + decay 0.9997778) is as recorded. Round 4 respawned: rotated axis =
+plateau-policy arithmetic (Case A/B/C bars, satisficing thresholds, dynamic-EMA A/B design)
++ endpoint-path mental execution (wall-cap vs ep1526 vs typed exit — which artifact does each
+exit hand the adjudicator?). Seal requires 3/3; the running window is not gated on it.
