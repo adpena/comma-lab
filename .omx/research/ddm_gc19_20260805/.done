@@ -1,0 +1,9 @@
+ddm_gc19_20260805 keeper receipt
+
+status: artifacts written; council anchor and serializer commit verified separately
+axis: [macOS-CPU advisory] research/text only
+no_scorer: true
+no_launch: true
+no_paid_dispatch: true
+no_run_dir_touch: true
+own_vehicle_line: S = 0.7539807296911207 @ 357,836 B [macOS-CPU advisory]
