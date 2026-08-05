@@ -59,3 +59,17 @@ seg burn cannot damage pose; variant UNBUILT, ddm_pg1 fire-order at falsifier F2
 carriers vs joint trunk = race, never presumption · H1-class loss residuals are NOT pure-axis
 evidence (RR1-C2-R7-F1) — endpoint n600 probes are the axis authority · gate rows and probe
 rows are CROSS-INSTRUMENT (R7-F3, CPU-torch vs MLX adapter) — never mix them in one series.
+
+## ADDENDUM 2026-08-05 — sq2 landed (the solve-line seg read; MEASURED, changes the WHEN)
+sq2 (d929eeb27b) uncapped sq1 to 100 steps, n32 same-pair population: **η 0.7895 → 0.8620 →
+0.9113, STILL cap-bound (0/32 converged; 21/32 best-at-cap)** — the seg reach keeps rising at
+every cap tried (caps-genus: this is a HIGHER FLOOR, not a ceiling). Pre-pose delta −0.1374 S.
+**BUT the R8 pose-bank gate fired correctly: solved-paint subset d_pose 0.0777 → pose-term
+erosion +0.797 vs allowed +0.005 → projected S 1.413 — NO promotion.** This is the THIRD
+independent confirmation of the order-of-operations law: a seg surface with real reach is
+pose-vetoed at current form (sisters: #827 composition, bo1 −0.0867). Consequence: the solve
+line's promotion path is now explicitly GATED on pose-compatibility — either (a) the pg1
+Q3-projection discipline applied INSIDE the solve (the sq1 projector's float-nullity is not
+surviving η≈0.91 uint8 paint at this amplitude — measured, not assumed), or (b) composition
+atop the pose-carrying base jd5 is building, with a terminal pose re-solve. The η curve itself
+(still rising at 100 steps) is banked as the solve-line capacity evidence.
