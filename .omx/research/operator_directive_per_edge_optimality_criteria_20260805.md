@@ -44,6 +44,29 @@ Three MEASURED phenomenon families the per-edge representation must consume, not
   event grammar, or PRICED OMISSION against the fl1 flicker floor). Measure where the
   coherent→dust crossover sits (edge-size threshold) instead of assuming it.
 
+## Operator addendum 2 (verbatim): "Also remember our factorization and flattening lessons and
+all related and other helpful techniques and research, also the agent has full research authority"
+- **FACTORIZATION lessons** (the #516 factorized-adjoint / flattening-factorization corpus +
+  p0_costate_organ_factorization_grounded_ABC): factor the n600 edge ensemble into SHARED
+  structure × per-pair coordinates — LOTTO/shared-dictionary (p3v2 machinery, recalled not
+  rebuilt) = shared edge-shape codebook × per-pair instance transforms; the ~8-dim lane-orbit
+  manifold IS the factorized claim (basis once + low-dim per-pair coords); low-rank precedents
+  measured: rank-2 SVD pose codec (#140, 2.7×), rank-1 e_p (sc1), rank-4 head (#559); QA83
+  factorized output head; g1 two-part grammar code = grammar × productions; SMEVR = mode ×
+  residual factorization; cl1 GA-factorization sleeper.
+- **FLATTENING lessons**: choose coordinates where the object becomes flat/linear — the
+  ground-plane homography/IPM flattens road/lane edges to near-straight BEV lines and is FREE
+  at decode (rule-118 generic geometry, #145/#325/#609); Cole–Hopf linearization (#542);
+  gauge-fixed ker(A) quotient (ms1/ms2 — drop the 80.67% blind subspace before coding);
+  Bregman/dually-flat coordinates (#504 Nielsen) + SPD normal coordinates (#552); tropical/
+  max-plus reading of argmax (#284/#311). For pe1 concretely: RACE image-space vs
+  BEV-flattened edge parametrization — a flattened edge needs fewer knots and transports more
+  rigidly (composes with criterion 2: the flattening map itself falls out free).
+- **FULL RESEARCH AUTHORITY**: the zero-web-search constraint is LIFTED for pe1 — online
+  literature/OSS consultation authorized (boundary/curve coding: chain codes + digital
+  straightness (#307 lineage), MPEG-4 CAE, subdivision/spline curve coding, anything that
+  serves the five criteria). Scorer slot discipline and all fail-closed gates UNCHANGED.
+
 ## Measured anchors at issue time
 bf1 winner (rl1 Lane crop, full band): 205,196 B @ 1.109 bits/band-px, recall 1.0.
 Per-edge currency (#916): 0.60 bits/band-px → the per-edge partition projects ~45% below the
