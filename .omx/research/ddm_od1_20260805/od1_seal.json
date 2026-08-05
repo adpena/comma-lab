@@ -1,0 +1,101 @@
+{
+  "schema": "ddm_od1_seal.v1",
+  "created_date": "2026-08-05",
+  "status": "SEALED_FOR_MAIN_REVIEW",
+  "ready_to_fire": false,
+  "ready_to_fire_owner": "MAIN",
+  "axis": "macOS-CPU advisory / scorer-free campaign design",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "n600_scorer_job": false,
+  "own_vehicle_frontier": {
+    "score": 0.7539807296911207,
+    "archive_bytes": 357836,
+    "axis": "macOS-CPU advisory",
+    "archive_sha256_prefix": "d5e814d5",
+    "contest_pointer": "borrowed_unmoved"
+  },
+  "score_formula": {
+    "source": "upstream/evaluate.py",
+    "formula": "100*d_seg + sqrt(10*d_pose) + 25*archive_bytes/37545489",
+    "archive_denominator_bytes": 37545489
+  },
+  "ordered_campaign": [
+    {
+      "stage": 0,
+      "name": "custody_and_event_schedule",
+      "disposition": "FIRED",
+      "result": "documented in this package"
+    },
+    {
+      "stage": 1,
+      "name": "seg_base_production",
+      "disposition": "QUEUED-WITH-FIRE-ORDER",
+      "preferred_route": "solved-field or regional phase seg base",
+      "required_denominator": "n>=32 stratified/random before banking"
+    },
+    {
+      "stage": 2,
+      "name": "joint_pose_recovery_after_seg",
+      "disposition": "QUEUED-WITH-FIRE-ORDER",
+      "preferred_route": "frame_0 C-PRIME/k=4 or measured better frame_0 basis",
+      "r8_gate_scope": "final composition only"
+    },
+    {
+      "stage": 3,
+      "name": "carrier_and_rate_composition",
+      "disposition": "FOLDED",
+      "current_state": "PE2 receiver consumption landed; scorer survival pending"
+    },
+    {
+      "stage": 4,
+      "name": "final_composition_gate",
+      "disposition": "QUEUED-WITH-FIRE-ORDER",
+      "measurement": "n>=32 before full n600"
+    },
+    {
+      "stage": 5,
+      "name": "n600_and_authority_replay",
+      "disposition": "QUEUED-WITH-FIRE-ORDER",
+      "owner": "MAIN"
+    }
+  ],
+  "source_hashes": {
+    "od1_prompt": "acb258f0515d220fa5687b6074092d606377d6bc2b14da965a91e7b730a6cce9",
+    "common_contract": "eeae9e0035582e6bdd65fd837e4aa35a65e064fd09900b9c212d41ac02086771",
+    "operator_directive": "76f83e8a7364267329bf84b0767858536d020d45cd32c60590cdcedbd1c55190",
+    "main_hot_state": "f77728ed1dbe05257dd7a7d555eecfc38865dfc639070fa1a91c5f0fec592db0",
+    "sq2": "4a0bf7f7e7a104068f29790be840318a1b9412335ca85e51cd093f9b46f1da6c",
+    "tj1": "5c41bed2b8b9305cde023571993939f4904fbcab23fc9d8bb2e6a7bca155eefe",
+    "js1": "e71476863f4f7259194b2cdc10094f12e6d8045d3e6f55f3872dfb130de8f5b9",
+    "pe2": "06cbf9dc8492210a4683bf81d8872afcddfaa492ceadf186edca59c08df4fef7"
+  },
+  "blockers": [
+    "OD1_BLOCKER_PE2_SURVIVAL_ROWS_PENDING",
+    "OD1_BLOCKER_SEG_BASE_CAP_BOUND",
+    "OD1_BLOCKER_TRANSIENT_POSE_EROSION",
+    "OD1_BLOCKER_FRAME0_CARRIAGE_POPULATION",
+    "OD1_BLOCKER_SCHEDULE_RESEAL",
+    "OD1_BLOCKER_AUTHORITY_PROMOTION"
+  ],
+  "follow_on_disposition": {
+    "FIRED": [
+      "OD1 recall package",
+      "OD1 campaign spec",
+      "OD1 launch tickets",
+      "OD1 typed blockers",
+      "OD1 machine-readable seal"
+    ],
+    "FOLDED": [
+      "Q31 as scoped negative for Q3-first",
+      "W_seg/W_joint as controls",
+      "PE2 receiver consumption as current carrier evidence"
+    ],
+    "QUEUED-WITH-FIRE-ORDER": [
+      "MAIN pe2 scorer survival join",
+      "OD1 scorer-free staged composition prototype",
+      "OD1 n>=32 final-composition gate",
+      "OD1 full n600 and authority replay only after gate pass"
+    ]
+  }
+}
