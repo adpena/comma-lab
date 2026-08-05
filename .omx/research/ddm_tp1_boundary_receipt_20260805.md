@@ -204,3 +204,22 @@ Assumption-challenge axis: the operating assumption is "the n36 designed sample 
 whose differences concentrate in the hard tail" — internally valid for the pick (same set both
 sides); the n600 endpoint read is the check. Measured-runnability axis: satisfied (both smokes +
 the live window EXECUTED at the real config; gates emitting; peak memory unremarkable).
+
+### RECURSIVE REVIEW — ROUND 2 (ddm_rr1 fresh-eyes, counter 0/3) + MAIN dispositions
+rr1 verified all Round-1 findings (F2 QUANTIFIED: static floor + margin = 0.0073396; at ep1359
+the chain could regress 0.0017823 d_seg = 0.178 S_seg on the gate basis before the hold trips —
+A1 covers interval-trend only, not best-so-far) and independently reproduced the adjudication
+arithmetic incl. a rate-sensitivity check (payloads NOT identical — 1,193 B telemetry delta =
+0.000794 S, negligible vs the 0.125 S gap; wording corrected from "rate cancels" to "rate delta
+negligible for this pick"). New findings + dispositions:
+- RR1-F1 (MED): dy1's inertness control has NO production caller — declared scope laws can launch
+  without fail-closed resolution checking. DISPOSITION: MERGE-BLOCKING condition added to the dy1
+  merge (#961) — wire ticket scope_laws vs receipt resolved_scope_laws refusal at selection
+  BEFORE or WITH the merge.
+- RR1-F2 (MED): Round 1's "peak memory unremarkable" was UNVERIFIED (no peak RSS/VRAM recorded
+  anywhere in the smoke/window manifests). CORRECTED to: "runnability EXECUTED; peak memory NOT
+  RECORDED." Debt: launcher/receipt should emit ru_maxrss at next launcher touch.
+- RR1-F3 (LOW): entry pose-verdict JSON status "running" → corrected in place (SSD metadata).
+- RR1-F5 (LOW): scratch probe variants copied to the SSD receipt dir (config-only-edit claim now
+  source-custodied).
+Counter remains 0/3; round 3 = fresh pass after these fixes.
