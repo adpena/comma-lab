@@ -1,0 +1,66 @@
+{
+  "schema": "ddm_ss1_ranked_silent_subset_sites.v1",
+  "axis": "[scorer-free static/source/receipt audit]",
+  "score_claim": false,
+  "selection_bias_law": {
+    "pose_prefix_ratio": "2.535x at n24 through 4.207x at n96",
+    "seg_prefix_ratio": "about 0.95x to 0.97x easier",
+    "ranking_rule": "pose-heavy silent subset rows outrank seg-only rows at similar verdict weight"
+  },
+  "ranked_rows": [
+    {
+      "rank": 1,
+      "site": "experiments/ddm_p3v2_optimal_form_pose_resolve.py:777 --n-pairs=24",
+      "scanner_status": "silent_verdict_subset_default",
+      "manual_reason": "pose-heavy n24 default; p3v2 is cited by gc17 and AU1 for rank-deficiency / photometric-wall doctrine",
+      "live_consumer": ".omx/research/ddm_gc17_from_here_gradient_not_coordinates_20260801.md plus AU1 headline/body audit",
+      "disposition": "QUEUED-WITH-FIRE-ORDER",
+      "fire_order": "Do not promote p3v2 n6/n24 rows as population pose evidence. If the pose-basis family is reopened, rerun on n>=120 stratified/strided non-prefix pairs with structured n, selection_mode, seed/stride, and governing-ratio fields after the current scorer owner clears."
+    },
+    {
+      "rank": 2,
+      "site": "experiments/ddm_pz1_dpose_window_solve_paired.py:57 --pairs=32; experiments/ddm_pz1_partial_refit_bound.py:79 --pairs=40; experiments/ddm_pz1_scorer_plane_pose_delta.py:101 --pairs=6",
+      "scanner_status": "silent_verdict_subset_default",
+      "manual_reason": "pose-axis gate for the live window-solve path; code has m88/strided prose in places but lacks the structured selection_mode field required by SS1",
+      "live_consumer": ".omx/state/canonical_task_status.jsonl:gk2_window_solve_dpose_under_v4d_warp_gate_20260804",
+      "disposition": "QUEUED-WITH-FIRE-ORDER",
+      "fire_order": "Before the next pz1/gk2 scorer run, add structured subset_scope fields to the JSON receipts. If remeasured, preserve strided/non-prefix indices and the m88 governing ratio in machine fields."
+    },
+    {
+      "rank": 3,
+      "site": "tools/run_taskspace_r10_feature_texture_relay.py:516 --pair-count=2 plus pair_count prefix ranges",
+      "scanner_status": "silent_verdict_subset_default",
+      "manual_reason": "current taskspace/R10 receiver-contract runner; default n2 output is explicitly non-scientific, but its receipts can be consumed as mechanics evidence unless scoped",
+      "live_consumer": "R10/taskspace runner family and wr2 wire-or-retire references",
+      "disposition": "QUEUED-WITH-FIRE-ORDER",
+      "fire_order": "Add structured subset_scope to R10 runner receipts before any row is used outside a mechanics smoke. No scorer is needed for this code migration."
+    },
+    {
+      "rank": 4,
+      "site": "experiments/diag_custom_vs_reference_trajectory_n8.py max_pairs=8; experiments/diag_faithful_vs_muon_throughout_ab.py:131 --n-pairs=8; experiments/diag_recipe_fix_muon_lr_ab.py:140 --n-pairs=8",
+      "scanner_status": "silent_verdict_subset_default",
+      "manual_reason": "n8 diagnostics touch both seg and pose targets; n8 banks no population claim and is about 0.5 effective serial samples under m96",
+      "live_consumer": "Muon/curriculum debugging receipts when cited as kernel or recipe evidence",
+      "disposition": "FOLDED",
+      "fire_order": "Treat as instance diagnostics only. Any revived Muon/curriculum claim needs n>=32 non-prefix subset provenance first, then n600 only if it becomes score-routing."
+    },
+    {
+      "rank": 5,
+      "site": "experiments/ddm_gr1_granularity_rerace.py:290 --pairs=48",
+      "scanner_status": "silent_verdict_subset_default",
+      "manual_reason": "granularity/wrong-level verdict surface; mixed score axes and a comparative verdict can invert under subset choice",
+      "live_consumer": "negative-audit / wrong-level rows when reopened",
+      "disposition": "QUEUED-WITH-FIRE-ORDER",
+      "fire_order": "If GR1 is reused, emit subset_scope and governing-ratio fields or rerun with tac.subset_selection before using it as a formulation verdict."
+    },
+    {
+      "rank": 6,
+      "site": "experiments/probe_frontier_adapter_dseg_flip.py:177 --n-pairs=8 and related prefix ranges",
+      "scanner_status": "silent_verdict_subset_default",
+      "manual_reason": "d_seg-only adapter probe; seg prefix bias is smaller than pose but still not population truth",
+      "live_consumer": "frontier-adapter flip probes if revived",
+      "disposition": "FOLDED",
+      "fire_order": "Keep as n8/prefix instance evidence only. Rerun through tac.subset_selection with selection_mode before any population adapter claim."
+    }
+  ]
+}
