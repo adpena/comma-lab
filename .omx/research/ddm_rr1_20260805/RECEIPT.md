@@ -1,6 +1,6 @@
 # ddm_rr1 recursive adversarial review receipt
 
-Status: REVIEW arm, rounds 2-4 fresh-eyes pass over the JD3 v3 chain and DY1 scope-law resolver. I ran no scorer, no Metal/MLX launch, no archive build, and no exact evaluation. Live full-v3 dirs/files were read-only.
+Status: REVIEW arm, rounds 2-5 fresh-eyes pass over the JD3 v3 chain and DY1 scope-law resolver. I ran no scorer, no Metal/MLX launch, no archive build, and no exact evaluation. Live full-v3 dirs/files were read-only.
 
 Axis: source/receipt/telemetry review plus derived arithmetic. Any score arithmetic below is non-promotable `[macOS-CPU/MLX advisory]` or derived from existing receipts; `score_claim=false`.
 
@@ -13,8 +13,9 @@ Axis: source/receipt/telemetry review plus derived arithmetic. Any score arithme
 | Full corpus recall | targeted `rg` over `.omx/research`, `.omx/state`, docs/reports for `JD3`, `full_v3`, `dy1`, `chain_both_bases`, `ep1349`, `0.0037233` | Found cx1 fire-gate receipt and dy1 build receipt as additional context. Chain-sweep best-live caveat lives inside the JSON finalize note; no uncaveated downstream citation found in searched md/json surfaces. | Added cx1 gate verification and DY1 pre-merge review. |
 | Round-3 recall refresh | targeted `rg` over `.omx/research`, `.omx/state`, docs/reports for `JD3`, `full_v3`, `scope-law`, `inertness`, `chain_both_bases`, `0.0037233`, `ru_maxrss`, `peak RSS`, `VRAM` | Found `ddm_gc20_20260805/RECEIPT.md`, which consumes the two-smoke matrix and explicitly says the live full-v3 lane must not be mutated. The only current peak-memory rows found were unrelated older receipts; JD3 manifests/telemetry still do not record peak RSS/VRAM. | Raised the custody severity of the full-window out-dir alias; kept measured-runnability downgraded to executed-without-peak-memory. |
 | Round-4 recall refresh | targeted `rg` for `full_v3`, `entry_cont`, `stage_ema`, `0.996667`, `0.999555`, `jd1_stage_ema_reanchor`, `scope_law`, and `0.0037233`; inspected the full-window launch manifest, ticket, top-level mixed telemetry, smoke snapshot receipt, TP1, GC20, and the EMA evaluator source. | Found a new live-window control-transfer defect: the full continuation resumes from the entry smoke final checkpoint with `stage_ema_reanchored=true` and keeps the 8-epoch smoke decay `0.9966666667` (`U=1200`) even though the 60-epoch full window would derive `0.9995555556` (`U=9000`) if re-anchored at resume. | Raised RR1-R4-F1 as endpoint-blocking for consuming the full continuation as a full-window stage-scoped EMA run. |
-| Canonical equations | `tools/list_canonical_equations.py --json`, plus source grep for `ema_decay_run_geometry_v1` | EMA law is executable; JD3 stage EMA derivation is `d = 1 - 2/(0.5*1200) = 0.9966666667`. | Re-derived EMA seed-retention rather than trusting the receipt wording. |
-| Source and receipts | TP1 receipt, cx1 receipt, JD3 smoke telemetry/verdicts, fired ticket, launcher manifests, DY1 clone at `a9eac92166` | Found new artifact/status and enforcement gaps below. | Counter remains 0/3; fixes are recommended, not applied. |
+| Round-5 recall refresh | targeted current-surface `rg` over `.omx/research`, `.omx/state`, docs, and reports for `full-window EMA`, `EMA-cured`, `smoke-EMA continuation`, `stage_ema_reanchored`, `jd1_realized_hold`, `scope_law`, `inertness`, and `0.0037233`; re-read TP1, main hot state, DY1 clone `a9eac92166`, mixed telemetry, live manifest, tickets, `SCOPE_MARKER.md`, and preserved scratch probe variants. | No missed current consumer of the wrong full-window EMA label was found in the searched decision surfaces. The relabel/gating language is present in TP1 and main hot state; DY1 and regenerator production fixes remain unimplemented and correctly blocked. Other carried resume-state fields are classified below rather than silently treated as new full-window derivations. | Round 5 produced zero new findings; clean-pass counter advances to 1/3. |
+| Canonical equations | `tools/list_canonical_equations.py --json`, plus source grep for `ema_decay_run_geometry_v1` and `src/tac/canonical_equations/evaluators.py` | EMA law is executable; JD3 stage EMA derivation is `d = 1 - 2/(0.5*1200) = 0.9966666667`. | Re-derived EMA seed-retention rather than trusting the receipt wording. |
+| Source and receipts | TP1 receipt, cx1 receipt, JD3 smoke telemetry/verdicts, fired ticket, launcher manifests, DY1 clone at `a9eac92166` | Rounds 2-4 found artifact/status and enforcement gaps; round 5 found no new gap in the searched scope. | Counter is now 1/3; fixes remain recommended unless explicitly marked implemented. |
 
 ## ROUND 2 FINDINGS
 
@@ -45,6 +46,14 @@ Counter state after this round: **0/3 clean passes**. This round found a new iss
 |---|---|---|---|---|
 | RR1-R4-F1 | CRITICAL | The 60-epoch full-v3 continuation did not re-derive/re-anchor the active EMA for the full window. It resumes from the entry smoke final checkpoint with `stage_ema_reanchored=true`, so the trainer carries the smoke-window decay `0.9966666667` (`U=1200`, warmup 601 updates) into the full continuation. The full ticket's own epoch geometry (`--epochs 1406`, resume event epoch 1346, 150 steps/epoch) would derive `U=9000`, decay `0.9995555556`, warmup 4500 updates. The two-smoke adjudication remains valid; the full continuation is endpoint-blocked as evidence for a "full-window stage-scoped EMA" law until relabeled or re-run/re-anchored. | `jd3_ticket_v3_full_entry_cont.json` and the r2 launch manifest show `--epochs 1406` and `--resume-from .../tr1_jd3_v3_smoke_entry_ep1336/checkpoints/stage_joint_pose_finish_final.npz`. Top-level telemetry has start indices `[0,30]`; the full resume row at epoch 1346 reports `stage_ema_reanchored=true`, `active_ema_decay=0.9966666667`, provenance `U=1200`. The only `jd1_stage_ema_reanchor` event in the mixed telemetry is the smoke event at epoch 1337. `eval_ema_decay_run_geometry` gives `d = 1 - 2/(0.5*U)`, so a 60-epoch full window at 150 steps/epoch would use `0.9995555556`. The top-level `tr1_window_receipt.json` still records `stage_ema_reanchored_epoch=1337`, active decay `0.9966666667`, and `ema_warmup_updates=601`. | Do not byte-close, promote, or endpoint-route the full continuation as a full-window EMA-cured v3 result. If the owner harvests it, label it `smoke-EMA continuation` and measure live/EMA basis explicitly; otherwise regenerate into a unique out-dir or force a fresh full-window reanchor at continuation resume. Add a production inertness/refuse check that compares declared full-window EMA scope to the resolved active EMA row before checkpoint selection. |
 
+## ROUND 5 FINDINGS
+
+Counter state after this round: **1/3 clean passes**. This round found zero new findings; it re-verified the round-4 disposition boundary and checked the broader resume-state class.
+
+| ID | Severity | Finding | Evidence | Required disposition |
+|---|---|---|---|---|
+| RR1-R5-clean | NONE | No new blocker, regression, or missed consumer was found in the searched round-5 scope. | The current hot state and TP1 receipt label the live continuation as `smoke-EMA continuation`, block #961/DY1 on production inertness and geometry-keyed EMA scope, and require endpoint adjudication to measure both live/EMA bases. The searched current md/json/jsonl decision surfaces did not contain an uncaveated full-window EMA-cured consumption of the continuation. | Continue the recursive review with counter `1/3`; do not treat DY1/regenerator production debts as fixed until code or launch gates actually enforce them. |
+
 ## ROUND 2 DISPOSITIONS RE-VERIFIED IN ROUND 3
 
 | Prior item | Round-3 state | Evidence |
@@ -63,6 +72,17 @@ Counter state after this round: **0/3 clean passes**. This round found a new iss
 | RR1-R3-F1 mixed-scope full continuation | Marker fixed the citation hazard, but not the underlying same-dir/continuation semantics. The finding remains correctly disposed for smoke evidence only. | `/Volumes/VertigoDataTier/pact/ddm_jd3_20260805/tr1_jd3_v3_smoke_entry_ep1336/SCOPE_MARKER.md` explicitly says the top-level directory is `entry_smoke_plus_full_continuation` and instructs smoke claims to use `smoke_snapshot_ep1344/`. |
 | RR1-R3-F2 source-vs-saved epoch labels | Still a documentation rule, not a completed schema fix. | The preserved pose verdicts still use tags `smoke_start_ep1336` and `smoke_start_ep1355`; no new verdict schema field splits source checkpoint epoch from saved reanchor checkpoint epoch. |
 | DY1 scope-law branch | Unit tests pass; the merge-blocking production caller gap remains. | In the DY1 clone at `a9eac92166`, `PYTHONPATH=src /Users/adpena/Projects/pact/.venv/bin/python -m pytest src/tac/witness_dsl/tests/test_scope_laws.py` passed `5/5`. `rg inertness_violations` still finds no production refuse caller outside tests/helper definition. |
+
+## ROUND 4 DISPOSITION RE-VERIFIED IN ROUND 5
+
+| Prior item | Round-5 state | Evidence |
+|---|---|---|
+| RR1-R4-F1 wrong-geometry EMA carry | Correctly relabeled and endpoint-blocked in the governing surfaces searched. The continuation remains a real run, but only as a `smoke-EMA continuation`, not as a full-window EMA-cured result. | TP1 says the window runs on under the relabel, endpoint adjudication must measure both live and EMA bases, DY1/#961 must resolve declared-vs-active EMA scope before selection, and regenerator debt remains. Main hot state repeats `smoke-EMA continuation` and keeps #961 blocked on production inertness plus geometry-hash-keyed resolution. |
+| Missed consumers of the wrong label | No missed current consumer found in searched decision surfaces. | Targeted `rg` over `.omx/research`, `.omx/state`, docs, and reports found TP1, main hot state, RR1, cx1 pre-fire context, and older historical EMA mentions. cx1 predates the full-continuation defect and consumes smoke/fire gates, not the full endpoint. |
+| DY1 scope-law merge condition | Disposition complete as a gate, not implemented as a cure. DY1 remains blocked. | In clone `a9eac92166`, `ScopeLawResolution.with_hash()` hashes the full row, but `inertness_violations(declared_scope_laws, resolved_scope_laws)` compares names only. A wrong-geometry `jd3_stage_ema_decay` row would therefore satisfy the helper if only that helper were wired. This matches the existing TP1/NEXT_IF_RESUMED demand for a positive control where full-window declared EMA refuses when only a smoke-scope row exists. |
+| Regenerator state-flag debt | Still debt, not fixed. | `experiments/ddm_jd1_ticket_regenerate.py` can preserve a same-dir continuation shape by changing only `--epochs`, `--resume-from`, and wall minutes; the full ticket confirmed this. Future continuation tickets that change geometry must force fresh reanchor or emit a scope-law refusal. |
+| Other resume-carried state flags | No new hidden full-window derivation claim found. `jd1_realized_hold` floor/margin, `engaged`, and effective pose-controller state carry through the same-stage continuation; these are not EMA-law geometry claims. They must still be labeled as inherited/static if endpoint rows are harvested. | Trainer resume code carries `jd1_pose_finish_state`, `jd1_realized_hold_state`, and `effective_w_pose`. Round 1/TP1/CX1 already classified the static realized floor as grandfathered and non-ratcheting; no rollback/refuse row was observed in the smokes. |
+| Live endpoint status | Still not consumed by rr1. | The expected `.done` marker for `jd3_full_v3_entry_cont` was absent in this sandbox check; top-level telemetry was inspected only as control-flow evidence, not as an endpoint result. |
 
 ## ROUND 1 F1-F4 VERIFICATION
 
@@ -132,6 +152,12 @@ Shared assumption: a smoke-final checkpoint with a stage-scoped EMA reanchor can
 
 Would violating it unlock breakthrough? It will not itself move the score, but it prevents the same cross-regime constant-transfer class that v3 was built to cure. The full continuation may still be a real candidate if measured as the actual checkpoint it is; it cannot be cited as a full-window EMA-cured result without a fresh reanchor or an explicit relabel.
 
+## ROUND 5 ASSUMPTION-CHALLENGE AXIS
+
+Shared assumption: documented relabel/gating is enough to prevent the wrong full-window EMA claim while the production guard is still pending.
+
+Would violating it unlock breakthrough? Not directly on score, but it would reduce recurrence risk in the same state-flag class. The next higher-value cure is code-level: scope-law selection must compare declared full-window EMA geometry against the resolved active row's geometry/hash, not just law names or a boolean `stage_ema_reanchored` flag.
+
 ## MEASURED-RUNNABILITY AND MEASURED-SCORED-QUANTITY AXIS
 
 - MEASURED from existing artifacts: both v3 smokes executed at `num_pairs=600`, `batch_pairs=4`, emitted gates, and preserved checkpoints. The full-window retry launched with `.venv/bin/python` prepended.
@@ -143,6 +169,12 @@ Would violating it unlock breakthrough? It will not itself move the score, but i
 - MEASURED from existing artifacts: the full continuation wrote live telemetry through at least epoch 1377, with active EMA decay `0.9966666667` on every inspected epoch row. The expected done marker `jd3_full_v3_entry_cont.done` was absent at 2026-08-05T19:50:32Z, so I did not inspect or consume a completed endpoint.
 - NOT MEASURED by this arm: process liveness via `ps` (`operation not permitted` in this sandbox), peak RSS/VRAM, a completed full-window endpoint, any archive bytes, or contest CPU/CUDA score.
 - Measured scored quantity in round 4: none new. The review result is source/telemetry control-flow evidence only.
+
+## ROUND 5 MEASURED-RUNNABILITY AND MEASURED-SCORED-QUANTITY AXIS
+
+- MEASURED from existing artifacts: current-source and receipt labels, ticket diffs, telemetry control-flow rows, DY1 helper semantics, preserved scratch-probe source diffs, and absence of a local full-window `.done` marker.
+- NOT MEASURED by this arm: no new scorer output, no process liveness, no peak RSS/VRAM, no completed endpoint, no archive bytes, and no contest CPU/CUDA score.
+- Measured scored quantity in round 5: none new. This was a review-only clean pass over control-flow and custody surfaces.
 
 ## BOUNDARIES
 
