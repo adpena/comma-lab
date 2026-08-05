@@ -93,16 +93,16 @@ GC20 is a research-only synergy and antagonism adjudication over the live compos
 
 ## Ranked op-routables
 
-1. FIRED: preserve the full-v3 ENTRY window and consume its endpoint only through JD3/GC19 predicates. No GC20 mutation is allowed.
-2. QUEUED-WITH-FIRE-ORDER: if v3 endpoint is alive, byte-close/parse-back the endpoint first, then compose OD3/SQ2 terminal pose/rate actions by net S.
-3. QUEUED-WITH-FIRE-ORDER: keep realized hold plus window EMA as the v3 immune system. If it trips, retreat pose pressure or rollback; do not call the family dead.
-4. QUEUED-WITH-FIRE-ORDER: lane-guard ratchet only after endpoint evidence of lane give-back with slack.
-5. QUEUED-WITH-FIRE-ORDER: EN1 margin-weight one-variable A/B at next clean boundary, with d_pose collateral and realized hold telemetry.
-6. QUEUED-WITH-FIRE-ORDER: OD5/generator/worldsheet receiver closure before any task-description archive promotion.
-7. FOLDED: PE3-as-is scorer-negative hybrid. Reopen only as conditioning-only or receiver-consumed rider.
-8. FOLDED: SL2 explicit edit carriage and distill-from-solve shipping. Retain solved frames as teacher/verifier/terminal surface.
-9. FOLDED: pure qo1 byte crumbs, OD4 sparse per-flip streams, LR2 offset fields, flat solved paint, and byte-only waterfills.
-10. QUEUED-WITH-FIRE-ORDER: conflict controller only if endpoint gradient logs show actual seg/pose conflict.
+1. FIRED, owner live full-v3 lane: preserve the full-v3 ENTRY window and consume its endpoint only through JD3/GC19 predicates. No GC20 mutation is allowed.
+2. QUEUED-WITH-FIRE-ORDER, owner MAIN endpoint consumer: if v3 endpoint is alive, byte-close/parse-back the endpoint first, then compose OD3/SQ2 terminal pose/rate actions by net S.
+3. QUEUED-WITH-FIRE-ORDER, owner MAIN controller consumer: keep realized hold plus window EMA as the v3 immune system. If it trips, retreat pose pressure or rollback; do not call the family dead.
+4. QUEUED-WITH-FIRE-ORDER, owner lane-guard successor lane: lane-guard ratchet only after endpoint evidence of lane give-back with slack.
+5. QUEUED-WITH-FIRE-ORDER, owner EN1 successor lane: EN1 margin-weight one-variable A/B at next clean boundary, with d_pose collateral and realized hold telemetry.
+6. QUEUED-WITH-FIRE-ORDER, owner OD5 successor lane: OD5/generator/worldsheet receiver closure before any task-description archive promotion.
+7. FOLDED, owner GC20 disposition: PE3-as-is scorer-negative hybrid. Reopen only as conditioning-only or receiver-consumed rider.
+8. FOLDED, owner GC20 disposition: SL2 explicit edit carriage and distill-from-solve shipping. Retain solved frames as teacher/verifier/terminal surface.
+9. FOLDED, owner GC20 disposition: pure qo1 byte crumbs, OD4 sparse per-flip streams, LR2 offset fields, flat solved paint, and byte-only waterfills.
+10. QUEUED-WITH-FIRE-ORDER, owner conflict-controller successor lane: conflict controller only if endpoint gradient logs show actual seg/pose conflict.
 
 ## SHA-256 table
 
@@ -123,7 +123,7 @@ The receipt self-hash is intentionally verified after final edit and at serializ
 | `.omx/research/ddm_uf1_20260805/UF1_RECEIPT.md` | `639abd3d7273c2d4497ef592c60af232a4146ad9f9be10d1947ea7e1e3185358` |
 | `/Volumes/VertigoDataTier/pact/ddm_jd3_20260805/jd3_smoke_entry_pose_verdict.json` | `d502e3c7a57e4734c56dffa8584bbabe7404491a58807f502efd602ee12756f3` |
 | `/Volumes/VertigoDataTier/pact/ddm_jd3_20260805/jd3_smoke_final_pose_verdict.json` | `66d4a93ae616dbe46b68874800018ab82ab8a2444a145edabafc4926ca71e4ae` |
-| `.omx/research/ddm_gc20_20260805/OP_ROUTABLES.md` | `483286e33d04f95575a9bfb4e51f05331e89d0da2acd2f2bfe5b0191d97878d4` |
+| `.omx/research/ddm_gc20_20260805/OP_ROUTABLES.md` | `97ded06b8992ebd069dea5b097f564e16a2b22fd80958424024795bb00a5f954` |
 | `.omx/research/ddm_gc20_20260805/NEXT_IF_RESUMED.md` | `2cd212de0909295fd8c22a39572599737d318260a9c113f3ece9bbd204dfc512` |
 | `.omx/research/ddm_gc20_20260805/.done` | `a696ad941eb6ae8d878256a53019cdfbd8bb4ee24a63bc3eafa16b73344379ce` |
 
