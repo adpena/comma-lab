@@ -76,6 +76,15 @@ Core mechanism, paraphrased from the abstract, introduction, theory, algorithm, 
 - No code edit, no trainer launch, no lane claim, no GPU/MLX job.
 - No new canonical equation.
 
+## Follow-On Disposition
+
+| item | disposition | fire order |
+|---|---|---|
+| Model-native locality diagnostic over cached Pact partitions | QUEUED-WITH-FIRE-ORDER | Fire only when a concrete future read already has cached per-pair/per-cell rows. Report native-cell count, residual spread, selection mode, and prefix-vs-stratified risk before any scorer spend. |
+| PE3 labels-as-targets | FOLDED | LC1 already measured direct labels worsening all n32 pairs. |
+| LoBoost as token coder/orderer | FOLDED | XO1/SV2 already block semantic/orderer claims unless same-coder match structure improves. |
+| LoBoost as pose solver, loss function, or joint-pricing bypass | FOLDED | Requires actual terminal-pose, loss-wiring, or joint Seg/Pose/rate evidence; AR2 provides none. |
+
 ## NEXT_IF_RESUMED
 
 ```json
@@ -103,6 +112,7 @@ Core mechanism, paraphrased from the abstract, introduction, theory, algorithm, 
   "evaluate_py": false,
   "archive_mutation": false,
   "pointer_moved": false,
+  "follow_on_disposition": "QUEUED-WITH-FIRE-ORDER",
   "next_fire_order": "If reused, implement only a $0 cached diagnostic that reports native-cell count, residual spread, and prefix/stratified selection mode before any scorer spend."
 }
 ```
