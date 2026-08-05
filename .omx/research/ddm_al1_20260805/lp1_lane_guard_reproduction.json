@@ -1,0 +1,58 @@
+{
+  "adjudications": [
+    {
+      "alarm_fires": false,
+      "bh": {
+        "alarm_id": "lane_guard.ratchet",
+        "fdr_family": "lane_guard",
+        "p_value": 0.9928003599820009,
+        "q_value": 0.9928003599820009,
+        "rank": 1,
+        "rejected": false,
+        "threshold": 0.05
+      },
+      "conformal": {
+        "calibration_n": 20000,
+        "direction": "greater",
+        "observed_score": 0.029133,
+        "p_value": 0.9928003599820009,
+        "tail_count": 19856
+      },
+      "registry_row": {
+        "active": true,
+        "alarm_id": "lane_guard.ratchet",
+        "block_calibration_required": true,
+        "calibration_population": "same vehicle/window no-erosion Lane realized series; lp1 banked iid-noise null uses MC n=20000 and the shipped first-difference sigma",
+        "calibration_status": "lp1_banked_null_case_available; live use requires block calibration",
+        "consumer": "#934 successor, b4s burn reseal, lane guard fire order",
+        "exchangeability_grade": "conditional_if_stationary_window; fragile across stages",
+        "falsifier": "held-out or block-calibrated null p-values are not super-uniform",
+        "fdr_family": "lane_guard",
+        "notes": "Worked example for AL1; diagnostic-only and scorer-free.",
+        "p_value_direction": "greater",
+        "score": "sum_rises_s_units over the derived true gate horizon",
+        "statistic_status": "ready",
+        "surface": "lane_guard.ratchet / inertness_alarm"
+      }
+    }
+  ],
+  "axis": "diagnostic/apparatus only; no scorer forward",
+  "n_trials": 20000,
+  "null": {
+    "rise_count_low_tail_percentile": 0.0121,
+    "rise_count_mean": 31.51175,
+    "sum_rises_low_tail_percentile": 0.0072,
+    "sum_rises_mean": 0.05056006413412676,
+    "sum_rises_p5": 0.03576021020214661,
+    "sum_rises_p95": 0.06645387019882161
+  },
+  "observed": {
+    "rise_count": 22.0,
+    "sum_rises_s_units": 0.029133
+  },
+  "schema": "lp1_lane_guard_ratchet_null_reproduction.v1",
+  "seed": 777,
+  "selection_mode": "ALL 64 lane_guard rows in burn-4 windows 01-03; regenerated iid-noise MC null",
+  "source": ".omx/research/ddm_lp1_lane_program_20260803.md",
+  "verdict": "FALSE_POSITIVE_REPRODUCED_NO_HIGH_TAIL_ALARM"
+}

@@ -1,0 +1,70 @@
+{
+  "authority_boundary": "diagnostic alarm calibration only; no score authority, no promotion, no surrogate ranker",
+  "rows": [
+    {
+      "active": true,
+      "alarm_id": "lane_guard.ratchet",
+      "block_calibration_required": true,
+      "calibration_population": "same vehicle/window no-erosion Lane realized series; lp1 banked iid-noise null uses MC n=20000 and the shipped first-difference sigma",
+      "calibration_status": "lp1_banked_null_case_available; live use requires block calibration",
+      "consumer": "#934 successor, b4s burn reseal, lane guard fire order",
+      "exchangeability_grade": "conditional_if_stationary_window; fragile across stages",
+      "falsifier": "held-out or block-calibrated null p-values are not super-uniform",
+      "fdr_family": "lane_guard",
+      "notes": "Worked example for AL1; diagnostic-only and scorer-free.",
+      "p_value_direction": "greater",
+      "score": "sum_rises_s_units over the derived true gate horizon",
+      "statistic_status": "ready",
+      "surface": "lane_guard.ratchet / inertness_alarm"
+    },
+    {
+      "active": true,
+      "alarm_id": "term_domination",
+      "block_calibration_required": true,
+      "calibration_population": "same-stage term-share rows under the same vehicle and schedule",
+      "calibration_status": "requires_same_stage_null",
+      "consumer": "v9 telemetry port and burn supervisor",
+      "exchangeability_grade": "partial_stage_scoped",
+      "falsifier": "same-stage null rows fail calibration or the fire is a stage transition",
+      "fdr_family": "loss_term",
+      "notes": "",
+      "p_value_direction": "greater",
+      "score": "max non-scored post-weight share, or scored-term deficit below the derived floor",
+      "statistic_status": "ready",
+      "surface": "TR1 loss term domination"
+    },
+    {
+      "active": true,
+      "alarm_id": "term_inert",
+      "block_calibration_required": true,
+      "calibration_population": "engaged historical rows, scoped by stage and vehicle",
+      "calibration_status": "requires_block_null",
+      "consumer": "force-stack and curriculum gates",
+      "exchangeability_grade": "partial_block_calibration_required",
+      "falsifier": "alarm disappears under block calibration or null p-values bunch low",
+      "fdr_family": "loss_term",
+      "notes": "",
+      "p_value_direction": "greater",
+      "score": "sustained movement deficit or residual debt while the term is engaged",
+      "statistic_status": "ready",
+      "surface": "engaged-but-inert loss terms"
+    },
+    {
+      "active": true,
+      "alarm_id": "gnorm_hijack",
+      "block_calibration_required": true,
+      "calibration_population": "same-stage gradient norm shares with matching optimizer controls",
+      "calibration_status": "requires_same_stage_null_and_shift_guard",
+      "consumer": "force caps and optimizer watchdogs",
+      "exchangeability_grade": "partial_fragile",
+      "falsifier": "nonstationary gradients invalidate calibration before the fire",
+      "fdr_family": "gradient_health",
+      "notes": "",
+      "p_value_direction": "greater",
+      "score": "excess global or per-group norm share against the clip budget",
+      "statistic_status": "ready",
+      "surface": "gradient-norm hijack watchdog"
+    }
+  ],
+  "schema": "tac_l1_alarm_registry.v1"
+}
