@@ -78,6 +78,16 @@ def main() -> int:
                     help="ledger + custody + inflate only (no scorer slot)")
     args = ap.parse_args()
 
+    # upstream/evaluate.py:68 reads <submission_dir>/inflated; an eval pointed at any
+    # other inflate-out dies in ds_comp.prepare_data with a bare AssertionError.  Two
+    # hand-staged scripts hit this on 2026-08-05 (pe2 v1, pe4) — refuse it here.
+    expected_inflate = (args.sub_dir / "inflated").resolve()
+    if not args.skip_eval and args.inflate_out.resolve() != expected_inflate:
+        raise SystemExit(
+            f"--inflate-out must be {expected_inflate} when eval runs "
+            f"(got {args.inflate_out.resolve()}); pass --skip-eval for custody-only runs"
+        )
+
     from tac.submission_chain import (
         audit_runtime_tree,
         build_byte_ledger,
