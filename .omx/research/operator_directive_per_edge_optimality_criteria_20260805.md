@@ -255,3 +255,18 @@ produces."*
   photometrics) is a NEW fitting target none of those measured.
 - Race rule unchanged: both targets race the incumbent archive at total counted bytes,
   same falsifier discipline, fire at the composed-candidate boundary.
+
+### Addendum 7 final scoping (operator, two follow-ups)
+
+- *"or some other dimension that is most optimal"* — the crush target generalizes beyond
+  {archive, inflated RGB}: the crush may act at WHICHEVER LEVEL of the stack is most
+  compressible (scorer-plane ŷ · token field · generator coordinates · logit/margin
+  field · BEV chart). The dimension choice is itself a raced question, governed by the
+  existing layer-assignment law (#669c: re-home every stream to the deepest layer where
+  its information survives) + the per-dimension optimality law (#503).
+- *"This is just ideation, not a directive necessarily"* — STATUS: addendum 7 is a
+  TRACKED CANDIDATE CLASS (`rate_crush` family), NOT a binding P0. The scoping laws
+  above (coder-role lineage, rule-118 accounting, race discipline, dual research
+  mandate) are the conditions under which it WOULD fire; the fire-condition is the
+  composed-candidate boundary (od3/od5 landed + receiver gate). gc18 treats it as
+  design input, not obligation. No arm fires on it now.

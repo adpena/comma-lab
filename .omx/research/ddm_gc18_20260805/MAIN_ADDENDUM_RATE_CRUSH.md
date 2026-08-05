@@ -31,3 +31,12 @@ becomes compress-time machinery; archive = bytes(model)+residual, rule-118 count
 question): Target B is a candidate ANSWER — the "vehicle" that ships may be the crush
 of the staged line's output, dissolving the base-substrate dichotomy. Prior floors are
 formulation-scoped to flat paint (fp1 f′, #909); the composed output is a new target.
+
+## Final scoping (operator ×2): generalized dimension + IDEATION status
+
+The crush may act at whichever stack level is most compressible (ŷ-plane / tokens /
+generator coords / margin field / BEV) — dimension choice raced, per #669c + #503.
+STATUS: this whole family is operator IDEATION, a tracked candidate class with a
+fire-condition (composed-candidate boundary), NOT a directive — weigh it in your
+territory-1 budget and territory-3 adjudication on its merits, freely rank it down
+if the arithmetic says so.
