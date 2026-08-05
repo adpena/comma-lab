@@ -1,0 +1,101 @@
+{
+  "schema": "ddm_lh1_fire_order.v1",
+  "created_utc": "2026-08-05T00:50:21Z",
+  "lane": "ddm_lh1",
+  "outcome": "QUEUED_WITH_FIRE_ORDER",
+  "score_claim": false,
+  "axis": {
+    "realized_scores": "macOS-CPU advisory",
+    "contest_cpu": "not measured",
+    "contest_cuda": "not measured"
+  },
+  "base_verification": {
+    "pose_carrying_base": {
+      "archive": "/Volumes/VertigoDataTier/pact/ddm_fz1_20260804/rowB/sub_final/archive.zip",
+      "report": "/Volumes/VertigoDataTier/pact/ddm_fz1_20260804/rowB/sub_final/report.txt",
+      "n": 600,
+      "d_seg": 0.00431179,
+      "d_pose": 0.00071459,
+      "archive_bytes": 358084,
+      "recomputed_score": 0.7541458627114951
+    },
+    "current_qo1_pairbit_row": {
+      "archive_bytes": 357836,
+      "d_seg": 0.00431179,
+      "d_pose": 0.00071459,
+      "recomputed_score": 0.7539807296911207
+    },
+    "map_repair_branch": {
+      "report": "/Volumes/VertigoDataTier/pact/ddm_fz4_20260804/sub_map_repair/report.txt",
+      "n": 600,
+      "d_seg": 0.00515854,
+      "d_pose": 0.16711321,
+      "archive_bytes": 240992,
+      "recomputed_score": 1.969043427594408,
+      "disposition": "not the fire base"
+    }
+  },
+  "registered_arms": {
+    "source": ".omx/research/ddm_p4x_lane_existence_birth_matrix_20260803.md",
+    "control": {},
+    "arm_a_lane_only": {
+      "existence_hinge_weight": 0.1,
+      "existence_hinge_classes": [
+        "lane"
+      ]
+    },
+    "arm_b_birth_matrix": {
+      "existence_hinge_weight": 0.1,
+      "existence_hinge_classes": [
+        "lane",
+        "movable"
+      ]
+    }
+  },
+  "blockers": [
+    {
+      "id": "no_pose_preserving_tr1_compose_bridge",
+      "status": "blocking",
+      "detail": "No located bridge takes a TR1 existence endpoint through the frame_0-repaired fz4/qo1 base while preserving and pricing d_pose."
+    },
+    {
+      "id": "current_tr1_bounded_n_is_prefix_shaped",
+      "status": "blocking",
+      "detail": "Current TR1 num_pairs < 600 resolves to range(num_pairs), not the registered seeded random bounded cohort."
+    },
+    {
+      "id": "plain_tr1_full_confirm_is_seg_only",
+      "status": "blocking",
+      "detail": "The current existence term path uses compute_pose=False and the full confirm records realized_dseg_mean without matched pose pricing."
+    },
+    {
+      "id": "tr1_seed_amplify_birth_path_unbuilt",
+      "status": "queued",
+      "detail": "Island seed/amplify flags occur zero times in the TR1 trainer; do not claim birth-path coverage until this is built and actuated."
+    },
+    {
+      "id": "mlx_test_environment_no_metal",
+      "status": "environment_blocked",
+      "detail": "Focused existence-hinge tests were 30 passed and 1 failed before hinge logic because MLX tried to load Metal and no Metal device is available in this environment."
+    }
+  ],
+  "fire_order": [
+    "Build or identify a non-prefix random/stratified bounded sample bridge for LH1; do not treat TR1 --num-pairs 96 as the registered random sample.",
+    "Compose or re-render the TR1 existence endpoint through the fz4/qo1 frame_0-repaired base and preserve the frame_0 pose repair section.",
+    "Fire control vs arm A lane-only first with matched d_seg, d_pose, archive bytes, and recomputed S.",
+    "If arm A is live and pose-admissible, fire arm B lane,movable under the same matched surface.",
+    "Spend full n600 only after a bounded net-positive pose-priced result."
+  ],
+  "frontier_after": {
+    "own_vehicle": {
+      "score": 0.7539807296911207,
+      "archive_bytes": 357836,
+      "axis": "macOS-CPU advisory",
+      "status": "unchanged"
+    },
+    "borrowed_contest_pointer": {
+      "score": 0.1910828242,
+      "status": "unchanged"
+    }
+  }
+}
