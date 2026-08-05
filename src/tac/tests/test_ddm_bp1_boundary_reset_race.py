@@ -40,6 +40,7 @@ from experiments.train_tr1_partition_renderer_mlx import (  # noqa: E402
     derive_jd1_stage_ema_decay,
     derive_ema_decay,
     gate_interval_fields,
+    jd1_ema_gate_basis_label,
     jd1_forced_resume_start_epoch,
     jd1_should_reanchor_stage_ema,
     load_checkpoint,
@@ -396,8 +397,17 @@ def test_gate_basis_differs_between_fresh_and_resumed_runs():
     two different instruments. Re-derived from source, since it is the seal-blocking invariant."""
     src = (WORKTREE / "experiments/train_tr1_partition_renderer_mlx.py").read_text()
     assert "global_step = 0 if args.resume_from is None else ema_warmup_updates" in src
-    assert ('gate_basis = "ema_shadow" if global_step >= ema_warmup_updates '
-            'else "live_ema_warmup"') in src
+    assert "jd1_ema_gate_basis_label(" in src
+    assert jd1_ema_gate_basis_label(
+        global_step=0,
+        ema_warmup_updates=1,
+        state={},
+    ) == "live_ema_warmup"
+    assert jd1_ema_gate_basis_label(
+        global_step=1,
+        ema_warmup_updates=1,
+        state={},
+    ) == "ema_shadow"
 
 
 def test_builder_refuses_arms_that_are_not_on_the_same_gate_basis():

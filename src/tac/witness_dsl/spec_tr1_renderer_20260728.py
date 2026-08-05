@@ -427,6 +427,50 @@ def lever_jd1_joint_pose_finish(
         })
 
 
+def lever_jd1_plateau_tail_average_ema(*, anchor_epoch: int) -> Lever:
+    """DY2: switch JD1's shipping EMA shadow to a plateau-anchored tail average.
+
+    This composes with :func:`lever_jd1_joint_pose_finish`; it does not arm pose
+    finish by itself. The trainer validation refuses this lever unless JD1 is
+    active, which keeps a dangling EMA mode from becoming a declared-but-unread
+    flag.
+    """
+    if int(anchor_epoch) < 0:
+        raise ValueError("anchor_epoch must be >= 0")
+    return Lever(
+        name=f"tr1_jd1_ema_plateau_tail_average_ep{int(anchor_epoch)}",
+        overrides={
+            "--jd1-ema-stage-scope": "window",
+            "--jd1-ema-mode": "plateau_tail_average",
+            "--jd1-ema-tail-anchor-epoch": str(int(anchor_epoch)),
+        },
+        notes="DY2 dynamic-EMA A/B arm: geometric stage EMA until an explicit plateau "
+              "anchor epoch, then reset the shipping EMA shadow to live weights and "
+              "maintain a growing-horizon Polyak tail average. Default trainer mode "
+              "remains geometric and checkpoint-byte-identical when unarmed.",
+        constant_manifest={
+            "--jd1-ema-tail-anchor-epoch": {
+                "value": int(anchor_epoch),
+                "rung": "EVENT-OR-BOUNDARY-SUPPLIED",
+                "provenance": "Explicit stand-in for the tp1 Case-0 plateau detector event. "
+                              "This factory only makes the tail-average arm fireable; MAIN "
+                              "selects the anchor from the endpoint/plateau policy.",
+            },
+            "--jd1-ema-mode": {
+                "value": "plateau_tail_average",
+                "rung": "MECHANISM-SPECIFIED (dy2 build)",
+                "provenance": "tp1 queued dynamic-EMA A/B: fixed 1-4/U geometric EMA versus "
+                              "plateau-anchored growing-horizon tail average.",
+            },
+        },
+        runtime_receipt_schemas={
+            "jd1_ema_mode": "typed telemetry row at JD1 engage/resume",
+            "jd1_ema_tail_average_anchor": "typed telemetry row when explicit anchor fires",
+        },
+        policy_contracts={"score_claim": False, "requires_jd1_pose_finish": True},
+    )
+
+
 def lever_solve_frame_distill(field_cache: str, *, form: str = "kd_logits",
                               weight: float = 100.0, temp: float = 2.0,
                               attack_temp: float = 0.0) -> Lever:

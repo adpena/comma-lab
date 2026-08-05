@@ -16,6 +16,7 @@ from tac.witness_dsl.spec_tr1_renderer_20260728 import (
     TR1RendererProgramV1,
     default_t1_smoke_program,
     lever_jd1_joint_pose_finish,
+    lever_jd1_plateau_tail_average_ema,
     trainer_declared_flags,
 )
 
@@ -53,6 +54,36 @@ def test_jd1_lever_flags_are_declared_by_the_live_trainer():
     missing = sorted(set(lv.overrides) - trainer_declared_flags())
     assert not missing
     assert (_REPO / TRAINER_RELPATH).is_file()
+
+
+def test_jd1_tail_average_ema_lever_composes_with_joint_pose_finish():
+    joint = lever_jd1_joint_pose_finish(w_pose=1.0, start_epoch=5, engage_on="start_epoch")
+    tail = lever_jd1_plateau_tail_average_ema(anchor_epoch=1424)
+    base = default_t1_smoke_program("plain", "/unused")
+    prog = TR1RendererProgramV1(
+        levers=base.levers + (joint, tail),
+        num_pairs=24,
+        out_dir="/unused",
+        resume_from="parent.npz",
+    )
+    argv = prog.compile_trainer_argv()
+    ns = build_argparser().parse_args(argv[1:])
+    validate_jd1_pose_finish_args(ns)
+    assert ns.jd1_pose_finish_mode == "joint_loss"
+    assert ns.jd1_ema_stage_scope == "window"
+    assert ns.jd1_ema_mode == "plateau_tail_average"
+    assert ns.jd1_ema_tail_anchor_epoch == 1424
+
+
+def test_jd1_tail_average_ema_lever_flags_are_declared_by_the_live_trainer():
+    lv = lever_jd1_plateau_tail_average_ema(anchor_epoch=1424)
+    missing = sorted(set(lv.overrides) - trainer_declared_flags())
+    assert not missing
+
+
+def test_jd1_tail_average_ema_factory_refuses_negative_anchor():
+    with pytest.raises(ValueError, match="anchor_epoch"):
+        lever_jd1_plateau_tail_average_ema(anchor_epoch=-1)
 
 
 def test_jd1_factory_refuses_inert_or_invalid_shapes():

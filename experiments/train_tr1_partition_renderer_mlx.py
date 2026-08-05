@@ -133,6 +133,18 @@ JD1_SEG_HOLD_FLOOR_SOURCES = (
 )
 JD1_SEG_HOLD_SPACES = ("loss", "realized")
 JD1_EMA_STAGE_SCOPES = ("off", "window")
+JD1_EMA_MODES = ("geometric", "plateau_tail_average")
+JD1_EMA_TAIL_ANCHOR_OFF = -1
+JD1_EMA_TAIL_STATE_KEYS = (
+    "ema_mode",
+    "ema_tail_anchor_epoch",
+    "ema_tail_configured_anchor_epoch",
+    "ema_tail_average_active",
+    "ema_tail_update_count",
+    "ema_tail_anchor_global_step",
+    "ema_tail_anchor_reason",
+    "ema_tail_last_live_weight",
+)
 JD1_LIVE_GATE_TELEMETRY = ("off", "on")
 
 # Pre-registered A1 alarm thresholds (tb1 charter T1: "never scale a loop whose
@@ -2841,6 +2853,16 @@ def build_argparser() -> argparse.ArgumentParser:
                          "at joint-pose engagement or engaged resume, preserve the parent "
                          "shadow in the entry checkpoint and re-anchor EMA to live weights "
                          "with decay derived from the remaining stage window.")
+    ap.add_argument("--jd1-ema-mode", default="geometric",
+                    choices=JD1_EMA_MODES,
+                    help="DY2 EMA update mode for JD1 windows. geometric = existing "
+                         "decay update. plateau_tail_average = run geometric EMA until "
+                         "--jd1-ema-tail-anchor-epoch, then reset shadow to live weights "
+                         "and update it as a growing-horizon Polyak tail average.")
+    ap.add_argument("--jd1-ema-tail-anchor-epoch", type=int,
+                    default=JD1_EMA_TAIL_ANCHOR_OFF,
+                    help="DY2 explicit absolute epoch that anchors plateau_tail_average. "
+                         "-1 = off. Required when --jd1-ema-mode plateau_tail_average.")
     ap.add_argument("--jd1-live-gate-telemetry", default="off",
                     choices=JD1_LIVE_GATE_TELEMETRY,
                     help="JD3 observability. on additionally logs a live-weight realized "
@@ -3162,6 +3184,86 @@ def derive_jd1_stage_ema_decay(remaining_epochs: int, steps_per_epoch: int) -> t
     return decay, f"JD3 stage-scoped window EMA: {prov}"
 
 
+def jd1_ema_tail_anchor_epoch(value: int) -> int | None:
+    """Normalize the explicit tail-average anchor epoch, or None for default-off."""
+    v = int(value)
+    if v < JD1_EMA_TAIL_ANCHOR_OFF:
+        raise ValueError("--jd1-ema-tail-anchor-epoch must be -1/off or >= 0")
+    return None if v == JD1_EMA_TAIL_ANCHOR_OFF else v
+
+
+def jd1_ema_initial_state(args: Any) -> dict[str, Any]:
+    """Return JD1 EMA state keys only when the new mode needs checkpoint custody.
+
+    The default geometric path returns an empty dict so old JD1 checkpoints remain
+    byte-identical when the new flags are absent.
+    """
+    anchor = jd1_ema_tail_anchor_epoch(int(args.jd1_ema_tail_anchor_epoch))
+    if str(args.jd1_ema_mode) == "geometric" and anchor is None:
+        return {}
+    return {
+        "ema_mode": str(args.jd1_ema_mode),
+        "ema_tail_anchor_epoch": anchor,
+        "ema_tail_configured_anchor_epoch": anchor,
+        "ema_tail_average_active": False,
+        "ema_tail_update_count": 0,
+        "ema_tail_anchor_global_step": None,
+        "ema_tail_anchor_reason": None,
+        "ema_tail_last_live_weight": None,
+    }
+
+
+def jd1_ema_checkpoint_payload(args: Any, state: Mapping[str, Any]) -> dict[str, Any]:
+    """Checkpoint-resumable JD1 EMA mode payload.
+
+    Geometric default stays absent unless a resumed/new checkpoint already carries
+    one of these keys. Tail-average mode persists mode, anchor, and update count.
+    """
+    carries_tail_state = any(k in state for k in JD1_EMA_TAIL_STATE_KEYS)
+    if str(args.jd1_ema_mode) == "geometric" and not carries_tail_state:
+        return {}
+    anchor = jd1_ema_tail_anchor_epoch(int(args.jd1_ema_tail_anchor_epoch))
+    return {
+        "ema_mode": str(state.get("ema_mode", args.jd1_ema_mode)),
+        "ema_tail_anchor_epoch": state.get("ema_tail_anchor_epoch", anchor),
+        "ema_tail_configured_anchor_epoch": state.get(
+            "ema_tail_configured_anchor_epoch", anchor),
+        "ema_tail_average_active": bool(state.get("ema_tail_average_active", False)),
+        "ema_tail_update_count": int(state.get("ema_tail_update_count", 0)),
+        "ema_tail_anchor_global_step": state.get("ema_tail_anchor_global_step"),
+        "ema_tail_anchor_reason": state.get("ema_tail_anchor_reason"),
+        "ema_tail_last_live_weight": state.get("ema_tail_last_live_weight"),
+    }
+
+
+def jd1_ema_tail_average_active(state: Mapping[str, Any]) -> bool:
+    return (
+        str(state.get("ema_mode", "geometric")) == "plateau_tail_average"
+        and bool(state.get("ema_tail_average_active", False))
+    )
+
+
+def jd1_ema_tail_average_live_weight(updates_since_anchor: int) -> float:
+    """Polyak live-sample weight after a reset-to-live anchor.
+
+    ``updates_since_anchor`` is the count already folded into the mean after the
+    anchor sample. The next settled live iterate gets weight 1/(k+2), so the
+    anchor live weights remain sample 0 of the growing horizon.
+    """
+    k = int(updates_since_anchor)
+    if k < 0:
+        raise ValueError("updates_since_anchor must be >= 0")
+    return 1.0 / float(k + 2)
+
+
+def jd1_ema_gate_basis_label(
+    *, global_step: int, ema_warmup_updates: int, state: Mapping[str, Any]
+) -> str:
+    if jd1_ema_tail_average_active(state):
+        return "ema_tail_average"
+    return "ema_shadow" if int(global_step) >= int(ema_warmup_updates) else "live_ema_warmup"
+
+
 def jd1_forced_resume_start_epoch(
     *,
     saved_epoch: int,
@@ -3246,6 +3348,10 @@ def derive_jd1_realized_hold_margin(args: Any, gate_row: dict[str, Any]) -> tupl
 
 def validate_jd1_pose_finish_args(args: Any) -> None:
     """Fail closed on JD1 value flags that would otherwise be declared-but-unread."""
+    try:
+        _tail_anchor = jd1_ema_tail_anchor_epoch(int(args.jd1_ema_tail_anchor_epoch))
+    except ValueError as exc:
+        raise SystemExit(str(exc)) from exc
     if int(args.jd1_pose_finish_start_epoch) < 0:
         raise SystemExit("--jd1-pose-finish-start-epoch must be >= 0")
     if float(args.jd1_w_pose) < 0.0:
@@ -3292,6 +3398,10 @@ def validate_jd1_pose_finish_args(args: Any) -> None:
             inert.append("--jd1-realized-hold-max-retreats")
         if args.jd1_ema_stage_scope != "off":
             inert.append("--jd1-ema-stage-scope")
+        if args.jd1_ema_mode != "geometric":
+            inert.append("--jd1-ema-mode")
+        if _tail_anchor is not None:
+            inert.append("--jd1-ema-tail-anchor-epoch")
         if args.jd1_live_gate_telemetry != "off":
             inert.append("--jd1-live-gate-telemetry")
         if args.jd1_force_ema_reanchor_on_resume:
@@ -3304,6 +3414,18 @@ def validate_jd1_pose_finish_args(args: Any) -> None:
 
     if float(args.jd1_w_pose) <= 0.0:
         raise SystemExit("--jd1-pose-finish-mode joint_loss requires --jd1-w-pose > 0")
+    if args.jd1_ema_mode == "geometric":
+        if _tail_anchor is not None:
+            raise SystemExit(
+                "--jd1-ema-tail-anchor-epoch requires --jd1-ema-mode plateau_tail_average")
+    elif args.jd1_ema_mode == "plateau_tail_average":
+        if args.jd1_ema_stage_scope != "window":
+            raise SystemExit(
+                "--jd1-ema-mode plateau_tail_average requires --jd1-ema-stage-scope window")
+        if _tail_anchor is None:
+            raise SystemExit(
+                "--jd1-ema-mode plateau_tail_average requires "
+                "--jd1-ema-tail-anchor-epoch >= 0")
     if (args.jd1_pose_finish_engage_on == "start_epoch"
             and int(args.jd1_pose_finish_start_epoch) <= 0):
         raise SystemExit("--jd1-pose-finish-engage-on start_epoch requires a positive start epoch")
@@ -3621,6 +3743,8 @@ def main() -> int:
           "realized_hold_pose_retreat": float(args.jd1_realized_hold_pose_retreat),
           "realized_hold_max_retreats": int(args.jd1_realized_hold_max_retreats),
           "ema_stage_scope": args.jd1_ema_stage_scope,
+          "ema_mode": args.jd1_ema_mode,
+          "ema_tail_anchor_epoch": int(args.jd1_ema_tail_anchor_epoch),
           "force_ema_reanchor_on_resume": bool(args.jd1_force_ema_reanchor_on_resume),
           "live_gate_telemetry": args.jd1_live_gate_telemetry,
           "gt_poses_loaded": bool(gt_poses is not None),
@@ -3860,6 +3984,7 @@ def main() -> int:
         "force_ema_reanchor_on_resume": bool(args.jd1_force_ema_reanchor_on_resume),
         "live_gate_telemetry": args.jd1_live_gate_telemetry,
     }
+    jd1_pose_finish_state.update(jd1_ema_initial_state(args))
 
     def _jd1_checkpoint_extra_meta() -> dict[str, Any] | None:
         if not (_jd1_pose_finish_enabled and jd1_pose_finish_state.get("engaged")):
@@ -3873,6 +3998,7 @@ def main() -> int:
             "force_ema_reanchor_on_resume": bool(args.jd1_force_ema_reanchor_on_resume),
             "live_gate_telemetry": args.jd1_live_gate_telemetry,
             "seg_hold_space": args.jd1_seg_hold_space,
+            **jd1_ema_checkpoint_payload(args, jd1_pose_finish_state),
         })
         return {"jd1_pose_finish": dict(jd1_pose_finish_state)}
 
@@ -3889,6 +4015,12 @@ def main() -> int:
                 raise SystemExit(
                     "resume REFUSED: checkpoint is inside JD1 joint_pose_finish but this launch "
                     "sets --jd1-pose-finish-mode off")
+            _saved_ema_mode = _saved_jd1.get("ema_mode")
+            if (_saved_ema_mode is not None
+                    and str(_saved_ema_mode) != str(args.jd1_ema_mode)):
+                raise SystemExit(
+                    "resume REFUSED: checkpoint JD1 EMA mode "
+                    f"{_saved_ema_mode!r} != launch --jd1-ema-mode {args.jd1_ema_mode!r}")
             jd1_pose_finish_state.update(_saved_jd1)
             if _saved_jd1.get("effective_w_pose") is not None:
                 jd1_effective_w_pose = float(_saved_jd1["effective_w_pose"])
@@ -4357,6 +4489,7 @@ def main() -> int:
             "active_ema_decay": float(active_ema_decay),
             "active_ema_decay_provenance": active_ema_decay_provenance,
             "ema_warmup_updates": int(ema_warmup_updates),
+            **jd1_ema_initial_state(args),
         })
         save_checkpoint(out_dir / "checkpoints" / "stage_joint_pose_finish_entry.npz",
                         model=model, ema=ema, opt_state_flat=_opt_state(), epoch=epoch,
@@ -4374,9 +4507,68 @@ def main() -> int:
               "parent_shadow_preserved_prefix": "jd1_parent_ema::",
               "active_ema_decay": float(active_ema_decay),
               "active_ema_decay_provenance": active_ema_decay_provenance,
+              "ema_mode": args.jd1_ema_mode,
+              "ema_tail_anchor_epoch": int(args.jd1_ema_tail_anchor_epoch),
               "ema_warmup_updates": int(ema_warmup_updates),
               "checkpoint": "checkpoints/stage_joint_pose_finish_entry.npz",
               "score_claim": False})
+
+    def _log_jd1_ema_mode(*, epoch: int, reason: str) -> None:
+        payload = jd1_ema_checkpoint_payload(args, jd1_pose_finish_state)
+        tlog({
+            "event": "jd1_ema_mode",
+            "epoch": int(epoch),
+            "stage": stage,
+            "reason": reason,
+            "mode": args.jd1_ema_mode,
+            "ema_stage_scope": args.jd1_ema_stage_scope,
+            "active_ema_decay": float(active_ema_decay),
+            "ema_tail_anchor_epoch": int(args.jd1_ema_tail_anchor_epoch),
+            "ema_tail_average_active": bool(payload.get("ema_tail_average_active", False)),
+            "ema_tail_update_count": int(payload.get("ema_tail_update_count", 0)),
+            "gate_basis": jd1_ema_gate_basis_label(
+                global_step=global_step,
+                ema_warmup_updates=ema_warmup_updates,
+                state=jd1_pose_finish_state,
+            ),
+            "score_claim": False,
+        })
+
+    def _maybe_apply_jd1_ema_tail_anchor(*, epoch: int, reason: str) -> None:
+        nonlocal ema
+        if args.jd1_ema_mode != "plateau_tail_average":
+            return
+        if not jd1_pose_finish_state.get("engaged"):
+            return
+        if jd1_ema_tail_average_active(jd1_pose_finish_state):
+            return
+        anchor_epoch = jd1_ema_tail_anchor_epoch(int(args.jd1_ema_tail_anchor_epoch))
+        if anchor_epoch is None or int(epoch) < int(anchor_epoch):
+            return
+        ema = _copy_mx_tree(dict(tree_flatten(model.trainable_parameters())))
+        jd1_pose_finish_state.update({
+            "ema_mode": "plateau_tail_average",
+            "ema_tail_anchor_epoch": int(epoch),
+            "ema_tail_configured_anchor_epoch": int(anchor_epoch),
+            "ema_tail_average_active": True,
+            "ema_tail_update_count": 0,
+            "ema_tail_anchor_global_step": int(global_step),
+            "ema_tail_anchor_reason": reason,
+            "ema_tail_last_live_weight": None,
+        })
+        tlog({
+            "event": "jd1_ema_tail_average_anchor",
+            "epoch": int(epoch),
+            "stage": stage,
+            "reason": reason,
+            "configured_anchor_epoch": int(anchor_epoch),
+            "global_step": int(global_step),
+            "gate_basis": "ema_tail_average",
+            "score_claim": False,
+            "note": "Reset EMA shadow to live weights and switch future updates to a "
+                    "growing-horizon Polyak tail average over the anchor plus settled "
+                    "post-anchor live iterates.",
+        })
 
     def _capture_jd1_gate_snapshot(epoch: int) -> dict[str, Any]:
         return {
@@ -4467,6 +4659,7 @@ def main() -> int:
     if jd1_pose_finish_state.get("engaged"):
         _apply_jd1_stage_ema_reanchor(epoch=start_epoch,
                                       reason="resume_inside_joint_pose_finish")
+        _log_jd1_ema_mode(epoch=start_epoch, reason="resume_inside_joint_pose_finish")
     if knee_switched and state_form["form"] == "ce":
         # #517-twin re-anchor (2026-07-30 qa86 EMA-resume incident): the form state
         # machine must position to the RESTORED stage, not --seg-form-start. Without
@@ -4490,8 +4683,12 @@ def main() -> int:
         # 1/(n_gate*H*W). Half that quantum accepts only a bit-exact reproduction while staying
         # robust to float summation order across processes.
         boundary_pc_tol = 0.5 / float(len(gate_ids) * SEG_H * SEG_W)
-        _pc_basis = "ema_shadow" if global_step >= ema_warmup_updates else "live_ema_warmup"
-        _pc_live = ema_snapshot_swap(model, ema) if _pc_basis == "ema_shadow" else None
+        _pc_basis = jd1_ema_gate_basis_label(
+            global_step=global_step,
+            ema_warmup_updates=ema_warmup_updates,
+            state=jd1_pose_finish_state,
+        )
+        _pc_live = ema_snapshot_swap(model, ema) if _pc_basis != "live_ema_warmup" else None
         try:
             _pc_row = realized_gate(model, gate_ids, lstars, seg_cpu, None)
         finally:
@@ -4613,6 +4810,8 @@ def main() -> int:
                   "note": "JD1 joint pose-finish is now active: pair_loss consumes gt_poses "
                           "and builds make_loss_fn's PoseNet path; A1 smooth baseline rebased.",
                   "score_claim": False})
+            _log_jd1_ema_mode(epoch=epoch, reason="fresh_joint_pose_engagement")
+        _maybe_apply_jd1_ema_tail_anchor(epoch=epoch, reason="explicit_epoch")
         perm = order_rng.permutation(cfg.num_pairs)
         ep_loss, steps = 0.0, 0
         last_gnorm = None
@@ -4630,8 +4829,16 @@ def main() -> int:
             steps += 1
             global_step += 1
             flat = tree_flatten(model.trainable_parameters())
-            for k, v in flat:
-                ema[k] = active_ema_decay * ema[k] + (1.0 - active_ema_decay) * v
+            if jd1_ema_tail_average_active(jd1_pose_finish_state):
+                _tail_k = int(jd1_pose_finish_state.get("ema_tail_update_count", 0))
+                _live_w = jd1_ema_tail_average_live_weight(_tail_k)
+                for k, v in flat:
+                    ema[k] = ema[k] + _live_w * (v - ema[k])
+                jd1_pose_finish_state["ema_tail_update_count"] = _tail_k + 1
+                jd1_pose_finish_state["ema_tail_last_live_weight"] = float(_live_w)
+            else:
+                for k, v in flat:
+                    ema[k] = active_ema_decay * ema[k] + (1.0 - active_ema_decay) * v
             if b0 + cfg.batch_pairs >= cfg.num_pairs:  # last batch: gnorm telemetry
                 from mlx.utils import tree_flatten as _tf
 
@@ -4650,7 +4857,12 @@ def main() -> int:
                "jd1_seg_hold_floor": jd1_pose_finish_state.get("seg_hold_floor"),
                "jd1_effective_w_pose": (float(jd1_effective_w_pose)
                                         if jd1_pose_finish_state.get("engaged") else 0.0),
-               "active_ema_decay": float(active_ema_decay)}
+               "active_ema_decay": float(active_ema_decay),
+               "jd1_ema_mode": args.jd1_ema_mode,
+               "jd1_ema_tail_average_active": bool(
+                   jd1_pose_finish_state.get("ema_tail_average_active", False)),
+               "jd1_ema_tail_update_count": int(
+                   jd1_pose_finish_state.get("ema_tail_update_count", 0))}
         # Confound immune system (day-one, L1 runtime alarms — LOUD, never silent):
         if ep_loss == 0.0:
             tlog({"event": "confound_alarm", "kind": "frozen_epoch", "epoch": epoch,
@@ -4743,7 +4955,11 @@ def main() -> int:
         # A1 realized gate. Basis = EMA shadow once warm (W = 2/(1-d) updates), LIVE
         # params before that (the #85 shadow-lag guard above; basis recorded, LOUD).
         if (epoch + 1) % cfg.gate_every == 0 or epoch == cfg.epochs - 1:
-            gate_basis = "ema_shadow" if global_step >= ema_warmup_updates else "live_ema_warmup"
+            gate_basis = jd1_ema_gate_basis_label(
+                global_step=global_step,
+                ema_warmup_updates=ema_warmup_updates,
+                state=jd1_pose_finish_state,
+            )
             live_np = {k: np.asarray(v) for k, v in tree_flatten(model.trainable_parameters())}
             if args.jd1_live_gate_telemetry == "on":
                 live_gate_row = realized_gate(model, gate_ids, lstars, seg_cpu, None)
@@ -4754,12 +4970,17 @@ def main() -> int:
                     "stage": stage,
                     "gate_params": "live_weights",
                     "active_ema_decay": float(active_ema_decay),
+                    "jd1_ema_mode": args.jd1_ema_mode,
+                    "jd1_ema_tail_update_count": int(
+                        jd1_pose_finish_state.get("ema_tail_update_count", 0)),
+                    "jd1_ema_tail_average_active": bool(
+                        jd1_pose_finish_state.get("ema_tail_average_active", False)),
                     "effective_w_pose": (float(jd1_effective_w_pose)
                                          if jd1_pose_finish_state.get("engaged") else 0.0),
                     "score_claim": False,
                     **live_gate_row,
                 })
-            live = ema_snapshot_swap(model, ema) if gate_basis == "ema_shadow" else None
+            live = ema_snapshot_swap(model, ema) if gate_basis != "live_ema_warmup" else None
             try:
                 gate_row = realized_gate(model, gate_ids, lstars, seg_cpu, prev_realized)
                 ledger = counted_bytes_ledger(model, cfg)
@@ -4770,6 +4991,13 @@ def main() -> int:
             gate_row["gate_params"] = gate_basis
             gate_row["ema_warmup_updates"] = ema_warmup_updates
             gate_row["global_step"] = global_step
+            gate_row["jd1_ema_mode"] = args.jd1_ema_mode
+            gate_row["jd1_ema_tail_update_count"] = int(
+                jd1_pose_finish_state.get("ema_tail_update_count", 0))
+            gate_row["jd1_ema_tail_average_active"] = bool(
+                jd1_pose_finish_state.get("ema_tail_average_active", False))
+            gate_row["jd1_ema_tail_anchor_epoch"] = jd1_pose_finish_state.get(
+                "ema_tail_anchor_epoch")
             # Basis change (live->shadow) REBASES the A1 comparison + flip baseline.
             if prev_gate_basis is not None and gate_basis != prev_gate_basis:
                 prev_gate_smooth = None
@@ -5121,8 +5349,11 @@ def main() -> int:
         "reset_arm": resolve_arm_name(_reset_arm),
         "reset_operator": _reset_arm.describe(),
         "a1_alarms": a1_alarm_summary(telemetry_tail),
-        "gate_basis_mode": ("resumed_warm_shadow" if args.resume_from is not None
-                            else "fresh_live_then_shadow"),
+        "gate_basis_mode": (
+            "plateau_tail_average" if jd1_ema_tail_average_active(jd1_pose_finish_state)
+            else ("resumed_warm_shadow" if args.resume_from is not None
+                  else "fresh_live_then_shadow")
+        ),
         # ddm_op2 (OP2-2): the receipt reports the STRICT decay+basis verdict once the first
         # post-resume gate has observed the basis; before that it can only report the decay leg,
         # and it says which one it is rather than presenting the weaker leg under the strict name.
@@ -5156,6 +5387,7 @@ def main() -> int:
             "effective_w_pose": float(jd1_effective_w_pose),
             "realized_hold": dict(jd1_realized_hold_state),
             "ema_stage_scope": args.jd1_ema_stage_scope,
+            "ema_mode": args.jd1_ema_mode,
             "active_ema_decay": float(active_ema_decay),
             "active_ema_decay_provenance": active_ema_decay_provenance,
             "force_ema_reanchor_on_resume": bool(args.jd1_force_ema_reanchor_on_resume),
@@ -5172,8 +5404,12 @@ def main() -> int:
             cpu_verdict_d_seg_batch,
         )
 
-        confirm_basis = "ema_shadow" if global_step >= ema_warmup_updates else "live_ema_warmup"
-        live = ema_snapshot_swap(model, ema) if confirm_basis == "ema_shadow" else None
+        confirm_basis = jd1_ema_gate_basis_label(
+            global_step=global_step,
+            ema_warmup_updates=ema_warmup_updates,
+            state=jd1_pose_finish_state,
+        )
+        live = ema_snapshot_swap(model, ema) if confirm_basis != "live_ema_warmup" else None
         try:
             t0 = time.monotonic()
             all_dsegs: list[float] = []
@@ -5227,8 +5463,12 @@ def main() -> int:
                            if 0 <= int(i) < cfg.num_pairs]
             else:
                 sub_ids = list(range(n_sub))
-            cbasis = "ema_shadow" if global_step >= ema_warmup_updates else "live_ema_warmup"
-            live = ema_snapshot_swap(model, ema) if cbasis == "ema_shadow" else None
+            cbasis = jd1_ema_gate_basis_label(
+                global_step=global_step,
+                ema_warmup_updates=ema_warmup_updates,
+                state=jd1_pose_finish_state,
+            )
+            live = ema_snapshot_swap(model, ema) if cbasis != "live_ema_warmup" else None
             try:
                 frames = []
                 with mx.stream(mx.cpu):
