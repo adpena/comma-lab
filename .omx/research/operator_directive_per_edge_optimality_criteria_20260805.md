@@ -285,3 +285,38 @@ image, not in the scorer's privilege. The one seam left (realization) is itself 
 geometry problem: the values SegNet must read are dictated by the frozen head's own
 hyperplanes, solvable at encode, shippable as prototypes. Nothing today moved by luck;
 everything moved by derive → falsify → measure → compose.
+
+## ADDENDUM 8 (operator 2026-08-05) — THE NATIVE-COORDINATES SHIPPING LAW
+
+Operator verbatim: *"Can't all of that be done during encoding or during another pass?"*
++ *"That seems to always be the issue when we run into realization issues."*
+
+**The law (verified against the record, BOTH directions):** a realization wall is the
+signature of a LOSSY PROJECTION shipped in place of the encode-side object. The cure is
+never a cleverer decode-side realizer — it is shipping the object in the coordinates in
+which it was solved/learned, making decode purely mechanical (apply, zero tax by
+construction). Measured instances:
+
+| shipped object | native object it projected | result |
+|---|---|---|
+| od7 per-cell stamps | od2's regional solved fields | +0.31–0.35 S (dead) |
+| pe2 dense paint | mask descriptions w/o values/coherence | S 1.51–6.11 (dead) |
+| fp1 flat paint | class fields w/o texture/margin | f′ 0.008305 floor |
+| v14 painted masks | exact masks through paint→R→uint8 | 1700× Movable loss |
+| dm2 L4 semantic records | L3 RGB preimages unpriced | 2,524× price ratio |
+| et1 address band | addresses w/o values | η 0.3017 vs bar 0.615 |
+| **od2 carriage k=4 DCT coeffs** | **the solve's OWN DOF** | **pose repaired BELOW baseline** |
+| **qo1 token stream** | **the renderer's OWN tokens** | **the live frontier** |
+
+**The unification:** this is HNeRV-parity Lesson 2 (export-first design — declare the
+archive grammar BEFORE writing the trainer) generalized to the SOLVE surface. The od7
+persistence gap exists precisely because the js1 solve was built before its payload
+schema was declared — the solve computed the right object and discarded it.
+
+**The binding design rule going forward:** every solver/trainer PERSISTS its native DOF
+from byte one, and its payload schema is declared BEFORE it runs. "Can it be done at
+encode / in another pass?" is the FIRST question at any realization wall — the measured
+answer has been yes every time. Fire-order: register
+`lossy_projection_shipped_expecting_decode_realization_v1` in the canonical
+anti-patterns registry at the next arm landing that touches it (od8's NEXT_IF_RESUMED
+or successor); MEMORY.md index line at the next consolidation boundary.
