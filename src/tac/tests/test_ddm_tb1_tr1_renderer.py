@@ -199,13 +199,29 @@ def test_bi1_birth_seed_bank_pure_numpy_smoke():
     assert summary["score_claim"] is False
 
 
-def test_bi1_birth_seed_refuses_unprojected_token_geometry():
+def test_bi1_birth_seed_refuses_unprojected_token_geometry(tmp_path):
     lstars = _birth_lstars(1)
-    with pytest.raises(ValueError, match="dense token lattice"):
+    # Coverage contract (replaces the former categorical dense-lattice refusal):
+    # a keep mask that EXCLUDES seeded cells refuses (gradient-dead + unpriced)...
+    cfg_probe = _cfg("plain", num_pairs=1)
+    zero_mask = tmp_path / "keep_none.npy"
+    np.save(zero_mask, np.zeros((cfg_probe.grid_h, cfg_probe.grid_w), dtype=np.uint8))
+    with pytest.raises(ValueError, match="OUTSIDE the token keep mask"):
         build_tr1_birth_seed_bank(
-            _cfg("plain", num_pairs=1, token_cell_mask="cells.npy"), lstars,
+            _cfg("plain", num_pairs=1, token_cell_mask=str(zero_mask)), lstars,
             weight=0.5, classes="lane"
         )
+    # ...while a keep mask COVERING every seeded cell (the union-mask workflow)
+    # builds the bank on a masked lattice.
+    full_mask = tmp_path / "keep_all.npy"
+    np.save(full_mask, np.ones((cfg_probe.grid_h, cfg_probe.grid_w), dtype=np.uint8))
+    bank, summary = build_tr1_birth_seed_bank(
+        _cfg("plain", num_pairs=1, token_cell_mask=str(full_mask)), lstars,
+        weight=0.5, classes="lane"
+    )
+    assert bank is not None
+    assert summary["masked_lattice"] is True
+    assert summary["uncovered_seed_cells"] == 0
     with pytest.raises(ValueError, match="untied token cells"):
         build_tr1_birth_seed_bank(
             _cfg("plain", num_pairs=1, token_rowband_spec='{"bands": []}'), lstars,

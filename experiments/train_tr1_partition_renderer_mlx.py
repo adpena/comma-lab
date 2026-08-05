@@ -761,9 +761,6 @@ def build_tr1_birth_seed_bank(
         raise ValueError("--tr1-birth-seed-dilate-px must be >= 0")
     if persist not in ("uniform", "inverse_thickness"):
         raise ValueError("--tr1-birth-amplify-persist must be uniform|inverse_thickness")
-    if getattr(cfg, "token_cell_mask", None) is not None:
-        raise ValueError("BI1 birth seed currently requires the dense token lattice; "
-                         "--token-cell-mask would make some seeded targets gradient-dead")
     if getattr(cfg, "token_rowband_spec", None) is not None:
         raise ValueError("BI1 birth seed currently requires untied token cells; "
                          "--token-rowband-spec needs an explicit tied-target projection")
@@ -803,6 +800,29 @@ def build_tr1_birth_seed_bank(
             mask[pair_idx, ..., 0] = np.maximum(mask[pair_idx, ..., 0], cell_w)
 
     np.clip(target, -1.0, 1.0, out=target)
+    # Masked-lattice coverage check (replaces the former categorical refusal): a
+    # keep-masked cell is multiplied to exactly 0 with vanishing gradient AND is
+    # excluded from byte-close, so a seed outside the keep mask would be a
+    # gradient-dead target the byte ledger never prices. Permit a masked lattice
+    # ONLY when every seeded cell is kept — the union-mask workflow (keep ∪ seeds,
+    # materialized as a mask FILE so trainer/byte-close/receiver see one object,
+    # and the birthed cells' rate is counted) is how an ON arm satisfies this.
+    uncovered_cells = 0
+    if getattr(cfg, "token_cell_mask", None) is not None:
+        keep = np.load(cfg.token_cell_mask)
+        if keep.shape != (cfg.grid_h, cfg.grid_w):
+            raise ValueError(
+                f"token_cell_mask shape {keep.shape} != grid ({cfg.grid_h},{cfg.grid_w})")
+        seeded_any = mask[..., 0].max(axis=0) > 0.0
+        uncovered = seeded_any & (keep.astype(bool) == False)  # noqa: E712
+        uncovered_cells = int(uncovered.sum())
+        if uncovered_cells > 0:
+            raise ValueError(
+                f"BI1 birth seed: {uncovered_cells} seeded cell(s) fall OUTSIDE the "
+                f"token keep mask ({cfg.token_cell_mask}) and would be gradient-dead + "
+                f"unpriced. Materialize the union mask (keep | seeded cells) as a new "
+                f".npy and pass it as --token-cell-mask so byte-close counts the "
+                f"birthed cells.")
     summary = {
         "active": True,
         "mechanism": "BI1 token-lattice birth seed plus scorer-free amplify anchor",
@@ -815,6 +835,8 @@ def build_tr1_birth_seed_bank(
         "seeded_cells_by_class": seeded_by_class,
         "target_abs_sum": float(np.abs(target).sum()),
         "mask_sum": float(mask.sum()),
+        "masked_lattice": getattr(cfg, "token_cell_mask", None) is not None,
+        "uncovered_seed_cells": uncovered_cells,
         "score_claim": False,
     }
     if summary["target_abs_sum"] <= 0.0:
