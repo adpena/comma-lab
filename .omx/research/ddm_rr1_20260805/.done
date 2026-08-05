@@ -2,5 +2,5 @@ status=done
 artifact=.omx/research/ddm_rr1_20260805/RECEIPT.md
 round=cycle2_round2
 clean_counter=0/3
-new_finding=RR1-C2-R2-F1 MEDIUM completed n600 both-bases probe receipt has 600 pairs but stale 36-pair axis label; correct/supersede before endpoint adjudication or JD4 fire
+new_finding=RR1-C2-R2-F1 MEDIUM completed n600 both-bases probe receipt has 600 pairs but stale 36-pair axis label; superseding correction landed at .omx/research/ddm_rr1_20260805/jd3_endpoint_n600_axis_correction.json
 frontier=S = 0.7539807296911207 @ 357,836 B [macOS-CPU advisory]; contest pointer borrowed/unmoved

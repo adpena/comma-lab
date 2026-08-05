@@ -1,0 +1,35 @@
+{
+  "schema": "ddm_rr1_axis_correction.v1",
+  "finding_id": "RR1-C2-R2-F1",
+  "status": "supersedes_axis_label_only",
+  "original_receipt_path": "/Volumes/VertigoDataTier/pact/ddm_jd3_20260805/jd3_endpoint_n600_both_bases_verdict.json",
+  "original_receipt_sha256": "fda3451c2aff50bbb46bbeb86cf9a5e688d1f35cf7671971a0b99c5bbbac4a71",
+  "source_variant_path": "/Volumes/VertigoDataTier/pact/ddm_jd3_20260805/jd3_endpoint_n600_both_bases.py",
+  "source_variant_sha256": "dfb912b609372a1b2494891b0283ecbe1fc18018c589011b8194bb72878755ba",
+  "stale_axis": "[macOS-CPU frozen-scorer advisory] 36 gd1-designed gate pairs, NON-PROMOTABLE",
+  "corrected_axis": "[macOS-CPU frozen-scorer advisory] n600 all 600 pair ids (0..599), training-vehicle endpoint live/EMA basis, NON-PROMOTABLE, score_claim=false",
+  "pair_count_verified": 600,
+  "status_verified": "complete",
+  "ckpt_keys_verified": [
+    "endpoint_ep1405_ema",
+    "endpoint_ep1405_live"
+  ],
+  "measured_rows_existing_artifact": {
+    "endpoint_ep1405_live": {
+      "d_seg": 0.007150336371527777,
+      "d_pose": 0.5740917290074666,
+      "pose_term_sqrt10": 2.3960211372345332
+    },
+    "endpoint_ep1405_ema": {
+      "d_seg": 0.00574798583984375,
+      "d_pose": 0.12885309147362226,
+      "pose_term_sqrt10": 1.1351347562013165
+    }
+  },
+  "limits": [
+    "No raw SSD receipt bytes were mutated by this correction.",
+    "This correction does not change measured values.",
+    "This is not byte-closed archive evidence and not contest CPU/CUDA authority.",
+    "Patch or preserve a corrected source variant before the next probe launch."
+  ]
+}
