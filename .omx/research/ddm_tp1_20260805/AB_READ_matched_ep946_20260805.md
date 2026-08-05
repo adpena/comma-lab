@@ -37,3 +37,25 @@ Linear fits over the final 40/20 telemetry epochs:
    {OFF@ep919 0.003947+270,968B-class} vs {ON@w2-plateau, TBD}.
 3. jd1's joint window waits for the ON plateau; winning endpoint decided on CONVERGED
    states per amendment 3 (ticket regenerates against the winner).
+
+## ADDENDUM (MAIN, 2026-08-05 ~19:35Z) — w2 window COMPLETE, amendment-3 adjudication: EXTEND (w3 fired)
+
+**w2 (ep946→1084, 138 eps, 83 min) endpoint = the BEST measured TP1 state:**
+- **n600 full-confirm realized d_seg = 0.003883514404296875** (max-pair 0.011276) — below
+  OFF@ep919's 0.003947 (the prior best) AND below the original burn plateau 0.0038892.
+  The ON birth lineage, continued past its censored cap, now LEADS outright.
+- Gate trajectory (36-pair gd1 HT design): first-10 mean 0.004152 → last-10 0.003997;
+  window min = endpoint (0.003944 gate-basis) — monotone into the cap.
+- **Tail-slope fit (the amendment-3 authority, overruling the a1 FLAT label):**
+  tail-40 = −2.789e-6/ep at 6.2σ (REAL descent) · tail-20 = −1.048e-6/ep at 2.4σ
+  (decelerating but above noise). Verdict: CENSORED again → one more warm window.
+- One A1_REALIZATION_GAP_ALARM at ep1054 (smooth fell ≥2% while realized <0.5%) —
+  logged, corroborates #824's η-transient surface; no decision rode on it.
+- jd1 pose-finish machinery present but NOT engaged (engage predicate never fired —
+  seg still descending, correct per #383).
+
+**Action:** w3 ticket 97bc5306… compiled via sealed_ticket() from w2's OWN levers
+(in-place window swap ep1085→1224), resume from w2's stage_seg_trunk_tau_final.npz,
+governed launch OK (pid 80705, monitor armed). At the w3 boundary: same tail-slope
+adjudication; if converged, the winner is ON-w3's endpoint (already dominating both
+prior endpoints) and jd1's joint pose-finish ticket regenerates against it.
