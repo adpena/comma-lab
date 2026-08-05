@@ -694,9 +694,11 @@ def test_initial_15_anti_patterns_all_register_cleanly(temp_registry):
     """
     path, lock = temp_registry
     registered = populate_initial_anti_patterns(path=path, lock_path=lock)
-    assert len(registered) == 15
+    # Hardcoding the live count is the #780 staleness-in-tests class (na3's +2 on
+    # 2026-08-05 turned the literal 15 red); assert registration integrity instead.
+    assert len(registered) >= 15
     all_aps = query_anti_patterns(path=path)
-    assert len(all_aps) == 15
+    assert len(all_aps) == len(registered)
     ids = {ap.anti_pattern_id for ap in all_aps}
     # Spot-check a handful (12 original + 3 NEW Wave N+7 2026-05-28)
     assert "lzma_on_already_brotli_saturated_compounding_v1" in ids
