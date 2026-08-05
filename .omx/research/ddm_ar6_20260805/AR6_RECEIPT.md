@@ -115,3 +115,28 @@ Honesty label: **MEASURED acquisition blocker**. This is not a full-paper crossw
 ```
 
 S = 0.7539807296911207 @ 357,836 B [macOS-CPU advisory]; contest pointer borrowed/unmoved.
+
+## ADDENDUM (MAIN, 2026-08-05, same day — acquisition blocker RESOLVED via MAIN's network path)
+
+Identified via WebFetch of the abs page (the arm's sandbox lacked DNS; MAIN's path worked):
+
+| field | value |
+|---|---|
+| title | Beyond the Gegenbauer Paradigm: q-Orthogonal Kernels for Machine Learning |
+| authors | Á. Sánchez-Paniagua Ríos, J.P. Llerena, A. Lastra, N. Torrado, E.J. Huertas |
+| submitted | 2026-08-04 · cs.LG, stat.ML · 27 pages |
+| claim | Discrete q-Hermite I polynomial kernels for SVMs; Mercer-valid; inherent boundedness prevents annihilation/explosion without explicit scaling; competitive on 20 benchmarks |
+| code | github.com/Kokechacho/SVMs-QSVMs |
+
+TRIAGE (abstract-level, MAIN): **N-A for the live campaign** with ONE narrow note.
+The paper is SVM kernel design; the live TR1 vehicle is a token-grid conv renderer
+where the basis axis is measured-CLOSED (#918: coder/basis race 0.83% to IDENT; the
+witness Fourier-alternative program #497 is the only adjacent family). NOTE for #497:
+q-deformed Hermite bases join the candidate list as a BOUNDED orthogonal-polynomial
+family (the boundedness-without-scaling property is the interesting part — echoes our
+hosc saturation-death cure) IF a basis race ever reopens on a vehicle where basis is
+the lever. No consumer today; no deep read warranted at current routing. Rank-1
+acquisition-gate row above is SATISFIED for identification; full-text custody remains
+un-fetched and any mechanism-level claim would still require it.
+
+S = 0.7539807296911207 @ 357,836 B [macOS-CPU advisory]; contest pointer borrowed/unmoved.
