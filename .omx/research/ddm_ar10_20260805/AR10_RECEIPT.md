@@ -185,3 +185,20 @@ landing time.
 ```
 
 S = 0.7539807296911207 @ 357,836 B [macOS-CPU advisory]; contest pointer borrowed/unmoved.
+
+## ADDENDUM (MAIN, same day) — the owed AR9↔AR10 mean-vs-minimax reconciliation
+
+Both receipts now exist; the join, precondition-tagged per consumer surface (no
+blanket rule, per ar4 discipline):
+
+| consumer surface | error profile the surface OWNS | representative rule |
+|---|---|---|
+| flip-critical prototypes (v14 margin-optimal colors; any cell where ONE pixel below margin = a flip) | WORST-CASE (d_seg counts the single worst member) | **AR9 minimax** (Bregman MEB circumcenter; its radius = the certified worst-case KL, a per-cell flip-safety CERTIFICATE) |
+| codebook RANKING / conditioning cues (rg3 per-stratum codebooks used as context, lc1's 107-record trust gate, #869 cell representatives where the map averages) | AVERAGE (aggregate divergence over the set) | **AR10 JFR mean** (closed-form categorical; cheap) |
+| mixed cells | measure BOTH + the gap | the MEB radius minus mean-divergence GAP is itself the diagnostic: small gap ⇒ representatives agree, choice free; large gap ⇒ the cell is heterogeneous and should likely be SPLIT before either center is trusted |
+
+Both adoption probes remain as queued in the respective receipts ($0, attach to the
+next codebook/prototype touch — no new lanes). Shared precondition (both papers): the
+center lives in HEAD space; any RGB realization goes through the archive→receiver→R→
+backbone pullback or it is the name-preserving fake (AR8's transfer clause applies
+verbatim).
