@@ -1,0 +1,181 @@
+{
+  "schema": "ddm_bn1_receipt.v1",
+  "date_utc": "2026-08-05",
+  "status": "BENNETT_CROSSWALK_COMPLETE",
+  "axis": "research-signal literature crosswalk plus local receipt recall",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "n600_scorer_job": false,
+  "exact_eval_run": false,
+  "launch_run": false,
+  "protected_files_touched": false,
+  "source": {
+    "paper_title": "Weakness is the Key to Generalization",
+    "paper_url": "https://arxiv.org/pdf/2301.12987v4",
+    "paper_version": "v4",
+    "paper_version_date": "2024-04-11",
+    "technical_appendices_url": "https://github.com/ViscousLemming/Technical-Appendices"
+  },
+  "answer_first": {
+    "summary": "Bennett weakness maps to the constraint-selection side of Pact, not to deletion of the counted archive-rate term.",
+    "operational_form": {
+      "weakest_sufficient_constraint": "W* = weakest scorer-sufficient constraint set",
+      "shortest_archive_inside_constraint": "C* = shortest legal counted archive whose receiver output satisfies W*"
+    },
+    "canonical_equation_registration": {
+      "registered": false,
+      "reason": "Seed 2 is already embodied by existing closed-scorer, quotient, tolerance-capped, score-quotient, and direct-description equations/specs.",
+      "existing_equations_or_specs": [
+        "closed_scorer_taskspace_variational_functional_v1",
+        "ddm_ms2_visible_quotient_gauge_zero_v1",
+        "ddm_tolerance_capped_min_score_waterfill_v1",
+        "ddm_score_quotient_functional_v1",
+        ".omx/research/direct_description_minimizer_PRIMARY_SPEC_20260721T214800Z.md"
+      ]
+    }
+  },
+  "paper_formalism": {
+    "implementable_language": "Finite vocabulary v induces implementable language L_v.",
+    "extension": "Z_l is the extension of statement l; larger |Z_l| means weaker hypothesis.",
+    "task": "alpha = (S_alpha, D_alpha, M_alpha), with situations, correct decisions, and models consistent with the child task.",
+    "induction": "Choose a child-task model by maximizing proxy q_v; generalization succeeds when it is also a parent-task model.",
+    "weakness_proxy": "maximize |Z_l|",
+    "mdl_proxy": "maximize inverse statement length",
+    "main_theorem_boundary": "Under the paper's uniform task distribution over a fixed implementable vocabulary, weakness is necessary and sufficient for optimal generalization probability; MDL is neither necessary nor sufficient in that formal setting.",
+    "pact_boundary": "Pact is a fixed single-video contest with external archive-byte accounting, so weakness is a constraint lens only."
+  },
+  "seed_verdicts": [
+    {
+      "seed": 1,
+      "name": "Weakness over shortest description",
+      "verdict": "ALREADY-EMBODIED",
+      "result": "Quotient, blind, and tolerance surfaces already drop scorer-invisible or task-irrelevant specification.",
+      "named_consumer": [
+        "ddm_ms2_visible_quotient_gauge_zero_v1",
+        "ddm_tolerance_capped_min_score_waterfill_v1",
+        "OD2 target-prior design"
+      ],
+      "falsifier_or_boundary": "Byte-closed same-object row where preserving a more specific scorer-invisible description improves exact S at equal counted bytes; ker(A) byte-credit without receiver parse-back remains invalid."
+    },
+    {
+      "seed": 2,
+      "name": "Weakest-then-shortest equation",
+      "verdict": "ALREADY-EMBODIED",
+      "result": "The direct-description and closed-scorer equations already encode weakest sufficient scorer constraints followed by shortest counted archive under feasibility.",
+      "named_consumer": [
+        "closed_scorer_taskspace_variational_functional_v1",
+        "ddm_score_quotient_functional_v1",
+        "direct-description minimizer",
+        "DC1 receiver contract"
+      ],
+      "falsifier_or_boundary": "A live objective that minimizes counted bytes before quotient/scorer constraints and demonstrably over-constrains the witness."
+    },
+    {
+      "seed": 3,
+      "name": "Amortized held-out targeter lens",
+      "verdict": "ADOPT",
+      "result": "Use weakness only as a paired fixed-byte targeter-selection discriminator; ST2 is supportive but confounded.",
+      "named_consumer": [
+        "OD2 scorer-native targeter",
+        "future student/prior target tables"
+      ],
+      "falsifier_or_boundary": "Same bytes, same receiver, same coder, fixed heldout cells: the weaker targeter loses recall and score-effect to a more specific targeter."
+    },
+    {
+      "seed": 4,
+      "name": "Non-applicability guard",
+      "verdict": "ADOPT",
+      "result": "The paper cannot be used to argue away Pact's externally charged rate term.",
+      "named_consumer": [
+        "future literature citations",
+        "review memos"
+      ],
+      "falsifier_or_boundary": "Boundary guard; a citation saying weakness makes bytes irrelevant is out of scope."
+    },
+    {
+      "seed": 5,
+      "name": "Epistemic weakest claim",
+      "verdict": "ALREADY-EMBODIED",
+      "result": "The verdict-scope ladder already enforces the weakest claim justified by evidence.",
+      "named_consumer": [
+        "review receipts",
+        "negative-surface audits",
+        "premise-falsification notes"
+      ],
+      "falsifier_or_boundary": "Any scope escalation without proof across the ladder is a citation bug."
+    }
+  ],
+  "recall_evidence": [
+    {
+      "source": "memory_bn1_binary_collapse",
+      "fact": "Prior BN1/binary-collapse work was partial and emphasized typed denominator-first scope.",
+      "impact": "Fresh durable receipt and JSON were created."
+    },
+    {
+      "source": "canonical_equation_search",
+      "fact": "Existing equations cover MDL rate, scorer quotient, gauge-zero free coordinates, tolerance-capped waterfill, and exact closed scorer functional.",
+      "impact": "No duplicate seed-2 canonical equation was registered."
+    },
+    {
+      "source": ".omx/research/ddm_st2_20260805/ST2_RECEIPT_20260805.md",
+      "fact": "Scorer-native bucket pricing supports coarse scorer-aligned target descriptions but is confounded.",
+      "impact": "Seed 3 is adopted as A/B lens, not score proof."
+    },
+    {
+      "source": "ker_blind_box_ms2r_direct_description_receipts",
+      "fact": "The repo already separates scorer-invisible freedom, tolerance allowance, counted bytes, and receiver realization.",
+      "impact": "Seed 1 is already embodied with byte-credit guard."
+    }
+  ],
+  "beyond_seed_sweep": [
+    {
+      "discovery": "Vocabulary choice is the hidden prior.",
+      "disposition": "ADOPT",
+      "reason": "Scorer-native vocabularies and quotient coordinates determine which weak hypotheses are available."
+    },
+    {
+      "discovery": "Weakness is not blind coarseness.",
+      "disposition": "ADOPT",
+      "reason": "Coarser descriptions help only when they preserve needed scorer constraints and receiver feasibility."
+    },
+    {
+      "discovery": "Uniform-task theorem does not transfer as a score theorem.",
+      "disposition": "ADOPT",
+      "reason": "Pact's source video, scorer, and byte accounting are fixed and nonuniform."
+    },
+    {
+      "discovery": "MDL failure in the paper does not refute counted archive optimization.",
+      "disposition": "ADOPT",
+      "reason": "The paper attacks statement-shortness as an induction proxy; Pact archive bytes are an externally charged contest term."
+    }
+  ],
+  "fire_fold_queue": [
+    {
+      "item": "Seed 2 canonical equation",
+      "disposition": "FOLDED",
+      "fire_order": "No action; existing equations own the formal structure."
+    },
+    {
+      "item": "Seed 3 targeter A/B",
+      "disposition": "QUEUED-WITH-FIRE-ORDER",
+      "fire_order": "Fire only inside the next OD2/scorer-native targeter touch: same bytes, same receiver, same coder, fixed heldout scorer cells, vary weakness/extension independently from context and regularization."
+    },
+    {
+      "item": "Seed 5 epistemic scope rule",
+      "disposition": "FOLDED",
+      "fire_order": "Continue using the verdict-scope ladder; no new apparatus."
+    }
+  ],
+  "boundaries": {
+    "upstream_evaluate_py_run": false,
+    "scorer_job": false,
+    "n600_dispatch": false,
+    "launch": false,
+    "protected_file_edit": false,
+    "canonical_equation_registered": false,
+    "score_claim": false,
+    "promotion": false,
+    "pointer_move": false
+  },
+  "frontier_line": "S = 0.7539807296911207 @ 357,836 B [macOS-CPU advisory]; contest pointer borrowed/unmoved."
+}
