@@ -345,3 +345,54 @@ seg term 0.4371 (w100). Endpoint custody snapshot: full_v3_endpoint_ep1405_snaps
 sha recorded there + receipt + ep1404 intra). NEXT (operator steer "will need more descent"):
 n600 both-bases endpoint probe → continuation window from the endpoint with the FIXED regenerator
 (all 5 debts) + correct U-derived EMA re-anchor. No byte-close before the probe.
+
+### PLATEAU POLICY for the jd4 continuation (operator-directed 2026-08-05, 5W-typed; binds
+### MAIN's boundary adjudications + the continuation's typed event exits)
+STORES CONSULTED: PR95 L14 stage decomposition + demotion banner (CLAUDE.md) · #164 Muon-jump
+verdict · #302/#686 derived event schedule · #341/#342/#850/#897/sq2-cw1 solve inventory ·
+od2 addendum-4/6 ordering laws · #269/#270 Muon warm-start · #475 plateau semantics · #888/#925/
+en1 hinge+margin · #775 QA43 · #946 pose carriage · #827/#934 banked compositions · jd3 window
+telemetry (this receipt).
+
+CASE 0 — ALWAYS FIRST: plateau DISAMBIGUATION (the #205 lesson: 4 rediagnoses, every wall an
+artifact). Checks in order: (a) liveness (accepted_frac, weights_stepped — L3 confound); (b)
+BASIS — ⚠ NEW TRAP: the continuation's CORRECT U=18000 EMA (decay 0.999778, warmup 9000 steps
+= 60 ep) is IMMATURE for half the window — a slow EMA manufactures phantom plateaus early and
+masks late ones. GATES READ LIVE (windowed mean vs the ±0.0002 single-ckpt noise floor); EMA =
+shipping basis only. The inverse of the round-4 defect — fixed-EMA must not corrupt detection.
+(c) slope vs noise floor over ≥3 gates; (d) PER-CLASS decomposition (pc2: seg is ONE GRAPH,
+Road hub 87.8% of flips — a Lane-only plateau is a different disease than a Road plateau).
+
+CASE A — POSE plateaus, seg descending. WHAT: exit in-loop pose → TERMINAL POSE SOLVE (eg1 E3
+per-pair 6-eq GN, UNCAPPED per #850) + QA43 tail-targeted per-pair correction (#775: top-112
+projected pose 1.263→0.382) + od-line cheap carriage (40,444 B projected, #946). WHERE: frozen
+trunk, per-pair DOF. WHEN: pose slope < noise for 3 gates, OR pose reaches the satisficing band
+(d_pose ≤ ~1.5e-3 → contribution ≤0.12 ≈ frontier bank — stop descending, satisficing hinge
+#360; zero is not the target, the tube is). WHY: pose is a 6-scalar terminal quantity; training
+it through the shared trunk pays antagonism tax a post-freeze solve does not. HOW: freeze → GN
+to convergence (no relin cap) → price via per-surface coder race → compose.
+
+CASE B — SEG plateaus, pose descending. WHAT, in fire order: (1) UNCAPPED sq2-class GN/CG seg
+solve from the live state (the measured seg lead: η 0.862, −0.117 S n32; #935 uncap); (2) MUON
+FINISHER stage flip (the ONE measured d_seg drop in the PR95 decomposition — conditioning, not
+capacity; warm-start COLD momentum + FLAT LR anneal #269/#270; optimizer swap at a stage
+boundary ONLY per SPEC_v75 §8C); (3) en1 margin-weight engagement (single-variable, consumer
+built #925) / hinge weight (#888). WHERE: trunk (Muon) vs per-pair (solve) — solve first, it is
+$0-class and does not perturb the pose descent. WHEN: seg gate windowed-live slope < noise ×3,
+AND the realized hold has not tripped (a hold trip = regression, different branch: rollback).
+WHY: at gate ~0.0048 vs frontier 0.0043 we are IN the terminal band where the solve inventory
+measured dominance over descent. HOW: keep pose in-loop; interleave solve at the boundary;
+recursion-from-solved-states (#954 doctrine).
+
+CASE C — BOTH plateau. This IS the E2 train→solve handoff (eg1). Exit training → terminal stack:
+uncapped seg solve → pose 6-eq solve → TTO/MC-finisher polish (#396/#400) → byte-close (drop-knee
+re-derivation + per-surface coder race #940) → COMPOSE the banked levers that were waiting for a
+pose-carrying base: #827 cell_drop50 seg+rate composition (−0.036 S banked) + #934 phase-field
+compose (q3x-gated). WHY: at both-plateau the marginal epoch is worth less than the marginal
+solve/composition — the vehicle's remaining value IS the pose-carrying base. WHEN: both slopes
+< noise ×3 on live basis. Then n600 both-bases → byte-close → candidate row.
+
+ARCHIVE-IMPACT NOTE (why stage choice moves bytes, not just distortion): rate-in-loss + entropy
+model shrank counted bytes 306,891→301,761 DURING the window; quant-anneal engages at_knee;
+terminal solves move distortion at ~0 byte cost; the coder is chosen per-surface at export. Every
+plateau branch above states its byte consequence through this chain, never assumes rate constant.
