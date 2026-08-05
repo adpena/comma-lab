@@ -367,7 +367,9 @@ CASE A — POSE plateaus, seg descending. WHAT: exit in-loop pose → TERMINAL P
 per-pair 6-eq GN, UNCAPPED per #850) + QA43 tail-targeted per-pair correction (#775: top-112
 projected pose 1.263→0.382) + od-line cheap carriage (40,444 B projected, #946). WHERE: frozen
 trunk, per-pair DOF. WHEN: pose slope < noise for 3 gates, OR pose reaches the satisficing band
-(d_pose ≤ ~1.5e-3 → contribution ≤0.12 ≈ frontier bank — stop descending, satisficing hinge
+(strict gate d_pose ≤ 0.00144 → contribution ≤0.12 exactly [RR1-C2-R4: √(10·0.0015)=0.12247,
+so "1.5e-3" is the rounded neighborhood, ~0.1225, NOT the ≤0.12 gate] ≈ frontier bank — stop
+descending, satisficing hinge
 #360; zero is not the target, the tube is). WHY: pose is a 6-scalar terminal quantity; training
 it through the shared trunk pays antagonism tax a post-freeze solve does not. HOW: freeze → GN
 to convergence (no relin cap) → price via per-surface coder race → compose.
@@ -463,8 +465,9 @@ arithmetic (NOT byte-closed) ≈ 1.911.
 ### Adjudication under the PLATEAU POLICY (Case 0 first)
 
 Neither axis is plateaued: seg gate still descending at the endpoint (−4.28e-5/ep,
-COUPLED_DESCENT, 0 rollbacks) and pose needs ~86× more descent (0.1289 → ~1.5e-3 for the ≤0.12
-contribution target). No Case A/B/C fires. **VERDICT: CONTINUE — fire the sealed jd4 ticket
+COUPLED_DESCENT, 0 rollbacks) and pose needs ~89× more descent (0.1289 → 0.00144 for the strict
+≤0.12 contribution gate; RR1-C2-R4: √(10·0.0015)=0.12247, so 1.5e-3 is the rounded ~0.1225
+neighborhood, not the gate). No Case A/B/C fires. **VERDICT: CONTINUE — fire the sealed jd4 ticket
 (51c64222…) once review cycle 2 clears.** The operator steer "will need more descent" is
 confirmed by the numbers. Watch item for the jd4 window: slow-EMA warmup ends ~ep1466 and
 τ=30 ep — the endpoint at ep1526 gives the shadow only ~2τ of maturity past warmup; gates read
