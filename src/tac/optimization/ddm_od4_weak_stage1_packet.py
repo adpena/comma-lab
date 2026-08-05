@@ -37,6 +37,12 @@ RECEIPT_SCHEMA: Final = "ddm_od4_weak_stage1_packet_receipt.v1"
 MAGIC: Final = b"OD4WPK1\0"
 VERSION: Final = 1
 HEADER = struct.Struct("<8sBHHHI32s")
+OD5_PACKET_SCHEMA: Final = "ddm_od5_generator_coordinate_packet.v1"
+OD5_RECEIPT_SCHEMA: Final = "ddm_od5_generator_coordinate_receipt.v1"
+OD5_MAGIC: Final = b"OD5GPK1\0"
+OD5_VERSION: Final = 1
+OD5_HEADER = struct.Struct("<8sBHHHII32s")
+OD5_MAX_SECTION_NAME_BYTES: Final = 80
 LZMA1_FILTERS: Final = (
     {"id": lzma.FILTER_LZMA1, "dict_size": 1 << 22, "lc": 0, "lp": 0, "pb": 0},
 )
@@ -103,6 +109,41 @@ class CoderRow:
         }
 
 
+@dataclass(frozen=True, slots=True)
+class OD5Section:
+    name: str
+    payload: bytes
+
+    def __post_init__(self) -> None:
+        try:
+            encoded = self.name.encode("ascii")
+        except UnicodeEncodeError as exc:
+            raise OD4PacketError("OD5 section names must be ASCII") from exc
+        if not encoded:
+            raise OD4PacketError("OD5 section name is empty")
+        if len(encoded) > OD5_MAX_SECTION_NAME_BYTES:
+            raise OD4PacketError("OD5 section name is too long")
+        if not isinstance(self.payload, bytes):
+            raise OD4PacketError("OD5 section payload must be bytes")
+
+
+@dataclass(frozen=True, slots=True)
+class ParsedOD5Packet:
+    h: int
+    w: int
+    n_pairs: int
+    sections: tuple[OD5Section, ...]
+    payload_sha256: str
+
+    @property
+    def section_count(self) -> int:
+        return len(self.sections)
+
+    @property
+    def body_bytes(self) -> int:
+        return sum(len(_od5_section_body(section)) for section in self.sections)
+
+
 def sha256_bytes(payload: bytes) -> str:
     return hashlib.sha256(payload).hexdigest()
 
@@ -135,6 +176,72 @@ def _read_varint(payload: bytes, offset: int) -> tuple[int, int]:
         shift += 7
         if shift > 63:
             raise OD4PacketError("varint is too long")
+
+
+def _od5_section_body(section: OD5Section) -> bytes:
+    name = section.name.encode("ascii")
+    return _varint(len(name)) + name + _varint(len(section.payload)) + section.payload
+
+
+def serialize_od5_packet(sections: Iterable[OD5Section]) -> bytes:
+    ordered = tuple(sections)
+    names = [section.name for section in ordered]
+    if len(set(names)) != len(names):
+        raise OD4PacketError("duplicate OD5 section names")
+    body = b"".join(_od5_section_body(section) for section in ordered)
+    header = OD5_HEADER.pack(
+        OD5_MAGIC,
+        OD5_VERSION,
+        SEG_H,
+        SEG_W,
+        N_PAIRS,
+        len(ordered),
+        len(body),
+        hashlib.sha256(body).digest(),
+    )
+    return header + body
+
+
+def parse_od5_packet(payload: bytes) -> ParsedOD5Packet:
+    if len(payload) < OD5_HEADER.size:
+        raise OD4PacketError("OD5 packet header is truncated")
+    magic, version, h, w, n_pairs, section_count, body_bytes, body_sha = OD5_HEADER.unpack_from(payload)
+    if magic != OD5_MAGIC:
+        raise OD4PacketError("OD5 packet magic mismatch")
+    if version != OD5_VERSION:
+        raise OD4PacketError(f"OD5 packet version mismatch: {version}")
+    if (h, w, n_pairs) != (SEG_H, SEG_W, N_PAIRS):
+        raise OD4PacketError(f"OD5 packet geometry mismatch: {(h, w, n_pairs)}")
+    body = payload[OD5_HEADER.size :]
+    if len(body) != body_bytes:
+        raise OD4PacketError("OD5 packet body length mismatch")
+    if hashlib.sha256(body).digest() != body_sha:
+        raise OD4PacketError("OD5 packet body SHA-256 mismatch")
+    sections: list[OD5Section] = []
+    offset = 0
+    for _ in range(section_count):
+        name_len, offset = _read_varint(body, offset)
+        if not 0 < name_len <= OD5_MAX_SECTION_NAME_BYTES:
+            raise OD4PacketError("OD5 section name length invalid")
+        name_bytes = body[offset : offset + name_len]
+        if len(name_bytes) != name_len:
+            raise OD4PacketError("OD5 section name is truncated")
+        offset += name_len
+        try:
+            name = name_bytes.decode("ascii")
+        except UnicodeDecodeError as exc:
+            raise OD4PacketError("OD5 section name is not ASCII") from exc
+        section_len, offset = _read_varint(body, offset)
+        section_payload = body[offset : offset + section_len]
+        if len(section_payload) != section_len:
+            raise OD4PacketError("OD5 section payload is truncated")
+        offset += section_len
+        sections.append(OD5Section(name, section_payload))
+    if offset != len(body):
+        raise OD4PacketError("OD5 packet has trailing body bytes")
+    if len({section.name for section in sections}) != len(sections):
+        raise OD4PacketError("OD5 packet contains duplicate section names")
+    return ParsedOD5Packet(h, w, n_pairs, tuple(sections), sha256_bytes(payload))
 
 
 def _pack_nibbles(values: Sequence[int]) -> bytes:
@@ -266,6 +373,34 @@ def select_sparse_corrections(
     useful_flat = np.flatnonzero(useful.reshape(-1))
     keep = min(int(math.floor(max(0, desired_fix_count) * fraction + 1e-9)), int(useful_flat.size))
     selected = np.sort(useful_flat[:keep].astype(np.int64))
+    labels = tuple(int(value) for value in target.reshape(-1)[selected])
+    return SparsePairCorrections(pair, tuple(int(value) for value in selected), labels)
+
+
+def select_masked_sparse_corrections(
+    *,
+    pair: int,
+    current_argmax: np.ndarray,
+    gt_argmax: np.ndarray,
+    target_argmax: np.ndarray,
+    constraint_mask: np.ndarray,
+    max_count: int | None = None,
+) -> SparsePairCorrections:
+    cur = np.asarray(current_argmax, dtype=np.uint8)
+    gt = np.asarray(gt_argmax, dtype=np.uint8)
+    target = np.asarray(target_argmax, dtype=np.uint8)
+    mask = np.asarray(constraint_mask, dtype=bool)
+    if cur.shape != (SEG_H, SEG_W) or gt.shape != cur.shape or target.shape != cur.shape:
+        raise OD4PacketError("argmax grid shape mismatch")
+    if mask.shape != cur.shape:
+        raise OD4PacketError("constraint mask shape mismatch")
+    useful = (cur != gt) & (target == gt) & (target != cur) & mask
+    useful_flat = np.flatnonzero(useful.reshape(-1)).astype(np.int64)
+    if max_count is not None:
+        if max_count < 0:
+            raise OD4PacketError("max_count cannot be negative")
+        useful_flat = useful_flat[:max_count]
+    selected = np.sort(useful_flat)
     labels = tuple(int(value) for value in target.reshape(-1)[selected])
     return SparsePairCorrections(pair, tuple(int(value) for value in selected), labels)
 
@@ -438,4 +573,35 @@ def projection_rows(
             "n32 exact packet bytes with linear n600 byte projection; mask-domain Stage-1 replay; "
             "OD2 pose credit included only when requested, not remeasured by OD4"
         ),
+    }
+
+
+def projection_rows_with_projected_packet_bytes(
+    *,
+    n32_packet_bytes: int,
+    n600_packet_bytes_projected: int,
+    n_pairs: int,
+    retained_fix_count: int,
+    include_od2_pose_credit: bool,
+    projection_scope: str,
+) -> dict[str, Any]:
+    if n32_packet_bytes < 0 or n600_packet_bytes_projected < 0:
+        raise OD4PacketError("packet byte counts cannot be negative")
+    stage1_delta_s = projected_stage1_delta_s(retained_fix_count, n_pairs)
+    packet_rate_s = n600_packet_bytes_projected * RATE_PER_BYTE
+    stage2_rate_s = OD2_STAGE2_K4_BYTES_N600 * RATE_PER_BYTE
+    pose_delta_s = OD2_STAGE2_POSE_DELTA_S if include_od2_pose_credit else 0.0
+    projected_s = CURRENT_OWN_S + stage1_delta_s + pose_delta_s + stage2_rate_s + packet_rate_s
+    rate_cost_over_seg_win = packet_rate_s / abs(stage1_delta_s) if stage1_delta_s else math.inf
+    return {
+        "stage1_delta_s_from_mask_replay": stage1_delta_s,
+        "stage2_pose_delta_s": pose_delta_s,
+        "stage2_k4_rate_s": stage2_rate_s,
+        "packet_rate_s_projected_n600": packet_rate_s,
+        "packet_bytes_n32_exact": n32_packet_bytes,
+        "packet_bytes_n600_projected": n600_packet_bytes_projected,
+        "projected_s": projected_s,
+        "beats_current_own_line": projected_s < CURRENT_OWN_S,
+        "rate_cost_over_seg_win": rate_cost_over_seg_win,
+        "projection_scope": projection_scope,
     }

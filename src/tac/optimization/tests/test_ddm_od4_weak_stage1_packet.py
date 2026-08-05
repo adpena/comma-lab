@@ -99,6 +99,55 @@ def test_packet_refuses_body_tamper() -> None:
         od4.parse_sparse_packet(bytes(packet))
 
 
+def test_od5_sectioned_packet_parseback_exact() -> None:
+    packet = od4.serialize_od5_packet(
+        [
+            od4.OD5Section("pe3_generator_coords", b"coords"),
+            od4.OD5Section("st2_context_table", b"context"),
+        ]
+    )
+    parsed = od4.parse_od5_packet(packet)
+
+    assert parsed.payload_sha256 == od4.sha256_bytes(packet)
+    assert parsed.section_count == 2
+    assert [(section.name, section.payload) for section in parsed.sections] == [
+        ("pe3_generator_coords", b"coords"),
+        ("st2_context_table", b"context"),
+    ]
+    assert od4.serialize_od5_packet(parsed.sections) == packet
+
+
+def test_od5_sectioned_packet_refuses_tamper() -> None:
+    packet = bytearray(od4.serialize_od5_packet([od4.OD5Section("residual", b"abc")]))
+    packet[-1] ^= 1
+
+    with pytest.raises(od4.OD4PacketError, match="SHA-256"):
+        od4.parse_od5_packet(bytes(packet))
+
+
+def test_select_masked_sparse_corrections_retains_only_masked_useful_cells() -> None:
+    cur = np.zeros((od4.SEG_H, od4.SEG_W), dtype=np.uint8)
+    gt = cur.copy()
+    target = cur.copy()
+    mask = np.zeros_like(cur, dtype=bool)
+    gt.reshape(-1)[:8] = 1
+    target.reshape(-1)[:6] = 1
+    target.reshape(-1)[6:8] = 2
+    mask.reshape(-1)[2:7] = True
+
+    record = od4.select_masked_sparse_corrections(
+        pair=0,
+        current_argmax=cur,
+        gt_argmax=gt,
+        target_argmax=target,
+        constraint_mask=mask,
+        max_count=3,
+    )
+
+    assert record.flat_indices == (2, 3, 4)
+    assert record.target_labels == (1, 1, 1)
+
+
 def test_projection_rows_keep_n32_exact_and_n600_projected_bytes_distinct() -> None:
     row = od4.projection_rows(
         n32_packet_bytes=320,
@@ -111,3 +160,19 @@ def test_projection_rows_keep_n32_exact_and_n600_projected_bytes_distinct() -> N
     assert row["packet_bytes_n600_linear_projection"] == 6000
     assert row["stage2_pose_delta_s"] == od4.OD2_STAGE2_POSE_DELTA_S
     assert row["projected_s"] < od4.CURRENT_OWN_S
+
+
+def test_projection_rows_accept_measured_n600_packet_bytes() -> None:
+    row = od4.projection_rows_with_projected_packet_bytes(
+        n32_packet_bytes=4000,
+        n600_packet_bytes_projected=74_408,
+        n_pairs=32,
+        retained_fix_count=6000,
+        include_od2_pose_credit=True,
+        projection_scope="measured PE3 n600 section bytes plus exact n32 mask replay",
+    )
+
+    assert row["packet_bytes_n32_exact"] == 4000
+    assert row["packet_bytes_n600_projected"] == 74_408
+    assert row["packet_rate_s_projected_n600"] == 74_408 * od4.RATE_PER_BYTE
+    assert row["rate_cost_over_seg_win"] > 0
