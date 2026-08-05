@@ -1,0 +1,58 @@
+{
+  "schema": "ddm_na3.sigma_eff_n600_stage.v1",
+  "created_utc": "2026-08-05T01:20:17Z",
+  "axis": "[macOS-CPU frozen-scorer advisory]",
+  "task": "#931",
+  "status": "STAGED_NOT_RUN_SCORER_SLOT_NOT_OURS",
+  "source_path": ".omx/research/lever_d_nuanced_fullstack_20260612T223343Z.md",
+  "old_denominator": "n4 plus n12 video-order prefix slices",
+  "required_new_denominator": "n600 full population",
+  "argv": [
+    ".venv/bin/python",
+    "experiments/probe_lever_d_selective_fullstack.py",
+    "--state-ckpt",
+    "experiments/results/torch_vehicle_full_mps_basin_bc20_n600/torch_vehicle_checkpoint_state.pt",
+    "--video",
+    "upstream/videos/0.mkv",
+    "--which",
+    "ema",
+    "--n-pairs",
+    "600",
+    "--tau",
+    "0.5",
+    "--batch",
+    "6",
+    "--targets-cache",
+    "/Volumes/VertigoDataTier/pact/ddm_na3_20260805/lever_d_selective_targets_n600",
+    "--out-json",
+    "/Volumes/VertigoDataTier/pact/ddm_na3_20260805/lever_d_selective_probe_n600_sigma_eff.json"
+  ],
+  "input_custody_from_ng1": [
+    {
+      "path": "experiments/probe_lever_d_selective_fullstack.py",
+      "sha256": "1e47022e31c34b29667091f865a8bb7ecb8358f2a7568f7e17d60de14cc1ef02"
+    },
+    {
+      "path": "src/tac/torch_vehicle/lever_d_selective.py",
+      "sha256": "93b865a431c7d987513e1fceefcf38e9fb5e45025e3e25b96d57df4c611c81e3"
+    },
+    {
+      "path": "experiments/results/torch_vehicle_full_mps_basin_bc20_n600/torch_vehicle_checkpoint_state.pt",
+      "sha256": "4fd836db479f93981f2cc4d133bcca71d235e1e1232fe81fa76da36851896524"
+    },
+    {
+      "path": "upstream/videos/0.mkv",
+      "sha256": "2611f5f3e186f3529777749f97bd4cce3a208d6b3559e137bd45d256980d2fa9"
+    },
+    {
+      "path": ".omx/research/lever_d_selective_probe_n12.json",
+      "sha256": "ea4ec85b3ec8d8d7dc3fb57d3db639825d1c525a11956af4d6d7245200ccf948"
+    }
+  ],
+  "scorer_slot_boundary": "Per the common contract/main hot state, the n600 scorer slot is owned by pe2/sq2, not NA3. This command was not run.",
+  "inflate_out_contract": {
+    "source_commit": "a16aa984d09ef1f90a1d3c2b37ccdc0a3b3cd9b4",
+    "rule": "For ddm_fz2 byteclose/eval composition, --inflate-out must equal <sub-dir>/inflated when eval runs; pass --skip-eval for custody-only runs.",
+    "applicability_to_this_probe": "probe_lever_d_selective_fullstack.py is a read-only sigma_eff probe and has no --inflate-out argument."
+  }
+}

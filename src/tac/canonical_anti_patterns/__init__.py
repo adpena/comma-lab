@@ -97,6 +97,12 @@ from tac.canonical_anti_patterns.d7_d8_d9_builders import (
     build_micro_optimization_without_macro_escape_polishing_plateau_ceiling_v1,
     populate_d7_d8_d9_anti_patterns,
 )
+from tac.canonical_anti_patterns.na3_subset_bias_builders import (
+    build_all_na3_subset_bias_anti_patterns,
+    build_prefix_bias_sign_inversion_pose_axis_v1,
+    build_subset_default_silent_under_sampling_v1,
+    populate_na3_subset_bias_anti_patterns,
+)
 from tac.canonical_anti_patterns.pattern_matcher import (
     AntiPatternMatch,
     ValidationResult,
@@ -126,12 +132,11 @@ from tac.canonical_anti_patterns.registry import (
     register_anti_pattern,
 )
 
-
 __all__ = [
-    # Schema + contract constants
-    "CANONICAL_ANTI_PATTERN_SCHEMA_VERSION",
     "CANONICAL_ANTI_PATTERNS_REGISTRY_LOCK",
     "CANONICAL_ANTI_PATTERNS_REGISTRY_PATH",
+    # Schema + contract constants
+    "CANONICAL_ANTI_PATTERN_SCHEMA_VERSION",
     "EVENT_ANTI_PATTERN_RECALIBRATED",
     "EVENT_ANTI_PATTERN_REGISTERED",
     "EVENT_FALSIFICATION_APPENDED",
@@ -180,9 +185,12 @@ __all__ = [
     "auto_recalibrate_from_continual_learning_posterior",
     "build_all_d7_d8_d9_anti_patterns",
     "build_all_initial_anti_patterns",
+    "build_all_na3_subset_bias_anti_patterns",
     "build_canonical_default_plateau_substrate_disguised_as_class_shift_v1",
     "build_hnerv_pr95_language_anchoring_local_minima_perpetuation_v1",
     "build_micro_optimization_without_macro_escape_polishing_plateau_ceiling_v1",
+    "build_prefix_bias_sign_inversion_pose_axis_v1",
+    "build_subset_default_silent_under_sampling_v1",
     "evaluate_explicit_override_for_anti_pattern",
     "get_anti_pattern_by_id",
     "load_anti_patterns_events_lenient",
@@ -190,6 +198,7 @@ __all__ = [
     "match_stack_against_anti_patterns",
     "populate_d7_d8_d9_anti_patterns",
     "populate_initial_anti_patterns",
+    "populate_na3_subset_bias_anti_patterns",
     "query_anti_patterns",
     "query_anti_patterns_by_substrate",
     "query_falsifications_by_paradigm_class",

@@ -1,0 +1,70 @@
+{
+  "schema": "ddm_na3.prefix_pose_bias_rederive_931.v1",
+  "created_utc": "2026-08-05T01:20:17Z",
+  "axis": "[macOS-CPU frozen-scorer advisory]",
+  "task": "#931",
+  "status": "REPRODUCED",
+  "source": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_pfs1_20260729/d2/d2_ep_solve.partial.jsonl",
+    "sha256": "d2853c92090c28ebe558ece4a21b2847b55e25c9d768bef167bcba9dc67b72e5",
+    "rows": 600,
+    "field": "d_pose_shipped_f16"
+  },
+  "population": {
+    "n": 600,
+    "mean_d_pose_shipped_f16": 0.15950891917937635
+  },
+  "prefix_ratios": {
+    "n8": {
+      "mean": 0.20400947331966277,
+      "ratio_vs_population": 1.2789847387169815
+    },
+    "n24": {
+      "mean": 0.40443096931554917,
+      "ratio_vs_population": 2.535475579649216
+    },
+    "n48": {
+      "mean": 0.42113252767421655,
+      "ratio_vs_population": 2.640181689154513
+    },
+    "n64": {
+      "mean": 0.4223427475000764,
+      "ratio_vs_population": 2.6477688499984713
+    },
+    "n96": {
+      "mean": 0.671017484604445,
+      "ratio_vs_population": 4.206770932037034
+    },
+    "n120": {
+      "mean": 0.6113497203145416,
+      "ratio_vs_population": 3.83269928390052
+    }
+  },
+  "block60_means": [
+    0.4064574677343671,
+    0.8162419728947162,
+    0.08284583730141847,
+    0.04134430503495017,
+    0.025498122996739807,
+    0.043397990407523075,
+    0.010275387279786217,
+    0.013430519655914387,
+    0.10915908787810258,
+    0.04643850061024548
+  ],
+  "block60_ratios": {
+    "hardest_over_easiest": 79.43661398538532,
+    "first120_mean": 0.6113497203145416,
+    "first120_over_easiest": 59.49651372432368
+  },
+  "interpretation": "The NA2 quote 2.54-4.21x is reproduced from the cached D2 receipt. Pose prefixes are harder, not conservative. Prefix pose NO-GO verdicts remain false-negative shaped.",
+  "quoting_surfaces_checked": [
+    "AGENTS.md",
+    "CLAUDE.md",
+    "src/tac/subset_selection.py",
+    "src/tac/tests/test_subset_selection.py",
+    ".omx/research/ddm_na2_negative_audit_20260803.md",
+    ".omx/research/ddm_ng1_20260805/ng1_negative_results_audit.md"
+  ],
+  "quoting_surface_action": "NO_CORRECTION_REQUIRED_IN_CHECKED_SCOPE"
+}
