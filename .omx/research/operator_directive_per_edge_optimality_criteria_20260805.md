@@ -155,3 +155,33 @@ Per-edge currency (#916): 0.60 bits/band-px → the per-edge partition projects 
 bf1 winner. 75 KB tiny-student lane: closed to full-band representations, potentially REOPENED
 by a low-dim per-edge description. Consumers: ddm_pe1 (the build), #941 (address solve), #939
 (realization half), cq2 (student thresholds).
+
+## ADDENDUM 6 (operator 2026-08-05, post-od2 harvest) — THE CONDITIONED-SEG→BETTER-POSE LAW + CONTINUE-ITERATING directive
+
+Operator verbatim: *"Using all of these techniques, we can continue iterating and
+optimizing, and that frontier score lowering could be even lower. Also, note how a better
+conditioned seg produces even better pose."*
+
+**The law (measured anchor: od2, c07d0ad159, n32 stratified [macOS-CPU frozen-scorer
+advisory]):** the d_pose triple 0.000801 (baseline) → 0.005841 (post-Stage-1 seg solve) →
+**0.000759 (post-carriage, BELOW baseline)**. Seg conditioning is not merely a recoverable
+transient for pose (addendum 4) — it is pose-POSITIVE: the conditioned seg field gives the
+frame_0 carriage a better substrate than the unconditioned baseline had, so the repair
+lands BETTER than where pose started. This is the #383 conditioning-gate design measured
+at the staged-composition surface, and the strong form of the ordering law: seg-first
+doesn't just tolerate pose erosion, it BUYS pose quality.
+
+**Pre-registered prediction (dropped into od3's receipt dir as a charter addendum):** if
+the law holds, post-carriage d_pose at TERMINAL Stage-1 (η → ~0.9) ≤ 0.000759 (the
+cap-bound value), despite the larger erosion transient. If instead it degrades, the law
+scopes to repair capacity — the cure is the k-sweep (k∈{4,8,12}) and the reading becomes
+"conditioned seg → better pose PER unit repair capacity." Either outcome is informative;
+od3's carriage-at-terminal re-proof is the discriminating measurement.
+
+**Continue-iterating directive:** the −0.0622 subset projection is NOT the ceiling. The
+named composition stack, in fire order: Stage-1 terminality (od3, live) → carriage k-sweep
+at terminal if the pose margin allows cheaper k → od4 receiver-close + n≥32 receiver gate →
+Stage-3 carriers-as-constraints (the banked pe/st descriptions constrain the solve, m95
+route) → rate movers on the composed archive (waterfill #766, granularity re-race) →
+per-edge (m91) residual decomposition of whatever seg remains. n600 only after the
+receiver gate beats the live line.
