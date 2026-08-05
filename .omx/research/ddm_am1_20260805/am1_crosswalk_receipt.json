@@ -1,0 +1,116 @@
+{
+  "schema": "ddm_am1_crosswalk_receipt.v1",
+  "unit": "AM1",
+  "created_date": "2026-08-05",
+  "paper": {
+    "title": "Trajectory inference via Acceleration Matching",
+    "authors": [
+      "Gabriele Dazzini",
+      "Giovanni Conforti",
+      "Alain Durmus",
+      "Aram-Alexandre Pooladian"
+    ],
+    "arxiv_id": "2608.03916",
+    "submitted": "2026-08-04",
+    "abstract_url": "https://arxiv.org/abs/2608.03916",
+    "html_url": "https://arxiv.org/html/2608.03916",
+    "local_pdf_hash": null,
+    "pdf_fetch_status": "shell_dns_blocked; official_arxiv_html_full_text_read"
+  },
+  "scope": {
+    "dollars": 0,
+    "scorer_forwards": 0,
+    "upstream_evaluate_run": false,
+    "n600_run": false,
+    "launches": 0,
+    "score_claim": false,
+    "protected_files_touched": false
+  },
+  "answer_first": {
+    "summary": "AM1 yields no measured score move today. Its useful Pact transfer is a compact smooth trajectory or acceleration packet for known encode-time streams, not unpaired trajectory inference.",
+    "canonical_equation_registered": false,
+    "canonical_equation_reason": "Existing PC1 pose-stream laws and trajectory-derived stopping law already cover the transferable law shape."
+  },
+  "verdicts": [
+    {
+      "seed": "xi_curve_pose_stream_rate",
+      "grade": "ALREADY-EMBODIED_PLUS_NARROW_ADOPT",
+      "honesty": [
+        "DERIVED",
+        "CONJECTURE"
+      ],
+      "status": "Broad smooth control-curve representation already exists; acceleration-residual packet remains an unmeasured A/B.",
+      "named_consumer": "PC1 descendant pose stream and post-OD3 OD8 persisted stream pricing",
+      "falsifier": "Acceleration packet plus residuals fails to beat existing spline, delta, or direct dxi packet at byte-exact decoded receiver output, or integration drift changes receiver behavior."
+    },
+    {
+      "seed": "od8_cross_pair_smoothness_prior",
+      "grade": "ADOPT_TEST_DESIGN_ONLY",
+      "honesty": [
+        "DERIVED",
+        "OPEN-QUESTION"
+      ],
+      "status": "Not measurable from current OD8 docs because solved paint/DCT values were not persisted.",
+      "named_consumer": "OD8 post-OD3 native DOF persistence",
+      "falsifier": "Persisted acceleration-coded residual bytes are not below flat, first-order, or second-order coding under exact decode equality."
+    },
+    {
+      "seed": "unpaired_marginal_inference",
+      "grade": "N-A",
+      "honesty": [
+        "DERIVED"
+      ],
+      "status": "Pact knows the encode-time trajectories; AM's unpaired marginal inference problem is not the live task.",
+      "named_consumer": "none",
+      "falsifier": "A future Pact branch intentionally keeps only unpaired per-time marginals while still needing a legal receiver packet."
+    },
+    {
+      "seed": "learned_acceleration_model_as_free_archive_logic",
+      "grade": "REFUTED-SEED",
+      "honesty": [
+        "DERIVED"
+      ],
+      "status": "Generic integration code can be free, but learned or video-derived weights/tables are counted payload.",
+      "named_consumer": "none",
+      "falsifier": "A counted learned acceleration payload beats existing receiver packets after archive byte pricing."
+    }
+  ],
+  "recall_evidence": [
+    {
+      "query": "pose stream xi se3 bspline scorer_targets pose_from_embedding",
+      "source": ".omx/research/pose_in_training_levers_survey_20260702.md",
+      "impact": "Reframed AM as already-overlapping with built smooth xi and SE(3) B-spline machinery."
+    },
+    {
+      "query": "ddm_pc1 pose stream canonical equations",
+      "source": ".omx/research/ddm_pc1_pose_stream_admission_canonical_equations_20260724.md",
+      "impact": "Identified an existing counted 32-knot twist-curve law; no duplicate AM equation."
+    },
+    {
+      "query": "xi temporal delta coder 574",
+      "source": ".omx/research/xi_temporal_delta_coder_574_20260721T222234Z.md",
+      "impact": "Scoped prior negative to planar-3 on canonicalized Lane chart instead of killing the full xi family."
+    },
+    {
+      "query": "OD8 native DOF delta entropy",
+      "source": ".omx/research/ddm_od8_20260805/OD8_NATIVE_DOF_RECEIPT.md",
+      "impact": "Found that needed values were not persisted, so seed 2 becomes a post-OD3 producer/test design."
+    },
+    {
+      "query": "trajectory stopping canonical equation",
+      "source": ".omx/state/canonical_equations_registry.jsonl",
+      "impact": "Confirmed AM costate/curriculum angle is already covered by a registered law."
+    }
+  ],
+  "next_if_resumed": [
+    "Wait for OD3 or post-OD3 OD8 re-derive that persists native payload values.",
+    "Run scorer-free byte comparison across flat, delta, second-order, and acceleration/control-curve residual coders.",
+    "Require exact decode equality before admitting a packet.",
+    "Only after byte win and receiver parse-back should a score-facing composition be considered."
+  ],
+  "frontier": {
+    "own_vehicle": "S = 0.7539807296911207 @ 357,836 B [macOS-CPU advisory]",
+    "contest_pointer": "borrowed/unmoved",
+    "frontier_moved_by_am1": false
+  }
+}
