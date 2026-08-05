@@ -13,6 +13,14 @@ HIGH trunk disagreement (classes pulling in conflicting directions) = the
 per-class-split premise has measured support (row-4 races via the row-1
 identity-preserving entry protocol); LOW = shared trunk suffices, split dominated.
 
+DUAL-METRIC (operator 2026-08-05 "plain cosine is pretty much never optimal" +
+[[cosine_is_hardly_ever_optimal_prefer_fisher_derived_basis_20260803]] + m65
+Euclid-vs-Fisher SIGN-FLIP law): every cosine is reported in BOTH metrics —
+plain Euclidean AND diagonal-Fisher-whitened (per-coordinate 1/sqrt(E[g^2])
+over all class x pair gradient samples), never one alone. The whitened metric
+kills the plain-cosine pathology where a few large-magnitude coordinates
+dominate the angle; a sign flip between the two metrics is itself a finding.
+
 Axis: [macOS-CPU frozen-scorer advisory], score_claim=false. n=8 STRIDED pairs
 (m88/m96: prefixes are biased; strided is the mitigation) — a DIRECTION probe for
 routing, never a population-scale finding. #855 caveat: the MLX conv adapter has a
@@ -99,8 +107,12 @@ def main() -> int:
 
     lvag = nn.value_and_grad(model, class_ce)
 
-    # Accumulate per-class flat gradients (name -> float64 np array).
+    # Accumulate per-class flat gradients (name -> float64 np array) + the
+    # per-coordinate second moment over ALL class x pair samples (the empirical
+    # diagonal Fisher for the whitened metric).
     acc: list[dict[str, np.ndarray]] = [dict() for _ in range(5)]
+    acc_sq: dict[str, np.ndarray] = {}
+    n_samples = 0
     skipped: list[dict] = []
     t0 = time.time()
     receipt: dict = {
@@ -125,12 +137,17 @@ def main() -> int:
                 continue
             loss, grads = lvag(model, idx, cls, mx.array(mask.astype(np.float32)), n_px)
             mx.eval(loss, grads)  # never let the lazy graph accumulate (#205 lesson)
+            n_samples += 1
             for name, g in tree_flatten(grads):
                 a = np.asarray(g, dtype=np.float64).ravel()
                 if name in acc[cls]:
                     acc[cls][name] += a
                 else:
                     acc[cls][name] = a
+                if name in acc_sq:
+                    acc_sq[name] += a * a
+                else:
+                    acc_sq[name] = a * a
         receipt["progress"] = {"pairs_done": pi + 1, "of": len(pairs),
                                "elapsed_s": round(time.time() - t0, 1)}
         args.out.write_text(json.dumps(receipt, indent=1))  # resumable-in-spirit partial
@@ -144,54 +161,79 @@ def main() -> int:
     names = sorted(set().union(*[set(a.keys()) for a in acc if a]))
     trunk = [n for n in names if not n.startswith("tokens")]
     tokens = [n for n in names if n.startswith("tokens")]
+    # Diagonal-Fisher whitening: per-coordinate 1/sqrt(E[g^2]) over all class x pair
+    # samples. eps = 1e-3 of the tensor's own RMS floor (scale-free, no bare constant).
+    whiten: dict[str, np.ndarray] = {}
+    for n, sq in acc_sq.items():
+        rms = np.sqrt(sq / max(1, n_samples))
+        eps = 1e-3 * float(rms.mean()) if float(rms.mean()) > 0 else 1.0
+        whiten[n] = 1.0 / (rms + eps)
 
-    def group_matrix(group: list[str]) -> list[list[float | None]]:
+    def group_matrix(group: list[str], whitened: bool) -> list[list[float | None]]:
         vecs = []
         for cls in range(5):
-            parts = [acc[cls][n] for n in group if n in acc[cls]]
+            parts = [(acc[cls][n] * whiten[n]) if whitened else acc[cls][n]
+                     for n in group if n in acc[cls]]
             vecs.append(np.concatenate(parts) if parts else np.zeros(1))
         return [[cos(vecs[i], vecs[j]) for j in range(5)] for i in range(5)]
 
-    per_tensor = {}
-    for n in names:
-        per_tensor[n] = [[cos(acc[i].get(n, np.zeros(1)), acc[j].get(n, np.zeros(1)))
-                          for j in range(5)] for i in range(5)]
-
-    trunk_m = group_matrix(trunk)
-    tok_m = group_matrix(tokens) if tokens else None
+    def tensor_matrix(n: str, whitened: bool) -> list[list[float | None]]:
+        def vec(cls: int) -> np.ndarray:
+            a = acc[cls].get(n)
+            if a is None:
+                return np.zeros(1)
+            return a * whiten[n] if whitened else a
+        return [[cos(vec(i), vec(j)) for j in range(5)] for i in range(5)]
 
     def off_diag_mean(m) -> float | None:
         vals = [m[i][j] for i in range(5) for j in range(5) if i != j and m[i][j] is not None]
         return float(np.mean(vals)) if vals else None
 
-    trunk_od = off_diag_mean(trunk_m)
+    trunk_plain, trunk_fisher = group_matrix(trunk, False), group_matrix(trunk, True)
+    tok_plain = group_matrix(tokens, False) if tokens else None
+    tok_fisher = group_matrix(tokens, True) if tokens else None
+    per_tensor = {n: {"plain": tensor_matrix(n, False), "fisher_whitened": tensor_matrix(n, True)}
+                  for n in names}
+    od_plain, od_fisher = off_diag_mean(trunk_plain), off_diag_mean(trunk_fisher)
+    sign_flips = [(CLASS_NAMES[i], CLASS_NAMES[j], trunk_plain[i][j], trunk_fisher[i][j])
+                  for i in range(5) for j in range(i + 1, 5)
+                  if trunk_plain[i][j] is not None and trunk_fisher[i][j] is not None
+                  and (trunk_plain[i][j] > 0) != (trunk_fisher[i][j] > 0)]
+
     # Pre-registered reading bands (probe-scoped interpretation aid, NOT a law;
-    # provenance: registered here by MAIN before results were seen, per MHAR row-2):
-    # off-diag mean < 0.2 -> HIGH disagreement (split premise supported);
-    # > 0.6 -> LOW (shared trunk suffices); else AMBIGUOUS.
-    if trunk_od is None:
-        verdict = "NO_SIGNAL"
-    elif trunk_od < 0.2:
-        verdict = "HIGH_DISAGREEMENT_split_premise_supported"
-    elif trunk_od > 0.6:
-        verdict = "LOW_DISAGREEMENT_shared_trunk_suffices"
-    else:
-        verdict = "AMBIGUOUS_between_preregistered_bands"
+    # registered before results were seen, per MHAR row-2). VERDICT keys off the
+    # FISHER-WHITENED metric per the dual-metric law; plain is reported alongside.
+    def band(od: float | None) -> str:
+        if od is None:
+            return "NO_SIGNAL"
+        if od < 0.2:
+            return "HIGH_DISAGREEMENT_split_premise_supported"
+        if od > 0.6:
+            return "LOW_DISAGREEMENT_shared_trunk_suffices"
+        return "AMBIGUOUS_between_preregistered_bands"
 
     receipt.update({
         "status": "complete",
         "class_names": list(CLASS_NAMES),
         "trunk_tensors": trunk, "token_tensors": tokens,
-        "trunk_cosine_5x5": trunk_m, "token_cosine_5x5": tok_m,
+        "n_grad_samples": n_samples,
+        "trunk_cosine_5x5": {"plain": trunk_plain, "fisher_whitened": trunk_fisher},
+        "token_cosine_5x5": ({"plain": tok_plain, "fisher_whitened": tok_fisher}
+                             if tokens else None),
         "per_tensor_cosine_5x5": per_tensor,
-        "trunk_offdiag_mean": trunk_od,
-        "token_offdiag_mean": off_diag_mean(tok_m) if tok_m else None,
+        "trunk_offdiag_mean": {"plain": od_plain, "fisher_whitened": od_fisher},
+        "token_offdiag_mean": {"plain": off_diag_mean(tok_plain) if tok_plain else None,
+                               "fisher_whitened": off_diag_mean(tok_fisher) if tok_fisher else None},
+        "trunk_pairwise_sign_flips_plain_vs_fisher": sign_flips,
         "skipped": skipped,
-        "preregistered_bands": {"high": "<0.2", "low": ">0.6"},
-        "verdict_advisory": verdict,
+        "preregistered_bands": {"high": "<0.2", "low": ">0.6",
+                                "verdict_metric": "fisher_whitened (dual-metric law m65)"},
+        "verdict_advisory": band(od_fisher),
+        "verdict_plain_for_signflip_watch": band(od_plain),
         "routing": ("HIGH -> MHAR row-4 depth-mixing + per-class routing race via row-1 "
                     "identity-preserving entry; LOW -> per-class split DOMINATED at this "
-                    "endpoint (INSTANCE scope: this ckpt, these pairs)"),
+                    "endpoint (INSTANCE scope: this ckpt, these pairs); any plain-vs-fisher "
+                    "sign flip is a finding in its own right"),
         "elapsed_s": round(time.time() - t0, 1),
     })
     args.out.write_text(json.dumps(receipt, indent=1))
