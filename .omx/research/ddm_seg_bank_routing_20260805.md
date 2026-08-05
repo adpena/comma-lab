@@ -54,3 +54,26 @@ spawn to build the LOOP, not a one-shot window. The v19b measured +0.0805 correc
 synergy is the existence proof that re-passing on an improved base re-opens headroom.
 
 S = 0.7539807296911207 @ 357,836 B [macOS-CPU advisory]; contest pointer borrowed/unmoved.
+
+## AMENDMENT 2 (operator, same day): SEG IS ~100% SOLVABLE — the receipts, and what stage-1 therefore IS
+Operator: *"Yesterday, you were able to solve or fix basically one hundred percent of all
+d_seg."* CONFIRMED against receipts: exact lattice solve d_seg **1.52e-4** (w/ 1.02e-4
+pose at the solved point — #603's solved pair; shipping cost was the open problem, never
+the solve) · #897 realization-flip cure **96.6%** (88→3) under JOINT pricing · sq2
+uncapped head-solve **η 0.9113 at an arbitrary 100-step cap, still descending
+13–23%/iter** (#850/#935 — at convergence plausibly →1.0). Consequences, binding on jd1
+and the A/B reads:
+1. **"Seg gap 0.4015 CONSTANT" is the SHIPPED-VEHICLE gap, not a capability gap.** The
+   open problem is CARRIAGE: describe the solved state cheaply (raw solve = rate-dead,
+   od9: 1,214,007 B vs ~90 KB corridor → it enters as TEACHER/TARGET through the TR1
+   renderer, dw1's distill-window mechanism) + hold it constrained + train pose down on
+   it. Never re-frame seg capability as the frontier again.
+2. **The recursion's stage-1 opens from the SOLVED state (~2e-4-class), not the trained
+   trunk (0.0040).** Each round's seg-solve pass runs the solve machinery TO CONVERGENCE
+   (no arbitrary iteration caps — #935's lesson; cap-stops get CapStopReceipts), then
+   distills/conditions into the renderer, then the joint pose window descends on the
+   held state.
+3. The per-round verdict is the COMPOSED triple (d_seg held · d_pose descending · bytes
+   of the description), never the solve's raw d_seg (which is known-achievable).
+
+S = 0.7539807296911207 @ 357,836 B [macOS-CPU advisory]; contest pointer borrowed/unmoved.
