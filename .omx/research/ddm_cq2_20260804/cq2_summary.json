@@ -1,81 +1,2551 @@
 {
-  "arm": "ddm_cq2_20260804",
-  "status": "BLOCKED_DATASET_ABSENT_OR_INCOMPLETE",
-  "axis": "macOS-CPU advisory / public-data custody preflight / scorer-free",
-  "score_claim": false,
-  "promotion_eligible": false,
-  "n600_scorer_job": false,
-  "checked_utc": "2026-08-04T22:27:28Z",
-  "repo_head": "2c5fda118298429b7a262b1c13048818ee614634",
-  "own_vehicle_frontier": {
-    "S": 0.7539807296911207,
-    "bytes": 357836,
-    "axis": "macOS-CPU advisory"
-  },
-  "teacher": {
-    "path": "/Volumes/VertigoDataTier/pact/public_models/comma10k_segnet",
-    "model_sha256": "8208672861ad1b111dc98f3a7c54196d29875b709c7353e2dd1b7614343fb3a8",
-    "albumentations_config_eval_sha256": "d260853fe0a993e23613ff38039fdce59264f5fe31f729c1fa65f8c3e5fde913",
-    "config_sha256": "2b8f16dbad9bd85386609386a9cb5dedc6e0c518253a9af484e0a128d9463c88"
-  },
-  "dataset": {
-    "path": "/Volumes/VertigoDataTier/pact/public_datasets/comma10k",
-    "remote_url": "https://github.com/commaai/comma10k",
-    "rev_parse_head_rc": 128,
-    "rev_parse_head_stderr": "fatal: ambiguous argument 'HEAD': unknown revision or path not in the working tree.",
-    "symbolic_ref_head_rc": 128,
-    "symbolic_ref_head_stderr": "fatal: No such ref: HEAD",
-    "maxdepth_2_file_count": 4,
-    "maxdepth_4_file_count": 20,
-    "non_git_data_files_found_maxdepth_4": 0,
-    "lock_marker": "/Volumes/VertigoDataTier/pact/public_datasets/comma10k/.git/shallow.lock",
-    "pack_marker": "/Volumes/VertigoDataTier/pact/public_datasets/comma10k/.git/objects/pack/tmp_pack_xkG6pP"
-  },
-  "cq1_predecessor": {
-    "overlap_fraction": 0.9970011534,
-    "overlap_numerator": 8644,
-    "overlap_denominator": 8670,
-    "teacher_argmax_npy_sha256": "249ad030e60025ad46464fa78ff7957753b056371761140e2891978107a0d44a"
-  },
-  "se3_prices": {
-    "W_bytes_per_flip": 1.2731082153320312,
-    "captured_flips": 161660,
-    "side_implied_stream_bytes": 81365,
-    "explicit_direction_stream_bytes": 100904,
-    "ed1_section_baseline_bytes": 169149,
-    "derived_thresholds": [
-      {
-        "student_counted_bytes": 25000,
-        "side_implied_total_bytes": 106365,
-        "side_implied_break_even_survival": 0.5168099296598647,
-        "explicit_direction_total_bytes": 125904,
-        "explicit_direction_break_even_survival": 0.6117466966003442
-      },
-      {
-        "student_counted_bytes": 75000,
-        "side_implied_total_bytes": 156365,
-        "side_implied_break_even_survival": 0.7597516537513725,
-        "explicit_direction_total_bytes": 175904,
-        "explicit_direction_break_even_survival": 0.854688420691852
-      },
-      {
-        "student_counted_bytes": 150000,
-        "side_implied_total_bytes": 231365,
-        "side_implied_break_even_survival": 1.1241642398886345,
-        "explicit_direction_total_bytes": 250904,
-        "explicit_direction_break_even_survival": 1.219101006829114
-      }
-    ]
-  },
-  "measurements_not_performed": [
-    "comma10k train/val split",
-    "student training",
-    "student compression",
-    "comma10k-val Road/Lane IoU",
-    "CQ1 overlap remeasurement",
-    "contest SegNet/PoseNet forward",
-    "upstream/evaluate.py",
-    "archive.zip"
+  "axis": "[macOS-CPU advisory / public-data tiny-student chart sizing / scorer-free]",
+  "boundaries": [
+    "Training and selection used only comma10k public images plus the public teacher.",
+    "No contest SegNet/PoseNet forward was run.",
+    "No upstream/evaluate.py run was performed.",
+    "No archive.zip was built.",
+    "Final overlap, if present, was a single frozen-candidate CQ1-style read after public-val selection.",
+    "No /tmp evidence."
   ],
-  "follow_on_disposition": "QUEUED-WITH-FIRE-ORDER"
+  "bulk_dir": "/Volumes/VertigoDataTier/pact/ddm_cq2_20260804",
+  "created_utc": "2026-08-05T01:07:08Z",
+  "custody": {
+    "class_order": {
+      "Lane": 1,
+      "Movable": 3,
+      "MyCar": 4,
+      "Road": 0,
+      "Undrivable": 2
+    },
+    "clone_manifest": {
+      "bytes": 26835853312,
+      "fetched_utc": "2026-08-05T00:09:29Z",
+      "imgs": 9888,
+      "masks": 9888,
+      "schema": "comma10k_clone_manifest.v1",
+      "sha": "6c205fe4c43cc53b2b1befafb1060d0606555027"
+    },
+    "dataset_dir": "/Volumes/VertigoDataTier/pact/public_datasets/comma10k",
+    "git_head": {
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD"
+      ],
+      "returncode": 0,
+      "stderr": "",
+      "stdout": "6c205fe4c43cc53b2b1befafb1060d0606555027"
+    },
+    "git_lock_files_maxdepth1": [],
+    "git_remote": {
+      "argv": [
+        "git",
+        "remote",
+        "-v"
+      ],
+      "returncode": 0,
+      "stderr": "",
+      "stdout": "origin\thttps://github.com/commaai/comma10k (fetch)\norigin\thttps://github.com/commaai/comma10k (push)"
+    },
+    "image_count": 9888,
+    "manifest_path": "/Volumes/VertigoDataTier/pact/public_datasets/comma10k/CLONE_MANIFEST.json",
+    "mask_count": 9888,
+    "matched_image_mask_names": true,
+    "split_rule": "README conventional validation: parsed leading numeric id ending in 9; supports numeric, h###, r###, u### names",
+    "teacher_dir": "/Volumes/VertigoDataTier/pact/public_models/comma10k_segnet",
+    "teacher_hashes": {
+      "albumentations_config_eval.json": {
+        "bytes": 414,
+        "sha256": "d260853fe0a993e23613ff38039fdce59264f5fe31f729c1fa65f8c3e5fde913"
+      },
+      "config.json": {
+        "bytes": 374,
+        "sha256": "2b8f16dbad9bd85386609386a9cb5dedc6e0c518253a9af484e0a128d9463c88"
+      },
+      "model.safetensors": {
+        "bytes": 38502740,
+        "sha256": "8208672861ad1b111dc98f3a7c54196d29875b709c7353e2dd1b7614343fb3a8"
+      }
+    },
+    "top_level_dirs": [
+      ".git",
+      ".github",
+      "imgs",
+      "imgs2",
+      "imgsd",
+      "masks",
+      "masks2",
+      "masksd",
+      "tools"
+    ],
+    "train_count": 8900,
+    "val_count": 988
+  },
+  "economics": [
+    {
+      "W_bytes_per_flip": 1.2731082153320312,
+      "break_even_survival": 1.0015515517396503,
+      "captured_flips": 161660,
+      "ed1_baseline_bytes": 169149,
+      "row": "side_implied",
+      "stream_bytes": 81365,
+      "student_bytes": 124765,
+      "total_bytes": 206130
+    },
+    {
+      "W_bytes_per_flip": 1.2731082153320312,
+      "break_even_survival": 1.0964883186801297,
+      "captured_flips": 161660,
+      "ed1_baseline_bytes": 169149,
+      "row": "explicit_direction",
+      "stream_bytes": 100904,
+      "student_bytes": 124765,
+      "total_bytes": 225669
+    },
+    {
+      "W_bytes_per_flip": 1.2731082153320312,
+      "break_even_survival": 1.428079477892629,
+      "captured_flips": 161660,
+      "ed1_baseline_bytes": 169149,
+      "row": "ed1_section_baseline",
+      "stream_bytes": 169149,
+      "student_bytes": 124765,
+      "total_bytes": 293914
+    }
+  ],
+  "n600_scorer_job": false,
+  "overlap": {
+    "artifacts": {
+      "argmax_subset": {
+        "bytes": 6291584,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_cq2_20260804/cq2r_20260805/cq2_selected_student_argmax_pairs_n32.npy",
+        "sha256": "f3542d2a1cd8a18f861d855d0f462bca27da50634c471713785bc3147a385ebd",
+        "shape": [
+          32,
+          384,
+          512
+        ]
+      },
+      "pair_rows_jsonl": "/Users/adpena/Projects/pact/.omx/research/ddm_cq2_20260804/cq2_selected_overlap_pair_rows.jsonl"
+    },
+    "axis": "[macOS-CPU advisory / public-data tiny-student chart-overlap scorer-free]",
+    "band_overlap_vs_se3_cx1_chart": [
+      {
+        "band_iou_vs_se3": 0.0,
+        "band_precision_vs_se3": 0.0,
+        "band_recall_vs_se3": 0.0,
+        "micro_band_pixels": 0,
+        "micro_capture_fraction_of_total_targets": 0.0,
+        "micro_captured_flips": 0,
+        "micro_over_se3_captured_fraction": 0.0,
+        "micro_overlap_of_se3_captured_flips": 0,
+        "radius": 1,
+        "se3_band_pixels": 64643,
+        "se3_capture_fraction_of_total_targets": 0.6987990650439269,
+        "se3_captured_flips": 8670
+      },
+      {
+        "band_iou_vs_se3": 0.0,
+        "band_precision_vs_se3": 0.0,
+        "band_recall_vs_se3": 0.0,
+        "micro_band_pixels": 0,
+        "micro_capture_fraction_of_total_targets": 0.0,
+        "micro_captured_flips": 0,
+        "micro_over_se3_captured_fraction": 0.0,
+        "micro_overlap_of_se3_captured_flips": 0,
+        "radius": 2,
+        "se3_band_pixels": 108625,
+        "se3_capture_fraction_of_total_targets": 0.7376481018779721,
+        "se3_captured_flips": 9152
+      },
+      {
+        "band_iou_vs_se3": 0.0,
+        "band_precision_vs_se3": 0.0,
+        "band_recall_vs_se3": 0.0,
+        "micro_band_pixels": 0,
+        "micro_capture_fraction_of_total_targets": 0.0,
+        "micro_captured_flips": 0,
+        "micro_over_se3_captured_fraction": 0.0,
+        "micro_overlap_of_se3_captured_flips": 0,
+        "radius": 3,
+        "se3_band_pixels": 152060,
+        "se3_capture_fraction_of_total_targets": 0.7599742081083259,
+        "se3_captured_flips": 9429
+      }
+    ],
+    "decisive_metric": {
+      "denominator_se3_r1_captured_flips": 8670,
+      "measured_student_overlap_fraction": 0.0,
+      "numerator_student_overlap_of_se3_r1_captured_flips": 0,
+      "threshold": 0.8
+    },
+    "denominators": {
+      "selected_pairs": 32,
+      "subset_road_lane_target_flips": 12407,
+      "subset_scorer_cells": 6291456
+    },
+    "iou_vs_cx1": {
+      "Lane": {
+        "class_id": 1,
+        "intersection": 0,
+        "iou": 0.0,
+        "pred_pixels": 0,
+        "ref_pixels": 30541,
+        "union": 30541
+      },
+      "Movable": {
+        "class_id": 3,
+        "intersection": 0,
+        "iou": 0.0,
+        "pred_pixels": 0,
+        "ref_pixels": 60973,
+        "union": 60973
+      },
+      "MyCar": {
+        "class_id": 4,
+        "intersection": 932801,
+        "iou": 0.395285982406233,
+        "pred_pixels": 1691355,
+        "ref_pixels": 1601259,
+        "union": 2359813
+      },
+      "Road": {
+        "class_id": 0,
+        "intersection": 1384670,
+        "iou": 0.41772593724894647,
+        "pred_pixels": 3221282,
+        "ref_pixels": 1478169,
+        "union": 3314781
+      },
+      "Undrivable": {
+        "class_id": 2,
+        "intersection": 910033,
+        "iou": 0.2535405232217981,
+        "pred_pixels": 1378819,
+        "ref_pixels": 3120514,
+        "union": 3589300
+      }
+    },
+    "iou_vs_gt": {
+      "Lane": {
+        "class_id": 1,
+        "intersection": 0,
+        "iou": 0.0,
+        "pred_pixels": 0,
+        "ref_pixels": 37596,
+        "union": 37596
+      },
+      "Movable": {
+        "class_id": 3,
+        "intersection": 0,
+        "iou": 0.0,
+        "pred_pixels": 0,
+        "ref_pixels": 62782,
+        "union": 62782
+      },
+      "MyCar": {
+        "class_id": 4,
+        "intersection": 932800,
+        "iou": 0.39556364851489767,
+        "pred_pixels": 1691355,
+        "ref_pixels": 1599599,
+        "union": 2358154
+      },
+      "Road": {
+        "class_id": 0,
+        "intersection": 1377188,
+        "iou": 0.4154724093989535,
+        "pred_pixels": 3221282,
+        "ref_pixels": 1470658,
+        "union": 3314752
+      },
+      "Undrivable": {
+        "class_id": 2,
+        "intersection": 910112,
+        "iou": 0.2535464272740037,
+        "pred_pixels": 1378819,
+        "ref_pixels": 3120821,
+        "union": 3589528
+      }
+    },
+    "n600_scorer_job": false,
+    "pairs": [
+      31,
+      43,
+      62,
+      82,
+      94,
+      118,
+      147,
+      165,
+      167,
+      182,
+      185,
+      200,
+      237,
+      241,
+      247,
+      259,
+      272,
+      286,
+      288,
+      292,
+      296,
+      306,
+      327,
+      382,
+      390,
+      419,
+      473,
+      488,
+      525,
+      555,
+      560,
+      581
+    ],
+    "promotion_eligible": false,
+    "schema": "ddm_cq2_selected_student_cq1_overlap.v1",
+    "score_claim": false,
+    "selected_label": "150k",
+    "selected_width": 56,
+    "verdict": "POOR-OVERLAP"
+  },
+  "own_vehicle_frontier_line": "S = 0.7539807296911207 @ 357,836 B [macOS-CPU advisory]; contest pointer borrowed/unmoved.",
+  "platform": {
+    "brotli": "1.2.0",
+    "opencv": "4.11.0",
+    "platform": "macOS-26.4-arm64-arm-64bit-Mach-O",
+    "python": "3.13.12",
+    "smp": "0.5.0",
+    "torch": "2.12.1",
+    "torch_interop_threads": 1,
+    "torch_threads": 4
+  },
+  "promotion_eligible": false,
+  "run_dir": "/Volumes/VertigoDataTier/pact/ddm_cq2_20260804/cq2r_20260805",
+  "schema": "ddm_cq2_comma10k_tiny_student_sizing.v1",
+  "score_claim": false,
+  "script": "experiments/ddm_cq2_comma10k_tiny_student.py",
+  "script_sha256": "36b501bfc965702b2ff30ec72a7c8270bd6f17504182eafdbb54723ff01424d7",
+  "selection": {
+    "bar": {
+      "lane_iou": 0.5,
+      "mean_iou": 0.72,
+      "road_iou": 0.9
+    },
+    "selected_label": "150k",
+    "selected_result": {
+      "best_interim_metric": 0.20000427441704494,
+      "best_interim_step": 160,
+      "checkpoint_dir": "/Volumes/VertigoDataTier/pact/ddm_cq2_20260804/cq2r_20260805",
+      "compression": {
+        "all_candidates": [
+          {
+            "codec": "brotli_q11",
+            "compressed_bytes": 273625,
+            "mode": "fp16",
+            "raw_bytes": 315899,
+            "sha256": "426f3f7ce85a97ef69b2a14827ae007dff9aa2b3bc55d33385a54c4e99cf733d"
+          },
+          {
+            "codec": "zlib_9",
+            "compressed_bytes": 288817,
+            "mode": "fp16",
+            "raw_bytes": 315899,
+            "sha256": "3fc039dca0f44f7ec5b379ba93dddae53558bb10e1cdff3cd7a9c8622102beb6"
+          },
+          {
+            "codec": "brotli_q11",
+            "compressed_bytes": 124765,
+            "mode": "int8",
+            "raw_bytes": 159734,
+            "sha256": "df2258a7ee74738674a9433e093e39559414c9104d1af3e334b29dfcab309e80"
+          },
+          {
+            "codec": "zlib_9",
+            "compressed_bytes": 128526,
+            "mode": "int8",
+            "raw_bytes": 159734,
+            "sha256": "d58f160e32a2fa4732201de80e7eb6927f6f6c4dd068f9d71b815f4fd9945cf4"
+          }
+        ],
+        "bytes": 124765,
+        "codec": "brotli_q11",
+        "mode": "int8",
+        "path": "/Volumes/VertigoDataTier/pact/ddm_cq2_20260804/cq2r_20260805/150k_student_weights.bin",
+        "raw_bytes": 159734,
+        "sha256": "df2258a7ee74738674a9433e093e39559414c9104d1af3e334b29dfcab309e80"
+      },
+      "final_checkpoint": "/Volumes/VertigoDataTier/pact/ddm_cq2_20260804/cq2r_20260805/150k_checkpoint_final_step_000160.pt",
+      "final_val": {
+        "confusion": [
+          [
+            32108141,
+            0,
+            3075501,
+            0,
+            2335323
+          ],
+          [
+            960595,
+            0,
+            142159,
+            0,
+            27216
+          ],
+          [
+            25133765,
+            0,
+            59543692,
+            0,
+            16591921
+          ],
+          [
+            2763629,
+            0,
+            2019818,
+            0,
+            703343
+          ],
+          [
+            12435159,
+            0,
+            10234188,
+            0,
+            26174254
+          ]
+        ],
+        "evaluated_images": 988,
+        "lane_iou": 0.0,
+        "per_class": {
+          "Lane": {
+            "class_id": 1,
+            "intersection": 0,
+            "iou": 0.0,
+            "student_pixels": 0,
+            "teacher_pixels": 1129970,
+            "union": 1129970
+          },
+          "Movable": {
+            "class_id": 3,
+            "intersection": 0,
+            "iou": 0.0,
+            "student_pixels": 0,
+            "teacher_pixels": 5486790,
+            "union": 5486790
+          },
+          "MyCar": {
+            "class_id": 4,
+            "intersection": 26174254,
+            "iou": 0.38209806619438047,
+            "student_pixels": 45832057,
+            "teacher_pixels": 48843601,
+            "union": 68501404
+          },
+          "Road": {
+            "class_id": 0,
+            "intersection": 32108141,
+            "iou": 0.4074010932811813,
+            "student_pixels": 73401289,
+            "teacher_pixels": 37518965,
+            "union": 78812113
+          },
+          "Undrivable": {
+            "class_id": 2,
+            "intersection": 59543692,
+            "iou": 0.5100493362043259,
+            "student_pixels": 75015358,
+            "teacher_pixels": 101269378,
+            "union": 116741044
+          }
+        },
+        "pixel_accuracy": 0.6065733493902744,
+        "road_iou": 0.4074010932811813,
+        "road_lane_mean_iou": 0.20370054664059065,
+        "weighted_ce_per_pixel": 1.2540131236216638
+      },
+      "interim_history": [
+        {
+          "interim_val": {
+            "confusion": [
+              [
+                3152050,
+                0,
+                421940,
+                0,
+                0
+              ],
+              [
+                49414,
+                0,
+                59989,
+                0,
+                0
+              ],
+              [
+                4871370,
+                0,
+                5002741,
+                0,
+                0
+              ],
+              [
+                458134,
+                0,
+                157171,
+                0,
+                0
+              ],
+              [
+                4243266,
+                0,
+                458293,
+                0,
+                0
+              ]
+            ],
+            "evaluated_images": 96,
+            "lane_iou": 0.0,
+            "per_class": {
+              "Lane": {
+                "class_id": 1,
+                "intersection": 0,
+                "iou": 0.0,
+                "student_pixels": 0,
+                "teacher_pixels": 109403,
+                "union": 109403
+              },
+              "Movable": {
+                "class_id": 3,
+                "intersection": 0,
+                "iou": 0.0,
+                "student_pixels": 0,
+                "teacher_pixels": 615305,
+                "union": 615305
+              },
+              "MyCar": {
+                "class_id": 4,
+                "intersection": 0,
+                "iou": 0.0,
+                "student_pixels": 0,
+                "teacher_pixels": 4701559,
+                "union": 4701559
+              },
+              "Road": {
+                "class_id": 0,
+                "intersection": 3152050,
+                "iou": 0.23886090013666084,
+                "student_pixels": 12774234,
+                "teacher_pixels": 3573990,
+                "union": 13196174
+              },
+              "Undrivable": {
+                "class_id": 2,
+                "intersection": 5002741,
+                "iou": 0.45597586256177824,
+                "student_pixels": 6100134,
+                "teacher_pixels": 9874111,
+                "union": 10971504
+              }
+            },
+            "pixel_accuracy": 0.43205637402004665,
+            "road_iou": 0.23886090013666084,
+            "road_lane_mean_iou": 0.11943045006833042,
+            "weighted_ce_per_pixel": 1.6088591284222074
+          },
+          "step": 40,
+          "train_weighted_ce": 1.0516078472137451
+        },
+        {
+          "interim_val": {
+            "confusion": [
+              [
+                3360546,
+                0,
+                88015,
+                0,
+                125429
+              ],
+              [
+                96209,
+                0,
+                11152,
+                0,
+                2042
+              ],
+              [
+                4042088,
+                0,
+                4508855,
+                0,
+                1323168
+              ],
+              [
+                476991,
+                0,
+                93996,
+                0,
+                44318
+              ],
+              [
+                2850947,
+                0,
+                284814,
+                0,
+                1565798
+              ]
+            ],
+            "evaluated_images": 96,
+            "lane_iou": 0.0,
+            "per_class": {
+              "Lane": {
+                "class_id": 1,
+                "intersection": 0,
+                "iou": 0.0,
+                "student_pixels": 0,
+                "teacher_pixels": 109403,
+                "union": 109403
+              },
+              "Movable": {
+                "class_id": 3,
+                "intersection": 0,
+                "iou": 0.0,
+                "student_pixels": 0,
+                "teacher_pixels": 615305,
+                "union": 615305
+              },
+              "MyCar": {
+                "class_id": 4,
+                "intersection": 1565798,
+                "iou": 0.25269006002727984,
+                "student_pixels": 3060755,
+                "teacher_pixels": 4701559,
+                "union": 6196516
+              },
+              "Road": {
+                "class_id": 0,
+                "intersection": 3360546,
+                "iou": 0.30439107898616197,
+                "student_pixels": 10826781,
+                "teacher_pixels": 3573990,
+                "union": 11040225
+              },
+              "Undrivable": {
+                "class_id": 2,
+                "intersection": 4508855,
+                "iou": 0.4355502967130882,
+                "student_pixels": 4986832,
+                "teacher_pixels": 9874111,
+                "union": 10352088
+              }
+            },
+            "pixel_accuracy": 0.499894830915663,
+            "road_iou": 0.30439107898616197,
+            "road_lane_mean_iou": 0.15219553949308098,
+            "weighted_ce_per_pixel": 1.4293926590018802
+          },
+          "step": 80,
+          "train_weighted_ce": 0.9241725206375122
+        },
+        {
+          "interim_val": {
+            "confusion": [
+              [
+                2994344,
+                0,
+                328917,
+                0,
+                250729
+              ],
+              [
+                75394,
+                0,
+                30435,
+                0,
+                3574
+              ],
+              [
+                2732144,
+                0,
+                5234700,
+                0,
+                1907267
+              ],
+              [
+                343241,
+                0,
+                175639,
+                0,
+                96425
+              ],
+              [
+                1697077,
+                0,
+                619503,
+                0,
+                2384979
+              ]
+            ],
+            "evaluated_images": 96,
+            "lane_iou": 0.0,
+            "per_class": {
+              "Lane": {
+                "class_id": 1,
+                "intersection": 0,
+                "iou": 0.0,
+                "student_pixels": 0,
+                "teacher_pixels": 109403,
+                "union": 109403
+              },
+              "Movable": {
+                "class_id": 3,
+                "intersection": 0,
+                "iou": 0.0,
+                "student_pixels": 0,
+                "teacher_pixels": 615305,
+                "union": 615305
+              },
+              "MyCar": {
+                "class_id": 4,
+                "intersection": 2384979,
+                "iou": 0.34269135637139964,
+                "student_pixels": 4642974,
+                "teacher_pixels": 4701559,
+                "union": 6959554
+              },
+              "Road": {
+                "class_id": 0,
+                "intersection": 2994344,
+                "iou": 0.35554485323051505,
+                "student_pixels": 7842200,
+                "teacher_pixels": 3573990,
+                "union": 8421846
+              },
+              "Undrivable": {
+                "class_id": 2,
+                "intersection": 5234700,
+                "iou": 0.47464751888384793,
+                "student_pixels": 6389194,
+                "teacher_pixels": 9874111,
+                "union": 11028605
+              }
+            },
+            "pixel_accuracy": 0.5623511738247342,
+            "road_iou": 0.35554485323051505,
+            "road_lane_mean_iou": 0.17777242661525752,
+            "weighted_ce_per_pixel": 1.3474851548671722
+          },
+          "step": 120,
+          "train_weighted_ce": 0.9811983108520508
+        },
+        {
+          "interim_val": {
+            "confusion": [
+              [
+                3022699,
+                0,
+                327539,
+                0,
+                223752
+              ],
+              [
+                93141,
+                0,
+                13011,
+                0,
+                3251
+              ],
+              [
+                2434438,
+                0,
+                5607412,
+                0,
+                1832261
+              ],
+              [
+                285013,
+                0,
+                226468,
+                0,
+                103824
+              ],
+              [
+                1170004,
+                0,
+                1021379,
+                0,
+                2510176
+              ]
+            ],
+            "evaluated_images": 96,
+            "lane_iou": 0.0,
+            "per_class": {
+              "Lane": {
+                "class_id": 1,
+                "intersection": 0,
+                "iou": 0.0,
+                "student_pixels": 0,
+                "teacher_pixels": 109403,
+                "union": 109403
+              },
+              "Movable": {
+                "class_id": 3,
+                "intersection": 0,
+                "iou": 0.0,
+                "student_pixels": 0,
+                "teacher_pixels": 615305,
+                "union": 615305
+              },
+              "MyCar": {
+                "class_id": 4,
+                "intersection": 2510176,
+                "iou": 0.36566716394885274,
+                "student_pixels": 4673264,
+                "teacher_pixels": 4701559,
+                "union": 6864647
+              },
+              "Road": {
+                "class_id": 0,
+                "intersection": 3022699,
+                "iou": 0.40000854883408987,
+                "student_pixels": 7005295,
+                "teacher_pixels": 3573990,
+                "union": 7556586
+              },
+              "Undrivable": {
+                "class_id": 2,
+                "intersection": 5607412,
+                "iou": 0.4891959072133254,
+                "student_pixels": 7195809,
+                "teacher_pixels": 9874111,
+                "union": 11462508
+              }
+            },
+            "pixel_accuracy": 0.5902336438496908,
+            "road_iou": 0.40000854883408987,
+            "road_lane_mean_iou": 0.20000427441704494,
+            "weighted_ce_per_pixel": 1.2896570099724665
+          },
+          "step": 160,
+          "train_weighted_ce": 0.8216120004653931
+        }
+      ],
+      "label": "150k",
+      "param_count": 156581,
+      "passes_pre_registered_bar": false,
+      "resumed_from": null,
+      "steps_completed": 160,
+      "stop_reason": "safety_bound_REPORTED_max_steps",
+      "train_loss_tail": [
+        {
+          "step": 151,
+          "weighted_ce": 0.6845085620880127
+        },
+        {
+          "step": 152,
+          "weighted_ce": 0.9239115118980408
+        },
+        {
+          "step": 153,
+          "weighted_ce": 0.839753270149231
+        },
+        {
+          "step": 154,
+          "weighted_ce": 0.8618545532226562
+        },
+        {
+          "step": 155,
+          "weighted_ce": 1.128912091255188
+        },
+        {
+          "step": 156,
+          "weighted_ce": 0.9524146914482117
+        },
+        {
+          "step": 157,
+          "weighted_ce": 0.7767196297645569
+        },
+        {
+          "step": 158,
+          "weighted_ce": 1.057313323020935
+        },
+        {
+          "step": 159,
+          "weighted_ce": 1.0534263849258423
+        },
+        {
+          "step": 160,
+          "weighted_ce": 0.8216120004653931
+        }
+      ],
+      "wall_seconds": 1212.4796559810638,
+      "width": 56
+    },
+    "status": "NO_PASS_SELECTED_BEST_PUBLIC_VAL_DIAGNOSTIC"
+  },
+  "size_results": [
+    {
+      "best_interim_metric": 0.18368219584890697,
+      "best_interim_step": 160,
+      "checkpoint_dir": "/Volumes/VertigoDataTier/pact/ddm_cq2_20260804/cq2r_20260805",
+      "compression": {
+        "all_candidates": [
+          {
+            "codec": "brotli_q11",
+            "compressed_bytes": 40363,
+            "mode": "fp16",
+            "raw_bytes": 48289,
+            "sha256": "64942aa3770f9a1b441a42c1e4b63e5effaa7f545ce1dd1889e68ba026662d17"
+          },
+          {
+            "codec": "zlib_9",
+            "compressed_bytes": 42742,
+            "mode": "fp16",
+            "raw_bytes": 48289,
+            "sha256": "82c11b74ef0ad08aaa6dd941bd73546dd36d7fcc05571c0a9f87db860bb57281"
+          },
+          {
+            "codec": "brotli_q11",
+            "compressed_bytes": 21691,
+            "mode": "int8",
+            "raw_bytes": 25909,
+            "sha256": "8931db98ea7e7f0c85132b2f253b23dfa1783de5e47bcc3ae3a90da15c568166"
+          },
+          {
+            "codec": "zlib_9",
+            "compressed_bytes": 22281,
+            "mode": "int8",
+            "raw_bytes": 25909,
+            "sha256": "b8cdcd6685d5c3c3843cbd19807c3b5c39ce97d3a1ebbfaff736903e9884817c"
+          }
+        ],
+        "bytes": 21691,
+        "codec": "brotli_q11",
+        "mode": "int8",
+        "path": "/Volumes/VertigoDataTier/pact/ddm_cq2_20260804/cq2r_20260805/25k_student_weights.bin",
+        "raw_bytes": 25909,
+        "sha256": "8931db98ea7e7f0c85132b2f253b23dfa1783de5e47bcc3ae3a90da15c568166"
+      },
+      "final_checkpoint": "/Volumes/VertigoDataTier/pact/ddm_cq2_20260804/cq2r_20260805/25k_checkpoint_final_step_000160.pt",
+      "final_val": {
+        "confusion": [
+          [
+            33764803,
+            0,
+            1736922,
+            0,
+            2017240
+          ],
+          [
+            1014388,
+            0,
+            95330,
+            0,
+            20252
+          ],
+          [
+            34034798,
+            0,
+            51037869,
+            0,
+            16196711
+          ],
+          [
+            3425610,
+            0,
+            1453883,
+            0,
+            607297
+          ],
+          [
+            15923797,
+            0,
+            8375773,
+            0,
+            24544031
+          ]
+        ],
+        "evaluated_images": 988,
+        "lane_iou": 0.0,
+        "per_class": {
+          "Lane": {
+            "class_id": 1,
+            "intersection": 0,
+            "iou": 0.0,
+            "student_pixels": 0,
+            "teacher_pixels": 1129970,
+            "union": 1129970
+          },
+          "Movable": {
+            "class_id": 3,
+            "intersection": 0,
+            "iou": 0.0,
+            "student_pixels": 0,
+            "teacher_pixels": 5486790,
+            "union": 5486790
+          },
+          "MyCar": {
+            "class_id": 4,
+            "intersection": 24544031,
+            "iou": 0.3626208816619776,
+            "student_pixels": 43385531,
+            "teacher_pixels": 48843601,
+            "union": 67685101
+          },
+          "Road": {
+            "class_id": 0,
+            "intersection": 33764803,
+            "iou": 0.36733790294994567,
+            "student_pixels": 88163396,
+            "teacher_pixels": 37518965,
+            "union": 91917558
+          },
+          "Undrivable": {
+            "class_id": 2,
+            "intersection": 51037869,
+            "iou": 0.45193737544084994,
+            "student_pixels": 62699777,
+            "teacher_pixels": 101269378,
+            "union": 112931286
+          }
+        },
+        "pixel_accuracy": 0.5629211456669487,
+        "road_iou": 0.36733790294994567,
+        "road_lane_mean_iou": 0.18366895147497284,
+        "weighted_ce_per_pixel": 1.2783415066568475
+      },
+      "interim_history": [
+        {
+          "interim_val": {
+            "confusion": [
+              [
+                0,
+                0,
+                3573990,
+                0,
+                0
+              ],
+              [
+                0,
+                0,
+                109403,
+                0,
+                0
+              ],
+              [
+                0,
+                0,
+                9874111,
+                0,
+                0
+              ],
+              [
+                0,
+                0,
+                615305,
+                0,
+                0
+              ],
+              [
+                0,
+                0,
+                4701559,
+                0,
+                0
+              ]
+            ],
+            "evaluated_images": 96,
+            "lane_iou": 0.0,
+            "per_class": {
+              "Lane": {
+                "class_id": 1,
+                "intersection": 0,
+                "iou": 0.0,
+                "student_pixels": 0,
+                "teacher_pixels": 109403,
+                "union": 109403
+              },
+              "Movable": {
+                "class_id": 3,
+                "intersection": 0,
+                "iou": 0.0,
+                "student_pixels": 0,
+                "teacher_pixels": 615305,
+                "union": 615305
+              },
+              "MyCar": {
+                "class_id": 4,
+                "intersection": 0,
+                "iou": 0.0,
+                "student_pixels": 0,
+                "teacher_pixels": 4701559,
+                "union": 4701559
+              },
+              "Road": {
+                "class_id": 0,
+                "intersection": 0,
+                "iou": 0.0,
+                "student_pixels": 0,
+                "teacher_pixels": 3573990,
+                "union": 3573990
+              },
+              "Undrivable": {
+                "class_id": 2,
+                "intersection": 9874111,
+                "iou": 0.523149225446913,
+                "student_pixels": 18874368,
+                "teacher_pixels": 9874111,
+                "union": 18874368
+              }
+            },
+            "pixel_accuracy": 0.523149225446913,
+            "road_iou": 0.0,
+            "road_lane_mean_iou": 0.0,
+            "weighted_ce_per_pixel": 1.6873460478252835
+          },
+          "step": 40,
+          "train_weighted_ce": 1.1662062406539917
+        },
+        {
+          "interim_val": {
+            "confusion": [
+              [
+                3330236,
+                0,
+                243748,
+                0,
+                6
+              ],
+              [
+                67458,
+                0,
+                41945,
+                0,
+                0
+              ],
+              [
+                4962541,
+                0,
+                4911563,
+                0,
+                7
+              ],
+              [
+                466532,
+                0,
+                148773,
+                0,
+                0
+              ],
+              [
+                4310253,
+                0,
+                388704,
+                0,
+                2602
+              ]
+            ],
+            "evaluated_images": 96,
+            "lane_iou": 0.0,
+            "per_class": {
+              "Lane": {
+                "class_id": 1,
+                "intersection": 0,
+                "iou": 0.0,
+                "student_pixels": 0,
+                "teacher_pixels": 109403,
+                "union": 109403
+              },
+              "Movable": {
+                "class_id": 3,
+                "intersection": 0,
+                "iou": 0.0,
+                "student_pixels": 0,
+                "teacher_pixels": 615305,
+                "union": 615305
+              },
+              "MyCar": {
+                "class_id": 4,
+                "intersection": 2602,
+                "iou": 0.0005534319159634267,
+                "student_pixels": 2615,
+                "teacher_pixels": 4701559,
+                "union": 4701572
+              },
+              "Road": {
+                "class_id": 0,
+                "intersection": 3330236,
+                "iou": 0.24888216481348538,
+                "student_pixels": 13137020,
+                "teacher_pixels": 3573990,
+                "union": 13380774
+              },
+              "Undrivable": {
+                "class_id": 2,
+                "intersection": 4911563,
+                "iou": 0.459141252809943,
+                "student_pixels": 5734733,
+                "teacher_pixels": 9874111,
+                "union": 10697281
+              }
+            },
+            "pixel_accuracy": 0.43680408265855575,
+            "road_iou": 0.24888216481348538,
+            "road_lane_mean_iou": 0.12444108240674269,
+            "weighted_ce_per_pixel": 1.4907439450422924
+          },
+          "step": 80,
+          "train_weighted_ce": 0.998931348323822
+        },
+        {
+          "interim_val": {
+            "confusion": [
+              [
+                3136862,
+                0,
+                115935,
+                0,
+                321193
+              ],
+              [
+                92341,
+                0,
+                13079,
+                0,
+                3983
+              ],
+              [
+                3067184,
+                0,
+                4551336,
+                0,
+                2255591
+              ],
+              [
+                342071,
+                0,
+                121521,
+                0,
+                151713
+              ],
+              [
+                1539094,
+                0,
+                358405,
+                0,
+                2804060
+              ]
+            ],
+            "evaluated_images": 96,
+            "lane_iou": 0.0,
+            "per_class": {
+              "Lane": {
+                "class_id": 1,
+                "intersection": 0,
+                "iou": 0.0,
+                "student_pixels": 0,
+                "teacher_pixels": 109403,
+                "union": 109403
+              },
+              "Movable": {
+                "class_id": 3,
+                "intersection": 0,
+                "iou": 0.0,
+                "student_pixels": 0,
+                "teacher_pixels": 615305,
+                "union": 615305
+              },
+              "MyCar": {
+                "class_id": 4,
+                "intersection": 2804060,
+                "iou": 0.37719199482273363,
+                "student_pixels": 5536540,
+                "teacher_pixels": 4701559,
+                "union": 7434039
+              },
+              "Road": {
+                "class_id": 0,
+                "intersection": 3136862,
+                "iou": 0.36412983419001055,
+                "student_pixels": 8177552,
+                "teacher_pixels": 3573990,
+                "union": 8614680
+              },
+              "Undrivable": {
+                "class_id": 2,
+                "intersection": 4551336,
+                "iou": 0.4341613906104244,
+                "student_pixels": 5160276,
+                "teacher_pixels": 9874111,
+                "union": 10483051
+              }
+            },
+            "pixel_accuracy": 0.5558998319837782,
+            "road_iou": 0.36412983419001055,
+            "road_lane_mean_iou": 0.18206491709500527,
+            "weighted_ce_per_pixel": 1.3519420524438222
+          },
+          "step": 120,
+          "train_weighted_ce": 1.041382908821106
+        },
+        {
+          "interim_val": {
+            "confusion": [
+              [
+                3192556,
+                0,
+                178720,
+                0,
+                202714
+              ],
+              [
+                96335,
+                0,
+                10568,
+                0,
+                2500
+              ],
+              [
+                3149467,
+                0,
+                4928677,
+                0,
+                1795967
+              ],
+              [
+                354931,
+                0,
+                168862,
+                0,
+                91512
+              ],
+              [
+                1515711,
+                0,
+                841422,
+                0,
+                2344426
+              ]
+            ],
+            "evaluated_images": 96,
+            "lane_iou": 0.0,
+            "per_class": {
+              "Lane": {
+                "class_id": 1,
+                "intersection": 0,
+                "iou": 0.0,
+                "student_pixels": 0,
+                "teacher_pixels": 109403,
+                "union": 109403
+              },
+              "Movable": {
+                "class_id": 3,
+                "intersection": 0,
+                "iou": 0.0,
+                "student_pixels": 0,
+                "teacher_pixels": 615305,
+                "union": 615305
+              },
+              "MyCar": {
+                "class_id": 4,
+                "intersection": 2344426,
+                "iou": 0.3450602067747855,
+                "student_pixels": 4437119,
+                "teacher_pixels": 4701559,
+                "union": 6794252
+              },
+              "Road": {
+                "class_id": 0,
+                "intersection": 3192556,
+                "iou": 0.36736439169781393,
+                "student_pixels": 8309000,
+                "teacher_pixels": 3573990,
+                "union": 8690434
+              },
+              "Undrivable": {
+                "class_id": 2,
+                "intersection": 4928677,
+                "iou": 0.44508019599260695,
+                "student_pixels": 6128249,
+                "teacher_pixels": 9874111,
+                "union": 11073683
+              }
+            },
+            "pixel_accuracy": 0.5544905662536621,
+            "road_iou": 0.36736439169781393,
+            "road_lane_mean_iou": 0.18368219584890697,
+            "weighted_ce_per_pixel": 1.3141439424620733
+          },
+          "step": 160,
+          "train_weighted_ce": 0.8080236911773682
+        }
+      ],
+      "label": "25k",
+      "param_count": 22805,
+      "passes_pre_registered_bar": false,
+      "resumed_from": null,
+      "steps_completed": 160,
+      "stop_reason": "safety_bound_REPORTED_max_steps",
+      "train_loss_tail": [
+        {
+          "step": 151,
+          "weighted_ce": 0.9183554649353027
+        },
+        {
+          "step": 152,
+          "weighted_ce": 0.8610150218009949
+        },
+        {
+          "step": 153,
+          "weighted_ce": 0.9440529942512512
+        },
+        {
+          "step": 154,
+          "weighted_ce": 0.7627214193344116
+        },
+        {
+          "step": 155,
+          "weighted_ce": 0.837758481502533
+        },
+        {
+          "step": 156,
+          "weighted_ce": 0.8506218194961548
+        },
+        {
+          "step": 157,
+          "weighted_ce": 0.8319362998008728
+        },
+        {
+          "step": 158,
+          "weighted_ce": 0.885858952999115
+        },
+        {
+          "step": 159,
+          "weighted_ce": 0.8411808013916016
+        },
+        {
+          "step": 160,
+          "weighted_ce": 0.8080236911773682
+        }
+      ],
+      "wall_seconds": 812.7004079818726,
+      "width": 20
+    },
+    {
+      "best_interim_metric": 0.19448943347580766,
+      "best_interim_step": 160,
+      "checkpoint_dir": "/Volumes/VertigoDataTier/pact/ddm_cq2_20260804/cq2r_20260805",
+      "compression": {
+        "all_candidates": [
+          {
+            "codec": "brotli_q11",
+            "compressed_bytes": 143762,
+            "mode": "fp16",
+            "raw_bytes": 167517,
+            "sha256": "041a95cb573284bac3291b286e4a8c17be1c949f3668feadd60029329941d3cb"
+          },
+          {
+            "codec": "zlib_9",
+            "compressed_bytes": 152272,
+            "mode": "fp16",
+            "raw_bytes": 167517,
+            "sha256": "9c1f5b1578b083a745b08e4f6819066505c97765a52c988329a84619a38c311a"
+          },
+          {
+            "codec": "brotli_q11",
+            "compressed_bytes": 69329,
+            "mode": "int8",
+            "raw_bytes": 85535,
+            "sha256": "cab34080f74e65d1c44610db6b216bbd7dfe95ee72505308626ed2b942df983d"
+          },
+          {
+            "codec": "zlib_9",
+            "compressed_bytes": 71798,
+            "mode": "int8",
+            "raw_bytes": 85535,
+            "sha256": "cb3f3c694336776fcf175108fd1224b9da115713d99d3906532e376aea5dfe34"
+          }
+        ],
+        "bytes": 69329,
+        "codec": "brotli_q11",
+        "mode": "int8",
+        "path": "/Volumes/VertigoDataTier/pact/ddm_cq2_20260804/cq2r_20260805/75k_student_weights.bin",
+        "raw_bytes": 85535,
+        "sha256": "cab34080f74e65d1c44610db6b216bbd7dfe95ee72505308626ed2b942df983d"
+      },
+      "final_checkpoint": "/Volumes/VertigoDataTier/pact/ddm_cq2_20260804/cq2r_20260805/75k_checkpoint_final_step_000160.pt",
+      "final_val": {
+        "confusion": [
+          [
+            32161085,
+            0,
+            3181887,
+            0,
+            2175993
+          ],
+          [
+            944792,
+            0,
+            163100,
+            0,
+            22078
+          ],
+          [
+            27008673,
+            0,
+            57313015,
+            0,
+            16947690
+          ],
+          [
+            2860279,
+            0,
+            1877351,
+            0,
+            749160
+          ],
+          [
+            13314724,
+            0,
+            9113683,
+            0,
+            26415194
+          ]
+        ],
+        "evaluated_images": 988,
+        "lane_iou": 0.0,
+        "per_class": {
+          "Lane": {
+            "class_id": 1,
+            "intersection": 0,
+            "iou": 0.0,
+            "student_pixels": 0,
+            "teacher_pixels": 1129970,
+            "union": 1129970
+          },
+          "Movable": {
+            "class_id": 3,
+            "intersection": 0,
+            "iou": 0.0,
+            "student_pixels": 0,
+            "teacher_pixels": 5486790,
+            "union": 5486790
+          },
+          "MyCar": {
+            "class_id": 4,
+            "intersection": 26415194,
+            "iou": 0.3842851610920584,
+            "student_pixels": 46310115,
+            "teacher_pixels": 48843601,
+            "union": 68738522
+          },
+          "Road": {
+            "class_id": 0,
+            "intersection": 32161085,
+            "iou": 0.3939019736235921,
+            "student_pixels": 76289553,
+            "teacher_pixels": 37518965,
+            "union": 81647433
+          },
+          "Undrivable": {
+            "class_id": 2,
+            "intersection": 57313015,
+            "iou": 0.49576417274421586,
+            "student_pixels": 71649036,
+            "teacher_pixels": 101269378,
+            "union": 115605399
+          }
+        },
+        "pixel_accuracy": 0.5966026625330793,
+        "road_iou": 0.3939019736235921,
+        "road_lane_mean_iou": 0.19695098681179604,
+        "weighted_ce_per_pixel": 1.2625747631114181
+      },
+      "interim_history": [
+        {
+          "interim_val": {
+            "confusion": [
+              [
+                3492103,
+                0,
+                81887,
+                0,
+                0
+              ],
+              [
+                82704,
+                0,
+                26699,
+                0,
+                0
+              ],
+              [
+                5719772,
+                0,
+                4154339,
+                0,
+                0
+              ],
+              [
+                525219,
+                0,
+                90086,
+                0,
+                0
+              ],
+              [
+                4444033,
+                0,
+                257526,
+                0,
+                0
+              ]
+            ],
+            "evaluated_images": 96,
+            "lane_iou": 0.0,
+            "per_class": {
+              "Lane": {
+                "class_id": 1,
+                "intersection": 0,
+                "iou": 0.0,
+                "student_pixels": 0,
+                "teacher_pixels": 109403,
+                "union": 109403
+              },
+              "Movable": {
+                "class_id": 3,
+                "intersection": 0,
+                "iou": 0.0,
+                "student_pixels": 0,
+                "teacher_pixels": 615305,
+                "union": 615305
+              },
+              "MyCar": {
+                "class_id": 4,
+                "intersection": 0,
+                "iou": 0.0,
+                "student_pixels": 0,
+                "teacher_pixels": 4701559,
+                "union": 4701559
+              },
+              "Road": {
+                "class_id": 0,
+                "intersection": 3492103,
+                "iou": 0.24342476270619567,
+                "student_pixels": 14263831,
+                "teacher_pixels": 3573990,
+                "union": 14345718
+              },
+              "Undrivable": {
+                "class_id": 2,
+                "intersection": 4154339,
+                "iou": 0.40215050682414244,
+                "student_pixels": 4610537,
+                "teacher_pixels": 9874111,
+                "union": 10330309
+              }
+            },
+            "pixel_accuracy": 0.4051230748494466,
+            "road_iou": 0.24342476270619567,
+            "road_lane_mean_iou": 0.12171238135309784,
+            "weighted_ce_per_pixel": 1.6952432062890794
+          },
+          "step": 40,
+          "train_weighted_ce": 1.2559926509857178
+        },
+        {
+          "interim_val": {
+            "confusion": [
+              [
+                3328190,
+                0,
+                245800,
+                0,
+                0
+              ],
+              [
+                68560,
+                0,
+                40843,
+                0,
+                0
+              ],
+              [
+                4934245,
+                0,
+                4939866,
+                0,
+                0
+              ],
+              [
+                466261,
+                0,
+                149044,
+                0,
+                0
+              ],
+              [
+                4297531,
+                0,
+                404028,
+                0,
+                0
+              ]
+            ],
+            "evaluated_images": 96,
+            "lane_iou": 0.0,
+            "per_class": {
+              "Lane": {
+                "class_id": 1,
+                "intersection": 0,
+                "iou": 0.0,
+                "student_pixels": 0,
+                "teacher_pixels": 109403,
+                "union": 109403
+              },
+              "Movable": {
+                "class_id": 3,
+                "intersection": 0,
+                "iou": 0.0,
+                "student_pixels": 0,
+                "teacher_pixels": 615305,
+                "union": 615305
+              },
+              "MyCar": {
+                "class_id": 4,
+                "intersection": 0,
+                "iou": 0.0,
+                "student_pixels": 0,
+                "teacher_pixels": 4701559,
+                "union": 4701559
+              },
+              "Road": {
+                "class_id": 0,
+                "intersection": 3328190,
+                "iou": 0.24947852744410723,
+                "student_pixels": 13094787,
+                "teacher_pixels": 3573990,
+                "union": 13340587
+              },
+              "Undrivable": {
+                "class_id": 2,
+                "intersection": 4939866,
+                "iou": 0.46107394314598726,
+                "student_pixels": 5779581,
+                "teacher_pixels": 9874111,
+                "union": 10713826
+              }
+            },
+            "pixel_accuracy": 0.438057369656033,
+            "road_iou": 0.24947852744410723,
+            "road_lane_mean_iou": 0.12473926372205361,
+            "weighted_ce_per_pixel": 1.4896439214547474
+          },
+          "step": 80,
+          "train_weighted_ce": 1.1254712343215942
+        },
+        {
+          "interim_val": {
+            "confusion": [
+              [
+                3207791,
+                0,
+                106889,
+                0,
+                259310
+              ],
+              [
+                91818,
+                0,
+                14233,
+                0,
+                3352
+              ],
+              [
+                3262140,
+                0,
+                4558433,
+                0,
+                2053538
+              ],
+              [
+                386420,
+                0,
+                109289,
+                0,
+                119596
+              ],
+              [
+                1820358,
+                0,
+                299819,
+                0,
+                2581382
+              ]
+            ],
+            "evaluated_images": 96,
+            "lane_iou": 0.0,
+            "per_class": {
+              "Lane": {
+                "class_id": 1,
+                "intersection": 0,
+                "iou": 0.0,
+                "student_pixels": 0,
+                "teacher_pixels": 109403,
+                "union": 109403
+              },
+              "Movable": {
+                "class_id": 3,
+                "intersection": 0,
+                "iou": 0.0,
+                "student_pixels": 0,
+                "teacher_pixels": 615305,
+                "union": 615305
+              },
+              "MyCar": {
+                "class_id": 4,
+                "intersection": 2581382,
+                "iou": 0.3616720760001429,
+                "student_pixels": 5017178,
+                "teacher_pixels": 4701559,
+                "union": 7137355
+              },
+              "Road": {
+                "class_id": 0,
+                "intersection": 3207791,
+                "iou": 0.3511644465307443,
+                "student_pixels": 8768527,
+                "teacher_pixels": 3573990,
+                "union": 9134726
+              },
+              "Undrivable": {
+                "class_id": 2,
+                "intersection": 4558433,
+                "iou": 0.43812798907686706,
+                "student_pixels": 5088663,
+                "teacher_pixels": 9874111,
+                "union": 10404341
+              }
+            },
+            "pixel_accuracy": 0.5482358932495117,
+            "road_iou": 0.3511644465307443,
+            "road_lane_mean_iou": 0.17558222326537215,
+            "weighted_ce_per_pixel": 1.3484351072046492
+          },
+          "step": 120,
+          "train_weighted_ce": 0.9553189277648926
+        },
+        {
+          "interim_val": {
+            "confusion": [
+              [
+                3064796,
+                0,
+                316582,
+                0,
+                192612
+              ],
+              [
+                92175,
+                0,
+                14964,
+                0,
+                2264
+              ],
+              [
+                2644825,
+                0,
+                5401364,
+                0,
+                1827922
+              ],
+              [
+                297977,
+                0,
+                210244,
+                0,
+                107084
+              ],
+              [
+                1270114,
+                0,
+                930921,
+                0,
+                2500524
+              ]
+            ],
+            "evaluated_images": 96,
+            "lane_iou": 0.0,
+            "per_class": {
+              "Lane": {
+                "class_id": 1,
+                "intersection": 0,
+                "iou": 0.0,
+                "student_pixels": 0,
+                "teacher_pixels": 109403,
+                "union": 109403
+              },
+              "Movable": {
+                "class_id": 3,
+                "intersection": 0,
+                "iou": 0.0,
+                "student_pixels": 0,
+                "teacher_pixels": 615305,
+                "union": 615305
+              },
+              "MyCar": {
+                "class_id": 4,
+                "intersection": 2500524,
+                "iou": 0.36603170546302016,
+                "student_pixels": 4630406,
+                "teacher_pixels": 4701559,
+                "union": 6831441
+              },
+              "Road": {
+                "class_id": 0,
+                "intersection": 3064796,
+                "iou": 0.3889788669516153,
+                "student_pixels": 7369887,
+                "teacher_pixels": 3573990,
+                "union": 7879081
+              },
+              "Undrivable": {
+                "class_id": 2,
+                "intersection": 5401364,
+                "iou": 0.476024388150268,
+                "student_pixels": 6874075,
+                "teacher_pixels": 9874111,
+                "union": 11346822
+              }
+            },
+            "pixel_accuracy": 0.5810358259412978,
+            "road_iou": 0.3889788669516153,
+            "road_lane_mean_iou": 0.19448943347580766,
+            "weighted_ce_per_pixel": 1.3075669805208843
+          },
+          "step": 160,
+          "train_weighted_ce": 0.9107144474983215
+        }
+      ],
+      "label": "75k",
+      "param_count": 82405,
+      "passes_pre_registered_bar": false,
+      "resumed_from": null,
+      "steps_completed": 160,
+      "stop_reason": "safety_bound_REPORTED_max_steps",
+      "train_loss_tail": [
+        {
+          "step": 151,
+          "weighted_ce": 0.8617037534713745
+        },
+        {
+          "step": 152,
+          "weighted_ce": 0.8598189353942871
+        },
+        {
+          "step": 153,
+          "weighted_ce": 0.9741445183753967
+        },
+        {
+          "step": 154,
+          "weighted_ce": 1.0803781747817993
+        },
+        {
+          "step": 155,
+          "weighted_ce": 0.941095769405365
+        },
+        {
+          "step": 156,
+          "weighted_ce": 0.8245541453361511
+        },
+        {
+          "step": 157,
+          "weighted_ce": 0.9509999752044678
+        },
+        {
+          "step": 158,
+          "weighted_ce": 1.1115257740020752
+        },
+        {
+          "step": 159,
+          "weighted_ce": 1.1341369152069092
+        },
+        {
+          "step": 160,
+          "weighted_ce": 0.9107144474983215
+        }
+      ],
+      "wall_seconds": 931.4189958572388,
+      "width": 40
+    },
+    {
+      "best_interim_metric": 0.20000427441704494,
+      "best_interim_step": 160,
+      "checkpoint_dir": "/Volumes/VertigoDataTier/pact/ddm_cq2_20260804/cq2r_20260805",
+      "compression": {
+        "all_candidates": [
+          {
+            "codec": "brotli_q11",
+            "compressed_bytes": 273625,
+            "mode": "fp16",
+            "raw_bytes": 315899,
+            "sha256": "426f3f7ce85a97ef69b2a14827ae007dff9aa2b3bc55d33385a54c4e99cf733d"
+          },
+          {
+            "codec": "zlib_9",
+            "compressed_bytes": 288817,
+            "mode": "fp16",
+            "raw_bytes": 315899,
+            "sha256": "3fc039dca0f44f7ec5b379ba93dddae53558bb10e1cdff3cd7a9c8622102beb6"
+          },
+          {
+            "codec": "brotli_q11",
+            "compressed_bytes": 124765,
+            "mode": "int8",
+            "raw_bytes": 159734,
+            "sha256": "df2258a7ee74738674a9433e093e39559414c9104d1af3e334b29dfcab309e80"
+          },
+          {
+            "codec": "zlib_9",
+            "compressed_bytes": 128526,
+            "mode": "int8",
+            "raw_bytes": 159734,
+            "sha256": "d58f160e32a2fa4732201de80e7eb6927f6f6c4dd068f9d71b815f4fd9945cf4"
+          }
+        ],
+        "bytes": 124765,
+        "codec": "brotli_q11",
+        "mode": "int8",
+        "path": "/Volumes/VertigoDataTier/pact/ddm_cq2_20260804/cq2r_20260805/150k_student_weights.bin",
+        "raw_bytes": 159734,
+        "sha256": "df2258a7ee74738674a9433e093e39559414c9104d1af3e334b29dfcab309e80"
+      },
+      "final_checkpoint": "/Volumes/VertigoDataTier/pact/ddm_cq2_20260804/cq2r_20260805/150k_checkpoint_final_step_000160.pt",
+      "final_val": {
+        "confusion": [
+          [
+            32108141,
+            0,
+            3075501,
+            0,
+            2335323
+          ],
+          [
+            960595,
+            0,
+            142159,
+            0,
+            27216
+          ],
+          [
+            25133765,
+            0,
+            59543692,
+            0,
+            16591921
+          ],
+          [
+            2763629,
+            0,
+            2019818,
+            0,
+            703343
+          ],
+          [
+            12435159,
+            0,
+            10234188,
+            0,
+            26174254
+          ]
+        ],
+        "evaluated_images": 988,
+        "lane_iou": 0.0,
+        "per_class": {
+          "Lane": {
+            "class_id": 1,
+            "intersection": 0,
+            "iou": 0.0,
+            "student_pixels": 0,
+            "teacher_pixels": 1129970,
+            "union": 1129970
+          },
+          "Movable": {
+            "class_id": 3,
+            "intersection": 0,
+            "iou": 0.0,
+            "student_pixels": 0,
+            "teacher_pixels": 5486790,
+            "union": 5486790
+          },
+          "MyCar": {
+            "class_id": 4,
+            "intersection": 26174254,
+            "iou": 0.38209806619438047,
+            "student_pixels": 45832057,
+            "teacher_pixels": 48843601,
+            "union": 68501404
+          },
+          "Road": {
+            "class_id": 0,
+            "intersection": 32108141,
+            "iou": 0.4074010932811813,
+            "student_pixels": 73401289,
+            "teacher_pixels": 37518965,
+            "union": 78812113
+          },
+          "Undrivable": {
+            "class_id": 2,
+            "intersection": 59543692,
+            "iou": 0.5100493362043259,
+            "student_pixels": 75015358,
+            "teacher_pixels": 101269378,
+            "union": 116741044
+          }
+        },
+        "pixel_accuracy": 0.6065733493902744,
+        "road_iou": 0.4074010932811813,
+        "road_lane_mean_iou": 0.20370054664059065,
+        "weighted_ce_per_pixel": 1.2540131236216638
+      },
+      "interim_history": [
+        {
+          "interim_val": {
+            "confusion": [
+              [
+                3152050,
+                0,
+                421940,
+                0,
+                0
+              ],
+              [
+                49414,
+                0,
+                59989,
+                0,
+                0
+              ],
+              [
+                4871370,
+                0,
+                5002741,
+                0,
+                0
+              ],
+              [
+                458134,
+                0,
+                157171,
+                0,
+                0
+              ],
+              [
+                4243266,
+                0,
+                458293,
+                0,
+                0
+              ]
+            ],
+            "evaluated_images": 96,
+            "lane_iou": 0.0,
+            "per_class": {
+              "Lane": {
+                "class_id": 1,
+                "intersection": 0,
+                "iou": 0.0,
+                "student_pixels": 0,
+                "teacher_pixels": 109403,
+                "union": 109403
+              },
+              "Movable": {
+                "class_id": 3,
+                "intersection": 0,
+                "iou": 0.0,
+                "student_pixels": 0,
+                "teacher_pixels": 615305,
+                "union": 615305
+              },
+              "MyCar": {
+                "class_id": 4,
+                "intersection": 0,
+                "iou": 0.0,
+                "student_pixels": 0,
+                "teacher_pixels": 4701559,
+                "union": 4701559
+              },
+              "Road": {
+                "class_id": 0,
+                "intersection": 3152050,
+                "iou": 0.23886090013666084,
+                "student_pixels": 12774234,
+                "teacher_pixels": 3573990,
+                "union": 13196174
+              },
+              "Undrivable": {
+                "class_id": 2,
+                "intersection": 5002741,
+                "iou": 0.45597586256177824,
+                "student_pixels": 6100134,
+                "teacher_pixels": 9874111,
+                "union": 10971504
+              }
+            },
+            "pixel_accuracy": 0.43205637402004665,
+            "road_iou": 0.23886090013666084,
+            "road_lane_mean_iou": 0.11943045006833042,
+            "weighted_ce_per_pixel": 1.6088591284222074
+          },
+          "step": 40,
+          "train_weighted_ce": 1.0516078472137451
+        },
+        {
+          "interim_val": {
+            "confusion": [
+              [
+                3360546,
+                0,
+                88015,
+                0,
+                125429
+              ],
+              [
+                96209,
+                0,
+                11152,
+                0,
+                2042
+              ],
+              [
+                4042088,
+                0,
+                4508855,
+                0,
+                1323168
+              ],
+              [
+                476991,
+                0,
+                93996,
+                0,
+                44318
+              ],
+              [
+                2850947,
+                0,
+                284814,
+                0,
+                1565798
+              ]
+            ],
+            "evaluated_images": 96,
+            "lane_iou": 0.0,
+            "per_class": {
+              "Lane": {
+                "class_id": 1,
+                "intersection": 0,
+                "iou": 0.0,
+                "student_pixels": 0,
+                "teacher_pixels": 109403,
+                "union": 109403
+              },
+              "Movable": {
+                "class_id": 3,
+                "intersection": 0,
+                "iou": 0.0,
+                "student_pixels": 0,
+                "teacher_pixels": 615305,
+                "union": 615305
+              },
+              "MyCar": {
+                "class_id": 4,
+                "intersection": 1565798,
+                "iou": 0.25269006002727984,
+                "student_pixels": 3060755,
+                "teacher_pixels": 4701559,
+                "union": 6196516
+              },
+              "Road": {
+                "class_id": 0,
+                "intersection": 3360546,
+                "iou": 0.30439107898616197,
+                "student_pixels": 10826781,
+                "teacher_pixels": 3573990,
+                "union": 11040225
+              },
+              "Undrivable": {
+                "class_id": 2,
+                "intersection": 4508855,
+                "iou": 0.4355502967130882,
+                "student_pixels": 4986832,
+                "teacher_pixels": 9874111,
+                "union": 10352088
+              }
+            },
+            "pixel_accuracy": 0.499894830915663,
+            "road_iou": 0.30439107898616197,
+            "road_lane_mean_iou": 0.15219553949308098,
+            "weighted_ce_per_pixel": 1.4293926590018802
+          },
+          "step": 80,
+          "train_weighted_ce": 0.9241725206375122
+        },
+        {
+          "interim_val": {
+            "confusion": [
+              [
+                2994344,
+                0,
+                328917,
+                0,
+                250729
+              ],
+              [
+                75394,
+                0,
+                30435,
+                0,
+                3574
+              ],
+              [
+                2732144,
+                0,
+                5234700,
+                0,
+                1907267
+              ],
+              [
+                343241,
+                0,
+                175639,
+                0,
+                96425
+              ],
+              [
+                1697077,
+                0,
+                619503,
+                0,
+                2384979
+              ]
+            ],
+            "evaluated_images": 96,
+            "lane_iou": 0.0,
+            "per_class": {
+              "Lane": {
+                "class_id": 1,
+                "intersection": 0,
+                "iou": 0.0,
+                "student_pixels": 0,
+                "teacher_pixels": 109403,
+                "union": 109403
+              },
+              "Movable": {
+                "class_id": 3,
+                "intersection": 0,
+                "iou": 0.0,
+                "student_pixels": 0,
+                "teacher_pixels": 615305,
+                "union": 615305
+              },
+              "MyCar": {
+                "class_id": 4,
+                "intersection": 2384979,
+                "iou": 0.34269135637139964,
+                "student_pixels": 4642974,
+                "teacher_pixels": 4701559,
+                "union": 6959554
+              },
+              "Road": {
+                "class_id": 0,
+                "intersection": 2994344,
+                "iou": 0.35554485323051505,
+                "student_pixels": 7842200,
+                "teacher_pixels": 3573990,
+                "union": 8421846
+              },
+              "Undrivable": {
+                "class_id": 2,
+                "intersection": 5234700,
+                "iou": 0.47464751888384793,
+                "student_pixels": 6389194,
+                "teacher_pixels": 9874111,
+                "union": 11028605
+              }
+            },
+            "pixel_accuracy": 0.5623511738247342,
+            "road_iou": 0.35554485323051505,
+            "road_lane_mean_iou": 0.17777242661525752,
+            "weighted_ce_per_pixel": 1.3474851548671722
+          },
+          "step": 120,
+          "train_weighted_ce": 0.9811983108520508
+        },
+        {
+          "interim_val": {
+            "confusion": [
+              [
+                3022699,
+                0,
+                327539,
+                0,
+                223752
+              ],
+              [
+                93141,
+                0,
+                13011,
+                0,
+                3251
+              ],
+              [
+                2434438,
+                0,
+                5607412,
+                0,
+                1832261
+              ],
+              [
+                285013,
+                0,
+                226468,
+                0,
+                103824
+              ],
+              [
+                1170004,
+                0,
+                1021379,
+                0,
+                2510176
+              ]
+            ],
+            "evaluated_images": 96,
+            "lane_iou": 0.0,
+            "per_class": {
+              "Lane": {
+                "class_id": 1,
+                "intersection": 0,
+                "iou": 0.0,
+                "student_pixels": 0,
+                "teacher_pixels": 109403,
+                "union": 109403
+              },
+              "Movable": {
+                "class_id": 3,
+                "intersection": 0,
+                "iou": 0.0,
+                "student_pixels": 0,
+                "teacher_pixels": 615305,
+                "union": 615305
+              },
+              "MyCar": {
+                "class_id": 4,
+                "intersection": 2510176,
+                "iou": 0.36566716394885274,
+                "student_pixels": 4673264,
+                "teacher_pixels": 4701559,
+                "union": 6864647
+              },
+              "Road": {
+                "class_id": 0,
+                "intersection": 3022699,
+                "iou": 0.40000854883408987,
+                "student_pixels": 7005295,
+                "teacher_pixels": 3573990,
+                "union": 7556586
+              },
+              "Undrivable": {
+                "class_id": 2,
+                "intersection": 5607412,
+                "iou": 0.4891959072133254,
+                "student_pixels": 7195809,
+                "teacher_pixels": 9874111,
+                "union": 11462508
+              }
+            },
+            "pixel_accuracy": 0.5902336438496908,
+            "road_iou": 0.40000854883408987,
+            "road_lane_mean_iou": 0.20000427441704494,
+            "weighted_ce_per_pixel": 1.2896570099724665
+          },
+          "step": 160,
+          "train_weighted_ce": 0.8216120004653931
+        }
+      ],
+      "label": "150k",
+      "param_count": 156581,
+      "passes_pre_registered_bar": false,
+      "resumed_from": null,
+      "steps_completed": 160,
+      "stop_reason": "safety_bound_REPORTED_max_steps",
+      "train_loss_tail": [
+        {
+          "step": 151,
+          "weighted_ce": 0.6845085620880127
+        },
+        {
+          "step": 152,
+          "weighted_ce": 0.9239115118980408
+        },
+        {
+          "step": 153,
+          "weighted_ce": 0.839753270149231
+        },
+        {
+          "step": 154,
+          "weighted_ce": 0.8618545532226562
+        },
+        {
+          "step": 155,
+          "weighted_ce": 1.128912091255188
+        },
+        {
+          "step": 156,
+          "weighted_ce": 0.9524146914482117
+        },
+        {
+          "step": 157,
+          "weighted_ce": 0.7767196297645569
+        },
+        {
+          "step": 158,
+          "weighted_ce": 1.057313323020935
+        },
+        {
+          "step": 159,
+          "weighted_ce": 1.0534263849258423
+        },
+        {
+          "step": 160,
+          "weighted_ce": 0.8216120004653931
+        }
+      ],
+      "wall_seconds": 1212.4796559810638,
+      "width": 56
+    }
+  ],
+  "training": {
+    "batch_size": 4,
+    "candidate_selection_signal": "comma10k-val public teacher chart metrics only",
+    "class_weight": [
+      3.0,
+      6.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "eval_every": 40,
+    "interim_val_images_used": 96,
+    "loss": "weighted hard-label cross entropy against public teacher argmax; Road/Lane weighted",
+    "max_steps": 160,
+    "preprocessing": "teacher eval config equivalent: RGB resize to 384x512 linear, HWC uint8 to CHW float32, no normalization for teacher; student divides by 255 internally",
+    "seed": 20260805,
+    "train_images_available": 8900,
+    "train_images_used": 8900,
+    "val_images_available": 988,
+    "val_images_used": 988
+  }
 }

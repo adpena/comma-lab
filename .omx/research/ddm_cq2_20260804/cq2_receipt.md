@@ -1,140 +1,100 @@
-# CQ2 comma10k-only tiny-student sizing receipt - 2026-08-04
+# CQ2 comma10k-only tiny-student sizing receipt - 2026-08-05
 
-Status: **BLOCKED_DATASET_ABSENT_OR_INCOMPLETE**.
+Status: **NO_PASS_SELECTED_BEST_PUBLIC_VAL_DIAGNOSTIC**.
 
-Axis: `[macOS-CPU advisory / public-data custody preflight / scorer-free]`.
+Axis: `[macOS-CPU advisory / public-data tiny-student chart sizing / scorer-free]`.
 `score_claim=false`, `promotion_eligible=false`, `n600_scorer_job=false`.
 
-Own-vehicle baseline from hot state: `S = 0.7539807296911207 @ 357,836 B [macOS-CPU advisory]`
-for qo1 `sub_auto_pairbit`. Contest pointer remains borrowed/unmoved.
+Own-vehicle baseline from hot state: `S = 0.7539807296911207 @ 357,836 B [macOS-CPU advisory]; contest pointer borrowed/unmoved.`
 
-## Charter
+## Answer First
 
-CQ2 was chartered to train a comma10k-public-data-only tiny segmentation student
-at roughly 25 KB / 75 KB / 150 KB counted weight sizes, choose the smallest
-student by comma10k-val Road/Lane fidelity against the public teacher, and only
-then re-run CQ1's frozen-candidate n32 Road/Lane band-overlap measurement.
+The dataset blocker from `102d1b4fda` is resolved: comma10k is complete at sha
+`6c205fe4c43cc53b2b1befafb1060d0606555027` with `9888` imgs
+and `9888` masks. CQ2 trained the requested three public-data-only
+student sizes and selected `150k` by the pre-registered comma10k-val rule.
 
-The charter explicitly requires stopping with a typed blocker if the comma10k
-dataset is absent. This receipt is that stop.
+## RECALL EVIDENCE
 
-## Recall Inputs
+- Charter seeds read: `.omx/research/ddm_cq1_20260804/{cq1_receipt.md,NEXT_IF_RESUMED.md}` and `.omx/research/ddm_se3_20260804/se3_receipt.md`.
+- Current resume receipt read: `.omx/research/ddm_cq2_20260804/{cq2_receipt.md,NEXT_IF_RESUMED.md}`; it changed the plan from blocker-only to dataset re-preflight plus training after the 2026-08-05 manifest.
+- Corpus search beyond seeds found `.omx/research/ddm_rf1_20260804/RF1_RECEIPT_20260804.md`: qo1 has no legal receiver class chart, so the student remains the legal chart-source fallback and the SE3 81KB/101KB rows stay assumption-scoped until receiver closure.
+- Corpus search beyond seeds found `.omx/research/ddm_nb1_20260804/nb1_receipt.md`: CQ1 GOOD-overlap and SE3 stream prices stand at their written scopes; n32 comparability is allowed but not a population verdict.
+- Corpus search beyond seeds found `.omx/research/ddm_bf1_20260805/BF1_RECEIPT_20260805.md` and the 2026-08-05 per-edge directive: BF1 settled a receiver-closed lane-crop price, while cq2's 75KB lane remains relevant only if a low-dim/per-edge description can ride this public student.
+- Corpus search beyond seeds found `.omx/research/distillation_smaller_student_20260610T191237Z.md`: older contest-frame student distillation was training-stability-limited and non-monotone; CQ2 therefore records explicit stop reasons and selects only by public comma10k-val metrics.
 
-CQ1 predecessor result: GOOD-OVERLAP for the full public comma10k-segnet teacher
-on the matched n32 subset:
+## Custody
+
+| item | value |
+|---|---:|
+| dataset path | `/Volumes/VertigoDataTier/pact/public_datasets/comma10k` |
+| clone manifest sha | `6c205fe4c43cc53b2b1befafb1060d0606555027` |
+| manifest imgs / masks | `9888 / 9888` |
+| actual imgs / masks | `9888 / 9888` |
+| git HEAD | `6c205fe4c43cc53b2b1befafb1060d0606555027` |
+| split | `8900 train / 988 val` |
+| teacher model sha | `8208672861ad1b111dc98f3a7c54196d29875b709c7353e2dd1b7614343fb3a8` |
+| eval config sha | `d260853fe0a993e23613ff38039fdce59264f5fe31f729c1fa65f8c3e5fde913` |
+
+## Pre-Registered Selection Rule
+
+Before any CQ1 overlap read, choose the smallest measured counted-byte student whose public comma10k-val
+teacher-chart metrics satisfy: Road IoU >= `0.9`, Lane IoU >=
+`0.5`, and Road/Lane mean IoU >= `0.72`.
+If none pass, choose the best Road/Lane mean IoU candidate as a diagnostic non-passing frozen student;
+that overlap read cannot promote the route.
+
+## Size Curve
+
+| size | width | params | counted B | Road IoU | Lane IoU | mean | pass | stop |
+|---|---:|---:|---:|---:|---:|---:|---|---|
+| 25k | 20 | 22,805 | 21,691 | 0.367338 | 0.000000 | 0.183669 | False | safety_bound_REPORTED_max_steps |
+| 75k | 40 | 82,405 | 69,329 | 0.393902 | 0.000000 | 0.196951 | False | safety_bound_REPORTED_max_steps |
+| 150k | 56 | 156,581 | 124,765 | 0.407401 | 0.000000 | 0.203701 | False | safety_bound_REPORTED_max_steps |
+
+Compression is the smallest measured real payload among int8/fp16 x Brotli q11/zlib9, written as a
+decodeable tensor package and reloaded before final validation/overlap.
+
+## Selected Student
+
+| field | value |
+|---|---:|
+| selected label | `150k` |
+| counted bytes | `124765` |
+| payload path | `/Volumes/VertigoDataTier/pact/ddm_cq2_20260804/cq2r_20260805/150k_student_weights.bin` |
+| payload sha256 | `df2258a7ee74738674a9433e093e39559414c9104d1af3e334b29dfcab309e80` |
+| selected status | `NO_PASS_SELECTED_BEST_PUBLIC_VAL_DIAGNOSTIC` |
+
+## Final CQ1 Overlap Read
+
+Selected-student CQ1 overlap verdict: **POOR-OVERLAP**.
 
 | metric | value |
 |---|---:|
-| SE3 r1 captured target flips, cx1 chart | `8,670` |
-| those flips also inside public-model r1 band | `8,644` |
-| overlap fraction | `0.9970011534` |
-| Road IoU vs cx1 | `0.999742` |
-| Lane IoU vs cx1 | `0.994872` |
-| teacher argmax npy sha256 | `249ad030e60025ad46464fa78ff7957753b056371761140e2891978107a0d44a` |
+| SE3 r1 captured flips | `8670` |
+| selected-student overlap numerator | `0` |
+| selected-student overlap fraction | `0.0000000000` |
+| GOOD threshold | `0.8` |
 
-SE3 priced stream targets:
+## Economics
 
-| stream row | stream bytes | captured flips | break-even survival |
-|---|---:|---:|---:|
-| `road_lane_band_r1_edit_bits_side_implied` | `81,365` | `161,660` | `0.395339` |
-| `road_lane_band_r1_edit_plus_direction_bits` | `100,904` | `161,660` | `0.490276` |
-| ED1 section baseline | `169,149` | `191,005` | `0.696430` |
+| stream row | student B | stream B | total B | break-even survival |
+|---|---:|---:|---:|---:|
+| side_implied | 124,765 | 81,365 | 206,130 | 1.001552 |
+| explicit_direction | 124,765 | 100,904 | 225,669 | 1.096488 |
+| ed1_section_baseline | 124,765 | 169,149 | 293,914 | 1.428079 |
 
-Rate exchange: `W = 1.2731082153320312 B/flip`.
+Live realizer context: se2's paint ceiling remains `0.263-0.407`, which only clears rows whose
+break-even survival is below that band; sq2's solved-field eta remains the live realization candidate.
+The composition verdict is MAIN's after cq2 and sq2 are both consumed.
 
-## Custody Preflight
+## Boundaries
 
-Repo HEAD at preflight: `2c5fda118298429b7a262b1c13048818ee614634`.
-
-Teacher path verified:
-
-| file | sha256 |
-|---|---|
-| `/Volumes/VertigoDataTier/pact/public_models/comma10k_segnet/model.safetensors` | `8208672861ad1b111dc98f3a7c54196d29875b709c7353e2dd1b7614343fb3a8` |
-| `/Volumes/VertigoDataTier/pact/public_models/comma10k_segnet/albumentations_config_eval.json` | `d260853fe0a993e23613ff38039fdce59264f5fe31f729c1fa65f8c3e5fde913` |
-| `/Volumes/VertigoDataTier/pact/public_models/comma10k_segnet/config.json` | `2b8f16dbad9bd85386609386a9cb5dedc6e0c518253a9af484e0a128d9463c88` |
-
-Teacher custody manifest: `/Volumes/VertigoDataTier/pact/public_models/comma10k_segnet/CUSTODY_MANIFEST.json`.
-
-Dataset path checked:
-`/Volumes/VertigoDataTier/pact/public_datasets/comma10k`.
-
-Dataset findings:
-
-| check | result |
-|---|---|
-| remote URL | `https://github.com/commaai/comma10k` |
-| `git rev-parse HEAD` | `fatal: ambiguous argument 'HEAD': unknown revision or path not in the working tree.` |
-| `git symbolic-ref -q HEAD` | `fatal: No such ref: HEAD` |
-| maxdepth-2 file count | `4` |
-| maxdepth-4 file count | `20` |
-| non-git data files found in maxdepth-4 listing | `0` |
-| lock marker | `.git/shallow.lock` present |
-| pack marker | `.git/objects/pack/tmp_pack_xkG6pP` present |
-
-The path is an incomplete or in-progress git clone, not a usable comma10k
-dataset. No train/val split can be made and no legal public-data-only
-distillation can launch from this state.
-
-## Derived Thresholds Only
-
-These rows are arithmetic for the next run, not measured student results.
-Formula:
-`break_even_survival = (student_counted_bytes + stream_bytes) / (W * 161660)`.
-
-| hypothetical student bytes | side-implied total bytes | side-implied break-even survival | explicit-direction total bytes | explicit-direction break-even survival |
-|---:|---:|---:|---:|---:|
-| `25,000` | `106,365` | `0.516810` | `125,904` | `0.611747` |
-| `75,000` | `156,365` | `0.759752` | `175,904` | `0.854688` |
-| `150,000` | `231,365` | `1.124164` | `250,904` | `1.219101` |
-
-Interpretation: a measured 25 KB student would require realizer survival above
-about `0.517` on the side-implied stream and `0.612` on the explicit-direction
-stream. A measured 75 KB student would still fit under the ED1 bytes only for
-the side-implied row, but would require about `0.760` survival. A measured
-150 KB student cannot clear the SE3 break-even on these streams without more
-captured flips or a better coder.
-
-Live realizer context from the charter/hot state remains unchanged: se2's
-paint ceiling `0.263-0.407` does not cover the 25 KB side-implied threshold;
-sq2's solved-field eta is the live candidate if its convergence survives.
-Composition verdict remains MAIN's after CQ2 and sq2 both return measured rows.
-
-## Measurements Not Performed
-
-- No comma10k train/val split was made.
-- No public-data student was trained, selected, quantized, or compressed.
-- No comma10k-val Road/Lane IoU was measured.
-- No CQ1 overlap re-measurement with a tiny student was run.
+- Training and selection used only comma10k public images plus the public teacher.
 - No contest SegNet/PoseNet forward was run.
 - No `upstream/evaluate.py` run was performed.
 - No `archive.zip` was built.
+- The final overlap read used the frozen selected payload after public-val selection; it was not used to choose among candidates.
+- All bulk artifacts are under `/Volumes/VertigoDataTier/pact/ddm_cq2_20260804`; no `/tmp` evidence is cited.
 
-## Verdict
-
-**BLOCKED**, verdict_scope
-`INSTANCE: /Volumes/VertigoDataTier/pact/public_datasets/comma10k is present only as incomplete git metadata at 2026-08-04T22:27:28Z`.
-
-This is not a negative verdict on the tiny-student formulation. It is a custody
-preflight blocker required by the charter.
-
-## Follow-On Disposition
-
-QUEUED-WITH-FIRE-ORDER:
-
-1. When the comma10k clone finishes, re-run the dataset preflight before any
-   training: record git HEAD, remote URL, file counts, top-level tree shape, and
-   whether image/label assets are present.
-2. If the dataset is complete, create the fixed train/val split from the
-   conventional repo val list if present; otherwise use a seeded split and
-   record the seed.
-3. Train the public-data-only student size curve and choose the candidate by
-   comma10k-val metrics before any contest-side CQ1 overlap read.
-4. Then run the frozen-candidate n32 overlap measurement exactly once for the
-   selected candidate.
-
-Do not download data in this arm and do not silently symlink around the
-incomplete SSD clone.
-
-Own-vehicle frontier line: `S = 0.7539807296911207 @ 357,836 B [macOS-CPU advisory]`;
-contest pointer borrowed/unmoved.
+Own-vehicle frontier line: `S = 0.7539807296911207 @ 357,836 B [macOS-CPU advisory]; contest pointer borrowed/unmoved.`
