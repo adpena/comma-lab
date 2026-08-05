@@ -237,3 +237,16 @@ bytes), where 1,193 B ≡ 0.000794 S would be a real waterfill row if it persist
 Same scoping applies to rr1's RR1-F4 row (the arm's phrasing "far below the partial-S gap" =
 the 0.63% ratio above). The flagged RR1-F2 row is an evidence-absence correction, not a
 magnitude dismissal — no ΔS was dismissed there.
+
+### RECURSIVE REVIEW — ROUND 3 (rr1, counter 0/3) + MAIN dispositions
+Round-2 dispositions RE-VERIFIED real (F5 diffs confirm probe physics unchanged; F1 correctly
+gated-not-fixed; chain-sweep caveat holds). Two NEW findings:
+- RR1-R3-F1 (MED): the full window continues INTO the entry-smoke dir → top-level telemetry is
+  MIXED-SCOPE (smoke rows + full-window rows through ep1369+). DISPOSITION: SCOPE_MARKER.md
+  written into the dir; the endpoint harvest MUST read smoke evidence from smoke_snapshot_ep1344/
+  only; unique-out-dir for future continuations joins the regenerator debt (with the
+  argv-interpreter fix).
+- RR1-R3-F2 (LOW): smoke_start_* verdict tags are SOURCE epochs; the re-anchored saved ckpts are
+  +1 (meta::epoch 1337/1356). Gate-to-gate slope arithmetic (1339→1344, 1359→1363) is unaffected;
+  future tables split source_checkpoint_epoch from saved_reanchor_checkpoint_epoch.
+Counter 0/3; round 4 = next fresh pass.
