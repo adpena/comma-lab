@@ -185,3 +185,49 @@ Stage-3 carriers-as-constraints (the banked pe/st descriptions constrain the sol
 route) → rate movers on the composed archive (waterfill #766, granularity re-race) →
 per-edge (m91) residual decomposition of whatever seg remains. n600 only after the
 receiver gate beats the live line.
+
+## ADDENDUM 7 (operator 2026-08-05 ×2) — THE RATE-CRUSH TERMINAL STAGE
+
+Operator verbatim: *"Perhaps there's a rate crush move that we can do once everything is
+fully optimized on distortion and rate by doing a neural compression step maybe even
+using H nerve or other PR signal."* + *"or other frontier techniques, there is a related
+rich line of research that is constantly being updated even day to day, but also
+sometimes the oldest math is the sleeper best."*
+
+**The stage:** a TERMINAL neural/learned (or classical-sleeper) compression pass over the
+ALREADY-OPTIMIZED counted payload — meta-compression of the description itself. SEQUENCED
+at the composed-candidate boundary (after distortion+rate optimization per the operator's
+own clause), appended to the gc17 route after the receiver gate, before n600.
+
+**Lineage scoping (operator-licensed amendment to the no-old-lineage ban m34):**
+HNeRV/PR-signal machinery is licensed HERE in the CODER role only — a payload compressor
+raced through real coder races against the incumbent stack (brotli-q11 / lzma1-raw /
+SMEVR), never adopted by citation, never as a vehicle/carrier of video content. This is
+consistent with the L20–L32 demotion banner (vehicle-agnostic coding math may be RACED).
+
+**Rule-118 accounting law (binding on every candidate):** a learned decompressor's
+weights are VIDEO-DERIVED → COUNTED. The three legal escapes, each with a prior receipt:
+(1) total-counted-win self-compression — INR/tiny-decoder + latents < raw payload
+(Selfcomp paradigm; #557 raced it); (2) backward-adaptive parameter-free context models —
+parameters derived at decode from already-decoded content, generic code, FREE (CM/CTW
+family; SMEVR is a step here); (3) bits-back/REC sample-communication (vae1 vein). Any
+candidate must state which escape it uses and show TOTAL counted bytes (weights +
+latents + code-that-is-actually-data) beating the incumbent.
+
+**Prior measurements (recall, do not re-derive):** 07-19 neural_selfcomp_sota — DeepCABAC
++1,436 B vs int8+Brotli on the ep725 v10 donor, `verdict_scope: instance/regime`, family
+OPEN with the named condition "a new vehicle whose measured quantization response clears
+the knee" — the staged-composition candidate IS that vehicle. 07-19 arith_selfcomp —
+Brotli smallest complete int8 coder on that donor. #918 "coder axis shut" is scoped to
+the CURRENT qo1 token base; the new payload (generator packet + carriage + context
+tables) is a different object and gets its own race.
+
+**The dual research mandate:** every rate-crush arm sweeps BOTH ends — (a) day-fresh
+literature (2025–26 learned entropy models, overfitted/instance-optimal coders, INR
+weight compression — the field updates daily) AND (b) oldest-math sleepers (context
+mixing/CTW/PPM, Krichevsky–Trofimov, universal/enumerative coding, combinatorial ranks —
+the PR lineage's own L26/L31 Wang–Rudin colex ranks were exactly this class).
+
+**Disposition:** QUEUED-WITH-FIRE-ORDER — fires when od5/od3 land the composed payload
+formats (the crush needs its true target object); gc18's 131KB budget design includes
+the stage as a line item NOW. Ledger row tracks the fire-order.
