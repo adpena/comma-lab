@@ -103,6 +103,11 @@ from tac.canonical_anti_patterns.na3_subset_bias_builders import (
     build_subset_default_silent_under_sampling_v1,
     populate_na3_subset_bias_anti_patterns,
 )
+from tac.canonical_anti_patterns.na5_native_coordinate_builders import (
+    build_all_na5_native_coordinate_anti_patterns,
+    build_lossy_projection_shipped_expecting_decode_realization_v1,
+    populate_na5_native_coordinate_anti_patterns,
+)
 from tac.canonical_anti_patterns.pattern_matcher import (
     AntiPatternMatch,
     ValidationResult,
@@ -186,8 +191,10 @@ __all__ = [
     "build_all_d7_d8_d9_anti_patterns",
     "build_all_initial_anti_patterns",
     "build_all_na3_subset_bias_anti_patterns",
+    "build_all_na5_native_coordinate_anti_patterns",
     "build_canonical_default_plateau_substrate_disguised_as_class_shift_v1",
     "build_hnerv_pr95_language_anchoring_local_minima_perpetuation_v1",
+    "build_lossy_projection_shipped_expecting_decode_realization_v1",
     "build_micro_optimization_without_macro_escape_polishing_plateau_ceiling_v1",
     "build_prefix_bias_sign_inversion_pose_axis_v1",
     "build_subset_default_silent_under_sampling_v1",
@@ -199,6 +206,7 @@ __all__ = [
     "populate_d7_d8_d9_anti_patterns",
     "populate_initial_anti_patterns",
     "populate_na3_subset_bias_anti_patterns",
+    "populate_na5_native_coordinate_anti_patterns",
     "query_anti_patterns",
     "query_anti_patterns_by_substrate",
     "query_falsifications_by_paradigm_class",

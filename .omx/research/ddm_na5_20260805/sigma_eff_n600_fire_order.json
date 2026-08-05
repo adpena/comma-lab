@@ -1,0 +1,14 @@
+{
+  "schema": "ddm_na5.sigma_eff_n600_fire_order.v1",
+  "created_utc": "2026-08-05T18:59:47Z",
+  "task": "#923",
+  "status": "QUEUED_NOT_RUN_BY_NA5",
+  "score_claim": false,
+  "axis": "[macOS-CPU frozen-scorer advisory]",
+  "reason_not_run": "full n600 scorer slot was not consumed before the pose rerun prerequisite finished; command preserved from NA3/NG1 receipts",
+  "exact_argv": ".venv/bin/python experiments/probe_lever_d_selective_fullstack.py --state-ckpt experiments/results/torch_vehicle_full_mps_basin_bc20_n600/torch_vehicle_checkpoint_state.pt --video upstream/videos/0.mkv --which ema --n-pairs 600 --tau 0.5 --batch 6 --targets-cache /Volumes/VertigoDataTier/pact/ddm_na5_20260805/lever_d_selective_targets_n600 --out-json /Volumes/VertigoDataTier/pact/ddm_na5_20260805/lever_d_selective_probe_n600_sigma_eff.json",
+  "source_fire_order_receipts": [
+    ".omx/research/ddm_na3_20260805/sigma_eff_n600_stage.json",
+    ".omx/research/ddm_ng1_20260805/ng1_negative_results_audit.md"
+  ]
+}

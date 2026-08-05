@@ -1,0 +1,18 @@
+{
+  "schema": "ddm_na5.pose923_render_cache_attempt.v1",
+  "created_utc": "2026-08-05T19:07:09Z",
+  "score_claim": false,
+  "axis": "[macOS-CPU scorer-free prerequisite]",
+  "status": "ATTEMPTED_INTERRUPTED_NO_CACHE_MATERIALIZED",
+  "exact_argv": ".venv/bin/python experiments/ddm_ub1_pose_family_923_harness.py build-render-cache --selection .omx/research/ddm_na3_20260805/stratified_pose_selection_923.json --checkpoint experiments/results/levelset_n600_crucible_v6_run1_20260708T095730Z/levelset_witness_ema_mlx.npz --out-cache /Volumes/VertigoDataTier/pact/ddm_na5_20260805/pose923_run1_stratified_n120_oracle_render_cache.npz",
+  "destination": "/Volumes/VertigoDataTier/pact/ddm_na5_20260805/pose923_run1_stratified_n120_oracle_render_cache.npz",
+  "destination_materialized": false,
+  "last_observed_stack": [
+    "experiments/ddm_ub1_pose_family_923_harness.py:build_render_cache",
+    "tools/levelset_byte_close_and_eval.py:numpy_oracle_reference_frames",
+    "src/tac/boundary_math/lever_b_levelset_generator.py:levelset_rgb_forward_numpy",
+    "src/tac/boundary_math/lever_b_levelset_generator.py:hosc_activation"
+  ],
+  "interruption_reason": "foreground attempt remained compute-bound with no durable cache output; stopped to avoid leaving an unbounded live process",
+  "downstream_effect": "pose_carrier_arms and pose_mladder_depthwarp n120 reruns remain QUEUED_BEHIND_RENDER_CACHE; pose_l2_truedepth and pose_stratified_texture remain blocked by missing recovered sidecars"
+}
