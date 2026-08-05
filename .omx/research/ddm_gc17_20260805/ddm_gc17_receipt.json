@@ -1,0 +1,191 @@
+{
+  "schema": "ddm_gc17_receipt.v1",
+  "arm": "ddm_gc17",
+  "utc": "2026-08-05",
+  "axis": "[macOS-CPU advisory / scorer-free research]",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "n600_scorer_job": false,
+  "scorer_forwards_run": 0,
+  "own_vehicle_frontier": {
+    "S": 0.7539807296911207,
+    "archive_bytes": 357836,
+    "axis": "[macOS-CPU advisory]",
+    "contest_pointer": "borrowed/unmoved"
+  },
+  "current_components": {
+    "seg_term": 0.4311794704861111,
+    "pose_term": 0.08453295485558432,
+    "rate_term": 0.2382683043494253,
+    "d_pose_derived": 0.0007145820456616257
+  },
+  "od2_arithmetic_audit": {
+    "stage1_dseg_before": 0.004331270853678386,
+    "stage1_dseg_after": 0.003349463144938151,
+    "stage1_seg_delta_S": -0.09818077087402348,
+    "stage2_dpose_before": 0.0008014285623403339,
+    "stage2_dpose_after": 0.0007588698333620414,
+    "stage2_pose_delta_S": -0.0024094072901496427,
+    "stage2_projected_bytes": 57600,
+    "stage2_rate_delta_S": 0.03835347569983707,
+    "net_delta_S": -0.062236702464336054,
+    "projected_S": 0.6917440272267846,
+    "verdict": "ARITHMETIC_SOUND_SUBSET_PROJECTION_NOT_BANKABLE"
+  },
+  "unpriced_terms": [
+    "stage1_representation_payload",
+    "stage1_receiver_computation",
+    "terminality_cost",
+    "carriage_capacity",
+    "target_prior_bytes",
+    "edge_worldsheet_residuals",
+    "pose_aware_rate_leak",
+    "n600_drift"
+  ],
+  "ranked_op_routables": [
+    {
+      "rank": 1,
+      "verb": "AUDIT_PRICE",
+      "claim": "Price receiver-consumed weak Stage-1 packet before promotion wording.",
+      "falsifier": "n>=32 exact receiver row cannot preserve OD2 gains below current own S after bytes.",
+      "consumer": "od4",
+      "cost_class": "zero_dollar_build_then_queued_scorer"
+    },
+    {
+      "rank": 2,
+      "verb": "CONTINUE_VERIFY",
+      "claim": "OD3 terminality and terminal carriage re-proof remain first.",
+      "falsifier": "terminal eta below priced break-even or terminal d_pose worsens beyond k-sweep repair.",
+      "consumer": "od3",
+      "cost_class": "existing_owner"
+    },
+    {
+      "rank": 3,
+      "verb": "HYBRIDIZE",
+      "claim": "Use PE1/PE2 and SE3 as carrier candidates only.",
+      "falsifier": "receiver field fails <=101KB or PE2 survival batch worsens S.",
+      "consumer": "SE3-RF1_PE2",
+      "cost_class": "zero_dollar_then_one_scorer_batch"
+    },
+    {
+      "rank": 4,
+      "verb": "SANDWICH",
+      "claim": "ST2 is a scorer-native target prior inside the solve.",
+      "falsifier": "same-byte same-receiver weaker targeter loses recall and score effect.",
+      "consumer": "OD4_ST2",
+      "cost_class": "zero_dollar_cached"
+    },
+    {
+      "rank": 5,
+      "verb": "REMOVE_ANTAGONISM",
+      "claim": "Rate waterfill must be pose-aware.",
+      "falsifier": "measured pose leak exceeds rate savings after pose recovery.",
+      "consumer": "WR1_GR1_QA24",
+      "cost_class": "zero_dollar_reprice_then_gate"
+    },
+    {
+      "rank": 6,
+      "verb": "RESEAT",
+      "claim": "Q3 is post-seg repair/null placement, not first base.",
+      "falsifier": "box Q3 deeper run remains below ED1 survival with non-flat pose.",
+      "consumer": "Q3_889",
+      "cost_class": "zero_dollar_solver_first"
+    },
+    {
+      "rank": 7,
+      "verb": "EXHAUST",
+      "claim": "Existence hinge fires only on matched pose-carrying base.",
+      "falsifier": "at_risk moves without d_seg or pose erases net S.",
+      "consumer": "P4X_934",
+      "cost_class": "queued_scorer"
+    },
+    {
+      "rank": 8,
+      "verb": "FOLD",
+      "claim": "Explicit contour support, per-island dust, token precision, and class masks are not Stage-1 price routes.",
+      "falsifier": "new receiver-closed same-object row beats edge/cell route.",
+      "consumer": "queue_hygiene",
+      "cost_class": "folded"
+    }
+  ],
+  "backcast": [
+    {
+      "target_S": 0.5,
+      "required_delta": -0.25398072969112073,
+      "seg_term_required_if_pose_rate_fixed": 0.17719874079499037,
+      "implication": "remove about 59 percent of current seg term"
+    },
+    {
+      "target_S": 0.35,
+      "required_delta": -0.40398072969112075,
+      "seg_term_required_if_pose_rate_fixed": 0.02719874079499035,
+      "implication": "remove about 94 percent of current seg term"
+    },
+    {
+      "target_S": 0.1721417,
+      "required_delta": -0.5818390296911207,
+      "seg_term_required_if_pose_rate_fixed": -0.15065955920500956,
+      "implication": "impossible at current pose and rate; requires large rate and pose movement too"
+    }
+  ],
+  "council": {
+    "tier": "T3",
+    "verdict": "PROCEED_WITH_REVISIONS",
+    "operator_convened": true,
+    "council_override_invoked": true,
+    "attendees": [
+      "Schmidhuber",
+      "Shannon",
+      "Dykstra",
+      "Yousfi",
+      "Fridrich",
+      "Contrarian",
+      "Assumption-Adversary",
+      "Bennett",
+      "Rudin",
+      "Daubechies",
+      "Mallat",
+      "MacKay",
+      "Tishby-memorial",
+      "Atick",
+      "Wyner",
+      "Rosenfeld-memorial",
+      "Freeman-memorial",
+      "SongHan"
+    ],
+    "dissent": [
+      {
+        "member": "Contrarian",
+        "verbatim": "The -0.0622 number is a receipt about an unpriced object. If the receipt is handed to a scorer queue as a row, it becomes a fake score claim. Price the object or stop."
+      },
+      {
+        "member": "Assumption-Adversary",
+        "verbatim": "Weakest-not-shortest is one typo away from deleting the rate term. I will not sign off unless the receipt says shortest counted archive inside the weakest sufficient scorer constraint."
+      },
+      {
+        "member": "Fridrich",
+        "verbatim": "A rate waterfill that does not price pose leakage is a channel mismatch. The road-plane cells are not empty containers; they are the pose channel."
+      },
+      {
+        "member": "Rudin",
+        "verbatim": "A dense solved field is the least interpretable object in this stack. Student-distill it against heldout cells or admit that the representation is not yet a representation."
+      }
+    ]
+  },
+  "recall_evidence": [
+    "MEMORY.md gc17/#899/#904/waterfill/roadlane search",
+    "CLAUDE.md_AGENTS.md_PROGRAM_operating_handoff_main_hot_state",
+    "OD1_OD2_OD3_receipts",
+    "PE1_PE2_SE3_RL1_ST2_BN1_WR1_GR1_SP1_SG3_P4X_Q31_PC2",
+    "canonical_equations_v8_describe_line_ms2r",
+    "online_schmidhuber_bennett_bisenetv2"
+  ],
+  "boundaries": [
+    "no_upstream_evaluate_py",
+    "no_scorer_job",
+    "no_full_n600_launch",
+    "no_archive_build",
+    "no_exact_pointer_move"
+  ],
+  "end_line": "S = 0.7539807296911207 @ 357,836 B [macOS-CPU advisory]; contest pointer borrowed/unmoved."
+}
