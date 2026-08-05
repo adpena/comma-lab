@@ -150,7 +150,7 @@ Commands run:
 
 | command | result |
 |---|---|
-| `.venv/bin/python -m pytest tools/tests/test_check_subset_default_scope_fields.py src/tac/tests/test_subset_selection_gate.py src/tac/tests/test_subset_selection.py` | 66 passed |
+| `.venv/bin/python -m pytest tools/tests/test_check_subset_default_scope_fields.py src/tac/tests/test_subset_selection_gate.py src/tac/tests/test_subset_selection.py` | 67 passed |
 | `.venv/bin/python -m pytest tools/tests/test_check_subset_default_scope_fields.py` | 7 passed after scanner refinements |
 | `.venv/bin/ruff check --isolated --select F821 tools/check_subset_default_scope_fields.py tools/tests/test_check_subset_default_scope_fields.py src/tac/preflight.py` | passed |
 | `.venv/bin/python tools/check_subset_default_scope_fields.py --write-baseline .omx/research/ddm_ss1_20260805/ss1_subset_default_scope_inventory_20260805.json` | 6,214 scanned; 595 sites; 568 silent; 0 parse errors |
