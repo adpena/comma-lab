@@ -46,6 +46,22 @@ REQUIRED_RUNTIME_CONSTANTS = (
     "LO_LEN",
     "HI_HIST_LEN",
 )
+LEGACY_PR103_INFLATE_SH_INVOCATION = 'python "$HERE/inflate.py" "$SRC" "$DST"'
+PORTABLE_PR103_INFLATE_SH_INVOCATION = 'exec "$PY" "$HERE/inflate.py" "$SRC" "$DST"'
+PORTABLE_PR103_INFLATE_SH_BLOCK = '''PY="${PYTHON:-}"
+if [ -z "$PY" ]; then
+  for candidate in python3 python; do
+    if command -v "$candidate" >/dev/null 2>&1; then
+      PY="$candidate"
+      break
+    fi
+  done
+fi
+if [ -z "$PY" ]; then
+  echo "inflate.sh: FATAL: no Python interpreter (tried PYTHON env var, python3, python)" >&2
+  exit 127
+fi
+exec "$PY" "$HERE/inflate.py" "$SRC" "$DST"'''
 EXCLUDED_DIR_NAMES = frozenset({"__pycache__", ".git", ".mypy_cache", ".pytest_cache"})
 EXCLUDED_FILE_NAMES = frozenset({".DS_Store"})
 EXCLUDED_SUFFIXES = (".pyc", ".pyo")
@@ -724,16 +740,31 @@ def _patch_inflate_constants(path: Path, constants: dict[str, int]) -> list[dict
 
 def _verify_inflate_shell_contract(path: Path) -> dict[str, Any]:
     text = path.read_text(encoding="utf-8")
-    expected = 'python "$HERE/inflate.py" "$SRC" "$DST"'
-    count = text.count(expected)
-    if count != 1:
+    portable_count = text.count(PORTABLE_PR103_INFLATE_SH_INVOCATION)
+    legacy_count = text.count(LEGACY_PR103_INFLATE_SH_INVOCATION)
+    changed = False
+    if portable_count == 0 and legacy_count == 1:
+        text = text.replace(
+            LEGACY_PR103_INFLATE_SH_INVOCATION,
+            PORTABLE_PR103_INFLATE_SH_BLOCK,
+            1,
+        )
+        path.write_text(text, encoding="utf-8")
+        changed = True
+        portable_count = 1
+        legacy_count = 0
+    if portable_count != 1 or legacy_count != 0:
         raise Pr103RuntimeAdapterError(
-            f"expected exactly one bare python inflate invocation, found {count}"
+            "expected exactly one portable PR103 inflate invocation and zero "
+            "legacy bare-python invocations; found "
+            f"portable={portable_count} legacy={legacy_count}"
         )
     return {
-        "changed": False,
-        "contract": expected,
-        "basis": "preserve_source_pr103_inflate_shell_interpreter_contract",
+        "changed": changed,
+        "legacy_contract": LEGACY_PR103_INFLATE_SH_INVOCATION,
+        "contract": PORTABLE_PR103_INFLATE_SH_INVOCATION,
+        "portable_python_fallback": True,
+        "basis": "replace_pr103_bare_python_with_fail_closed_python3_fallback",
         "score_claim": False,
         "dispatch_attempted": False,
     }

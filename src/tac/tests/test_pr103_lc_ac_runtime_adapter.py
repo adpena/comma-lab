@@ -19,6 +19,7 @@ from tac.pr103_lc_ac_runtime_adapter import (
     ADAPTER_SCHEMA,
     FRAME_PARITY_SCHEMA,
     PACKET_SCHEMA,
+    PORTABLE_PR103_INFLATE_SH_INVOCATION,
     SHELL_PARITY_SCHEMA,
     Pr103RuntimeAdapterError,
     build_pr103_lc_ac_candidate_packet,
@@ -66,9 +67,12 @@ def test_pr103_runtime_adapter_patches_constants_and_proves_consumption(
     adapted_inflate = (tmp_path / "adapted/inflate.py").read_text(encoding="utf-8")
     adapted_shell = (tmp_path / "adapted/inflate.sh").read_text(encoding="utf-8")
     assert "HIST_LEN = 2" in adapted_inflate
-    assert 'python "$HERE/inflate.py" "$SRC" "$DST"' in adapted_shell
-    assert '"${PYTHON:-python}"' not in adapted_shell
-    assert report["shell_patch"]["changed"] is False
+    assert 'python "$HERE/inflate.py" "$SRC" "$DST"' not in adapted_shell
+    assert "for candidate in python3 python" in adapted_shell
+    assert "exit 127" in adapted_shell
+    assert PORTABLE_PR103_INFLATE_SH_INVOCATION in adapted_shell
+    assert report["shell_patch"]["changed"] is True
+    assert report["shell_patch"]["portable_python_fallback"] is True
 
 
 def test_pr103_runtime_adapter_rejects_candidate_archive_custody_mismatch(

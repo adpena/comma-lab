@@ -9,7 +9,10 @@ from 2026-08-04 (hand-rolled nohup clone; run_in_background git clone rc=144).
 from __future__ import annotations
 
 import importlib.util
+import os
+import subprocess
 import sys
+import time
 from pathlib import Path
 
 _TOOLS = Path(__file__).resolve().parents[1]
@@ -68,3 +71,46 @@ def test_launcher_done_receipt_supervisor_shape() -> None:
     assert "codex_runs" in src  # the watched dir — completions notify MAIN
     assert "SIGURG" in src  # supervisor is immune to the reaper signal
     assert "rc=%d elapsed=%d" in src  # keeper-compatible receipt prefix
+
+
+def test_launcher_done_receipt_records_child_nonzero_rc(tmp_path: Path) -> None:
+    """Executed BL1 positive control: launcher rc is not the job verdict.
+
+    The parent launcher exits 0 after starting the detached supervisor; the
+    watcher-visible .done receipt must carry the child process rc instead.
+    """
+    repo = _TOOLS.parent
+    name = f"bl1_receipt_{os.getpid()}_{time.time_ns()}"
+    done = repo / ".omx" / "tmp" / "codex_runs" / f"{name}.done"
+    done.unlink(missing_ok=True)
+    try:
+        proc = subprocess.run(
+            [
+                sys.executable,
+                str(_TOOLS / "launch_detached_process.py"),
+                "--output-dir",
+                str(tmp_path / "launch"),
+                "--cwd",
+                str(repo),
+                "--done-receipt",
+                name,
+                "--",
+                sys.executable,
+                "-c",
+                "import sys; sys.exit(7)",
+            ],
+            cwd=repo,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+        assert proc.returncode == 0, proc.stderr  # LAUNCHER_RC_OK: launch-start health; child rc is asserted from .done
+        deadline = time.time() + 10
+        while time.time() < deadline and not done.exists():
+            time.sleep(0.05)
+        assert done.exists(), proc.stdout
+        receipt = done.read_text(encoding="utf-8").strip()
+        assert receipt.startswith("rc=7 "), receipt
+    finally:
+        done.unlink(missing_ok=True)

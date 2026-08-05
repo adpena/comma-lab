@@ -4054,6 +4054,14 @@ def preflight_all(
         check_no_orphan_prone_daemon_launch(
             strict=True, verbose=verbose,
         )
+        # BL1 / task #937 (2026-08-05): detached/background launcher rc is
+        # launch-start health only, never the background job verdict. The
+        # child rc lives in the --done-receipt file. Warn-only at landing so
+        # existing surfaces can be migrated deliberately; same-line waiver:
+        # `# LAUNCHER_RC_OK:<rationale>`.
+        check_background_launcher_rc_not_job_verdict(
+            strict=False, verbose=verbose,
+        )
         # 2026-05-19 Catalog #339 - SILENT-NO-SPAWN-STRUCTURAL-EXTINCTION.
         # Per CLAUDE.md "Modal `.spawn()` HARVEST OR LOSE" non-negotiable +
         # "Bugs must be permanently fixed AND self-protected against".
@@ -81133,6 +81141,227 @@ def check_substrate_driver_consumes_trainer_mode_env_var(
             "check_substrate_driver_consumes_trainer_mode_env_var found "
             f"{len(violations)} violation(s) per Catalog #326.\n  "
             + "\n  ".join(v[:600] for v in violations[:5])
+        )
+    return violations
+
+
+# ============================================================================
+# BL1 / task #937 — BACKGROUNDED-LAUNCHER-RC-IS-NOT-JOB-RC (2026-08-05)
+# ============================================================================
+# Bug class anchor: ddm_si1 reproduced a backgrounded job whose launcher
+# returned rc=0 while the job failed and produced no output. The canonical
+# cure is `tools/launch_detached_process.py --done-receipt NAME -- <cmd...>`;
+# consumers must read the watcher-visible .done receipt for the job rc. The
+# immediate subprocess rc only means "the detached supervisor was started".
+#
+# Same-line waiver: `# LAUNCHER_RC_OK:<rationale>` for code that explicitly
+# treats the launcher rc as launch-start health only. Placeholder rationales
+# are rejected.
+
+_CHECK_BL1_LAUNCHER_SCAN_DIRS = ("tools", "scripts", "experiments", "src/tac")
+_CHECK_BL1_LAUNCHER_SCAN_SUFFIXES = (".py", ".sh", ".bash", ".zsh")
+_CHECK_BL1_LAUNCHER_VENDORED_MARKERS = (
+    "/pr_heads/",
+    "/leaderboard_intel_",
+    "/reverse_engineering_",
+    "/public_runtime_adapters_",
+    "/vendored/",
+    "_intake_",
+    "/av1_crf31_bicubic/",
+)
+_CHECK_BL1_LAUNCHER_WAIVER = re.compile(r"# LAUNCHER_RC_OK:(.+?)(?:$|#)")
+_CHECK_BL1_LAUNCHER_TOKEN = "launch_detached_process.py"
+
+
+def _check_bl1_launcher_rationale_is_placeholder(rationale: str) -> bool:
+    low = rationale.strip().rstrip(":").strip().lower()
+    return low in ("", "<rationale>", "<reason>")
+
+
+def _check_bl1_launcher_line_has_waiver(line: str) -> bool:
+    match = _CHECK_BL1_LAUNCHER_WAIVER.search(line)
+    return bool(match) and not _check_bl1_launcher_rationale_is_placeholder(match.group(1))
+
+
+def _check_bl1_ast_string_fragments(node: ast.AST) -> list[str]:
+    fragments: list[str] = []
+    for child in ast.walk(node):
+        if isinstance(child, ast.Constant) and isinstance(child.value, str):
+            fragments.append(child.value)
+    return fragments
+
+
+def _check_bl1_call_mentions_detached_launcher(node: ast.Call) -> bool:
+    return any(
+        _CHECK_BL1_LAUNCHER_TOKEN in fragment
+        for fragment in _check_bl1_ast_string_fragments(node)
+    )
+
+
+def _check_bl1_is_subprocess_run_shape(node: ast.Call) -> bool:
+    """Conservative subprocess.run shape; avoids flagging docs/test fixtures."""
+    return isinstance(node.func, ast.Attribute) and node.func.attr == "run"
+
+
+def _check_bl1_call_has_check_true(node: ast.Call) -> bool:
+    for keyword in node.keywords:
+        if keyword.arg == "check" and isinstance(keyword.value, ast.Constant):
+            return keyword.value.value is True
+    return False
+
+
+def _check_bl1_assigned_names(node: ast.AST) -> set[str]:
+    names: set[str] = set()
+    targets: list[ast.AST]
+    if isinstance(node, ast.Assign):
+        targets = list(node.targets)
+    elif isinstance(node, ast.AnnAssign):
+        targets = [node.target]
+    else:
+        return names
+    for target in targets:
+        if isinstance(target, ast.Name):
+            names.add(target.id)
+        elif isinstance(target, (ast.Tuple, ast.List)):
+            names.update(item.id for item in target.elts if isinstance(item, ast.Name))
+    return names
+
+
+def _check_bl1_returncode_attr(node: ast.AST, launch_vars: set[str]) -> bool:
+    return (
+        isinstance(node, ast.Attribute)
+        and node.attr == "returncode"
+        and isinstance(node.value, ast.Name)
+        and node.value.id in launch_vars
+    )
+
+
+def _check_bl1_zero_constant(node: ast.AST) -> bool:
+    return isinstance(node, ast.Constant) and node.value == 0
+
+
+def _check_bl1_returncode_success_test(node: ast.AST, launch_vars: set[str]) -> bool:
+    if isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.Not):
+        return _check_bl1_returncode_attr(node.operand, launch_vars)
+    if not isinstance(node, ast.Compare) or len(node.ops) != 1 or len(node.comparators) != 1:
+        return False
+    if not isinstance(node.ops[0], ast.Eq):
+        return False
+    left, right = node.left, node.comparators[0]
+    return (
+        _check_bl1_returncode_attr(left, launch_vars) and _check_bl1_zero_constant(right)
+    ) or (
+        _check_bl1_zero_constant(left) and _check_bl1_returncode_attr(right, launch_vars)
+    )
+
+
+def _check_bl1_python_launcher_rc_violations(rel: str, text: str) -> list[str]:
+    if _CHECK_BL1_LAUNCHER_TOKEN not in text:
+        return []
+    try:
+        tree = ast.parse(text)
+    except SyntaxError:
+        return []
+    lines = text.splitlines()
+    launch_vars: set[str] = set()
+    violations: list[str] = []
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.Assign, ast.AnnAssign)) and isinstance(node.value, ast.Call):
+            if _check_bl1_is_subprocess_run_shape(
+                node.value
+            ) and _check_bl1_call_mentions_detached_launcher(node.value):
+                launch_vars.update(_check_bl1_assigned_names(node))
+        if (
+            isinstance(node, ast.Call)
+            and _check_bl1_is_subprocess_run_shape(node)
+            and _check_bl1_call_mentions_detached_launcher(node)
+        ):
+            lineno = int(getattr(node, "lineno", 0) or 0)
+            line = lines[lineno - 1] if 0 < lineno <= len(lines) else ""
+            if _check_bl1_call_has_check_true(node) and not _check_bl1_launcher_line_has_waiver(line):
+                violations.append(
+                    f"{rel}:{lineno}: launch_detached_process.py called with check=True. "
+                    "That checks only launcher start, not the detached job rc; read the "
+                    "--done-receipt file for job success, or add same-line "
+                    "`# LAUNCHER_RC_OK:<rationale>` if this is explicitly launch-start health."
+                )
+    if not launch_vars:
+        return violations
+    for node in ast.walk(tree):
+        if not _check_bl1_returncode_success_test(node, launch_vars):
+            continue
+        lineno = int(getattr(node, "lineno", 0) or 0)
+        line = lines[lineno - 1] if 0 < lineno <= len(lines) else ""
+        if _check_bl1_launcher_line_has_waiver(line):
+            continue
+        violations.append(
+            f"{rel}:{lineno}: launcher returncode compared to zero as a success verdict. "
+            "A detached launcher's rc is launch-start health only; the background job rc "
+            "must come from --done-receipt."
+        )
+    return violations
+
+
+def check_background_launcher_rc_not_job_verdict(
+    *,
+    strict: bool = False,
+    verbose: bool = False,
+    repo_root: Path | str | None = None,
+) -> list[str]:
+    """Warn/refuse call sites that promote detached-launcher rc to job success.
+
+    The canonical launcher returns before the child job exits. Checking
+    ``proc.returncode != 0`` to detect a failed launch is allowed; treating
+    ``proc.returncode == 0`` or ``check=True`` as background-job success is the
+    si1 amplifier bug class. Use ``--done-receipt`` and read the receipt line
+    for the child rc.
+    """
+    root = Path(repo_root).resolve() if repo_root is not None else REPO_ROOT
+    violations: list[str] = []
+    for scan_dir in _CHECK_BL1_LAUNCHER_SCAN_DIRS:
+        base = root / scan_dir
+        if not base.is_dir():
+            continue
+        for path in base.rglob("*"):
+            if not path.is_file() or path.suffix not in _CHECK_BL1_LAUNCHER_SCAN_SUFFIXES:
+                continue
+            rel = path.relative_to(root).as_posix()
+            rel_lc = "/" + rel.lower()
+            if any(marker in rel_lc for marker in _CHECK_BL1_LAUNCHER_VENDORED_MARKERS):
+                continue
+            try:
+                text = path.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            if _CHECK_BL1_LAUNCHER_TOKEN not in text:
+                continue
+            if path.suffix == ".py":
+                violations.extend(_check_bl1_python_launcher_rc_violations(rel, text))
+            else:
+                for lineno, line in enumerate(text.splitlines(), start=1):
+                    if (
+                        _CHECK_BL1_LAUNCHER_TOKEN in line
+                        and "&&" in line
+                        and not _check_bl1_launcher_line_has_waiver(line)
+                    ):
+                        violations.append(
+                            f"{rel}:{lineno}: shell command chains success after "
+                            "launch_detached_process.py with &&. That rc is launch-start "
+                            "health only; read --done-receipt for the job verdict."
+                        )
+    if verbose:
+        if violations:
+            print(
+                "  [check_background_launcher_rc_not_job_verdict] "
+                f"{len(violations)} violation(s)"
+            )
+        else:
+            print("  [check_background_launcher_rc_not_job_verdict] OK")
+    if violations and strict:
+        raise PreflightError(
+            "check_background_launcher_rc_not_job_verdict found "
+            f"{len(violations)} violation(s).\n  "
+            + "\n  ".join(v[:600] for v in violations[:8])
         )
     return violations
 
