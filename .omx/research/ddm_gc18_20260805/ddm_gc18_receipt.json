@@ -1,0 +1,344 @@
+{
+  "schema": "ddm_gc18_convocation_receipt_v1",
+  "arm": "ddm_gc18_20260805",
+  "written_at_utc": "2026-08-05T02:48:59Z",
+  "scope": {
+    "research_only": true,
+    "score_claim": false,
+    "exact_eval_run": false,
+    "evaluate_py_run": false,
+    "scorer_forwards_run": 0,
+    "launches_run": 0,
+    "python_source_edited": false,
+    "protected_files_edited": false
+  },
+  "answer_first": {
+    "verdict": "OD4 kills sparse per-flip weak-packet formulation, not the GC17 route family.",
+    "live_route": "replacement task-description archive: OD5 generator/worldsheet coordinates plus ST2 prior plus PE/SE geometry, terminal pose recovery, TR1 child route if generator context cannot meet byte corridor",
+    "frontier_moved": false
+  },
+  "current_row": {
+    "d_seg": 0.00431179,
+    "seg_term": 0.43117900000000003,
+    "d_pose": 0.00071459,
+    "pose_term": 0.08453342534169546,
+    "archive_bytes": 357836,
+    "rate_term": 0.2382683043494253,
+    "S": 0.7539807296911207,
+    "axis": "macOS-CPU advisory",
+    "contest_pointer": "borrowed/unmoved"
+  },
+  "bar": {
+    "source": "UF1/GC17 PR130 floor",
+    "S": 0.17214129749189644,
+    "borrowed_external": true,
+    "not_our_custody_progress": true
+  },
+  "derived_score_arithmetic": {
+    "zero_seg_floor_current_pose_rate": 0.32280172969112075,
+    "pose_rate_cut_needed_at_zero_seg_vs_bar": 0.15066043219922431,
+    "byte_ceiling_current_pose_zero_seg_vs_bar": 131571.21600515107,
+    "byte_ceiling_terminal_pose_dseg_0p0003_vs_bar": 190541.3813496,
+    "byte_ceiling_terminal_pose_dseg_0p0003_vs_sub015": 157289.14769249095,
+    "byte_ceiling_terminal_pose_dseg_0p0005_vs_bar": 160504.9901496,
+    "byte_ceiling_terminal_pose_dseg_0p0005_vs_sub015": 127252.75649249095,
+    "terminal_pose_assumption_d_pose": 0.00002331
+  },
+  "od4_delta_against_gc17": [
+    {
+      "claim": "Price Stage-1 before promotion",
+      "update": "OD4 priced sparse per-flip constraints at projected 104775 n600 bytes for retained target 1.00.",
+      "status": "DONE for formulation 1"
+    },
+    {
+      "claim": "Weak packet can carry OD2 subset solve",
+      "update": "Sparse packet carries but costs too much; projected S 0.761509399 is +0.007528669 above live.",
+      "status": "DEAD at sparse-per-flip formulation scope"
+    },
+    {
+      "claim": "Weakest constraint, shortest archive",
+      "update": "Held: weak constraints can guide solve, but counted archive bytes still decide.",
+      "status": "HELD"
+    },
+    {
+      "claim": "Generator/context family remains live",
+      "update": "ST2 and PE3 strengthen it; receiver consumption remains open.",
+      "status": "HELD WITH GATES"
+    }
+  ],
+  "task_description_archive_sketch": [
+    {
+      "section": "ST2 target-prior table",
+      "target_bytes_low": 3602,
+      "target_bytes_high": 3602,
+      "honesty_label": "MEASURED targeter-only",
+      "falsifier": "receiver treats prior as hidden shipped data"
+    },
+    {
+      "section": "generator/worldsheet boundary grammar",
+      "target_bytes_low": 45000,
+      "target_bytes_high": 75000,
+      "honesty_label": "DERIVED target from PE3/OD5",
+      "falsifier": "receiver-consumed n32 price projects above about 90000 bytes with no native d_seg gain"
+    },
+    {
+      "section": "context/innovation stream",
+      "target_bytes_low": 8000,
+      "target_bytes_high": 20000,
+      "honesty_label": "CONJECTURE",
+      "falsifier": "innovation bytes scale with flips instead of components"
+    },
+    {
+      "section": "learned-prior or TR1-style residual",
+      "target_bytes_low": 30000,
+      "target_bytes_high": 45000,
+      "honesty_label": "OPEN-QUESTION",
+      "falsifier": "native d_seg remains above 5e-4 after receiver parse-back"
+    },
+    {
+      "section": "terminal pose packet",
+      "target_bytes_low": 2000,
+      "target_bytes_high": 7200,
+      "honesty_label": "OPEN-QUESTION with fallback",
+      "falsifier": "terminal d_pose remains near current 0.00071459"
+    },
+    {
+      "section": "framing/coder overhead",
+      "target_bytes_low": 2000,
+      "target_bytes_high": 5000,
+      "honesty_label": "CONJECTURE",
+      "falsifier": "measured archive overhead exceeds 5000 bytes"
+    }
+  ],
+  "floor_estimate": {
+    "pure_target_prior_floor_bytes": [3000, 6000],
+    "coherent_boundary_grammar_floor_bytes": [45000, 90000],
+    "legal_task_description_archive_with_terminal_pose_bytes": [90000, 155000],
+    "explicit_partition_control_bytes": [172000, 174000],
+    "honesty": "The 90000-155000 corridor is conjecture; only the explicit partition control and target-prior facts are measured.",
+    "falsifier": "OD5 receiver-consumed generator+context projects above about 160000 bytes at terminal-pose assumptions and still needs a correction stream."
+  },
+  "vehicle_verdicts": [
+    {
+      "vehicle": "qo1/pu2 plus OD5",
+      "disposition": "QUEUED-WITH-FIRE-ORDER",
+      "reason": "same-object continuity with OD2, OD4, ST2, PE3, and OD3 terminality",
+      "flip_condition": "OD5 parse-back no better than sparse OD4 or cannot survive receiver runtime"
+    },
+    {
+      "vehicle": "PE3/SE hybrid",
+      "disposition": "QUEUED-WITH-FIRE-ORDER",
+      "reason": "measured 74408 B section is the best current coherent-coordinate evidence",
+      "flip_condition": "receiver consumption fails or band recall cannot become native d_seg"
+    },
+    {
+      "vehicle": "TR1 learned partition renderer",
+      "disposition": "QUEUED-WITH-FIRE-ORDER as child route",
+      "reason": "can plausibly absorb pp1 explicit overhead into learned prior if OD5 fails",
+      "flip_condition": "byte-closed TR1 object reaches <=190KB, d_seg about 3e-4, terminal pose"
+    },
+    {
+      "vehicle": "pp1 direct partition",
+      "disposition": "FOLDED as ship vehicle, retained as control",
+      "reason": "172KB-174KB measured control is useful but not a strong sub-0.15 default",
+      "flip_condition": "new direct coding <155KB with terminal pose"
+    },
+    {
+      "vehicle": "OD4 sparse packet",
+      "disposition": "FOLDED for promotion",
+      "reason": "formulation 1 priced dead",
+      "flip_condition": "different coordinate system, not more per-flip records"
+    }
+  ],
+  "op_routables": [
+    {
+      "rank": 1,
+      "disposition": "QUEUED-WITH-FIRE-ORDER",
+      "verb": "build OD5 receiver-consumed generator+context packet on the same n32 cells OD4 used",
+      "claim_label": "DERIVED from OD4/PE3/ST2",
+      "falsifier": "projected n600 bytes above 160KB or no native d_seg movement after parse-back",
+      "named_consumer": "OD5",
+      "cost_class": "$0 build, no scorer until slot free"
+    },
+    {
+      "rank": 2,
+      "disposition": "QUEUED-WITH-FIRE-ORDER",
+      "verb": "when OD3 terminality lands, recompute byte ceiling with measured terminal d_pose",
+      "claim_label": "DERIVED from ordering law",
+      "falsifier": "d_pose remains near current 0.00071459",
+      "named_consumer": "OD3/MAIN",
+      "cost_class": "existing terminal receipt; no duplicate scorer"
+    },
+    {
+      "rank": 3,
+      "disposition": "QUEUED-WITH-FIRE-ORDER",
+      "verb": "wire PE2 runtime consumption for PE3-style section before score language",
+      "claim_label": "MEASURED section, OPEN receiver",
+      "falsifier": "inflate/runtime cannot consume section into legal frames",
+      "named_consumer": "PE2/OD5",
+      "cost_class": "$0 local receiver smoke"
+    },
+    {
+      "rank": 4,
+      "disposition": "QUEUED-WITH-FIRE-ORDER",
+      "verb": "prepare TR1 child route only if OD5 cannot beat explicit partition price",
+      "claim_label": "CONJECTURE",
+      "falsifier": "OD5 reaches <=155KB corridor",
+      "named_consumer": "TR1",
+      "cost_class": "build only, no launch in GC18"
+    },
+    {
+      "rank": 5,
+      "disposition": "FOLDED",
+      "verb": "fold OD4 sparse per-flip packet as promotion candidate",
+      "claim_label": "MEASURED formulation negative",
+      "falsifier": "non-per-flip coordinate rewrite changes the object",
+      "named_consumer": "MAIN queue",
+      "cost_class": "no sparse-packet scorer spend"
+    },
+    {
+      "rank": 6,
+      "disposition": "FOLDED",
+      "verb": "keep pp1 direct partition as control/oracle, not default ship route",
+      "claim_label": "MEASURED control",
+      "falsifier": "direct partition plus terminal pose beats PR130 or exposes a lower coded map",
+      "named_consumer": "pp1/TR1",
+      "cost_class": "local pricing/control"
+    },
+    {
+      "rank": 7,
+      "disposition": "QUEUED-WITH-FIRE-ORDER",
+      "verb": "use ST2 as solve prior in OD5, never as hidden receiver data",
+      "claim_label": "MEASURED targeter-only",
+      "falsifier": "receiver relies on scorer-derived hidden table",
+      "named_consumer": "OD5",
+      "cost_class": "$0"
+    }
+  ],
+  "recall_evidence": {
+    "governing_files_read": [
+      "PROGRAM.md",
+      "CLAUDE.md",
+      "AGENTS.md",
+      "docs/operating_manual_craft_handoff.md",
+      ".omx/state/main_hot_state.md",
+      ".omx/tmp/codex_runs/gc18_prompt.md",
+      ".omx/tmp/codex_runs/_common_contract.md"
+    ],
+    "local_receipts_consulted": [
+      ".omx/research/ddm_gc17_20260805/GC17_CONVOCATION_RECEIPT.md",
+      ".omx/research/ddm_od4_20260805/OD4_WEAK_PACKET_RECEIPT.md",
+      ".omx/research/ddm_od4_20260805/od4_weak_packet_receipt.json",
+      ".omx/tmp/codex_runs/od5_prompt.md",
+      ".omx/research/ddm_st2_20260805/ST2_RECEIPT_20260805.md",
+      ".omx/research/ddm_pe3_20260805/PE3_RECEIPT_20260805.md",
+      ".omx/research/ddm_g4_spatial_stationarity_603_DAG_FEED_20260722T212138Z.md",
+      ".omx/research/ddm_pp1_direct_partition_pricing_20260728.md",
+      ".omx/research/SPEC_tr1_trained_partition_renderer_20260728.md",
+      ".omx/research/ddm_eg1_endgame_chain_20260728.md",
+      ".omx/research/ddm_uf1_20260805/UF1_RECEIPT.md",
+      ".omx/research/operator_directive_per_edge_optimality_criteria_20260805.md"
+    ]
+  },
+  "online_sources": [
+    "https://arxiv.org/abs/0812.4360",
+    "https://arxiv.org/abs/cs/0207097",
+    "https://link.springer.com/article/10.1023/B:MACH.0000015880.99707.b2",
+    "https://ieeexplore.ieee.org/document/775629",
+    "https://arxiv.org/abs/2301.12987",
+    "https://www.itsoc.org/publications/papers/the-rate-distortion-function-for-source-coding-with-side-information-at-the-decoder",
+    "https://researchportal.hkust.edu.hk/en/publications/semantic-communication-a-survey-of-its-theoretical-development/",
+    "https://openaccess.thecvf.com/content/CVPR2024/html/Ge_Task-Aware_Encoder_Control_for_Deep_Video_Compression_CVPR_2024_paper.html",
+    "https://www.sciencedirect.com/science/article/abs/pii/S0923596599000478",
+    "https://nvlabs.github.io/SPADE/",
+    "https://papers.neurips.cc/paper_files/paper/2023/hash/e5dc475c370ff42f2f96dddf8191a40c-Abstract-Conference.html",
+    "https://onlinelibrary.wiley.com/doi/abs/10.1002/cpa.10116"
+  ],
+  "council_positions": {
+    "shared_operating_assumptions": [
+      "no scorer/eval launch",
+      "no score claim",
+      "free receiver code only for generic algorithms",
+      "video-derived learned content is counted",
+      "post-hoc pose sidecar is not revived",
+      "OD4 negative is formulation-scoped",
+      "current own-vehicle pointer is unchanged"
+    ],
+    "positions": [
+      {
+        "seat": "Schmidhuber",
+        "position": "Chase the largest expected compression-progress derivative: OD5, because it can turn solved constraints into reusable generator structure.",
+        "operating_within_assumption": "Compression progress is measured only by a smaller legal archive or a narrower falsifier."
+      },
+      {
+        "seat": "Shannon",
+        "position": "Transmit innovations relative to a receiver-generated task model, not addresses of every flip.",
+        "operating_within_assumption": "Receiver side information is free only when generic and not video-derived hidden data."
+      },
+      {
+        "seat": "Rissanen/Bennett/Vitanyi",
+        "position": "Model-plus-residual is the right lens: pp1 is explicit model, OD5/TR1 are attempts to find the shorter sufficient statistic.",
+        "operating_within_assumption": "The model knee must be priced by counted archive bytes."
+      },
+      {
+        "seat": "Wyner",
+        "position": "Treat deterministic receiver as side information and send the minimum correction stream that makes scorer action land.",
+        "operating_within_assumption": "Side-information coding does not waive rule 118."
+      },
+      {
+        "seat": "Fridrich",
+        "position": "ST2 target priors must never become hidden scorer-derived receiver payload.",
+        "operating_within_assumption": "Security/compliance boundaries outrank cleverness."
+      },
+      {
+        "seat": "Mallat/Daubechies",
+        "position": "Boundary grammar should use edge-coherent, multiscale coordinates.",
+        "operating_within_assumption": "Live directional-basis production evidence is neutral/off, so this is design pressure."
+      },
+      {
+        "seat": "Rudin",
+        "position": "A route without receiver parse-back is not a route.",
+        "operating_within_assumption": "Sparse data fit is not interpretable evidence until it survives the legal receiver."
+      },
+      {
+        "seat": "Tishby/Atick",
+        "position": "Optimize the semantic bottleneck actually read by SegNet/PoseNet.",
+        "operating_within_assumption": "The bottleneck is task-score-specific, not proxy authority."
+      },
+      {
+        "seat": "MacKay/Balle/SongHan",
+        "position": "Hold TR1 as learned-prior child route for absorbing explicit partition overhead if OD5 stalls.",
+        "operating_within_assumption": "Learned priors are counted bytes and must beat pp1 explicit map."
+      }
+    ],
+    "verbatim_dissent": [
+      {
+        "member": "Contrarian",
+        "verbatim": "This receipt still risks adding measured fragments into a fantasy budget. A 90 KB to 155 KB corridor is a conjecture until OD5 parses back through a receiver. If a queue reads this as a row, it becomes fake."
+      },
+      {
+        "member": "Assumption-Adversary",
+        "verbatim": "The floor estimate is carrying the unverified assumption that PE3's band recall converts into d_seg. Band recall is not flips fixed. Make OD5 prove that conversion before letting TR1 inherit the target."
+      },
+      {
+        "member": "Fridrich",
+        "verbatim": "ST2 is a targeter. If the receiver ships scorer-native buckets as if they were public side information, the rate win is illegal."
+      },
+      {
+        "member": "Rudin",
+        "verbatim": "The first measurement is not another global scorer run. The first measurement is a local receiver-consumption failure or survival bit for the exact section."
+      }
+    ],
+    "invited_consultees": [
+      "Bennett/Vitanyi for structure functions and sufficient statistic pressure",
+      "Wyner and Slepian/Wolf for decoder-side information framing",
+      "Rissanen for MDL knee discipline",
+      "Ge et al. for task-aware video codec pressure",
+      "SPADE/semantic-layout work for layout-conditioned rendering",
+      "MPEG-4 shape coding for binary boundary stream priors",
+      "curvelet literature for edge-coordinate priors",
+      "HiNeRV only as a counted learned-INR caution"
+    ]
+  },
+  "frontier_line": "S = 0.7539807296911207 @ 357,836 B [macOS-CPU advisory]; contest pointer borrowed/unmoved."
+}
