@@ -122,8 +122,12 @@ rate. **cell_rung (graded {L8,L4}) is DOMINATED by cell-DROP at matched bytes** 
    the coder and save shallow bytes — **the CELL (spatial column), not the token, is the efficient
    coding + coarsening unit.**
 3. **QA07 nested-rung {L16,L8,L4,base} is DOMINATED by clean drop-to-base at BOTH granularities.**
+   Scope: **INSTANCE** — this is the measured `{cell_rung_a,b,c}` / SMEVR case under the recorded
+   `|g|`-sum ordering, not a family-level "no middle ground pays" law.
    For a low-sensitivity cell, drop-to-base is nearly free (max byte saving, ~0 flips), so keeping
-   it at L8/L4 only wastes bytes; for a high-sensitivity cell you keep L16. No middle ground pays.
+   it at L8/L4 only wastes bytes; for a high-sensitivity cell you keep L16. No middle ground paid
+   in this instance; a lower-convex-hull allocation over the real `{L16,L8,L4,base}` RD curves is
+   owed before FORMULATION/FAMILY wording.
 4. **Cell-granular drop-to-base IS the RD frontier** (confirms wr1's unit choice as correct). The
    |g|-sum-ordered knee cell_drop50 (359 KB @ 0.003947) dominates the current point by −0.132 on
    seg+rate — a genuine JOINT win on the two terms this rung controls.
@@ -184,5 +188,7 @@ promising re-burn — it can only exceed the −0.132 post-hoc drop. **QA08's re
 - n48 is a subset ranking anchor; the winner cell_drop50 is confirmed at n600 (above). The token
   DOMINATED verdict rests on n48 with large margins + strict domination (robust to n48→n600 drift
   ≈0.7%).
+- The QA07 nested-rung sentence is VS1-regraded to INSTANCE scope: only the measured
+  `{cell_rung_a,b,c}` / SMEVR allocation under the recorded `|g|` ordering is closed.
 - cell_drop50's ordering is seg-only / pose-blind; the composed decision cell (base + pose
   re-solve, and optionally a seg-solve arm) is v4b/v4c's, not this rung's.

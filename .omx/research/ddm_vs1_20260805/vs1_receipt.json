@@ -1,0 +1,116 @@
+{
+  "schema_version": "ddm_vs1_receipt.v1",
+  "date": "2026-08-05",
+  "lane": "VS1",
+  "cost_usd": 0,
+  "scorer_forwards_run": false,
+  "launches_run": false,
+  "score_claim": false,
+  "frontier_line": "S = 0.7539807296911207 @ 357,836 B [macOS-CPU advisory]; contest pointer borrowed/unmoved.",
+  "rows": [
+    {
+      "task_id": 846,
+      "verdict": "DONE_SCOPED_SOURCE_HYGIENE",
+      "summary": "Re-scoped overbroad negative claims: post-hoc pose-value storage is formulation-scoped, exact reversible L3 raster residual storage is formulation-scoped, and GR1 nested-rung/no-middle-ground is instance-scoped.",
+      "edits": [
+        ".omx/research/ddm_gc14_first_descent_20260731.md",
+        ".omx/research/generator_description_crux_synthesis_20260719.md",
+        ".omx/research/ddm_gr1_granularity_rerace_20260730.md",
+        ".omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md",
+        ".omx/research/SPEC_v10_integer_plane_vehicle_20260719.md",
+        ".omx/state/canonical_equations_registry.jsonl"
+      ],
+      "boundary": "No measurement, no score claim; only wording/registry scope corrections."
+    },
+    {
+      "task_id": 839,
+      "verdict": "DONE_NAMING_AND_LIVE_RATE_TAG",
+      "summary": "Separated RESIZE_KERNEL_NULLITY_DOF, CERTIFIED_ZERO_WEIGHT_BLIND_MASK, RANGE_A_COMPLEMENT_RENDER_ENERGY, and COUNTED_PAYLOAD_RATE_CREDIT; only the last is a rate column admissible to waterfill consumers.",
+      "edits": [
+        ".omx/research/ddm_vs1_20260805/SCORER_INVISIBLE_NAMING.md",
+        "src/tac/canonical_equations/ddm_m4_rate_floor_20260723.py",
+        ".omx/research/pantheon_synergy_crux_synthesis_20260728.md"
+      ],
+      "boundary": "No historical sweep beyond live retag and on-touch convention doc."
+    },
+    {
+      "task_id": 890,
+      "verdict": "CLASSIFIED_FROM_REPO_CONTENT",
+      "summary": "The original TaskList row exists only as a bare pending subject in the bridge; PH4 already recorded bounded absence of the detailed three-item content. The consumable PH4 O1/O2/O3 items are classified without scorer work.",
+      "items": [
+        {
+          "item": "O1 blind-set aimed d_pose A/B with bit-identical d_seg positive control",
+          "classification": "SCORER_GATED_QUEUE",
+          "fire_order": "First scorer slot after current holder; run n600 d_pose and d_seg together."
+        },
+        {
+          "item": "O2 byte question for rank-k blind-set correction",
+          "classification": "SCORER_GATED_CONDITIONAL",
+          "fire_order": "After O1 proves aimability; otherwise retire as stale."
+        },
+        {
+          "item": "O3 Q3 visible complement warp pass-through",
+          "classification": "STALE_DONE_SCORER_FREE",
+          "evidence": ".omx/research/ddm_ph4_visible_set_warp_passthrough_cx1_20260803.json sha256 ec850cfd8481b45e8fd1b3e21e53dfbf02bbfd0aef8bb5ea08761c43255449e7"
+        }
+      ],
+      "boundary": "No scorer fired and no missing #890 content fabricated."
+    },
+    {
+      "task_id": 877,
+      "verdict": "STALE_CLOSED_CURRENT_CODE_ALREADY_FIXED",
+      "summary": "Current report consumers parse upstream Final score only as rounded display and recompute canonical score from pose, seg, and rate components.",
+      "evidence": [
+        "experiments/contest_eval.py stores reported_final_score_display_rounded and sets score from score_recomputed_from_components",
+        "src/comma_lab/evaluate.py recomputes current_score from seg, pose, and rate",
+        "src/tac/eval/auth_eval.py best_score prefers computed_score over final_score",
+        "src/tac/tests/test_measurement_integrity.py asserts the rounded display is not canonical"
+      ],
+      "boundary": "No code edit was needed for #877 in this VS1 pass."
+    }
+  ],
+  "recall_evidence": {
+    "sources_searched": [
+      ".omx/tmp/codex_runs/vs1_prompt.md",
+      ".omx/tmp/codex_runs/_common_contract.md",
+      "PROGRAM.md",
+      "CLAUDE.md",
+      "AGENTS.md",
+      "docs/operating_manual_craft_handoff.md",
+      ".omx/state/main_hot_state.md",
+      ".omx/research/ddm_ub1_untagged_verdict_scope_audit_20260801.md",
+      ".omx/research/ddm_ng1_20260805/ng1_negative_results_audit.md",
+      ".omx/research/ddm_mi1_measurement_integrity_20260804.md",
+      ".omx/research/ddm_ph4_physics_photometrics_dynamics_20260803.md",
+      ".omx/research/harness_tasklist_bridge_20260803.jsonl",
+      ".omx/research/ddm_qj1_followon_backlog_join_20260804.json",
+      ".omx/state/canonical_equations_registry.jsonl"
+    ],
+    "queries": [
+      "#846, post-hoc stored corrections, plane-storage, No middle ground pays",
+      "#839, scorer-invisible, ker(A), blind mask, range(A), rate column",
+      "#890, physics vs photometrics, scorer-readout asymmetry, censored, v4c, v4d",
+      "#877, Final score, reported_final_score_display_rounded, score_recomputed_from_components"
+    ],
+    "found_beyond_seeds": [
+      "NG1 had already recorded the #846 negative-results audit, but source wording still needed edits.",
+      "PH4 recorded bounded absence of #890 detailed content and named O1/O2/O3 owed measurements.",
+      "MI1 had already fixed the #877 issue in current code; tests now verify the behavior."
+    ],
+    "changed": [
+      "Overbroad source/registry wording corrected.",
+      "Scorer-invisible naming convention and live rate-credit tag added.",
+      "VS1 receipt artifacts added."
+    ]
+  },
+  "validation": [
+    ".venv/bin/python -m pytest src/tac/canonical_equations/tests/test_ddm_m4_rate_floor_20260723.py src/tac/tests/test_measurement_integrity.py",
+    ".venv/bin/python tools/review_tracker.py mark-file src/tac/canonical_equations/ddm_m4_rate_floor_20260723.py --status reviewed (run twice)",
+    ".venv/bin/python tools/review_tracker.py status | rg -n \"ddm_m4_rate_floor_20260723|canonical_equations/ddm_m4\""
+  ],
+  "next_if_resumed": [
+    "For #890, wait for the scorer slot; fire PH4 O1 before O2.",
+    "For #839, retag old uses on touch using the four canonical names, not a broad sweep.",
+    "For #846, do not cite family/law scope unless a new measurement earns it."
+  ]
+}

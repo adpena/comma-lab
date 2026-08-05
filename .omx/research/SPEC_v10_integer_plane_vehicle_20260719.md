@@ -731,10 +731,13 @@ or labeled DERIVED. Pointer **0.19108 [contest-CPU] UNMOVED**. Pointers to memos
   advisory AND [contest-CPU] Modal Linux x86_64 (fc-01KXXRAR7341QCJ6XWKV4S3QCW). Cross-host determinism of
   the C1 receiver spine PROVEN; inflate **215.8 s / 1800 s** (§6 C1 canonical-full-evaluate receipt now
   satisfied). score_claim=false — rate-dead spine, not a candidate; any compact §5 payload inherits this decode.
-- **(B) Plane-storage family CLOSED** (`v10_ratecrush_phase1_20260719.md`). Exact-plane lossless storage
-  RATE-DEAD at FAMILY scope: 5 codec families within 1.9× of the ~334 KB/pair floor (#541 n48) vs the box —
-  ~700× over. JXL e9 best rung implied S=168.71, KEPT as donor. This retires the §5.1 "store the residual"
-  reading of the intrinsic-complexity cut: the cut must buy STRUCTURE (generator + slack), not per-pixel residual.
+- **(B) Exact reversible L3 raster residual storage CLOSED** (`v10_ratecrush_phase1_20260719.md`,
+  VS1 re-scope 2026-08-05). Exact-plane lossless storage is RATE-DEAD at
+  `FORMULATION:EXACT_REVERSIBLE_L3_RASTER_RESIDUAL_RATE_DEAD` scope: 5 codec families within 1.9×
+  of the ~334 KB/pair floor (#541 n48) vs the box — ~700× over. JXL e9 best rung implied S=168.71,
+  KEPT as donor. This retires the §5.1 "store the residual" reading of the intrinsic-complexity cut:
+  the cut must buy STRUCTURE (generator + slack), not per-pixel residual. It does not close rehomed,
+  layer-typed, generative, or score-quotient plane descriptions.
 - **(C) THE BUDGET BOX** (`generator_description_crux_synthesis_20260719.md` §0; extends §7.1 ceilings).
   S<0.19108 at capstone distortion (pose≈0) ⇒ TOTAL ≤ **264,320 B (440.5 B/pair)**; the HONEST box at the
   MEASURED spine distortions ≤ **~216,300 B (~360 B/pair)**; the box widens toward 264 KB as the residual

@@ -97,8 +97,10 @@ LEVER_POOLS = (
         levers=("ker(A)-hide",),
         relationship="ORTHOGONAL_GEOMETRY_NOT_RATE",
         evidence_scope=(
-            "A null direction is scorer-invisible geometry. It saves archive bytes only "
-            "if a parser-consumed counted payload is actually removed."
+            "COUNTED_PAYLOAD_RATE_CREDIT only: nullity / blind-mask area / "
+            "range(A)-complement energy are scorer-invariant geometry, not a "
+            "priced rate column. Archive-byte credit exists only when a "
+            "parser-consumed counted payload is actually removed."
         ),
     ),
 )

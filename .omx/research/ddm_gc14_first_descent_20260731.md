@@ -329,7 +329,7 @@ Per-class, with fl1 floors as the lower leg and the measured trajectory as the u
 | item | measured/predicted bytes | predicted S benefit | blocker |
 |---|---|---|---|
 | #425 raster leg | **10,682 B** (rate +0.007113) | **NONE BANKED** — `recovered_d_seg = OWED_through_R_n600_AB` | through-R A/B needs trainer render plumbing against the live-run dir |
-| #425 STORE leg (dash δ(s)) | **37,158 B** / 29,958 B excl-ξ | **NONE BANKED** — through-R d_seg OWED | 16.6× over the 0.9–1.8 KB anchor budget; **post-hoc store-apply RULED OUT by law** (`post_hoc_stored_corrections_dead_joint_descent_required_law_20260718`) |
+| #425 STORE leg (dash δ(s)) | **37,158 B** / 29,958 B excl-ξ | **NONE BANKED** — through-R d_seg OWED | 16.6× over the 0.9–1.8 KB anchor budget; **post-hoc pose-value storage without compact code-to-photometry inverse is FORMULATION-scoped dead on the witness vehicle** (`post_hoc_stored_corrections_dead_joint_descent_required_law_20260718` re-scoped by `ddm_ub1`/VS1). This is not a seg/TR1 law and cannot kill a joint-trained store leg. |
 | #535 FiLM flicker sidecar | **2,400 B** int8 (rate +0.00160) | **NONE BANKED** — "No 1–5 KB success claim exists before the exact packer row" | hard `[REQUIRED BEFORE BUILD]`: Fisher-weighted Jacobian spectrum never measured |
 | W1-COH | 12–26 KB all-in (static map 9.7–13.5 KB) | d_seg reach ≤ **0.00167** (all flicker) / 0.00037 (deep tail); B/err 0.075–0.141 vs water 1.273 | **uint8 actuation cost kills the band** (gc8); Bayes-floor preflight owed to Yousfi |
 
@@ -338,7 +338,7 @@ Per-class, with fl1 floors as the lower leg and the measured trajectory as the u
 **Named fire criteria (pre-registered):**
 - **W1-COH actuation** fires iff Test 3 = PIERCE-DOMINANT **AND** the Yousfi flicker-Bayes-floor preflight (owed, $0, from existing W1-COH receipts) returns a floor **below** 0.00167. Otherwise the channel stays HELD — its uint8 actuation cost is already known to kill the break-even band.
 - **#535** fires iff PIERCE-DOMINANT **AND** its `[REQUIRED BEFORE BUILD]` Fisher-spectrum measurement lands first. That measurement is $0 and can run in any quiet slot; **it should be queued regardless of branch**, because it is the cheapest way to convert a never-fired design into a priced one.
-- **#425** stays HELD in both branches. Its store-apply plan is ruled out by standing law, and its train-side leg is not a burn-5-shaped object. Note the recorded caveat that the killing probe was partly a strawman ("the EFFICACY of conditioning + the real coherent codec is UNTESTED") — that is a genuine re-open hook, but it is a *training* re-open, not a carrier re-open, and it should not be conflated with the store leg.
+- **#425** stays HELD in both branches. Its post-hoc pose-value store-apply ancestor is FORMULATION-scoped dead on the witness vehicle, but no standing seg/TR1 law is banked; the train-side leg is not a burn-5-shaped object. Note the recorded caveat that the killing probe was partly a strawman ("the EFFICACY of conditioning + the real coherent codec is UNTESTED") — that is a genuine re-open hook, but it must be tested as joint training / through-R benefit rather than cited as a killed carrier family.
 
 **PR130's mechanism is LESSONS-ONLY** per the no-old-lineage ban. Its 2.966e-4 is cited here **only** as an existence proof that the smooth-label floor is pierceable — never as a vehicle, carrier, or calibration source.
 

@@ -20020,11 +20020,11 @@ AND [contest-CPU] Modal Linux x86_64 (fc-01KXXRAR7341QCJ6XWKV4S3QCW) — BIT-IDE
 determinism of the C1 receiver spine PROVEN; inflate 215.8s/1800s (C1 canonical-full-evaluate receipt
 satisfied). score_claim=false (rate-dead spine, not a candidate); any compact payload inherits this decode.
 
-**B. Plane-storage family CLOSED — exact-plane lossless storage RATE-DEAD at FAMILY scope**
+**B. Exact reversible L3 raster residual storage CLOSED — RATE-DEAD at FORMULATION scope**
 (`v10_ratecrush_phase1_20260719.md`). 5 codec families (brotli/zstd/lzma ranks · JXL · WebP · FFV1 ·
 x264/x265) within 1.9× of the ~334 KB/pair conditional floor (#541 n48) vs the ~286,682 B TOTAL box —
 ~700× over. JXL e9 best rung implied S=168.71, KEPT as donor codec (byte-exact decode wired). temporal
-prediction LOSES (verdict_scope: formulation). verdict_scope: family for the exact-plane storage class. # VERDICT_SCOPE_OK: family kill spans 5 structurally-distinct codec formulations (brotli/zstd/lzma · JXL · WebP · FFV1 · x264/x265) all within 1.9× of the ~334 KB/pair entropy-bound conditional floor (#541 n48) — ≥2 formulations AND an entropy lower bound per req R
+prediction LOSES (verdict_scope: formulation). verdict_scope: `FORMULATION:EXACT_REVERSIBLE_L3_RASTER_RESIDUAL_RATE_DEAD`; VS1 withdraws the prior family wording. Rehomed, layer-typed, generative, and score-quotient plane descriptions remain open unless separately measured.
 
 **C. THE BUDGET BOX (operator derivation, re-verified arithmetically)** (`generator_description_crux_synthesis_20260719.md`
 §0). S<0.19108 at capstone distortion (d_seg 1.52e-4, pose≈0) ⇒ TOTAL ≤ **264,320 B (440.5 B/pair)**;
@@ -20069,9 +20069,11 @@ grammar (power-diagram/generator/temporal), NOT trainer levers; the only DSL sur
 duty A/B config `src/tac/witness_dsl/spec_v9c3_duty_ab_20260719.py` (already committed on MAIN, hashes
 reproduced in F). The DSL SoT therefore holds with zero drift this landing.
 
-**Equations leg (this sync):** appended ONE EmpiricalAnchor `exact_plane_storage_rate_dead_family_20260719`
-to `realization_necessity_preimage_per_stratum_v1` (the rate-dead family verdict B). Budget box: no equation
-(FORMALIZATION_PENDING, cross-ref seg_rate_breakeven_v1). f32 official n600 anchor: already present (G).
+**Equations leg (this sync, VS1 re-scoped 2026-08-05):** the EmpiricalAnchor is now
+`exact_reversible_l3_raster_residual_rate_dead_formulation_20260719` on
+`realization_necessity_preimage_per_stratum_v1` (the exact reversible L3 raster residual formulation,
+not a plane-description family verdict). Budget box: no equation (FORMALIZATION_PENDING, cross-ref
+seg_rate_breakeven_v1). f32 official n600 anchor: already present (G).
 
 **TASKS/ledgers leg:** current on MAIN — cross-ref codex-landing ids #572–#575 (the day's landed arms:
 capstone spine, rate-crush, description-crux, survey/#574 temporal, gauntlet). No ledger edit owed.

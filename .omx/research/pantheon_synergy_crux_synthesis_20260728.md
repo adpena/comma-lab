@@ -260,7 +260,7 @@ receiver-closed generator+coder exists yet (NULL≠0, NO-FAKE #1). Advisory rows
 | **F2 ξ(t) — ego-screw trajectory** | cross-frame temporal factor: 1 keyframe + 1199 ξ-predicted residuals (#574); dual-use (same ξ = pose payload = advection warp = coding context) | ξ-keyed delta coder (#574, strongest UNBUILT rate axis); AR/spline knots; ξ-warp-confidence as CAE context (crosswalk §4b) | BEV D0 SE(3) closure exact ≤3.58e-15 m [MEASURED n600, bev_staticity_v2]. Knot payload bracket 0.3–2 KB [DERIVED]. #574 delta coder **UNBUILT** ⇒ (bytes,ΔS) **NULL**. Caveat: ξ-transport does NOT place boundaries (39–47 px, §2) — ξ is pose+context, not placement |
 | **F3 pose section** | low-rank: rank-2 pose codec (#140, 2.7×); rides F2's ξ (dual-use) | quantization-aware uint8-lattice solve (#532); descent-fit carrier (A3) not storage-shaped | Exact quotient d_pose 1.02e-4 [MEASURED, is1/rd1]; pc2 accept-loop 16/16, joint ΔS **−0.2475** [macOS-CPU advisory exact n600]; storage-shaped floor d_pose 19.9 (p1, FORMULATION-scoped). Byte-closed carrier: **NULL** (existence: PR130 23 KB→2.33e-5 external) |
 | **F4 VOPs — sparse dynamic events** | per-object separable planes (Movable band + transients + lane birth/death tokens); Morse-persistence-ranked | latent-structure-induced (dedup/AR-codeable #110); event grammar (#620) | Movable = **27.0%** of flip mass, transients **1.19%** [MEASURED n600, G4]; cell-space Movable field 1,533 B (row above). Realized VOP price: **NULL** |
-| **F5 gauge/null split** | range(A) counted ⊕ ker(A) FREE — put maximal description mass in the scorer-invisible fiber | gauge-fixed canonical low-entropy representative (PDW2 #553); the free fiber costs 0 S by construction | ker(A) ≈ **52%** of head-norm is rate-neutral / scorer-invisible (dense-int8; precision 22%) [MEASURED, null_subspace_rate_measure_20260717]. This is a **design multiplier on every other factor**: ~half of F1–F4's representational DOF can live free |
+| **F5 gauge/null split** | range(A) canonicalization ⊕ ker(A) gauge; put representation mass in a canonical low-entropy scorer-equivalence fiber before coding | `COUNTED_PAYLOAD_RATE_CREDIT` only: gauge-fixed representative can save bytes only when a parser-consumed counted payload is removed; nullity / blind-mask area / range(A)-complement energy are not priced bytes by themselves | range(A)-complement head-norm energy ≈ **52%** [MEASURED, null_subspace_rate_measure_20260717] is a precision/gauge signal, not a rate column. Live priced instance is **zero credit until coder bytes are actually removed** (VS1 #839 retag). |
 | **F6 residual syndrome** | context-coded flip corrections where F1–F4 miss | coder-in-the-loop (Brotli-Q11/LZMA1/arithmetic INSIDE the objective, not post-hoc); real-coder H not entropy proxy | Sized by **H(flip-field \| free decoder context)** — the tier-moving scalar, **UNMEASURED** (405.5 B/err is a channel upper bound; boundary-distance entropy proxy REJECTED, 192,417 B WORSE than context-free [MEASURED, G4]). (bytes,ΔS) **NULL** |
 
 ### Whole-object compactness moves already MEASURED (compound onto any export, born from the solve)
@@ -284,8 +284,9 @@ receiver-closed generator+coder exists yet (NULL≠0, NO-FAKE #1). Advisory rows
 
 ### The design contract (what family-(d)'s confirming build MUST honor)
 
-1. Optimize over W = F1⊕F2⊕F3⊕F4 with the **F5 gauge-split applied first** (route ~52% of DOF
-   into ker(A) free) and **F6 as the priced remainder**.
+1. Optimize over W = F1⊕F2⊕F3⊕F4 with the **F5 gauge-split applied first** (canonicalize the
+   scorer-equivalence fiber before coding); admit rate credit only as `COUNTED_PAYLOAD_RATE_CREDIT`
+   after parser-consumed payload bytes are removed, with **F6 as the priced remainder**.
 2. **Coder-in-the-loss** (F6 mechanism) is non-negotiable: MDL two-part objective (#602/#620),
    real Brotli-Q11/LZMA1 bytes as the rate term, uint8-lattice (#532) so quantized values are
    born cheap.
