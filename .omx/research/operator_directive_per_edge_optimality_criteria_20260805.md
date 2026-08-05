@@ -117,6 +117,32 @@ and since."
   tj1's per-pair adaptive stopping (makes the n600 solve tractable — most pairs stop early,
   the tail gets the steps).
 
+## Operator addendum 5 (2026-08-05, verbatim intent): "Those implementations might have been
+slightly naive or toy or [generic] basis or not informed by all of the information, research,
+and signal, and telemetry, and everything we have — were not surgically targeted enough at
+frames or pairs or certain classes or edges or boundaries or even specific ones."
+- **THE SURGICAL-FORM LAW (binding, extends OPTIMAL-FORM to the targeting axis)**: a negative
+  measured on a GENERIC/untargeted implementation closes NOTHING beyond RECIPE scope. Before
+  any dispatch whose verdict could close a route, the implementation MUST consume the
+  targeting corpus we already hold: g3 score atlas (hard-pair tail) · g4 flip-frequency map
+  (per-pixel across n600, per stratum) · m91/pc2 per-edge decomposition (Road↔Lane = 49.2% of
+  flips) · #141 margin-saliency map · fl1 per-class flicker floors · the frozen scorer's OWN
+  flip set as the training/eval target — aimed at SPECIFIC frames, pairs, classes, edges,
+  boundaries, even individual instances. Generic-corpus training graded against a surgical
+  target is a category error, not a measurement.
+- **RE-GRADES under this law (2026-08-05)**:
+  (a) cq2r tiny-student → RECIPE-scoped (generic comma10k recipe, no lane weighting → Lane IoU
+  0.000 = majority-class collapse, never aimed at the flip set → overlap 0/8,670 is the
+  recipe's failure not the family's; the >1.0 break-even kill is SIZE-scoped at ≥124,765 B —
+  a band-only/edge-only surgical student lives in a different size class entirely).
+  (b) pe4 conditional transport → FORMULATION-scoped (per-track stream-SPLIT selector destroys
+  cross-track coder context, the exact #859 LZ-match-structure mechanism; the untested
+  reformulation = ONE stream + transport-prediction as a coding CONTEXT — adds information
+  without splitting).
+- Sisters: OPTIMAL-FORM before dispatch (CLAUDE.md #315) · #307 implementation-vs-paradigm ·
+  the a1 naive-verdict audit · m83 rich-problem reframe · addendum 3's all-signal law (these
+  negatives are decomposition fuel — the re-grades ARE the decomposition).
+
 ## Measured anchors at issue time
 bf1 winner (rl1 Lane crop, full band): 205,196 B @ 1.109 bits/band-px, recall 1.0.
 Per-edge currency (#916): 0.60 bits/band-px → the per-edge partition projects ~45% below the
