@@ -67,6 +67,24 @@ all related and other helpful techniques and research, also the agent has full r
   straightness (#307 lineage), MPEG-4 CAE, subdivision/spline curve coding, anything that
   serves the five criteria). Scorer slot discipline and all fail-closed gates UNCHANGED.
 
+## Operator addendum 3 (verbatim): "We can also always use hybrid implementations and also
+different at different dimensions and levels, And also, we should always use all signal,
+especially in negative or partial positive or even promising positive as means for
+decomposition and further iteration and optimization."
+- **HYBRID / PER-LEVEL law**: never force one representation to win everywhere — compose the
+  measured per-regime winners (pe1 PROVED the split: falls-out generator-pair wins SURGICAL,
+  explicit-curve wins FULL coverage; #308 grids-for-bulk + INR-for-annulus; m95 level-is-
+  per-role; #503 recursive-fractal optimal-per-dimension + composition law). The hybrid also
+  applies PER AXIS: e.g. transport where transport pays, independent coding where it doesn't
+  (a subset-conditional hybrid on the temporal axis).
+- **ALL-SIGNAL DECOMPOSITION law**: every result — negative, partial positive, promising
+  positive — is DECOMPOSITION FUEL, never a terminal verdict. Aggregates hide subsets (m82):
+  pe1's ξ-transport 0.899 is an AGGREGATE over 5,164 tracks — decompose per-track; the
+  g4-static subset may transport while transients don't. Recall 0.984's missing 1.6% and the
+  surgical 80.73%'s missing 19.27% decompose into the NEXT iteration's targets. WINS decompose
+  too (the kt1 matrix's row-7 gap confirmed): sweep each win's class, don't bank it
+  instance-only. Sisters: m48 NEG↔CURE · L8 negatives=signal · m83 rich-problem reframe.
+
 ## Measured anchors at issue time
 bf1 winner (rl1 Lane crop, full band): 205,196 B @ 1.109 bits/band-px, recall 1.0.
 Per-edge currency (#916): 0.60 bits/band-px → the per-edge partition projects ~45% below the
