@@ -463,3 +463,49 @@ contribution target). No Case A/B/C fires. **VERDICT: CONTINUE — fire the seal
 confirmed by the numbers. Watch item for the jd4 window: slow-EMA warmup ends ~ep1466 and
 τ=30 ep — the endpoint at ep1526 gives the shadow only ~2τ of maturity past warmup; gates read
 LIVE throughout (policy), and the endpoint probe must again measure BOTH bases.
+
+## CYCLE-2 ROUND 2 DISPOSITION + JD4 FIRE RECORD (MAIN, 2026-08-05 ~16:2xZ)
+
+**Round 2 (fresh-eyes rr1): ONE MEDIUM (RR1-C2-R2-F1)** — the n600 both-bases receipt's embedded
+`axis` field carried the copied instrument's "36 gd1-designed gate pairs" literal while the
+measurement is n600 (denominator-label defect, misleading-name genus; MAIN-authored variant).
+Values unaffected; the tp1 adjudication section had already labeled the numbers n600 correctly.
+Dispositions, all landed: (a) arm's non-mutating correction manifest
+(.omx/research/ddm_rr1_20260805/jd3_endpoint_n600_axis_correction.json; raw SSD receipt bytes
+untouched per append-only); (b) CLASS FIX at source 6e4a6e24fe — the committed instrument's axis
+label is now DERIVED from GATE_PAIR_IDS (literal cannot lie; a variant that swaps in range(600)
+self-labels "all 600 pair ids"); future endpoint probes derive from the FIXED committed source,
+never the stale SSD/scratch copies. Cycle-2 counter honestly 0/3 (arm reset); the finding was
+NOT against the jd4 landing.
+
+### FIRE-GATE ADJUDICATION (explicit, no silent weakening)
+
+The committed gate: "fires only after (a) probe receipt + endpoint adjudication AND (b) the
+review clears the LANDING." (a) satisfied (receipt complete + CONTINUE verdict above). (b): TWO
+independent examinations of the jd4 landing (MAIN round 1 + fresh-eyes round 2, which read the
+ticket fields, trainer/regenerator source, and probe artifacts) produced ZERO findings against
+the landing itself; the sole finding was instrument-label, cured at class level. The LANDING is
+adjudicated CLEAR; the cycle-2 seal (3 clean passes over ALL artifacts) continues in parallel
+and does NOT gate the fire under the committed wording.
+
+### THE FIRE (2026-08-05 ~16:25Z)
+
+Custody verified at fire time: ticket file sha a22783a9340c…, ticket_hash 51c64222b432…,
+argv_len 118, reaper cmdline sweep CLEAN. Fired via tools/launch_detached_process.py (the same
+governed path as the v3 window; launch_tr1_run.py REFUSES the jd1 ticket schema — expected,
+recorded): pid 90157, out-dir tr1_jd4_cont_ep1406, mainlaunch jd4_cont_mainlaunch, done-receipt
+jd4_cont_ep1406, wall cap 165 min for 120 ep (1406→1526).
+
+**LIVE VERIFICATION of the R4 cure (telemetry, first minute):**
+- `jd1_force_resume_epoch_reanchor`: forced_start=1406, legacy=1407, tail_last=1405 — tail-derived
+  start under the force flag, exactly the Round-1 arithmetic.
+- `jd1_stage_ema_reanchor`: `active_ema_decay=0.9997777777777778`, provenance "U=18000 → 0.999778;
+  ceiling 1−2/U=0.999889, no constant clamp", `ema_warmup_updates=9000` — the carried smoke decay
+  (0.99667, visible in the resume row's historical sub-dict) is SUPERSEDED in-window. The
+  cross-regime constant-transfer genus instance #4 is cured IN THE FIRING RUN, not just in tests.
+
+Endpoint obligations (bind at ~ep1526 / wall-cap / typed exit): both-bases n600 endpoint probe
+from the FIXED committed instrument (never the stale copies) · plateau policy Cases 0/A/B/C ·
+gates read LIVE through warmup (ends ~ep1466; shadow ~2τ mature by ep1526) · dynamic-EMA A/B
+(fixed 1−4/U vs plateau-anchored tail average) queued as the next-window decision per the
+operator's dynamic-EMA question.
