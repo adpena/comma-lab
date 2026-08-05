@@ -41,3 +41,16 @@ missing stage-3 machinery. BUILD = ddm_jd1 (queued rank-1): in-loop pose loss +
 ticket; fires a joint-finish window from the seg bank at the TP1 boundary.
 
 S = 0.7539807296911207 @ 357,836 B [macOS-CPU advisory]; contest pointer borrowed/unmoved.
+
+## AMENDMENT (operator ×2, same day): RECURSION — the pipeline is a LOOP, and encode passes are free
+The three stages above are ONE ROUND, not the pipeline. Curriculum principle + encode-
+time freedom (unlimited compress-time passes; only decode ≤30min + archive bytes are
+budgeted) ⇒ the pipeline is RECURSIVE: seg-solve → constrain → joint-descent → RE-SOLVE
+on the improved base → … with event-driven continuation (derived threshold), per-round
+byte-closeable checkpoints (N candidate rows from one recursion). Machinery already in-
+tree: #339 stage-repetition curriculum DSL · #688 DDMEventContinuationV1 · #344 NCDE
+detector · v17/rd1/ms2 alternation-continuation precedents. jd1's charter amended pre-
+spawn to build the LOOP, not a one-shot window. The v19b measured +0.0805 correction
+synergy is the existence proof that re-passing on an improved base re-opens headroom.
+
+S = 0.7539807296911207 @ 357,836 B [macOS-CPU advisory]; contest pointer borrowed/unmoved.
