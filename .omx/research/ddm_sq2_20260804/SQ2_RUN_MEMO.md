@@ -52,6 +52,33 @@ Argparse verified before launch: every flag above exists on `experiments/ddm_sq1
 - 25-step aggregate: `eta_net_pooled=0.7895095948827292`; no explicit convergence stop reason.
 - 50-step aggregate: `eta_net_pooled=0.8620042643923241`; cap census 31/32 `iteration_cap_best_at_cap`, 1/32 `iteration_cap_before_plateau`; pose mean after `0.04925062965230609` on the selected subset.
 
+## RECALL EVIDENCE
+
+Searches run for this sq2 verification pass:
+
+- `rg -n "sq1|sq2|ddm_sq1|solved-paint|solved paint|stage_decomposition|CONVERGED-STOP|qo1|m46|jd5|R8 guard|pose bank" /Users/adpena/.codex/memories/MEMORY.md`
+- `rg -n "sq1|sq2|#935|solved-paint|solved paint|stage_n32_uncap|uncap100|eta|iteration_cap|converged|sq1_aggregate|ddm_sq2" .omx/research experiments reports docs .ralph`
+- `rg -n "sq1|sq2|#935|uncap100|solved-paint|solved paint|eta_net_pooled|R8|pose-bank" .omx/research/ddm_sq2_20260804 .omx/research/scorer_batch_20260804.md .omx/state/main_hot_state.md .omx/research/CANONICAL_RESEARCH_INDEX* .omx/research/sub015_DAG_*`
+- `.venv/bin/python tools/list_canonical_equations.py --json`, filtered to `trajectory_derived_stopping_law_v1`
+- `rg -n "#935|sq1|sq2|solved-paint|solved paint" .omx/state .omx/research/harness_tasklist_bridge_20260803.jsonl .omx/state/canonical_task_status.jsonl`
+- `sed -n '1,14p' .omx/state/active_lane_dispatch_claims.md`
+
+Findings beyond the charter seeds:
+
+- `.omx/state/canonical_task_status.jsonl` records the source-verified sm1 correction: the original 25-step sq1 receipt had `{'dec@25': 31, 'dec@20': 1}` and `truth` start won 0/32, so the multi-start rider was unmeasured for the sq1 headline; it also established under-convergence as a live owed item.
+- `.omx/state/canonical_equations_registry.jsonl` now includes `trajectory_derived_stopping_law_v1`, whose scope explicitly excludes using an iteration cap as a convergence certificate. That confirms the sq2 uncap100 result is a higher floor, not a converged stop.
+- `.omx/state/active_lane_dispatch_claims.md` records sl2 as completed bounded n32 SQ2 persisted-frame + terminal-pose work only, with no full-n600/evaluate.py/archive claim. It does not satisfy this charter's n600 promotion gate and does not conflict with this receipt.
+- `.omx/state/main_hot_state.md` still carries sq1/sq2 as a scorer-gated route and separately records the later sl2 n32 result as non-promotable bounded work. No direct sq2-specific stronger completion was found in the searched canonical index/DAG scope beyond this memo, the gate JSON, scorer batch append, and the sl2 bounded n32 receipt.
+
+Plan change from recall: do not treat `iteration_cap_*` rows as convergence; do not fire n600 while the R8 pose guard fails; keep the only follow-on as a queued 200-step floor rung with an explicit aggregate-and-R8 gate before any receiver-closed n600 spend.
+
+## 2026-08-05 Resume Verification
+
+- MEASURED: the charter stage command was re-executed with `--resume`; it reported `32 rows on disk, 0 remaining` and left the stage receipt hash unchanged at `dc7ecfe5c1578cc6a7f2668c070f04251b7e570a3e288d2789364d4e8ecead0b`.
+- MEASURED: the aggregate command was re-executed and reproduced the existing aggregate hash `f6d5ef091fd574d34fbc06cf4230c13a4b1654db94600b6fcf822d221f1c113a`.
+- MEASURED aggregate values after rerun: eta `0.9112579957356077`; stop census 21/32 `iteration_cap_best_at_cap`, 11/32 `iteration_cap_before_plateau`, 0/32 converged; solved-paint subset mean d_pose `0.07768548923741037`.
+- DERIVED: the gate disposition remains unchanged: no receiver-closed n600 build and no full-n600 scorer row because the receipt is still cap-class and the R8 pose-bank erosion remains `+0.7968937215422536` vs the `+0.005` allowance.
+
 ## Next If Resumed
 
 The uncap100 run completed and aggregated. Result: higher floor, not convergence.
