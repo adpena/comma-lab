@@ -1,0 +1,2691 @@
+{
+  "axis": "[macOS-CPU frozen-scorer n32 advisory]",
+  "baseline_qo1_n32": {
+    "rows": [
+      {
+        "d_pose": 0.0003892929817084223,
+        "flips": 732,
+        "pair": 8
+      },
+      {
+        "d_pose": 0.0003203082305844873,
+        "flips": 781,
+        "pair": 32
+      },
+      {
+        "d_pose": 7.58303576731123e-05,
+        "flips": 689,
+        "pair": 46
+      },
+      {
+        "d_pose": 0.0004332523967605084,
+        "flips": 834,
+        "pair": 57
+      },
+      {
+        "d_pose": 0.0004691094218287617,
+        "flips": 1408,
+        "pair": 70
+      },
+      {
+        "d_pose": 0.0012929423246532679,
+        "flips": 853,
+        "pair": 107
+      },
+      {
+        "d_pose": 0.0017715349094942212,
+        "flips": 897,
+        "pair": 112
+      },
+      {
+        "d_pose": 0.002261098939925432,
+        "flips": 734,
+        "pair": 119
+      },
+      {
+        "d_pose": 0.0018312218599021435,
+        "flips": 827,
+        "pair": 148
+      },
+      {
+        "d_pose": 0.0004992280737496912,
+        "flips": 962,
+        "pair": 154
+      },
+      {
+        "d_pose": 0.0009603847865946591,
+        "flips": 828,
+        "pair": 168
+      },
+      {
+        "d_pose": 0.0025681934785097837,
+        "flips": 838,
+        "pair": 198
+      },
+      {
+        "d_pose": 0.00023785697703715414,
+        "flips": 714,
+        "pair": 225
+      },
+      {
+        "d_pose": 0.0002604630426503718,
+        "flips": 767,
+        "pair": 234
+      },
+      {
+        "d_pose": 0.000712953566107899,
+        "flips": 684,
+        "pair": 244
+      },
+      {
+        "d_pose": 6.345198926283047e-05,
+        "flips": 922,
+        "pair": 251
+      },
+      {
+        "d_pose": 0.0011600544676184654,
+        "flips": 910,
+        "pair": 284
+      },
+      {
+        "d_pose": 0.0009327156003564596,
+        "flips": 748,
+        "pair": 328
+      },
+      {
+        "d_pose": 0.001253719674423337,
+        "flips": 652,
+        "pair": 336
+      },
+      {
+        "d_pose": 0.000300292536849156,
+        "flips": 686,
+        "pair": 349
+      },
+      {
+        "d_pose": 0.00012433451774995774,
+        "flips": 781,
+        "pair": 383
+      },
+      {
+        "d_pose": 0.0006771527114324272,
+        "flips": 819,
+        "pair": 399
+      },
+      {
+        "d_pose": 0.001142296358011663,
+        "flips": 786,
+        "pair": 411
+      },
+      {
+        "d_pose": 0.0018699754728004336,
+        "flips": 814,
+        "pair": 423
+      },
+      {
+        "d_pose": 0.001295599271543324,
+        "flips": 734,
+        "pair": 445
+      },
+      {
+        "d_pose": 0.00029971907497383654,
+        "flips": 945,
+        "pair": 465
+      },
+      {
+        "d_pose": 0.0008590403595007956,
+        "flips": 848,
+        "pair": 481
+      },
+      {
+        "d_pose": 0.0005849204608239233,
+        "flips": 1307,
+        "pair": 516
+      },
+      {
+        "d_pose": 0.00021340999228414148,
+        "flips": 908,
+        "pair": 536
+      },
+      {
+        "d_pose": 0.00014723741333000362,
+        "flips": 847,
+        "pair": 561
+      },
+      {
+        "d_pose": 3.4193293686257675e-05,
+        "flips": 993,
+        "pair": 582
+      },
+      {
+        "d_pose": 0.0006039294530637562,
+        "flips": 1002,
+        "pair": 583
+      }
+    ],
+    "totals": {
+      "d_pose_mean": 0.0008014285623403339,
+      "flips": 27250,
+      "pairs": 32,
+      "pose_contribution_sqrt10": 0.08952254254322393,
+      "wall_seconds": 37.27824524976313
+    }
+  },
+  "best_mode": {
+    "best_coder": {
+      "bytes": 20895,
+      "codec": "brotli-q11",
+      "coder_id": 2,
+      "parseback_exact": true,
+      "sha256": "a09514e4270b9703e0fd50d0aeaa01e616bbde0988dae4e0da25c47770163a65"
+    },
+    "candidate_archive_bytes": 460585,
+    "coder_race": [
+      {
+        "bytes": 29038,
+        "codec": "raw",
+        "coder_id": 0,
+        "parseback_exact": true,
+        "sha256": "49d2c3ea67d51b85668e8af5534411b52f446fc2ed66c41a7008d05bf5fca116"
+      },
+      {
+        "bytes": 21446,
+        "codec": "lzma1-raw",
+        "coder_id": 1,
+        "parseback_exact": true,
+        "sha256": "b256eb66ea864413fc3c08fa1fc6b44ae4d31d8f6f4d9a8c9a2c2f03d19b8529"
+      },
+      {
+        "bytes": 20895,
+        "codec": "brotli-q11",
+        "coder_id": 2,
+        "parseback_exact": true,
+        "sha256": "a09514e4270b9703e0fd50d0aeaa01e616bbde0988dae4e0da25c47770163a65"
+      }
+    ],
+    "mode": "sparse_gt_rgb",
+    "projection": {
+      "archive_bytes_exact_staged": 460585,
+      "beats_live_advisory": false,
+      "beats_od6_projection": false,
+      "delta_vs_live": 0.3135313206026302,
+      "delta_vs_od6_mask_projection": 0.3239112797598852,
+      "n_pairs": 32,
+      "pose_delta_s_vs_qo1_n32": 0.23030123798010316,
+      "projected_s": 1.067512050293751,
+      "projection_axis": "[macOS-CPU frozen-scorer n32 advisory]",
+      "rate_delta_s_vs_live_archive_bytes": 0.06841634157434999,
+      "stage1_delta_s_from_n32": 0.014813741048177084
+    },
+    "score": {
+      "mode": "sparse_gt_rgb",
+      "rows": [
+        {
+          "changed_camera_pixels_f1": 580,
+          "d_pose": 0.0005323353689163923,
+          "flips_after": 800,
+          "flips_before": 732,
+          "pair": 8,
+          "retained_fix_count": -68,
+          "selected_records": 145
+        },
+        {
+          "changed_camera_pixels_f1": 584,
+          "d_pose": 0.03197203949093819,
+          "flips_after": 805,
+          "flips_before": 781,
+          "pair": 32,
+          "retained_fix_count": -24,
+          "selected_records": 146
+        },
+        {
+          "changed_camera_pixels_f1": 664,
+          "d_pose": 0.00010136677883565426,
+          "flips_after": 812,
+          "flips_before": 689,
+          "pair": 46,
+          "retained_fix_count": -123,
+          "selected_records": 166
+        },
+        {
+          "changed_camera_pixels_f1": 1124,
+          "d_pose": 0.0035091207828372717,
+          "flips_after": 882,
+          "flips_before": 834,
+          "pair": 57,
+          "retained_fix_count": -48,
+          "selected_records": 281
+        },
+        {
+          "changed_camera_pixels_f1": 1016,
+          "d_pose": 0.0008401757222600281,
+          "flips_after": 1419,
+          "flips_before": 1408,
+          "pair": 70,
+          "retained_fix_count": -11,
+          "selected_records": 254
+        },
+        {
+          "changed_camera_pixels_f1": 708,
+          "d_pose": 0.01907394826412201,
+          "flips_after": 882,
+          "flips_before": 853,
+          "pair": 107,
+          "retained_fix_count": -29,
+          "selected_records": 177
+        },
+        {
+          "changed_camera_pixels_f1": 636,
+          "d_pose": 0.0018337159417569637,
+          "flips_after": 901,
+          "flips_before": 897,
+          "pair": 112,
+          "retained_fix_count": -4,
+          "selected_records": 159
+        },
+        {
+          "changed_camera_pixels_f1": 744,
+          "d_pose": 0.00325908069498837,
+          "flips_after": 724,
+          "flips_before": 734,
+          "pair": 119,
+          "retained_fix_count": 10,
+          "selected_records": 186
+        },
+        {
+          "changed_camera_pixels_f1": 628,
+          "d_pose": 0.01848108507692814,
+          "flips_after": 815,
+          "flips_before": 827,
+          "pair": 148,
+          "retained_fix_count": 12,
+          "selected_records": 157
+        },
+        {
+          "changed_camera_pixels_f1": 1028,
+          "d_pose": 0.0005062557174824178,
+          "flips_after": 1012,
+          "flips_before": 962,
+          "pair": 154,
+          "retained_fix_count": -50,
+          "selected_records": 257
+        },
+        {
+          "changed_camera_pixels_f1": 816,
+          "d_pose": 0.023933090269565582,
+          "flips_after": 850,
+          "flips_before": 828,
+          "pair": 168,
+          "retained_fix_count": -22,
+          "selected_records": 204
+        },
+        {
+          "changed_camera_pixels_f1": 528,
+          "d_pose": 0.0033541705925017595,
+          "flips_after": 923,
+          "flips_before": 838,
+          "pair": 198,
+          "retained_fix_count": -85,
+          "selected_records": 132
+        },
+        {
+          "changed_camera_pixels_f1": 328,
+          "d_pose": 0.0002366507687838748,
+          "flips_after": 726,
+          "flips_before": 714,
+          "pair": 225,
+          "retained_fix_count": -12,
+          "selected_records": 82
+        },
+        {
+          "changed_camera_pixels_f1": 648,
+          "d_pose": 0.005237777251750231,
+          "flips_after": 754,
+          "flips_before": 767,
+          "pair": 234,
+          "retained_fix_count": 13,
+          "selected_records": 162
+        },
+        {
+          "changed_camera_pixels_f1": 728,
+          "d_pose": 0.010535362176597118,
+          "flips_after": 607,
+          "flips_before": 684,
+          "pair": 244,
+          "retained_fix_count": 77,
+          "selected_records": 182
+        },
+        {
+          "changed_camera_pixels_f1": 1020,
+          "d_pose": 0.023292014375329018,
+          "flips_after": 833,
+          "flips_before": 922,
+          "pair": 251,
+          "retained_fix_count": 89,
+          "selected_records": 255
+        },
+        {
+          "changed_camera_pixels_f1": 948,
+          "d_pose": 0.006272990722209215,
+          "flips_after": 1050,
+          "flips_before": 910,
+          "pair": 284,
+          "retained_fix_count": -140,
+          "selected_records": 237
+        },
+        {
+          "changed_camera_pixels_f1": 776,
+          "d_pose": 0.001794756855815649,
+          "flips_after": 782,
+          "flips_before": 748,
+          "pair": 328,
+          "retained_fix_count": -34,
+          "selected_records": 194
+        },
+        {
+          "changed_camera_pixels_f1": 640,
+          "d_pose": 0.00128720432985574,
+          "flips_after": 697,
+          "flips_before": 652,
+          "pair": 336,
+          "retained_fix_count": -45,
+          "selected_records": 160
+        },
+        {
+          "changed_camera_pixels_f1": 512,
+          "d_pose": 0.00046063834452070296,
+          "flips_after": 799,
+          "flips_before": 686,
+          "pair": 349,
+          "retained_fix_count": -113,
+          "selected_records": 128
+        },
+        {
+          "changed_camera_pixels_f1": 804,
+          "d_pose": 0.008508537895977497,
+          "flips_after": 743,
+          "flips_before": 781,
+          "pair": 383,
+          "retained_fix_count": 38,
+          "selected_records": 201
+        },
+        {
+          "changed_camera_pixels_f1": 840,
+          "d_pose": 0.001035365741699934,
+          "flips_after": 855,
+          "flips_before": 819,
+          "pair": 399,
+          "retained_fix_count": -36,
+          "selected_records": 210
+        },
+        {
+          "changed_camera_pixels_f1": 900,
+          "d_pose": 0.04158548638224602,
+          "flips_after": 743,
+          "flips_before": 786,
+          "pair": 411,
+          "retained_fix_count": 43,
+          "selected_records": 225
+        },
+        {
+          "changed_camera_pixels_f1": 796,
+          "d_pose": 0.0019575112964957952,
+          "flips_after": 854,
+          "flips_before": 814,
+          "pair": 423,
+          "retained_fix_count": -40,
+          "selected_records": 199
+        },
+        {
+          "changed_camera_pixels_f1": 660,
+          "d_pose": 0.04125025123357773,
+          "flips_after": 819,
+          "flips_before": 734,
+          "pair": 445,
+          "retained_fix_count": -85,
+          "selected_records": 165
+        },
+        {
+          "changed_camera_pixels_f1": 916,
+          "d_pose": 0.010889395140111446,
+          "flips_after": 1016,
+          "flips_before": 945,
+          "pair": 465,
+          "retained_fix_count": -71,
+          "selected_records": 229
+        },
+        {
+          "changed_camera_pixels_f1": 596,
+          "d_pose": 0.05715281888842583,
+          "flips_after": 955,
+          "flips_before": 848,
+          "pair": 481,
+          "retained_fix_count": -107,
+          "selected_records": 149
+        },
+        {
+          "changed_camera_pixels_f1": 1292,
+          "d_pose": 0.0007402652408927679,
+          "flips_after": 1186,
+          "flips_before": 1307,
+          "pair": 516,
+          "retained_fix_count": 121,
+          "selected_records": 323
+        },
+        {
+          "changed_camera_pixels_f1": 592,
+          "d_pose": 0.002193633234128356,
+          "flips_after": 943,
+          "flips_before": 908,
+          "pair": 536,
+          "retained_fix_count": -35,
+          "selected_records": 148
+        },
+        {
+          "changed_camera_pixels_f1": 704,
+          "d_pose": 0.0008591121877543628,
+          "flips_after": 923,
+          "flips_before": 847,
+          "pair": 561,
+          "retained_fix_count": -76,
+          "selected_records": 176
+        },
+        {
+          "changed_camera_pixels_f1": 932,
+          "d_pose": 0.003714185208082199,
+          "flips_after": 1064,
+          "flips_before": 993,
+          "pair": 582,
+          "retained_fix_count": -71,
+          "selected_records": 233
+        },
+        {
+          "changed_camera_pixels_f1": 756,
+          "d_pose": 0.0009188599069602787,
+          "flips_after": 1008,
+          "flips_before": 1002,
+          "pair": 583,
+          "retained_fix_count": -6,
+          "selected_records": 189
+        }
+      ],
+      "totals": {
+        "changed_camera_pixels_f1": 24444,
+        "d_pose_mean": 0.01022872505882333,
+        "eta_vs_od2_n_described": -0.08365496813571492,
+        "flips_after": 28182,
+        "flips_before": 27250,
+        "pairs": 32,
+        "pose_contribution_sqrt10": 0.3198237805233271,
+        "retained_fix_count": -932,
+        "selected_records": 6111,
+        "wall_seconds": 38.65973512502387
+      }
+    },
+    "section": {
+      "coder_id": 2,
+      "exception_count": 0,
+      "mode": "sparse_gt_rgb",
+      "mode_id": 1,
+      "pairs_with_records": 32,
+      "raw_bytes": 29038,
+      "raw_sha256": "49d2c3ea67d51b85668e8af5534411b52f446fc2ed66c41a7008d05bf5fca116",
+      "record_count": 6111,
+      "schema": "ddm_od7_sparse_rgb_section.v1",
+      "section_bytes": 20987,
+      "section_sha256": "827d0b8a1d1e468059d9a1b50270422b87ee62a40552bd77b74d38cab07a829d",
+      "source_od6_packet_sha256": "52bd534cea34578bb8d76fb079befa951d26f914347bd51b7078c398e2ff6e2a"
+    }
+  },
+  "boundaries": [
+    "No upstream/evaluate.py, contest CPU/CUDA, MPS, or full n600 scorer job.",
+    "n32 selected-set value materialization only; full n600 values are not present.",
+    "OD6 packet self-contained targeter recomputation remains blocked by missing coverage columns.",
+    "OD2 k4 carriage coefficients were not available in the OD2 JSON and were not re-applied."
+  ],
+  "candidate": {
+    "archive_0_bin": {
+      "bytes": 460477,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od7_20260805/run_20260805T_od7_codex/sub_od7/archive/0.bin",
+      "sha256": "8dece89fa7cb13a6fde6602a8d5d37944f1d58cbf28135b1ea46382707959ac9"
+    },
+    "archive_zip": {
+      "bytes": 460585,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od7_20260805/run_20260805T_od7_codex/sub_od7/archive.zip",
+      "sha256": "f2b8f4392e2642c2e3f7fb892815b2f59248242e31b26d568fc5a849543c497c"
+    },
+    "inflate_runner": {
+      "bytes": 59308,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od7_20260805/run_20260805T_od7_codex/sub_od7/inflate_runner.py",
+      "sha256": "0299cad26eca4b5f2bc94514cf644c01c007090bbcf224b5156ddd85ec1cad99"
+    },
+    "parse_back": {
+      "appended_od6_packet_index": 6,
+      "appended_od6_packet_sha256": "52bd534cea34578bb8d76fb079befa951d26f914347bd51b7078c398e2ff6e2a",
+      "appended_od7_section_index": 7,
+      "appended_od7_section_sha256": "827d0b8a1d1e468059d9a1b50270422b87ee62a40552bd77b74d38cab07a829d",
+      "bulk_bytes": 341295,
+      "joint_section_count": 8,
+      "payload_reencodes_identically": true
+    },
+    "submission_dir": "/Volumes/VertigoDataTier/pact/ddm_od7_20260805/run_20260805T_od7_codex/sub_od7"
+  },
+  "candidate_rows_before_final_copy": [
+    {
+      "candidate": {
+        "archive_0_bin": {
+          "bytes": 445142,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_od7_20260805/run_20260805T_od7_codex/stage_fixed_proto/sub_od7/archive/0.bin",
+          "sha256": "8b1381f5c93f5e1bce9a0ada1bd3b997066461b453c3d57bc5cb8eb472aa2ff2"
+        },
+        "archive_zip": {
+          "bytes": 445250,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_od7_20260805/run_20260805T_od7_codex/stage_fixed_proto/sub_od7/archive.zip",
+          "sha256": "39f2cbec9f36e398c019e11c5a73d2745de3e6c31c7bdc5f4e913faa91b14556"
+        },
+        "inflate_runner": {
+          "bytes": 59308,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_od7_20260805/run_20260805T_od7_codex/stage_fixed_proto/sub_od7/inflate_runner.py",
+          "sha256": "0299cad26eca4b5f2bc94514cf644c01c007090bbcf224b5156ddd85ec1cad99"
+        },
+        "parse_back": {
+          "appended_od6_packet_index": 6,
+          "appended_od6_packet_sha256": "52bd534cea34578bb8d76fb079befa951d26f914347bd51b7078c398e2ff6e2a",
+          "appended_od7_section_index": 7,
+          "appended_od7_section_sha256": "075c75f763f8f1961c5f89b4f7c3053fe652b296571c10be4d4fd338310ea5cf",
+          "bulk_bytes": 341295,
+          "joint_section_count": 8,
+          "payload_reencodes_identically": true
+        },
+        "submission_dir": "/Volumes/VertigoDataTier/pact/ddm_od7_20260805/run_20260805T_od7_codex/stage_fixed_proto/sub_od7"
+      },
+      "mode": "fixed_proto",
+      "projection": {
+        "archive_bytes_exact_staged": 445250,
+        "beats_live_advisory": false,
+        "beats_od6_projection": false,
+        "delta_vs_live": 0.31417262424539416,
+        "delta_vs_od6_mask_projection": 0.32455258340264914,
+        "n_pairs": 32,
+        "pose_delta_s_vs_qo1_n32": 0.23840372772335772,
+        "projected_s": 1.068153353936515,
+        "projection_axis": "[macOS-CPU frozen-scorer n32 advisory]",
+        "rate_delta_s_vs_live_archive_bytes": 0.05820539452822149,
+        "stage1_delta_s_from_n32": 0.017563501993815105
+      }
+    },
+    {
+      "candidate": {
+        "archive_0_bin": {
+          "bytes": 460477,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_od7_20260805/run_20260805T_od7_codex/stage_sparse_gt_rgb/sub_od7/archive/0.bin",
+          "sha256": "8dece89fa7cb13a6fde6602a8d5d37944f1d58cbf28135b1ea46382707959ac9"
+        },
+        "archive_zip": {
+          "bytes": 460585,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_od7_20260805/run_20260805T_od7_codex/stage_sparse_gt_rgb/sub_od7/archive.zip",
+          "sha256": "f2b8f4392e2642c2e3f7fb892815b2f59248242e31b26d568fc5a849543c497c"
+        },
+        "inflate_runner": {
+          "bytes": 59308,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_od7_20260805/run_20260805T_od7_codex/stage_sparse_gt_rgb/sub_od7/inflate_runner.py",
+          "sha256": "0299cad26eca4b5f2bc94514cf644c01c007090bbcf224b5156ddd85ec1cad99"
+        },
+        "parse_back": {
+          "appended_od6_packet_index": 6,
+          "appended_od6_packet_sha256": "52bd534cea34578bb8d76fb079befa951d26f914347bd51b7078c398e2ff6e2a",
+          "appended_od7_section_index": 7,
+          "appended_od7_section_sha256": "827d0b8a1d1e468059d9a1b50270422b87ee62a40552bd77b74d38cab07a829d",
+          "bulk_bytes": 341295,
+          "joint_section_count": 8,
+          "payload_reencodes_identically": true
+        },
+        "submission_dir": "/Volumes/VertigoDataTier/pact/ddm_od7_20260805/run_20260805T_od7_codex/stage_sparse_gt_rgb/sub_od7"
+      },
+      "mode": "sparse_gt_rgb",
+      "projection": {
+        "archive_bytes_exact_staged": 460585,
+        "beats_live_advisory": false,
+        "beats_od6_projection": false,
+        "delta_vs_live": 0.3135313206026302,
+        "delta_vs_od6_mask_projection": 0.3239112797598852,
+        "n_pairs": 32,
+        "pose_delta_s_vs_qo1_n32": 0.23030123798010316,
+        "projected_s": 1.067512050293751,
+        "projection_axis": "[macOS-CPU frozen-scorer n32 advisory]",
+        "rate_delta_s_vs_live_archive_bytes": 0.06841634157434999,
+        "stage1_delta_s_from_n32": 0.014813741048177084
+      }
+    },
+    {
+      "candidate": {
+        "archive_0_bin": {
+          "bytes": 455798,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_od7_20260805/run_20260805T_od7_codex/stage_hybrid_proto_gt_exceptions/sub_od7/archive/0.bin",
+          "sha256": "cab12826892cd8661a2f7d3f05979809cc9f8e20482351f6dbd702c6a66d7204"
+        },
+        "archive_zip": {
+          "bytes": 455906,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_od7_20260805/run_20260805T_od7_codex/stage_hybrid_proto_gt_exceptions/sub_od7/archive.zip",
+          "sha256": "8614d898e316f1c2d0b46d634c665ce99558529ef7428c9835c4669886f41d84"
+        },
+        "inflate_runner": {
+          "bytes": 59308,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_od7_20260805/run_20260805T_od7_codex/stage_hybrid_proto_gt_exceptions/sub_od7/inflate_runner.py",
+          "sha256": "0299cad26eca4b5f2bc94514cf644c01c007090bbcf224b5156ddd85ec1cad99"
+        },
+        "parse_back": {
+          "appended_od6_packet_index": 6,
+          "appended_od6_packet_sha256": "52bd534cea34578bb8d76fb079befa951d26f914347bd51b7078c398e2ff6e2a",
+          "appended_od7_section_index": 7,
+          "appended_od7_section_sha256": "f4c9fd3d85712b68d99d5f48a93db31672a18c716f5459796f261cc32da1f86c",
+          "bulk_bytes": 341295,
+          "joint_section_count": 8,
+          "payload_reencodes_identically": true
+        },
+        "submission_dir": "/Volumes/VertigoDataTier/pact/ddm_od7_20260805/run_20260805T_od7_codex/stage_hybrid_proto_gt_exceptions/sub_od7"
+      },
+      "mode": "hybrid_proto_gt_exceptions",
+      "projection": {
+        "archive_bytes_exact_staged": 455906,
+        "beats_live_advisory": false,
+        "beats_od6_projection": false,
+        "delta_vs_live": 0.34907806610972836,
+        "delta_vs_od6_mask_projection": 0.35945802526698334,
+        "n_pairs": 32,
+        "pose_delta_s_vs_qo1_n32": 0.2729371805138861,
+        "projected_s": 1.103058795800849,
+        "projection_axis": "[macOS-CPU frozen-scorer n32 advisory]",
+        "rate_delta_s_vs_live_archive_bytes": 0.06530078753269135,
+        "stage1_delta_s_from_n32": 0.010840098063151041
+      }
+    }
+  ],
+  "created_utc": "2026-08-05T03:23:19Z",
+  "current_own_vehicle_frontier": {
+    "S": 0.7539807296911207,
+    "archive_bytes": 357836,
+    "axis": "[macOS-CPU advisory]"
+  },
+  "denominators": {
+    "height": 384,
+    "n_pairs": 32,
+    "od2_n_described": 11141,
+    "pairs": 32,
+    "population_pairs": 600,
+    "rate_denominator_bytes": 37545489,
+    "retained_fix_denominator": 6177,
+    "selection_mode": "stratified_blocks",
+    "selection_seed": 20260805,
+    "width": 512
+  },
+  "frontier_line": "S = 0.7539807296911207 @ 357,836 B [macOS-CPU advisory]; contest pointer borrowed/unmoved.",
+  "frontier_moved": false,
+  "modes": [
+    {
+      "best_coder": {
+        "bytes": 5493,
+        "codec": "brotli-q11",
+        "coder_id": 2,
+        "parseback_exact": true,
+        "sha256": "1272fd4421c74fa69eba5399be4741835e15b342634e30143d7d0f6383afb048"
+      },
+      "candidate_archive_bytes": 445250,
+      "coder_race": [
+        {
+          "bytes": 10705,
+          "codec": "raw",
+          "coder_id": 0,
+          "parseback_exact": true,
+          "sha256": "d60c0cacb13842d406eb6adee6b0d3e85350c406d85a0fe5db344108c5d61a5f"
+        },
+        {
+          "bytes": 5990,
+          "codec": "lzma1-raw",
+          "coder_id": 1,
+          "parseback_exact": true,
+          "sha256": "8285592c9169a51745ab05702769181a0889e55795e4fc6f94db09a66461d1cf"
+        },
+        {
+          "bytes": 5493,
+          "codec": "brotli-q11",
+          "coder_id": 2,
+          "parseback_exact": true,
+          "sha256": "1272fd4421c74fa69eba5399be4741835e15b342634e30143d7d0f6383afb048"
+        }
+      ],
+      "mode": "fixed_proto",
+      "projection": {
+        "archive_bytes_exact_staged": 445250,
+        "beats_live_advisory": false,
+        "beats_od6_projection": false,
+        "delta_vs_live": 0.31417262424539416,
+        "delta_vs_od6_mask_projection": 0.32455258340264914,
+        "n_pairs": 32,
+        "pose_delta_s_vs_qo1_n32": 0.23840372772335772,
+        "projected_s": 1.068153353936515,
+        "projection_axis": "[macOS-CPU frozen-scorer n32 advisory]",
+        "rate_delta_s_vs_live_archive_bytes": 0.05820539452822149,
+        "stage1_delta_s_from_n32": 0.017563501993815105
+      },
+      "score": {
+        "mode": "fixed_proto",
+        "rows": [
+          {
+            "changed_camera_pixels_f1": 580,
+            "d_pose": 0.0016552569577470422,
+            "flips_after": 909,
+            "flips_before": 732,
+            "pair": 8,
+            "retained_fix_count": -177,
+            "selected_records": 145
+          },
+          {
+            "changed_camera_pixels_f1": 584,
+            "d_pose": 0.07478424161672592,
+            "flips_after": 820,
+            "flips_before": 781,
+            "pair": 32,
+            "retained_fix_count": -39,
+            "selected_records": 146
+          },
+          {
+            "changed_camera_pixels_f1": 664,
+            "d_pose": 0.0038471464067697525,
+            "flips_after": 830,
+            "flips_before": 689,
+            "pair": 46,
+            "retained_fix_count": -141,
+            "selected_records": 166
+          },
+          {
+            "changed_camera_pixels_f1": 1124,
+            "d_pose": 0.008382712490856647,
+            "flips_after": 830,
+            "flips_before": 834,
+            "pair": 57,
+            "retained_fix_count": 4,
+            "selected_records": 281
+          },
+          {
+            "changed_camera_pixels_f1": 1016,
+            "d_pose": 0.00494163203984499,
+            "flips_after": 1451,
+            "flips_before": 1408,
+            "pair": 70,
+            "retained_fix_count": -43,
+            "selected_records": 254
+          },
+          {
+            "changed_camera_pixels_f1": 708,
+            "d_pose": 0.007440357934683561,
+            "flips_after": 872,
+            "flips_before": 853,
+            "pair": 107,
+            "retained_fix_count": -19,
+            "selected_records": 177
+          },
+          {
+            "changed_camera_pixels_f1": 636,
+            "d_pose": 0.0029767665546387434,
+            "flips_after": 876,
+            "flips_before": 897,
+            "pair": 112,
+            "retained_fix_count": 21,
+            "selected_records": 159
+          },
+          {
+            "changed_camera_pixels_f1": 744,
+            "d_pose": 0.015130728483200073,
+            "flips_after": 746,
+            "flips_before": 734,
+            "pair": 119,
+            "retained_fix_count": -12,
+            "selected_records": 186
+          },
+          {
+            "changed_camera_pixels_f1": 628,
+            "d_pose": 0.029886523261666298,
+            "flips_after": 853,
+            "flips_before": 827,
+            "pair": 148,
+            "retained_fix_count": -26,
+            "selected_records": 157
+          },
+          {
+            "changed_camera_pixels_f1": 1028,
+            "d_pose": 0.0010769156506285071,
+            "flips_after": 1003,
+            "flips_before": 962,
+            "pair": 154,
+            "retained_fix_count": -41,
+            "selected_records": 257
+          },
+          {
+            "changed_camera_pixels_f1": 816,
+            "d_pose": 0.002586448797956109,
+            "flips_after": 883,
+            "flips_before": 828,
+            "pair": 168,
+            "retained_fix_count": -55,
+            "selected_records": 204
+          },
+          {
+            "changed_camera_pixels_f1": 528,
+            "d_pose": 0.002824271796271205,
+            "flips_after": 903,
+            "flips_before": 838,
+            "pair": 198,
+            "retained_fix_count": -65,
+            "selected_records": 132
+          },
+          {
+            "changed_camera_pixels_f1": 328,
+            "d_pose": 0.0006882916204631329,
+            "flips_after": 756,
+            "flips_before": 714,
+            "pair": 225,
+            "retained_fix_count": -42,
+            "selected_records": 82
+          },
+          {
+            "changed_camera_pixels_f1": 648,
+            "d_pose": 0.0033093728125095367,
+            "flips_after": 716,
+            "flips_before": 767,
+            "pair": 234,
+            "retained_fix_count": 51,
+            "selected_records": 162
+          },
+          {
+            "changed_camera_pixels_f1": 728,
+            "d_pose": 0.0020211690571159124,
+            "flips_after": 724,
+            "flips_before": 684,
+            "pair": 244,
+            "retained_fix_count": -40,
+            "selected_records": 182
+          },
+          {
+            "changed_camera_pixels_f1": 1020,
+            "d_pose": 0.0719943717122078,
+            "flips_after": 845,
+            "flips_before": 922,
+            "pair": 251,
+            "retained_fix_count": 77,
+            "selected_records": 255
+          },
+          {
+            "changed_camera_pixels_f1": 948,
+            "d_pose": 0.02128542773425579,
+            "flips_after": 950,
+            "flips_before": 910,
+            "pair": 284,
+            "retained_fix_count": -40,
+            "selected_records": 237
+          },
+          {
+            "changed_camera_pixels_f1": 776,
+            "d_pose": 0.0015248776180669665,
+            "flips_after": 742,
+            "flips_before": 748,
+            "pair": 328,
+            "retained_fix_count": 6,
+            "selected_records": 194
+          },
+          {
+            "changed_camera_pixels_f1": 640,
+            "d_pose": 0.008067748509347439,
+            "flips_after": 655,
+            "flips_before": 652,
+            "pair": 336,
+            "retained_fix_count": -3,
+            "selected_records": 160
+          },
+          {
+            "changed_camera_pixels_f1": 512,
+            "d_pose": 0.00033643466304056346,
+            "flips_after": 774,
+            "flips_before": 686,
+            "pair": 349,
+            "retained_fix_count": -88,
+            "selected_records": 128
+          },
+          {
+            "changed_camera_pixels_f1": 804,
+            "d_pose": 0.00020839435455854982,
+            "flips_after": 768,
+            "flips_before": 781,
+            "pair": 383,
+            "retained_fix_count": 13,
+            "selected_records": 201
+          },
+          {
+            "changed_camera_pixels_f1": 840,
+            "d_pose": 0.0007044958765618503,
+            "flips_after": 808,
+            "flips_before": 819,
+            "pair": 399,
+            "retained_fix_count": 11,
+            "selected_records": 210
+          },
+          {
+            "changed_camera_pixels_f1": 900,
+            "d_pose": 0.006178625393658876,
+            "flips_after": 812,
+            "flips_before": 786,
+            "pair": 411,
+            "retained_fix_count": -26,
+            "selected_records": 225
+          },
+          {
+            "changed_camera_pixels_f1": 796,
+            "d_pose": 0.0019567355047911406,
+            "flips_after": 798,
+            "flips_before": 814,
+            "pair": 423,
+            "retained_fix_count": 16,
+            "selected_records": 199
+          },
+          {
+            "changed_camera_pixels_f1": 660,
+            "d_pose": 0.0012968296650797129,
+            "flips_after": 743,
+            "flips_before": 734,
+            "pair": 445,
+            "retained_fix_count": -9,
+            "selected_records": 165
+          },
+          {
+            "changed_camera_pixels_f1": 916,
+            "d_pose": 0.02233101986348629,
+            "flips_after": 982,
+            "flips_before": 945,
+            "pair": 465,
+            "retained_fix_count": -37,
+            "selected_records": 229
+          },
+          {
+            "changed_camera_pixels_f1": 596,
+            "d_pose": 0.016377950087189674,
+            "flips_after": 924,
+            "flips_before": 848,
+            "pair": 481,
+            "retained_fix_count": -76,
+            "selected_records": 149
+          },
+          {
+            "changed_camera_pixels_f1": 1292,
+            "d_pose": 0.018052825704216957,
+            "flips_after": 1441,
+            "flips_before": 1307,
+            "pair": 516,
+            "retained_fix_count": -134,
+            "selected_records": 323
+          },
+          {
+            "changed_camera_pixels_f1": 592,
+            "d_pose": 0.0008475854410789907,
+            "flips_after": 893,
+            "flips_before": 908,
+            "pair": 536,
+            "retained_fix_count": 15,
+            "selected_records": 148
+          },
+          {
+            "changed_camera_pixels_f1": 704,
+            "d_pose": 0.003946138080209494,
+            "flips_after": 907,
+            "flips_before": 847,
+            "pair": 561,
+            "retained_fix_count": -60,
+            "selected_records": 176
+          },
+          {
+            "changed_camera_pixels_f1": 932,
+            "d_pose": 0.0014513181522488594,
+            "flips_after": 1080,
+            "flips_before": 993,
+            "pair": 582,
+            "retained_fix_count": -87,
+            "selected_records": 233
+          },
+          {
+            "changed_camera_pixels_f1": 756,
+            "d_pose": 0.006001430097967386,
+            "flips_after": 1061,
+            "flips_before": 1002,
+            "pair": 583,
+            "retained_fix_count": -59,
+            "selected_records": 189
+          }
+        ],
+        "totals": {
+          "changed_camera_pixels_f1": 24444,
+          "d_pose_mean": 0.010753563873095118,
+          "eta_vs_od2_n_described": -0.09918319719953325,
+          "flips_after": 28355,
+          "flips_before": 27250,
+          "pairs": 32,
+          "pose_contribution_sqrt10": 0.32792627026658167,
+          "retained_fix_count": -1105,
+          "selected_records": 6111,
+          "wall_seconds": 40.14451762475073
+        }
+      },
+      "section": {
+        "coder_id": 2,
+        "exception_count": 0,
+        "mode": "fixed_proto",
+        "mode_id": 0,
+        "pairs_with_records": 32,
+        "raw_bytes": 10705,
+        "raw_sha256": "d60c0cacb13842d406eb6adee6b0d3e85350c406d85a0fe5db344108c5d61a5f",
+        "record_count": 6111,
+        "schema": "ddm_od7_sparse_rgb_section.v1",
+        "section_bytes": 5585,
+        "section_sha256": "075c75f763f8f1961c5f89b4f7c3053fe652b296571c10be4d4fd338310ea5cf",
+        "source_od6_packet_sha256": "52bd534cea34578bb8d76fb079befa951d26f914347bd51b7078c398e2ff6e2a"
+      }
+    },
+    {
+      "best_coder": {
+        "bytes": 20895,
+        "codec": "brotli-q11",
+        "coder_id": 2,
+        "parseback_exact": true,
+        "sha256": "a09514e4270b9703e0fd50d0aeaa01e616bbde0988dae4e0da25c47770163a65"
+      },
+      "candidate_archive_bytes": 460585,
+      "coder_race": [
+        {
+          "bytes": 29038,
+          "codec": "raw",
+          "coder_id": 0,
+          "parseback_exact": true,
+          "sha256": "49d2c3ea67d51b85668e8af5534411b52f446fc2ed66c41a7008d05bf5fca116"
+        },
+        {
+          "bytes": 21446,
+          "codec": "lzma1-raw",
+          "coder_id": 1,
+          "parseback_exact": true,
+          "sha256": "b256eb66ea864413fc3c08fa1fc6b44ae4d31d8f6f4d9a8c9a2c2f03d19b8529"
+        },
+        {
+          "bytes": 20895,
+          "codec": "brotli-q11",
+          "coder_id": 2,
+          "parseback_exact": true,
+          "sha256": "a09514e4270b9703e0fd50d0aeaa01e616bbde0988dae4e0da25c47770163a65"
+        }
+      ],
+      "mode": "sparse_gt_rgb",
+      "projection": {
+        "archive_bytes_exact_staged": 460585,
+        "beats_live_advisory": false,
+        "beats_od6_projection": false,
+        "delta_vs_live": 0.3135313206026302,
+        "delta_vs_od6_mask_projection": 0.3239112797598852,
+        "n_pairs": 32,
+        "pose_delta_s_vs_qo1_n32": 0.23030123798010316,
+        "projected_s": 1.067512050293751,
+        "projection_axis": "[macOS-CPU frozen-scorer n32 advisory]",
+        "rate_delta_s_vs_live_archive_bytes": 0.06841634157434999,
+        "stage1_delta_s_from_n32": 0.014813741048177084
+      },
+      "score": {
+        "mode": "sparse_gt_rgb",
+        "rows": [
+          {
+            "changed_camera_pixels_f1": 580,
+            "d_pose": 0.0005323353689163923,
+            "flips_after": 800,
+            "flips_before": 732,
+            "pair": 8,
+            "retained_fix_count": -68,
+            "selected_records": 145
+          },
+          {
+            "changed_camera_pixels_f1": 584,
+            "d_pose": 0.03197203949093819,
+            "flips_after": 805,
+            "flips_before": 781,
+            "pair": 32,
+            "retained_fix_count": -24,
+            "selected_records": 146
+          },
+          {
+            "changed_camera_pixels_f1": 664,
+            "d_pose": 0.00010136677883565426,
+            "flips_after": 812,
+            "flips_before": 689,
+            "pair": 46,
+            "retained_fix_count": -123,
+            "selected_records": 166
+          },
+          {
+            "changed_camera_pixels_f1": 1124,
+            "d_pose": 0.0035091207828372717,
+            "flips_after": 882,
+            "flips_before": 834,
+            "pair": 57,
+            "retained_fix_count": -48,
+            "selected_records": 281
+          },
+          {
+            "changed_camera_pixels_f1": 1016,
+            "d_pose": 0.0008401757222600281,
+            "flips_after": 1419,
+            "flips_before": 1408,
+            "pair": 70,
+            "retained_fix_count": -11,
+            "selected_records": 254
+          },
+          {
+            "changed_camera_pixels_f1": 708,
+            "d_pose": 0.01907394826412201,
+            "flips_after": 882,
+            "flips_before": 853,
+            "pair": 107,
+            "retained_fix_count": -29,
+            "selected_records": 177
+          },
+          {
+            "changed_camera_pixels_f1": 636,
+            "d_pose": 0.0018337159417569637,
+            "flips_after": 901,
+            "flips_before": 897,
+            "pair": 112,
+            "retained_fix_count": -4,
+            "selected_records": 159
+          },
+          {
+            "changed_camera_pixels_f1": 744,
+            "d_pose": 0.00325908069498837,
+            "flips_after": 724,
+            "flips_before": 734,
+            "pair": 119,
+            "retained_fix_count": 10,
+            "selected_records": 186
+          },
+          {
+            "changed_camera_pixels_f1": 628,
+            "d_pose": 0.01848108507692814,
+            "flips_after": 815,
+            "flips_before": 827,
+            "pair": 148,
+            "retained_fix_count": 12,
+            "selected_records": 157
+          },
+          {
+            "changed_camera_pixels_f1": 1028,
+            "d_pose": 0.0005062557174824178,
+            "flips_after": 1012,
+            "flips_before": 962,
+            "pair": 154,
+            "retained_fix_count": -50,
+            "selected_records": 257
+          },
+          {
+            "changed_camera_pixels_f1": 816,
+            "d_pose": 0.023933090269565582,
+            "flips_after": 850,
+            "flips_before": 828,
+            "pair": 168,
+            "retained_fix_count": -22,
+            "selected_records": 204
+          },
+          {
+            "changed_camera_pixels_f1": 528,
+            "d_pose": 0.0033541705925017595,
+            "flips_after": 923,
+            "flips_before": 838,
+            "pair": 198,
+            "retained_fix_count": -85,
+            "selected_records": 132
+          },
+          {
+            "changed_camera_pixels_f1": 328,
+            "d_pose": 0.0002366507687838748,
+            "flips_after": 726,
+            "flips_before": 714,
+            "pair": 225,
+            "retained_fix_count": -12,
+            "selected_records": 82
+          },
+          {
+            "changed_camera_pixels_f1": 648,
+            "d_pose": 0.005237777251750231,
+            "flips_after": 754,
+            "flips_before": 767,
+            "pair": 234,
+            "retained_fix_count": 13,
+            "selected_records": 162
+          },
+          {
+            "changed_camera_pixels_f1": 728,
+            "d_pose": 0.010535362176597118,
+            "flips_after": 607,
+            "flips_before": 684,
+            "pair": 244,
+            "retained_fix_count": 77,
+            "selected_records": 182
+          },
+          {
+            "changed_camera_pixels_f1": 1020,
+            "d_pose": 0.023292014375329018,
+            "flips_after": 833,
+            "flips_before": 922,
+            "pair": 251,
+            "retained_fix_count": 89,
+            "selected_records": 255
+          },
+          {
+            "changed_camera_pixels_f1": 948,
+            "d_pose": 0.006272990722209215,
+            "flips_after": 1050,
+            "flips_before": 910,
+            "pair": 284,
+            "retained_fix_count": -140,
+            "selected_records": 237
+          },
+          {
+            "changed_camera_pixels_f1": 776,
+            "d_pose": 0.001794756855815649,
+            "flips_after": 782,
+            "flips_before": 748,
+            "pair": 328,
+            "retained_fix_count": -34,
+            "selected_records": 194
+          },
+          {
+            "changed_camera_pixels_f1": 640,
+            "d_pose": 0.00128720432985574,
+            "flips_after": 697,
+            "flips_before": 652,
+            "pair": 336,
+            "retained_fix_count": -45,
+            "selected_records": 160
+          },
+          {
+            "changed_camera_pixels_f1": 512,
+            "d_pose": 0.00046063834452070296,
+            "flips_after": 799,
+            "flips_before": 686,
+            "pair": 349,
+            "retained_fix_count": -113,
+            "selected_records": 128
+          },
+          {
+            "changed_camera_pixels_f1": 804,
+            "d_pose": 0.008508537895977497,
+            "flips_after": 743,
+            "flips_before": 781,
+            "pair": 383,
+            "retained_fix_count": 38,
+            "selected_records": 201
+          },
+          {
+            "changed_camera_pixels_f1": 840,
+            "d_pose": 0.001035365741699934,
+            "flips_after": 855,
+            "flips_before": 819,
+            "pair": 399,
+            "retained_fix_count": -36,
+            "selected_records": 210
+          },
+          {
+            "changed_camera_pixels_f1": 900,
+            "d_pose": 0.04158548638224602,
+            "flips_after": 743,
+            "flips_before": 786,
+            "pair": 411,
+            "retained_fix_count": 43,
+            "selected_records": 225
+          },
+          {
+            "changed_camera_pixels_f1": 796,
+            "d_pose": 0.0019575112964957952,
+            "flips_after": 854,
+            "flips_before": 814,
+            "pair": 423,
+            "retained_fix_count": -40,
+            "selected_records": 199
+          },
+          {
+            "changed_camera_pixels_f1": 660,
+            "d_pose": 0.04125025123357773,
+            "flips_after": 819,
+            "flips_before": 734,
+            "pair": 445,
+            "retained_fix_count": -85,
+            "selected_records": 165
+          },
+          {
+            "changed_camera_pixels_f1": 916,
+            "d_pose": 0.010889395140111446,
+            "flips_after": 1016,
+            "flips_before": 945,
+            "pair": 465,
+            "retained_fix_count": -71,
+            "selected_records": 229
+          },
+          {
+            "changed_camera_pixels_f1": 596,
+            "d_pose": 0.05715281888842583,
+            "flips_after": 955,
+            "flips_before": 848,
+            "pair": 481,
+            "retained_fix_count": -107,
+            "selected_records": 149
+          },
+          {
+            "changed_camera_pixels_f1": 1292,
+            "d_pose": 0.0007402652408927679,
+            "flips_after": 1186,
+            "flips_before": 1307,
+            "pair": 516,
+            "retained_fix_count": 121,
+            "selected_records": 323
+          },
+          {
+            "changed_camera_pixels_f1": 592,
+            "d_pose": 0.002193633234128356,
+            "flips_after": 943,
+            "flips_before": 908,
+            "pair": 536,
+            "retained_fix_count": -35,
+            "selected_records": 148
+          },
+          {
+            "changed_camera_pixels_f1": 704,
+            "d_pose": 0.0008591121877543628,
+            "flips_after": 923,
+            "flips_before": 847,
+            "pair": 561,
+            "retained_fix_count": -76,
+            "selected_records": 176
+          },
+          {
+            "changed_camera_pixels_f1": 932,
+            "d_pose": 0.003714185208082199,
+            "flips_after": 1064,
+            "flips_before": 993,
+            "pair": 582,
+            "retained_fix_count": -71,
+            "selected_records": 233
+          },
+          {
+            "changed_camera_pixels_f1": 756,
+            "d_pose": 0.0009188599069602787,
+            "flips_after": 1008,
+            "flips_before": 1002,
+            "pair": 583,
+            "retained_fix_count": -6,
+            "selected_records": 189
+          }
+        ],
+        "totals": {
+          "changed_camera_pixels_f1": 24444,
+          "d_pose_mean": 0.01022872505882333,
+          "eta_vs_od2_n_described": -0.08365496813571492,
+          "flips_after": 28182,
+          "flips_before": 27250,
+          "pairs": 32,
+          "pose_contribution_sqrt10": 0.3198237805233271,
+          "retained_fix_count": -932,
+          "selected_records": 6111,
+          "wall_seconds": 38.65973512502387
+        }
+      },
+      "section": {
+        "coder_id": 2,
+        "exception_count": 0,
+        "mode": "sparse_gt_rgb",
+        "mode_id": 1,
+        "pairs_with_records": 32,
+        "raw_bytes": 29038,
+        "raw_sha256": "49d2c3ea67d51b85668e8af5534411b52f446fc2ed66c41a7008d05bf5fca116",
+        "record_count": 6111,
+        "schema": "ddm_od7_sparse_rgb_section.v1",
+        "section_bytes": 20987,
+        "section_sha256": "827d0b8a1d1e468059d9a1b50270422b87ee62a40552bd77b74d38cab07a829d",
+        "source_od6_packet_sha256": "52bd534cea34578bb8d76fb079befa951d26f914347bd51b7078c398e2ff6e2a"
+      }
+    },
+    {
+      "best_coder": {
+        "bytes": 16126,
+        "codec": "brotli-q11",
+        "coder_id": 2,
+        "parseback_exact": true,
+        "sha256": "d3fc3a256d1cd9e8c5d3527476ef9b2b6df9fb76e31e641e55f573d0c239cd38"
+      },
+      "candidate_archive_bytes": 455906,
+      "coder_race": [
+        {
+          "bytes": 25812,
+          "codec": "raw",
+          "coder_id": 0,
+          "parseback_exact": true,
+          "sha256": "4dcba52e40b2bcbe9993b1b8d70467a06cf0f3e71027e409cc931c357c5bce1b"
+        },
+        {
+          "bytes": 16833,
+          "codec": "lzma1-raw",
+          "coder_id": 1,
+          "parseback_exact": true,
+          "sha256": "beec74fb3c5852fedfd753c73eb9bc334acb6bf4de10213a50c6e91aedf96ef9"
+        },
+        {
+          "bytes": 16126,
+          "codec": "brotli-q11",
+          "coder_id": 2,
+          "parseback_exact": true,
+          "sha256": "d3fc3a256d1cd9e8c5d3527476ef9b2b6df9fb76e31e641e55f573d0c239cd38"
+        }
+      ],
+      "mode": "hybrid_proto_gt_exceptions",
+      "projection": {
+        "archive_bytes_exact_staged": 455906,
+        "beats_live_advisory": false,
+        "beats_od6_projection": false,
+        "delta_vs_live": 0.34907806610972836,
+        "delta_vs_od6_mask_projection": 0.35945802526698334,
+        "n_pairs": 32,
+        "pose_delta_s_vs_qo1_n32": 0.2729371805138861,
+        "projected_s": 1.103058795800849,
+        "projection_axis": "[macOS-CPU frozen-scorer n32 advisory]",
+        "rate_delta_s_vs_live_archive_bytes": 0.06530078753269135,
+        "stage1_delta_s_from_n32": 0.010840098063151041
+      },
+      "score": {
+        "mode": "hybrid_proto_gt_exceptions",
+        "rows": [
+          {
+            "changed_camera_pixels_f1": 580,
+            "d_pose": 0.0042124041356146336,
+            "flips_after": 883,
+            "flips_before": 732,
+            "pair": 8,
+            "retained_fix_count": -151,
+            "selected_records": 145
+          },
+          {
+            "changed_camera_pixels_f1": 584,
+            "d_pose": 0.07046665251255035,
+            "flips_after": 810,
+            "flips_before": 781,
+            "pair": 32,
+            "retained_fix_count": -29,
+            "selected_records": 146
+          },
+          {
+            "changed_camera_pixels_f1": 664,
+            "d_pose": 0.0008666408830322325,
+            "flips_after": 815,
+            "flips_before": 689,
+            "pair": 46,
+            "retained_fix_count": -126,
+            "selected_records": 166
+          },
+          {
+            "changed_camera_pixels_f1": 1124,
+            "d_pose": 0.011612248606979847,
+            "flips_after": 837,
+            "flips_before": 834,
+            "pair": 57,
+            "retained_fix_count": -3,
+            "selected_records": 281
+          },
+          {
+            "changed_camera_pixels_f1": 1016,
+            "d_pose": 0.00737132178619504,
+            "flips_after": 1470,
+            "flips_before": 1408,
+            "pair": 70,
+            "retained_fix_count": -62,
+            "selected_records": 254
+          },
+          {
+            "changed_camera_pixels_f1": 708,
+            "d_pose": 0.015442073345184326,
+            "flips_after": 848,
+            "flips_before": 853,
+            "pair": 107,
+            "retained_fix_count": 5,
+            "selected_records": 177
+          },
+          {
+            "changed_camera_pixels_f1": 636,
+            "d_pose": 0.002392236376181245,
+            "flips_after": 858,
+            "flips_before": 897,
+            "pair": 112,
+            "retained_fix_count": 39,
+            "selected_records": 159
+          },
+          {
+            "changed_camera_pixels_f1": 744,
+            "d_pose": 0.013852734118700027,
+            "flips_after": 720,
+            "flips_before": 734,
+            "pair": 119,
+            "retained_fix_count": 14,
+            "selected_records": 186
+          },
+          {
+            "changed_camera_pixels_f1": 628,
+            "d_pose": 0.00679046893492341,
+            "flips_after": 815,
+            "flips_before": 827,
+            "pair": 148,
+            "retained_fix_count": 12,
+            "selected_records": 157
+          },
+          {
+            "changed_camera_pixels_f1": 1028,
+            "d_pose": 0.0007329951622523367,
+            "flips_after": 1017,
+            "flips_before": 962,
+            "pair": 154,
+            "retained_fix_count": -55,
+            "selected_records": 257
+          },
+          {
+            "changed_camera_pixels_f1": 816,
+            "d_pose": 0.015552070923149586,
+            "flips_after": 828,
+            "flips_before": 828,
+            "pair": 168,
+            "retained_fix_count": 0,
+            "selected_records": 204
+          },
+          {
+            "changed_camera_pixels_f1": 528,
+            "d_pose": 0.009219756349921227,
+            "flips_after": 926,
+            "flips_before": 838,
+            "pair": 198,
+            "retained_fix_count": -88,
+            "selected_records": 132
+          },
+          {
+            "changed_camera_pixels_f1": 328,
+            "d_pose": 0.0008813646272756159,
+            "flips_after": 730,
+            "flips_before": 714,
+            "pair": 225,
+            "retained_fix_count": -16,
+            "selected_records": 82
+          },
+          {
+            "changed_camera_pixels_f1": 648,
+            "d_pose": 0.0003558704920578748,
+            "flips_after": 745,
+            "flips_before": 767,
+            "pair": 234,
+            "retained_fix_count": 22,
+            "selected_records": 162
+          },
+          {
+            "changed_camera_pixels_f1": 728,
+            "d_pose": 0.02001510187983513,
+            "flips_after": 614,
+            "flips_before": 684,
+            "pair": 244,
+            "retained_fix_count": 70,
+            "selected_records": 182
+          },
+          {
+            "changed_camera_pixels_f1": 1020,
+            "d_pose": 0.16010503470897675,
+            "flips_after": 840,
+            "flips_before": 922,
+            "pair": 251,
+            "retained_fix_count": 82,
+            "selected_records": 255
+          },
+          {
+            "changed_camera_pixels_f1": 948,
+            "d_pose": 0.015313132666051388,
+            "flips_after": 1028,
+            "flips_before": 910,
+            "pair": 284,
+            "retained_fix_count": -118,
+            "selected_records": 237
+          },
+          {
+            "changed_camera_pixels_f1": 776,
+            "d_pose": 0.0012323249829933047,
+            "flips_after": 752,
+            "flips_before": 748,
+            "pair": 328,
+            "retained_fix_count": -4,
+            "selected_records": 194
+          },
+          {
+            "changed_camera_pixels_f1": 640,
+            "d_pose": 0.0035809213295578957,
+            "flips_after": 654,
+            "flips_before": 652,
+            "pair": 336,
+            "retained_fix_count": -2,
+            "selected_records": 160
+          },
+          {
+            "changed_camera_pixels_f1": 512,
+            "d_pose": 0.000827978306915611,
+            "flips_after": 813,
+            "flips_before": 686,
+            "pair": 349,
+            "retained_fix_count": -127,
+            "selected_records": 128
+          },
+          {
+            "changed_camera_pixels_f1": 804,
+            "d_pose": 0.004087920766323805,
+            "flips_after": 758,
+            "flips_before": 781,
+            "pair": 383,
+            "retained_fix_count": 23,
+            "selected_records": 201
+          },
+          {
+            "changed_camera_pixels_f1": 840,
+            "d_pose": 0.0048791090957820415,
+            "flips_after": 781,
+            "flips_before": 819,
+            "pair": 399,
+            "retained_fix_count": 38,
+            "selected_records": 210
+          },
+          {
+            "changed_camera_pixels_f1": 900,
+            "d_pose": 0.012648556381464005,
+            "flips_after": 770,
+            "flips_before": 786,
+            "pair": 411,
+            "retained_fix_count": 16,
+            "selected_records": 225
+          },
+          {
+            "changed_camera_pixels_f1": 796,
+            "d_pose": 0.002547690412029624,
+            "flips_after": 824,
+            "flips_before": 814,
+            "pair": 423,
+            "retained_fix_count": -10,
+            "selected_records": 199
+          },
+          {
+            "changed_camera_pixels_f1": 660,
+            "d_pose": 0.0013123201206326485,
+            "flips_after": 780,
+            "flips_before": 734,
+            "pair": 445,
+            "retained_fix_count": -46,
+            "selected_records": 165
+          },
+          {
+            "changed_camera_pixels_f1": 916,
+            "d_pose": 0.009312757290899754,
+            "flips_after": 983,
+            "flips_before": 945,
+            "pair": 465,
+            "retained_fix_count": -38,
+            "selected_records": 229
+          },
+          {
+            "changed_camera_pixels_f1": 596,
+            "d_pose": 0.00863385945558548,
+            "flips_after": 947,
+            "flips_before": 848,
+            "pair": 481,
+            "retained_fix_count": -99,
+            "selected_records": 149
+          },
+          {
+            "changed_camera_pixels_f1": 1292,
+            "d_pose": 0.0006936638965271413,
+            "flips_after": 1174,
+            "flips_before": 1307,
+            "pair": 516,
+            "retained_fix_count": 133,
+            "selected_records": 323
+          },
+          {
+            "changed_camera_pixels_f1": 592,
+            "d_pose": 0.00036345337866805494,
+            "flips_after": 892,
+            "flips_before": 908,
+            "pair": 536,
+            "retained_fix_count": 16,
+            "selected_records": 148
+          },
+          {
+            "changed_camera_pixels_f1": 704,
+            "d_pose": 0.0036587491631507874,
+            "flips_after": 922,
+            "flips_before": 847,
+            "pair": 561,
+            "retained_fix_count": -75,
+            "selected_records": 176
+          },
+          {
+            "changed_camera_pixels_f1": 932,
+            "d_pose": 0.0016641708789393306,
+            "flips_after": 1062,
+            "flips_before": 993,
+            "pair": 582,
+            "retained_fix_count": -69,
+            "selected_records": 233
+          },
+          {
+            "changed_camera_pixels_f1": 756,
+            "d_pose": 0.009780979715287685,
+            "flips_after": 1036,
+            "flips_before": 1002,
+            "pair": 583,
+            "retained_fix_count": -34,
+            "selected_records": 189
+          }
+        ],
+        "totals": {
+          "changed_camera_pixels_f1": 24444,
+          "d_pose_mean": 0.013137705083863693,
+          "eta_vs_od2_n_described": -0.06121533076025491,
+          "flips_after": 27932,
+          "flips_before": 27250,
+          "pairs": 32,
+          "pose_contribution_sqrt10": 0.36245972305711005,
+          "retained_fix_count": -682,
+          "selected_records": 6111,
+          "wall_seconds": 38.14056745916605
+        }
+      },
+      "section": {
+        "coder_id": 2,
+        "exception_count": 3766,
+        "mode": "hybrid_proto_gt_exceptions",
+        "mode_id": 2,
+        "pairs_with_records": 32,
+        "raw_bytes": 25812,
+        "raw_sha256": "4dcba52e40b2bcbe9993b1b8d70467a06cf0f3e71027e409cc931c357c5bce1b",
+        "record_count": 6111,
+        "schema": "ddm_od7_sparse_rgb_section.v1",
+        "section_bytes": 16218,
+        "section_sha256": "f4c9fd3d85712b68d99d5f48a93db31672a18c716f5459796f261cc32da1f86c",
+        "source_od6_packet_sha256": "52bd534cea34578bb8d76fb079befa951d26f914347bd51b7078c398e2ff6e2a"
+      }
+    }
+  ],
+  "n600_scorer_job": false,
+  "next_if_resumed_path": "/Users/adpena/Projects/pact/.omx/research/ddm_od7_20260805/NEXT_IF_RESUMED.md",
+  "next_if_resumed_sha256": "d8fc60d13259914abb951c764a5f2c931bba93855f7fa06cda94ab84e9001c10",
+  "od6_projection_reference": {
+    "delta_vs_live": -0.0103799591572549,
+    "projected_n600_packet_bytes": 76304,
+    "projected_s": 0.7436007705338658
+  },
+  "promotion_eligible": false,
+  "queued_scorer_gate_script": "/Users/adpena/Projects/pact/.omx/research/ddm_od7_20260805/OD7_RECEIVER_GATE_FIRE_ORDER.sh",
+  "receipt_json_path": "/Users/adpena/Projects/pact/.omx/research/ddm_od7_20260805/od7_receiver_close_receipt.json",
+  "receipt_json_sha256": "bf914fb919b1fcf7d4e0e906211a633e96ba64941ac69b4411d4726a2d81bf17",
+  "receipt_md_path": "/Users/adpena/Projects/pact/.omx/research/ddm_od7_20260805/OD7_RECEIVER_CLOSE_RECEIPT.md",
+  "run_ssd_dir": "/Volumes/VertigoDataTier/pact/ddm_od7_20260805/run_20260805T_od7_codex",
+  "runtime_checks": {
+    "absent_section_identity_passed": true,
+    "absent_section_identity_scope": "n32 selected pairs against qo1 raw, using patched OD7 runtime with no OD7 sections",
+    "changed_pixel_rows": [
+      {
+        "changed_camera_pixels_f1": 580,
+        "pair": 8,
+        "selected_records": 145
+      },
+      {
+        "changed_camera_pixels_f1": 584,
+        "pair": 32,
+        "selected_records": 146
+      },
+      {
+        "changed_camera_pixels_f1": 664,
+        "pair": 46,
+        "selected_records": 166
+      },
+      {
+        "changed_camera_pixels_f1": 1124,
+        "pair": 57,
+        "selected_records": 281
+      },
+      {
+        "changed_camera_pixels_f1": 1016,
+        "pair": 70,
+        "selected_records": 254
+      },
+      {
+        "changed_camera_pixels_f1": 708,
+        "pair": 107,
+        "selected_records": 177
+      },
+      {
+        "changed_camera_pixels_f1": 636,
+        "pair": 112,
+        "selected_records": 159
+      },
+      {
+        "changed_camera_pixels_f1": 744,
+        "pair": 119,
+        "selected_records": 186
+      },
+      {
+        "changed_camera_pixels_f1": 628,
+        "pair": 148,
+        "selected_records": 157
+      },
+      {
+        "changed_camera_pixels_f1": 1028,
+        "pair": 154,
+        "selected_records": 257
+      },
+      {
+        "changed_camera_pixels_f1": 816,
+        "pair": 168,
+        "selected_records": 204
+      },
+      {
+        "changed_camera_pixels_f1": 528,
+        "pair": 198,
+        "selected_records": 132
+      },
+      {
+        "changed_camera_pixels_f1": 328,
+        "pair": 225,
+        "selected_records": 82
+      },
+      {
+        "changed_camera_pixels_f1": 648,
+        "pair": 234,
+        "selected_records": 162
+      },
+      {
+        "changed_camera_pixels_f1": 728,
+        "pair": 244,
+        "selected_records": 182
+      },
+      {
+        "changed_camera_pixels_f1": 1020,
+        "pair": 251,
+        "selected_records": 255
+      },
+      {
+        "changed_camera_pixels_f1": 948,
+        "pair": 284,
+        "selected_records": 237
+      },
+      {
+        "changed_camera_pixels_f1": 776,
+        "pair": 328,
+        "selected_records": 194
+      },
+      {
+        "changed_camera_pixels_f1": 640,
+        "pair": 336,
+        "selected_records": 160
+      },
+      {
+        "changed_camera_pixels_f1": 512,
+        "pair": 349,
+        "selected_records": 128
+      },
+      {
+        "changed_camera_pixels_f1": 804,
+        "pair": 383,
+        "selected_records": 201
+      },
+      {
+        "changed_camera_pixels_f1": 840,
+        "pair": 399,
+        "selected_records": 210
+      },
+      {
+        "changed_camera_pixels_f1": 900,
+        "pair": 411,
+        "selected_records": 225
+      },
+      {
+        "changed_camera_pixels_f1": 796,
+        "pair": 423,
+        "selected_records": 199
+      },
+      {
+        "changed_camera_pixels_f1": 660,
+        "pair": 445,
+        "selected_records": 165
+      },
+      {
+        "changed_camera_pixels_f1": 916,
+        "pair": 465,
+        "selected_records": 229
+      },
+      {
+        "changed_camera_pixels_f1": 596,
+        "pair": 481,
+        "selected_records": 149
+      },
+      {
+        "changed_camera_pixels_f1": 1292,
+        "pair": 516,
+        "selected_records": 323
+      },
+      {
+        "changed_camera_pixels_f1": 592,
+        "pair": 536,
+        "selected_records": 148
+      },
+      {
+        "changed_camera_pixels_f1": 704,
+        "pair": 561,
+        "selected_records": 176
+      },
+      {
+        "changed_camera_pixels_f1": 932,
+        "pair": 582,
+        "selected_records": 233
+      },
+      {
+        "changed_camera_pixels_f1": 756,
+        "pair": 583,
+        "selected_records": 189
+      }
+    ],
+    "changed_pixel_totals": {
+      "changed_camera_pixels_f1": 24444,
+      "pairs": 32,
+      "selected_records": 6111
+    },
+    "identity_rows": [
+      {
+        "f0_matches_qo1_raw": true,
+        "f1_matches_qo1_raw": true,
+        "pair": 8
+      },
+      {
+        "f0_matches_qo1_raw": true,
+        "f1_matches_qo1_raw": true,
+        "pair": 32
+      },
+      {
+        "f0_matches_qo1_raw": true,
+        "f1_matches_qo1_raw": true,
+        "pair": 46
+      },
+      {
+        "f0_matches_qo1_raw": true,
+        "f1_matches_qo1_raw": true,
+        "pair": 57
+      },
+      {
+        "f0_matches_qo1_raw": true,
+        "f1_matches_qo1_raw": true,
+        "pair": 70
+      },
+      {
+        "f0_matches_qo1_raw": true,
+        "f1_matches_qo1_raw": true,
+        "pair": 107
+      },
+      {
+        "f0_matches_qo1_raw": true,
+        "f1_matches_qo1_raw": true,
+        "pair": 112
+      },
+      {
+        "f0_matches_qo1_raw": true,
+        "f1_matches_qo1_raw": true,
+        "pair": 119
+      },
+      {
+        "f0_matches_qo1_raw": true,
+        "f1_matches_qo1_raw": true,
+        "pair": 148
+      },
+      {
+        "f0_matches_qo1_raw": true,
+        "f1_matches_qo1_raw": true,
+        "pair": 154
+      },
+      {
+        "f0_matches_qo1_raw": true,
+        "f1_matches_qo1_raw": true,
+        "pair": 168
+      },
+      {
+        "f0_matches_qo1_raw": true,
+        "f1_matches_qo1_raw": true,
+        "pair": 198
+      },
+      {
+        "f0_matches_qo1_raw": true,
+        "f1_matches_qo1_raw": true,
+        "pair": 225
+      },
+      {
+        "f0_matches_qo1_raw": true,
+        "f1_matches_qo1_raw": true,
+        "pair": 234
+      },
+      {
+        "f0_matches_qo1_raw": true,
+        "f1_matches_qo1_raw": true,
+        "pair": 244
+      },
+      {
+        "f0_matches_qo1_raw": true,
+        "f1_matches_qo1_raw": true,
+        "pair": 251
+      },
+      {
+        "f0_matches_qo1_raw": true,
+        "f1_matches_qo1_raw": true,
+        "pair": 284
+      },
+      {
+        "f0_matches_qo1_raw": true,
+        "f1_matches_qo1_raw": true,
+        "pair": 328
+      },
+      {
+        "f0_matches_qo1_raw": true,
+        "f1_matches_qo1_raw": true,
+        "pair": 336
+      },
+      {
+        "f0_matches_qo1_raw": true,
+        "f1_matches_qo1_raw": true,
+        "pair": 349
+      },
+      {
+        "f0_matches_qo1_raw": true,
+        "f1_matches_qo1_raw": true,
+        "pair": 383
+      },
+      {
+        "f0_matches_qo1_raw": true,
+        "f1_matches_qo1_raw": true,
+        "pair": 399
+      },
+      {
+        "f0_matches_qo1_raw": true,
+        "f1_matches_qo1_raw": true,
+        "pair": 411
+      },
+      {
+        "f0_matches_qo1_raw": true,
+        "f1_matches_qo1_raw": true,
+        "pair": 423
+      },
+      {
+        "f0_matches_qo1_raw": true,
+        "f1_matches_qo1_raw": true,
+        "pair": 445
+      },
+      {
+        "f0_matches_qo1_raw": true,
+        "f1_matches_qo1_raw": true,
+        "pair": 465
+      },
+      {
+        "f0_matches_qo1_raw": true,
+        "f1_matches_qo1_raw": true,
+        "pair": 481
+      },
+      {
+        "f0_matches_qo1_raw": true,
+        "f1_matches_qo1_raw": true,
+        "pair": 516
+      },
+      {
+        "f0_matches_qo1_raw": true,
+        "f1_matches_qo1_raw": true,
+        "pair": 536
+      },
+      {
+        "f0_matches_qo1_raw": true,
+        "f1_matches_qo1_raw": true,
+        "pair": 561
+      },
+      {
+        "f0_matches_qo1_raw": true,
+        "f1_matches_qo1_raw": true,
+        "pair": 582
+      },
+      {
+        "f0_matches_qo1_raw": true,
+        "f1_matches_qo1_raw": true,
+        "pair": 583
+      }
+    ],
+    "n32_decode_wall_seconds": 10.53461566567421,
+    "projected_n600_decode_wall_seconds": 197.52404373139143
+  },
+  "schema": "ddm_od7_receiver_close_receipt.v1",
+  "score_claim": false,
+  "source_files": {
+    "gt_mkv": {
+      "bytes": 37545489,
+      "path": "/Users/adpena/Projects/pact/upstream/videos/0.mkv",
+      "sha256": "2611f5f3e186f3529777749f97bd4cce3a208d6b3559e137bd45d256980d2fa9"
+    },
+    "od2_json": {
+      "bytes": 103690,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_od2_20260805/od2_js1_n32_cprime_k4.json",
+      "sha256": "fd1016751e4668ff786692f52f91d924be97081a70a20d11e470150aaf85c6af"
+    },
+    "od6_json": {
+      "bytes": 550769,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_od6_20260805/ddm_od6_decoder_legal_receipt.json",
+      "sha256": "4775cb3fc8925de33a70945ba1469b962f0934b5527a032e39cb60e0589566b1"
+    },
+    "od6_packet": {
+      "bytes": 12577,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_od6_20260805/run_20260805T030410Z/packets/base_rgb_generator_geometry_b1024.od5.raw_packet",
+      "sha256": "52bd534cea34578bb8d76fb079befa951d26f914347bd51b7078c398e2ff6e2a"
+    },
+    "od7_script": {
+      "bytes": 68973,
+      "path": "/Users/adpena/Projects/pact/experiments/ddm_od7_receiver_close.py",
+      "sha256": "8d65fc9dfb25a4a2f88a2485144e8a5c2e3a26d12a42f45adeaff47b51b2e34b"
+    },
+    "pair_selection": {
+      "bytes": 2388,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_od2_20260805/PAIR_SELECTION.json",
+      "sha256": "0a8ac26a1cd39c7dc425dbb4922d0dda6f71227b205241d3d771ea9791c2d4f9"
+    },
+    "pe1_receipt": {
+      "bytes": 50622,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_pe1_20260805/ddm_pe1_repr_race_receipt.json",
+      "sha256": "d6db13bb1ba14b140fb86b0d6c09dcff836c30a0a155a5d2cbd8638ea788bb88"
+    },
+    "pe3_archive": {
+      "bytes": 432428,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_pe3_20260805/pe3_20260805T000000Z/sub_auto_pairbit_pe3_hybrid_75kb/archive.zip",
+      "sha256": "3f08c7fdd1c2746fa456ef8b6d8005e850d1a3acac5665a5d08b2ef17585b5e0"
+    },
+    "pe3_receipt": {
+      "bytes": 69875,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_pe3_20260805/ddm_pe3_hybrid_receipt.json",
+      "sha256": "7839d5c3e18c1b89959538fa518621bd3e4c0a8cd166eccf5d9c240dd79c1716"
+    },
+    "qo1_archive": {
+      "bytes": 357836,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_qo1_20260804/sub_auto_pairbit/archive.zip",
+      "sha256": "d5e814d5b9f65c3094b0e65fecdd7771734d03c420c63d1d2033a671b766986a"
+    }
+  },
+  "source_reconstruction": {
+    "combined_selected_fix_points": 6111,
+    "component_extraction": {
+      "components": 22338,
+      "edge_ranking": [
+        {
+          "class_ids": [
+            0,
+            1
+          ],
+          "components": 12851,
+          "edge": "Road<->Lane",
+          "flip_mass": 226140,
+          "flip_mass_fraction": 0.4902541022522552,
+          "source_band_pixels": 1143497
+        },
+        {
+          "class_ids": [
+            0,
+            2
+          ],
+          "components": 2489,
+          "edge": "Road<->Undriv",
+          "flip_mass": 84847,
+          "flip_mass_fraction": 0.18394176091711814,
+          "source_band_pixels": 511976
+        },
+        {
+          "class_ids": [
+            0,
+            4
+          ],
+          "components": 1166,
+          "edge": "Road<->MyCar",
+          "flip_mass": 61086,
+          "flip_mass_fraction": 0.13242974303608943,
+          "source_band_pixels": 606290
+        },
+        {
+          "class_ids": [
+            2,
+            3
+          ],
+          "components": 2102,
+          "edge": "Undriv<->Movable",
+          "flip_mass": 44304,
+          "flip_mass_fraction": 0.09604765961874906,
+          "source_band_pixels": 150302
+        },
+        {
+          "class_ids": [
+            0,
+            3
+          ],
+          "components": 2183,
+          "edge": "Road<->Movable",
+          "flip_mass": 43532,
+          "flip_mass_fraction": 0.09437402307970802,
+          "source_band_pixels": 142295
+        },
+        {
+          "class_ids": [
+            1,
+            4
+          ],
+          "components": 557,
+          "edge": "Lane<->MyCar",
+          "flip_mass": 805,
+          "flip_mass_fraction": 0.0017451779973161113,
+          "source_band_pixels": 9563
+        },
+        {
+          "class_ids": [
+            1,
+            3
+          ],
+          "components": 596,
+          "edge": "Lane<->Movable",
+          "flip_mass": 409,
+          "flip_mass_fraction": 0.0008866804980152665,
+          "source_band_pixels": 2180
+        },
+        {
+          "class_ids": [
+            3,
+            4
+          ],
+          "components": 12,
+          "edge": "Movable<->MyCar",
+          "flip_mass": 75,
+          "flip_mass_fraction": 0.00016259422335243272,
+          "source_band_pixels": 266
+        },
+        {
+          "class_ids": [
+            1,
+            2
+          ],
+          "components": 382,
+          "edge": "Lane<->Undriv",
+          "flip_mass": 73,
+          "flip_mass_fraction": 0.00015825837739636786,
+          "source_band_pixels": 3018
+        }
+      ],
+      "per_pair_band_pixels_max": 5417,
+      "per_pair_band_pixels_mean": 4282.3116666666665,
+      "per_pair_band_pixels_min": 3297,
+      "per_pair_components_max": 64,
+      "per_pair_components_mean": 37.23,
+      "per_pair_components_min": 22,
+      "road_lane_first": {
+        "class_ids": [
+          0,
+          1
+        ],
+        "components": 12851,
+        "edge": "Road<->Lane",
+        "flip_mass": 226140,
+        "flip_mass_fraction": 0.4902541022522552,
+        "source_band_pixels": 1143497
+      },
+      "schema": "pe1_component_extraction.v1",
+      "source_band_pixels_sum_over_edges": 2569387,
+      "total_flip_mass_in_edge_bands": 461271
+    },
+    "generator_surface": {
+      "generator_count": 7894,
+      "hybrid75_n32_subset_raw_bytes": 9297,
+      "hybrid_knee_n32_subset_raw_bytes": 13247
+    },
+    "hybrid75_selected_fix_points": 513,
+    "od6_packet_sections": [
+      {
+        "bytes": 9297,
+        "name": "pe3_hybrid75_coords_n32",
+        "sha256": "ab6b59806da75eef725ab071c016bd6039d777a1d0799b2e7f43771af49f317a"
+      },
+      {
+        "bytes": 3140,
+        "name": "od6_decoder_legal_table_base_rgb_generator_geometry_1024",
+        "sha256": "f116dd758cf16d0b8903ed1250b40b0ec14ef5d35632dbe30ee1caa5908b46db"
+      }
+    ],
+    "od6_selected_context_fix_points_before_hybrid_union": 6105,
+    "od6_table_header": {
+      "bucket_count": 1024,
+      "decoder_legal_feature_sources": [
+        "qo1 decoded last-frame RGB local bins",
+        "shipped generator/hybrid packet coverage bits when feature mode includes generator state",
+        "generic row/column/horizon bins when feature mode includes geometry",
+        "counted block-prior proxy when feature mode includes proxy"
+      ],
+      "feature_columns": [
+        "r_bin_q8",
+        "g_bin_q8",
+        "b_bin_q8",
+        "y_bin_q8",
+        "u_bin_q8",
+        "v_bin_q8",
+        "gx_bin",
+        "gy_bin",
+        "contrast_bin",
+        "chroma_delta_bin",
+        "pe1_generator_coverage",
+        "pe3_hybrid75_coverage",
+        "pe3_hybrid_knee_coverage",
+        "row_bin_16",
+        "col_bin_16",
+        "row_bin_32",
+        "col_bin_32",
+        "above_horizon_190",
+        "depth_band_190_230",
+        "center_dx_bin_32",
+        "left_right_half"
+      ],
+      "feature_mode": "base_rgb_generator_geometry",
+      "forbidden_sources_absent": [
+        "GT RGB frames",
+        "GT margin",
+        "Fisher/head-distance caches",
+        "scorer weights or scorer forwards"
+      ],
+      "holdout_points": 5487,
+      "positive_points_total": 6177,
+      "qlogit_count": 1024,
+      "qscale": 1024.0,
+      "schema": "ddm_od6_decoder_legal_bucket_table.v1",
+      "seed": 20261856,
+      "selected_positive_points": 6105,
+      "smoothing": 1.0,
+      "threshold": 0.10000000149011612,
+      "train_points": 21763
+    },
+    "od6_table_payload_sha256": "f116dd758cf16d0b8903ed1250b40b0ec14ef5d35632dbe30ee1caa5908b46db",
+    "point_meta": {
+      "candidate_scope": "training labels use the n32 currently-wrong scorer-lattice cells; feature columns themselves are decoder-legal and contain no GT/scorer values",
+      "negative_wrong_candidate_count": 21073,
+      "per_pair": [
+        {
+          "negative_wrong_candidates": 584,
+          "pair": 8,
+          "positive_od2_stage1_fix_points": 148,
+          "wrong_candidates": 732
+        },
+        {
+          "negative_wrong_candidates": 634,
+          "pair": 32,
+          "positive_od2_stage1_fix_points": 147,
+          "wrong_candidates": 781
+        },
+        {
+          "negative_wrong_candidates": 522,
+          "pair": 46,
+          "positive_od2_stage1_fix_points": 167,
+          "wrong_candidates": 689
+        },
+        {
+          "negative_wrong_candidates": 549,
+          "pair": 57,
+          "positive_od2_stage1_fix_points": 285,
+          "wrong_candidates": 834
+        },
+        {
+          "negative_wrong_candidates": 1153,
+          "pair": 70,
+          "positive_od2_stage1_fix_points": 255,
+          "wrong_candidates": 1408
+        },
+        {
+          "negative_wrong_candidates": 676,
+          "pair": 107,
+          "positive_od2_stage1_fix_points": 177,
+          "wrong_candidates": 853
+        },
+        {
+          "negative_wrong_candidates": 734,
+          "pair": 112,
+          "positive_od2_stage1_fix_points": 163,
+          "wrong_candidates": 897
+        },
+        {
+          "negative_wrong_candidates": 544,
+          "pair": 119,
+          "positive_od2_stage1_fix_points": 190,
+          "wrong_candidates": 734
+        },
+        {
+          "negative_wrong_candidates": 668,
+          "pair": 148,
+          "positive_od2_stage1_fix_points": 159,
+          "wrong_candidates": 827
+        },
+        {
+          "negative_wrong_candidates": 702,
+          "pair": 154,
+          "positive_od2_stage1_fix_points": 260,
+          "wrong_candidates": 962
+        },
+        {
+          "negative_wrong_candidates": 623,
+          "pair": 168,
+          "positive_od2_stage1_fix_points": 205,
+          "wrong_candidates": 828
+        },
+        {
+          "negative_wrong_candidates": 706,
+          "pair": 198,
+          "positive_od2_stage1_fix_points": 132,
+          "wrong_candidates": 838
+        },
+        {
+          "negative_wrong_candidates": 632,
+          "pair": 225,
+          "positive_od2_stage1_fix_points": 82,
+          "wrong_candidates": 714
+        },
+        {
+          "negative_wrong_candidates": 603,
+          "pair": 234,
+          "positive_od2_stage1_fix_points": 164,
+          "wrong_candidates": 767
+        },
+        {
+          "negative_wrong_candidates": 499,
+          "pair": 244,
+          "positive_od2_stage1_fix_points": 185,
+          "wrong_candidates": 684
+        },
+        {
+          "negative_wrong_candidates": 662,
+          "pair": 251,
+          "positive_od2_stage1_fix_points": 260,
+          "wrong_candidates": 922
+        },
+        {
+          "negative_wrong_candidates": 671,
+          "pair": 284,
+          "positive_od2_stage1_fix_points": 239,
+          "wrong_candidates": 910
+        },
+        {
+          "negative_wrong_candidates": 551,
+          "pair": 328,
+          "positive_od2_stage1_fix_points": 197,
+          "wrong_candidates": 748
+        },
+        {
+          "negative_wrong_candidates": 490,
+          "pair": 336,
+          "positive_od2_stage1_fix_points": 162,
+          "wrong_candidates": 652
+        },
+        {
+          "negative_wrong_candidates": 557,
+          "pair": 349,
+          "positive_od2_stage1_fix_points": 129,
+          "wrong_candidates": 686
+        },
+        {
+          "negative_wrong_candidates": 577,
+          "pair": 383,
+          "positive_od2_stage1_fix_points": 204,
+          "wrong_candidates": 781
+        },
+        {
+          "negative_wrong_candidates": 608,
+          "pair": 399,
+          "positive_od2_stage1_fix_points": 211,
+          "wrong_candidates": 819
+        },
+        {
+          "negative_wrong_candidates": 561,
+          "pair": 411,
+          "positive_od2_stage1_fix_points": 225,
+          "wrong_candidates": 786
+        },
+        {
+          "negative_wrong_candidates": 610,
+          "pair": 423,
+          "positive_od2_stage1_fix_points": 204,
+          "wrong_candidates": 814
+        },
+        {
+          "negative_wrong_candidates": 568,
+          "pair": 445,
+          "positive_od2_stage1_fix_points": 166,
+          "wrong_candidates": 734
+        },
+        {
+          "negative_wrong_candidates": 711,
+          "pair": 465,
+          "positive_od2_stage1_fix_points": 234,
+          "wrong_candidates": 945
+        },
+        {
+          "negative_wrong_candidates": 697,
+          "pair": 481,
+          "positive_od2_stage1_fix_points": 151,
+          "wrong_candidates": 848
+        },
+        {
+          "negative_wrong_candidates": 983,
+          "pair": 516,
+          "positive_od2_stage1_fix_points": 324,
+          "wrong_candidates": 1307
+        },
+        {
+          "negative_wrong_candidates": 759,
+          "pair": 536,
+          "positive_od2_stage1_fix_points": 149,
+          "wrong_candidates": 908
+        },
+        {
+          "negative_wrong_candidates": 669,
+          "pair": 561,
+          "positive_od2_stage1_fix_points": 178,
+          "wrong_candidates": 847
+        },
+        {
+          "negative_wrong_candidates": 758,
+          "pair": 582,
+          "positive_od2_stage1_fix_points": 235,
+          "wrong_candidates": 993
+        },
+        {
+          "negative_wrong_candidates": 812,
+          "pair": 583,
+          "positive_od2_stage1_fix_points": 190,
+          "wrong_candidates": 1002
+        }
+      ],
+      "retained_fix_denominator": 6177,
+      "wrong_candidate_count": 27250
+    },
+    "pure_receiver_targeter_gap": {
+      "reason": "OD6 b1024 hashes require pe1_generator_coverage and pe3_hybrid_knee_coverage columns; the OD6 packet row stores only the PE3 hybrid75 n32 subset and the bucket table.",
+      "status": "NOT_CLOSED_BY_OD6_PACKET_ALONE"
+    },
+    "qo1_base_frame_features": {
+      "bytes": 3662409600,
+      "camera_shape": [
+        1200,
+        874,
+        1164,
+        3
+      ],
+      "frame_index_rule": "last frame for pair p is raw frame 2*p+1",
+      "path": "/Volumes/VertigoDataTier/pact/ddm_qo1_20260804/sub_auto_pairbit/inflated/0.raw",
+      "seg_resize": {
+        "align_corners": "default_false",
+        "implementation": "torch.nn.functional.interpolate",
+        "mode": "bilinear",
+        "size_hw": [
+          384,
+          512
+        ]
+      },
+      "selected_pair_rgb_shas": {
+        "107": "e7fb341eccd2ef6411d9a3b2fa2b0f2772cbeed6d846ff78922a4a6dd5218ce6",
+        "112": "7d142e9d5df0202b1b4ba586f0719b8448b7a6b3322e18d05ab92daf0a7df9bb",
+        "119": "a349a6ef5de10ea2935fb1b9db79416952379a24fb189a428973b459232c6740",
+        "148": "9f6882aa6c23fa85700399db61aa36c7419b5dde9a156af76cfbb246bb38e92b",
+        "154": "87baac0d5c917a5933e08e5852b08557f81d40897428ba50212328aeae3022a8",
+        "168": "845a7954f55664aac3268fa1ad5444d95ca15e18a9875aff9c81f245c2ce233b",
+        "198": "170289fd67ad84d70d8784b70416b60922cab5ac2db9aa35293016f31a18ca4c",
+        "225": "2f1a7ce9bd403e47946d67264d4491d0be418a99c0b3fa8655a34b6522bebc80",
+        "234": "ee6c51d46ab42c09709aa2aa5c042292861717667c8a75ab2ac7edc8a030e9ba",
+        "244": "8240c9848bbd9ea1b715bbd3c03f7b1427031efb6f0bef7bb5a587262564480d",
+        "251": "16a9c554e99a575865296f101cd04cd9b68a98b53486dfadc0b1e737bbe3bec2",
+        "284": "7a5485594367b1d36261674b15bde0ff83824a249609c7ea70cafbe69a3d39be",
+        "32": "74abaec0f099b95cef0c7e38063b803a63b7b7f31baea802d518b9eb123960a3",
+        "328": "4ad93dcc97c892ad9d351f31d7362aa248c6fecf3c2fc158930c1c385a4c5944",
+        "336": "52bd42f32f62bc15bff8243ee6c3a11035747b3fb9b3beba24c1ffcea5f2e634",
+        "349": "b50e981000c4fe789a5e557eb8c042a56640435f3ac18f199ce7cc50e1f9d40a",
+        "383": "ee3037e4fc666b7ea9639ad8f11b68d86b7ac09dc2381ecb25310d1f28e92afa",
+        "399": "68117f97a956b4044723aef13753e33c5405eff9c738e2730d4787bfe41c821e",
+        "411": "75f74d5e61eb19d47d4d0e997d567abf58c1ac1388fe8c82287a423a54eeefc7",
+        "423": "090d362983d6d578e1fa3de91c9aecc031cdf3df8ab53d0863cb983345d92855",
+        "445": "5d2a3698c5439ed5ca27e056f4230064eaf4eae22970e32f64216fd717ea8a26",
+        "46": "6a478cfd9dccb9a6fcafdbddf6e82667df31bea9031a73f5772f43e549be8b5e",
+        "465": "3fb37fcc03f35b7ddf35a2c70a31542b15a193d1827cd31e7ec2b2f83a2dd7ef",
+        "481": "7fd21ddf5c183ce8e398c3f4b9c13b4cecff46a3a6c2a28f1a9892017618f6d5",
+        "516": "0b12994d82db321da40d129a273f0ad31cce3df795d96bd506bc12a9cf1a6871",
+        "536": "1d7389acc8fbbcee4932e1f2e952928de3087b62f2eb630dc93285eb91e7ee3b",
+        "561": "5098f2b87c94c3ba0fa8da5d76d98f939936f4ee10b3dd73cad754f1815a3c95",
+        "57": "fa5f327a3c90c7bb151637823971b22adb6fb14c7d790f2de56dc4baf15015b2",
+        "582": "4f6d8f18cd000bc1afb1b0d6680a1a5d4940ad540d89b8e09cbfac64aa4516be",
+        "583": "31634036781cb937cc435ea00d02fc0d39039070c00fca374c550104b2605040",
+        "70": "98ab1922c4bdd121f3a32ab781c3cb0f2a89267fdda01b4e98563fb1e34b9755",
+        "8": "85c82bf5474b18423f42a7e2c7ee296c024f8c537da8eabba7f4b7ecd466767a"
+      },
+      "sha256": "3ce7d269a7080a4024a576694cd0ddc697099c64cd02fdd2bb879339e4b03f31"
+    }
+  },
+  "storage_preflight": {
+    "free_bytes": 127625547776,
+    "ok": true,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_od7_20260805",
+    "required_free_bytes": 2147483648,
+    "total_bytes": 2000189177856,
+    "used_bytes": 1872563630080
+  },
+  "upstream_evaluate": false
+}
