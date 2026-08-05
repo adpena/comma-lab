@@ -422,7 +422,7 @@ clears the landing.
 | 2 | Forced-resume tail source = checkpoint's OWN baked meta (`telemetry_tail`, last ≤4 gate rows, :2404-2417) — snapshot resume works WITHOUT telemetry.jsonl. Snapshot meta parse via the trainer's canonical idiom `json.loads(bytes(z['meta::json']).decode())` (:2640) | VERIFIED — tail epochs [1404,1404,1405,1405], meta::epoch=1406 EXCLUSIVE |
 | 3 | Forced-start arithmetic: legacy 1407 vs forced max(tail)+1=1406 → chosen 1406; remaining 1526−1406=120 ep → U=18000 → decay 1−4/U=0.9997777777777778 == the sealed ticket's derived decay | VERIFIED (recomputed) |
 | 4 | The R4 latch is LIVE in the snapshot (`jd1_pose_finish.stage_ema_reanchored=True`, carried `active_ema_decay=0.9966667` w/ U=1200 provenance string) AND the predicate `jd1_should_reanchor_stage_ema` (:3200) overrides it: forced branch fires on force-flag ∧ reason=="resume_inside_joint_pose_finish". Without the flag the continuation would run 120 ep at the smoke decay — the exact hazard, confirmed present, confirmed cured | VERIFIED at source |
-| 5 | Probe basis semantics: ckpt stores 20 `ema::` arrays SEPARATE from 20 live param arrays; `load_checkpoint` loads LIVE params; `ema_snapshot_swap` applied only when `use_ema=True` → the `endpoint_ep1405_live` tag measures the true LIVE basis (per the plateau policy: slow-EMA warmup ≈ U/2 = 9000 steps = 60 ep, so continuation gates MUST read LIVE) | VERIFIED |
+| 5 | Probe basis semantics: ckpt stores 20 `ema::` arrays SEPARATE from 20 live param arrays; `load_checkpoint` loads LIVE params; `ema_snapshot_swap` applied only when `use_ema=True` → the `endpoint_ep1405_live` tag measures the true LIVE basis (warmup ≈ U/2 = 9000 steps = 60 ep; ⚠ CORRECTED post-R5 by MAIN-R5X below — the "so continuation gates MUST read LIVE" inference here was WRONG: the as-built resume⇒warm-shadow rule (:4314/:4346) pre-satisfies warmup, so continuation gates read the ep1406-REANCHORED ema_shadow from the first gate; the both-bases probe design this check verified is unaffected) | VERIFIED |
 | 6 | Sealed ticket lever ledger: 23 levers, 0 lever-vs-argv mismatches (declared-vs-argv refuse = regenerator debt #5; live cross-check on the actual ticket) | VERIFIED — 0 mismatches |
 
 Axis 8 (assumption-challenge): the shared assumption under review is "the checkpoint's baked
@@ -469,9 +469,14 @@ COUPLED_DESCENT, 0 rollbacks) and pose needs ~89× more descent (0.1289 → 0.00
 ≤0.12 contribution gate; RR1-C2-R4: √(10·0.0015)=0.12247, so 1.5e-3 is the rounded ~0.1225
 neighborhood, not the gate). No Case A/B/C fires. **VERDICT: CONTINUE — fire the sealed jd4 ticket
 (51c64222…) once review cycle 2 clears.** The operator steer "will need more descent" is
-confirmed by the numbers. Watch item for the jd4 window: slow-EMA warmup ends ~ep1466 and
-τ=30 ep — the endpoint at ep1526 gives the shadow only ~2τ of maturity past warmup; gates read
-LIVE throughout (policy), and the endpoint probe must again measure BOTH bases.
+confirmed by the numbers. Watch item for the jd4 window (⚠ CORRECTED post-R5, MAIN-R5X below —
+the original wording here claimed "gates read LIVE throughout (policy)", which is WRONG about
+the as-built mechanism): the reanchored shadow is reset EQUAL to live at ep1406 (:4342) and the
+resume⇒warm-shadow rule (:4314/:4346) pre-satisfies warmup, so gates read `ema_shadow` from the
+window's FIRST gate (telemetry `a1_gate gate_params="ema_shadow"` at ep1424/1429 confirms; the
+parallel `jd1_live_basis_gate` channel logs the live basis at every gate boundary). Shadow
+maturity at the ep1526 endpoint = 120 ep = 4τ from its ep1406 anchor (τ=30 ep). The endpoint
+probe must again measure BOTH bases.
 
 ## CYCLE-2 ROUND 2 DISPOSITION + JD4 FIRE RECORD (MAIN, 2026-08-05 ~16:2xZ)
 
@@ -515,7 +520,8 @@ jd4_cont_ep1406, wall cap 165 min for 120 ep (1406→1526).
 
 Endpoint obligations (bind at ~ep1526 / wall-cap / typed exit): both-bases n600 endpoint probe
 from the FIXED committed instrument (never the stale copies) · plateau policy Cases 0/A/B/C ·
-gates read LIVE through warmup (ends ~ep1466; shadow ~2τ mature by ep1526) · dynamic-EMA A/B
+in-window gate basis = the ep1406-reanchored ema_shadow (resume⇒warm-shadow :4346, NOT live —
+corrected per MAIN-R5X; 4τ mature by ep1526; live basis logged in parallel) · dynamic-EMA A/B
 (fixed 1−4/U vs plateau-anchored tail average) queued as the next-window decision per the
 operator's dynamic-EMA question.
 
@@ -528,3 +534,30 @@ ADJUDICATION was audited for gate-bending and PASSED CLEAN, and the live R4-cure
 plateau-policy arithmetic (Case A/B/C bars, satisficing thresholds, dynamic-EMA A/B design)
 + endpoint-path mental execution (wall-cap vs ep1526 vs typed exit — which artifact does each
 exit hand the adjudicator?). Seal requires 3/3; the running window is not gated on it.
+
+## CYCLE-2 MAIN-R5X (between-rounds finding, MAIN, 2026-08-05): ONE MEDIUM — counter RESET 0/3
+
+rr1 round 5 returned CLEAN (1/3), verifying the R4 headline correction, the warmup/τ arithmetic,
+and the ep1424→1429 A1 alarm episode (transient, recovered, 0 refuses, watch-only). MAIN then
+caught — from the same live telemetry the round had already read — a record-vs-build
+contradiction the round missed:
+
+**MAIN-R5X (MEDIUM, record-accuracy class, MINE):** this receipt (three sites) and the hot state
+claimed "gates read LIVE through ~ep1466 (warmup)". The AS-BUILT trainer rule is
+**resume⇒warm-shadow**: on resume `global_step` initializes AT `ema_warmup_updates`
+(trainer :4314) and the forced reanchor re-bumps it (`global_step = max(global_step,
+ema_warmup_updates)`, :4346), so `gate_basis = "ema_shadow"` from the window's FIRST gate.
+Telemetry confirms: `a1_gate gate_params="ema_shadow"` at ep1424 and ep1429, with
+`ema_warmup_updates=9000` present in the same rows. The rule is deliberate and documented
+(:2183-2185 "resume ⇒ warm shadow") and SOUND for this window — the reanchor resets the shadow
+EQUAL to live (:4342), so the basis is anchored, not stale; it lags live by at most ~τ (30 ep)
+as it tracks. Physics unaffected; endpoint adjudication unaffected (the plateau gates consume
+the BOTH-bases n600 endpoint probe, never the in-window a1 rows). Wrong: my "LIVE-through-
+warmup" description — that warmup semantics applies to FRESH runs only. Corrected at all three
+sites (Round-1 check-5 parenthetical · adjudication watch item · fire-record endpoint
+obligations) + hot state; the "~2τ past warmup" maturity framing recast as 4τ-from-anchor.
+
+Disposition per protocol: a found defect resets the counter regardless of who found it — round
+5's clean is INVALIDATED on the live-A1-status axis (the arm read the a1_gate rows carrying the
+contradicting basis label without flagging it). **Counter honestly RESET 0/3.** Round 6 verifies
+this correction at source (:4314/:4342/:4346 + the telemetry rows) and continues the fresh sweep.
