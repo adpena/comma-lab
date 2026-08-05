@@ -294,3 +294,12 @@ DISPOSITION (binding on the endpoint boundary):
    re-anchor (clear/ignore the carried flag). Joins the argv-interpreter + unique-out-dir items.
 Counter 0/3. The genus audit lesson: value-audits (cx1) cannot catch flag-latches — only
 telemetry-reads at the resume row can. Round 5 = next fresh pass.
+
+### RECURSIVE REVIEW — ROUND 5 (rr1): FIRST CLEAN PASS, counter 1/3
+Zero new findings. Substantive verification (not absence-of-effort): round-4 disposition boundary
+re-verified (hot state + tp1 + scope marker all label the continuation smoke-EMA; no uncaveated
+full-window-EMA consumption found in current decision surfaces) + the broader resume-carried
+state-flag CLASS swept (no second instance found in the searched scope). Honest boundary: dy1 +
+regenerator production debts are GATED, not fixed — round 5 correctly refuses to count them
+until code/launch gates enforce. Rounds 6-7 = the remaining consecutive clean passes to SEAL the
+pre-endpoint state.
