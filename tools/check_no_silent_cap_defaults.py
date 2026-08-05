@@ -29,6 +29,8 @@ CAP_FLAG_RE = re.compile(
     r"^--(?:(?:max|num|n)-)?(?:steps?|iters?|iterations?|passes?|relin-bound)$"
 )
 STOP_REPORT_MARKERS = (
+    "CapStopReceipt",
+    "build_cap_stop_receipt",
     "stop_reason",
     "stop_reasons",
     "stop_status",
@@ -157,6 +159,8 @@ def _iter_python_files(roots: list[Path], *, include_tests: bool) -> list[Path]:
         for path in root.rglob("*.py"):
             rel_parts = path.relative_to(REPO).parts if path.is_relative_to(REPO) else path.parts
             if any(part in SKIP_DIR_NAMES for part in rel_parts):
+                continue
+            if len(rel_parts) >= 2 and rel_parts[:2] == ("experiments", "results"):
                 continue
             if not include_tests and ("tests" in rel_parts or path.name.startswith("test_")):
                 continue

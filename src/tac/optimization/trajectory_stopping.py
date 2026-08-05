@@ -18,6 +18,7 @@ RATE_SCORE_PER_BYTE: Final = 25.0 / 37_545_489.0
 TRAJECTORY_STOPPING_LAW_REF: Final = "trajectory_derived_stopping_law_v1"
 
 FitKind = Literal["geometric", "power_law", "last_k_slope"]
+CapStopReason = Literal["converged", "cap_bound", "failed"]
 StopReason = Literal[
     "converged_projected",
     "marginal_below_bar",
@@ -168,6 +169,56 @@ class StopDecision:
             "safety_bound_compute": self.safety_bound_compute,
             "bound_reported": self.bound_reported,
         }
+
+
+@dataclass(frozen=True, slots=True)
+class CapStopReceipt:
+    """Typed cap/convergence receipt for solvers that do not use trajectory fits."""
+
+    stop_reason: CapStopReason
+    steps_run: int
+    cap: int | None
+    still_descending: bool | None
+
+    def __post_init__(self) -> None:
+        if self.steps_run < 0:
+            raise TrajectoryStoppingError("steps_run must be non-negative")
+        if self.cap is not None and self.cap < 0:
+            raise TrajectoryStoppingError("cap must be non-negative when supplied")
+        if self.stop_reason == "cap_bound":
+            if self.cap is None:
+                raise TrajectoryStoppingError("cap_bound receipts must record cap")
+            if self.steps_run < self.cap:
+                raise TrajectoryStoppingError("cap_bound receipts require steps_run >= cap")
+            if self.still_descending is None:
+                raise TrajectoryStoppingError("cap_bound receipts must record still_descending")
+        if self.stop_reason == "converged" and self.still_descending:
+            raise TrajectoryStoppingError("converged receipts cannot be still_descending")
+
+    def to_payload(self) -> dict[str, Any]:
+        return {
+            "stop_reason": self.stop_reason,
+            "steps_run": self.steps_run,
+            "cap": self.cap,
+            "still_descending": self.still_descending,
+        }
+
+
+def build_cap_stop_receipt(
+    *,
+    stop_reason: CapStopReason,
+    steps_run: int,
+    cap: int | None,
+    still_descending: bool | None,
+) -> CapStopReceipt:
+    """Build the canonical small stop-reason payload for capped solvers."""
+
+    return CapStopReceipt(
+        stop_reason=stop_reason,
+        steps_run=steps_run,
+        cap=cap,
+        still_descending=still_descending,
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -504,6 +555,8 @@ def allocate_adaptive_depths(
 __all__ = [
     "RATE_SCORE_PER_BYTE",
     "TRAJECTORY_STOPPING_LAW_REF",
+    "CapStopReason",
+    "CapStopReceipt",
     "DecayFit",
     "DepthAllocation",
     "ProjectionInterval",
@@ -513,6 +566,7 @@ __all__ = [
     "TrajectoryStopConfig",
     "TrajectoryStoppingError",
     "allocate_adaptive_depths",
+    "build_cap_stop_receipt",
     "byte_score_units",
     "evaluate_trajectory_stop",
     "fit_decay_models",
