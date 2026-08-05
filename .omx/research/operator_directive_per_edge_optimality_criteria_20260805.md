@@ -270,3 +270,18 @@ produces."*
   mandate) are the conditions under which it WOULD fire; the fire-condition is the
   composed-candidate boundary (od3/od5 landed + receiver gate). gc18 treats it as
   design input, not obligation. No arm fires on it now.
+
+## CODA (operator, 2026-08-05)
+
+*"All is possible through proper deep math and geometry and engineering."*
+
+This day is the demonstration. Every wall named this morning fell to a derivation with a
+falsifier by evening: staging derived from the frame-dimension split → ordering law
+MEASURED (od2); the conditioned-seg→better-pose law stated → registered as a live
+hypothesis test (od3); the per-flip packet killed by arithmetic (od4, knee-less curve) →
+the amortization escape DERIVED from measured stationarity → below the line (od5); the
+legality fear RESOLVED by measurement, tax negative (od6) — the information was in the
+image, not in the scorer's privilege. The one seam left (realization) is itself a
+geometry problem: the values SegNet must read are dictated by the frozen head's own
+hyperplanes, solvable at encode, shippable as prototypes. Nothing today moved by luck;
+everything moved by derive → falsify → measure → compose.
