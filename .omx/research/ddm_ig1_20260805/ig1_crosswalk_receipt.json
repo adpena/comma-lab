@@ -1,0 +1,166 @@
+{
+  "schema": "ddm_ig1_crosswalk_receipt.v1",
+  "unit": "IG1",
+  "created_date": "2026-08-05",
+  "paper": {
+    "title": "Information-Geometric Forward Policy Training in GFlowNets",
+    "authors": [
+      "Yordan Raykov",
+      "Rodrigo Veiga"
+    ],
+    "arxiv_id": "2608.03967",
+    "submitted": "2026-08-04",
+    "abstract_url": "https://arxiv.org/abs/2608.03967",
+    "html_url": "https://arxiv.org/html/2608.03967",
+    "pdf_url": "https://arxiv.org/pdf/2608.03967",
+    "local_pdf_hash": null,
+    "custody_status": "official_abstract_read; html_pdf_full_text_blocked_in_sandbox",
+    "full_text_verified": false,
+    "full_text_blockers": [
+      "web cache returned official abstract only for arxiv abs endpoint and blank results for html/pdf/src endpoints",
+      "shell curl failed DNS resolution for arxiv.org",
+      "node fetch failed for arxiv abs/html/pdf endpoints",
+      "browser plugin reported no browser available"
+    ]
+  },
+  "scope": {
+    "dollars": 0,
+    "scorer_forwards": 0,
+    "upstream_evaluate_run": false,
+    "n600_run": false,
+    "launches": 0,
+    "score_claim": false,
+    "protected_files_touched": false,
+    "persisted_tmp_evidence": false
+  },
+  "answer_first": {
+    "summary": "IG1 yields no measured score move. The useful transfer is a scorer-free trajectory-coupling diagnostic and vanishing-condition A/B over recorded solve traces, not a new score authority or duplicate Fisher equation.",
+    "canonical_equation_registered": false,
+    "canonical_equation_reason": "Existing Fisher, Bregman/natural-gradient, dual-metric, and trajectory-stopping laws already cover the local law shape."
+  },
+  "verdicts": [
+    {
+      "seed": "per_step_fisher_decomposition_iterative_solves",
+      "grade": "ALREADY_EMBODIED_PLUS_ADOPT_DIAGNOSTIC",
+      "honesty": [
+        "DERIVED",
+        "FULL_TEXT_NOT_VERIFIED"
+      ],
+      "status": "Local Fisher geometry is already embodied; the adopted piece is a scorer-free cross-step interaction table over recorded trajectories.",
+      "named_consumer": "post-OD3 trajectory replay, SQ2/TJ1 descendants, v17/v19 realized-acceptance logs",
+      "falsifier": "Cross-step Fisher/synergy matrix is near-diagonal or does not reorder candidates beyond current Fisher-margin, ST2, fd1/fd2, and TJ1 practice."
+    },
+    {
+      "seed": "vanishing_condition_shared_parameterization",
+      "grade": "ADOPT_MEASUREMENT_QUESTION",
+      "honesty": [
+        "DERIVED"
+      ],
+      "status": "Cross-pair terms may vanish for disjoint/separable packet families but must be measured for shared context/generator routes.",
+      "named_consumer": "OD8 post-OD3 persisted native stream and TR1 shared renderer/token route",
+      "falsifier": "Exact joint replay shows off-diagonal terms collapse after receiver and entropy coding, or shared route loses to independent per-pair coding at equal decoded output."
+    },
+    {
+      "seed": "riemannian_vs_euclidean_convergence",
+      "grade": "ALREADY_EMBODIED_PLUS_ADOPT_LOGGING",
+      "honesty": [
+        "DERIVED"
+      ],
+      "status": "Keep current Fisher/dual-metric discipline and add cheap norm/stop-reason logging when touching trajectory-stopping or fd-line code.",
+      "named_consumer": "tac.optimization.trajectory_stopping and fd1/fd2/SQ2/OD3 descendants",
+      "falsifier": "Fisher-norm/Euclidean-norm fields do not separate accepted, rejected, and cap-bound rows better than existing logs."
+    },
+    {
+      "seed": "gflownet_proper",
+      "grade": "N-A_PLUS_TRANSFERABLE_FOR_CANDIDATE_GENERATION",
+      "honesty": [
+        "DERIVED"
+      ],
+      "status": "Current Pact path is deterministic solve/replay/admission, not reward-proportional terminal-state sampling.",
+      "named_consumer": "none now; possible future #319 K>1 emission or MC finisher",
+      "falsifier": "A live producer explicitly needs reward-proportional diverse terminal states and deterministic ranking is insufficient under exact receiver/coder replay."
+    },
+    {
+      "seed": "belief_propagation_marginalization_beyond_seed",
+      "grade": "ADOPT_DESIGN_LENS_ONLY",
+      "honesty": [
+        "INFERRED",
+        "FULL_TEXT_NOT_VERIFIED"
+      ],
+      "status": "Potential sparse factor-graph lens for receiver-visible per-edge/worldsheet/costate variables, with no implementation in this arm.",
+      "named_consumer": "m91/per-edge graph, worldsheet tracks, costate lambda-field",
+      "falsifier": "Graph requires hidden scorer/GT state at decode time, cannot preserve exact decode equality, or fails to improve ordering under joint receiver/coder replay."
+    }
+  ],
+  "recall_evidence": [
+    {
+      "query": "Fisher-Rao margin Pearson 0.978 natural gradient information geometry",
+      "source": "docs/paper/information_geometric_foundations.md",
+      "impact": "Confirmed Fisher geometry is already central and measured; IG1 must not duplicate it."
+    },
+    {
+      "query": "canonical equations trajectory Fisher natural gradient bregman stopping",
+      "source": "tools/list_canonical_equations.py --json filtered output",
+      "impact": "Found existing Fisher/Bregman/natural-gradient/trajectory equations; no new canonical equation registered."
+    },
+    {
+      "query": "trajectory_derived_stopping_law_v1 safety_bound_REPORTED marginal S/step",
+      "source": ".omx/research/ddm_tj1_20260805/tj1_summary.md and src/tac/optimization/trajectory_stopping.py",
+      "impact": "Mapped IG1 trajectory diagnostics onto an existing scorer-free replay consumer."
+    },
+    {
+      "query": "v19b synergy joint remeasure stack amplification",
+      "source": ".omx/research/codex_findings_ddm_v19b_joint_remeasure_stack_20260723_codex.md",
+      "impact": "Used measured non-additivity as the concrete Pact observable for cross-step temporal score interaction."
+    },
+    {
+      "query": "fd1 scorer metric GN fd2 realization gap uint8",
+      "source": ".omx/research/ddm_fd1_family_d_gn_description_engine_20260728.md and .omx/research/ddm_fd2_posenull_gn_disambiguation_20260728.md",
+      "impact": "Prevented proposing a generic natural-gradient replacement for a line whose current blocker is realized argmax transfer."
+    },
+    {
+      "query": "ST2 scorer-native Fisher targeter",
+      "source": ".omx/research/ddm_st2_20260805/ST2_RECEIPT_20260805.md",
+      "impact": "Confirmed cached scorer-native Fisher/head/BN features are already used for targeting."
+    },
+    {
+      "query": "OD8 native DOF shared context table generator persisted values",
+      "source": ".omx/research/ddm_od8_20260805/OD8_NATIVE_DOF_RECEIPT.md",
+      "impact": "Named OD8 post-OD3 persistence as the producer for the shared-vs-independent interaction A/B."
+    },
+    {
+      "query": "AM1 duplicate discipline trajectory stopping",
+      "source": ".omx/research/ddm_am1_20260805/AM1_CROSSWALK_RECEIPT.md",
+      "impact": "Reused the no-duplicate crosswalk discipline for recent papers."
+    }
+  ],
+  "follow_on_disposition": [
+    {
+      "id": "IG1-F1",
+      "status": "QUEUED_WITH_FIRE_ORDER",
+      "fire_order": "After OD3 or a complete SQ2/TJ1 trajectory receipt, consume recorded trajectories only and compute single-vs-joint deltas plus a Fisher-conditioned cross-step table."
+    },
+    {
+      "id": "IG1-F2",
+      "status": "QUEUED_WITH_FIRE_ORDER",
+      "fire_order": "After OD8 post-OD3 persistence, price independent versus shared-context coding on the same persisted native stream with exact decode equality."
+    },
+    {
+      "id": "IG1-F3",
+      "status": "FOLDED",
+      "fire_order": "Add Fisher norm, Euclidean norm, ratio, and stop-reason log fields only during the next trajectory-stopping or fd-line code touch."
+    }
+  ],
+  "next_if_resumed": [
+    "Re-run paper custody when arXiv HTML/PDF is reachable and replace the custody caveat only after full text is read.",
+    "Wait for OD3/post-OD3 OD8 or SQ2/TJ1 complete trajectory receipts.",
+    "Build the scorer-free cross-step interaction table from existing records.",
+    "Route a shared-context or ordering change only if off-diagonal terms are material under exact receiver/coder replay.",
+    "Close IG1 as already-embodied if off-diagonal terms are not material."
+  ],
+  "frontier": {
+    "own_vehicle": "S = 0.7539807296911207 @ 357,836 B [macOS-CPU advisory]",
+    "contest_pointer": "borrowed/unmoved",
+    "frontier_moved_by_ig1": false
+  }
+}
