@@ -1,0 +1,1898 @@
+{
+  "all_signal_decomposition": {
+    "curve_only_control": {
+      "archive_projection": {
+        "joint_section_count": 6,
+        "payload_bytes": 431944,
+        "payload_sha256": "5657f6aa4372570897936ee778685e326c80ccb284ddd14efecfec3d70b47c2f",
+        "projected_archive_bytes": 432052,
+        "projected_archive_sha256": "e34fa4b8c356d085abda2629fba5b64cb1e24df5f8709eab0ab48d1bca4653c6"
+      },
+      "best_body_bytes": 73975,
+      "best_body_sha256": "0c4b41725416eecf8c838870e8d385745595ec312cae39e13668c458281687e3",
+      "best_codec": "lzma1-raw",
+      "claim_label": "MEASURED n600 mask-domain coder bytes and PE3 section parse-back; scorer-free",
+      "coder_race": [
+        {
+          "artifact_path": null,
+          "bytes": 73975,
+          "codec": "lzma1-raw",
+          "sha256": "0c4b41725416eecf8c838870e8d385745595ec312cae39e13668c458281687e3"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 77447,
+          "codec": "brotli-q11",
+          "sha256": "d2135f5e1966434b71bb7513df3f772a2e1f2fc59e12a2b1134baef5bc39e1cb"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 139047,
+          "codec": "smevr-r7-nibble",
+          "sha256": "c0ac96b02426c331e7b4bc4152d05e3f42720b49ff85e81082083497b73973d2"
+        }
+      ],
+      "flip_recall": 0.866596859546774,
+      "mask_domain_fidelity": {
+        "all_components": 22338,
+        "component_recall": 0.44766765153550003,
+        "decoded_band_pixels": 4790479,
+        "hausdorff_px_max": 59.135437767890075,
+        "hausdorff_px_mean": 2.706241224557857,
+        "hausdorff_px_p95": 7.0,
+        "intersection_pixels": 2287740,
+        "iou": 0.4510416342180774,
+        "precision": 0.4775597596816519,
+        "recall": 0.8903835817648335,
+        "selected_components": 10000,
+        "source_band_pixels": 2569387,
+        "union_pixels": 5072126
+      },
+      "mode_counts": {
+        "depth_conditioned_curve": 10000
+      },
+      "parse_back": {
+        "codec": "lzma1-raw",
+        "component_records": 10000,
+        "frame_records": 600,
+        "kind": 1,
+        "kind_name": "hybrid_per_regime",
+        "mode_counts": {
+          "depth_conditioned_curve": 10000
+        },
+        "raw_bytes": 242189,
+        "raw_sha256": "348f4b957508cc9d8ea1e83aebbb8b2b1c5e09121386415921de9515d22ac386",
+        "schema": "pe3_section_parse_back.v1",
+        "section_bytes": 74032,
+        "section_sha256": "22cda7697de18ecdcbf83969162939c2884cb903eec57de53d0d7021d882ff7b"
+      },
+      "policy": "all-signal control: per-edge curve-only waterfill, not the operator hybrid law",
+      "prefix_counts": {
+        "curve": 10000
+      },
+      "raw_bytes": 242189,
+      "raw_sha256": "348f4b957508cc9d8ea1e83aebbb8b2b1c5e09121386415921de9515d22ac386",
+      "section_bits_per_band_px": 0.2305047857718592,
+      "section_bytes": 74032,
+      "section_sha256": "22cda7697de18ecdcbf83969162939c2884cb903eec57de53d0d7021d882ff7b",
+      "selected_flip_mass": 399736,
+      "surface_id": "pe3_curve_only_waterfill_10000_control",
+      "target_section_bytes": null,
+      "total_flip_mass": 461271
+    },
+    "missing_recall": {
+      "by_depth": {
+        "far_row": {
+          "components": 9350,
+          "flicker_pixels": 50205,
+          "fraction": 0.3099182847289902,
+          "missing_pixels": 12402,
+          "source_band_pixels": 428125
+        },
+        "mid_row": {
+          "components": 9750,
+          "flicker_pixels": 183892,
+          "fraction": 0.4687507809181098,
+          "missing_pixels": 18758,
+          "source_band_pixels": 1273244
+        },
+        "near_row": {
+          "components": 3238,
+          "flicker_pixels": 156380,
+          "fraction": 0.22133093435290002,
+          "missing_pixels": 8857,
+          "source_band_pixels": 868018
+        }
+      },
+      "by_edge": {
+        "Lane<->Movable": {
+          "components": 596,
+          "flicker_pixels": 396,
+          "fraction": 0.0003998300722193068,
+          "missing_pixels": 16,
+          "source_band_pixels": 2180
+        },
+        "Lane<->MyCar": {
+          "components": 557,
+          "flicker_pixels": 3483,
+          "fraction": 0.0043981307944123745,
+          "missing_pixels": 176,
+          "source_band_pixels": 9563
+        },
+        "Lane<->Undriv": {
+          "components": 382,
+          "flicker_pixels": 945,
+          "fraction": 0.0002748831746507734,
+          "missing_pixels": 11,
+          "source_band_pixels": 3018
+        },
+        "Movable<->MyCar": {
+          "components": 12,
+          "flicker_pixels": 70,
+          "fraction": 0.0003748406927056001,
+          "missing_pixels": 15,
+          "source_band_pixels": 266
+        },
+        "Road<->Lane": {
+          "components": 12851,
+          "flicker_pixels": 215297,
+          "fraction": 0.2953244870929855,
+          "missing_pixels": 11818,
+          "source_band_pixels": 1143497
+        },
+        "Road<->Movable": {
+          "components": 2183,
+          "flicker_pixels": 11283,
+          "fraction": 0.15228527875652847,
+          "missing_pixels": 6094,
+          "source_band_pixels": 142295
+        },
+        "Road<->MyCar": {
+          "components": 1166,
+          "flicker_pixels": 84511,
+          "fraction": 0.13051952920008997,
+          "missing_pixels": 5223,
+          "source_band_pixels": 606290
+        },
+        "Road<->Undriv": {
+          "components": 2489,
+          "flicker_pixels": 57066,
+          "fraction": 0.29747357373116423,
+          "missing_pixels": 11904,
+          "source_band_pixels": 511976
+        },
+        "Undriv<->Movable": {
+          "components": 2102,
+          "flicker_pixels": 17426,
+          "fraction": 0.11894944648524378,
+          "missing_pixels": 4760,
+          "source_band_pixels": 150302
+        }
+      },
+      "by_regime": {
+        "coherent_edge_tail": {
+          "components": 15770,
+          "flicker_pixels": 375573,
+          "fraction": 0.9886048429417498,
+          "missing_pixels": 39561,
+          "source_band_pixels": 2506138
+        },
+        "dust_fragment": {
+          "components": 6568,
+          "flicker_pixels": 14904,
+          "fraction": 0.011395157058250244,
+          "missing_pixels": 456,
+          "source_band_pixels": 63249
+        }
+      },
+      "fl1_flicker_overlap_scope": "component-local GT flicker pixels inside source band; not a scorer delta",
+      "missing_pixels": 40017,
+      "recall": 0.9844254680201932,
+      "reference": "PE1 explicit_curve_k8 full row",
+      "schema": "pe3_missing_recall_decomposition.v1",
+      "source_band_pixels": 2569387
+    },
+    "pure_generator_marginal_rows": [
+      {
+        "archive_projection": {
+          "joint_section_count": 6,
+          "payload_bytes": 425519,
+          "payload_sha256": "b86598aab7a852816fcf2bc0f74dee4411129ef4aacbcbbf48cdbc5a2e804559",
+          "projected_archive_bytes": 425627,
+          "projected_archive_sha256": "90de4c14887156fe462ead76163303bacefc3bbffec54bea10296ea104ff929a"
+        },
+        "best_body_bytes": 67550,
+        "best_body_sha256": "9bfcff8b0028c7ffea33017cf25fa342347d87b2bb202c97e91b115c01c47535",
+        "best_codec": "lzma1-raw",
+        "body_bits_per_band_px": 0.21032253996770436,
+        "claim_label": "MEASURED n600 mask-domain coder bytes and parse-back; scorer-free",
+        "coder_race": [
+          {
+            "artifact_path": null,
+            "bytes": 67550,
+            "codec": "lzma1-raw",
+            "sha256": "9bfcff8b0028c7ffea33017cf25fa342347d87b2bb202c97e91b115c01c47535"
+          },
+          {
+            "artifact_path": null,
+            "bytes": 76820,
+            "codec": "brotli-q11",
+            "sha256": "a847eaa57af4b4f4ef3e81a671dab20cdc940b301991d6ede565272951ddb3f8"
+          },
+          {
+            "artifact_path": null,
+            "bytes": 84208,
+            "codec": "smevr-r7-nibble",
+            "sha256": "9422bef2b527c9422f66674278908dacfd7e6aac068b5f5e394c3e96540a47a4"
+          }
+        ],
+        "component_records": 7894,
+        "dim_per_edge_mean": 4.0,
+        "dim_per_edge_p95": 4.0,
+        "falls_out": true,
+        "flip_recall": 0.8073388528652354,
+        "frame_records": 600,
+        "mask_domain_fidelity": {
+          "all_components": 22338,
+          "component_recall": 0.35338884412212374,
+          "decoded_band_pixels": 472652,
+          "hausdorff_px_max": 280.04463929880893,
+          "hausdorff_px_mean": 51.8317906300702,
+          "hausdorff_px_p95": 189.25445340415277,
+          "intersection_pixels": 63563,
+          "iou": 0.02134077964704097,
+          "precision": 0.1344816059172499,
+          "recall": 0.02473858550697112,
+          "selected_components": 7894,
+          "source_band_pixels": 2569387,
+          "union_pixels": 2978476
+        },
+        "metadata": {
+          "generator_quantization": "quarter-pixel q4 int16"
+        },
+        "parse_back": {
+          "codec": "lzma1-raw",
+          "component_records": 7894,
+          "frame_records": 600,
+          "kind": 2,
+          "kind_name": "generator_pair_bisector",
+          "raw_bytes": 150586,
+          "raw_sha256": "cb9e355c2534e89d586e5f87a9632ec31a8f073d7c0a9c8fbe5077af2fe5f198",
+          "section_bytes": 67607,
+          "section_sha256": "e07fc131765776d6c427250b6c6477b8aa49d44a25e6caec5599149fc8e0285f"
+        },
+        "raw_bytes": 150586,
+        "raw_sha256": "cb9e355c2534e89d586e5f87a9632ec31a8f073d7c0a9c8fbe5077af2fe5f198",
+        "representation": "generator_pair_bisector",
+        "scope_note": "local Laguerre/power-diagram generator pair; boundary values fall out from the bisector at decode",
+        "section_bits_per_band_px": 0.210500014205723,
+        "section_bytes": 67607,
+        "section_sha256": "e07fc131765776d6c427250b6c6477b8aa49d44a25e6caec5599149fc8e0285f",
+        "selected_flip_mass": 372402,
+        "surface_id": "generator_pair_bisector_prefix_7894",
+        "total_flip_mass": 461271
+      },
+      {
+        "archive_projection": {
+          "joint_section_count": 6,
+          "payload_bytes": 433525,
+          "payload_sha256": "3dcef3276f55b82b0cfc3103901845feabcc21eff74e176b9bc6f5e67f516144",
+          "projected_archive_bytes": 433633,
+          "projected_archive_sha256": "21e61149c88d7d5b1c8248d898fdc353b9ec709727d500bff768cccdb452d542"
+        },
+        "best_body_bytes": 75556,
+        "best_body_sha256": "56580437964c0ee711952db0dfae01ba135ddc6fa9a0bfae3f84279c5452ead1",
+        "best_codec": "lzma1-raw",
+        "body_bits_per_band_px": 0.23524988645151548,
+        "claim_label": "MEASURED n600 mask-domain coder bytes and parse-back; scorer-free",
+        "coder_race": [
+          {
+            "artifact_path": null,
+            "bytes": 75556,
+            "codec": "lzma1-raw",
+            "sha256": "56580437964c0ee711952db0dfae01ba135ddc6fa9a0bfae3f84279c5452ead1"
+          },
+          {
+            "artifact_path": null,
+            "bytes": 85744,
+            "codec": "brotli-q11",
+            "sha256": "50873defecf98f8a857802c2ba32f46b2e533dd30b65b443767f2a47260f8e77"
+          },
+          {
+            "artifact_path": null,
+            "bytes": 94165,
+            "codec": "smevr-r7-nibble",
+            "sha256": "e334f5c22e321375e2eb438cd89ba704bbeabe1ab3878977183a603d0c7bd66e"
+          }
+        ],
+        "component_records": 8894,
+        "dim_per_edge_mean": 4.0,
+        "dim_per_edge_p95": 4.0,
+        "falls_out": true,
+        "flip_recall": 0.8399595899156895,
+        "frame_records": 600,
+        "mask_domain_fidelity": {
+          "all_components": 22338,
+          "component_recall": 0.3981556092756737,
+          "decoded_band_pixels": 503078,
+          "hausdorff_px_max": 280.04463929880893,
+          "hausdorff_px_mean": 47.459476333281636,
+          "hausdorff_px_p95": 152.16109883935513,
+          "intersection_pixels": 72878,
+          "iou": 0.02429601141757182,
+          "precision": 0.14486421588699963,
+          "recall": 0.028363963855970314,
+          "selected_components": 8894,
+          "source_band_pixels": 2569387,
+          "union_pixels": 2999587
+        },
+        "metadata": {
+          "generator_quantization": "quarter-pixel q4 int16"
+        },
+        "parse_back": {
+          "codec": "lzma1-raw",
+          "component_records": 8894,
+          "frame_records": 600,
+          "kind": 2,
+          "kind_name": "generator_pair_bisector",
+          "raw_bytes": 169586,
+          "raw_sha256": "f1d13e7c61167cf97c7add220a4ca0410ab55704c9b27b650633e740db88c2a1",
+          "section_bytes": 75613,
+          "section_sha256": "e0299ad24ad129b104b13d419b6894a32ce6fcf8c19425cdcb9699ee8ca440d4"
+        },
+        "raw_bytes": 169586,
+        "raw_sha256": "f1d13e7c61167cf97c7add220a4ca0410ab55704c9b27b650633e740db88c2a1",
+        "representation": "generator_pair_bisector",
+        "scope_note": "local Laguerre/power-diagram generator pair; boundary values fall out from the bisector at decode",
+        "section_bits_per_band_px": 0.23542736068953413,
+        "section_bytes": 75613,
+        "section_sha256": "e0299ad24ad129b104b13d419b6894a32ce6fcf8c19425cdcb9699ee8ca440d4",
+        "selected_flip_mass": 387449,
+        "surface_id": "generator_pair_bisector_prefix_8894",
+        "total_flip_mass": 461271
+      },
+      {
+        "archive_projection": {
+          "joint_section_count": 6,
+          "payload_bytes": 441185,
+          "payload_sha256": "4b05c2c8fee3c1e84a4af749ca125e74a9771f255c19d10a20d830a3abc20379",
+          "projected_archive_bytes": 441293,
+          "projected_archive_sha256": "c0e6c13bf42e9d425dade2f9a1e89181da40f3fc3adea0fdcddd407318ca1066"
+        },
+        "best_body_bytes": 83211,
+        "best_body_sha256": "e3c52df6a32d7fcb4e0291e1566f957a328db816fdf03485cc8eecc23f73de38",
+        "best_codec": "lzma1-raw",
+        "body_bits_per_band_px": 0.25908436525910655,
+        "claim_label": "MEASURED n600 mask-domain coder bytes and parse-back; scorer-free",
+        "coder_race": [
+          {
+            "artifact_path": null,
+            "bytes": 83211,
+            "codec": "lzma1-raw",
+            "sha256": "e3c52df6a32d7fcb4e0291e1566f957a328db816fdf03485cc8eecc23f73de38"
+          },
+          {
+            "artifact_path": null,
+            "bytes": 94786,
+            "codec": "brotli-q11",
+            "sha256": "522617194d9751e5b897dd093a014b2a2a8ed9bdf6f9fbd974664edccfe36204"
+          },
+          {
+            "artifact_path": null,
+            "bytes": 104159,
+            "codec": "smevr-r7-nibble",
+            "sha256": "0a2a79bc86aae367da01542a0863db9e4f10e88a1e64c7d23469bd4eeb1ac3d4"
+          }
+        ],
+        "component_records": 9894,
+        "dim_per_edge_mean": 4.0,
+        "dim_per_edge_p95": 4.0,
+        "falls_out": true,
+        "flip_recall": 0.8678260718753185,
+        "frame_records": 600,
+        "mask_domain_fidelity": {
+          "all_components": 22338,
+          "component_recall": 0.4429223744292237,
+          "decoded_band_pixels": 531160,
+          "hausdorff_px_max": 280.04463929880893,
+          "hausdorff_px_mean": 43.775884468354576,
+          "hausdorff_px_p95": 148.16544806398016,
+          "intersection_pixels": 82030,
+          "iou": 0.02717559649324486,
+          "precision": 0.15443557496799457,
+          "recall": 0.031925902948835655,
+          "selected_components": 9894,
+          "source_band_pixels": 2569387,
+          "union_pixels": 3018517
+        },
+        "metadata": {
+          "generator_quantization": "quarter-pixel q4 int16"
+        },
+        "parse_back": {
+          "codec": "lzma1-raw",
+          "component_records": 9894,
+          "frame_records": 600,
+          "kind": 2,
+          "kind_name": "generator_pair_bisector",
+          "raw_bytes": 188586,
+          "raw_sha256": "e90e9d846822af37b18971753ae574f391caaf3e51ac33862347c33a7b7314c6",
+          "section_bytes": 83268,
+          "section_sha256": "60a1df916edd3385aec1e432dc278749400c9778c6d0954afc804708afd3512b"
+        },
+        "raw_bytes": 188586,
+        "raw_sha256": "e90e9d846822af37b18971753ae574f391caaf3e51ac33862347c33a7b7314c6",
+        "representation": "generator_pair_bisector",
+        "scope_note": "local Laguerre/power-diagram generator pair; boundary values fall out from the bisector at decode",
+        "section_bits_per_band_px": 0.25926183949712517,
+        "section_bytes": 83268,
+        "section_sha256": "60a1df916edd3385aec1e432dc278749400c9778c6d0954afc804708afd3512b",
+        "selected_flip_mass": 400303,
+        "surface_id": "generator_pair_bisector_prefix_9894",
+        "total_flip_mass": 461271
+      },
+      {
+        "archive_projection": {
+          "joint_section_count": 6,
+          "payload_bytes": 455152,
+          "payload_sha256": "fcd9ce231db6d16ac70c126722fd5cc32d580423f0c872f21f18f9af4eb7dc53",
+          "projected_archive_bytes": 455260,
+          "projected_archive_sha256": "45ba96bd1443527e3eb58ddf431fcab4825fe9ab35509d1e79cfc353ced3a0a8"
+        },
+        "best_body_bytes": 97178,
+        "best_body_sha256": "3955879b19ecc783ad1e2c86b707fae3f3827cd29fe0947e54044556d0d0ef8a",
+        "best_codec": "lzma1-raw",
+        "body_bits_per_band_px": 0.3025717807399197,
+        "claim_label": "MEASURED n600 mask-domain coder bytes and parse-back; scorer-free",
+        "coder_race": [
+          {
+            "artifact_path": null,
+            "bytes": 97178,
+            "codec": "lzma1-raw",
+            "sha256": "3955879b19ecc783ad1e2c86b707fae3f3827cd29fe0947e54044556d0d0ef8a"
+          },
+          {
+            "artifact_path": null,
+            "bytes": 111330,
+            "codec": "brotli-q11",
+            "sha256": "7c3b734e595c51b34932fba8f5989cb39f7cc2023bf42b742334eb808a039dc2"
+          },
+          {
+            "artifact_path": null,
+            "bytes": 122231,
+            "codec": "smevr-r7-nibble",
+            "sha256": "abb2df7cb653c371c81a9e26c75e56015794b4dd6c46f900c30945854b12f195"
+          }
+        ],
+        "component_records": 11894,
+        "dim_per_edge_mean": 4.0,
+        "dim_per_edge_p95": 4.0,
+        "falls_out": true,
+        "flip_recall": 0.9126847341367655,
+        "frame_records": 600,
+        "mask_domain_fidelity": {
+          "all_components": 22338,
+          "component_recall": 0.5324559047363238,
+          "decoded_band_pixels": 580751,
+          "hausdorff_px_max": 280.04463929880893,
+          "hausdorff_px_mean": 37.886936788282505,
+          "hausdorff_px_p95": 143.17122615944868,
+          "intersection_pixels": 100077,
+          "iou": 0.03281147491804262,
+          "precision": 0.17232342260280223,
+          "recall": 0.03894975727673566,
+          "selected_components": 11894,
+          "source_band_pixels": 2569387,
+          "union_pixels": 3050061
+        },
+        "metadata": {
+          "generator_quantization": "quarter-pixel q4 int16"
+        },
+        "parse_back": {
+          "codec": "lzma1-raw",
+          "component_records": 11894,
+          "frame_records": 600,
+          "kind": 2,
+          "kind_name": "generator_pair_bisector",
+          "raw_bytes": 226586,
+          "raw_sha256": "a7b6ee1f308f8c67dc91af67e2cf3cf7805069cbab78ddf0330914d4d5f105c3",
+          "section_bytes": 97235,
+          "section_sha256": "5a225fefae2bbf607876137744abf3909385c1cd3965d84c4b5404c84b808dcf"
+        },
+        "raw_bytes": 226586,
+        "raw_sha256": "a7b6ee1f308f8c67dc91af67e2cf3cf7805069cbab78ddf0330914d4d5f105c3",
+        "representation": "generator_pair_bisector",
+        "scope_note": "local Laguerre/power-diagram generator pair; boundary values fall out from the bisector at decode",
+        "section_bits_per_band_px": 0.3027492549779383,
+        "section_bytes": 97235,
+        "section_sha256": "5a225fefae2bbf607876137744abf3909385c1cd3965d84c4b5404c84b808dcf",
+        "selected_flip_mass": 420995,
+        "surface_id": "generator_pair_bisector_prefix_11894",
+        "total_flip_mass": 461271
+      }
+    ],
+    "row_106465": {
+      "full_reference": "explicit_curve_k8",
+      "full_reference_recall": 0.9844254680201932,
+      "recall": 0.9699169490621693,
+      "recall_trade_vs_full": 0.014508518958023853,
+      "section_bytes": 106465,
+      "surface_id": "explicit_curve_k16",
+      "verdict": "hybrid component source for near/depth-conditioned curve rows; not the full-coverage winner because recall is lower."
+    },
+    "surgical_residual": {
+      "by_class_incident": {
+        "Lane": {
+          "components": 10704,
+          "flicker_pixels": 72858,
+          "flip_mass": 62218,
+          "fraction": 0.3500545747110916,
+          "source_band_pixels": 245968
+        },
+        "Movable": {
+          "components": 2939,
+          "flicker_pixels": 5976,
+          "flip_mass": 19558,
+          "fraction": 0.11003837108553038,
+          "source_band_pixels": 68881
+        },
+        "MyCar": {
+          "components": 817,
+          "flicker_pixels": 8909,
+          "flip_mass": 3580,
+          "fraction": 0.020142006774015685,
+          "source_band_pixels": 55743
+        },
+        "Road": {
+          "components": 11899,
+          "flicker_pixels": 79460,
+          "flip_mass": 77663,
+          "fraction": 0.43695214304200564,
+          "source_band_pixels": 336826
+        },
+        "Undriv": {
+          "components": 2529,
+          "flicker_pixels": 7621,
+          "flip_mass": 14719,
+          "fraction": 0.08281290438735667,
+          "source_band_pixels": 65486
+        }
+      },
+      "by_depth": {
+        "far_row": {
+          "components": 7272,
+          "flicker_pixels": 19225,
+          "flip_mass": 39145,
+          "fraction": 0.4404798073568961,
+          "source_band_pixels": 143636
+        },
+        "mid_row": {
+          "components": 6046,
+          "flicker_pixels": 53206,
+          "flip_mass": 43138,
+          "fraction": 0.48541111073602716,
+          "source_band_pixels": 168496
+        },
+        "near_row": {
+          "components": 1126,
+          "flicker_pixels": 14981,
+          "flip_mass": 6586,
+          "fraction": 0.07410908190707671,
+          "source_band_pixels": 74320
+        }
+      },
+      "by_edge": {
+        "Lane<->Movable": {
+          "components": 596,
+          "flicker_pixels": 396,
+          "flip_mass": 409,
+          "fraction": 0.004602279760096322,
+          "source_band_pixels": 2180
+        },
+        "Lane<->MyCar": {
+          "components": 557,
+          "flicker_pixels": 3483,
+          "flip_mass": 805,
+          "fraction": 0.009058276789431635,
+          "source_band_pixels": 9563
+        },
+        "Lane<->Undriv": {
+          "components": 382,
+          "flicker_pixels": 945,
+          "flip_mass": 73,
+          "fraction": 0.0008214337958118129,
+          "source_band_pixels": 3018
+        },
+        "Movable<->MyCar": {
+          "components": 12,
+          "flicker_pixels": 70,
+          "flip_mass": 75,
+          "fraction": 0.0008439388313135064,
+          "source_band_pixels": 266
+        },
+        "Road<->Lane": {
+          "components": 9169,
+          "flicker_pixels": 68034,
+          "flip_mass": 60931,
+          "fraction": 0.6856271590768435,
+          "source_band_pixels": 231207
+        },
+        "Road<->Movable": {
+          "components": 1333,
+          "flicker_pixels": 2452,
+          "flip_mass": 9230,
+          "fraction": 0.10386073884031552,
+          "source_band_pixels": 31836
+        },
+        "Road<->MyCar": {
+          "components": 248,
+          "flicker_pixels": 5356,
+          "flip_mass": 2700,
+          "fraction": 0.03038179792728623,
+          "source_band_pixels": 45914
+        },
+        "Road<->Undriv": {
+          "components": 1149,
+          "flicker_pixels": 3618,
+          "flip_mass": 4802,
+          "fraction": 0.0540345902395661,
+          "source_band_pixels": 27869
+        },
+        "Undriv<->Movable": {
+          "components": 998,
+          "flicker_pixels": 3058,
+          "flip_mass": 9844,
+          "fraction": 0.11076978473933542,
+          "source_band_pixels": 34599
+        }
+      },
+      "reference": "PE1 generator_pair_bisector_waterfill_75kb",
+      "residual_flip_mass": 88869,
+      "residual_fraction": 0.1926611471347646,
+      "schema": "pe3_surgical_residual_decomposition.v1",
+      "selected_flip_mass": 372402,
+      "total_flip_mass": 461271
+    },
+    "transport": {
+      "aggregate_independent_record_bytes": 424422,
+      "aggregate_transport_record_bytes": 345028,
+      "by_depth": {
+        "far_row": {
+          "components": 9230,
+          "flip_mass": 114154,
+          "independent_record_bytes": 175370,
+          "tracks": 1119,
+          "transport_record_bytes": 135632,
+          "transport_won_fraction": 0.6291331546023236,
+          "transport_won_tracks": 704
+        },
+        "mid_row": {
+          "components": 9898,
+          "flip_mass": 231556,
+          "independent_record_bytes": 188062,
+          "tracks": 1957,
+          "transport_record_bytes": 151020,
+          "transport_won_fraction": 0.46499744506898316,
+          "transport_won_tracks": 910
+        },
+        "near_row": {
+          "components": 3210,
+          "flip_mass": 115561,
+          "independent_record_bytes": 60990,
+          "tracks": 2088,
+          "transport_record_bytes": 58376,
+          "transport_won_fraction": 0.2921455938697318,
+          "transport_won_tracks": 610
+        }
+      },
+      "by_g4_stratum": {
+        "static_majority": {
+          "components": 21121,
+          "flip_mass": 451590,
+          "independent_record_bytes": 401299,
+          "tracks": 4925,
+          "transport_record_bytes": 326530,
+          "transport_won_fraction": 0.4268020304568528,
+          "transport_won_tracks": 2102
+        },
+        "transient_majority": {
+          "components": 1217,
+          "flip_mass": 9681,
+          "independent_record_bytes": 23123,
+          "tracks": 239,
+          "transport_record_bytes": 18498,
+          "transport_won_fraction": 0.5104602510460251,
+          "transport_won_tracks": 122
+        }
+      },
+      "by_track_length": {
+        "len1": {
+          "components": 3000,
+          "flip_mass": 84779,
+          "independent_record_bytes": 57000,
+          "tracks": 3000,
+          "transport_record_bytes": 59956,
+          "transport_won_fraction": 0.028666666666666667,
+          "transport_won_tracks": 86
+        },
+        "len2_3": {
+          "components": 2485,
+          "flip_mass": 55184,
+          "independent_record_bytes": 47215,
+          "tracks": 1080,
+          "transport_record_bytes": 42039,
+          "transport_won_fraction": 0.975925925925926,
+          "transport_won_tracks": 1054
+        },
+        "len33_plus": {
+          "components": 7078,
+          "flip_mass": 178230,
+          "independent_record_bytes": 134482,
+          "tracks": 112,
+          "transport_record_bytes": 99020,
+          "transport_won_fraction": 1.0,
+          "transport_won_tracks": 112
+        },
+        "len4_8": {
+          "components": 2975,
+          "flip_mass": 48567,
+          "independent_record_bytes": 56525,
+          "tracks": 554,
+          "transport_record_bytes": 45728,
+          "transport_won_fraction": 1.0,
+          "transport_won_tracks": 554
+        },
+        "len9_32": {
+          "components": 6800,
+          "flip_mass": 94511,
+          "independent_record_bytes": 129200,
+          "tracks": 418,
+          "transport_record_bytes": 98285,
+          "transport_won_fraction": 1.0,
+          "transport_won_tracks": 418
+        }
+      },
+      "component_denominator": 22338,
+      "conditional_transport_hybrid": {
+        "compression_scope": "record-byte model before global entropy coding; not promoted as archive-byte win",
+        "conditional_record_bytes_with_1bit_selector": 342551,
+        "delta_record_bytes": 81871,
+        "independent_record_bytes": 424422,
+        "score_claim": false,
+        "selected_transport_tracks": 2224,
+        "selector_bytes": 646
+      },
+      "sample_winning_tracks": [
+        {
+          "components": 131,
+          "depth_counts": {
+            "mid_row": 131
+          },
+          "flip_mass": 10557,
+          "g4_static_fraction": 0.891945192576567,
+          "independent_record_bytes": 2489,
+          "majority_depth_band": "mid_row",
+          "source_band_pixels": 67947,
+          "static_pixels": 60605,
+          "track_id": 2542,
+          "transient_pixels": 7342,
+          "transport_record_bytes": 1840,
+          "transport_won": true
+        },
+        {
+          "components": 129,
+          "depth_counts": {
+            "far_row": 4,
+            "mid_row": 125
+          },
+          "flip_mass": 9265,
+          "g4_static_fraction": 0.9130405921205483,
+          "independent_record_bytes": 2451,
+          "majority_depth_band": "mid_row",
+          "source_band_pixels": 60258,
+          "static_pixels": 55018,
+          "track_id": 19,
+          "transient_pixels": 5240,
+          "transport_record_bytes": 1684,
+          "transport_won": true
+        },
+        {
+          "components": 121,
+          "depth_counts": {
+            "mid_row": 119,
+            "near_row": 2
+          },
+          "flip_mass": 7928,
+          "g4_static_fraction": 0.9893199884045588,
+          "independent_record_bytes": 2299,
+          "majority_depth_band": "mid_row",
+          "source_band_pixels": 65543,
+          "static_pixels": 64843,
+          "track_id": 2637,
+          "transient_pixels": 700,
+          "transport_record_bytes": 1708,
+          "transport_won": true
+        },
+        {
+          "components": 89,
+          "depth_counts": {
+            "mid_row": 83,
+            "near_row": 6
+          },
+          "flip_mass": 7419,
+          "g4_static_fraction": 0.973231550112794,
+          "independent_record_bytes": 1691,
+          "majority_depth_band": "mid_row",
+          "source_band_pixels": 49648,
+          "static_pixels": 48319,
+          "track_id": 1957,
+          "transient_pixels": 1329,
+          "transport_record_bytes": 1255,
+          "transport_won": true
+        },
+        {
+          "components": 205,
+          "depth_counts": {
+            "far_row": 85,
+            "mid_row": 120
+          },
+          "flip_mass": 6500,
+          "g4_static_fraction": 0.5743341184997283,
+          "independent_record_bytes": 3895,
+          "majority_depth_band": "mid_row",
+          "source_band_pixels": 22076,
+          "static_pixels": 12679,
+          "track_id": 516,
+          "transient_pixels": 9397,
+          "transport_record_bytes": 2881,
+          "transport_won": true
+        },
+        {
+          "components": 119,
+          "depth_counts": {
+            "mid_row": 119
+          },
+          "flip_mass": 6447,
+          "g4_static_fraction": 0.9108335004727658,
+          "independent_record_bytes": 2261,
+          "majority_depth_band": "mid_row",
+          "source_band_pixels": 34901,
+          "static_pixels": 31789,
+          "track_id": 445,
+          "transient_pixels": 3112,
+          "transport_record_bytes": 1672,
+          "transport_won": true
+        },
+        {
+          "components": 163,
+          "depth_counts": {
+            "far_row": 41,
+            "mid_row": 122
+          },
+          "flip_mass": 6277,
+          "g4_static_fraction": 0.7513683383527563,
+          "independent_record_bytes": 3097,
+          "majority_depth_band": "mid_row",
+          "source_band_pixels": 38185,
+          "static_pixels": 28691,
+          "track_id": 2307,
+          "transient_pixels": 9494,
+          "transport_record_bytes": 2288,
+          "transport_won": true
+        },
+        {
+          "components": 119,
+          "depth_counts": {
+            "far_row": 18,
+            "mid_row": 101
+          },
+          "flip_mass": 5644,
+          "g4_static_fraction": 0.994427047396635,
+          "independent_record_bytes": 2261,
+          "majority_depth_band": "mid_row",
+          "source_band_pixels": 37682,
+          "static_pixels": 37472,
+          "track_id": 3180,
+          "transient_pixels": 210,
+          "transport_record_bytes": 1678,
+          "transport_won": true
+        },
+        {
+          "components": 73,
+          "depth_counts": {
+            "far_row": 41,
+            "mid_row": 32
+          },
+          "flip_mass": 5411,
+          "g4_static_fraction": 0.7326470260015623,
+          "independent_record_bytes": 1387,
+          "majority_depth_band": "far_row",
+          "source_band_pixels": 35844,
+          "static_pixels": 26261,
+          "track_id": 1424,
+          "transient_pixels": 9583,
+          "transport_record_bytes": 1028,
+          "transport_won": true
+        },
+        {
+          "components": 99,
+          "depth_counts": {
+            "far_row": 9,
+            "mid_row": 89,
+            "near_row": 1
+          },
+          "flip_mass": 5361,
+          "g4_static_fraction": 0.6194695227948186,
+          "independent_record_bytes": 1881,
+          "majority_depth_band": "mid_row",
+          "source_band_pixels": 17833,
+          "static_pixels": 11047,
+          "track_id": 3869,
+          "transient_pixels": 6786,
+          "transport_record_bytes": 1396,
+          "transport_won": true
+        }
+      ],
+      "schema": "pe3_transport_decomposition.v1",
+      "tracks": 5164,
+      "transport_won_fraction": 0.43067389620449265,
+      "transport_won_tracks": 2224,
+      "verdict_scope": "FORMULATION-scoped to PE1 local generator-parameter transport; compressed aggregate remains worse unless the conditional subset price is separately adopted."
+    }
+  },
+  "axis": "[macOS-CPU advisory / scorer-free mask-domain byte custody]",
+  "base": {
+    "archive_bytes": 357836,
+    "archive_sha256": "d5e814d5b9f65c3094b0e65fecdd7771734d03c420c63d1d2033a671b766986a",
+    "axis": "[macOS-CPU advisory]",
+    "joint_section_count": 5,
+    "own_vehicle_S": 0.7539807296911207,
+    "payload_sha256": "bd6da15ec41030762e4510555f12d3d141d3c71f495af701666a769b12f0b036",
+    "submission_dir": "/Volumes/VertigoDataTier/pact/ddm_qo1_20260804/sub_auto_pairbit"
+  },
+  "boundaries": [
+    "No SegNet/PoseNet scorer forward was run; sq2 owns the scorer slot.",
+    "No upstream/ files were edited.",
+    "No /tmp evidence is cited; durable candidate archives and payloads are on the SSD tier.",
+    "PE3 candidate archives append counted video-derived sections; no data is hidden in free code.",
+    "PE3 proves section parse-back and IX2 byte closure, not runtime RGB consumption; PE2 owns inflate_runner consumption.",
+    "The all-signal curve-only control is a decomposition signal, not the operator hybrid-law candidate.",
+    "All byte counts are measured on real serialized coder outputs over n600 cached masks."
+  ],
+  "built_at_utc": "2026-08-05T00:41:11.058321+00:00",
+  "candidate_75kb": {
+    "archive_bytes": 432428,
+    "archive_sha256": "3f08c7fdd1c2746fa456ef8b6d8005e850d1a3acac5665a5d08b2ef17585b5e0",
+    "delta_bytes_vs_qo1": 74592,
+    "label": "BYTE-CLOSED / PE3-SECTION-PARSE-BACK / RUNTIME-SURVIVAL-UNMEASURED / score_claim=false",
+    "parse_back": {
+      "archive_bytes": 432428,
+      "archive_sha256": "3f08c7fdd1c2746fa456ef8b6d8005e850d1a3acac5665a5d08b2ef17585b5e0",
+      "bulk_bytes": 341295,
+      "joint_section_count": 6,
+      "joint_sections": [
+        {
+          "index": 0,
+          "magic": "\u0000\u0000B\r\u0003\u000b\u0003",
+          "name": "config",
+          "raw_bytes": 36,
+          "sha256": "fc4f23ac9e31ba266ace26131319eb5b574d69e1d505fb1fc20a9dbc79a240d6"
+        },
+        {
+          "index": 1,
+          "magic": "IX2REN01",
+          "name": "renderer",
+          "raw_bytes": 3266,
+          "sha256": "3b8eb0c24f9e6d8b547a23a5db29a1dbbd03db474fbba3638b0c3dd858ca7009"
+        },
+        {
+          "index": 2,
+          "magic": "{\"activa",
+          "name": "selector",
+          "raw_bytes": 535,
+          "sha256": "8fc5c3fc65eb051b65ebf01d4b008e52d606097194c57884e739eae2ad8382e1"
+        },
+        {
+          "index": 3,
+          "magic": "PFS1WPD1",
+          "name": "pose_warp",
+          "raw_bytes": 8751,
+          "sha256": "d1d073e55aacf991491365d13716fededb169854b78bb203c34c84ca880c25db"
+        },
+        {
+          "index": 4,
+          "magic": "F0PR1!\u0000\u0000",
+          "name": "frame0_pose_repair",
+          "raw_bytes": 4081,
+          "sha256": "b5874d32324a46dc76cb1fc0beb7cda5fdaca2f59ebae6acbb08283206e8e7a2"
+        },
+        {
+          "index": 5,
+          "magic": "PE3EDGE1",
+          "name": "pe3_hybrid_75kb",
+          "raw_bytes": 74408,
+          "sha256": "5cc024ad32df7fedb18afb75dbed6be9c1af948dac826a1736cb1084949855c2"
+        }
+      ],
+      "payload_bytes": 432320,
+      "payload_reencodes_identically": true,
+      "zip_members": [
+        {
+          "compress_type": 0,
+          "compressed_bytes": 432320,
+          "name": "0.bin",
+          "uncompressed_bytes": 432320
+        }
+      ]
+    },
+    "payload_sha256": "1291c0ea3c000ad136f28aac483cb58ffdbad8206f6942e04f98cb44867dba9d",
+    "pe3_section_parse_back": {
+      "codec": "lzma1-raw",
+      "component_records": 8644,
+      "frame_records": 600,
+      "kind": 1,
+      "kind_name": "hybrid_per_regime",
+      "mode_counts": {
+        "depth_conditioned_curve": 750,
+        "generator_pair_bisector": 7894
+      },
+      "raw_bytes": 169975,
+      "raw_sha256": "beecc444dac58e7b345df3783a8b38e20c8c74e8b011ac82bd4cb02c24e697a8",
+      "schema": "pe3_section_parse_back.v1",
+      "section_bytes": 74408,
+      "section_sha256": "5cc024ad32df7fedb18afb75dbed6be9c1af948dac826a1736cb1084949855c2"
+    },
+    "rate_delta_S_vs_qo1": 0.049667751031289,
+    "submission_dir": "/Volumes/VertigoDataTier/pact/ddm_pe3_20260805/pe3_20260805T000000Z/sub_auto_pairbit_pe3_hybrid_75kb"
+  },
+  "candidate_knee": {
+    "archive_bytes": 461288,
+    "archive_sha256": "33d2ea5135fd642f5744bdef770a991b565a04a26901b32e1fc96dffe2e08b86",
+    "delta_bytes_vs_qo1": 103452,
+    "label": "BYTE-CLOSED / PE3-SECTION-PARSE-BACK / RUNTIME-SURVIVAL-UNMEASURED / score_claim=false",
+    "parse_back": {
+      "archive_bytes": 461288,
+      "archive_sha256": "33d2ea5135fd642f5744bdef770a991b565a04a26901b32e1fc96dffe2e08b86",
+      "bulk_bytes": 341295,
+      "joint_section_count": 6,
+      "joint_sections": [
+        {
+          "index": 0,
+          "magic": "\u0000\u0000B\r\u0003\u000b\u0003",
+          "name": "config",
+          "raw_bytes": 36,
+          "sha256": "fc4f23ac9e31ba266ace26131319eb5b574d69e1d505fb1fc20a9dbc79a240d6"
+        },
+        {
+          "index": 1,
+          "magic": "IX2REN01",
+          "name": "renderer",
+          "raw_bytes": 3266,
+          "sha256": "3b8eb0c24f9e6d8b547a23a5db29a1dbbd03db474fbba3638b0c3dd858ca7009"
+        },
+        {
+          "index": 2,
+          "magic": "{\"activa",
+          "name": "selector",
+          "raw_bytes": 535,
+          "sha256": "8fc5c3fc65eb051b65ebf01d4b008e52d606097194c57884e739eae2ad8382e1"
+        },
+        {
+          "index": 3,
+          "magic": "PFS1WPD1",
+          "name": "pose_warp",
+          "raw_bytes": 8751,
+          "sha256": "d1d073e55aacf991491365d13716fededb169854b78bb203c34c84ca880c25db"
+        },
+        {
+          "index": 4,
+          "magic": "F0PR1!\u0000\u0000",
+          "name": "frame0_pose_repair",
+          "raw_bytes": 4081,
+          "sha256": "b5874d32324a46dc76cb1fc0beb7cda5fdaca2f59ebae6acbb08283206e8e7a2"
+        },
+        {
+          "index": 5,
+          "magic": "PE3EDGE1",
+          "name": "pe3_hybrid_knee",
+          "raw_bytes": 103258,
+          "sha256": "b0d2a7f41ec8bb215b8a5352157aa77aca34e67339fe7f88927b3a7ffa2596fc"
+        }
+      ],
+      "payload_bytes": 461180,
+      "payload_reencodes_identically": true,
+      "zip_members": [
+        {
+          "compress_type": 0,
+          "compressed_bytes": 461180,
+          "name": "0.bin",
+          "uncompressed_bytes": 461180
+        }
+      ]
+    },
+    "payload_sha256": "f3e1059a6bbc05bfd3c6c89efda013caa7fcea8d661315b61e58d30866022377",
+    "pe3_section_parse_back": {
+      "codec": "lzma1-raw",
+      "component_records": 13894,
+      "frame_records": 600,
+      "kind": 1,
+      "kind_name": "hybrid_per_regime",
+      "mode_counts": {
+        "depth_conditioned_curve": 6000,
+        "generator_pair_bisector": 7894
+      },
+      "raw_bytes": 252363,
+      "raw_sha256": "b5fe5f8cafbedb37fce32dd2eddc4405b06c5ab22c823c67adae2f033d490432",
+      "schema": "pe3_section_parse_back.v1",
+      "section_bytes": 103258,
+      "section_sha256": "b0d2a7f41ec8bb215b8a5352157aa77aca34e67339fe7f88927b3a7ffa2596fc"
+    },
+    "rate_delta_S_vs_qo1": 0.06888444041839487,
+    "submission_dir": "/Volumes/VertigoDataTier/pact/ddm_pe3_20260805/pe3_20260805T000000Z/sub_auto_pairbit_pe3_hybrid_knee"
+  },
+  "depth_policy": {
+    "centroid_y_quantiles_flip_weighted": {
+      "q25": 190.35714285714286,
+      "q50": 201.64044943820224,
+      "q75": 230.24475524475525
+    },
+    "centroid_y_quantiles_unweighted": {
+      "q0": 154.35714285714286,
+      "q10": 176.3,
+      "q100": 294.68548387096774,
+      "q25": 183.77634099616859,
+      "q50": 192.61805555555554,
+      "q75": 208.5,
+      "q90": 261.5834314045984
+    },
+    "depth_stride_policy": {
+      "far_row": 4,
+      "mid_row": 8,
+      "near_row": 16
+    },
+    "depth_y_cutpoints": [
+      190.0,
+      230.0
+    ]
+  },
+  "edge_extraction": {
+    "components": 22338,
+    "edge_ranking": [
+      {
+        "class_ids": [
+          0,
+          1
+        ],
+        "components": 12851,
+        "edge": "Road<->Lane",
+        "flip_mass": 226140,
+        "flip_mass_fraction": 0.4902541022522552,
+        "source_band_pixels": 1143497
+      },
+      {
+        "class_ids": [
+          0,
+          2
+        ],
+        "components": 2489,
+        "edge": "Road<->Undriv",
+        "flip_mass": 84847,
+        "flip_mass_fraction": 0.18394176091711814,
+        "source_band_pixels": 511976
+      },
+      {
+        "class_ids": [
+          0,
+          4
+        ],
+        "components": 1166,
+        "edge": "Road<->MyCar",
+        "flip_mass": 61086,
+        "flip_mass_fraction": 0.13242974303608943,
+        "source_band_pixels": 606290
+      },
+      {
+        "class_ids": [
+          2,
+          3
+        ],
+        "components": 2102,
+        "edge": "Undriv<->Movable",
+        "flip_mass": 44304,
+        "flip_mass_fraction": 0.09604765961874906,
+        "source_band_pixels": 150302
+      },
+      {
+        "class_ids": [
+          0,
+          3
+        ],
+        "components": 2183,
+        "edge": "Road<->Movable",
+        "flip_mass": 43532,
+        "flip_mass_fraction": 0.09437402307970802,
+        "source_band_pixels": 142295
+      },
+      {
+        "class_ids": [
+          1,
+          4
+        ],
+        "components": 557,
+        "edge": "Lane<->MyCar",
+        "flip_mass": 805,
+        "flip_mass_fraction": 0.0017451779973161113,
+        "source_band_pixels": 9563
+      },
+      {
+        "class_ids": [
+          1,
+          3
+        ],
+        "components": 596,
+        "edge": "Lane<->Movable",
+        "flip_mass": 409,
+        "flip_mass_fraction": 0.0008866804980152665,
+        "source_band_pixels": 2180
+      },
+      {
+        "class_ids": [
+          3,
+          4
+        ],
+        "components": 12,
+        "edge": "Movable<->MyCar",
+        "flip_mass": 75,
+        "flip_mass_fraction": 0.00016259422335243272,
+        "source_band_pixels": 266
+      },
+      {
+        "class_ids": [
+          1,
+          2
+        ],
+        "components": 382,
+        "edge": "Lane<->Undriv",
+        "flip_mass": 73,
+        "flip_mass_fraction": 0.00015825837739636786,
+        "source_band_pixels": 3018
+      }
+    ],
+    "per_pair_band_pixels_max": 5417,
+    "per_pair_band_pixels_mean": 4282.3116666666665,
+    "per_pair_band_pixels_min": 3297,
+    "per_pair_components_max": 64,
+    "per_pair_components_mean": 37.23,
+    "per_pair_components_min": 22,
+    "road_lane_first": {
+      "class_ids": [
+        0,
+        1
+      ],
+      "components": 12851,
+      "edge": "Road<->Lane",
+      "flip_mass": 226140,
+      "flip_mass_fraction": 0.4902541022522552,
+      "source_band_pixels": 1143497
+    },
+    "schema": "pe1_component_extraction.v1",
+    "source_band_pixels_sum_over_edges": 2569387,
+    "total_flip_mass_in_edge_bands": 461271
+  },
+  "follow_on_disposition": [
+    {
+      "action": "After PE2 receiver consumption lands and sq2 releases the scorer slot, include the PE3 75KB candidate in the one-batch survival measurement if MAIN accepts the extra entrant.",
+      "id": "pe3-hybrid-scorer-batch",
+      "status": "QUEUED-WITH-FIRE-ORDER"
+    },
+    {
+      "action": "If the operator wants the all-signal surprise followed, build a PE4 explicit-curve surgical candidate; do not relabel it as the addendum-3 hybrid law.",
+      "id": "pe3-curve-only-control",
+      "status": "QUEUED-WITH-FIRE-ORDER"
+    },
+    {
+      "action": "Record-byte conditional transport saves only in a subset before global entropy coding; archive-byte promotion requires a new coder, not a PE3 claim.",
+      "id": "pe3-transport-conditional",
+      "status": "FOLDED"
+    }
+  ],
+  "hybrid_75kb": {
+    "archive_projection": {
+      "joint_section_count": 6,
+      "payload_bytes": 432320,
+      "payload_sha256": "1291c0ea3c000ad136f28aac483cb58ffdbad8206f6942e04f98cb44867dba9d",
+      "projected_archive_bytes": 432428,
+      "projected_archive_sha256": "3f08c7fdd1c2746fa456ef8b6d8005e850d1a3acac5665a5d08b2ef17585b5e0"
+    },
+    "best_body_bytes": 74351,
+    "best_body_sha256": "792697d0ddf3692a9242fbecf4aa374cbeb293f97b0cf9de3416e4329d7ce0a8",
+    "best_codec": "lzma1-raw",
+    "claim_label": "MEASURED n600 mask-domain coder bytes and PE3 section parse-back; scorer-free",
+    "coder_race": [
+      {
+        "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_pe3_20260805/pe3_20260805T000000Z/payloads/pe3_hybrid_g7894_c750.lzma1-raw.bin",
+        "bytes": 74351,
+        "codec": "lzma1-raw",
+        "sha256": "792697d0ddf3692a9242fbecf4aa374cbeb293f97b0cf9de3416e4329d7ce0a8"
+      },
+      {
+        "artifact_path": null,
+        "bytes": 83286,
+        "codec": "brotli-q11",
+        "sha256": "55a16ca38d0460b7c1429f31830dfe1ef390b19ff91f1912b04fea2f2dac0375"
+      },
+      {
+        "artifact_path": null,
+        "bytes": 123350,
+        "codec": "smevr-r7-nibble",
+        "sha256": "336e98271531419fc372473156e6e643e4ff0629174f360b9b4d8101f0901b4b"
+      }
+    ],
+    "flip_recall": 0.8315220336851872,
+    "mask_domain_fidelity": {
+      "all_components": 22338,
+      "component_recall": 0.38696391798728624,
+      "decoded_band_pixels": 542493,
+      "hausdorff_px_max": 280.04463929880893,
+      "hausdorff_px_mean": 47.405711532978295,
+      "hausdorff_px_p95": 172.43330522222408,
+      "intersection_pixels": 102968,
+      "iou": 0.034221007460503994,
+      "precision": 0.189805214076495,
+      "recall": 0.04007492837785822,
+      "selected_components": 8644,
+      "source_band_pixels": 2569387,
+      "union_pixels": 3008912
+    },
+    "mode_counts": {
+      "depth_conditioned_curve": 750,
+      "generator_pair_bisector": 7894
+    },
+    "parse_back": {
+      "codec": "lzma1-raw",
+      "component_records": 8644,
+      "frame_records": 600,
+      "kind": 1,
+      "kind_name": "hybrid_per_regime",
+      "mode_counts": {
+        "depth_conditioned_curve": 750,
+        "generator_pair_bisector": 7894
+      },
+      "raw_bytes": 169975,
+      "raw_sha256": "beecc444dac58e7b345df3783a8b38e20c8c74e8b011ac82bd4cb02c24e697a8",
+      "schema": "pe3_section_parse_back.v1",
+      "section_bytes": 74408,
+      "section_sha256": "5cc024ad32df7fedb18afb75dbed6be9c1af948dac826a1736cb1084949855c2"
+    },
+    "policy": "generator_pair_bisector surgical prefix + depth-conditioned curve residual waterfill",
+    "prefix_counts": {
+      "curve_residual": 750,
+      "generator": 7894
+    },
+    "raw_bytes": 169975,
+    "raw_sha256": "beecc444dac58e7b345df3783a8b38e20c8c74e8b011ac82bd4cb02c24e697a8",
+    "section_bits_per_band_px": 0.23167549302615761,
+    "section_bytes": 74408,
+    "section_sha256": "5cc024ad32df7fedb18afb75dbed6be9c1af948dac826a1736cb1084949855c2",
+    "selected_flip_mass": 383557,
+    "surface_id": "pe3_hybrid_g7894_c750_at_75kb",
+    "target_section_bytes": 75000,
+    "total_flip_mass": 461271
+  },
+  "hybrid_knee": {
+    "archive_projection": {
+      "joint_section_count": 6,
+      "payload_bytes": 461180,
+      "payload_sha256": "f3e1059a6bbc05bfd3c6c89efda013caa7fcea8d661315b61e58d30866022377",
+      "projected_archive_bytes": 461288,
+      "projected_archive_sha256": "33d2ea5135fd642f5744bdef770a991b565a04a26901b32e1fc96dffe2e08b86"
+    },
+    "best_body_bytes": 103201,
+    "best_body_sha256": "57f27cd16b33963b6f8c487212be93e784688f9d90cc08b5b40cb050f9b2cbba",
+    "best_codec": "lzma1-raw",
+    "claim_label": "MEASURED n600 mask-domain coder bytes and PE3 section parse-back; scorer-free",
+    "coder_race": [
+      {
+        "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_pe3_20260805/pe3_20260805T000000Z/payloads/pe3_hybrid_g7894_c6000.lzma1-raw.bin",
+        "bytes": 103201,
+        "codec": "lzma1-raw",
+        "sha256": "57f27cd16b33963b6f8c487212be93e784688f9d90cc08b5b40cb050f9b2cbba"
+      },
+      {
+        "artifact_path": null,
+        "bytes": 114519,
+        "codec": "brotli-q11",
+        "sha256": "0062cc7e3cc3a60247289d69d4ef09e44e77f1d5a6d4352c18bd41f68d26c831"
+      },
+      {
+        "artifact_path": null,
+        "bytes": 186236,
+        "codec": "smevr-r7-nibble",
+        "sha256": "6cb51e5488a58c30239834d95efa14acb1dd80fcd3da8ed0992eb1b2ea4fe26e"
+      }
+    ],
+    "flip_recall": 0.9461726403784326,
+    "knee_detection": {
+      "candidate_count": 13,
+      "distance": 0.026067161109023726,
+      "method": "max_distance_to_endpoint_line"
+    },
+    "mask_domain_fidelity": {
+      "all_components": 22338,
+      "component_recall": 0.6219894350434237,
+      "decoded_band_pixels": 920900,
+      "hausdorff_px_max": 280.04463929880893,
+      "hausdorff_px_mean": 29.878886547888463,
+      "hausdorff_px_p95": 131.03434664239754,
+      "intersection_pixels": 322045,
+      "iou": 0.10164785392024978,
+      "precision": 0.34970680855684655,
+      "recall": 0.1253392346112127,
+      "selected_components": 13894,
+      "source_band_pixels": 2569387,
+      "union_pixels": 3168242
+    },
+    "mode_counts": {
+      "depth_conditioned_curve": 6000,
+      "generator_pair_bisector": 7894
+    },
+    "parse_back": {
+      "codec": "lzma1-raw",
+      "component_records": 13894,
+      "frame_records": 600,
+      "kind": 1,
+      "kind_name": "hybrid_per_regime",
+      "mode_counts": {
+        "depth_conditioned_curve": 6000,
+        "generator_pair_bisector": 7894
+      },
+      "raw_bytes": 252363,
+      "raw_sha256": "b5fe5f8cafbedb37fce32dd2eddc4405b06c5ab22c823c67adae2f033d490432",
+      "schema": "pe3_section_parse_back.v1",
+      "section_bytes": 103258,
+      "section_sha256": "b0d2a7f41ec8bb215b8a5352157aa77aca34e67339fe7f88927b3a7ffa2596fc"
+    },
+    "policy": "generator_pair_bisector surgical prefix + depth-conditioned curve residual waterfill",
+    "prefix_counts": {
+      "curve_residual": 6000,
+      "generator": 7894
+    },
+    "raw_bytes": 252363,
+    "raw_sha256": "b5fe5f8cafbedb37fce32dd2eddc4405b06c5ab22c823c67adae2f033d490432",
+    "section_bits_per_band_px": 0.32150236612857463,
+    "section_bytes": 103258,
+    "section_sha256": "b0d2a7f41ec8bb215b8a5352157aa77aca34e67339fe7f88927b3a7ffa2596fc",
+    "selected_flip_mass": 436442,
+    "surface_id": "pe3_hybrid_g7894_c6000_knee",
+    "target_section_bytes": null,
+    "total_flip_mass": 461271
+  },
+  "hybrid_points": [
+    {
+      "archive_projection": {
+        "joint_section_count": 6,
+        "payload_bytes": 432320,
+        "payload_sha256": "1291c0ea3c000ad136f28aac483cb58ffdbad8206f6942e04f98cb44867dba9d",
+        "projected_archive_bytes": 432428,
+        "projected_archive_sha256": "3f08c7fdd1c2746fa456ef8b6d8005e850d1a3acac5665a5d08b2ef17585b5e0"
+      },
+      "best_body_bytes": 74351,
+      "best_body_sha256": "792697d0ddf3692a9242fbecf4aa374cbeb293f97b0cf9de3416e4329d7ce0a8",
+      "best_codec": "lzma1-raw",
+      "claim_label": "MEASURED n600 mask-domain coder bytes and PE3 section parse-back; scorer-free",
+      "coder_race": [
+        {
+          "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_pe3_20260805/pe3_20260805T000000Z/payloads/pe3_hybrid_g7894_c750.lzma1-raw.bin",
+          "bytes": 74351,
+          "codec": "lzma1-raw",
+          "sha256": "792697d0ddf3692a9242fbecf4aa374cbeb293f97b0cf9de3416e4329d7ce0a8"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 83286,
+          "codec": "brotli-q11",
+          "sha256": "55a16ca38d0460b7c1429f31830dfe1ef390b19ff91f1912b04fea2f2dac0375"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 123350,
+          "codec": "smevr-r7-nibble",
+          "sha256": "336e98271531419fc372473156e6e643e4ff0629174f360b9b4d8101f0901b4b"
+        }
+      ],
+      "flip_recall": 0.8315220336851872,
+      "mask_domain_fidelity": {
+        "all_components": 22338,
+        "component_recall": 0.38696391798728624,
+        "decoded_band_pixels": 542493,
+        "hausdorff_px_max": 280.04463929880893,
+        "hausdorff_px_mean": 47.405711532978295,
+        "hausdorff_px_p95": 172.43330522222408,
+        "intersection_pixels": 102968,
+        "iou": 0.034221007460503994,
+        "precision": 0.189805214076495,
+        "recall": 0.04007492837785822,
+        "selected_components": 8644,
+        "source_band_pixels": 2569387,
+        "union_pixels": 3008912
+      },
+      "mode_counts": {
+        "depth_conditioned_curve": 750,
+        "generator_pair_bisector": 7894
+      },
+      "parse_back": {
+        "codec": "lzma1-raw",
+        "component_records": 8644,
+        "frame_records": 600,
+        "kind": 1,
+        "kind_name": "hybrid_per_regime",
+        "mode_counts": {
+          "depth_conditioned_curve": 750,
+          "generator_pair_bisector": 7894
+        },
+        "raw_bytes": 169975,
+        "raw_sha256": "beecc444dac58e7b345df3783a8b38e20c8c74e8b011ac82bd4cb02c24e697a8",
+        "schema": "pe3_section_parse_back.v1",
+        "section_bytes": 74408,
+        "section_sha256": "5cc024ad32df7fedb18afb75dbed6be9c1af948dac826a1736cb1084949855c2"
+      },
+      "policy": "generator_pair_bisector surgical prefix + depth-conditioned curve residual waterfill",
+      "prefix_counts": {
+        "curve_residual": 750,
+        "generator": 7894
+      },
+      "raw_bytes": 169975,
+      "raw_sha256": "beecc444dac58e7b345df3783a8b38e20c8c74e8b011ac82bd4cb02c24e697a8",
+      "section_bits_per_band_px": 0.23167549302615761,
+      "section_bytes": 74408,
+      "section_sha256": "5cc024ad32df7fedb18afb75dbed6be9c1af948dac826a1736cb1084949855c2",
+      "selected_flip_mass": 383557,
+      "surface_id": "pe3_hybrid_g7894_c750_at_75kb",
+      "target_section_bytes": 75000,
+      "total_flip_mass": 461271
+    },
+    {
+      "archive_projection": {
+        "joint_section_count": 6,
+        "payload_bytes": 461180,
+        "payload_sha256": "f3e1059a6bbc05bfd3c6c89efda013caa7fcea8d661315b61e58d30866022377",
+        "projected_archive_bytes": 461288,
+        "projected_archive_sha256": "33d2ea5135fd642f5744bdef770a991b565a04a26901b32e1fc96dffe2e08b86"
+      },
+      "best_body_bytes": 103201,
+      "best_body_sha256": "57f27cd16b33963b6f8c487212be93e784688f9d90cc08b5b40cb050f9b2cbba",
+      "best_codec": "lzma1-raw",
+      "claim_label": "MEASURED n600 mask-domain coder bytes and PE3 section parse-back; scorer-free",
+      "coder_race": [
+        {
+          "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_pe3_20260805/pe3_20260805T000000Z/payloads/pe3_hybrid_g7894_c6000.lzma1-raw.bin",
+          "bytes": 103201,
+          "codec": "lzma1-raw",
+          "sha256": "57f27cd16b33963b6f8c487212be93e784688f9d90cc08b5b40cb050f9b2cbba"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 114519,
+          "codec": "brotli-q11",
+          "sha256": "0062cc7e3cc3a60247289d69d4ef09e44e77f1d5a6d4352c18bd41f68d26c831"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 186236,
+          "codec": "smevr-r7-nibble",
+          "sha256": "6cb51e5488a58c30239834d95efa14acb1dd80fcd3da8ed0992eb1b2ea4fe26e"
+        }
+      ],
+      "flip_recall": 0.9461726403784326,
+      "knee_detection": {
+        "candidate_count": 13,
+        "distance": 0.026067161109023726,
+        "method": "max_distance_to_endpoint_line"
+      },
+      "mask_domain_fidelity": {
+        "all_components": 22338,
+        "component_recall": 0.6219894350434237,
+        "decoded_band_pixels": 920900,
+        "hausdorff_px_max": 280.04463929880893,
+        "hausdorff_px_mean": 29.878886547888463,
+        "hausdorff_px_p95": 131.03434664239754,
+        "intersection_pixels": 322045,
+        "iou": 0.10164785392024978,
+        "precision": 0.34970680855684655,
+        "recall": 0.1253392346112127,
+        "selected_components": 13894,
+        "source_band_pixels": 2569387,
+        "union_pixels": 3168242
+      },
+      "mode_counts": {
+        "depth_conditioned_curve": 6000,
+        "generator_pair_bisector": 7894
+      },
+      "parse_back": {
+        "codec": "lzma1-raw",
+        "component_records": 13894,
+        "frame_records": 600,
+        "kind": 1,
+        "kind_name": "hybrid_per_regime",
+        "mode_counts": {
+          "depth_conditioned_curve": 6000,
+          "generator_pair_bisector": 7894
+        },
+        "raw_bytes": 252363,
+        "raw_sha256": "b5fe5f8cafbedb37fce32dd2eddc4405b06c5ab22c823c67adae2f033d490432",
+        "schema": "pe3_section_parse_back.v1",
+        "section_bytes": 103258,
+        "section_sha256": "b0d2a7f41ec8bb215b8a5352157aa77aca34e67339fe7f88927b3a7ffa2596fc"
+      },
+      "policy": "generator_pair_bisector surgical prefix + depth-conditioned curve residual waterfill",
+      "prefix_counts": {
+        "curve_residual": 6000,
+        "generator": 7894
+      },
+      "raw_bytes": 252363,
+      "raw_sha256": "b5fe5f8cafbedb37fce32dd2eddc4405b06c5ab22c823c67adae2f033d490432",
+      "section_bits_per_band_px": 0.32150236612857463,
+      "section_bytes": 103258,
+      "section_sha256": "b0d2a7f41ec8bb215b8a5352157aa77aca34e67339fe7f88927b3a7ffa2596fc",
+      "selected_flip_mass": 436442,
+      "surface_id": "pe3_hybrid_g7894_c6000_knee",
+      "target_section_bytes": null,
+      "total_flip_mass": 461271
+    }
+  ],
+  "inputs": {
+    "class_order": {
+      "0": "Road",
+      "1": "Lane",
+      "2": "Undriv",
+      "3": "Movable",
+      "4": "MyCar"
+    },
+    "current_argmax": "/Volumes/VertigoDataTier/pact/ddm_pu2_20260803/argmax_cache/cx1_argmax_n600.npy",
+    "g4_recurrence": "/Volumes/VertigoDataTier/pact/ddm_g4_spatial_stationarity_n600_20260722T212138Z/stage_checkpoints/01_recurrence_arrays.npz",
+    "gt_cache": "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+    "pe1_receipt": "/Users/adpena/Projects/pact/.omx/research/ddm_pe1_20260805/ddm_pe1_repr_race_receipt.json",
+    "selection_mode": "n600 all pairs; no prefix; scorer-free",
+    "shape": [
+      600,
+      384,
+      512
+    ]
+  },
+  "n600_scorer_job": false,
+  "next_if_resumed": "Start from PE3_RECEIPT_20260805.md and ddm_pe3_hybrid_receipt.json. Do not run a scorer while sq2 owns the slot. If PE2 lands runtime PE section consumption, add the PE3 75KB candidate under the SSD run directory to MAIN's staged survival batch or spawn a PE4 curve-only surgical control from the recorded decomposition.",
+  "pe1_references": {
+    "full_120577_B": {
+      "archive_projection": {
+        "joint_section_count": 6,
+        "payload_bytes": 478504,
+        "payload_sha256": "135d967e8850b455ef64167c90bb2e90c7ace05726c4ff2cc3129f7ea875a101",
+        "projected_archive_bytes": 478612,
+        "projected_archive_sha256": "51e2e5b78d2c83b3cb357206c2e3a006ba3a51e2ba5661fcee364c39762a0416"
+      },
+      "best_body_bytes": 120520,
+      "best_body_sha256": "83115011d4453cfeef975120c17ce883aca84b7125bee241b7150dad7dd9b2df",
+      "best_codec": "lzma1-raw",
+      "body_bits_per_band_px": 0.37524903800011444,
+      "claim_label": "MEASURED n600 mask-domain coder bytes and parse-back; scorer-free",
+      "coder_race": [
+        {
+          "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_pe1_20260805/pe1_20260805T030000Z/payloads/explicit_curve_k8.lzma1-raw.bin",
+          "bytes": 120520,
+          "codec": "lzma1-raw",
+          "sha256": "83115011d4453cfeef975120c17ce883aca84b7125bee241b7150dad7dd9b2df"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 127967,
+          "codec": "brotli-q11",
+          "sha256": "5b193f908f6378c32b608e37ff85c738800e4190f61d35aa5b84616510162df4"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 234983,
+          "codec": "smevr-r7-nibble",
+          "sha256": "86a2a2ebffd38869709d683b360e251ba763c5b799306a7e0176f3217255b2d0"
+        }
+      ],
+      "component_records": 22338,
+      "dim_per_edge_mean": 11.001298236189452,
+      "dim_per_edge_p95": 32.0,
+      "falls_out": false,
+      "flip_recall": 1.0,
+      "frame_records": 600,
+      "mask_domain_fidelity": {
+        "all_components": 22338,
+        "component_recall": 1.0,
+        "decoded_band_pixels": 5191004,
+        "hausdorff_px_max": 59.033888572581766,
+        "hausdorff_px_mean": 1.9698910525040816,
+        "hausdorff_px_p95": 4.123105625617661,
+        "intersection_pixels": 2529370,
+        "iou": 0.4835327558425019,
+        "precision": 0.48726026795587135,
+        "recall": 0.9844254680201932,
+        "selected_components": 22338,
+        "source_band_pixels": 2569387,
+        "union_pixels": 5231021
+      },
+      "metadata": {
+        "knot_stride": 8
+      },
+      "parse_back": {
+        "codec": "lzma1-raw",
+        "component_records": 22338,
+        "frame_records": 600,
+        "kind": 1,
+        "kind_name": "explicit_curve_spline",
+        "raw_bytes": 401351,
+        "raw_sha256": "ed5dee749b1bf5a3da93978b8a1b497f7ce64d498012483a4dc29a9fc656a316",
+        "section_bytes": 120577,
+        "section_sha256": "492943cf199639c20f362ca8069affad2d183327970dda4186d632c7181b06fb"
+      },
+      "raw_bytes": 401351,
+      "raw_sha256": "ed5dee749b1bf5a3da93978b8a1b497f7ce64d498012483a4dc29a9fc656a316",
+      "representation": "explicit_curve_spline",
+      "scope_note": "arc-length curve chart with stride-selected secondary-coordinate knots; MDL row is selected from real-coded strides",
+      "section_bits_per_band_px": 0.37542651223813306,
+      "section_bytes": 120577,
+      "section_sha256": "492943cf199639c20f362ca8069affad2d183327970dda4186d632c7181b06fb",
+      "selected_flip_mass": 461271,
+      "surface_id": "explicit_curve_k8",
+      "total_flip_mass": 461271
+    },
+    "full_winner": {
+      "band_recall": 0.9844254680201932,
+      "flip_recall": 1.0,
+      "section_bytes": 120577,
+      "surface_id": "explicit_curve_k8"
+    },
+    "surgical_67607_B": {
+      "archive_projection": {
+        "joint_section_count": 6,
+        "payload_bytes": 425519,
+        "payload_sha256": "b86598aab7a852816fcf2bc0f74dee4411129ef4aacbcbbf48cdbc5a2e804559",
+        "projected_archive_bytes": 425627,
+        "projected_archive_sha256": "90de4c14887156fe462ead76163303bacefc3bbffec54bea10296ea104ff929a"
+      },
+      "best_body_bytes": 67550,
+      "best_body_sha256": "9bfcff8b0028c7ffea33017cf25fa342347d87b2bb202c97e91b115c01c47535",
+      "best_codec": "lzma1-raw",
+      "body_bits_per_band_px": 0.21032253996770436,
+      "claim_label": "MEASURED n600 mask-domain coder bytes and parse-back; scorer-free",
+      "coder_race": [
+        {
+          "artifact_path": null,
+          "bytes": 67550,
+          "codec": "lzma1-raw",
+          "sha256": "9bfcff8b0028c7ffea33017cf25fa342347d87b2bb202c97e91b115c01c47535"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 76820,
+          "codec": "brotli-q11",
+          "sha256": "a847eaa57af4b4f4ef3e81a671dab20cdc940b301991d6ede565272951ddb3f8"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 84208,
+          "codec": "smevr-r7-nibble",
+          "sha256": "9422bef2b527c9422f66674278908dacfd7e6aac068b5f5e394c3e96540a47a4"
+        }
+      ],
+      "component_records": 7894,
+      "dim_per_edge_mean": 4.0,
+      "dim_per_edge_p95": 4.0,
+      "falls_out": true,
+      "flip_recall": 0.8073388528652354,
+      "frame_records": 600,
+      "mask_domain_fidelity": {
+        "all_components": 22338,
+        "component_recall": 0.35338884412212374,
+        "decoded_band_pixels": 472652,
+        "hausdorff_px_max": 280.04463929880893,
+        "hausdorff_px_mean": 51.8317906300702,
+        "hausdorff_px_p95": 189.25445340415277,
+        "intersection_pixels": 63563,
+        "iou": 0.02134077964704097,
+        "precision": 0.1344816059172499,
+        "recall": 0.02473858550697112,
+        "selected_components": 7894,
+        "source_band_pixels": 2569387,
+        "union_pixels": 2978476
+      },
+      "metadata": {
+        "generator_quantization": "quarter-pixel q4 int16"
+      },
+      "parse_back": {
+        "codec": "lzma1-raw",
+        "component_records": 7894,
+        "frame_records": 600,
+        "kind": 2,
+        "kind_name": "generator_pair_bisector",
+        "raw_bytes": 150586,
+        "raw_sha256": "cb9e355c2534e89d586e5f87a9632ec31a8f073d7c0a9c8fbe5077af2fe5f198",
+        "section_bytes": 67607,
+        "section_sha256": "e07fc131765776d6c427250b6c6477b8aa49d44a25e6caec5599149fc8e0285f"
+      },
+      "raw_bytes": 150586,
+      "raw_sha256": "cb9e355c2534e89d586e5f87a9632ec31a8f073d7c0a9c8fbe5077af2fe5f198",
+      "representation": "generator_pair_bisector",
+      "scope_note": "local Laguerre/power-diagram generator pair; boundary values fall out from the bisector at decode",
+      "section_bits_per_band_px": 0.210500014205723,
+      "section_bytes": 67607,
+      "section_sha256": "e07fc131765776d6c427250b6c6477b8aa49d44a25e6caec5599149fc8e0285f",
+      "selected_flip_mass": 372402,
+      "surface_id": "generator_pair_bisector_waterfill_75kb",
+      "total_flip_mass": 461271,
+      "waterfill_priced_prefix_counts": [
+        1,
+        1973,
+        2960,
+        3947,
+        4933,
+        5920,
+        7894
+      ],
+      "waterfill_rank_prefix_components": 7894,
+      "waterfill_target": "generator",
+      "waterfill_target_section_bytes": 75000
+    },
+    "surgical_winner": {
+      "band_recall": 0.02473858550697112,
+      "flip_recall": 0.8073388528652354,
+      "section_bytes": 67607,
+      "surface_id": "generator_pair_bisector_waterfill_75kb"
+    }
+  },
+  "promotion_eligible": false,
+  "recall_evidence": [
+    {
+      "finding": "PE3 is scorer-free because sq2 owns the scorer slot; original recall and real-coder evidence are required.",
+      "plan_impact": "no SegNet/PoseNet forward was run; all rows are mask-domain byte custody with score_claim=false.",
+      "source": ".omx/tmp/codex_runs/_common_contract.md"
+    },
+    {
+      "finding": "addendum 3 requires hybrid/per-level composition and all-signal decomposition of positives and negatives.",
+      "plan_impact": "PE3 composes generator surgical prefix plus curve residuals and decomposes transport, recall misses, surgical residual, and the 106465 B row.",
+      "source": ".omx/research/operator_directive_per_edge_optimality_criteria_20260805.md"
+    },
+    {
+      "finding": "PE1 measured explicit_curve_k8 full at 120577 B / 0.984425 band recall and generator_pair_bisector_waterfill_75kb at 67607 B / 0.807339 flip recall.",
+      "plan_impact": "these are the fixed pure-row references and the generator prefix size denominator.",
+      "source": ".omx/research/ddm_pe1_20260805/ddm_pe1_repr_race_receipt.json"
+    },
+    {
+      "finding": "static-in-image dominates aggregate flip stationarity; xi-proxy is scoped and not free physical BEV.",
+      "plan_impact": "transport decomposition joins tracks to image-static/transient counts and does not promote xi transport globally.",
+      "source": ".omx/research/ddm_g4_spatial_stationarity_n600_20260722T212138Z/ddm_g4_spatial_stationarity_receipt.json plus recurrence arrays"
+    },
+    {
+      "finding": "GT flicker is formulation-scoped, not a hard floor, but ranks phase-faithfulness debt.",
+      "plan_impact": "tiny/flicker-dominated fragments are priced omission candidates and counted in the missing/residual decomposition.",
+      "source": ".omx/research/ddm_fl1_perclass_flicker_floors_20260731.md"
+    },
+    {
+      "finding": "boundary/waterfill/transport laws exist, but no current PE3 hybrid section was already settled in the registry or index.",
+      "plan_impact": "PE3 measures the section bytes instead of promoting a prior equation or a charter assumption.",
+      "source": ".venv/bin/python tools/list_canonical_equations.py --json and .omx/research/CANONICAL_RESEARCH_INDEX_20260629.md"
+    }
+  ],
+  "schema": "ddm_pe3_hybrid_composition.v1",
+  "score_claim": false,
+  "section_format": {
+    "coordination": "No ddm_pe2_20260805 receipt was present at run time; PE3 claimed a distinct section magic/version and did not edit PE2 receiver code.",
+    "kind": "hybrid_per_regime",
+    "magic": "PE3EDGE1",
+    "version": 1
+  },
+  "staged_batch_note_for_main": {
+    "fire_order": "If pe2 runtime receiver consumption lands for PE sections, add the PE3 75KB hybrid candidate to the staged scorer batch behind sq2; do not run a scorer from this arm.",
+    "hybrid_beats_pe1_surgical_flip_recall": true
+  },
+  "storage_preflight": {
+    "observed_free_bytes": 142282780672,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_pe3_20260805",
+    "required_free_bytes": 536870912,
+    "status": "PASS"
+  }
+}
