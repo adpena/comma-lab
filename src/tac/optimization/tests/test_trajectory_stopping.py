@@ -131,3 +131,69 @@ def test_malformed_thresholds_fail_closed() -> None:
             score_units_per_objective=seg_flip_score_units(),
             marginal_score_gain_per_compute=0.0,
         )
+
+
+# --- amendment-3 tail-slope adjudication (#874/#935 censored-cap genus) ---------------
+
+
+def test_tail_slope_censored_still_descending() -> None:
+    from tac.optimization.trajectory_stopping import adjudicate_tail_slope
+
+    # the w2 shape: linear descent ~-3e-6/ep with tiny alternating noise -> censored
+    steps = [949 + 5 * i for i in range(28)]
+    values = [0.00415 - 3e-6 * (s - 949) + (2e-7 if i % 2 else -2e-7)
+              for i, s in enumerate(steps)]
+    v = adjudicate_tail_slope(steps, values)
+    assert v.verdict == "censored_still_descending"
+    assert v.endpoint_is_min
+    assert any(f.slope < 0 and f.sigma >= v.sigma_threshold for f in v.fits)
+    payload = v.to_payload()
+    assert payload["verdict"] == "censored_still_descending"
+    assert payload["fits"]
+
+
+def test_tail_slope_converged_plateau() -> None:
+    from tac.optimization.trajectory_stopping import adjudicate_tail_slope
+
+    # flat with noise larger than any drift -> no fit clears the threshold
+    steps = [float(5 * i) for i in range(30)]
+    values = [0.004 + (3e-5 if i % 2 else -3e-5) for i in range(30)]
+    v = adjudicate_tail_slope(steps, values)
+    assert v.verdict == "converged_plateau"
+
+
+def test_tail_slope_ascending_past_min() -> None:
+    from tac.optimization.trajectory_stopping import adjudicate_tail_slope
+
+    # the OFF-arm shape: descend to a minimum, then a clean ascent past it -> the
+    # endpoint is NOT adoptable; the verdict must say so and record the minimum.
+    steps = [float(5 * i) for i in range(30)]
+    values = [0.004 - 4e-6 * s for s in steps[:15]]
+    vmin = values[-1]
+    values += [vmin + 4e-6 * (s - steps[14]) for s in steps[15:]]
+    v = adjudicate_tail_slope(steps, values)
+    assert v.verdict == "ascending_past_min"
+    assert not v.endpoint_is_min
+    assert v.min_value == pytest.approx(vmin)
+
+
+def test_tail_slope_insufficient_points_raises() -> None:
+    from tac.optimization.trajectory_stopping import (
+        TrajectoryStoppingError,
+        adjudicate_tail_slope,
+    )
+
+    with pytest.raises(TrajectoryStoppingError, match=">= 3"):
+        adjudicate_tail_slope([0.0, 1.0], [1.0, 0.5])
+
+
+def test_tail_slope_short_history_falls_back_to_full_fit() -> None:
+    from tac.optimization.trajectory_stopping import adjudicate_tail_slope
+
+    # 4 points spanning 300 steps: both default spans (40/20) hold <3 points each,
+    # so the adjudicator must fall back to ONE full-trajectory fit, not error.
+    steps = [0.0, 100.0, 200.0, 300.0]
+    values = [0.01, 0.008, 0.006, 0.004]
+    v = adjudicate_tail_slope(steps, values)
+    assert v.verdict == "censored_still_descending"
+    assert len(v.fits) == 1

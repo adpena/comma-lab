@@ -1867,29 +1867,25 @@ def initial_stage_label(seg_form_start: str) -> str:
             else f"seg_trunk_{seg_form_start}")
 
 
-# ---- ddm_tp2 (2026-08-02) row 2: --margin-weighted-loss is INERT on two seg forms ----------
-# MEASURED BUG: ``--margin-weighted-loss on`` is threaded into make_loss_fn for EVERY form
-# (it sets ``apply_mw``), but only three of the five branches ever READ it. In
-# ``experiments/train_witness_realized_through_R_mlx.py::make_loss_fn.loss_fn`` the
-# ``margin_hinge`` / ``unify_tau`` / ``ce`` branches all guard on ``if apply_mw:``; the
-# ``tau_softplus`` and ``l7_softplus`` branches contain no such guard at all. For
-# ``l7_softplus`` that is DELIBERATE and documented ("l7_softplus carries its OWN hard-pixel
-# weight so the curriculum l7 stage does NOT also use this lever"); for ``tau_softplus`` --
-# a bare mean(tau*softplus(-m/tau)) with no weight of its own -- nothing absorbs it, so the
-# flag is simply declared-ON and dead.
+# ---- ddm_en1 (2026-08-05) row 1: --margin-weighted-loss now reaches tau_softplus ----------
+# ddm_tp2 MEASURED the bug: ``--margin-weighted-loss on`` was threaded into make_loss_fn for
+# EVERY form (it sets ``apply_mw``), but only three of the five branches ever READ it. In
+# ``experiments/train_witness_realized_through_R_mlx.py::make_loss_fn.loss_fn`` the historical
+# ``margin_hinge`` / ``unify_tau`` / ``ce`` branches guarded on ``if apply_mw:``; EN1 adds the
+# same real consumer to ``tau_softplus``. ``l7_softplus`` remains deliberately outside this
+# lever because that stage carries its OWN hard-pixel weight.
 #
 # MEASURED blast radius: all four TR1 windows (ddm_b4s_20260731/window_01..03,
 # ddm_r1c_20260731/window_01) launched margin_weighted_loss='on' and ran the tau_softplus
 # form for 100% of their trained epochs -> the flag had ZERO effect on every epoch of the
 # burn lineage. window_03 alone: 199/199 gate rows at form tau_softplus, ep807-945.
 #
-# WHY REFUSE RATHER THAN WIRE: wiring margin weighting into the tau_softplus branch would
-# change the training loss of the live vehicle. That is a score-affecting lever, and levers
-# are RACED, never adopted by citation -- it would also make the next window incomparable to
-# windows 01-03. Refusing is fail-closed, costs nothing, and turns a silent artifact LOUD
-# (the confound-immune-system rule). The remedy is free: because the flag was inert, DROPPING
-# it reproduces the burn lineage EXACTLY, byte-for-byte.
-MARGIN_WEIGHTED_HONORING_SEG_FORMS = frozenset({"ce", "unify_tau", "margin_hinge"})
+# POST-FIX CONTRACT: the existing DSL lever ``tr1_seg_margin_weight`` is now a real tau/ce
+# training-force candidate, default OFF and RACED, never retroactively asserted for old windows.
+# A run that starts at ce remains allowed because the knee transition ce -> tau_softplus keeps
+# honoring the same lever. The guard still refuses any reachable form that does not consume it.
+MARGIN_WEIGHTED_HONORING_SEG_FORMS = frozenset(
+    {"ce", "tau_softplus", "unify_tau", "margin_hinge"})
 
 # ---- ddm_tp2 (2026-08-02) row 3: #274 spike/coherent PRODUCER, ported onto the live vehicle ----
 # This is a PORT, not new machinery. The lever (--seg-spike-reweight / --seg-spike-downweight /
@@ -2010,15 +2006,10 @@ def assert_margin_weighted_loss_is_honored(seg_form_start: str, margin_weighted_
         f"launched at --seg-form-start {seg_form_start!r} will occupy.\n"
         f"  Forms that honor it: {sorted(MARGIN_WEIGHTED_HONORING_SEG_FORMS)} (they guard on "
         f"`if apply_mw:`).\n"
-        f"  Forms that ignore it: ['l7_softplus', 'tau_softplus'] (no apply_mw guard in "
-        f"make_loss_fn; l7_softplus deliberately carries its own hard-pixel weight).\n"
-        f"  NOTE 'ce' is not a way out: the knee event (F2 midpoint fallback makes it "
-        f"unconditional) switches ce -> tau_softplus mid-run, so the weighting dies at the "
-        f"knee. This is MEASURED: b4s window_01..03 + r1c window_01 all launched "
-        f"margin_weighted_loss='on' and ran tau_softplus for 100% of their epochs.\n"
-        f"  FIX (free, and byte-identical to what those runs actually did): drop "
-        f"--margin-weighted-loss. To USE the lever, launch a form that honors it -- and race "
-        f"it, because on this vehicle that is an unmeasured change to the training loss.")
+        f"  Forms that ignore it: ['l7_softplus'] (deliberately carries its own hard-pixel "
+        f"weight).\n"
+        f"  FIX: drop --margin-weighted-loss for that form, or launch a form that honors it. "
+        f"This remains a score-affecting training-force lever, so race it before any claim.")
 
 
 def basin_entry_fires(w: list[dict]) -> bool:
@@ -2114,6 +2105,31 @@ def a1_alarm_summary(gate_rows: list[dict[str, Any]]) -> dict[str, Any]:
                 "6 firings in the burn were invisible to every decision record (only "
                 "final_gate_a1 was propagated and none was at a final gate)",
     }
+
+
+def tail_slope_adjudication(gate_rows: list[dict[str, Any]]) -> dict[str, Any]:
+    """Amendment-3 boundary self-adjudication (#874/#935 censored-cap genus; operator
+    2026-08-05 "fix censorship sources everywhere"): the window-boundary verdict
+    authority is the MEASURED tail-slope fit over the gate history — never the
+    per-gate 5-epoch interval label (a1 FLAT censored a real 6.2-sigma descent twice
+    on 2026-08-05). ADDITIVE ONLY: never changes a1_alarm / a1_classification; pure
+    over the rows the caller already holds.
+    """
+    pts = sorted(
+        (float(r["epoch"]), float(r["realized_gate_dseg_mean"]))
+        for r in gate_rows
+        if r.get("epoch") is not None and r.get("realized_gate_dseg_mean") is not None
+    )
+    if len(pts) < 3:
+        return {"verdict": "insufficient_gate_rows", "n_gate_rows": len(pts)}
+    try:
+        from tac.optimization.trajectory_stopping import adjudicate_tail_slope
+        payload = adjudicate_tail_slope([p[0] for p in pts], [p[1] for p in pts]).to_payload()
+    except Exception as exc:  # fail-open telemetry: a broken fit must not kill the receipt
+        return {"verdict": "adjudication_error", "error": f"{type(exc).__name__}: {exc}",
+                "n_gate_rows": len(pts)}
+    payload["n_gate_rows"] = len(pts)
+    return payload
 
 
 def boundary_jump_row(parent_tail: list[dict[str, Any]], parent_ema_decay: float | None,
@@ -3009,9 +3025,8 @@ def build_argparser() -> argparse.ArgumentParser:
     # WHY THESE FOUR AND NOT ``margin_weight_fn``: focal / fisher-density / natural-grad fold into
     # ``seg_pixel_w`` (or transform ``seg_logits``), the surface EVERY seg form honors before the
     # mean -- including ``tau_softplus``, which the live burn lineage occupies ~100% of its epochs.
-    # ``margin_weight_fn`` is read only under ``apply_mw``, which ``tau_softplus`` ignores entirely
-    # (MARGIN_WEIGHTED_HONORING_SEG_FORMS above, ddm_tp2 row 2) -- porting it would ship a flag
-    # that is inert on the live vehicle, which is the genus this file already refuses.
+    # ``margin_weight_fn`` is owned by the already-registered DSL lever ``tr1_seg_margin_weight``;
+    # EN1 wires its tau consumer and the guard above keeps any unhonored future form fail-closed.
     #
     # ARGS-ONLY, never TR1Config (the --persist-optimizer-state / --telemetry-v9-port precedent):
     # ``canonical_json`` is ``asdict(self)``, so a new config field would move ``config_hash`` for
@@ -3422,7 +3437,8 @@ def main() -> int:
                   "(retired-trainer levers SegFocalGamma / FisherDensityWeight / "
                   "HeadNaturalGradient + the tau_softplus scalar). focal + fisher fold into "
                   "seg_pixel_w and natural-grad transforms seg_logits, so ALL of them are honored "
-                  "by every seg form including tau_softplus -- unlike --margin-weighted-loss. "
+                  "by every seg form including tau_softplus. The separate tr1_seg_margin_weight "
+                  "lever now also has a tau_softplus consumer (EN1). "
                   "Args-only => config_hash flag-invariant. score_claim=False",
           "score_claim": False})
     tlog({"event": "jd1_joint_pose_finish_config",
@@ -4612,6 +4628,9 @@ def main() -> int:
         "gate_basis_held": boundary_gate_basis_held,
         "held_scope": ("decay_and_gate_basis" if boundary_strict_basis_held is not None
                        else "decay_only_no_post_resume_gate_observed"),
+        # amendment-3 (#874/#935): the receipt SELF-ADJUDICATES its boundary — measured
+        # tail-slope verdict, so no reader mistakes a capped endpoint for convergence.
+        "tail_slope_adjudication": tail_slope_adjudication(telemetry_tail),
         "boundary_probe": args.boundary_probe,
         "pe3_conditioning": (
             pe3_conditioning_summary

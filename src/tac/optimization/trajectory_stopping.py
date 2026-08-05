@@ -221,6 +221,158 @@ def build_cap_stop_receipt(
     )
 
 
+TailSlopeVerdictKind = Literal[
+    "censored_still_descending",
+    "ascending_past_min",
+    "converged_plateau",
+]
+
+# Detection threshold provenance (constants-are-poison discipline): 2.0 sigma is the
+# two-sided standard-normal ~95.4% detection convention, NOT a fitted constant.
+# Operating anchors from the 2026-08-05 TP1 adjudications that this codifies: the
+# acted-on extension fired at 2.44 sigma (w2 tail-20) and the strongest censored
+# signal measured 6.23 sigma (w2 tail-40) while the run's own 5-epoch interval label
+# said FLAT; the OFF arm's past-minimum ascent measured ~4 sigma. Sites with a
+# measured noise floor of their own may override per call.
+TAIL_SLOPE_SIGMA_THRESHOLD: Final = 2.0
+# Default fit windows: the long window buys slope sensitivity (~T^1.5 in SNR), the
+# short window buys recency; (40, 20) is the TP1 window-boundary practice pair
+# (gate cadence 5 -> 8/4 points minimum). Units are the caller's step axis.
+TAIL_SLOPE_DEFAULT_SPANS: Final = (40.0, 20.0)
+
+
+@dataclass(frozen=True, slots=True)
+class TailSlopeSpanFit:
+    """One linear tail fit: objective vs step over the trailing ``span`` steps."""
+
+    span: float
+    n_points: int
+    slope: float
+    slope_se: float
+    sigma: float
+
+    def to_payload(self) -> dict[str, Any]:
+        return {
+            "span": self.span,
+            "n_points": self.n_points,
+            "slope": self.slope,
+            "slope_se": self.slope_se,
+            "sigma": self.sigma,
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class TailSlopeVerdict:
+    """Amendment-3 censored-cap adjudication at a window/cap boundary.
+
+    The MEASURED tail-slope fits are the stopping authority; short-window
+    per-gate classifier labels are not (they censored a real 6.2-sigma descent
+    as FLAT twice on 2026-08-05).  ``censored_still_descending`` means the
+    window cap cut a live descent (endpoint = censored, warm continuation owed);
+    ``ascending_past_min`` means the endpoint is NOT the best state (adoption
+    must use the recorded minimum, never the endpoint); ``converged_plateau``
+    means no tail slope clears the detection threshold.
+    """
+
+    verdict: TailSlopeVerdictKind
+    fits: tuple[TailSlopeSpanFit, ...]
+    sigma_threshold: float
+    min_step: float
+    min_value: float
+    end_step: float
+    end_value: float
+    endpoint_is_min: bool
+
+    def to_payload(self) -> dict[str, Any]:
+        return {
+            "verdict": self.verdict,
+            "fits": [f.to_payload() for f in self.fits],
+            "sigma_threshold": self.sigma_threshold,
+            "min_step": self.min_step,
+            "min_value": self.min_value,
+            "end_step": self.end_step,
+            "end_value": self.end_value,
+            "endpoint_is_min": self.endpoint_is_min,
+            "authority_note": ("measured tail-slope fit is the boundary authority; "
+                               "interval classifier labels are advisory (#874/#935 "
+                               "censored-cap genus, amendment-3 2026-08-05)"),
+        }
+
+
+def _tail_fit(x: Sequence[float], y: Sequence[float], span: float) -> TailSlopeSpanFit | None:
+    lo = x[-1] - span
+    xs = [a for a in x if a >= lo]
+    ys = [b for a, b in zip(x, y) if a >= lo]
+    if len(xs) < 3:
+        return None
+    intercept, slope = _linear_regression(xs, ys)
+    xbar = sum(xs) / len(xs)
+    sxx = sum((a - xbar) ** 2 for a in xs)
+    pred = [intercept + slope * a for a in xs]
+    resid = [b - p for b, p in zip(ys, pred)]
+    dof = max(1, len(xs) - 2)
+    resid_sd = math.sqrt(sum(r * r for r in resid) / dof)
+    se = resid_sd / math.sqrt(sxx) if sxx > 0 else 0.0
+    if se > 0:
+        sigma = abs(slope) / se
+    else:
+        sigma = math.inf if slope != 0.0 else 0.0
+    return TailSlopeSpanFit(span=float(span), n_points=len(xs), slope=float(slope),
+                            slope_se=float(se), sigma=float(sigma))
+
+
+def adjudicate_tail_slope(
+    steps: Sequence[float],
+    values: Sequence[float],
+    *,
+    spans: Sequence[float] = TAIL_SLOPE_DEFAULT_SPANS,
+    sigma_threshold: float = TAIL_SLOPE_SIGMA_THRESHOLD,
+) -> TailSlopeVerdict:
+    """Adjudicate a trajectory at its window/cap boundary by MEASURED tail slopes.
+
+    Decision rule (the 2026-08-05 amendment-3 practice, made canonical):
+      1. any tail-span fit descending beyond ``sigma_threshold``
+         -> ``censored_still_descending`` (the cap is censoring a live descent);
+      2. else the shortest fitted span ascending beyond threshold while the
+         endpoint sits above the trajectory minimum
+         -> ``ascending_past_min`` (adopt the minimum, never the endpoint);
+      3. else -> ``converged_plateau``.
+    Requires >= 3 points; spans with < 3 points are dropped, and if every span
+    drops, one fit over the full trajectory is used instead.
+    """
+
+    if len(steps) != len(values):
+        raise TrajectoryStoppingError("steps and values must be equal length")
+    if len(steps) < 3:
+        raise TrajectoryStoppingError("tail-slope adjudication requires >= 3 points")
+    order = sorted(range(len(steps)), key=lambda i: steps[i])
+    x = [float(steps[i]) for i in order]
+    y = [float(values[i]) for i in order]
+    fits = [f for f in (_tail_fit(x, y, s) for s in spans) if f is not None]
+    if not fits:
+        full = _tail_fit(x, y, x[-1] - x[0])
+        if full is None:
+            raise TrajectoryStoppingError("no fittable tail span (degenerate steps)")
+        fits = [full]
+    i_min = min(range(len(y)), key=lambda i: y[i])
+    endpoint_is_min = i_min == len(y) - 1
+    descending = any(f.slope < 0 and f.sigma >= sigma_threshold for f in fits)
+    shortest = min(fits, key=lambda f: f.span)
+    ascending = (shortest.slope > 0 and shortest.sigma >= sigma_threshold
+                 and not endpoint_is_min)
+    if descending:
+        verdict: TailSlopeVerdictKind = "censored_still_descending"
+    elif ascending:
+        verdict = "ascending_past_min"
+    else:
+        verdict = "converged_plateau"
+    return TailSlopeVerdict(
+        verdict=verdict, fits=tuple(fits), sigma_threshold=float(sigma_threshold),
+        min_step=x[i_min], min_value=y[i_min], end_step=x[-1], end_value=y[-1],
+        endpoint_is_min=endpoint_is_min,
+    )
+
+
 @dataclass(frozen=True, slots=True)
 class ProjectionInterval:
     target_compute: float

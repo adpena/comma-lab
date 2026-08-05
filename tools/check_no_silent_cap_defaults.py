@@ -31,6 +31,9 @@ CAP_FLAG_RE = re.compile(
 STOP_REPORT_MARKERS = (
     "CapStopReceipt",
     "build_cap_stop_receipt",
+    "adjudicate_tail_slope",
+    "TailSlopeVerdict",
+    "tail_slope_adjudication",
     "stop_reason",
     "stop_reasons",
     "stop_status",
