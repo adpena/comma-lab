@@ -572,12 +572,16 @@ research-signal] n36 designed-gate realized d_seg, ema_shadow basis, score_claim
 | birth OFF (`smoke_birth_off`) | 0.0039732 | **0.0040446** | ascending/FLAT (A1 alarm ep814) |
 | birth ON + union mask (`smoke_birth_lane_on`) | 0.0046221 | 0.0045341 | COUPLED_DESCENT → stalls FLAT at ep820 (last interval +8.5e-6) |
 
-**Verdict (INSTANCE scope — this base, this window length, this basis):** birth-seeding ON loses
-the matched-epochs endpoint by **+4.90e-4 realized d_seg (≈ +0.049 S_seg)** — ~10× the w4m
-margin-A/B endpoint gap. The ON slope argument is weaker than w4m's: ON's descent DECELERATES
-and flips positive at the endpoint. The ep809 first-gate gap (+6.5e-4) shows the treatment's
-up-front seg cost; the window did not buy it back. lane_guard g_s_units near-identical
-(−0.0352 vs −0.0362).
+**Verdict — RE-GRADED by the operator-directed negative audit (same day, below): NOT a
+treatment verdict; a SHORT-WINDOW COST MEASUREMENT.** ⚠ The window is **14 epochs** (both arms
+ep807→820, verified from telemetry epoch rows — NOT the ~140 ep the lineage context suggested).
+The +4.90e-4 matched-endpoint gap therefore mostly re-measures the birth-seed injection's
+UP-FRONT cost (+6.5e-4 visible at the first gate, 2 ep after the shared resume — the amplify
+anchor perturbs the lattice AT resume), of which ON bought back ~0.9e-4 in the remaining 13 ep
+(best rate −1.4e-5/ep). Break-even ETA at that rate ≥ ~46 ep — **3.5× the window**; the
+original "ON loses / descent stalls" wording is WINDOW-CENSORED (the "stall" was ONE +8.5e-6
+interval, noise-level). Honest scope: **UNDECIDED at this horizon** — the same under-power
+class as bp1's 1.56τ A/B. lane_guard g_s_units near-identical (−0.0352 vs −0.0362).
 
 **Cross-base caveat (m85 — matched-base controls):** the LIVE jd4 lineage (w4m→jd1→jd3→jd4)
 carries birth_lane_on throughout — this A/B ran on a DIFFERENT (smoke-continuation) base and
@@ -589,3 +593,28 @@ next single-variable slot — three queued single-variable A/Bs now exist; the b
 adjudication picks by expected |ΔS| per window); (c) #924's "opposite-signs-same-cells"
 hypothesis stays REFUTED (union added ONE cell); the mechanism under test here is the
 birth-seed amplify anchor, not the mask.
+
+## NEGATIVE/INCONCLUSIVE AUDIT (operator-directed, 2026-08-05): this window's fresh verdicts re-graded for naive/toy/short-horizon construction
+
+Per the standing verdict-scope discipline (m69, #390/#630/na2 lineage) over every negative or
+inconclusive result produced in the current arc:
+
+| result | prior grade | audit finding | re-grade |
+|---|---|---|---|
+| bi1 birth-seed ON-vs-OFF (3401ce59f3) | "INSTANCE: ON loses endpoint +4.9e-4; descent stalls" | **CAUGHT — window-censored construction.** Window = 14 ep (ep807→820, verified), vs a ≥~46-ep break-even ETA derived from ON's own measured buy-back rate against its +6.5e-4 at-resume injection cost. "Stall" = ONE noise-level interval. Same under-power class as bp1's 1.56τ. | **UNDECIDED at this horizon — a cost measurement, not a treatment verdict.** Section amended in place (headline+body). Queued matched-base A/B design now PRE-REGISTERS: window ≥100 ep past first gate · gates every ≤5 ep throughout (bi1 had 4 gates) · falsifier = ON interior min beats OFF endpoint within the pre-derived break-even horizon. |
+| w4/w4m margin A/B | AMBIGUOUS (crossing arms) | Construction sound: matched resume/epochs/seed, single variable; crossing-arms honestly reported; endpoint gap +5.13e-5 near noise. | STANDS. Re-A/B queued at a clean boundary (boundary candidate set). |
+| bp1 bias-correction ON +0.0120 worse | under-powered (1.56τ) | Already flagged; ci1 independently caught the stale 1.56τ figure. | STANDS as under-powered; not citable as a family verdict. |
+| jd1-v2 P2 endpoint (pose-alive, seg-harmed) | routed to 2 controller cures | Not a family negative — defects named (hold-space, basis), cures built into jd3/jd4. | STANDS. |
+| A1 alarm ep1424 (jd4) | transient, watch-only | Single-episode, recovered ep1429, 0 refuses; correctly NOT escalated to a verdict. | STANDS. |
+| gc20's 6 folded routes | folded w/ reopen conditions | Each fold cites a MEASURED basis (PE3 S=1.8527@432,428B byte-closed · SL2 ~3-orders carriage · etc.) + named reopen condition. The KD fold leans on a cited prior settlement — its reopen condition (weights-as-carrier mechanism change) is the correct guard. | STAND. |
+| sq1 0/32 multi-start (#930) | cap-bound | Already re-scoped (25-step cap; sq2 uncapped continuation measured η 0.7895→0.8620). | STANDS. |
+| pending strong negatives #894/#916/#918 | measured, reopen-conditioned | Depth-wave adjudicated on measured races/structural arguments; no construction defect surfaced today; reopen conditions named. | STAND — no reopen warranted. |
+
+Net: ONE material catch (bi1 — my own same-day adjudication), corrected at source per the
+stale-headlines law; the queued birth-seed matched-base A/B inherits the pre-registered
+adequate-power design. The audit itself confirms the class pattern: the two fresh under-powered
+reads this week (bp1, bi1) are BOTH short-horizon A/Bs whose window was inherited from
+convenience (an existing smoke budget) rather than DERIVED from the treatment's own time
+constant — window length joins decay/floor/hold on the cross-regime derive-at-scope list (m: 
+cross-regime-constant-transfer genus, instance #5: A/B WINDOW LENGTH must be derived from the
+treatment's measured break-even horizon, never inherited from the vehicle's smoke budget).
