@@ -1,0 +1,373 @@
+{
+ "axis": "[macOS-CPU advisory / scorer-free receiver-byte custody]",
+ "conditional_transport_pricing": {
+  "axis": "[macOS-CPU advisory / scorer-free real-coder byte pricing]",
+  "best": {
+   "all_transport": {
+    "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_pe4_20260805_r2/conditional_transport_payloads/pe4_transport_all_tracks_transport.brotli-q11.bin",
+    "bytes": 183348,
+    "codec": "brotli-q11",
+    "sha256": "1d3700fc533c104b2fb70e3ccd46c08eb7323d1ea246dc520df7d7ece79f2dd8"
+   },
+   "conditional_net_delta_bytes_vs_independent": 15359,
+   "conditional_wins": false,
+   "independent": {
+    "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_pe4_20260805_r2/conditional_transport_payloads/pe4_transport_independent_generator.lzma1-raw.bin",
+    "bytes": 164831,
+    "codec": "lzma1-raw",
+    "sha256": "236c550370601659943ba1fd511ba4367efbb396c2d27f447e7119c40ca25520"
+   },
+   "subset_conditional": {
+    "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_pe4_20260805_r2/conditional_transport_payloads/pe4_transport_subset_conditional.brotli-q11.bin",
+    "bytes": 180190,
+    "codec": "brotli-q11",
+    "sha256": "c6619d146cd6356e175d83fcc03fe94317918193124ca5b58bf287dfa72a9e07"
+   }
+  },
+  "coder_race": {
+   "all_transport": [
+    {
+     "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_pe4_20260805_r2/conditional_transport_payloads/pe4_transport_all_tracks_transport.brotli-q11.bin",
+     "bytes": 183348,
+     "codec": "brotli-q11",
+     "sha256": "1d3700fc533c104b2fb70e3ccd46c08eb7323d1ea246dc520df7d7ece79f2dd8"
+    },
+    {
+     "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_pe4_20260805_r2/conditional_transport_payloads/pe4_transport_all_tracks_transport.lzma1-raw.bin",
+     "bytes": 184854,
+     "codec": "lzma1-raw",
+     "sha256": "009221a6acc8a712ee5edb9887bf58ac516d706e1aaab6b8e164eb438648a801"
+    },
+    {
+     "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_pe4_20260805_r2/conditional_transport_payloads/pe4_transport_all_tracks_transport.smevr-r7-nibble.bin",
+     "bytes": 265557,
+     "codec": "smevr-r7-nibble",
+     "sha256": "ec70f07f61b9428f2b34052c67aeca0e3f76a6c938dc50de006967b215e0b4ab"
+    }
+   ],
+   "independent": [
+    {
+     "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_pe4_20260805_r2/conditional_transport_payloads/pe4_transport_independent_generator.lzma1-raw.bin",
+     "bytes": 164831,
+     "codec": "lzma1-raw",
+     "sha256": "236c550370601659943ba1fd511ba4367efbb396c2d27f447e7119c40ca25520"
+    },
+    {
+     "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_pe4_20260805_r2/conditional_transport_payloads/pe4_transport_independent_generator.brotli-q11.bin",
+     "bytes": 189671,
+     "codec": "brotli-q11",
+     "sha256": "b9f921eab56a1421bcde38108f2bde4ecff152ef06150c61c34f116d4c330699"
+    },
+    {
+     "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_pe4_20260805_r2/conditional_transport_payloads/pe4_transport_independent_generator.smevr-r7-nibble.bin",
+     "bytes": 216676,
+     "codec": "smevr-r7-nibble",
+     "sha256": "ee31b7d22650f4dbb4fd986dbea493303228a1519d8d2672b3b435e445b0b54d"
+    }
+   ],
+   "subset_conditional": [
+    {
+     "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_pe4_20260805_r2/conditional_transport_payloads/pe4_transport_subset_conditional.brotli-q11.bin",
+     "bytes": 180190,
+     "codec": "brotli-q11",
+     "sha256": "c6619d146cd6356e175d83fcc03fe94317918193124ca5b58bf287dfa72a9e07"
+    },
+    {
+     "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_pe4_20260805_r2/conditional_transport_payloads/pe4_transport_subset_conditional.lzma1-raw.bin",
+     "bytes": 180727,
+     "codec": "lzma1-raw",
+     "sha256": "c4b2cce111d1f2fc4cc517aec32bf9321fa876972f8d090f8dce2c2a9e0ea1a8"
+    },
+    {
+     "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_pe4_20260805_r2/conditional_transport_payloads/pe4_transport_subset_conditional.smevr-r7-nibble.bin",
+     "bytes": 258546,
+     "codec": "smevr-r7-nibble",
+     "sha256": "ef83097eaf62a016eaef9cc99528dd54af9ad626008823d5bac677e94fc6be0f"
+    }
+   ]
+  },
+  "component_count": 22338,
+  "raw_record_model": {
+   "aggregate_independent_record_bytes": 424422,
+   "aggregate_transport_record_bytes": 345028,
+   "conditional_record_bytes_with_1bit_selector": 342551,
+   "selector_bytes": 646,
+   "tracks": 5164,
+   "transport_won_tracks": 2224
+  },
+  "raw_streams": {
+   "all_transport_bytes": 345628,
+   "conditional_bytes_including_selector": 343151,
+   "conditional_delta_vs_independent_raw": -81871,
+   "conditional_sha256": "f31e8bf17ec632efab15a33f0c998d15e0ab79ec09d937406e451b8f101cdc7d",
+   "independent_bytes": 425022
+  },
+  "sample_winning_tracks": [
+   {
+    "components": 131,
+    "flip_mass": 10557,
+    "independent_record_bytes": 2489,
+    "track_id": 2542,
+    "transport_record_bytes": 1840,
+    "transport_won": true
+   },
+   {
+    "components": 129,
+    "flip_mass": 9265,
+    "independent_record_bytes": 2451,
+    "track_id": 19,
+    "transport_record_bytes": 1684,
+    "transport_won": true
+   },
+   {
+    "components": 121,
+    "flip_mass": 7928,
+    "independent_record_bytes": 2299,
+    "track_id": 2637,
+    "transport_record_bytes": 1708,
+    "transport_won": true
+   },
+   {
+    "components": 89,
+    "flip_mass": 7419,
+    "independent_record_bytes": 1691,
+    "track_id": 1957,
+    "transport_record_bytes": 1255,
+    "transport_won": true
+   },
+   {
+    "components": 205,
+    "flip_mass": 6500,
+    "independent_record_bytes": 3895,
+    "track_id": 516,
+    "transport_record_bytes": 2881,
+    "transport_won": true
+   },
+   {
+    "components": 119,
+    "flip_mass": 6447,
+    "independent_record_bytes": 2261,
+    "track_id": 445,
+    "transport_record_bytes": 1672,
+    "transport_won": true
+   },
+   {
+    "components": 163,
+    "flip_mass": 6277,
+    "independent_record_bytes": 3097,
+    "track_id": 2307,
+    "transport_record_bytes": 2288,
+    "transport_won": true
+   },
+   {
+    "components": 119,
+    "flip_mass": 5644,
+    "independent_record_bytes": 2261,
+    "track_id": 3180,
+    "transport_record_bytes": 1678,
+    "transport_won": true
+   },
+   {
+    "components": 73,
+    "flip_mass": 5411,
+    "independent_record_bytes": 1387,
+    "track_id": 1424,
+    "transport_record_bytes": 1028,
+    "transport_won": true
+   },
+   {
+    "components": 99,
+    "flip_mass": 5361,
+    "independent_record_bytes": 1881,
+    "track_id": 3869,
+    "transport_record_bytes": 1396,
+    "transport_won": true
+   }
+  ],
+  "schema": "ddm_pe4_conditional_transport_pricing.v1",
+  "selection_mode": "n600 all PE1 generator tracks; no prefix; scorer-free",
+  "selector": {
+   "bytes": 646,
+   "coding": "one packed bit per sorted track id; prepended as a standalone coder record",
+   "sha256": "ef4de27b210dd67612111d1fda2f90965df3f7081ca257bb61edccbe10e1f678"
+  },
+  "track_count": 5164,
+  "verdict_scope": "FORMULATION-scoped to PE1 local generator-parameter tracks with a packed per-track selector and the real Brotli/LZMA1/SMEVR coder race; no scorer claim and no PE3-r2 archive promotion unless the encoded subset wins.",
+  "wall_seconds": 23.0,
+  "winning_track_fraction": 0.43067389620449265,
+  "winning_tracks": 2224
+ },
+ "created_utc": "2026-08-05T01:00:05.829436+00:00",
+ "follow_on_disposition": [
+  {
+   "action": "PE3EDGE1 runtime consumption is implemented in the v4d receiver and proved on the PE3 75KB candidate copy.",
+   "status": "FIRED"
+  },
+  {
+   "action": "qo1 absent-section identity is re-proved under the PE3-capable receiver.",
+   "status": "FIRED"
+  },
+  {
+   "action": "MAIN runs the PE4 fourth-candidate scorer script only after the active PE2 batch is harvested and the scorer slot is free.",
+   "status": "QUEUED-WITH-FIRE-ORDER"
+  },
+  {
+   "action": "PE3-r2 conditional-transport spec is staged only if the encoded subset conditional stream beats independent coding; otherwise the scoped negative is the terminal disposition.",
+   "status": "FOLDED"
+  }
+ ],
+ "n600_scorer_job": false,
+ "next_if_resumed": "Start from PE4_RECEIPT_20260805.md and ddm_pe4_runtime_transport_receipt.json. Do not run a scorer until MAIN harvests the PE2 batch and claims the slot. If the slot is free, run `bash /Users/adpena/Projects/pact/.omx/research/ddm_pe4_20260805/stage_pe4_fourth_candidate_scorer_batch.sh cpu` for a local advisory row or the same script on authority hardware. If conditional transport won, implement the queued PE3-r2 receiver section before staging any scorer row.",
+ "old_archive_identity_proof": {
+  "byte_identical_to_qo1_shipped_decode": true,
+  "command": "/Users/adpena/Projects/pact/.venv/bin/python /Volumes/VertigoDataTier/pact/ddm_pe4_20260805_r2/qo1_identity_pe4_extended_receiver/inflate_runner.py /Volumes/VertigoDataTier/pact/ddm_pe4_20260805_r2/qo1_identity_pe4_extended_receiver/archive /Volumes/VertigoDataTier/pact/ddm_pe4_20260805_r2/qo1_identity_pe4_extended_receiver/inflated /Volumes/VertigoDataTier/pact/ddm_pe4_20260805_r2/qo1_identity_pe4_extended_receiver/names.txt",
+  "expected_raw_bytes": 3662409600,
+  "expected_raw_sha256": "3ce7d269a7080a4024a576694cd0ddc697099c64cd02fdd2bb879339e4b03f31",
+  "output_raw": "/Volumes/VertigoDataTier/pact/ddm_pe4_20260805_r2/qo1_identity_pe4_extended_receiver/inflated/0.raw",
+  "raw_bytes": 3662409600,
+  "raw_sha256": "3ce7d269a7080a4024a576694cd0ddc697099c64cd02fdd2bb879339e4b03f31",
+  "wall_seconds": 209.2
+ },
+ "own_vehicle_frontier": {
+  "S": 0.7539807296911207,
+  "archive_bytes": 357836,
+  "axis": "[macOS-CPU advisory]",
+  "pointer_moved": false
+ },
+ "pe3_candidate": {
+  "archive_bytes": 432428,
+  "archive_sha256": "3f08c7fdd1c2746fa456ef8b6d8005e850d1a3acac5665a5d08b2ef17585b5e0",
+  "label": "PE3 hybrid 75KB",
+  "ledger": {
+   "archive_bytes": 432428,
+   "archive_sha256": "3f08c7fdd1c2746fa456ef8b6d8005e850d1a3acac5665a5d08b2ef17585b5e0",
+   "bulk_bytes": 341295,
+   "joint_section_count": 6,
+   "joint_sections": [
+    {
+     "index": 0,
+     "magic": "\u0000\u0000B\r\u0003\u000b\u0003",
+     "name": "config",
+     "raw_bytes": 36,
+     "sha256": "fc4f23ac9e31ba266ace26131319eb5b574d69e1d505fb1fc20a9dbc79a240d6"
+    },
+    {
+     "index": 1,
+     "magic": "IX2REN01",
+     "name": "renderer",
+     "raw_bytes": 3266,
+     "sha256": "3b8eb0c24f9e6d8b547a23a5db29a1dbbd03db474fbba3638b0c3dd858ca7009"
+    },
+    {
+     "index": 2,
+     "magic": "{\"activa",
+     "name": "selector",
+     "raw_bytes": 535,
+     "sha256": "8fc5c3fc65eb051b65ebf01d4b008e52d606097194c57884e739eae2ad8382e1"
+    },
+    {
+     "index": 3,
+     "magic": "PFS1WPD1",
+     "name": "pose_warp",
+     "raw_bytes": 8751,
+     "sha256": "d1d073e55aacf991491365d13716fededb169854b78bb203c34c84ca880c25db"
+    },
+    {
+     "index": 4,
+     "magic": "F0PR1!\u0000\u0000",
+     "name": "frame0_pose_repair",
+     "raw_bytes": 4081,
+     "sha256": "b5874d32324a46dc76cb1fc0beb7cda5fdaca2f59ebae6acbb08283206e8e7a2"
+    },
+    {
+     "index": 5,
+     "magic": "PE3EDGE1",
+     "name": "pe3_hybrid_75kb",
+     "raw_bytes": 74408,
+     "sha256": "5cc024ad32df7fedb18afb75dbed6be9c1af948dac826a1736cb1084949855c2"
+    }
+   ],
+   "payload_bytes": 432320,
+   "payload_reencodes_identically": true,
+   "zip_members": [
+    {
+     "compress_type": 0,
+     "compressed_bytes": 432320,
+     "name": "0.bin",
+     "uncompressed_bytes": 432320
+    }
+   ]
+  },
+  "receiver_copy": "/Volumes/VertigoDataTier/pact/ddm_pe4_20260805_r2/sub_auto_pairbit_pe4_pe3_hybrid_75kb_receiver",
+  "runtime_consumption": {
+   "camera_pixels_changed": 2896,
+   "component_records": 8644,
+   "deterministic_raster_hash_first": "1661535005f09a8dcd864fb54d20d18be618455bb7cf0c5801fec3c4efe83818",
+   "deterministic_raster_hash_second": "1661535005f09a8dcd864fb54d20d18be618455bb7cf0c5801fec3c4efe83818",
+   "deterministic_raster_match": true,
+   "frame1_with_field_sha256": "735880634875636f06e8a672af9931460e4c763bc221738c43eb970fd9edde4f",
+   "frame1_without_field_sha256": "4bd5d651172308b377136a983f50c49ba5019ad9f5fd01759775650756086536",
+   "kind": "hybrid_per_regime",
+   "mode_counts": {
+    "depth_conditioned_curve": 750,
+    "generator_pair_bisector": 7894
+   },
+   "mutated": true,
+   "painted_pairs": 600,
+   "painted_pixels_total": 540058,
+   "raw_bytes": 169975,
+   "raw_sha256": "beecc444dac58e7b345df3783a8b38e20c8c74e8b011ac82bd4cb02c24e697a8",
+   "section_bytes": 74408,
+   "section_sha256": "5cc024ad32df7fedb18afb75dbed6be9c1af948dac826a1736cb1084949855c2",
+   "smoke_pair": 0,
+   "smoke_pair_painted_pixels": 724
+  },
+  "source_sub": "/Volumes/VertigoDataTier/pact/ddm_pe3_20260805/pe3_20260805T000000Z/sub_auto_pairbit_pe3_hybrid_75kb"
+ },
+ "promotion_eligible": false,
+ "recall_evidence": [
+  {
+   "finding": "PE4 is scorer-free because PE2 owns the active scorer slot; follow-ons must be queued with a fire order.",
+   "plan_impact": "the fourth candidate is staged only, and no scorer process is launched.",
+   "source": ".omx/tmp/codex_runs/_common_contract.md"
+  },
+  {
+   "finding": "addendum 3 requires hybrid/per-level and conditional-per-axis treatment, while addendum 4 keeps seg-first ordering.",
+   "plan_impact": "PE4 consumes the PE3 hybrid section and prices transport as a conditional subset instead of promoting aggregate transport.",
+   "source": ".omx/research/operator_directive_per_edge_optimality_criteria_20260805.md"
+  },
+  {
+   "finding": "PE2's receiver proof pattern is materialize receiver copy, prove absent identity, smoke optional section mutation, stage scorer script.",
+   "plan_impact": "PE4 mirrors that receiver-byte proof for PE3EDGE1 and stages a separate fourth-candidate script.",
+   "source": ".omx/research/ddm_pe2_20260805/PE2_RECEIPT_20260805.md"
+  },
+  {
+   "finding": "PE3 75KB archive is byte-closed and parse-back-only; conditional transport headline was record-byte pre-entropy, not archive-byte.",
+   "plan_impact": "PE4 verifies runtime RGB consumption and re-prices transport through real coders before any PE3-r2 spec.",
+   "source": ".omx/research/ddm_pe3_20260805/PE3_RECEIPT_20260805.md and ddm_pe3_hybrid_receipt.json"
+  },
+  {
+   "finding": "no prior current PE3EDGE1 runtime consumer or encoded subset-conditional transport receipt was found in the searched scope.",
+   "plan_impact": "PE4 implements the missing receiver consumer and records a scoped negative/win from fresh coder outputs.",
+   "source": "content searches: PE3EDGE1, conditional_transport, selector_bytes, SMEVR, #940 over .omx/research + experiments/src/tools"
+  }
+ ],
+ "schema": "ddm_pe4_runtime_transport_receipt.v1",
+ "score_claim": false,
+ "staged_scorer_job": {
+  "manifest": "/Users/adpena/Projects/pact/.omx/research/ddm_pe4_20260805/pe4_fourth_candidate_scorer_manifest.json",
+  "queue_note": "/Users/adpena/Projects/pact/.omx/research/ddm_pe4_20260805/PE4_QUEUE_NOTE.md",
+  "run_by_pe4": false,
+  "scorer_out_dir": "/Volumes/VertigoDataTier/pact/ddm_pe4_20260805_r2/scorer_batch",
+  "script": "/Users/adpena/Projects/pact/.omx/research/ddm_pe4_20260805/stage_pe4_fourth_candidate_scorer_batch.sh",
+  "status": "QUEUED-WITH-FIRE-ORDER"
+ },
+ "storage_preflight": {
+  "free_bytes": 131285016576,
+  "ok": true,
+  "path": "/Volumes/VertigoDataTier/pact/ddm_pe4_20260805_r2",
+  "required_free_bytes": 4662409600,
+  "total_bytes": 2000189177856,
+  "used_bytes": 1868904161280
+ }
+}

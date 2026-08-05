@@ -135,6 +135,16 @@ _PE1_CLASS_RGB = np.array(
     ],
     dtype=np.uint8,
 )
+PE3_EDGE_MAGIC = b"PE3EDGE1"
+PE3_EDGE_HEADER = struct.Struct("<8sBHHHBBII32s")
+PE3_EDGE_VERSION = 1
+_PE3_HYBRID = 1
+_PE3_MODE_CURVE = 1
+_PE3_MODE_GENERATOR = 2
+_PE3_MODE_NAMES = {
+    _PE3_MODE_CURVE: "depth_conditioned_curve",
+    _PE3_MODE_GENERATOR: "generator_pair_bisector",
+}
 
 
 def geometric_horizon_row(K: np.ndarray) -> int:
@@ -842,6 +852,87 @@ def _pe1_apply_edge_field(u8: np.ndarray, field, pair_index: int) -> np.ndarray:
     return out
 
 
+def _pe3_parse_edge_field(blob: bytes):
+    """Parse a counted PE3 hybrid per-regime section into receiver-consumed bands."""
+    if len(blob) < PE3_EDGE_HEADER.size:
+        raise SystemExit("PE3 edge-field section header truncated")
+    (magic, version, seg_h, seg_w, n_pairs, kind, codec, raw_len,
+     frame_record_count, raw_sha) = PE3_EDGE_HEADER.unpack_from(blob, 0)
+    if magic != PE3_EDGE_MAGIC:
+        raise SystemExit("PE3 edge-field magic differs")
+    if version != PE3_EDGE_VERSION:
+        raise SystemExit("PE3 edge-field version differs")
+    if int(seg_h) < 1 or int(seg_w) < 1 or int(n_pairs) < 1:
+        raise SystemExit("PE3 edge-field geometry invalid")
+    if int(kind) != _PE3_HYBRID:
+        raise SystemExit(f"unknown PE3 edge-field representation kind {int(kind)}")
+    raw = _pe1_decode_body(int(codec), blob[PE3_EDGE_HEADER.size:])
+    if len(raw) != int(raw_len):
+        raise SystemExit("PE3 edge-field raw length differs")
+    if hashlib.sha256(raw).digest() != raw_sha:
+        raise SystemExit("PE3 edge-field raw SHA-256 differs")
+    if int(frame_record_count) != int(n_pairs):
+        raise SystemExit("PE3 edge-field frame record count differs")
+    slots = int(seg_h) * int(seg_w)
+    bands = []
+    classes = []
+    pair_counts = []
+    mode_counts = dict.fromkeys(_PE3_MODE_NAMES.values(), 0)
+    component_records = 0
+    offset = 0
+    for _pair in range(int(n_pairs)):
+        count, offset = _pe1_read_varint(raw, offset)
+        component_records += int(count)
+        class_by_index = np.full(slots, -1, dtype=np.int16)
+        for _ in range(int(count)):
+            length, offset = _pe1_read_varint(raw, offset)
+            record = raw[offset:offset + int(length)]
+            if len(record) != int(length):
+                raise SystemExit("PE3 edge-field component record truncated")
+            offset += int(length)
+            if not record:
+                raise SystemExit("PE3 edge-field empty component record")
+            mode = int(record[0])
+            payload = record[1:]
+            if mode == _PE3_MODE_CURVE:
+                indices, cls = _pe1_curve_indices(payload, int(seg_h), int(seg_w))
+            elif mode == _PE3_MODE_GENERATOR:
+                indices, cls = _pe1_generator_indices(payload, int(seg_h), int(seg_w))
+            else:
+                raise SystemExit(f"unknown PE3 edge-field component mode {mode}")
+            mode_counts[_PE3_MODE_NAMES[mode]] += 1
+            if int(indices.size) != int(cls.size):
+                raise SystemExit("PE3 edge-field index/class count differs")
+            if indices.size:
+                if int(indices.min()) < 0 or int(indices.max()) >= slots:
+                    raise SystemExit("PE3 edge-field index outside scorer grid")
+                class_by_index[indices.astype(np.int64)] = cls.astype(np.int16)
+        band = np.flatnonzero(class_by_index >= 0).astype(np.int32)
+        bands.append(band)
+        classes.append(class_by_index[band].astype(np.uint8))
+        pair_counts.append(int(band.size))
+    if offset != len(raw):
+        raise SystemExit("PE3 edge-field raw body has trailing bytes")
+    field = {
+        "seg_h": int(seg_h),
+        "seg_w": int(seg_w),
+        "kind": int(kind),
+        "kind_name": "hybrid_per_regime",
+        "codec": int(codec),
+        "raw_bytes": int(raw_len),
+        "raw_sha256": hashlib.sha256(raw).hexdigest(),
+        "section_bytes": len(blob),
+        "section_sha256": hashlib.sha256(blob).hexdigest(),
+        "component_records": int(component_records),
+        "mode_counts": dict(mode_counts),
+        "bands": tuple(bands),
+        "classes": tuple(classes),
+        "pair_counts": tuple(pair_counts),
+    }
+    field["raster_sha256"] = _pe1_raster_sha256(field)
+    return field
+
+
 def parse_pose_warp_v4d(payload: bytes):
     if payload[:8] != MAGIC:
         raise SystemExit("pose_warp magic differs (expected v4d PFS1WPD1)")
@@ -928,6 +1019,7 @@ class Decoder:
         self._f0_repair = None          # (coefs, atoms, seg_h, seg_w) when F0PR1 ships
         self._bd1_class_field = None    # Road/Lane r1-band class-field modulation
         self._pe1_edge_field = None     # PE1 all-class edge partition modulation
+        self._pe3_edge_field = None     # PE3 hybrid per-regime edge modulation
         blob = archive_dir / IX2_MEMBER
         if blob.exists():
             codes, sections, pose_warp = self._read_ix2(blob)
@@ -1016,12 +1108,16 @@ class Decoder:
                     raise SystemExit("ix2 container has duplicate BD1CLF1 optional sections")
                 self._bd1_class_field = _bd1_parse_class_field(extra)
             elif extra[:8] == PE1_EDGE_MAGIC:
-                if self._pe1_edge_field is not None:
-                    raise SystemExit("ix2 container has duplicate PE1EDGE1 optional sections")
+                if self._pe1_edge_field is not None or self._pe3_edge_field is not None:
+                    raise SystemExit("ix2 container has duplicate edge optional sections")
                 self._pe1_edge_field = _pe1_parse_edge_field(extra)
+            elif extra[:8] == PE3_EDGE_MAGIC:
+                if self._pe1_edge_field is not None or self._pe3_edge_field is not None:
+                    raise SystemExit("ix2 container has duplicate edge optional sections")
+                self._pe3_edge_field = _pe3_parse_edge_field(extra)
             else:
                 raise SystemExit(
-                    "ix2 optional section magic is not F0PR1, BD1CLF1, or PE1EDGE1"
+                    "ix2 optional section magic is not F0PR1, BD1CLF1, PE1EDGE1, or PE3EDGE1"
                 )
         offset, beta_mags, st_grid = unpack_config_section(config)
         self.dim0_offset = offset
@@ -1045,6 +1141,8 @@ class Decoder:
             frame = _bd1_apply_class_field(frame, self._bd1_class_field, i)
         if self._pe1_edge_field is not None:
             frame = _pe1_apply_edge_field(frame, self._pe1_edge_field, i)
+        if self._pe3_edge_field is not None:
+            frame = _pe1_apply_edge_field(frame, self._pe3_edge_field, i)
         return frame
 
     def _warp_pair(self, f1_f: np.ndarray, pose: np.ndarray, s_t: float,

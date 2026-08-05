@@ -1,0 +1,15 @@
+{
+ "candidate": {
+  "archive_bytes": 432428,
+  "archive_sha256": "3f08c7fdd1c2746fa456ef8b6d8005e850d1a3acac5665a5d08b2ef17585b5e0",
+  "label": "PE3 hybrid 75KB",
+  "receiver_copy": "/Volumes/VertigoDataTier/pact/ddm_pe4_20260805_r2/sub_auto_pairbit_pe4_pe3_hybrid_75kb_receiver",
+  "source_sub": "/Volumes/VertigoDataTier/pact/ddm_pe3_20260805/pe3_20260805T000000Z/sub_auto_pairbit_pe3_hybrid_75kb"
+ },
+ "created_utc": "2026-08-05T01:00:05.829183+00:00",
+ "n600_scorer_job": "staged_not_run",
+ "schema": "ddm_pe4_fourth_candidate_scorer_manifest.v1",
+ "score_claim": false,
+ "single_scorer_slot_owner_to_claim": "MAIN after PE2 batch done-receipt",
+ "stage_script": "/Users/adpena/Projects/pact/.omx/research/ddm_pe4_20260805/stage_pe4_fourth_candidate_scorer_batch.sh"
+}

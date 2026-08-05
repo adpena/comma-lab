@@ -67,6 +67,10 @@ def test_receiver_source_accepts_tagged_optional_bd1_class_field() -> None:
     assert "self._pe1_edge_field = _pe1_parse_edge_field(extra)" in source
     assert "elif extra[:8] == PE1_EDGE_MAGIC" in source
     assert "frame = _pe1_apply_edge_field(frame, self._pe1_edge_field, i)" in source
+    assert "PE3_EDGE_MAGIC = b\"PE3EDGE1\"" in source
+    assert "self._pe3_edge_field = _pe3_parse_edge_field(extra)" in source
+    assert "elif extra[:8] == PE3_EDGE_MAGIC" in source
+    assert "frame = _pe1_apply_edge_field(frame, self._pe3_edge_field, i)" in source
 
 
 def _varint(value: int) -> bytes:
@@ -95,6 +99,25 @@ def _build_pe1_section(runner, raw: bytes, kind: int) -> bytes:
             512,
             600,
             kind,
+            runner._BD1_BROTLI_Q11,
+            len(raw),
+            600,
+            hashlib.sha256(raw).digest(),
+        )
+        + body
+    )
+
+
+def _build_pe3_section(runner, raw: bytes) -> bytes:
+    body = brotli.compress(raw, quality=11)
+    return (
+        runner.PE3_EDGE_HEADER.pack(
+            runner.PE3_EDGE_MAGIC,
+            runner.PE3_EDGE_VERSION,
+            384,
+            512,
+            600,
+            runner._PE3_HYBRID,
             runner._BD1_BROTLI_Q11,
             len(raw),
             600,
@@ -152,6 +175,43 @@ def test_pe1_curve_record_paints_frame1_private_support() -> None:
     assert parsed["component_records"] == 1
     assert parsed["pair_counts"][0] == 3
     assert set(parsed["classes"][0].tolist()) == {0, 1}
+
+    before = np.zeros((874, 1164, 3), dtype=np.uint8)
+    after = runner._pe1_apply_edge_field(before, parsed, 0)
+    assert np.any(after != before)
+
+
+def test_pe3_hybrid_record_paints_mixed_curve_and_generator_modes() -> None:
+    runner = _import_v4d_runner()
+
+    curve_record = (
+        bytes([0, 1, 0])
+        + _varint(1)
+        + _varint(3)
+        + _varint(1)
+        + _varint(1)
+        + _varint(1)
+        + _zigzag(5)
+    )
+    generator_record = runner._PE1_GENERATOR_RECORD.pack(0, 1, 8, 8, 10, 10, 32, 32, 64, 64)
+    mixed_records = [
+        bytes([runner._PE3_MODE_CURVE]) + curve_record,
+        bytes([runner._PE3_MODE_GENERATOR]) + generator_record,
+    ]
+    first_frame = _varint(len(mixed_records)) + b"".join(
+        _varint(len(record)) + record for record in mixed_records
+    )
+    raw = first_frame + (b"\x00" * 599)
+    section = _build_pe3_section(runner, raw)
+    parsed = runner._pe3_parse_edge_field(section)
+
+    assert parsed["kind_name"] == "hybrid_per_regime"
+    assert parsed["mode_counts"] == {
+        "depth_conditioned_curve": 1,
+        "generator_pair_bisector": 1,
+    }
+    assert parsed["component_records"] == 2
+    assert parsed["pair_counts"][0] > 3
 
     before = np.zeros((874, 1164, 3), dtype=np.uint8)
     after = runner._pe1_apply_edge_field(before, parsed, 0)
