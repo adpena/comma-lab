@@ -70,3 +70,25 @@ Known bytes:
 - d_seg verdict for n32/n120: frozen CPU-torch SegNet through exact R/uint8 against OUR `gt_seg_cache.pt`.
 - Compare against fp1 flat-paint floor `0.008305` and PR130 external d_seg `0.00029660`.
 - No prefix banking. No n600 scorer work here; et4 owns the full scorer slot. No contest promotion without a byte-closed archive and `upstream/evaluate.py`.
+
+## ROUND-1 ADVERSARIAL AMENDMENT (MAIN, 2026-08-06 — BINDING at fire)
+
+**F1 (assumption-challenge axis finding): the token-source choice conflates two questions.**
+The arm's torch smoke ran input=tq1c labels, target=GT — that measures ERROR-CORRECTION
+capacity (can the renderer fix tq1c's own d_seg 0.0043 while rendering), NOT the receiver-
+capacity question PR130's 2.9660e-4 [external] answers (their tokens ≈ their shipped
+partition; renderer reproduces what tokens SAY). The Row-1 fire therefore runs TWO arms at
+n32 (same budget each, stratified pairs shared):
+  ARM-CAP  tokens=GT lstars,  target=GT   — mirrors their form; the receiver-capacity
+           number comparable against fp1 0.008305 and their 2.9660e-4 [external].
+  ARM-VEH  tokens=tq1c labels, target=GT  — the composed-vehicle question (tokens we can
+           actually afford to ship + correction reach).
+ARM-CAP is the EH1 Row-1 discriminator; ARM-VEH prices the real vehicle. n120 continues
+whichever arm the n32 read makes decisive (both if divergent). Verify at fire time that
+--input-cache/--target-cache route as declared (never assume the smoke default).
+
+**Runnability note (axis 9):** first Metal s/step measured at the n32 rung start; abort
+bar = projected wall-clock > 4× the CPU-derived estimate; memory projection re-checked at
+the real batch before n120. Provenance: ticket args verified at source = their stage-08
+TAIL (e2e.py:419-424: bits 4, steps 6000, lr 2e-7, eval-every 250, resumed from the 12k
+QAT checkpoint) — calibration lineage CLOSED this round.
