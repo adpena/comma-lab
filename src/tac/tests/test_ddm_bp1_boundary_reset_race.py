@@ -36,12 +36,14 @@ from experiments.train_tr1_partition_renderer_mlx import (  # noqa: E402
     TR1Config,
     boundary_jump_row,
     build_argparser,
+    derive_jd1_lr_tail_schedule,
     derive_jd1_realized_hold_margin,
     derive_jd1_stage_ema_decay,
     derive_ema_decay,
     gate_interval_fields,
     jd1_ema_gate_basis_label,
     jd1_forced_resume_start_epoch,
+    jd1_lr_at_epoch,
     jd1_should_reanchor_stage_ema,
     load_checkpoint,
     parent_boundary_ema_decay_fields,
@@ -556,6 +558,26 @@ def test_trainer_actually_wires_the_arm_into_its_optimizer():
     assert isinstance(ref, ast.Attribute) and ref.attr == "adam_bias_correction", (
         "the gate must be driven by cfg.adam_bias_correction, not a literal")
 
+    lr_assigns = [
+        n for n in ast.walk(tree)
+        if isinstance(n, ast.Assign)
+        and any(isinstance(t, ast.Attribute)
+                and t.attr == "learning_rate"
+                and isinstance(t.value, ast.Name)
+                and t.value.id == "optimizer"
+                for t in n.targets)
+    ]
+    assert lr_assigns, "JD1 LR anneal must reach optimizer.learning_rate in main()"
+    assert any("jd1_lr_current" in ast.dump(n.value) for n in lr_assigns), (
+        "optimizer.learning_rate must be driven by the derived JD1 schedule value")
+    lr_schedule_calls = [
+        n for n in ast.walk(tree)
+        if isinstance(n, ast.Call)
+        and isinstance(n.func, ast.Name)
+        and n.func.id == "jd1_lr_at_epoch"
+    ]
+    assert lr_schedule_calls, "main() never consumes jd1_lr_at_epoch()"
+
 
 # ------------------------------------------ launcher G4 slot gate (bug found in this build) ----
 _PS = """  PID COMMAND
@@ -735,6 +757,88 @@ def test_jd4_forced_resume_start_epoch_uses_terminal_tail_geometry():
     )
     assert intra_start == 1405
     assert intra_row is None
+
+
+def test_la1_jd1_lr_anneal_flags_fail_closed_when_inert_or_unresumable():
+    defaults = build_argparser().parse_args([
+        "--variant", "plain",
+        "--out-dir", str(WORKTREE / "scratchpad/la1-test"),
+    ])
+    validate_jd1_pose_finish_args(defaults)
+    assert defaults.jd1_lr_anneal == "off"
+    assert defaults.jd1_lr_final_frac == 0.0
+
+    inert = build_argparser().parse_args([
+        "--variant", "plain",
+        "--out-dir", str(WORKTREE / "scratchpad/la1-test"),
+        "--jd1-lr-anneal", "derived_tail",
+    ])
+    with pytest.raises(SystemExit, match="JD1 value flags set"):
+        validate_jd1_pose_finish_args(inert)
+
+    no_resume = build_argparser().parse_args([
+        "--variant", "plain",
+        "--out-dir", str(WORKTREE / "scratchpad/la1-test"),
+        "--jd1-pose-finish-mode", "joint_loss",
+        "--jd1-pose-finish-engage-on", "start_epoch",
+        "--jd1-pose-finish-start-epoch", "1",
+        "--jd1-w-pose", "1.0",
+        "--jd1-lr-anneal", "derived_tail",
+    ])
+    with pytest.raises(SystemExit, match="requires --resume-from"):
+        validate_jd1_pose_finish_args(no_resume)
+
+    dangling_frac = build_argparser().parse_args([
+        "--variant", "plain",
+        "--out-dir", str(WORKTREE / "scratchpad/la1-test"),
+        "--resume-from", "parent.npz",
+        "--jd1-pose-finish-mode", "joint_loss",
+        "--jd1-pose-finish-engage-on", "start_epoch",
+        "--jd1-pose-finish-start-epoch", "1",
+        "--jd1-w-pose", "1.0",
+        "--jd1-lr-final-frac", "0.5",
+    ])
+    with pytest.raises(SystemExit, match="requires --jd1-lr-anneal"):
+        validate_jd1_pose_finish_args(dangling_frac)
+
+
+def test_la1_jd1_lr_anneal_derives_tail_from_parent_telemetry(tmp_path):
+    run_dir = tmp_path / "parent"
+    ckpt_dir = run_dir / "checkpoints"
+    ckpt_dir.mkdir(parents=True)
+    resume_from = ckpt_dir / "stage_joint_pose_finish_final.npz"
+    resume_from.write_bytes(b"fixture")
+    values = [0.91 + (0.014 if i % 2 else -0.010) + i * 1e-4 for i in range(70)]
+    with (run_dir / "telemetry.jsonl").open("w") as fh:
+        for i, value in enumerate(values):
+            fh.write(json.dumps({
+                "event": "epoch",
+                "epoch": 1500 + i,
+                "stage": "joint_pose_finish",
+                "jd1_pose_finish_active": True,
+                "ep_loss": value,
+            }) + "\n")
+
+    sched = derive_jd1_lr_tail_schedule(
+        base_lr=2e-3,
+        start_epoch=1526,
+        end_epoch=1646,
+        steps_per_epoch=150,
+        beta2=0.999,
+        active_ema_decay=0.9997777777777778,
+        resume_from=resume_from,
+    )
+    tail = np.asarray(values[-60:], dtype=np.float64)
+    half_range = float((tail.max() - tail.min()) / 2.0)
+    sd = float(tail.std())
+    assert sched["tail_epochs"] == 60
+    assert sched["onset_epoch"] == 1586
+    assert sched["beta2_memory_epochs_c2"] == 14
+    assert sched["active_ema_memory_epochs_c2"] == 60
+    assert sched["signal_source"] == "epoch.ep_loss[jd1_pose_finish_active]"
+    assert sched["final_frac"] == pytest.approx(sd / (sd + half_range))
+    assert jd1_lr_at_epoch(1585, sched) == pytest.approx(2e-3)
+    assert jd1_lr_at_epoch(1645, sched) == pytest.approx(sched["final_lr"])
 
 
 def test_jd3_realized_hold_flags_fail_closed_when_declared_but_unread():

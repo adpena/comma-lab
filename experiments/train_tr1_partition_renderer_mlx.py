@@ -152,6 +152,10 @@ JD1_EMA_TAIL_STATE_KEYS = (
     "ema_tail_last_live_weight",
 )
 JD1_LIVE_GATE_TELEMETRY = ("off", "on")
+JD1_LR_ANNEAL_SCHEMA = "ddm_la1_jd1_lr_anneal.v1"
+JD1_LR_ANNEAL_MODES = ("off", "derived_tail")
+JD1_LR_FINAL_FRAC_DERIVED = 0.0
+JD1_LR_DERIVATION_TIME_CONSTANTS = 2.0
 
 # Pre-registered A1 alarm thresholds (tb1 charter T1: "never scale a loop whose
 # realized-flip telemetry is flat"). Smooth descended but realized did not:
@@ -3072,6 +3076,16 @@ def build_argparser() -> argparse.ArgumentParser:
                     help="RACED: uint8 rounding is directionally asymmetric through R")
     ap.add_argument("--w-seg", type=float, default=100.0)
     ap.add_argument("--lr", type=float, default=2e-3)
+    ap.add_argument("--jd1-lr-anneal", default="off", choices=JD1_LR_ANNEAL_MODES,
+                    help="ddm_la1 terminal JD1 LR anneal. off = legacy flat LR, with no "
+                         "telemetry/checkpoint/config changes. derived_tail = derive a "
+                         "tail-only cosine damping schedule from the parent JD1 telemetry "
+                         "window plus beta2/EMA memory constants.")
+    ap.add_argument("--jd1-lr-final-frac", type=float,
+                    default=JD1_LR_FINAL_FRAC_DERIVED,
+                    help="ddm_la1 terminal LR fraction. 0.0 = derive from the parent "
+                         "tail oscillation sd/(sd+half_range); explicit values must be "
+                         "in (0,1) and require --jd1-lr-anneal derived_tail.")
     ap.add_argument("--batch-pairs", type=int, default=8)
     ap.add_argument("--epochs", type=int, default=60)
     ap.add_argument("--gate-every", type=int, default=5)
@@ -3531,6 +3545,167 @@ def jd1_forced_resume_start_epoch(
     }
 
 
+def jd1_lr_parent_telemetry_path(resume_from: Path | str | None) -> Path | None:
+    if resume_from is None:
+        return None
+    p = Path(resume_from)
+    if p.parent.name == "checkpoints":
+        return p.parent.parent / "telemetry.jsonl"
+    return p.parent / "telemetry.jsonl"
+
+
+def jd1_lr_epoch_signal_from_telemetry(telemetry_path: Path | str) -> tuple[list[float], str]:
+    """Extract the terminal JD1 loss signal used for LR-tail damping.
+
+    Pose-itemized loss rows win when present.  The jd5 telemetry did not itemize a pose
+    loss term, so the fallback is the active joint-pose-finish epoch loss over the same
+    window, explicitly labelled in the returned source.
+    """
+    path = Path(telemetry_path)
+    pose_values: list[float] = []
+    epoch_values: list[float] = []
+    with path.open() as fh:
+        for line in fh:
+            if not line.strip():
+                continue
+            row = json.loads(line)
+            if row.get("event") == "loss_terms" and row.get("tr1_stage") == "joint_pose_finish":
+                terms = row.get("terms")
+                if isinstance(terms, Mapping):
+                    for key, value in terms.items():
+                        if "pose" in str(key) and isinstance(value, (int, float)):
+                            pose_values.append(float(value))
+            if row.get("event") == "epoch" and row.get("jd1_pose_finish_active"):
+                value = row.get("ep_loss")
+                if isinstance(value, (int, float)):
+                    epoch_values.append(float(value))
+    if pose_values:
+        return pose_values, "loss_terms.terms.*pose*"
+    return epoch_values, "epoch.ep_loss[jd1_pose_finish_active]"
+
+
+def jd1_lr_tail_oscillation_stats(values: Sequence[float], tail_epochs: int) -> dict[str, Any]:
+    vals = [float(v) for v in values if np.isfinite(float(v))]
+    if not vals:
+        raise ValueError("JD1 LR anneal cannot derive from an empty telemetry signal")
+    tail = vals[-max(1, int(tail_epochs)):]
+    arr = np.asarray(tail, dtype=np.float64)
+    mean = float(np.mean(arr))
+    sd = float(np.std(arr))
+    half_range = float((np.max(arr) - np.min(arr)) / 2.0)
+    diffs = np.diff(arr)
+    nonzero = [float(d) for d in diffs if float(d) != 0.0]
+    sign_changes = sum(1 for a, b in zip(nonzero, nonzero[1:]) if (a < 0) != (b < 0))
+    denom = abs(mean) if mean != 0.0 else 1.0
+    return {
+        "n": int(arr.size),
+        "mean": mean,
+        "sd": sd,
+        "half_range": half_range,
+        "rel_half_range": float(half_range / denom),
+        "sign_changes": int(sign_changes),
+        "sign_change_denominator": max(0, len(nonzero) - 1),
+    }
+
+
+def derive_jd1_lr_tail_schedule(
+    *,
+    base_lr: float,
+    start_epoch: int,
+    end_epoch: int,
+    steps_per_epoch: int,
+    beta2: float,
+    active_ema_decay: float,
+    resume_from: Path | str | None,
+    explicit_final_frac: float = JD1_LR_FINAL_FRAC_DERIVED,
+) -> dict[str, Any]:
+    """Derive the ddm_la1 terminal LR anneal from measured parent-window telemetry.
+
+    The horizon is the larger of the optimizer beta2 variance-memory window and the
+    active EMA memory window, both converted into epochs at the live batch geometry.
+    The derived final fraction is ``sd / (sd + half_range)`` over that tail window:
+    a flat tail leaves the LR unchanged, while a large alternating half-range relative
+    to its settled dispersion damps the terminal live iterate.
+    """
+    if float(base_lr) <= 0.0:
+        raise ValueError("base_lr must be > 0")
+    if int(end_epoch) <= int(start_epoch):
+        raise ValueError("end_epoch must be greater than start_epoch")
+    if int(steps_per_epoch) <= 0:
+        raise ValueError("steps_per_epoch must be > 0")
+    if not (0.0 <= float(beta2) < 1.0):
+        raise ValueError("beta2 must be in [0,1)")
+    if not (0.0 <= float(active_ema_decay) < 1.0):
+        raise ValueError("active_ema_decay must be in [0,1)")
+    if float(explicit_final_frac) < 0.0 or float(explicit_final_frac) >= 1.0:
+        raise ValueError("explicit_final_frac must be 0.0 (derive) or in (0,1)")
+
+    beta2_epochs = int(math.ceil(
+        JD1_LR_DERIVATION_TIME_CONSTANTS / max(1.0 - float(beta2), 1e-12)
+        / int(steps_per_epoch)
+    ))
+    ema_epochs = int(math.ceil(
+        JD1_LR_DERIVATION_TIME_CONSTANTS / max(1.0 - float(active_ema_decay), 1e-12)
+        / int(steps_per_epoch)
+    ))
+    window_epochs = int(end_epoch) - int(start_epoch)
+    tail_epochs = max(1, min(window_epochs, max(beta2_epochs, ema_epochs)))
+    onset_epoch = int(end_epoch) - tail_epochs
+
+    telemetry_path = jd1_lr_parent_telemetry_path(resume_from)
+    if telemetry_path is None or not telemetry_path.exists():
+        raise ValueError(
+            "JD1 LR derived_tail requires --resume-from whose parent run has telemetry.jsonl"
+        )
+    signal, signal_source = jd1_lr_epoch_signal_from_telemetry(telemetry_path)
+    stats = jd1_lr_tail_oscillation_stats(signal, tail_epochs)
+    if float(explicit_final_frac) > 0.0:
+        final_frac = float(explicit_final_frac)
+        final_frac_source = "explicit"
+    elif stats["sd"] + stats["half_range"] > 0.0:
+        final_frac = float(stats["sd"] / (stats["sd"] + stats["half_range"]))
+        final_frac_source = "derived_sd_over_sd_plus_half_range"
+    else:
+        final_frac = 1.0
+        final_frac_source = "derived_flat_tail_no_damping"
+    return {
+        "schema": JD1_LR_ANNEAL_SCHEMA,
+        "mode": "derived_tail",
+        "base_lr": float(base_lr),
+        "final_lr": float(base_lr) * float(final_frac),
+        "final_frac": float(final_frac),
+        "final_frac_source": final_frac_source,
+        "start_epoch": int(start_epoch),
+        "end_epoch": int(end_epoch),
+        "onset_epoch": int(onset_epoch),
+        "tail_epochs": int(tail_epochs),
+        "steps_per_epoch": int(steps_per_epoch),
+        "beta2": float(beta2),
+        "beta2_memory_epochs_c2": int(beta2_epochs),
+        "active_ema_decay": float(active_ema_decay),
+        "active_ema_memory_epochs_c2": int(ema_epochs),
+        "telemetry_path": str(telemetry_path),
+        "signal_source": signal_source,
+        "oscillation": stats,
+        "score_claim": False,
+    }
+
+
+def jd1_lr_at_epoch(epoch: int, schedule: Mapping[str, Any]) -> float:
+    base_lr = float(schedule["base_lr"])
+    onset = int(schedule["onset_epoch"])
+    end = int(schedule["end_epoch"])
+    final_frac = float(schedule["final_frac"])
+    if int(epoch) < onset:
+        return base_lr
+    if end <= onset:
+        return base_lr * final_frac
+    progress = min(1.0, max(0.0, (int(epoch) - onset + 1) / float(end - onset)))
+    cosine = 0.5 * (1.0 + math.cos(math.pi * progress))
+    frac = final_frac + (1.0 - final_frac) * cosine
+    return float(base_lr * frac)
+
+
 def jd1_should_reanchor_stage_ema(args: Any, state: Mapping[str, Any], *, reason: str) -> bool:
     """Pure JD1 stage-EMA reanchor predicate for ticket and resume tests."""
     if args.jd1_ema_stage_scope != "window":
@@ -3594,6 +3769,8 @@ def validate_jd1_pose_finish_args(args: Any) -> None:
     if (float(args.jd1_realized_hold_pose_retreat) < 0.0
             or float(args.jd1_realized_hold_pose_retreat) >= 1.0):
         raise SystemExit("--jd1-realized-hold-pose-retreat must be 0.0 or in (0,1)")
+    if float(args.jd1_lr_final_frac) < 0.0 or float(args.jd1_lr_final_frac) >= 1.0:
+        raise SystemExit("--jd1-lr-final-frac must be 0.0 (derive) or in (0,1)")
 
     inert: list[str] = []
     if not jd1_pose_finish_armed(args):
@@ -3629,6 +3806,10 @@ def validate_jd1_pose_finish_args(args: Any) -> None:
             inert.append("--jd1-live-gate-telemetry")
         if args.jd1_force_ema_reanchor_on_resume:
             inert.append("--jd1-force-ema-reanchor-on-resume")
+        if args.jd1_lr_anneal != "off":
+            inert.append("--jd1-lr-anneal")
+        if float(args.jd1_lr_final_frac) != JD1_LR_FINAL_FRAC_DERIVED:
+            inert.append("--jd1-lr-final-frac")
         if inert:
             raise SystemExit(
                 "REFUSED: JD1 value flags set while --jd1-pose-finish-mode off: "
@@ -3673,6 +3854,11 @@ def validate_jd1_pose_finish_args(args: Any) -> None:
             raise SystemExit("--jd1-seg-hold-floor-source checkpoint_tail_ep_loss requires --resume-from")
     elif args.jd1_seg_hold_floor_source != "off" or float(args.jd1_seg_hold_floor) != 0.0:
         raise SystemExit("JD1 seg-hold floor flags require --jd1-seg-hold-weight > 0")
+    if args.jd1_lr_anneal == "derived_tail":
+        if args.resume_from is None:
+            raise SystemExit("--jd1-lr-anneal derived_tail requires --resume-from")
+    elif float(args.jd1_lr_final_frac) != JD1_LR_FINAL_FRAC_DERIVED:
+        raise SystemExit("--jd1-lr-final-frac requires --jd1-lr-anneal derived_tail")
 
 
 def jd1_pose_finish_should_engage(args: Any, *, epoch: int, stage: str) -> bool:
@@ -4774,6 +4960,8 @@ def main() -> int:
     prev_gate_snapshot: dict[str, Any] | None = None
     order_rng = np.random.default_rng(cfg.seed + 1)
     knee_switched = stage != SEG_TRUNK_CE_STAGE
+    jd1_lr_schedule: dict[str, Any] | None = None
+    jd1_lr_current = float(cfg.lr)
 
     def _copy_mx_tree(tree: dict[str, Any]) -> dict[str, Any]:
         return {k: mx.array(np.asarray(v).copy()) for k, v in tree.items()}
@@ -4873,6 +5061,43 @@ def main() -> int:
             ),
             "score_claim": False,
         })
+
+    def _resolve_jd1_lr_anneal_schedule(*, epoch: int, reason: str) -> None:
+        nonlocal jd1_lr_schedule
+        if args.jd1_lr_anneal != "derived_tail":
+            return
+        if jd1_lr_schedule is not None:
+            return
+        try:
+            jd1_lr_schedule = derive_jd1_lr_tail_schedule(
+                base_lr=float(cfg.lr),
+                start_epoch=int(epoch),
+                end_epoch=int(cfg.epochs),
+                steps_per_epoch=int(steps_per_epoch),
+                beta2=float(RESET_ADAM_BETAS[1]),
+                active_ema_decay=float(active_ema_decay),
+                resume_from=args.resume_from,
+                explicit_final_frac=float(args.jd1_lr_final_frac),
+            )
+        except ValueError as exc:
+            raise SystemExit(str(exc)) from exc
+        jd1_pose_finish_state["lr_anneal"] = dict(jd1_lr_schedule)
+        tlog({"event": "jd1_lr_anneal_config",
+              "epoch": int(epoch),
+              "stage": stage,
+              "reason": reason,
+              **jd1_lr_schedule})
+
+    def _apply_jd1_lr_anneal_for_epoch(*, epoch: int) -> float:
+        nonlocal jd1_lr_current
+        if jd1_lr_schedule is None or not jd1_pose_finish_state.get("engaged"):
+            jd1_lr_current = float(cfg.lr)
+            return jd1_lr_current
+        jd1_lr_current = float(jd1_lr_at_epoch(epoch, jd1_lr_schedule))
+        optimizer.learning_rate = jd1_lr_current
+        jd1_pose_finish_state["lr_anneal_last_epoch"] = int(epoch)
+        jd1_pose_finish_state["lr_anneal_last_lr"] = float(jd1_lr_current)
+        return jd1_lr_current
 
     def _maybe_apply_jd1_ema_tail_anchor(*, epoch: int, reason: str) -> None:
         nonlocal ema
@@ -5000,6 +5225,8 @@ def main() -> int:
         _apply_jd1_stage_ema_reanchor(epoch=start_epoch,
                                       reason="resume_inside_joint_pose_finish")
         _log_jd1_ema_mode(epoch=start_epoch, reason="resume_inside_joint_pose_finish")
+        _resolve_jd1_lr_anneal_schedule(epoch=start_epoch,
+                                        reason="resume_inside_joint_pose_finish")
     if knee_switched and state_form["form"] == "ce":
         # #517-twin re-anchor (2026-07-30 qa86 EMA-resume incident): the form state
         # machine must position to the RESTORED stage, not --seg-form-start. Without
@@ -5159,7 +5386,10 @@ def main() -> int:
                           "and builds make_loss_fn's PoseNet path; A1 smooth baseline rebased.",
                   "score_claim": False})
             _log_jd1_ema_mode(epoch=epoch, reason="fresh_joint_pose_engagement")
+            _resolve_jd1_lr_anneal_schedule(epoch=epoch,
+                                            reason="fresh_joint_pose_engagement")
         _maybe_apply_jd1_ema_tail_anchor(epoch=epoch, reason="explicit_epoch")
+        _apply_jd1_lr_anneal_for_epoch(epoch=epoch)
         perm = order_rng.permutation(cfg.num_pairs)
         ep_loss, steps = 0.0, 0
         last_gnorm = None
@@ -5219,6 +5449,15 @@ def main() -> int:
                    jd1_pose_finish_state.get("ema_tail_average_active", False)),
                "jd1_ema_tail_update_count": int(
                    jd1_pose_finish_state.get("ema_tail_update_count", 0))}
+        if jd1_lr_schedule is not None:
+            row.update({
+                "jd1_lr_anneal": args.jd1_lr_anneal,
+                "jd1_lr": float(jd1_lr_current),
+                "jd1_lr_anneal_onset_epoch": int(jd1_lr_schedule["onset_epoch"]),
+                "jd1_lr_final_frac": float(jd1_lr_schedule["final_frac"]),
+                "jd1_lr_tail_epochs": int(jd1_lr_schedule["tail_epochs"]),
+                "jd1_lr_signal_source": jd1_lr_schedule["signal_source"],
+            })
         # Confound immune system (day-one, L1 runtime alarms — LOUD, never silent):
         if ep_loss == 0.0:
             tlog({"event": "confound_alarm", "kind": "frozen_epoch", "epoch": epoch,

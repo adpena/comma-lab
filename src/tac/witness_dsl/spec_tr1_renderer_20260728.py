@@ -517,6 +517,55 @@ def lever_jd1_plateau_tail_average_ema(*, anchor_epoch: int) -> Lever:
     )
 
 
+def lever_jd1_lr_anneal(*, final_frac: float | None = None) -> Lever:
+    """ddm_la1: terminal JD1 LR-tail anneal.
+
+    This composes with :func:`lever_jd1_joint_pose_finish`; it refuses an OFF shape
+    by construction.  The trainer derives the default final fraction from the parent
+    telemetry tail, so the factory only passes ``--jd1-lr-final-frac`` when MAIN has
+    supplied an explicit boundary value.
+    """
+    overrides = {"--jd1-lr-anneal": "derived_tail"}
+    manifest: dict[str, dict[str, Any]] = {
+        "--jd1-lr-anneal": {
+            "value": "derived_tail",
+            "rung": "DERIVED_FROM_PARENT_WINDOW_TELEMETRY (ddm_la1)",
+            "provenance": "Onset/length derive from beta2 and active EMA memory windows; "
+                          "default final_frac derives from parent JD1 tail oscillation "
+                          "sd/(sd+half_range). No Muon final-frac constant is transferred.",
+        },
+    }
+    if final_frac is not None:
+        if float(final_frac) <= 0.0 or float(final_frac) >= 1.0:
+            raise ValueError("final_frac must be None (derive) or in (0,1)")
+        overrides["--jd1-lr-final-frac"] = repr(float(final_frac))
+        manifest["--jd1-lr-final-frac"] = {
+            "value": float(final_frac),
+            "rung": "BOUNDARY-SUPPLIED",
+            "provenance": "Explicit override for a preregistered boundary A/B; omitted "
+                          "means the trainer derives from the parent telemetry tail.",
+        }
+    return Lever(
+        name="tr1_jd1_lr_anneal_derived_tail",
+        overrides=overrides,
+        notes="ddm_la1 terminal LR-anneal lever: default-off trainer flag; active state "
+              "derives a tail-only cosine damping schedule from parent JD1 telemetry plus "
+              "beta2/EMA time constants. Falsifier: ON endpoint EMA not better and live/EMA "
+              "divergence unchanged at the matched jd7-or-Case-B boundary.",
+        constant_manifest=manifest,
+        runtime_receipt_schemas={
+            "jd1_lr_anneal_config": "typed telemetry row with onset, length, final fraction, "
+                                    "beta2/EMA epochs, and parent signal custody",
+        },
+        policy_contracts={
+            "score_claim": False,
+            "requires_jd1_pose_finish": True,
+            "requires_resume_from_parent_telemetry": True,
+            "falsifier": "ON endpoint EMA no better AND live divergence unchanged => not LR-driven",
+        },
+    )
+
+
 def lever_solve_frame_distill(field_cache: str, *, form: str = "kd_logits",
                               weight: float = 100.0, temp: float = 2.0,
                               attack_temp: float = 0.0) -> Lever:

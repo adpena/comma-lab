@@ -16,6 +16,7 @@ from tac.witness_dsl.spec_tr1_renderer_20260728 import (
     TR1RendererProgramV1,
     default_t1_smoke_program,
     lever_jd1_joint_pose_finish,
+    lever_jd1_lr_anneal,
     lever_jd1_plateau_tail_average_ema,
     lever_seg_grad_q3_project,
     trainer_declared_flags,
@@ -85,6 +86,37 @@ def test_jd1_tail_average_ema_lever_flags_are_declared_by_the_live_trainer():
 def test_jd1_tail_average_ema_factory_refuses_negative_anchor():
     with pytest.raises(ValueError, match="anchor_epoch"):
         lever_jd1_plateau_tail_average_ema(anchor_epoch=-1)
+
+
+def test_jd1_lr_anneal_lever_composes_with_joint_pose_finish_and_defaults_derive():
+    joint = lever_jd1_joint_pose_finish(w_pose=1.0, start_epoch=5, engage_on="start_epoch")
+    lr = lever_jd1_lr_anneal()
+    base = default_t1_smoke_program("plain", "/unused")
+    prog = TR1RendererProgramV1(
+        levers=base.levers + (joint, lr),
+        num_pairs=24,
+        out_dir="/unused",
+        resume_from="parent.npz",
+    )
+    argv = prog.compile_trainer_argv()
+    ns = build_argparser().parse_args(argv[1:])
+    validate_jd1_pose_finish_args(ns)
+    assert ns.jd1_pose_finish_mode == "joint_loss"
+    assert ns.jd1_lr_anneal == "derived_tail"
+    assert ns.jd1_lr_final_frac == 0.0
+
+
+def test_jd1_lr_anneal_lever_flags_are_declared_by_the_live_trainer():
+    lv = lever_jd1_lr_anneal()
+    missing = sorted(set(lv.overrides) - trainer_declared_flags())
+    assert not missing
+
+
+def test_jd1_lr_anneal_factory_refuses_inert_or_invalid_shapes():
+    with pytest.raises(ValueError, match="final_frac"):
+        lever_jd1_lr_anneal(final_frac=0.0)
+    with pytest.raises(ValueError, match="final_frac"):
+        lever_jd1_lr_anneal(final_frac=1.0)
 
 
 def test_jd1_factory_refuses_inert_or_invalid_shapes():
