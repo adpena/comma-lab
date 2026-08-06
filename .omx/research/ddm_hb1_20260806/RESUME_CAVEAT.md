@@ -10,3 +10,8 @@ the payload CLEAN (cheap, form-faithful); crash after → accept the warm-start 
 label the payload's race row FORM_DEVIATED_RESUME and note total-steps-trained. HARVEST CHECK:
 grep driver.log for "resume from latest" — zero hits ⇒ run is form-clean (current state: zero).
 Driver-side FORM_DEVIATION logging lands at the next driver start, never mid-run.
+
+RR4-MEDIUM (harvest sharpening): the driver's terminal "all done" line is a LOOP-COMPLETION
+marker, NOT a success verdict — stages 3/4 log rc but do not halt the chain. A payload's race
+row is admissible ONLY from: stage2 rc=0 AND stage3 rc=0 AND stage4 encode rc=0 AND stage4
+decode rc=0 (--require-exact) AND the pack/encode report JSONs parse with exact byte fields.
