@@ -67,8 +67,15 @@ BASELINE_EP1646 = {
     "live": {"d_seg_mean": 0.005876948038736979, "d_pose_mean": 0.1397043092628879},
     "ema": {"d_seg_mean": 0.005437978108723958, "d_pose_mean": 0.03581784128891155},
 }
+# jd6 ep1766 endpoint (receipt jd6_endpoint_n600_both_bases.json, full precision) — the
+# same-instrument baseline for the la1 A/B arms (ON/OFF both resume from ep1766). Divergence
+# WIDENED at this endpoint (live pose 0.214 vs ema 0.0101, 21×): same-basis deltas only.
+BASELINE_EP1766 = {
+    "live": {"d_seg_mean": 0.005423244900173612, "d_pose_mean": 0.21424890481926206},
+    "ema": {"d_seg_mean": 0.004971932305230035, "d_pose_mean": 0.010094668682475555},
+}
 BASELINES = {"ep1405": BASELINE_EP1405, "ep1526": BASELINE_EP1526,
-             "ep1646": BASELINE_EP1646}
+             "ep1646": BASELINE_EP1646, "ep1766": BASELINE_EP1766}
 
 
 def build_argparser() -> argparse.ArgumentParser:
