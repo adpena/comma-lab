@@ -84,8 +84,8 @@ def scorer_plane_from_camera(operator, frame: np.ndarray) -> np.ndarray:
     return operator.apply(frame.astype(np.float64)).astype(np.float64)
 
 
-def select_phase_blocks(offsets: np.ndarray, *, n: int) -> list[tuple[int, int, int, int]]:
-    """Return (pair, block_index, block_row, block_col) for nonzero phase blocks."""
+def _all_phase_blocks(offsets: np.ndarray) -> list[tuple[int, int, int, int]]:
+    """Return all (pair, block_index, scorer_row, scorer_col) nonzero phase blocks."""
 
     if offsets.ndim != 3 or offsets.shape[2] != 2:
         raise RuntimeError(f"unexpected offsets shape {offsets.shape}")
@@ -100,9 +100,82 @@ def select_phase_blocks(offsets: np.ndarray, *, n: int) -> list[tuple[int, int, 
             scorer_col = (bc * 16 + 8) & ~1
             if scorer_row <= 382 and scorer_col <= 510:
                 found.append((int(pair), int(block), int(scorer_row), int(scorer_col)))
-            if len(found) >= n:
-                return found
     return found
+
+
+def select_phase_blocks(
+    offsets: np.ndarray,
+    *,
+    n: int,
+    mode: str,
+    seed: int,
+    strata: int,
+) -> tuple[list[tuple[int, int, int, int]], dict[str, Any]]:
+    """Select phase blocks with explicit denominator and selection provenance."""
+
+    candidates = _all_phase_blocks(offsets)
+    if n < 1:
+        raise RuntimeError("n must be positive")
+    if len(candidates) < n:
+        raise RuntimeError(f"found only {len(candidates)} nonzero phase blocks")
+    if mode == "first_nonzero":
+        selected = candidates[:n]
+        return selected, {
+            "mode": "first_nonzero_phase_blocks",
+            "candidate_population_blocks": len(candidates),
+            "selection_scope": "phase-field nonzero block16 offsets with valid even 2x2 scorer centers",
+            "note": "video-order first-n; instance-scope only, not population authority",
+        }
+    if mode != "stratified_nonzero":
+        raise RuntimeError(f"unknown selection mode: {mode}")
+    if strata < 1:
+        raise RuntimeError("strata must be positive")
+
+    n_pairs = int(offsets.shape[0])
+    buckets: list[list[tuple[int, int, int, int]]] = [[] for _ in range(strata)]
+    for item in candidates:
+        pair = item[0]
+        bucket = min(strata - 1, int(pair * strata // max(1, n_pairs)))
+        buckets[bucket].append(item)
+
+    rng = np.random.default_rng(int(seed))
+    shuffled: list[list[tuple[int, int, int, int]]] = []
+    for bucket_items in buckets:
+        if not bucket_items:
+            shuffled.append([])
+            continue
+        order = rng.permutation(len(bucket_items))
+        shuffled.append([bucket_items[int(i)] for i in order])
+
+    selected = []
+    cursor = [0] * strata
+    while len(selected) < n:
+        progressed = False
+        for idx, bucket_items in enumerate(shuffled):
+            if cursor[idx] >= len(bucket_items):
+                continue
+            selected.append(bucket_items[cursor[idx]])
+            cursor[idx] += 1
+            progressed = True
+            if len(selected) >= n:
+                break
+        if not progressed:
+            break
+    if len(selected) < n:
+        raise RuntimeError(f"stratified selector produced only {len(selected)} blocks")
+
+    return selected, {
+        "mode": "stratified_nonzero_phase_blocks",
+        "seed": int(seed),
+        "strata": int(strata),
+        "candidate_population_blocks": len(candidates),
+        "candidate_blocks_per_stratum": [len(bucket) for bucket in buckets],
+        "selection_scope": "phase-field nonzero block16 offsets with valid even 2x2 scorer centers",
+        "selected_blocks_per_stratum": [
+            sum(1 for item in selected if min(strata - 1, int(item[0] * strata // max(1, n_pairs))) == idx)
+            for idx in range(strata)
+        ],
+    }
 
 
 def shifted_target_delta(
@@ -127,13 +200,20 @@ def pose_delta(sc: Scorer, base_pose: Any, pair: np.ndarray) -> float:
 
 def execute(args: argparse.Namespace) -> dict[str, Any]:
     started = time.time()
-    if args.n_blocks > 8:
-        raise RuntimeError("dk1 charter allows only small-n scorer use; n_blocks must be <= 8")
+    if args.n_blocks > 8 and not args.skip_real_posenet:
+        raise RuntimeError(
+            "dk1 charter allows only small-n frozen-scorer use; use --skip-real-posenet "
+            "for scorer-free n_blocks > 8"
+        )
     operator = build_default_operator()
     offsets = np.load(args.offsets, mmap_mode="r")
-    selected = select_phase_blocks(offsets, n=args.n_blocks)
-    if len(selected) < args.n_blocks:
-        raise RuntimeError(f"found only {len(selected)} nonzero phase blocks")
+    selected, selection_provenance = select_phase_blocks(
+        offsets,
+        n=args.n_blocks,
+        mode=args.selection_mode,
+        seed=args.selection_seed,
+        strata=args.selection_strata,
+    )
 
     raw = np.memmap(
         args.raw,
@@ -141,7 +221,7 @@ def execute(args: argparse.Namespace) -> dict[str, Any]:
         mode="r",
         shape=(N_PAIRS_TOTAL * seq_len, CAM_H, CAM_W, 3),
     )
-    sc = Scorer(args.threads)
+    sc = None if args.skip_real_posenet else Scorer(args.threads)
     rows = []
     for pair, block, scorer_row, scorer_col in selected:
         frame0 = np.asarray(raw[seq_len * pair], dtype=np.uint8)
@@ -164,14 +244,18 @@ def execute(args: argparse.Namespace) -> dict[str, Any]:
             cvp_tap_radius=args.cvp_tap_radius,
         )
         base_pair = np.stack([frame0, frame1])
-        base_pose = sc.pose_out(base_pair)
+        base_pose = sc.pose_out(base_pair) if sc is not None else None
         method_rows = {}
         for name, result in results.items():
             edited_f1 = add_private_delta_to_frame(frame1, geom, result.camera_delta)
             edited_pair = np.stack([frame0, edited_f1])
             method_rows[name] = {
                 **result.to_dict(),
-                "real_posenet_dpose_vs_parent_pair": pose_delta(sc, base_pose, edited_pair),
+                "real_posenet_dpose_vs_parent_pair": (
+                    pose_delta(sc, base_pose, edited_pair)
+                    if sc is not None and base_pose is not None
+                    else None
+                ),
                 "realized_scorer_delta_l2": float(np.linalg.norm(result.scorer_delta)),
                 "target_scorer_delta_l2": float(np.linalg.norm(target)),
                 "local_delta_retention_l2": (
@@ -203,22 +287,35 @@ def execute(args: argparse.Namespace) -> dict[str, Any]:
     aggregate = {}
     for name in ("naive", "dykstra", "cvp"):
         vals_pose = [row["methods"][name]["pose_leakage_sq"] for row in rows]
-        vals_real = [row["methods"][name]["real_posenet_dpose_vs_parent_pair"] for row in rows]
+        vals_real = [
+            row["methods"][name]["real_posenet_dpose_vs_parent_pair"]
+            for row in rows
+            if row["methods"][name]["real_posenet_dpose_vs_parent_pair"] is not None
+        ]
         vals_seg = [row["methods"][name]["seg_discrepancy"] for row in rows]
         aggregate[name] = {
             "pose_leakage_sq_mean": float(np.mean(vals_pose)),
             "pose_leakage_sq_median": float(np.median(vals_pose)),
-            "real_posenet_dpose_vs_parent_pair_mean": float(np.mean(vals_real)),
-            "real_posenet_dpose_vs_parent_pair_median": float(np.median(vals_real)),
+            "real_posenet_dpose_vs_parent_pair_mean": (
+                float(np.mean(vals_real)) if vals_real else None
+            ),
+            "real_posenet_dpose_vs_parent_pair_median": (
+                float(np.median(vals_real)) if vals_real else None
+            ),
             "seg_discrepancy_mean": float(np.mean(vals_seg)),
         }
 
     return {
         "schema": "ddm_dk1_lattice_realizer_measurement.v1",
-        "axis": "[macOS-CPU frozen-PoseNet advisory] small-n",
+        "axis": (
+            "[scorer-free local A(Dx)/D-private advisory]"
+            if args.skip_real_posenet
+            else "[macOS-CPU frozen-PoseNet advisory] small-n"
+        ),
         "score_claim": False,
         "promotion_eligible": False,
         "n600_run": False,
+        "frozen_posenet_used": not bool(args.skip_real_posenet),
         "n_blocks": len(rows),
         "inputs": {
             "raw": str(args.raw),
@@ -227,7 +324,7 @@ def execute(args: argparse.Namespace) -> dict[str, Any]:
             "offsets_sha256": sha256_file(args.offsets),
         },
         "selection": {
-            "mode": "first nonzero tq1c block16 phase offsets, center even 2x2 scorer block",
+            **selection_provenance,
             "blocks": [[p, b, r, c] for p, b, r, c in selected],
             "target_scale": args.target_scale,
         },
@@ -241,9 +338,13 @@ def execute(args: argparse.Namespace) -> dict[str, Any]:
         "rows": rows,
         "elapsed_s": time.time() - started,
         "boundaries": [
-            "small-n block-local advisory only",
+            "block-local advisory only",
             "target is local shift delta from phase-field offset, projected to ker(A)",
-            "real PoseNet leakage measured versus parent pair output, not GT authority",
+            (
+                "real PoseNet leakage skipped by request; receipt is scorer-free"
+                if args.skip_real_posenet
+                else "real PoseNet leakage measured versus parent pair output, not GT authority"
+            ),
             "no SegNet score, no archive build, no n600 scorer slot",
         ],
     }
@@ -255,7 +356,15 @@ def main() -> int:
     ap.add_argument("--offsets", type=Path, default=DEFAULT_OFFSETS)
     ap.add_argument("--out", type=Path, default=DEFAULT_OUT)
     ap.add_argument("--n-blocks", type=int, default=4)
+    ap.add_argument(
+        "--selection-mode",
+        choices=("first_nonzero", "stratified_nonzero"),
+        default="first_nonzero",
+    )
+    ap.add_argument("--selection-seed", type=int, default=20260806)
+    ap.add_argument("--selection-strata", type=int, default=10)
     ap.add_argument("--threads", type=int, default=6)
+    ap.add_argument("--skip-real-posenet", action="store_true")
     ap.add_argument("--target-scale", type=float, default=0.25)
     ap.add_argument("--dykstra-iterations", type=int, default=8)
     ap.add_argument("--cvp-tap-radius", type=int, default=1)

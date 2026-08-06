@@ -17,8 +17,15 @@ def test_build_registry_contains_round0_and_source_candidate_rows() -> None:
     assert build.summary["row_groups"]["sw1-round0"] == 16
     assert any(row["instrument_id"] == "iteration_cap_stop_defaults" for row in build.rows)
     assert any(
-        row["candidate_status"] == "OVERINCLUSIVE_SOURCE_CANDIDATE_NEEDS_R2_CONSUMER_CONFIRMATION"
+        row["candidate_status"] == "MEASURED_SOURCE_TOKEN_DENOMINATOR_NEEDS_R2_CONSUMER_CONFIRMATION"
         for row in build.rows
+    )
+    assert build.summary["registry_order"]["within_family"] == [
+        "verdict_fanout_desc",
+        "instrument_id_asc",
+    ]
+    assert build.summary["source_candidate_denominator"]["denominator_kind"] == (
+        "readable_live_python_files_after_declared_exclusions"
     )
 
 

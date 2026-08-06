@@ -202,6 +202,36 @@ def block_mask_from_scorer_mask(mask: np.ndarray) -> np.ndarray:
     return x.reshape(x.shape[0] // 2, 2, x.shape[1] // 2, 2).any(axis=(1, 3))
 
 
+def q3_block_coverage_payload(
+    *,
+    total_blocks: int,
+    realized_blocks: int,
+    block_limit: int | None,
+) -> dict[str, Any]:
+    """Grade whether a Q3 realization covered the full requested block mask."""
+
+    total = int(total_blocks)
+    realized = int(realized_blocks)
+    if total < 0:
+        raise ValueError("total_blocks must be non-negative")
+    if realized < 0:
+        raise ValueError("realized_blocks must be non-negative")
+    if realized > total:
+        raise ValueError("realized_blocks cannot exceed total_blocks")
+    if block_limit is not None and int(block_limit) < 1:
+        raise ValueError("block_limit must be positive when supplied")
+    full = realized == total and block_limit is None
+    return {
+        "blocks_total_requested_by_mask": total,
+        "blocks_realized": realized,
+        "blocks_unrealized": total - realized,
+        "block_limit": None if block_limit is None else int(block_limit),
+        "block_coverage_fraction": (float(realized) / float(total) if total else 1.0),
+        "block_coverage_status": "FULL_REQUESTED_MASK" if full else "PARTIAL_OR_CAPPED",
+        "coverage_form_grade": "OPTIMAL-RECEIPT" if full else "NAIVE-NAMED",
+    }
+
+
 def scorer_hwc_from_tensor(value: torch.Tensor | np.ndarray) -> np.ndarray:
     if isinstance(value, torch.Tensor):
         arr = value.detach().cpu().numpy()
@@ -249,9 +279,11 @@ def realize_q3_delta_lattice_native(
     out = frame.copy()
     receipts: list[dict[str, Any]] = []
     aggregate = {
-        "blocks_total_requested_by_mask": int(total_blocks),
-        "blocks_realized": len(coords),
-        "block_limit": None if max_blocks is None else int(max_blocks),
+        **q3_block_coverage_payload(
+            total_blocks=int(total_blocks),
+            realized_blocks=len(coords),
+            block_limit=max_blocks,
+        ),
         "pose_leakage_sq_sum": 0.0,
         "seg_discrepancy_sum": 0.0,
         "changed_camera_values_sum": 0,

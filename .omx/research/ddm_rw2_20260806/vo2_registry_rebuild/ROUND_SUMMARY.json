@@ -1,0 +1,69 @@
+{
+  "generated_at_utc": "2026-08-06T00:00:00Z",
+  "last_graded_source": "deterministic audit label; override with --last-graded for an intentional refresh",
+  "registry_hash_scope": "INSTRUMENT_REGISTRY.jsonl rows sorted by family priority, verdict_fanout desc, instrument_id",
+  "registry_order": {
+    "family_priority": {
+      "ca1-round0": 1,
+      "dk1-round0": 3,
+      "sw1-round0": 2,
+      "vo1-round0": 0,
+      "vo2-new": 4
+    },
+    "within_family": [
+      "verdict_fanout_desc",
+      "instrument_id_asc"
+    ]
+  },
+  "round_dry_trajectory": [
+    {
+      "dry": false,
+      "new_rows": 10,
+      "round": "R0"
+    },
+    {
+      "dry": false,
+      "new_rows": 4632,
+      "round": "R1"
+    }
+  ],
+  "round_reached": "R1",
+  "row_count": 4632,
+  "row_groups": {
+    "ca1-round0": 89,
+    "dk1-round0": 3,
+    "sw1-round0": 16,
+    "vo1-round0": 10,
+    "vo2-new": 4514
+  },
+  "schema": "ddm_vo2_instrument_registry.summary.v1",
+  "score_claim": false,
+  "scorer_free": true,
+  "source_candidate_denominator": {
+    "candidate_rule": ">=2 measurement/verdict token hits; overinclusive source candidate, not consumer proof",
+    "denominator_kind": "readable_live_python_files_after_declared_exclusions",
+    "live_python_decode_errors": 0,
+    "live_python_files_readable": 6247,
+    "live_python_files_scanned": 6247,
+    "source_candidate_rows": 4514,
+    "token_hit_file_counts": {
+      "DERIVED": 307,
+      "MEASURED": 641,
+      "PoseNet": 1382,
+      "SegNet": 1890,
+      "archive.zip": 934,
+      "archive_bytes": 1420,
+      "axis": 2267,
+      "d_pose": 1087,
+      "d_seg": 1417,
+      "eta": 118,
+      "evaluate.py": 720,
+      "ledger": 530,
+      "n600": 921,
+      "promotion_eligible": 2093,
+      "receipt": 834,
+      "score_claim": 2821,
+      "verdict": 1614
+    }
+  }
+}

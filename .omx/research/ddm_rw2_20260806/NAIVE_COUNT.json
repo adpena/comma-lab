@@ -1,0 +1,27 @@
+{
+  "schema": "ddm_rw2_naive_count.v1",
+  "baseline": {
+    "source": ".omx/research/ddm_vo2_20260806/R2_ELEMENT_DECOMPOSITION.jsonl",
+    "selected_rows": 23,
+    "naive_rows": 14,
+    "naive_elements": 26,
+    "rule": "row counts as naive if any element has form_grade == NAIVE-NAMED"
+  },
+  "after_rw2_same_selected_denominator": {
+    "selected_rows": 23,
+    "naive_rows": 13,
+    "naive_elements": 21,
+    "rule": "apply RW2 regrades only to matching R2 selected instrument_ids; exclude new bounded q3x row from the 23-row denominator"
+  },
+  "row_count_delta": -1,
+  "element_count_delta": -5,
+  "applied_regrade_summary": [
+    "dk1_realizer:{naive,dykstra,cvp} subset_sampling NAIVE-NAMED -> OPTIMAL-RECEIPT in scorer-free local A(Dx)/D-private scope",
+    "source_candidate:tools_build_ddm_vo2_instrument_registry.py proposal_step_rule and tie_breaks NAIVE-NAMED -> OPTIMAL-RECEIPT",
+    "source_candidate:experiments_train_levelset_witness_realized_through_R_mlx.py remains NAIVE-NAMED on stopping_rule",
+    "q3x rw2 full-CVP row is new bounded evidence and is not counted in the R2 23-row denominator"
+  ],
+  "score_claim": false,
+  "promotion_eligible": false,
+  "pointer_moved": false
+}

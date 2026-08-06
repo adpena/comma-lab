@@ -1,0 +1,14 @@
+{
+  "changed_unaffected_rows": [],
+  "missing_from_new": [],
+  "new_registry": ".omx/research/ddm_rw2_20260806/vo2_registry_rebuild/INSTRUMENT_REGISTRY.jsonl",
+  "new_unexpected_unaffected_keys": [],
+  "old_registry": ".omx/research/ddm_vo2_20260806/INSTRUMENT_REGISTRY.jsonl",
+  "schema": "ddm_rw2_registry_rebuild_stability.v1",
+  "source_candidate_new_count": 4514,
+  "source_candidate_old_count": 4512,
+  "unaffected_hash_stable": true,
+  "unaffected_new_count": 118,
+  "unaffected_old_count": 118,
+  "unaffected_scope": "provenance_family != vo2-new"
+}

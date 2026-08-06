@@ -5,6 +5,7 @@ from tac.optimization.rw1_true_domain_instruments import (
     cap_receipt_from_solver_diagnostics,
     element_grade_vector,
     parse_cap_ladder,
+    q3_block_coverage_payload,
 )
 
 
@@ -60,3 +61,14 @@ def test_block_mask_from_scorer_mask_uses_any_within_2x2_block():
     assert out[0, 1]
     assert out[1, 2]
     assert int(out.sum()) == 2
+
+
+def test_q3_block_coverage_payload_grades_full_vs_capped():
+    full = q3_block_coverage_payload(total_blocks=4, realized_blocks=4, block_limit=None)
+    capped = q3_block_coverage_payload(total_blocks=4, realized_blocks=2, block_limit=2)
+
+    assert full["block_coverage_status"] == "FULL_REQUESTED_MASK"
+    assert full["coverage_form_grade"] == "OPTIMAL-RECEIPT"
+    assert capped["block_coverage_status"] == "PARTIAL_OR_CAPPED"
+    assert capped["coverage_form_grade"] == "NAIVE-NAMED"
+    assert capped["blocks_unrealized"] == 2

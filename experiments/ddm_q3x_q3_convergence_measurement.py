@@ -362,7 +362,18 @@ def _solve_cap_ladder(
 
 
 def _q3_grade_vector(args: argparse.Namespace, selection: dict[str, Any]) -> dict[str, Any]:
-    realization_grade = "NAIVE-NAMED" if args.realizer == "naive-round" else "OPTIMAL-RECEIPT"
+    if args.realizer == "naive-round":
+        realization_grade = "NAIVE-NAMED"
+        realization_note = "naive scorer-lattice round then camera realization"
+    elif args.dk1_max_blocks is not None:
+        realization_grade = "NAIVE-NAMED"
+        realization_note = (
+            f"{args.realizer} with dk1_max_blocks={args.dk1_max_blocks}; "
+            "bounded smoke valve, not full requested Q3 block coverage"
+        )
+    else:
+        realization_grade = "OPTIMAL-RECEIPT"
+        realization_note = f"{args.realizer} with full requested Q3 block-mask coverage"
     projection_grade = (
         "NAIVE-NAMED"
         if args.realizer == "naive-round" or args.solver_form == "project-after"
@@ -376,7 +387,7 @@ def _q3_grade_vector(args: argparse.Namespace, selection: dict[str, Any]) -> dic
             "stopping_rule": ("OPTIMAL-RECEIPT", f"CA1 cap-stop receipts over ladder {args.cap_ladder or args.steps}"),
             "metric": ("NAIVE-NAMED", "proxy SegNet cross-entropy/argmax objective retained from source solver"),
             "subset": ("OPTIMAL-RECEIPT", f"bounded {MODE_STRIDED} selection {selection['provenance']}"),
-            "realization": (realization_grade, args.realizer),
+            "realization": (realization_grade, realization_note),
             "projection": (projection_grade, args.solver_form),
             "tie_breaks": ("NAIVE-NAMED", "best proxy flips then first observed best iterate"),
             "seed": ("UNKNOWN", "no stochastic seed consumed by this small-n CPU advisory path"),

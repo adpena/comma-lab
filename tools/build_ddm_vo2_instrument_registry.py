@@ -37,6 +37,13 @@ ELEMENT_NAMES = (
 )
 
 LIVE_ROOTS = ("experiments", "tools", "src/tac")
+PROVENANCE_FAMILY_PRIORITY = {
+    "vo1-round0": 0,
+    "ca1-round0": 1,
+    "sw1-round0": 2,
+    "dk1-round0": 3,
+    "vo2-new": 4,
+}
 SKIP_PARTS = {
     ".git",
     ".mypy_cache",
@@ -206,8 +213,9 @@ def _row(
     provenance_family: str,
     candidate_status: str = "VERDICT_CONSUMER_OR_ROUND0_INPUT",
     notes: str = "",
+    source_token_denominator: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    return {
+    row = {
         "schema": "ddm_vo2_instrument_registry.row.v1",
         "instrument_id": instrument_id,
         "path": path,
@@ -221,6 +229,9 @@ def _row(
         "candidate_status": candidate_status,
         "notes": notes,
     }
+    if source_token_denominator is not None:
+        row["source_token_denominator"] = source_token_denominator
+    return row
 
 
 def _rows_from_vo1(last_graded: str) -> list[dict[str, Any]]:
@@ -386,15 +397,28 @@ def _iter_live_python_files() -> list[Path]:
     return sorted(files)
 
 
+def _row_priority_key(row: dict[str, Any]) -> tuple[int, int, str]:
+    """Registry order: charter family priority, then verdict fanout, then stable id."""
+
+    family = str(row.get("provenance_family", ""))
+    return (
+        PROVENANCE_FAMILY_PRIORITY.get(family, 99),
+        -int(row.get("verdict_fanout", 0)),
+        str(row.get("instrument_id", "")),
+    )
+
+
 def _rows_from_source_candidates(last_graded: str) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     files = _iter_live_python_files()
     parseable = 0
     token_counts: Counter[str] = Counter()
+    skipped_decode_errors = 0
     for path in files:
         try:
             text = path.read_text(encoding="utf-8")
         except UnicodeDecodeError:
+            skipped_decode_errors += 1
             continue
         parseable += 1
         hits = [tok for tok, pattern in TOKEN_PATTERNS.items() if pattern.search(text)]
@@ -424,15 +448,31 @@ def _rows_from_source_candidates(last_graded: str) -> tuple[list[dict[str, Any]]
                 reopen_refs=[],
                 last_graded=last_graded,
                 provenance_family="vo2-new",
-                candidate_status="OVERINCLUSIVE_SOURCE_CANDIDATE_NEEDS_R2_CONSUMER_CONFIRMATION",
+                candidate_status="MEASURED_SOURCE_TOKEN_DENOMINATOR_NEEDS_R2_CONSUMER_CONFIRMATION",
                 notes=f"measurement/verdict tokens={','.join(hits)}",
+                source_token_denominator={
+                    "live_roots": list(LIVE_ROOTS),
+                    "excluded_scopes": [
+                        "experiments/results",
+                        "tests",
+                        "test_*.py",
+                        *sorted(SKIP_PARTS),
+                    ],
+                    "tokens": list(MEASUREMENT_TOKENS),
+                    "matched_tokens": hits,
+                    "token_hit_count": len(hits),
+                    "denominator_kind": "readable_live_python_files_after_declared_exclusions",
+                },
             )
         )
     summary = {
         "live_python_files_scanned": len(files),
         "live_python_files_readable": parseable,
+        "live_python_decode_errors": skipped_decode_errors,
         "source_candidate_rows": len(rows),
         "token_hit_file_counts": dict(sorted(token_counts.items())),
+        "denominator_kind": "readable_live_python_files_after_declared_exclusions",
+        "candidate_rule": ">=2 measurement/verdict token hits; overinclusive source candidate, not consumer proof",
     }
     return rows, summary
 
@@ -453,7 +493,7 @@ def build_registry(last_graded: str = DEFAULT_LAST_GRADED) -> RegistryBuild:
     rows.extend(source_rows)
     row_groups["vo2-new"] = len(source_rows)
 
-    rows = sorted(rows, key=lambda r: (r["provenance_family"], r["instrument_id"]))
+    rows = sorted(rows, key=_row_priority_key)
     summary = {
         "schema": "ddm_vo2_instrument_registry.summary.v1",
         "generated_at_utc": last_graded,
@@ -467,7 +507,11 @@ def build_registry(last_graded: str = DEFAULT_LAST_GRADED) -> RegistryBuild:
         "row_count": len(rows),
         "row_groups": row_groups,
         "source_candidate_denominator": source_summary,
-        "registry_hash_scope": "INSTRUMENT_REGISTRY.jsonl rows sorted by provenance_family/instrument_id",
+        "registry_hash_scope": "INSTRUMENT_REGISTRY.jsonl rows sorted by family priority, verdict_fanout desc, instrument_id",
+        "registry_order": {
+            "family_priority": PROVENANCE_FAMILY_PRIORITY,
+            "within_family": ["verdict_fanout_desc", "instrument_id_asc"],
+        },
         "last_graded_source": "deterministic audit label; override with --last-graded for an intentional refresh",
     }
     return RegistryBuild(rows=rows, summary=summary)

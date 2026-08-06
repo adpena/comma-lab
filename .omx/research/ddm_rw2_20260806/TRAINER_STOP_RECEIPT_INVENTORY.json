@@ -1,0 +1,135 @@
+{
+  "schema": "ddm_rw2_trainer_stop_receipt_inventory.v1",
+  "arm": "ddm_rw2",
+  "axis": "[scorer-free source audit]",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "pointer_moved": false,
+  "source": "experiments/train_levelset_witness_realized_through_R_mlx.py",
+  "normalized_cap_stop_receipt_rows_added": 0,
+  "existing_emit_surface_count": 17,
+  "r2_stopping_rule_disposition": "NOT_CURED_REMAINS_NAIVE_NAMED",
+  "reason": "RW2 observed existing stop/checkpoint/event emit surfaces, but did not run the trainer and did not patch one normalized semantic receipt across every trainer stop mode.",
+  "surfaces": [
+    {
+      "kind": "curriculum_transition",
+      "line": 4473,
+      "row_stage": "curriculum_transition_fired",
+      "receipt_fields_seen": ["from", "to", "epoch", "trigger", "nucleus_gated", "nucleus_ready"],
+      "cap_vs_convergence_status": "trigger is loss_plateau or cap"
+    },
+    {
+      "kind": "handoff_readiness",
+      "line": 4606,
+      "row_stage": "handoff_readiness",
+      "receipt_fields_seen": ["plateau_ok", "nucleus_all_ok", "ready"],
+      "cap_vs_convergence_status": "telemetry only"
+    },
+    {
+      "kind": "pose_finish_arm",
+      "line": 10461,
+      "row_stage": "pose_finish_armed",
+      "receipt_fields_seen": ["start_backstop", "w_pose_finish", "beta_anneal_coupling"],
+      "cap_vs_convergence_status": "backstop armed"
+    },
+    {
+      "kind": "event_backstop_gate_setup",
+      "line": 10224,
+      "row_stage": "EventBackstopGate definitions",
+      "receipt_fields_seen": ["name", "start_epoch_flag", "start_event_flag", "cap"],
+      "cap_vs_convergence_status": "gate-dependent"
+    },
+    {
+      "kind": "muon_event_backstop",
+      "line": 15717,
+      "row_stage": "muon gate telemetry",
+      "receipt_fields_seen": ["telemetry"],
+      "cap_vs_convergence_status": "gate-dependent"
+    },
+    {
+      "kind": "phase_advect_event_backstop",
+      "line": 15907,
+      "row_stage": "phase_advect gate telemetry",
+      "receipt_fields_seen": ["telemetry"],
+      "cap_vs_convergence_status": "gate-dependent"
+    },
+    {
+      "kind": "temporal_screw_event_backstop",
+      "line": 16096,
+      "row_stage": "temporal_screw gate telemetry",
+      "receipt_fields_seen": ["telemetry"],
+      "cap_vs_convergence_status": "gate-dependent"
+    },
+    {
+      "kind": "chroma_event_backstop",
+      "line": 16190,
+      "row_stage": "seg_chroma_boundary gate telemetry",
+      "receipt_fields_seen": ["telemetry"],
+      "cap_vs_convergence_status": "gate-dependent"
+    },
+    {
+      "kind": "lane_band_event_backstop",
+      "line": 16245,
+      "row_stage": "lane_band gate telemetry",
+      "receipt_fields_seen": ["telemetry"],
+      "cap_vs_convergence_status": "gate-dependent"
+    },
+    {
+      "kind": "eikonal_retention_prime",
+      "line": 16397,
+      "row_stage": "eikonal_retention_prime",
+      "receipt_fields_seen": ["from_rung", "to_rung", "lambda_eik_from", "lambda_eik_to", "tau_to"],
+      "cap_vs_convergence_status": "transition receipt"
+    },
+    {
+      "kind": "tau_rung_transition",
+      "line": 16428,
+      "row_stage": "tau_rung_transition_retreat",
+      "receipt_fields_seen": ["rung", "reset_moments", "rewarmup_epochs"],
+      "cap_vs_convergence_status": "transition receipt"
+    },
+    {
+      "kind": "tail_controller",
+      "line": 15110,
+      "row_stage": "tail_controller_armed",
+      "receipt_fields_seen": ["muon_start", "tail_start_epoch", "k_max", "cycle_floor_ep"],
+      "cap_vs_convergence_status": "k_max backstop armed"
+    },
+    {
+      "kind": "tail_cycle",
+      "line": 16610,
+      "row_stage": "tail_cycle_begin",
+      "receipt_fields_seen": ["cycle", "tau", "lr", "reason"],
+      "cap_vs_convergence_status": "cycle boundary"
+    },
+    {
+      "kind": "tail_powerplay_stop",
+      "line": 16621,
+      "row_stage": "tail_powerplay_stop",
+      "receipt_fields_seen": ["cycle", "reason", "net_marginal_s_per_ep", "rate_aware"],
+      "cap_vs_convergence_status": "semantic stop"
+    },
+    {
+      "kind": "closed_loop_early_stop",
+      "line": 17705,
+      "row_stage": "closed_loop_early_stop",
+      "receipt_fields_seen": ["reason", "best_d_seg", "best_epoch", "best_path"],
+      "cap_vs_convergence_status": "semantic stop"
+    },
+    {
+      "kind": "tail_early_stop",
+      "line": 17720,
+      "row_stage": "tail_early_stop",
+      "receipt_fields_seen": ["best_d_seg", "best_epoch"],
+      "cap_vs_convergence_status": "semantic stop"
+    },
+    {
+      "kind": "checkpoint_rows",
+      "line": [11947, 17594, 17608, 17766],
+      "row_stage": "checkpoint",
+      "receipt_fields_seen": ["kind=best", "kind=stage_transition", "kind=intra_stage", "kind=final"],
+      "cap_vs_convergence_status": "checkpoint custody, not convergence proof"
+    }
+  ],
+  "next_cure": "Patch or reuse a normalized semantic stop receipt helper at every trainer stop/transition branch, then verify with AST and a tiny no-scorer dry path before regrading the R2 trainer stopping_rule."
+}
