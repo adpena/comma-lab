@@ -54,6 +54,13 @@ BASELINE_EP1405 = {
     "live": {"d_seg_mean": 0.007150336371527777, "d_pose_mean": 0.5740917290074666},
     "ema": {"d_seg_mean": 0.00574798583984375, "d_pose_mean": 0.12885309147362226},
 }
+# jd4 ep1526 endpoint (this probe's own receipt, jd4_endpoint_n600_both_bases.json) — the
+# same-instrument baseline for the jd5 ep1646 run.
+BASELINE_EP1526 = {
+    "live": {"d_seg_mean": 0.0054997, "d_pose_mean": 0.091572},
+    "ema": {"d_seg_mean": 0.0052305, "d_pose_mean": 0.090731},
+}
+BASELINES = {"ep1405": BASELINE_EP1405, "ep1526": BASELINE_EP1526}
 
 
 def build_argparser() -> argparse.ArgumentParser:
@@ -61,6 +68,8 @@ def build_argparser() -> argparse.ArgumentParser:
     ap.add_argument("--run-dir", type=Path, default=RUN_DIR)
     ap.add_argument("--ckpt-name", default="stage_joint_pose_finish_final.npz")
     ap.add_argument("--ckpt-tag", default="final_ep1526")
+    ap.add_argument("--baseline", choices=sorted(BASELINES), default="ep1405",
+                    help="same-instrument delta baseline (jd5 boundary uses ep1526)")
     ap.add_argument("--gt-cache", type=Path,
                     default=Path("/Users/adpena/Projects/pact/experiments/results/"
                                  "mlx_fleet_gt_cache/gt_n600.npz"))
@@ -115,7 +124,7 @@ def main() -> int:
         "pose_semantics": "training-vehicle window objective; NOT shipped-archive "
                           "pair semantics (byte-close owns those)",
         "ckpt": args.ckpt_name,
-        "baseline_ep1405": BASELINE_EP1405,
+        "baseline": {args.baseline: BASELINES[args.baseline]},
         "bases": {},
         "status": "running",
     }
@@ -156,9 +165,9 @@ def main() -> int:
             "d_pose_median": float(np.median(d_poses)),
             "pose_term_sqrt10": float(np.sqrt(10.0 * float(np.mean(d_poses)))),
             "seg_S_100x": 100.0 * float(np.mean(d_segs)),
-            "delta_vs_ep1405_same_basis": {
-                "d_seg": float(np.mean(d_segs)) - BASELINE_EP1405[basis]["d_seg_mean"],
-                "d_pose": float(np.mean(d_poses)) - BASELINE_EP1405[basis]["d_pose_mean"],
+            "delta_vs_baseline_same_basis": {
+                "d_seg": float(np.mean(d_segs)) - BASELINES[args.baseline][basis]["d_seg_mean"],
+                "d_pose": float(np.mean(d_poses)) - BASELINES[args.baseline][basis]["d_pose_mean"],
             },
             "gate36_positive_control": {
                 "d_seg_mean": float(np.mean(gate_seg)),
@@ -174,8 +183,8 @@ def main() -> int:
         args.out.write_text(json.dumps(receipt, indent=1))
         print(f"{basis}: d_seg {row['d_seg_mean']:.7f}  d_pose {row['d_pose_mean']:.6f}  "
               f"pose_term {row['pose_term_sqrt10']:.4f}  "
-              f"Δd_seg {row['delta_vs_ep1405_same_basis']['d_seg']:+.7f}  "
-              f"Δd_pose {row['delta_vs_ep1405_same_basis']['d_pose']:+.6f}  "
+              f"Δd_seg {row['delta_vs_baseline_same_basis']['d_seg']:+.7f}  "
+              f"Δd_pose {row['delta_vs_baseline_same_basis']['d_pose']:+.6f}  "
               f"({receipt['elapsed_s']}s)")
 
     receipt["case_a_strict_bar"] = {
