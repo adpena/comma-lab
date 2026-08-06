@@ -313,16 +313,24 @@ def run_mlx_parity(args: argparse.Namespace) -> dict[str, Any]:
     torch_pred = torch_logits.argmax(dim=1).cpu().numpy()
     mlx_pred = np.asarray(mx.argmax(mlx_logits_nchw, axis=1))
     frame_max_abs = float(np.max(np.abs(torch_frame_nhwc - mlx_frame_np)))
-    argmax_equal = bool(np.array_equal(torch_pred, mlx_pred))
+    argmax_diff_count = int(np.count_nonzero(torch_pred != mlx_pred))
+    argmax_equal = argmax_diff_count == 0
     loss_abs = abs(float(torch_loss.detach()) - _as_float(mlx_loss))
     return {
         "schema": "ddm_mx1_mlx_parity.v1",
         "status": "passed",
         "axis": "[torch-CPU reference vs MLX host parity]",
         "score_claim": False,
+        "parity_input": "real built label caches, not synthetic tensors",
+        "token_batch_shape": list(conditioning_torch.shape),
+        "scorer_batch_shape": list(torch_frame_r.shape),
+        "scorer_adapter": "tac.local_acceleration.mlx_scorer_adapters.torch_segnet_to_mlx",
+        "gradient_parity_claim": False,
+        "gradient_parity_scope": "not measured by this mode; training telemetry remains research-signal unless a separate gradient-parity check is added",
         "pairs": pair_ids,
         "raw_frame_max_abs": frame_max_abs,
         "seg_argmax_equal": argmax_equal,
+        "seg_argmax_diff_count": argmax_diff_count,
         "loss_abs_delta": loss_abs,
         "torch_phase": torch_phase,
         "mlx_phase": mlx_phase,

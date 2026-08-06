@@ -6,7 +6,7 @@ ddm_mx1 lifted PR130's width-96 semantic-token renderer trainer into the repo an
 
 - Borrowed PR130 source under `src/tac/pr130_lift/lifted/` with per-file `borrowed_substrate_accounting` headers and pinned source hashes.
 - MLX substrate port in `src/tac/pr130_lift/mlx_semantic_renderer.py`: renderer architecture, torch weight import, QAT parameter transform, curriculum loss, exact checkpoint/resume helpers, and fail-closed MLX probe.
-- Driver `experiments/ddm_mx1_pr130_semantic_renderer.py`: `probe`, `torch-smoke`, `mlx-parity`, and `mlx-train` modes; stratified sampling; SSD evidence outputs; MAIN launch-ticket generation.
+- Driver `experiments/ddm_mx1_pr130_semantic_renderer.py`: `probe`, `torch-smoke`, `mlx-parity`, and `mlx-train` modes; stratified sampling; real-cache parity fields; SSD evidence outputs; MAIN launch-ticket generation.
 - Focused tests in `src/tac/pr130_lift/tests/test_mx1_pr130_lift.py`.
 - Durable evidence files: `PARITY.md`, `LAUNCH_TICKET.md`, `NEXT_IF_RESUMED.md`.
 
@@ -53,6 +53,7 @@ Reason: PR130's trainer is a distinct semantic-token -> RGB recipe. Reusing the 
 | focused pytest | PASS, `4 passed in 0.67s` |
 | local MLX probe | BLOCKED: `[metal::load_device] No Metal device available` |
 | MLX parity | BLOCKED-LOCAL-RUNTIME, no max-abs/argmax/loss value measured |
+| MLX gradient parity | NOT-CLAIMED; training telemetry remains research-signal unless a later real-input gradient-parity receipt exists |
 | MLX smoke | BLOCKED-LOCAL-RUNTIME, driver exits rc 2 and writes blocker JSON |
 | lifted torch CPU n=2 smoke | PASS-SMOKE-ONLY; loss `0.004268820863217115 -> 0.004265481140464544`; d_seg batch `0.0042317709885537624`; `4.949445009231567` s/step; resume load OK |
 
@@ -65,6 +66,7 @@ Searches performed beyond the charter seeds:
 - Memory registry query: `mx1|MX1|#899|required-component|REQUIRED_COMPONENT|declared-on-never-read|margin_targets|preflight`. Found only #899/#904 preflight context, not an mx1-specific prior. Change to plan: keep review/serializer discipline and no raw-ledger side trip.
 - Repo/corpus query: `PR130|Row-1|semantic renderer|ddm_tb1|train_tr1_partition_renderer_mlx|apply_contest_faithful_roundtrip_nhwc|torch_segnet_to_mlx|ddm_hb1|ddm_eh1` across `.omx/research`, `src/tac/local_acceleration`, and `experiments/train_tr1_partition_renderer_mlx.py`. Found EH1 row-1 trained receiver priority, HB1 label payloads/blocker, TR1 trainer context, and the canonical MLX scorer/R surfaces. Change to plan: standalone PR130 port using existing scorer/R adapters; no n600 scorer; queue n32/n120 at et4 boundary.
 - PR130 recipe inspection: `recipe/TRAINING.md` plus `scripts/e2e.py` stage 02-08 commands. Found that the retained init is the QAT12k semantic checkpoint, so the launch ticket is the 6k low-LR stage 08 tail (`lr=2e-7`, `ce_fraction=0`, `softplus_fraction=-999`), not a fresh 12k QAT run.
+- MAIN amendment inspection: `.omx/research/ddm_mx1_20260806/CHARTER_AMENDMENT_MAIN.md`. Found requirements for real-frame parity only, #855 argmax-diff reporting, batch-shape pinning, and gradient-parity scoping. Change to plan: parity remains BLOCKED locally; `mlx-parity` reports real-cache batch shapes, adapter identity, and `seg_argmax_diff_count`; gradient parity is explicitly not claimed.
 
 Scoped negative: within the searched memory registry scope, I did not find a prior mx1 implementation or parity receipt.
 

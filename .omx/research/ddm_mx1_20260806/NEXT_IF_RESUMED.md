@@ -18,7 +18,9 @@ Do not treat MLX parity or MLX smoke as measured in this sandbox. Torch CPU smok
 .venv/bin/python experiments/ddm_mx1_pr130_semantic_renderer.py --mode mlx-parity --device gpu --pairs 2 --steps 2 --input-cache /Volumes/VertigoDataTier/pact/ddm_hb1_20260806/inputs/tq1c_seg_cache.pt --target-cache /Volumes/VertigoDataTier/pact/ddm_hb1_20260806/inputs/gt_seg_cache.pt --init /Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo/artifacts/checkpoints/semantic_renderer_w96_b4_qat4_12k.pt --run-dir /Volumes/VertigoDataTier/pact/ddm_mx1_20260806/launch/parity_metal --out /Volumes/VertigoDataTier/pact/ddm_mx1_20260806/launch/parity_metal/result.json
 ```
 
-Required parity fields before training claim: `raw_frame_max_abs`, `seg_argmax_equal`, `loss_abs_delta`, and matching loss phase.
+Required parity fields before training claim: `raw_frame_max_abs`, `seg_argmax_equal`, `seg_argmax_diff_count`, `loss_abs_delta`, `token_batch_shape`, `scorer_batch_shape`, adapter identity, and matching loss phase. Because #855 found systematic default-adapter argmax flips, `seg_argmax_diff_count` must be reported even if it is nonzero.
+
+Gradient parity is not implemented in this mode. If the resumed run wants to make a training-mechanism parity claim rather than a forward/loss-only research-signal claim, add one real-input torch-CPU vs MLX gradient-parity check with per-tensor max relative differences before banking the trainer.
 
 2. If parity is admissible, run n32:
 

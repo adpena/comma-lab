@@ -11,8 +11,9 @@ Axis labels:
 | --- | --- | --- |
 | lifted PR130 torch CPU forward/curriculum behavior | PASS | focused tests `4 passed`; output shape `(2,3,12,16)`, bounded `[0,255]`, deterministic same-seed output equal |
 | torch CPU -> MLX-CPU raw frame parity | BLOCKED-LOCAL-RUNTIME | max-abs not measured; local MLX probe fails before array execution with `[metal::load_device] No Metal device available` |
-| torch CPU -> MLX-CPU scorer argmax parity | BLOCKED-LOCAL-RUNTIME | argmax parity not measured for same reason |
+| torch CPU -> MLX-CPU scorer argmax parity | BLOCKED-LOCAL-RUNTIME | argmax diff count not measured for same reason; MAIN must report exact count on real cache pairs because the default MLX conv adapter has a known #855 hazard |
 | torch CPU -> MLX-CPU one-step loss parity | BLOCKED-LOCAL-RUNTIME | loss delta not measured for same reason |
+| torch CPU -> MLX-CPU gradient parity | NOT-CLAIMED | no gradient-parity result exists locally; any later training claim must add it or remain scoped to forward/loss research-signal |
 | MLX-CPU n=2 smoke | BLOCKED-LOCAL-RUNTIME | `--mode mlx-train` exits fail-closed with rc 2 and writes blocker JSON |
 | lifted torch CPU n=2 smoke on real OUR label payloads | PASS-SMOKE-ONLY | loss `0.004268820863217115 -> 0.004265481140464544`; batch d_seg stayed `0.0042317709885537624`; `4.949445009231567` s/step; resume load OK |
 
@@ -43,6 +44,15 @@ MLX blocked artifacts:
 | --- | ---: | --- |
 | `/Volumes/VertigoDataTier/pact/ddm_mx1_20260806/mlx_parity_probe/result.json` | 6517 | `682cb5a2a35064fc9dd9a686a77270a52d6cc100d9b4d2fcd901ef4b9fa7f0db` |
 | `/Volumes/VertigoDataTier/pact/ddm_mx1_20260806/mlx_block_probe/result.json` | 6527 | `16f31e4d6c03296f00656db42a46dc7fa9d0d1feead6c1329c30ba7bf6573675` |
+
+## MAIN Amendment Boundaries
+
+The MAIN amendment in `.omx/research/ddm_mx1_20260806/CHARTER_AMENDMENT_MAIN.md` is honored as follows:
+
+- Parity PASS is not claimed locally.
+- The implemented `mlx-parity` mode uses real built label caches, not synthetic tensors.
+- The implemented `mlx-parity` JSON reports token/scorer batch shapes, the MLX SegNet adapter name, `seg_argmax_equal`, and `seg_argmax_diff_count`.
+- Gradient parity is not claimed by this mode; any later training result must either add one real-input gradient parity receipt or remain explicitly scoped to forward/loss research-signal.
 
 ## Source Closure
 
