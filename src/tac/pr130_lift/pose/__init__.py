@@ -8,4 +8,5 @@ __all__ = [
     "mlx_pose_carrier",
     "repack_race",
     "source_loader",
+    "train_pose_carrier_full_resumable",
 ]
