@@ -1,0 +1,292 @@
+{
+ "schema": "ddm_et4_solve_within_cvp_n600.v1",
+ "captured_at_utc": "2026-08-06T16:23:36.959548Z",
+ "git": "9522a5d361896760e181f70e7df80b4aeb741c4d",
+ "axis": "[macOS-CPU frozen-scorer advisory]",
+ "score_claim": false,
+ "promotion_eligible": false,
+ "charter": {
+  "path": ".omx/tmp/codex_runs/et4_prompt.md",
+  "common_contract": ".omx/tmp/codex_runs/_common_contract.md",
+  "main_override_recorded_verbatim": "et3 measured eta 0.3562364 (2.083x bar 0.1710048742) with pose ratios 0.8128/1.0031/1.1284 (min/med/max) and correctly withheld under its pre-registered per-pair-max guard. MAIN override BY S-ARITHMETIC (m67 pace-vs-direction, m52 never-binary-judgment): net seg+rate win ~= 0.3562*0.18039 - 0.0308 ~= -0.0335 S vs worst-case pose cost (max ratio applied to ALL pairs) ~= +0.0053 S \u2014 6x margin even at the impossible tail; the n600 MEAN pose ratio is the real quantity and THIS RUN MEASURES IT. Subset caveat honored: the n=32 set's pose behavior may not project (m96 axis law) \u2014 which is an argument FOR the measurement, not against it."
+ },
+ "selection": {
+  "mode": "bounded_chunk",
+  "requested_pairs": [
+   0,
+   1,
+   2,
+   3,
+   4,
+   5,
+   6,
+   7
+  ],
+  "requested_count": 8,
+  "population": 600,
+  "chunk_max_contract": 120
+ },
+ "parent": {
+  "archive": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/candidate_archives/move_0023_snap_r00_c12_L13.zip.receipt-bytes",
+  "archive_sha256": "b35e756829306a85ec2ad51634bde74523d89df9046c682253176b393bd59c06",
+  "archive_bytes": 357837,
+  "expected_sha256": "b35e756829306a85ec2ad51634bde74523d89df9046c682253176b393bd59c06",
+  "not_tq1c_base": true,
+  "baseline_S": 0.7534578126155775,
+  "baseline_d_seg": 0.004305419922,
+  "baseline_d_pose": 0.000716508925
+ },
+ "mechanism": {
+  "solve": "SW1 solve-within null-basis, delta=Nc, c-space objective",
+  "realizer": "DK1 CVP/Babai private-support integer realizer, full requested mask per pair",
+  "runner_precedent": "ET3 commit 6484a51de6",
+  "no_reduced_form": true
+ },
+ "vo2_element_grade_vector": {
+  "schema": "ddm_vo2_r2_element_decomposition.row.v1",
+  "instrument_id": "ddm_et4_solve_within_cvp_n600_composed_chain",
+  "path": "experiments/ddm_et4_solve_within_cvp_n600.py",
+  "provenance_family": "et4",
+  "status": "R2_GRADED_CHECKPOINT",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "elements": [
+   {
+    "name": "initialization",
+    "form_grade": "OPTIMAL-RECEIPT",
+    "note": "frontier parent archive sha/bytes are verified before any pair runs"
+   },
+   {
+    "name": "proposal_step_rule",
+    "form_grade": "OPTIMAL-RECEIPT",
+    "note": "SW1 c-space delta=Nc solve-within step; no reduced/project-after form"
+   },
+   {
+    "name": "stopping_rule",
+    "form_grade": "OPTIMAL-RECEIPT",
+    "note": "every completed row carries a selected CapStopReceipt; cap_bound is not convergence evidence"
+   },
+   {
+    "name": "metric_inner_product",
+    "form_grade": "OPTIMAL-RECEIPT",
+    "note": "chartered SW1 score-metric objective using margin saliency weights; no global MS4D metric claim beyond this chain",
+    "lambda_saliency": 1.0,
+    "outside_weight": 0.02,
+    "saliency_clip": 20.0
+   },
+   {
+    "name": "subset_sampling",
+    "form_grade": "NAIVE-NAMED",
+    "note": "current checkpoint is a prefix timing slice; n=8 banks nothing",
+    "completed_rows": 8,
+    "population": 600
+   },
+   {
+    "name": "realization",
+    "form_grade": "OPTIMAL-RECEIPT",
+    "note": "DK1 CVP/Babai finite kept-scope realizer; no global MIQP claim"
+   },
+   {
+    "name": "projection_constraint_handling",
+    "form_grade": "OPTIMAL-RECEIPT",
+    "note": "pose-null basis is enforced inside the solve, not projected after the fact"
+   },
+   {
+    "name": "tie_breaks",
+    "form_grade": "UNKNOWN",
+    "note": "local candidate enumeration order is deterministic but no global tie theorem is claimed"
+   },
+   {
+    "name": "seed_determinism",
+    "form_grade": "OPTIMAL-RECEIPT",
+    "note": "no RNG is used by ET4 row ordering or the overlay codec"
+   },
+   {
+    "name": "caches_staleness",
+    "form_grade": "OPTIMAL-RECEIPT",
+    "note": "completed rows verify decoded parent argmax and GT argmax against caches"
+   }
+  ],
+  "calibration_lineage": [
+   {
+    "kind": "receipt_or_source",
+    "ref": ".omx/research/ddm_sw1_20260806/RECEIPT.md"
+   },
+   {
+    "kind": "receipt_or_source",
+    "ref": ".omx/research/ddm_dk1_20260806/RECEIPT.md"
+   },
+   {
+    "kind": "receipt_or_source",
+    "ref": ".omx/research/ddm_rw2_20260806/RECEIPT.md"
+   },
+   {
+    "kind": "receipt_or_source",
+    "ref": ".omx/research/ddm_vo2_20260806/R2_ELEMENT_DECOMPOSITION.jsonl"
+   }
+  ],
+  "fire_order": "complete n600, byte-close archive through tac.submission_chain, then measure realized S"
+ },
+ "storage_preflight": {
+  "schema": "ddm_et4_storage_preflight.v1",
+  "bulk_dir": "/Volumes/VertigoDataTier/pact/ddm_et4_20260806",
+  "total_bytes": 2000189177856,
+  "used_bytes": 1902488662016,
+  "free_bytes": 97700515840,
+  "min_free_bytes": 21474836480,
+  "passes": true,
+  "parent_raw_bytes": 3662409600,
+  "notes": [
+   "bulk and candidate artifacts stay on SSD",
+   "no /tmp evidence path is used"
+  ]
+ },
+ "memory_preflight": {
+  "schema": "ddm_et4_memory_preflight.v1",
+  "rss_bytes": 341835776,
+  "available_bytes": 93655695360,
+  "source": "psutil"
+ },
+ "completed_pairs": [
+  0,
+  1,
+  2,
+  3,
+  4,
+  5,
+  6,
+  7
+ ],
+ "remaining_pairs_in_request": [],
+ "rows_path": "/Volumes/VertigoDataTier/pact/ddm_et4_20260806/et4_solve_within_cvp_rows.jsonl",
+ "patch_dir": "/Volumes/VertigoDataTier/pact/ddm_et4_20260806/patch_records",
+ "aggregate": {
+  "schema": "ddm_et4_aggregate.v1",
+  "n_rows": 8,
+  "population": 600,
+  "axis": "[macOS-CPU frozen-scorer advisory]",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "baseline": {
+   "S": 0.7534578126155775,
+   "d_seg": 0.004305419922,
+   "d_pose": 0.000716508925,
+   "archive_bytes": 357837,
+   "archive_sha256": "b35e756829306a85ec2ad51634bde74523d89df9046c682253176b393bd59c06"
+  },
+  "flips_before": 6160,
+  "flips_after": 5246,
+  "net_flip_reduction": 914,
+  "label_ceiling_net_fixed": 2539,
+  "eta": 0.35998424576604965,
+  "d_seg_before_completed_scope": 0.003916422526041667,
+  "d_seg_after_completed_scope": 0.0033353169759114585,
+  "d_pose_before_completed_scope": 0.0005436650690672668,
+  "d_pose_after_completed_scope": 0.0005440473515824126,
+  "pose_ratio_min": 0.9975208759595314,
+  "pose_ratio_p25": 0.9978662741886511,
+  "pose_ratio_median": 0.9992154567151883,
+  "pose_ratio_mean": 1.0010761399699157,
+  "pose_ratio_p75": 1.0022497095158698,
+  "pose_ratio_max": 1.0110802276564776,
+  "archive_bytes": null,
+  "S": null,
+  "dS_vs_named_baseline": null,
+  "delta_d_seg_vs_named_baseline": null,
+  "delta_d_pose_vs_named_baseline": null,
+  "per_class_before": {
+   "Road": {
+    "errors": 1982,
+    "sites": 358412
+   },
+   "Lane": {
+    "errors": 2595,
+    "sites": 9595
+   },
+   "Undrivable": {
+    "errors": 481,
+    "sites": 774993
+   },
+   "Movable": {
+    "errors": 779,
+    "sites": 26703
+   },
+   "MyCar": {
+    "errors": 323,
+    "sites": 403161
+   }
+  },
+  "per_class_after": {
+   "Road": {
+    "errors": 1639,
+    "sites": 358412
+   },
+   "Lane": {
+    "errors": 2400,
+    "sites": 9595
+   },
+   "Undrivable": {
+    "errors": 413,
+    "sites": 774993
+   },
+   "Movable": {
+    "errors": 518,
+    "sites": 26703
+   },
+   "MyCar": {
+    "errors": 276,
+    "sites": 403161
+   }
+  },
+  "per_class_delta_errors": {
+   "Road": -343,
+   "Lane": -195,
+   "Undrivable": -68,
+   "Movable": -261,
+   "MyCar": -47
+  },
+  "cap_stop_counts": {
+   "cap_bound": 8
+  },
+  "dk1_blocks_realized": 3116,
+  "dk1_exact_declared_scope_blocks": 3116,
+  "full_population_complete": false
+ },
+ "archive": null,
+ "recall_evidence": {
+  "sources_read": [
+   ".omx/tmp/codex_runs/et4_prompt.md",
+   ".omx/tmp/codex_runs/_common_contract.md",
+   "PROGRAM.md",
+   "CLAUDE.md",
+   "AGENTS.md",
+   "docs/operating_manual_craft_handoff.md",
+   ".omx/state/main_hot_state.md",
+   ".omx/research/ddm_et3_20260806/RECEIPT.md",
+   ".omx/research/ddm_sw1_20260806/RECEIPT.md",
+   ".omx/research/ddm_dk1_20260806/RECEIPT.md",
+   ".omx/research/ddm_rw2_20260806/RECEIPT.md",
+   ".omx/research/ddm_vo2_20260806/RECEIPT.md",
+   "experiments/ddm_et3_solve_within_cvp_phase_field.py",
+   "experiments/ddm_tq1_optimal_token_edit.py",
+   "src/tac/submission_chain.py"
+  ],
+  "queries": [
+   "et4|solve-within+CVP|DK1 CVP|phase field sidecar|image-domain correction|overlay|delta sidecar",
+   "phase_b_realized|candidate_archives|move_0023|current_offsets|block16_offsets|receipt-bytes"
+  ],
+  "beyond_charter_findings_that_changed_plan": [
+   "ET3 did not persist receiver-consumable frame deltas; ET4 adds per-pair patch records before any byte-close claim.",
+   "No existing ET4 sidecar grammar was found in the searched scope; ET4 uses an explicit counted overlay grammar rather than pretending image-domain deltas are IX2 token edits.",
+   "TQ1 proves the parent archive restages through the IX2 payload and the qo1 runtime decoder; ET4 wraps that decoder and applies counted frame_1 patches.",
+   "RW2/VO2 constrain the DK1 claim to bounded finite kept-set optimality, so ET4 carries exact_declared_scope counts and no global MIQP claim."
+  ]
+ },
+ "boundaries": [
+  "macOS CPU advisory only unless run_upstream_evaluate returns a contest axis on contest hardware",
+  "score_claim=false in all local receipts",
+  "no pointer promotion; MAIN adjudicates pointer updates",
+  "DK1 CVP exactness is declared finite kept-scope only",
+  "archive score remains absent until all 600 patches exist and the staged archive is evaluated"
+ ]
+}
