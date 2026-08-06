@@ -1814,6 +1814,22 @@ def section_fm_advisory(run_dir: Path | None, data: dict) -> tuple[list[str], di
     lines: list[str] = ["fm-advisory (on-device FM · advisory · NON-PROMOTABLE):"]
     secdata: dict = {"available": True}
     try:
+        cap = _fm.capability_report(timeout=8)
+        if cap:
+            secdata["capability_report"] = cap
+            flags = [
+                f"guided={'Y' if cap.get('supports_guided_generation') else 'n'}",
+                f"tools={'Y' if cap.get('supports_tools') else 'n'}",
+                f"stream={'Y' if cap.get('supports_streaming') else 'n'}",
+                f"options={'Y' if cap.get('supports_generation_options') else 'n'}",
+            ]
+            avail = "Y" if cap.get("model_available") else "n"
+            lines.append(
+                "  capability: "
+                f"sdk={cap.get('sdk_version') or '?'} available={avail} "
+                f"backend={cap.get('backend') or '?'} "
+                + " ".join(flags)
+            )
         # (a) REGIME supplement — telemetry text from shadow classification + numeric hint from annulus.
         shadow = data.get("shadow") if isinstance(data.get("shadow"), dict) else None
         classification = (shadow or {}).get("classification")

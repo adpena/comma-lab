@@ -1,0 +1,804 @@
+diff --git a/fmtools/__init__.py b/fmtools/__init__.py
+index 3b41273..2f1a032 100644
+--- a/fmtools/__init__.py
++++ b/fmtools/__init__.py
+@@ -14,14 +14,19 @@ from .exceptions import AppleFMSetupError, raise_setup_error
+ __all__ = [
+     "AppleFMSetupError",
+     "Extract",
++    "FMCapabilityReport",
++    "FMGenerationControls",
+     "Sink",
+     "Source",
++    "capability_report",
+     "enhanced_debug",
+     "export_transcript_dict",
+     "export_transcript_json",
+     "local_extract",
++    "respond",
+     "resume_session_from_transcript",
+     "stream_extract",
++    "stream_response",
+ ]
+ 
+ 
+@@ -48,6 +53,27 @@ def __getattr__(name: str) -> Any:
+             raise
+         return stream_extract
+ 
++    if name in {"FMCapabilityReport", "FMGenerationControls", "capability_report", "respond", "stream_response"}:
++        try:
++            from .session import (
++                FMCapabilityReport,
++                FMGenerationControls,
++                capability_report,
++                respond,
++                stream_response,
++            )
++        except ModuleNotFoundError as exc:
++            if exc.name == "apple_fm_sdk":
++                _raise_missing_sdk()
++            raise
++        return {
++            "FMCapabilityReport": FMCapabilityReport,
++            "FMGenerationControls": FMGenerationControls,
++            "capability_report": capability_report,
++            "respond": respond,
++            "stream_response": stream_response,
++        }[name]
++
+     if name in {
+         "export_transcript_dict",
+         "export_transcript_json",
+diff --git a/fmtools/backends/apple_sdk.py b/fmtools/backends/apple_sdk.py
+index 386b598..520b00a 100644
+--- a/fmtools/backends/apple_sdk.py
++++ b/fmtools/backends/apple_sdk.py
+@@ -3,7 +3,10 @@ from __future__ import annotations
+ import importlib
+ import json
+ from functools import lru_cache
+-from typing import Any, TypeVar, cast
++from typing import TYPE_CHECKING, Any, TypeVar, cast
++
++if TYPE_CHECKING:
++    from collections.abc import AsyncIterator
+ 
+ T = TypeVar("T")
+ 
+@@ -33,13 +36,40 @@ class AppleFMModel:
+ class AppleFMSession:
+     """Wrap ``apple_fm_sdk.LanguageModelSession`` behind a small protocol adapter."""
+ 
+-    def __init__(self, model: Any, instructions: str) -> None:
++    def __init__(self, model: Any, instructions: str, *, tools: list[Any] | None = None) -> None:
+         fm_sdk = _import_apple_fm_sdk()
+         raw_model = cast("Any", getattr(model, "raw", model))
+-        self._session = fm_sdk.LanguageModelSession(model=raw_model, instructions=instructions)
++        kwargs = {"model": raw_model, "instructions": instructions}
++        if tools is not None:
++            kwargs["tools"] = tools
++        self._session = fm_sdk.LanguageModelSession(**kwargs)
+ 
+-    async def respond(self, prompt: str, generating: type[T] | None = None) -> Any:
+-        return await self._session.respond(prompt, generating=cast("Any", generating))
++    async def respond(
++        self,
++        prompt: str,
++        generating: type[T] | T | None = None,
++        *,
++        schema: Any | None = None,
++        json_schema: dict[str, Any] | None = None,
++        options: Any | None = None,
++    ) -> Any:
++        kwargs: dict[str, Any] = {"generating": cast("Any", generating)}
++        if schema is not None:
++            kwargs["schema"] = schema
++        if json_schema is not None:
++            kwargs["json_schema"] = json_schema
++        if options is not None:
++            kwargs["options"] = options
++        return await self._session.respond(prompt, **kwargs)
++
++    async def stream_response(
++        self,
++        prompt: str,
++        *,
++        options: Any | None = None,
++    ) -> AsyncIterator[str]:
++        async for chunk in self._session.stream_response(prompt, options=options):
++            yield chunk
+ 
+     async def export_transcript_dict(self) -> dict[str, Any]:
+         return await self._session.transcript.to_dict()
+@@ -56,12 +86,18 @@ class AppleFMSession:
+         cls,
+         model: Any,
+         transcript: str | dict[str, Any],
++        *,
++        tools: list[Any] | None = None,
+     ) -> AppleFMSession:
+         fm_sdk = _import_apple_fm_sdk()
+         raw_model = cast("Any", getattr(model, "raw", model))
+         transcript_dict = json.loads(transcript) if isinstance(transcript, str) else transcript
+         transcript_obj = await fm_sdk.Transcript.from_dict(transcript_dict)
+-        raw_session = fm_sdk.LanguageModelSession.from_transcript(transcript_obj, model=raw_model)
++        raw_session = fm_sdk.LanguageModelSession.from_transcript(
++            transcript_obj,
++            model=raw_model,
++            tools=tools,
++        )
+         session = cls.__new__(cls)
+         session._session = raw_session
+         return session
+@@ -73,15 +109,32 @@ class AppleFMBackend:
+     def create_model(self) -> AppleFMModel:
+         return AppleFMModel()
+ 
+-    def __call__(self, model: Any, instructions: str) -> AppleFMSession:
+-        return AppleFMSession(model, instructions)
++    def create_session(
++        self,
++        model: Any,
++        instructions: str,
++        *,
++        tools: list[Any] | None = None,
++    ) -> AppleFMSession:
++        return AppleFMSession(model, instructions, tools=tools)
++
++    def __call__(
++        self,
++        model: Any,
++        instructions: str,
++        *,
++        tools: list[Any] | None = None,
++    ) -> AppleFMSession:
++        return self.create_session(model, instructions, tools=tools)
+ 
+     async def create_session_from_transcript(
+         self,
+         model: Any,
+         transcript: str | dict[str, Any],
++        *,
++        tools: list[Any] | None = None,
+     ) -> AppleFMSession:
+-        return await AppleFMSession.from_transcript(model, transcript)
++        return await AppleFMSession.from_transcript(model, transcript, tools=tools)
+ 
+ 
+ def build_backend() -> AppleFMBackend:
+diff --git a/fmtools/backends/ffi.py b/fmtools/backends/ffi.py
+index c426411..13cfda3 100644
+--- a/fmtools/backends/ffi.py
++++ b/fmtools/backends/ffi.py
+@@ -37,7 +37,17 @@ class FFISession:
+         self._instructions = instructions
+         self._transcript_json = _normalize_transcript_json(transcript_json)
+ 
+-    async def respond(self, prompt: str, generating=None, json_schema: dict | None = None):
++    async def respond(
++        self,
++        prompt: str,
++        generating=None,
++        *,
++        schema=None,
++        json_schema: dict | None = None,
++        options=None,
++    ):
++        if options is not None:
++            raise NotImplementedError("FFI backend does not support GenerationOptions.")
+         if generating is not None:
+             schema_factory = getattr(generating, "generation_schema", None)
+             if not callable(schema_factory):
+@@ -45,6 +55,9 @@ class FFISession:
+                     "Structured generation requires a schema type with generation_schema()."
+                 )
+             json_schema = schema_factory().to_dict()
++        elif schema is not None:
++            schema_to_dict = getattr(schema, "to_dict", None)
++            json_schema = schema_to_dict() if callable(schema_to_dict) else schema
+ 
+         if hasattr(self._library, "respond") and callable(self._library.respond):
+             payload = self._library.respond(
+diff --git a/fmtools/capabilities.py b/fmtools/capabilities.py
+new file mode 100644
+index 0000000..4bb1a6a
+--- /dev/null
++++ b/fmtools/capabilities.py
+@@ -0,0 +1,126 @@
++from __future__ import annotations
++
++import importlib
++import inspect
++from dataclasses import asdict, dataclass
++from importlib import metadata
++from typing import Any
++
++from .protocols import create_model, get_backend
++
++
++@dataclass(frozen=True)
++class FMCapabilityReport:
++    backend: str
++    sdk_package: str | None
++    sdk_version: str | None
++    model_available: bool
++    availability_reason: str | None
++    supports_guided_generation: bool
++    supports_json_schema: bool
++    supports_tools: bool
++    supports_streaming: bool
++    supports_generation_options: bool
++    supports_transcripts: bool
++    supports_model_controls: bool
++    respond_signature: str | None
++    stream_response_signature: str | None
++    error: str | None = None
++
++    def to_dict(self) -> dict[str, Any]:
++        return asdict(self)
++
++
++def capability_report(model: Any | None = None, backend: Any | None = None) -> FMCapabilityReport:
++    """Return a typed, fail-soft report of the active Foundation Models surface."""
++    active_backend = backend if backend is not None else get_backend()
++    backend_name = type(active_backend).__name__
++    error: str | None = None
++
++    try:
++        resolved_model = model if model is not None else create_model()
++    except Exception as exc:
++        resolved_model = None
++        error = f"{type(exc).__name__}: {exc}"
++
++    available = False
++    reason: str | None = None
++    if resolved_model is not None:
++        try:
++            available, raw_reason = resolved_model.is_available()
++            reason = None if raw_reason is None else str(raw_reason)
++        except Exception as exc:
++            reason = f"{type(exc).__name__}: {exc}"
++
++    sdk = _import_sdk()
++    sdk_version = _package_version("apple-fm-sdk") if sdk is not None else None
++    session_cls = getattr(sdk, "LanguageModelSession", None) if sdk is not None else None
++    model_cls = getattr(sdk, "SystemLanguageModel", None) if sdk is not None else None
++
++    respond_sig = _signature(getattr(session_cls, "respond", None))
++    stream_sig = _signature(getattr(session_cls, "stream_response", None))
++    respond_params = _signature_params(getattr(session_cls, "respond", None))
++    init_params = _signature_params(session_cls)
++    model_params = _signature_params(model_cls)
++
++    supports_guided = "generating" in respond_params or "schema" in respond_params
++    supports_json_schema = "json_schema" in respond_params
++    supports_tools = "tools" in init_params and hasattr(sdk, "Tool")
++    supports_streaming = hasattr(session_cls, "stream_response")
++    supports_options = hasattr(sdk, "GenerationOptions") and (
++        "options" in respond_params or "options" in _signature_params(getattr(session_cls, "stream_response", None))
++    )
++    supports_transcripts = hasattr(sdk, "Transcript") and hasattr(session_cls, "from_transcript")
++    supports_model_controls = any(p not in {"self", "_ptr"} for p in model_params) or hasattr(
++        sdk, "SystemLanguageModelUseCase"
++    )
++
++    return FMCapabilityReport(
++        backend=backend_name,
++        sdk_package="apple-fm-sdk" if sdk is not None else None,
++        sdk_version=sdk_version,
++        model_available=bool(available),
++        availability_reason=reason,
++        supports_guided_generation=supports_guided,
++        supports_json_schema=supports_json_schema,
++        supports_tools=supports_tools,
++        supports_streaming=supports_streaming,
++        supports_generation_options=supports_options,
++        supports_transcripts=supports_transcripts,
++        supports_model_controls=supports_model_controls,
++        respond_signature=respond_sig,
++        stream_response_signature=stream_sig,
++        error=error,
++    )
++
++
++def _import_sdk() -> Any | None:
++    try:
++        return importlib.import_module("apple_fm_sdk")
++    except Exception:
++        return None
++
++
++def _package_version(package: str) -> str | None:
++    try:
++        return metadata.version(package)
++    except metadata.PackageNotFoundError:
++        return None
++
++
++def _signature(callable_obj: Any) -> str | None:
++    if callable_obj is None:
++        return None
++    try:
++        return str(inspect.signature(callable_obj))
++    except Exception:
++        return None
++
++
++def _signature_params(callable_obj: Any) -> set[str]:
++    if callable_obj is None:
++        return set()
++    try:
++        return set(inspect.signature(callable_obj).parameters)
++    except Exception:
++        return set()
+diff --git a/fmtools/decorators.py b/fmtools/decorators.py
+index bc6567d..56ada85 100644
+--- a/fmtools/decorators.py
++++ b/fmtools/decorators.py
+@@ -22,6 +22,8 @@ def local_extract(
+     retries: int = 3,
+     debug_timing: bool = False,
+     instructions: str | None = None,
++    options: Any | None = None,
++    tools: list[Any] | None = None,
+ ) -> Callable[[F], F]:
+     """
+     A decorator that transforms a Python function into an intelligent, on-device data extractor.
+@@ -36,6 +38,8 @@ def local_extract(
+         debug_timing (bool, optional): If True, logs the time taken by the Neural Engine. Defaults to False.
+         instructions (str | None, optional): Explicit system instructions override. If omitted or blank,
+             the wrapped function's docstring is used.
++        options: Optional backend-specific generation options for each request.
++        tools: Optional ``apple_fm_sdk.Tool`` instances registered on each fresh session.
+ 
+     Returns:
+         Callable: The wrapped function returning the requested structured schema.
+@@ -75,10 +79,17 @@ def local_extract(
+             last_exception = None
+             for attempt in range(retries):
+                 # Fresh session per attempt to avoid stale conversation state on retry
+-                session = create_session(instructions=resolved_instructions, model=model)
++                session = create_session(
++                    instructions=resolved_instructions,
++                    model=model,
++                    tools=tools,
++                )
+                 try:
+                     start_time = time.perf_counter()
+-                    result = await session.respond(input_text, generating=schema)
++                    if options is None:
++                        result = await session.respond(input_text, generating=schema)
++                    else:
++                        result = await session.respond(input_text, generating=schema, options=options)
+                     elapsed = time.perf_counter() - start_time
+ 
+                     if debug_timing:
+diff --git a/fmtools/protocols.py b/fmtools/protocols.py
+index 2b6ce44..5659d17 100644
+--- a/fmtools/protocols.py
++++ b/fmtools/protocols.py
+@@ -16,6 +16,7 @@ Usage:
+ 
+ from __future__ import annotations
+ 
++import inspect
+ import logging
+ from typing import TYPE_CHECKING, Any, Protocol, TypeVar, cast, runtime_checkable
+ 
+@@ -63,7 +64,15 @@ class ModelProtocol(Protocol):
+ class SessionProtocol(Protocol):
+     """Structural interface for a language model session."""
+ 
+-    def respond(self, prompt: str, generating: type[T] | None = None) -> Awaitable[T]:
++    def respond(
++        self,
++        prompt: str,
++        generating: type[T] | T | None = None,
++        *,
++        schema: Any | None = None,
++        json_schema: dict[str, Any] | None = None,
++        options: Any | None = None,
++    ) -> Awaitable[T]:
+         """Send a prompt and return a structured (or plain) response."""
+         ...
+ 
+@@ -85,7 +94,13 @@ class TranscriptSessionProtocol(SessionProtocol, Protocol):
+ class SessionFactory(Protocol):
+     """Callable that creates a SessionProtocol from a model + instructions."""
+ 
+-    def __call__(self, model: ModelProtocol, instructions: str) -> SessionProtocol: ...
++    def __call__(
++        self,
++        model: ModelProtocol,
++        instructions: str,
++        *,
++        tools: list[Any] | None = None,
++    ) -> SessionProtocol: ...
+ 
+ 
+ @runtime_checkable
+@@ -150,6 +165,7 @@ def create_model() -> ModelProtocol:
+ def create_session(
+     instructions: str,
+     model: ModelProtocol | None = None,
++    tools: list[Any] | None = None,
+ ) -> SessionProtocol:
+     """Create a session via the active backend.
+ 
+@@ -159,13 +175,36 @@ def create_session(
+     resolved_model = model if model is not None else _create_model_from_backend(backend)
+ 
+     if callable(backend):
+-        return cast("SessionProtocol", backend(resolved_model, instructions))
++        return _call_session_factory(backend, resolved_model, instructions, tools)
+ 
+     create_session_fn = getattr(backend, "create_session", None)
+     if callable(create_session_fn):
+-        return cast("SessionProtocol", create_session_fn(resolved_model, instructions))
++        return _call_session_factory(create_session_fn, resolved_model, instructions, tools)
+ 
+     raise TypeError(
+         "Active backend must be callable(model, instructions) or "
+         f"provide create_session(); got {type(backend).__name__}"
+     )
++
++
++def _call_session_factory(
++    factory: Any,
++    model: ModelProtocol,
++    instructions: str,
++    tools: list[Any] | None,
++) -> SessionProtocol:
++    if tools is not None and _callable_accepts_tools(factory):
++        return cast("SessionProtocol", factory(model, instructions, tools=tools))
++    if tools:
++        raise NotImplementedError("Active backend does not support session tools.")
++    return cast("SessionProtocol", factory(model, instructions))
++
++
++def _callable_accepts_tools(factory: Any) -> bool:
++    try:
++        params = inspect.signature(factory).parameters
++    except Exception:
++        return False
++    if "tools" in params:
++        return True
++    return any(p.kind == inspect.Parameter.VAR_KEYWORD for p in params.values())
+diff --git a/fmtools/session.py b/fmtools/session.py
+new file mode 100644
+index 0000000..3f2c99f
+--- /dev/null
++++ b/fmtools/session.py
+@@ -0,0 +1,96 @@
++from __future__ import annotations
++
++from dataclasses import dataclass
++from typing import TYPE_CHECKING, Any, TypeVar
++
++if TYPE_CHECKING:
++    from collections.abc import AsyncIterator
++
++from .capabilities import FMCapabilityReport, capability_report
++from .exceptions import ensure_model_available
++from .protocols import create_model, create_session
++
++T = TypeVar("T")
++
++
++@dataclass(frozen=True)
++class FMGenerationControls:
++    """Portable request controls that map onto apple_fm_sdk.GenerationOptions when present."""
++
++    temperature: float | None = None
++    maximum_response_tokens: int | None = None
++    sampling: Any | None = None
++
++    def to_sdk_options(self) -> Any | None:
++        if self.temperature is None and self.maximum_response_tokens is None and self.sampling is None:
++            return None
++        import apple_fm_sdk as fm
++
++        return fm.GenerationOptions(
++            sampling=self.sampling,
++            temperature=self.temperature,
++            maximum_response_tokens=self.maximum_response_tokens,
++        )
++
++
++async def respond(
++    prompt: str,
++    *,
++    instructions: str = "",
++    generating: type[T] | T | None = None,
++    schema: Any | None = None,
++    json_schema: dict[str, Any] | None = None,
++    options: Any | None = None,
++    controls: FMGenerationControls | None = None,
++    tools: list[Any] | None = None,
++    model: Any | None = None,
++) -> Any:
++    """One-shot session response with guided generation, tools, and per-call options."""
++    resolved_model = model if model is not None else create_model()
++    ensure_model_available(resolved_model, context="respond")
++    session = create_session(instructions=instructions, model=resolved_model, tools=tools)
++    resolved_options = options if options is not None else (
++        controls.to_sdk_options() if controls is not None else None
++    )
++    kwargs: dict[str, Any] = {}
++    if generating is not None:
++        kwargs["generating"] = generating
++    if schema is not None:
++        kwargs["schema"] = schema
++    if json_schema is not None:
++        kwargs["json_schema"] = json_schema
++    if resolved_options is not None:
++        kwargs["options"] = resolved_options
++    return await session.respond(prompt, **kwargs)
++
++
++async def stream_response(
++    prompt: str,
++    *,
++    instructions: str = "",
++    options: Any | None = None,
++    controls: FMGenerationControls | None = None,
++    tools: list[Any] | None = None,
++    model: Any | None = None,
++) -> AsyncIterator[str]:
++    """Yield text snapshots from the active backend's streaming response surface."""
++    resolved_model = model if model is not None else create_model()
++    ensure_model_available(resolved_model, context="stream_response")
++    session = create_session(instructions=instructions, model=resolved_model, tools=tools)
++    stream = getattr(session, "stream_response", None)
++    if not callable(stream):
++        raise NotImplementedError("Active backend does not support stream_response().")
++    resolved_options = options if options is not None else (
++        controls.to_sdk_options() if controls is not None else None
++    )
++    async for chunk in stream(prompt, options=resolved_options):
++        yield chunk
++
++
++__all__ = [
++    "FMCapabilityReport",
++    "FMGenerationControls",
++    "capability_report",
++    "respond",
++    "stream_response",
++]
+diff --git a/pyproject.toml b/pyproject.toml
+index 7421630..69a0213 100644
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -18,7 +18,7 @@ classifiers = [
+     "Topic :: Scientific/Engineering :: Artificial Intelligence",
+ ]
+ dependencies = [
+-    "apple-fm-sdk>=0.1.1",
++    "apple-fm-sdk>=0.2.1",
+     "click>=8.3.2",
+     "dspy>=3.1.3",
+     "polars>=1.39.3",
+@@ -41,7 +41,7 @@ dev = [
+     "ty>=0.0.29",
+ ]
+ apple = [
+-    "apple-fm-sdk>=0.1.1",
++    "apple-fm-sdk>=0.2.1",
+ ]
+ 
+ [tool.pytest.ini_options]
+diff --git a/tests/test_full_sdk_surfaces.py b/tests/test_full_sdk_surfaces.py
+new file mode 100644
+index 0000000..dbef15f
+--- /dev/null
++++ b/tests/test_full_sdk_surfaces.py
+@@ -0,0 +1,194 @@
++from __future__ import annotations
++
++from unittest.mock import AsyncMock, MagicMock, patch
++
++import pytest
++
++from fmtools.backends.apple_sdk import AppleFMSession
++from fmtools.capabilities import capability_report
++from fmtools.decorators import local_extract
++from fmtools.protocols import create_session
++from fmtools.session import FMGenerationControls, respond, stream_response
++
++from .conftest import MockSchema, make_mock_model, make_mock_session
++
++
++async def test_create_session_passes_tools_to_apple_backend() -> None:
++    model = make_mock_model(available=True)
++    session = make_mock_session()
++    tool = object()
++
++    with patch("apple_fm_sdk.LanguageModelSession", return_value=session) as session_cls:
++        created = create_session("Use tools.", model=model, tools=[tool])
++
++    assert created.raw is session
++    session_cls.assert_called_once_with(
++        model=model.raw,
++        instructions="Use tools.",
++        tools=[tool],
++    )
++
++
++async def test_local_extract_forwards_options_and_tools() -> None:
++    model = make_mock_model(available=True)
++    session = make_mock_session(respond_return=MockSchema(name="Ada"))
++    option = object()
++    tool = object()
++
++    with (
++        patch("fmtools.decorators.create_model", return_value=model),
++        patch("fmtools.decorators.create_session", return_value=session) as create_session_mock,
++    ):
++
++        @local_extract(schema=MockSchema, retries=1, options=option, tools=[tool])
++        async def extract_name(text: str) -> MockSchema:
++            """Extract a name."""
++
++        result = await extract_name("Ada")
++
++    assert result == MockSchema(name="Ada")
++    create_session_mock.assert_called_once_with(
++        instructions="Extract a name.",
++        model=model,
++        tools=[tool],
++    )
++    session.respond.assert_awaited_once_with("Ada", generating=MockSchema, options=option)
++
++
++async def test_one_shot_respond_supports_json_schema_and_controls() -> None:
++    model = make_mock_model(available=True)
++    session = make_mock_session(respond_return={"label": "ok"})
++    options = object()
++    controls = MagicMock(spec=FMGenerationControls)
++    controls.to_sdk_options.return_value = options
++
++    with (
++        patch("fmtools.session.create_model", return_value=model),
++        patch("fmtools.session.create_session", return_value=session) as create_session_mock,
++    ):
++        result = await respond(
++            "Classify.",
++            instructions="Use schema.",
++            json_schema={"type": "object"},
++            controls=controls,
++            tools=[],
++        )
++
++    assert result == {"label": "ok"}
++    create_session_mock.assert_called_once_with(instructions="Use schema.", model=model, tools=[])
++    session.respond.assert_awaited_once_with(
++        "Classify.",
++        json_schema={"type": "object"},
++        options=options,
++    )
++
++
++async def test_apple_session_stream_response_yields_snapshots() -> None:
++    model = make_mock_model(available=True)
++
++    async def fake_stream(prompt: str, *, options=None):
++        assert prompt == "tell"
++        assert options == "opts"
++        yield "h"
++        yield "hi"
++
++    raw_session = MagicMock()
++    raw_session.stream_response = fake_stream
++    with patch("apple_fm_sdk.LanguageModelSession", return_value=raw_session):
++        session = AppleFMSession(model, "Stream.")
++
++    assert [chunk async for chunk in session.stream_response("tell", options="opts")] == ["h", "hi"]
++
++
++async def test_top_level_stream_response_raises_when_backend_lacks_streaming() -> None:
++    model = make_mock_model(available=True)
++    class NoStreamSession:
++        pass
++
++    session = NoStreamSession()
++
++    with (
++        patch("fmtools.session.create_model", return_value=model),
++        patch("fmtools.session.create_session", return_value=session),
++        pytest.raises(NotImplementedError),
++    ):
++        _ = [chunk async for chunk in stream_response("tell")]
++
++
++def test_generation_controls_builds_sdk_options() -> None:
++    fake_options_cls = MagicMock(return_value="options")
++    with patch("apple_fm_sdk.GenerationOptions", fake_options_cls):
++        out = FMGenerationControls(temperature=0.2, maximum_response_tokens=12).to_sdk_options()
++
++    assert out == "options"
++    fake_options_cls.assert_called_once_with(
++        sampling=None,
++        temperature=0.2,
++        maximum_response_tokens=12,
++    )
++
++
++def test_capability_report_is_typed_and_fail_soft() -> None:
++    class FakeSession:
++        def __init__(self, instructions=None, model=None, tools=None):
++            pass
++
++        async def respond(self, prompt, *, generating=None, json_schema=None, options=None):
++            return "ok"
++
++        async def stream_response(self, prompt, *, options=None):
++            yield "ok"
++
++        @classmethod
++        def from_transcript(cls, transcript, model=None, tools=None):
++            return cls()
++
++    fake_sdk = MagicMock()
++    fake_sdk.LanguageModelSession = FakeSession
++    fake_sdk.SystemLanguageModel = MagicMock
++    fake_sdk.GenerationOptions = object
++    fake_sdk.Tool = object
++    fake_sdk.Transcript = object
++    fake_sdk.SystemLanguageModelUseCase = object
++
++    with (
++        patch("fmtools.capabilities.create_model", return_value=make_mock_model(True)),
++        patch("fmtools.capabilities.importlib.import_module", return_value=fake_sdk),
++        patch("fmtools.capabilities._package_version", return_value="0.2.1"),
++    ):
++        report = capability_report()
++
++    assert report.sdk_package == "apple-fm-sdk"
++    assert report.model_available is True
++    assert report.supports_guided_generation is True
++    assert report.supports_json_schema is True
++    assert report.supports_tools is True
++    assert report.supports_streaming is True
++    assert report.supports_generation_options is True
++    assert report.supports_transcripts is True
++    assert report.to_dict()["backend"]
++
++
++async def test_apple_session_respond_forwards_all_structured_modes() -> None:
++    model = make_mock_model(available=True)
++    raw_session = MagicMock()
++    raw_session.respond = AsyncMock(return_value=MockSchema(name="Ada"))
++    with patch("apple_fm_sdk.LanguageModelSession", return_value=raw_session):
++        session = AppleFMSession(model, "Structured.")
++
++    result = await session.respond(
++        "Ada",
++        generating=MockSchema,
++        schema="schema",
++        json_schema={"type": "object"},
++        options="opts",
++    )
++
++    assert result == MockSchema(name="Ada")
++    raw_session.respond.assert_awaited_once_with(
++        "Ada",
++        generating=MockSchema,
++        schema="schema",
++        json_schema={"type": "object"},
++        options="opts",
++    )
+diff --git a/tests/test_packaging_metadata.py b/tests/test_packaging_metadata.py
+index 9c61e1e..a9b07cb 100644
+--- a/tests/test_packaging_metadata.py
++++ b/tests/test_packaging_metadata.py
+@@ -16,7 +16,7 @@ def test_pyproject_uses_pypi_apple_sdk_dependency():
+     _assert_exact_dependencies(
+         deps,
+         [
+-            "apple-fm-sdk>=0.1.1",
++            "apple-fm-sdk>=0.2.1",
+             "click>=8.3.2",
+             "dspy>=3.1.3",
+             "polars>=1.39.3",

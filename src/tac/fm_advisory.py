@@ -105,6 +105,10 @@ _FM_CLASSIFY_SCRIPT = r'''
 import asyncio, json, sys
 try:
     import apple_fm_sdk as fm
+    try:
+        from fmtools import respond as fmtools_respond
+    except Exception:
+        fmtools_respond = None
     from fmtools import local_extract
 except Exception:
     print(json.dumps({"ok": False, "reason": "fmtools-absent"})); raise SystemExit(0)
@@ -135,13 +139,22 @@ class Choice:
 async def _classify(text: str) -> Choice:
     """(instructions provided above)"""
 
+async def _classify_one(text: str) -> Choice:
+    if fmtools_respond is not None:
+        return await fmtools_respond(
+            text,
+            instructions=instructions,
+            generating=Choice,
+        )
+    return await _classify(text)
+
 async def _main():
     out = []
     for it in items:
         _id = it.get("id") if isinstance(it, dict) else None
         txt = str((it.get("text") if isinstance(it, dict) else it) or "")[:1800]
         try:
-            r = await _classify(txt)
+            r = await _classify_one(txt)
             lab = str(getattr(r, "label", "") or "")
             if lab not in labels:
                 lab = None
@@ -155,6 +168,85 @@ async def _main():
     print(json.dumps({"ok": True, "results": out}))
 
 asyncio.run(_main())
+'''
+
+_FM_CAPABILITY_SCRIPT = r'''
+import inspect, importlib.metadata, json
+
+def _sig(obj):
+    try:
+        return str(inspect.signature(obj))
+    except Exception:
+        return None
+
+def _params(obj):
+    try:
+        return set(inspect.signature(obj).parameters)
+    except Exception:
+        return set()
+
+try:
+    import apple_fm_sdk as fm
+except Exception as exc:
+    print(json.dumps({"ok": False, "reason": "apple-fm-sdk-absent",
+                      "error": "%s: %s" % (type(exc).__name__, exc)}))
+    raise SystemExit(0)
+
+try:
+    from fmtools import capability_report as fmtools_capability_report
+except Exception:
+    fmtools_capability_report = None
+
+if callable(fmtools_capability_report):
+    try:
+        report = fmtools_capability_report()
+        if hasattr(report, "to_dict"):
+            report = report.to_dict()
+        print(json.dumps({"ok": True, "report": report}))
+        raise SystemExit(0)
+    except Exception:
+        pass
+
+try:
+    version = importlib.metadata.version("apple-fm-sdk")
+except Exception:
+    version = None
+
+available = False
+reason = None
+try:
+    model = fm.SystemLanguageModel()
+    available, reason = model.is_available()
+except Exception as exc:
+    reason = "%s: %s" % (type(exc).__name__, exc)
+
+session_cls = getattr(fm, "LanguageModelSession", None)
+model_cls = getattr(fm, "SystemLanguageModel", None)
+respond_params = _params(getattr(session_cls, "respond", None))
+stream_params = _params(getattr(session_cls, "stream_response", None))
+init_params = _params(session_cls)
+model_params = _params(model_cls)
+report = {
+    "backend": "direct-apple_fm_sdk",
+    "sdk_package": "apple-fm-sdk",
+    "sdk_version": version,
+    "model_available": bool(available),
+    "availability_reason": None if reason is None else str(reason),
+    "supports_guided_generation": "generating" in respond_params or "schema" in respond_params,
+    "supports_json_schema": "json_schema" in respond_params,
+    "supports_tools": "tools" in init_params and hasattr(fm, "Tool"),
+    "supports_streaming": hasattr(session_cls, "stream_response"),
+    "supports_generation_options": hasattr(fm, "GenerationOptions") and (
+        "options" in respond_params or "options" in stream_params
+    ),
+    "supports_transcripts": hasattr(fm, "Transcript") and hasattr(session_cls, "from_transcript"),
+    "supports_model_controls": any(p not in {"self", "_ptr"} for p in model_params)
+        or hasattr(fm, "SystemLanguageModelUseCase"),
+    "respond_signature": _sig(getattr(session_cls, "respond", None)),
+    "stream_response_signature": _sig(getattr(session_cls, "stream_response", None)),
+    "error": None,
+}
+print(json.dumps({"ok": True, "report": report}))
 '''
 
 
@@ -221,9 +313,17 @@ def _cache_put(key: str, row: dict) -> None:
 def _run_job(fm_py: str, job: dict, timeout: int) -> dict | None:
     """Run ONE classify job under the fmtools venv. Returns the parsed payload dict, or
     None on any failure/timeout (fail-silent by construction). Tests monkeypatch this."""
+    return _run_script(fm_py, _FM_CLASSIFY_SCRIPT, job, timeout)
+
+
+def _run_capability_job(fm_py: str, timeout: int) -> dict | None:
+    return _run_script(fm_py, _FM_CAPABILITY_SCRIPT, {}, timeout)
+
+
+def _run_script(fm_py: str, script: str, job: dict, timeout: int) -> dict | None:
     try:
         proc = subprocess.run(
-            [fm_py, "-c", _FM_CLASSIFY_SCRIPT],
+            [fm_py, "-c", script],
             input=json.dumps(job),
             capture_output=True,
             text=True,
@@ -324,6 +424,23 @@ def classify_one(
     """Single-text convenience over ``classify``. None when unavailable / failed."""
     out = classify([text], labels, instructions, timeout=timeout, cache=cache)
     return out[0] if out else None
+
+
+def capability_report(*, timeout: int = 10) -> dict | None:
+    """Typed fmtools / apple-fm-sdk capability report, or None when unavailable.
+
+    The report is advisory-only and fail-open, matching the classifier boundary. It is meant
+    for digest visibility: SDK version, model availability, structured generation, tools,
+    streaming, options, transcripts, and model/control support.
+    """
+    fm_py = fm_python()
+    if not fm_py:
+        return None
+    payload = _run_capability_job(fm_py, timeout)
+    if payload is None or not payload.get("ok"):
+        return None
+    report = payload.get("report")
+    return report if isinstance(report, dict) else None
 
 
 # ─────────────────────────── (a) REGIME supplement ───────────────────────────

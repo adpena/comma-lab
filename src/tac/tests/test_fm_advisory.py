@@ -30,6 +30,7 @@ def test_all_entry_points_degrade_to_none_when_absent(monkeypatch) -> None:
     assert fa.charter_class("build this") is None
     assert fa.mechanism_reduction_language("quick toy run") is None
     assert fa.classify_confounds([{"failure_id": "f"}], ["c1"]) is None
+    assert fa.capability_report() is None
     assert fa.shadow_advisory(telemetry_texts=[{"a": 1}], event_texts=[{"b": 2}]) is None
 
 
@@ -230,6 +231,36 @@ def test_classify_confounds_maps_none(monkeypatch) -> None:
     monkeypatch.setattr(fa, "_run_job", _run)
     rows = fa.classify_confounds([{"failure_id": "x", "symptom": "spike"}], ["spike_deadlock"])
     assert rows is not None and rows[0]["matched_class"] is None
+
+
+def test_capability_report_shape(monkeypatch) -> None:
+    monkeypatch.setattr(fa, "fm_python", lambda: "/fake/py")
+
+    def _run_capability(_fm_py, _timeout):
+        return {
+            "ok": True,
+            "report": {
+                "backend": "AppleFMBackend",
+                "sdk_version": "0.2.1",
+                "model_available": True,
+                "supports_guided_generation": True,
+                "supports_tools": True,
+                "supports_streaming": True,
+                "supports_generation_options": True,
+            },
+        }
+
+    monkeypatch.setattr(fa, "_run_capability_job", _run_capability)
+    report = fa.capability_report(timeout=3)
+    assert report is not None
+    assert report["sdk_version"] == "0.2.1"
+    assert report["supports_guided_generation"] is True
+
+
+def test_capability_report_fail_open(monkeypatch) -> None:
+    monkeypatch.setattr(fa, "fm_python", lambda: "/fake/py")
+    monkeypatch.setattr(fa, "_run_capability_job", lambda *_a, **_k: {"ok": False})
+    assert fa.capability_report(timeout=3) is None
 
 
 def test_shadow_advisory_bundle(monkeypatch) -> None:

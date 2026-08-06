@@ -59,9 +59,20 @@ def test_section_renders_regime_and_agreement(monkeypatch) -> None:
         return {"ok": True, "results": [{"id": it["id"], "label": lab, "rationale": "cited",
                                          "classifier": "apple-fm-on-device"} for it in job["items"]]}
     monkeypatch.setattr(fa, "_run_job", _run)
+    monkeypatch.setattr(fa, "capability_report", lambda **_k: {
+        "backend": "AppleFMBackend",
+        "sdk_version": "0.2.1",
+        "model_available": True,
+        "supports_guided_generation": True,
+        "supports_tools": True,
+        "supports_streaming": True,
+        "supports_generation_options": True,
+    })
     lines, data = cd.section_fm_advisory(None, _data_with_regime())
     assert lines[0].startswith("fm-advisory (on-device FM")
     assert data["available"] is True
+    assert data["capability_report"]["sdk_version"] == "0.2.1"
+    assert any("capability: sdk=0.2.1" in ln and "guided=Y" in ln for ln in lines)
     assert any("regime: fm=lane-erosion" in ln and "[AGREE]" in ln for ln in lines)
     # duty-relevance secondary hint present, P8 order note included
     assert any("duty-relevance (secondary hint; P8 order unchanged)" in ln for ln in lines)
