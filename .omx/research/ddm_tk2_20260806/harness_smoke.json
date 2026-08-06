@@ -1,0 +1,256 @@
+{
+  "axis": "[macOS-CPU frozen-SegNet harness-smoke]",
+  "candidate_results": [
+    {
+      "candidate_id": "c0_flat_paint",
+      "chunks": [
+        {
+          "checkpoint": "/Users/adpena/Projects/pact/.omx/research/ddm_tk2_20260806/stage_checkpoints/c0_flat_paint/chunk_0000_0004.json",
+          "chunk_start": 0,
+          "chunk_stop": 4
+        }
+      ],
+      "d_seg": 0.008454640706380209,
+      "d_seg_by_pair": [
+        0.0082855224609375,
+        0.007975260416666666,
+        0.0093994140625,
+        0.008158365885416666
+      ],
+      "errors": 6649,
+      "pair_count": 4,
+      "pair_start": 0,
+      "per_class": [
+        {
+          "class_id": 0,
+          "class_name": "Road",
+          "d_seg_class": 0.02357510058113545,
+          "errors": 4219,
+          "sites": 178960
+        },
+        {
+          "class_id": 1,
+          "class_name": "Lane",
+          "d_seg_class": 0.30967223004222805,
+          "errors": 1540,
+          "sites": 4973
+        },
+        {
+          "class_id": 2,
+          "class_name": "Undrivable",
+          "d_seg_class": 1.8085144862010344e-05,
+          "errors": 7,
+          "sites": 387058
+        },
+        {
+          "class_id": 3,
+          "class_name": "Movable",
+          "d_seg_class": 0.056255003274870825,
+          "errors": 773,
+          "sites": 13741
+        },
+        {
+          "class_id": 4,
+          "class_name": "MyCar",
+          "d_seg_class": 0.0005453644025780862,
+          "errors": 110,
+          "sites": 201700
+        }
+      ],
+      "provenance": "fp1 measured palette; positive control target is the tk1-cited flat-paint floor near d_seg 0.008305 on n600 when driven from GT argmax",
+      "score_claim": false,
+      "sites": 786432,
+      "status": "measured_harness_smoke",
+      "title": "C0 flat-paint prototype colors",
+      "wall_seconds_total": 1.176136000547558
+    },
+    {
+      "candidate_id": "c1_v15_template_paint",
+      "chunks": [
+        {
+          "checkpoint": "/Users/adpena/Projects/pact/.omx/research/ddm_tk2_20260806/stage_checkpoints/c1_v15_template_paint/chunk_0000_0004.json",
+          "chunk_start": 0,
+          "chunk_stop": 4
+        }
+      ],
+      "d_seg": 0.010585784912109375,
+      "d_seg_by_pair": [
+        0.0093994140625,
+        0.011866251627604166,
+        0.011301676432291666,
+        0.009775797526041666
+      ],
+      "errors": 8325,
+      "pair_count": 4,
+      "pair_start": 0,
+      "per_class": [
+        {
+          "class_id": 0,
+          "class_name": "Road",
+          "d_seg_class": 0.036276262852033975,
+          "errors": 6492,
+          "sites": 178960
+        },
+        {
+          "class_id": 1,
+          "class_name": "Lane",
+          "d_seg_class": 0.2606072793082646,
+          "errors": 1296,
+          "sites": 4973
+        },
+        {
+          "class_id": 2,
+          "class_name": "Undrivable",
+          "d_seg_class": 0.00013951397464979408,
+          "errors": 54,
+          "sites": 387058
+        },
+        {
+          "class_id": 3,
+          "class_name": "Movable",
+          "d_seg_class": 0.02510734298813769,
+          "errors": 345,
+          "sites": 13741
+        },
+        {
+          "class_id": 4,
+          "class_name": "MyCar",
+          "d_seg_class": 0.0006841844323252355,
+          "errors": 138,
+          "sites": 201700
+        }
+      ],
+      "provenance": "fp1 palette plus v15 lane-boundary scorer-solved template color (51,255,204) and v14 movable prototype (107,0,114); no training",
+      "score_claim": false,
+      "sites": 786432,
+      "status": "measured_harness_smoke",
+      "title": "C1 v14/v15 analytic margin paint",
+      "wall_seconds_total": 1.268157375510782
+    },
+    {
+      "candidate_id": "c2_boundary_aa",
+      "chunks": [
+        {
+          "checkpoint": "/Users/adpena/Projects/pact/.omx/research/ddm_tk2_20260806/stage_checkpoints/c2_boundary_aa/chunk_0000_0004.json",
+          "chunk_start": 0,
+          "chunk_stop": 4
+        }
+      ],
+      "d_seg": 0.010674794514973959,
+      "d_seg_by_pair": [
+        0.009511311848958334,
+        0.011861165364583334,
+        0.01141357421875,
+        0.009913126627604166
+      ],
+      "errors": 8395,
+      "pair_count": 4,
+      "pair_start": 0,
+      "per_class": [
+        {
+          "class_id": 0,
+          "class_name": "Road",
+          "d_seg_class": 0.0369132767098793,
+          "errors": 6606,
+          "sites": 178960
+        },
+        {
+          "class_id": 1,
+          "class_name": "Lane",
+          "d_seg_class": 0.25135732957973056,
+          "errors": 1250,
+          "sites": 4973
+        },
+        {
+          "class_id": 2,
+          "class_name": "Undrivable",
+          "d_seg_class": 0.00016018271163494876,
+          "errors": 62,
+          "sites": 387058
+        },
+        {
+          "class_id": 3,
+          "class_name": "Movable",
+          "d_seg_class": 0.026126191689105596,
+          "errors": 359,
+          "sites": 13741
+        },
+        {
+          "class_id": 4,
+          "class_name": "MyCar",
+          "d_seg_class": 0.000585027268220129,
+          "errors": 118,
+          "sites": 201700
+        }
+      ],
+      "provenance": "#149 survival-wall lesson: all-class boundary band dominates through-R errors; this applies a deterministic 4-neighbor coverage blend before R",
+      "score_claim": false,
+      "sites": 786432,
+      "status": "measured_harness_smoke",
+      "title": "C2 C1 plus boundary coverage treatment",
+      "wall_seconds_total": 1.2469395422376692
+    }
+  ],
+  "candidate_unavailable": [
+    {
+      "candidate_id": "c3_tr1_onehot_retarget",
+      "checkpoint_candidate": "/Volumes/VertigoDataTier/pact/ddm_tb1_20260728/t2_n600_lotto/checkpoints/stage_seg_trunk_tau_final.npz",
+      "reason": "C3 refused: no compatible TR1 one-hot input adapter is declared in the banked LOTTO checkpoints. TR1 consumes its own token/code surface; retargeting it to one-hot class planes without a real adapter or training cell would be fake.",
+      "score_claim": false,
+      "status": "blocked_fail_closed"
+    }
+  ],
+  "chunk_size": 4,
+  "claim_scorer_slot": false,
+  "config_sha256": "ab2beab9489ebffbae5254c2549c9011f097aa268f439c03e7aef21f987d2bd5",
+  "host": "Primary.local",
+  "pair_count": 4,
+  "pair_start": 0,
+  "platform": "macOS-26.4-arm64-arm-64bit-Mach-O",
+  "python": "3.13.12 (main, Mar 10 2026, 18:26:32) [Clang 21.1.4 ]",
+  "r_path": "torch_cpu_bicubic_to_camera_uint8_then_segnet_preprocess_bilinear",
+  "schema": "ddm_tk2_harness_smoke_v1",
+  "score_claim": false,
+  "source_verification": {
+    "artifact_boundary": "tk1 did not persist a standalone 142001-byte full stream; this harness verifies the persisted source-label array plus subset real-coder roundtrip before rendering",
+    "gt_labels_file_sha256": "b74a14b226a5aceb5824899898bcb06e5413c54b7db2441268da7bc91a10db5d",
+    "gt_labels_file_sha256_expected": "b74a14b226a5aceb5824899898bcb06e5413c54b7db2441268da7bc91a10db5d",
+    "gt_labels_file_sha256_match": true,
+    "gt_labels_path": "/Volumes/VertigoDataTier/pact/ddm_ph1_lstars_u8.npy",
+    "gt_labels_raw_sha256_expected_full_n600": "f2c8be94774780bda718adf337900403a8533b6ffa1352b5aae19e200a005557",
+    "gt_window_raw_sha256": "df5d8a9a5a9763d6399c3d95438f8915cee83f7b135670881d909354e9d0860f",
+    "schema": "ddm_tk2_source_verification_v1",
+    "semantic_labels_file_sha256": "764a244c4890b22a67c4dbe95a959e970c29328778d41ffe4deb85f5b650eee6",
+    "semantic_labels_file_sha256_expected": "764a244c4890b22a67c4dbe95a959e970c29328778d41ffe4deb85f5b650eee6",
+    "semantic_labels_file_sha256_match": true,
+    "semantic_labels_path": "/Volumes/VertigoDataTier/pact/ddm_et2_20260806/parent_score/parent_tq1c_argmax_n600.npy",
+    "semantic_labels_raw_sha256_expected_full_n600": "a7dd6f4271eedfa877f6499348de5f9dae2d97311f9e98f4f534908eb66e044e",
+    "semantic_window_raw_sha256": "a8ad75711fcf75638ebe1c21b8aa66d52288210c0dd5f3b88fd1ee6b24cdea16",
+    "source_file_matches_expected": true,
+    "subset_context_arith_bytes_kt_alpha_0_5": 1809.22699960222,
+    "subset_context_count": 1322,
+    "subset_real_coder_roundtrip": {
+      "bit_exact_roundtrip": true,
+      "closed_form_bytes_laplace": 2125.798826338975,
+      "coded_bytes": 2126,
+      "coded_over_closed": 1.0000946343833352,
+      "subset_frames": 4
+    },
+    "tk1_receipt_path": "/Users/adpena/Projects/pact/.omx/research/ddm_tk1_20260806/RECEIPT.md",
+    "tk1_selected_context_arith_bytes_from_receipt": 142001,
+    "window_count": 4,
+    "window_start": 0,
+    "window_stop": 4
+  },
+  "ssd_preflight": {
+    "free_bytes": 97702735872,
+    "host": "Primary.local",
+    "path": "/Volumes/VertigoDataTier/pact/ddm_tk2_20260806",
+    "pid": 59233,
+    "probe_sha256": "448760f93b11a100e123416af777755fccb30aa0348f71ef93ad240e7985c2bf",
+    "schema": "ddm_tk2_ssd_preflight_v1",
+    "total_bytes": 2000189177856,
+    "written_at_utc": "2026-08-06T15:41:04+00:00"
+  },
+  "written_at_utc": "2026-08-06T15:41:11+00:00"
+}

@@ -1,0 +1,78 @@
+{
+  "axis": "[macOS-CPU frozen-SegNet harness-smoke]",
+  "candidate_id": "c2_boundary_aa",
+  "chunk_start": 0,
+  "chunk_stop": 4,
+  "config_sha256": "ab2beab9489ebffbae5254c2549c9011f097aa268f439c03e7aef21f987d2bd5",
+  "result": {
+    "candidate_id": "c2_boundary_aa",
+    "d_seg_by_pair": [
+      0.009511311848958334,
+      0.011861165364583334,
+      0.01141357421875,
+      0.009913126627604166
+    ],
+    "pair_count": 4,
+    "per_class": [
+      {
+        "class_id": 0,
+        "class_name": "Road",
+        "d_seg_class": 0.0369132767098793,
+        "errors": 6606,
+        "share_of_total_errors": 0.7868969624776653,
+        "sites": 178960
+      },
+      {
+        "class_id": 1,
+        "class_name": "Lane",
+        "d_seg_class": 0.25135732957973056,
+        "errors": 1250,
+        "share_of_total_errors": 0.14889815366289458,
+        "sites": 4973
+      },
+      {
+        "class_id": 2,
+        "class_name": "Undrivable",
+        "d_seg_class": 0.00016018271163494876,
+        "errors": 62,
+        "share_of_total_errors": 0.007385348421679571,
+        "sites": 387058
+      },
+      {
+        "class_id": 3,
+        "class_name": "Movable",
+        "d_seg_class": 0.026126191689105596,
+        "errors": 359,
+        "share_of_total_errors": 0.042763549731983326,
+        "sites": 13741
+      },
+      {
+        "class_id": 4,
+        "class_name": "MyCar",
+        "d_seg_class": 0.000585027268220129,
+        "errors": 118,
+        "share_of_total_errors": 0.01405598570577725,
+        "sites": 201700
+      }
+    ],
+    "post_r_camera_rgb_sha256": "64583009dc9b3e59ea2c2ba9d11ef6de9f3d3c5939e39647b2d88bf908e99f92",
+    "r_path": "torch_cpu_bicubic_to_camera_uint8_then_segnet_preprocess_bilinear",
+    "realized_argmax_sha256": "b43c41d26932e3175c63b2f51313ec476e04a54557b54adf9d02909aaed4c5be",
+    "rgb_input_sha256": "d31fc3a883a2f794094027e7c4a36f74e8478d4b1a1e9e6f7b5048df6d33abc0",
+    "status": "measured_harness_smoke",
+    "total": {
+      "d_seg": 0.010674794514973959,
+      "errors": 8395,
+      "sites": 786432
+    },
+    "wall_seconds": {
+      "actual_R": 0.028676458168774843,
+      "frozen_cpu_segnet": 1.2029896671883762,
+      "render": 0.015273416880518198,
+      "total": 1.2469395422376692
+    }
+  },
+  "schema": "ddm_tk2_chunk_checkpoint_v1",
+  "score_claim": false,
+  "written_at_utc": "2026-08-06T15:41:11+00:00"
+}
