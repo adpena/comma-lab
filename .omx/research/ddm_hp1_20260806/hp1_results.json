@@ -1,0 +1,321 @@
+{
+  "axis": "[macOS-CPU byte-only scorer-free]",
+  "baselines": {
+    "forced_ix2_lzma1": {
+      "bytes": 349811,
+      "delta_vs_shipped_bytes": 8515,
+      "delta_vs_shipped_s_rate": 0.005669788985835289,
+      "sha256": "de2caac4cba239e2791cb7fff0af27ff5c18c5c9ea0c1beb5aa4e4e94afc6278"
+    },
+    "raw_token_frame_brotli_q11": {
+      "bytes": 451773,
+      "delta_vs_shipped_bytes": 110477,
+      "delta_vs_shipped_s_rate": 0.07356209956407812,
+      "sha256": "1d0baf56872c5042cac5d96a1fac25d1af7081a0aaf72bbaded3397310babe4e"
+    },
+    "raw_token_frame_lzma1": {
+      "bytes": 463371,
+      "delta_vs_shipped_bytes": 122075,
+      "delta_vs_shipped_s_rate": 0.08128473170238906,
+      "sha256": "2fa6056cccab45478584396c4c4edc2226926eb34a3fe847a2f9bef8acab627a"
+    },
+    "shipped_ix2_brotli_q11": {
+      "bytes": 341296,
+      "note": "exact IX2TOK01 bulk section from tq1c archive; both residual and base blocks use coder_id=2 Brotli",
+      "sha256": "a2d3ad05074ea23a77d8111553da63b738d89705e61ec0cc76d31be2d8467183"
+    }
+  },
+  "byte_ladder": [
+    {
+      "bytes": 341296,
+      "delta_vs_shipped_bytes": 0,
+      "delta_vs_shipped_s_rate": 0.0,
+      "name": "shipped_ix2_brotli_q11",
+      "rank": 1
+    },
+    {
+      "bytes": 349811,
+      "delta_vs_shipped_bytes": 8515,
+      "delta_vs_shipped_s_rate": 0.005669788985835289,
+      "name": "forced_ix2_lzma1",
+      "rank": 2
+    },
+    {
+      "bytes": 456166,
+      "delta_vs_shipped_bytes": 114870,
+      "delta_vs_shipped_s_rate": 0.07648721794514382,
+      "name": "hp1_learned_prior_plus_counted_model",
+      "rank": 3
+    }
+  ],
+  "created_utc": "2026-08-06T14:53:09Z",
+  "decode_feasibility": {
+    "cell_channel_temporal_streams": 3072,
+    "measured_full_decode_seconds_including_canonical_reencode": 3.6791550419293344,
+    "no_94_step_claim": true,
+    "note": "prototype decodes scalar range symbols in Python; a production receiver could batch by patch group, but this result claims only the measured scalar path.",
+    "patch": 4,
+    "patch_groups_per_pair": 48,
+    "scalar_range_updates_full_stream": 1843200,
+    "thirty_minute_budget_seconds": 1800,
+    "within_budget_on_this_host": true
+  },
+  "entropy": {
+    "alphabet": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "condition_on_prev_not_diffs": true,
+    "measurement_seconds": 4.693431917112321,
+    "order0": {
+      "active_symbols": 16,
+      "bits_per_symbol": 3.4574809346293494,
+      "ideal_bytes": 796603.6073386021
+    },
+    "prev_pair_conditioned_same_cell": {
+      "active_contexts": 68,
+      "bits_per_symbol": 2.0037733497633,
+      "ideal_bytes": 461669.3797854643
+    },
+    "prev_pair_plus_spatial_context": {
+      "active_contexts": 126222,
+      "bits_per_symbol": 1.2546708277242293,
+      "ideal_bytes": 289076.1587076624
+    },
+    "spatial_context_left_up_channelprev": {
+      "active_contexts": 12690,
+      "bits_per_symbol": 2.4554266009032877,
+      "ideal_bytes": 565730.2888481175
+    },
+    "symbol_count": 1843200
+  },
+  "falsifier": {
+    "decode_projection_exceeds_budget": false,
+    "net_delta_bytes_ge_0": true,
+    "verdict": "FAMILY_NEGATIVE_ON_THIS_STREAM"
+  },
+  "host": {
+    "platform": "macOS-26.4-arm64-arm-64bit-Mach-O",
+    "python": "3.13.12"
+  },
+  "learned_prior": {
+    "canonical_reencode_equal": true,
+    "context_mode": "prev_chan",
+    "context_rows": 289,
+    "decode_equal": true,
+    "decode_seconds_including_canonical_reencode": 3.6791550419293344,
+    "delta_vs_shipped_bytes": 114870,
+    "delta_vs_shipped_s_rate": 0.07648721794514382,
+    "encode_seconds": 1.4727757503278553,
+    "family": "small counted learned conditional prior with static int8 frequency table and exact range coder",
+    "frame_bytes": 456166,
+    "frame_path": "/Volumes/VertigoDataTier/pact/ddm_hp1_20260806/hp1_learned_prior.hp1",
+    "frame_sha256": "575d7acafd562e75ead009bcb81634a0681859f93e5e1510aebc537c0fc641fc",
+    "header_bytes": 62,
+    "levels": 16,
+    "max_model_bytes": 10000,
+    "model_info": {
+      "active_context_rows": 289,
+      "context_mode": "prev_chan",
+      "context_rows": 289,
+      "model_raw_bytes": 4624,
+      "patch": 4,
+      "train_seconds": 1.5236869170330465
+    },
+    "model_raw_bytes": 4624,
+    "raced_context_modes": [
+      {
+        "canonical_reencode_equal": true,
+        "context_mode": "prev_k",
+        "context_rows": 68,
+        "decode_equal": true,
+        "decode_seconds_including_canonical_reencode": 3.583646500017494,
+        "encode_seconds": 1.5888277082704008,
+        "frame_bytes": 467309,
+        "frame_sha256": "5b6fbe0d8845b770de58d96eb2ae6308cc6a039b9b36a8e41b8a968270883da7",
+        "header_bytes": 62,
+        "model_info": {
+          "active_context_rows": 68,
+          "context_mode": "prev_k",
+          "context_rows": 68,
+          "model_raw_bytes": 1088,
+          "patch": 4,
+          "train_seconds": 1.5722719999030232
+        },
+        "model_raw_bytes": 1088,
+        "range_stream_bytes": 466159,
+        "skipped": false
+      },
+      {
+        "canonical_reencode_equal": true,
+        "context_mode": "prev_left",
+        "context_rows": 289,
+        "decode_equal": true,
+        "decode_seconds_including_canonical_reencode": 3.382797417230904,
+        "encode_seconds": 1.509655375033617,
+        "frame_bytes": 462085,
+        "frame_sha256": "47c79446542a3076c49a7c7f661f4890bfcc8db51402ed7bdfde19c2cd40263a",
+        "header_bytes": 62,
+        "model_info": {
+          "active_context_rows": 289,
+          "context_mode": "prev_left",
+          "context_rows": 289,
+          "model_raw_bytes": 4624,
+          "patch": 4,
+          "train_seconds": 1.6246353746391833
+        },
+        "model_raw_bytes": 4624,
+        "range_stream_bytes": 457399,
+        "skipped": false
+      },
+      {
+        "canonical_reencode_equal": true,
+        "context_mode": "prev_up",
+        "context_rows": 289,
+        "decode_equal": true,
+        "decode_seconds_including_canonical_reencode": 3.4331229589879513,
+        "encode_seconds": 1.5138578326441348,
+        "frame_bytes": 456197,
+        "frame_sha256": "8275f91ede55a37c52d11f9fe693e06b97b593151549d1e409ba90a237564ccf",
+        "header_bytes": 62,
+        "model_info": {
+          "active_context_rows": 288,
+          "context_mode": "prev_up",
+          "context_rows": 289,
+          "model_raw_bytes": 4624,
+          "patch": 4,
+          "train_seconds": 1.5136643750593066
+        },
+        "model_raw_bytes": 4624,
+        "range_stream_bytes": 451511,
+        "skipped": false
+      },
+      {
+        "canonical_reencode_equal": true,
+        "context_mode": "prev_chan",
+        "context_rows": 289,
+        "decode_equal": true,
+        "decode_seconds_including_canonical_reencode": 3.6791550419293344,
+        "encode_seconds": 1.4727757503278553,
+        "frame_bytes": 456166,
+        "frame_sha256": "575d7acafd562e75ead009bcb81634a0681859f93e5e1510aebc537c0fc641fc",
+        "header_bytes": 62,
+        "model_info": {
+          "active_context_rows": 289,
+          "context_mode": "prev_chan",
+          "context_rows": 289,
+          "model_raw_bytes": 4624,
+          "patch": 4,
+          "train_seconds": 1.5236869170330465
+        },
+        "model_raw_bytes": 4624,
+        "range_stream_bytes": 451480,
+        "skipped": false
+      },
+      {
+        "canonical_reencode_equal": true,
+        "context_mode": "hash_prev_spatial",
+        "context_rows": 625,
+        "decode_equal": true,
+        "decode_seconds_including_canonical_reencode": 4.3817509156651795,
+        "encode_seconds": 1.9621475832536817,
+        "frame_bytes": 702480,
+        "frame_sha256": "cfea48015daa7783f6e41bdb5495b69274aaa5cb06ee7e05f8c307a74ee5d494",
+        "header_bytes": 62,
+        "model_info": {
+          "active_context_rows": 625,
+          "context_mode": "hash_prev_spatial",
+          "context_rows": 625,
+          "model_raw_bytes": 10000,
+          "patch": 4,
+          "train_seconds": 1.7115357499569654
+        },
+        "model_raw_bytes": 10000,
+        "range_stream_bytes": 692418,
+        "skipped": false
+      }
+    ],
+    "range_stream_bytes": 451480
+  },
+  "ran_upstream_evaluate_py": false,
+  "run_seconds": 41.48110512457788,
+  "schema": "ddm_hp1_learned_ar_prior_race.v1",
+  "scope_regrade": {
+    "learned_conditional_prior_was_not_measured_by_918": true,
+    "lz_family_closure_stands": true,
+    "task_918_scope": "INSTRUMENT-SCOPED to explicit LZ/rank/basis/token-coder families already raced",
+    "this_hp1_family_verdict_scope": "FAMILY on this exact tq1c IX2 token stream for this 10K-int8 static-context learned prior"
+  },
+  "score_claim": false,
+  "scorer_forwards_run": 0,
+  "source_archive": {
+    "archive_bytes": 357837,
+    "archive_path": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/candidate_archives/move_0023_snap_r00_c12_L13.zip.receipt-bytes",
+    "archive_sha256": "b35e756829306a85ec2ad51634bde74523d89df9046c682253176b393bd59c06",
+    "ix2_decode_seconds": 0.006576457992196083,
+    "joint_section_sha256": [
+      "fc4f23ac9e31ba266ace26131319eb5b574d69e1d505fb1fc20a9dbc79a240d6",
+      "3b8eb0c24f9e6d8b547a23a5db29a1dbbd03db474fbba3638b0c3dd858ca7009",
+      "8fc5c3fc65eb051b65ebf01d4b008e52d606097194c57884e739eae2ad8382e1",
+      "d1d073e55aacf991491365d13716fededb169854b78bb203c34c84ca880c25db",
+      "b5874d32324a46dc76cb1fc0beb7cda5fdaca2f59ebae6acbb08283206e8e7a2"
+    ],
+    "joint_section_sizes": [
+      36,
+      3266,
+      535,
+      8751,
+      4081
+    ],
+    "member_bytes": 357729,
+    "member_sha256": "1bd7b7186978e7d96316a43e297588208411b91df91e4834be6357128abc839b",
+    "token_bulk_bytes": 341296,
+    "token_bulk_sha256": "a2d3ad05074ea23a77d8111553da63b738d89705e61ec0cc76d31be2d8467183"
+  },
+  "token_stream": {
+    "alphabet": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "definition": "receiver-input IX2TOK01 token lattice decoded from tq1c 0.bin bulk section",
+    "dtype": "uint8",
+    "not_semantic_labels": true,
+    "raw_symbol_count": 1843200,
+    "raw_uint8_bytes": 1843200,
+    "sha256": "1a46a51909b150bc1fc320cb6f66f52cc53472e6f830c911c2ea7bbec2bbdcc3",
+    "shape": [
+      600,
+      24,
+      32,
+      4
+    ]
+  }
+}
