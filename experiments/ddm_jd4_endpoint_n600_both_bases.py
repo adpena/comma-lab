@@ -60,7 +60,15 @@ BASELINE_EP1526 = {
     "live": {"d_seg_mean": 0.0054997, "d_pose_mean": 0.091572},
     "ema": {"d_seg_mean": 0.0052305, "d_pose_mean": 0.090731},
 }
-BASELINES = {"ep1405": BASELINE_EP1405, "ep1526": BASELINE_EP1526}
+# jd5 ep1646 endpoint (receipt jd5_endpoint_n600_both_bases.json, full precision) — the
+# same-instrument baseline for the jd6 ep1766 run. Note the live/EMA divergence at this
+# endpoint (live pose WORSE, EMA much better): deltas vs ep1646 must stay same-basis.
+BASELINE_EP1646 = {
+    "live": {"d_seg_mean": 0.005876948038736979, "d_pose_mean": 0.1397043092628879},
+    "ema": {"d_seg_mean": 0.005437978108723958, "d_pose_mean": 0.03581784128891155},
+}
+BASELINES = {"ep1405": BASELINE_EP1405, "ep1526": BASELINE_EP1526,
+             "ep1646": BASELINE_EP1646}
 
 
 def build_argparser() -> argparse.ArgumentParser:
