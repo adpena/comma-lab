@@ -1,0 +1,2741 @@
+{
+ "schema": "ddm_q3x_q3_convergence_measurement.v1",
+ "utc": "2026-08-06T15:01:50Z",
+ "git": "a5146af5eb56c1e2c17d45d82fd62c15673e9d9d",
+ "axis": "[macOS-CPU frozen-scorer advisory] NON-PROMOTABLE",
+ "score_claim": false,
+ "promotion_eligible": false,
+ "pointer_moved": false,
+ "selection_mode": "strided",
+ "selection": {
+  "indices": [
+   0
+  ],
+  "provenance": {
+   "schema": "pact.subset_selection.v1",
+   "pair_selection": "strided",
+   "n": 1,
+   "population": 600,
+   "seed": null,
+   "params": {
+    "stride": 20,
+    "offset": 0
+   },
+   "indices_head": [
+    0
+   ],
+   "representative_mode": true,
+   "population_matched": true,
+   "governing_ratios": [
+    {
+     "name": "flips_per_pair",
+     "subset_mean": 765.0,
+     "population_mean": 847.7333333333333,
+     "ratio": 0.9024064171122994,
+     "n_subset": 1,
+     "n_population": 600,
+     "verdict": "MATCHED",
+     "null_p05": 0.6793763762189368,
+     "null_p95": 1.555795847750864,
+     "n_bootstrap": 500,
+     "reason": ""
+    }
+   ]
+  },
+  "summary": "selection: mode=strided n=1/600 seed=None | flips_per_pair: subset mean 765 vs population 847.733 = 0.9024x, seeded-random band [0.6794, 1.556] (n_boot=500) => MATCHED",
+  "extra_governing_ratios": [
+   {
+    "name": "d_pose_base",
+    "subset_mean": 0.0007871190427514002,
+    "population_mean": 0.0025513987495742432,
+    "ratio": 0.3085049104467689,
+    "n_subset": 1,
+    "n_population": 600,
+    "verdict": "MATCHED",
+    "null_p05": 0.006794465017217532,
+    "null_p95": 19.509314853606313,
+    "n_bootstrap": 500,
+    "reason": ""
+   }
+  ]
+ },
+ "inputs": {
+  "sub_dir": "/Volumes/VertigoDataTier/pact/ddm_gt3_20260803",
+  "gt_mkv": "/Users/adpena/Projects/pact/upstream/videos/0.mkv",
+  "argmax_cache": "/Volumes/VertigoDataTier/pact/ddm_pu2_20260803/argmax_cache",
+  "gt3_receipt": "/Volumes/VertigoDataTier/pact/ddm_gt3_20260803/gt3_free_basis_n600.json",
+  "pz1_dpose": "/Users/adpena/Projects/pact/.omx/research/ddm_pz1_dpose_paired_n600_cx1_20260803.json"
+ },
+ "gt3_threshold": {
+  "break_even_eta": 0.7163826725858013,
+  "eta_seg_only_source": 0.7895,
+  "retained_fraction_threshold": 0.9073878056818256,
+  "gt3_bytes_unchanged": 108213.53344322393,
+  "gt3_flips_in_taken": 115760.0,
+  "gt3_dS_at_eta_seg_only": -0.0054194490506389555,
+  "gt3_gap": 0.6189279,
+  "gt3_archive_bytes": 353805.0,
+  "gt3_S_per_byte": 6.658589531221714e-07,
+  "gt3_S_per_flip": 8.477105034722222e-07
+ },
+ "solver": {
+  "seg_only_source": "ddm_sq1_stage_decomposition.solve_margin_optimal_paint",
+  "solver_form": "project-after",
+  "steps": 2,
+  "cap_ladder": [
+   2
+  ],
+  "lr": 4.0,
+  "eval_every": 1,
+  "convergence_patience_evals": 0,
+  "convergence_min_improvement": 1,
+  "starts": [
+   "dec",
+   "truth"
+  ],
+  "projector": "ddm_sq1_pose_null_constrained_paint.pose_null_projector",
+  "realizer": "dk1-cvp",
+  "dk1_dykstra_iterations": 8,
+  "dk1_cvp_tap_radius": 0,
+  "dk1_max_blocks": 64,
+  "snap_to_2x2_blocks": true
+ },
+ "element_grade_vector": {
+  "schema": "ddm_rw1_element_grade_vector.v1",
+  "chain_name": "q3x_q3_convergence_realizer",
+  "elements": {
+   "init": {
+    "grade": "OPTIMAL-RECEIPT",
+    "note": "solver uses inherited dec/truth multi-start starts"
+   },
+   "step_rule": {
+    "grade": "NAIVE-NAMED",
+    "note": "project-after Adam step rule, not separately optimized in rw1"
+   },
+   "stopping_rule": {
+    "grade": "OPTIMAL-RECEIPT",
+    "note": "CA1 cap-stop receipts over ladder 2"
+   },
+   "metric": {
+    "grade": "NAIVE-NAMED",
+    "note": "proxy SegNet cross-entropy/argmax objective retained from source solver"
+   },
+   "subset": {
+    "grade": "OPTIMAL-RECEIPT",
+    "note": "bounded strided selection {'schema': 'pact.subset_selection.v1', 'pair_selection': 'strided', 'n': 1, 'population': 600, 'seed': None, 'params': {'stride': 20, 'offset': 0}, 'indices_head': [0], 'representative_mode': True, 'population_matched': True, 'governing_ratios': [{'name': 'flips_per_pair', 'subset_mean': 765.0, 'population_mean': 847.7333333333333, 'ratio': 0.9024064171122994, 'n_subset': 1, 'n_population': 600, 'verdict': 'MATCHED', 'null_p05': 0.6793763762189368, 'null_p95': 1.555795847750864, 'n_bootstrap': 500, 'reason': ''}]}"
+   },
+   "realization": {
+    "grade": "OPTIMAL-RECEIPT",
+    "note": "dk1-cvp"
+   },
+   "projection": {
+    "grade": "NAIVE-NAMED",
+    "note": "project-after"
+   },
+   "tie_breaks": {
+    "grade": "NAIVE-NAMED",
+    "note": "best proxy flips then first observed best iterate"
+   },
+   "seed": {
+    "grade": "UNKNOWN",
+    "note": "no stochastic seed consumed by this small-n CPU advisory path"
+   },
+   "caches": {
+    "grade": "OPTIMAL-RECEIPT",
+    "note": "argmax cache C2/C3 checked per selected pair"
+   }
+  },
+  "status": "PARTIALLY-CURED"
+ },
+ "aggregate": {
+  "n_rows": 1,
+  "total_described_in_band": 644,
+  "flips_before": 765,
+  "seg_only_flips_after": 618,
+  "q3_projected_flips_after": 766,
+  "seg_only_net_flip_reduction": 147,
+  "q3_projected_net_flip_reduction": -1,
+  "seg_only_eta_net": 0.22826086956521738,
+  "q3_projected_eta_net": -0.0015527950310559005,
+  "retained_seg_fraction": -0.006802721088435374,
+  "retained_fraction_threshold": 0.9073878056818256,
+  "crosses_retained_fraction_threshold": false,
+  "d_pose_before_mean": 0.0007871219422668219,
+  "d_pose_seg_only_after_mean": 0.002260820474475622,
+  "d_pose_q3_projected_after_mean": 0.0007872164133004844,
+  "d_pose_q3_projected_delta_mean": 9.44710336625576e-08,
+  "d_pose_q3_projected_ratio": 1.0001200208361496,
+  "pose_small_threshold_ratio": 1.05,
+  "pose_small": true,
+  "instrument_capacity": {
+   "one_flip_retained_fraction_quantum": 0.006802721088435374,
+   "one_flip_eta_quantum": 0.0015527950310559005,
+   "scorer_sites_per_pair": 196608,
+   "sample_pairs": 1,
+   "projector_rank_per_2x2_block": 6,
+   "projector_dof_per_2x2_block": 12
+  },
+  "priced_row_spec": {
+   "bytes_unchanged_from_gt3_scheme": 108213.53344322393,
+   "flips_in_taken_from_gt3_scheme": 115760.0,
+   "projected_eta_for_gt3_join": -0.005370748299319728,
+   "dS_total_at_projected_eta": 0.07258198682101871,
+   "pct_of_gap_at_projected_eta": -11.727050407813044
+  },
+  "outcome": "FOLDED"
+ },
+ "rows": [
+  {
+   "pair": 0,
+   "flips_before": 765,
+   "described_in_band": 644,
+   "band_frac": 0.054255167643229164,
+   "band_frac_snapped": 0.06341552734375,
+   "snap_tax": 1.1688384737976938,
+   "d_pose_before": 0.0007871219422668219,
+   "C_before": [
+    [
+     43880,
+     71,
+     84,
+     49,
+     48
+    ],
+    [
+     369,
+     1032,
+     0,
+     0,
+     0
+    ],
+    [
+     14,
+     0,
+     96920,
+     9,
+     0
+    ],
+    [
+     51,
+     0,
+     31,
+     3482,
+     0
+    ],
+    [
+     39,
+     0,
+     0,
+     0,
+     50529
+    ]
+   ],
+   "seg_only": {
+    "tag": "dec@2",
+    "proxy_flips_scorer_lattice": 620,
+    "solve_cap": 2,
+    "solve_cap_stop_receipt": {
+     "stop_reason": "cap_bound",
+     "steps_run": 2,
+     "cap": 2,
+     "still_descending": true
+    },
+    "solve_cap_ladder": [
+     {
+      "cap": 2,
+      "proxy_flips": 620,
+      "tag": "dec@2",
+      "cap_stop_receipt": {
+       "stop_reason": "cap_bound",
+       "steps_run": 2,
+       "cap": 2,
+       "still_descending": true
+      },
+      "selected": {
+       "start": "dec",
+       "tag": "dec@2",
+       "best_step": 2,
+       "best_proxy_flips": 620,
+       "stop_reason": "iteration_cap_best_at_cap",
+       "trajectory_stop": null,
+       "steps_run": 2,
+       "curve": [
+        {
+         "step": 0,
+         "proxy_flips": 770
+        },
+        {
+         "step": 1,
+         "proxy_flips": 762
+        },
+        {
+         "step": 2,
+         "proxy_flips": 620
+        }
+       ]
+      }
+     }
+    ],
+    "solve_diagnostics_selected": {
+     "start": "dec",
+     "tag": "dec@2",
+     "best_step": 2,
+     "best_proxy_flips": 620,
+     "stop_reason": "iteration_cap_best_at_cap",
+     "trajectory_stop": null,
+     "steps_run": 2,
+     "curve": [
+      {
+       "step": 0,
+       "proxy_flips": 770
+      },
+      {
+       "step": 1,
+       "proxy_flips": 762
+      },
+      {
+       "step": 2,
+       "proxy_flips": 620
+      }
+     ]
+    },
+    "flips_after": 618,
+    "fixed": 333,
+    "introduced": 186,
+    "C_after": [
+     [
+      43915,
+      35,
+      146,
+      22,
+      14
+     ],
+     [
+      309,
+      1092,
+      0,
+      0,
+      0
+     ],
+     [
+      1,
+      0,
+      96933,
+      9,
+      0
+     ],
+     [
+      31,
+      0,
+      21,
+      3512,
+      0
+     ],
+     [
+      30,
+      0,
+      0,
+      0,
+      50538
+     ]
+    ],
+    "d_pose_after": 0.002260820474475622,
+    "eta_net": 0.22826086956521738
+   },
+   "q3_projected": {
+    "flips_after": 766,
+    "fixed": 0,
+    "introduced": 1,
+    "C_after": [
+     [
+      43879,
+      71,
+      85,
+      49,
+      48
+     ],
+     [
+      369,
+      1032,
+      0,
+      0,
+      0
+     ],
+     [
+      14,
+      0,
+      96920,
+      9,
+      0
+     ],
+     [
+      51,
+      0,
+      31,
+      3482,
+      0
+     ],
+     [
+      39,
+      0,
+      0,
+      0,
+      50529
+     ]
+    ],
+    "d_pose_after": 0.0007872164133004844,
+    "realizer": "dk1-cvp",
+    "realizer_receipt": {
+     "schema": "ddm_rw1_true_domain_instrument.v1",
+     "instrument": "dk1_lattice_native_q3_realizer",
+     "selected_method": "cvp",
+     "dk1_cvp_tap_radius": 0,
+     "dk1_dykstra_iterations": 8,
+     "score_claim": false,
+     "promotion_eligible": false,
+     "aggregate": {
+      "blocks_total_requested_by_mask": 3117,
+      "blocks_realized": 64,
+      "block_limit": 64,
+      "pose_leakage_sq_sum": 4.967479377663086,
+      "seg_discrepancy_sum": 27.529132879292156,
+      "changed_camera_values_sum": 1273,
+      "exact_declared_scope_count": 64,
+      "global_integer_optimum_claim": false
+     },
+     "sampled_block_receipts": [
+      {
+       "scorer_row": 170,
+       "scorer_col": 252,
+       "selected_method": "cvp",
+       "result": {
+        "method": "cvp",
+        "pose_leakage_sq": 0.07640373249452251,
+        "pose_leakage_l2": 0.27641225098486955,
+        "seg_discrepancy": 0.49774719941186973,
+        "changed_camera_values": 14,
+        "diagnostics": {
+         "solver": "bounded_private_window_cvp",
+         "tap_radius": 0,
+         "max_channel_candidates": 9,
+         "max_pixel_candidates": 16,
+         "max_combinations": 250000,
+         "combinations_evaluated": 1,
+         "candidate_scope": "EXHAUSTIVE_TAP_RADIUS_PRODUCT",
+         "exact_declared_scope": true,
+         "global_integer_optimum_claim": false,
+         "pixel_candidate_counts": [
+          {
+           "pixel": [
+            0,
+            0
+           ],
+           "channel_counts": [
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            }
+           ],
+           "pixel_candidates_total_before_prune": 1,
+           "pixel_candidates_kept": 1,
+           "pixel_pruned": false
+          },
+          {
+           "pixel": [
+            0,
+            1
+           ],
+           "channel_counts": [
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            }
+           ],
+           "pixel_candidates_total_before_prune": 1,
+           "pixel_candidates_kept": 1,
+           "pixel_pruned": false
+          },
+          {
+           "pixel": [
+            1,
+            0
+           ],
+           "channel_counts": [
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            }
+           ],
+           "pixel_candidates_total_before_prune": 1,
+           "pixel_candidates_kept": 1,
+           "pixel_pruned": false
+          },
+          {
+           "pixel": [
+            1,
+            1
+           ],
+           "channel_counts": [
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            }
+           ],
+           "pixel_candidates_total_before_prune": 1,
+           "pixel_candidates_kept": 1,
+           "pixel_pruned": false
+          }
+         ]
+        }
+       },
+       "geometry": {
+        "assumes_uniform_025": false,
+        "denominator": 786432
+       }
+      },
+      {
+       "scorer_row": 170,
+       "scorer_col": 254,
+       "selected_method": "cvp",
+       "result": {
+        "method": "cvp",
+        "pose_leakage_sq": 0.0663656003145954,
+        "pose_leakage_l2": 0.25761521755244854,
+        "seg_discrepancy": 0.47360990390953167,
+        "changed_camera_values": 9,
+        "diagnostics": {
+         "solver": "bounded_private_window_cvp",
+         "tap_radius": 0,
+         "max_channel_candidates": 9,
+         "max_pixel_candidates": 16,
+         "max_combinations": 250000,
+         "combinations_evaluated": 1,
+         "candidate_scope": "EXHAUSTIVE_TAP_RADIUS_PRODUCT",
+         "exact_declared_scope": true,
+         "global_integer_optimum_claim": false,
+         "pixel_candidate_counts": [
+          {
+           "pixel": [
+            0,
+            0
+           ],
+           "channel_counts": [
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            }
+           ],
+           "pixel_candidates_total_before_prune": 1,
+           "pixel_candidates_kept": 1,
+           "pixel_pruned": false
+          },
+          {
+           "pixel": [
+            0,
+            1
+           ],
+           "channel_counts": [
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            }
+           ],
+           "pixel_candidates_total_before_prune": 1,
+           "pixel_candidates_kept": 1,
+           "pixel_pruned": false
+          },
+          {
+           "pixel": [
+            1,
+            0
+           ],
+           "channel_counts": [
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            }
+           ],
+           "pixel_candidates_total_before_prune": 1,
+           "pixel_candidates_kept": 1,
+           "pixel_pruned": false
+          },
+          {
+           "pixel": [
+            1,
+            1
+           ],
+           "channel_counts": [
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            }
+           ],
+           "pixel_candidates_total_before_prune": 1,
+           "pixel_candidates_kept": 1,
+           "pixel_pruned": false
+          }
+         ]
+        }
+       },
+       "geometry": {
+        "assumes_uniform_025": false,
+        "denominator": 786432
+       }
+      },
+      {
+       "scorer_row": 170,
+       "scorer_col": 256,
+       "selected_method": "cvp",
+       "result": {
+        "method": "cvp",
+        "pose_leakage_sq": 0.08617706742594275,
+        "pose_leakage_l2": 0.29355930819162035,
+        "seg_discrepancy": 0.5777583358733016,
+        "changed_camera_values": 26,
+        "diagnostics": {
+         "solver": "bounded_private_window_cvp",
+         "tap_radius": 0,
+         "max_channel_candidates": 9,
+         "max_pixel_candidates": 16,
+         "max_combinations": 250000,
+         "combinations_evaluated": 1,
+         "candidate_scope": "EXHAUSTIVE_TAP_RADIUS_PRODUCT",
+         "exact_declared_scope": true,
+         "global_integer_optimum_claim": false,
+         "pixel_candidate_counts": [
+          {
+           "pixel": [
+            0,
+            0
+           ],
+           "channel_counts": [
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            }
+           ],
+           "pixel_candidates_total_before_prune": 1,
+           "pixel_candidates_kept": 1,
+           "pixel_pruned": false
+          },
+          {
+           "pixel": [
+            0,
+            1
+           ],
+           "channel_counts": [
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            }
+           ],
+           "pixel_candidates_total_before_prune": 1,
+           "pixel_candidates_kept": 1,
+           "pixel_pruned": false
+          },
+          {
+           "pixel": [
+            1,
+            0
+           ],
+           "channel_counts": [
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            }
+           ],
+           "pixel_candidates_total_before_prune": 1,
+           "pixel_candidates_kept": 1,
+           "pixel_pruned": false
+          },
+          {
+           "pixel": [
+            1,
+            1
+           ],
+           "channel_counts": [
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            }
+           ],
+           "pixel_candidates_total_before_prune": 1,
+           "pixel_candidates_kept": 1,
+           "pixel_pruned": false
+          }
+         ]
+        }
+       },
+       "geometry": {
+        "assumes_uniform_025": false,
+        "denominator": 786432
+       }
+      },
+      {
+       "scorer_row": 170,
+       "scorer_col": 258,
+       "selected_method": "cvp",
+       "result": {
+        "method": "cvp",
+        "pose_leakage_sq": 0.10541264574986786,
+        "pose_leakage_l2": 0.3246731367850871,
+        "seg_discrepancy": 0.35047414143721695,
+        "changed_camera_values": 25,
+        "diagnostics": {
+         "solver": "bounded_private_window_cvp",
+         "tap_radius": 0,
+         "max_channel_candidates": 9,
+         "max_pixel_candidates": 16,
+         "max_combinations": 250000,
+         "combinations_evaluated": 1,
+         "candidate_scope": "EXHAUSTIVE_TAP_RADIUS_PRODUCT",
+         "exact_declared_scope": true,
+         "global_integer_optimum_claim": false,
+         "pixel_candidate_counts": [
+          {
+           "pixel": [
+            0,
+            0
+           ],
+           "channel_counts": [
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            }
+           ],
+           "pixel_candidates_total_before_prune": 1,
+           "pixel_candidates_kept": 1,
+           "pixel_pruned": false
+          },
+          {
+           "pixel": [
+            0,
+            1
+           ],
+           "channel_counts": [
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            }
+           ],
+           "pixel_candidates_total_before_prune": 1,
+           "pixel_candidates_kept": 1,
+           "pixel_pruned": false
+          },
+          {
+           "pixel": [
+            1,
+            0
+           ],
+           "channel_counts": [
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            }
+           ],
+           "pixel_candidates_total_before_prune": 1,
+           "pixel_candidates_kept": 1,
+           "pixel_pruned": false
+          },
+          {
+           "pixel": [
+            1,
+            1
+           ],
+           "channel_counts": [
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            }
+           ],
+           "pixel_candidates_total_before_prune": 1,
+           "pixel_candidates_kept": 1,
+           "pixel_pruned": false
+          }
+         ]
+        }
+       },
+       "geometry": {
+        "assumes_uniform_025": false,
+        "denominator": 786432
+       }
+      },
+      {
+       "scorer_row": 170,
+       "scorer_col": 260,
+       "selected_method": "cvp",
+       "result": {
+        "method": "cvp",
+        "pose_leakage_sq": 0.06843237108980789,
+        "pose_leakage_l2": 0.26159581626969475,
+        "seg_discrepancy": 0.5622908654719263,
+        "changed_camera_values": 21,
+        "diagnostics": {
+         "solver": "bounded_private_window_cvp",
+         "tap_radius": 0,
+         "max_channel_candidates": 9,
+         "max_pixel_candidates": 16,
+         "max_combinations": 250000,
+         "combinations_evaluated": 1,
+         "candidate_scope": "EXHAUSTIVE_TAP_RADIUS_PRODUCT",
+         "exact_declared_scope": true,
+         "global_integer_optimum_claim": false,
+         "pixel_candidate_counts": [
+          {
+           "pixel": [
+            0,
+            0
+           ],
+           "channel_counts": [
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            }
+           ],
+           "pixel_candidates_total_before_prune": 1,
+           "pixel_candidates_kept": 1,
+           "pixel_pruned": false
+          },
+          {
+           "pixel": [
+            0,
+            1
+           ],
+           "channel_counts": [
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            }
+           ],
+           "pixel_candidates_total_before_prune": 1,
+           "pixel_candidates_kept": 1,
+           "pixel_pruned": false
+          },
+          {
+           "pixel": [
+            1,
+            0
+           ],
+           "channel_counts": [
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            }
+           ],
+           "pixel_candidates_total_before_prune": 1,
+           "pixel_candidates_kept": 1,
+           "pixel_pruned": false
+          },
+          {
+           "pixel": [
+            1,
+            1
+           ],
+           "channel_counts": [
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            }
+           ],
+           "pixel_candidates_total_before_prune": 1,
+           "pixel_candidates_kept": 1,
+           "pixel_pruned": false
+          }
+         ]
+        }
+       },
+       "geometry": {
+        "assumes_uniform_025": false,
+        "denominator": 786432
+       }
+      },
+      {
+       "scorer_row": 170,
+       "scorer_col": 262,
+       "selected_method": "cvp",
+       "result": {
+        "method": "cvp",
+        "pose_leakage_sq": 0.050716913307795784,
+        "pose_leakage_l2": 0.22520415917073064,
+        "seg_discrepancy": 0.18221999424974852,
+        "changed_camera_values": 25,
+        "diagnostics": {
+         "solver": "bounded_private_window_cvp",
+         "tap_radius": 0,
+         "max_channel_candidates": 9,
+         "max_pixel_candidates": 16,
+         "max_combinations": 250000,
+         "combinations_evaluated": 1,
+         "candidate_scope": "EXHAUSTIVE_TAP_RADIUS_PRODUCT",
+         "exact_declared_scope": true,
+         "global_integer_optimum_claim": false,
+         "pixel_candidate_counts": [
+          {
+           "pixel": [
+            0,
+            0
+           ],
+           "channel_counts": [
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            }
+           ],
+           "pixel_candidates_total_before_prune": 1,
+           "pixel_candidates_kept": 1,
+           "pixel_pruned": false
+          },
+          {
+           "pixel": [
+            0,
+            1
+           ],
+           "channel_counts": [
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            }
+           ],
+           "pixel_candidates_total_before_prune": 1,
+           "pixel_candidates_kept": 1,
+           "pixel_pruned": false
+          },
+          {
+           "pixel": [
+            1,
+            0
+           ],
+           "channel_counts": [
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            }
+           ],
+           "pixel_candidates_total_before_prune": 1,
+           "pixel_candidates_kept": 1,
+           "pixel_pruned": false
+          },
+          {
+           "pixel": [
+            1,
+            1
+           ],
+           "channel_counts": [
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            }
+           ],
+           "pixel_candidates_total_before_prune": 1,
+           "pixel_candidates_kept": 1,
+           "pixel_pruned": false
+          }
+         ]
+        }
+       },
+       "geometry": {
+        "assumes_uniform_025": false,
+        "denominator": 786432
+       }
+      },
+      {
+       "scorer_row": 170,
+       "scorer_col": 264,
+       "selected_method": "cvp",
+       "result": {
+        "method": "cvp",
+        "pose_leakage_sq": 0.07138081515666261,
+        "pose_leakage_l2": 0.2671718831701094,
+        "seg_discrepancy": 0.48259117701250204,
+        "changed_camera_values": 14,
+        "diagnostics": {
+         "solver": "bounded_private_window_cvp",
+         "tap_radius": 0,
+         "max_channel_candidates": 9,
+         "max_pixel_candidates": 16,
+         "max_combinations": 250000,
+         "combinations_evaluated": 1,
+         "candidate_scope": "EXHAUSTIVE_TAP_RADIUS_PRODUCT",
+         "exact_declared_scope": true,
+         "global_integer_optimum_claim": false,
+         "pixel_candidate_counts": [
+          {
+           "pixel": [
+            0,
+            0
+           ],
+           "channel_counts": [
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            }
+           ],
+           "pixel_candidates_total_before_prune": 1,
+           "pixel_candidates_kept": 1,
+           "pixel_pruned": false
+          },
+          {
+           "pixel": [
+            0,
+            1
+           ],
+           "channel_counts": [
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            }
+           ],
+           "pixel_candidates_total_before_prune": 1,
+           "pixel_candidates_kept": 1,
+           "pixel_pruned": false
+          },
+          {
+           "pixel": [
+            1,
+            0
+           ],
+           "channel_counts": [
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            }
+           ],
+           "pixel_candidates_total_before_prune": 1,
+           "pixel_candidates_kept": 1,
+           "pixel_pruned": false
+          },
+          {
+           "pixel": [
+            1,
+            1
+           ],
+           "channel_counts": [
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            }
+           ],
+           "pixel_candidates_total_before_prune": 1,
+           "pixel_candidates_kept": 1,
+           "pixel_pruned": false
+          }
+         ]
+        }
+       },
+       "geometry": {
+        "assumes_uniform_025": false,
+        "denominator": 786432
+       }
+      },
+      {
+       "scorer_row": 170,
+       "scorer_col": 266,
+       "selected_method": "cvp",
+       "result": {
+        "method": "cvp",
+        "pose_leakage_sq": 0.029516152167184666,
+        "pose_leakage_l2": 0.1718026547151838,
+        "seg_discrepancy": 0.24314380652573758,
+        "changed_camera_values": 28,
+        "diagnostics": {
+         "solver": "bounded_private_window_cvp",
+         "tap_radius": 0,
+         "max_channel_candidates": 9,
+         "max_pixel_candidates": 16,
+         "max_combinations": 250000,
+         "combinations_evaluated": 1,
+         "candidate_scope": "EXHAUSTIVE_TAP_RADIUS_PRODUCT",
+         "exact_declared_scope": true,
+         "global_integer_optimum_claim": false,
+         "pixel_candidate_counts": [
+          {
+           "pixel": [
+            0,
+            0
+           ],
+           "channel_counts": [
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            }
+           ],
+           "pixel_candidates_total_before_prune": 1,
+           "pixel_candidates_kept": 1,
+           "pixel_pruned": false
+          },
+          {
+           "pixel": [
+            0,
+            1
+           ],
+           "channel_counts": [
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            }
+           ],
+           "pixel_candidates_total_before_prune": 1,
+           "pixel_candidates_kept": 1,
+           "pixel_pruned": false
+          },
+          {
+           "pixel": [
+            1,
+            0
+           ],
+           "channel_counts": [
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            }
+           ],
+           "pixel_candidates_total_before_prune": 1,
+           "pixel_candidates_kept": 1,
+           "pixel_pruned": false
+          },
+          {
+           "pixel": [
+            1,
+            1
+           ],
+           "channel_counts": [
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            }
+           ],
+           "pixel_candidates_total_before_prune": 1,
+           "pixel_candidates_kept": 1,
+           "pixel_pruned": false
+          }
+         ]
+        }
+       },
+       "geometry": {
+        "assumes_uniform_025": false,
+        "denominator": 786432
+       }
+      },
+      {
+       "scorer_row": 170,
+       "scorer_col": 268,
+       "selected_method": "cvp",
+       "result": {
+        "method": "cvp",
+        "pose_leakage_sq": 0.12526814079196835,
+        "pose_leakage_l2": 0.35393239579327623,
+        "seg_discrepancy": 0.3766395282296856,
+        "changed_camera_values": 18,
+        "diagnostics": {
+         "solver": "bounded_private_window_cvp",
+         "tap_radius": 0,
+         "max_channel_candidates": 9,
+         "max_pixel_candidates": 16,
+         "max_combinations": 250000,
+         "combinations_evaluated": 1,
+         "candidate_scope": "EXHAUSTIVE_TAP_RADIUS_PRODUCT",
+         "exact_declared_scope": true,
+         "global_integer_optimum_claim": false,
+         "pixel_candidate_counts": [
+          {
+           "pixel": [
+            0,
+            0
+           ],
+           "channel_counts": [
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            }
+           ],
+           "pixel_candidates_total_before_prune": 1,
+           "pixel_candidates_kept": 1,
+           "pixel_pruned": false
+          },
+          {
+           "pixel": [
+            0,
+            1
+           ],
+           "channel_counts": [
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            }
+           ],
+           "pixel_candidates_total_before_prune": 1,
+           "pixel_candidates_kept": 1,
+           "pixel_pruned": false
+          },
+          {
+           "pixel": [
+            1,
+            0
+           ],
+           "channel_counts": [
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            }
+           ],
+           "pixel_candidates_total_before_prune": 1,
+           "pixel_candidates_kept": 1,
+           "pixel_pruned": false
+          },
+          {
+           "pixel": [
+            1,
+            1
+           ],
+           "channel_counts": [
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            }
+           ],
+           "pixel_candidates_total_before_prune": 1,
+           "pixel_candidates_kept": 1,
+           "pixel_pruned": false
+          }
+         ]
+        }
+       },
+       "geometry": {
+        "assumes_uniform_025": false,
+        "denominator": 786432
+       }
+      },
+      {
+       "scorer_row": 170,
+       "scorer_col": 270,
+       "selected_method": "cvp",
+       "result": {
+        "method": "cvp",
+        "pose_leakage_sq": 0.14981963339927604,
+        "pose_leakage_l2": 0.38706541230039665,
+        "seg_discrepancy": 0.4260251283132324,
+        "changed_camera_values": 18,
+        "diagnostics": {
+         "solver": "bounded_private_window_cvp",
+         "tap_radius": 0,
+         "max_channel_candidates": 9,
+         "max_pixel_candidates": 16,
+         "max_combinations": 250000,
+         "combinations_evaluated": 1,
+         "candidate_scope": "EXHAUSTIVE_TAP_RADIUS_PRODUCT",
+         "exact_declared_scope": true,
+         "global_integer_optimum_claim": false,
+         "pixel_candidate_counts": [
+          {
+           "pixel": [
+            0,
+            0
+           ],
+           "channel_counts": [
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            }
+           ],
+           "pixel_candidates_total_before_prune": 1,
+           "pixel_candidates_kept": 1,
+           "pixel_pruned": false
+          },
+          {
+           "pixel": [
+            0,
+            1
+           ],
+           "channel_counts": [
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            }
+           ],
+           "pixel_candidates_total_before_prune": 1,
+           "pixel_candidates_kept": 1,
+           "pixel_pruned": false
+          },
+          {
+           "pixel": [
+            1,
+            0
+           ],
+           "channel_counts": [
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            }
+           ],
+           "pixel_candidates_total_before_prune": 1,
+           "pixel_candidates_kept": 1,
+           "pixel_pruned": false
+          },
+          {
+           "pixel": [
+            1,
+            1
+           ],
+           "channel_counts": [
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            }
+           ],
+           "pixel_candidates_total_before_prune": 1,
+           "pixel_candidates_kept": 1,
+           "pixel_pruned": false
+          }
+         ]
+        }
+       },
+       "geometry": {
+        "assumes_uniform_025": false,
+        "denominator": 786432
+       }
+      },
+      {
+       "scorer_row": 170,
+       "scorer_col": 272,
+       "selected_method": "cvp",
+       "result": {
+        "method": "cvp",
+        "pose_leakage_sq": 0.14104697344322223,
+        "pose_leakage_l2": 0.3755622098177907,
+        "seg_discrepancy": 0.48131110381735265,
+        "changed_camera_values": 17,
+        "diagnostics": {
+         "solver": "bounded_private_window_cvp",
+         "tap_radius": 0,
+         "max_channel_candidates": 9,
+         "max_pixel_candidates": 16,
+         "max_combinations": 250000,
+         "combinations_evaluated": 1,
+         "candidate_scope": "EXHAUSTIVE_TAP_RADIUS_PRODUCT",
+         "exact_declared_scope": true,
+         "global_integer_optimum_claim": false,
+         "pixel_candidate_counts": [
+          {
+           "pixel": [
+            0,
+            0
+           ],
+           "channel_counts": [
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            }
+           ],
+           "pixel_candidates_total_before_prune": 1,
+           "pixel_candidates_kept": 1,
+           "pixel_pruned": false
+          },
+          {
+           "pixel": [
+            0,
+            1
+           ],
+           "channel_counts": [
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            }
+           ],
+           "pixel_candidates_total_before_prune": 1,
+           "pixel_candidates_kept": 1,
+           "pixel_pruned": false
+          },
+          {
+           "pixel": [
+            1,
+            0
+           ],
+           "channel_counts": [
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            }
+           ],
+           "pixel_candidates_total_before_prune": 1,
+           "pixel_candidates_kept": 1,
+           "pixel_pruned": false
+          },
+          {
+           "pixel": [
+            1,
+            1
+           ],
+           "channel_counts": [
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            }
+           ],
+           "pixel_candidates_total_before_prune": 1,
+           "pixel_candidates_kept": 1,
+           "pixel_pruned": false
+          }
+         ]
+        }
+       },
+       "geometry": {
+        "assumes_uniform_025": false,
+        "denominator": 786432
+       }
+      },
+      {
+       "scorer_row": 170,
+       "scorer_col": 452,
+       "selected_method": "cvp",
+       "result": {
+        "method": "cvp",
+        "pose_leakage_sq": 0.06578915088895143,
+        "pose_leakage_l2": 0.2564939587767155,
+        "seg_discrepancy": 0.3147064836242408,
+        "changed_camera_values": 23,
+        "diagnostics": {
+         "solver": "bounded_private_window_cvp",
+         "tap_radius": 0,
+         "max_channel_candidates": 9,
+         "max_pixel_candidates": 16,
+         "max_combinations": 250000,
+         "combinations_evaluated": 1,
+         "candidate_scope": "EXHAUSTIVE_TAP_RADIUS_PRODUCT",
+         "exact_declared_scope": true,
+         "global_integer_optimum_claim": false,
+         "pixel_candidate_counts": [
+          {
+           "pixel": [
+            0,
+            0
+           ],
+           "channel_counts": [
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            }
+           ],
+           "pixel_candidates_total_before_prune": 1,
+           "pixel_candidates_kept": 1,
+           "pixel_pruned": false
+          },
+          {
+           "pixel": [
+            0,
+            1
+           ],
+           "channel_counts": [
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            }
+           ],
+           "pixel_candidates_total_before_prune": 1,
+           "pixel_candidates_kept": 1,
+           "pixel_pruned": false
+          },
+          {
+           "pixel": [
+            1,
+            0
+           ],
+           "channel_counts": [
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            }
+           ],
+           "pixel_candidates_total_before_prune": 1,
+           "pixel_candidates_kept": 1,
+           "pixel_pruned": false
+          },
+          {
+           "pixel": [
+            1,
+            1
+           ],
+           "channel_counts": [
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            }
+           ],
+           "pixel_candidates_total_before_prune": 1,
+           "pixel_candidates_kept": 1,
+           "pixel_pruned": false
+          }
+         ]
+        }
+       },
+       "geometry": {
+        "assumes_uniform_025": false,
+        "denominator": 786432
+       }
+      },
+      {
+       "scorer_row": 170,
+       "scorer_col": 454,
+       "selected_method": "cvp",
+       "result": {
+        "method": "cvp",
+        "pose_leakage_sq": 0.08563174645466982,
+        "pose_leakage_l2": 0.2926290253113485,
+        "seg_discrepancy": 0.42670919287391545,
+        "changed_camera_values": 20,
+        "diagnostics": {
+         "solver": "bounded_private_window_cvp",
+         "tap_radius": 0,
+         "max_channel_candidates": 9,
+         "max_pixel_candidates": 16,
+         "max_combinations": 250000,
+         "combinations_evaluated": 1,
+         "candidate_scope": "EXHAUSTIVE_TAP_RADIUS_PRODUCT",
+         "exact_declared_scope": true,
+         "global_integer_optimum_claim": false,
+         "pixel_candidate_counts": [
+          {
+           "pixel": [
+            0,
+            0
+           ],
+           "channel_counts": [
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            }
+           ],
+           "pixel_candidates_total_before_prune": 1,
+           "pixel_candidates_kept": 1,
+           "pixel_pruned": false
+          },
+          {
+           "pixel": [
+            0,
+            1
+           ],
+           "channel_counts": [
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            }
+           ],
+           "pixel_candidates_total_before_prune": 1,
+           "pixel_candidates_kept": 1,
+           "pixel_pruned": false
+          },
+          {
+           "pixel": [
+            1,
+            0
+           ],
+           "channel_counts": [
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            }
+           ],
+           "pixel_candidates_total_before_prune": 1,
+           "pixel_candidates_kept": 1,
+           "pixel_pruned": false
+          },
+          {
+           "pixel": [
+            1,
+            1
+           ],
+           "channel_counts": [
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            }
+           ],
+           "pixel_candidates_total_before_prune": 1,
+           "pixel_candidates_kept": 1,
+           "pixel_pruned": false
+          }
+         ]
+        }
+       },
+       "geometry": {
+        "assumes_uniform_025": false,
+        "denominator": 786432
+       }
+      },
+      {
+       "scorer_row": 170,
+       "scorer_col": 456,
+       "selected_method": "cvp",
+       "result": {
+        "method": "cvp",
+        "pose_leakage_sq": 0.035109524681024046,
+        "pose_leakage_l2": 0.18737535772087013,
+        "seg_discrepancy": 0.21696662942213746,
+        "changed_camera_values": 24,
+        "diagnostics": {
+         "solver": "bounded_private_window_cvp",
+         "tap_radius": 0,
+         "max_channel_candidates": 9,
+         "max_pixel_candidates": 16,
+         "max_combinations": 250000,
+         "combinations_evaluated": 1,
+         "candidate_scope": "EXHAUSTIVE_TAP_RADIUS_PRODUCT",
+         "exact_declared_scope": true,
+         "global_integer_optimum_claim": false,
+         "pixel_candidate_counts": [
+          {
+           "pixel": [
+            0,
+            0
+           ],
+           "channel_counts": [
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            }
+           ],
+           "pixel_candidates_total_before_prune": 1,
+           "pixel_candidates_kept": 1,
+           "pixel_pruned": false
+          },
+          {
+           "pixel": [
+            0,
+            1
+           ],
+           "channel_counts": [
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            }
+           ],
+           "pixel_candidates_total_before_prune": 1,
+           "pixel_candidates_kept": 1,
+           "pixel_pruned": false
+          },
+          {
+           "pixel": [
+            1,
+            0
+           ],
+           "channel_counts": [
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            }
+           ],
+           "pixel_candidates_total_before_prune": 1,
+           "pixel_candidates_kept": 1,
+           "pixel_pruned": false
+          },
+          {
+           "pixel": [
+            1,
+            1
+           ],
+           "channel_counts": [
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            }
+           ],
+           "pixel_candidates_total_before_prune": 1,
+           "pixel_candidates_kept": 1,
+           "pixel_pruned": false
+          }
+         ]
+        }
+       },
+       "geometry": {
+        "assumes_uniform_025": false,
+        "denominator": 786432
+       }
+      },
+      {
+       "scorer_row": 170,
+       "scorer_col": 458,
+       "selected_method": "cvp",
+       "result": {
+        "method": "cvp",
+        "pose_leakage_sq": 0.09570140877393486,
+        "pose_leakage_l2": 0.30935644291647596,
+        "seg_discrepancy": 0.46233855113810385,
+        "changed_camera_values": 15,
+        "diagnostics": {
+         "solver": "bounded_private_window_cvp",
+         "tap_radius": 0,
+         "max_channel_candidates": 9,
+         "max_pixel_candidates": 16,
+         "max_combinations": 250000,
+         "combinations_evaluated": 1,
+         "candidate_scope": "EXHAUSTIVE_TAP_RADIUS_PRODUCT",
+         "exact_declared_scope": true,
+         "global_integer_optimum_claim": false,
+         "pixel_candidate_counts": [
+          {
+           "pixel": [
+            0,
+            0
+           ],
+           "channel_counts": [
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            }
+           ],
+           "pixel_candidates_total_before_prune": 1,
+           "pixel_candidates_kept": 1,
+           "pixel_pruned": false
+          },
+          {
+           "pixel": [
+            0,
+            1
+           ],
+           "channel_counts": [
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            }
+           ],
+           "pixel_candidates_total_before_prune": 1,
+           "pixel_candidates_kept": 1,
+           "pixel_pruned": false
+          },
+          {
+           "pixel": [
+            1,
+            0
+           ],
+           "channel_counts": [
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            }
+           ],
+           "pixel_candidates_total_before_prune": 1,
+           "pixel_candidates_kept": 1,
+           "pixel_pruned": false
+          },
+          {
+           "pixel": [
+            1,
+            1
+           ],
+           "channel_counts": [
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            }
+           ],
+           "pixel_candidates_total_before_prune": 1,
+           "pixel_candidates_kept": 1,
+           "pixel_pruned": false
+          }
+         ]
+        }
+       },
+       "geometry": {
+        "assumes_uniform_025": false,
+        "denominator": 786432
+       }
+      },
+      {
+       "scorer_row": 170,
+       "scorer_col": 460,
+       "selected_method": "cvp",
+       "result": {
+        "method": "cvp",
+        "pose_leakage_sq": 0.031896110622250985,
+        "pose_leakage_l2": 0.17859482249564512,
+        "seg_discrepancy": 0.4125979819587021,
+        "changed_camera_values": 31,
+        "diagnostics": {
+         "solver": "bounded_private_window_cvp",
+         "tap_radius": 0,
+         "max_channel_candidates": 9,
+         "max_pixel_candidates": 16,
+         "max_combinations": 250000,
+         "combinations_evaluated": 1,
+         "candidate_scope": "EXHAUSTIVE_TAP_RADIUS_PRODUCT",
+         "exact_declared_scope": true,
+         "global_integer_optimum_claim": false,
+         "pixel_candidate_counts": [
+          {
+           "pixel": [
+            0,
+            0
+           ],
+           "channel_counts": [
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            }
+           ],
+           "pixel_candidates_total_before_prune": 1,
+           "pixel_candidates_kept": 1,
+           "pixel_pruned": false
+          },
+          {
+           "pixel": [
+            0,
+            1
+           ],
+           "channel_counts": [
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            }
+           ],
+           "pixel_candidates_total_before_prune": 1,
+           "pixel_candidates_kept": 1,
+           "pixel_pruned": false
+          },
+          {
+           "pixel": [
+            1,
+            0
+           ],
+           "channel_counts": [
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            }
+           ],
+           "pixel_candidates_total_before_prune": 1,
+           "pixel_candidates_kept": 1,
+           "pixel_pruned": false
+          },
+          {
+           "pixel": [
+            1,
+            1
+           ],
+           "channel_counts": [
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            },
+            {
+             "tap_product_candidates": 1,
+             "unique_candidates": 1,
+             "kept": 1,
+             "pruned": false
+            }
+           ],
+           "pixel_candidates_total_before_prune": 1,
+           "pixel_candidates_kept": 1,
+           "pixel_pruned": false
+          }
+         ]
+        }
+       },
+       "geometry": {
+        "assumes_uniform_025": false,
+        "denominator": 786432
+       }
+      }
+     ]
+    },
+    "eta_net": -0.0015527950310559005,
+    "yuv6_residual": {
+     "max_abs_dY": 0.8259999999999987,
+     "mean_abs_dY": 0.0002649688720703127,
+     "max_abs_dU": 0.3749999999999716,
+     "max_abs_dV": 0.3749999999999716
+    },
+    "changed_scorer_pixels": 241,
+    "changed_scorer_channel_values": 529
+   }
+  }
+ ]
+}

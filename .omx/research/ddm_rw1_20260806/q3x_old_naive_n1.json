@@ -1,0 +1,408 @@
+{
+ "schema": "ddm_q3x_q3_convergence_measurement.v1",
+ "utc": "2026-08-06T15:01:31Z",
+ "git": "a5146af5eb56c1e2c17d45d82fd62c15673e9d9d",
+ "axis": "[macOS-CPU frozen-scorer advisory] NON-PROMOTABLE",
+ "score_claim": false,
+ "promotion_eligible": false,
+ "pointer_moved": false,
+ "selection_mode": "strided",
+ "selection": {
+  "indices": [
+   0
+  ],
+  "provenance": {
+   "schema": "pact.subset_selection.v1",
+   "pair_selection": "strided",
+   "n": 1,
+   "population": 600,
+   "seed": null,
+   "params": {
+    "stride": 20,
+    "offset": 0
+   },
+   "indices_head": [
+    0
+   ],
+   "representative_mode": true,
+   "population_matched": true,
+   "governing_ratios": [
+    {
+     "name": "flips_per_pair",
+     "subset_mean": 765.0,
+     "population_mean": 847.7333333333333,
+     "ratio": 0.9024064171122994,
+     "n_subset": 1,
+     "n_population": 600,
+     "verdict": "MATCHED",
+     "null_p05": 0.6793763762189368,
+     "null_p95": 1.555795847750864,
+     "n_bootstrap": 500,
+     "reason": ""
+    }
+   ]
+  },
+  "summary": "selection: mode=strided n=1/600 seed=None | flips_per_pair: subset mean 765 vs population 847.733 = 0.9024x, seeded-random band [0.6794, 1.556] (n_boot=500) => MATCHED",
+  "extra_governing_ratios": [
+   {
+    "name": "d_pose_base",
+    "subset_mean": 0.0007871190427514002,
+    "population_mean": 0.0025513987495742432,
+    "ratio": 0.3085049104467689,
+    "n_subset": 1,
+    "n_population": 600,
+    "verdict": "MATCHED",
+    "null_p05": 0.006794465017217532,
+    "null_p95": 19.509314853606313,
+    "n_bootstrap": 500,
+    "reason": ""
+   }
+  ]
+ },
+ "inputs": {
+  "sub_dir": "/Volumes/VertigoDataTier/pact/ddm_gt3_20260803",
+  "gt_mkv": "/Users/adpena/Projects/pact/upstream/videos/0.mkv",
+  "argmax_cache": "/Volumes/VertigoDataTier/pact/ddm_pu2_20260803/argmax_cache",
+  "gt3_receipt": "/Volumes/VertigoDataTier/pact/ddm_gt3_20260803/gt3_free_basis_n600.json",
+  "pz1_dpose": "/Users/adpena/Projects/pact/.omx/research/ddm_pz1_dpose_paired_n600_cx1_20260803.json"
+ },
+ "gt3_threshold": {
+  "break_even_eta": 0.7163826725858013,
+  "eta_seg_only_source": 0.7895,
+  "retained_fraction_threshold": 0.9073878056818256,
+  "gt3_bytes_unchanged": 108213.53344322393,
+  "gt3_flips_in_taken": 115760.0,
+  "gt3_dS_at_eta_seg_only": -0.0054194490506389555,
+  "gt3_gap": 0.6189279,
+  "gt3_archive_bytes": 353805.0,
+  "gt3_S_per_byte": 6.658589531221714e-07,
+  "gt3_S_per_flip": 8.477105034722222e-07
+ },
+ "solver": {
+  "seg_only_source": "ddm_sq1_stage_decomposition.solve_margin_optimal_paint",
+  "solver_form": "project-after",
+  "steps": 2,
+  "cap_ladder": [
+   2
+  ],
+  "lr": 4.0,
+  "eval_every": 1,
+  "convergence_patience_evals": 0,
+  "convergence_min_improvement": 1,
+  "starts": [
+   "dec",
+   "truth"
+  ],
+  "projector": "ddm_sq1_pose_null_constrained_paint.pose_null_projector",
+  "realizer": "naive-round",
+  "dk1_dykstra_iterations": 8,
+  "dk1_cvp_tap_radius": 1,
+  "dk1_max_blocks": null,
+  "snap_to_2x2_blocks": true
+ },
+ "element_grade_vector": {
+  "schema": "ddm_rw1_element_grade_vector.v1",
+  "chain_name": "q3x_q3_convergence_realizer",
+  "elements": {
+   "init": {
+    "grade": "OPTIMAL-RECEIPT",
+    "note": "solver uses inherited dec/truth multi-start starts"
+   },
+   "step_rule": {
+    "grade": "NAIVE-NAMED",
+    "note": "project-after Adam step rule, not separately optimized in rw1"
+   },
+   "stopping_rule": {
+    "grade": "OPTIMAL-RECEIPT",
+    "note": "CA1 cap-stop receipts over ladder 2"
+   },
+   "metric": {
+    "grade": "NAIVE-NAMED",
+    "note": "proxy SegNet cross-entropy/argmax objective retained from source solver"
+   },
+   "subset": {
+    "grade": "OPTIMAL-RECEIPT",
+    "note": "bounded strided selection {'schema': 'pact.subset_selection.v1', 'pair_selection': 'strided', 'n': 1, 'population': 600, 'seed': None, 'params': {'stride': 20, 'offset': 0}, 'indices_head': [0], 'representative_mode': True, 'population_matched': True, 'governing_ratios': [{'name': 'flips_per_pair', 'subset_mean': 765.0, 'population_mean': 847.7333333333333, 'ratio': 0.9024064171122994, 'n_subset': 1, 'n_population': 600, 'verdict': 'MATCHED', 'null_p05': 0.6793763762189368, 'null_p95': 1.555795847750864, 'n_bootstrap': 500, 'reason': ''}]}"
+   },
+   "realization": {
+    "grade": "NAIVE-NAMED",
+    "note": "naive-round"
+   },
+   "projection": {
+    "grade": "NAIVE-NAMED",
+    "note": "project-after"
+   },
+   "tie_breaks": {
+    "grade": "NAIVE-NAMED",
+    "note": "best proxy flips then first observed best iterate"
+   },
+   "seed": {
+    "grade": "UNKNOWN",
+    "note": "no stochastic seed consumed by this small-n CPU advisory path"
+   },
+   "caches": {
+    "grade": "OPTIMAL-RECEIPT",
+    "note": "argmax cache C2/C3 checked per selected pair"
+   }
+  },
+  "status": "PARTIALLY-CURED"
+ },
+ "aggregate": {
+  "n_rows": 1,
+  "total_described_in_band": 644,
+  "flips_before": 765,
+  "seg_only_flips_after": 618,
+  "q3_projected_flips_after": 720,
+  "seg_only_net_flip_reduction": 147,
+  "q3_projected_net_flip_reduction": 45,
+  "seg_only_eta_net": 0.22826086956521738,
+  "q3_projected_eta_net": 0.06987577639751552,
+  "retained_seg_fraction": 0.30612244897959184,
+  "retained_fraction_threshold": 0.9073878056818256,
+  "crosses_retained_fraction_threshold": false,
+  "d_pose_before_mean": 0.0007871219422668219,
+  "d_pose_seg_only_after_mean": 0.002260820474475622,
+  "d_pose_q3_projected_after_mean": 0.0007870767149142921,
+  "d_pose_q3_projected_delta_mean": -4.5227352529764175e-08,
+  "d_pose_q3_projected_ratio": 0.9999425408566308,
+  "pose_small_threshold_ratio": 1.05,
+  "pose_small": true,
+  "instrument_capacity": {
+   "one_flip_retained_fraction_quantum": 0.006802721088435374,
+   "one_flip_eta_quantum": 0.0015527950310559005,
+   "scorer_sites_per_pair": 196608,
+   "sample_pairs": 1,
+   "projector_rank_per_2x2_block": 6,
+   "projector_dof_per_2x2_block": 12
+  },
+  "priced_row_spec": {
+   "bytes_unchanged_from_gt3_scheme": 108213.53344322393,
+   "flips_in_taken_from_gt3_scheme": 115760.0,
+   "projected_eta_for_gt3_join": 0.24168367346938777,
+   "dS_total_at_projected_eta": 0.048338297293341326,
+   "pct_of_gap_at_projected_eta": -7.81000457296259
+  },
+  "outcome": "FOLDED"
+ },
+ "rows": [
+  {
+   "pair": 0,
+   "flips_before": 765,
+   "described_in_band": 644,
+   "band_frac": 0.054255167643229164,
+   "band_frac_snapped": 0.06341552734375,
+   "snap_tax": 1.1688384737976938,
+   "d_pose_before": 0.0007871219422668219,
+   "C_before": [
+    [
+     43880,
+     71,
+     84,
+     49,
+     48
+    ],
+    [
+     369,
+     1032,
+     0,
+     0,
+     0
+    ],
+    [
+     14,
+     0,
+     96920,
+     9,
+     0
+    ],
+    [
+     51,
+     0,
+     31,
+     3482,
+     0
+    ],
+    [
+     39,
+     0,
+     0,
+     0,
+     50529
+    ]
+   ],
+   "seg_only": {
+    "tag": "dec@2",
+    "proxy_flips_scorer_lattice": 620,
+    "solve_cap": 2,
+    "solve_cap_stop_receipt": {
+     "stop_reason": "cap_bound",
+     "steps_run": 2,
+     "cap": 2,
+     "still_descending": true
+    },
+    "solve_cap_ladder": [
+     {
+      "cap": 2,
+      "proxy_flips": 620,
+      "tag": "dec@2",
+      "cap_stop_receipt": {
+       "stop_reason": "cap_bound",
+       "steps_run": 2,
+       "cap": 2,
+       "still_descending": true
+      },
+      "selected": {
+       "start": "dec",
+       "tag": "dec@2",
+       "best_step": 2,
+       "best_proxy_flips": 620,
+       "stop_reason": "iteration_cap_best_at_cap",
+       "trajectory_stop": null,
+       "steps_run": 2,
+       "curve": [
+        {
+         "step": 0,
+         "proxy_flips": 770
+        },
+        {
+         "step": 1,
+         "proxy_flips": 762
+        },
+        {
+         "step": 2,
+         "proxy_flips": 620
+        }
+       ]
+      }
+     }
+    ],
+    "solve_diagnostics_selected": {
+     "start": "dec",
+     "tag": "dec@2",
+     "best_step": 2,
+     "best_proxy_flips": 620,
+     "stop_reason": "iteration_cap_best_at_cap",
+     "trajectory_stop": null,
+     "steps_run": 2,
+     "curve": [
+      {
+       "step": 0,
+       "proxy_flips": 770
+      },
+      {
+       "step": 1,
+       "proxy_flips": 762
+      },
+      {
+       "step": 2,
+       "proxy_flips": 620
+      }
+     ]
+    },
+    "flips_after": 618,
+    "fixed": 333,
+    "introduced": 186,
+    "C_after": [
+     [
+      43915,
+      35,
+      146,
+      22,
+      14
+     ],
+     [
+      309,
+      1092,
+      0,
+      0,
+      0
+     ],
+     [
+      1,
+      0,
+      96933,
+      9,
+      0
+     ],
+     [
+      31,
+      0,
+      21,
+      3512,
+      0
+     ],
+     [
+      30,
+      0,
+      0,
+      0,
+      50538
+     ]
+    ],
+    "d_pose_after": 0.002260820474475622,
+    "eta_net": 0.22826086956521738
+   },
+   "q3_projected": {
+    "flips_after": 720,
+    "fixed": 48,
+    "introduced": 3,
+    "C_after": [
+     [
+      43916,
+      65,
+      65,
+      45,
+      41
+     ],
+     [
+      363,
+      1038,
+      0,
+      0,
+      0
+     ],
+     [
+      15,
+      0,
+      96919,
+      9,
+      0
+     ],
+     [
+      49,
+      0,
+      28,
+      3487,
+      0
+     ],
+     [
+      40,
+      0,
+      0,
+      0,
+      50528
+     ]
+    ],
+    "d_pose_after": 0.0007870767149142921,
+    "realizer": "naive-round",
+    "realizer_receipt": {
+     "schema": "ddm_rw1_q3x_legacy_realizer_receipt.v1",
+     "method": "naive-round",
+     "projector": "euclidean Q3 projector then scorer-lattice uint8 rounding",
+     "snap_to_2x2_blocks": true,
+     "score_claim": false,
+     "promotion_eligible": false
+    },
+    "eta_net": 0.06987577639751552,
+    "yuv6_residual": {
+     "max_abs_dY": 0.875,
+     "mean_abs_dY": 0.01358987935384115,
+     "max_abs_dU": 0.41718397291197107,
+     "max_abs_dV": 0.5640156918687751
+    },
+    "changed_scorer_pixels": 11360,
+    "changed_scorer_channel_values": 23807
+   }
+  }
+ ]
+}

@@ -1,0 +1,1083 @@
+{
+ "schema": "ddm_rw1_fd_integer_near_margin_smoke.v1",
+ "utc": "2026-08-06T15:02:00Z",
+ "git": "a5146af5eb56c1e2c17d45d82fd62c15673e9d9d",
+ "axis": "[macOS-CPU frozen-scorer advisory] NON-PROMOTABLE",
+ "score_claim": false,
+ "promotion_eligible": false,
+ "pointer_moved": false,
+ "inputs": {
+  "fd1_raw": "/Volumes/VertigoDataTier/pact/ddm_fd1_20260728/boxsolve_inflate/0.raw",
+  "gt_mkv": "/Users/adpena/Projects/pact/upstream/videos/0.mkv"
+ },
+ "bounds": {
+  "limit_pairs": 1,
+  "max_proposals_total": 6,
+  "scorer_slot": "small-n<=8 smoke only; no n600 scorer job"
+ },
+ "baseline": {
+  "fd1_accept_rate": "0/6",
+  "fd1_source": ".omx/research/ddm_fd1_family_d_gn_DAG_FEED_20260728.md",
+  "fd2_source": ".omx/research/ddm_fd2_posenull_gn_disambiguation_20260728.md"
+ },
+ "instrument": {
+  "method": "cvp",
+  "dk1_cvp_tap_radius": 0,
+  "dk1_dykstra_iterations": 8
+ },
+ "aggregate": {
+  "n_pairs": 1,
+  "n_proposals": 6,
+  "n_accepted": 1,
+  "accept_rate": 0.16666666666666666,
+  "delta_vs_fd1_baseline_accepts": 1,
+  "elapsed_sec": 4.577171087265015
+ },
+ "element_grade_vector": {
+  "schema": "ddm_rw1_element_grade_vector.v1",
+  "chain_name": "fd1_fd2_integer_near_margin_reopen",
+  "elements": {
+   "init": {
+    "grade": "OPTIMAL-RECEIPT",
+    "note": "FD1 inflated substrate plus decoded GT, bounded pair selection"
+   },
+   "step_rule": {
+    "grade": "OPTIMAL-RECEIPT",
+    "note": "ascending realized current-minus-target logit margin"
+   },
+   "stopping_rule": {
+    "grade": "OPTIMAL-RECEIPT",
+    "note": "bounded n<=8 smoke and max proposal count, no campaign relaunch"
+   },
+   "metric": {
+    "grade": "OPTIMAL-RECEIPT",
+    "note": "proposal acceptance requires realized SegNet argmax improvement"
+   },
+   "subset": {
+    "grade": "OPTIMAL-RECEIPT",
+    "note": "strided limit=1 stride=20 offset=0"
+   },
+   "realization": {
+    "grade": "OPTIMAL-RECEIPT",
+    "note": "dk1 cvp private-block uint8 camera lattice"
+   },
+   "projection": {
+    "grade": "OPTIMAL-RECEIPT",
+    "note": "no post-hoc pose-null-only projection; proposals are realized before validation"
+   },
+   "tie_breaks": {
+    "grade": "NAIVE-NAMED",
+    "note": "stable lexical tie-break after margin sort"
+   },
+   "seed": {
+    "grade": "UNKNOWN",
+    "note": "no stochastic seed consumed"
+   },
+   "caches": {
+    "grade": "NAIVE-NAMED",
+    "note": "FD1 raw substrate read directly; no new cache authority"
+   }
+  },
+  "status": "PARTIALLY-CURED"
+ },
+ "rows": [
+  {
+   "pair": 0,
+   "flips_before": 197,
+   "result": {
+    "schema": "ddm_rw1_fd_integer_near_margin_proposals.v1",
+    "score_claim": false,
+    "promotion_eligible": false,
+    "generated_on": "uint8 camera lattice via dk1 private-block integer realizer",
+    "proposal_order": "ascending realized logit margin current_class-minus-target_class",
+    "validation_gate": "realized SegNet argmax must improve in the proposal loop",
+    "selected_method": "cvp",
+    "dk1_cvp_tap_radius": 0,
+    "dk1_dykstra_iterations": 8,
+    "proposals": [
+     {
+      "schema": "ddm_rw1_fd_integer_near_margin_proposals.v1",
+      "site": {
+       "scorer_row": 192,
+       "scorer_col": 238,
+       "target_class": 0,
+       "current_class": 1,
+       "margin_current_minus_target": 5.7220458984375e-06
+      },
+      "selected_method": "cvp",
+      "dk1_result": {
+       "method": "cvp",
+       "pose_leakage_sq": 0.05633017132773725,
+       "pose_leakage_l2": 0.23733978033135797,
+       "seg_discrepancy": 0.290273385001083,
+       "changed_camera_values": 18,
+       "diagnostics": {
+        "solver": "bounded_private_window_cvp",
+        "tap_radius": 0,
+        "max_channel_candidates": 9,
+        "max_pixel_candidates": 16,
+        "max_combinations": 250000,
+        "combinations_evaluated": 1,
+        "candidate_scope": "EXHAUSTIVE_TAP_RADIUS_PRODUCT",
+        "exact_declared_scope": true,
+        "global_integer_optimum_claim": false,
+        "pixel_candidate_counts": [
+         {
+          "pixel": [
+           0,
+           0
+          ],
+          "channel_counts": [
+           {
+            "tap_product_candidates": 1,
+            "unique_candidates": 1,
+            "kept": 1,
+            "pruned": false
+           },
+           {
+            "tap_product_candidates": 1,
+            "unique_candidates": 1,
+            "kept": 1,
+            "pruned": false
+           },
+           {
+            "tap_product_candidates": 1,
+            "unique_candidates": 1,
+            "kept": 1,
+            "pruned": false
+           }
+          ],
+          "pixel_candidates_total_before_prune": 1,
+          "pixel_candidates_kept": 1,
+          "pixel_pruned": false
+         },
+         {
+          "pixel": [
+           0,
+           1
+          ],
+          "channel_counts": [
+           {
+            "tap_product_candidates": 1,
+            "unique_candidates": 1,
+            "kept": 1,
+            "pruned": false
+           },
+           {
+            "tap_product_candidates": 1,
+            "unique_candidates": 1,
+            "kept": 1,
+            "pruned": false
+           },
+           {
+            "tap_product_candidates": 1,
+            "unique_candidates": 1,
+            "kept": 1,
+            "pruned": false
+           }
+          ],
+          "pixel_candidates_total_before_prune": 1,
+          "pixel_candidates_kept": 1,
+          "pixel_pruned": false
+         },
+         {
+          "pixel": [
+           1,
+           0
+          ],
+          "channel_counts": [
+           {
+            "tap_product_candidates": 1,
+            "unique_candidates": 1,
+            "kept": 1,
+            "pruned": false
+           },
+           {
+            "tap_product_candidates": 1,
+            "unique_candidates": 1,
+            "kept": 1,
+            "pruned": false
+           },
+           {
+            "tap_product_candidates": 1,
+            "unique_candidates": 1,
+            "kept": 1,
+            "pruned": false
+           }
+          ],
+          "pixel_candidates_total_before_prune": 1,
+          "pixel_candidates_kept": 1,
+          "pixel_pruned": false
+         },
+         {
+          "pixel": [
+           1,
+           1
+          ],
+          "channel_counts": [
+           {
+            "tap_product_candidates": 1,
+            "unique_candidates": 1,
+            "kept": 1,
+            "pruned": false
+           },
+           {
+            "tap_product_candidates": 1,
+            "unique_candidates": 1,
+            "kept": 1,
+            "pruned": false
+           },
+           {
+            "tap_product_candidates": 1,
+            "unique_candidates": 1,
+            "kept": 1,
+            "pruned": false
+           }
+          ],
+          "pixel_candidates_total_before_prune": 1,
+          "pixel_candidates_kept": 1,
+          "pixel_pruned": false
+         }
+        ]
+       }
+      },
+      "validation": {
+       "accepted": false,
+       "flips_before": 197,
+       "flips_after": 197,
+       "fixed": 0,
+       "introduced": 0,
+       "accept_rule": "flips_after < baseline_flips_before on realized SegNet argmax",
+       "site": {
+        "scorer_row": 192,
+        "scorer_col": 238,
+        "target_class": 0,
+        "current_class": 1,
+        "margin_current_minus_target": 5.7220458984375e-06
+       }
+      },
+      "accepted": false
+     },
+     {
+      "schema": "ddm_rw1_fd_integer_near_margin_proposals.v1",
+      "site": {
+       "scorer_row": 186,
+       "scorer_col": 208,
+       "target_class": 1,
+       "current_class": 0,
+       "margin_current_minus_target": 0.00018167495727539062
+      },
+      "selected_method": "cvp",
+      "dk1_result": {
+       "method": "cvp",
+       "pose_leakage_sq": 0.14271210358693742,
+       "pose_leakage_l2": 0.37777255536491455,
+       "seg_discrepancy": 0.8263042102791855,
+       "changed_camera_values": 24,
+       "diagnostics": {
+        "solver": "bounded_private_window_cvp",
+        "tap_radius": 0,
+        "max_channel_candidates": 9,
+        "max_pixel_candidates": 16,
+        "max_combinations": 250000,
+        "combinations_evaluated": 1,
+        "candidate_scope": "EXHAUSTIVE_TAP_RADIUS_PRODUCT",
+        "exact_declared_scope": true,
+        "global_integer_optimum_claim": false,
+        "pixel_candidate_counts": [
+         {
+          "pixel": [
+           0,
+           0
+          ],
+          "channel_counts": [
+           {
+            "tap_product_candidates": 1,
+            "unique_candidates": 1,
+            "kept": 1,
+            "pruned": false
+           },
+           {
+            "tap_product_candidates": 1,
+            "unique_candidates": 1,
+            "kept": 1,
+            "pruned": false
+           },
+           {
+            "tap_product_candidates": 1,
+            "unique_candidates": 1,
+            "kept": 1,
+            "pruned": false
+           }
+          ],
+          "pixel_candidates_total_before_prune": 1,
+          "pixel_candidates_kept": 1,
+          "pixel_pruned": false
+         },
+         {
+          "pixel": [
+           0,
+           1
+          ],
+          "channel_counts": [
+           {
+            "tap_product_candidates": 1,
+            "unique_candidates": 1,
+            "kept": 1,
+            "pruned": false
+           },
+           {
+            "tap_product_candidates": 1,
+            "unique_candidates": 1,
+            "kept": 1,
+            "pruned": false
+           },
+           {
+            "tap_product_candidates": 1,
+            "unique_candidates": 1,
+            "kept": 1,
+            "pruned": false
+           }
+          ],
+          "pixel_candidates_total_before_prune": 1,
+          "pixel_candidates_kept": 1,
+          "pixel_pruned": false
+         },
+         {
+          "pixel": [
+           1,
+           0
+          ],
+          "channel_counts": [
+           {
+            "tap_product_candidates": 1,
+            "unique_candidates": 1,
+            "kept": 1,
+            "pruned": false
+           },
+           {
+            "tap_product_candidates": 1,
+            "unique_candidates": 1,
+            "kept": 1,
+            "pruned": false
+           },
+           {
+            "tap_product_candidates": 1,
+            "unique_candidates": 1,
+            "kept": 1,
+            "pruned": false
+           }
+          ],
+          "pixel_candidates_total_before_prune": 1,
+          "pixel_candidates_kept": 1,
+          "pixel_pruned": false
+         },
+         {
+          "pixel": [
+           1,
+           1
+          ],
+          "channel_counts": [
+           {
+            "tap_product_candidates": 1,
+            "unique_candidates": 1,
+            "kept": 1,
+            "pruned": false
+           },
+           {
+            "tap_product_candidates": 1,
+            "unique_candidates": 1,
+            "kept": 1,
+            "pruned": false
+           },
+           {
+            "tap_product_candidates": 1,
+            "unique_candidates": 1,
+            "kept": 1,
+            "pruned": false
+           }
+          ],
+          "pixel_candidates_total_before_prune": 1,
+          "pixel_candidates_kept": 1,
+          "pixel_pruned": false
+         }
+        ]
+       }
+      },
+      "validation": {
+       "accepted": false,
+       "flips_before": 197,
+       "flips_after": 197,
+       "fixed": 0,
+       "introduced": 0,
+       "accept_rule": "flips_after < baseline_flips_before on realized SegNet argmax",
+       "site": {
+        "scorer_row": 186,
+        "scorer_col": 208,
+        "target_class": 1,
+        "current_class": 0,
+        "margin_current_minus_target": 0.00018167495727539062
+       }
+      },
+      "accepted": false
+     },
+     {
+      "schema": "ddm_rw1_fd_integer_near_margin_proposals.v1",
+      "site": {
+       "scorer_row": 222,
+       "scorer_col": 458,
+       "target_class": 0,
+       "current_class": 1,
+       "margin_current_minus_target": 0.0006170272827148438
+      },
+      "selected_method": "cvp",
+      "dk1_result": {
+       "method": "cvp",
+       "pose_leakage_sq": 0.12623553701548318,
+       "pose_leakage_l2": 0.3552964072650935,
+       "seg_discrepancy": 0.5097269917101678,
+       "changed_camera_values": 11,
+       "diagnostics": {
+        "solver": "bounded_private_window_cvp",
+        "tap_radius": 0,
+        "max_channel_candidates": 9,
+        "max_pixel_candidates": 16,
+        "max_combinations": 250000,
+        "combinations_evaluated": 1,
+        "candidate_scope": "EXHAUSTIVE_TAP_RADIUS_PRODUCT",
+        "exact_declared_scope": true,
+        "global_integer_optimum_claim": false,
+        "pixel_candidate_counts": [
+         {
+          "pixel": [
+           0,
+           0
+          ],
+          "channel_counts": [
+           {
+            "tap_product_candidates": 1,
+            "unique_candidates": 1,
+            "kept": 1,
+            "pruned": false
+           },
+           {
+            "tap_product_candidates": 1,
+            "unique_candidates": 1,
+            "kept": 1,
+            "pruned": false
+           },
+           {
+            "tap_product_candidates": 1,
+            "unique_candidates": 1,
+            "kept": 1,
+            "pruned": false
+           }
+          ],
+          "pixel_candidates_total_before_prune": 1,
+          "pixel_candidates_kept": 1,
+          "pixel_pruned": false
+         },
+         {
+          "pixel": [
+           0,
+           1
+          ],
+          "channel_counts": [
+           {
+            "tap_product_candidates": 1,
+            "unique_candidates": 1,
+            "kept": 1,
+            "pruned": false
+           },
+           {
+            "tap_product_candidates": 1,
+            "unique_candidates": 1,
+            "kept": 1,
+            "pruned": false
+           },
+           {
+            "tap_product_candidates": 1,
+            "unique_candidates": 1,
+            "kept": 1,
+            "pruned": false
+           }
+          ],
+          "pixel_candidates_total_before_prune": 1,
+          "pixel_candidates_kept": 1,
+          "pixel_pruned": false
+         },
+         {
+          "pixel": [
+           1,
+           0
+          ],
+          "channel_counts": [
+           {
+            "tap_product_candidates": 1,
+            "unique_candidates": 1,
+            "kept": 1,
+            "pruned": false
+           },
+           {
+            "tap_product_candidates": 1,
+            "unique_candidates": 1,
+            "kept": 1,
+            "pruned": false
+           },
+           {
+            "tap_product_candidates": 1,
+            "unique_candidates": 1,
+            "kept": 1,
+            "pruned": false
+           }
+          ],
+          "pixel_candidates_total_before_prune": 1,
+          "pixel_candidates_kept": 1,
+          "pixel_pruned": false
+         },
+         {
+          "pixel": [
+           1,
+           1
+          ],
+          "channel_counts": [
+           {
+            "tap_product_candidates": 1,
+            "unique_candidates": 1,
+            "kept": 1,
+            "pruned": false
+           },
+           {
+            "tap_product_candidates": 1,
+            "unique_candidates": 1,
+            "kept": 1,
+            "pruned": false
+           },
+           {
+            "tap_product_candidates": 1,
+            "unique_candidates": 1,
+            "kept": 1,
+            "pruned": false
+           }
+          ],
+          "pixel_candidates_total_before_prune": 1,
+          "pixel_candidates_kept": 1,
+          "pixel_pruned": false
+         }
+        ]
+       }
+      },
+      "validation": {
+       "accepted": false,
+       "flips_before": 197,
+       "flips_after": 197,
+       "fixed": 0,
+       "introduced": 0,
+       "accept_rule": "flips_after < baseline_flips_before on realized SegNet argmax",
+       "site": {
+        "scorer_row": 222,
+        "scorer_col": 458,
+        "target_class": 0,
+        "current_class": 1,
+        "margin_current_minus_target": 0.0006170272827148438
+       }
+      },
+      "accepted": false
+     },
+     {
+      "schema": "ddm_rw1_fd_integer_near_margin_proposals.v1",
+      "site": {
+       "scorer_row": 208,
+       "scorer_col": 216,
+       "target_class": 1,
+       "current_class": 0,
+       "margin_current_minus_target": 0.0010514259338378906
+      },
+      "selected_method": "cvp",
+      "dk1_result": {
+       "method": "cvp",
+       "pose_leakage_sq": 0.04034500780894804,
+       "pose_leakage_l2": 0.20086066765035918,
+       "seg_discrepancy": 0.3237547589975246,
+       "changed_camera_values": 16,
+       "diagnostics": {
+        "solver": "bounded_private_window_cvp",
+        "tap_radius": 0,
+        "max_channel_candidates": 9,
+        "max_pixel_candidates": 16,
+        "max_combinations": 250000,
+        "combinations_evaluated": 1,
+        "candidate_scope": "EXHAUSTIVE_TAP_RADIUS_PRODUCT",
+        "exact_declared_scope": true,
+        "global_integer_optimum_claim": false,
+        "pixel_candidate_counts": [
+         {
+          "pixel": [
+           0,
+           0
+          ],
+          "channel_counts": [
+           {
+            "tap_product_candidates": 1,
+            "unique_candidates": 1,
+            "kept": 1,
+            "pruned": false
+           },
+           {
+            "tap_product_candidates": 1,
+            "unique_candidates": 1,
+            "kept": 1,
+            "pruned": false
+           },
+           {
+            "tap_product_candidates": 1,
+            "unique_candidates": 1,
+            "kept": 1,
+            "pruned": false
+           }
+          ],
+          "pixel_candidates_total_before_prune": 1,
+          "pixel_candidates_kept": 1,
+          "pixel_pruned": false
+         },
+         {
+          "pixel": [
+           0,
+           1
+          ],
+          "channel_counts": [
+           {
+            "tap_product_candidates": 1,
+            "unique_candidates": 1,
+            "kept": 1,
+            "pruned": false
+           },
+           {
+            "tap_product_candidates": 1,
+            "unique_candidates": 1,
+            "kept": 1,
+            "pruned": false
+           },
+           {
+            "tap_product_candidates": 1,
+            "unique_candidates": 1,
+            "kept": 1,
+            "pruned": false
+           }
+          ],
+          "pixel_candidates_total_before_prune": 1,
+          "pixel_candidates_kept": 1,
+          "pixel_pruned": false
+         },
+         {
+          "pixel": [
+           1,
+           0
+          ],
+          "channel_counts": [
+           {
+            "tap_product_candidates": 1,
+            "unique_candidates": 1,
+            "kept": 1,
+            "pruned": false
+           },
+           {
+            "tap_product_candidates": 1,
+            "unique_candidates": 1,
+            "kept": 1,
+            "pruned": false
+           },
+           {
+            "tap_product_candidates": 1,
+            "unique_candidates": 1,
+            "kept": 1,
+            "pruned": false
+           }
+          ],
+          "pixel_candidates_total_before_prune": 1,
+          "pixel_candidates_kept": 1,
+          "pixel_pruned": false
+         },
+         {
+          "pixel": [
+           1,
+           1
+          ],
+          "channel_counts": [
+           {
+            "tap_product_candidates": 1,
+            "unique_candidates": 1,
+            "kept": 1,
+            "pruned": false
+           },
+           {
+            "tap_product_candidates": 1,
+            "unique_candidates": 1,
+            "kept": 1,
+            "pruned": false
+           },
+           {
+            "tap_product_candidates": 1,
+            "unique_candidates": 1,
+            "kept": 1,
+            "pruned": false
+           }
+          ],
+          "pixel_candidates_total_before_prune": 1,
+          "pixel_candidates_kept": 1,
+          "pixel_pruned": false
+         }
+        ]
+       }
+      },
+      "validation": {
+       "accepted": true,
+       "flips_before": 197,
+       "flips_after": 196,
+       "fixed": 1,
+       "introduced": 0,
+       "accept_rule": "flips_after < baseline_flips_before on realized SegNet argmax",
+       "site": {
+        "scorer_row": 208,
+        "scorer_col": 216,
+        "target_class": 1,
+        "current_class": 0,
+        "margin_current_minus_target": 0.0010514259338378906
+       }
+      },
+      "accepted": true
+     },
+     {
+      "schema": "ddm_rw1_fd_integer_near_margin_proposals.v1",
+      "site": {
+       "scorer_row": 284,
+       "scorer_col": 394,
+       "target_class": 0,
+       "current_class": 4,
+       "margin_current_minus_target": 0.00119781494140625
+      },
+      "selected_method": "cvp",
+      "dk1_result": {
+       "method": "cvp",
+       "pose_leakage_sq": 0.08778295972271297,
+       "pose_leakage_l2": 0.2962818923301135,
+       "seg_discrepancy": 0.4604169372294168,
+       "changed_camera_values": 25,
+       "diagnostics": {
+        "solver": "bounded_private_window_cvp",
+        "tap_radius": 0,
+        "max_channel_candidates": 9,
+        "max_pixel_candidates": 16,
+        "max_combinations": 250000,
+        "combinations_evaluated": 1,
+        "candidate_scope": "EXHAUSTIVE_TAP_RADIUS_PRODUCT",
+        "exact_declared_scope": true,
+        "global_integer_optimum_claim": false,
+        "pixel_candidate_counts": [
+         {
+          "pixel": [
+           0,
+           0
+          ],
+          "channel_counts": [
+           {
+            "tap_product_candidates": 1,
+            "unique_candidates": 1,
+            "kept": 1,
+            "pruned": false
+           },
+           {
+            "tap_product_candidates": 1,
+            "unique_candidates": 1,
+            "kept": 1,
+            "pruned": false
+           },
+           {
+            "tap_product_candidates": 1,
+            "unique_candidates": 1,
+            "kept": 1,
+            "pruned": false
+           }
+          ],
+          "pixel_candidates_total_before_prune": 1,
+          "pixel_candidates_kept": 1,
+          "pixel_pruned": false
+         },
+         {
+          "pixel": [
+           0,
+           1
+          ],
+          "channel_counts": [
+           {
+            "tap_product_candidates": 1,
+            "unique_candidates": 1,
+            "kept": 1,
+            "pruned": false
+           },
+           {
+            "tap_product_candidates": 1,
+            "unique_candidates": 1,
+            "kept": 1,
+            "pruned": false
+           },
+           {
+            "tap_product_candidates": 1,
+            "unique_candidates": 1,
+            "kept": 1,
+            "pruned": false
+           }
+          ],
+          "pixel_candidates_total_before_prune": 1,
+          "pixel_candidates_kept": 1,
+          "pixel_pruned": false
+         },
+         {
+          "pixel": [
+           1,
+           0
+          ],
+          "channel_counts": [
+           {
+            "tap_product_candidates": 1,
+            "unique_candidates": 1,
+            "kept": 1,
+            "pruned": false
+           },
+           {
+            "tap_product_candidates": 1,
+            "unique_candidates": 1,
+            "kept": 1,
+            "pruned": false
+           },
+           {
+            "tap_product_candidates": 1,
+            "unique_candidates": 1,
+            "kept": 1,
+            "pruned": false
+           }
+          ],
+          "pixel_candidates_total_before_prune": 1,
+          "pixel_candidates_kept": 1,
+          "pixel_pruned": false
+         },
+         {
+          "pixel": [
+           1,
+           1
+          ],
+          "channel_counts": [
+           {
+            "tap_product_candidates": 1,
+            "unique_candidates": 1,
+            "kept": 1,
+            "pruned": false
+           },
+           {
+            "tap_product_candidates": 1,
+            "unique_candidates": 1,
+            "kept": 1,
+            "pruned": false
+           },
+           {
+            "tap_product_candidates": 1,
+            "unique_candidates": 1,
+            "kept": 1,
+            "pruned": false
+           }
+          ],
+          "pixel_candidates_total_before_prune": 1,
+          "pixel_candidates_kept": 1,
+          "pixel_pruned": false
+         }
+        ]
+       }
+      },
+      "validation": {
+       "accepted": false,
+       "flips_before": 197,
+       "flips_after": 197,
+       "fixed": 0,
+       "introduced": 0,
+       "accept_rule": "flips_after < baseline_flips_before on realized SegNet argmax",
+       "site": {
+        "scorer_row": 284,
+        "scorer_col": 394,
+        "target_class": 0,
+        "current_class": 4,
+        "margin_current_minus_target": 0.00119781494140625
+       }
+      },
+      "accepted": false
+     },
+     {
+      "schema": "ddm_rw1_fd_integer_near_margin_proposals.v1",
+      "site": {
+       "scorer_row": 214,
+       "scorer_col": 470,
+       "target_class": 3,
+       "current_class": 0,
+       "margin_current_minus_target": 0.0012021064758300781
+      },
+      "selected_method": "cvp",
+      "dk1_result": {
+       "method": "cvp",
+       "pose_leakage_sq": 0.03297428712123955,
+       "pose_leakage_l2": 0.18158823508487423,
+       "seg_discrepancy": 0.44801148826793435,
+       "changed_camera_values": 13,
+       "diagnostics": {
+        "solver": "bounded_private_window_cvp",
+        "tap_radius": 0,
+        "max_channel_candidates": 9,
+        "max_pixel_candidates": 16,
+        "max_combinations": 250000,
+        "combinations_evaluated": 1,
+        "candidate_scope": "EXHAUSTIVE_TAP_RADIUS_PRODUCT",
+        "exact_declared_scope": true,
+        "global_integer_optimum_claim": false,
+        "pixel_candidate_counts": [
+         {
+          "pixel": [
+           0,
+           0
+          ],
+          "channel_counts": [
+           {
+            "tap_product_candidates": 1,
+            "unique_candidates": 1,
+            "kept": 1,
+            "pruned": false
+           },
+           {
+            "tap_product_candidates": 1,
+            "unique_candidates": 1,
+            "kept": 1,
+            "pruned": false
+           },
+           {
+            "tap_product_candidates": 1,
+            "unique_candidates": 1,
+            "kept": 1,
+            "pruned": false
+           }
+          ],
+          "pixel_candidates_total_before_prune": 1,
+          "pixel_candidates_kept": 1,
+          "pixel_pruned": false
+         },
+         {
+          "pixel": [
+           0,
+           1
+          ],
+          "channel_counts": [
+           {
+            "tap_product_candidates": 1,
+            "unique_candidates": 1,
+            "kept": 1,
+            "pruned": false
+           },
+           {
+            "tap_product_candidates": 1,
+            "unique_candidates": 1,
+            "kept": 1,
+            "pruned": false
+           },
+           {
+            "tap_product_candidates": 1,
+            "unique_candidates": 1,
+            "kept": 1,
+            "pruned": false
+           }
+          ],
+          "pixel_candidates_total_before_prune": 1,
+          "pixel_candidates_kept": 1,
+          "pixel_pruned": false
+         },
+         {
+          "pixel": [
+           1,
+           0
+          ],
+          "channel_counts": [
+           {
+            "tap_product_candidates": 1,
+            "unique_candidates": 1,
+            "kept": 1,
+            "pruned": false
+           },
+           {
+            "tap_product_candidates": 1,
+            "unique_candidates": 1,
+            "kept": 1,
+            "pruned": false
+           },
+           {
+            "tap_product_candidates": 1,
+            "unique_candidates": 1,
+            "kept": 1,
+            "pruned": false
+           }
+          ],
+          "pixel_candidates_total_before_prune": 1,
+          "pixel_candidates_kept": 1,
+          "pixel_pruned": false
+         },
+         {
+          "pixel": [
+           1,
+           1
+          ],
+          "channel_counts": [
+           {
+            "tap_product_candidates": 1,
+            "unique_candidates": 1,
+            "kept": 1,
+            "pruned": false
+           },
+           {
+            "tap_product_candidates": 1,
+            "unique_candidates": 1,
+            "kept": 1,
+            "pruned": false
+           },
+           {
+            "tap_product_candidates": 1,
+            "unique_candidates": 1,
+            "kept": 1,
+            "pruned": false
+           }
+          ],
+          "pixel_candidates_total_before_prune": 1,
+          "pixel_candidates_kept": 1,
+          "pixel_pruned": false
+         }
+        ]
+       }
+      },
+      "validation": {
+       "accepted": false,
+       "flips_before": 197,
+       "flips_after": 197,
+       "fixed": 0,
+       "introduced": 0,
+       "accept_rule": "flips_after < baseline_flips_before on realized SegNet argmax",
+       "site": {
+        "scorer_row": 214,
+        "scorer_col": 470,
+        "target_class": 3,
+        "current_class": 0,
+        "margin_current_minus_target": 0.0012021064758300781
+       }
+      },
+      "accepted": false
+     }
+    ],
+    "n_proposals": 6,
+    "n_accepted": 1,
+    "accept_rate": 0.16666666666666666
+   }
+  }
+ ]
+}
