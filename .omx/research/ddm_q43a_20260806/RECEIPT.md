@@ -177,3 +177,29 @@ Follow-on is `QUEUED-WITH-A-FIRE-ORDER`, not merely noted:
 No paid dispatch, no contest-CPU/CUDA claim, no upstream edits, no protected-file
 edits, no `/tmp` persisted evidence, no large artifacts created. Exact pointer
 unmoved.
+
+## MAIN APPENDIX — $0 BLOCK-LEVEL TAIL ADJUDICATION (2026-08-06, MAIN)
+
+The arm's typed blocker (adapter grammar mismatch) is ACCEPTED as filed. Before authorizing an
+adapter build, MAIN computed the tail-concentration half from the BANKED tq1c scorer checkpoints
+(38 x 16-pair batch files, pose_squared_error_sum; parent b35e756829, same custody chain as the
+preserved aggregate):
+
+- total pose sq-sum 2.5794 over 38 blocks; top block share 0.054 (2.1x uniform 0.026).
+- top-4 blocks (64 pairs) = 21.1% · top-7 (112 pairs) = 35.1% · top-13 (208 pairs) = 56.9%.
+- VERDICT: pose debt on THIS parent is NOT block-tail-concentrated. The QA43 charter's
+  counterfactual (pose 1.263 -> 0.382 via top-112) was a STALE-PREMISE import from the v4d era
+  (m37 genus — MAIN charter defect, filed as a round-10 finding): the pfs1/ms8/pw1 arc that
+  collapsed pose 2.7 -> 0.000717 also flattened the tail. Corroboration: #915 (pu2 line) banked
+  the tail-specific FORWARD value at ~0.6% of gap.
+- Scope honesty: block-level flatness bounds block-selection, NOT per-pair selection (extreme
+  within-block skew could evade it). But best-case top-112 arithmetic (<=0.024 S at PERFECT
+  correction, ~0.009 S byte cost at 120 B/pair) is dominated by named seg-axis spends
+  (seg gap 0.4015 = 69% of total; en1 margin-weight A/B built+waiting per #925).
+
+ROUTING: tq1c-grammar QA43 adapter build = NOT AUTHORIZED for tail-solve alone (would fire only
+if a future GLOBAL pose re-solve on this parent needs the same receiver binding — su2 step-2
+family, where #850's uncapped-GN headroom lives). The q43a slot routes to the round-10 review's
+pick from the scorer-gated queue, seg-axis-first per m66/m67. Verdict scope: INSTANCE
+(parent b35e756829 x block-level evidence); per-pair profile remains the named residual
+measurement if the pose axis is ever re-prioritized.
