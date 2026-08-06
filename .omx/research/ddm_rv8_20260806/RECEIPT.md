@@ -227,3 +227,23 @@ Run the same bounded ON smoke on a Metal-capable host, with:
 - record valid peak RSS/VRAM inside the tq1c co-tenancy envelope.
 
 Only after that measured smoke passes can the recursive review counter advance.
+
+## MAIN ADDENDUM — axis-9 completion (host smoke, 2026-08-06)
+
+rv8's BLOCKED_AXIS9_ENVIRONMENT was environmental only (no Metal in the codex sandbox). MAIN
+ran the bounded ON smoke on the host (detached, /Volumes/VertigoDataTier/pact/ddm_rv8_20260806/
+smoke_la1on, 6 ep from ep1766, rc=0, 357s). All four axis-9 evidence items MEASURED:
+1. ANNEAL NOT INERT: jd1_lr_anneal_config row — mode derived_tail, onset 1767, final_frac
+   0.4235143475 (source derived_sd_over_sd_plus_half_range: oscillation half_range 0.01590737,
+   mean 0.85168, n=5), final_lr 8.470287e-4; per-epoch jd1_lr descends 1.8899e-3 → 8.4703e-4.
+2. GATE POSE CHANNEL EMITS: realized_gate_dpose_* present at first gate (mean 0.00407, q50
+   0.002706, q95 0.01184, advisory label + calibration note + semantics string per charter).
+3. LOSS FINITE + DESCENDING: ep_loss 0.8552 → 0.7450 over 5 epochs, gnorms 1.1–2.9 (no spike).
+4. POSE-CHANNEL WALL-CLOCK MEASURED: realized_gate_dpose_wall_seconds 9.1516 of gate_wall
+   10.3716 (gate ~1.2s before) = ~3.7% run overhead at gate-every-5 — acceptable, no cadence
+   knob needed now.
+Note (non-blocking): smoke gate36 EMA dpose 0.00407 at ep1769 vs probe gate36 EMA 0.011570 at
+ep1766 — steep early-window descent consistent with the window pattern; the n600 endpoint
+probe remains the A/B authority.
+VERDICT COMPLETED: CLEAN_PASS_2_OF_3 · READY_TO_FIRE_UNDER_STANDING_GO (ON arm). Counter 2/3;
+round 9 fires at the OFF-arm boundary.
