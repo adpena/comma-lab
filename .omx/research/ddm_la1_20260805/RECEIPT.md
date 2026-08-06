@@ -248,3 +248,56 @@ process only); (5) adjudication arithmetic re-derived from raw receipt fields (O
 ONE FINDING: MAIN's false pg1 blocker in the routing paragraph (above, corrected in-round).
 Counter: the la1/jd7 MEASUREMENT chain is finding-free across rounds 8-9; the boundary-routing
 doc took 1 finding → corrected → counter 0/3 on the routing surface per the reset rule.
+
+## APPENDIX 4 — JD8-Q3 ENDPOINT ADJUDICATION (2026-08-06, MAIN)
+
+Probe: jd8q3_endpoint_n600_both_bases.json (n600 both bases, baseline ep1766, tag
+final_ep1875_q3on — window stopped on max_wall_minutes at 109/120 ep). All numbers
+[macOS-CPU advisory], training-vehicle window-objective pose semantics, score_claim=false.
+
+### Endpoints (EMA shipping basis)
+- ep1766 baseline: d_seg 0.004971932 · d_pose 0.010094669 · seg+pose 0.8149
+- jd7-OFF ep1886 (120ep): d_seg 0.004586 · d_pose 0.013307 · seg+pose 0.8234
+- jd8-Q3 ep1875 (109ep): d_seg 0.007533137 · d_pose 0.012074570 · seg+pose 1.1008
+Live basis Q3: d_seg 0.010384259 (worse) · d_pose 0.031096467 (7x BETTER than ep1766 live 0.214249).
+
+### Pre-registered #889 A/B: Q3 LOSES
+- q3_seg_gain = -0.002561205 (seg ASCENDED; OFF's gain +0.000386) -> seg_retention = -6.63.
+- q3_pose_delta = +0.001979901 -> pose-held gate (<=0.0001606) FAILS 12.3x.
+- WIN condition (comparable seg + near-zero pose damage) fails BOTH legs.
+- pg1 falsifier F2 CONFIRMED (extreme form): Q4 spend was load-bearing — for descent AND defense.
+
+### ffm1 (arXiv 2608.04531) pre-registered prediction: AMBIGUOUS by its own bands
+Pose-held condition failed, so the registered support/falsifier bands do not adjudicate
+cleanly (per PREDICTIONS.md ambiguous clause). Mechanism-class (projected field as
+order-wrong surrogate for constrained conditioning) directionally vindicated in a stronger
+form than modeled: bidirectional interference, not one-way yield deficit.
+
+### Mechanism (DERIVED, not measured-causal)
+Asymmetric disarmament: Q3 confines seg gradients to the pose-null (Q3) subspace; the
+active pose-finish term then moves Q4 freely (live pose 0.2142->0.0311, MEASURED). Q4
+movement perturbs seg, and seg's corrective component in Q4 is projected away -> seg
+ascends. Seg-hold requires Q4 access.
+
+### Verdict + scope (verdict ladder)
+RAW-PROJECTION Q3 AS A WINDOW-TRAINING CONSTRAINT: REFUTED at FORMULATION scope
+(linear --seg-grad-q3-project on TR1 from ep1766, joint window with active pose-finish,
+109ep). NOT killed: (a) the sq1 projector kernel claims stand (subspace IS pose-null,
+~4% integer leakage); (b) ffm1's conditioning analogue — descent ON the pose-null
+manifold with curvature correction — remains OPEN/unbuilt (consumer clause: any Q3 child
+must be constrained/curvature-corrected, never raw projection); (c) Q3 as an EXPORT-time
+placement constraint (bo1's #889 sharpening) is untouched by this training-mode result.
+- #837 ANSWERED at the training level: the pose-null subspace is NOT seg-defensible —
+  seg cannot even hold value when confined to it (stronger than not-reachable).
+- #934 lane-program q3x gate: DEAD as routed; existence hinge needs a different
+  pose-carrying base.
+- Epoch mismatch 109-vs-120 immaterial to a sign-level verdict (alarms from ep1779;
+  matched-epoch OFF intra ckpts exist if ever re-litigated).
+
+### Routing (la1 typed-exit chain, executed)
+ep1766 remains the campaign-best checkpoint, now dominant over THREE continuations
+(ON 0.9366 / OFF 0.8234 / Q3 1.1008 vs 0.8149). Plateau exit routes to POSE TERMINAL
+MACHINERY on ep1766 (QA43 #775 tail-targeted per-pair solve, built-to-ready; wp1 Muon
+finisher 098b98e11c as Case-B) + round 10 review. The Q3 window's one keeper transfers:
+seg-interference-free pose descent is large and fast — the pose-terminal design premise
+is MEASURED, not conjectured.
