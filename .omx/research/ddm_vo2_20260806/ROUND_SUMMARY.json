@@ -1,0 +1,53 @@
+{
+  "generated_at_utc": "2026-08-06T00:00:00Z",
+  "last_graded_source": "deterministic audit label; override with --last-graded for an intentional refresh",
+  "registry_hash_scope": "INSTRUMENT_REGISTRY.jsonl rows sorted by provenance_family/instrument_id",
+  "round_dry_trajectory": [
+    {
+      "dry": false,
+      "new_rows": 10,
+      "round": "R0"
+    },
+    {
+      "dry": false,
+      "new_rows": 4630,
+      "round": "R1"
+    }
+  ],
+  "round_reached": "R1",
+  "row_count": 4630,
+  "row_groups": {
+    "ca1-round0": 89,
+    "dk1-round0": 3,
+    "sw1-round0": 16,
+    "vo1-round0": 10,
+    "vo2-new": 4512
+  },
+  "schema": "ddm_vo2_instrument_registry.summary.v1",
+  "score_claim": false,
+  "scorer_free": true,
+  "source_candidate_denominator": {
+    "live_python_files_readable": 6245,
+    "live_python_files_scanned": 6245,
+    "source_candidate_rows": 4512,
+    "token_hit_file_counts": {
+      "DERIVED": 307,
+      "MEASURED": 640,
+      "PoseNet": 1382,
+      "SegNet": 1889,
+      "archive.zip": 934,
+      "archive_bytes": 1419,
+      "axis": 2265,
+      "d_pose": 1086,
+      "d_seg": 1416,
+      "eta": 117,
+      "evaluate.py": 718,
+      "ledger": 530,
+      "n600": 920,
+      "promotion_eligible": 2091,
+      "receipt": 832,
+      "score_claim": 2819,
+      "verdict": 1613
+    }
+  }
+}
