@@ -12,6 +12,8 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.util
+import io
 import json
 import math
 import os
@@ -20,6 +22,7 @@ import time
 import zipfile
 from dataclasses import asdict, dataclass
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any, Iterable, Mapping, Sequence
 
 import numpy as np
@@ -27,7 +30,7 @@ import numpy as np
 REPO = Path(__file__).resolve().parents[1]
 SRC = REPO / "src"
 EXP = REPO / "experiments"
-for path in (str(SRC), str(EXP)):
+for path in (str(SRC), str(EXP), str(REPO)):
     if path not in sys.path:
         sys.path.insert(0, path)
 
@@ -53,6 +56,19 @@ BASELINE = {
 DOMINATED_GLOBAL_BASELINE = (16, 12, 8, 4)
 R8_POSE_TERM_EROSION_LIMIT = 0.005
 CHECKPOINT_EVERY = 10
+DEFAULT_PHASE_B_ROOT = Path("/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized")
+DEFAULT_CANDIDATE_LEDGER = Path(
+    "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/optimal_form/tq1_phase_a_candidate_prices.jsonl"
+)
+DEFAULT_GT_CACHE = REPO / "experiments/results/mlx_fleet_gt_cache/gt_n600.npz"
+DEFAULT_QO1_RUNTIME = Path("/Volumes/VertigoDataTier/pact/ddm_qo1_20260804/sub_auto_pairbit")
+SCORER_CLASS_NAMES = {
+    0: "Road",
+    1: "Lane",
+    2: "Undrivable",
+    3: "Movable",
+    4: "MyCar",
+}
 
 
 @dataclass(frozen=True)
@@ -135,6 +151,25 @@ def _json_default(obj: Any) -> Any:
 def write_json(path: Path, value: Mapping[str, Any] | Sequence[Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(value, indent=1, sort_keys=True, default=_json_default, allow_nan=False) + "\n")
+
+
+def canonical_json_bytes(value: Mapping[str, Any] | Sequence[Any]) -> bytes:
+    return json.dumps(value, sort_keys=True, separators=(",", ":"), default=_json_default, allow_nan=False).encode("utf-8")
+
+
+def write_immutable_bytes(path: Path, payload: bytes) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if path.exists():
+        if path.read_bytes() != payload:
+            raise RuntimeError(f"immutable output differs: {path}")
+        return
+    temporary = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+    temporary.write_bytes(payload)
+    os.replace(temporary, path)
+
+
+def write_immutable_json(path: Path, value: Mapping[str, Any] | Sequence[Any]) -> None:
+    write_immutable_bytes(path, canonical_json_bytes(value) + b"\n")
 
 
 def append_jsonl(path: Path, row: Mapping[str, Any]) -> None:
@@ -510,6 +545,676 @@ def phase_b_psutil_preflight(limit_gb: float = 20.0) -> dict[str, Any]:
     }
 
 
+def phase_b_runtime_preflight(limit_gb: float = 20.0, min_available_gb: float = 25.0) -> dict[str, Any]:
+    import psutil
+
+    preflight = dict(phase_b_psutil_preflight(limit_gb))
+    available = int(psutil.virtual_memory().available)
+    minimum = int(min_available_gb * (1024**3))
+    preflight.update(
+        {
+            "available_memory_bytes": available,
+            "minimum_available_memory_bytes": minimum,
+            "minimum_available_memory_gb": min_available_gb,
+            "available_memory_passes": bool(available >= minimum),
+        }
+    )
+    preflight["passes"] = bool(preflight["passes"] and preflight["available_memory_passes"])
+    return preflight
+
+
+def candidate_from_row(row: Mapping[str, Any]) -> Candidate:
+    if row.get("schema") != "ddm_tq1_phase_a_candidate_price.v1":
+        raise RuntimeError(f"unexpected candidate ledger schema: {row.get('schema')!r}")
+    raw = row.get("candidate")
+    if not isinstance(raw, Mapping):
+        raise RuntimeError("candidate ledger row lacks candidate object")
+    preview = tuple(int(value) for value in raw.get("affected_pair_preview", ()))
+    return Candidate(
+        candidate_id=str(raw["candidate_id"]),
+        row=int(raw["row"]),
+        col=int(raw["col"]),
+        direction=str(raw["direction"]),
+        rung=int(raw["rung"]),
+        priority=float(raw["priority"]),
+        joint_guard=float(raw["joint_guard"]),
+        seg_guard=float(raw["seg_guard"]),
+        pose_guard=float(raw["pose_guard"]),
+        activity=float(raw["activity"]),
+        affected_pair_count=int(raw["affected_pair_count"]),
+        affected_pair_preview=preview,
+    )
+
+
+def load_candidate_ledger(path: Path, *, max_moves: int) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    with path.open() as handle:
+        for line in handle:
+            if line.strip():
+                rows.append(json.loads(line))
+    if max_moves > 0:
+        rows = rows[:max_moves]
+    for expected_index, row in enumerate(rows, start=1):
+        if int(row.get("index", expected_index)) != expected_index:
+            raise RuntimeError("candidate ledger index order differs")
+        candidate_from_row(row)
+    return rows
+
+
+def load_qo1_decoder_class(runtime_dir: Path) -> type[Any]:
+    runner = runtime_dir / "inflate_runner.py"
+    if not runner.is_file():
+        raise FileNotFoundError(f"inflate runner missing: {runner}")
+    module_name = f"ddm_tq1_qo1_inflate_runner_{sha256_file(runner)[:12]}"
+    spec = importlib.util.spec_from_file_location(module_name, runner)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"cannot import inflate runner: {runner}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    decoder = getattr(module, "Decoder", None)
+    if decoder is None:
+        raise RuntimeError(f"inflate runner has no Decoder class: {runner}")
+    return decoder
+
+
+class TQ1IX2Receiver:
+    """Small adapter exposing qo1 Decoder frames through the v19 receiver API."""
+
+    def __init__(self, archive_dir: Path, decoder_class: type[Any], *, archive_sha256: str) -> None:
+        self._decoder = decoder_class(archive_dir)
+        self.custody = {
+            "schema": "ddm_tq1_ix2_receiver_adapter.v1",
+            "archive_dir": str(archive_dir),
+            "archive_sha256": archive_sha256,
+            "decoder_class": f"{decoder_class.__module__}.{decoder_class.__qualname__}",
+            "receiver_output": "uint8 [B,2,874,1164,3] camera pairs",
+            "score_claim": False,
+            "axis": AXIS,
+        }
+
+    def render_camera_pairs(self, pair_ids: Sequence[int]) -> np.ndarray:
+        ids = tuple(int(value) for value in pair_ids)
+        out = np.empty((len(ids), 2, 874, 1164, 3), dtype=np.uint8)
+        for local, pair_id in enumerate(ids):
+            f1 = self._decoder.f1(pair_id)
+            f0 = self._decoder.f0(pair_id, f1)
+            out[local, 0] = f0
+            out[local, 1] = f1
+        return np.ascontiguousarray(out)
+
+
+def _extract_ix2_archive(archive_bytes: bytes, archive_sha256: str, extract_dir: Path) -> Path:
+    del archive_sha256
+    with zipfile.ZipFile(io.BytesIO(archive_bytes)) as zf:
+        payload = zf.read("0.bin")
+    member = extract_dir / "0.bin"
+    write_immutable_bytes(member, payload)
+    return extract_dir
+
+
+def _load_phase_b_scorers(args: argparse.Namespace) -> tuple[Any, Any, dict[str, Any]]:
+    from tools.measure_ddm_v14_realization_fidelity import _load_models
+
+    cfg = SimpleNamespace(
+        upstream_root=str(args.upstream_root),
+        scorer_threads=int(args.scorer_threads),
+        scorer_batch_size=int(args.scorer_batch_size),
+        seed=1234,
+    )
+    return _load_models(cfg)
+
+
+def _forward_phase_b(segnet: Any, posenet: Any, camera: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    from tools.measure_ddm_v14_realization_fidelity import _forward
+
+    return _forward(segnet, posenet, camera)
+
+
+def _phase_b_config(args: argparse.Namespace, jd5_gate: Mapping[str, Any]) -> dict[str, Any]:
+    config = {
+        "schema": "ddm_tq1_phase_b_realized_config.v1",
+        "base_archive": str(args.base_sub / "archive.zip"),
+        "base_archive_sha256": BASE_ARCHIVE_SHA256,
+        "candidate_ledger": str(args.candidate_ledger),
+        "candidate_ledger_sha256": sha256_file(args.candidate_ledger),
+        "gt_cache": str(args.gt_cache),
+        "gt_cache_sha256": sha256_file(args.gt_cache),
+        "runtime_dir": str(args.runtime_dir),
+        "inflate_runner_sha256": sha256_file(args.runtime_dir / "inflate_runner.py"),
+        "jd5_gate": jd5_gate,
+        "scorer_batch_size": int(args.scorer_batch_size),
+        "scorer_threads": int(args.scorer_threads),
+        "axis": AXIS,
+        "score_claim": False,
+    }
+    config["typed_config_sha256"] = sha256_bytes(canonical_json_bytes(config))
+    return config
+
+
+def measure_ix2_archive_n600(
+    *,
+    name: str,
+    archive_bytes: bytes,
+    phase_b_root: Path,
+    decoder_class: type[Any],
+    labels: np.ndarray,
+    poses: np.ndarray,
+    segnet: Any,
+    posenet: Any,
+    scorer_custody: Mapping[str, Any],
+    typed_config_sha256: str,
+    scorer_batch_size: int,
+) -> dict[str, Any]:
+    archive_sha = sha256_bytes(archive_bytes)
+    stage = phase_b_root / "stage_checkpoints" / "n600_scorer" / name
+    aggregate_path = stage / "aggregate.json"
+    if aggregate_path.exists():
+        aggregate = json.loads(aggregate_path.read_text())
+        if aggregate.get("archive_sha256") != archive_sha or aggregate.get("typed_config_sha256") != typed_config_sha256:
+            raise RuntimeError(f"n600 aggregate identity differs: {aggregate_path}")
+        return aggregate
+
+    archive_path = phase_b_root / "candidate_archives" / f"{name}.zip.receipt-bytes"
+    write_immutable_bytes(archive_path, archive_bytes)
+    extract_dir = phase_b_root / "extracted_archives" / name
+    archive_dir = _extract_ix2_archive(archive_bytes, archive_sha, extract_dir)
+    receiver = TQ1IX2Receiver(archive_dir, decoder_class, archive_sha256=archive_sha)
+
+    for start in range(0, 600, scorer_batch_size):
+        stop = min(start + scorer_batch_size, 600)
+        checkpoint = stage / f"batch_{start:04d}_{stop:04d}.json"
+        if checkpoint.exists():
+            row = json.loads(checkpoint.read_text())
+            if (
+                row.get("archive_sha256") != archive_sha
+                or row.get("typed_config_sha256") != typed_config_sha256
+                or row.get("pair_range") != [start, stop]
+            ):
+                raise RuntimeError(f"n600 batch checkpoint identity differs: {checkpoint}")
+            continue
+        print(f"[tq1b] scoring {name} batch {start:04d}:{stop:04d}", flush=True)
+        pair_ids = tuple(range(start, stop))
+        camera = receiver.render_camera_pairs(pair_ids)
+        cells, pose6 = _forward_phase_b(segnet, posenet, camera)
+        if start == 0:
+            replay_cells, replay_pose6 = _forward_phase_b(segnet, posenet, camera)
+            if not np.array_equal(cells, replay_cells) or not np.array_equal(pose6, replay_pose6):
+                raise RuntimeError(f"deterministic first-batch replay failed for {name}")
+        target = np.asarray(labels[start:stop], dtype=np.uint8)
+        target_pose = np.asarray(poses[start:stop], dtype=np.float64)
+        errors = cells != target
+        class_rows = {}
+        for class_id, class_name in SCORER_CLASS_NAMES.items():
+            mask = target == class_id
+            class_rows[class_name] = {
+                "errors": int(np.count_nonzero(errors & mask)),
+                "sites": int(np.count_nonzero(mask)),
+            }
+        row = {
+            "schema": "ddm_tq1_phase_b_n600_batch.v1",
+            "typed_config_sha256": typed_config_sha256,
+            "candidate": name,
+            "archive_sha256": archive_sha,
+            "pair_range": [start, stop],
+            "errors": int(np.count_nonzero(errors)),
+            "sites": int(errors.size),
+            "pose_squared_error_sum": f"{float(np.square(pose6 - target_pose).sum(dtype=np.float64)):.12f}",
+            "pose_coordinates": int(pose6.size),
+            "class_rows": class_rows,
+            "camera_sha256": sha256_array(camera),
+            "cells_sha256": sha256_array(cells),
+            "pose6_sha256": sha256_array(pose6),
+            "deterministic_first_batch_replay_checked": start == 0,
+            "axis": AXIS,
+            "score_claim": False,
+        }
+        write_immutable_json(checkpoint, row)
+
+    batch_rows = [json.loads(path.read_text()) for path in sorted(stage.glob("batch_*.json"))]
+    expected_batches = (600 + scorer_batch_size - 1) // scorer_batch_size
+    if len(batch_rows) != expected_batches:
+        raise RuntimeError(f"n600 batch coverage incomplete for {name}: {len(batch_rows)} != {expected_batches}")
+    class_totals = {name_: {"errors": 0, "sites": 0} for name_ in SCORER_CLASS_NAMES.values()}
+    for batch in batch_rows:
+        for class_name, row in batch["class_rows"].items():
+            class_totals[class_name]["errors"] += int(row["errors"])
+            class_totals[class_name]["sites"] += int(row["sites"])
+    errors = sum(int(row["errors"]) for row in batch_rows)
+    sites = sum(int(row["sites"]) for row in batch_rows)
+    pose_sse = sum(float(row["pose_squared_error_sum"]) for row in batch_rows)
+    pose_coordinates = sum(int(row["pose_coordinates"]) for row in batch_rows)
+    d_seg = errors / sites
+    d_pose = pose_sse / pose_coordinates
+    aggregate = {
+        "schema": "ddm_tq1_phase_b_n600_aggregate.v1",
+        "typed_config_sha256": typed_config_sha256,
+        "candidate": name,
+        "archive_path": str(archive_path),
+        "archive_bytes": len(archive_bytes),
+        "archive_sha256": archive_sha,
+        "d_seg": f"{d_seg:.12f}",
+        "d_pose": f"{d_pose:.12f}",
+        "advisory_score_formula_value": f"{score_from_components(d_seg, d_pose, len(archive_bytes)):.12f}",
+        "errors": errors,
+        "sites": sites,
+        "pose_squared_error_sum": f"{pose_sse:.12f}",
+        "pose_coordinates": pose_coordinates,
+        "per_stratum": {
+            class_name: {
+                **row,
+                "d_seg": f"{(row['errors'] / row['sites']) if row['sites'] else 0.0:.12f}",
+            }
+            for class_name, row in class_totals.items()
+        },
+        "batch_count": len(batch_rows),
+        "batch_size": scorer_batch_size,
+        "batch_digest_chain_sha256": sha256_bytes(
+            "".join(row["cells_sha256"] + row["pose6_sha256"] for row in batch_rows).encode("ascii")
+        ),
+        "all_batches_checkpointed_and_preserved": True,
+        "receiver_custody": receiver.custody,
+        "scorer_custody": dict(scorer_custody),
+        "axis": AXIS,
+        "score_claim": False,
+    }
+    write_immutable_json(aggregate_path, aggregate)
+    return aggregate
+
+
+def _component_from_measurement(row: Mapping[str, Any]) -> ComponentScore:
+    return ComponentScore(
+        d_seg=float(row["d_seg"]),
+        d_pose=float(row["d_pose"]),
+        archive_bytes=int(row["archive_bytes"]),
+        axis=str(row.get("axis", row.get("evidence_axis", AXIS))),
+        score_claim=bool(row.get("score_claim", False)),
+    )
+
+
+def _decision_path(root: Path, index: int, candidate_id: str) -> Path:
+    return root / "stage_checkpoints" / "phase_b_decisions" / f"move_{index:04d}_{candidate_id}.json"
+
+
+def _make_decision_row(
+    *,
+    index: int,
+    source_row: Mapping[str, Any],
+    candidate: Candidate,
+    current_before: ComponentScore,
+    trial: Mapping[str, Any],
+    verdict: Mapping[str, Any],
+    accepted_before: Sequence[str],
+    accepted_after: Sequence[str],
+    typed_config_sha256: str,
+    phase_b_root: Path,
+) -> dict[str, Any]:
+    return {
+        "schema": "ddm_tq1_phase_b_realized_move.v1",
+        "typed_config_sha256": typed_config_sha256,
+        "move_index": index,
+        "candidate_id": candidate.candidate_id,
+        "candidate": asdict(candidate),
+        "phase_a_singleton": {
+            "archive_bytes": int(source_row["archive_bytes"]),
+            "archive_sha256": str(source_row["archive_sha256"]),
+            "candidate_tokens_sha256": str(source_row.get("candidate_tokens_sha256")),
+            "token_frame_sha256": str(source_row.get("token_frame_sha256")),
+        },
+        "current_before": asdict(current_before) | {"score": current_before.score},
+        "trial": trial,
+        "verdict": dict(verdict),
+        "accepted": bool(verdict["accepted"]),
+        "accepted_move_ids_before": list(accepted_before),
+        "accepted_move_ids_after": list(accepted_after),
+        "checkpoint_root": str(phase_b_root / "stage_checkpoints"),
+        "axis": AXIS,
+        "score_claim": False,
+    }
+
+
+def write_phase_b_jsonl(rows: Sequence[Mapping[str, Any]], path: Path) -> None:
+    payload = "".join(json.dumps(row, sort_keys=True, default=_json_default, allow_nan=False) + "\n" for row in rows)
+    write_immutable_bytes(path, payload.encode("utf-8"))
+
+
+def _dominated_baselines() -> list[dict[str, Any]]:
+    return [
+        {
+            "id": "rt1_sb1_margin_coupled_16_12_8_4",
+            "S": 1.9753490686354727,
+            "archive_bytes": 244_436,
+            "d_seg": 0.00515854,
+            "d_pose": 0.16815221,
+            "scope": "FORMULATION for that adaptive margin map on fz4 sub_final",
+            "source": ".omx/research/ddm_ng1_20260805/ng1_negative_results_audit.md",
+        },
+        {
+            "id": "fz4_map_repair_kill",
+            "S": 1.9690434,
+            "archive_bytes": None,
+            "d_seg": None,
+            "d_pose": None,
+            "scope": "FORMULATION for [16,12,8,4] map plus current F0PR1 repair",
+            "source": ".omx/research/ddm_ng1_20260805/ng1_negative_results_audit.md",
+        },
+        {
+            "id": "ed2_entropy_descent_a025",
+            "S": 1.010325639339858,
+            "archive_bytes": 350_130,
+            "d_seg": 0.004499130249023438,
+            "d_pose": 0.01071092,
+            "scope": "FORMULATION/INSTANCE for qo1 IX2 discrete entropy step alpha=0.25",
+            "source": ".omx/research/ddm_ed2_20260805/RECEIPT.md",
+        },
+    ]
+
+
+def write_phase_b_receipts(
+    *,
+    args: argparse.Namespace,
+    result: Mapping[str, Any],
+    decision_rows: Sequence[Mapping[str, Any]],
+    measurement_jsonl: Path,
+    receipt_json: Path,
+) -> None:
+    final = result["final_current"]
+    baseline = result["measured_baseline"]
+    accepted = int(result["accepted"])
+    tested = int(result["rows"])
+    delta_s = float(final["score"]) - float(baseline["score"])
+    delta_d_seg = float(final["d_seg"]) - float(baseline["d_seg"])
+    delta_d_pose = float(final["d_pose"]) - float(baseline["d_pose"])
+    delta_bytes = int(final["archive_bytes"]) - int(baseline["archive_bytes"])
+    saturation = result["saturation"]
+    dominated = _dominated_baselines()
+    dominated_lines = [
+        "| id | S | bytes | d_seg | d_pose | scope |",
+        "|---|---:|---:|---:|---:|---|",
+    ]
+    for row in dominated:
+        dominated_lines.append(
+            "| {id} | {S} | {bytes} | {d_seg} | {d_pose} | {scope} |".format(
+                id=row["id"],
+                S=row["S"],
+                bytes="" if row["archive_bytes"] is None else row["archive_bytes"],
+                d_seg="" if row["d_seg"] is None else row["d_seg"],
+                d_pose="" if row["d_pose"] is None else row["d_pose"],
+                scope=row["scope"],
+            )
+        )
+
+    accepted_ids = result["accepted_move_ids"]
+    receipt_md = "\n".join(
+        [
+            "# ddm_tq1b Phase B realized acceptance receipt",
+            "",
+            f"Axis: `{AXIS}`. `score_claim=false`; promotion remains MAIN-only.",
+            "",
+            "## Result",
+            "",
+            f"- Tested moves: {tested} from `{args.candidate_ledger}`.",
+            f"- Accepted moves: {accepted} ({', '.join(accepted_ids) if accepted_ids else 'none'}).",
+            f"- Saturation: {saturation['state']} ({saturation['scope']}).",
+            f"- Baseline measured S: `{baseline['score']}` at {baseline['archive_bytes']} B.",
+            f"- Final held S: `{final['score']}` at {final['archive_bytes']} B.",
+            f"- Realized delta vs measured baseline: `delta_S={delta_s:+.12f}`, `delta_d_seg={delta_d_seg:+.12f}`, `delta_d_pose={delta_d_pose:+.12f}`, `delta_bytes={delta_bytes:+d}`.",
+            "",
+            "## Artifacts",
+            "",
+            f"- Receipt JSON: `{receipt_json}`",
+            f"- Accepted-move ledger: `{result['accepted_move_ledger']}`",
+            f"- Realized measurement JSONL: `{measurement_jsonl}`",
+            f"- Candidate archives: `{args.phase_b_root / 'candidate_archives'}`",
+            f"- Scorer checkpoints: `{args.phase_b_root / 'stage_checkpoints'}`",
+            "",
+            "## Dominated-Baseline Context",
+            "",
+            *dominated_lines,
+            "",
+            "## Scope",
+            "",
+            saturation["scope"],
+            "This is a macOS-CPU frozen-scorer advisory realization of the queued TQ1 Phase A prefix. It is not a contest-CPU/CUDA promotion row and does not move the contest pointer.",
+            "",
+            "## Recall Evidence",
+            "",
+            "- `.omx/tmp/codex_runs/tq1b_prompt.md`: Phase B fire order and acceptance rule.",
+            "- `.omx/tmp/codex_runs/_common_contract.md`: scorer slot, memory, serializer, and evidence constraints.",
+            "- `.omx/state/main_hot_state.md`: qo1 own-vehicle frontier and live JD6 co-tenancy.",
+            "- `tools/measure_ddm_v19_pure_priced_objective.py` and `tools/measure_ddm_v19b_joint_remeasure_stack.py`: realized receiver/scorer accounting pattern.",
+            "- `.omx/research/ddm_ng1_20260805/ng1_negative_results_audit.md` and `.omx/research/ddm_ed2_20260805/RECEIPT.md`: rt1/fz4/ed2 dominated rows.",
+            "",
+            "Own-vehicle frontier line unchanged: `S = 0.7539807296911207 @ 357,836 B [macOS-CPU advisory]`. Contest pointer unchanged: `S = 0.1910828242`, borrowed/unmoved.",
+            "",
+        ]
+    )
+    (args.receipt_dir / "RECEIPT.md").write_text(receipt_md)
+    next_md = "\n".join(
+        [
+            "# ddm_tq1 NEXT_IF_RESUMED",
+            "",
+            f"Status: {saturation['state']}. Phase B tested {tested} queued moves and accepted {accepted}.",
+            "",
+            f"- Receipt JSON: `{receipt_json}`",
+            f"- Realized measurement JSONL: `{measurement_jsonl}`",
+            f"- Accepted-move ledger: `{result['accepted_move_ledger']}`",
+            f"- Resume checkpoint root: `{args.phase_b_root / 'stage_checkpoints'}`",
+            "",
+            "NEXT_IF_RESUMED:",
+            saturation["next_if_resumed"],
+            "",
+        ]
+    )
+    (args.receipt_dir / "NEXT_IF_RESUMED.md").write_text(next_md)
+
+
+def run_phase_b_realized(args: argparse.Namespace, jd5_gate: Mapping[str, Any], preflight: Mapping[str, Any]) -> dict[str, Any]:
+    started = time.time()
+    args.phase_b_root.mkdir(parents=True, exist_ok=True)
+    args.receipt_dir.mkdir(parents=True, exist_ok=True)
+    config = _phase_b_config(args, jd5_gate)
+    typed_hash = str(config["typed_config_sha256"])
+    write_json(args.phase_b_root / "phase_b_realized_config.json", config)
+
+    from tac.boundary_math.power_diagram_witness import open_stored_npy_memmap
+
+    labels = open_stored_npy_memmap(args.gt_cache, "lstars")
+    poses = open_stored_npy_memmap(args.gt_cache, "gt_poses")
+    if labels.shape != (600, 384, 512) or poses.shape != (600, 6):
+        raise RuntimeError(f"target cache shape drift: labels={labels.shape}, poses={poses.shape}")
+    decoder_class = load_qo1_decoder_class(args.runtime_dir)
+    segnet, posenet, scorer_custody = _load_phase_b_scorers(args)
+    base_archive = args.base_sub / "archive.zip"
+    base_bytes = base_archive.read_bytes()
+    if sha256_bytes(base_bytes) != BASE_ARCHIVE_SHA256:
+        raise RuntimeError("base archive SHA drift before Phase B")
+    sections, base_tokens, base_info = load_phase_b_base_inputs(args)
+    mode, _delta = IX2._factor_mode_delta(base_tokens, 16)
+    base_measurement = measure_ix2_archive_n600(
+        name="qo1_baseline",
+        archive_bytes=base_bytes,
+        phase_b_root=args.phase_b_root,
+        decoder_class=decoder_class,
+        labels=labels,
+        poses=poses,
+        segnet=segnet,
+        posenet=posenet,
+        scorer_custody=scorer_custody,
+        typed_config_sha256=typed_hash,
+        scorer_batch_size=args.scorer_batch_size,
+    )
+    current_tokens = np.ascontiguousarray(base_tokens)
+    current_score = _component_from_measurement(base_measurement)
+    measured_baseline = asdict(current_score) | {"score": current_score.score}
+    current_archive = base_bytes
+    current_archive_sha = sha256_bytes(current_archive)
+    source_rows = load_candidate_ledger(args.candidate_ledger, max_moves=args.phase_b_max_moves)
+    accepted_ids: list[str] = []
+    decision_rows: list[dict[str, Any]] = []
+
+    for index, source_row in enumerate(source_rows, start=1):
+        candidate = candidate_from_row(source_row)
+        checkpoint = _decision_path(args.phase_b_root, index, candidate.candidate_id)
+        if checkpoint.exists():
+            row = json.loads(checkpoint.read_text())
+            if row.get("typed_config_sha256") != typed_hash or row.get("candidate_id") != candidate.candidate_id:
+                raise RuntimeError(f"Phase B decision checkpoint identity differs: {checkpoint}")
+            decision_rows.append(row)
+            if row["accepted"]:
+                current_tokens = apply_candidate(current_tokens, candidate, mode)
+                current_archive = (args.phase_b_root / "candidate_archives" / f"move_{index:04d}_{candidate.candidate_id}.zip.receipt-bytes").read_bytes()
+                current_archive_sha = sha256_bytes(current_archive)
+                current_score = _component_from_measurement(row["trial"])
+                accepted_ids.append(candidate.candidate_id)
+            continue
+
+        memory_check = phase_b_runtime_preflight()
+        if not memory_check["passes"]:
+            pause_path = args.phase_b_root / "stage_checkpoints" / f"pause_before_move_{index:04d}.json"
+            write_json(
+                pause_path,
+                {
+                    "schema": "ddm_tq1_phase_b_memory_pause.v1",
+                    "move_index": index,
+                    "candidate_id": candidate.candidate_id,
+                    "preflight": memory_check,
+                    "accepted_move_ids": accepted_ids,
+                    "score_claim": False,
+                },
+            )
+            time.sleep(60.0)
+            memory_recheck = phase_b_runtime_preflight()
+            if not memory_recheck["passes"]:
+                raise RuntimeError(f"Phase B memory gate failed after pause: {memory_recheck}")
+
+        print(f"[tq1b] testing move {index}/{len(source_rows)} {candidate.candidate_id}", flush=True)
+        trial_tokens = apply_candidate(current_tokens, candidate, mode)
+        _token_frame, trial_archive = build_archive_bytes(trial_tokens, sections)
+        trial_name = f"move_{index:04d}_{candidate.candidate_id}"
+        trial_measurement = measure_ix2_archive_n600(
+            name=trial_name,
+            archive_bytes=trial_archive,
+            phase_b_root=args.phase_b_root,
+            decoder_class=decoder_class,
+            labels=labels,
+            poses=poses,
+            segnet=segnet,
+            posenet=posenet,
+            scorer_custody=scorer_custody,
+            typed_config_sha256=typed_hash,
+            scorer_batch_size=args.scorer_batch_size,
+        )
+        trial_score = _component_from_measurement(trial_measurement)
+        verdict = acceptance_verdict(current_score, trial_score)
+        after_ids = [*accepted_ids, candidate.candidate_id] if verdict["accepted"] else list(accepted_ids)
+        row = _make_decision_row(
+            index=index,
+            source_row=source_row,
+            candidate=candidate,
+            current_before=current_score,
+            trial=trial_measurement,
+            verdict=verdict,
+            accepted_before=accepted_ids,
+            accepted_after=after_ids,
+            typed_config_sha256=typed_hash,
+            phase_b_root=args.phase_b_root,
+        )
+        write_immutable_json(checkpoint, row)
+        decision_rows.append(row)
+        if verdict["accepted"]:
+            current_tokens = trial_tokens
+            current_archive = trial_archive
+            current_archive_sha = sha256_bytes(current_archive)
+            current_score = trial_score
+            accepted_ids = after_ids
+
+        if index % args.phase_b_checkpoint_every == 0 or verdict["accepted"]:
+            write_json(
+                args.phase_b_root / "stage_checkpoints" / f"greedy_state_{index:04d}.json",
+                {
+                    "schema": "ddm_tq1_phase_b_greedy_state.v1",
+                    "typed_config_sha256": typed_hash,
+                    "move_index": index,
+                    "accepted_move_ids": accepted_ids,
+                    "current_score": asdict(current_score) | {"score": current_score.score},
+                    "current_archive_sha256": current_archive_sha,
+                    "score_claim": False,
+                },
+            )
+
+    measurement_jsonl = args.phase_b_root / "tq1_phase_b_realized_measurements.jsonl"
+    jsonl_rows = [
+        {
+            "schema": "ddm_tq1_phase_b_realized_measurement_row.v1",
+            "index": row["move_index"],
+            "candidate_id": row["candidate_id"],
+            "d_seg": row["trial"]["d_seg"],
+            "d_pose": row["trial"]["d_pose"],
+            "archive_bytes": row["trial"]["archive_bytes"],
+            "archive_sha256": row["trial"]["archive_sha256"],
+            "current_before": row["current_before"],
+            "verdict": row["verdict"],
+            "accepted": row["accepted"],
+            "axis": AXIS,
+            "score_claim": False,
+        }
+        for row in decision_rows
+    ]
+    write_phase_b_jsonl(jsonl_rows, measurement_jsonl)
+    accepted_ledger = args.phase_b_root / "tq1_phase_b_accepted_move_ledger.jsonl"
+    write_phase_b_jsonl([row for row in decision_rows if row["accepted"]], accepted_ledger)
+    saturation_state = "SATURATED_ZERO_ACCEPTED_PREFIX" if not accepted_ids else "SATURATED_ACCEPTED_PREFIX"
+    scope = (
+        f"queued {len(source_rows)}-move Phase A price-ledger prefix only; "
+        "the full 1,140-row derived menu is not claimed closed by this run"
+    )
+    result = {
+        "schema": "ddm_tq1_phase_b_realized_acceptance_receipt.v1",
+        "typed_config_sha256": typed_hash,
+        "seconds": time.time() - started,
+        "rows": len(decision_rows),
+        "accepted": len(accepted_ids),
+        "accepted_move_ids": accepted_ids,
+        "rejected_move_ids": [row["candidate_id"] for row in decision_rows if not row["accepted"]],
+        "measured_baseline": measured_baseline,
+        "final_current": asdict(current_score) | {"score": current_score.score},
+        "final_archive": {
+            "bytes": len(current_archive),
+            "sha256": current_archive_sha,
+            "source": "base archive" if not accepted_ids else "last accepted trial archive",
+        },
+        "saturation": {
+            "state": saturation_state,
+            "scope": scope,
+            "next_if_resumed": (
+                "Measure the remaining derived-menu rows, after regenerating a larger Phase A price ledger, before claiming full-menu closure."
+                if len(source_rows) < 1140
+                else "No queued menu rows remain under this config."
+            ),
+        },
+        "decision_rows": decision_rows,
+        "measurement_jsonl": str(measurement_jsonl),
+        "accepted_move_ledger": str(accepted_ledger),
+        "dominated_baselines": _dominated_baselines(),
+        "psutil_preflight": preflight,
+        "jd5_gate": jd5_gate,
+        "base_archive": base_info,
+        "phase_b_config": config,
+        "axis": AXIS,
+        "score_claim": False,
+    }
+    receipt_json = args.receipt_dir / "phase_b_realized_acceptance_receipt.json"
+    write_json(receipt_json, result)
+    write_phase_b_receipts(
+        args=args,
+        result=result,
+        decision_rows=decision_rows,
+        measurement_jsonl=measurement_jsonl,
+        receipt_json=receipt_json,
+    )
+    return result
+
+
 def apply_realized_measurement_jsonl(path: Path) -> dict[str, Any]:
     current = ComponentScore(
         d_seg=float(BASELINE["d_seg"]),
@@ -616,6 +1321,50 @@ def load_phase_a_inputs(args: argparse.Namespace) -> tuple[bytes, list[bytes], n
         "section_sha256": _section_sha256(sections),
     }
     return bulk, sections, tokens, fields, {"instrument_source": instrument_source, "base_info": base_info}, field_hashes
+
+
+def load_phase_b_base_inputs(args: argparse.Namespace) -> tuple[list[bytes], np.ndarray, dict[str, Any]]:
+    base_archive = args.base_sub / "archive.zip"
+    if not base_archive.exists():
+        raise FileNotFoundError(f"base archive missing: {base_archive}")
+    got_sha = sha256_file(base_archive)
+    if got_sha != BASE_ARCHIVE_SHA256:
+        raise RuntimeError(f"refusing cross-object TQ1 Phase B: base sha {got_sha} != {BASE_ARCHIVE_SHA256}")
+    bulk, sections = read_payload_archive(base_archive)
+    tokens = IX2.decode_token_frame(bulk)
+    if tokens.shape != (600, 24, 32, 4):
+        raise ValueError(f"live token shape drift: {tokens.shape}")
+    token_source_equal = None
+    token_source_sha = None
+    if args.token_source.exists():
+        source_tokens = np.load(args.token_source)
+        token_source_equal = bool(np.array_equal(tokens, source_tokens))
+        token_source_sha = sha256_file(args.token_source)
+        if not token_source_equal:
+            raise RuntimeError("live qo1 token bulk differs from token source; refusing mixed-object Phase B")
+    restaged = IX2.build_single_member_zip(IX2.build_payload(IX2.encode_token_frame(tokens, levels=16), sections))
+    restaged_sha = sha256_bytes(restaged)
+    if restaged_sha != got_sha:
+        raise RuntimeError(f"base restage did not reproduce qo1 archive: {restaged_sha} != {got_sha}")
+    return list(sections), tokens, {
+        "path": str(base_archive),
+        "sha256": got_sha,
+        "bytes": base_archive.stat().st_size,
+        "bulk_bytes": len(bulk),
+        "bulk_sha256": sha256_bytes(bulk),
+        "tokens_sha256": sha256_array(tokens),
+        "token_source": {
+            "path": str(args.token_source),
+            "exists": args.token_source.exists(),
+            "sha256": token_source_sha,
+            "equal_to_archive_tokens": token_source_equal,
+        },
+        "restaged_archive_sha256": restaged_sha,
+        "restaged_archive_bytes": len(restaged),
+        "restaged_matches_live": True,
+        "section_bytes": [len(section) for section in sections],
+        "section_sha256": _section_sha256(sections),
+    }
 
 
 def rung_summary(rungs: Mapping[tuple[int, int], tuple[int, ...]]) -> dict[str, Any]:
@@ -849,14 +1598,25 @@ def run_phase_b(args: argparse.Namespace) -> int:
         print(json.dumps({"status": "QUEUED-WITH-FIRE-ORDER", "jd5_ready": False}, indent=1))
         return 0
 
-    preflight = phase_b_psutil_preflight()
+    preflight = phase_b_runtime_preflight()
     if not preflight["passes"]:
         raise RuntimeError(f"Phase B psutil RSS preflight failed: {preflight}")
     if args.realized_measurement_jsonl is None:
-        raise RuntimeError(
-            "Phase B gate is open, but no realized scorer measurement JSONL was supplied. "
-            "Do not fabricate acceptance; wire the v19/v19b receiver->R->uint8 scorer stack first."
+        result = run_phase_b_realized(args, jd5_gate, preflight)
+        print(
+            json.dumps(
+                {
+                    "status": "REALIZED_PHASE_B_COMPLETE",
+                    "accepted": result["accepted"],
+                    "rows": result["rows"],
+                    "receipt": str(args.receipt_dir / "phase_b_realized_acceptance_receipt.json"),
+                    "measurement_jsonl": result["measurement_jsonl"],
+                },
+                indent=1,
+                sort_keys=True,
+            )
         )
+        return 0
     result = apply_realized_measurement_jsonl(args.realized_measurement_jsonl)
     result["psutil_preflight"] = preflight
     result["jd5_gate"] = jd5_gate
@@ -882,6 +1642,15 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--out-root", type=Path, default=Path("/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/optimal_form"))
     parser.add_argument("--receipt-dir", type=Path, default=REPO / ".omx/research/ddm_tq1_20260805")
     parser.add_argument("--jd5-dir", type=Path, default=Path("/Volumes/VertigoDataTier/pact/ddm_jd4_20260805"))
+    parser.add_argument("--phase-b-root", type=Path, default=DEFAULT_PHASE_B_ROOT)
+    parser.add_argument("--candidate-ledger", type=Path, default=DEFAULT_CANDIDATE_LEDGER)
+    parser.add_argument("--gt-cache", type=Path, default=DEFAULT_GT_CACHE)
+    parser.add_argument("--runtime-dir", type=Path, default=DEFAULT_QO1_RUNTIME)
+    parser.add_argument("--upstream-root", type=Path, default=REPO / "upstream")
+    parser.add_argument("--scorer-batch-size", type=int, default=16)
+    parser.add_argument("--scorer-threads", type=int, default=4)
+    parser.add_argument("--phase-b-max-moves", type=int, default=0, help="0 means all rows in the queued candidate ledger.")
+    parser.add_argument("--phase-b-checkpoint-every", type=int, default=20)
     parser.add_argument("--price-top", type=int, default=12)
     parser.add_argument("--smoke-moves", type=int, default=4)
     args = parser.parse_args(argv)
@@ -891,6 +1660,14 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         raise SystemExit("--price-top must be positive")
     if args.smoke_moves < 0:
         raise SystemExit("--smoke-moves must be non-negative")
+    if args.scorer_batch_size < 1:
+        raise SystemExit("--scorer-batch-size must be positive")
+    if args.scorer_threads < 1:
+        raise SystemExit("--scorer-threads must be positive")
+    if args.phase_b_max_moves < 0:
+        raise SystemExit("--phase-b-max-moves must be non-negative")
+    if args.phase_b_checkpoint_every < 1:
+        raise SystemExit("--phase-b-checkpoint-every must be positive")
     return args
 
 

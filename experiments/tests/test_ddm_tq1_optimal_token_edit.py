@@ -94,3 +94,59 @@ def test_acceptance_verdict_uses_recomputed_joint_score_and_pose_guard() -> None
 def test_score_from_components_rejects_silent_formula_drift() -> None:
     got = tq1.score_from_components(0.0, 0.0, tq1.DEN)
     assert got == pytest.approx(25.0)
+
+
+def test_candidate_from_row_validates_phase_a_price_schema() -> None:
+    row = {
+        "schema": "ddm_tq1_phase_a_candidate_price.v1",
+        "candidate": {
+            "candidate_id": "snap_r00_c02_L12",
+            "row": 0,
+            "col": 2,
+            "direction": "snap_sublattice",
+            "rung": 12,
+            "priority": 1.25,
+            "joint_guard": 0.0,
+            "seg_guard": 0.1,
+            "pose_guard": 0.2,
+            "activity": 0.3,
+            "affected_pair_count": 2,
+            "affected_pair_preview": [0, 17],
+        },
+    }
+
+    candidate = tq1.candidate_from_row(row)
+
+    assert candidate.candidate_id == "snap_r00_c02_L12"
+    assert candidate.affected_pair_preview == (0, 17)
+
+
+def test_phase_b_jsonl_is_immutable(tmp_path: Path) -> None:
+    path = tmp_path / "ledger.jsonl"
+    tq1.write_phase_b_jsonl([{"candidate_id": "a", "accepted": False}], path)
+    tq1.write_phase_b_jsonl([{"candidate_id": "a", "accepted": False}], path)
+
+    with pytest.raises(RuntimeError, match="immutable output differs"):
+        tq1.write_phase_b_jsonl([{"candidate_id": "b", "accepted": False}], path)
+
+
+def test_tq1_ix2_receiver_adapter_orders_frames() -> None:
+    class FakeDecoder:
+        def __init__(self, archive_dir: Path) -> None:
+            self.archive_dir = archive_dir
+
+        def f1(self, i: int) -> np.ndarray:
+            return np.full((874, 1164, 3), i + 1, dtype=np.uint8)
+
+        def f0(self, i: int, f1_u8: np.ndarray | None = None) -> np.ndarray:
+            assert f1_u8 is not None
+            return np.full((874, 1164, 3), i, dtype=np.uint8)
+
+    receiver = tq1.TQ1IX2Receiver(Path("/unused"), FakeDecoder, archive_sha256="0" * 64)
+    got = receiver.render_camera_pairs([3, 4])
+
+    assert got.shape == (2, 2, 874, 1164, 3)
+    assert got.dtype == np.uint8
+    assert int(got[0, 0, 0, 0, 0]) == 3
+    assert int(got[0, 1, 0, 0, 0]) == 4
+    assert receiver.custody["score_claim"] is False
