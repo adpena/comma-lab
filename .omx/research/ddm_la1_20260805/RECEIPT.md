@@ -182,3 +182,45 @@ only, n600 probe = authority). DO NOT project n600 pose from gate36 at low-error
 
 Error-atlas NPZs (ema+live, packbits, per-basis) + manifest landed next to the probe receipt
 → wp1 rows 3/9/13 unlocked as $0 reads.
+
+## OFF-arm endpoint + FINAL la1 ADJUDICATION (MAIN, 2026-08-06 — receipt jd7off_endpoint_n600_both_bases.json)
+
+OFF control window ep1766→1886 (flat LR 0.002, single-variable diff verified) completed rc=0
+(6,717 s); probe rc=0 (1,276 s). Endpoint vs ep1766 (same-basis):
+
+| arm | EMA d_seg (Δ) | EMA d_pose (Δ) | EMA seg+pose S | live d_pose | live/EMA |
+|---|---|---|---|---|---|
+| ep1766 start | 0.004972 | 0.010095 | 0.8149 | 0.214249 | 21.2× |
+| **OFF ep1886** | 0.004586 (−0.000386) | 0.013307 (+0.003212) | 0.8234 | 0.222644 | 16.7× |
+| ON ep1886 | 0.004803 (−0.000169) | 0.020818 (+0.010724) | 0.9366 | 0.028632 | 1.38× |
+
+**la1 VERDICT (pre-registered branch 1 — direct EMA comparison): the anneal lever is OFF
+mid-campaign.** OFF beats ON on BOTH EMA axes; ON-minus-OFF endpoint EMA ΔS = +0.113130.
+Mechanism fully resolved: `derived_tail` collapses the live oscillation (divergence 16.7×→1.38×)
+but the EMA — a weight-average OVER the oscillation — is the better scorer point, and killing
+the oscillation converges live toward a WORSE point that drags the EMA with it (SWA-class
+effect: the averaged iterate beats every individual iterate; the anneal destroys the ensemble).
+RE-SCOPE: terminal-only utility is CONJECTURE (a consumer needing live≈EMA convergence, e.g.
+continued-training-after-solve); no current consumer — default OFF everywhere, DSL lever retained.
+
+## PLATEAU ADJUDICATION (the boundary's larger finding)
+
+Window-over-window EMA net ΔS (shipping basis): jd6 −0.333 → **jd7-OFF +0.0085 (control) —
+the continuation bar (−0.03 S/window) FAILED for the first time.** Decomposition: seg still
+pays (−0.000386 d_seg = −0.0386 S/window, above bar ALONE) but pose gives back more
+(+0.0471 S/window, oscillating terminal phase; live pose flat ~0.21–0.22 across jd6→jd7 —
+the EMA's low pose is a real weight-averaging gain that has SATURATED, not ongoing descent).
+**Best campaign checkpoint = ep1766** (tr1_jd4_cont_ep1646/checkpoints/
+stage_joint_pose_finish_final.npz, EMA seg+pose 0.8149). Both jd7 arms are dominated by
+their own starting point.
+
+**Typed exit routing (tp1 policy):** plain joint continuation (jd8-as-jd7) is REFUTED by the
+control arm. The measured structure routes a COMPOSED exit: (i) seg-only descent still clears
+the bar → the pg1 Q3-CONSTRAINED seg lever (#889: Q3 spend cannot create pose damage, exact
+kernel) is the named continuation vehicle — its own pre-registered A/B fires at this boundary
+[fire-order F2 satisfied: jd7 measured seg-window pose give-back]; BLOCKER: pg1's lever is an
+unapplied COMMIT_INTENT.patch (sandbox git-block), apply-to-main owed first. (ii) The stalled
+pose axis (EMA 0.0101 @ ep1766, contribution 0.3177) routes to the banked pose TERMINAL
+machinery (QA43 tail-targeted solve #775 built-to-ready by su2; wp1 Muon finisher 098b98e11c
+available for Case-B seg finishing). Error-atlas custody now exists for BOTH jd7 endpoints
+(ON + OFF) → wp1 rows 3/9/13 fully unblocked.
