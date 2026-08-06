@@ -1,0 +1,221 @@
+{
+  "axis": "[macOS-CPU frozen-scorer advisory] SegNet-only decomposition; no PoseNet/full evaluate row",
+  "baseline_confusion_gt_by_pred": [
+    [
+      27253805,
+      50534,
+      33400,
+      21957,
+      47350
+    ],
+    [
+      184614,
+      504837,
+      37,
+      630,
+      521
+    ],
+    [
+      56144,
+      47,
+      58338584,
+      18506,
+      0
+    ],
+    [
+      35269,
+      51,
+      43386,
+      1381492,
+      127
+    ],
+    [
+      15677,
+      382,
+      0,
+      8,
+      29977442
+    ]
+  ],
+  "baseline_d_seg": 0.004311794704861111,
+  "baseline_raw": "/Volumes/VertigoDataTier/pact/ddm_qo1_20260804/sub_auto_pairbit/inflated/0.raw",
+  "baseline_raw_sha256": "3ce7d269a7080a4024a576694cd0ddc697099c64cd02fdd2bb879339e4b03f31",
+  "baseline_total_errors": 508640,
+  "candidate_confusion_gt_by_pred": [
+    [
+      27262177,
+      45475,
+      34023,
+      18360,
+      47011
+    ],
+    [
+      196381,
+      493215,
+      32,
+      531,
+      480
+    ],
+    [
+      59448,
+      77,
+      58337718,
+      16038,
+      0
+    ],
+    [
+      43358,
+      75,
+      50791,
+      1365930,
+      171
+    ],
+    [
+      18090,
+      390,
+      0,
+      8,
+      29975021
+    ]
+  ],
+  "candidate_d_seg": 0.004499130249023438,
+  "candidate_raw": "/Volumes/VertigoDataTier/pact/ddm_ed2_20260805/entropy_descent_a025/inflated/0.raw",
+  "candidate_raw_sha256": "1baf064bdd9a42c32b43904f225ee2719fc80e4dc44452eaa0b5d6468dab4565",
+  "candidate_total_errors": 530739,
+  "class_names": [
+    "Road",
+    "Lane markings",
+    "Undrivable",
+    "Movable",
+    "MyCar"
+  ],
+  "delta_confusion_gt_by_pred": [
+    [
+      8372,
+      -5059,
+      623,
+      -3597,
+      -339
+    ],
+    [
+      11767,
+      -11622,
+      -5,
+      -99,
+      -41
+    ],
+    [
+      3304,
+      30,
+      -866,
+      -2468,
+      0
+    ],
+    [
+      8089,
+      24,
+      7405,
+      -15562,
+      44
+    ],
+    [
+      2413,
+      8,
+      0,
+      0,
+      -2421
+    ]
+  ],
+  "delta_d_seg": 0.0001873355441623264,
+  "delta_errors": 22099,
+  "elapsed_s": 436.521812915802,
+  "fixed_errors": 50886,
+  "gt_cache": "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+  "introduced_errors": 72985,
+  "maxrss": 12743999488,
+  "n_pairs": 600,
+  "per_class": [
+    {
+      "baseline_errors": 153241,
+      "baseline_global_dseg_contrib": 0.001299040052625868,
+      "candidate_errors": 144869,
+      "candidate_global_dseg_contrib": 0.0012280697292751737,
+      "class_index": 0,
+      "class_name": "Road",
+      "delta_errors": -8372,
+      "delta_global_dseg_contrib": -7.097032335069444e-05,
+      "fixed_errors": 27042,
+      "gt_area_frac": 0.23233240763346355,
+      "gt_sites": 27407046,
+      "introduced_errors": 18670,
+      "net_introduced_minus_fixed": -8372
+    },
+    {
+      "baseline_errors": 185802,
+      "baseline_global_dseg_contrib": 0.0015750630696614583,
+      "candidate_errors": 197424,
+      "candidate_global_dseg_contrib": 0.001673583984375,
+      "class_index": 1,
+      "class_name": "Lane markings",
+      "delta_errors": 11622,
+      "delta_global_dseg_contrib": 9.852091471354167e-05,
+      "fixed_errors": 9742,
+      "gt_area_frac": 0.005854619344075521,
+      "gt_sites": 690639,
+      "introduced_errors": 21364,
+      "net_introduced_minus_fixed": 11622
+    },
+    {
+      "baseline_errors": 74697,
+      "baseline_global_dseg_contrib": 0.0006332143147786459,
+      "candidate_errors": 75563,
+      "candidate_global_dseg_contrib": 0.0006405554877387153,
+      "class_index": 2,
+      "class_name": "Undrivable",
+      "delta_errors": 866,
+      "delta_global_dseg_contrib": 7.341172960069444e-06,
+      "fixed_errors": 9611,
+      "gt_area_frac": 0.49517551845974395,
+      "gt_sites": 58413281,
+      "introduced_errors": 10477,
+      "net_introduced_minus_fixed": 866
+    },
+    {
+      "baseline_errors": 78833,
+      "baseline_global_dseg_contrib": 0.0006682756212022569,
+      "candidate_errors": 94395,
+      "candidate_global_dseg_contrib": 0.0008001963297526042,
+      "class_index": 3,
+      "class_name": "Movable",
+      "delta_errors": 15562,
+      "delta_global_dseg_contrib": 0.00013192070855034722,
+      "fixed_errors": 3479,
+      "gt_area_frac": 0.012379328409830729,
+      "gt_sites": 1460325,
+      "introduced_errors": 19041,
+      "net_introduced_minus_fixed": 15562
+    },
+    {
+      "baseline_errors": 16067,
+      "baseline_global_dseg_contrib": 0.00013620164659288196,
+      "candidate_errors": 18488,
+      "candidate_global_dseg_contrib": 0.00015672471788194444,
+      "class_index": 4,
+      "class_name": "MyCar",
+      "delta_errors": 2421,
+      "delta_global_dseg_contrib": 2.05230712890625e-05,
+      "fixed_errors": 1012,
+      "gt_area_frac": 0.2542581261528863,
+      "gt_sites": 29993509,
+      "introduced_errors": 3433,
+      "net_introduced_minus_fixed": 2421
+    }
+  ],
+  "pixels_per_pair": 196608,
+  "promotion_eligible": false,
+  "same_wrong_errors": 456898,
+  "schema": "ddm_ed2_entropy_step_seg_decomp.v1",
+  "score_claim": false,
+  "total_pixels": 117964800,
+  "wrong_to_different_wrong_errors": 856
+}
