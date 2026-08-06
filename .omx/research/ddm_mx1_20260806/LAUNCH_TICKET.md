@@ -92,3 +92,18 @@ bar = projected wall-clock > 4× the CPU-derived estimate; memory projection re-
 the real batch before n120. Provenance: ticket args verified at source = their stage-08
 TAIL (e2e.py:419-424: bits 4, steps 6000, lr 2e-7, eval-every 250, resumed from the 12k
 QAT checkpoint) — calibration lineage CLOSED this round.
+
+## ROUND-2 FIX (RR2-F1, MAIN 2026-08-06) — MACHINE-READABLE TICKET REGENERATED
+
+The single-arm fire-order above (and any single `argv_n32` in older JSON copies) is
+SUPERSEDED. `/Volumes/VertigoDataTier/pact/ddm_mx1_20260806/launch_ticket.json` now carries
+`argv_n32_arm_cap` (GT→GT), `argv_n32_arm_veh` (tq1c→GT), per-arm n120 argvs, distinct
+`launch_arm_cap/` and `launch_arm_veh/` run dirs, and a binding `arm_selection_rule`: both
+n32 arms fire; NO n120 until the scaled arm is explicitly selected from the two n32
+CPU-torch-verdict results. The old single-arm keys were REMOVED from the JSON so a launcher
+cannot silently regress (the RR2-F1 "fixed-in-prose" class).
+
+RR2-F3 fold (fire-time check): before any resume, verify the checkpoint's recorded command
+metadata matches the launching argv — a silent mismatch is a refusal, not a warning.
+RR2-F4 fold (authority): MLX in-train telemetry is research-signal; every reported verdict
+comes only from the CPU-torch verifier pass on the run dir. No exceptions at any rung.
