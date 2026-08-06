@@ -84,3 +84,25 @@ Commands passed:
 ```
 
 Test output: `4 passed in 0.67s`. The MLX package still emits the same atexit no-device error after tests; this is part of the local MLX blocker, not a parity pass.
+
+## MAIN HOST ADJUDICATION (2026-08-06, per CHARTER_AMENDMENT_MAIN.md)
+
+Host run (Metal available): `host_parity_n4/result.json`, 4 stratified REAL pairs
+[68, 224, 323, 518], batch shape pinned (4,3,384,512), adapter
+`tac.local_acceleration.mlx_scorer_adapters.torch_segnet_to_mlx`.
+
+| gate | measured | adjudication |
+| --- | --- | --- |
+| raw-frame forward max-abs | 0.011199951171875 on the [0,255] scale (~4.4e-5 relative) | PASS — port is forward-faithful |
+| scorer argmax diff | **180 / 786,432 px (0.0229%, ~45 px/pair)** | NAMED — the known #855 MLX-conv-adapter tie-pixel class, same order as the measured 76/frame; NOT zero |
+| one-step loss delta | 6.0716e-5 abs on ~0.0059 (~1% rel) | PASS for training use (includes the tie-pixel flow-through) |
+| gradient parity | NOT MEASURED (honestly scoped by the arm) | SCOPED — see ruling |
+
+**RULING (binding on the Row-1 fire):** the MLX port is admitted as a TRAINING
+SUBSTRATE ONLY. Every d_seg/d_pose verdict in the Row-1 measurement runs on the
+CPU-torch authority through exact R (already the launch ticket's protocol) — the
+0.023% scorer-argmax divergence and unmeasured gradient parity therefore cannot
+contaminate any claim; MLX training telemetry stays `[research-signal]` until the
+authority verdict confirms it (#903 discipline). If the trained result lands near a
+decision boundary, the port's own `--train-exact-path` mode (or a torch-CPU tail) is
+the pre-named escalation. Row-1 launch ticket: CLEARED to fire at the et4 boundary.
