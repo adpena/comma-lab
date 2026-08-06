@@ -1,0 +1,38 @@
+{
+  "schema": "ddm_tk1_learned_prior_exact_addendum.v1",
+  "axis": "[macOS-CPU byte-only scorer-free]",
+  "score_claim": false,
+  "ran_upstream_evaluate_py": false,
+  "scorer_forwards_run": 0,
+  "note": "Exact full-range learned-prior rows supersede the estimate-only learned_prior rows in semantic_stream_race.json; both are loser rows versus PP1 KT.",
+  "rows": {
+    "tq1c_parent_argmax": {
+      "labels_raw_sha256": "a7dd6f4271eedfa877f6499348de5f9dae2d97311f9e98f4f534908eb66e044e",
+      "frame_path": "/Volumes/VertigoDataTier/pact/ddm_tk1_20260806/tq1c_parent_argmax_learned_prior.tk1",
+      "frame_bytes": 700111,
+      "frame_sha256": "d6170de29851366bb4028acc4f30e80d7a450e44c13ed13437f6784ac974cae0",
+      "decode_equal": true,
+      "canonical_reencode_equal": true,
+      "context_mode": "prev_left_up",
+      "context_rows": 216,
+      "model_raw_bytes": 1080,
+      "header_bytes": 61,
+      "best_pp1_kt_bytes": 142001,
+      "learned_minus_pp1_kt_bytes": 558110
+    },
+    "gt_lstars": {
+      "labels_raw_sha256": "f2c8be94774780bda718adf337900403a8533b6ffa1352b5aae19e200a005557",
+      "frame_path": "/Volumes/VertigoDataTier/pact/ddm_tk1_20260806/gt_lstars_learned_prior.tk1",
+      "frame_bytes": 713345,
+      "frame_sha256": "54a624ad55fb2b9b01d1cb0d62c7c81fb8fcf4071c87f8b8a17b686d08b9cbc2",
+      "decode_equal": true,
+      "canonical_reencode_equal": true,
+      "context_mode": "prev_left_up",
+      "context_rows": 216,
+      "model_raw_bytes": 1080,
+      "header_bytes": 61,
+      "best_pp1_kt_bytes": 173617,
+      "learned_minus_pp1_kt_bytes": 539728
+    }
+  }
+}

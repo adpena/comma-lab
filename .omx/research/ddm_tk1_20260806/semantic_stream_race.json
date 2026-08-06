@@ -1,0 +1,661 @@
+{
+  "axis": "[macOS-CPU byte-only scorer-free]",
+  "byte_ladder_first": [
+    {
+      "bytes": 142001,
+      "name": "kt_context_arith",
+      "rank": 1,
+      "rate_S": 0.09455263720230145
+    },
+    {
+      "bytes": 285394,
+      "name": "bz2_9",
+      "rank": 2,
+      "rate_S": 0.19003215006734897
+    },
+    {
+      "bytes": 354900,
+      "name": "lzma1_x9e",
+      "rank": 3,
+      "rate_S": 0.2363133424630586
+    },
+    {
+      "bytes": 368760,
+      "name": "brotli_11",
+      "rank": 4,
+      "rate_S": 0.2455421475533319
+    },
+    {
+      "bytes": 504452,
+      "name": "zlib_9",
+      "rank": 5,
+      "rate_S": 0.33589388062038555
+    },
+    {
+      "bytes": 523001,
+      "name": "learned_static_prior",
+      "rank": 6,
+      "rate_S": 0.34824489834184874
+    }
+  ],
+  "created_at_utc": "2026-08-06T15:16:47.093360+00:00",
+  "full_range_learned_prior_requested": false,
+  "host": {
+    "platform": "macOS-26.4-arm64-arm-64bit-Mach-O",
+    "python": "3.13.12"
+  },
+  "n_frames": 600,
+  "pp1_delta": {
+    "gt_learned_minus_pp1_kt_bytes": 380858,
+    "gt_learned_prior_bytes": 554475,
+    "gt_pp1_best_kt_bytes": 173617
+  },
+  "progress_state": "complete",
+  "promotion_eligible": false,
+  "ran_upstream_evaluate_py": false,
+  "rate_denominator": 37545489,
+  "run_seconds": 171.40160866687074,
+  "run_seconds_so_far": 85.42695758398622,
+  "schema": "ddm_tk1_semantic_stream_race.v1",
+  "score_claim": false,
+  "scorer_forwards_run": 0,
+  "source_receipts": {
+    "gt_lstars": {
+      "alphabet": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "dtype": "uint8",
+      "file_bytes": 117964928,
+      "file_sha256": "b74a14b226a5aceb5824899898bcb06e5413c54b7db2441268da7bc91a10db5d",
+      "path": "/Volumes/VertigoDataTier/pact/ddm_ph1_lstars_u8.npy",
+      "raw_sha256": "f2c8be94774780bda718adf337900403a8533b6ffa1352b5aae19e200a005557",
+      "raw_uint8_bytes": 117964800,
+      "shape": [
+        600,
+        384,
+        512
+      ]
+    },
+    "tq1c_digest_receipt": {
+      "all_pass": true,
+      "batch_count": 38,
+      "checked_first": {
+        "actual_cells_sha256": "9335c33970f3e998882d5cf45c8e154e22923f4a78a3308f251c416edc14ff13",
+        "expected_cells_sha256": "9335c33970f3e998882d5cf45c8e154e22923f4a78a3308f251c416edc14ff13",
+        "file": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/stage_checkpoints/n600_scorer/move_0023_snap_r00_c12_L13/batch_0000_0016.json",
+        "pair_range": [
+          0,
+          16
+        ],
+        "pass": true
+      },
+      "checked_last": {
+        "actual_cells_sha256": "7d8757ac99985326eb22e20ef2fc84b7963527c4050962c4e01abead924965ad",
+        "expected_cells_sha256": "7d8757ac99985326eb22e20ef2fc84b7963527c4050962c4e01abead924965ad",
+        "file": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/stage_checkpoints/n600_scorer/move_0023_snap_r00_c12_L13/batch_0592_0600.json",
+        "pair_range": [
+          592,
+          600
+        ],
+        "pass": true
+      },
+      "checkpoint_dir": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/stage_checkpoints/n600_scorer/move_0023_snap_r00_c12_L13",
+      "mismatches": []
+    },
+    "tq1c_parent_argmax": {
+      "alphabet": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "dtype": "uint8",
+      "file_bytes": 117964928,
+      "file_sha256": "764a244c4890b22a67c4dbe95a959e970c29328778d41ffe4deb85f5b650eee6",
+      "path": "/Volumes/VertigoDataTier/pact/ddm_et2_20260806/parent_score/parent_tq1c_argmax_n600.npy",
+      "raw_sha256": "a7dd6f4271eedfa877f6499348de5f9dae2d97311f9e98f4f534908eb66e044e",
+      "raw_uint8_bytes": 117964800,
+      "shape": [
+        600,
+        384,
+        512
+      ]
+    }
+  },
+  "streams": {
+    "gt_lstars": {
+      "best_bytes": 173617,
+      "best_coder": "kt_context_arith",
+      "boundary_px_per_frame_mean": 2436.19,
+      "byte_ladder": [
+        {
+          "bytes": 173617,
+          "name": "kt_context_arith",
+          "rank": 1,
+          "rate_S": 0.11560443386421203
+        },
+        {
+          "bytes": 338593,
+          "name": "bz2_9",
+          "rank": 2,
+          "rate_S": 0.22545518051449537
+        },
+        {
+          "bytes": 409989,
+          "name": "lzma1_x9e",
+          "rank": 3,
+          "rate_S": 0.2729948463316059
+        },
+        {
+          "bytes": 424728,
+          "name": "brotli_11",
+          "rank": 4,
+          "rate_S": 0.28280894144167357
+        },
+        {
+          "bytes": 554475,
+          "name": "learned_static_prior",
+          "rank": 5,
+          "rate_S": 0.36920214303241594
+        },
+        {
+          "bytes": 581266,
+          "name": "zlib_9",
+          "rank": 6,
+          "rate_S": 0.38704117024551205
+        }
+      ],
+      "class_fractions": {
+        "Lane": 0.005854619344075521,
+        "Movable": 0.012379328409830729,
+        "MyCar": 0.2542581261528863,
+        "Road": 0.23233240763346355,
+        "Undrivable": 0.49517551845974395
+      },
+      "context_arith": {
+        "best_context": "temporal_o8_prev5",
+        "best_kt_bytes": 173616.4981647628,
+        "best_kt_bytes_ceiled": 173617,
+        "roundtrip_proof": {
+          "bit_exact_roundtrip": true,
+          "closed_form_bytes_laplace": 3284.85705513053,
+          "coded_bytes": 3285,
+          "coded_over_closed": 1.000043516313517,
+          "subset_frames": 6
+        },
+        "rows": {
+          "intra_o4": {
+            "kt_bytes": 233664.1407680307,
+            "kt_bytes_ceiled": 233665,
+            "laplace_bytes": 233862.91425113095,
+            "n_contexts": 232
+          },
+          "intra_o6": {
+            "kt_bytes": 219793.49349131284,
+            "kt_bytes_ceiled": 219794,
+            "laplace_bytes": 220336.30546331283,
+            "n_contexts": 895
+          },
+          "intra_o8": {
+            "kt_bytes": 206873.6204933756,
+            "kt_bytes_ceiled": 206874,
+            "laplace_bytes": 207866.3051427392,
+            "n_contexts": 2257
+          },
+          "temporal_o8_prev5": {
+            "kt_bytes": 173616.4981647628,
+            "kt_bytes_ceiled": 173617,
+            "laplace_bytes": 177847.42557081717,
+            "n_contexts": 19462
+          }
+        },
+        "source": "experiments/ddm_pp1_direct_partition_coder.py adaptive_code_bytes + roundtrip_proof"
+      },
+      "digest_receipt": null,
+      "generic_baselines": {
+        "brotli_11": {
+          "bytes": 424728,
+          "roundtrip": true,
+          "sha256": "3e6033643330c9d5ac8995fc594ef07be32a7f83b1e94aca38bc9131ba80a2e4"
+        },
+        "bz2_9": {
+          "bytes": 338593,
+          "roundtrip": true,
+          "sha256": "2c87b6588c3a57ca01e2930f80dd2965e245fd7ef5cb51d873ef5d0bf6231626"
+        },
+        "lzma1_x9e": {
+          "bytes": 409989,
+          "roundtrip": true,
+          "sha256": "de58afdfa326001d0f889efcf94e004013d08f8a17017189e97f04559cce46b2"
+        },
+        "raw_uint8_bytes": 117964800,
+        "zlib_9": {
+          "bytes": 581266,
+          "roundtrip": true,
+          "sha256": "d370e8a4e88ca2d8ba9a2a5f65384f8c610c1b85810b331ddd335c591c337619"
+        }
+      },
+      "learned_prior": {
+        "best": {
+          "canonical_reencode_equal": true,
+          "context_mode": "prev_left_up",
+          "context_rows": 216,
+          "decode_equal": true,
+          "estimated_bits_per_symbol": 0.03752530377505715,
+          "estimated_frame_bytes": 554475,
+          "estimated_range_bytes": 553334,
+          "frame_bytes": 554475,
+          "full_range_measured": false,
+          "header_bytes": 61,
+          "model_info": {
+            "active_context_rows": 125,
+            "context_mode": "prev_left_up",
+            "context_rows": 216,
+            "counts_total": 117964800,
+            "model_raw_bytes": 1080,
+            "patch": 32,
+            "train_seconds": 0.43251795787364244
+          },
+          "model_raw_bytes": 1080,
+          "range_stream_bytes": 553334,
+          "skipped": false,
+          "subset_frame_bytes": 8647,
+          "subset_range_stream_bytes": 7506,
+          "subset_roundtrip_frames": 6
+        },
+        "family": "small counted static conditional-prior table over 5-symbol labels + exact range coder",
+        "patch_group_causality": {
+          "causal_for_left_up_ul": true,
+          "delta": 2,
+          "patch": 32,
+          "patches_per_frame": 192,
+          "steps_per_patch": 94,
+          "violations": []
+        },
+        "raced_context_modes": [
+          {
+            "context_mode": "prev",
+            "context_rows": 6,
+            "estimated_bits_per_symbol": 0.09854709495888327,
+            "estimated_frame_bytes": 1453228,
+            "estimated_range_bytes": 1453137,
+            "header_bytes": 61,
+            "model_info": {
+              "active_context_rows": 6,
+              "context_mode": "prev",
+              "context_rows": 6,
+              "counts_total": 117964800,
+              "model_raw_bytes": 30,
+              "patch": 32,
+              "train_seconds": 0.35788024961948395
+            },
+            "model_raw_bytes": 30,
+            "skipped": false
+          },
+          {
+            "context_mode": "prev_left_up",
+            "context_rows": 216,
+            "estimated_bits_per_symbol": 0.03752530377505715,
+            "estimated_frame_bytes": 554475,
+            "estimated_range_bytes": 553334,
+            "header_bytes": 61,
+            "model_info": {
+              "active_context_rows": 125,
+              "context_mode": "prev_left_up",
+              "context_rows": 216,
+              "counts_total": 117964800,
+              "model_raw_bytes": 1080,
+              "patch": 32,
+              "train_seconds": 0.43251795787364244
+            },
+            "model_raw_bytes": 1080,
+            "skipped": false
+          },
+          {
+            "context_mode": "prev_left_up_ul",
+            "context_rows": 1296,
+            "estimated_bits_per_symbol": 0.03731180794044472,
+            "estimated_frame_bytes": 556726,
+            "estimated_range_bytes": 550185,
+            "header_bytes": 61,
+            "model_info": {
+              "active_context_rows": 303,
+              "context_mode": "prev_left_up_ul",
+              "context_rows": 1296,
+              "counts_total": 117964800,
+              "model_raw_bytes": 6480,
+              "patch": 32,
+              "train_seconds": 0.48810908291488886
+            },
+            "model_raw_bytes": 6480,
+            "skipped": false
+          },
+          {
+            "context_mode": "hash_prev_spatial",
+            "context_rows": 2000,
+            "estimated_bits_per_symbol": 0.05333793671248142,
+            "estimated_frame_bytes": 796561,
+            "estimated_range_bytes": 786500,
+            "header_bytes": 61,
+            "model_info": {
+              "active_context_rows": 1003,
+              "context_mode": "hash_prev_spatial",
+              "context_rows": 2000,
+              "counts_total": 117964800,
+              "model_raw_bytes": 10000,
+              "patch": 32,
+              "train_seconds": 0.6723415423184633
+            },
+            "model_raw_bytes": 10000,
+            "skipped": false
+          }
+        ]
+      },
+      "name": "gt_lstars",
+      "source": {
+        "alphabet": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "dtype": "uint8",
+        "file_bytes": 117964928,
+        "file_sha256": "b74a14b226a5aceb5824899898bcb06e5413c54b7db2441268da7bc91a10db5d",
+        "path": "/Volumes/VertigoDataTier/pact/ddm_ph1_lstars_u8.npy",
+        "raw_sha256": "f2c8be94774780bda718adf337900403a8533b6ffa1352b5aae19e200a005557",
+        "raw_uint8_bytes": 117964800,
+        "shape": [
+          600,
+          384,
+          512
+        ]
+      },
+      "temporal_disagree_frac": 0.012456377015620652,
+      "wall_seconds": 85.97416404169053
+    },
+    "tq1c_parent_argmax": {
+      "best_bytes": 142001,
+      "best_coder": "kt_context_arith",
+      "boundary_px_per_frame_mean": 2176.5116666666668,
+      "byte_ladder": [
+        {
+          "bytes": 142001,
+          "name": "kt_context_arith",
+          "rank": 1,
+          "rate_S": 0.09455263720230145
+        },
+        {
+          "bytes": 285394,
+          "name": "bz2_9",
+          "rank": 2,
+          "rate_S": 0.19003215006734897
+        },
+        {
+          "bytes": 354900,
+          "name": "lzma1_x9e",
+          "rank": 3,
+          "rate_S": 0.2363133424630586
+        },
+        {
+          "bytes": 368760,
+          "name": "brotli_11",
+          "rank": 4,
+          "rate_S": 0.2455421475533319
+        },
+        {
+          "bytes": 504452,
+          "name": "zlib_9",
+          "rank": 5,
+          "rate_S": 0.33589388062038555
+        },
+        {
+          "bytes": 523001,
+          "name": "learned_static_prior",
+          "rank": 6,
+          "rate_S": 0.34824489834184874
+        }
+      ],
+      "class_fractions": {
+        "Lane": 0.004714024861653646,
+        "Movable": 0.012057774861653646,
+        "MyCar": 0.2545220269097222,
+        "Road": 0.2335097418891059,
+        "Undrivable": 0.4951964314778646
+      },
+      "context_arith": {
+        "best_context": "temporal_o8_prev5",
+        "best_kt_bytes": 142000.62841696,
+        "best_kt_bytes_ceiled": 142001,
+        "roundtrip_proof": {
+          "bit_exact_roundtrip": true,
+          "closed_form_bytes_laplace": 2775.526944155841,
+          "coded_bytes": 2776,
+          "coded_over_closed": 1.0001704382099965,
+          "subset_frames": 6
+        },
+        "rows": {
+          "intra_o4": {
+            "kt_bytes": 197495.2833957563,
+            "kt_bytes_ceiled": 197496,
+            "laplace_bytes": 197679.2461259876,
+            "n_contexts": 205
+          },
+          "intra_o6": {
+            "kt_bytes": 184959.8721278773,
+            "kt_bytes_ceiled": 184960,
+            "laplace_bytes": 185436.0168066666,
+            "n_contexts": 719
+          },
+          "intra_o8": {
+            "kt_bytes": 171201.51839085377,
+            "kt_bytes_ceiled": 171202,
+            "laplace_bytes": 172012.61539933755,
+            "n_contexts": 1616
+          },
+          "temporal_o8_prev5": {
+            "kt_bytes": 142000.62841696,
+            "kt_bytes_ceiled": 142001,
+            "laplace_bytes": 145529.18147646723,
+            "n_contexts": 13482
+          }
+        },
+        "source": "experiments/ddm_pp1_direct_partition_coder.py adaptive_code_bytes + roundtrip_proof"
+      },
+      "digest_receipt": {
+        "all_pass": true,
+        "batch_count": 38,
+        "checked_first": {
+          "actual_cells_sha256": "9335c33970f3e998882d5cf45c8e154e22923f4a78a3308f251c416edc14ff13",
+          "expected_cells_sha256": "9335c33970f3e998882d5cf45c8e154e22923f4a78a3308f251c416edc14ff13",
+          "file": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/stage_checkpoints/n600_scorer/move_0023_snap_r00_c12_L13/batch_0000_0016.json",
+          "pair_range": [
+            0,
+            16
+          ],
+          "pass": true
+        },
+        "checked_last": {
+          "actual_cells_sha256": "7d8757ac99985326eb22e20ef2fc84b7963527c4050962c4e01abead924965ad",
+          "expected_cells_sha256": "7d8757ac99985326eb22e20ef2fc84b7963527c4050962c4e01abead924965ad",
+          "file": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/stage_checkpoints/n600_scorer/move_0023_snap_r00_c12_L13/batch_0592_0600.json",
+          "pair_range": [
+            592,
+            600
+          ],
+          "pass": true
+        },
+        "checkpoint_dir": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/stage_checkpoints/n600_scorer/move_0023_snap_r00_c12_L13",
+        "mismatches": []
+      },
+      "generic_baselines": {
+        "brotli_11": {
+          "bytes": 368760,
+          "roundtrip": true,
+          "sha256": "4d343a91fc8a647dfd847bf233acb26fc033819407604fde82ae4c91c86e1652"
+        },
+        "bz2_9": {
+          "bytes": 285394,
+          "roundtrip": true,
+          "sha256": "4658212cb0c954024bcef99ab3bc8c635f2a455bf50cc76cfaaee7c9270eeb4d"
+        },
+        "lzma1_x9e": {
+          "bytes": 354900,
+          "roundtrip": true,
+          "sha256": "dd902f6c4b2e036c436457bedf63bd756fe438f3d3358f8ea2a86d48506f34ed"
+        },
+        "raw_uint8_bytes": 117964800,
+        "zlib_9": {
+          "bytes": 504452,
+          "roundtrip": true,
+          "sha256": "a67663b47f9219e7786b94161ed4621d3d48fb0af8fce50ea864b8f97e6a16d2"
+        }
+      },
+      "learned_prior": {
+        "best": {
+          "canonical_reencode_equal": true,
+          "context_mode": "prev_left_up",
+          "context_rows": 216,
+          "decode_equal": true,
+          "estimated_bits_per_symbol": 0.035390869702810274,
+          "estimated_frame_bytes": 523001,
+          "estimated_range_bytes": 521860,
+          "frame_bytes": 523001,
+          "full_range_measured": false,
+          "header_bytes": 61,
+          "model_info": {
+            "active_context_rows": 121,
+            "context_mode": "prev_left_up",
+            "context_rows": 216,
+            "counts_total": 117964800,
+            "model_raw_bytes": 1080,
+            "patch": 32,
+            "train_seconds": 0.46146791614592075
+          },
+          "model_raw_bytes": 1080,
+          "range_stream_bytes": 521860,
+          "skipped": false,
+          "subset_frame_bytes": 8457,
+          "subset_range_stream_bytes": 7316,
+          "subset_roundtrip_frames": 6
+        },
+        "family": "small counted static conditional-prior table over 5-symbol labels + exact range coder",
+        "patch_group_causality": {
+          "causal_for_left_up_ul": true,
+          "delta": 2,
+          "patch": 32,
+          "patches_per_frame": 192,
+          "steps_per_patch": 94,
+          "violations": []
+        },
+        "raced_context_modes": [
+          {
+            "context_mode": "prev",
+            "context_rows": 6,
+            "estimated_bits_per_symbol": 0.09376861051125993,
+            "estimated_frame_bytes": 1382766,
+            "estimated_range_bytes": 1382675,
+            "header_bytes": 61,
+            "model_info": {
+              "active_context_rows": 6,
+              "context_mode": "prev",
+              "context_rows": 6,
+              "counts_total": 117964800,
+              "model_raw_bytes": 30,
+              "patch": 32,
+              "train_seconds": 0.3663346669636667
+            },
+            "model_raw_bytes": 30,
+            "skipped": false
+          },
+          {
+            "context_mode": "prev_left_up",
+            "context_rows": 216,
+            "estimated_bits_per_symbol": 0.035390869702810274,
+            "estimated_frame_bytes": 523001,
+            "estimated_range_bytes": 521860,
+            "header_bytes": 61,
+            "model_info": {
+              "active_context_rows": 121,
+              "context_mode": "prev_left_up",
+              "context_rows": 216,
+              "counts_total": 117964800,
+              "model_raw_bytes": 1080,
+              "patch": 32,
+              "train_seconds": 0.46146791614592075
+            },
+            "model_raw_bytes": 1080,
+            "skipped": false
+          },
+          {
+            "context_mode": "prev_left_up_ul",
+            "context_rows": 1296,
+            "estimated_bits_per_symbol": 0.03516557617889694,
+            "estimated_frame_bytes": 525079,
+            "estimated_range_bytes": 518538,
+            "header_bytes": 61,
+            "model_info": {
+              "active_context_rows": 280,
+              "context_mode": "prev_left_up_ul",
+              "context_rows": 1296,
+              "counts_total": 117964800,
+              "model_raw_bytes": 6480,
+              "patch": 32,
+              "train_seconds": 0.48014187486842275
+            },
+            "model_raw_bytes": 6480,
+            "skipped": false
+          },
+          {
+            "context_mode": "hash_prev_spatial",
+            "context_rows": 2000,
+            "estimated_bits_per_symbol": 0.050104185718617994,
+            "estimated_frame_bytes": 748878,
+            "estimated_range_bytes": 738817,
+            "header_bytes": 61,
+            "model_info": {
+              "active_context_rows": 980,
+              "context_mode": "hash_prev_spatial",
+              "context_rows": 2000,
+              "counts_total": 117964800,
+              "model_raw_bytes": 10000,
+              "patch": 32,
+              "train_seconds": 0.6733482498675585
+            },
+            "model_raw_bytes": 10000,
+            "skipped": false
+          }
+        ]
+      },
+      "name": "tq1c_parent_argmax",
+      "source": {
+        "alphabet": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "dtype": "uint8",
+        "file_bytes": 117964928,
+        "file_sha256": "764a244c4890b22a67c4dbe95a959e970c29328778d41ffe4deb85f5b650eee6",
+        "path": "/Volumes/VertigoDataTier/pact/ddm_et2_20260806/parent_score/parent_tq1c_argmax_n600.npy",
+        "raw_sha256": "a7dd6f4271eedfa877f6499348de5f9dae2d97311f9e98f4f534908eb66e044e",
+        "raw_uint8_bytes": 117964800,
+        "shape": [
+          600,
+          384,
+          512
+        ]
+      },
+      "temporal_disagree_frac": 0.011333026153615401,
+      "wall_seconds": 83.92938979109749
+    }
+  }
+}
