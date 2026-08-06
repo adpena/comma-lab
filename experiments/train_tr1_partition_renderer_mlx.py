@@ -156,6 +156,17 @@ JD1_LR_ANNEAL_SCHEMA = "ddm_la1_jd1_lr_anneal.v1"
 JD1_LR_ANNEAL_MODES = ("off", "derived_tail")
 JD1_LR_FINAL_FRAC_DERIVED = 0.0
 JD1_LR_DERIVATION_TIME_CONSTANTS = 2.0
+JD1_FINISHER_SCHEMA = "ddm_wp1_jd1_muon_finisher.v1"
+JD1_FINISHER_MODES = ("off", "muon")
+JD1_MUON_FINISHER_NS_STEPS = 5
+TR1_MUON_RENDERER_WEIGHT_PREFIXES = (
+    "w_conv",
+    "w_up",
+    "w_head",
+    "s_conv",
+    "s_up",
+    "s_head",
+)
 
 # Pre-registered A1 alarm thresholds (tb1 charter T1: "never scale a loop whose
 # realized-flip telemetry is flat"). Smooth descended but realized did not:
@@ -2657,6 +2668,15 @@ def opt_state_param_path(key: str) -> str | None:
     """
     if key in OPT_STATE_SCALAR_KEYS:
         return None
+    for prefix in ("states.0.", "states.1."):
+        if key.startswith(prefix):
+            inner = key[len(prefix):]
+            if inner in OPT_STATE_SCALAR_KEYS:
+                return None
+            for suffix in OPT_STATE_MOMENT_SUFFIXES:
+                if inner.endswith(suffix):
+                    return inner[: -len(suffix)]
+            return None
     for suffix in OPT_STATE_MOMENT_SUFFIXES:
         if key.endswith(suffix):
             return key[: -len(suffix)]
@@ -3086,6 +3106,12 @@ def build_argparser() -> argparse.ArgumentParser:
                     help="ddm_la1 terminal LR fraction. 0.0 = derive from the parent "
                          "tail oscillation sd/(sd+half_range); explicit values must be "
                          "in (0,1) and require --jd1-lr-anneal derived_tail.")
+    ap.add_argument("--jd1-finisher", default="off", choices=JD1_FINISHER_MODES,
+                    help="ddm_wp1 terminal JD1 finisher. off = existing Adam path; muon = "
+                         "Case-B-only terminal optimizer switch: MLX Muon on renderer matrix "
+                         "tensors (MLX flattens conv filters) plus Adam fallback for tokens, "
+                         "biases, gains, and gates. Args-only; default off preserves "
+                         "TR1Config/config_hash/checkpoint bytes.")
     ap.add_argument("--batch-pairs", type=int, default=8)
     ap.add_argument("--epochs", type=int, default=60)
     ap.add_argument("--gate-every", type=int, default=5)
@@ -3706,6 +3732,132 @@ def jd1_lr_at_epoch(epoch: int, schedule: Mapping[str, Any]) -> float:
     return float(base_lr * frac)
 
 
+def tr1_muon_finisher_param_filter(name: str, weight: Any) -> bool:
+    """Route TR1 renderer weight tensors to Muon; tokens/vectors/biases stay Adam.
+
+    TR1's renderer trainables are convolution tensors (``w_*`` for plain, ``s_*``
+    supermask logits for lotto). MLX Muon's own implementation flattens 4-D
+    convolution filters into 2-D matrices before Newton-Schulz, so these are the
+    renderer matrix group. Token grids, biases, per-channel gains, PE3 gates, and
+    any 0-D/1-D leaves stay on the Adam fallback.
+    """
+    if int(getattr(weight, "ndim", 0)) < 2:
+        return False
+    low = str(name).lower()
+    return any(low.startswith(prefix) for prefix in TR1_MUON_RENDERER_WEIGHT_PREFIXES)
+
+
+def _tree_items_plain(tree: Any, prefix: str = "") -> list[tuple[str, Any]]:
+    """Small tree flattener for pure tests and split telemetry without importing MLX utils."""
+    if isinstance(tree, Mapping):
+        out: list[tuple[str, Any]] = []
+        for key, value in tree.items():
+            child = str(key) if not prefix else f"{prefix}.{key}"
+            out.extend(_tree_items_plain(value, child))
+        return out
+    if isinstance(tree, (list, tuple)):
+        out = []
+        for idx, value in enumerate(tree):
+            child = str(idx) if not prefix else f"{prefix}.{idx}"
+            out.extend(_tree_items_plain(value, child))
+        return out
+    return [(prefix, tree)]
+
+
+def tr1_muon_adam_split_counts(params: Any) -> tuple[int, int]:
+    """Count ``(Muon leaves, Adam leaves)`` under the TR1 finisher partition."""
+    n_muon = n_adam = 0
+    for name, leaf in _tree_items_plain(params):
+        if tr1_muon_finisher_param_filter(name, leaf):
+            n_muon += 1
+        else:
+            n_adam += 1
+    return n_muon, n_adam
+
+
+def derive_jd1_muon_momentum(beta1: float) -> tuple[float, str]:
+    """Muon momentum derived from the outgoing TR1 Adam first-moment time constant."""
+    if not 0.0 <= float(beta1) < 1.0:
+        raise ValueError("beta1 must be in [0,1)")
+    return (
+        float(beta1),
+        "DERIVED from TR1 optimizer beta1: warm-started Muon v consumes Adam m, "
+        "so preserving the first-moment decay keeps the boundary time constant "
+        "instead of importing the witness 0.95 default",
+    )
+
+
+def build_tr1_jd1_muon_finisher_optimizer(
+    *,
+    muon_lr: float,
+    adam_lr: float,
+    muon_momentum: float,
+    muon_ns_steps: int = JD1_MUON_FINISHER_NS_STEPS,
+    muon_lr_final_frac: float = 1.0,
+    muon_anneal_steps: int = 0,
+    adam_bias_correction: bool = False,
+) -> Any:
+    """Build the TR1 JD1 Muon finisher optimizer.
+
+    Reuses MLX's real ``optim.Muon`` Newton-Schulz implementation and
+    ``optim.MultiOptimizer``. The filter is TR1-specific because this vehicle's
+    renderer leaves are conv tensors/supermask logits, not ``*.weight`` module
+    leaves from the older witness trainer.
+    """
+    if float(muon_lr) <= 0.0:
+        raise ValueError("muon_lr must be > 0")
+    if float(adam_lr) <= 0.0:
+        raise ValueError("adam_lr must be > 0")
+    if not 0.0 <= float(muon_momentum) < 1.0:
+        raise ValueError("muon_momentum must be in [0,1)")
+    if int(muon_ns_steps) < 1:
+        raise ValueError("muon_ns_steps must be >= 1")
+    if not 0.0 < float(muon_lr_final_frac) <= 1.0:
+        raise ValueError("muon_lr_final_frac must be in (0,1]")
+    if int(muon_anneal_steps) < 0:
+        raise ValueError("muon_anneal_steps must be >= 0")
+
+    import mlx.optimizers as optim
+
+    if float(muon_lr_final_frac) < 1.0 and int(muon_anneal_steps) > 0:
+        muon_learning_rate: Any = optim.cosine_decay(
+            float(muon_lr),
+            int(muon_anneal_steps),
+            end=float(muon_lr) * float(muon_lr_final_frac),
+        )
+    else:
+        muon_learning_rate = float(muon_lr)
+    muon = optim.Muon(
+        learning_rate=muon_learning_rate,
+        momentum=float(muon_momentum),
+        weight_decay=0.0,
+        nesterov=True,
+        ns_steps=int(muon_ns_steps),
+    )
+    adam = optim.Adam(learning_rate=float(adam_lr), bias_correction=bool(adam_bias_correction))
+    return optim.MultiOptimizer([muon, adam], [tr1_muon_finisher_param_filter])
+
+
+def seed_tr1_muon_momentum_from_adam(muon_opt: Any, old_adam_state: Any) -> int:
+    """Seed initialized Muon ``v`` leaves from outgoing Adam ``m`` leaves."""
+    from mlx.utils import tree_flatten, tree_unflatten
+
+    m_map = {k[:-2]: v for (k, v) in tree_flatten(old_adam_state) if k.endswith(".m")}
+    new_flat: list[tuple[str, Any]] = []
+    n_seed = 0
+    for key, value in tree_flatten(muon_opt.state):
+        if key.endswith(".v"):
+            src = m_map.get(key[:-2])
+            if src is not None and tuple(src.shape) == tuple(value.shape):
+                value = src.astype(value.dtype)
+                n_seed += 1
+        new_flat.append((key, value))
+    if n_seed:
+        muon_opt.state = tree_unflatten(new_flat)
+        muon_opt._initialized = True
+    return n_seed
+
+
 def jd1_should_reanchor_stage_ema(args: Any, state: Mapping[str, Any], *, reason: str) -> bool:
     """Pure JD1 stage-EMA reanchor predicate for ticket and resume tests."""
     if args.jd1_ema_stage_scope != "window":
@@ -3810,6 +3962,8 @@ def validate_jd1_pose_finish_args(args: Any) -> None:
             inert.append("--jd1-lr-anneal")
         if float(args.jd1_lr_final_frac) != JD1_LR_FINAL_FRAC_DERIVED:
             inert.append("--jd1-lr-final-frac")
+        if args.jd1_finisher != "off":
+            inert.append("--jd1-finisher")
         if inert:
             raise SystemExit(
                 "REFUSED: JD1 value flags set while --jd1-pose-finish-mode off: "
@@ -3859,6 +4013,13 @@ def validate_jd1_pose_finish_args(args: Any) -> None:
             raise SystemExit("--jd1-lr-anneal derived_tail requires --resume-from")
     elif float(args.jd1_lr_final_frac) != JD1_LR_FINAL_FRAC_DERIVED:
         raise SystemExit("--jd1-lr-final-frac requires --jd1-lr-anneal derived_tail")
+    if args.jd1_finisher == "muon":
+        if args.resume_from is None:
+            raise SystemExit("--jd1-finisher muon is Case-B boundary-only and requires --resume-from")
+        if args.jd1_pose_finish_engage_on != "start_epoch":
+            raise SystemExit(
+                "--jd1-finisher muon requires --jd1-pose-finish-engage-on start_epoch so "
+                "the optimizer switch is a terminal boundary action, not a mid-window default")
 
 
 def jd1_pose_finish_should_engage(args: Any, *, epoch: int, stage: str) -> bool:
@@ -4199,6 +4360,19 @@ def main() -> int:
                   "joint_loss consumes the gt_poses memmap through make_loss_fn with "
                   "compute_pose=True only after the engagement predicate fires.",
           "score_claim": False})
+    tlog({"event": "jd1_muon_finisher_config",
+          "schema": JD1_FINISHER_SCHEMA,
+          "mode": args.jd1_finisher,
+          "active": False,
+          "case_b_only": True,
+          "requires_resume": bool(args.jd1_finisher == "muon"),
+          "optimizer_split": "Muon(renderer conv/supermask tensors flattened by MLX) + Adam(rest)",
+          "momentum_source": "TR1 Adam beta1" if args.jd1_finisher == "muon" else None,
+          "lr_source": "ddm_la1 parent-tail final-frac law" if args.jd1_finisher == "muon" else None,
+          "note": "Args-only default-off finisher. Muon is legal only as a resumed JD1 "
+                  "terminal boundary action; the runtime refuses a launch where it would "
+                  "first engage mid-window.",
+          "score_claim": False})
 
     model = build_module(cfg)
     mx.eval(model.parameters())
@@ -4434,6 +4608,8 @@ def main() -> int:
         "resolved_scope_laws": list(resolved_scope_laws),
     }
     jd1_pose_finish_state.update(jd1_ema_initial_state(args))
+    jd1_muon_schedule: dict[str, Any] | None = None
+    jd1_finisher_active = False
 
     def _jd1_checkpoint_extra_meta() -> dict[str, Any] | None:
         if not (_jd1_pose_finish_enabled and jd1_pose_finish_state.get("engaged")):
@@ -4448,6 +4624,12 @@ def main() -> int:
             "live_gate_telemetry": args.jd1_live_gate_telemetry,
             "seg_hold_space": args.jd1_seg_hold_space,
             "resolved_scope_laws": list(resolved_scope_laws),
+            "finisher": (dict(jd1_muon_schedule)
+                         if jd1_muon_schedule is not None else {
+                             "schema": JD1_FINISHER_SCHEMA,
+                             "mode": args.jd1_finisher,
+                             "active": False,
+                         }),
             **jd1_ema_checkpoint_payload(args, jd1_pose_finish_state),
         })
         return {"jd1_pose_finish": dict(jd1_pose_finish_state)}
@@ -4485,6 +4667,13 @@ def main() -> int:
                                    active_ema_decay_provenance))
             jd1_pose_finish_state["force_ema_reanchor_on_resume"] = bool(
                 args.jd1_force_ema_reanchor_on_resume)
+            _saved_finisher = _saved_jd1.get("finisher")
+            if isinstance(_saved_finisher, dict) and _saved_finisher.get("active"):
+                if args.jd1_finisher != "muon":
+                    raise SystemExit(
+                        "resume REFUSED: checkpoint is inside the JD1 Muon finisher but "
+                        "this launch sets --jd1-finisher off")
+                jd1_muon_schedule = dict(_saved_finisher)
         if (stage == "joint_pose_finish" and _jd1_pose_finish_enabled
                 and not jd1_pose_finish_state.get("engaged")):
             jd1_pose_finish_state.update({
@@ -4523,6 +4712,34 @@ def main() -> int:
         # instead of a 16.167-epoch re-convergence impulse (#824 arm C; ddm_gd5 §3.6). The
         # payload already passed the resume-geometry guard inside load_checkpoint.
         _resume_opt_flat = st.get("opt_flat") or {}
+        if (_persist_opt and _resume_opt_flat
+                and any(str(k).startswith("states.") for k in _resume_opt_flat)):
+            if jd1_muon_schedule is None:
+                raise OptimizerStateRestoreError(
+                    "optimizer-state restore REFUSED — checkpoint carries MultiOptimizer "
+                    "state but no JD1 Muon finisher metadata. Refusing to guess the split.")
+            optimizer = build_tr1_jd1_muon_finisher_optimizer(
+                muon_lr=float(jd1_muon_schedule["muon_lr"]),
+                adam_lr=float(jd1_muon_schedule["adam_lr"]),
+                muon_momentum=float(jd1_muon_schedule["muon_momentum"]),
+                muon_ns_steps=int(jd1_muon_schedule["muon_ns_steps"]),
+                muon_lr_final_frac=float(jd1_muon_schedule.get("muon_lr_final_frac", 1.0)),
+                muon_anneal_steps=int(jd1_muon_schedule.get("muon_anneal_steps", 0)),
+                adam_bias_correction=bool(_bias_correction),
+            )
+            jd1_finisher_active = True
+            tlog({"event": "jd1_muon_finisher_resume_optimizer",
+                  "epoch": int(start_epoch),
+                  "resume_from": str(args.resume_from),
+                  "schema": JD1_FINISHER_SCHEMA,
+                  "muon_lr": float(jd1_muon_schedule["muon_lr"]),
+                  "adam_lr": float(jd1_muon_schedule["adam_lr"]),
+                  "muon_momentum": float(jd1_muon_schedule["muon_momentum"]),
+                  "muon_ns_steps": int(jd1_muon_schedule["muon_ns_steps"]),
+                  "muon_lr_final_frac": float(
+                      jd1_muon_schedule.get("muon_lr_final_frac", 1.0)),
+                  "muon_anneal_steps": int(jd1_muon_schedule.get("muon_anneal_steps", 0)),
+                  "score_claim": False})
         if _persist_opt:
             if _resume_opt_flat:
                 tlog({**restore_optimizer_state(optimizer, model, _resume_opt_flat),
@@ -5090,6 +5307,8 @@ def main() -> int:
 
     def _apply_jd1_lr_anneal_for_epoch(*, epoch: int) -> float:
         nonlocal jd1_lr_current
+        if jd1_finisher_active:
+            return jd1_lr_current
         if jd1_lr_schedule is None or not jd1_pose_finish_state.get("engaged"):
             jd1_lr_current = float(cfg.lr)
             return jd1_lr_current
@@ -5098,6 +5317,111 @@ def main() -> int:
         jd1_pose_finish_state["lr_anneal_last_epoch"] = int(epoch)
         jd1_pose_finish_state["lr_anneal_last_lr"] = float(jd1_lr_current)
         return jd1_lr_current
+
+    def _derive_jd1_muon_finisher_schedule(*, epoch: int, reason: str) -> dict[str, Any]:
+        nonlocal jd1_muon_schedule
+        if jd1_muon_schedule is not None:
+            return dict(jd1_muon_schedule)
+        try:
+            lr_tail = derive_jd1_lr_tail_schedule(
+                base_lr=float(cfg.lr),
+                start_epoch=int(epoch),
+                end_epoch=int(cfg.epochs),
+                steps_per_epoch=int(steps_per_epoch),
+                beta2=float(RESET_ADAM_BETAS[1]),
+                active_ema_decay=float(active_ema_decay),
+                resume_from=args.resume_from,
+                explicit_final_frac=float(args.jd1_lr_final_frac),
+            )
+        except ValueError as exc:
+            raise SystemExit(str(exc)) from exc
+        muon_momentum, momentum_source = derive_jd1_muon_momentum(RESET_ADAM_BETAS[0])
+        final_frac = float(lr_tail["final_frac"])
+        anneal_steps = (
+            max(1, (int(cfg.epochs) - int(epoch)) * int(steps_per_epoch))
+            if final_frac < 1.0 else 0
+        )
+        jd1_muon_schedule = {
+            "schema": JD1_FINISHER_SCHEMA,
+            "mode": "muon",
+            "active": False,
+            "reason": reason,
+            "switch_epoch": int(epoch),
+            "muon_lr": float(lr_tail["base_lr"]),
+            "adam_lr": float(lr_tail["base_lr"]),
+            "muon_lr_final_frac": final_frac,
+            "muon_final_lr": float(lr_tail["base_lr"]) * final_frac,
+            "muon_anneal_steps": int(anneal_steps),
+            "muon_momentum": float(muon_momentum),
+            "muon_momentum_source": momentum_source,
+            "muon_ns_steps": int(JD1_MUON_FINISHER_NS_STEPS),
+            "lr_tail_derivation": dict(lr_tail),
+            "score_claim": False,
+        }
+        return dict(jd1_muon_schedule)
+
+    def _activate_jd1_muon_finisher(*, epoch: int, reason: str) -> None:
+        nonlocal optimizer, jd1_finisher_active, jd1_muon_schedule, jd1_lr_current
+        if args.jd1_finisher != "muon":
+            return
+        if jd1_finisher_active:
+            return
+        if not jd1_pose_finish_state.get("engaged"):
+            raise RuntimeError("JD1 Muon finisher activation reached before JD1 engagement")
+        schedule = _derive_jd1_muon_finisher_schedule(epoch=epoch, reason=reason)
+        n_muon, n_adam = tr1_muon_adam_split_counts(model.trainable_parameters())
+        if n_muon <= 0:
+            raise SystemExit(
+                "--jd1-finisher muon REFUSED: TR1 Muon renderer-weight split routed zero "
+                "leaves. This would be an inert finisher.")
+        old_adam_state = (
+            optimizer.state if type(optimizer).__name__ in ("Adam", "AdamW") else None
+        )
+        new_optimizer = build_tr1_jd1_muon_finisher_optimizer(
+            muon_lr=float(schedule["muon_lr"]),
+            adam_lr=float(schedule["adam_lr"]),
+            muon_momentum=float(schedule["muon_momentum"]),
+            muon_ns_steps=int(schedule["muon_ns_steps"]),
+            muon_lr_final_frac=float(schedule["muon_lr_final_frac"]),
+            muon_anneal_steps=int(schedule["muon_anneal_steps"]),
+            adam_bias_correction=bool(_bias_correction),
+        )
+        new_optimizer.init(model.trainable_parameters())
+        mx.eval(new_optimizer.state)
+        warm_seeded = 0
+        if old_adam_state is not None:
+            try:
+                warm_seeded = seed_tr1_muon_momentum_from_adam(
+                    new_optimizer.optimizers[0],
+                    old_adam_state,
+                )
+            except Exception as exc:
+                warm_seeded = -1
+                tlog({"event": "jd1_muon_warm_start_failed_cold_fallback",
+                      "epoch": int(epoch),
+                      "error": f"{type(exc).__name__}: {exc}",
+                      "score_claim": False})
+            mx.eval(new_optimizer.state)
+        optimizer = new_optimizer
+        jd1_finisher_active = True
+        jd1_lr_current = float(schedule["muon_lr"])
+        schedule["active"] = True
+        schedule["n_muon_leaves"] = int(n_muon)
+        schedule["n_adam_leaves"] = int(n_adam)
+        schedule["warm_start_from_adam_m"] = bool(old_adam_state is not None)
+        schedule["muon_warm_seeded_leaves"] = int(warm_seeded)
+        jd1_muon_schedule = dict(schedule)
+        jd1_pose_finish_state["finisher"] = dict(schedule)
+        tlog({"event": "jd1_muon_finisher_switch",
+              "epoch": int(epoch),
+              "stage": stage,
+              "reason": reason,
+              **schedule,
+              "optimizer_split": "Muon(TR1 renderer tensors) + Adam(tokens/biases/gains/gates)",
+              "note": "Case-B terminal optimizer switch. MLX Muon performs real "
+                      "Newton-Schulz orthogonalized momentum and flattens conv filters "
+                      "to 2-D matrices internally; tokens and non-matrix leaves stay Adam.",
+              "score_claim": False})
 
     def _maybe_apply_jd1_ema_tail_anchor(*, epoch: int, reason: str) -> None:
         nonlocal ema
@@ -5221,12 +5545,22 @@ def main() -> int:
         lane_guard_state = copy.deepcopy(snapshot["lane_guard_state"])
         mx.eval(model.parameters(), optimizer.state, *ema.values())
 
+    if (args.jd1_finisher == "muon"
+            and not jd1_pose_finish_state.get("engaged")
+            and not jd1_pose_finish_should_engage(args, epoch=start_epoch, stage=stage)):
+        raise SystemExit(
+            "--jd1-finisher muon REFUSED: JD1 would not be active at the resumed start "
+            f"epoch {start_epoch}. Case-B is a terminal boundary action; choose a "
+            "checkpoint/start_epoch where JD1 is already active at launch.")
+
     if jd1_pose_finish_state.get("engaged"):
         _apply_jd1_stage_ema_reanchor(epoch=start_epoch,
                                       reason="resume_inside_joint_pose_finish")
         _log_jd1_ema_mode(epoch=start_epoch, reason="resume_inside_joint_pose_finish")
         _resolve_jd1_lr_anneal_schedule(epoch=start_epoch,
                                         reason="resume_inside_joint_pose_finish")
+        _activate_jd1_muon_finisher(epoch=start_epoch,
+                                    reason="resume_inside_joint_pose_finish")
     if knee_switched and state_form["form"] == "ce":
         # #517-twin re-anchor (2026-07-30 qa86 EMA-resume incident): the form state
         # machine must position to the RESTORED stage, not --seg-form-start. Without
@@ -5388,6 +5722,8 @@ def main() -> int:
             _log_jd1_ema_mode(epoch=epoch, reason="fresh_joint_pose_engagement")
             _resolve_jd1_lr_anneal_schedule(epoch=epoch,
                                             reason="fresh_joint_pose_engagement")
+            _activate_jd1_muon_finisher(epoch=epoch,
+                                        reason="fresh_joint_pose_engagement")
         _maybe_apply_jd1_ema_tail_anchor(epoch=epoch, reason="explicit_epoch")
         _apply_jd1_lr_anneal_for_epoch(epoch=epoch)
         perm = order_rng.permutation(cfg.num_pairs)
@@ -5443,6 +5779,8 @@ def main() -> int:
                "jd1_seg_hold_floor": jd1_pose_finish_state.get("seg_hold_floor"),
                "jd1_effective_w_pose": (float(jd1_effective_w_pose)
                                         if jd1_pose_finish_state.get("engaged") else 0.0),
+               "jd1_finisher": args.jd1_finisher,
+               "jd1_finisher_active": bool(jd1_finisher_active),
                "active_ema_decay": float(active_ema_decay),
                "jd1_ema_mode": args.jd1_ema_mode,
                "jd1_ema_tail_average_active": bool(
@@ -5457,6 +5795,13 @@ def main() -> int:
                 "jd1_lr_final_frac": float(jd1_lr_schedule["final_frac"]),
                 "jd1_lr_tail_epochs": int(jd1_lr_schedule["tail_epochs"]),
                 "jd1_lr_signal_source": jd1_lr_schedule["signal_source"],
+            })
+        if jd1_finisher_active and jd1_muon_schedule is not None:
+            row.update({
+                "jd1_muon_lr": float(jd1_muon_schedule["muon_lr"]),
+                "jd1_muon_final_lr": float(jd1_muon_schedule["muon_final_lr"]),
+                "jd1_muon_lr_final_frac": float(jd1_muon_schedule["muon_lr_final_frac"]),
+                "jd1_muon_momentum": float(jd1_muon_schedule["muon_momentum"]),
             })
         # Confound immune system (day-one, L1 runtime alarms — LOUD, never silent):
         if ep_loss == 0.0:
@@ -6035,6 +6380,12 @@ def main() -> int:
             "ema_mode": args.jd1_ema_mode,
             "active_ema_decay": float(active_ema_decay),
             "active_ema_decay_provenance": active_ema_decay_provenance,
+            "finisher": (
+                dict(jd1_muon_schedule)
+                if jd1_muon_schedule is not None
+                else {"schema": JD1_FINISHER_SCHEMA, "mode": args.jd1_finisher,
+                      "active": False, "score_claim": False}
+            ),
             "force_ema_reanchor_on_resume": bool(args.jd1_force_ema_reanchor_on_resume),
             "live_gate_telemetry": args.jd1_live_gate_telemetry,
             "score_claim": False,

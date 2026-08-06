@@ -543,11 +543,29 @@ def test_trainer_actually_wires_the_arm_into_its_optimizer():
 
     src = (WORKTREE / "experiments/train_tr1_partition_renderer_mlx.py").read_text()
     tree = ast.parse(src)
+    parent = {}
+    for node in ast.walk(tree):
+        for child in ast.iter_child_nodes(node):
+            parent[child] = node
+
+    def enclosing_function(node):
+        cur = node
+        while cur in parent:
+            cur = parent[cur]
+            if isinstance(cur, ast.FunctionDef):
+                return cur.name
+        return None
+
     adam_calls = [n for n in ast.walk(tree)
                   if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)
                   and n.func.attr == "Adam"]
-    assert len(adam_calls) == 1, "more than one optimizer construction => an unwired arm is possible"
-    kw = {k.arg for k in adam_calls[0].keywords}
+    boundary_adam_calls = [
+        n for n in adam_calls
+        if enclosing_function(n) != "build_tr1_jd1_muon_finisher_optimizer"
+    ]
+    assert len(boundary_adam_calls) == 1, (
+        "more than one non-finisher optimizer construction => an unwired arm is possible")
+    kw = {k.arg for k in boundary_adam_calls[0].keywords}
     assert "bias_correction" in kw, "the arm selector is not passed to the optimizer"
 
     gate_calls = [n for n in ast.walk(tree)

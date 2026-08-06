@@ -17,6 +17,7 @@ from tac.witness_dsl.spec_tr1_renderer_20260728 import (
     default_t1_smoke_program,
     lever_jd1_joint_pose_finish,
     lever_jd1_lr_anneal,
+    lever_jd1_muon_finisher,
     lever_jd1_plateau_tail_average_ema,
     lever_seg_grad_q3_project,
     trainer_declared_flags,
@@ -117,6 +118,47 @@ def test_jd1_lr_anneal_factory_refuses_inert_or_invalid_shapes():
         lever_jd1_lr_anneal(final_frac=0.0)
     with pytest.raises(ValueError, match="final_frac"):
         lever_jd1_lr_anneal(final_frac=1.0)
+
+
+def test_jd1_muon_finisher_lever_composes_with_case_b_start_boundary():
+    joint = lever_jd1_joint_pose_finish(w_pose=1.0, start_epoch=1646, engage_on="start_epoch")
+    muon = lever_jd1_muon_finisher()
+    base = default_t1_smoke_program("plain", "/unused")
+    prog = TR1RendererProgramV1(
+        levers=base.levers + (joint, muon),
+        num_pairs=24,
+        out_dir="/unused",
+        resume_from="parent.npz",
+    )
+    argv = prog.compile_trainer_argv()
+    ns = build_argparser().parse_args(argv[1:])
+    validate_jd1_pose_finish_args(ns)
+    assert ns.jd1_pose_finish_mode == "joint_loss"
+    assert ns.jd1_pose_finish_engage_on == "start_epoch"
+    assert ns.jd1_finisher == "muon"
+
+
+def test_jd1_muon_finisher_lever_flags_are_declared_by_the_live_trainer():
+    lv = lever_jd1_muon_finisher()
+    missing = sorted(set(lv.overrides) - trainer_declared_flags())
+    assert not missing
+
+
+def test_jd1_muon_finisher_validation_refuses_mid_window_or_unresumed_shapes():
+    base_args = [
+        "--variant", "plain",
+        "--out-dir", "/unused",
+        "--jd1-pose-finish-mode", "joint_loss",
+        "--jd1-w-pose", "1.0",
+        "--jd1-finisher", "muon",
+    ]
+    ns = build_argparser().parse_args(base_args)
+    with pytest.raises(SystemExit, match="requires --resume-from"):
+        validate_jd1_pose_finish_args(ns)
+
+    ns = build_argparser().parse_args([*base_args, "--resume-from", "parent.npz"])
+    with pytest.raises(SystemExit, match="engage-on start_epoch"):
+        validate_jd1_pose_finish_args(ns)
 
 
 def test_jd1_factory_refuses_inert_or_invalid_shapes():

@@ -566,6 +566,47 @@ def lever_jd1_lr_anneal(*, final_frac: float | None = None) -> Lever:
     )
 
 
+def lever_jd1_muon_finisher() -> Lever:
+    """ddm_wp1: terminal JD1 Muon finisher for plateau-policy Case-B.
+
+    The trainer keeps ``--jd1-finisher`` default-off and refuses the Muon value
+    unless JD1 is resumed at a start-epoch boundary. This factory therefore only
+    emits the non-inert ON shape; compose it with
+    :func:`lever_jd1_joint_pose_finish` using ``engage_on='start_epoch'`` and a
+    shared ``resume_from`` checkpoint chosen by the Case-B controller.
+    """
+    return Lever(
+        name="tr1_jd1_muon_finisher",
+        overrides={"--jd1-finisher": "muon"},
+        notes="ddm_wp1 Case-B terminal finisher: MLX Muon on TR1 renderer matrix "
+              "tensors (MLX flattens conv filters) and Adam on tokens/biases/gains/gates. "
+              "Trainer derives LR final fraction from parent JD1 telemetry (la1 law) and "
+              "momentum from TR1 Adam beta1; no witness numeric constants are imported.",
+        constant_manifest={
+            "--jd1-finisher": {
+                "value": "muon",
+                "rung": "MECHANISM-SPECIFIED (Case-B exit consumer)",
+                "provenance": "vh1/tp1 Case-B names an uncapped terminal finisher; this flag "
+                              "only selects the mechanism. The trainer derives Muon LR from "
+                              "parent-tail telemetry and momentum from the active TR1 Adam "
+                              "first-moment law.",
+            },
+        },
+        runtime_receipt_schemas={
+            "jd1_muon_finisher_config": "typed default-off config row",
+            "jd1_muon_finisher_switch": "typed switch row with split counts, LR derivation, "
+                                       "momentum derivation, warm-start count",
+        },
+        policy_contracts={
+            "score_claim": False,
+            "requires_jd1_pose_finish": True,
+            "requires_resume_from_parent_telemetry": True,
+            "activation_path": "plateau_policy_case_b_only",
+            "falsifier": "Case-B finisher endpoint no better at matched parent boundary",
+        },
+    )
+
+
 def lever_solve_frame_distill(field_cache: str, *, form: str = "kd_logits",
                               weight: float = 100.0, temp: float = 2.0,
                               attack_temp: float = 0.0) -> Lever:
