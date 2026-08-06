@@ -21,3 +21,18 @@ Current adjudication before final write:
 - Rows 4 and 5 look LESSON-ONLY: stability bookkeeping and `n` scaling do not replace measured gate noise floors.
 
 No scorer runs, no paid dispatch, no launches, no code edits, and no score claims.
+
+## 2026-08-06T10:15Z checkpoint 2
+
+Final artifact draft written:
+
+- `RECEIPT.md` with theorem-level paper summary, recall evidence, five seeded-surface adjudications, ranked crosswalk table, AM1-vs-ffm1 diff, follow-ons, and explicit score boundary.
+- `PREDICTIONS.md` pre-registering the Q3 projection-vs-conditioning endpoint check before this arm observed any `jd8q3_window` endpoint receipt.
+
+Final disposition counts:
+
+- ADOPT-CLASS: 2 rows.
+- LESSON-ONLY: 3 rows.
+- N-A: 1 row.
+
+No scorer runs, no paid dispatch, no launches, no code edits, and no score claims.
