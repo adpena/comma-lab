@@ -1,0 +1,11 @@
+{
+ "jd5_gate": {
+  "checked": [],
+  "complete_endpoint": null,
+  "ready": false
+ },
+ "reason": "jd5 endpoint receipt with status=complete not found",
+ "schema": "ddm_tq1_phase_b_gate_check.v1",
+ "score_claim": false,
+ "status": "QUEUED-WITH-FIRE-ORDER"
+}

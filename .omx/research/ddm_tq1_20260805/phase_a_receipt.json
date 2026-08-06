@@ -1,0 +1,197 @@
+{
+ "axis": "[macOS-CPU frozen-scorer advisory]",
+ "base_archive": {
+  "bulk_bytes": 341295,
+  "bulk_sha256": "cbd4b49fe6d678de68772ba29797e8663d847242641b1cb4fe39abcd91c5d9be",
+  "bytes": 357836,
+  "path": "/Volumes/VertigoDataTier/pact/ddm_qo1_20260804/sub_auto_pairbit/archive.zip",
+  "restaged_archive_bytes": 357836,
+  "restaged_archive_sha256": "d5e814d5b9f65c3094b0e65fecdd7771734d03c420c63d1d2033a671b766986a",
+  "restaged_matches_live": true,
+  "section_bytes": [
+   36,
+   3266,
+   535,
+   8751,
+   4081
+  ],
+  "section_sha256": [
+   "fc4f23ac9e31ba266ace26131319eb5b574d69e1d505fb1fc20a9dbc79a240d6",
+   "3b8eb0c24f9e6d8b547a23a5db29a1dbbd03db474fbba3638b0c3dd858ca7009",
+   "8fc5c3fc65eb051b65ebf01d4b008e52d606097194c57884e739eae2ad8382e1",
+   "d1d073e55aacf991491365d13716fededb169854b78bb203c34c84ca880c25db",
+   "b5874d32324a46dc76cb1fc0beb7cda5fdaca2f59ebae6acbb08283206e8e7a2"
+  ],
+  "sha256": "d5e814d5b9f65c3094b0e65fecdd7771734d03c420c63d1d2033a671b766986a",
+  "token_source": {
+   "equal_to_archive_tokens": true,
+   "exists": true,
+   "path": "/Volumes/VertigoDataTier/pact/ddm_br1_20260803/cx1_tokens.npy",
+   "sha256": "d4eacbf619d09aeda1c15a5015b0cd45ab2d3de33d349c881b7e0f59dc803a56"
+  },
+  "tokens_sha256": "f6055f3159ce080f1d8b89dce618d7286d11bd3853d6bb0380cba9fac9801146"
+ },
+ "baseline": {
+  "archive_bytes": 357836,
+  "archive_sha256": "d5e814d5b9f65c3094b0e65fecdd7771734d03c420c63d1d2033a671b766986a",
+  "axis": "[macOS-CPU frozen-scorer advisory]",
+  "d_pose": 0.00071459,
+  "d_seg": 0.00431179,
+  "score": 0.7539807296911207,
+  "score_claim": false,
+  "source": "main_hot_state live own-vehicle row / qo1 sub_auto_pairbit"
+ },
+ "build_sites": {
+  "candidate_menu": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/optimal_form/tq1_phase_a_candidate_menu.jsonl",
+  "checkpoints": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/optimal_form/checkpoints",
+  "driver": "experiments/ddm_tq1_optimal_token_edit.py",
+  "price_ledger": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/optimal_form/tq1_phase_a_candidate_prices.jsonl",
+  "smoke_archives": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/optimal_form/smoke_candidates",
+  "ssd_root": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/optimal_form"
+ },
+ "candidate_menu": {
+  "accepted_count": 0,
+  "accepted_status": "NOT_RUN_PHASE_A_SCORER_LIGHT",
+  "generated": 1140,
+  "menu_ledger": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/optimal_form/tq1_phase_a_candidate_menu.jsonl",
+  "price_ledger": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/optimal_form/tq1_phase_a_candidate_prices.jsonl",
+  "priced": 12,
+  "top_candidate_ids": [
+   "snap_r00_c02_L12",
+   "snap_r00_c04_L12",
+   "snap_r00_c06_L12",
+   "snap_r00_c08_L12",
+   "snap_r00_c10_L12",
+   "snap_r00_c12_L12",
+   "snap_r00_c14_L12",
+   "snap_r00_c16_L12",
+   "snap_r00_c18_L12",
+   "snap_r00_c01_L13"
+  ]
+ },
+ "field_hashes": [
+  {
+   "name": "cell_error",
+   "sha256_of_float64": "c158a8cdc52262689894c38f0ae69eeefd18e52ba2f02b8bb88f9712662e138e"
+  },
+  {
+   "name": "cell_score_weighted_error",
+   "sha256_of_float64": "57ab7c394fe6bed3d9ce1efbc79ce68841d626403bfead9237ceb8eeb65f5781"
+  },
+  {
+   "name": "g4_cell_recurrence",
+   "sha256_of_float64": "c792eb0e6ab1a036a9ac6ad0f1b700b9f0a65a98b37a7d5088bce9936c0153cf"
+  },
+  {
+   "name": "sg1_cell_flip_mass",
+   "sha256_of_float64": "d41da4d45b80786bff40bbeeb7dfb15e569a2f83ee839094ab1bee184c016e9d"
+  },
+  {
+   "name": "activity",
+   "sha256_of_float64": "494904e2aa3b13d78b8f9a8be28bdf15f9abc360158a079459237ffb4ec551a7"
+  },
+  {
+   "name": "pose_tube_proxy",
+   "sha256_of_float64": "85648608bd981d9372fc61bef132631828a855594637d74bb01e69f2b6faa64a"
+  },
+  {
+   "name": "seg_guard",
+   "sha256_of_float64": "2f249427bf324c94bda7cb00ff4d15f809dc6fe234c3ed774e1c4d1e0cbc691e"
+  },
+  {
+   "name": "pose_guard",
+   "sha256_of_float64": "ed7a564937057d05f8e72b511aff7ac4239978776f35e7338d07034278ae9b5c"
+  },
+  {
+   "name": "joint_guard",
+   "sha256_of_float64": "af793906ad74df46e2813477b7a613cba0858b464cb627ffe1f00c05ef1ce495"
+  }
+ ],
+ "followon_status": "QUEUED-WITH-FIRE-ORDER",
+ "harness_reuse_evidence": [
+  "Reuses TD1 _instrument_fields for gt/cx1 argmax, g3 score atlas, g4 recurrence, sg1 flip mass custody.",
+  "Reuses live IX2 parse/decode/encode/build_payload/build_single_member_zip receiver/archive path.",
+  "Uses #869 cell-drop waterfill invariant: per-candidate bytes are repriced from the current token object, not inferred from singleton tables.",
+  "Phase B fire order binds to v19/v19b realized move-level acceptance before any family closure."
+ ],
+ "instrument_sources": {
+  "cx1_argmax": {
+   "path": "/Volumes/VertigoDataTier/pact/ddm_pu2_20260803/argmax_cache/cx1_argmax_n600.npy",
+   "sha256": "5e903de650e60ec6a64b34eb455fa1bc911223551d0b31e9ae45cc906e1490be",
+   "shape": [
+    600,
+    384,
+    512
+   ]
+  },
+  "formula": {
+   "authority": "DERIVED instrument ledger only; scorer forward pass not run by td1",
+   "joint_guard": "0.72*seg_guard+0.28*pose_guard",
+   "pose_guard": "0.70*norm(g3_pose_weighted_token_mode_residual)+0.30*norm(token_mode_activity)",
+   "seg_guard": "0.45*norm(g3_score_weighted_argmax_errors)+0.25*norm(cx1_argmax_errors)+0.20*norm(sg1_cell_flip_mass)+0.10*norm(g4_flip_recurrence)"
+  },
+  "g3_jsonl": {
+   "path": "/Volumes/VertigoDataTier/pact/ddm_g3_score_atlas_n600_20260722T204000Z/ddm_g3_score_atlas_n600.jsonl",
+   "rows": 600,
+   "sha256": "faaff7299d86aa49c97e25e9cce2eeb0201f64e919f110015d31708788bcec09"
+  },
+  "g4_recurrence": {
+   "path": "/Volumes/VertigoDataTier/pact/ddm_g4_spatial_stationarity_n600_20260722T212138Z/stage_checkpoints/01_recurrence_arrays.npz",
+   "sha256": "dbc85e7a4f593ab9b7a7f4ed017dbb63a064cb681df806d0bb93277ae8f42451"
+  },
+  "gt_argmax": {
+   "path": "/Volumes/VertigoDataTier/pact/ddm_pu2_20260803/argmax_cache/gt_argmax_n600.npy",
+   "sha256": "b74a14b226a5aceb5824899898bcb06e5413c54b7db2441268da7bc91a10db5d",
+   "shape": [
+    600,
+    384,
+    512
+   ]
+  },
+  "sg1_cell_flip_mass": {
+   "path": "/Volumes/VertigoDataTier/pact/ddm_sg1_20260731/cell_flip_mass.npy",
+   "sha256": "31586a87e2f82662602fda554f5a6bf286dceeea5ec9b4a062929f67f58d184d",
+   "shape": [
+    24,
+    32
+   ]
+  }
+ },
+ "jd5_gate": {
+  "checked": [],
+  "complete_endpoint": null,
+  "ready": false
+ },
+ "not_measured": {
+  "family_closure": "not claimed; zero accepted moves can close only after full derived menu is scorer-realized",
+  "subset_or_n600_scorer": "not run; jd5 endpoint receipt with status=complete was absent"
+ },
+ "phase": "A_BUILD_SCORER_LIGHT",
+ "phase_b_status": "GATED_CLOSED_JD5_ENDPOINT_ABSENT",
+ "promotion_eligible": false,
+ "rung_summary": {
+  "cells": 768,
+  "dominated_global_baseline_recorded_only": [
+   16,
+   12,
+   8,
+   4
+  ],
+  "global_16_12_8_4_used_as_generator": false,
+  "rung_use_counts": {
+   "12": 423,
+   "13": 423,
+   "14": 611,
+   "15": 700
+  },
+  "unique_per_cell_menus": {
+   "15": 89,
+   "15,14": 188,
+   "15,14,13,12": 423,
+   "preserve": 68
+  }
+ },
+ "schema": "ddm_tq1_phase_a_receipt.v1",
+ "score_claim": false,
+ "seconds": 13.184551000595093
+}
