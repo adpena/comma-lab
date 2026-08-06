@@ -74,6 +74,22 @@ EVENT_CLASS_LABELS: tuple[str, ...] = (
 #: (c) duty-relevance labels (secondary sort hint only).
 DUTY_RELEVANCE_LABELS: tuple[str, ...] = ("high", "medium", "low")
 
+#: Charter-level work-shape labels for the codex arm queue lint. Advisory only.
+CHARTER_CLASS_LABELS: tuple[str, ...] = (
+    "build_race_train_measure",
+    "audit_analysis",
+    "convocation",
+    "mixed",
+)
+
+#: Mechanism-reduction smells. Each is classified independently as present/absent.
+MECHANISM_REDUCTION_LANGUAGE_LABELS: tuple[str, ...] = (
+    "quick-train",
+    "undersized",
+    "toy-scale",
+    "convenience-basis",
+)
+
 AUTHORITY = "on-device FM · advisory · read-only · NON-PROMOTABLE"
 
 # in-process cache: content-hash → {"label", "rationale", "classifier"}. Bounded; NO disk
@@ -460,6 +476,123 @@ def duty_relevance(
             "rationale": r_out.get("rationale"),
         })
     return rows
+
+
+# ─────────────────────────── charter lint helpers ───────────────────────────
+_CHARTER_CLASS_INSTRUCTIONS = (
+    "You classify ONE codex-arm charter into a closed set. "
+    "'build_race_train_measure' = the charter asks the arm to implement, build, train, race, "
+    "compose, solve, measure, or otherwise produce a mechanism or measured artifact. "
+    "'audit_analysis' = the charter asks only to inspect, review, classify, audit, summarize, "
+    "or analyze existing artifacts without building a new mechanism. 'convocation' = the "
+    "charter is a discussion/symposium/planning council with no direct implementation step. "
+    "'mixed' = both implementation/measurement and audit/convocation are material. Use only "
+    "facts in the text; pick the closest single label."
+)
+
+
+def charter_class(text: str, *, timeout: int = 25) -> dict | None:
+    """Classify a charter's semantic work-shape for queue lint enrichment.
+
+    Returns ``{"charter_class","rationale","classifier","authority"}``, or None when
+    fmtools is unavailable / failed. Advisory only; deterministic lint gates stay primary.
+    """
+    if not str(text).strip():
+        return None
+    row = classify_one(
+        str(text)[:1800],
+        CHARTER_CLASS_LABELS,
+        _CHARTER_CLASS_INSTRUCTIONS,
+        timeout=timeout,
+    )
+    if not row or not row.get("label"):
+        return None
+    return {
+        "charter_class": row.get("label"),
+        "rationale": row.get("rationale"),
+        "classifier": row.get("classifier"),
+        "authority": AUTHORITY,
+    }
+
+
+_MECHANISM_REDUCTION_DESCRIPTIONS: dict[str, str] = {
+    "quick-train": (
+        "language that proposes a quick training shortcut, short-run proxy, smoke-only "
+        "descent, or hurry-up training as if it can stand for the real mechanism"
+    ),
+    "undersized": (
+        "language that knowingly shrinks capacity, basis size, epoch count, sample count, "
+        "or representation size in a way that may change the mechanism rather than only scope"
+    ),
+    "toy-scale": (
+        "language that treats a toy, tiny, n=small, smoke, or miniature mechanism verdict as "
+        "if it can transfer to n600/production without preserving mechanism fidelity"
+    ),
+    "convenience-basis": (
+        "language that chooses a basis, metric, coordinate system, or substrate because it is "
+        "convenient/easy/default rather than because it is the optimal form for the mechanism"
+    ),
+}
+
+_MECHANISM_REDUCTION_INSTRUCTIONS = (
+    "For each item, decide whether the PASSAGE contains the TARGET mechanism-reduction smell. "
+    "Return 'present' only when the passage itself uses or endorses the smell, not when it "
+    "warns against it, requires optimal form, or discusses the smell as a forbidden class. "
+    "Use 'absent' otherwise. Use only facts in the passage."
+)
+
+
+def mechanism_reduction_language(text: str, *, timeout: int = 25) -> dict | None:
+    """Flag quick-train / undersized / toy-scale / convenience-basis language.
+
+    The four smells are classified independently through the same closed-label fmtools
+    subprocess surface. Returns a dict with ``flags`` (possibly empty) or None when fmtools
+    is unavailable / failed. Advisory only; no gate consumes this as authority.
+    """
+    passage = str(text).strip()
+    if not passage:
+        return None
+    passage = passage[:1600]
+    items = [
+        {
+            "id": label,
+            "text": (
+                f"TARGET {label}: {description}. PASSAGE: {passage}"
+            ),
+        }
+        for label, description in _MECHANISM_REDUCTION_DESCRIPTIONS.items()
+    ]
+    out = classify(
+        items,
+        ("present", "absent"),
+        _MECHANISM_REDUCTION_INSTRUCTIONS,
+        timeout=timeout,
+    )
+    if out is None:
+        return None
+    rows: list[dict] = []
+    flags: list[str] = []
+    classified = 0
+    for r in out:
+        label = str(r.get("id") or "")
+        if r.get("label") in {"present", "absent"}:
+            classified += 1
+        present = r.get("label") == "present"
+        if present and label in MECHANISM_REDUCTION_LANGUAGE_LABELS:
+            flags.append(label)
+        rows.append({
+            "label": label,
+            "present": present,
+            "rationale": r.get("rationale"),
+            "classifier": r.get("classifier"),
+        })
+    if classified == 0:
+        return None
+    return {
+        "flags": flags,
+        "rows": rows,
+        "authority": AUTHORITY,
+    }
 
 
 # ─────────────────────────── (d) CONFOUND-alarm classing ───────────────────────────

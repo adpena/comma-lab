@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+from argparse import Namespace
 from pathlib import Path
 
 import pytest
@@ -393,3 +394,84 @@ def test_persist_final_message_copies_full_text_indexes_and_extracts_next(q, tmp
     assert next_rows[0]["provenance"] == "harvested-final"
     assert next_rows[0]["source_kind"] == "persisted_final_message"
     assert "Resume here" in next_rows[0]["text"]
+
+
+# --- fmtools charter-lint advisories (warn-only, never a gate) -------------------
+
+
+def test_lint_charter_fm_advisories_absent_is_silent(q, tmp_path, monkeypatch):
+    prompt = tmp_path / "x_prompt.md"
+    prompt.write_text("Implement a mechanism.\n", encoding="utf-8")
+    monkeypatch.setattr(q, "_fm_advisory_module", lambda: None)
+    assert q.lint_charter_fm_advisories(str(prompt)) == []
+
+
+def test_fm_advisory_warns_but_strict_mode_still_queues(q, tmp_path, monkeypatch, capsys):
+    class FakeFM:
+        @staticmethod
+        def charter_class(_text, timeout=15):
+            return {"charter_class": "build_race_train_measure", "rationale": "build measure"}
+
+        @staticmethod
+        def mechanism_reduction_language(_text, timeout=15):
+            return {"flags": ["quick-train"]}
+
+    prompt = tmp_path / "x_prompt.md"
+    prompt.write_text(
+        "Implement and measure the surface.\n\n"
+        "## OPTIMAL FORM\n\n"
+        "REFERENCE: source package.\n"
+        "sha abcdef1234567890\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(q, "_fm_advisory_module", lambda: FakeFM)
+    monkeypatch.setattr(q, "append_row", lambda *_a, **_k: None)
+    monkeypatch.setenv("TAC_CHARTER_LINT_STRICT", "1")
+
+    rc = q.cmd_add(Namespace(
+        name="x",
+        prompt=str(prompt),
+        rank=10,
+        owns_scorer=False,
+        note="",
+    ))
+
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert "charter-lint WARN [x]: fmtools advisory charter_class=build_race_train_measure" in out
+    assert "mechanism_reduction_language=quick-train" in out
+    assert "REFUSED" not in out
+    assert "queued x" in out
+
+
+def test_fm_advisory_does_not_rescue_deterministic_strict_refusal(
+    q, tmp_path, monkeypatch, capsys
+):
+    class FakeFM:
+        @staticmethod
+        def charter_class(_text, timeout=15):
+            return {"charter_class": "audit_analysis", "rationale": "audit"}
+
+        @staticmethod
+        def mechanism_reduction_language(_text, timeout=15):
+            return {"flags": []}
+
+    prompt = tmp_path / "x_prompt.md"
+    prompt.write_text("Implement the thing without an optimal-form block.\n", encoding="utf-8")
+    monkeypatch.setattr(q, "_fm_advisory_module", lambda: FakeFM)
+    monkeypatch.setattr(q, "append_row", lambda *_a, **_k: None)
+    monkeypatch.setenv("TAC_CHARTER_LINT_STRICT", "1")
+
+    rc = q.cmd_add(Namespace(
+        name="x",
+        prompt=str(prompt),
+        rank=10,
+        owns_scorer=False,
+        note="",
+    ))
+
+    out = capsys.readouterr().out
+    assert rc == 3
+    assert "charter-lint REFUSED [x]:" in out
+    assert "charter-lint WARN [x]: fmtools advisory charter_class=audit_analysis" in out
+    assert "queued x" not in out

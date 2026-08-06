@@ -27,6 +27,8 @@ def test_all_entry_points_degrade_to_none_when_absent(monkeypatch) -> None:
     assert fa.regime_supplement([{"epoch": 1}]) is None
     assert fa.classify_events([{"stage": "s"}]) is None
     assert fa.duty_relevance([{"lever": "l"}], "lane-erosion") is None
+    assert fa.charter_class("build this") is None
+    assert fa.mechanism_reduction_language("quick toy run") is None
     assert fa.classify_confounds([{"failure_id": "f"}], ["c1"]) is None
     assert fa.shadow_advisory(telemetry_texts=[{"a": 1}], event_texts=[{"b": 2}]) is None
 
@@ -163,6 +165,58 @@ def test_duty_relevance_shape(monkeypatch) -> None:
     monkeypatch.setattr(fa, "_run_job", _run)
     rows = fa.duty_relevance([{"lever": "thin_lane", "why": "lane band"}], "lane-erosion")
     assert rows is not None and rows[0]["lever"] == "thin_lane" and rows[0]["relevance"] == "high"
+
+
+def test_charter_class_shape(monkeypatch) -> None:
+    fa._CACHE.clear()
+    monkeypatch.setattr(fa, "fm_python", lambda: "/fake/py")
+
+    def _run(_fm_py, job, _t):
+        return {"ok": True, "results": [{"id": it["id"], "label": "build_race_train_measure",
+                                         "rationale": "build and measure", "classifier": "apple-fm-on-device"}
+                                        for it in job["items"]]}
+    monkeypatch.setattr(fa, "_run_job", _run)
+    row = fa.charter_class("Implement and measure the receiver.")
+    assert row is not None
+    assert row["charter_class"] == "build_race_train_measure"
+    assert row["authority"] == fa.AUTHORITY
+
+
+def test_mechanism_reduction_language_flags_multiple(monkeypatch) -> None:
+    fa._CACHE.clear()
+    monkeypatch.setattr(fa, "fm_python", lambda: "/fake/py")
+
+    def _run(_fm_py, job, _t):
+        results = []
+        for it in job["items"]:
+            present = "TARGET quick-train:" in it["text"] or "TARGET undersized:" in it["text"]
+            results.append({
+                "id": it["id"],
+                "label": "present" if present else "absent",
+                "rationale": "shortcut language" if present else "not present",
+                "classifier": "apple-fm-on-device",
+            })
+        return {"ok": True, "results": results}
+
+    monkeypatch.setattr(fa, "_run_job", _run)
+    row = fa.mechanism_reduction_language("Run a quick tiny proxy and call it done.")
+    assert row is not None
+    assert row["flags"] == ["quick-train", "undersized"]
+    assert {r["label"]: r["present"] for r in row["rows"]}["toy-scale"] is False
+
+
+def test_mechanism_reduction_language_none_when_all_items_unclassified(monkeypatch) -> None:
+    fa._CACHE.clear()
+    monkeypatch.setattr(fa, "fm_python", lambda: "/fake/py")
+
+    def _run(_fm_py, job, _t):
+        return {"ok": True, "results": [{"id": it["id"], "label": None,
+                                         "rationale": "unclassified",
+                                         "classifier": "apple-fm-skip"}
+                                        for it in job["items"]]}
+
+    monkeypatch.setattr(fa, "_run_job", _run)
+    assert fa.mechanism_reduction_language("quick tiny proxy") is None
 
 
 def test_classify_confounds_maps_none(monkeypatch) -> None:

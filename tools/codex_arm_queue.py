@@ -740,6 +740,68 @@ def cmd_status(args) -> int:
 _BUILD_CHARTER_TOKENS = ("build", "race", "train", "implement", "measure", "solve", "compose")
 
 
+def _charter_is_build_by_tokens(text: str) -> bool:
+    return any(t in text.lower() for t in _BUILD_CHARTER_TOKENS)
+
+
+def _fm_advisory_module():
+    """Return the Pact fmtools advisory module only when it is importable and available.
+
+    Any import/model/venv failure degrades to None so queue output is byte-identical on hosts
+    without fmtools. The returned module is used only for WARN lines, never refusals.
+    """
+    try:
+        from tac import fm_advisory as _fm  # noqa: PLC0415
+    except Exception:
+        return None
+    try:
+        return _fm if _fm.available() else None
+    except Exception:
+        return None
+
+
+def lint_charter_fm_advisories(prompt_path: str) -> list[str]:
+    """Warn-only fmtools enrichment for charter lint.
+
+    Deterministic checks remain the gate. These lines are intentionally separated from
+    ``lint_charter_optimal_form`` so TAC_CHARTER_LINT_STRICT never upgrades an FM result
+    into a refusal.
+    """
+    fm = _fm_advisory_module()
+    if fm is None:
+        return []
+    try:
+        text = Path(prompt_path).read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return []
+
+    warnings: list[str] = []
+    is_build = _charter_is_build_by_tokens(text)
+    try:
+        cls = fm.charter_class(text, timeout=15)
+    except Exception:
+        cls = None
+    if cls:
+        label = cls.get("charter_class") or "unknown"
+        note = ""
+        if label in {"build_race_train_measure", "mixed"} and not is_build:
+            note = "; deterministic build-token gate did not fire"
+        elif label in {"audit_analysis", "convocation"} and is_build:
+            note = "; deterministic build-token gate fired"
+        rationale = str(cls.get("rationale") or "").strip()
+        tail = f" ({rationale[:120]})" if rationale else ""
+        warnings.append(f"fmtools advisory charter_class={label}{note}{tail}")
+
+    try:
+        reduction = fm.mechanism_reduction_language(text, timeout=15)
+    except Exception:
+        reduction = None
+    if reduction and reduction.get("flags"):
+        flags = ", ".join(str(f) for f in reduction.get("flags", []))
+        warnings.append(f"fmtools advisory mechanism_reduction_language={flags}")
+    return warnings
+
+
 def lint_charter_optimal_form(prompt_path: str) -> list[str]:
     """Charter-time toy guard (operator 2026-08-06 'naive first pass' correction).
 
@@ -766,7 +828,7 @@ def lint_charter_optimal_form(prompt_path: str) -> list[str]:
         if len(rationale) < 8 or rationale.startswith("<"):
             problems.append("OPTIMAL_FORM_NA waiver rationale is placeholder/too short")
         return problems
-    is_build = any(t in low for t in _BUILD_CHARTER_TOKENS)
+    is_build = _charter_is_build_by_tokens(text)
     if not is_build:
         return problems
     if not has_block:
@@ -787,13 +849,19 @@ def lint_charter_optimal_form(prompt_path: str) -> list[str]:
 
 def cmd_add(args) -> int:
     problems = lint_charter_optimal_form(args.prompt)
+    advisories = lint_charter_fm_advisories(args.prompt)
     if problems:
         strict = os.environ.get("TAC_CHARTER_LINT_STRICT") == "1"
         tag = "REFUSED" if strict else "WARN"
         for p in problems:
             print(f"charter-lint {tag} [{args.name}]: {p}")
+        for p in advisories:
+            print(f"charter-lint WARN [{args.name}]: {p}")
         if strict:
             return 3
+    else:
+        for p in advisories:
+            print(f"charter-lint WARN [{args.name}]: {p}")
     append_row(
         {
             "name": args.name,
