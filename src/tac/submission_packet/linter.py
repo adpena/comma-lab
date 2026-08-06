@@ -241,6 +241,22 @@ _ARCHIVE_RUNTIME_OR_DOC_PREFIXES: tuple[str, ...] = (
     "tac/",
     "__pycache__/",
 )
+_SCORER_SAFETENSOR_RUNTIME_SUFFIXES: frozenset[str] = frozenset(
+    {".env", ".json", ".py", ".sh", ".toml", ".txt"}
+)
+_SCORER_SAFETENSOR_FILENAMES: tuple[str, ...] = (
+    "posenet.safetensors",
+    "segnet.safetensors",
+)
+_SCORER_SAFETENSOR_NON_RUNTIME_BASENAMES: frozenset[str] = frozenset(
+    {
+        "compress.sh",
+        "compress_archive.py",
+        "compress_masks.py",
+        "eval.py",
+        "runner.py",
+    }
+)
 
 
 # ---------------------------------------------------------------------------
@@ -577,6 +593,96 @@ def _line_at(body: str, char_offset: int) -> int:
     return body.count("\n", 0, char_offset) + 1
 
 
+def _line_references_upstream_scorer_safetensor(line: str) -> bool:
+    """Return true for executable runtime references to upstream scorer weights."""
+
+    stripped = line.strip()
+    if not stripped or stripped.startswith("#"):
+        return False
+    low = stripped.lower().replace("\\", "/")
+    if not any(name in low for name in _SCORER_SAFETENSOR_FILENAMES):
+        return False
+    has_model_dir = (
+        "upstream/models/" in low
+        or "models/" in low
+        or "'models'" in low
+        or '"models"' in low
+        or "/models/" in low
+    )
+    if not has_model_dir:
+        return False
+    access_tokens = (
+        "open(",
+        "load_file",
+        "safe_open",
+        ".read_bytes",
+        ".read_text",
+        ".exists",
+        "os.path.join",
+        "path(",
+        "_path",
+        "path =",
+        "path=",
+        "posenet_path",
+        "segnet_path",
+        "posenet_path=",
+        "segnet_path=",
+    )
+    return any(token in low for token in access_tokens)
+
+
+def _line_has_scorer_at_inflate_waiver(line: str) -> bool:
+    if "#" not in line:
+        return False
+    comment = line[line.index("#") :]
+    return (
+        "SCORER_AT_INFLATE_WAIVED" in comment
+        or "noqa: scorer-at-inflate" in comment
+    )
+
+
+def _runtime_tree_scorer_checkpoint_findings(runtime_root: Path) -> tuple[LintFinding, ...]:
+    """Lint every text runtime file for decode-time upstream scorer checkpoint access."""
+
+    findings: list[LintFinding] = []
+    if not runtime_root.exists():
+        return ()
+    for path in sorted(runtime_root.rglob("*")):
+        if not path.is_file():
+            continue
+        if path.suffix.lower() not in _SCORER_SAFETENSOR_RUNTIME_SUFFIXES:
+            continue
+        if path.name in _SCORER_SAFETENSOR_NON_RUNTIME_BASENAMES:
+            continue
+        if any(part in {"__pycache__", ".git"} for part in path.parts):
+            continue
+        try:
+            source = path.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        lines = source.splitlines()
+        for line_no, line in enumerate(lines, start=1):
+            if not _line_references_upstream_scorer_safetensor(line):
+                continue
+            if _line_has_scorer_at_inflate_waiver(line):
+                continue
+            findings.append(
+                LintFinding(
+                    surface=LintSurface.INFLATE_PY.value,
+                    severity=LintSeverity.ERROR.value,
+                    rule="decode_time_upstream_scorer_safetensors_access",
+                    file_path=str(path),
+                    line_number=line_no,
+                    matched_text=_truncate(line.strip()),
+                    fix_suggestion=(
+                        "Remove decode-time upstream/models/*.safetensors access; "
+                        "scorer weights cannot be read by inflate/runtime files."
+                    ),
+                )
+            )
+    return tuple(findings)
+
+
 def derive_linter_provenance(
     *,
     target_repo: str,
@@ -894,6 +1000,8 @@ def lint_inflate_py(
                 ),
             )
         )
+
+    findings.extend(_runtime_tree_scorer_checkpoint_findings(path.parent))
 
     return tuple(findings)
 

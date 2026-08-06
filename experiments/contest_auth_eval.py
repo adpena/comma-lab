@@ -45,6 +45,7 @@ import argparse
 import ast
 import fcntl
 import hashlib
+import importlib.metadata as importlib_metadata
 import json
 import os
 import platform
@@ -71,6 +72,7 @@ except (AttributeError, OSError):
 # fields; bump for a breaking shape or semantic change so downstream tooling
 # (BATTLE_PLAN parsers, leaderboard, etc.) can detect incompatibility.
 SCHEMA_VERSION = 1
+AUTH_EVAL_ENV_PACKAGES = ("torch", "torchvision", "timm", "numpy")
 _RUNTIME_DEPENDENCY_SUFFIXES = {
     ".c",
     ".cc",
@@ -564,6 +566,157 @@ def _runtime_dependency_manifest(
     }
 
 
+def _current_python_environment_versions() -> dict:
+    """Return exact interpreter/package versions for this process."""
+
+    packages: dict[str, str | None] = {}
+    for name in AUTH_EVAL_ENV_PACKAGES:
+        try:
+            packages[name] = importlib_metadata.version(name)
+        except importlib_metadata.PackageNotFoundError:
+            packages[name] = None
+    return {
+        "python_executable": sys.executable,
+        "python_version": platform.python_version(),
+        "packages": packages,
+    }
+
+
+def _external_python_environment_versions(python_executable: Path) -> dict:
+    """Query exact interpreter/package versions for another Python executable."""
+
+    script = (
+        "import importlib.metadata as m, json, platform, sys\n"
+        f"packages = {list(AUTH_EVAL_ENV_PACKAGES)!r}\n"
+        "out = {'python_executable': sys.executable, "
+        "'python_version': platform.python_version(), 'packages': {}}\n"
+        "for name in packages:\n"
+        "    try:\n"
+        "        out['packages'][name] = m.version(name)\n"
+        "    except m.PackageNotFoundError:\n"
+        "        out['packages'][name] = None\n"
+        "print(json.dumps(out, sort_keys=True))\n"
+    )
+    try:
+        raw = subprocess.check_output(
+            [str(python_executable), "-c", script],
+            text=True,
+            stderr=subprocess.STDOUT,
+            timeout=15,
+        )
+        payload = json.loads(raw)
+    except (OSError, subprocess.SubprocessError, json.JSONDecodeError) as exc:
+        return {
+            "python_executable": str(python_executable),
+            "query_error": repr(exc),
+            "packages": {name: None for name in AUTH_EVAL_ENV_PACKAGES},
+        }
+    if not isinstance(payload, dict):
+        return {
+            "python_executable": str(python_executable),
+            "query_error": "non_object_json",
+            "packages": {name: None for name in AUTH_EVAL_ENV_PACKAGES},
+        }
+    return payload
+
+
+def _resolve_evaluate_python(args: argparse.Namespace, upstream_dir: Path) -> tuple[Path, str]:
+    """Resolve the interpreter that will run upstream/evaluate.py."""
+
+    raw = getattr(args, "upstream_python", None)
+    if raw is not None:
+        path = Path(raw).resolve()
+        if not path.exists():
+            raise SystemExit(f"--upstream-python does not exist: {path}")
+        return path, "cli_upstream_python"
+    return Path(sys.executable).resolve(), "current_process_python"
+
+
+def _build_auth_eval_environment_report(
+    args: argparse.Namespace,
+    upstream_dir: Path,
+) -> dict:
+    """Record eval-package versions and flag unproven root-venv parity."""
+
+    eval_python, eval_python_source = _resolve_evaluate_python(args, upstream_dir)
+    current = _current_python_environment_versions()
+    evaluation = (
+        dict(current)
+        if eval_python == Path(sys.executable).resolve()
+        else _external_python_environment_versions(eval_python)
+    )
+    evaluation["python_executable"] = str(eval_python)
+
+    report: dict = {
+        "schema": "contest_auth_eval_python_environment_v1",
+        "packages_recorded": list(AUTH_EVAL_ENV_PACKAGES),
+        "evaluation_python_source": eval_python_source,
+        "evaluation": evaluation,
+        "wrapper": current,
+    }
+
+    upstream_ref = upstream_dir / ".venv" / "bin" / "python"
+    explicit_upstream_python = getattr(args, "upstream_python", None) is not None
+    if upstream_ref.exists():
+        if eval_python == upstream_ref.resolve():
+            reference = dict(evaluation)
+        else:
+            reference = _external_python_environment_versions(upstream_ref.resolve())
+            reference["python_executable"] = str(upstream_ref.resolve())
+        report["upstream_reference"] = reference
+    else:
+        reference = None
+        report["upstream_reference"] = {
+            "python_executable": str(upstream_ref.resolve()),
+            "exists": False,
+        }
+
+    if not explicit_upstream_python:
+        mismatches: dict[str, dict[str, object]] = {}
+        if reference is None or reference.get("query_error"):
+            mismatches["upstream_reference_python"] = {
+                "evaluation": str(eval_python),
+                "reference": str(upstream_ref.resolve()),
+                "reason": (
+                    reference.get("query_error")
+                    if isinstance(reference, dict)
+                    else "missing"
+                ),
+            }
+        elif eval_python != upstream_ref.resolve():
+            eval_packages = (
+                evaluation.get("packages")
+                if isinstance(evaluation.get("packages"), dict)
+                else {}
+            )
+            ref_packages = (
+                reference.get("packages")
+                if isinstance(reference.get("packages"), dict)
+                else {}
+            )
+            if evaluation.get("python_version") != reference.get("python_version"):
+                mismatches["python"] = {
+                    "evaluation": evaluation.get("python_version"),
+                    "reference": reference.get("python_version"),
+                }
+            for name in AUTH_EVAL_ENV_PACKAGES:
+                if eval_packages.get(name) != ref_packages.get(name):
+                    mismatches[name] = {
+                        "evaluation": eval_packages.get(name),
+                        "reference": ref_packages.get(name),
+                    }
+        if mismatches:
+            report["env_mismatch"] = {
+                "schema": "contest_auth_eval_env_mismatch_v1",
+                "reason": "current_python_without_proven_upstream_lock_parity",
+                "evaluation_python": str(eval_python),
+                "reference_python": str(upstream_ref.resolve()),
+                "mismatches": mismatches,
+                "advisory_only": True,
+            }
+    return report
+
+
 def _ensure_uv_available() -> None:
     """The robust_current inflate.sh shells out to `uv run python ...`.
     Verify uv is on PATH so we fail loud here, not 200 lines deep."""
@@ -649,6 +802,7 @@ def _record_provenance(work_dir: Path, archive: Path, inflate_sh: Path,
         "inflate_script": str(inflate_sh),
         "inflate_script_sha256": _sha256(inflate_sh, prefix=0) if inflate_sh.exists() else None,
         "inflate_runtime_manifest": _runtime_dependency_manifest(inflate_sh, upstream_dir),
+        "auth_eval_environment": _build_auth_eval_environment_report(args, upstream_dir),
         "upstream_dir": str(upstream_dir),
         "upstream_snapshot_sha256": _require_upstream_snapshot_sha256(upstream_dir),
         "device": args.device,
@@ -673,6 +827,10 @@ def _record_provenance(work_dir: Path, archive: Path, inflate_sh: Path,
             "UV_PROJECT_ENVIRONMENT", "PYTHON",
         )},
     }
+    prov["auth_eval_python"] = prov["auth_eval_environment"]["evaluation"]["python_executable"]
+    prov["package_versions"] = prov["auth_eval_environment"]["evaluation"].get("packages", {})
+    if "env_mismatch" in prov["auth_eval_environment"]:
+        prov["env_mismatch"] = prov["auth_eval_environment"]["env_mismatch"]
     # GPU + driver — recorded in provenance for downstream comparison.
     # Contest scorer runs on Tesla T4; gpu_t4_match flag lets the operator
     # filter scores by hardware. No banner/warning printed (no editorializing
@@ -1488,7 +1646,7 @@ def _run_inflate(inflate_sh: Path, archive_dir: Path, inflated_dir: Path,
 
     # Council R3 #3 + R4 #1 fix: STRICT per-video byte-count validation.
     # Each .raw is uint8 RGB at upstream/frame_utils.py's camera_size
-    # (1164w x 874h) x NUM_FRAMES (1200) x 3 channels = 3,663,237,120 B.
+    # (1164w x 874h) x NUM_FRAMES (1200) x 3 channels = 3,662,409,600 B.
     # R4 #1 (CRITICAL): use Path.with_suffix('.raw') NOT .stem so subdir
     # paths like 'subdir/0.mkv' resolve to 'inflated_dir/subdir/0.raw'
     # (matching submissions/robust_current/inflate.sh layout). The .stem
@@ -1498,7 +1656,7 @@ def _run_inflate(inflate_sh: Path, archive_dir: Path, inflated_dir: Path,
     OUT_W, OUT_H, NUM_FRAMES = 1164, 874, int(expected_num_frames)
     if NUM_FRAMES < 1:
         raise RuntimeError(f"[inflate] expected_num_frames must be >= 1, got {NUM_FRAMES}")
-    EXPECTED_RAW_BYTES = OUT_W * OUT_H * NUM_FRAMES * 3  # 3,663,237,120
+    EXPECTED_RAW_BYTES = OUT_W * OUT_H * NUM_FRAMES * 3  # 3,662,409,600
     missing: list[str] = []
     wrong_size: list[tuple[str, int, int]] = []
     for vname in test_videos:
@@ -1588,7 +1746,8 @@ def _validate_uncompressed_dir(uncompressed_dir: Path,
 
 def _run_upstream_evaluate(upstream_dir: Path, submission_dir: Path,
                            uncompressed_dir: Path, video_names_file: Path,
-                           device: str, *, timeout: int = 1800) -> dict:
+                           device: str, *, timeout: int = 1800,
+                           python_executable: Path | None = None) -> dict:
     """Invoke upstream/evaluate.py — the contest scorer. Returns the
     parsed score dict from the report.txt the script writes.
 
@@ -1602,8 +1761,9 @@ def _run_upstream_evaluate(upstream_dir: Path, submission_dir: Path,
     _validate_uncompressed_dir(uncompressed_dir, video_names_file)
 
     report_path = submission_dir / "report.txt"
+    eval_python = Path(python_executable or sys.executable)
     cmd = [
-        sys.executable, str(upstream_dir / "evaluate.py"),
+        str(eval_python), str(upstream_dir / "evaluate.py"),
         "--submission-dir", str(submission_dir),
         "--uncompressed-dir", str(uncompressed_dir),
         "--video-names-file", str(video_names_file),
@@ -1779,6 +1939,16 @@ def _parse_report(report_path: Path | str, *, archive_size: int,
     score_rate = 25.0 * rate_unscaled
     score_recomputed = score_seg + score_pose + score_rate
     score_rounding_abs_delta = abs(score_recomputed - final)
+    report_component_rounding_abs_bound = 0.5e-8
+    pose_lower = max(0.0, pose - report_component_rounding_abs_bound)
+    pose_upper = pose + report_component_rounding_abs_bound
+    pose_score_rounding_bound = max(
+        abs((10.0 * pose_lower) ** 0.5 - score_pose),
+        abs((10.0 * pose_upper) ** 0.5 - score_pose),
+    )
+    seg_score_rounding_bound = 100.0 * report_component_rounding_abs_bound
+    rate_reported_score_rounding_bound = 25.0 * report_component_rounding_abs_bound
+    report_8dp_score_bound = pose_score_rounding_bound + seg_score_rounding_bound
 
     # Council R3 #6 (Medium): assert recomputed score matches reported
     # within upstream's print precision (.2f → ±0.005, generous bound 0.01).
@@ -1797,16 +1967,27 @@ def _parse_report(report_path: Path | str, *, archive_size: int,
         "final_score": final,
         "avg_posenet_dist": pose,
         "avg_segnet_dist": seg,
+        "avg_posenet_dist_report_8dp_derived": pose,
+        "avg_segnet_dist_report_8dp_derived": seg,
         "rate_unscaled": rate_unscaled,
         "rate_unscaled_reported_rounded": rate_unscaled_reported,
+        "rate_unscaled_report_8dp_derived": rate_unscaled_reported,
         "original_uncompressed_size_bytes": original_size_bytes,
         "score_pose_contribution": score_pose,
         "score_seg_contribution": score_seg,
         "score_rate_contribution": score_rate,
         "score_recomputed_from_components": score_recomputed,
         "canonical_score": score_recomputed,
-        "canonical_score_source": "score_recomputed_from_components",
+        "canonical_score_source": "report_8dp_components_plus_exact_archive_bytes",
+        "legacy_canonical_score_source_alias": "score_recomputed_from_components",
         "reported_final_score_display_rounded": final,
+        "reported_final_score_display_2dp": final,
+        "report_component_decimal_places": 8,
+        "report_component_rounding_abs_bound": report_component_rounding_abs_bound,
+        "report_8dp_score_worst_case_abs_error_bound": report_8dp_score_bound,
+        "report_8dp_pose_score_worst_case_abs_error_bound": pose_score_rounding_bound,
+        "report_8dp_seg_score_worst_case_abs_error_bound": seg_score_rounding_bound,
+        "report_8dp_printed_rate_score_worst_case_abs_error_bound": rate_reported_score_rounding_bound,
         "score_rounding_abs_delta": score_rounding_abs_delta,
         "score_reported_rounded_differs_from_canonical": score_rounding_abs_delta > 1e-12,
         "archive_size_bytes": archive_size,
@@ -1848,6 +2029,27 @@ def _auth_eval_evidence_contract(
     diagnostic_blockers: list[str] | None = None,
 ) -> dict:
     """Return explicit evidence semantics for the selected eval device."""
+
+    if provenance.get("env_mismatch"):
+        return {
+            "evidence_grade": "auth-eval env mismatch advisory",
+            "lane_tag": "[env-mismatch advisory]",
+            "score_axis": f"{device}_env_mismatch_advisory",
+            "evidence_semantics": "auth_eval_environment_mismatch_advisory",
+            "exact_cuda_eval_complete": False,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "score_claim_valid": False,
+            "rank_or_kill_eligible": False,
+            **_auth_eval_authority_fields(score_claim=False, score_claim_valid=False),
+            "cpu_leaderboard_reproduction_eligible": False,
+            "env_mismatch": provenance["env_mismatch"],
+            "diagnostic_blockers": ["auth_eval_environment_mismatch"],
+            "allowed_uses": [
+                "diagnostic_debugging",
+                "environment_parity_triage",
+            ],
+        }
 
     if provenance.get("modal_auth_eval_advisory_only") is True:
         diagnostic_blockers = [
@@ -2052,6 +2254,17 @@ def main() -> int:
                         help="Submission's inflate.sh (default: robust_current)")
     parser.add_argument("--upstream-dir", type=Path, default=Path("upstream"),
                         help="upstream/ root (has evaluate.py, modules.py, videos/)")
+    parser.add_argument(
+        "--upstream-python",
+        type=Path,
+        default=None,
+        help=(
+            "Optional Python executable for authority replays, e.g. "
+            "upstream/.venv/bin/python. Without this, runs under the current "
+            "repo venv are labeled advisory if package parity with the "
+            "upstream lock is not proven."
+        ),
+    )
     parser.add_argument("--video-names-file", type=Path,
                         default=Path("upstream/public_test_video_names.txt"),
                         help="Test video names list (one per line)")
@@ -2361,12 +2574,17 @@ def main() -> int:
             video_names_file=video_names_file,
             device=args.device,
             timeout=args.evaluate_timeout,
+            python_executable=Path(prov["auth_eval_python"]),
         )
         result["inflate_elapsed_seconds"] = inflate_elapsed_seconds
         result["contest_auth_eval_elapsed_seconds"] = time.monotonic() - exact_eval_t0
 
         # Save final JSON next to the work dir
         result["provenance"] = prov
+        result["auth_eval_environment"] = prov["auth_eval_environment"]
+        result["package_versions"] = prov.get("package_versions", {})
+        if "env_mismatch" in prov:
+            result["env_mismatch"] = prov["env_mismatch"]
         result.update(
             _auth_eval_evidence_contract(
                 args.device,

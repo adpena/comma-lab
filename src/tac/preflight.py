@@ -14220,6 +14220,25 @@ _GETATTR_LOADER_NAMES = frozenset({
 })
 _SCORER_MODULE_PREFIX = "tac.scorer"  # matches tac.scorer, tac.scorer_targets, ...
 _WAIVER_MARKER = "SCORER_AT_INFLATE_WAIVED"
+_SCORER_SAFETENSOR_RUNTIME_SUFFIXES = {
+    ".env",
+    ".json",
+    ".py",
+    ".sh",
+    ".toml",
+    ".txt",
+}
+_SCORER_SAFETENSOR_FILENAMES = (
+    "posenet.safetensors",
+    "segnet.safetensors",
+)
+_SCORER_SAFETENSOR_NON_RUNTIME_BASENAMES = frozenset({
+    "compress.sh",
+    "compress_archive.py",
+    "compress_masks.py",
+    "eval.py",
+    "runner.py",
+})
 # 2026-04-27 codex R5-r6 #1 fix: lookback is now SAME-LINE ONLY.
 # The previous 6-line lookback meant a marker intended for one specific
 # pending-ruling import could waive an UNRELATED scorer load inserted
@@ -14263,6 +14282,96 @@ def _line_is_waived(lines: list[str], lineno: int) -> bool:
     if "noqa: scorer-at-inflate" in comment:
         return True
     return False
+
+
+def _line_references_upstream_scorer_safetensor(line: str) -> bool:
+    """Return true for executable runtime references to upstream scorer weights."""
+
+    stripped = line.strip()
+    if not stripped or stripped.startswith("#"):
+        return False
+    low = stripped.lower().replace("\\", "/")
+    if not any(name in low for name in _SCORER_SAFETENSOR_FILENAMES):
+        return False
+    has_model_dir = (
+        "upstream/models/" in low
+        or "models/" in low
+        or "'models'" in low
+        or '"models"' in low
+        or "/models/" in low
+    )
+    if not has_model_dir:
+        return False
+    access_tokens = (
+        "open(",
+        "load_file",
+        "safe_open",
+        ".read_bytes",
+        ".read_text",
+        ".exists",
+        "os.path.join",
+        "path(",
+        "_path",
+        "path =",
+        "path=",
+        "posenet_path",
+        "segnet_path",
+        "posenet_path=",
+        "segnet_path=",
+    )
+    return any(token in low for token in access_tokens)
+
+
+def _runtime_tree_scorer_scan_files(runtime_root: Path) -> tuple[Path, ...]:
+    """Return text runtime files whose contents can affect decode-time behavior."""
+
+    if not runtime_root.exists():
+        return ()
+    paths: list[Path] = []
+    for path in runtime_root.rglob("*"):
+        if not path.is_file():
+            continue
+        if path.suffix.lower() not in _SCORER_SAFETENSOR_RUNTIME_SUFFIXES:
+            continue
+        if path.name in _SCORER_SAFETENSOR_NON_RUNTIME_BASENAMES:
+            continue
+        if any(part in {"__pycache__", ".git"} for part in path.parts):
+            continue
+        paths.append(path)
+    return tuple(sorted(paths))
+
+
+def _scan_runtime_tree_for_scorer_safetensor_access(
+    runtime_root: Path,
+    repo_root: Path,
+) -> tuple[list[str], list[str], int]:
+    """Detect decode-time references to upstream/models/*.safetensors."""
+
+    unwaived: list[str] = []
+    waived: list[str] = []
+    scanned = 0
+    for path in _runtime_tree_scorer_scan_files(runtime_root):
+        scanned += 1
+        try:
+            text = path.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        lines = text.splitlines()
+        rel = path.relative_to(repo_root) if path.is_absolute() else path
+        for lineno, line in enumerate(lines, start=1):
+            if not _line_references_upstream_scorer_safetensor(line):
+                continue
+            msg = (
+                f"{rel}:{lineno}: runtime tree references upstream scorer "
+                "checkpoint safetensors at decode time. Strict scorer rule: "
+                "NO upstream/models/{posenet,segnet}.safetensors access from "
+                "inflate/runtime files."
+            )
+            if _line_is_waived(lines, lineno):
+                waived.append(msg)
+            else:
+                unwaived.append(msg)
+    return unwaived, waived, scanned
 
 
 def _string_constant_arg(call: ast.Call) -> str | None:
@@ -14715,6 +14824,13 @@ def check_no_scorer_load_at_inflate(
                 u, w = _scan_inflate_for_scorer_load_with_waivers(p, root)
                 violations.extend(u)
                 waived.extend(w)
+            u, w, runtime_scanned = _scan_runtime_tree_for_scorer_safetensor_access(
+                sub_dir,
+                root,
+            )
+            n_scanned += runtime_scanned
+            violations.extend(u)
+            waived.extend(w)
 
     if verbose and violations:
         print(f"  [no-scorer-at-inflate] {len(violations)} violation(s) across {n_scanned} files:")

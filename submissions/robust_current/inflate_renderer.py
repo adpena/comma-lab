@@ -3125,7 +3125,7 @@ def _open_upstream_segnet_for_dev_fallback(upstream_root: Path, device: str) -> 
             pass  # already removed
 
     segnet = SegNet()
-    segnet_path = upstream_root / "models" / "segnet.safetensors"
+    segnet_path = upstream_root / "models" / "segnet.safetensors"  # SCORER_AT_INFLATE_WAIVED:env-gated-INFLATE_MASK_SOURCE-dev-fallback
     if not segnet_path.exists():
         raise FileNotFoundError(f"SegNet weights not found: {segnet_path}")
 

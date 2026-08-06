@@ -80,6 +80,67 @@ def test_record_provenance_emits_required_full_upstream_snapshot_hash(
     assert persisted["upstream_snapshot_sha256"] == expected
 
 
+def test_record_provenance_records_package_versions_and_env_mismatch(
+    cae, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    work_dir = tmp_path / "work"
+    work_dir.mkdir()
+    upstream = tmp_path / "upstream"
+    upstream_python = upstream / ".venv" / "bin" / "python"
+    upstream_python.parent.mkdir(parents=True)
+    upstream_python.write_text("# fake executable path for synthetic fixture\n")
+    (upstream / "evaluate.py").write_text("# frozen evaluator\n", encoding="utf-8")
+    video_names = upstream / "public_test_video_names.txt"
+    video_names.write_text("0.mkv\n", encoding="utf-8")
+    archive = tmp_path / "archive.zip"
+    archive.write_bytes(b"archive")
+    inflate = tmp_path / "inflate.sh"
+    inflate.write_text("#!/bin/sh\n", encoding="utf-8")
+
+    current_env = {
+        "python_executable": sys.executable,
+        "python_version": "3.13.1",
+        "packages": {
+            "torch": "2.12.1",
+            "torchvision": "0.27.1",
+            "timm": "1.0.27",
+            "numpy": "1.26.4",
+        },
+    }
+    upstream_env = {
+        "python_executable": str(upstream_python),
+        "python_version": "3.13.1",
+        "packages": {
+            "torch": "2.10.0",
+            "torchvision": "0.25.0",
+            "timm": "1.0.22",
+            "numpy": "2.3.4",
+        },
+    }
+    monkeypatch.setattr(cae, "_runtime_dependency_manifest", lambda *_args: {})
+    monkeypatch.setattr(cae, "_current_python_environment_versions", lambda: current_env)
+    monkeypatch.setattr(cae, "_external_python_environment_versions", lambda _p: upstream_env)
+
+    provenance = cae._record_provenance(
+        work_dir,
+        archive,
+        inflate,
+        upstream,
+        SimpleNamespace(
+            device="cpu",
+            inflate_timeout=1,
+            evaluate_timeout=2,
+            video_names_file=video_names,
+            upstream_python=None,
+        ),
+    )
+
+    assert provenance["package_versions"]["torch"] == "2.12.1"
+    assert provenance["auth_eval_environment"]["upstream_reference"]["packages"]["torch"] == "2.10.0"
+    assert provenance["env_mismatch"]["advisory_only"] is True
+    assert "torch" in provenance["env_mismatch"]["mismatches"]
+
+
 def test_required_upstream_snapshot_hash_rejects_unbound_symlink(
     cae, tmp_path: Path
 ) -> None:
@@ -143,10 +204,16 @@ def test_parse_report_baseline_format(cae, tmp_path: Path):
     assert result["canonical_score"] == pytest.approx(
         result["score_recomputed_from_components"]
     )
-    assert result["canonical_score_source"] == "score_recomputed_from_components"
+    assert result["canonical_score_source"] == "report_8dp_components_plus_exact_archive_bytes"
+    assert result["legacy_canonical_score_source_alias"] == "score_recomputed_from_components"
     assert result["reported_final_score_display_rounded"] == pytest.approx(
         result["final_score"]
     )
+    assert result["avg_posenet_dist_report_8dp_derived"] == pytest.approx(result["avg_posenet_dist"])
+    assert result["avg_segnet_dist_report_8dp_derived"] == pytest.approx(result["avg_segnet_dist"])
+    assert result["rate_unscaled_report_8dp_derived"] == pytest.approx(0.009)
+    assert result["report_component_decimal_places"] == 8
+    assert result["report_8dp_score_worst_case_abs_error_bound"] > 0.0
     assert result["n_samples"] == 600
     assert result["archive_size_bytes"] == 337748
 
@@ -228,7 +295,8 @@ def test_parse_report_score_recomputation_consistent(cae, tmp_path: Path):
         f"recomputed={recomputed:.4f} reported={result['final_score']:.4f}"
     )
     assert result["canonical_score"] == pytest.approx(recomputed)
-    assert result["canonical_score_source"] == "score_recomputed_from_components"
+    assert result["canonical_score_source"] == "report_8dp_components_plus_exact_archive_bytes"
+    assert result["legacy_canonical_score_source_alias"] == "score_recomputed_from_components"
 
 
 def test_parse_report_marks_reported_score_as_display_rounded(cae, tmp_path: Path):
@@ -305,6 +373,7 @@ def test_upstream_evaluate_records_elapsed_seconds(cae, tmp_path: Path, monkeypa
     captured: dict[str, object] = {}
 
     def fake_run(*_args, **_kwargs):
+        captured["cmd"] = list(_args[0])
         captured["env"] = dict(_kwargs.get("env") or {})
         report = submission / "report.txt"
         report.write_text("""=== Evaluation results over 600 samples ===
@@ -331,10 +400,12 @@ def test_upstream_evaluate_records_elapsed_seconds(cae, tmp_path: Path, monkeypa
         tmp_path / "videos",
         video_names,
         "cuda",
+        python_executable=tmp_path / "upstream-python",
     )
 
     assert "evaluate_elapsed_seconds" in result
     assert result["evaluate_elapsed_seconds"] >= 0.0
+    assert captured["cmd"][0] == str(tmp_path / "upstream-python")
     assert captured["env"]["DALI_DISABLE_NVML"] == "1"
 
 
@@ -435,6 +506,28 @@ def test_evidence_contract_demotes_modal_cpu_advisory_even_on_linux_x86(cae) -> 
         "modal_training_wrapper_auth_eval_advisory_only"
         in contract["diagnostic_blockers"]
     )
+
+
+def test_evidence_contract_demotes_env_mismatch_even_on_linux_x86(cae) -> None:
+    contract = cae._auth_eval_evidence_contract(
+        "cpu",
+        600,
+        {
+            "platform_machine": "x86_64",
+            "platform_system": "Linux",
+            "env_mismatch": {
+                "schema": "contest_auth_eval_env_mismatch_v1",
+                "advisory_only": True,
+                "mismatches": {"torch": {"evaluation": "2.12.1", "reference": "2.10.0"}},
+            },
+        },
+    )
+
+    assert contract["evidence_grade"] == "auth-eval env mismatch advisory"
+    assert contract["score_axis"] == "cpu_env_mismatch_advisory"
+    assert contract["score_claim"] is False
+    assert contract["score_claim_valid"] is False
+    assert contract["env_mismatch"]["advisory_only"] is True
 
 
 def test_evidence_contract_downgrades_macos_cpu_to_advisory(cae) -> None:

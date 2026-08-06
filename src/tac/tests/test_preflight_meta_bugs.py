@@ -3323,6 +3323,23 @@ class TestScorerScannerDynamicImports:
             f"strict mode should pass with only waived violations; got: {v}"
         )
 
+    def test_runtime_tree_safetensor_open_in_non_inflate_file_is_caught(
+        self, tmp_path: Path,
+    ) -> None:
+        from tac.preflight import check_no_scorer_load_at_inflate
+
+        root = _stub_repo(tmp_path)
+        _write(root / "submissions" / "robust_current" / "inflate.py", "print('ok')\n")
+        helper = root / "submissions" / "robust_current" / "runtime_helper.py"
+        _write(helper, """
+            def bad_decode_time_access():
+                with open("upstream/models/segnet.safetensors", "rb") as fh:
+                    return fh.read(1)
+        """)
+
+        with pytest.raises(MetaBugViolation, match="upstream scorer checkpoint safetensors"):
+            check_no_scorer_load_at_inflate(repo_root=root, strict=True, verbose=False)
+
 
 # ─── codex R5-4 #3: pack_sparse_delta promotion gate broader fixture ────────
 

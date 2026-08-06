@@ -801,6 +801,31 @@ class TestLintInflatePy:
         ]
         assert vendor_findings == []
 
+    def test_runtime_tree_scorer_safetensors_access_errors(
+        self, tmp_path: Path,
+    ) -> None:
+        path = tmp_path / "inflate.py"
+        path.write_text(
+            "# select_inflate_device canonical\n"
+            "print('decode')\n",
+            encoding="utf-8",
+        )
+        helper = tmp_path / "runtime_helper.py"
+        helper.write_text(
+            "def bad_decode_time_access():\n"
+            "    return open('upstream/models/posenet.safetensors', 'rb').read(1)\n",
+            encoding="utf-8",
+        )
+
+        findings = lint_inflate_py(path)
+
+        assert any(
+            f.rule == "decode_time_upstream_scorer_safetensors_access"
+            and f.severity == "error"
+            and f.file_path == str(helper)
+            for f in findings
+        )
+
 
 # ---------------------------------------------------------------------------
 # lint_archive_zip
