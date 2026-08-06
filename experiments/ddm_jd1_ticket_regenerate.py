@@ -348,6 +348,17 @@ def emit_jd4_continuation(args: argparse.Namespace) -> dict[str, Any]:
             "base ticket already carries --jd1-lr-anneal but --anneal off was requested; "
             "the OFF arm must inherit an anneal-free argv (single-variable A/B)"
         )
+    # pg1 Q3 A/B (#889, pre-registered window A/B; landed 8b6b8e17ff): the ON arm adds ONLY
+    # --seg-grad-q3-project on (seg gradient projected to the frame_1 pose-null subspace —
+    # the plateau-typed exit's seg-continuation lever; jd7-OFF ep1766->1886 is the matched
+    # joint-gradient control). OFF arm inherits a Q3-free argv, same refusal discipline.
+    if args.q3 != "off":
+        argv_ensure_value(argv, "--seg-grad-q3-project", args.q3)
+    elif "--seg-grad-q3-project" in argv:
+        raise SystemExit(
+            "base ticket already carries --seg-grad-q3-project but --q3 off was requested; "
+            "the OFF arm must inherit a Q3-free argv (single-variable A/B)"
+        )
 
     regen = copy.deepcopy(t)
     regen["regenerated_from"] = {
@@ -366,6 +377,7 @@ def emit_jd4_continuation(args: argparse.Namespace) -> dict[str, Any]:
         "derived_stage_ema_decay_provenance": derived_prov,
         "wall_cap_source": "MEASURED 55 s/epoch x window_epochs x 1.5 safety",
         "lr_anneal_arm": args.anneal,
+        "q3_project_arm": args.q3,
         "ticket_version": "jd4_continuation",
         "launch_order": "launch_now=false; MAIN fires after n600 endpoint probe completion",
         "score_claim": False,
@@ -402,6 +414,10 @@ def main() -> int:
                     help="jd4 continuation window length")
     ap.add_argument("--epochs", type=int, default=None,
                     help="explicit exclusive epoch limit for jd4; default resume_start+window")
+    ap.add_argument("--q3", choices=("off", "on"), default="off",
+                    help="pg1 #889 A/B arm: on adds --seg-grad-q3-project on (Q3-projected "
+                         "seg gradient, ON arm); off inherits a Q3-free argv (refuses an "
+                         "inherited Q3 flag)")
     ap.add_argument("--anneal", choices=("off", "derived_tail"), default="off",
                     help="la1 A/B arm: derived_tail adds --jd1-lr-anneal derived_tail "
                          "(ON arm); off inherits an anneal-free argv (OFF arm, refuses "
