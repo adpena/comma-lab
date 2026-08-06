@@ -73,3 +73,19 @@ Q3-projection discipline applied INSIDE the solve (the sq1 projector's float-nul
 surviving η≈0.91 uint8 paint at this amplitude — measured, not assumed), or (b) composition
 atop the pose-carrying base jd5 is building, with a terminal pose re-solve. The η curve itself
 (still rising at 100 steps) is banked as the solve-line capacity evidence.
+
+## SCOPE CORRECTION 2026-08-05 (operator: "token tweaks probably not done through realization or
+## otherwise optimally") — the token-edit negatives are INSTANCE-scoped, NOT family
+The "4th joint-pricing kill / family conclusion" line above is WITHDRAWN as over-scoped. Verdict-
+ladder re-grade: rt1 [16,12,8,4] map · fz4 map-repair · ed2 entropy-step α=0.25 are ALL
+**INSTANCE negatives on the OPEN-LOOP BLANKET formulation** — one global map/step applied to
+every token, aggregate-measured, no per-move realized acceptance. ed2's own decomposition is the
+tell: 50,886 errors FIXED and 72,985 introduced — the family contains real wins; the blanket
+bought both sides blind. **In-family existence proof of the operator's point: the cell-drop
+waterfill (768 cells under per-cell JOINT REMEASURE) produced the banked drop knee (−0.0983
+seg+rate, exact-evaluated) — the ONE realized-acceptance instance won; the three open-loop
+instances died.** The family stays OPEN; the honest test is realized-acceptance per-cell/per-band
+edits (v19/v19b machinery: accept iff realized joint ΔS<0 incl. the R8 pose bank, greedy under
+joint remeasure w/ SE-batched pair-local remeasures) over the {entropy-descent α-rungs ×
+quant-map rungs} candidate menu on the qo1 base. sq2 remains SEPARATELY scoped (its issue is
+projector fidelity at η≈0.91 amplitude under uint8, not open-loop-ness).
