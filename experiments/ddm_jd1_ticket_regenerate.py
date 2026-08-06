@@ -325,7 +325,7 @@ def emit_jd4_continuation(args: argparse.Namespace) -> dict[str, Any]:
     derived_decay, derived_prov = derive_jd1_stage_ema_decay(window_epochs, steps_per_epoch)
     parent_u = checkpoint_stage_ema_u(ckpt["meta"])
     force_reanchor = maybe_force_window_reanchor(argv, parent_u=parent_u, new_u=new_u)
-    child_out_dir = JD4_ROOT / f"tr1_jd4_cont_ep{resume_start_epoch}"
+    child_out_dir = JD4_ROOT / f"tr1_jd4_cont_ep{resume_start_epoch}{args.out_dir_suffix}"
     epoch_limit = int(args.epochs) if args.epochs is not None else resume_start_epoch + window_epochs
     wall_minutes = int(math.ceil((55.0 * window_epochs / 60.0) * 1.5))
 
@@ -336,6 +336,18 @@ def emit_jd4_continuation(args: argparse.Namespace) -> dict[str, Any]:
     argv_ensure_value(argv, "--jd1-ema-stage-scope", "window")
     argv_ensure_value(argv, "--jd1-live-gate-telemetry", "on")
     argv_drop_flag(argv, "--full-confirm")
+    # la1 A/B (pre-registered in .omx/research/ddm_la1_20260805/RECEIPT.md §Preregistered
+    # Boundary A/B): the ON arm adds ONLY --jd1-lr-anneal derived_tail (the lever derives
+    # onset/length/final-frac itself; no --jd1-lr-final-frac unless MAIN overrides at the
+    # boundary). OFF arm = inherited argv untouched — single-variable by construction, so
+    # refuse an inherited anneal flag the base ticket should never carry.
+    if args.anneal != "off":
+        argv_ensure_value(argv, "--jd1-lr-anneal", args.anneal)
+    elif "--jd1-lr-anneal" in argv:
+        raise SystemExit(
+            "base ticket already carries --jd1-lr-anneal but --anneal off was requested; "
+            "the OFF arm must inherit an anneal-free argv (single-variable A/B)"
+        )
 
     regen = copy.deepcopy(t)
     regen["regenerated_from"] = {
@@ -353,6 +365,7 @@ def emit_jd4_continuation(args: argparse.Namespace) -> dict[str, Any]:
         "derived_stage_ema_decay": float(derived_decay),
         "derived_stage_ema_decay_provenance": derived_prov,
         "wall_cap_source": "MEASURED 55 s/epoch x window_epochs x 1.5 safety",
+        "lr_anneal_arm": args.anneal,
         "ticket_version": "jd4_continuation",
         "launch_order": "launch_now=false; MAIN fires after n600 endpoint probe completion",
         "score_claim": False,
@@ -389,6 +402,13 @@ def main() -> int:
                     help="jd4 continuation window length")
     ap.add_argument("--epochs", type=int, default=None,
                     help="explicit exclusive epoch limit for jd4; default resume_start+window")
+    ap.add_argument("--anneal", choices=("off", "derived_tail"), default="off",
+                    help="la1 A/B arm: derived_tail adds --jd1-lr-anneal derived_tail "
+                         "(ON arm); off inherits an anneal-free argv (OFF arm, refuses "
+                         "an inherited anneal flag)")
+    ap.add_argument("--out-dir-suffix", default="",
+                    help="suffix for the derived child out-dir (A/B arms resuming the "
+                         "SAME checkpoint need distinct dirs, e.g. _la1on)")
     args = ap.parse_args()
 
     if args.jd4_continuation:
