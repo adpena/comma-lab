@@ -1,0 +1,48 @@
+{
+  "files": [
+    {
+      "path": "code/carrier_codec.py",
+      "sha256": "d2f14402374b4e622b7f981d736389fb04f0ca0165180e4c75f3a32ffe996bed",
+      "vendored": "src/tac/pr130_lift/pose/lifted/carrier_codec.py"
+    },
+    {
+      "path": "code/learned_pose_carrier_oracle.py",
+      "sha256": "59a574bf2ec52953ccdcf50edab94fff5d9c62158b993bd4da2e245f5fe310a4",
+      "vendored": "src/tac/pr130_lift/pose/lifted/learned_pose_carrier_oracle.py"
+    },
+    {
+      "path": "code/pack_semantic_pose.py",
+      "sha256": "151413b0696a23e26fbc246dd2cbf7f42c3d64f67290e7c61f21ccc1d0a9bfbc",
+      "vendored": "src/tac/pr130_lift/pose/lifted/pack_semantic_pose.py"
+    },
+    {
+      "path": "code/pose_basis_oracle.py",
+      "sha256": "90909bdd600cf8f518b8fc951b19fd6b66796a1ed963ece4c7638cb1b14057cb",
+      "vendored": "src/tac/pr130_lift/pose/lifted/pose_basis_oracle.py"
+    },
+    {
+      "path": "code/refine_pose_coeff_codes.py",
+      "sha256": "8912464ba22f6bde09d4d53e4e16d1c6880b48d2358752219073fa2d4710a403",
+      "vendored": "src/tac/pr130_lift/pose/lifted/refine_pose_coeff_codes.py"
+    },
+    {
+      "path": "code/repack_carrier.py",
+      "sha256": "df6bdaa23d0bd1f717af588931ebdb5ed3777517af8b046e287835aa16a7a72e",
+      "vendored": "src/tac/pr130_lift/pose/lifted/repack_carrier.py"
+    },
+    {
+      "path": "code/search_pose_coeff_cpu.py",
+      "sha256": "42b0f57cad5170b6da2d7147ba90af147cda7baecc74b848b9cd2c4bed7c9285",
+      "vendored": "src/tac/pr130_lift/pose/lifted/search_pose_coeff_cpu.py"
+    },
+    {
+      "path": "code/train_pose_carrier_full.py",
+      "sha256": "684a4906edecb7653572db77c11a03a4e445eb256a8dc7b665e8fa0f78cab649",
+      "vendored": "src/tac/pr130_lift/pose/lifted/train_pose_carrier_full.py"
+    }
+  ],
+  "schema": "ddm_mx2_pr130_pose_vendor_manifest.v1",
+  "score_claim": false,
+  "source_head": "2f94596bb0136d342254022a5c9584756eae0468",
+  "source_repo": "/Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo"
+}
