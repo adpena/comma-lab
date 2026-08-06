@@ -84,6 +84,12 @@ CHECKPOINT_JSONL_PATH = REPO_ROOT / ".omx" / "state" / "subagent_progress.jsonl"
 ``tools/subagent_checkpoint.py`` per CLAUDE.md "Mandatory crash-resume
 protocol" + Catalog #131 + #138."""
 
+CODEX_ARM_QUEUE_JSONL_PATH = REPO_ROOT / ".omx" / "state" / "codex_arm_queue.jsonl"
+"""Append-only arm queue state. A landed/dropped queue row is terminal enough
+to neutralize that arm's stale ``in_progress`` checkpoint."""
+
+TERMINAL_QUEUE_STATUSES: frozenset[str] = frozenset({"landed", "dropped"})
+
 DEFAULT_LOOKBACK_MINUTES = 60
 """Default lookback window. Mirrors Catalog #302 + Catalog #314 60-min
 absorption window so cross-surface alerts agree on the same time horizon."""
@@ -162,7 +168,7 @@ def _parse_iso_utc(ts: str | None) -> _dt.datetime | None:
             ts = ts[:-1] + "+00:00"
         d = _dt.datetime.fromisoformat(ts)
         if d.tzinfo is None:
-            d = d.replace(tzinfo=_dt.timezone.utc)
+            d = d.replace(tzinfo=_dt.UTC)
         return d
     except (TypeError, ValueError):
         return None
@@ -203,7 +209,7 @@ def _load_checkpoints_strict(jsonl_path: Path) -> list[dict]:
         return []
     rows: list[dict] = []
     try:
-        with open(jsonl_path, "r", encoding="utf-8") as fh:
+        with open(jsonl_path, encoding="utf-8") as fh:
             for lineno, raw in enumerate(fh, start=1):
                 raw = raw.strip()
                 if not raw:
@@ -226,6 +232,52 @@ def _load_checkpoints_strict(jsonl_path: Path) -> list[dict]:
     return rows
 
 
+def _subagent_id_aliases(name: str) -> set[str]:
+    aliases = {name}
+    if name.startswith("ddm_"):
+        aliases.add(name.removeprefix("ddm_"))
+    else:
+        aliases.add(f"ddm_{name}")
+    return aliases
+
+
+def _load_terminal_queue_subagent_ids(jsonl_path: Path) -> set[str]:
+    """Best-effort latest terminal queue ids.
+
+    The checkpoint guard itself is fail-closed for corrupt checkpoint JSONL, but
+    the queue is only an allowlist for clearing stale ``in_progress`` rows. If
+    the queue is unreadable or malformed, return no terminal ids and keep the
+    original checkpoint refusal behavior.
+    """
+    if not jsonl_path.exists():
+        return set()
+    latest_status_by_name: dict[str, str] = {}
+    try:
+        with open(jsonl_path, encoding="utf-8") as fh:
+            for raw in fh:
+                raw = raw.strip()
+                if not raw:
+                    continue
+                try:
+                    rec = json.loads(raw)
+                except json.JSONDecodeError:
+                    continue
+                if not isinstance(rec, dict):
+                    continue
+                name = rec.get("name")
+                status = rec.get("status")
+                if isinstance(name, str) and name and isinstance(status, str):
+                    latest_status_by_name[name] = status
+    except OSError:
+        return set()
+
+    terminal_ids: set[str] = set()
+    for name, status in latest_status_by_name.items():
+        if status in TERMINAL_QUEUE_STATUSES:
+            terminal_ids.update(_subagent_id_aliases(name))
+    return terminal_ids
+
+
 class CorruptCheckpointError(RuntimeError):
     """Raised by ``_load_checkpoints_strict`` on malformed JSONL.
 
@@ -243,6 +295,7 @@ def check_files_against_sister_checkpoints(
     current_subagent_id: str | None = None,
     lookback_minutes: int = DEFAULT_LOOKBACK_MINUTES,
     checkpoint_path: Path | None = None,
+    codex_queue_path: Path | None = None,
     now_utc: _dt.datetime | None = None,
 ) -> SisterCheckpointVerdict:
     """Check ``files`` against in-flight sister subagent checkpoints.
@@ -276,9 +329,13 @@ def check_files_against_sister_checkpoints(
     checkpoint_path
         Override the canonical ``.omx/state/subagent_progress.jsonl`` path
         (useful for testing). If ``None``, uses ``CHECKPOINT_JSONL_PATH``.
+    codex_queue_path
+        Override the canonical ``.omx/state/codex_arm_queue.jsonl`` path
+        (useful for testing). Latest queue rows with ``status`` landed/dropped
+        make matching stale in-progress checkpoints non-blocking.
     now_utc
         Override the current UTC time (useful for testing). If ``None``,
-        uses ``datetime.now(timezone.utc)``.
+        uses ``datetime.now(UTC)``.
 
     Raises
     ------
@@ -293,10 +350,16 @@ def check_files_against_sister_checkpoints(
         raise TypeError("files must be a list of strings")
 
     path = Path(checkpoint_path) if checkpoint_path is not None else CHECKPOINT_JSONL_PATH
-    now = now_utc if now_utc is not None else _dt.datetime.now(_dt.timezone.utc)
+    queue_path = (
+        Path(codex_queue_path)
+        if codex_queue_path is not None
+        else CODEX_ARM_QUEUE_JSONL_PATH
+    )
+    now = now_utc if now_utc is not None else _dt.datetime.now(_dt.UTC)
     lookback_seconds = lookback_minutes * 60
 
     rows = _load_checkpoints_strict(path)
+    terminal_queue_ids = _load_terminal_queue_subagent_ids(queue_path)
 
     # Build a "latest checkpoint per subagent" map. A single subagent may
     # write multiple checkpoints (step 1, step 2, ...); only the most-recent
@@ -312,6 +375,8 @@ def check_files_against_sister_checkpoints(
     in_flight: list[tuple[str, _dt.datetime, set[str]]] = []
     for sid, row in latest_per_subagent.items():
         if sid == current_subagent_id:
+            continue
+        if sid in terminal_queue_ids:
             continue
         status = row.get("status")
         if status != "in_progress":

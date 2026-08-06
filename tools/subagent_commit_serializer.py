@@ -104,11 +104,12 @@ Two structural additions close/mitigate these:
   <file>=<N> is a warn-only heuristic that flags a grossly larger staged
   diff for callers still using whole-file `git add` on shared files.
 
-Return-code map: 0 ok · 2 fatal/malformed/timeout · 3 concurrent-edit
-(lock-wait) · 4 pre-lock expected-sha mismatch · 5 staged-sha mismatch /
-high-risk-file-missing-sha · 6 base-sha mismatch (absorption) · 7 POST-COMMIT
-HEAD mismatch (clobber) · 8/9 sister-checkpoint ABORT/WAIT · 10 bare-override ·
-11 corrupt-checkpoint · 12 review-gate override attempted on Python.
+    Return-code map: 0 ok · 2 fatal/malformed/timeout · 3 concurrent-edit
+    (lock-wait) · 4 pre-lock expected-sha mismatch · 5 staged-sha mismatch /
+    high-risk-file-missing-sha · 6 base-sha mismatch (absorption) · 7 POST-COMMIT
+    HEAD mismatch (clobber) · 8/9 sister-checkpoint ABORT/WAIT · 10 bare-override ·
+    11 corrupt-checkpoint · 12 review-gate override attempted on Python ·
+    13 gitignored path · 14 protected append-doc shrink · 15 undeclared staged file.
 
 Behaviour
 ─────────
@@ -157,14 +158,12 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 # Imported BEFORE fcntl-lock acquisition so the guard runs early.
 sys.path.insert(0, str(REPO_ROOT / "src"))
 try:
-    from tac.commit_safety import (  # noqa: E402
-        check_files_against_sister_checkpoints,
+    from tac.commit_safety import (
         bare_override_attempted,
+        check_files_against_sister_checkpoints,
         parse_override_env,
     )
-    from tac.commit_safety.sister_checkpoint_guard import (  # noqa: E402
-        CorruptCheckpointError,
-    )
+    from tac.commit_safety.sister_checkpoint_guard import CorruptCheckpointError
     _CATALOG_340_HELPER_AVAILABLE = True
 except ImportError:
     # Test fixtures may stand up a minimal repo without the package.
@@ -806,6 +805,65 @@ def _staged_touched_files(env: dict, *, diff_filter: str | None = None) -> list[
     return [ln.strip() for ln in proc.stdout.splitlines() if ln.strip()]
 
 
+def _staged_declared_file_set_mismatch(
+    files: list[str], env: dict,
+) -> tuple[list[str], list[str], list[str]]:
+    """Compare the staged file set to the caller's declared file list.
+
+    ``--no-stage`` intentionally honors the real shared index for repair paths,
+    which is exactly where an unrelated staged file can be silently swept into a
+    commit. The temp-index paths should already be isolated, but running the same
+    check there also catches hook/patch surprises before or immediately after the
+    commit.
+
+    Returns ``(staged_but_not_declared, declared_but_not_staged, staged_files)``.
+    Only ``staged_but_not_declared`` is a hard pre-commit violation: a declared
+    file absent from the staged diff can be a legitimate no-op versus HEAD.
+    """
+    staged = set(_staged_touched_files(env))
+    declared = set(files)
+    return sorted(staged - declared), sorted(declared - staged), sorted(staged)
+
+
+def _refuse_staged_declared_file_set_mismatch(
+    files: list[str],
+    env: dict,
+    record: dict,
+    *,
+    wait_seconds: float | int | None = None,
+    temp_index_path: str | None = None,
+    context: str,
+) -> int | None:
+    """rc=15 refusal when the staged diff contains undeclared paths."""
+    extra, absent, staged = _staged_declared_file_set_mismatch(files, env)
+    if not extra:
+        return None
+    log_record = {
+        **record,
+        "outcome": "staged_file_set_mismatch_refused",
+        "context": context,
+        "declared_files": sorted(set(files)),
+        "staged_files": staged,
+        "staged_but_not_declared": extra,
+        "declared_but_not_staged": absent,
+        "temp_index": temp_index_path,
+    }
+    if wait_seconds is not None:
+        log_record["wait_seconds"] = wait_seconds
+    _append_log(log_record)
+    print(
+        "[subagent-commit-serializer] REFUSED (rc=15): the staged file set "
+        "contains path(s) not declared by --files. This would let a repair/"
+        "--no-stage or hook-mutated commit carry unauthored work under the "
+        "wrong message. Declare the exact staged paths or unstage the decoy "
+        "before retrying. "
+        f"context={context}; staged_but_not_declared={extra!r}; "
+        f"declared_but_not_staged={absent!r}",
+        file=sys.stderr,
+    )
+    return 15
+
+
 def _is_protected_append_doc(relpath: str) -> bool:
     return any(m in relpath for m in _PROTECTED_APPEND_DOC_MARKERS)
 
@@ -1081,7 +1139,7 @@ def _staged_diff_line_count(files: list[str], env: dict) -> dict[str, int]:
     GIT_INDEX_FILE (so it reads OUR temp index). Binary files (numstat ``-``)
     map to -1 (skip the heuristic). Files with no staged change map to 0.
     """
-    out: dict[str, int] = {f: 0 for f in files}
+    out: dict[str, int] = dict.fromkeys(files, 0)
     if not files:
         return out
     try:
@@ -2084,6 +2142,23 @@ def main(rebind_root: bool = False) -> int:
                         file=sys.stderr,
                     )
 
+        if patch_mode:
+            staged_set_context = "patch-file temp index"
+        elif args.no_stage:
+            staged_set_context = "--no-stage real index"
+        else:
+            staged_set_context = "git-add temp index"
+        rc15 = _refuse_staged_declared_file_set_mismatch(
+            files,
+            env,
+            base_record,
+            wait_seconds=wait_seconds,
+            temp_index_path=temp_index_path,
+            context=staged_set_context,
+        )
+        if rc15 is not None:
+            return rc15
+
         # Catalog #216 (FIX-HARDEN-OPT 2026-05-14 P1): POST-STAGE
         # content verification. The pre-lock + post-lock check (Catalog #157)
         # only catches working-tree edits DURING the lock-wait window. If
@@ -2207,11 +2282,12 @@ def main(rebind_root: bool = False) -> int:
                 )
                 return 7
 
-        # FIX-ATTRIBUTION (2026-08-02, task #911): reconcile REQUESTED files
-        # against what git RECORDED for this commit. Warn-only and fail-open —
-        # `absent` has a benign cause (a requested file whose content already
-        # matched HEAD produces no diff), so refusing here would block honest
-        # commits. The value is that the two counts are now COMPARED at all.
+        # FIX-ATTRIBUTION (2026-08-02 task #911, hardened 2026-08-05 task #883):
+        # reconcile REQUESTED files against what git RECORDED for this commit.
+        # `absent` remains warn-only because a requested file whose content
+        # already matched HEAD produces no diff. `extra` is hard rc=15: this
+        # commit carries files the caller did not declare, i.e. the wrong-body
+        # absorption direction. The commit is KEPT for no-signal-loss forensics.
         recorded = _files_recorded_by_head_commit()
         recorded_n = "?" if recorded is None else str(len(recorded))
         if recorded is not None:
@@ -2221,7 +2297,11 @@ def main(rebind_root: bool = False) -> int:
             if absent or extra:
                 _append_log({
                     **base_record,
-                    "outcome": "post_commit_file_attribution_mismatch",
+                    "outcome": (
+                        "post_commit_file_attribution_extra_refused"
+                        if extra
+                        else "post_commit_file_attribution_absent_warned"
+                    ),
                     "wait_seconds": wait_seconds,
                     "commit_seconds": commit_seconds,
                     "head_after": head_after,
@@ -2232,8 +2312,9 @@ def main(rebind_root: bool = False) -> int:
                     "temp_index": temp_index_path,
                 })
                 print(
-                    "[subagent-commit-serializer] ATTRIBUTION MISMATCH (warn, "
-                    f"rc=0): you requested {len(requested)} file(s); commit "
+                    "[subagent-commit-serializer] ATTRIBUTION MISMATCH "
+                    f"({'hard rc=15' if extra else 'warn rc=0'}): "
+                    f"you requested {len(requested)} file(s); commit "
                     f"{head_after} recorded {len(recorded)}.",
                     file=sys.stderr,
                 )
@@ -2241,7 +2322,7 @@ def main(rebind_root: bool = False) -> int:
                     print(
                         "  REQUESTED BUT NOT RECORDED (a sibling may have "
                         "already committed your content — check "
-                        f"`git log -S<your-symbol> --all`; or your edit was a "
+                        "`git log -S<your-symbol> --all`; or your edit was a "
                         "no-op vs HEAD):\n"
                         + "\n".join(f"    {f}" for f in absent),
                         file=sys.stderr,
@@ -2255,6 +2336,13 @@ def main(rebind_root: bool = False) -> int:
                         + "\n".join(f"    {f}" for f in extra),
                         file=sys.stderr,
                     )
+                    print(
+                        "  The commit is KEPT for no-signal-loss forensics. "
+                        "Record a correction or follow-up; do not rewrite "
+                        "history blindly.",
+                        file=sys.stderr,
+                    )
+                    return 15
 
         print(f"[subagent-commit-serializer] OK head={head_after} "
               f"label={args.label} files={len(files)} recorded={recorded_n} "

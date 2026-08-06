@@ -12,9 +12,10 @@ WHY EVERY EXISTING CHECK PASSED — the projection is wrong, not the arithmetic.
 already committed byte-identical content, the HEAD blob matches and the check passes BY
 CONSTRUCTION. It is structurally incapable of asking "did MY commit put it there?"
 
-These tests cover the complement. Warn-only by design: `requested - recorded` has a benign
-cause (a requested file whose content already equals HEAD yields no diff), so refusing
-would block honest commits. The cure is that the two sets are COMPARED at all.
+These tests cover the complement. `requested - recorded` is warn-only by design: a
+requested file whose content already equals HEAD yields no diff, so refusing would block
+honest commits. `recorded - requested` is hard-fail territory in the serializer: our
+commit carried an undeclared file.
 """
 from __future__ import annotations
 

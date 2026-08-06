@@ -25,8 +25,6 @@ REPO_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
 from tac.commit_safety.sister_checkpoint_guard import (  # noqa: E402
-    DEFAULT_LOOKBACK_MINUTES,
-    EXEMPT_FILES,
     OVERRIDE_ENV_FLAG,
     OVERRIDE_ENV_RATIONALE,
     CorruptCheckpointError,
@@ -49,7 +47,7 @@ def _write_checkpoint(
 ) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     if written_at_utc is None:
-        written_at_utc = _dt.datetime.now(_dt.timezone.utc).isoformat()
+        written_at_utc = _dt.datetime.now(_dt.UTC).isoformat()
     record = {
         "subagent_id": subagent_id,
         "parent_id_or_session": None,
@@ -67,6 +65,18 @@ def _write_checkpoint(
         fh.write(json.dumps(record, sort_keys=True) + "\n")
 
 
+def _write_queue_row(path: Path, *, name: str, status: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    record = {
+        "event": "mark",
+        "name": name,
+        "status": status,
+        "ts": 1785974053.063295,
+    }
+    with open(path, "a") as fh:
+        fh.write(json.dumps(record, sort_keys=True) + "\n")
+
+
 @pytest.fixture
 def empty_checkpoint(tmp_path: Path) -> Path:
     return tmp_path / "subagent_progress.jsonl"
@@ -74,7 +84,7 @@ def empty_checkpoint(tmp_path: Path) -> Path:
 
 @pytest.fixture
 def now_utc() -> _dt.datetime:
-    return _dt.datetime(2026, 5, 19, 12, 0, 0, tzinfo=_dt.timezone.utc)
+    return _dt.datetime(2026, 5, 19, 12, 0, 0, tzinfo=_dt.UTC)
 
 
 # ── Helper unit tests ────────────────────────────────────────────────────
@@ -299,6 +309,58 @@ class TestHelperUnit:
         )
         assert verdict.recommendation == "PROCEED"
 
+    def test_landed_queue_row_neutralizes_stale_in_progress_checkpoint(
+        self, empty_checkpoint, now_utc,
+    ):
+        sister_ts = (now_utc - _dt.timedelta(minutes=5)).isoformat()
+        _write_checkpoint(
+            empty_checkpoint,
+            subagent_id="ddm_fx1",
+            files_touched=["src/tac/foo.py"],
+            written_at_utc=sister_ts,
+            status="in_progress",
+        )
+        queue_path = empty_checkpoint.parent / "codex_arm_queue.jsonl"
+        _write_queue_row(queue_path, name="fx1", status="live")
+        _write_queue_row(queue_path, name="fx1", status="landed")
+
+        verdict = check_files_against_sister_checkpoints(
+            ["src/tac/foo.py"],
+            current_subagent_id="ME",
+            checkpoint_path=empty_checkpoint,
+            codex_queue_path=queue_path,
+            now_utc=now_utc,
+        )
+
+        assert verdict.recommendation == "PROCEED"
+        assert verdict.conflicts == ()
+        assert "ddm_fx1" not in verdict.in_flight_subagent_ids
+
+    def test_live_queue_row_does_not_neutralize_in_progress_checkpoint(
+        self, empty_checkpoint, now_utc,
+    ):
+        sister_ts = (now_utc - _dt.timedelta(minutes=5)).isoformat()
+        _write_checkpoint(
+            empty_checkpoint,
+            subagent_id="ddm_fx1",
+            files_touched=["src/tac/foo.py"],
+            written_at_utc=sister_ts,
+            status="in_progress",
+        )
+        queue_path = empty_checkpoint.parent / "codex_arm_queue.jsonl"
+        _write_queue_row(queue_path, name="fx1", status="live")
+
+        verdict = check_files_against_sister_checkpoints(
+            ["src/tac/foo.py"],
+            current_subagent_id="ME",
+            checkpoint_path=empty_checkpoint,
+            codex_queue_path=queue_path,
+            now_utc=now_utc,
+        )
+
+        assert verdict.recommendation == "ABORT"
+        assert verdict.conflicts == (("ddm_fx1", ("src/tac/foo.py",)),)
+
     def test_files_must_be_list_of_strings(self, empty_checkpoint, now_utc):
         with pytest.raises(TypeError):
             check_files_against_sister_checkpoints(
@@ -443,6 +505,18 @@ def _make_test_repo(tmp_path: Path) -> tuple[Path, dict]:
     return repo, env
 
 
+def _git(repo: Path, env: dict, *args: str) -> str:
+    proc = subprocess.run(
+        ["git", *args],
+        cwd=repo,
+        env=env,
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+    return proc.stdout.strip()
+
+
 def _run_serializer(
     repo: Path,
     env: dict,
@@ -467,6 +541,25 @@ def _run_serializer(
     return subprocess.run(cmd, cwd=repo, env=full_env, capture_output=True, text=True)
 
 
+def _run_serializer_no_stage(
+    repo: Path,
+    env: dict,
+    files: list[str],
+    message: str = "test no-stage commit",
+) -> subprocess.CompletedProcess:
+    """Invoke the serializer repair/no-stage path against the test repo."""
+    cmd = [
+        sys.executable,
+        str(repo / "tools" / "subagent_commit_serializer.py"),
+        "--message", message,
+        "--no-stage",
+        "--files", *files,
+        "--no-sister-checkpoint-check",
+        "--no-co-author",
+    ]
+    return subprocess.run(cmd, cwd=repo, env=env, capture_output=True, text=True)
+
+
 class TestSerializerWireIn:
     def test_clean_repo_serializer_proceeds(self, tmp_path):
         repo, env = _make_test_repo(tmp_path)
@@ -480,7 +573,7 @@ class TestSerializerWireIn:
 
     def test_serializer_aborts_on_fresh_sister_conflict(self, tmp_path):
         repo, env = _make_test_repo(tmp_path)
-        now = _dt.datetime.now(_dt.timezone.utc)
+        now = _dt.datetime.now(_dt.UTC)
         # Sister checkpoint declares src/tac/foo.py 5 min ago, in_progress.
         sister_ts = (now - _dt.timedelta(minutes=5)).isoformat()
         _write_checkpoint(
@@ -504,7 +597,7 @@ class TestSerializerWireIn:
 
     def test_serializer_wait_and_retry_on_aged_sister(self, tmp_path):
         repo, env = _make_test_repo(tmp_path)
-        now = _dt.datetime.now(_dt.timezone.utc)
+        now = _dt.datetime.now(_dt.UTC)
         # Sister checkpoint 45 min ago → WAIT_AND_RETRY.
         sister_ts = (now - _dt.timedelta(minutes=45)).isoformat()
         _write_checkpoint(
@@ -526,7 +619,7 @@ class TestSerializerWireIn:
 
     def test_serializer_paired_env_bypass_accepted(self, tmp_path):
         repo, env = _make_test_repo(tmp_path)
-        now = _dt.datetime.now(_dt.timezone.utc)
+        now = _dt.datetime.now(_dt.UTC)
         sister_ts = (now - _dt.timedelta(minutes=5)).isoformat()
         _write_checkpoint(
             repo / ".omx" / "state" / "subagent_progress.jsonl",
@@ -552,7 +645,7 @@ class TestSerializerWireIn:
 
     def test_serializer_bare_bypass_rejected_rc_10(self, tmp_path):
         repo, env = _make_test_repo(tmp_path)
-        now = _dt.datetime.now(_dt.timezone.utc)
+        now = _dt.datetime.now(_dt.UTC)
         sister_ts = (now - _dt.timedelta(minutes=5)).isoformat()
         _write_checkpoint(
             repo / ".omx" / "state" / "subagent_progress.jsonl",
@@ -575,7 +668,7 @@ class TestSerializerWireIn:
 
     def test_serializer_placeholder_rationale_rejected(self, tmp_path):
         repo, env = _make_test_repo(tmp_path)
-        now = _dt.datetime.now(_dt.timezone.utc)
+        now = _dt.datetime.now(_dt.UTC)
         sister_ts = (now - _dt.timedelta(minutes=5)).isoformat()
         _write_checkpoint(
             repo / ".omx" / "state" / "subagent_progress.jsonl",
@@ -600,7 +693,7 @@ class TestSerializerWireIn:
 
     def test_serializer_skip_check_flag(self, tmp_path):
         repo, env = _make_test_repo(tmp_path)
-        now = _dt.datetime.now(_dt.timezone.utc)
+        now = _dt.datetime.now(_dt.UTC)
         sister_ts = (now - _dt.timedelta(minutes=5)).isoformat()
         _write_checkpoint(
             repo / ".omx" / "state" / "subagent_progress.jsonl",
@@ -616,6 +709,52 @@ class TestSerializerWireIn:
             skip_sister_check=True,
         )
         assert result.returncode == 0
+
+    def test_no_stage_refuses_staged_decoy_file_before_commit(self, tmp_path):
+        repo, env = _make_test_repo(tmp_path)
+        (repo / "declared.py").write_text("declared = 1\n")
+        (repo / "decoy.py").write_text("decoy = 1\n")
+        subprocess.run(
+            ["git", "add", "--", "declared.py", "decoy.py"],
+            cwd=repo,
+            env=env,
+            check=True,
+        )
+        head_before = _git(repo, env, "rev-parse", "HEAD")
+
+        result = _run_serializer_no_stage(
+            repo,
+            env,
+            ["declared.py"],
+            message="repair path declared only one file",
+        )
+
+        assert result.returncode == 15, result.stderr
+        assert "decoy.py" in result.stderr
+        assert "staged_but_not_declared" in result.stderr
+        assert _git(repo, env, "rev-parse", "HEAD") == head_before
+
+    def test_no_stage_accepts_exact_declared_staged_file_set(self, tmp_path):
+        repo, env = _make_test_repo(tmp_path)
+        (repo / "declared.py").write_text("declared = 1\n")
+        subprocess.run(
+            ["git", "add", "--", "declared.py"],
+            cwd=repo,
+            env=env,
+            check=True,
+        )
+
+        result = _run_serializer_no_stage(
+            repo,
+            env,
+            ["declared.py"],
+            message="repair path exact staged file set",
+        )
+
+        assert result.returncode == 0, result.stderr
+        assert _git(repo, env, "show", "--pretty=format:", "--name-only", "HEAD") == (
+            "declared.py"
+        )
 
 
 # ── Concurrent-stress test ───────────────────────────────────────────────
@@ -634,7 +773,7 @@ def _spawn_pool_worker(args: tuple) -> tuple[str, str, int]:
     # Step 1: declare in-flight checkpoint for SISTER (impersonate the
     # race condition where SISTER-A wrote its checkpoint moments before
     # SISTER-B's commit attempt).
-    now = _dt.datetime.now(_dt.timezone.utc)
+    now = _dt.datetime.now(_dt.UTC)
     ts = (now - _dt.timedelta(seconds=10)).isoformat()
     _write_checkpoint(
         repo_path / ".omx" / "state" / "subagent_progress.jsonl",
@@ -803,9 +942,10 @@ class TestCatalog340PreflightGate:
 
     def test_strict_mode_raises_on_violation(self, tmp_path):
         from tac.preflight import (
+            PreflightError,
             check_subagent_commit_serializer_invokes_sister_checkpoint_guard,
         )
-        from tac.preflight import PreflightError
+
         (tmp_path / "tools").mkdir()
         (tmp_path / "tools" / "subagent_commit_serializer.py").write_text(
             "# no imports\n"
