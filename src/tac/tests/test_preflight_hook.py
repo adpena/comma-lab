@@ -153,6 +153,15 @@ def test_module_reference_tokens_package_init_resolves_to_the_package(tmp_path) 
         "tac.verdicts.emit", "verdicts.emit", "emit"}
 
 
+def test_nested_package_init_drops_generic_leaf_token() -> None:
+    """Nested package leaves can be broad domain words; keep package suffixes, not the bare leaf."""
+    assert preflight_hook._module_reference_tokens(
+        "src/tac/pr130_lift/pose/__init__.py") == {
+        "tac.pr130_lift.pose", "pr130_lift.pose"}
+    assert "pose" not in preflight_hook._module_reference_tokens(
+        "src/tac/pr130_lift/pose/__init__.py")
+
+
 def test_package_init_does_not_select_unrelated_mlx_modules() -> None:
     """The regression itself: staging tac/verdicts/__init__.py must not drag in MLX GPU
     modules that never reference it (they crashed under concurrent-MLX GPU contention)."""
@@ -160,6 +169,13 @@ def test_package_init_does_not_select_unrelated_mlx_modules() -> None:
     modules = {s.split("::")[0] for s in selected}
     offenders = [m for m in modules if "tac.verdicts" not in Path(m).read_text()]
     assert offenders == [], f"selected modules that never reference tac.verdicts: {offenders}"
+
+
+def test_nested_pose_package_init_does_not_select_pose_word_mlx_modules() -> None:
+    """Regression for #983: bare token `pose` selected 29 unrelated MLX-gated targets."""
+    selected = preflight_hook._select_ci_blind_tests(
+        ["src/tac/pr130_lift/pose/__init__.py"])
+    assert selected == []
 
 
 def test_select_ci_blind_tests_empty_staged_selects_nothing() -> None:

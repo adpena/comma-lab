@@ -386,17 +386,29 @@ def _module_reference_tokens(rel_path: str) -> set[str]:
     surfaced as a `Fatal Python error: Bus error`, i.e. a flaky hard block on every
     `__init__.py` edit. It also UNDER-matched, which is the failure this step exists to
     prevent: a test doing `from tac.verdicts import X` was never matched by the token
-    `tac.verdicts.__init__`, so real importers were silently skipped. Dropping the
-    trailing component fixes the silence and removes the universal false positive.
+    `tac.verdicts.__init__`, so real importers were silently skipped.
+
+    Nested package `__init__.py` files add a second over-match class: the bare leaf token can
+    be a common domain word. Measured 2026-08-06 (`ddm_cb2`, task #983), staging
+    `src/tac/pr130_lift/pose/__init__.py` emitted the token `pose`, selecting 29 unrelated
+    MLX-gated targets whose only match was ordinary pose terminology. Dropping only that
+    nested bare leaf keeps the importable package suffix (`pr130_lift.pose`) while removing
+    the generic domain-word match.
     """
     if not rel_path:
         return set()
     parts = Path(rel_path).with_suffix("").parts
     if parts and parts[0] == "src":
         parts = parts[1:]
-    if len(parts) > 1 and parts[-1] == "__init__":
+    package_init = len(parts) > 1 and parts[-1] == "__init__"
+    if package_init:
         parts = parts[:-1]
-    return {".".join(parts[i:]) for i in range(len(parts))}
+    tokens: set[str] = set()
+    for i in range(len(parts)):
+        if package_init and len(parts) > 2 and i == len(parts) - 1:
+            continue
+        tokens.add(".".join(parts[i:]))
+    return tokens
 
 
 def _select_ci_blind_tests(staged: list[str]) -> list[str]:
