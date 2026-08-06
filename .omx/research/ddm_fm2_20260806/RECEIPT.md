@@ -123,7 +123,16 @@ No deletion or movement was performed. These bytes are retained as reproducible 
 
 ## Serializer Status
 
-PENDING at receipt creation. The intended commit scope is:
+Serializer completed successfully.
+
+| Field | Value |
+|---|---|
+| commit | `412783cd93` |
+| serializer | `.venv/bin/python tools/subagent_commit_serializer.py` |
+| result | `OK head=412783cd93 label=anonymous files=9 recorded=9 temp_index=YES` |
+| message | `ddm_fm2: stage fmtools full SDK surfaces [no-triality] [p0-ledger-ok]` |
+
+Committed scope:
 - `src/tac/fm_advisory.py`
 - `tools/costate_digest.py`
 - `src/tac/tests/test_fm_advisory.py`
