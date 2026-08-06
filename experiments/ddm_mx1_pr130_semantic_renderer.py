@@ -520,8 +520,38 @@ def launch_ticket(args: argparse.Namespace, smoke: dict[str, Any] | None, mlx_pr
         }
     n32 = _select_stratified_indices(32, seed=args.seed)
     n120 = _select_stratified_indices(120, seed=args.seed + 1)
+
+    # RR3-F1: a Row-1 verdict requires TWO arms — ARM-CAP (GT tokens -> GT targets, receiver
+    # CAPACITY vs the fp1 flat-paint floor and PR130's external number) and ARM-VEH (public-wire
+    # tq1c tokens -> GT targets, composed-vehicle correction reach). A single-arm ticket
+    # conflates the two questions, so the bare argv_n32/argv_n120 keys no longer exist.
+    def _arm_argv(pairs: int, seed: int, input_cache: Path, subdir: str) -> list[str]:
+        run_dir = args.run_dir / subdir
+        return [
+            ".venv/bin/python",
+            "experiments/ddm_mx1_pr130_semantic_renderer.py",
+            "--mode", "mlx-train",
+            "--device", "gpu",
+            "--pairs", str(pairs),
+            "--steps", str(horizon),
+            "--lr", str(args.lr),
+            "--ce-fraction", str(args.ce_fraction),
+            "--softplus-fraction", str(args.softplus_fraction),
+            "--bits", str(args.bits),
+            "--seed", str(seed),
+            "--checkpoint-every", str(args.checkpoint_every),
+            "--eval-every", str(args.eval_every),
+            "--input-cache", str(input_cache),
+            "--target-cache", str(args.target_cache),
+            "--init", str(args.init),
+            "--run-dir", str(run_dir),
+            "--out", str(run_dir / "result.json"),
+        ]
+
+    cap_cache = args.target_cache  # GT labels as tokens AND targets
+    veh_cache = args.input_cache   # public-wire (tq1c) labels as tokens, GT targets
     return {
-        "schema": "ddm_mx1_row1_launch_ticket.v1",
+        "schema": "ddm_mx1_row1_launch_ticket.v2_two_arm",
         "score_claim": False,
         "source_repo_root": SOURCE_REPO_ROOT,
         "source_repo_head": SOURCE_REPO_HEAD,
@@ -531,78 +561,15 @@ def launch_ticket(args: argparse.Namespace, smoke: dict[str, Any] | None, mlx_pr
         "init_checkpoint": str(args.init),
         "n32_stratified_indices": n32,
         "n120_stratified_indices": n120,
-        "argv_n32": [
-            ".venv/bin/python",
-            "experiments/ddm_mx1_pr130_semantic_renderer.py",
-            "--mode",
-            "mlx-train",
-            "--device",
-            "gpu",
-            "--pairs",
-            "32",
-            "--steps",
-            str(horizon),
-            "--lr",
-            str(args.lr),
-            "--ce-fraction",
-            str(args.ce_fraction),
-            "--softplus-fraction",
-            str(args.softplus_fraction),
-            "--bits",
-            str(args.bits),
-            "--seed",
-            str(args.seed),
-            "--checkpoint-every",
-            str(args.checkpoint_every),
-            "--eval-every",
-            str(args.eval_every),
-            "--input-cache",
-            str(args.input_cache),
-            "--target-cache",
-            str(args.target_cache),
-            "--init",
-            str(args.init),
-            "--run-dir",
-            str(args.run_dir / "n32_metal"),
-            "--out",
-            str(args.run_dir / "n32_metal" / "result.json"),
-        ],
-        "argv_n120": [
-            ".venv/bin/python",
-            "experiments/ddm_mx1_pr130_semantic_renderer.py",
-            "--mode",
-            "mlx-train",
-            "--device",
-            "gpu",
-            "--pairs",
-            "120",
-            "--steps",
-            str(horizon),
-            "--lr",
-            str(args.lr),
-            "--ce-fraction",
-            str(args.ce_fraction),
-            "--softplus-fraction",
-            str(args.softplus_fraction),
-            "--bits",
-            str(args.bits),
-            "--seed",
-            str(args.seed + 1),
-            "--checkpoint-every",
-            str(args.checkpoint_every),
-            "--eval-every",
-            str(args.eval_every),
-            "--input-cache",
-            str(args.input_cache),
-            "--target-cache",
-            str(args.target_cache),
-            "--init",
-            str(args.init),
-            "--run-dir",
-            str(args.run_dir / "n120_metal"),
-            "--out",
-            str(args.run_dir / "n120_metal" / "result.json"),
-        ],
+        "arm_selection_rule": (
+            "fire BOTH n32 arms (arm_cap: GT->GT receiver capacity; arm_veh: tq1c->GT composed-"
+            "vehicle reach); NO n120 dispatch until the scaled arm is explicitly selected from "
+            "the two n32 CPU-torch verdicts; MLX telemetry is research-signal only"
+        ),
+        "argv_n32_arm_cap": _arm_argv(32, args.seed, cap_cache, "launch_arm_cap/n32_metal"),
+        "argv_n32_arm_veh": _arm_argv(32, args.seed, veh_cache, "launch_arm_veh/n32_metal"),
+        "argv_n120_arm_cap": _arm_argv(120, args.seed + 1, cap_cache, "launch_arm_cap/n120_metal"),
+        "argv_n120_arm_veh": _arm_argv(120, args.seed + 1, veh_cache, "launch_arm_veh/n120_metal"),
         "verdict_protocol": {
             "axis": "[macOS-MLX research-signal] for train telemetry; frozen CPU-torch SegNet through exact R for d_seg; no contest promotion without upstream/evaluate.py on byte-closed archive",
             "compare_against": {
