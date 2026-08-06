@@ -224,3 +224,27 @@ pose axis (EMA 0.0101 @ ep1766, contribution 0.3177) routes to the banked pose T
 machinery (QA43 tail-targeted solve #775 built-to-ready by su2; wp1 Muon finisher 098b98e11c
 available for Case-B seg finishing). Error-atlas custody now exists for BOTH jd7 endpoints
 (ON + OFF) → wp1 rows 3/9/13 fully unblocked.
+
+## CORRECTION (MAIN, same boundary — supersedes the routing paragraph's blocker clause)
+
+The claim "pg1's lever is an unapplied COMMIT_INTENT.patch, apply-to-main owed first" is
+**FALSE — pg1 LANDED on main in commit 8b6b8e17ff (2026-08-05 18:53)**: MAIN committed the
+fx1+pg1 combined landing on behalf of the sandbox-blocked arm; the live flag is
+`--seg-grad-q3-project` (trainer:1426 `apply_seg_grad_q3_project`, projector parity vs sq1
+P 1.29e-8, DSL Lever refusing inert-off). The COMMIT_INTENT.patch is a STALE artifact of the
+arm's sandbox view (its final message predates MAIN's commit); its failure to `git apply` is
+because it is ALREADY APPLIED plus later drift (wp1 098b98e11c). Cause: MAIN grepped wrong
+flag patterns + trusted the arm's final message over `git log` — the m75 check-refs law,
+caught in round 9. NO pg2 arm needed; the Q3-constrained jd8 window is composable NOW.
+
+## ROUND 9 REVIEW (MAIN, the OFF-boundary re-verification — counter honest-reset)
+
+Verified: (1) single-variable argv diff ON−OFF = exactly `--jd1-lr-anneal derived_tail` +
+out-dir; (2) identical resume checkpoint; (3) **identical trainer bytes** — last trainer
+commit c478dd1712 22:54 CDT 08-05, ON launch 23:17, OFF launch 01:46 (both after); (4) OFF
+first-launch argparse failure left no training state (fresh exec, checkpoints from the second
+process only); (5) adjudication arithmetic re-derived from raw receipt fields (ON EMA S
+0.936537, OFF 0.823407, ep1766 0.814914 — matches); (6) matched epochs by construction.
+ONE FINDING: MAIN's false pg1 blocker in the routing paragraph (above, corrected in-round).
+Counter: the la1/jd7 MEASUREMENT chain is finding-free across rounds 8-9; the boundary-routing
+doc took 1 finding → corrected → counter 0/3 on the routing surface per the reset rule.
