@@ -135,3 +135,50 @@ LR-driven.
   - JD1 DSL tests: `12 reviewed`
 
 No score claim. No scorer slot consumed. No live jd6 modification.
+
+## ON-arm endpoint adjudication (MAIN, 2026-08-06 — receipt jd7on_endpoint_n600_both_bases.json)
+
+ON window ep1766→1886 (`--jd1-lr-anneal derived_tail`) completed rc=0 (7,125 s); n600 probe
+rc=0 (1,361 s). Anneal telemetry confirmed the derivation live at real window scale: LR flat
+0.002 through ~ep1830, then tail-anneal to 6.76e-4 (final_frac 0.4235143475126433, source
+derived_sd_over_sd_plus_half_range — the smoke's immediate-onset was the 6-ep-window artifact,
+as predicted).
+
+Endpoint vs ep1766 baseline (same-basis deltas):
+
+| basis | d_seg (Δ) | d_pose (Δ) |
+|---|---|---|
+| EMA (ships) | 0.004802653 (−0.000169279) | 0.020818391 (**+0.010723722 WORSE**) |
+| live | 0.004846124 (−0.000577121) | 0.028631812 (**−0.185617092 BETTER**) |
+
+- **Mechanism prediction CONFIRMED**: live/EMA d_pose divergence closed 21.2× → 1.38×
+  (live 0.214249 → 0.028632). Terminal LR oscillation IS the cause of the divergence.
+- **Shipping basis DEGRADED**: EMA window ΔS = pose_term +0.138551 + seg −0.016928 =
+  **+0.121623 net WORSE**. The ep1766 EMA (0.010095) was an average over an oscillating live
+  trajectory; the window's flat-LR first half dragged the EMA up before the anneal engaged.
+- **Pre-registered falsifier: HALF-FIRED** ("EMA no better" TRUE · "live divergence unchanged"
+  FALSE). Full adjudication requires the OFF arm (control, same ep1766 ckpt, fired 2026-08-06,
+  out-dir tr1_jd4_cont_ep1766_la1off).
+- Case-A strict bar (d_pose ≤ 0.00144 on ema): NOT met (14.5× above — REGRESSED from 7.0×).
+
+### Instrument finding — gate36 pose calibration is STATE-DEPENDENT (m96 sign)
+
+Trainer a1_gate (36-pair, #970 channel) read EMA d_pose ≈ 0.00218 at ep1885 while the n600
+probe measures 0.020818 — a **9.5× subset-easy bias**, vs the banked 1.002–1.146 calibration
+series from jd4/jd5/jd6. Mechanism: pose error is tail-concentrated (m96 — the hard pose
+pairs are excluded from the 36-pair gate subset); as the bulk error collapses, the gate
+under-reads the surviving tail. Validates the #970 design decision (gate = advisory-trend
+only, n600 probe = authority). DO NOT project n600 pose from gate36 at low-error states.
+
+### Adjudication table at the OFF endpoint (pre-registered now)
+
+- If OFF EMA d_pose also worsens (≳0.02): anneal is not the cause of EMA degradation →
+  compare EMA endpoints directly; lever verdict by the better shipping-basis endpoint.
+- If OFF EMA d_pose continues the jd6 trend (−0.026/window → ~0.004–0.005): the anneal HURT
+  the shipping basis mid-campaign → lever stays **OFF mid-campaign**; RE-SCOPE derived_tail
+  as a TERMINAL-ONLY move (candidate use: stabilize live weights before E2 train→solve
+  handoff / terminal GN solves, where a converged live state is the input — the EMA shadow
+  is what ships, so mid-campaign live-convergence buys nothing by itself).
+
+Error-atlas NPZs (ema+live, packbits, per-basis) + manifest landed next to the probe receipt
+→ wp1 rows 3/9/13 unlocked as $0 reads.
