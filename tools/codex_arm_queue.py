@@ -737,7 +737,63 @@ def cmd_status(args) -> int:
     return 0
 
 
+_BUILD_CHARTER_TOKENS = ("build", "race", "train", "implement", "measure", "solve", "compose")
+
+
+def lint_charter_optimal_form(prompt_path: str) -> list[str]:
+    """Charter-time toy guard (operator 2026-08-06 'naive first pass' correction).
+
+    Naive/toy implementations are born at CHARTER time — every downstream audit
+    (ty1 citation guards, vo2 form-grade gate, Catalog #307) fires only after a
+    toy has produced a verdict. This lint fires at the birth point: a charter
+    that builds/races a mechanism must either carry an '## OPTIMAL FORM' block
+    (family reference cited + scope-vs-mechanism delta + provenance pins) or an
+    explicit 'OPTIMAL_FORM_NA:<rationale>' waiver (audits/convocations/pure
+    analysis). MVP-first reduces SCOPE (n, epochs), never MECHANISM fidelity.
+    Warn-only by default; TAC_CHARTER_LINT_STRICT=1 refuses (legacy respawn
+    charters predate the law, so strict is opt-in until conformance sweep).
+    """
+    problems: list[str] = []
+    try:
+        text = Path(prompt_path).read_text(encoding="utf-8", errors="replace")
+    except OSError as exc:
+        return [f"charter unreadable ({exc})"]
+    low = text.lower()
+    has_block = "## optimal form" in low
+    waiver = "optimal_form_na:" in low
+    if waiver:
+        rationale = low.split("optimal_form_na:", 1)[1].splitlines()[0].strip()
+        if len(rationale) < 8 or rationale.startswith("<"):
+            problems.append("OPTIMAL_FORM_NA waiver rationale is placeholder/too short")
+        return problems
+    is_build = any(t in low for t in _BUILD_CHARTER_TOKENS)
+    if not is_build:
+        return problems
+    if not has_block:
+        problems.append(
+            "build/race charter lacks '## OPTIMAL FORM' block "
+            "(family reference + scope-vs-mechanism delta + provenance pins) "
+            "and no OPTIMAL_FORM_NA:<rationale> waiver"
+        )
+        return problems
+    section = low.split("## optimal form", 1)[1]
+    section = section.split("\n## ", 1)[0]
+    if "reference" not in section and "receipt" not in section:
+        problems.append("OPTIMAL FORM block cites no family reference/receipt")
+    if not re.search(r"\b[0-9a-f]{7,40}\b", section):
+        problems.append("OPTIMAL FORM block carries no sha/commit provenance pin")
+    return problems
+
+
 def cmd_add(args) -> int:
+    problems = lint_charter_optimal_form(args.prompt)
+    if problems:
+        strict = os.environ.get("TAC_CHARTER_LINT_STRICT") == "1"
+        tag = "REFUSED" if strict else "WARN"
+        for p in problems:
+            print(f"charter-lint {tag} [{args.name}]: {p}")
+        if strict:
+            return 3
     append_row(
         {
             "name": args.name,
