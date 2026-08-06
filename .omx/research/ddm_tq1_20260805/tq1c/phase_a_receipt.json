@@ -1,0 +1,278 @@
+{
+ "axis": "[macOS-CPU frozen-scorer advisory]",
+ "base_archive": {
+  "bulk_bytes": 341296,
+  "bulk_sha256": "60c6f25eb8397e641ee9f90d15068e91edc332d90e365f2f1e665803e307bcf8",
+  "bytes": 357837,
+  "expected_sha256": "75df9cc341d8188b47fe38337d2ec996600c245112a008c3f333957a6522db59",
+  "path": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/tq1c_base/archive.zip",
+  "restaged_archive_bytes": 357837,
+  "restaged_archive_sha256": "75df9cc341d8188b47fe38337d2ec996600c245112a008c3f333957a6522db59",
+  "restaged_matches_live": true,
+  "section_bytes": [
+   36,
+   3266,
+   535,
+   8751,
+   4081
+  ],
+  "section_sha256": [
+   "fc4f23ac9e31ba266ace26131319eb5b574d69e1d505fb1fc20a9dbc79a240d6",
+   "3b8eb0c24f9e6d8b547a23a5db29a1dbbd03db474fbba3638b0c3dd858ca7009",
+   "8fc5c3fc65eb051b65ebf01d4b008e52d606097194c57884e739eae2ad8382e1",
+   "d1d073e55aacf991491365d13716fededb169854b78bb203c34c84ca880c25db",
+   "b5874d32324a46dc76cb1fc0beb7cda5fdaca2f59ebae6acbb08283206e8e7a2"
+  ],
+  "sha256": "75df9cc341d8188b47fe38337d2ec996600c245112a008c3f333957a6522db59",
+  "token_source": {
+   "equal_to_archive_tokens": true,
+   "exists": true,
+   "path": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/tq1c_base/tq1b_final_tokens.npy",
+   "sha256": "47ad10ec754a57a15fe56f5df26e1a17103a67ecaab32cd117cf6fccb1c88115"
+  },
+  "tokens_sha256": "4b80db7d456e4f0e72a0cd64dc290a8e2e1c58798d789a8d9f765391a522196f"
+ },
+ "baseline": {
+  "archive_bytes": 357837,
+  "archive_sha256": "75df9cc341d8188b47fe38337d2ec996600c245112a008c3f333957a6522db59",
+  "axis": "[macOS-CPU frozen-scorer advisory]",
+  "d_pose": 0.00071673674,
+  "d_seg": 0.004308641222,
+  "score": 0.7537933983374265,
+  "score_claim": false,
+  "source": ".omx/research/ddm_tq1_20260805/phase_b_realized_acceptance_receipt.json:final_current"
+ },
+ "build_sites": {
+  "candidate_menu": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/optimal_form_tq1c/tq1_phase_a_candidate_menu.jsonl",
+  "checkpoints": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/optimal_form_tq1c/checkpoints",
+  "driver": "experiments/ddm_tq1_optimal_token_edit.py",
+  "phase_b_queue_limit": 26,
+  "price_ledger": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/optimal_form_tq1c/tq1_phase_a_candidate_prices.jsonl",
+  "smoke_archives": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/optimal_form_tq1c/smoke_candidates",
+  "ssd_root": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/optimal_form_tq1c"
+ },
+ "candidate_menu": {
+  "accepted_count": 0,
+  "accepted_status": "NOT_RUN_PHASE_A_SCORER_LIGHT",
+  "generated": 1133,
+  "menu_ledger": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/optimal_form_tq1c/tq1_phase_a_candidate_menu.jsonl",
+  "price_ledger": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/optimal_form_tq1c/tq1_phase_a_candidate_prices.jsonl",
+  "priced": 26,
+  "top_candidate_ids": [
+   "snap_r00_c01_L12",
+   "snap_r00_c02_L12",
+   "snap_r00_c12_L12",
+   "snap_r00_c14_L12",
+   "snap_r00_c16_L12",
+   "snap_r00_c18_L12",
+   "snap_r00_c23_L12",
+   "snap_r00_c25_L12",
+   "snap_r00_c26_L12",
+   "snap_r00_c27_L12"
+  ]
+ },
+ "field_hashes": [
+  {
+   "name": "cell_error",
+   "sha256_of_float64": "c158a8cdc52262689894c38f0ae69eeefd18e52ba2f02b8bb88f9712662e138e"
+  },
+  {
+   "name": "cell_score_weighted_error",
+   "sha256_of_float64": "57ab7c394fe6bed3d9ce1efbc79ce68841d626403bfead9237ceb8eeb65f5781"
+  },
+  {
+   "name": "g4_cell_recurrence",
+   "sha256_of_float64": "c792eb0e6ab1a036a9ac6ad0f1b700b9f0a65a98b37a7d5088bce9936c0153cf"
+  },
+  {
+   "name": "sg1_cell_flip_mass",
+   "sha256_of_float64": "d41da4d45b80786bff40bbeeb7dfb15e569a2f83ee839094ab1bee184c016e9d"
+  },
+  {
+   "name": "activity",
+   "sha256_of_float64": "494904e2aa3b13d78b8f9a8be28bdf15f9abc360158a079459237ffb4ec551a7"
+  },
+  {
+   "name": "pose_tube_proxy",
+   "sha256_of_float64": "85648608bd981d9372fc61bef132631828a855594637d74bb01e69f2b6faa64a"
+  },
+  {
+   "name": "seg_guard",
+   "sha256_of_float64": "2f249427bf324c94bda7cb00ff4d15f809dc6fe234c3ed774e1c4d1e0cbc691e"
+  },
+  {
+   "name": "pose_guard",
+   "sha256_of_float64": "ed7a564937057d05f8e72b511aff7ac4239978776f35e7338d07034278ae9b5c"
+  },
+  {
+   "name": "joint_guard",
+   "sha256_of_float64": "af793906ad74df46e2813477b7a613cba0858b464cb627ffe1f00c05ef1ce495"
+  }
+ ],
+ "followon_status": "QUEUED-WITH-FIRE-ORDER",
+ "harness_reuse_evidence": [
+  "Reuses TD1 _instrument_fields for gt/cx1 argmax, g3 score atlas, g4 recurrence, sg1 flip mass custody.",
+  "Reuses live IX2 parse/decode/encode/build_payload/build_single_member_zip receiver/archive path.",
+  "Uses #869 cell-drop waterfill invariant: per-candidate bytes are repriced from the current token object, not inferred from singleton tables.",
+  "Phase B fire order binds to v19/v19b realized move-level acceptance before any family closure."
+ ],
+ "instrument_sources": {
+  "cx1_argmax": {
+   "path": "/Volumes/VertigoDataTier/pact/ddm_pu2_20260803/argmax_cache/cx1_argmax_n600.npy",
+   "sha256": "5e903de650e60ec6a64b34eb455fa1bc911223551d0b31e9ae45cc906e1490be",
+   "shape": [
+    600,
+    384,
+    512
+   ]
+  },
+  "formula": {
+   "authority": "DERIVED instrument ledger only; scorer forward pass not run by td1",
+   "joint_guard": "0.72*seg_guard+0.28*pose_guard",
+   "pose_guard": "0.70*norm(g3_pose_weighted_token_mode_residual)+0.30*norm(token_mode_activity)",
+   "seg_guard": "0.45*norm(g3_score_weighted_argmax_errors)+0.25*norm(cx1_argmax_errors)+0.20*norm(sg1_cell_flip_mass)+0.10*norm(g4_flip_recurrence)"
+  },
+  "g3_jsonl": {
+   "path": "/Volumes/VertigoDataTier/pact/ddm_g3_score_atlas_n600_20260722T204000Z/ddm_g3_score_atlas_n600.jsonl",
+   "rows": 600,
+   "sha256": "faaff7299d86aa49c97e25e9cce2eeb0201f64e919f110015d31708788bcec09"
+  },
+  "g4_recurrence": {
+   "path": "/Volumes/VertigoDataTier/pact/ddm_g4_spatial_stationarity_n600_20260722T212138Z/stage_checkpoints/01_recurrence_arrays.npz",
+   "sha256": "dbc85e7a4f593ab9b7a7f4ed017dbb63a064cb681df806d0bb93277ae8f42451"
+  },
+  "gt_argmax": {
+   "path": "/Volumes/VertigoDataTier/pact/ddm_pu2_20260803/argmax_cache/gt_argmax_n600.npy",
+   "sha256": "b74a14b226a5aceb5824899898bcb06e5413c54b7db2441268da7bc91a10db5d",
+   "shape": [
+    600,
+    384,
+    512
+   ]
+  },
+  "sg1_cell_flip_mass": {
+   "path": "/Volumes/VertigoDataTier/pact/ddm_sg1_20260731/cell_flip_mass.npy",
+   "sha256": "31586a87e2f82662602fda554f5a6bf286dceeea5ec9b4a062929f67f58d184d",
+   "shape": [
+    24,
+    32
+   ]
+  }
+ },
+ "jd5_gate": {
+  "checked": [
+   {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_jd4_20260805/jd5_endpoint_n600_both_bases.json",
+    "sha256": "4ff9f7b596ce6308817847c524d1c612d66cb65eb4793ffef844e2c865ea034d",
+    "status": "complete"
+   }
+  ],
+  "complete_endpoint": {
+   "path": "/Volumes/VertigoDataTier/pact/ddm_jd4_20260805/jd5_endpoint_n600_both_bases.json",
+   "sha256": "4ff9f7b596ce6308817847c524d1c612d66cb65eb4793ffef844e2c865ea034d",
+   "status": "complete"
+  },
+  "ready": true
+ },
+ "not_measured": {
+  "family_closure": "not claimed; zero accepted moves can close only after full derived menu is scorer-realized",
+  "subset_or_n600_scorer": "not run by Phase A; jd5 endpoint receipt with status=complete was present"
+ },
+ "phase": "A_BUILD_SCORER_LIGHT",
+ "phase_b_status": "GATED_OPEN_NOT_FIRED_BY_PHASE_A",
+ "phase_b_wall_budget_derivation": {
+  "axis": "[macOS-CPU frozen-scorer advisory]",
+  "budgeted_realized_moves": 26,
+  "measured_realized_seconds_per_move": 411.8453793525696,
+  "measured_realized_seconds_per_move_source": ".omx/research/ddm_tq1_20260805/phase_b_realized_acceptance_receipt.json seconds/12",
+  "phase_a_seconds": 30.957348823547363,
+  "phase_a_seconds_per_priced_row": 1.1906672624441295,
+  "priced_rows": 26,
+  "queued_for_phase_b": 26,
+  "schema": "ddm_tq1_phase_b_wall_budget_derivation.v1",
+  "score_claim": false,
+  "wall_budget_minutes": 180.0,
+  "wall_budget_seconds": 10800.0
+ },
+ "promotion_eligible": false,
+ "recall_evidence": {
+  "found_beyond_charter": [
+   {
+    "finding": "prior tq1 scorer leg was stale blanket-map negative, not a closure of optimal-form token edits",
+    "source": ".omx/research/ddm_tq1_preempted_by_rt1_and_sl2_composition_20260805.md"
+   },
+   {
+    "finding": "live token field is IX2TOK01 and token-byte wins must beat same-coder match-structure, not semantic ordering claims",
+    "source": ".omx/research/ddm_sv2_smevr_base_rule_race_20260803.md"
+   },
+   {
+    "finding": "IX2/Brotli-Q11 token baseline and entropy surrogate calibration are scorer-free triage only",
+    "source": ".omx/research/ddm_en1_20260805/EN1_RECEIPT.md"
+   },
+   {
+    "finding": "control-head ordering worsened IX2 token bytes, blocking orderer shortcuts",
+    "source": ".omx/research/ddm_xo1_20260805/XO1_RECEIPT.md"
+   },
+   {
+    "finding": "tq1c is the named consumer for accepted-rate vs rank yield-curve evidence",
+    "source": ".omx/research/ddm_lm1_20260805/RECEIPT.md"
+   },
+   {
+    "finding": "score arithmetic, frontier-pointer, and correction-stream label-cost rows require recomputing S from components and forbid promoting advisory/in-place token-edit rows as contest claims",
+    "source": "canonical equations registry"
+   }
+  ],
+  "memory_registry_hits": "no direct ddm_tq1-specific MEMORY.md hit found in searched scope",
+  "plan_changes": [
+   "Rebased on 75df9cc3 and regenerated priority order instead of replaying qo1 top rows.",
+   "Priced and realized same-coder IX2 archive bytes only; no entropy surrogate or orderer shortcut was used.",
+   "Kept score_claim=false and [macOS-CPU frozen-scorer advisory] axis; no contest-CPU projection.",
+   "Labeled saturation as accepted prefix only with resume at new-base menu index 27."
+  ],
+  "schema": "ddm_tq1c_recall_evidence.v1",
+  "sources_searched": [
+   {
+    "query": "tq1|token-edit|token edit|snap_sublattice|snap_r|IX2|#969|SATURATED_ACCEPTED_PREFIX",
+    "scope": ".omx/research/CANONICAL_RESEARCH_INDEX* .omx/research/sub015_DAG_* .omx/research/*.md .omx/research/*/*.md"
+   },
+   {
+    "query": "tq1|token-edit|token edit|snap_sublattice|snap_r|IX2|#969|SATURATED_ACCEPTED_PREFIX",
+    "scope": ".omx/tmp/codex_runs .omx/state docs reports experiments tools src/tac"
+   },
+   {
+    "query": "token|TQ1|IX2|waterfill|acceptance|score|archive|receiver|pose|seg",
+    "scope": "canonical equations registry"
+   },
+   {
+    "query": "ddm_tq1|token waterfill|IX2|snap_sublattice|SATURATED_ACCEPTED_PREFIX|#969",
+    "scope": "/Users/adpena/.codex/memories/MEMORY.md"
+   }
+  ]
+ },
+ "run_label": "ddm_tq1c",
+ "rung_summary": {
+  "cells": 768,
+  "dominated_global_baseline_recorded_only": [
+   16,
+   12,
+   8,
+   4
+  ],
+  "global_16_12_8_4_used_as_generator": false,
+  "rung_use_counts": {
+   "12": 423,
+   "13": 423,
+   "14": 611,
+   "15": 700
+  },
+  "unique_per_cell_menus": {
+   "15": 89,
+   "15,14": 188,
+   "15,14,13,12": 423,
+   "preserve": 68
+  }
+ },
+ "schema": "ddm_tq1_phase_a_receipt.v1",
+ "score_claim": false,
+ "seconds": 30.957348823547363
+}

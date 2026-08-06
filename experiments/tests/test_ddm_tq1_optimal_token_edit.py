@@ -96,6 +96,32 @@ def test_score_from_components_rejects_silent_formula_drift() -> None:
     assert got == pytest.approx(25.0)
 
 
+def test_explicit_base_archive_and_baseline_are_threaded() -> None:
+    args = tq1.parse_args(
+        [
+            "--base-archive",
+            "/x/archive.zip",
+            "--base-archive-sha256",
+            "a" * 64,
+            "--baseline-d-seg",
+            "0.001",
+            "--baseline-d-pose",
+            "0.0004",
+            "--baseline-archive-bytes",
+            "123",
+            "--full-menu-size",
+            "1133",
+        ]
+    )
+
+    assert tq1.base_archive_path(args) == Path("/x/archive.zip")
+    assert args.full_menu_size == 1133
+    baseline = tq1.baseline_for_args(args)
+    assert baseline["archive_sha256"] == "a" * 64
+    assert baseline["archive_bytes"] == 123
+    assert baseline["score"] == pytest.approx(tq1.score_from_components(0.001, 0.0004, 123))
+
+
 def test_candidate_from_row_validates_phase_a_price_schema() -> None:
     row = {
         "schema": "ddm_tq1_phase_a_candidate_price.v1",

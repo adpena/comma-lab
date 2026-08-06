@@ -1,0 +1,4153 @@
+{
+ "accepted": 6,
+ "accepted_move_ids": [
+  "snap_r00_c23_L12",
+  "snap_r00_c25_L12",
+  "snap_r00_c26_L12",
+  "snap_r00_c28_L12",
+  "snap_r00_c30_L12",
+  "snap_r00_c12_L13"
+ ],
+ "accepted_move_ledger": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/tq1_phase_b_accepted_move_ledger.jsonl",
+ "accepted_move_ledger_sha256": "a992f0112d5e7e02d3a773cf3daa0bd6e1c726c26325168b77a8770186497216",
+ "axis": "[macOS-CPU frozen-scorer advisory]",
+ "base_archive": {
+  "bulk_bytes": 341296,
+  "bulk_sha256": "60c6f25eb8397e641ee9f90d15068e91edc332d90e365f2f1e665803e307bcf8",
+  "bytes": 357837,
+  "expected_sha256": "75df9cc341d8188b47fe38337d2ec996600c245112a008c3f333957a6522db59",
+  "path": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/tq1c_base/archive.zip",
+  "restaged_archive_bytes": 357837,
+  "restaged_archive_sha256": "75df9cc341d8188b47fe38337d2ec996600c245112a008c3f333957a6522db59",
+  "restaged_matches_live": true,
+  "section_bytes": [
+   36,
+   3266,
+   535,
+   8751,
+   4081
+  ],
+  "section_sha256": [
+   "fc4f23ac9e31ba266ace26131319eb5b574d69e1d505fb1fc20a9dbc79a240d6",
+   "3b8eb0c24f9e6d8b547a23a5db29a1dbbd03db474fbba3638b0c3dd858ca7009",
+   "8fc5c3fc65eb051b65ebf01d4b008e52d606097194c57884e739eae2ad8382e1",
+   "d1d073e55aacf991491365d13716fededb169854b78bb203c34c84ca880c25db",
+   "b5874d32324a46dc76cb1fc0beb7cda5fdaca2f59ebae6acbb08283206e8e7a2"
+  ],
+  "sha256": "75df9cc341d8188b47fe38337d2ec996600c245112a008c3f333957a6522db59",
+  "token_source": {
+   "equal_to_archive_tokens": true,
+   "exists": true,
+   "path": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/tq1c_base/tq1b_final_tokens.npy",
+   "sha256": "47ad10ec754a57a15fe56f5df26e1a17103a67ecaab32cd117cf6fccb1c88115"
+  },
+  "tokens_sha256": "4b80db7d456e4f0e72a0cd64dc290a8e2e1c58798d789a8d9f765391a522196f"
+ },
+ "decision_rows": [
+  {
+   "accepted": false,
+   "accepted_move_ids_after": [],
+   "accepted_move_ids_before": [],
+   "axis": "[macOS-CPU frozen-scorer advisory]",
+   "candidate": {
+    "activity": 0.0,
+    "affected_pair_count": 600,
+    "affected_pair_preview": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8,
+     9,
+     10,
+     11,
+     12,
+     13,
+     14,
+     15
+    ],
+    "candidate_id": "snap_r00_c01_L12",
+    "col": 1,
+    "direction": "snap_sublattice",
+    "joint_guard": 0.0,
+    "pose_guard": 0.0,
+    "priority": 1.307920372723422,
+    "row": 0,
+    "rung": 12,
+    "seg_guard": 0.0
+   },
+   "candidate_id": "snap_r00_c01_L12",
+   "checkpoint_root": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/stage_checkpoints",
+   "current_before": {
+    "archive_bytes": 357837,
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "d_pose": 0.00071673674,
+    "d_seg": 0.004308641222,
+    "score": 0.7537933983374265,
+    "score_claim": false
+   },
+   "move_index": 1,
+   "phase_a_singleton": {
+    "archive_bytes": 357837,
+    "archive_sha256": "bc5261d8f4e47dfc58ddd7eba4d4e271b8eb39ccb17ae50890c803a2f7db678b",
+    "candidate_tokens_sha256": "c8ffcaf5d0549b79cb140185c403cd3e9a5ed5e0a731ef3e96a2865618c18800",
+    "token_frame_sha256": "ac71a18706cb662a105ec67ec95732793b0cdc792aa6c16c1496899328f34f81"
+   },
+   "schema": "ddm_tq1_phase_b_realized_move.v1",
+   "score_claim": false,
+   "trial": {
+    "advisory_score_formula_value": "0.753892729364",
+    "all_batches_checkpointed_and_preserved": true,
+    "archive_bytes": 357837,
+    "archive_path": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/candidate_archives/move_0001_snap_r00_c01_L12.zip.receipt-bytes",
+    "archive_sha256": "bc5261d8f4e47dfc58ddd7eba4d4e271b8eb39ccb17ae50890c803a2f7db678b",
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "batch_count": 38,
+    "batch_digest_chain_sha256": "78b4a13442f161106aaab072a69bc4a528ec17c9abd55a2097525ef30a6b0b6f",
+    "batch_size": 16,
+    "candidate": "move_0001_snap_r00_c01_L12",
+    "d_pose": "0.000717414035",
+    "d_seg": "0.004309234619",
+    "errors": 508338,
+    "per_stratum": {
+     "Lane": {
+      "d_seg": "0.268881427200",
+      "errors": 185700,
+      "sites": 690639
+     },
+     "Movable": {
+      "d_seg": "0.053992090802",
+      "errors": 78846,
+      "sites": 1460325
+     },
+     "MyCar": {
+      "d_seg": "0.000538949944",
+      "errors": 16165,
+      "sites": 29993509
+     },
+     "Road": {
+      "d_seg": "0.005577726253",
+      "errors": 152869,
+      "sites": 27407046
+     },
+     "Undrivable": {
+      "d_seg": "0.001279811692",
+      "errors": 74758,
+      "sites": 58413281
+     }
+    },
+    "pose_coordinates": 3600,
+    "pose_squared_error_sum": "2.582690527034",
+    "receiver_custody": {
+     "archive_dir": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/extracted_archives/move_0001_snap_r00_c01_L12",
+     "archive_sha256": "bc5261d8f4e47dfc58ddd7eba4d4e271b8eb39ccb17ae50890c803a2f7db678b",
+     "axis": "[macOS-CPU frozen-scorer advisory]",
+     "decoder_class": "ddm_tq1_qo1_inflate_runner_dcd4406aaa83.Decoder",
+     "receiver_output": "uint8 [B,2,874,1164,3] camera pairs",
+     "schema": "ddm_tq1_ix2_receiver_adapter.v1",
+     "score_claim": false
+    },
+    "schema": "ddm_tq1_phase_b_n600_aggregate.v1",
+    "score_claim": false,
+    "scorer_custody": {
+     "batch_size": 16,
+     "deterministic_algorithms": true,
+     "device": "cpu",
+     "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+     "modules_path": "/Users/adpena/Projects/pact/upstream/modules.py",
+     "modules_sha256": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa",
+     "posenet_weights_path": "/Users/adpena/Projects/pact/upstream/models/posenet.safetensors",
+     "posenet_weights_sha256": "0f3a0874c5c387f990d7b88bd1d7e1f6de35d98b45f2a289989db2c77b9b6576",
+     "score_claim": false,
+     "segnet_weights_path": "/Users/adpena/Projects/pact/upstream/models/segnet.safetensors",
+     "segnet_weights_sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6"
+    },
+    "sites": 117964800,
+    "typed_config_sha256": "c3ec612b57b6bd4fa47794cd73a9f1609d04594bff18f232252afa7c218f0e8b"
+   },
+   "typed_config_sha256": "c3ec612b57b6bd4fa47794cd73a9f1609d04594bff18f232252afa7c218f0e8b",
+   "verdict": {
+    "accepted": false,
+    "authority": "requires real receiver -> R -> uint8 -> frozen scorer components",
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "candidate_score": 0.7538927293333587,
+    "current_score": 0.7537933983374265,
+    "delta_S": 9.933099593217865e-05,
+    "delta_archive_bytes": 0,
+    "delta_d_pose": 6.772949999999398e-07,
+    "delta_d_seg": 5.933969999998359e-07,
+    "pose_term_erosion": 3.999129593226791e-05,
+    "pose_term_erosion_limit": 0.005,
+    "schema": "ddm_tq1_realized_acceptance_verdict.v1",
+    "score_claim": false
+   }
+  },
+  {
+   "accepted": false,
+   "accepted_move_ids_after": [],
+   "accepted_move_ids_before": [],
+   "axis": "[macOS-CPU frozen-scorer advisory]",
+   "candidate": {
+    "activity": 0.0,
+    "affected_pair_count": 600,
+    "affected_pair_preview": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8,
+     9,
+     10,
+     11,
+     12,
+     13,
+     14,
+     15
+    ],
+    "candidate_id": "snap_r00_c02_L12",
+    "col": 2,
+    "direction": "snap_sublattice",
+    "joint_guard": 0.0,
+    "pose_guard": 0.0,
+    "priority": 1.2837670384138786,
+    "row": 0,
+    "rung": 12,
+    "seg_guard": 0.0
+   },
+   "candidate_id": "snap_r00_c02_L12",
+   "checkpoint_root": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/stage_checkpoints",
+   "current_before": {
+    "archive_bytes": 357837,
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "d_pose": 0.00071673674,
+    "d_seg": 0.004308641222,
+    "score": 0.7537933983374265,
+    "score_claim": false
+   },
+   "move_index": 2,
+   "phase_a_singleton": {
+    "archive_bytes": 357837,
+    "archive_sha256": "b4a6e259b5eed87b12429ce086b52f29f18eda9d206dca9707efb95e542b723e",
+    "candidate_tokens_sha256": "4644c0908739432cb604bb955e6fde3e72350503eb2af68d4e10f919d99484c7",
+    "token_frame_sha256": "ac23c65ff8674afe06cb45829e008ae616b0034b0c2377175c469adfd1da2aab"
+   },
+   "schema": "ddm_tq1_phase_b_realized_move.v1",
+   "score_claim": false,
+   "trial": {
+    "advisory_score_formula_value": "0.753820616963",
+    "all_batches_checkpointed_and_preserved": true,
+    "archive_bytes": 357837,
+    "archive_path": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/candidate_archives/move_0002_snap_r00_c02_L12.zip.receipt-bytes",
+    "archive_sha256": "b4a6e259b5eed87b12429ce086b52f29f18eda9d206dca9707efb95e542b723e",
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "batch_count": 38,
+    "batch_digest_chain_sha256": "2faa2264b8b83a44d722ddfcce9b3bab03a38e950a9a5c838931910903d3186b",
+    "batch_size": 16,
+    "candidate": "move_0002_snap_r00_c02_L12",
+    "d_pose": "0.000716967971",
+    "d_seg": "0.004308776855",
+    "errors": 508284,
+    "per_stratum": {
+     "Lane": {
+      "d_seg": "0.268906042086",
+      "errors": 185717,
+      "sites": 690639
+     },
+     "Movable": {
+      "d_seg": "0.054003047267",
+      "errors": 78862,
+      "sites": 1460325
+     },
+     "MyCar": {
+      "d_seg": "0.000539450052",
+      "errors": 16180,
+      "sites": 29993509
+     },
+     "Road": {
+      "d_seg": "0.005572253208",
+      "errors": 152719,
+      "sites": 27407046
+     },
+     "Undrivable": {
+      "d_seg": "0.001280633423",
+      "errors": 74806,
+      "sites": 58413281
+     }
+    },
+    "pose_coordinates": 3600,
+    "pose_squared_error_sum": "2.581084694409",
+    "receiver_custody": {
+     "archive_dir": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/extracted_archives/move_0002_snap_r00_c02_L12",
+     "archive_sha256": "b4a6e259b5eed87b12429ce086b52f29f18eda9d206dca9707efb95e542b723e",
+     "axis": "[macOS-CPU frozen-scorer advisory]",
+     "decoder_class": "ddm_tq1_qo1_inflate_runner_dcd4406aaa83.Decoder",
+     "receiver_output": "uint8 [B,2,874,1164,3] camera pairs",
+     "schema": "ddm_tq1_ix2_receiver_adapter.v1",
+     "score_claim": false
+    },
+    "schema": "ddm_tq1_phase_b_n600_aggregate.v1",
+    "score_claim": false,
+    "scorer_custody": {
+     "batch_size": 16,
+     "deterministic_algorithms": true,
+     "device": "cpu",
+     "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+     "modules_path": "/Users/adpena/Projects/pact/upstream/modules.py",
+     "modules_sha256": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa",
+     "posenet_weights_path": "/Users/adpena/Projects/pact/upstream/models/posenet.safetensors",
+     "posenet_weights_sha256": "0f3a0874c5c387f990d7b88bd1d7e1f6de35d98b45f2a289989db2c77b9b6576",
+     "score_claim": false,
+     "segnet_weights_path": "/Users/adpena/Projects/pact/upstream/models/segnet.safetensors",
+     "segnet_weights_sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6"
+    },
+    "sites": 117964800,
+    "typed_config_sha256": "c3ec612b57b6bd4fa47794cd73a9f1609d04594bff18f232252afa7c218f0e8b"
+   },
+   "typed_config_sha256": "c3ec612b57b6bd4fa47794cd73a9f1609d04594bff18f232252afa7c218f0e8b",
+   "verdict": {
+    "accepted": false,
+    "authority": "requires real receiver -> R -> uint8 -> frozen scorer components",
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "candidate_score": 0.7538206169361372,
+    "current_score": 0.7537933983374265,
+    "delta_S": 2.7218598710687658e-05,
+    "delta_archive_bytes": 0,
+    "delta_d_pose": 2.3123100000000361e-07,
+    "delta_d_seg": 1.3563299999970468e-07,
+    "pose_term_erosion": 1.3655298710793518e-05,
+    "pose_term_erosion_limit": 0.005,
+    "schema": "ddm_tq1_realized_acceptance_verdict.v1",
+    "score_claim": false
+   }
+  },
+  {
+   "accepted": false,
+   "accepted_move_ids_after": [],
+   "accepted_move_ids_before": [],
+   "axis": "[macOS-CPU frozen-scorer advisory]",
+   "candidate": {
+    "activity": 0.0,
+    "affected_pair_count": 600,
+    "affected_pair_preview": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8,
+     9,
+     10,
+     11,
+     12,
+     13,
+     14,
+     15
+    ],
+    "candidate_id": "snap_r00_c12_L12",
+    "col": 12,
+    "direction": "snap_sublattice",
+    "joint_guard": 0.0,
+    "pose_guard": 0.0,
+    "priority": 1.0950016550810988,
+    "row": 0,
+    "rung": 12,
+    "seg_guard": 0.0
+   },
+   "candidate_id": "snap_r00_c12_L12",
+   "checkpoint_root": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/stage_checkpoints",
+   "current_before": {
+    "archive_bytes": 357837,
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "d_pose": 0.00071673674,
+    "d_seg": 0.004308641222,
+    "score": 0.7537933983374265,
+    "score_claim": false
+   },
+   "move_index": 3,
+   "phase_a_singleton": {
+    "archive_bytes": 357837,
+    "archive_sha256": "6e50a63a3e87ff6c9eb08b17d40f7f947778d70cbddbcde1b83b4f8ee4f4109a",
+    "candidate_tokens_sha256": "d7fa9ef0859773af66e915bd04e90345c2068167eda4f04d5dedc0c4a9093d60",
+    "token_frame_sha256": "5aae7dfd51a26ceb70c764b9e988c93cc8941cb6e43a0fcb05b0afb486b62dfd"
+   },
+   "schema": "ddm_tq1_phase_b_realized_move.v1",
+   "score_claim": false,
+   "trial": {
+    "advisory_score_formula_value": "0.753931370065",
+    "all_batches_checkpointed_and_preserved": true,
+    "archive_bytes": 357837,
+    "archive_path": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/candidate_archives/move_0003_snap_r00_c12_L12.zip.receipt-bytes",
+    "archive_sha256": "6e50a63a3e87ff6c9eb08b17d40f7f947778d70cbddbcde1b83b4f8ee4f4109a",
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "batch_count": 38,
+    "batch_digest_chain_sha256": "f6811ee308214db3850c02c81bf056bf2b5633746eaeeab49b3b4204986fea24",
+    "batch_size": 16,
+    "candidate": "move_0003_snap_r00_c12_L12",
+    "d_pose": "0.000717393679",
+    "d_seg": "0.004309633043",
+    "errors": 508385,
+    "per_stratum": {
+     "Lane": {
+      "d_seg": "0.269032012383",
+      "errors": 185804,
+      "sites": 690639
+     },
+     "Movable": {
+      "d_seg": "0.054005101604",
+      "errors": 78865,
+      "sites": 1460325
+     },
+     "MyCar": {
+      "d_seg": "0.000538849922",
+      "errors": 16162,
+      "sites": 29993509
+     },
+     "Road": {
+      "d_seg": "0.005576522183",
+      "errors": 152836,
+      "sites": 27407046
+     },
+     "Undrivable": {
+      "d_seg": "0.001279126916",
+      "errors": 74718,
+      "sites": 58413281
+     }
+    },
+    "pose_coordinates": 3600,
+    "pose_squared_error_sum": "2.582617243221",
+    "receiver_custody": {
+     "archive_dir": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/extracted_archives/move_0003_snap_r00_c12_L12",
+     "archive_sha256": "6e50a63a3e87ff6c9eb08b17d40f7f947778d70cbddbcde1b83b4f8ee4f4109a",
+     "axis": "[macOS-CPU frozen-scorer advisory]",
+     "decoder_class": "ddm_tq1_qo1_inflate_runner_dcd4406aaa83.Decoder",
+     "receiver_output": "uint8 [B,2,874,1164,3] camera pairs",
+     "schema": "ddm_tq1_ix2_receiver_adapter.v1",
+     "score_claim": false
+    },
+    "schema": "ddm_tq1_phase_b_n600_aggregate.v1",
+    "score_claim": false,
+    "scorer_custody": {
+     "batch_size": 16,
+     "deterministic_algorithms": true,
+     "device": "cpu",
+     "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+     "modules_path": "/Users/adpena/Projects/pact/upstream/modules.py",
+     "modules_sha256": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa",
+     "posenet_weights_path": "/Users/adpena/Projects/pact/upstream/models/posenet.safetensors",
+     "posenet_weights_sha256": "0f3a0874c5c387f990d7b88bd1d7e1f6de35d98b45f2a289989db2c77b9b6576",
+     "score_claim": false,
+     "segnet_weights_path": "/Users/adpena/Projects/pact/upstream/models/segnet.safetensors",
+     "segnet_weights_sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6"
+    },
+    "sites": 117964800,
+    "typed_config_sha256": "c3ec612b57b6bd4fa47794cd73a9f1609d04594bff18f232252afa7c218f0e8b"
+   },
+   "typed_config_sha256": "c3ec612b57b6bd4fa47794cd73a9f1609d04594bff18f232252afa7c218f0e8b",
+   "verdict": {
+    "accepted": false,
+    "authority": "requires real receiver -> R -> uint8 -> frozen scorer components",
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "candidate_score": 0.7539313700761588,
+    "current_score": 0.7537933983374265,
+    "delta_S": 0.00013797173873231205,
+    "delta_archive_bytes": 0,
+    "delta_d_pose": 6.569389999999632e-07,
+    "delta_d_seg": 9.91820999999421e-07,
+    "pose_term_erosion": 3.878963873242547e-05,
+    "pose_term_erosion_limit": 0.005,
+    "schema": "ddm_tq1_realized_acceptance_verdict.v1",
+    "score_claim": false
+   }
+  },
+  {
+   "accepted": false,
+   "accepted_move_ids_after": [],
+   "accepted_move_ids_before": [],
+   "axis": "[macOS-CPU frozen-scorer advisory]",
+   "candidate": {
+    "activity": 0.0,
+    "affected_pair_count": 600,
+    "affected_pair_preview": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8,
+     9,
+     10,
+     11,
+     12,
+     13,
+     14,
+     15
+    ],
+    "candidate_id": "snap_r00_c14_L12",
+    "col": 14,
+    "direction": "snap_sublattice",
+    "joint_guard": 0.0,
+    "pose_guard": 0.0,
+    "priority": 1.0659025787965617,
+    "row": 0,
+    "rung": 12,
+    "seg_guard": 0.0
+   },
+   "candidate_id": "snap_r00_c14_L12",
+   "checkpoint_root": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/stage_checkpoints",
+   "current_before": {
+    "archive_bytes": 357837,
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "d_pose": 0.00071673674,
+    "d_seg": 0.004308641222,
+    "score": 0.7537933983374265,
+    "score_claim": false
+   },
+   "move_index": 4,
+   "phase_a_singleton": {
+    "archive_bytes": 357837,
+    "archive_sha256": "99c783e59a8d82cf656401e2cd3434935c198d3bfacd92e6d77754085c8ecba6",
+    "candidate_tokens_sha256": "d29c109285d8caeca0146d2a16ce57bc83e65a9f5c9fd409921ca857b0d15879",
+    "token_frame_sha256": "d5d9b525f067fa4abbb3a9955203792d9c1055a21b63780fadbd6ff7de8852fc"
+   },
+   "schema": "ddm_tq1_phase_b_realized_move.v1",
+   "score_claim": false,
+   "trial": {
+    "advisory_score_formula_value": "0.753919639595",
+    "all_batches_checkpointed_and_preserved": true,
+    "archive_bytes": 357837,
+    "archive_path": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/candidate_archives/move_0004_snap_r00_c14_L12.zip.receipt-bytes",
+    "archive_sha256": "99c783e59a8d82cf656401e2cd3434935c198d3bfacd92e6d77754085c8ecba6",
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "batch_count": 38,
+    "batch_digest_chain_sha256": "0c7e0e7161648397fa2f9d85b7ddef0909f5aa6157868d0a33edd5c2ab0f2442",
+    "batch_size": 16,
+    "candidate": "move_0004_snap_r00_c14_L12",
+    "d_pose": "0.000718487789",
+    "d_seg": "0.004308870104",
+    "errors": 508295,
+    "per_stratum": {
+     "Lane": {
+      "d_seg": "0.269034908252",
+      "errors": 185806,
+      "sites": 690639
+     },
+     "Movable": {
+      "d_seg": "0.054003732046",
+      "errors": 78863,
+      "sites": 1460325
+     },
+     "MyCar": {
+      "d_seg": "0.000540316907",
+      "errors": 16206,
+      "sites": 29993509
+     },
+     "Road": {
+      "d_seg": "0.005571268060",
+      "errors": 152692,
+      "sites": 27407046
+     },
+     "Undrivable": {
+      "d_seg": "0.001279298110",
+      "errors": 74728,
+      "sites": 58413281
+     }
+    },
+    "pose_coordinates": 3600,
+    "pose_squared_error_sum": "2.586556040848",
+    "receiver_custody": {
+     "archive_dir": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/extracted_archives/move_0004_snap_r00_c14_L12",
+     "archive_sha256": "99c783e59a8d82cf656401e2cd3434935c198d3bfacd92e6d77754085c8ecba6",
+     "axis": "[macOS-CPU frozen-scorer advisory]",
+     "decoder_class": "ddm_tq1_qo1_inflate_runner_dcd4406aaa83.Decoder",
+     "receiver_output": "uint8 [B,2,874,1164,3] camera pairs",
+     "schema": "ddm_tq1_ix2_receiver_adapter.v1",
+     "score_claim": false
+    },
+    "schema": "ddm_tq1_phase_b_n600_aggregate.v1",
+    "score_claim": false,
+    "scorer_custody": {
+     "batch_size": 16,
+     "deterministic_algorithms": true,
+     "device": "cpu",
+     "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+     "modules_path": "/Users/adpena/Projects/pact/upstream/modules.py",
+     "modules_sha256": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa",
+     "posenet_weights_path": "/Users/adpena/Projects/pact/upstream/models/posenet.safetensors",
+     "posenet_weights_sha256": "0f3a0874c5c387f990d7b88bd1d7e1f6de35d98b45f2a289989db2c77b9b6576",
+     "score_claim": false,
+     "segnet_weights_path": "/Users/adpena/Projects/pact/upstream/models/segnet.safetensors",
+     "segnet_weights_sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6"
+    },
+    "sites": 117964800,
+    "typed_config_sha256": "c3ec612b57b6bd4fa47794cd73a9f1609d04594bff18f232252afa7c218f0e8b"
+   },
+   "typed_config_sha256": "c3ec612b57b6bd4fa47794cd73a9f1609d04594bff18f232252afa7c218f0e8b",
+   "verdict": {
+    "accepted": false,
+    "authority": "requires real receiver -> R -> uint8 -> frozen scorer components",
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "candidate_score": 0.753919639625672,
+    "current_score": 0.7537933983374265,
+    "delta_S": 0.00012624128824545444,
+    "delta_archive_bytes": 0,
+    "delta_d_pose": 1.7510489999999438e-06,
+    "delta_d_seg": 2.2888199999963194e-07,
+    "pose_term_erosion": 0.00010335308824549472,
+    "pose_term_erosion_limit": 0.005,
+    "schema": "ddm_tq1_realized_acceptance_verdict.v1",
+    "score_claim": false
+   }
+  },
+  {
+   "accepted": false,
+   "accepted_move_ids_after": [],
+   "accepted_move_ids_before": [],
+   "axis": "[macOS-CPU frozen-scorer advisory]",
+   "candidate": {
+    "activity": 0.0,
+    "affected_pair_count": 600,
+    "affected_pair_preview": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8,
+     9,
+     10,
+     11,
+     12,
+     13,
+     14,
+     15
+    ],
+    "candidate_id": "snap_r00_c16_L12",
+    "col": 16,
+    "direction": "snap_sublattice",
+    "joint_guard": 0.0,
+    "pose_guard": 0.0,
+    "priority": 1.0389451088623123,
+    "row": 0,
+    "rung": 12,
+    "seg_guard": 0.0
+   },
+   "candidate_id": "snap_r00_c16_L12",
+   "checkpoint_root": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/stage_checkpoints",
+   "current_before": {
+    "archive_bytes": 357837,
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "d_pose": 0.00071673674,
+    "d_seg": 0.004308641222,
+    "score": 0.7537933983374265,
+    "score_claim": false
+   },
+   "move_index": 5,
+   "phase_a_singleton": {
+    "archive_bytes": 357837,
+    "archive_sha256": "42ed055b18a5aa2fe430662f0b151a441ad641e582edc4a44854eec9d92e37d6",
+    "candidate_tokens_sha256": "ff29d01bbb4d4a2f56aa58c393e34a80912d546f45eacb764a1e887d5c0586a3",
+    "token_frame_sha256": "f4d4803d3d5e211166241da9faacf6a23622ae74a713bdc4532d13dab7d4f6fd"
+   },
+   "schema": "ddm_tq1_phase_b_realized_move.v1",
+   "score_claim": false,
+   "trial": {
+    "advisory_score_formula_value": "0.753866921186",
+    "all_batches_checkpointed_and_preserved": true,
+    "archive_bytes": 357837,
+    "archive_path": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/candidate_archives/move_0005_snap_r00_c16_L12.zip.receipt-bytes",
+    "archive_sha256": "42ed055b18a5aa2fe430662f0b151a441ad641e582edc4a44854eec9d92e37d6",
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "batch_count": 38,
+    "batch_digest_chain_sha256": "a941af05afcef8d4860566a1ebeab00eef9aa350001136a0ac3ce9233379272a",
+    "batch_size": 16,
+    "candidate": "move_0005_snap_r00_c16_L12",
+    "d_pose": "0.000717579984",
+    "d_seg": "0.004308878581",
+    "errors": 508296,
+    "per_stratum": {
+     "Lane": {
+      "d_seg": "0.268962511529",
+      "errors": 185756,
+      "sites": 690639
+     },
+     "Movable": {
+      "d_seg": "0.054018112406",
+      "errors": 78884,
+      "sites": 1460325
+     },
+     "MyCar": {
+      "d_seg": "0.000539149987",
+      "errors": 16171,
+      "sites": 29993509
+     },
+     "Road": {
+      "d_seg": "0.005574807296",
+      "errors": 152789,
+      "sites": 27407046
+     },
+     "Undrivable": {
+      "d_seg": "0.001278750290",
+      "errors": 74696,
+      "sites": 58413281
+     }
+    },
+    "pose_coordinates": 3600,
+    "pose_squared_error_sum": "2.583287942352",
+    "receiver_custody": {
+     "archive_dir": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/extracted_archives/move_0005_snap_r00_c16_L12",
+     "archive_sha256": "42ed055b18a5aa2fe430662f0b151a441ad641e582edc4a44854eec9d92e37d6",
+     "axis": "[macOS-CPU frozen-scorer advisory]",
+     "decoder_class": "ddm_tq1_qo1_inflate_runner_dcd4406aaa83.Decoder",
+     "receiver_output": "uint8 [B,2,874,1164,3] camera pairs",
+     "schema": "ddm_tq1_ix2_receiver_adapter.v1",
+     "score_claim": false
+    },
+    "schema": "ddm_tq1_phase_b_n600_aggregate.v1",
+    "score_claim": false,
+    "scorer_custody": {
+     "batch_size": 16,
+     "deterministic_algorithms": true,
+     "device": "cpu",
+     "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+     "modules_path": "/Users/adpena/Projects/pact/upstream/modules.py",
+     "modules_sha256": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa",
+     "posenet_weights_path": "/Users/adpena/Projects/pact/upstream/models/posenet.safetensors",
+     "posenet_weights_sha256": "0f3a0874c5c387f990d7b88bd1d7e1f6de35d98b45f2a289989db2c77b9b6576",
+     "score_claim": false,
+     "segnet_weights_path": "/Users/adpena/Projects/pact/upstream/models/segnet.safetensors",
+     "segnet_weights_sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6"
+    },
+    "sites": 117964800,
+    "typed_config_sha256": "c3ec612b57b6bd4fa47794cd73a9f1609d04594bff18f232252afa7c218f0e8b"
+   },
+   "typed_config_sha256": "c3ec612b57b6bd4fa47794cd73a9f1609d04594bff18f232252afa7c218f0e8b",
+   "verdict": {
+    "accepted": false,
+    "authority": "requires real receiver -> R -> uint8 -> frozen scorer components",
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "candidate_score": 0.7538669212135335,
+    "current_score": 0.7537933983374265,
+    "delta_S": 7.352287610695729e-05,
+    "delta_archive_bytes": 0,
+    "delta_d_pose": 8.432439999999384e-07,
+    "delta_d_seg": 2.373590000000203e-07,
+    "pose_term_erosion": 4.9786976107052405e-05,
+    "pose_term_erosion_limit": 0.005,
+    "schema": "ddm_tq1_realized_acceptance_verdict.v1",
+    "score_claim": false
+   }
+  },
+  {
+   "accepted": false,
+   "accepted_move_ids_after": [],
+   "accepted_move_ids_before": [],
+   "axis": "[macOS-CPU frozen-scorer advisory]",
+   "candidate": {
+    "activity": 0.0,
+    "affected_pair_count": 600,
+    "affected_pair_preview": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8,
+     9,
+     10,
+     11,
+     12,
+     13,
+     14,
+     15
+    ],
+    "candidate_id": "snap_r00_c18_L12",
+    "col": 18,
+    "direction": "snap_sublattice",
+    "joint_guard": 0.0,
+    "pose_guard": 0.0,
+    "priority": 1.0139012126589766,
+    "row": 0,
+    "rung": 12,
+    "seg_guard": 0.0
+   },
+   "candidate_id": "snap_r00_c18_L12",
+   "checkpoint_root": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/stage_checkpoints",
+   "current_before": {
+    "archive_bytes": 357837,
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "d_pose": 0.00071673674,
+    "d_seg": 0.004308641222,
+    "score": 0.7537933983374265,
+    "score_claim": false
+   },
+   "move_index": 6,
+   "phase_a_singleton": {
+    "archive_bytes": 357837,
+    "archive_sha256": "0cb9cee5523b0dba48d1392c286039bf6f2556ebfdb9a6886e942966fea01127",
+    "candidate_tokens_sha256": "60d8fc046f0456bc400640b3e9761f03b863af9f5c6a7fbf7c19efbc3a824952",
+    "token_frame_sha256": "78120758ba91201412f8e88b8257308023427de38ebf6446c56b090ff676ba29"
+   },
+   "schema": "ddm_tq1_phase_b_realized_move.v1",
+   "score_claim": false,
+   "trial": {
+    "advisory_score_formula_value": "0.753828901630",
+    "all_batches_checkpointed_and_preserved": true,
+    "archive_bytes": 357837,
+    "archive_path": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/candidate_archives/move_0006_snap_r00_c18_L12.zip.receipt-bytes",
+    "archive_sha256": "0cb9cee5523b0dba48d1392c286039bf6f2556ebfdb9a6886e942966fea01127",
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "batch_count": 38,
+    "batch_digest_chain_sha256": "303a8ebdc82e0ce5cc635bd19cd94a950e3579ec93250be4ac2fe899bf17a7cb",
+    "batch_size": 16,
+    "candidate": "move_0006_snap_r00_c18_L12",
+    "d_pose": "0.000716878580",
+    "d_seg": "0.004308912489",
+    "errors": 508300,
+    "per_stratum": {
+     "Lane": {
+      "d_seg": "0.268933552840",
+      "errors": 185736,
+      "sites": 690639
+     },
+     "Movable": {
+      "d_seg": "0.054002362488",
+      "errors": 78861,
+      "sites": 1460325
+     },
+     "MyCar": {
+      "d_seg": "0.000538916604",
+      "errors": 16164,
+      "sites": 29993509
+     },
+     "Road": {
+      "d_seg": "0.005577945175",
+      "errors": 152875,
+      "sites": 27407046
+     },
+     "Undrivable": {
+      "d_seg": "0.001278202469",
+      "errors": 74664,
+      "sites": 58413281
+     }
+    },
+    "pose_coordinates": 3600,
+    "pose_squared_error_sum": "2.580762887065",
+    "receiver_custody": {
+     "archive_dir": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/extracted_archives/move_0006_snap_r00_c18_L12",
+     "archive_sha256": "0cb9cee5523b0dba48d1392c286039bf6f2556ebfdb9a6886e942966fea01127",
+     "axis": "[macOS-CPU frozen-scorer advisory]",
+     "decoder_class": "ddm_tq1_qo1_inflate_runner_dcd4406aaa83.Decoder",
+     "receiver_output": "uint8 [B,2,874,1164,3] camera pairs",
+     "schema": "ddm_tq1_ix2_receiver_adapter.v1",
+     "score_claim": false
+    },
+    "schema": "ddm_tq1_phase_b_n600_aggregate.v1",
+    "score_claim": false,
+    "scorer_custody": {
+     "batch_size": 16,
+     "deterministic_algorithms": true,
+     "device": "cpu",
+     "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+     "modules_path": "/Users/adpena/Projects/pact/upstream/modules.py",
+     "modules_sha256": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa",
+     "posenet_weights_path": "/Users/adpena/Projects/pact/upstream/models/posenet.safetensors",
+     "posenet_weights_sha256": "0f3a0874c5c387f990d7b88bd1d7e1f6de35d98b45f2a289989db2c77b9b6576",
+     "score_claim": false,
+     "segnet_weights_path": "/Users/adpena/Projects/pact/upstream/models/segnet.safetensors",
+     "segnet_weights_sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6"
+    },
+    "sites": 117964800,
+    "typed_config_sha256": "c3ec612b57b6bd4fa47794cd73a9f1609d04594bff18f232252afa7c218f0e8b"
+   },
+   "typed_config_sha256": "c3ec612b57b6bd4fa47794cd73a9f1609d04594bff18f232252afa7c218f0e8b",
+   "verdict": {
+    "accepted": false,
+    "authority": "requires real receiver -> R -> uint8 -> frozen scorer components",
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "candidate_score": 0.7538289016303121,
+    "current_score": 0.7537933983374265,
+    "delta_S": 3.550329288559695e-05,
+    "delta_archive_bytes": 0,
+    "delta_d_pose": 1.418399999999478e-07,
+    "delta_d_seg": 2.7126699999983905e-07,
+    "pose_term_erosion": 8.376592885689371e-06,
+    "pose_term_erosion_limit": 0.005,
+    "schema": "ddm_tq1_realized_acceptance_verdict.v1",
+    "score_claim": false
+   }
+  },
+  {
+   "accepted": true,
+   "accepted_move_ids_after": [
+    "snap_r00_c23_L12"
+   ],
+   "accepted_move_ids_before": [],
+   "axis": "[macOS-CPU frozen-scorer advisory]",
+   "candidate": {
+    "activity": 0.0,
+    "affected_pair_count": 600,
+    "affected_pair_preview": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8,
+     9,
+     10,
+     11,
+     12,
+     13,
+     14,
+     15
+    ],
+    "candidate_id": "snap_r00_c23_L12",
+    "col": 23,
+    "direction": "snap_sublattice",
+    "joint_guard": 0.0,
+    "pose_guard": 0.0,
+    "priority": 0.9584352078239609,
+    "row": 0,
+    "rung": 12,
+    "seg_guard": 0.0
+   },
+   "candidate_id": "snap_r00_c23_L12",
+   "checkpoint_root": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/stage_checkpoints",
+   "current_before": {
+    "archive_bytes": 357837,
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "d_pose": 0.00071673674,
+    "d_seg": 0.004308641222,
+    "score": 0.7537933983374265,
+    "score_claim": false
+   },
+   "move_index": 7,
+   "phase_a_singleton": {
+    "archive_bytes": 357837,
+    "archive_sha256": "250e72c604555c3e76b26836001d401dc2880f4213d80f1c7f2b293faf181520",
+    "candidate_tokens_sha256": "cca805710621d1a4efce6aa49c175628b437ac877a5c5c8110b467a66bcc9af5",
+    "token_frame_sha256": "e3d96bcc7c4d0a4f367329a39ad192eb174ce3ab7117f536ea5e0c6417b9cc05"
+   },
+   "schema": "ddm_tq1_phase_b_realized_move.v1",
+   "score_claim": false,
+   "trial": {
+    "advisory_score_formula_value": "0.753710556259",
+    "all_batches_checkpointed_and_preserved": true,
+    "archive_bytes": 357837,
+    "archive_path": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/candidate_archives/move_0007_snap_r00_c23_L12.zip.receipt-bytes",
+    "archive_sha256": "250e72c604555c3e76b26836001d401dc2880f4213d80f1c7f2b293faf181520",
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "batch_count": 38,
+    "batch_digest_chain_sha256": "3eaf02151c5cf3ef9d0fcce8328cb0d0b45bc5419e82087702a2dbafe8130446",
+    "batch_size": 16,
+    "candidate": "move_0007_snap_r00_c23_L12",
+    "d_pose": "0.000716152321",
+    "d_seg": "0.004308158027",
+    "errors": 508211,
+    "per_stratum": {
+     "Lane": {
+      "d_seg": "0.268917625561",
+      "errors": 185725,
+      "sites": 690639
+     },
+     "Movable": {
+      "d_seg": "0.054011264616",
+      "errors": 78874,
+      "sites": 1460325
+     },
+     "MyCar": {
+      "d_seg": "0.000540416928",
+      "errors": 16209,
+      "sites": 29993509
+     },
+     "Road": {
+      "d_seg": "0.005573311330",
+      "errors": 152748,
+      "sites": 27407046
+     },
+     "Undrivable": {
+      "d_seg": "0.001278048395",
+      "errors": 74655,
+      "sites": 58413281
+     }
+    },
+    "pose_coordinates": 3600,
+    "pose_squared_error_sum": "2.578148355964",
+    "receiver_custody": {
+     "archive_dir": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/extracted_archives/move_0007_snap_r00_c23_L12",
+     "archive_sha256": "250e72c604555c3e76b26836001d401dc2880f4213d80f1c7f2b293faf181520",
+     "axis": "[macOS-CPU frozen-scorer advisory]",
+     "decoder_class": "ddm_tq1_qo1_inflate_runner_dcd4406aaa83.Decoder",
+     "receiver_output": "uint8 [B,2,874,1164,3] camera pairs",
+     "schema": "ddm_tq1_ix2_receiver_adapter.v1",
+     "score_claim": false
+    },
+    "schema": "ddm_tq1_phase_b_n600_aggregate.v1",
+    "score_claim": false,
+    "scorer_custody": {
+     "batch_size": 16,
+     "deterministic_algorithms": true,
+     "device": "cpu",
+     "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+     "modules_path": "/Users/adpena/Projects/pact/upstream/modules.py",
+     "modules_sha256": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa",
+     "posenet_weights_path": "/Users/adpena/Projects/pact/upstream/models/posenet.safetensors",
+     "posenet_weights_sha256": "0f3a0874c5c387f990d7b88bd1d7e1f6de35d98b45f2a289989db2c77b9b6576",
+     "score_claim": false,
+     "segnet_weights_path": "/Users/adpena/Projects/pact/upstream/models/segnet.safetensors",
+     "segnet_weights_sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6"
+    },
+    "sites": 117964800,
+    "typed_config_sha256": "c3ec612b57b6bd4fa47794cd73a9f1609d04594bff18f232252afa7c218f0e8b"
+   },
+   "typed_config_sha256": "c3ec612b57b6bd4fa47794cd73a9f1609d04594bff18f232252afa7c218f0e8b",
+   "verdict": {
+    "accepted": true,
+    "authority": "requires real receiver -> R -> uint8 -> frozen scorer components",
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "candidate_score": 0.7537105562725518,
+    "current_score": 0.7537933983374265,
+    "delta_S": -8.28420648747441e-05,
+    "delta_archive_bytes": 0,
+    "delta_d_pose": -5.8441900000004e-07,
+    "delta_d_seg": -4.83195000000429e-07,
+    "pose_term_erosion": -3.4522564874642225e-05,
+    "pose_term_erosion_limit": 0.005,
+    "schema": "ddm_tq1_realized_acceptance_verdict.v1",
+    "score_claim": false
+   }
+  },
+  {
+   "accepted": true,
+   "accepted_move_ids_after": [
+    "snap_r00_c23_L12",
+    "snap_r00_c25_L12"
+   ],
+   "accepted_move_ids_before": [
+    "snap_r00_c23_L12"
+   ],
+   "axis": "[macOS-CPU frozen-scorer advisory]",
+   "candidate": {
+    "activity": 0.0,
+    "affected_pair_count": 600,
+    "affected_pair_preview": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8,
+     9,
+     10,
+     11,
+     12,
+     13,
+     14,
+     15
+    ],
+    "candidate_id": "snap_r00_c25_L12",
+    "col": 25,
+    "direction": "snap_sublattice",
+    "joint_guard": 0.0,
+    "pose_guard": 0.0,
+    "priority": 0.938700342015259,
+    "row": 0,
+    "rung": 12,
+    "seg_guard": 0.0
+   },
+   "candidate_id": "snap_r00_c25_L12",
+   "checkpoint_root": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/stage_checkpoints",
+   "current_before": {
+    "archive_bytes": 357837,
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "d_pose": 0.000716152321,
+    "d_seg": 0.004308158027,
+    "score": 0.7537105562725518,
+    "score_claim": false
+   },
+   "move_index": 8,
+   "phase_a_singleton": {
+    "archive_bytes": 357838,
+    "archive_sha256": "10712bb3c4e2611ade1d415f5424a8b55778a5bd4f10f57e423e148a5bd641b8",
+    "candidate_tokens_sha256": "6d76571d9902025a1c2a293e3117cb3341348f22ce66151c460b8d6584e67691",
+    "token_frame_sha256": "0605ac25d0a38930fd37593d9cc315922bc06af5f643ccb7fa029f75e460b7b0"
+   },
+   "schema": "ddm_tq1_phase_b_realized_move.v1",
+   "score_claim": false,
+   "trial": {
+    "advisory_score_formula_value": "0.753698491864",
+    "all_batches_checkpointed_and_preserved": true,
+    "archive_bytes": 357838,
+    "archive_path": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/candidate_archives/move_0008_snap_r00_c25_L12.zip.receipt-bytes",
+    "archive_sha256": "930236194381c6367ae0e8ba74df120d3d61cc7dfcbe6bc262d6c8ddbfe10944",
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "batch_count": 38,
+    "batch_digest_chain_sha256": "6f407e53a6faf5dfe19d8e180bb9c60aa9239b997c10692cfc4470b42f5efdab",
+    "batch_size": 16,
+    "candidate": "move_0008_snap_r00_c25_L12",
+    "d_pose": "0.000716998834",
+    "d_seg": "0.004307530721",
+    "errors": 508137,
+    "per_stratum": {
+     "Lane": {
+      "d_seg": "0.268917625561",
+      "errors": 185725,
+      "sites": 690639
+     },
+     "Movable": {
+      "d_seg": "0.053990036464",
+      "errors": 78843,
+      "sites": 1460325
+     },
+     "MyCar": {
+      "d_seg": "0.000541817231",
+      "errors": 16251,
+      "sites": 29993509
+     },
+     "Road": {
+      "d_seg": "0.005566050424",
+      "errors": 152549,
+      "sites": 27407046
+     },
+     "Undrivable": {
+      "d_seg": "0.001280000005",
+      "errors": 74769,
+      "sites": 58413281
+     }
+    },
+    "pose_coordinates": 3600,
+    "pose_squared_error_sum": "2.581195803879",
+    "receiver_custody": {
+     "archive_dir": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/extracted_archives/move_0008_snap_r00_c25_L12",
+     "archive_sha256": "930236194381c6367ae0e8ba74df120d3d61cc7dfcbe6bc262d6c8ddbfe10944",
+     "axis": "[macOS-CPU frozen-scorer advisory]",
+     "decoder_class": "ddm_tq1_qo1_inflate_runner_dcd4406aaa83.Decoder",
+     "receiver_output": "uint8 [B,2,874,1164,3] camera pairs",
+     "schema": "ddm_tq1_ix2_receiver_adapter.v1",
+     "score_claim": false
+    },
+    "schema": "ddm_tq1_phase_b_n600_aggregate.v1",
+    "score_claim": false,
+    "scorer_custody": {
+     "batch_size": 16,
+     "deterministic_algorithms": true,
+     "device": "cpu",
+     "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+     "modules_path": "/Users/adpena/Projects/pact/upstream/modules.py",
+     "modules_sha256": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa",
+     "posenet_weights_path": "/Users/adpena/Projects/pact/upstream/models/posenet.safetensors",
+     "posenet_weights_sha256": "0f3a0874c5c387f990d7b88bd1d7e1f6de35d98b45f2a289989db2c77b9b6576",
+     "score_claim": false,
+     "segnet_weights_path": "/Users/adpena/Projects/pact/upstream/models/segnet.safetensors",
+     "segnet_weights_sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6"
+    },
+    "sites": 117964800,
+    "typed_config_sha256": "c3ec612b57b6bd4fa47794cd73a9f1609d04594bff18f232252afa7c218f0e8b"
+   },
+   "typed_config_sha256": "c3ec612b57b6bd4fa47794cd73a9f1609d04594bff18f232252afa7c218f0e8b",
+   "verdict": {
+    "accepted": true,
+    "authority": "requires real receiver -> R -> uint8 -> frozen scorer components",
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "candidate_score": 0.7536984918365719,
+    "current_score": 0.7537105562725518,
+    "delta_S": -1.2064435979897148e-05,
+    "delta_archive_bytes": 1,
+    "delta_d_pose": 8.465129999999949e-07,
+    "delta_d_seg": -6.273060000000844e-07,
+    "pose_term_erosion": 5.0000305067049444e-05,
+    "pose_term_erosion_limit": 0.005,
+    "schema": "ddm_tq1_realized_acceptance_verdict.v1",
+    "score_claim": false
+   }
+  },
+  {
+   "accepted": true,
+   "accepted_move_ids_after": [
+    "snap_r00_c23_L12",
+    "snap_r00_c25_L12",
+    "snap_r00_c26_L12"
+   ],
+   "accepted_move_ids_before": [
+    "snap_r00_c23_L12",
+    "snap_r00_c25_L12"
+   ],
+   "axis": "[macOS-CPU frozen-scorer advisory]",
+   "candidate": {
+    "activity": 0.0,
+    "affected_pair_count": 600,
+    "affected_pair_preview": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8,
+     9,
+     10,
+     11,
+     12,
+     13,
+     14,
+     15
+    ],
+    "candidate_id": "snap_r00_c26_L12",
+    "col": 26,
+    "direction": "snap_sublattice",
+    "joint_guard": 0.0,
+    "pose_guard": 0.0,
+    "priority": 0.9292929292929291,
+    "row": 0,
+    "rung": 12,
+    "seg_guard": 0.0
+   },
+   "candidate_id": "snap_r00_c26_L12",
+   "checkpoint_root": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/stage_checkpoints",
+   "current_before": {
+    "archive_bytes": 357838,
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "d_pose": 0.000716998834,
+    "d_seg": 0.004307530721,
+    "score": 0.7536984918365719,
+    "score_claim": false
+   },
+   "move_index": 9,
+   "phase_a_singleton": {
+    "archive_bytes": 357837,
+    "archive_sha256": "0de18c25720d718ab75e68d17982d8a228a7f7c838b4ceb34d116b39cf80319b",
+    "candidate_tokens_sha256": "cb7b2aeb56db2a3a4d35a9e964c94ec42dfa01ad635d6945e63b9e03c3e9ec47",
+    "token_frame_sha256": "f28057a92e3f27a235126a83f398e2103b7c7a9b94cc2a57157bcb771e417420"
+   },
+   "schema": "ddm_tq1_phase_b_realized_move.v1",
+   "score_claim": false,
+   "trial": {
+    "advisory_score_formula_value": "0.753585065263",
+    "all_batches_checkpointed_and_preserved": true,
+    "archive_bytes": 357838,
+    "archive_path": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/candidate_archives/move_0009_snap_r00_c26_L12.zip.receipt-bytes",
+    "archive_sha256": "020ca4453e1f3b8e8f08674efbc7d00480e9dd24f9282e0b387a4308241ab210",
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "batch_count": 38,
+    "batch_digest_chain_sha256": "a02510e17c93b5a17c511cf313e9b26f5a354c1166e84d72933acf4ea17b9c4e",
+    "batch_size": 16,
+    "candidate": "move_0009_snap_r00_c26_L12",
+    "d_pose": "0.000716915522",
+    "d_seg": "0.004306445652",
+    "errors": 508009,
+    "per_stratum": {
+     "Lane": {
+      "d_seg": "0.268782967657",
+      "errors": 185632,
+      "sites": 690639
+     },
+     "Movable": {
+      "d_seg": "0.053985927790",
+      "errors": 78837,
+      "sites": 1460325
+     },
+     "MyCar": {
+      "d_seg": "0.000541717210",
+      "errors": 16248,
+      "sites": 29993509
+     },
+     "Road": {
+      "d_seg": "0.005567692337",
+      "errors": 152594,
+      "sites": 27407046
+     },
+     "Undrivable": {
+      "d_seg": "0.001278784528",
+      "errors": 74698,
+      "sites": 58413281
+     }
+    },
+    "pose_coordinates": 3600,
+    "pose_squared_error_sum": "2.580895878081",
+    "receiver_custody": {
+     "archive_dir": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/extracted_archives/move_0009_snap_r00_c26_L12",
+     "archive_sha256": "020ca4453e1f3b8e8f08674efbc7d00480e9dd24f9282e0b387a4308241ab210",
+     "axis": "[macOS-CPU frozen-scorer advisory]",
+     "decoder_class": "ddm_tq1_qo1_inflate_runner_dcd4406aaa83.Decoder",
+     "receiver_output": "uint8 [B,2,874,1164,3] camera pairs",
+     "schema": "ddm_tq1_ix2_receiver_adapter.v1",
+     "score_claim": false
+    },
+    "schema": "ddm_tq1_phase_b_n600_aggregate.v1",
+    "score_claim": false,
+    "scorer_custody": {
+     "batch_size": 16,
+     "deterministic_algorithms": true,
+     "device": "cpu",
+     "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+     "modules_path": "/Users/adpena/Projects/pact/upstream/modules.py",
+     "modules_sha256": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa",
+     "posenet_weights_path": "/Users/adpena/Projects/pact/upstream/models/posenet.safetensors",
+     "posenet_weights_sha256": "0f3a0874c5c387f990d7b88bd1d7e1f6de35d98b45f2a289989db2c77b9b6576",
+     "score_claim": false,
+     "segnet_weights_path": "/Users/adpena/Projects/pact/upstream/models/segnet.safetensors",
+     "segnet_weights_sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6"
+    },
+    "sites": 117964800,
+    "typed_config_sha256": "c3ec612b57b6bd4fa47794cd73a9f1609d04594bff18f232252afa7c218f0e8b"
+   },
+   "typed_config_sha256": "c3ec612b57b6bd4fa47794cd73a9f1609d04594bff18f232252afa7c218f0e8b",
+   "verdict": {
+    "accepted": true,
+    "authority": "requires real receiver -> R -> uint8 -> frozen scorer components",
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "candidate_score": 0.7535850653233928,
+    "current_score": 0.7536984918365719,
+    "delta_S": -0.00011342651317913788,
+    "delta_archive_bytes": 0,
+    "delta_d_pose": -8.331199999995174e-08,
+    "delta_d_seg": -1.085068999999786e-06,
+    "pose_term_erosion": -4.9196131791801045e-06,
+    "pose_term_erosion_limit": 0.005,
+    "schema": "ddm_tq1_realized_acceptance_verdict.v1",
+    "score_claim": false
+   }
+  },
+  {
+   "accepted": false,
+   "accepted_move_ids_after": [
+    "snap_r00_c23_L12",
+    "snap_r00_c25_L12",
+    "snap_r00_c26_L12"
+   ],
+   "accepted_move_ids_before": [
+    "snap_r00_c23_L12",
+    "snap_r00_c25_L12",
+    "snap_r00_c26_L12"
+   ],
+   "axis": "[macOS-CPU frozen-scorer advisory]",
+   "candidate": {
+    "activity": 0.0,
+    "affected_pair_count": 600,
+    "affected_pair_preview": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8,
+     9,
+     10,
+     11,
+     12,
+     13,
+     14,
+     15
+    ],
+    "candidate_id": "snap_r00_c27_L12",
+    "col": 27,
+    "direction": "snap_sublattice",
+    "joint_guard": 0.0,
+    "pose_guard": 0.0,
+    "priority": 0.9201734251466462,
+    "row": 0,
+    "rung": 12,
+    "seg_guard": 0.0
+   },
+   "candidate_id": "snap_r00_c27_L12",
+   "checkpoint_root": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/stage_checkpoints",
+   "current_before": {
+    "archive_bytes": 357838,
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "d_pose": 0.000716915522,
+    "d_seg": 0.004306445652,
+    "score": 0.7535850653233928,
+    "score_claim": false
+   },
+   "move_index": 10,
+   "phase_a_singleton": {
+    "archive_bytes": 357837,
+    "archive_sha256": "ed9d1d3033cee5b70849a5aa88fc8d196f0939d5eb13019c8c7a157e1ed299d3",
+    "candidate_tokens_sha256": "fb03182d6a6871b59491118a34dccfe71a2db29948b975b9f757ddbbc3be5a45",
+    "token_frame_sha256": "4fd88f61c1f05282af9b133f2195fea73be4ad879008ccf59614a262b6059950"
+   },
+   "schema": "ddm_tq1_phase_b_realized_move.v1",
+   "score_claim": false,
+   "trial": {
+    "advisory_score_formula_value": "0.753683045500",
+    "all_batches_checkpointed_and_preserved": true,
+    "archive_bytes": 357838,
+    "archive_path": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/candidate_archives/move_0010_snap_r00_c27_L12.zip.receipt-bytes",
+    "archive_sha256": "397eb00b3b45ae7ab26e317c22e9c5a87f15797c85c0632b1abc43876821c076",
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "batch_count": 38,
+    "batch_digest_chain_sha256": "0c2cffc6d85eca3cc1154121bc8e0111059ca33869ac81b0b491b5d04bcdb8a8",
+    "batch_size": 16,
+    "candidate": "move_0010_snap_r00_c27_L12",
+    "d_pose": "0.000716679859",
+    "d_seg": "0.004307564629",
+    "errors": 508141,
+    "per_stratum": {
+     "Lane": {
+      "d_seg": "0.268858260249",
+      "errors": 185684,
+      "sites": 690639
+     },
+     "Movable": {
+      "d_seg": "0.053961960522",
+      "errors": 78802,
+      "sites": 1460325
+     },
+     "MyCar": {
+      "d_seg": "0.000541250442",
+      "errors": 16234,
+      "sites": 29993509
+     },
+     "Road": {
+      "d_seg": "0.005569042355",
+      "errors": 152631,
+      "sites": 27407046
+     },
+     "Undrivable": {
+      "d_seg": "0.001280359513",
+      "errors": 74790,
+      "sites": 58413281
+     }
+    },
+    "pose_coordinates": 3600,
+    "pose_squared_error_sum": "2.580047491923",
+    "receiver_custody": {
+     "archive_dir": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/extracted_archives/move_0010_snap_r00_c27_L12",
+     "archive_sha256": "397eb00b3b45ae7ab26e317c22e9c5a87f15797c85c0632b1abc43876821c076",
+     "axis": "[macOS-CPU frozen-scorer advisory]",
+     "decoder_class": "ddm_tq1_qo1_inflate_runner_dcd4406aaa83.Decoder",
+     "receiver_output": "uint8 [B,2,874,1164,3] camera pairs",
+     "schema": "ddm_tq1_ix2_receiver_adapter.v1",
+     "score_claim": false
+    },
+    "schema": "ddm_tq1_phase_b_n600_aggregate.v1",
+    "score_claim": false,
+    "scorer_custody": {
+     "batch_size": 16,
+     "deterministic_algorithms": true,
+     "device": "cpu",
+     "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+     "modules_path": "/Users/adpena/Projects/pact/upstream/modules.py",
+     "modules_sha256": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa",
+     "posenet_weights_path": "/Users/adpena/Projects/pact/upstream/models/posenet.safetensors",
+     "posenet_weights_sha256": "0f3a0874c5c387f990d7b88bd1d7e1f6de35d98b45f2a289989db2c77b9b6576",
+     "score_claim": false,
+     "segnet_weights_path": "/Users/adpena/Projects/pact/upstream/models/segnet.safetensors",
+     "segnet_weights_sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6"
+    },
+    "sites": 117964800,
+    "typed_config_sha256": "c3ec612b57b6bd4fa47794cd73a9f1609d04594bff18f232252afa7c218f0e8b"
+   },
+   "typed_config_sha256": "c3ec612b57b6bd4fa47794cd73a9f1609d04594bff18f232252afa7c218f0e8b",
+   "verdict": {
+    "accepted": false,
+    "authority": "requires real receiver -> R -> uint8 -> frozen scorer components",
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "candidate_score": 0.7536830454631744,
+    "current_score": 0.7535850653233928,
+    "delta_S": 9.798013978168374e-05,
+    "delta_archive_bytes": 0,
+    "delta_d_pose": -2.356629999999667e-07,
+    "delta_d_seg": 1.118977000000472e-06,
+    "pose_term_erosion": -1.3917560218359992e-05,
+    "pose_term_erosion_limit": 0.005,
+    "schema": "ddm_tq1_realized_acceptance_verdict.v1",
+    "score_claim": false
+   }
+  },
+  {
+   "accepted": false,
+   "accepted_move_ids_after": [
+    "snap_r00_c23_L12",
+    "snap_r00_c25_L12",
+    "snap_r00_c26_L12"
+   ],
+   "accepted_move_ids_before": [
+    "snap_r00_c23_L12",
+    "snap_r00_c25_L12",
+    "snap_r00_c26_L12"
+   ],
+   "axis": "[macOS-CPU frozen-scorer advisory]",
+   "candidate": {
+    "activity": 0.0,
+    "affected_pair_count": 600,
+    "affected_pair_preview": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8,
+     9,
+     10,
+     11,
+     12,
+     13,
+     14,
+     15
+    ],
+    "candidate_id": "snap_r00_c05_L13",
+    "col": 5,
+    "direction": "snap_sublattice",
+    "joint_guard": 0.0,
+    "pose_guard": 0.0,
+    "priority": 0.9134948096885813,
+    "row": 0,
+    "rung": 13,
+    "seg_guard": 0.0
+   },
+   "candidate_id": "snap_r00_c05_L13",
+   "checkpoint_root": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/stage_checkpoints",
+   "current_before": {
+    "archive_bytes": 357838,
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "d_pose": 0.000716915522,
+    "d_seg": 0.004306445652,
+    "score": 0.7535850653233928,
+    "score_claim": false
+   },
+   "move_index": 11,
+   "phase_a_singleton": {
+    "archive_bytes": 357837,
+    "archive_sha256": "871e28454e7dc23f49ea9fb188450774bfc5e1504144f798679d1839f705266a",
+    "candidate_tokens_sha256": "4de8a23273ab76e57502715555dd9a67a048d622c95c94bcd6edbb74272a9511",
+    "token_frame_sha256": "7c2bba4609ab0ae55b6c4c98d1229d6d3d38deb14b22d12669d389107c8830e5"
+   },
+   "schema": "ddm_tq1_phase_b_realized_move.v1",
+   "score_claim": false,
+   "trial": {
+    "advisory_score_formula_value": "0.753793012195",
+    "all_batches_checkpointed_and_preserved": true,
+    "archive_bytes": 357838,
+    "archive_path": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/candidate_archives/move_0011_snap_r00_c05_L13.zip.receipt-bytes",
+    "archive_sha256": "4634190688dc790747acd70970f214b4c5c8321f8cbde4262182254d00f86e29",
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "batch_count": 38,
+    "batch_digest_chain_sha256": "a3b96dee38b22c7620749448147b8570b726c62f7493ed4c5fca8b18ed80ae0a",
+    "batch_size": 16,
+    "candidate": "move_0011_snap_r00_c05_L13",
+    "d_pose": "0.000718859166",
+    "d_seg": "0.004307378133",
+    "errors": 508119,
+    "per_stratum": {
+     "Lane": {
+      "d_seg": "0.268819166019",
+      "errors": 185657,
+      "sites": 690639
+     },
+     "Movable": {
+      "d_seg": "0.053983188674",
+      "errors": 78833,
+      "sites": 1460325
+     },
+     "MyCar": {
+      "d_seg": "0.000540950377",
+      "errors": 16225,
+      "sites": 29993509
+     },
+     "Road": {
+      "d_seg": "0.005568495051",
+      "errors": 152616,
+      "sites": 27407046
+     },
+     "Undrivable": {
+      "d_seg": "0.001280325274",
+      "errors": 74788,
+      "sites": 58413281
+     }
+    },
+    "pose_coordinates": 3600,
+    "pose_squared_error_sum": "2.587892998201",
+    "receiver_custody": {
+     "archive_dir": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/extracted_archives/move_0011_snap_r00_c05_L13",
+     "archive_sha256": "4634190688dc790747acd70970f214b4c5c8321f8cbde4262182254d00f86e29",
+     "axis": "[macOS-CPU frozen-scorer advisory]",
+     "decoder_class": "ddm_tq1_qo1_inflate_runner_dcd4406aaa83.Decoder",
+     "receiver_output": "uint8 [B,2,874,1164,3] camera pairs",
+     "schema": "ddm_tq1_ix2_receiver_adapter.v1",
+     "score_claim": false
+    },
+    "schema": "ddm_tq1_phase_b_n600_aggregate.v1",
+    "score_claim": false,
+    "scorer_custody": {
+     "batch_size": 16,
+     "deterministic_algorithms": true,
+     "device": "cpu",
+     "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+     "modules_path": "/Users/adpena/Projects/pact/upstream/modules.py",
+     "modules_sha256": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa",
+     "posenet_weights_path": "/Users/adpena/Projects/pact/upstream/models/posenet.safetensors",
+     "posenet_weights_sha256": "0f3a0874c5c387f990d7b88bd1d7e1f6de35d98b45f2a289989db2c77b9b6576",
+     "score_claim": false,
+     "segnet_weights_path": "/Users/adpena/Projects/pact/upstream/models/segnet.safetensors",
+     "segnet_weights_sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6"
+    },
+    "sites": 117964800,
+    "typed_config_sha256": "c3ec612b57b6bd4fa47794cd73a9f1609d04594bff18f232252afa7c218f0e8b"
+   },
+   "typed_config_sha256": "c3ec612b57b6bd4fa47794cd73a9f1609d04594bff18f232252afa7c218f0e8b",
+   "verdict": {
+    "accepted": false,
+    "authority": "requires real receiver -> R -> uint8 -> frozen scorer components",
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "candidate_score": 0.7537930121713844,
+    "current_score": 0.7535850653233928,
+    "delta_S": 0.00020794684799163576,
+    "delta_archive_bytes": 0,
+    "delta_d_pose": 1.943643999999939e-06,
+    "delta_d_seg": 9.324809999997422e-07,
+    "pose_term_erosion": 0.0001146987479916789,
+    "pose_term_erosion_limit": 0.005,
+    "schema": "ddm_tq1_realized_acceptance_verdict.v1",
+    "score_claim": false
+   }
+  },
+  {
+   "accepted": true,
+   "accepted_move_ids_after": [
+    "snap_r00_c23_L12",
+    "snap_r00_c25_L12",
+    "snap_r00_c26_L12",
+    "snap_r00_c28_L12"
+   ],
+   "accepted_move_ids_before": [
+    "snap_r00_c23_L12",
+    "snap_r00_c25_L12",
+    "snap_r00_c26_L12"
+   ],
+   "axis": "[macOS-CPU frozen-scorer advisory]",
+   "candidate": {
+    "activity": 0.0,
+    "affected_pair_count": 600,
+    "affected_pair_preview": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8,
+     9,
+     10,
+     11,
+     12,
+     13,
+     14,
+     15
+    ],
+    "candidate_id": "snap_r00_c28_L12",
+    "col": 28,
+    "direction": "snap_sublattice",
+    "joint_guard": 0.0,
+    "pose_guard": 0.0,
+    "priority": 0.9113288118563174,
+    "row": 0,
+    "rung": 12,
+    "seg_guard": 0.0
+   },
+   "candidate_id": "snap_r00_c28_L12",
+   "checkpoint_root": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/stage_checkpoints",
+   "current_before": {
+    "archive_bytes": 357838,
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "d_pose": 0.000716915522,
+    "d_seg": 0.004306445652,
+    "score": 0.7535850653233928,
+    "score_claim": false
+   },
+   "move_index": 12,
+   "phase_a_singleton": {
+    "archive_bytes": 357837,
+    "archive_sha256": "8e7d054e76f070a46dc0f870461a9cfe9c028700f8d5f021aa1eb455e743bd36",
+    "candidate_tokens_sha256": "71eb5b24d1722d7635a098ea220510d24a6e0e84fabcd8a4a51ebc9ae7362955",
+    "token_frame_sha256": "eb775d93f5b76738829e133be5a8606058244ada0c96ff85850ecbe67b2c269c"
+   },
+   "schema": "ddm_tq1_phase_b_realized_move.v1",
+   "score_claim": false,
+   "trial": {
+    "advisory_score_formula_value": "0.753562086822",
+    "all_batches_checkpointed_and_preserved": true,
+    "archive_bytes": 357838,
+    "archive_path": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/candidate_archives/move_0012_snap_r00_c28_L12.zip.receipt-bytes",
+    "archive_sha256": "dda5f3016606825ea407ad5196a00f7c5788d7a20550dc93982a97149e7197d9",
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "batch_count": 38,
+    "batch_digest_chain_sha256": "eb9aa318808279fb4c3f50e4aefe7ee53b5099a37df8a1af23b456c1bae9f71a",
+    "batch_size": 16,
+    "candidate": "move_0012_snap_r00_c28_L12",
+    "d_pose": "0.000717100624",
+    "d_seg": "0.004306106567",
+    "errors": 507969,
+    "per_stratum": {
+     "Lane": {
+      "d_seg": "0.268755456903",
+      "errors": 185613,
+      "sites": 690639
+     },
+     "Movable": {
+      "d_seg": "0.054000308151",
+      "errors": 78858,
+      "sites": 1460325
+     },
+     "MyCar": {
+      "d_seg": "0.000541883912",
+      "errors": 16253,
+      "sites": 29993509
+     },
+     "Road": {
+      "d_seg": "0.005567874772",
+      "errors": 152599,
+      "sites": 27407046
+     },
+     "Undrivable": {
+      "d_seg": "0.001277894320",
+      "errors": 74646,
+      "sites": 58413281
+     }
+    },
+    "pose_coordinates": 3600,
+    "pose_squared_error_sum": "2.581562245597",
+    "receiver_custody": {
+     "archive_dir": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/extracted_archives/move_0012_snap_r00_c28_L12",
+     "archive_sha256": "dda5f3016606825ea407ad5196a00f7c5788d7a20550dc93982a97149e7197d9",
+     "axis": "[macOS-CPU frozen-scorer advisory]",
+     "decoder_class": "ddm_tq1_qo1_inflate_runner_dcd4406aaa83.Decoder",
+     "receiver_output": "uint8 [B,2,874,1164,3] camera pairs",
+     "schema": "ddm_tq1_ix2_receiver_adapter.v1",
+     "score_claim": false
+    },
+    "schema": "ddm_tq1_phase_b_n600_aggregate.v1",
+    "score_claim": false,
+    "scorer_custody": {
+     "batch_size": 16,
+     "deterministic_algorithms": true,
+     "device": "cpu",
+     "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+     "modules_path": "/Users/adpena/Projects/pact/upstream/modules.py",
+     "modules_sha256": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa",
+     "posenet_weights_path": "/Users/adpena/Projects/pact/upstream/models/posenet.safetensors",
+     "posenet_weights_sha256": "0f3a0874c5c387f990d7b88bd1d7e1f6de35d98b45f2a289989db2c77b9b6576",
+     "score_claim": false,
+     "segnet_weights_path": "/Users/adpena/Projects/pact/upstream/models/segnet.safetensors",
+     "segnet_weights_sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6"
+    },
+    "sites": 117964800,
+    "typed_config_sha256": "c3ec612b57b6bd4fa47794cd73a9f1609d04594bff18f232252afa7c218f0e8b"
+   },
+   "typed_config_sha256": "c3ec612b57b6bd4fa47794cd73a9f1609d04594bff18f232252afa7c218f0e8b",
+   "verdict": {
+    "accepted": true,
+    "authority": "requires real receiver -> R -> uint8 -> frozen scorer components",
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "candidate_score": 0.7535620867965088,
+    "current_score": 0.7535850653233928,
+    "delta_S": -2.2978526883932204e-05,
+    "delta_archive_bytes": 0,
+    "delta_d_pose": 1.8510200000001163e-07,
+    "delta_d_seg": -3.3908499999946856e-07,
+    "pose_term_erosion": 1.092997311602506e-05,
+    "pose_term_erosion_limit": 0.005,
+    "schema": "ddm_tq1_realized_acceptance_verdict.v1",
+    "score_claim": false
+   }
+  },
+  {
+   "accepted": false,
+   "accepted_move_ids_after": [
+    "snap_r00_c23_L12",
+    "snap_r00_c25_L12",
+    "snap_r00_c26_L12",
+    "snap_r00_c28_L12"
+   ],
+   "accepted_move_ids_before": [
+    "snap_r00_c23_L12",
+    "snap_r00_c25_L12",
+    "snap_r00_c26_L12",
+    "snap_r00_c28_L12"
+   ],
+   "axis": "[macOS-CPU frozen-scorer advisory]",
+   "candidate": {
+    "activity": 0.0,
+    "affected_pair_count": 600,
+    "affected_pair_preview": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8,
+     9,
+     10,
+     11,
+     12,
+     13,
+     14,
+     15
+    ],
+    "candidate_id": "snap_r00_c29_L12",
+    "col": 29,
+    "direction": "snap_sublattice",
+    "joint_guard": 0.0,
+    "pose_guard": 0.0,
+    "priority": 0.9027468448403859,
+    "row": 0,
+    "rung": 12,
+    "seg_guard": 0.0
+   },
+   "candidate_id": "snap_r00_c29_L12",
+   "checkpoint_root": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/stage_checkpoints",
+   "current_before": {
+    "archive_bytes": 357838,
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "d_pose": 0.000717100624,
+    "d_seg": 0.004306106567,
+    "score": 0.7535620867965088,
+    "score_claim": false
+   },
+   "move_index": 13,
+   "phase_a_singleton": {
+    "archive_bytes": 357836,
+    "archive_sha256": "bf83f3eb9801f3e4c3868db4d1a66493f035aaed4c5339297b08a9c8cbfa1af0",
+    "candidate_tokens_sha256": "53db562c0e59c9944d20ae0d56e49390012bd1410908dc34987273aa7199aeda",
+    "token_frame_sha256": "89aa85602d5cd7905c8b3506b5725f21e25b2562b19a32f14936a818980cefcd"
+   },
+   "schema": "ddm_tq1_phase_b_realized_move.v1",
+   "score_claim": false,
+   "trial": {
+    "advisory_score_formula_value": "0.753596870723",
+    "all_batches_checkpointed_and_preserved": true,
+    "archive_bytes": 357837,
+    "archive_path": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/candidate_archives/move_0013_snap_r00_c29_L12.zip.receipt-bytes",
+    "archive_sha256": "f0bbbc055b72c8154f0f1b1ce5635acaf9609f2619fd5d569593d4d1ac57331f",
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "batch_count": 38,
+    "batch_digest_chain_sha256": "1dcbaaed940bd701b115b5d3390ed67f432d5ae365b4f54c79ff475cec23c8a4",
+    "batch_size": 16,
+    "candidate": "move_0013_snap_r00_c29_L12",
+    "d_pose": "0.000718045896",
+    "d_seg": "0.004305903117",
+    "errors": 507945,
+    "per_stratum": {
+     "Lane": {
+      "d_seg": "0.268777175920",
+      "errors": 185628,
+      "sites": 690639
+     },
+     "Movable": {
+      "d_seg": "0.053977710441",
+      "errors": 78825,
+      "sites": 1460325
+     },
+     "MyCar": {
+      "d_seg": "0.000541950593",
+      "errors": 16255,
+      "sites": 29993509
+     },
+     "Road": {
+      "d_seg": "0.005567801798",
+      "errors": 152597,
+      "sites": 27407046
+     },
+     "Undrivable": {
+      "d_seg": "0.001277791604",
+      "errors": 74640,
+      "sites": 58413281
+     }
+    },
+    "pose_coordinates": 3600,
+    "pose_squared_error_sum": "2.584965225774",
+    "receiver_custody": {
+     "archive_dir": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/extracted_archives/move_0013_snap_r00_c29_L12",
+     "archive_sha256": "f0bbbc055b72c8154f0f1b1ce5635acaf9609f2619fd5d569593d4d1ac57331f",
+     "axis": "[macOS-CPU frozen-scorer advisory]",
+     "decoder_class": "ddm_tq1_qo1_inflate_runner_dcd4406aaa83.Decoder",
+     "receiver_output": "uint8 [B,2,874,1164,3] camera pairs",
+     "schema": "ddm_tq1_ix2_receiver_adapter.v1",
+     "score_claim": false
+    },
+    "schema": "ddm_tq1_phase_b_n600_aggregate.v1",
+    "score_claim": false,
+    "scorer_custody": {
+     "batch_size": 16,
+     "deterministic_algorithms": true,
+     "device": "cpu",
+     "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+     "modules_path": "/Users/adpena/Projects/pact/upstream/modules.py",
+     "modules_sha256": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa",
+     "posenet_weights_path": "/Users/adpena/Projects/pact/upstream/models/posenet.safetensors",
+     "posenet_weights_sha256": "0f3a0874c5c387f990d7b88bd1d7e1f6de35d98b45f2a289989db2c77b9b6576",
+     "score_claim": false,
+     "segnet_weights_path": "/Users/adpena/Projects/pact/upstream/models/segnet.safetensors",
+     "segnet_weights_sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6"
+    },
+    "sites": 117964800,
+    "typed_config_sha256": "c3ec612b57b6bd4fa47794cd73a9f1609d04594bff18f232252afa7c218f0e8b"
+   },
+   "typed_config_sha256": "c3ec612b57b6bd4fa47794cd73a9f1609d04594bff18f232252afa7c218f0e8b",
+   "verdict": {
+    "accepted": false,
+    "authority": "requires real receiver -> R -> uint8 -> frozen scorer components",
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "candidate_score": 0.7535968707341174,
+    "current_score": 0.7535620867965088,
+    "delta_S": 3.478393760858456e-05,
+    "delta_archive_bytes": -1,
+    "delta_d_pose": 9.45272000000023e-07,
+    "delta_d_seg": -2.0345000000063923e-07,
+    "pose_term_erosion": 5.5794796561717264e-05,
+    "pose_term_erosion_limit": 0.005,
+    "schema": "ddm_tq1_realized_acceptance_verdict.v1",
+    "score_claim": false
+   }
+  },
+  {
+   "accepted": true,
+   "accepted_move_ids_after": [
+    "snap_r00_c23_L12",
+    "snap_r00_c25_L12",
+    "snap_r00_c26_L12",
+    "snap_r00_c28_L12",
+    "snap_r00_c30_L12"
+   ],
+   "accepted_move_ids_before": [
+    "snap_r00_c23_L12",
+    "snap_r00_c25_L12",
+    "snap_r00_c26_L12",
+    "snap_r00_c28_L12"
+   ],
+   "axis": "[macOS-CPU frozen-scorer advisory]",
+   "candidate": {
+    "activity": 0.0,
+    "affected_pair_count": 600,
+    "affected_pair_preview": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8,
+     9,
+     10,
+     11,
+     12,
+     13,
+     14,
+     15
+    ],
+    "candidate_id": "snap_r00_c30_L12",
+    "col": 30,
+    "direction": "snap_sublattice",
+    "joint_guard": 0.0,
+    "pose_guard": 0.0,
+    "priority": 0.8944159960985125,
+    "row": 0,
+    "rung": 12,
+    "seg_guard": 0.0
+   },
+   "candidate_id": "snap_r00_c30_L12",
+   "checkpoint_root": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/stage_checkpoints",
+   "current_before": {
+    "archive_bytes": 357838,
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "d_pose": 0.000717100624,
+    "d_seg": 0.004306106567,
+    "score": 0.7535620867965088,
+    "score_claim": false
+   },
+   "move_index": 14,
+   "phase_a_singleton": {
+    "archive_bytes": 357837,
+    "archive_sha256": "dc2311e7b58024caf881a01403d0a1574920dd4ea6982f92dcf64cc7cdf8f1e7",
+    "candidate_tokens_sha256": "cee1486ac591a700c3e3a176921bf82ba02983b39000af1090961affddb45049",
+    "token_frame_sha256": "b602dceaef60b52650c612b5b448ed0fe458752b07562b201294512497ae3424"
+   },
+   "schema": "ddm_tq1_phase_b_realized_move.v1",
+   "score_claim": false,
+   "trial": {
+    "advisory_score_formula_value": "0.753546503521",
+    "all_batches_checkpointed_and_preserved": true,
+    "archive_bytes": 357837,
+    "archive_path": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/candidate_archives/move_0014_snap_r00_c30_L12.zip.receipt-bytes",
+    "archive_sha256": "a437b2131adbc08ef1c117065fa96001fdca45bc581c494a48f19142d2cdc797",
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "batch_count": 38,
+    "batch_digest_chain_sha256": "72fb1412d4e5dbae7df7452b072da06ff42c6389d5edd018e0f5f4e2aa94b00d",
+    "batch_size": 16,
+    "candidate": "move_0014_snap_r00_c30_L12",
+    "d_pose": "0.000716747520",
+    "d_seg": "0.004306165907",
+    "errors": 507976,
+    "per_stratum": {
+     "Lane": {
+      "d_seg": "0.268748217231",
+      "errors": 185608,
+      "sites": 690639
+     },
+     "Movable": {
+      "d_seg": "0.054034547104",
+      "errors": 78908,
+      "sites": 1460325
+     },
+     "MyCar": {
+      "d_seg": "0.000541450485",
+      "errors": 16240,
+      "sites": 29993509
+     },
+     "Road": {
+      "d_seg": "0.005569553173",
+      "errors": 152645,
+      "sites": 27407046
+     },
+     "Undrivable": {
+      "d_seg": "0.001276678843",
+      "errors": 74575,
+      "sites": 58413281
+     }
+    },
+    "pose_coordinates": 3600,
+    "pose_squared_error_sum": "2.580291072716",
+    "receiver_custody": {
+     "archive_dir": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/extracted_archives/move_0014_snap_r00_c30_L12",
+     "archive_sha256": "a437b2131adbc08ef1c117065fa96001fdca45bc581c494a48f19142d2cdc797",
+     "axis": "[macOS-CPU frozen-scorer advisory]",
+     "decoder_class": "ddm_tq1_qo1_inflate_runner_dcd4406aaa83.Decoder",
+     "receiver_output": "uint8 [B,2,874,1164,3] camera pairs",
+     "schema": "ddm_tq1_ix2_receiver_adapter.v1",
+     "score_claim": false
+    },
+    "schema": "ddm_tq1_phase_b_n600_aggregate.v1",
+    "score_claim": false,
+    "scorer_custody": {
+     "batch_size": 16,
+     "deterministic_algorithms": true,
+     "device": "cpu",
+     "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+     "modules_path": "/Users/adpena/Projects/pact/upstream/modules.py",
+     "modules_sha256": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa",
+     "posenet_weights_path": "/Users/adpena/Projects/pact/upstream/models/posenet.safetensors",
+     "posenet_weights_sha256": "0f3a0874c5c387f990d7b88bd1d7e1f6de35d98b45f2a289989db2c77b9b6576",
+     "score_claim": false,
+     "segnet_weights_path": "/Users/adpena/Projects/pact/upstream/models/segnet.safetensors",
+     "segnet_weights_sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6"
+    },
+    "sites": 117964800,
+    "typed_config_sha256": "c3ec612b57b6bd4fa47794cd73a9f1609d04594bff18f232252afa7c218f0e8b"
+   },
+   "typed_config_sha256": "c3ec612b57b6bd4fa47794cd73a9f1609d04594bff18f232252afa7c218f0e8b",
+   "verdict": {
+    "accepted": true,
+    "authority": "requires real receiver -> R -> uint8 -> frozen scorer components",
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "candidate_score": 0.7535465034970362,
+    "current_score": 0.7535620867965088,
+    "delta_S": -1.5583299472599066e-05,
+    "delta_archive_bytes": -1,
+    "delta_d_pose": -3.5310400000004676e-07,
+    "delta_d_seg": 5.9339999999678816e-08,
+    "pose_term_erosion": -2.085144051952592e-05,
+    "pose_term_erosion_limit": 0.005,
+    "schema": "ddm_tq1_realized_acceptance_verdict.v1",
+    "score_claim": false
+   }
+  },
+  {
+   "accepted": false,
+   "accepted_move_ids_after": [
+    "snap_r00_c23_L12",
+    "snap_r00_c25_L12",
+    "snap_r00_c26_L12",
+    "snap_r00_c28_L12",
+    "snap_r00_c30_L12"
+   ],
+   "accepted_move_ids_before": [
+    "snap_r00_c23_L12",
+    "snap_r00_c25_L12",
+    "snap_r00_c26_L12",
+    "snap_r00_c28_L12",
+    "snap_r00_c30_L12"
+   ],
+   "axis": "[macOS-CPU frozen-scorer advisory]",
+   "candidate": {
+    "activity": 0.0,
+    "affected_pair_count": 600,
+    "affected_pair_preview": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8,
+     9,
+     10,
+     11,
+     12,
+     13,
+     14,
+     15
+    ],
+    "candidate_id": "snap_r00_c07_L13",
+    "col": 7,
+    "direction": "snap_sublattice",
+    "joint_guard": 0.0,
+    "pose_guard": 0.0,
+    "priority": 0.8842337375964718,
+    "row": 0,
+    "rung": 13,
+    "seg_guard": 0.0
+   },
+   "candidate_id": "snap_r00_c07_L13",
+   "checkpoint_root": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/stage_checkpoints",
+   "current_before": {
+    "archive_bytes": 357837,
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "d_pose": 0.00071674752,
+    "d_seg": 0.004306165907,
+    "score": 0.7535465034970362,
+    "score_claim": false
+   },
+   "move_index": 15,
+   "phase_a_singleton": {
+    "archive_bytes": 357837,
+    "archive_sha256": "2eea1fc33af2c1bb5a438723dfb6dc1b88636e4400e32783483fdaff1a6d192c",
+    "candidate_tokens_sha256": "867c2f335c7a717136e365f2c9fbfdfb9950c75ec8f79fbeb9d8d3a6a4ab0bcd",
+    "token_frame_sha256": "7f258432ed74ca8f3b90bbcea3c2de57e0885f0d2f930a43d1ba7a7f166fb4a4"
+   },
+   "schema": "ddm_tq1_phase_b_realized_move.v1",
+   "score_claim": false,
+   "trial": {
+    "advisory_score_formula_value": "0.753605068775",
+    "all_batches_checkpointed_and_preserved": true,
+    "archive_bytes": 357837,
+    "archive_path": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/candidate_archives/move_0015_snap_r00_c07_L13.zip.receipt-bytes",
+    "archive_sha256": "2f2c33119029c8fbe115f884cd802b23c1d298199a6024345ceadacab4d2738a",
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "batch_count": 38,
+    "batch_digest_chain_sha256": "1d3ca066714bedf1711b90023e9a4f8ad9e4e07d0d2802368d0a5c2aef567de4",
+    "batch_size": 16,
+    "candidate": "move_0015_snap_r00_c07_L13",
+    "d_pose": "0.000716705700",
+    "d_seg": "0.004306776259",
+    "errors": 508048,
+    "per_stratum": {
+     "Lane": {
+      "d_seg": "0.268738081690",
+      "errors": 185601,
+      "sites": 690639
+     },
+     "Movable": {
+      "d_seg": "0.054029068872",
+      "errors": 78900,
+      "sites": 1460325
+     },
+     "MyCar": {
+      "d_seg": "0.000540783674",
+      "errors": 16220,
+      "sites": 29993509
+     },
+     "Road": {
+      "d_seg": "0.005570903190",
+      "errors": 152682,
+      "sites": 27407046
+     },
+     "Undrivable": {
+      "d_seg": "0.001277877201",
+      "errors": 74645,
+      "sites": 58413281
+     }
+    },
+    "pose_coordinates": 3600,
+    "pose_squared_error_sum": "2.580140519864",
+    "receiver_custody": {
+     "archive_dir": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/extracted_archives/move_0015_snap_r00_c07_L13",
+     "archive_sha256": "2f2c33119029c8fbe115f884cd802b23c1d298199a6024345ceadacab4d2738a",
+     "axis": "[macOS-CPU frozen-scorer advisory]",
+     "decoder_class": "ddm_tq1_qo1_inflate_runner_dcd4406aaa83.Decoder",
+     "receiver_output": "uint8 [B,2,874,1164,3] camera pairs",
+     "schema": "ddm_tq1_ix2_receiver_adapter.v1",
+     "score_claim": false
+    },
+    "schema": "ddm_tq1_phase_b_n600_aggregate.v1",
+    "score_claim": false,
+    "scorer_custody": {
+     "batch_size": 16,
+     "deterministic_algorithms": true,
+     "device": "cpu",
+     "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+     "modules_path": "/Users/adpena/Projects/pact/upstream/modules.py",
+     "modules_sha256": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa",
+     "posenet_weights_path": "/Users/adpena/Projects/pact/upstream/models/posenet.safetensors",
+     "posenet_weights_sha256": "0f3a0874c5c387f990d7b88bd1d7e1f6de35d98b45f2a289989db2c77b9b6576",
+     "score_claim": false,
+     "segnet_weights_path": "/Users/adpena/Projects/pact/upstream/models/segnet.safetensors",
+     "segnet_weights_sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6"
+    },
+    "sites": 117964800,
+    "typed_config_sha256": "c3ec612b57b6bd4fa47794cd73a9f1609d04594bff18f232252afa7c218f0e8b"
+   },
+   "typed_config_sha256": "c3ec612b57b6bd4fa47794cd73a9f1609d04594bff18f232252afa7c218f0e8b",
+   "verdict": {
+    "accepted": false,
+    "authority": "requires real receiver -> R -> uint8 -> frozen scorer components",
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "candidate_score": 0.7536050688089889,
+    "current_score": 0.7535465034970362,
+    "delta_S": 5.856531195269632e-05,
+    "delta_archive_bytes": 0,
+    "delta_d_pose": -4.181999999997108e-08,
+    "delta_d_seg": 6.10352000000175e-07,
+    "pose_term_erosion": -2.4698880473073004e-06,
+    "pose_term_erosion_limit": 0.005,
+    "schema": "ddm_tq1_realized_acceptance_verdict.v1",
+    "score_claim": false
+   }
+  },
+  {
+   "accepted": false,
+   "accepted_move_ids_after": [
+    "snap_r00_c23_L12",
+    "snap_r00_c25_L12",
+    "snap_r00_c26_L12",
+    "snap_r00_c28_L12",
+    "snap_r00_c30_L12"
+   ],
+   "accepted_move_ids_before": [
+    "snap_r00_c23_L12",
+    "snap_r00_c25_L12",
+    "snap_r00_c26_L12",
+    "snap_r00_c28_L12",
+    "snap_r00_c30_L12"
+   ],
+   "axis": "[macOS-CPU frozen-scorer advisory]",
+   "candidate": {
+    "activity": 0.0,
+    "affected_pair_count": 600,
+    "affected_pair_preview": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8,
+     9,
+     10,
+     11,
+     12,
+     13,
+     14,
+     15
+    ],
+    "candidate_id": "snap_r01_c00_L12",
+    "col": 0,
+    "direction": "snap_sublattice",
+    "joint_guard": 0.0,
+    "pose_guard": 0.0,
+    "priority": 0.8784648187633263,
+    "row": 1,
+    "rung": 12,
+    "seg_guard": 0.0
+   },
+   "candidate_id": "snap_r01_c00_L12",
+   "checkpoint_root": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/stage_checkpoints",
+   "current_before": {
+    "archive_bytes": 357837,
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "d_pose": 0.00071674752,
+    "d_seg": 0.004306165907,
+    "score": 0.7535465034970362,
+    "score_claim": false
+   },
+   "move_index": 16,
+   "phase_a_singleton": {
+    "archive_bytes": 357837,
+    "archive_sha256": "e70f183929c1901bd422278d0fa43c44919ec70148655c7bd3b3ec324c524d8f",
+    "candidate_tokens_sha256": "168249eb32ef06fb28c3ff680d1e94d8ebc614b4ef4e395d014a1b5f17eee753",
+    "token_frame_sha256": "10168884613fe35787916f5d53d082c2c0c3a6844132125b2e7af8b7d052289f"
+   },
+   "schema": "ddm_tq1_phase_b_realized_move.v1",
+   "score_claim": false,
+   "trial": {
+    "advisory_score_formula_value": "0.753584713348",
+    "all_batches_checkpointed_and_preserved": true,
+    "archive_bytes": 357837,
+    "archive_path": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/candidate_archives/move_0016_snap_r01_c00_L12.zip.receipt-bytes",
+    "archive_sha256": "383c150715d6cc6bd305b8be5a9f16e7d41f3fd832774ddde9b7a209f7e99f35",
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "batch_count": 38,
+    "batch_digest_chain_sha256": "00049f93cd2b78d0c04555eb4b969fac1262cd9477a18d5180825a7106f8dc58",
+    "batch_size": 16,
+    "candidate": "move_0016_snap_r01_c00_L12",
+    "d_pose": "0.000716734231",
+    "d_seg": "0.004306555854",
+    "errors": 508022,
+    "per_stratum": {
+     "Lane": {
+      "d_seg": "0.268680164312",
+      "errors": 185561,
+      "sites": 690639
+     },
+     "Movable": {
+      "d_seg": "0.054036601441",
+      "errors": 78911,
+      "sites": 1460325
+     },
+     "MyCar": {
+      "d_seg": "0.000541217101",
+      "errors": 16233,
+      "sites": 29993509
+     },
+     "Road": {
+      "d_seg": "0.005571705904",
+      "errors": 152704,
+      "sites": 27407046
+     },
+     "Undrivable": {
+      "d_seg": "0.001277329380",
+      "errors": 74613,
+      "sites": 58413281
+     }
+    },
+    "pose_coordinates": 3600,
+    "pose_squared_error_sum": "2.580243231355",
+    "receiver_custody": {
+     "archive_dir": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/extracted_archives/move_0016_snap_r01_c00_L12",
+     "archive_sha256": "383c150715d6cc6bd305b8be5a9f16e7d41f3fd832774ddde9b7a209f7e99f35",
+     "axis": "[macOS-CPU frozen-scorer advisory]",
+     "decoder_class": "ddm_tq1_qo1_inflate_runner_dcd4406aaa83.Decoder",
+     "receiver_output": "uint8 [B,2,874,1164,3] camera pairs",
+     "schema": "ddm_tq1_ix2_receiver_adapter.v1",
+     "score_claim": false
+    },
+    "schema": "ddm_tq1_phase_b_n600_aggregate.v1",
+    "score_claim": false,
+    "scorer_custody": {
+     "batch_size": 16,
+     "deterministic_algorithms": true,
+     "device": "cpu",
+     "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+     "modules_path": "/Users/adpena/Projects/pact/upstream/modules.py",
+     "modules_sha256": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa",
+     "posenet_weights_path": "/Users/adpena/Projects/pact/upstream/models/posenet.safetensors",
+     "posenet_weights_sha256": "0f3a0874c5c387f990d7b88bd1d7e1f6de35d98b45f2a289989db2c77b9b6576",
+     "score_claim": false,
+     "segnet_weights_path": "/Users/adpena/Projects/pact/upstream/models/segnet.safetensors",
+     "segnet_weights_sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6"
+    },
+    "sites": 117964800,
+    "typed_config_sha256": "c3ec612b57b6bd4fa47794cd73a9f1609d04594bff18f232252afa7c218f0e8b"
+   },
+   "typed_config_sha256": "c3ec612b57b6bd4fa47794cd73a9f1609d04594bff18f232252afa7c218f0e8b",
+   "verdict": {
+    "accepted": false,
+    "authority": "requires real receiver -> R -> uint8 -> frozen scorer components",
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "candidate_score": 0.7535847133568732,
+    "current_score": 0.7535465034970362,
+    "delta_S": 3.8209859836935145e-05,
+    "delta_archive_bytes": 0,
+    "delta_d_pose": -1.3289000000025683e-08,
+    "delta_d_seg": 3.8994700000006405e-07,
+    "pose_term_erosion": -7.848401630677904e-07,
+    "pose_term_erosion_limit": 0.005,
+    "schema": "ddm_tq1_realized_acceptance_verdict.v1",
+    "score_claim": false
+   }
+  },
+  {
+   "accepted": false,
+   "accepted_move_ids_after": [
+    "snap_r00_c23_L12",
+    "snap_r00_c25_L12",
+    "snap_r00_c26_L12",
+    "snap_r00_c28_L12",
+    "snap_r00_c30_L12"
+   ],
+   "accepted_move_ids_before": [
+    "snap_r00_c23_L12",
+    "snap_r00_c25_L12",
+    "snap_r00_c26_L12",
+    "snap_r00_c28_L12",
+    "snap_r00_c30_L12"
+   ],
+   "axis": "[macOS-CPU frozen-scorer advisory]",
+   "candidate": {
+    "activity": 0.0,
+    "affected_pair_count": 600,
+    "affected_pair_preview": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8,
+     9,
+     10,
+     11,
+     12,
+     13,
+     14,
+     15
+    ],
+    "candidate_id": "snap_r00_c08_L13",
+    "col": 8,
+    "direction": "snap_sublattice",
+    "joint_guard": 0.0,
+    "pose_guard": 0.0,
+    "priority": 0.8705501618122976,
+    "row": 0,
+    "rung": 13,
+    "seg_guard": 0.0
+   },
+   "candidate_id": "snap_r00_c08_L13",
+   "checkpoint_root": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/stage_checkpoints",
+   "current_before": {
+    "archive_bytes": 357837,
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "d_pose": 0.00071674752,
+    "d_seg": 0.004306165907,
+    "score": 0.7535465034970362,
+    "score_claim": false
+   },
+   "move_index": 17,
+   "phase_a_singleton": {
+    "archive_bytes": 357837,
+    "archive_sha256": "987cf140b182feeaab3b1c02c6bc7ea586541984ed34bd6914315f06f36c6cc5",
+    "candidate_tokens_sha256": "cdb5c5b8917690312d06568bad4d1bc253e926cf800926a8f58df128a8a721b8",
+    "token_frame_sha256": "8b1f6b7f1829f2f0798886a92768fa29b3c0641c81b3b89a496e8e5ce17d5d4b"
+   },
+   "schema": "ddm_tq1_phase_b_realized_move.v1",
+   "score_claim": false,
+   "trial": {
+    "advisory_score_formula_value": "0.753600995069",
+    "all_batches_checkpointed_and_preserved": true,
+    "archive_bytes": 357837,
+    "archive_path": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/candidate_archives/move_0017_snap_r00_c08_L13.zip.receipt-bytes",
+    "archive_sha256": "0e3c62ba19f7a18e7a8b668a2eea16eb3f14b3652211aae95747b1cab66162db",
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "batch_count": 38,
+    "batch_digest_chain_sha256": "d55251797696fc1832e9b2a5716ca077fa6c704f62d0ace521c2835c737575a1",
+    "batch_size": 16,
+    "candidate": "move_0017_snap_r00_c08_L13",
+    "d_pose": "0.000716722844",
+    "d_seg": "0.004306725396",
+    "errors": 508042,
+    "per_stratum": {
+     "Lane": {
+      "d_seg": "0.268810478412",
+      "errors": 185651,
+      "sites": 690639
+     },
+     "Movable": {
+      "d_seg": "0.054055775256",
+      "errors": 78939,
+      "sites": 1460325
+     },
+     "MyCar": {
+      "d_seg": "0.000540450269",
+      "errors": 16210,
+      "sites": 29993509
+     },
+     "Road": {
+      "d_seg": "0.005572764026",
+      "errors": 152733,
+      "sites": 27407046
+     },
+     "Undrivable": {
+      "d_seg": "0.001275548963",
+      "errors": 74509,
+      "sites": 58413281
+     }
+    },
+    "pose_coordinates": 3600,
+    "pose_squared_error_sum": "2.580202239776",
+    "receiver_custody": {
+     "archive_dir": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/extracted_archives/move_0017_snap_r00_c08_L13",
+     "archive_sha256": "0e3c62ba19f7a18e7a8b668a2eea16eb3f14b3652211aae95747b1cab66162db",
+     "axis": "[macOS-CPU frozen-scorer advisory]",
+     "decoder_class": "ddm_tq1_qo1_inflate_runner_dcd4406aaa83.Decoder",
+     "receiver_output": "uint8 [B,2,874,1164,3] camera pairs",
+     "schema": "ddm_tq1_ix2_receiver_adapter.v1",
+     "score_claim": false
+    },
+    "schema": "ddm_tq1_phase_b_n600_aggregate.v1",
+    "score_claim": false,
+    "scorer_custody": {
+     "batch_size": 16,
+     "deterministic_algorithms": true,
+     "device": "cpu",
+     "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+     "modules_path": "/Users/adpena/Projects/pact/upstream/modules.py",
+     "modules_sha256": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa",
+     "posenet_weights_path": "/Users/adpena/Projects/pact/upstream/models/posenet.safetensors",
+     "posenet_weights_sha256": "0f3a0874c5c387f990d7b88bd1d7e1f6de35d98b45f2a289989db2c77b9b6576",
+     "score_claim": false,
+     "segnet_weights_path": "/Users/adpena/Projects/pact/upstream/models/segnet.safetensors",
+     "segnet_weights_sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6"
+    },
+    "sites": 117964800,
+    "typed_config_sha256": "c3ec612b57b6bd4fa47794cd73a9f1609d04594bff18f232252afa7c218f0e8b"
+   },
+   "typed_config_sha256": "c3ec612b57b6bd4fa47794cd73a9f1609d04594bff18f232252afa7c218f0e8b",
+   "verdict": {
+    "accepted": false,
+    "authority": "requires real receiver -> R -> uint8 -> frozen scorer components",
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "candidate_score": 0.7536009950418714,
+    "current_score": 0.7535465034970362,
+    "delta_S": 5.449154483516683e-05,
+    "delta_archive_bytes": 0,
+    "delta_d_pose": -2.4675999999953548e-08,
+    "delta_d_seg": 5.594890000000172e-07,
+    "pose_term_erosion": -1.4573551648383587e-06,
+    "pose_term_erosion_limit": 0.005,
+    "schema": "ddm_tq1_realized_acceptance_verdict.v1",
+    "score_claim": false
+   }
+  },
+  {
+   "accepted": false,
+   "accepted_move_ids_after": [
+    "snap_r00_c23_L12",
+    "snap_r00_c25_L12",
+    "snap_r00_c26_L12",
+    "snap_r00_c28_L12",
+    "snap_r00_c30_L12"
+   ],
+   "accepted_move_ids_before": [
+    "snap_r00_c23_L12",
+    "snap_r00_c25_L12",
+    "snap_r00_c26_L12",
+    "snap_r00_c28_L12",
+    "snap_r00_c30_L12"
+   ],
+   "axis": "[macOS-CPU frozen-scorer advisory]",
+   "candidate": {
+    "activity": 0.0,
+    "affected_pair_count": 600,
+    "affected_pair_preview": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8,
+     9,
+     10,
+     11,
+     12,
+     13,
+     14,
+     15
+    ],
+    "candidate_id": "snap_r01_c02_L12",
+    "col": 2,
+    "direction": "snap_sublattice",
+    "joint_guard": 0.0,
+    "pose_guard": 0.0,
+    "priority": 0.8633955309836444,
+    "row": 1,
+    "rung": 12,
+    "seg_guard": 0.0
+   },
+   "candidate_id": "snap_r01_c02_L12",
+   "checkpoint_root": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/stage_checkpoints",
+   "current_before": {
+    "archive_bytes": 357837,
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "d_pose": 0.00071674752,
+    "d_seg": 0.004306165907,
+    "score": 0.7535465034970362,
+    "score_claim": false
+   },
+   "move_index": 18,
+   "phase_a_singleton": {
+    "archive_bytes": 357837,
+    "archive_sha256": "88a84d8c547fb84da63237cd4849fddcd574e9e2ad39567e08818b3c711ae61d",
+    "candidate_tokens_sha256": "5016d47c704e797153534f7520012a33e58b19ba8476c6215f1535db1b1853d8",
+    "token_frame_sha256": "83dc18e933bf034bd830fdc317eb4a6fbd4147877aced6027b88bce74a290768"
+   },
+   "schema": "ddm_tq1_phase_b_realized_move.v1",
+   "score_claim": false,
+   "trial": {
+    "advisory_score_formula_value": "0.753573780730",
+    "all_batches_checkpointed_and_preserved": true,
+    "archive_bytes": 357837,
+    "archive_path": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/candidate_archives/move_0018_snap_r01_c02_L12.zip.receipt-bytes",
+    "archive_sha256": "3ecc111e1833a576dfe594dd679abee4a6eae0762306c3d2bf3739a059853c12",
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "batch_count": 38,
+    "batch_digest_chain_sha256": "8f62a7e429a68d96fa3514d21f8b88d73a32eff15cba086be70ec994271516ae",
+    "batch_size": 16,
+    "candidate": "move_0018_snap_r01_c02_L12",
+    "d_pose": "0.000716936677",
+    "d_seg": "0.004306326972",
+    "errors": 507995,
+    "per_stratum": {
+     "Lane": {
+      "d_seg": "0.268782967657",
+      "errors": 185632,
+      "sites": 690639
+     },
+     "Movable": {
+      "d_seg": "0.054048927465",
+      "errors": 78929,
+      "sites": 1460325
+     },
+     "MyCar": {
+      "d_seg": "0.000541417145",
+      "errors": 16239,
+      "sites": 29993509
+     },
+     "Road": {
+      "d_seg": "0.005570246425",
+      "errors": 152664,
+      "sites": 27407046
+     },
+     "Undrivable": {
+      "d_seg": "0.001275925590",
+      "errors": 74531,
+      "sites": 58413281
+     }
+    },
+    "pose_coordinates": 3600,
+    "pose_squared_error_sum": "2.580972038043",
+    "receiver_custody": {
+     "archive_dir": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/extracted_archives/move_0018_snap_r01_c02_L12",
+     "archive_sha256": "3ecc111e1833a576dfe594dd679abee4a6eae0762306c3d2bf3739a059853c12",
+     "axis": "[macOS-CPU frozen-scorer advisory]",
+     "decoder_class": "ddm_tq1_qo1_inflate_runner_dcd4406aaa83.Decoder",
+     "receiver_output": "uint8 [B,2,874,1164,3] camera pairs",
+     "schema": "ddm_tq1_ix2_receiver_adapter.v1",
+     "score_claim": false
+    },
+    "schema": "ddm_tq1_phase_b_n600_aggregate.v1",
+    "score_claim": false,
+    "scorer_custody": {
+     "batch_size": 16,
+     "deterministic_algorithms": true,
+     "device": "cpu",
+     "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+     "modules_path": "/Users/adpena/Projects/pact/upstream/modules.py",
+     "modules_sha256": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa",
+     "posenet_weights_path": "/Users/adpena/Projects/pact/upstream/models/posenet.safetensors",
+     "posenet_weights_sha256": "0f3a0874c5c387f990d7b88bd1d7e1f6de35d98b45f2a289989db2c77b9b6576",
+     "score_claim": false,
+     "segnet_weights_path": "/Users/adpena/Projects/pact/upstream/models/segnet.safetensors",
+     "segnet_weights_sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6"
+    },
+    "sites": 117964800,
+    "typed_config_sha256": "c3ec612b57b6bd4fa47794cd73a9f1609d04594bff18f232252afa7c218f0e8b"
+   },
+   "typed_config_sha256": "c3ec612b57b6bd4fa47794cd73a9f1609d04594bff18f232252afa7c218f0e8b",
+   "verdict": {
+    "accepted": false,
+    "authority": "requires real receiver -> R -> uint8 -> frozen scorer components",
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "candidate_score": 0.7535737807043155,
+    "current_score": 0.7535465034970362,
+    "delta_S": 2.7277207279241544e-05,
+    "delta_archive_bytes": 0,
+    "delta_d_pose": 1.8915699999996326e-07,
+    "delta_d_seg": 1.6106499999956475e-07,
+    "pose_term_erosion": 1.1170707279323233e-05,
+    "pose_term_erosion_limit": 0.005,
+    "schema": "ddm_tq1_realized_acceptance_verdict.v1",
+    "score_claim": false
+   }
+  },
+  {
+   "accepted": false,
+   "accepted_move_ids_after": [
+    "snap_r00_c23_L12",
+    "snap_r00_c25_L12",
+    "snap_r00_c26_L12",
+    "snap_r00_c28_L12",
+    "snap_r00_c30_L12"
+   ],
+   "accepted_move_ids_before": [
+    "snap_r00_c23_L12",
+    "snap_r00_c25_L12",
+    "snap_r00_c26_L12",
+    "snap_r00_c28_L12",
+    "snap_r00_c30_L12"
+   ],
+   "axis": "[macOS-CPU frozen-scorer advisory]",
+   "candidate": {
+    "activity": 0.0,
+    "affected_pair_count": 600,
+    "affected_pair_preview": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8,
+     9,
+     10,
+     11,
+     12,
+     13,
+     14,
+     15
+    ],
+    "candidate_id": "snap_r01_c03_L12",
+    "col": 3,
+    "direction": "snap_sublattice",
+    "joint_guard": 0.0,
+    "pose_guard": 0.0,
+    "priority": 0.856169052488071,
+    "row": 1,
+    "rung": 12,
+    "seg_guard": 0.0
+   },
+   "candidate_id": "snap_r01_c03_L12",
+   "checkpoint_root": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/stage_checkpoints",
+   "current_before": {
+    "archive_bytes": 357837,
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "d_pose": 0.00071674752,
+    "d_seg": 0.004306165907,
+    "score": 0.7535465034970362,
+    "score_claim": false
+   },
+   "move_index": 19,
+   "phase_a_singleton": {
+    "archive_bytes": 357837,
+    "archive_sha256": "01edd0f9fd4bf8c874df79333b1de4e1d0dad76fa15e0fa0cf6caa65f011686a",
+    "candidate_tokens_sha256": "d66a678f6ceadfa190eeef6f868f44a326cf3356ac5acc42f9b113f3f61011e0",
+    "token_frame_sha256": "b68116e6541f3be43804d3cbba3cf624ca66ee2ea29f6321772e6c9fce58e3bf"
+   },
+   "schema": "ddm_tq1_phase_b_realized_move.v1",
+   "score_claim": false,
+   "trial": {
+    "advisory_score_formula_value": "0.753551546399",
+    "all_batches_checkpointed_and_preserved": true,
+    "archive_bytes": 357836,
+    "archive_path": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/candidate_archives/move_0019_snap_r01_c03_L12.zip.receipt-bytes",
+    "archive_sha256": "2451e28e9ca33ffa69d997650e48c3dbabe812a18197926997485ddc2e6ed5ae",
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "batch_count": 38,
+    "batch_digest_chain_sha256": "54fb1824562417a4c269c9e9e399005738c0bcd588a2d1f40fd35a1201c1fc3f",
+    "batch_size": 16,
+    "candidate": "move_0019_snap_r01_c03_L12",
+    "d_pose": "0.000717174378",
+    "d_seg": "0.004305970934",
+    "errors": 507953,
+    "per_stratum": {
+     "Lane": {
+      "d_seg": "0.268756904837",
+      "errors": 185614,
+      "sites": 690639
+     },
+     "Movable": {
+      "d_seg": "0.054030438430",
+      "errors": 78902,
+      "sites": 1460325
+     },
+     "MyCar": {
+      "d_seg": "0.000541450485",
+      "errors": 16240,
+      "sites": 29993509
+     },
+     "Road": {
+      "d_seg": "0.005568713972",
+      "errors": 152622,
+      "sites": 27407046
+     },
+     "Undrivable": {
+      "d_seg": "0.001276678843",
+      "errors": 74575,
+      "sites": 58413281
+     }
+    },
+    "pose_coordinates": 3600,
+    "pose_squared_error_sum": "2.581827760127",
+    "receiver_custody": {
+     "archive_dir": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/extracted_archives/move_0019_snap_r01_c03_L12",
+     "archive_sha256": "2451e28e9ca33ffa69d997650e48c3dbabe812a18197926997485ddc2e6ed5ae",
+     "axis": "[macOS-CPU frozen-scorer advisory]",
+     "decoder_class": "ddm_tq1_qo1_inflate_runner_dcd4406aaa83.Decoder",
+     "receiver_output": "uint8 [B,2,874,1164,3] camera pairs",
+     "schema": "ddm_tq1_ix2_receiver_adapter.v1",
+     "score_claim": false
+    },
+    "schema": "ddm_tq1_phase_b_n600_aggregate.v1",
+    "score_claim": false,
+    "scorer_custody": {
+     "batch_size": 16,
+     "deterministic_algorithms": true,
+     "device": "cpu",
+     "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+     "modules_path": "/Users/adpena/Projects/pact/upstream/modules.py",
+     "modules_sha256": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa",
+     "posenet_weights_path": "/Users/adpena/Projects/pact/upstream/models/posenet.safetensors",
+     "posenet_weights_sha256": "0f3a0874c5c387f990d7b88bd1d7e1f6de35d98b45f2a289989db2c77b9b6576",
+     "score_claim": false,
+     "segnet_weights_path": "/Users/adpena/Projects/pact/upstream/models/segnet.safetensors",
+     "segnet_weights_sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6"
+    },
+    "sites": 117964800,
+    "typed_config_sha256": "c3ec612b57b6bd4fa47794cd73a9f1609d04594bff18f232252afa7c218f0e8b"
+   },
+   "typed_config_sha256": "c3ec612b57b6bd4fa47794cd73a9f1609d04594bff18f232252afa7c218f0e8b",
+   "verdict": {
+    "accepted": false,
+    "authority": "requires real receiver -> R -> uint8 -> frozen scorer components",
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "candidate_score": 0.7535515464397513,
+    "current_score": 0.7535465034970362,
+    "delta_S": 5.042942715083321e-06,
+    "delta_archive_bytes": -1,
+    "delta_d_pose": 4.2685800000002647e-07,
+    "delta_d_seg": -1.9497300000025086e-07,
+    "pose_term_erosion": 2.5206101668256986e-05,
+    "pose_term_erosion_limit": 0.005,
+    "schema": "ddm_tq1_realized_acceptance_verdict.v1",
+    "score_claim": false
+   }
+  },
+  {
+   "accepted": false,
+   "accepted_move_ids_after": [
+    "snap_r00_c23_L12",
+    "snap_r00_c25_L12",
+    "snap_r00_c26_L12",
+    "snap_r00_c28_L12",
+    "snap_r00_c30_L12"
+   ],
+   "accepted_move_ids_before": [
+    "snap_r00_c23_L12",
+    "snap_r00_c25_L12",
+    "snap_r00_c26_L12",
+    "snap_r00_c28_L12",
+    "snap_r00_c30_L12"
+   ],
+   "axis": "[macOS-CPU frozen-scorer advisory]",
+   "candidate": {
+    "activity": 0.0,
+    "affected_pair_count": 600,
+    "affected_pair_preview": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8,
+     9,
+     10,
+     11,
+     12,
+     13,
+     14,
+     15
+    ],
+    "candidate_id": "snap_r01_c05_L12",
+    "col": 5,
+    "direction": "snap_sublattice",
+    "joint_guard": 0.0,
+    "pose_guard": 0.0,
+    "priority": 0.8422915284229154,
+    "row": 1,
+    "rung": 12,
+    "seg_guard": 0.0
+   },
+   "candidate_id": "snap_r01_c05_L12",
+   "checkpoint_root": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/stage_checkpoints",
+   "current_before": {
+    "archive_bytes": 357837,
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "d_pose": 0.00071674752,
+    "d_seg": 0.004306165907,
+    "score": 0.7535465034970362,
+    "score_claim": false
+   },
+   "move_index": 20,
+   "phase_a_singleton": {
+    "archive_bytes": 357837,
+    "archive_sha256": "8fd7f5ba15404e04c76505335add7fe6337743e800c915159a301947afeaafb0",
+    "candidate_tokens_sha256": "278f64044687a720a22906b57594816618f2b83800573c030904836c4d6ad8ee",
+    "token_frame_sha256": "207bf8e0a4a3cbb4af45c67be1aba21970833f664d4fc26ef4517fbbcebfc584"
+   },
+   "schema": "ddm_tq1_phase_b_realized_move.v1",
+   "score_claim": false,
+   "trial": {
+    "advisory_score_formula_value": "0.753625791044",
+    "all_batches_checkpointed_and_preserved": true,
+    "archive_bytes": 357837,
+    "archive_path": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/candidate_archives/move_0020_snap_r01_c05_L12.zip.receipt-bytes",
+    "archive_sha256": "6328e5d12ad9c24ef836b74fe4447810d95a0a71c1fffc7adada658b0532d341",
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "batch_count": 38,
+    "batch_digest_chain_sha256": "77c5a6635b95f8a9be0d1e1d896cc4fbe2ce886d6514e6650ab262259dd3fcc6",
+    "batch_size": 16,
+    "candidate": "move_0020_snap_r01_c05_L12",
+    "d_pose": "0.000717487371",
+    "d_seg": "0.004306521946",
+    "errors": 508018,
+    "per_stratum": {
+     "Lane": {
+      "d_seg": "0.268707675066",
+      "errors": 185580,
+      "sites": 690639
+     },
+     "Movable": {
+      "d_seg": "0.054036601441",
+      "errors": 78911,
+      "sites": 1460325
+     },
+     "MyCar": {
+      "d_seg": "0.000541517166",
+      "errors": 16242,
+      "sites": 29993509
+     },
+     "Road": {
+      "d_seg": "0.005567582876",
+      "errors": 152591,
+      "sites": 27407046
+     },
+     "Undrivable": {
+      "d_seg": "0.001278716051",
+      "errors": 74694,
+      "sites": 58413281
+     }
+    },
+    "pose_coordinates": 3600,
+    "pose_squared_error_sum": "2.582954536948",
+    "receiver_custody": {
+     "archive_dir": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/extracted_archives/move_0020_snap_r01_c05_L12",
+     "archive_sha256": "6328e5d12ad9c24ef836b74fe4447810d95a0a71c1fffc7adada658b0532d341",
+     "axis": "[macOS-CPU frozen-scorer advisory]",
+     "decoder_class": "ddm_tq1_qo1_inflate_runner_dcd4406aaa83.Decoder",
+     "receiver_output": "uint8 [B,2,874,1164,3] camera pairs",
+     "schema": "ddm_tq1_ix2_receiver_adapter.v1",
+     "score_claim": false
+    },
+    "schema": "ddm_tq1_phase_b_n600_aggregate.v1",
+    "score_claim": false,
+    "scorer_custody": {
+     "batch_size": 16,
+     "deterministic_algorithms": true,
+     "device": "cpu",
+     "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+     "modules_path": "/Users/adpena/Projects/pact/upstream/modules.py",
+     "modules_sha256": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa",
+     "posenet_weights_path": "/Users/adpena/Projects/pact/upstream/models/posenet.safetensors",
+     "posenet_weights_sha256": "0f3a0874c5c387f990d7b88bd1d7e1f6de35d98b45f2a289989db2c77b9b6576",
+     "score_claim": false,
+     "segnet_weights_path": "/Users/adpena/Projects/pact/upstream/models/segnet.safetensors",
+     "segnet_weights_sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6"
+    },
+    "sites": 117964800,
+    "typed_config_sha256": "c3ec612b57b6bd4fa47794cd73a9f1609d04594bff18f232252afa7c218f0e8b"
+   },
+   "typed_config_sha256": "c3ec612b57b6bd4fa47794cd73a9f1609d04594bff18f232252afa7c218f0e8b",
+   "verdict": {
+    "accepted": false,
+    "authority": "requires real receiver -> R -> uint8 -> frozen scorer components",
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "candidate_score": 0.7536257910692858,
+    "current_score": 0.7535465034970362,
+    "delta_S": 7.928757224962002e-05,
+    "delta_archive_bytes": 0,
+    "delta_d_pose": 7.398509999999954e-07,
+    "delta_d_seg": 3.560390000002453e-07,
+    "pose_term_erosion": 4.368367224966141e-05,
+    "pose_term_erosion_limit": 0.005,
+    "schema": "ddm_tq1_realized_acceptance_verdict.v1",
+    "score_claim": false
+   }
+  },
+  {
+   "accepted": false,
+   "accepted_move_ids_after": [
+    "snap_r00_c23_L12",
+    "snap_r00_c25_L12",
+    "snap_r00_c26_L12",
+    "snap_r00_c28_L12",
+    "snap_r00_c30_L12"
+   ],
+   "accepted_move_ids_before": [
+    "snap_r00_c23_L12",
+    "snap_r00_c25_L12",
+    "snap_r00_c26_L12",
+    "snap_r00_c28_L12",
+    "snap_r00_c30_L12"
+   ],
+   "axis": "[macOS-CPU frozen-scorer advisory]",
+   "candidate": {
+    "activity": 0.0,
+    "affected_pair_count": 600,
+    "affected_pair_preview": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8,
+     9,
+     10,
+     11,
+     12,
+     13,
+     14,
+     15
+    ],
+    "candidate_id": "snap_r01_c07_L12",
+    "col": 7,
+    "direction": "snap_sublattice",
+    "joint_guard": 0.0,
+    "pose_guard": 0.0,
+    "priority": 0.8291316526610645,
+    "row": 1,
+    "rung": 12,
+    "seg_guard": 0.0
+   },
+   "candidate_id": "snap_r01_c07_L12",
+   "checkpoint_root": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/stage_checkpoints",
+   "current_before": {
+    "archive_bytes": 357837,
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "d_pose": 0.00071674752,
+    "d_seg": 0.004306165907,
+    "score": 0.7535465034970362,
+    "score_claim": false
+   },
+   "move_index": 21,
+   "phase_a_singleton": {
+    "archive_bytes": 357837,
+    "archive_sha256": "d69081acbc2eabe7f5b3330d1b04202153440a76efd053b15805cd04a99b66b0",
+    "candidate_tokens_sha256": "3d9e7e08583c7a570053d1bb8a0548d2b174898e7ce2619f86c7bd1b9828d8f9",
+    "token_frame_sha256": "795f70ab510b0b613c0bfe31959eb042ae7efd02e7a33bc824d7e899c9e56fb0"
+   },
+   "schema": "ddm_tq1_phase_b_realized_move.v1",
+   "score_claim": false,
+   "trial": {
+    "advisory_score_formula_value": "0.753586453219",
+    "all_batches_checkpointed_and_preserved": true,
+    "archive_bytes": 357837,
+    "archive_path": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/candidate_archives/move_0021_snap_r01_c07_L12.zip.receipt-bytes",
+    "archive_sha256": "9d78116c6654c5e9048ae04aa6b014e32843f6822894262d8d9040bb24e3d688",
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "batch_count": 38,
+    "batch_digest_chain_sha256": "63868eaf4a14fc6d7f03d50817360a056a875b2f6bb547bbd9b96b32eeda4682",
+    "batch_size": 16,
+    "candidate": "move_0021_snap_r01_c07_L12",
+    "d_pose": "0.000716490995",
+    "d_seg": "0.004306716919",
+    "errors": 508041,
+    "per_stratum": {
+     "Lane": {
+      "d_seg": "0.268827853625",
+      "errors": 185663,
+      "sites": 690639
+     },
+     "Movable": {
+      "d_seg": "0.054024275418",
+      "errors": 78893,
+      "sites": 1460325
+     },
+     "MyCar": {
+      "d_seg": "0.000540950377",
+      "errors": 16225,
+      "sites": 29993509
+     },
+     "Road": {
+      "d_seg": "0.005568713972",
+      "errors": 152622,
+      "sites": 27407046
+     },
+     "Undrivable": {
+      "d_seg": "0.001277757365",
+      "errors": 74638,
+      "sites": 58413281
+     }
+    },
+    "pose_coordinates": 3600,
+    "pose_squared_error_sum": "2.579367583296",
+    "receiver_custody": {
+     "archive_dir": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/extracted_archives/move_0021_snap_r01_c07_L12",
+     "archive_sha256": "9d78116c6654c5e9048ae04aa6b014e32843f6822894262d8d9040bb24e3d688",
+     "axis": "[macOS-CPU frozen-scorer advisory]",
+     "decoder_class": "ddm_tq1_qo1_inflate_runner_dcd4406aaa83.Decoder",
+     "receiver_output": "uint8 [B,2,874,1164,3] camera pairs",
+     "schema": "ddm_tq1_ix2_receiver_adapter.v1",
+     "score_claim": false
+    },
+    "schema": "ddm_tq1_phase_b_n600_aggregate.v1",
+    "score_claim": false,
+    "scorer_custody": {
+     "batch_size": 16,
+     "deterministic_algorithms": true,
+     "device": "cpu",
+     "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+     "modules_path": "/Users/adpena/Projects/pact/upstream/modules.py",
+     "modules_sha256": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa",
+     "posenet_weights_path": "/Users/adpena/Projects/pact/upstream/models/posenet.safetensors",
+     "posenet_weights_sha256": "0f3a0874c5c387f990d7b88bd1d7e1f6de35d98b45f2a289989db2c77b9b6576",
+     "score_claim": false,
+     "segnet_weights_path": "/Users/adpena/Projects/pact/upstream/models/segnet.safetensors",
+     "segnet_weights_sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6"
+    },
+    "sites": 117964800,
+    "typed_config_sha256": "c3ec612b57b6bd4fa47794cd73a9f1609d04594bff18f232252afa7c218f0e8b"
+   },
+   "typed_config_sha256": "c3ec612b57b6bd4fa47794cd73a9f1609d04594bff18f232252afa7c218f0e8b",
+   "verdict": {
+    "accepted": false,
+    "authority": "requires real receiver -> R -> uint8 -> frozen scorer components",
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "candidate_score": 0.7535864532027973,
+    "current_score": 0.7535465034970362,
+    "delta_S": 3.9949705761044285e-05,
+    "delta_archive_bytes": 0,
+    "delta_d_pose": -2.565249999999814e-07,
+    "delta_d_seg": 5.510119999996288e-07,
+    "pose_term_erosion": -1.5151494238863084e-05,
+    "pose_term_erosion_limit": 0.005,
+    "schema": "ddm_tq1_realized_acceptance_verdict.v1",
+    "score_claim": false
+   }
+  },
+  {
+   "accepted": false,
+   "accepted_move_ids_after": [
+    "snap_r00_c23_L12",
+    "snap_r00_c25_L12",
+    "snap_r00_c26_L12",
+    "snap_r00_c28_L12",
+    "snap_r00_c30_L12"
+   ],
+   "accepted_move_ids_before": [
+    "snap_r00_c23_L12",
+    "snap_r00_c25_L12",
+    "snap_r00_c26_L12",
+    "snap_r00_c28_L12",
+    "snap_r00_c30_L12"
+   ],
+   "axis": "[macOS-CPU frozen-scorer advisory]",
+   "candidate": {
+    "activity": 0.0,
+    "affected_pair_count": 600,
+    "affected_pair_preview": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8,
+     9,
+     10,
+     11,
+     12,
+     13,
+     14,
+     15
+    ],
+    "candidate_id": "snap_r01_c08_L12",
+    "col": 8,
+    "direction": "snap_sublattice",
+    "joint_guard": 0.0,
+    "pose_guard": 0.0,
+    "priority": 0.8228036587960008,
+    "row": 1,
+    "rung": 12,
+    "seg_guard": 0.0
+   },
+   "candidate_id": "snap_r01_c08_L12",
+   "checkpoint_root": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/stage_checkpoints",
+   "current_before": {
+    "archive_bytes": 357837,
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "d_pose": 0.00071674752,
+    "d_seg": 0.004306165907,
+    "score": 0.7535465034970362,
+    "score_claim": false
+   },
+   "move_index": 22,
+   "phase_a_singleton": {
+    "archive_bytes": 357837,
+    "archive_sha256": "5f7a69a7715489528319db3f7090e206e72cfb0ed42276acb73b08f68ecd213f",
+    "candidate_tokens_sha256": "21e07ab383ad31c087e8ee9641cb60f1b81ac953e56bf32fbcd82bac2e71ac4b",
+    "token_frame_sha256": "2212726abef94adc6618ec00aa4e2771b35df0ae6f7a0aed6b3f68a1ccfc74ff"
+   },
+   "schema": "ddm_tq1_phase_b_realized_move.v1",
+   "score_claim": false,
+   "trial": {
+    "advisory_score_formula_value": "0.753572981440",
+    "all_batches_checkpointed_and_preserved": true,
+    "archive_bytes": 357837,
+    "archive_path": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/candidate_archives/move_0022_snap_r01_c08_L12.zip.receipt-bytes",
+    "archive_sha256": "c40742d0682c9030861221c2cfcaa92c823f3b743f4ab3444d91945c4ad9999f",
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "batch_count": 38,
+    "batch_digest_chain_sha256": "0d1293cafd70f5d22d6be971d0fe8f0b5a6e3ca32fc46444a0288eaaf0f6a372",
+    "batch_size": 16,
+    "candidate": "move_0022_snap_r01_c08_L12",
+    "d_pose": "0.000716779595",
+    "d_seg": "0.004306411743",
+    "errors": 508005,
+    "per_stratum": {
+     "Lane": {
+      "d_seg": "0.268645413885",
+      "errors": 185537,
+      "sites": 690639
+     },
+     "Movable": {
+      "d_seg": "0.054024960197",
+      "errors": 78894,
+      "sites": 1460325
+     },
+     "MyCar": {
+      "d_seg": "0.000540250225",
+      "errors": 16204,
+      "sites": 29993509
+     },
+     "Road": {
+      "d_seg": "0.005572691052",
+      "errors": 152731,
+      "sites": 27407046
+     },
+     "Undrivable": {
+      "d_seg": "0.001277774484",
+      "errors": 74639,
+      "sites": 58413281
+     }
+    },
+    "pose_coordinates": 3600,
+    "pose_squared_error_sum": "2.580406543623",
+    "receiver_custody": {
+     "archive_dir": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/extracted_archives/move_0022_snap_r01_c08_L12",
+     "archive_sha256": "c40742d0682c9030861221c2cfcaa92c823f3b743f4ab3444d91945c4ad9999f",
+     "axis": "[macOS-CPU frozen-scorer advisory]",
+     "decoder_class": "ddm_tq1_qo1_inflate_runner_dcd4406aaa83.Decoder",
+     "receiver_output": "uint8 [B,2,874,1164,3] camera pairs",
+     "schema": "ddm_tq1_ix2_receiver_adapter.v1",
+     "score_claim": false
+    },
+    "schema": "ddm_tq1_phase_b_n600_aggregate.v1",
+    "score_claim": false,
+    "scorer_custody": {
+     "batch_size": 16,
+     "deterministic_algorithms": true,
+     "device": "cpu",
+     "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+     "modules_path": "/Users/adpena/Projects/pact/upstream/modules.py",
+     "modules_sha256": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa",
+     "posenet_weights_path": "/Users/adpena/Projects/pact/upstream/models/posenet.safetensors",
+     "posenet_weights_sha256": "0f3a0874c5c387f990d7b88bd1d7e1f6de35d98b45f2a289989db2c77b9b6576",
+     "score_claim": false,
+     "segnet_weights_path": "/Users/adpena/Projects/pact/upstream/models/segnet.safetensors",
+     "segnet_weights_sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6"
+    },
+    "sites": 117964800,
+    "typed_config_sha256": "c3ec612b57b6bd4fa47794cd73a9f1609d04594bff18f232252afa7c218f0e8b"
+   },
+   "typed_config_sha256": "c3ec612b57b6bd4fa47794cd73a9f1609d04594bff18f232252afa7c218f0e8b",
+   "verdict": {
+    "accepted": false,
+    "authority": "requires real receiver -> R -> uint8 -> frozen scorer components",
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "candidate_score": 0.7535729813968267,
+    "current_score": 0.7535465034970362,
+    "delta_S": 2.647789979048909e-05,
+    "delta_archive_bytes": 0,
+    "delta_d_pose": 3.207499999998732e-08,
+    "delta_d_seg": 2.458359999995413e-07,
+    "pose_term_erosion": 1.8942997905696535e-06,
+    "pose_term_erosion_limit": 0.005,
+    "schema": "ddm_tq1_realized_acceptance_verdict.v1",
+    "score_claim": false
+   }
+  },
+  {
+   "accepted": true,
+   "accepted_move_ids_after": [
+    "snap_r00_c23_L12",
+    "snap_r00_c25_L12",
+    "snap_r00_c26_L12",
+    "snap_r00_c28_L12",
+    "snap_r00_c30_L12",
+    "snap_r00_c12_L13"
+   ],
+   "accepted_move_ids_before": [
+    "snap_r00_c23_L12",
+    "snap_r00_c25_L12",
+    "snap_r00_c26_L12",
+    "snap_r00_c28_L12",
+    "snap_r00_c30_L12"
+   ],
+   "axis": "[macOS-CPU frozen-scorer advisory]",
+   "candidate": {
+    "activity": 0.0,
+    "affected_pair_count": 600,
+    "affected_pair_preview": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8,
+     9,
+     10,
+     11,
+     12,
+     13,
+     14,
+     15
+    ],
+    "candidate_id": "snap_r00_c12_L13",
+    "col": 12,
+    "direction": "snap_sublattice",
+    "joint_guard": 0.0,
+    "pose_guard": 0.0,
+    "priority": 0.8212512413108242,
+    "row": 0,
+    "rung": 13,
+    "seg_guard": 0.0
+   },
+   "candidate_id": "snap_r00_c12_L13",
+   "checkpoint_root": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/stage_checkpoints",
+   "current_before": {
+    "archive_bytes": 357837,
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "d_pose": 0.00071674752,
+    "d_seg": 0.004306165907,
+    "score": 0.7535465034970362,
+    "score_claim": false
+   },
+   "move_index": 23,
+   "phase_a_singleton": {
+    "archive_bytes": 357837,
+    "archive_sha256": "0c2d428bede51b54df78efdbb59e31cbc501debd37a2cece3736168e3132ec25",
+    "candidate_tokens_sha256": "7f185a7d4a4e3cd65563b7d0c370ce11505d27480720770d859e6082a84cca35",
+    "token_frame_sha256": "ea96a8d5c2dc4dbf3def03a9b0ec050bc84564e49e9257ab8771676fb96d29bc"
+   },
+   "schema": "ddm_tq1_phase_b_realized_move.v1",
+   "score_claim": false,
+   "trial": {
+    "advisory_score_formula_value": "0.753457812580",
+    "all_batches_checkpointed_and_preserved": true,
+    "archive_bytes": 357837,
+    "archive_path": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/candidate_archives/move_0023_snap_r00_c12_L13.zip.receipt-bytes",
+    "archive_sha256": "b35e756829306a85ec2ad51634bde74523d89df9046c682253176b393bd59c06",
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "batch_count": 38,
+    "batch_digest_chain_sha256": "4fd41899776512b552bd43dd9d9a115c2e9c25e741b7adfe422e7577aaa40ecc",
+    "batch_size": 16,
+    "candidate": "move_0023_snap_r00_c12_L13",
+    "d_pose": "0.000716508925",
+    "d_seg": "0.004305419922",
+    "errors": 507888,
+    "per_stratum": {
+     "Lane": {
+      "d_seg": "0.268688851918",
+      "errors": 185567,
+      "sites": 690639
+     },
+     "Movable": {
+      "d_seg": "0.054045503569",
+      "errors": 78924,
+      "sites": 1460325
+     },
+     "MyCar": {
+      "d_seg": "0.000541617188",
+      "errors": 16245,
+      "sites": 29993509
+     },
+     "Road": {
+      "d_seg": "0.005569954529",
+      "errors": 152656,
+      "sites": 27407046
+     },
+     "Undrivable": {
+      "d_seg": "0.001275326411",
+      "errors": 74496,
+      "sites": 58413281
+     }
+    },
+    "pose_coordinates": 3600,
+    "pose_squared_error_sum": "2.579432128567",
+    "receiver_custody": {
+     "archive_dir": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/extracted_archives/move_0023_snap_r00_c12_L13",
+     "archive_sha256": "b35e756829306a85ec2ad51634bde74523d89df9046c682253176b393bd59c06",
+     "axis": "[macOS-CPU frozen-scorer advisory]",
+     "decoder_class": "ddm_tq1_qo1_inflate_runner_dcd4406aaa83.Decoder",
+     "receiver_output": "uint8 [B,2,874,1164,3] camera pairs",
+     "schema": "ddm_tq1_ix2_receiver_adapter.v1",
+     "score_claim": false
+    },
+    "schema": "ddm_tq1_phase_b_n600_aggregate.v1",
+    "score_claim": false,
+    "scorer_custody": {
+     "batch_size": 16,
+     "deterministic_algorithms": true,
+     "device": "cpu",
+     "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+     "modules_path": "/Users/adpena/Projects/pact/upstream/modules.py",
+     "modules_sha256": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa",
+     "posenet_weights_path": "/Users/adpena/Projects/pact/upstream/models/posenet.safetensors",
+     "posenet_weights_sha256": "0f3a0874c5c387f990d7b88bd1d7e1f6de35d98b45f2a289989db2c77b9b6576",
+     "score_claim": false,
+     "segnet_weights_path": "/Users/adpena/Projects/pact/upstream/models/segnet.safetensors",
+     "segnet_weights_sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6"
+    },
+    "sites": 117964800,
+    "typed_config_sha256": "c3ec612b57b6bd4fa47794cd73a9f1609d04594bff18f232252afa7c218f0e8b"
+   },
+   "typed_config_sha256": "c3ec612b57b6bd4fa47794cd73a9f1609d04594bff18f232252afa7c218f0e8b",
+   "verdict": {
+    "accepted": true,
+    "authority": "requires real receiver -> R -> uint8 -> frozen scorer components",
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "candidate_score": 0.7534578126155775,
+    "current_score": 0.7535465034970362,
+    "delta_S": -8.86908814586862e-05,
+    "delta_archive_bytes": 0,
+    "delta_d_pose": -2.385949999999604e-07,
+    "delta_d_seg": -7.459849999998797e-07,
+    "pose_term_erosion": -1.4092381458635783e-05,
+    "pose_term_erosion_limit": 0.005,
+    "schema": "ddm_tq1_realized_acceptance_verdict.v1",
+    "score_claim": false
+   }
+  },
+  {
+   "accepted": false,
+   "accepted_move_ids_after": [
+    "snap_r00_c23_L12",
+    "snap_r00_c25_L12",
+    "snap_r00_c26_L12",
+    "snap_r00_c28_L12",
+    "snap_r00_c30_L12",
+    "snap_r00_c12_L13"
+   ],
+   "accepted_move_ids_before": [
+    "snap_r00_c23_L12",
+    "snap_r00_c25_L12",
+    "snap_r00_c26_L12",
+    "snap_r00_c28_L12",
+    "snap_r00_c30_L12",
+    "snap_r00_c12_L13"
+   ],
+   "axis": "[macOS-CPU frozen-scorer advisory]",
+   "candidate": {
+    "activity": 0.0,
+    "affected_pair_count": 600,
+    "affected_pair_preview": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8,
+     9,
+     10,
+     11,
+     12,
+     13,
+     14,
+     15
+    ],
+    "candidate_id": "snap_r01_c09_L12",
+    "col": 9,
+    "direction": "snap_sublattice",
+    "joint_guard": 0.0,
+    "pose_guard": 0.0,
+    "priority": 0.8166351606805291,
+    "row": 1,
+    "rung": 12,
+    "seg_guard": 0.0
+   },
+   "candidate_id": "snap_r01_c09_L12",
+   "checkpoint_root": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/stage_checkpoints",
+   "current_before": {
+    "archive_bytes": 357837,
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "d_pose": 0.000716508925,
+    "d_seg": 0.004305419922,
+    "score": 0.7534578126155775,
+    "score_claim": false
+   },
+   "move_index": 24,
+   "phase_a_singleton": {
+    "archive_bytes": 357837,
+    "archive_sha256": "41e575a341e939114e1a6f360f4e870c4b9bc751419ec03f61811a035b7482c2",
+    "candidate_tokens_sha256": "2fc723c24ea84aca99e68f24e1b630b28c1cb4898cf5fc6d0c3968198499cc4d",
+    "token_frame_sha256": "321c55b8b73674b6b3b815f6eeadebd607e35b09635cb3f80b088e0e4563f0b5"
+   },
+   "schema": "ddm_tq1_phase_b_realized_move.v1",
+   "score_claim": false,
+   "trial": {
+    "advisory_score_formula_value": "0.753521804230",
+    "all_batches_checkpointed_and_preserved": true,
+    "archive_bytes": 357837,
+    "archive_path": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/candidate_archives/move_0024_snap_r01_c09_L12.zip.receipt-bytes",
+    "archive_sha256": "0a89aa03c5761359c423a0a326c45d1d67d2fdcc7d623263f2bf2bda64e1da5f",
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "batch_count": 38,
+    "batch_digest_chain_sha256": "00fcb2f91880443d529303694218d044e62dc2a25278a136ef474406b3fae68d",
+    "batch_size": 16,
+    "candidate": "move_0024_snap_r01_c09_L12",
+    "d_pose": "0.000716099796",
+    "d_seg": "0.004306301541",
+    "errors": 507992,
+    "per_stratum": {
+     "Lane": {
+      "d_seg": "0.268794551133",
+      "errors": 185640,
+      "sites": 690639
+     },
+     "Movable": {
+      "d_seg": "0.054066731721",
+      "errors": 78955,
+      "sites": 1460325
+     },
+     "MyCar": {
+      "d_seg": "0.000540883696",
+      "errors": 16223,
+      "sites": 29993509
+     },
+     "Road": {
+      "d_seg": "0.005572289695",
+      "errors": 152720,
+      "sites": 27407046
+     },
+     "Undrivable": {
+      "d_seg": "0.001274607396",
+      "errors": 74454,
+      "sites": 58413281
+     }
+    },
+    "pose_coordinates": 3600,
+    "pose_squared_error_sum": "2.577959265809",
+    "receiver_custody": {
+     "archive_dir": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/extracted_archives/move_0024_snap_r01_c09_L12",
+     "archive_sha256": "0a89aa03c5761359c423a0a326c45d1d67d2fdcc7d623263f2bf2bda64e1da5f",
+     "axis": "[macOS-CPU frozen-scorer advisory]",
+     "decoder_class": "ddm_tq1_qo1_inflate_runner_dcd4406aaa83.Decoder",
+     "receiver_output": "uint8 [B,2,874,1164,3] camera pairs",
+     "schema": "ddm_tq1_ix2_receiver_adapter.v1",
+     "score_claim": false
+    },
+    "schema": "ddm_tq1_phase_b_n600_aggregate.v1",
+    "score_claim": false,
+    "scorer_custody": {
+     "batch_size": 16,
+     "deterministic_algorithms": true,
+     "device": "cpu",
+     "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+     "modules_path": "/Users/adpena/Projects/pact/upstream/modules.py",
+     "modules_sha256": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa",
+     "posenet_weights_path": "/Users/adpena/Projects/pact/upstream/models/posenet.safetensors",
+     "posenet_weights_sha256": "0f3a0874c5c387f990d7b88bd1d7e1f6de35d98b45f2a289989db2c77b9b6576",
+     "score_claim": false,
+     "segnet_weights_path": "/Users/adpena/Projects/pact/upstream/models/segnet.safetensors",
+     "segnet_weights_sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6"
+    },
+    "sites": 117964800,
+    "typed_config_sha256": "c3ec612b57b6bd4fa47794cd73a9f1609d04594bff18f232252afa7c218f0e8b"
+   },
+   "typed_config_sha256": "c3ec612b57b6bd4fa47794cd73a9f1609d04594bff18f232252afa7c218f0e8b",
+   "verdict": {
+    "accepted": false,
+    "authority": "requires real receiver -> R -> uint8 -> frozen scorer components",
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "candidate_score": 0.7535218042470333,
+    "current_score": 0.7534578126155775,
+    "delta_S": 6.399163145576203e-05,
+    "delta_archive_bytes": 0,
+    "delta_d_pose": -4.0912900000006965e-07,
+    "delta_d_seg": 8.81619000000014e-07,
+    "pose_term_erosion": -2.4170268544343454e-05,
+    "pose_term_erosion_limit": 0.005,
+    "schema": "ddm_tq1_realized_acceptance_verdict.v1",
+    "score_claim": false
+   }
+  },
+  {
+   "accepted": false,
+   "accepted_move_ids_after": [
+    "snap_r00_c23_L12",
+    "snap_r00_c25_L12",
+    "snap_r00_c26_L12",
+    "snap_r00_c28_L12",
+    "snap_r00_c30_L12",
+    "snap_r00_c12_L13"
+   ],
+   "accepted_move_ids_before": [
+    "snap_r00_c23_L12",
+    "snap_r00_c25_L12",
+    "snap_r00_c26_L12",
+    "snap_r00_c28_L12",
+    "snap_r00_c30_L12",
+    "snap_r00_c12_L13"
+   ],
+   "axis": "[macOS-CPU frozen-scorer advisory]",
+   "candidate": {
+    "activity": 0.0,
+    "affected_pair_count": 600,
+    "affected_pair_preview": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8,
+     9,
+     10,
+     11,
+     12,
+     13,
+     14,
+     15
+    ],
+    "candidate_id": "snap_r00_c13_L13",
+    "col": 13,
+    "direction": "snap_sublattice",
+    "joint_guard": 0.0,
+    "pose_guard": 0.0,
+    "priority": 0.8101265822784811,
+    "row": 0,
+    "rung": 13,
+    "seg_guard": 0.0
+   },
+   "candidate_id": "snap_r00_c13_L13",
+   "checkpoint_root": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/stage_checkpoints",
+   "current_before": {
+    "archive_bytes": 357837,
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "d_pose": 0.000716508925,
+    "d_seg": 0.004305419922,
+    "score": 0.7534578126155775,
+    "score_claim": false
+   },
+   "move_index": 25,
+   "phase_a_singleton": {
+    "archive_bytes": 357837,
+    "archive_sha256": "7264b5a0b01dc6a077cae67983469bc476601d5cc7732a2f62d4815ad65a7a2d",
+    "candidate_tokens_sha256": "4495ba619a70a56c403d3300a6c49b3c0b2144c9bcd30bcf6aa00dc5891a8fcd",
+    "token_frame_sha256": "b8dbccd2fed042c204cd2f8a6cbc6e0da8a80bb99988ab77b6688a166f9baef4"
+   },
+   "schema": "ddm_tq1_phase_b_realized_move.v1",
+   "score_claim": false,
+   "trial": {
+    "advisory_score_formula_value": "0.753462793762",
+    "all_batches_checkpointed_and_preserved": true,
+    "archive_bytes": 357837,
+    "archive_path": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/candidate_archives/move_0025_snap_r00_c13_L13.zip.receipt-bytes",
+    "archive_sha256": "604b569795f9c2481edb61971654fcc09bd1ed47ad2709857c219ef0309165bb",
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "batch_count": 38,
+    "batch_digest_chain_sha256": "1892bb01b436b9d4cb3428e638271c1f3d3df50f43551492ed9f41095beeb9d2",
+    "batch_size": 16,
+    "candidate": "move_0025_snap_r00_c13_L13",
+    "d_pose": "0.000716880325",
+    "d_seg": "0.004305250380",
+    "errors": 507868,
+    "per_stratum": {
+     "Lane": {
+      "d_seg": "0.268714914738",
+      "errors": 185585,
+      "sites": 690639
+     },
+     "Movable": {
+      "d_seg": "0.054072894732",
+      "errors": 78964,
+      "sites": 1460325
+     },
+     "MyCar": {
+      "d_seg": "0.000542017274",
+      "errors": 16257,
+      "sites": 29993509
+     },
+     "Road": {
+      "d_seg": "0.005569370738",
+      "errors": 152640,
+      "sites": 27407046
+     },
+     "Undrivable": {
+      "d_seg": "0.001274059576",
+      "errors": 74422,
+      "sites": 58413281
+     }
+    },
+    "pose_coordinates": 3600,
+    "pose_squared_error_sum": "2.580769170345",
+    "receiver_custody": {
+     "archive_dir": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/extracted_archives/move_0025_snap_r00_c13_L13",
+     "archive_sha256": "604b569795f9c2481edb61971654fcc09bd1ed47ad2709857c219ef0309165bb",
+     "axis": "[macOS-CPU frozen-scorer advisory]",
+     "decoder_class": "ddm_tq1_qo1_inflate_runner_dcd4406aaa83.Decoder",
+     "receiver_output": "uint8 [B,2,874,1164,3] camera pairs",
+     "schema": "ddm_tq1_ix2_receiver_adapter.v1",
+     "score_claim": false
+    },
+    "schema": "ddm_tq1_phase_b_n600_aggregate.v1",
+    "score_claim": false,
+    "scorer_custody": {
+     "batch_size": 16,
+     "deterministic_algorithms": true,
+     "device": "cpu",
+     "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+     "modules_path": "/Users/adpena/Projects/pact/upstream/modules.py",
+     "modules_sha256": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa",
+     "posenet_weights_path": "/Users/adpena/Projects/pact/upstream/models/posenet.safetensors",
+     "posenet_weights_sha256": "0f3a0874c5c387f990d7b88bd1d7e1f6de35d98b45f2a289989db2c77b9b6576",
+     "score_claim": false,
+     "segnet_weights_path": "/Users/adpena/Projects/pact/upstream/models/segnet.safetensors",
+     "segnet_weights_sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6"
+    },
+    "sites": 117964800,
+    "typed_config_sha256": "c3ec612b57b6bd4fa47794cd73a9f1609d04594bff18f232252afa7c218f0e8b"
+   },
+   "typed_config_sha256": "c3ec612b57b6bd4fa47794cd73a9f1609d04594bff18f232252afa7c218f0e8b",
+   "verdict": {
+    "accepted": false,
+    "authority": "requires real receiver -> R -> uint8 -> frozen scorer components",
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "candidate_score": 0.7534627937789771,
+    "current_score": 0.7534578126155775,
+    "delta_S": 4.981163399531141e-06,
+    "delta_archive_bytes": 0,
+    "delta_d_pose": 3.714000000000148e-07,
+    "delta_d_seg": -1.6954199999995312e-07,
+    "pose_term_erosion": 2.193536339947788e-05,
+    "pose_term_erosion_limit": 0.005,
+    "schema": "ddm_tq1_realized_acceptance_verdict.v1",
+    "score_claim": false
+   }
+  },
+  {
+   "accepted": false,
+   "accepted_move_ids_after": [
+    "snap_r00_c23_L12",
+    "snap_r00_c25_L12",
+    "snap_r00_c26_L12",
+    "snap_r00_c28_L12",
+    "snap_r00_c30_L12",
+    "snap_r00_c12_L13"
+   ],
+   "accepted_move_ids_before": [
+    "snap_r00_c23_L12",
+    "snap_r00_c25_L12",
+    "snap_r00_c26_L12",
+    "snap_r00_c28_L12",
+    "snap_r00_c30_L12",
+    "snap_r00_c12_L13"
+   ],
+   "axis": "[macOS-CPU frozen-scorer advisory]",
+   "candidate": {
+    "activity": 0.0,
+    "affected_pair_count": 600,
+    "affected_pair_preview": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8,
+     9,
+     10,
+     11,
+     12,
+     13,
+     14,
+     15
+    ],
+    "candidate_id": "snap_r01_c11_L12",
+    "col": 11,
+    "direction": "snap_sublattice",
+    "joint_guard": 0.0,
+    "pose_guard": 0.0,
+    "priority": 0.8047531243597623,
+    "row": 1,
+    "rung": 12,
+    "seg_guard": 0.0
+   },
+   "candidate_id": "snap_r01_c11_L12",
+   "checkpoint_root": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/stage_checkpoints",
+   "current_before": {
+    "archive_bytes": 357837,
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "d_pose": 0.000716508925,
+    "d_seg": 0.004305419922,
+    "score": 0.7534578126155775,
+    "score_claim": false
+   },
+   "move_index": 26,
+   "phase_a_singleton": {
+    "archive_bytes": 357837,
+    "archive_sha256": "24b32089ac0754210901918acc2e2760b4aa72a3a4be4f51d56c577264697de7",
+    "candidate_tokens_sha256": "9eff9887cbe76924e6185442bef9759dc73637205f212b5c8df505318cf6315c",
+    "token_frame_sha256": "ef117a8019bda6c1b9b4c333055754762f9178ffbefe1cc21b8b77c1f4e7bcc0"
+   },
+   "schema": "ddm_tq1_phase_b_realized_move.v1",
+   "score_claim": false,
+   "trial": {
+    "advisory_score_formula_value": "0.753531820802",
+    "all_batches_checkpointed_and_preserved": true,
+    "archive_bytes": 357837,
+    "archive_path": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/candidate_archives/move_0026_snap_r01_c11_L12.zip.receipt-bytes",
+    "archive_sha256": "96bf495a2dd438307737d51bf3f563106c48b6ba5b9371d906b013b3462d9113",
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "batch_count": 38,
+    "batch_digest_chain_sha256": "43aa1910c0c94f4486a202a12373c773763fcbd3f221d51e14aaa5b2cd0ba10d",
+    "batch_size": 16,
+    "candidate": "move_0026_snap_r01_c11_L12",
+    "d_pose": "0.000716771628",
+    "d_seg": "0.004306004842",
+    "errors": 507957,
+    "per_stratum": {
+     "Lane": {
+      "d_seg": "0.268775727985",
+      "errors": 185627,
+      "sites": 690639
+     },
+     "Movable": {
+      "d_seg": "0.054087275093",
+      "errors": 78985,
+      "sites": 1460325
+     },
+     "MyCar": {
+      "d_seg": "0.000541617188",
+      "errors": 16245,
+      "sites": 29993509
+     },
+     "Road": {
+      "d_seg": "0.005568057207",
+      "errors": 152604,
+      "sites": 27407046
+     },
+     "Undrivable": {
+      "d_seg": "0.001275326411",
+      "errors": 74496,
+      "sites": 58413281
+     }
+    },
+    "pose_coordinates": 3600,
+    "pose_squared_error_sum": "2.580377861271",
+    "receiver_custody": {
+     "archive_dir": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/extracted_archives/move_0026_snap_r01_c11_L12",
+     "archive_sha256": "96bf495a2dd438307737d51bf3f563106c48b6ba5b9371d906b013b3462d9113",
+     "axis": "[macOS-CPU frozen-scorer advisory]",
+     "decoder_class": "ddm_tq1_qo1_inflate_runner_dcd4406aaa83.Decoder",
+     "receiver_output": "uint8 [B,2,874,1164,3] camera pairs",
+     "schema": "ddm_tq1_ix2_receiver_adapter.v1",
+     "score_claim": false
+    },
+    "schema": "ddm_tq1_phase_b_n600_aggregate.v1",
+    "score_claim": false,
+    "scorer_custody": {
+     "batch_size": 16,
+     "deterministic_algorithms": true,
+     "device": "cpu",
+     "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+     "modules_path": "/Users/adpena/Projects/pact/upstream/modules.py",
+     "modules_sha256": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa",
+     "posenet_weights_path": "/Users/adpena/Projects/pact/upstream/models/posenet.safetensors",
+     "posenet_weights_sha256": "0f3a0874c5c387f990d7b88bd1d7e1f6de35d98b45f2a289989db2c77b9b6576",
+     "score_claim": false,
+     "segnet_weights_path": "/Users/adpena/Projects/pact/upstream/models/segnet.safetensors",
+     "segnet_weights_sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6"
+    },
+    "sites": 117964800,
+    "typed_config_sha256": "c3ec612b57b6bd4fa47794cd73a9f1609d04594bff18f232252afa7c218f0e8b"
+   },
+   "typed_config_sha256": "c3ec612b57b6bd4fa47794cd73a9f1609d04594bff18f232252afa7c218f0e8b",
+   "verdict": {
+    "accepted": false,
+    "authority": "requires real receiver -> R -> uint8 -> frozen scorer components",
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "candidate_score": 0.7535318207821102,
+    "current_score": 0.7534578126155775,
+    "delta_S": 7.400816653269082e-05,
+    "delta_archive_bytes": 0,
+    "delta_d_pose": 2.6270300000001516e-07,
+    "delta_d_seg": 5.849199999994475e-07,
+    "pose_term_erosion": 1.5516166532753006e-05,
+    "pose_term_erosion_limit": 0.005,
+    "schema": "ddm_tq1_realized_acceptance_verdict.v1",
+    "score_claim": false
+   }
+  }
+ ],
+ "dominated_baselines": [
+  {
+   "S": 1.9753490686354727,
+   "archive_bytes": 244436,
+   "d_pose": 0.16815221,
+   "d_seg": 0.00515854,
+   "id": "rt1_sb1_margin_coupled_16_12_8_4",
+   "scope": "FORMULATION for that adaptive margin map on fz4 sub_final",
+   "source": ".omx/research/ddm_ng1_20260805/ng1_negative_results_audit.md"
+  },
+  {
+   "S": 1.9690434,
+   "archive_bytes": null,
+   "d_pose": null,
+   "d_seg": null,
+   "id": "fz4_map_repair_kill",
+   "scope": "FORMULATION for [16,12,8,4] map plus current F0PR1 repair",
+   "source": ".omx/research/ddm_ng1_20260805/ng1_negative_results_audit.md"
+  },
+  {
+   "S": 1.010325639339858,
+   "archive_bytes": 350130,
+   "d_pose": 0.01071092,
+   "d_seg": 0.004499130249023438,
+   "id": "ed2_entropy_descent_a025",
+   "scope": "FORMULATION/INSTANCE for qo1 IX2 discrete entropy step alpha=0.25",
+   "source": ".omx/research/ddm_ed2_20260805/RECEIPT.md"
+  }
+ ],
+ "final_archive": {
+  "bytes": 357837,
+  "path": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/candidate_archives/move_0023_snap_r00_c12_L13.zip.receipt-bytes",
+  "sha256": "b35e756829306a85ec2ad51634bde74523d89df9046c682253176b393bd59c06",
+  "source": "last accepted trial archive"
+ },
+ "final_current": {
+  "archive_bytes": 357837,
+  "axis": "[macOS-CPU frozen-scorer advisory]",
+  "d_pose": 0.000716508925,
+  "d_seg": 0.004305419922,
+  "score": 0.7534578126155775,
+  "score_claim": false
+ },
+ "generated_menu": {
+  "next_unpriced_candidate_id": "snap_r01_c13_L12",
+  "next_unpriced_index": 27,
+  "path": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/optimal_form_tq1c/tq1_phase_a_candidate_menu.jsonl",
+  "priced_rows": 26,
+  "rows": 1133
+ },
+ "jd5_gate": {
+  "checked": [
+   {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_jd4_20260805/jd5_endpoint_n600_both_bases.json",
+    "sha256": "4ff9f7b596ce6308817847c524d1c612d66cb65eb4793ffef844e2c865ea034d",
+    "status": "complete"
+   }
+  ],
+  "complete_endpoint": {
+   "path": "/Volumes/VertigoDataTier/pact/ddm_jd4_20260805/jd5_endpoint_n600_both_bases.json",
+   "sha256": "4ff9f7b596ce6308817847c524d1c612d66cb65eb4793ffef844e2c865ea034d",
+   "status": "complete"
+  },
+  "ready": true
+ },
+ "measured_baseline": {
+  "archive_bytes": 357837,
+  "axis": "[macOS-CPU frozen-scorer advisory]",
+  "d_pose": 0.00071673674,
+  "d_seg": 0.004308641222,
+  "score": 0.7537933983374265,
+  "score_claim": false
+ },
+ "measurement_jsonl": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/tq1_phase_b_realized_measurements.jsonl",
+ "measurement_jsonl_sha256": "e0427f27beae82340dcdc9e17d472d51d32984416e409ebda3c76e15078ca15c",
+ "phase_b_config": {
+  "axis": "[macOS-CPU frozen-scorer advisory]",
+  "base_archive": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/tq1c_base/archive.zip",
+  "base_archive_sha256": "75df9cc341d8188b47fe38337d2ec996600c245112a008c3f333957a6522db59",
+  "candidate_ledger": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/optimal_form_tq1c/tq1_phase_a_candidate_prices.jsonl",
+  "candidate_ledger_sha256": "3eb8879f6efbc292a5a520486d12e594a15c89ab6caebe2905ffbcb67d921b6b",
+  "gt_cache": "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+  "gt_cache_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6",
+  "inflate_runner_sha256": "dcd4406aaa83cc431fc48cbb1d3e38697c1488d539728bdc697ef22910bf9a5f",
+  "jd5_gate": {
+   "checked": [
+    {
+     "path": "/Volumes/VertigoDataTier/pact/ddm_jd4_20260805/jd5_endpoint_n600_both_bases.json",
+     "sha256": "4ff9f7b596ce6308817847c524d1c612d66cb65eb4793ffef844e2c865ea034d",
+     "status": "complete"
+    }
+   ],
+   "complete_endpoint": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_jd4_20260805/jd5_endpoint_n600_both_bases.json",
+    "sha256": "4ff9f7b596ce6308817847c524d1c612d66cb65eb4793ffef844e2c865ea034d",
+    "status": "complete"
+   },
+   "ready": true
+  },
+  "runtime_dir": "/Volumes/VertigoDataTier/pact/ddm_qo1_20260804/sub_auto_pairbit",
+  "schema": "ddm_tq1_phase_b_realized_config.v1",
+  "score_claim": false,
+  "scorer_batch_size": 16,
+  "scorer_threads": 4,
+  "typed_config_sha256": "c3ec612b57b6bd4fa47794cd73a9f1609d04594bff18f232252afa7c218f0e8b"
+ },
+ "psutil_preflight": {
+  "available_memory_bytes": 89521602560,
+  "available_memory_passes": true,
+  "minimum_available_memory_bytes": 26843545600,
+  "minimum_available_memory_gb": 25.0,
+  "passes": true,
+  "rss_bytes": 51134464,
+  "rss_limit_bytes": 21474836480,
+  "rss_limit_gb": 20.0
+ },
+ "recall_evidence": {
+  "found_beyond_charter": [
+   {
+    "finding": "prior tq1 scorer leg was stale blanket-map negative, not a closure of optimal-form token edits",
+    "source": ".omx/research/ddm_tq1_preempted_by_rt1_and_sl2_composition_20260805.md"
+   },
+   {
+    "finding": "live token field is IX2TOK01 and token-byte wins must beat same-coder match-structure, not semantic ordering claims",
+    "source": ".omx/research/ddm_sv2_smevr_base_rule_race_20260803.md"
+   },
+   {
+    "finding": "IX2/Brotli-Q11 token baseline and entropy surrogate calibration are scorer-free triage only",
+    "source": ".omx/research/ddm_en1_20260805/EN1_RECEIPT.md"
+   },
+   {
+    "finding": "control-head ordering worsened IX2 token bytes, blocking orderer shortcuts",
+    "source": ".omx/research/ddm_xo1_20260805/XO1_RECEIPT.md"
+   },
+   {
+    "finding": "tq1c is the named consumer for accepted-rate vs rank yield-curve evidence",
+    "source": ".omx/research/ddm_lm1_20260805/RECEIPT.md"
+   },
+   {
+    "finding": "score arithmetic, frontier-pointer, and correction-stream label-cost rows require recomputing S from components and forbid promoting advisory/in-place token-edit rows as contest claims",
+    "source": "canonical equations registry"
+   }
+  ],
+  "memory_registry_hits": "no direct ddm_tq1-specific MEMORY.md hit found in searched scope",
+  "plan_changes": [
+   "Rebased on 75df9cc3 and regenerated priority order instead of replaying qo1 top rows.",
+   "Priced and realized same-coder IX2 archive bytes only; no entropy surrogate or orderer shortcut was used.",
+   "Kept score_claim=false and [macOS-CPU frozen-scorer advisory] axis; no contest-CPU projection.",
+   "Labeled saturation as accepted prefix only with resume at new-base menu index 27."
+  ],
+  "schema": "ddm_tq1c_recall_evidence.v1",
+  "sources_searched": [
+   {
+    "query": "tq1|token-edit|token edit|snap_sublattice|snap_r|IX2|#969|SATURATED_ACCEPTED_PREFIX",
+    "scope": ".omx/research/CANONICAL_RESEARCH_INDEX* .omx/research/sub015_DAG_* .omx/research/*.md .omx/research/*/*.md"
+   },
+   {
+    "query": "tq1|token-edit|token edit|snap_sublattice|snap_r|IX2|#969|SATURATED_ACCEPTED_PREFIX",
+    "scope": ".omx/tmp/codex_runs .omx/state docs reports experiments tools src/tac"
+   },
+   {
+    "query": "token|TQ1|IX2|waterfill|acceptance|score|archive|receiver|pose|seg",
+    "scope": "canonical equations registry"
+   },
+   {
+    "query": "ddm_tq1|token waterfill|IX2|snap_sublattice|SATURATED_ACCEPTED_PREFIX|#969",
+    "scope": "/Users/adpena/.codex/memories/MEMORY.md"
+   }
+  ]
+ },
+ "rejected_move_ids": [
+  "snap_r00_c01_L12",
+  "snap_r00_c02_L12",
+  "snap_r00_c12_L12",
+  "snap_r00_c14_L12",
+  "snap_r00_c16_L12",
+  "snap_r00_c18_L12",
+  "snap_r00_c27_L12",
+  "snap_r00_c05_L13",
+  "snap_r00_c29_L12",
+  "snap_r00_c07_L13",
+  "snap_r01_c00_L12",
+  "snap_r00_c08_L13",
+  "snap_r01_c02_L12",
+  "snap_r01_c03_L12",
+  "snap_r01_c05_L12",
+  "snap_r01_c07_L12",
+  "snap_r01_c08_L12",
+  "snap_r01_c09_L12",
+  "snap_r00_c13_L13",
+  "snap_r01_c11_L12"
+ ],
+ "rows": 26,
+ "saturation": {
+  "next_if_resumed": "Regenerate or extend the Phase A price ledger from new-base menu index 27 (candidate snap_r01_c13_L12) and resume realized acceptance from the held final archive b35e756829306a85ec2ad51634bde74523d89df9046c682253176b393bd59c06; do not claim full-menu closure until all 1,133 generated rows are priced and realized or otherwise explicitly folded.",
+  "scope": "queued 26-move Phase A price-ledger prefix only; the new-base generated 1,133-row derived menu is not claimed closed by this run (the parent qo1 menu had 1,140 rows)",
+  "state": "SATURATED_ACCEPTED_PREFIX"
+ },
+ "schema": "ddm_tq1_phase_b_realized_acceptance_receipt.v1",
+ "score_claim": false,
+ "seconds": 9793.913234949112,
+ "typed_config_sha256": "c3ec612b57b6bd4fa47794cd73a9f1609d04594bff18f232252afa7c218f0e8b"
+}

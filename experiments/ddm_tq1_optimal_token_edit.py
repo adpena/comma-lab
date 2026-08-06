@@ -108,6 +108,46 @@ def score_from_components(d_seg: float, d_pose: float, archive_bytes: int) -> fl
     return 100.0 * float(d_seg) + math.sqrt(10.0 * float(d_pose)) + 25.0 * int(archive_bytes) / DEN
 
 
+def base_archive_path(args: argparse.Namespace) -> Path:
+    explicit = getattr(args, "base_archive", None)
+    if explicit is not None:
+        return Path(explicit)
+    return Path(args.base_sub) / "archive.zip"
+
+
+def expected_base_sha256(args: argparse.Namespace) -> str:
+    return str(getattr(args, "base_archive_sha256", None) or BASE_ARCHIVE_SHA256)
+
+
+def baseline_for_args(args: argparse.Namespace, *, archive_bytes: int | None = None) -> dict[str, Any]:
+    bytes_value = int(
+        getattr(args, "baseline_archive_bytes", None)
+        if getattr(args, "baseline_archive_bytes", None) is not None
+        else (archive_bytes if archive_bytes is not None else BASELINE["archive_bytes"])
+    )
+    d_seg = float(
+        getattr(args, "baseline_d_seg", None)
+        if getattr(args, "baseline_d_seg", None) is not None
+        else BASELINE["d_seg"]
+    )
+    d_pose = float(
+        getattr(args, "baseline_d_pose", None)
+        if getattr(args, "baseline_d_pose", None) is not None
+        else BASELINE["d_pose"]
+    )
+    score = getattr(args, "baseline_score", None)
+    return {
+        "source": str(getattr(args, "baseline_source", None) or BASELINE["source"]),
+        "archive_bytes": bytes_value,
+        "archive_sha256": expected_base_sha256(args),
+        "d_seg": d_seg,
+        "d_pose": d_pose,
+        "score": float(score) if score is not None else score_from_components(d_seg, d_pose, bytes_value),
+        "axis": AXIS,
+        "score_claim": False,
+    }
+
+
 def acceptance_verdict(
     current: ComponentScore,
     candidate: ComponentScore,
@@ -424,7 +464,7 @@ def write_candidate_menu(out_root: Path, candidates: Sequence[Candidate]) -> Pat
                 "candidate": asdict(candidate),
                 "axis": AXIS,
                 "score_claim": False,
-                "candidate_source": "receiver token lattice decoded from qo1 archive",
+                "candidate_source": "receiver token lattice decoded from the configured base archive",
             },
         )
     return menu_path
@@ -671,10 +711,11 @@ def _forward_phase_b(segnet: Any, posenet: Any, camera: np.ndarray) -> tuple[np.
 
 
 def _phase_b_config(args: argparse.Namespace, jd5_gate: Mapping[str, Any]) -> dict[str, Any]:
+    base_archive = base_archive_path(args)
     config = {
         "schema": "ddm_tq1_phase_b_realized_config.v1",
-        "base_archive": str(args.base_sub / "archive.zip"),
-        "base_archive_sha256": BASE_ARCHIVE_SHA256,
+        "base_archive": str(base_archive),
+        "base_archive_sha256": expected_base_sha256(args),
         "candidate_ledger": str(args.candidate_ledger),
         "candidate_ledger_sha256": sha256_file(args.candidate_ledger),
         "gt_cache": str(args.gt_cache),
@@ -946,7 +987,7 @@ def write_phase_b_receipts(
     accepted_ids = result["accepted_move_ids"]
     receipt_md = "\n".join(
         [
-            "# ddm_tq1b Phase B realized acceptance receipt",
+            f"# {args.run_label} Phase B realized acceptance receipt",
             "",
             f"Axis: `{AXIS}`. `score_claim=false`; promotion remains MAIN-only.",
             "",
@@ -984,7 +1025,7 @@ def write_phase_b_receipts(
             "- `tools/measure_ddm_v19_pure_priced_objective.py` and `tools/measure_ddm_v19b_joint_remeasure_stack.py`: realized receiver/scorer accounting pattern.",
             "- `.omx/research/ddm_ng1_20260805/ng1_negative_results_audit.md` and `.omx/research/ddm_ed2_20260805/RECEIPT.md`: rt1/fz4/ed2 dominated rows.",
             "",
-            "Own-vehicle frontier line unchanged: `S = 0.7539807296911207 @ 357,836 B [macOS-CPU advisory]`. Contest pointer unchanged: `S = 0.1910828242`, borrowed/unmoved.",
+            f"Own-vehicle advisory line for this run: `S = {final['score']} @ {final['archive_bytes']} B {AXIS}`. Contest pointer unchanged: `S = 0.1910828242`, borrowed/unmoved.",
             "",
         ]
     )
@@ -1024,9 +1065,9 @@ def run_phase_b_realized(args: argparse.Namespace, jd5_gate: Mapping[str, Any], 
         raise RuntimeError(f"target cache shape drift: labels={labels.shape}, poses={poses.shape}")
     decoder_class = load_qo1_decoder_class(args.runtime_dir)
     segnet, posenet, scorer_custody = _load_phase_b_scorers(args)
-    base_archive = args.base_sub / "archive.zip"
+    base_archive = base_archive_path(args)
     base_bytes = base_archive.read_bytes()
-    if sha256_bytes(base_bytes) != BASE_ARCHIVE_SHA256:
+    if sha256_bytes(base_bytes) != expected_base_sha256(args):
         raise RuntimeError("base archive SHA drift before Phase B")
     sections, base_tokens, base_info = load_phase_b_base_inputs(args)
     mode, _delta = IX2._factor_mode_delta(base_tokens, 16)
@@ -1048,6 +1089,7 @@ def run_phase_b_realized(args: argparse.Namespace, jd5_gate: Mapping[str, Any], 
     measured_baseline = asdict(current_score) | {"score": current_score.score}
     current_archive = base_bytes
     current_archive_sha = sha256_bytes(current_archive)
+    current_archive_path = base_archive
     source_rows = load_candidate_ledger(args.candidate_ledger, max_moves=args.phase_b_max_moves)
     accepted_ids: list[str] = []
     decision_rows: list[dict[str, Any]] = []
@@ -1062,7 +1104,8 @@ def run_phase_b_realized(args: argparse.Namespace, jd5_gate: Mapping[str, Any], 
             decision_rows.append(row)
             if row["accepted"]:
                 current_tokens = apply_candidate(current_tokens, candidate, mode)
-                current_archive = (args.phase_b_root / "candidate_archives" / f"move_{index:04d}_{candidate.candidate_id}.zip.receipt-bytes").read_bytes()
+                current_archive_path = args.phase_b_root / "candidate_archives" / f"move_{index:04d}_{candidate.candidate_id}.zip.receipt-bytes"
+                current_archive = current_archive_path.read_bytes()
                 current_archive_sha = sha256_bytes(current_archive)
                 current_score = _component_from_measurement(row["trial"])
                 accepted_ids.append(candidate.candidate_id)
@@ -1087,10 +1130,11 @@ def run_phase_b_realized(args: argparse.Namespace, jd5_gate: Mapping[str, Any], 
             if not memory_recheck["passes"]:
                 raise RuntimeError(f"Phase B memory gate failed after pause: {memory_recheck}")
 
-        print(f"[tq1b] testing move {index}/{len(source_rows)} {candidate.candidate_id}", flush=True)
+        print(f"[{args.run_label}] testing move {index}/{len(source_rows)} {candidate.candidate_id}", flush=True)
         trial_tokens = apply_candidate(current_tokens, candidate, mode)
         _token_frame, trial_archive = build_archive_bytes(trial_tokens, sections)
         trial_name = f"move_{index:04d}_{candidate.candidate_id}"
+        trial_archive_path = args.phase_b_root / "candidate_archives" / f"{trial_name}.zip.receipt-bytes"
         trial_measurement = measure_ix2_archive_n600(
             name=trial_name,
             archive_bytes=trial_archive,
@@ -1125,6 +1169,7 @@ def run_phase_b_realized(args: argparse.Namespace, jd5_gate: Mapping[str, Any], 
             current_tokens = trial_tokens
             current_archive = trial_archive
             current_archive_sha = sha256_bytes(current_archive)
+            current_archive_path = trial_archive_path
             current_score = trial_score
             accepted_ids = after_ids
 
@@ -1164,10 +1209,13 @@ def run_phase_b_realized(args: argparse.Namespace, jd5_gate: Mapping[str, Any], 
     accepted_ledger = args.phase_b_root / "tq1_phase_b_accepted_move_ledger.jsonl"
     write_phase_b_jsonl([row for row in decision_rows if row["accepted"]], accepted_ledger)
     saturation_state = "SATURATED_ZERO_ACCEPTED_PREFIX" if not accepted_ids else "SATURATED_ACCEPTED_PREFIX"
-    scope = (
-        f"queued {len(source_rows)}-move Phase A price-ledger prefix only; "
-        "the full 1,140-row derived menu is not claimed closed by this run"
+    full_menu_size = int(args.full_menu_size)
+    full_menu_phrase = (
+        f"the full {full_menu_size:,}-row derived menu"
+        if full_menu_size > 0
+        else "the full derived menu"
     )
+    scope = f"queued {len(source_rows)}-move Phase A price-ledger prefix only; {full_menu_phrase} is not claimed closed by this run"
     result = {
         "schema": "ddm_tq1_phase_b_realized_acceptance_receipt.v1",
         "typed_config_sha256": typed_hash,
@@ -1180,6 +1228,7 @@ def run_phase_b_realized(args: argparse.Namespace, jd5_gate: Mapping[str, Any], 
         "final_current": asdict(current_score) | {"score": current_score.score},
         "final_archive": {
             "bytes": len(current_archive),
+            "path": str(current_archive_path),
             "sha256": current_archive_sha,
             "source": "base archive" if not accepted_ids else "last accepted trial archive",
         },
@@ -1188,13 +1237,15 @@ def run_phase_b_realized(args: argparse.Namespace, jd5_gate: Mapping[str, Any], 
             "scope": scope,
             "next_if_resumed": (
                 "Measure the remaining derived-menu rows, after regenerating a larger Phase A price ledger, before claiming full-menu closure."
-                if len(source_rows) < 1140
+                if full_menu_size <= 0 or len(source_rows) < full_menu_size
                 else "No queued menu rows remain under this config."
             ),
         },
         "decision_rows": decision_rows,
         "measurement_jsonl": str(measurement_jsonl),
+        "measurement_jsonl_sha256": sha256_file(measurement_jsonl),
         "accepted_move_ledger": str(accepted_ledger),
+        "accepted_move_ledger_sha256": sha256_file(accepted_ledger),
         "dominated_baselines": _dominated_baselines(),
         "psutil_preflight": preflight,
         "jd5_gate": jd5_gate,
@@ -1215,11 +1266,11 @@ def run_phase_b_realized(args: argparse.Namespace, jd5_gate: Mapping[str, Any], 
     return result
 
 
-def apply_realized_measurement_jsonl(path: Path) -> dict[str, Any]:
+def apply_realized_measurement_jsonl(path: Path, baseline: Mapping[str, Any] = BASELINE) -> dict[str, Any]:
     current = ComponentScore(
-        d_seg=float(BASELINE["d_seg"]),
-        d_pose=float(BASELINE["d_pose"]),
-        archive_bytes=int(BASELINE["archive_bytes"]),
+        d_seg=float(baseline["d_seg"]),
+        d_pose=float(baseline["d_pose"]),
+        archive_bytes=int(baseline["archive_bytes"]),
         axis=AXIS,
         score_claim=False,
     )
@@ -1260,12 +1311,13 @@ def _section_sha256(sections: Sequence[bytes]) -> list[str]:
 
 
 def load_phase_a_inputs(args: argparse.Namespace) -> tuple[bytes, list[bytes], np.ndarray, dict[str, Any], dict[str, Any], list[dict[str, Any]]]:
-    base_archive = args.base_sub / "archive.zip"
+    base_archive = base_archive_path(args)
     if not base_archive.exists():
         raise FileNotFoundError(f"base archive missing: {base_archive}")
     got_sha = sha256_file(base_archive)
-    if got_sha != BASE_ARCHIVE_SHA256:
-        raise RuntimeError(f"refusing cross-object TQ1: base sha {got_sha} != {BASE_ARCHIVE_SHA256}")
+    expected_sha = expected_base_sha256(args)
+    if got_sha != expected_sha:
+        raise RuntimeError(f"refusing cross-object TQ1: base sha {got_sha} != {expected_sha}")
 
     bulk, sections = read_payload_archive(base_archive)
     tokens = IX2.decode_token_frame(bulk)
@@ -1304,6 +1356,7 @@ def load_phase_a_inputs(args: argparse.Namespace) -> tuple[bytes, list[bytes], n
     base_info = {
         "path": str(base_archive),
         "sha256": got_sha,
+        "expected_sha256": expected_sha,
         "bytes": base_archive.stat().st_size,
         "bulk_bytes": len(bulk),
         "bulk_sha256": sha256_bytes(bulk),
@@ -1324,12 +1377,13 @@ def load_phase_a_inputs(args: argparse.Namespace) -> tuple[bytes, list[bytes], n
 
 
 def load_phase_b_base_inputs(args: argparse.Namespace) -> tuple[list[bytes], np.ndarray, dict[str, Any]]:
-    base_archive = args.base_sub / "archive.zip"
+    base_archive = base_archive_path(args)
     if not base_archive.exists():
         raise FileNotFoundError(f"base archive missing: {base_archive}")
     got_sha = sha256_file(base_archive)
-    if got_sha != BASE_ARCHIVE_SHA256:
-        raise RuntimeError(f"refusing cross-object TQ1 Phase B: base sha {got_sha} != {BASE_ARCHIVE_SHA256}")
+    expected_sha = expected_base_sha256(args)
+    if got_sha != expected_sha:
+        raise RuntimeError(f"refusing cross-object TQ1 Phase B: base sha {got_sha} != {expected_sha}")
     bulk, sections = read_payload_archive(base_archive)
     tokens = IX2.decode_token_frame(bulk)
     if tokens.shape != (600, 24, 32, 4):
@@ -1349,6 +1403,7 @@ def load_phase_b_base_inputs(args: argparse.Namespace) -> tuple[list[bytes], np.
     return list(sections), tokens, {
         "path": str(base_archive),
         "sha256": got_sha,
+        "expected_sha256": expected_sha,
         "bytes": base_archive.stat().st_size,
         "bulk_bytes": len(bulk),
         "bulk_sha256": sha256_bytes(bulk),
@@ -1404,6 +1459,25 @@ def write_receipts(
     receipt_dir.mkdir(parents=True, exist_ok=True)
     out_root.mkdir(parents=True, exist_ok=True)
     followon_status = "QUEUED-WITH-FIRE-ORDER"
+    baseline = baseline_for_args(args, archive_bytes=int(base_info["bytes"]))
+    realized_seconds_per_move = float(args.realized_seconds_per_move)
+    phase_b_wall_seconds = float(args.phase_b_wall_minutes) * 60.0
+    phase_b_budgeted_moves = int(phase_b_wall_seconds // realized_seconds_per_move) if realized_seconds_per_move > 0 else 0
+    phase_b_queue_limit = min(len(priced_rows), max(0, phase_b_budgeted_moves))
+    budget_derivation = {
+        "schema": "ddm_tq1_phase_b_wall_budget_derivation.v1",
+        "wall_budget_minutes": float(args.phase_b_wall_minutes),
+        "wall_budget_seconds": phase_b_wall_seconds,
+        "measured_realized_seconds_per_move_source": str(args.realized_seconds_source),
+        "measured_realized_seconds_per_move": realized_seconds_per_move,
+        "budgeted_realized_moves": phase_b_budgeted_moves,
+        "priced_rows": len(priced_rows),
+        "queued_for_phase_b": phase_b_queue_limit,
+        "phase_a_seconds": seconds,
+        "phase_a_seconds_per_priced_row": (seconds / len(priced_rows)) if priced_rows else None,
+        "score_claim": False,
+        "axis": AXIS,
+    }
     phase_a_json = {
         "schema": "ddm_tq1_phase_a_receipt.v1",
         "score_claim": False,
@@ -1413,7 +1487,8 @@ def write_receipts(
         "phase": "A_BUILD_SCORER_LIGHT",
         "phase_b_status": "GATED_CLOSED_JD5_ENDPOINT_ABSENT" if not jd5_gate["ready"] else "GATED_OPEN_NOT_FIRED_BY_PHASE_A",
         "followon_status": followon_status,
-        "baseline": BASELINE,
+        "run_label": args.run_label,
+        "baseline": baseline,
         "base_archive": base_info,
         "instrument_sources": instrument_source,
         "field_hashes": list(field_hashes),
@@ -1427,12 +1502,14 @@ def write_receipts(
             "accepted_count": 0,
             "accepted_status": "NOT_RUN_PHASE_A_SCORER_LIGHT",
         },
+        "phase_b_wall_budget_derivation": budget_derivation,
         "jd5_gate": jd5_gate,
         "build_sites": {
             "driver": "experiments/ddm_tq1_optimal_token_edit.py",
             "ssd_root": str(out_root),
             "price_ledger": str(price_ledger),
             "candidate_menu": str(menu_path),
+            "phase_b_queue_limit": phase_b_queue_limit,
             "smoke_archives": str(out_root / "smoke_candidates"),
             "checkpoints": str(out_root / "checkpoints"),
         },
@@ -1443,7 +1520,11 @@ def write_receipts(
             "Phase B fire order binds to v19/v19b realized move-level acceptance before any family closure.",
         ],
         "not_measured": {
-            "subset_or_n600_scorer": "not run; jd5 endpoint receipt with status=complete was absent",
+            "subset_or_n600_scorer": (
+                "not run by Phase A; jd5 endpoint receipt with status=complete was present"
+                if jd5_gate["ready"]
+                else "not run; jd5 endpoint receipt with status=complete was absent"
+            ),
             "family_closure": "not claimed; zero accepted moves can close only after full derived menu is scorer-realized",
         },
     }
@@ -1454,16 +1535,16 @@ def write_receipts(
     next_path.write_text(
         "\n".join(
             [
-                "# ddm_tq1 NEXT_IF_RESUMED",
+                f"# {args.run_label} NEXT_IF_RESUMED",
                 "",
-                "Status: QUEUED-WITH-FIRE-ORDER. Phase A built the derived menu and byte-priced smoke candidates; Phase B is gated on a jd5 endpoint receipt with `status=complete`.",
+                "Status: QUEUED-WITH-FIRE-ORDER. Phase A built the derived menu and byte-priced candidates; Phase B uses the budgeted queue prefix below.",
                 "",
                 "1. Re-check the gate without touching the jd5 run dir:",
-                "   `.venv/bin/python experiments/ddm_tq1_optimal_token_edit.py --phase-b --require-jd5`",
-                "2. If the gate opens, wire/run the v19/v19b realized move-level scorer stack on the queued candidate ledger:",
+                f"   `.venv/bin/python experiments/ddm_tq1_optimal_token_edit.py --phase-b --require-jd5 --base-archive {base_info['path']} --base-archive-sha256 {base_info['sha256']} --candidate-ledger {price_ledger} --phase-b-root {args.phase_b_root} --receipt-dir {receipt_dir} --run-label {args.run_label} --phase-b-max-moves {phase_b_queue_limit}`",
+                "2. Run the v19/v19b realized move-level scorer stack on the queued candidate ledger:",
                 f"   `{price_ledger}`",
                 "3. Accept a move only when its realized receiver -> R -> uint8 -> frozen-scorer components give joint `delta_S < 0` and pose-term erosion <= 0.005.",
-                "4. Checkpoint about every 20 accepted/rejected scorer moves under the SSD root before any n600 greedy-to-saturation run.",
+                f"4. Queue size derives from {phase_b_wall_seconds:.1f}s / {realized_seconds_per_move:.6f}s-per-move = {phase_b_budgeted_moves}; current priced rows limit it to {phase_b_queue_limit}.",
                 "5. If a full derived menu produces zero accepted realized moves, close the family at optimal-form scope; otherwise stage the accepted endpoint for n600.",
                 "",
                 "No score is claimed by this Phase A receipt.",
@@ -1473,7 +1554,7 @@ def write_receipts(
     )
 
     recall_lines = [
-        "# ddm_tq1 RECEIPT",
+        f"# {args.run_label} RECEIPT",
         "",
         "score_claim: false",
         f"axis: {AXIS}",
@@ -1495,6 +1576,7 @@ def write_receipts(
         f"- Base archive verified: `{base_info['path']}` sha256 `{base_info['sha256']}`, {base_info['bytes']} B.",
         f"- Candidate menu generated: {len(candidates)} moves with exact affected-pair sets from the decoded receiver token lattice.",
         f"- Candidate prefix priced: {len(priced_rows)} moves; accepted moves: 0 (`NOT_RUN_PHASE_A_SCORER_LIGHT`).",
+        f"- Budgeted Phase B queue: {phase_b_queue_limit} moves from `{args.phase_b_wall_minutes}` min wall / `{realized_seconds_per_move}` s-per-move.",
         f"- Smoke byte-close archives: {min(len(priced_rows), int(args.smoke_moves))}; each parsed with `build_byte_ledger`.",
         "- Global `[16,12,8,4]` is recorded only as a dominated baseline, not used as the generator.",
         "",
@@ -1617,7 +1699,7 @@ def run_phase_b(args: argparse.Namespace) -> int:
             )
         )
         return 0
-    result = apply_realized_measurement_jsonl(args.realized_measurement_jsonl)
+    result = apply_realized_measurement_jsonl(args.realized_measurement_jsonl, baseline_for_args(args))
     result["psutil_preflight"] = preflight
     result["jd5_gate"] = jd5_gate
     write_json(args.receipt_dir / "phase_b_realized_acceptance_receipt.json", result)
@@ -1632,7 +1714,15 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     phase.add_argument("--phase-b", action="store_true", help="Run/queue Phase B gate handling.")
     parser.add_argument("--require-jd5", action="store_true", help="Require a complete jd5 endpoint receipt before Phase B.")
     parser.add_argument("--realized-measurement-jsonl", type=Path, default=None)
+    parser.add_argument("--run-label", default="ddm_tq1", help="Receipt label; does not change schemas.")
     parser.add_argument("--base-sub", type=Path, default=Path("/Volumes/VertigoDataTier/pact/ddm_qo1_20260804/sub_auto_pairbit"))
+    parser.add_argument("--base-archive", type=Path, default=None, help="Explicit base archive; overrides --base-sub/archive.zip.")
+    parser.add_argument("--base-archive-sha256", default=BASE_ARCHIVE_SHA256)
+    parser.add_argument("--baseline-d-seg", type=float, default=None)
+    parser.add_argument("--baseline-d-pose", type=float, default=None)
+    parser.add_argument("--baseline-archive-bytes", type=int, default=None)
+    parser.add_argument("--baseline-score", type=float, default=None)
+    parser.add_argument("--baseline-source", default=BASELINE["source"])
     parser.add_argument("--token-source", type=Path, default=Path("/Volumes/VertigoDataTier/pact/ddm_br1_20260803/cx1_tokens.npy"))
     parser.add_argument("--gt-argmax", type=Path, default=Path("/Volumes/VertigoDataTier/pact/ddm_pu2_20260803/argmax_cache/gt_argmax_n600.npy"))
     parser.add_argument("--cx1-argmax", type=Path, default=Path("/Volumes/VertigoDataTier/pact/ddm_pu2_20260803/argmax_cache/cx1_argmax_n600.npy"))
@@ -1651,6 +1741,10 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--scorer-threads", type=int, default=4)
     parser.add_argument("--phase-b-max-moves", type=int, default=0, help="0 means all rows in the queued candidate ledger.")
     parser.add_argument("--phase-b-checkpoint-every", type=int, default=20)
+    parser.add_argument("--phase-b-wall-minutes", type=float, default=90.0)
+    parser.add_argument("--full-menu-size", type=int, default=1140)
+    parser.add_argument("--realized-seconds-per-move", type=float, default=4942.144552230835 / 12.0)
+    parser.add_argument("--realized-seconds-source", default=".omx/research/ddm_tq1_20260805/phase_b_realized_acceptance_receipt.json seconds/12")
     parser.add_argument("--price-top", type=int, default=12)
     parser.add_argument("--smoke-moves", type=int, default=4)
     args = parser.parse_args(argv)
@@ -1668,6 +1762,12 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         raise SystemExit("--phase-b-max-moves must be non-negative")
     if args.phase_b_checkpoint_every < 1:
         raise SystemExit("--phase-b-checkpoint-every must be positive")
+    if args.phase_b_wall_minutes <= 0:
+        raise SystemExit("--phase-b-wall-minutes must be positive")
+    if args.realized_seconds_per_move <= 0:
+        raise SystemExit("--realized-seconds-per-move must be positive")
+    if args.full_menu_size < 0:
+        raise SystemExit("--full-menu-size must be non-negative")
     return args
 
 
