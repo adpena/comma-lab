@@ -1,7 +1,7 @@
 # ddm_if1 Checkpoints
 
-Arm: `ddm_if1`  
-Date: 2026-08-06  
+Arm: `ddm_if1`
+Date: 2026-08-06
 Mode: scorer-free, analysis-only, $0.
 
 ## Checkpoint 1 - Contract Load

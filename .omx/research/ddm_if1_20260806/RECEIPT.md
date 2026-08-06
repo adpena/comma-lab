@@ -1,8 +1,8 @@
 # RIGOR GRADE: TERMINOLOGY-ESSAY
 
-Arm: `ddm_if1`  
-Date: 2026-08-06  
-Status: COMPLETE, scorer-free, no launch, no paid dispatch, no score claim.  
+Arm: `ddm_if1`
+Date: 2026-08-06
+Status: COMPLETE, scorer-free, no launch, no paid dispatch, no score claim.
 Paper: Srinivasa Rao P. and Vangmayi P Reddy, "Informational Frustration in Neural Manifolds: Shannon Bottlenecks and the Limits of Learnability," arXiv:2606.30512v1.
 
 ## Answer First
