@@ -27,6 +27,21 @@ import numpy as np
 import torch
 
 
+def _prefix_pair_selection_scope(max_pairs: int) -> dict[str, object]:
+    return {
+        "schema": "subset_scope.v1",
+        "n": int(max_pairs),
+        "population": 600,
+        "selection_mode": "video_order_prefix",
+        "pair_indices": list(range(int(max_pairs))),
+        "axis_bias_caveat": (
+            "video-order prefix diagnostic only; prefix bias can differ by axis, so this "
+            "trajectory is not population or n600 evidence"
+        ),
+        "population_claim": False,
+    }
+
+
 def build(max_pairs, base_channels, seed, muon_lr, grad_clip, batch_size, custom_backward, targets_cache):
     os.environ["TAC_MLX_CUSTOM_GROUPED_BACKWARD"] = "1" if custom_backward else "0"
     os.environ.setdefault("MLX_METAL_GPU_ARCH", "applegpu_g15")
@@ -129,7 +144,8 @@ def main():
         verdict = "REFERENCE_ONLY_DIVERGES_unexpected"
     print(f"\nVERDICT: {verdict}")
     print(f"diverged: custom={div_c} reference={div_r}")
-    out = {"config": vars(args), "custom": traj_c, "reference": traj_r,
+    out = {"config": vars(args), "pair_selection": _prefix_pair_selection_scope(args.max_pairs),
+           "custom": traj_c, "reference": traj_r,
            "diverged": {"custom": div_c, "reference": div_r}, "verdict": verdict}
     Path(args.out_json).parent.mkdir(parents=True, exist_ok=True)
     Path(args.out_json).write_text(json.dumps(out, indent=2))

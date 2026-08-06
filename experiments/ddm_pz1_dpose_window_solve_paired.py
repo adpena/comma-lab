@@ -44,6 +44,31 @@ POPULATION_D_POSE: float = 0.00255143
 CX1_SEG, CX1_POSE_CONTRIB, CX1_RATE = 0.4311790, 0.1597320, 0.2355862
 
 
+def _strided_pair_selection_scope(
+    idx: np.ndarray,
+    population: int,
+    *,
+    subset_over_population: float,
+) -> dict[str, object]:
+    return {
+        "schema": "subset_scope.v1",
+        "n": int(len(idx)),
+        "population": int(population),
+        "selection_mode": "strided_linspace",
+        "pair_indices": [int(v) for v in idx],
+        "selection_rule": "unique(round(linspace(0, population - 1, requested_pairs)))",
+        "axis_bias_caveat": (
+            "strided advisory subset; m88 subset/population guard must be read before any "
+            "population or n600 interpretation"
+        ),
+        "governing_ratio": {
+            "name": "base_d_pose",
+            "subset_over_population": float(subset_over_population),
+        },
+        "population_claim": False,
+    }
+
+
 def _install_paths(sub: Path) -> None:
     root = Path(__file__).resolve().parents[1]
     for p in (str(sub), str(root / "upstream"), str(root / "experiments")):
@@ -118,6 +143,9 @@ def main() -> int:
         "base": sub.name,
         "pairs_measured": [int(v) for v in idx],
         "n_pairs_measured": len(idx),
+        "pair_selection": _strided_pair_selection_scope(
+            idx, n, subset_over_population=m88_ratio
+        ),
         "m88_guard": {
             "subset_mean_base_d_pose": subset_mean,
             "population_d_pose": POPULATION_D_POSE,

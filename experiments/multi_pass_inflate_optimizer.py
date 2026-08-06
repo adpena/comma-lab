@@ -62,6 +62,8 @@ for _p in (_REPO / "src",):
     if _p.is_dir() and str(_p) not in sys.path:
         sys.path.insert(0, str(_p))
 
+from tac.optimization.trajectory_stopping import build_cap_stop_receipt  # noqa: E402
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Deterministic ZIP write — codex R5-r6 #5
@@ -363,6 +365,7 @@ def run_multi_pass(
     best_score: float = float("inf")
 
     converged = False
+    hit_iter_cap = False
     for iter_idx in range(cfg.max_iters):
         elapsed = time.monotonic() - start_time
         if elapsed > cfg.wall_clock_cap_sec:
@@ -415,6 +418,7 @@ def run_multi_pass(
         # Step 3: don't bother updating if this was the last iter — score
         # would never feed back into a decision.
         if iter_idx == cfg.max_iters - 1:
+            hit_iter_cap = True
             break
 
         # Step 4: inner update step. 1 TTO step on poses + 1 LCT EMA update
@@ -427,6 +431,15 @@ def run_multi_pass(
         )
         next_archive = work_root / f"iter_{iter_idx + 1}.zip"
         current_archive = _repack_archive(current_contents, next_archive)
+
+    cap_stop = build_cap_stop_receipt(
+        stop_reason=(
+            "converged" if converged else ("cap_bound" if hit_iter_cap else "failed")
+        ),
+        steps_run=len(history),
+        cap=cfg.max_iters,
+        still_descending=(False if converged else (True if hit_iter_cap else None)),
+    )
 
     # Final output: the best archive seen, re-packed to the canonical
     # output path (so the destination is always written even if no iters
@@ -466,6 +479,7 @@ def run_multi_pass(
             for r in history
         ],
         "converged": converged,
+        "cap_stop_receipt": cap_stop.to_payload(),
         "best_score": best_score if history else None,
         "best_archive_iter": int(min(range(len(history)), key=lambda i: history[i].score))
             if history else None,

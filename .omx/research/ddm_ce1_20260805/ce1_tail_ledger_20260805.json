@@ -1,0 +1,151 @@
+{
+  "schema": "ddm_ce1_tail_ledger.v1",
+  "utc": "2026-08-06T00:10:03Z",
+  "program": "#955 censorship-sources / #875 subset-default scope-censoring",
+  "selection_rule": "triage by live-consumer blast radius from 6d3cbbb684, CA1, SS1, VC1, SI1, and NA4 recall; do not edit untracked or owner/scorer-dependent rows in this unit",
+  "cured_top_rows": [
+    {
+      "path": "experiments/ddm_p3v2_optimal_form_pose_resolve.py",
+      "family": "subset_default",
+      "site_count": 1,
+      "blast_radius": "P3/P3v2 pose-resolution receipt can be misread as population evidence",
+      "cure": "receipt now emits pair_selection with n, population, selection_mode=video_order_prefix, pair_indices, axis_bias_caveat, and population_claim=false"
+    },
+    {
+      "path": "experiments/ddm_pz1_dpose_window_solve_paired.py",
+      "family": "subset_default",
+      "site_count": 1,
+      "blast_radius": "PZ1 paired d_pose window-solve spend gate",
+      "cure": "receipt now emits strided pair_selection plus governing_ratio from the executed m88 subset/population guard"
+    },
+    {
+      "path": "experiments/ddm_pz1_partial_refit_bound.py",
+      "family": "subset_default",
+      "site_count": 1,
+      "blast_radius": "PZ1 partial re-fit ranking can be read as population evidence",
+      "cure": "receipt now emits strided pair_selection with n, population, indices, and axis_bias_caveat"
+    },
+    {
+      "path": "experiments/ddm_pz1_scorer_plane_pose_delta.py",
+      "family": "subset_default",
+      "site_count": 1,
+      "blast_radius": "PZ1 scorer-plane delta probe governs whether to spend the n600 slot",
+      "cure": "receipt now emits strided pair_selection with n, population, indices, and axis_bias_caveat"
+    },
+    {
+      "path": "experiments/diag_custom_vs_reference_trajectory_n8.py",
+      "family": "subset_default",
+      "site_count": 5,
+      "blast_radius": "N8 custom-vs-reference trajectory diagnostic can be cited as kernel verdict support",
+      "cure": "JSON output now emits pair_selection with n=8, population=600, selection_mode=video_order_prefix, pair_indices, and axis_bias_caveat"
+    },
+    {
+      "path": "experiments/multi_pass_inflate_optimizer.py",
+      "family": "silent_cap",
+      "site_count": 1,
+      "blast_radius": "multi-pass outer loop previously had a capped --max-iters default without canonical cap-stop payload",
+      "cure": "manifest now emits cap_stop_receipt via tac.optimization.trajectory_stopping.build_cap_stop_receipt"
+    }
+  ],
+  "deferred_tail": [
+    {
+      "path": "tools/run_taskspace_r10_feature_texture_relay.py",
+      "family": "subset_default",
+      "site_count": 4,
+      "blast_radius": "R10 task-space feature/texture relay mechanics receipt",
+      "status": "deferred_untracked_file",
+      "fire_order": "when owner lands or explicitly releases the untracked file, add the same pair_selection payload without changing pair-count semantics",
+      "source": "SS1/current CE1 subset scan"
+    },
+    {
+      "path": "experiments/probe_frontier_adapter_dseg_flip.py",
+      "family": "subset_default",
+      "site_count": 8,
+      "blast_radius": "frontier adapter d_seg flip probe can be misread as population evidence",
+      "status": "deferred_folded_or_stale",
+      "fire_order": "only cure if the probe is reopened on a live decision path",
+      "source": "SS1/current CE1 subset scan"
+    },
+    {
+      "path": "experiments/ddm_q3x_q3_convergence_measurement.py",
+      "family": "silent_cap",
+      "site_count": 1,
+      "blast_radius": "active Q3 gate source",
+      "status": "deferred_owner_scorer_lane",
+      "fire_order": "queue behind owner/scorer lane; migrate to CapStopReceipt before using capped verdicts",
+      "source": "CA1 classified inventory"
+    },
+    {
+      "path": "experiments/ddm_et1_block16_realization.py",
+      "family": "silent_cap",
+      "site_count": 1,
+      "blast_radius": "live phase-field/coupling input",
+      "status": "deferred_scorer_dependent",
+      "fire_order": "migrate to CapStopReceipt inside the owning realization lane before interpreting capped results",
+      "source": "CA1 classified inventory"
+    },
+    {
+      "path": "experiments/ddm_sq1_pose_null_constrained_paint.py",
+      "family": "silent_cap",
+      "site_count": 1,
+      "blast_radius": "Q3/pose-null predecessor if reactivated",
+      "status": "deferred_scorer_dependent_if_reopened",
+      "fire_order": "migrate to CapStopReceipt only if the family is reopened",
+      "source": "CA1 classified inventory"
+    },
+    {
+      "path": "tools/pose_frame0_inverse_solve_probe.py",
+      "family": "silent_cap",
+      "site_count": 1,
+      "blast_radius": "historical inverse-solve cap prior",
+      "status": "deferred_historical_stale",
+      "fire_order": "hold until reopened; do not spend CE1 patch budget on stale off-chain prior",
+      "source": "CA1 classified inventory"
+    },
+    {
+      "path": "tools/probe_onpolicy_scorer_surrogate.py",
+      "family": "silent_cap",
+      "site_count": 1,
+      "blast_radius": "on-policy scorer surrogate support if reopened",
+      "status": "deferred_research_if_reopened",
+      "fire_order": "migrate to CapStopReceipt before any new capped surrogate verdict",
+      "source": "CA1 classified inventory"
+    },
+    {
+      "path": "tools/probe_yopo_first_layer_costate.py",
+      "family": "silent_cap",
+      "site_count": 1,
+      "blast_radius": "costate probe appears in multiple research bundles",
+      "status": "deferred_research_if_reopened",
+      "fire_order": "migrate to CapStopReceipt before using a capped support row",
+      "source": "CA1 classified inventory"
+    },
+    {
+      "path": "tools/check_gate*.py",
+      "family": "vacuity_equals_pass",
+      "site_count": 18,
+      "blast_radius": "shared gate main can print OK with zero examined items",
+      "status": "deferred_vacuity_cure_needed",
+      "fire_order": "add examined/declared/population denominators and zero-examined failure or explicit acknowledgement",
+      "source": "SI1 recall"
+    },
+    {
+      "path": "confound gate finish emitters",
+      "family": "vacuity_equals_pass",
+      "site_count": 12,
+      "blast_radius": "_finish(ok_detail=...) prose can pass without counts",
+      "status": "deferred_vacuity_cure_needed",
+      "fire_order": "replace prose-only ok_detail with typed denominator fields",
+      "source": "VC1 recall"
+    },
+    {
+      "path": "runtime adapter / bare-python launch surfaces",
+      "family": "vacuity_equals_pass",
+      "site_count": 4,
+      "blast_radius": "bare Python contracts and launchers can silently green on non-executed work",
+      "status": "deferred_vacuity_cure_needed",
+      "fire_order": "convert to explicit rc/denominator receipt before new use",
+      "source": "SI1 recall"
+    }
+  ]
+}

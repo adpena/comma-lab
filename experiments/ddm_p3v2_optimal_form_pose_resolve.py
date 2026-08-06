@@ -461,6 +461,23 @@ def contribution(d_pose_mean: float) -> float:
     return float(np.sqrt(10.0 * max(d_pose_mean, 0.0)))
 
 
+def _prefix_pair_selection_scope(pair_indices: list[int], requested_n: int) -> dict[str, Any]:
+    pairs = [int(v) for v in pair_indices]
+    return {
+        "schema": "subset_scope.v1",
+        "n": len(pairs),
+        "requested_n": int(requested_n),
+        "population": 600,
+        "selection_mode": "video_order_prefix",
+        "pair_indices": pairs,
+        "axis_bias_caveat": (
+            "video-order prefix is bounded mechanics evidence, not population evidence; "
+            "prefix bias can differ by axis, so no n600 claim follows from this subset"
+        ),
+        "population_claim": False,
+    }
+
+
 def run(args) -> dict[str, Any]:
     import torch
     torch.set_num_threads(4)
@@ -617,6 +634,7 @@ def run(args) -> dict[str, Any]:
         "utc": _utc(), "git_hash": _git_hash(), "axis": args.axis,
         "score_claim": False, "promotable": False, "pointer": "0.1910828242 [contest-CPU] UNMOVED",
         "n_pairs_done": len(per_pair), "n_pairs_requested": n,
+        "pair_selection": _prefix_pair_selection_scope([r["pair"] for r in per_pair], n),
         "work_res": [wh, ww], "free_iters": args.free_iters,
         "baseline_d_pose": {
             "stored_mean": float(stored.mean()), "stored_median": float(np.median(stored)),
@@ -747,6 +765,7 @@ def run_s3warp(args) -> dict[str, Any]:
         "utc": _utc(), "git_hash": _git_hash(), "axis": args.axis,
         "score_claim": False, "promotable": False, "pointer": "0.1910828242 [contest-CPU] UNMOVED",
         "n_pairs_done": len(done), "n_pairs_requested": n,
+        "pair_selection": _prefix_pair_selection_scope(done, n),
         "carrier": "warp-base (ground homography of f1 by the carried pose target + per-pair s_t index)",
         "d_pose_warp_mean": pose_mean, "d_pose_warp_median": float(np.median(dps)),
         "d_pose_warp_max": float(dps.max()), "d_pose_warp_min": float(dps.min()),

@@ -49,6 +49,22 @@ import torch
 SEG_H, SEG_W = 384, 512
 
 
+def _strided_pair_selection_scope(idx: np.ndarray, population: int) -> dict[str, object]:
+    return {
+        "schema": "subset_scope.v1",
+        "n": int(len(idx)),
+        "population": int(population),
+        "selection_mode": "strided_linspace",
+        "pair_indices": [int(v) for v in idx],
+        "selection_rule": "unique(round(linspace(0, population - 1, requested_pairs)))",
+        "axis_bias_caveat": (
+            "strided advisory subset; no population claim or n600 conclusion follows without "
+            "a governing subset/population bias check"
+        ),
+        "population_claim": False,
+    }
+
+
 def _install_submission_path(sub: Path) -> None:
     for p in (str(sub), str(Path(__file__).resolve().parents[1] / "upstream")):
         if p not in sys.path:
@@ -207,6 +223,7 @@ def main() -> int:
         "base": sub.name,
         "n_pairs_total": n,
         "pairs_measured": [int(v) for v in idx],
+        "pair_selection": _strided_pair_selection_scope(idx, n),
         "controls": {
             "C0_shipped_receiver_has_window_solve": bool(shipped_has_solve),
             "C0_repo_receiver_has_window_solve": bool(repo_has_solve),

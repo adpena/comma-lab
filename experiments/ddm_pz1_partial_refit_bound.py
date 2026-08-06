@@ -48,6 +48,22 @@ from pathlib import Path
 import numpy as np
 
 
+def _strided_pair_selection_scope(idx: np.ndarray, population: int) -> dict[str, object]:
+    return {
+        "schema": "subset_scope.v1",
+        "n": int(len(idx)),
+        "population": int(population),
+        "selection_mode": "strided_linspace",
+        "pair_indices": [int(v) for v in idx],
+        "selection_rule": "unique(round(linspace(0, population - 1, requested_pairs)))",
+        "axis_bias_caveat": (
+            "strided advisory subset; no population claim or n600 conclusion follows without "
+            "a governing subset/population bias check"
+        ),
+        "population_claim": False,
+    }
+
+
 def _install_paths(sub: Path) -> None:
     root = Path(__file__).resolve().parents[1]
     for p in (str(sub), str(root / "upstream"), str(root / "experiments")):
@@ -132,6 +148,7 @@ def main() -> int:
         "base": sub.name,
         "n_pairs": len(idx),
         "pairs": [int(v) for v in idx],
+        "pair_selection": _strided_pair_selection_scope(idx, n),
         "grid": {"n_st": n_st, "n_sel": 2},
         "mean_d_pose_base_shipped": float(bs.mean()),
         "mean_d_pose_base_refit": float(br.mean()),
