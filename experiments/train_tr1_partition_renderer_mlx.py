@@ -1742,11 +1742,12 @@ def topology_per_class(realized: np.ndarray, gts: list[np.ndarray]) -> dict[str,
 # cannot change the bytes defaults ON" rule).  Cost is negligible against the
 # SegNet forward the gate already paid for.
 # ---------------------------------------------------------------------------
-# Every key the ddm_bs3 cures add to a gate row. These are telemetry.jsonl-ONLY:
+# Every score-neutral detailed gate telemetry key. These are telemetry.jsonl-ONLY:
 # they are stripped before the row enters ``telemetry_tail`` (baked into the
-# checkpoint meta), so this landing leaves checkpoint bytes untouched. Pinned
-# against the producing functions by ``test_ddm_bs3_gate_projection_kernel`` so a
-# future field cannot silently leak into the checkpoint.
+# checkpoint meta), so these observability landings leave checkpoint bytes
+# untouched. Pinned against the producing functions by
+# ``test_ddm_bs3_gate_projection_kernel`` so a future field cannot silently leak
+# into the checkpoint.
 BS3_TELEMETRY_ONLY_KEYS = frozenset({
     "realized_gate_pair_ids",
     "realized_gate_dseg_per_pair",
@@ -1764,6 +1765,18 @@ BS3_TELEMETRY_ONLY_KEYS = frozenset({
     "realized_flips_net_error_px",
     "realized_class_l1_rel_since_prev_gate",
     "realized_mean_hid_class_motion",
+    "realized_gate_dpose_per_pair",
+    "realized_gate_dpose_mean",
+    "realized_gate_dpose_per_pair_max",
+    "realized_gate_dpose_per_pair_sd",
+    "realized_gate_dpose_per_pair_q50",
+    "realized_gate_dpose_per_pair_q90",
+    "realized_gate_dpose_per_pair_q95",
+    "realized_gate_dpose_wall_seconds",
+    "realized_gate_dpose_axis",
+    "realized_gate_dpose_label",
+    "realized_gate_dpose_semantics",
+    "realized_gate_dpose_gate36_n600_calibration",
 })
 
 
@@ -1875,6 +1888,81 @@ def gd1_realized_gate_dseg_fields(
     }
 
 
+def realized_gate_dpose_fields(
+    gate_ids: Sequence[int],
+    dposes: Sequence[float],
+    *,
+    wall_seconds: float,
+) -> dict[str, Any]:
+    """POSE-denominated A1 gate telemetry over the same pair set as d_seg.
+
+    This is an advisory trend channel only: the n600 endpoint probe remains the
+    boundary authority. The values are per-pair first-6 PoseNet MSEs after the
+    same MLX ``_apply_R`` + yuv12 path used by
+    ``experiments/ddm_jd4_endpoint_n600_both_bases.py``.
+    """
+    ids = tuple(int(i) for i in gate_ids)
+    vals = np.asarray(dposes, dtype=np.float64)
+    if vals.ndim != 1:
+        raise ValueError(f"realized_gate_dpose_fields: expected 1D dposes, got {vals.shape}")
+    if len(ids) != vals.shape[0]:
+        raise ValueError(
+            f"realized_gate_dpose_fields: {len(ids)} gate ids vs {vals.shape[0]} dposes")
+    if vals.shape[0] == 0:
+        raise ValueError("realized_gate_dpose_fields: empty gate set is VACUOUS")
+    return {
+        "realized_gate_dpose_per_pair": [float(v) for v in vals],
+        "realized_gate_dpose_mean": float(np.mean(vals)),
+        "realized_gate_dpose_per_pair_max": float(np.max(vals)),
+        "realized_gate_dpose_per_pair_sd": (
+            float(np.std(vals, ddof=1)) if vals.shape[0] > 1 else None),
+        "realized_gate_dpose_per_pair_q50": float(np.quantile(vals, 0.50)),
+        "realized_gate_dpose_per_pair_q90": float(np.quantile(vals, 0.90)),
+        "realized_gate_dpose_per_pair_q95": float(np.quantile(vals, 0.95)),
+        "realized_gate_dpose_wall_seconds": float(wall_seconds),
+        "realized_gate_dpose_axis": "[macOS-CPU frozen-scorer advisory]",
+        "realized_gate_dpose_label": "advisory_trend_channel_n600_probe_authority",
+        "realized_gate_dpose_semantics": (
+            "PoseNet first-6 MSE vs gt_poses[idx][:6] on "
+            "(_apply_R(render(max(idx-1,0))), _apply_R(render(idx))) yuv12"),
+        "realized_gate_dpose_gate36_n600_calibration": "banked jd4/jd5/jd6 ratio 1.002-1.146",
+    }
+
+
+def realized_gate_pose_yuv12(f0: Any, f1: Any) -> Any:
+    """Endpoint-probe yuv12 packing for a PoseNet pair."""
+    import mlx.core as mx
+
+    from tac.local_acceleration.pr95_hnerv_mlx_training import rgb_to_yuv6_mlx
+
+    pair = mx.stack([f0[0], f1[0]], axis=0)[None]
+    yuv = rgb_to_yuv6_mlx(pair)
+    b, t, h2, w2, c6 = yuv.shape
+    return mx.reshape(mx.transpose(yuv, (0, 2, 3, 1, 4)), (b, h2, w2, t * c6))
+
+
+def realized_gate_dposes(model: Any, gate_ids: Sequence[int], gt_poses: Any,
+                         pose_adapter: Any) -> list[float]:
+    """Read-only gate d_pose pass, outside gradient and training state updates."""
+    import mlx.core as mx
+
+    from experiments.train_witness_realized_through_R_mlx import _apply_R
+
+    out: list[float] = []
+    with mx.stream(mx.cpu):
+        for idx in gate_ids:
+            i = int(idx)
+            f1 = _apply_R(model.render_frame(i))
+            f0 = _apply_R(model.render_frame(max(i - 1, 0)))
+            pose_out = pose_adapter.posenet(realized_gate_pose_yuv12(f0, f1))
+            pose = pose_out["pose"] if isinstance(pose_out, dict) else pose_out
+            mx.eval(pose)
+            p6 = np.asarray(pose, dtype=np.float64).ravel()[:6]
+            tgt = np.asarray(gt_poses[i], dtype=np.float64).ravel()[:6]
+            out.append(float(np.mean((p6 - tgt) ** 2)))
+    return out
+
+
 def flip_direction_counts(realized: np.ndarray, prev_realized: np.ndarray,
                           gts: list[np.ndarray]) -> dict[str, int]:
     """SIGN-RESOLVE ``realized_flips_vs_prev_gate`` into an exact 3-way partition.
@@ -1916,7 +2004,9 @@ def flip_direction_counts(realized: np.ndarray, prev_realized: np.ndarray,
 
 
 def realized_gate(model, gate_ids: tuple[int, ...], lstars, seg_cpu,
-                  prev_realized: np.ndarray | None) -> dict[str, Any]:
+                  prev_realized: np.ndarray | None, *,
+                  pose_adapter: Any | None = None,
+                  gt_poses: Any | None = None) -> dict[str, Any]:
     import mlx.core as mx
 
     from experiments.train_witness_realized_through_R_mlx import (
@@ -1944,6 +2034,14 @@ def realized_gate(model, gate_ids: tuple[int, ...], lstars, seg_cpu,
         "gate_render_stream": "mlx_cpu_fp32",
         "gate_wall_seconds": time.monotonic() - t0,
     }
+    if (pose_adapter is None) != (gt_poses is None):
+        raise ValueError("realized_gate d_pose channel requires both pose_adapter and gt_poses")
+    if pose_adapter is not None and gt_poses is not None:
+        pose_t0 = time.monotonic()
+        dposes = realized_gate_dposes(model, gate_ids, gt_poses, pose_adapter)
+        row.update(realized_gate_dpose_fields(
+            gate_ids, dposes, wall_seconds=time.monotonic() - pose_t0))
+        row["gate_wall_seconds"] = time.monotonic() - t0
     if prev_realized is not None and prev_realized.shape == realized.shape:
         row["realized_flips_vs_prev_gate"] = int(np.count_nonzero(realized != prev_realized))
         # ddm_bs3 (#909): sign-resolve that count. MEASURED on burn-4, ~94.6% of
@@ -4187,13 +4285,11 @@ def main() -> int:
     margins = open_stored_npy_memmap(args.gt_cache, "margins")
     if lstars.shape[0] < cfg.num_pairs:
         raise SystemExit(f"gt cache has {lstars.shape[0]} pairs < --num-pairs {cfg.num_pairs}")
-    gt_poses = None
-    if _jd1_pose_finish_enabled:
-        gt_poses = open_stored_npy_memmap(args.gt_cache, "gt_poses")
-        if gt_poses.shape[0] < cfg.num_pairs or gt_poses.shape[1] < 6:
-            raise SystemExit(
-                f"gt cache gt_poses shape {gt_poses.shape} incompatible with --num-pairs "
-                f"{cfg.num_pairs} and PoseNet-6 targets")
+    gt_poses = open_stored_npy_memmap(args.gt_cache, "gt_poses")
+    if gt_poses.shape[0] < cfg.num_pairs or gt_poses.shape[1] < 6:
+        raise SystemExit(
+            f"gt cache gt_poses shape {gt_poses.shape} incompatible with --num-pairs "
+            f"{cfg.num_pairs} and PoseNet-6 targets")
     seg_cpu = load_real_segnet("cpu")
 
     # QA75 solve-frame distillation teacher (ddm_dw1): the concatenated b2b SegNet FIELD,
@@ -4252,6 +4348,18 @@ def main() -> int:
     # MLX scorer adapter (training-gradient device; NEVER a score) + canonical loss.
     upstream_root = str(Path(sys.modules["tac"].__file__).resolve().parents[2] / "upstream")
     adapter = load_mlx_distortion_scorer_adapter_from_upstream(upstream_root, device="cpu")
+    tlog({"event": "realized_gate_dpose_channel_config",
+          "port": "ddm_bd1_970",
+          "status": "on",
+          "default_on": True,
+          "gate_cadence": "a1_gate",
+          "basis": "normal a1_gate basis (EMA shadow after warmup; live only during warmup)",
+          "live_basis_gate_pass_added": False,
+          "gt_poses_loaded": True,
+          "pose_path": "_apply_R(render(max(idx-1,0))) + _apply_R(render(idx)) + yuv12 "
+                       "+ frozen MLX PoseNet first-6 MSE vs gt_poses[idx][:6]",
+          "label": "advisory trend channel; n600 endpoint probe remains boundary authority",
+          "score_claim": False})
     # §3.2 boundary-annulus form fix: 100% of realized flips sit in the bottom GT-margin decile
     # (sg1 §1.3) => reweight the per-pixel seg loss toward the small-margin boundary annulus.
     # ddm_tp2 row 2: fail closed BEFORE any training if the flag would be inert for a form
@@ -5922,7 +6030,9 @@ def main() -> int:
                 })
             live = ema_snapshot_swap(model, ema) if gate_basis != "live_ema_warmup" else None
             try:
-                gate_row = realized_gate(model, gate_ids, lstars, seg_cpu, prev_realized)
+                gate_row = realized_gate(
+                    model, gate_ids, lstars, seg_cpu, prev_realized,
+                    pose_adapter=adapter, gt_poses=gt_poses)
                 ledger = counted_bytes_ledger(model, cfg)
             finally:
                 if live is not None:

@@ -330,6 +330,9 @@ def test_bs3_keys_constant_covers_every_field_the_cures_emit():
     emitted |= {"realized_gate_dseg_by_gt_class", "realized_gate_dseg_per_pair_sd"}
     gd1_fields = T.gd1_realized_gate_dseg_fields(tuple(range(36)), [0.001] * 36, 36)
     emitted |= set(gd1_fields) & set(T.BS3_TELEMETRY_ONLY_KEYS)
+    dpose_fields = T.realized_gate_dpose_fields(
+        tuple(range(3)), [0.001, 0.004, 0.009], wall_seconds=1.25)
+    emitted |= set(dpose_fields)
     emitted |= set(T.a1_class_motion_fields(
         {"realized_gate_dseg_by_gt_class": [1.0, 0, 0, 0, 0]},
         {"realized_gate_dseg_by_gt_class": [0.0, 1.0, 0, 0, 0]}, 0.0))
@@ -341,10 +344,44 @@ def test_bs3_keys_constant_covers_every_field_the_cures_emit():
 def test_checkpoint_safe_telemetry_row_strips_exactly_the_bs3_fields():
     row = {"epoch": 7, "realized_gate_dseg_mean": 0.1,
            "realized_gate_dseg_by_gt_class": [0.1, 0, 0, 0, 0],
+           "realized_gate_dpose_mean": 0.02,
            "realized_flips_toward_gt": 3, "topology_per_class": {}}
     safe = T.checkpoint_safe_telemetry_row(row)
     assert set(safe) == {"epoch", "realized_gate_dseg_mean", "topology_per_class"}
     assert safe["realized_gate_dseg_mean"] == 0.1
+
+
+def test_bd1_realized_gate_dpose_fields_match_gate_naming_and_label():
+    fields = T.realized_gate_dpose_fields(
+        (11, 12, 13), [0.001, 0.004, 0.009], wall_seconds=2.5)
+
+    assert fields["realized_gate_dpose_per_pair"] == pytest.approx([0.001, 0.004, 0.009])
+    assert fields["realized_gate_dpose_mean"] == pytest.approx((0.001 + 0.004 + 0.009) / 3)
+    assert fields["realized_gate_dpose_per_pair_q50"] == pytest.approx(0.004)
+    assert fields["realized_gate_dpose_per_pair_q90"] == pytest.approx(0.008)
+    assert fields["realized_gate_dpose_per_pair_q95"] == pytest.approx(0.0085)
+    assert fields["realized_gate_dpose_wall_seconds"] == pytest.approx(2.5)
+    assert fields["realized_gate_dpose_label"] == "advisory_trend_channel_n600_probe_authority"
+    assert fields["realized_gate_dpose_axis"] == "[macOS-CPU frozen-scorer advisory]"
+
+
+def test_bd1_realized_gate_dpose_pass_is_structurally_read_only():
+    """Regression fixture for #970's byte-identity invariant.
+
+    A full run-level post-step hash comparison is too expensive for this unit
+    test. This structural guard pins that the d_pose pass is an evaluation-only
+    render/adapter path: no RNG, no optimizer, no value_and_grad, and no model
+    state update call.
+    """
+    import inspect
+
+    src = inspect.getsource(T.realized_gate_dposes)
+    assert "model.render_frame" in src
+    assert "pose_adapter.posenet" in src
+    assert "mx.random" not in src
+    assert "value_and_grad" not in src
+    assert "optimizer" not in src
+    assert ".update(" not in src
 
 
 def test_ast_guard_telemetry_tail_append_actually_applies_the_strip():
