@@ -209,3 +209,24 @@ ONE ckpt/τ=1.0; larger-n + flip-weighted-target reformulations owed, killed onl
   target (e.g. C14 lane-band, E5 sR, C1 directional) is goal-material, not a rounding error.
 
 **Pointer 0.19110 UNMOVED — this register is MEANS.** It drives follow-up re-tests; it moves nothing itself.
+
+## TY1 Implementation-Grade Rescope (2026-08-06)
+
+TY1 grades the row cluster C12/C14/C15 as `TOY-NAMED` if it is cited against the
+in-training Lane-channel family. The register already marks the rows as tainted
+or scoped, and TY1 makes the citation rule explicit: a dead gate or a post-hoc
+render/composite experiment is not the optimal form of an active in-training
+lane-band, lane-prior, or dash-comb arm.
+
+Allowed source citation: these rows carve out only `FORMULATION: dead-gate
+lane-prior or post-hoc lane-band/dash-comb composite on the measured checkpoint`.
+Forbidden citation: "in-training Lane-channel levers do not work." The fireable
+optimal form remains a governed in-training Lane pool A/B with the gate active
+from epoch 0 and realized Lane Betti-0/per-class d_seg readout.
+
+TY1 also upgrades the B1/B3/B4 rate rows' citation guard: if they are used
+against the current structured token-stream coder family, the implementation
+grade is `TOY-NAMED` because the historical objects were RGB/HNeRV int8-weight
+or PR101-symbol streams, not the live semantic/IX2 token fields. Allowed source
+citation remains object-scoped: near-iid ancestor weight/symbol streams did not
+benefit from those coder swaps.

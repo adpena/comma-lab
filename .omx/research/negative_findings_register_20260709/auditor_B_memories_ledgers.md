@@ -90,6 +90,18 @@ Key structural finding: **most run-1-stop-gated deferrals (D1/D2/D9/D15/D17/D18/
 - **Mis-scoped-or-suspect flags: 6** (B1, B2 redirect, B7, B9, B12, plus B3/B6 formulation-with-live-reformulation).
 - **Proxy-SUSPECT (P9): 5** (B1 n24-only, B2/B3/B4 macOS-CPU-advisory frozen-ckpt, B9 abandoned-vehicle). No MPS-derived kills found in this corpus slice (those live in Auditor A's DAG memos).
 - **Deferral rows: 20** — 3 CLOSED, 16 ARMED/QUEUED (7 gated on a run-1 stop whose gating-run may need re-pointing to v7.5.2), **1 DEADLINE-TODAY (D10)**.
+
+## TY1 Implementation-Grade Rescope (2026-08-06)
+
+TY1 grades B12/B13 as `TOY-NAMED` if they are cited against current structured
+witness token-stream or semantic-stream learned coders. The measured objects
+were ancestor PR101/near-iid symbol streams; that is not the optimal form for a
+current HPAC-class, patch-group causal, or structured token-field entropy model.
+
+Allowed source citation remains narrow: Balle hyperprior and Markov-1 AAC did
+not pay on the measured PR101/ancestor-symbol objects. Forbidden citation:
+"structured token-stream learned coders are exhausted." Those require a current
+stream, counted model bytes, exact decode equality, and a convergence receipt.
 - **Excluded process/operational: ~34** (discipline, not method — carve process not geometry).
 - Pointer **0.19110 UNMOVED** throughout. All Bucket-A verdicts `[macOS-CPU advisory · NON-PROMOTABLE]` or n600-CLEAN as noted.
 

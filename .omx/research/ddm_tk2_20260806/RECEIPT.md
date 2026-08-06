@@ -58,3 +58,17 @@ Expected wall clock from smoke scales roughly linearly from the observed per-can
 ## Frontier Honesty
 
 Own-vehicle frontier remains the current pointer from `.omx/state/main_hot_state.md`: `S=0.7534578126155775 @ 357,837 B [macOS-CPU advisory]`; contest borrowed pointer remains unmoved. This tk2 artifact is means, not goal progress.
+
+## TY1 Implementation-Grade Rescope (2026-08-06)
+
+TY1 grades `c1_v15_template_paint` and `c2_boundary_aa` as `TOY-NAMED` if they
+are cited against the margin-optimal paint / semantic-renderer family. They are
+real smoke candidates, but the measured form is an n=4 template/color reuse plus
+a deterministic 4-neighbor blend; it is not a trained source-forward renderer,
+a full v14/v15 receiver-closed paint, or an n600 D1 row.
+
+The C1/C2 negative verdict is therefore scoped to `FORMULATION: n4 D1 harness
+smoke over template paint / local boundary blend`. `c3_tr1_onehot_retarget` is
+an absence/fail-closed row, not a negative verdict. The queued D1 n600 scorer
+discriminator remains the required race before citing a semantic-renderer family
+negative.

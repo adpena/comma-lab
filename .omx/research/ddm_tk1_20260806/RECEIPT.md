@@ -123,3 +123,16 @@ Exact learned TK1 frames:
 |---|---:|---|
 | `/Volumes/VertigoDataTier/pact/ddm_tk1_20260806/tq1c_parent_argmax_learned_prior.tk1` | 700111 | `d6170de29851366bb4028acc4f30e80d7a450e44c13ed13437f6784ac974cae0` |
 | `/Volumes/VertigoDataTier/pact/ddm_tk1_20260806/gt_lstars_learned_prior.tk1` | 713345 | `54a624ad55fb2b9b01d1cb0d62c7c81fb8fcf4071c87f8b8a17b686d08b9cbc2` |
+
+## TY1 Implementation-Grade Rescope (2026-08-06)
+
+TY1 grades the `small counted learned prior` row as `TOY-NAMED` if it is cited
+against the HPAC-class semantic-stream family. The row is a real counted static
+conditional-table range coder with exact decode equality, but it is not the
+PR130/HPAC optimal form: no neural patch-group causal prior, no integer-lattice
+logits, no trained convergence receipt, and no renderer/prior joint packet.
+
+Therefore the negative verdict is scoped to `FORMULATION: small static
+conditional-prior table over tq1c/GT 5-class maps`. It must not be cited as a
+family negative against HPAC-class semantic token coding. The PP1 KT/context-
+arith selected stream row remains unchanged.
