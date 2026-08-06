@@ -86,12 +86,13 @@ anchor.
 Cheapest next discriminator, not fired here: **D1 semantic renderer source-forward
 n600 SegNet-only closure**.
 
-Fire order if claimed later: build RGB frames from the 142001 B semantic label
-stream plus the candidate renderer, run the frozen CPU SegNet argmax only, and
-measure `d_seg` against the GT `lstars` cache. This directly distinguishes the
-flat-paint floor (`d_seg=0.008305`) from a PR130-like renderer cell
-(`d_seg=0.0002966`) without PoseNet or `upstream/evaluate.py`. It must claim a
-scorer lane before firing because this TK1 unit was scorer-free.
+QUEUED-WITH-FIRE-ORDER owner: next scorer-lane claimant. Fire order if claimed:
+build RGB frames from the 142001 B semantic label stream plus the candidate
+renderer, run the frozen CPU SegNet argmax only, and measure `d_seg` against the
+GT `lstars` cache. This directly distinguishes the flat-paint floor
+(`d_seg=0.008305`) from a PR130-like renderer cell (`d_seg=0.0002966`) without
+PoseNet or `upstream/evaluate.py`. It must claim a scorer lane before firing
+because this TK1 unit was scorer-free.
 
 ## Recall Evidence
 
@@ -122,4 +123,3 @@ Exact learned TK1 frames:
 |---|---:|---|
 | `/Volumes/VertigoDataTier/pact/ddm_tk1_20260806/tq1c_parent_argmax_learned_prior.tk1` | 700111 | `d6170de29851366bb4028acc4f30e80d7a450e44c13ed13437f6784ac974cae0` |
 | `/Volumes/VertigoDataTier/pact/ddm_tk1_20260806/gt_lstars_learned_prior.tk1` | 713345 | `54a624ad55fb2b9b01d1cb0d62c7c81fb8fcf4071c87f8b8a17b686d08b9cbc2` |
-
