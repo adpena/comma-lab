@@ -1,0 +1,1940 @@
+{
+ "schema": "ddm_sw1_null_basis_phase_solve_summary.v1",
+ "captured_at_utc": "2026-08-06T13:10:04.816492Z",
+ "git": "fedd213612709b03fc706b9e790c12768e20a5da",
+ "axis": "[macOS-CPU frozen-scorer advisory]",
+ "score_claim": false,
+ "promotion_eligible": false,
+ "n600_run": false,
+ "parent": {
+  "archive": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/candidate_archives/move_0023_snap_r00_c12_L13.zip.receipt-bytes",
+  "archive_sha256": "b35e756829306a85ec2ad51634bde74523d89df9046c682253176b393bd59c06",
+  "archive_bytes": 357837,
+  "expected_own_vehicle_frontier": {
+   "S": 0.7534578126155775,
+   "d_seg": 0.004305419922,
+   "d_pose": 0.000716508925,
+   "bytes": 357837
+  },
+  "parent_score": {
+   "schema": "ddm_et2_parent_tq1c_score.v1",
+   "captured_at_utc": "2026-08-06T12:47:33.334748Z",
+   "git": "c9901113c20781cf4d671143a14fbc1a252effa3",
+   "archive_path": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/phase_b_realized_tq1c/candidate_archives/move_0023_snap_r00_c12_L13.zip.receipt-bytes",
+   "archive_sha256": "b35e756829306a85ec2ad51634bde74523d89df9046c682253176b393bd59c06",
+   "archive_bytes": 357837,
+   "parent_raw_path": "/Volumes/VertigoDataTier/pact/ddm_et2_20260806/parent_tq1c_decode/submission/inflated/0.raw",
+   "parent_raw_bytes": 3662409600,
+   "parent_raw_sha256": "82de098f5b97e6c61c7a53b4180f425117ea2e3c89e6ab435e7aea423f81291a",
+   "lstars_path": "/Volumes/VertigoDataTier/pact/ddm_et2_20260806/parent_score/parent_tq1c_argmax_n600.npy",
+   "lstars_sha256": "764a244c4890b22a67c4dbe95a959e970c29328778d41ffe4deb85f5b650eee6",
+   "pose6_path": "/Volumes/VertigoDataTier/pact/ddm_et2_20260806/parent_score/parent_tq1c_pose6_n600.npy",
+   "pose6_sha256": "69a09a8ab94233ac230a45d98e574a81d71899d2c86ef760c73dc561890bf2ba",
+   "d_seg": "0.004305419922",
+   "d_pose": "0.000716508925",
+   "score": "0.753457812580",
+   "expected_neighborhood": {
+    "S": 0.7534578126155775,
+    "d_seg": 0.004305419922,
+    "d_pose": 0.000716508925,
+    "archive_bytes": 357837
+   },
+   "delta_vs_expected_neighborhood": {
+    "delta_S": -3.601263731667359e-11,
+    "delta_d_seg": -1.2499983687019878e-13,
+    "delta_d_pose": -3.9805561190958683e-13,
+    "delta_bytes": 0
+   },
+   "errors": 507888,
+   "sites": 117964800,
+   "pose_squared_error_sum": "2.579432128567",
+   "pose_coordinates": 3600,
+   "batch_count": 38,
+   "batch_size": 16,
+   "seconds": 233.59182906150818,
+   "scorer_custody": {
+    "modules_path": "/Users/adpena/Projects/pact/upstream/modules.py",
+    "modules_sha256": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa",
+    "segnet_weights_path": "/Users/adpena/Projects/pact/upstream/models/segnet.safetensors",
+    "segnet_weights_sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6",
+    "posenet_weights_path": "/Users/adpena/Projects/pact/upstream/models/posenet.safetensors",
+    "posenet_weights_sha256": "0f3a0874c5c387f990d7b88bd1d7e1f6de35d98b45f2a289989db2c77b9b6576",
+    "device": "cpu",
+    "threads": 6,
+    "deterministic_algorithms": true,
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "score_claim": false
+   },
+   "axis": "[macOS-CPU frozen-scorer advisory]",
+   "score_claim": false
+  }
+ },
+ "phase_field": {
+  "schema": "ddm_et2_block16_phase_field_summary.v1",
+  "name": "tq1c_parent_b35e7568",
+  "block": 16,
+  "rmax": 5,
+  "offsets_path": "/Volumes/VertigoDataTier/pact/ddm_et2_20260806/phase_field/tq1c_block16_offsets.npy",
+  "offsets_sha256": "71365c74d49c2c0f611b4a3e01cbfe735177398c0510751bdf0f4642fad5af0d",
+  "offset_shape": [
+   600,
+   768,
+   2
+  ],
+  "base_flips": 507888,
+  "flips_left_if_exact": 295585,
+  "label_ceiling_net_fixed": 212303,
+  "label_ceiling_fixed": 281925,
+  "label_ceiling_broken": 69622,
+  "reach": 0.4180114513436033,
+  "band_px": 353416,
+  "band_frac": 0.002995944552951389,
+  "gross_S": 0.1799714830186632,
+  "price": {
+   "lzma1_bytes": 57775,
+   "smevr_projected_bytes": 46220,
+   "raw_bytes": 921600
+  },
+  "rate_S_at_projected_bytes": 0.030776000813306763,
+  "breakeven_eta": 0.1710048742006269,
+  "axis": "[macOS-CPU cache-derived advisory]",
+  "score_claim": false
+ },
+ "selection": {
+  "mode": "et1/et2 fixed n32 order prefix, bounded by sw1 --limit",
+  "source": "/Volumes/VertigoDataTier/pact/ddm_et1_20260803/et1_b16_realization_n32.json",
+  "pairs": [
+   0,
+   20,
+   32,
+   48
+  ],
+  "n_pairs": 4
+ },
+ "solver": {
+  "steps": 15,
+  "lr": 2.0,
+  "eval_every": 5,
+  "convergence_patience_evals": 0,
+  "convergence_min_improvement": 1,
+  "s_metric": {
+   "producer": "tac.margin_saliency_map.compute_margin_saliency_map",
+   "lambda_saliency": 1.0,
+   "outside_weight": 0.02,
+   "saliency_clip": 20.0,
+   "metric_scope": "diagonal scorer-grid margin-saliency weights; full MS4D margin-Fisher substitution is ledger-queued"
+  },
+  "realizer": {
+   "current": "naive uint8 rounding after float null-coordinate solve",
+   "dk1_interface": "NullRealizer.apply_coefficients(pair, coeffs, basis_id, rounding_policy)"
+  }
+ },
+ "basis": {
+  "schema": "ddm_sw1_null_coordinate_basis.v1",
+  "basis_shape": [
+   12,
+   6
+  ],
+  "constraint_shape": [
+   6,
+   12
+  ],
+  "constraint_rank": 6,
+  "singular_values": [
+   0.7323667266938315,
+   0.6685551585321889,
+   0.6685551585321888,
+   0.6685551585321886,
+   0.4999999999999999,
+   0.40075550854824465
+  ],
+  "max_abs_A_times_N": 1.1796119636642288e-16,
+  "max_abs_NtN_minus_I": 1.5585082678759737e-16,
+  "construction": "numpy.linalg.svd(A), N = Vh[rank:].T; vector order is 2x2 row-major RGB"
+ },
+ "scorer_custody": {
+  "modules_path": "/Users/adpena/Projects/pact/upstream/modules.py",
+  "modules_sha256": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa",
+  "segnet_weights_path": "/Users/adpena/Projects/pact/upstream/models/segnet.safetensors",
+  "segnet_weights_sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6",
+  "posenet_weights_path": "/Users/adpena/Projects/pact/upstream/models/posenet.safetensors",
+  "posenet_weights_sha256": "0f3a0874c5c387f990d7b88bd1d7e1f6de35d98b45f2a289989db2c77b9b6576",
+  "device": "cpu",
+  "threads": 6,
+  "deterministic_algorithms": true,
+  "axis": "[macOS-CPU frozen-scorer advisory]",
+  "score_claim": false
+ },
+ "aggregate": {
+  "schema": "ddm_sw1_null_basis_phase_solve_aggregate.v1",
+  "n_rows": 4,
+  "breakeven_eta_bar": 0.1710048742006269,
+  "axis": "[macOS-CPU frozen-scorer advisory]",
+  "score_claim": false,
+  "flips_before_subset": 3023,
+  "label_ceiling_net_fixed_subset": 1201,
+  "unconstrained": {
+   "flips_after_subset": 2433,
+   "net_flip_reduction_subset": 590,
+   "eta_realized": 0.4912572855953372,
+   "eta_over_bar": 2.8727677377136205,
+   "clears_bar": true,
+   "seg_delta_S_no_rate": -0.0005001491970486111,
+   "pose_delta_S_against_parent": 0.0010773042422635298,
+   "joint_delta_S_no_rate_against_parent": 0.0005771550452149187,
+   "pose_ratio_min": 1.0440874436418626,
+   "pose_ratio_mean": 5.340604208750329,
+   "pose_ratio_max": 10.125820769483738,
+   "selected_start_census": {
+    "dec": 4
+   }
+  },
+  "project_after_euclidean": {
+   "flips_after_subset": 2910,
+   "net_flip_reduction_subset": 113,
+   "eta_realized": 0.09408825978351373,
+   "eta_over_bar": 0.5502080582400662,
+   "clears_bar": false,
+   "seg_delta_S_no_rate": -9.579128689236111e-05,
+   "pose_delta_S_against_parent": -1.2262276289781715e-06,
+   "joint_delta_S_no_rate_against_parent": -9.701751452133928e-05,
+   "pose_ratio_min": 0.9764603739322497,
+   "pose_ratio_mean": 0.9930848913779327,
+   "pose_ratio_max": 1.001740743244367,
+   "selected_start_census": {
+    "unknown": 4
+   }
+  },
+  "project_after_metric": {
+   "flips_after_subset": 2905,
+   "net_flip_reduction_subset": 118,
+   "eta_realized": 0.09825145711906745,
+   "eta_over_bar": 0.5745535475427241,
+   "clears_bar": false,
+   "seg_delta_S_no_rate": -0.00010002983940972222,
+   "pose_delta_S_against_parent": -1.3287814590867697e-06,
+   "joint_delta_S_no_rate_against_parent": -0.00010135862086880899,
+   "pose_ratio_min": 0.9694387978082172,
+   "pose_ratio_mean": 0.9917949851025187,
+   "pose_ratio_max": 1.0052372093150803,
+   "selected_start_census": {
+    "unknown": 4
+   }
+  },
+  "solve_within_null_basis": {
+   "flips_after_subset": 2649,
+   "net_flip_reduction_subset": 374,
+   "eta_realized": 0.31140716069941715,
+   "eta_over_bar": 1.8210425998388036,
+   "clears_bar": true,
+   "seg_delta_S_no_rate": -0.00031704372829861107,
+   "pose_delta_S_against_parent": 1.0861913364995646e-06,
+   "joint_delta_S_no_rate_against_parent": -0.0003159575369621115,
+   "pose_ratio_min": 0.9983658756993503,
+   "pose_ratio_mean": 1.0057338218592529,
+   "pose_ratio_max": 1.0249098780016554,
+   "selected_start_census": {
+    "dec": 3,
+    "truth_null": 1
+   }
+  },
+  "tax_recovery": {
+   "solve_within_minus_project_after_euclidean_eta": 0.21731890091590342,
+   "solve_within_minus_project_after_metric_eta": 0.2131557035803497,
+   "project_after_metric_minus_euclidean_eta": 0.004163197335553717,
+   "solve_within_recovered_fraction_of_unconstrained_minus_euclidean": 0.5471698113207548,
+   "headline_scope": "small-n advisory, same parent/protocol; not n600 and not a score claim"
+  },
+  "verdict": "READY_TO_FIRE_N32_IF_MAIN_ACCEPTS_FORM",
+  "verdict_scope": "FORMULATION: null-coordinate block16 phase paint on tq1c parent, bounded small-n advisory"
+ },
+ "rows": [
+  {
+   "schema": "ddm_sw1_null_basis_phase_solve_pair.v1",
+   "pair": 0,
+   "flips_before": 766,
+   "label_ceiling_flips_left": 481,
+   "label_ceiling_net_fixed": 285,
+   "label_ceiling_fixed": 384,
+   "label_ceiling_broken": 99,
+   "band_px": 484,
+   "band_snapped_px": 1444,
+   "band_snap_tax": 2.9834710743801653,
+   "d_pose_before": 0.0007890495686140401,
+   "metric_weights": {
+    "producer": "tac.margin_saliency_map.compute_margin_saliency_map",
+    "metric": "diagonal margin-saliency G = diag(weight); weight=1+lambda*saliency/median_on_snapped_band",
+    "lambda_saliency": 1.0,
+    "outside_weight": 0.02,
+    "normalization": "median saliency on snapped phase-target band",
+    "clip": 20.0,
+    "saliency_min": 2.0151640001131454e-06,
+    "saliency_median_band": 0.005928623955696821,
+    "saliency_max": 0.08753173798322678,
+    "weight_min": 0.019999999552965164,
+    "weight_mean": 0.037886496633291245,
+    "weight_max": 12.642580032348633
+   },
+   "controls": {
+    "C2_parent_argmax_matches_cache": true,
+    "C3_gt_argmax_matches_cache": true,
+    "offset_shape": [
+     768,
+     2
+    ],
+    "null_basis_max_abs_A_times_N": 1.1796119636642288e-16
+   },
+   "modes": {
+    "unconstrained": {
+     "mode": "unconstrained",
+     "flips_after": 613,
+     "net_flip_reduction": 153,
+     "eta_realized": 0.5368421052631579,
+     "fixed_global": 353,
+     "introduced_global": 200,
+     "C_after": [
+      [
+       43962,
+       59,
+       29,
+       34,
+       48
+      ],
+      [
+       314,
+       1087,
+       0,
+       0,
+       0
+      ],
+      [
+       61,
+       0,
+       96873,
+       9,
+       0
+      ],
+      [
+       42,
+       0,
+       13,
+       3509,
+       0
+      ],
+      [
+       4,
+       0,
+       0,
+       0,
+       50564
+      ]
+     ],
+     "d_pose_after": 0.007989774510024231,
+     "changed_scorer_pixels": 1444,
+     "changed_scorer_channel_values": 4300,
+     "yuv6_residual_after_naive_rounding": {
+      "max_abs_dY": 29.657999999999987,
+      "mean_abs_dY": 0.11404545593261717,
+      "max_abs_dU": 26.785976297968375,
+      "max_abs_dV": 22.685984308131253
+     },
+     "float_null_certificate_max_abs_A_delta_before_rounding": null,
+     "naive_rounding": true,
+     "dk1_realizer_interface": "NullRealizer.apply_coefficients(pair, coeffs, basis_id, rounding_policy)",
+     "diagnostics": {
+      "starts": [
+       {
+        "start": "dec",
+        "curve": [
+         {
+          "step": 0,
+          "proxy_phase_target_flips": 482,
+          "clipped_channel_values": 0
+         },
+         {
+          "step": 5,
+          "proxy_phase_target_flips": 285,
+          "clipped_channel_values": 11
+         },
+         {
+          "step": 10,
+          "proxy_phase_target_flips": 270,
+          "clipped_channel_values": 16
+         },
+         {
+          "step": 15,
+          "proxy_phase_target_flips": 267,
+          "clipped_channel_values": 32
+         }
+        ],
+        "stop_reason": "iteration_cap_best_at_cap",
+        "best_proxy_phase_target_flips": 267,
+        "best_step": 15
+       },
+       {
+        "start": "truth",
+        "curve": [
+         {
+          "step": 0,
+          "proxy_phase_target_flips": 1168,
+          "clipped_channel_values": 0
+         },
+         {
+          "step": 5,
+          "proxy_phase_target_flips": 736,
+          "clipped_channel_values": 55
+         },
+         {
+          "step": 10,
+          "proxy_phase_target_flips": 515,
+          "clipped_channel_values": 171
+         },
+         {
+          "step": 15,
+          "proxy_phase_target_flips": 443,
+          "clipped_channel_values": 280
+         }
+        ],
+        "stop_reason": "iteration_cap_best_at_cap",
+        "best_proxy_phase_target_flips": 443,
+        "best_step": 15
+       }
+      ],
+      "loss": "weighted cross_entropy against translated phase target",
+      "selected": {
+       "start": "dec",
+       "best_step": 15,
+       "best_proxy_phase_target_flips": 267
+      }
+     }
+    },
+    "project_after_euclidean": {
+     "mode": "project_after_euclidean",
+     "flips_after": 735,
+     "net_flip_reduction": 31,
+     "eta_realized": 0.10877192982456141,
+     "fixed_global": 37,
+     "introduced_global": 6,
+     "C_after": [
+      [
+       43903,
+       71,
+       65,
+       46,
+       47
+      ],
+      [
+       365,
+       1036,
+       0,
+       0,
+       0
+      ],
+      [
+       15,
+       0,
+       96919,
+       9,
+       0
+      ],
+      [
+       50,
+       0,
+       28,
+       3486,
+       0
+      ],
+      [
+       39,
+       0,
+       0,
+       0,
+       50529
+      ]
+     ],
+     "d_pose_after": 0.0007904231013200758,
+     "changed_scorer_pixels": 1435,
+     "changed_scorer_channel_values": 3923,
+     "yuv6_residual_after_naive_rounding": {
+      "max_abs_dY": 0.7940000000000111,
+      "mean_abs_dY": 0.0016975911458333352,
+      "max_abs_dU": 0.33281602708804314,
+      "max_abs_dV": 0.4186875891583668
+     },
+     "float_null_certificate_max_abs_A_delta_before_rounding": 1.5497207641601562e-06,
+     "naive_rounding": true,
+     "dk1_realizer_interface": "NullRealizer.apply_coefficients(pair, coeffs, basis_id, rounding_policy)",
+     "diagnostics": {
+      "arm": "Arm E",
+      "source": "unconstrained weighted paint projected by Euclidean N N^T"
+     }
+    },
+    "project_after_metric": {
+     "mode": "project_after_metric",
+     "flips_after": 737,
+     "net_flip_reduction": 29,
+     "eta_realized": 0.10175438596491228,
+     "fixed_global": 35,
+     "introduced_global": 6,
+     "C_after": [
+      [
+       43902,
+       72,
+       66,
+       45,
+       47
+      ],
+      [
+       366,
+       1035,
+       0,
+       0,
+       0
+      ],
+      [
+       15,
+       0,
+       96919,
+       9,
+       0
+      ],
+      [
+       50,
+       0,
+       29,
+       3485,
+       0
+      ],
+      [
+       38,
+       0,
+       0,
+       0,
+       50530
+      ]
+     ],
+     "d_pose_after": 0.0007931819863648456,
+     "changed_scorer_pixels": 1441,
+     "changed_scorer_channel_values": 4004,
+     "yuv6_residual_after_naive_rounding": {
+      "max_abs_dY": 2.227000000000004,
+      "mean_abs_dY": 0.0016605122884114554,
+      "max_abs_dU": 0.33281602708805735,
+      "max_abs_dV": 0.4593437945792118
+     },
+     "float_null_certificate_max_abs_A_delta_before_rounding": 4.884981308350689e-15,
+     "naive_rounding": true,
+     "dk1_realizer_interface": "NullRealizer.apply_coefficients(pair, coeffs, basis_id, rounding_policy)",
+     "diagnostics": {
+      "arm": "Arm M",
+      "source": "unconstrained weighted paint projected by diagonal margin-saliency metric",
+      "ridge": 1e-05
+     }
+    },
+    "solve_within_null_basis": {
+     "mode": "solve_within_null_basis",
+     "flips_after": 692,
+     "net_flip_reduction": 74,
+     "eta_realized": 0.2596491228070175,
+     "fixed_global": 103,
+     "introduced_global": 29,
+     "C_after": [
+      [
+       43934,
+       68,
+       48,
+       39,
+       43
+      ],
+      [
+       362,
+       1039,
+       0,
+       0,
+       0
+      ],
+      [
+       25,
+       0,
+       96907,
+       11,
+       0
+      ],
+      [
+       48,
+       0,
+       19,
+       3497,
+       0
+      ],
+      [
+       29,
+       0,
+       0,
+       0,
+       50539
+      ]
+     ],
+     "d_pose_after": 0.0007877601635395507,
+     "changed_scorer_pixels": 1444,
+     "changed_scorer_channel_values": 4255,
+     "yuv6_residual_after_naive_rounding": {
+      "max_abs_dY": 6.634999999999998,
+      "mean_abs_dY": 0.0017103729248046865,
+      "max_abs_dU": 1.082816027088029,
+      "max_abs_dV": 1.2967189728958601
+     },
+     "float_null_certificate_max_abs_A_delta_before_rounding": 3.337860107421875e-06,
+     "naive_rounding": true,
+     "dk1_realizer_interface": "NullRealizer.apply_coefficients(pair, coeffs, basis_id, rounding_policy)",
+     "diagnostics": {
+      "starts": [
+       {
+        "start": "dec",
+        "curve": [
+         {
+          "step": 0,
+          "proxy_phase_target_flips": 482,
+          "max_abs_A_delta_float": 0.0,
+          "clipped_channel_values": 0
+         },
+         {
+          "step": 5,
+          "proxy_phase_target_flips": 440,
+          "max_abs_A_delta_float": 8.344650268554688e-07,
+          "clipped_channel_values": 1
+         },
+         {
+          "step": 10,
+          "proxy_phase_target_flips": 421,
+          "max_abs_A_delta_float": 1.9073486328125e-06,
+          "clipped_channel_values": 7
+         },
+         {
+          "step": 15,
+          "proxy_phase_target_flips": 405,
+          "max_abs_A_delta_float": 2.86102294921875e-06,
+          "clipped_channel_values": 10
+         }
+        ],
+        "stop_reason": "iteration_cap_best_at_cap",
+        "best_proxy_phase_target_flips": 405,
+        "best_step": 15
+       },
+       {
+        "start": "truth_null",
+        "curve": [
+         {
+          "step": 0,
+          "proxy_phase_target_flips": 486,
+          "max_abs_A_delta_float": 2.205371856689453e-06,
+          "clipped_channel_values": 11
+         },
+         {
+          "step": 5,
+          "proxy_phase_target_flips": 439,
+          "max_abs_A_delta_float": 1.9073486328125e-06,
+          "clipped_channel_values": 10
+         },
+         {
+          "step": 10,
+          "proxy_phase_target_flips": 418,
+          "max_abs_A_delta_float": 2.1457672119140625e-06,
+          "clipped_channel_values": 10
+         },
+         {
+          "step": 15,
+          "proxy_phase_target_flips": 401,
+          "max_abs_A_delta_float": 3.337860107421875e-06,
+          "clipped_channel_values": 12
+         }
+        ],
+        "stop_reason": "iteration_cap_best_at_cap",
+        "best_proxy_phase_target_flips": 401,
+        "best_step": 15
+       }
+      ],
+      "parameterization": "per-2x2-block c in R^6, delta=N@c, no projection step",
+      "loss": "diagonal margin-saliency weighted cross_entropy against translated phase target",
+      "selected": {
+       "start": "truth_null",
+       "best_step": 15,
+       "best_proxy_phase_target_flips": 401,
+       "max_abs_A_delta_float": 3.337860107421875e-06
+      }
+     }
+    }
+   },
+   "elapsed_s": 127.13840675354004,
+   "axis": "[macOS-CPU frozen-scorer advisory]",
+   "score_claim": false
+  },
+  {
+   "schema": "ddm_sw1_null_basis_phase_solve_pair.v1",
+   "pair": 20,
+   "flips_before": 772,
+   "label_ceiling_flips_left": 449,
+   "label_ceiling_net_fixed": 323,
+   "label_ceiling_fixed": 408,
+   "label_ceiling_broken": 85,
+   "band_px": 495,
+   "band_snapped_px": 1476,
+   "band_snap_tax": 2.981818181818182,
+   "d_pose_before": 0.0012009518866432113,
+   "metric_weights": {
+    "producer": "tac.margin_saliency_map.compute_margin_saliency_map",
+    "metric": "diagonal margin-saliency G = diag(weight); weight=1+lambda*saliency/median_on_snapped_band",
+    "lambda_saliency": 1.0,
+    "outside_weight": 0.02,
+    "normalization": "median saliency on snapped phase-target band",
+    "clip": 20.0,
+    "saliency_min": 2.7287528610031586e-06,
+    "saliency_median_band": 0.006110252114012837,
+    "saliency_max": 0.1061057448387146,
+    "weight_min": 0.019999999552965164,
+    "weight_mean": 0.039448320865631104,
+    "weight_max": 18.36520004272461
+   },
+   "controls": {
+    "C2_parent_argmax_matches_cache": true,
+    "C3_gt_argmax_matches_cache": true,
+    "offset_shape": [
+     768,
+     2
+    ],
+    "null_basis_max_abs_A_times_N": 1.1796119636642288e-16
+   },
+   "modes": {
+    "unconstrained": {
+     "mode": "unconstrained",
+     "flips_after": 582,
+     "net_flip_reduction": 190,
+     "eta_realized": 0.5882352941176471,
+     "fixed_global": 391,
+     "introduced_global": 201,
+     "C_after": [
+      [
+       44613,
+       84,
+       72,
+       24,
+       32
+      ],
+      [
+       250,
+       1013,
+       0,
+       0,
+       0
+      ],
+      [
+       11,
+       0,
+       97223,
+       5,
+       0
+      ],
+      [
+       26,
+       0,
+       62,
+       2667,
+       0
+      ],
+      [
+       16,
+       0,
+       0,
+       0,
+       50510
+      ]
+     ],
+     "d_pose_after": 0.0012538987852621826,
+     "changed_scorer_pixels": 1476,
+     "changed_scorer_channel_values": 4384,
+     "yuv6_residual_after_naive_rounding": {
+      "max_abs_dY": 20.000000000000014,
+      "mean_abs_dY": 0.08923983256022135,
+      "max_abs_dU": 18.957816027088043,
+      "max_abs_dV": 13.95328102710414
+     },
+     "float_null_certificate_max_abs_A_delta_before_rounding": null,
+     "naive_rounding": true,
+     "dk1_realizer_interface": "NullRealizer.apply_coefficients(pair, coeffs, basis_id, rounding_policy)",
+     "diagnostics": {
+      "starts": [
+       {
+        "start": "dec",
+        "curve": [
+         {
+          "step": 0,
+          "proxy_phase_target_flips": 495,
+          "clipped_channel_values": 0
+         },
+         {
+          "step": 5,
+          "proxy_phase_target_flips": 340,
+          "clipped_channel_values": 3
+         },
+         {
+          "step": 10,
+          "proxy_phase_target_flips": 336,
+          "clipped_channel_values": 8
+         },
+         {
+          "step": 15,
+          "proxy_phase_target_flips": 352,
+          "clipped_channel_values": 23
+         }
+        ],
+        "stop_reason": "iteration_cap_before_plateau",
+        "best_proxy_phase_target_flips": 336,
+        "best_step": 10
+       },
+       {
+        "start": "truth",
+        "curve": [
+         {
+          "step": 0,
+          "proxy_phase_target_flips": 975,
+          "clipped_channel_values": 0
+         },
+         {
+          "step": 5,
+          "proxy_phase_target_flips": 747,
+          "clipped_channel_values": 61
+         },
+         {
+          "step": 10,
+          "proxy_phase_target_flips": 599,
+          "clipped_channel_values": 187
+         },
+         {
+          "step": 15,
+          "proxy_phase_target_flips": 504,
+          "clipped_channel_values": 308
+         }
+        ],
+        "stop_reason": "iteration_cap_best_at_cap",
+        "best_proxy_phase_target_flips": 504,
+        "best_step": 15
+       }
+      ],
+      "loss": "weighted cross_entropy against translated phase target",
+      "selected": {
+       "start": "dec",
+       "best_step": 10,
+       "best_proxy_phase_target_flips": 336
+      }
+     }
+    },
+    "project_after_euclidean": {
+     "mode": "project_after_euclidean",
+     "flips_after": 734,
+     "net_flip_reduction": 38,
+     "eta_realized": 0.11764705882352941,
+     "fixed_global": 40,
+     "introduced_global": 2,
+     "C_after": [
+      [
+       44631,
+       108,
+       21,
+       13,
+       52
+      ],
+      [
+       324,
+       938,
+       0,
+       1,
+       0
+      ],
+      [
+       55,
+       0,
+       97155,
+       29,
+       0
+      ],
+      [
+       66,
+       0,
+       39,
+       2650,
+       0
+      ],
+      [
+       26,
+       0,
+       0,
+       0,
+       50500
+      ]
+     ],
+     "d_pose_after": 0.0012007649999152571,
+     "changed_scorer_pixels": 1459,
+     "changed_scorer_channel_values": 3927,
+     "yuv6_residual_after_naive_rounding": {
+      "max_abs_dY": 0.8689999999999998,
+      "mean_abs_dY": 0.001692138671875003,
+      "max_abs_dU": 0.373448081264101,
+      "max_abs_dV": 0.4593437945792118
+     },
+     "float_null_certificate_max_abs_A_delta_before_rounding": 1.0579824447631836e-06,
+     "naive_rounding": true,
+     "dk1_realizer_interface": "NullRealizer.apply_coefficients(pair, coeffs, basis_id, rounding_policy)",
+     "diagnostics": {
+      "arm": "Arm E",
+      "source": "unconstrained weighted paint projected by Euclidean N N^T"
+     }
+    },
+    "project_after_metric": {
+     "mode": "project_after_metric",
+     "flips_after": 732,
+     "net_flip_reduction": 40,
+     "eta_realized": 0.1238390092879257,
+     "fixed_global": 42,
+     "introduced_global": 2,
+     "C_after": [
+      [
+       44630,
+       109,
+       21,
+       12,
+       53
+      ],
+      [
+       324,
+       938,
+       0,
+       1,
+       0
+      ],
+      [
+       53,
+       0,
+       97158,
+       28,
+       0
+      ],
+      [
+       66,
+       0,
+       39,
+       2650,
+       0
+      ],
+      [
+       26,
+       0,
+       0,
+       0,
+       50500
+      ]
+     ],
+     "d_pose_after": 0.0012011017249723883,
+     "changed_scorer_pixels": 1466,
+     "changed_scorer_channel_values": 4035,
+     "yuv6_residual_after_naive_rounding": {
+      "max_abs_dY": 0.7999999999999972,
+      "mean_abs_dY": 0.0016375427246093756,
+      "max_abs_dU": 0.33281602708804314,
+      "max_abs_dV": 0.3546718972895917
+     },
+     "float_null_certificate_max_abs_A_delta_before_rounding": 5.773159728050814e-15,
+     "naive_rounding": true,
+     "dk1_realizer_interface": "NullRealizer.apply_coefficients(pair, coeffs, basis_id, rounding_policy)",
+     "diagnostics": {
+      "arm": "Arm M",
+      "source": "unconstrained weighted paint projected by diagonal margin-saliency metric",
+      "ridge": 1e-05
+     }
+    },
+    "solve_within_null_basis": {
+     "mode": "solve_within_null_basis",
+     "flips_after": 640,
+     "net_flip_reduction": 132,
+     "eta_realized": 0.4086687306501548,
+     "fixed_global": 160,
+     "introduced_global": 28,
+     "C_after": [
+      [
+       44642,
+       98,
+       35,
+       5,
+       45
+      ],
+      [
+       294,
+       968,
+       0,
+       1,
+       0
+      ],
+      [
+       27,
+       0,
+       97197,
+       15,
+       0
+      ],
+      [
+       55,
+       0,
+       40,
+       2660,
+       0
+      ],
+      [
+       25,
+       0,
+       0,
+       0,
+       50501
+      ]
+     ],
+     "d_pose_after": 0.0012008491048347374,
+     "changed_scorer_pixels": 1476,
+     "changed_scorer_channel_values": 4363,
+     "yuv6_residual_after_naive_rounding": {
+      "max_abs_dY": 2.768000000000029,
+      "mean_abs_dY": 0.0017735646565755242,
+      "max_abs_dU": 1.832816027088029,
+      "max_abs_dV": 1.3546718972895633
+     },
+     "float_null_certificate_max_abs_A_delta_before_rounding": 2.86102294921875e-06,
+     "naive_rounding": true,
+     "dk1_realizer_interface": "NullRealizer.apply_coefficients(pair, coeffs, basis_id, rounding_policy)",
+     "diagnostics": {
+      "starts": [
+       {
+        "start": "dec",
+        "curve": [
+         {
+          "step": 0,
+          "proxy_phase_target_flips": 495,
+          "max_abs_A_delta_float": 0.0,
+          "clipped_channel_values": 0
+         },
+         {
+          "step": 5,
+          "proxy_phase_target_flips": 451,
+          "max_abs_A_delta_float": 9.5367431640625e-07,
+          "clipped_channel_values": 1
+         },
+         {
+          "step": 10,
+          "proxy_phase_target_flips": 420,
+          "max_abs_A_delta_float": 1.6093254089355469e-06,
+          "clipped_channel_values": 4
+         },
+         {
+          "step": 15,
+          "proxy_phase_target_flips": 380,
+          "max_abs_A_delta_float": 2.86102294921875e-06,
+          "clipped_channel_values": 20
+         }
+        ],
+        "stop_reason": "iteration_cap_best_at_cap",
+        "best_proxy_phase_target_flips": 380,
+        "best_step": 15
+       },
+       {
+        "start": "truth_null",
+        "curve": [
+         {
+          "step": 0,
+          "proxy_phase_target_flips": 497,
+          "max_abs_A_delta_float": 1.9073486328125e-06,
+          "clipped_channel_values": 2
+         },
+         {
+          "step": 5,
+          "proxy_phase_target_flips": 446,
+          "max_abs_A_delta_float": 1.9073486328125e-06,
+          "clipped_channel_values": 3
+         },
+         {
+          "step": 10,
+          "proxy_phase_target_flips": 419,
+          "max_abs_A_delta_float": 2.6226043701171875e-06,
+          "clipped_channel_values": 5
+         },
+         {
+          "step": 15,
+          "proxy_phase_target_flips": 387,
+          "max_abs_A_delta_float": 2.86102294921875e-06,
+          "clipped_channel_values": 17
+         }
+        ],
+        "stop_reason": "iteration_cap_best_at_cap",
+        "best_proxy_phase_target_flips": 387,
+        "best_step": 15
+       }
+      ],
+      "parameterization": "per-2x2-block c in R^6, delta=N@c, no projection step",
+      "loss": "diagonal margin-saliency weighted cross_entropy against translated phase target",
+      "selected": {
+       "start": "dec",
+       "best_step": 15,
+       "best_proxy_phase_target_flips": 380,
+       "max_abs_A_delta_float": 2.86102294921875e-06
+      }
+     }
+    }
+   },
+   "elapsed_s": 158.84595608711243,
+   "axis": "[macOS-CPU frozen-scorer advisory]",
+   "score_claim": false
+  },
+  {
+   "schema": "ddm_sw1_null_basis_phase_solve_pair.v1",
+   "pair": 32,
+   "flips_before": 777,
+   "label_ceiling_flips_left": 475,
+   "label_ceiling_net_fixed": 302,
+   "label_ceiling_fixed": 418,
+   "label_ceiling_broken": 116,
+   "band_px": 535,
+   "band_snapped_px": 1536,
+   "band_snap_tax": 2.8710280373831774,
+   "d_pose_before": 0.0003195389652106695,
+   "metric_weights": {
+    "producer": "tac.margin_saliency_map.compute_margin_saliency_map",
+    "metric": "diagonal margin-saliency G = diag(weight); weight=1+lambda*saliency/median_on_snapped_band",
+    "lambda_saliency": 1.0,
+    "outside_weight": 0.02,
+    "normalization": "median saliency on snapped phase-target band",
+    "clip": 20.0,
+    "saliency_min": 2.0773004507645965e-06,
+    "saliency_median_band": 0.006138906814157963,
+    "saliency_max": 0.21570856869220734,
+    "weight_min": 0.019999999552965164,
+    "weight_mean": 0.04045495018362999,
+    "weight_max": 21.0
+   },
+   "controls": {
+    "C2_parent_argmax_matches_cache": true,
+    "C3_gt_argmax_matches_cache": true,
+    "offset_shape": [
+     768,
+     2
+    ],
+    "null_basis_max_abs_A_times_N": 1.1796119636642288e-16
+   },
+   "modes": {
+    "unconstrained": {
+     "mode": "unconstrained",
+     "flips_after": 647,
+     "net_flip_reduction": 130,
+     "eta_realized": 0.4304635761589404,
+     "fixed_global": 389,
+     "introduced_global": 259,
+     "C_after": [
+      [
+       44714,
+       78,
+       113,
+       36,
+       29
+      ],
+      [
+       257,
+       1079,
+       0,
+       2,
+       0
+      ],
+      [
+       6,
+       0,
+       96973,
+       34,
+       0
+      ],
+      [
+       26,
+       0,
+       26,
+       2856,
+       0
+      ],
+      [
+       38,
+       2,
+       0,
+       0,
+       50339
+      ]
+     ],
+     "d_pose_after": 0.0009400934514976478,
+     "changed_scorer_pixels": 1536,
+     "changed_scorer_channel_values": 4551,
+     "yuv6_residual_after_naive_rounding": {
+      "max_abs_dY": 29.999999999999993,
+      "mean_abs_dY": 0.11618526713053386,
+      "max_abs_dU": 28.164080135440187,
+      "max_abs_dV": 19.035485021398003
+     },
+     "float_null_certificate_max_abs_A_delta_before_rounding": null,
+     "naive_rounding": true,
+     "dk1_realizer_interface": "NullRealizer.apply_coefficients(pair, coeffs, basis_id, rounding_policy)",
+     "diagnostics": {
+      "starts": [
+       {
+        "start": "dec",
+        "curve": [
+         {
+          "step": 0,
+          "proxy_phase_target_flips": 544,
+          "clipped_channel_values": 0
+         },
+         {
+          "step": 5,
+          "proxy_phase_target_flips": 449,
+          "clipped_channel_values": 9
+         },
+         {
+          "step": 10,
+          "proxy_phase_target_flips": 414,
+          "clipped_channel_values": 17
+         },
+         {
+          "step": 15,
+          "proxy_phase_target_flips": 376,
+          "clipped_channel_values": 29
+         }
+        ],
+        "stop_reason": "iteration_cap_best_at_cap",
+        "best_proxy_phase_target_flips": 376,
+        "best_step": 15
+       },
+       {
+        "start": "truth",
+        "curve": [
+         {
+          "step": 0,
+          "proxy_phase_target_flips": 1174,
+          "clipped_channel_values": 0
+         },
+         {
+          "step": 5,
+          "proxy_phase_target_flips": 808,
+          "clipped_channel_values": 33
+         },
+         {
+          "step": 10,
+          "proxy_phase_target_flips": 662,
+          "clipped_channel_values": 157
+         },
+         {
+          "step": 15,
+          "proxy_phase_target_flips": 597,
+          "clipped_channel_values": 315
+         }
+        ],
+        "stop_reason": "iteration_cap_best_at_cap",
+        "best_proxy_phase_target_flips": 597,
+        "best_step": 15
+       }
+      ],
+      "loss": "weighted cross_entropy against translated phase target",
+      "selected": {
+       "start": "dec",
+       "best_step": 15,
+       "best_proxy_phase_target_flips": 376
+      }
+     }
+    },
+    "project_after_euclidean": {
+     "mode": "project_after_euclidean",
+     "flips_after": 754,
+     "net_flip_reduction": 23,
+     "eta_realized": 0.076158940397351,
+     "fixed_global": 35,
+     "introduced_global": 12,
+     "C_after": [
+      [
+       44748,
+       96,
+       18,
+       30,
+       78
+      ],
+      [
+       324,
+       1012,
+       0,
+       2,
+       0
+      ],
+      [
+       74,
+       0,
+       96911,
+       28,
+       0
+      ],
+      [
+       38,
+       0,
+       33,
+       2837,
+       0
+      ],
+      [
+       29,
+       4,
+       0,
+       0,
+       50346
+      ]
+     ],
+     "d_pose_after": 0.00031771569627288737,
+     "changed_scorer_pixels": 1523,
+     "changed_scorer_channel_values": 4187,
+     "yuv6_residual_after_naive_rounding": {
+      "max_abs_dY": 4.549000000000007,
+      "mean_abs_dY": 0.0018449757893880217,
+      "max_abs_dU": 0.7155756207674955,
+      "max_abs_dV": 1.7703281027104083
+     },
+     "float_null_certificate_max_abs_A_delta_before_rounding": 1.0281801223754883e-06,
+     "naive_rounding": true,
+     "dk1_realizer_interface": "NullRealizer.apply_coefficients(pair, coeffs, basis_id, rounding_policy)",
+     "diagnostics": {
+      "arm": "Arm E",
+      "source": "unconstrained weighted paint projected by Euclidean N N^T"
+     }
+    },
+    "project_after_metric": {
+     "mode": "project_after_metric",
+     "flips_after": 753,
+     "net_flip_reduction": 24,
+     "eta_realized": 0.07947019867549669,
+     "fixed_global": 34,
+     "introduced_global": 10,
+     "C_after": [
+      [
+       44746,
+       97,
+       19,
+       31,
+       77
+      ],
+      [
+       325,
+       1011,
+       0,
+       2,
+       0
+      ],
+      [
+       74,
+       0,
+       96911,
+       28,
+       0
+      ],
+      [
+       34,
+       0,
+       33,
+       2841,
+       0
+      ],
+      [
+       29,
+       4,
+       0,
+       0,
+       50346
+      ]
+     ],
+     "d_pose_after": 0.0003171038121140372,
+     "changed_scorer_pixels": 1531,
+     "changed_scorer_channel_values": 4306,
+     "yuv6_residual_after_naive_rounding": {
+      "max_abs_dY": 4.5660000000000025,
+      "mean_abs_dY": 0.0017829538981119816,
+      "max_abs_dU": 0.75,
+      "max_abs_dV": 1.8750000000000284
+     },
+     "float_null_certificate_max_abs_A_delta_before_rounding": 6.661338147750939e-15,
+     "naive_rounding": true,
+     "dk1_realizer_interface": "NullRealizer.apply_coefficients(pair, coeffs, basis_id, rounding_policy)",
+     "diagnostics": {
+      "arm": "Arm M",
+      "source": "unconstrained weighted paint projected by diagonal margin-saliency metric",
+      "ridge": 1e-05
+     }
+    },
+    "solve_within_null_basis": {
+     "mode": "solve_within_null_basis",
+     "flips_after": 708,
+     "net_flip_reduction": 69,
+     "eta_realized": 0.22847682119205298,
+     "fixed_global": 105,
+     "introduced_global": 36,
+     "C_after": [
+      [
+       44750,
+       88,
+       26,
+       34,
+       72
+      ],
+      [
+       312,
+       1024,
+       0,
+       2,
+       0
+      ],
+      [
+       47,
+       0,
+       96937,
+       29,
+       0
+      ],
+      [
+       30,
+       0,
+       32,
+       2846,
+       0
+      ],
+      [
+       32,
+       4,
+       0,
+       0,
+       50343
+      ]
+     ],
+     "d_pose_after": 0.0003194575202739765,
+     "changed_scorer_pixels": 1536,
+     "changed_scorer_channel_values": 4492,
+     "yuv6_residual_after_naive_rounding": {
+      "max_abs_dY": 3.8619999999999948,
+      "mean_abs_dY": 0.0018227335611979204,
+      "max_abs_dU": 0.8436794582392793,
+      "max_abs_dV": 2.7296718972895917
+     },
+     "float_null_certificate_max_abs_A_delta_before_rounding": 2.1457672119140625e-06,
+     "naive_rounding": true,
+     "dk1_realizer_interface": "NullRealizer.apply_coefficients(pair, coeffs, basis_id, rounding_policy)",
+     "diagnostics": {
+      "starts": [
+       {
+        "start": "dec",
+        "curve": [
+         {
+          "step": 0,
+          "proxy_phase_target_flips": 544,
+          "max_abs_A_delta_float": 0.0,
+          "clipped_channel_values": 0
+         },
+         {
+          "step": 5,
+          "proxy_phase_target_flips": 496,
+          "max_abs_A_delta_float": 9.5367431640625e-07,
+          "clipped_channel_values": 6
+         },
+         {
+          "step": 10,
+          "proxy_phase_target_flips": 454,
+          "max_abs_A_delta_float": 2.1457672119140625e-06,
+          "clipped_channel_values": 15
+         },
+         {
+          "step": 15,
+          "proxy_phase_target_flips": 458,
+          "max_abs_A_delta_float": 3.0994415283203125e-06,
+          "clipped_channel_values": 26
+         }
+        ],
+        "stop_reason": "iteration_cap_before_plateau",
+        "best_proxy_phase_target_flips": 454,
+        "best_step": 10
+       },
+       {
+        "start": "truth_null",
+        "curve": [
+         {
+          "step": 0,
+          "proxy_phase_target_flips": 552,
+          "max_abs_A_delta_float": 2.86102294921875e-06,
+          "clipped_channel_values": 12
+         },
+         {
+          "step": 5,
+          "proxy_phase_target_flips": 497,
+          "max_abs_A_delta_float": 2.86102294921875e-06,
+          "clipped_channel_values": 9
+         },
+         {
+          "step": 10,
+          "proxy_phase_target_flips": 461,
+          "max_abs_A_delta_float": 2.86102294921875e-06,
+          "clipped_channel_values": 14
+         },
+         {
+          "step": 15,
+          "proxy_phase_target_flips": 456,
+          "max_abs_A_delta_float": 2.7418136596679688e-06,
+          "clipped_channel_values": 22
+         }
+        ],
+        "stop_reason": "iteration_cap_best_at_cap",
+        "best_proxy_phase_target_flips": 456,
+        "best_step": 15
+       }
+      ],
+      "parameterization": "per-2x2-block c in R^6, delta=N@c, no projection step",
+      "loss": "diagonal margin-saliency weighted cross_entropy against translated phase target",
+      "selected": {
+       "start": "dec",
+       "best_step": 10,
+       "best_proxy_phase_target_flips": 454,
+       "max_abs_A_delta_float": 2.1457672119140625e-06
+      }
+     }
+    }
+   },
+   "elapsed_s": 145.5352258682251,
+   "axis": "[macOS-CPU frozen-scorer advisory]",
+   "score_claim": false
+  },
+  {
+   "schema": "ddm_sw1_null_basis_phase_solve_pair.v1",
+   "pair": 48,
+   "flips_before": 708,
+   "label_ceiling_flips_left": 417,
+   "label_ceiling_net_fixed": 291,
+   "label_ceiling_fixed": 393,
+   "label_ceiling_broken": 102,
+   "band_px": 496,
+   "band_snapped_px": 1488,
+   "band_snap_tax": 3.0,
+   "d_pose_before": 0.0005020828945975405,
+   "metric_weights": {
+    "producer": "tac.margin_saliency_map.compute_margin_saliency_map",
+    "metric": "diagonal margin-saliency G = diag(weight); weight=1+lambda*saliency/median_on_snapped_band",
+    "lambda_saliency": 1.0,
+    "outside_weight": 0.02,
+    "normalization": "median saliency on snapped phase-target band",
+    "clip": 20.0,
+    "saliency_min": 8.97940481081605e-07,
+    "saliency_median_band": 0.006696904543787241,
+    "saliency_max": 0.16477549076080322,
+    "weight_min": 0.019999999552965164,
+    "weight_mean": 0.04018910974264145,
+    "weight_max": 21.0
+   },
+   "controls": {
+    "C2_parent_argmax_matches_cache": true,
+    "C3_gt_argmax_matches_cache": true,
+    "offset_shape": [
+     768,
+     2
+    ],
+    "null_basis_max_abs_A_times_N": 1.1796119636642288e-16
+   },
+   "modes": {
+    "unconstrained": {
+     "mode": "unconstrained",
+     "flips_after": 591,
+     "net_flip_reduction": 117,
+     "eta_realized": 0.4020618556701031,
+     "fixed_global": 380,
+     "introduced_global": 263,
+     "C_after": [
+      [
+       44228,
+       54,
+       69,
+       41,
+       34
+      ],
+      [
+       275,
+       1179,
+       0,
+       0,
+       0
+      ],
+      [
+       39,
+       0,
+       97280,
+       51,
+       0
+      ],
+      [
+       9,
+       1,
+       10,
+       2904,
+       0
+      ],
+      [
+       8,
+       0,
+       0,
+       0,
+       50426
+      ]
+     ],
+     "d_pose_after": 0.0036403409328007266,
+     "changed_scorer_pixels": 1488,
+     "changed_scorer_channel_values": 4424,
+     "yuv6_residual_after_naive_rounding": {
+      "max_abs_dY": 29.885999999999996,
+      "mean_abs_dY": 0.11343950398763021,
+      "max_abs_dU": 24.081264108352144,
+      "max_abs_dV": 16.76515691868758
+     },
+     "float_null_certificate_max_abs_A_delta_before_rounding": null,
+     "naive_rounding": true,
+     "dk1_realizer_interface": "NullRealizer.apply_coefficients(pair, coeffs, basis_id, rounding_policy)",
+     "diagnostics": {
+      "starts": [
+       {
+        "start": "dec",
+        "curve": [
+         {
+          "step": 0,
+          "proxy_phase_target_flips": 497,
+          "clipped_channel_values": 0
+         },
+         {
+          "step": 5,
+          "proxy_phase_target_flips": 372,
+          "clipped_channel_values": 7
+         },
+         {
+          "step": 10,
+          "proxy_phase_target_flips": 363,
+          "clipped_channel_values": 8
+         },
+         {
+          "step": 15,
+          "proxy_phase_target_flips": 334,
+          "clipped_channel_values": 15
+         }
+        ],
+        "stop_reason": "iteration_cap_best_at_cap",
+        "best_proxy_phase_target_flips": 334,
+        "best_step": 15
+       },
+       {
+        "start": "truth",
+        "curve": [
+         {
+          "step": 0,
+          "proxy_phase_target_flips": 1059,
+          "clipped_channel_values": 0
+         },
+         {
+          "step": 5,
+          "proxy_phase_target_flips": 715,
+          "clipped_channel_values": 56
+         },
+         {
+          "step": 10,
+          "proxy_phase_target_flips": 535,
+          "clipped_channel_values": 219
+         },
+         {
+          "step": 15,
+          "proxy_phase_target_flips": 436,
+          "clipped_channel_values": 385
+         }
+        ],
+        "stop_reason": "iteration_cap_best_at_cap",
+        "best_proxy_phase_target_flips": 436,
+        "best_step": 15
+       }
+      ],
+      "loss": "weighted cross_entropy against translated phase target",
+      "selected": {
+       "start": "dec",
+       "best_step": 15,
+       "best_proxy_phase_target_flips": 334
+      }
+     }
+    },
+    "project_after_euclidean": {
+     "mode": "project_after_euclidean",
+     "flips_after": 687,
+     "net_flip_reduction": 21,
+     "eta_realized": 0.07216494845360824,
+     "fixed_global": 31,
+     "introduced_global": 10,
+     "C_after": [
+      [
+       44247,
+       93,
+       19,
+       30,
+       37
+      ],
+      [
+       305,
+       1149,
+       0,
+       0,
+       0
+      ],
+      [
+       84,
+       0,
+       97277,
+       9,
+       0
+      ],
+      [
+       45,
+       0,
+       44,
+       2835,
+       0
+      ],
+      [
+       21,
+       0,
+       0,
+       0,
+       50413
+      ]
+     ],
+     "d_pose_after": 0.0004902640510037007,
+     "changed_scorer_pixels": 1479,
+     "changed_scorer_channel_values": 4045,
+     "yuv6_residual_after_naive_rounding": {
+      "max_abs_dY": 1.1359999999999957,
+      "mean_abs_dY": 0.0015981801350911451,
+      "max_abs_dU": 1.9156320541761147,
+      "max_abs_dV": 0.4593437945791834
+     },
+     "float_null_certificate_max_abs_A_delta_before_rounding": 1.430511474609375e-06,
+     "naive_rounding": true,
+     "dk1_realizer_interface": "NullRealizer.apply_coefficients(pair, coeffs, basis_id, rounding_policy)",
+     "diagnostics": {
+      "arm": "Arm E",
+      "source": "unconstrained weighted paint projected by Euclidean N N^T"
+     }
+    },
+    "project_after_metric": {
+     "mode": "project_after_metric",
+     "flips_after": 683,
+     "net_flip_reduction": 25,
+     "eta_realized": 0.0859106529209622,
+     "fixed_global": 32,
+     "introduced_global": 7,
+     "C_after": [
+      [
+       44247,
+       93,
+       19,
+       30,
+       37
+      ],
+      [
+       305,
+       1149,
+       0,
+       0,
+       0
+      ],
+      [
+       84,
+       0,
+       97277,
+       9,
+       0
+      ],
+      [
+       44,
+       0,
+       41,
+       2839,
+       0
+      ],
+      [
+       21,
+       0,
+       0,
+       0,
+       50413
+      ]
+     ],
+     "d_pose_after": 0.0004867386377387095,
+     "changed_scorer_pixels": 1485,
+     "changed_scorer_channel_values": 4143,
+     "yuv6_residual_after_naive_rounding": {
+      "max_abs_dY": 1.2019999999999982,
+      "mean_abs_dY": 0.0016510314941406209,
+      "max_abs_dU": 2.0828160270880574,
+      "max_abs_dV": 0.3546718972895917
+     },
+     "float_null_certificate_max_abs_A_delta_before_rounding": 3.9968028886505635e-15,
+     "naive_rounding": true,
+     "dk1_realizer_interface": "NullRealizer.apply_coefficients(pair, coeffs, basis_id, rounding_policy)",
+     "diagnostics": {
+      "arm": "Arm M",
+      "source": "unconstrained weighted paint projected by diagonal margin-saliency metric",
+      "ridge": 1e-05
+     }
+    },
+    "solve_within_null_basis": {
+     "mode": "solve_within_null_basis",
+     "flips_after": 609,
+     "net_flip_reduction": 99,
+     "eta_realized": 0.3402061855670103,
+     "fixed_global": 140,
+     "introduced_global": 41,
+     "C_after": [
+      [
+       44248,
+       85,
+       24,
+       35,
+       34
+      ],
+      [
+       301,
+       1153,
+       0,
+       0,
+       0
+      ],
+      [
+       46,
+       0,
+       97311,
+       13,
+       0
+      ],
+      [
+       28,
+       0,
+       23,
+       2873,
+       0
+      ],
+      [
+       20,
+       0,
+       0,
+       0,
+       50414
+      ]
+     ],
+     "d_pose_after": 0.0005145897182486833,
+     "changed_scorer_pixels": 1488,
+     "changed_scorer_channel_values": 4394,
+     "yuv6_residual_after_naive_rounding": {
+      "max_abs_dY": 4.256999999999977,
+      "mean_abs_dY": 0.0017043253580729149,
+      "max_abs_dU": 1.6656320541760863,
+      "max_abs_dV": 1.7500000000000284
+     },
+     "float_null_certificate_max_abs_A_delta_before_rounding": 2.86102294921875e-06,
+     "naive_rounding": true,
+     "dk1_realizer_interface": "NullRealizer.apply_coefficients(pair, coeffs, basis_id, rounding_policy)",
+     "diagnostics": {
+      "starts": [
+       {
+        "start": "dec",
+        "curve": [
+         {
+          "step": 0,
+          "proxy_phase_target_flips": 497,
+          "max_abs_A_delta_float": 0.0,
+          "clipped_channel_values": 0
+         },
+         {
+          "step": 5,
+          "proxy_phase_target_flips": 459,
+          "max_abs_A_delta_float": 1.1324882507324219e-06,
+          "clipped_channel_values": 3
+         },
+         {
+          "step": 10,
+          "proxy_phase_target_flips": 419,
+          "max_abs_A_delta_float": 1.6689300537109375e-06,
+          "clipped_channel_values": 4
+         },
+         {
+          "step": 15,
+          "proxy_phase_target_flips": 396,
+          "max_abs_A_delta_float": 2.86102294921875e-06,
+          "clipped_channel_values": 16
+         }
+        ],
+        "stop_reason": "iteration_cap_best_at_cap",
+        "best_proxy_phase_target_flips": 396,
+        "best_step": 15
+       },
+       {
+        "start": "truth_null",
+        "curve": [
+         {
+          "step": 0,
+          "proxy_phase_target_flips": 496,
+          "max_abs_A_delta_float": 1.9073486328125e-06,
+          "clipped_channel_values": 10
+         },
+         {
+          "step": 5,
+          "proxy_phase_target_flips": 455,
+          "max_abs_A_delta_float": 2.86102294921875e-06,
+          "clipped_channel_values": 10
+         },
+         {
+          "step": 10,
+          "proxy_phase_target_flips": 424,
+          "max_abs_A_delta_float": 2.86102294921875e-06,
+          "clipped_channel_values": 11
+         },
+         {
+          "step": 15,
+          "proxy_phase_target_flips": 396,
+          "max_abs_A_delta_float": 3.814697265625e-06,
+          "clipped_channel_values": 19
+         }
+        ],
+        "stop_reason": "iteration_cap_best_at_cap",
+        "best_proxy_phase_target_flips": 396,
+        "best_step": 15
+       }
+      ],
+      "parameterization": "per-2x2-block c in R^6, delta=N@c, no projection step",
+      "loss": "diagonal margin-saliency weighted cross_entropy against translated phase target",
+      "selected": {
+       "start": "dec",
+       "best_step": 15,
+       "best_proxy_phase_target_flips": 396,
+       "max_abs_A_delta_float": 2.86102294921875e-06
+      }
+     }
+    }
+   },
+   "elapsed_s": 136.8992269039154,
+   "axis": "[macOS-CPU frozen-scorer advisory]",
+   "score_claim": false
+  }
+ ],
+ "boundaries": [
+  "small-n advisory only",
+  "no n600 scorer slot consumed",
+  "no archive build",
+  "naive rounding used; lattice-native realization belongs to dk1",
+  "full rank-4 MS4D margin-Fisher row-Gram not consumed in this build"
+ ]
+}
