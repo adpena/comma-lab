@@ -1,6 +1,31 @@
 {
   "generated_at_utc": "2026-08-06T00:00:00Z",
   "last_graded_source": "deterministic audit label; override with --last-graded for an intentional refresh",
+  "r2_element_decomposition": {
+    "artifact": ".omx/research/ddm_vo2_20260806/R2_ELEMENT_DECOMPOSITION.jsonl",
+    "graded_row_groups": {
+      "ca1-round0": 6,
+      "dk1-round0": 3,
+      "sw1-round0": 8,
+      "vo1-round0": 1,
+      "vo2-new": 5
+    },
+    "graded_rows": 23,
+    "new_instruments_surfaced": [
+      "src/tac/canonical_equations/trajectory_derived_stopping_20260805.py"
+    ],
+    "next_start": "continue R2 at the remaining registry rows by verdict_fanout after selected_order=23; then recurse R3 calibration lineage and R4 self-audit",
+    "r2_complete": false,
+    "r3_complete": false,
+    "r4_complete": false,
+    "schema": "ddm_vo2_r2_element_decomposition.summary.v1",
+    "seal_ready": false,
+    "selection_mode": "charter priority families first, then verdict_fanout descending; never alphabetical",
+    "status_counts": {
+      "R2_GRADED": 18,
+      "R2_SOURCE_CANDIDATE_GRADED_NOT_CONSUMER_PROOF": 5
+    }
+  },
   "registry_hash_scope": "INSTRUMENT_REGISTRY.jsonl rows sorted by provenance_family/instrument_id",
   "round_dry_trajectory": [
     {
@@ -12,9 +37,15 @@
       "dry": false,
       "new_rows": 4630,
       "round": "R1"
+    },
+    {
+      "dry": false,
+      "graded_rows": 23,
+      "new_instruments_surfaced": 1,
+      "round": "R2-partial"
     }
   ],
-  "round_reached": "R1",
+  "round_reached": "R2-partial",
   "row_count": 4630,
   "row_groups": {
     "ca1-round0": 89,

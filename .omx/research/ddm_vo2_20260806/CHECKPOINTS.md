@@ -39,3 +39,27 @@
   only for an intentional refresh.
 
 No scorer, archive, training, paid dispatch, or upstream edit happened in this generation.
+
+## Checkpoint 6 - Generation 2 R2 Resume
+
+- Read `.omx/tmp/codex_runs/vo2r2_prompt.md`.
+- Re-read `NEXT_IF_RESUMED.md`, `.omx/tmp/codex_runs/vo2_prompt.md`, and
+  `.omx/tmp/codex_runs/_common_contract.md`.
+- Re-ran `tools/build_ddm_vo2_instrument_registry.py --out-dir .omx/research/ddm_vo2_20260806`.
+- Verified the rebuild matched the R1 manifest before R2:
+  - registry SHA-256 `947b7faaa3ba61dfad567b434075c8151028e8fd5e6dbe3c38cbcb4ccc43b936`
+  - summary SHA-256 `0b450d49d33d1ba8e756b1d16d031f144fd05a490ace2c4292b577d4bb2b4393`
+  - row count 4,630.
+
+## Checkpoint 7 - R2 Element Batch 1
+
+- Added `.omx/research/ddm_vo2_20260806/R2_ELEMENT_DECOMPOSITION.jsonl`.
+- R2 selected rows: 23, each with all ten charter elements present.
+- Row groups: vo1-round0 1, ca1-round0 6, sw1-round0 8, dk1-round0 3, vo2-new 5.
+- Source-candidate rows are explicitly `R2_SOURCE_CANDIDATE_GRADED_NOT_CONSUMER_PROOF`.
+- New R3 lineage instrument surfaced:
+  `src/tac/canonical_equations/trajectory_derived_stopping_20260805.py`.
+- `ROUND_SUMMARY.json` now records `round_reached=R2-partial`, `r2_complete=false`, and
+  `seal_ready=false`.
+
+No scorer, archive, training, paid dispatch, or upstream edit happened in Generation 2.

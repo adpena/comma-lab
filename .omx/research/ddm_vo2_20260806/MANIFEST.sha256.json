@@ -1,4 +1,8 @@
 {
+  ".omx/research/ddm_vo2_20260806/CHECKPOINTS.md": "7bffbaf2d22d0e1af0984f9d64de99ae2af2284f03229e7cccbede06ea3767fc",
   ".omx/research/ddm_vo2_20260806/INSTRUMENT_REGISTRY.jsonl": "947b7faaa3ba61dfad567b434075c8151028e8fd5e6dbe3c38cbcb4ccc43b936",
-  ".omx/research/ddm_vo2_20260806/ROUND_SUMMARY.json": "0b450d49d33d1ba8e756b1d16d031f144fd05a490ace2c4292b577d4bb2b4393"
+  ".omx/research/ddm_vo2_20260806/NEXT_IF_RESUMED.md": "606768ed2d75a6c59422625269d72d5477b5c84e53e39daaf2c82cd6cb700cf3",
+  ".omx/research/ddm_vo2_20260806/R2_ELEMENT_DECOMPOSITION.jsonl": "6f5f64c34f3b38f6f67875473ce558540a0bfcd64c8cc4da55873308aadaa431",
+  ".omx/research/ddm_vo2_20260806/RECEIPT.md": "39b63ae587209d150499db41898b4e19c71120a9bbedd9367f80f8d13a81e52e",
+  ".omx/research/ddm_vo2_20260806/ROUND_SUMMARY.json": "04f544c14b2f47be3299710c03ac432787f4656126437cc32b51111dd6d60232"
 }
