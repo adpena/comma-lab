@@ -648,9 +648,11 @@ def _channel_candidates(
     tap_radius: int,
     max_candidates: int,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
-    center_i = np.rint(center.reshape(4)).astype(np.int64)
     lo_i = lo.reshape(4).astype(np.int64)
     hi_i = hi.reshape(4).astype(np.int64)
+    center_raw_i = np.rint(center.reshape(4)).astype(np.int64)
+    center_i = np.clip(center_raw_i, lo_i, hi_i)
+    clipped_center_count = int(np.count_nonzero(center_i != center_raw_i))
     weights4 = weights.reshape(4)
     choices: list[list[int]] = []
     for idx in range(4):
@@ -680,6 +682,7 @@ def _channel_candidates(
         "unique_candidates": len(by_values),
         "kept": len(cands),
         "pruned": bool(pruned),
+        "center_clipped_to_bounds_count": clipped_center_count,
     }
 
 
