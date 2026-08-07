@@ -17,6 +17,7 @@ import argparse
 import gc
 import hashlib
 import importlib.util
+import inspect
 import json
 import math
 import os
@@ -59,10 +60,15 @@ DEFAULT_INIT = Path(
 CONTEST_DENOMINATOR_BYTES = 37_545_489
 GIB = 1024.0 ** 3
 MEM_PROBE_RECEIPT_SCHEMA = "ddm_mx1_load_phase_peak_receipt.v1"
+MX1_FIRE_GUARD_VERDICT_SCHEMA = "ddm_mx1_fire_guard_verdict.v1"
 MX1B_MEM_PROBE_RESULT = REPO / ".omx/research/ddm_mx1b_20260806/mem_probe_cpu_result.json"
 METAL_UNKNOWN_MARGIN_GIB = 65.0
 ROW1_SAFE_RUN_RSS_MB = 90_000
 ROW1_SAFE_RUN_TIMEOUT_S = 28_800
+
+
+class MemoryLimitConfigurationError(RuntimeError):
+    """Raised when GPU mode cannot install a hard MLX allocator limit."""
 
 
 def _sha256_file(path: Path) -> str:
@@ -75,6 +81,15 @@ def _sha256_file(path: Path) -> str:
 
 def _utc_now_iso() -> str:
     return datetime.now(UTC).isoformat().replace("+00:00", "Z")
+
+
+def _host_fingerprint() -> dict[str, str]:
+    return {
+        "node": platform.node(),
+        "platform": platform.platform(),
+        "machine": platform.machine(),
+        "system": platform.system(),
+    }
 
 
 def _gib_or_none(num_bytes: int | float | None) -> float | None:
@@ -609,13 +624,14 @@ def run_mlx_parity(args: argparse.Namespace) -> dict[str, Any]:
     }
 
 
-def _derive_mem_budget_gb(explicit_gb: float | None) -> dict[str, Any]:
+def _derive_mem_budget_gb(explicit_gb: float | None, *, mem_probe: bool = False) -> dict[str, Any]:
     if explicit_gb is not None:
         if explicit_gb <= 0:
             raise ValueError("--mem-budget-gb must be positive when provided")
         return {
             "budget_gb": float(explicit_gb),
             "source": "explicit_cli",
+            "mem_probe_cap_gb": 24.0 if mem_probe else None,
             "available_gib_at_start": _gib_or_none(_system_available_bytes()),
         }
     available = _system_available_bytes()
@@ -623,52 +639,191 @@ def _derive_mem_budget_gb(explicit_gb: float | None) -> dict[str, Any]:
         return {
             "budget_gb": None,
             "source": "unavailable_no_limit_applied",
+            "mem_probe_cap_gb": 24.0 if mem_probe else None,
             "available_gib_at_start": None,
         }
     available_gib = float(available) / GIB
+    default_budget = max(1.0, available_gib * 0.35)
+    if mem_probe:
+        default_budget = min(24.0, default_budget)
     return {
-        "budget_gb": round(max(1.0, available_gib * 0.50), 3),
-        "source": "default_50pct_of_available_memory_at_start",
+        "budget_gb": round(default_budget, 3),
+        "source": "default_35pct_of_available_memory_at_start"
+        if not mem_probe
+        else "mem_probe_min_24gb_default_35pct_of_available_memory_at_start",
+        "mem_probe_cap_gb": 24.0 if mem_probe else None,
         "available_gib_at_start": round(available_gib, 6),
     }
 
 
-def _call_optional_mlx_limit(mx: Any, dotted_name: str, value: int) -> dict[str, Any]:
+def _resolve_attr(obj: Any, dotted_name: str) -> Any:
+    cur = obj
+    for part in dotted_name.split("."):
+        cur = getattr(cur, part)
+    return cur
+
+
+def _call_mlx_limit_with_signature(
+    mx: Any,
+    dotted_name: str,
+    value: int,
+    *,
+    require_hard: bool,
+    allow_soft: bool,
+) -> dict[str, Any]:
     try:
-        obj: Any = mx
-        for part in dotted_name.split("."):
-            obj = getattr(obj, part)
-        obj(value)
-        return {"target": dotted_name, "status": "applied", "value_bytes": value}
+        obj = _resolve_attr(mx, dotted_name)
     except AttributeError:
-        return {"target": dotted_name, "status": "unavailable", "value_bytes": value}
+        return {
+            "target": dotted_name,
+            "status": "unavailable",
+            "value_bytes": value,
+            "hard_limit": False,
+            "signature_form": "missing",
+        }
+
+    relaxed_supported: bool | None
+    signature_text: str | None = None
+    try:
+        sig = inspect.signature(obj)
+        signature_text = str(sig)
+        relaxed_supported = (
+            "relaxed" in sig.parameters
+            or any(param.kind == inspect.Parameter.VAR_KEYWORD for param in sig.parameters.values())
+        )
+    except (TypeError, ValueError):
+        relaxed_supported = None
+
+    if relaxed_supported is not False:
+        try:
+            obj(value, relaxed=False)
+            return {
+                "target": dotted_name,
+                "status": "applied",
+                "value_bytes": value,
+                "hard_limit": True,
+                "relaxed": False,
+                "signature": signature_text,
+                "signature_form": "value_relaxed_false"
+                if relaxed_supported is True
+                else "value_relaxed_false_uninspectable",
+            }
+        except TypeError as exc:
+            if relaxed_supported is True or (require_hard and not allow_soft):
+                return {
+                    "target": dotted_name,
+                    "status": "failed",
+                    "value_bytes": value,
+                    "hard_limit": False,
+                    "signature": signature_text,
+                    "signature_form": "value_relaxed_false",
+                    "error_type": type(exc).__name__,
+                    "error": str(exc),
+                }
+        except Exception as exc:
+            return {
+                "target": dotted_name,
+                "status": "failed",
+                "value_bytes": value,
+                "hard_limit": False,
+                "signature": signature_text,
+                "signature_form": "value_relaxed_false",
+                "error_type": type(exc).__name__,
+                "error": str(exc),
+            }
+
+    if require_hard and not allow_soft:
+        return {
+            "target": dotted_name,
+            "status": "refused_soft_only",
+            "value_bytes": value,
+            "hard_limit": False,
+            "signature": signature_text,
+            "signature_form": "value_only",
+            "error": "installed MLX memory limit API has no relaxed=False hard-cap form",
+        }
+    try:
+        obj(value)
+        return {
+            "target": dotted_name,
+            "status": "applied_soft_allowed",
+            "value_bytes": value,
+            "hard_limit": False,
+            "relaxed": "default",
+            "signature": signature_text,
+            "signature_form": "value_only",
+            "soft_limit_allowed_by_cli": allow_soft,
+        }
     except Exception as exc:
         return {
             "target": dotted_name,
             "status": "failed",
             "value_bytes": value,
+            "hard_limit": False,
+            "signature": signature_text,
+            "signature_form": "value_only",
             "error_type": type(exc).__name__,
             "error": str(exc),
         }
 
 
-def _configure_mlx_memory_limits(mx: Any, explicit_gb: float | None) -> dict[str, Any]:
-    derived = _derive_mem_budget_gb(explicit_gb)
+def _configure_mlx_memory_limits(
+    mx: Any,
+    explicit_gb: float | None,
+    *,
+    device: str,
+    allow_soft_mem_limit: bool = False,
+    mem_probe: bool = False,
+) -> dict[str, Any]:
+    derived = _derive_mem_budget_gb(explicit_gb, mem_probe=mem_probe)
     budget_gb = derived["budget_gb"]
+    hard_limit_required = str(device).lower() == "gpu"
     if budget_gb is None:
-        return {**derived, "memory_limit": None, "cache_limit": None, "calls": []}
+        if hard_limit_required and not allow_soft_mem_limit:
+            raise MemoryLimitConfigurationError(
+                "REFUSED gpu mode: available memory could not be read, so no hard MLX memory limit can be derived"
+            )
+        return {
+            **derived,
+            "memory_limit": None,
+            "cache_limit": None,
+            "hard_limit_required": hard_limit_required,
+            "hard_limit_satisfied": False,
+            "soft_limit_allowed_by_cli": allow_soft_mem_limit,
+            "calls": [],
+        }
     memory_limit = int(float(budget_gb) * GIB)
     cache_limit = int(max(256 * 1024 * 1024, memory_limit * 0.25))
     calls = [
-        _call_optional_mlx_limit(mx, "set_memory_limit", memory_limit),
-        _call_optional_mlx_limit(mx, "metal.set_memory_limit", memory_limit),
-        _call_optional_mlx_limit(mx, "set_cache_limit", cache_limit),
-        _call_optional_mlx_limit(mx, "metal.set_cache_limit", cache_limit),
+        _call_mlx_limit_with_signature(
+            mx,
+            "set_memory_limit",
+            memory_limit,
+            require_hard=hard_limit_required,
+            allow_soft=allow_soft_mem_limit,
+        ),
+        _call_mlx_limit_with_signature(
+            mx,
+            "set_cache_limit",
+            cache_limit,
+            require_hard=False,
+            allow_soft=True,
+        ),
     ]
+    memory_call = calls[0]
+    hard_limit_satisfied = bool(memory_call.get("hard_limit")) and memory_call.get("status") == "applied"
+    if hard_limit_required and not hard_limit_satisfied and not allow_soft_mem_limit:
+        raise MemoryLimitConfigurationError(
+            "REFUSED gpu mode: installed MLX set_memory_limit did not apply a hard relaxed=False cap; "
+            f"call={memory_call}"
+        )
     return {
         **derived,
         "memory_limit": memory_limit,
         "cache_limit": cache_limit,
+        "hard_limit_required": hard_limit_required,
+        "hard_limit_satisfied": hard_limit_satisfied,
+        "soft_limit_allowed_by_cli": allow_soft_mem_limit,
         "calls": calls,
     }
 
@@ -729,7 +884,21 @@ def run_mlx_train(
     )
 
     mx, _nn, optim = require_mlx(device=args.device)
-    memory_limits = _configure_mlx_memory_limits(mx, args.mem_budget_gb)
+    try:
+        memory_limits = _configure_mlx_memory_limits(
+            mx,
+            args.mem_budget_gb,
+            device=args.device,
+            allow_soft_mem_limit=bool(getattr(args, "allow_soft_mem_limit", False)),
+            mem_probe=getattr(args, "mode", "") == "mem-probe",
+        )
+    except Exception as exc:
+        probe.sample(
+            "after_require_mlx_memory_limit_configuration_failed",
+            mx=mx,
+            note=f"{type(exc).__name__}: {exc}",
+        )
+        raise
     probe.sample("after_require_mlx_and_memory_limits", mx=mx)
     from mlx.utils import tree_flatten, tree_unflatten
 
@@ -922,6 +1091,7 @@ def run_mlx_train(
 
 def _mem_probe_args(args: argparse.Namespace) -> argparse.Namespace:
     payload = vars(args).copy()
+    payload["mode"] = "mem-probe"
     payload["steps"] = int(args.mem_probe_steps)
     payload["eval_every"] = 1
     payload["checkpoint_every"] = max(1, int(args.mem_probe_steps))
@@ -957,6 +1127,7 @@ def _build_mem_probe_receipt(
         "score_claim": False,
         "source_repo_head": SOURCE_REPO_HEAD,
         "source_repo_root": SOURCE_REPO_ROOT,
+        "host": _host_fingerprint(),
         "mode": "mem-probe",
         "device_request": args.device,
         "pairs": int(args.pairs),
@@ -966,6 +1137,20 @@ def _build_mem_probe_receipt(
         "input_cache": str(args.input_cache),
         "target_cache": str(args.target_cache),
         "init_checkpoint": str(args.init),
+        "argv_config": {
+            "device": args.device,
+            "pairs": int(args.pairs),
+            "lr": float(args.lr),
+            "ce_fraction": float(args.ce_fraction),
+            "softplus_fraction": float(args.softplus_fraction),
+            "bits": int(args.bits),
+            "mem_budget_gb": args.mem_budget_gb,
+            "allow_soft_mem_limit": bool(getattr(args, "allow_soft_mem_limit", False)),
+            "input_cache": str(args.input_cache),
+            "target_cache": str(args.target_cache),
+            "init": str(args.init),
+        },
+        "memory_limits": None if train_result is None else train_result.get("memory_limits"),
         "samples": probe.samples,
         "peak": probe.peak(),
         "train_result_summary": None
@@ -974,6 +1159,7 @@ def _build_mem_probe_receipt(
             "status": train_result.get("status"),
             "steps": train_result.get("steps"),
             "seconds_per_step": train_result.get("seconds_per_step"),
+            "memory_limits": train_result.get("memory_limits"),
             "stage_checkpoint": train_result.get("stage_checkpoint"),
             "latest_checkpoint": train_result.get("latest_checkpoint"),
             "latest_checkpoint_sha256": train_result.get("latest_checkpoint_sha256"),
@@ -1004,10 +1190,13 @@ def run_mem_probe(args: argparse.Namespace) -> dict[str, Any]:
         train_result = run_mlx_train(probe_args, memory_probe=probe)
         status = str(train_result.get("status", "passed"))
     except Exception as exc:
-        status = "blocked"
+        status = "blocked" if isinstance(exc, MlxUnavailableError) else "failed"
+        last_sample = probe.samples[-1] if probe.samples else None
         blocker = {
             "error_type": type(exc).__name__,
             "error": str(exc),
+            "last_sample_stage": None if last_sample is None else last_sample.get("stage"),
+            "sample_count": len(probe.samples),
             "boundary": (
                 "CPU load-path telemetry may be present before this blocker; "
                 "full MLX allocator/three-step telemetry requires MAIN Metal."
@@ -1015,6 +1204,8 @@ def run_mem_probe(args: argparse.Namespace) -> dict[str, Any]:
         }
         if isinstance(exc, MlxUnavailableError):
             blocker["verdict_scope"] = "ENVIRONMENT: local sandbox MLX/Metal unavailable"
+        elif isinstance(exc, MemoryLimitConfigurationError):
+            blocker["verdict_scope"] = "INSTANCE: MLX hard memory-limit configuration"
         else:
             blocker["verdict_scope"] = "INSTANCE: mem-probe execution"
     receipt = _build_mem_probe_receipt(
@@ -1026,7 +1217,7 @@ def run_mem_probe(args: argparse.Namespace) -> dict[str, Any]:
         blocker=blocker,
     )
     receipt_path = args.run_dir / "mem_probe_receipt.json"
-    write_json(receipt_path, receipt)
+    write_json_atomic(receipt_path, receipt)
     return {
         "schema": "ddm_mx1_mem_probe.v1",
         "status": status,
@@ -1050,6 +1241,9 @@ def launch_ticket(args: argparse.Namespace, smoke: dict[str, Any] | None, mlx_pr
         }
     n32 = _select_stratified_indices(32, seed=args.seed)
     n120 = _select_stratified_indices(120, seed=args.seed + 1)
+    cap_cache = args.target_cache  # GT labels as tokens AND targets
+    veh_cache = args.input_cache   # public-wire (tq1c) labels as tokens, GT targets
+    ticket_path = _ticket_path_for_args(args)
 
     # RR3-F1: a Row-1 verdict requires TWO arms — ARM-CAP (GT tokens -> GT targets, receiver
     # CAPACITY vs the fp1 flat-paint floor and PR130's external number) and ARM-VEH (public-wire
@@ -1057,6 +1251,7 @@ def launch_ticket(args: argparse.Namespace, smoke: dict[str, Any] | None, mlx_pr
     # conflates the two questions, so the bare argv_n32/argv_n120 keys no longer exist.
     def _arm_argv(pairs: int, seed: int, input_cache: Path, subdir: str) -> list[str]:
         run_dir = args.run_dir / subdir
+        fire_guard_verdict = run_dir / "fire_guard_verdict.json"
         argv = [
             ".venv/bin/python",
             "experiments/ddm_mx1_pr130_semantic_renderer.py",
@@ -1076,37 +1271,14 @@ def launch_ticket(args: argparse.Namespace, smoke: dict[str, Any] | None, mlx_pr
             "--init", str(args.init),
             "--run-dir", str(run_dir),
             "--out", str(run_dir / "result.json"),
+            "--fire-guard-verdict", str(fire_guard_verdict),
         ]
         if args.mem_budget_gb is not None:
             argv.extend(["--mem-budget-gb", str(args.mem_budget_gb)])
+        if getattr(args, "allow_soft_mem_limit", False):
+            argv.append("--allow-soft-mem-limit")
         return argv
 
-    mem_probe_receipt_path = args.run_dir / "mem_probe_receipt.json"
-    mem_probe_command = [
-        ".venv/bin/python",
-        "experiments/ddm_mx1_pr130_semantic_renderer.py",
-        "--mode", "mem-probe",
-        "--device", "gpu",
-        "--pairs", "32",
-        "--mem-probe-steps", str(args.mem_probe_steps),
-        "--lr", str(args.lr),
-        "--ce-fraction", str(args.ce_fraction),
-        "--softplus-fraction", str(args.softplus_fraction),
-        "--bits", str(args.bits),
-        "--seed", str(args.seed),
-        "--checkpoint-every", str(max(1, int(args.mem_probe_steps))),
-        "--eval-every", "1",
-        "--input-cache", str(args.input_cache),
-        "--target-cache", str(args.target_cache),
-        "--init", str(args.init),
-        "--run-dir", str(args.run_dir),
-        "--out", str(args.run_dir / "mem_probe_result.json"),
-    ]
-    if args.mem_budget_gb is not None:
-        mem_probe_command.extend(["--mem-budget-gb", str(args.mem_budget_gb)])
-
-    cap_cache = args.target_cache  # GT labels as tokens AND targets
-    veh_cache = args.input_cache   # public-wire (tq1c) labels as tokens, GT targets
     safe_run_projection = _derive_row1_safe_run_projection()
 
     def _fire_argv(pairs: int, seed: int, input_cache: Path, subdir: str) -> list[str]:
@@ -1117,12 +1289,107 @@ def launch_ticket(args: argparse.Namespace, smoke: dict[str, Any] | None, mlx_pr
             projection=safe_run_projection,
         )
 
+    arm_specs = {
+        "argv_n32_arm_cap": (32, args.seed, cap_cache, "launch_arm_cap/n32_metal"),
+        "argv_n32_arm_veh": (32, args.seed, veh_cache, "launch_arm_veh/n32_metal"),
+        "argv_n120_arm_cap": (120, args.seed + 1, cap_cache, "launch_arm_cap/n120_metal"),
+        "argv_n120_arm_veh": (120, args.seed + 1, veh_cache, "launch_arm_veh/n120_metal"),
+    }
+    mem_probe_receipt_paths = {
+        key: str(args.run_dir / subdir / "mem_probe" / "mem_probe_receipt.json")
+        for key, (_pairs, _seed, _cache, subdir) in arm_specs.items()
+    }
+
+    def _mem_probe_command(pairs: int, seed: int, input_cache: Path, subdir: str) -> list[str]:
+        probe_run_dir = args.run_dir / subdir / "mem_probe"
+        command = [
+            ".venv/bin/python",
+            "experiments/ddm_mx1_pr130_semantic_renderer.py",
+            "--mode", "mem-probe",
+            "--device", "gpu",
+            "--pairs", str(pairs),
+            "--mem-probe-steps", str(args.mem_probe_steps),
+            "--lr", str(args.lr),
+            "--ce-fraction", str(args.ce_fraction),
+            "--softplus-fraction", str(args.softplus_fraction),
+            "--bits", str(args.bits),
+            "--seed", str(seed),
+            "--checkpoint-every", str(max(1, int(args.mem_probe_steps))),
+            "--eval-every", "1",
+            "--input-cache", str(input_cache),
+            "--target-cache", str(args.target_cache),
+            "--init", str(args.init),
+            "--run-dir", str(probe_run_dir),
+            "--out", str(probe_run_dir / "mem_probe_result.json"),
+            "--launch-ticket-path", str(ticket_path),
+        ]
+        if args.mem_budget_gb is not None:
+            command.extend(["--mem-budget-gb", str(args.mem_budget_gb)])
+        if getattr(args, "allow_soft_mem_limit", False):
+            command.append("--allow-soft-mem-limit")
+        return command
+
+    mem_probe_commands = {
+        key: _mem_probe_command(pairs, seed, cache, subdir)
+        for key, (pairs, seed, cache, subdir) in arm_specs.items()
+    }
+    mem_probe_receipt_path = Path(mem_probe_receipt_paths["argv_n32_arm_cap"])
+    mem_probe_command = mem_probe_commands["argv_n32_arm_cap"]
+    fire_guard_verdict_paths = {
+        key: str(args.run_dir / subdir / "fire_guard_verdict.json")
+        for key, (_pairs, _seed, _cache, subdir) in arm_specs.items()
+    }
+    fire_guard_commands = {
+        key: [
+            ".venv/bin/python",
+            "tools/mx1_fire_guard.py",
+            "--ticket", str(ticket_path),
+            "--argv-key", key,
+            "--out", fire_guard_verdict_paths[key],
+        ]
+        for key in arm_specs
+    }
+    fire_argvs = {
+        key: _fire_argv(pairs, seed, cache, subdir)
+        for key, (pairs, seed, cache, subdir) in arm_specs.items()
+    }
+
     return {
         "schema": "ddm_mx1_row1_launch_ticket.v2_two_arm",
         "score_claim": False,
+        "launch_ticket_path": str(ticket_path),
         "mem_probe_receipt_required": True,
         "mem_probe_receipt_path": str(mem_probe_receipt_path),
+        "mem_probe_receipt_paths": mem_probe_receipt_paths,
         "mem_probe_command": mem_probe_command,
+        "mem_probe_commands": mem_probe_commands,
+        "fire_guard_required": True,
+        "fire_guard_tool": "tools/mx1_fire_guard.py",
+        "fire_guard_verdict_schema": MX1_FIRE_GUARD_VERDICT_SCHEMA,
+        "fire_guard_verdict_paths": fire_guard_verdict_paths,
+        "fire_guard_commands": fire_guard_commands,
+        "main_fire_sequence": [
+            {
+                "step": "guard_precheck",
+                "command": fire_guard_commands["argv_n32_arm_cap"],
+                "expected": "REFUSE until the matching mem_probe_receipt exists and passes",
+            },
+            {
+                "step": "probe",
+                "command": mem_probe_command,
+                "expected": "writes mem_probe_receipt.json atomically with status=passed",
+            },
+            {
+                "step": "gate",
+                "command": fire_guard_commands["argv_n32_arm_cap"],
+                "expected": "writes fire_guard_verdict.json with status=passed",
+            },
+            {
+                "step": "fire",
+                "command": fire_argvs["argv_n32_arm_cap"],
+                "expected": "entrypoint re-reads --fire-guard-verdict before MLX setup",
+            },
+        ],
         "scheduling": (
             "SEQUENTIAL one-Metal-fire-at-a-time — operator machine OOM 2026-08-06; "
             "ARM-VEH fires only after ARM-CAP completes or a composed measured-peak "
@@ -1152,10 +1419,10 @@ def launch_ticket(args: argparse.Namespace, smoke: dict[str, Any] | None, mlx_pr
             "vehicle reach); NO n120 dispatch until the scaled arm is explicitly selected from "
             "the two n32 CPU-torch verdicts; MLX telemetry is research-signal only"
         ),
-        "argv_n32_arm_cap": _fire_argv(32, args.seed, cap_cache, "launch_arm_cap/n32_metal"),
-        "argv_n32_arm_veh": _fire_argv(32, args.seed, veh_cache, "launch_arm_veh/n32_metal"),
-        "argv_n120_arm_cap": _fire_argv(120, args.seed + 1, cap_cache, "launch_arm_cap/n120_metal"),
-        "argv_n120_arm_veh": _fire_argv(120, args.seed + 1, veh_cache, "launch_arm_veh/n120_metal"),
+        "argv_n32_arm_cap": fire_argvs["argv_n32_arm_cap"],
+        "argv_n32_arm_veh": fire_argvs["argv_n32_arm_veh"],
+        "argv_n120_arm_cap": fire_argvs["argv_n120_arm_cap"],
+        "argv_n120_arm_veh": fire_argvs["argv_n120_arm_veh"],
         "verdict_protocol": {
             "axis": "[macOS-MLX research-signal] for train telemetry; frozen CPU-torch SegNet through exact R for d_seg; no contest promotion without upstream/evaluate.py on byte-closed archive",
             "compare_against": {
@@ -1170,7 +1437,8 @@ def launch_ticket(args: argparse.Namespace, smoke: dict[str, Any] | None, mlx_pr
             "stage": "PR130 stage 08 tail from retained semantic_renderer_w96_b4_qat4_12k checkpoint",
             "configured_horizon_steps": horizon,
             "mem_budget_gb_arg": args.mem_budget_gb,
-            "mem_budget_default_policy": "50% of available memory at process start when --mem-budget-gb is omitted",
+            "mem_budget_default_policy": "35% of available memory at process start when --mem-budget-gb is omitted; mem-probe caps default at min(24GB, default)",
+            "allow_soft_mem_limit": bool(getattr(args, "allow_soft_mem_limit", False)),
             "lr": args.lr,
             "ce_fraction": args.ce_fraction,
             "softplus_fraction": args.softplus_fraction,
@@ -1186,6 +1454,46 @@ def launch_ticket(args: argparse.Namespace, smoke: dict[str, Any] | None, mlx_pr
 def write_json(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2, sort_keys=True, default=str) + "\n")
+
+
+def write_json_atomic(path: Path, payload: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(f".{path.name}.tmp.{os.getpid()}")
+    tmp.write_text(json.dumps(payload, indent=2, sort_keys=True, default=str) + "\n")
+    os.replace(tmp, path)
+
+
+def _ticket_path_for_args(args: argparse.Namespace) -> Path:
+    explicit = getattr(args, "launch_ticket_path", None)
+    if explicit is not None:
+        return Path(explicit)
+    return args.run_dir / "launch_ticket_v2_two_arm_guarded.json"
+
+
+def _assert_fire_guard_verdict(verdict_path: Path | None) -> None:
+    if verdict_path is None:
+        print(
+            "[mx1-fire-guard] REFUSED: gpu mlx-train requires --fire-guard-verdict "
+            "from tools/mx1_fire_guard.py",
+            file=sys.stderr,
+        )
+        raise SystemExit(9)
+    try:
+        verdict = json.loads(verdict_path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        print(
+            f"[mx1-fire-guard] REFUSED: could not read guard verdict at {verdict_path}: "
+            f"{type(exc).__name__}: {exc}",
+            file=sys.stderr,
+        )
+        raise SystemExit(9) from exc
+    if verdict.get("schema") != MX1_FIRE_GUARD_VERDICT_SCHEMA or verdict.get("status") != "passed":
+        print(
+            f"[mx1-fire-guard] REFUSED: guard verdict failed or malformed at {verdict_path}: "
+            f"status={verdict.get('status')!r} reason={verdict.get('reason_code')!r}",
+            file=sys.stderr,
+        )
+        raise SystemExit(9)
 
 
 def main() -> None:
@@ -1214,6 +1522,9 @@ def main() -> None:
     parser.add_argument("--checkpoint-every", type=int, default=250)
     parser.add_argument("--mem-budget-gb", type=float)
     parser.add_argument("--mem-probe-steps", type=int, default=3)
+    parser.add_argument("--allow-soft-mem-limit", action="store_true")
+    parser.add_argument("--fire-guard-verdict", type=Path)
+    parser.add_argument("--launch-ticket-path", type=Path)
     parser.add_argument("--resume-from", type=Path)
     parser.add_argument("--out", type=Path, default=SSD_ROOT / "mx1_driver_result.json")
     args = parser.parse_args()
@@ -1221,6 +1532,8 @@ def main() -> None:
         parser.error("--mem-probe-steps must be positive")
     if args.mode in {"mlx-train", "torch-smoke"}:
         assert_governed_admission(f"ddm_mx1_pr130_semantic_renderer:{args.mode}")
+    if args.mode == "mlx-train" and str(args.device).lower() == "gpu":
+        _assert_fire_guard_verdict(args.fire_guard_verdict)
 
     result: dict[str, Any] = {
         "schema": "ddm_mx1_pr130_semantic_renderer_driver.v1",
@@ -1255,11 +1568,12 @@ def main() -> None:
         result["mem_probe"] = run_mem_probe(args)
         result["status"] = result["mem_probe"]["status"]
     result["launch_ticket"] = launch_ticket(args, smoke, mlx_probe)
+    write_json(_ticket_path_for_args(args), result["launch_ticket"])
     write_json(args.out, result)
     print(json.dumps(result, indent=2, sort_keys=True, default=str))
     if args.mode in {"mlx-parity", "mlx-train"} and mlx_probe["status"] == "blocked":
         raise SystemExit(2)
-    if args.mode == "mem-probe" and result.get("status") == "blocked":
+    if args.mode == "mem-probe" and result.get("status") != "passed":
         raise SystemExit(2)
 
 
