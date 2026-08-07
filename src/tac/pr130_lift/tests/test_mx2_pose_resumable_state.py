@@ -1,10 +1,14 @@
 from __future__ import annotations
 
 import argparse
+import sys
+from contextlib import nullcontext
 from pathlib import Path
 
+import pytest
 import torch
 
+from tac.pr130_lift.pose import train_pose_carrier_full_resumable as pose_train
 from tac.pr130_lift.pose.train_pose_carrier_full_resumable import (
     _load_full_state,
     _save_full_state,
@@ -110,3 +114,51 @@ def test_full_state_round_trip_restores_training_state(tmp_path: Path) -> None:
     assert loaded_best["mean"] == 1.25
     assert torch.equal(raw_basis, best["basis"])
     assert torch.equal(coeff.weight, best["coeff"])
+
+
+def _pose_cli(tmp_path: Path) -> list[str]:
+    return [
+        "train_pose_carrier_full_resumable.py",
+        "--challenge-root",
+        str(tmp_path / "challenge"),
+        "--target-cache",
+        str(tmp_path / "target.pt"),
+        "--master-checkpoint",
+        str(tmp_path / "master.pt"),
+        "--init-carrier",
+        str(tmp_path / "carrier.pt"),
+        "--out",
+        str(tmp_path / "out.json"),
+        "--save",
+        str(tmp_path / "save.pt"),
+    ]
+
+
+def test_pose_trainer_refuses_raw_when_admission_enforced(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("TAC_ADMISSION_ENFORCE", "1")
+    monkeypatch.delenv("TAC_GOVERNED_ADMISSION", raising=False)
+    monkeypatch.delenv("TAC_ADMISSION_BYPASS_OK", raising=False)
+    monkeypatch.setattr(sys, "argv", _pose_cli(tmp_path))
+
+    with pytest.raises(SystemExit) as excinfo:
+        pose_train.main()
+
+    assert excinfo.value.code == 7
+
+
+def test_pose_trainer_governed_env_passes_guard(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("TAC_ADMISSION_ENFORCE", "1")
+    monkeypatch.setenv("TAC_GOVERNED_ADMISSION", "1")
+    monkeypatch.setattr(sys, "argv", _pose_cli(tmp_path))
+    monkeypatch.setattr(pose_train, "lifted_script_path", lambda: nullcontext())
+    called: dict[str, argparse.Namespace] = {}
+
+    def fake_run(args: argparse.Namespace) -> dict[str, bool]:
+        called["args"] = args
+        return {"ok": True}
+
+    monkeypatch.setattr(pose_train, "run", fake_run)
+
+    pose_train.main()
+
+    assert called["args"].save == tmp_path / "save.pt"

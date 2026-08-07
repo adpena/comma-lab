@@ -32,6 +32,7 @@ from typing import Any
 import numpy as np
 import torch
 
+from tac.admission_guard import assert_governed_admission
 from tac.pr130_lift import SOURCE_REPO_HEAD, SOURCE_REPO_ROOT
 from tac.pr130_lift.mlx_semantic_renderer import (
     MlxSemanticConfig,
@@ -58,6 +59,10 @@ DEFAULT_INIT = Path(
 CONTEST_DENOMINATOR_BYTES = 37_545_489
 GIB = 1024.0 ** 3
 MEM_PROBE_RECEIPT_SCHEMA = "ddm_mx1_load_phase_peak_receipt.v1"
+MX1B_MEM_PROBE_RESULT = REPO / ".omx/research/ddm_mx1b_20260806/mem_probe_cpu_result.json"
+METAL_UNKNOWN_MARGIN_GIB = 65.0
+ROW1_SAFE_RUN_RSS_MB = 90_000
+ROW1_SAFE_RUN_TIMEOUT_S = 28_800
 
 
 def _sha256_file(path: Path) -> str:
@@ -76,6 +81,66 @@ def _gib_or_none(num_bytes: int | float | None) -> float | None:
     if num_bytes is None:
         return None
     return round(float(num_bytes) / GIB, 6)
+
+
+def _safe_label_token(text: str) -> str:
+    return "".join(ch if ch.isalnum() else "_" for ch in text).strip("_")
+
+
+def _derive_row1_safe_run_projection() -> dict[str, Any]:
+    measured_cpu_peak_gib: float | None = None
+    source_status = "missing"
+    try:
+        payload = json.loads(MX1B_MEM_PROBE_RESULT.read_text(encoding="utf-8"))
+        measured_cpu_peak_gib = float(
+            payload["mem_probe"]["receipt"]["peak"]["peak_rss_gib"]
+        )
+        source_status = "read"
+    except (OSError, KeyError, TypeError, ValueError, json.JSONDecodeError):
+        source_status = "unavailable"
+    if measured_cpu_peak_gib is None:
+        projected_gib = METAL_UNKNOWN_MARGIN_GIB
+        arithmetic = (
+            f"{METAL_UNKNOWN_MARGIN_GIB:.6f} GiB Metal/model/scorer/load-step unknown margin; "
+            f"mx1b CPU-side peak unavailable at {MX1B_MEM_PROBE_RESULT}"
+        )
+    else:
+        projected_gib = measured_cpu_peak_gib + METAL_UNKNOWN_MARGIN_GIB
+        arithmetic = (
+            f"{measured_cpu_peak_gib:.6f} GiB measured CPU-side peak + "
+            f"{METAL_UNKNOWN_MARGIN_GIB:.6f} GiB Metal/model/scorer/load-step unknown margin = "
+            f"{projected_gib:.6f} GiB"
+        )
+    return {
+        "schema": "ddm_mx1_row1_safe_run_projection.v1",
+        "axis": "[load-phase memory telemetry projection; score_claim=false]",
+        "score_claim": False,
+        "mx1b_mem_probe_result": str(MX1B_MEM_PROBE_RESULT),
+        "mx1b_source_status": source_status,
+        "measured_cpu_peak_gib": measured_cpu_peak_gib,
+        "metal_unknown_margin_gib": METAL_UNKNOWN_MARGIN_GIB,
+        "projected_gib": round(projected_gib, 6),
+        "arithmetic": arithmetic,
+        "safe_run_rss_mb": ROW1_SAFE_RUN_RSS_MB,
+        "safe_run_timeout_s": ROW1_SAFE_RUN_TIMEOUT_S,
+    }
+
+
+def _wrap_fire_argv(raw_argv: list[str], *, label: str, projection: dict[str, Any]) -> list[str]:
+    return [
+        ".venv/bin/python",
+        "tools/safe_run.py",
+        "--rss-mb",
+        str(ROW1_SAFE_RUN_RSS_MB),
+        "--timeout",
+        str(ROW1_SAFE_RUN_TIMEOUT_S),
+        "--projected-gib",
+        f"{float(projection['projected_gib']):.6f}",
+        "--label",
+        label,
+        "--",
+        *raw_argv,
+    ]
 
 
 def _process_rss_bytes() -> int | None:
@@ -1042,6 +1107,16 @@ def launch_ticket(args: argparse.Namespace, smoke: dict[str, Any] | None, mlx_pr
 
     cap_cache = args.target_cache  # GT labels as tokens AND targets
     veh_cache = args.input_cache   # public-wire (tq1c) labels as tokens, GT targets
+    safe_run_projection = _derive_row1_safe_run_projection()
+
+    def _fire_argv(pairs: int, seed: int, input_cache: Path, subdir: str) -> list[str]:
+        raw = _arm_argv(pairs, seed, input_cache, subdir)
+        return _wrap_fire_argv(
+            raw,
+            label=f"ddm_mx1_row1_{_safe_label_token(subdir)}",
+            projection=safe_run_projection,
+        )
+
     return {
         "schema": "ddm_mx1_row1_launch_ticket.v2_two_arm",
         "score_claim": False,
@@ -1049,10 +1124,21 @@ def launch_ticket(args: argparse.Namespace, smoke: dict[str, Any] | None, mlx_pr
         "mem_probe_receipt_path": str(mem_probe_receipt_path),
         "mem_probe_command": mem_probe_command,
         "scheduling": (
-            "SEQUENTIAL — one Metal arm at a time (operator machine OOM 2026-08-06); "
+            "SEQUENTIAL one-Metal-fire-at-a-time — operator machine OOM 2026-08-06; "
             "ARM-VEH fires only after ARM-CAP completes or a composed measured-peak "
             "projection shows headroom under 116GiB"
         ),
+        "fire_protocol": {
+            "pre_fire_liveness_proof": (
+                "A SUCCESSFUL enumerator is required before every fire. If pgrep returns rc>=2, "
+                "run ps axo command; if ps also fails or is denied (rc!=0), REFUSE. Never map "
+                "a denied enumerator to 0 candidates."
+            ),
+            "rr8_f1_refuse_condition": "pgrep rc>=2 AND ps rc!=0",
+            "anti_pattern": "no `|| true` around the fallback enumerator; denied ps is not quiescence",
+            "scheduling": "SEQUENTIAL one-Metal-fire-at-a-time",
+        },
+        "safe_run_projection": safe_run_projection,
         "source_repo_root": SOURCE_REPO_ROOT,
         "source_repo_head": SOURCE_REPO_HEAD,
         "owned_run_root": str(args.run_dir),
@@ -1066,10 +1152,10 @@ def launch_ticket(args: argparse.Namespace, smoke: dict[str, Any] | None, mlx_pr
             "vehicle reach); NO n120 dispatch until the scaled arm is explicitly selected from "
             "the two n32 CPU-torch verdicts; MLX telemetry is research-signal only"
         ),
-        "argv_n32_arm_cap": _arm_argv(32, args.seed, cap_cache, "launch_arm_cap/n32_metal"),
-        "argv_n32_arm_veh": _arm_argv(32, args.seed, veh_cache, "launch_arm_veh/n32_metal"),
-        "argv_n120_arm_cap": _arm_argv(120, args.seed + 1, cap_cache, "launch_arm_cap/n120_metal"),
-        "argv_n120_arm_veh": _arm_argv(120, args.seed + 1, veh_cache, "launch_arm_veh/n120_metal"),
+        "argv_n32_arm_cap": _fire_argv(32, args.seed, cap_cache, "launch_arm_cap/n32_metal"),
+        "argv_n32_arm_veh": _fire_argv(32, args.seed, veh_cache, "launch_arm_veh/n32_metal"),
+        "argv_n120_arm_cap": _fire_argv(120, args.seed + 1, cap_cache, "launch_arm_cap/n120_metal"),
+        "argv_n120_arm_veh": _fire_argv(120, args.seed + 1, veh_cache, "launch_arm_veh/n120_metal"),
         "verdict_protocol": {
             "axis": "[macOS-MLX research-signal] for train telemetry; frozen CPU-torch SegNet through exact R for d_seg; no contest promotion without upstream/evaluate.py on byte-closed archive",
             "compare_against": {
@@ -1133,6 +1219,8 @@ def main() -> None:
     args = parser.parse_args()
     if args.mem_probe_steps <= 0:
         parser.error("--mem-probe-steps must be positive")
+    if args.mode in {"mlx-train", "torch-smoke"}:
+        assert_governed_admission(f"ddm_mx1_pr130_semantic_renderer:{args.mode}")
 
     result: dict[str, Any] = {
         "schema": "ddm_mx1_pr130_semantic_renderer_driver.v1",

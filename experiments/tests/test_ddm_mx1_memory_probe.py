@@ -2,9 +2,11 @@
 from __future__ import annotations
 
 import json
+import sys
 from argparse import Namespace
 from pathlib import Path
 
+import pytest
 import torch
 
 from experiments import ddm_mx1_pr130_semantic_renderer as mx1
@@ -117,6 +119,9 @@ def test_launch_ticket_requires_mem_probe_and_sequential_scheduling(tmp_path: Pa
         "argv_n120_arm_veh",
     ):
         assert key in ticket
+        assert ticket[key][:2] == [".venv/bin/python", "tools/safe_run.py"]
+        assert "--projected-gib" in ticket[key]
+        assert "--" in ticket[key]
         assert "--mem-budget-gb" in ticket[key]
         assert "12.5" in ticket[key]
     assert ticket["mem_probe_command"][:4] == [
@@ -126,3 +131,89 @@ def test_launch_ticket_requires_mem_probe_and_sequential_scheduling(tmp_path: Pa
         "mem-probe",
     ]
     assert "--mem-probe-steps" in ticket["mem_probe_command"]
+    assert ticket["safe_run_projection"]["schema"] == "ddm_mx1_row1_safe_run_projection.v1"
+    assert ticket["safe_run_projection"]["projected_gib"] >= mx1.METAL_UNKNOWN_MARGIN_GIB
+    assert ticket["fire_protocol"]["rr8_f1_refuse_condition"] == "pgrep rc>=2 AND ps rc!=0"
+
+
+def test_mx1_heavy_mode_refuses_raw_when_enforced(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("TAC_ADMISSION_ENFORCE", "1")
+    monkeypatch.delenv("TAC_GOVERNED_ADMISSION", raising=False)
+    monkeypatch.delenv("TAC_ADMISSION_BYPASS_OK", raising=False)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "ddm_mx1_pr130_semantic_renderer.py",
+            "--mode",
+            "mlx-train",
+            "--out",
+            str(tmp_path / "raw_refused.json"),
+        ],
+    )
+
+    with pytest.raises(SystemExit) as excinfo:
+        mx1.main()
+
+    assert excinfo.value.code == 7
+
+
+def test_mx1_heavy_mode_governed_env_passes_guard(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("TAC_ADMISSION_ENFORCE", "1")
+    monkeypatch.setenv("TAC_GOVERNED_ADMISSION", "1")
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "ddm_mx1_pr130_semantic_renderer.py",
+            "--mode",
+            "torch-smoke",
+            "--out",
+            str(tmp_path / "governed.json"),
+        ],
+    )
+    monkeypatch.setattr(mx1, "mlx_device_probe", lambda *, device: {"status": "blocked"})
+    monkeypatch.setattr(
+        mx1,
+        "run_torch_smoke",
+        lambda args: {"status": "passed", "seconds_per_step": 0.001},
+    )
+    monkeypatch.setattr(
+        mx1,
+        "launch_ticket",
+        lambda args, smoke, mlx_probe: {"schema": "test_ticket"},
+    )
+    written: dict[str, object] = {}
+    monkeypatch.setattr(mx1, "write_json", lambda path, payload: written.update(payload))
+
+    mx1.main()
+
+    assert written["torch_smoke"]["status"] == "passed"
+
+
+def test_mx1_light_probe_mode_ungated_when_enforced(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("TAC_ADMISSION_ENFORCE", "1")
+    monkeypatch.delenv("TAC_GOVERNED_ADMISSION", raising=False)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "ddm_mx1_pr130_semantic_renderer.py",
+            "--mode",
+            "probe",
+            "--out",
+            str(tmp_path / "probe.json"),
+        ],
+    )
+    monkeypatch.setattr(mx1, "mlx_device_probe", lambda *, device: {"status": "blocked"})
+    monkeypatch.setattr(
+        mx1,
+        "launch_ticket",
+        lambda args, smoke, mlx_probe: {"schema": "test_ticket"},
+    )
+    written: dict[str, object] = {}
+    monkeypatch.setattr(mx1, "write_json", lambda path, payload: written.update(payload))
+
+    mx1.main()
+
+    assert written["mode"] == "probe"

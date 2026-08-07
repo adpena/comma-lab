@@ -88474,6 +88474,98 @@ def check_axis_solved_claim_has_pipeline_validation(
     return violations
 
 
+_ADMISSION_GUARD_WAIVER_RE = re.compile(
+    r"#\s*ADMISSION_GUARD_WAIVED:(?P<reason>.+)$", re.IGNORECASE
+)
+_ADMISSION_GUARD_WAIVER_PLACEHOLDERS = {
+    "", "todo", "tbd", "placeholder", "<reason>", "<rationale>", "reason", "rationale",
+}
+_GPU_DEVICE_TOKENS = ("gpu", "cuda", "mps", "metal")
+
+
+def _admission_guard_waiver_valid(text: str) -> bool:
+    for line in text.splitlines():
+        match = _ADMISSION_GUARD_WAIVER_RE.search(line)
+        if match is None:
+            continue
+        reason = match.group("reason").strip()
+        if len(reason) >= 12 and reason.lower() not in _ADMISSION_GUARD_WAIVER_PLACEHOLDERS:
+            return True
+    return False
+
+
+def _literal_string_values(node: ast.AST) -> list[str]:
+    if isinstance(node, ast.Constant) and isinstance(node.value, str):
+        return [node.value]
+    if isinstance(node, (ast.List, ast.Tuple, ast.Set)):
+        values: list[str] = []
+        for item in node.elts:
+            values.extend(_literal_string_values(item))
+        return values
+    return []
+
+
+def _argparse_add_argument_specs(tree: ast.AST) -> list[tuple[list[str], list[str]]]:
+    specs: list[tuple[list[str], list[str]]] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        if not isinstance(node.func, ast.Attribute) or node.func.attr != "add_argument":
+            continue
+        flags: list[str] = []
+        details: list[str] = []
+        for arg in node.args:
+            values = _literal_string_values(arg)
+            flags.extend(values)
+            details.extend(values)
+        for keyword in node.keywords:
+            if keyword.arg in {"choices", "default", "help", "metavar"}:
+                details.extend(_literal_string_values(keyword.value))
+        specs.append((flags, details))
+    return specs
+
+
+def _path_implies_train_entrypoint(entry: Path, root: Path) -> bool:
+    rel = entry.relative_to(root).as_posix()
+    if rel.startswith("src/tac/") and entry.name.startswith("train"):
+        return True
+    if rel.startswith("experiments/") and entry.parent == root / "experiments":
+        return entry.name.startswith("train")
+    return False
+
+
+def _argparse_gpu_train_entrypoint(entry: Path, root: Path, text: str) -> bool:
+    if "argparse" not in text or "add_argument" not in text:
+        return False
+    try:
+        tree = ast.parse(text)
+    except SyntaxError:
+        return False
+    specs = _argparse_add_argument_specs(tree)
+    has_device_arg = False
+    device_mentions_gpu = False
+    mode_mentions_train = _path_implies_train_entrypoint(entry, root)
+    for flags, details in specs:
+        lowered_details = [item.lower() for item in details]
+        if "--mode" in flags and any("train" in item for item in lowered_details):
+            mode_mentions_train = True
+        if "--device" in flags:
+            has_device_arg = True
+            if any(
+                token in item
+                for item in lowered_details
+                for token in _GPU_DEVICE_TOKENS
+            ):
+                device_mentions_gpu = True
+    if mode_mentions_train and has_device_arg and device_mentions_gpu:
+        return True
+    if mode_mentions_train and has_device_arg and '"gpu"' in text:
+        return True
+    if mode_mentions_train and has_device_arg and "'gpu'" in text:
+        return True
+    return False
+
+
 def check_heavy_witness_trainers_call_admission_guard(
     *, repo_root: Path | str | None = None, strict: bool = False, verbose: bool = False
 ) -> list[str]:
@@ -88482,37 +88574,56 @@ def check_heavy_witness_trainers_call_admission_guard(
     admission path (the P0 machine-crash gate: a concurrent >128 GB run CRASHED the box) fails
     CLOSED when enforce is armed.
 
-    Scans ``experiments/train_*witness*realized_through_R*.py`` (the witness trainers) AND — as of
+    Scans ``experiments/train_*witness*realized_through_R*.py`` (the witness trainers) AND - as of
     the 2026-07-06 memory-safety whole-subsystem review — the ``experiments/train_substrate_*.py``
     family, which is now IN scope: substrate trainers are paid-dispatch-class heavy entrypoints
     and were a carved-out blind spot in the admission-guard coverage. WARN-ONLY: the substrate
     family's live warn count (~104 at in-scoping) is the VISIBLE backlog for a follow-up wiring
     campaign, not a carve-out — per CLAUDE.md "'Off' is a tracked queue, never a forgotten
-    default". Same-line waiver: ``# ADMISSION_GUARD_WAIVED:<rationale>`` (for a genuinely-light
-    entrypoint that never allocates heavy)."""
+    default".
+
+    2026-08-07 class-fix (rr8-F3): the detection vocabulary also covers top-level
+    ``experiments/*.py`` and ``src/tac/**/train*.py`` entrypoints whose argparse surface exposes
+    a train mode plus a GPU/Metal/CUDA/MPS device choice. This catches lifted entrypoints whose
+    names do not start with ``train_``. Same-line waiver:
+    ``# ADMISSION_GUARD_WAIVED:<rationale>`` (for a genuinely-light entrypoint that never
+    allocates heavy)."""
     root = Path(repo_root or REPO_ROOT)
     exp = root / "experiments"
+    src_tac = root / "src" / "tac"
     violations: list[str] = []
     scanned = 0
     scan_paths: list[Path] = []
+    legacy_paths: set[Path] = set()
     if exp.is_dir():
-        scan_paths = sorted(
+        legacy_paths = (
             set(exp.glob("train_*witness*realized_through_R*.py"))
             | set(exp.glob("train_substrate_*.py"))
         )
+        scan_paths = sorted(
+            legacy_paths
+            | set(exp.glob("*.py"))
+        )
+    if src_tac.is_dir():
+        scan_paths = sorted(set(scan_paths) | set(src_tac.glob("**/train*.py")))
     if scan_paths:
         for entry in scan_paths:
             if not entry.is_file():
                 continue
             rel = entry.relative_to(root).as_posix()
+            if "/tests/" in rel or entry.name.startswith("test_"):
+                continue
             try:
                 text = entry.read_text(encoding="utf-8", errors="replace")
             except OSError:
                 continue
+            in_scope = entry in legacy_paths or _argparse_gpu_train_entrypoint(entry, root, text)
+            if not in_scope:
+                continue
             scanned += 1
             if "assert_governed_admission" in text:
                 continue
-            if any("ADMISSION_GUARD_WAIVED:" in ln for ln in text.splitlines()):
+            if _admission_guard_waiver_valid(text):
                 continue
             violations.append(
                 f"{rel}: heavy trainer entrypoint does not call assert_governed_admission() in "
@@ -88525,10 +88636,10 @@ def check_heavy_witness_trainers_call_admission_guard(
         print(
             f"  [catalog-254] check_heavy_witness_trainers_call_admission_guard: "
             f"{len(violations)} violation(s) ({scanned} heavy trainer(s) scanned; "
-            f"witness + substrate families)"
+            f"witness + substrate + argparse gpu/train entrypoints)"
             if violations else
             f"  [catalog-254] check_heavy_witness_trainers_call_admission_guard: OK "
-            f"({scanned} heavy trainer(s) scanned; witness + substrate families)")
+            f"({scanned} heavy trainer(s) scanned; witness + substrate + argparse gpu/train entrypoints)")
     if strict and violations:
         raise PreflightError(
             "check_heavy_witness_trainers_call_admission_guard found "

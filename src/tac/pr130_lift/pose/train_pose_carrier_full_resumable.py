@@ -19,18 +19,16 @@ from __future__ import annotations
 
 import argparse
 import json
-import math
 import sys
 from pathlib import Path
 from typing import Any
 
 import numpy as np
 import torch
-import torch.nn.functional as F
 from safetensors.torch import load_file
 
+from tac.admission_guard import assert_governed_admission
 from tac.pr130_lift.pose.source_loader import lifted_script_path, load_lifted_module
-
 
 N_TOTAL_PAIRS = 600
 
@@ -493,7 +491,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             record = {
                 "step": step,
                 "phase": "full_quantized",
-                "scope_pairs": int(len(active_pair_ids)),
+                "scope_pairs": len(active_pair_ids),
                 **summary,
             }
             history.append(record)
@@ -508,7 +506,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                     "weight_min": float(sampling_weights.min()),
                     "weight_max": float(sampling_weights.max()),
                     "weight_mean": float(sampling_weights.mean()),
-                    "scope_pairs": int(len(active_pair_ids)),
+                    "scope_pairs": len(active_pair_ids),
                 }), flush=True)
             latest_path = args.save.with_name(args.save.stem + ".latest.pt")
             latest_path.parent.mkdir(parents=True, exist_ok=True)
@@ -620,6 +618,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
 
 def main() -> None:
     args = parse_args()
+    assert_governed_admission("pr130_pose_carrier_full_resumable")
     with lifted_script_path():
         run(args)
 
