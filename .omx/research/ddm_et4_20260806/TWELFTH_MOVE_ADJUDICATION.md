@@ -24,7 +24,7 @@ n600, inflate rc=0 in 255.3 s, 3,662,409,600 raw bytes out (full-population comp
 
 1. **The exact within-CVP solve DELIVERS on seg through the real archive path**: d_seg 0.0043054 →
    0.0036416 realized through byte-close → inflate → n600 evaluate. First measured proof at this base
-   that the solver axis is not the blocker — ≈78,304 net flips fixed (6.638e-4 × 196,608 × 600).
+   that the solver axis is not the blocker — 78,302 net flips fixed (receipt integer, final_stage_repaired.log net_flip_reduction; the rounded d_seg-derived reconstruction 6.638e-4 × 196,608 × 600 ≈ 78,304 agrees to 2 flips — RR8-F4 provenance fix: the receipt integer is authoritative).
 2. **W break-even independently reproduced**: band-priced cost of those same flips = 78,304 ×
    1.27310821533 = 99,689 B → rate +0.066379 S = exactly the seg gain. (W is the break-even constant
    by construction; the receipt closes the loop to 6 decimals.)
