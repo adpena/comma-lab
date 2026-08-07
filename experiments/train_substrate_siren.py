@@ -1404,6 +1404,8 @@ SIREN_SUBSTRATE_CONTRACT = SubstrateContract(
 
 def main(argv: list[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
+    from tac.admission_guard import assert_governed_admission
+    assert_governed_admission("train_substrate_siren")
     if not args.smoke:
         require_train_substrate_siren_contract(args.dispatch_contract)
     if args.smoke:

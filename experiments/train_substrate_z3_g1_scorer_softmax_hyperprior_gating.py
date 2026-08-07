@@ -1265,6 +1265,8 @@ def _full_main(args: argparse.Namespace) -> int:
 
 def main(argv: list[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
+    from tac.admission_guard import assert_governed_admission
+    assert_governed_admission("train_substrate_z3_g1_scorer_softmax_hyperprior_gating")
     _validate_full_cpu_flags(args)
     if args.device == "mps":
         raise SystemExit(

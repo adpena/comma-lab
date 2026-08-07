@@ -67,6 +67,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
+    from tac.admission_guard import assert_governed_admission
+    assert_governed_admission("train_cnerv_as_renderer")
 
     if args.auth_eval:
         if args.phase_b_auth_memo is None:

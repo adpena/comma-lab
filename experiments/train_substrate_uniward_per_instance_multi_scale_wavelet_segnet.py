@@ -694,6 +694,8 @@ def _full_main(args: argparse.Namespace) -> int:
 def main(argv: list[str] | None = None) -> int:
     parser = _build_argparser()
     args = parser.parse_args(argv)
+    from tac.admission_guard import assert_governed_admission
+    assert_governed_admission("train_substrate_uniward_per_instance_multi_scale_wavelet_segnet")
 
     mode = _resolve_trainer_mode(args)
     print(f"[uniward-pims] trainer_mode={mode}", file=sys.stderr)

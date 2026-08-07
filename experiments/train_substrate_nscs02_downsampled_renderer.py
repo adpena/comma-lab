@@ -910,6 +910,8 @@ def _full_main(args: argparse.Namespace) -> int:
 def main(argv: list[str] | None = None) -> int:
     parser = _build_parser()
     args = parser.parse_args(argv)
+    from tac.admission_guard import assert_governed_admission
+    assert_governed_admission("train_substrate_nscs02_downsampled_renderer")
     _validate_full_cpu_flags(args)
     if args.smoke:
         return _smoke_main(args)

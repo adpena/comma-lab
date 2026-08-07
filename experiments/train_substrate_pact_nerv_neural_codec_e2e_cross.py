@@ -578,6 +578,8 @@ PACT_NERV_NCEC_SUBSTRATE_CONTRACT = SubstrateContract(
 @register_substrate(PACT_NERV_NCEC_SUBSTRATE_CONTRACT)
 def main(argv: list[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
+    from tac.admission_guard import assert_governed_admission
+    assert_governed_admission("train_substrate_pact_nerv_neural_codec_e2e_cross")
     if args.smoke:
         return _smoke_main(args)
     return _full_main(args)

@@ -502,6 +502,8 @@ def _resolve_main(args: argparse.Namespace) -> int:
 def main(argv: list[str] | None = None) -> int:
     parser = _build_parser()
     args = parser.parse_args(argv)
+    from tac.admission_guard import assert_governed_admission
+    assert_governed_admission("train_substrate_tishby_ib_pure")
     return _resolve_main(args)
 
 

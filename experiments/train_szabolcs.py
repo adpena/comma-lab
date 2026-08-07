@@ -181,6 +181,8 @@ def upscale_to_camera(rgb_low: torch.Tensor) -> torch.Tensor:
 
 def main() -> int:
     args = parse_args()
+    from tac.admission_guard import assert_governed_admission
+    assert_governed_admission("train_szabolcs")
     if args.smoke:
         args.total_epochs = min(args.total_epochs, 5)
         args.max_frames = min(args.max_frames, 8)

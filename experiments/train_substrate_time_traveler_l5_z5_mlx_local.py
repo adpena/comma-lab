@@ -604,6 +604,8 @@ def _build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
+    from tac.admission_guard import assert_governed_admission
+    assert_governed_admission("train_substrate_time_traveler_l5_z5_mlx_local")
     if args.full and args.smoke:
         print(
             "ERROR: --full and --smoke are mutually exclusive.",

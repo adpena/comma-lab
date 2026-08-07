@@ -936,6 +936,8 @@ PR101_LC_V2_CLONE_ENHANCED_CURRICULUM_SUBSTRATE_CONTRACT = SubstrateContract(
 def main(argv: list[str] | None = None) -> int:
     parser = _build_parser()
     args = parser.parse_args(argv)
+    from tac.admission_guard import assert_governed_admission
+    assert_governed_admission("train_substrate_pr101_lc_v2_clone_enhanced_curriculum")
     args.output_dir = Path(args.output_dir)
     args.output_dir.mkdir(parents=True, exist_ok=True)
 

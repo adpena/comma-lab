@@ -1592,6 +1592,8 @@ def _enforce_eval_roundtrip(args) -> None:
 
 def main() -> None:
     args = parse_args()
+    from tac.admission_guard import assert_governed_admission
+    assert_governed_admission("train_distill")
 
     # Build config from args
     cfg = DistillConfig(

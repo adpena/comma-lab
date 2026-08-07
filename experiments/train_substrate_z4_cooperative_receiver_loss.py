@@ -1087,6 +1087,8 @@ def _full_main(args: argparse.Namespace) -> int:
 
 def main(argv: list[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
+    from tac.admission_guard import assert_governed_admission
+    assert_governed_admission("train_substrate_z4_cooperative_receiver_loss")
     _validate_full_cpu_flags(args)
     if args.smoke:
         return _smoke_main(args)

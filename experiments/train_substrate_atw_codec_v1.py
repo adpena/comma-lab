@@ -657,6 +657,8 @@ def _sha256_first16(data: bytes) -> str:
 def main(argv: list[str] | None = None) -> int:
     parser = _build_parser()
     args = parser.parse_args(argv)
+    from tac.admission_guard import assert_governed_admission
+    assert_governed_admission("train_substrate_atw_codec_v1")
     if args.smoke:
         return _smoke_main(args)
     return _full_main(args)

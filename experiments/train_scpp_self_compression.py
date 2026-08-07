@@ -727,6 +727,8 @@ def assert_cuda_or_explicit_cpu(args: argparse.Namespace) -> torch.device:
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
+    from tac.admission_guard import assert_governed_admission
+    assert_governed_admission("train_scpp_self_compression")
 
     # Refuse /tmp paths per CLAUDE.md "Forbidden /tmp paths"
     if args.output_dir.startswith("/tmp") or args.output_dir.startswith("/private/tmp"):

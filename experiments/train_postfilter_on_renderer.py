@@ -175,6 +175,8 @@ def _enforce_eval_roundtrip(args) -> None:
 
 def main() -> None:
     args = parse_args()
+    from tac.admission_guard import assert_governed_admission
+    assert_governed_admission("train_postfilter_on_renderer")
 
     if args.smoke:
         args.epochs = 200

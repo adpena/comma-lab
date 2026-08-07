@@ -2276,6 +2276,8 @@ def _activate_yuv6_mode_t1(
 
 def main() -> int:
     args = parse_args()
+    from tac.admission_guard import assert_governed_admission
+    assert_governed_admission("train_paradigm_delta_epsilon_zeta_track1_balle_endtoend")
     if args.auth_eval:
         refuse_phase1_scaffold_path("--auth-eval")
     if not args.smoke and PHASE1_SCAFFOLD_ONLY and not args.enable_scorer_domain_loss:

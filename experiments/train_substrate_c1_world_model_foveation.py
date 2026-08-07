@@ -682,6 +682,8 @@ C1_WORLD_MODEL_FOVEATION_SUBSTRATE_CONTRACT = SubstrateContract(
 
 def main(argv: list[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
+    from tac.admission_guard import assert_governed_admission
+    assert_governed_admission("train_substrate_c1_world_model_foveation")
     _validate_full_cpu_flags(args)
     if args.smoke:
         return _smoke_main(args)

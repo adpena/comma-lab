@@ -217,6 +217,8 @@ def _build_pair_tensors(mask_classes: torch.Tensor, gt_frames):
 
 def main() -> int:
     args = _parse_args()
+    from tac.admission_guard import assert_governed_admission
+    assert_governed_admission("train_segmap_film_canvas")
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     _seed_all(args.seed)

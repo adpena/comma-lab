@@ -168,6 +168,8 @@ def generate_renderer_frames(
 
 def main() -> None:
     args = parse_args()
+    from tac.admission_guard import assert_governed_admission
+    assert_governed_admission("train_mini_scorer")
     t0 = time.time()
 
     if args.smoke:

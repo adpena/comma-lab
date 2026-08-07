@@ -348,6 +348,8 @@ def _write_class_targets_payload(output_dir: Path, filename: str, targets_module
 
 def main() -> int:
     args = _parse_args()
+    from tac.admission_guard import assert_governed_admission
+    assert_governed_admission("train_segmap")
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 

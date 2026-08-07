@@ -2474,6 +2474,8 @@ PRETRAINED_DRIVING_PRIOR_SUBSTRATE_CONTRACT = SubstrateContract(
 def main() -> int:
     parser = build_argparser()
     args = parser.parse_args()
+    from tac.admission_guard import assert_governed_admission
+    assert_governed_admission("train_substrate_pretrained_driving_prior")
     _validate_full_cpu_flags(args)
     if args.dataset_name in {"comma10k", "comma10k19"}:
         raise SystemExit(

@@ -344,6 +344,8 @@ def _canonical_dir_name_from_relpath(relpath: str) -> str:
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
+    from tac.admission_guard import assert_governed_admission
+    assert_governed_admission("train_t6_balle_uniward_cross_paradigm")
     if args.device == "mps":
         raise SystemExit("[t6] --device mps refused; see CLAUDE.md MPS-is-noise rule")
     if args.auth_eval:

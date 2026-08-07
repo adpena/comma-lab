@@ -351,6 +351,8 @@ def _full_main(args: argparse.Namespace) -> int:
 
 def main(argv: list[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
+    from tac.admission_guard import assert_governed_admission
+    assert_governed_admission("train_substrate_faiss_ivf_pq_residual")
     if args.full:
         return _full_main(args)
     if args.smoke:

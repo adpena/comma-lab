@@ -173,6 +173,8 @@ def _make_synthetic_mnerv_smoke_batch(
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
+    from tac.admission_guard import assert_governed_admission
+    assert_governed_admission("train_mnerv_as_renderer")
     _refuse_auth_eval_without_authorization(args)
     try:
         assert_not_temporary_output_dir(args.output_dir, tool_name="mnerv")

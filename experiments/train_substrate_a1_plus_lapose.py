@@ -1372,6 +1372,8 @@ A1_PLUS_LAPOSE_SUBSTRATE_CONTRACT = SubstrateContract(
 def main(argv: list[str] | None = None) -> int:
     parser = _build_parser()
     args = parser.parse_args(argv)
+    from tac.admission_guard import assert_governed_admission
+    assert_governed_admission("train_substrate_a1_plus_lapose")
     if args.smoke:
         return _smoke_main(args)
     return _full_main(args)

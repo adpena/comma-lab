@@ -382,6 +382,8 @@ def main(argv: list[str] | None = None) -> int:
     import mlx.optimizers as mlx_optim
 
     args = _parse_args(argv)
+    from tac.admission_guard import assert_governed_admission
+    assert_governed_admission("train_substrate_z7_mamba2_v2_mlx")
     args.output_dir.mkdir(parents=True, exist_ok=True)
 
     print(f"[z7-mamba2-v2-mlx] [L1-PROMOTION] FAIR-SHAKE per UNIQUE-AND-COMPLETE-PER-METHOD")

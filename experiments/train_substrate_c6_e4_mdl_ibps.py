@@ -909,6 +909,8 @@ C6_E4_MDL_IBPS_SUBSTRATE_CONTRACT = SubstrateContract(
 
 def main(argv: list[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
+    from tac.admission_guard import assert_governed_admission
+    assert_governed_admission("train_substrate_c6_e4_mdl_ibps")
     _validate_full_cpu_flags(args)
     if args.quick_smoke:
         args.smoke = True

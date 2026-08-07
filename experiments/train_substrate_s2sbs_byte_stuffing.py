@@ -474,6 +474,8 @@ S2SBS_BYTE_STUFFING_SUBSTRATE_CONTRACT = SubstrateContract(
 def main(argv: list[str] | None = None) -> int:
     parser = _build_parser()
     args = parser.parse_args(argv)
+    from tac.admission_guard import assert_governed_admission
+    assert_governed_admission("train_substrate_s2sbs_byte_stuffing")
     if not args.smoke:
         print(
             "[s2sbs] FATAL: full training is not implemented for this L0/L1 "

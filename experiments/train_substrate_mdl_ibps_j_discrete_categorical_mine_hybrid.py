@@ -353,6 +353,8 @@ def _full_main(args: argparse.Namespace) -> int:
 
 def main(argv: list[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
+    from tac.admission_guard import assert_governed_admission
+    assert_governed_admission("train_substrate_mdl_ibps_j_discrete_categorical_mine_hybrid")
     # Explicit `--mode full` selects full MLX score-aware training (the harness
     # path). `--mode full` overrides the smoke default (which is True at L0 per
     # Catalog #326) so the bug-class "smoke default masks full intent" cannot

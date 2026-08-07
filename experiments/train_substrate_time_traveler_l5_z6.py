@@ -2530,6 +2530,8 @@ def _full_main(args: argparse.Namespace) -> int:
 @register_substrate(TIME_TRAVELER_L5_Z6_SUBSTRATE_CONTRACT)
 def main(argv: list[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
+    from tac.admission_guard import assert_governed_admission
+    assert_governed_admission("train_substrate_time_traveler_l5_z6")
     _validate_full_cpu_flags(args)
     if args.smoke:
         return _smoke_main(args)

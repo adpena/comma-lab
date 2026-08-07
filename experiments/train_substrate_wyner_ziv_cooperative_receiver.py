@@ -1095,6 +1095,8 @@ WYNER_ZIV_COOPERATIVE_RECEIVER_SUBSTRATE_CONTRACT = SubstrateContract(
 def main(argv: list[str] | None = None) -> int:
     parser = _build_parser()
     args = parser.parse_args(argv)
+    from tac.admission_guard import assert_governed_admission
+    assert_governed_admission("train_substrate_wyner_ziv_cooperative_receiver")
     _validate_full_cpu_flags(args)
     _full_cpu_banner(args)
     if args.smoke:

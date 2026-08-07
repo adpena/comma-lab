@@ -953,6 +953,8 @@ def _accumulated_pair_step(
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
+    from tac.admission_guard import assert_governed_admission
+    assert_governed_admission("train_levelset_witness_realized_through_R_torch")
     if args.num_pairs <= 0:
         raise ValueError("num-pairs must be positive")
     if args.epochs <= 0:

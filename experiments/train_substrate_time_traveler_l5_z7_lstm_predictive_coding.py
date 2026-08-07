@@ -1095,6 +1095,8 @@ def _full_main(args: argparse.Namespace) -> int:
 def main(argv: list[str] | None = None) -> int:
     parser = _build_argparser()
     args = parser.parse_args(argv)
+    from tac.admission_guard import assert_governed_admission
+    assert_governed_admission("train_substrate_time_traveler_l5_z7_lstm_predictive_coding")
     # Explicit attribute reassignments so preflight dead-resolver gate sees
     # the canonical TIER_1_OPERATOR_REQUIRED_FLAGS-derived argparse names at
     # static analysis time (per comprehensive bug audit cascade 2026-05-26).

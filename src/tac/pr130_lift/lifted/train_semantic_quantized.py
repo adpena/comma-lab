@@ -181,6 +181,8 @@ def main() -> None:
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--save", type=Path, required=True)
     args = parser.parse_args()
+    from tac.admission_guard import assert_governed_admission
+    assert_governed_admission("train_semantic_quantized")
     if not 2 <= args.bits <= 8:
         raise ValueError("--bits must be in [2,8]")
     if not 0 <= args.float_warmup_steps < args.steps:

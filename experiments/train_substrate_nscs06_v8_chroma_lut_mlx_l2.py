@@ -50,6 +50,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--video-path", type=Path, default=Path("upstream/videos/0.mkv"))
     parser.add_argument("--checkpoint-interval-epochs", type=int, default=10)
     args = parser.parse_args(argv)
+    from tac.admission_guard import assert_governed_admission
+    assert_governed_admission("train_substrate_nscs06_v8_chroma_lut_mlx_l2")
 
     try:
         import mlx.core as mx

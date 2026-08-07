@@ -288,6 +288,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
+    from tac.admission_guard import assert_governed_admission
+    assert_governed_admission("train_t10_ib_lagrangian_aux_scorer")
     if args.device == "mps":
         raise SystemExit(
             "[t10] --device mps refused; see CLAUDE.md MPS-is-noise rule "

@@ -66,6 +66,8 @@ def main() -> None:
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--save", type=Path, required=True)
     args = parser.parse_args()
+    from tac.admission_guard import assert_governed_admission
+    assert_governed_admission("train_semantic_full")
 
     torch.manual_seed(args.seed)
     np.random.seed(args.seed)

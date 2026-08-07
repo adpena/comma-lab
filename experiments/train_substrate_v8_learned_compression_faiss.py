@@ -485,6 +485,8 @@ def _full_main(args: argparse.Namespace) -> int:
 
 def main(argv: list[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
+    from tac.admission_guard import assert_governed_admission
+    assert_governed_admission("train_substrate_v8_learned_compression_faiss")
     mode = _resolve_trainer_mode(args)
     print(f"[v8-faiss] resolved trainer mode: {mode}")
     if mode == "smoke":

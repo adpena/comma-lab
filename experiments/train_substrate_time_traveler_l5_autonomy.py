@@ -1703,6 +1703,8 @@ def _full_main(args: argparse.Namespace) -> int:
 def main(argv: list[str] | None = None) -> int:
     parser = _build_parser()
     args = parser.parse_args(argv)
+    from tac.admission_guard import assert_governed_admission
+    assert_governed_admission("train_substrate_time_traveler_l5_autonomy")
     # Catalog #197 coupled-flag validation (must run before _smoke_main /
     # _full_main can be entered with inconsistent --full-cpu state).
     _validate_full_cpu_flags(args)

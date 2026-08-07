@@ -230,6 +230,8 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 def main(argv: list[str] | None = None) -> int:
     _require_mlx()
     args = _parse_args(argv)
+    from tac.admission_guard import assert_governed_admission
+    assert_governed_admission("train_substrate_z6_predictive_coding_mlx")
 
     import mlx.core as mx
     import mlx.nn as mlx_nn

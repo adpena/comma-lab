@@ -755,6 +755,8 @@ def _summary(report: dict[str, Any]) -> dict[str, Any]:
 
 def main(argv: list[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
+    from tac.admission_guard import assert_governed_admission
+    assert_governed_admission("train_substrate_snerv_scorer_loop_local")
     if args.score_loop:
         return _score_loop_main(args)
     raise AssertionError("argparse should require a mode")

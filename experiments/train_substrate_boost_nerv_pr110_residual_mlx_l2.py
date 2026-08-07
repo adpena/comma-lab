@@ -59,6 +59,8 @@ def main(argv: list[str] | None = None) -> int:
                         help="Path to PR110 base archive (L1 follow-up Stage 0 dependency)")
     parser.add_argument("--checkpoint-interval-epochs", type=int, default=10)
     args = parser.parse_args(argv)
+    from tac.admission_guard import assert_governed_admission
+    assert_governed_admission("train_substrate_boost_nerv_pr110_residual_mlx_l2")
 
     try:
         import mlx.core as mx

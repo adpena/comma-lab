@@ -311,6 +311,8 @@ def main(argv: list[str] | None = None) -> int:
         help="Smoke mode: reduces n_pairs to 8 + skips auth_eval per smoke-before-full",
     )
     args = parser.parse_args(argv)
+    from tac.admission_guard import assert_governed_admission
+    assert_governed_admission("train_substrate_cascade_c_prime_frame_1_segnet_waterfill")
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
     t_start = time.time()

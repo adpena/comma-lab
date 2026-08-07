@@ -674,6 +674,8 @@ def _sha256_z5(data: bytes) -> str:
 
 def main(argv: list[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
+    from tac.admission_guard import assert_governed_admission
+    assert_governed_admission("train_substrate_z5_predictive_coding_world_model")
     _validate_full_cpu_flags(args)
     if args.smoke:
         return _smoke_main(args)

@@ -194,6 +194,8 @@ def _activate_differentiable_yuv6():
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
+    from tac.admission_guard import assert_governed_admission
+    assert_governed_admission("train_lane_12_v2_nerv_as_renderer")
     try:
         assert_not_temporary_output_dir(args.output_dir, tool_name="lane_12_v2")
     except ValueError as exc:

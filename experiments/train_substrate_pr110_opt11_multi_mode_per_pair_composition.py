@@ -586,6 +586,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--smoke", action="store_true", default=True)
 
     args = parser.parse_args(argv)
+    from tac.admission_guard import assert_governed_admission
+    assert_governed_admission("train_substrate_pr110_opt11_multi_mode_per_pair_composition")
 
     # Per Catalog #326 mode resolution: PR110_OPT11_TRAINER_MODE > SMOKE_ONLY > default
     # Modes: smoke (L0 SCAFFOLD synthetic) | l1 (L1 real-frame Phase C) | full (council-gated)

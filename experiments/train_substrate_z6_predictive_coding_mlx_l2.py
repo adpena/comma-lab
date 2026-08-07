@@ -48,6 +48,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--video-path", type=Path, default=Path("upstream/videos/0.mkv"))
     parser.add_argument("--checkpoint-interval-epochs", type=int, default=20)
     args = parser.parse_args(argv)
+    from tac.admission_guard import assert_governed_admission
+    assert_governed_admission("train_substrate_z6_predictive_coding_mlx_l2")
 
     # Canonical Z6 imports — substrate-specific (architecture, data, adapter).
     try:

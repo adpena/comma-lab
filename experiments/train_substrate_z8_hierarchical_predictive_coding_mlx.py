@@ -1105,6 +1105,8 @@ def _canonical_quadruple_main(args: argparse.Namespace) -> int:
 
 def main(argv: list[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
+    from tac.admission_guard import assert_governed_admission
+    assert_governed_admission("train_substrate_z8_hierarchical_predictive_coding_mlx")
     if args.smoke:
         return _smoke_main(args)
     if args.canonical_quadruple_binding:

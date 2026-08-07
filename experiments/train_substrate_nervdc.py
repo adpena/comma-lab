@@ -565,6 +565,8 @@ NERVDC_SUBSTRATE_CONTRACT = SubstrateContract(
 @register_substrate(NERVDC_SUBSTRATE_CONTRACT)
 def main(argv: list[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
+    from tac.admission_guard import assert_governed_admission
+    assert_governed_admission("train_substrate_nervdc")
     if args.smoke:
         return _smoke_main(args)
     return _full_main(args)

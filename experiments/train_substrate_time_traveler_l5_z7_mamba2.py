@@ -1945,6 +1945,8 @@ def _full_main(args: argparse.Namespace) -> int:
 def main(argv: list[str] | None = None) -> int:
     parser = _build_argparser()
     args = parser.parse_args(argv)
+    from tac.admission_guard import assert_governed_admission
+    assert_governed_admission("train_substrate_time_traveler_l5_z7_mamba2")
 
     smoke = bool(args.smoke) if isinstance(args.smoke, bool) \
         else str(args.smoke).lower() in ("true", "1", "yes")

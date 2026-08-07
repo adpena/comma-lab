@@ -272,6 +272,8 @@ def _save_state(model: nn.Module, output_dir: Path,
 
 def main() -> int:
     args = parse_args()
+    from tac.admission_guard import assert_governed_admission
+    assert_governed_admission("train_imp_cycle")
     torch.manual_seed(args.seed)
 
     device = torch.device(args.device)

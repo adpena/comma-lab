@@ -163,3 +163,7 @@ def test_ah1_top_tier_backlog_slice_wired():
         "experiments/train_charm_50k_toy_substrate.py",
     ):
         assert rel not in joined
+
+
+def test_ab1_real_repo_admission_backlog_drained():
+    assert _gate(strict=False, verbose=False) == []

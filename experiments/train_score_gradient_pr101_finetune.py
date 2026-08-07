@@ -1388,6 +1388,8 @@ def _activate_yuv6_mode(
 def main() -> int:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
     args = parse_args()
+    from tac.admission_guard import assert_governed_admission
+    assert_governed_admission("train_score_gradient_pr101_finetune")
     device = assert_cuda_or_explicit_cpu(args.device, args.smoke)
     output_dir = Path(args.output).resolve()
     output_dir.mkdir(parents=True, exist_ok=True)

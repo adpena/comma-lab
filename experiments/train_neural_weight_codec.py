@@ -128,6 +128,8 @@ def main() -> None:
     parser.add_argument("--seed", type=int, default=1234)
     parser.add_argument("--log-interval", type=int, default=100)
     args = parser.parse_args()
+    from tac.admission_guard import assert_governed_admission
+    assert_governed_admission("train_neural_weight_codec")
 
     if args.corpus_manifest is None and args.corpus_dir is None:
         raise SystemExit("FATAL: pass either --corpus-dir or --corpus-manifest")

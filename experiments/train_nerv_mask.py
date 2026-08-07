@@ -965,6 +965,8 @@ def main() -> int:
         help="Quantization for shipping; default = profile['nerv_weight_dtype']",
     )
     args = p.parse_args()
+    from tac.admission_guard import assert_governed_admission
+    assert_governed_admission("train_nerv_mask")
 
     if args.profile not in PROFILES:
         raise SystemExit(

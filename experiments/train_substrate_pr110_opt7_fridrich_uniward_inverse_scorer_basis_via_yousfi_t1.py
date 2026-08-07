@@ -693,6 +693,8 @@ def main(argv: list[str] | None = None) -> int:
         help="Override PR110_OPT7_TRAINER_MODE env var (smoke=MLX-LOCAL Phase C, full=paired-CUDA RATIFICATION)",
     )
     args = parser.parse_args(argv)
+    from tac.admission_guard import assert_governed_admission
+    assert_governed_admission("train_substrate_pr110_opt7_fridrich_uniward_inverse_scorer_basis_via_yousfi_t1")
 
     # Per Catalog #326 driver mode hardcode discipline: precedence is
     # (1) CLI --trainer-mode > (2) PR110_OPT7_TRAINER_MODE env var >

@@ -1033,6 +1033,8 @@ def _full_main(args: argparse.Namespace) -> int:
 def main(argv: list[str] | None = None) -> int:
     parser = _build_arg_parser()
     args = parser.parse_args(argv)
+    from tac.admission_guard import assert_governed_admission
+    assert_governed_admission("train_substrate_z3_g1_entropy_coded_v2")
     print(f"[z3g1-v2] starting at {_canon_utc_now_iso()}")
     print(f"[z3g1-v2] git_head_sha = {_canon_git_head_sha()}")
     print(f"[z3g1-v2] hardware_substrate = {_canon_detect_hardware_substrate(axis='cpu', substrate_tag='z3_g1_entropy_coded_v2')}")

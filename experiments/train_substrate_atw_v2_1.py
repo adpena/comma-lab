@@ -385,6 +385,8 @@ def _full_main(args: argparse.Namespace) -> int:
 
 def main(argv: list[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
+    from tac.admission_guard import assert_governed_admission
+    assert_governed_admission("train_substrate_atw_v2_1")
 
     mode = _resolve_trainer_mode(args)
     print(f"[atw_v2_1] resolved trainer mode: {mode}")

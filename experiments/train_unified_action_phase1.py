@@ -409,6 +409,8 @@ def main(argv: Optional[list[str]] = None) -> int:
     parser.add_argument("--parity-tolerance", type=float, default=1e-6)
     parser.add_argument("--output", type=Path, default=None)
     args = parser.parse_args(argv)
+    from tac.admission_guard import assert_governed_admission
+    assert_governed_admission("train_unified_action_phase1")
 
     try:
         result = train_one_run(

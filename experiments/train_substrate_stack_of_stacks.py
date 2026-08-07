@@ -1116,6 +1116,8 @@ def main(argv: list[str] | None = None) -> int:  # AUTH_EVAL_DIRECT_SUBPROCESS_O
     `gate_auth_eval_call` helper on the actual archive bytes.
     """
     args = _build_parser().parse_args(argv)
+    from tac.admission_guard import assert_governed_admission
+    assert_governed_admission("train_substrate_stack_of_stacks")
     output_dir = args.output_dir
     output_dir.mkdir(parents=True, exist_ok=True)
 

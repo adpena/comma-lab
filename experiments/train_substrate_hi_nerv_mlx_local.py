@@ -6284,6 +6284,8 @@ def _receiver_cache_quality_manifest_summary(
 
 def main(argv: list[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
+    from tac.admission_guard import assert_governed_admission
+    assert_governed_admission("train_substrate_hi_nerv_mlx_local")
     # Research-launch opt-out: when an explicit reduced research curriculum
     # budget is supplied, bind it to BOTH --epochs and
     # --pr95-curriculum-total-epochs so the contract's epoch-floor relaxation

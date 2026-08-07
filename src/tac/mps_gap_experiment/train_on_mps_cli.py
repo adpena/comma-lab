@@ -30,6 +30,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
+    from tac.admission_guard import assert_governed_admission
+    assert_governed_admission("train_on_mps_cli")
     metrics = train_on_mps_real_frames(
         output_dir=args.output_dir,
         upstream_dir=args.upstream_dir,
