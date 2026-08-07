@@ -178,6 +178,15 @@ def test_nested_pose_package_init_does_not_select_pose_word_mlx_modules() -> Non
     assert selected == []
 
 
+def test_cb2_repro_pair_targets_are_ordered_subset_of_legacy_selection() -> None:
+    """#983 residual: the repro tool's smaller pair must stay in legacy selection order."""
+    from tools import repro_cb2_pr130_lift_pose_ci_blind_order as repro
+
+    legacy = repro.legacy_pose_token_targets()
+    positions = [legacy.index(target) for target in repro.PAIR_TARGETS]
+    assert positions == sorted(positions)
+
+
 def test_select_ci_blind_tests_empty_staged_selects_nothing() -> None:
     assert preflight_hook._select_ci_blind_tests([]) == []
 
@@ -310,6 +319,79 @@ def test_followon_regrow_step_is_wired_before_preflight() -> None:
     assert "run_followon_regrow_scan(staged_docs)" in main_body
     assert main_body.index("run_followon_regrow_scan(staged_docs)") < main_body.index(
         "rc = run_preflight()")
+
+
+def test_shell_driver_rc_scan_warns_on_implicit_success_after_rc_echo(
+    monkeypatch, tmp_path
+) -> None:
+    monkeypatch.setattr(preflight_hook, "REPO_ROOT", tmp_path)
+    script = tmp_path / "driver.sh"
+    script.write_text(
+        "#!/bin/bash\n"
+        "set -uo pipefail\n"
+        "python final.py\n"
+        "echo \"final rc: $?\"\n",
+        encoding="utf-8",
+    )
+
+    warnings = preflight_hook._shell_driver_rc_receipt_warnings(["driver.sh"])
+    assert len(warnings) == 1
+    assert "no variable exit/return propagates" in warnings[0]
+
+
+def test_shell_driver_rc_scan_warns_on_unconditional_exit_zero(
+    monkeypatch, tmp_path
+) -> None:
+    monkeypatch.setattr(preflight_hook, "REPO_ROOT", tmp_path)
+    script = tmp_path / "driver.sh"
+    script.write_text(
+        "#!/bin/bash\n"
+        "rc=0\n"
+        "python final.py || rc=$?\n"
+        "echo \"final rc=$rc\"\n"
+        "exit 0\n",
+        encoding="utf-8",
+    )
+
+    warnings = preflight_hook._shell_driver_rc_receipt_warnings(["driver.sh"])
+    assert any("unconditional exit 0" in warning for warning in warnings)
+
+
+def test_shell_driver_rc_scan_honors_same_line_waiver(monkeypatch, tmp_path) -> None:
+    monkeypatch.setattr(preflight_hook, "REPO_ROOT", tmp_path)
+    script = tmp_path / "driver.sh"
+    script.write_text(
+        "#!/bin/bash\n"
+        "echo \"status rc=manual-sentinel\" # DRIVER_RC_EXIT0_OK: report-only sentinel\n"
+        "exit 0 # DRIVER_RC_EXIT0_OK: report-only sentinel\n",
+        encoding="utf-8",
+    )
+
+    assert preflight_hook._shell_driver_rc_receipt_warnings(["driver.sh"]) == []
+
+
+def test_shell_driver_rc_scan_accepts_variable_exit(monkeypatch, tmp_path) -> None:
+    monkeypatch.setattr(preflight_hook, "REPO_ROOT", tmp_path)
+    script = tmp_path / "driver.sh"
+    script.write_text(
+        "#!/bin/bash\n"
+        "rc=0\n"
+        "python final.py || rc=$?\n"
+        "echo \"final rc=$rc\"\n"
+        "exit \"$rc\"\n",
+        encoding="utf-8",
+    )
+
+    assert preflight_hook._shell_driver_rc_receipt_warnings(["driver.sh"]) == []
+
+
+def test_shell_driver_rc_scan_is_wired_before_preflight() -> None:
+    src = (preflight_hook.REPO_ROOT / "tools" / "preflight_hook.py").read_text(
+        encoding="utf-8")
+    main_body = src.split("def main()", 1)[1]
+    assert "run_shell_driver_rc_receipt_scan(staged_shell)" in main_body
+    assert main_body.index("run_shell_driver_rc_receipt_scan(staged_shell)") < \
+        main_body.index("rc = run_preflight()")
 
 
 # ---------------------------------------------------------------------------

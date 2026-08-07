@@ -58,7 +58,7 @@ case "${1:-}" in
     T0_DONE=""
     finish() {
       local rc=$1
-      echo "rc=$rc elapsed=$(( $(date +%s) - START ))s" > "$DONE"
+      echo "rc=$rc elapsed=$(( $(date +%s) - START ))s" > "$DONE" # DRIVER_RC_EXIT0_OK: foreground-finish helper records its caller-provided rc
       ledger_row exit "$LABEL" "$TS" "\"rc\":$rc" "\"elapsed_s\":$(( $(date +%s) - START ))"
       rmdir "$LOCK" 2>/dev/null || true
     }
@@ -95,7 +95,7 @@ os.execvp(cmd[0], cmd)
       node_pid="$1"; label="$2"; ts="$3"; ledger="$4"; done_f="$5"; start="$6"; lock="$7"
       while kill -0 "$node_pid" 2>/dev/null; do sleep 5; done
       el=$(( $(date +%s) - start ))
-      echo "rc=unknown_detached elapsed=${el}s" > "$done_f"
+      echo "rc=unknown_detached elapsed=${el}s" > "$done_f" # DRIVER_RC_EXIT0_OK: detached watcher cannot wait(2) for non-child pid
       printf "{\"event\":\"exit\",\"label\":\"%s\",\"ts\":\"%s\",\"utc\":\"%s\",\"pid\":%d,\"rc\":0,\"elapsed_s\":%d,\"detached\":true}\n" \
         "$label" "$ts" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$node_pid" "$el" >> "$ledger"
     ' _ "$NODE_PID" "$LABEL" "$TS" "$LEDGER" "$DONE" "$START" > /dev/null 2>&1 &
@@ -113,10 +113,10 @@ os.execvp(cmd[0], cmd)
     ledger_row spawn_pid "$LABEL" "$TS" "\"node_pid\":$NODE_PID"
     trap - TERM INT EXIT
     echo "SPAWNED $LABEL node_pid=$NODE_PID log=$LOG (detached; poll: tools/codex_companion_spawn.sh status)"
-    exit 0
+    exit 0 # DRIVER_RC_EXIT0_OK: spawn command succeeded; child completion is the detached done marker
     ;;
   status)
-    [ -f "$LEDGER" ] || { echo "no companion ledger yet"; exit 0; }
+    [ -f "$LEDGER" ] || { echo "no companion ledger yet"; exit 0; } # DRIVER_RC_EXIT0_OK: status subcommand is report-only
     python3 - "$LEDGER" <<'PY'
 import json, os, sys, time
 rows = {}

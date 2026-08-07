@@ -96,6 +96,23 @@ def _staged_doc_files() -> list[str]:
     ]
 
 
+def _staged_shell_files() -> list[str]:
+    """Staged shell scripts relative to repo root."""
+    try:
+        out = subprocess.check_output(
+            ["git", "diff", "--cached", "--name-only", "--diff-filter=ACMR"],
+            cwd=REPO_ROOT,
+            text=True,
+        )
+    except subprocess.CalledProcessError:
+        return []
+    return [
+        f
+        for f in out.splitlines()
+        if f.endswith(".sh") and (REPO_ROOT / f).exists()
+    ]
+
+
 def run_ruff_undefined_name(staged: list[str]) -> int:
     """Run ruff on staged .py files, fail on F821 (undefined name) only.
 
@@ -1123,6 +1140,89 @@ def run_followon_regrow_scan(staged_docs: list[str]) -> int:
     return 0
 
 
+_DRIVER_RC_EXIT0_WAIVER = "DRIVER_RC_EXIT0_OK:"
+_DRIVER_RC_ECHO_RE = re.compile(r'(^|;)\s*echo\b.*\brc\s*[:=]')
+_DRIVER_EXIT_ZERO_RE = re.compile(r'(^|;)\s*exit\s+0(\s|;|$)')
+_DRIVER_PROPAGATING_EXIT_RE = re.compile(
+    r'(^|;)\s*(exit|return)\s+'
+    r'(?:"?\$\{?[A-Za-z_][A-Za-z0-9_]*\}?"?|\$\?)(\s|;|$)'
+)
+
+
+def _shell_driver_rc_receipt_warnings(files: list[str]) -> list[str]:
+    """Warn on shell drivers that log rc values but fall through to success.
+
+    This is intentionally conservative and warn-only. The high-cost failure is a
+    detached watcher seeing ``rc=0`` after a driver script merely echoed a failed
+    stage's rc. Same-line ``DRIVER_RC_EXIT0_OK:<reason>`` waives explicit
+    sentinels and intentional fire-order stop exits.
+    """
+    warnings: list[str] = []
+    for rel in files:
+        path = REPO_ROOT / rel
+        try:
+            lines = path.read_text(encoding="utf-8", errors="ignore").splitlines()
+        except OSError as exc:
+            warnings.append(f"{rel}: unreadable ({exc.__class__.__name__})")
+            continue
+        rc_echo_lines = [
+            (idx, line)
+            for idx, line in enumerate(lines, start=1)
+            if _DRIVER_RC_ECHO_RE.search(line)
+            and _DRIVER_RC_EXIT0_WAIVER not in line
+        ]
+        if not rc_echo_lines:
+            continue
+        propagating_exit = any(
+            _DRIVER_PROPAGATING_EXIT_RE.search(line)
+            and _DRIVER_RC_EXIT0_WAIVER not in line
+            for line in lines
+        )
+        for idx, line in enumerate(lines, start=1):
+            if _DRIVER_EXIT_ZERO_RE.search(line) and _DRIVER_RC_EXIT0_WAIVER not in line:
+                warnings.append(
+                    f"{rel}:{idx}: logs rc but has unconditional exit 0; add "
+                    f"exit \"$rc\"/overall rc propagation or same-line "
+                    f"{_DRIVER_RC_EXIT0_WAIVER}<reason>"
+                )
+        if not propagating_exit:
+            first_idx, first_line = rc_echo_lines[0]
+            warnings.append(
+                f"{rel}:{first_idx}: logs rc but no variable exit/return propagates "
+                f"that status; first rc line: {first_line.strip()[:140]}"
+            )
+    return warnings
+
+
+def run_shell_driver_rc_receipt_scan(staged_shell: list[str]) -> int:
+    """Warn-only guard for detached shell drivers that can emit false success receipts."""
+    if os.environ.get("SHELL_DRIVER_RC_RECEIPT_SCAN_ENABLED", "1") == "0":
+        print(
+            "[preflight-hook] shell-driver rc receipt scan DISABLED by env — NOT a pass.",
+            file=sys.stderr,
+        )
+        return 0
+    if not staged_shell:
+        return 0
+    warnings = _shell_driver_rc_receipt_warnings(staged_shell)
+    if warnings:
+        print(
+            f"{YELLOW}[preflight-hook] shell-driver rc receipts: "
+            f"{len(staged_shell)} staged .sh examined, {len(warnings)} warning(s). "
+            f"A detached .done receipt inherits the script exit code, not echoed stage rc.{RST}",
+            file=sys.stderr,
+        )
+        for warning in warnings[:10]:
+            print(f"[preflight-hook]   {warning}", file=sys.stderr)
+        return 0
+    print(
+        f"{GREEN}[preflight-hook] shell-driver rc receipts: {len(staged_shell)} "
+        f"staged .sh examined, no rc fallthrough patterns{RST}",
+        file=sys.stderr,
+    )
+    return 0
+
+
 def run_guarded_constant_frozen_literal_scan(staged: list[str]) -> int:
     """`ddm_gk1` landing 2 — refuse a NEWLY-ADDED frozen output of a live derivation.
 
@@ -1212,6 +1312,7 @@ def run_guarded_constant_frozen_literal_scan(staged: list[str]) -> int:
 def main() -> int:
     staged = _staged_py_files()
     staged_docs = _staged_doc_files()
+    staged_shell = _staged_shell_files()
 
     # Step 1: ruff F821 on staged files only (fast, ~50ms per file)
     rc = run_ruff_undefined_name(staged)
@@ -1255,8 +1356,14 @@ def main() -> int:
     if rc != 0:
         return rc
 
-    # Step 1f: `ddm_gk1` guarded-constant frozen-derivation guard. Same placement
-    # rationale as 1b/1c/1d/1e — before run_preflight(), which early-returns on failure.
+    # Step 1f: rr8-F2 shell-driver receipt guard. Warn-only: a hook cannot infer every
+    # intentional stop marker, but it can expose the false-success receipt class.
+    rc = run_shell_driver_rc_receipt_scan(staged_shell)
+    if rc != 0:
+        return rc
+
+    # Step 1g: `ddm_gk1` guarded-constant frozen-derivation guard. Same placement
+    # rationale as 1b/1c/1d/1e/1f — before run_preflight(), which early-returns on failure.
     rc = run_guarded_constant_frozen_literal_scan(staged)
     if rc != 0:
         return rc
