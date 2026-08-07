@@ -1,0 +1,14 @@
+{
+  "addendum_for": "mx1t_facets_receipts.jsonl + MX1T_FINDINGS.md (ddm_mx1t_20260807)",
+  "reason": "rr16 F1 (ROUND16_FINDINGS.md): committed mx1t receipts omitted cache identity/argv; the binding is LOAD-BEARING (parser-default tq1c->gt replay measures d_seg 0.004567305246988933 vs the committed 0.0010732014973958333 under gt->gt)",
+  "binding": {
+    "input_cache": "/Volumes/VertigoDataTier/pact/ddm_hb1_20260806/inputs/gt_seg_cache.pt",
+    "target_cache": "/Volumes/VertigoDataTier/pact/ddm_hb1_20260806/inputs/gt_seg_cache.pt",
+    "cache_bytes": 943720076,
+    "cache_sha256": "286fe40a2a29aa6950684f43229fce3a4a284ac7ffc65040e7e18953b95787d4",
+    "note": "ARM-CAP is the gt->gt receiver-capacity arm; ALL mx1t facet/tail-average rows were produced under this binding (matches the live fire argv for launch_arm_cap)"
+  },
+  "reproduction": "rr16 reproduced step3250 d_seg 0.0010732014973958333 twice under gt->gt with abs diff 0.0 (bit-identical)",
+  "selection_policy_status": "HOLD released pending rr17 verification of this addendum; K=8 tail-average remains n32 advisory [macOS-CPU advisory], score_claim=false",
+  "written_by": "MAIN 2026-08-07, cure for rr16 F1"
+}
