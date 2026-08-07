@@ -1841,8 +1841,13 @@ def main() -> None:
     elif args.mode == "mem-probe":
         result["mem_probe"] = run_mem_probe(args)
         result["status"] = result["mem_probe"]["status"]
-    result["launch_ticket"] = launch_ticket(args, smoke, mlx_probe)
-    write_json(_ticket_path_for_args(args), result["launch_ticket"])
+    if args.mode == "probe":
+        # RR11-F1: the canonical launch ticket is an immutable fire order. ONLY the
+        # ticket-authoring mode may write it; mem-probe/mlx-train/parity/smoke runs
+        # must never regenerate it (a probe once collapsed ARM-VEH's tq1c cache
+        # discriminator to gt by rewriting the ticket it was supporting).
+        result["launch_ticket"] = launch_ticket(args, smoke, mlx_probe)
+        write_json(_ticket_path_for_args(args), result["launch_ticket"])
     write_json(args.out, result)
     print(json.dumps(result, indent=2, sort_keys=True, default=str))
     if args.mode in {"mlx-parity", "mlx-train"} and mlx_probe["status"] == "blocked":
