@@ -23,6 +23,7 @@ import json
 import math
 import os
 import platform
+import shutil
 import subprocess
 import sys
 import time
@@ -71,6 +72,19 @@ ROW1_SAFE_RUN_RSS_MB = 90_000
 ROW1_SAFE_RUN_TIMEOUT_S = 28_800
 DEFAULT_WIRED_LIMIT_FRACTION = 0.35
 FP1_FLAT_PAINT_FLOOR_D_SEG = 0.008305
+MX1H_STEP1500_AUTHORITY_D_SEG = 0.0010689099629720051
+MX1T_DEFAULT_CHECKPOINT_DIR = Path(
+    ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_cap/n32_metal"
+)
+MX1T_DEFAULT_OUT_DIR = Path(".omx/research/ddm_mx1t_20260807")
+SEG_CLASS_NAMES = ("Road", "Lane", "Undrivable", "Movable", "MyCar")
+MARGIN_BINS: tuple[tuple[str, float, float | None], ...] = (
+    ("0-0.05", 0.0, 0.05),
+    ("0.05-0.1", 0.05, 0.1),
+    ("0.1-0.25", 0.1, 0.25),
+    ("0.25-0.5", 0.25, 0.5),
+    (">0.5", 0.5, None),
+)
 
 
 class MemoryLimitConfigurationError(RuntimeError):
@@ -983,6 +997,784 @@ def _iter_tensor_slices(total: int, chunk_size: int) -> list[tuple[int, int]]:
 
 def _as_float(value: Any) -> float:
     return float(np.asarray(value).reshape(()))
+
+
+def _margin_histogram_empty() -> dict[str, Any]:
+    return {
+        "total": 0,
+        "bins": [{"range": label, "lo": lo, "hi": hi, "count": 0} for label, lo, hi in MARGIN_BINS],
+    }
+
+
+def _margin_histogram_update(hist: dict[str, Any], margins: torch.Tensor, mask: torch.Tensor) -> None:
+    selected = margins[mask]
+    hist["total"] += int(selected.numel())
+    if selected.numel() == 0:
+        return
+    for bucket, (_label, lo, hi) in zip(hist["bins"], MARGIN_BINS, strict=True):
+        if hi is None:
+            count = int((selected >= lo).sum().item())
+        else:
+            count = int(((selected >= lo) & (selected < hi)).sum().item())
+        bucket["count"] += count
+
+
+def _margin_histogram_finalize(hist: dict[str, Any]) -> dict[str, Any]:
+    total = int(hist["total"])
+    return {
+        "total": total,
+        "bins": [
+            {
+                "range": bucket["range"],
+                "lo": bucket["lo"],
+                "hi": bucket["hi"],
+                "count": int(bucket["count"]),
+                "fraction": None if total == 0 else int(bucket["count"]) / total,
+            }
+            for bucket in hist["bins"]
+        ],
+    }
+
+
+def _boundary_band_mask(labels: torch.Tensor) -> torch.Tensor:
+    mask = torch.zeros_like(labels, dtype=torch.bool)
+    mask[:, :, 1:] |= labels[:, :, 1:] != labels[:, :, :-1]
+    mask[:, :, :-1] |= labels[:, :, :-1] != labels[:, :, 1:]
+    mask[:, 1:, :] |= labels[:, 1:, :] != labels[:, :-1, :]
+    mask[:, :-1, :] |= labels[:, :-1, :] != labels[:, 1:, :]
+    return mask
+
+
+def _new_class_accumulators() -> dict[str, np.ndarray]:
+    return {
+        "gt_sites": np.zeros(len(SEG_CLASS_NAMES), dtype=np.int64),
+        "gt_mispredicted": np.zeros(len(SEG_CLASS_NAMES), dtype=np.int64),
+        "pred_sites": np.zeros(len(SEG_CLASS_NAMES), dtype=np.int64),
+        "pred_false_positive": np.zeros(len(SEG_CLASS_NAMES), dtype=np.int64),
+        "confusion": np.zeros((len(SEG_CLASS_NAMES), len(SEG_CLASS_NAMES)), dtype=np.int64),
+    }
+
+
+def _update_class_accumulators(
+    accum: dict[str, np.ndarray],
+    target: torch.Tensor,
+    pred: torch.Tensor,
+) -> None:
+    target_cpu = target.detach().cpu().long()
+    pred_cpu = pred.detach().cpu().long()
+    mismatch_cpu = pred_cpu != target_cpu
+    for class_id in range(len(SEG_CLASS_NAMES)):
+        gt_mask = target_cpu == class_id
+        pred_mask = pred_cpu == class_id
+        accum["gt_sites"][class_id] += int(gt_mask.sum().item())
+        accum["gt_mispredicted"][class_id] += int((gt_mask & mismatch_cpu).sum().item())
+        accum["pred_sites"][class_id] += int(pred_mask.sum().item())
+        accum["pred_false_positive"][class_id] += int((pred_mask & mismatch_cpu).sum().item())
+    flat = (target_cpu.reshape(-1) * len(SEG_CLASS_NAMES) + pred_cpu.reshape(-1)).clamp(
+        min=0,
+        max=len(SEG_CLASS_NAMES) * len(SEG_CLASS_NAMES) - 1,
+    )
+    counts = torch.bincount(flat, minlength=len(SEG_CLASS_NAMES) * len(SEG_CLASS_NAMES))
+    accum["confusion"] += counts.reshape(len(SEG_CLASS_NAMES), len(SEG_CLASS_NAMES)).numpy()
+
+
+def _finalize_class_accumulators(accum: dict[str, np.ndarray]) -> dict[str, Any]:
+    per_class = []
+    for class_id, class_name in enumerate(SEG_CLASS_NAMES):
+        gt_sites = int(accum["gt_sites"][class_id])
+        gt_mispredicted = int(accum["gt_mispredicted"][class_id])
+        pred_sites = int(accum["pred_sites"][class_id])
+        pred_false_positive = int(accum["pred_false_positive"][class_id])
+        per_class.append(
+            {
+                "class_id": class_id,
+                "class_name": class_name,
+                "gt_sites": gt_sites,
+                "gt_mispredicted": gt_mispredicted,
+                "gt_mispredicted_rate": None if gt_sites == 0 else gt_mispredicted / gt_sites,
+                "pred_sites": pred_sites,
+                "pred_false_positive": pred_false_positive,
+                "pred_false_positive_rate": None
+                if pred_sites == 0
+                else pred_false_positive / pred_sites,
+            }
+        )
+    directed = []
+    for gt_id, gt_name in enumerate(SEG_CLASS_NAMES):
+        for pred_id, pred_name in enumerate(SEG_CLASS_NAMES):
+            directed.append(
+                {
+                    "gt_class_id": gt_id,
+                    "gt_class_name": gt_name,
+                    "pred_class_id": pred_id,
+                    "pred_class_name": pred_name,
+                    "pixels": int(accum["confusion"][gt_id, pred_id]),
+                    "is_correct": gt_id == pred_id,
+                }
+            )
+    return {
+        "class_order": [
+            {"class_id": class_id, "class_name": class_name}
+            for class_id, class_name in enumerate(SEG_CLASS_NAMES)
+        ],
+        "class_order_provenance": "CLAUDE.md canonical comma10k order; no luma-sort",
+        "per_class_d_seg": per_class,
+        "directed_confusion_counts": directed,
+    }
+
+
+def _stage_step_from_path(path: Path) -> int:
+    stem = path.stem
+    prefix = "mlx_stage_step"
+    if not stem.startswith(prefix):
+        raise ValueError(f"not an MX1 stage checkpoint name: {path}")
+    return int(stem.removeprefix(prefix))
+
+
+def _parse_int_list(text: str) -> list[int]:
+    return [int(part.strip()) for part in text.split(",") if part.strip()]
+
+
+def _mx1t_copy_checkpoint(src: Path, copy_dir: Path) -> dict[str, Any]:
+    copy_dir.mkdir(parents=True, exist_ok=True)
+    src_sha = _sha256_file(src)
+    dst = copy_dir / src.name
+    status = "copied"
+    if dst.exists() and _sha256_file(dst) == src_sha:
+        status = "reused_existing_copy"
+    else:
+        tmp = dst.with_name(f".{dst.name}.tmp.{os.getpid()}")
+        shutil.copy2(src, tmp)
+        os.replace(tmp, dst)
+    dst_sha = _sha256_file(dst)
+    if dst_sha != src_sha:
+        raise ValueError(f"checkpoint copy sha mismatch for {src}: {src_sha} != {dst_sha}")
+    return {
+        "schema": "ddm_mx1t_checkpoint_copy.v1",
+        "status": status,
+        "copied_at_utc": _utc_now_iso(),
+        "step": _stage_step_from_path(src),
+        "source_path": str(src),
+        "source_bytes": src.stat().st_size,
+        "source_sha256": src_sha,
+        "copy_path": str(dst),
+        "copy_bytes": dst.stat().st_size,
+        "copy_sha256": dst_sha,
+    }
+
+
+def _mx1t_evaluate_checkpoint_facets(
+    *,
+    lifted: Any,
+    checkpoint: Mapping[str, Any],
+    checkpoint_meta: Mapping[str, Any],
+    checkpoint_info: Mapping[str, Any],
+    conditioning: torch.Tensor,
+    target: torch.Tensor,
+    idx: torch.Tensor,
+    pair_ids: list[int],
+    segnet: torch.nn.Module,
+    batch_size: int,
+    previous_mismatch_set: np.ndarray | None,
+    row_kind: str,
+    tail_average: Mapping[str, Any] | None = None,
+) -> tuple[dict[str, Any], np.ndarray]:
+    model = _build_torch_renderer(lifted, checkpoint).to(torch.device("cpu"))
+    per_pair: list[dict[str, Any]] = []
+    total_mismatch = 0
+    total_pixels = 0
+    scorer_batch_shapes: list[list[int]] = []
+    chunk_batch_sizes: list[int] = []
+    mismatch_parts: list[np.ndarray] = []
+    class_accum = _new_class_accumulators()
+    mismatch_hist = _margin_histogram_empty()
+    correct_boundary_hist = _margin_histogram_empty()
+    start_time = time.time()
+    with torch.no_grad():
+        for start, stop in _iter_tensor_slices(len(pair_ids), batch_size):
+            cond_chunk = conditioning[start:stop]
+            target_chunk = target[start:stop]
+            idx_chunk = idx[start:stop]
+            frame_r = lifted.render_for_seg(
+                model,
+                cond_chunk,
+                idx_chunk,
+                exact_path=True,
+            )
+            logits = segnet(frame_r)
+            top2 = torch.topk(logits, k=2, dim=1).values
+            margins = top2[:, 0] - top2[:, 1]
+            pred = logits.argmax(dim=1)
+            mismatch = pred != target_chunk
+            boundary = _boundary_band_mask(target_chunk)
+            _margin_histogram_update(mismatch_hist, margins, mismatch)
+            _margin_histogram_update(correct_boundary_hist, margins, (~mismatch) & boundary)
+            _update_class_accumulators(class_accum, target_chunk, pred)
+            flat = mismatch.reshape(mismatch.shape[0], -1)
+            chunk_pixels = int(flat.shape[1])
+            chunk_counts = flat.sum(dim=1).cpu().numpy().astype(np.int64)
+            scorer_batch_shapes.append(list(frame_r.shape))
+            chunk_batch_sizes.append(int(stop - start))
+            mismatch_parts.append(mismatch.detach().cpu().numpy().astype(np.bool_, copy=False).reshape(-1))
+            for pair_id, count in zip(pair_ids[start:stop], chunk_counts, strict=True):
+                mismatches = int(count)
+                per_pair.append(
+                    {
+                        "pair_id": int(pair_id),
+                        "mismatch_pixels": mismatches,
+                        "pixels": chunk_pixels,
+                        "d_seg": mismatches / max(chunk_pixels, 1),
+                    }
+                )
+                total_mismatch += mismatches
+                total_pixels += chunk_pixels
+            del frame_r, logits, top2, margins, pred, mismatch, boundary, flat
+    elapsed = time.time() - start_time
+    current_mismatch_set = np.concatenate(mismatch_parts) if mismatch_parts else np.zeros(0, dtype=np.bool_)
+    churn: dict[str, Any]
+    if previous_mismatch_set is None:
+        churn = {
+            "status": "not_available_first_checkpoint",
+            "symmetric_difference_pixels": None,
+            "denominator_current_mismatch_pixels": int(current_mismatch_set.sum()),
+            "ratio_vs_current_mismatch": None,
+        }
+    else:
+        if previous_mismatch_set.shape != current_mismatch_set.shape:
+            raise ValueError(
+                "mismatch-set shape changed across checkpoints: "
+                f"{previous_mismatch_set.shape} vs {current_mismatch_set.shape}"
+            )
+        sym = int(np.logical_xor(previous_mismatch_set, current_mismatch_set).sum())
+        denom = int(current_mismatch_set.sum())
+        churn = {
+            "status": "measured",
+            "symmetric_difference_pixels": sym,
+            "denominator_current_mismatch_pixels": denom,
+            "ratio_vs_current_mismatch": None if denom == 0 else sym / denom,
+        }
+    aggregate_dseg = total_mismatch / max(total_pixels, 1)
+    row: dict[str, Any] = {
+        "schema": "ddm_mx1t_checkpoint_facet_row.v1",
+        "status": "passed",
+        "row_kind": row_kind,
+        "axis": "[macOS-CPU advisory torch upstream SegNet]",
+        "score_claim": False,
+        "verdict_scope": "n32 arm-instrument checkpoint-series facets",
+        "host": _host_fingerprint(),
+        "source_repo_head": SOURCE_REPO_HEAD,
+        "source_repo_root": SOURCE_REPO_ROOT,
+        "checkpoint": dict(checkpoint_info),
+        "checkpoint_meta": {
+            "format": checkpoint_meta.get("format"),
+            "step": checkpoint_meta.get("step"),
+            "param_count": checkpoint_meta.get("param_count"),
+            "axis": (checkpoint_meta.get("extra") or {}).get("axis")
+            if isinstance(checkpoint_meta.get("extra"), Mapping)
+            else None,
+            "score_claim": (checkpoint_meta.get("extra") or {}).get("score_claim")
+            if isinstance(checkpoint_meta.get("extra"), Mapping)
+            else None,
+        },
+        "pair_ids": pair_ids,
+        "pair_count": len(pair_ids),
+        "token_batch_shape": list(conditioning.shape),
+        "target_batch_shape": list(target.shape),
+        "segnet_batch_size": batch_size,
+        "segnet_chunk_batch_sizes": chunk_batch_sizes,
+        "scorer_batch_shapes": scorer_batch_shapes,
+        "contest_faithful_roundtrip": "lifted.render_for_seg(..., exact_path=True): bilinear up to 874x1164, uint8 STE, bilinear down to 384x512",
+        "per_pair_d_seg": per_pair,
+        "aggregate_d_seg": aggregate_dseg,
+        "total_mismatch_pixels": total_mismatch,
+        "total_pixels": total_pixels,
+        "margin_histogram_mismatched_pixels": _margin_histogram_finalize(mismatch_hist),
+        "margin_histogram_correct_boundary_band_pixels": _margin_histogram_finalize(correct_boundary_hist),
+        "class_facets": _finalize_class_accumulators(class_accum),
+        "flip_set_churn_vs_previous": churn,
+        "elapsed_seconds": elapsed,
+    }
+    if tail_average is not None:
+        row["tail_average"] = dict(tail_average)
+    history = list(checkpoint_meta.get("history") or [])
+    step = int(checkpoint_meta.get("step") or 0)
+    if history:
+        row["mlx_history_row"] = _history_row_at_step(history, step)
+        proxy_dseg = float(row["mlx_history_row"]["d_seg_batch"])
+        row["comparison_to_mlx_proxy"] = {
+            "mlx_in_training_d_seg_batch": proxy_dseg,
+            "authority_minus_mlx_proxy_d_seg": aggregate_dseg - proxy_dseg,
+            "authority_over_mlx_proxy_d_seg": aggregate_dseg / proxy_dseg if proxy_dseg else None,
+        }
+    return row, current_mismatch_set
+
+
+def _load_average_torch_checkpoint(
+    paths: list[Path],
+    *,
+    lifted: Any,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    if not paths:
+        raise ValueError("tail-average requires at least one checkpoint")
+    loaded = [_load_mlx_npz_checkpoint_for_torch(path, lifted=lifted) for path in paths]
+    configs = [json.dumps(item[0]["config"], sort_keys=True) for item in loaded]
+    if len(set(configs)) != 1:
+        raise ValueError("tail-average checkpoint configs differ")
+    pair_sets = [_checkpoint_pair_ids(item[1]) for item in loaded]
+    if any(pair_ids != pair_sets[0] for pair_ids in pair_sets):
+        raise ValueError("tail-average checkpoint pair_ids differ")
+    names = sorted(loaded[0][0]["state_dict"])
+    state_dict: dict[str, torch.Tensor] = {}
+    for name in names:
+        tensors = [item[0]["state_dict"][name] for item in loaded]
+        shape_set = {tuple(tensor.shape) for tensor in tensors}
+        dtype_set = {tensor.dtype for tensor in tensors}
+        if len(shape_set) != 1 or len(dtype_set) != 1:
+            raise ValueError(f"tail-average tensor mismatch for {name}")
+        if tensors[0].dtype.is_floating_point:
+            state_dict[name] = torch.stack(tensors, dim=0).mean(dim=0).to(dtype=tensors[0].dtype)
+        else:
+            state_dict[name] = tensors[-1].clone()
+    steps = [int(item[1]["step"]) for item in loaded]
+    return (
+        {
+            "config": loaded[0][0]["config"],
+            "state_dict": state_dict,
+        },
+        {
+            "format": "torch_fp32_simple_mean_from_mlx_npz",
+            "step": max(steps),
+            "history": [],
+            "extra": {
+                "pair_ids": pair_sets[0],
+                "score_claim": False,
+                "axis": "[macOS-CPU advisory torch upstream SegNet]",
+            },
+            "param_count": len(state_dict),
+            "member_steps": steps,
+        },
+    )
+
+
+def _hist_fraction(row: Mapping[str, Any], hist_key: str, ranges: set[str]) -> float | None:
+    hist = row.get(hist_key)
+    if not isinstance(hist, Mapping) or not hist.get("total"):
+        return None
+    total = int(hist["total"])
+    count = sum(
+        int(bucket.get("count", 0))
+        for bucket in hist.get("bins", [])
+        if bucket.get("range") in ranges
+    )
+    return count / total
+
+
+def _top_pairs(row: Mapping[str, Any], limit: int = 5) -> list[dict[str, Any]]:
+    pairs = list(row.get("per_pair_d_seg") or [])
+    pairs.sort(key=lambda item: float(item.get("d_seg", 0.0)), reverse=True)
+    return pairs[:limit]
+
+
+def _top_class_residuals(row: Mapping[str, Any]) -> dict[str, Any]:
+    facets = ((row.get("class_facets") or {}).get("per_class_d_seg") or [])
+    gt_sorted = sorted(facets, key=lambda item: int(item.get("gt_mispredicted", 0)), reverse=True)
+    fp_sorted = sorted(facets, key=lambda item: int(item.get("pred_false_positive", 0)), reverse=True)
+    return {
+        "gt_mispredicted_top": gt_sorted[:3],
+        "pred_false_positive_top": fp_sorted[:3],
+    }
+
+
+def _mx1t_iteration_verdict(
+    checkpoint_rows: list[dict[str, Any]],
+    tail_rows: list[dict[str, Any]],
+) -> dict[str, Any]:
+    first = checkpoint_rows[0]
+    last = checkpoint_rows[-1]
+    near_ranges = {"0-0.05", "0.05-0.1"}
+    first_near = _hist_fraction(first, "margin_histogram_mismatched_pixels", near_ranges)
+    last_near = _hist_fraction(last, "margin_histogram_mismatched_pixels", near_ranges)
+    first_far = _hist_fraction(first, "margin_histogram_mismatched_pixels", {">0.5"})
+    last_far = _hist_fraction(last, "margin_histogram_mismatched_pixels", {">0.5"})
+    churn_values = [
+        float(row["flip_set_churn_vs_previous"]["ratio_vs_current_mismatch"])
+        for row in checkpoint_rows[1:]
+        if row["flip_set_churn_vs_previous"].get("ratio_vs_current_mismatch") is not None
+    ]
+    tail_winners = [
+        row for row in tail_rows if row.get("tail_average", {}).get("delta_vs_final_d_seg", 0.0) < 0.0
+    ]
+    if first_near is not None and last_near is not None and last_near > first_near:
+        margin_verdict = "near_flip_fraction_rising"
+    elif first_far is not None and last_far is not None and last_far >= first_far:
+        margin_verdict = "far_margin_stuck_not_improving"
+    else:
+        margin_verdict = "mixed_margin_trend"
+    if churn_values:
+        median_churn = float(np.median(np.asarray(churn_values, dtype=np.float64)))
+        if median_churn >= 1.0:
+            churn_verdict = "high_churn_trading_pixels"
+        elif median_churn <= 0.25:
+            churn_verdict = "low_churn_stable_residual"
+        else:
+            churn_verdict = "moderate_churn"
+    else:
+        median_churn = None
+        churn_verdict = "unmeasured_single_row"
+    if tail_winners:
+        best_tail = min(tail_winners, key=lambda row: row["aggregate_d_seg"])
+        tail_verdict = "tail_average_wins_here"
+        tail_delta = best_tail["tail_average"]["delta_vs_final_d_seg"]
+        tail_k = best_tail["tail_average"]["k"]
+    else:
+        best_tail = min(tail_rows, key=lambda row: row["aggregate_d_seg"]) if tail_rows else None
+        tail_verdict = "tail_average_loses_or_unavailable"
+        tail_delta = None if best_tail is None else best_tail["tail_average"]["delta_vs_final_d_seg"]
+        tail_k = None if best_tail is None else best_tail["tail_average"]["k"]
+    if (
+        last["aggregate_d_seg"] < first["aggregate_d_seg"]
+        and margin_verdict == "near_flip_fraction_rising"
+        and churn_verdict != "high_churn_trading_pixels"
+    ):
+        next_delta = "extend_steps_same_lr_schedule_before_mechanism_pivot"
+        next_delta_basis = "d_seg descended, mismatch margins moved toward near-flip, and churn was not high"
+    elif tail_verdict == "tail_average_wins_here":
+        next_delta = "apply_tail_average_selection_symmetrically_to_arm_cap_arm_veh_and_n120"
+        next_delta_basis = f"avg-K={tail_k} beat final by d_seg {tail_delta}"
+    else:
+        next_delta = "do_not_assume_more_steps_pay_without_new_objective_or_capacity_change"
+        next_delta_basis = "series did not show the clean near-flip/low-churn continuation signature"
+    return {
+        "margin_verdict": margin_verdict,
+        "first_mismatch_near_fraction_le_0p1": first_near,
+        "last_mismatch_near_fraction_le_0p1": last_near,
+        "first_mismatch_far_fraction_gt_0p5": first_far,
+        "last_mismatch_far_fraction_gt_0p5": last_far,
+        "churn_verdict": churn_verdict,
+        "median_churn_ratio_vs_current_mismatch": median_churn,
+        "tail_average_verdict": tail_verdict,
+        "best_tail_average_k": tail_k,
+        "best_tail_average_delta_vs_final_d_seg": tail_delta,
+        "residual_classes_latest": _top_class_residuals(last),
+        "residual_pairs_latest_top5": _top_pairs(last, limit=5),
+        "recommended_next_config_delta": next_delta,
+        "recommended_next_config_delta_basis": next_delta_basis,
+    }
+
+
+def _write_jsonl(path: Path, rows: list[Mapping[str, Any]]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(f".{path.name}.tmp.{os.getpid()}")
+    with tmp.open("w", encoding="utf-8") as handle:
+        for row in rows:
+            handle.write(json.dumps(row, sort_keys=True, default=str) + "\n")
+    os.replace(tmp, path)
+
+
+def _mx1t_findings_markdown(result: Mapping[str, Any]) -> str:
+    checkpoint_rows = list(result["checkpoint_rows"])
+    tail_rows = list(result["tail_average_rows"])
+    verdict = result["iteration_verdict"]
+    latest = checkpoint_rows[-1]
+    anchor = result["anchor_check"]
+    lines = [
+        "# ddm_mx1t findings",
+        "",
+        "## Verdict",
+        "",
+        "MX1T completed the ARM-CAP n32 checkpoint-series facet analyzer and tail-average A/B.",
+        "",
+        "| field | value |",
+        "|---|---:|",
+        f"| axis | {result['axis']} |",
+        f"| score_claim | {str(result['score_claim']).lower()} |",
+        f"| checkpoint rows | {len(checkpoint_rows)} |",
+        f"| tail-average rows | {len(tail_rows)} |",
+        f"| step-1500 anchor expected | {anchor['expected_d_seg']} |",
+        f"| step-1500 anchor measured | {anchor['measured_d_seg']} |",
+        f"| step-1500 abs diff | {anchor['abs_diff']} |",
+        f"| latest step | {latest['checkpoint']['step']} |",
+        f"| latest aggregate d_seg | {latest['aggregate_d_seg']} |",
+        f"| latest mismatch pixels | {latest['total_mismatch_pixels']} |",
+        "",
+        f"Receipts JSONL: `{result['receipts_jsonl']}`",
+        "",
+        "## Facet Trajectory",
+        "",
+        "| step | aggregate d_seg | mismatch px | near-margin mismatch <=0.1 | far-margin mismatch >0.5 | churn/current |",
+        "|---:|---:|---:|---:|---:|---:|",
+    ]
+    for row in checkpoint_rows:
+        near = _hist_fraction(row, "margin_histogram_mismatched_pixels", {"0-0.05", "0.05-0.1"})
+        far = _hist_fraction(row, "margin_histogram_mismatched_pixels", {">0.5"})
+        churn = row["flip_set_churn_vs_previous"].get("ratio_vs_current_mismatch")
+        lines.append(
+            "| {step} | {dseg:.12f} | {mismatch} | {near} | {far} | {churn} |".format(
+                step=row["checkpoint"]["step"],
+                dseg=float(row["aggregate_d_seg"]),
+                mismatch=row["total_mismatch_pixels"],
+                near="n/a" if near is None else f"{near:.6f}",
+                far="n/a" if far is None else f"{far:.6f}",
+                churn="n/a" if churn is None else f"{float(churn):.6f}",
+            )
+        )
+    lines.extend([
+        "",
+        "## Tail Average A/B",
+        "",
+        "| row | d_seg | delta vs final | verdict |",
+        "|---|---:|---:|---|",
+    ])
+    final_dseg = float(latest["aggregate_d_seg"])
+    lines.append(f"| final step {latest['checkpoint']['step']} | {final_dseg:.12f} | 0 | baseline |")
+    for row in tail_rows:
+        ta = row["tail_average"]
+        delta = float(ta["delta_vs_final_d_seg"])
+        lines.append(
+            f"| avg-K={ta['k']} | {float(row['aggregate_d_seg']):.12f} | {delta:.12f} | "
+            f"{'wins' if delta < 0 else 'loses'} |"
+        )
+    lines.extend([
+        "",
+        "## Iteration Verdict",
+        "",
+        "| question | answer | measurement basis |",
+        "|---|---|---|",
+        f"| near-flip vs stuck | {verdict['margin_verdict']} | mismatch <=0.1 fraction {verdict['first_mismatch_near_fraction_le_0p1']} -> {verdict['last_mismatch_near_fraction_le_0p1']}; >0.5 fraction {verdict['first_mismatch_far_fraction_gt_0p5']} -> {verdict['last_mismatch_far_fraction_gt_0p5']} |",
+        f"| residual owner classes | {verdict['residual_classes_latest']} | latest checkpoint per-class GT-mispredicted and predicted false-positive counts |",
+        f"| residual owner pairs | {verdict['residual_pairs_latest_top5']} | latest checkpoint per-pair d_seg vector |",
+        f"| churn regime | {verdict['churn_verdict']} | median churn/current {verdict['median_churn_ratio_vs_current_mismatch']} |",
+        f"| tail-average verdict | {verdict['tail_average_verdict']} | best K {verdict['best_tail_average_k']}, delta {verdict['best_tail_average_delta_vs_final_d_seg']} |",
+        f"| recommended next-config delta | {verdict['recommended_next_config_delta']} | {verdict['recommended_next_config_delta_basis']} |",
+        "",
+        "## RECALL EVIDENCE",
+        "",
+        "| scope | query / source | found beyond charter seeds | changed plan |",
+        "|---|---|---|---|",
+    ])
+    for row in result["recall_evidence"]:
+        lines.append(
+            f"| {row['scope']} | `{row['query']}` | {row['found']} | {row['changed_plan']} |"
+        )
+    lines.extend([
+        "",
+        "## Boundaries",
+        "",
+        "- Axis: [macOS-CPU advisory torch upstream SegNet].",
+        "- Scope: n32 ARM-CAP checkpoint-series instrument only.",
+        "- No Metal, MLX training, n600 scorer job, archive build, remote dispatch, or `upstream/evaluate.py` run.",
+        "- Live run directory was copied from before reading and otherwise kept read-only.",
+        "- Score claim is false; this is not a contest-CPU or contest-CUDA row.",
+        "",
+        "Own-vehicle frontier remains `S = 0.7534578126155775 @ 357,837 B [macOS-CPU advisory]`; contest pointer remains borrowed/unmoved.",
+        "",
+    ])
+    return "\n".join(lines)
+
+
+def run_torch_facets(args: argparse.Namespace) -> dict[str, Any]:
+    lifted = _load_lifted_semantic()
+    device = torch.device("cpu")
+    batch_size = int(args.verdict_batch_size)
+    checkpoint_dir = args.facet_checkpoint_dir
+    out_dir = args.facet_out_dir
+    copy_dir = out_dir / "checkpoint_copies"
+    all_stage_paths = sorted(
+        checkpoint_dir.glob("mlx_stage_step*.npz"),
+        key=_stage_step_from_path,
+    )
+    if args.facet_steps:
+        wanted = set(_parse_int_list(args.facet_steps))
+        all_stage_paths = [path for path in all_stage_paths if _stage_step_from_path(path) in wanted]
+    if not all_stage_paths:
+        raise ValueError(f"no checkpoints found under {checkpoint_dir}")
+    copy_receipts = [_mx1t_copy_checkpoint(path, copy_dir) for path in all_stage_paths]
+    copied_paths = [Path(row["copy_path"]) for row in copy_receipts]
+    first_checkpoint, first_meta = _load_torch_or_mlx_checkpoint_for_verdict(
+        copied_paths[0],
+        lifted=lifted,
+    )
+    pair_ids = _checkpoint_pair_ids(first_meta)
+    del first_checkpoint
+    conditioning_np, target_np, cache_meta = _load_selected_token_arrays(
+        input_cache=args.input_cache,
+        target_cache=args.target_cache,
+        pair_ids=pair_ids,
+        memory_probe=None,
+    )
+    idx = torch.tensor(pair_ids, dtype=torch.long, device=device)
+    conditioning = torch.from_numpy(conditioning_np).long().to(device)
+    target = torch.from_numpy(target_np).long().to(device)
+    del conditioning_np, target_np
+    gc.collect()
+    segnet = _load_upstream_segnet(device)
+    checkpoint_rows: list[dict[str, Any]] = []
+    previous_mismatch_set: np.ndarray | None = None
+    anchor_row: dict[str, Any] | None = None
+    for copy_receipt, copied_path in zip(copy_receipts, copied_paths, strict=True):
+        checkpoint, checkpoint_meta = _load_torch_or_mlx_checkpoint_for_verdict(
+            copied_path,
+            lifted=lifted,
+        )
+        if _checkpoint_pair_ids(checkpoint_meta) != pair_ids:
+            raise ValueError(f"pair_ids changed in {copied_path}")
+        row, previous_mismatch_set = _mx1t_evaluate_checkpoint_facets(
+            lifted=lifted,
+            checkpoint=checkpoint,
+            checkpoint_meta=checkpoint_meta,
+            checkpoint_info=copy_receipt,
+            conditioning=conditioning,
+            target=target,
+            idx=idx,
+            pair_ids=pair_ids,
+            segnet=segnet,
+            batch_size=batch_size,
+            previous_mismatch_set=previous_mismatch_set,
+            row_kind="checkpoint",
+        )
+        checkpoint_rows.append(row)
+        if int(copy_receipt["step"]) == int(args.facet_anchor_step):
+            anchor_row = row
+            diff = abs(float(row["aggregate_d_seg"]) - float(args.facet_anchor_d_seg))
+            if diff > float(args.facet_anchor_tolerance):
+                blocker = {
+                    "schema": "ddm_mx1t_anchor_blocker.v1",
+                    "status": "blocked",
+                    "axis": "[macOS-CPU advisory torch upstream SegNet]",
+                    "score_claim": False,
+                    "expected_d_seg": float(args.facet_anchor_d_seg),
+                    "measured_d_seg": float(row["aggregate_d_seg"]),
+                    "abs_diff": diff,
+                    "tolerance": float(args.facet_anchor_tolerance),
+                    "checkpoint": row["checkpoint"],
+                    "reason": "step-1500 CPU-torch anchor did not reproduce mx1h; stopped before later checkpoints/tail averages",
+                }
+                write_json_atomic(out_dir / "MX1T_ANCHOR_BLOCKER.json", blocker)
+                raise RuntimeError(blocker["reason"])
+    if anchor_row is None:
+        raise ValueError(f"required anchor step {args.facet_anchor_step} was not present")
+    latest_row = checkpoint_rows[-1]
+    tail_average_rows: list[dict[str, Any]] = []
+    tail_ks = _parse_int_list(args.facet_tail_average_ks)
+    for k in tail_ks:
+        if k <= 0:
+            raise ValueError("tail average K values must be positive")
+        if len(copied_paths) < k:
+            continue
+        member_paths = copied_paths[-k:]
+        avg_checkpoint, avg_meta = _load_average_torch_checkpoint(member_paths, lifted=lifted)
+        member_receipts = [copy_receipts[copied_paths.index(path)] for path in member_paths]
+        avg_info = {
+            "schema": "ddm_mx1t_tail_average_checkpoint.v1",
+            "step": int(avg_meta["step"]),
+            "source": "in_memory_simple_mean",
+            "k": k,
+            "member_steps": [int(row["step"]) for row in member_receipts],
+            "member_copy_paths": [row["copy_path"] for row in member_receipts],
+            "member_copy_sha256": [row["copy_sha256"] for row in member_receipts],
+            "averaging_rule": "torch.stack(member_tensors).mean(dim=0) for floating tensors; non-floating metadata copied from latest member",
+        }
+        row, _avg_mismatch_set = _mx1t_evaluate_checkpoint_facets(
+            lifted=lifted,
+            checkpoint=avg_checkpoint,
+            checkpoint_meta=avg_meta,
+            checkpoint_info=avg_info,
+            conditioning=conditioning,
+            target=target,
+            idx=idx,
+            pair_ids=pair_ids,
+            segnet=segnet,
+            batch_size=batch_size,
+            previous_mismatch_set=None,
+            row_kind="tail_average",
+            tail_average={
+                "k": k,
+                "member_steps": avg_info["member_steps"],
+                "final_reference_step": latest_row["checkpoint"]["step"],
+                "final_reference_d_seg": latest_row["aggregate_d_seg"],
+                "delta_vs_final_d_seg": None,
+            },
+        )
+        row["tail_average"]["delta_vs_final_d_seg"] = row["aggregate_d_seg"] - latest_row["aggregate_d_seg"]
+        row["tail_average"]["wins_vs_final"] = row["tail_average"]["delta_vs_final_d_seg"] < 0.0
+        tail_average_rows.append(row)
+    iteration_verdict = _mx1t_iteration_verdict(checkpoint_rows, tail_average_rows)
+    receipts_jsonl = out_dir / "mx1t_facets_receipts.jsonl"
+    _write_jsonl(receipts_jsonl, [*checkpoint_rows, *tail_average_rows])
+    copy_jsonl = out_dir / "mx1t_checkpoint_copy_receipts.jsonl"
+    _write_jsonl(copy_jsonl, copy_receipts)
+    anchor_diff = abs(float(anchor_row["aggregate_d_seg"]) - float(args.facet_anchor_d_seg))
+    result: dict[str, Any] = {
+        "schema": "ddm_mx1t_torch_facets_result.v1",
+        "status": "passed",
+        "axis": "[macOS-CPU advisory torch upstream SegNet]",
+        "score_claim": False,
+        "verdict_scope": "n32 arm-instrument checkpoint-series facets",
+        "host": _host_fingerprint(),
+        "checkpoint_dir": str(checkpoint_dir),
+        "out_dir": str(out_dir),
+        "checkpoint_copy_receipts_jsonl": str(copy_jsonl),
+        "receipts_jsonl": str(receipts_jsonl),
+        "checkpoint_rows": checkpoint_rows,
+        "tail_average_rows": tail_average_rows,
+        "anchor_check": {
+            "step": int(args.facet_anchor_step),
+            "expected_d_seg": float(args.facet_anchor_d_seg),
+            "measured_d_seg": float(anchor_row["aggregate_d_seg"]),
+            "abs_diff": anchor_diff,
+            "tolerance": float(args.facet_anchor_tolerance),
+            "status": "passed",
+        },
+        "cache_load": cache_meta,
+        "batching_scheme": {
+            "segnet_batch_size": batch_size,
+            "token_batch_shape": list(conditioning.shape),
+            "target_batch_shape": list(target.shape),
+        },
+        "iteration_verdict": iteration_verdict,
+        "recall_evidence": [
+            {
+                "scope": "Governing files",
+                "query": "CHARTER.md, _common_contract.md, PROGRAM.md, CLAUDE.md/AGENTS.md, docs/operating_manual_craft_handoff.md, .omx/state/main_hot_state.md, upstream/evaluate.py",
+                "found": "mx1t owns only the n32 CPU-torch scorer instrument; live frontier is S=0.7534578126155775 @ 357,837 B and contest pointer is borrowed/unmoved.",
+                "changed_plan": "Kept CPU-only, score_claim=false, copied checkpoints before reading, and used mx1h step-1500 as a hard anchor.",
+            },
+            {
+                "scope": "Prior MX1 verdict",
+                "query": "torch-verdict|mx1h|d7f557bb7c|0.0010689099629720051",
+                "found": "MX1H already implemented strict MLX NPZ -> torch loading and CPU upstream SegNet verdict; RR14 added fail-closed NPZ/history tests.",
+                "changed_plan": "Extended the existing loader/verdict path with torch-facets instead of adding a new loader.",
+            },
+            {
+                "scope": "Tail-average precedent",
+                "query": "git log --grep dy2 and .omx/research/ddm_dy2_20260805/RECEIPT.md",
+                "found": "dy2 registered jd1_plateau_tail_average_ema_v1 and documented an explicit growing-horizon tail average law for JD1.",
+                "changed_plan": "Used a scoped post-hoc simple parameter mean for MX1 checkpoints and labeled it as this vehicle/stage only, not a general EMA verdict.",
+            },
+            {
+                "scope": "Canonical equations",
+                "query": ".venv/bin/python tools/list_canonical_equations.py --json | rg 'jd1_plateau|ema_decay|score_marginal|SegNet'",
+                "found": "Relevant entries include score_marginal_lagrange_multipliers_v1, ema_decay_substrate_stage_aware_v1, and jd1_plateau_tail_average_ema_v1.",
+                "changed_plan": "No score recomputation was promoted; tail average stayed a measured A/B row under the n32 advisory axis.",
+            },
+            {
+                "scope": "Class order",
+                "query": "CLAUDE.md SegNet class table and class-order corpus search",
+                "found": "Canonical comma10k order is Road/Lane/Undrivable/Movable/MyCar; luma-sort is forbidden and historically wrong.",
+                "changed_plan": "Per-class facets use that fixed class order and record the provenance in every row.",
+            },
+        ],
+    }
+    findings_path = out_dir / "MX1T_FINDINGS.md"
+    findings_path.parent.mkdir(parents=True, exist_ok=True)
+    tmp_findings = findings_path.with_name(f".{findings_path.name}.tmp.{os.getpid()}")
+    tmp_findings.write_text(_mx1t_findings_markdown(result), encoding="utf-8")
+    os.replace(tmp_findings, findings_path)
+    result["findings_path"] = str(findings_path)
+    result_path = out_dir / "mx1t_facets_result.json"
+    write_json_atomic(result_path, result)
+    result["result_path"] = str(result_path)
+    return result
 
 
 def run_torch_verdict(args: argparse.Namespace) -> dict[str, Any]:
@@ -2586,6 +3378,7 @@ def main() -> None:
             "probe",
             "torch-smoke",
             "torch-verdict",
+            "torch-facets",
             "mlx-parity",
             "mlx-train",
             "mem-probe",
@@ -2618,6 +3411,13 @@ def main() -> None:
     parser.add_argument("--launch-ticket-path", type=Path)
     parser.add_argument("--fire-argv-key")
     parser.add_argument("--resume-from", type=Path)
+    parser.add_argument("--facet-checkpoint-dir", type=Path, default=MX1T_DEFAULT_CHECKPOINT_DIR)
+    parser.add_argument("--facet-out-dir", type=Path, default=MX1T_DEFAULT_OUT_DIR)
+    parser.add_argument("--facet-tail-average-ks", default="2,4,8")
+    parser.add_argument("--facet-steps", default="")
+    parser.add_argument("--facet-anchor-step", type=int, default=1500)
+    parser.add_argument("--facet-anchor-d-seg", type=float, default=MX1H_STEP1500_AUTHORITY_D_SEG)
+    parser.add_argument("--facet-anchor-tolerance", type=float, default=1e-12)
     parser.add_argument("--out", type=Path, default=SSD_ROOT / "mx1_driver_result.json")
     args = parser.parse_args()
     if args.mem_probe_steps <= 0:
@@ -2640,10 +3440,10 @@ def main() -> None:
         "source_repo_head": SOURCE_REPO_HEAD,
         "source_repo_root": SOURCE_REPO_ROOT,
     }
-    if args.mode == "torch-verdict":
+    if args.mode in {"torch-verdict", "torch-facets"}:
         mlx_probe = {
             "status": "not_run",
-            "reason": "torch-verdict is CPU-only and does not import or probe MLX/Metal",
+            "reason": f"{args.mode} is CPU-only and does not import or probe MLX/Metal",
         }
     else:
         mlx_probe = mlx_device_probe(device=args.device)
@@ -2655,6 +3455,9 @@ def main() -> None:
     elif args.mode == "torch-verdict":
         result["torch_verdict"] = run_torch_verdict(args)
         result["status"] = result["torch_verdict"]["status"]
+    elif args.mode == "torch-facets":
+        result["torch_facets"] = run_torch_facets(args)
+        result["status"] = result["torch_facets"]["status"]
     elif args.mode == "mlx-parity":
         if mlx_probe["status"] == "blocked":
             result["status"] = "blocked"

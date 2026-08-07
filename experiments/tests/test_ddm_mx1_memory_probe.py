@@ -950,6 +950,88 @@ def test_mx1_torch_verdict_skips_mlx_probe(tmp_path: Path, monkeypatch) -> None:
     assert written["mlx_probe"]["status"] == "not_run"
 
 
+def test_mx1_torch_facets_skips_mlx_probe(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "ddm_mx1_pr130_semantic_renderer.py",
+            "--mode",
+            "torch-facets",
+            "--out",
+            str(tmp_path / "facets.json"),
+        ],
+    )
+
+    def fail_mlx_probe(*, device: str) -> dict[str, object]:
+        raise AssertionError(f"torch-facets must not probe MLX/Metal: {device}")
+
+    monkeypatch.setattr(mx1, "mlx_device_probe", fail_mlx_probe)
+    monkeypatch.setattr(mx1, "run_torch_facets", lambda args: {"status": "passed"})
+    written: dict[str, object] = {}
+    monkeypatch.setattr(mx1, "write_json", lambda path, payload: written.update(payload))
+
+    mx1.main()
+
+    assert written["mode"] == "torch-facets"
+    assert written["status"] == "passed"
+    assert written["mlx_probe"]["status"] == "not_run"
+
+
+def test_mx1_margin_histogram_uses_fixed_bins() -> None:
+    hist = mx1._margin_histogram_empty()
+    margins = torch.tensor([[[0.0, 0.049, 0.05, 0.249, 0.5, 2.0]]])
+    mask = torch.tensor([[[True, True, True, True, True, False]]])
+
+    mx1._margin_histogram_update(hist, margins, mask)
+    finalized = mx1._margin_histogram_finalize(hist)
+
+    assert finalized["total"] == 5
+    assert [bucket["count"] for bucket in finalized["bins"]] == [2, 1, 1, 0, 1]
+
+
+def test_mx1_boundary_band_mask_marks_four_neighbors() -> None:
+    labels = torch.tensor(
+        [
+            [
+                [0, 0, 1],
+                [0, 0, 1],
+                [2, 2, 2],
+            ]
+        ]
+    )
+
+    mask = mx1._boundary_band_mask(labels)
+
+    assert mask.tolist() == [
+        [
+            [False, True, True],
+            [True, True, True],
+            [True, True, True],
+        ]
+    ]
+
+
+def test_mx1_class_accumulators_report_both_directions() -> None:
+    target = torch.tensor([[[0, 0, 1, 1, 4]]])
+    pred = torch.tensor([[[0, 1, 1, 2, 0]]])
+    accum = mx1._new_class_accumulators()
+
+    mx1._update_class_accumulators(accum, target, pred)
+    finalized = mx1._finalize_class_accumulators(accum)
+    by_name = {row["class_name"]: row for row in finalized["per_class_d_seg"]}
+
+    assert by_name["Road"]["gt_sites"] == 2
+    assert by_name["Road"]["gt_mispredicted"] == 1
+    assert by_name["Road"]["pred_sites"] == 2
+    assert by_name["Road"]["pred_false_positive"] == 1
+    assert by_name["Lane"]["gt_sites"] == 2
+    assert by_name["Lane"]["gt_mispredicted"] == 1
+    assert by_name["Lane"]["pred_sites"] == 2
+    assert by_name["Lane"]["pred_false_positive"] == 1
+    assert finalized["class_order"][4] == {"class_id": 4, "class_name": "MyCar"}
+
+
 def test_mx1_light_probe_mode_ungated_when_enforced(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setenv("TAC_ADMISSION_ENFORCE", "1")
     monkeypatch.delenv("TAC_GOVERNED_ADMISSION", raising=False)
