@@ -1,0 +1,4 @@
+.xxxxxx                                                                  [100%]
+1 passed, 6 xfailed in 2.22s
+Exception ignored in atexit callback <nanobind.nb_func object at 0x10e243ab0>:
+RuntimeError: [metal::load_device] No Metal device available. This typically occurs in headless, sandboxed, or virtualized macOS sessions where the GPU is not accessible.

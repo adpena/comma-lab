@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import ast
 import hashlib
+import importlib.util
 import json
 import math
 import os
@@ -58,12 +59,8 @@ from tools.run_compact_renderer_mlx_spine_runner import (  # noqa: E402
     execute_snerv_inverse_steg_advisory_and_adapt,
 )
 
-try:
-    import mlx.core as _mx  # noqa: F401
-
-    _MLX_AVAILABLE = True
-except ImportError:
-    _MLX_AVAILABLE = False
+_MLX_NO_METAL_ERROR = "[metal::load_device] No Metal device available"
+_MLX_AVAILABLE = importlib.util.find_spec("mlx.core") is not None
 
 try:
     import av as _av  # noqa: F401
@@ -71,6 +68,33 @@ try:
     _AV_AVAILABLE = True
 except ImportError:
     _AV_AVAILABLE = False
+
+
+def _is_mlx_no_metal_error(exc: BaseException) -> bool:
+    return _MLX_NO_METAL_ERROR in str(exc)
+
+
+def _require_mlx_runtime_or_xfail():
+    mx = pytest.importorskip("mlx.core", reason="MLX runtime required")
+    try:
+        mx.array([0.0], dtype=mx.float32)
+    except RuntimeError as exc:
+        if _is_mlx_no_metal_error(exc):
+            pytest.xfail(
+                "#856 known-red environment/MLX-gating: MLX imports, but "
+                "array allocation loads Metal and this sandbox has no Metal device"
+            )
+        raise
+    return mx
+
+
+def test_mlx_runtime_gate_recognizes_no_metal_error() -> None:
+    exc = RuntimeError(
+        "[metal::load_device] No Metal device available. This typically occurs "
+        "in headless, sandboxed, or virtualized macOS sessions where the GPU is "
+        "not accessible."
+    )
+    assert _is_mlx_no_metal_error(exc)
 
 
 def test_hinerv_runner_short_smoke_readiness_consumes_strict_launch_actuators() -> None:
@@ -1914,7 +1938,7 @@ def test_hinerv_live_birth_hysteresis_probe_restores_model_state(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    mx = pytest.importorskip("mlx.core")
+    mx = _require_mlx_runtime_or_xfail()
 
     class DummyModel:
         def __init__(self) -> None:
@@ -2083,7 +2107,7 @@ def test_hinerv_live_birth_survival_writes_four_arm_rows_when_birth_not_accepted
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    mx = pytest.importorskip("mlx.core")
+    mx = _require_mlx_runtime_or_xfail()
 
     class DummyModel:
         def __init__(self) -> None:
@@ -9031,6 +9055,7 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
+    _require_mlx_runtime_or_xfail()
     from tac.substrates._shared import mlx_score_aware as mlx_score_aware_pkg
     from tac.substrates.hi_nerv import archive_candidate as hinerv_archive_candidate
     from tac.substrates.hi_nerv import mlx_renderer as hinerv_mlx_renderer
@@ -9347,8 +9372,7 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
         live_segnet_adapter = object()
 
         def teacher_argmax_for_indices(self, idx):
-            import mlx.core as mx
-
+            mx = _require_mlx_runtime_or_xfail()
             return mx.zeros((int(idx.shape[0]), 384, 512), dtype=mx.int32)
 
         def teacher_logits_for_frames_nhwc01(self, frames):
@@ -9952,6 +9976,7 @@ def test_hinerv_private_smoke_forwards_explicit_pr95_curriculum_total_epochs(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
+    _require_mlx_runtime_or_xfail()
     from tac.substrates._shared import mlx_score_aware as mlx_score_aware_pkg
     from tac.substrates.hi_nerv import archive_candidate as hinerv_archive_candidate
     from tac.substrates.hi_nerv import mlx_renderer as hinerv_mlx_renderer
@@ -10074,13 +10099,11 @@ def test_hinerv_private_smoke_forwards_explicit_pr95_curriculum_total_epochs(
         upstream_segnet_safetensors_sha256 = "0" * 64
 
         def teacher_argmax_for_indices(self, indices):
-            import mlx.core as mx
-
+            mx = _require_mlx_runtime_or_xfail()
             return mx.zeros((int(indices.shape[0]), 384, 512), dtype=mx.int32)
 
         def teacher_logits_for_frames_nhwc01(self, frames):
-            import mlx.core as mx
-
+            mx = _require_mlx_runtime_or_xfail()
             batch, height, width, _channels = frames.shape
             zeros = mx.zeros((batch, height, width, 1), dtype=mx.float32)
             ones = mx.ones((batch, height, width, 1), dtype=mx.float32)
@@ -10091,8 +10114,7 @@ def test_hinerv_private_smoke_forwards_explicit_pr95_curriculum_total_epochs(
         upstream_posenet_safetensors_sha256 = "1" * 64
 
         def teacher_pose_for_yuv6_pair_nhwc(self, yuv6_pair):
-            import mlx.core as mx
-
+            mx = _require_mlx_runtime_or_xfail()
             return mx.zeros((int(yuv6_pair.shape[0]), self.pose_dims), dtype=mx.float32)
 
     def fake_build_hi_nerv_archive_replay_components(
@@ -17485,8 +17507,7 @@ def test_hinerv_private_smoke_generates_startup_section_telemetry_for_qat_terms(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    import mlx.core as mx
-
+    mx = _require_mlx_runtime_or_xfail()
     from tac.substrates._shared import mlx_score_aware as mlx_score_aware_pkg
     from tac.substrates.hi_nerv import archive as hinerv_archive
     from tac.substrates.hi_nerv import archive_candidate as hinerv_archive_candidate
@@ -18590,6 +18611,7 @@ def test_hinerv_optimizer_controls_refuse_silent_decay_drop() -> None:
 def test_hinerv_execute_runs_training_archive_and_receiver_proof(
     tmp_path: Path,
 ) -> None:
+    _require_mlx_runtime_or_xfail()
     out = execute_hi_nerv_mlx_scoreaware_and_adapt(
         output_dir=tmp_path / "hinerv_gate",
         num_pairs=1,

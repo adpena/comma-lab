@@ -1,0 +1,21 @@
+{
+  "mode": "hi_nerv_mlx_scoreaware_failed",
+  "failure": "RuntimeError('[metal::load_device] No Metal device available. This typically occurs in headless, sandboxed, or virtualized macOS sessions where the GPU is not accessible.')",
+  "blockers": [
+    "hi_nerv_mlx_scoreaware_or_export_failed"
+  ],
+  "training_executed": false,
+  "score_aware_training_status": "failed_during_mlx_training_or_export",
+  "scorer_upstream_snapshot": {
+    "modules_py_exists": true,
+    "modules_py_sha256": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa",
+    "posenet_safetensors_exists": true,
+    "posenet_safetensors_sha256": "0f3a0874c5c387f990d7b88bd1d7e1f6de35d98b45f2a289989db2c77b9b6576",
+    "schema": "compact_runner_scorer_upstream_snapshot.v1",
+    "segnet_safetensors_exists": true,
+    "segnet_safetensors_sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6",
+    "upstream_dir": "/Users/adpena/Projects/pact/upstream"
+  },
+  "no_score_claim": true,
+  "report_path": "/Users/adpena/Projects/pact/.omx/research/ddm_sb3_20260807/repro_run_hinerv_execute/compact_renderer_mlx_spine_runner_report.json"
+}

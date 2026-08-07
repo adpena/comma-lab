@@ -1,0 +1,30 @@
+## import_only
+returncode=0
+stdout:
+imported
+stderr:
+Exception ignored in atexit callback <nanobind.nb_func object at 0x10362adf0>:
+RuntimeError: [metal::load_device] No Metal device available. This typically occurs in headless, sandboxed, or virtualized macOS sessions where the GPU is not accessible.
+## array_eval_no_set
+returncode=1
+stdout:
+
+stderr:
+Traceback (most recent call last):
+  File "<string>", line 2, in <module>
+    a=mx.array([1.0])
+RuntimeError: [metal::load_device] No Metal device available. This typically occurs in headless, sandboxed, or virtualized macOS sessions where the GPU is not accessible.
+Exception ignored in atexit callback <nanobind.nb_func object at 0x10574edf0>:
+RuntimeError: [metal::load_device] No Metal device available. This typically occurs in headless, sandboxed, or virtualized macOS sessions where the GPU is not accessible.
+## seed
+returncode=1
+stdout:
+
+stderr:
+Traceback (most recent call last):
+  File "<string>", line 2, in <module>
+    mx.random.seed(0)
+    ~~~~~~~~~~~~~~^^^
+RuntimeError: [metal::load_device] No Metal device available. This typically occurs in headless, sandboxed, or virtualized macOS sessions where the GPU is not accessible.
+Exception ignored in atexit callback <nanobind.nb_func object at 0x102d5edf0>:
+RuntimeError: [metal::load_device] No Metal device available. This typically occurs in headless, sandboxed, or virtualized macOS sessions where the GPU is not accessible.
