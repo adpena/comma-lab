@@ -235,8 +235,9 @@ def _mlx_allocator_bytes(mx: Any | None) -> dict[str, int | None]:
 class LoadPhaseMemoryProbe:
     """Small typed recorder for load-phase RSS + MLX allocator telemetry."""
 
-    def __init__(self) -> None:
+    def __init__(self, *, emit_log_lines: bool = False) -> None:
         self.samples: list[dict[str, Any]] = []
+        self.emit_log_lines = emit_log_lines
         self._start_rss_bytes: int | None = None
         self._start_available_bytes: int | None = None
         self._software_budget_bytes: int | None = None
@@ -244,6 +245,25 @@ class LoadPhaseMemoryProbe:
         self._budget_check_count = 0
         self._budget_peak_bytes = 0
         self._last_budget_check: dict[str, Any] | None = None
+
+    def _emit_sample_line(self, sample: Mapping[str, Any]) -> None:
+        if not self.emit_log_lines:
+            return
+        line = {
+            "schema": "ddm_mx1_load_phase_checkpoint.v1",
+            "event_index": sample.get("event_index"),
+            "stage": sample.get("stage"),
+            "timestamp_utc": sample.get("timestamp_utc"),
+            "rss_gib": sample.get("rss_gib"),
+            "rss_delta_from_start_gib": sample.get("rss_delta_from_start_gib"),
+            "sys_available_gib": sample.get("sys_available_gib"),
+            "sys_available_delta_from_start_gib": sample.get("sys_available_delta_from_start_gib"),
+            "mlx_active_gib": sample.get("mlx_active_gib"),
+            "mlx_cache_gib": sample.get("mlx_cache_gib"),
+            "mlx_peak_gib": sample.get("mlx_peak_gib"),
+            "note": sample.get("note"),
+        }
+        print(f"[mx1-load-phase] {json.dumps(line, sort_keys=True)}", file=sys.stderr, flush=True)
 
     def sample(self, stage: str, *, mx: Any | None = None, note: str | None = None) -> dict[str, Any]:
         rss_bytes = _process_rss_bytes()
@@ -274,6 +294,7 @@ class LoadPhaseMemoryProbe:
         if note:
             sample["note"] = note
         self.samples.append(sample)
+        self._emit_sample_line(sample)
         return sample
 
     def install_software_budget(self, memory_limits: Mapping[str, Any]) -> None:
@@ -1016,9 +1037,68 @@ def _mx_eval_setup_barrier(
     *values: Any,
     note: str | None = None,
 ) -> None:
+    before_stage = f"before_{stage.removeprefix('after_')}" if stage.startswith("after_") else f"before_{stage}"
+    memory_probe.sample_and_check(before_stage, mx=mx, note="before mx.eval setup barrier")
     if values:
         mx.eval(*values)
-    memory_probe.sample_and_check(stage, mx=mx, note=note)
+    memory_probe.sample_and_check(stage, mx=mx, note=note or "after mx.eval setup barrier")
+
+
+def _derive_train_microbatch_pairs(args: argparse.Namespace, *, total_pairs: int) -> int:
+    explicit = int(getattr(args, "microbatch_pairs", 0) or 0)
+    if explicit > 0:
+        return max(1, min(explicit, total_pairs))
+    if str(getattr(args, "device", "")).lower() == "gpu":
+        return max(1, min(4, total_pairs))
+    return max(1, total_pairs)
+
+
+def _iter_pair_chunks(total_pairs: int, microbatch_pairs: int) -> list[tuple[int, int]]:
+    if total_pairs <= 0:
+        raise ValueError("total_pairs must be positive")
+    if microbatch_pairs <= 0:
+        raise ValueError("microbatch_pairs must be positive")
+    return [
+        (start, min(start + microbatch_pairs, total_pairs))
+        for start in range(0, total_pairs, microbatch_pairs)
+    ]
+
+
+def _mlx_token_chunk(
+    mx: Any,
+    conditioning_np: np.ndarray,
+    target_np: np.ndarray,
+    pair_ids: list[int],
+    start: int,
+    stop: int,
+) -> tuple[Any, Any, Any]:
+    conditioning = mx.array(np.ascontiguousarray(conditioning_np[start:stop]))
+    target = mx.array(np.ascontiguousarray(target_np[start:stop]))
+    pair_idx = mx.array(np.asarray(pair_ids[start:stop], dtype=np.int32))
+    return conditioning, target, pair_idx
+
+
+def _tree_add_scaled(
+    mx: Any,
+    tree_flatten: Any,
+    tree_unflatten: Any,
+    accum: Mapping[str, Any] | None,
+    update: Mapping[str, Any],
+    scale: float,
+) -> Mapping[str, Any]:
+    scaled = [
+        (name, value * scale if hasattr(value, "shape") else value)
+        for name, value in tree_flatten(update)
+    ]
+    if accum is None:
+        return tree_unflatten(scaled)
+    accum_flat = tree_flatten(accum)
+    out = []
+    for (left_name, left), (right_name, right) in zip(accum_flat, scaled, strict=True):
+        if left_name != right_name:
+            raise ValueError(f"gradient tree mismatch: {left_name!r} != {right_name!r}")
+        out.append((left_name, left + right if hasattr(left, "shape") else left))
+    return tree_unflatten(out)
 
 
 def run_mlx_train(
@@ -1042,6 +1122,7 @@ def run_mlx_train(
     torch.manual_seed(args.seed)
     np.random.seed(args.seed)
     pair_ids = _select_stratified_indices(args.pairs, seed=args.seed)
+    probe.sample_and_check("before_init_checkpoint_torch_load")
     checkpoint = torch.load(args.init, map_location="cpu", weights_only=False)
     probe.sample_and_check("after_init_checkpoint_torch_load")
     config = MlxSemanticConfig.from_pr130_checkpoint_config(checkpoint["config"])
@@ -1061,8 +1142,10 @@ def run_mlx_train(
         memory_probe=probe,
     )
 
+    probe.sample_and_check("before_require_mlx", note=f"device={args.device}")
     mx, _nn, optim = require_mlx(device=args.device)
     try:
+        probe.sample_and_check("before_mlx_memory_limit_configuration", mx=mx)
         memory_limits = _configure_mlx_memory_limits(
             mx,
             args.mem_budget_gb,
@@ -1087,8 +1170,11 @@ def run_mlx_train(
         apply_contest_faithful_roundtrip_nhwc,
     )
 
+    probe.sample_and_check("before_model_init", mx=mx)
     model = make_mlx_renderer(config, device=args.device)
+    probe.sample_and_check("before_optimizer_init", mx=mx)
     optimizer = optim.AdamW(learning_rate=args.lr, weight_decay=0.0)
+    probe.sample_and_check("after_optimizer_init", mx=mx)
     _mx_eval_setup_barrier(mx, probe, "after_model_init", model.parameters())
     start_step = 0
     history: list[dict[str, Any]] = []
@@ -1114,24 +1200,56 @@ def run_mlx_train(
         _clear_mlx_cache(mx)
         probe.sample_and_check("after_torch_checkpoint_free", mx=mx)
 
-    conditioning = mx.array(conditioning_np)
-    target = mx.array(target_np)
-    pair_idx = mx.array(np.asarray(pair_ids, dtype=np.int32))
-    _mx_eval_setup_barrier(
-        mx,
-        probe,
-        "after_selected_tokens_mlx_conversion",
-        conditioning,
-        target,
-        pair_idx,
+    total_pairs = len(pair_ids)
+    microbatch_pairs = _derive_train_microbatch_pairs(args, total_pairs=total_pairs)
+    chunk_plan = {
+        "total_pairs": total_pairs,
+        "microbatch_pairs": microbatch_pairs,
+        "chunk_count": len(_iter_pair_chunks(total_pairs, microbatch_pairs)),
+        "mode": "full_batch" if microbatch_pairs >= total_pairs else "serial_gradient_accumulation",
+        "source": "explicit_cli"
+        if int(getattr(args, "microbatch_pairs", 0) or 0) > 0
+        else ("gpu_default_4_pairs" if str(args.device).lower() == "gpu" else "cpu_full_batch_default"),
+    }
+    conditioning = target = pair_idx = None
+    probe.sample_and_check(
+        "before_selected_tokens_mlx_conversion_plan",
+        mx=mx,
+        note=json.dumps(chunk_plan, sort_keys=True),
     )
-    del conditioning_np, target_np
-    gc.collect()
-    _clear_mlx_cache(mx)
-    probe.sample_and_check("after_selected_token_numpy_free", mx=mx)
+    if microbatch_pairs >= total_pairs:
+        conditioning, target, pair_idx = _mlx_token_chunk(
+            mx,
+            conditioning_np,
+            target_np,
+            pair_ids,
+            0,
+            total_pairs,
+        )
+        _mx_eval_setup_barrier(
+            mx,
+            probe,
+            "after_selected_tokens_mlx_conversion",
+            conditioning,
+            target,
+            pair_idx,
+            note=json.dumps(chunk_plan, sort_keys=True),
+        )
+        del conditioning_np, target_np
+        gc.collect()
+        _clear_mlx_cache(mx)
+        probe.sample_and_check("after_selected_token_numpy_free", mx=mx)
+    else:
+        probe.sample_and_check(
+            "after_selected_tokens_lazy_chunk_plan",
+            mx=mx,
+            note=json.dumps(chunk_plan, sort_keys=True),
+        )
 
+    probe.sample_and_check("before_upstream_segnet_torch_load", mx=mx)
     segnet_torch = _load_upstream_segnet(torch.device("cpu"))
     probe.sample_and_check("after_upstream_segnet_torch_load", mx=mx)
+    probe.sample_and_check("before_segnet_mlx_conversion", mx=mx)
     segnet_mlx = torch_segnet_to_mlx(segnet_torch)
     segnet_params = segnet_mlx.parameters() if hasattr(segnet_mlx, "parameters") else []
     _mx_eval_setup_barrier(mx, probe, "after_segnet_mlx_conversion", segnet_params)
@@ -1151,7 +1269,14 @@ def run_mlx_train(
         base_params = model.trainable_parameters()
         step_for_loss = step
 
-        def loss_for_params(params: Mapping[str, Any], *, step_for_loss: int = step_for_loss) -> Any:
+        def loss_for_batch(
+            params: Mapping[str, Any],
+            conditioning_batch: Any,
+            target_batch: Any,
+            pair_idx_batch: Any,
+            *,
+            step_for_loss: int = step_for_loss,
+        ) -> Any:
             if step_for_loss < args.float_warmup_steps:
                 active_params = params
                 phase_prefix = "float_"
@@ -1165,7 +1290,7 @@ def run_mlx_train(
                 )
                 phase_prefix = ""
             model.update(active_params)
-            frame = model(conditioning, pair_idx)
+            frame = model(conditioning_batch, pair_idx_batch)
             frame_r = apply_contest_faithful_roundtrip_nhwc(
                 frame, output_hw=(384, 512), ste_round=True
             )
@@ -1174,21 +1299,90 @@ def run_mlx_train(
             loss, phase = curriculum_loss_mlx(
                 mx,
                 logits_nchw,
-                target,
+                target_batch,
                 step=max(0, step_for_loss - args.float_warmup_steps),
                 total_steps=max(1, args.steps - args.float_warmup_steps),
                 ce_fraction=args.ce_fraction,
                 softplus_fraction=args.softplus_fraction,
             )
-            loss_for_params.phase = phase_prefix + phase  # type: ignore[attr-defined]
+            loss_for_batch.phase = phase_prefix + phase  # type: ignore[attr-defined]
             return loss
 
-        value, grads = mx.value_and_grad(loss_for_params)(base_params)
+        if microbatch_pairs >= total_pairs:
+            assert conditioning is not None and target is not None and pair_idx is not None
+            if step == start_step or args.steps <= 3:
+                probe.sample_and_check(
+                    f"before_train_step_{step + 1:06d}_full_batch_value_and_grad",
+                    mx=mx,
+                )
+
+            def loss_for_params(params: Mapping[str, Any]) -> Any:
+                return loss_for_batch(params, conditioning, target, pair_idx)
+
+            value, grads = mx.value_and_grad(loss_for_params)(base_params)
+            phase = getattr(loss_for_batch, "phase", "unknown")
+        else:
+            value = None
+            grads = None
+            phase = "unknown"
+            for chunk_index, (start, stop) in enumerate(
+                _iter_pair_chunks(total_pairs, microbatch_pairs),
+                start=1,
+            ):
+                conditioning_chunk, target_chunk, pair_idx_chunk = _mlx_token_chunk(
+                    mx,
+                    conditioning_np,
+                    target_np,
+                    pair_ids,
+                    start,
+                    stop,
+                )
+                if step == start_step or args.steps <= 3:
+                    probe.sample_and_check(
+                        f"before_train_step_{step + 1:06d}_chunk_{chunk_index:03d}_value_and_grad",
+                        mx=mx,
+                        note=f"rows={start}:{stop}",
+                    )
+
+                def loss_for_params(
+                    params: Mapping[str, Any],
+                    conditioning_chunk: Any = conditioning_chunk,
+                    target_chunk: Any = target_chunk,
+                    pair_idx_chunk: Any = pair_idx_chunk,
+                ) -> Any:
+                    return loss_for_batch(params, conditioning_chunk, target_chunk, pair_idx_chunk)
+
+                chunk_value, chunk_grads = mx.value_and_grad(loss_for_params)(base_params)
+                mx.eval(chunk_value, chunk_grads)
+                probe.check_budget(
+                    f"after_train_step_{step + 1:06d}_chunk_{chunk_index:03d}_value_and_grad",
+                    mx=mx,
+                )
+                weight = float(stop - start) / float(total_pairs)
+                grads = _tree_add_scaled(
+                    mx,
+                    tree_flatten,
+                    tree_unflatten,
+                    grads,
+                    chunk_grads,
+                    weight,
+                )
+                value = chunk_value * weight if value is None else value + chunk_value * weight
+                mx.eval(value, grads)
+                phase = getattr(loss_for_batch, "phase", "unknown")
+                del conditioning_chunk, target_chunk, pair_idx_chunk, chunk_value, chunk_grads
+                gc.collect()
+                _clear_mlx_cache(mx)
+                probe.check_budget(
+                    f"after_train_step_{step + 1:06d}_chunk_{chunk_index:03d}_free",
+                    mx=mx,
+                )
+            if value is None or grads is None:
+                raise RuntimeError("microbatch path produced no gradients")
         model.update(base_params)
         model.update(optimizer.apply_gradients(grads, base_params))
         mx.eval(value, model.parameters(), optimizer.state)
         probe.check_budget(f"after_train_step_{step + 1:06d}", mx=mx)
-        phase = getattr(loss_for_params, "phase", "unknown")
         record: dict[str, Any] = {
             "step": step + 1,
             "phase": phase,
@@ -1198,16 +1392,51 @@ def run_mlx_train(
         if step == start_step or args.steps <= 3:
             probe.sample(f"after_train_step_{step + 1:06d}", mx=mx)
         if (step + 1) % max(args.eval_every, 1) == 0 or step + 1 == args.steps:
-            frame = model(conditioning, pair_idx)
-            frame_r = apply_contest_faithful_roundtrip_nhwc(
-                frame, output_hw=(384, 512), ste_round=True
-            )
-            logits = segnet_mlx(frame_r)
-            pred = mx.argmax(logits, axis=-1)
-            dseg = mx.mean((pred != target).astype(mx.float32))
-            mx.eval(dseg)
-            probe.check_budget(f"after_eval_step_{step + 1:06d}", mx=mx)
-            record["d_seg_batch"] = float(dseg)
+            if microbatch_pairs >= total_pairs:
+                assert conditioning is not None and target is not None and pair_idx is not None
+                frame = model(conditioning, pair_idx)
+                frame_r = apply_contest_faithful_roundtrip_nhwc(
+                    frame, output_hw=(384, 512), ste_round=True
+                )
+                logits = segnet_mlx(frame_r)
+                pred = mx.argmax(logits, axis=-1)
+                dseg = mx.mean((pred != target).astype(mx.float32))
+                mx.eval(dseg)
+                probe.check_budget(f"after_eval_step_{step + 1:06d}", mx=mx)
+                record["d_seg_batch"] = float(dseg)
+            else:
+                mismatch_count = 0.0
+                pixel_count = 0
+                for chunk_index, (start, stop) in enumerate(
+                    _iter_pair_chunks(total_pairs, microbatch_pairs),
+                    start=1,
+                ):
+                    conditioning_chunk, target_chunk, pair_idx_chunk = _mlx_token_chunk(
+                        mx,
+                        conditioning_np,
+                        target_np,
+                        pair_ids,
+                        start,
+                        stop,
+                    )
+                    frame = model(conditioning_chunk, pair_idx_chunk)
+                    frame_r = apply_contest_faithful_roundtrip_nhwc(
+                        frame, output_hw=(384, 512), ste_round=True
+                    )
+                    logits = segnet_mlx(frame_r)
+                    pred = mx.argmax(logits, axis=-1)
+                    mismatch = mx.sum((pred != target_chunk).astype(mx.float32))
+                    mx.eval(mismatch)
+                    probe.check_budget(
+                        f"after_eval_step_{step + 1:06d}_chunk_{chunk_index:03d}",
+                        mx=mx,
+                    )
+                    mismatch_count += float(mismatch)
+                    pixel_count += int(stop - start) * int(target_np.shape[-2]) * int(target_np.shape[-1])
+                    del conditioning_chunk, target_chunk, pair_idx_chunk, frame, frame_r, logits, pred, mismatch
+                    gc.collect()
+                    _clear_mlx_cache(mx)
+                record["d_seg_batch"] = mismatch_count / max(pixel_count, 1)
             if args.steps <= 3:
                 probe.sample(f"after_eval_step_{step + 1:06d}", mx=mx)
         history.append(record)
@@ -1256,6 +1485,7 @@ def run_mlx_train(
         "pairs": pair_ids,
         "cache_load": cache_meta,
         "memory_limits": memory_limits,
+        "microbatch_plan": chunk_plan,
         "software_budget": probe.budget_summary(),
         "load_memory_samples": probe.samples,
         "load_memory_peak": probe.peak(),
@@ -1343,6 +1573,7 @@ def _build_mem_probe_receipt(
             "ce_fraction": float(args.ce_fraction),
             "softplus_fraction": float(args.softplus_fraction),
             "bits": int(args.bits),
+            "microbatch_pairs": int(getattr(args, "microbatch_pairs", 0) or 0),
             "mem_budget_gb": args.mem_budget_gb,
             "allow_soft_mem_limit": bool(getattr(args, "allow_soft_mem_limit", False)),
             "input_cache": str(args.input_cache),
@@ -1360,6 +1591,7 @@ def _build_mem_probe_receipt(
             "steps": train_result.get("steps"),
             "seconds_per_step": train_result.get("seconds_per_step"),
             "memory_limits": train_result.get("memory_limits"),
+            "microbatch_plan": train_result.get("microbatch_plan"),
             "stage_checkpoint": train_result.get("stage_checkpoint"),
             "latest_checkpoint": train_result.get("latest_checkpoint"),
             "latest_checkpoint_sha256": train_result.get("latest_checkpoint_sha256"),
@@ -1386,7 +1618,7 @@ def _build_mem_probe_receipt(
 
 
 def run_mem_probe(args: argparse.Namespace) -> dict[str, Any]:
-    probe = LoadPhaseMemoryProbe()
+    probe = LoadPhaseMemoryProbe(emit_log_lines=True)
     probe_args = _mem_probe_args(args)
     train_result: dict[str, Any] | None = None
     blocker: dict[str, Any] | None = None
@@ -1793,6 +2025,7 @@ def main() -> None:
     parser.add_argument("--float-warmup-steps", type=int, default=0)
     parser.add_argument("--eval-every", type=int, default=250)
     parser.add_argument("--checkpoint-every", type=int, default=250)
+    parser.add_argument("--microbatch-pairs", type=int, default=0)
     parser.add_argument("--mem-budget-gb", type=float)
     parser.add_argument("--mem-probe-steps", type=int, default=3)
     parser.add_argument("--allow-soft-mem-limit", action="store_true")
@@ -1804,6 +2037,8 @@ def main() -> None:
     args = parser.parse_args()
     if args.mem_probe_steps <= 0:
         parser.error("--mem-probe-steps must be positive")
+    if args.microbatch_pairs < 0:
+        parser.error("--microbatch-pairs must be non-negative")
     if args.mode in {"mlx-train", "torch-smoke"}:
         assert_governed_admission(f"ddm_mx1_pr130_semantic_renderer:{args.mode}")
     if args.mode == "mlx-train" and str(args.device).lower() == "gpu":

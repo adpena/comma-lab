@@ -6,6 +6,7 @@ import sys
 from argparse import Namespace
 from pathlib import Path
 
+import numpy as np
 import pytest
 import torch
 
@@ -44,6 +45,7 @@ def _args(tmp_path: Path) -> Namespace:
         float_warmup_steps=0,
         eval_every=250,
         checkpoint_every=250,
+        microbatch_pairs=0,
         mem_budget_gb=12.5,
         mem_probe_steps=3,
         allow_soft_mem_limit=False,
@@ -126,6 +128,58 @@ def test_run_mem_probe_writes_peak_receipt_schema(tmp_path: Path, monkeypatch) -
     assert receipt["samples"][-1]["stage"] == "after_train_step_000003"
 
 
+def test_run_mem_probe_emits_flushed_load_phase_checkpoint_lines(
+    tmp_path: Path,
+    monkeypatch,
+    capsys,
+) -> None:
+    args = _args(tmp_path)
+
+    class FakeMx:
+        @staticmethod
+        def get_active_memory() -> int:
+            return 256
+
+    def fake_run_mlx_train(probe_args, *, memory_probe):
+        memory_probe.install_software_budget(
+            {
+                "software_cap_required": True,
+                "software_budget_bytes": int(2 * mx1.GIB),
+            }
+        )
+        memory_probe.sample_and_check("before_test_allocator", mx=FakeMx())
+        memory_probe.sample_and_check("after_train_step_000003", mx=FakeMx())
+        return {
+            "schema": "ddm_mx1_mlx_train.v1",
+            "status": "passed",
+            "steps": probe_args.steps,
+            "seconds_per_step": 0.25,
+            "memory_limits": {"enforcement": "software_stage_step_cap"},
+            "microbatch_plan": {"mode": "serial_gradient_accumulation"},
+            "software_budget": memory_probe.budget_summary(),
+            "stage_checkpoint": str(probe_args.run_dir / "mlx_stage_step000003.npz"),
+            "latest_checkpoint": str(probe_args.run_dir / "mlx.latest.npz"),
+            "latest_checkpoint_sha256": "0" * 64,
+            "load_memory_peak": memory_probe.peak(),
+        }
+
+    monkeypatch.setattr(mx1, "run_mlx_train", fake_run_mlx_train)
+
+    result = mx1.run_mem_probe(args)
+    captured = capsys.readouterr()
+
+    assert result["status"] == "passed"
+    lines = [line for line in captured.err.splitlines() if line.startswith("[mx1-load-phase] ")]
+    assert len(lines) >= 2
+    payloads = [json.loads(line.split("] ", 1)[1]) for line in lines]
+    assert {payload["stage"] for payload in payloads} >= {
+        "before_test_allocator",
+        "after_train_step_000003",
+    }
+    assert payloads[0]["schema"] == "ddm_mx1_load_phase_checkpoint.v1"
+    assert payloads[0]["mlx_active_gib"] == mx1._gib_or_none(256)
+
+
 def test_run_mem_probe_writes_failed_receipt_on_hard_cap_failure(tmp_path: Path, monkeypatch) -> None:
     args = _args(tmp_path)
 
@@ -185,6 +239,52 @@ def test_default_budget_uses_35_percent_and_probe_cap(monkeypatch) -> None:
     assert normal["source"] == "default_35pct_of_available_memory_at_start"
     assert probe["budget_gb"] == 24.0
     assert probe["source"] == "mem_probe_min_24gb_default_35pct_of_available_memory_at_start"
+
+
+def test_gpu_train_defaults_to_four_pair_microbatches(tmp_path: Path) -> None:
+    args = _args(tmp_path)
+    args.device = "gpu"
+
+    assert mx1._derive_train_microbatch_pairs(args, total_pairs=32) == 4
+
+    args.device = "cpu"
+    assert mx1._derive_train_microbatch_pairs(args, total_pairs=32) == 32
+
+    args.device = "gpu"
+    args.microbatch_pairs = 7
+    assert mx1._derive_train_microbatch_pairs(args, total_pairs=32) == 7
+    assert mx1._derive_train_microbatch_pairs(args, total_pairs=3) == 3
+
+
+def test_mlx_token_chunks_cover_same_rows_as_full_selected_arrays() -> None:
+    conditioning_np = np.arange(7 * 2 * 3, dtype=np.int32).reshape(7, 2, 3)
+    target_np = (conditioning_np + 100).copy()
+    pair_ids = [3, 9, 10, 17, 24, 31, 42]
+
+    class FakeMx:
+        @staticmethod
+        def array(value):
+            return np.asarray(value).copy()
+
+    conditioning_chunks = []
+    target_chunks = []
+    idx_chunks = []
+    for start, stop in mx1._iter_pair_chunks(len(pair_ids), 3):
+        conditioning, target, idx = mx1._mlx_token_chunk(
+            FakeMx(),
+            conditioning_np,
+            target_np,
+            pair_ids,
+            start,
+            stop,
+        )
+        conditioning_chunks.append(conditioning)
+        target_chunks.append(target)
+        idx_chunks.append(idx)
+
+    assert np.array_equal(np.concatenate(conditioning_chunks, axis=0), conditioning_np)
+    assert np.array_equal(np.concatenate(target_chunks, axis=0), target_np)
+    assert np.array_equal(np.concatenate(idx_chunks, axis=0), np.asarray(pair_ids, dtype=np.int32))
 
 
 def test_configure_mlx_memory_limits_installs_software_and_wired_caps_for_gpu(monkeypatch) -> None:
