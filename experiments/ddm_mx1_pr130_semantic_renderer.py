@@ -14,15 +14,20 @@ It does not run n600 scorer work and does not claim a contest score.
 from __future__ import annotations
 
 import argparse
+import gc
 import hashlib
 import importlib.util
 import json
 import math
+import os
 import platform
+import subprocess
 import sys
 import time
+from collections.abc import Mapping
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 
 import numpy as np
 import torch
@@ -30,6 +35,8 @@ import torch
 from tac.pr130_lift import SOURCE_REPO_HEAD, SOURCE_REPO_ROOT
 from tac.pr130_lift.mlx_semantic_renderer import (
     MlxSemanticConfig,
+    MlxUnavailableError,
+    curriculum_loss_mlx,
     fake_quantize_parameter_tree,
     load_stage_checkpoint_npz,
     load_torch_state_dict_into_mlx,
@@ -37,7 +44,6 @@ from tac.pr130_lift.mlx_semantic_renderer import (
     mlx_device_probe,
     require_mlx,
     save_stage_checkpoint_npz,
-    curriculum_loss_mlx,
 )
 
 REPO = Path(__file__).resolve().parents[1]
@@ -50,6 +56,8 @@ DEFAULT_INIT = Path(
     "repro_repo/artifacts/checkpoints/semantic_renderer_w96_b4_qat4_12k.pt"
 )
 CONTEST_DENOMINATOR_BYTES = 37_545_489
+GIB = 1024.0 ** 3
+MEM_PROBE_RECEIPT_SCHEMA = "ddm_mx1_load_phase_peak_receipt.v1"
 
 
 def _sha256_file(path: Path) -> str:
@@ -58,6 +66,130 @@ def _sha256_file(path: Path) -> str:
         for chunk in iter(lambda: handle.read(1 << 20), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def _utc_now_iso() -> str:
+    return datetime.now(UTC).isoformat().replace("+00:00", "Z")
+
+
+def _gib_or_none(num_bytes: int | float | None) -> float | None:
+    if num_bytes is None:
+        return None
+    return round(float(num_bytes) / GIB, 6)
+
+
+def _process_rss_bytes() -> int | None:
+    try:
+        import psutil
+
+        return int(psutil.Process(os.getpid()).memory_info().rss)
+    except Exception:
+        pass
+    try:
+        out = subprocess.run(
+            ["ps", "-o", "rss=", "-p", str(os.getpid())],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        if out.returncode == 0 and out.stdout.strip():
+            return int(out.stdout.strip().split()[0]) * 1024
+    except Exception:
+        return None
+    return None
+
+
+def _system_available_bytes() -> int | None:
+    try:
+        import psutil
+
+        # RAW_VM_BASIS_OK: telemetry-only load-phase receipt/default limit hint,
+        # not an admission guard or launch clearance.
+        return int(psutil.virtual_memory().available)
+    except Exception:
+        return None
+
+
+def _mlx_allocator_bytes(mx: Any | None) -> dict[str, int | None]:
+    if mx is None:
+        return {"active": None, "cache": None, "peak": None}
+    out: dict[str, int | None] = {}
+    for key, names in {
+        "active": ("get_active_memory", "metal.get_active_memory"),
+        "cache": ("get_cache_memory", "metal.get_cache_memory"),
+        "peak": ("get_peak_memory", "metal.get_peak_memory"),
+    }.items():
+        value: int | None = None
+        for name in names:
+            try:
+                obj: Any = mx
+                for part in name.split("."):
+                    obj = getattr(obj, part)
+                value = int(obj())
+                break
+            except Exception:
+                continue
+        out[key] = value
+    return out
+
+
+class LoadPhaseMemoryProbe:
+    """Small typed recorder for load-phase RSS + MLX allocator telemetry."""
+
+    def __init__(self) -> None:
+        self.samples: list[dict[str, Any]] = []
+        self._start_rss_bytes: int | None = None
+        self._start_available_bytes: int | None = None
+
+    def sample(self, stage: str, *, mx: Any | None = None, note: str | None = None) -> dict[str, Any]:
+        rss_bytes = _process_rss_bytes()
+        available_bytes = _system_available_bytes()
+        if self._start_rss_bytes is None:
+            self._start_rss_bytes = rss_bytes
+        if self._start_available_bytes is None:
+            self._start_available_bytes = available_bytes
+        mlx_bytes = _mlx_allocator_bytes(mx)
+        sample = {
+            "event_index": len(self.samples),
+            "stage": stage,
+            "timestamp_utc": _utc_now_iso(),
+            "rss_gib": _gib_or_none(rss_bytes),
+            "rss_delta_from_start_gib": _gib_or_none(
+                None if rss_bytes is None or self._start_rss_bytes is None else rss_bytes - self._start_rss_bytes
+            ),
+            "sys_available_gib": _gib_or_none(available_bytes),
+            "sys_available_delta_from_start_gib": _gib_or_none(
+                None
+                if available_bytes is None or self._start_available_bytes is None
+                else available_bytes - self._start_available_bytes
+            ),
+            "mlx_active_gib": _gib_or_none(mlx_bytes["active"]),
+            "mlx_cache_gib": _gib_or_none(mlx_bytes["cache"]),
+            "mlx_peak_gib": _gib_or_none(mlx_bytes["peak"]),
+        }
+        if note:
+            sample["note"] = note
+        self.samples.append(sample)
+        return sample
+
+    def peak(self) -> dict[str, Any]:
+        def max_present(key: str) -> float | None:
+            values = [row[key] for row in self.samples if row.get(key) is not None]
+            return max(values) if values else None
+
+        def min_present(key: str) -> float | None:
+            values = [row[key] for row in self.samples if row.get(key) is not None]
+            return min(values) if values else None
+
+        return {
+            "sample_count": len(self.samples),
+            "peak_rss_gib": max_present("rss_gib"),
+            "min_sys_available_gib": min_present("sys_available_gib"),
+            "peak_mlx_active_gib": max_present("mlx_active_gib"),
+            "peak_mlx_cache_gib": max_present("mlx_cache_gib"),
+            "peak_mlx_reported_gib": max_present("mlx_peak_gib"),
+        }
 
 
 def _load_lifted_semantic() -> Any:
@@ -118,22 +250,87 @@ def _select_stratified_indices(n: int, total: int = 600, seed: int = 20260806) -
     return sorted(selected)
 
 
+def _load_selected_seg_tokens(cache_path: Path, pair_ids: list[int]) -> tuple[torch.Tensor, dict[str, Any]]:
+    """Load only selected cache rows into the retained tensor.
+
+    The cache file is still a monolithic ``torch.save`` payload, so PyTorch must
+    deserialize it. The fix is to index+clone immediately and drop the full
+    cache before any MLX arrays or scorer weights are built.
+    """
+
+    payload = torch.load(cache_path, map_location="cpu", weights_only=False)
+    try:
+        seg_all = payload["seg"]
+        idx = torch.tensor(pair_ids, dtype=torch.long)
+        selected = seg_all.index_select(0, idx).long().clone().contiguous()
+        meta = {
+            "cache_path": str(cache_path),
+            "cache_bytes": cache_path.stat().st_size if cache_path.exists() else None,
+            "full_shape_seen": list(seg_all.shape),
+            "full_dtype_seen": str(seg_all.dtype),
+            "selected_shape": list(selected.shape),
+            "selected_dtype": str(selected.dtype),
+            "selected_pair_count": len(pair_ids),
+        }
+    finally:
+        del payload
+        if "seg_all" in locals():
+            del seg_all
+        gc.collect()
+    return selected, meta
+
+
+def _load_selected_token_arrays(
+    *,
+    input_cache: Path,
+    target_cache: Path,
+    pair_ids: list[int],
+    memory_probe: LoadPhaseMemoryProbe | None,
+) -> tuple[np.ndarray, np.ndarray, dict[str, Any]]:
+    if memory_probe is not None:
+        memory_probe.sample("before_selected_cache_load")
+    input_tokens, input_meta = _load_selected_seg_tokens(input_cache, pair_ids)
+    if memory_probe is not None:
+        memory_probe.sample("after_input_cache_selected_clone")
+    if input_cache == target_cache:
+        target_tokens = input_tokens
+        target_meta = {**input_meta, "shared_with_input_cache": True}
+    else:
+        target_tokens, target_meta = _load_selected_seg_tokens(target_cache, pair_ids)
+        if memory_probe is not None:
+            memory_probe.sample("after_target_cache_selected_clone")
+
+    conditioning_np = input_tokens.numpy().astype(np.int32, copy=True)
+    target_np = target_tokens.numpy().astype(np.int32, copy=True)
+    del input_tokens
+    del target_tokens
+    gc.collect()
+    if memory_probe is not None:
+        memory_probe.sample("after_selected_cache_numpy_copy_and_torch_free")
+    return conditioning_np, target_np, {
+        "input": input_meta,
+        "target": target_meta,
+        "subset_before_materialize": "torch.load_index_clone_del_full_cache",
+    }
+
+
 def run_torch_smoke(args: argparse.Namespace) -> dict[str, Any]:
     lifted = _load_lifted_semantic()
     torch.manual_seed(args.seed)
     np.random.seed(args.seed)
     device = torch.device("cpu")
-    target_cache = torch.load(args.target_cache, map_location="cpu", weights_only=False)
-    target_tokens_all = target_cache["seg"].long()
-    input_tokens_all = (
-        torch.load(args.input_cache, map_location="cpu", weights_only=False)["seg"].long()
-        if args.input_cache != args.target_cache
-        else target_tokens_all
-    )
     pair_ids = _select_stratified_indices(args.pairs, seed=args.seed)
+    conditioning_np, target_np, cache_meta = _load_selected_token_arrays(
+        input_cache=args.input_cache,
+        target_cache=args.target_cache,
+        pair_ids=pair_ids,
+        memory_probe=None,
+    )
     idx = torch.tensor(pair_ids, dtype=torch.long, device=device)
-    conditioning = input_tokens_all[idx.cpu()].to(device)
-    target = target_tokens_all[idx.cpu()].to(device)
+    conditioning = torch.from_numpy(conditioning_np).long().to(device)
+    target = torch.from_numpy(target_np).long().to(device)
+    del conditioning_np, target_np
+    gc.collect()
 
     checkpoint = torch.load(args.init, map_location="cpu", weights_only=False)
     config = checkpoint["config"]
@@ -215,6 +412,7 @@ def run_torch_smoke(args: argparse.Namespace) -> dict[str, Any]:
         "scorer_axis": scorer_axis,
         "score_claim": False,
         "pairs": pair_ids,
+        "cache_load": cache_meta,
         "steps": args.steps,
         "elapsed_seconds": elapsed,
         "seconds_per_step": elapsed / max(args.steps, 1),
@@ -264,12 +462,18 @@ def run_mlx_parity(args: argparse.Namespace) -> dict[str, Any]:
         mlx_model, checkpoint["state_dict"], device=args.device
     )
 
-    input_tokens_all = torch.load(args.input_cache, map_location="cpu", weights_only=False)["seg"].long()
-    target_tokens_all = torch.load(args.target_cache, map_location="cpu", weights_only=False)["seg"].long()
     pair_ids = _select_stratified_indices(args.pairs, seed=args.seed)
     idx_torch = torch.tensor(pair_ids, dtype=torch.long)
-    conditioning_torch = input_tokens_all[pair_ids]
-    target_torch = target_tokens_all[pair_ids]
+    conditioning_np, target_np, cache_meta = _load_selected_token_arrays(
+        input_cache=args.input_cache,
+        target_cache=args.target_cache,
+        pair_ids=pair_ids,
+        memory_probe=None,
+    )
+    conditioning_torch = torch.from_numpy(conditioning_np).long()
+    target_torch = torch.from_numpy(target_np).long()
+    del conditioning_np, target_np
+    gc.collect()
 
     with torch.no_grad():
         torch_frame = torch_model(conditioning_torch, idx_torch)
@@ -328,6 +532,7 @@ def run_mlx_parity(args: argparse.Namespace) -> dict[str, Any]:
         "gradient_parity_claim": False,
         "gradient_parity_scope": "not measured by this mode; training telemetry remains research-signal unless a separate gradient-parity check is added",
         "pairs": pair_ids,
+        "cache_load": cache_meta,
         "raw_frame_max_abs": frame_max_abs,
         "seg_argmax_equal": argmax_equal,
         "seg_argmax_diff_count": argmax_diff_count,
@@ -339,21 +544,108 @@ def run_mlx_parity(args: argparse.Namespace) -> dict[str, Any]:
     }
 
 
-def run_mlx_train(args: argparse.Namespace) -> dict[str, Any]:
+def _derive_mem_budget_gb(explicit_gb: float | None) -> dict[str, Any]:
+    if explicit_gb is not None:
+        if explicit_gb <= 0:
+            raise ValueError("--mem-budget-gb must be positive when provided")
+        return {
+            "budget_gb": float(explicit_gb),
+            "source": "explicit_cli",
+            "available_gib_at_start": _gib_or_none(_system_available_bytes()),
+        }
+    available = _system_available_bytes()
+    if available is None:
+        return {
+            "budget_gb": None,
+            "source": "unavailable_no_limit_applied",
+            "available_gib_at_start": None,
+        }
+    available_gib = float(available) / GIB
+    return {
+        "budget_gb": round(max(1.0, available_gib * 0.50), 3),
+        "source": "default_50pct_of_available_memory_at_start",
+        "available_gib_at_start": round(available_gib, 6),
+    }
+
+
+def _call_optional_mlx_limit(mx: Any, dotted_name: str, value: int) -> dict[str, Any]:
+    try:
+        obj: Any = mx
+        for part in dotted_name.split("."):
+            obj = getattr(obj, part)
+        obj(value)
+        return {"target": dotted_name, "status": "applied", "value_bytes": value}
+    except AttributeError:
+        return {"target": dotted_name, "status": "unavailable", "value_bytes": value}
+    except Exception as exc:
+        return {
+            "target": dotted_name,
+            "status": "failed",
+            "value_bytes": value,
+            "error_type": type(exc).__name__,
+            "error": str(exc),
+        }
+
+
+def _configure_mlx_memory_limits(mx: Any, explicit_gb: float | None) -> dict[str, Any]:
+    derived = _derive_mem_budget_gb(explicit_gb)
+    budget_gb = derived["budget_gb"]
+    if budget_gb is None:
+        return {**derived, "memory_limit": None, "cache_limit": None, "calls": []}
+    memory_limit = int(float(budget_gb) * GIB)
+    cache_limit = int(max(256 * 1024 * 1024, memory_limit * 0.25))
+    calls = [
+        _call_optional_mlx_limit(mx, "set_memory_limit", memory_limit),
+        _call_optional_mlx_limit(mx, "metal.set_memory_limit", memory_limit),
+        _call_optional_mlx_limit(mx, "set_cache_limit", cache_limit),
+        _call_optional_mlx_limit(mx, "metal.set_cache_limit", cache_limit),
+    ]
+    return {
+        **derived,
+        "memory_limit": memory_limit,
+        "cache_limit": cache_limit,
+        "calls": calls,
+    }
+
+
+def _clear_mlx_cache(mx: Any) -> None:
+    for name in ("clear_cache", "metal.clear_cache"):
+        try:
+            obj: Any = mx
+            for part in name.split("."):
+                obj = getattr(obj, part)
+            obj()
+            return
+        except Exception:
+            continue
+
+
+def _mx_eval_setup_barrier(
+    mx: Any,
+    memory_probe: LoadPhaseMemoryProbe,
+    stage: str,
+    *values: Any,
+    note: str | None = None,
+) -> None:
+    if values:
+        mx.eval(*values)
+    memory_probe.sample(stage, mx=mx, note=note)
+
+
+def run_mlx_train(
+    args: argparse.Namespace,
+    *,
+    memory_probe: LoadPhaseMemoryProbe | None = None,
+) -> dict[str, Any]:
     """Run the real MLX Row-1 training path when MLX is available."""
 
-    mx, nn, optim = require_mlx(device=args.device)
-    from mlx.utils import tree_flatten, tree_unflatten
-
-    from tac.local_acceleration.mlx_scorer_adapters import torch_segnet_to_mlx
-    from tac.local_acceleration.pr95_hnerv_mlx_training import (
-        apply_contest_faithful_roundtrip_nhwc,
-    )
-
+    probe = memory_probe if memory_probe is not None else LoadPhaseMemoryProbe()
+    probe.sample("start")
     torch.manual_seed(args.seed)
     np.random.seed(args.seed)
     pair_ids = _select_stratified_indices(args.pairs, seed=args.seed)
     checkpoint = torch.load(args.init, map_location="cpu", weights_only=False)
+    probe.sample("after_init_checkpoint_torch_load")
     config = MlxSemanticConfig.from_pr130_checkpoint_config(checkpoint["config"])
     config = MlxSemanticConfig(
         **(config.asdict() | {
@@ -364,8 +656,26 @@ def run_mlx_train(args: argparse.Namespace) -> dict[str, Any]:
             "softplus_fraction": args.softplus_fraction,
         })
     )
+    conditioning_np, target_np, cache_meta = _load_selected_token_arrays(
+        input_cache=args.input_cache,
+        target_cache=args.target_cache,
+        pair_ids=pair_ids,
+        memory_probe=probe,
+    )
+
+    mx, _nn, optim = require_mlx(device=args.device)
+    memory_limits = _configure_mlx_memory_limits(mx, args.mem_budget_gb)
+    probe.sample("after_require_mlx_and_memory_limits", mx=mx)
+    from mlx.utils import tree_flatten, tree_unflatten
+
+    from tac.local_acceleration.mlx_scorer_adapters import torch_segnet_to_mlx
+    from tac.local_acceleration.pr95_hnerv_mlx_training import (
+        apply_contest_faithful_roundtrip_nhwc,
+    )
+
     model = make_mlx_renderer(config, device=args.device)
     optimizer = optim.AdamW(learning_rate=args.lr, weight_decay=0.0)
+    _mx_eval_setup_barrier(mx, probe, "after_model_init", model.parameters())
     start_step = 0
     history: list[dict[str, Any]] = []
     if args.resume_from is not None:
@@ -374,21 +684,47 @@ def run_mlx_train(args: argparse.Namespace) -> dict[str, Any]:
         )
         start_step = int(resume["step"])
         history = list(resume["history"])
+        del checkpoint
+        gc.collect()
+        _clear_mlx_cache(mx)
+        probe.sample("after_resume_load_and_init_checkpoint_free", mx=mx)
     else:
+        state_dict = checkpoint["state_dict"]
         load_torch_state_dict_into_mlx(
-            model, checkpoint["state_dict"], device=args.device
+            model, state_dict, device=args.device
         )
+        _mx_eval_setup_barrier(mx, probe, "after_model_weight_mlx_conversion", model.parameters())
+        del state_dict
+        del checkpoint
+        gc.collect()
+        _clear_mlx_cache(mx)
+        probe.sample("after_torch_checkpoint_free", mx=mx)
 
-    input_tokens_all = torch.load(args.input_cache, map_location="cpu", weights_only=False)["seg"].long()
-    target_tokens_all = torch.load(args.target_cache, map_location="cpu", weights_only=False)["seg"].long()
-    conditioning_np = input_tokens_all[pair_ids].numpy().astype(np.int32, copy=False)
-    target_np = target_tokens_all[pair_ids].numpy().astype(np.int32, copy=False)
     conditioning = mx.array(conditioning_np)
     target = mx.array(target_np)
     pair_idx = mx.array(np.asarray(pair_ids, dtype=np.int32))
+    _mx_eval_setup_barrier(
+        mx,
+        probe,
+        "after_selected_tokens_mlx_conversion",
+        conditioning,
+        target,
+        pair_idx,
+    )
+    del conditioning_np, target_np
+    gc.collect()
+    _clear_mlx_cache(mx)
+    probe.sample("after_selected_token_numpy_free", mx=mx)
 
     segnet_torch = _load_upstream_segnet(torch.device("cpu"))
+    probe.sample("after_upstream_segnet_torch_load", mx=mx)
     segnet_mlx = torch_segnet_to_mlx(segnet_torch)
+    segnet_params = segnet_mlx.parameters() if hasattr(segnet_mlx, "parameters") else []
+    _mx_eval_setup_barrier(mx, probe, "after_segnet_mlx_conversion", segnet_params)
+    del segnet_torch
+    gc.collect()
+    _clear_mlx_cache(mx)
+    probe.sample("after_segnet_torch_free", mx=mx)
     start_time = time.time()
     last_stage_path: Path | None = None
 
@@ -399,9 +735,10 @@ def run_mlx_train(args: argparse.Namespace) -> dict[str, Any]:
     for step in range(start_step, args.steps):
         optimizer.learning_rate = cosine_lr(step)
         base_params = model.trainable_parameters()
+        step_for_loss = step
 
-        def loss_for_params(params: Mapping[str, Any]) -> Any:
-            if step < args.float_warmup_steps:
+        def loss_for_params(params: Mapping[str, Any], *, step_for_loss: int = step_for_loss) -> Any:
+            if step_for_loss < args.float_warmup_steps:
                 active_params = params
                 phase_prefix = "float_"
             else:
@@ -424,7 +761,7 @@ def run_mlx_train(args: argparse.Namespace) -> dict[str, Any]:
                 mx,
                 logits_nchw,
                 target,
-                step=max(0, step - args.float_warmup_steps),
+                step=max(0, step_for_loss - args.float_warmup_steps),
                 total_steps=max(1, args.steps - args.float_warmup_steps),
                 ce_fraction=args.ce_fraction,
                 softplus_fraction=args.softplus_fraction,
@@ -435,7 +772,7 @@ def run_mlx_train(args: argparse.Namespace) -> dict[str, Any]:
         value, grads = mx.value_and_grad(loss_for_params)(base_params)
         model.update(base_params)
         model.update(optimizer.apply_gradients(grads, base_params))
-        mx.eval(model.parameters(), optimizer.state)
+        mx.eval(value, model.parameters(), optimizer.state)
         phase = getattr(loss_for_params, "phase", "unknown")
         record: dict[str, Any] = {
             "step": step + 1,
@@ -443,6 +780,8 @@ def run_mlx_train(args: argparse.Namespace) -> dict[str, Any]:
             "loss": float(value),
             "lr": float(optimizer.learning_rate),
         }
+        if step == start_step or args.steps <= 3:
+            probe.sample(f"after_train_step_{step + 1:06d}", mx=mx)
         if (step + 1) % max(args.eval_every, 1) == 0 or step + 1 == args.steps:
             frame = model(conditioning, pair_idx)
             frame_r = apply_contest_faithful_roundtrip_nhwc(
@@ -453,6 +792,8 @@ def run_mlx_train(args: argparse.Namespace) -> dict[str, Any]:
             dseg = mx.mean((pred != target).astype(mx.float32))
             mx.eval(dseg)
             record["d_seg_batch"] = float(dseg)
+            if args.steps <= 3:
+                probe.sample(f"after_eval_step_{step + 1:06d}", mx=mx)
         history.append(record)
         if (step + 1) % max(args.checkpoint_every, 1) == 0 or step + 1 == args.steps:
             last_stage_path = args.run_dir / f"mlx_stage_step{step + 1:06d}.npz"
@@ -485,15 +826,22 @@ def run_mlx_train(args: argparse.Namespace) -> dict[str, Any]:
                     "source_repo_head": SOURCE_REPO_HEAD,
                 },
             )
+            if args.steps <= 3:
+                probe.sample(f"after_checkpoint_step_{step + 1:06d}", mx=mx)
     elapsed = time.time() - start_time
     latest_path = args.run_dir / "mlx.latest.npz"
     resume_check = load_stage_checkpoint_npz(latest_path, model=model, optimizer=optimizer, mx=mx)
+    probe.sample("after_resume_check", mx=mx)
     return {
         "schema": "ddm_mx1_mlx_train.v1",
         "status": "passed",
         "axis": "[macOS-MLX research-signal]",
         "score_claim": False,
         "pairs": pair_ids,
+        "cache_load": cache_meta,
+        "memory_limits": memory_limits,
+        "load_memory_samples": probe.samples,
+        "load_memory_peak": probe.peak(),
         "steps": args.steps,
         "start_step": start_step,
         "elapsed_seconds": elapsed,
@@ -504,6 +852,123 @@ def run_mlx_train(args: argparse.Namespace) -> dict[str, Any]:
         "latest_checkpoint_bytes": latest_path.stat().st_size if latest_path.exists() else None,
         "latest_checkpoint_sha256": _sha256_file(latest_path) if latest_path.exists() else None,
         "resume_load": resume_check,
+    }
+
+
+def _mem_probe_args(args: argparse.Namespace) -> argparse.Namespace:
+    payload = vars(args).copy()
+    payload["steps"] = int(args.mem_probe_steps)
+    payload["eval_every"] = 1
+    payload["checkpoint_every"] = max(1, int(args.mem_probe_steps))
+    return argparse.Namespace(**payload)
+
+
+def _build_mem_probe_receipt(
+    *,
+    args: argparse.Namespace,
+    probe_args: argparse.Namespace,
+    probe: LoadPhaseMemoryProbe,
+    status: str,
+    train_result: dict[str, Any] | None,
+    blocker: dict[str, Any] | None,
+) -> dict[str, Any]:
+    required_stage = f"after_train_step_{int(probe_args.steps):06d}"
+    final_step_sample = next(
+        (row for row in probe.samples if row.get("stage") == required_stage),
+        None,
+    )
+    has_mlx_allocator_telemetry = bool(
+        final_step_sample
+        and any(
+            final_step_sample.get(key) is not None
+            for key in ("mlx_active_gib", "mlx_cache_gib", "mlx_peak_gib")
+        )
+    )
+    metal_fire_clearance = status == "passed" and final_step_sample is not None and has_mlx_allocator_telemetry
+    return {
+        "schema": MEM_PROBE_RECEIPT_SCHEMA,
+        "status": status,
+        "axis": "[load-phase memory telemetry; score_claim=false]",
+        "score_claim": False,
+        "source_repo_head": SOURCE_REPO_HEAD,
+        "source_repo_root": SOURCE_REPO_ROOT,
+        "mode": "mem-probe",
+        "device_request": args.device,
+        "pairs": int(args.pairs),
+        "pair_ids": _select_stratified_indices(args.pairs, seed=args.seed),
+        "requested_training_steps": int(probe_args.steps),
+        "mem_budget_gb_arg": args.mem_budget_gb,
+        "input_cache": str(args.input_cache),
+        "target_cache": str(args.target_cache),
+        "init_checkpoint": str(args.init),
+        "samples": probe.samples,
+        "peak": probe.peak(),
+        "train_result_summary": None
+        if train_result is None
+        else {
+            "status": train_result.get("status"),
+            "steps": train_result.get("steps"),
+            "seconds_per_step": train_result.get("seconds_per_step"),
+            "stage_checkpoint": train_result.get("stage_checkpoint"),
+            "latest_checkpoint": train_result.get("latest_checkpoint"),
+            "latest_checkpoint_sha256": train_result.get("latest_checkpoint_sha256"),
+            "load_memory_peak": train_result.get("load_memory_peak"),
+        },
+        "blocker": blocker,
+        "clearance_checks": {
+            "required_stage": required_stage,
+            "has_required_stage_sample": final_step_sample is not None,
+            "has_mlx_allocator_telemetry_at_required_stage": has_mlx_allocator_telemetry,
+        },
+        "metal_fire_clearance": metal_fire_clearance,
+        "clearance_rule": (
+            "A Metal launch may consume this receipt only when status=passed, "
+            "samples include the required final mem-probe train step with MLX allocator telemetry, and peak fits the composed "
+            "one-Metal-fire-at-a-time schedule under the host ceiling."
+        ),
+    }
+
+
+def run_mem_probe(args: argparse.Namespace) -> dict[str, Any]:
+    probe = LoadPhaseMemoryProbe()
+    probe_args = _mem_probe_args(args)
+    train_result: dict[str, Any] | None = None
+    blocker: dict[str, Any] | None = None
+    status = "passed"
+    try:
+        train_result = run_mlx_train(probe_args, memory_probe=probe)
+        status = str(train_result.get("status", "passed"))
+    except Exception as exc:
+        status = "blocked"
+        blocker = {
+            "error_type": type(exc).__name__,
+            "error": str(exc),
+            "boundary": (
+                "CPU load-path telemetry may be present before this blocker; "
+                "full MLX allocator/three-step telemetry requires MAIN Metal."
+            ),
+        }
+        if isinstance(exc, MlxUnavailableError):
+            blocker["verdict_scope"] = "ENVIRONMENT: local sandbox MLX/Metal unavailable"
+        else:
+            blocker["verdict_scope"] = "INSTANCE: mem-probe execution"
+    receipt = _build_mem_probe_receipt(
+        args=args,
+        probe_args=probe_args,
+        probe=probe,
+        status=status,
+        train_result=train_result,
+        blocker=blocker,
+    )
+    receipt_path = args.run_dir / "mem_probe_receipt.json"
+    write_json(receipt_path, receipt)
+    return {
+        "schema": "ddm_mx1_mem_probe.v1",
+        "status": status,
+        "score_claim": False,
+        "receipt_path": str(receipt_path),
+        "receipt_sha256": _sha256_file(receipt_path),
+        "receipt": receipt,
     }
 
 
@@ -527,7 +992,7 @@ def launch_ticket(args: argparse.Namespace, smoke: dict[str, Any] | None, mlx_pr
     # conflates the two questions, so the bare argv_n32/argv_n120 keys no longer exist.
     def _arm_argv(pairs: int, seed: int, input_cache: Path, subdir: str) -> list[str]:
         run_dir = args.run_dir / subdir
-        return [
+        argv = [
             ".venv/bin/python",
             "experiments/ddm_mx1_pr130_semantic_renderer.py",
             "--mode", "mlx-train",
@@ -547,12 +1012,47 @@ def launch_ticket(args: argparse.Namespace, smoke: dict[str, Any] | None, mlx_pr
             "--run-dir", str(run_dir),
             "--out", str(run_dir / "result.json"),
         ]
+        if args.mem_budget_gb is not None:
+            argv.extend(["--mem-budget-gb", str(args.mem_budget_gb)])
+        return argv
+
+    mem_probe_receipt_path = args.run_dir / "mem_probe_receipt.json"
+    mem_probe_command = [
+        ".venv/bin/python",
+        "experiments/ddm_mx1_pr130_semantic_renderer.py",
+        "--mode", "mem-probe",
+        "--device", "gpu",
+        "--pairs", "32",
+        "--mem-probe-steps", str(args.mem_probe_steps),
+        "--lr", str(args.lr),
+        "--ce-fraction", str(args.ce_fraction),
+        "--softplus-fraction", str(args.softplus_fraction),
+        "--bits", str(args.bits),
+        "--seed", str(args.seed),
+        "--checkpoint-every", str(max(1, int(args.mem_probe_steps))),
+        "--eval-every", "1",
+        "--input-cache", str(args.input_cache),
+        "--target-cache", str(args.target_cache),
+        "--init", str(args.init),
+        "--run-dir", str(args.run_dir),
+        "--out", str(args.run_dir / "mem_probe_result.json"),
+    ]
+    if args.mem_budget_gb is not None:
+        mem_probe_command.extend(["--mem-budget-gb", str(args.mem_budget_gb)])
 
     cap_cache = args.target_cache  # GT labels as tokens AND targets
     veh_cache = args.input_cache   # public-wire (tq1c) labels as tokens, GT targets
     return {
         "schema": "ddm_mx1_row1_launch_ticket.v2_two_arm",
         "score_claim": False,
+        "mem_probe_receipt_required": True,
+        "mem_probe_receipt_path": str(mem_probe_receipt_path),
+        "mem_probe_command": mem_probe_command,
+        "scheduling": (
+            "SEQUENTIAL — one Metal arm at a time (operator machine OOM 2026-08-06); "
+            "ARM-VEH fires only after ARM-CAP completes or a composed measured-peak "
+            "projection shows headroom under 116GiB"
+        ),
         "source_repo_root": SOURCE_REPO_ROOT,
         "source_repo_head": SOURCE_REPO_HEAD,
         "owned_run_root": str(args.run_dir),
@@ -583,6 +1083,8 @@ def launch_ticket(args: argparse.Namespace, smoke: dict[str, Any] | None, mlx_pr
             "blocks": 4,
             "stage": "PR130 stage 08 tail from retained semantic_renderer_w96_b4_qat4_12k checkpoint",
             "configured_horizon_steps": horizon,
+            "mem_budget_gb_arg": args.mem_budget_gb,
+            "mem_budget_default_policy": "50% of available memory at process start when --mem-budget-gb is omitted",
             "lr": args.lr,
             "ce_fraction": args.ce_fraction,
             "softplus_fraction": args.softplus_fraction,
@@ -602,7 +1104,11 @@ def write_json(path: Path, payload: dict[str, Any]) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--mode", choices=["probe", "torch-smoke", "mlx-parity", "mlx-train"], default="probe")
+    parser.add_argument(
+        "--mode",
+        choices=["probe", "torch-smoke", "mlx-parity", "mlx-train", "mem-probe"],
+        default="probe",
+    )
     parser.add_argument("--input-cache", type=Path, default=DEFAULT_INPUT_CACHE)
     parser.add_argument("--target-cache", type=Path, default=DEFAULT_TARGET_CACHE)
     parser.add_argument("--init", type=Path, default=DEFAULT_INIT)
@@ -620,9 +1126,13 @@ def main() -> None:
     parser.add_argument("--float-warmup-steps", type=int, default=0)
     parser.add_argument("--eval-every", type=int, default=250)
     parser.add_argument("--checkpoint-every", type=int, default=250)
+    parser.add_argument("--mem-budget-gb", type=float)
+    parser.add_argument("--mem-probe-steps", type=int, default=3)
     parser.add_argument("--resume-from", type=Path)
     parser.add_argument("--out", type=Path, default=SSD_ROOT / "mx1_driver_result.json")
     args = parser.parse_args()
+    if args.mem_probe_steps <= 0:
+        parser.error("--mem-probe-steps must be positive")
 
     result: dict[str, Any] = {
         "schema": "ddm_mx1_pr130_semantic_renderer_driver.v1",
@@ -653,10 +1163,15 @@ def main() -> None:
         else:
             result["mlx_train"] = run_mlx_train(args)
             result["status"] = result["mlx_train"]["status"]
+    elif args.mode == "mem-probe":
+        result["mem_probe"] = run_mem_probe(args)
+        result["status"] = result["mem_probe"]["status"]
     result["launch_ticket"] = launch_ticket(args, smoke, mlx_probe)
     write_json(args.out, result)
     print(json.dumps(result, indent=2, sort_keys=True, default=str))
     if args.mode in {"mlx-parity", "mlx-train"} and mlx_probe["status"] == "blocked":
+        raise SystemExit(2)
+    if args.mode == "mem-probe" and result.get("status") == "blocked":
         raise SystemExit(2)
 
 
