@@ -6,6 +6,7 @@ This is a scorer-slot-free harness for Row-1 readiness.  It can:
 * run a tiny lifted-torch CPU smoke on real label tensors;
 * probe local MLX availability without hiding runtime failures;
 * run the torch-vs-MLX parity gate when MLX is available;
+* run a CPU-torch verdict over a saved MLX checkpoint's own pair set;
 * emit a MAIN launch ticket for the n32 -> n120 stratified Metal run.
 
 It does not run n600 scorer work and does not claim a contest score.
@@ -61,11 +62,15 @@ CONTEST_DENOMINATOR_BYTES = 37_545_489
 GIB = 1024.0 ** 3
 MEM_PROBE_RECEIPT_SCHEMA = "ddm_mx1_load_phase_peak_receipt.v1"
 MX1_FIRE_GUARD_VERDICT_SCHEMA = "ddm_mx1_fire_guard_verdict.v1"
-MX1B_MEM_PROBE_RESULT = REPO / ".omx/research/ddm_mx1b_20260806/mem_probe_cpu_result.json"
-METAL_UNKNOWN_MARGIN_GIB = 65.0
+SAFE_RUN_RECEIPT_SENTINEL = "REQUIRES_FRESH_MEM_PROBE"
+SAFE_RUN_RECEIPT_PROJECTION_SCHEMA = "ddm_mx1_receipt_derived_safe_run_projection.v1"
+SAFE_RUN_PROJECTION_MULTIPLIER = 1.5
+SAFE_RUN_PROJECTED_GIB_FLOOR = 15
+SAFE_RUN_RSS_MB_FLOOR = 45_000
 ROW1_SAFE_RUN_RSS_MB = 90_000
 ROW1_SAFE_RUN_TIMEOUT_S = 28_800
 DEFAULT_WIRED_LIMIT_FRACTION = 0.35
+FP1_FLAT_PAINT_FLOOR_D_SEG = 0.008305
 
 
 class MemoryLimitConfigurationError(RuntimeError):
@@ -111,57 +116,251 @@ def _safe_label_token(text: str) -> str:
     return "".join(ch if ch.isalnum() else "_" for ch in text).strip("_")
 
 
-def _derive_row1_safe_run_projection() -> dict[str, Any]:
-    measured_cpu_peak_gib: float | None = None
-    source_status = "missing"
-    try:
-        payload = json.loads(MX1B_MEM_PROBE_RESULT.read_text(encoding="utf-8"))
-        measured_cpu_peak_gib = float(
-            payload["mem_probe"]["receipt"]["peak"]["peak_rss_gib"]
-        )
-        source_status = "read"
-    except (OSError, KeyError, TypeError, ValueError, json.JSONDecodeError):
-        source_status = "unavailable"
-    if measured_cpu_peak_gib is None:
-        projected_gib = METAL_UNKNOWN_MARGIN_GIB
-        arithmetic = (
-            f"{METAL_UNKNOWN_MARGIN_GIB:.6f} GiB Metal/model/scorer/load-step unknown margin; "
-            f"mx1b CPU-side peak unavailable at {MX1B_MEM_PROBE_RESULT}"
-        )
-    else:
-        projected_gib = measured_cpu_peak_gib + METAL_UNKNOWN_MARGIN_GIB
-        arithmetic = (
-            f"{measured_cpu_peak_gib:.6f} GiB measured CPU-side peak + "
-            f"{METAL_UNKNOWN_MARGIN_GIB:.6f} GiB Metal/model/scorer/load-step unknown margin = "
-            f"{projected_gib:.6f} GiB"
-        )
+def _ticket_attempt_id() -> str:
+    return f"{_safe_label_token(_utc_now_iso())}_pid{os.getpid()}"
+
+
+def _sentinel_safe_run_projection(
+    *,
+    argv_key: str,
+    receipt_path: Path,
+    reason_code: str,
+    detail: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     return {
-        "schema": "ddm_mx1_row1_safe_run_projection.v1",
+        "schema": SAFE_RUN_RECEIPT_PROJECTION_SCHEMA,
         "axis": "[load-phase memory telemetry projection; score_claim=false]",
         "score_claim": False,
-        "mx1b_mem_probe_result": str(MX1B_MEM_PROBE_RESULT),
-        "mx1b_source_status": source_status,
-        "measured_cpu_peak_gib": measured_cpu_peak_gib,
-        "metal_unknown_margin_gib": METAL_UNKNOWN_MARGIN_GIB,
-        "projected_gib": round(projected_gib, 6),
-        "arithmetic": arithmetic,
-        "safe_run_rss_mb": ROW1_SAFE_RUN_RSS_MB,
+        "argv_key": argv_key,
+        "status": "requires_fresh_mem_probe",
+        "reason_code": reason_code,
+        "detail": detail or {},
+        "receipt_path": str(receipt_path),
+        "receipt_sha256": None,
+        "projected_gib": SAFE_RUN_RECEIPT_SENTINEL,
+        "safe_run_rss_mb": SAFE_RUN_RECEIPT_SENTINEL,
         "safe_run_timeout_s": ROW1_SAFE_RUN_TIMEOUT_S,
+        "margin_rule": (
+            "fresh passed receipt required; when present use measured_peak=max(peak_rss_gib, "
+            "peak_mlx_reported_gib, peak_mlx_active_gib+peak_mlx_cache_gib), "
+            f"projected_gib=max({SAFE_RUN_PROJECTED_GIB_FLOOR}, ceil(measured_peak*"
+            f"{SAFE_RUN_PROJECTION_MULTIPLIER})), rss_mb=max({SAFE_RUN_RSS_MB_FLOOR}, "
+            "ceil(projected_gib*1024))"
+        ),
+        "fail_closed_rule": (
+            f"{SAFE_RUN_RECEIPT_SENTINEL} is intentionally non-numeric; tools/safe_run.py argparse "
+            "will refuse the wrapper before governor admission if this ticket is fired without a "
+            "fresh passed mem-probe receipt."
+        ),
     }
 
 
-def _wrap_fire_argv(raw_argv: list[str], *, label: str, projection: dict[str, Any]) -> list[str]:
+def _peak_candidate_gib(peak: Mapping[str, Any]) -> dict[str, float]:
+    candidates: dict[str, float] = {}
+    for key in ("peak_rss_gib", "peak_mlx_reported_gib", "peak_mlx_active_gib", "peak_mlx_cache_gib"):
+        value = peak.get(key)
+        if value is None:
+            continue
+        try:
+            candidates[key] = float(value)
+        except (TypeError, ValueError):
+            continue
+    if "peak_mlx_active_gib" in candidates or "peak_mlx_cache_gib" in candidates:
+        candidates["peak_mlx_active_plus_cache_gib"] = (
+            candidates.get("peak_mlx_active_gib", 0.0)
+            + candidates.get("peak_mlx_cache_gib", 0.0)
+        )
+    return candidates
+
+
+def _derive_receipt_safe_run_projection(
+    *,
+    argv_key: str,
+    raw_argv: list[str],
+    receipt_path: Path,
+) -> dict[str, Any]:
+    try:
+        repo_root = str(REPO)
+        if repo_root not in sys.path:
+            sys.path.insert(0, repo_root)
+        from tools import mx1_fire_guard as guard
+    except Exception as exc:
+        return _sentinel_safe_run_projection(
+            argv_key=argv_key,
+            receipt_path=receipt_path,
+            reason_code="fire_guard_import_failed",
+            detail={"error": f"{type(exc).__name__}: {exc}"},
+        )
+    if not receipt_path.exists():
+        return _sentinel_safe_run_projection(
+            argv_key=argv_key,
+            receipt_path=receipt_path,
+            reason_code="mem_probe_receipt_missing",
+        )
+    receipt_sha = _sha256_file(receipt_path)
+    ok, reason, detail = guard._validate_receipt_freshness(receipt_path)
+    if not ok:
+        row = _sentinel_safe_run_projection(
+            argv_key=argv_key,
+            receipt_path=receipt_path,
+            reason_code=reason,
+            detail=detail,
+        )
+        row["receipt_sha256"] = receipt_sha
+        return row
+    try:
+        receipt = guard._load_json(receipt_path)
+    except Exception as exc:
+        row = _sentinel_safe_run_projection(
+            argv_key=argv_key,
+            receipt_path=receipt_path,
+            reason_code="mem_probe_receipt_parse_error",
+            detail={"error": f"{type(exc).__name__}: {exc}"},
+        )
+        row["receipt_sha256"] = receipt_sha
+        return row
+    if not isinstance(receipt, dict) or receipt.get("schema") != MEM_PROBE_RECEIPT_SCHEMA:
+        return _sentinel_safe_run_projection(
+            argv_key=argv_key,
+            receipt_path=receipt_path,
+            reason_code="receipt_schema_mismatch",
+            detail={"schema": None if not isinstance(receipt, dict) else receipt.get("schema")},
+        )
+    if receipt.get("status") != "passed" or receipt.get("metal_fire_clearance") is not True:
+        row = _sentinel_safe_run_projection(
+            argv_key=argv_key,
+            receipt_path=receipt_path,
+            reason_code="receipt_status_not_clearance",
+            detail={
+                "status": receipt.get("status"),
+                "metal_fire_clearance": receipt.get("metal_fire_clearance"),
+            },
+        )
+        row["receipt_sha256"] = receipt_sha
+        return row
+    validation_checks = []
+    for name, validator in (
+        ("host", guard._validate_host),
+        ("samples", guard._validate_samples),
+        ("memory_limits", guard._validate_memory_limits),
+    ):
+        ok, reason, detail = validator(receipt)
+        validation_checks.append({
+            "name": name,
+            "status": "passed" if ok else "failed",
+            "reason": reason,
+            "detail": detail,
+        })
+        if not ok:
+            row = _sentinel_safe_run_projection(
+                argv_key=argv_key,
+                receipt_path=receipt_path,
+                reason_code=reason,
+                detail={"checks": validation_checks},
+            )
+            row["receipt_sha256"] = receipt_sha
+            return row
+    fire_config = guard._parsed_fire_config(raw_argv)
+    receipt_config = guard._receipt_config(receipt)
+    ok, reason, detail = guard._validate_config_match(fire_config, receipt_config)
+    validation_checks.append({
+        "name": "config_match",
+        "status": "passed" if ok else "failed",
+        "reason": reason,
+        "detail": detail,
+    })
+    if not ok:
+        row = _sentinel_safe_run_projection(
+            argv_key=argv_key,
+            receipt_path=receipt_path,
+            reason_code=reason,
+            detail={"checks": validation_checks},
+        )
+        row["receipt_sha256"] = receipt_sha
+        return row
+    peak = receipt.get("peak")
+    if not isinstance(peak, Mapping):
+        row = _sentinel_safe_run_projection(
+            argv_key=argv_key,
+            receipt_path=receipt_path,
+            reason_code="receipt_peak_missing",
+        )
+        row["receipt_sha256"] = receipt_sha
+        return row
+    peak_candidates = _peak_candidate_gib(peak)
+    if not peak_candidates:
+        row = _sentinel_safe_run_projection(
+            argv_key=argv_key,
+            receipt_path=receipt_path,
+            reason_code="receipt_peak_numeric_fields_missing",
+            detail={"peak": peak},
+        )
+        row["receipt_sha256"] = receipt_sha
+        return row
+    measured_peak_gib = max(peak_candidates.values())
+    projected_gib = max(
+        SAFE_RUN_PROJECTED_GIB_FLOOR,
+        math.ceil(measured_peak_gib * SAFE_RUN_PROJECTION_MULTIPLIER),
+    )
+    safe_run_rss_mb = max(SAFE_RUN_RSS_MB_FLOOR, math.ceil(projected_gib * 1024.0))
+    return {
+        "schema": SAFE_RUN_RECEIPT_PROJECTION_SCHEMA,
+        "axis": "[load-phase memory telemetry projection; score_claim=false]",
+        "score_claim": False,
+        "argv_key": argv_key,
+        "status": "passed",
+        "reason_code": "receipt_projection_derived",
+        "receipt_path": str(receipt_path),
+        "receipt_sha256": receipt_sha,
+        "freshness_window_seconds": guard.RECEIPT_FRESHNESS_WINDOW_SECONDS,
+        "measured_peak_gib": round(measured_peak_gib, 6),
+        "peak_candidates_gib": {key: round(value, 6) for key, value in peak_candidates.items()},
+        "projected_gib": projected_gib,
+        "safe_run_rss_mb": safe_run_rss_mb,
+        "safe_run_timeout_s": ROW1_SAFE_RUN_TIMEOUT_S,
+        "margin_multiplier": SAFE_RUN_PROJECTION_MULTIPLIER,
+        "projected_gib_floor": SAFE_RUN_PROJECTED_GIB_FLOOR,
+        "rss_mb_floor": SAFE_RUN_RSS_MB_FLOOR,
+        "margin_rule": (
+            "measured_peak=max(peak_rss_gib, peak_mlx_reported_gib, "
+            "peak_mlx_active_gib+peak_mlx_cache_gib); "
+            f"projected_gib=max({SAFE_RUN_PROJECTED_GIB_FLOOR}, "
+            f"ceil(measured_peak*{SAFE_RUN_PROJECTION_MULTIPLIER})); "
+            f"rss_mb=max({SAFE_RUN_RSS_MB_FLOOR}, ceil(projected_gib*1024))"
+        ),
+        "validation_checks": validation_checks,
+    }
+
+
+def _safe_run_arg(value: Any) -> str:
+    if isinstance(value, float):
+        return f"{value:.6f}"
+    return str(value)
+
+
+def _wrap_fire_argv(
+    raw_argv: list[str],
+    *,
+    label: str,
+    projection: dict[str, Any],
+    status_receipt: Path,
+    child_pidfile: Path,
+) -> list[str]:
     return [
         ".venv/bin/python",
         "tools/safe_run.py",
         "--rss-mb",
-        str(ROW1_SAFE_RUN_RSS_MB),
+        _safe_run_arg(projection["safe_run_rss_mb"]),
         "--timeout",
         str(ROW1_SAFE_RUN_TIMEOUT_S),
         "--projected-gib",
-        f"{float(projection['projected_gib']):.6f}",
+        _safe_run_arg(projection["projected_gib"]),
         "--label",
         label,
+        "--status-receipt",
+        str(status_receipt),
+        "--child-pidfile",
+        str(child_pidfile),
         "--",
         *raw_argv,
     ]
@@ -630,23 +829,283 @@ def run_torch_smoke(args: argparse.Namespace) -> dict[str, Any]:
     }
 
 
-def _build_torch_renderer(lifted: Any, checkpoint: Mapping[str, Any]) -> torch.nn.Module:
-    config = checkpoint["config"]
-    model = lifted.SemanticTokenRenderer(
+def _new_torch_renderer_from_config(lifted: Any, config: Mapping[str, Any]) -> torch.nn.Module:
+    return lifted.SemanticTokenRenderer(
         width=int(config["width"]),
         blocks=int(config["blocks"]),
         frame_dim=int(config["frame_dim"]),
-        num_pairs=600,
+        num_pairs=int(config.get("num_pairs", 600)),
+        num_tokens=int(config.get("num_tokens", 5)),
         phase_y=int(config.get("phase_y", 1)),
         phase_x=int(config.get("phase_x", 1)),
         temporal_radius=int(config.get("temporal_radius", 0)),
     ).eval()
+
+
+def _build_torch_renderer(lifted: Any, checkpoint: Mapping[str, Any]) -> torch.nn.Module:
+    model = _new_torch_renderer_from_config(lifted, checkpoint["config"])
     model.load_state_dict(checkpoint["state_dict"])
     return model
 
 
+def _json_from_uint8_array(value: np.ndarray) -> Any:
+    return json.loads(bytes(value).decode("utf-8"))
+
+
+def _torch_tensor_from_mlx_param(
+    name: str,
+    value: np.ndarray,
+    *,
+    expected: torch.Tensor,
+) -> torch.Tensor:
+    arr = np.asarray(value)
+    if arr.ndim == 4 and expected.ndim == 4:
+        arr = np.transpose(arr, (0, 3, 1, 2))
+    if tuple(arr.shape) != tuple(expected.shape):
+        raise ValueError(
+            "MLX checkpoint tensor shape mismatch for "
+            f"{name}: mapped {tuple(arr.shape)} != torch {tuple(expected.shape)}"
+        )
+    if expected.dtype.is_floating_point:
+        arr = arr.astype(np.float32, copy=False)
+    tensor = torch.from_numpy(np.ascontiguousarray(arr)).to(dtype=expected.dtype)
+    return tensor.clone()
+
+
+def _load_mlx_npz_checkpoint_for_torch(
+    path: Path,
+    *,
+    lifted: Any,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    with np.load(path, allow_pickle=False) as payload:
+        files = set(payload.files)
+        required_meta = {"meta::config_json", "meta::step", "meta::history_json"}
+        missing_meta = sorted(required_meta - files)
+        if missing_meta:
+            raise ValueError(f"MLX checkpoint missing metadata fields: {missing_meta}")
+        config = _json_from_uint8_array(payload["meta::config_json"])
+        history = _json_from_uint8_array(payload["meta::history_json"])
+        extra = (
+            _json_from_uint8_array(payload["meta::extra_json"])
+            if "meta::extra_json" in files
+            else {}
+        )
+        step = int(np.asarray(payload["meta::step"]).reshape(-1)[0])
+        expected_model = _new_torch_renderer_from_config(lifted, config)
+        expected_state = expected_model.state_dict()
+        present_names = {
+            key.removeprefix("param::")
+            for key in files
+            if key.startswith("param::")
+        }
+        expected_names = set(expected_state)
+        missing = sorted(expected_names - present_names)
+        unexpected = sorted(present_names - expected_names)
+        if missing or unexpected:
+            raise ValueError(
+                "MLX checkpoint parameter set mismatch; "
+                f"missing={missing}; unexpected={unexpected}"
+            )
+        state_dict = {
+            name: _torch_tensor_from_mlx_param(
+                name,
+                payload[f"param::{name}"],
+                expected=expected_state[name],
+            )
+            for name in sorted(expected_names)
+        }
+    checkpoint = {"config": config, "state_dict": state_dict}
+    meta = {
+        "format": "mlx_npz",
+        "step": step,
+        "history": history,
+        "extra": extra,
+        "param_count": len(state_dict),
+    }
+    return checkpoint, meta
+
+
+def _load_torch_or_mlx_checkpoint_for_verdict(
+    path: Path,
+    *,
+    lifted: Any,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    if path.suffix == ".npz":
+        return _load_mlx_npz_checkpoint_for_torch(path, lifted=lifted)
+    checkpoint = torch.load(path, map_location="cpu", weights_only=False)
+    if "config" not in checkpoint or "state_dict" not in checkpoint:
+        raise ValueError(
+            "torch verdict checkpoint must contain config and state_dict"
+        )
+    history = list(checkpoint.get("history", []))
+    step = int(checkpoint.get("step") or (history[-1]["step"] if history else 0))
+    meta = {
+        "format": "torch_pt",
+        "step": step,
+        "history": history,
+        "extra": {
+            "pair_ids": checkpoint.get("pair_ids"),
+            "score_claim": checkpoint.get("score_claim", False),
+            "axis": checkpoint.get("scorer_axis"),
+        },
+        "param_count": len(checkpoint["state_dict"]),
+    }
+    return checkpoint, meta
+
+
+def _checkpoint_pair_ids(meta: Mapping[str, Any]) -> list[int]:
+    extra = meta.get("extra")
+    pair_ids = extra.get("pair_ids") if isinstance(extra, Mapping) else None
+    if pair_ids is None:
+        raise ValueError("verdict checkpoint missing pair_ids; refusing to re-derive from seed")
+    out = [int(item) for item in pair_ids]
+    if not out:
+        raise ValueError("verdict checkpoint pair_ids is empty")
+    return out
+
+
+def _history_row_at_step(history: list[dict[str, Any]], step: int) -> dict[str, Any]:
+    for row in reversed(history):
+        if int(row.get("step", -1)) == int(step):
+            if "d_seg_batch" not in row:
+                raise ValueError(
+                    f"checkpoint history row at step {step} lacks d_seg_batch"
+                )
+            return dict(row)
+    raise ValueError(f"checkpoint history has no row for step {step}")
+
+
+def _iter_tensor_slices(total: int, chunk_size: int) -> list[tuple[int, int]]:
+    if chunk_size <= 0:
+        raise ValueError("chunk_size must be positive")
+    return [(start, min(start + chunk_size, total)) for start in range(0, total, chunk_size)]
+
+
 def _as_float(value: Any) -> float:
     return float(np.asarray(value).reshape(()))
+
+
+def run_torch_verdict(args: argparse.Namespace) -> dict[str, Any]:
+    lifted = _load_lifted_semantic()
+    device = torch.device("cpu")
+    checkpoint, checkpoint_meta = _load_torch_or_mlx_checkpoint_for_verdict(
+        args.init,
+        lifted=lifted,
+    )
+    pair_ids = _checkpoint_pair_ids(checkpoint_meta)
+    step = int(checkpoint_meta["step"])
+    history = list(checkpoint_meta.get("history") or [])
+    comparison_row = _history_row_at_step(history, step)
+    batch_size = int(args.verdict_batch_size)
+    if batch_size <= 0:
+        raise ValueError("--verdict-batch-size must be positive")
+
+    conditioning_np, target_np, cache_meta = _load_selected_token_arrays(
+        input_cache=args.input_cache,
+        target_cache=args.target_cache,
+        pair_ids=pair_ids,
+        memory_probe=None,
+    )
+    idx = torch.tensor(pair_ids, dtype=torch.long, device=device)
+    conditioning = torch.from_numpy(conditioning_np).long().to(device)
+    target = torch.from_numpy(target_np).long().to(device)
+    del conditioning_np, target_np
+    gc.collect()
+
+    model = _build_torch_renderer(lifted, checkpoint).to(device)
+    segnet = _load_upstream_segnet(device)
+    per_pair: list[dict[str, Any]] = []
+    total_mismatch = 0
+    total_pixels = 0
+    scorer_batch_shapes: list[list[int]] = []
+    chunk_batch_sizes: list[int] = []
+    start_time = time.time()
+    with torch.no_grad():
+        for start, stop in _iter_tensor_slices(len(pair_ids), batch_size):
+            cond_chunk = conditioning[start:stop]
+            target_chunk = target[start:stop]
+            idx_chunk = idx[start:stop]
+            frame_r = lifted.render_for_seg(
+                model,
+                cond_chunk,
+                idx_chunk,
+                exact_path=True,
+            )
+            logits = segnet(frame_r)
+            pred = logits.argmax(dim=1)
+            mismatch = pred != target_chunk
+            flat = mismatch.reshape(mismatch.shape[0], -1)
+            chunk_pixels = int(flat.shape[1])
+            chunk_counts = flat.sum(dim=1).cpu().numpy().astype(np.int64)
+            scorer_batch_shapes.append(list(frame_r.shape))
+            chunk_batch_sizes.append(int(stop - start))
+            for pair_id, count in zip(pair_ids[start:stop], chunk_counts, strict=True):
+                mismatches = int(count)
+                per_pair.append(
+                    {
+                        "pair_id": int(pair_id),
+                        "mismatch_pixels": mismatches,
+                        "pixels": chunk_pixels,
+                        "d_seg": mismatches / max(chunk_pixels, 1),
+                    }
+                )
+                total_mismatch += mismatches
+                total_pixels += chunk_pixels
+    elapsed = time.time() - start_time
+    aggregate_dseg = total_mismatch / max(total_pixels, 1)
+    proxy_dseg = float(comparison_row["d_seg_batch"])
+    checkpoint_score_claim = None
+    extra = checkpoint_meta.get("extra")
+    if isinstance(extra, Mapping):
+        checkpoint_score_claim = extra.get("score_claim")
+    return {
+        "schema": "ddm_mx1_torch_verdict.v1",
+        "status": "passed",
+        "axis": "[macOS-CPU advisory torch upstream SegNet]",
+        "score_claim": False,
+        "verdict_scope": "n32 arm-selection instrument",
+        "host": _host_fingerprint(),
+        "source_repo_head": SOURCE_REPO_HEAD,
+        "source_repo_root": SOURCE_REPO_ROOT,
+        "checkpoint": {
+            "path": str(args.init),
+            "bytes": args.init.stat().st_size,
+            "sha256": _sha256_file(args.init),
+            "format": checkpoint_meta["format"],
+            "step": step,
+            "param_count": checkpoint_meta["param_count"],
+            "axis": extra.get("axis") if isinstance(extra, Mapping) else None,
+            "score_claim": checkpoint_score_claim,
+        },
+        "input_cache": str(args.input_cache),
+        "target_cache": str(args.target_cache),
+        "cache_load": cache_meta,
+        "pair_ids": pair_ids,
+        "pair_count": len(pair_ids),
+        "token_batch_shape": list(conditioning.shape),
+        "target_batch_shape": list(target.shape),
+        "segnet_batch_size": batch_size,
+        "segnet_chunk_batch_sizes": chunk_batch_sizes,
+        "scorer_batch_shapes": scorer_batch_shapes,
+        "contest_faithful_roundtrip": "lifted.render_for_seg(..., exact_path=True): bilinear up to 874x1164, uint8 STE, bilinear down to 384x512",
+        "per_pair_d_seg": per_pair,
+        "aggregate_d_seg": aggregate_dseg,
+        "total_mismatch_pixels": total_mismatch,
+        "total_pixels": total_pixels,
+        "comparison_row": {
+            "checkpoint_step": step,
+            "mlx_in_training_d_seg_batch": proxy_dseg,
+            "mlx_history_row": comparison_row,
+            "authority_minus_mlx_proxy_d_seg": aggregate_dseg - proxy_dseg,
+            "authority_over_mlx_proxy_d_seg": aggregate_dseg / proxy_dseg
+            if proxy_dseg
+            else None,
+            "fp1_flat_paint_floor_d_seg": FP1_FLAT_PAINT_FLOOR_D_SEG,
+            "authority_minus_fp1_floor_d_seg": aggregate_dseg - FP1_FLAT_PAINT_FLOOR_D_SEG,
+            "authority_over_fp1_floor_d_seg": aggregate_dseg / FP1_FLAT_PAINT_FLOOR_D_SEG,
+        },
+        "elapsed_seconds": elapsed,
+    }
 
 
 def run_mlx_parity(args: argparse.Namespace) -> dict[str, Any]:
@@ -1690,14 +2149,23 @@ def launch_ticket(args: argparse.Namespace, smoke: dict[str, Any] | None, mlx_pr
     cap_cache = args.target_cache  # GT labels as tokens AND targets
     veh_cache = args.input_cache   # public-wire (tq1c) labels as tokens, GT targets
     ticket_path = _ticket_path_for_args(args)
+    attempt_id = _ticket_attempt_id()
 
     # RR3-F1: a Row-1 verdict requires TWO arms — ARM-CAP (GT tokens -> GT targets, receiver
     # CAPACITY vs the fp1 flat-paint floor and PR130's external number) and ARM-VEH (public-wire
     # tq1c tokens -> GT targets, composed-vehicle correction reach). A single-arm ticket
     # conflates the two questions, so the bare argv_n32/argv_n120 keys no longer exist.
-    def _arm_argv(pairs: int, seed: int, input_cache: Path, subdir: str, argv_key: str) -> list[str]:
+    def _arm_argv(
+        pairs: int,
+        seed: int,
+        input_cache: Path,
+        subdir: str,
+        argv_key: str,
+        *,
+        resume: bool,
+    ) -> list[str]:
         run_dir = args.run_dir / subdir
-        fire_guard_verdict = run_dir / "fire_guard_verdict.json"
+        fire_guard_verdict = run_dir / "fire_guard" / f"{argv_key}.{attempt_id}.json"
         argv = [
             ".venv/bin/python",
             "experiments/ddm_mx1_pr130_semantic_renderer.py",
@@ -1721,35 +2189,45 @@ def launch_ticket(args: argparse.Namespace, smoke: dict[str, Any] | None, mlx_pr
             "--launch-ticket-path", str(ticket_path),
             "--fire-argv-key", argv_key,
         ]
+        if resume:
+            argv.extend(["--resume-from", str(run_dir / "mlx.latest.npz")])
         if args.mem_budget_gb is not None:
             argv.extend(["--mem-budget-gb", str(args.mem_budget_gb)])
         if getattr(args, "allow_soft_mem_limit", False):
             argv.append("--allow-soft-mem-limit")
         return argv
 
-    safe_run_projection = _derive_row1_safe_run_projection()
-
-    def _fire_argv(pairs: int, seed: int, input_cache: Path, subdir: str, argv_key: str) -> list[str]:
-        raw = _arm_argv(pairs, seed, input_cache, subdir, argv_key)
-        return _wrap_fire_argv(
-            raw,
-            label=f"ddm_mx1_row1_{_safe_label_token(subdir)}",
-            projection=safe_run_projection,
-        )
-
-    arm_specs = {
+    base_arm_specs = {
         "argv_n32_arm_cap": (32, args.seed, cap_cache, "launch_arm_cap/n32_metal"),
         "argv_n32_arm_veh": (32, args.seed, veh_cache, "launch_arm_veh/n32_metal"),
         "argv_n120_arm_cap": (120, args.seed + 1, cap_cache, "launch_arm_cap/n120_metal"),
         "argv_n120_arm_veh": (120, args.seed + 1, veh_cache, "launch_arm_veh/n120_metal"),
     }
+    arm_specs: dict[str, tuple[int, int, Path, str, bool]] = {}
+    for key, (pairs, seed, cache, subdir) in base_arm_specs.items():
+        arm_specs[key] = (pairs, seed, cache, subdir, False)
+        arm_specs[f"{key}_resume"] = (pairs, seed, cache, subdir, True)
+
     mem_probe_receipt_paths = {
-        key: str(args.run_dir / subdir / "mem_probe" / "mem_probe_receipt.json")
-        for key, (_pairs, _seed, _cache, subdir) in arm_specs.items()
+        key: str(
+            args.run_dir
+            / subdir
+            / ("mem_probe_resume" if resume else "mem_probe")
+            / "mem_probe_receipt.json"
+        )
+        for key, (_pairs, _seed, _cache, subdir, resume) in arm_specs.items()
     }
 
-    def _mem_probe_command(pairs: int, seed: int, input_cache: Path, subdir: str) -> list[str]:
-        probe_run_dir = args.run_dir / subdir / "mem_probe"
+    def _mem_probe_command(
+        pairs: int,
+        seed: int,
+        input_cache: Path,
+        subdir: str,
+        *,
+        resume: bool,
+    ) -> list[str]:
+        run_dir = args.run_dir / subdir
+        probe_run_dir = run_dir / ("mem_probe_resume" if resume else "mem_probe")
         command = [
             ".venv/bin/python",
             "experiments/ddm_mx1_pr130_semantic_renderer.py",
@@ -1771,6 +2249,8 @@ def launch_ticket(args: argparse.Namespace, smoke: dict[str, Any] | None, mlx_pr
             "--out", str(probe_run_dir / "mem_probe_result.json"),
             "--launch-ticket-path", str(ticket_path),
         ]
+        if resume:
+            command.extend(["--resume-from", str(run_dir / "mlx.latest.npz")])
         if args.mem_budget_gb is not None:
             command.extend(["--mem-budget-gb", str(args.mem_budget_gb)])
         if getattr(args, "allow_soft_mem_limit", False):
@@ -1778,14 +2258,14 @@ def launch_ticket(args: argparse.Namespace, smoke: dict[str, Any] | None, mlx_pr
         return command
 
     mem_probe_commands = {
-        key: _mem_probe_command(pairs, seed, cache, subdir)
-        for key, (pairs, seed, cache, subdir) in arm_specs.items()
+        key: _mem_probe_command(pairs, seed, cache, subdir, resume=resume)
+        for key, (pairs, seed, cache, subdir, resume) in arm_specs.items()
     }
     mem_probe_receipt_path = Path(mem_probe_receipt_paths["argv_n32_arm_cap"])
     mem_probe_command = mem_probe_commands["argv_n32_arm_cap"]
     fire_guard_verdict_paths = {
-        key: str(args.run_dir / subdir / "fire_guard_verdict.json")
-        for key, (_pairs, _seed, _cache, subdir) in arm_specs.items()
+        key: str(args.run_dir / subdir / "fire_guard" / f"{key}.{attempt_id}.json")
+        for key, (_pairs, _seed, _cache, subdir, _resume) in arm_specs.items()
     }
     fire_guard_commands = {
         key: [
@@ -1797,15 +2277,65 @@ def launch_ticket(args: argparse.Namespace, smoke: dict[str, Any] | None, mlx_pr
         ]
         for key in arm_specs
     }
+    raw_fire_argvs = {
+        key: _arm_argv(pairs, seed, cache, subdir, key, resume=resume)
+        for key, (pairs, seed, cache, subdir, resume) in arm_specs.items()
+    }
+    safe_run_projections = {
+        key: _derive_receipt_safe_run_projection(
+            argv_key=key,
+            raw_argv=raw_fire_argvs[key],
+            receipt_path=Path(mem_probe_receipt_paths[key]),
+        )
+        for key in arm_specs
+    }
+    safe_run_status_receipt_paths = {
+        key: str(args.run_dir / subdir / "safe_run" / f"{key}.{attempt_id}.status.json")
+        for key, (_pairs, _seed, _cache, subdir, _resume) in arm_specs.items()
+    }
+    safe_run_child_pidfile_paths = {
+        key: f"{path}.child.pid"
+        for key, path in safe_run_status_receipt_paths.items()
+    }
     fire_argvs = {
-        key: _fire_argv(pairs, seed, cache, subdir, key)
-        for key, (pairs, seed, cache, subdir) in arm_specs.items()
+        key: _wrap_fire_argv(
+            raw_fire_argvs[key],
+            label=f"ddm_mx1_row1_{_safe_label_token(subdir)}"
+            + ("_resume" if resume else ""),
+            projection=safe_run_projections[key],
+            status_receipt=Path(safe_run_status_receipt_paths[key]),
+            child_pidfile=Path(safe_run_child_pidfile_paths[key]),
+        )
+        for key, (_pairs, _seed, _cache, subdir, resume) in arm_specs.items()
+    }
+    detached_done_receipt_names = {
+        key: f"mx1_{_safe_label_token(key)}_{attempt_id}"
+        for key in arm_specs
+    }
+    detached_done_receipt_paths = {
+        key: f".omx/tmp/codex_runs/{name}.done"
+        for key, name in detached_done_receipt_names.items()
+    }
+    detached_fire_commands = {
+        key: [
+            ".venv/bin/python",
+            "tools/launch_detached_process.py",
+            "--output-dir", str(args.run_dir / subdir / "detached" / attempt_id),
+            "--cwd", str(REPO),
+            "--purpose", f"MX1 {key} receipt-derived fire attempt {attempt_id}",
+            "--authority", "local detached execution; downstream artifacts decide authority",
+            "--done-receipt", detached_done_receipt_names[key],
+            "--",
+            *fire_argvs[key],
+        ]
+        for key, (_pairs, _seed, _cache, subdir, _resume) in arm_specs.items()
     }
 
     return {
         "schema": "ddm_mx1_row1_launch_ticket.v4_software_cap_fire_guarded",
         "score_claim": False,
         "launch_ticket_path": str(ticket_path),
+        "ticket_attempt_id": attempt_id,
         "mem_probe_receipt_required": True,
         "mem_probe_receipt_path": str(mem_probe_receipt_path),
         "mem_probe_receipt_paths": mem_probe_receipt_paths,
@@ -1834,8 +2364,12 @@ def launch_ticket(args: argparse.Namespace, smoke: dict[str, Any] | None, mlx_pr
             },
             {
                 "step": "fire",
-                "command": fire_argvs["argv_n32_arm_cap"],
-                "expected": "entrypoint re-runs tools.mx1_fire_guard against --launch-ticket-path/--fire-argv-key before MLX setup",
+                "command": detached_fire_commands["argv_n32_arm_cap"],
+                "expected": (
+                    "detached wrapper uses an attempt-unique done receipt, safe_run writes "
+                    "an attempt-unique status receipt/child pidfile, and the entrypoint re-runs "
+                    "tools.mx1_fire_guard against --launch-ticket-path/--fire-argv-key before MLX setup"
+                ),
             },
         ],
         "scheduling": (
@@ -1853,7 +2387,40 @@ def launch_ticket(args: argparse.Namespace, smoke: dict[str, Any] | None, mlx_pr
             "anti_pattern": "no `|| true` around the fallback enumerator; denied ps is not quiescence",
             "scheduling": "SEQUENTIAL one-Metal-fire-at-a-time",
         },
-        "safe_run_projection": safe_run_projection,
+        "safe_run_projection": safe_run_projections["argv_n32_arm_cap"],
+        "safe_run_projections": safe_run_projections,
+        "safe_run_projection_policy": {
+            "schema": SAFE_RUN_RECEIPT_PROJECTION_SCHEMA,
+            "sentinel": SAFE_RUN_RECEIPT_SENTINEL,
+            "fresh_receipt_required": True,
+            "freshness_window_seconds": 6 * 60 * 60,
+            "margin_rule": (
+                "For each argv key, read that key's mem-probe receipt path. If it is fresh, passed, "
+                "guard-validated, and config-matching, measured_peak=max(peak_rss_gib, "
+                "peak_mlx_reported_gib, peak_mlx_active_gib+peak_mlx_cache_gib); "
+                f"projected_gib=max({SAFE_RUN_PROJECTED_GIB_FLOOR}, "
+                f"ceil(measured_peak*{SAFE_RUN_PROJECTION_MULTIPLIER})); "
+                f"rss_mb=max({SAFE_RUN_RSS_MB_FLOOR}, ceil(projected_gib*1024)). "
+                "Otherwise emit REQUIRES_FRESH_MEM_PROBE so safe_run refuses before launch."
+            ),
+        },
+        "safe_run_status_receipt_paths": safe_run_status_receipt_paths,
+        "safe_run_child_pidfile_paths": safe_run_child_pidfile_paths,
+        "detached_done_receipt_names": detached_done_receipt_names,
+        "detached_done_receipt_paths": detached_done_receipt_paths,
+        "detached_fire_commands": detached_fire_commands,
+        "resume_protocol": {
+            "resume_keys": [key for key in arm_specs if key.endswith("_resume")],
+            "resume_checkpoint_rule": "<arm run_dir>/mlx.latest.npz",
+            "fresh_mem_probe_required": True,
+            "freshness_window_seconds": 6 * 60 * 60,
+            "same_chunked_microbatch_config_required": True,
+            "guard_binding": (
+                "resume argv keys use the same mx1_fire_guard binding as fresh fires; "
+                "--resume-from is intentionally outside the guard config comparison set but "
+                "the ticket gives resume its own key and mem_probe_resume receipt path."
+            ),
+        },
         "source_repo_root": SOURCE_REPO_ROOT,
         "source_repo_head": SOURCE_REPO_HEAD,
         "owned_run_root": str(args.run_dir),
@@ -1871,6 +2438,10 @@ def launch_ticket(args: argparse.Namespace, smoke: dict[str, Any] | None, mlx_pr
         "argv_n32_arm_veh": fire_argvs["argv_n32_arm_veh"],
         "argv_n120_arm_cap": fire_argvs["argv_n120_arm_cap"],
         "argv_n120_arm_veh": fire_argvs["argv_n120_arm_veh"],
+        "argv_n32_arm_cap_resume": fire_argvs["argv_n32_arm_cap_resume"],
+        "argv_n32_arm_veh_resume": fire_argvs["argv_n32_arm_veh_resume"],
+        "argv_n120_arm_cap_resume": fire_argvs["argv_n120_arm_cap_resume"],
+        "argv_n120_arm_veh_resume": fire_argvs["argv_n120_arm_veh_resume"],
         "verdict_protocol": {
             "axis": "[macOS-MLX research-signal] for train telemetry; frozen CPU-torch SegNet through exact R for d_seg; no contest promotion without upstream/evaluate.py on byte-closed archive",
             "compare_against": {
@@ -2011,7 +2582,14 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--mode",
-        choices=["probe", "torch-smoke", "mlx-parity", "mlx-train", "mem-probe"],
+        choices=[
+            "probe",
+            "torch-smoke",
+            "torch-verdict",
+            "mlx-parity",
+            "mlx-train",
+            "mem-probe",
+        ],
         default="probe",
     )
     parser.add_argument("--input-cache", type=Path, default=DEFAULT_INPUT_CACHE)
@@ -2032,6 +2610,7 @@ def main() -> None:
     parser.add_argument("--eval-every", type=int, default=250)
     parser.add_argument("--checkpoint-every", type=int, default=250)
     parser.add_argument("--microbatch-pairs", type=int, default=0)
+    parser.add_argument("--verdict-batch-size", type=int, default=32)
     parser.add_argument("--mem-budget-gb", type=float)
     parser.add_argument("--mem-probe-steps", type=int, default=3)
     parser.add_argument("--allow-soft-mem-limit", action="store_true")
@@ -2045,6 +2624,8 @@ def main() -> None:
         parser.error("--mem-probe-steps must be positive")
     if args.microbatch_pairs < 0:
         parser.error("--microbatch-pairs must be non-negative")
+    if args.verdict_batch_size <= 0:
+        parser.error("--verdict-batch-size must be positive")
     if args.mode in {"mlx-train", "torch-smoke"}:
         assert_governed_admission(f"ddm_mx1_pr130_semantic_renderer:{args.mode}")
     if args.mode == "mlx-train" and str(args.device).lower() == "gpu":
@@ -2059,12 +2640,21 @@ def main() -> None:
         "source_repo_head": SOURCE_REPO_HEAD,
         "source_repo_root": SOURCE_REPO_ROOT,
     }
-    mlx_probe = mlx_device_probe(device=args.device)
+    if args.mode == "torch-verdict":
+        mlx_probe = {
+            "status": "not_run",
+            "reason": "torch-verdict is CPU-only and does not import or probe MLX/Metal",
+        }
+    else:
+        mlx_probe = mlx_device_probe(device=args.device)
     result["mlx_probe"] = mlx_probe
     smoke: dict[str, Any] | None = None
     if args.mode == "torch-smoke":
         smoke = run_torch_smoke(args)
         result["torch_smoke"] = smoke
+    elif args.mode == "torch-verdict":
+        result["torch_verdict"] = run_torch_verdict(args)
+        result["status"] = result["torch_verdict"]["status"]
     elif args.mode == "mlx-parity":
         if mlx_probe["status"] == "blocked":
             result["status"] = "blocked"

@@ -5,6 +5,7 @@ import json
 import sys
 from argparse import Namespace
 from pathlib import Path
+from types import SimpleNamespace
 
 import numpy as np
 import pytest
@@ -46,6 +47,7 @@ def _args(tmp_path: Path) -> Namespace:
         eval_every=250,
         checkpoint_every=250,
         microbatch_pairs=0,
+        verdict_batch_size=32,
         mem_budget_gb=12.5,
         mem_probe_steps=3,
         allow_soft_mem_limit=False,
@@ -54,6 +56,87 @@ def _args(tmp_path: Path) -> Namespace:
         resume_from=None,
         out=tmp_path / "result.json",
     )
+
+
+def _argv_value(argv: list[str], flag: str) -> str:
+    return argv[argv.index(flag) + 1]
+
+
+def _write_passed_mem_probe_receipt(
+    path: Path,
+    args: Namespace,
+    *,
+    pairs: int = 32,
+    input_cache: Path | None = None,
+    peak_rss_gib: float = 2.0,
+    peak_mlx_reported_gib: float = 10.1,
+) -> None:
+    final_stage = f"after_train_step_{int(args.mem_probe_steps):06d}"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    receipt = {
+        "schema": mx1.MEM_PROBE_RECEIPT_SCHEMA,
+        "status": "passed",
+        "axis": "[load-phase memory telemetry; score_claim=false]",
+        "score_claim": False,
+        "host": mx1._host_fingerprint(),
+        "mode": "mem-probe",
+        "device_request": args.device,
+        "pairs": pairs,
+        "requested_training_steps": int(args.mem_probe_steps),
+        "mem_budget_gb_arg": args.mem_budget_gb,
+        "input_cache": str(input_cache or args.target_cache),
+        "target_cache": str(args.target_cache),
+        "init_checkpoint": str(args.init),
+        "argv_config": {
+            "device": args.device,
+            "pairs": pairs,
+            "lr": float(args.lr),
+            "ce_fraction": float(args.ce_fraction),
+            "softplus_fraction": float(args.softplus_fraction),
+            "bits": int(args.bits),
+            "microbatch_pairs": int(getattr(args, "microbatch_pairs", 0) or 0),
+            "mem_budget_gb": args.mem_budget_gb,
+            "allow_soft_mem_limit": bool(getattr(args, "allow_soft_mem_limit", False)),
+            "input_cache": str(input_cache or args.target_cache),
+            "target_cache": str(args.target_cache),
+            "init": str(args.init),
+        },
+        "memory_limits": {
+            "enforcement": "software_stage_step_cap",
+            "software_cap_installed": True,
+            "software_budget_bytes": int(24 * mx1.GIB),
+        },
+        "software_budget": {
+            "enforcement": "software_stage_step_cap",
+            "check_count": int(args.mem_probe_steps),
+            "last_check": {"within_budget": True},
+        },
+        "samples": [
+            {"stage": "after_require_mlx_and_memory_limits", "mlx_active_gib": 0.0},
+            {
+                "stage": final_stage,
+                "mlx_active_gib": 1.0,
+                "mlx_cache_gib": 0.25,
+                "mlx_peak_gib": peak_mlx_reported_gib,
+            },
+        ],
+        "peak": {
+            "peak_rss_gib": peak_rss_gib,
+            "peak_mlx_active_gib": 1.0,
+            "peak_mlx_cache_gib": 0.25,
+            "peak_mlx_reported_gib": peak_mlx_reported_gib,
+            "sample_count": 2,
+        },
+        "clearance_checks": {
+            "required_stage": final_stage,
+            "has_required_stage_sample": True,
+            "has_mlx_allocator_telemetry_at_required_stage": True,
+            "software_budget_check_count": int(args.mem_probe_steps),
+            "software_budget_within_limit": True,
+        },
+        "metal_fire_clearance": True,
+    }
+    path.write_text(json.dumps(receipt, indent=2, sort_keys=True) + "\n")
 
 
 def test_load_selected_seg_tokens_matches_full_load_slice(tmp_path: Path) -> None:
@@ -68,6 +151,146 @@ def test_load_selected_seg_tokens_matches_full_load_slice(tmp_path: Path) -> Non
     assert selected.dtype == torch.long
     assert meta["selected_pair_count"] == len(pair_ids)
     assert meta["full_shape_seen"] == [600, 2, 3]
+
+
+def _json_bytes(payload: object) -> np.ndarray:
+    return np.frombuffer(json.dumps(payload, sort_keys=True).encode("utf-8"), dtype=np.uint8)
+
+
+def _write_mlx_layout_npz(
+    path: Path,
+    state_dict: dict[str, torch.Tensor],
+    *,
+    config: dict[str, object],
+    step: int,
+    pair_ids: list[int],
+) -> None:
+    payload: dict[str, np.ndarray] = {
+        "meta::config_json": _json_bytes(config),
+        "meta::step": np.asarray([step], dtype=np.int64),
+        "meta::history_json": _json_bytes(
+            [{"step": step, "phase": "expected_flip", "loss": 0.25, "d_seg_batch": 0.125}]
+        ),
+        "meta::extra_json": _json_bytes(
+            {
+                "pair_ids": pair_ids,
+                "axis": "[macOS-MLX research-signal]",
+                "score_claim": False,
+            }
+        ),
+    }
+    for name, tensor in state_dict.items():
+        arr = tensor.detach().cpu().numpy()
+        if arr.ndim == 4:
+            arr = np.transpose(arr, (0, 2, 3, 1))
+        payload[f"param::{name}"] = np.asarray(arr)
+    np.savez(path, **payload)
+
+
+def test_mlx_npz_checkpoint_maps_back_to_torch_state_dict(tmp_path: Path) -> None:
+    lifted = mx1._load_lifted_semantic()
+    config = {
+        "width": 8,
+        "blocks": 2,
+        "frame_dim": 4,
+        "num_pairs": 6,
+        "num_tokens": 5,
+        "phase_y": 1,
+        "phase_x": 1,
+        "temporal_radius": 0,
+    }
+    torch.manual_seed(17)
+    model = lifted.SemanticTokenRenderer(**config)
+    checkpoint_path = tmp_path / "tiny_mlx_checkpoint.npz"
+    _write_mlx_layout_npz(
+        checkpoint_path,
+        model.state_dict(),
+        config=config,
+        step=7,
+        pair_ids=[0, 2, 5],
+    )
+
+    checkpoint, meta = mx1._load_mlx_npz_checkpoint_for_torch(
+        checkpoint_path,
+        lifted=lifted,
+    )
+
+    assert meta["format"] == "mlx_npz"
+    assert meta["step"] == 7
+    assert meta["extra"]["pair_ids"] == [0, 2, 5]
+    for name, expected in model.state_dict().items():
+        assert torch.equal(checkpoint["state_dict"][name], expected), name
+
+
+def test_run_torch_verdict_receipt_schema_with_checkpoint_pair_ids(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    class TinyRenderer(torch.nn.Module):
+        def __init__(self, *args, **kwargs) -> None:
+            super().__init__()
+            self.bias = torch.nn.Parameter(torch.zeros(()))
+
+        def forward(self, tokens: torch.Tensor, pair_idx: torch.Tensor) -> torch.Tensor:
+            del pair_idx
+            return torch.zeros((tokens.shape[0], 3, tokens.shape[1], tokens.shape[2]))
+
+    def fake_render_for_seg(
+        model: torch.nn.Module,
+        tokens: torch.Tensor,
+        idx: torch.Tensor,
+        *,
+        exact_path: bool,
+    ) -> torch.Tensor:
+        assert exact_path is True
+        return model(tokens, idx)
+
+    class TinySegNet(torch.nn.Module):
+        def forward(self, frame: torch.Tensor) -> torch.Tensor:
+            logits = torch.zeros(
+                (frame.shape[0], 5, frame.shape[2], frame.shape[3]),
+                dtype=frame.dtype,
+            )
+            logits[:, 0] = 1.0
+            return logits
+
+    fake_lifted = SimpleNamespace(
+        SemanticTokenRenderer=TinyRenderer,
+        render_for_seg=fake_render_for_seg,
+    )
+    monkeypatch.setattr(mx1, "_load_lifted_semantic", lambda: fake_lifted)
+    monkeypatch.setattr(mx1, "_load_upstream_segnet", lambda device: TinySegNet())
+    cache = tmp_path / "cache.pt"
+    torch.save({"seg": torch.zeros((600, 2, 3), dtype=torch.int16)}, cache)
+    checkpoint_path = tmp_path / "tiny_verdict.npz"
+    _write_mlx_layout_npz(
+        checkpoint_path,
+        TinyRenderer().state_dict(),
+        config={"width": 1, "blocks": 1, "frame_dim": 1, "num_pairs": 600, "num_tokens": 5},
+        step=11,
+        pair_ids=[4, 9, 20],
+    )
+    args = _args(tmp_path)
+    args.init = checkpoint_path
+    args.input_cache = cache
+    args.target_cache = cache
+    args.verdict_batch_size = 2
+
+    receipt = mx1.run_torch_verdict(args)
+
+    assert receipt["schema"] == "ddm_mx1_torch_verdict.v1"
+    assert receipt["status"] == "passed"
+    assert receipt["axis"] == "[macOS-CPU advisory torch upstream SegNet]"
+    assert receipt["score_claim"] is False
+    assert receipt["verdict_scope"] == "n32 arm-selection instrument"
+    assert receipt["pair_ids"] == [4, 9, 20]
+    assert receipt["aggregate_d_seg"] == 0.0
+    assert receipt["segnet_batch_size"] == 2
+    assert receipt["segnet_chunk_batch_sizes"] == [2, 1]
+    assert receipt["comparison_row"]["checkpoint_step"] == 11
+    assert receipt["comparison_row"]["mlx_in_training_d_seg_batch"] == 0.125
+    assert receipt["comparison_row"]["fp1_flat_paint_floor_d_seg"] == mx1.FP1_FLAT_PAINT_FLOOR_D_SEG
+    assert [row["pair_id"] for row in receipt["per_pair_d_seg"]] == [4, 9, 20]
 
 
 def test_run_mem_probe_writes_peak_receipt_schema(tmp_path: Path, monkeypatch) -> None:
@@ -362,10 +585,18 @@ def test_launch_ticket_requires_mem_probe_and_sequential_scheduling(tmp_path: Pa
         "argv_n32_arm_veh",
         "argv_n120_arm_cap",
         "argv_n120_arm_veh",
+        "argv_n32_arm_cap_resume",
+        "argv_n32_arm_veh_resume",
+        "argv_n120_arm_cap_resume",
+        "argv_n120_arm_veh_resume",
     ):
         assert key in ticket
         assert ticket[key][:2] == [".venv/bin/python", "tools/safe_run.py"]
         assert "--projected-gib" in ticket[key]
+        assert _argv_value(ticket[key], "--projected-gib") == mx1.SAFE_RUN_RECEIPT_SENTINEL
+        assert _argv_value(ticket[key], "--rss-mb") == mx1.SAFE_RUN_RECEIPT_SENTINEL
+        assert "--status-receipt" in ticket[key]
+        assert "--child-pidfile" in ticket[key]
         assert "--" in ticket[key]
         assert "--mem-budget-gb" in ticket[key]
         assert "12.5" in ticket[key]
@@ -375,6 +606,7 @@ def test_launch_ticket_requires_mem_probe_and_sequential_scheduling(tmp_path: Pa
         assert key in ticket[key]
         assert key in ticket["fire_guard_commands"]
         assert ticket["fire_guard_commands"][key][:2] == [".venv/bin/python", "tools/mx1_fire_guard.py"]
+        assert ticket["safe_run_projections"][key]["receipt_path"] == ticket["mem_probe_receipt_paths"][key]
     assert ticket["mem_probe_command"][:4] == [
         ".venv/bin/python",
         "experiments/ddm_mx1_pr130_semantic_renderer.py",
@@ -384,10 +616,106 @@ def test_launch_ticket_requires_mem_probe_and_sequential_scheduling(tmp_path: Pa
     assert "--mem-probe-steps" in ticket["mem_probe_command"]
     assert "--launch-ticket-path" in ticket["mem_probe_command"]
     assert str(args.target_cache) in ticket["mem_probe_command"]
-    assert ticket["safe_run_projection"]["schema"] == "ddm_mx1_row1_safe_run_projection.v1"
-    assert ticket["safe_run_projection"]["projected_gib"] >= mx1.METAL_UNKNOWN_MARGIN_GIB
+    assert ticket["safe_run_projection"]["schema"] == mx1.SAFE_RUN_RECEIPT_PROJECTION_SCHEMA
+    assert ticket["safe_run_projection"]["status"] == "requires_fresh_mem_probe"
+    assert ticket["safe_run_projection"]["reason_code"] == "mem_probe_receipt_missing"
+    assert ticket["safe_run_projection"]["projected_gib"] == mx1.SAFE_RUN_RECEIPT_SENTINEL
+    assert "mx1b_mem_probe_result" not in json.dumps(ticket["safe_run_projection"], sort_keys=True)
+    assert ticket["safe_run_projection_policy"]["sentinel"] == mx1.SAFE_RUN_RECEIPT_SENTINEL
+    assert "argv_n32_arm_cap_resume" in ticket["resume_protocol"]["resume_keys"]
     assert ticket["fire_protocol"]["rr8_f1_refuse_condition"] == "pgrep rc>=2 AND ps rc!=0"
     assert ticket["memory_projection"]["enforcement"] == "software_stage_step_cap"
+    assert len(set(ticket["safe_run_status_receipt_paths"].values())) == 8
+    assert len(set(ticket["detached_done_receipt_names"].values())) == 8
+    assert ticket["main_fire_sequence"][3]["command"][:2] == [
+        ".venv/bin/python",
+        "tools/launch_detached_process.py",
+    ]
+
+
+def test_launch_ticket_derives_safe_run_projection_from_passed_receipt(tmp_path: Path) -> None:
+    args = _args(tmp_path)
+    receipt_path = (
+        args.run_dir
+        / "launch_arm_cap"
+        / "n32_metal"
+        / "mem_probe"
+        / "mem_probe_receipt.json"
+    )
+    _write_passed_mem_probe_receipt(
+        receipt_path,
+        args,
+        pairs=32,
+        input_cache=args.target_cache,
+        peak_rss_gib=2.0,
+        peak_mlx_reported_gib=10.1,
+    )
+
+    ticket = mx1.launch_ticket(args, smoke=None, mlx_probe={"status": "blocked"})
+    projection = ticket["safe_run_projections"]["argv_n32_arm_cap"]
+
+    assert projection["status"] == "passed"
+    assert projection["reason_code"] == "receipt_projection_derived"
+    assert projection["receipt_path"] == str(receipt_path)
+    assert projection["receipt_sha256"] == mx1._sha256_file(receipt_path)
+    assert projection["measured_peak_gib"] == 10.1
+    assert projection["projected_gib"] == 16
+    assert projection["safe_run_rss_mb"] == mx1.SAFE_RUN_RSS_MB_FLOOR
+    assert _argv_value(ticket["argv_n32_arm_cap"], "--projected-gib") == "16"
+    assert _argv_value(ticket["argv_n32_arm_cap"], "--rss-mb") == str(mx1.SAFE_RUN_RSS_MB_FLOOR)
+    assert ticket["safe_run_projections"]["argv_n32_arm_veh"]["status"] == "requires_fresh_mem_probe"
+
+
+def test_launch_ticket_emits_explicit_resume_keys_and_resume_probe_paths(tmp_path: Path) -> None:
+    args = _args(tmp_path)
+
+    ticket = mx1.launch_ticket(args, smoke=None, mlx_probe={"status": "blocked"})
+    resume_key = "argv_n32_arm_cap_resume"
+    resume_argv = ticket[resume_key]
+    resume_inner = resume_argv[resume_argv.index("--") + 1 :]
+    expected_run_dir = args.run_dir / "launch_arm_cap" / "n32_metal"
+    expected_resume = expected_run_dir / "mlx.latest.npz"
+
+    assert resume_key in ticket["resume_protocol"]["resume_keys"]
+    assert "--resume-from" in resume_inner
+    assert _argv_value(resume_inner, "--resume-from") == str(expected_resume)
+    assert _argv_value(resume_inner, "--run-dir") == str(expected_run_dir)
+    assert ticket["mem_probe_receipt_paths"][resume_key] == str(
+        expected_run_dir / "mem_probe_resume" / "mem_probe_receipt.json"
+    )
+    resume_probe = ticket["mem_probe_commands"][resume_key]
+    assert "--resume-from" in resume_probe
+    assert _argv_value(resume_probe, "--resume-from") == str(expected_resume)
+    assert _argv_value(resume_probe, "--run-dir") == str(expected_run_dir / "mem_probe_resume")
+    assert ticket["fire_guard_commands"][resume_key][
+        ticket["fire_guard_commands"][resume_key].index("--argv-key") + 1
+    ] == resume_key
+
+
+def test_launch_ticket_attempt_unique_receipts_prevent_stale_done_alias(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    args = _args(tmp_path)
+    stamps = iter([
+        "2026-08-07T14:35:58.000000Z",
+        "2026-08-07T14:37:05.000000Z",
+    ])
+    monkeypatch.setattr(mx1, "_utc_now_iso", lambda: next(stamps))
+
+    first = mx1.launch_ticket(args, smoke=None, mlx_probe={"status": "blocked"})
+    second = mx1.launch_ticket(args, smoke=None, mlx_probe={"status": "blocked"})
+    key = "argv_n32_arm_cap"
+
+    assert first["ticket_attempt_id"] != second["ticket_attempt_id"]
+    assert first["detached_done_receipt_names"][key] != second["detached_done_receipt_names"][key]
+    assert first["safe_run_status_receipt_paths"][key] != second["safe_run_status_receipt_paths"][key]
+    assert first["safe_run_child_pidfile_paths"][key] != second["safe_run_child_pidfile_paths"][key]
+    assert first["detached_done_receipt_names"][key] not in set(
+        second["detached_done_receipt_names"].values()
+    )
+    assert _argv_value(second[key], "--status-receipt") == second["safe_run_status_receipt_paths"][key]
+    assert _argv_value(second[key], "--child-pidfile") == second["safe_run_child_pidfile_paths"][key]
 
 
 def test_mx1_heavy_mode_refuses_raw_when_enforced(tmp_path: Path, monkeypatch) -> None:
@@ -544,6 +872,34 @@ def test_mx1_heavy_mode_governed_env_passes_guard(tmp_path: Path, monkeypatch) -
     mx1.main()
 
     assert written["torch_smoke"]["status"] == "passed"
+
+
+def test_mx1_torch_verdict_skips_mlx_probe(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "ddm_mx1_pr130_semantic_renderer.py",
+            "--mode",
+            "torch-verdict",
+            "--out",
+            str(tmp_path / "verdict.json"),
+        ],
+    )
+
+    def fail_mlx_probe(*, device: str) -> dict[str, object]:
+        raise AssertionError(f"torch-verdict must not probe MLX/Metal: {device}")
+
+    monkeypatch.setattr(mx1, "mlx_device_probe", fail_mlx_probe)
+    monkeypatch.setattr(mx1, "run_torch_verdict", lambda args: {"status": "passed"})
+    written: dict[str, object] = {}
+    monkeypatch.setattr(mx1, "write_json", lambda path, payload: written.update(payload))
+
+    mx1.main()
+
+    assert written["mode"] == "torch-verdict"
+    assert written["status"] == "passed"
+    assert written["mlx_probe"]["status"] == "not_run"
 
 
 def test_mx1_light_probe_mode_ungated_when_enforced(tmp_path: Path, monkeypatch) -> None:

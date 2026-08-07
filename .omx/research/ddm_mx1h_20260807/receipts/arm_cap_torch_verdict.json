@@ -1,0 +1,351 @@
+{
+  "mlx_probe": {
+    "reason": "torch-verdict is CPU-only and does not import or probe MLX/Metal",
+    "status": "not_run"
+  },
+  "mode": "torch-verdict",
+  "platform": "macOS-26.4-arm64-arm-64bit-Mach-O",
+  "schema": "ddm_mx1_pr130_semantic_renderer_driver.v1",
+  "score_claim": false,
+  "source_repo_head": "2f94596bb0136d342254022a5c9584756eae0468",
+  "source_repo_root": "/Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo",
+  "status": "passed",
+  "torch": "2.12.1",
+  "torch_verdict": {
+    "aggregate_d_seg": 0.0010689099629720051,
+    "axis": "[macOS-CPU advisory torch upstream SegNet]",
+    "cache_load": {
+      "input": {
+        "cache_bytes": 943720076,
+        "cache_path": "/Volumes/VertigoDataTier/pact/ddm_hb1_20260806/inputs/gt_seg_cache.pt",
+        "full_dtype_seen": "torch.int64",
+        "full_shape_seen": [
+          600,
+          384,
+          512
+        ],
+        "selected_dtype": "torch.int64",
+        "selected_pair_count": 32,
+        "selected_shape": [
+          32,
+          384,
+          512
+        ]
+      },
+      "subset_before_materialize": "torch.load_index_clone_del_full_cache",
+      "target": {
+        "cache_bytes": 943720076,
+        "cache_path": "/Volumes/VertigoDataTier/pact/ddm_hb1_20260806/inputs/gt_seg_cache.pt",
+        "full_dtype_seen": "torch.int64",
+        "full_shape_seen": [
+          600,
+          384,
+          512
+        ],
+        "selected_dtype": "torch.int64",
+        "selected_pair_count": 32,
+        "selected_shape": [
+          32,
+          384,
+          512
+        ],
+        "shared_with_input_cache": true
+      }
+    },
+    "checkpoint": {
+      "axis": "[macOS-MLX research-signal]",
+      "bytes": 983954,
+      "format": "mlx_npz",
+      "param_count": 38,
+      "path": ".omx/research/ddm_mx1h_20260807/receipts/arm_cap_mlx_latest_snapshot.npz",
+      "score_claim": false,
+      "sha256": "b01ee1e41018dda863c2eb6c3e708a71c512b002b765a1462b27ff40ed35986a",
+      "step": 1500
+    },
+    "comparison_row": {
+      "authority_minus_fp1_floor_d_seg": -0.007236090037027995,
+      "authority_minus_mlx_proxy_d_seg": 4.736582438151027e-05,
+      "authority_over_fp1_floor_d_seg": 0.12870679867212584,
+      "authority_over_mlx_proxy_d_seg": 1.046366889684145,
+      "checkpoint_step": 1500,
+      "fp1_flat_paint_floor_d_seg": 0.008305,
+      "mlx_history_row": {
+        "d_seg_batch": 0.0010215441385904949,
+        "loss": 0.00024392033810727298,
+        "lr": 1.7103106131344248e-07,
+        "phase": "expected_flip",
+        "step": 1500
+      },
+      "mlx_in_training_d_seg_batch": 0.0010215441385904949
+    },
+    "contest_faithful_roundtrip": "lifted.render_for_seg(..., exact_path=True): bilinear up to 874x1164, uint8 STE, bilinear down to 384x512",
+    "elapsed_seconds": 28.45423913002014,
+    "host": {
+      "machine": "arm64",
+      "node": "Primary",
+      "platform": "macOS-26.4-arm64-arm-64bit-Mach-O",
+      "system": "Darwin"
+    },
+    "input_cache": "/Volumes/VertigoDataTier/pact/ddm_hb1_20260806/inputs/gt_seg_cache.pt",
+    "pair_count": 32,
+    "pair_ids": [
+      8,
+      28,
+      40,
+      65,
+      91,
+      97,
+      128,
+      149,
+      152,
+      188,
+      201,
+      209,
+      246,
+      252,
+      284,
+      285,
+      307,
+      334,
+      346,
+      379,
+      398,
+      406,
+      432,
+      437,
+      464,
+      491,
+      497,
+      514,
+      538,
+      561,
+      577,
+      591
+    ],
+    "per_pair_d_seg": [
+      {
+        "d_seg": 0.0014139811197916667,
+        "mismatch_pixels": 278,
+        "pair_id": 8,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0011800130208333333,
+        "mismatch_pixels": 232,
+        "pair_id": 28,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.001129150390625,
+        "mismatch_pixels": 222,
+        "pair_id": 40,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0010325113932291667,
+        "mismatch_pixels": 203,
+        "pair_id": 65,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0012715657552083333,
+        "mismatch_pixels": 250,
+        "pair_id": 91,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0011749267578125,
+        "mismatch_pixels": 231,
+        "pair_id": 97,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0013224283854166667,
+        "mismatch_pixels": 260,
+        "pair_id": 128,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0008392333984375,
+        "mismatch_pixels": 165,
+        "pair_id": 149,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.00115966796875,
+        "mismatch_pixels": 228,
+        "pair_id": 152,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0012919108072916667,
+        "mismatch_pixels": 254,
+        "pair_id": 188,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0009002685546875,
+        "mismatch_pixels": 177,
+        "pair_id": 201,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.001129150390625,
+        "mismatch_pixels": 222,
+        "pair_id": 209,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.000823974609375,
+        "mismatch_pixels": 162,
+        "pair_id": 246,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0009816487630208333,
+        "mismatch_pixels": 193,
+        "pair_id": 252,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0011749267578125,
+        "mismatch_pixels": 231,
+        "pair_id": 284,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0009562174479166666,
+        "mismatch_pixels": 188,
+        "pair_id": 285,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0011952718098958333,
+        "mismatch_pixels": 235,
+        "pair_id": 307,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0010477701822916667,
+        "mismatch_pixels": 206,
+        "pair_id": 334,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0009562174479166666,
+        "mismatch_pixels": 188,
+        "pair_id": 346,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0009256998697916666,
+        "mismatch_pixels": 182,
+        "pair_id": 379,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0007680257161458334,
+        "mismatch_pixels": 151,
+        "pair_id": 398,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0009714762369791666,
+        "mismatch_pixels": 191,
+        "pair_id": 406,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0009969075520833333,
+        "mismatch_pixels": 196,
+        "pair_id": 432,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0009613037109375,
+        "mismatch_pixels": 189,
+        "pair_id": 437,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.001007080078125,
+        "mismatch_pixels": 198,
+        "pair_id": 464,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0009256998697916666,
+        "mismatch_pixels": 182,
+        "pair_id": 491,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.001251220703125,
+        "mismatch_pixels": 246,
+        "pair_id": 497,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0010732014973958333,
+        "mismatch_pixels": 211,
+        "pair_id": 514,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0011138916015625,
+        "mismatch_pixels": 219,
+        "pair_id": 538,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.001190185546875,
+        "mismatch_pixels": 234,
+        "pair_id": 561,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0009816487630208333,
+        "mismatch_pixels": 193,
+        "pair_id": 577,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0010579427083333333,
+        "mismatch_pixels": 208,
+        "pair_id": 591,
+        "pixels": 196608
+      }
+    ],
+    "schema": "ddm_mx1_torch_verdict.v1",
+    "score_claim": false,
+    "scorer_batch_shapes": [
+      [
+        32,
+        3,
+        384,
+        512
+      ]
+    ],
+    "segnet_batch_size": 32,
+    "segnet_chunk_batch_sizes": [
+      32
+    ],
+    "source_repo_head": "2f94596bb0136d342254022a5c9584756eae0468",
+    "source_repo_root": "/Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo",
+    "status": "passed",
+    "target_batch_shape": [
+      32,
+      384,
+      512
+    ],
+    "target_cache": "/Volumes/VertigoDataTier/pact/ddm_hb1_20260806/inputs/gt_seg_cache.pt",
+    "token_batch_shape": [
+      32,
+      384,
+      512
+    ],
+    "total_mismatch_pixels": 6725,
+    "total_pixels": 6291456,
+    "verdict_scope": "n32 arm-selection instrument"
+  }
+}
