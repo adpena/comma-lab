@@ -1271,6 +1271,10 @@ def main() -> int:
             / f"track1_a4_charm_50k_toy_{ts}"
         )
 
+    if not args.smoke and not args.build_archive_only:
+        from tac.admission_guard import assert_governed_admission
+        assert_governed_admission("train_charm_50k_toy_substrate")
+
     args.output.mkdir(parents=True, exist_ok=True)
 
     if args.smoke:

@@ -209,6 +209,9 @@ def main(argv: Sequence[str] | None = None) -> int:
                         help="cuda|cpu. CLAUDE.md forbids MPS. Default cuda; "
                              "--device cpu opt-in is for byte-deterministic smoke.")
     args = parser.parse_args(argv)
+    if not args.smoke:
+        from tac.admission_guard import assert_governed_admission
+        assert_governed_admission("train_anr_token_renderer")
 
     # CLAUDE.md non-negotiable: no MPS-fallback default.
     if args.device.lower() == "mps":

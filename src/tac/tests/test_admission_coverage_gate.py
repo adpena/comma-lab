@@ -150,3 +150,16 @@ def test_real_repo_lifted_target_entrypoints_wired():
     joined = "\n".join(v)
     assert "experiments/ddm_mx1_pr130_semantic_renderer.py" not in joined
     assert "src/tac/pr130_lift/pose/train_pose_carrier_full_resumable.py" not in joined
+
+
+def test_ah1_top_tier_backlog_slice_wired():
+    v = _gate(strict=False, verbose=False)
+    joined = "\n".join(v)
+    for rel in (
+        "experiments/train_anr_token_renderer.py",
+        "experiments/train_balle_hyperprior.py",
+        "experiments/train_blocknerv_as_renderer.py",
+        "experiments/train_categorical_renderer.py",
+        "experiments/train_charm_50k_toy_substrate.py",
+    ):
+        assert rel not in joined

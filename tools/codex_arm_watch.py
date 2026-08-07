@@ -7,7 +7,8 @@ canonical emitter; MAIN arms it as a persistent Monitor at session start —
 each printed line becomes a conversation notification that re-invokes MAIN.
 
 Events emitted (one line each, snapshot-baselined so history stays silent):
-  ARM <name> FINISHED <rc=..|signal=..> [gen=N] elapsed=Ns | last: <final-msg head>
+  ARM <name> FINISHED <rc=0...> [gen=N] elapsed=Ns | last: <final-msg head>
+  ARM <name> ALERT <rc!=0|signal=..> [gen=N] elapsed=Ns | last: <final-msg head>
   ARM <name> RELAYED <relay line>            (context-exhaustion relay fired)
 
 A heartbeat file (`_watcher.alive`, mtime-refreshed each poll) lets the
@@ -59,6 +60,19 @@ def _final_msg_head(runs: Path, arm: str, limit: int = 140) -> str:
         return "(no final message file)"
 
 
+def _terminal_kind(receipt: str) -> tuple[str, str]:
+    line = receipt.splitlines()[-1] if receipt else "(empty receipt)"
+    if "signal=" in line:
+        return "ALERT", line
+    for token in line.replace(",", " ").split():
+        if token.startswith("rc="):
+            try:
+                return ("FINISHED" if int(token.split("=", 1)[1]) == 0 else "ALERT", line)
+            except ValueError:
+                return "ALERT", line
+    return "ALERT", line
+
+
 def format_events(
     runs: Path, before: dict[str, tuple[float, int]], after: dict[str, tuple[float, int]]
 ) -> list[str]:
@@ -74,8 +88,9 @@ def format_events(
         except OSError:
             continue
         if name.endswith(".done"):
+            kind, terminal = _terminal_kind(content)
             lines.append(
-                f"ARM {arm} FINISHED {content.splitlines()[-1] if content else '(empty receipt)'}"
+                f"ARM {arm} {kind} {terminal}"
                 f" | last: {_final_msg_head(runs, arm)}"
             )
         else:  # .relay — report only lines appended since the last poll

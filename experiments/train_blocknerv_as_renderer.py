@@ -120,6 +120,9 @@ def _activate_differentiable_yuv6():
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
+    if not args.smoke:
+        from tac.admission_guard import assert_governed_admission
+        assert_governed_admission("train_blocknerv_as_renderer")
 
     if args.auth_eval:
         if args.phase_b_auth_memo is None:

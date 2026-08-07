@@ -163,6 +163,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         ),
     )
     args = parser.parse_args(argv)
+    if not args.smoke:
+        from tac.admission_guard import assert_governed_admission
+        assert_governed_admission("train_categorical_renderer")
 
     if args.device.lower() == "mps":
         print("FATAL: MPS forbidden by CLAUDE.md.", file=sys.stderr)

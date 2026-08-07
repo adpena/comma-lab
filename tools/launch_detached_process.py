@@ -16,6 +16,7 @@ import json
 import os
 import subprocess
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
@@ -40,6 +41,13 @@ def _git_sha(cwd: Path) -> str | None:
 
 def _write_json(path: Path, payload: dict[str, Any]) -> None:
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+
+
+def _tail_lines(path: Path, limit: int = 20) -> list[str]:
+    try:
+        return path.read_text(errors="replace").splitlines()[-limit:]
+    except OSError:
+        return []
 
 
 def parse_args() -> argparse.Namespace:
@@ -83,6 +91,15 @@ def parse_args() -> argparse.Namespace:
             "Write .omx/tmp/codex_runs/<NAME>.done (rc=<rc> elapsed=<s>) when the "
             "child exits — the fleet watcher (tools/codex_arm_watch.py) turns it "
             "into a MAIN notification, same channel as codex-arm completions."
+        ),
+    )
+    parser.add_argument(
+        "--verify-alive-secs",
+        type=float,
+        default=3.0,
+        help=(
+            "After spawning, wait this many seconds and fail if the detached child "
+            "already exited. Use 0 to skip the survival check."
         ),
     )
     parser.add_argument(
@@ -188,6 +205,34 @@ def main() -> int:
     payload["pid"] = int(proc.pid)
     _write_json(manifest_path, payload)
     pid_path.write_text(f"{proc.pid}\n")
+    if args.verify_alive_secs > 0:
+        deadline = time.monotonic() + float(args.verify_alive_secs)
+        rc: int | None = None
+        while time.monotonic() < deadline:
+            rc = proc.poll()
+            if rc is not None:
+                break
+            time.sleep(min(0.05, max(0.0, deadline - time.monotonic())))
+        if rc is not None:
+            print(
+                json.dumps(
+                    {
+                        "error": "detached child exited during verify-alive window",
+                        "pid": int(proc.pid),
+                        "rc": int(rc),
+                        "verify_alive_secs": float(args.verify_alive_secs),
+                        "output_dir": out.as_posix(),
+                        "manifest_path": manifest_path.as_posix(),
+                        "log_path": log_path.as_posix(),
+                        "last_log_lines": _tail_lines(log_path),
+                    },
+                    sort_keys=True,
+                ),
+                file=sys.stderr,
+            )
+            if 1 <= int(rc) <= 125:
+                return int(rc)
+            return 4
     print(
         json.dumps(
             {

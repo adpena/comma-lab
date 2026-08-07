@@ -24,6 +24,7 @@ import importlib.util
 import json
 import os
 import signal
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -260,6 +261,99 @@ def test_safe_run_command_not_found_detailed(capsys):
     assert "len(cmd)=1" in err
     assert "cwd=" in err
     assert "collapsed" in err.lower()
+
+
+def test_launch_detached_instant_death_fails_with_log_tail(tmp_path):
+    out = tmp_path / "detached_dead"
+    runs_dir = tmp_path / ".omx" / "tmp" / "codex_runs"
+    res = subprocess.run(
+        [
+            sys.executable,
+            str(_REPO / "tools" / "launch_detached_process.py"),
+            "--output-dir",
+            str(out),
+            "--cwd",
+            str(tmp_path),
+            "--verify-alive-secs",
+            "0.2",
+            "--",
+            sys.executable,
+            "-c",
+            "import sys; print('fatal marker'); sys.exit(17)",
+        ],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        timeout=10,
+    )
+    assert res.returncode == 17
+    err = json.loads(res.stderr)
+    assert err["rc"] == 17
+    assert err["last_log_lines"] == ["fatal marker"]
+    assert not any(runs_dir.glob("*.done"))
+
+
+def test_launch_detached_live_child_succeeds(tmp_path):
+    out = tmp_path / "detached_live"
+    pid = None
+    try:
+        res = subprocess.run(
+            [
+                sys.executable,
+                str(_REPO / "tools" / "launch_detached_process.py"),
+                "--output-dir",
+                str(out),
+                "--cwd",
+                str(tmp_path),
+                "--verify-alive-secs",
+                "0.2",
+                "--",
+                "/bin/sleep",
+                "20",
+            ],
+            cwd=tmp_path,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        assert res.returncode == 0, res.stderr
+        payload = json.loads(res.stdout)
+        pid = int(payload["pid"])
+        assert (out / "run.pid").read_text().strip() == str(pid)
+    finally:
+        if pid:
+            import contextlib
+
+            with contextlib.suppress(ProcessLookupError, PermissionError):
+                os.killpg(pid, signal.SIGKILL)
+
+
+def test_safe_run_timeout_writes_peak_kill_receipt(tmp_path):
+    receipt = tmp_path / "safe_run_status.json"
+    rc = sr.main(
+        [
+            "--skip-admission-gate",
+            "--rss-mb",
+            "4096",
+            "--timeout",
+            "0.15",
+            "--poll",
+            "0.02",
+            "--status-receipt",
+            str(receipt),
+            "--",
+            "/bin/sleep",
+            "10",
+        ]
+    )
+    assert rc == sr.EXIT_TIMEOUT
+    payload = json.loads(receipt.read_text())
+    assert payload["schema"] == sr.STATUS_RECEIPT_SCHEMA
+    assert payload["status"] == "timeout"
+    assert payload["exit"] == sr.EXIT_TIMEOUT
+    assert payload["peak_rss_observed"] is True
+    assert payload["last_sample_ts"]
+    assert payload["kill_action"]["reason"] == "timeout"
 
 
 def test_safe_run_no_command_detailed(capsys):

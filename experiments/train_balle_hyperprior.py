@@ -229,6 +229,8 @@ def main() -> None:
         ),
     )
     args = parser.parse_args()
+    from tac.admission_guard import assert_governed_admission
+    assert_governed_admission("train_balle_hyperprior")
 
     if args.device == "mps":
         raise SystemExit(

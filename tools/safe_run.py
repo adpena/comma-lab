@@ -46,16 +46,20 @@ Exit codes:
 from __future__ import annotations
 
 import argparse
+import datetime as _dt
 import json
 import os
 import signal
 import subprocess
 import sys
 import time
+from pathlib import Path
+from typing import Any
 
 EXIT_TIMEOUT = 124
 EXIT_OOM = 137
 EXIT_SPAWN = 125
+STATUS_RECEIPT_SCHEMA = "safe_run_status_receipt.v1"
 
 
 def _parse_args(argv: list[str]) -> tuple[argparse.Namespace, list[str]]:
@@ -64,7 +68,7 @@ def _parse_args(argv: list[str]) -> tuple[argparse.Namespace, list[str]]:
         ours, cmd = argv[:sep], argv[sep + 1 :]
     else:
         ours, cmd = [], []
-        known_val = {"--rss-mb", "--timeout", "--poll", "--label",
+        known_val = {"--rss-mb", "--timeout", "--poll", "--label", "--status-receipt",
                      "--projected-gib", "--admission-override-rationale"}
         known_flag = {"--quiet", "--json", "--skip-admission-gate"}
         i = 0
@@ -92,6 +96,15 @@ def _parse_args(argv: list[str]) -> tuple[argparse.Namespace, list[str]]:
     p.add_argument("--timeout", type=float, default=30.0)
     p.add_argument("--poll", type=float, default=0.2)
     p.add_argument("--label", default=None)
+    p.add_argument(
+        "--status-receipt",
+        type=Path,
+        default=None,
+        help=(
+            "Durable JSON receipt updated atomically on every RSS sample tick "
+            "with peak_rss_observed, last_sample_ts, and kill_action."
+        ),
+    )
     p.add_argument("--quiet", action="store_true")
     p.add_argument("--json", action="store_true")
     # (review-fix CRITICAL) safe_run stamps the child TAC_GOVERNED_ADMISSION so the heavy
@@ -163,6 +176,28 @@ def _spawn_debug(cmd: list[str]) -> str:
             "expansion). Pass the command as separate argv tokens or via a script."
         )
     return detail
+
+
+def _utc_now() -> str:
+    return _dt.datetime.now(_dt.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _status_receipt_path(ns: argparse.Namespace) -> Path | None:
+    if ns.status_receipt is not None:
+        return ns.status_receipt.expanduser().resolve(strict=False)
+    env_path = os.environ.get("SAFE_RUN_STATUS_RECEIPT")
+    if env_path:
+        return Path(env_path).expanduser().resolve(strict=False)
+    return None
+
+
+def _write_status_receipt(path: Path | None, payload: dict[str, Any]) -> None:
+    if path is None:
+        return
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+    tmp.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+    tmp.replace(path)
 
 
 def _rationale_is_real(s: str | None) -> bool:
@@ -312,6 +347,39 @@ def main(argv: list[str]) -> int:
     label = ns.label or os.path.basename(cmd[0])
     rss_limit_kib = ns.rss_mb * 1024
     start = time.monotonic()
+    start_utc = _utc_now()
+    status_receipt = _status_receipt_path(ns)
+    peak_kib = 0
+    peak_observed = False
+    last_sample_ts: str | None = None
+    child_pid: int | None = None
+    pgid: int | None = None
+    kill_action: dict[str, Any] | None = None
+
+    def _emit_status(status: str, *, exit_code: int | None = None) -> None:
+        _write_status_receipt(
+            status_receipt,
+            {
+                "schema": STATUS_RECEIPT_SCHEMA,
+                "generated_utc": _utc_now(),
+                "start_utc": start_utc,
+                "label": label,
+                "argv": list(cmd),
+                "child_pid": child_pid,
+                "pgid": pgid,
+                "status": status,
+                "exit": exit_code,
+                "elapsed_s": round(time.monotonic() - start, 3),
+                "rss_limit_mib": ns.rss_mb,
+                "timeout_s": ns.timeout,
+                "poll_s": ns.poll,
+                "peak_rss_observed": peak_observed,
+                "peak_rss_kib": int(peak_kib),
+                "peak_rss_mib": round(peak_kib / 1024.0, 3),
+                "last_sample_ts": last_sample_ts,
+                "kill_action": kill_action,
+            },
+        )
 
     # (review-fix CRITICAL) run the SYSTEM-TOTAL admission gate BEFORE stamping governed. The old
     # code stamped governed off the per-process --rss-mb cap alone — the exact SYSTEM-BLIND
@@ -321,6 +389,7 @@ def main(argv: list[str]) -> int:
     # + the same TOCTOU close as the daemon path); no-op for --skip-admission-gate (daemon-wrapped).
     _adm_rc, _reservation = _gate_and_reserve(ns, cmd)
     if _adm_rc is not None:
+        _emit_status("admission_refused", exit_code=_adm_rc)
         return _adm_rc
 
     # (#254) stamp the child env as GOVERNED so the heavy entrypoint's admission guard passes —
@@ -343,6 +412,7 @@ def main(argv: list[str]) -> int:
             file=sys.stderr,
         )
         _release_reservation(_reservation, reason="safe_run_spawn_failed")
+        _emit_status("spawn_failed", exit_code=EXIT_SPAWN)
         return EXIT_SPAWN
     except Exception as exc:  # noqa: BLE001
         print(
@@ -350,12 +420,14 @@ def main(argv: list[str]) -> int:
             file=sys.stderr,
         )
         _release_reservation(_reservation, reason="safe_run_spawn_failed")
+        _emit_status("spawn_failed", exit_code=EXIT_SPAWN)
         return EXIT_SPAWN
 
+    child_pid = proc.pid
     pgid = proc.pid  # equals the new session/group id
     # promote the pending reservation to a live running row (real pid + projected peak).
     _activate_reservation(_reservation, proc.pid, pgid, cmd)
-    peak_kib = 0
+    _emit_status("running", exit_code=None)
     status = "ok"
     rc = 0
 
@@ -368,6 +440,13 @@ def main(argv: list[str]) -> int:
     # Install SIGTERM/SIGINT handlers that kill the child's group, then exit, so
     # an external shed CASCADES to the arm.
     def _cascade_kill(signum, _frame):  # noqa: ANN001
+        nonlocal kill_action
+        kill_action = {
+            "reason": "external_signal",
+            "signal": int(signum),
+            "action": "SIGTERM_then_SIGKILL_process_group",
+        }
+        _emit_status("killed", exit_code=128 + signum)
         _kill_group(pgid)
         os._exit(128 + signum)
 
@@ -385,15 +464,32 @@ def main(argv: list[str]) -> int:
             elapsed = time.monotonic() - start
             if elapsed > ns.timeout:
                 status = "timeout"
+                kill_action = {
+                    "reason": "timeout",
+                    "elapsed_s": round(elapsed, 3),
+                    "timeout_s": ns.timeout,
+                    "action": "SIGTERM_then_SIGKILL_process_group",
+                }
+                _emit_status(status, exit_code=EXIT_TIMEOUT)
                 _kill_group(pgid)
                 proc.wait()
                 rc = EXIT_TIMEOUT
                 break
             rss = _group_rss_kib(pgid)
+            peak_observed = True
+            last_sample_ts = _utc_now()
             if rss > peak_kib:
                 peak_kib = rss
+            _emit_status("running", exit_code=None)
             if rss > rss_limit_kib:
                 status = "oom"
+                kill_action = {
+                    "reason": "rss_limit",
+                    "rss_kib": int(rss),
+                    "rss_limit_kib": int(rss_limit_kib),
+                    "action": "SIGTERM_then_SIGKILL_process_group",
+                }
+                _emit_status(status, exit_code=EXIT_OOM)
                 _kill_group(pgid)
                 proc.wait()
                 rc = EXIT_OOM
@@ -401,6 +497,11 @@ def main(argv: list[str]) -> int:
             time.sleep(ns.poll)
     except KeyboardInterrupt:
         status = "interrupted"
+        kill_action = {
+            "reason": "keyboard_interrupt",
+            "action": "SIGTERM_then_SIGKILL_process_group",
+        }
+        _emit_status(status, exit_code=130)
         _kill_group(pgid)
         proc.wait()
         rc = 130
@@ -434,6 +535,7 @@ def main(argv: list[str]) -> int:
         print(f"SAFE_RUN [{label}] {detail}", file=sys.stderr)
 
     _release_reservation(_reservation, reason=f"safe_run_exit_{status}")
+    _emit_status(status, exit_code=rc)
     return rc
 
 

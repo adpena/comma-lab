@@ -51,7 +51,18 @@ def test_missing_last_txt_is_not_fatal(tmp_path: Path) -> None:
     before = watch_mod._snapshot(tmp_path)
     _write(tmp_path, "arm3.done", "rc=1 elapsed=5 gen=1\n")
     lines = watch_mod.format_events(tmp_path, before, watch_mod._snapshot(tmp_path))
-    assert len(lines) == 1 and "(no final message file)" in lines[0]
+    assert len(lines) == 1
+    assert lines[0].startswith("ARM arm3 ALERT rc=1 elapsed=5 gen=1")
+    assert "(no final message file)" in lines[0]
+
+
+def test_signal_done_event_is_alert(tmp_path: Path) -> None:
+    before = watch_mod._snapshot(tmp_path)
+    _write(tmp_path, "arm4.done", "signal=TERM elapsed=31 gen=1\n")
+    lines = watch_mod.format_events(tmp_path, before, watch_mod._snapshot(tmp_path))
+    assert lines == [
+        "ARM arm4 ALERT signal=TERM elapsed=31 gen=1 | last: (no final message file)"
+    ]
 
 
 # --- dispatcher instrument fix (codex_arm_queue) ---------------------------------
