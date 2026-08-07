@@ -445,6 +445,7 @@ def _verdict(
         "schema": FIRE_GUARD_VERDICT_SCHEMA,
         "status": status,
         "reason_code": reason_code,
+        "reason": reason_code,
         "axis": "[apparatus / scorer-free]",
         "score_claim": False,
         "timestamp_utc": _utc_now_iso(),

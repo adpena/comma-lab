@@ -181,6 +181,7 @@ def test_mx1_fire_guard_passes_matching_receipt(tmp_path: Path) -> None:
     assert verdict["schema"] == "ddm_mx1_fire_guard_verdict.v1"
     assert verdict["status"] == "passed"
     assert verdict["reason_code"] == "fire_guard_passed"
+    assert verdict["reason"] == "fire_guard_passed"
     assert verdict["checks"][0]["name"] == "receipt_freshness"
 
 
@@ -209,6 +210,7 @@ def test_mx1_fire_guard_refuses_missing_receipt(tmp_path: Path) -> None:
     verdict = json.loads(verdict_path.read_text())
     assert verdict["status"] == "failed"
     assert verdict["reason_code"] == "mem_probe_receipt_missing"
+    assert verdict["reason"] == "mem_probe_receipt_missing"
 
 
 def test_mx1_fire_guard_refuses_stale_receipt(tmp_path: Path) -> None:
@@ -270,3 +272,49 @@ def test_mx1_fire_guard_refuses_microbatch_footprint_mismatch(tmp_path: Path) ->
     assert verdict["reason_code"] == "receipt_config_mismatch"
     mismatches = verdict["checks"][-1]["detail"]["mismatches"]
     assert "microbatch_pairs" in mismatches
+
+
+def test_mx1_fire_guard_passes_resume_key_with_matching_resume_receipt(tmp_path: Path) -> None:
+    ticket_path, receipt_path, verdict_path = _ticket_and_receipt(tmp_path)
+    ticket = json.loads(ticket_path.read_text())
+    resume_key = "argv_n32_arm_cap_resume"
+    resume_receipt_path = (
+        tmp_path
+        / "launch_arm_cap"
+        / "n32_metal"
+        / "mem_probe_resume"
+        / "mem_probe_receipt.json"
+    )
+    resume_receipt_path.parent.mkdir(parents=True)
+    resume_receipt_path.write_text(receipt_path.read_text(encoding="utf-8"), encoding="utf-8")
+    resume_argv = list(ticket["argv_n32_arm_cap"])
+    resume_argv[resume_argv.index("--fire-argv-key") + 1] = resume_key
+    resume_argv.extend(["--resume-from", str(tmp_path / "launch_arm_cap" / "n32_metal" / "mlx.latest.npz")])
+    ticket[resume_key] = resume_argv
+    ticket["mem_probe_receipt_paths"] = {resume_key: str(resume_receipt_path)}
+    ticket_path.write_text(json.dumps(ticket), encoding="utf-8")
+
+    result = subprocess.run(
+        [
+            ".venv/bin/python",
+            "tools/mx1_fire_guard.py",
+            "--ticket",
+            str(ticket_path),
+            "--argv-key",
+            resume_key,
+            "--out",
+            str(verdict_path),
+        ],
+        cwd=REPO,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    verdict = json.loads(verdict_path.read_text())
+    assert verdict["status"] == "passed"
+    assert verdict["reason_code"] == "fire_guard_passed"
+    assert verdict["reason"] == "fire_guard_passed"
+    assert verdict["receipt_path"] == str(resume_receipt_path)
+    assert verdict["argv_key"] == resume_key

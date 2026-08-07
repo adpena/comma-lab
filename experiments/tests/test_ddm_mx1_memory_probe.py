@@ -222,6 +222,54 @@ def test_mlx_npz_checkpoint_maps_back_to_torch_state_dict(tmp_path: Path) -> Non
         assert torch.equal(checkpoint["state_dict"][name], expected), name
 
 
+def test_mlx_npz_checkpoint_refuses_missing_or_extra_parameters(tmp_path: Path) -> None:
+    lifted = mx1._load_lifted_semantic()
+    config = {
+        "width": 8,
+        "blocks": 2,
+        "frame_dim": 4,
+        "num_pairs": 6,
+        "num_tokens": 5,
+        "phase_y": 1,
+        "phase_x": 1,
+        "temporal_radius": 0,
+    }
+    model = lifted.SemanticTokenRenderer(**config)
+    checkpoint_path = tmp_path / "tiny_mlx_checkpoint.npz"
+    _write_mlx_layout_npz(
+        checkpoint_path,
+        model.state_dict(),
+        config=config,
+        step=7,
+        pair_ids=[0, 2, 5],
+    )
+    with np.load(checkpoint_path, allow_pickle=False) as payload:
+        base_payload = {key: np.asarray(payload[key]) for key in payload.files}
+    param_keys = sorted(key for key in base_payload if key.startswith("param::"))
+
+    missing_path = tmp_path / "missing_param.npz"
+    missing_payload = dict(base_payload)
+    missing_payload.pop(param_keys[0])
+    np.savez(missing_path, **missing_payload)
+    with pytest.raises(ValueError, match="parameter set mismatch"):
+        mx1._load_mlx_npz_checkpoint_for_torch(missing_path, lifted=lifted)
+
+    extra_path = tmp_path / "extra_param.npz"
+    extra_payload = dict(base_payload)
+    extra_payload["param::__unexpected__"] = np.asarray([0.0], dtype=np.float32)
+    np.savez(extra_path, **extra_payload)
+    with pytest.raises(ValueError, match="parameter set mismatch"):
+        mx1._load_mlx_npz_checkpoint_for_torch(extra_path, lifted=lifted)
+
+
+def test_torch_verdict_history_comparison_refuses_missing_checkpoint_step() -> None:
+    with pytest.raises(ValueError, match="no row for step 11"):
+        mx1._history_row_at_step(
+            [{"step": 10, "phase": "expected_flip", "d_seg_batch": 0.125}],
+            11,
+        )
+
+
 def test_run_torch_verdict_receipt_schema_with_checkpoint_pair_ids(
     tmp_path: Path,
     monkeypatch,
