@@ -1,0 +1,94 @@
+{
+  "archive_bytes": 191052,
+  "archive_sha256": "0491d5df84fc70b62b3f7ccf8894f5e1b81c616de46a052e4423fc1e18fdc7cd",
+  "axis": "[macOS-CPU advisory, byte-only archive-grammar audit]",
+  "blind_coordinate_law": {
+    "blind_fraction": 0.22696926089315625,
+    "camera_hw": [
+      874,
+      1164
+    ],
+    "n_blind_px_per_camera_frame": 230904,
+    "retained_subgrid_hw": [
+      768,
+      1024
+    ],
+    "scope": "applies directly only to camera-resolution-storing payloads; CPR1 stores no such section",
+    "seg_hw": [
+      384,
+      512
+    ]
+  },
+  "camera_resolution_storing_counted_payload_bytes": 0,
+  "charged_component_rows": [
+    {
+      "camera_resolution_stored_pixels": false,
+      "charged_bytes": 73968,
+      "component": "compressed_model_bundle",
+      "contains_raw_subsections": {
+        "hpac_model_raw_bytes": 20179,
+        "pose_carrier_cpr1_raw_bytes": 23054,
+        "raw_model_bundle_header_bytes": 8,
+        "raw_models_total_bytes": 83493,
+        "semantic_renderer_weights_raw_bytes": 40252
+      },
+      "direct_blind_coordinate_reclaim_bytes": 0,
+      "payload_surface": "compressed bundle of learned renderer weights, 24x32 pose carrier, and HPAC model weights"
+    },
+    {
+      "camera_resolution_stored_pixels": false,
+      "charged_bytes": 116980,
+      "component": "semantic_token_stream",
+      "direct_blind_coordinate_reclaim_bytes": 0,
+      "payload_surface": "range-coded 600x384x512 5-class semantic labels on scorer/eval grid",
+      "token_shape": [
+        600,
+        384,
+        512
+      ]
+    },
+    {
+      "camera_resolution_stored_pixels": false,
+      "charged_bytes": 4,
+      "component": "payload_length_header",
+      "direct_blind_coordinate_reclaim_bytes": 0,
+      "payload_surface": "4-byte compressed-model length header"
+    },
+    {
+      "camera_resolution_stored_pixels": false,
+      "charged_bytes": 100,
+      "component": "zip_stored_member_overhead",
+      "direct_blind_coordinate_reclaim_bytes": 0,
+      "payload_surface": "deterministic ZIP wrapper overhead for stored member p"
+    }
+  ],
+  "compressed_models_bytes": 73968,
+  "compressed_models_sha256": "d33d9b083d8ade8a3ab45b79a691ce2eb041e9bb03fed831c263a0eb3847710a",
+  "d_pose_measured": false,
+  "d_seg_measured": false,
+  "direct_blind_coordinate_rate_delta": 0.0,
+  "direct_blind_coordinate_reclaim_bytes": 0,
+  "hpac_model_raw_bytes": 20179,
+  "invalid_naive_fractional_token_byte_estimate": {
+    "blind_fraction_times_token_bytes": 26550.864139281417,
+    "why_invalid": "semantic tokens live on 384x512 scorer grid and feed a learned renderer; they are not stored 874x1164 camera pixels and cannot inherit the camera-grid blind-coordinate proof by fraction"
+  },
+  "measured_verdict": "FORMULATION direct audit: PR130/CPR1 has 0 counted camera-resolution payload bytes, so #401 blind-coordinate/nullity direct byte reclaim is 0 B on this archive shape. This does not test learned-renderer token edits or scorer-surviving mutations.",
+  "member_bytes": 190952,
+  "member_name": "p",
+  "member_sha256": "fcc6a3c242106350077d3c328a2c07c8994c86d19b1a361f8507917de6ba3d84",
+  "nullity_dof_direct_reclaim_bytes": 0,
+  "pose_carrier_cpr1_raw_bytes": 23054,
+  "promotion_eligible": false,
+  "rate_term": 0.1272136847118971,
+  "raw_models_bytes": 83493,
+  "raw_models_sha256": "62dd72dfa0858a25ca32bdee1e536627a17883b6fc7efd7cd5b2de7b13b84517",
+  "schema": "ddm_aa1_pr130_payload_blind_coordinate_audit.v1",
+  "score_claim": false,
+  "score_measured": false,
+  "semantic_renderer_raw_bytes": 40252,
+  "source_archive": "/Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/releases/cpr1/archive.zip",
+  "token_bytes": 116980,
+  "token_sha256": "948379872ff81a4e5d948ec301c143be00ebd0033544c8abdfb4af0f4c4a15eb",
+  "zip_member_overhead_bytes": 100
+}
