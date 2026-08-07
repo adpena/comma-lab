@@ -1941,6 +1941,12 @@ def _assert_gpu_fire_guard(args: argparse.Namespace) -> None:
         )
         raise SystemExit(9)
     try:
+        # Detached launches put the script dir (experiments/) on sys.path, not the
+        # repo root — anchor the guard import to this file's parent so the
+        # in-process re-evaluation works from any cwd.
+        _repo_root = str(Path(__file__).resolve().parent.parent)
+        if _repo_root not in sys.path:
+            sys.path.insert(0, _repo_root)
         from tools.mx1_fire_guard import evaluate_guard
 
         evaluated = evaluate_guard(ticket_path, argv_key)
