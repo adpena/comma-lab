@@ -94,6 +94,7 @@ def _ticket_and_receipt(tmp_path: Path) -> tuple[Path, Path, Path]:
             "ce_fraction": 0.0,
             "softplus_fraction": -999.0,
             "bits": 4,
+            "microbatch_pairs": 0,
             "mem_budget_gb": None,
             "allow_soft_mem_limit": False,
             "input_cache": str(input_cache),
@@ -119,6 +120,15 @@ def _ticket_and_receipt(tmp_path: Path) -> tuple[Path, Path, Path]:
                 "within_budget": True,
                 "combined_gib": 2.0,
                 "budget_gib": 8.0,
+            },
+        },
+        "train_result_summary": {
+            "microbatch_plan": {
+                "total_pairs": 32,
+                "microbatch_pairs": 4,
+                "chunk_count": 8,
+                "mode": "serial_gradient_accumulation",
+                "source": "gpu_default_4_pairs",
             },
         },
         "samples": [
@@ -227,3 +237,36 @@ def test_mx1_fire_guard_refuses_stale_receipt(tmp_path: Path) -> None:
     verdict = json.loads(verdict_path.read_text())
     assert verdict["status"] == "failed"
     assert verdict["reason_code"] == "mem_probe_receipt_stale"
+
+
+def test_mx1_fire_guard_refuses_microbatch_footprint_mismatch(tmp_path: Path) -> None:
+    ticket_path, _receipt_path, verdict_path = _ticket_and_receipt(tmp_path)
+    ticket = json.loads(ticket_path.read_text())
+    argv = ticket["argv_n32_arm_cap"]
+    insert_at = argv.index("--fire-guard-verdict")
+    argv[insert_at:insert_at] = ["--microbatch-pairs", "32"]
+    ticket_path.write_text(json.dumps(ticket), encoding="utf-8")
+
+    result = subprocess.run(
+        [
+            ".venv/bin/python",
+            "tools/mx1_fire_guard.py",
+            "--ticket",
+            str(ticket_path),
+            "--argv-key",
+            "argv_n32_arm_cap",
+            "--out",
+            str(verdict_path),
+        ],
+        cwd=REPO,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 4
+    verdict = json.loads(verdict_path.read_text())
+    assert verdict["status"] == "failed"
+    assert verdict["reason_code"] == "receipt_config_mismatch"
+    mismatches = verdict["checks"][-1]["detail"]["mismatches"]
+    assert "microbatch_pairs" in mismatches

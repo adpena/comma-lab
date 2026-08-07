@@ -117,17 +117,32 @@ def _norm_int(value: Any) -> int | None:
         return None
 
 
+def _effective_microbatch_pairs(device: Any, pairs: int | None, explicit: int | None) -> int | None:
+    if pairs is None:
+        return None
+    total_pairs = max(1, int(pairs))
+    if explicit is not None and explicit > 0:
+        return max(1, min(int(explicit), total_pairs))
+    if str(device).lower() == "gpu":
+        return max(1, min(4, total_pairs))
+    return total_pairs
+
+
 def _parsed_fire_config(argv: list[str]) -> dict[str, Any]:
     raw = _unwrap_safe_run(argv)
     flags = _flag_value_map(raw)
+    device = flags.get("device")
+    pairs = _norm_int(flags.get("pairs"))
+    explicit_microbatch_pairs = _norm_int(flags.get("microbatch_pairs", 0))
     return {
         "mode": flags.get("mode"),
-        "device": flags.get("device"),
-        "pairs": _norm_int(flags.get("pairs")),
+        "device": device,
+        "pairs": pairs,
         "lr": _norm_float(flags.get("lr")),
         "ce_fraction": _norm_float(flags.get("ce_fraction")),
         "softplus_fraction": _norm_float(flags.get("softplus_fraction")),
         "bits": _norm_int(flags.get("bits")),
+        "microbatch_pairs": _effective_microbatch_pairs(device, pairs, explicit_microbatch_pairs),
         "mem_budget_gb": _norm_float(flags.get("mem_budget_gb")),
         "allow_soft_mem_limit": "allow_soft_mem_limit" in flags,
         "input_cache": _norm_path(flags.get("input_cache")),
@@ -141,14 +156,27 @@ def _parsed_fire_config(argv: list[str]) -> dict[str, Any]:
 
 def _receipt_config(receipt: dict[str, Any]) -> dict[str, Any]:
     cfg = dict(receipt.get("argv_config") or {})
+    device = cfg.get("device", receipt.get("device_request"))
+    pairs = _norm_int(cfg.get("pairs", receipt.get("pairs")))
+    microbatch_plan = (receipt.get("train_result_summary") or {}).get("microbatch_plan")
+    if not isinstance(microbatch_plan, dict):
+        microbatch_plan = receipt.get("microbatch_plan")
+    microbatch_pairs = (
+        _norm_int(microbatch_plan.get("microbatch_pairs"))
+        if isinstance(microbatch_plan, dict)
+        else None
+    )
+    if microbatch_pairs is None:
+        microbatch_pairs = _effective_microbatch_pairs(device, pairs, _norm_int(cfg.get("microbatch_pairs", 0)))
     return {
         "mode": "mlx-train",
-        "device": cfg.get("device", receipt.get("device_request")),
-        "pairs": _norm_int(cfg.get("pairs", receipt.get("pairs"))),
+        "device": device,
+        "pairs": pairs,
         "lr": _norm_float(cfg.get("lr")),
         "ce_fraction": _norm_float(cfg.get("ce_fraction")),
         "softplus_fraction": _norm_float(cfg.get("softplus_fraction")),
         "bits": _norm_int(cfg.get("bits")),
+        "microbatch_pairs": microbatch_pairs,
         "mem_budget_gb": _norm_float(cfg.get("mem_budget_gb", receipt.get("mem_budget_gb_arg"))),
         "allow_soft_mem_limit": bool(cfg.get("allow_soft_mem_limit", False)),
         "input_cache": _norm_path(cfg.get("input_cache", receipt.get("input_cache"))),
@@ -252,6 +280,7 @@ def _validate_config_match(fire: dict[str, Any], receipt: dict[str, Any]) -> tup
         "device",
         "pairs",
         "bits",
+        "microbatch_pairs",
         "allow_soft_mem_limit",
         "input_cache",
         "target_cache",
