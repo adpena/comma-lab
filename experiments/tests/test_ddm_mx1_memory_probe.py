@@ -78,18 +78,31 @@ def test_run_mem_probe_writes_peak_receipt_schema(tmp_path: Path, monkeypatch) -
 
     def fake_run_mlx_train(probe_args, *, memory_probe):
         assert probe_args.steps == 3
-        memory_probe.sample("start", mx=FakeMx())
-        memory_probe.sample("after_train_step_000003", mx=FakeMx())
+        memory_probe.install_software_budget(
+            {
+                "software_cap_required": True,
+                "software_budget_bytes": int(2 * mx1.GIB),
+            }
+        )
+        memory_probe.sample_and_check("start", mx=FakeMx())
+        memory_probe.sample_and_check("after_train_step_000001", mx=FakeMx())
+        memory_probe.sample_and_check("after_train_step_000002", mx=FakeMx())
+        memory_probe.sample_and_check("after_train_step_000003", mx=FakeMx())
         return {
             "schema": "ddm_mx1_mlx_train.v1",
             "status": "passed",
             "steps": probe_args.steps,
             "seconds_per_step": 0.25,
             "memory_limits": {
-                "hard_limit_required": True,
-                "hard_limit_satisfied": True,
-                "calls": [{"target": "set_memory_limit", "status": "applied", "hard_limit": True}],
+                "enforcement": "software_stage_step_cap",
+                "software_cap_required": True,
+                "software_cap_installed": True,
+                "software_budget_bytes": int(2 * mx1.GIB),
+                "hard_limit_required": False,
+                "hard_limit_satisfied": False,
+                "calls": [{"target": "set_memory_limit", "status": "applied", "hard_limit": False}],
             },
+            "software_budget": memory_probe.budget_summary(),
             "stage_checkpoint": str(probe_args.run_dir / "mlx_stage_step000003.npz"),
             "latest_checkpoint": str(probe_args.run_dir / "mlx.latest.npz"),
             "latest_checkpoint_sha256": "0" * 64,
@@ -105,7 +118,8 @@ def test_run_mem_probe_writes_peak_receipt_schema(tmp_path: Path, monkeypatch) -
     assert result["status"] == "passed"
     assert receipt["schema"] == mx1.MEM_PROBE_RECEIPT_SCHEMA
     assert receipt["metal_fire_clearance"] is True
-    assert receipt["memory_limits"]["hard_limit_satisfied"] is True
+    assert receipt["memory_limits"]["enforcement"] == "software_stage_step_cap"
+    assert receipt["software_budget"]["check_count"] >= 3
     assert receipt["host"]["node"]
     assert receipt["requested_training_steps"] == 3
     assert receipt["peak"]["sample_count"] >= 2
@@ -132,6 +146,35 @@ def test_run_mem_probe_writes_failed_receipt_on_hard_cap_failure(tmp_path: Path,
     assert receipt["blocker"]["last_sample_stage"] == "after_require_mlx_memory_limit_configuration_failed"
 
 
+def test_run_mem_probe_budget_exceeded_writes_failed_receipt_and_raises(tmp_path: Path, monkeypatch) -> None:
+    args = _args(tmp_path)
+
+    class FakeMx:
+        @staticmethod
+        def get_active_memory() -> int:
+            return int(4 * mx1.GIB)
+
+    def fake_run_mlx_train(probe_args, *, memory_probe):
+        memory_probe.install_software_budget(
+            {
+                "software_cap_required": True,
+                "software_budget_bytes": int(1 * mx1.GIB),
+            }
+        )
+        memory_probe.sample_and_check("after_train_step_000001", mx=FakeMx())
+
+    monkeypatch.setattr(mx1, "run_mlx_train", fake_run_mlx_train)
+
+    with pytest.raises(mx1.MemoryBudgetExceeded):
+        mx1.run_mem_probe(args)
+
+    receipt = json.loads((args.run_dir / "mem_probe_receipt.json").read_text())
+    assert receipt["status"] == "failed"
+    assert receipt["metal_fire_clearance"] is False
+    assert receipt["blocker"]["error_type"] == "MemoryBudgetExceeded"
+    assert receipt["blocker"]["software_budget"]["last_check"]["within_budget"] is False
+
+
 def test_default_budget_uses_35_percent_and_probe_cap(monkeypatch) -> None:
     monkeypatch.setattr(mx1, "_system_available_bytes", lambda: int(100 * mx1.GIB))
 
@@ -144,17 +187,22 @@ def test_default_budget_uses_35_percent_and_probe_cap(monkeypatch) -> None:
     assert probe["source"] == "mem_probe_min_24gb_default_35pct_of_available_memory_at_start"
 
 
-def test_configure_mlx_memory_limits_uses_relaxed_false_for_gpu() -> None:
-    calls: list[tuple[int, bool]] = []
+def test_configure_mlx_memory_limits_installs_software_and_wired_caps_for_gpu(monkeypatch) -> None:
+    calls: list[tuple[str, int]] = []
+    monkeypatch.setattr(mx1, "_system_total_bytes", lambda: int(10 * mx1.GIB))
 
     class FakeMx:
         @staticmethod
-        def set_memory_limit(value: int, *, relaxed: bool = True) -> None:
-            calls.append((value, relaxed))
+        def set_memory_limit(value: int) -> None:
+            calls.append(("memory", value))
 
         @staticmethod
         def set_cache_limit(value: int) -> None:
-            calls.append((value, True))
+            calls.append(("cache", value))
+
+        @staticmethod
+        def set_wired_limit(value: int) -> None:
+            calls.append(("wired", value))
 
     result = mx1._configure_mlx_memory_limits(
         FakeMx(),
@@ -163,13 +211,19 @@ def test_configure_mlx_memory_limits_uses_relaxed_false_for_gpu() -> None:
         allow_soft_mem_limit=False,
     )
 
-    assert result["hard_limit_required"] is True
-    assert result["hard_limit_satisfied"] is True
-    assert calls[0] == (int(2.0 * mx1.GIB), False)
-    assert result["calls"][0]["signature_form"] == "value_relaxed_false"
+    assert result["enforcement"] == "software_stage_step_cap"
+    assert result["software_cap_required"] is True
+    assert result["software_cap_installed"] is True
+    assert result["hard_limit_required"] is False
+    assert result["hard_limit_satisfied"] is False
+    assert calls[0] == ("memory", int(2.0 * mx1.GIB))
+    assert calls[2] == ("wired", int(2.0 * mx1.GIB))
+    assert result["calls"][0]["signature_form"] == "value_only_soft_guideline"
 
 
-def test_configure_mlx_memory_limits_refuses_soft_only_gpu() -> None:
+def test_configure_mlx_memory_limits_refuses_gpu_when_budget_cannot_be_derived(monkeypatch) -> None:
+    monkeypatch.setattr(mx1, "_system_available_bytes", lambda: None)
+
     class FakeMx:
         @staticmethod
         def set_memory_limit(value: int) -> None:
@@ -182,7 +236,7 @@ def test_configure_mlx_memory_limits_refuses_soft_only_gpu() -> None:
     with pytest.raises(mx1.MemoryLimitConfigurationError):
         mx1._configure_mlx_memory_limits(
             FakeMx(),
-            2.0,
+            None,
             device="gpu",
             allow_soft_mem_limit=False,
         )
@@ -193,7 +247,7 @@ def test_launch_ticket_requires_mem_probe_and_sequential_scheduling(tmp_path: Pa
 
     ticket = mx1.launch_ticket(args, smoke=None, mlx_probe={"status": "blocked"})
 
-    assert ticket["schema"] == "ddm_mx1_row1_launch_ticket.v2_two_arm"
+    assert ticket["schema"] == "ddm_mx1_row1_launch_ticket.v4_software_cap_fire_guarded"
     assert ticket["mem_probe_receipt_required"] is True
     assert ticket["mem_probe_receipt_path"].endswith("mem_probe_receipt.json")
     assert ticket["fire_guard_required"] is True
@@ -216,6 +270,9 @@ def test_launch_ticket_requires_mem_probe_and_sequential_scheduling(tmp_path: Pa
         assert "--mem-budget-gb" in ticket[key]
         assert "12.5" in ticket[key]
         assert "--fire-guard-verdict" in ticket[key]
+        assert "--launch-ticket-path" in ticket[key]
+        assert "--fire-argv-key" in ticket[key]
+        assert key in ticket[key]
         assert key in ticket["fire_guard_commands"]
         assert ticket["fire_guard_commands"][key][:2] == [".venv/bin/python", "tools/mx1_fire_guard.py"]
     assert ticket["mem_probe_command"][:4] == [
@@ -230,6 +287,7 @@ def test_launch_ticket_requires_mem_probe_and_sequential_scheduling(tmp_path: Pa
     assert ticket["safe_run_projection"]["schema"] == "ddm_mx1_row1_safe_run_projection.v1"
     assert ticket["safe_run_projection"]["projected_gib"] >= mx1.METAL_UNKNOWN_MARGIN_GIB
     assert ticket["fire_protocol"]["rr8_f1_refuse_condition"] == "pgrep rc>=2 AND ps rc!=0"
+    assert ticket["memory_projection"]["enforcement"] == "software_stage_step_cap"
 
 
 def test_mx1_heavy_mode_refuses_raw_when_enforced(tmp_path: Path, monkeypatch) -> None:
@@ -308,6 +366,49 @@ def test_mx1_gpu_train_refuses_failed_fire_guard_verdict(tmp_path: Path, monkeyp
 
     with pytest.raises(SystemExit) as excinfo:
         mx1.main()
+
+    assert excinfo.value.code == 9
+
+
+def test_mx1_gpu_train_refuses_minimal_forged_passed_fire_guard_verdict(tmp_path: Path, monkeypatch) -> None:
+    verdict = tmp_path / "fire_guard_verdict.json"
+    ticket = tmp_path / "launch_ticket.json"
+    receipt = tmp_path / "mem_probe_receipt.json"
+    verdict.write_text(
+        json.dumps(
+            {
+                "schema": mx1.MX1_FIRE_GUARD_VERDICT_SCHEMA,
+                "status": "passed",
+            }
+        )
+    )
+    ticket.write_text("{}")
+    receipt.write_text("{}")
+
+    import tools.mx1_fire_guard as guard
+
+    monkeypatch.setattr(
+        guard,
+        "evaluate_guard",
+        lambda ticket_path, argv_key: {
+            "schema": mx1.MX1_FIRE_GUARD_VERDICT_SCHEMA,
+            "status": "passed",
+            "reason_code": "fire_guard_passed",
+            "ticket_path": str(ticket),
+            "argv_key": "argv_n32_arm_cap",
+            "receipt_path": str(receipt),
+            "fire_config": {"fire_guard_verdict": str(verdict)},
+        },
+    )
+
+    with pytest.raises(SystemExit) as excinfo:
+        mx1._assert_gpu_fire_guard(
+            Namespace(
+                fire_guard_verdict=verdict,
+                launch_ticket_path=ticket,
+                fire_argv_key="argv_n32_arm_cap",
+            )
+        )
 
     assert excinfo.value.code == 9
 

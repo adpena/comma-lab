@@ -1,0 +1,16 @@
+{
+  "argv_key": "argv_n32_arm_cap",
+  "axis": "[apparatus / scorer-free]",
+  "checks": [],
+  "error": null,
+  "fire_config": null,
+  "reason_code": "mem_probe_receipt_missing",
+  "receipt_config": null,
+  "receipt_path": "/Users/adpena/Projects/pact/.omx/research/ddm_mx1e_20260807/row1_v4_two_arm/launch_arm_cap/n32_metal/mem_probe/mem_probe_receipt.json",
+  "schema": "ddm_mx1_fire_guard_verdict.v1",
+  "score_claim": false,
+  "status": "failed",
+  "ticket_path": ".omx/research/ddm_mx1e_20260807/launch_ticket_v4_fire_guarded.json",
+  "timestamp_utc": "2026-08-07T13:25:56.453403Z",
+  "verdict_path": ".omx/research/ddm_mx1e_20260807/row1_v4_two_arm/launch_arm_cap/n32_metal/fire_guard_verdict.json"
+}

@@ -2,8 +2,10 @@
 from __future__ import annotations
 
 import json
+import os
 import platform
 import subprocess
+import time
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
@@ -29,7 +31,7 @@ def _ticket_and_receipt(tmp_path: Path) -> tuple[Path, Path, Path]:
     receipt_path = tmp_path / "row1" / "mem_probe_receipt.json"
     ticket_path = tmp_path / "launch_ticket.json"
     ticket = {
-        "schema": "ddm_mx1_row1_launch_ticket.v2_two_arm",
+        "schema": "ddm_mx1_row1_launch_ticket.v4_software_cap_fire_guarded",
         "mem_probe_receipt_required": True,
         "mem_probe_receipt_path": str(receipt_path),
         "argv_n32_arm_cap": [
@@ -66,6 +68,10 @@ def _ticket_and_receipt(tmp_path: Path) -> tuple[Path, Path, Path]:
             str(run_dir / "result.json"),
             "--fire-guard-verdict",
             str(verdict_path),
+            "--launch-ticket-path",
+            str(ticket_path),
+            "--fire-argv-key",
+            "argv_n32_arm_cap",
         ],
     }
     ticket_path.write_text(json.dumps(ticket), encoding="utf-8")
@@ -95,10 +101,25 @@ def _ticket_and_receipt(tmp_path: Path) -> tuple[Path, Path, Path]:
             "init": str(init),
         },
         "memory_limits": {
-            "hard_limit_required": True,
-            "hard_limit_satisfied": True,
+            "enforcement": "software_stage_step_cap",
+            "software_cap_required": True,
+            "software_cap_installed": True,
+            "software_budget_bytes": 8_589_934_592,
+            "hard_limit_required": False,
+            "hard_limit_satisfied": False,
             "soft_limit_allowed_by_cli": False,
-            "calls": [{"target": "set_memory_limit", "status": "applied", "hard_limit": True}],
+            "calls": [{"target": "set_memory_limit", "status": "applied", "hard_limit": False}],
+        },
+        "software_budget": {
+            "enforcement": "software_stage_step_cap",
+            "budget_bytes": 8_589_934_592,
+            "check_count": 5,
+            "last_check": {
+                "stage": "after_train_step_000003",
+                "within_budget": True,
+                "combined_gib": 2.0,
+                "budget_gib": 8.0,
+            },
         },
         "samples": [
             {
@@ -150,6 +171,7 @@ def test_mx1_fire_guard_passes_matching_receipt(tmp_path: Path) -> None:
     assert verdict["schema"] == "ddm_mx1_fire_guard_verdict.v1"
     assert verdict["status"] == "passed"
     assert verdict["reason_code"] == "fire_guard_passed"
+    assert verdict["checks"][0]["name"] == "receipt_freshness"
 
 
 def test_mx1_fire_guard_refuses_missing_receipt(tmp_path: Path) -> None:
@@ -177,3 +199,31 @@ def test_mx1_fire_guard_refuses_missing_receipt(tmp_path: Path) -> None:
     verdict = json.loads(verdict_path.read_text())
     assert verdict["status"] == "failed"
     assert verdict["reason_code"] == "mem_probe_receipt_missing"
+
+
+def test_mx1_fire_guard_refuses_stale_receipt(tmp_path: Path) -> None:
+    ticket_path, receipt_path, verdict_path = _ticket_and_receipt(tmp_path)
+    stale = time.time() - (7 * 60 * 60)
+    os.utime(receipt_path, (stale, stale))
+
+    result = subprocess.run(
+        [
+            ".venv/bin/python",
+            "tools/mx1_fire_guard.py",
+            "--ticket",
+            str(ticket_path),
+            "--argv-key",
+            "argv_n32_arm_cap",
+            "--out",
+            str(verdict_path),
+        ],
+        cwd=REPO,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 4
+    verdict = json.loads(verdict_path.read_text())
+    assert verdict["status"] == "failed"
+    assert verdict["reason_code"] == "mem_probe_receipt_stale"

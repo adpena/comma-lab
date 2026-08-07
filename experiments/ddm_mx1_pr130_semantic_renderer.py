@@ -65,10 +65,19 @@ MX1B_MEM_PROBE_RESULT = REPO / ".omx/research/ddm_mx1b_20260806/mem_probe_cpu_re
 METAL_UNKNOWN_MARGIN_GIB = 65.0
 ROW1_SAFE_RUN_RSS_MB = 90_000
 ROW1_SAFE_RUN_TIMEOUT_S = 28_800
+DEFAULT_WIRED_LIMIT_FRACTION = 0.35
 
 
 class MemoryLimitConfigurationError(RuntimeError):
-    """Raised when GPU mode cannot install a hard MLX allocator limit."""
+    """Raised when GPU mode cannot install a fail-closed software budget."""
+
+
+class MemoryBudgetExceeded(RuntimeError):
+    """Raised when measured MLX active memory plus RSS delta exceeds budget."""
+
+    def __init__(self, message: str, *, check: dict[str, Any]) -> None:
+        super().__init__(message)
+        self.check = check
 
 
 def _sha256_file(path: Path) -> str:
@@ -191,6 +200,15 @@ def _system_available_bytes() -> int | None:
         return None
 
 
+def _system_total_bytes() -> int | None:
+    try:
+        import psutil
+
+        return int(psutil.virtual_memory().total)
+    except Exception:
+        return None
+
+
 def _mlx_allocator_bytes(mx: Any | None) -> dict[str, int | None]:
     if mx is None:
         return {"active": None, "cache": None, "peak": None}
@@ -221,6 +239,11 @@ class LoadPhaseMemoryProbe:
         self.samples: list[dict[str, Any]] = []
         self._start_rss_bytes: int | None = None
         self._start_available_bytes: int | None = None
+        self._software_budget_bytes: int | None = None
+        self._software_budget_required = False
+        self._budget_check_count = 0
+        self._budget_peak_bytes = 0
+        self._last_budget_check: dict[str, Any] | None = None
 
     def sample(self, stage: str, *, mx: Any | None = None, note: str | None = None) -> dict[str, Any]:
         rss_bytes = _process_rss_bytes()
@@ -252,6 +275,87 @@ class LoadPhaseMemoryProbe:
             sample["note"] = note
         self.samples.append(sample)
         return sample
+
+    def install_software_budget(self, memory_limits: Mapping[str, Any]) -> None:
+        budget = memory_limits.get("software_budget_bytes")
+        self._software_budget_bytes = None if budget is None else int(budget)
+        self._software_budget_required = bool(memory_limits.get("software_cap_required"))
+        if self._software_budget_required and self._software_budget_bytes is None:
+            raise MemoryLimitConfigurationError(
+                "REFUSED gpu mode: software memory budget was not installed"
+            )
+
+    def sample_and_check(
+        self,
+        stage: str,
+        *,
+        mx: Any | None = None,
+        note: str | None = None,
+    ) -> dict[str, Any]:
+        sample = self.sample(stage, mx=mx, note=note)
+        self.check_budget(stage, mx=mx)
+        return sample
+
+    def check_budget(self, stage: str, *, mx: Any | None = None) -> dict[str, Any] | None:
+        if self._software_budget_bytes is None:
+            if self._software_budget_required:
+                raise MemoryLimitConfigurationError(
+                    "REFUSED gpu mode: software memory budget check requested before installation"
+                )
+            return None
+        rss_bytes = _process_rss_bytes()
+        if self._start_rss_bytes is None:
+            self._start_rss_bytes = rss_bytes
+        if rss_bytes is None or self._start_rss_bytes is None:
+            raise MemoryLimitConfigurationError(
+                "REFUSED gpu mode: software budget cannot read process RSS"
+            )
+        rss_delta = max(0, int(rss_bytes) - int(self._start_rss_bytes))
+        mlx_active: int
+        if mx is None:
+            mlx_active = 0
+        else:
+            mlx_active_raw = _mlx_allocator_bytes(mx).get("active")
+            if mlx_active_raw is None:
+                raise MemoryLimitConfigurationError(
+                    "REFUSED gpu mode: software budget cannot read mx.get_active_memory()"
+                )
+            mlx_active = int(mlx_active_raw)
+        combined = int(mlx_active) + int(rss_delta)
+        self._budget_check_count += 1
+        self._budget_peak_bytes = max(self._budget_peak_bytes, combined)
+        check = {
+            "stage": stage,
+            "timestamp_utc": _utc_now_iso(),
+            "budget_bytes": self._software_budget_bytes,
+            "budget_gib": _gib_or_none(self._software_budget_bytes),
+            "mlx_active_gib": _gib_or_none(mlx_active),
+            "rss_delta_from_start_gib": _gib_or_none(rss_delta),
+            "combined_gib": _gib_or_none(combined),
+            "within_budget": combined <= self._software_budget_bytes,
+            "check_index": self._budget_check_count,
+        }
+        self._last_budget_check = check
+        if combined > self._software_budget_bytes:
+            self.sample(stage, mx=mx, note="software memory budget exceeded")
+            raise MemoryBudgetExceeded(
+                "software memory budget exceeded: "
+                f"stage={stage} combined={combined} budget={self._software_budget_bytes}",
+                check=check,
+            )
+        return check
+
+    def budget_summary(self) -> dict[str, Any]:
+        return {
+            "enforcement": "software_stage_step_cap",
+            "budget_bytes": self._software_budget_bytes,
+            "budget_gib": _gib_or_none(self._software_budget_bytes),
+            "required": self._software_budget_required,
+            "check_count": self._budget_check_count,
+            "peak_combined_gib": _gib_or_none(self._budget_peak_bytes),
+            "last_check": self._last_budget_check,
+            "rule": "mx.get_active_memory() + max(0, process_rss - start_process_rss) <= budget",
+        }
 
     def peak(self) -> dict[str, Any]:
         def max_present(key: str) -> float | None:
@@ -368,17 +472,17 @@ def _load_selected_token_arrays(
     memory_probe: LoadPhaseMemoryProbe | None,
 ) -> tuple[np.ndarray, np.ndarray, dict[str, Any]]:
     if memory_probe is not None:
-        memory_probe.sample("before_selected_cache_load")
+        memory_probe.sample_and_check("before_selected_cache_load")
     input_tokens, input_meta = _load_selected_seg_tokens(input_cache, pair_ids)
     if memory_probe is not None:
-        memory_probe.sample("after_input_cache_selected_clone")
+        memory_probe.sample_and_check("after_input_cache_selected_clone")
     if input_cache == target_cache:
         target_tokens = input_tokens
         target_meta = {**input_meta, "shared_with_input_cache": True}
     else:
         target_tokens, target_meta = _load_selected_seg_tokens(target_cache, pair_ids)
         if memory_probe is not None:
-            memory_probe.sample("after_target_cache_selected_clone")
+            memory_probe.sample_and_check("after_target_cache_selected_clone")
 
     conditioning_np = input_tokens.numpy().astype(np.int32, copy=True)
     target_np = target_tokens.numpy().astype(np.int32, copy=True)
@@ -386,7 +490,7 @@ def _load_selected_token_arrays(
     del target_tokens
     gc.collect()
     if memory_probe is not None:
-        memory_probe.sample("after_selected_cache_numpy_copy_and_torch_free")
+        memory_probe.sample_and_check("after_selected_cache_numpy_copy_and_torch_free")
     return conditioning_np, target_np, {
         "input": input_meta,
         "target": target_meta,
@@ -767,6 +871,64 @@ def _call_mlx_limit_with_signature(
         }
 
 
+def _call_mlx_limit_value_only(mx: Any, dotted_name: str, value: int) -> dict[str, Any]:
+    try:
+        obj = _resolve_attr(mx, dotted_name)
+    except AttributeError:
+        return {
+            "target": dotted_name,
+            "status": "unavailable",
+            "value_bytes": value,
+            "hard_limit": False,
+            "signature_form": "missing",
+        }
+    signature_text: str | None = None
+    try:
+        signature_text = str(inspect.signature(obj))
+    except (TypeError, ValueError):
+        signature_text = None
+    try:
+        previous = obj(value)
+        return {
+            "target": dotted_name,
+            "status": "applied",
+            "value_bytes": value,
+            "previous_value_bytes": previous if isinstance(previous, int) else None,
+            "hard_limit": False,
+            "signature": signature_text,
+            "signature_form": "value_only_soft_guideline",
+        }
+    except Exception as exc:
+        return {
+            "target": dotted_name,
+            "status": "failed",
+            "value_bytes": value,
+            "hard_limit": False,
+            "signature": signature_text,
+            "signature_form": "value_only_soft_guideline",
+            "error_type": type(exc).__name__,
+            "error": str(exc),
+        }
+
+
+def _derive_wired_limit_bytes(memory_limit: int) -> dict[str, Any]:
+    total = _system_total_bytes()
+    if total is None:
+        return {
+            "wired_limit": memory_limit,
+            "system_total_bytes": None,
+            "derived_wired_fraction": DEFAULT_WIRED_LIMIT_FRACTION,
+            "source": "budget_bytes_total_memory_unavailable",
+        }
+    derived = int(float(total) * DEFAULT_WIRED_LIMIT_FRACTION)
+    return {
+        "wired_limit": min(memory_limit, derived),
+        "system_total_bytes": total,
+        "derived_wired_fraction": DEFAULT_WIRED_LIMIT_FRACTION,
+        "source": "min_budget_bytes_35pct_total_memory",
+    }
+
+
 def _configure_mlx_memory_limits(
     mx: Any,
     explicit_gb: float | None,
@@ -774,55 +936,62 @@ def _configure_mlx_memory_limits(
     device: str,
     allow_soft_mem_limit: bool = False,
     mem_probe: bool = False,
+    derived_budget: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    derived = _derive_mem_budget_gb(explicit_gb, mem_probe=mem_probe)
+    derived = dict(derived_budget or _derive_mem_budget_gb(explicit_gb, mem_probe=mem_probe))
     budget_gb = derived["budget_gb"]
-    hard_limit_required = str(device).lower() == "gpu"
+    software_cap_required = str(device).lower() == "gpu"
     if budget_gb is None:
-        if hard_limit_required and not allow_soft_mem_limit:
+        if software_cap_required:
             raise MemoryLimitConfigurationError(
-                "REFUSED gpu mode: available memory could not be read, so no hard MLX memory limit can be derived"
+                "REFUSED gpu mode: available memory could not be read, so no software memory budget can be derived"
             )
         return {
             **derived,
+            "enforcement": "software_stage_step_cap",
+            "software_cap_required": software_cap_required,
+            "software_cap_installed": False,
+            "software_budget_bytes": None,
             "memory_limit": None,
             "cache_limit": None,
-            "hard_limit_required": hard_limit_required,
+            "wired_limit": None,
+            "hard_limit_required": False,
             "hard_limit_satisfied": False,
             "soft_limit_allowed_by_cli": allow_soft_mem_limit,
             "calls": [],
         }
     memory_limit = int(float(budget_gb) * GIB)
     cache_limit = int(max(256 * 1024 * 1024, memory_limit * 0.25))
+    wired = _derive_wired_limit_bytes(memory_limit)
+    wired_limit = int(wired["wired_limit"])
     calls = [
-        _call_mlx_limit_with_signature(
-            mx,
-            "set_memory_limit",
-            memory_limit,
-            require_hard=hard_limit_required,
-            allow_soft=allow_soft_mem_limit,
-        ),
-        _call_mlx_limit_with_signature(
-            mx,
-            "set_cache_limit",
-            cache_limit,
-            require_hard=False,
-            allow_soft=True,
-        ),
+        _call_mlx_limit_value_only(mx, "set_memory_limit", memory_limit),
+        _call_mlx_limit_value_only(mx, "set_cache_limit", cache_limit),
+        _call_mlx_limit_value_only(mx, "set_wired_limit", wired_limit),
     ]
-    memory_call = calls[0]
-    hard_limit_satisfied = bool(memory_call.get("hard_limit")) and memory_call.get("status") == "applied"
-    if hard_limit_required and not hard_limit_satisfied and not allow_soft_mem_limit:
+    software_cap_installed = memory_limit > 0
+    if software_cap_required and not software_cap_installed:
         raise MemoryLimitConfigurationError(
-            "REFUSED gpu mode: installed MLX set_memory_limit did not apply a hard relaxed=False cap; "
-            f"call={memory_call}"
+            "REFUSED gpu mode: software memory budget was not installed"
         )
     return {
         **derived,
+        "enforcement": "software_stage_step_cap",
+        "software_cap_required": software_cap_required,
+        "software_cap_installed": software_cap_installed,
+        "software_budget_bytes": memory_limit,
+        "software_budget_rule": "mx.get_active_memory() + max(0, process_rss - start_process_rss) <= budget",
         "memory_limit": memory_limit,
         "cache_limit": cache_limit,
-        "hard_limit_required": hard_limit_required,
-        "hard_limit_satisfied": hard_limit_satisfied,
+        "wired_limit": wired_limit,
+        "wired_limit_derivation": wired,
+        "wired_limit_semantics": (
+            "MLX 0.31.2 set_wired_limit limits memory kept resident on macOS 15+; "
+            "set_memory_limit is only a graph-evaluation guideline and is not a hard allocation cap."
+        ),
+        "hard_limit_required": False,
+        "hard_limit_satisfied": False,
+        "hard_limit_deprecated_reason": "MLX 0.31.2 set_memory_limit(limit) is soft and has no relaxed=False API.",
         "soft_limit_allowed_by_cli": allow_soft_mem_limit,
         "calls": calls,
     }
@@ -849,7 +1018,7 @@ def _mx_eval_setup_barrier(
 ) -> None:
     if values:
         mx.eval(*values)
-    memory_probe.sample(stage, mx=mx, note=note)
+    memory_probe.sample_and_check(stage, mx=mx, note=note)
 
 
 def run_mlx_train(
@@ -860,12 +1029,21 @@ def run_mlx_train(
     """Run the real MLX Row-1 training path when MLX is available."""
 
     probe = memory_probe if memory_probe is not None else LoadPhaseMemoryProbe()
-    probe.sample("start")
+    mem_probe_mode = getattr(args, "mode", "") == "mem-probe"
+    budget_plan = _derive_mem_budget_gb(args.mem_budget_gb, mem_probe=mem_probe_mode)
+    probe.install_software_budget({
+        **budget_plan,
+        "software_cap_required": str(args.device).lower() == "gpu",
+        "software_budget_bytes": None
+        if budget_plan["budget_gb"] is None
+        else int(float(budget_plan["budget_gb"]) * GIB),
+    })
+    probe.sample_and_check("start")
     torch.manual_seed(args.seed)
     np.random.seed(args.seed)
     pair_ids = _select_stratified_indices(args.pairs, seed=args.seed)
     checkpoint = torch.load(args.init, map_location="cpu", weights_only=False)
-    probe.sample("after_init_checkpoint_torch_load")
+    probe.sample_and_check("after_init_checkpoint_torch_load")
     config = MlxSemanticConfig.from_pr130_checkpoint_config(checkpoint["config"])
     config = MlxSemanticConfig(
         **(config.asdict() | {
@@ -890,16 +1068,18 @@ def run_mlx_train(
             args.mem_budget_gb,
             device=args.device,
             allow_soft_mem_limit=bool(getattr(args, "allow_soft_mem_limit", False)),
-            mem_probe=getattr(args, "mode", "") == "mem-probe",
+            mem_probe=mem_probe_mode,
+            derived_budget=budget_plan,
         )
+        probe.install_software_budget(memory_limits)
     except Exception as exc:
-        probe.sample(
+        probe.sample_and_check(
             "after_require_mlx_memory_limit_configuration_failed",
             mx=mx,
             note=f"{type(exc).__name__}: {exc}",
         )
         raise
-    probe.sample("after_require_mlx_and_memory_limits", mx=mx)
+    probe.sample_and_check("after_require_mlx_and_memory_limits", mx=mx)
     from mlx.utils import tree_flatten, tree_unflatten
 
     from tac.local_acceleration.mlx_scorer_adapters import torch_segnet_to_mlx
@@ -921,7 +1101,7 @@ def run_mlx_train(
         del checkpoint
         gc.collect()
         _clear_mlx_cache(mx)
-        probe.sample("after_resume_load_and_init_checkpoint_free", mx=mx)
+        probe.sample_and_check("after_resume_load_and_init_checkpoint_free", mx=mx)
     else:
         state_dict = checkpoint["state_dict"]
         load_torch_state_dict_into_mlx(
@@ -932,7 +1112,7 @@ def run_mlx_train(
         del checkpoint
         gc.collect()
         _clear_mlx_cache(mx)
-        probe.sample("after_torch_checkpoint_free", mx=mx)
+        probe.sample_and_check("after_torch_checkpoint_free", mx=mx)
 
     conditioning = mx.array(conditioning_np)
     target = mx.array(target_np)
@@ -948,17 +1128,17 @@ def run_mlx_train(
     del conditioning_np, target_np
     gc.collect()
     _clear_mlx_cache(mx)
-    probe.sample("after_selected_token_numpy_free", mx=mx)
+    probe.sample_and_check("after_selected_token_numpy_free", mx=mx)
 
     segnet_torch = _load_upstream_segnet(torch.device("cpu"))
-    probe.sample("after_upstream_segnet_torch_load", mx=mx)
+    probe.sample_and_check("after_upstream_segnet_torch_load", mx=mx)
     segnet_mlx = torch_segnet_to_mlx(segnet_torch)
     segnet_params = segnet_mlx.parameters() if hasattr(segnet_mlx, "parameters") else []
     _mx_eval_setup_barrier(mx, probe, "after_segnet_mlx_conversion", segnet_params)
     del segnet_torch
     gc.collect()
     _clear_mlx_cache(mx)
-    probe.sample("after_segnet_torch_free", mx=mx)
+    probe.sample_and_check("after_segnet_torch_free", mx=mx)
     start_time = time.time()
     last_stage_path: Path | None = None
 
@@ -1007,6 +1187,7 @@ def run_mlx_train(
         model.update(base_params)
         model.update(optimizer.apply_gradients(grads, base_params))
         mx.eval(value, model.parameters(), optimizer.state)
+        probe.check_budget(f"after_train_step_{step + 1:06d}", mx=mx)
         phase = getattr(loss_for_params, "phase", "unknown")
         record: dict[str, Any] = {
             "step": step + 1,
@@ -1025,6 +1206,7 @@ def run_mlx_train(
             pred = mx.argmax(logits, axis=-1)
             dseg = mx.mean((pred != target).astype(mx.float32))
             mx.eval(dseg)
+            probe.check_budget(f"after_eval_step_{step + 1:06d}", mx=mx)
             record["d_seg_batch"] = float(dseg)
             if args.steps <= 3:
                 probe.sample(f"after_eval_step_{step + 1:06d}", mx=mx)
@@ -1061,11 +1243,11 @@ def run_mlx_train(
                 },
             )
             if args.steps <= 3:
-                probe.sample(f"after_checkpoint_step_{step + 1:06d}", mx=mx)
+                probe.sample_and_check(f"after_checkpoint_step_{step + 1:06d}", mx=mx)
     elapsed = time.time() - start_time
     latest_path = args.run_dir / "mlx.latest.npz"
     resume_check = load_stage_checkpoint_npz(latest_path, model=model, optimizer=optimizer, mx=mx)
-    probe.sample("after_resume_check", mx=mx)
+    probe.sample_and_check("after_resume_check", mx=mx)
     return {
         "schema": "ddm_mx1_mlx_train.v1",
         "status": "passed",
@@ -1074,6 +1256,7 @@ def run_mlx_train(
         "pairs": pair_ids,
         "cache_load": cache_meta,
         "memory_limits": memory_limits,
+        "software_budget": probe.budget_summary(),
         "load_memory_samples": probe.samples,
         "load_memory_peak": probe.peak(),
         "steps": args.steps,
@@ -1119,7 +1302,23 @@ def _build_mem_probe_receipt(
             for key in ("mlx_active_gib", "mlx_cache_gib", "mlx_peak_gib")
         )
     )
-    metal_fire_clearance = status == "passed" and final_step_sample is not None and has_mlx_allocator_telemetry
+    software_budget = (
+        train_result.get("software_budget")
+        if train_result is not None and isinstance(train_result.get("software_budget"), dict)
+        else probe.budget_summary()
+    )
+    software_last = software_budget.get("last_check")
+    software_budget_clearance = (
+        int(software_budget.get("check_count") or 0) >= int(probe_args.steps)
+        and isinstance(software_last, dict)
+        and software_last.get("within_budget") is True
+    )
+    metal_fire_clearance = (
+        status == "passed"
+        and final_step_sample is not None
+        and has_mlx_allocator_telemetry
+        and software_budget_clearance
+    )
     return {
         "schema": MEM_PROBE_RECEIPT_SCHEMA,
         "status": status,
@@ -1151,6 +1350,7 @@ def _build_mem_probe_receipt(
             "init": str(args.init),
         },
         "memory_limits": None if train_result is None else train_result.get("memory_limits"),
+        "software_budget": software_budget,
         "samples": probe.samples,
         "peak": probe.peak(),
         "train_result_summary": None
@@ -1164,12 +1364,17 @@ def _build_mem_probe_receipt(
             "latest_checkpoint": train_result.get("latest_checkpoint"),
             "latest_checkpoint_sha256": train_result.get("latest_checkpoint_sha256"),
             "load_memory_peak": train_result.get("load_memory_peak"),
+            "software_budget": train_result.get("software_budget"),
         },
         "blocker": blocker,
         "clearance_checks": {
             "required_stage": required_stage,
             "has_required_stage_sample": final_step_sample is not None,
             "has_mlx_allocator_telemetry_at_required_stage": has_mlx_allocator_telemetry,
+            "software_budget_check_count": software_budget.get("check_count"),
+            "software_budget_within_limit": None
+            if not isinstance(software_last, dict)
+            else software_last.get("within_budget"),
         },
         "metal_fire_clearance": metal_fire_clearance,
         "clearance_rule": (
@@ -1186,17 +1391,21 @@ def run_mem_probe(args: argparse.Namespace) -> dict[str, Any]:
     train_result: dict[str, Any] | None = None
     blocker: dict[str, Any] | None = None
     status = "passed"
+    budget_exc: MemoryBudgetExceeded | None = None
     try:
         train_result = run_mlx_train(probe_args, memory_probe=probe)
         status = str(train_result.get("status", "passed"))
     except Exception as exc:
         status = "blocked" if isinstance(exc, MlxUnavailableError) else "failed"
+        if isinstance(exc, MemoryBudgetExceeded):
+            budget_exc = exc
         last_sample = probe.samples[-1] if probe.samples else None
         blocker = {
             "error_type": type(exc).__name__,
             "error": str(exc),
             "last_sample_stage": None if last_sample is None else last_sample.get("stage"),
             "sample_count": len(probe.samples),
+            "software_budget": probe.budget_summary(),
             "boundary": (
                 "CPU load-path telemetry may be present before this blocker; "
                 "full MLX allocator/three-step telemetry requires MAIN Metal."
@@ -1205,7 +1414,9 @@ def run_mem_probe(args: argparse.Namespace) -> dict[str, Any]:
         if isinstance(exc, MlxUnavailableError):
             blocker["verdict_scope"] = "ENVIRONMENT: local sandbox MLX/Metal unavailable"
         elif isinstance(exc, MemoryLimitConfigurationError):
-            blocker["verdict_scope"] = "INSTANCE: MLX hard memory-limit configuration"
+            blocker["verdict_scope"] = "INSTANCE: MLX software memory-budget configuration"
+        elif isinstance(exc, MemoryBudgetExceeded):
+            blocker["verdict_scope"] = "INSTANCE: software stage/step memory budget"
         else:
             blocker["verdict_scope"] = "INSTANCE: mem-probe execution"
     receipt = _build_mem_probe_receipt(
@@ -1218,7 +1429,7 @@ def run_mem_probe(args: argparse.Namespace) -> dict[str, Any]:
     )
     receipt_path = args.run_dir / "mem_probe_receipt.json"
     write_json_atomic(receipt_path, receipt)
-    return {
+    result = {
         "schema": "ddm_mx1_mem_probe.v1",
         "status": status,
         "score_claim": False,
@@ -1226,6 +1437,9 @@ def run_mem_probe(args: argparse.Namespace) -> dict[str, Any]:
         "receipt_sha256": _sha256_file(receipt_path),
         "receipt": receipt,
     }
+    if budget_exc is not None:
+        raise budget_exc
+    return result
 
 
 def launch_ticket(args: argparse.Namespace, smoke: dict[str, Any] | None, mlx_probe: dict[str, Any]) -> dict[str, Any]:
@@ -1249,7 +1463,7 @@ def launch_ticket(args: argparse.Namespace, smoke: dict[str, Any] | None, mlx_pr
     # CAPACITY vs the fp1 flat-paint floor and PR130's external number) and ARM-VEH (public-wire
     # tq1c tokens -> GT targets, composed-vehicle correction reach). A single-arm ticket
     # conflates the two questions, so the bare argv_n32/argv_n120 keys no longer exist.
-    def _arm_argv(pairs: int, seed: int, input_cache: Path, subdir: str) -> list[str]:
+    def _arm_argv(pairs: int, seed: int, input_cache: Path, subdir: str, argv_key: str) -> list[str]:
         run_dir = args.run_dir / subdir
         fire_guard_verdict = run_dir / "fire_guard_verdict.json"
         argv = [
@@ -1272,6 +1486,8 @@ def launch_ticket(args: argparse.Namespace, smoke: dict[str, Any] | None, mlx_pr
             "--run-dir", str(run_dir),
             "--out", str(run_dir / "result.json"),
             "--fire-guard-verdict", str(fire_guard_verdict),
+            "--launch-ticket-path", str(ticket_path),
+            "--fire-argv-key", argv_key,
         ]
         if args.mem_budget_gb is not None:
             argv.extend(["--mem-budget-gb", str(args.mem_budget_gb)])
@@ -1281,8 +1497,8 @@ def launch_ticket(args: argparse.Namespace, smoke: dict[str, Any] | None, mlx_pr
 
     safe_run_projection = _derive_row1_safe_run_projection()
 
-    def _fire_argv(pairs: int, seed: int, input_cache: Path, subdir: str) -> list[str]:
-        raw = _arm_argv(pairs, seed, input_cache, subdir)
+    def _fire_argv(pairs: int, seed: int, input_cache: Path, subdir: str, argv_key: str) -> list[str]:
+        raw = _arm_argv(pairs, seed, input_cache, subdir, argv_key)
         return _wrap_fire_argv(
             raw,
             label=f"ddm_mx1_row1_{_safe_label_token(subdir)}",
@@ -1350,12 +1566,12 @@ def launch_ticket(args: argparse.Namespace, smoke: dict[str, Any] | None, mlx_pr
         for key in arm_specs
     }
     fire_argvs = {
-        key: _fire_argv(pairs, seed, cache, subdir)
+        key: _fire_argv(pairs, seed, cache, subdir, key)
         for key, (pairs, seed, cache, subdir) in arm_specs.items()
     }
 
     return {
-        "schema": "ddm_mx1_row1_launch_ticket.v2_two_arm",
+        "schema": "ddm_mx1_row1_launch_ticket.v4_software_cap_fire_guarded",
         "score_claim": False,
         "launch_ticket_path": str(ticket_path),
         "mem_probe_receipt_required": True,
@@ -1387,7 +1603,7 @@ def launch_ticket(args: argparse.Namespace, smoke: dict[str, Any] | None, mlx_pr
             {
                 "step": "fire",
                 "command": fire_argvs["argv_n32_arm_cap"],
-                "expected": "entrypoint re-reads --fire-guard-verdict before MLX setup",
+                "expected": "entrypoint re-runs tools.mx1_fire_guard against --launch-ticket-path/--fire-argv-key before MLX setup",
             },
         ],
         "scheduling": (
@@ -1437,7 +1653,10 @@ def launch_ticket(args: argparse.Namespace, smoke: dict[str, Any] | None, mlx_pr
             "stage": "PR130 stage 08 tail from retained semantic_renderer_w96_b4_qat4_12k checkpoint",
             "configured_horizon_steps": horizon,
             "mem_budget_gb_arg": args.mem_budget_gb,
-            "mem_budget_default_policy": "35% of available memory at process start when --mem-budget-gb is omitted; mem-probe caps default at min(24GB, default)",
+            "mem_budget_default_policy": "software cap at 35% of available memory at process start when --mem-budget-gb is omitted; mem-probe caps default at min(24GB, default)",
+            "enforcement": "software_stage_step_cap",
+            "software_budget_rule": "mx.get_active_memory() + max(0, process_rss - start_process_rss) <= budget",
+            "wired_limit_policy": "attempt mx.set_wired_limit(min(budget, 35% of system total)) when available",
             "allow_soft_mem_limit": bool(getattr(args, "allow_soft_mem_limit", False)),
             "lr": args.lr,
             "ce_fraction": args.ce_fraction,
@@ -1467,14 +1686,51 @@ def _ticket_path_for_args(args: argparse.Namespace) -> Path:
     explicit = getattr(args, "launch_ticket_path", None)
     if explicit is not None:
         return Path(explicit)
-    return args.run_dir / "launch_ticket_v2_two_arm_guarded.json"
+    return args.run_dir / "launch_ticket_v4_fire_guarded.json"
 
 
-def _assert_fire_guard_verdict(verdict_path: Path | None) -> None:
-    if verdict_path is None:
+def _canonical_existing_or_repo_path(path: Path | str | None) -> str | None:
+    if path is None:
+        return None
+    resolved = Path(path).expanduser()
+    resolved = (REPO / resolved).resolve() if not resolved.is_absolute() else resolved.resolve()
+    return str(resolved)
+
+
+def _assert_gpu_fire_guard(args: argparse.Namespace) -> None:
+    verdict_path = args.fire_guard_verdict
+    ticket_path = args.launch_ticket_path
+    argv_key = args.fire_argv_key
+    if verdict_path is None or ticket_path is None or not argv_key:
         print(
-            "[mx1-fire-guard] REFUSED: gpu mlx-train requires --fire-guard-verdict "
-            "from tools/mx1_fire_guard.py",
+            "[mx1-fire-guard] REFUSED: gpu mlx-train requires --fire-guard-verdict, "
+            "--launch-ticket-path, and --fire-argv-key",
+            file=sys.stderr,
+        )
+        raise SystemExit(9)
+    try:
+        from tools.mx1_fire_guard import evaluate_guard
+
+        evaluated = evaluate_guard(ticket_path, argv_key)
+    except Exception as exc:
+        print(
+            f"[mx1-fire-guard] REFUSED: in-process guard evaluation failed for "
+            f"{ticket_path} {argv_key}: {type(exc).__name__}: {exc}",
+            file=sys.stderr,
+        )
+        raise SystemExit(9) from exc
+    if evaluated.get("schema") != MX1_FIRE_GUARD_VERDICT_SCHEMA or evaluated.get("status") != "passed":
+        print(
+            f"[mx1-fire-guard] REFUSED: in-process guard failed: "
+            f"status={evaluated.get('status')!r} reason={evaluated.get('reason_code')!r}",
+            file=sys.stderr,
+        )
+        raise SystemExit(9)
+    expected_verdict_path = (evaluated.get("fire_config") or {}).get("fire_guard_verdict")
+    if _canonical_existing_or_repo_path(expected_verdict_path) != _canonical_existing_or_repo_path(verdict_path):
+        print(
+            "[mx1-fire-guard] REFUSED: --fire-guard-verdict does not match ticket fire argv "
+            f"expected={expected_verdict_path!r} actual={str(verdict_path)!r}",
             file=sys.stderr,
         )
         raise SystemExit(9)
@@ -1487,10 +1743,27 @@ def _assert_fire_guard_verdict(verdict_path: Path | None) -> None:
             file=sys.stderr,
         )
         raise SystemExit(9) from exc
-    if verdict.get("schema") != MX1_FIRE_GUARD_VERDICT_SCHEMA or verdict.get("status") != "passed":
+    if (
+        verdict.get("schema") != MX1_FIRE_GUARD_VERDICT_SCHEMA
+        or verdict.get("status") != "passed"
+        or verdict.get("reason_code") != "fire_guard_passed"
+    ):
         print(
             f"[mx1-fire-guard] REFUSED: guard verdict failed or malformed at {verdict_path}: "
             f"status={verdict.get('status')!r} reason={verdict.get('reason_code')!r}",
+            file=sys.stderr,
+        )
+        raise SystemExit(9)
+    for key in ("ticket_path", "receipt_path"):
+        if _canonical_existing_or_repo_path(verdict.get(key)) != _canonical_existing_or_repo_path(evaluated.get(key)):
+            print(
+                f"[mx1-fire-guard] REFUSED: guard verdict {key} does not match fresh evaluation",
+                file=sys.stderr,
+            )
+            raise SystemExit(9)
+    if verdict.get("argv_key") != argv_key:
+        print(
+            "[mx1-fire-guard] REFUSED: guard verdict argv_key does not match current fire argv",
             file=sys.stderr,
         )
         raise SystemExit(9)
@@ -1525,6 +1798,7 @@ def main() -> None:
     parser.add_argument("--allow-soft-mem-limit", action="store_true")
     parser.add_argument("--fire-guard-verdict", type=Path)
     parser.add_argument("--launch-ticket-path", type=Path)
+    parser.add_argument("--fire-argv-key")
     parser.add_argument("--resume-from", type=Path)
     parser.add_argument("--out", type=Path, default=SSD_ROOT / "mx1_driver_result.json")
     args = parser.parse_args()
@@ -1533,7 +1807,7 @@ def main() -> None:
     if args.mode in {"mlx-train", "torch-smoke"}:
         assert_governed_admission(f"ddm_mx1_pr130_semantic_renderer:{args.mode}")
     if args.mode == "mlx-train" and str(args.device).lower() == "gpu":
-        _assert_fire_guard_verdict(args.fire_guard_verdict)
+        _assert_gpu_fire_guard(args)
 
     result: dict[str, Any] = {
         "schema": "ddm_mx1_pr130_semantic_renderer_driver.v1",

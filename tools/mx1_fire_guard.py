@@ -14,6 +14,7 @@ import argparse
 import json
 import os
 import platform
+import time
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -22,6 +23,7 @@ REPO = Path(__file__).resolve().parents[1]
 MEM_PROBE_RECEIPT_SCHEMA = "ddm_mx1_load_phase_peak_receipt.v1"
 FIRE_GUARD_VERDICT_SCHEMA = "ddm_mx1_fire_guard_verdict.v1"
 EXIT_REFUSED = 4
+RECEIPT_FRESHNESS_WINDOW_SECONDS = 6 * 60 * 60
 
 
 def _utc_now_iso() -> str:
@@ -132,6 +134,8 @@ def _parsed_fire_config(argv: list[str]) -> dict[str, Any]:
         "target_cache": _norm_path(flags.get("target_cache")),
         "init": _norm_path(flags.get("init")),
         "fire_guard_verdict": _norm_path(flags.get("fire_guard_verdict")),
+        "launch_ticket_path": _norm_path(flags.get("launch_ticket_path")),
+        "fire_argv_key": flags.get("fire_argv_key"),
     }
 
 
@@ -195,12 +199,44 @@ def _validate_memory_limits(receipt: dict[str, Any]) -> tuple[bool, str, dict[st
     limits = receipt.get("memory_limits") or (receipt.get("train_result_summary") or {}).get("memory_limits")
     if not isinstance(limits, dict):
         return False, "receipt_memory_limits_missing", {}
+    if limits.get("enforcement") == "software_stage_step_cap":
+        software = receipt.get("software_budget") or (receipt.get("train_result_summary") or {}).get("software_budget")
+        detail = {"memory_limits": limits, "software_budget": software}
+        if not limits.get("software_cap_installed") or not limits.get("software_budget_bytes"):
+            return False, "receipt_software_cap_not_installed", detail
+        if not isinstance(software, dict):
+            return False, "receipt_software_budget_summary_missing", detail
+        if software.get("enforcement") != "software_stage_step_cap":
+            return False, "receipt_software_budget_enforcement_mismatch", detail
+        if int(software.get("check_count") or 0) <= 0:
+            return False, "receipt_software_budget_checks_missing", detail
+        last_check = software.get("last_check")
+        if not isinstance(last_check, dict) or last_check.get("within_budget") is not True:
+            return False, "receipt_software_budget_not_clear", detail
+        return True, "software_memory_cap_ok", detail
     hard_required = bool(limits.get("hard_limit_required"))
     hard_satisfied = bool(limits.get("hard_limit_satisfied"))
     soft_allowed = bool(limits.get("soft_limit_allowed_by_cli"))
     if hard_required and not hard_satisfied and not soft_allowed:
         return False, "receipt_hard_mlx_limit_not_satisfied", limits
     return True, "memory_limits_ok", limits
+
+
+def _validate_receipt_freshness(receipt_path: Path) -> tuple[bool, str, dict[str, Any]]:
+    try:
+        stat = receipt_path.stat()
+    except OSError as exc:
+        return False, "mem_probe_receipt_stat_error", {"error": f"{type(exc).__name__}: {exc}"}
+    age_seconds = max(0.0, time.time() - stat.st_mtime)
+    detail = {
+        "receipt_mtime_utc": datetime.fromtimestamp(stat.st_mtime, UTC).isoformat().replace("+00:00", "Z"),
+        "age_seconds": age_seconds,
+        "freshness_window_seconds": RECEIPT_FRESHNESS_WINDOW_SECONDS,
+        "freshness_rule": "receipt mtime must be <= 6h old because host memory state drifts across reboots",
+    }
+    if age_seconds > RECEIPT_FRESHNESS_WINDOW_SECONDS:
+        return False, "mem_probe_receipt_stale", detail
+    return True, "freshness_ok", detail
 
 
 def _same_float(a: float | None, b: float | None) -> bool:
@@ -272,6 +308,10 @@ def evaluate_guard(ticket_path: Path, argv_key: str) -> dict[str, Any]:
             checks,
             receipt_path=receipt_path,
         )
+    ok, reason, detail = _validate_receipt_freshness(receipt_path)
+    checks.append({"name": "receipt_freshness", "status": "passed" if ok else "failed", "reason": reason, "detail": detail})
+    if not ok:
+        return _verdict("failed", reason, ticket_path, argv_key, checks, receipt_path=receipt_path)
 
     try:
         receipt = _load_json(receipt_path)
@@ -305,6 +345,29 @@ def evaluate_guard(ticket_path: Path, argv_key: str) -> dict[str, Any]:
             return _verdict("failed", reason, ticket_path, argv_key, checks, receipt_path=receipt_path)
 
     fire_config = _parsed_fire_config(argv)
+    if fire_config.get("fire_argv_key") not in (None, argv_key):
+        return _verdict(
+            "failed",
+            "fire_argv_key_mismatch",
+            ticket_path,
+            argv_key,
+            checks,
+            receipt_path=receipt_path,
+            fire_config=fire_config,
+            receipt_config=_receipt_config(receipt),
+        )
+    ticket_from_argv = fire_config.get("launch_ticket_path")
+    if ticket_from_argv is not None and _norm_path(ticket_from_argv) != _norm_path(ticket_path):
+        return _verdict(
+            "failed",
+            "fire_launch_ticket_path_mismatch",
+            ticket_path,
+            argv_key,
+            checks,
+            receipt_path=receipt_path,
+            fire_config=fire_config,
+            receipt_config=_receipt_config(receipt),
+        )
     receipt_config = _receipt_config(receipt)
     ok, reason, detail = _validate_config_match(fire_config, receipt_config)
     checks.append({
