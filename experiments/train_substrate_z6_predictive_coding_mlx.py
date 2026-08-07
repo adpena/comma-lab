@@ -228,17 +228,17 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 
 def main(argv: list[str] | None = None) -> int:
-    _require_mlx()
     args = _parse_args(argv)
     from tac.admission_guard import assert_governed_admission
     assert_governed_admission("train_substrate_z6_predictive_coding_mlx")
+    _require_mlx()
 
     import mlx.core as mx
     import mlx.nn as mlx_nn
     import mlx.optimizers as mlx_optim
 
-    # Import after MLX check so non-Apple-Silicon CI gets the clean SystemExit
-    # from _require_mlx() above instead of an opaque module-import error.
+    # Import after the P0 admission guard and MLX check so raw launches fail
+    # closed before any backend-heavy setup.
     from tac.substrates.time_traveler_l5_z6.architecture import (
         Z6PredictiveCodingConfig,
     )

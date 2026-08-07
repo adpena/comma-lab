@@ -49,6 +49,7 @@ import argparse
 import datetime as _dt
 import json
 import os
+import shlex
 import signal
 import subprocess
 import sys
@@ -103,6 +104,15 @@ def _parse_args(argv: list[str]) -> tuple[argparse.Namespace, list[str]]:
         help=(
             "Durable JSON receipt updated atomically on every RSS sample tick "
             "with peak_rss_observed, last_sample_ts, and kill_action."
+        ),
+    )
+    p.add_argument(
+        "--child-pidfile",
+        type=Path,
+        default=None,
+        help=(
+            "Durable plain-text pidfile for the spawned child process. Operators "
+            "must kill by this pidfile, not by pattern-matching the wrapped argv."
         ),
     )
     p.add_argument("--quiet", action="store_true")
@@ -191,13 +201,46 @@ def _status_receipt_path(ns: argparse.Namespace) -> Path | None:
     return None
 
 
+def _child_pidfile_path(ns: argparse.Namespace, status_receipt: Path | None) -> Path | None:
+    if ns.child_pidfile is not None:
+        return ns.child_pidfile.expanduser().resolve(strict=False)
+    env_path = os.environ.get("SAFE_RUN_CHILD_PIDFILE")
+    if env_path:
+        return Path(env_path).expanduser().resolve(strict=False)
+    if status_receipt is not None:
+        return status_receipt.with_name(f"{status_receipt.name}.child.pid")
+    return None
+
+
 def _write_status_receipt(path: Path | None, payload: dict[str, Any]) -> None:
     if path is None:
         return
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_name(f".{path.name}.{os.getpid()}.tmp")
-    tmp.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+    with tmp.open("w", encoding="utf-8") as handle:
+        handle.write(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+        handle.flush()
+        os.fsync(handle.fileno())
     tmp.replace(path)
+
+
+def _write_child_pidfile(path: Path | None, pid: int | None) -> None:
+    if path is None or pid is None:
+        return
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+    with tmp.open("w", encoding="utf-8") as handle:
+        handle.write(f"{int(pid)}\n")
+        handle.flush()
+        os.fsync(handle.fileno())
+    tmp.replace(path)
+
+
+def _child_only_kill_command(path: Path | None) -> str | None:
+    if path is None:
+        return None
+    quoted = shlex.quote(str(path))
+    return f"kill -TERM \"$(cat {quoted})\""
 
 
 def _rationale_is_real(s: str | None) -> bool:
@@ -349,6 +392,7 @@ def main(argv: list[str]) -> int:
     start = time.monotonic()
     start_utc = _utc_now()
     status_receipt = _status_receipt_path(ns)
+    child_pidfile = _child_pidfile_path(ns, status_receipt)
     peak_kib = 0
     peak_observed = False
     last_sample_ts: str | None = None
@@ -367,6 +411,11 @@ def main(argv: list[str]) -> int:
                 "argv": list(cmd),
                 "child_pid": child_pid,
                 "pgid": pgid,
+                "child_pidfile": None if child_pidfile is None else str(child_pidfile),
+                "child_only_kill_command": _child_only_kill_command(child_pidfile),
+                "operator_kill_rule": (
+                    "Kill the child pid from child_pidfile; never pkill/pgrep by the wrapped argv."
+                ),
                 "status": status,
                 "exit": exit_code,
                 "elapsed_s": round(time.monotonic() - start, 3),
@@ -425,6 +474,7 @@ def main(argv: list[str]) -> int:
 
     child_pid = proc.pid
     pgid = proc.pid  # equals the new session/group id
+    _write_child_pidfile(child_pidfile, child_pid)
     # promote the pending reservation to a live running row (real pid + projected peak).
     _activate_reservation(_reservation, proc.pid, pgid, cmd)
     _emit_status("running", exit_code=None)

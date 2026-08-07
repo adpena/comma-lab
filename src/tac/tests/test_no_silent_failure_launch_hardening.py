@@ -356,6 +356,72 @@ def test_safe_run_timeout_writes_peak_kill_receipt(tmp_path):
     assert payload["kill_action"]["reason"] == "timeout"
 
 
+def test_safe_run_external_sigterm_writes_killed_receipt_and_child_pidfile(tmp_path):
+    receipt = tmp_path / "safe_run_status.json"
+    child_pidfile = tmp_path / "safe_run_child.pid"
+    proc = subprocess.Popen(
+        [
+            sys.executable,
+            str(_REPO / "tools" / "safe_run.py"),
+            "--skip-admission-gate",
+            "--rss-mb",
+            "4096",
+            "--timeout",
+            "20",
+            "--poll",
+            "0.05",
+            "--status-receipt",
+            str(receipt),
+            "--child-pidfile",
+            str(child_pidfile),
+            "--",
+            "/bin/sleep",
+            "20",
+        ],
+        cwd=_REPO,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    child_pid = None
+    try:
+        deadline = time.time() + 5
+        payload = {}
+        while time.time() < deadline:
+            if proc.poll() is not None:
+                raise AssertionError(f"safe_run exited early rc={proc.returncode}")
+            if receipt.exists() and child_pidfile.exists():
+                payload = json.loads(receipt.read_text())
+                if payload.get("status") == "running" and payload.get("child_pid"):
+                    child_pid = int(child_pidfile.read_text().strip())
+                    break
+            time.sleep(0.02)
+        assert child_pid is not None, "safe_run did not publish child pidfile before timeout"
+
+        proc.terminate()
+        _out, _err = proc.communicate(timeout=10)
+        assert proc.returncode == 143
+        payload = json.loads(receipt.read_text())
+        assert payload["schema"] == sr.STATUS_RECEIPT_SCHEMA
+        assert payload["status"] == "killed"
+        assert payload["exit"] == 143
+        assert payload["child_pid"] == child_pid
+        expected_pidfile = str(child_pidfile.resolve(strict=False))
+        assert payload["child_pidfile"] == expected_pidfile
+        assert payload["child_only_kill_command"] == f'kill -TERM "$(cat {expected_pidfile})"'
+        assert "never pkill/pgrep by the wrapped argv" in payload["operator_kill_rule"]
+        assert payload["kill_action"]["reason"] == "external_signal"
+    finally:
+        if proc.poll() is None:
+            proc.kill()
+            proc.wait(timeout=5)
+        if child_pid is not None:
+            import contextlib
+
+            with contextlib.suppress(ProcessLookupError, PermissionError):
+                os.kill(child_pid, signal.SIGKILL)
+
+
 def test_safe_run_no_command_detailed(capsys):
     rc = sr.main(["--rss-mb", "100"])  # no command after options
     assert rc == sr.EXIT_SPAWN
