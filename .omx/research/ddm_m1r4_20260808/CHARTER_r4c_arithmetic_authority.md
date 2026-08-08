@@ -42,7 +42,18 @@ sequence — a false CLEAN is far more expensive than a reset.
 | `experiments/ddm_mx1_pr130_semantic_renderer.py` | `1ef18faf37e2f171` |
 | `tools/ddm_seal_orchestrator.py` | `e592cb36fb00d502` |
 
-HEAD: `1381ac84cb`. If a sha differs when you read it, STOP and report that as finding #1.
+**REVIEW SUBJECT (immutable).** The reviewed subject is the CONTENT of the four files above,
+keyed by their sha256 — **NOT the live repository HEAD**. The subject's tree is that of commit
+`1381ac84cb`. Live HEAD WILL advance during your pass (this charter's own commit, sister-arm
+receipts, MAIN's own notes); that is EXPECTED and is NOT a finding. Descendant commits that touch
+only charter files, review receipts, or MAIN's notes are OUTSIDE the reviewed subject by construction.
+
+**The binding stop test:** re-hash the four files yourself. If any of the four CONTENT shas differs
+from the table, STOP and report that as finding #1 — the subject moved under the review and the pass
+is void. A differing live HEAD **alone is not such a mismatch and must not stop the pass**.
+
+(Provenance-clause v2, repaired after M1R4A-F1: v1 pinned live HEAD, which a charter's own commit
+necessarily invalidates — an unstable freeze key in a shared worktree.)
 
 ## Your questions
 
@@ -135,4 +146,5 @@ Write `.omx/research/ddm_m1r4_20260808/M1R4C_REVIEW.md` with:
   sources; no new measurement commissioned; recomputation is analytic.
 - **Mechanism reductions:** NONE. Sampling the literals instead of enumerating them, or reporting
   findings without the denominator, is a silent mechanism reduction and invalidates the pass.
-- **Provenance pins:** the four shas above + HEAD `1381ac84cb`.
+- **Provenance pins:** the four CONTENT shas above = the immutable subject; subject tree =
+  commit `1381ac84cb`; live HEAD is explicitly NOT a pin (see provenance-clause v2).
