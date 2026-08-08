@@ -2919,7 +2919,10 @@ def _build_mem_probe_receipt(
     )
     software_last = software_budget.get("last_check")
     software_budget_clearance = (
-        int(software_budget.get("check_count") or 0) >= int(probe_args.steps)
+        # Resume-path probes end at an absolute step index (e.g. 5253) but only
+        # EXECUTE mem_probe_steps of them; the budget-check floor is the executed
+        # window, never the absolute end index (which no 3-step probe can reach).
+        int(software_budget.get("check_count") or 0) >= int(args.mem_probe_steps)
         and isinstance(software_last, dict)
         and software_last.get("within_budget") is True
     )
