@@ -3079,6 +3079,16 @@ def launch_ticket(args: argparse.Namespace, smoke: dict[str, Any] | None, mlx_pr
     n120 = _select_stratified_indices(120, seed=args.seed + 1)
     cap_cache = args.target_cache  # GT labels as tokens AND targets
     veh_cache = args.input_cache   # public-wire (tq1c) labels as tokens, GT targets
+    if Path(cap_cache).resolve() == Path(veh_cache).resolve():
+        # A probe reauthor run with --input-cache pointed at the GT cache collapses
+        # ARM-VEH's public-wire discriminator into a duplicate of ARM-CAP, silently
+        # defeating the RR3-F1 two-arm requirement (the RR11-F1 incident, replayed
+        # 2026-08-08 by a resume-leg reauthor that copied ARM-CAP's mem-probe flags).
+        raise ValueError(
+            "ticket author refuses: --input-cache (ARM-VEH tokens) == --target-cache "
+            "(ARM-CAP tokens); ARM-VEH must consume the public-wire (tq1c) cache as "
+            "input or the two n32 arms answer the same question"
+        )
     ticket_path = _ticket_path_for_args(args)
     attempt_id = _ticket_attempt_id()
 
