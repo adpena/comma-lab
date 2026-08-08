@@ -1,0 +1,877 @@
+{
+  "axis": "[byte-only scorer-free]",
+  "best_treatment": {
+    "arm_id": "trot_q0p5_residual",
+    "axis": "[byte-only scorer-free]",
+    "best": {
+      "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_tr2p1_20260808/payloads/trot_q0p5_residual.brotli-q11.bin",
+      "bytes": 1292070,
+      "codec": "brotli-q11",
+      "sha256": "6a24f89f38d059b7844dfa4075c311d8220cb536dc4955314f9bfb47aa4c1c61"
+    },
+    "coder_rows": [
+      {
+        "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_tr2p1_20260808/payloads/trot_q0p5_residual.brotli-q11.bin",
+        "bytes": 1292070,
+        "codec": "brotli-q11",
+        "sha256": "6a24f89f38d059b7844dfa4075c311d8220cb536dc4955314f9bfb47aa4c1c61"
+      },
+      {
+        "artifact_path": null,
+        "bytes": 1306738,
+        "codec": "lzma1-raw",
+        "sha256": "649871c8c4a1f9ac652acfd3abf73f552f1630f5f3ead523bc3541616b9ac1f3"
+      },
+      {
+        "artifact_path": null,
+        "bytes": 1506561,
+        "codec": "zlib-9",
+        "sha256": "154040cc45d20da770b0b1f3c9ecf4fa1f44ba5f55d682a8be71a5b0eb0fc250"
+      },
+      {
+        "artifact_path": null,
+        "bytes": 1768354,
+        "codec": "smevr-r7-nibble",
+        "sha256": "8539f2e24db2fbd12c21114ef1ba724bc75d193cd42bd39d77a5d49fde1b5610"
+      }
+    ],
+    "coders": [
+      "zlib-9",
+      "brotli-q11",
+      "lzma1-raw",
+      "smevr-r7-nibble"
+    ],
+    "config": {
+      "integer_projection": "row_count_descending_top_score_with_column_quota",
+      "iterations": 12,
+      "lambda": 4.0,
+      "max_solver_cells": 65536,
+      "mode": "trot_q",
+      "q": 0.5,
+      "side_info_source": "generic_cost_derived_from_counted_marginals",
+      "video_derived_side_info_bytes": 0
+    },
+    "counted_bytes_breakdown": {
+      "compressed_sha256": "6a24f89f38d059b7844dfa4075c311d8220cb536dc4955314f9bfb47aa4c1c61",
+      "compressed_total": 1292070,
+      "raw_components": {
+        "framing": 17982,
+        "marginals": 2096981,
+        "residual": 4827329,
+        "side_info": 0,
+        "tags": 3672
+      },
+      "raw_sha256": "bb432e563cd63fbc468ae0f7644c627f70cec9a13470455fe27dabf685064db8",
+      "raw_total": 6945964,
+      "video_derived_side_info_bytes": 0
+    },
+    "created_utc": "2026-08-08T15:34:07Z",
+    "decode_equality": true,
+    "delta_vs_incumbent_bytes": 827513,
+    "delta_vs_incumbent_pct": 1.7812948680140435,
+    "description": "q-family joint-from-marginals residual stream",
+    "incumbent_control": {
+      "bytes": 464557,
+      "codec": "lzma1-raw",
+      "sha256": "0a53f649768c61912399ccab14e4d3323998e47235992091e2a9e28cf7259fe1"
+    },
+    "n600_scorer_job": false,
+    "pass_condition_met": false,
+    "prediction_pixels": 2554360,
+    "promotion_eligible": false,
+    "residual_extra_pixels": 2257752,
+    "residual_missing_pixels": 2257752,
+    "schema": "ddm_tr2p1_coder_race_row.v1",
+    "score_claim": false,
+    "selection_mode": "n600_all_pairs_no_prefix",
+    "verdict": "LOSS-w/-bytes",
+    "verdict_scope": "FORMULATION: q-family joint-from-marginals residual coding of the CR1 selected edge-labeled n600 support payload"
+  },
+  "boundaries": [
+    "No scorer, no evaluator, no archive promotion, no Metal/GPU, no paid job.",
+    "Payloads are cached real n600 argmax supports from GT and cx1 argmax arrays.",
+    "CR1 incumbent was re-decoded from the SHA-pinned lzma1-raw artifact; it was not re-derived.",
+    "No video-derived side-information matrix was omitted from counted bytes.",
+    "All coder rows are real zlib/Brotli/LZMA/SMEVR outputs with round-trip checks.",
+    "Verdicts are formulation-scoped byte-race outcomes only."
+  ],
+  "created_utc": "2026-08-08T15:39:29Z",
+  "follow_on_disposition": [
+    {
+      "disposition": "FIRED",
+      "fire_order": "This receipt is the pre-registered byte-only q-family residual race against CR1's incumbent.",
+      "id": "TR2-P1"
+    },
+    {
+      "disposition": "FIRED",
+      "fire_order": "The local q-family solver passed deterministic fixtures before the CR1 payload race; no unpinned dependency was vendored.",
+      "id": "TR2-P1-implementation-reference"
+    },
+    {
+      "disposition": "QUEUED-WITH-FIRE-ORDER",
+      "fire_order": "Consume this row only as a scorer-free byte-race negative unless a future arm supplies a new counted side-info source or residual model and repeats same-payload decode-equality racing.",
+      "id": "#984 rate axis / CR1 successor consumer"
+    }
+  ],
+  "frontier": {
+    "contest_pointer": "borrowed/unmoved 0.1910828242 [contest-CPU]",
+    "own_vehicle": "S = 0.7534578126155775 @ 357,837 B [macOS-CPU advisory]"
+  },
+  "incumbent_control": {
+    "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_cr1_20260808/payloads/p2_edge_conditioned_support.lzma1-raw.bin",
+    "bytes": 464557,
+    "decode_equality": true,
+    "decoded_pixels": 2554360,
+    "raw_bytes": 2732013,
+    "raw_sha256": "b38ba57489d6af2528ddcdb499515714c12b0fa6815f13d81e5a067b2a4e458a",
+    "record_count": 3001,
+    "sha256": "0a53f649768c61912399ccab14e4d3323998e47235992091e2a9e28cf7259fe1"
+  },
+  "inputs": {
+    "class_names": [
+      "Road",
+      "Lane",
+      "Undriv",
+      "Movable",
+      "MyCar"
+    ],
+    "cr1_receipt_path": "/Users/adpena/Projects/pact/.omx/research/ddm_cr1_20260808/CR1_RECEIPT.json",
+    "current_argmax_path": "/Volumes/VertigoDataTier/pact/ddm_pu2_20260803/argmax_cache/cx1_argmax_n600.npy",
+    "current_argmax_sha256": "5e903de650e60ec6a64b34eb455fa1bc911223551d0b31e9ae45cc906e1490be",
+    "gt_argmax_path": "/Volumes/VertigoDataTier/pact/ddm_pu2_20260803/argmax_cache/gt_argmax_n600.npy",
+    "gt_argmax_sha256": "b74a14b226a5aceb5824899898bcb06e5413c54b7db2441268da7bc91a10db5d",
+    "selected_edges": [
+      "Road<->Lane",
+      "Road<->Undriv",
+      "Road<->MyCar",
+      "Undriv<->Movable",
+      "Road<->Movable"
+    ]
+  },
+  "iterations": 12,
+  "lambda": 4.0,
+  "max_solver_cells": 65536,
+  "n600_scorer_job": false,
+  "pass_rows": [],
+  "promotion_eligible": false,
+  "q_values": [
+    0.5,
+    0.8,
+    1.0,
+    1.2,
+    2.0
+  ],
+  "recall_evidence": [
+    {
+      "impact": "Used live charter, TR2, CR1, and corpus receipts rather than a recalled shortcut.",
+      "result": "No TR2P1-specific prior memory entry was found in MEMORY.md.",
+      "source": "MEMORY.md query: ddm_tr2p1|TR2P1|tr2p1|ddm_tr2|common_contract|20260808"
+    },
+    {
+      "impact": "Kept verdict scoped to this formulation and did not claim TROT sparsity or metric replacement.",
+      "result": "TR2 pre-registered only this CR1 same-payload q-family residual race; sparse-plan claims were lesson-only.",
+      "source": ".omx/research/ddm_tr2_20260808/TR2_CROSSWALK.md and TR2_ROWS.jsonl rows 1, 3, 6"
+    },
+    {
+      "impact": "Set the pass threshold and re-decoded the incumbent artifact instead of re-measuring CR1.",
+      "result": "CR1 P2 measured 464557 B edge-conditioned lzma1-raw with exact decode equality on selected n600 supports.",
+      "source": ".omx/research/ddm_cr1_20260808/CR1_FINDINGS.md, CR1_RECEIPT.json, CR1_ROWS.jsonl row 2"
+    },
+    {
+      "impact": "Used top-five class-pair edges, n600/no-prefix selection, same coder set, and exact decode equality.",
+      "result": "Found GDL1-P2 edge-conditioned fire-order, SX1 separatrix concentration, RL1 interface pricing, and TR2 same-coder requirement beyond the charter seeds.",
+      "source": "content query over GDL1/RL1/SX1/TR2/BD1 scopes: joint-from-marginals|TROT|Tsallis|Sinkhorn|edge-conditioned|same-coder|#940|Road<->Lane|separatrix"
+    },
+    {
+      "impact": "Reported all coders per arm and selected by real compressed bytes, not representation reputation.",
+      "result": "Found repeated same-coder race doctrine and TR2 citation of ddm_sv2 as the #940 blocker.",
+      "source": "content query: #940|same-coder|races-not-reputation|same payload|decode equality"
+    },
+    {
+      "impact": "Receipt stays a byte-only measurement with score_claim=false and promotion_eligible=false.",
+      "result": "Canonical registry was consulted; relevant hits reinforced scorer-free byte-race and transfer/equality boundaries, with no TR2P1 superseding equation found.",
+      "source": "tools/list_canonical_equations.py --json"
+    }
+  ],
+  "schema": "ddm_tr2p1_trot_residual_race_receipt.v1",
+  "score_claim": false,
+  "selection_mode": "n600_all_pairs_no_prefix",
+  "solver_validation": {
+    "col_marginal_max_abs_error": 2.220446049250313e-16,
+    "fixture": "3x4 active support embedded in scorer grid",
+    "max_abs_plan_delta": 0.0,
+    "q1_matches_sinkhorn_reference": true,
+    "residual_decode_equality": true,
+    "row_marginal_max_abs_error": 0.0,
+    "target_pixels": 5
+  },
+  "support_extraction": {
+    "edges": [
+      {
+        "class_ids": [
+          0,
+          1
+        ],
+        "direct_flip_mass_cx1": 235148,
+        "edge": "Road<->Lane",
+        "flip_fraction_within_selected_edges": 0.4639519214264152,
+        "support_fraction_within_selected_edges": 0.44766477708701985,
+        "support_pixels": 1143497
+      },
+      {
+        "class_ids": [
+          0,
+          4
+        ],
+        "direct_flip_mass_cx1": 63027,
+        "edge": "Road<->MyCar",
+        "flip_fraction_within_selected_edges": 0.12435358902369006,
+        "support_fraction_within_selected_edges": 0.23735495388277297,
+        "support_pixels": 606290
+      },
+      {
+        "class_ids": [
+          0,
+          2
+        ],
+        "direct_flip_mass_cx1": 89545,
+        "edge": "Road<->Undriv",
+        "flip_fraction_within_selected_edges": 0.17667415756939608,
+        "support_fraction_within_selected_edges": 0.20043220219546187,
+        "support_pixels": 511976
+      },
+      {
+        "class_ids": [
+          2,
+          3
+        ],
+        "direct_flip_mass_cx1": 61892,
+        "edge": "Undriv<->Movable",
+        "flip_fraction_within_selected_edges": 0.12211421028851485,
+        "support_fraction_within_selected_edges": 0.05884135360716579,
+        "support_pixels": 150302
+      },
+      {
+        "class_ids": [
+          0,
+          3
+        ],
+        "direct_flip_mass_cx1": 57225,
+        "edge": "Road<->Movable",
+        "flip_fraction_within_selected_edges": 0.11290612169198382,
+        "support_fraction_within_selected_edges": 0.05570671322757951,
+        "support_pixels": 142295
+      }
+    ],
+    "selected_direct_flip_mass_cx1": 506837,
+    "selected_edge_count": 5,
+    "selected_support_pixels": 2554360,
+    "selection_mode": "n600_all_pairs_no_prefix"
+  },
+  "typed_rows": [
+    {
+      "arm_id": "identity_container_control",
+      "axis": "[byte-only scorer-free]",
+      "best": {
+        "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_tr2p1_20260808/payloads/identity_container_control.lzma1-raw.bin",
+        "bytes": 464660,
+        "codec": "lzma1-raw",
+        "sha256": "46b7abe762988c695e9b39856cfb2ec35f8d4768f6dd0b8513b3aa0efa8c18d3"
+      },
+      "coder_rows": [
+        {
+          "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_tr2p1_20260808/payloads/identity_container_control.lzma1-raw.bin",
+          "bytes": 464660,
+          "codec": "lzma1-raw",
+          "sha256": "46b7abe762988c695e9b39856cfb2ec35f8d4768f6dd0b8513b3aa0efa8c18d3"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 476234,
+          "codec": "brotli-q11",
+          "sha256": "0479a867f03a73c75bf617cbac023aefce3cb38a5c932c18310a3e9698ae17c5"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 555769,
+          "codec": "zlib-9",
+          "sha256": "15799b37565438c4384c9a5694e85843734c35a91c10c8cea3865078e57c9957"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 669911,
+          "codec": "smevr-r7-nibble",
+          "sha256": "fb90fa9945c33233609c559c2361f7f9b3d8fcaf360910dc680ad8b15d09c3c7"
+        }
+      ],
+      "coders": [
+        "zlib-9",
+        "brotli-q11",
+        "lzma1-raw",
+        "smevr-r7-nibble"
+      ],
+      "config": {
+        "mode": "identity"
+      },
+      "counted_bytes_breakdown": {
+        "compressed_sha256": "46b7abe762988c695e9b39856cfb2ec35f8d4768f6dd0b8513b3aa0efa8c18d3",
+        "compressed_total": 464660,
+        "raw_components": {
+          "framing": 12016,
+          "marginals": 0,
+          "residual": 2716738,
+          "side_info": 0,
+          "tags": 3409
+        },
+        "raw_sha256": "4c2e609fa3467e7a97f4409fa2f0c83e79c3c60013d0772eab1f416cf8a5041b",
+        "raw_total": 2732163,
+        "video_derived_side_info_bytes": 0
+      },
+      "created_utc": "2026-08-08T15:31:30Z",
+      "decode_equality": true,
+      "delta_vs_incumbent_bytes": 103,
+      "delta_vs_incumbent_pct": 0.00022171660312943298,
+      "description": "raw selected support through the TR2P1 container and same coder set",
+      "incumbent_control": {
+        "bytes": 464557,
+        "codec": "lzma1-raw",
+        "sha256": "0a53f649768c61912399ccab14e4d3323998e47235992091e2a9e28cf7259fe1"
+      },
+      "n600_scorer_job": false,
+      "pass_condition_met": false,
+      "prediction_pixels": 0,
+      "promotion_eligible": false,
+      "residual_extra_pixels": 0,
+      "residual_missing_pixels": 0,
+      "schema": "ddm_tr2p1_coder_race_row.v1",
+      "score_claim": false,
+      "selection_mode": "n600_all_pairs_no_prefix",
+      "verdict": "LOSS-w/-bytes",
+      "verdict_scope": "CONTROL: same-payload TR2P1 byte container for selected edge-labeled n600 support"
+    },
+    {
+      "arm_id": "marginals_only_residual",
+      "axis": "[byte-only scorer-free]",
+      "best": {
+        "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_tr2p1_20260808/payloads/marginals_only_residual.lzma1-raw.bin",
+        "bytes": 1130973,
+        "codec": "lzma1-raw",
+        "sha256": "6c9399125d6dbf01b1cd2d0b1548b545d327c8aa6daf0129a1cf1af9ab7b6d35"
+      },
+      "coder_rows": [
+        {
+          "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_tr2p1_20260808/payloads/marginals_only_residual.lzma1-raw.bin",
+          "bytes": 1130973,
+          "codec": "lzma1-raw",
+          "sha256": "6c9399125d6dbf01b1cd2d0b1548b545d327c8aa6daf0129a1cf1af9ab7b6d35"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 1143483,
+          "codec": "brotli-q11",
+          "sha256": "98df3206a8ccab13ca375c6b3fd5785ea3c65de5a426f982b4df325957c02c71"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 1334453,
+          "codec": "zlib-9",
+          "sha256": "77423b15e8d1f402d729b3aa4e7c0d9d18abb6714ae5026c18e8537a6f6088d6"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 1611934,
+          "codec": "smevr-r7-nibble",
+          "sha256": "d451e8219fde2442460e73ccafe40d5d9c00b1ea02df32f4e5dd35da6de9de89"
+        }
+      ],
+      "coders": [
+        "zlib-9",
+        "brotli-q11",
+        "lzma1-raw",
+        "smevr-r7-nibble"
+      ],
+      "config": {
+        "integer_projection": "row_count_descending_top_score_with_column_quota",
+        "iterations": null,
+        "lambda": null,
+        "max_solver_cells": 65536,
+        "mode": "marginals_only",
+        "q": null,
+        "side_info_source": "generic_cost_derived_from_counted_marginals",
+        "video_derived_side_info_bytes": 0
+      },
+      "counted_bytes_breakdown": {
+        "compressed_sha256": "6c9399125d6dbf01b1cd2d0b1548b545d327c8aa6daf0129a1cf1af9ab7b6d35",
+        "compressed_total": 1130973,
+        "raw_components": {
+          "framing": 17982,
+          "marginals": 2096981,
+          "residual": 4825553,
+          "side_info": 0,
+          "tags": 3689
+        },
+        "raw_sha256": "3498a919c27bd070395353faf8e8cb4b97065aa3918166bda296018ccebfab42",
+        "raw_total": 6944205,
+        "video_derived_side_info_bytes": 0
+      },
+      "created_utc": "2026-08-08T15:32:48Z",
+      "decode_equality": true,
+      "delta_vs_incumbent_bytes": 666416,
+      "delta_vs_incumbent_pct": 1.4345193377777108,
+      "description": "marginals plus residual with no q-family OT solve",
+      "incumbent_control": {
+        "bytes": 464557,
+        "codec": "lzma1-raw",
+        "sha256": "0a53f649768c61912399ccab14e4d3323998e47235992091e2a9e28cf7259fe1"
+      },
+      "n600_scorer_job": false,
+      "pass_condition_met": false,
+      "prediction_pixels": 2554360,
+      "promotion_eligible": false,
+      "residual_extra_pixels": 2256244,
+      "residual_missing_pixels": 2256244,
+      "schema": "ddm_tr2p1_coder_race_row.v1",
+      "score_claim": false,
+      "selection_mode": "n600_all_pairs_no_prefix",
+      "verdict": "LOSS-w/-bytes",
+      "verdict_scope": "CONTROL: same-payload TR2P1 byte container for selected edge-labeled n600 support"
+    },
+    {
+      "arm_id": "trot_q0p5_residual",
+      "axis": "[byte-only scorer-free]",
+      "best": {
+        "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_tr2p1_20260808/payloads/trot_q0p5_residual.brotli-q11.bin",
+        "bytes": 1292070,
+        "codec": "brotli-q11",
+        "sha256": "6a24f89f38d059b7844dfa4075c311d8220cb536dc4955314f9bfb47aa4c1c61"
+      },
+      "coder_rows": [
+        {
+          "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_tr2p1_20260808/payloads/trot_q0p5_residual.brotli-q11.bin",
+          "bytes": 1292070,
+          "codec": "brotli-q11",
+          "sha256": "6a24f89f38d059b7844dfa4075c311d8220cb536dc4955314f9bfb47aa4c1c61"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 1306738,
+          "codec": "lzma1-raw",
+          "sha256": "649871c8c4a1f9ac652acfd3abf73f552f1630f5f3ead523bc3541616b9ac1f3"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 1506561,
+          "codec": "zlib-9",
+          "sha256": "154040cc45d20da770b0b1f3c9ecf4fa1f44ba5f55d682a8be71a5b0eb0fc250"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 1768354,
+          "codec": "smevr-r7-nibble",
+          "sha256": "8539f2e24db2fbd12c21114ef1ba724bc75d193cd42bd39d77a5d49fde1b5610"
+        }
+      ],
+      "coders": [
+        "zlib-9",
+        "brotli-q11",
+        "lzma1-raw",
+        "smevr-r7-nibble"
+      ],
+      "config": {
+        "integer_projection": "row_count_descending_top_score_with_column_quota",
+        "iterations": 12,
+        "lambda": 4.0,
+        "max_solver_cells": 65536,
+        "mode": "trot_q",
+        "q": 0.5,
+        "side_info_source": "generic_cost_derived_from_counted_marginals",
+        "video_derived_side_info_bytes": 0
+      },
+      "counted_bytes_breakdown": {
+        "compressed_sha256": "6a24f89f38d059b7844dfa4075c311d8220cb536dc4955314f9bfb47aa4c1c61",
+        "compressed_total": 1292070,
+        "raw_components": {
+          "framing": 17982,
+          "marginals": 2096981,
+          "residual": 4827329,
+          "side_info": 0,
+          "tags": 3672
+        },
+        "raw_sha256": "bb432e563cd63fbc468ae0f7644c627f70cec9a13470455fe27dabf685064db8",
+        "raw_total": 6945964,
+        "video_derived_side_info_bytes": 0
+      },
+      "created_utc": "2026-08-08T15:34:07Z",
+      "decode_equality": true,
+      "delta_vs_incumbent_bytes": 827513,
+      "delta_vs_incumbent_pct": 1.7812948680140435,
+      "description": "q-family joint-from-marginals residual stream",
+      "incumbent_control": {
+        "bytes": 464557,
+        "codec": "lzma1-raw",
+        "sha256": "0a53f649768c61912399ccab14e4d3323998e47235992091e2a9e28cf7259fe1"
+      },
+      "n600_scorer_job": false,
+      "pass_condition_met": false,
+      "prediction_pixels": 2554360,
+      "promotion_eligible": false,
+      "residual_extra_pixels": 2257752,
+      "residual_missing_pixels": 2257752,
+      "schema": "ddm_tr2p1_coder_race_row.v1",
+      "score_claim": false,
+      "selection_mode": "n600_all_pairs_no_prefix",
+      "verdict": "LOSS-w/-bytes",
+      "verdict_scope": "FORMULATION: q-family joint-from-marginals residual coding of the CR1 selected edge-labeled n600 support payload"
+    },
+    {
+      "arm_id": "trot_q0p8_residual",
+      "axis": "[byte-only scorer-free]",
+      "best": {
+        "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_tr2p1_20260808/payloads/trot_q0p8_residual.brotli-q11.bin",
+        "bytes": 1316311,
+        "codec": "brotli-q11",
+        "sha256": "83f4935c0d3e04105e072ef468f70ce91c595cd030c805ce2f87722ca71ab2fb"
+      },
+      "coder_rows": [
+        {
+          "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_tr2p1_20260808/payloads/trot_q0p8_residual.brotli-q11.bin",
+          "bytes": 1316311,
+          "codec": "brotli-q11",
+          "sha256": "83f4935c0d3e04105e072ef468f70ce91c595cd030c805ce2f87722ca71ab2fb"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 1329861,
+          "codec": "lzma1-raw",
+          "sha256": "d7a40d612effb6b061a6980053c7a08f4b0162febc4432621b81305578d0c6af"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 1528691,
+          "codec": "zlib-9",
+          "sha256": "ef774683bfec0b62e93da6f1a95089e5e907b02b48da627124e178b93790bafd"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 1800051,
+          "codec": "smevr-r7-nibble",
+          "sha256": "e28b5d8728a2e9b5cd1bb28669965f895bd9c792cb29703b451fce8f3cfc3c15"
+        }
+      ],
+      "coders": [
+        "zlib-9",
+        "brotli-q11",
+        "lzma1-raw",
+        "smevr-r7-nibble"
+      ],
+      "config": {
+        "integer_projection": "row_count_descending_top_score_with_column_quota",
+        "iterations": 12,
+        "lambda": 4.0,
+        "max_solver_cells": 65536,
+        "mode": "trot_q",
+        "q": 0.8,
+        "side_info_source": "generic_cost_derived_from_counted_marginals",
+        "video_derived_side_info_bytes": 0
+      },
+      "counted_bytes_breakdown": {
+        "compressed_sha256": "83f4935c0d3e04105e072ef468f70ce91c595cd030c805ce2f87722ca71ab2fb",
+        "compressed_total": 1316311,
+        "raw_components": {
+          "framing": 17982,
+          "marginals": 2096981,
+          "residual": 4827639,
+          "side_info": 0,
+          "tags": 3672
+        },
+        "raw_sha256": "749c865999b26c809e3ae0d5e6f5f040b7b5a8a19400691e754c670687af459b",
+        "raw_total": 6946274,
+        "video_derived_side_info_bytes": 0
+      },
+      "created_utc": "2026-08-08T15:35:27Z",
+      "decode_equality": true,
+      "delta_vs_incumbent_bytes": 851754,
+      "delta_vs_incumbent_pct": 1.8334757629311365,
+      "description": "q-family joint-from-marginals residual stream",
+      "incumbent_control": {
+        "bytes": 464557,
+        "codec": "lzma1-raw",
+        "sha256": "0a53f649768c61912399ccab14e4d3323998e47235992091e2a9e28cf7259fe1"
+      },
+      "n600_scorer_job": false,
+      "pass_condition_met": false,
+      "prediction_pixels": 2554360,
+      "promotion_eligible": false,
+      "residual_extra_pixels": 2256877,
+      "residual_missing_pixels": 2256877,
+      "schema": "ddm_tr2p1_coder_race_row.v1",
+      "score_claim": false,
+      "selection_mode": "n600_all_pairs_no_prefix",
+      "verdict": "LOSS-w/-bytes",
+      "verdict_scope": "FORMULATION: q-family joint-from-marginals residual coding of the CR1 selected edge-labeled n600 support payload"
+    },
+    {
+      "arm_id": "trot_q1p0_residual",
+      "axis": "[byte-only scorer-free]",
+      "best": {
+        "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_tr2p1_20260808/payloads/trot_q1p0_residual.brotli-q11.bin",
+        "bytes": 1316436,
+        "codec": "brotli-q11",
+        "sha256": "efb30383ccc535b360bc4e767c6e87f304fca9902d901921ddc26fdeb996c3e8"
+      },
+      "coder_rows": [
+        {
+          "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_tr2p1_20260808/payloads/trot_q1p0_residual.brotli-q11.bin",
+          "bytes": 1316436,
+          "codec": "brotli-q11",
+          "sha256": "efb30383ccc535b360bc4e767c6e87f304fca9902d901921ddc26fdeb996c3e8"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 1329985,
+          "codec": "lzma1-raw",
+          "sha256": "192b090d11dcef27da14a946d7e8c59be89dd30fd54d6edba2a2bfaee7a7ffcd"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 1526499,
+          "codec": "zlib-9",
+          "sha256": "b8fd53805ec78372f1e62f45c19a3139a340b734df562d39edd51549acad58a6"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 1805045,
+          "codec": "smevr-r7-nibble",
+          "sha256": "0d63db19ce3e0d741e00648bf408485773ed49142b0c5917072dc2804de327e0"
+        }
+      ],
+      "coders": [
+        "zlib-9",
+        "brotli-q11",
+        "lzma1-raw",
+        "smevr-r7-nibble"
+      ],
+      "config": {
+        "integer_projection": "row_count_descending_top_score_with_column_quota",
+        "iterations": 12,
+        "lambda": 4.0,
+        "max_solver_cells": 65536,
+        "mode": "trot_q",
+        "q": 1.0,
+        "side_info_source": "generic_cost_derived_from_counted_marginals",
+        "video_derived_side_info_bytes": 0
+      },
+      "counted_bytes_breakdown": {
+        "compressed_sha256": "efb30383ccc535b360bc4e767c6e87f304fca9902d901921ddc26fdeb996c3e8",
+        "compressed_total": 1316436,
+        "raw_components": {
+          "framing": 17982,
+          "marginals": 2096981,
+          "residual": 4825820,
+          "side_info": 0,
+          "tags": 3672
+        },
+        "raw_sha256": "1960dd7eae812dc4085a3cd73b395609f59faaee932467b50ba5fe12ce1bb657",
+        "raw_total": 6944455,
+        "video_derived_side_info_bytes": 0
+      },
+      "created_utc": "2026-08-08T15:36:48Z",
+      "decode_equality": true,
+      "delta_vs_incumbent_bytes": 851879,
+      "delta_vs_incumbent_pct": 1.8337448364786237,
+      "description": "q-family joint-from-marginals residual stream",
+      "incumbent_control": {
+        "bytes": 464557,
+        "codec": "lzma1-raw",
+        "sha256": "0a53f649768c61912399ccab14e4d3323998e47235992091e2a9e28cf7259fe1"
+      },
+      "n600_scorer_job": false,
+      "pass_condition_met": false,
+      "prediction_pixels": 2554360,
+      "promotion_eligible": false,
+      "residual_extra_pixels": 2255267,
+      "residual_missing_pixels": 2255267,
+      "schema": "ddm_tr2p1_coder_race_row.v1",
+      "score_claim": false,
+      "selection_mode": "n600_all_pairs_no_prefix",
+      "verdict": "LOSS-w/-bytes",
+      "verdict_scope": "FORMULATION: q-family joint-from-marginals residual coding of the CR1 selected edge-labeled n600 support payload"
+    },
+    {
+      "arm_id": "trot_q1p2_residual",
+      "axis": "[byte-only scorer-free]",
+      "best": {
+        "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_tr2p1_20260808/payloads/trot_q1p2_residual.brotli-q11.bin",
+        "bytes": 1322174,
+        "codec": "brotli-q11",
+        "sha256": "191beecede1105850a1c0d8db9635bfb17420e884b02e6f218c81214c1d3d983"
+      },
+      "coder_rows": [
+        {
+          "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_tr2p1_20260808/payloads/trot_q1p2_residual.brotli-q11.bin",
+          "bytes": 1322174,
+          "codec": "brotli-q11",
+          "sha256": "191beecede1105850a1c0d8db9635bfb17420e884b02e6f218c81214c1d3d983"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 1335482,
+          "codec": "lzma1-raw",
+          "sha256": "d9dc8547746584c392f9bb37f877d5f10eb27ff0bcdcf06a1c0fe509ec765e81"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 1532224,
+          "codec": "zlib-9",
+          "sha256": "51ee2b64d025e036d49d882bc8055b764f29310133c4ce76f5be3a7e003dfd46"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 1811252,
+          "codec": "smevr-r7-nibble",
+          "sha256": "06c93fc9298e3b3ed979b673b0c15888abfd6d30065b4ffb674108bc3c9065d7"
+        }
+      ],
+      "coders": [
+        "zlib-9",
+        "brotli-q11",
+        "lzma1-raw",
+        "smevr-r7-nibble"
+      ],
+      "config": {
+        "integer_projection": "row_count_descending_top_score_with_column_quota",
+        "iterations": 12,
+        "lambda": 4.0,
+        "max_solver_cells": 65536,
+        "mode": "trot_q",
+        "q": 1.2,
+        "side_info_source": "generic_cost_derived_from_counted_marginals",
+        "video_derived_side_info_bytes": 0
+      },
+      "counted_bytes_breakdown": {
+        "compressed_sha256": "191beecede1105850a1c0d8db9635bfb17420e884b02e6f218c81214c1d3d983",
+        "compressed_total": 1322174,
+        "raw_components": {
+          "framing": 17982,
+          "marginals": 2096981,
+          "residual": 4823529,
+          "side_info": 0,
+          "tags": 3672
+        },
+        "raw_sha256": "28714e86d983c4335ab319e0348a0d82cae039dc7549ec5c66540ed8a646068e",
+        "raw_total": 6942164,
+        "video_derived_side_info_bytes": 0
+      },
+      "created_utc": "2026-08-08T15:38:09Z",
+      "decode_equality": true,
+      "delta_vs_incumbent_bytes": 857617,
+      "delta_vs_incumbent_pct": 1.846096388602475,
+      "description": "q-family joint-from-marginals residual stream",
+      "incumbent_control": {
+        "bytes": 464557,
+        "codec": "lzma1-raw",
+        "sha256": "0a53f649768c61912399ccab14e4d3323998e47235992091e2a9e28cf7259fe1"
+      },
+      "n600_scorer_job": false,
+      "pass_condition_met": false,
+      "prediction_pixels": 2554360,
+      "promotion_eligible": false,
+      "residual_extra_pixels": 2253741,
+      "residual_missing_pixels": 2253741,
+      "schema": "ddm_tr2p1_coder_race_row.v1",
+      "score_claim": false,
+      "selection_mode": "n600_all_pairs_no_prefix",
+      "verdict": "LOSS-w/-bytes",
+      "verdict_scope": "FORMULATION: q-family joint-from-marginals residual coding of the CR1 selected edge-labeled n600 support payload"
+    },
+    {
+      "arm_id": "trot_q2p0_residual",
+      "axis": "[byte-only scorer-free]",
+      "best": {
+        "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_tr2p1_20260808/payloads/trot_q2p0_residual.brotli-q11.bin",
+        "bytes": 1336591,
+        "codec": "brotli-q11",
+        "sha256": "cfa91183c812b6eedb3c4fd90b48cda4b69b9d319d6af1ebb596f00bbafadf5a"
+      },
+      "coder_rows": [
+        {
+          "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_tr2p1_20260808/payloads/trot_q2p0_residual.brotli-q11.bin",
+          "bytes": 1336591,
+          "codec": "brotli-q11",
+          "sha256": "cfa91183c812b6eedb3c4fd90b48cda4b69b9d319d6af1ebb596f00bbafadf5a"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 1344212,
+          "codec": "lzma1-raw",
+          "sha256": "930d2e44abdb816ff46f3f1847d4f680547a1aa6522e014d423669e508270f74"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 1540173,
+          "codec": "zlib-9",
+          "sha256": "7bccc3e062f87a622a678b31836a8ded70f53877b8ae809af02f8647b9967c94"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 1824227,
+          "codec": "smevr-r7-nibble",
+          "sha256": "9bb66e0e4a206653a42ec725933db5802009362e58b24f2ee4010ac19a9d17dd"
+        }
+      ],
+      "coders": [
+        "zlib-9",
+        "brotli-q11",
+        "lzma1-raw",
+        "smevr-r7-nibble"
+      ],
+      "config": {
+        "integer_projection": "row_count_descending_top_score_with_column_quota",
+        "iterations": 12,
+        "lambda": 4.0,
+        "max_solver_cells": 65536,
+        "mode": "trot_q",
+        "q": 2.0,
+        "side_info_source": "generic_cost_derived_from_counted_marginals",
+        "video_derived_side_info_bytes": 0
+      },
+      "counted_bytes_breakdown": {
+        "compressed_sha256": "cfa91183c812b6eedb3c4fd90b48cda4b69b9d319d6af1ebb596f00bbafadf5a",
+        "compressed_total": 1336591,
+        "raw_components": {
+          "framing": 17982,
+          "marginals": 2096981,
+          "residual": 4820075,
+          "side_info": 0,
+          "tags": 3672
+        },
+        "raw_sha256": "9105f51a9e3403ce3b1715a5f3bd19b3b3f18457ce730d0f2217af87867f4be4",
+        "raw_total": 6938710,
+        "video_derived_side_info_bytes": 0
+      },
+      "created_utc": "2026-08-08T15:39:29Z",
+      "decode_equality": true,
+      "delta_vs_incumbent_bytes": 872034,
+      "delta_vs_incumbent_pct": 1.877130255275456,
+      "description": "q-family joint-from-marginals residual stream",
+      "incumbent_control": {
+        "bytes": 464557,
+        "codec": "lzma1-raw",
+        "sha256": "0a53f649768c61912399ccab14e4d3323998e47235992091e2a9e28cf7259fe1"
+      },
+      "n600_scorer_job": false,
+      "pass_condition_met": false,
+      "prediction_pixels": 2554360,
+      "promotion_eligible": false,
+      "residual_extra_pixels": 2251209,
+      "residual_missing_pixels": 2251209,
+      "schema": "ddm_tr2p1_coder_race_row.v1",
+      "score_claim": false,
+      "selection_mode": "n600_all_pairs_no_prefix",
+      "verdict": "LOSS-w/-bytes",
+      "verdict_scope": "FORMULATION: q-family joint-from-marginals residual coding of the CR1 selected edge-labeled n600 support payload"
+    }
+  ],
+  "verdict": "LOSS-w/-bytes; FORMULATION falsifier met for q-family joint-from-marginals residual coding of CR1 selected edge support",
+  "wall_seconds": 548.4357360840077
+}
