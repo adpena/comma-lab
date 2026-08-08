@@ -61,6 +61,11 @@ NEXT_IF_RESUMED = _REPO / ".omx" / "state" / "codex_arm_queue.next_if_resumed.js
 
 DEFAULT_CAP = 4
 SSD_ADD_DIR = "/Volumes/VertigoDataTier/pact"
+# THE arm model. Single source of truth: the pin used to live inside
+# keeper_source(), where a stale generation went unnoticed until the operator
+# caught it (2026-08-08, "You should be using GPT five point six"). Env override
+# exists so a model bump never requires a code edit mid-campaign.
+ARM_MODEL = os.environ.get("TAC_CODEX_ARM_MODEL", "gpt-5.6")
 KILL_SWITCH = "TAC_CODEX_SATURATE_OFF"
 _LIVE_STATUSES = frozenset({"queued", "live"})
 _NEXT_SCHEMA = "codex_arm_queue.next_if_resumed.v1"
@@ -501,16 +506,18 @@ def keeper_source(name: str, prompt_path: str) -> str:
         f"charter at {prompt_path} plus the common contract at "
         f".omx/tmp/codex_runs/_common_contract.md."
     )
-    # gpt-5.5 @ xhigh IS the sol-ultra profile. OPERATOR LAW (2026-08-05): every
-    # CONVOCATION arm (gc*/pantheon passes) runs at sol-ultra — if per-arm profile
-    # tiers are ever added here, convocation-class arms MUST pin to the maximum.
-    # For the MOST IMPORTANT convocations (operator-flagged or route-changing
-    # adjudications), MAIN ALSO runs a parallel FABLE leg (Agent tool,
-    # model:"fable" carve-out) on the same charter and reconciles both receipts.
+    # gpt-5.6 @ xhigh IS the sol-ultra profile (operator correction 2026-08-08:
+    # "You should be using GPT five point six" — the 5.5 pin was stale and every
+    # arm since had been spawning a generation behind). OPERATOR LAW (2026-08-05):
+    # every CONVOCATION arm (gc*/pantheon passes) runs at sol-ultra — if per-arm
+    # profile tiers are ever added here, convocation-class arms MUST pin to the
+    # maximum. For the MOST IMPORTANT convocations (operator-flagged or
+    # route-changing adjudications), MAIN ALSO runs a parallel FABLE leg (Agent
+    # tool, model:"fable" carve-out) on the same charter and reconciles both.
     argv_prefix = [
         "codex", "exec", "--skip-git-repo-check", "-s", "workspace-write",
         "--add-dir", SSD_ADD_DIR,
-        "-m", "gpt-5.5", "-c", "model_reasoning_effort=xhigh",
+        "-m", ARM_MODEL, "-c", "model_reasoning_effort=xhigh",
         "-o", f".omx/tmp/codex_runs/{name}.last.txt",
     ]
     return (
