@@ -307,30 +307,92 @@ def _same_float(a: float | None, b: float | None) -> bool:
     return abs(a - b) <= 1e-12
 
 
+# THE equivalence tuple, hoisted to ONE constant so the validator and the
+# classification check below cannot drift apart (M1R2-F2, 2026-08-08).
+_EQUIVALENCE_EXACT_KEYS: tuple[str, ...] = (
+    "mode",
+    "device",
+    "pairs",
+    "bits",
+    "microbatch_pairs",
+    "microbatch_policy",
+    "cache_residency",
+    "microbatch_hygiene",
+    "microbatch_chunk_cache",
+    "verdict_batch_size",
+    "float_warmup_steps",
+    "train_compute_dtype",
+    "compile_train_loss",
+    "perf_thread_pin",
+    "allow_soft_mem_limit",
+    "input_cache",
+    "target_cache",
+    "init",
+)
+_EQUIVALENCE_FLOAT_KEYS: tuple[str, ...] = ("lr", "ce_fraction", "softplus_fraction", "mem_budget_gb")
+
+# M1R2-F2 (review round 2, 2026-08-08): the tuple above had NO STATED SCOPE, so a
+# reader could not tell "omitted because it cannot affect the measured envelope"
+# from "omitted because nobody thought of it" -- and a NEW trainer flag would join
+# a fire config unexamined. The claim the tuple actually makes is narrow: THE FIRE
+# RUNS AT THE CONFIG WHOSE PEAK MEMORY THE PROBE MEASURED. Flags outside that claim
+# are listed here WITH THEIR REASON, and the check below refuses any flag that is
+# in neither set -- so omission becomes a classification decision, never a default.
+_EQUIVALENCE_EXCLUSIONS: dict[str, str] = {
+    "steps": (
+        "MUST differ: the probe is a few-step envelope measurement, the fire is the "
+        "full safety-capped burn. Requiring equality would refuse every fire. Step "
+        "COUNT does not change per-step peak memory (no step-indexed allocation)."
+    ),
+    "run_dir": "MUST differ: probe and fire write separate run dirs by construction.",
+    "out": "MUST differ: per-invocation output path, same class as run_dir.",
+    "mem_probe_steps": (
+        "PROBE-ONLY flag: present in the mem-probe command, absent from any fire argv. "
+        "Classified so the probe command can be run through this same check."
+    ),
+    "resume_from": (
+        "Resume loads one checkpoint into the SAME parameter footprint the probe "
+        "measured; it changes starting values, not the envelope."
+    ),
+    "seed": "RNG stream only -- no allocation is seed-dependent.",
+    "eval_every": (
+        "Verdict CADENCE, not verdict SIZE. The size term (verdict_batch_size) IS "
+        "compared; cadence changes how often that peak recurs, not how high it is."
+    ),
+    "checkpoint_every": "Checkpoint CADENCE; the write buffer is per-checkpoint, not per-interval.",
+    # Guard plumbing: not config at all. Each is validated on its own path in
+    # evaluate_guard (argv-key identity and ticket-path identity), so comparing
+    # them against a probe receipt that never carried them would be meaningless.
+    "fire_guard_verdict": "guard plumbing: the output path for this guard's own verdict.",
+    "launch_ticket_path": "guard plumbing: identity-checked against ticket_path directly.",
+    "fire_argv_key": "guard plumbing: identity-checked against argv_key directly.",
+}
+
+
+def _validate_flag_classification(argv: list[str]) -> tuple[bool, str, dict[str, Any]]:
+    """Refuse a fire whose argv carries a flag in NEITHER the compared set nor the
+    excluded-with-reason set. Fail-closed: a new trainer flag must be classified
+    before it can ride a fire, so the equivalence claim can never silently narrow.
+    """
+    present = sorted(_flag_value_map(_unwrap_safe_run(argv)))
+    classified = set(_EQUIVALENCE_EXACT_KEYS) | set(_EQUIVALENCE_FLOAT_KEYS) | set(_EQUIVALENCE_EXCLUSIONS)
+    unclassified = [flag for flag in present if flag not in classified]
+    detail = {
+        "present_flags": present,
+        "compared": sorted(set(_EQUIVALENCE_EXACT_KEYS) | set(_EQUIVALENCE_FLOAT_KEYS)),
+        "excluded_with_reason": _EQUIVALENCE_EXCLUSIONS,
+        "unclassified": unclassified,
+    }
+    if unclassified:
+        return False, "fire_argv_flag_unclassified_for_equivalence", detail
+    return True, "flag_classification_ok", detail
+
+
 def _validate_config_match(fire: dict[str, Any], receipt: dict[str, Any]) -> tuple[bool, str, dict[str, Any]]:
     comparisons: dict[str, dict[str, Any]] = {}
-    for key in (
-        "mode",
-        "device",
-        "pairs",
-        "bits",
-        "microbatch_pairs",
-        "microbatch_policy",
-        "cache_residency",
-        "microbatch_hygiene",
-        "microbatch_chunk_cache",
-        "verdict_batch_size",
-        "float_warmup_steps",
-        "train_compute_dtype",
-        "compile_train_loss",
-        "perf_thread_pin",
-        "allow_soft_mem_limit",
-        "input_cache",
-        "target_cache",
-        "init",
-    ):
+    for key in _EQUIVALENCE_EXACT_KEYS:
         comparisons[key] = {"fire": fire.get(key), "receipt": receipt.get(key), "match": fire.get(key) == receipt.get(key)}
-    for key in ("lr", "ce_fraction", "softplus_fraction", "mem_budget_gb"):
+    for key in _EQUIVALENCE_FLOAT_KEYS:
         comparisons[key] = {
             "fire": fire.get(key),
             "receipt": receipt.get(key),
@@ -417,6 +479,12 @@ def evaluate_guard(ticket_path: Path, argv_key: str) -> dict[str, Any]:
             return _verdict("failed", reason, ticket_path, argv_key, checks, receipt_path=receipt_path)
 
     fire_config = _parsed_fire_config(argv)
+    ok, reason, detail = _validate_flag_classification(argv)
+    checks.append(
+        {"name": "flag_classification", "status": "passed" if ok else "failed", "reason": reason, "detail": detail}
+    )
+    if not ok:
+        return _verdict("failed", reason, ticket_path, argv_key, checks, receipt_path=receipt_path, fire_config=fire_config)
     if fire_config.get("fire_argv_key") not in (None, argv_key):
         return _verdict(
             "failed",
