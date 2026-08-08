@@ -4,15 +4,17 @@ from __future__ import annotations
 import pytest
 
 from tac.optimization.trajectory_stopping import (
+    StaircaseStopConfig,
     TrajectoryPoint,
     TrajectoryStopConfig,
     allocate_adaptive_depths,
+    build_cap_stop_receipt,
     byte_score_units,
+    evaluate_staircase_aware_stop,
     evaluate_trajectory_stop,
     projection_interval,
     seg_flip_score_units,
 )
-
 
 _SQ1_PROXY_CURVE = (
     (0, 27_084),
@@ -37,11 +39,7 @@ def _sq1_config() -> TrajectoryStopConfig:
 
 
 def _points_through(step: int) -> tuple[TrajectoryPoint, ...]:
-    return tuple(
-        TrajectoryPoint(compute=float(s), objective=float(v))
-        for s, v in _SQ1_PROXY_CURVE
-        if s <= step
-    )
+    return tuple(TrajectoryPoint(compute=float(s), objective=float(v)) for s, v in _SQ1_PROXY_CURVE if s <= step)
 
 
 def test_sq1_25_and_50_step_positive_controls_report_caps_not_convergence() -> None:
@@ -133,6 +131,122 @@ def test_malformed_thresholds_fail_closed() -> None:
         )
 
 
+def _m1_staircase_config() -> StaircaseStopConfig:
+    # DERIVED test geometry: five 50-step eval intervals form the event-free horizon.
+    return StaircaseStopConfig(
+        min_eval_rows=5,
+        window_rows=5,
+        event_free_horizon_compute=250.0,
+        event_score_delta=4.238552517361111e-6,
+        creep_score_per_compute=2.0e-6,
+        sustained_erosion_windows=3,
+    )
+
+
+def _m1_trajectory_config() -> TrajectoryStopConfig:
+    return TrajectoryStopConfig(
+        score_units_per_objective=1.0,
+        marginal_score_gain_per_compute=8.477105034722223e-8,
+        min_fit_points=5,
+    )
+
+
+def _m1_rows(objectives: list[float], losses: list[float]) -> list[dict[str, float | int]]:
+    assert len(objectives) == len(losses)
+    return [
+        {
+            "step": 50 * index,
+            "objective_S": objective,
+            "loss": loss,
+            "weights_stepped": 50 * index,
+            "accepted_batch_fraction": 1.0,
+        }
+        for index, (objective, loss) in enumerate(zip(objectives, losses, strict=True))
+    ]
+
+
+def test_staircase_plateau_then_drop_does_not_stop() -> None:
+    # BAD-state positive control: a smooth-fit plateau immediately followed by an
+    # event must stay open because its event-free horizon has restarted.
+    rows = _m1_rows(
+        [0.10, 0.10, 0.10, 0.10, 0.10, 0.09],
+        [1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+    )
+    decision = evaluate_staircase_aware_stop(
+        rows,
+        _m1_trajectory_config(),
+        _m1_staircase_config(),
+    )
+    assert decision.action == "CONTINUE"
+    assert "event_free_horizon_not_met" in decision.blockers
+
+
+def test_staircase_flat_objective_with_falling_loss_does_not_stop() -> None:
+    # BAD-state positive control: objective quantization cannot hide live loss descent.
+    rows = _m1_rows(
+        [0.10] * 6,
+        [1.0, 0.95, 0.90, 0.85, 0.80, 0.75],
+    )
+    decision = evaluate_staircase_aware_stop(
+        rows,
+        _m1_trajectory_config(),
+        _m1_staircase_config(),
+    )
+    assert decision.action == "CONTINUE"
+    assert "loss_tail_not_flat" in decision.blockers
+
+
+def test_staircase_flat_live_event_free_trace_can_stop() -> None:
+    # GOOD-state silence control: the extra guards do not suppress a resolved,
+    # event-free, live plateau.
+    rows = _m1_rows([0.10] * 6, [1.0] * 6)
+    decision = evaluate_staircase_aware_stop(
+        rows,
+        _m1_trajectory_config(),
+        _m1_staircase_config(),
+    )
+    assert decision.action == "STOP_CONVERGED"
+    assert decision.should_halt is True
+    assert decision.blockers == ()
+
+
+def test_staircase_frozen_weights_cannot_certify_convergence() -> None:
+    rows = _m1_rows([0.10] * 6, [1.0] * 6)
+    for row in rows:
+        row["weights_stepped"] = 0
+        row["accepted_batch_fraction"] = 0.0
+    decision = evaluate_staircase_aware_stop(
+        rows,
+        _m1_trajectory_config(),
+        _m1_staircase_config(),
+    )
+    assert decision.action == "CONTINUE"
+    assert "weight_update_liveness_not_clear" in decision.blockers
+
+
+def test_wall_clock_cap_receipt_fires_only_at_the_bound() -> None:
+    receipt = build_cap_stop_receipt(
+        stop_reason="cap_bound",
+        steps_run=900,
+        cap=None,
+        still_descending=True,
+        bound_kind="wall_clock_seconds",
+        bound_value=28_800.0,
+        observed_value=28_800.5,
+    )
+    assert receipt.to_payload()["bound_kind"] == "wall_clock_seconds"
+    with pytest.raises(Exception, match="observed_value >= bound_value"):
+        build_cap_stop_receipt(
+            stop_reason="cap_bound",
+            steps_run=899,
+            cap=None,
+            still_descending=True,
+            bound_kind="wall_clock_seconds",
+            bound_value=28_800.0,
+            observed_value=28_799.9,
+        )
+
+
 # --- amendment-3 tail-slope adjudication (#874/#935 censored-cap genus) ---------------
 
 
@@ -141,8 +255,7 @@ def test_tail_slope_censored_still_descending() -> None:
 
     # the w2 shape: linear descent ~-3e-6/ep with tiny alternating noise -> censored
     steps = [949 + 5 * i for i in range(28)]
-    values = [0.00415 - 3e-6 * (s - 949) + (2e-7 if i % 2 else -2e-7)
-              for i, s in enumerate(steps)]
+    values = [0.00415 - 3e-6 * (s - 949) + (2e-7 if i % 2 else -2e-7) for i, s in enumerate(steps)]
     v = adjudicate_tail_slope(steps, values)
     assert v.verdict == "censored_still_descending"
     assert v.endpoint_is_min

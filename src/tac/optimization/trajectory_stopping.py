@@ -9,6 +9,7 @@ when one binds the stop reason says so.
 
 from __future__ import annotations
 
+import itertools
 import math
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
@@ -19,11 +20,19 @@ TRAJECTORY_STOPPING_LAW_REF: Final = "trajectory_derived_stopping_law_v1"
 
 FitKind = Literal["geometric", "power_law", "last_k_slope"]
 CapStopReason = Literal["converged", "cap_bound", "failed"]
+CapBoundKind = Literal["steps", "wall_clock_seconds"]
 StopReason = Literal[
     "converged_projected",
     "marginal_below_bar",
     "safety_bound_REPORTED",
     "continue_projected",
+]
+TrainingStopAction = Literal[
+    "INSUFFICIENT_HISTORY",
+    "CONTINUE",
+    "STOP_CONVERGED",
+    "ROLLBACK_OR_RETREAT",
+    "QUEUE_RESUME",
 ]
 
 
@@ -60,10 +69,7 @@ class TrajectoryStopConfig:
     def __post_init__(self) -> None:
         if not math.isfinite(self.score_units_per_objective) or self.score_units_per_objective <= 0.0:
             raise TrajectoryStoppingError("score_units_per_objective must be positive")
-        if (
-            not math.isfinite(self.marginal_score_gain_per_compute)
-            or self.marginal_score_gain_per_compute <= 0.0
-        ):
+        if not math.isfinite(self.marginal_score_gain_per_compute) or self.marginal_score_gain_per_compute <= 0.0:
             raise TrajectoryStoppingError("marginal_score_gain_per_compute must be positive")
         if not 0.0 <= self.min_fit_r2 <= 1.0:
             raise TrajectoryStoppingError("min_fit_r2 must be in [0,1]")
@@ -131,9 +137,7 @@ class DecayFit:
             "current_objective": self.current_objective,
             "fit_quality_flag": self.fit_quality_flag,
             "projected_remaining_objective_gain": self.projected_remaining_objective_gain,
-            "projected_marginal_objective_gain_per_compute": (
-                self.projected_marginal_objective_gain_per_compute()
-            ),
+            "projected_marginal_objective_gain_per_compute": (self.projected_marginal_objective_gain_per_compute()),
         }
 
 
@@ -179,17 +183,34 @@ class CapStopReceipt:
     steps_run: int
     cap: int | None
     still_descending: bool | None
+    bound_kind: CapBoundKind = "steps"
+    bound_value: float | None = None
+    observed_value: float | None = None
 
     def __post_init__(self) -> None:
         if self.steps_run < 0:
             raise TrajectoryStoppingError("steps_run must be non-negative")
         if self.cap is not None and self.cap < 0:
             raise TrajectoryStoppingError("cap must be non-negative when supplied")
+        if self.bound_kind not in {"steps", "wall_clock_seconds"}:
+            raise TrajectoryStoppingError("unknown cap bound_kind")
+        if self.bound_value is not None and (not math.isfinite(self.bound_value) or self.bound_value < 0.0):
+            raise TrajectoryStoppingError("bound_value must be finite and non-negative")
+        if self.observed_value is not None and (not math.isfinite(self.observed_value) or self.observed_value < 0.0):
+            raise TrajectoryStoppingError("observed_value must be finite and non-negative")
         if self.stop_reason == "cap_bound":
-            if self.cap is None:
-                raise TrajectoryStoppingError("cap_bound receipts must record cap")
-            if self.steps_run < self.cap:
-                raise TrajectoryStoppingError("cap_bound receipts require steps_run >= cap")
+            if self.bound_kind == "steps":
+                if self.cap is None:
+                    raise TrajectoryStoppingError("step cap_bound receipts must record cap")
+                if self.steps_run < self.cap:
+                    raise TrajectoryStoppingError("step cap_bound receipts require steps_run >= cap")
+            else:
+                if self.bound_value is None or self.observed_value is None:
+                    raise TrajectoryStoppingError(
+                        "wall-clock cap_bound receipts require bound_value and observed_value"
+                    )
+                if self.observed_value < self.bound_value:
+                    raise TrajectoryStoppingError("wall-clock cap_bound receipts require observed_value >= bound_value")
             if self.still_descending is None:
                 raise TrajectoryStoppingError("cap_bound receipts must record still_descending")
         if self.stop_reason == "converged" and self.still_descending:
@@ -201,6 +222,9 @@ class CapStopReceipt:
             "steps_run": self.steps_run,
             "cap": self.cap,
             "still_descending": self.still_descending,
+            "bound_kind": self.bound_kind,
+            "bound_value": self.bound_value,
+            "observed_value": self.observed_value,
         }
 
 
@@ -210,6 +234,9 @@ def build_cap_stop_receipt(
     steps_run: int,
     cap: int | None,
     still_descending: bool | None,
+    bound_kind: CapBoundKind = "steps",
+    bound_value: float | None = None,
+    observed_value: float | None = None,
 ) -> CapStopReceipt:
     """Build the canonical small stop-reason payload for capped solvers."""
 
@@ -218,14 +245,11 @@ def build_cap_stop_receipt(
         steps_run=steps_run,
         cap=cap,
         still_descending=still_descending,
+        bound_kind=bound_kind,
+        bound_value=bound_value,
+        observed_value=observed_value,
     )
 
-
-TailSlopeVerdictKind = Literal[
-    "censored_still_descending",
-    "ascending_past_min",
-    "converged_plateau",
-]
 
 # Detection threshold provenance (constants-are-poison discipline): 2.0 sigma is the
 # two-sided standard-normal ~95.4% detection convention, NOT a fitted constant.
@@ -239,6 +263,92 @@ TAIL_SLOPE_SIGMA_THRESHOLD: Final = 2.0
 # short window buys recency; (40, 20) is the TP1 window-boundary practice pair
 # (gate cadence 5 -> 8/4 points minimum). Units are the caller's step axis.
 TAIL_SLOPE_DEFAULT_SPANS: Final = (40.0, 20.0)
+
+
+@dataclass(frozen=True, slots=True)
+class StaircaseStopConfig:
+    """Extra evidence required before a smooth-fit stop can close a staircase.
+
+    ``event_free_horizon_compute`` and ``event_score_delta`` are supplied by the
+    caller's run geometry.  Loss flatness and decision resolution are estimated
+    from the recorded tail itself, so a borrowed absolute loss epsilon is not
+    introduced here.
+    """
+
+    min_eval_rows: int
+    window_rows: int
+    event_free_horizon_compute: float
+    event_score_delta: float
+    creep_score_per_compute: float
+    sustained_erosion_windows: int
+    sigma_threshold: float = TAIL_SLOPE_SIGMA_THRESHOLD
+
+    def __post_init__(self) -> None:
+        if self.min_eval_rows < 2:
+            raise TrajectoryStoppingError("min_eval_rows must be at least 2")
+        if self.window_rows < 3:
+            raise TrajectoryStoppingError("window_rows must be at least 3")
+        if self.min_eval_rows < self.window_rows:
+            raise TrajectoryStoppingError("min_eval_rows must cover window_rows")
+        for name, value in (
+            ("event_free_horizon_compute", self.event_free_horizon_compute),
+            ("event_score_delta", self.event_score_delta),
+            ("creep_score_per_compute", self.creep_score_per_compute),
+            ("sigma_threshold", self.sigma_threshold),
+        ):
+            if not math.isfinite(value) or value <= 0.0:
+                raise TrajectoryStoppingError(f"{name} must be finite and positive")
+        if self.sustained_erosion_windows < 1:
+            raise TrajectoryStoppingError("sustained_erosion_windows must be positive")
+
+
+@dataclass(frozen=True, slots=True)
+class StaircaseStopDecision:
+    """Typed production action layered on the canonical trajectory fit."""
+
+    action: TrainingStopAction
+    should_halt: bool
+    trajectory_decision: StopDecision | None
+    n_points: int
+    event_free_compute: float
+    event_free_horizon_compute: float
+    loss_slope_per_compute: float | None
+    loss_slope_se: float | None
+    loss_flat: bool
+    decision_noise_upper_bound_score_per_compute: float | None
+    decision_noise_resolved: bool
+    liveness_clear: bool
+    erosion_sustained: bool
+    boundary_kind: CapBoundKind | None
+    blockers: tuple[str, ...]
+
+    def to_payload(self) -> dict[str, Any]:
+        return {
+            "action": self.action,
+            "should_halt": self.should_halt,
+            "trajectory_decision": (
+                None if self.trajectory_decision is None else self.trajectory_decision.to_payload()
+            ),
+            "n_points": self.n_points,
+            "event_free_compute": self.event_free_compute,
+            "event_free_horizon_compute": self.event_free_horizon_compute,
+            "loss_slope_per_compute": self.loss_slope_per_compute,
+            "loss_slope_se": self.loss_slope_se,
+            "loss_flat": self.loss_flat,
+            "decision_noise_upper_bound_score_per_compute": (self.decision_noise_upper_bound_score_per_compute),
+            "decision_noise_resolved": self.decision_noise_resolved,
+            "liveness_clear": self.liveness_clear,
+            "erosion_sustained": self.erosion_sustained,
+            "boundary_kind": self.boundary_kind,
+            "blockers": list(self.blockers),
+        }
+
+
+TailSlopeVerdictKind = Literal[
+    "censored_still_descending",
+    "ascending_past_min",
+    "converged_plateau",
+]
 
 
 @dataclass(frozen=True, slots=True)
@@ -293,23 +403,25 @@ class TailSlopeVerdict:
             "end_step": self.end_step,
             "end_value": self.end_value,
             "endpoint_is_min": self.endpoint_is_min,
-            "authority_note": ("measured tail-slope fit is the boundary authority; "
-                               "interval classifier labels are advisory (#874/#935 "
-                               "censored-cap genus, amendment-3 2026-08-05)"),
+            "authority_note": (
+                "measured tail-slope fit is the boundary authority; "
+                "interval classifier labels are advisory (#874/#935 "
+                "censored-cap genus, amendment-3 2026-08-05)"
+            ),
         }
 
 
 def _tail_fit(x: Sequence[float], y: Sequence[float], span: float) -> TailSlopeSpanFit | None:
     lo = x[-1] - span
     xs = [a for a in x if a >= lo]
-    ys = [b for a, b in zip(x, y) if a >= lo]
+    ys = [b for a, b in zip(x, y, strict=False) if a >= lo]
     if len(xs) < 3:
         return None
     intercept, slope = _linear_regression(xs, ys)
     xbar = sum(xs) / len(xs)
     sxx = sum((a - xbar) ** 2 for a in xs)
     pred = [intercept + slope * a for a in xs]
-    resid = [b - p for b, p in zip(ys, pred)]
+    resid = [b - p for b, p in zip(ys, pred, strict=False)]
     dof = max(1, len(xs) - 2)
     resid_sd = math.sqrt(sum(r * r for r in resid) / dof)
     se = resid_sd / math.sqrt(sxx) if sxx > 0 else 0.0
@@ -317,8 +429,9 @@ def _tail_fit(x: Sequence[float], y: Sequence[float], span: float) -> TailSlopeS
         sigma = abs(slope) / se
     else:
         sigma = math.inf if slope != 0.0 else 0.0
-    return TailSlopeSpanFit(span=float(span), n_points=len(xs), slope=float(slope),
-                            slope_se=float(se), sigma=float(sigma))
+    return TailSlopeSpanFit(
+        span=float(span), n_points=len(xs), slope=float(slope), slope_se=float(se), sigma=float(sigma)
+    )
 
 
 def adjudicate_tail_slope(
@@ -358,8 +471,7 @@ def adjudicate_tail_slope(
     endpoint_is_min = i_min == len(y) - 1
     descending = any(f.slope < 0 and f.sigma >= sigma_threshold for f in fits)
     shortest = min(fits, key=lambda f: f.span)
-    ascending = (shortest.slope > 0 and shortest.sigma >= sigma_threshold
-                 and not endpoint_is_min)
+    ascending = shortest.slope > 0 and shortest.sigma >= sigma_threshold and not endpoint_is_min
     if descending:
         verdict: TailSlopeVerdictKind = "censored_still_descending"
     elif ascending:
@@ -367,8 +479,13 @@ def adjudicate_tail_slope(
     else:
         verdict = "converged_plateau"
     return TailSlopeVerdict(
-        verdict=verdict, fits=tuple(fits), sigma_threshold=float(sigma_threshold),
-        min_step=x[i_min], min_value=y[i_min], end_step=x[-1], end_value=y[-1],
+        verdict=verdict,
+        fits=tuple(fits),
+        sigma_threshold=float(sigma_threshold),
+        min_step=x[i_min],
+        min_value=y[i_min],
+        end_step=x[-1],
+        end_value=y[-1],
         endpoint_is_min=endpoint_is_min,
     )
 
@@ -447,7 +564,7 @@ def _points(points: Sequence[TrajectoryPoint | Mapping[str, Any]]) -> tuple[Traj
     if len(out) < 2:
         raise TrajectoryStoppingError("at least two trajectory points are required")
     out.sort(key=lambda p: p.compute)
-    for prev, cur in zip(out, out[1:]):
+    for prev, cur in itertools.pairwise(out):
         if cur.compute <= prev.compute:
             raise TrajectoryStoppingError("trajectory compute coordinates must be strictly increasing")
     return tuple(out)
@@ -458,7 +575,7 @@ def _r2(y: Sequence[float], pred: Sequence[float]) -> float:
     sst = sum((v - ybar) ** 2 for v in y)
     if sst <= 0.0:
         return 0.0
-    rss = sum((a - b) ** 2 for a, b in zip(y, pred))
+    rss = sum((a - b) ** 2 for a, b in zip(y, pred, strict=False))
     return max(0.0, 1.0 - rss / sst)
 
 
@@ -468,7 +585,7 @@ def _linear_regression(x: Sequence[float], y: Sequence[float]) -> tuple[float, f
     den = sum((v - xbar) ** 2 for v in x)
     if den <= 0.0:
         raise TrajectoryStoppingError("degenerate fit x coordinates")
-    slope = sum((a - xbar) * (b - ybar) for a, b in zip(x, y)) / den
+    slope = sum((a - xbar) * (b - ybar) for a, b in zip(x, y, strict=False)) / den
     intercept = ybar - slope * xbar
     return float(intercept), float(slope)
 
@@ -483,7 +600,9 @@ def _candidate_asymptotes(y: Sequence[float], objective_floor: float) -> tuple[f
     return tuple(sorted(a for a in out if a < min(y) - eps))
 
 
-def _fit_decay_kind(points: tuple[TrajectoryPoint, ...], kind: Literal["geometric", "power_law"], cfg: TrajectoryStopConfig) -> DecayFit | None:
+def _fit_decay_kind(
+    points: tuple[TrajectoryPoint, ...], kind: Literal["geometric", "power_law"], cfg: TrajectoryStopConfig
+) -> DecayFit | None:
     if len(points) < cfg.min_fit_points:
         return None
     t = [p.compute for p in points]
@@ -580,10 +699,7 @@ def evaluate_trajectory_stop(
     fits = fit_decay_models(pts, config)
     accepted = tuple(fit for fit in fits if fit.r2 >= config.min_fit_r2)
     selected = accepted[0] if accepted else _fallback_fit(pts, config)
-    marginal_score = (
-        selected.projected_marginal_objective_gain_per_compute()
-        * config.score_units_per_objective
-    )
+    marginal_score = selected.projected_marginal_objective_gain_per_compute() * config.score_units_per_objective
     remaining_score: float | None
     if math.isfinite(selected.projected_remaining_objective_gain):
         remaining_score = selected.projected_remaining_objective_gain * config.score_units_per_objective
@@ -620,6 +736,167 @@ def evaluate_trajectory_stop(
         threshold_score_gain_per_compute=config.marginal_score_gain_per_compute,
         safety_bound_compute=safety_bound_compute,
         bound_reported=bound_reported,
+    )
+
+
+def _slope_and_se(x: Sequence[float], y: Sequence[float]) -> tuple[float, float]:
+    if len(x) != len(y) or len(x) < 3:
+        raise TrajectoryStoppingError("slope evidence requires at least three paired rows")
+    intercept, slope = _linear_regression(x, y)
+    xbar = sum(x) / len(x)
+    sxx = sum((value - xbar) ** 2 for value in x)
+    pred = [intercept + slope * value for value in x]
+    dof = max(1, len(x) - 2)
+    residual_sd = math.sqrt(sum((actual - fitted) ** 2 for actual, fitted in zip(y, pred, strict=False)) / dof)
+    slope_se = residual_sd / math.sqrt(sxx) if sxx > 0.0 else 0.0
+    return float(slope), float(slope_se)
+
+
+def _window_erosion_sustained(
+    rows: Sequence[Mapping[str, Any]],
+    config: StaircaseStopConfig,
+) -> bool:
+    required = config.window_rows + config.sustained_erosion_windows - 1
+    if len(rows) < required:
+        return False
+    for offset in range(config.sustained_erosion_windows):
+        end = len(rows) - offset
+        window = rows[end - config.window_rows : end]
+        x = [float(row["step"]) for row in window]
+        objective = [float(row["objective_S"]) for row in window]
+        losses = [float(row["loss"]) for row in window]
+        objective_slope, _ = _slope_and_se(x, objective)
+        loss_slope, _ = _slope_and_se(x, losses)
+        if not (objective_slope > config.creep_score_per_compute and loss_slope < 0.0):
+            return False
+    return True
+
+
+def evaluate_staircase_aware_stop(
+    rows: Sequence[Mapping[str, Any]],
+    trajectory_config: TrajectoryStopConfig,
+    staircase_config: StaircaseStopConfig,
+    *,
+    safety_bound_compute: float | None = None,
+    boundary_kind: CapBoundKind | None = None,
+) -> StaircaseStopDecision:
+    """Evaluate one production training action from durable per-eval rows.
+
+    A smooth-fit semantic stop is only admitted after the run has remained free
+    of a score-lattice event for the caller-derived horizon, the recorded loss
+    tail is statistically flat, the trajectory's own slope-noise upper bound is
+    below the marginal bar, and the weight-update liveness counters advance.
+    A safety or wall-clock boundary reports ``QUEUE_RESUME`` when any of those
+    gates remains unresolved.
+    """
+
+    if boundary_kind not in {None, "steps", "wall_clock_seconds"}:
+        raise TrajectoryStoppingError("unknown boundary_kind")
+    normalized = [dict(row) for row in rows]
+    required = {"step", "objective_S", "loss", "weights_stepped", "accepted_batch_fraction"}
+    for row in normalized:
+        missing = required - set(row)
+        if missing:
+            raise TrajectoryStoppingError(f"staircase row missing required fields: {sorted(missing)}")
+    normalized.sort(key=lambda row: float(row["step"]))
+    for previous, current in itertools.pairwise(normalized):
+        if float(current["step"]) <= float(previous["step"]):
+            raise TrajectoryStoppingError("staircase steps must be strictly increasing")
+
+    if normalized:
+        event_origin = float(normalized[0]["step"])
+        previous_objective = float(normalized[0]["objective_S"])
+        for row in normalized[1:]:
+            objective = float(row["objective_S"])
+            if abs(objective - previous_objective) >= staircase_config.event_score_delta:
+                event_origin = float(row["step"])
+            previous_objective = objective
+        event_free_compute = float(normalized[-1]["step"]) - event_origin
+    else:
+        event_free_compute = 0.0
+
+    if len(normalized) < staircase_config.min_eval_rows:
+        action: TrainingStopAction = "QUEUE_RESUME" if boundary_kind is not None else "INSUFFICIENT_HISTORY"
+        return StaircaseStopDecision(
+            action=action,
+            should_halt=boundary_kind is not None,
+            trajectory_decision=None,
+            n_points=len(normalized),
+            event_free_compute=event_free_compute,
+            event_free_horizon_compute=staircase_config.event_free_horizon_compute,
+            loss_slope_per_compute=None,
+            loss_slope_se=None,
+            loss_flat=False,
+            decision_noise_upper_bound_score_per_compute=None,
+            decision_noise_resolved=False,
+            liveness_clear=False,
+            erosion_sustained=False,
+            boundary_kind=boundary_kind,
+            blockers=("min_eval_rows_not_met",),
+        )
+
+    trajectory = evaluate_trajectory_stop(
+        [TrajectoryPoint(float(row["step"]), float(row["objective_S"])) for row in normalized],
+        trajectory_config,
+        safety_bound_compute=safety_bound_compute,
+    )
+    tail = normalized[-staircase_config.window_rows :]
+    x = [float(row["step"]) for row in tail]
+    objective = [float(row["objective_S"]) for row in tail]
+    losses = [float(row["loss"]) for row in tail]
+    loss_slope, loss_slope_se = _slope_and_se(x, losses)
+    _, objective_slope_se = _slope_and_se(x, objective)
+    loss_flat = abs(loss_slope) <= staircase_config.sigma_threshold * loss_slope_se
+    noise_upper = staircase_config.sigma_threshold * objective_slope_se
+    noise_resolved = noise_upper < trajectory_config.marginal_score_gain_per_compute
+    liveness_clear = all(
+        math.isfinite(float(row["accepted_batch_fraction"])) and 0.0 < float(row["accepted_batch_fraction"]) <= 1.0
+        for row in tail
+    ) and all(
+        int(current["weights_stepped"]) > int(previous["weights_stepped"])
+        for previous, current in itertools.pairwise(tail)
+    )
+    erosion_sustained = _window_erosion_sustained(normalized, staircase_config)
+    event_horizon_clear = event_free_compute >= staircase_config.event_free_horizon_compute
+    semantic_candidate = trajectory.stop_reason in {
+        "converged_projected",
+        "marginal_below_bar",
+    }
+
+    blockers: list[str] = []
+    if not event_horizon_clear:
+        blockers.append("event_free_horizon_not_met")
+    if not loss_flat:
+        blockers.append("loss_tail_not_flat")
+    if not noise_resolved:
+        blockers.append("decision_noise_overlaps_marginal_bar")
+    if not liveness_clear:
+        blockers.append("weight_update_liveness_not_clear")
+
+    if erosion_sustained:
+        action = "ROLLBACK_OR_RETREAT"
+    elif semantic_candidate and not blockers:
+        action = "STOP_CONVERGED"
+    elif boundary_kind is not None or trajectory.stop_reason == "safety_bound_REPORTED":
+        action = "QUEUE_RESUME"
+    else:
+        action = "CONTINUE"
+    return StaircaseStopDecision(
+        action=action,
+        should_halt=action in {"STOP_CONVERGED", "ROLLBACK_OR_RETREAT", "QUEUE_RESUME"},
+        trajectory_decision=trajectory,
+        n_points=len(normalized),
+        event_free_compute=event_free_compute,
+        event_free_horizon_compute=staircase_config.event_free_horizon_compute,
+        loss_slope_per_compute=loss_slope,
+        loss_slope_se=loss_slope_se,
+        loss_flat=loss_flat,
+        decision_noise_upper_bound_score_per_compute=noise_upper,
+        decision_noise_resolved=noise_resolved,
+        liveness_clear=liveness_clear,
+        erosion_sustained=erosion_sustained,
+        boundary_kind=boundary_kind,
+        blockers=tuple(blockers),
     )
 
 
@@ -706,20 +983,27 @@ def allocate_adaptive_depths(
 
 __all__ = [
     "RATE_SCORE_PER_BYTE",
+    "TAIL_SLOPE_DEFAULT_SPANS",
+    "TAIL_SLOPE_SIGMA_THRESHOLD",
     "TRAJECTORY_STOPPING_LAW_REF",
+    "CapBoundKind",
     "CapStopReason",
     "CapStopReceipt",
     "DecayFit",
     "DepthAllocation",
     "ProjectionInterval",
+    "StaircaseStopConfig",
+    "StaircaseStopDecision",
     "StopDecision",
     "StopReason",
+    "TrainingStopAction",
     "TrajectoryPoint",
     "TrajectoryStopConfig",
     "TrajectoryStoppingError",
     "allocate_adaptive_depths",
     "build_cap_stop_receipt",
     "byte_score_units",
+    "evaluate_staircase_aware_stop",
     "evaluate_trajectory_stop",
     "fit_decay_models",
     "gap_fraction_score_bar",

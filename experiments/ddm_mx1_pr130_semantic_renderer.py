@@ -36,6 +36,12 @@ import numpy as np
 import torch
 
 from tac.admission_guard import assert_governed_admission
+from tac.optimization.trajectory_stopping import (
+    StaircaseStopConfig,
+    TrajectoryStopConfig,
+    build_cap_stop_receipt,
+    evaluate_staircase_aware_stop,
+)
 from tac.pr130_lift import SOURCE_REPO_HEAD, SOURCE_REPO_ROOT
 from tac.pr130_lift.mlx_semantic_renderer import (
     MlxSemanticConfig,
@@ -60,7 +66,7 @@ DEFAULT_INIT = Path(
     "repro_repo/artifacts/checkpoints/semantic_renderer_w96_b4_qat4_12k.pt"
 )
 CONTEST_DENOMINATOR_BYTES = 37_545_489
-GIB = 1024.0 ** 3
+GIB = 1024.0**3
 TRAIN_COMPUTE_DTYPES = ("fp32", "bf16", "fp16")
 THREAD_PIN_MODES = ("off", "one")
 CACHE_RESIDENCY_MODES = ("selected", "ram-full")
@@ -78,10 +84,13 @@ ROW1_SAFE_RUN_TIMEOUT_S = 28_800
 DEFAULT_WIRED_LIMIT_FRACTION = 0.35
 FP1_FLAT_PAINT_FLOOR_D_SEG = 0.008305
 MX1H_STEP1500_AUTHORITY_D_SEG = 0.0010689099629720051
-MX1T_DEFAULT_CHECKPOINT_DIR = Path(
-    ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_cap/n32_metal"
-)
+MX1T_DEFAULT_CHECKPOINT_DIR = Path(".omx/research/ddm_mx1e_20260807/regen2/launch_arm_cap/n32_metal")
 MX1T_DEFAULT_OUT_DIR = Path(".omx/research/ddm_mx1t_20260807")
+M1_EVAL_JOURNAL_SCHEMA = "ddm_m1_eval_journal.v1"
+M1_STOP_DECISION_SCHEMA = "ddm_m1_stop_decision.v1"
+M1_TERMINAL_RECEIPT_SCHEMA = "ddm_m1_terminal_receipt.v1"
+M1_SCHEDULE_SELECTION_SCHEMA = "ddm_m1_schedule_selection.v1"
+EMA_DECAY_LAW_REF = "ema_decay_run_geometry_v1"
 SEG_CLASS_NAMES = ("Road", "Lane", "Undrivable", "Movable", "MyCar")
 WC2_AUTO_MICROBATCH_ANCHOR = {
     "schema": "ddm_wc2_microbatch_law_anchor.v1",
@@ -125,6 +134,179 @@ def _sha256_file(path: Path) -> str:
         for chunk in iter(lambda: handle.read(1 << 20), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def _append_jsonl_durable(path: Path, payload: Mapping[str, Any]) -> None:
+    """Append one complete JSON line with one O_APPEND write and an fsync."""
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    encoded = (json.dumps(dict(payload), sort_keys=True, default=str) + "\n").encode("utf-8")
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
+    try:
+        written = os.write(fd, encoded)
+        if written != len(encoded):
+            raise OSError(f"short append to {path}: {written} != {len(encoded)}")
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+    directory_fd = os.open(path.parent, os.O_RDONLY)
+    try:
+        os.fsync(directory_fd)
+    finally:
+        os.close(directory_fd)
+
+
+def _read_active_m1_eval_rows(path: Path) -> list[dict[str, Any]]:
+    """Return the resume-active journal view without deleting abandoned tail rows."""
+
+    active: dict[int, dict[str, Any]] = {}
+    if not path.exists():
+        return []
+    with path.open("r", encoding="utf-8") as handle:
+        for line_number, line in enumerate(handle, start=1):
+            if not line.endswith("\n"):
+                raise ValueError(f"journal {path}:{line_number} is not a complete JSONL row")
+            row = json.loads(line)
+            if row.get("schema") != M1_EVAL_JOURNAL_SCHEMA:
+                raise ValueError(f"journal {path}:{line_number} has wrong schema")
+            if row.get("row_kind") == "segment_start":
+                resume_step = int(row["resume_step"])
+                active = {step: item for step, item in active.items() if step <= resume_step}
+            elif row.get("row_kind") == "eval":
+                active[int(row["step"])] = row
+            else:
+                raise ValueError(f"journal {path}:{line_number} has unknown row_kind")
+    return [active[step] for step in sorted(active)]
+
+
+def _m1_cosine_lr(base_lr: float, step: int, schedule_horizon_steps: int) -> float:
+    """Monotone cosine whose terminal value is held across resumed extensions."""
+
+    if base_lr <= 0.0 or schedule_horizon_steps <= 0 or step < 0:
+        raise ValueError("base_lr, schedule_horizon_steps, and step are out of domain")
+    clamped_step = min(step, schedule_horizon_steps - 1)
+    progress = clamped_step / max(schedule_horizon_steps - 1, 1)
+    return base_lr * (0.01 + 0.5 * (1.0 - 0.01) * (1.0 + math.cos(math.pi * progress)))
+
+
+def _load_m1_executor_policy(args: argparse.Namespace) -> dict[str, Any] | None:
+    ticket_path = getattr(args, "launch_ticket_path", None)
+    argv_key = str(getattr(args, "fire_argv_key", "") or "")
+    if ticket_path is None or not argv_key:
+        return None
+    ticket = json.loads(Path(ticket_path).read_text(encoding="utf-8"))
+    executor = dict((ticket.get("stop_policy") or {}).get("executor") or {})
+    if argv_key not in set(executor.get("child_argv_keys") or []):
+        return None
+    predicate = dict((ticket.get("stop_policy") or {}).get("predicate") or {})
+    n_pairs = int(predicate["N"])
+    height = int(predicate["H"])
+    width = int(predicate["W"])
+    one_flip = 100.0 / float(n_pairs * height * width)
+    if not math.isclose(one_flip, float(predicate["one_sample_flip_S"]), rel_tol=0.0, abs_tol=1e-18):
+        raise ValueError("ticket one_sample_flip_S drifted from N*H*W geometry")
+    eval_every = int(predicate["eval_every_steps"])
+    event_free_evals = int(executor["event_free_horizon_evals"])
+    trajectory_config = TrajectoryStopConfig(
+        score_units_per_objective=1.0,
+        marginal_score_gain_per_compute=float(predicate["marginal_bar_S_per_step"]),
+        min_fit_points=int(predicate["min_eval_rows"]),
+    )
+    staircase_config = StaircaseStopConfig(
+        min_eval_rows=int(predicate["min_eval_rows"]),
+        window_rows=int(predicate["window_rows"]),
+        event_free_horizon_compute=float(event_free_evals * eval_every),
+        event_score_delta=one_flip,
+        creep_score_per_compute=(100.0 * float(predicate["creep_eps_dseg_per_eval"]) / float(eval_every)),
+        sustained_erosion_windows=int(predicate["sustained_erosion_windows"]),
+    )
+    return {
+        "ticket": ticket,
+        "ticket_path": Path(ticket_path),
+        "argv_key": argv_key,
+        "executor": executor,
+        "predicate": predicate,
+        "trajectory_config": trajectory_config,
+        "staircase_config": staircase_config,
+    }
+
+
+def _derive_m1_ema_policy(policy: Mapping[str, Any]) -> dict[str, Any]:
+    ema = dict(policy["executor"]["ema"])
+    updates = int(ema["updates_per_run"])
+    warmup_fraction = float(ema["warmup_fraction"])
+    from tac.canonical_equations.evaluators import eval_ema_decay_run_geometry
+
+    decay = float(
+        eval_ema_decay_run_geometry(
+            {
+                "mode": "decay_from_warmup_fraction",
+                "warmup_fraction": warmup_fraction,
+                "updates_per_run": updates,
+            }
+        )
+    )
+    if not math.isclose(decay, float(ema["derived_decay"]), rel_tol=0.0, abs_tol=1e-15):
+        raise ValueError("ticket EMA decay drifted from ema_decay_run_geometry_v1")
+    return {**ema, "derived_decay": decay, "law_ref": EMA_DECAY_LAW_REF}
+
+
+def _update_m1_ema_flat(
+    ema_flat: Mapping[str, Any],
+    live_flat: Mapping[str, Any],
+    *,
+    decay: float,
+) -> dict[str, Any]:
+    """Apply one real Polyak update while failing closed on tree drift."""
+
+    if not 0.0 <= decay < 1.0:
+        raise ValueError("EMA decay must be in [0,1)")
+    if set(ema_flat) != set(live_flat):
+        raise ValueError("M1 EMA parameter set drifted during training")
+    return {name: decay * ema_flat[name] + (1.0 - decay) * live_value for name, live_value in live_flat.items()}
+
+
+def _write_tail_average_npz(
+    member_paths: list[Path],
+    out_path: Path,
+    *,
+    selection_extra: Mapping[str, Any],
+) -> Path:
+    """Materialize a loadable simple-mean checkpoint from the exact member NPZs."""
+
+    if not member_paths:
+        raise ValueError("tail average requires at least one checkpoint")
+    loaded = [np.load(path, allow_pickle=False) for path in member_paths]
+    try:
+        keys = set(loaded[0].files)
+        if any(set(item.files) != keys for item in loaded[1:]):
+            raise ValueError("tail-average checkpoint key sets differ")
+        payload = {key: np.asarray(loaded[-1][key]) for key in loaded[-1].files}
+        for key in sorted(k for k in keys if k.startswith("param::")):
+            shapes = {tuple(item[key].shape) for item in loaded}
+            if len(shapes) != 1:
+                raise ValueError(f"tail-average parameter shape mismatch for {key}")
+            payload[key] = (
+                np.stack([np.asarray(item[key], dtype=np.float64) for item in loaded], axis=0)
+                .mean(axis=0)
+                .astype(loaded[-1][key].dtype, copy=False)
+            )
+        old_extra = {}
+        if "meta::extra_json" in payload:
+            old_extra = json.loads(bytes(payload["meta::extra_json"]).decode("utf-8"))
+        payload["meta::extra_json"] = np.frombuffer(
+            json.dumps(old_extra | dict(selection_extra), sort_keys=True).encode("utf-8"),
+            dtype=np.uint8,
+        )
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = out_path.with_suffix(out_path.suffix + ".tmp")
+        with tmp.open("wb") as handle:
+            np.savez(handle, **payload)
+        os.replace(tmp, out_path)
+        return out_path
+    finally:
+        for item in loaded:
+            item.close()
 
 
 def _utc_now_iso() -> str:
@@ -244,9 +426,8 @@ def _peak_candidate_gib(peak: Mapping[str, Any]) -> dict[str, float]:
         except (TypeError, ValueError):
             continue
     if "peak_mlx_active_gib" in candidates or "peak_mlx_cache_gib" in candidates:
-        candidates["peak_mlx_active_plus_cache_gib"] = (
-            candidates.get("peak_mlx_active_gib", 0.0)
-            + candidates.get("peak_mlx_cache_gib", 0.0)
+        candidates["peak_mlx_active_plus_cache_gib"] = candidates.get("peak_mlx_active_gib", 0.0) + candidates.get(
+            "peak_mlx_cache_gib", 0.0
         )
     return candidates
 
@@ -323,12 +504,14 @@ def _derive_receipt_safe_run_projection(
         ("memory_limits", guard._validate_memory_limits),
     ):
         ok, reason, detail = validator(receipt)
-        validation_checks.append({
-            "name": name,
-            "status": "passed" if ok else "failed",
-            "reason": reason,
-            "detail": detail,
-        })
+        validation_checks.append(
+            {
+                "name": name,
+                "status": "passed" if ok else "failed",
+                "reason": reason,
+                "detail": detail,
+            }
+        )
         if not ok:
             row = _sentinel_safe_run_projection(
                 argv_key=argv_key,
@@ -341,12 +524,14 @@ def _derive_receipt_safe_run_projection(
     fire_config = guard._parsed_fire_config(raw_argv)
     receipt_config = guard._receipt_config(receipt)
     ok, reason, detail = guard._validate_config_match(fire_config, receipt_config)
-    validation_checks.append({
-        "name": "config_match",
-        "status": "passed" if ok else "failed",
-        "reason": reason,
-        "detail": detail,
-    })
+    validation_checks.append(
+        {
+            "name": "config_match",
+            "status": "passed" if ok else "failed",
+            "reason": reason,
+            "detail": detail,
+        }
+    )
     if not ok:
         row = _sentinel_safe_run_projection(
             argv_key=argv_key,
@@ -579,9 +764,7 @@ class LoadPhaseMemoryProbe:
         self._software_budget_bytes = None if budget is None else int(budget)
         self._software_budget_required = bool(memory_limits.get("software_cap_required"))
         if self._software_budget_required and self._software_budget_bytes is None:
-            raise MemoryLimitConfigurationError(
-                "REFUSED gpu mode: software memory budget was not installed"
-            )
+            raise MemoryLimitConfigurationError("REFUSED gpu mode: software memory budget was not installed")
 
     def sample_and_check(
         self,
@@ -605,9 +788,7 @@ class LoadPhaseMemoryProbe:
         if self._start_rss_bytes is None:
             self._start_rss_bytes = rss_bytes
         if rss_bytes is None or self._start_rss_bytes is None:
-            raise MemoryLimitConfigurationError(
-                "REFUSED gpu mode: software budget cannot read process RSS"
-            )
+            raise MemoryLimitConfigurationError("REFUSED gpu mode: software budget cannot read process RSS")
         rss_delta = max(0, int(rss_bytes) - int(self._start_rss_bytes))
         mlx_active: int
         if mx is None:
@@ -842,13 +1023,18 @@ def _load_selected_token_arrays(
     gc.collect()
     if memory_probe is not None:
         memory_probe.sample_and_check("after_selected_cache_numpy_copy_and_torch_free")
-    return conditioning_np, target_np, {
-        "input": input_meta,
-        "target": target_meta,
-        "subset_before_materialize": "torch.load_index_clone_del_full_cache",
-        "cache_residency": cache_residency,
-        "full_cache_resident_tensor_count": len(retained),
-    }, retained
+    return (
+        conditioning_np,
+        target_np,
+        {
+            "input": input_meta,
+            "target": target_meta,
+            "subset_before_materialize": "torch.load_index_clone_del_full_cache",
+            "cache_residency": cache_residency,
+            "full_cache_resident_tensor_count": len(retained),
+        },
+        retained,
+    )
 
 
 def run_torch_smoke(args: argparse.Namespace) -> dict[str, Any]:
@@ -890,9 +1076,7 @@ def run_torch_smoke(args: argparse.Namespace) -> dict[str, Any]:
         segnet = FastTokenSegProxy().eval().to(device)
         scorer_axis = "[proxy smoke no scorer authority]"
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=0.0)
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-        optimizer, T_max=max(args.steps, 1), eta_min=args.lr * 0.01
-    )
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=max(args.steps, 1), eta_min=args.lr * 0.01)
     history: list[dict[str, Any]] = []
     start_time = time.time()
     for step in range(args.steps):
@@ -1018,27 +1202,16 @@ def _load_mlx_npz_checkpoint_for_torch(
             raise ValueError(f"MLX checkpoint missing metadata fields: {missing_meta}")
         config = _json_from_uint8_array(payload["meta::config_json"])
         history = _json_from_uint8_array(payload["meta::history_json"])
-        extra = (
-            _json_from_uint8_array(payload["meta::extra_json"])
-            if "meta::extra_json" in files
-            else {}
-        )
+        extra = _json_from_uint8_array(payload["meta::extra_json"]) if "meta::extra_json" in files else {}
         step = int(np.asarray(payload["meta::step"]).reshape(-1)[0])
         expected_model = _new_torch_renderer_from_config(lifted, config)
         expected_state = expected_model.state_dict()
-        present_names = {
-            key.removeprefix("param::")
-            for key in files
-            if key.startswith("param::")
-        }
+        present_names = {key.removeprefix("param::") for key in files if key.startswith("param::")}
         expected_names = set(expected_state)
         missing = sorted(expected_names - present_names)
         unexpected = sorted(present_names - expected_names)
         if missing or unexpected:
-            raise ValueError(
-                "MLX checkpoint parameter set mismatch; "
-                f"missing={missing}; unexpected={unexpected}"
-            )
+            raise ValueError(f"MLX checkpoint parameter set mismatch; missing={missing}; unexpected={unexpected}")
         state_dict = {
             name: _torch_tensor_from_mlx_param(
                 name,
@@ -1067,9 +1240,7 @@ def _load_torch_or_mlx_checkpoint_for_verdict(
         return _load_mlx_npz_checkpoint_for_torch(path, lifted=lifted)
     checkpoint = torch.load(path, map_location="cpu", weights_only=False)
     if "config" not in checkpoint or "state_dict" not in checkpoint:
-        raise ValueError(
-            "torch verdict checkpoint must contain config and state_dict"
-        )
+        raise ValueError("torch verdict checkpoint must contain config and state_dict")
     history = list(checkpoint.get("history", []))
     step = int(checkpoint.get("step") or (history[-1]["step"] if history else 0))
     meta = {
@@ -1101,9 +1272,7 @@ def _history_row_at_step(history: list[dict[str, Any]], step: int) -> dict[str, 
     for row in reversed(history):
         if int(row.get("step", -1)) == int(step):
             if "d_seg_batch" not in row:
-                raise ValueError(
-                    f"checkpoint history row at step {step} lacks d_seg_batch"
-                )
+                raise ValueError(f"checkpoint history row at step {step} lacks d_seg_batch")
             return dict(row)
     raise ValueError(f"checkpoint history has no row for step {step}")
 
@@ -1213,9 +1382,7 @@ def _finalize_class_accumulators(accum: dict[str, np.ndarray]) -> dict[str, Any]
                 "gt_mispredicted_rate": None if gt_sites == 0 else gt_mispredicted / gt_sites,
                 "pred_sites": pred_sites,
                 "pred_false_positive": pred_false_positive,
-                "pred_false_positive_rate": None
-                if pred_sites == 0
-                else pred_false_positive / pred_sites,
+                "pred_false_positive_rate": None if pred_sites == 0 else pred_false_positive / pred_sites,
             }
         )
     directed = []
@@ -1233,8 +1400,7 @@ def _finalize_class_accumulators(accum: dict[str, np.ndarray]) -> dict[str, Any]
             )
     return {
         "class_order": [
-            {"class_id": class_id, "class_name": class_name}
-            for class_id, class_name in enumerate(SEG_CLASS_NAMES)
+            {"class_id": class_id, "class_name": class_name} for class_id, class_name in enumerate(SEG_CLASS_NAMES)
         ],
         "class_order_provenance": "CLAUDE.md canonical comma10k order; no luma-sort",
         "per_class_d_seg": per_class,
@@ -1480,11 +1646,7 @@ def _hist_fraction(row: Mapping[str, Any], hist_key: str, ranges: set[str]) -> f
     if not isinstance(hist, Mapping) or not hist.get("total"):
         return None
     total = int(hist["total"])
-    count = sum(
-        int(bucket.get("count", 0))
-        for bucket in hist.get("bins", [])
-        if bucket.get("range") in ranges
-    )
+    count = sum(int(bucket.get("count", 0)) for bucket in hist.get("bins", []) if bucket.get("range") in ranges)
     return count / total
 
 
@@ -1495,7 +1657,7 @@ def _top_pairs(row: Mapping[str, Any], limit: int = 5) -> list[dict[str, Any]]:
 
 
 def _top_class_residuals(row: Mapping[str, Any]) -> dict[str, Any]:
-    facets = ((row.get("class_facets") or {}).get("per_class_d_seg") or [])
+    facets = (row.get("class_facets") or {}).get("per_class_d_seg") or []
     gt_sorted = sorted(facets, key=lambda item: int(item.get("gt_mispredicted", 0)), reverse=True)
     fp_sorted = sorted(facets, key=lambda item: int(item.get("pred_false_positive", 0)), reverse=True)
     return {
@@ -1520,9 +1682,7 @@ def _mx1t_iteration_verdict(
         for row in checkpoint_rows[1:]
         if row["flip_set_churn_vs_previous"].get("ratio_vs_current_mismatch") is not None
     ]
-    tail_winners = [
-        row for row in tail_rows if row.get("tail_average", {}).get("delta_vs_final_d_seg", 0.0) < 0.0
-    ]
+    tail_winners = [row for row in tail_rows if row.get("tail_average", {}).get("delta_vs_final_d_seg", 0.0) < 0.0]
     if first_near is not None and last_near is not None and last_near > first_near:
         margin_verdict = "near_flip_fraction_rising"
     elif first_far is not None and last_far is not None and last_far >= first_far:
@@ -1637,13 +1797,15 @@ def _mx1t_findings_markdown(result: Mapping[str, Any]) -> str:
                 churn="n/a" if churn is None else f"{float(churn):.6f}",
             )
         )
-    lines.extend([
-        "",
-        "## Tail Average A/B",
-        "",
-        "| row | d_seg | delta vs final | verdict |",
-        "|---|---:|---:|---|",
-    ])
+    lines.extend(
+        [
+            "",
+            "## Tail Average A/B",
+            "",
+            "| row | d_seg | delta vs final | verdict |",
+            "|---|---:|---:|---|",
+        ]
+    )
     final_dseg = float(latest["aggregate_d_seg"])
     lines.append(f"| final step {latest['checkpoint']['step']} | {final_dseg:.12f} | 0 | baseline |")
     for row in tail_rows:
@@ -1653,41 +1815,43 @@ def _mx1t_findings_markdown(result: Mapping[str, Any]) -> str:
             f"| avg-K={ta['k']} | {float(row['aggregate_d_seg']):.12f} | {delta:.12f} | "
             f"{'wins' if delta < 0 else 'loses'} |"
         )
-    lines.extend([
-        "",
-        "## Iteration Verdict",
-        "",
-        "| question | answer | measurement basis |",
-        "|---|---|---|",
-        f"| near-flip vs stuck | {verdict['margin_verdict']} | mismatch <=0.1 fraction {verdict['first_mismatch_near_fraction_le_0p1']} -> {verdict['last_mismatch_near_fraction_le_0p1']}; >0.5 fraction {verdict['first_mismatch_far_fraction_gt_0p5']} -> {verdict['last_mismatch_far_fraction_gt_0p5']} |",
-        f"| residual owner classes | {verdict['residual_classes_latest']} | latest checkpoint per-class GT-mispredicted and predicted false-positive counts |",
-        f"| residual owner pairs | {verdict['residual_pairs_latest_top5']} | latest checkpoint per-pair d_seg vector |",
-        f"| churn regime | {verdict['churn_verdict']} | median churn/current {verdict['median_churn_ratio_vs_current_mismatch']} |",
-        f"| tail-average verdict | {verdict['tail_average_verdict']} | best K {verdict['best_tail_average_k']}, delta {verdict['best_tail_average_delta_vs_final_d_seg']} |",
-        f"| recommended next-config delta | {verdict['recommended_next_config_delta']} | {verdict['recommended_next_config_delta_basis']} |",
-        "",
-        "## RECALL EVIDENCE",
-        "",
-        "| scope | query / source | found beyond charter seeds | changed plan |",
-        "|---|---|---|---|",
-    ])
+    lines.extend(
+        [
+            "",
+            "## Iteration Verdict",
+            "",
+            "| question | answer | measurement basis |",
+            "|---|---|---|",
+            f"| near-flip vs stuck | {verdict['margin_verdict']} | mismatch <=0.1 fraction {verdict['first_mismatch_near_fraction_le_0p1']} -> {verdict['last_mismatch_near_fraction_le_0p1']}; >0.5 fraction {verdict['first_mismatch_far_fraction_gt_0p5']} -> {verdict['last_mismatch_far_fraction_gt_0p5']} |",
+            f"| residual owner classes | {verdict['residual_classes_latest']} | latest checkpoint per-class GT-mispredicted and predicted false-positive counts |",
+            f"| residual owner pairs | {verdict['residual_pairs_latest_top5']} | latest checkpoint per-pair d_seg vector |",
+            f"| churn regime | {verdict['churn_verdict']} | median churn/current {verdict['median_churn_ratio_vs_current_mismatch']} |",
+            f"| tail-average verdict | {verdict['tail_average_verdict']} | best K {verdict['best_tail_average_k']}, delta {verdict['best_tail_average_delta_vs_final_d_seg']} |",
+            f"| recommended next-config delta | {verdict['recommended_next_config_delta']} | {verdict['recommended_next_config_delta_basis']} |",
+            "",
+            "## RECALL EVIDENCE",
+            "",
+            "| scope | query / source | found beyond charter seeds | changed plan |",
+            "|---|---|---|---|",
+        ]
+    )
     for row in result["recall_evidence"]:
-        lines.append(
-            f"| {row['scope']} | `{row['query']}` | {row['found']} | {row['changed_plan']} |"
-        )
-    lines.extend([
-        "",
-        "## Boundaries",
-        "",
-        "- Axis: [macOS-CPU advisory torch upstream SegNet].",
-        "- Scope: n32 ARM-CAP checkpoint-series instrument only.",
-        "- No Metal, MLX training, n600 scorer job, archive build, remote dispatch, or `upstream/evaluate.py` run.",
-        "- Live run directory was copied from before reading and otherwise kept read-only.",
-        "- Score claim is false; this is not a contest-CPU or contest-CUDA row.",
-        "",
-        "Own-vehicle frontier remains `S = 0.7534578126155775 @ 357,837 B [macOS-CPU advisory]`; contest pointer remains borrowed/unmoved.",
-        "",
-    ])
+        lines.append(f"| {row['scope']} | `{row['query']}` | {row['found']} | {row['changed_plan']} |")
+    lines.extend(
+        [
+            "",
+            "## Boundaries",
+            "",
+            "- Axis: [macOS-CPU advisory torch upstream SegNet].",
+            "- Scope: n32 ARM-CAP checkpoint-series instrument only.",
+            "- No Metal, MLX training, n600 scorer job, archive build, remote dispatch, or `upstream/evaluate.py` run.",
+            "- Live run directory was copied from before reading and otherwise kept read-only.",
+            "- Score claim is false; this is not a contest-CPU or contest-CUDA row.",
+            "",
+            "Own-vehicle frontier remains `S = 0.7534578126155775 @ 357,837 B [macOS-CPU advisory]`; contest pointer remains borrowed/unmoved.",
+            "",
+        ]
+    )
     return "\n".join(lines)
 
 
@@ -2038,9 +2202,7 @@ def run_torch_verdict(args: argparse.Namespace) -> dict[str, Any]:
             "mlx_in_training_d_seg_batch": proxy_dseg,
             "mlx_history_row": comparison_row,
             "authority_minus_mlx_proxy_d_seg": aggregate_dseg - proxy_dseg,
-            "authority_over_mlx_proxy_d_seg": aggregate_dseg / proxy_dseg
-            if proxy_dseg
-            else None,
+            "authority_over_mlx_proxy_d_seg": aggregate_dseg / proxy_dseg if proxy_dseg else None,
             "fp1_flat_paint_floor_d_seg": FP1_FLAT_PAINT_FLOOR_D_SEG,
             "authority_minus_fp1_floor_d_seg": aggregate_dseg - FP1_FLAT_PAINT_FLOOR_D_SEG,
             "authority_over_fp1_floor_d_seg": aggregate_dseg / FP1_FLAT_PAINT_FLOOR_D_SEG,
@@ -2230,9 +2392,7 @@ def run_mlx_parity(args: argparse.Namespace) -> dict[str, Any]:
     torch_model = _build_torch_renderer(lifted, checkpoint)
     config = MlxSemanticConfig.from_pr130_checkpoint_config(checkpoint["config"])
     mlx_model = make_mlx_renderer(config, device=args.device)
-    load_torch_state_dict_into_mlx(
-        mlx_model, checkpoint["state_dict"], device=args.device
-    )
+    load_torch_state_dict_into_mlx(mlx_model, checkpoint["state_dict"], device=args.device)
 
     pair_ids = _select_stratified_indices(args.pairs, seed=args.seed)
     idx_torch = torch.tensor(pair_ids, dtype=torch.long)
@@ -2249,9 +2409,7 @@ def run_mlx_parity(args: argparse.Namespace) -> dict[str, Any]:
 
     with torch.no_grad():
         torch_frame = torch_model(conditioning_torch, idx_torch)
-        torch_frame_r = lifted.render_for_seg(
-            torch_model, conditioning_torch, idx_torch, exact_path=True
-        )
+        torch_frame_r = lifted.render_for_seg(torch_model, conditioning_torch, idx_torch, exact_path=True)
         segnet_torch = _load_upstream_segnet(torch.device("cpu"))
         torch_logits = segnet_torch(torch_frame_r)
         torch_loss, torch_phase = lifted.curriculum_loss(
@@ -2267,9 +2425,7 @@ def run_mlx_parity(args: argparse.Namespace) -> dict[str, Any]:
     target_mlx = mx.array(target_torch.numpy().astype(np.int32, copy=False))
     idx_mlx = mx.array(np.asarray(pair_ids, dtype=np.int32))
     mlx_frame = mlx_model(conditioning_mlx, idx_mlx)
-    mlx_frame_r = apply_contest_faithful_roundtrip_nhwc(
-        mlx_frame, output_hw=(384, 512), ste_round=True
-    )
+    mlx_frame_r = apply_contest_faithful_roundtrip_nhwc(mlx_frame, output_hw=(384, 512), ste_round=True)
     segnet_mlx = torch_segnet_to_mlx(segnet_torch)
     mlx_logits_nhwc = segnet_mlx(mlx_frame_r)
     mlx_logits_nchw = mx.transpose(mlx_logits_nhwc, (0, 3, 1, 2))
@@ -2379,9 +2535,8 @@ def _call_mlx_limit_with_signature(
     try:
         sig = inspect.signature(obj)
         signature_text = str(sig)
-        relaxed_supported = (
-            "relaxed" in sig.parameters
-            or any(param.kind == inspect.Parameter.VAR_KEYWORD for param in sig.parameters.values())
+        relaxed_supported = "relaxed" in sig.parameters or any(
+            param.kind == inspect.Parameter.VAR_KEYWORD for param in sig.parameters.values()
         )
     except (TypeError, ValueError):
         relaxed_supported = None
@@ -2559,9 +2714,7 @@ def _configure_mlx_memory_limits(
     ]
     software_cap_installed = memory_limit > 0
     if software_cap_required and not software_cap_installed:
-        raise MemoryLimitConfigurationError(
-            "REFUSED gpu mode: software memory budget was not installed"
-        )
+        raise MemoryLimitConfigurationError("REFUSED gpu mode: software memory budget was not installed")
     return {
         **derived,
         "enforcement": "software_stage_step_cap",
@@ -2672,10 +2825,7 @@ def _iter_pair_chunks(total_pairs: int, microbatch_pairs: int) -> list[tuple[int
         raise ValueError("total_pairs must be positive")
     if microbatch_pairs <= 0:
         raise ValueError("microbatch_pairs must be positive")
-    return [
-        (start, min(start + microbatch_pairs, total_pairs))
-        for start in range(0, total_pairs, microbatch_pairs)
-    ]
+    return [(start, min(start + microbatch_pairs, total_pairs)) for start in range(0, total_pairs, microbatch_pairs)]
 
 
 def _mlx_token_chunk(
@@ -2700,10 +2850,7 @@ def _tree_add_scaled(
     update: Mapping[str, Any],
     scale: float,
 ) -> Mapping[str, Any]:
-    scaled = [
-        (name, value * scale if hasattr(value, "shape") else value)
-        for name, value in tree_flatten(update)
-    ]
+    scaled = [(name, value * scale if hasattr(value, "shape") else value) for name, value in tree_flatten(update)]
     if accum is None:
         return tree_unflatten(scaled)
     accum_flat = tree_flatten(accum)
@@ -2763,29 +2910,61 @@ def run_mlx_train(
     mem_probe_mode = getattr(args, "mode", "") == "mem-probe"
     thread_pin = _apply_perf_thread_pin(getattr(args, "perf_thread_pin", "off"))
     budget_plan = _derive_mem_budget_gb(args.mem_budget_gb, mem_probe=mem_probe_mode)
-    probe.install_software_budget({
-        **budget_plan,
-        "software_cap_required": str(args.device).lower() == "gpu",
-        "software_budget_bytes": None
-        if budget_plan["budget_gb"] is None
-        else int(float(budget_plan["budget_gb"]) * GIB),
-    })
+    probe.install_software_budget(
+        {
+            **budget_plan,
+            "software_cap_required": str(args.device).lower() == "gpu",
+            "software_budget_bytes": None
+            if budget_plan["budget_gb"] is None
+            else int(float(budget_plan["budget_gb"]) * GIB),
+        }
+    )
     probe.sample_and_check("start")
     torch.manual_seed(args.seed)
     np.random.seed(args.seed)
     pair_ids = _select_stratified_indices(args.pairs, seed=args.seed)
+    controller_policy = _load_m1_executor_policy(args) if not mem_probe_mode else None
+    schedule_horizon_steps = int(args.steps)
+    ema_policy: dict[str, Any] | None = None
+    if controller_policy is not None:
+        executor = controller_policy["executor"]
+        predicate = controller_policy["predicate"]
+        if int(args.pairs) != int(predicate["N"]):
+            raise ValueError("M1 controller ticket N does not match --pairs")
+        if int(args.eval_every) != int(predicate["eval_every_steps"]):
+            raise ValueError("M1 controller ticket eval cadence does not match --eval-every")
+        if int(args.checkpoint_every) != int(predicate["checkpoint_every_steps"]):
+            raise ValueError("M1 controller ticket checkpoint cadence does not match --checkpoint-every")
+        schedule_horizon_steps = int(executor["schedule"]["horizon_steps"])
+        ema_policy = _derive_m1_ema_policy(controller_policy)
+        if args.resume_from is not None:
+            selection_path = Path(executor["schedule"]["selection_receipt_path"])
+            if not selection_path.exists():
+                raise ValueError(
+                    f"M1 resume requires the same-object CPU schedule selection receipt at {selection_path}"
+                )
+            selection = json.loads(selection_path.read_text(encoding="utf-8"))
+            if (
+                selection.get("schema") != M1_SCHEDULE_SELECTION_SCHEMA
+                or selection.get("status") != "passed"
+                or selection.get("selected_schedule") != "monotone_clamped_cosine"
+            ):
+                raise ValueError("M1 schedule selection receipt did not admit resume")
     probe.sample_and_check("before_init_checkpoint_torch_load")
     checkpoint = torch.load(args.init, map_location="cpu", weights_only=False)
     probe.sample_and_check("after_init_checkpoint_torch_load")
     config = MlxSemanticConfig.from_pr130_checkpoint_config(checkpoint["config"])
     config = MlxSemanticConfig(
-        **(config.asdict() | {
-            "bits": args.bits,
-            "lr": args.lr,
-            "steps": args.steps,
-            "ce_fraction": args.ce_fraction,
-            "softplus_fraction": args.softplus_fraction,
-        })
+        **(
+            config.asdict()
+            | {
+                "bits": args.bits,
+                "lr": args.lr,
+                "steps": schedule_horizon_steps,
+                "ce_fraction": args.ce_fraction,
+                "softplus_fraction": args.softplus_fraction,
+            }
+        )
     )
     conditioning_np, target_np, cache_meta, resident_cache_handles = _load_selected_token_arrays(
         input_cache=args.input_cache,
@@ -2836,13 +3015,13 @@ def run_mlx_train(
     _mx_eval_setup_barrier(mx, probe, "after_model_init", model.parameters())
     start_step = 0
     history: list[dict[str, Any]] = []
+    resume_extra: dict[str, Any] = {}
     if args.resume_from is not None:
-        resume = load_stage_checkpoint_npz(
-            args.resume_from, model=model, optimizer=optimizer, mx=mx
-        )
+        resume = load_stage_checkpoint_npz(args.resume_from, model=model, optimizer=optimizer, mx=mx)
         start_step = int(resume["step"])
         history = list(resume["history"])
-        resume_pair_ids = (resume.get("extra") or {}).get("pair_ids")
+        resume_extra = dict(resume.get("extra") or {})
+        resume_pair_ids = resume_extra.get("pair_ids")
         if resume_pair_ids is not None and [int(item) for item in resume_pair_ids] != pair_ids:
             raise ValueError(
                 "resume checkpoint pair_ids do not match requested --pairs/--seed; "
@@ -2854,15 +3033,34 @@ def run_mlx_train(
         probe.sample_and_check("after_resume_load_and_init_checkpoint_free", mx=mx)
     else:
         state_dict = checkpoint["state_dict"]
-        load_torch_state_dict_into_mlx(
-            model, state_dict, device=args.device
-        )
+        load_torch_state_dict_into_mlx(model, state_dict, device=args.device)
         _mx_eval_setup_barrier(mx, probe, "after_model_weight_mlx_conversion", model.parameters())
         del state_dict
         del checkpoint
         gc.collect()
         _clear_mlx_cache(mx)
         probe.sample_and_check("after_torch_checkpoint_free", mx=mx)
+
+    ema_flat: dict[str, Any] = {}
+    if ema_policy is not None:
+        live_flat = dict(tree_flatten(model.trainable_parameters()))
+        if args.resume_from is None:
+            ema_flat = {name: mx.array(value) for name, value in live_flat.items()}
+        else:
+            ema_checkpoint = resume_extra.get("ema_checkpoint")
+            if not ema_checkpoint:
+                raise ValueError("M1 resume checkpoint lacks required ema_checkpoint custody")
+            with np.load(Path(ema_checkpoint), allow_pickle=False) as ema_payload:
+                ema_flat = {
+                    key.removeprefix("param::"): mx.array(ema_payload[key])
+                    for key in ema_payload.files
+                    if key.startswith("param::")
+                }
+            if set(ema_flat) != set(live_flat):
+                raise ValueError("M1 EMA checkpoint parameter set differs from live checkpoint")
+            for name, live_value in live_flat.items():
+                if tuple(ema_flat[name].shape) != tuple(live_value.shape):
+                    raise ValueError(f"M1 EMA shape mismatch for {name}")
 
     total_pairs = len(pair_ids)
     chunk_plan = {
@@ -2936,14 +3134,196 @@ def run_mlx_train(
             mx.eval(*cached_chunk)
         probe.sample_and_check("after_microbatch_chunk_cache_materialize", mx=mx)
 
-    def cosine_lr(step: int) -> float:
-        progress = step / max(args.steps - 1, 1)
-        return args.lr * (0.01 + 0.5 * (1.0 - 0.01) * (1.0 + math.cos(math.pi * progress)))
+    journal_path: Path | None = None
+    decision_path: Path | None = None
+    terminal_receipt_path: Path | None = None
+    if controller_policy is not None:
+        executor = controller_policy["executor"]
+        journal_path = Path(executor["journal_path"])
+        decision_path = Path(executor["decision_path"])
+        terminal_receipt_path = Path(executor["terminal_receipt_paths_by_key"][controller_policy["argv_key"]])
+        if args.resume_from is None and journal_path.exists():
+            raise ValueError(f"fresh M1 fire refuses an existing append-only journal: {journal_path}")
+        if args.resume_from is None and any(args.run_dir.glob("mlx_stage_step??????.npz")):
+            raise ValueError(f"fresh M1 fire refuses existing stage checkpoints under sacred run dir {args.run_dir}")
+        if args.resume_from is not None and not journal_path.exists():
+            raise ValueError("M1 resume requires the prior durable eval journal")
+        _append_jsonl_durable(
+            journal_path,
+            {
+                "schema": M1_EVAL_JOURNAL_SCHEMA,
+                "row_kind": "segment_start",
+                "segment_id": _ticket_attempt_id(),
+                "resume_step": start_step,
+                "resume_from": None if args.resume_from is None else str(args.resume_from),
+                "generated_utc": _utc_now_iso(),
+            },
+        )
+
+    def evaluate_current_dseg(eval_step: int) -> float:
+        if microbatch_pairs >= total_pairs:
+            assert conditioning is not None and target is not None and pair_idx is not None
+            frame = model(conditioning, pair_idx)
+            frame_r = apply_contest_faithful_roundtrip_nhwc(frame, output_hw=(384, 512), ste_round=True)
+            logits = segnet_mlx(frame_r)
+            pred = mx.argmax(logits, axis=-1)
+            dseg_value = mx.mean((pred != target).astype(mx.float32))
+            mx.eval(dseg_value)
+            probe.check_budget(f"after_eval_step_{eval_step:06d}", mx=mx)
+            return float(dseg_value)
+        mismatch_count = 0.0
+        pixel_count = 0
+        for chunk_index, (start, stop) in enumerate(
+            _iter_pair_chunks(total_pairs, microbatch_pairs),
+            start=1,
+        ):
+            conditioning_chunk, target_chunk, pair_idx_chunk = _mlx_token_chunk(
+                mx,
+                conditioning_np,
+                target_np,
+                pair_ids,
+                start,
+                stop,
+            )
+            frame = model(conditioning_chunk, pair_idx_chunk)
+            frame_r = apply_contest_faithful_roundtrip_nhwc(frame, output_hw=(384, 512), ste_round=True)
+            logits = segnet_mlx(frame_r)
+            pred = mx.argmax(logits, axis=-1)
+            mismatch = mx.sum((pred != target_chunk).astype(mx.float32))
+            mx.eval(mismatch)
+            probe.check_budget(
+                f"after_eval_step_{eval_step:06d}_chunk_{chunk_index:03d}",
+                mx=mx,
+            )
+            mismatch_count += float(mismatch)
+            pixel_count += int(stop - start) * int(target_np.shape[-2]) * int(target_np.shape[-1])
+            del conditioning_chunk, target_chunk, pair_idx_chunk, frame, frame_r, logits, pred, mismatch
+            gc.collect()
+            _clear_mlx_cache(mx)
+        return mismatch_count / max(pixel_count, 1)
+
+    def checkpoint_extra(ema_path: Path | None, tail_path: Path | None) -> dict[str, Any]:
+        return {
+            "pair_ids": pair_ids,
+            "score_claim": False,
+            "axis": "[macOS-MLX research-signal]",
+            "source_repo_head": SOURCE_REPO_HEAD,
+            "throughput_flags": {
+                "train_compute_dtype": str(getattr(args, "train_compute_dtype", "fp32")),
+                "compile_train_loss": compile_train_loss,
+                "perf_thread_pin": str(getattr(args, "perf_thread_pin", "off")),
+                "microbatch_policy": str(getattr(args, "microbatch_policy", "auto")),
+                "cache_residency": str(getattr(args, "cache_residency", "selected")),
+                "microbatch_hygiene": str(getattr(args, "microbatch_hygiene", "per-chunk")),
+                "microbatch_chunk_cache": bool(getattr(args, "microbatch_chunk_cache", False)),
+            },
+            "schedule": {
+                "base_lr": float(args.lr),
+                "base_lr_status": "BORROWED_CANDIDATE_NOT_ADOPTED",
+                "horizon_steps": schedule_horizon_steps,
+                "extension_rule": "hold terminal cosine value; never recompute horizon",
+            },
+            "ema_checkpoint": None if ema_path is None else str(ema_path),
+            "tail_average_checkpoint": None if tail_path is None else str(tail_path),
+            "selection_status": "QUEUED_SAME_OBJECT_CPU_FACETS",
+        }
+
+    def save_checkpoint_bundle(checkpoint_step: int) -> tuple[Path, Path | None, Path | None]:
+        nonlocal last_stage_path
+        live_path = args.run_dir / f"mlx_stage_step{checkpoint_step:06d}.npz"
+        ema_path = args.run_dir / f"mlx_ema_step{checkpoint_step:06d}.npz" if ema_policy is not None else None
+        member_paths = sorted(args.run_dir.glob("mlx_stage_step??????.npz"))
+        anticipated_members = [*member_paths, live_path]
+        tail_k = 0 if ema_policy is None else int(ema_policy["tail_average_k"])
+        tail_path = (
+            args.run_dir / f"mlx_tail_average_k{tail_k}_step{checkpoint_step:06d}.npz"
+            if tail_k > 0 and len(anticipated_members) >= tail_k
+            else None
+        )
+        extra = checkpoint_extra(ema_path, tail_path)
+        save_stage_checkpoint_npz(
+            live_path,
+            model=model,
+            config=config,
+            step=checkpoint_step,
+            history=history,
+            optimizer_state=optimizer.state,
+            extra=extra,
+        )
+        save_stage_checkpoint_npz(
+            args.run_dir / "mlx.latest.npz",
+            model=model,
+            config=config,
+            step=checkpoint_step,
+            history=history,
+            optimizer_state=optimizer.state,
+            extra=extra,
+        )
+        if ema_path is not None:
+            live_weights = list(tree_flatten(model.parameters()))
+            model.load_weights(list(ema_flat.items()), strict=False)
+            mx.eval(model.parameters())
+            save_stage_checkpoint_npz(
+                ema_path,
+                model=model,
+                config=config,
+                step=checkpoint_step,
+                history=history,
+                optimizer_state=None,
+                extra=extra
+                | {
+                    "parameter_basis": "ema_shadow",
+                    "ema_law_ref": EMA_DECAY_LAW_REF,
+                    "ema_decay": float(ema_policy["derived_decay"]),
+                },
+            )
+            save_stage_checkpoint_npz(
+                args.run_dir / "mlx.ema.latest.npz",
+                model=model,
+                config=config,
+                step=checkpoint_step,
+                history=history,
+                optimizer_state=None,
+                extra=extra
+                | {
+                    "parameter_basis": "ema_shadow",
+                    "ema_law_ref": EMA_DECAY_LAW_REF,
+                    "ema_decay": float(ema_policy["derived_decay"]),
+                },
+            )
+            model.load_weights(live_weights, strict=False)
+            mx.eval(model.parameters())
+        if tail_path is not None:
+            _write_tail_average_npz(
+                anticipated_members[-tail_k:],
+                tail_path,
+                selection_extra={
+                    "parameter_basis": "tail_average",
+                    "tail_average_k": tail_k,
+                    "tail_average_member_paths": [str(path) for path in anticipated_members[-tail_k:]],
+                    "selection_status": "QUEUED_SAME_OBJECT_CPU_FACETS",
+                },
+            )
+        last_stage_path = live_path
+        return live_path, ema_path, tail_path
+
+    if controller_policy is not None and start_step == 0:
+        initial_dseg = evaluate_current_dseg(0)
+        history.append(
+            {
+                "step": 0,
+                "phase": "initial",
+                "loss": None,
+                "lr": float(args.lr),
+                "d_seg_batch": initial_dseg,
+            }
+        )
+        save_checkpoint_bundle(0)
 
     for step in range(start_step, args.steps):
-        optimizer.learning_rate = cosine_lr(step)
+        optimizer.learning_rate = _m1_cosine_lr(args.lr, step, schedule_horizon_steps)
         base_params = model.trainable_parameters()
-        step_for_loss = step
+        step_for_loss = min(step, schedule_horizon_steps - 1)
 
         def loss_for_batch(
             params: Mapping[str, Any],
@@ -2973,9 +3353,7 @@ def run_mlx_train(
             )
             model.update(active_params)
             frame = model(conditioning_batch, pair_idx_batch)
-            frame_r = apply_contest_faithful_roundtrip_nhwc(
-                frame, output_hw=(384, 512), ste_round=True
-            )
+            frame_r = apply_contest_faithful_roundtrip_nhwc(frame, output_hw=(384, 512), ste_round=True)
             logits_nhwc = segnet_mlx(frame_r)
             logits_nchw = mx.transpose(logits_nhwc, (0, 3, 1, 2))
             loss, phase = curriculum_loss_mlx(
@@ -2983,7 +3361,7 @@ def run_mlx_train(
                 logits_nchw,
                 target_batch,
                 step=max(0, step_for_loss - args.float_warmup_steps),
-                total_steps=max(1, args.steps - args.float_warmup_steps),
+                total_steps=max(1, schedule_horizon_steps - args.float_warmup_steps),
                 ce_fraction=args.ce_fraction,
                 softplus_fraction=args.softplus_fraction,
             )
@@ -3072,6 +3450,11 @@ def run_mlx_train(
         model.update(base_params)
         model.update(optimizer.apply_gradients(grads, base_params))
         mx.eval(value, model.parameters(), optimizer.state)
+        if ema_policy is not None:
+            decay = float(ema_policy["derived_decay"])
+            live_after_step = dict(tree_flatten(model.trainable_parameters()))
+            ema_flat = _update_m1_ema_flat(ema_flat, live_after_step, decay=decay)
+            mx.eval(*ema_flat.values())
         if microbatch_hygiene == "per-step" and microbatch_pairs < total_pairs:
             gc.collect()
             _clear_mlx_cache(mx)
@@ -3087,106 +3470,147 @@ def run_mlx_train(
             # old first-step-only condition never emitted the required final-stage sample
             # (after_train_step_{steps}) that metal_fire_clearance demands.
             probe.sample(f"after_train_step_{step + 1:06d}", mx=mx)
+        controller_should_halt = False
+        controller_decision_payload: dict[str, Any] | None = None
         if (step + 1) % max(args.eval_every, 1) == 0 or step + 1 == args.steps:
-            if microbatch_pairs >= total_pairs:
-                assert conditioning is not None and target is not None and pair_idx is not None
-                frame = model(conditioning, pair_idx)
-                frame_r = apply_contest_faithful_roundtrip_nhwc(
-                    frame, output_hw=(384, 512), ste_round=True
-                )
-                logits = segnet_mlx(frame_r)
-                pred = mx.argmax(logits, axis=-1)
-                dseg = mx.mean((pred != target).astype(mx.float32))
-                mx.eval(dseg)
-                probe.check_budget(f"after_eval_step_{step + 1:06d}", mx=mx)
-                record["d_seg_batch"] = float(dseg)
-            else:
-                mismatch_count = 0.0
-                pixel_count = 0
-                for chunk_index, (start, stop) in enumerate(
-                    _iter_pair_chunks(total_pairs, microbatch_pairs),
-                    start=1,
-                ):
-                    conditioning_chunk, target_chunk, pair_idx_chunk = _mlx_token_chunk(
-                        mx,
-                        conditioning_np,
-                        target_np,
-                        pair_ids,
-                        start,
-                        stop,
-                    )
-                    frame = model(conditioning_chunk, pair_idx_chunk)
-                    frame_r = apply_contest_faithful_roundtrip_nhwc(
-                        frame, output_hw=(384, 512), ste_round=True
-                    )
-                    logits = segnet_mlx(frame_r)
-                    pred = mx.argmax(logits, axis=-1)
-                    mismatch = mx.sum((pred != target_chunk).astype(mx.float32))
-                    mx.eval(mismatch)
-                    probe.check_budget(
-                        f"after_eval_step_{step + 1:06d}_chunk_{chunk_index:03d}",
-                        mx=mx,
-                    )
-                    mismatch_count += float(mismatch)
-                    pixel_count += int(stop - start) * int(target_np.shape[-2]) * int(target_np.shape[-1])
-                    del conditioning_chunk, target_chunk, pair_idx_chunk, frame, frame_r, logits, pred, mismatch
-                    gc.collect()
-                    _clear_mlx_cache(mx)
-                record["d_seg_batch"] = mismatch_count / max(pixel_count, 1)
+            record["d_seg_batch"] = evaluate_current_dseg(step + 1)
             if args.steps <= 3:
                 probe.sample(f"after_eval_step_{step + 1:06d}", mx=mx)
+            if controller_policy is not None:
+                assert journal_path is not None and decision_path is not None
+                active_before = _read_active_m1_eval_rows(journal_path)
+                prior_best = min(
+                    (float(row["d_seg_batch_mlx"]) for row in active_before),
+                    default=float(record["d_seg_batch"]),
+                )
+                checkpoint_path = last_stage_path
+                journal_row = {
+                    "schema": M1_EVAL_JOURNAL_SCHEMA,
+                    "row_kind": "eval",
+                    "segment_id": None,
+                    "step": step + 1,
+                    "objective_S": 100.0 * float(record["d_seg_batch"]),
+                    "d_seg_batch_mlx": float(record["d_seg_batch"]),
+                    "best_d_seg_batch_mlx": min(prior_best, float(record["d_seg_batch"])),
+                    "loss": float(record["loss"]),
+                    "lr": float(record["lr"]),
+                    "wall_seconds": time.time() - start_time,
+                    "weights_stepped": step + 1,
+                    "accepted_batch_fraction": 1.0,
+                    "checkpoint": None
+                    if checkpoint_path is None
+                    else {
+                        "path": str(checkpoint_path),
+                        "sha256": _sha256_file(checkpoint_path),
+                        "step": _checkpoint_step_npz(checkpoint_path),
+                    },
+                    "generated_utc": _utc_now_iso(),
+                }
+                _append_jsonl_durable(journal_path, journal_row)
+                active_rows = _read_active_m1_eval_rows(journal_path)
+                executor = controller_policy["executor"]
+                safety_bound = float(executor["safety_bound_steps_by_key"][controller_policy["argv_key"]])
+                at_step_boundary = step + 1 >= int(safety_bound)
+                decision = evaluate_staircase_aware_stop(
+                    active_rows,
+                    controller_policy["trajectory_config"],
+                    controller_policy["staircase_config"],
+                    safety_bound_compute=safety_bound,
+                    boundary_kind="steps" if at_step_boundary else None,
+                )
+                controller_decision_payload = decision.to_payload()
+                schedule_gate: dict[str, Any] | None = None
+                schedule = executor["schedule"]
+                selection_path = Path(schedule["selection_receipt_path"])
+                if (
+                    args.resume_from is None
+                    and step + 1 >= int(schedule["calibration_step"])
+                    and not selection_path.exists()
+                ):
+                    controller_decision_payload["action"] = "QUEUE_RESUME"
+                    controller_decision_payload["should_halt"] = True
+                    controller_decision_payload["blockers"] = [
+                        *controller_decision_payload["blockers"],
+                        "same_object_cpu_schedule_calibration_owed",
+                    ]
+                    schedule_gate = {
+                        "status": "QUEUED",
+                        "calibration_step": int(schedule["calibration_step"]),
+                        "selection_receipt_path": str(selection_path),
+                    }
+                controller_should_halt = bool(controller_decision_payload["should_halt"])
+                _append_jsonl_durable(
+                    decision_path,
+                    {
+                        "schema": M1_STOP_DECISION_SCHEMA,
+                        "step": step + 1,
+                        "generated_utc": _utc_now_iso(),
+                        "ticket_path": str(controller_policy["ticket_path"]),
+                        "ticket_sha256": _sha256_file(controller_policy["ticket_path"]),
+                        "journal_path": str(journal_path),
+                        "journal_sha256": _sha256_file(journal_path),
+                        "decision": controller_decision_payload,
+                        "schedule_gate": schedule_gate,
+                    },
+                )
         history.append(record)
-        if (step + 1) % max(args.checkpoint_every, 1) == 0 or step + 1 == args.steps:
-            last_stage_path = args.run_dir / f"mlx_stage_step{step + 1:06d}.npz"
-            save_stage_checkpoint_npz(
-                last_stage_path,
-                model=model,
-                config=config,
-                step=step + 1,
-                history=history,
-                optimizer_state=optimizer.state,
-                extra={
-                    "pair_ids": pair_ids,
-                    "score_claim": False,
-                    "axis": "[macOS-MLX research-signal]",
-                    "source_repo_head": SOURCE_REPO_HEAD,
-                    "throughput_flags": {
-                        "train_compute_dtype": str(getattr(args, "train_compute_dtype", "fp32")),
-                        "compile_train_loss": compile_train_loss,
-                        "perf_thread_pin": str(getattr(args, "perf_thread_pin", "off")),
-                        "microbatch_policy": str(getattr(args, "microbatch_policy", "auto")),
-                        "cache_residency": str(getattr(args, "cache_residency", "selected")),
-                        "microbatch_hygiene": str(getattr(args, "microbatch_hygiene", "per-chunk")),
-                        "microbatch_chunk_cache": bool(getattr(args, "microbatch_chunk_cache", False)),
-                    },
-                },
-            )
-            latest = args.run_dir / "mlx.latest.npz"
-            save_stage_checkpoint_npz(
-                latest,
-                model=model,
-                config=config,
-                step=step + 1,
-                history=history,
-                optimizer_state=optimizer.state,
-                extra={
-                    "pair_ids": pair_ids,
-                    "score_claim": False,
-                    "axis": "[macOS-MLX research-signal]",
-                    "source_repo_head": SOURCE_REPO_HEAD,
-                    "throughput_flags": {
-                        "train_compute_dtype": str(getattr(args, "train_compute_dtype", "fp32")),
-                        "compile_train_loss": compile_train_loss,
-                        "perf_thread_pin": str(getattr(args, "perf_thread_pin", "off")),
-                        "microbatch_policy": str(getattr(args, "microbatch_policy", "auto")),
-                        "cache_residency": str(getattr(args, "cache_residency", "selected")),
-                        "microbatch_hygiene": str(getattr(args, "microbatch_hygiene", "per-chunk")),
-                        "microbatch_chunk_cache": bool(getattr(args, "microbatch_chunk_cache", False)),
-                    },
-                },
-            )
+        if (step + 1) % max(args.checkpoint_every, 1) == 0 or step + 1 == args.steps or controller_should_halt:
+            live_path, ema_path, tail_path = save_checkpoint_bundle(step + 1)
             if args.steps <= 3:
                 probe.sample_and_check(f"after_checkpoint_step_{step + 1:06d}", mx=mx)
+            if controller_should_halt:
+                assert terminal_receipt_path is not None and controller_decision_payload is not None
+                action = str(controller_decision_payload["action"])
+                trajectory_payload = controller_decision_payload.get("trajectory_decision") or {}
+                at_step_cap = controller_decision_payload.get("boundary_kind") == "steps"
+                canonical_receipt = None
+                terminal_mode = "event_stop"
+                if action == "STOP_CONVERGED":
+                    canonical_receipt = build_cap_stop_receipt(
+                        stop_reason="converged",
+                        steps_run=step + 1,
+                        cap=None,
+                        still_descending=False,
+                    ).to_payload()
+                elif action == "ROLLBACK_OR_RETREAT":
+                    canonical_receipt = build_cap_stop_receipt(
+                        stop_reason="failed",
+                        steps_run=step + 1,
+                        cap=None,
+                        still_descending=None,
+                    ).to_payload()
+                elif at_step_cap:
+                    terminal_mode = "step_cap"
+                    canonical_receipt = build_cap_stop_receipt(
+                        stop_reason="cap_bound",
+                        steps_run=step + 1,
+                        cap=int(trajectory_payload["safety_bound_compute"]),
+                        still_descending=action == "QUEUE_RESUME",
+                    ).to_payload()
+                elif "same_object_cpu_schedule_calibration_owed" in set(
+                    controller_decision_payload.get("blockers") or []
+                ):
+                    terminal_mode = "schedule_calibration_boundary"
+                write_json_atomic(
+                    terminal_receipt_path,
+                    {
+                        "schema": M1_TERMINAL_RECEIPT_SCHEMA,
+                        "status": "halted",
+                        "terminal_mode": terminal_mode,
+                        "action": action,
+                        "step": step + 1,
+                        "decision": controller_decision_payload,
+                        "cap_stop_receipt": canonical_receipt,
+                        "live_checkpoint": str(live_path),
+                        "ema_checkpoint": None if ema_path is None else str(ema_path),
+                        "tail_average_checkpoint": None if tail_path is None else str(tail_path),
+                        "resume_argv_key": controller_policy["executor"]["resume_argv_key"],
+                        "resume_argv": controller_policy["ticket"][controller_policy["executor"]["resume_argv_key"]],
+                        "same_object_cpu_selection": controller_policy["executor"]["same_object_cpu_selection"],
+                        "generated_utc": _utc_now_iso(),
+                    },
+                )
+                break
     elapsed = time.time() - start_time
     latest_path = args.run_dir / "mlx.latest.npz"
     resume_check = load_stage_checkpoint_npz(latest_path, model=model, optimizer=optimizer, mx=mx)
@@ -3209,6 +3633,7 @@ def run_mlx_train(
         "load_memory_samples": probe.samples,
         "load_memory_peak": probe.peak(),
         "steps": args.steps,
+        "steps_run": int(history[-1]["step"]) if history else start_step,
         "start_step": start_step,
         "elapsed_seconds": elapsed,
         "seconds_per_step": elapsed / max(args.steps - start_step, 1),
@@ -3217,6 +3642,15 @@ def run_mlx_train(
         "latest_checkpoint": str(latest_path),
         "latest_checkpoint_bytes": latest_path.stat().st_size if latest_path.exists() else None,
         "latest_checkpoint_sha256": _sha256_file(latest_path) if latest_path.exists() else None,
+        "ema_checkpoint": (
+            str(args.run_dir / "mlx.ema.latest.npz") if (args.run_dir / "mlx.ema.latest.npz").exists() else None
+        ),
+        "ema_policy": ema_policy,
+        "schedule_horizon_steps": schedule_horizon_steps,
+        "eval_journal": None if journal_path is None else str(journal_path),
+        "stop_decisions": None if decision_path is None else str(decision_path),
+        "terminal_receipt": (None if terminal_receipt_path is None else str(terminal_receipt_path)),
+        "selection_status": "QUEUED_SAME_OBJECT_CPU_FACETS" if ema_policy is not None else None,
         "resume_load": resume_check,
     }
 
@@ -3249,10 +3683,7 @@ def _build_mem_probe_receipt(
     )
     has_mlx_allocator_telemetry = bool(
         final_step_sample
-        and any(
-            final_step_sample.get(key) is not None
-            for key in ("mlx_active_gib", "mlx_cache_gib", "mlx_peak_gib")
-        )
+        and any(final_step_sample.get(key) is not None for key in ("mlx_active_gib", "mlx_cache_gib", "mlx_peak_gib"))
     )
     software_budget = (
         train_result.get("software_budget")
@@ -3426,7 +3857,7 @@ def launch_ticket(args: argparse.Namespace, smoke: dict[str, Any] | None, mlx_pr
     n32 = _select_stratified_indices(32, seed=args.seed)
     n120 = _select_stratified_indices(120, seed=args.seed + 1)
     cap_cache = args.target_cache  # GT labels as tokens AND targets
-    veh_cache = args.input_cache   # public-wire (tq1c) labels as tokens, GT targets
+    veh_cache = args.input_cache  # public-wire (tq1c) labels as tokens, GT targets
     if Path(cap_cache).resolve() == Path(veh_cache).resolve():
         # A probe reauthor run with --input-cache pointed at the GT cache collapses
         # ARM-VEH's public-wire discriminator into a duplicate of ARM-CAP, silently
@@ -3458,25 +3889,44 @@ def launch_ticket(args: argparse.Namespace, smoke: dict[str, Any] | None, mlx_pr
         argv = [
             ".venv/bin/python",
             "experiments/ddm_mx1_pr130_semantic_renderer.py",
-            "--mode", "mlx-train",
-            "--device", "gpu",
-            "--pairs", str(pairs),
-            "--steps", str(horizon),
-            "--lr", str(args.lr),
-            "--ce-fraction", str(args.ce_fraction),
-            "--softplus-fraction", str(args.softplus_fraction),
-            "--bits", str(args.bits),
-            "--seed", str(seed),
-            "--checkpoint-every", str(args.checkpoint_every),
-            "--eval-every", str(args.eval_every),
-            "--input-cache", str(input_cache),
-            "--target-cache", str(args.target_cache),
-            "--init", str(args.init),
-            "--run-dir", str(run_dir),
-            "--out", str(run_dir / "result.json"),
-            "--fire-guard-verdict", str(fire_guard_verdict),
-            "--launch-ticket-path", str(ticket_path),
-            "--fire-argv-key", argv_key,
+            "--mode",
+            "mlx-train",
+            "--device",
+            "gpu",
+            "--pairs",
+            str(pairs),
+            "--steps",
+            str(horizon),
+            "--lr",
+            str(args.lr),
+            "--ce-fraction",
+            str(args.ce_fraction),
+            "--softplus-fraction",
+            str(args.softplus_fraction),
+            "--bits",
+            str(args.bits),
+            "--seed",
+            str(seed),
+            "--checkpoint-every",
+            str(args.checkpoint_every),
+            "--eval-every",
+            str(args.eval_every),
+            "--input-cache",
+            str(input_cache),
+            "--target-cache",
+            str(args.target_cache),
+            "--init",
+            str(args.init),
+            "--run-dir",
+            str(run_dir),
+            "--out",
+            str(run_dir / "result.json"),
+            "--fire-guard-verdict",
+            str(fire_guard_verdict),
+            "--launch-ticket-path",
+            str(ticket_path),
+            "--fire-argv-key",
+            argv_key,
         ]
         if resume:
             argv.extend(["--resume-from", str(run_dir / "mlx.latest.npz")])
@@ -3508,12 +3958,7 @@ def launch_ticket(args: argparse.Namespace, smoke: dict[str, Any] | None, mlx_pr
         arm_specs[f"{key}_resume"] = (pairs, seed, cache, subdir, True)
 
     mem_probe_receipt_paths = {
-        key: str(
-            args.run_dir
-            / subdir
-            / ("mem_probe_resume" if resume else "mem_probe")
-            / "mem_probe_receipt.json"
-        )
+        key: str(args.run_dir / subdir / ("mem_probe_resume" if resume else "mem_probe") / "mem_probe_receipt.json")
         for key, (_pairs, _seed, _cache, subdir, resume) in arm_specs.items()
     }
 
@@ -3530,23 +3975,40 @@ def launch_ticket(args: argparse.Namespace, smoke: dict[str, Any] | None, mlx_pr
         command = [
             ".venv/bin/python",
             "experiments/ddm_mx1_pr130_semantic_renderer.py",
-            "--mode", "mem-probe",
-            "--device", "gpu",
-            "--pairs", str(pairs),
-            "--mem-probe-steps", str(args.mem_probe_steps),
-            "--lr", str(args.lr),
-            "--ce-fraction", str(args.ce_fraction),
-            "--softplus-fraction", str(args.softplus_fraction),
-            "--bits", str(args.bits),
-            "--seed", str(seed),
-            "--checkpoint-every", str(max(1, int(args.mem_probe_steps))),
-            "--eval-every", "1",
-            "--input-cache", str(input_cache),
-            "--target-cache", str(args.target_cache),
-            "--init", str(args.init),
-            "--run-dir", str(probe_run_dir),
-            "--out", str(probe_run_dir / "mem_probe_result.json"),
-            "--launch-ticket-path", str(ticket_path),
+            "--mode",
+            "mem-probe",
+            "--device",
+            "gpu",
+            "--pairs",
+            str(pairs),
+            "--mem-probe-steps",
+            str(args.mem_probe_steps),
+            "--lr",
+            str(args.lr),
+            "--ce-fraction",
+            str(args.ce_fraction),
+            "--softplus-fraction",
+            str(args.softplus_fraction),
+            "--bits",
+            str(args.bits),
+            "--seed",
+            str(seed),
+            "--checkpoint-every",
+            str(max(1, int(args.mem_probe_steps))),
+            "--eval-every",
+            "1",
+            "--input-cache",
+            str(input_cache),
+            "--target-cache",
+            str(args.target_cache),
+            "--init",
+            str(args.init),
+            "--run-dir",
+            str(probe_run_dir),
+            "--out",
+            str(probe_run_dir / "mem_probe_result.json"),
+            "--launch-ticket-path",
+            str(ticket_path),
         ]
         if resume:
             command.extend(["--resume-from", str(run_dir / "mlx.latest.npz")])
@@ -3580,9 +4042,12 @@ def launch_ticket(args: argparse.Namespace, smoke: dict[str, Any] | None, mlx_pr
         key: [
             ".venv/bin/python",
             "tools/mx1_fire_guard.py",
-            "--ticket", str(ticket_path),
-            "--argv-key", key,
-            "--out", fire_guard_verdict_paths[key],
+            "--ticket",
+            str(ticket_path),
+            "--argv-key",
+            key,
+            "--out",
+            fire_guard_verdict_paths[key],
         ]
         for key in arm_specs
     }
@@ -3602,38 +4067,35 @@ def launch_ticket(args: argparse.Namespace, smoke: dict[str, Any] | None, mlx_pr
         key: str(args.run_dir / subdir / "safe_run" / f"{key}.{attempt_id}.status.json")
         for key, (_pairs, _seed, _cache, subdir, _resume) in arm_specs.items()
     }
-    safe_run_child_pidfile_paths = {
-        key: f"{path}.child.pid"
-        for key, path in safe_run_status_receipt_paths.items()
-    }
+    safe_run_child_pidfile_paths = {key: f"{path}.child.pid" for key, path in safe_run_status_receipt_paths.items()}
     fire_argvs = {
         key: _wrap_fire_argv(
             raw_fire_argvs[key],
-            label=f"ddm_mx1_row1_{_safe_label_token(subdir)}"
-            + ("_resume" if resume else ""),
+            label=f"ddm_mx1_row1_{_safe_label_token(subdir)}" + ("_resume" if resume else ""),
             projection=safe_run_projections[key],
             status_receipt=Path(safe_run_status_receipt_paths[key]),
             child_pidfile=Path(safe_run_child_pidfile_paths[key]),
         )
         for key, (_pairs, _seed, _cache, subdir, resume) in arm_specs.items()
     }
-    detached_done_receipt_names = {
-        key: f"mx1_{_safe_label_token(key)}_{attempt_id}"
-        for key in arm_specs
-    }
+    detached_done_receipt_names = {key: f"mx1_{_safe_label_token(key)}_{attempt_id}" for key in arm_specs}
     detached_done_receipt_paths = {
-        key: f".omx/tmp/codex_runs/{name}.done"
-        for key, name in detached_done_receipt_names.items()
+        key: f".omx/tmp/codex_runs/{name}.done" for key, name in detached_done_receipt_names.items()
     }
     detached_fire_commands = {
         key: [
             ".venv/bin/python",
             "tools/launch_detached_process.py",
-            "--output-dir", str(args.run_dir / subdir / "detached" / attempt_id),
-            "--cwd", str(REPO),
-            "--purpose", f"MX1 {key} receipt-derived fire attempt {attempt_id}",
-            "--authority", "local detached execution; downstream artifacts decide authority",
-            "--done-receipt", detached_done_receipt_names[key],
+            "--output-dir",
+            str(args.run_dir / subdir / "detached" / attempt_id),
+            "--cwd",
+            str(REPO),
+            "--purpose",
+            f"MX1 {key} receipt-derived fire attempt {attempt_id}",
+            "--authority",
+            "local detached execution; downstream artifacts decide authority",
+            "--done-receipt",
+            detached_done_receipt_names[key],
             "--",
             *fire_argvs[key],
         ]
@@ -3800,8 +4262,167 @@ def write_json(path: Path, payload: dict[str, Any]) -> None:
 def write_json_atomic(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_name(f".{path.name}.tmp.{os.getpid()}")
-    tmp.write_text(json.dumps(payload, indent=2, sort_keys=True, default=str) + "\n")
+    with tmp.open("w", encoding="utf-8") as handle:
+        handle.write(json.dumps(payload, indent=2, sort_keys=True, default=str) + "\n")
+        handle.flush()
+        os.fsync(handle.fileno())
     os.replace(tmp, path)
+    directory_fd = os.open(path.parent, os.O_RDONLY)
+    try:
+        os.fsync(directory_fd)
+    finally:
+        os.close(directory_fd)
+
+
+def _torch_verdict_dseg(path: Path) -> tuple[float, dict[str, Any]]:
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    verdict = payload.get("torch_verdict", payload)
+    if verdict.get("schema") != "ddm_mx1_torch_verdict.v1" or verdict.get("status") != "passed":
+        raise ValueError(f"CPU verdict {path} is missing a passed ddm_mx1_torch_verdict.v1")
+    return float(verdict["aggregate_d_seg"]), verdict
+
+
+def run_m1_schedule_selection(args: argparse.Namespace) -> dict[str, Any]:
+    """Select the post-calibration schedule from two same-object CPU facets."""
+
+    if args.launch_ticket_path is None or args.resume_from is None:
+        raise ValueError("m1-schedule-select requires --launch-ticket-path and --resume-from")
+    ticket = json.loads(args.launch_ticket_path.read_text(encoding="utf-8"))
+    predicate = dict((ticket.get("stop_policy") or {}).get("predicate") or {})
+    baseline_dseg, baseline = _torch_verdict_dseg(args.init)
+    candidate_dseg, candidate = _torch_verdict_dseg(args.resume_from)
+    if baseline.get("pair_ids") != candidate.get("pair_ids"):
+        raise ValueError("same-object schedule facets have different pair IDs")
+    required_improvement = float(predicate["one_sample_flip_S"]) / 100.0
+    improvement = baseline_dseg - candidate_dseg
+    passed = improvement >= required_improvement
+    return {
+        "schema": M1_SCHEDULE_SELECTION_SCHEMA,
+        "status": "passed" if passed else "refused",
+        "selected_schedule": "monotone_clamped_cosine" if passed else "rollback_no_resume",
+        "axis": "[macOS-CPU advisory torch upstream SegNet]",
+        "score_claim": False,
+        "verdict_scope": f"n{len(candidate['pair_ids'])} same-object schedule calibration",
+        "baseline_result": str(args.init),
+        "candidate_result": str(args.resume_from),
+        "baseline_d_seg": baseline_dseg,
+        "candidate_d_seg": candidate_dseg,
+        "improvement_d_seg": improvement,
+        "required_improvement_d_seg": required_improvement,
+        "decision_rule": (
+            "admit the ticketed monotone cosine only when the step-250 same-object CPU facet "
+            "improves by at least one n120 Seg lattice flip; otherwise rollback and do not resume"
+        ),
+        "generated_utc": _utc_now_iso(),
+    }
+
+
+def run_m1_controlled_train(args: argparse.Namespace) -> dict[str, Any]:
+    """Run one ticketed safe_run child and survive it to receipt a wall cap."""
+
+    if args.launch_ticket_path is None or not args.fire_argv_key:
+        raise ValueError("controlled-train requires --launch-ticket-path and --fire-argv-key")
+    ticket = json.loads(args.launch_ticket_path.read_text(encoding="utf-8"))
+    routes = dict(((ticket.get("stop_policy") or {}).get("executor") or {}).get("controller_routes") or {})
+    if args.fire_argv_key not in routes:
+        raise ValueError(f"ticket has no controlled-train route for {args.fire_argv_key}")
+    route = dict(routes[args.fire_argv_key])
+    child_key = str(route["child_argv_key"])
+    child_argv = list(ticket[child_key])
+    if child_argv[:2] != [".venv/bin/python", "tools/safe_run.py"]:
+        raise ValueError("controlled-train child must be the ticketed governed safe_run argv")
+    completed = subprocess.run(child_argv, cwd=REPO, check=False)
+    status_path = Path(route["safe_run_status_receipt_path"])
+    if not status_path.exists():
+        raise ValueError(f"safe_run child returned without durable status receipt: {status_path}")
+    safe_status = json.loads(status_path.read_text(encoding="utf-8"))
+    terminal_path = Path(route["terminal_receipt_path"])
+    if completed.returncode == 124:
+        child_policy = _load_m1_executor_policy(
+            argparse.Namespace(
+                launch_ticket_path=args.launch_ticket_path,
+                fire_argv_key=child_key,
+            )
+        )
+        if child_policy is None:
+            raise ValueError("wall-cap child key is not bound to the M1 executor")
+        journal_path = Path(child_policy["executor"]["journal_path"])
+        rows = _read_active_m1_eval_rows(journal_path)
+        last_step = int(rows[-1]["step"]) if rows else 0
+        safety_bound = float(child_policy["executor"]["safety_bound_steps_by_key"][child_key])
+        decision = evaluate_staircase_aware_stop(
+            rows,
+            child_policy["trajectory_config"],
+            child_policy["staircase_config"],
+            safety_bound_compute=max(safety_bound, float(last_step)),
+            boundary_kind="wall_clock_seconds",
+        )
+        decision_path = Path(child_policy["executor"]["decision_path"])
+        _append_jsonl_durable(
+            decision_path,
+            {
+                "schema": M1_STOP_DECISION_SCHEMA,
+                "step": last_step,
+                "generated_utc": _utc_now_iso(),
+                "ticket_path": str(args.launch_ticket_path),
+                "ticket_sha256": _sha256_file(args.launch_ticket_path),
+                "journal_path": str(journal_path),
+                "journal_sha256": _sha256_file(journal_path) if journal_path.exists() else None,
+                "decision": decision.to_payload(),
+                "boundary_status_receipt": str(status_path),
+            },
+        )
+        cap_receipt = build_cap_stop_receipt(
+            stop_reason="cap_bound",
+            steps_run=last_step,
+            cap=None,
+            still_descending=decision.action != "STOP_CONVERGED",
+            bound_kind="wall_clock_seconds",
+            bound_value=float(safe_status["timeout_s"]),
+            observed_value=max(float(safe_status["elapsed_s"]), float(safe_status["timeout_s"])),
+        ).to_payload()
+        write_json_atomic(
+            terminal_path,
+            {
+                "schema": M1_TERMINAL_RECEIPT_SCHEMA,
+                "status": "halted",
+                "terminal_mode": "wall_clock_cap",
+                "action": "QUEUE_RESUME",
+                "step": last_step,
+                "decision": decision.to_payload(),
+                "cap_stop_receipt": cap_receipt,
+                "safe_run_status_receipt": str(status_path),
+                "safe_run_status_sha256": _sha256_file(status_path),
+                "resume_argv_key": child_policy["executor"]["resume_argv_key"],
+                "resume_argv": ticket[child_policy["executor"]["resume_argv_key"]],
+                "same_object_cpu_selection": child_policy["executor"]["same_object_cpu_selection"],
+                "generated_utc": _utc_now_iso(),
+            },
+        )
+    elif not terminal_path.exists():
+        write_json_atomic(
+            terminal_path,
+            {
+                "schema": M1_TERMINAL_RECEIPT_SCHEMA,
+                "status": "failed",
+                "terminal_mode": "child_exit_without_training_terminal",
+                "action": "ROLLBACK_OR_RETREAT",
+                "child_exit": completed.returncode,
+                "safe_run_status_receipt": str(status_path),
+                "safe_run_status_sha256": _sha256_file(status_path),
+                "generated_utc": _utc_now_iso(),
+            },
+        )
+    terminal = json.loads(terminal_path.read_text(encoding="utf-8"))
+    return {
+        "schema": "ddm_m1_controlled_train.v1",
+        "status": "passed" if terminal.get("status") == "halted" else "failed",
+        "child_argv_key": child_key,
+        "child_exit": completed.returncode,
+        "safe_run_status_receipt": str(status_path),
+        "terminal_receipt": str(terminal_path),
+        "terminal": terminal,
+    }
 
 
 def _ticket_path_for_args(args: argparse.Namespace) -> Path:
@@ -3866,8 +4487,7 @@ def _assert_gpu_fire_guard(args: argparse.Namespace) -> None:
         verdict = json.loads(verdict_path.read_text(encoding="utf-8"))
     except Exception as exc:
         print(
-            f"[mx1-fire-guard] REFUSED: could not read guard verdict at {verdict_path}: "
-            f"{type(exc).__name__}: {exc}",
+            f"[mx1-fire-guard] REFUSED: could not read guard verdict at {verdict_path}: {type(exc).__name__}: {exc}",
             file=sys.stderr,
         )
         raise SystemExit(9) from exc
@@ -3910,6 +4530,8 @@ def main() -> None:
             "mlx-parity",
             "mlx-train",
             "mem-probe",
+            "controlled-train",
+            "m1-schedule-select",
         ],
         default="probe",
     )
@@ -3963,6 +4585,20 @@ def main() -> None:
         parser.error("--microbatch-pairs must be non-negative")
     if args.verdict_batch_size <= 0:
         parser.error("--verdict-batch-size must be positive")
+    if args.mode == "m1-schedule-select":
+        selection = run_m1_schedule_selection(args)
+        write_json_atomic(args.out, selection)
+        print(json.dumps(selection, indent=2, sort_keys=True, default=str))
+        if selection["status"] != "passed":
+            raise SystemExit(3)
+        return
+    if args.mode == "controlled-train":
+        controlled = run_m1_controlled_train(args)
+        write_json_atomic(args.out, controlled)
+        print(json.dumps(controlled, indent=2, sort_keys=True, default=str))
+        if controlled["status"] != "passed":
+            raise SystemExit(3)
+        return
     if args.mode in {"mlx-train", "torch-smoke"}:
         assert_governed_admission(f"ddm_mx1_pr130_semantic_renderer:{args.mode}")
     if args.mode == "mlx-train" and str(args.device).lower() == "gpu":
