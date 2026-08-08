@@ -24,6 +24,7 @@ MEM_PROBE_RECEIPT_SCHEMA = "ddm_mx1_load_phase_peak_receipt.v1"
 FIRE_GUARD_VERDICT_SCHEMA = "ddm_mx1_fire_guard_verdict.v1"
 EXIT_REFUSED = 4
 RECEIPT_FRESHNESS_WINDOW_SECONDS = 6 * 60 * 60
+MICROBATCH_POLICIES = ("auto", "legacy-4", "full")
 
 
 def _utc_now_iso() -> str:
@@ -117,12 +118,20 @@ def _norm_int(value: Any) -> int | None:
         return None
 
 
-def _effective_microbatch_pairs(device: Any, pairs: int | None, explicit: int | None) -> int | None:
+def _effective_microbatch_pairs(
+    device: Any,
+    pairs: int | None,
+    explicit: int | None,
+    policy: str | None = "auto",
+) -> int | None:
     if pairs is None:
         return None
     total_pairs = max(1, int(pairs))
     if explicit is not None and explicit > 0:
         return max(1, min(int(explicit), total_pairs))
+    policy_value = str(policy or "auto")
+    if str(device).lower() == "gpu" and policy_value == "full":
+        return total_pairs
     if str(device).lower() == "gpu":
         return max(1, min(4, total_pairs))
     return total_pairs
@@ -134,6 +143,7 @@ def _parsed_fire_config(argv: list[str]) -> dict[str, Any]:
     device = flags.get("device")
     pairs = _norm_int(flags.get("pairs"))
     explicit_microbatch_pairs = _norm_int(flags.get("microbatch_pairs", 0))
+    microbatch_policy = flags.get("microbatch_policy", "auto")
     return {
         "mode": flags.get("mode"),
         "device": device,
@@ -142,7 +152,13 @@ def _parsed_fire_config(argv: list[str]) -> dict[str, Any]:
         "ce_fraction": _norm_float(flags.get("ce_fraction")),
         "softplus_fraction": _norm_float(flags.get("softplus_fraction")),
         "bits": _norm_int(flags.get("bits")),
-        "microbatch_pairs": _effective_microbatch_pairs(device, pairs, explicit_microbatch_pairs),
+        "microbatch_pairs": _effective_microbatch_pairs(device, pairs, explicit_microbatch_pairs, microbatch_policy),
+        "microbatch_policy": microbatch_policy,
+        "cache_residency": flags.get("cache_residency", "selected"),
+        "microbatch_hygiene": flags.get("microbatch_hygiene", "per-chunk"),
+        "microbatch_chunk_cache": "microbatch_chunk_cache" in flags,
+        "verdict_batch_size": _norm_int(flags.get("verdict_batch_size", 32)),
+        "float_warmup_steps": _norm_int(flags.get("float_warmup_steps", 0)),
         "train_compute_dtype": flags.get("train_compute_dtype", "fp32"),
         "compile_train_loss": "compile_train_loss" in flags,
         "perf_thread_pin": flags.get("perf_thread_pin", "off"),
@@ -161,6 +177,7 @@ def _receipt_config(receipt: dict[str, Any]) -> dict[str, Any]:
     cfg = dict(receipt.get("argv_config") or {})
     device = cfg.get("device", receipt.get("device_request"))
     pairs = _norm_int(cfg.get("pairs", receipt.get("pairs")))
+    microbatch_policy = cfg.get("microbatch_policy", "auto")
     microbatch_plan = (receipt.get("train_result_summary") or {}).get("microbatch_plan")
     if not isinstance(microbatch_plan, dict):
         microbatch_plan = receipt.get("microbatch_plan")
@@ -170,7 +187,12 @@ def _receipt_config(receipt: dict[str, Any]) -> dict[str, Any]:
         else None
     )
     if microbatch_pairs is None:
-        microbatch_pairs = _effective_microbatch_pairs(device, pairs, _norm_int(cfg.get("microbatch_pairs", 0)))
+        microbatch_pairs = _effective_microbatch_pairs(
+            device,
+            pairs,
+            _norm_int(cfg.get("microbatch_pairs", 0)),
+            microbatch_policy,
+        )
     return {
         "mode": "mlx-train",
         "device": device,
@@ -180,6 +202,12 @@ def _receipt_config(receipt: dict[str, Any]) -> dict[str, Any]:
         "softplus_fraction": _norm_float(cfg.get("softplus_fraction")),
         "bits": _norm_int(cfg.get("bits")),
         "microbatch_pairs": microbatch_pairs,
+        "microbatch_policy": microbatch_policy,
+        "cache_residency": cfg.get("cache_residency", "selected"),
+        "microbatch_hygiene": cfg.get("microbatch_hygiene", "per-chunk"),
+        "microbatch_chunk_cache": bool(cfg.get("microbatch_chunk_cache", False)),
+        "verdict_batch_size": _norm_int(cfg.get("verdict_batch_size", 32)),
+        "float_warmup_steps": _norm_int(cfg.get("float_warmup_steps", 0)),
         "train_compute_dtype": cfg.get("train_compute_dtype", "fp32"),
         "compile_train_loss": bool(cfg.get("compile_train_loss", False)),
         "perf_thread_pin": cfg.get("perf_thread_pin", "off"),
@@ -287,6 +315,12 @@ def _validate_config_match(fire: dict[str, Any], receipt: dict[str, Any]) -> tup
         "pairs",
         "bits",
         "microbatch_pairs",
+        "microbatch_policy",
+        "cache_residency",
+        "microbatch_hygiene",
+        "microbatch_chunk_cache",
+        "verdict_batch_size",
+        "float_warmup_steps",
         "train_compute_dtype",
         "compile_train_loss",
         "perf_thread_pin",
