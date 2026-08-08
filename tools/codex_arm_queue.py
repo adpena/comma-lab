@@ -759,8 +759,11 @@ def _watcher_line() -> str:
                 channel = row.split("=", 1)[1].strip()
     except OSError:
         channel = ""
-    if channel == "fifo":
-        return f"fleet watcher: ALIVE + DELIVERING (heartbeat {int(age)}s ago)"
+    # socket = the harness Monitor's channel (MEASURED); fifo = a shell pipe.
+    # Both are IPC to a consuming parent. Accepting only "fifo" false-alarmed on the
+    # CORRECT config — a false alarm on the good state trains the reader to ignore the light.
+    if channel in ("socket", "fifo"):
+        return f"fleet watcher: ALIVE + DELIVERING (stdout={channel}; heartbeat {int(age)}s ago)"
     if channel:
         return (
             f"fleet watcher: RUNNING but NOT DELIVERING (stdout={channel}, not a Monitor pipe; "

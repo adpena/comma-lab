@@ -113,8 +113,13 @@ def stdout_delivery_channel() -> str:
     notifications, because its stdout was a file, not the Monitor's pipe. That is
     the vacuity genus — a green indicator for a condition nobody checked.
 
-    fifo -> armed as a Monitor (events become MAIN notifications).  Anything else
-    -> the watcher runs but is NOT delivering.
+    DELIVERING_CHANNELS = {"socket", "fifo"}: an IPC channel a parent is consuming.
+    MEASURED 2026-08-08 against the REAL consumer: the harness Monitor hands the
+    child a SOCKETPAIR, not a pipe — a first patch that accepted only "fifo" raised
+    a false NOT-DELIVERING alarm on the correct configuration, because its control
+    used `| cat` (a stand-in) instead of the actual Monitor. A false alarm on the
+    good state is worse than no alarm: it trains the reader to ignore the light.
+    Controls for this classifier MUST exercise the real consumer.
     """
     try:
         mode = os.fstat(1).st_mode
@@ -122,12 +127,12 @@ def stdout_delivery_channel() -> str:
         return "closed"
     if stat.S_ISFIFO(mode):
         return "fifo"
+    if stat.S_ISSOCK(mode):
+        return "socket"   # what the harness Monitor actually hands us
     if stat.S_ISREG(mode):
         return "file"
     if stat.S_ISCHR(mode):
         return "tty"
-    if stat.S_ISSOCK(mode):
-        return "socket"
     return "other"
 
 
