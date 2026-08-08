@@ -76,6 +76,17 @@ Sequencing (avoids reviewing a moving target):
 3. ONE amendment applies every cure + resets `review_passes` to `[]`.
 4. Three fresh passes run against the cured artifact.
 
+## Sister sweep: every OTHER `gpt-5.5` site (operator correction 2026-08-08)
+
+The stale-model pin was not unique to `keeper_source()`. Full sweep of live surfaces:
+
+| site | role | disposition |
+|---|---|---|
+| `tools/codex_arm_queue.py:513` | THE spawn pin | FIXED → `ARM_MODEL` constant (`gpt-5.6`, env-overridable) |
+| `tools/agent_model_routing_guard_hook.py:69` | `BLOCK_MESSAGE` guidance text shown to a blocked agent | FIXED → names `tools.codex_arm_queue.ARM_MODEL` instead of restating a value (it was actively telling future agents to spawn the stale model). NOT an enforcement predicate — the guard gates the Agent tool via `ALLOWED_MODELS={"fable"}` and never checks a codex model, so no refusal hazard existed either way. |
+| `tools/claim_lane_dispatch.py:8` | docstring usage EXAMPLE | LEFT — example text, dated in-line |
+| `tools/build_wr01_exact_eval_packet.py:2569` · `build_hnerv_lowlevel_exact_eval_packet.py:2123` · `kaggle_build_pr106_latent_score_table.py:137` · `harvest_pr106_yshift_score_table_batch.py:230` | `--agent` argparse DEFAULT (stamps producer provenance) | **TRACKED DEBT, deliberately not churned** — all four are banned-lineage tools (wr01 / HNeRV / PR106) that should not run as vehicles per the no-old-lineage rule. A wrong default would MISLABEL provenance *if* one ran; that is a latent mislabel of the same "constant standing in for a derived fact" class, but fixing 4 dormant files costs review-marks and stale-test risk for no live benefit. Fire-order: fold into `ARM_MODEL` the next time any of them is touched for a real reason. |
+
 ## Why this was worth a reset
 
 A clean pass I did not earn is worse than a reset (my own words in both charters). Sitting on a known
