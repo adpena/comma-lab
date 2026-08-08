@@ -1,38 +1,38 @@
 {
   "axis": "[byte-only scorer-free]",
   "best_treatment": {
-    "arm_id": "trot_q0p5_residual",
+    "arm_id": "trot_q2p0_ac",
     "axis": "[byte-only scorer-free]",
     "best": {
-      "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_tr2p1_20260808/payloads/trot_q0p5_residual.brotli-q11.bin",
-      "bytes": 1292070,
+      "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_tr2p1_20260808/payloads/trot_q2p0_ac.brotli-q11.bin",
+      "bytes": 2637555,
       "codec": "brotli-q11",
-      "sha256": "6a24f89f38d059b7844dfa4075c311d8220cb536dc4955314f9bfb47aa4c1c61"
+      "sha256": "2025d34d9e3a69959b42a61480f8dd856dfc38683f1ce24a2c134d54ef42f07c"
     },
     "coder_rows": [
       {
-        "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_tr2p1_20260808/payloads/trot_q0p5_residual.brotli-q11.bin",
-        "bytes": 1292070,
+        "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_tr2p1_20260808/payloads/trot_q2p0_ac.brotli-q11.bin",
+        "bytes": 2637555,
         "codec": "brotli-q11",
-        "sha256": "6a24f89f38d059b7844dfa4075c311d8220cb536dc4955314f9bfb47aa4c1c61"
+        "sha256": "2025d34d9e3a69959b42a61480f8dd856dfc38683f1ce24a2c134d54ef42f07c"
       },
       {
         "artifact_path": null,
-        "bytes": 1306738,
+        "bytes": 2651257,
         "codec": "lzma1-raw",
-        "sha256": "649871c8c4a1f9ac652acfd3abf73f552f1630f5f3ead523bc3541616b9ac1f3"
+        "sha256": "c191b28a9fbfd693925242ae7a716908702ea42e125910f406205c993792f924"
       },
       {
         "artifact_path": null,
-        "bytes": 1506561,
+        "bytes": 2727694,
         "codec": "zlib-9",
-        "sha256": "154040cc45d20da770b0b1f3c9ecf4fa1f44ba5f55d682a8be71a5b0eb0fc250"
+        "sha256": "9c18cbe13b60ba6b5e5469b895c7376d32286084145739451b3d6e86e1428fe3"
       },
       {
         "artifact_path": null,
-        "bytes": 1768354,
+        "bytes": 2974765,
         "codec": "smevr-r7-nibble",
-        "sha256": "8539f2e24db2fbd12c21114ef1ba724bc75d193cd42bd39d77a5d49fde1b5610"
+        "sha256": "d37a6f465358f823022852d6e4c1bf407264e5abdf620739cb27e0307819df7e"
       }
     ],
     "coders": [
@@ -42,34 +42,40 @@
       "smevr-r7-nibble"
     ],
     "config": {
-      "integer_projection": "row_count_descending_top_score_with_column_quota",
+      "ac_symbols": 2554360,
+      "coding_family": "conditional_range_ac",
+      "frequency_scale": 4096,
       "iterations": 12,
       "lambda": 4.0,
       "max_solver_cells": 65536,
       "mode": "trot_q",
-      "q": 0.5,
-      "side_info_source": "generic_cost_derived_from_counted_marginals",
+      "q": 2.0,
+      "side_info_source": "generic_cost_derived_from_counted_marginals_and_edge_context",
+      "symbolization": "row_ordered_column_choices_under_counted_row_col_marginals",
       "video_derived_side_info_bytes": 0
     },
     "counted_bytes_breakdown": {
-      "compressed_sha256": "6a24f89f38d059b7844dfa4075c311d8220cb536dc4955314f9bfb47aa4c1c61",
-      "compressed_total": 1292070,
+      "compressed_sha256": "2025d34d9e3a69959b42a61480f8dd856dfc38683f1ce24a2c134d54ef42f07c",
+      "compressed_total": 2637555,
       "raw_components": {
-        "framing": 17982,
+        "ac_stream": 2485106,
+        "framing": 23552,
         "marginals": 2096981,
-        "residual": 4827329,
+        "residual": 0,
         "side_info": 0,
-        "tags": 3672
+        "tags": 3741
       },
-      "raw_sha256": "bb432e563cd63fbc468ae0f7644c627f70cec9a13470455fe27dabf685064db8",
-      "raw_total": 6945964,
+      "raw_sha256": "5576148a72338bd7ab25cc80facd0822c168b790c7299e720ffffa2565006615",
+      "raw_total": 4609380,
       "video_derived_side_info_bytes": 0
     },
-    "created_utc": "2026-08-08T15:34:07Z",
+    "created_utc": "2026-08-08T16:11:23Z",
     "decode_equality": true,
-    "delta_vs_incumbent_bytes": 827513,
-    "delta_vs_incumbent_pct": 1.7812948680140435,
-    "description": "q-family joint-from-marginals residual stream",
+    "delta_vs_incumbent_bytes": 2172998,
+    "delta_vs_incumbent_pct": 4.677570244340307,
+    "delta_vs_reference_best_bytes": 2172998,
+    "delta_vs_reference_best_pct": 4.677570244340307,
+    "description": "q-family joint-from-marginals conditional range-AC stream",
     "incumbent_control": {
       "bytes": 464557,
       "codec": "lzma1-raw",
@@ -79,27 +85,34 @@
     "pass_condition_met": false,
     "prediction_pixels": 2554360,
     "promotion_eligible": false,
-    "residual_extra_pixels": 2257752,
-    "residual_missing_pixels": 2257752,
+    "reference_best_control": {
+      "arm_id": "cr1_edge_conditioned_lzma1_raw_incumbent",
+      "bytes": 464557,
+      "codec": "lzma1-raw",
+      "sha256": "0a53f649768c61912399ccab14e4d3323998e47235992091e2a9e28cf7259fe1"
+    },
+    "residual_extra_pixels": 0,
+    "residual_missing_pixels": 0,
     "schema": "ddm_tr2p1_coder_race_row.v1",
     "score_claim": false,
     "selection_mode": "n600_all_pairs_no_prefix",
     "verdict": "LOSS-w/-bytes",
-    "verdict_scope": "FORMULATION: q-family joint-from-marginals residual coding of the CR1 selected edge-labeled n600 support payload"
+    "verdict_scope": "FORMULATION: q-family joint-from-marginals conditional range-AC coding of the CR1 selected edge-labeled n600 support payload"
   },
   "boundaries": [
     "No scorer, no evaluator, no archive promotion, no Metal/GPU, no paid job.",
     "Payloads are cached real n600 argmax supports from GT and cx1 argmax arrays.",
     "CR1 incumbent was re-decoded from the SHA-pinned lzma1-raw artifact; it was not re-derived.",
     "No video-derived side-information matrix was omitted from counted bytes.",
-    "All coder rows are real zlib/Brotli/LZMA/SMEVR outputs with round-trip checks.",
-    "Verdicts are formulation-scoped byte-race outcomes only."
+    "All LZ coder rows are real zlib/Brotli/LZMA/SMEVR outputs with round-trip checks.",
+    "All conditional range-AC rows carry real AC bitstreams and decode-equality checks before any optional container coding.",
+    "Verdicts are conditional-AC formulation-scoped byte-race outcomes only."
   ],
-  "created_utc": "2026-08-08T15:39:29Z",
+  "created_utc": "2026-08-08T16:11:23Z",
   "follow_on_disposition": [
     {
       "disposition": "FIRED",
-      "fire_order": "This receipt is the pre-registered byte-only q-family residual race against CR1's incumbent.",
+      "fire_order": "This receipt is the pre-registered byte-only q-family residual plus amendment-required conditional range-AC race against CR1's incumbent.",
       "id": "TR2-P1"
     },
     {
@@ -109,7 +122,7 @@
     },
     {
       "disposition": "QUEUED-WITH-FIRE-ORDER",
-      "fire_order": "Consume this row only as a scorer-free byte-race negative unless a future arm supplies a new counted side-info source or residual model and repeats same-payload decode-equality racing.",
+      "fire_order": "Consume this row only as a scorer-free byte-race negative unless a future arm supplies a new counted side-info source or conditional probability model and repeats same-payload decode-equality AC racing.",
       "id": "#984 rate axis / CR1 successor consumer"
     }
   ],
@@ -173,6 +186,11 @@
       "source": ".omx/research/ddm_tr2_20260808/TR2_CROSSWALK.md and TR2_ROWS.jsonl rows 1, 3, 6"
     },
     {
+      "impact": "Added incumbent edge-context AC plus TROT conditional range-AC rows and made the FORMULATION verdict depend only on the AC race.",
+      "result": "The operator correction requires conditional arithmetic/range coding; LZ residual rows alone are instrument-scoped.",
+      "source": ".omx/research/ddm_tr2p1_20260808/CHARTER.md amendment 2026-08-08"
+    },
+    {
       "impact": "Set the pass threshold and re-decoded the incumbent artifact instead of re-measuring CR1.",
       "result": "CR1 P2 measured 464557 B edge-conditioned lzma1-raw with exact decode equality on selected n600 supports.",
       "source": ".omx/research/ddm_cr1_20260808/CR1_FINDINGS.md, CR1_RECEIPT.json, CR1_ROWS.jsonl row 2"
@@ -193,11 +211,20 @@
       "source": "tools/list_canonical_equations.py --json"
     }
   ],
-  "schema": "ddm_tr2p1_trot_residual_race_receipt.v1",
+  "reference_best_control": {
+    "arm_id": "cr1_edge_conditioned_lzma1_raw_incumbent",
+    "bytes": 464557,
+    "codec": "lzma1-raw",
+    "sha256": "0a53f649768c61912399ccab14e4d3323998e47235992091e2a9e28cf7259fe1"
+  },
+  "schema": "ddm_tr2p1_trot_residual_range_ac_race_receipt.v2",
   "score_claim": false,
   "selection_mode": "n600_all_pairs_no_prefix",
   "solver_validation": {
     "col_marginal_max_abs_error": 2.220446049250313e-16,
+    "conditional_range_ac_bytes": 22,
+    "conditional_range_ac_decode_equality": true,
+    "conditional_range_ac_symbols": 5,
     "fixture": "3x4 active support embedded in scorer grid",
     "max_abs_plan_delta": 0.0,
     "q1_matches_sinkhorn_reference": true,
@@ -311,12 +338,14 @@
         "smevr-r7-nibble"
       ],
       "config": {
+        "coding_family": "delta_container",
         "mode": "identity"
       },
       "counted_bytes_breakdown": {
         "compressed_sha256": "46b7abe762988c695e9b39856cfb2ec35f8d4768f6dd0b8513b3aa0efa8c18d3",
         "compressed_total": 464660,
         "raw_components": {
+          "ac_stream": 0,
           "framing": 12016,
           "marginals": 0,
           "residual": 2716738,
@@ -327,10 +356,12 @@
         "raw_total": 2732163,
         "video_derived_side_info_bytes": 0
       },
-      "created_utc": "2026-08-08T15:31:30Z",
+      "created_utc": "2026-08-08T15:55:39Z",
       "decode_equality": true,
       "delta_vs_incumbent_bytes": 103,
       "delta_vs_incumbent_pct": 0.00022171660312943298,
+      "delta_vs_reference_best_bytes": 103,
+      "delta_vs_reference_best_pct": 0.00022171660312943298,
       "description": "raw selected support through the TR2P1 container and same coder set",
       "incumbent_control": {
         "bytes": 464557,
@@ -341,47 +372,53 @@
       "pass_condition_met": false,
       "prediction_pixels": 0,
       "promotion_eligible": false,
+      "reference_best_control": {
+        "arm_id": "cr1_edge_conditioned_lzma1_raw_incumbent",
+        "bytes": 464557,
+        "codec": "lzma1-raw",
+        "sha256": "0a53f649768c61912399ccab14e4d3323998e47235992091e2a9e28cf7259fe1"
+      },
       "residual_extra_pixels": 0,
       "residual_missing_pixels": 0,
       "schema": "ddm_tr2p1_coder_race_row.v1",
       "score_claim": false,
       "selection_mode": "n600_all_pairs_no_prefix",
-      "verdict": "LOSS-w/-bytes",
+      "verdict": "CONTROL",
       "verdict_scope": "CONTROL: same-payload TR2P1 byte container for selected edge-labeled n600 support"
     },
     {
-      "arm_id": "marginals_only_residual",
+      "arm_id": "incumbent_edge_context_ac",
       "axis": "[byte-only scorer-free]",
       "best": {
-        "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_tr2p1_20260808/payloads/marginals_only_residual.lzma1-raw.bin",
-        "bytes": 1130973,
-        "codec": "lzma1-raw",
-        "sha256": "6c9399125d6dbf01b1cd2d0b1548b545d327c8aa6daf0129a1cf1af9ab7b6d35"
+        "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_tr2p1_20260808/payloads/incumbent_edge_context_ac.brotli-q11.bin",
+        "bytes": 2582804,
+        "codec": "brotli-q11",
+        "sha256": "51ad1d35b70665c610ff7b465b42220c4f9712527fbc93e091176838403ba2d7"
       },
       "coder_rows": [
         {
-          "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_tr2p1_20260808/payloads/marginals_only_residual.lzma1-raw.bin",
-          "bytes": 1130973,
-          "codec": "lzma1-raw",
-          "sha256": "6c9399125d6dbf01b1cd2d0b1548b545d327c8aa6daf0129a1cf1af9ab7b6d35"
-        },
-        {
-          "artifact_path": null,
-          "bytes": 1143483,
+          "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_tr2p1_20260808/payloads/incumbent_edge_context_ac.brotli-q11.bin",
+          "bytes": 2582804,
           "codec": "brotli-q11",
-          "sha256": "98df3206a8ccab13ca375c6b3fd5785ea3c65de5a426f982b4df325957c02c71"
+          "sha256": "51ad1d35b70665c610ff7b465b42220c4f9712527fbc93e091176838403ba2d7"
         },
         {
           "artifact_path": null,
-          "bytes": 1334453,
+          "bytes": 2596581,
+          "codec": "lzma1-raw",
+          "sha256": "f525de057d9b838426b70b2a89c0be0f10ddbd769920e90c05348792f7b54def"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 2673019,
           "codec": "zlib-9",
-          "sha256": "77423b15e8d1f402d729b3aa4e7c0d9d18abb6714ae5026c18e8537a6f6088d6"
+          "sha256": "eb49d49c4b0d5fb3a4432c48176bb8f04ddfb9438b6f35333ed31dae261b3474"
         },
         {
           "artifact_path": null,
-          "bytes": 1611934,
+          "bytes": 2919415,
           "codec": "smevr-r7-nibble",
-          "sha256": "d451e8219fde2442460e73ccafe40d5d9c00b1ea02df32f4e5dd35da6de9de89"
+          "sha256": "ec5898c28669d6bf58b80b17517bc6dd14c7b043a727472c400862c74c7cad8e"
         }
       ],
       "coders": [
@@ -391,6 +428,106 @@
         "smevr-r7-nibble"
       ],
       "config": {
+        "ac_symbols": 2554360,
+        "coding_family": "conditional_range_ac",
+        "frequency_scale": 4096,
+        "iterations": null,
+        "lambda": null,
+        "max_solver_cells": 65536,
+        "mode": "edge_context",
+        "q": null,
+        "side_info_source": "generic_cost_derived_from_counted_marginals_and_edge_context",
+        "symbolization": "row_ordered_column_choices_under_counted_row_col_marginals",
+        "video_derived_side_info_bytes": 0
+      },
+      "counted_bytes_breakdown": {
+        "compressed_sha256": "51ad1d35b70665c610ff7b465b42220c4f9712527fbc93e091176838403ba2d7",
+        "compressed_total": 2582804,
+        "raw_components": {
+          "ac_stream": 2428240,
+          "framing": 23534,
+          "marginals": 2096981,
+          "residual": 0,
+          "side_info": 0,
+          "tags": 3764
+        },
+        "raw_sha256": "33f6293e3706d5e5f0ad3b7eff0c76dcb5e3d53d541cf3c2e2a950419e076993",
+        "raw_total": 4552519,
+        "video_derived_side_info_bytes": 0
+      },
+      "created_utc": "2026-08-08T15:56:43Z",
+      "decode_equality": true,
+      "delta_vs_incumbent_bytes": 2118247,
+      "delta_vs_incumbent_pct": 4.559713877952544,
+      "delta_vs_reference_best_bytes": 2118247,
+      "delta_vs_reference_best_pct": 4.559713877952544,
+      "description": "CR1 edge-conditioned conditional range-AC control",
+      "incumbent_control": {
+        "bytes": 464557,
+        "codec": "lzma1-raw",
+        "sha256": "0a53f649768c61912399ccab14e4d3323998e47235992091e2a9e28cf7259fe1"
+      },
+      "n600_scorer_job": false,
+      "pass_condition_met": false,
+      "prediction_pixels": 2554360,
+      "promotion_eligible": false,
+      "reference_best_control": {
+        "arm_id": "cr1_edge_conditioned_lzma1_raw_incumbent",
+        "bytes": 464557,
+        "codec": "lzma1-raw",
+        "sha256": "0a53f649768c61912399ccab14e4d3323998e47235992091e2a9e28cf7259fe1"
+      },
+      "residual_extra_pixels": 0,
+      "residual_missing_pixels": 0,
+      "schema": "ddm_tr2p1_coder_race_row.v1",
+      "score_claim": false,
+      "selection_mode": "n600_all_pairs_no_prefix",
+      "verdict": "CONTROL",
+      "verdict_scope": "CONTROL: same-payload TR2P1 byte container for selected edge-labeled n600 support"
+    },
+    {
+      "arm_id": "marginals_only_residual",
+      "axis": "[byte-only scorer-free]",
+      "best": {
+        "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_tr2p1_20260808/payloads/marginals_only_residual.lzma1-raw.bin",
+        "bytes": 1133907,
+        "codec": "lzma1-raw",
+        "sha256": "279e4856e2188c2bd5af986fb9c0d9da7452c7b1e64df647a1b626a8fa035a6f"
+      },
+      "coder_rows": [
+        {
+          "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_tr2p1_20260808/payloads/marginals_only_residual.lzma1-raw.bin",
+          "bytes": 1133907,
+          "codec": "lzma1-raw",
+          "sha256": "279e4856e2188c2bd5af986fb9c0d9da7452c7b1e64df647a1b626a8fa035a6f"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 1141095,
+          "codec": "brotli-q11",
+          "sha256": "5a824557fcc6628e9a8e573baead5c340d7dadb9d110d4d5e18a9479c64dfc82"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 1334487,
+          "codec": "zlib-9",
+          "sha256": "b6bb4223681fdff7f1473f5b98fe06a8bf522048d7e5460f1efad826a73fdc23"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 1611963,
+          "codec": "smevr-r7-nibble",
+          "sha256": "ed3c367ffe2396d2fee84b6dc07b3d2bf23ed292d2d2362f59a28c7d36a04f21"
+        }
+      ],
+      "coders": [
+        "zlib-9",
+        "brotli-q11",
+        "lzma1-raw",
+        "smevr-r7-nibble"
+      ],
+      "config": {
+        "coding_family": "lz_residual_baseline",
         "integer_projection": "row_count_descending_top_score_with_column_quota",
         "iterations": null,
         "lambda": null,
@@ -401,23 +538,26 @@
         "video_derived_side_info_bytes": 0
       },
       "counted_bytes_breakdown": {
-        "compressed_sha256": "6c9399125d6dbf01b1cd2d0b1548b545d327c8aa6daf0129a1cf1af9ab7b6d35",
-        "compressed_total": 1130973,
+        "compressed_sha256": "279e4856e2188c2bd5af986fb9c0d9da7452c7b1e64df647a1b626a8fa035a6f",
+        "compressed_total": 1133907,
         "raw_components": {
+          "ac_stream": 0,
           "framing": 17982,
           "marginals": 2096981,
           "residual": 4825553,
           "side_info": 0,
-          "tags": 3689
+          "tags": 3728
         },
-        "raw_sha256": "3498a919c27bd070395353faf8e8cb4b97065aa3918166bda296018ccebfab42",
-        "raw_total": 6944205,
+        "raw_sha256": "8f5e207f5b97125acd74e56e887f1db47844178e082da4ce25995a7548f4ce2e",
+        "raw_total": 6944244,
         "video_derived_side_info_bytes": 0
       },
-      "created_utc": "2026-08-08T15:32:48Z",
+      "created_utc": "2026-08-08T15:58:02Z",
       "decode_equality": true,
-      "delta_vs_incumbent_bytes": 666416,
-      "delta_vs_incumbent_pct": 1.4345193377777108,
+      "delta_vs_incumbent_bytes": 669350,
+      "delta_vs_incumbent_pct": 1.4408350320843297,
+      "delta_vs_reference_best_bytes": 669350,
+      "delta_vs_reference_best_pct": 1.4408350320843297,
       "description": "marginals plus residual with no q-family OT solve",
       "incumbent_control": {
         "bytes": 464557,
@@ -428,47 +568,53 @@
       "pass_condition_met": false,
       "prediction_pixels": 2554360,
       "promotion_eligible": false,
+      "reference_best_control": {
+        "arm_id": "cr1_edge_conditioned_lzma1_raw_incumbent",
+        "bytes": 464557,
+        "codec": "lzma1-raw",
+        "sha256": "0a53f649768c61912399ccab14e4d3323998e47235992091e2a9e28cf7259fe1"
+      },
       "residual_extra_pixels": 2256244,
       "residual_missing_pixels": 2256244,
       "schema": "ddm_tr2p1_coder_race_row.v1",
       "score_claim": false,
       "selection_mode": "n600_all_pairs_no_prefix",
-      "verdict": "LOSS-w/-bytes",
+      "verdict": "INSTRUMENT-LZ-BASELINE",
       "verdict_scope": "CONTROL: same-payload TR2P1 byte container for selected edge-labeled n600 support"
     },
     {
-      "arm_id": "trot_q0p5_residual",
+      "arm_id": "marginals_only_ac",
       "axis": "[byte-only scorer-free]",
       "best": {
-        "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_tr2p1_20260808/payloads/trot_q0p5_residual.brotli-q11.bin",
-        "bytes": 1292070,
+        "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_tr2p1_20260808/payloads/marginals_only_ac.brotli-q11.bin",
+        "bytes": 2593397,
         "codec": "brotli-q11",
-        "sha256": "6a24f89f38d059b7844dfa4075c311d8220cb536dc4955314f9bfb47aa4c1c61"
+        "sha256": "b8bb5e132071c22188fd87a11b511a772ba9e8a55a57e8412aca830ba3db23f1"
       },
       "coder_rows": [
         {
-          "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_tr2p1_20260808/payloads/trot_q0p5_residual.brotli-q11.bin",
-          "bytes": 1292070,
+          "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_tr2p1_20260808/payloads/marginals_only_ac.brotli-q11.bin",
+          "bytes": 2593397,
           "codec": "brotli-q11",
-          "sha256": "6a24f89f38d059b7844dfa4075c311d8220cb536dc4955314f9bfb47aa4c1c61"
+          "sha256": "b8bb5e132071c22188fd87a11b511a772ba9e8a55a57e8412aca830ba3db23f1"
         },
         {
           "artifact_path": null,
-          "bytes": 1306738,
+          "bytes": 2606756,
           "codec": "lzma1-raw",
-          "sha256": "649871c8c4a1f9ac652acfd3abf73f552f1630f5f3ead523bc3541616b9ac1f3"
+          "sha256": "277b4c940cc7582723d40e55334f9c488d576f1d66dd97674dfd5deee249113a"
         },
         {
           "artifact_path": null,
-          "bytes": 1506561,
+          "bytes": 2683603,
           "codec": "zlib-9",
-          "sha256": "154040cc45d20da770b0b1f3c9ecf4fa1f44ba5f55d682a8be71a5b0eb0fc250"
+          "sha256": "6ac827e314f65c994eb3f39184d4da84ff8335616b1dd12fadcb8f39a1ced48f"
         },
         {
           "artifact_path": null,
-          "bytes": 1768354,
+          "bytes": 2930711,
           "codec": "smevr-r7-nibble",
-          "sha256": "8539f2e24db2fbd12c21114ef1ba724bc75d193cd42bd39d77a5d49fde1b5610"
+          "sha256": "ef6338ab5975ec702ab2f26fc89419b04e829f112b174cde7d7d5dbd02127a0a"
         }
       ],
       "coders": [
@@ -478,6 +624,106 @@
         "smevr-r7-nibble"
       ],
       "config": {
+        "ac_symbols": 2554360,
+        "coding_family": "conditional_range_ac",
+        "frequency_scale": 4096,
+        "iterations": null,
+        "lambda": null,
+        "max_solver_cells": 65536,
+        "mode": "marginals_only",
+        "q": null,
+        "side_info_source": "generic_cost_derived_from_counted_marginals_and_edge_context",
+        "symbolization": "row_ordered_column_choices_under_counted_row_col_marginals",
+        "video_derived_side_info_bytes": 0
+      },
+      "counted_bytes_breakdown": {
+        "compressed_sha256": "b8bb5e132071c22188fd87a11b511a772ba9e8a55a57e8412aca830ba3db23f1",
+        "compressed_total": 2593397,
+        "raw_components": {
+          "ac_stream": 2439420,
+          "framing": 23522,
+          "marginals": 2096981,
+          "residual": 0,
+          "side_info": 0,
+          "tags": 3758
+        },
+        "raw_sha256": "6be31d1dbe46e389b1385b9dd00f5ce826dd27990423722fffe7296886ebfdb4",
+        "raw_total": 4563681,
+        "video_derived_side_info_bytes": 0
+      },
+      "created_utc": "2026-08-08T15:59:06Z",
+      "decode_equality": true,
+      "delta_vs_incumbent_bytes": 2128840,
+      "delta_vs_incumbent_pct": 4.582516246660798,
+      "delta_vs_reference_best_bytes": 2128840,
+      "delta_vs_reference_best_pct": 4.582516246660798,
+      "description": "marginals-only conditional range-AC control",
+      "incumbent_control": {
+        "bytes": 464557,
+        "codec": "lzma1-raw",
+        "sha256": "0a53f649768c61912399ccab14e4d3323998e47235992091e2a9e28cf7259fe1"
+      },
+      "n600_scorer_job": false,
+      "pass_condition_met": false,
+      "prediction_pixels": 2554360,
+      "promotion_eligible": false,
+      "reference_best_control": {
+        "arm_id": "cr1_edge_conditioned_lzma1_raw_incumbent",
+        "bytes": 464557,
+        "codec": "lzma1-raw",
+        "sha256": "0a53f649768c61912399ccab14e4d3323998e47235992091e2a9e28cf7259fe1"
+      },
+      "residual_extra_pixels": 0,
+      "residual_missing_pixels": 0,
+      "schema": "ddm_tr2p1_coder_race_row.v1",
+      "score_claim": false,
+      "selection_mode": "n600_all_pairs_no_prefix",
+      "verdict": "CONTROL",
+      "verdict_scope": "CONTROL: same-payload TR2P1 byte container for selected edge-labeled n600 support"
+    },
+    {
+      "arm_id": "trot_q0p5_residual",
+      "axis": "[byte-only scorer-free]",
+      "best": {
+        "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_tr2p1_20260808/payloads/trot_q0p5_residual.brotli-q11.bin",
+        "bytes": 1291866,
+        "codec": "brotli-q11",
+        "sha256": "443a9e30b2d951917415455b0438f17dba9d42aa901835518b73eab4118befa6"
+      },
+      "coder_rows": [
+        {
+          "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_tr2p1_20260808/payloads/trot_q0p5_residual.brotli-q11.bin",
+          "bytes": 1291866,
+          "codec": "brotli-q11",
+          "sha256": "443a9e30b2d951917415455b0438f17dba9d42aa901835518b73eab4118befa6"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 1306872,
+          "codec": "lzma1-raw",
+          "sha256": "5a722c601521eb2b27f60184d7b066f47a7833c50809f9ab4945194611edc363"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 1506592,
+          "codec": "zlib-9",
+          "sha256": "746b667e73fbec2171362f43b8060f73850a1ad2e47bcb1bebbcec95bc6b864a"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 1768366,
+          "codec": "smevr-r7-nibble",
+          "sha256": "f92027819effbece3bb4b874c32910ced151d55d84f74d96062a9f550d27a598"
+        }
+      ],
+      "coders": [
+        "zlib-9",
+        "brotli-q11",
+        "lzma1-raw",
+        "smevr-r7-nibble"
+      ],
+      "config": {
+        "coding_family": "lz_residual_baseline",
         "integer_projection": "row_count_descending_top_score_with_column_quota",
         "iterations": 12,
         "lambda": 4.0,
@@ -488,23 +734,26 @@
         "video_derived_side_info_bytes": 0
       },
       "counted_bytes_breakdown": {
-        "compressed_sha256": "6a24f89f38d059b7844dfa4075c311d8220cb536dc4955314f9bfb47aa4c1c61",
-        "compressed_total": 1292070,
+        "compressed_sha256": "443a9e30b2d951917415455b0438f17dba9d42aa901835518b73eab4118befa6",
+        "compressed_total": 1291866,
         "raw_components": {
+          "ac_stream": 0,
           "framing": 17982,
           "marginals": 2096981,
           "residual": 4827329,
           "side_info": 0,
-          "tags": 3672
+          "tags": 3711
         },
-        "raw_sha256": "bb432e563cd63fbc468ae0f7644c627f70cec9a13470455fe27dabf685064db8",
-        "raw_total": 6945964,
+        "raw_sha256": "6dfde0d5ffb2390956f6c63b9f545cebf8008b5c634af160b6bc1b43124b8b04",
+        "raw_total": 6946003,
         "video_derived_side_info_bytes": 0
       },
-      "created_utc": "2026-08-08T15:34:07Z",
+      "created_utc": "2026-08-08T16:00:26Z",
       "decode_equality": true,
-      "delta_vs_incumbent_bytes": 827513,
-      "delta_vs_incumbent_pct": 1.7812948680140435,
+      "delta_vs_incumbent_bytes": 827309,
+      "delta_vs_incumbent_pct": 1.7808557399845444,
+      "delta_vs_reference_best_bytes": 827309,
+      "delta_vs_reference_best_pct": 1.7808557399845444,
       "description": "q-family joint-from-marginals residual stream",
       "incumbent_control": {
         "bytes": 464557,
@@ -515,47 +764,53 @@
       "pass_condition_met": false,
       "prediction_pixels": 2554360,
       "promotion_eligible": false,
+      "reference_best_control": {
+        "arm_id": "cr1_edge_conditioned_lzma1_raw_incumbent",
+        "bytes": 464557,
+        "codec": "lzma1-raw",
+        "sha256": "0a53f649768c61912399ccab14e4d3323998e47235992091e2a9e28cf7259fe1"
+      },
       "residual_extra_pixels": 2257752,
       "residual_missing_pixels": 2257752,
       "schema": "ddm_tr2p1_coder_race_row.v1",
       "score_claim": false,
       "selection_mode": "n600_all_pairs_no_prefix",
-      "verdict": "LOSS-w/-bytes",
-      "verdict_scope": "FORMULATION: q-family joint-from-marginals residual coding of the CR1 selected edge-labeled n600 support payload"
+      "verdict": "INSTRUMENT-LZ-BASELINE",
+      "verdict_scope": "INSTRUMENT(LZ-coder): q-family joint-from-marginals residual stream; not a family/formulation verdict carrier under the 2026-08-08 amendment"
     },
     {
-      "arm_id": "trot_q0p8_residual",
+      "arm_id": "trot_q0p5_ac",
       "axis": "[byte-only scorer-free]",
       "best": {
-        "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_tr2p1_20260808/payloads/trot_q0p8_residual.brotli-q11.bin",
-        "bytes": 1316311,
+        "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_tr2p1_20260808/payloads/trot_q0p5_ac.brotli-q11.bin",
+        "bytes": 3036649,
         "codec": "brotli-q11",
-        "sha256": "83f4935c0d3e04105e072ef468f70ce91c595cd030c805ce2f87722ca71ab2fb"
+        "sha256": "0262e99a7ee4cae890b59f6b5c2fd2d60b1088dbfe2a4ee30bbe4ada028d6afd"
       },
       "coder_rows": [
         {
-          "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_tr2p1_20260808/payloads/trot_q0p8_residual.brotli-q11.bin",
-          "bytes": 1316311,
+          "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_tr2p1_20260808/payloads/trot_q0p5_ac.brotli-q11.bin",
+          "bytes": 3036649,
           "codec": "brotli-q11",
-          "sha256": "83f4935c0d3e04105e072ef468f70ce91c595cd030c805ce2f87722ca71ab2fb"
+          "sha256": "0262e99a7ee4cae890b59f6b5c2fd2d60b1088dbfe2a4ee30bbe4ada028d6afd"
         },
         {
           "artifact_path": null,
-          "bytes": 1329861,
+          "bytes": 3056711,
           "codec": "lzma1-raw",
-          "sha256": "d7a40d612effb6b061a6980053c7a08f4b0162febc4432621b81305578d0c6af"
+          "sha256": "5c524c40554c5b22fc169f5393a3805c5dad04630dc6f55c48ea2ef06799e446"
         },
         {
           "artifact_path": null,
-          "bytes": 1528691,
+          "bytes": 3130500,
           "codec": "zlib-9",
-          "sha256": "ef774683bfec0b62e93da6f1a95089e5e907b02b48da627124e178b93790bafd"
+          "sha256": "c0a40138b163d534e44c6b7a81ae292101145e9c57075d4277b626a2c3b0e939"
         },
         {
           "artifact_path": null,
-          "bytes": 1800051,
+          "bytes": 3387089,
           "codec": "smevr-r7-nibble",
-          "sha256": "e28b5d8728a2e9b5cd1bb28669965f895bd9c792cb29703b451fce8f3cfc3c15"
+          "sha256": "ce1cc3ad8d17dddee3e10d80c0deb38f44cd863c8aa23dae818f20a11fdf8e46"
         }
       ],
       "coders": [
@@ -565,6 +820,106 @@
         "smevr-r7-nibble"
       ],
       "config": {
+        "ac_symbols": 2554360,
+        "coding_family": "conditional_range_ac",
+        "frequency_scale": 4096,
+        "iterations": 12,
+        "lambda": 4.0,
+        "max_solver_cells": 65536,
+        "mode": "trot_q",
+        "q": 0.5,
+        "side_info_source": "generic_cost_derived_from_counted_marginals_and_edge_context",
+        "symbolization": "row_ordered_column_choices_under_counted_row_col_marginals",
+        "video_derived_side_info_bytes": 0
+      },
+      "counted_bytes_breakdown": {
+        "compressed_sha256": "0262e99a7ee4cae890b59f6b5c2fd2d60b1088dbfe2a4ee30bbe4ada028d6afd",
+        "compressed_total": 3036649,
+        "raw_components": {
+          "ac_stream": 2916793,
+          "framing": 23516,
+          "marginals": 2096981,
+          "residual": 0,
+          "side_info": 0,
+          "tags": 3741
+        },
+        "raw_sha256": "c26934ed07cc9f3f16f04d6c8fcdedbddd58ee44388d7f9eee01da18f2ae5d53",
+        "raw_total": 5041031,
+        "video_derived_side_info_bytes": 0
+      },
+      "created_utc": "2026-08-08T16:01:40Z",
+      "decode_equality": true,
+      "delta_vs_incumbent_bytes": 2572092,
+      "delta_vs_incumbent_pct": 5.536655351227083,
+      "delta_vs_reference_best_bytes": 2572092,
+      "delta_vs_reference_best_pct": 5.536655351227083,
+      "description": "q-family joint-from-marginals conditional range-AC stream",
+      "incumbent_control": {
+        "bytes": 464557,
+        "codec": "lzma1-raw",
+        "sha256": "0a53f649768c61912399ccab14e4d3323998e47235992091e2a9e28cf7259fe1"
+      },
+      "n600_scorer_job": false,
+      "pass_condition_met": false,
+      "prediction_pixels": 2554360,
+      "promotion_eligible": false,
+      "reference_best_control": {
+        "arm_id": "cr1_edge_conditioned_lzma1_raw_incumbent",
+        "bytes": 464557,
+        "codec": "lzma1-raw",
+        "sha256": "0a53f649768c61912399ccab14e4d3323998e47235992091e2a9e28cf7259fe1"
+      },
+      "residual_extra_pixels": 0,
+      "residual_missing_pixels": 0,
+      "schema": "ddm_tr2p1_coder_race_row.v1",
+      "score_claim": false,
+      "selection_mode": "n600_all_pairs_no_prefix",
+      "verdict": "LOSS-w/-bytes",
+      "verdict_scope": "FORMULATION: q-family joint-from-marginals conditional range-AC coding of the CR1 selected edge-labeled n600 support payload"
+    },
+    {
+      "arm_id": "trot_q0p8_residual",
+      "axis": "[byte-only scorer-free]",
+      "best": {
+        "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_tr2p1_20260808/payloads/trot_q0p8_residual.brotli-q11.bin",
+        "bytes": 1314955,
+        "codec": "brotli-q11",
+        "sha256": "26bb35614600ad4eb96bd7085c3199bc858d7342ef4f81524febe2a955d89366"
+      },
+      "coder_rows": [
+        {
+          "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_tr2p1_20260808/payloads/trot_q0p8_residual.brotli-q11.bin",
+          "bytes": 1314955,
+          "codec": "brotli-q11",
+          "sha256": "26bb35614600ad4eb96bd7085c3199bc858d7342ef4f81524febe2a955d89366"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 1329892,
+          "codec": "lzma1-raw",
+          "sha256": "ded77e317ae5ac6261d39eb7aa8b9eed5b911eac84b8c8f936a2a4647be9e71e"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 1528705,
+          "codec": "zlib-9",
+          "sha256": "32574a18cc4264d9900c8d40cac0b6f28b4b21c051fb5f1cad12e2dafe48089a"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 1800063,
+          "codec": "smevr-r7-nibble",
+          "sha256": "c21283fa308868bd1e4111514907b7a235eac8e9d7993559415f7aadc8c8dc40"
+        }
+      ],
+      "coders": [
+        "zlib-9",
+        "brotli-q11",
+        "lzma1-raw",
+        "smevr-r7-nibble"
+      ],
+      "config": {
+        "coding_family": "lz_residual_baseline",
         "integer_projection": "row_count_descending_top_score_with_column_quota",
         "iterations": 12,
         "lambda": 4.0,
@@ -575,23 +930,26 @@
         "video_derived_side_info_bytes": 0
       },
       "counted_bytes_breakdown": {
-        "compressed_sha256": "83f4935c0d3e04105e072ef468f70ce91c595cd030c805ce2f87722ca71ab2fb",
-        "compressed_total": 1316311,
+        "compressed_sha256": "26bb35614600ad4eb96bd7085c3199bc858d7342ef4f81524febe2a955d89366",
+        "compressed_total": 1314955,
         "raw_components": {
+          "ac_stream": 0,
           "framing": 17982,
           "marginals": 2096981,
           "residual": 4827639,
           "side_info": 0,
-          "tags": 3672
+          "tags": 3711
         },
-        "raw_sha256": "749c865999b26c809e3ae0d5e6f5f040b7b5a8a19400691e754c670687af459b",
-        "raw_total": 6946274,
+        "raw_sha256": "46e3c1a552199b6825da8cd3a0ab1a38be306529c95adb30b11df956495fc2ea",
+        "raw_total": 6946313,
         "video_derived_side_info_bytes": 0
       },
-      "created_utc": "2026-08-08T15:35:27Z",
+      "created_utc": "2026-08-08T16:03:00Z",
       "decode_equality": true,
-      "delta_vs_incumbent_bytes": 851754,
-      "delta_vs_incumbent_pct": 1.8334757629311365,
+      "delta_vs_incumbent_bytes": 850398,
+      "delta_vs_incumbent_pct": 1.8305568530879957,
+      "delta_vs_reference_best_bytes": 850398,
+      "delta_vs_reference_best_pct": 1.8305568530879957,
       "description": "q-family joint-from-marginals residual stream",
       "incumbent_control": {
         "bytes": 464557,
@@ -602,47 +960,53 @@
       "pass_condition_met": false,
       "prediction_pixels": 2554360,
       "promotion_eligible": false,
+      "reference_best_control": {
+        "arm_id": "cr1_edge_conditioned_lzma1_raw_incumbent",
+        "bytes": 464557,
+        "codec": "lzma1-raw",
+        "sha256": "0a53f649768c61912399ccab14e4d3323998e47235992091e2a9e28cf7259fe1"
+      },
       "residual_extra_pixels": 2256877,
       "residual_missing_pixels": 2256877,
       "schema": "ddm_tr2p1_coder_race_row.v1",
       "score_claim": false,
       "selection_mode": "n600_all_pairs_no_prefix",
-      "verdict": "LOSS-w/-bytes",
-      "verdict_scope": "FORMULATION: q-family joint-from-marginals residual coding of the CR1 selected edge-labeled n600 support payload"
+      "verdict": "INSTRUMENT-LZ-BASELINE",
+      "verdict_scope": "INSTRUMENT(LZ-coder): q-family joint-from-marginals residual stream; not a family/formulation verdict carrier under the 2026-08-08 amendment"
     },
     {
-      "arm_id": "trot_q1p0_residual",
+      "arm_id": "trot_q0p8_ac",
       "axis": "[byte-only scorer-free]",
       "best": {
-        "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_tr2p1_20260808/payloads/trot_q1p0_residual.brotli-q11.bin",
-        "bytes": 1316436,
+        "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_tr2p1_20260808/payloads/trot_q0p8_ac.brotli-q11.bin",
+        "bytes": 2691482,
         "codec": "brotli-q11",
-        "sha256": "efb30383ccc535b360bc4e767c6e87f304fca9902d901921ddc26fdeb996c3e8"
+        "sha256": "38d9372009e5bcefa748b81178a54376ec624043e47e9fdf7934d475447e0306"
       },
       "coder_rows": [
         {
-          "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_tr2p1_20260808/payloads/trot_q1p0_residual.brotli-q11.bin",
-          "bytes": 1316436,
+          "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_tr2p1_20260808/payloads/trot_q0p8_ac.brotli-q11.bin",
+          "bytes": 2691482,
           "codec": "brotli-q11",
-          "sha256": "efb30383ccc535b360bc4e767c6e87f304fca9902d901921ddc26fdeb996c3e8"
+          "sha256": "38d9372009e5bcefa748b81178a54376ec624043e47e9fdf7934d475447e0306"
         },
         {
           "artifact_path": null,
-          "bytes": 1329985,
+          "bytes": 2705536,
           "codec": "lzma1-raw",
-          "sha256": "192b090d11dcef27da14a946d7e8c59be89dd30fd54d6edba2a2bfaee7a7ffcd"
+          "sha256": "a355a65e10a8b3d6892ba920d18e380179aa6c3e2a18ee388ba62ba23c97dd99"
         },
         {
           "artifact_path": null,
-          "bytes": 1526499,
+          "bytes": 2781287,
           "codec": "zlib-9",
-          "sha256": "b8fd53805ec78372f1e62f45c19a3139a340b734df562d39edd51549acad58a6"
+          "sha256": "3f17f9c6c91267094539ad3856399e4c9bb8d4b8489a29160f8b147b6d2c0886"
         },
         {
           "artifact_path": null,
-          "bytes": 1805045,
+          "bytes": 3029185,
           "codec": "smevr-r7-nibble",
-          "sha256": "0d63db19ce3e0d741e00648bf408485773ed49142b0c5917072dc2804de327e0"
+          "sha256": "a841b64295848707259467e25d8da8ad786b89f503723d167426a9dfc4463e4d"
         }
       ],
       "coders": [
@@ -652,6 +1016,106 @@
         "smevr-r7-nibble"
       ],
       "config": {
+        "ac_symbols": 2554360,
+        "coding_family": "conditional_range_ac",
+        "frequency_scale": 4096,
+        "iterations": 12,
+        "lambda": 4.0,
+        "max_solver_cells": 65536,
+        "mode": "trot_q",
+        "q": 0.8,
+        "side_info_source": "generic_cost_derived_from_counted_marginals_and_edge_context",
+        "symbolization": "row_ordered_column_choices_under_counted_row_col_marginals",
+        "video_derived_side_info_bytes": 0
+      },
+      "counted_bytes_breakdown": {
+        "compressed_sha256": "38d9372009e5bcefa748b81178a54376ec624043e47e9fdf7934d475447e0306",
+        "compressed_total": 2691482,
+        "raw_components": {
+          "ac_stream": 2544840,
+          "framing": 23532,
+          "marginals": 2096981,
+          "residual": 0,
+          "side_info": 0,
+          "tags": 3741
+        },
+        "raw_sha256": "35be0a7303131c953a98c9eec7b2f36c7d4aeefbb837dad5720b9d0f6f591bc7",
+        "raw_total": 4669094,
+        "video_derived_side_info_bytes": 0
+      },
+      "created_utc": "2026-08-08T16:04:06Z",
+      "decode_equality": true,
+      "delta_vs_incumbent_bytes": 2226925,
+      "delta_vs_incumbent_pct": 4.7936528779030345,
+      "delta_vs_reference_best_bytes": 2226925,
+      "delta_vs_reference_best_pct": 4.7936528779030345,
+      "description": "q-family joint-from-marginals conditional range-AC stream",
+      "incumbent_control": {
+        "bytes": 464557,
+        "codec": "lzma1-raw",
+        "sha256": "0a53f649768c61912399ccab14e4d3323998e47235992091e2a9e28cf7259fe1"
+      },
+      "n600_scorer_job": false,
+      "pass_condition_met": false,
+      "prediction_pixels": 2554360,
+      "promotion_eligible": false,
+      "reference_best_control": {
+        "arm_id": "cr1_edge_conditioned_lzma1_raw_incumbent",
+        "bytes": 464557,
+        "codec": "lzma1-raw",
+        "sha256": "0a53f649768c61912399ccab14e4d3323998e47235992091e2a9e28cf7259fe1"
+      },
+      "residual_extra_pixels": 0,
+      "residual_missing_pixels": 0,
+      "schema": "ddm_tr2p1_coder_race_row.v1",
+      "score_claim": false,
+      "selection_mode": "n600_all_pairs_no_prefix",
+      "verdict": "LOSS-w/-bytes",
+      "verdict_scope": "FORMULATION: q-family joint-from-marginals conditional range-AC coding of the CR1 selected edge-labeled n600 support payload"
+    },
+    {
+      "arm_id": "trot_q1p0_residual",
+      "axis": "[byte-only scorer-free]",
+      "best": {
+        "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_tr2p1_20260808/payloads/trot_q1p0_residual.brotli-q11.bin",
+        "bytes": 1315291,
+        "codec": "brotli-q11",
+        "sha256": "a836e58ebd5d3598bbd9d9e068d09780b94099b8869145394cef5cfc58e9629e"
+      },
+      "coder_rows": [
+        {
+          "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_tr2p1_20260808/payloads/trot_q1p0_residual.brotli-q11.bin",
+          "bytes": 1315291,
+          "codec": "brotli-q11",
+          "sha256": "a836e58ebd5d3598bbd9d9e068d09780b94099b8869145394cef5cfc58e9629e"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 1330174,
+          "codec": "lzma1-raw",
+          "sha256": "4faee889172099e9e19ea21c0c60f9ec842465d034254cd6fe226b887cc1a7f0"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 1526522,
+          "codec": "zlib-9",
+          "sha256": "bdfb6582293bc7c2931a38da53fd0cdb268fbaed40252c4b684af992684f016a"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 1805067,
+          "codec": "smevr-r7-nibble",
+          "sha256": "43c4322e8bc2c30186d6cc0fab12318d3b88a26b1966a4f9407b4d9ec6b54928"
+        }
+      ],
+      "coders": [
+        "zlib-9",
+        "brotli-q11",
+        "lzma1-raw",
+        "smevr-r7-nibble"
+      ],
+      "config": {
+        "coding_family": "lz_residual_baseline",
         "integer_projection": "row_count_descending_top_score_with_column_quota",
         "iterations": 12,
         "lambda": 4.0,
@@ -662,23 +1126,26 @@
         "video_derived_side_info_bytes": 0
       },
       "counted_bytes_breakdown": {
-        "compressed_sha256": "efb30383ccc535b360bc4e767c6e87f304fca9902d901921ddc26fdeb996c3e8",
-        "compressed_total": 1316436,
+        "compressed_sha256": "a836e58ebd5d3598bbd9d9e068d09780b94099b8869145394cef5cfc58e9629e",
+        "compressed_total": 1315291,
         "raw_components": {
+          "ac_stream": 0,
           "framing": 17982,
           "marginals": 2096981,
           "residual": 4825820,
           "side_info": 0,
-          "tags": 3672
+          "tags": 3711
         },
-        "raw_sha256": "1960dd7eae812dc4085a3cd73b395609f59faaee932467b50ba5fe12ce1bb657",
-        "raw_total": 6944455,
+        "raw_sha256": "3b6afd2dbb4ce70ee3c5085f1a2c974be540e5d989e7b86e7b8a55002eb6b5fd",
+        "raw_total": 6944494,
         "video_derived_side_info_bytes": 0
       },
-      "created_utc": "2026-08-08T15:36:48Z",
+      "created_utc": "2026-08-08T16:05:26Z",
       "decode_equality": true,
-      "delta_vs_incumbent_bytes": 851879,
-      "delta_vs_incumbent_pct": 1.8337448364786237,
+      "delta_vs_incumbent_bytes": 850734,
+      "delta_vs_incumbent_pct": 1.8312801227836413,
+      "delta_vs_reference_best_bytes": 850734,
+      "delta_vs_reference_best_pct": 1.8312801227836413,
       "description": "q-family joint-from-marginals residual stream",
       "incumbent_control": {
         "bytes": 464557,
@@ -689,47 +1156,53 @@
       "pass_condition_met": false,
       "prediction_pixels": 2554360,
       "promotion_eligible": false,
+      "reference_best_control": {
+        "arm_id": "cr1_edge_conditioned_lzma1_raw_incumbent",
+        "bytes": 464557,
+        "codec": "lzma1-raw",
+        "sha256": "0a53f649768c61912399ccab14e4d3323998e47235992091e2a9e28cf7259fe1"
+      },
       "residual_extra_pixels": 2255267,
       "residual_missing_pixels": 2255267,
       "schema": "ddm_tr2p1_coder_race_row.v1",
       "score_claim": false,
       "selection_mode": "n600_all_pairs_no_prefix",
-      "verdict": "LOSS-w/-bytes",
-      "verdict_scope": "FORMULATION: q-family joint-from-marginals residual coding of the CR1 selected edge-labeled n600 support payload"
+      "verdict": "INSTRUMENT-LZ-BASELINE",
+      "verdict_scope": "INSTRUMENT(LZ-coder): q-family joint-from-marginals residual stream; not a family/formulation verdict carrier under the 2026-08-08 amendment"
     },
     {
-      "arm_id": "trot_q1p2_residual",
+      "arm_id": "trot_q1p0_ac",
       "axis": "[byte-only scorer-free]",
       "best": {
-        "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_tr2p1_20260808/payloads/trot_q1p2_residual.brotli-q11.bin",
-        "bytes": 1322174,
+        "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_tr2p1_20260808/payloads/trot_q1p0_ac.brotli-q11.bin",
+        "bytes": 2665580,
         "codec": "brotli-q11",
-        "sha256": "191beecede1105850a1c0d8db9635bfb17420e884b02e6f218c81214c1d3d983"
+        "sha256": "c64b583aebc9231108cee475cd4c1950e8e3b1e634bc924cc44b26b69ec0bf0f"
       },
       "coder_rows": [
         {
-          "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_tr2p1_20260808/payloads/trot_q1p2_residual.brotli-q11.bin",
-          "bytes": 1322174,
+          "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_tr2p1_20260808/payloads/trot_q1p0_ac.brotli-q11.bin",
+          "bytes": 2665580,
           "codec": "brotli-q11",
-          "sha256": "191beecede1105850a1c0d8db9635bfb17420e884b02e6f218c81214c1d3d983"
+          "sha256": "c64b583aebc9231108cee475cd4c1950e8e3b1e634bc924cc44b26b69ec0bf0f"
         },
         {
           "artifact_path": null,
-          "bytes": 1335482,
+          "bytes": 2679796,
           "codec": "lzma1-raw",
-          "sha256": "d9dc8547746584c392f9bb37f877d5f10eb27ff0bcdcf06a1c0fe509ec765e81"
+          "sha256": "f0d1067d732ceadeea166e5f755fdca30805b6ab81953ed342834dc9ba28b847"
         },
         {
           "artifact_path": null,
-          "bytes": 1532224,
+          "bytes": 2755730,
           "codec": "zlib-9",
-          "sha256": "51ee2b64d025e036d49d882bc8055b764f29310133c4ce76f5be3a7e003dfd46"
+          "sha256": "bbb7dbe9d1e0193a69daa167e0ad63e7eb8670f1e66f8906dae0115f413afb50"
         },
         {
           "artifact_path": null,
-          "bytes": 1811252,
+          "bytes": 3003524,
           "codec": "smevr-r7-nibble",
-          "sha256": "06c93fc9298e3b3ed979b673b0c15888abfd6d30065b4ffb674108bc3c9065d7"
+          "sha256": "30a3f2b2c7196b6763f54bb20f5a7bf46fbe67a758c4ae34062c3917cc3772cb"
         }
       ],
       "coders": [
@@ -739,6 +1212,106 @@
         "smevr-r7-nibble"
       ],
       "config": {
+        "ac_symbols": 2554360,
+        "coding_family": "conditional_range_ac",
+        "frequency_scale": 4096,
+        "iterations": 12,
+        "lambda": 4.0,
+        "max_solver_cells": 65536,
+        "mode": "trot_q",
+        "q": 1.0,
+        "side_info_source": "generic_cost_derived_from_counted_marginals_and_edge_context",
+        "symbolization": "row_ordered_column_choices_under_counted_row_col_marginals",
+        "video_derived_side_info_bytes": 0
+      },
+      "counted_bytes_breakdown": {
+        "compressed_sha256": "c64b583aebc9231108cee475cd4c1950e8e3b1e634bc924cc44b26b69ec0bf0f",
+        "compressed_total": 2665580,
+        "raw_components": {
+          "ac_stream": 2515558,
+          "framing": 23542,
+          "marginals": 2096981,
+          "residual": 0,
+          "side_info": 0,
+          "tags": 3741
+        },
+        "raw_sha256": "9f0637a4d542769f0e678f497cad2a1a70313f3ed3d288c95067af09ff06ef9a",
+        "raw_total": 4639822,
+        "video_derived_side_info_bytes": 0
+      },
+      "created_utc": "2026-08-08T16:06:32Z",
+      "decode_equality": true,
+      "delta_vs_incumbent_bytes": 2201023,
+      "delta_vs_incumbent_pct": 4.737896533686932,
+      "delta_vs_reference_best_bytes": 2201023,
+      "delta_vs_reference_best_pct": 4.737896533686932,
+      "description": "q-family joint-from-marginals conditional range-AC stream",
+      "incumbent_control": {
+        "bytes": 464557,
+        "codec": "lzma1-raw",
+        "sha256": "0a53f649768c61912399ccab14e4d3323998e47235992091e2a9e28cf7259fe1"
+      },
+      "n600_scorer_job": false,
+      "pass_condition_met": false,
+      "prediction_pixels": 2554360,
+      "promotion_eligible": false,
+      "reference_best_control": {
+        "arm_id": "cr1_edge_conditioned_lzma1_raw_incumbent",
+        "bytes": 464557,
+        "codec": "lzma1-raw",
+        "sha256": "0a53f649768c61912399ccab14e4d3323998e47235992091e2a9e28cf7259fe1"
+      },
+      "residual_extra_pixels": 0,
+      "residual_missing_pixels": 0,
+      "schema": "ddm_tr2p1_coder_race_row.v1",
+      "score_claim": false,
+      "selection_mode": "n600_all_pairs_no_prefix",
+      "verdict": "LOSS-w/-bytes",
+      "verdict_scope": "FORMULATION: q-family joint-from-marginals conditional range-AC coding of the CR1 selected edge-labeled n600 support payload"
+    },
+    {
+      "arm_id": "trot_q1p2_residual",
+      "axis": "[byte-only scorer-free]",
+      "best": {
+        "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_tr2p1_20260808/payloads/trot_q1p2_residual.brotli-q11.bin",
+        "bytes": 1321772,
+        "codec": "brotli-q11",
+        "sha256": "7d4b69bc82e9f76ee7881c1e02084e2284d7e91d9fb8c1ce547f2b680a343a77"
+      },
+      "coder_rows": [
+        {
+          "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_tr2p1_20260808/payloads/trot_q1p2_residual.brotli-q11.bin",
+          "bytes": 1321772,
+          "codec": "brotli-q11",
+          "sha256": "7d4b69bc82e9f76ee7881c1e02084e2284d7e91d9fb8c1ce547f2b680a343a77"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 1334860,
+          "codec": "lzma1-raw",
+          "sha256": "9f254c32433a3abce5c042829b09615b49f57b6de7ac05be51c82bdb3942a551"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 1532236,
+          "codec": "zlib-9",
+          "sha256": "799a9aaa52d348389a59318c51c21e153274c98b0144cfc03f9db7ab4d595614"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 1811268,
+          "codec": "smevr-r7-nibble",
+          "sha256": "fd4f625e77a614e9bcb353bebf41f7ce6f48a454263343d3baebf2311467ac07"
+        }
+      ],
+      "coders": [
+        "zlib-9",
+        "brotli-q11",
+        "lzma1-raw",
+        "smevr-r7-nibble"
+      ],
+      "config": {
+        "coding_family": "lz_residual_baseline",
         "integer_projection": "row_count_descending_top_score_with_column_quota",
         "iterations": 12,
         "lambda": 4.0,
@@ -749,23 +1322,26 @@
         "video_derived_side_info_bytes": 0
       },
       "counted_bytes_breakdown": {
-        "compressed_sha256": "191beecede1105850a1c0d8db9635bfb17420e884b02e6f218c81214c1d3d983",
-        "compressed_total": 1322174,
+        "compressed_sha256": "7d4b69bc82e9f76ee7881c1e02084e2284d7e91d9fb8c1ce547f2b680a343a77",
+        "compressed_total": 1321772,
         "raw_components": {
+          "ac_stream": 0,
           "framing": 17982,
           "marginals": 2096981,
           "residual": 4823529,
           "side_info": 0,
-          "tags": 3672
+          "tags": 3711
         },
-        "raw_sha256": "28714e86d983c4335ab319e0348a0d82cae039dc7549ec5c66540ed8a646068e",
-        "raw_total": 6942164,
+        "raw_sha256": "146d0f4defc8146824d514f9d91ce0451e170db69f97be3fbd4eefa7ab06bc24",
+        "raw_total": 6942203,
         "video_derived_side_info_bytes": 0
       },
-      "created_utc": "2026-08-08T15:38:09Z",
+      "created_utc": "2026-08-08T16:07:52Z",
       "decode_equality": true,
-      "delta_vs_incumbent_bytes": 857617,
-      "delta_vs_incumbent_pct": 1.846096388602475,
+      "delta_vs_incumbent_bytes": 857215,
+      "delta_vs_incumbent_pct": 1.8452310480737564,
+      "delta_vs_reference_best_bytes": 857215,
+      "delta_vs_reference_best_pct": 1.8452310480737564,
       "description": "q-family joint-from-marginals residual stream",
       "incumbent_control": {
         "bytes": 464557,
@@ -776,47 +1352,53 @@
       "pass_condition_met": false,
       "prediction_pixels": 2554360,
       "promotion_eligible": false,
+      "reference_best_control": {
+        "arm_id": "cr1_edge_conditioned_lzma1_raw_incumbent",
+        "bytes": 464557,
+        "codec": "lzma1-raw",
+        "sha256": "0a53f649768c61912399ccab14e4d3323998e47235992091e2a9e28cf7259fe1"
+      },
       "residual_extra_pixels": 2253741,
       "residual_missing_pixels": 2253741,
       "schema": "ddm_tr2p1_coder_race_row.v1",
       "score_claim": false,
       "selection_mode": "n600_all_pairs_no_prefix",
-      "verdict": "LOSS-w/-bytes",
-      "verdict_scope": "FORMULATION: q-family joint-from-marginals residual coding of the CR1 selected edge-labeled n600 support payload"
+      "verdict": "INSTRUMENT-LZ-BASELINE",
+      "verdict_scope": "INSTRUMENT(LZ-coder): q-family joint-from-marginals residual stream; not a family/formulation verdict carrier under the 2026-08-08 amendment"
     },
     {
-      "arm_id": "trot_q2p0_residual",
+      "arm_id": "trot_q1p2_ac",
       "axis": "[byte-only scorer-free]",
       "best": {
-        "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_tr2p1_20260808/payloads/trot_q2p0_residual.brotli-q11.bin",
-        "bytes": 1336591,
+        "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_tr2p1_20260808/payloads/trot_q1p2_ac.brotli-q11.bin",
+        "bytes": 2653884,
         "codec": "brotli-q11",
-        "sha256": "cfa91183c812b6eedb3c4fd90b48cda4b69b9d319d6af1ebb596f00bbafadf5a"
+        "sha256": "1ba9052ea80dcd53a664934aa0a027872c4b503ca9fb0337dd6419414ebcf13a"
       },
       "coder_rows": [
         {
-          "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_tr2p1_20260808/payloads/trot_q2p0_residual.brotli-q11.bin",
-          "bytes": 1336591,
+          "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_tr2p1_20260808/payloads/trot_q1p2_ac.brotli-q11.bin",
+          "bytes": 2653884,
           "codec": "brotli-q11",
-          "sha256": "cfa91183c812b6eedb3c4fd90b48cda4b69b9d319d6af1ebb596f00bbafadf5a"
+          "sha256": "1ba9052ea80dcd53a664934aa0a027872c4b503ca9fb0337dd6419414ebcf13a"
         },
         {
           "artifact_path": null,
-          "bytes": 1344212,
+          "bytes": 2667898,
           "codec": "lzma1-raw",
-          "sha256": "930d2e44abdb816ff46f3f1847d4f680547a1aa6522e014d423669e508270f74"
+          "sha256": "98ba3ecf1bd032df64f0f4f3be5669076f76d2c47a390e0cbf3dab269da047a8"
         },
         {
           "artifact_path": null,
-          "bytes": 1540173,
+          "bytes": 2743941,
           "codec": "zlib-9",
-          "sha256": "7bccc3e062f87a622a678b31836a8ded70f53877b8ae809af02f8647b9967c94"
+          "sha256": "4b4b2822aa32e2be31eea82688dc2d1ca05cf4f4345fbae5a6190449201263b5"
         },
         {
           "artifact_path": null,
-          "bytes": 1824227,
+          "bytes": 2991569,
           "codec": "smevr-r7-nibble",
-          "sha256": "9bb66e0e4a206653a42ec725933db5802009362e58b24f2ee4010ac19a9d17dd"
+          "sha256": "b7412c4cf2ddac35c3b50876f3e9638e5a5c46f06bb988d6620d1c3fadb27b29"
         }
       ],
       "coders": [
@@ -826,6 +1408,106 @@
         "smevr-r7-nibble"
       ],
       "config": {
+        "ac_symbols": 2554360,
+        "coding_family": "conditional_range_ac",
+        "frequency_scale": 4096,
+        "iterations": 12,
+        "lambda": 4.0,
+        "max_solver_cells": 65536,
+        "mode": "trot_q",
+        "q": 1.2,
+        "side_info_source": "generic_cost_derived_from_counted_marginals_and_edge_context",
+        "symbolization": "row_ordered_column_choices_under_counted_row_col_marginals",
+        "video_derived_side_info_bytes": 0
+      },
+      "counted_bytes_breakdown": {
+        "compressed_sha256": "1ba9052ea80dcd53a664934aa0a027872c4b503ca9fb0337dd6419414ebcf13a",
+        "compressed_total": 2653884,
+        "raw_components": {
+          "ac_stream": 2502577,
+          "framing": 23545,
+          "marginals": 2096981,
+          "residual": 0,
+          "side_info": 0,
+          "tags": 3741
+        },
+        "raw_sha256": "4d1c322bb85ef42c9e90383379a18c0e1af160cf5299d78fa027532fe27be172",
+        "raw_total": 4626844,
+        "video_derived_side_info_bytes": 0
+      },
+      "created_utc": "2026-08-08T16:08:57Z",
+      "decode_equality": true,
+      "delta_vs_incumbent_bytes": 2189327,
+      "delta_vs_incumbent_pct": 4.7127198599956515,
+      "delta_vs_reference_best_bytes": 2189327,
+      "delta_vs_reference_best_pct": 4.7127198599956515,
+      "description": "q-family joint-from-marginals conditional range-AC stream",
+      "incumbent_control": {
+        "bytes": 464557,
+        "codec": "lzma1-raw",
+        "sha256": "0a53f649768c61912399ccab14e4d3323998e47235992091e2a9e28cf7259fe1"
+      },
+      "n600_scorer_job": false,
+      "pass_condition_met": false,
+      "prediction_pixels": 2554360,
+      "promotion_eligible": false,
+      "reference_best_control": {
+        "arm_id": "cr1_edge_conditioned_lzma1_raw_incumbent",
+        "bytes": 464557,
+        "codec": "lzma1-raw",
+        "sha256": "0a53f649768c61912399ccab14e4d3323998e47235992091e2a9e28cf7259fe1"
+      },
+      "residual_extra_pixels": 0,
+      "residual_missing_pixels": 0,
+      "schema": "ddm_tr2p1_coder_race_row.v1",
+      "score_claim": false,
+      "selection_mode": "n600_all_pairs_no_prefix",
+      "verdict": "LOSS-w/-bytes",
+      "verdict_scope": "FORMULATION: q-family joint-from-marginals conditional range-AC coding of the CR1 selected edge-labeled n600 support payload"
+    },
+    {
+      "arm_id": "trot_q2p0_residual",
+      "axis": "[byte-only scorer-free]",
+      "best": {
+        "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_tr2p1_20260808/payloads/trot_q2p0_residual.brotli-q11.bin",
+        "bytes": 1329394,
+        "codec": "brotli-q11",
+        "sha256": "df094ddb3428e87496c89220e1df04ec5af42b20c91f098c12929c73d8dd21ab"
+      },
+      "coder_rows": [
+        {
+          "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_tr2p1_20260808/payloads/trot_q2p0_residual.brotli-q11.bin",
+          "bytes": 1329394,
+          "codec": "brotli-q11",
+          "sha256": "df094ddb3428e87496c89220e1df04ec5af42b20c91f098c12929c73d8dd21ab"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 1344287,
+          "codec": "lzma1-raw",
+          "sha256": "57372520ec688f34df094dd3fb95f0746d682a71a92c5041bbb6d44762115dd2"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 1540197,
+          "codec": "zlib-9",
+          "sha256": "dac6830f157f703495a0777efd5809f5ab12a8ffbc20ec09a8efa9612a38046e"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 1824251,
+          "codec": "smevr-r7-nibble",
+          "sha256": "c5d13d41c467ac33e14e085c2a51cc046dc2f7bb87432c40d643a33f99cf9c94"
+        }
+      ],
+      "coders": [
+        "zlib-9",
+        "brotli-q11",
+        "lzma1-raw",
+        "smevr-r7-nibble"
+      ],
+      "config": {
+        "coding_family": "lz_residual_baseline",
         "integer_projection": "row_count_descending_top_score_with_column_quota",
         "iterations": 12,
         "lambda": 4.0,
@@ -836,23 +1518,26 @@
         "video_derived_side_info_bytes": 0
       },
       "counted_bytes_breakdown": {
-        "compressed_sha256": "cfa91183c812b6eedb3c4fd90b48cda4b69b9d319d6af1ebb596f00bbafadf5a",
-        "compressed_total": 1336591,
+        "compressed_sha256": "df094ddb3428e87496c89220e1df04ec5af42b20c91f098c12929c73d8dd21ab",
+        "compressed_total": 1329394,
         "raw_components": {
+          "ac_stream": 0,
           "framing": 17982,
           "marginals": 2096981,
           "residual": 4820075,
           "side_info": 0,
-          "tags": 3672
+          "tags": 3711
         },
-        "raw_sha256": "9105f51a9e3403ce3b1715a5f3bd19b3b3f18457ce730d0f2217af87867f4be4",
-        "raw_total": 6938710,
+        "raw_sha256": "9f8014bacc365e86589749c8581c70f63be03eda23faea1afb5cef604d9cb26b",
+        "raw_total": 6938749,
         "video_derived_side_info_bytes": 0
       },
-      "created_utc": "2026-08-08T15:39:29Z",
+      "created_utc": "2026-08-08T16:10:18Z",
       "decode_equality": true,
-      "delta_vs_incumbent_bytes": 872034,
-      "delta_vs_incumbent_pct": 1.877130255275456,
+      "delta_vs_incumbent_bytes": 864837,
+      "delta_vs_incumbent_pct": 1.8616380767053344,
+      "delta_vs_reference_best_bytes": 864837,
+      "delta_vs_reference_best_pct": 1.8616380767053344,
       "description": "q-family joint-from-marginals residual stream",
       "incumbent_control": {
         "bytes": 464557,
@@ -863,15 +1548,120 @@
       "pass_condition_met": false,
       "prediction_pixels": 2554360,
       "promotion_eligible": false,
+      "reference_best_control": {
+        "arm_id": "cr1_edge_conditioned_lzma1_raw_incumbent",
+        "bytes": 464557,
+        "codec": "lzma1-raw",
+        "sha256": "0a53f649768c61912399ccab14e4d3323998e47235992091e2a9e28cf7259fe1"
+      },
       "residual_extra_pixels": 2251209,
       "residual_missing_pixels": 2251209,
       "schema": "ddm_tr2p1_coder_race_row.v1",
       "score_claim": false,
       "selection_mode": "n600_all_pairs_no_prefix",
+      "verdict": "INSTRUMENT-LZ-BASELINE",
+      "verdict_scope": "INSTRUMENT(LZ-coder): q-family joint-from-marginals residual stream; not a family/formulation verdict carrier under the 2026-08-08 amendment"
+    },
+    {
+      "arm_id": "trot_q2p0_ac",
+      "axis": "[byte-only scorer-free]",
+      "best": {
+        "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_tr2p1_20260808/payloads/trot_q2p0_ac.brotli-q11.bin",
+        "bytes": 2637555,
+        "codec": "brotli-q11",
+        "sha256": "2025d34d9e3a69959b42a61480f8dd856dfc38683f1ce24a2c134d54ef42f07c"
+      },
+      "coder_rows": [
+        {
+          "artifact_path": "/Volumes/VertigoDataTier/pact/ddm_tr2p1_20260808/payloads/trot_q2p0_ac.brotli-q11.bin",
+          "bytes": 2637555,
+          "codec": "brotli-q11",
+          "sha256": "2025d34d9e3a69959b42a61480f8dd856dfc38683f1ce24a2c134d54ef42f07c"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 2651257,
+          "codec": "lzma1-raw",
+          "sha256": "c191b28a9fbfd693925242ae7a716908702ea42e125910f406205c993792f924"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 2727694,
+          "codec": "zlib-9",
+          "sha256": "9c18cbe13b60ba6b5e5469b895c7376d32286084145739451b3d6e86e1428fe3"
+        },
+        {
+          "artifact_path": null,
+          "bytes": 2974765,
+          "codec": "smevr-r7-nibble",
+          "sha256": "d37a6f465358f823022852d6e4c1bf407264e5abdf620739cb27e0307819df7e"
+        }
+      ],
+      "coders": [
+        "zlib-9",
+        "brotli-q11",
+        "lzma1-raw",
+        "smevr-r7-nibble"
+      ],
+      "config": {
+        "ac_symbols": 2554360,
+        "coding_family": "conditional_range_ac",
+        "frequency_scale": 4096,
+        "iterations": 12,
+        "lambda": 4.0,
+        "max_solver_cells": 65536,
+        "mode": "trot_q",
+        "q": 2.0,
+        "side_info_source": "generic_cost_derived_from_counted_marginals_and_edge_context",
+        "symbolization": "row_ordered_column_choices_under_counted_row_col_marginals",
+        "video_derived_side_info_bytes": 0
+      },
+      "counted_bytes_breakdown": {
+        "compressed_sha256": "2025d34d9e3a69959b42a61480f8dd856dfc38683f1ce24a2c134d54ef42f07c",
+        "compressed_total": 2637555,
+        "raw_components": {
+          "ac_stream": 2485106,
+          "framing": 23552,
+          "marginals": 2096981,
+          "residual": 0,
+          "side_info": 0,
+          "tags": 3741
+        },
+        "raw_sha256": "5576148a72338bd7ab25cc80facd0822c168b790c7299e720ffffa2565006615",
+        "raw_total": 4609380,
+        "video_derived_side_info_bytes": 0
+      },
+      "created_utc": "2026-08-08T16:11:23Z",
+      "decode_equality": true,
+      "delta_vs_incumbent_bytes": 2172998,
+      "delta_vs_incumbent_pct": 4.677570244340307,
+      "delta_vs_reference_best_bytes": 2172998,
+      "delta_vs_reference_best_pct": 4.677570244340307,
+      "description": "q-family joint-from-marginals conditional range-AC stream",
+      "incumbent_control": {
+        "bytes": 464557,
+        "codec": "lzma1-raw",
+        "sha256": "0a53f649768c61912399ccab14e4d3323998e47235992091e2a9e28cf7259fe1"
+      },
+      "n600_scorer_job": false,
+      "pass_condition_met": false,
+      "prediction_pixels": 2554360,
+      "promotion_eligible": false,
+      "reference_best_control": {
+        "arm_id": "cr1_edge_conditioned_lzma1_raw_incumbent",
+        "bytes": 464557,
+        "codec": "lzma1-raw",
+        "sha256": "0a53f649768c61912399ccab14e4d3323998e47235992091e2a9e28cf7259fe1"
+      },
+      "residual_extra_pixels": 0,
+      "residual_missing_pixels": 0,
+      "schema": "ddm_tr2p1_coder_race_row.v1",
+      "score_claim": false,
+      "selection_mode": "n600_all_pairs_no_prefix",
       "verdict": "LOSS-w/-bytes",
-      "verdict_scope": "FORMULATION: q-family joint-from-marginals residual coding of the CR1 selected edge-labeled n600 support payload"
+      "verdict_scope": "FORMULATION: q-family joint-from-marginals conditional range-AC coding of the CR1 selected edge-labeled n600 support payload"
     }
   ],
-  "verdict": "LOSS-w/-bytes; FORMULATION falsifier met for q-family joint-from-marginals residual coding of CR1 selected edge support",
-  "wall_seconds": 548.4357360840077
+  "verdict": "LOSS-w/-bytes; FORMULATION falsifier met for q-family joint-from-marginals conditional range-AC coding of CR1 selected edge support",
+  "wall_seconds": 1396.701238291993
 }

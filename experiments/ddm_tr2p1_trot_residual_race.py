@@ -1,12 +1,13 @@
 #!/usr/bin/env python
 # SPDX-License-Identifier: MIT
-"""ddm_tr2p1 scorer-free TROT residual race on CR1 edge supports.
+"""ddm_tr2p1 scorer-free TROT residual/AC race on CR1 edge supports.
 
 This arm races the measured CR1 edge-conditioned support incumbent against a
-counted joint-from-marginals residual stream.  It never runs SegNet, PoseNet,
-Metal, a scorer job, or an archive promotion path.  Every raced byte row is a
-real lossless coder output with decode equality back to the same selected
-n600 edge-labeled support arrays.
+counted joint-from-marginals residual stream and the charter-amended conditional
+range-AC reference form.  It never runs SegNet, PoseNet, Metal, a scorer job,
+or an archive promotion path.  Every raced byte row is a real lossless coder
+output with decode equality back to the same selected n600 edge-labeled support
+arrays.
 """
 
 from __future__ import annotations
@@ -88,6 +89,187 @@ class StreamBuild:
     residual_missing_pixels: int
     residual_extra_pixels: int
     config: dict[str, Any]
+
+
+class BitWriter:
+    __slots__ = ("_bits", "_buffer", "_current")
+
+    def __init__(self) -> None:
+        self._buffer = bytearray()
+        self._current = 0
+        self._bits = 0
+
+    def write(self, bit: int) -> None:
+        self._current = (self._current << 1) | (bit & 1)
+        self._bits += 1
+        if self._bits == 8:
+            self._buffer.append(self._current)
+            self._current = 0
+            self._bits = 0
+
+    def finish(self) -> bytes:
+        if self._bits:
+            self._buffer.append(self._current << (8 - self._bits))
+            self._current = 0
+            self._bits = 0
+        return bytes(self._buffer)
+
+
+class BitReader:
+    __slots__ = ("_bit_index", "_byte_index", "_data")
+
+    def __init__(self, data: bytes) -> None:
+        self._data = data
+        self._byte_index = 0
+        self._bit_index = 0
+
+    def read(self) -> int:
+        if self._byte_index >= len(self._data):
+            return 0
+        byte = self._data[self._byte_index]
+        bit = (byte >> (7 - self._bit_index)) & 1
+        self._bit_index += 1
+        if self._bit_index == 8:
+            self._bit_index = 0
+            self._byte_index += 1
+        return bit
+
+
+RANGE_STATE_BITS: Final = 32
+RANGE_FULL: Final = 1 << RANGE_STATE_BITS
+RANGE_HALF: Final = RANGE_FULL >> 1
+RANGE_QUARTER: Final = RANGE_HALF >> 1
+RANGE_THREE_QUARTERS: Final = RANGE_QUARTER * 3
+
+
+class FastRangeEncoder:
+    """Small unchecked interval encoder for per-symbol conditional models."""
+
+    __slots__ = ("_high", "_low", "_pending", "_writer")
+
+    def __init__(self) -> None:
+        self._writer = BitWriter()
+        self._low = 0
+        self._high = RANGE_FULL - 1
+        self._pending = 0
+
+    def _emit(self, bit: int) -> None:
+        self._writer.write(bit)
+        while self._pending:
+            self._writer.write(1 - bit)
+            self._pending -= 1
+
+    def encode_interval(self, low_count: int, high_count: int, total: int) -> None:
+        current_range = self._high - self._low + 1
+        self._high = self._low + (current_range * high_count // total) - 1
+        self._low = self._low + (current_range * low_count // total)
+        while True:
+            if self._high < RANGE_HALF:
+                self._emit(0)
+            elif self._low >= RANGE_HALF:
+                self._emit(1)
+                self._low -= RANGE_HALF
+                self._high -= RANGE_HALF
+            elif self._low >= RANGE_QUARTER and self._high < RANGE_THREE_QUARTERS:
+                self._pending += 1
+                self._low -= RANGE_QUARTER
+                self._high -= RANGE_QUARTER
+            else:
+                break
+            self._low <<= 1
+            self._high = (self._high << 1) | 1
+
+    def finish(self) -> bytes:
+        self._pending += 1
+        self._emit(0 if self._low < RANGE_QUARTER else 1)
+        return self._writer.finish()
+
+
+class FastRangeDecoder:
+    __slots__ = ("_code", "_high", "_low", "_reader")
+
+    def __init__(self, encoded: bytes) -> None:
+        self._reader = BitReader(encoded)
+        self._low = 0
+        self._high = RANGE_FULL - 1
+        self._code = 0
+        for _ in range(RANGE_STATE_BITS):
+            self._code = (self._code << 1) | self._reader.read()
+
+    def target(self, total: int) -> int:
+        current_range = self._high - self._low + 1
+        return ((self._code - self._low + 1) * total - 1) // current_range
+
+    def update(self, low_count: int, high_count: int, total: int) -> None:
+        current_range = self._high - self._low + 1
+        self._high = self._low + (current_range * high_count // total) - 1
+        self._low = self._low + (current_range * low_count // total)
+        while True:
+            if self._high < RANGE_HALF:
+                pass
+            elif self._low >= RANGE_HALF:
+                self._low -= RANGE_HALF
+                self._high -= RANGE_HALF
+                self._code -= RANGE_HALF
+            elif self._low >= RANGE_QUARTER and self._high < RANGE_THREE_QUARTERS:
+                self._low -= RANGE_QUARTER
+                self._high -= RANGE_QUARTER
+                self._code -= RANGE_QUARTER
+            else:
+                break
+            self._low <<= 1
+            self._high = (self._high << 1) | 1
+            self._code = (self._code << 1) | self._reader.read()
+
+
+class Fenwick:
+    __slots__ = ("_tree", "n", "values")
+
+    def __init__(self, values: np.ndarray) -> None:
+        arr = np.asarray(values, dtype=np.int64).reshape(-1)
+        self.n = int(arr.size)
+        self.values = arr.copy()
+        self._tree = np.zeros(self.n + 1, dtype=np.int64)
+        for idx, value in enumerate(arr.tolist(), start=1):
+            j = idx
+            while j <= self.n:
+                self._tree[j] += value
+                j += j & -j
+
+    def total(self) -> int:
+        return self.prefix_sum(self.n)
+
+    def prefix_sum(self, end: int) -> int:
+        total = 0
+        idx = int(end)
+        while idx > 0:
+            total += int(self._tree[idx])
+            idx -= idx & -idx
+        return total
+
+    def set_zero(self, index: int) -> None:
+        old = int(self.values[index])
+        if old == 0:
+            return
+        self.values[index] = 0
+        idx = index + 1
+        while idx <= self.n:
+            self._tree[idx] -= old
+            idx += idx & -idx
+
+    def find_by_cumulative(self, target: int) -> int:
+        idx = 0
+        bit = 1 << (self.n.bit_length() - 1)
+        remaining = int(target)
+        while bit:
+            nxt = idx + bit
+            if nxt <= self.n and int(self._tree[nxt]) <= remaining:
+                idx = nxt
+                remaining -= int(self._tree[nxt])
+            bit >>= 1
+        if idx >= self.n:
+            raise TR2P1Error("range target outside Fenwick table")
+        return idx
 
 
 def now_utc() -> str:
@@ -375,6 +557,48 @@ def marginal_only_scores(row_counts: np.ndarray, col_counts: np.ndarray) -> tupl
     return rows, cols, score
 
 
+def edge_context_scores(
+    row_counts: np.ndarray,
+    col_counts: np.ndarray,
+    edge: tuple[int, int],
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    rows, cols, base = marginal_only_scores(row_counts, col_counts)
+    if base.size == 0:
+        return rows, cols, base
+    edge_index = TOP_EDGE_PAIRS.index(edge)
+    edge_center = (edge_index + 0.5) / len(TOP_EDGE_PAIRS)
+    col_norm = cols.astype(np.float64) / max(1, SEG_W - 1)
+    edge_bias = 1.0 / (1.0 + np.abs(col_norm - edge_center))
+    return rows, cols, base * edge_bias[None, :]
+
+
+def scores_for_model(
+    row_counts: np.ndarray,
+    col_counts: np.ndarray,
+    *,
+    mode: str,
+    edge: tuple[int, int],
+    q: float,
+    lam: float,
+    iterations: int,
+    max_solver_cells: int,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    if mode == "edge_context":
+        return edge_context_scores(row_counts, col_counts, edge)
+    if mode == "marginals_only":
+        return marginal_only_scores(row_counts, col_counts)
+    if mode == "trot_q":
+        return balance_q_kernel(
+            row_counts,
+            col_counts,
+            q=q,
+            lam=lam,
+            iterations=iterations,
+            max_solver_cells=max_solver_cells,
+        )
+    raise TR2P1Error(f"unknown AC model mode {mode!r}")
+
+
 def integer_projection_from_scores(
     rows: np.ndarray,
     cols: np.ndarray,
@@ -484,6 +708,7 @@ def encode_residual_record(
         "marginals": len(marginals),
         "side_info": 0,
         "residual": len(residual),
+        "ac_stream": 0,
         "tags": 1,
         "framing": len(record) - len(marginals) - len(residual) - 1,
         "prediction_pixels": int(prediction.size),
@@ -530,6 +755,217 @@ def decode_residual_record(
     return out
 
 
+AC_FREQ_SCALE: Final = 4096
+
+
+def row_choice_frequencies(
+    scores: np.ndarray,
+    row_pos: int,
+    remaining_cols: np.ndarray,
+) -> np.ndarray:
+    weights = np.asarray(scores[row_pos], dtype=np.float64) * np.maximum(
+        remaining_cols.astype(np.float64), 0.0
+    )
+    if weights.size == 0:
+        return np.empty(0, dtype=np.int64)
+    max_weight = float(weights.max())
+    if max_weight <= 0.0:
+        freqs = (remaining_cols > 0).astype(np.int64)
+    else:
+        freqs = 1 + np.rint(weights / max_weight * (AC_FREQ_SCALE - 1)).astype(np.int64)
+        freqs[remaining_cols <= 0] = 0
+    return freqs
+
+
+def encode_ac_choices(
+    flats: np.ndarray,
+    *,
+    edge: tuple[int, int],
+    mode: str,
+    q: float,
+    lam: float,
+    iterations: int,
+    max_solver_cells: int,
+) -> tuple[bytes, dict[str, int]]:
+    row_counts, col_counts = flats_to_marginals(flats)
+    rows, cols, scores = scores_for_model(
+        row_counts,
+        col_counts,
+        mode=mode,
+        edge=edge,
+        q=q,
+        lam=lam,
+        iterations=iterations,
+        max_solver_cells=max_solver_cells,
+    )
+    arr = np.asarray(flats, dtype=np.uint32)
+    ys = arr // SEG_W
+    xs = arr % SEG_W
+    row_to_pos = np.full(SEG_H, -1, dtype=np.int32)
+    row_to_pos[rows] = np.arange(rows.size, dtype=np.int32)
+    col_to_pos = np.full(SEG_W, -1, dtype=np.int32)
+    col_to_pos[cols] = np.arange(cols.size, dtype=np.int32)
+    remaining = col_counts[cols].astype(np.int64).copy()
+    encoder = FastRangeEncoder()
+    symbol_count = 0
+    for row in rows.tolist():
+        need = int(row_counts[row])
+        if need == 0:
+            continue
+        start = int(np.searchsorted(ys, row, side="left"))
+        end = int(np.searchsorted(ys, row, side="right"))
+        row_xs = xs[start:end]
+        if row_xs.size != need:
+            raise TR2P1Error("row AC encoder saw inconsistent row count")
+        row_pos = int(row_to_pos[row])
+        freqs = row_choice_frequencies(scores, row_pos, remaining)
+        model = Fenwick(freqs)
+        for x_raw in row_xs.tolist():
+            col_pos = int(col_to_pos[int(x_raw)])
+            if col_pos < 0 or int(remaining[col_pos]) <= 0 or int(model.values[col_pos]) <= 0:
+                raise TR2P1Error("AC encoder selected an unavailable column")
+            low = model.prefix_sum(col_pos)
+            high = low + int(model.values[col_pos])
+            total = model.total()
+            if total <= 0:
+                raise TR2P1Error("AC encoder has empty model")
+            encoder.encode_interval(low, high, total)
+            model.set_zero(col_pos)
+            remaining[col_pos] -= 1
+            symbol_count += 1
+    if np.any(remaining != 0):
+        raise TR2P1Error("AC encoder failed to consume all column marginals")
+    return encoder.finish(), {
+        "prediction_pixels": int(arr.size),
+        "ac_symbols": symbol_count,
+    }
+
+
+def decode_ac_choices(
+    encoded: bytes,
+    row_counts: np.ndarray,
+    col_counts: np.ndarray,
+    *,
+    edge: tuple[int, int],
+    mode: str,
+    q: float,
+    lam: float,
+    iterations: int,
+    max_solver_cells: int,
+) -> np.ndarray:
+    rows, cols, scores = scores_for_model(
+        row_counts,
+        col_counts,
+        mode=mode,
+        edge=edge,
+        q=q,
+        lam=lam,
+        iterations=iterations,
+        max_solver_cells=max_solver_cells,
+    )
+    remaining = col_counts[cols].astype(np.int64).copy()
+    decoder = FastRangeDecoder(encoded)
+    selected: list[int] = []
+    for row in rows.tolist():
+        need = int(row_counts[row])
+        if need == 0:
+            continue
+        row_pos = int(np.searchsorted(rows, row))
+        freqs = row_choice_frequencies(scores, row_pos, remaining)
+        model = Fenwick(freqs)
+        for _ in range(need):
+            total = model.total()
+            if total <= 0:
+                raise TR2P1Error("AC decoder has empty model")
+            target = decoder.target(total)
+            col_pos = model.find_by_cumulative(target)
+            low = model.prefix_sum(col_pos)
+            high = low + int(model.values[col_pos])
+            decoder.update(low, high, total)
+            selected.append(row * SEG_W + int(cols[col_pos]))
+            model.set_zero(col_pos)
+            remaining[col_pos] -= 1
+    if np.any(remaining != 0):
+        raise TR2P1Error("AC decoder failed to consume all column marginals")
+    out = np.asarray(selected, dtype=np.uint32)
+    out.sort()
+    return out
+
+
+def encode_ac_record(
+    flats: np.ndarray,
+    *,
+    edge: tuple[int, int],
+    mode: str,
+    q: float,
+    lam: float,
+    iterations: int,
+    max_solver_cells: int,
+) -> tuple[bytes, dict[str, int]]:
+    row_counts, col_counts = flats_to_marginals(flats)
+    marginals = encode_marginals(row_counts, col_counts)
+    ac_stream, ac_meta = encode_ac_choices(
+        flats,
+        edge=edge,
+        mode=mode,
+        q=q,
+        lam=lam,
+        iterations=iterations,
+        max_solver_cells=max_solver_cells,
+    )
+    record = b"A" + write_varint(len(marginals)) + marginals + write_varint(len(ac_stream)) + ac_stream
+    return record, {
+        "marginals": len(marginals),
+        "side_info": 0,
+        "residual": 0,
+        "ac_stream": len(ac_stream),
+        "tags": 1,
+        "framing": len(record) - len(marginals) - len(ac_stream) - 1,
+        "prediction_pixels": int(ac_meta["prediction_pixels"]),
+        "residual_missing_pixels": 0,
+        "residual_extra_pixels": 0,
+        "ac_symbols": int(ac_meta["ac_symbols"]),
+    }
+
+
+def decode_ac_record(
+    record: bytes,
+    *,
+    edge: tuple[int, int],
+    mode: str,
+    q: float,
+    lam: float,
+    iterations: int,
+    max_solver_cells: int,
+) -> np.ndarray:
+    if not record.startswith(b"A"):
+        raise TR2P1Error("bad AC record magic")
+    marg_len, offset = read_varint(record, 1)
+    marg_end = offset + marg_len
+    if marg_end > len(record):
+        raise TR2P1Error("AC marginal section truncated")
+    row_counts, col_counts, marg_off = decode_marginals(record[:marg_end], offset)
+    if marg_off != marg_end:
+        raise TR2P1Error("AC marginal section has trailing bytes")
+    ac_len, offset = read_varint(record, marg_end)
+    ac_end = offset + ac_len
+    if ac_end > len(record):
+        raise TR2P1Error("AC range stream truncated")
+    if ac_end != len(record):
+        raise TR2P1Error("AC record has trailing bytes")
+    return decode_ac_choices(
+        record[offset:ac_end],
+        row_counts,
+        col_counts,
+        edge=edge,
+        mode=mode,
+        q=q,
+        lam=lam,
+        iterations=iterations,
+        max_solver_cells=max_solver_cells,
+    )
+
+
 def records_for_support_order(
     supports: dict[tuple[int, int], list[np.ndarray]],
 ) -> Iterable[tuple[tuple[int, int], int, np.ndarray]]:
@@ -548,7 +984,14 @@ def build_identity_stream(
         {**header_common, "arm": "identity_container_control"},
     )
     records = [header]
-    component_raw_bytes = {"marginals": 0, "side_info": 0, "tags": len(header), "residual": 0, "framing": 0}
+    component_raw_bytes = {
+        "marginals": 0,
+        "side_info": 0,
+        "tags": len(header),
+        "residual": 0,
+        "ac_stream": 0,
+        "framing": 0,
+    }
     for _edge, _pair, flats in records_for_support_order(supports):
         rec = encode_identity_record(flats)
         decoded = decode_identity_record(rec)
@@ -570,7 +1013,7 @@ def build_identity_stream(
         prediction_pixels=0,
         residual_missing_pixels=0,
         residual_extra_pixels=0,
-        config={"mode": "identity"},
+        config={"mode": "identity", "coding_family": "delta_container"},
     )
 
 
@@ -585,8 +1028,10 @@ def build_residual_stream(
     iterations: int,
     max_solver_cells: int,
 ) -> StreamBuild:
+    print(f"[tr2p1] building residual stream {arm_id}", file=sys.stderr, flush=True)
     config = {
         "mode": mode,
+        "coding_family": "lz_residual_baseline",
         "q": q if mode == "trot_q" else None,
         "lambda": lam if mode == "trot_q" else None,
         "iterations": iterations if mode == "trot_q" else None,
@@ -600,7 +1045,14 @@ def build_residual_stream(
         {**header_common, "arm": arm_id, "config": config},
     )
     records = [header]
-    component_raw_bytes = {"marginals": 0, "side_info": 0, "tags": len(header), "residual": 0, "framing": 0}
+    component_raw_bytes = {
+        "marginals": 0,
+        "side_info": 0,
+        "tags": len(header),
+        "residual": 0,
+        "ac_stream": 0,
+        "framing": 0,
+    }
     prediction_pixels = 0
     missing_pixels = 0
     extra_pixels = 0
@@ -624,7 +1076,7 @@ def build_residual_stream(
         if not np.array_equal(decoded, flats):
             raise TR2P1Error(f"{arm_id} decode mismatch")
         records.append(rec)
-        for key in ("marginals", "side_info", "tags", "residual", "framing"):
+        for key in ("marginals", "side_info", "tags", "residual", "ac_stream", "framing"):
             component_raw_bytes[key] += int(accounting[key])
         prediction_pixels += int(accounting["prediction_pixels"])
         missing_pixels += int(accounting["residual_missing_pixels"])
@@ -632,7 +1084,7 @@ def build_residual_stream(
     records_tuple = tuple(records)
     raw = pack_record_stream(b"TR2P1RS!", records_tuple)
     component_raw_bytes["framing"] += len(raw) - sum(len(record) for record in records_tuple)
-    return StreamBuild(
+    built = StreamBuild(
         arm_id=arm_id,
         description=(
             "q-family joint-from-marginals residual stream"
@@ -648,6 +1100,109 @@ def build_residual_stream(
         residual_extra_pixels=extra_pixels,
         config=config,
     )
+    print(
+        f"[tr2p1] built residual stream {arm_id}: raw={len(raw)}",
+        file=sys.stderr,
+        flush=True,
+    )
+    return built
+
+
+def build_ac_stream(
+    supports: dict[tuple[int, int], list[np.ndarray]],
+    *,
+    header_common: dict[str, Any],
+    arm_id: str,
+    mode: str,
+    q: float,
+    lam: float,
+    iterations: int,
+    max_solver_cells: int,
+) -> StreamBuild:
+    print(f"[tr2p1] building AC stream {arm_id}", file=sys.stderr, flush=True)
+    config = {
+        "mode": mode,
+        "coding_family": "conditional_range_ac",
+        "q": q if mode == "trot_q" else None,
+        "lambda": lam if mode == "trot_q" else None,
+        "iterations": iterations if mode == "trot_q" else None,
+        "max_solver_cells": max_solver_cells,
+        "side_info_source": "generic_cost_derived_from_counted_marginals_and_edge_context",
+        "video_derived_side_info_bytes": 0,
+        "symbolization": "row_ordered_column_choices_under_counted_row_col_marginals",
+        "frequency_scale": AC_FREQ_SCALE,
+    }
+    header = compact_header(
+        "ddm_tr2p1_conditional_range_ac_records.v1",
+        {**header_common, "arm": arm_id, "config": config},
+    )
+    records = [header]
+    component_raw_bytes = {
+        "marginals": 0,
+        "side_info": 0,
+        "tags": len(header),
+        "residual": 0,
+        "ac_stream": 0,
+        "framing": 0,
+    }
+    prediction_pixels = 0
+    ac_symbols = 0
+    for edge, _pair, flats in records_for_support_order(supports):
+        rec, accounting = encode_ac_record(
+            flats,
+            edge=edge,
+            mode=mode,
+            q=q,
+            lam=lam,
+            iterations=iterations,
+            max_solver_cells=max_solver_cells,
+        )
+        decoded = decode_ac_record(
+            rec,
+            edge=edge,
+            mode=mode,
+            q=q,
+            lam=lam,
+            iterations=iterations,
+            max_solver_cells=max_solver_cells,
+        )
+        if not np.array_equal(decoded, flats):
+            raise TR2P1Error(f"{arm_id} AC decode mismatch")
+        records.append(rec)
+        for key in ("marginals", "side_info", "tags", "residual", "ac_stream", "framing"):
+            component_raw_bytes[key] += int(accounting[key])
+        prediction_pixels += int(accounting["prediction_pixels"])
+        ac_symbols += int(accounting["ac_symbols"])
+    records_tuple = tuple(records)
+    raw = pack_record_stream(b"TR2P1AC!", records_tuple)
+    component_raw_bytes["framing"] += len(raw) - sum(len(record) for record in records_tuple)
+    description = (
+        "CR1 edge-conditioned conditional range-AC control"
+        if mode == "edge_context"
+        else (
+            "q-family joint-from-marginals conditional range-AC stream"
+            if mode == "trot_q"
+            else "marginals-only conditional range-AC control"
+        )
+    )
+    built = StreamBuild(
+        arm_id=arm_id,
+        description=description,
+        raw=raw,
+        records=records_tuple,
+        decode_equal=True,
+        component_raw_bytes=component_raw_bytes,
+        prediction_pixels=prediction_pixels,
+        residual_missing_pixels=0,
+        residual_extra_pixels=0,
+        config={**config, "ac_symbols": ac_symbols},
+    )
+    print(
+        f"[tr2p1] built AC stream {arm_id}: raw={len(raw)} ac_symbols={ac_symbols}",
+        file=sys.stderr,
+        flush=True,
+    )
+    return built
 
 
 def race_coders(
@@ -788,6 +1343,26 @@ def validate_q_solver_fixtures() -> dict[str, Any]:
     )
     if not np.array_equal(decoded, target):
         raise TR2P1Error("fixture residual decode equality failed")
+    ac_record, ac_accounting = encode_ac_record(
+        target,
+        edge=TOP_EDGE_PAIRS[0],
+        mode="trot_q",
+        q=1.0,
+        lam=2.0,
+        iterations=80,
+        max_solver_cells=10_000,
+    )
+    ac_decoded = decode_ac_record(
+        ac_record,
+        edge=TOP_EDGE_PAIRS[0],
+        mode="trot_q",
+        q=1.0,
+        lam=2.0,
+        iterations=80,
+        max_solver_cells=10_000,
+    )
+    if not np.array_equal(ac_decoded, target):
+        raise TR2P1Error("fixture AC decode equality failed")
     return {
         "fixture": "3x4 active support embedded in scorer grid",
         "q1_matches_sinkhorn_reference": True,
@@ -795,12 +1370,28 @@ def validate_q_solver_fixtures() -> dict[str, Any]:
         "row_marginal_max_abs_error": row_err,
         "col_marginal_max_abs_error": col_err,
         "residual_decode_equality": True,
+        "conditional_range_ac_decode_equality": True,
+        "conditional_range_ac_bytes": len(ac_record),
+        "conditional_range_ac_symbols": int(ac_accounting["ac_symbols"]),
         "target_pixels": int(target.size),
     }
 
 
 def stream_row(stream: StreamBuild, rows: tuple[CoderRow, ...], best: CoderRow) -> dict[str, Any]:
     delta = best.bytes - INCUMBENT_BYTES
+    coding_family = str(stream.config.get("coding_family", "unknown"))
+    if coding_family == "conditional_range_ac" and stream.config["mode"] == "trot_q":
+        verdict_scope = (
+            "FORMULATION: q-family joint-from-marginals conditional range-AC coding of "
+            "the CR1 selected edge-labeled n600 support payload"
+        )
+    elif coding_family == "lz_residual_baseline" and stream.config["mode"] == "trot_q":
+        verdict_scope = (
+            "INSTRUMENT(LZ-coder): q-family joint-from-marginals residual stream; "
+            "not a family/formulation verdict carrier under the 2026-08-08 amendment"
+        )
+    else:
+        verdict_scope = "CONTROL: same-payload TR2P1 byte container for selected edge-labeled n600 support"
     return {
         "schema": "ddm_tr2p1_coder_race_row.v1",
         "created_utc": now_utc(),
@@ -836,12 +1427,44 @@ def stream_row(stream: StreamBuild, rows: tuple[CoderRow, ...], best: CoderRow) 
         "score_claim": False,
         "promotion_eligible": False,
         "n600_scorer_job": False,
-        "verdict_scope": (
-            "FORMULATION: q-family joint-from-marginals residual coding of the CR1 selected edge-labeled n600 support payload"
-            if stream.config["mode"] == "trot_q"
-            else "CONTROL: same-payload TR2P1 byte container for selected edge-labeled n600 support"
-        ),
+        "verdict_scope": verdict_scope,
     }
+
+
+def apply_reference_thresholds(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    incumbent_ac = next(row for row in rows if row["arm_id"] == "incumbent_edge_context_ac")
+    if int(incumbent_ac["best"]["bytes"]) < INCUMBENT_BYTES:
+        reference = {
+            "arm_id": incumbent_ac["arm_id"],
+            "bytes": int(incumbent_ac["best"]["bytes"]),
+            "codec": incumbent_ac["best"]["codec"],
+            "sha256": incumbent_ac["best"]["sha256"],
+        }
+    else:
+        reference = {
+            "arm_id": "cr1_edge_conditioned_lzma1_raw_incumbent",
+            "bytes": INCUMBENT_BYTES,
+            "codec": "lzma1-raw",
+            "sha256": INCUMBENT_SHA256,
+        }
+    reference_bytes = int(reference["bytes"])
+    for row in rows:
+        delta = int(row["best"]["bytes"]) - reference_bytes
+        row["reference_best_control"] = reference
+        row["delta_vs_reference_best_bytes"] = delta
+        row["delta_vs_reference_best_pct"] = delta / reference_bytes
+        is_trot_ac = (
+            row["config"].get("coding_family") == "conditional_range_ac"
+            and row["config"].get("mode") == "trot_q"
+        )
+        row["pass_condition_met"] = bool(is_trot_ac and row["decode_equality"] and delta < 0)
+        if is_trot_ac:
+            row["verdict"] = "WIN-w/-bytes" if row["pass_condition_met"] else "LOSS-w/-bytes"
+        elif row["config"].get("coding_family") == "lz_residual_baseline":
+            row["verdict"] = "INSTRUMENT-LZ-BASELINE"
+        else:
+            row["verdict"] = "CONTROL"
+    return reference
 
 
 def write_jsonl(path: Path, rows: Iterable[dict[str, Any]]) -> None:
@@ -850,10 +1473,13 @@ def write_jsonl(path: Path, rows: Iterable[dict[str, Any]]) -> None:
 
 def findings_table_row(row: dict[str, Any]) -> str:
     best = row["best"]
-    delta = row["delta_vs_incumbent_bytes"]
+    delta_cr1 = row["delta_vs_incumbent_bytes"]
+    delta_ref = row["delta_vs_reference_best_bytes"]
     return (
-        f"| {row['arm_id']} | {best['bytes']} B ({best['codec']}) | "
-        f"{delta:+d} B ({row['delta_vs_incumbent_pct']:.3%}) | "
+        f"| {row['arm_id']} | {row['config'].get('coding_family')} | "
+        f"{best['bytes']} B ({best['codec']}) | "
+        f"{delta_cr1:+d} B ({row['delta_vs_incumbent_pct']:.3%}) | "
+        f"{delta_ref:+d} B ({row['delta_vs_reference_best_pct']:.3%}) | "
         f"{row['decode_equality']} | {row['verdict']} |"
     )
 
@@ -864,8 +1490,9 @@ def md_cell(value: Any) -> str:
 
 def write_findings(path: Path, receipt: dict[str, Any]) -> None:
     best = receipt["best_treatment"]
+    reference = receipt["reference_best_control"]
     lines = [
-        "# TR2P1 TROT residual byte race - 2026-08-08",
+        "# TR2P1 TROT residual/range-AC byte race - 2026-08-08",
         "",
         "Tags: [no-triality] [p0-ledger-ok]",
         "",
@@ -873,14 +1500,15 @@ def write_findings(path: Path, receipt: dict[str, Any]) -> None:
         "",
         "No scorer, no evaluator, no Metal/GPU, no paid job, and no archive promotion ran.",
         (
-            f"Best TR2P1 challenger: `{best['arm_id']}` at `{best['best']['bytes']}` B "
-            f"({best['best']['codec']}), delta `{best['delta_vs_incumbent_bytes']:+d}` B "
-            f"vs CR1's `464557` B incumbent."
+            f"Best reference-form TROT AC challenger: `{best['arm_id']}` at "
+            f"`{best['best']['bytes']}` B ({best['best']['codec']}), delta "
+            f"`{best['delta_vs_reference_best_bytes']:+d}` B vs best incumbent control "
+            f"`{reference['arm_id']}` at `{reference['bytes']}` B."
         ),
         f"Verdict: `{receipt['verdict']}`.",
         "",
-        "| arm | best bytes | delta vs CR1 | decode equality | verdict |",
-        "|---|---:|---:|---|---|",
+        "| arm | coding family | best bytes | delta vs CR1-LZ | delta vs best incumbent | decode equality | verdict |",
+        "|---|---|---:|---:|---:|---|---|",
     ]
     for row in receipt["typed_rows"]:
         lines.append(findings_table_row(row))
@@ -918,13 +1546,15 @@ def write_findings(path: Path, receipt: dict[str, Any]) -> None:
                 f"row/column max errors "
                 f"`{receipt['solver_validation']['row_marginal_max_abs_error']:.3e}` / "
                 f"`{receipt['solver_validation']['col_marginal_max_abs_error']:.3e}`; "
-                f"residual decode equality `{receipt['solver_validation']['residual_decode_equality']}`."
+                f"residual decode equality `{receipt['solver_validation']['residual_decode_equality']}`; "
+                f"conditional range-AC decode equality "
+                f"`{receipt['solver_validation']['conditional_range_ac_decode_equality']}`."
             ),
             "",
             "## Counted Bytes",
             "",
-            "| arm | compressed total | raw total | marginals raw | side-info raw | residual raw | tags raw | framing raw |",
-            "|---|---:|---:|---:|---:|---:|---:|---:|",
+            "| arm | compressed total | raw total | marginals raw | side-info raw | residual raw | AC stream raw | tags raw | framing raw |",
+            "|---|---:|---:|---:|---:|---:|---:|---:|---:|",
         ]
     )
     for row in receipt["typed_rows"]:
@@ -933,6 +1563,7 @@ def write_findings(path: Path, receipt: dict[str, Any]) -> None:
         lines.append(
             f"| {row['arm_id']} | {br['compressed_total']} | {br['raw_total']} | "
             f"{comp['marginals']} | {comp['side_info']} | {comp['residual']} | "
+            f"{comp['ac_stream']} | "
             f"{comp['tags']} | {comp['framing']} |"
         )
     lines.extend(
@@ -941,10 +1572,12 @@ def write_findings(path: Path, receipt: dict[str, Any]) -> None:
             "## Boundaries",
             "",
             "- These are byte-only scorer-free measurements over cached argmax labels.",
-            "- The q-family solve is generic decode-time algorithm; counted payload includes marginals, residuals, tags, and framing.",
+            "- The q-family solve is generic decode-time algorithm; counted payload includes marginals, AC streams or residuals, tags, and framing.",
+            "- Conditional range-AC rows are the reference-form verdict carrier required by the 2026-08-08 amendment.",
+            "- Residual-through-LZ rows are retained only as instrument baselines, not as formulation verdict carriers.",
             "- No video-derived side-information matrix was hidden in code or omitted from bytes; side-info bytes are zero because the cost is derived only from counted marginals.",
             "- No RGB receiver, archive parse-back, SegNet/PoseNet scorer survival, or score improvement is claimed.",
-            "- Negative verdict scope is the pre-registered FORMULATION only, not the TROT family outside this CR1 selected-support payload.",
+            "- Negative verdict scope is the pre-registered conditional-AC FORMULATION only, not the TROT family outside this CR1 selected-support payload.",
             "",
             "## Follow-On Disposition",
             "",
@@ -987,10 +1620,30 @@ def build_receipt(args: argparse.Namespace) -> dict[str, Any]:
     artifact_dir = args.ssd_dir / "payloads"
     streams: list[StreamBuild] = [
         build_identity_stream(supports, header_common=header_common),
+        build_ac_stream(
+            supports,
+            header_common=header_common,
+            arm_id="incumbent_edge_context_ac",
+            mode="edge_context",
+            q=1.0,
+            lam=args.lam,
+            iterations=args.iterations,
+            max_solver_cells=args.max_solver_cells,
+        ),
         build_residual_stream(
             supports,
             header_common=header_common,
             arm_id="marginals_only_residual",
+            mode="marginals_only",
+            q=1.0,
+            lam=args.lam,
+            iterations=args.iterations,
+            max_solver_cells=args.max_solver_cells,
+        ),
+        build_ac_stream(
+            supports,
+            header_common=header_common,
+            arm_id="marginals_only_ac",
             mode="marginals_only",
             q=1.0,
             lam=args.lam,
@@ -1012,23 +1665,44 @@ def build_receipt(args: argparse.Namespace) -> dict[str, Any]:
                 max_solver_cells=args.max_solver_cells,
             )
         )
+        streams.append(
+            build_ac_stream(
+                supports,
+                header_common=header_common,
+                arm_id=f"trot_q{safe_q}_ac",
+                mode="trot_q",
+                q=float(q),
+                lam=args.lam,
+                iterations=args.iterations,
+                max_solver_cells=args.max_solver_cells,
+            )
+        )
 
     typed_rows: list[dict[str, Any]] = []
     for stream in streams:
         rows, best = race_coders(stream=stream, artifact_dir=artifact_dir)
         typed_rows.append(jsonable(stream_row(stream, rows, best)))
 
-    trot_rows = [row for row in typed_rows if row["config"]["mode"] == "trot_q"]
+    reference_control = apply_reference_thresholds(typed_rows)
+    trot_rows = [
+        row
+        for row in typed_rows
+        if row["config"]["mode"] == "trot_q"
+        and row["config"].get("coding_family") == "conditional_range_ac"
+    ]
     best_treatment = min(trot_rows, key=lambda row: row["best"]["bytes"])
     pass_rows = [row for row in trot_rows if row["pass_condition_met"]]
     verdict = (
         "WIN-w/-bytes"
         if pass_rows
-        else "LOSS-w/-bytes; FORMULATION falsifier met for q-family joint-from-marginals residual coding of CR1 selected edge support"
+        else (
+            "LOSS-w/-bytes; FORMULATION falsifier met for q-family joint-from-marginals "
+            "conditional range-AC coding of CR1 selected edge support"
+        )
     )
 
     return {
-        "schema": "ddm_tr2p1_trot_residual_race_receipt.v1",
+        "schema": "ddm_tr2p1_trot_residual_range_ac_race_receipt.v2",
         "created_utc": now_utc(),
         "axis": AXIS,
         "selection_mode": SELECTION_MODE,
@@ -1053,6 +1727,7 @@ def build_receipt(args: argparse.Namespace) -> dict[str, Any]:
         "iterations": args.iterations,
         "max_solver_cells": args.max_solver_cells,
         "typed_rows": typed_rows,
+        "reference_best_control": reference_control,
         "best_treatment": best_treatment,
         "pass_rows": pass_rows,
         "verdict": verdict,
@@ -1066,6 +1741,11 @@ def build_receipt(args: argparse.Namespace) -> dict[str, Any]:
                 "source": ".omx/research/ddm_tr2_20260808/TR2_CROSSWALK.md and TR2_ROWS.jsonl rows 1, 3, 6",
                 "result": "TR2 pre-registered only this CR1 same-payload q-family residual race; sparse-plan claims were lesson-only.",
                 "impact": "Kept verdict scoped to this formulation and did not claim TROT sparsity or metric replacement.",
+            },
+            {
+                "source": ".omx/research/ddm_tr2p1_20260808/CHARTER.md amendment 2026-08-08",
+                "result": "The operator correction requires conditional arithmetic/range coding; LZ residual rows alone are instrument-scoped.",
+                "impact": "Added incumbent edge-context AC plus TROT conditional range-AC rows and made the FORMULATION verdict depend only on the AC race.",
             },
             {
                 "source": ".omx/research/ddm_cr1_20260808/CR1_FINDINGS.md, CR1_RECEIPT.json, CR1_ROWS.jsonl row 2",
@@ -1092,7 +1772,7 @@ def build_receipt(args: argparse.Namespace) -> dict[str, Any]:
             {
                 "id": "TR2-P1",
                 "disposition": "FIRED",
-                "fire_order": "This receipt is the pre-registered byte-only q-family residual race against CR1's incumbent.",
+                "fire_order": "This receipt is the pre-registered byte-only q-family residual plus amendment-required conditional range-AC race against CR1's incumbent.",
             },
             {
                 "id": "TR2-P1-implementation-reference",
@@ -1103,7 +1783,7 @@ def build_receipt(args: argparse.Namespace) -> dict[str, Any]:
                 "id": "#984 rate axis / CR1 successor consumer",
                 "disposition": "QUEUED-WITH-FIRE-ORDER",
                 "fire_order": (
-                    "Consume this row only as a scorer-free byte-race negative unless a future arm supplies a new counted side-info source or residual model and repeats same-payload decode-equality racing."
+                    "Consume this row only as a scorer-free byte-race negative unless a future arm supplies a new counted side-info source or conditional probability model and repeats same-payload decode-equality AC racing."
                     if not pass_rows
                     else "A future owner must still build receiver/archive parse-back before any scorer or promotion claim."
                 ),
@@ -1114,8 +1794,9 @@ def build_receipt(args: argparse.Namespace) -> dict[str, Any]:
             "Payloads are cached real n600 argmax supports from GT and cx1 argmax arrays.",
             "CR1 incumbent was re-decoded from the SHA-pinned lzma1-raw artifact; it was not re-derived.",
             "No video-derived side-information matrix was omitted from counted bytes.",
-            "All coder rows are real zlib/Brotli/LZMA/SMEVR outputs with round-trip checks.",
-            "Verdicts are formulation-scoped byte-race outcomes only.",
+            "All LZ coder rows are real zlib/Brotli/LZMA/SMEVR outputs with round-trip checks.",
+            "All conditional range-AC rows carry real AC bitstreams and decode-equality checks before any optional container coding.",
+            "Verdicts are conditional-AC formulation-scoped byte-race outcomes only.",
         ],
         "frontier": {
             "own_vehicle": OWN_FRONTIER,
