@@ -93,3 +93,68 @@ A clean pass I did not earn is worse than a reset (my own words in both charters
 label defect and letting two arms return CLEAN would have laundered it through the gate — and the
 defective emission would then have run 65+ times during the burn, producing a full run of rows whose
 scope field nobody could trust.
+
+---
+
+# ROUND-2/3 HARVEST + ONE AMENDMENT (MAIN, 2026-08-08)
+
+Both live review passes landed. Verdicts:
+
+| pass | lens | recommendation |
+|---|---|---|
+| `ddm_m1r2` (rc=0, 485s) | seal/guard MECHANICS | **FINDINGS_RESET_COUNTER** — 2 findings |
+| `ddm_m1r3` (rc=0, 241s) | SCIENCE (right burn / optimal form / interpretability / counterfactual / waste) | CLEAN_PASS_3_OF_3 |
+
+Per the concurrency caveat both passes carried, m1r2's findings void both. Counter stays **0/3** —
+it was already 0 from the MAIN finding above, so nothing was laundered.
+
+## M1R2-F1 (HIGH) — CONFIRMED, and the MECHANISM is worse than "wrong number"
+
+m1r2 reported the stop threshold does not follow from the ticket's constants. I re-derived it
+independently rather than confirming, and found the exact cause:
+
+```
+ticket predicate (same dict!):  N=120, H=384, W=512, eval_every_steps=50
+ticket one_sample_flip_S     :  4.4228e-06
+100/(120*384*512)            =  4.238552517361111e-06     <- what N=120 gives
+100/(115*384*512)            =  4.42283740942029e-06      <- MATCHES the ticket to 5 s.f.
+100/4.4228e-06/(384*512)     =  115.00097                 <- the implied N, solved backwards
+```
+
+The shipped threshold was derived at **N=115** and shipped for **N=120**. The derivation INPUTS
+and the derived VALUE sit three lines apart in the same JSON object and disagree. `eval_every_steps`
+divides correctly, so N is the sole defect.
+
+Direction: the stale value is **stricter by 4.34%** (bar lower ⇒ `marginal_below_bar` harder to
+declare ⇒ run continues longer). Conservative, not a fake improvement — m1r2 called that correctly.
+
+## M1R2-F2 (MEDIUM) — ACCEPTED, NOT YET CURED
+
+The fire guard's receipt-equivalence tuple omits `steps`, `seed`, `eval_every`, `checkpoint_every`,
+`run_dir`, `resume_from`. Cure is either extend the tuple or document per-flag why each is outside
+the mem-probe equivalence claim. **OWNER: MAIN, before the next seal round.** Not silently dropped.
+
+## The amendment applied (one pass, both cures that were ready)
+
+1. **Ticket** `launch_ticket_v5_event_driven.json` — `one_sample_flip_S` and
+   `marginal_bar_S_per_step` RE-DERIVED from the predicate's own `N/H/W/eval_every_steps`
+   (4.4228e-06 → 4.238552517361111e-06; 8.8456e-08 → 8.477105034722223e-08), and the same value
+   substituted inside the `evaluator` string so the `TrajectoryStopConfig` literal cannot drift from
+   the field. `review_passes` reset to `[]`. No new keys (the fire guard parses this file).
+2. **Renderer** `experiments/ddm_mx1_pr130_semantic_renderer.py` — `verdict_scope` now
+   `f"n{len(pair_ids)} ..."` at all three sites (`:1382`, `:1860`, `:2007`). The two surviving
+   `n32 arm` strings are prose in help text about the historical n32 A/B arms, not emitted labels.
+
+## The genus, stated once
+
+Four instances in one window, same shape — **a value that should be derived was frozen from a
+different context**: the arm-model pin (stale generation) · the effort constant (hardcoded xhigh) ·
+`verdict_scope` (n32 while running n120) · `one_sample_flip_S` (N=115 while running N=120). The cure
+is identical every time: make it a derivation, not a literal. Where the number must be transcribed
+(the codex effort enum), record WHAT it was read from and RE-READ on version change.
+
+## Next (fire order)
+
+1. Cure M1R2-F2 (guard receipt tuple) — MAIN.
+2. Three FRESH review passes against the amended artifact.
+3. Guard gate → FIRE.
