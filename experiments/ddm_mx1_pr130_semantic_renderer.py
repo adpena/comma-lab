@@ -2748,7 +2748,10 @@ def run_mlx_train(
             "loss": float(value),
             "lr": float(optimizer.learning_rate),
         }
-        if step == start_step or args.steps <= 3:
+        if step == start_step or step + 1 == int(args.steps) or args.steps <= 3:
+            # Resume-path probes have steps = resume_base + probe_window (e.g. 5253), so the
+            # old first-step-only condition never emitted the required final-stage sample
+            # (after_train_step_{steps}) that metal_fire_clearance demands.
             probe.sample(f"after_train_step_{step + 1:06d}", mx=mx)
         if (step + 1) % max(args.eval_every, 1) == 0 or step + 1 == args.steps:
             if microbatch_pairs >= total_pairs:
