@@ -61,6 +61,8 @@ DEFAULT_INIT = Path(
 )
 CONTEST_DENOMINATOR_BYTES = 37_545_489
 GIB = 1024.0 ** 3
+TRAIN_COMPUTE_DTYPES = ("fp32", "bf16", "fp16")
+THREAD_PIN_MODES = ("off", "one")
 MEM_PROBE_RECEIPT_SCHEMA = "ddm_mx1_load_phase_peak_receipt.v1"
 MX1_FIRE_GUARD_VERDICT_SCHEMA = "ddm_mx1_fire_guard_verdict.v1"
 SAFE_RUN_RECEIPT_SENTINEL = "REQUIRES_FRESH_MEM_PROBE"
@@ -128,6 +130,50 @@ def _gib_or_none(num_bytes: int | float | None) -> float | None:
 
 def _safe_label_token(text: str) -> str:
     return "".join(ch if ch.isalnum() else "_" for ch in text).strip("_")
+
+
+def _apply_perf_thread_pin(mode: str, *, torch_module: Any | None = None) -> dict[str, Any]:
+    mode = str(mode)
+    if mode not in THREAD_PIN_MODES:
+        raise ValueError(f"unknown --perf-thread-pin {mode!r}")
+    if mode == "off":
+        return {"mode": mode, "applied": False, "env": {}, "torch": {}}
+    env_keys = (
+        "OMP_NUM_THREADS",
+        "MKL_NUM_THREADS",
+        "OPENBLAS_NUM_THREADS",
+        "VECLIB_MAXIMUM_THREADS",
+        "NUMEXPR_NUM_THREADS",
+        "MLX_NUM_THREADS",
+    )
+    before_env = {key: os.environ.get(key) for key in env_keys}
+    for key in env_keys:
+        os.environ[key] = "1"
+    torch_obj = torch if torch_module is None else torch_module
+    torch_report: dict[str, Any] = {}
+    for attr, value in (("set_num_threads", 1), ("set_num_interop_threads", 1)):
+        setter = getattr(torch_obj, attr, None)
+        if setter is None:
+            torch_report[attr] = {"status": "missing"}
+            continue
+        try:
+            setter(value)
+            torch_report[attr] = {"status": "applied", "value": value}
+        except Exception as exc:
+            torch_report[attr] = {"status": "failed", "error": f"{type(exc).__name__}: {exc}"}
+    return {
+        "mode": mode,
+        "applied": True,
+        "env": {key: {"before": before_env[key], "after": os.environ.get(key)} for key in env_keys},
+        "torch": torch_report,
+    }
+
+
+def _checkpoint_step_npz(path: Path) -> int:
+    with np.load(path, allow_pickle=False) as payload:
+        if "meta::step" not in payload.files:
+            raise ValueError(f"checkpoint {path} missing meta::step")
+        return int(payload["meta::step"][0])
 
 
 def _ticket_attempt_id() -> str:
@@ -2352,6 +2398,43 @@ def _tree_add_scaled(
     return tree_unflatten(out)
 
 
+def _resolve_train_compute_dtype(mx: Any, mode: str) -> Any | None:
+    mode = str(mode)
+    if mode == "fp32":
+        return None
+    if mode == "fp16":
+        return mx.float16
+    if mode == "bf16":
+        dtype = getattr(mx, "bfloat16", None)
+        if dtype is None:
+            raise ValueError("MLX runtime has no bfloat16 dtype for --train-compute-dtype bf16")
+        return dtype
+    raise ValueError(f"unknown --train-compute-dtype {mode!r}")
+
+
+def _cast_mlx_parameter_tree(
+    tree_flatten: Any,
+    tree_unflatten: Any,
+    params: Mapping[str, Any],
+    dtype: Any | None,
+) -> Mapping[str, Any]:
+    if dtype is None:
+        return params
+    casted = []
+    for name, value in tree_flatten(params):
+        if hasattr(value, "astype") and hasattr(value, "shape"):
+            casted.append((name, value.astype(dtype)))
+        else:
+            casted.append((name, value))
+    return tree_unflatten(casted)
+
+
+def _maybe_compile_loss_function(mx: Any, fn: Any, *, enabled: bool) -> Any:
+    if not enabled:
+        return fn
+    return mx.compile(fn)
+
+
 def run_mlx_train(
     args: argparse.Namespace,
     *,
@@ -2361,6 +2444,7 @@ def run_mlx_train(
 
     probe = memory_probe if memory_probe is not None else LoadPhaseMemoryProbe()
     mem_probe_mode = getattr(args, "mode", "") == "mem-probe"
+    thread_pin = _apply_perf_thread_pin(getattr(args, "perf_thread_pin", "off"))
     budget_plan = _derive_mem_budget_gb(args.mem_budget_gb, mem_probe=mem_probe_mode)
     probe.install_software_budget({
         **budget_plan,
@@ -2395,6 +2479,11 @@ def run_mlx_train(
 
     probe.sample_and_check("before_require_mlx", note=f"device={args.device}")
     mx, _nn, optim = require_mlx(device=args.device)
+    train_compute_dtype = _resolve_train_compute_dtype(
+        mx,
+        getattr(args, "train_compute_dtype", "fp32"),
+    )
+    compile_train_loss = bool(getattr(args, "compile_train_loss", False))
     try:
         probe.sample_and_check("before_mlx_memory_limit_configuration", mx=mx)
         memory_limits = _configure_mlx_memory_limits(
@@ -2435,6 +2524,12 @@ def run_mlx_train(
         )
         start_step = int(resume["step"])
         history = list(resume["history"])
+        resume_pair_ids = (resume.get("extra") or {}).get("pair_ids")
+        if resume_pair_ids is not None and [int(item) for item in resume_pair_ids] != pair_ids:
+            raise ValueError(
+                "resume checkpoint pair_ids do not match requested --pairs/--seed; "
+                "refusing to train on a mismatched sample set"
+            )
         del checkpoint
         gc.collect()
         _clear_mlx_cache(mx)
@@ -2461,6 +2556,9 @@ def run_mlx_train(
         "source": "explicit_cli"
         if int(getattr(args, "microbatch_pairs", 0) or 0) > 0
         else ("gpu_default_4_pairs" if str(args.device).lower() == "gpu" else "cpu_full_batch_default"),
+        "train_compute_dtype": str(getattr(args, "train_compute_dtype", "fp32")),
+        "compile_train_loss": compile_train_loss,
+        "perf_thread_pin": str(getattr(args, "perf_thread_pin", "off")),
     }
     conditioning = target = pair_idx = None
     probe.sample_and_check(
@@ -2540,6 +2638,12 @@ def run_mlx_train(
                     bits=args.bits,
                 )
                 phase_prefix = ""
+            active_params = _cast_mlx_parameter_tree(
+                tree_flatten,
+                tree_unflatten,
+                active_params,
+                train_compute_dtype,
+            )
             model.update(active_params)
             frame = model(conditioning_batch, pair_idx_batch)
             frame_r = apply_contest_faithful_roundtrip_nhwc(
@@ -2570,7 +2674,9 @@ def run_mlx_train(
             def loss_for_params(params: Mapping[str, Any]) -> Any:
                 return loss_for_batch(params, conditioning, target, pair_idx)
 
-            value, grads = mx.value_and_grad(loss_for_params)(base_params)
+            value, grads = mx.value_and_grad(
+                _maybe_compile_loss_function(mx, loss_for_params, enabled=compile_train_loss)
+            )(base_params)
             phase = getattr(loss_for_batch, "phase", "unknown")
         else:
             value = None
@@ -2603,7 +2709,9 @@ def run_mlx_train(
                 ) -> Any:
                     return loss_for_batch(params, conditioning_chunk, target_chunk, pair_idx_chunk)
 
-                chunk_value, chunk_grads = mx.value_and_grad(loss_for_params)(base_params)
+                chunk_value, chunk_grads = mx.value_and_grad(
+                    _maybe_compile_loss_function(mx, loss_for_params, enabled=compile_train_loss)
+                )(base_params)
                 mx.eval(chunk_value, chunk_grads)
                 probe.check_budget(
                     f"after_train_step_{step + 1:06d}_chunk_{chunk_index:03d}_value_and_grad",
@@ -2705,6 +2813,11 @@ def run_mlx_train(
                     "score_claim": False,
                     "axis": "[macOS-MLX research-signal]",
                     "source_repo_head": SOURCE_REPO_HEAD,
+                    "throughput_flags": {
+                        "train_compute_dtype": str(getattr(args, "train_compute_dtype", "fp32")),
+                        "compile_train_loss": compile_train_loss,
+                        "perf_thread_pin": str(getattr(args, "perf_thread_pin", "off")),
+                    },
                 },
             )
             latest = args.run_dir / "mlx.latest.npz"
@@ -2720,6 +2833,11 @@ def run_mlx_train(
                     "score_claim": False,
                     "axis": "[macOS-MLX research-signal]",
                     "source_repo_head": SOURCE_REPO_HEAD,
+                    "throughput_flags": {
+                        "train_compute_dtype": str(getattr(args, "train_compute_dtype", "fp32")),
+                        "compile_train_loss": compile_train_loss,
+                        "perf_thread_pin": str(getattr(args, "perf_thread_pin", "off")),
+                    },
                 },
             )
             if args.steps <= 3:
@@ -2737,6 +2855,11 @@ def run_mlx_train(
         "cache_load": cache_meta,
         "memory_limits": memory_limits,
         "microbatch_plan": chunk_plan,
+        "throughput_flags": {
+            "train_compute_dtype": str(getattr(args, "train_compute_dtype", "fp32")),
+            "compile_train_loss": compile_train_loss,
+            "perf_thread_pin": thread_pin,
+        },
         "software_budget": probe.budget_summary(),
         "load_memory_samples": probe.samples,
         "load_memory_peak": probe.peak(),
@@ -2756,7 +2879,10 @@ def run_mlx_train(
 def _mem_probe_args(args: argparse.Namespace) -> argparse.Namespace:
     payload = vars(args).copy()
     payload["mode"] = "mem-probe"
-    payload["steps"] = int(args.mem_probe_steps)
+    resume_from = payload.get("resume_from")
+    resume_step = _checkpoint_step_npz(Path(resume_from)) if resume_from is not None else 0
+    payload["steps"] = resume_step + int(args.mem_probe_steps)
+    payload["mem_probe_resume_base_step"] = resume_step
     payload["eval_every"] = 1
     payload["checkpoint_every"] = max(1, int(args.mem_probe_steps))
     return argparse.Namespace(**payload)
@@ -2813,6 +2939,9 @@ def _build_mem_probe_receipt(
         "pairs": int(args.pairs),
         "pair_ids": _select_stratified_indices(args.pairs, seed=args.seed),
         "requested_training_steps": int(probe_args.steps),
+        "mem_probe_steps_after_resume": int(args.mem_probe_steps),
+        "resume_from": None if args.resume_from is None else str(args.resume_from),
+        "resume_base_step": int(getattr(probe_args, "mem_probe_resume_base_step", 0)),
         "mem_budget_gb_arg": args.mem_budget_gb,
         "input_cache": str(args.input_cache),
         "target_cache": str(args.target_cache),
@@ -2825,6 +2954,9 @@ def _build_mem_probe_receipt(
             "softplus_fraction": float(args.softplus_fraction),
             "bits": int(args.bits),
             "microbatch_pairs": int(getattr(args, "microbatch_pairs", 0) or 0),
+            "train_compute_dtype": str(getattr(args, "train_compute_dtype", "fp32")),
+            "compile_train_loss": bool(getattr(args, "compile_train_loss", False)),
+            "perf_thread_pin": str(getattr(args, "perf_thread_pin", "off")),
             "mem_budget_gb": args.mem_budget_gb,
             "allow_soft_mem_limit": bool(getattr(args, "allow_soft_mem_limit", False)),
             "input_cache": str(args.input_cache),
@@ -2843,6 +2975,7 @@ def _build_mem_probe_receipt(
             "seconds_per_step": train_result.get("seconds_per_step"),
             "memory_limits": train_result.get("memory_limits"),
             "microbatch_plan": train_result.get("microbatch_plan"),
+            "throughput_flags": train_result.get("throughput_flags"),
             "stage_checkpoint": train_result.get("stage_checkpoint"),
             "latest_checkpoint": train_result.get("latest_checkpoint"),
             "latest_checkpoint_sha256": train_result.get("latest_checkpoint_sha256"),
@@ -2987,6 +3120,12 @@ def launch_ticket(args: argparse.Namespace, smoke: dict[str, Any] | None, mlx_pr
             argv.extend(["--mem-budget-gb", str(args.mem_budget_gb)])
         if getattr(args, "allow_soft_mem_limit", False):
             argv.append("--allow-soft-mem-limit")
+        if str(getattr(args, "train_compute_dtype", "fp32")) != "fp32":
+            argv.extend(["--train-compute-dtype", str(args.train_compute_dtype)])
+        if bool(getattr(args, "compile_train_loss", False)):
+            argv.append("--compile-train-loss")
+        if str(getattr(args, "perf_thread_pin", "off")) != "off":
+            argv.extend(["--perf-thread-pin", str(args.perf_thread_pin)])
         return argv
 
     base_arm_specs = {
@@ -3047,6 +3186,12 @@ def launch_ticket(args: argparse.Namespace, smoke: dict[str, Any] | None, mlx_pr
             command.extend(["--mem-budget-gb", str(args.mem_budget_gb)])
         if getattr(args, "allow_soft_mem_limit", False):
             command.append("--allow-soft-mem-limit")
+        if str(getattr(args, "train_compute_dtype", "fp32")) != "fp32":
+            command.extend(["--train-compute-dtype", str(args.train_compute_dtype)])
+        if bool(getattr(args, "compile_train_loss", False)):
+            command.append("--compile-train-loss")
+        if str(getattr(args, "perf_thread_pin", "off")) != "off":
+            command.extend(["--perf-thread-pin", str(args.perf_thread_pin)])
         return command
 
     mem_probe_commands = {
@@ -3253,6 +3398,9 @@ def launch_ticket(args: argparse.Namespace, smoke: dict[str, Any] | None, mlx_pr
             "software_budget_rule": "mx.get_active_memory() + max(0, process_rss - start_process_rss) <= budget",
             "wired_limit_policy": "attempt mx.set_wired_limit(min(budget, 35% of system total)) when available",
             "allow_soft_mem_limit": bool(getattr(args, "allow_soft_mem_limit", False)),
+            "train_compute_dtype": str(getattr(args, "train_compute_dtype", "fp32")),
+            "compile_train_loss": bool(getattr(args, "compile_train_loss", False)),
+            "perf_thread_pin": str(getattr(args, "perf_thread_pin", "off")),
             "lr": args.lr,
             "ce_fraction": args.ce_fraction,
             "softplus_fraction": args.softplus_fraction,
@@ -3403,6 +3551,9 @@ def main() -> None:
     parser.add_argument("--eval-every", type=int, default=250)
     parser.add_argument("--checkpoint-every", type=int, default=250)
     parser.add_argument("--microbatch-pairs", type=int, default=0)
+    parser.add_argument("--train-compute-dtype", choices=TRAIN_COMPUTE_DTYPES, default="fp32")
+    parser.add_argument("--compile-train-loss", action="store_true")
+    parser.add_argument("--perf-thread-pin", choices=THREAD_PIN_MODES, default="off")
     parser.add_argument("--verdict-batch-size", type=int, default=32)
     parser.add_argument("--mem-budget-gb", type=float)
     parser.add_argument("--mem-probe-steps", type=int, default=3)
