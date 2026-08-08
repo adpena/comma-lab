@@ -401,3 +401,51 @@ def test_harvest_receipt_carries_the_calibration_horizon_scope(tmp_path):
     orch.harvest_sigma(gate, ticket, path)
     receipt = json.loads(gate.receipt.read_text())
     assert "CALIBRATION horizon" in receipt["scope"] and "not at the" in receipt["scope"]
+
+
+# --- M1R4C-F1: a gate may not report satisfied while its dependencies are unmet ---
+# `unmet` was computed for every kind but consulted ONLY by KIND_FIRE, so a stale
+# burn-guard receipt (status=passed on disk) satisfied guard::<key> while
+# review_passes sat at 0/3 - and FIRE, whose only dependency IS that guard, read
+# READY. A fire gate that opens at zero clean passes is the bypass these pin shut.
+
+
+def _bypass_gates(tmp_path):
+    receipt = tmp_path / "guard.json"
+    _write(receipt, {"status": "passed"})  # a STALE but PASSING guard receipt
+    guard = orch.Gate(name="guard::fire", kind=orch.KIND_GUARD, detail="fire guard",
+                      receipt=receipt, depends_on=("review_passes",))
+    fire = orch.Gate(name="FIRE", kind=orch.KIND_FIRE, detail="the burn",
+                     depends_on=("guard::fire",))
+    review = orch.Gate(name="review_passes", kind=orch.KIND_REVIEW, detail="3 clean passes")
+    return guard, fire, review
+
+
+def _walk(guard, fire, review, review_status):
+    states = {}
+    if review_status is not None:
+        states["review_passes"] = orch.GateState(review, review_status, "counter")
+    states["guard::fire"] = orch.evaluate_gate(guard, {}, states)
+    states["FIRE"] = orch.evaluate_gate(fire, {}, states)
+    return states
+
+
+def test_passing_guard_receipt_cannot_open_fire_while_review_unmet(tmp_path):
+    """POSITIVE CONTROL: review_passes 0/3 + a passing guard receipt must NOT reach READY."""
+    states = _walk(*_bypass_gates(tmp_path), orch.PENDING)
+    assert states["guard::fire"].status != orch.SATISFIED
+    assert "READY" not in states["FIRE"].reason
+
+
+def test_unevaluated_dependency_is_unmet_not_met(tmp_path):
+    """ABSENCE CONTROL: a dependency with no state at all is UNMET - absent != pass."""
+    states = _walk(*_bypass_gates(tmp_path), None)
+    assert states["guard::fire"].status != orch.SATISFIED
+    assert "READY" not in states["FIRE"].reason
+
+
+def test_satisfied_dependency_still_opens_the_fire_gate(tmp_path):
+    """NEGATIVE CONTROL: the GOOD state must still open - a false hold is its own defect."""
+    states = _walk(*_bypass_gates(tmp_path), orch.SATISFIED)
+    assert states["guard::fire"].status == orch.SATISFIED
+    assert "READY" in states["FIRE"].reason

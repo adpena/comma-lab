@@ -264,25 +264,54 @@ def build_gates(ticket: dict[str, Any], ticket_path: Path) -> list[Gate]:
 # ------------------------------------------------------------------------ evaluate
 
 
+def unmet_dependencies(gate: Gate, states: dict[str, GateState]) -> list[str]:
+    """Dependencies not proven SATISFIED — fail-closed on ABSENCE.
+
+    The prior form was ``states.get(d) and states[d].status != SATISFIED``: a
+    dependency with NO state yet is falsy, so an UNEVALUATED dependency counted
+    as met. Absent == pass is the vacuity genus. A dependency we have not
+    evaluated is UNMET.
+    """
+    return [d for d in gate.depends_on
+            if states.get(d) is None or states[d].status != SATISFIED]
+
+
 def evaluate_gate(gate: Gate, ticket: dict[str, Any], states: dict[str, GateState]) -> GateState:
-    unmet = [d for d in gate.depends_on if states.get(d) and states[d].status != SATISFIED]
-    if gate.kind == KIND_MEM_PROBE:
-        return _eval_mem_probe(gate)
-    if gate.kind == KIND_GUARD:
-        return _eval_receipt_status(gate, "status", ("passed",))
-    if gate.kind == KIND_TRAIN:
-        return _eval_train(gate)
-    if gate.kind == KIND_VERDICT:
-        return _eval_verdict(gate)
-    if gate.kind == KIND_HARVEST:
-        return _eval_harvest(gate, ticket)
-    if gate.kind == KIND_REVIEW:
-        return _eval_review(gate, ticket)
+    unmet = unmet_dependencies(gate, states)
     if gate.kind == KIND_FIRE:
         if unmet:
             return GateState(gate, MANUAL, f"held: {', '.join(unmet)} not satisfied")
         return GateState(gate, MANUAL, "READY - run the ticket argv from MAIN (one Metal fire)")
-    return GateState(gate, BLOCKED, f"unknown gate kind {gate.kind!r}")
+
+    if gate.kind == KIND_MEM_PROBE:
+        state = _eval_mem_probe(gate)
+    elif gate.kind == KIND_GUARD:
+        state = _eval_receipt_status(gate, "status", ("passed",))
+    elif gate.kind == KIND_TRAIN:
+        state = _eval_train(gate)
+    elif gate.kind == KIND_VERDICT:
+        state = _eval_verdict(gate)
+    elif gate.kind == KIND_HARVEST:
+        state = _eval_harvest(gate, ticket)
+    elif gate.kind == KIND_REVIEW:
+        state = _eval_review(gate, ticket)
+    else:
+        return GateState(gate, BLOCKED, f"unknown gate kind {gate.kind!r}")
+
+    # NO gate may REPORT satisfied while its own dependencies are unmet.
+    # `unmet` was computed for every kind but consulted ONLY by KIND_FIRE, so a
+    # stale burn-guard receipt (status=passed on disk) satisfied guard::<key>
+    # while review_passes sat at 0/3 — and FIRE, whose only dependency IS that
+    # guard, then read READY. That is a fire-gate bypass at zero clean passes
+    # (M1R4C-F1, 2026-08-08). PENDING not BLOCKED: the dependency may yet be
+    # satisfied, and BLOCKED breaks the evaluation loop.
+    if unmet and state.status == SATISFIED:
+        return GateState(
+            gate,
+            PENDING,
+            f"held: {', '.join(unmet)} not satisfied (receipt says {state.reason!r})",
+        )
+    return state
 
 
 def _eval_mem_probe(gate: Gate) -> GateState:
