@@ -63,9 +63,61 @@ DEFAULT_CAP = 4
 SSD_ADD_DIR = "/Volumes/VertigoDataTier/pact"
 # THE arm model. Single source of truth: the pin used to live inside
 # keeper_source(), where a stale generation went unnoticed until the operator
-# caught it (2026-08-08, "You should be using GPT five point six"). Env override
-# exists so a model bump never requires a code edit mid-campaign.
-ARM_MODEL = os.environ.get("TAC_CODEX_ARM_MODEL", "gpt-5.6")
+# caught it (2026-08-08, "You should be using GPT five point six" -> then "a
+# five point six SOL"). The value is VERIFIED against the operator's own codex
+# config (~/.codex/config.toml: model = "gpt-5.6-sol"), not guessed. Env
+# override exists so a model bump never requires a code edit mid-campaign.
+_DEFAULT_ARM_MODEL = "gpt-5.6-sol"
+ARM_MODEL = os.environ.get("TAC_CODEX_ARM_MODEL", _DEFAULT_ARM_MODEL)
+# NEVER AGAIN (operator 2026-08-08, verbatim: "We are never spawning on five
+# point five again"). This is a REFUSAL, not a default: spawn() fails closed if
+# the resolved model matches, so an env override cannot resurrect the old
+# generation either. Substring match catches every 5.5 variant/suffix.
+BANNED_ARM_MODEL_SUBSTRINGS: tuple[str, ...] = ("gpt-5.5",)
+# The reasoning-effort enum, READ FROM the installed codex binary's own variant
+# table (strings | grep -> "...noneminimallowmediumhighxhighmaxultra..."),
+# ascending. Recorded so a future effort choice is picked from the real
+# vocabulary rather than invented. RE-VERIFIED against 0.147.0 on 2026-08-08
+# after the cask upgrade (0.145.0 -> 0.147.0): vocabulary UNCHANGED, `ultra`
+# still the ceiling. Re-read it after any future codex upgrade -- this list is
+# a transcription of an external binary, not a value we own.
+CODEX_EFFORT_ENUM: tuple[str, ...] = (
+    "none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra",
+)
+# The operator's admissible RANGE (2026-08-08: "high to ultra effort levels
+# depending on the task at hand"). Effort is PER-TASK, chosen at `add` time --
+# it is not one global constant. Below-`high` is refused for arm work.
+ARM_EFFORT_LEVELS: tuple[str, ...] = ("high", "xhigh", "max", "ultra")
+# Fallback for rows queued before `effort` existed. NOT a recommendation: pick
+# the level deliberately per arm.
+DEFAULT_ARM_EFFORT = os.environ.get("TAC_CODEX_ARM_EFFORT", "xhigh")
+
+
+def resolve_arm_effort(effort: str | None) -> str:
+    """Effort for one arm; refuses anything outside the operator's range."""
+    value = (effort or DEFAULT_ARM_EFFORT).strip()
+    if value not in ARM_EFFORT_LEVELS:
+        raise SystemExit(
+            f"REFUSED: arm effort {value!r} is outside the operator's range "
+            f"{ARM_EFFORT_LEVELS} (codex enum: {CODEX_EFFORT_ENUM})."
+        )
+    return value
+
+
+def assert_arm_model_admissible(model: str) -> None:
+    """Fail closed on a banned model generation. Called before every spawn."""
+    for banned in BANNED_ARM_MODEL_SUBSTRINGS:
+        if banned in model:
+            raise SystemExit(
+                f"REFUSED: arm model {model!r} contains banned {banned!r}. "
+                "Operator directive 2026-08-08: never spawn on 5.5 again. "
+                # Cite the CANONICAL default, never the live (possibly
+                # overridden) value -- under an override the live value IS the
+                # banned one, and echoing it would tell the reader 5.5 is our
+                # default. Same class as the guard-hook message this window.
+                f"Set TAC_CODEX_ARM_MODEL to a live model "
+                f"(canonical default {_DEFAULT_ARM_MODEL!r})."
+            )
 KILL_SWITCH = "TAC_CODEX_SATURATE_OFF"
 _LIVE_STATUSES = frozenset({"queued", "live"})
 _NEXT_SCHEMA = "codex_arm_queue.next_if_resumed.v1"
@@ -462,7 +514,7 @@ def keeper_path(name: str) -> str:
     return f".omx/tmp/codex_runs/{name}_keeper.py"
 
 
-def keeper_source(name: str, prompt_path: str) -> str:
+def keeper_source(name: str, prompt_path: str, effort: str | None = None) -> str:
     """Source of the per-arm KEEPER — the reaper-proof supervisor.
 
     The reaper kills on: name-match \\b(claude|codex)\\b AND no-TTY AND
@@ -506,18 +558,20 @@ def keeper_source(name: str, prompt_path: str) -> str:
         f"charter at {prompt_path} plus the common contract at "
         f".omx/tmp/codex_runs/_common_contract.md."
     )
-    # gpt-5.6 @ xhigh IS the sol-ultra profile (operator correction 2026-08-08:
-    # "You should be using GPT five point six" — the 5.5 pin was stale and every
-    # arm since had been spawning a generation behind). OPERATOR LAW (2026-08-05):
-    # every CONVOCATION arm (gc*/pantheon passes) runs at sol-ultra — if per-arm
-    # profile tiers are ever added here, convocation-class arms MUST pin to the
-    # maximum. For the MOST IMPORTANT convocations (operator-flagged or
-    # route-changing adjudications), MAIN ALSO runs a parallel FABLE leg (Agent
-    # tool, model:"fable" carve-out) on the same charter and reconciles both.
+    # Model + effort are BOTH resolved here, per-arm (operator 2026-08-08: a
+    # 5.6-sol "of high to ultra effort levels depending on the task at hand").
+    # Effort is a per-task CHOICE, no longer a hardcoded xhigh. OPERATOR LAW
+    # (2026-08-05): every CONVOCATION arm (gc*/pantheon passes) runs at the
+    # MAXIMUM tier -- now literally expressible as effort="ultra". For the MOST
+    # IMPORTANT convocations (operator-flagged or route-changing adjudications),
+    # MAIN ALSO runs a parallel FABLE leg (Agent tool, model:"fable" carve-out)
+    # on the same charter and reconciles both receipts.
+    assert_arm_model_admissible(ARM_MODEL)
+    resolved_effort = resolve_arm_effort(effort)
     argv_prefix = [
         "codex", "exec", "--skip-git-repo-check", "-s", "workspace-write",
         "--add-dir", SSD_ADD_DIR,
-        "-m", ARM_MODEL, "-c", "model_reasoning_effort=xhigh",
+        "-m", ARM_MODEL, "-c", f"model_reasoning_effort={resolved_effort}",
         "-o", f".omx/tmp/codex_runs/{name}.last.txt",
     ]
     return (
@@ -625,8 +679,12 @@ def spawn_command(name: str, prompt_path: str) -> str:
     return " ".join(["python3 -c", q(_DETACH_PY), q(log), "python3", q(keeper_path(name))])
 
 
-def spawn(name: str, prompt_path: str) -> bool:
+def spawn(name: str, prompt_path: str, effort: str | None = None) -> bool:
     RUNS.mkdir(parents=True, exist_ok=True)
+    # Fail closed on a banned generation BEFORE any file is written or process
+    # forked -- a refusal must not leave a half-written keeper behind.
+    assert_arm_model_admissible(ARM_MODEL)
+    resolved_effort = resolve_arm_effort(effort)
     if not (_REPO / prompt_path).exists():
         print(f"  REFUSED {name}: prompt file missing ({prompt_path})", file=sys.stderr)
         return False
@@ -636,9 +694,16 @@ def spawn(name: str, prompt_path: str) -> bool:
     # to remove. Confirmed by executed control 2026-08-04 review round.
     for stale in (RUNS / f"{name}.done", RUNS / f"{name}.last.txt"):
         stale.unlink(missing_ok=True)
-    (_REPO / keeper_path(name)).write_text(keeper_source(name, prompt_path), encoding="utf-8")
+    (_REPO / keeper_path(name)).write_text(
+        keeper_source(name, prompt_path, resolved_effort), encoding="utf-8"
+    )
     subprocess.run(["bash", "-c", spawn_command(name, prompt_path)], cwd=_REPO, check=False)
-    append_row({"name": name, "prompt_path": prompt_path, "status": "live", "event": "spawned"})
+    append_row({
+        "name": name, "prompt_path": prompt_path, "status": "live", "event": "spawned",
+        # Model+effort on the SPAWN row: what actually ran is a receipt, not an
+        # inference from whatever the constants happen to say when you read back.
+        "model": ARM_MODEL, "effort": resolved_effort,
+    })
     try:
         SPAWN_LOG.parent.mkdir(parents=True, exist_ok=True)
         with SPAWN_LOG.open("a", encoding="utf-8") as handle:
@@ -877,9 +942,14 @@ def cmd_add(args) -> int:
             "owns_scorer": bool(args.owns_scorer),
             "status": "queued",
             "note": args.note or "",
+            # Per-task effort, chosen at queue time (operator 2026-08-08).
+            "effort": resolve_arm_effort(getattr(args, "effort", None)),
         }
     )
-    print(f"queued {args.name} (rank {args.rank})")
+    print(
+        f"queued {args.name} (rank {args.rank}, "
+        f"effort {resolve_arm_effort(getattr(args, 'effort', None))})"
+    )
     return 0
 
 
@@ -910,7 +980,7 @@ def cmd_saturate(args) -> int:
         if not args.spawn:
             print(f"  would spawn: {name} ({prompt})")
             continue
-        if spawn(name, prompt):
+        if spawn(name, prompt, row.get("effort")):
             print(f"  spawned {name}")
             time.sleep(2)
     if not args.spawn:
@@ -951,7 +1021,17 @@ def main(argv=None) -> int:
     p = sub.add_parser("add")
     p.add_argument("--name", required=True); p.add_argument("--prompt", required=True)
     p.add_argument("--rank", type=int, default=100); p.add_argument("--owns-scorer", action="store_true")
-    p.add_argument("--note", default=""); p.set_defaults(fn=cmd_add)
+    p.add_argument("--note", default="")
+    p.add_argument(
+        "--effort",
+        default=None,
+        choices=list(ARM_EFFORT_LEVELS),
+        help=(
+            "reasoning effort for THIS arm, chosen per task (operator 2026-08-08: "
+            f"high->ultra). Default {DEFAULT_ARM_EFFORT}."
+        ),
+    )
+    p.set_defaults(fn=cmd_add)
     p = sub.add_parser("mark")
     p.add_argument("--name", required=True)
     p.add_argument("--status", required=True, choices=["queued", "live", "landed", "dropped"])
