@@ -65,7 +65,12 @@ SCOPE reductions allowed and declared: the q ladder may be coarse (≥4 values i
 solver iteration budget may be capped IF the residual is coded against whatever joint the
 capped solve actually produced at decode (decode reproducibility > solver optimality — the
 decode rerun must reproduce the SAME joint bit-exactly, same seed/iterations/tolerance).
-Provenance pins: CR1 payload SHAs above · repo HEAD at arm start · solver config in receipt.
+Provenance pins: incumbent stream sha
+`0a53f649768c61912399ccab14e4d3323998e47235992091e2a9e28cf7259fe1` · gt argmax cache sha
+`b74a14b226a5aceb5824899898bcb06e5413c54b7db2441268da7bc91a10db5d` · cx1 argmax cache sha
+`5e903de650e60ec6a64b34eb455fa1bc911223551d0b31e9ae45cc906e1490be` · CR1 receipts commit
+lineage per `.omx/research/ddm_cr1_20260808/CR1_RECEIPT.json` · repo HEAD at arm start ·
+solver config in receipt.
 
 **Boundaries:** CPU-only (OMP/MKL ≤4 threads), NO Metal, NO scorer slot (ARM-VEH n32 leg 2 is
 LIVE on Metal — read-only toward ddm_mx1e/ddm_mx1g run dirs). No archive promotion, no score
