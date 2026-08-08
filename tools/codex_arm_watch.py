@@ -19,7 +19,9 @@ reintroducing the poll-on-request regime.
 from __future__ import annotations
 
 import argparse
+import os
 import signal
+import stat
 import sys
 import time
 from pathlib import Path
@@ -102,12 +104,47 @@ def format_events(
     return lines
 
 
+def stdout_delivery_channel() -> str:
+    """Classify where our stdout GOES — the thing liveness never measured.
+
+    A refreshed heartbeat proves this process is polling; it does NOT prove the
+    events reach MAIN. Measured 2026-08-08: a detached watcher held the heartbeat
+    at 0s all session (status read ALIVE/green) while MAIN received zero
+    notifications, because its stdout was a file, not the Monitor's pipe. That is
+    the vacuity genus — a green indicator for a condition nobody checked.
+
+    fifo -> armed as a Monitor (events become MAIN notifications).  Anything else
+    -> the watcher runs but is NOT delivering.
+    """
+    try:
+        mode = os.fstat(1).st_mode
+    except OSError:
+        return "closed"
+    if stat.S_ISFIFO(mode):
+        return "fifo"
+    if stat.S_ISREG(mode):
+        return "file"
+    if stat.S_ISCHR(mode):
+        return "tty"
+    if stat.S_ISSOCK(mode):
+        return "socket"
+    return "other"
+
+
+def _write_heartbeat() -> None:
+    """Heartbeat carries the DELIVERY CHANNEL, not just an mtime."""
+    payload = f"channel={stdout_delivery_channel()}\npid={os.getpid()}\n"
+    tmp = HEARTBEAT.with_suffix(HEARTBEAT.suffix + ".tmp")
+    tmp.write_text(payload)
+    tmp.replace(HEARTBEAT)  # atomic; readers never see a torn heartbeat
+
+
 def watch(runs: Path, interval_s: float, once: bool) -> int:
     runs.mkdir(parents=True, exist_ok=True)
     before = _snapshot(runs)  # baseline: pre-existing receipts stay silent
     while True:
         HEARTBEAT.parent.mkdir(parents=True, exist_ok=True)
-        HEARTBEAT.touch()
+        _write_heartbeat()
         time.sleep(interval_s)
         after = _snapshot(runs)
         for line in format_events(runs, before, after):

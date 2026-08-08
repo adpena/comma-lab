@@ -747,7 +747,30 @@ def _watcher_line() -> str:
         )
     if age > 90:  # codex_arm_watch.HEARTBEAT_STALE_S
         return f"fleet watcher: STALE (heartbeat {int(age)}s ago) — re-arm the Monitor"
-    return f"fleet watcher: ALIVE (heartbeat {int(age)}s ago)"
+    # Liveness is NOT delivery. Measured 2026-08-08: a detached watcher kept the
+    # heartbeat at 0s all session (this line read ALIVE/green) while MAIN received
+    # ZERO notifications — its stdout was a file, not the Monitor's pipe. A green
+    # indicator for a condition nobody checked is the vacuity genus; report the
+    # DELIVERY CHANNEL the watcher now stamps into the heartbeat.
+    channel = ""
+    try:
+        for row in hb.read_text().splitlines():
+            if row.startswith("channel="):
+                channel = row.split("=", 1)[1].strip()
+    except OSError:
+        channel = ""
+    if channel == "fifo":
+        return f"fleet watcher: ALIVE + DELIVERING (heartbeat {int(age)}s ago)"
+    if channel:
+        return (
+            f"fleet watcher: RUNNING but NOT DELIVERING (stdout={channel}, not a Monitor pipe; "
+            f"heartbeat {int(age)}s ago) — arm it as a persistent Monitor or MAIN gets no "
+            "arm-completion notifications"
+        )
+    return (
+        f"fleet watcher: ALIVE (heartbeat {int(age)}s ago) — delivery channel UNKNOWN "
+        "(pre-channel watcher; restart it to report whether MAIN actually receives events)"
+    )
 
 
 def _surface_line() -> str:
