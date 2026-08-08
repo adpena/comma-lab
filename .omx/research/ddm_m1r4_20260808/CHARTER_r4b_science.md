@@ -35,14 +35,14 @@ pass that merely agrees with the first is worth very little.
 
 | file | sha256 (first 16) |
 |---|---|
-| `.omx/research/ddm_m1_20260808/launch_ticket_v5_event_driven.json` | `9c8373b5b352cacc` |
-| `experiments/ddm_mx1_pr130_semantic_renderer.py` | `1ef18faf37e2f171` |
+| `.omx/research/ddm_m1_20260808/launch_ticket_v5_event_driven.json` | `90cf28d390999ef9` |
+| `experiments/ddm_mx1_pr130_semantic_renderer.py` | `8bad6a6b8be1b201` |
 | `tools/mx1_fire_guard.py` | `60fc0501a65d8d09` |
-| `tools/ddm_seal_orchestrator.py` | `e592cb36fb00d502` |
+| `tools/ddm_seal_orchestrator.py` | `11c4368f009afc31` |
 
 **REVIEW SUBJECT (immutable).** The reviewed subject is the CONTENT of the four files above,
 keyed by their sha256 — **NOT the live repository HEAD**. The subject's tree is that of commit
-`1381ac84cb`. Live HEAD WILL advance during your pass (this charter's own commit, sister-arm
+`393d67d016` (ROUND 5: the m1c1 amendment 393d67d016 is IN the subject). Live HEAD WILL advance during your pass (this charter's own commit, sister-arm
 receipts, MAIN's own notes); that is EXPECTED and is NOT a finding. Descendant commits that touch
 only charter files, review receipts, or MAIN's notes are OUTSIDE the reviewed subject by construction.
 
@@ -113,7 +113,7 @@ pre-registration NOW that would make the outcome interpretable either way?
 
 ## Deliverable
 
-Write `.omx/research/ddm_m1r4_20260808/M1R4B_REVIEW.md` with:
+Write `.omx/research/ddm_m1r4_20260808/M1R5B_REVIEW.md` with:
 
 1. First line EXACTLY one of `VERDICT: CLEAN_PASS` / `VERDICT: FINDINGS_RESET_COUNTER`.
 2. The sha re-verifications.
