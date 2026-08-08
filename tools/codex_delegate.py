@@ -49,6 +49,18 @@ REPO = Path(__file__).resolve().parent.parent
 _TOOLS_DIR = Path(__file__).resolve().parent
 if str(_TOOLS_DIR) not in sys.path:
     sys.path.insert(0, str(_TOOLS_DIR))
+# THE model/effort constants are OWNED by codex_arm_queue -- imported, never
+# re-declared here. This file is the SECOND live codex spawn surface (10+ callers);
+# a duplicated default is two sources of truth for one fact, and on 2026-08-08 the
+# 5.5 REFUSAL was enforced at only one of the two (this one would have spawned a
+# banned generation, since _full_model_id only rejects shorthands). One-way import:
+# codex_arm_queue does not import this module.
+from codex_arm_queue import (  # noqa: E402  (must follow the sys.path insert above)
+    ARM_EFFORT_LEVELS,
+    ARM_MODEL,
+    assert_arm_model_admissible,
+)
+
 RUNS = REPO / ".omx" / "tmp" / "codex_runs"
 EVENTS = RUNS / "codex_events.log"
 LEDGER = REPO / ".omx" / "state" / "codex_delegations.jsonl"
@@ -440,6 +452,10 @@ def _full_model_id(value: str) -> str:
         raise argparse.ArgumentTypeError(
             f"model {value!r} looks like a shorthand; pass the full ID (e.g. 'gpt-5.6-sol')"
         )
+    # ALSO fail closed on a banned generation (operator 2026-08-08: "never spawning
+    # on five point five again"). Shorthand-refusal alone let 'gpt-5.5' straight
+    # through -- it starts with 'gpt-'. Same refusal the arm-queue spawn path uses.
+    assert_arm_model_admissible(value)
     return value
 
 
@@ -451,10 +467,12 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--prompt", help="inline prompt string (written to a prompt file)")
     # Full model IDs only: the API 400s on shorthands ("sol") AFTER worktree/ledger setup — a
     # 2026-07-20 launcher-side rc=1 came from exactly that. Refuse shorthands at parse time.
-    ap.add_argument("--model", default="gpt-5.6-sol",
+    ap.add_argument("--model", default=ARM_MODEL,
                     type=_full_model_id,
                     help="full codex model ID (e.g. gpt-5.6-sol); shorthands like 'sol' are refused")
-    ap.add_argument("--effort", default="high", choices=["low", "medium", "high", "xhigh", "ultra"])
+    ap.add_argument("--effort", default="high", choices=list(ARM_EFFORT_LEVELS),
+                    help="reasoning effort, per task (operator range high->ultra). "
+                         "Canonical enum owned by codex_arm_queue.ARM_EFFORT_LEVELS.")
     # Sandbox relaxed to FULL AUTHORITY (operator 2026-07-14: "codex is a trusted partner, I trust it
     # with as much authority as you"). danger-full-access lets an arm write .git/objects and COMMIT —
     # coherent (no-trample) because each arm runs in its OWN git worktree (disjoint write-domain, the
