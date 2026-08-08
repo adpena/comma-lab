@@ -247,21 +247,87 @@ def test_harvest_labels_scope_and_refuses_score_authority(tmp_path):
     orch.harvest_sigma(gate, ticket, path)
     receipt = json.loads(gate.receipt.read_text())
     assert receipt["score_claim"] is False
-    assert receipt["axis"] == "[macOS-MLX research-signal]"
+    assert "advisory" in receipt["axis"] and "research-signal" in receipt["axis"]
     assert "same-seed" in receipt["measured"]["scope"]
 
 
-def test_harvest_emits_unit_mismatch_rather_than_comparing_loss_to_a_dseg_bar(tmp_path):
+def test_harvest_leaves_falsifiers_unevaluable_without_the_dseg_verdicts(tmp_path):
+    """No d_seg verdicts and no determinism proof => UNEVALUABLE, never a silent pass."""
     path = _harvest_ticket(tmp_path, [1.0, 2.0], fp32=1.5)
     ticket = orch.load_ticket(path)
     gate = next(g for g in orch.build_gates(ticket, path) if g.kind == orch.KIND_HARVEST)
     orch.harvest_sigma(gate, ticket, path)
     receipt = json.loads(gate.receipt.read_text())
     for name, row in receipt["falsifiers"].items():
-        assert row["fired"] is None, f"{name} must not be adjudicated across units"
-        assert "UNIT_MISMATCH" in row["reason"]
-        assert row["bar_unit"] != row["measured_unit"]
-    assert receipt["resolving_commands"]["d_seg_unit_sigma"]
+        assert row["fired"] is None, f"{name} must not be adjudicated without evidence"
+        assert "UNEVALUABLE" in row["reason"]
+        assert row["unit"] == "d_seg", "bars are d_seg-denominated"
+    assert receipt["measured"]["repeat_determinism"]["bit_identical_checkpoints"] is False
+
+
+def _add_shas(tmp_path, keys_to_sha: dict[str, str]) -> None:
+    for run_name, sha in keys_to_sha.items():
+        p = tmp_path / "sigma" / run_name / "result.json"
+        payload = json.loads(p.read_text())
+        payload["mlx_train"]["latest_checkpoint_sha256"] = sha
+        p.write_text(json.dumps(payload))
+
+
+def test_bit_identical_checkpoints_prove_sigma_zero_and_clear_F1_F3(tmp_path):
+    path = _harvest_ticket(tmp_path, [1.0, 1.0, 1.0], fp32=None)
+    _add_shas(tmp_path, {"run_1": "abc", "run_2": "abc", "run_3": "abc"})
+    ticket = orch.load_ticket(path)
+    gate = next(g for g in orch.build_gates(ticket, path) if g.kind == orch.KIND_HARVEST)
+    orch.harvest_sigma(gate, ticket, path)
+    receipt = json.loads(gate.receipt.read_text())
+    det = receipt["measured"]["repeat_determinism"]
+    assert det["bit_identical_checkpoints"] is True and det["distinct_sha_count"] == 1
+    assert receipt["falsifiers"]["F1_sigma_below_fp16_guard_bar"]["fired"] is False
+    assert receipt["falsifiers"]["F3_sigma_below_event_threshold"]["fired"] is False
+    # F2 still needs the verdicts - determinism does not answer the fp16-vs-fp32 question
+    assert receipt["falsifiers"]["F2_fp16_fp32_delta_within_envelope"]["fired"] is None
+
+
+def test_divergent_checkpoints_refuse_the_determinism_shortcut(tmp_path):
+    path = _harvest_ticket(tmp_path, [1.0, 1.0], fp32=None)
+    _add_shas(tmp_path, {"run_1": "abc", "run_2": "def"})
+    ticket = orch.load_ticket(path)
+    gate = next(g for g in orch.build_gates(ticket, path) if g.kind == orch.KIND_HARVEST)
+    orch.harvest_sigma(gate, ticket, path)
+    receipt = json.loads(gate.receipt.read_text())
+    assert receipt["measured"]["repeat_determinism"]["distinct_sha_count"] == 2
+    assert receipt["falsifiers"]["F1_sigma_below_fp16_guard_bar"]["fired"] is None
+
+
+@pytest.mark.parametrize(
+    "fp16_dseg,fp32_dseg,expect_fired",
+    [(0.0043000, 0.0043005, False), (0.0043000, 0.0043100, True)],  # bar is 2.0e-6 d_seg
+)
+def test_F2_adjudicates_on_the_measured_dseg_delta(tmp_path, fp16_dseg, fp32_dseg, expect_fired):
+    path = _harvest_ticket(tmp_path, [1.0, 1.0], fp32=None)
+    _add_shas(tmp_path, {"run_1": "abc", "run_2": "abc"})
+    ticket = orch.load_ticket(path)
+    # fp16 uses the LIVE top-level shape; fp32 uses the nested rows shape - both must read
+    for tag, value, shape in (
+        ("fp16", fp16_dseg, "top_level"),
+        ("fp32", fp32_dseg, "nested_rows"),
+    ):
+        out = tmp_path / f"dseg_{tag}" / "verdict_result.json"
+        body = (
+            {"aggregate_d_seg": value}
+            if shape == "top_level"
+            else {"checkpoint_rows": [{"aggregate_d_seg": value}]}
+        )
+        _write(out, {"torch_verdict": body})
+        ticket[f"argv_dseg_verdict_{tag}"] = ["true", "--out", str(out)]
+    _write(path, ticket)
+    ticket = orch.load_ticket(path)
+    gate = next(g for g in orch.build_gates(ticket, path) if g.kind == orch.KIND_HARVEST)
+    orch.harvest_sigma(gate, ticket, path)
+    receipt = json.loads(gate.receipt.read_text())
+    row = receipt["falsifiers"]["F2_fp16_fp32_delta_within_envelope"]
+    assert row["fired"] is expect_fired
+    assert row["measured"] == pytest.approx(abs(fp16_dseg - fp32_dseg))
 
 
 def test_unevaluable_falsifier_blocks_the_harvest_gate(tmp_path):
@@ -311,3 +377,27 @@ def test_cli_returns_three_when_blocked(tmp_path, capsys):
 
 def test_cli_returns_three_on_a_ticket_error(tmp_path, capsys):
     assert orch.main(["--ticket", str(tmp_path / "absent.json"), "--quiet"]) == 3
+
+
+def test_stale_harvest_is_pending_not_terminal(tmp_path):
+    """A harvest older than its inputs must re-run - a stale UNEVALUABLE is not a verdict."""
+    path = _harvest_ticket(tmp_path, [1.0, 2.0], fp32=None)
+    ticket = orch.load_ticket(path)
+    gate = next(g for g in orch.build_gates(ticket, path) if g.kind == orch.KIND_HARVEST)
+    orch.harvest_sigma(gate, ticket, path)
+    assert orch._eval_harvest(gate, orch.load_ticket(path)).status == orch.BLOCKED
+
+    import os, time
+    later = time.time() + 60
+    os.utime(tmp_path / "sigma" / "run_1" / "result.json", (later, later))
+    state = orch._eval_harvest(gate, orch.load_ticket(path))
+    assert state.status == orch.PENDING and "stale" in state.reason
+
+
+def test_harvest_receipt_carries_the_calibration_horizon_scope(tmp_path):
+    path = _harvest_ticket(tmp_path, [1.0, 1.0], fp32=None)
+    ticket = orch.load_ticket(path)
+    gate = next(g for g in orch.build_gates(ticket, path) if g.kind == orch.KIND_HARVEST)
+    orch.harvest_sigma(gate, ticket, path)
+    receipt = json.loads(gate.receipt.read_text())
+    assert "CALIBRATION horizon" in receipt["scope"] and "not at the" in receipt["scope"]

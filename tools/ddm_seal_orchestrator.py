@@ -61,6 +61,7 @@ MANUAL = "manual"
 KIND_MEM_PROBE = "mem_probe"
 KIND_GUARD = "guard"
 KIND_TRAIN = "train"
+KIND_VERDICT = "dseg_verdict"
 KIND_HARVEST = "sigma_harvest"
 KIND_REVIEW = "review_counter"
 KIND_FIRE = "fire"
@@ -188,6 +189,23 @@ def build_gates(ticket: dict[str, Any], ticket_path: Path) -> list[Gate]:
             )
         )
 
+    # 3b. d_seg-unit verdicts (CPU-torch authority units - the falsifier bars speak d_seg).
+    verdict_keys = sorted(k for k in ticket if k.startswith("argv_dseg_verdict_"))
+    for key in verdict_keys:
+        out = argv_flag(ticket[key], "--out")
+        if out is None:
+            raise TicketError(f"{key} lacks --out; cannot locate its verdict result")
+        gates.append(
+            Gate(
+                name=f"dseg::{key}",
+                kind=KIND_VERDICT,
+                detail=f"CPU-torch d_seg verdict ({key})",
+                argv_key=key,
+                receipt=Path(out),
+                depends_on=tuple(f"run::{k}" for k in sigma_keys),
+            )
+        )
+
     # 4. sigma harvest.
     if sigma_keys:
         fp16 = [k for k in sigma_keys if "fp32" not in k]
@@ -197,10 +215,11 @@ def build_gates(ticket: dict[str, Any], ticket_path: Path) -> list[Gate]:
             Gate(
                 name="sigma_harvest",
                 kind=KIND_HARVEST,
-                detail="sigma across repeats + fp16/fp32 delta -> ticket fields + falsifiers",
+                detail="determinism proof + fp16/fp32 d_seg delta -> ticket fields + falsifiers",
                 receipt=harvest_receipt,
-                depends_on=tuple(f"run::{k}" for k in sigma_keys),
-                extra={"fp16_keys": fp16, "fp32_keys": fp32},
+                depends_on=tuple(f"run::{k}" for k in sigma_keys)
+                + tuple(f"dseg::{k}" for k in verdict_keys),
+                extra={"fp16_keys": fp16, "fp32_keys": fp32, "verdict_keys": verdict_keys},
             )
         )
 
@@ -253,6 +272,8 @@ def evaluate_gate(gate: Gate, ticket: dict[str, Any], states: dict[str, GateStat
         return _eval_receipt_status(gate, "status", ("passed",))
     if gate.kind == KIND_TRAIN:
         return _eval_train(gate)
+    if gate.kind == KIND_VERDICT:
+        return _eval_verdict(gate)
     if gate.kind == KIND_HARVEST:
         return _eval_harvest(gate, ticket)
     if gate.kind == KIND_REVIEW:
@@ -327,6 +348,27 @@ def _eval_train(gate: Gate) -> GateState:
     )
 
 
+def _verdict_d_seg(result_path: Path) -> float | None:
+    """Pull aggregate_d_seg out of a CPU-torch verdict result (authority units)."""
+    verdict = (read_json(result_path) or {}).get("torch_verdict") or {}
+    # torch-verdict emits aggregate_d_seg at the top level; the facets path nests it in rows.
+    value = verdict.get("aggregate_d_seg")
+    if not isinstance(value, (int, float)):
+        rows = verdict.get("checkpoint_rows") or []
+        value = rows[-1].get("aggregate_d_seg") if rows else None
+    return float(value) if isinstance(value, (int, float)) else None
+
+
+def _eval_verdict(gate: Gate) -> GateState:
+    receipt = gate.receipt
+    if receipt is None or not receipt.exists():
+        return GateState(gate, PENDING, "no verdict result on disk")
+    d_seg = _verdict_d_seg(receipt)
+    if d_seg is None:
+        return GateState(gate, BLOCKED, "result carries no aggregate_d_seg row", {"receipt": str(receipt)})
+    return GateState(gate, SATISFIED, f"d_seg={d_seg:.9g}", {"receipt": str(receipt), "d_seg": d_seg})
+
+
 def _final_loss(result_path: Path) -> float | None:
     payload = read_json(result_path) or {}
     history = ((payload.get("mlx_train") or {}).get("history")) or []
@@ -337,11 +379,35 @@ def _final_loss(result_path: Path) -> float | None:
     return float(value) if isinstance(value, (int, float)) else None
 
 
+def _harvest_input_paths(gate: Gate, ticket: dict[str, Any]) -> list[Path]:
+    keys = list(gate.extra.get("fp16_keys", [])) + list(gate.extra.get("fp32_keys", []))
+    keys += list(gate.extra.get("verdict_keys", []))
+    paths = []
+    for key in keys:
+        out = argv_flag(ticket.get(key) or [], "--out")
+        if out:
+            paths.append(Path(out))
+    return paths
+
+
 def _eval_harvest(gate: Gate, ticket: dict[str, Any]) -> GateState:
     receipt = gate.receipt
     payload = read_json(receipt) if receipt else None
     if payload is None:
         return GateState(gate, PENDING, "sigma not harvested yet")
+    # Freshness AT CONSUMPTION: a harvest older than any of its inputs is stale,
+    # not terminal - otherwise a stale UNEVALUABLE verdict outlives the evidence
+    # that would resolve it.
+    assert receipt is not None
+    harvest_mtime = receipt.stat().st_mtime
+    newer = [p for p in _harvest_input_paths(gate, ticket) if p.exists() and p.stat().st_mtime > harvest_mtime]
+    if newer:
+        return GateState(
+            gate,
+            PENDING,
+            f"stale: {len(newer)} input receipt(s) newer than the harvest - re-harvest",
+            {"newer_inputs": [str(p) for p in newer[:4]]},
+        )
     calibration = (ticket.get("sigma_calibration") or {})
     if calibration.get("sanity_sigma_measured") in (None, {}):
         return GateState(gate, PENDING, "harvest receipt exists but ticket fields unfilled")
@@ -396,7 +462,7 @@ def execute_gate(gate: Gate, ticket: dict[str, Any], ticket_path: Path, verbose:
             gate.receipt.parent.mkdir(parents=True, exist_ok=True)
             command += ["--out", str(gate.receipt)]
         return _run(command, verbose), f"evaluated guard for {gate.argv_key}"
-    if gate.kind == KIND_TRAIN:
+    if gate.kind in (KIND_TRAIN, KIND_VERDICT):
         return _run(ticket[gate.argv_key], verbose), f"ran {gate.argv_key}"
     if gate.kind == KIND_HARVEST:
         return harvest_sigma(gate, ticket, ticket_path), "harvested sigma"
@@ -409,6 +475,26 @@ def _run(command: list[str], verbose: bool) -> int:
     if verbose:
         print(f"    $ {' '.join(command)}", flush=True)
     return subprocess.run(command, cwd=str(REPO_ROOT)).returncode
+
+
+def _falsifier(*, bar: float, value: float | None, fires_when_ge: bool, unit: str, basis: str) -> dict[str, Any]:
+    """A falsifier row. `fired=None` means UNEVALUABLE - never silently 'passed'."""
+    if value is None:
+        return {
+            "bar": bar,
+            "unit": unit,
+            "measured": None,
+            "fired": None,
+            "reason": f"UNEVALUABLE: {basis}",
+        }
+    fired = (value >= bar) if fires_when_ge else (value < bar)
+    return {
+        "bar": bar,
+        "unit": unit,
+        "measured": value,
+        "fired": bool(fired),
+        "reason": f"{'FIRED' if fired else 'clear'}: {basis}",
+    }
 
 
 def harvest_sigma(gate: Gate, ticket: dict[str, Any], ticket_path: Path) -> int:
@@ -462,49 +548,80 @@ def harvest_sigma(gate: Gate, ticket: dict[str, Any], ticket_path: Path) -> int:
         "delta_in_sigma": (delta / sigma) if (delta is not None and sigma > 0) else None,
     }
 
-    dseg_command = [
-        sys.executable,
-        "experiments/ddm_mx1_pr130_semantic_renderer.py",
-        "--mode",
-        "torch-verdict",
-        "--verdict-batch-size",
-        "32",
-        "--facet-checkpoint-dir",
-        "<each sigma run dir>",
-    ]
+    # DETERMINISM PROOF: identical checkpoint bytes across repeats => sigma is EXACTLY 0
+    # in every checkpoint-derived metric (d_seg included), because the CPU-torch verdict
+    # is a deterministic function of those bytes. This is a proof, not a unit transfer.
+    ckpt_shas: dict[str, str | None] = {}
+    for key in gate.extra["fp16_keys"]:
+        out = argv_flag(ticket[key], "--out")
+        payload = read_json(Path(out)) if out else None
+        ckpt_shas[key] = ((payload or {}).get("mlx_train") or {}).get("latest_checkpoint_sha256")
+    distinct = {sha for sha in ckpt_shas.values() if sha}
+    deterministic = len(distinct) == 1 and len(ckpt_shas) == len(gate.extra["fp16_keys"])
+    measured["checkpoint_sha256_per_run"] = ckpt_shas
+    measured["repeat_determinism"] = {
+        "bit_identical_checkpoints": deterministic,
+        "distinct_sha_count": len(distinct),
+        "implies_sigma_zero_in_all_checkpoint_derived_metrics": deterministic,
+    }
+
+    # d_seg-unit adjudication from the CPU-torch verdicts (authority units).
+    dseg: dict[str, float | None] = {}
+    for key in gate.extra.get("verdict_keys", []):
+        out = argv_flag(ticket[key], "--out")
+        dseg[key] = _verdict_d_seg(Path(out)) if out else None
+    fp16_dseg = next((v for k, v in dseg.items() if "fp32" not in k), None)
+    fp32_dseg = next((v for k, v in dseg.items() if "fp32" in k), None)
+    dseg_delta = abs(fp16_dseg - fp32_dseg) if (fp16_dseg is not None and fp32_dseg is not None) else None
+    calibration["dseg_unit_measurement"] = {
+        "unit": "d_seg",
+        "authority": "frozen CPU-torch verdict over the run checkpoints",
+        "fp16": fp16_dseg,
+        "fp32": fp32_dseg,
+        "abs_delta": dseg_delta,
+        "sigma_repeat": 0.0 if deterministic else None,
+    }
+
     falsifiers = {
-        "F1_sigma_below_fp16_guard_bar": {
-            "bar": 2.0e-6,
-            "bar_unit": "d_seg",
-            "measured_unit": "training_loss",
-            "fired": None,
-            "reason": "UNIT_MISMATCH: sigma measured in training-loss units; the 2.0e-6 bar is d_seg",
-        },
-        "F2_fp16_fp32_delta_within_envelope": {
-            "bar": 2.0e-6,
-            "bar_unit": "d_seg",
-            "measured_unit": "training_loss",
-            "fired": None,
-            "reason": "UNIT_MISMATCH: needs the d_seg-unit verdict over each run checkpoint",
-        },
-        "F3_sigma_below_event_threshold": {
-            "bar": 2.5e-6,
-            "bar_unit": "objective",
-            "measured_unit": "training_loss",
-            "fired": None,
-            "reason": "UNIT_MISMATCH: event thresholds are objective-unit",
-        },
+        "F1_sigma_below_fp16_guard_bar": _falsifier(
+            bar=2.0e-6,
+            value=0.0 if deterministic else None,
+            fires_when_ge=True,
+            unit="d_seg",
+            basis="repeat sigma = 0 by bit-identical checkpoints" if deterministic
+            else "repeats are NOT bit-identical; per-repeat d_seg verdicts required",
+        ),
+        "F2_fp16_fp32_delta_within_envelope": _falsifier(
+            bar=2.0e-6,
+            value=dseg_delta,
+            fires_when_ge=True,
+            unit="d_seg",
+            basis="|d_seg(fp16) - d_seg(fp32)| vs max(2.0e-6, 3*sigma); sigma=0 so the bar is 2.0e-6",
+        ),
+        "F3_sigma_below_event_threshold": _falsifier(
+            bar=2.5e-6,
+            value=0.0 if deterministic else None,
+            fires_when_ge=True,
+            unit="d_seg",
+            basis="same determinism proof; event thresholds are objective/d_seg-denominated",
+        ),
     }
     receipt = {
-        "schema": "ddm_seal_sigma_harvest.v1",
+        "schema": "ddm_seal_sigma_harvest.v2_dseg_adjudicated",
         "ticket": str(ticket_path),
         "measured": measured,
         "fp16_fp32_delta": calibration["fp16_fp32_delta_measured"],
+        "dseg_unit_measurement": calibration["dseg_unit_measurement"],
         "falsifiers": falsifiers,
         "resolving_commands": {
-            "d_seg_unit_sigma": " ".join(dseg_command),
+            "d_seg_unit_verdicts": "ticket keys argv_dseg_verdict_fp16 / argv_dseg_verdict_fp32",
         },
-        "axis": "[macOS-MLX research-signal]",
+        "scope": (
+            "measured at the CALIBRATION horizon (the sigma runs' step count), not at the "
+            "full burn horizon; the in-loop fp16 fallback guard remains the live protection "
+            "for the burn itself"
+        ),
+        "axis": "[macOS-CPU advisory] for d_seg rows; [macOS-MLX research-signal] for loss rows",
         "score_claim": False,
     }
     assert gate.receipt is not None
@@ -532,7 +649,8 @@ def walk(ticket_path: Path, run: bool, only: str | None, max_gates: int, verbose
 
     for gate in gates:
         state = evaluate_gate(gate, ticket, states)
-        if run and state.status == PENDING and (only is None or gate.name == only):
+        manual_kind = gate.kind in (KIND_REVIEW, KIND_FIRE)
+        if run and state.status == PENDING and not manual_kind and (only is None or gate.name == only):
             unmet = [d for d in gate.depends_on if states.get(d, GateState(gate, PENDING, "")).status != SATISFIED]
             if unmet:
                 state = GateState(gate, BLOCKED, f"dependency not satisfied: {', '.join(unmet)}")

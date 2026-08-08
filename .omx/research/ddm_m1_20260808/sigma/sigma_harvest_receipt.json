@@ -1,0 +1,79 @@
+{
+ "axis": "[macOS-CPU advisory] for d_seg rows; [macOS-MLX research-signal] for loss rows",
+ "dseg_unit_measurement": {
+  "abs_delta": 0.0,
+  "authority": "frozen CPU-torch verdict over the run checkpoints",
+  "fp16": 0.0010835435655381944,
+  "fp32": 0.0010835435655381944,
+  "sigma_repeat": 0.0,
+  "unit": "d_seg"
+ },
+ "falsifiers": {
+  "F1_sigma_below_fp16_guard_bar": {
+   "bar": 2e-06,
+   "fired": false,
+   "measured": 0.0,
+   "reason": "clear: repeat sigma = 0 by bit-identical checkpoints",
+   "unit": "d_seg"
+  },
+  "F2_fp16_fp32_delta_within_envelope": {
+   "bar": 2e-06,
+   "fired": false,
+   "measured": 0.0,
+   "reason": "clear: |d_seg(fp16) - d_seg(fp32)| vs max(2.0e-6, 3*sigma); sigma=0 so the bar is 2.0e-6",
+   "unit": "d_seg"
+  },
+  "F3_sigma_below_event_threshold": {
+   "bar": 2.5e-06,
+   "fired": false,
+   "measured": 0.0,
+   "reason": "clear: same determinism proof; event thresholds are objective/d_seg-denominated",
+   "unit": "d_seg"
+  }
+ },
+ "fp16_fp32_delta": {
+  "abs_delta": 2.0381150534376502e-05,
+  "delta_in_sigma": null,
+  "fp16_mean": 0.0003770271432586014,
+  "fp32": {
+   "argv_sigma_fp32_ref": 0.0003566459927242249
+  },
+  "metric": "final_step_training_loss",
+  "unit": "training_loss"
+ },
+ "measured": {
+  "checkpoint_sha256_per_run": {
+   "argv_sigma_fp16_run1": "56047d059595b36887a77b2940ebfd15f607413ee82cbd09f2eb946e50eba55c",
+   "argv_sigma_fp16_run2": "56047d059595b36887a77b2940ebfd15f607413ee82cbd09f2eb946e50eba55c",
+   "argv_sigma_fp16_run3": "56047d059595b36887a77b2940ebfd15f607413ee82cbd09f2eb946e50eba55c",
+   "argv_sigma_fp16_run4": "56047d059595b36887a77b2940ebfd15f607413ee82cbd09f2eb946e50eba55c",
+   "argv_sigma_fp16_run5": "56047d059595b36887a77b2940ebfd15f607413ee82cbd09f2eb946e50eba55c"
+  },
+  "mean": 0.0003770271432586014,
+  "metric": "final_step_training_loss",
+  "n": 5,
+  "per_run": {
+   "argv_sigma_fp16_run1": 0.0003770271432586014,
+   "argv_sigma_fp16_run2": 0.0003770271432586014,
+   "argv_sigma_fp16_run3": 0.0003770271432586014,
+   "argv_sigma_fp16_run4": 0.0003770271432586014,
+   "argv_sigma_fp16_run5": 0.0003770271432586014
+  },
+  "relative_sigma": 0.0,
+  "repeat_determinism": {
+   "bit_identical_checkpoints": true,
+   "distinct_sha_count": 1,
+   "implies_sigma_zero_in_all_checkpoint_derived_metrics": true
+  },
+  "scope": "same-seed backend nondeterminism floor (n=5 repeats, identical config)",
+  "sigma": 0.0,
+  "unit": "training_loss"
+ },
+ "resolving_commands": {
+  "d_seg_unit_verdicts": "ticket keys argv_dseg_verdict_fp16 / argv_dseg_verdict_fp32"
+ },
+ "schema": "ddm_seal_sigma_harvest.v2_dseg_adjudicated",
+ "scope": "measured at the CALIBRATION horizon (the sigma runs' step count), not at the full burn horizon; the in-loop fp16 fallback guard remains the live protection for the burn itself",
+ "score_claim": false,
+ "ticket": ".omx/research/ddm_m1_20260808/launch_ticket_v5_event_driven.json"
+}

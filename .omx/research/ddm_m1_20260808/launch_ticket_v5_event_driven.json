@@ -1,4 +1,62 @@
 {
+ "argv_dseg_verdict_fp16": [
+  ".venv/bin/python",
+  "tools/safe_run.py",
+  "--rss-mb",
+  "90000",
+  "--timeout",
+  "5400",
+  "--projected-gib",
+  "24.0",
+  "--label",
+  "ddm_m1_dseg_fp16",
+  "--",
+  ".venv/bin/python",
+  "experiments/ddm_mx1_pr130_semantic_renderer.py",
+  "--mode",
+  "torch-verdict",
+  "--verdict-batch-size",
+  "32",
+  "--init",
+  ".omx/research/ddm_m1_20260808/sigma/run_1/mlx_stage_step000005.npz",
+  "--input-cache",
+  "/Volumes/VertigoDataTier/pact/ddm_hb1_20260806/inputs/gt_seg_cache.pt",
+  "--target-cache",
+  "/Volumes/VertigoDataTier/pact/ddm_hb1_20260806/inputs/gt_seg_cache.pt",
+  "--run-dir",
+  ".omx/research/ddm_m1_20260808/sigma/dseg_fp16",
+  "--out",
+  ".omx/research/ddm_m1_20260808/sigma/dseg_fp16/verdict_result.json"
+ ],
+ "argv_dseg_verdict_fp32": [
+  ".venv/bin/python",
+  "tools/safe_run.py",
+  "--rss-mb",
+  "90000",
+  "--timeout",
+  "5400",
+  "--projected-gib",
+  "24.0",
+  "--label",
+  "ddm_m1_dseg_fp32",
+  "--",
+  ".venv/bin/python",
+  "experiments/ddm_mx1_pr130_semantic_renderer.py",
+  "--mode",
+  "torch-verdict",
+  "--verdict-batch-size",
+  "32",
+  "--init",
+  ".omx/research/ddm_m1_20260808/sigma/run_fp32/mlx_stage_step000005.npz",
+  "--input-cache",
+  "/Volumes/VertigoDataTier/pact/ddm_hb1_20260806/inputs/gt_seg_cache.pt",
+  "--target-cache",
+  "/Volumes/VertigoDataTier/pact/ddm_hb1_20260806/inputs/gt_seg_cache.pt",
+  "--run-dir",
+  ".omx/research/ddm_m1_20260808/sigma/dseg_fp32",
+  "--out",
+  ".omx/research/ddm_m1_20260808/sigma/dseg_fp32/verdict_result.json"
+ ],
  "argv_m1_n120_cap_saturated": [
   ".venv/bin/python",
   "tools/safe_run.py",
@@ -651,10 +709,54 @@
   "independent review pass 3 of 3 (codex arm)"
  ],
  "sigma_calibration": {
-  "fp16_fp32_delta_measured": null,
+  "dseg_unit_measurement": {
+   "abs_delta": 0.0,
+   "authority": "frozen CPU-torch verdict over the run checkpoints",
+   "fp16": 0.0010835435655381944,
+   "fp32": 0.0010835435655381944,
+   "sigma_repeat": 0.0,
+   "unit": "d_seg"
+  },
+  "fp16_fp32_delta_measured": {
+   "abs_delta": 2.0381150534376502e-05,
+   "delta_in_sigma": null,
+   "fp16_mean": 0.0003770271432586014,
+   "fp32": {
+    "argv_sigma_fp32_ref": 0.0003566459927242249
+   },
+   "metric": "final_step_training_loss",
+   "unit": "training_loss"
+  },
   "governance_note": "each sigma run is a GOVERNED fire: own argv key + per-key receipt + in-process guard re-eval (the rc=9 refusal 2026-08-08 was the no-ungoverned-Metal-train rule holding; cured by routing THROUGH the guard, not around it)",
   "protocol": "5x repeated runs of the EXACT argv above truncated to --steps 5 --eval-every 5 (fresh --run-dir each: .omx/research/ddm_m1_20260808/sigma/run_{1..5}) + 1 identical run with --train-compute-dtype fp32 (hygiene+cache kept) as the fp16-vs-fp32 comparison point",
-  "sanity_sigma_measured": null,
+  "sanity_sigma_measured": {
+   "checkpoint_sha256_per_run": {
+    "argv_sigma_fp16_run1": "56047d059595b36887a77b2940ebfd15f607413ee82cbd09f2eb946e50eba55c",
+    "argv_sigma_fp16_run2": "56047d059595b36887a77b2940ebfd15f607413ee82cbd09f2eb946e50eba55c",
+    "argv_sigma_fp16_run3": "56047d059595b36887a77b2940ebfd15f607413ee82cbd09f2eb946e50eba55c",
+    "argv_sigma_fp16_run4": "56047d059595b36887a77b2940ebfd15f607413ee82cbd09f2eb946e50eba55c",
+    "argv_sigma_fp16_run5": "56047d059595b36887a77b2940ebfd15f607413ee82cbd09f2eb946e50eba55c"
+   },
+   "mean": 0.0003770271432586014,
+   "metric": "final_step_training_loss",
+   "n": 5,
+   "per_run": {
+    "argv_sigma_fp16_run1": 0.0003770271432586014,
+    "argv_sigma_fp16_run2": 0.0003770271432586014,
+    "argv_sigma_fp16_run3": 0.0003770271432586014,
+    "argv_sigma_fp16_run4": 0.0003770271432586014,
+    "argv_sigma_fp16_run5": 0.0003770271432586014
+   },
+   "relative_sigma": 0.0,
+   "repeat_determinism": {
+    "bit_identical_checkpoints": true,
+    "distinct_sha_count": 1,
+    "implies_sigma_zero_in_all_checkpoint_derived_metrics": true
+   },
+   "scope": "same-seed backend nondeterminism floor (n=5 repeats, identical config)",
+   "sigma": 0.0,
+   "unit": "training_loss"
+  },
   "seal_falsifiers": [
    "sigma >= 2.0e-6 d_seg (the gc21 fp16 guard bar) -> guard undiscriminating, re-derive before seal",
    "fp16 vs fp32 delta > max(2.0e-6, 3*sigma) OR event classification flips inside the envelope -> fall back to fp32 hygiene+cache for the reference burn",
