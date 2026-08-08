@@ -54,6 +54,27 @@ would improve it). Loop-until-dry: sweep beyond the seeds (canonical equations r
 fractal-audit standard; run at least one self-audit round asking "which term got the
 shallowest sweep?" and deepen it.
 
+## AMENDMENT 2026-08-08 (operator: "all dependencies and weights and gradients and bases and GT and everything that upstream uses")
+
+MANDATORY COVERAGE — the crosswalk must carry explicit rows for these five upstream object
+classes (in addition to the six vehicle terms; a class with no PORT-NOW/RACE row must say why):
+- **DEPENDENCIES/runtime:** us2 runtime-closure table (uv.lock +3 drift, symlinks #836, torch
+  pin, PyAV lineage) · e4 brotli declared-dep + fail-closed LZMA fallback precedent · CI
+  30-min whole-job semantics (#835 — decode-side compute headroom for free prediction).
+- **WEIGHTS as objects:** BN-buffer per-stratum capacity codebook (#725, BUILT, consumer TBD)
+  · three-way GENERIC/ECONOMIC/COUNTED classification (us2; scorer-weight small-end UNPRICED)
+  · eu2 micro-student context cell (10K-int8, 0.00666 S rate cost) as a label-prior context
+  feature PR130 lacks.
+- **GRADIENTS/adjoints:** #391 exact resize adjoint + flip ledger · ms3/ms4 rank-4/margin-
+  Fisher row-Gram + pose quadratics · at1 factored influence map → the pricing engine for
+  task-lossy label tolerance.
+- **BASES:** #580 nullity basis (80.67% DOF) · 22.70% blind mask · Fisher-derived-never-cosine
+  law · curvelet/shearlet measured rows (#502) — route as null-coordinate byte savings +
+  receiver basis choices.
+- **GT lineage:** yuv420_to_rgb decode law (PyAV rgb24 = phantom pose) · m87 d_pose-is-RELATIVE
+  · fl1 per-class GT-flicker floors (the tolerance floors) · et4 batch-shape-is-instrument ·
+  m88/m96 prefix-bias laws · SHA-pinned gt caches.
+
 ## OPTIMAL FORM
 
 Crosswalk/synthesis arm at reference form: recall-first (cite receipts, NEVER re-derive or
