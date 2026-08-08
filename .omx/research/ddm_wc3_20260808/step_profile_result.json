@@ -1,0 +1,176 @@
+{
+ "schema": "ddm_wc3_step_profile.v2",
+ "axis": "[macOS-Metal wall-clock instrument]",
+ "score_claim": false,
+ "repo_head": "d29df564f169",
+ "chunk_pairs": 4,
+ "pairs_loaded": 32,
+ "reps": 5,
+ "warmup": 2,
+ "init": "/Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo/artifacts/checkpoints/semantic_renderer_w96_b4_qat4_12k.pt",
+ "cache_meta": {
+  "input": "{'cache_path': '/Volumes/VertigoDataTier/pact/ddm_hb1_20260806/inputs/gt_seg_cache.pt', 'cache_bytes': 943720076, 'full_shape_seen': [600, 384, 512], 'full_dtype_seen': 'torch.int64', 'selected_shape': [32, 384, 512], 'selected_dtype': 'torch.int64', 'selected_pair_count': 32, 'full_cache_resident': False, 'retained_tensor_shape': None, 'retained_tensor_dtype': None}",
+  "target": "{'cache_path': '/Volumes/VertigoDataTier/pact/ddm_hb1_20260806/inputs/gt_seg_cache.pt', 'cache_bytes': 943720076, 'full_shape_seen': [600, 384, 512], 'full_dtype_seen': 'torch.int64', 'selected_shape': [32, 384, 512], 'selected_dtype': 'torch.int64', 'selected_pair_count': 32, 'full_cache_resident': False, 'retained_tensor_shape': None, 'retained_tensor_dtype': None, 'shared_with_input_cache': True}",
+  "subset_before_materialize": "torch.load_index_clone_del_full_cache",
+  "cache_residency": "selected",
+  "full_cache_resident_tensor_count": "0"
+ },
+ "profiles": {
+  "fp32": {
+   "train_compute_dtype": "fp32",
+   "cumulative_fwd_s_per_chunk": {
+    "S1_quantize_cast_update": 0.0014431083982344717,
+    "S2_renderer_fwd": 0.12890330840018577,
+    "S3_R_roundtrip": 0.13773579160042573,
+    "S4_segnet_fwd": 0.19939557499892543,
+    "S5_loss": 0.198204150001402
+   },
+   "cumulative_vag_s_per_chunk": {
+    "S1_quantize_cast_update": 0.0025108333997195587,
+    "S2_renderer_fwd": 0.5724451165995561,
+    "S3_R_roundtrip": 0.5685460831999081,
+    "S4_segnet_fwd": 0.7537642000010237,
+    "S5_loss": 0.774598116602283
+   },
+   "marginal_s_per_chunk": {
+    "S1_quantize_cast_update": {
+     "fwd_s": 0.0014431083982344717,
+     "bwd_s": 0.001067725001485087,
+     "fwd_plus_bwd_s": 0.0025108333997195587
+    },
+    "S2_renderer_fwd": {
+     "fwd_s": 0.1274602000019513,
+     "bwd_s": 0.4424740831978852,
+     "fwd_plus_bwd_s": 0.5699342831998365
+    },
+    "S3_R_roundtrip": {
+     "fwd_s": 0.008832483200239966,
+     "bwd_s": -0.012731516599887999,
+     "fwd_plus_bwd_s": -0.003899033399648033
+    },
+    "S4_segnet_fwd": {
+     "fwd_s": 0.0616597833984997,
+     "bwd_s": 0.12355833340261596,
+     "fwd_plus_bwd_s": 0.18521811680111566
+    },
+    "S5_loss": {
+     "fwd_s": -0.0011914249975234215,
+     "bwd_s": 0.02202534159878264,
+     "fwd_plus_bwd_s": 0.020833916601259217
+    }
+   },
+   "optimizer_update_s_per_step": 0.0011051334004150704,
+   "full_chunk_vag_s": 0.774598116602283,
+   "shares_of_full_chunk": {
+    "S1_quantize_cast_update": {
+     "fwd": 0.0018630414498870193,
+     "bwd": 0.0013784244740596367
+    },
+    "S2_renderer_fwd": {
+     "fwd": 0.16455010316968752,
+     "bwd": 0.5712305177538578
+    },
+    "S3_R_roundtrip": {
+     "fwd": 0.011402665473785292,
+     "bwd": -0.016436286542670476
+    },
+    "S4_segnet_fwd": {
+     "fwd": 0.0796022893380709,
+     "bwd": 0.1595128244625683
+    },
+    "S5_loss": {
+     "fwd": -0.0015381201838567831,
+     "bwd": 0.028434540604610765
+    }
+   },
+   "projections": {
+    "n32": {
+     "chunks": 8,
+     "projected_step_s": 6.197890066218679
+    },
+    "n120": {
+     "chunks": 30,
+     "projected_step_s": 23.239048631468904
+    }
+   }
+  },
+  "fp16": {
+   "train_compute_dtype": "fp16",
+   "cumulative_fwd_s_per_chunk": {
+    "S1_quantize_cast_update": 0.0007907499995781109,
+    "S2_renderer_fwd": 0.09774951679864899,
+    "S3_R_roundtrip": 0.10662724180147051,
+    "S4_segnet_fwd": 0.17618080840038602,
+    "S5_loss": 0.1754705915984232
+   },
+   "cumulative_vag_s_per_chunk": {
+    "S1_quantize_cast_update": 0.0021213582018390297,
+    "S2_renderer_fwd": 0.4945367749984143,
+    "S3_R_roundtrip": 0.5176208332006353,
+    "S4_segnet_fwd": 0.610952025000006,
+    "S5_loss": 1.0029911749996245
+   },
+   "marginal_s_per_chunk": {
+    "S1_quantize_cast_update": {
+     "fwd_s": 0.0007907499995781109,
+     "bwd_s": 0.0013306082022609188,
+     "fwd_plus_bwd_s": 0.0021213582018390297
+    },
+    "S2_renderer_fwd": {
+     "fwd_s": 0.09695876679907088,
+     "bwd_s": 0.3954566499975044,
+     "fwd_plus_bwd_s": 0.4924154167965753
+    },
+    "S3_R_roundtrip": {
+     "fwd_s": 0.008877725002821524,
+     "bwd_s": 0.014206333199399512,
+     "fwd_plus_bwd_s": 0.023084058202221036
+    },
+    "S4_segnet_fwd": {
+     "fwd_s": 0.06955356659891551,
+     "bwd_s": 0.02377762520045515,
+     "fwd_plus_bwd_s": 0.09333119179937066
+    },
+    "S5_loss": {
+     "fwd_s": -0.0007102168019628152,
+     "bwd_s": 0.39274936680158135,
+     "fwd_plus_bwd_s": 0.39203914999961853
+    }
+   },
+   "optimizer_update_s_per_step": 0.0010496083996258676,
+   "full_chunk_vag_s": 1.0029911749996245,
+   "shares_of_full_chunk": {
+    "S1_quantize_cast_update": {
+     "fwd": 0.0007883917817905097,
+     "bwd": 0.0013266399898896586
+    },
+    "S2_renderer_fwd": {
+     "fwd": 0.09666961107519932,
+     "bwd": 0.3942772976019978
+    },
+    "S3_R_roundtrip": {
+     "fwd": 0.008851249366999513,
+     "bwd": 0.014163966297514862
+    },
+    "S4_segnet_fwd": {
+     "fwd": 0.06934614015815398,
+     "bwd": 0.02370671426940925
+    },
+    "S5_loss": {
+     "fwd": -0.0007080987546705793,
+     "bwd": 0.3915780882137157
+    }
+   },
+   "projections": {
+    "n32": {
+     "chunks": 8,
+     "projected_step_s": 8.024979008396622
+    },
+    "n120": {
+     "chunks": 30,
+     "projected_step_s": 30.09078485838836
+    }
+   }
+  }
+ }
+}

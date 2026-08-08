@@ -63,6 +63,9 @@ CONTEST_DENOMINATOR_BYTES = 37_545_489
 GIB = 1024.0 ** 3
 TRAIN_COMPUTE_DTYPES = ("fp32", "bf16", "fp16")
 THREAD_PIN_MODES = ("off", "one")
+CACHE_RESIDENCY_MODES = ("selected", "ram-full")
+MICROBATCH_POLICIES = ("auto", "legacy-4", "full")
+MICROBATCH_HYGIENE_MODES = ("per-chunk", "per-step", "off")
 MEM_PROBE_RECEIPT_SCHEMA = "ddm_mx1_load_phase_peak_receipt.v1"
 MX1_FIRE_GUARD_VERDICT_SCHEMA = "ddm_mx1_fire_guard_verdict.v1"
 SAFE_RUN_RECEIPT_SENTINEL = "REQUIRES_FRESH_MEM_PROBE"
@@ -80,6 +83,21 @@ MX1T_DEFAULT_CHECKPOINT_DIR = Path(
 )
 MX1T_DEFAULT_OUT_DIR = Path(".omx/research/ddm_mx1t_20260807")
 SEG_CLASS_NAMES = ("Road", "Lane", "Undrivable", "Movable", "MyCar")
+WC2_AUTO_MICROBATCH_ANCHOR = {
+    "schema": "ddm_wc2_microbatch_law_anchor.v1",
+    "axis": "[macOS-MLX research-signal bench harness]",
+    "source_receipt": ".omx/research/ddm_wc1_20260807/wc1_bench_receipts.jsonl",
+    "source_commit": "wc1 charter pin 26f6a5aa3d; measured receipts consumed 2026-08-08",
+    "n32_baseline_microbatch_pairs": 4,
+    "n32_baseline_seconds_per_step": 10.441456365585328,
+    "n32_full_batch_microbatch_pairs": 32,
+    "n32_full_batch_seconds_per_step": 11.596535015106202,
+    "selected_default": 4,
+    "selection_rule": (
+        "use the fastest measured safe n32 footprint until a fresh same-vehicle "
+        "bench proves a larger microbatch wins under the same guard"
+    ),
+}
 MARGIN_BINS: tuple[tuple[str, float, float | None], ...] = (
     ("0-0.05", 0.0, 0.05),
     ("0.05-0.1", 0.05, 0.1),
@@ -744,23 +762,76 @@ def _load_selected_seg_tokens(cache_path: Path, pair_ids: list[int]) -> tuple[to
     return selected, meta
 
 
+def _load_selected_seg_tokens_with_residency(
+    cache_path: Path,
+    pair_ids: list[int],
+    *,
+    retain_full_cache: bool,
+) -> tuple[torch.Tensor, dict[str, Any], torch.Tensor | None]:
+    """Load selected rows and optionally keep the full real cache resident."""
+
+    payload = torch.load(cache_path, map_location="cpu", weights_only=False)
+    retained: torch.Tensor | None = None
+    try:
+        seg_all = payload["seg"]
+        idx = torch.tensor(pair_ids, dtype=torch.long)
+        selected = seg_all.index_select(0, idx).long().clone().contiguous()
+        if retain_full_cache:
+            retained = seg_all
+        meta = {
+            "cache_path": str(cache_path),
+            "cache_bytes": cache_path.stat().st_size if cache_path.exists() else None,
+            "full_shape_seen": list(seg_all.shape),
+            "full_dtype_seen": str(seg_all.dtype),
+            "selected_shape": list(selected.shape),
+            "selected_dtype": str(selected.dtype),
+            "selected_pair_count": len(pair_ids),
+            "full_cache_resident": retain_full_cache,
+            "retained_tensor_shape": list(seg_all.shape) if retain_full_cache else None,
+            "retained_tensor_dtype": str(seg_all.dtype) if retain_full_cache else None,
+        }
+    finally:
+        del payload
+        if not retain_full_cache and "seg_all" in locals():
+            del seg_all
+        gc.collect()
+    return selected, meta, retained
+
+
 def _load_selected_token_arrays(
     *,
     input_cache: Path,
     target_cache: Path,
     pair_ids: list[int],
     memory_probe: LoadPhaseMemoryProbe | None,
-) -> tuple[np.ndarray, np.ndarray, dict[str, Any]]:
+    cache_residency: str = "selected",
+) -> tuple[np.ndarray, np.ndarray, dict[str, Any], list[torch.Tensor]]:
+    if cache_residency not in CACHE_RESIDENCY_MODES:
+        raise ValueError(f"unknown cache_residency {cache_residency!r}")
+    retain_full_cache = cache_residency == "ram-full"
+    retained: list[torch.Tensor] = []
     if memory_probe is not None:
         memory_probe.sample_and_check("before_selected_cache_load")
-    input_tokens, input_meta = _load_selected_seg_tokens(input_cache, pair_ids)
+    input_tokens, input_meta, input_retained = _load_selected_seg_tokens_with_residency(
+        input_cache,
+        pair_ids,
+        retain_full_cache=retain_full_cache,
+    )
+    if input_retained is not None:
+        retained.append(input_retained)
     if memory_probe is not None:
         memory_probe.sample_and_check("after_input_cache_selected_clone")
     if input_cache == target_cache:
         target_tokens = input_tokens
         target_meta = {**input_meta, "shared_with_input_cache": True}
     else:
-        target_tokens, target_meta = _load_selected_seg_tokens(target_cache, pair_ids)
+        target_tokens, target_meta, target_retained = _load_selected_seg_tokens_with_residency(
+            target_cache,
+            pair_ids,
+            retain_full_cache=retain_full_cache,
+        )
+        if target_retained is not None:
+            retained.append(target_retained)
         if memory_probe is not None:
             memory_probe.sample_and_check("after_target_cache_selected_clone")
 
@@ -775,7 +846,9 @@ def _load_selected_token_arrays(
         "input": input_meta,
         "target": target_meta,
         "subset_before_materialize": "torch.load_index_clone_del_full_cache",
-    }
+        "cache_residency": cache_residency,
+        "full_cache_resident_tensor_count": len(retained),
+    }, retained
 
 
 def run_torch_smoke(args: argparse.Namespace) -> dict[str, Any]:
@@ -784,7 +857,7 @@ def run_torch_smoke(args: argparse.Namespace) -> dict[str, Any]:
     np.random.seed(args.seed)
     device = torch.device("cpu")
     pair_ids = _select_stratified_indices(args.pairs, seed=args.seed)
-    conditioning_np, target_np, cache_meta = _load_selected_token_arrays(
+    conditioning_np, target_np, cache_meta, _cache_handles = _load_selected_token_arrays(
         input_cache=args.input_cache,
         target_cache=args.target_cache,
         pair_ids=pair_ids,
@@ -1642,7 +1715,7 @@ def run_torch_facets(args: argparse.Namespace) -> dict[str, Any]:
     )
     pair_ids = _checkpoint_pair_ids(first_meta)
     del first_checkpoint
-    conditioning_np, target_np, cache_meta = _load_selected_token_arrays(
+    conditioning_np, target_np, cache_meta, _cache_handles = _load_selected_token_arrays(
         input_cache=args.input_cache,
         target_cache=args.target_cache,
         pair_ids=pair_ids,
@@ -1868,7 +1941,7 @@ def run_torch_verdict(args: argparse.Namespace) -> dict[str, Any]:
     if batch_size <= 0:
         raise ValueError("--verdict-batch-size must be positive")
 
-    conditioning_np, target_np, cache_meta = _load_selected_token_arrays(
+    conditioning_np, target_np, cache_meta, _cache_handles = _load_selected_token_arrays(
         input_cache=args.input_cache,
         target_cache=args.target_cache,
         pair_ids=pair_ids,
@@ -1976,6 +2049,173 @@ def run_torch_verdict(args: argparse.Namespace) -> dict[str, Any]:
     }
 
 
+def _coreml_compute_unit(coremltools: Any, name: str) -> Any:
+    compute_unit = str(name).upper()
+    mapping = {
+        "CPU_ONLY": "CPU_ONLY",
+        "CPU_AND_GPU": "CPU_AND_GPU",
+        "CPU_AND_NE": "CPU_AND_NE",
+        "ALL": "ALL",
+    }
+    attr = mapping.get(compute_unit)
+    if attr is None:
+        raise ValueError(f"unknown CoreML compute unit {name!r}")
+    value = getattr(coremltools.ComputeUnit, attr, None)
+    if value is None:
+        raise RuntimeError(f"coremltools has no ComputeUnit.{attr}")
+    return value
+
+
+def run_coreml_segnet_parity(args: argparse.Namespace) -> dict[str, Any]:
+    """Parity-gate the frozen upstream SegNet through a real CoreML conversion."""
+
+    axis = "[CoreML-FP32 ANE advisory parity-gate; CPU-torch authority]"
+    start_time = time.time()
+    try:
+        import coremltools as ct  # type: ignore[import-not-found]
+    except Exception as exc:
+        return {
+            "schema": "ddm_mx1_coreml_segnet_parity.v1",
+            "status": "blocked",
+            "axis": axis,
+            "score_claim": False,
+            "verdict_scope": "ENVIRONMENT: coremltools import",
+            "blocker": {"error_type": type(exc).__name__, "error": str(exc)},
+        }
+    try:
+        compute_units = _coreml_compute_unit(ct, str(args.coreml_compute_units))
+    except Exception as exc:
+        return {
+            "schema": "ddm_mx1_coreml_segnet_parity.v1",
+            "status": "blocked",
+            "axis": axis,
+            "score_claim": False,
+            "verdict_scope": "ENVIRONMENT: CoreML ANE compute-unit availability",
+            "blocker": {"error_type": type(exc).__name__, "error": str(exc)},
+        }
+    lifted = _load_lifted_semantic()
+    device = torch.device("cpu")
+    checkpoint, checkpoint_meta = _load_torch_or_mlx_checkpoint_for_verdict(
+        args.init,
+        lifted=lifted,
+    )
+    pair_ids = _checkpoint_pair_ids(checkpoint_meta)
+    if args.pairs > 0:
+        pair_ids = pair_ids[: min(int(args.pairs), len(pair_ids))]
+    if not pair_ids:
+        raise ValueError("CoreML parity received no checkpoint pair IDs")
+    conditioning_np, target_np, cache_meta, _cache_handles = _load_selected_token_arrays(
+        input_cache=args.input_cache,
+        target_cache=args.target_cache,
+        pair_ids=pair_ids,
+        memory_probe=None,
+    )
+    idx = torch.tensor(pair_ids, dtype=torch.long, device=device)
+    conditioning = torch.from_numpy(conditioning_np).long().to(device)
+    del conditioning_np, target_np
+    gc.collect()
+    model = _build_torch_renderer(lifted, checkpoint).to(device)
+    segnet = _load_upstream_segnet(device)
+    with torch.no_grad():
+        frames = lifted.render_for_seg(model, conditioning, idx, exact_path=True).contiguous()
+        torch_logits = segnet(frames).detach().cpu()
+    try:
+        traced = torch.jit.trace(segnet, frames[:1], strict=False)
+        precision = getattr(getattr(ct, "precision", object()), "FLOAT32", None)
+        convert_kwargs: dict[str, Any] = {
+            "convert_to": "mlprogram",
+            "inputs": [ct.TensorType(name="rgb_nchw", shape=frames[:1].shape)],
+            "compute_units": compute_units,
+        }
+        if precision is not None:
+            convert_kwargs["compute_precision"] = precision
+        mlmodel = ct.convert(traced, **convert_kwargs)
+    except Exception as exc:
+        return {
+            "schema": "ddm_mx1_coreml_segnet_parity.v1",
+            "status": "blocked",
+            "axis": axis,
+            "score_claim": False,
+            "verdict_scope": "FORMULATION: CoreML conversion of upstream SegNet",
+            "host": _host_fingerprint(),
+            "pair_ids": pair_ids,
+            "cache_load": cache_meta,
+            "blocker": {"error_type": type(exc).__name__, "error": str(exc)},
+        }
+    coreml_logits_parts: list[np.ndarray] = []
+    try:
+        for start, stop in _iter_tensor_slices(len(pair_ids), 1):
+            batch = frames[start:stop].detach().cpu().numpy().astype(np.float32, copy=False)
+            pred = mlmodel.predict({"rgb_nchw": batch})
+            if not isinstance(pred, Mapping) or not pred:
+                raise RuntimeError("CoreML predict returned no output mapping")
+            array = np.asarray(next(iter(pred.values())), dtype=np.float32)
+            coreml_logits_parts.append(array)
+    except Exception as exc:
+        return {
+            "schema": "ddm_mx1_coreml_segnet_parity.v1",
+            "status": "blocked",
+            "axis": axis,
+            "score_claim": False,
+            "verdict_scope": "ENVIRONMENT: CoreML predict on real rendered frames",
+            "host": _host_fingerprint(),
+            "pair_ids": pair_ids,
+            "cache_load": cache_meta,
+            "blocker": {"error_type": type(exc).__name__, "error": str(exc)},
+        }
+    coreml_logits = torch.from_numpy(np.concatenate(coreml_logits_parts, axis=0))
+    if list(coreml_logits.shape) != list(torch_logits.shape):
+        return {
+            "schema": "ddm_mx1_coreml_segnet_parity.v1",
+            "status": "failed",
+            "axis": axis,
+            "score_claim": False,
+            "verdict_scope": "INSTANCE: CoreML output shape mismatch",
+            "host": _host_fingerprint(),
+            "pair_ids": pair_ids,
+            "torch_logits_shape": list(torch_logits.shape),
+            "coreml_logits_shape": list(coreml_logits.shape),
+            "cache_load": cache_meta,
+        }
+    torch_argmax = torch_logits.argmax(dim=1)
+    coreml_argmax = coreml_logits.argmax(dim=1)
+    diff_pixels = int((torch_argmax != coreml_argmax).sum().item())
+    total_pixels = int(torch_argmax.numel())
+    logit_delta = torch.abs(torch_logits.float() - coreml_logits.float())
+    max_argmax_diff = int(args.coreml_parity_max_argmax_diff)
+    status = "passed" if diff_pixels <= max_argmax_diff else "failed"
+    return {
+        "schema": "ddm_mx1_coreml_segnet_parity.v1",
+        "status": status,
+        "axis": axis,
+        "score_claim": False,
+        "verdict_scope": "n32-or-smaller real-frame CoreML SegNet parity gate",
+        "host": _host_fingerprint(),
+        "source_repo_head": SOURCE_REPO_HEAD,
+        "source_repo_root": SOURCE_REPO_ROOT,
+        "compute_units": str(args.coreml_compute_units),
+        "pair_ids": pair_ids,
+        "pair_count": len(pair_ids),
+        "cache_load": cache_meta,
+        "checkpoint": {
+            "path": str(args.init),
+            "bytes": args.init.stat().st_size,
+            "sha256": _sha256_file(args.init),
+            "format": checkpoint_meta["format"],
+            "step": checkpoint_meta["step"],
+        },
+        "torch_logits_shape": list(torch_logits.shape),
+        "coreml_logits_shape": list(coreml_logits.shape),
+        "argmax_diff_pixels": diff_pixels,
+        "total_pixels": total_pixels,
+        "argmax_diff_rate": diff_pixels / max(total_pixels, 1),
+        "max_allowed_argmax_diff_pixels": max_argmax_diff,
+        "logit_abs_max_delta": float(logit_delta.max().item()),
+        "logit_abs_mean_delta": float(logit_delta.mean().item()),
+        "elapsed_seconds": time.time() - start_time,
+    }
+
+
 def run_mlx_parity(args: argparse.Namespace) -> dict[str, Any]:
     """Compare lifted torch CPU behavior to the MLX port on the selected host."""
 
@@ -1996,7 +2236,7 @@ def run_mlx_parity(args: argparse.Namespace) -> dict[str, Any]:
 
     pair_ids = _select_stratified_indices(args.pairs, seed=args.seed)
     idx_torch = torch.tensor(pair_ids, dtype=torch.long)
-    conditioning_np, target_np, cache_meta = _load_selected_token_arrays(
+    conditioning_np, target_np, cache_meta, _cache_handles = _load_selected_token_arrays(
         input_cache=args.input_cache,
         target_cache=args.target_cache,
         pair_ids=pair_ids,
@@ -2371,13 +2611,60 @@ def _mx_eval_setup_barrier(
     memory_probe.sample_and_check(stage, mx=mx, note=note or "after mx.eval setup barrier")
 
 
-def _derive_train_microbatch_pairs(args: argparse.Namespace, *, total_pairs: int) -> int:
+def _derive_train_microbatch_plan(args: argparse.Namespace, *, total_pairs: int) -> dict[str, Any]:
     explicit = int(getattr(args, "microbatch_pairs", 0) or 0)
+    policy = str(getattr(args, "microbatch_policy", "auto") or "auto")
+    if policy not in MICROBATCH_POLICIES:
+        raise ValueError(f"unknown --microbatch-policy {policy!r}")
     if explicit > 0:
-        return max(1, min(explicit, total_pairs))
-    if str(getattr(args, "device", "")).lower() == "gpu":
-        return max(1, min(4, total_pairs))
-    return max(1, total_pairs)
+        microbatch_pairs = max(1, min(explicit, total_pairs))
+        return {
+            "total_pairs": total_pairs,
+            "microbatch_pairs": microbatch_pairs,
+            "chunk_count": len(_iter_pair_chunks(total_pairs, microbatch_pairs)),
+            "mode": "full_batch" if microbatch_pairs >= total_pairs else "serial_gradient_accumulation",
+            "source": "explicit_cli",
+            "policy": policy,
+            "derivation": {"explicit_microbatch_pairs": explicit},
+        }
+    if str(getattr(args, "device", "")).lower() != "gpu":
+        microbatch_pairs = max(1, total_pairs)
+        return {
+            "total_pairs": total_pairs,
+            "microbatch_pairs": microbatch_pairs,
+            "chunk_count": len(_iter_pair_chunks(total_pairs, microbatch_pairs)),
+            "mode": "full_batch",
+            "source": "cpu_full_batch_default",
+            "policy": policy,
+            "derivation": {"reason": "CPU path has no Metal allocator pressure"},
+        }
+    if policy == "full":
+        microbatch_pairs = max(1, total_pairs)
+        source = "microbatch_policy_full"
+        derivation: dict[str, Any] = {
+            "reason": "operator-requested full-batch footprint measurement via mem-probe",
+        }
+    elif policy == "legacy-4":
+        microbatch_pairs = max(1, min(4, total_pairs))
+        source = "legacy_gpu_default_4_pairs"
+        derivation = {"reason": "explicit legacy policy requested"}
+    else:
+        microbatch_pairs = max(1, min(int(WC2_AUTO_MICROBATCH_ANCHOR["selected_default"]), total_pairs))
+        source = "wc2_auto_empirical_wallclock_anchor"
+        derivation = dict(WC2_AUTO_MICROBATCH_ANCHOR)
+    return {
+        "total_pairs": total_pairs,
+        "microbatch_pairs": microbatch_pairs,
+        "chunk_count": len(_iter_pair_chunks(total_pairs, microbatch_pairs)),
+        "mode": "full_batch" if microbatch_pairs >= total_pairs else "serial_gradient_accumulation",
+        "source": source,
+        "policy": policy,
+        "derivation": derivation,
+    }
+
+
+def _derive_train_microbatch_pairs(args: argparse.Namespace, *, total_pairs: int) -> int:
+    return int(_derive_train_microbatch_plan(args, total_pairs=total_pairs)["microbatch_pairs"])
 
 
 def _iter_pair_chunks(total_pairs: int, microbatch_pairs: int) -> list[tuple[int, int]]:
@@ -2500,11 +2787,12 @@ def run_mlx_train(
             "softplus_fraction": args.softplus_fraction,
         })
     )
-    conditioning_np, target_np, cache_meta = _load_selected_token_arrays(
+    conditioning_np, target_np, cache_meta, resident_cache_handles = _load_selected_token_arrays(
         input_cache=args.input_cache,
         target_cache=args.target_cache,
         pair_ids=pair_ids,
         memory_probe=probe,
+        cache_residency=str(getattr(args, "cache_residency", "selected")),
     )
 
     probe.sample_and_check("before_require_mlx", note=f"device={args.device}")
@@ -2577,19 +2865,17 @@ def run_mlx_train(
         probe.sample_and_check("after_torch_checkpoint_free", mx=mx)
 
     total_pairs = len(pair_ids)
-    microbatch_pairs = _derive_train_microbatch_pairs(args, total_pairs=total_pairs)
     chunk_plan = {
-        "total_pairs": total_pairs,
-        "microbatch_pairs": microbatch_pairs,
-        "chunk_count": len(_iter_pair_chunks(total_pairs, microbatch_pairs)),
-        "mode": "full_batch" if microbatch_pairs >= total_pairs else "serial_gradient_accumulation",
-        "source": "explicit_cli"
-        if int(getattr(args, "microbatch_pairs", 0) or 0) > 0
-        else ("gpu_default_4_pairs" if str(args.device).lower() == "gpu" else "cpu_full_batch_default"),
+        **_derive_train_microbatch_plan(args, total_pairs=total_pairs),
         "train_compute_dtype": str(getattr(args, "train_compute_dtype", "fp32")),
         "compile_train_loss": compile_train_loss,
         "perf_thread_pin": str(getattr(args, "perf_thread_pin", "off")),
+        "cache_residency": str(getattr(args, "cache_residency", "selected")),
+        "resident_cache_handle_count": len(resident_cache_handles),
+        "microbatch_hygiene": str(getattr(args, "microbatch_hygiene", "per-chunk")),
+        "microbatch_chunk_cache": bool(getattr(args, "microbatch_chunk_cache", False)),
     }
+    microbatch_pairs = int(chunk_plan["microbatch_pairs"])
     conditioning = target = pair_idx = None
     probe.sample_and_check(
         "before_selected_tokens_mlx_conversion_plan",
@@ -2638,6 +2924,17 @@ def run_mlx_train(
     probe.sample_and_check("after_segnet_torch_free", mx=mx)
     start_time = time.time()
     last_stage_path: Path | None = None
+
+    microbatch_hygiene = str(getattr(args, "microbatch_hygiene", "per-chunk"))
+    chunk_cache: dict[tuple[int, int], tuple[Any, Any, Any]] | None = None
+    if bool(getattr(args, "microbatch_chunk_cache", False)) and microbatch_pairs < total_pairs:
+        chunk_cache = {
+            (start, stop): _mlx_token_chunk(mx, conditioning_np, target_np, pair_ids, start, stop)
+            for start, stop in _iter_pair_chunks(total_pairs, microbatch_pairs)
+        }
+        for cached_chunk in chunk_cache.values():
+            mx.eval(*cached_chunk)
+        probe.sample_and_check("after_microbatch_chunk_cache_materialize", mx=mx)
 
     def cosine_lr(step: int) -> float:
         progress = step / max(args.steps - 1, 1)
@@ -2716,14 +3013,17 @@ def run_mlx_train(
                 _iter_pair_chunks(total_pairs, microbatch_pairs),
                 start=1,
             ):
-                conditioning_chunk, target_chunk, pair_idx_chunk = _mlx_token_chunk(
-                    mx,
-                    conditioning_np,
-                    target_np,
-                    pair_ids,
-                    start,
-                    stop,
-                )
+                if chunk_cache is not None:
+                    conditioning_chunk, target_chunk, pair_idx_chunk = chunk_cache[(start, stop)]
+                else:
+                    conditioning_chunk, target_chunk, pair_idx_chunk = _mlx_token_chunk(
+                        mx,
+                        conditioning_np,
+                        target_np,
+                        pair_ids,
+                        start,
+                        stop,
+                    )
                 if step == start_step or args.steps <= 3:
                     probe.sample_and_check(
                         f"before_train_step_{step + 1:06d}_chunk_{chunk_index:03d}_value_and_grad",
@@ -2760,8 +3060,9 @@ def run_mlx_train(
                 mx.eval(value, grads)
                 phase = getattr(loss_for_batch, "phase", "unknown")
                 del conditioning_chunk, target_chunk, pair_idx_chunk, chunk_value, chunk_grads
-                gc.collect()
-                _clear_mlx_cache(mx)
+                if microbatch_hygiene == "per-chunk":
+                    gc.collect()
+                    _clear_mlx_cache(mx)
                 probe.check_budget(
                     f"after_train_step_{step + 1:06d}_chunk_{chunk_index:03d}_free",
                     mx=mx,
@@ -2771,6 +3072,9 @@ def run_mlx_train(
         model.update(base_params)
         model.update(optimizer.apply_gradients(grads, base_params))
         mx.eval(value, model.parameters(), optimizer.state)
+        if microbatch_hygiene == "per-step" and microbatch_pairs < total_pairs:
+            gc.collect()
+            _clear_mlx_cache(mx)
         probe.check_budget(f"after_train_step_{step + 1:06d}", mx=mx)
         record: dict[str, Any] = {
             "step": step + 1,
@@ -2850,6 +3154,8 @@ def run_mlx_train(
                         "train_compute_dtype": str(getattr(args, "train_compute_dtype", "fp32")),
                         "compile_train_loss": compile_train_loss,
                         "perf_thread_pin": str(getattr(args, "perf_thread_pin", "off")),
+                        "microbatch_policy": str(getattr(args, "microbatch_policy", "auto")),
+                        "cache_residency": str(getattr(args, "cache_residency", "selected")),
                     },
                 },
             )
@@ -2870,6 +3176,8 @@ def run_mlx_train(
                         "train_compute_dtype": str(getattr(args, "train_compute_dtype", "fp32")),
                         "compile_train_loss": compile_train_loss,
                         "perf_thread_pin": str(getattr(args, "perf_thread_pin", "off")),
+                        "microbatch_policy": str(getattr(args, "microbatch_policy", "auto")),
+                        "cache_residency": str(getattr(args, "cache_residency", "selected")),
                     },
                 },
             )
@@ -2990,6 +3298,8 @@ def _build_mem_probe_receipt(
             "softplus_fraction": float(args.softplus_fraction),
             "bits": int(args.bits),
             "microbatch_pairs": int(getattr(args, "microbatch_pairs", 0) or 0),
+            "microbatch_policy": str(getattr(args, "microbatch_policy", "auto")),
+            "cache_residency": str(getattr(args, "cache_residency", "selected")),
             "train_compute_dtype": str(getattr(args, "train_compute_dtype", "fp32")),
             "compile_train_loss": bool(getattr(args, "compile_train_loss", False)),
             "perf_thread_pin": str(getattr(args, "perf_thread_pin", "off")),
@@ -3172,6 +3482,10 @@ def launch_ticket(args: argparse.Namespace, smoke: dict[str, Any] | None, mlx_pr
             argv.append("--compile-train-loss")
         if str(getattr(args, "perf_thread_pin", "off")) != "off":
             argv.extend(["--perf-thread-pin", str(args.perf_thread_pin)])
+        if str(getattr(args, "microbatch_policy", "auto")) != "auto":
+            argv.extend(["--microbatch-policy", str(args.microbatch_policy)])
+        if str(getattr(args, "cache_residency", "selected")) != "selected":
+            argv.extend(["--cache-residency", str(args.cache_residency)])
         return argv
 
     base_arm_specs = {
@@ -3238,6 +3552,10 @@ def launch_ticket(args: argparse.Namespace, smoke: dict[str, Any] | None, mlx_pr
             command.append("--compile-train-loss")
         if str(getattr(args, "perf_thread_pin", "off")) != "off":
             command.extend(["--perf-thread-pin", str(args.perf_thread_pin)])
+        if str(getattr(args, "microbatch_policy", "auto")) != "auto":
+            command.extend(["--microbatch-policy", str(args.microbatch_policy)])
+        if str(getattr(args, "cache_residency", "selected")) != "selected":
+            command.extend(["--cache-residency", str(args.cache_residency)])
         return command
 
     mem_probe_commands = {
@@ -3447,6 +3765,9 @@ def launch_ticket(args: argparse.Namespace, smoke: dict[str, Any] | None, mlx_pr
             "train_compute_dtype": str(getattr(args, "train_compute_dtype", "fp32")),
             "compile_train_loss": bool(getattr(args, "compile_train_loss", False)),
             "perf_thread_pin": str(getattr(args, "perf_thread_pin", "off")),
+            "microbatch_policy": str(getattr(args, "microbatch_policy", "auto")),
+            "cache_residency": str(getattr(args, "cache_residency", "selected")),
+            "microbatch_auto_anchor": WC2_AUTO_MICROBATCH_ANCHOR,
             "lr": args.lr,
             "ce_fraction": args.ce_fraction,
             "softplus_fraction": args.softplus_fraction,
@@ -3573,6 +3894,7 @@ def main() -> None:
             "torch-smoke",
             "torch-verdict",
             "torch-facets",
+            "coreml-segnet-parity",
             "mlx-parity",
             "mlx-train",
             "mem-probe",
@@ -3597,9 +3919,13 @@ def main() -> None:
     parser.add_argument("--eval-every", type=int, default=250)
     parser.add_argument("--checkpoint-every", type=int, default=250)
     parser.add_argument("--microbatch-pairs", type=int, default=0)
+    parser.add_argument("--microbatch-policy", choices=MICROBATCH_POLICIES, default="auto")
+    parser.add_argument("--cache-residency", choices=CACHE_RESIDENCY_MODES, default="selected")
     parser.add_argument("--train-compute-dtype", choices=TRAIN_COMPUTE_DTYPES, default="fp32")
     parser.add_argument("--compile-train-loss", action="store_true")
     parser.add_argument("--perf-thread-pin", choices=THREAD_PIN_MODES, default="off")
+    parser.add_argument("--microbatch-hygiene", choices=MICROBATCH_HYGIENE_MODES, default="per-chunk")
+    parser.add_argument("--microbatch-chunk-cache", action="store_true")
     parser.add_argument("--verdict-batch-size", type=int, default=32)
     parser.add_argument("--mem-budget-gb", type=float)
     parser.add_argument("--mem-probe-steps", type=int, default=3)
@@ -3615,6 +3941,8 @@ def main() -> None:
     parser.add_argument("--facet-anchor-step", type=int, default=1500)
     parser.add_argument("--facet-anchor-d-seg", type=float, default=MX1H_STEP1500_AUTHORITY_D_SEG)
     parser.add_argument("--facet-anchor-tolerance", type=float, default=1e-12)
+    parser.add_argument("--coreml-compute-units", default="CPU_AND_NE")
+    parser.add_argument("--coreml-parity-max-argmax-diff", type=int, default=0)
     parser.add_argument("--out", type=Path, default=SSD_ROOT / "mx1_driver_result.json")
     args = parser.parse_args()
     if args.mem_probe_steps <= 0:
@@ -3637,7 +3965,7 @@ def main() -> None:
         "source_repo_head": SOURCE_REPO_HEAD,
         "source_repo_root": SOURCE_REPO_ROOT,
     }
-    if args.mode in {"torch-verdict", "torch-facets"}:
+    if args.mode in {"torch-verdict", "torch-facets", "coreml-segnet-parity"}:
         mlx_probe = {
             "status": "not_run",
             "reason": f"{args.mode} is CPU-only and does not import or probe MLX/Metal",
@@ -3655,6 +3983,9 @@ def main() -> None:
     elif args.mode == "torch-facets":
         result["torch_facets"] = run_torch_facets(args)
         result["status"] = result["torch_facets"]["status"]
+    elif args.mode == "coreml-segnet-parity":
+        result["coreml_segnet_parity"] = run_coreml_segnet_parity(args)
+        result["status"] = result["coreml_segnet_parity"]["status"]
     elif args.mode == "mlx-parity":
         if mlx_probe["status"] == "blocked":
             result["status"] = "blocked"

@@ -12,6 +12,7 @@ import hashlib
 import json
 import os
 import platform
+import signal
 import subprocess
 import time
 from dataclasses import dataclass
@@ -47,6 +48,8 @@ class Variant:
     name: str
     extra_args: tuple[str, ...] = ()
     env: dict[str, str] | None = None
+    concurrent_cpu_verdict: bool = False
+    ane_parity: bool = False
 
 
 VARIANTS = {
@@ -55,6 +58,17 @@ VARIANTS = {
     "batched": Variant("batched", ("--microbatch-pairs", "32")),
     "compile": Variant("compile", ("--compile-train-loss",)),
     "fp16-train": Variant("fp16-train", ("--train-compute-dtype", "fp16")),
+    "hygiene-step": Variant("hygiene-step", ("--microbatch-hygiene", "per-step")),
+    "chunk-cache": Variant("chunk-cache", ("--microbatch-chunk-cache",)),
+    "saturated": Variant(
+        "saturated",
+        ("--train-compute-dtype", "fp16", "--microbatch-hygiene", "per-step",
+         "--microbatch-chunk-cache"),
+    ),
+    "ram-cache": Variant("ram-cache", ("--cache-residency", "ram-full")),
+    "derived-microbatch-4": Variant("derived-microbatch-4", ("--microbatch-policy", "auto")),
+    "concurrent-cpu-verdict": Variant("concurrent-cpu-verdict", concurrent_cpu_verdict=True),
+    "ane-verdict": Variant("ane-verdict", ane_parity=True),
 }
 
 
@@ -183,6 +197,18 @@ def build_plan(args: argparse.Namespace) -> tuple[dict[str, Any], list[dict[str,
         "mem_probe_receipt_paths": {},
         "fire_guard_required": True,
         "receipt_schema": RECEIPT_SCHEMA,
+        "wc2_extension": {
+            "schema": "ddm_wc2_bench_extension.v1",
+            "score_claim": False,
+            "added_variants": [
+                "ram-cache",
+                "derived-microbatch-4",
+                "concurrent-cpu-verdict",
+                "ane-verdict",
+            ],
+            "cpu_verdict_contract": "subprocess process-group; OMP/MKL/OpenBLAS/vecLib/NumExpr <=4",
+            "ane_contract": "CoreML FP32 SegNet parity must pass on real rendered frames before ANE verdict use",
+        },
     }
     rows: list[dict[str, Any]] = []
 
@@ -306,8 +332,54 @@ def build_plan(args: argparse.Namespace) -> tuple[dict[str, Any], list[dict[str,
             "--out",
             str(fire_guard_path),
         ]
+        cpu_verdict_result = run_dir / "cpu_verdict" / "result.json"
+        cpu_verdict = [
+            ".venv/bin/python",
+            str(DRIVER),
+            "--mode",
+            "torch-verdict",
+            "--device",
+            "cpu",
+            "--input-cache",
+            source_flags["input_cache"],
+            "--target-cache",
+            source_flags["target_cache"],
+            "--init",
+            str(resume_from),
+            "--out",
+            str(cpu_verdict_result),
+            "--verdict-batch-size",
+            str(int(getattr(args, "concurrent_verdict_batch_size", 16))),
+        ]
+        ane_parity_result = run_dir / "ane_parity" / "result.json"
+        ane_parity = [
+            ".venv/bin/python",
+            str(DRIVER),
+            "--mode",
+            "coreml-segnet-parity",
+            "--device",
+            "cpu",
+            "--pairs",
+            str(int(getattr(args, "ane_parity_pairs", args.pairs))),
+            "--input-cache",
+            source_flags["input_cache"],
+            "--target-cache",
+            source_flags["target_cache"],
+            "--init",
+            str(resume_from),
+            "--out",
+            str(ane_parity_result),
+            "--verdict-batch-size",
+            str(int(getattr(args, "concurrent_verdict_batch_size", 16))),
+            "--coreml-compute-units",
+            str(getattr(args, "coreml_compute_units", "CPU_AND_NE")),
+        ]
         ticket[argv_key] = safe_train
         ticket["mem_probe_receipt_paths"][argv_key] = str(mem_probe_receipt)
+        if variant.concurrent_cpu_verdict:
+            ticket[f"{argv_key}_concurrent_cpu_verdict"] = cpu_verdict
+        if variant.ane_parity:
+            ticket[f"{argv_key}_ane_parity"] = ane_parity
         rows.append(
             {
                 "schema": RECEIPT_SCHEMA,
@@ -328,6 +400,12 @@ def build_plan(args: argparse.Namespace) -> tuple[dict[str, Any], list[dict[str,
                 "mem_probe_command": safe_probe,
                 "fire_guard_command": guard,
                 "train_command": safe_train,
+                "concurrent_cpu_verdict": variant.concurrent_cpu_verdict,
+                "cpu_verdict_command": cpu_verdict if variant.concurrent_cpu_verdict else None,
+                "cpu_verdict_result_path": str(cpu_verdict_result) if variant.concurrent_cpu_verdict else None,
+                "ane_parity": variant.ane_parity,
+                "ane_parity_command": ane_parity if variant.ane_parity else None,
+                "ane_parity_result_path": str(ane_parity_result) if variant.ane_parity else None,
                 "seconds_per_step": None,
                 "d_seg_batch_sanity": None,
             }
@@ -352,6 +430,21 @@ def extract_train_metrics(result_path: Path) -> dict[str, Any]:
     }
 
 
+def extract_cpu_verdict_metrics(result_path: Path) -> dict[str, Any]:
+    if not result_path.exists():
+        return {"cpu_verdict_result_exists": False}
+    payload = json.loads(result_path.read_text(encoding="utf-8"))
+    verdict = payload.get("torch_verdict") or {}
+    return {
+        "cpu_verdict_result_exists": True,
+        "cpu_verdict_result_sha256": sha256_file(result_path),
+        "cpu_verdict_status": verdict.get("status", payload.get("status")),
+        "cpu_verdict_aggregate_d_seg": verdict.get("aggregate_d_seg"),
+        "cpu_verdict_elapsed_seconds": verdict.get("elapsed_seconds"),
+        "cpu_verdict_batch_size": verdict.get("segnet_batch_size"),
+    }
+
+
 def run_logged(command: list[str], *, env_overrides: dict[str, str], stdout_path: Path, stderr_path: Path) -> dict[str, Any]:
     stdout_path.parent.mkdir(parents=True, exist_ok=True)
     env = os.environ.copy()
@@ -364,6 +457,87 @@ def run_logged(command: list[str], *, env_overrides: dict[str, str], stdout_path
         "elapsed_seconds": time.time() - started,
         "stdout_path": str(stdout_path),
         "stderr_path": str(stderr_path),
+    }
+
+
+def start_logged_async(
+    command: list[str],
+    *,
+    env_overrides: dict[str, str],
+    stdout_path: Path,
+    stderr_path: Path,
+) -> tuple[subprocess.Popen[None], dict[str, Any]]:
+    stdout_path.parent.mkdir(parents=True, exist_ok=True)
+    env = os.environ.copy()
+    env.update(env_overrides)
+    stdout = stdout_path.open("w", encoding="utf-8")
+    stderr = stderr_path.open("w", encoding="utf-8")
+    proc = subprocess.Popen(
+        command,
+        cwd=REPO,
+        env=env,
+        stdout=stdout,
+        stderr=stderr,
+        start_new_session=True,
+    )
+    return proc, {
+        "pid": proc.pid,
+        "started_at_monotonic": time.time(),
+        "stdout_path": str(stdout_path),
+        "stderr_path": str(stderr_path),
+        "_stdout_handle": stdout,
+        "_stderr_handle": stderr,
+    }
+
+
+def finish_logged_async(
+    proc: subprocess.Popen[None],
+    state: dict[str, Any],
+    *,
+    timeout_s: float,
+) -> dict[str, Any]:
+    started = float(state.pop("started_at_monotonic"))
+    stdout = state.pop("_stdout_handle")
+    stderr = state.pop("_stderr_handle")
+    timed_out = False
+    killed = False
+    try:
+        try:
+            returncode = proc.wait(timeout=max(0.0, timeout_s))
+        except subprocess.TimeoutExpired:
+            timed_out = True
+            os.killpg(proc.pid, signal.SIGTERM)
+            killed = True
+            try:
+                returncode = proc.wait(timeout=10.0)
+            except subprocess.TimeoutExpired:
+                os.killpg(proc.pid, signal.SIGKILL)
+                returncode = proc.wait(timeout=10.0)
+    finally:
+        stdout.close()
+        stderr.close()
+    return {
+        **state,
+        "returncode": returncode,
+        "elapsed_seconds": time.time() - started,
+        "timed_out": timed_out,
+        "process_group_reclaimed": killed,
+    }
+
+
+def extract_coreml_parity_metrics(result_path: Path) -> dict[str, Any]:
+    if not result_path.exists():
+        return {"ane_result_exists": False}
+    payload = json.loads(result_path.read_text(encoding="utf-8"))
+    row = payload.get("coreml_segnet_parity") or {}
+    return {
+        "ane_result_exists": True,
+        "ane_result_sha256": sha256_file(result_path),
+        "ane_status": row.get("status", payload.get("status")),
+        "ane_argmax_diff_pixels": row.get("argmax_diff_pixels"),
+        "ane_argmax_diff_rate": row.get("argmax_diff_rate"),
+        "ane_logit_abs_max_delta": row.get("logit_abs_max_delta"),
+        "ane_blocker": row.get("blocker"),
     }
 
 
@@ -403,12 +577,48 @@ def execute_rows(args: argparse.Namespace, rows: list[dict[str, Any]]) -> list[d
             row["finished_at_utc"] = utc_now()
             executed.append(row)
             continue
+        if row.get("ane_parity_command"):
+            row["ane_parity_run"] = run_logged(
+                row["ane_parity_command"],
+                env_overrides={},
+                stdout_path=run_dir / "logs" / "ane_parity.stdout.log",
+                stderr_path=run_dir / "logs" / "ane_parity.stderr.log",
+            )
+            row.update(extract_coreml_parity_metrics(Path(row["ane_parity_result_path"])))
+            if row["ane_parity_run"]["returncode"] != 0 or row.get("ane_status") != "passed":
+                row["status"] = "ane_parity_blocked_or_failed"
+                row["finished_at_utc"] = utc_now()
+                executed.append(row)
+                continue
+        async_cpu: tuple[subprocess.Popen[None], dict[str, Any]] | None = None
+        if row.get("cpu_verdict_command"):
+            cpu_env = {
+                "OMP_NUM_THREADS": "4",
+                "MKL_NUM_THREADS": "4",
+                "OPENBLAS_NUM_THREADS": "4",
+                "VECLIB_MAXIMUM_THREADS": "4",
+                "NUMEXPR_NUM_THREADS": "4",
+            }
+            async_cpu = start_logged_async(
+                row["cpu_verdict_command"],
+                env_overrides=cpu_env,
+                stdout_path=run_dir / "logs" / "cpu_verdict.stdout.log",
+                stderr_path=run_dir / "logs" / "cpu_verdict.stderr.log",
+            )
         row["train_run"] = run_logged(
             row["train_command"],
             env_overrides=env_overrides,
             stdout_path=run_dir / "logs" / "train.stdout.log",
             stderr_path=run_dir / "logs" / "train.stderr.log",
         )
+        if async_cpu is not None:
+            proc, state = async_cpu
+            row["cpu_verdict_run"] = finish_logged_async(
+                proc,
+                state,
+                timeout_s=float(getattr(args, "cpu_verdict_timeout_s", 900.0)),
+            )
+            row["cpu_verdict_result"] = extract_cpu_verdict_metrics(Path(row["cpu_verdict_result_path"]))
         metrics = extract_train_metrics(Path(row["result_path"]))
         row.update(metrics)
         row["status"] = "passed" if row["train_run"]["returncode"] == 0 else "train_failed"
@@ -426,7 +636,13 @@ def main() -> None:
     parser.add_argument("--output-root", type=Path, default=DEFAULT_OUTPUT_ROOT)
     parser.add_argument("--ticket-out", type=Path, default=DEFAULT_TICKET_OUT)
     parser.add_argument("--receipts-jsonl", type=Path, default=DEFAULT_RECEIPTS_JSONL)
-    parser.add_argument("--variants", default="baseline,threads,batched,compile,fp16-train")
+    parser.add_argument(
+        "--variants",
+        default=(
+            "baseline,threads,batched,compile,fp16-train,"
+            "ram-cache,derived-microbatch-4,concurrent-cpu-verdict,ane-verdict"
+        ),
+    )
     parser.add_argument("--pairs", type=int, default=32)
     parser.add_argument("--seed", type=int, default=20260806)
     parser.add_argument("--bench-steps", type=int, default=5)
@@ -435,11 +651,17 @@ def main() -> None:
     parser.add_argument("--timeout-s", type=float, default=600.0)
     parser.add_argument("--projected-gib", type=float, default=24.0)
     parser.add_argument("--metal-budget-s", type=float, default=600.0)
+    parser.add_argument("--concurrent-verdict-batch-size", type=int, default=16)
+    parser.add_argument("--cpu-verdict-timeout-s", type=float, default=900.0)
+    parser.add_argument("--ane-parity-pairs", type=int, default=32)
+    parser.add_argument("--coreml-compute-units", default="CPU_AND_NE")
     parser.add_argument("--execute", action="store_true")
     args = parser.parse_args()
 
     if args.pairs <= 0 or args.bench_steps <= 0 or args.mem_probe_steps <= 0:
         parser.error("--pairs, --bench-steps, and --mem-probe-steps must be positive")
+    if args.concurrent_verdict_batch_size <= 0 or args.ane_parity_pairs <= 0:
+        parser.error("--concurrent-verdict-batch-size and --ane-parity-pairs must be positive")
     ticket, rows = build_plan(args)
     ticket["host"] = {
         "node": platform.node(),
