@@ -80,6 +80,25 @@ claim (`score_claim=false`, `promotion_eligible=false`). Findings:
 residual, framing}, sha256, decode-equality bool, q, solver config). Bulky payloads →
 `/Volumes/VertigoDataTier/pact/ddm_tr2p1_20260808/` (certify-or-block).
 
+## AMENDMENT 2026-08-08 (operator correction: "still naive and toy engineering basis")
+
+The residual-then-LZ design above is a CONVENIENCE basis, not the family's reference form.
+Reference form for label/support-stream coding = **prediction as PROBABILITY MODEL +
+conditional arithmetic/range coding** (the form hb2 just measured on our own labels at
+2.1% over its model's ideal: bpp 0.006641 vs ideal 0.006502). And #859/sv2 MEASURED that
+generic-LZ outcomes are governed by LZ MATCH STRUCTURE, not symbol probability — a
+transform/prior raced only through LZ coders yields an INSTRUMENT-scoped verdict, never a
+family verdict. Binding changes:
+1. The TROT treatment MUST include a conditional-AC leg: TROT joint → per-symbol conditional
+   probabilities → deterministic arithmetic/range coder (own minimal coder or the repro_repo
+   AC pattern as parity reference; counted = marginals + counted side-info + tags + AC stream
+   + framing). The LZ-residual leg becomes a BASELINE, never the verdict carrier.
+2. The INCUMBENT also gets a context-model AC leg (edge-conditioned per-symbol probabilities
+   → AC) so the race is reference-form vs reference-form, not naive vs naive.
+3. Any TROT LOSS verdict drawn only from LZ legs is scoped INSTRUMENT(LZ-coder), not
+   FORMULATION. The pass bar stays: beat the best measured incumbent leg (≥464,557 B or its
+   AC leg if lower) under exact decode equality.
+
 **Discipline:** pact commits via `tools/subagent_commit_serializer.py` with POST-EDIT
 `--expected-content-sha256` per file; tags `[no-triality] [p0-ledger-ok]`; review_tracker ×2
 per pact .py; NO Claude/AI attribution or Co-Authored-By trailer. Recall-first before building
