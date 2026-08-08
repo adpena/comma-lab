@@ -1654,6 +1654,33 @@ def run_torch_facets(args: argparse.Namespace) -> dict[str, Any]:
     del conditioning_np, target_np
     gc.collect()
     segnet = _load_upstream_segnet(device)
+    # rr16-F1/rr18-F1 cache-bound provenance: every facet row must be self-contained
+    # (cache identity + SHA-256 + pair IDs + replay argv), not just the aggregate block.
+    input_cache_path = Path(args.input_cache)
+    target_cache_path = Path(args.target_cache)
+    caches_shared = input_cache_path.resolve() == target_cache_path.resolve()
+    input_cache_sha = _sha256_file(input_cache_path)
+    cache_provenance: dict[str, Any] = {
+        "input_cache": {
+            "path": str(input_cache_path),
+            "bytes": input_cache_path.stat().st_size,
+            "sha256": input_cache_sha,
+        },
+        "target_cache": (
+            {"shared_with_input_cache": True, "sha256": input_cache_sha}
+            if caches_shared
+            else {
+                "path": str(target_cache_path),
+                "bytes": target_cache_path.stat().st_size,
+                "sha256": _sha256_file(target_cache_path),
+            }
+        ),
+        "pair_ids": [int(p) for p in pair_ids],
+        "source_repo_head": SOURCE_REPO_HEAD,
+        "replay_argv": list(sys.argv),
+        "axis": "[macOS-CPU advisory torch upstream SegNet]",
+        "score_claim": False,
+    }
     checkpoint_rows: list[dict[str, Any]] = []
     previous_mismatch_set: np.ndarray | None = None
     anchor_row: dict[str, Any] | None = None
@@ -1745,6 +1772,8 @@ def run_torch_facets(args: argparse.Namespace) -> dict[str, Any]:
         row["tail_average"]["wins_vs_final"] = row["tail_average"]["delta_vs_final_d_seg"] < 0.0
         tail_average_rows.append(row)
     iteration_verdict = _mx1t_iteration_verdict(checkpoint_rows, tail_average_rows)
+    for provenance_row in (*checkpoint_rows, *tail_average_rows):
+        provenance_row["cache_provenance"] = cache_provenance
     receipts_jsonl = out_dir / "mx1t_facets_receipts.jsonl"
     _write_jsonl(receipts_jsonl, [*checkpoint_rows, *tail_average_rows])
     copy_jsonl = out_dir / "mx1t_checkpoint_copy_receipts.jsonl"
@@ -1772,6 +1801,7 @@ def run_torch_facets(args: argparse.Namespace) -> dict[str, Any]:
             "status": "passed",
         },
         "cache_load": cache_meta,
+        "cache_provenance": cache_provenance,
         "batching_scheme": {
             "segnet_batch_size": batch_size,
             "token_batch_shape": list(conditioning.shape),
