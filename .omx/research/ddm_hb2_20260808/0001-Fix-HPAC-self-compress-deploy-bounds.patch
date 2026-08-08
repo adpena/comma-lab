@@ -1,0 +1,134 @@
+From e34f31bc4969042c0051ac81aa3c56884419a231 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Alejandro=20Pe=C3=B1a?= <adpena@gmail.com>
+Date: Sat, 8 Aug 2026 04:14:45 -0500
+Subject: [PATCH] Fix HPAC self-compress deploy bounds
+
+---
+ code/hpac_self_compress.py      |  7 +++++--
+ code/integer_model_io.py        |  8 ++++++++
+ code/pack_hpac_self_compress.py | 16 ++++++++++++++--
+ tests/test_provenance.py        | 29 +++++++++++++++++++++++++++++
+ 4 files changed, 56 insertions(+), 4 deletions(-)
+
+diff --git a/code/hpac_self_compress.py b/code/hpac_self_compress.py
+index f983952..7db1878 100644
+--- a/code/hpac_self_compress.py
++++ b/code/hpac_self_compress.py
+@@ -25,8 +25,11 @@ def _quantized_weight(module) -> torch.Tensor:
+     if module.self_compress_deployed:
+         bits = ste_round(bits)
+     radius = torch.pow(2.0, bits - 1.0)
+-    low = _channel_view(module, -radius)
+-    high = _channel_view(module, radius - 1.0)
++    bound = torch.as_tensor(
++        float(module.weight_bound), dtype=radius.dtype, device=radius.device
++    )
++    low = _channel_view(module, torch.maximum(-radius, -bound))
++    high = _channel_view(module, torch.minimum(radius - 1.0, bound))
+     weight = ste_round(torch.maximum(torch.minimum(module.weight, high), low))
+     if isinstance(module, IntegerConv2d):
+         weight = weight * module.mask
+diff --git a/code/integer_model_io.py b/code/integer_model_io.py
+index 4485147..9cc60cb 100644
+--- a/code/integer_model_io.py
++++ b/code/integer_model_io.py
+@@ -89,6 +89,14 @@ def _deserialize_self_compressed(model, raw: bytes) -> None:
+                     bit_offset += count_bits
+                 else:
+                     values = np.zeros(count, dtype=np.int16)
++                bound = getattr(module, "weight_bound", 127)
++                if (
++                    int(values.min(initial=0)) < -bound
++                    or int(values.max(initial=0)) > bound
++                ):
++                    raise ValueError(
++                        "self-compressed integer weight exceeds deployable range"
++                    )
+                 _restore_weight_row(module, parameter, index, values)
+             depth_offset += parameter.shape[0]
+ 
+diff --git a/code/pack_hpac_self_compress.py b/code/pack_hpac_self_compress.py
+index 8418820..5e0404a 100644
+--- a/code/pack_hpac_self_compress.py
++++ b/code/pack_hpac_self_compress.py
+@@ -89,9 +89,13 @@ def serialize_self_compressed(model) -> bytes:
+                 if np.any(row != 0):
+                     raise ValueError("zero-bit channel contains nonzero weights")
+                 continue
+-            low, high = -(1 << (bits - 1)), (1 << (bits - 1)) - 1
++            bound = getattr(module, "weight_bound", 127)
++            low = max(-(1 << (bits - 1)), -bound)
++            high = min((1 << (bits - 1)) - 1, bound)
+             if int(row.min(initial=0)) < low or int(row.max(initial=0)) > high:
+-                raise ValueError(f"{bits}-bit channel exceeds signed range")
++                raise ValueError(
++                    f"{bits}-bit channel exceeds deployable signed range"
++                )
+             codes = row.astype(np.int64) & ((1 << bits) - 1)
+             weight_bits.append(
+                 ((codes[:, None] >> np.arange(bits, dtype=np.int64)) & 1)
+@@ -186,6 +190,14 @@ def deserialize_self_compressed(model: IntegerHPAC, raw: bytes) -> None:
+                     bit_offset += count_bits
+                 else:
+                     values = np.zeros(count, dtype=np.int16)
++                bound = getattr(module, "weight_bound", 127)
++                if (
++                    int(values.min(initial=0)) < -bound
++                    or int(values.max(initial=0)) > bound
++                ):
++                    raise ValueError(
++                        "self-compressed HPAC weight exceeds deployable range"
++                    )
+                 restore_weight_row(module, parameter, index, values)
+             depth_offset += parameter.shape[0]
+ 
+diff --git a/tests/test_provenance.py b/tests/test_provenance.py
+index f0b9486..9202659 100644
+--- a/tests/test_provenance.py
++++ b/tests/test_provenance.py
+@@ -25,6 +25,7 @@ from integer_model_io import deserialize_integer_model  # noqa: E402
+ from pack_hpac_integer import serialize  # noqa: E402
+ from pack_hpac_self_compress import (  # noqa: E402
+     LZMA_FILTERS,
++    deserialize_self_compressed,
+     model_from_args,
+     serialize_self_compressed,
+ )
+@@ -112,6 +113,34 @@ def test_selected_hpac_checkpoint_reproduces_the_packed_model():
+     assert len(raw) == 20_179
+ 
+ 
++def test_self_compressed_8bit_weights_match_deployable_bound():
++    class Args:
++        channels = 64
++        patch = 64
++        delta = 2
++        frame_dim = 8
++        weight_bound = 127
++        activation_bound = 127
++        weight_exponent_min = -6
++
++    model = model_from_args(Args(), True)
++    with torch.no_grad():
++        model.conv_a.weight.zero_()
++        model.conv_a.weight[0, 0, 0, 0] = -128.0
++        model.conv_a.bit_depth.zero_()
++        model.conv_a.bit_depth[0] = 8.0
++    set_deployed_bit_depths(model, True)
++    raw = serialize_self_compressed(model)
++
++    restored = model_from_args(Args(), False)
++    deserialize_self_compressed(restored, raw)
++
++    source_weight = model.conv_a.codes()[0]
++    restored_weight = restored.conv_a.codes()[0]
++    assert float(source_weight.detach().min()) == -127.0
++    assert torch.equal(source_weight, restored_weight)
++
++
+ def test_final_token_stream_is_the_rebuilt_stream():
+     _, _, old_tokens = base_components()
+     selected = (
+-- 
+2.50.1 (Apple Git-155)
+
