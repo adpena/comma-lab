@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 # borrowed_substrate_accounting:
 #   source_repo: /Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo
-#   source_head: 2f94596bb0136d342254022a5c9584756eae0468
+#   source_repo_head: e34f31bc4969042c0051ac81aa3c56884419a231
+#   lifted_at_head: 2f94596bb0136d342254022a5c9584756eae0468
 #   source_path: code/train_pose_carrier_full.py
 #   theirs: PR130 pose carrier model, losses, quantization, optimizer semantics,
 #     cache schema, and full-run defaults.
-#   ours: wrapper-only full-state resume sidecar and smoke-pair scope reduction;
-#     no score claim and no change to the vendored trainer file.
+#   ours: wrapper-only full-state resume sidecar, smoke-pair scope reduction,
+#     explicit optimizer-mode selection, execution provenance, and typed
+#     checkpoint-metadata reads; the vendored trainer has only its separately
+#     declared governed-admission adaptation.
 """Resumable wrapper for PR130's full pose-carrier trainer.
 
 The vendored PR130 trainer saves deployable weights only.  This wrapper mirrors
@@ -18,8 +21,12 @@ resume without changing the borrowed pose-carrier mechanism.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
+import os
+import subprocess
 import sys
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -27,15 +34,28 @@ import numpy as np
 import torch
 
 from tac.admission_guard import assert_governed_admission
+from tac.pr130_lift.checkpoint_schema import architecture_config_from_checkpoint
 from tac.pr130_lift.pose.mps_port import (
+    DENSE_ADAPTER_MODE,
+    REFERENCE_SPARSE_MODE,
+    RowLocalDenseAdam,
     build_row_local_coefficients,
     clear_device_cache,
     load_safetensors_cpu_then_move,
     prepare_row_local_step,
+    torch_public_version,
 )
 from tac.pr130_lift.pose.source_loader import lifted_script_path, load_lifted_module
 
 N_TOTAL_PAIRS = 600
+REPO_ROOT = Path(__file__).resolve().parents[4]
+NATIVE_SPARSE_RECEIPT_PATH = Path(
+    "/Volumes/VertigoDataTier/pact/ddm_pq1_probe_20260809/"
+    "probe_torch2100_pinned.json"
+)
+NATIVE_SPARSE_RECEIPT_SHA256 = (
+    "32ce0585d070fd578bea563f94b33fffe6e000b8cc608f827d4fcb5319893ec3"
+)
 
 
 def _jsonable_args(args: argparse.Namespace) -> dict[str, Any]:
@@ -45,12 +65,102 @@ def _jsonable_args(args: argparse.Namespace) -> dict[str, Any]:
     }
 
 
+def _native_probe_receipt_identity() -> dict[str, Any]:
+    observed_sha256 = None
+    status = "missing_at_run"
+    if NATIVE_SPARSE_RECEIPT_PATH.is_file():
+        observed_sha256 = hashlib.sha256(
+            NATIVE_SPARSE_RECEIPT_PATH.read_bytes()
+        ).hexdigest()
+        status = (
+            "verified_at_run"
+            if observed_sha256 == NATIVE_SPARSE_RECEIPT_SHA256
+            else "hash_mismatch"
+        )
+    if status == "hash_mismatch":
+        raise RuntimeError(
+            "native sparse probe receipt hash mismatch: "
+            f"{NATIVE_SPARSE_RECEIPT_PATH}"
+        )
+    return {
+        "path": str(NATIVE_SPARSE_RECEIPT_PATH),
+        "expected_sha256": NATIVE_SPARSE_RECEIPT_SHA256,
+        "observed_sha256": observed_sha256,
+        "status": status,
+        "scope": "Torch 2.10.0, two steps, four coefficient rows, real MPS",
+        "score_claim": False,
+    }
+
+
+def _git_head() -> str:
+    return subprocess.check_output(
+        ["git", "-C", str(REPO_ROOT), "rev-parse", "HEAD"], text=True
+    ).strip()
+
+
+def _execution_provenance(
+    *,
+    args: argparse.Namespace,
+    coefficients: torch.nn.Embedding,
+    optimizer: torch.optim.Optimizer,
+    argv: list[str],
+) -> dict[str, Any]:
+    sparse = bool(coefficients.sparse)
+    is_dense_adapter = isinstance(optimizer, RowLocalDenseAdam)
+    if sparse == is_dense_adapter:
+        raise RuntimeError("row-local optimizer class does not match gradient mode")
+    expected_mode = (
+        DENSE_ADAPTER_MODE if is_dense_adapter else REFERENCE_SPARSE_MODE
+    )
+    if args.row_local_mode != expected_mode:
+        raise RuntimeError("row-local optimizer selection drifted from requested mode")
+    return {
+        "schema": "ddm_fx2_pose_optimizer_provenance.v1",
+        "score_claim": False,
+        "device": str(args.device),
+        "optimizer_class": (
+            f"{type(optimizer).__module__}.{type(optimizer).__qualname__}"
+        ),
+        "row_local_mode": expected_mode,
+        "gradient_representation": "sparse" if sparse else "dense",
+        "selection_event": (
+            "reference_default"
+            if expected_mode == REFERENCE_SPARSE_MODE
+            else "explicit_dense_adapter_opt_in"
+        ),
+        "fallback_event": "none",
+        "fallback_policy": "automatic_fallback_forbidden",
+        "torch_version": torch_public_version(),
+        "git_sha": _git_head(),
+        "argv": list(argv),
+        "native_probe_receipt": _native_probe_receipt_identity(),
+    }
+
+
 def _state_path(save: Path, step: int) -> Path:
     return save.with_name(f"{save.stem}.step{step:06d}.full_state.pt")
 
 
 def _latest_state_path(save: Path) -> Path:
     return save.with_name(f"{save.stem}.full_state.latest.pt")
+
+
+def _atomic_torch_save(payload: Any, path: Path) -> None:
+    """Write a Torch artifact atomically in its destination directory."""
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    descriptor, temporary_name = tempfile.mkstemp(
+        dir=path.parent,
+        prefix=f".{path.name}.",
+        suffix=".tmp",
+    )
+    os.close(descriptor)
+    temporary_path = Path(temporary_name)
+    try:
+        torch.save(payload, temporary_path)
+        os.replace(temporary_path, path)
+    finally:
+        temporary_path.unlink(missing_ok=True)
 
 
 def _save_full_state(
@@ -70,6 +180,7 @@ def _save_full_state(
     history: list[dict[str, Any]],
     best: dict[str, Any],
     active_pair_ids: torch.Tensor,
+    execution_provenance: dict[str, Any],
 ) -> Path:
     payload = {
         "schema": "ddm_mx2_pose_carrier_full_state.v1",
@@ -101,12 +212,12 @@ def _save_full_state(
             ),
         },
         "active_pair_ids": active_pair_ids.detach().cpu().tolist(),
+        "execution_provenance": execution_provenance,
     }
     path = _state_path(args.save, step)
     latest = _latest_state_path(args.save)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    torch.save(payload, path)
-    torch.save(payload, latest)
+    _atomic_torch_save(payload, path)
+    _atomic_torch_save(payload, latest)
     print(json.dumps({
         "event": "full_state_saved",
         "step": step,
@@ -162,6 +273,19 @@ def _check_resume_compatibility(
                 f"resume-state config mismatch for {key}: "
                 f"{previous_args.get(key)!r} != {current.get(key)!r}"
             )
+    previous_mode = previous_args.get("row_local_mode")
+    if previous_mode is None:
+        previous_device_type = torch.device(previous_args.get("device", "cpu")).type
+        previous_mode = (
+            DENSE_ADAPTER_MODE
+            if previous_device_type == "mps"
+            else REFERENCE_SPARSE_MODE
+        )
+    if previous_mode != current.get("row_local_mode"):
+        raise ValueError(
+            "resume-state row-local optimizer mode mismatch: "
+            f"{previous_mode!r} != {current.get('row_local_mode')!r}"
+        )
     if payload.get("active_pair_ids") != active_pair_ids.detach().cpu().tolist():
         raise ValueError("resume-state active pair ids mismatch")
 
@@ -289,13 +413,25 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--zero-init-coeff", action="store_true")
     parser.add_argument("--seed", type=int, default=20260715)
     parser.add_argument("--device", default="cuda")
+    parser.add_argument(
+        "--row-local-mode",
+        choices=(REFERENCE_SPARSE_MODE, DENSE_ADAPTER_MODE),
+        default=REFERENCE_SPARSE_MODE,
+        help=(
+            "reference-sparse uses PR130's native sparse mechanism; "
+            "dense-adapter is an explicit portability opt-in and never an "
+            "automatic MPS fallback"
+        ),
+    )
     parser.add_argument("--smoke-pairs", type=int)
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--save", type=Path, required=True)
     return parser.parse_args()
 
 
-def run(args: argparse.Namespace) -> dict[str, Any]:
+def run(
+    args: argparse.Namespace, *, argv: list[str] | None = None
+) -> dict[str, Any]:
     lifted_train = load_lifted_module("train_pose_carrier_full")
     if args.steps < 1:
         raise ValueError("--steps must be positive")
@@ -321,7 +457,10 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     target_scale = (targets.amax(0) - targets.amin(0)).clamp_min(1e-4)
 
     master_checkpoint = torch.load(args.master_checkpoint, map_location="cpu", weights_only=False)
-    master_config = master_checkpoint["config"]
+    master_config = architecture_config_from_checkpoint(
+        master_checkpoint,
+        consumer="train_pose_carrier_full_resumable.master",
+    )
     master_model = lifted_train.SemanticTokenRenderer(
         width=int(master_config["width"]), blocks=int(master_config["blocks"]),
         frame_dim=int(master_config["frame_dim"]), num_pairs=N_TOTAL_PAIRS,
@@ -359,6 +498,22 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         device=device,
         lr=args.lr_coeff,
         sparse_optimizer_type=lifted_train.RowLocalSparseAdam,
+        mode=args.row_local_mode,
+    )
+    execution_provenance = _execution_provenance(
+        args=args,
+        coefficients=coeff,
+        optimizer=coeff_optimizer,
+        argv=list(sys.argv if argv is None else argv),
+    )
+    print(
+        json.dumps(
+            {
+                "event": "row_local_optimizer_selected",
+                **execution_provenance,
+            }
+        ),
+        flush=True,
     )
     with torch.no_grad():
         coeff.weight.copy_(lifted_train.initialize_coefficients(
@@ -519,10 +674,10 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                     "scope_pairs": len(active_pair_ids),
                 }), flush=True)
             latest_path = args.save.with_name(args.save.stem + ".latest.pt")
-            latest_path.parent.mkdir(parents=True, exist_ok=True)
             checkpoint_payload = {
                 "basis": raw_basis.detach().cpu().clone(),
                 "coeff": coeff.weight.detach().cpu().clone(),
+                "execution_provenance": execution_provenance,
                 "result": {
                     "pair_ids": list(range(N_TOTAL_PAIRS)),
                     "step": step,
@@ -530,9 +685,10 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                     "per_pair_mse": eval_mse.tolist(),
                     "scope_pair_ids": active_pair_ids.tolist(),
                     "score_claim": False,
+                    "execution_provenance": execution_provenance,
                 },
             }
-            torch.save(checkpoint_payload, latest_path)
+            _atomic_torch_save(checkpoint_payload, latest_path)
             if use_basis_qat and use_coeff_qat and summary["mean"] < best["mean"]:
                 best = {
                     "mean": summary["mean"],
@@ -540,7 +696,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                     "coeff": coeff.weight.detach().cpu().clone(),
                 }
                 best_path = args.save.with_name(args.save.stem + ".best.pt")
-                torch.save(checkpoint_payload, best_path)
+                _atomic_torch_save(checkpoint_payload, best_path)
         if should_state_save:
             _save_full_state(
                 args=args,
@@ -558,6 +714,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                 history=history,
                 best=best,
                 active_pair_ids=active_pair_ids,
+                execution_provenance=execution_provenance,
             )
 
     if best["basis"] is None:
@@ -617,11 +774,19 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         "per_pair_mse": q_mse.tolist(),
         "history": history,
         "full_state_latest": str(_latest_state_path(args.save)),
+        "execution_provenance": execution_provenance,
     }
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(result, indent=2) + "\n")
-    args.save.parent.mkdir(parents=True, exist_ok=True)
-    torch.save({"basis": best["basis"], "coeff": best["coeff"], "result": result}, args.save)
+    _atomic_torch_save(
+        {
+            "basis": best["basis"],
+            "coeff": best["coeff"],
+            "execution_provenance": execution_provenance,
+            "result": result,
+        },
+        args.save,
+    )
     print(json.dumps(result, indent=2), flush=True)
     return result
 

@@ -13,7 +13,12 @@ from tac.pr130_lift.pose.source_loader import load_lifted_module
 def test_vendor_manifest_records_pr130_pose_sources() -> None:
     manifest_path = Path("src/tac/pr130_lift/pose/vendor_manifest.json")
     manifest = json.loads(manifest_path.read_text())
-    assert manifest["source_head"] == "2f94596bb0136d342254022a5c9584756eae0468"
+    assert manifest["source_repo_head"] == "e34f31bc4969042c0051ac81aa3c56884419a231"
+    assert manifest["lifted_at_head"] == "2f94596bb0136d342254022a5c9584756eae0468"
+    assert manifest["source_sha256_scope"].startswith("exact intake path bytes")
+    assert manifest["vendored_body_authentication"].endswith(
+        "test_fx2_lift_custody.py"
+    )
     paths = {entry["path"]: entry for entry in manifest["files"]}
     assert paths["code/carrier_codec.py"]["sha256"] == (
         "d2f14402374b4e622b7f981d736389fb04f0ca0165180e4c75f3a32ffe996bed"
@@ -21,6 +26,11 @@ def test_vendor_manifest_records_pr130_pose_sources() -> None:
     assert paths["code/repack_carrier.py"]["sha256"] == (
         "df6bdaa23d0bd1f717af588931ebdb5ed3777517af8b046e287835aa16a7a72e"
     )
+    assert len(paths) == 8
+    assert paths["code/train_pose_carrier_full.py"]["adaptation"] == (
+        "governed_admission_guard_after_argparse"
+    )
+    assert sum(entry["adaptation"] == "none" for entry in paths.values()) == 7
 
 
 def test_cpr1_codec_roundtrips_legacy_shape_symbols() -> None:

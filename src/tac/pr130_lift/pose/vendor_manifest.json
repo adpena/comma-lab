@@ -3,46 +3,57 @@
     {
       "path": "code/carrier_codec.py",
       "sha256": "d2f14402374b4e622b7f981d736389fb04f0ca0165180e4c75f3a32ffe996bed",
-      "vendored": "src/tac/pr130_lift/pose/lifted/carrier_codec.py"
+      "vendored": "src/tac/pr130_lift/pose/lifted/carrier_codec.py",
+      "adaptation": "none"
     },
     {
       "path": "code/learned_pose_carrier_oracle.py",
       "sha256": "59a574bf2ec52953ccdcf50edab94fff5d9c62158b993bd4da2e245f5fe310a4",
-      "vendored": "src/tac/pr130_lift/pose/lifted/learned_pose_carrier_oracle.py"
+      "vendored": "src/tac/pr130_lift/pose/lifted/learned_pose_carrier_oracle.py",
+      "adaptation": "none"
     },
     {
       "path": "code/pack_semantic_pose.py",
       "sha256": "151413b0696a23e26fbc246dd2cbf7f42c3d64f67290e7c61f21ccc1d0a9bfbc",
-      "vendored": "src/tac/pr130_lift/pose/lifted/pack_semantic_pose.py"
+      "vendored": "src/tac/pr130_lift/pose/lifted/pack_semantic_pose.py",
+      "adaptation": "none"
     },
     {
       "path": "code/pose_basis_oracle.py",
       "sha256": "90909bdd600cf8f518b8fc951b19fd6b66796a1ed963ece4c7638cb1b14057cb",
-      "vendored": "src/tac/pr130_lift/pose/lifted/pose_basis_oracle.py"
+      "vendored": "src/tac/pr130_lift/pose/lifted/pose_basis_oracle.py",
+      "adaptation": "none"
     },
     {
       "path": "code/refine_pose_coeff_codes.py",
       "sha256": "8912464ba22f6bde09d4d53e4e16d1c6880b48d2358752219073fa2d4710a403",
-      "vendored": "src/tac/pr130_lift/pose/lifted/refine_pose_coeff_codes.py"
+      "vendored": "src/tac/pr130_lift/pose/lifted/refine_pose_coeff_codes.py",
+      "adaptation": "none"
     },
     {
       "path": "code/repack_carrier.py",
       "sha256": "df6bdaa23d0bd1f717af588931ebdb5ed3777517af8b046e287835aa16a7a72e",
-      "vendored": "src/tac/pr130_lift/pose/lifted/repack_carrier.py"
+      "vendored": "src/tac/pr130_lift/pose/lifted/repack_carrier.py",
+      "adaptation": "none"
     },
     {
       "path": "code/search_pose_coeff_cpu.py",
       "sha256": "42b0f57cad5170b6da2d7147ba90af147cda7baecc74b848b9cd2c4bed7c9285",
-      "vendored": "src/tac/pr130_lift/pose/lifted/search_pose_coeff_cpu.py"
+      "vendored": "src/tac/pr130_lift/pose/lifted/search_pose_coeff_cpu.py",
+      "adaptation": "none"
     },
     {
       "path": "code/train_pose_carrier_full.py",
       "sha256": "684a4906edecb7653572db77c11a03a4e445eb256a8dc7b665e8fa0f78cab649",
-      "vendored": "src/tac/pr130_lift/pose/lifted/train_pose_carrier_full.py"
+      "vendored": "src/tac/pr130_lift/pose/lifted/train_pose_carrier_full.py",
+      "adaptation": "governed_admission_guard_after_argparse"
     }
   ],
   "schema": "ddm_mx2_pr130_pose_vendor_manifest.v1",
   "score_claim": false,
-  "source_head": "2f94596bb0136d342254022a5c9584756eae0468",
+  "source_repo_head": "e34f31bc4969042c0051ac81aa3c56884419a231",
+  "lifted_at_head": "2f94596bb0136d342254022a5c9584756eae0468",
+  "source_sha256_scope": "exact intake path bytes at source_repo_head before vendored headers and declared adaptations",
+  "vendored_body_authentication": "src/tac/pr130_lift/tests/test_fx2_lift_custody.py",
   "source_repo": "/Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo"
 }

@@ -17,10 +17,12 @@ SOURCE_REPO_ROOT = "/Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/r
 
 # TWO DIFFERENT QUANTITIES — do not collapse them again.
 #
-# LIFTED_AT_HEAD is the commit the files under `lifted/` were copied from; each
-# carries its own `borrowed_substrate_accounting` header with a per-file
-# source_sha256, and each is byte-identical to that commit apart from the header.
-# It is a fact about OUR copies and only changes when we re-lift.
+# LIFTED_AT_HEAD is the commit at which the files under `lifted/` were copied.
+# Each header separately names SOURCE_REPO_HEAD as the commit whose original
+# bytes its source_sha256 authenticates, plus an explicit adaptation id.  The
+# custody test reconstructs every current body from those pinned original bytes
+# and refuses any edit outside the enumerated adaptations.  LIFTED_AT_HEAD is a
+# fact about when OUR copies were made and only changes when we re-lift.
 #
 # SOURCE_REPO_HEAD is the CURRENT state of the actual PR130 repo, which we also
 # execute directly for the files we did NOT lift (hpac_self_compress.py,

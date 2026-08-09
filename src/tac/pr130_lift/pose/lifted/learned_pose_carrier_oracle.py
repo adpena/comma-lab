@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 # borrowed_substrate_accounting:
 #   source_repo: /Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo
-#   source_head: 2f94596bb0136d342254022a5c9584756eae0468
+#   source_repo_head: e34f31bc4969042c0051ac81aa3c56884419a231
+#   lifted_at_head: 2f94596bb0136d342254022a5c9584756eae0468
 #   source_path: code/learned_pose_carrier_oracle.py
 #   source_sha256: 59a574bf2ec52953ccdcf50edab94fff5d9c62158b993bd4da2e245f5fe310a4
+#   source_sha256_scope: exact source_path bytes at source_repo_head before adaptations
 #   theirs: PR130 pose-leg mechanism, tensor shapes, search/codec semantics.
-#   ours: vendored custody copy only; mx2 behavior changes live in sibling wrappers.
+#   ours: accounting header only; mx2 behavior changes live in sibling wrappers.
+#   adaptations: none
 #   score_claim: false
 #
 """Learn a compact low-rank pixel carrier that controls PoseNet outputs.

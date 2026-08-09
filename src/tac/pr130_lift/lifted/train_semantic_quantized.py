@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 # borrowed_substrate_accounting:
 #   source_repo: /Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo
-#   source_head: 2f94596bb0136d342254022a5c9584756eae0468
+#   source_repo_head: e34f31bc4969042c0051ac81aa3c56884419a231
+#   lifted_at_head: 2f94596bb0136d342254022a5c9584756eae0468
 #   source_path: code/train_semantic_quantized.py
 #   source_sha256: 4bcaf8a5c581c1e5eb057ea0ef760f269e1eabfdd2fca926bcbf61f4163a248d
+#   source_sha256_scope: exact source_path bytes at source_repo_head before adaptations
 #   theirs: QAT loop, fake quantization, distillation option, packed-size accounting.
-#   ours: This accounting header only; mechanism is intentionally PR130-lifted.
+#   ours: governed-admission guard after CLI parsing; scientific mechanism remains PR130-lifted.
+#   adaptations: governed_admission_guard_after_argparse
 """Quantization-aware fine-tuning for the compact semantic renderer."""
 
 from __future__ import annotations

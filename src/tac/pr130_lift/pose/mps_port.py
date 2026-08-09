@@ -1,10 +1,9 @@
 """Device-port adapters for the lifted PR130 pose-carrier trainer.
 
-The borrowed trainer uses sparse embedding gradients and a custom Adam variant
-with one bias-correction clock per coefficient row.  MPS sparse-backward
-coverage is not assumed here.  Instead, the MPS path changes only the gradient
-representation to dense and applies the same row-local update to the explicitly
-selected rows.  CPU and CUDA retain the borrowed sparse mechanism.
+The borrowed sparse embedding plus ``RowLocalSparseAdam`` mechanism is the
+reference on every device.  It is admitted on MPS only under the Torch runtime
+covered by the pinned native-sparse receipt.  ``RowLocalDenseAdam`` remains an
+explicit portability adapter; selecting MPS never activates it implicitly.
 """
 
 from __future__ import annotations
@@ -14,6 +13,32 @@ from pathlib import Path
 
 import torch
 from safetensors.torch import load_file
+
+REFERENCE_SPARSE_MODE = "reference-sparse"
+DENSE_ADAPTER_MODE = "dense-adapter"
+ROW_LOCAL_MODES = (REFERENCE_SPARSE_MODE, DENSE_ADAPTER_MODE)
+PINNED_MPS_TORCH_VERSION = "2.10.0"
+
+
+def torch_public_version() -> str:
+    """Return the public Torch version without a local build suffix."""
+
+    return torch.__version__.split("+", 1)[0]
+
+
+def assert_reference_runtime_compatible(device: torch.device) -> None:
+    """Fail closed when MPS reference mode leaves its validated runtime."""
+
+    if device.type != "mps":
+        return
+    actual = torch_public_version()
+    if actual != PINNED_MPS_TORCH_VERSION:
+        raise RuntimeError(
+            "reference sparse MPS mode requires the receipt-pinned Torch "
+            f"{PINNED_MPS_TORCH_VERSION}; found {actual}. "
+            "Use the pinned runtime or explicitly opt into --row-local-mode "
+            f"{DENSE_ADAPTER_MODE}."
+        )
 
 
 def clear_device_cache(device: torch.device) -> None:
@@ -163,12 +188,17 @@ def build_row_local_coefficients(
     device: torch.device,
     lr: float,
     sparse_optimizer_type: type[torch.optim.Optimizer],
+    mode: str = REFERENCE_SPARSE_MODE,
 ) -> tuple[torch.nn.Embedding, torch.optim.Optimizer]:
-    """Build the reference sparse path or the equivalent MPS dense adapter."""
+    """Build the reference sparse path or the explicitly selected adapter."""
 
     if device.type not in {"cpu", "cuda", "mps"}:
         raise ValueError(f"unsupported pose-carrier device type: {device.type!r}")
-    use_sparse = device.type != "mps"
+    if mode not in ROW_LOCAL_MODES:
+        raise ValueError(f"unsupported row-local optimizer mode: {mode!r}")
+    use_sparse = mode == REFERENCE_SPARSE_MODE
+    if use_sparse:
+        assert_reference_runtime_compatible(device)
     coefficients = torch.nn.Embedding(
         num_embeddings, embedding_dim, sparse=use_sparse
     ).to(device)

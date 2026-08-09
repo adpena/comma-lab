@@ -16,7 +16,7 @@ def _state(optimizer: torch.optim.Optimizer, parameter: torch.Tensor) -> dict[st
     return optimizer.state[parameter]
 
 
-def test_dense_adapter_matches_row_local_sparse_adam_step_for_step() -> None:
+def test_dense_adapter_matches_reference_over_64_step_cpu_trajectory() -> None:
     lifted = load_lifted_module("train_pose_carrier_full")
     initial = torch.linspace(-0.4, 0.6, 10 * 4).reshape(10, 4)
     sparse = torch.nn.Embedding(10, 4, sparse=True)
@@ -26,12 +26,19 @@ def test_dense_adapter_matches_row_local_sparse_adam_step_for_step() -> None:
         dense.weight.copy_(initial)
     sparse_optimizer = lifted.RowLocalSparseAdam([sparse.weight], lr=0.037)
     dense_optimizer = mps_port.RowLocalDenseAdam([dense.weight], lr=0.037)
-    steps = (
-        torch.tensor([5, 1, 5, 3, 1]),
-        torch.tensor([3, 9, 3, 5, 9]),
+    sparse_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+        sparse_optimizer, T_max=64, eta_min=0.00037
     )
+    dense_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+        dense_optimizer, T_max=64, eta_min=0.00037
+    )
+    generator = torch.Generator().manual_seed(130)
+    steps = []
+    for _ in range(64):
+        sampled = torch.randint(0, 10, (6,), generator=generator)
+        steps.append(torch.cat((sampled, sampled[:3])))
 
-    for row_ids in steps:
+    for step, row_ids in enumerate(steps, start=1):
         sparse_before = sparse.weight.detach().clone()
         dense_before = dense.weight.detach().clone()
         sparse_optimizer.zero_grad(set_to_none=True)
@@ -49,6 +56,8 @@ def test_dense_adapter_matches_row_local_sparse_adam_step_for_step() -> None:
         assert torch.equal(dense_rows, expected_rows)
         sparse_optimizer.step()
         dense_optimizer.step()
+        sparse_scheduler.step()
+        dense_scheduler.step()
 
         assert torch.equal(sparse.weight, dense.weight)
         sparse_state = _state(sparse_optimizer, sparse.weight)
@@ -59,6 +68,46 @@ def test_dense_adapter_matches_row_local_sparse_adam_step_for_step() -> None:
         untouched.index_fill_(0, expected_rows, False)
         assert torch.equal(sparse.weight[untouched], sparse_before[untouched])
         assert torch.equal(dense.weight[untouched], dense_before[untouched])
+        assert sparse_optimizer.param_groups[0]["lr"] == dense_optimizer.param_groups[0]["lr"]
+        assert int(sparse_state["row_step"].sum()) >= step
+
+
+def test_reference_sparse_is_default_and_dense_adapter_requires_opt_in() -> None:
+    lifted = load_lifted_module("train_pose_carrier_full")
+    sparse, sparse_optimizer = mps_port.build_row_local_coefficients(
+        num_embeddings=8,
+        embedding_dim=3,
+        device=torch.device("cpu"),
+        lr=0.02,
+        sparse_optimizer_type=lifted.RowLocalSparseAdam,
+    )
+    dense, dense_optimizer = mps_port.build_row_local_coefficients(
+        num_embeddings=8,
+        embedding_dim=3,
+        device=torch.device("cpu"),
+        lr=0.02,
+        sparse_optimizer_type=lifted.RowLocalSparseAdam,
+        mode=mps_port.DENSE_ADAPTER_MODE,
+    )
+
+    assert sparse.sparse is True
+    assert type(sparse_optimizer) is lifted.RowLocalSparseAdam
+    assert dense.sparse is False
+    assert isinstance(dense_optimizer, mps_port.RowLocalDenseAdam)
+
+
+def test_reference_sparse_mps_refuses_unpinned_torch(monkeypatch) -> None:
+    lifted = load_lifted_module("train_pose_carrier_full")
+    monkeypatch.setattr(torch, "__version__", "2.9.0")
+
+    with pytest.raises(RuntimeError, match=r"receipt-pinned Torch 2\.10\.0"):
+        mps_port.build_row_local_coefficients(
+            num_embeddings=8,
+            embedding_dim=3,
+            device=torch.device("mps"),
+            lr=0.02,
+            sparse_optimizer_type=lifted.RowLocalSparseAdam,
+        )
 
 
 def test_dense_adapter_refuses_undeclared_gradient_rows() -> None:

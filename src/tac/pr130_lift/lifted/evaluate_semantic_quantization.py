@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 # borrowed_substrate_accounting:
 #   source_repo: /Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo
-#   source_head: 2f94596bb0136d342254022a5c9584756eae0468
+#   source_repo_head: e34f31bc4969042c0051ac81aa3c56884419a231
+#   lifted_at_head: 2f94596bb0136d342254022a5c9584756eae0468
 #   source_path: code/evaluate_semantic_quantization.py
 #   source_sha256: 5bbd2136174bfa2c99219d73f45103d4293f60e3f4eced5ee188e38053923962
+#   source_sha256_scope: exact source_path bytes at source_repo_head before adaptations
 #   theirs: Deployment-shaped semantic renderer quantization evaluator.
-#   ours: This accounting header only; mechanism is intentionally PR130-lifted.
+#   ours: accounting header only; mechanism is intentionally PR130-lifted.
+#   adaptations: none
 """Measure exact semantic error after deployment-shaped weight quantization."""
 
 from __future__ import annotations

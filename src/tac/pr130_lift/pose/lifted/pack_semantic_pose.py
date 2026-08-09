@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 # borrowed_substrate_accounting:
 #   source_repo: /Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo
-#   source_head: 2f94596bb0136d342254022a5c9584756eae0468
+#   source_repo_head: e34f31bc4969042c0051ac81aa3c56884419a231
+#   lifted_at_head: 2f94596bb0136d342254022a5c9584756eae0468
 #   source_path: code/pack_semantic_pose.py
 #   source_sha256: 151413b0696a23e26fbc246dd2cbf7f42c3d64f67290e7c61f21ccc1d0a9bfbc
+#   source_sha256_scope: exact source_path bytes at source_repo_head before adaptations
 #   theirs: PR130 pose-leg mechanism, tensor shapes, search/codec semantics.
-#   ours: vendored custody copy only; mx2 behavior changes live in sibling wrappers.
+#   ours: accounting header only; mx2 behavior changes live in sibling wrappers.
+#   adaptations: none
 #   score_claim: false
 #
 """Pack and verify the semantic renderer plus pose carrier payload."""

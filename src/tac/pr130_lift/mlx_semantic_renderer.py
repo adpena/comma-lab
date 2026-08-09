@@ -21,9 +21,10 @@ frozen scorer path named in the caller's receipt and, for promotion, from
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 
 import numpy as np
 
@@ -55,8 +56,8 @@ class MlxSemanticConfig:
     steps: int = 6_000
 
     @classmethod
-    def from_pr130_checkpoint_config(cls, payload: Mapping[str, Any]) -> "MlxSemanticConfig":
-        """Build from PR130's saved ``checkpoint["config"]`` dictionary."""
+    def from_pr130_checkpoint_config(cls, payload: Mapping[str, Any]) -> MlxSemanticConfig:
+        """Build from a sanitized PR130 architecture dictionary."""
 
         return cls(
             width=int(payload.get("width", cls.width)),
@@ -65,6 +66,23 @@ class MlxSemanticConfig:
             phase_y=int(payload.get("phase_y", cls.phase_y)),
             phase_x=int(payload.get("phase_x", cls.phase_x)),
             temporal_radius=int(payload.get("temporal_radius", cls.temporal_radius)),
+        )
+
+    @classmethod
+    def from_pr130_checkpoint(
+        cls,
+        checkpoint: Mapping[str, Any],
+        *,
+        consumer: str,
+    ) -> MlxSemanticConfig:
+        """Build from v2 metadata or a legacy architecture-only compatibility read."""
+
+        from tac.pr130_lift.checkpoint_schema import (
+            architecture_config_from_checkpoint,
+        )
+
+        return cls.from_pr130_checkpoint_config(
+            architecture_config_from_checkpoint(checkpoint, consumer=consumer)
         )
 
     def asdict(self) -> dict[str, Any]:

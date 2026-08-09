@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 # borrowed_substrate_accounting:
 #   source_repo: /Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo
-#   source_head: 2f94596bb0136d342254022a5c9584756eae0468
+#   source_repo_head: e34f31bc4969042c0051ac81aa3c56884419a231
+#   lifted_at_head: 2f94596bb0136d342254022a5c9584756eae0468
 #   source_path: code/train_semantic_full.py
 #   source_sha256: 2d7a3575e422dc2b5823b97e52101ad5632e5fa04a98e0af8a83d85b7c2176b8
+#   source_sha256_scope: exact source_path bytes at source_repo_head before adaptations
 #   theirs: Full semantic renderer trainer loop, scheduler, selection, CLI.
-#   ours: This accounting header only; mechanism is intentionally PR130-lifted.
+#   ours: governed-admission guard after CLI parsing; scientific mechanism remains PR130-lifted.
+#   adaptations: governed_admission_guard_after_argparse
 """Train the compact semantic renderer on all 600 token maps."""
 
 from __future__ import annotations
