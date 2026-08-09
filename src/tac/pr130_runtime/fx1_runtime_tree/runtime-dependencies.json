@@ -1,0 +1,43 @@
+{
+  "schema": "comma_lab.pr130_runtime_dependencies.v1",
+  "dependencies": [
+    {
+      "name": "constriction",
+      "version": "0.5.0",
+      "required_apis": [
+        "constriction.stream.queue.RangeDecoder",
+        "constriction.stream.model.Categorical"
+      ],
+      "install_policy": "wheel_only_no_source_build",
+      "failure_policy": "fail_closed_no_decoder_fallback",
+      "license_expression": "MIT OR Apache-2.0 OR BSL-1.0"
+    }
+  ],
+  "receiver": "inflate.py",
+  "entrypoint": "inflate.sh",
+  "borrowed_substrate_accounting": {
+    "verbatim_borrowed_files": [
+      "carrier_codec.py",
+      "hpac_integer.py",
+      "hpac_integer_sparse.py",
+      "inflate.py",
+      "integer_model_io.py"
+    ],
+    "fx1_original_files": [
+      "inflate.sh",
+      "runtime-dependencies.json"
+    ],
+    "claim": "FX1 adds dependency closure only; it does not claim the PR130 receiver implementation as original work"
+  },
+  "source": {
+    "intake_root": "/Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo",
+    "intake_git_commit": "e34f31bc4969042c0051ac81aa3c56884419a231",
+    "copied_files": {
+      "carrier_codec.py": "d2f14402374b4e622b7f981d736389fb04f0ca0165180e4c75f3a32ffe996bed",
+      "hpac_integer.py": "6e6b4f4d0b293fb60cc1b751958756a4cd6c2ce7bcff68c6f03e20277856803f",
+      "hpac_integer_sparse.py": "2240ee32c53fe949b560d316d349e0bbdccc0ceb78787307cd4d530623d42a0c",
+      "inflate.py": "335369c9b3b295707f1790feb0b5b7ae288338fae350056cc4bb03aaa18f0c9e",
+      "integer_model_io.py": "6f91c91ed4785d203aa3570af362fbe9c6a64bb2249599f8554adb31174b80a5"
+    }
+  }
+}

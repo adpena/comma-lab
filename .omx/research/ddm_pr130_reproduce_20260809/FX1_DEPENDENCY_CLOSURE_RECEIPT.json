@@ -1,0 +1,174 @@
+{
+  "schema": "ddm_fx1_dependency_closure_receipt.v1",
+  "generated_at_utc": "2026-08-09T16:28:10Z",
+  "axis": "[byte-only scorer-free, macOS-CPU dependency smoke]",
+  "authority": {
+    "contest_score_measured": false,
+    "cuda_used": false,
+    "metal_or_mps_used": false,
+    "scorer_slot_used": false,
+    "pointer_moved": false,
+    "full_n600_decode_run": false
+  },
+  "provenance": {
+    "pact_head_before_landing": "3028e6806bad638341fb330e4f415d849d3d6754",
+    "intake_root": "/Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo",
+    "intake_head": "e34f31bc4969042c0051ac81aa3c56884419a231",
+    "intake_status_path_count_after_work": 0,
+    "canonical_archive_path": "/Volumes/VertigoDataTier/pact/ddm_pr130_reproduce_20260809/reproduction/archive.zip",
+    "canonical_archive_bytes": 191052,
+    "canonical_archive_sha256": "0491d5df84fc70b62b3f7ccf8894f5e1b81c616de46a052e4423fc1e18fdc7cd"
+  },
+  "derived_runtime_tree": {
+    "path": "src/tac/pr130_runtime/fx1_runtime_tree",
+    "source_receiver_files_changed_from_intake": 0,
+    "source_receiver_file_denominator": 5,
+    "source_receiver_files": {
+      "carrier_codec.py": "d2f14402374b4e622b7f981d736389fb04f0ca0165180e4c75f3a32ffe996bed",
+      "hpac_integer.py": "6e6b4f4d0b293fb60cc1b751958756a4cd6c2ce7bcff68c6f03e20277856803f",
+      "hpac_integer_sparse.py": "2240ee32c53fe949b560d316d349e0bbdccc0ceb78787307cd4d530623d42a0c",
+      "inflate.py": "335369c9b3b295707f1790feb0b5b7ae288338fae350056cc4bb03aaa18f0c9e",
+      "integer_model_io.py": "6f91c91ed4785d203aa3570af362fbe9c6a64bb2249599f8554adb31174b80a5"
+    },
+    "entrypoint_sha256": "00ca74cef3986d1a01be6d0256e9ba671f4996a19035d5260d37ac4711ca46af",
+    "dependency_manifest_sha256": "a7cadcda5e169adbfa26f95663c1b72f56c16a994436a35d382b54d87a1dbf1d",
+    "file_bytes_before_report_and_receipt": 77644,
+    "content_manifest_sha256_before_report_and_receipt": "1255326167e29b606bd1443d699466633123a79a660543762b7fcdcf88e90739",
+    "declared_dependency": "constriction==0.5.0",
+    "install_policy": "wheel-only, no dependencies, exact version",
+    "failure_policy": "fail closed; no arithmetic-decoder fallback; invalid existing target is not overwritten"
+  },
+  "owned_runtime_absence_search": {
+    "finding": "no pre-existing owned derived PR130 shipping runtime found in the enumerated scopes",
+    "verdict_scope": "five enumerated local repo and PR130 custody scopes; not a global nonexistence claim",
+    "scopes": [
+      {
+        "path": "src/tac/pr130_lift",
+        "files": 32
+      },
+      {
+        "path": "submissions",
+        "files": 262
+      },
+      {
+        "path": ".omx/research/ddm_pr130_reproduce_20260809",
+        "files": 21
+      },
+      {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_pr130_reproduce_20260809",
+        "files": 8
+      },
+      {
+        "path": "/Volumes/VertigoDataTier/pact/pr130_e2e/challenge/submissions",
+        "files": 273
+      }
+    ],
+    "matching_owned_derived_runtime_trees": 0
+  },
+  "storage_preflight": {
+    "requested_bytes": 52428800,
+    "selected_tier": "vertigo",
+    "selected_workload_root": "/Volumes/VertigoDataTier/pact/ddm_fx1_dependency_closure_20260809",
+    "free_bytes_at_preflight": 86279614464,
+    "blockers": [],
+    "plan_path": "/Volumes/VertigoDataTier/pact/ddm_fx1_dependency_closure_20260809/storage_plan.json",
+    "plan_bytes": 5624,
+    "plan_sha256": "d81e345ab583acf4bb5f4c8d2fbf16b35cdd6c816ff4b12b529534cdd919d649"
+  },
+  "cured_bare_venv_receipt": {
+    "python_executable": "/Users/adpena/Projects/pact/upstream/.venv/bin/python",
+    "python_version": "3.11.15",
+    "host_platform": "macOS-26.4-arm64",
+    "start_site_enable_user_site": false,
+    "start_constriction_find_spec": null,
+    "fresh_dependency_target_absent_at_start": true,
+    "command": "UV_OFFLINE=1 UV_CACHE_DIR=<seeded_uv_cache> UV=/opt/homebrew/bin/uv PYTHON=<upstream-python> PR130_RUNTIME_DEPS_DIR=<fresh-runtime_deps_final> PR130_DEPENDENCY_SMOKE_ONLY=1 /usr/bin/time -p <derived-runtime>/inflate.sh",
+    "uv_version": "0.11.32",
+    "uv_resolve_milliseconds": 111,
+    "uv_install_milliseconds": 223,
+    "entrypoint_end_to_end_seconds": 17.50,
+    "terminal_return_code": 0,
+    "terminal_output": "PR130_DEPENDENCY_READY constriction=0.5.0 receiver=inflate.py",
+    "host_after_constriction_find_spec": null,
+    "warm_entrypoint_seconds": 0.51,
+    "installed_target_path": "/Volumes/VertigoDataTier/pact/ddm_fx1_dependency_closure_20260809/runtime_deps_final",
+    "installed_target_file_count": 10,
+    "installed_target_file_bytes": 1931498,
+    "installed_target_content_manifest_sha256": "bfe25761e26f32b1dca1f7114a45648fa9b25dc8f98f0fa2e98b199992fd4a4b",
+    "receiver_imported": "the copied real inflate.py module",
+    "scope": "clean-host dependency closure and real receiver import; not a full archive inflate or score"
+  },
+  "failure_controls": {
+    "invalid_target": {
+      "trials": 1,
+      "failures": 1,
+      "terminal_return_code": 65,
+      "result": "refused an existing target that could not supply the exact version and APIs"
+    },
+    "live_network_attempt": {
+      "trials": 1,
+      "terminal_return_code": 2,
+      "elapsed_seconds": 6.61,
+      "result": "sandbox DNS could not resolve pypi.org after three retries; no dependency target was published"
+    }
+  },
+  "contest_wheel_availability": {
+    "workflow_platform": "Linux x86_64 on ubuntu-latest or linux-nvidia-t4",
+    "workflow_python": "CPython 3.11 from upstream/.python-version and pyproject.toml",
+    "pypi_release_url": "https://pypi.org/project/constriction/0.5.0/",
+    "pypi_release_date": "2026-07-17",
+    "pypi_python_constraint": ">=3.10,<3.15",
+    "pypi_source_distribution_count": 0,
+    "contest_wheel": "constriction-0.5.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+    "contest_wheel_display_size": "410.4 kB",
+    "contest_wheel_sha256": "eb7909d0ad4940d3b74696d98f0dc16dec7294e57f9e0797bc06d5ce7b3b1507",
+    "cross_platform_uv_attempt": {
+      "terminal_return_code": 1,
+      "resolved_wheel_url": "https://files.pythonhosted.org/packages/d5/62/1e5355b0a3975841181607a8a721c2fe9576ee4483c891e5903c0bca6cee/constriction-0.5.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+      "result": "selected the exact contest wheel, then failed because the wheel bytes were not in the offline cache"
+    },
+    "source_build_possible_in_cured_entrypoint": false,
+    "source_build_reason": "--only-binary constriction forbids source distributions; official 0.5.0 also publishes no source distribution",
+    "linux_wheel_execution_measured": false
+  },
+  "whole_job_budget": {
+    "workflow_timeout_seconds": 1800,
+    "timeout_scope": "entire GitHub Actions test job",
+    "measured_entrypoint_smoke_seconds": 17.50,
+    "measured_entrypoint_fraction_of_timeout": 0.009722222222,
+    "measured_entrypoint_percent_of_timeout": 0.972222222222,
+    "seconds_left_for_all_other_job_work_after_smoke": 1782.5,
+    "historical_independent_full_wrapper_seconds_with_constriction_0_5_0": 142.098,
+    "conservative_cross_host_double_startup_projection_seconds": 159.598,
+    "conservative_cross_host_projection_seconds_left": 1640.402,
+    "conservative_cross_host_projection_percent_of_timeout": 8.866555555556,
+    "projection_warning": "17.50 seconds includes a receiver import that the historical 142.098-second wrapper also includes; the sum deliberately double-counts startup, crosses macOS and RTX 5070 hosts, and excludes current CI setup steps, so it is a conservative non-authority budget projection, not a measured contest total"
+  },
+  "rate_pricing": {
+    "current_evaluator_denominator": "sum(file.stat().st_size for file in uncompressed_dir.rglob('*') if file.is_file())",
+    "historical_denominator_reused_as_current": false,
+    "declared_dependency_archive_byte_delta": 0,
+    "vendored_generic_decoder_archive_byte_delta": 0,
+    "reason": "both alternatives live in generic submission code or external libraries, not archive.zip; rule 118 requires only video-derived large artifacts to be counted",
+    "canonical_archive_expression_after_cure": "191052 / current_sum_of_video_file_bytes",
+    "score_rate_delta_after_cure": 0.0
+  },
+  "vendoring_search": {
+    "bounded_scopes": [
+      "src",
+      "submissions",
+      ".omx/research"
+    ],
+    "pure_submission_decoder_functions_found_by_exact_function_query": 2,
+    "constriction_wire_compatible_pure_decoder_receipts_found": 0,
+    "verdict_scope": "bounded exact-name and constriction-wire search; other range coders use different packet/model contracts unless cross-decoding proves otherwise",
+    "linux_cp311_wheel_code_price": "410.4 kB displayed compressed wheel plus extraction/import glue; archive delta remains 0 B",
+    "pure_source_port_code_price": "unknown until implemented; archive delta remains 0 B; exact-wire parity and n600 runtime are unmeasured"
+  },
+  "cleanup": {
+    "success_only_installer_temp_dirs": "deleted automatically by the entrypoint trap before publication or moved atomically into the final target",
+    "runtime_tree_python_cache": "disabled in the final entrypoint with PYTHONDONTWRITEBYTECODE=1",
+    "bulk_evidence_root": "/Volumes/VertigoDataTier/pact/ddm_fx1_dependency_closure_20260809",
+    "bulk_evidence_retained": true
+  }
+}
