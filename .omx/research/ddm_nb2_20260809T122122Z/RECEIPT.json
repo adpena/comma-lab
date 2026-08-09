@@ -1,0 +1,191 @@
+{
+  "schema": "ddm_nb2_receipt.v1",
+  "arm": "ddm_nb2",
+  "created_at_utc": "2026-08-09T12:21:22Z",
+  "working_head_before_commit": "e384596d6d5d05c1b19c3f3a9ef6f0254a3ba3d2",
+  "authority": "scorer-free source-body audit",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "population": {
+    "description": "138 current negative probe identities whose bodies NB1 did not open",
+    "denominator": 138,
+    "adjudicated": 138,
+    "routed": 138,
+    "unreached": 0,
+    "unrouted": 0,
+    "local_targets_opened": 118,
+    "recovered_without_live_local_target": 20,
+    "au1_vo2_candidate_records_out_of_scope": 24627
+  },
+  "self_audit": {
+    "round": 2,
+    "new_identities": 0,
+    "identity_set_difference": 0,
+    "duplicate_probe_ids": 0,
+    "missing_owners": 0,
+    "missing_dispositions": 0,
+    "missing_routes": 0,
+    "missing_source_row_hashes": 0,
+    "missing_body_open_or_recovery_grades": 0,
+    "queued_rows_missing_fire_contract": 0,
+    "already_done_rows_missing_commit": 0,
+    "persisted_ephemeral_path_references": 0,
+    "primary_population_sealed": true
+  },
+  "dispositions": {
+    "ALREADY-DONE": 4,
+    "FOLDED": 41,
+    "QUEUED-WITH-FIRE-ORDER": 3,
+    "SUPERSEDED": 90,
+    "FIRED": 0,
+    "DEFERRED": 0
+  },
+  "grades": {
+    "CURE_BUILT_AND_WIRED": 4,
+    "NEGATIVE_UPHELD_SCOPED": 6,
+    "NOT_A_LIVE_TECHNICAL_NEGATIVE": 35,
+    "REOPEN_UNDERTESTED": 3,
+    "SUPERSEDED_BY_CORRECTED_BODY": 1,
+    "SUPERSEDED_RETIRED_OR_CORRECTED": 89
+  },
+  "lens_incidence_nonexclusive": {
+    "L1_NAIVE": 6,
+    "L2_TOY": 12,
+    "L3_GENERIC_BASIS": 26,
+    "L4_OTHER_NONOPTIMAL": 95
+  },
+  "axis_lens": {
+    "receipt_path": "/Volumes/VertigoDataTier/pact/ddm_chroma_dali_av_20260809/result_summary.json",
+    "receipt_sha256": "15f43860a2d0a32bd7191ee12f3f1f1308cf3345090a4ad1cf2f3bb67bc5aa2c",
+    "seg_disagreement": 0.00017523023416288197,
+    "pose_mse": 0.00014061325055081397,
+    "triangle_inequality_upper_bound_s": 0.0550214568,
+    "unsafe_mixed_decoder_negatives_found": 0,
+    "corpus_sweep_owner": "ddm_ax2",
+    "duplicated_corpus_sweep": false
+  },
+  "reciprocal_cure_check": {
+    "built_elsewhere_unwired_found": 0,
+    "built_and_wired_rows": [
+      {
+        "probe_id": "fp64_master_gradient_600_pair_independence_pending_20260518",
+        "commit": "6f17beaf8468bfd3ae7e5bcaf6aed82fc7f9f98b"
+      },
+      {
+        "probe_id": "vq_vae_k_sweep_dispatch_attempt_t4_oom_at_segnet_batchnorm_20260519",
+        "commit": "8134867d445a0a9c00ace62a9cbcc80c47a43ec4"
+      },
+      {
+        "probe_id": "harvest_e7_vq_k_sweep_1_t4_oom_20260519",
+        "commit": "8134867d445a0a9c00ace62a9cbcc80c47a43ec4"
+      },
+      {
+        "probe_id": "pr110_opt7_l1_paired_cuda_ratification_dispatch_DEFER_pending_trainer_auth_eval_wire_in_20260530",
+        "commit": "86e3f4c382d99aff61e5114e2b6e3323f477c9eb"
+      }
+    ]
+  },
+  "queued_tasks": [
+    {
+      "fire_order": 1,
+      "task_id": "nb2_retest_yousfi_native_grid_incell_pr130_20260809",
+      "owner": "ddm_nb2_yousfi_retest",
+      "consumer_store": ".omx/state/canonical_task_status.jsonl"
+    },
+    {
+      "fire_order": 2,
+      "task_id": "nb2_retest_ego_hood_survival_pr130_20260809",
+      "owner": "ddm_nb2_ego_hood_retest",
+      "consumer_store": ".omx/state/canonical_task_status.jsonl"
+    },
+    {
+      "fire_order": 3,
+      "task_id": "nb2_retest_yopo_firstblock_population_20260809",
+      "owner": "ddm_nb2_yopo_retest",
+      "consumer_store": ".omx/state/canonical_task_status.jsonl"
+    }
+  ],
+  "machine_validation": {
+    "nb2_rows_json_parse": "PASS",
+    "nb2_rows_schema_predicate": "PASS",
+    "nb1_nb2_identity_set_equality": "PASS",
+    "canonical_task_status_validation": "PASS: 531 rows",
+    "canonical_task_status_historical_warning_lines": 16,
+    "staged_index_touched": false,
+    "python_files_changed": 0,
+    "review_tracker_passes_required": 0
+  },
+  "inputs": {
+    "charter_sha256": "31d847ca60c54bc2231fade5ec3309399e89e610107e6bf0094db71c07ab9a64",
+    "common_contract_sha256": "eeae9e0035582e6bdd65fd837e4aa35a65e064fd09900b9c212d41ac02086771",
+    "program_sha256": "a6d5f79f3241ca1ae17b2587afd9940e1a4ea598804fd9efa152f2330e15db82",
+    "claude_sha256": "397c6abc84899018d73e5d73611d2b7ccc7bd55933d2b79d7ce5566b6550503b",
+    "agents_sha256": "397c6abc84899018d73e5d73611d2b7ccc7bd55933d2b79d7ce5566b6550503b",
+    "craft_handoff_sha256": "40d157a039d4dd242bfb189d53e6b82abcc5d037adceb0a52c9bb2956903f212",
+    "hot_state_sha256": "84ceaea0f5a7e865208fe865d2e5913606b3f1589095ffa92e29e005ea359b90",
+    "nb1_rows_sha256": "776806b4c4dde25bca12290494c65bd149b375da00d78588b4fb8af841de04ba",
+    "probe_outcomes_sha256_at_adjudication": "10de30106b16d55e64984d6ab1c6a885f39aa95b16e1b2113c90f2a7fdd6f294",
+    "canonical_task_status_sha256_before": "4a5a44c40a4aea092b9c52c40612d488f1db75e8ccde9027d9b1c274b1232e1d",
+    "canonical_task_status_sha256_after": "01c944ec343deeed1af451746b0935dc5ffea2ef3a3ca1b791e63ebca1ac287e"
+  },
+  "outputs_before_receipt": {
+    "NB2_FINDINGS.md": {
+      "sha256": "ca5bbb42a8d8f53c1b22abdb0928f81d09af1f1f279e02f7f20e0e194c0ea888"
+    },
+    "NB2_ROWS.jsonl": {
+      "sha256": "1f69cde7932e1dd8697fb2470330cb7fa6ac9d6127101e0694ec69f2cd873c9f",
+      "rows": 138
+    },
+    "NEXT_IF_RESUMED.md": {
+      "sha256": "bbf511913d5b1e9e9cf63bc0f4e9641fc5d26a6d504dc33a6e5fea3cd200429e"
+    }
+  },
+  "## RECALL EVIDENCE": {
+    "sources_searched": [
+      ".omx/research content by every probe id and lens query",
+      "429 canonical equations from tools/list_canonical_equations.py --json",
+      "CANONICAL_RESEARCH_INDEX surfaces",
+      "all 11 sub015_DAG surfaces",
+      "design and SPEC documents",
+      ".omx/state/canonical_task_status.jsonl",
+      "complete probe event history for all 138 identities"
+    ],
+    "queries": [
+      "prefix",
+      "cap",
+      "generic basis",
+      "metric",
+      "coder",
+      "wrong-object floor",
+      "built-elsewhere-unwired",
+      "stale headline",
+      "DALI",
+      "PyAV",
+      "races-not-reputation"
+    ],
+    "beyond_charter_findings": [
+      "The binding no-old-lineage FEED and current PR130-base exception changed historical vehicle rows from reopen candidates to lessons-only supersessions.",
+      "The May 30 append-only backfill added criteria without re-evaluating technical bodies, so append-order latest was not technical latest.",
+      "The later closure re-audit already identified the Yousfi population defect and ego-region defect, which fixed the top two reactivation measurements.",
+      "The live own-vehicle frontier moved after the common-contract snapshot to 0.7534578126155775 at 357837 bytes on macOS-CPU advisory."
+    ],
+    "plan_change": "Do not resurrect old vehicles; close stale administrative backfills, retain exact scoped negatives, and queue only three current-base population-safe measurements."
+  },
+  "boundaries": {
+    "scorer_free": true,
+    "metal_or_mps_used": false,
+    "cuda_used": false,
+    "eval_run": false,
+    "dispatch_or_launch": false,
+    "archive_built": false,
+    "upstream_modified": false,
+    "pr130_intake_modified": false,
+    "promotion_attempted": false,
+    "pointer_delta": 0.0,
+    "own_vehicle_frontier": {
+      "s": 0.7534578126155775,
+      "archive_bytes": 357837,
+      "axis": "macOS-CPU advisory"
+    }
+  }
+}
