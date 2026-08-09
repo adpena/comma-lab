@@ -34,8 +34,9 @@ canonical Stop-hook precedent):
     NOT block a LAUNCH (heavy/paid/launch gating stays with the governor +
     launch_guard_hook, the correct authority boundary). This hook only nudges.
   * TWO-STAGE, ROBUST — a cheap deterministic PRE-FILTER finds candidate passages
-    (dismissal-verb + magnitude-word co-located, ABSENT a relative-significance
-    ratio AND a measured-un-recoverability citation); then an fmtools SEMANTIC
+    (dismissal-verb + magnitude-word linked in one claim, ABSENT a relative-
+    significance ratio AND a measured-un-recoverability citation); then an fmtools
+    SEMANTIC
     CLASSIFY confirms each candidate (killing the false positives — noise-floor,
     weak-supervision, measured-label-noise). fmtools runs ONLY on pre-filtered
     candidates (never per-line), in a SUBPROCESS under the fmtools venv (the pact
@@ -136,6 +137,30 @@ _DISCUSSION_CUE = re.compile(
     r"reopen|re-?open|re-?rank|re-?audit",
     re.IGNORECASE,
 )
+# A cross-line pair is one claim only when the text carries an explicit causal link,
+# an anaphoric/magnitude-led sentence, or a colon that introduces the justification. Raw
+# proximity is not a link: Markdown table rows and source/provenance inventories routinely
+# place dismissal-shaped class nouns near unrelated magnitude vocabulary.
+_CAUSAL_LINK = re.compile(
+    r"\b(?:because|since|due\s+to|on\s+account\s+of|therefore|thus|hence|"
+    r"consequently|as\s+a\s+result|which\s+(?:is|was|looks|seems)|"
+    r"whose\s+(?:effect|gain|impact|improvement|margin|result))\b",
+    re.IGNORECASE,
+)
+_ANAPHORIC_MAGNITUDE = re.compile(
+    r"^(?:[-*+]\s+|\d+[.)]\s+|>\s*)*(?:its|their|this|that|the)\s+"
+    r"(?:measured\s+)?(?:Δs|delta.?s|effect|gain|impact|improvement|margin|"
+    r"result|signal|contribution)\b",
+    re.IGNORECASE,
+)
+_MAGNITUDE_LEAD = re.compile(
+    r"^(?:[-*+]\s+|\d+[.)]\s+|>\s*)*(?:weak(?:ly)?|negligibl[ey]|"
+    r"insignificant(?:ly)?|tiny|minimal|trivial(?:ly)?|marginal(?:ly)?|"
+    r"too\s+small|so\s+small|barely|diminishing|nois[ey]|"
+    r"not\s+significant|hardly\s+moves)\b(?![-_])",
+    re.IGNORECASE,
+)
+_MARKDOWN_TABLE_ROW = re.compile(r"^\s*\|.*\|\s*$")
 
 
 def _has_valid_waiver(line: str) -> bool:
@@ -173,20 +198,55 @@ def _line_exempt(passage: str, wide: str) -> bool:
     )
 
 
+def _has_linked_cooccurrence(window: list[str]) -> bool:
+    """True iff dismissal and magnitude matches belong to one claim.
+
+    A same-line pair is linked.  A cross-line pair must carry an explicit causal,
+    anaphoric, or magnitude-led bridge (or a colon introducing the next line), and
+    distinct Markdown table rows never lend vocabulary to one another. This preserves
+    wrapped-prose detection without treating arbitrary three-line proximity as semantic
+    co-occurrence.
+    """
+    window = [str(ln or "") for ln in (window or [])]
+    dismissal_lines = [i for i, line in enumerate(window) if _DISMISSAL.search(line)]
+    magnitude_lines = [i for i, line in enumerate(window) if _MAGNITUDE.search(line)]
+    for d_idx in dismissal_lines:
+        for m_idx in magnitude_lines:
+            if d_idx == m_idx:
+                return True
+            lo, hi = sorted((d_idx, m_idx))
+            span = window[lo: hi + 1]
+            if any(_MARKDOWN_TABLE_ROW.match(line) for line in span):
+                continue
+            joined = "\n".join(span)
+            magnitude_line = window[m_idx].strip()
+            if (
+                _CAUSAL_LINK.search(joined)
+                or _ANAPHORIC_MAGNITUDE.search(magnitude_line)
+                or _MAGNITUDE_LEAD.search(magnitude_line)
+                or (d_idx < m_idx and window[d_idx].rstrip().endswith(":"))
+            ):
+                return True
+    return False
+
+
 def magnitude_dismissal_candidates(lines: list[str]) -> list[dict]:
     """The deterministic PRE-FILTER. Slides a 3-line window over ``lines``; a window
-    is a CANDIDATE iff it co-locates a dismissal verb AND a magnitude word AND is not
-    exempt (relative-sig / measured-un-recoverability / non-dismissal / waiver /
-    discussion) within a wider 5-line window. Adjacent candidates (within 2 lines) are
-    collapsed so one dismissal is reported once. Returns ``[{line_no, passage}]``.
+    is a CANDIDATE iff it links a dismissal verb AND a magnitude word in one claim AND
+    is not exempt (relative-sig / measured-unrecoverability / non-dismissal / waiver /
+    discussion) within a wider 5-line window. Same-line pairs are linked directly;
+    cross-line pairs require a causal/anaphoric bridge and cannot cross Markdown table
+    rows. Adjacent candidates (within 2 lines) are collapsed so one dismissal is reported
+    once. Returns ``[{line_no, passage}]``.
 
     Defensive ``str(... or "")`` throughout — never raises on odd input (r5 discipline)."""
     lines = [str(ln or "") for ln in (lines or [])]
     out: list[dict] = []
     last_center = -10
     for i in range(len(lines)):
-        passage = "\n".join(lines[max(0, i - 1): i + 2])
-        if not (_DISMISSAL.search(passage) and _MAGNITUDE.search(passage)):
+        window = lines[max(0, i - 1): i + 2]
+        passage = "\n".join(window)
+        if not _has_linked_cooccurrence(window):
             continue
         wide = "\n".join(lines[max(0, i - 2): i + 3])
         if _line_exempt(passage, wide):
