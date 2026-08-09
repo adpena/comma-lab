@@ -81,3 +81,34 @@ Provenance pins (verify each; a pin that does not reproduce is a STOP):
 A retained, round-trip-verified ANS token payload with path + sha256 + exact bytes, and the
 range-arm byte-identity result. Say plainly which of the two byte-identity proofs you closed and
 which you could not.
+
+---
+
+## ERRATUM — MAIN, 2026-08-09 (the charter author correcting his own false pin)
+
+**The SMEVR selector pin in "Provenance pins" above is WRONG and is hereby WITHDRAWN.**
+
+I wrote that the receiver's coder dispatch (`absent → legacy`, `r7_smevr_v1 → SMEVR`, anything else
+→ REFUSED) "landed at `5de03569ad`". `ddm_ap1` checked at source and found **that selector does not
+exist at that commit.** The charter's own STOP rule — "a pin that does not reproduce is a STOP" —
+fired, and the arm was right to stop on it rather than proceed around it.
+
+**The mechanism of my error:** that three-case dispatch is real, but it belongs to OUR OWN-VEHICLE
+TR1 receiver (task #858, re-derived at source by `sv2` and pinned by a mutation-checked test). It is
+NOT the PR130-reproduction receiver at `5de03569ad`. I carried the detail across from working memory
+and attached it to the wrong object. This is the recall-before-decide law applied to charter
+authorship: **verify every pin at source before writing it into a charter**, because an arm that
+honours a false pin either stops (best case, what happened here) or builds on sand.
+
+**What survives unchanged:** everything AP1 actually measured. The retained payloads, both identity
+proofs, the constriction 0.5.0 pin, and the decode verification are independent of the false pin and
+stand on their own receipts.
+
+**Charter-completeness, stated honestly:** AP1 is NOT fully charter-complete. Beyond the withdrawn
+pin, its producer lacked the governed launcher, whole-job resumability, and direct canonical-helper
+reuse. The arm reported this instead of fabricating the receipts, which is the correct outcome —
+those legs remain OWED, not done.
+
+**Duplication note, also mine:** `ddm_dt1` necessarily encoded and retained an ANS payload in order
+to measure ANS decode time, so this charter overlapped work already in flight. I fired it without
+checking that. `dt1`'s retained pair is the cleaner source and is what `cx2` should consume.
