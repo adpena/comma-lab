@@ -1,0 +1,579 @@
+{
+  "schema": "ddm_op1r_measurements.v1",
+  "historical_measurements_recorded_at_utc": "2026-08-09T01:02:11Z",
+  "updated_at_utc": "2026-08-09T02:50:36.539595Z",
+  "historical_workspace_head_before_executable_receipt": "4bfba0560bf371e5d851ed72d2c7ddebdd311f0e",
+  "fresh_reproduction_workspace_head": "f2d649b3ff64c29a0e72a62a3b007fb60122782e",
+  "score_claim": false,
+  "pointer_moved": false,
+  "reproduction_config": {
+    "path": ".omx/research/ddm_op1r_20260809/OP1R_REPRODUCTION.json",
+    "sha256": "43fa12d89a2144c343ac025d6cdbf90dc6a72ffe55dd95a24b5eb29a9f3327e6",
+    "historical_original_argv": "UNDETERMINED",
+    "fresh_argv_authority": "OP1R_REPRODUCTION_RECEIPT.json",
+    "note": "Canonical hash-pinned config for fresh scorer-free reruns; it does not reconstruct the unrecovered historical one-off argv.",
+    "fresh_producer": {
+      "path": "tools/reproduce_ddm_op1r_measurements.py",
+      "sha256": "31d737b6c3ee495e9bbcef60ca75d99f414754543e50f59c5c9410d1e776e676",
+      "review_tracker_passes": [
+        {"reviewer": "op1r-primary", "pass": "op1r_primary_final", "entities": 32},
+        {"reviewer": "op1r-independent", "pass": "op1r_independent_final", "entities": 32}
+      ]
+    }
+  },
+  "storage_preflight": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_op1r_20260809/reproducer_state_v3/storage_preflight.json",
+    "bytes": 5717,
+    "sha256": "8b3115dba97f0e0cbe6f94921bf363ad839bf2f88880c2c02ccbd3018d055007",
+    "selected_tier": "vertigo",
+    "selected_workload_root": "/Volumes/VertigoDataTier/pact/ddm_op1r_20260809/reproducer_scratch",
+    "selected_workload_root_matches_expected": true,
+    "free_bytes_at_preflight": 89250656256,
+    "requested_bytes": 20971520,
+    "reserve_free_bytes": 10737418240,
+    "blockers": [],
+    "score_claim": false
+  },
+  "fresh_reproduction_receipt": {
+    "path": ".omx/research/ddm_op1r_20260809/OP1R_REPRODUCTION_RECEIPT.json",
+    "bytes": 113594,
+    "sha256": "852286a65d91cec811f7fd1c07d8e8ec7a46c0e42ee65a077e5df8bc67062af6",
+    "schema": "ddm_op1r_reproduction_receipt.v1",
+    "classification": "AGGREGATE_DETERMINISTIC_RERUN_WITH_VERIFIED_OR_RESUMED_STAGE_RECEIPTS",
+    "verdict": "PASS",
+    "started_at_utc": "2026-08-09T02:50:23.371647Z",
+    "completed_at_utc": "2026-08-09T02:50:36.539595Z",
+    "workspace_head": "f2d649b3ff64c29a0e72a62a3b007fb60122782e",
+    "producer_path": "tools/reproduce_ddm_op1r_measurements.py",
+    "producer_sha256": "31d737b6c3ee495e9bbcef60ca75d99f414754543e50f59c5c9410d1e776e676",
+    "config_path": ".omx/research/ddm_op1r_20260809/OP1R_REPRODUCTION.json",
+    "config_sha256": "43fa12d89a2144c343ac025d6cdbf90dc6a72ffe55dd95a24b5eb29a9f3327e6",
+    "argv": [
+      "/opt/homebrew/opt/python@3.14/bin/python3.14",
+      "tools/reproduce_ddm_op1r_measurements.py",
+      "--config",
+      ".omx/research/ddm_op1r_20260809/OP1R_REPRODUCTION.json",
+      "--section",
+      "all",
+      "--resume-from",
+      "/Volumes/VertigoDataTier/pact/ddm_op1r_20260809/reproducer_state_v3/state.json",
+      "--dependency-root",
+      "/Volumes/VertigoDataTier/pact/ddm_op1r_20260809/runtime_py314",
+      "--pycache-prefix",
+      "/Volumes/VertigoDataTier/pact/ddm_op1r_20260809/reproducer_pycache_v3",
+      "--hardware-label",
+      "MacBook Pro Mac17,6; Apple M5 Max; 18 cores; 128 GB",
+      "--output",
+      ".omx/research/ddm_op1r_20260809/OP1R_REPRODUCTION_RECEIPT.json"
+    ],
+    "runtime_summary": {
+      "hardware_label": "MacBook Pro Mac17,6; Apple M5 Max; 18 cores; 128 GB",
+      "platform": "macOS-26.4-arm64-arm-64bit-Mach-O",
+      "python": "3.14.6",
+      "python_build": ["main", "Jun 10 2026 10:03:53"],
+      "python_compiler": "Clang 21.0.0 (clang-2100.0.123.102)",
+      "numpy": "2.4.3",
+      "torch": "2.11.0",
+      "constriction": "0.4.2",
+      "xz": "5.8.3",
+      "liblzma": "5.8.3"
+    },
+    "score_claim": false,
+    "pointer_moved": false
+  },
+  "attempt_dispositions": [
+    {
+      "classification": "HISTORICAL_ONE_OFF_PRODUCERS_UNDETERMINED",
+      "promotable": false,
+      "reason": "The original python3-stdin argv and producer bytes were not recovered; their numeric rows are retained only where the executable rerun reproduced them."
+    },
+    {
+      "classification": "INVALID_OVERLAPPING_XZ_WRITERS_NONPROMOTABLE",
+      "path": "/Volumes/VertigoDataTier/pact/ddm_op1r_20260809/reproducer_state_invalid_overlap_20260809T0203Z",
+      "quarantined_receipt_path": "/Volumes/VertigoDataTier/pact/ddm_op1r_20260809/receipts_quarantine/OP1R_REPRODUCTION_RECEIPT_invalid_overlap_12f71aa9.json",
+      "quarantined_receipt_bytes": 38726,
+      "quarantined_receipt_sha256": "947966c0db354af5fbef7d4d3f172aa58533f3391b6df6385a59d72166ca6a77",
+      "promotable": false,
+      "reason": "Two writers overlapped on one cursor namespace; preserved for audit and excluded from every final measurement."
+    },
+    {
+      "classification": "RECEIVER_SOURCE_CLOSURE_INCOMPLETE_UNPINNED_PYC_NONPROMOTABLE",
+      "path": "/Volumes/VertigoDataTier/pact/ddm_op1r_20260809/reproducer_scratch_unpinned_pyc_20260809T0203Z",
+      "promotable": false,
+      "reason": "Existing pyc files could have supplied unpinned bytecode; preserved and superseded by an empty forced pycache prefix plus exact import-origin checks."
+    },
+    {
+      "classification": "VALID_SINGLE_WRITER_BUT_SUPERSEDED_RESUME_IDENTITY",
+      "path": "/Volumes/VertigoDataTier/pact/ddm_op1r_20260809/reproducer_state_v2_superseded_resume_identity_20260809T0223Z",
+      "xz_receipt_bytes": 17847,
+      "xz_receipt_sha256": "557fd1c9dff9e91fdbb6d1bcfe65e88d716ad09a36d5e60892f9630c3ddf9ed1",
+      "receiver_stage_receipts_path": "/Volumes/VertigoDataTier/pact/ddm_op1r_20260809/reproducer_scratch_v2_clean_source_receipts_20260809T0223Z",
+      "receiver_run_1_receipt_sha256": "c8190b89bdfed7099a46c1ce68e4da85077277de28efb06a46a6ee8757649144",
+      "receiver_run_2_receipt_sha256": "4e41d85fe4169616efb6d59d1aeddc7507a507baa83dc7f77e67a744cbd47251",
+      "promotable": false,
+      "reason": "The run was single-writer and numerically valid but its resume identity omitted exact runtime bits and its cursor lacked the final row-size ledger; preserved, not cited."
+    },
+    {
+      "classification": "PRE_FREEZE_TARGET_CACHE_PASS_NONAUTHORITY",
+      "path": "/Volumes/VertigoDataTier/pact/ddm_op1r_20260809/receipts_quarantine/target_cache_receipt_pre_freeze_4044b81b.json",
+      "bytes": 8986,
+      "sha256": "1d12d9a575e6a375c0be60d902ebfc70ac54e8ba52d4d5830f233340ea68d306",
+      "promotable": false,
+      "reason": "Passed before the producer/config freeze and is superseded by the consolidated receipt."
+    },
+    {
+      "classification": "FINAL_V3_GOVERNED_SCORER_FREE_RECEIPT",
+      "path": ".omx/research/ddm_op1r_20260809/OP1R_REPRODUCTION_RECEIPT.json",
+      "sha256": "852286a65d91cec811f7fd1c07d8e8ec7a46c0e42ee65a077e5df8bc67062af6",
+      "promotable": false,
+      "admissible_as_governed_evidence": true,
+      "admission_scope": "scorer-free cache content, first-pair TOY-BRACKET receiver, and configured two-grid XZ formulation only"
+    }
+  ],
+  "decision_arithmetic": {
+    "cpr1_bot_row": {
+      "classification": "MEASURED contest-CUDA components plus recomputed score",
+      "d_seg": 0.0002966,
+      "d_pose": 0.00002331,
+      "archive_bytes": 191052,
+      "seg_term": 0.02966,
+      "pose_term": 0.015267612779999365,
+      "rate_term": 0.1272136847118971,
+      "recomputed_score": 0.17214129749189644,
+      "source": ".omx/research/pr86_pr130_fullstack_intake_20260728.md:137-152"
+    },
+    "source_ada_row": {
+      "classification": "MEASURED external source archive, non-1:1",
+      "axis": "external RTX 2000 Ada; non-1:1 hardware; source archive",
+      "source": "/Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo/evidence/source_archive_official_ada_report.txt:11-17",
+      "d_seg": 0.00028609,
+      "d_pose": 0.00001967,
+      "archive_bytes": 194380,
+      "recomputed_score": 0.17206364102623004
+    },
+    "mixed_object_projection": {
+      "classification": "PROJECTED; never evaluated",
+      "d_seg_from_source_ada": 0.00028609,
+      "d_pose_from_source_ada": 0.00001967,
+      "archive_bytes_from_cpr1": 191052,
+      "projected_score": 0.16984766243023947
+    },
+    "fixed_cpr1_distortion_sub015_byte_target": {
+      "classification": "DERIVED from rounded CPR1 bot distortions",
+      "maximum_integer_archive_bytes_below_015": 157799,
+      "required_cut_bytes": 33253,
+      "required_cut_fraction_archive": 0.17405209053032683,
+      "required_cut_fraction_if_token_only": 0.2842622670541973,
+      "rate_score_per_byte": 6.658589531221714e-7,
+      "bytes_equivalent_per_1e_minus_6_dseg": 150.181956
+    },
+    "vehicle_comparison": {
+      "classification": "MEASURED isolated HPAC packages and cross-axis existence evidence; PROJECTED package-equivalent exchange arithmetic",
+      "pr130_dali_gt_hpac": {
+        "token_bytes": 116980,
+        "packed_model_bytes": 15164,
+        "total_bytes": 132144,
+        "d_seg_contest_cuda": 0.0002966
+      },
+      "tq1c_veh_hpac": {
+        "token_bytes": 97928,
+        "packed_model_bytes": 14116,
+        "total_bytes": 112044,
+        "d_seg_macos_cpu_advisory": 0.00430542
+      },
+      "gt_premium_bytes": 20100,
+      "gt_premium_bytes_scope": "isolated token plus separately packed HPAC model; not a measured full-archive delta because CPR1 jointly XZ-compresses renderer, carrier, and HPAC",
+      "projected_package_equivalent_rate_score": 0.013383764957755643,
+      "projected_package_equivalent_dseg_break_even": 0.00013383764957755644,
+      "full_archive_delta_measured": false,
+      "observed_cross_axis_dseg_gap": 0.00400882,
+      "decision": "GT_PRIMARY; VEH_PRIMARY_FOLDED; VEH_GT_HYBRID_BASE_FOLDED",
+      "boundary": "The d_seg values use different hardware axes and are an existence/routing comparison, not a predicted local score."
+    }
+  },
+  "measurements": {
+    "official_dali_vs_local_av_like_target_content_diff": {
+      "classification": "MEASURED",
+      "producer_config": "OP1R_REPRODUCTION.json#target_cache_comparison",
+      "fresh_rerun_provenance": {
+        "classification": "FRESH_DETERMINISTIC_RERUN",
+        "receipt_section": "OP1R_REPRODUCTION_RECEIPT.json#/sections/target_cache",
+        "measured_at_utc": "2026-08-09T02:50:23.785950Z",
+        "completed_at_utc": "2026-08-09T02:50:32.965935Z",
+        "workspace_head": "f2d649b3ff64c29a0e72a62a3b007fb60122782e",
+        "producer_path": "tools/reproduce_ddm_op1r_measurements.py",
+        "producer_sha256": "31d737b6c3ee495e9bbcef60ca75d99f414754543e50f59c5c9410d1e776e676",
+        "config_path": ".omx/research/ddm_op1r_20260809/OP1R_REPRODUCTION.json",
+        "config_sha256": "43fa12d89a2144c343ac025d6cdbf90dc6a72ffe55dd95a24b5eb29a9f3327e6",
+        "argv_authority": "OP1R_REPRODUCTION_RECEIPT.json#/argv",
+        "runtime_authority": "OP1R_REPRODUCTION_RECEIPT.json#/runtime",
+        "seed": "N/A_no_RNG",
+        "verdict": "PASS"
+      },
+      "axis": "n600 full-population preserved-cache cross-platform/pipeline content comparison; scorer-free; not same-host #906 isolation",
+      "selection": "all 600 pairs, no prefix or sampling",
+      "sites": 117964800,
+      "official_dali": {
+        "source_path": "/Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo/artifacts/caches/gt_cache_600_official_ada.pt.xz",
+        "compressed_bytes": 526820,
+        "compressed_sha256": "233884c672eff22258376cf9532bb69a52017980000a2615bbd917ba7a8ec3dc",
+        "uncompressed_bytes": 117981301,
+        "uncompressed_sha256": "382d7dfe38b37c0cc5017e5645032faa045af6924db66e0b67549cc96c840195",
+        "seg_shape": [600, 384, 512],
+        "seg_dtype": "uint8",
+        "seg_raw_sha256": "c5c7671d037b6912980c57929a5b6d789d250ee6a93e3b0a6018cf9f63e32ece"
+      },
+      "local_macos_cpu_av": {
+        "source_path": "/Volumes/VertigoDataTier/pact/ddm_ph1_lstars_u8.npy",
+        "file_bytes": 117964928,
+        "file_sha256": "b74a14b226a5aceb5824899898bcb06e5413c54b7db2441268da7bc91a10db5d",
+        "seg_shape": [600, 384, 512],
+        "seg_dtype": "uint8",
+        "seg_raw_sha256": "f2c8be94774780bda718adf337900403a8533b6ffa1352b5aae19e200a005557"
+      },
+      "m1_target_cache": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_hb1_20260806/inputs/gt_seg_cache.pt",
+        "file_bytes": 943720076,
+        "file_sha256": "286fe40a2a29aa6950684f43229fce3a4a284ac7ffc65040e7e18953b95787d4",
+        "stored_seg_dtype": "int64",
+        "seg_uint8_raw_sha256": "f2c8be94774780bda718adf337900403a8533b6ffa1352b5aae19e200a005557",
+        "content_identity": "local_macos_cpu_av"
+      },
+      "official_dali_vs_local_av_like": {
+        "mismatches": 20749,
+        "fraction": 0.0001758914523654514,
+        "pairs_with_any_mismatch": 600,
+        "per_pair_mismatches": {
+          "min": 15,
+          "q25": 27.75,
+          "median": 33.0,
+          "mean": 34.58166666666666,
+          "q75": 40.0,
+          "max": 103
+        },
+        "dali_boundary_definition": "four-neighbor endpoint union on the DALI label field",
+        "dali_boundary_sites": 2551446,
+        "mismatches_on_dali_boundary": 20504,
+        "mismatch_share_on_dali_boundary": 0.988192202033833,
+        "per_dali_class": [
+          {"class": 0, "sites": 27407369, "mismatches": 9467, "fraction": 0.00034541805161962096},
+          {"class": 1, "sites": 690874, "mismatches": 3023, "fraction": 0.004375616972125163},
+          {"class": 2, "sites": 58413418, "mismatches": 3957, "fraction": 0.00006774128505885411},
+          {"class": 3, "sites": 1460279, "mismatches": 1689, "fraction": 0.0011566282881558935},
+          {"class": 4, "sites": 29992860, "mismatches": 2613, "fraction": 0.0000871207347348669}
+        ]
+      },
+      "pr130_original_semantic_cache": {
+        "source_path": "/Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo/artifacts/caches/gt_cache_600.pt.xz",
+        "compressed_bytes": 527296,
+        "compressed_sha256": "67fa351ac728332b0e9b186706a6596f3f9b85e15303b55f007473fdec6d248f",
+        "uncompressed_bytes": 117981133,
+        "uncompressed_sha256": "8248a60da56119eb4b3ad76bfa32f5498dee849eaf4b83b304275064141fd828",
+        "seg_raw_sha256": "36c6be718916de9b0a62fec0c1229c94e38f84c3313a1fad1357c9a24eef8b68",
+        "mismatches_vs_official_dali": 20750,
+        "fraction_vs_official_dali": 0.00017589992947048612,
+        "mismatches_vs_local_macos_cpu_av": 1,
+        "fraction_vs_local_macos_cpu_av": 8.477105034722222e-09
+      },
+      "instrument": {
+        "loader": "Python lzma.decompress plus torch.load(weights_only=false), then contiguous uint8 tensors",
+        "comparison": "elementwise inequality over complete tensors",
+        "boundary_census": "four-neighbor endpoint union computed independently from the DALI tensor"
+      },
+      "boundary": "This measures official-Ada-DALI versus local-macOS-CPU-AV-like preserved target-label content. Platform and pipeline are not isolated, so it does not close same-host #906, identify the decode mechanism, measure pose drift, or provide a candidate CPU-to-CUDA score offset."
+    },
+    "official_dali_vs_pr130_original_av_like_pose_target_diff": {
+      "classification": "MEASURED",
+      "producer_config": "OP1R_REPRODUCTION.json#target_cache_comparison",
+      "fresh_rerun_provenance": {
+        "classification": "FRESH_DETERMINISTIC_RERUN",
+        "receipt_section": "OP1R_REPRODUCTION_RECEIPT.json#/sections/target_cache",
+        "measured_at_utc": "2026-08-09T02:50:23.785950Z",
+        "completed_at_utc": "2026-08-09T02:50:32.965935Z",
+        "workspace_head": "f2d649b3ff64c29a0e72a62a3b007fb60122782e",
+        "producer_path": "tools/reproduce_ddm_op1r_measurements.py",
+        "producer_sha256": "31d737b6c3ee495e9bbcef60ca75d99f414754543e50f59c5c9410d1e776e676",
+        "config_path": ".omx/research/ddm_op1r_20260809/OP1R_REPRODUCTION.json",
+        "config_sha256": "43fa12d89a2144c343ac025d6cdbf90dc6a72ffe55dd95a24b5eb29a9f3327e6",
+        "argv_authority": "OP1R_REPRODUCTION_RECEIPT.json#/argv",
+        "runtime_authority": "OP1R_REPRODUCTION_RECEIPT.json#/runtime",
+        "seed": "N/A_no_RNG",
+        "verdict": "PASS"
+      },
+      "axis": "n600 full-population preserved-cache cross-platform/pipeline target comparison; scorer-free; not same-host #906 isolation",
+      "selection": "all 600 pairs and all six stored PoseNet target coordinates, no prefix or sampling",
+      "official_dali": {
+        "source_path": "/Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo/artifacts/caches/gt_cache_600_official_ada.pt.xz",
+        "shape": [600, 6],
+        "dtype": "float32",
+        "raw_sha256": "23ae28d20aee8697d87e015c1145b248c111bc3ce61b9b66793e770d65522b2a"
+      },
+      "pr130_original_av_like": {
+        "source_path": "/Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo/artifacts/caches/gt_cache_600.pt.xz",
+        "shape": [600, 6],
+        "dtype": "float32",
+        "raw_sha256": "6133af44619b5b7dcc33cc21a801a9599051e1b7192886d6d96525617877f344"
+      },
+      "comparison": {
+        "elements": 3600,
+        "exact_unequal_elements": 3600,
+        "pairs_with_any_difference": 600,
+        "mse": 0.00014004340079290477,
+        "mae": 0.003892889264971018,
+        "max_abs": 0.09792327880859375,
+        "per_pair_mse": {
+          "min": 5.818575140222511e-9,
+          "q25": 0.000011038769063555567,
+          "median": 0.00005308946854353999,
+          "mean": 0.00014004340079290477,
+          "q75": 0.00016544319400206274,
+          "max": 0.0015984075255721097
+        }
+      },
+      "derived_root_pose_term_separation_scale": 0.03742237309323191,
+      "derived_ratio_to_cpr1_bot_pose_term": 2.451095245371652,
+      "instrument": "Python lzma.decompress plus torch.load(weights_only=false), contiguous float32 pose tensors promoted to float64 for subtraction and reduction",
+      "boundary": "This is cross-platform/pipeline target-to-target separation, not same-host #906 isolation, a candidate d_pose delta, or recoverable score. The nonlinear root term makes candidate impact depend on the candidate residual direction."
+    },
+    "pr130_cpu_first_pair_toy_bracket": {
+      "classification": "MEASURED TOY-BRACKET",
+      "producer_config": "OP1R_REPRODUCTION.json#cpu_first_pair_receiver",
+      "fresh_rerun_provenance": {
+        "classification": "VERIFIED_PRESERVED_FRESH_STAGE_RECEIPTS",
+        "receipt_section": "OP1R_REPRODUCTION_RECEIPT.json#/sections/receiver",
+        "cold_aggregate_receipt_path": "/Volumes/VertigoDataTier/pact/ddm_op1r_20260809/reproducer_state_v3/receiver_receipt.json",
+        "cold_aggregate_receipt_bytes": 25636,
+        "cold_aggregate_receipt_sha256": "586be8c467e9a03a0add3dcf3687230294adba95076595664e6ebac1d57cb363",
+        "measured_at_utc": "2026-08-09T02:37:20.406948Z",
+        "completed_at_utc": "2026-08-09T02:37:36.341811Z",
+        "aggregate_verified_at_utc": "2026-08-09T02:50:35.905951Z",
+        "workspace_head": "f2d649b3ff64c29a0e72a62a3b007fb60122782e",
+        "producer_path": "tools/reproduce_ddm_op1r_measurements.py",
+        "producer_sha256": "31d737b6c3ee495e9bbcef60ca75d99f414754543e50f59c5c9410d1e776e676",
+        "config_path": ".omx/research/ddm_op1r_20260809/OP1R_REPRODUCTION.json",
+        "config_sha256": "43fa12d89a2144c343ac025d6cdbf90dc6a72ffe55dd95a24b5eb29a9f3327e6",
+        "aggregate_argv_authority": "OP1R_REPRODUCTION_RECEIPT.json#/argv",
+        "worker_argv_authority": "OP1R_REPRODUCTION_RECEIPT.json#/sections/receiver/subprocess_argvs",
+        "runtime_authority": "OP1R_REPRODUCTION_RECEIPT.json#/runtime",
+        "seed": 0,
+        "repeat_equal": true,
+        "verdict": "PASS"
+      },
+      "axis": "macOS-CPU advisory, scorer-free",
+      "mechanism_reduction": true,
+      "family_verdict_capable": false,
+      "full_match_capable": false,
+      "score_claim": false,
+      "source_repo_head": "e34f31bc4969042c0051ac81aa3c56884419a231",
+      "inflate_py_sha256": "335369c9b3b295707f1790feb0b5b7ae288338fae350056cc4bb03aaa18f0c9e",
+      "archive": {
+        "path": "/Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/releases/cpr1/archive.zip",
+        "bytes": 191052,
+        "sha256": "0491d5df84fc70b62b3f7ccf8894f5e1b81c616de46a052e4423fc1e18fdc7cd",
+        "member_path": "/Volumes/VertigoDataTier/pact/ddm_op1r_20260809/match_cpu_n1_v1/data/p",
+        "member_bytes": 190952,
+        "member_sha256": "fcc6a3c242106350077d3c328a2c07c8994c86d19b1a361f8507917de6ba3d84"
+      },
+      "runtime": {
+        "python": "3.14.6",
+        "torch": "2.11.0",
+        "constriction": "0.4.2",
+        "device": "cpu",
+        "threads": 4,
+        "pythonhashseed": 0,
+        "torch_deterministic_algorithms": true
+      },
+      "procedure": "Import the pinned source inflate.py; unpack the full N=600 model/carrier bundle; load the full 600-frame HPAC model; only then set module.N=1; decode the first real arithmetic-coded label field; render its real pose and semantic frames through the source functions.",
+      "historical_one_off_run_1": {
+        "producer_argv": "UNDETERMINED",
+        "elapsed_seconds": 2.7530899047851562,
+        "token_shape": [1, 384, 512],
+        "token_sha256": "8f6f0d8679c5701967a782cb4bc53f057d02c0498c570fa537c40fe31ad41789",
+        "output_path": "/Volumes/VertigoDataTier/pact/ddm_op1r_20260809/match_cpu_n1_v1/pr130_cpu_first_pair.raw",
+        "output_bytes": 6104016,
+        "output_sha256": "88ecb9180a8555f33799446d705590245044606703b7fb78c340eb2af9bc8609"
+      },
+      "historical_one_off_run_2": {
+        "producer_argv": "UNDETERMINED",
+        "elapsed_seconds": 2.442988872528076,
+        "token_shape": [1, 384, 512],
+        "token_sha256": "8f6f0d8679c5701967a782cb4bc53f057d02c0498c570fa537c40fe31ad41789",
+        "output_path": "/Volumes/VertigoDataTier/pact/ddm_op1r_20260809/match_cpu_n1_v1/pr130_cpu_first_pair_repeat.raw",
+        "output_bytes": 6104016,
+        "output_sha256": "88ecb9180a8555f33799446d705590245044606703b7fb78c340eb2af9bc8609"
+      },
+      "fresh_governed_repeat": {
+        "run_1": {
+          "measured_at_utc": "2026-08-09T02:37:20.406948Z",
+          "completed_at_utc": "2026-08-09T02:37:28.533334Z",
+          "decode_render_elapsed_seconds": 5.3620526250160765,
+          "token_shape": [1, 384, 512],
+          "token_sha256": "8f6f0d8679c5701967a782cb4bc53f057d02c0498c570fa537c40fe31ad41789",
+          "output_bytes": 6104016,
+          "output_sha256": "88ecb9180a8555f33799446d705590245044606703b7fb78c340eb2af9bc8609",
+          "worker_receipt_path": "/Volumes/VertigoDataTier/pact/ddm_op1r_20260809/reproducer_scratch/receiver_run_1.json",
+          "worker_receipt_bytes": 5682,
+          "worker_receipt_sha256": "0b316eadfaa2697df289592956fc2d3cf2bb543085c16ef9b7058636950c5149"
+        },
+        "run_2": {
+          "measured_at_utc": "2026-08-09T02:37:28.989567Z",
+          "completed_at_utc": "2026-08-09T02:37:36.341811Z",
+          "decode_render_elapsed_seconds": 4.869718791014748,
+          "token_shape": [1, 384, 512],
+          "token_sha256": "8f6f0d8679c5701967a782cb4bc53f057d02c0498c570fa537c40fe31ad41789",
+          "output_bytes": 6104016,
+          "output_sha256": "88ecb9180a8555f33799446d705590245044606703b7fb78c340eb2af9bc8609",
+          "worker_receipt_path": "/Volumes/VertigoDataTier/pact/ddm_op1r_20260809/reproducer_scratch/receiver_run_2.json",
+          "worker_receipt_bytes": 5681,
+          "worker_receipt_sha256": "38c959f3da7d3c12e301bc24b30c1c7d0a4539728053f1d2a178cf2eda08b39a"
+        },
+        "repeat_equal": true,
+        "source_repo_clean": true,
+        "pycache_prefix_empty": true,
+        "raw_cleanup": "PASS; both deterministic 6,104,016-byte scratch raws were hashed and success-deleted after preserving their worker receipts"
+      },
+      "repeat_cmp_equal": true,
+      "full_cpu_match_blocker": "The shipped RangeDecoder state has no persisted seek checkpoints. Historical full token decode alone is 2197.6 seconds; an ad-hoc full run would violate the P0 resumability rule before the unmeasured CPU render and 3.662 GB raw output.",
+      "cleanup": {
+        "action": "preserve",
+        "rebuildable": true,
+        "reason": "Both small raw outputs are deterministic proof artifacts; no bytes were deleted or moved.",
+        "cold_store_root": "/Volumes/VertigoDataTier/pact/ddm_op1r_20260809"
+      }
+    },
+    "cpr1_same_object_xz_filter_race": {
+      "classification": "MEASURED byte-only plus DERIVED same-state rate delta",
+      "producer_config": "OP1R_REPRODUCTION.json#xz_filter_race",
+      "fresh_rerun_provenance": {
+        "classification": "VERIFIED_PRESERVED_FRESH_STAGE_RECEIPTS",
+        "receipt_section": "OP1R_REPRODUCTION_RECEIPT.json#/sections/xz",
+        "cold_aggregate_receipt_path": "/Volumes/VertigoDataTier/pact/ddm_op1r_20260809/reproducer_state_v3/xz_receipt.json",
+        "cold_aggregate_receipt_bytes": 81308,
+        "cold_aggregate_receipt_sha256": "f443e2b01683076d5d8d0d63b88a0e3fad37c3035815f3269f44deef77c6834c",
+        "measured_at_utc": "2026-08-09T02:37:52.012636Z",
+        "completed_at_utc": "2026-08-09T02:49:50.562028Z",
+        "aggregate_verified_at_utc": "2026-08-09T02:50:36.517189Z",
+        "workspace_head": "f2d649b3ff64c29a0e72a62a3b007fb60122782e",
+        "producer_path": "tools/reproduce_ddm_op1r_measurements.py",
+        "producer_sha256": "31d737b6c3ee495e9bbcef60ca75d99f414754543e50f59c5c9410d1e776e676",
+        "config_path": ".omx/research/ddm_op1r_20260809/OP1R_REPRODUCTION.json",
+        "config_sha256": "43fa12d89a2144c343ac025d6cdbf90dc6a72ffe55dd95a24b5eb29a9f3327e6",
+        "aggregate_argv_authority": "OP1R_REPRODUCTION_RECEIPT.json#/argv",
+        "cold_stage_argv_authority": "OP1R_REPRODUCTION_RECEIPT.json#/sections/xz/grid_1/launch_history/0/argv and #/sections/xz/grid_2/launch_history/0/argv",
+        "runtime_authority": "OP1R_REPRODUCTION_RECEIPT.json#/sections/xz/runtime_validation",
+        "runtime_fingerprint_sha256": "1741b621864851ec4460e95b93011963cb7cfa861e791d0cbff2f8fe7c151572",
+        "seed": "N/A_no_RNG",
+        "verdict": "PASS"
+      },
+      "axis": "PR130 CPR1 exact model bundle, scorer-free",
+      "source_archive_bytes": 191052,
+      "source_archive_sha256": "0491d5df84fc70b62b3f7ccf8894f5e1b81c616de46a052e4423fc1e18fdc7cd",
+      "raw_models_bytes": 83493,
+      "raw_models_sha256": "62dd72dfa0858a25ca32bdee1e536627a17883b6fc7efd7cd5b2de7b13b84517",
+      "incumbent_compressed_models_bytes": 73968,
+      "incumbent_compressed_models_sha256": "d33d9b083d8ade8a3ab45b79a691ce2eb041e9bb03fed831c263a0eb3847710a",
+      "grid_1": {
+        "rows": 675,
+        "fresh_valid_roundtrips": 675,
+        "varied": "dict_size 2^12..2^20; all lc/lp pairs with lc+lp<=4; pb 0..4; normal mode, nice_len 273, bt4, depth 0",
+        "historical_one_off_elapsed_seconds": 4.548701047897339,
+        "historical_one_off_timing_provenance": "UNDETERMINED producer/argv; retained only as compression-loop timing",
+        "fresh_governed_elapsed_seconds": 256.33123937499477,
+        "fresh_governed_timing_scope": "single-writer cold run including per-row decode, row-ledger digest, atomic cursor write, fsync, and stage receipt",
+        "best_bytes": 73968,
+        "best_tie_count": 9,
+        "row_sizes_sha256": "aea1b9fc2872bbc230218faca1147eda5be19c6f66e0a41a3d75d3105a097afd",
+        "stage_receipt": {
+          "path": "/Volumes/VertigoDataTier/pact/ddm_op1r_20260809/reproducer_state_v3/state.grid_1_complete.json",
+          "bytes": 10691,
+          "sha256": "a150805f2f932546324d68f1542096c2318d49a2b096f22025d6f1fccee0f4ea",
+          "schema": "ddm_op1r_xz_stage_receipt.v2",
+          "resumed_from_row": 0,
+          "verdict": "PASS"
+        },
+        "delta_vs_incumbent": 0
+      },
+      "grid_2": {
+        "rows": 2700,
+        "fresh_valid_roundtrips": 2700,
+        "varied": "dict_size in {2^12,2^16,2^20}; fast/normal; hc3/hc4/bt2/bt3/bt4; ten nice_len values 8..273; nine depth values 0..512; fixed lc0/lp1/pb0",
+        "historical_one_off_elapsed_seconds": 18.35917091369629,
+        "historical_one_off_timing_provenance": "UNDETERMINED producer/argv; retained only as compression-loop timing",
+        "fresh_governed_elapsed_seconds": 460.5985558749817,
+        "fresh_governed_timing_scope": "single-writer cold run including per-row decode, row-ledger digest, atomic cursor write, fsync, and stage receipt",
+        "historical_selected_filter": {
+          "dict_size": 4096,
+          "lc": 0,
+          "lp": 1,
+          "pb": 0,
+          "mode": "normal",
+          "nice_len": 192,
+          "mf": "bt2",
+          "depth": 0
+        },
+        "fresh_canonical_equal-stream_filter": {
+          "dict_size": 4096,
+          "lc": 0,
+          "lp": 1,
+          "pb": 0,
+          "mode": "normal",
+          "nice_len": 160,
+          "mf": "bt2",
+          "depth": 0
+        },
+        "best_compressed_models_bytes": 73960,
+        "best_compressed_models_sha256": "a94b326a2d2a0e8a9bd8e835757dd400cc45fae0332f0c80767d3945665106d9",
+        "best_tie_count": 32,
+        "row_sizes_sha256": "a293406be80e5e1acc7f63c1bdc89e816ca6a877e9ad90529b89ad17726a656d",
+        "stage_receipt": {
+          "path": "/Volumes/VertigoDataTier/pact/ddm_op1r_20260809/reproducer_state_v3/state.grid_2_complete.json",
+          "bytes": 36811,
+          "sha256": "a1e68119b44aa010b93600991ca610af42a11eb454da6a01800f91d07aa00b6f",
+          "schema": "ddm_op1r_xz_stage_receipt.v2",
+          "resumed_from_row": 0,
+          "verdict": "PASS"
+        },
+        "delta_vs_incumbent": -8
+      },
+      "candidate_archive": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_op1r_20260809/rate_race/cpr1_xz_bt2_d12lc0lp1pb0_n192.zip",
+        "bytes": 191044,
+        "sha256": "dc302953ff1e7f6d09210fff80cf6981cd7a36fafbf4299770bff61abdc462bd",
+        "payload_bytes": 190944,
+        "payload_sha256": "6fe48d0cf9b26c6324c8096e6088e3af366c4f66625ae38365d877666f13ab83",
+        "token_bytes": 116980,
+        "token_sha256": "948379872ff81a4e5d948ec301c143be00ebd0033544c8abdfb4af0f4c4a15eb",
+        "raw_models_parseback_equal": true,
+        "tokens_parseback_equal": true,
+        "delta_archive_bytes": -8,
+        "derived_delta_s_rate": -0.000005326871624977371,
+        "derived_score_at_cpr1_bot_rounded_distortions": 0.17213597062027147,
+        "exact_evaluator_run": false
+      },
+      "first_pair_receiver_control": {
+        "classification": "DERIVED TOY-BRACKET from exact candidate parse-back plus fresh governed source-receiver evidence; historical candidate output agrees",
+        "historical_output_path": "/Volumes/VertigoDataTier/pact/ddm_op1r_20260809/rate_race/n1/cpr1_xz_first_pair.raw",
+        "output_bytes": 6104016,
+        "output_sha256": "88ecb9180a8555f33799446d705590245044606703b7fb78c340eb2af9bc8609",
+        "token_sha256": "8f6f0d8679c5701967a782cb4bc53f057d02c0498c570fa537c40fe31ad41789",
+        "equal_to_source_cpr1_first_pair": true,
+        "historical_original_producer": "UNDETERMINED",
+        "historical_original_argv": "UNDETERMINED"
+      },
+      "verdict": "FOLD the configured two-grid single-LZMA2 parameter search on this exact CPR1 raw bundle: the bounded race found only 8 bytes. Keep the candidate as a lossless floor and rerun after state changes.",
+      "verdict_scope": "FORMULATION: configured two-grid single-LZMA2 parameter search on this exact CPR1 raw bundle; broader lossless/filter-chain family remains open; rerace after renderer/model state changes.",
+      "boundary": "The 8-byte rate improvement is exact from archive length and byte-identical decompressed state. No new exact evaluator row or own-frontier claim is made."
+    }
+  },
+  "durable_assets": {
+    "official_dali_cache_materialization": {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_op1r_20260809/authority_cache/gt_cache_600_official_ada.pt",
+      "bytes": 117981301,
+      "sha256": "382d7dfe38b37c0cc5017e5645032faa045af6924db66e0b67549cc96c840195",
+      "source_path": "/Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo/artifacts/caches/gt_cache_600_official_ada.pt.xz",
+      "source_sha256": "233884c672eff22258376cf9532bb69a52017980000a2615bbd917ba7a8ec3dc",
+      "materialization": "hash-checked lzma decompression, fsync, atomic rename",
+      "rebuildable": true
+    }
+  }
+}

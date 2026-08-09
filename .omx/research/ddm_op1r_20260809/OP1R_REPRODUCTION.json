@@ -1,0 +1,232 @@
+{
+  "schema": "ddm_op1r_reproduction_config.v1",
+  "recorded_at_utc": "2026-08-09T01:35:35Z",
+  "timestamp_semantics": "Current-clock reconstruction-config time; the original one-off command timestamps and argv are UNDETERMINED.",
+  "purpose": "Hash-pinned canonical reconstruction config for fresh scorer-free reruns. Original producers were one-off Python stdin commands with unrecovered argv; this config drives the checked-in executable producer and does not claim to be their historical receipt.",
+  "common_runtime": {
+    "platform": "macOS-26.4-arm64-arm-64bit-Mach-O",
+    "historical_original_argv": "UNDETERMINED",
+    "fresh_argv_authority": "OP1R_REPRODUCTION_RECEIPT.json",
+    "python": "3.14.6",
+    "python_build": ["main", "Jun 10 2026 10:03:53"],
+    "python_compiler": "Clang 21.0.0 (clang-2100.0.123.102)",
+    "torch": "2.11.0",
+    "numpy": "2.4.3"
+  },
+  "target_cache_comparison": {
+    "producer_kind": "historical_one_off_producer_UNDETERMINED; canonical_executable_rerun=tools/reproduce_ddm_op1r_measurements.py",
+    "inputs": {
+      "official_dali_xz": {
+        "path": "/Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo/artifacts/caches/gt_cache_600_official_ada.pt.xz",
+        "bytes": 526820,
+        "sha256": "233884c672eff22258376cf9532bb69a52017980000a2615bbd917ba7a8ec3dc"
+      },
+      "pr130_original_av_like_xz": {
+        "path": "/Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo/artifacts/caches/gt_cache_600.pt.xz",
+        "bytes": 527296,
+        "sha256": "67fa351ac728332b0e9b186706a6596f3f9b85e15303b55f007473fdec6d248f"
+      },
+      "local_macos_cpu_av_npy": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_ph1_lstars_u8.npy",
+        "bytes": 117964928,
+        "sha256": "b74a14b226a5aceb5824899898bcb06e5413c54b7db2441268da7bc91a10db5d"
+      },
+      "m1_target_cache": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_hb1_20260806/inputs/gt_seg_cache.pt",
+        "bytes": 943720076,
+        "sha256": "286fe40a2a29aa6950684f43229fce3a4a284ac7ffc65040e7e18953b95787d4"
+      }
+    },
+    "load_contract": [
+      "Read each XZ file as bytes and call lzma.decompress once.",
+      "Call torch.load(io.BytesIO(raw), map_location='cpu', weights_only=False).",
+      "For segmentation, select key 'seg', convert to contiguous uint8, and compare all 600*384*512 sites by exact inequality.",
+      "Load the local NPY with numpy.load and require shape [600,384,512] and uint8.",
+      "Load the M1 target key 'seg', convert the stored int64 tensor to contiguous uint8, hash it, and release it before loading another large tensor.",
+      "For pose, select key 'pose', require shape [600,6] and float32, promote both arrays to float64 for subtraction and reductions."
+    ],
+    "segmentation_boundary_contract": {
+      "definition": "four-neighbor class-transition endpoint union on the official DALI label tensor",
+      "horizontal": "For every unequal adjacent x pair, mark both endpoints.",
+      "vertical": "For every unequal adjacent y pair, mark both endpoints.",
+      "mismatch_on_boundary": "Count official-DALI versus local-macOS-AV unequal sites whose official-DALI boundary mask is true."
+    },
+    "pose_reduction_contract": {
+      "element_mse": "mean((official_dali_float64 - pr130_original_av_like_float64)**2) over all 3600 coordinates",
+      "element_mae": "mean(abs(delta)) over all 3600 coordinates",
+      "per_pair_mse": "mean(delta**2, axis=1), then min/q25/median/mean/q75/max",
+      "root_pose_term_separation_scale": "sqrt(10 * element_mse)"
+    },
+    "expected": {
+      "official_dali_seg_raw_sha256": "c5c7671d037b6912980c57929a5b6d789d250ee6a93e3b0a6018cf9f63e32ece",
+      "local_macos_cpu_av_seg_raw_sha256": "f2c8be94774780bda718adf337900403a8533b6ffa1352b5aae19e200a005557",
+      "pr130_original_seg_raw_sha256": "36c6be718916de9b0a62fec0c1229c94e38f84c3313a1fad1357c9a24eef8b68",
+      "m1_seg_uint8_raw_sha256": "f2c8be94774780bda718adf337900403a8533b6ffa1352b5aae19e200a005557",
+      "seg_mismatches": 20749,
+      "seg_pairs_with_any_mismatch": 600,
+      "seg_boundary_sites": 2551446,
+      "seg_mismatches_on_boundary": 20504,
+      "pr130_original_mismatches_vs_dali": 20750,
+      "pr130_original_mismatches_vs_local_av": 1,
+      "official_dali_pose_raw_sha256": "23ae28d20aee8697d87e015c1145b248c111bc3ce61b9b66793e770d65522b2a",
+      "pr130_original_av_like_pose_raw_sha256": "6133af44619b5b7dcc33cc21a801a9599051e1b7192886d6d96525617877f344",
+      "pose_exact_unequal_elements": 3600,
+      "pose_pairs_with_any_difference": 600,
+      "pose_target_mse": 0.00014004340079290477,
+      "pose_target_mae": 0.003892889264971018,
+      "pose_target_max_abs": 0.09792327880859375
+    },
+    "scope_boundary": "Cross-platform/pipeline preserved-cache content comparison only; not the same-host AV/DALI #906 isolation."
+  },
+  "cpu_first_pair_receiver": {
+    "producer_kind": "historical_one_off_producer_UNDETERMINED; canonical_executable_rerun=tools/reproduce_ddm_op1r_measurements.py",
+    "runtime": {
+      "python": "3.14.6",
+      "torch": "2.11.0",
+      "numpy": "2.4.3",
+      "constriction": "0.4.2",
+      "dependency_root": "/Volumes/VertigoDataTier/pact/ddm_op1r_20260809/runtime_py314",
+      "pycache_prefix": "/Volumes/VertigoDataTier/pact/ddm_op1r_20260809/reproducer_pycache_v3",
+      "dependency_files": {
+        "constriction/__init__.py": "97e2fcf2a28e499a3dc9e2829e412d66e3f7bee2e7df78d56cba1af979079a99",
+        "constriction/constriction.cpython-314-darwin.so": "f6ab0905977e77f7a74e9d668da47fac9d42ec81e5411acb69bfa756c2da6e2b",
+        "constriction-0.4.2.dist-info/METADATA": "3f3a3e6c76e2e6cc367de49bbe3254dc0f855fd88a49586b3b5cfad0fe1cdd0b"
+      },
+      "device": "cpu",
+      "torch_threads": 4,
+      "pythonhashseed": 0,
+      "python_dont_write_bytecode": true,
+      "torch_manual_seed_for_fully_overwritten_constructor_state": 0,
+      "torch_deterministic_algorithms": true
+    },
+    "source": {
+      "repo_head": "e34f31bc4969042c0051ac81aa3c56884419a231",
+      "inflate_py_path": "/Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo/code/inflate.py",
+      "inflate_py_sha256": "335369c9b3b295707f1790feb0b5b7ae288338fae350056cc4bb03aaa18f0c9e",
+      "carrier_codec_sha256": "d2f14402374b4e622b7f981d736389fb04f0ca0165180e4c75f3a32ffe996bed",
+      "hpac_integer_sha256": "6e6b4f4d0b293fb60cc1b751958756a4cd6c2ce7bcff68c6f03e20277856803f",
+      "hpac_integer_sparse_sha256": "2240ee32c53fe949b560d316d349e0bbdccc0ceb78787307cd4d530623d42a0c",
+      "integer_model_io_sha256": "6f91c91ed4785d203aa3570af362fbe9c6a64bb2249599f8554adb31174b80a5"
+    },
+    "archive": {
+      "path": "/Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/releases/cpr1/archive.zip",
+      "bytes": 191052,
+      "sha256": "0491d5df84fc70b62b3f7ccf8894f5e1b81c616de46a052e4423fc1e18fdc7cd"
+    },
+    "procedure": [
+      "Set PYTHONHASHSEED=0, torch.set_num_threads(4), and torch.use_deterministic_algorithms(True).",
+      "Import the pinned source inflate module without editing its checkout.",
+      "Read ZIP member p; parse u32le compressed-model length; LZMA-decompress and unpack the complete n600 semantic model, carrier basis/coefficients, and HPAC model exactly as inflate.main does.",
+      "After all complete models are loaded, set only source module N to 1.",
+      "Call source decode_tokens on the unchanged arithmetic stream and CPU device; require shape [1,384,512].",
+      "Call source render_video with the real first token, semantic model, basis, and coefficient row to an SSD raw path.",
+      "Repeat in a fresh process/state and require byte-identical token and raw hashes."
+    ],
+    "expected": {
+      "token_shape": [1, 384, 512],
+      "token_sha256": "8f6f0d8679c5701967a782cb4bc53f057d02c0498c570fa537c40fe31ad41789",
+      "output_bytes": 6104016,
+      "output_sha256": "88ecb9180a8555f33799446d705590245044606703b7fb78c340eb2af9bc8609",
+      "repeat_equal": true
+    },
+    "scope_boundary": "Real first-pair TOY-BRACKET only; cannot support full MATCH, score, timing extrapolation, or family verdict."
+  },
+  "xz_filter_race": {
+    "producer_kind": "historical_one_off_producer_UNDETERMINED; canonical_executable_rerun=tools/reproduce_ddm_op1r_measurements.py",
+    "runtime": {
+      "python": "3.14.6",
+      "python_build": ["main", "Jun 10 2026 10:03:53"],
+      "python_compiler": "Clang 21.0.0 (clang-2100.0.123.102)",
+      "python_executable": "/opt/homebrew/opt/python@3.14/bin/python3.14",
+      "python_executable_resolved": "/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/bin/python3.14",
+      "python_executable_sha256": "b502cb4c5b46b8d4192ec6bcb600ce8922f1afc396fcf646e8765c6eba74a0bf",
+      "python_lzma_module": "/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/lzma.py",
+      "python_lzma_module_sha256": "b01a78a04c6a9ba6c645758cace78ed53a53871ea3ff88744e23f6263613d507",
+      "_lzma_extension": "/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/lib-dynload/_lzma.cpython-314-darwin.so",
+      "_lzma_extension_sha256": "90f3612615d66f3cc7ebced3851f2c24ed91a142ddb5428b1ad9253d2a7fbb19",
+      "linked_liblzma": "/opt/homebrew/Cellar/xz/5.8.3/lib/liblzma.5.dylib",
+      "linked_liblzma_sha256": "3d5bfa2f097c31463642b1daab5e662b44368bb4da368f85e412e7f9adcbaa10",
+      "linked_liblzma_otool_line": "/opt/homebrew/opt/xz/lib/liblzma.5.dylib (compatibility version 14.0.0, current version 14.3.0)",
+      "xz_utils": "5.8.3",
+      "liblzma": "5.8.3"
+    },
+    "input": {
+      "archive_path": "/Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/releases/cpr1/archive.zip",
+      "archive_sha256": "0491d5df84fc70b62b3f7ccf8894f5e1b81c616de46a052e4423fc1e18fdc7cd",
+      "member": "p",
+      "raw_model_bundle_bytes": 83493,
+      "raw_model_bundle_sha256": "62dd72dfa0858a25ca32bdee1e536627a17883b6fc7efd7cd5b2de7b13b84517"
+    },
+    "extraction": "Read member p; parse the first four bytes as little-endian compressed-model length; lzma.decompress that slice; preserve all trailing token bytes exactly.",
+    "grid_1": {
+      "dict_sizes": [4096, 8192, 16384, 32768, 65536, 131072, 262144, 524288, 1048576],
+      "lc_lp": "all nonnegative integer pairs with lc+lp<=4",
+      "pb": [0, 1, 2, 3, 4],
+      "mode": "normal",
+      "nice_len": 273,
+      "mf": "bt4",
+      "depth": 0,
+      "valid_rows": 675
+    },
+    "grid_2_canonical_rerun": {
+      "dict_sizes": [4096, 65536, 1048576],
+      "lc": 0,
+      "lp": 1,
+      "pb": 0,
+      "modes": ["fast", "normal"],
+      "match_finders": ["hc3", "hc4", "bt2", "bt3", "bt4"],
+      "nice_len": [8, 16, 32, 64, 96, 128, 160, 192, 224, 273],
+      "depth": [0, 4, 8, 16, 32, 64, 128, 256, 512],
+      "valid_rows": 2700,
+      "canonical_rerun_best_filter": {
+        "dict_size": 4096,
+        "lc": 0,
+        "lp": 1,
+        "pb": 0,
+        "mode": "normal",
+        "nice_len": 160,
+        "mf": "bt2",
+        "depth": 0
+      },
+      "note": "The originally selected nice_len=192 and canonical-rerun nice_len=160 produce the identical 73,960-byte XZ stream SHA below."
+    },
+    "candidate_filter": {
+      "id": "LZMA2",
+      "dict_size": 4096,
+      "lc": 0,
+      "lp": 1,
+      "pb": 0,
+      "mode": "normal",
+      "nice_len": 192,
+      "mf": "bt2",
+      "depth": 0
+    },
+    "candidate_xz": {
+      "bytes": 73960,
+      "sha256": "a94b326a2d2a0e8a9bd8e835757dd400cc45fae0332f0c80767d3945665106d9",
+      "raw_parseback_sha256": "62dd72dfa0858a25ca32bdee1e536627a17883b6fc7efd7cd5b2de7b13b84517"
+    },
+    "zip_rebuild": {
+      "member": "p",
+      "payload": "u32le(candidate_xz_bytes) || candidate_xz || original_tokens",
+      "compression": "ZIP_STORED",
+      "dos_timestamp": "1980-01-01T00:00:00",
+      "create_system": "Unix",
+      "unix_mode": "100644",
+      "extra_field_bytes": 0,
+      "archive_comment_bytes": 0
+    },
+    "expected": {
+      "grid_1_best_bytes": 73968,
+      "grid_2_best_bytes": 73960,
+      "canonical_grid_2_xz_sha256": "a94b326a2d2a0e8a9bd8e835757dd400cc45fae0332f0c80767d3945665106d9",
+      "candidate_archive_path": "/Volumes/VertigoDataTier/pact/ddm_op1r_20260809/rate_race/cpr1_xz_bt2_d12lc0lp1pb0_n192.zip",
+      "candidate_archive_bytes": 191044,
+      "candidate_archive_sha256": "dc302953ff1e7f6d09210fff80cf6981cd7a36fafbf4299770bff61abdc462bd",
+      "member_bytes": 190944,
+      "member_sha256": "6fe48d0cf9b26c6324c8096e6088e3af366c4f66625ae38365d877666f13ab83",
+      "tokens_parseback_equal": true,
+      "raw_models_parseback_equal": true
+    }
+  }
+}
