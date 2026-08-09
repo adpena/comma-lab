@@ -88,20 +88,42 @@ def _device_type(device: str | None) -> str:
     return text or "cpu"
 
 
+# This tool builds its ground truth with AVVideoDataset UNCONDITIONALLY (see the
+# `ds_gt = AVVideoDataset(` construction below). upstream/evaluate.py:31-46 selects
+# DaliVideoDataset iff `device.type == "cuda"` and AVVideoDataset otherwise, so the
+# contest axis is a property of the GROUND-TRUTH DECODER, not of the device that runs
+# our forward pass. Because this call-site pins AV, a CUDA run here does NOT reproduce
+# the contest-CUDA object and must not be labelled as if it did.
+GT_DECODER: str = "av"
+
+
 def evidence_axis_for_device(
     actual_device: str,
     *,
+    gt_decoder: str,
     platform_system: str | None = None,
 ) -> str:
-    """Return the evidence axis implied by the device that actually ran.
+    """Return the evidence axis for a run, from the device AND the ground-truth decoder.
+
+    The contest axis is defined by the GT decoder that `upstream/evaluate.py:31-46`
+    selects (DALI iff cuda, AV otherwise) — not by the device that executes the
+    forward pass. Those coincide upstream because upstream couples them; this
+    call-site does not couple them (it pins AV, see ``GT_DECODER``), so the device
+    alone cannot imply the axis. Labelling a CUDA run `contest_cuda` while its GT
+    came from PyAV would assert a measurement against a ground truth never used.
 
     Non-CUDA renderer auth-eval evidence is advisory at this call-site. Linux
     CPU public-axis replay is handled by the separate contest-auth-eval flow.
     """
 
     device_type = _device_type(actual_device)
+    decoder = str(gt_decoder or "").strip().lower()
     if device_type == "cuda":
-        return "contest_cuda"
+        if decoder == "dali":
+            return "contest_cuda"
+        # CUDA execution over a non-DALI ground truth: a real measurement, but not
+        # the contest-CUDA object. Fail closed to advisory rather than over-claim.
+        return f"cuda_{decoder or 'unknown'}_gt_advisory"
     if device_type == "mps":
         return "mps_advisory"
     system = (platform_system or platform.system()).strip().lower()
@@ -117,6 +139,8 @@ def evidence_axis_for_device(
 def lane_tag_for_evidence_axis(evidence_axis: str) -> str:
     return {
         "contest_cuda": "[contest-CUDA]",
+        "cuda_av_gt_advisory": "[CUDA-exec AV-GT advisory]",
+        "cuda_unknown_gt_advisory": "[CUDA-exec unknown-GT advisory]",
         "linux_cpu_advisory": "[Linux-CPU advisory]",
         "macos_cpu_advisory": "[macOS-CPU advisory]",
         "mps_advisory": "[MPS advisory]",
@@ -130,12 +154,16 @@ def device_evidence_fields(
     actual_device: str,
     device_fallback_occurred: bool,
     device_fallback_reason: str | None = None,
+    gt_decoder: str = GT_DECODER,
 ) -> dict[str, object]:
-    evidence_axis = evidence_axis_for_device(actual_device)
+    evidence_axis = evidence_axis_for_device(actual_device, gt_decoder=gt_decoder)
     return {
         "requested_device": str(requested_device),
         "actual_device": str(actual_device),
         "device": str(actual_device),
+        # The GT decoder is emitted so downstream custody can re-derive the axis
+        # instead of trusting the label. upstream/evaluate.py:31-46 is the authority.
+        "gt_decoder": str(gt_decoder),
         "evidence_axis": evidence_axis,
         "score_axis": evidence_axis,
         "lane_tag": lane_tag_for_evidence_axis(evidence_axis),
