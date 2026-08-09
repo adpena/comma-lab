@@ -1,0 +1,127 @@
+{
+  "arm": "ddm_mp2",
+  "axis": "[macOS-MPS device-coverage; no scorer; no training]",
+  "boundaries": {
+    "archive_built": false,
+    "cache_consumed_by_training": false,
+    "intake_modified": false,
+    "modal_or_paid_dispatch": false,
+    "n600_scorer_forwards": 0,
+    "promotion_eligible": false,
+    "python_files_edited": false,
+    "score_claim": false,
+    "training_steps": 0,
+    "upstream_modified": false
+  },
+  "cache_choice": {
+    "bytes": 117981301,
+    "compressed_bytes": 526820,
+    "compressed_path": "/Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo/artifacts/caches/gt_cache_600_official_ada.pt.xz",
+    "compressed_sha256": "233884c672eff22258376cf9532bb69a52017980000a2615bbd917ba7a8ec3dc",
+    "label": "PR130 official Ada DALI",
+    "path": "/Volumes/VertigoDataTier/pact/ddm_op1r_20260809/authority_cache/gt_cache_600_official_ada.pt",
+    "reason": "exact shipped PR130 DALI label object retained by OP1R; alternate DALI hardware and AV-like caches are not interchangeable",
+    "sha256": "382d7dfe38b37c0cc5017e5645032faa045af6924db66e0b67549cc96c840195",
+    "trained_against": false,
+    "verification": [
+      "xz -dc gt_cache_600_official_ada.pt.xz | shasum -a 256",
+      "shasum -a 256 /Volumes/VertigoDataTier/pact/ddm_op1r_20260809/authority_cache/gt_cache_600_official_ada.pt"
+    ]
+  },
+  "captured_at_utc": "2026-08-09T10:54:49Z",
+  "device_coverage": {
+    "fallback_environment": "PYTORCH_ENABLE_MPS_FALLBACK=1",
+    "pose": {
+      "blocker_message": "The MPS backend is supported on macOS 14.0+. Current OS version can be queried using `sw_vers`",
+      "blocker_op": "SemanticTokenRenderer(...).eval().to(torch.device('mps')) at train_pose_carrier_full.py:246-249",
+      "blocker_type": "RuntimeError",
+      "seed": 20260722,
+      "status": "BLOCKED_BEFORE_POSE_FORWARD",
+      "warnings": []
+    },
+    "semantic": {
+      "blocker_message": "The MPS backend is supported on macOS 14.0+. Current OS version can be queried using `sw_vers`",
+      "blocker_op": "SemanticTokenRenderer(width=96, blocks=4, frame_dim=8, num_pairs=600).to(torch.device('mps'))",
+      "blocker_type": "RuntimeError",
+      "input_shape_if_transfer_passed": [
+        1,
+        384,
+        512
+      ],
+      "seed": 20260715,
+      "status": "BLOCKED_BEFORE_FORWARD",
+      "warnings": []
+    },
+    "warning_interpretation": "No warning is not a no-fallback finding because execution stopped before MPS kernel dispatch."
+  },
+  "environment": {
+    "hardware": "Apple M5 Max MacBook Pro",
+    "memory_gb": 128,
+    "mlx_alternate_runtime": {
+      "import": "PASS",
+      "mx_eval": "BLOCKED",
+      "mx_eval_error": "[metal::load_device] No Metal device available. This typically occurs in headless, sandboxed, or virtualized macOS sessions where the GPU is not accessible."
+    },
+    "mps_available": false,
+    "mps_built": true,
+    "mps_device_count": 0,
+    "os": "macOS 26.4 build 25E246",
+    "python_version": "3.13.12",
+    "safetensors_version": "0.8.0",
+    "torch_version": "2.12.1"
+  },
+  "frontier": {
+    "archive_bytes": 357837,
+    "axis": "[macOS-CPU advisory]",
+    "candidate_produced": false,
+    "pointer_moved": false,
+    "score": 0.7534578126155775
+  },
+  "provenance": {
+    "intake_git_head": "e34f31bc4969042c0051ac81aa3c56884419a231",
+    "intake_git_status_clean": true,
+    "repo_git_head_before_receipt": "534c2c03561e67fab0fe3ad065a0d8970493f637",
+    "source_files": {
+      "recipe/TRAINING.md": "7300abb68f4761b740f7825fa37ae04095168b579d0fd026559de4a2bd47449b",
+      "semantic_renderer_oracle.py": "2bf3a6a8621334723fec1c3e596665d1f049a55f311c5348dd5a4c588873f25b",
+      "train_pose_carrier_full.py": "684a4906edecb7653572db77c11a03a4e445eb256a8dc7b665e8fa0f78cab649",
+      "train_semantic_full.py": "2d7a3575e422dc2b5823b97e52101ad5632e5fa04a98e0af8a83d85b7c2176b8"
+    },
+    "source_root": "/Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo",
+    "upstream_checkout_head_not_used_for_training": "11ad728f563d8970929e8947a1cf6124ee6303e4"
+  },
+  "recall_evidence": {
+    "canonical_equations_query": "PR130|semantic|MPS|Metal|GT cache|DALI",
+    "changed_plan": [
+      "selected retained official DALI cache",
+      "reused existing governed Metal mem-probe law",
+      "stopped before non-device-backed training",
+      "scoped verdict to current managed execution instance"
+    ],
+    "full_corpus_query": "382d7d|a91d982|train_semantic_full.py|train_pose_carrier_full.py|semantic_renderer_oracle|pr130_eureka_intake|dali_vs_dali_hardware_gt_ambiguity",
+    "memory_query": "ddm_mp2|PR130|semantic stack|semantic_renderer_oracle|train_semantic_full|train_pose_carrier_full|Metal|MPS",
+    "sources_beyond_charter": [
+      ".omx/research/ddm_op1r_20260809/ADDENDUM_from_MAIN_read_this.md",
+      ".omx/research/ddm_op1r_20260809/OP1R_PATH.md",
+      ".omx/research/ddm_mx1_20260806/RECEIPT.md",
+      ".omx/research/ddm_mx1b_20260806/RECEIPT.md",
+      ".omx/research/ddm_rr9_20260807/ROUND9_FINDINGS.md",
+      ".omx/state/main_hot_state.md"
+    ]
+  },
+  "real_short_train": {
+    "cuda_reference_s_per_step": null,
+    "loss_trajectory": null,
+    "metal_s_per_step": null,
+    "reason": "MPS device transfer blocked before cache consumption, scorer load, optimizer construction, or step 1",
+    "status": "NOT_RUN_BLOCKED",
+    "steps_completed": 0,
+    "wallclock_envelope": "UNKNOWN for a normal host Metal session; NO for this managed execution surface"
+  },
+  "schema_version": "ddm_mp2_receipt_v1",
+  "verdict": {
+    "answer": "NO",
+    "blocker": "current managed session exposes zero Metal devices; first exact PR130 model .to(torch.device('mps')) raises RuntimeError",
+    "scope": "INSTANCE"
+  }
+}
