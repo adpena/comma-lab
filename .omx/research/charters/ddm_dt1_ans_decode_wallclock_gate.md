@@ -31,13 +31,27 @@ possibly much smaller) representation. Treat a decode speedup as a rate lever in
 
 **Required: measure BOTH arms at OPTIMAL FORM, in this order.**
 
-1. **First determine the DEPENDENCY STRUCTURE — do not assume it.** What actually serializes?
-   Interleaved lanes within one stream? Frames? Pairs? The HPAC prior is autoregressive, so the
-   binding question is whether its context is WITHIN-frame (⇒ frames are embarrassingly parallel)
-   or ACROSS-frame (⇒ frame-parallel decode is blocked and the parallelism must come from
-   interleaving instead). Read the encoder/receiver and SAY which it is, with the source lines.
-   This determination gates every optimization below — get it wrong and the speedup is a
-   correctness bug.
+1. **DEPENDENCY STRUCTURE — ANSWERED AT SOURCE by MAIN, do not re-derive; VERIFY and build on it.**
+   `codec_hpac_integer.py:96-124` (read-only intake). Three nested levels, three different verdicts:
+
+   | level | code | parallelizable? |
+   |---|---|---|
+   | frames `for frame in range(frame_count)` | `context = prepare_frame_context(idx, previous)`; `previous = raw` at :121 | **NO — strictly serial.** Frame *f*'s context is frame *f−1*'s decoded output. Frame-parallel decode is a CORRECTNESS BUG, not a speedup. |
+   | groups `for group, mask in enumerate(masks)` | `selected = sparse.selected_logits(current, context, group)`; then `current[0, mask] = symbols` | **NO — sequential context refinement.** Group *g+1*'s logits read `current`, which group *g* just filled (the checkerboard/masked-context pattern). |
+   | positions within a group | one `decoder.decode(family, table)` over the whole mask, `table` shape `[n_masked, n_classes]` | **ALREADY VECTORIZED** — one call per group, not per symbol. |
+
+   **Consequence that reframes this whole arm:** the per-group work is dominated by a **neural-net
+   forward** (`cached_context_logits` / `sparse.selected_logits`) plus `probability_table`, and
+   **those are IDENTICAL between the range and ANS arms.** The RC1 n2 figure of 2.683 s is
+   *whole-decode* time, the large majority of which is the shared model forward — so extrapolating
+   it as "805 s of ANS decode" over-attributes shared cost to the coder. Measure the DELTA
+   (below); expect it to be a small fraction of the absolute. Say so with numbers.
+
+   Remaining real parallelism axes, in order of expected payoff: **(i)** intra-op on the NN forward
+   (threads/Metal/CUDA — the dominant term, and it is a torch model, so this is tuning not
+   rewriting); **(ii)** the coder's own per-symbol inner loop, where interleaving would pay *only if*
+   the coder turns out to be a non-trivial share; **(iii)** `probability_table` construction. Profile
+   before optimizing — the split between these three is UNMEASURED and is the first thing to report.
 2. **Interleaved rANS is the canonical high-throughput design** (Giesen): the encoder round-robins
    symbols across N states so the decoder advances N lanes in parallel, SIMD-friendly, throughput
    scaling with lanes until memory-bandwidth-bound. This is the standard answer to exactly our

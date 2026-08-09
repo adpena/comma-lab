@@ -105,11 +105,29 @@ round-trip proves the causal lossless mechanism; n600 ANS words were not retaine
    are ~4.7 GB and the run is 681 s) before any archive claim.
    **Correction to how MAIN framed this:** the blocker was NOT "no receiver" — the receiver IS
    built and selector-explicit as of `5de03569ad`. The blocker is the discarded payload.
-6. ⚠ **DECODE WALL-CLOCK IS AN UNCLOSED GATE, newly named.** RC1 measured n2 ANS decode at
-   2.683 s; a **linear** extrapolation to n600 is **~805 s (13.4 min) of ANS decode alone**, with
-   rendering SEPARATE and on top, against the contest's **30-min total** budget
-   (`upstream/README.md:114`). Extrapolated from n=2 — very weak evidence, promotable only by a
-   real n600 decode. The quantity that actually matters is **ANS-decode-time MINUS range-decode-time**
-   (range decode is already inside the shipped budget), and that delta is UNMEASURED. It is
-   possible that PR130 chose the range coder partly for decode speed; we have not checked.
-   Until measured, treat −2,120 B as a rate win with an unpriced wall-clock cost.
+6. ⚠ **DECODE WALL-CLOCK IS AN UNCLOSED GATE — and my first framing of it OVER-ATTRIBUTED the cost
+   to the coder.** RC1 measured n2 *whole-decode* at 2.683 s; I linearly extrapolated that to
+   "~805 s of ANS decode alone" at n600. **That figure double-counts shared work and must not be
+   quoted.** Structure read at source (`codec_hpac_integer.py:96-124`, read-only intake):
+
+   - the frame loop is **strictly serial** (frame *f*'s context is frame *f−1*'s decoded output,
+     `:110` + `:121`) — frame-parallel decode would be a correctness bug, not a speedup;
+   - the group loop is **also serial** (group *g+1*'s logits read the `current` that group *g*
+     filled — masked/checkerboard context refinement);
+   - positions within a group are **already vectorized** — ONE `decoder.decode(family, table)` call
+     over the whole mask, `table` shape `[n_masked, n_classes]`, not one call per symbol.
+
+   So the per-group cost is dominated by a **neural-net forward** (`cached_context_logits` /
+   `sparse.selected_logits`) plus `probability_table` — **both identical in the range and ANS arms.**
+   The binding quantity is the DELTA `t_decode(ANS) − t_decode(range)` on the same stream, and it is
+   a fraction of the absolute, not the absolute. UNMEASURED either way; `ddm_dt1` owns it.
+
+   **And the decoder is OURS to optimize** (operator, 2026-08-09): rule-118 makes decode compute
+   FREE (`upstream/evaluate.py:63` charges `archive.zip` bytes only; `:92` has no time term), so the
+   only constraint is wall-clock, and wall-clock is a term we move — by intra-op parallelism on the
+   dominant NN forward, coder-level interleaving if the coder proves to be a real share, and the
+   `INFLATE_WORKERS`/Rust precedents already in-tree. Budget context (`eval.yml:29`): the 30 minutes
+   covers the WHOLE CI job — checkout, `git lfs pull` of the videos, `uv sync`, apt, inflate, AND the
+   600-pair scorer pass — so reclaimed decode seconds are both safety margin and budget available to
+   a more expensive (possibly much smaller) representation. Treat −2,120 B as a rate win whose
+   wall-clock cost is unpriced but likely small and, where it isn't, reducible.
