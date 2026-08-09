@@ -1,0 +1,10 @@
+# HR1 durable follow-on backfill — ddm_wc2
+
+Canonical typed provenance: `HR1_ROUTING.jsonl`. This file is a bridge into the
+costate-readable arm queue, not a second disposition engine.
+
+## NEXT_IF_RESUMED
+
+- `wc2_extended_bench_matrix`; disposition=QUEUED-WITH-FIRE-ORDER; owner=ddm_wc2 throughput-matrix owner; consumer_store=.omx/state/codex_arm_queue.next_if_resumed.jsonl; fire_trigger=a governed Metal gap exists after the current owned run releases the lane; action=Run the planned extended WC2 bench matrix with per-variant memory, safe-run, wall-clock, and sanity receipts during an owned Metal gap.; source=.omx/research/ddm_wc2_20260808/WC2_FINDINGS.md (lines 54-58; line 81, commit b08fd86f87e27fd45e9d4296c5bb367213822505, sha256 91260b50b8c6a7282a3430e29f99f19fe9b07417e9a3213e6b7d47d6a23c9a97).
+- `wc2_ane_verdict_use`; disposition=QUEUED-WITH-FIRE-ORDER; owner=ddm_wc2 CoreML-parity owner; consumer_store=.omx/state/codex_arm_queue.next_if_resumed.jsonl; fire_trigger=coreml-segnet-parity status is passed on the current vehicle and the advisory lane is owned; action=Use ANE verdict only if current-vehicle coreml-segnet-parity records status=passed; keep ANE advisory and CPU-torch authoritative.; source=.omx/research/ddm_wc2_20260808/WC2_FINDINGS.md (line 82; Boundaries lines 88-91, commit b08fd86f87e27fd45e9d4296c5bb367213822505, sha256 91260b50b8c6a7282a3430e29f99f19fe9b07417e9a3213e6b7d47d6a23c9a97).
+- `wc2_concurrent_cpu_verdict`; disposition=QUEUED-WITH-FIRE-ORDER; owner=ddm_wc2/M1 CPU-verdict owner; consumer_store=.omx/state/codex_arm_queue.next_if_resumed.jsonl; fire_trigger=a scorer-free CPU verdict can run beside the owned Metal row without violating lane custody; action=Run concurrent CPU verdict with a subprocess-group receipt, starting at verdict batch size 16 and recording RSS and elapsed evidence before raising it.; source=.omx/research/ddm_wc2_20260808/WC2_FINDINGS.md (line 83, commit b08fd86f87e27fd45e9d4296c5bb367213822505, sha256 91260b50b8c6a7282a3430e29f99f19fe9b07417e9a3213e6b7d47d6a23c9a97).

@@ -8,10 +8,13 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import sys
 from argparse import Namespace
 from pathlib import Path
 
 import pytest
+
+from tac.subagent_contract import RETAINED_REASONING
 
 _REPO = Path(__file__).resolve().parents[3]
 _TOOL = _REPO / "tools" / "codex_arm_queue.py"
@@ -167,6 +170,17 @@ def test_keeper_runs_codex_as_child_with_regular_file_stdin(q):
 
 def test_keeper_names_the_common_contract(q):
     assert "_common_contract.md" in q.keeper_source("x", "p.md")
+
+
+def test_direct_entrypoint_bootstraps_repo_src(q):
+    assert q._SRC == _REPO / "src"
+    assert str(q._SRC) in sys.path
+
+
+def test_keeper_composes_the_retained_reasoning_contract(q):
+    src = q.keeper_source("x", "p.md")
+    assert src.count(RETAINED_REASONING) == 2  # initial generation and relay
+    assert src.count("## NEXT_IF_RESUMED") == 2
 
 
 def test_spawn_writes_the_keeper_file(q, tmp_path, monkeypatch):
@@ -327,6 +341,34 @@ This describes the surface, not a resumable plan block.
     assert len(blocks) == 1
     assert blocks[0]["line_start"] == 7
     assert "Answer First" not in blocks[0]["text"]
+
+
+def test_generated_contract_catches_a_block_the_old_prompt_missed(q):
+    old_prompt_final = """# Final
+
+Remaining work: route the measured row after the receiver is selected.
+"""
+    assert q.next_if_resumed_blocks(old_prompt_final) == []
+
+    new_contract_final = """# Final
+
+## NEXT_IF_RESUMED
+
+- QUEUED-WITH-FIRE-ORDER; owner=receiver-owner; consumer_store=task-ledger;
+  trigger=after receiver selection: route the measured row.
+"""
+    assert "## NEXT_IF_RESUMED" in q.keeper_source("x", "p.md")
+    blocks = q.next_if_resumed_blocks(new_contract_final)
+    assert len(blocks) == 1
+    assert "owner=receiver-owner" in blocks[0]["text"]
+
+
+def test_generated_contract_negative_control_omits_non_followon_prose(q):
+    non_followon = """# Final
+
+The NEXT_IF_RESUMED extractor was reviewed. All requested work is complete.
+"""
+    assert q.next_if_resumed_blocks(non_followon) == []
 
 
 def test_extract_next_if_resumed_is_idempotent_and_has_no_phantom(q, tmp_path):

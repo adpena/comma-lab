@@ -467,13 +467,14 @@ CORRECT_OVER_EASY = (
 #: Asks for CONCLUSIONS / hypotheses / next actions (NOT a reasoning transcript), so the sister
 #: gate check_no_reasoning_echo_instructions stays green (no echo-your-thinking phrasing).
 RETAINED_REASONING = (
-    "RETAINED REASONING (harness crosswalk, ARC-AGI-3): end your final message with three "
-    "labeled lines so a successor inherits your live state instead of re-walking it — "
-    "LIVE-HYPOTHESES (untested leads still worth pursuing, each with why it is plausible); "
-    "DEAD-ENDS (paths you closed, each with the reason, so no successor re-tries them); "
-    "NEXT-IF-RESUMED (the exact first action a successor would take). State conclusions, "
-    "hypotheses, and next actions in plain language — this is a handoff of WHAT you found and "
-    "WHERE to go next, not a replay of how you got there."
+    "RETAINED REASONING (harness crosswalk, ARC-AGI-3): end your final message with "
+    "LIVE-HYPOTHESES (untested leads still worth pursuing, each with why it is plausible) and "
+    "DEAD-ENDS (paths you closed, each with the reason, so no successor re-tries them). If any "
+    "future action remains, add the exact Markdown heading `## NEXT_IF_RESUMED` and put one "
+    "action per bullet under it, naming its disposition, owner, consumer store, and fire trigger. "
+    "Omit that heading entirely when no future action remains, so the extractor cannot create a "
+    "phantom plan row. State conclusions, hypotheses, and next actions in plain language — this "
+    "is a handoff of WHAT you found and WHERE to go next, not a replay of how you got there."
 )
 
 #: #767 standing original-design authority (operator 2026-07-29 verbatim). An arm asking

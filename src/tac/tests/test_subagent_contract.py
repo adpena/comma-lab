@@ -86,6 +86,14 @@ def test_standard_contract_grounding_phrase_always_present() -> None:
         assert "Before reporting progress, audit each claim against a tool result" in composed
 
 
+def test_retained_reasoning_has_machine_readable_followon_contract() -> None:
+    text = sc.RETAINED_REASONING
+    assert "`## NEXT_IF_RESUMED`" in text
+    for field in ("disposition", "owner", "consumer store", "fire trigger"):
+        assert field in text
+    assert "Omit that heading entirely when no future action remains" in text
+
+
 def test_standard_contract_blocks_separated_by_blank_lines() -> None:
     composed = sc.standard_contract()
     # 30 blocks by default (29 separators). This magic number has drifted stale twice

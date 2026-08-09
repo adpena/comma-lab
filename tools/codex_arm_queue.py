@@ -52,6 +52,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 _REPO = Path(__file__).resolve().parents[1]
+_SRC = _REPO / "src"
+if str(_SRC) not in sys.path:
+    sys.path.insert(0, str(_SRC))
+
+from tac.subagent_contract import RETAINED_REASONING  # noqa: E402
+
 QUEUE = _REPO / ".omx" / "state" / "codex_arm_queue.jsonl"
 RUNS = _REPO / ".omx" / "tmp" / "codex_runs"
 SPAWN_LOG = _REPO / ".omx" / "state" / "codex_arm_spawn_log.jsonl"
@@ -544,7 +550,7 @@ def keeper_source(name: str, prompt_path: str, effort: str | None = None) -> str
     instruction = (
         f"Read and execute the charter at {prompt_path} in full, plus the common "
         f"contract it points to at .omx/tmp/codex_runs/_common_contract.md. "
-        f"Follow every constraint in both."
+        f"Follow every constraint in both.\n\n{RETAINED_REASONING}"
     )
     relay_instruction = (
         f"CONTINUATION generation %d of arm {name}: your predecessor ran out of "
@@ -556,7 +562,7 @@ def keeper_source(name: str, prompt_path: str, effort: str | None = None) -> str
         f"incrementally, commit early via the serializer, never accumulate large "
         f"outputs or web-search results in context. Then continue executing the "
         f"charter at {prompt_path} plus the common contract at "
-        f".omx/tmp/codex_runs/_common_contract.md."
+        f".omx/tmp/codex_runs/_common_contract.md.\n\n{RETAINED_REASONING}"
     )
     # Model + effort are BOTH resolved here, per-arm (operator 2026-08-08: a
     # 5.6-sol "of high to ultra effort levels depending on the task at hand").

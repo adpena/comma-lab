@@ -1,0 +1,1444 @@
+{
+  "## RECALL EVIDENCE": {
+    "beyond_seeds": [
+      "NP1 production validation was still unpaid",
+      ".omx/state NEXT_IF_RESUMED has a real costate reader",
+      "OH1 exact rows already exist in canonical task ledger",
+      "#824 and #869 existing task rows",
+      "no post-R5 M1 repair found in bounded current git/task/research scope"
+    ],
+    "plan_changes": [
+      "reuse existing canonical task rows instead of duplicating them",
+      "collapse older M1 review rounds into newest R5 defects",
+      "route missing survivors into the costate-readable queue",
+      "repair keeper producer instead of changing the already-correct parser"
+    ],
+    "queries": [
+      "29 landed arms follow-on routing orphan NEXT_IF_RESUMED",
+      "M1R5 launch blocking fire route terminal selector provenance",
+      "OH1 ZC1 orphan signal consumption plan fire order",
+      "codex arm queue retained reasoning NEXT IF RESUMED extractor consumer"
+    ],
+    "scopes": [
+      ".omx/research content and receipts",
+      "CANONICAL_RESEARCH_INDEX and sub015_DAG FEED surfaces",
+      "design docs and SPECs",
+      ".omx/state/canonical_task_status.jsonl",
+      ".omx/state/probe_outcomes.jsonl",
+      "arm queue final-message and NEXT_IF_RESUMED stores",
+      "canonical equations registry: 429 entries"
+    ]
+  },
+  "artifacts_to_commit": [
+    {
+      "bytes": 283227,
+      "path": ".omx/research/ddm_hr1_20260809T031504Z/HR1_ROUTING.jsonl",
+      "sha256": "130af841f4285a4840dec4fbba2fb2d0960f162f851378950abf2fd412d66872"
+    },
+    {
+      "bytes": 9192,
+      "path": ".omx/research/ddm_hr1_20260809T031504Z/HR1_FINDINGS.md",
+      "sha256": "582f6f5d65ff0f69a2dedeef504abfe422bf34144073f1fa56900da2ea4e8369"
+    },
+    {
+      "bytes": 2604,
+      "path": ".omx/research/ddm_hr1_20260809T031504Z/NEXT_IF_RESUMED_ddm_aa1.md",
+      "sha256": "ae5f29afd068bfa7498388360ac99471813186d241c94cc6fabb466baf6ff40f"
+    },
+    {
+      "bytes": 3341,
+      "path": ".omx/research/ddm_hr1_20260809T031504Z/NEXT_IF_RESUMED_ddm_cf2.md",
+      "sha256": "4d8e6672dacbfafeba3f0a439888b2ad575006a11952eab96830fd305dac4e52"
+    },
+    {
+      "bytes": 788,
+      "path": ".omx/research/ddm_hr1_20260809T031504Z/NEXT_IF_RESUMED_ddm_cr1.md",
+      "sha256": "0ea010605f53c22b692b11e007961295d2c691420749c19c098c1ac6db90d982"
+    },
+    {
+      "bytes": 1341,
+      "path": ".omx/research/ddm_hr1_20260809T031504Z/NEXT_IF_RESUMED_ddm_gc21.md",
+      "sha256": "3eb9fd869c817b9bd7c0a914406ed110ceeefa8f22eef4f7ee7ab53b19fa9c0e"
+    },
+    {
+      "bytes": 899,
+      "path": ".omx/research/ddm_hr1_20260809T031504Z/NEXT_IF_RESUMED_ddm_hb2_hpac_pack_roundtrip.md",
+      "sha256": "f6e433312372b05ef4f46a66348e5b1f5d47327455d2a6149f905d01edbe5f90"
+    },
+    {
+      "bytes": 6280,
+      "path": ".omx/research/ddm_hr1_20260809T031504Z/NEXT_IF_RESUMED_ddm_lx1.md",
+      "sha256": "ddc31dec80391cf369c3ea79b2ff7770d6892314046c02d9e11c0a047e21142c"
+    },
+    {
+      "bytes": 3648,
+      "path": ".omx/research/ddm_hr1_20260809T031504Z/NEXT_IF_RESUMED_ddm_m1c1.md",
+      "sha256": "19f0d1c3191eb610b1725eaa67483de7b1881f0effae5f468b2d2a840069b0e2"
+    },
+    {
+      "bytes": 7520,
+      "path": ".omx/research/ddm_hr1_20260809T031504Z/NEXT_IF_RESUMED_ddm_m1r5a.md",
+      "sha256": "3af57331af31ad998e68124e2ce83245093036f5047572baa6349987837da9b4"
+    },
+    {
+      "bytes": 5248,
+      "path": ".omx/research/ddm_hr1_20260809T031504Z/NEXT_IF_RESUMED_ddm_m1r5b.md",
+      "sha256": "984b207cd7091d1607e9aa4d0fab3f620d399fd0e92f76000b48494114012952"
+    },
+    {
+      "bytes": 9703,
+      "path": ".omx/research/ddm_hr1_20260809T031504Z/NEXT_IF_RESUMED_ddm_m1r5c.md",
+      "sha256": "40ced4434b8fe85e3794156d4e075dd6f8b95fb14156e3293f9a5662b439254a"
+    },
+    {
+      "bytes": 4802,
+      "path": ".omx/research/ddm_hr1_20260809T031504Z/NEXT_IF_RESUMED_ddm_ng1.md",
+      "sha256": "7a20f680e5b330202d872b53972628bb6163a29f9d5aaa1bac74e85dbbdf4cc5"
+    },
+    {
+      "bytes": 14095,
+      "path": ".omx/research/ddm_hr1_20260809T031504Z/NEXT_IF_RESUMED_ddm_oh1.md",
+      "sha256": "5c4fcb090c5ba9ceebbad7ade7828996dc8077eda96f6c12bbdd47a6523ba63d"
+    },
+    {
+      "bytes": 882,
+      "path": ".omx/research/ddm_hr1_20260809T031504Z/NEXT_IF_RESUMED_ddm_rr17.md",
+      "sha256": "939bc9fc4123e80d063dcbfa537e008ee581d701983918f7b6dd1fde8aa1b2b8"
+    },
+    {
+      "bytes": 1585,
+      "path": ".omx/research/ddm_hr1_20260809T031504Z/NEXT_IF_RESUMED_ddm_rr18.md",
+      "sha256": "eece7ddce34923a3a0632a229bd8b7d4beb5b56839904fd800aaabc738b8ca27"
+    },
+    {
+      "bytes": 3270,
+      "path": ".omx/research/ddm_hr1_20260809T031504Z/NEXT_IF_RESUMED_ddm_rv2.md",
+      "sha256": "665de1074f326f695e31d39eaada969c91011f648392770d8b11df56c43d6d95"
+    },
+    {
+      "bytes": 962,
+      "path": ".omx/research/ddm_hr1_20260809T031504Z/NEXT_IF_RESUMED_ddm_tr2p1.md",
+      "sha256": "78059a2089d7b0f362ad6ee9db71b285bd2eac842e3dc08c8598fc3330e44d03"
+    },
+    {
+      "bytes": 2050,
+      "path": ".omx/research/ddm_hr1_20260809T031504Z/NEXT_IF_RESUMED_ddm_wc2.md",
+      "sha256": "00bee2e8eef40f8202df2904e631b0230d9ec7da7cf4cff269439a0dd7c9de0a"
+    },
+    {
+      "bytes": 4854,
+      "path": ".omx/research/ddm_hr1_20260809T031504Z/NEXT_IF_RESUMED_ddm_zc1.md",
+      "sha256": "601a91d139a0a8c4ac9fd6fbffc39ebb7dfee689a6f913110938ca88fb8809e8"
+    },
+    {
+      "bytes": 38136,
+      "path": "src/tac/subagent_contract.py",
+      "sha256": "1aca36982872d42d588bf5b38956df62e55b4649cb936b42f927363e717a1deb"
+    },
+    {
+      "bytes": 45538,
+      "path": "tools/codex_arm_queue.py",
+      "sha256": "6aa2e7d6b38dd497b2d4fb97d1c35bdae18dfd86f8b3fffdf65d900aa545f449"
+    },
+    {
+      "bytes": 19430,
+      "path": "src/tac/tests/test_codex_arm_queue.py",
+      "sha256": "7c15250d35e76cadc67ccf99a3a68060aa70142de2a721609a63910c85ae8d68"
+    },
+    {
+      "bytes": 10230,
+      "path": "src/tac/tests/test_subagent_contract.py",
+      "sha256": "74a717cf266c3831cd28c32e03c5f976d3110b4b2a410d970ed702f8081168c7"
+    }
+  ],
+  "boundaries": {
+    "archive_built": false,
+    "dispatch_or_launch": false,
+    "evaluate_py_run": false,
+    "files_deleted_or_moved": false,
+    "metal_mps_cuda_run": false,
+    "promotion_attempted": false,
+    "public_pr_intake_edited": false,
+    "scorer_executed": false,
+    "upstream_edited": false
+  },
+  "controls": [
+    {
+      "command": ".venv/bin/python -m pytest -q src/tac/tests/test_codex_arm_queue.py src/tac/tests/test_subagent_contract.py",
+      "detail": "98 passed",
+      "result": "PASS"
+    },
+    {
+      "command": "python3 tools/codex_arm_queue.py status",
+      "detail": "direct system-python entrypoint; no PYTHONPATH assistance",
+      "result": "PASS"
+    },
+    {
+      "command": ".venv/bin/ruff check src/tac/subagent_contract.py src/tac/tests/test_codex_arm_queue.py src/tac/tests/test_subagent_contract.py",
+      "result": "PASS"
+    },
+    {
+      "command": ".venv/bin/ruff check --select E402,F401,I001 tools/codex_arm_queue.py",
+      "result": "PASS"
+    },
+    {
+      "command": ".venv/bin/python -m py_compile <four changed Python files>",
+      "result": "PASS"
+    },
+    {
+      "command": "git diff --check -- <HR1 changed files>",
+      "result": "PASS"
+    },
+    {
+      "command": ".venv/bin/ruff check <four changed Python files>",
+      "detail": "11 pre-existing tool-file findings outside HR1-edited lines; scoped changed-surface/import checks passed; HR1 did not expand into unrelated cleanup",
+      "result": "BASELINE-NONZERO"
+    },
+    {
+      "command": "repeat all 18 HR1 bridge extractions against append-only store",
+      "detail": "second pass wrote 0 rows; store SHA-256 unchanged at 803ab10a9315fe4a8ccf3c0ab9319126408458d8ce37bba89bda25f94cdb0098",
+      "result": "PASS"
+    },
+    {
+      "command": "canonical serializer in main worktree",
+      "detail": "managed sandbox denied Git object creation; index remained empty; artifacts remained uncommitted in main worktree",
+      "result": "BLOCKED"
+    },
+    {
+      "command": "review_tracker policy-check on all four changed Python files",
+      "detail": "106 entities compliant; 0 violations under registered codex approver principal",
+      "result": "PASS"
+    },
+    {
+      "command": "first serializer-backed shadow commit attempt",
+      "detail": "hooks correctly rejected unregistered codex-hr1 reviewer ID; passes re-recorded under registered codex principal; policy checks now 0 violations",
+      "result": "BLOCKED_THEN_CURED"
+    }
+  ],
+  "created_at_utc": "2026-08-09T03:34:52.389565+00:00",
+  "final_message_custody": [
+    {
+      "bytes": 1143,
+      "capture_disposition": "RETAINED_INDEXED_EVIDENCE",
+      "index_hash_matches": true,
+      "index_row_id": "c78492245293bfc3f983cc8462a10698917be7dd6720b7ebaf6d7d159f8c94ae",
+      "name": "ddm_aa1",
+      "path": ".omx/research/arm_final_messages/ddm_aa1_20260807T231153Z.md",
+      "rc": 0,
+      "sha256": "160254b6b7bca567286fe2bdbe278f7a623fc9853f18ee4095d87364cfbb4153"
+    },
+    {
+      "bytes": 1017,
+      "capture_disposition": "RETAINED_INDEXED_EVIDENCE",
+      "index_hash_matches": true,
+      "index_row_id": "8d64c34be6e273ff96d91b18e990be34c6c6add1730073eae7b62ce179781785",
+      "name": "ddm_cf2",
+      "path": ".omx/research/arm_final_messages/ddm_cf2_20260808T170318Z.md",
+      "rc": 0,
+      "sha256": "4df2a9369f07eab83337d9cf4756cfc4024c993f8132a1b8fce27e95f56adf20"
+    },
+    {
+      "bytes": 1417,
+      "capture_disposition": "RETAINED_INDEXED_EVIDENCE",
+      "index_hash_matches": true,
+      "index_row_id": "77a53facbb6554dcc381dfc37ccb2714881202b9f044c5385554ad2443d6f972",
+      "name": "ddm_cr1",
+      "path": ".omx/research/arm_final_messages/ddm_cr1_20260808T064811Z.md",
+      "rc": 0,
+      "sha256": "06c4d88caa877f4efa3f4d8f336a0e335b6c0ba870eb854732712c4b74d14b6f"
+    },
+    {
+      "bytes": 840,
+      "capture_disposition": "RETAINED_INDEXED_EVIDENCE",
+      "index_hash_matches": true,
+      "index_row_id": "9ba49dd45963c31d70c951f23e3db023aee5770dbbf54590f365fd36e19585bd",
+      "name": "ddm_gc21",
+      "path": ".omx/research/arm_final_messages/ddm_gc21_20260808T173828Z.md",
+      "rc": 0,
+      "sha256": "fe2c5f8f7c0fe66691fc72b832fea096f9167475adf6d81fc03a8e510ec425fc"
+    },
+    {
+      "bytes": 1711,
+      "capture_disposition": "RETAINED_INDEXED_EVIDENCE",
+      "index_hash_matches": true,
+      "index_row_id": "35daf006c4a5698bf091da1ad8b58fbbfe7bf9196ae3ce1eb9ddfc566eaccc99",
+      "name": "ddm_gdl1",
+      "path": ".omx/research/arm_final_messages/ddm_gdl1_20260808T011105Z.md",
+      "rc": 0,
+      "sha256": "cbb69beb7b5a7996825cc920cc1cb0ca2b6cd34d9902230005b1717ba0667e53"
+    },
+    {
+      "bytes": 1219,
+      "capture_disposition": "RETAINED_INDEXED_EVIDENCE",
+      "index_hash_matches": true,
+      "index_row_id": "f94108b151c6146c72c0c3d1d1c27357b2730820f60f76e537653d71205ff7f1",
+      "name": "ddm_hb2_hpac_pack_roundtrip",
+      "path": ".omx/research/arm_final_messages/ddm_hb2_hpac_pack_roundtrip_20260808T091917Z.md",
+      "rc": 0,
+      "sha256": "815f2faa7bba173f90666bb1a006f1648eee5dd80658e5e700ad0a9f0bbac886"
+    },
+    {
+      "bytes": 873,
+      "capture_disposition": "RETAINED_INDEXED_EVIDENCE",
+      "index_hash_matches": true,
+      "index_row_id": "106fdbcaa9bbad6ae6bd10c72e9be6620459b6eb456bc6ebbc8989a1032dbc08",
+      "name": "ddm_lx1",
+      "path": ".omx/research/arm_final_messages/ddm_lx1_20260808T155720Z.md",
+      "rc": 0,
+      "sha256": "c03195421797ad38d5ed8b2ef5d4b7455f4d7d5df90df3cad41fc77c0c3cc886"
+    },
+    {
+      "bytes": 922,
+      "capture_disposition": "RETAINED_INDEXED_EVIDENCE",
+      "index_hash_matches": true,
+      "index_row_id": "32188f580c1d2a4d93df84c5cc8d62fa4b12cd68f374af6c4320f0481ddab2da",
+      "name": "ddm_m1c1",
+      "path": ".omx/research/arm_final_messages/ddm_m1c1_20260808T233715Z.md",
+      "rc": 0,
+      "sha256": "e86572cb9b8db637b24860a8d634dad8da1a2ee4b582534117fb6d2f64a6e857"
+    },
+    {
+      "bytes": 1016,
+      "capture_disposition": "RETAINED_INDEXED_EVIDENCE",
+      "index_hash_matches": true,
+      "index_row_id": "0e344b355d752a8ac0741d2ed57bee03b9a8592a5d739d59f1f0d6972974ddf7",
+      "name": "ddm_m1r2",
+      "path": ".omx/research/arm_final_messages/ddm_m1r2_20260808T212052Z.md",
+      "rc": 0,
+      "sha256": "8bae62968756ddcf8b8678b4e8ae28706dff77b9af2139f44c69601086dea9d8"
+    },
+    {
+      "bytes": 833,
+      "capture_disposition": "RETAINED_INDEXED_EVIDENCE",
+      "index_hash_matches": true,
+      "index_row_id": "352a1d2a83c50f57e3490d0d971da5e10706c01f1d84ebacf50bf0c8229758aa",
+      "name": "ddm_m1r3",
+      "path": ".omx/research/arm_final_messages/ddm_m1r3_20260808T211804Z.md",
+      "rc": 0,
+      "sha256": "06107cd7ae3de2e932733bc38580cc4568025c57c327d7a49c3c37e9816b119a"
+    },
+    {
+      "bytes": 572,
+      "capture_disposition": "RETAINED_INDEXED_EVIDENCE",
+      "index_hash_matches": true,
+      "index_row_id": "a5a9c25b6f893ef7b6c6c5b8fe89762e5eedf2c241f5dc624169e5c85dcf7273",
+      "name": "ddm_m1r4a_mechanics",
+      "path": ".omx/research/arm_final_messages/ddm_m1r4a_mechanics_20260808T222155Z.md",
+      "rc": 0,
+      "sha256": "be80579f3079b01a3958b111a2e7a3206d96dc4d4d29f1f37d62c15f6577102b"
+    },
+    {
+      "bytes": 672,
+      "capture_disposition": "RETAINED_INDEXED_EVIDENCE",
+      "index_hash_matches": true,
+      "index_row_id": "a718c2f0406c57d7c6e79337eefbaeb64c6afecc69bd8d9446595a3a8354d0b0",
+      "name": "ddm_m1r4b_science",
+      "path": ".omx/research/arm_final_messages/ddm_m1r4b_science_20260808T223035Z.md",
+      "rc": 0,
+      "sha256": "8f2202260ae16c041fba2e11b29343f5b657eba7dd299a44dfcbed3b6a8f453f"
+    },
+    {
+      "bytes": 782,
+      "capture_disposition": "RETAINED_INDEXED_EVIDENCE",
+      "index_hash_matches": true,
+      "index_row_id": "614eb6b4336a30ea52f279c86dba7c727e886cf3df7cf9d929b5a2688ace6653",
+      "name": "ddm_m1r4c_arith",
+      "path": ".omx/research/arm_final_messages/ddm_m1r4c_arith_20260808T224428Z.md",
+      "rc": 0,
+      "sha256": "0af075355fbed772ca02703579f1799fc221e584471cd445b9e3198ebc332c31"
+    },
+    {
+      "bytes": 877,
+      "capture_disposition": "RETAINED_INDEXED_EVIDENCE",
+      "index_hash_matches": true,
+      "index_row_id": "96cba663981d8b2ff006d492e3dfa2236813b0090cf2c6edbf5206f7e4e2d3bd",
+      "name": "ddm_m1r5a",
+      "path": ".omx/research/arm_final_messages/ddm_m1r5a_20260808T235049Z.md",
+      "rc": 0,
+      "sha256": "e360c937a99011bdef33d0e3e7a14decf55a04e97bc6ad6376176f0dadbb55e4"
+    },
+    {
+      "bytes": 885,
+      "capture_disposition": "RETAINED_INDEXED_EVIDENCE",
+      "index_hash_matches": true,
+      "index_row_id": "14c4e1823070386a060712752e6b24e664d17bef9cede4d868ebfb02cba9726e",
+      "name": "ddm_m1r5b",
+      "path": ".omx/research/arm_final_messages/ddm_m1r5b_20260808T234736Z.md",
+      "rc": 0,
+      "sha256": "84db84bf0bfb4b54a7dc9e695c19eb4e6553ad0d99da6077a78511b95f959117"
+    },
+    {
+      "bytes": 877,
+      "capture_disposition": "RETAINED_INDEXED_EVIDENCE",
+      "index_hash_matches": true,
+      "index_row_id": "083216da6fe31550188aea586b2215a16639059f1a14c8b3d52220547f47e4aa",
+      "name": "ddm_m1r5c",
+      "path": ".omx/research/arm_final_messages/ddm_m1r5c_20260808T235543Z.md",
+      "rc": 0,
+      "sha256": "f0720dcb992c6b9cf729957bda34182b86e5589392a778c23eb61725eda7c384"
+    },
+    {
+      "bytes": 1120,
+      "capture_disposition": "RETAINED_INDEXED_EVIDENCE",
+      "index_hash_matches": true,
+      "index_row_id": "60671366f6447ceca412cecd32ffe1265a6475d951a6f58e9db3a86555acd871",
+      "name": "ddm_ng1",
+      "path": ".omx/research/arm_final_messages/ddm_ng1_20260808T182805Z.md",
+      "rc": 0,
+      "sha256": "d7c50b698aa32c3a6c4bf162be501a26240617ea588b9d03dbaf547ec57b7ace"
+    },
+    {
+      "bytes": 1197,
+      "capture_disposition": "RETAINED_INDEXED_EVIDENCE",
+      "index_hash_matches": true,
+      "index_row_id": "8488b4172918e18c60a49460cadb57c41259378ea00797f3024356fe3d012ae2",
+      "name": "ddm_oh1",
+      "path": ".omx/research/arm_final_messages/ddm_oh1_20260807T231752Z.md",
+      "rc": 0,
+      "sha256": "3e2ae6e6d1a692401f511cbce052b61709767cabc2755a6edaf5403e97c726ae"
+    },
+    {
+      "bytes": 1153,
+      "capture_disposition": "RETAINED_INDEXED_EVIDENCE",
+      "index_hash_matches": true,
+      "index_row_id": "a221cffaef66afc3d41bebb17fca7bc15f5321238deaba79bc8e22049acfab2a",
+      "name": "ddm_pk1",
+      "path": ".omx/research/arm_final_messages/ddm_pk1_20260808T004930Z.md",
+      "rc": 0,
+      "sha256": "c001dd956bf2ee4a3e607be8338d295f8707c4138619db6426b86a99faa4cd00"
+    },
+    {
+      "bytes": 1386,
+      "capture_disposition": "RETAINED_INDEXED_EVIDENCE",
+      "index_hash_matches": true,
+      "index_row_id": "7866c5314d011739bd1686494b53d0d9cb9f15714e896bcb71fb896defec8472",
+      "name": "ddm_pk2",
+      "path": ".omx/research/arm_final_messages/ddm_pk2_20260808T073117Z.md",
+      "rc": 0,
+      "sha256": "2b6402e9b761582e14b02ac4d0d5d1d2daa2f72f6eb477527f2540b5abc09046"
+    },
+    {
+      "bytes": 1171,
+      "capture_disposition": "RETAINED_INDEXED_EVIDENCE",
+      "index_hash_matches": true,
+      "index_row_id": "4c7e3ee96bcb6dae7d30ad9d3d7de75e1c044c19126bee1b519c65764abc68cf",
+      "name": "ddm_rr16",
+      "path": ".omx/research/arm_final_messages/ddm_rr16_20260807T230920Z.md",
+      "rc": 0,
+      "sha256": "c5648c6a218e3d9599bf12747eea522acf307aee7299985adce36acee4363272"
+    },
+    {
+      "bytes": 1099,
+      "capture_disposition": "RETAINED_INDEXED_EVIDENCE",
+      "index_hash_matches": true,
+      "index_row_id": "0cbf4ed2020fca827c01379ed55849b85ef1414c518439b543b4787bee01086d",
+      "name": "ddm_rr17",
+      "path": ".omx/research/arm_final_messages/ddm_rr17_20260807T233546Z.md",
+      "rc": 0,
+      "sha256": "a93a440ed99d6a8d70883f5931f7029b2e3f97d8ad7000ed1ebad75836ef2ec3"
+    },
+    {
+      "bytes": 933,
+      "capture_disposition": "RETAINED_INDEXED_EVIDENCE",
+      "index_hash_matches": true,
+      "index_row_id": "ed841f0e7d5d4f398155f8c64d4eaa2238145b37a9ed3834b298cab27f479c5b",
+      "name": "ddm_rr18",
+      "path": ".omx/research/arm_final_messages/ddm_rr18_20260808T064117Z.md",
+      "rc": 0,
+      "sha256": "7a3192a6f5f56fe0c7b3686167dcd410d673fe05afe79e8c21eefdb6003921a9"
+    },
+    {
+      "bytes": 940,
+      "capture_disposition": "RETAINED_INDEXED_EVIDENCE",
+      "index_hash_matches": true,
+      "index_row_id": "511dd4005d1adf447f67b3ce780dbd36d4fc90378b25936e3b91726f9cde98bb",
+      "name": "ddm_rv2",
+      "path": ".omx/research/arm_final_messages/ddm_rv2_20260807T231836Z.md",
+      "rc": 0,
+      "sha256": "134ae50c80108b847e908fa6074b973e62e4b14728581c5e6b131aaa8a208f8a"
+    },
+    {
+      "bytes": 1092,
+      "capture_disposition": "RETAINED_INDEXED_EVIDENCE",
+      "index_hash_matches": true,
+      "index_row_id": "ed2a29e599108831b74da3bcf8581b7894fd10bd3cc927bcfc7c7af9bd0134df",
+      "name": "ddm_tr2_trot_crosswalk",
+      "path": ".omx/research/arm_final_messages/ddm_tr2_trot_crosswalk_20260808T140203Z.md",
+      "rc": 0,
+      "sha256": "fe6cb5b71f036b71d50e448440ba24110397828ec7bf2dd08d9bd171524193fe"
+    },
+    {
+      "bytes": 1510,
+      "capture_disposition": "RETAINED_INDEXED_EVIDENCE",
+      "index_hash_matches": true,
+      "index_row_id": "a1de8f516fc0b55d37231a1ee65b99a3df0dd416ba3195607b9b47a93c20609d",
+      "name": "ddm_tr2p1",
+      "path": ".omx/research/arm_final_messages/ddm_tr2p1_20260808T161301Z.md",
+      "rc": 0,
+      "sha256": "a7aa3afea1f367f34805aa5110bc55dbb241ba70d4fcab035e3846cc524640a0"
+    },
+    {
+      "bytes": 1946,
+      "capture_disposition": "RETAINED_INDEXED_EVIDENCE",
+      "index_hash_matches": true,
+      "index_row_id": "b5f2f49b6b627e1c4271b21bb480787508142ee3bd315e642a22dc60c9d3be56",
+      "name": "ddm_wc1",
+      "path": ".omx/research/arm_final_messages/ddm_wc1_20260808T003539Z.md",
+      "rc": 0,
+      "sha256": "42cbfadc8087ed557d414183ebd62e8b2e15798f1a524e8ccaa930ca77dcc503"
+    },
+    {
+      "bytes": 1799,
+      "capture_disposition": "RETAINED_INDEXED_EVIDENCE",
+      "index_hash_matches": true,
+      "index_row_id": "d3c46a1a6dc52e52e587aaa8a623dbd5b4d1a52e8e387cf099bd0232231c931d",
+      "name": "ddm_wc2",
+      "path": ".omx/research/arm_final_messages/ddm_wc2_20260808T170800Z.md",
+      "rc": 0,
+      "sha256": "076be031654e58962204fc035ed7bb317e307d51d3d8c62bfa7cde1c08624a13"
+    },
+    {
+      "bytes": 1306,
+      "capture_disposition": "RETAINED_INDEXED_EVIDENCE",
+      "index_hash_matches": true,
+      "index_row_id": "9f45539b447cedd90f94217b5e116a34c7e1df1efb51c2df804e64d98b0262d3",
+      "name": "ddm_zc1",
+      "path": ".omx/research/arm_final_messages/ddm_zc1_20260808T002736Z.md",
+      "rc": 0,
+      "sha256": "6d6b28a6bcea694252b432ae29c098bea19ea36d69d2102571056c31397d4433"
+    }
+  ],
+  "final_message_directory_scope": {
+    "files_total": 173,
+    "other_files_outside_charter_population": 144,
+    "population_files_verified": 29
+  },
+  "frontier": {
+    "contest_pointer": "borrowed/unmoved",
+    "measured_by_hr1": false,
+    "own_vehicle": "S = 0.7534578126155775 @ 357,837 B [macOS-CPU advisory]"
+  },
+  "generator_defect": {
+    "blocks_before_cure": 0,
+    "cure": "inject exact nonempty-only NEXT_IF_RESUMED contract into initial and relay keeper prompts; bootstrap repo src for direct python3 entrypoint",
+    "files_with_blocks_before_cure": 0,
+    "phantom_prevention": "omit heading entirely when no future action remains",
+    "population_final_messages": 29,
+    "root_cause": "keeper_source omitted RETAINED_REASONING even though the standard contract defined it; the common contract did not carry the exact parseable heading requirement"
+  },
+  "governance": {
+    "charter": {
+      "bytes": 6011,
+      "classification": "OPERATOR_INPUT",
+      "cleanup_disposition": "RETAINED_INPUT",
+      "evidence_or_reproducer": "read in full",
+      "exists": true,
+      "kind": "file",
+      "path": ".omx/research/ddm_hr1_charter.md",
+      "reason": "governing charter",
+      "sha256": "d10ef5c58b4ecfde0609ce5a9e996b336c5b54cda8ac572c33949c7f52de2142",
+      "tracked": false
+    },
+    "common_contract": {
+      "bytes": 4124,
+      "classification": "GOVERNANCE_INPUT",
+      "cleanup_disposition": "RETAINED_INPUT",
+      "evidence_or_reproducer": "read in full",
+      "exists": true,
+      "kind": "file",
+      "path": ".omx/tmp/codex_runs/_common_contract.md",
+      "reason": "governing common contract",
+      "sha256": "eeae9e0035582e6bdd65fd837e4aa35a65e064fd09900b9c212d41ac02086771",
+      "tracked": false
+    }
+  },
+  "landing": {
+    "fallback_status": "A serializer-backed shadow commit and durable SSD bundle will be attempted; its hash is reported in the final handoff, not guessed here.",
+    "main_index_after_failure": "EMPTY",
+    "main_serializer_error": "git add rc=128: unable to create temporary file; failed to insert src/tac/subagent_contract.py into object database",
+    "main_worktree_commit_status": "BLOCKED_BY_MANAGED_GIT_OBJECT_WRITE"
+  },
+  "population": {
+    "arm_names": [
+      "ddm_aa1",
+      "ddm_cf2",
+      "ddm_cr1",
+      "ddm_gc21",
+      "ddm_gdl1",
+      "ddm_hb2_hpac_pack_roundtrip",
+      "ddm_lx1",
+      "ddm_m1c1",
+      "ddm_m1r2",
+      "ddm_m1r3",
+      "ddm_m1r4a_mechanics",
+      "ddm_m1r4b_science",
+      "ddm_m1r4c_arith",
+      "ddm_m1r5a",
+      "ddm_m1r5b",
+      "ddm_m1r5c",
+      "ddm_ng1",
+      "ddm_oh1",
+      "ddm_pk1",
+      "ddm_pk2",
+      "ddm_rr16",
+      "ddm_rr17",
+      "ddm_rr18",
+      "ddm_rv2",
+      "ddm_tr2_trot_crosswalk",
+      "ddm_tr2p1",
+      "ddm_wc1",
+      "ddm_wc2",
+      "ddm_zc1"
+    ],
+    "arms_inspected": 29,
+    "arms_named": 29,
+    "canonical_rows_after_alias_collapse": 155,
+    "dispositions": {
+      "ALREADY-DONE": 21,
+      "DEFERRED": 37,
+      "FIRED": 0,
+      "FOLDED": 63,
+      "QUEUED-WITH-FIRE-ORDER": 59,
+      "SUPERSEDED": 41
+    },
+    "existing_exact_task_routes": 1,
+    "live_or_conditional_raw_rows": 96,
+    "live_or_conditional_unique_backfill_items": 94,
+    "raw_rows_extracted": 221,
+    "routed_rows": 221,
+    "semantic_aliases": 66,
+    "unrouted_rows": 0,
+    "zero_followon_arms": [
+      "ddm_pk2"
+    ]
+  },
+  "promotion_eligible": false,
+  "receipt_self": {
+    "note": "post-write file hash is supplied to the commit serializer and final handoff",
+    "path": ".omx/research/ddm_hr1_20260809T031504Z/RECEIPT.json",
+    "sha256": "omitted-self-referential"
+  },
+  "repo_head_before_hr1_commit": "84fc17f831620636065b3c20681c5b0cf27b88c7",
+  "review_tracker": {
+    "passes": [
+      {
+        "files": 4,
+        "finding": "direct python3 entrypoint initially failed to import tac; fixed with repo src bootstrap",
+        "name": "hr1-pass1-functional-codex",
+        "result": "PASS_WITH_FIX",
+        "reviewer": "codex"
+      },
+      {
+        "files": 4,
+        "name": "hr1-pass2-adversarial-codex",
+        "result": "PASS",
+        "reviewer": "codex"
+      }
+    ],
+    "policy_check": {
+      "entities": 106,
+      "files": 4,
+      "result": "PASS",
+      "violations": 0
+    },
+    "scan": "160813 entities across 10247 files"
+  },
+  "schema": "ddm_hr1.receipt.v1",
+  "score_claim": false,
+  "source_files_tracked_and_commit_exact": 34,
+  "source_files_unique": 34,
+  "source_provenance_validation": [
+    {
+      "current_matches_source_commit": true,
+      "current_sha256": "4a1f0080100abf547c748111694fdf34d1bf52878cdee8602298353ac86b27e9",
+      "exists_at_source_commit": true,
+      "path": ".omx/research/ddm_aa1_20260807/AA1_ATTACK_SHEET.jsonl",
+      "source_commit": "c70d78198fc61b64c6e446f854454565f24c535a",
+      "source_commit_blob_sha256": "4a1f0080100abf547c748111694fdf34d1bf52878cdee8602298353ac86b27e9",
+      "source_sha256": "4a1f0080100abf547c748111694fdf34d1bf52878cdee8602298353ac86b27e9",
+      "tracked": true
+    },
+    {
+      "current_matches_source_commit": true,
+      "current_sha256": "a2a52d5c8a15db9dbef53f42070313b7503c10bed11c5bfcbb37c103bcfe41fb",
+      "exists_at_source_commit": true,
+      "path": ".omx/research/ddm_cf2_20260808/CF2_ROWS.jsonl",
+      "source_commit": "d29df564f169f9cd1dee7219575fd56696a4309a",
+      "source_commit_blob_sha256": "a2a52d5c8a15db9dbef53f42070313b7503c10bed11c5bfcbb37c103bcfe41fb",
+      "source_sha256": "a2a52d5c8a15db9dbef53f42070313b7503c10bed11c5bfcbb37c103bcfe41fb",
+      "tracked": true
+    },
+    {
+      "current_matches_source_commit": true,
+      "current_sha256": "423857d24c99eeb1ef06b6e3f7aebcb6824a27f16ae85d7f9812122f9da2f791",
+      "exists_at_source_commit": true,
+      "path": ".omx/research/ddm_cr1_20260808/CR1_ROWS.jsonl",
+      "source_commit": "e3c3fb35418ff000c812d3390c5d52c8f877f470",
+      "source_commit_blob_sha256": "423857d24c99eeb1ef06b6e3f7aebcb6824a27f16ae85d7f9812122f9da2f791",
+      "source_sha256": "423857d24c99eeb1ef06b6e3f7aebcb6824a27f16ae85d7f9812122f9da2f791",
+      "tracked": true
+    },
+    {
+      "current_matches_source_commit": true,
+      "current_sha256": "15f6d2febc23e7eb779ebaa93d902d7470aec612a9a4c6bba54cd9f6de1d06ee",
+      "exists_at_source_commit": true,
+      "path": ".omx/research/ddm_gc21_20260808/GC21_CONVOCATION.md",
+      "source_commit": "0df50fcbf2f05bc704a509edda0f3f8432f5d7be",
+      "source_commit_blob_sha256": "15f6d2febc23e7eb779ebaa93d902d7470aec612a9a4c6bba54cd9f6de1d06ee",
+      "source_sha256": "15f6d2febc23e7eb779ebaa93d902d7470aec612a9a4c6bba54cd9f6de1d06ee",
+      "tracked": true
+    },
+    {
+      "current_matches_source_commit": true,
+      "current_sha256": "aa763fca6ae65aa63ced68e0e140e14286fe48d21ded30a9fe90727330a3ee52",
+      "exists_at_source_commit": true,
+      "path": ".omx/research/ddm_gdl1_20260807/GDL1_CROSSWALK_ROWS.jsonl",
+      "source_commit": "c42a8c4159a78c821c6b03fc4a368c750a9612af",
+      "source_commit_blob_sha256": "aa763fca6ae65aa63ced68e0e140e14286fe48d21ded30a9fe90727330a3ee52",
+      "source_sha256": "aa763fca6ae65aa63ced68e0e140e14286fe48d21ded30a9fe90727330a3ee52",
+      "tracked": true
+    },
+    {
+      "current_matches_source_commit": true,
+      "current_sha256": "91e160f667d9ddcc6f93b0940fa2c0bb7fe80c06ba096a60a952e18d2df1550d",
+      "exists_at_source_commit": true,
+      "path": ".omx/research/ddm_hb2_20260808/HB2_FINDINGS.md",
+      "source_commit": "896d0df5fd39c6eb342268b31205f216bf9db215",
+      "source_commit_blob_sha256": "91e160f667d9ddcc6f93b0940fa2c0bb7fe80c06ba096a60a952e18d2df1550d",
+      "source_sha256": "91e160f667d9ddcc6f93b0940fa2c0bb7fe80c06ba096a60a952e18d2df1550d",
+      "tracked": true
+    },
+    {
+      "current_matches_source_commit": true,
+      "current_sha256": "951eba93de3963adbdcdb6fbd46161f470a6e4339b2c76254d358b70db2b6ebe",
+      "exists_at_source_commit": true,
+      "path": ".omx/research/ddm_lx1_20260808/LX1_ROWS.jsonl",
+      "source_commit": "fb570351bcd69f582727992c41089a56935e2b31",
+      "source_commit_blob_sha256": "951eba93de3963adbdcdb6fbd46161f470a6e4339b2c76254d358b70db2b6ebe",
+      "source_sha256": "951eba93de3963adbdcdb6fbd46161f470a6e4339b2c76254d358b70db2b6ebe",
+      "tracked": true
+    },
+    {
+      "current_matches_source_commit": true,
+      "current_sha256": "4616dafa80a82476e048fa04ee777033befbdc25c64f6438bd989d7212303998",
+      "exists_at_source_commit": true,
+      "path": ".omx/research/ddm_m1c1_20260808/M1C1_CURES.md",
+      "source_commit": "393d67d01671262fbc8da0ed0e7c009f421cc986",
+      "source_commit_blob_sha256": "4616dafa80a82476e048fa04ee777033befbdc25c64f6438bd989d7212303998",
+      "source_sha256": "4616dafa80a82476e048fa04ee777033befbdc25c64f6438bd989d7212303998",
+      "tracked": true
+    },
+    {
+      "current_matches_source_commit": true,
+      "current_sha256": "ba8dacc18960c7308987960ff77af466155c6130ce8ecbb8d39e39f3567f20f2",
+      "exists_at_source_commit": true,
+      "path": ".omx/research/ddm_m1r2_20260808/M1R2_REVIEW.md",
+      "source_commit": "c0f70c6c31464e69803ba280e07ada2ffcf71097",
+      "source_commit_blob_sha256": "ba8dacc18960c7308987960ff77af466155c6130ce8ecbb8d39e39f3567f20f2",
+      "source_sha256": "ba8dacc18960c7308987960ff77af466155c6130ce8ecbb8d39e39f3567f20f2",
+      "tracked": true
+    },
+    {
+      "current_matches_source_commit": true,
+      "current_sha256": "23de0fdc667cdb799cfa24509ef1dfb4eedf65a8793b7137130f3e7b97730639",
+      "exists_at_source_commit": true,
+      "path": ".omx/research/ddm_m1r3_20260808/M1R3_REVIEW.md",
+      "source_commit": "5825ed5af716c7644d7e57825f9c0ed85b9a0e4f",
+      "source_commit_blob_sha256": "23de0fdc667cdb799cfa24509ef1dfb4eedf65a8793b7137130f3e7b97730639",
+      "source_sha256": "23de0fdc667cdb799cfa24509ef1dfb4eedf65a8793b7137130f3e7b97730639",
+      "tracked": true
+    },
+    {
+      "current_matches_source_commit": true,
+      "current_sha256": "e94669d685d9aafed8fc4832ef7d4743222e6459a3044d8f0b1722a0a6f01f90",
+      "exists_at_source_commit": true,
+      "path": ".omx/research/ddm_m1r4_20260808/M1R4A_REVIEW.md",
+      "source_commit": "440d29ffc24447be1968f59b7bd062564b536126",
+      "source_commit_blob_sha256": "e94669d685d9aafed8fc4832ef7d4743222e6459a3044d8f0b1722a0a6f01f90",
+      "source_sha256": "e94669d685d9aafed8fc4832ef7d4743222e6459a3044d8f0b1722a0a6f01f90",
+      "tracked": true
+    },
+    {
+      "current_matches_source_commit": true,
+      "current_sha256": "e8d979493743467624ca52776a96328c12ccc6057f91cd4d01ddbbdbbab5f675",
+      "exists_at_source_commit": true,
+      "path": ".omx/research/ddm_m1r4_20260808/M1R4B_REVIEW.md",
+      "source_commit": "3ff6808a9681004ee2939ce21beae974d4e611b7",
+      "source_commit_blob_sha256": "e8d979493743467624ca52776a96328c12ccc6057f91cd4d01ddbbdbbab5f675",
+      "source_sha256": "e8d979493743467624ca52776a96328c12ccc6057f91cd4d01ddbbdbbab5f675",
+      "tracked": true
+    },
+    {
+      "current_matches_source_commit": true,
+      "current_sha256": "6b2670eda54e761930892a8ff6635c64175815a75cedb1d55385d256cf44f658",
+      "exists_at_source_commit": true,
+      "path": ".omx/research/ddm_m1r4_20260808/M1R4C_REVIEW.md",
+      "source_commit": "690a5033fe63bc00d79268cbcea7a4d25b9bcf9c",
+      "source_commit_blob_sha256": "6b2670eda54e761930892a8ff6635c64175815a75cedb1d55385d256cf44f658",
+      "source_sha256": "6b2670eda54e761930892a8ff6635c64175815a75cedb1d55385d256cf44f658",
+      "tracked": true
+    },
+    {
+      "current_matches_source_commit": true,
+      "current_sha256": "265d5c41dc4c1362b5ec381e988749e0a1cc17178d8314ec3e3ea10c303b38c1",
+      "exists_at_source_commit": true,
+      "path": ".omx/research/ddm_m1r4_20260808/M1R5A_REVIEW.md",
+      "source_commit": "0acc42e2534e87d4a53aaaa5a783970ab8e09b4c",
+      "source_commit_blob_sha256": "265d5c41dc4c1362b5ec381e988749e0a1cc17178d8314ec3e3ea10c303b38c1",
+      "source_sha256": "265d5c41dc4c1362b5ec381e988749e0a1cc17178d8314ec3e3ea10c303b38c1",
+      "tracked": true
+    },
+    {
+      "current_matches_source_commit": true,
+      "current_sha256": "bde305795ca04c2409b05a6cbcc090106fc91abdf870086d8c7dc945665c68be",
+      "exists_at_source_commit": true,
+      "path": ".omx/research/ddm_m1r4_20260808/M1R5B_REVIEW.md",
+      "source_commit": "871f51f66b868c1259c3ee5f6eac95b3ee8d2ecd",
+      "source_commit_blob_sha256": "bde305795ca04c2409b05a6cbcc090106fc91abdf870086d8c7dc945665c68be",
+      "source_sha256": "bde305795ca04c2409b05a6cbcc090106fc91abdf870086d8c7dc945665c68be",
+      "tracked": true
+    },
+    {
+      "current_matches_source_commit": true,
+      "current_sha256": "75a6b4d455cf35de05ea5b2ac4cc394b2df94b98e15415a7c8393bb7d032d0b6",
+      "exists_at_source_commit": true,
+      "path": ".omx/research/ddm_m1r4_20260808/M1R5C_REVIEW.md",
+      "source_commit": "b08fd86f87e27fd45e9d4296c5bb367213822505",
+      "source_commit_blob_sha256": "75a6b4d455cf35de05ea5b2ac4cc394b2df94b98e15415a7c8393bb7d032d0b6",
+      "source_sha256": "75a6b4d455cf35de05ea5b2ac4cc394b2df94b98e15415a7c8393bb7d032d0b6",
+      "tracked": true
+    },
+    {
+      "current_matches_source_commit": true,
+      "current_sha256": "26f76a4496ad55a2a15af69889f0a60d28a724c372c4f94ea59375b96ce28845",
+      "exists_at_source_commit": true,
+      "path": ".omx/research/ddm_ng1_20260808/NG1_CROSSWALK.md",
+      "source_commit": "acdbab2818cc1c217de91b34100a1b3e8fb0499a",
+      "source_commit_blob_sha256": "26f76a4496ad55a2a15af69889f0a60d28a724c372c4f94ea59375b96ce28845",
+      "source_sha256": "26f76a4496ad55a2a15af69889f0a60d28a724c372c4f94ea59375b96ce28845",
+      "tracked": true
+    },
+    {
+      "current_matches_source_commit": true,
+      "current_sha256": "b642697d6efdaeaa9278e130a0b4acc857168a966a0d6999cf6f71744554d4ab",
+      "exists_at_source_commit": true,
+      "path": ".omx/research/ddm_oh1_20260807/OH1_CONSUMPTION_PLAN.jsonl",
+      "source_commit": "81bb5edcb5d302a4e9ee1fd0e3e5f8f53e348a3c",
+      "source_commit_blob_sha256": "b642697d6efdaeaa9278e130a0b4acc857168a966a0d6999cf6f71744554d4ab",
+      "source_sha256": "b642697d6efdaeaa9278e130a0b4acc857168a966a0d6999cf6f71744554d4ab",
+      "tracked": true
+    },
+    {
+      "current_matches_source_commit": true,
+      "current_sha256": "02b7f447b51e88ac5844d55ba762a5205d873c005e649d58179d0cf45711439a",
+      "exists_at_source_commit": true,
+      "path": ".omx/research/ddm_pk1_20260807/PK1_FINDINGS.md",
+      "source_commit": "f4047ddbe23370580bc4195d0c2f9d59b1b159ae",
+      "source_commit_blob_sha256": "02b7f447b51e88ac5844d55ba762a5205d873c005e649d58179d0cf45711439a",
+      "source_sha256": "02b7f447b51e88ac5844d55ba762a5205d873c005e649d58179d0cf45711439a",
+      "tracked": true
+    },
+    {
+      "current_matches_source_commit": true,
+      "current_sha256": "5646b5c7e572edb0f23eaa7dcdee106fbfcf6cbcb65426db18613569d8bb7c0f",
+      "exists_at_source_commit": true,
+      "path": ".omx/research/ddm_rr16_20260807/ROUND16_FINDINGS.md",
+      "source_commit": "c70d78198fc61b64c6e446f854454565f24c535a",
+      "source_commit_blob_sha256": "5646b5c7e572edb0f23eaa7dcdee106fbfcf6cbcb65426db18613569d8bb7c0f",
+      "source_sha256": "5646b5c7e572edb0f23eaa7dcdee106fbfcf6cbcb65426db18613569d8bb7c0f",
+      "tracked": true
+    },
+    {
+      "current_matches_source_commit": true,
+      "current_sha256": "fcd00c613f5aa4c9f3cb2b9269721e7ec93b015f41a79370e0461f7212c54195",
+      "exists_at_source_commit": true,
+      "path": ".omx/research/ddm_rr17_20260807/ROUND17_FINDINGS.md",
+      "source_commit": "0a6d0baf78b0e396c05594e28b96ec9d777d92cb",
+      "source_commit_blob_sha256": "fcd00c613f5aa4c9f3cb2b9269721e7ec93b015f41a79370e0461f7212c54195",
+      "source_sha256": "fcd00c613f5aa4c9f3cb2b9269721e7ec93b015f41a79370e0461f7212c54195",
+      "tracked": true
+    },
+    {
+      "current_matches_source_commit": true,
+      "current_sha256": "279736e755f3d8ea1f383601fe1d4ac94287f22716ed84f852badd03672c698a",
+      "exists_at_source_commit": true,
+      "path": ".omx/research/ddm_rr18_20260808/ROUND18_FINDINGS.md",
+      "source_commit": "3c3348fd3593de23a6b537973721b7f5f7b080ea",
+      "source_commit_blob_sha256": "279736e755f3d8ea1f383601fe1d4ac94287f22716ed84f852badd03672c698a",
+      "source_sha256": "279736e755f3d8ea1f383601fe1d4ac94287f22716ed84f852badd03672c698a",
+      "tracked": true
+    },
+    {
+      "current_matches_source_commit": true,
+      "current_sha256": "52381ba118d36b5a96758c476f13bb107c2820283e0aa306bda6b52558058ba1",
+      "exists_at_source_commit": true,
+      "path": ".omx/research/ddm_rv2_20260807/RV2_REGRADE_TABLE.jsonl",
+      "source_commit": "b61cacae0115d6d94ed14734cde76c6d5b7dd556",
+      "source_commit_blob_sha256": "52381ba118d36b5a96758c476f13bb107c2820283e0aa306bda6b52558058ba1",
+      "source_sha256": "52381ba118d36b5a96758c476f13bb107c2820283e0aa306bda6b52558058ba1",
+      "tracked": true
+    },
+    {
+      "current_matches_source_commit": true,
+      "current_sha256": "142dbbb4ab9437179f488310bd459885f3187b573adffe975e362e237d861a85",
+      "exists_at_source_commit": true,
+      "path": ".omx/research/ddm_tr2_20260808/TR2_CROSSWALK.md",
+      "source_commit": "49ce3f1c155823608c1b10e94996519525d687d1",
+      "source_commit_blob_sha256": "142dbbb4ab9437179f488310bd459885f3187b573adffe975e362e237d861a85",
+      "source_sha256": "142dbbb4ab9437179f488310bd459885f3187b573adffe975e362e237d861a85",
+      "tracked": true
+    },
+    {
+      "current_matches_source_commit": true,
+      "current_sha256": "906b97f54e4956062e3c322cf2c0f70c8dab2915656afbc4f0a1cf197f027860",
+      "exists_at_source_commit": true,
+      "path": ".omx/research/ddm_tr2_20260808/TR2_ROWS.jsonl",
+      "source_commit": "49ce3f1c155823608c1b10e94996519525d687d1",
+      "source_commit_blob_sha256": "906b97f54e4956062e3c322cf2c0f70c8dab2915656afbc4f0a1cf197f027860",
+      "source_sha256": "906b97f54e4956062e3c322cf2c0f70c8dab2915656afbc4f0a1cf197f027860",
+      "tracked": true
+    },
+    {
+      "current_matches_source_commit": true,
+      "current_sha256": "45f8b7e5fecaf71f67199c51b585670e0bbb71cab99841225ee05986d09599d1",
+      "exists_at_source_commit": true,
+      "path": ".omx/research/ddm_tr2p1_20260808/TR2P1_FINDINGS.md",
+      "source_commit": "67eb977fffef78e1d8e714384453d0a93a8a46e7",
+      "source_commit_blob_sha256": "45f8b7e5fecaf71f67199c51b585670e0bbb71cab99841225ee05986d09599d1",
+      "source_sha256": "45f8b7e5fecaf71f67199c51b585670e0bbb71cab99841225ee05986d09599d1",
+      "tracked": true
+    },
+    {
+      "current_matches_source_commit": true,
+      "current_sha256": "717ad4815b1ee48ab48f3ed19ea0de07fb41ce720ca8fb3b2cf45043a879bef3",
+      "exists_at_source_commit": true,
+      "path": ".omx/research/ddm_wc1_20260807/WC1_FINDINGS.md",
+      "source_commit": "26f6a5aa3d845c77f4f21d1d9718399f19744805",
+      "source_commit_blob_sha256": "717ad4815b1ee48ab48f3ed19ea0de07fb41ce720ca8fb3b2cf45043a879bef3",
+      "source_sha256": "717ad4815b1ee48ab48f3ed19ea0de07fb41ce720ca8fb3b2cf45043a879bef3",
+      "tracked": true
+    },
+    {
+      "current_matches_source_commit": true,
+      "current_sha256": "91260b50b8c6a7282a3430e29f99f19fe9b07417e9a3213e6b7d47d6a23c9a97",
+      "exists_at_source_commit": true,
+      "path": ".omx/research/ddm_wc2_20260808/WC2_FINDINGS.md",
+      "source_commit": "b08fd86f87e27fd45e9d4296c5bb367213822505",
+      "source_commit_blob_sha256": "91260b50b8c6a7282a3430e29f99f19fe9b07417e9a3213e6b7d47d6a23c9a97",
+      "source_sha256": "91260b50b8c6a7282a3430e29f99f19fe9b07417e9a3213e6b7d47d6a23c9a97",
+      "tracked": true
+    },
+    {
+      "current_matches_source_commit": true,
+      "current_sha256": "077542b98b5d5064fc1e80aece1aec6e36ce341fde656f4afddba1cc3cd88673",
+      "exists_at_source_commit": true,
+      "path": ".omx/research/ddm_zc1_20260807/LEG_832_BOUND_TEST_RECEIPT.md",
+      "source_commit": "63b71360c7c711a91f9272cb98baa1261d2b7013",
+      "source_commit_blob_sha256": "077542b98b5d5064fc1e80aece1aec6e36ce341fde656f4afddba1cc3cd88673",
+      "source_sha256": "077542b98b5d5064fc1e80aece1aec6e36ce341fde656f4afddba1cc3cd88673",
+      "tracked": true
+    },
+    {
+      "current_matches_source_commit": true,
+      "current_sha256": "cd9ca2a6f145d2392973f89df8e93a0a301a25000b315cb32c38f71482fd7ed6",
+      "exists_at_source_commit": true,
+      "path": ".omx/research/ddm_zc1_20260807/LEG_MH1_524_LANE_SKIPBAND_RECEIPT.md",
+      "source_commit": "63b71360c7c711a91f9272cb98baa1261d2b7013",
+      "source_commit_blob_sha256": "cd9ca2a6f145d2392973f89df8e93a0a301a25000b315cb32c38f71482fd7ed6",
+      "source_sha256": "cd9ca2a6f145d2392973f89df8e93a0a301a25000b315cb32c38f71482fd7ed6",
+      "tracked": true
+    },
+    {
+      "current_matches_source_commit": true,
+      "current_sha256": "2e8fc8bfc507692f8a8c8afc301f126120c467e020d8a3aedb16222cb46d678d",
+      "exists_at_source_commit": true,
+      "path": ".omx/research/ddm_zc1_20260807/LEG_MH1_SPLIT_BANK_GATE_RECEIPT.md",
+      "source_commit": "63b71360c7c711a91f9272cb98baa1261d2b7013",
+      "source_commit_blob_sha256": "2e8fc8bfc507692f8a8c8afc301f126120c467e020d8a3aedb16222cb46d678d",
+      "source_sha256": "2e8fc8bfc507692f8a8c8afc301f126120c467e020d8a3aedb16222cb46d678d",
+      "tracked": true
+    },
+    {
+      "current_matches_source_commit": true,
+      "current_sha256": "4660c6d28c0b889112ea77de82060bb3b7affbfe796d75c35283afeeefe1accc",
+      "exists_at_source_commit": true,
+      "path": ".omx/research/ddm_zc1_20260807/LEG_P1A_PHI_COMPOSITE_R_ADJOINT_RECEIPT.md",
+      "source_commit": "63b71360c7c711a91f9272cb98baa1261d2b7013",
+      "source_commit_blob_sha256": "4660c6d28c0b889112ea77de82060bb3b7affbfe796d75c35283afeeefe1accc",
+      "source_sha256": "4660c6d28c0b889112ea77de82060bb3b7affbfe796d75c35283afeeefe1accc",
+      "tracked": true
+    },
+    {
+      "current_matches_source_commit": true,
+      "current_sha256": "68b506a38736dfdf294f7d2fcec62602612adab5548377e6c6182aa7bca523a2",
+      "exists_at_source_commit": true,
+      "path": ".omx/research/ddm_zc1_20260807/LEG_P1A_TW1_LIVE_VEHICLE_RECEIPT.md",
+      "source_commit": "63b71360c7c711a91f9272cb98baa1261d2b7013",
+      "source_commit_blob_sha256": "68b506a38736dfdf294f7d2fcec62602612adab5548377e6c6182aa7bca523a2",
+      "source_sha256": "68b506a38736dfdf294f7d2fcec62602612adab5548377e6c6182aa7bca523a2",
+      "tracked": true
+    },
+    {
+      "current_matches_source_commit": true,
+      "current_sha256": "7bc2644a5844042089f7c2c58c4de1b19f1bd62b6d1ff2e7fdf91689737765be",
+      "exists_at_source_commit": true,
+      "path": ".omx/research/ddm_zc1_20260807/LEG_P2A_T0_DRAIN_RECEIPT.md",
+      "source_commit": "63b71360c7c711a91f9272cb98baa1261d2b7013",
+      "source_commit_blob_sha256": "7bc2644a5844042089f7c2c58c4de1b19f1bd62b6d1ff2e7fdf91689737765be",
+      "source_sha256": "7bc2644a5844042089f7c2c58c4de1b19f1bd62b6d1ff2e7fdf91689737765be",
+      "tracked": true
+    }
+  ],
+  "store_delivery": {
+    "all_bridge_source_hashes_match_store": true,
+    "hr1_arm_names": [
+      "ddm_aa1",
+      "ddm_cf2",
+      "ddm_cr1",
+      "ddm_gc21",
+      "ddm_hb2_hpac_pack_roundtrip",
+      "ddm_lx1",
+      "ddm_m1c1",
+      "ddm_m1r5a",
+      "ddm_m1r5b",
+      "ddm_m1r5c",
+      "ddm_ng1",
+      "ddm_oh1",
+      "ddm_rr17",
+      "ddm_rr18",
+      "ddm_rv2",
+      "ddm_tr2p1",
+      "ddm_wc2",
+      "ddm_zc1"
+    ],
+    "hr1_item_bullets": 94,
+    "hr1_rows_written": 18,
+    "idempotence_key": "row_id",
+    "queue_sha256_after": "803ab10a9315fe4a8ccf3c0ab9319126408458d8ce37bba89bda25f94cdb0098",
+    "reader": "tools/costate_digest.py::section_arm_next_if_resumed",
+    "reader_verified_rows": 85,
+    "rows_after": 85,
+    "rows_before": 67,
+    "schema": "codex_arm_queue.next_if_resumed.v1",
+    "surface": ".omx/state/codex_arm_queue.next_if_resumed.jsonl"
+  },
+  "triality": {
+    "legs_touched": "none",
+    "reason": "harvest routing and arm-queue apparatus; no model law, DSL lever, or campaign DAG state changed"
+  },
+  "uncommitted_custody": [
+    {
+      "bytes": 6011,
+      "classification": "OPERATOR_INPUT",
+      "cleanup_disposition": "RETAINED_INPUT",
+      "evidence_or_reproducer": "Read verbatim for this unit.",
+      "exists": true,
+      "kind": "file",
+      "path": ".omx/research/ddm_hr1_charter.md",
+      "reason": "User-supplied HR1 charter; not an arm output.",
+      "sha256": "d10ef5c58b4ecfde0609ce5a9e996b336c5b54cda8ac572c33949c7f52de2142",
+      "tracked": false
+    },
+    {
+      "bytes": 4124,
+      "classification": "GOVERNANCE_INPUT",
+      "cleanup_disposition": "RETAINED_INPUT",
+      "evidence_or_reproducer": "Read verbatim for this unit.",
+      "exists": true,
+      "kind": "file",
+      "path": ".omx/tmp/codex_runs/_common_contract.md",
+      "reason": "Shared common contract; ignored live governance surface.",
+      "sha256": "eeae9e0035582e6bdd65fd837e4aa35a65e064fd09900b9c212d41ac02086771",
+      "tracked": false
+    },
+    {
+      "bytes": 4116,
+      "classification": "ARM_INPUT",
+      "cleanup_disposition": "RETAINED_INPUT",
+      "evidence_or_reproducer": "CF2 commit d29df564f169f9cd1dee7219575fd56696a4309a.",
+      "exists": true,
+      "kind": "file",
+      "path": ".omx/research/ddm_cf2_20260808/CHARTER.md",
+      "reason": "Untracked CF2 charter; committed CF2_ROWS and findings are separately source-validated.",
+      "sha256": "926ae4fca2281e10341dfcc5c347364535256880c92083a47dcfa46a7df1561a",
+      "tracked": false
+    },
+    {
+      "bytes": 35545,
+      "classification": "PREEXISTING_RECOVERY_RESIDUE",
+      "cleanup_disposition": "RETAINED_BLOCKED_FROM_CLEANUP",
+      "evidence_or_reproducer": "Committed CR1 route source is .omx/research/ddm_cr1_20260808/CR1_ROWS.jsonl at e3c3fb35418ff000c812d3390c5d52c8f877f470.",
+      "exists": true,
+      "file_count": 2,
+      "kind": "directory",
+      "path": ".omx/research/ddm_cr1_20260801",
+      "reason": "CR1 land log and intent patch are not the committed CR1 findings source.",
+      "tree_hash_grammar": "sorted relative_path NUL bytes NUL file_sha256 LF",
+      "tree_sha256": "4778b8f839104d313b7c5bb69226391025a4f2a7d18fd4f51c1ac7b5f5b036a3"
+    },
+    {
+      "bytes": 17515,
+      "classification": "PROTECTED_INPUT",
+      "cleanup_disposition": "RETAINED_PROTECTED",
+      "evidence_or_reproducer": "Protected composition evidence; HR1 performed no edit.",
+      "exists": true,
+      "kind": "file",
+      "path": ".omx/research/ddm_cr1_composition_row_827_20260801.md",
+      "reason": "Common contract forbids editing this file.",
+      "sha256": "74286007d37b1a95df95ba973a3d772e5e43ac7b38ad581119923b92d0b7d4a7",
+      "tracked": false
+    },
+    {
+      "bytes": 45434,
+      "classification": "SACRED_LIVE_RUN_EVIDENCE",
+      "cleanup_disposition": "RETAINED_BLOCKED_FROM_CLEANUP",
+      "evidence_or_reproducer": "M1 launch ticket and review receipts under .omx/research/ddm_m1_20260808.",
+      "exists": true,
+      "file_count": 3,
+      "kind": "directory",
+      "path": ".omx/research/ddm_m1_20260808/dseg_leg_logs",
+      "reason": "Pre-existing M1 run evidence reviewed by the R rounds, not produced by HR1.",
+      "tree_hash_grammar": "sorted relative_path NUL bytes NUL file_sha256 LF",
+      "tree_sha256": "0f4ec6cfdabe7bb5e0f0f3f99ecf071db80b4aae014e1ec1dfe63f4518d24101"
+    },
+    {
+      "bytes": 3625197,
+      "classification": "SACRED_LIVE_RUN_EVIDENCE",
+      "cleanup_disposition": "RETAINED_BLOCKED_FROM_CLEANUP",
+      "evidence_or_reproducer": "M1 launch ticket and resume/controller receipts under the same directory.",
+      "exists": true,
+      "file_count": 16,
+      "kind": "directory",
+      "path": ".omx/research/ddm_m1_20260808/run",
+      "reason": "Pre-existing M1 run directory; run dirs are sacred.",
+      "tree_hash_grammar": "sorted relative_path NUL bytes NUL file_sha256 LF",
+      "tree_sha256": "feb4c0252708b584ba007089ec846e4fa9e42348c75c691d2b633bf8fc8ec00f"
+    },
+    {
+      "bytes": 2615,
+      "classification": "SACRED_LIVE_RUN_INPUT",
+      "cleanup_disposition": "RETAINED_BLOCKED_FROM_CLEANUP",
+      "evidence_or_reproducer": "M1 seal review chain.",
+      "exists": true,
+      "kind": "file",
+      "path": ".omx/research/ddm_m1_20260808/seal_metal_leg.sh",
+      "reason": "Pre-existing seal input; HR1 did not execute or edit it.",
+      "sha256": "67e3310b825934433a2c41509297c7ae4f7cd891537002ffea106ee18b4f4dc4",
+      "tracked": false
+    },
+    {
+      "bytes": 130509,
+      "classification": "SACRED_LIVE_RUN_EVIDENCE",
+      "cleanup_disposition": "RETAINED_BLOCKED_FROM_CLEANUP",
+      "evidence_or_reproducer": "M1 seal review chain.",
+      "exists": true,
+      "file_count": 3,
+      "kind": "directory",
+      "path": ".omx/research/ddm_m1_20260808/seal_metal_leg_logs",
+      "reason": "Pre-existing seal logs; HR1 did not execute the seal.",
+      "tree_hash_grammar": "sorted relative_path NUL bytes NUL file_sha256 LF",
+      "tree_sha256": "5f81204db1ab3aeb3d1dbc14f5cb5ac59bf38b16351abe22d30011f6c0c064bf"
+    },
+    {
+      "bytes": 10326157,
+      "classification": "SACRED_LIVE_RUN_EVIDENCE",
+      "cleanup_disposition": "RETAINED_BLOCKED_FROM_CLEANUP",
+      "evidence_or_reproducer": "M1 ticket/review chain; no deletion without complete stage provenance.",
+      "exists": true,
+      "file_count": 27,
+      "kind": "directory",
+      "path": ".omx/research/ddm_m1_20260808/sigma",
+      "reason": "Pre-existing sigma receipts and runs; tree includes tracked and untracked members.",
+      "tree_hash_grammar": "sorted relative_path NUL bytes NUL file_sha256 LF",
+      "tree_sha256": "51eff5a4c1611514223395d0ace3ad62d1b5fcdae1511f71b0b7988a396b75a6"
+    },
+    {
+      "bytes": 1619,
+      "classification": "SACRED_LIVE_RUN_INPUT",
+      "cleanup_disposition": "RETAINED_BLOCKED_FROM_CLEANUP",
+      "evidence_or_reproducer": "M1 ticket/review chain.",
+      "exists": true,
+      "kind": "file",
+      "path": ".omx/research/ddm_m1_20260808/sigma_leg.sh",
+      "reason": "Pre-existing sigma runner; HR1 did not launch it.",
+      "sha256": "b2a6fe9d0b617ef51f7d5c014e9a412891eba5fdfadb37762e1980a1fc7c2e3f",
+      "tracked": false
+    },
+    {
+      "bytes": 1317,
+      "classification": "SACRED_LIVE_RUN_EVIDENCE",
+      "cleanup_disposition": "RETAINED_BLOCKED_FROM_CLEANUP",
+      "evidence_or_reproducer": "M1 ticket/review chain.",
+      "exists": true,
+      "file_count": 3,
+      "kind": "directory",
+      "path": ".omx/research/ddm_m1_20260808/sigma_leg_logs",
+      "reason": "Pre-existing sigma logs.",
+      "tree_hash_grammar": "sorted relative_path NUL bytes NUL file_sha256 LF",
+      "tree_sha256": "38d79a4c70dda11b07c135d63eda304e00f70d0065ec8e8b745aacd175a94270"
+    },
+    {
+      "bytes": 439644,
+      "classification": "SACRED_LIVE_RUN_EVIDENCE",
+      "cleanup_disposition": "RETAINED_BLOCKED_FROM_CLEANUP",
+      "evidence_or_reproducer": "M1 ticket/review chain.",
+      "exists": true,
+      "file_count": 3,
+      "kind": "directory",
+      "path": ".omx/research/ddm_m1_20260808/sigma_leg_v2_logs",
+      "reason": "Pre-existing revised sigma logs.",
+      "tree_hash_grammar": "sorted relative_path NUL bytes NUL file_sha256 LF",
+      "tree_sha256": "7b9cfc89be1167ef791a8d96e48c43da9674a8d3d04b354d8493355ddd6d6a3e"
+    },
+    {
+      "bytes": 3641489,
+      "classification": "POST_ARM_RUNTIME_EVIDENCE",
+      "cleanup_disposition": "RETAINED_EVIDENCE",
+      "evidence_or_reproducer": "RR16 findings commit c70d78198fc61b64c6e446f854454565f24c535a.",
+      "exists": true,
+      "file_count": 14,
+      "kind": "directory",
+      "path": ".omx/research/ddm_rr16_20260807/runtime_checks",
+      "reason": "Untracked RR16 runtime checks; primary ROUND16 findings are committed and source-validated.",
+      "tree_hash_grammar": "sorted relative_path NUL bytes NUL file_sha256 LF",
+      "tree_sha256": "9be3de792e7cde8416c041d5c8c261a998b2e8dcb438f81628e9eadf1fecb6f9"
+    },
+    {
+      "bytes": 25275,
+      "classification": "POST_ARM_BENCH_REVISION",
+      "cleanup_disposition": "RETAINED_EVIDENCE",
+      "evidence_or_reproducer": "Current worktree ticket/receipt pair; do not absorb into HR1.",
+      "exists": true,
+      "head_sha256": "5457e4f0a41a8c766b7f662098c5b486fb847f14e9eeb63cdbffb9d72dda909c",
+      "kind": "file",
+      "path": ".omx/research/ddm_wc1_20260807/wc1_bench_receipts.jsonl",
+      "reason": "Modified after the committed WC1 findings and later consumed by WC3.",
+      "sha256": "50ebae869c5486f5aee099d4c019c69be1ad5ee1251b61d6e7664050bea39962",
+      "tracked": true,
+      "worktree_differs_from_head": true
+    },
+    {
+      "bytes": 10174,
+      "classification": "POST_ARM_BENCH_REVISION",
+      "cleanup_disposition": "RETAINED_EVIDENCE",
+      "evidence_or_reproducer": "Current worktree ticket/receipt pair; do not absorb into HR1.",
+      "exists": true,
+      "head_sha256": "fdfa462b2f95ad98227a570542554ef53b4a1a7d3536d041a47823b128cd1793",
+      "kind": "file",
+      "path": ".omx/research/ddm_wc1_20260807/wc1_bench_ticket.json",
+      "reason": "Modified after the committed WC1 findings and later consumed by WC3.",
+      "sha256": "3549b6f277b538a4c1691d8417989ce36e54ce29052fd6922125317030b5f383",
+      "tracked": true,
+      "worktree_differs_from_head": true
+    },
+    {
+      "bytes": 12958,
+      "classification": "POST_ARM_BENCH_REVISION",
+      "cleanup_disposition": "RETAINED_USER_WORK",
+      "evidence_or_reproducer": "Current worktree diff preserved; do not absorb into HR1.",
+      "exists": true,
+      "head_sha256": "27a864799e5c2e6cf63679ba9ce95eccfabd44d4735e5510a5002587dec7b03b",
+      "kind": "file",
+      "path": "experiments/tests/test_ddm_wc1_wallclock.py",
+      "reason": "Modified WC1 benchmark test belongs to the later benchmark lane.",
+      "sha256": "a3b34bd2536d09aecb0966bf94ef9d76129a71b25a2cd3cd8e104f93feb0cf1d",
+      "tracked": true,
+      "worktree_differs_from_head": true
+    },
+    {
+      "bytes": 4359,
+      "classification": "POST_ARM_RUNTIME_EVIDENCE",
+      "cleanup_disposition": "RETAINED_EVIDENCE",
+      "evidence_or_reproducer": "WC1 ticket and receipts in the same arm directory.",
+      "exists": true,
+      "file_count": 3,
+      "kind": "directory",
+      "path": ".omx/research/ddm_wc1_20260807/bench_run",
+      "reason": "Untracked WC1 benchmark receipt directory.",
+      "tree_hash_grammar": "sorted relative_path NUL bytes NUL file_sha256 LF",
+      "tree_sha256": "03d5ac95e73f56519d266ab6e765fee80a0922ec9663b0b24a86f2a02a64fe0a"
+    },
+    {
+      "bytes": 2442,
+      "classification": "POST_ARM_RUNTIME_EVIDENCE",
+      "cleanup_disposition": "RETAINED_EVIDENCE",
+      "evidence_or_reproducer": "WC1 ticket and receipts in the same arm directory.",
+      "exists": true,
+      "file_count": 3,
+      "kind": "directory",
+      "path": ".omx/research/ddm_wc1_20260807/bench_run2",
+      "reason": "Untracked second WC1 benchmark receipt directory.",
+      "tree_hash_grammar": "sorted relative_path NUL bytes NUL file_sha256 LF",
+      "tree_sha256": "eb69287d35cb981a1120afdfa9188d51fa460f5552d86b598cdd2d6a54dcf2fa"
+    },
+    {
+      "bytes": 4351,
+      "classification": "ARM_INPUT",
+      "cleanup_disposition": "RETAINED_INPUT",
+      "evidence_or_reproducer": "Rescue commit b08fd86f87e27fd45e9d4296c5bb367213822505.",
+      "exists": true,
+      "kind": "file",
+      "path": ".omx/research/ddm_wc2_20260808/CHARTER.md",
+      "reason": "Untracked WC2 charter; WC2 findings and typed rows were rescued.",
+      "sha256": "e1253b0a4d620f6ab3d82261c130481937c4587e029272dca506715d62adc91f",
+      "tracked": false
+    },
+    {
+      "bytes": 45922,
+      "classification": "POST_ARM_RUNTIME_EVIDENCE",
+      "cleanup_disposition": "RETAINED_EVIDENCE",
+      "evidence_or_reproducer": "WC2 ticket plus WC2_FINDINGS.md.",
+      "exists": true,
+      "kind": "file",
+      "path": ".omx/research/ddm_wc2_20260808/wc2_bench_receipts.jsonl",
+      "reason": "Untracked WC2 execution receipt surface; extended rows remain unreceipted.",
+      "sha256": "cbdf35e2c3958d7f21940066e628448cb602f24cc835f01c3471fa683cef142f",
+      "tracked": false
+    },
+    {
+      "bytes": 22763,
+      "classification": "POST_ARM_RUNTIME_INPUT",
+      "cleanup_disposition": "RETAINED_INPUT",
+      "evidence_or_reproducer": "WC2_FINDINGS.md and WC3 bounded follow-up.",
+      "exists": true,
+      "kind": "file",
+      "path": ".omx/research/ddm_wc2_20260808/wc2_bench_ticket.json",
+      "reason": "Untracked WC2 benchmark ticket.",
+      "sha256": "f0e6c97cb2773a7b5ff4c08b66f34c9ddacd5292a35394d08f25a2bfb35281b4",
+      "tracked": false
+    },
+    {
+      "bytes": 7751718,
+      "classification": "APPEND_ONLY_CHECKPOINT_LEDGER",
+      "cleanup_disposition": "RETAINED_LIVE_STATE",
+      "evidence_or_reproducer": "Append-only shared state; intentionally not staged by HR1.",
+      "exists": true,
+      "kind": "file",
+      "path": ".omx/state/subagent_progress.jsonl",
+      "reason": "Delegated census agents wrote only required checkpoints here.",
+      "sha256": "edabfa0dac35dce7f51a8f0ce34f1b1274dff713142d31a344e70e052609f490",
+      "tracked": false
+    }
+  ],
+  "uncommitted_scope_audit": {
+    "entries_count": 28,
+    "no_delete_or_move": true,
+    "primary_findings_uncommitted": 0,
+    "relevant_porcelain_entries": [
+      {
+        "path": ".omx/research/ddm_wc1_20260807/wc1_bench_receipts.jsonl",
+        "status": " M"
+      },
+      {
+        "path": ".omx/research/ddm_wc1_20260807/wc1_bench_ticket.json",
+        "status": " M"
+      },
+      {
+        "path": "experiments/tests/test_ddm_wc1_wallclock.py",
+        "status": " M"
+      },
+      {
+        "path": ".omx/research/arm_final_messages/",
+        "status": "??"
+      },
+      {
+        "path": ".omx/research/ddm_cf2_20260808/CHARTER.md",
+        "status": "??"
+      },
+      {
+        "path": ".omx/research/ddm_cr1_20260801/",
+        "status": "??"
+      },
+      {
+        "path": ".omx/research/ddm_cr1_composition_row_827_20260801.md",
+        "status": "??"
+      },
+      {
+        "path": ".omx/research/ddm_m1_20260808/dseg_leg_logs/",
+        "status": "??"
+      },
+      {
+        "path": ".omx/research/ddm_m1_20260808/run/",
+        "status": "??"
+      },
+      {
+        "path": ".omx/research/ddm_m1_20260808/seal_metal_leg.sh",
+        "status": "??"
+      },
+      {
+        "path": ".omx/research/ddm_m1_20260808/seal_metal_leg_logs/",
+        "status": "??"
+      },
+      {
+        "path": ".omx/research/ddm_m1_20260808/sigma/dseg_fp16/",
+        "status": "??"
+      },
+      {
+        "path": ".omx/research/ddm_m1_20260808/sigma/dseg_fp32/",
+        "status": "??"
+      },
+      {
+        "path": ".omx/research/ddm_m1_20260808/sigma/run_1/",
+        "status": "??"
+      },
+      {
+        "path": ".omx/research/ddm_m1_20260808/sigma/run_2/",
+        "status": "??"
+      },
+      {
+        "path": ".omx/research/ddm_m1_20260808/sigma/run_3/",
+        "status": "??"
+      },
+      {
+        "path": ".omx/research/ddm_m1_20260808/sigma/run_4/",
+        "status": "??"
+      },
+      {
+        "path": ".omx/research/ddm_m1_20260808/sigma/run_5/",
+        "status": "??"
+      },
+      {
+        "path": ".omx/research/ddm_m1_20260808/sigma/run_fp32/",
+        "status": "??"
+      },
+      {
+        "path": ".omx/research/ddm_m1_20260808/sigma_leg.sh",
+        "status": "??"
+      },
+      {
+        "path": ".omx/research/ddm_m1_20260808/sigma_leg_logs/",
+        "status": "??"
+      },
+      {
+        "path": ".omx/research/ddm_m1_20260808/sigma_leg_v2_logs/",
+        "status": "??"
+      },
+      {
+        "path": ".omx/research/ddm_rr16_20260807/runtime_checks/",
+        "status": "??"
+      },
+      {
+        "path": ".omx/research/ddm_wc1_20260807/bench_run/",
+        "status": "??"
+      },
+      {
+        "path": ".omx/research/ddm_wc1_20260807/bench_run2/",
+        "status": "??"
+      },
+      {
+        "path": ".omx/research/ddm_wc2_20260808/CHARTER.md",
+        "status": "??"
+      },
+      {
+        "path": ".omx/research/ddm_wc2_20260808/wc2_bench_receipts.jsonl",
+        "status": "??"
+      },
+      {
+        "path": ".omx/research/ddm_wc2_20260808/wc2_bench_ticket.json",
+        "status": "??"
+      }
+    ],
+    "rescue_commit": "b08fd86f87e27fd45e9d4296c5bb367213822505",
+    "uncovered_entries": []
+  }
+}
