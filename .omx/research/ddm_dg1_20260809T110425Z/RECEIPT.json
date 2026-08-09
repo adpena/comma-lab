@@ -1,0 +1,129 @@
+{
+  "schema_version": "ddm_dg1_receipt_v1",
+  "arm": "ddm_dg1",
+  "task_id": "994",
+  "created_utc": "2026-08-09T11:04:25Z",
+  "result": "CURED",
+  "authority_surface": "scorer-free apparatus",
+  "root_cause": {
+    "class": "unlinked three-line lexical co-occurrence",
+    "verdict_scope": "CLASS",
+    "before": "_DISMISSAL.search(passage) and _MAGNITUDE.search(passage) over an arbitrary three-line window",
+    "after": "_has_linked_cooccurrence(window): same-line, causal, anaphoric, magnitude-led, or colon-introduced claim linkage; no cross-table-row borrowing",
+    "token_exclusion_added": false
+  },
+  "source": {
+    "detector": "tools/magnitude_dismissal_detector.py",
+    "predicate_after_lines": "201-230",
+    "target": ".omx/research/ddm_m1r4_20260808/M1R5C_REVIEW.md",
+    "target_trigger_lines": [139, 141],
+    "post_edit_sha256": {
+      "tools/magnitude_dismissal_detector.py": "168a0be80db8b68e9bd12bff0617426dbbcf94c1879e8a584deca3603acd5820",
+      "src/tac/tests/test_magnitude_dismissal_detector.py": "8ba3af5e1d40f12657daa971ac80f1b33c002262064bb79bbed5573135f3b42d",
+      ".omx/research/ddm_m1r4_20260808/M1R5C_REVIEW.md": "75a6b4d455cf35de05ea5b2ac4cc394b2df94b98e15415a7c8393bb7d032d0b6"
+    }
+  },
+  "corpus_sweep": {
+    "scope": "recursive readable .omx/research/**/*.md in shared working tree",
+    "pre_cure": {
+      "files_reached": 8146,
+      "files_total": 8146,
+      "unreadable_files": 0,
+      "lines": 1281880,
+      "raw_regex_hits": 34027,
+      "uppercase_hyphen_class_hits": 860,
+      "uppercase_hyphen_unique_labels": 316,
+      "old_predicate_candidates": 687,
+      "candidates_with_any_uppercase_hyphen_class_hit": 44,
+      "provenance_shape_occurrences": 38,
+      "provenance_shape_files": 16,
+      "provenance_shape_induced_candidates": 1
+    },
+    "post_cure": {
+      "files_reached": 8147,
+      "files_total": 8147,
+      "unreadable_files": 0,
+      "lines": 1281968,
+      "provenance_shape_occurrences": 38,
+      "provenance_shape_files": 16,
+      "provenance_shape_induced_candidates": 0
+    },
+    "denominator_note": "One memo appeared concurrently between sweeps; total-candidate counts are not treated as a paired corpus experiment."
+  },
+  "controls": {
+    "positive": {
+      "input": "We defer horizon-margin #169 because its measured delta-S is weak.",
+      "rc": 1,
+      "stdout": "flags=['positive_control.md:1: magnitude-based dismissal without relative significance or a measured-unrecoverability citation — \"We defer horizon-margin #169 because its measured delta-S is weak.\"']\ndecision=REFUSE\n"
+    },
+    "negative": {
+      "input": ".omx/research/ddm_m1r4_20260808/M1R5C_REVIEW.md",
+      "rc": 0,
+      "stdout": "flags=[]\ndecision=PASS\n"
+    },
+    "cure_test": {
+      "same_target_bytes": true,
+      "pre_cure_flag_count": 1,
+      "post_cure_flag_count": 0,
+      "would_report_same_after_cure": false
+    }
+  },
+  "verification": {
+    "detector_tests": "34 passed",
+    "catalog_404_and_refusal_control_tests": "4 passed, 159 deselected",
+    "full_confound_suite": "158 passed, 5 unrelated live-tree bound failures",
+    "full_confound_failures": [
+      "check_levelset_hosc_requires_beta_end",
+      "check_no_raw_virtual_memory_safety_basis",
+      "check_process_guard_excludes_observer_flag_values",
+      "check_no_stub_lever_factories",
+      "check_checkpoint_saves_do_not_silently_drop_optimizer_state"
+    ],
+    "py_compile_rc": 0,
+    "ruff_select_F_rc": 0,
+    "git_diff_check_rc": 0,
+    "review_tracker_passes_per_python_file": 2
+  },
+  "landings": [
+    {
+      "kind": "fix",
+      "commit": "43c9754007c4d1b692186ff8e6d8bfc1b9630147"
+    },
+    {
+      "kind": "regression_guard",
+      "commit": "fde131ae3e294c20f2f9a4a7e532e124fd9938e8"
+    }
+  ],
+  "## RECALL EVIDENCE": {
+    "sources": [
+      ".omx/research recursive content corpus",
+      ".omx/research/CANONICAL_RESEARCH_INDEX*",
+      ".omx/research/sub015_DAG_*",
+      ".omx/research/magnitude_dismissal_hook_build_20260708.md",
+      ".omx/research/relative_significance_reaudit_20260708.md",
+      "docs/meta_bug_class_catalog.md Catalog #404",
+      ".omx/state task and queue stores",
+      "canonical equations registry"
+    ],
+    "equations_examined": 429,
+    "relevant_equations_found": 0,
+    "beyond_charter_seed": "RA1 lexical false-positive adjudication",
+    "plan_change": "Rejected token exclusion; implemented linked claim context and guarded both known false-positive shapes."
+  },
+  "boundaries": {
+    "scorer_used": false,
+    "metal_mps_cuda_used": false,
+    "launch_dispatch_promotion": false,
+    "upstream_edited": false,
+    "public_pr_intake_edited": false,
+    "score_measured": false
+  },
+  "frontier": {
+    "own_vehicle_s": 0.7534578126155775,
+    "archive_bytes": 357837,
+    "axis": "macOS-CPU advisory",
+    "moved_by_this_arm": false,
+    "contest_pointer": 0.19108,
+    "contest_pointer_ownership": "borrowed"
+  }
+}
