@@ -1,0 +1,117 @@
+{
+  "schema": "comma_lab.pr130_runtime_dependencies.v1",
+  "dependencies": [
+    {
+      "name": "constriction",
+      "version": "0.5.0",
+      "required_apis": [
+        "constriction.stream.queue.RangeDecoder",
+        "constriction.stream.stack.AnsCoder",
+        "constriction.stream.stack.AnsCoder.encode_reverse",
+        "constriction.stream.stack.AnsCoder.is_empty",
+        "constriction.stream.model.Categorical"
+      ],
+      "provisioning": "self_installed_by_entrypoint",
+      "install_policy": "wheel_only_no_source_build",
+      "failure_policy": "fail_closed_no_decoder_fallback",
+      "license_expression": "MIT OR Apache-2.0 OR BSL-1.0",
+      "imported_by": ["inflate.py", "receiver.py"]
+    },
+    {
+      "name": "brotli",
+      "version": "1.2.0",
+      "required_apis": [
+        "brotli.decompress"
+      ],
+      "provisioning": "self_installed_by_entrypoint",
+      "activation_policy": "only for the split_brotli outer model selector; legacy_lzma and split_lzma2 do not require or install Brotli",
+      "install_policy": "wheel_only_no_source_build",
+      "failure_policy": "fail_closed_no_model_codec_fallback",
+      "license_expression": "MIT",
+      "imported_by": ["receiver.py"]
+    },
+    {
+      "name": "numpy",
+      "version": null,
+      "provisioning": "contest_runtime_provided_asserted_not_installed",
+      "install_policy": "never_installed_by_entrypoint",
+      "failure_policy": "fail_closed_named_exit_68",
+      "pin_source": "upstream/pyproject.toml declares numpy as a core dependency",
+      "imported_by": [
+        "inflate.py",
+        "carrier_codec.py",
+        "integer_model_io.py",
+        "receiver.py"
+      ]
+    },
+    {
+      "name": "torch",
+      "version": null,
+      "versions_by_axis": {
+        "linux_cpu": "2.10.0+cpu",
+        "darwin_cpu_or_mps": "2.10.0",
+        "linux_cu126": "2.9.0+cu126",
+        "linux_cu128": "2.9.0+cu128",
+        "linux_cu130": "2.9.0+cu130"
+      },
+      "provisioning": "contest_runtime_provided_asserted_not_installed",
+      "install_policy": "never_installed_by_entrypoint",
+      "failure_policy": "fail_closed_named_exit_68",
+      "pin_source": "upstream/uv.lock pins torch per the selected cpu/cu126/cu128/cu130/mps dependency group; the receiver requires the CUDA group selected by the evaluator rail",
+      "install_refused_rationale": "self-installing torch would pull ~2 GB inside the 30-minute whole-job CI budget; the contest eval host necessarily has it because evaluate.py runs torch scorers",
+      "imported_by": [
+        "inflate.py",
+        "hpac_integer.py",
+        "hpac_integer_sparse.py",
+        "integer_model_io.py"
+      ]
+    }
+  ],
+  "closure_provenance": {
+    "enumerated_from": "top-level import statements of all 6 receiver modules",
+    "denominator": 6,
+    "third_party_packages": 4,
+    "measured_by": "FX5 Linux x86_64 dispatch 2026-08-09 measured the prior five-module Range closure; DDM-RC1 local suite measured Brotli 1.2.0 with constriction 0.4.2, and a separate pinned-0.5.0 real n2 run measured raw-LZMA2 plus ANS decode",
+    "receipt": ".omx/research/ddm_pr130_reproduce_20260809/DDM_RC1_RECEIVER_RECEIPT.md",
+    "linux_retest_status": "QUEUED: the RC1 six-module closure has not run on the contest Linux rail"
+  },
+  "receiver": "inflate.py+receiver.py",
+  "entrypoint": "inflate.sh",
+  "borrowed_substrate_accounting": {
+    "verbatim_borrowed_files": [
+      "carrier_codec.py",
+      "hpac_integer.py",
+      "hpac_integer_sparse.py",
+      "integer_model_io.py"
+    ],
+    "fx1_original_files": [
+      "inflate.sh",
+      "runtime-dependencies.json"
+    ],
+    "ddm_rc1_original_files": [
+      "receiver.py"
+    ],
+    "ddm_dv1_modified_files": {
+      "inflate.py": "adds explicit-or-auto CPU/CUDA rail selection while retaining TF32-off on CUDA",
+      "inflate.sh": "restores the contest three-argument loop from the read-only PR130 intake after dependency closure"
+    },
+    "borrowed_base_with_ddm_rc1_modifications": {
+      "inflate.py": "335369c9b3b295707f1790feb0b5b7ae288338fae350056cc4bb03aaa18f0c9e"
+    },
+    "claim": "DDM-RC1 adds explicit split-model and ANS dispatch around the verbatim PR130 model and renderer implementation; it does not claim the borrowed PR130 vehicle as original"
+  },
+  "source": {
+    "intake_root": "/Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo",
+    "intake_git_commit": "e34f31bc4969042c0051ac81aa3c56884419a231",
+    "copied_files_semantics": "current shipping-tree custody hashes consumed by the FX5 closure harness; borrowed intake origins are recorded separately above",
+    "copied_files": {
+      "carrier_codec.py": "d2f14402374b4e622b7f981d736389fb04f0ca0165180e4c75f3a32ffe996bed",
+      "hpac_integer.py": "6e6b4f4d0b293fb60cc1b751958756a4cd6c2ce7bcff68c6f03e20277856803f",
+      "hpac_integer_sparse.py": "2240ee32c53fe949b560d316d349e0bbdccc0ceb78787307cd4d530623d42a0c",
+      "inflate.py": "48218c360fa26f9d3d7fec76db54be0e7652b53e8f9cbd48245e488d7494770f",
+      "inflate.sh": "972f49c573c16020455396638c3969402bde5af55e50e013a623a1d4efc2a6d7",
+      "integer_model_io.py": "6f91c91ed4785d203aa3570af362fbe9c6a64bb2249599f8554adb31174b80a5",
+      "receiver.py": "d9689091430b31b37f5f12d2eaa8025187f7f08899ae1b99ba43a30480b7ac4f"
+    }
+  }
+}

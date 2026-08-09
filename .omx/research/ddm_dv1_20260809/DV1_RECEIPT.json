@@ -1,0 +1,290 @@
+{
+  "schema": "ddm_dv1_device_axis_decomposition.v1",
+  "arm": "ddm_dv1",
+  "recorded_at_utc": "2026-08-09T22:44:58Z",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "pointer_moved": false,
+  "scorer_invoked_by_this_arm": false,
+  "eval_invoked_by_this_arm": false,
+  "modal_dispatched_by_this_arm": false,
+  "axis_scope": "mixed retained evidence with an isolated macOS-CPU scorer-free build verification; no contest-CPU row",
+  "pins": {
+    "archive": {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_pr130_reproduce_20260809/reproduction/archive.zip",
+      "bytes": 191052,
+      "sha256": "0491d5df84fc70b62b3f7ccf8894f5e1b81c616de46a052e4423fc1e18fdc7cd",
+      "verified": true
+    },
+    "commits": {
+      "reproduction_record": "12031094d9",
+      "pk2_closure": "cfddfc503a",
+      "receipt_binding": "c21d39b48d",
+      "all_resolve_as_commits": true
+    },
+    "intake": {
+      "path": "/Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo",
+      "head": "e34f31bc4969042c0051ac81aa3c56884419a231",
+      "status_porcelain": "clean",
+      "edited": false
+    },
+    "storage": {
+      "bulk_root": "/Volumes/VertigoDataTier/pact/ddm_dv1_20260809",
+      "ssd_free_gib_at_preflight": 80,
+      "blockers": []
+    }
+  },
+  "scorer_slot": {
+    "owns_scorer": false,
+    "source": ".omx/state/codex_arm_queue.jsonl:798,800",
+    "consequence": "candidate-level pose delta is queued; no hidden n600 scorer pass was run"
+  },
+  "leg_a": {
+    "same_object": "the selected quantized PR130 semantic renderer evaluated against the retained AV-like and DALI-lineage target caches",
+    "archive_bytes_held_fixed": 191052,
+    "rate_term_held_fixed": 0.12721368471189708,
+    "semantic": {
+      "classification": "VERIFIED_RETAINED_MEASUREMENT_WITH_REDERIVED_INTEGER_ARITHMETIC",
+      "axis": "[macOS-Metal advisory, n600]",
+      "selection": "all 600 pairs; 117964800 semantic sites",
+      "av_d_seg": 0.0002764044867621528,
+      "av_mismatches": 32606,
+      "dali_d_seg": 0.0002857038709852431,
+      "dali_mismatches": 33703,
+      "dali_minus_av_d_seg": 0.000009299384223090295,
+      "dali_minus_av_mismatches": 1097,
+      "dali_minus_av_seg_score_term": 0.0009299384223090295,
+      "av_reduction_fraction_relative_to_dali": 0.03254903124350954,
+      "source": ".omx/research/ddm_pr130_reproduce_20260809/FX4_GT_LINEAGE_RECEIPT.json#/fixed_renderer_axis_effect",
+      "source_sha256": "a7f68533921500389dfd03d1fc5cf8e5898fce60c71b9e5c9cbd027fac296371"
+    },
+    "pose": {
+      "candidate_level_delta_status": "UNMEASURED_SCORER_GATED",
+      "reason": "The retained carrier checkpoints store only per-pair MSE, not the six candidate PoseNet outputs required to change targets algebraically; this arm owns no scorer slot.",
+      "retained_target_to_target_pose_mse": 0.00014004340079290474,
+      "retained_target_metric_bound": 0.03742237309323191,
+      "candidate_pose_delta_sign": "unknown",
+      "source": ".omx/research/ddm_pr130_reproduce_20260809/FX4_GT_LINEAGE_RECEIPT.json#/retained_av_like_vs_retained_official_dali/pose",
+      "boundary": "Target separation is not candidate impact and cannot be added as a measured penalty."
+    },
+    "fixed_renderer_total_bound": {
+      "classification": "DERIVED_TRIANGLE_INEQUALITY_NOT_A_SCORE",
+      "dali_minus_av_score_interval_from_measured_seg_and_pose_target_bound": [
+        -0.03649243467092288,
+        0.03835231151554094
+      ],
+      "axis_winner": "UNDECIDED",
+      "reason": "The semantic sign favors AV, but the candidate-level pose term is absent and can dominate that 0.0009299384 semantic movement."
+    }
+  },
+  "leg_b": {
+    "cpu_runtime_path": "src/tac/pr130_runtime/dv1_cpu_runtime",
+    "reference_runtime_path": "src/tac/pr130_runtime/fx1_runtime_tree",
+    "verification": {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dv1_20260809/cpu_runtime_verification.json",
+      "bytes": 6619,
+      "sha256": "4c8e6c8b5998707405dcb2869d43c5300184b95fb7d60932faa9872901249dd0",
+      "verdict": "PASS_BUILD_AND_SCORER_FREE_PARSE_MODEL_EQUIVALENCE",
+      "axis": "[macOS-CPU scorer-free build verification]"
+    },
+    "device_selection": {
+      "auto": "cuda when CUDA is available, otherwise cpu",
+      "explicit_project_env": "PR130_INFLATE_DEVICE=cpu|cuda|auto",
+      "explicit_harness_env": "PACT_INFLATE_DEVICE=cpu|cuda|auto",
+      "invalid_values_fail_closed": true,
+      "resolved_device_printed": true
+    },
+    "fresh_exact_checks": {
+      "archive_parse": true,
+      "semantic_state_sha256": "de0e5fc616b75eb0bdb55528aa61a7405eebbd3a81064f513adfbb69b33105ba",
+      "basis_tensor_sha256": "7a6576e991a068e084ffc12f6377b9bfcc00fd2529eb8df27c424921f3c3933b",
+      "coefficient_tensor_sha256": "dee2587ec99eea45e76ebd68eaaad3e3ae52d51e0a9b673103be8d4128e07ca8",
+      "hpac_state_sha256": "35d65c7c560bcec392b973f82d3e28f2f0be5d365da7c43047554fa1d3604f27",
+      "token_stream_sha256": "948379872ff81a4e5d948ec301c143be00ebd0033544c8abdfb4af0f4c4a15eb",
+      "inflate_sh_syntax": "PASS"
+    },
+    "inherited_n600_token_proof": {
+      "classification": "VERIFIED_RETAINED_PRIMARY_ARTIFACT_NOT_FRESH_ON_CPU_COPY",
+      "frames": 600,
+      "shape": [
+        600,
+        384,
+        512
+      ],
+      "cpu_wall_seconds": 2197.6,
+      "decoded_token_sha256": "c5c7671d037b6912980c57929a5b6d789d250ee6a93e3b0a6018cf9f63e32ece",
+      "source": "/Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo/evidence/cpr1_verification.json",
+      "source_sha256": "1ea6c5347bea92cf40682b535c6947bdf4e98530dbf7f482065a2751d21f1f69"
+    },
+    "new_entrypoint_finding": {
+      "verdict_scope": "INSTANCE",
+      "shared_fx1_problem": "The committed dependency-closure inflate.sh forwards the contest three-argument call directly to a per-video Python entrypoint and therefore fails the real evaluator contract.",
+      "shared_fx1_sha256": "972f49c573c16020455396638c3969402bde5af55e50e013a623a1d4efc2a6d7",
+      "read_only_intake_control_sha256": "3957276fff82f05d1686aec2266741994fcebf78d5deeb0c2cb78c2af2586a95",
+      "copy_cure": "The isolated copy restores the per-video loop after dependency closure.",
+      "shared_runtime_edited": false
+    },
+    "tf32_implication": {
+      "measured": false,
+      "statement": "Disabling CUDA matmul and cuDNN TF32 removes one reduced-mantissa source of GPU drift and should narrow CPU/CUDA differences, but it does not make convolution, interpolation, GELU, normalization, or reduction kernels bit-identical.",
+      "tokens_models_bit_identity_scope": "packed payload, parsed models, semantic/basis/coeff tensors, and retained n600 CPU token proof",
+      "raw_frame_bit_identity_scope": "UNMEASURED",
+      "scorer_numeric_identity_scope": "UNMEASURED"
+    }
+  },
+  "ddm_dt1_dependency": {
+    "classification": "CONCURRENT_MACHINE_RECEIPT_CONSUMED_WITH_TERMINAL_E2E_HARVEST",
+    "probe_path": "/Volumes/VertigoDataTier/pact/ddm_dt1_20260809/probe_result.json",
+    "probe_sha256": "093a1e03e187e7d722d32d2d3108ae1eba3c39ca541ae418edd0ed120addeaa2",
+    "axis": "[macOS-CPU advisory, scorer-free]",
+    "scope": "n in {2,8,32,120} same-object range/ANS curve plus terminal n600 range decode and render",
+    "range_linear_projection_n600_seconds": 532.9190576922163,
+    "ans_linear_projection_n600_seconds": 525.4987576561052,
+    "projected_ans_minus_range_seconds": -7.4203000361110325,
+    "n120_range_seconds": 106.579314624978,
+    "n120_ans_seconds": 105.15496233399608,
+    "n120_ratio": 0.9866357529508066,
+    "range_n600_decode": {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dt1_20260809/range_e2e/range_decode_progress.json",
+      "bytes": 472,
+      "sha256": "d3d5c7e627e7ffe9e35822edfd3f8080f8f27ce5e9260c1843a8f364ccc8d149",
+      "completed_frames": 600,
+      "wall_seconds": 536.9592224999797,
+      "classification": "MEASURED_MACOS_CPU_ADVISORY_SCORER_FREE_COMPONENT"
+    },
+    "terminal_end_to_end": {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dt1_20260809/range_e2e/range_e2e_result.json",
+      "bytes": 5133,
+      "sha256": "7b87ffb228b3626b129f00a01db2b76a758c97c80f71b05cfbb6b20a6a903dcd",
+      "complete": true,
+      "decode_render_wall_seconds": 792.7735011659388,
+      "measured_process_wall_seconds": 797.539985749987,
+      "inflate_only_headroom_vs_1800_seconds": 1007.2264988340612,
+      "output_bytes": 3662409600,
+      "output_sha256": "a18eb42a8da9399bcc03e795e17597bfbd459412dbb37990117665f48c4c0353",
+      "scratch_removed_after_hash": true,
+      "boundary": "excludes checkout, LFS, dependency fetch, evaluator data loading, and scorer pass"
+    },
+    "terminal_end_to_end_status": "COMPLETE_MACOS_CPU_ADVISORY_SCORER_FREE",
+    "routing_consequence": "The macOS receiver has 1007.226 seconds of inflate-only headroom against 1800 seconds, so local decode-plus-render timing is no longer the blocker; Linux transfer, total evaluator timing, and the missing candidate pose comparison remain required before choosing CPU."
+  },
+  "leg_c": {
+    "disposition": "PRICED_UNFIRED",
+    "what_one_linux_cpu_dispatch_buys": "The same 191052-byte archive and CPU-capable runtime on Linux x86_64 with AV GT and CPU SegNet/PoseNet, yielding the previously absent whole contest-CPU component row if the receiver finishes inside the official total budget.",
+    "confounds_remaining_in_that_composite": [
+      "GT path changes DALI to AV",
+      "inflate floating kernels change CUDA to CPU",
+      "scorer kernels change CUDA to CPU"
+    ],
+    "current_modal_function_shape": {
+      "source": "experiments/modal_auth_eval_cpu.py:1019-1040",
+      "cpu_physical_cores_per_current_provider_docs": 8,
+      "memory_gib": 16,
+      "outer_timeout_seconds": 9000,
+      "inflate_timeout_seconds": 1800,
+      "evaluate_timeout_seconds": 5400,
+      "official_shape_warning": "The current wrapper's 9000-second envelope is diagnostic and not the contest's 30-minute total budget."
+    },
+    "modal_prices_as_of_2026_08_09": {
+      "cpu_usd_per_physical_core_second": 0.0000131,
+      "memory_usd_per_gib_second": 0.00000222,
+      "shape_usd_per_second": 0.00014032,
+      "shape_usd_per_hour": 0.505152,
+      "official_1800_second_compute_cap_usd": 0.252576,
+      "current_9000_second_wrapper_compute_cap_usd": 1.26288,
+      "regional_multiplier": "none assumed; broad or narrow region selection would add 1.5x or 1.75x",
+      "nonpreemptible_multiplier": "none assumed; nonpreemptible CPU/memory would add 3x",
+      "credits_image_build_network_storage": "excluded from this compute-only price",
+      "sources": [
+        "https://modal.com/pricing",
+        "https://modal.com/docs/guide/resources",
+        "https://modal.com/docs/guide/region-selection",
+        "https://modal.com/docs/guide/preemption"
+      ]
+    },
+    "blocking_prerequisites": [
+      "shared or uploaded runtime must contain the repaired contest three-argument inflate.sh loop",
+      "Linux six-module dependency closure with constriction 0.5.0 and torch 2.10.0+cpu",
+      "full-job 1800-second governor rather than separate 1800+5400 development timeouts",
+      "exact runtime-files digest and archive SHA preflight",
+      "fresh non-conflicting lane claim and operator GO",
+      "resumable durable harvest despite provider preemption",
+      "fleet scorer slot ownership"
+    ],
+    "paired_scorer_numerics_followup": "Preserve one fixed raw candidate output and both AV/DALI GT tensors, then run the identical scorer weights/code on CPU and T4 over those fixed tensors. This is required to isolate scorer numerics from GT and inflate drift."
+  },
+  "scope_verdict": {
+    "verdict_scope": "INSTANCE",
+    "result": "AV GT improves the semantic component for the retained PR130 renderer by 0.0009299384 S, but the whole device-axis winner is undecided because candidate pose, raw-frame CPU/CUDA equality, scorer numerics, Linux runtime, and 30-minute headroom remain unmeasured.",
+    "cpu_recommendation": "HOLD",
+    "reason": "The only signed same-object component favors CPU/AV and macOS decode-plus-render now fits inside 1800 seconds with 1007.226 seconds of inflate-only headroom, but the missing pose term can dominate and Linux total-evaluator transfer remains unmeasured."
+  },
+  "rungs_not_run": [
+    "candidate-level retained-cache d_pose A/B",
+    "fresh full-n600 CPU decode on the dv1 copy",
+    "CPU raw-video render",
+    "CPU-vs-CUDA raw-frame hash comparison",
+    "Linux x86_64 dependency/runtime replay",
+    "contest-CPU upstream/evaluate.py",
+    "paired fixed-tensor CPU/T4 scorer-numerics cell",
+    "any Modal dispatch"
+  ],
+  "follow_ons": [
+    {
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "owner": "fleet scorer-slot owner",
+      "consumer_store": ".omx/state/probe_outcomes.jsonl",
+      "fire_trigger": "after the scorer slot is explicitly assigned and the fixed PR130 candidate PoseNet6 outputs can be preserved once, run all 600 pairs against both hash-pinned retained target caches"
+    },
+    {
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "owner": "MAIN PR130 runtime owner",
+      "consumer_store": "src/tac/pr130_runtime/fx1_runtime_tree plus its dependency-closure receipt",
+      "fire_trigger": "before any shared FX1 runtime exact eval or remote dispatch, port the isolated contest-loop repair and rerun the real three-argument entrypoint contract"
+    },
+    {
+      "disposition": "FIRED-AND-FOLDED",
+      "owner": "ddm_dt1 owner",
+      "consumer_store": "/Volumes/VertigoDataTier/pact/ddm_dt1_20260809 terminal machine receipt, with the dt1 owner responsible for its repository landing",
+      "fire_trigger": "satisfied during dv1 sealing: terminal range decode-plus-render receipt was harvested and its scratch output was hash-certified then removed"
+    },
+    {
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "owner": "MAIN paired exact-eval owner",
+      "consumer_store": ".omx/state/probe_outcomes.jsonl and paired contest CPU/CUDA result stores",
+      "fire_trigger": "only after pose A/B, runtime-contract, Linux dependency, dt1 headroom, lane-claim, scorer-slot, and operator-GO gates pass; run the fixed-tensor scorer-numerics matrix before interpreting the composite CPU row"
+    }
+  ],
+  "live_hypotheses": [
+    {
+      "lead": "AV may win the full fixed-renderer GT-path comparison",
+      "plausibility": "the measured semantic component moves in AV's favor and the target decoder changes PoseNet inputs most strongly in dimension 0, but the candidate residual direction is still unknown"
+    },
+    {
+      "lead": "TF32-off may make the remaining CPU/T4 scorer gap smaller than old HNeRV priors",
+      "plausibility": "PR130 explicitly disables both matmul and cuDNN TF32 and its token decoder quantizes logits before the entropy table; unlike old vehicles, one major reduced-precision source is removed"
+    },
+    {
+      "lead": "the CPU rail may fit the budget after the current receiver refactor",
+      "plausibility": "ddm_dt1 measured full n600 decode plus render at 792.774 seconds, leaving 1007.226 seconds within the 1800-second envelope for the omitted evaluator stages; Linux and scorer transfer remain unmeasured"
+    }
+  ],
+  "dead_ends": [
+    {
+      "path": "infer candidate pose movement from target-to-target pose MSE",
+      "reason": "the root pose term is nonlinear and the residual direction is missing; target separation supplies only a bound"
+    },
+    {
+      "path": "transfer PR102's approximately 0.033 CPU/CUDA gap to PR130",
+      "reason": "historical paired rows show packet-specific sign reversals and PR130 is a different receiver and operating point"
+    },
+    {
+      "path": "call the isolated CPU copy contest-ready from parse/model checks",
+      "reason": "raw frames, scorer numerics, Linux closure, terminal dt1 headroom, and a real 30-minute evaluator run are all still absent"
+    },
+    {
+      "path": "use the shared FX1 inflate.sh unchanged",
+      "reason": "it violates the evaluator's three-argument entrypoint contract by passing the output directory as the per-video base"
+    }
+  ]
+}

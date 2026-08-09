@@ -1,0 +1,379 @@
+#!/usr/bin/env python3
+"""Byte-closed PR130 payload parser and range/ANS token-coder primitives.
+
+The outer PR130 payload remains ``[u32 model_word][models][tokens]``.  Bit 31
+of ``model_word`` is the token-coder tag: clear means the shipped queue range
+coder, set means the LIFO ANS coder.  Bits 29--30 explicitly select legacy XZ,
+split Brotli, or split raw LZMA2.  The low 29 bits remain the model-section
+length, so all tags cost zero bytes and the custodied legacy PR130 payload is
+unchanged.
+
+The model section is either the shipped single XZ/LZMA stream or the split
+three-stream form::
+
+    [u32 sem_len][u32 car_len][u32 hpac_len]
+    [brotli(semantic)][brotli(carrier)][brotli(hpac)]
+
+Raw LZMA2 streams are accepted as the explicitly tagged dependency-free split
+alternative.  In all cases :func:`decode_models` reconstructs the original
+``models_raw`` bytes, including its two raw-length words, before the real model
+loaders see the result.
+"""
+
+from __future__ import annotations
+
+import lzma
+import struct
+from collections.abc import Iterable, Sequence
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Literal, Protocol
+
+import constriction
+import numpy as np
+
+try:
+    import brotli
+except ImportError:  # pragma: no cover - exercised by a monkeypatched test.
+    brotli = None
+
+
+ANS_TOKEN_FLAG = 1 << 31
+SPLIT_BROTLI_FLAG = 1 << 29
+SPLIT_LZMA2_FLAG = 1 << 30
+MODEL_CODEC_MASK = SPLIT_BROTLI_FLAG | SPLIT_LZMA2_FLAG
+MODEL_LENGTH_MASK = SPLIT_BROTLI_FLAG - 1
+XZ_MAGIC = b"\xfd7zXZ\x00"
+SPLIT_HEADER = struct.Struct("<III")
+OUTER_HEADER = struct.Struct("<I")
+
+TokenCodec = Literal["range", "ans"]
+ModelCodec = Literal["legacy_lzma", "split_brotli", "split_lzma2"]
+
+
+class ReceiverFormatError(ValueError):
+    """The byte stream cannot be interpreted without guessing."""
+
+
+class BrotliDependencyError(RuntimeError):
+    """A Brotli-coded model pack was selected without the required decoder."""
+
+
+@dataclass(frozen=True)
+class PayloadParts:
+    """The two independently coded sections of a PR130 member ``p``."""
+
+    models: bytes
+    tokens: bytes
+    token_codec: TokenCodec
+    model_codec: ModelCodec
+
+
+@dataclass(frozen=True)
+class DecodedModels:
+    """Reconstructed loader bytes plus the model-section codec that produced them."""
+
+    raw: bytes
+    codec: ModelCodec
+    compressed_stream_bytes: tuple[int, ...]
+
+
+@dataclass(frozen=True)
+class AnsChunk:
+    """Paths for one chronological, concatenated ANS table chunk.
+
+    Both files are ordinary ``.npy`` arrays.  The symbol array is rank 1 int32;
+    the table array is rank 2 float32 with the same leading length.  Keeping
+    them separate permits ``mmap_mode='r'`` and bounds resident memory to one
+    chunk during the reverse-order ANS push.
+    """
+
+    symbols: Path
+    tables: Path
+
+
+@dataclass(frozen=True)
+class AnsCodeChunk:
+    """Memory-reduced PR130 chunk using int16 logit codes, not fp32 PMFs.
+
+    ``probability_table`` is a deterministic function of these codes.  Spilling
+    the codes halves the n600 table field from 2,359,296,000 to 1,179,648,000
+    bytes.  Symbols may be uint8 on disk and are cast to constriction's int32
+    API only for the currently encoded chunk.
+    """
+
+    symbols: Path
+    codes: Path
+    logit_precision: int = 8
+
+
+class _EntropyDecoder(Protocol):
+    def decode(self, model, probabilities: np.ndarray) -> np.ndarray: ...
+
+
+def split_payload(payload: bytes) -> PayloadParts:
+    """Parse the byte-neutral token-coder flag and isolate model/token sections."""
+
+    if len(payload) < OUTER_HEADER.size:
+        raise ReceiverFormatError("combined payload is truncated before model_word")
+    model_word = OUTER_HEADER.unpack_from(payload)[0]
+    model_bytes = model_word & MODEL_LENGTH_MASK
+    token_codec: TokenCodec = "ans" if model_word & ANS_TOKEN_FLAG else "range"
+    model_flags = model_word & MODEL_CODEC_MASK
+    model_codecs: dict[int, ModelCodec] = {
+        0: "legacy_lzma",
+        SPLIT_BROTLI_FLAG: "split_brotli",
+        SPLIT_LZMA2_FLAG: "split_lzma2",
+    }
+    try:
+        model_codec = model_codecs[model_flags]
+    except KeyError as error:
+        raise ReceiverFormatError("reserved model-codec selector 3 is invalid") from error
+    model_end = OUTER_HEADER.size + model_bytes
+    if model_bytes == 0:
+        raise ReceiverFormatError("combined payload declares an empty model section")
+    if model_end >= len(payload):
+        raise ReceiverFormatError("combined payload has no complete token section")
+    return PayloadParts(
+        models=payload[OUTER_HEADER.size:model_end],
+        tokens=payload[model_end:],
+        token_codec=token_codec,
+        model_codec=model_codec,
+    )
+
+
+def pack_payload(
+    models: bytes,
+    tokens: bytes,
+    *,
+    token_codec: TokenCodec,
+    model_codec: ModelCodec,
+) -> bytes:
+    """Build the outer payload with explicit, zero-byte codec discriminators."""
+
+    if not models or not tokens:
+        raise ReceiverFormatError("models and tokens must both be non-empty")
+    if len(models) > MODEL_LENGTH_MASK:
+        raise ReceiverFormatError("model section exceeds the 29-bit length field")
+    if token_codec not in ("range", "ans"):
+        raise ReceiverFormatError(f"unsupported token codec: {token_codec!r}")
+    model_flags = {
+        "legacy_lzma": 0,
+        "split_brotli": SPLIT_BROTLI_FLAG,
+        "split_lzma2": SPLIT_LZMA2_FLAG,
+    }
+    if model_codec not in model_flags:
+        raise ReceiverFormatError(f"unsupported model codec: {model_codec!r}")
+    model_word = len(models) | (ANS_TOKEN_FLAG if token_codec == "ans" else 0)
+    model_word |= model_flags[model_codec]
+    return OUTER_HEADER.pack(model_word) + models + tokens
+
+
+def _split_streams(models: bytes) -> tuple[bytes, bytes, bytes] | None:
+    """Return exactly framed streams, or ``None`` when this is the legacy form."""
+
+    if len(models) < SPLIT_HEADER.size:
+        return None
+    lengths = SPLIT_HEADER.unpack_from(models)
+    if SPLIT_HEADER.size + sum(lengths) != len(models):
+        return None
+    if any(length == 0 for length in lengths):
+        raise ReceiverFormatError("split model pack contains an empty stream")
+    streams: list[bytes] = []
+    offset = SPLIT_HEADER.size
+    for length in lengths:
+        streams.append(models[offset:offset + length])
+        offset += length
+    if offset != len(models):  # Defensive: the framing equality above must imply this.
+        raise ReceiverFormatError("split model pack was not consumed exactly")
+    return streams[0], streams[1], streams[2]
+
+
+def _decompress_brotli(stream: bytes) -> bytes:
+    if brotli is None:
+        raise BrotliDependencyError(
+            "split_brotli requires Brotli==1.2.0; the shipping inflate.sh must "
+            "self-install that exact wheel before importing the receiver"
+        )
+    try:
+        return brotli.decompress(stream)
+    except brotli.error as error:
+        raise ReceiverFormatError("invalid Brotli model stream") from error
+
+
+def _decompress_xz(stream: bytes, *, label: str) -> bytes:
+    try:
+        decoder = lzma.LZMADecompressor(format=lzma.FORMAT_XZ)
+        raw = decoder.decompress(stream)
+    except lzma.LZMAError as error:
+        raise ReceiverFormatError(f"invalid {label} XZ stream") from error
+    if not decoder.eof:
+        raise ReceiverFormatError(f"truncated {label} XZ stream")
+    if decoder.unused_data:
+        raise ReceiverFormatError(f"trailing bytes after {label} XZ stream")
+    return raw
+
+
+def _decompress_raw_lzma2(stream: bytes) -> bytes:
+    try:
+        decoder = lzma.LZMADecompressor(
+            format=lzma.FORMAT_RAW,
+            filters=[{"id": lzma.FILTER_LZMA2, "preset": 9 | lzma.PRESET_EXTREME}],
+        )
+        raw = decoder.decompress(stream)
+    except lzma.LZMAError as error:
+        raise ReceiverFormatError("invalid split raw-LZMA2 model stream") from error
+    if not decoder.eof:
+        raise ReceiverFormatError("truncated split raw-LZMA2 model stream")
+    if decoder.unused_data:
+        raise ReceiverFormatError("trailing bytes after split raw-LZMA2 model stream")
+    return raw
+
+
+def decode_models(models: bytes, *, model_codec: ModelCodec) -> DecodedModels:
+    """Reconstruct the exact ``models_raw`` bytes consumed by PR130's loaders."""
+
+    if model_codec == "legacy_lzma":
+        if not models.startswith(XZ_MAGIC):
+            raise ReceiverFormatError("legacy model flag requires one XZ stream")
+        raw = _decompress_xz(models, label="legacy model")
+        if len(raw) < 8:
+            raise ReceiverFormatError("legacy model bundle is truncated before raw lengths")
+        return DecodedModels(raw, "legacy_lzma", (len(models),))
+
+    if model_codec not in ("split_brotli", "split_lzma2"):
+        raise ReceiverFormatError(f"unsupported model codec: {model_codec!r}")
+    streams = _split_streams(models)
+    if streams is None:
+        raise ReceiverFormatError(
+            f"{model_codec} requires an exact three-stream model pack"
+        )
+
+    if model_codec == "split_lzma2":
+        semantic, carrier, hpac = (_decompress_raw_lzma2(stream) for stream in streams)
+        codec: ModelCodec = "split_lzma2"
+    else:
+        semantic, carrier, hpac = (_decompress_brotli(stream) for stream in streams)
+        codec = "split_brotli"
+    if not semantic or not carrier or not hpac:
+        raise ReceiverFormatError("split model pack decoded an empty raw section")
+    raw = struct.pack("<II", len(semantic), len(carrier)) + semantic + carrier + hpac
+    return DecodedModels(raw, codec, tuple(map(len, streams)))
+
+
+def new_token_decoder(blob: bytes, token_codec: TokenCodec) -> _EntropyDecoder:
+    """Instantiate the selected constriction decoder from little-endian words."""
+
+    if not blob or len(blob) % np.dtype("<u4").itemsize:
+        raise ReceiverFormatError(
+            "token payload must be a non-empty multiple of four bytes"
+        )
+    words_le = np.frombuffer(blob, dtype="<u4")
+    # constriction consumes native-endian uint32 words.  On the contest's
+    # little-endian hosts this is a view; on a big-endian verifier it is a copy.
+    words = words_le.astype(np.uint32, copy=False)
+    if token_codec == "range":
+        return constriction.stream.queue.RangeDecoder(words)
+    if token_codec == "ans":
+        return constriction.stream.stack.AnsCoder(words)
+    raise ReceiverFormatError(f"unsupported token codec: {token_codec!r}")
+
+
+def finish_token_decode(decoder: _EntropyDecoder, token_codec: TokenCodec) -> None:
+    """Fail closed if a selected ANS payload did not pop to its initial state."""
+
+    if token_codec == "ans" and not decoder.is_empty():
+        raise ReceiverFormatError(
+            "ANS token payload retained state after the declared symbol field"
+        )
+
+
+def encode_ans_blocks_reverse(
+    blocks: Sequence[tuple[np.ndarray, np.ndarray]],
+) -> bytes:
+    """Encode chronological blocks so the LIFO decoder pops them forward.
+
+    Each block uses ``encode_reverse`` to preserve order within the block.  The
+    calls themselves are issued in reverse chronological order because ANS is a
+    stack.  This two-level reversal is load-bearing for causal AR reconstruction.
+    """
+
+    coder = constriction.stream.stack.AnsCoder()
+    family = constriction.stream.model.Categorical(perfect=False)
+    for symbols, tables in reversed(blocks):
+        symbols = np.asarray(symbols, dtype=np.int32)
+        tables = np.asarray(tables, dtype=np.float32)
+        if symbols.ndim != 1 or tables.ndim != 2:
+            raise ReceiverFormatError("ANS symbols/tables must have ranks 1 and 2")
+        if len(symbols) == 0 or len(symbols) != len(tables):
+            raise ReceiverFormatError("ANS symbols/tables have incompatible lengths")
+        coder.encode_reverse(symbols, family, tables)
+    return coder.get_compressed().astype("<u4", copy=False).tobytes(order="C")
+
+
+def encode_ans_chunks_reverse(chunks: Iterable[AnsChunk]) -> bytes:
+    """Memory-bounded ANS encode from chronological on-disk chunks.
+
+    ``chunks`` may describe all n600 tables without holding them together in
+    RAM.  Only one pair of memory-mapped arrays is visited at a time, in reverse
+    chunk order; each chunk must already concatenate its AR groups forward.
+    """
+
+    ordered = tuple(chunks)
+    if not ordered:
+        raise ReceiverFormatError("ANS chunk list is empty")
+    coder = constriction.stream.stack.AnsCoder()
+    family = constriction.stream.model.Categorical(perfect=False)
+    for chunk in reversed(ordered):
+        symbols = np.load(chunk.symbols, mmap_mode="r", allow_pickle=False)
+        tables = np.load(chunk.tables, mmap_mode="r", allow_pickle=False)
+        if symbols.dtype != np.int32 or tables.dtype != np.float32:
+            raise ReceiverFormatError(
+                f"ANS chunk dtypes must be int32/float32: {chunk}"
+            )
+        if symbols.ndim != 1 or tables.ndim != 2 or len(symbols) != len(tables):
+            raise ReceiverFormatError(f"invalid ANS chunk geometry: {chunk}")
+        coder.encode_reverse(symbols, family, tables)
+        del symbols, tables
+    return coder.get_compressed().astype("<u4", copy=False).tobytes(order="C")
+
+
+def probability_tables_from_codes(
+    codes: np.ndarray, *, logit_precision: int,
+) -> np.ndarray:
+    """Rehydrate the exact float32 PMFs used by PR130 from int16 logit codes."""
+
+    codes = np.asarray(codes)
+    if codes.dtype != np.int16 or codes.ndim != 2:
+        raise ReceiverFormatError("logit codes must be a rank-2 int16 array")
+    if logit_precision <= 0:
+        raise ReceiverFormatError("logit_precision must be positive")
+    logits = codes.astype(np.float64) / logit_precision
+    logits -= logits.max(axis=1, keepdims=True)
+    probabilities = np.exp(logits)
+    probabilities /= probabilities.sum(axis=1, keepdims=True)
+    return probabilities.astype(np.float32)
+
+
+def encode_ans_code_chunks_reverse(chunks: Iterable[AnsCodeChunk]) -> bytes:
+    """Memory-bounded n600 path using the model's lossless int16 code lattice."""
+
+    ordered = tuple(chunks)
+    if not ordered:
+        raise ReceiverFormatError("ANS code-chunk list is empty")
+    coder = constriction.stream.stack.AnsCoder()
+    family = constriction.stream.model.Categorical(perfect=False)
+    for chunk in reversed(ordered):
+        symbols_raw = np.load(chunk.symbols, mmap_mode="r", allow_pickle=False)
+        codes = np.load(chunk.codes, mmap_mode="r", allow_pickle=False)
+        if symbols_raw.dtype not in (np.uint8, np.int32):
+            raise ReceiverFormatError(f"ANS symbols must be uint8 or int32: {chunk}")
+        if symbols_raw.ndim != 1 or codes.ndim != 2 or len(symbols_raw) != len(codes):
+            raise ReceiverFormatError(f"invalid ANS code-chunk geometry: {chunk}")
+        tables = probability_tables_from_codes(
+            codes, logit_precision=chunk.logit_precision
+        )
+        symbols = np.asarray(symbols_raw, dtype=np.int32)
+        coder.encode_reverse(symbols, family, tables)
+        del symbols, tables, codes, symbols_raw
+    return coder.get_compressed().astype("<u4", copy=False).tobytes(order="C")
