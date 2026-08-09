@@ -25,9 +25,14 @@ from typing import Any
 
 import numpy as np
 import torch
-from safetensors.torch import load_file
 
 from tac.admission_guard import assert_governed_admission
+from tac.pr130_lift.pose.mps_port import (
+    build_row_local_coefficients,
+    clear_device_cache,
+    load_safetensors_cpu_then_move,
+    prepare_row_local_step,
+)
 from tac.pr130_lift.pose.source_loader import lifted_script_path, load_lifted_module
 
 N_TOTAL_PAIRS = 600
@@ -335,20 +340,26 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     master_model.load_state_dict(master_state)
     masters = lifted_train.load_or_render_masters(args, master_model, tokens, device)
     del master_model
-    if torch.cuda.is_available():
-        torch.cuda.empty_cache()
+    clear_device_cache(device)
     if args.cache_masters_on_device:
         masters = masters.to(device=device, non_blocking=True)
 
-    posenet = modules.PoseNet().eval().to(device)
-    posenet.load_state_dict(load_file(modules.posenet_sd_path, device=str(device)))
+    posenet = load_safetensors_cpu_then_move(
+        modules.PoseNet().eval(), modules.posenet_sd_path, device
+    )
     for parameter in posenet.parameters():
         parameter.requires_grad_(False)
 
     initial = torch.load(args.init_carrier, map_location="cpu", weights_only=False)
     raw_basis = torch.nn.Parameter(initial["basis"].float().to(device))
     basis_dim = raw_basis.shape[0]
-    coeff = torch.nn.Embedding(N_TOTAL_PAIRS, basis_dim, sparse=True).to(device)
+    coeff, coeff_optimizer = build_row_local_coefficients(
+        num_embeddings=N_TOTAL_PAIRS,
+        embedding_dim=basis_dim,
+        device=device,
+        lr=args.lr_coeff,
+        sparse_optimizer_type=lifted_train.RowLocalSparseAdam,
+    )
     with torch.no_grad():
         coeff.weight.copy_(lifted_train.initialize_coefficients(
             initial, targets, target_scale, basis_dim, device
@@ -356,7 +367,6 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         if args.zero_init_coeff:
             coeff.weight.zero_()
     basis_optimizer = torch.optim.Adam([raw_basis], lr=args.lr_basis)
-    coeff_optimizer = lifted_train.RowLocalSparseAdam([coeff.weight], lr=args.lr_coeff)
     basis_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
         basis_optimizer, T_max=args.steps, eta_min=args.lr_basis * 0.01
     )
@@ -454,7 +464,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         coeff_optimizer.zero_grad(set_to_none=True)
         loss.backward()
         torch.nn.utils.clip_grad_norm_([raw_basis], 10.0)
-        lifted_train.clip_sparse_gradient(coeff.weight, 10.0)
+        prepare_row_local_step(coeff_optimizer, coeff.weight, batch_ids, 10.0)
         basis_optimizer.step()
         coeff_optimizer.step()
         basis_scheduler.step()

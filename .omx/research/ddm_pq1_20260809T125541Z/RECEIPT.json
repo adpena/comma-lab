@@ -1,0 +1,127 @@
+{
+  "schema": "ddm_pq1_receipt.v1",
+  "task_id": "ddm_pq1",
+  "session_id": "89ff112f-013d-43b5-b949-2a6d43b650c3",
+  "started_at_utc": "2026-08-09T12:55:41Z",
+  "completed_at_utc": "2026-08-09T13:02:25Z",
+  "status": "BUILD_COMPLETE_METAL_RECEIPT_OWED",
+  "verdict": "PARTIAL",
+  "axis": "scorer-free CPU/static build",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "metal_executed": false,
+  "frontier_moved": false,
+  "frontier": {
+    "score": 0.7534578126155775,
+    "archive_bytes": 357837,
+    "axis": "macOS-CPU advisory"
+  },
+  "contracts": {
+    "ddm_pq1_charter_sha256": "b80cc2bdbddd26b7c0bdbf368d51977f232b2db66776c5e6c38911ae43115a48",
+    "common_contract": ".omx/tmp/codex_runs/_common_contract.md",
+    "common_contract_sha256": "eeae9e0035582e6bdd65fd837e4aa35a65e064fd09900b9c212d41ac02086771"
+  },
+  "source_custody": {
+    "base_commit_observed_before_serialization": "e2661bdefd791d7bcfc7243d42893fb5ce009c19",
+    "intake_trainer_sha256": "684a4906edecb7653572db77c11a03a4e445eb256a8dc7b665e8fa0f78cab649",
+    "lifted_trainer_sha256": "0695685d1e8d61556da64f482296660779228088a1a8d8acb8eb6347d8afd807",
+    "resumable_wrapper_head_sha256": "3e535bf7b6f89fdace2137bb82e25a0867557bbb666ee1e9ce9baaf5043d20e7",
+    "intake_mutated": false,
+    "upstream_mutated": false
+  },
+  "artifacts": [
+    {
+      "path": "src/tac/pr130_lift/pose/mps_port.py",
+      "sha256": "c2f1b86d690f2df7da6012d814e955c35724b360a405180b42ba33d3383487c2"
+    },
+    {
+      "path": "src/tac/pr130_lift/pose/train_pose_carrier_full_resumable.py",
+      "sha256": "ccedf299217e02b10cd5cb5ca72da4d0008de05dc28bb7a3b4ddac85599f925b"
+    },
+    {
+      "path": "src/tac/pr130_lift/tests/test_pq1_pose_mps_port.py",
+      "sha256": "e2c49cb52b3816595024963428e43d98aafaa87f1c18a9c2f40965cb77a7dee2"
+    },
+    {
+      "path": "tools/probe_sparse_mps.py",
+      "sha256": "93dc9841a00b2c7f30cd25cee9b70b7b12373aa2c98f43fcb82c0bc6dd87cd3b"
+    },
+    {
+      "path": ".omx/research/ddm_pq1_20260809T125541Z/PQ1_FINDINGS.md",
+      "sha256": "9948eef7d24feb677274f3d51308d308e4eabebce72765074fd6e22fe06a08e3"
+    },
+    {
+      "path": ".omx/research/ddm_pq1_20260809T125541Z/NEXT_IF_RESUMED.md",
+      "sha256": "09c8a043bee97f3073fe8bc0f316bf3d820949a5dd3755b54a1bfccc50857a9c"
+    }
+  ],
+  "verification": {
+    "cpu_equivalence": {
+      "command": ".venv/bin/python -m pytest -q src/tac/pr130_lift/tests/test_pq1_pose_mps_port.py src/tac/pr130_lift/tests/test_mx2_pose_resumable_state.py",
+      "result": "10 passed",
+      "exact_full_weight_and_optimizer_state_equality": true,
+      "steps": 2,
+      "repeated_row_ids": true,
+      "untouched_rows_bit_identical": true
+    },
+    "full_pr130_lift_suite": {
+      "command": ".venv/bin/python -m pytest -q src/tac/pr130_lift/tests",
+      "result": "27 passed",
+      "note": "An imported MLX binding emitted an atexit no-Metal-device message; pytest exited 0 and PQ1 ran no Metal operation."
+    },
+    "cpu_sparse_probe_worker": {
+      "command": ".venv/bin/python tools/probe_sparse_mps.py --worker-device cpu",
+      "result": "exit 0",
+      "local_torch_version": "2.12.1",
+      "selected_rows_by_step": [[2, 5, 19], [5, 7, 19]],
+      "nonzero_row_clock_union": [2, 5, 7, 19],
+      "untouched_rows_bit_identical": true,
+      "pinned_metal_receipt": false
+    },
+    "ruff": "passed",
+    "py_compile": "passed",
+    "git_diff_check": "passed",
+    "review_tracker_mark_file_passes_per_python_file": 2
+  },
+  "pp2_unknown_denominator": {
+    "operator_families": 60,
+    "unknown_before": 3,
+    "unknown_before_fraction": 0.05,
+    "native_sparse_unknown_after": 2,
+    "native_sparse_unknown_after_fraction": 0.03333333333333333,
+    "active_wrapper_unknowns_removed_or_bypassed": 3,
+    "pinned_real_metal_execution_receipts_from_pq1": 0
+  },
+  "probe_outcomes_ledger": {
+    "path": ".omx/state/probe_outcomes.jsonl",
+    "probe_id": "pr130_pose_trainer_mps_port_build_pq1",
+    "event_type": "adjudicated",
+    "verdict": "PARTIAL",
+    "adjudicated_at_utc": "2026-08-09T13:01:34.034271Z",
+    "line_after_registration": 679,
+    "registered_through_canonical_helper": true,
+    "commit_disposition": "excluded from PQ1 serializer commit because 678 pre-existing shared-worktree rows and modifications were not owned by PQ1"
+  },
+  "boundaries": {
+    "forbidden_execution_observed": false,
+    "mps": false,
+    "mlx": false,
+    "cuda": false,
+    "trainer": false,
+    "scorer": false,
+    "evaluator": false,
+    "archive": false,
+    "paid_or_remote_dispatch": false
+  },
+  "## RECALL EVIDENCE": {
+    "sources_searched": [
+      "live hot state, lane registry, task and bridge stores, and probe ledger for ddm_pq1, ddm_pp2, pr130_pose, and sparse MPS",
+      "research corpus, canonical research index, DAG FEED blocks, specs, and receipts for RowLocalSparseAdam, SparseMPS, train_pose_carrier_full, and probe_sparse_mps",
+      "canonical equations registry filtered for row-local, sparse, MPS, and pose-carrier port terms",
+      "intake trainer, lifted custody copy, upstream lock, and current wrapper and tests"
+    ],
+    "beyond_charter_seeds": "MX2B already supplied the resumable wrapper and 600-pair cache surfaces; no superseding pinned-version pose-MPS receipt or canonical equation settled the sparse path.",
+    "plan_change": "Extended MX2B in place, reused its caches and run surfaces, and registered a new PARTIAL build row instead of overwriting PP2."
+  },
+  "remaining_risk": "The pinned Torch 2.10.0 native sparse path and the complete PoseNet plus coefficient-update graph have not executed on real Metal."
+}
