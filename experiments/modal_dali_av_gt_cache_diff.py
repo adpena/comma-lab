@@ -87,6 +87,31 @@ app = modal.App(APP_NAME, include_source=False)
 DALI_DISABLE_NVML_VALUE = "1"
 PYTORCH_CUDA_ALLOC_CONF_VALUE = "expandable_segments:True"
 CUBLAS_WORKSPACE_CONFIG_VALUE = ":4096:8"
+# CWD-INDEPENDENT LOCAL MOUNTS. add_local_dir/add_local_file resolve RELATIVE
+# PATHS against the process CWD and do NOT validate at image-construction time --
+# they fail only when `modal run` uploads. So a bare "upstream/videos" silently
+# constructs fine and dies at dispatch under any launcher that sets a different
+# cwd (measured 2026-08-09 run r3, launched with --cwd experiments: died on
+# FileNotFoundError for experiments/upstream/public_test_video_names.txt).
+# Anchoring to __file__ makes the mount independent of who launches us, and the
+# assert below turns a silent construction into a loud LOCAL refusal.
+REPO_ROOT = Path(__file__).resolve().parent.parent
+LOCAL_UPSTREAM = REPO_ROOT / "upstream"
+
+_LOCAL_MOUNT_SOURCES = (
+    LOCAL_UPSTREAM / "videos",
+    LOCAL_UPSTREAM / "models",
+    LOCAL_UPSTREAM / "frame_utils.py",
+    LOCAL_UPSTREAM / "modules.py",
+    LOCAL_UPSTREAM / "public_test_video_names.txt",
+    PR130_BUILDER,
+)
+_missing_local = [str(p) for p in _LOCAL_MOUNT_SOURCES if not p.exists()]
+if _missing_local:  # loud at IMPORT, not silent until the Modal upload
+    raise RuntimeError(
+        f"#906 local mount source(s) absent (SSD unmounted? wrong checkout?): {_missing_local}"
+    )
+
 # Provenance: the contest authority tier is the 600-sample eval (upstream
 # evaluate.py over public_test_video_names.txt), and our own frozen GT cache is
 # gt_n600.npz -- 600 pairs. Used ONLY as a coverage floor: this job must measure
@@ -132,19 +157,19 @@ gt_diff_image = (
     # Mounting all of upstream/ would upload 938 MB -- 812 MB of which is .venv (566 MB)
     # and .git (158 MB) that the builder never touches. These five entries are ~126 MB.
     .add_local_dir(  # MODAL_MANUAL_MOUNT_OK:the scored video, the builder's only data input
-        "upstream/videos",
+        str(LOCAL_UPSTREAM / "videos"),
         remote_path=str(REMOTE_UPSTREAM / "videos"),
         copy=True,
     )
     .add_local_dir(  # MODAL_MANUAL_MOUNT_OK:frozen scorer weights, resolved by modules.py:17-18
-        "upstream/models",
+        str(LOCAL_UPSTREAM / "models"),
         remote_path=str(REMOTE_UPSTREAM / "models"),
         copy=True,
     )
-    .add_local_file("upstream/frame_utils.py", remote_path=str(REMOTE_UPSTREAM / "frame_utils.py"))
-    .add_local_file("upstream/modules.py", remote_path=str(REMOTE_UPSTREAM / "modules.py"))
+    .add_local_file(str(LOCAL_UPSTREAM / "frame_utils.py"), remote_path=str(REMOTE_UPSTREAM / "frame_utils.py"))
+    .add_local_file(str(LOCAL_UPSTREAM / "modules.py"), remote_path=str(REMOTE_UPSTREAM / "modules.py"))
     .add_local_file(
-        "upstream/public_test_video_names.txt",
+        str(LOCAL_UPSTREAM / "public_test_video_names.txt"),
         remote_path=str(REMOTE_UPSTREAM / "public_test_video_names.txt"),
     )
     .add_local_file(  # MODAL_MANUAL_MOUNT_OK:PR130 builder, mounted read-only, never edited
