@@ -78,6 +78,7 @@ gt_diff_image = (
         "torch==2.5.1",
         "torchvision",
         "safetensors",
+        "einops",  # REQUIRED: upstream/modules.py:2 imports it. Do NOT drop.
         "segmentation-models-pytorch",
         "av",
         "nvidia-dali-cuda120==1.52.0",
@@ -86,10 +87,27 @@ gt_diff_image = (
         "Pillow",
         extra_index_url="https://pypi.nvidia.com",
     )
-    .add_local_dir(  # MODAL_MANUAL_MOUNT_OK:narrow #906 gt-cache diff; upstream is the whole input
-        "upstream",
-        remote_path=str(REMOTE_UPSTREAM),
+    # PRECISE MOUNT, derived from the builder's actual reads (verified at source):
+    #   root/public_test_video_names.txt · root/videos/ · sys.path.insert(root) then
+    #   `from frame_utils import ...` + `from modules import ...` (modules.py:17-18
+    #   resolves models/{segnet,posenet}.safetensors relative to its own HERE).
+    # Mounting all of upstream/ would upload 938 MB -- 812 MB of which is .venv (566 MB)
+    # and .git (158 MB) that the builder never touches. These five entries are ~126 MB.
+    .add_local_dir(  # MODAL_MANUAL_MOUNT_OK:the scored video, the builder's only data input
+        "upstream/videos",
+        remote_path=str(REMOTE_UPSTREAM / "videos"),
         copy=True,
+    )
+    .add_local_dir(  # MODAL_MANUAL_MOUNT_OK:frozen scorer weights, resolved by modules.py:17-18
+        "upstream/models",
+        remote_path=str(REMOTE_UPSTREAM / "models"),
+        copy=True,
+    )
+    .add_local_file("upstream/frame_utils.py", remote_path=str(REMOTE_UPSTREAM / "frame_utils.py"))
+    .add_local_file("upstream/modules.py", remote_path=str(REMOTE_UPSTREAM / "modules.py"))
+    .add_local_file(
+        "upstream/public_test_video_names.txt",
+        remote_path=str(REMOTE_UPSTREAM / "public_test_video_names.txt"),
     )
     .add_local_file(  # MODAL_MANUAL_MOUNT_OK:PR130 builder, mounted read-only, never edited
         str(PR130_BUILDER),
@@ -121,6 +139,20 @@ def build_and_diff() -> dict:
     }
     if not env_probe["cuda_available"]:
         raise RuntimeError("#906 job requires CUDA (that is the entire reason it is on Modal)")
+
+    # Fail fast and loudly on a mount typo, rather than inside the builder's import.
+    required = [
+        REMOTE_UPSTREAM / "public_test_video_names.txt",
+        REMOTE_UPSTREAM / "videos" / "0.mkv",
+        REMOTE_UPSTREAM / "frame_utils.py",
+        REMOTE_UPSTREAM / "modules.py",
+        REMOTE_UPSTREAM / "models" / "segnet.safetensors",
+        REMOTE_UPSTREAM / "models" / "posenet.safetensors",
+        REMOTE_BUILDER,
+    ]
+    missing = [str(p) for p in required if not p.exists()]
+    if missing:
+        raise RuntimeError(f"#906 mount incomplete: {missing}")
 
     def _run(argv: list[str], label: str) -> dict:
         started = time.time()
