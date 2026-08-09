@@ -1,0 +1,94 @@
+{
+  "schema_version": 1,
+  "arm": "ddm_sg2",
+  "session_id": "89ff112f",
+  "created_at_utc": "2026-08-09T12:28:48Z",
+  "scope": "scorer-free static source, checkpoint-record, and archive-byte audit",
+  "verdict": "FALSIFIED_AT_MEASUREMENT_PROTOCOL",
+  "verdict_scope": "MEASUREMENT_PROTOCOL: train_semantic_full float-forward evaluation of QAT checkpoints; no family-level negative on PR130's semantic renderer",
+  "disposition": "FOLDED",
+  "stage_denominator": 49,
+  "stages_read": 49,
+  "downstream_stages_audited": 41,
+  "strict_pre_final_cpr1_candidates": 37,
+  "post_renderer_seg_closer_stage_count": 0,
+  "named_mechanism": "stage-07/08 int4 quantization-aware semantic rendering",
+  "mechanism_phase": "train-time QAT with decode-time int4 dequantized forward",
+  "main_float_dali_exact_seg": 0.0011081186930338542,
+  "stage07_recorded_quantized_exact_seg": 0.0002972496880425347,
+  "stage08_recorded_quantized_exact_seg": 0.0002763705783420139,
+  "published_ada_dseg": 0.00028609,
+  "published_a4500_dseg": 0.00029607,
+  "semantic_params": 66339,
+  "semantic_int4_code_bytes": 33170,
+  "semantic_packed_bytes": 40252,
+  "semantic_overhead_bytes": 7082,
+  "post_renderer_closer_bytes": 0,
+  "compressed_marginal_price_identifiable": false,
+  "compressed_marginal_price_note": "semantic, carrier, and HPAC sections are jointly LZMA-compressed; no counterfactual archive was built",
+  "archive": {
+    "path": "/Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo/artifacts/final/archive.zip",
+    "bytes": 191052,
+    "sha256": "0491d5df84fc70b62b3f7ccf8894f5e1b81c616de46a052e4423fc1e18fdc7cd",
+    "member": "p",
+    "member_bytes": 190952,
+    "compressed_models_bytes": 73968,
+    "raw_models_bytes": 83493,
+    "carrier_bytes": 23054,
+    "token_bytes": 116980
+  },
+  "semantic_blob": {
+    "archive_sha256": "9b98360bd56918b5a414ace375c29790b7fe9f7f55cf423c0564ef4e62a39b99",
+    "stage07_sha256": "81058169865ffc7d1a400feba7dbe174d3610b5d55af78d13aa595062ecc1ea9",
+    "stage08_sha256": "9b98360bd56918b5a414ace375c29790b7fe9f7f55cf423c0564ef4e62a39b99",
+    "stage07_equals_archive": false,
+    "stage08_equals_archive": true
+  },
+  "checkpoints": [
+    {
+      "name": "semantic_renderer_w96_b4_qat4_12k.pt",
+      "bytes": 283432,
+      "sha256": "1549607db224ea2c4681738dbcc80d2ba9dd453de72db1cf60309985d0602eaf"
+    },
+    {
+      "name": "semantic_renderer_w96_b4_qat4_fixedtau05_tail6k_lr2e7.pt",
+      "bytes": 282352,
+      "sha256": "3948ccfcd44778dc42affee18a10c3f3baa434d1a2eb2345a013146c1dbfb647"
+    }
+  ],
+  "source": {
+    "intake_git_head": "e34f31bc4969042c0051ac81aa3c56884419a231",
+    "main_git_head_at_receipt_start": "5b342e9964d562920e68d0ab450ca4b094f3b7cb",
+    "e2e_py_sha256": "f903193ac2eebcbde65dada7849fb1ebdba36b5264488e673a69118b361ddbf2",
+    "train_semantic_quantized_py_sha256": "4bcaf8a5c581c1e5eb057ea0ef760f269e1eabfdd2fca926bcbf61f4163a248d",
+    "train_semantic_full_py_sha256": "2d7a3575e422dc2b5823b97e52101ad5632e5fa04a98e0af8a83d85b7c2176b8",
+    "inflate_py_sha256": "335369c9b3b295707f1790feb0b5b7ae288338fae350056cc4bb03aaa18f0c9e",
+    "build_submission_archive_py_sha256": "2815ca1bfac6b9bc8fb158ddfaca70e264def94725a3fc44b5c812d0fbeec1d4",
+    "repack_carrier_py_sha256": "df6bdaa23d0bd1f717af588931ebdb5ed3777517af8b046e287835aa16a7a72e",
+    "codec_hpac_integer_py_sha256": "70632168250cbecc40b9d6de5da5b167adeb56031368311ff936404a1ceba7e0"
+  },
+  "portability": {
+    "qat_mechanism": "statically Metal-portable; not executed",
+    "official_target_builder": "CUDA-bound as written",
+    "shipped_inflate_runtime": "CUDA-bound as written",
+    "metal_device_used": false
+  },
+  "boundaries": {
+    "scorer_forward": false,
+    "evaluator": false,
+    "trainer": false,
+    "archive_build": false,
+    "dispatch": false,
+    "promotion": false,
+    "cuda_execution": false,
+    "metal_execution": false,
+    "mps_execution": false,
+    "intake_mutated": false,
+    "upstream_mutated": false,
+    "score_claim": false
+  },
+  "recall_evidence_markdown": "## RECALL EVIDENCE\nSearched .omx/research, CANONICAL_RESEARCH_INDEX, sub015 DAG FEED surfaces, the canonical-equations JSON listing, operator/probe ledgers, PR130 roadmap and OP1R/CPR1 receipts using PR130, CPR1, semantic renderer, HPAC, quantized_exact_seg, 0.00028609, 3.87, and the archive SHA. Beyond charter seeds, archive-anatomy and semantic-token boundary evidence changed the plan to compare exact packed checkpoint blobs and the float/QAT evaluator split. No PR130-specific canonical equation was found in that bounded registry search.",
+  "future_action": null,
+  "frontier_delta": 0.0,
+  "own_vehicle_frontier": "S = 0.7539807296911207 @ 357,836 B [macOS-CPU advisory] n600"
+}
