@@ -1,0 +1,82 @@
+{
+  "schema": "ddm_na5.receipt.v1",
+  "created_utc": "2026-08-09T12:13:04Z",
+  "session_id": "89ff112f-ddm-na5-20260809",
+  "git_head_at_start": "5ceb33d612391a353eb4536bccfe15523f0592e6",
+  "axis": "[macOS-CPU frozen-scorer advisory; selection calibration only]",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "measurement_summary": {
+    "formulations_total": 4,
+    "survived": 0,
+    "flipped": 0,
+    "indeterminate": 4,
+    "new_scorer_forwards": 0,
+    "new_evals": 0,
+    "new_launches": 0,
+    "new_archives": 0,
+    "pointer_moved": false
+  },
+  "measured_in_this_arm": {
+    "d2_population_mean_d_pose_shipped_f16": 0.15950891917937635,
+    "prefix_ratio_n8": 1.2789847387169815,
+    "prefix_ratio_n24": 2.535475579649216,
+    "prefix_ratio_n96": 4.206770932037034,
+    "stratified_random_n120_ratio": 1.0057539935665503,
+    "strided_n120_ratio": 0.9688974305106292,
+    "magnitude_verdict": "The 2.54-4.21 range is reproduced for n24-n96. The n8 ratio is 1.279, so the larger range must not be attached to the n8 source row."
+  },
+  "not_measured": [
+    "new random/stratified d_pose for any formulation",
+    "new strided d_pose for any formulation",
+    "nonzero-arm repeatability noise floor",
+    "contest score or archive bytes"
+  ],
+  "blockers": [
+    "BLOCKED_ON_SCORER_SLOT_BY_CHARTER",
+    "BLOCKED_ON_SOURCE_CUSTODY",
+    "BLOCKED_ON_REFERENCE_PARITY",
+    "BLOCKED_ON_NOISE_FLOOR"
+  ],
+  "source_sha256": {
+    "charter": "23f7392a42597de2bdd4d7d71279c3c276ad7070e5a801bf272aaa3c0ff32382",
+    "common_contract": "eeae9e0035582e6bdd65fd837e4aa35a65e064fd09900b9c212d41ac02086771",
+    "program": "a6d5f79f3241ca1ae17b2587afd9940e1a4ea598804fd9efa152f2330e15db82",
+    "agents_claude_mirror": "397c6abc84899018d73e5d73611d2b7ccc7bd55933d2b79d7ce5566b6550503b",
+    "craft_handoff": "40d157a039d4dd242bfb189d53e6b82abcc5d037adceb0a52c9bb2956903f212",
+    "main_hot_state": "84ceaea0f5a7e865208fe865d2e5913606b3f1589095ffa92e29e005ea359b90",
+    "nb1_findings": "1620d7c73aa2a7ad3e23fa76c8706f840c30aea6787ff44c666444747a2cc6ec",
+    "na2_audit": "d7d7b503b461c0754226d9e0b18866bce095ae94d296019b03c46f24b634dbf2",
+    "random_selection": "6f7ba6dde77500f09923ecfa7c85a7b977bda1e9f3332e416f6fe05c7bca06f7",
+    "d2_population": "d2853c92090c28ebe558ece4a21b2847b55e25c9d768bef167bcba9dc67b72e5",
+    "ub1_harness": "35ad5b4e6936ccb4ae144db3c92c636654db38ba43a3d66fd49ab035e557237b",
+    "strided_builder": "876d29f0dd644cacd0663b6874fbf94e908b972a490f27b47099f4d4b3f04328",
+    "pose_l2_truedepth": "39b84b28b3eb47debac9dc199e13dd260d156eebedb596d8bee60bc545d5cb12",
+    "pose_carrier_arms": "d2ebf07e473c14be738653e32175dad72e5a1baef7bdde23a5fc5072855e8821",
+    "pose_mladder_depthwarp": "259bf0bd94c1e154e0b70134732450e10da6582e131902188fba41a63fda0706",
+    "pose_stratified_texture": "026dbcf5aa198ec30663d14ee0a59d21dee0e3df794298db50ff85ef004cd6e8"
+  },
+  "bounded_search": {
+    "exact_names": ["pose_l2_truedepth_probe.py", "pose_mladder.py", "pose_stratified_texture_probe.py", "pose_aperture_probe.py", "renders_n24.npz", "l2_n24.json", "l2_n8.json", "l2_depths_n24.npz", "a1t_grid_n24.json", "scale_sweep_n24.json", "a2_n24.jsonl", "a2plus_n8.jsonl"],
+    "scopes": ["/Users/adpena/Projects/pact", "git log --all --name-only", "/Volumes/VertigoDataTier/pact", "/private/tmp"],
+    "result": "did not find any exact-name original scratch harness/cache in the listed scopes"
+  },
+  "## RECALL EVIDENCE": {
+    "queries": ["stored pose", "post-hoc", "pose carrier", "pose l2 truedepth", "pose mladder depthwarp", "pose stratified texture", "prefix bias", "canonical task row ddm_na2_strided_rerun_four_pose_family_verdicts_20260803"],
+    "stores": [".omx/research", ".omx/research/CANONICAL_RESEARCH_INDEX*", ".omx/research/sub015_DAG_*", "tools/list_canonical_equations.py --json", ".omx/state/probe_outcomes.jsonl", ".omx/state/canonical_task_status.jsonl", ".omx/state/main_hot_state.md"],
+    "beyond_charter": ["prior ddm_na5_20260805 interrupted attempt", "UB1 partial recovery harness", "separate A0T aperture equation anchor", "live decoder-axis pose ambiguity concentrated in dimension 0"],
+    "plan_change": "Stopped instead of firing a same-name but mechanism-different harness; retained per-dimension axis reporting as a future requirement."
+  },
+  "routing": {
+    "rows": 4,
+    "owner_present": 4,
+    "disposition_present": 4,
+    "consumer_store_present": 4,
+    "consumer_store": ".omx/state/probe_outcomes.jsonl",
+    "preexisting_uncommitted_consumer_rows_at_na5_start": 7,
+    "concurrent_uncommitted_consumer_rows_before_na5_append": 1,
+    "na5_appended_physical_rows": [671, 672, 673, 674],
+    "commit_policy": "NA5 will not absorb or commit the eight unrelated shared-ledger rows that precede its four appends."
+  },
+  "deliverables": ["NA5_FINDINGS.md", "NA5_ROWS.jsonl", "SAMPLES.json", "NEXT_IF_RESUMED.md", "RECEIPT.json"]
+}
