@@ -1,0 +1,192 @@
+{
+  "schema": "ddm_nb1_receipt.v1",
+  "created_at_utc": "2026-08-09T03:09:14Z",
+  "arm": "ddm_nb1",
+  "axis": "[scorer-free source/registry audit]",
+  "research_only": true,
+  "score_claim": false,
+  "promotion_eligible": false,
+  "pointer_moved": false,
+  "source_read_head": "e1d077e48fa26f8476e3862ff6b0d166f94d840f",
+  "input_snapshots": {
+    "au1_corrections": {
+      "path": ".omx/research/ddm_au1_20260805/au1_corrections_index.jsonl",
+      "commit_sha": "7b72d4edaf97a6702807bd2e956be1d75ee720b7",
+      "sha256": "f42ced06ea79d1213d928fca80caee1aa7a63fc8f0c2e8aebe660f5151a03bbe",
+      "physical_rows": 11840,
+      "unique_sources": 2733
+    },
+    "au1_headline_vs_body": {
+      "path": ".omx/research/ddm_au1_20260805/au1_headline_vs_body.jsonl",
+      "commit_sha": "7b72d4edaf97a6702807bd2e956be1d75ee720b7",
+      "sha256": "e29ddfffa668da4d066b50a12152f49e9e1de6d6cfd3b26bd04d21506d1e400d",
+      "physical_rows": 8157,
+      "unique_source_locators": 1866
+    },
+    "au1_cross_file_join": {
+      "research_correction_loci": 11840,
+      "research_headline_loci": 8112,
+      "overlap_loci": 7137,
+      "union_research_loci": 12815,
+      "ledger_or_git_loci": 45,
+      "union_all_evidence_locators": 12860
+    },
+    "vo2_registry": {
+      "path": ".omx/research/ddm_vo2_20260806/INSTRUMENT_REGISTRY.jsonl",
+      "commit_sha": "6eb9ab4a985fbe1f62b2fe3666f313007a62fb73",
+      "sha256": "947b7faaa3ba61dfad567b434075c8151028e8fd5e6dbe3c38cbcb4ccc43b936",
+      "physical_rows": 4630,
+      "unique_instrument_ids": 4630,
+      "seeded_instruments": 118,
+      "overinclusive_source_candidates": 4512
+    },
+    "probe_outcomes": {
+      "path": ".omx/state/probe_outcomes.jsonl",
+      "commit_sha": "2ed5794ed37b4a59a25be1888f9b0890bc895ea2",
+      "sha256": "7df72ac73db1b0d625156255bf8c9c2ebd8e73f3179009d90f31f25277abd57b",
+      "physical_events": 662,
+      "logical_probe_ids": 370,
+      "latest_negative_identities": 145,
+      "latest_semantics": "append_order_last_row_wins"
+    },
+    "task_status_pre_route": {
+      "path": ".omx/state/canonical_task_status.jsonl",
+      "base_commit_sha": "eb3d47ce90fa1e03391a72760937884a74eea552",
+      "physical_events": 522,
+      "logical_task_ids": 190,
+      "current_blocked": 11,
+      "current_cancelled": 1
+    },
+    "research_markdown_pre_nb1_artifacts": {
+      "physical_files": 8088,
+      "case_insensitive_verdict_scope_candidates": 634,
+      "negative_claim_identity_denominator": "UNKNOWN_REQUIRES_BODY_AND_OVERLAP_ADJUDICATION"
+    }
+  },
+  "row_denominator": {
+    "all_typed_records": 24786,
+    "machine_candidate_records": 24627,
+    "canonical_negative_identities": 159,
+    "body_adjudicated_canonical_identities": 21,
+    "candidate_records_body_unreached": 24627,
+    "current_negative_probe_bodies_unreached": 138
+  },
+  "grade_counts_all_records": {
+    "PARADIGM_FALSIFIED": 1,
+    "IMPLEMENTATION_FALSIFIED_REOPEN": 6,
+    "UNREACHED": 24779
+  },
+  "grade_counts_canonical_negative_identities": {
+    "PARADIGM_FALSIFIED": 1,
+    "IMPLEMENTATION_FALSIFIED_REOPEN": 6,
+    "UNREACHED": 152
+  },
+  "implementation_primary_lens_counts": {
+    "L1": 1,
+    "L2": 0,
+    "L3": 2,
+    "L4": 3
+  },
+  "implementation_lens_incidence_counts": {
+    "L1": 1,
+    "L2": 0,
+    "L3": 2,
+    "L4": 6
+  },
+  "routing": {
+    "typed_rows": 24786,
+    "rows_with_owner": 24786,
+    "rows_with_exactly_one_valid_disposition": 24786,
+    "rows_with_named_machine_store": 24786,
+    "rows_unrouted": 0,
+    "disposition_counts": {
+      "QUEUED-WITH-FIRE-ORDER": 24767,
+      "FOLDED": 18,
+      "FIRED": 1,
+      "DEFERRED": 0
+    },
+    "task_ledger_post_route": {
+      "physical_events": 528,
+      "logical_task_ids": 195,
+      "sha256": "4a5a44c40a4aea092b9c52c40612d488f1db75e8ccde9027d9b1c274b1232e1d",
+      "new_pending_task_ids": [
+        "nb1_machine_corpus_body_adjudication_r2_20260809",
+        "nb1_probe_readiness_expiry_helper_wire_20260809",
+        "nb1_costate_coverage_guard_propagation_20260809",
+        "nb1_head_relax_no_distill_interaction_cell_20260809"
+      ],
+      "registered_then_cancelled_task_id": "nb1_qa03_position_label_stream_split_20260809",
+      "cancellation_row": 527
+    }
+  },
+  "loop_until_dry": [
+    {
+      "round": "R0",
+      "new_canonical_negative_rows": 0,
+      "typed_candidate_edges": 24627,
+      "dry": false
+    },
+    {
+      "round": "R1",
+      "new_canonical_negative_rows": 9,
+      "dry": false
+    },
+    {
+      "round": "R2_SELF_AUDIT",
+      "new_canonical_negative_rows": 0,
+      "dry": true,
+      "scope": "bounded_body_read_tranche_only",
+      "correction": "cancelled duplicate QA03 task after later DAG/equation settlement"
+    }
+  ],
+  "global_seal_ready": false,
+  "unreached_reason": "wall-clock bound; 24627 detector/instrument candidates and 138 current negative probe bodies remain source-body unadjudicated",
+  "validation": {
+    "jsonl_parse": "PASS_24786_OF_24786",
+    "required_keys": "PASS",
+    "unique_nb1_id": "PASS_24786_OF_24786",
+    "unique_canonical_identity": "PASS_24786_OF_24786",
+    "evidence_commit_sha_shape": "PASS_ALL_40_HEX",
+    "owner_disposition_route": "PASS_24786_OF_24786",
+    "score_claim_false": "PASS_24786_OF_24786",
+    "git_diff_check": "PASS",
+    "python_files_changed": 0,
+    "review_tracker_passes_required": 0
+  },
+  "deliverables": {
+    "NB1_FINDINGS.md": {
+      "bytes": 20356,
+      "sha256": "1620d7c73aa2a7ad3e23fa76c8706f840c30aea6787ff44c666444747a2cc6ec"
+    },
+    "NB1_ROWS.jsonl": {
+      "bytes": 48962273,
+      "rows": 24786,
+      "sha256": "776806b4c4dde25bca12290494c65bd149b375da00d78588b4fb8af841de04ba"
+    },
+    "NEXT_IF_RESUMED.md": {
+      "bytes": 1698,
+      "sha256": "a5d213f041c80ea6d7cdf25e8b7a6e1778c0dce467ebec8f49d4b233d81798dc"
+    },
+    "RECEIPT.json": {
+      "self_hash_omitted_to_avoid_recursive_manifest": true
+    }
+  },
+  "boundaries": {
+    "scorer_forwards": 0,
+    "evaluations": 0,
+    "launches": 0,
+    "dispatches": 0,
+    "archive_builds": 0,
+    "metal_mps_cuda_operations": 0,
+    "upstream_edits": 0,
+    "public_pr_intake_edits": 0,
+    "protected_file_edits": 0
+  },
+  "frontier": {
+    "S": 0.7534578126155775,
+    "archive_bytes": 357837,
+    "axis": "[macOS-CPU advisory]",
+    "source": ".omx/state/main_hot_state.md:5-20",
+    "contest_pointer": "0.19108 borrowed/unmoved"
+  }
+}
