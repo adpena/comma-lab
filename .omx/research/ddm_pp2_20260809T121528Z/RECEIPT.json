@@ -1,0 +1,120 @@
+{
+  "schema_version": 1,
+  "task_id": "ddm_pp2",
+  "session_id": "89ff112f",
+  "created_at_utc": "2026-08-09T12:15:28Z",
+  "completed_at_utc": "2026-08-09T12:20:58Z",
+  "status": "complete_static_audit",
+  "verdict": "portable-with-named-work",
+  "authority": "static_source_audit_only",
+  "source": {
+    "path": "/Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo/code/train_pose_carrier_full.py",
+    "sha256": "684a4906edecb7653572db77c11a03a4e445eb256a8dc7b665e8fa0f78cab649",
+    "lines": 467,
+    "read_only": true
+  },
+  "contracts": {
+    "charter_path": "/private/tmp/claude-501/-Users-adpena-Projects-pact/89ff112f-013d-43b5-b949-2a6d43b650c3/scratchpad/ddm_pp2_charter.md",
+    "charter_sha256": "65b35999eea7ea2fa3c2f1209e1040e06028a916a728a511d0606982ac969754",
+    "common_contract_path": ".omx/tmp/codex_runs/_common_contract.md",
+    "common_contract_sha256": "eeae9e0035582e6bdd65fd837e4aa35a65e064fd09900b9c212d41ac02086771"
+  },
+  "operator_inventory": {
+    "selection_mode": "distinct execution family; repeated call sites folded with all source lines retained",
+    "denominator": 60,
+    "unknown": 3,
+    "unknown_fraction": 0.05,
+    "unknown_row_ids": ["33", "36", "37"],
+    "highest_risk_op": "nn.Embedding(sparse=True) backward through SparseMPS COO into RowLocalSparseAdam",
+    "certain_port_edit": "device-dispatch the unconditional torch.cuda.empty_cache call at trainer line 264"
+  },
+  "stage_graph": {
+    "stage_range": "09-32",
+    "denominator": 24,
+    "explicit_target_cache_inputs": 24,
+    "audited_trainer_stages": 15,
+    "audited_trainer_pipeline_device_stages": 12,
+    "audited_trainer_forced_cpu_stages": 3,
+    "non_trainer_stages_requiring_separate_audit": 9,
+    "target_cache_dataset_declared": "dali at stage 01",
+    "target_cache_content_hash_declared": false,
+    "target_cache_decoder_axis_declared": false
+  },
+  "device_census": {
+    "intake_files": 5,
+    "intake_lines": 1415,
+    "tensor_or_module_cuda_calls": 0,
+    "literal_cuda_tensor_allocations": 0,
+    "active_cuda_specific_api_calls": 1,
+    "active_amp_or_autocast_calls": 0,
+    "pin_memory_dali_nccl_fused_or_custom_cuda_kernel_calls": 0
+  },
+  "runtime_boundary": {
+    "governed_torch": "2.10.0",
+    "governed_timm": "1.0.22",
+    "static_dispatcher_inspected_torch": "2.12.1",
+    "static_model_inspected_timm": "1.0.27",
+    "exact_runtime_execution_performed": false,
+    "metal_device_accessed": false
+  },
+  "prohibitions_observed": {
+    "trainer_run": false,
+    "mps_or_mlx_probe": false,
+    "scorer_or_evaluator_run": false,
+    "launch_or_dispatch": false,
+    "archive_created": false,
+    "score_claim": false,
+    "promotion_eligible": false,
+    "frontier_pointer_moved": false
+  },
+  "ledger_registration": {
+    "path": ".omx/state/probe_outcomes.jsonl",
+    "probe_id": "pr130_pose_trainer_static_mps_portability_pp2",
+    "verdict": "PARTIAL",
+    "metric_name": "unknown_execution_family_rows",
+    "metric_value": 3.0,
+    "threshold": 0.0,
+    "written_at_utc": "2026-08-09T12:20:58.891972Z",
+    "registered": true,
+    "commit_disposition": "not included in the PP2 commit because the shared append-only ledger already had unrelated uncommitted rows; the canonical helper append is preserved in the worktree"
+  },
+  "artifacts": [
+    {
+      "path": ".omx/research/ddm_pp2_20260809T121528Z/PP2_FINDINGS.md",
+      "sha256": "6dcc9da2e8da8951517d23ec346ae515e9d8a5e07b56790d9e3e2888f2bdc82e"
+    },
+    {
+      "path": ".omx/research/ddm_pp2_20260809T121528Z/PP2_OPS.jsonl",
+      "sha256": "95374227092aff0a675262d8369866de4d044ea2a68c8cebeeef5dcda9d859cd"
+    },
+    {
+      "path": ".omx/research/ddm_pp2_20260809T121528Z/NEXT_IF_RESUMED.md",
+      "sha256": "6cabcd9dfcbbcfaca6ef8265652a6938fc199ba059ff46fbece73ea2c6020e9e"
+    }
+  ],
+  "## RECALL EVIDENCE": {
+    "stores_consulted": [
+      ".omx/state/main_hot_state.md",
+      ".omx/research/CANONICAL_RESEARCH_INDEX_20260629.md and research corpus searches",
+      ".omx/research DAG surfaces",
+      "canonical task ledger and harness bridge searches",
+      "tools/list_canonical_equations.py --json"
+    ],
+    "decision_changing_artifacts": [
+      ".omx/research/ddm_mp2_20260809T105302Z/MP2_FINDINGS.md",
+      ".omx/research/ddm_rm1_20260808/ADDENDUM_gt_provenance_and_compute_split.md",
+      ".omx/research/ddm_mx2b_20260806/RECEIPT.md",
+      ".omx/research/pr130_eureka_intake_acquisition_20260806.md",
+      ".omx/research/pr130_lift_wave_element_audit_20260806.md",
+      ".omx/research/pr130_lift_wave_round1_adversarial_review_20260806.md"
+    ],
+    "superseding_exact_pose_mps_receipt_found": false,
+    "exact_sparse_mps_pose_trainer_receipt_found": false
+  },
+  "frontier": {
+    "own_vehicle_score": 0.7534578126155775,
+    "archive_bytes": 357837,
+    "axis": "[macOS-CPU advisory]",
+    "changed_by_pp2": false
+  }
+}
