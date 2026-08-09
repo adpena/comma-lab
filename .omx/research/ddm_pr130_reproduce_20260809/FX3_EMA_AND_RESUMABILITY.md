@@ -1,7 +1,8 @@
 # FX3 — EMA and crash-resumable PR130 semantic QAT
 
 **Date:** 2026-08-09  
-**Verdict scope:** PR130 lifted PyTorch semantic-QAT mechanism, seeded n4 real-pair CPU smoke  
+**Verdict scope:** PR130 lifted PyTorch semantic-QAT mechanism; n4 updated-EMA parity/resume plus
+n600 evaluation with seeded n32 deployed parity on CPU
 **Authority:** `[CPU mechanism smoke; no score]`; `score_claim=false`  
 **Machine-readable receipt:** `FX3_EMA_AND_RESUMABILITY_RECEIPT.json`
 
@@ -31,6 +32,16 @@ with the object the packer parses, and fails closed on any changed argmax pixel,
 non-finite value. The gate therefore admits the measured EMA shadow for this mechanism smoke. It does
 not authorize a production score claim; an n600 production checkpoint must pass the same gate before
 shipping.
+
+A separately governed two-step run evaluated the selected shadow on **600/600 pairs** and then ran the
+same deployed gate on a seeded **32/600 pairs**. It also passed: **0/6,291,456 argmax pixels differed**,
+frames were exactly equal, maximum absolute frame delta was 0, and both paths had zero non-finite
+values. Its selected full-population diagnostic was `d_seg=0.00029702080620659725`, and its 40,252-byte
+semantic blob had SHA-256 `81058169865ffc7d1a400feba7dbe174d3610b5d55af78d13aa595062ecc1ea9`.
+That run finished terminally with exit 0 in 879.456 s. Its best selection remained the step-0 EMA
+shadow because the step-2 n600 diagnostic was worse; the n4 result above is therefore the load-bearing
+check on an EMA shadow that actually incorporated optimizer updates, while the n32 result expands the
+pair coverage of the pack/parse gate. Neither is a contest score.
 
 The smoke consumed the real 600-pair cache (117,981,133 B, SHA-256
 `8248a60da56119eb4b3ad76bfa32f5498dee849eaf4b83b304275064141fd828`) and the real stage-07
@@ -148,10 +159,11 @@ and typed schema/refusal behavior.
 
 ## 5. Ranked residuals and falsifiers
 
-1. **HIGH before a production ship — n600 and contest-device adoption remain unmeasured.** The parity
-   result is n4 CPU by explicit legal scope reduction; it proves the mechanism and caught real defects,
-   but cannot establish rare-pair behavior or score movement. Falsifier: the final production EMA
-   checkpoint passes the same deployed gate on 600/600 pairs and its exact archive passes
+1. **HIGH before a production ship — full 600-pair parity and contest-device adoption remain
+   unmeasured.** The updated-EMA parity result is n4 CPU, with a supplemental selected-shadow n32 gate;
+   these prove the mechanism and caught real defects but cannot establish rare-pair behavior or score
+   movement. Falsifier: the final production EMA checkpoint passes the same deployed gate on 600/600
+   pairs and its exact archive passes
    `upstream/evaluate.py` on contest CPU/CUDA.
 2. **MEDIUM operational barrier — 13/19 historical direct readers fail closed rather than parse v2.**
    This is safe for provenance but blocks an old pack/eval CLI from consuming the new checkpoint.

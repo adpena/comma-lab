@@ -48,6 +48,73 @@
     "quantized_exact_seg_diagnostic": 0.0003751118977864583,
     "diagnostic_is_not_score_authority": true
   },
+  "supplemental_full_population_run": {
+    "score_claim": false,
+    "axis": "[CPU mechanism smoke; no score]",
+    "terminal_status": "ok",
+    "exit": 0,
+    "elapsed_s": 879.456,
+    "training_and_diagnostic_pairs": 600,
+    "deployed_parity_pairs": 32,
+    "deployed_parity_pair_selection": "seeded random without replacement from 600",
+    "deployed_parity_pair_ids": [
+      16,
+      34,
+      95,
+      102,
+      104,
+      130,
+      177,
+      224,
+      264,
+      271,
+      311,
+      318,
+      323,
+      338,
+      361,
+      365,
+      385,
+      396,
+      407,
+      413,
+      433,
+      437,
+      439,
+      478,
+      489,
+      498,
+      504,
+      523,
+      536,
+      543,
+      554,
+      558
+    ],
+    "argmax_diff_pixels": 0,
+    "total_pixels": 6291456,
+    "argmax_diff_rate": 0.0,
+    "frame_equal": true,
+    "frame_max_abs_delta": 0.0,
+    "qat_nonfinite_values": 0,
+    "deployed_nonfinite_values": 0,
+    "semantic_blob_bytes": 40252,
+    "semantic_blob_sha256": "81058169865ffc7d1a400feba7dbe174d3610b5d55af78d13aa595062ecc1ea9",
+    "selected_quantized_exact_seg_diagnostic": 0.00029702080620659725,
+    "step2_quantized_exact_seg_diagnostic": 0.00030153910319010417,
+    "selected_checkpoint_step": 0,
+    "selection_note": "The n600 selector retained the step-0 EMA shadow; the primary n4 gate covers a shadow updated by optimizer steps.",
+    "result": {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_fx3_20260809/uninterrupted_cpu/result.json",
+      "bytes": 5591,
+      "sha256": "1eb8c55eebd15da4a61f89263dbcc087785a8cdb233d3bff31f1c74df55ebcb2"
+    },
+    "checkpoint": {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_fx3_20260809/uninterrupted_cpu/semantic.pt",
+      "bytes": 1695286,
+      "sha256": "7e718a47c060ccef31c58864bebf3b57fde0eeb554eaf5854c3db37401e03b05"
+    }
+  },
   "crash_resume": {
     "passed": true,
     "scope": {
@@ -160,6 +227,15 @@
       "status": "ok",
       "exit": 0,
       "elapsed_s": 16.968
+    },
+    {
+      "role": "supplemental_n600_with_n32_parity",
+      "path": "/Volumes/VertigoDataTier/pact/ddm_fx3_20260809/uninterrupted_cpu/safe_run_status.json",
+      "bytes": 1811,
+      "sha256": "cd313aace94869653260eba7f44a54dfc4d4c120b011958aad3f659814a004c9",
+      "status": "ok",
+      "exit": 0,
+      "elapsed_s": 879.456
     }
   ],
   "artifact_hygiene": {
