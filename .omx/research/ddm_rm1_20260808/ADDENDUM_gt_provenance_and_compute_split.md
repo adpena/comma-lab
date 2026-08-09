@@ -113,3 +113,56 @@ training, renderer training, burns — stays on Metal.
 MEASURED: all file:line facts above (read at source 2026-08-09), the byte figures, the two d_seg
 values. UNMEASURED: the DALI↔AV label delta itself — that is the job. DERIVED: the chroma-siting
 mechanism candidate (from the centered-bilinear line vs nvdec convention), not yet confirmed.
+
+## 2c. MEASURED 2026-08-09 — the DALI↔AV label delta is 61.25% of PR130's seg term
+
+The §3 job ran (Modal T4, contest-CUDA env per Catalog #244, both legs on the SAME
+container/scorer, decoder varied by `--dataset {av,dali}`). Receipt:
+`/Volumes/VertigoDataTier/pact/ddm_chroma_dali_av_20260809/result_summary.json`.
+
+| quantity | value |
+|---|---|
+| **DALI-vs-AV argmax disagreement (`reference_seg_disagreement`)** | **1.7523023416288197e-4** |
+| in S units (100·d_seg) | **0.017523 S** |
+| coverage | **600 / 600 pairs both legs** (`coverage.ok = true`) |
+| vs PR130's ENTIRE d_seg 2.8609e-4 | **61.25%** |
+| vs the §2b chroma-siting sensitivity 2.2790696885850695e-4 | **76.89%** |
+| vs OUR live d_seg 0.004305420 | 4.07% |
+| ≈ argmax pixels per frame (512×384) | ~34.5 |
+| **POSITIVE CONTROL** `reference_pose_mse` | **1.4061325055081397e-4 — NONZERO** |
+| `reference_pose_max_abs` | 0.0970001220703125 |
+| DALI cache | 117,980,732 B, sha256 `a91d9825…4994` |
+| AV cache | 117,980,720 B, sha256 `837b5852…1f99` |
+
+**The positive control is what makes this readable.** A `reference_seg_disagreement`
+of 0 paired with a `reference_pose_mse` of 0 would have been indistinguishable from
+"the decoder never actually varied." Both are nonzero: the two legs genuinely
+decoded differently, so the seg number measures decoders, not plumbing.
+
+### What this MEASURES (and what it does not)
+
+MEASURED: switching the GT decoder from PyAV to DALI/nvdec moves **1.7523e-4 of the
+frozen SegNet argmax labels** over the full 600-pair population.
+
+DERIVED consequences:
+- Our AV-decoded GT is **not** the authority's GT. Every seg measurement taken
+  against it carries that much label uncertainty, silently.
+- At OUR current d_seg (0.004305) it is **4.07%** — real but not dominant.
+- At **PR130's** 2.8609e-4 it is **61.25%** — a renderer trained to perfection
+  against AV-GT would, scored against DALI-GT, still show ~1.75e-4 of "error"
+  that is pure target mismatch. **Any renderer program aimed at the bar's seg term
+  must train against the DALI cache**, which is now a durable local asset.
+- The **135,732 B (ours) vs 137,159 B (PR130)** comparison is between objects with
+  different label content and remains UNSAFE until re-derived on DALI labels.
+- The chroma-siting mechanism (§2b) accounts for **76.89%** of the measured delta in
+  magnitude — consistent with it being the dominant but not sole mechanism. The
+  residual is not attributed; that would need a separate decomposition.
+
+STILL UNMEASURED: which convention nvdec actually emits (this prices the
+consequence of the difference, it does not name the direction); and the
+platform leg (Modal-AV vs our local macOS-AV), which is a separate free
+comparison against `gt_n600.npz`.
+
+### The compute split held
+One short CUDA job (~3 min wall, T4) bought a durable artifact consumed by every
+future LOCAL training run. Nothing trained on Modal. Per §3.
