@@ -1,0 +1,87 @@
+{
+  "cold": {
+    "dependency_ready_line_present": true,
+    "returncode": 0,
+    "stderr": "Using CPython 3.11.12 interpreter at: /usr/local/bin/python3\nResolved 1 package in 49ms\nPrepared 1 package in 57ms\nInstalled 1 package in 18ms\n + constriction==0.5.0\n",
+    "stdout": "PR130_DEPENDENCY_READY constriction=0.5.0 receiver=inflate.py\n",
+    "wall_clock_s": 5.302314462
+  },
+  "image_shape": "contest_shaped_numpy_torch2100cpu_no_constriction",
+  "installed_target": {
+    "dir": "/tmp/fx5-runtime-deps",
+    "exists": true,
+    "file_count": 10,
+    "files": [
+      {
+        "bytes": 0,
+        "path": ".lock"
+      },
+      {
+        "bytes": 131,
+        "path": "constriction/__init__.py"
+      },
+      {
+        "bytes": 943808,
+        "path": "constriction/constriction.cpython-311-x86_64-linux-gnu.so"
+      },
+      {
+        "bytes": 2,
+        "path": "constriction-0.5.0.dist-info/INSTALLER"
+      },
+      {
+        "bytes": 10632,
+        "path": "constriction-0.5.0.dist-info/METADATA"
+      },
+      {
+        "bytes": 832,
+        "path": "constriction-0.5.0.dist-info/RECORD"
+      },
+      {
+        "bytes": 0,
+        "path": "constriction-0.5.0.dist-info/REQUESTED"
+      },
+      {
+        "bytes": 147,
+        "path": "constriction-0.5.0.dist-info/WHEEL"
+      },
+      {
+        "bytes": 106065,
+        "path": "constriction-0.5.0.dist-info/licenses/LICENSE.html"
+      },
+      {
+        "bytes": 40718,
+        "path": "constriction-0.5.0.dist-info/sboms/constriction.cyclonedx.json"
+      }
+    ],
+    "total_bytes": 1102335
+  },
+  "invalid_target_control": {
+    "expected_returncode": 65,
+    "passed": true,
+    "returncode": 65,
+    "stderr": "PR130 dependency closure refused invalid existing target: /tmp/fx5-invalid-target\nSelect a fresh PR130_RUNTIME_DEPS_DIR; this entrypoint will not overwrite it.\n"
+  },
+  "platform": {
+    "libc": "glibc-2.36",
+    "machine": "x86_64",
+    "python_implementation": "CPython",
+    "python_version": "3.11.12",
+    "system": "Linux"
+  },
+  "precondition_find_spec_is_none": true,
+  "receiver_sha256_matches_manifest": true,
+  "receiver_sha256_observed": {
+    "carrier_codec.py": "d2f14402374b4e622b7f981d736389fb04f0ca0165180e4c75f3a32ffe996bed",
+    "hpac_integer.py": "6e6b4f4d0b293fb60cc1b751958756a4cd6c2ce7bcff68c6f03e20277856803f",
+    "hpac_integer_sparse.py": "2240ee32c53fe949b560d316d349e0bbdccc0ceb78787307cd4d530623d42a0c",
+    "inflate.py": "335369c9b3b295707f1790feb0b5b7ae288338fae350056cc4bb03aaa18f0c9e",
+    "integer_model_io.py": "6f91c91ed4785d203aa3570af362fbe9c6a64bb2249599f8554adb31174b80a5"
+  },
+  "schema": "comma_lab.fx5_linux_closure.v1",
+  "warm": {
+    "dependency_ready_line_present": true,
+    "returncode": 0,
+    "stdout": "PR130_DEPENDENCY_READY constriction=0.5.0 receiver=inflate.py\n",
+    "wall_clock_s": 3.009660811
+  }
+}
