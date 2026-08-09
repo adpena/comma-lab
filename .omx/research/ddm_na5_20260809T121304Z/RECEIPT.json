@@ -76,7 +76,8 @@
     "preexisting_uncommitted_consumer_rows_at_na5_start": 7,
     "concurrent_uncommitted_consumer_rows_before_na5_append": 1,
     "na5_appended_physical_rows": [671, 672, 673, 674],
-    "commit_policy": "NA5 will not absorb or commit the eight unrelated shared-ledger rows that precede its four appends."
+    "commit_policy": "NA5 will not absorb or commit the eight unrelated shared-ledger rows that precede its four appends.",
+    "ledger_commit_disposition": "QUEUED-WITH-A-FIRE-ORDER to MAIN shared-ledger owner after rows 663-670 land or receive separate custody; patch-commit only rows 671-674."
   },
   "deliverables": ["NA5_FINDINGS.md", "NA5_ROWS.jsonl", "SAMPLES.json", "NEXT_IF_RESUMED.md", "RECEIPT.json"]
 }

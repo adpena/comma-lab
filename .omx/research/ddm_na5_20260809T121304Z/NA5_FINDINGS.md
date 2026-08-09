@@ -88,6 +88,7 @@ The cheapest next measurement is `pose_carrier_arms`: reconstruct the original c
 - **Disposition: QUEUED-WITH-A-FIRE-ORDER. Owner: pose depth-recovery arm. Consumer store: `.omx/state/probe_outcomes.jsonl` and OD1 Stage-2. Fire trigger:** the original L2 depth cache/harness is recovered or rebuilt and reproduces HPLAN/L2 n24 controls before a scorer slot is granted.
 - **Disposition: QUEUED-WITH-A-FIRE-ORDER. Owner: pose solve arm. Consumer store: `.omx/state/probe_outcomes.jsonl` and OD1 Stage-2. Fire trigger:** A0/A2/A2+ source parity is restored, including calibrated ξ and the original solver acceptance rule, before a scorer slot is granted.
 - **Disposition: QUEUED-WITH-A-FIRE-ORDER. Owner: pose texture arm. Consumer store: `.omx/state/probe_outcomes.jsonl` and OD1 Stage-2. Fire trigger:** the texture/aperture grids and per-cell warp diagnostics reproduce the source n24/n8 rows before a scorer slot is granted.
+- **Disposition: QUEUED-WITH-A-FIRE-ORDER. Owner: MAIN shared-ledger owner. Consumer store: `.omx/state/probe_outcomes.jsonl`. Fire trigger:** the eight unrelated dirty rows 663–670 land or receive separate custody; then commit only NA5 rows 671–674 with patch-intent staging so no sibling row is absorbed.
 
 ## LIVE-HYPOTHESES
 

@@ -6,6 +6,7 @@
 - **Disposition: QUEUED-WITH-A-FIRE-ORDER. Owner: pose depth-recovery arm. Consumer store: `.omx/state/probe_outcomes.jsonl` and OD1 Stage-2 pose-recovery adjudication. Fire trigger:** recover or parity-rebuild the original L2 depth cache/harness and reproduce HPLAN_REAL 0.878, L2_REAL 1.296, and L2_WITNESS 171.8 on n24 before requesting a scorer slot.
 - **Disposition: QUEUED-WITH-A-FIRE-ORDER. Owner: pose solve arm. Consumer store: `.omx/state/probe_outcomes.jsonl` and OD1 Stage-2 pose-recovery adjudication. Fire trigger:** recover or parity-rebuild the original A0/A2/A2+ solver, calibrated-ξ initialization, and acceptance rule before requesting a scorer slot.
 - **Disposition: QUEUED-WITH-A-FIRE-ORDER. Owner: pose texture arm. Consumer store: `.omx/state/probe_outcomes.jsonl` and OD1 Stage-2 pose-recovery adjudication. Fire trigger:** recover or parity-rebuild the original texture/aperture grids and reproduce the n24 A1T grid plus n8 self-pair diagnostic before requesting a scorer slot.
+- **Disposition: QUEUED-WITH-A-FIRE-ORDER. Owner: MAIN shared-ledger owner. Consumer store: `.omx/state/probe_outcomes.jsonl`. Fire trigger:** the unrelated dirty rows 663–670 land or receive separate custody; then patch-commit only NA5 rows 671–674 without absorbing sibling work.
 
 ## LIVE-HYPOTHESES
 
