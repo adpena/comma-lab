@@ -58,6 +58,38 @@ Consequences if the delta is non-trivial:
 - every seg measurement taken against AV-GT inherits the error silently;
 - we would be training toward a target the authority does not score.
 
+### 2b. MEASURED 2026-08-09 — the siting sensitivity is 79.66% of PR130's ENTIRE seg term
+
+`tools/measure_chroma_siting_argmax_sensitivity.py` (afa34a0860), n=120 stratified-random,
+frozen CPU-torch SegNet, `[macOS-CPU advisory]`. Receipt:
+`.omx/research/ddm_rm1_20260808/chroma_siting_sensitivity.json`.
+
+| quantity | value |
+|---|---|
+| **pooled argmax disagreement (centered vs left-sited chroma)** | **2.2790696885850695e-4** |
+| in S units (100·d_seg) | **0.022791 S** |
+| PR130's ENTIRE d_seg | 2.8609e-4 → 0.028609 S |
+| **ratio** | **79.66%** |
+| per-pair max / min | 4.3233e-4 (151% of their seg term) / 8.6466e-5 (30%) |
+| pairs with ANY disagreement | **120 / 120** — systematic, not a tail |
+| positive control | PASSED — our centered path is BYTE-IDENTICAL to upstream `yuv420_to_rgb` (pair 3) |
+
+~45 argmax pixels per frame move under a half-luma-pixel horizontal chroma shift. That is a small
+number — but PR130's realization error is ALSO small (~56 px/frame), so these are the same order.
+
+**What this DOES establish (MEASURED):** the frozen SegNet argmax is siting-sensitive at ~80% of
+the bar's seg term. Any renderer program aimed below ~1e-3 d_seg is carrying an unmeasured label
+uncertainty of that size. At OUR 0.004305 it is 5.3% (ignorable); at the BAR it is not.
+
+**What this does NOT establish (still UNMEASURED):** which convention nvdec/DALI actually emits.
+Upstream *intends* `yuv420_to_rgb` to match nvdec ("yuv420 to rgb matching nvdec output"); this
+probe cannot confirm or refute that — it prices the consequence IF they differ. That is exactly
+what the one qualifying Modal job (§3) resolves.
+
+**Routing:** the DALI-vs-AV dispatch moves from "worth doing" to **prerequisite** for any
+renderer work targeting the bar's seg term, and for the 135,732-vs-137,159 B comparison. #906
+stays OPEN with the sensitivity now priced.
+
 ## 3. THE COMPUTE SPLIT (operator binding 2026-08-09)
 
 > *"We can use Modal, but only for what's absolutely necessary, and all long runs / training
