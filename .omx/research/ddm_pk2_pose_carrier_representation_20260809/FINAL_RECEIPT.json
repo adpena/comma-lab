@@ -37,7 +37,7 @@
   },
   "analysis_receipt": {
     "path": "/Volumes/VertigoDataTier/pact/ddm_pk2_20260809/analysis_receipt.json",
-    "sha256": "d6aaf0da8fece52b6f32cc5ccb1eb2797a2c6866c54271096781115b15827052"
+    "sha256": "74e0921c3320ca2ce8398911882b2eb11242a2b73ff2ddde59e0f2fa93ce9588"
   },
   "axis": "[macOS-CPU advisory]",
   "best_measured_row": {
@@ -2223,7 +2223,7 @@
     "scope": "MEASURED_OPTIMAL_FORM_PACKET_COMPOSITION",
     "score_claim": false
   },
-  "created_at_utc": "2026-08-09T22:18:34.601385Z",
+  "created_at_utc": "2026-08-09T22:24:05.003585Z",
   "diagnostics": {
     "basis": {
       "cross_plane_cumulative_energy": [
@@ -15783,7 +15783,7 @@
   "score_claim": false,
   "score_receipt": {
     "path": "/Volumes/VertigoDataTier/pact/ddm_pk2_20260809/score_receipt_n120_seed20260809.json",
-    "sha256": "4ef45a84dc0506c88a24c982d5bec793b04a870d2b71b33b47a055bcf273a13d"
+    "sha256": "1f62826010a37836f7dcc9530d530e6302323484351499bb4c95a0d98120ee46"
   },
   "selection": {
     "governing_ratios": [
