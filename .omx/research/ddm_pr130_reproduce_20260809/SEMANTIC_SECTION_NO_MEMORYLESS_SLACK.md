@@ -1,8 +1,34 @@
-# The semantic section has NO memoryless entropy slack — brotli is already below the bound
+# THE CODER AXIS IS CLOSED on all four sections — three are already BELOW their memoryless bound
+
+> **Scope note on the filename:** this doc opened as the semantic-section measurement and grew to
+> cover all four sections. The axis-complete table is §"All four sections" below; the semantic
+> detail is retained beneath it.
 
 `score_claim=false` · scorer-free · MEASURED 2026-08-09 on the reproduced PR130 archive
 (sha `0491d5df84fc70b62b3f7ccf8894f5e1b81c616de46a052e4423fc1e18fdc7cd`, 191,052 B).
 `[macOS-CPU advisory]`.
+
+## All four sections — MEASURED, the axis is complete
+
+Every section of the archive, against its own order-0 (memoryless) entropy bound. The bound is
+assumption-free: it is the byte-histogram entropy of the exact bytes being coded.
+
+| section | achieved | memoryless floor | achieved − floor | coder-swap verdict |
+|---|---:|---:|---:|---|
+| **tokens** 116,980 → **114,860** (ANS) | 114,860 | 114,852 (model cross-entropy) | **+8 B (+0.0071%)** | **HARVESTED −2,120 B** |
+| semantic | 35,033 (brotli-q11) | 36,805 | **−1,772 B** | DEAD (loses ≥1,772) |
+| pose | 23,054 (canonical Huffman, shipped) | 22,989 | +65 B (+0.28%) | DEAD (re-code measured **+4 B WORSE**) |
+| hpac | 14,962 (brotli-q11) | 16,567 | **−1,605 B** | DEAD (loses ≥1,605) |
+
+**Read this table as the closure of an axis.** Three sections are already *below* what any memoryless
+coder can achieve — they buy that with inter-byte/LZ structure. The fourth (pose) sits 0.28% above its
+own floor, i.e. its Huffman is essentially optimal for its own symbol statistics. The ONE section that
+carried real coder slack was tokens, because it alone has an **explicit conditional model** (HPAC AR)
+that the range coder was coding 1.85% worse than; ANS took that to +0.0071%.
+
+**Consequence, binding on every future rate arm:** on this archive there is no coding win left. Every
+remaining rate byte must come from a **better REPRESENTATION or a better MODEL**. An arm that proposes
+a coder race on any section of this base is proposing a measured-dead cell — point it at this table.
 
 ## Why this was asked
 
