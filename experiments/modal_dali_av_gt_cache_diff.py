@@ -106,11 +106,17 @@ _LOCAL_MOUNT_SOURCES = (
     LOCAL_UPSTREAM / "public_test_video_names.txt",
     PR130_BUILDER,
 )
-_missing_local = [str(p) for p in _LOCAL_MOUNT_SOURCES if not p.exists()]
-if _missing_local:  # loud at IMPORT, not silent until the Modal upload
-    raise RuntimeError(
-        f"#906 local mount source(s) absent (SSD unmounted? wrong checkout?): {_missing_local}"
-    )
+# LOCAL-ONLY. This module is ALSO imported inside the container (Modal hydrates
+# the function by importing it), where these host paths cannot exist by
+# construction -- an unguarded module-scope check is a guaranteed false positive
+# that kills the run AFTER the mounts uploaded fine (measured 2026-08-09 run r4).
+# modal.is_local() returns False only inside a running Modal Function.
+if modal.is_local():
+    _missing_local = [str(p) for p in _LOCAL_MOUNT_SOURCES if not p.exists()]
+    if _missing_local:  # loud at IMPORT, not silent until the Modal upload
+        raise RuntimeError(
+            f"#906 local mount source(s) absent (SSD unmounted? wrong checkout?): {_missing_local}"
+        )
 
 # Provenance: the contest authority tier is the 600-sample eval (upstream
 # evaluate.py over public_test_video_names.txt), and our own frozen GT cache is
