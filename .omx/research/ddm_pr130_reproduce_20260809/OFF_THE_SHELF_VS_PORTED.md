@@ -41,14 +41,20 @@ read the old value, and the two-constant split is what caught it.
 | `hpac-init` | `extract_integer_hpac_archive.py` | **OTS** | ✅ ran |
 | `hpac` (60ep self-compress) | `train_hpac_self_compress.py` | **OTS** | ✅ ran, 59.18 s/epoch |
 | `pack-hpac` | `pack_hpac_self_compress.py` | **OTS** | ✅ (hb2 fixed the round-trip upstream) |
-| `encode-tokens` | `codec_hpac_integer.py` | **OTS + dep** | 🔄 RUNNING detached (pid 68605). Needed `constriction==0.5.0` — installed into the pinned runtime, no code change |
+| `encode-tokens` | `codec_hpac_integer.py` | **OTS + dep** | ✅ **BYTE-IDENTICAL on Metal.** 600 frames, 1,057 s, rc=0. `tokens.bin` = **116,980 B**, sha256 `948379872ff81a4e5d948ec301c143be00ebd0033544c8abdfb4af0f4c4a15eb` — exact match to the intake's own `verify_file` expectation. Needed `constriction==0.5.0`; **no code change** |
 | archive assembly | `build_submission_archive.py` · `rebuild_submission_hpac.py` · `compress.sh` | **OTS** | ✅ **BYTE-IDENTICAL** 191,052 B, sha matches |
 | verification | `scripts/verify.sh` | **OTS** | ✅ 24 passed, "CPR1 repository verification passed" |
 
 **Only ONE stage in the whole chain needed a real port: the pose carrier.** Everything else is
 off-the-shelf with `--device mps`, plus one pip install.
 
-## The port-verification bar for `encode-tokens`
+## PORT CLOSURE — every stage of the PR130 chain now runs on this host
+
+With `encode-tokens` byte-identical, **all seven stages plus archive assembly and verification are
+green on Metal.** The chain that produced S = 0.172141297491896447 is reproducible here end-to-end,
+and the only genuine port in it was the pose leg's two device sites.
+
+## The port-verification bar for `encode-tokens` — MET
 
 Arithmetic coding is bit-exact by construction (`hpac_integer.py` keeps every accumulation inside
 fp32's exact-integer range via an explicit constructor guard; `probability_table` quantizes logits
