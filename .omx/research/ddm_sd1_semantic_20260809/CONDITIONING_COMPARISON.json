@@ -1,0 +1,29 @@
+{
+  "schema": "ddm_sd1.conditioning_cache_comparison.v1",
+  "measured_at_utc": "2026-08-09T22:47:00Z",
+  "axis": "[scorer-free tensor identity, n600]",
+  "score_claim": false,
+  "operation": "torch.load each cache on CPU; compare the uint8 seg tensors elementwise",
+  "official_ada": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_op1r_20260809/authority_cache/gt_cache_600_official_ada.pt",
+    "file_bytes": 117981301,
+    "file_sha256": "382d7dfe38b37c0cc5017e5645032faa045af6924db66e0b67549cc96c840195",
+    "seg_shape": [600, 384, 512],
+    "seg_dtype": "torch.uint8",
+    "seg_sha256": "c5c7671d037b6912980c57929a5b6d789d250ee6a93e3b0a6018cf9f63e32ece"
+  },
+  "fresh_t4_dali": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_chroma_dali_av_20260809/gt_cache_dali.pt",
+    "file_bytes": 117980732,
+    "file_sha256": "a91d98252fe377c51ff7f3380c2fc9d30d84093fc54ee89e5e5f5102e6354994",
+    "seg_shape": [600, 384, 512],
+    "seg_dtype": "torch.uint8",
+    "seg_sha256": "44d3c7437401cc665a7f8166cf23f1d061f317e4db20f3c0d122b875a103bfa5"
+  },
+  "comparison": {
+    "sites": 117964800,
+    "mismatches": 1644,
+    "mismatch_fraction": 0.000013936360677083333,
+    "pairs_with_any_mismatch": 545
+  }
+}

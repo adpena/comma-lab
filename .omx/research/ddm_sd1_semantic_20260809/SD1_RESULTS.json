@@ -1,0 +1,215 @@
+{
+  "schema": "ddm_sd1_semantic_rd_curve.result.v1",
+  "measurement_completed_at_utc": "2026-08-09T22:29:25Z",
+  "written_at_utc": "2026-08-09T22:37:07Z",
+  "status": "complete",
+  "axis": "[macOS-CPU advisory; retained official-Ada conditioning and target]",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "contest_reference": "PR130 CPR1 S=0.172141297491896447 @ 191052 B [contest-CUDA, retained DALI GT, n600]",
+  "objective_scope": "semantic-leg delta only: 100*delta_d_seg + 25*delta_archive_bytes/37545489; pose not measured",
+  "verdict_scope": "INSTANCE and FORMULATION: post-hoc q3/q4/q5 and one measured mixed allocation decoded from the shipped width96 q4-QAT stage-08 master; isolated counted research format for non-int4; no public-receiver, bit-matched-QAT, capacity, pose, or contest-score verdict",
+  "reference": {
+    "archive_path": "/Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo/artifacts/final/archive.zip",
+    "archive_bytes": 191052,
+    "archive_sha256": "0491d5df84fc70b62b3f7ccf8894f5e1b81c616de46a052e4423fc1e18fdc7cd",
+    "semantic_blob_bytes": 40252,
+    "semantic_blob_sha256": "9b98360bd56918b5a414ace375c29790b7fe9f7f55cf423c0564ef4e62a39b99",
+    "checkpoint_path": "/Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo/artifacts/checkpoints/semantic_renderer_w96_b4_qat4_fixedtau05_tail6k_lr2e7.pt",
+    "checkpoint_bytes": 282352,
+    "checkpoint_sha256": "3948ccfcd44778dc42affee18a10c3f3baa434d1a2eb2345a013146c1dbfb647",
+    "conditioning_cache_path": "/Volumes/VertigoDataTier/pact/ddm_op1r_20260809/authority_cache/gt_cache_600_official_ada.pt",
+    "conditioning_cache_sha256": "382d7dfe38b37c0cc5017e5645032faa045af6924db66e0b67549cc96c840195",
+    "target_cache_path": "/Volumes/VertigoDataTier/pact/ddm_op1r_20260809/authority_cache/gt_cache_600_official_ada.pt",
+    "target_cache_sha256": "382d7dfe38b37c0cc5017e5645032faa045af6924db66e0b67549cc96c840195",
+    "scorer_denominator": 117964800
+  },
+  "positive_controls": {
+    "q4_semantic_blob_byte_identical": true,
+    "q4_archive_byte_identical": true,
+    "q4_cpu_mismatches": 33757,
+    "retained_mps_mismatches": 33703,
+    "cpu_minus_retained_mps_mismatches": 54,
+    "all_candidate_archives_parsed_back": true,
+    "all_decoded_tensors_equal_expected_dequantized_tensors": true,
+    "candidate_carrier_hpac_and_tokens_unchanged": true,
+    "selected_archive_independent_double_build_equal": true
+  },
+  "format": {
+    "legacy_q4": "unchanged PR130 int4 semantic blob",
+    "non_int4": "SD1M v1 isolated counted research format",
+    "non_int4_header_bytes": 14,
+    "allocation_entries": 16,
+    "allocation_is_counted_payload": true,
+    "bitpacked_values": 63936,
+    "fixed_fp16_payload_bytes": 8284
+  },
+  "n600_measurements": [
+    {
+      "candidate_id": "uniform_q4_legacy_n600",
+      "allocation": "all 16 tensors q4",
+      "semantic_blob_bytes": 40252,
+      "archive_bytes": 191052,
+      "archive_sha256": "0491d5df84fc70b62b3f7ccf8894f5e1b81c616de46a052e4423fc1e18fdc7cd",
+      "mismatches": 33757,
+      "d_seg": 0.00028616163465711804,
+      "delta_archive_bytes": 0,
+      "delta_d_seg": 0.0,
+      "seg_delta_s": 0.0,
+      "rate_delta_s": 0.0,
+      "semantic_leg_delta_s": 0.0,
+      "receiver_status": "PUBLIC_RECEIVER_CLOSED"
+    },
+    {
+      "candidate_id": "uniform_q3_n600",
+      "allocation": "all 16 tensors q3",
+      "semantic_blob_bytes": 32274,
+      "archive_bytes": 184828,
+      "archive_sha256": "7c49f470cd41dd1ebed20b18c3a5c3f255391c80e32db444ee54d742d38cb3d9",
+      "mismatches": 1952562,
+      "d_seg": 0.01655207316080729,
+      "delta_archive_bytes": -6224,
+      "delta_d_seg": 0.016265911526150173,
+      "seg_delta_s": 1.6265911526150173,
+      "rate_delta_s": -0.00414430612423239,
+      "semantic_leg_delta_s": 1.622446846490785,
+      "receiver_status": "RESEARCH_PARSEBACK_ONLY_PUBLIC_RECEIVER_BLOCKED"
+    },
+    {
+      "candidate_id": "uniform_q5_n600",
+      "allocation": "all 16 tensors q5",
+      "semantic_blob_bytes": 48258,
+      "archive_bytes": 202324,
+      "archive_sha256": "5c3e539844f8866d1fc9f6b23fea2a3383ae87a2e8f414f78d6fbcb34ff7dbf2",
+      "mismatches": 155228,
+      "d_seg": 0.0013158840603298611,
+      "delta_archive_bytes": 11272,
+      "delta_d_seg": 0.001029722425672743,
+      "seg_delta_s": 0.1029722425672743,
+      "rate_delta_s": 0.00750556211959312,
+      "semantic_leg_delta_s": 0.11047780468686742,
+      "receiver_status": "RESEARCH_PARSEBACK_ONLY_PUBLIC_RECEIVER_BLOCKED"
+    },
+    {
+      "candidate_id": "selected_mixed_n600",
+      "allocation": {
+        "frame_embed.weight": 3,
+        "blocks.1.film.weight": 3,
+        "blocks.2.film.weight": 3,
+        "blocks.3.film.weight": 3,
+        "all_other_bitpacked_tensors": 4
+      },
+      "semantic_blob_bytes": 39090,
+      "semantic_blob_sha256": "39002165c78ab707c15586110678671cd832101a970de5bd0f3b96824a2aa2cc",
+      "archive_path": "/Volumes/VertigoDataTier/pact/ddm_sd1_semantic_20260809/cpu_screen/archives/selected_mixed_n600.zip",
+      "archive_bytes": 190204,
+      "archive_sha256": "010a8a5273ae87595191ffc03447fa36e61978ae9f827c2def46dea7075dfa67",
+      "mismatches": 33923,
+      "d_seg": 0.00028756883409288193,
+      "delta_archive_bytes": -848,
+      "delta_d_seg": 0.0000014071994357638888,
+      "seg_delta_s": 0.00014071994357638888,
+      "rate_delta_s": -0.0005646483922476013,
+      "semantic_leg_delta_s": -0.00042392844867121244,
+      "receiver_status": "RESEARCH_PARSEBACK_ONLY_PUBLIC_RECEIVER_BLOCKED"
+    }
+  ],
+  "screen": {
+    "method": "seeded random without replacement within each of 10 contiguous 60-pair strata",
+    "seed": 20260809,
+    "n": 120,
+    "pair_ids_sha256": "a72f6f54d7d6cd17f1b7c5a2f53d7a258ee9847b63d2fe078f310250f64e5987",
+    "single_tensor_cells": 32,
+    "favorable_single_q3_moves": [
+      {
+        "tensor": "blocks.3.film.weight",
+        "delta_archive_bytes": -184,
+        "semantic_leg_delta_s": -0.00009284817975295176
+      },
+      {
+        "tensor": "blocks.2.film.weight",
+        "delta_archive_bytes": -160,
+        "semantic_leg_delta_s": -0.00008534466991274187
+      },
+      {
+        "tensor": "frame_embed.weight",
+        "delta_archive_bytes": -332,
+        "semantic_leg_delta_s": -0.00004728451922475532
+      },
+      {
+        "tensor": "blocks.1.film.weight",
+        "delta_archive_bytes": -168,
+        "semantic_leg_delta_s": -0.000035570358812024783
+      }
+    ],
+    "favorable_single_q5_moves": 0,
+    "selected_four_way_screen_delta_s": -0.0003060966886885735,
+    "selected_four_way_n600_delta_s": -0.00042392844867121244,
+    "interaction_canary": {
+      "definition": "deltaS(A union B) - deltaS(A) - deltaS(B)",
+      "first_tensor": "blocks.3.film.weight",
+      "second_tensor": "blocks.2.film.weight",
+      "cross_term_semantic_leg_delta_s": -0.00007314371190275513
+    }
+  },
+  "verdict": {
+    "uniform_posthoc": "q4 wins; uniform q3 and q5 are closed for this frozen q4-QAT master",
+    "mixed_posthoc": "q4 is not the semantic-leg optimum within the measured isolated mixed-bit formulation; the selected four-q3 allocation wins by 0.00042392844867121244 S units",
+    "shippable": "unchanged q4 remains the only public-receiver-closed point",
+    "full_score": "unknown because pose was not measured and the selected archive is not public-receiver-closed",
+    "capacity": "not measured because no compatible width/capacity checkpoint or resumable morphism was found"
+  },
+  "custody": {
+    "raw_results_path": "/Volumes/VertigoDataTier/pact/ddm_sd1_semantic_20260809/cpu_screen/results.json",
+    "raw_results_bytes": 201485,
+    "raw_results_sha256": "3267ab65ee3659349d43552a64531790bf5ed515f4a4da6a1f6b9ae2dc8b417c",
+    "safe_run_receipt_path": "/Volumes/VertigoDataTier/pact/ddm_sd1_semantic_20260809/cpu_screen/safe_run_status.json",
+    "safe_run_receipt_sha256": "48400c3b27c4bc09bdbbb951cf0ea958373c9ab36427a51e96c15db201b4682e",
+    "safe_run_exit": 0,
+    "safe_run_elapsed_seconds": 3186.604,
+    "measurement_source_sha256": "c114c30ab0a7e44668b38dded2277eac164d340b5e5441914dbe4c9e33e6357a",
+    "post_harvest_source_sha256": "85faba437a7f57ac49442b31701720cb785d20bc709e4c1dd5f92774f6941520",
+    "source_delta_path": ".omx/research/ddm_sd1_semantic_20260809/MEASUREMENT_SOURCE_DELTA.patch",
+    "segnet_sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6",
+    "semantic_renderer_oracle_sha256": "ffdf098801863ff8bffe8bd818ce101928dd75b4937cbbffb2e225bddbc12f4b",
+    "upstream_modules_sha256": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa",
+    "upstream_evaluate_sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
+  },
+  "boundaries": [
+    "The raw run's axis display string says n600 on screen rows; population_kind and population_n are correct, and the committed source removes the misleading display token.",
+    "Non-int4 rows are real counted archives with exact research parse-back, but the contest-facing receiver does not understand SD1M v1.",
+    "All non-int4 rows are post-hoc quantizations of a q4-QAT master, not bit-matched training optima.",
+    "PoseNet consumes the changed semantic frame; no full-score or frontier claim follows from the semantic-leg delta.",
+    "The macOS CPU q4 control differs from the retained MPS count by 54 pixels; all candidate deltas use the matched CPU baseline.",
+    "No contest evaluator, CUDA scorer, AV target, fresh T4-DALI target, width rung, or capacity rung was run."
+  ],
+  "conditioning_comparison_evidence": ".omx/research/ddm_sd1_semantic_20260809/CONDITIONING_COMPARISON.json",
+  "pointer_moved": false,
+  "own_vehicle_frontier": "S=0.7539807296911207 @ 357836 B [macOS-CPU advisory] n600",
+  "followons": [
+    {
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "owner": "MAIN receiver/runtime successor",
+      "consumer_store": "src/tac/pr130_runtime/fx1_runtime_tree/ and .omx/state/probe_outcomes.jsonl",
+      "fire_trigger": "MAIN elects to promote archive SHA 010a8a5273ae87595191ffc03447fa36e61978ae9f827c2def46dea7075dfa67 and a clean receiver lane is claimed"
+    },
+    {
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "owner": "full-candidate component evaluator",
+      "consumer_store": "/Volumes/VertigoDataTier/pact/ddm_sd1_semantic_20260809/pose_replay/",
+      "fire_trigger": "the selected allocation becomes public-receiver-readable or MAIN explicitly accepts research-decoded advisory frames"
+    },
+    {
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "owner": "PR130 resumable-QAT successor",
+      "consumer_store": "/Volumes/VertigoDataTier/pact/ddm_sd1_semantic_20260809/bit_qat/",
+      "fire_trigger": "public receiver plus pose replay leave a negative full delta S"
+    },
+    {
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "owner": "later semantic-capacity arm",
+      "consumer_store": ".omx/research/ddm_sd1_semantic_20260809/CAPACITY_LADDER.md",
+      "fire_trigger": "a compatible retained checkpoint or a receiver-aware resumable identity depth or width morphism exists"
+    }
+  ]
+}
