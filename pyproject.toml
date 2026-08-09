@@ -272,7 +272,17 @@ known-first-party = ["tac", "comma_lab"]
 
 [tool.pytest.ini_options]
 pythonpath = [".", "src"]
-testpaths = ["tests", "src/tac/tests"]
+# Review round 2 (2026-08-09) MEASURED: 1,101 of 3,961 test files under src/ + tests/
+# (27.8%) sit OUTSIDE these roots and are never collected by a default run. That
+# population is package-local `src/tac/<pkg>/tests/` dirs; whether each is deliberately
+# excluded or accidentally orphaned is UNMEASURED, so this list is NOT blanket-widened.
+#
+# `src/tac/pr130_lift/tests` is added on measured evidence, not convention: it holds the
+# ONLY guards for the fx2 adapter-selection cure and the fx3 EMA/resumability cure landed
+# 2026-08-09, and those guards were collected 0 times before this line existed. Measured
+# cost of including it: 42 tests, 2.39 s, all green. A cure whose guard never runs is not
+# guarded.
+testpaths = ["tests", "src/tac/tests", "src/tac/pr130_lift/tests"]
 timeout = 60
 markers = [
     "slow: marks tests that load scorer models (deselect with '-m \"not slow\"')",
