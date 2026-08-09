@@ -14,6 +14,48 @@ cost more wall-clock than the budget can afford — and the expensive payload-re
 **So measure the cost before paying it.** This arm is cheap and it GATES
 `NEXT_IF_RESUMED` rank-3 (the ANS encode/retain arm).
 
+## ⚠ THE DECODER IS OURS TO OPTIMIZE — the 805 s is a NAIVE-IMPLEMENTATION number
+
+**Operator correction, binding on this charter:** the decoder can be parallelized, made concurrent,
+vectorized, and otherwise optimized. **805 s is a property of one serial Python implementation, not
+of ANS.** Measuring a naive decoder and calling the result a family verdict is the TOY-BRACKET
+violation — MECHANISM reduction, not SCOPE reduction. A verdict from the naive decoder is
+inadmissible.
+
+**And rule-118 makes this pure upside: decoder COMPUTE IS FREE.** `inflate.py`/`inflate.sh` are NOT
+sized (`upstream/evaluate.py:63` charges `archive.zip` bytes only) and the score has NO time term
+(`:92`). Arbitrarily complex deterministic decode compute is legal — the ONLY constraint is the
+30-minute wall-clock. So decode speed is not merely a gate to pass; **it is a RESOURCE that buys
+representational freedom.** Every second reclaimed is budget available to a more expensive (and
+possibly much smaller) representation. Treat a decode speedup as a rate lever in disguise.
+
+**Required: measure BOTH arms at OPTIMAL FORM, in this order.**
+
+1. **First determine the DEPENDENCY STRUCTURE — do not assume it.** What actually serializes?
+   Interleaved lanes within one stream? Frames? Pairs? The HPAC prior is autoregressive, so the
+   binding question is whether its context is WITHIN-frame (⇒ frames are embarrassingly parallel)
+   or ACROSS-frame (⇒ frame-parallel decode is blocked and the parallelism must come from
+   interleaving instead). Read the encoder/receiver and SAY which it is, with the source lines.
+   This determination gates every optimization below — get it wrong and the speedup is a
+   correctness bug.
+2. **Interleaved rANS is the canonical high-throughput design** (Giesen): the encoder round-robins
+   symbols across N states so the decoder advances N lanes in parallel, SIMD-friendly, throughput
+   scaling with lanes until memory-bandwidth-bound. This is the standard answer to exactly our
+   problem, and — note — ANS's LIFO awkwardness is what interleaving is FOR. If interleaving
+   changes the stream format, that is a RECEIVER change (ours, free) and possibly a re-encode;
+   price both, and keep the faithfulness control.
+3. **Then the ordinary levers**: multiprocessing/thread pools across whatever unit step 1 says is
+   independent · vectorized table lookup instead of per-symbol Python · Rust (`runtime-rs/` already
+   has the parity+golden-vector discipline) · Metal/CUDA if it pays. Our own `INFLATE_WORKERS`
+   parallel-materializer precedent is in-tree (task #592) with byte-identity receipts.
+4. **The range arm gets the SAME optimization effort.** An optimized-ANS vs naive-range comparison
+   is rigged and worthless. Both at optimal form, or the row is void.
+
+**Determinism is non-negotiable through all of it:** same `archive.zip` → bit-identical inflate
+output every run and every host. Any parallelism that changes results, changes float summation
+order in a way that alters output, or introduces nondeterministic scheduling into the decoded
+bytes is REFUSED regardless of speed. Prove byte-identity against the serial reference.
+
 ## THE QUANTITY THAT ACTUALLY MATTERS — do not measure the wrong one
 
 The absolute ANS decode time is NOT the number. The range coder's decode is **already inside the
