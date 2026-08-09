@@ -56,6 +56,21 @@ def test_positive_across_two_lines_window():
     assert D.magnitude_dismissal_candidates(lines)
 
 
+def test_positive_causal_wrap_across_two_lines():
+    lines = ["We defer the lever because its measured", "delta-S effect is weak."]
+    assert D.magnitude_dismissal_candidates(lines)
+
+
+def test_positive_magnitude_led_continuation_across_two_lines():
+    lines = ["We defer the lever.", "Negligible impact at this operating point."]
+    assert D.magnitude_dismissal_candidates(lines)
+
+
+def test_positive_same_table_row_still_refuses():
+    lines = ["| lever | DEFER because its effect is negligible |"]
+    assert D.magnitude_dismissal_candidates(lines)
+
+
 # ------------------------------- NEGATIVE (a): relative significance ---------------------
 def test_negative_relative_significance_stated():
     lines = ["Defer #169? Its ΔS 0.012–0.024 is ~13–27% of the remaining gap to target — "
@@ -109,6 +124,29 @@ def test_negative_plain_prose_no_cooccurrence():
     lines = ["The lane markings are weak in this frame.",
              "Separately, we launched the n600 run."]
     # magnitude word but no dismissal decision in the same window.
+    assert D.magnitude_dismissal_candidates(lines) == []
+
+
+def test_negative_provenance_class_cannot_borrow_from_other_table_row():
+    lines = [
+        "| safety bound | ORPHAN-LITERAL | unowned extension |",
+        "| schedule | IMPORTED | same-object gate exists |",
+        "| stop predicate | DERIVED-IN-PLACE | one flip, marginal, objective |",
+    ]
+    assert D.magnitude_dismissal_candidates(lines) == []
+
+
+def test_negative_live_m1r5c_review_passes_without_waiver():
+    review = _REPO / ".omx" / "research" / "ddm_m1r4_20260808" / "M1R5C_REVIEW.md"
+    assert D.deterministic_flags(review.read_text().splitlines(), source=str(review)) == []
+
+
+def test_negative_source_inventory_does_not_borrow_label_noise():
+    lines = [
+        "- Deep-era bounded corpus: evaluator-inverse orphan inventory; tasks #52-#59,",
+        "  #66/#67 and #150-#158; B-WITNESS #95/#96; #141 label-noise memo;",
+        "  survival/capacity-wall and later generator-power-law corrections.",
+    ]
     assert D.magnitude_dismissal_candidates(lines) == []
 
 
