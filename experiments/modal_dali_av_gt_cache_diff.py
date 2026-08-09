@@ -87,6 +87,12 @@ app = modal.App(APP_NAME, include_source=False)
 DALI_DISABLE_NVML_VALUE = "1"
 PYTORCH_CUDA_ALLOC_CONF_VALUE = "expandable_segments:True"
 CUBLAS_WORKSPACE_CONFIG_VALUE = ":4096:8"
+# Provenance: the contest authority tier is the 600-sample eval (upstream
+# evaluate.py over public_test_video_names.txt), and our own frozen GT cache is
+# gt_n600.npz -- 600 pairs. Used ONLY as a coverage floor: this job must measure
+# the whole population, never a prefix.
+EXPECTED_PAIRS = 600
+
 CONTEST_CUDA_ENV = {
     "DALI_DISABLE_NVML": DALI_DISABLE_NVML_VALUE,
     "PYTORCH_CUDA_ALLOC_CONF": PYTORCH_CUDA_ALLOC_CONF_VALUE,
@@ -112,6 +118,13 @@ gt_diff_image = (
         "Pillow",
         extra_index_url="https://pypi.nvidia.com",
     )
+    # Catalog #244 -- DALI/nvdec refuses without DALI_DISABLE_NVML.
+    # MUST precede every add_local_* call: `.env()` is a BUILD STEP, and Modal
+    # refuses build steps after local-file adds ("An image tried to run a build
+    # step after using image.add_local_* to include local files") unless every
+    # such add uses copy=True. Measured 2026-08-09 run r2, which died here in
+    # 28s at $0. Order is load-bearing; do not move this below the mounts.
+    .env(CONTEST_CUDA_ENV)
     # PRECISE MOUNT, derived from the builder's actual reads (verified at source):
     #   root/public_test_video_names.txt · root/videos/ · sys.path.insert(root) then
     #   `from frame_utils import ...` + `from modules import ...` (modules.py:17-18
@@ -139,7 +152,6 @@ gt_diff_image = (
         remote_path=str(REMOTE_BUILDER),
     )
     .add_local_python_source("modal_dali_av_gt_cache_diff")  # MODAL_ENTRYPOINT_SELF_MOUNT_OK:include_source=False
-    .env(CONTEST_CUDA_ENV)  # Catalog #244 -- DALI/nvdec refuses without DALI_DISABLE_NVML
 )
 
 
@@ -238,6 +250,7 @@ def build_and_diff() -> dict:
         "env": env_probe,
         "legs": [leg_av, leg_dali],
         "av_report": av_report_obj,
+        "av_pairs": av_report_obj.get("pairs"),
         "av_cache_xz": av_packed["xz"],
         "av_cache_sha256": av_packed["sha256"],
         "av_cache_bytes": av_packed["bytes"],
@@ -245,13 +258,44 @@ def build_and_diff() -> dict:
     if leg_dali["returncode"] != 0:
         return {"status": "DALI_LEG_FAILED_AV_HARVESTED", **partial}
 
+    dali_report_obj = json.loads(dali_report.read_text())
+
+    # COVERAGE ASSERTION (report the DENOMINATOR, never a bare rate).
+    # The builder's `!=` compare broadcasts, so a SILENTLY TRUNCATED pair of
+    # caches (both 16 pairs, say) yields a clean-looking disagreement rate over
+    # a 16-pair PREFIX. Measured law (m88/m96): a prefix of this population is a
+    # DIFFERENT population -- video order is temporally correlated, and the bias
+    # SIGN INVERTS by axis (pose prefixes 2.5-4.2x HARDER, seg ~0.96x easier).
+    # A prefix answer here would be actively misleading, not merely weaker.
+    # NOTE: this REPORTS, it does not raise. Both caches are already built and
+    # are durable assets; raising here would destroy them on the way out --
+    # the exact harvest-or-lose failure that cost run 1 its AV leg.
+    av_pairs = av_report_obj.get("pairs")
+    dali_pairs = dali_report_obj.get("pairs")
+    coverage_ok = (av_pairs == dali_pairs == EXPECTED_PAIRS)
+
     dali_packed = _pack(dali_cache)
     return {
-        "status": "OK",
+        "status": "OK" if coverage_ok else "OK_BUT_COVERAGE_SUSPECT",
+        "coverage": {
+            "av_pairs": av_pairs,
+            "dali_pairs": dali_pairs,
+            "expected_pairs": EXPECTED_PAIRS,
+            "ok": coverage_ok,
+        },
         **partial,
         # THE HEADLINE lives in dali_report_obj["reference_seg_disagreement"] --
         # PR130's own field, argmax mismatch fraction, comparable to 2.8609e-4.
-        "dali_vs_av_report": json.loads(dali_report.read_text()),
+        #
+        # BINDING POSITIVE CONTROL: `reference_pose_mse`. The two legs differ ONLY
+        # in decoder (dataset_device gates DALI-vs-AV; the scorer is CUDA in both).
+        # If BOTH reference_seg_disagreement == 0.0 AND reference_pose_mse == 0.0,
+        # that is INDISTINGUISHABLE from "the decoder never actually varied" (a
+        # vacuous pass -- silent-instrument genus). Only a NONZERO pose delta
+        # licenses reading a zero seg delta as "the decoders agree on the argmax."
+        "dali_vs_av_report": dali_report_obj,
+        "dali_pairs": dali_pairs,
+        "positive_control_pose_mse": dali_report_obj.get("reference_pose_mse"),
         "dali_cache_xz": dali_packed["xz"],
         "dali_cache_sha256": dali_packed["sha256"],
         "dali_cache_bytes": dali_packed["bytes"],
@@ -279,6 +323,16 @@ def main(out_dir: str = "") -> None:
     target = Path(out_dir) if out_dir else Path(
         "/Volumes/VertigoDataTier/pact/ddm_chroma_dali_av_20260809"
     )
+    # CERTIFY-OR-BLOCK: if the SSD tier is UNMOUNTED, /Volumes/VertigoDataTier does
+    # not exist and mkdir(parents=True) would silently CREATE it on the boot disk --
+    # landing the caches on the wrong tier with no error. Refuse instead. Checked
+    # BEFORE .remote() so a storage fault costs $0 rather than a completed job.
+    for mount in (Path("/Volumes/VertigoDataTier"),):
+        if str(target).startswith(str(mount)) and not mount.is_dir():
+            raise RuntimeError(
+                f"SSD tier {mount} is not mounted; refusing to write cache artifacts "
+                "to the boot disk. Mount it or pass --out-dir."
+            )
     target.mkdir(parents=True, exist_ok=True)
 
     result = build_and_diff.remote()
@@ -299,12 +353,23 @@ def main(out_dir: str = "") -> None:
                 "raw_bytes": result[f"{name}_cache_bytes"],
                 "raw_sha256": result[f"{name}_cache_sha256"],
             }), flush=True)
-    if status == "OK":
+    if status in ("OK", "OK_BUT_COVERAGE_SUSPECT"):
         report = result["dali_vs_av_report"]
         headline = report.get("reference_seg_disagreement")
+        pose_mse = report.get("reference_pose_mse")
         print(json.dumps({
+            "status": status,
             "HEADLINE_reference_seg_disagreement": headline,
-            "reference_pose_mse": report.get("reference_pose_mse"),
+            "coverage": result.get("coverage"),
+            "pairs_DENOMINATOR": report.get("pairs"),
+            "reference_pose_mse": pose_mse,
+            # POSITIVE CONTROL verdict. A 0.0/0.0 pair proves nothing about the
+            # decoders -- it is what a NON-VARYING decoder would also produce.
+            "positive_control": (
+                "VACUOUS_BOTH_ZERO_decoder_may_not_have_varied"
+                if (headline == 0.0 and pose_mse == 0.0)
+                else "LIVE_decoder_varied"
+            ),
             "reference_pose_max_abs": report.get("reference_pose_max_abs"),
             "vs_pr130_d_seg_2p8609e-4_ratio": (
                 (headline / 2.8609e-4) if isinstance(headline, (int, float)) else None
