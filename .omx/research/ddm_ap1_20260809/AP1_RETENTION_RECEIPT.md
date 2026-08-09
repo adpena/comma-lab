@@ -30,7 +30,7 @@ AP1 governed-launch receipt.
 | AP1 chunk manifest | `/Volumes/VertigoDataTier/pact/ddm_ap1_20260809/retained/chunk_manifest.json` | 16,813 | `ad2993eb9aa0856e152849361349c4549e7abeb3b8eede9e95c10f5bf241ce86` | complete, AP1 paths |
 | coder checkpoints | `/Volumes/VertigoDataTier/pact/ddm_ap1_20260809/retained/coder_checkpoints.json` | 4,496 | `21c199649276e4ef15f3d9db7602dbe58b965ccc9111cf32cfcbeb9af0d69983` | 29 boundary states covering 28 intervals |
 | terminal n600 receipt | `/Volumes/VertigoDataTier/pact/ddm_ap1_20260809/retained/retained_n600_result.json` | 15,828 | `5c15f38ab68df68c09a5859d17d19e4247f90e76457282edccbc8a34d060916c` | complete; hard-linked source receipt |
-| AP1 custody receipt | `/Volumes/VertigoDataTier/pact/ddm_ap1_20260809/AP1_CUSTODY_RECEIPT.json` | 4,054 | `b9b5b9f77349d40de4882e35c81bf5d5d5b71ba0fdab33f58f9395db3cc56729` | machine-readable handoff and blockers |
+| AP1 custody receipt | `/Volumes/VertigoDataTier/pact/ddm_ap1_20260809/AP1_CUSTODY_RECEIPT.json` | 4,678 | `47a9f0866449f57f054a701e6d4dcbe9ef6a832c2e6ce2ce86514fac1a16892d` | machine-readable handoff and blockers |
 
 The 28 chunk pairs are hard-linked into AP1 custody from the DT1 producer, so this adoption adds no
 duplicate 1.30 GB allocation and survives deletion of either directory entry.  The manifest covers
@@ -145,9 +145,11 @@ input validator against the source pair
 `/Volumes/VertigoDataTier/pact/ddm_dt1_20260809/retained/ans_n600.bin` and
 `/Volumes/VertigoDataTier/pact/ddm_dt1_20260809/retained/retained_n600_result.json`.  Its data trigger
 is now satisfied: the receipt is complete, both decode proofs are exact, constriction is 0.5.0, and
-the payload stat/hash matches `streams.ans`.  This evidence-only consumption is not a waiver of
-AP1's false charter pin or governed-launch debt.  No composed archive or evaluator score is claimed
-here.
+the payload stat/hash matches `streams.ans`.  AP1 and DT1 copies of both the payload and terminal
+receipt were verified as same-inode hard links.  The full CX2 fire trigger is not satisfied because
+its validator remains sibling-owned and untracked; it must be reviewed and landed before it writes
+the accepted-input checkpoint.  This evidence-only consumption is not a waiver of AP1's false
+charter pin or governed-launch debt.  No composed archive or evaluator score is claimed here.
 
 ## Follow-on dispositions
 
@@ -155,13 +157,16 @@ here.
   `/Volumes/VertigoDataTier/pact/ddm_dt1_20260809/retained/retained_n600_result.json`; fire trigger was
   the measured affordable timing gate; terminal trigger is satisfied with both exact n600 decodes.
 - `QUEUED-WITH-A-FIRE-ORDER` — owner `ddm_cx2`; consumer store
-  `/Volumes/VertigoDataTier/pact/ddm_cx2_20260809/stages/01_inputs.json`; fire trigger is the now-valid
-  DT1 payload/receipt pair above, consumed and rehashed by CX2's own input stage.
-- `QUEUED-WITH-A-FIRE-ORDER` — owner `MAIN/charter author` then AP1; consumer store
-  `/Volumes/VertigoDataTier/pact/ddm_ap1_20260809/run/launch_manifest.json` plus an AP1 governed
-  verifier receipt; fire trigger is an explicit correction or waiver of the false selector pin and a
-  landed verifier that directly reuses the canonical reverse-chunk helper with restorable encode and
-  decode stage state.
+  `/Volumes/VertigoDataTier/pact/ddm_cx2_20260809/stages/01_inputs.json`; fire trigger is a reviewed,
+  landed CX2 validator consuming and rehashing the now-valid DT1 payload/receipt pair above.
+- `QUEUED-WITH-A-FIRE-ORDER` — owner `MAIN/charter author`; consumer store
+  `.omx/research/charters/ddm_ap1_ans_payload_retention.md` or a durable signed erratum beside it;
+  fire trigger is an explicit correction or waiver of the false selector pin.
+- `QUEUED-WITH-A-FIRE-ORDER` — owner AP1; consumer stores
+  `/Volumes/VertigoDataTier/pact/ddm_ap1_20260809/run/launch_manifest.json` and
+  `/Volumes/VertigoDataTier/pact/ddm_ap1_20260809/retained/AP1_GOVERNED_VERIFIER_RESULT.json`; fire
+  trigger is the charter correction/waiver plus a landed verifier that directly reuses the canonical
+  reverse-chunk helper with restorable encode and decode stage state.
 
 ## RECALL EVIDENCE
 
