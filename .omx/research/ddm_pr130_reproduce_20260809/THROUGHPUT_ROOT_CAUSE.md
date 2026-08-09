@@ -28,7 +28,15 @@ I reported **~0.48 s/step** earlier from a single data point (100 steps + load +
 load + one final n600 eval). The 6,000-step semantic tail is **~25 min**, not ~1 h.
 `LOCAL_TRAINING_AUDIT.md`'s "~1 h" is superseded by this file.
 
-## 1. It is COMPUTE-BOUND-SHAPED but running at 5.5% of the machine
+## 1. It is COMPUTE-BOUND-SHAPED but running at 7.10% of the machine
+
+> **CORRECTED 2026-08-09 by ddm_rr2's independent re-derivation.** This section first said **5.5%**.
+> My FLOP denominator covered only the four `TokenBlock`s, **not the full renderer** — it omitted the
+> stem/head/embedding path. rr2's independent full-renderer lower bound is **20.6486 GFLOP/fwd-image**
+> (mine: 15.8545). Under the same `backward ≈ 2× forward` convention that is **123.8914 GFLOP at B=2**,
+> so 120.5976 ms ⇒ **1,027.3 GFLOP/s = 7.10% of the measured 14,471.765 GFLOP/s ceiling.**
+> **The 75.40% renderer share and the memory-bandwidth-bound diagnosis are UNAFFECTED** — both rest on
+> measured ms, not on the FLOP denominator. Only the 5.5% figure and its scope were wrong.
 
 `step_cost_isolation_bs2.json` — isolation reproduces training exactly
 (80.0 ms/pair measured here vs 80.0 ms/pair in the real loop, **ratio 1.000**), so the split
