@@ -1,0 +1,171 @@
+{
+  "schema": "ddm_fx3_ema_and_resumability_receipt.v1",
+  "generated_utc": "2026-08-09T16:41:01Z",
+  "score_claim": false,
+  "axis": "[CPU mechanism smoke; no score]",
+  "source_pins": {
+    "rr2_audit_commit": "add4e9b34d",
+    "initial_checkpoint": {
+      "path": "/Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo/artifacts/checkpoints/semantic_renderer_w96_b4_qat4_12k.pt",
+      "bytes": 283432,
+      "sha256": "1549607db224ea2c4681738dbcc80d2ba9dd453de72db1cf60309985d0602eaf"
+    },
+    "gt_cache": {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_pr130_train_20260809/caches/gt_cache_600.pt",
+      "bytes": 117981133,
+      "sha256": "8248a60da56119eb4b3ad76bfa32f5498dee849eaf4b83b304275064141fd828"
+    }
+  },
+  "ema_policy": {
+    "canonical_class": "tac.training.EMA",
+    "equation_id": "ema_decay_run_geometry_v1",
+    "target_terminal_seed_fraction": 0.01,
+    "smoke_updates": 2,
+    "smoke_decay": 0.1,
+    "stage08_geometry_updates": 6000,
+    "stage08_derived_decay": 0.9992327661102197,
+    "fallback_decay": 0.997,
+    "fallback_used": false,
+    "update_order": "optimizer.step -> optional fixed-zero projection -> ema.update -> scheduler.step",
+    "evaluation_policy": "snapshot live state -> apply EMA -> evaluate -> restore live state",
+    "deployment_weights": "selected EMA shadow"
+  },
+  "deployed_argmax_parity": {
+    "passed": true,
+    "pair_selection": "seeded random without replacement from 600",
+    "seed": 20260809,
+    "pair_ids": [458, 460, 529, 585],
+    "pairs": 4,
+    "total_pixels": 786432,
+    "argmax_diff_pixels": 0,
+    "argmax_diff_rate": 0.0,
+    "frame_equal": true,
+    "frame_max_abs_delta": 0.0,
+    "qat_nonfinite_values": 0,
+    "deployed_nonfinite_values": 0,
+    "semantic_blob_bytes": 40252,
+    "semantic_blob_sha256": "e20f729fa505149f22e0fa36ae7cbf13d9ffe71ab4a68cebe442ea3922ca4441",
+    "quantized_exact_seg_diagnostic": 0.0003751118977864583,
+    "diagnostic_is_not_score_authority": true
+  },
+  "crash_resume": {
+    "passed": true,
+    "scope": {
+      "steps": 2,
+      "pairs": 4,
+      "pair_ids": [458, 460, 529, 585],
+      "batch_size": 2,
+      "kill_after_checkpoint_step": 1
+    },
+    "kill": {
+      "checkpoint_present_before_signal": true,
+      "exact_child_pid": 57443,
+      "signal": "SIGKILL",
+      "child_exit": -9,
+      "safe_wrapper_return": 247,
+      "resume_checkpoint": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_fx3_20260809/interrupted_cpu_n4_v2/semantic.periodic.step000001.full_state.pt",
+        "bytes": 1697219,
+        "sha256": "23626ae4c4e832422924ec8b37fa95f029734e86825da41a3ca505d469996215"
+      }
+    },
+    "causal_training_state_fields_equal": 15,
+    "causal_training_state_fields_total": 15,
+    "causal_training_state_field_equality": {
+      "best_ema_state_dict": true,
+      "best_key": true,
+      "best_rgb": true,
+      "best_seg": true,
+      "cursor": true,
+      "ema": true,
+      "generator_state": true,
+      "history": true,
+      "model_state_dict": true,
+      "optimizer": true,
+      "order": true,
+      "phase": true,
+      "rng_state": true,
+      "scheduler": true,
+      "step": true
+    },
+    "checkpoint_metadata_fields_equal": 6,
+    "checkpoint_metadata_fields_total": 6,
+    "deployment_state_dict_equal": true,
+    "deployment_blob_equal": true,
+    "deployment_blob_bytes": 40252,
+    "deployment_blob_sha256": "e20f729fa505149f22e0fa36ae7cbf13d9ffe71ab4a68cebe442ea3922ca4441",
+    "history_equal": true,
+    "parity_result_equal": true,
+    "quantized_exact_seg_equal": true
+  },
+  "config_census": {
+    "population": 19,
+    "population_source": "RR2 direct reads of an original-style top-level checkpoint config",
+    "typed_architecture_adapter_reads": 6,
+    "v2_fail_closed_legacy_direct_reads": 13,
+    "stale_config_propagators": 5,
+    "stale_config_propagators_that_fail_closed_on_v2": 5,
+    "current_sites_using_stale_schedule_to_control_execution": 0,
+    "breakdown": {
+      "immutable_intake_read_only": {
+        "sites": 7,
+        "typed": 0,
+        "v2_fail_closed": 7,
+        "propagators": 3
+      },
+      "lifted_and_pose_paths": {
+        "sites": 7,
+        "typed": 1,
+        "v2_fail_closed": 6,
+        "propagators": 2
+      },
+      "active_mx1_wc3_paths": {
+        "sites": 5,
+        "typed": 5,
+        "v2_fail_closed": 0,
+        "propagators": 0
+      }
+    },
+    "schema_behavior": {
+      "legacy_checkpoint": "architecture allow-list only; schedule, precision, seed, and paths discarded",
+      "v2_checkpoint": "separate architecture_config, producing_stage_config, and parent_checkpoint",
+      "legacy_provenance_request": "refused",
+      "ambiguous_v2_top_level_config": "refused"
+    }
+  },
+  "run_receipts": [
+    {
+      "role": "uninterrupted",
+      "path": "/Volumes/VertigoDataTier/pact/ddm_fx3_20260809/uninterrupted_cpu_n4_v2/safe_run_status.json",
+      "bytes": 1868,
+      "sha256": "0c2c571cbc96d0d7e3aee395927007ae94413093c19cb59ae546a75bf4e70f95",
+      "status": "ok",
+      "exit": 0,
+      "elapsed_s": 26.308
+    },
+    {
+      "role": "interrupted",
+      "path": "/Volumes/VertigoDataTier/pact/ddm_fx3_20260809/interrupted_cpu_n4_v2/safe_run_status.json",
+      "bytes": 1858,
+      "sha256": "d5ca4255f9eb05246336c2dc5c2c14a51e80336bb81da9dad6308efbc0287667",
+      "status": "ok",
+      "exit": -9,
+      "elapsed_s": 9.877
+    },
+    {
+      "role": "resumed",
+      "path": "/Volumes/VertigoDataTier/pact/ddm_fx3_20260809/resumed_cpu_n4_v2/safe_run_status.json",
+      "bytes": 1978,
+      "sha256": "1700f0e32f570306f3714776da9f007f957f4ef2fcc5b7d3d4f6e81e624a00cf",
+      "status": "ok",
+      "exit": 0,
+      "elapsed_s": 16.968
+    }
+  ],
+  "artifact_hygiene": {
+    "root": "/Volumes/VertigoDataTier/pact/ddm_fx3_20260809",
+    "policy": "retained on SSD; no artifact deleted",
+    "reproducibility": "commands are preserved in each safe_run receipt and configs/input hashes are preserved in each full-state checkpoint",
+    "rss_telemetry_limitation": "safe_run reported peak_rss_observed=true but peak_rss_mib=0 because process-group RSS sampling was unavailable in this sandbox"
+  }
+}

@@ -87,7 +87,9 @@ def main() -> None:
 
     torch.manual_seed(args.seed)
     checkpoint = torch.load(args.init, map_location="cpu", weights_only=False)
-    config = MlxSemanticConfig.from_pr130_checkpoint_config(checkpoint["config"])
+    config = MlxSemanticConfig.from_pr130_checkpoint(
+        checkpoint, consumer="ddm_wc3_step_profile"
+    )
     config = MlxSemanticConfig(**(config.asdict() | {"bits": args.bits}))
 
     pair_ids = tr._select_stratified_indices(args.pairs, seed=args.seed)

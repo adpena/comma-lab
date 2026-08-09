@@ -43,6 +43,7 @@ from tac.optimization.trajectory_stopping import (
     evaluate_staircase_aware_stop,
 )
 from tac.pr130_lift import SOURCE_REPO_HEAD, SOURCE_REPO_ROOT
+from tac.pr130_lift.checkpoint_schema import architecture_config_from_checkpoint
 from tac.pr130_lift.mlx_semantic_renderer import (
     MlxSemanticConfig,
     MlxUnavailableError,
@@ -1056,7 +1057,9 @@ def run_torch_smoke(args: argparse.Namespace) -> dict[str, Any]:
     gc.collect()
 
     checkpoint = torch.load(args.init, map_location="cpu", weights_only=False)
-    config = checkpoint["config"]
+    config = architecture_config_from_checkpoint(
+        checkpoint, consumer="ddm_mx1.run_torch_smoke"
+    )
     model = lifted.SemanticTokenRenderer(
         width=int(config["width"]),
         blocks=int(config["blocks"]),
@@ -1160,7 +1163,12 @@ def _new_torch_renderer_from_config(lifted: Any, config: Mapping[str, Any]) -> t
 
 
 def _build_torch_renderer(lifted: Any, checkpoint: Mapping[str, Any]) -> torch.nn.Module:
-    model = _new_torch_renderer_from_config(lifted, checkpoint["config"])
+    model = _new_torch_renderer_from_config(
+        lifted,
+        architecture_config_from_checkpoint(
+            checkpoint, consumer="ddm_mx1._build_torch_renderer"
+        ),
+    )
     model.load_state_dict(checkpoint["state_dict"])
     return model
 
@@ -2390,7 +2398,9 @@ def run_mlx_parity(args: argparse.Namespace) -> dict[str, Any]:
     lifted = _load_lifted_semantic()
     checkpoint = torch.load(args.init, map_location="cpu", weights_only=False)
     torch_model = _build_torch_renderer(lifted, checkpoint)
-    config = MlxSemanticConfig.from_pr130_checkpoint_config(checkpoint["config"])
+    config = MlxSemanticConfig.from_pr130_checkpoint(
+        checkpoint, consumer="ddm_mx1.run_mlx_parity"
+    )
     mlx_model = make_mlx_renderer(config, device=args.device)
     load_torch_state_dict_into_mlx(mlx_model, checkpoint["state_dict"], device=args.device)
 
@@ -2953,7 +2963,9 @@ def run_mlx_train(
     probe.sample_and_check("before_init_checkpoint_torch_load")
     checkpoint = torch.load(args.init, map_location="cpu", weights_only=False)
     probe.sample_and_check("after_init_checkpoint_torch_load")
-    config = MlxSemanticConfig.from_pr130_checkpoint_config(checkpoint["config"])
+    config = MlxSemanticConfig.from_pr130_checkpoint(
+        checkpoint, consumer="ddm_mx1.run_mlx_train"
+    )
     config = MlxSemanticConfig(
         **(
             config.asdict()
