@@ -74,9 +74,21 @@ overstated, not their existence.
   end-to-end."* **Withdrawn.** What is reproducible end-to-end is the assembly/encode tail from
   banked trained artifacts. The chain from *video* to *archive* has not been run here.
 - The carrier row previously carried `mean d_pose 2.4437744286842644e-05` presented as a measured
-  n600 result. **That figure has no locatable receipt** — it is absent from the intake, from
-  `/Volumes/VertigoDataTier/pact`, and from `.omx/research`. It is withdrawn, not restated. (Same
-  genus as #931: a number quoted repeatedly that could not be re-derived from disk.)
+  n600 result. **CORRECTED TWICE.** Round 1 withdrew it as "no locatable receipt." **ddm_rr4
+  FALSIFIED that withdrawal**: the receipt exists at
+  `/Volumes/VertigoDataTier/pact/ddm_pr130_train_20260809/reports/METAL_SMOKE_carrier.json`
+  (sha256 `0c85e4a31928361e4f3977cd6365569937ea10a78d31e9b7bb5fa740e4d5ec6f`, 26,152 B), where the
+  exact value is the **step-6 history mean over all 600 pairs** (`steps=4000`, `stop_after_step=6`,
+  pair IDs 0–599; step-3 companion `2.3431171939591877e-05`), with a full-state checkpoint
+  `…step000006.full_state.pt` (sha256 `abd09ca0…`, 362,405 B).
+  **My round-1 statement was a NEGATIVE-EXISTENCE CLAIM made from a non-exhaustive search** — I
+  searched the reproduce and pq1 custody dirs and a timed-out repo-wide grep, never
+  `ddm_pr130_train_20260809/`. The honest form was "did not find in <scope>," not "has no receipt."
+  (m53: negative-existence is our #1 false-claim class.)
+  **The withdrawal's SUBSTANCE stands**: it is a **6-step `[macOS-MPS advisory]`** training-history
+  row produced by the **dense adapter**, not the owed 4,000-step result, not byte-closed, not exact,
+  not score authority — and its JSON omits torch version, optimizer kind, git SHA, and argv, so it
+  cannot answer those questions retroactively.
 
 ### Round-1 findings that did NOT hold up (recorded, so they are not re-hunted)
 
