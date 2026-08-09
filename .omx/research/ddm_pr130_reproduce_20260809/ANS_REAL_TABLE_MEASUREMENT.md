@@ -34,9 +34,29 @@ distribution I approximated them with, and the range coder's quantization penalt
 
 | step | Δ bytes | archive | S |
 |---|---:|---:|---:|
-| PR130 base | — | 191,052 | 0.172141297 |
+| PR130 base | — | 191,052 | 0.172141297491896447 |
 | + split-stream brotli pack (MEASURED, parse-back exact) | −903 | 190,149 | 0.171540027 |
-| + ANS token coder (measured mechanism, n600 PROJECTED) | −2,080 | **188,069** | **≈0.170154897** |
+| + ANS token coder (**MEASURED n600**) | **−2,120** | **188,029** | **0.170128405876608123** |
+
+**n600 UPGRADE 2026-08-09 — PROJECTED → MEASURED.** The full 600-frame re-encode landed
+(rc=0, 681 s, receipt `ans_n600/ans_vs_range_n600_result.json`):
+
+```
+frames 600 · ideal_B 114,851.8 · range_B 116,980 · ans_B 114,860
+range overhead vs ideal +1.8530%  ·  ANS overhead vs ideal +0.0071%
+```
+
+**FAITHFULNESS CONTROL PASSED EXACTLY:** the re-encoded range-coder stream is **116,980 B —
+byte-for-byte the shipped token stream**. Delta 0. The harness reproduces PR130's own encoder
+exactly, so both arms are measured on the SAME object, not on a reconstruction that resembles it.
+Without this equality the ANS number would be a comparison between my harness and their reality.
+
+**Coder inefficiency recovered: 99.61%.** ANS sits +0.0071% over the model's own cross-entropy —
+the stream is now genuinely at its model's entropy, which is what RATE_AXIS §4's "no generic coder
+win exists" was measuring, and confirms the lever was the CODER, not the packing.
+
+The 60-frame projection (−2,080) was **1.9% low** vs the measured −2,120. Direction and magnitude
+both held; the small window was not misleading here.
 
 The two compose exactly — disjoint sections (model bundle vs token stream), no interaction term.
 Distortion unchanged on both: the model bundle reconstructs bit-identically, and ANS is a lossless
@@ -53,8 +73,8 @@ re-coding of the identical symbol sequence under the identical model.
    337 s death is inside the measured 300–360 s window and matches three banked receipts exactly
    (fz4/rt1/qj1 at 335/337/337 s). Peak memory at frame 300 was ~2.6 GB on a 128 GB machine, so OOM
    is excluded. Relaunched from the SSD (`ans_n600/`, no matching token in argv) through the canonical
-   detached launcher. Until it lands, **−2,080 stays PROJECTED** from a 60-frame window whose overhead
-   matches the full stream to 0.03pp — not measured at n600.
+   detached launcher. ✅ **CLOSED: the relaunch completed rc=0 in 681 s and the row above is now
+   MEASURED at n600 (−2,120 B), with the range-coder arm reproducing the shipped 116,980 B exactly.**
    Two-landing cure: `tools/launch_detached_process.py` now refuses (rc=5) any argv matching the
    reaper predicate, with an executed positive control on this exact script. The rule previously
    existed only in a memory file, which is why it did not fire.
