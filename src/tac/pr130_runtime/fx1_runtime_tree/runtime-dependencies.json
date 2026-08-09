@@ -8,11 +8,44 @@
         "constriction.stream.queue.RangeDecoder",
         "constriction.stream.model.Categorical"
       ],
+      "provisioning": "self_installed_by_entrypoint",
       "install_policy": "wheel_only_no_source_build",
       "failure_policy": "fail_closed_no_decoder_fallback",
-      "license_expression": "MIT OR Apache-2.0 OR BSL-1.0"
+      "license_expression": "MIT OR Apache-2.0 OR BSL-1.0",
+      "imported_by": ["inflate.py"]
+    },
+    {
+      "name": "numpy",
+      "version": null,
+      "provisioning": "contest_runtime_provided_asserted_not_installed",
+      "install_policy": "never_installed_by_entrypoint",
+      "failure_policy": "fail_closed_named_exit_68",
+      "pin_source": "upstream/pyproject.toml declares numpy as a core dependency",
+      "imported_by": ["inflate.py", "carrier_codec.py", "integer_model_io.py"]
+    },
+    {
+      "name": "torch",
+      "version": "2.10.0+cpu",
+      "provisioning": "contest_runtime_provided_asserted_not_installed",
+      "install_policy": "never_installed_by_entrypoint",
+      "failure_policy": "fail_closed_named_exit_68",
+      "pin_source": "upstream/uv.lock pins torch 2.10.0+cpu (linux) / 2.10.0 (darwin)",
+      "install_refused_rationale": "self-installing torch would pull ~2 GB inside the 30-minute whole-job CI budget; the contest eval host necessarily has it because evaluate.py runs torch scorers",
+      "imported_by": [
+        "inflate.py",
+        "hpac_integer.py",
+        "hpac_integer_sparse.py",
+        "integer_model_io.py"
+      ]
     }
   ],
+  "closure_provenance": {
+    "enumerated_from": "top-level import statements of all 5 receiver modules",
+    "denominator": 5,
+    "third_party_packages": 3,
+    "measured_by": "FX5 Linux x86_64 dispatch 2026-08-09; the bare-image run surfaced numpy/torch as undeclared when FX1's macOS smoke could not (that venv already had both)",
+    "receipt": ".omx/research/ddm_pr130_reproduce_20260809/FX5_LINUX_RECEIPT.json"
+  },
   "receiver": "inflate.py",
   "entrypoint": "inflate.sh",
   "borrowed_substrate_accounting": {

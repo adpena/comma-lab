@@ -83,10 +83,35 @@ removes the dependency you already suspect can only ever confirm what you suspec
 genus as today's other failures: an instrument that cannot see the thing it is supposed to certify.
 Run A, which I built to be *wrong* about the contest shape, is the only reason we know.
 
-**Cure (owed, small):** `runtime-dependencies.json` should enumerate all three with their provenance
-class — `constriction` = **self-installed by our entrypoint**; `numpy`/`torch` = **contest-runtime
-provided, pinned by `upstream/uv.lock`, asserted-not-installed**. The distinction matters: silently
-self-installing torch would be a 2 GB download inside a 30-minute job.
+### §2b — CURE LANDED, with its own Linux positive control
+
+Both halves shipped in the same pass and were re-measured on Linux x86_64:
+
+1. **`runtime-dependencies.json` now enumerates all three** with a `provisioning` class:
+   `constriction` = `self_installed_by_entrypoint`; `numpy` and `torch` =
+   `contest_runtime_provided_asserted_not_installed`, each with its `pin_source` and `imported_by`
+   list, plus a `closure_provenance` block recording the denominator (5 modules → 3 third-party) and
+   the receipt that surfaced it. `torch` carries an explicit `install_refused_rationale`: self-installing
+   it would pull ~2 GB inside a 30-minute whole-job budget.
+2. **`inflate.sh` gained `assert_provided_deps()`**, running FIRST, exiting **68** with a named message
+   when numpy/torch are absent — instead of dying in a raw `ModuleNotFoundError` deep inside the
+   receiver after pointlessly installing constriction.
+
+**Positive control, re-measured on Linux x86_64 (bare image, numpy/torch genuinely absent):**
+
+```
+rc=68  0.041 s
+PR130 runtime closure: contest-runtime dependencies absent: numpy, torch
+These are declared 'contest_runtime_provided_asserted_not_installed' in
+runtime-dependencies.json and are NEVER installed by this entrypoint.
+```
+
+Was: rc=1, 4.779 s, raw traceback, after a wasted constriction install. Now: **named, typed, and 116×
+faster to fail**, because it refuses before doing work it will not be able to use.
+
+**Regression check, contest-shaped image, same pass:** rc=0, `PR130_DEPENDENCY_READY constriction=0.5.0
+receiver=inflate.py`, cold 3.992 s / warm 2.569 s, invalid-target control still rc=65 PASS. The cure
+costs the passing path nothing.
 
 ---
 

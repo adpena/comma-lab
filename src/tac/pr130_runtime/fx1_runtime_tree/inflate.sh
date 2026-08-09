@@ -10,6 +10,34 @@ export PYTHONNOUSERSITE=1
 export PYTHONDONTWRITEBYTECODE=1
 export PYTHONPATH="$DEPS_DIR:$SCRIPT_DIR${PYTHONPATH:+:$PYTHONPATH}"
 
+# CONTEST-RUNTIME-PROVIDED dependencies. `inflate.py` and its siblings import numpy and
+# torch as well as constriction; upstream/pyproject.toml declares numpy and upstream/uv.lock
+# pins torch 2.10.0+cpu, so the contest eval host has both by construction (evaluate.py runs
+# torch scorers). We therefore ASSERT them rather than install them — self-installing torch
+# would pull ~2 GB inside the 30-minute whole-job budget. Absence is a NAMED, fail-closed
+# error (exit 68), never a raw ModuleNotFoundError from deep inside the receiver, and never
+# a silent degradation. Measured on Linux x86_64 by FX5 2026-08-09.
+assert_provided_deps() {
+    "$PYBIN" - <<'PY'
+import importlib.util
+import sys
+
+missing = [name for name in ("numpy", "torch") if importlib.util.find_spec(name) is None]
+if missing:
+    sys.stderr.write(
+        "PR130 runtime closure: contest-runtime dependencies absent: "
+        + ", ".join(missing)
+        + "\nThese are declared 'contest_runtime_provided_asserted_not_installed' in "
+        "runtime-dependencies.json and are NEVER installed by this entrypoint.\n"
+    )
+    raise SystemExit(68)
+PY
+}
+
+if ! assert_provided_deps; then
+    exit 68
+fi
+
 dependency_ready() {
     "$PYBIN" - "$EXPECTED_CONSTRICTION_VERSION" <<'PY'
 import importlib.metadata

@@ -2,9 +2,9 @@
   "cold": {
     "dependency_ready_line_present": true,
     "returncode": 0,
-    "stderr": "Using CPython 3.11.12 interpreter at: /usr/local/bin/python3\nResolved 1 package in 49ms\nPrepared 1 package in 57ms\nInstalled 1 package in 18ms\n + constriction==0.5.0\n",
+    "stderr": "Using CPython 3.11.12 interpreter at: /usr/local/bin/python3\nResolved 1 package in 147ms\nPrepared 1 package in 86ms\nInstalled 1 package in 11ms\n + constriction==0.5.0\n",
     "stdout": "PR130_DEPENDENCY_READY constriction=0.5.0 receiver=inflate.py\n",
-    "wall_clock_s": 5.302314462
+    "wall_clock_s": 3.992253911
   },
   "image_shape": "contest_shaped_numpy_torch2100cpu_no_constriction",
   "installed_target": {
@@ -82,6 +82,6 @@
     "dependency_ready_line_present": true,
     "returncode": 0,
     "stdout": "PR130_DEPENDENCY_READY constriction=0.5.0 receiver=inflate.py\n",
-    "wall_clock_s": 3.009660811
+    "wall_clock_s": 2.56908282
   }
 }

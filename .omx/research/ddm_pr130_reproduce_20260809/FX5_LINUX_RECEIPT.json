@@ -1,64 +1,24 @@
 {
   "cold": {
     "dependency_ready_line_present": false,
-    "returncode": 1,
-    "stderr": "Using CPython 3.11.12 interpreter at: /usr/local/bin/python3\nResolved 1 package in 199ms\nPrepared 1 package in 25ms\nInstalled 1 package in 10ms\n + constriction==0.5.0\nTraceback (most recent call last):\n  File \"<stdin>\", line 5, in <module>\n  File \"/runtime/fx1_runtime_tree/inflate.py\", line 14, in <module>\n    import numpy as np\nModuleNotFoundError: No module named 'numpy'\n",
+    "returncode": 68,
+    "stderr": "PR130 runtime closure: contest-runtime dependencies absent: numpy, torch\nThese are declared 'contest_runtime_provided_asserted_not_installed' in runtime-dependencies.json and are NEVER installed by this entrypoint.\n",
     "stdout": "",
-    "wall_clock_s": 4.7792916860000005
+    "wall_clock_s": 0.04128039800000005
   },
+  "image_shape": "bare_debian_slim_py311_uv_only",
   "installed_target": {
     "dir": "/tmp/fx5-runtime-deps",
-    "exists": true,
-    "file_count": 10,
-    "files": [
-      {
-        "bytes": 0,
-        "path": ".lock"
-      },
-      {
-        "bytes": 131,
-        "path": "constriction/__init__.py"
-      },
-      {
-        "bytes": 943808,
-        "path": "constriction/constriction.cpython-311-x86_64-linux-gnu.so"
-      },
-      {
-        "bytes": 2,
-        "path": "constriction-0.5.0.dist-info/INSTALLER"
-      },
-      {
-        "bytes": 10632,
-        "path": "constriction-0.5.0.dist-info/METADATA"
-      },
-      {
-        "bytes": 832,
-        "path": "constriction-0.5.0.dist-info/RECORD"
-      },
-      {
-        "bytes": 0,
-        "path": "constriction-0.5.0.dist-info/REQUESTED"
-      },
-      {
-        "bytes": 147,
-        "path": "constriction-0.5.0.dist-info/WHEEL"
-      },
-      {
-        "bytes": 106065,
-        "path": "constriction-0.5.0.dist-info/licenses/LICENSE.html"
-      },
-      {
-        "bytes": 40718,
-        "path": "constriction-0.5.0.dist-info/sboms/constriction.cyclonedx.json"
-      }
-    ],
-    "total_bytes": 1102335
+    "exists": false,
+    "file_count": 0,
+    "files": [],
+    "total_bytes": 0
   },
   "invalid_target_control": {
     "expected_returncode": 65,
-    "passed": true,
-    "returncode": 65,
-    "stderr": "PR130 dependency closure refused invalid existing target: /tmp/fx5-invalid-target\nSelect a fresh PR130_RUNTIME_DEPS_DIR; this entrypoint will not overwrite it.\n"
+    "passed": false,
+    "returncode": 68,
+    "stderr": "PR130 runtime closure: contest-runtime dependencies absent: numpy, torch\nThese are declared 'contest_runtime_provided_asserted_not_installed' in runtime-dependencies.json and are NEVER installed by this entrypoint.\n"
   },
   "platform": {
     "libc": "glibc-2.36",
@@ -79,8 +39,8 @@
   "schema": "comma_lab.fx5_linux_closure.v1",
   "warm": {
     "dependency_ready_line_present": false,
-    "returncode": 1,
+    "returncode": 68,
     "stdout": "",
-    "wall_clock_s": 0.29048120399999977
+    "wall_clock_s": 0.033877327999999984
   }
 }
