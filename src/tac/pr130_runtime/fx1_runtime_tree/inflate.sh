@@ -234,5 +234,19 @@ print(
 PY
 fi
 
+if [ "$#" -ne 3 ]; then
+    echo "usage: inflate.sh <archive-dir> <output-dir> <video-names-file>" >&2
+    exit 64
+fi
+
+ARCHIVE_DIR=$1
+OUTPUT_DIR=$2
+VIDEO_NAMES_FILE=$3
+mkdir -p -- "$OUTPUT_DIR"
+
 cd -- "$SCRIPT_DIR"
-exec "$PYBIN" inflate.py "$@"
+while IFS= read -r video_name || [ -n "$video_name" ]; do
+    [ -n "$video_name" ] || continue
+    base=${video_name%.*}
+    "$PYBIN" inflate.py "$ARCHIVE_DIR" "$base" "$OUTPUT_DIR/$base.raw"
+done < "$VIDEO_NAMES_FILE"

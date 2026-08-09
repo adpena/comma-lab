@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import math
+import os
 import sys
 import time
 from pathlib import Path
@@ -666,6 +667,33 @@ def render_video(semantic, basis, coeff, tokens, destination: Path, device):
     output.flush()
 
 
+def resolve_device() -> torch.device:
+    """Resolve the explicitly requested PR130 inflate rail.
+
+    Auto-selection preserves PR130's CUDA behavior on the T4 rail and selects
+    CPU on the CPU-only runner. Either project-specific or canonical harness
+    policy can make that choice explicit.
+    """
+
+    requested = os.environ.get(
+        "PR130_INFLATE_DEVICE",
+        os.environ.get("PACT_INFLATE_DEVICE", "auto"),
+    ).strip().lower()
+    if requested not in {"auto", "cpu", "cuda"}:
+        raise RuntimeError(
+            "PR130_INFLATE_DEVICE/PACT_INFLATE_DEVICE must be exactly "
+            "'auto', 'cpu', or 'cuda'; "
+            f"got {requested!r}"
+        )
+    if requested == "auto":
+        requested = "cuda" if torch.cuda.is_available() else "cpu"
+    if requested == "cuda" and not torch.cuda.is_available():
+        raise RuntimeError(
+            "PR130 CUDA inflate was requested but CUDA is unavailable"
+        )
+    return torch.device(requested)
+
+
 def main():
     if len(sys.argv) != 4:
         raise SystemExit("usage: inflate.py <archive-dir> <base> <destination.raw>")
@@ -674,11 +702,11 @@ def main():
     destination = Path(sys.argv[3])
     if base != "0":
         raise ValueError(f"unsupported public video: {base}")
-    if not torch.cuda.is_available():
-        raise RuntimeError("semantic_pose_landslide requires the official GPU rail")
-    torch.backends.cuda.matmul.allow_tf32 = False
-    torch.backends.cudnn.allow_tf32 = False
-    device = torch.device("cuda")
+    device = resolve_device()
+    if device.type == "cuda":
+        torch.backends.cuda.matmul.allow_tf32 = False
+        torch.backends.cudnn.allow_tf32 = False
+    print(f"PR130_INFLATE_DEVICE_RESOLVED={device.type}", flush=True)
     payload = (data_dir / "p").read_bytes()
     parts = split_payload(payload)
     decoded_models = decode_models(parts.models, model_codec=parts.model_codec)
@@ -701,7 +729,8 @@ def main():
         token_codec=parts.token_codec,
     )
     del hpac
-    torch.cuda.empty_cache()
+    if device.type == "cuda":
+        torch.cuda.empty_cache()
     render_video(semantic, basis, coeff, tokens, destination, device)
     print(f"wrote {destination} ({destination.stat().st_size} bytes)", flush=True)
 

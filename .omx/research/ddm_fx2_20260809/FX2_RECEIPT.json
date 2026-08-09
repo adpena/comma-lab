@@ -1,0 +1,249 @@
+{
+  "schema": "ddm_fx2_inflate_contract_repair_receipt.v1",
+  "status": "PASS",
+  "completed_at_utc": "2026-08-09T23:31:17Z",
+  "owner": "ddm_fx2",
+  "axis": "[macOS-CPU scorer-free behavioral replay]",
+  "score_claim": false,
+  "scorer_invoked": false,
+  "eval_invoked": false,
+  "modal_invoked": false,
+  "pointer_delta": {
+    "moved": false,
+    "base_score": "0.172141297491896447",
+    "base_archive_bytes": 191052,
+    "base_axis": "[contest-CUDA, DALI GT, n600]",
+    "reason": "FX2 repaired and measured an inflate entrypoint; it did not run a scorer or exact evaluation"
+  },
+  "source_derived_contract": {
+    "upstream_commit": "11ad728f563d8970929e8947a1cf6124ee6303e4",
+    "upstream_status_clean": true,
+    "invocation_source": "upstream/evaluate.sh:41-47",
+    "invocation": "bash inflate.sh <archive_dir> <inflated_output_dir> <video_names_file>",
+    "required_output_source": "upstream/evaluate.sh:49-63",
+    "required_output": "for every non-empty listed name, <inflated_output_dir>/<base>.raw must exist",
+    "pre_repair_shell": {
+      "path": "src/tac/pr130_runtime/fx1_runtime_tree/inflate.sh",
+      "sha256": "972f49c573c16020455396638c3969402bde5af55e50e013a623a1d4efc2a6d7",
+      "tail": "cd -- $SCRIPT_DIR; exec $PYBIN inflate.py $@"
+    },
+    "python_primitive_source": "src/tac/pr130_runtime/fx1_runtime_tree/inflate.py:669-676 at the pre-repair baseline",
+    "python_primitive_contract": "inflate.py <archive-dir> <base> <destination.raw>, with base required to equal 0",
+    "exact_violation": "the evaluator output directory was passed as base and rejected before render; the names-file path was passed in the destination position; the shell neither created the output directory nor iterated the names file",
+    "verdict_scope": "INSTANCE: the pre-FX2 shared FX1 runtime entrypoint"
+  },
+  "repair": {
+    "internal_leverage_commit": "9a1b483b220eb67c560521cc65ad1efe93cffbab",
+    "internal_leverage_path": "src/tac/pr130_runtime/dv1_cpu_runtime/inflate.sh:237-252",
+    "shell_change": "validate three arguments, bind archive/output/list, create output, skip blank list entries, derive base, and invoke the unchanged one-video Python primitive once per listed video",
+    "cpu_proof_enabler": {
+      "source": "src/tac/pr130_runtime/dv1_cpu_runtime/inflate.py at commit 9a1b483b220eb67c560521cc65ad1efe93cffbab",
+      "change": "port explicit-or-auto CPU/CUDA device resolution while retaining TF32-off and empty-cache behavior on CUDA",
+      "reason": "the charter forbids Modal and requires execution of the real shared tree; the available local host has no CUDA"
+    },
+    "post_edit_hashes": {
+      "inflate.sh": "6926683f68b7b0017c3c79ad33f5da82e8d8d5f4394c11549c6b8af914538b21",
+      "inflate.py": "75e76ac070c973a5403562eb1db1d9c479d11d9a8c8489760f5da5dfe55806ea",
+      "runtime-dependencies.json": "1b5515b8841bde0f544c806a70391c1f039696fe10cbd5213375e639dae22b2a"
+    },
+    "allowlisted_runtime_content_tree": {
+      "algorithm": "SHA-256 over sorted explicit shipping filename, NUL, file SHA-256, NUL tuples",
+      "excluded_untracked_runtime_files": true,
+      "sha256": "3a976c468fce76d3b7b7e627c4a454170deaa6fb8fc3dc61e16e336cdb8fa345"
+    }
+  },
+  "behavioral_replay": {
+    "success": true,
+    "scope": "the exact one-line upstream public names file, which names 0.mkv and causes the full n600 raw to render",
+    "output_preexisting": false,
+    "archive": {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_pr130_reproduce_20260809/reproduction/archive.zip",
+      "bytes": 191052,
+      "sha256": "0491d5df84fc70b62b3f7ccf8894f5e1b81c616de46a052e4423fc1e18fdc7cd"
+    },
+    "member": {
+      "name": "p",
+      "bytes": 190952,
+      "sha256": "fcc6a3c242106350077d3c328a2c07c8994c86d19b1a361f8507917de6ba3d84",
+      "model_codec": "legacy_lzma",
+      "token_codec": "range"
+    },
+    "video_names_file": {
+      "path": "upstream/public_test_video_names.txt",
+      "bytes": 6,
+      "sha256": "7ff99d08c8351dd8167ec09213b758da5bbb705dedabe361ba881217374029a8",
+      "content": "0.mkv\\n"
+    },
+    "shell_returncode": 0,
+    "terminal_marker_observed": true,
+    "decoded_token_frames": 600,
+    "rendered_master_frames": 600,
+    "rendered_carrier_frames": 600,
+    "wall_seconds": 979.61,
+    "raw": {
+      "path_before_cleanup": "/Volumes/VertigoDataTier/pact/ddm_fx2_20260809/replay_20260809_WFKO4z/inflated/0.raw",
+      "bytes": 3662409600,
+      "sha256": "a18eb42a8da9399bcc03e795e17597bfbd459412dbb37990117665f48c4c0353",
+      "matches_independent_ddm_dt1_raw_sha256": true
+    },
+    "durable_evidence": {
+      "command_record": "/Volumes/VertigoDataTier/pact/ddm_fx2_20260809/replay_20260809_WFKO4z/run_contract.txt",
+      "command_record_sha256": "1ae3bfc49e84c9f95cad40ded32c9bb9b364c42e13eccf53511eab4adcee84e6",
+      "log": "/Volumes/VertigoDataTier/pact/ddm_fx2_20260809/replay_20260809_WFKO4z/replay.log",
+      "log_sha256": "81876088c50022ad4d68367f91f752ff07c11575e029de3eee2c28d583ad2362",
+      "certification": "/Volumes/VertigoDataTier/pact/ddm_fx2_20260809/replay_20260809_WFKO4z/output_certification.json",
+      "certification_sha256": "87a726ff457f2118997f0d37d0d3d6badd89590ac17a1aaab10e54855098920a",
+      "storage_plan": "/Volumes/VertigoDataTier/pact/ddm_fx2_20260809/storage_plan.json",
+      "storage_plan_sha256": "fe543d0e2b0e59936d2b4215becf991acc56aadff42736a4e1bbe6f3543c351f"
+    },
+    "cleanup": {
+      "status": "deleted_after_certification",
+      "deleted_at_utc": "2026-08-09T23:30:09Z",
+      "raw_exists_after_cleanup": false,
+      "recovery": "not directly recoverable; deterministically rebuildable from retained inputs, command, runtime hashes, and environment"
+    }
+  },
+  "guard": {
+    "catalog": 146,
+    "new_catalog_number_added": false,
+    "consolidation_basis": "Catalog #146 already owns the evaluator three-argument and per-video inflate genus; Catalog #299 favors scope extension",
+    "protected_target": "src/tac/pr130_runtime/fx1_runtime_tree/inflate.sh",
+    "missing_target_refused": true,
+    "comment_only_fragments_refused": true,
+    "legacy_passthrough_refused": true,
+    "positive_control": "copy the live repaired shell, replace only the repaired tail with the exact historical inflate.py $@ pass-through, and require strict Catalog #146 to raise on the shared FX1 path",
+    "positive_control_executed": true,
+    "static_boundary": "the guard scans executable non-comment shell text; it is paired with the real behavioral replay because static fragments alone cannot establish execution"
+  },
+  "validation": {
+    "log": "/Volumes/VertigoDataTier/pact/ddm_fx2_20260809/final_validation.log",
+    "log_bytes": 970,
+    "log_sha256": "63ecb5495c023efe77892f0fcf572f1b4ab19d1c301792067251bd3d0fd812c5",
+    "git_diff_check": "PASS",
+    "python_compile": "PASS",
+    "shell_syntax": "PASS",
+    "manifest_json": "PASS",
+    "ruff": "PASS",
+    "catalog_and_closure_tests": "49 passed, 2 deprecation warnings",
+    "pr103_adapter_tests": "7 passed",
+    "catalog_146_live_strict": "PASS",
+    "cleanup_absence_check": "PASS",
+    "python_review_tracker": {
+      "passes": 2,
+      "pass_names": ["fx2_pass_1", "fx2_pass_2"],
+      "files": [
+        "src/tac/pr130_runtime/fx1_runtime_tree/inflate.py",
+        "src/tac/preflight.py",
+        "src/tac/tests/test_preflight_phase1_runtime_guard.py"
+      ]
+    }
+  },
+  "sister_bare_python_hazard": {
+    "fx1_status": "ABSENT",
+    "fx1_evidence": "inflate.sh binds PYBIN=${PYTHON:-python3} and every Python execution uses $PYBIN",
+    "pr103_charter_claim_status": "STALE",
+    "pr103_fix_commit": "0b47f132c8",
+    "pr103_current_contract": "PYTHON environment override, then python3, then python, else named exit 127; exactly one portable invocation and zero legacy invocations",
+    "disposition": "do not repair PR103 again and do not fold the separate remaining BL1 emitters into FX2"
+  },
+  "recall_evidence": {
+    "research_corpus": {
+      "scope": ".omx/research, 28,841 current files",
+      "queries": [
+        "fx1_runtime_tree|shared FX1|shared-runtime",
+        "three[- ]argument|3[- ]arg|video.names.file",
+        "bare[- ]python|python3[- ]only|legacy bare-python"
+      ],
+      "matching_file_counts": [18, 418, 10]
+    },
+    "graph_and_design_scope": {
+      "canonical_research_indexes": 1,
+      "sub015_dag_files": 11,
+      "design_or_spec_query_matches": 400
+    },
+    "canonical_equations": {
+      "command": ".venv/bin/python tools/list_canonical_equations.py --json",
+      "snapshot": "/Volumes/VertigoDataTier/pact/ddm_fx2_20260809/canonical_equations_snapshot.json",
+      "snapshot_sha256": "72a92093afba8ba7c2591f065dea0ea513f44c029a2e77134b9143da40663c2f",
+      "contract_specific_equation_found": false,
+      "relevant_generic_equation": "modal_dispatch_runtime_tree_hash_local_vs_worker_parity_v1"
+    },
+    "task_surfaces": [
+      ".omx/state/canonical_task_status.jsonl",
+      ".omx/research/harness_tasklist_bridge_20260803.jsonl",
+      "current arm queue and receipts"
+    ],
+    "beyond_charter_seeds": [
+      "BL1 commit 0b47f132c8 already repaired PR103, so the charter's line-727 statement is stale",
+      "runtime-dependencies.json hashes the current shipping tree and had to change with both runtime files",
+      "upstream/evaluate.sh does not clear inflated output, so replay required a never-existing output path",
+      "DV1's verifier proves shell syntax but not the real three-argument behavior and assumes the historical pre-FX2 shared reference",
+      "the generic runtime-tree parity equation means any later shared-tree dispatch must recompute rather than reuse the pre-FX2 digest"
+    ],
+    "plan_changes_from_recall": [
+      "ported only the pinned DV1 loop and device resolver, not the live dirty DV1 tree",
+      "used a fresh SSD output path and required rc, terminal marker, size, and full SHA",
+      "extended Catalog #146 instead of creating a new gate",
+      "updated both runtime custody hashes and recorded internal-leverage provenance",
+      "kept the PR103 and other bare-Python work separate"
+    ]
+  },
+  "authority_boundaries": [
+    "No scorer or upstream evaluate.py run occurred, so no d_seg, d_pose, or score was measured.",
+    "The replay axis is macOS arm64 CPU, not contest Linux CPU or contest CUDA.",
+    "The full raw byte equality is receiver-output evidence, not score or hardware-axis promotion evidence.",
+    "The 979.61-second time covers the shared inflate shell only; checkout, evaluator data loading, and scoring are excluded."
+  ],
+  "follow_ons": [
+    {
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "owner": "next shared-FX1 contest dispatcher",
+      "consumer_store": "that run's contest_auth_eval.json runtime manifest plus .omx/research/ddm_fx2_20260809/FX2_RECEIPT.json",
+      "fire_trigger": "before the first Linux CPU or CUDA evaluation/dispatch of the repaired shared FX1 tree",
+      "action": "recompute local and worker runtime-tree hashes from the committed FX2 tree and replay the three-argument contract on the target axis"
+    },
+    {
+      "disposition": "HELD-SEPARATE",
+      "owner": "BL1 successor",
+      "consumer_store": ".omx/research/ddm_bl1_20260805/RECEIPT.md and NEXT_IF_RESUMED.md",
+      "fire_trigger": "the next scorer-free apparatus cleanup boundary that explicitly owns the three remaining emitters",
+      "action": "finish the separate bare-Python emitter cleanup without attributing it to FX2"
+    }
+  ],
+  "live_hypotheses": [
+    {
+      "lead": "the repaired wrapper will preserve output on Linux CPU and CUDA",
+      "plausibility": "the shell adapter is POSIX and invokes the unchanged one-video primitive; the CUDA branch retains the pre-FX2 device and TF32 policy"
+    },
+    {
+      "lead": "a full contest job may remain under 30 minutes",
+      "plausibility": "the complete macOS CPU inflate measured 979.61 seconds, leaving 820.39 seconds for omitted stages, but Linux and scorer timing are unmeasured"
+    }
+  ],
+  "dead_ends": [
+    {
+      "path": "dispatch the pre-FX2 shared shell",
+      "reason": "it maps evaluator output_dir into the Python base argument and fails before render"
+    },
+    {
+      "path": "treat DV1 syntax/build checks or raw-file existence as behavioral proof",
+      "reason": "the real loop was not executed there, and stale or partially allocated memmaps can exist without successful completion"
+    },
+    {
+      "path": "copy the live DV1 runtime wholesale",
+      "reason": "it contains concurrent selector-3/CX2 work outside FX2 provenance"
+    },
+    {
+      "path": "repair bare Python in FX1 or PR103",
+      "reason": "FX1 already uses PYBIN=${PYTHON:-python3}, and PR103 was repaired by 0b47f132c8"
+    },
+    {
+      "path": "reuse a pre-FX2 runtime-tree digest",
+      "reason": "inflate.sh, inflate.py, and the shipping manifest changed"
+    },
+    {
+      "path": "use the moving live FX1 tree as DV1's historical reference runtime",
+      "reason": "tools/verify_ddm_dv1_cpu_runtime.py expects the pre-DV1 shared baseline; materialize commit 5de03569ad804d0a087bb6ae5d1b17bb48baa0c5 when reproducing that receipt"
+    }
+  ]
+}

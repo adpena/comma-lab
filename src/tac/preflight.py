@@ -39005,6 +39005,64 @@ def check_packet_blocker_clearance_evidence_matches(
 # ---------------------------------------------------------------------------
 
 
+_CHECK146_FX1_RUNTIME_REL = Path(
+    "src/tac/pr130_runtime/fx1_runtime_tree/inflate.sh"
+)
+
+
+def _check_146_fx1_shared_runtime_adapter(repo_root: Path) -> list[str]:
+    """Extend Catalog #146 over the shared PR130 FX1 shipping runtime.
+
+    The evaluator calls ``inflate.sh`` once with ``archive_dir``, ``output_dir``,
+    and ``video_names_file``. FX1's Python entry point is intentionally a
+    one-video primitive, so the shell wrapper must adapt that evaluator call
+    into one ``inflate.py archive_dir base output/base.raw`` call per listed
+    video. Exact fragments are pinned here because this is a static shipping
+    tree, not a family of generated templates.
+    """
+
+    path = repo_root / _CHECK146_FX1_RUNTIME_REL
+    if not path.is_file():
+        return [
+            f"{_CHECK146_FX1_RUNTIME_REL.as_posix()}: protected shared FX1 "
+            "runtime is missing; Catalog #146 cannot verify the evaluator "
+            "three-argument adapter"
+        ]
+    text = path.read_text(encoding="utf-8", errors="replace")
+    executable_text = "\n".join(
+        line for line in text.splitlines() if not line.lstrip().startswith("#")
+    )
+    required_fragments = (
+        'if [ "$#" -ne 3 ]; then',
+        "ARCHIVE_DIR=$1",
+        "OUTPUT_DIR=$2",
+        "VIDEO_NAMES_FILE=$3",
+        'mkdir -p -- "$OUTPUT_DIR"',
+        'cd -- "$SCRIPT_DIR"',
+        'while IFS= read -r video_name || [ -n "$video_name" ]; do',
+        '[ -n "$video_name" ] || continue',
+        "base=${video_name%.*}",
+        '"$PYBIN" inflate.py "$ARCHIVE_DIR" "$base" "$OUTPUT_DIR/$base.raw"',
+        'done < "$VIDEO_NAMES_FILE"',
+    )
+    missing = [
+        fragment for fragment in required_fragments if fragment not in executable_text
+    ]
+    legacy_passthrough = 'inflate.py "$@"' in executable_text
+    if not missing and not legacy_passthrough:
+        return []
+    details: list[str] = []
+    if missing:
+        details.append("missing=" + repr(missing))
+    if legacy_passthrough:
+        details.append('forbidden legacy `inflate.py "$@"` passthrough present')
+    return [
+        f"{_CHECK146_FX1_RUNTIME_REL.as_posix()}: shared FX1 runtime does not "
+        "adapt the evaluator three-argument call into the required per-video "
+        "raw-output loop (" + "; ".join(details) + ")"
+    ]
+
+
 def check_phase1_trainer_runtime_emits_contest_compliant_inflate(
     *,
     repo_root: str | Path | None = None,
@@ -39014,7 +39072,8 @@ def check_phase1_trainer_runtime_emits_contest_compliant_inflate(
     """Catalog #146 - Phase 1 trainer must emit contest-compliant inflate.sh + inflate.py.
 
     Scans `experiments/train_paradigm_delta_epsilon_zeta_track1_balle_endtoend.py`'s
-    `_write_runtime` function source for the regression patterns:
+    `_write_runtime` function source and the shared PR130 FX1 shipping wrapper
+    for the regression patterns:
 
     * inflate.sh template missing any of `$1`, `$2`, `$3` (or braced equiv).
     * inflate.sh template missing `set -euo pipefail` / `set -e`.
@@ -39036,13 +39095,18 @@ def check_phase1_trainer_runtime_emits_contest_compliant_inflate(
     """
     root = Path(repo_root) if repo_root is not None else REPO_ROOT
     trainer = root / "experiments" / "train_paradigm_delta_epsilon_zeta_track1_balle_endtoend.py"
-    violations: list[str] = []
+    violations = _check_146_fx1_shared_runtime_adapter(root)
     if not trainer.is_file():
         # Trainer file may have been moved or removed; gate is dormant.
         if verbose:
             print(
                 f"  [check_phase1_trainer_runtime] trainer not found: {trainer.relative_to(root)}; "
                 "gate dormant"
+            )
+        if violations and strict:
+            raise MetaBugViolation(
+                "PHASE1_TRAINER_WRITE_RUNTIME_VIOLATIONS (Catalog #146):\n"
+                + "\n".join(violations)
             )
         return violations
 

@@ -57,7 +57,7 @@
       "provisioning": "contest_runtime_provided_asserted_not_installed",
       "install_policy": "never_installed_by_entrypoint",
       "failure_policy": "fail_closed_named_exit_68",
-      "pin_source": "upstream/uv.lock pins torch per the selected cpu/cu126/cu128/cu130/mps dependency group; the receiver requires the CUDA group selected by the evaluator rail",
+      "pin_source": "upstream/uv.lock pins torch per the selected cpu/cu126/cu128/cu130/mps dependency group; the receiver selects the available CPU or CUDA evaluator rail and preserves TF32-off on CUDA",
       "install_refused_rationale": "self-installing torch would pull ~2 GB inside the 30-minute whole-job CI budget; the contest eval host necessarily has it because evaluate.py runs torch scorers",
       "imported_by": [
         "inflate.py",
@@ -71,8 +71,10 @@
     "enumerated_from": "top-level import statements of all 6 receiver modules",
     "denominator": 6,
     "third_party_packages": 4,
-    "measured_by": "FX5 Linux x86_64 dispatch 2026-08-09 measured the prior five-module Range closure; DDM-RC1 local suite measured Brotli 1.2.0 with constriction 0.4.2, and a separate pinned-0.5.0 real n2 run measured raw-LZMA2 plus ANS decode",
+    "measured_by": "FX5 Linux x86_64 dispatch 2026-08-09 measured the prior five-module Range closure; DDM-RC1 local suite measured Brotli 1.2.0 with constriction 0.4.2, and a separate pinned-0.5.0 real n2 run measured raw-LZMA2 plus ANS decode; DDM-FX2 executed the shared shell's real three-argument contract through the full n600 CPU decode and 3,662,409,600-byte render",
     "receipt": ".omx/research/ddm_pr130_reproduce_20260809/DDM_RC1_RECEIVER_RECEIPT.md",
+    "behavioral_entrypoint_receipt": ".omx/research/ddm_fx2_20260809/FX2_RECEIPT.json",
+    "shared_three_argument_replay_status": "PASS on macOS CPU with shell rc=0, terminal write marker, and raw SHA-256 a18eb42a8da9399bcc03e795e17597bfbd459412dbb37990117665f48c4c0353; Linux CPU and CUDA remain unmeasured",
     "linux_retest_status": "QUEUED: the RC1 six-module closure has not run on the contest Linux rail"
   },
   "receiver": "inflate.py+receiver.py",
@@ -91,6 +93,12 @@
     "ddm_rc1_original_files": [
       "receiver.py"
     ],
+    "ddm_fx2_internal_leverage": {
+      "source_commit": "9a1b483b220eb67c560521cc65ad1efe93cffbab",
+      "source_shell": "src/tac/pr130_runtime/dv1_cpu_runtime/inflate.sh",
+      "inflate.sh": "ports the evaluator three-argument per-video loop from the pinned DV1 repair",
+      "inflate.py": "ports DV1's explicit-or-auto CPU/CUDA rail resolver to execute the shared shipping tree in the required scorer-free behavioral proof while preserving TF32-off on CUDA"
+    },
     "borrowed_base_with_ddm_rc1_modifications": {
       "inflate.py": "335369c9b3b295707f1790feb0b5b7ae288338fae350056cc4bb03aaa18f0c9e"
     },
@@ -104,8 +112,8 @@
       "carrier_codec.py": "d2f14402374b4e622b7f981d736389fb04f0ca0165180e4c75f3a32ffe996bed",
       "hpac_integer.py": "6e6b4f4d0b293fb60cc1b751958756a4cd6c2ce7bcff68c6f03e20277856803f",
       "hpac_integer_sparse.py": "2240ee32c53fe949b560d316d349e0bbdccc0ceb78787307cd4d530623d42a0c",
-      "inflate.py": "48218c360fa26f9d3d7fec76db54be0e7652b53e8f9cbd48245e488d7494770f",
-      "inflate.sh": "972f49c573c16020455396638c3969402bde5af55e50e013a623a1d4efc2a6d7",
+      "inflate.py": "75e76ac070c973a5403562eb1db1d9c479d11d9a8c8489760f5da5dfe55806ea",
+      "inflate.sh": "6926683f68b7b0017c3c79ad33f5da82e8d8d5f4394c11549c6b8af914538b21",
       "integer_model_io.py": "6f91c91ed4785d203aa3570af362fbe9c6a64bb2249599f8554adb31174b80a5",
       "receiver.py": "d9689091430b31b37f5f12d2eaa8025187f7f08899ae1b99ba43a30480b7ac4f"
     }
