@@ -50,6 +50,7 @@ from __future__ import annotations
 import hashlib
 import json
 import lzma
+import os
 import subprocess
 import sys
 import time
@@ -67,6 +68,30 @@ PR130_REPO = Path("/Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/re
 PR130_BUILDER = PR130_REPO / "code" / "build_gt_cache_official.py"
 
 app = modal.App(APP_NAME, include_source=False)
+
+# Catalog #244 canonical contest-CUDA env block. These literals MUST equal
+# tac.deploy.modal.runtime.{DALI_DISABLE_NVML_VALUE, PYTORCH_CUDA_ALLOC_CONF_VALUE,
+# CUBLAS_WORKSPACE_CONFIG_VALUE} (src/tac/deploy/modal/runtime.py:52-62). They are
+# literals here rather than an import because this module is itself uploaded and
+# imported INSIDE the container, where `tac` is not mounted -- so `main()` below
+# fail-closes on a LOCAL parity assertion against the canonical module before any
+# dispatch fires. Single source of truth preserved; remote import kept safe.
+#
+# WHY THIS EXISTS (measured 2026-08-09, run dali_av_gt_diff_20260809T012723Z):
+# omitting DALI_DISABLE_NVML killed the DALI leg at 12.7s with
+#   `nvml error (999): A nvml internal driver error occurred`
+# inside `nvidia.dali.fn.experimental.inputs.video` -- the exact operator and
+# exact error CLAUDE.md records as the D1 incident anchor (6 occurrences in 24h
+# before Catalog #244 closed it for lane DRIVERS). This Modal app is a surface
+# that gate does not scan, so the cure had to be applied by recall, and was not.
+DALI_DISABLE_NVML_VALUE = "1"
+PYTORCH_CUDA_ALLOC_CONF_VALUE = "expandable_segments:True"
+CUBLAS_WORKSPACE_CONFIG_VALUE = ":4096:8"
+CONTEST_CUDA_ENV = {
+    "DALI_DISABLE_NVML": DALI_DISABLE_NVML_VALUE,
+    "PYTORCH_CUDA_ALLOC_CONF": PYTORCH_CUDA_ALLOC_CONF_VALUE,
+    "CUBLAS_WORKSPACE_CONFIG": CUBLAS_WORKSPACE_CONFIG_VALUE,
+}
 
 # Image mirrors the PROVEN experiments/modal_auth_eval.py base (r9m dispatched
 # through it successfully) -- same torch pin, same nvidia-dali-cuda120 from the
@@ -114,6 +139,7 @@ gt_diff_image = (
         remote_path=str(REMOTE_BUILDER),
     )
     .add_local_python_source("modal_dali_av_gt_cache_diff")  # MODAL_ENTRYPOINT_SELF_MOUNT_OK:include_source=False
+    .env(CONTEST_CUDA_ENV)  # Catalog #244 -- DALI/nvdec refuses without DALI_DISABLE_NVML
 )
 
 
@@ -154,6 +180,15 @@ def build_and_diff() -> dict:
     if missing:
         raise RuntimeError(f"#906 mount incomplete: {missing}")
 
+    def _pack(path: Path) -> dict:
+        """xz a built cache so a leg's product survives a LATER leg's failure."""
+        raw = path.read_bytes()
+        return {
+            "xz": lzma.compress(raw, preset=6),
+            "sha256": _sha256_bytes(raw),
+            "bytes": len(raw),
+        }
+
     def _run(argv: list[str], label: str) -> dict:
         started = time.time()
         proc = subprocess.run(
@@ -161,6 +196,7 @@ def build_and_diff() -> dict:
             capture_output=True,
             text=True,
             cwd=str(REMOTE_WORK),
+            env={**os.environ, **CONTEST_CUDA_ENV},  # Catalog #244, explicit
         )
         return {
             "label": label,
@@ -192,34 +228,54 @@ def build_and_diff() -> dict:
         ],
         "dali_vs_av",
     )
-    if leg_dali["returncode"] != 0:
-        return {"status": "DALI_LEG_FAILED", "env": env_probe, "legs": [leg_av, leg_dali]}
-
+    # HARVEST OR LOSE: the AV leg's cache is a durable asset in its own right
+    # (it is the free third leg vs our local macOS-AV cache). The first run of
+    # this job returned early on DALI failure and threw away a successful
+    # 100.4s AV build. Never again -- ship whatever legs succeeded.
+    av_packed = _pack(av_cache)
     av_report_obj = json.loads(av_report.read_text())
-    dali_report_obj = json.loads(dali_report.read_text())
-
-    dali_bytes = dali_cache.read_bytes()
-    av_bytes = av_cache.read_bytes()
-    return {
-        "status": "OK",
+    partial = {
         "env": env_probe,
         "legs": [leg_av, leg_dali],
         "av_report": av_report_obj,
+        "av_cache_xz": av_packed["xz"],
+        "av_cache_sha256": av_packed["sha256"],
+        "av_cache_bytes": av_packed["bytes"],
+    }
+    if leg_dali["returncode"] != 0:
+        return {"status": "DALI_LEG_FAILED_AV_HARVESTED", **partial}
+
+    dali_packed = _pack(dali_cache)
+    return {
+        "status": "OK",
+        **partial,
         # THE HEADLINE lives in dali_report_obj["reference_seg_disagreement"] --
         # PR130's own field, argmax mismatch fraction, comparable to 2.8609e-4.
-        "dali_vs_av_report": dali_report_obj,
-        "dali_cache_xz": lzma.compress(dali_bytes, preset=6),
-        "dali_cache_sha256": _sha256_bytes(dali_bytes),
-        "dali_cache_bytes": len(dali_bytes),
-        "av_cache_xz": lzma.compress(av_bytes, preset=6),
-        "av_cache_sha256": _sha256_bytes(av_bytes),
-        "av_cache_bytes": len(av_bytes),
+        "dali_vs_av_report": json.loads(dali_report.read_text()),
+        "dali_cache_xz": dali_packed["xz"],
+        "dali_cache_sha256": dali_packed["sha256"],
+        "dali_cache_bytes": dali_packed["bytes"],
     }
 
 
 @app.local_entrypoint()
 def main(out_dir: str = "") -> None:
     """Fire the remote job and land its artifacts durably (SSD tier for the caches)."""
+    # FAIL-CLOSED LOCAL PARITY: our literals must equal the canonical Catalog #244
+    # values. Runs on the Mac (where `tac` imports); refuses BEFORE any spend.
+    from tac.deploy.modal import runtime as _canon
+
+    _expected = {
+        "DALI_DISABLE_NVML": _canon.DALI_DISABLE_NVML_VALUE,
+        "PYTORCH_CUDA_ALLOC_CONF": _canon.PYTORCH_CUDA_ALLOC_CONF_VALUE,
+        "CUBLAS_WORKSPACE_CONFIG": _canon.CUBLAS_WORKSPACE_CONFIG_VALUE,
+    }
+    if CONTEST_CUDA_ENV != _expected:
+        raise AssertionError(
+            "Catalog #244 env drift vs tac.deploy.modal.runtime: "
+            f"local={CONTEST_CUDA_ENV} canonical={_expected}"
+        )
+
     target = Path(out_dir) if out_dir else Path(
         "/Volumes/VertigoDataTier/pact/ddm_chroma_dali_av_20260809"
     )
@@ -231,9 +287,10 @@ def main(out_dir: str = "") -> None:
     summary = {k: v for k, v in result.items() if not k.endswith("_xz")}
     (target / "result_summary.json").write_text(json.dumps(summary, indent=2) + "\n")
 
-    if status == "OK":
-        for name in ("dali", "av"):
-            blob = result[f"{name}_cache_xz"]
+    # Land EVERY cache the run actually produced, whatever the status.
+    for name in ("dali", "av"):
+        blob = result.get(f"{name}_cache_xz")
+        if blob is not None:
             path = target / f"gt_cache_{name}.pt.xz"
             path.write_bytes(blob)
             print(json.dumps({
@@ -242,11 +299,13 @@ def main(out_dir: str = "") -> None:
                 "raw_bytes": result[f"{name}_cache_bytes"],
                 "raw_sha256": result[f"{name}_cache_sha256"],
             }), flush=True)
-        headline = result["dali_vs_av_report"].get("reference_seg_disagreement")
+    if status == "OK":
+        report = result["dali_vs_av_report"]
+        headline = report.get("reference_seg_disagreement")
         print(json.dumps({
             "HEADLINE_reference_seg_disagreement": headline,
-            "reference_pose_mse": result["dali_vs_av_report"].get("reference_pose_mse"),
-            "reference_pose_max_abs": result["dali_vs_av_report"].get("reference_pose_max_abs"),
+            "reference_pose_mse": report.get("reference_pose_mse"),
+            "reference_pose_max_abs": report.get("reference_pose_max_abs"),
             "vs_pr130_d_seg_2p8609e-4_ratio": (
                 (headline / 2.8609e-4) if isinstance(headline, (int, float)) else None
             ),
@@ -255,5 +314,6 @@ def main(out_dir: str = "") -> None:
             ),
         }, indent=2), flush=True)
     else:
+        # Partial or failed: the legs table names exactly which one died and why.
         print(json.dumps(summary, indent=2), flush=True)
     print(json.dumps({"summary_written": str(target / "result_summary.json")}), flush=True)
