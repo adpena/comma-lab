@@ -1,6 +1,6 @@
 # FX5 — Linux x86_64 wheel closure
 
-Generated: `2026-08-09T16:47:56Z`  
+Generated: `2026-08-09T16:56:49Z`
 Axis: `[byte-only scorer-free, macOS-CPU custody and dispatch-preflight]`  
 Authority boundary: no Linux container executed, no network wheel fetch occurred, no scorer ran,
 no contest score was measured, and the pointer did not move.
@@ -11,52 +11,40 @@ no contest score was measured, and the pointer did not move.
 different provider, seed a wheel cache, or claim PyPI metadata as execution. No FX5 lane claim,
 Modal call ID, provider spend, dependency target, or Linux output was created.
 
-The first refusal is the canonical #513 single-flight guard. This terminal local command ran with
-the repository venv's Modal CLI on `PATH`:
+The earlier FX5 attempt found three phantom-active #906 claims. MAIN subsequently appended exact
+`stale_superseded_by_r5` rows for all three job IDs. On this resumed attempt, the independent
+dual-ledger reconciler terminated `rc=0` and returned:
 
-```text
-PATH="$PWD/.venv/bin:$PATH" PYTHONPATH=src .venv/bin/python -c \
-  'from tac.deploy.modal.single_flight import assert_modal_single_flight; \
-   assert_modal_single_flight(label="ddm_fx5_linux_wheel_closure_20260809", \
-   lane_id="lane_ddm_fx5_linux_wheel_closure_20260809")'
+```json
+{
+  "live_modal_call_ids": [],
+  "active_modal_claims": [],
+  "problems": [],
+  "consistent": true
+}
 ```
 
-It terminated `rc=1`. Its governing refusal was:
+The canonical #513 guard's local-ledger check also returned `[]`: **0 conflicts / 0 findings**.
+Thus the prior single-flight refusal is falsified as a current blocker. It remains historical
+provenance in commit `8ee4157507`; it is not carried forward as the reason this attempt stopped.
 
-```text
-MODAL SINGLE-FLIGHT REFUSAL (operator binding 2026-07-15): a live Modal job /
-active claim already exists — HARVEST or close it first; never fire a second.
-```
-
-It named two active #906 claims: `ddm_chroma_dali_av_gt_diff/modal-t4-r3` and
-`lane_ddm_chroma_dali_av_gt_diff_20260809/dali_av_gt_diff_r2_20260809T013932Z`.
-The provider cross-check also timed out and was explicitly skipped by the guard.
-
-The independent dual-ledger reconciler terminated `rc=6` and reported **0 live call IDs / 3
-active Modal claims**. Its denominator is all three active claim rows it found:
-
-1. `ddm_chroma_dali_av_gt_diff/modal-t4-r3`, status `active_modal_t4`;
-2. `lane_ddm_chroma_dali_av_gt_diff_20260809/dali_av_gt_diff_r2_20260809T013932Z`, status `eval`;
-3. `lane_ddm_chroma_dali_av_gt_diff_20260809/pending_spawn_dali_av_gt_diff`, status `spawning`.
-
-Each lacked a live call-ID-ledger row. A later terminal #906 receipt exists and says the successful
-successor completed 600 / 600 AV and DALI pairs, but it does not assign a terminal outcome to each
-of these three exact job IDs. I therefore did not invent those outcomes or use the later receipt as
-an implicit terminal row.
-
-The second refusal is provider reachability. A direct terminal provider check:
+The current refusal is provider reachability plus the inseparable #381 cost-envelope gate. Two
+direct terminal provider checks ran from the repository venv:
 
 ```text
 /usr/bin/time -p .venv/bin/modal app list --json
+/usr/bin/time -p .venv/bin/modal billing report --start 2026-07-09 --json
 ```
 
-terminated `rc=1` after `56.56 s` with `Could not connect to the Modal server.` The billing query
-was likewise unable to return a report. Therefore neither live provider state nor remaining #381
-headroom could be proven. This is an `INSTANCE` blocker for this execution environment, not a claim
-that Modal or the Linux wheel is unavailable globally.
+The app query terminated `rc=1` after `56.57 s`; the billing query terminated `rc=1` after
+`56.59 s`. Both returned exactly `Could not connect to the Modal server.` Therefore live provider
+state and cumulative spend since task #381 began could not be proven. Without the billing report,
+the required `cumulative spend + proposed CPU ceiling <= $20` predicate is unknown and must refuse.
+This is an `INSTANCE` blocker for this execution environment, not a claim that Modal or the Linux
+wheel is unavailable globally.
 
 The background-output rule was satisfied: no remote call was spawned and no partial remote output
-was consumed. The two quoted preflight processes and the reconciler all reached terminal status.
+was consumed. Both provider checks and the local reconciler reached terminal status.
 
 ## Whole-job budget
 
@@ -117,23 +105,19 @@ No receiver code, intake file, upstream file, or numeric fallback changed in FX5
 
 ## Ranked residuals and falsifiers
 
-1. **Dual-ledger inconsistency — HIGH, `INSTANCE`.** Three exact active claim rows have no live
-   call-ID row, so #513 refuses. **Falsifier/cure:** recover the exact terminal evidence for each
-   named job ID, append terminal rows through `tools/claim_lane_dispatch.py`, and require
-   `tools/claim_lane_dispatch.py reconcile` to terminate `rc=0`.
-2. **Provider connectivity and #381 visibility — HIGH, `INSTANCE`.** The CLI could not reach Modal,
+1. **Provider connectivity and #381 visibility — HIGH, `INSTANCE`.** The CLI could not reach Modal,
    so live-app state and budget headroom are unknown. **Falsifier:** `modal app list --json` and a
    billing report both terminate `rc=0`, with no live conflicting app and proved cumulative spend
    plus the proposed CPU ceiling at or below `$20`.
-3. **Linux network wheel execution — HIGH, `INSTANCE`.** Still unmeasured. **Falsifier:** a clean
+2. **Linux network wheel execution — HIGH, `INSTANCE`.** Still unmeasured. **Falsifier:** a clean
    Linux x86_64 CPython 3.11 venv with `ENABLE_USER_SITE=False` and
    `find_spec('constriction') is None` fetches the pinned wheel over the network, verifies its hash,
    imports `RangeDecoder` and `Categorical`, imports the real receiver, prints
    `PR130_DEPENDENCY_READY`, and exits `rc=0`.
-4. **Current whole-job time — HIGH, `INSTANCE`.** No single-host Linux total exists.
+3. **Current whole-job time — HIGH, `INSTANCE`.** No single-host Linux total exists.
    **Falsifier:** one terminal contest-shaped job reports checkout, LFS, environment setup,
    dependency bootstrap, full inflate, and evaluator time inside the same 1,800-second frame.
-5. **Vendored-vs-declared winner — MEDIUM, `FORMULATION`.** No race ran. **Falsifier:** after item 3
+4. **Vendored-vs-declared winner — MEDIUM, `FORMULATION`.** No race ran. **Falsifier:** after item 2
    passes, run the same wheel bytes as declared-install and vendored extraction/import treatments,
    verify receiver/decode identity, and compare network, extraction, import, and decode time.
 
@@ -141,7 +125,8 @@ No receiver code, intake file, upstream file, or numeric fallback changed in FX5
 
 - Linux x86_64 wheel import and receiver execution: the governed remote path refused before spawn.
 - Network resolve, download, and install timing: no Linux process or wheel fetch occurred.
-- Provider single-flight truth: the provider API was unreachable; local ledgers are inconsistent.
+- Provider single-flight truth: the provider API was unreachable; local ledgers are consistent and
+  clear, but they cannot substitute for the live-provider surface.
 - Remaining #381 budget: the provider billing query returned no report.
 - Full n600 inflate and whole-job time: no remote process started, and this arm owns no scorer job.
 - Declared-vs-vendored timing: the Linux-pass prerequisite was false and no matching wheel was in
@@ -178,10 +163,10 @@ Beyond the charter seeds, recall found:
   clean-host execution rather than metadata.
 - The DAG also records `constriction` losing two real coder races on other payloads. Those results
   are payload-scoped and did **not** license skipping or prejudging this exact PR130 decoder race.
-- FX4 proved the later #906 computation terminal, while the dual-ledger audit showed its predecessor
-  job IDs remain active. That changed the plan from “dispatch” to “refuse and reconcile exact job
-  identities first”; silently assuming the successor closed every predecessor would recreate the
-  false-terminality bug the charter warns about.
+- FX4 proved the later #906 computation terminal. The earlier FX5 audit exposed three predecessor
+  job IDs without terminal rows; the resumed recall found exact `stale_superseded_by_r5` rows now
+  present and reconciliation green. That changed the current blocker from local single-flight to
+  provider/billing reachability, while preserving exact job identity rather than inferring closure.
 
 No relevant row was found in the memory registry or canonical research index for FX5/Linux-wheel
 execution. Those are scoped negatives for the queried stores, not global nonexistence claims.
@@ -189,8 +174,7 @@ execution. Those are scoped negatives for the queried stores, not global nonexis
 ## Follow-on dispositions
 
 - **QUEUED-WITH-A-FIRE-ORDER:** owner = MAIN / resumed FX5; consumer store = this memo, then the
-  canonical lane-claim and Modal call-ID ledgers; fire trigger = exact terminal evidence closes all
-  three named stale claims, dual-ledger reconciliation is `rc=0`, provider app and billing checks are
+  canonical lane-claim and Modal call-ID ledgers; fire trigger = provider app and billing checks are
   `rc=0`, no live Modal work exists, and cumulative #381 spend plus a short CPU ceiling is `<= $20`.
   Then claim `lane_ddm_fx5_linux_wheel_closure_20260809`, spawn one CPU-only CPython 3.11 job,
   immediately register its call ID, harvest to terminal status, and close both ledgers.
