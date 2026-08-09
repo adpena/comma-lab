@@ -25,6 +25,19 @@ Static FastViT/PoseNet module census in the current matching model implementatio
 
 ## Operator verdict
 
+| PP2 rows | Execution path | MPS status | Load-bearing source |
+|---|---|---|---|
+| 01, 04, 45-47, 50, 52, 59-60 | CPU setup, I/O, schedule, sampling, logging | host-only / device-agnostic | trainer lines 30-59, 230-244, 285-315, 400-463 |
+| 02-20, 48-49, 51, 54-57 | tensor factories, transfers, resize, STE, quantization, reductions, assembly, views, indexing | covered statically in current MPS | trainer lines 35-125, 237-266, 305-463; carrier/oracle lines cited per JSONL row |
+| 21-32, 58 | semantic renderer and frozen PoseNet/FastViT forward plus backward-to-input | covered statically in current MPS | `semantic_renderer_oracle.py:60-161`; `upstream/modules.py:28-80` |
+| 33 | direct safetensors load to MPS | **UNKNOWN** external loader; avoidable | trainer line 269 |
+| 34 | unconditional CUDA cache clear | **PORT REQUIRED** | trainer line 264 |
+| 35, 38-44 | dense parameter/autograd and optimizer primitives | covered statically in current MPS | trainer lines 270-290, 352-360 |
+| 36-37 | sparse embedding backward, COO access, row-local sparse optimizer ingress | **UNKNOWN** on exact PyTorch 2.10.0 | trainer lines 117-176, 276, 329, 354-358 |
+| 53 | complete autograd traversal | covered except for the named sparse leaf | trainer line 354 |
+
+The exact one-row-per-family record, including every call-site line, explicit forward/backward path, status, evidence, and settling probe, is `PP2_OPS.jsonl`.
+
 Dense operations are not the blocker. Bilinear and bicubic interpolation forward/backward, convolution, batch/group norm, linear/addmm, GELU, ReLU, adaptive average pool, `einsum`, reductions, indexing, `index_select`, `index_copy_`, and `index_add_` all have native or composite coverage in the inspected PyTorch 2.12.1 dispatcher. Basis Adam requests neither fused nor foreach execution, so MPS takes the ordinary single-tensor path. `clip_grad_norm_` also falls to its ordinary vector-norm path on MPS; this may be slower but is not statically unsupported.
 
 The three UNKNOWN rows are:

@@ -81,11 +81,11 @@
   "artifacts": [
     {
       "path": ".omx/research/ddm_pp2_20260809T121528Z/PP2_FINDINGS.md",
-      "sha256": "6dcc9da2e8da8951517d23ec346ae515e9d8a5e07b56790d9e3e2888f2bdc82e"
+      "sha256": "57f17964e6ee5743cb29b2f48d610e4758c8941ae5c700f8c0fa1ebc87346dfe"
     },
     {
       "path": ".omx/research/ddm_pp2_20260809T121528Z/PP2_OPS.jsonl",
-      "sha256": "95374227092aff0a675262d8369866de4d044ea2a68c8cebeeef5dcda9d859cd"
+      "sha256": "242e012dd7deb39bb97975a6a7d3aaf8f7fc675d433b50aa21bff41755b48806"
     },
     {
       "path": ".omx/research/ddm_pp2_20260809T121528Z/NEXT_IF_RESUMED.md",
