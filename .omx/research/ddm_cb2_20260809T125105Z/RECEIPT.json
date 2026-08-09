@@ -1,0 +1,136 @@
+{
+  "schema_version": 1,
+  "arm": "ddm_cb2",
+  "session_id": "89ff112f-013d-43b5-b949-2a6d43b650c3",
+  "created_at_utc": "2026-08-09T12:51:05Z",
+  "scope": "scorer-free, zero-dollar re-derivation of beat-PR130 composition on corrected Seg, Pose, rate, and GT-axis premises",
+  "status": "COMPLETE",
+  "verdict": "DERIVED_CANDIDATE_CROSSES_BUT_NO_AUTHORITY_CROSSING_PROVED",
+  "verdict_scope": "ARITHMETIC and byte custody only; no new scorer, evaluator, archive build, launch, dispatch, or promotion",
+  "git_head_at_start": "c591727f54f745a903402804de6fa863ea7ad0d6",
+  "charter": {
+    "path": "/private/tmp/claude-501/-Users-adpena-Projects-pact/89ff112f-013d-43b5-b949-2a6d43b650c3/scratchpad/ddm_cb2_charter.md",
+    "sha256": "d0956d65d30b7a532f8937fc7afec6d56664bb823b77c04409a4504c072ca004",
+    "read_in_full": true
+  },
+  "common_contract": {
+    "path": ".omx/tmp/codex_runs/_common_contract.md",
+    "sha256": "eeae9e0035582e6bdd65fd837e4aa35a65e064fd09900b9c212d41ac02086771",
+    "read_in_full": true
+  },
+  "governing_inputs": [
+    {"path": "CLAUDE.md", "sha256": "397c6abc84899018d73e5d73611d2b7ccc7bd55933d2b79d7ce5566b6550503b"},
+    {"path": "AGENTS.md", "sha256": "397c6abc84899018d73e5d73611d2b7ccc7bd55933d2b79d7ce5566b6550503b", "note": "byte-identical to CLAUDE.md"},
+    {"path": "PROGRAM.md", "sha256": "a6d5f79f3241ca1ae17b2587afd9940e1a4ea598804fd9efa152f2330e15db82"},
+    {"path": "docs/operating_manual_craft_handoff.md", "sha256": "40d157a039d4dd242bfb189d53e6b82abcc5d037adceb0a52c9bb2956903f212"},
+    {"path": ".omx/state/main_hot_state.md", "sha256": "bc5bc279d48acfdbf285ef560ea580e5c643630706f09810602b7698410bba2d"}
+  ],
+  "deliverables": [
+    {"path": ".omx/research/ddm_cb2_20260809T125105Z/CB2_FINDINGS.md", "sha256": "7dc42702252b579a6920c9db626aa4f0e3b6b46e8261463c0dd4a97c66b890a8"},
+    {"path": ".omx/research/ddm_cb2_20260809T125105Z/CB2_ROWS.jsonl", "sha256": "5d3bddbe1ec183bb1672516c887741744b92491c65487cb571137dfc8bd8a05e", "rows": 6},
+    {"path": ".omx/research/ddm_cb2_20260809T125105Z/NEXT_IF_RESUMED.md", "sha256": "290e4a9726659a9d08fb8c2a1f56485d0e7f9707a512361da22b8405651d5577"}
+  ],
+  "reference_evidence": [
+    {"path": ".omx/research/ddm_tq1_20260805/tq1c/RECEIPT.md", "sha256": "907a30206f324f611e34ee6ba007590529fd92e608e0ac66de3bbc54dac90e30", "role": "live own-vehicle baseline"},
+    {"path": ".omx/research/ddm_sg2_20260809T122848Z/SG2_FINDINGS.md", "sha256": "ee1e57da9c2afb31ca3064d4272e6e664d35a161a8964b1179fd2f38fb993505", "role": "complete 49-stage Seg mechanism audit"},
+    {"path": ".omx/research/ddm_sg2_20260809T122848Z/RECEIPT.json", "sha256": "041f4ebcc7133c7e1c7684034e964c46b33feb07dd068ac325f32b095db018b1", "role": "Seg payload and checkpoint custody"},
+    {"path": "/Volumes/VertigoDataTier/pact/ddm_pr130_quant_repro_20260809T124039Z/quantized_repro_receipt.json", "sha256": "78f39bf24f008cad7aed9fa8b31dc29e7e9ff3d90848c4ea795e89f5f029530b", "role": "final quantized renderer AV/DALI reproduction"},
+    {"path": ".omx/research/ddm_ax2_20260809T121456Z/AX2_FINDINGS.md", "sha256": "d7b2d791054cdd4a3310359ea851ee6dcbe99fea041c64ef9890f5a0d324dec6", "role": "GT-axis crosswalk and target rails"},
+    {"path": ".omx/research/ddm_ax2_20260809T121456Z/RECEIPT.json", "sha256": "96783a997daaa2bb3bce998226df927e8c28db5aa2a4f915da610819cf9b1565", "role": "axis census custody"},
+    {"path": "/Volumes/VertigoDataTier/pact/ddm_chroma_dali_av_20260809/result_summary.json", "sha256": "15f43860a2d0a32bd7191ee12f3f1f1308cf3345090a4ad1cf2f3bb67bc5aa2c", "role": "same-host AV/DALI upper bound"},
+    {"path": ".omx/research/ddm_pp2_20260809T121528Z/PP2_FINDINGS.md", "sha256": "57f17964e6ee5743cb29b2f48d610e4758c8941ae5c700f8c0fa1ebc87346dfe", "role": "pose portability and 3/60 unknown census"},
+    {"path": ".omx/research/ddm_pp2_20260809T121528Z/RECEIPT.json", "sha256": "c9d7567e3f38d174f5fee9dabf089fc016dfeeeac2b5d5fd1b8c550e7c0693c0", "role": "pose audit custody"},
+    {"path": ".omx/research/pr86_pr130_intake_20260728/anatomy_pr130.json", "sha256": "cae35b80e52fd2bbd415e2d9be621b665d3b8f91aed07422dc50485ba3401abd", "role": "CPR1 tuple and joint-compression anatomy"},
+    {"path": ".omx/research/ddm_op1r_20260809/OP1R_PATH.md", "sha256": "9aabf71819380bcd1dc2d872f66f1bc059446fe9a3d5fdbafa86e0c586c9b765", "role": "lossless XZ race and retained candidate"},
+    {"path": "upstream/evaluate.py", "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b", "role": "score formula and GT decoder selection; read-only"},
+    {"path": ".omx/state/canonical_equations_registry.jsonl", "sha256": "c7e3ff80543b751fa47a1fed74a6e5feddab51ce8540b0e272c5c10f98096a91", "role": "existing score marginal and gap equations"},
+    {"path": ".omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md", "sha256": "8f61f716b9d4652d6b8b1da88c664fe99644199b3378b00d8ce8f51dfe9424c4", "role": "DAG/FEED recall surface"}
+  ],
+  "byte_artifacts": {
+    "pr130_source_archive": {
+      "path": "/Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo/artifacts/final/archive.zip",
+      "bytes": 191052,
+      "sha256": "0491d5df84fc70b62b3f7ccf8894f5e1b81c616de46a052e4423fc1e18fdc7cd",
+      "unzip_test": "PASS"
+    },
+    "lossless_candidate": {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_op1r_20260809/rate_race/cpr1_xz_bt2_d12lc0lp1pb0_n192.zip",
+      "bytes": 191044,
+      "sha256": "dc302953ff1e7f6d09210fff80cf6981cd7a36fafbf4299770bff61abdc462bd",
+      "unzip_test": "PASS",
+      "exact_eval": false
+    }
+  },
+  "rederived_values": {
+    "formula": "100*d_seg + sqrt(10*d_pose) + 25*archive_bytes/37545489",
+    "tq1c": {"score_receipt": 0.7534578126155775, "d_seg": 0.004305419922, "d_pose": 0.000716508925, "bytes": 357837, "axis": "[macOS-CPU frozen-scorer advisory]"},
+    "pr130": {"score_recomputed": 0.17214129749189644, "d_seg": 0.0002966, "d_pose": 0.00002331, "bytes": 191052, "axis": "[contest-CUDA, DALI GT]"},
+    "gap": {"seg_S": 0.4008819922, "pose_S": 0.06937923742719972, "rate_S": 0.11105528549648135, "total_S": 0.5813165151236811},
+    "strict_rate_only_ceiling_bytes_at_pr130_distortions": 191051,
+    "lossless_candidate_derived_score": 0.17213597062027147,
+    "lossless_candidate_derived_margin_below_bar": 0.000005326871624977371,
+    "metal_renderer_dali_toy_bracket_score": 0.17105168459042076,
+    "metal_renderer_dali_toy_bracket": true,
+    "metal_renderer_dali_toy_headroom_S": 0.00108961290147569
+  },
+  "routing": {
+    "consumer_store": ".omx/state/probe_outcomes.jsonl",
+    "feeder_path": ".omx/research/ddm_cb2_20260809T125105Z/CB2_ROWS.jsonl",
+    "row_count": 6,
+    "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+    "fire_trigger": "the unrelated dirty shared-ledger writer releases the file and the index is verified not to contain foreign rows",
+    "shared_ledger_mutated_by_cb2": false,
+    "reason": "preserved unrelated dirty work and avoided absorbing sibling rows"
+  },
+  "## RECALL EVIDENCE": {
+    "search_scopes": [
+      ".omx/research content corpus and arm receipts",
+      "CANONICAL_RESEARCH_INDEX surfaces",
+      "sub015_DAG_* FEED blocks",
+      ".omx/state/main_hot_state.md and task/probe ledgers",
+      "canonical equations via tools/list_canonical_equations.py --json",
+      "read-only PR130 intake and upstream evaluator"
+    ],
+    "queries": ["PR130", "CPR1", "0.172141", "TQ1C", "66339", "40252", "joint LZMA", "quantized_exact_seg", "DALI", "AVVideoDataset", "pose carrier", "191044"],
+    "beyond_charter": [
+      "OP1R retained a 191044-byte exact-lossless candidate, changing the plan from equality-only arithmetic to an exact-replay handoff",
+      "the CPR1 bot tuple is 0.00029660/0.00002331/191052; the 0.00028609/0.00001967 values belong to the 194380-byte source object",
+      "MAP1-era raw-section split language is confounded by the joint XZ model bundle and was not reused",
+      "a prior ddm_cb2_20260806 directory belongs to unrelated task 983 and was not overwritten"
+    ],
+    "plan_change": "rank the existing 191044-byte candidate's exact DALI replay first; treat raw semantic and pose sizes as descriptive only; route the pose port after its sparse parity gate"
+  },
+  "follow_ons": [
+    {"action": "exact DALI replay of retained 191044-byte candidate", "disposition": "QUEUED-WITH-A-FIRE-ORDER", "owner": "MAIN #984 exact-eval/custody owner", "consumer_store": ".omx/state/probe_outcomes.jsonl", "fire_trigger": "pinned PR130 evaluator/runtime, claimed lane, verified receiver and candidate SHA"},
+    {"action": "pose sparse parity, full graph, and remaining-stage audit", "disposition": "QUEUED-WITH-A-FIRE-ORDER", "owner": "MAIN PR130 pose-port owner", "consumer_store": ".omx/state/probe_outcomes.jsonl", "fire_trigger": "exact DALI cache SHA and pinned runtime bound on real Metal"},
+    {"action": "whole-archive joint marginal after component mutation", "disposition": "QUEUED-WITH-A-FIRE-ORDER", "owner": "PR130 archive-compose/rate owner", "consumer_store": ".omx/state/probe_outcomes.jsonl", "fire_trigger": "any accepted semantic, carrier, or HPAC byte mutation"},
+    {"action": "repeat configured two-grid single-LZMA2 search on unchanged raw bundle", "disposition": "FOLDED", "owner": "PR130 archive-compose/rate owner", "consumer_store": ".omx/state/probe_outcomes.jsonl", "fire_trigger": null}
+  ],
+  "verification": {
+    "cb2_rows_jsonl_parse": "PASS; 6 rows",
+    "source_archive_unzip_tqq": "PASS",
+    "candidate_archive_unzip_tqq": "PASS",
+    "staged_index_before_edit": "EMPTY",
+    "protected_files_touched": false,
+    "python_files_changed": 0,
+    "review_tracker_required": false
+  },
+  "boundaries": {
+    "scorer_forward": false,
+    "evaluator": false,
+    "metal_execution": false,
+    "mps_execution": false,
+    "cuda_execution": false,
+    "trainer": false,
+    "archive_build": false,
+    "dispatch": false,
+    "launch": false,
+    "promotion": false,
+    "paid_compute_usd": 0,
+    "upstream_mutated": false,
+    "pr130_intake_mutated": false,
+    "score_claim": false,
+    "frontier_delta": 0.0
+  },
+  "own_vehicle_frontier": "S = 0.7534578126155775 @ 357,837 B [macOS-CPU advisory] n600"
+}
