@@ -81,10 +81,21 @@ overstated, not their existence.
   exact value is the **step-6 history mean over all 600 pairs** (`steps=4000`, `stop_after_step=6`,
   pair IDs 0–599; step-3 companion `2.3431171939591877e-05`), with a full-state checkpoint
   `…step000006.full_state.pt` (sha256 `abd09ca0…`, 362,405 B).
-  **My round-1 statement was a NEGATIVE-EXISTENCE CLAIM made from a non-exhaustive search** — I
-  searched the reproduce and pq1 custody dirs and a timed-out repo-wide grep, never
-  `ddm_pr130_train_20260809/`. The honest form was "did not find in <scope>," not "has no receipt."
-  (m53: negative-existence is our #1 false-claim class.)
+  **MECHANISM CORRECTED AGAIN (third pass on this one figure).** My first correction blamed a
+  non-exhaustive scope — *"never looked in `ddm_pr130_train_20260809/`."* **That was also wrong.**
+  The round-1 background search (task `bh2s037tu`) completed at exit 0 and returned **10 hits**,
+  including `…/ddm_pr130_train_20260809/reports/METAL_SMOKE_carrier.json` — the exact file — and
+  `.omx/research/ddm_pr130_reproduce_20260809/LOCAL_TRAINING_AUDIT.md`, **a doc in my own custody
+  directory for this very work.**
+  The search was correct and exhaustive over the right scope. **I read its output while it was still
+  running, saw an empty buffer, and converted "not yet printed" into "does not exist."** The harness
+  had told me the command was moved to the background; I consumed the partial file anyway and never
+  re-checked completion.
+  This is the **#50 vacuity genus, not m53's scope genus**: an unfinished search returning nothing is
+  indistinguishable from a finished search returning nothing *unless you check the completion state* —
+  the silent-instrument failure mode, where absence-of-output is read as output-of-absence.
+  **Structural cure (owed, sister landing):** never consume a background job's output without first
+  asserting terminal status; a partial read must be typed as INCOMPLETE, never as a negative result.
   **The withdrawal's SUBSTANCE stands**: it is a **6-step `[macOS-MPS advisory]`** training-history
   row produced by the **dense adapter**, not the owed 4,000-step result, not byte-closed, not exact,
   not score authority — and its JSON omits torch version, optimizer kind, git SHA, and argv, so it
