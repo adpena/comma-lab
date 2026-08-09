@@ -3,9 +3,7 @@
 
 from __future__ import annotations
 
-import lzma
 import math
-import struct
 import sys
 import time
 from pathlib import Path
@@ -15,13 +13,18 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
 from carrier_codec import MAGIC as COMPACT_CARRIER_MAGIC
 from carrier_codec import decode_compact_carrier
 from hpac_integer import IntegerHPAC
 from hpac_integer_sparse import SparseIntegerHPAC
 from integer_model_io import deserialize_integer_model
-
+from receiver import (
+    TokenCodec,
+    decode_models,
+    finish_token_decode,
+    new_token_decoder,
+    split_payload,
+)
 
 N = 600
 NUM_CLASSES = 5
@@ -557,10 +560,17 @@ def hierarchical_decode(decoder, families, table: np.ndarray):
 
 
 @torch.no_grad()
-def decode_tokens(model: IntegerHPAC, blob: bytes, device: torch.device):
-    if len(blob) % np.dtype("<u4").itemsize:
-        raise ValueError("HPAC token payload length is not a multiple of four")
-    decoder = constriction.stream.queue.RangeDecoder(np.frombuffer(blob, dtype="<u4"))
+def decode_tokens(
+    model: IntegerHPAC,
+    blob: bytes,
+    device: torch.device,
+    *,
+    token_codec: TokenCodec = "range",
+    frame_count: int = N,
+):
+    if not 1 <= frame_count <= N:
+        raise ValueError(f"frame_count must be in [1, {N}], got {frame_count}")
+    decoder = new_token_decoder(blob, token_codec)
     family = constriction.stream.model.Categorical(perfect=HPAC_CODER_PERFECT)
     hierarchical_families = (
         constriction.stream.model.Categorical(perfect=HPAC_CODER_PERFECT),
@@ -568,10 +578,10 @@ def decode_tokens(model: IntegerHPAC, blob: bytes, device: torch.device):
     )
     masks = group_masks(device)
     sparse = SparseIntegerHPAC(model, EVAL_H, EVAL_W)
-    tokens = torch.empty((N, EVAL_H, EVAL_W), dtype=torch.uint8)
+    tokens = torch.empty((frame_count, EVAL_H, EVAL_W), dtype=torch.uint8)
     previous_raw = torch.zeros((1, EVAL_H, EVAL_W), dtype=torch.long, device=device)
     started = time.time()
-    for frame in range(N):
+    for frame in range(frame_count):
         idx = torch.tensor([frame], dtype=torch.long, device=device)
         current = torch.zeros_like(previous_raw)
         context = model.prepare_frame_context(idx, previous_raw)
@@ -592,9 +602,11 @@ def decode_tokens(model: IntegerHPAC, blob: bytes, device: torch.device):
         tokens[frame].copy_(previous_raw[0].to(torch.uint8).cpu())
         if frame == 0 or (frame + 1) % 50 == 0:
             print(
-                f"decoded tokens {frame + 1}/{N} in {time.time() - started:.1f}s",
+                f"decoded tokens {frame + 1}/{frame_count} "
+                f"in {time.time() - started:.1f}s",
                 flush=True,
             )
+    finish_token_decode(decoder, token_codec)
     return tokens
 
 
@@ -668,15 +680,13 @@ def main():
     torch.backends.cudnn.allow_tf32 = False
     device = torch.device("cuda")
     payload = (data_dir / "p").read_bytes()
-    if len(payload) < 4:
-        raise ValueError("combined payload is truncated before the model length")
-    models_bytes = struct.unpack_from("<I", payload)[0]
-    if len(payload) <= 4 + models_bytes:
-        raise ValueError("combined payload is truncated")
-    models_raw = lzma.decompress(payload[4:4 + models_bytes])
+    parts = split_payload(payload)
+    decoded_models = decode_models(parts.models, model_codec=parts.model_codec)
+    models_raw = decoded_models.raw
     if len(models_raw) < 8:
         raise ValueError("model bundle is truncated before semantic-pose lengths")
-    semantic_bytes, carrier_bytes = struct.unpack_from("<II", models_raw)
+    semantic_bytes = int.from_bytes(models_raw[:4], byteorder="little")
+    carrier_bytes = int.from_bytes(models_raw[4:8], byteorder="little")
     semantic_pose_bytes = 8 + semantic_bytes + carrier_bytes
     if semantic_pose_bytes > len(models_raw):
         raise ValueError("semantic-pose lengths exceed the model bundle")
@@ -684,7 +694,12 @@ def main():
         models_raw[:semantic_pose_bytes]
     )
     hpac = load_hpac(models_raw[semantic_pose_bytes:], device)
-    tokens = decode_tokens(hpac, payload[4 + models_bytes:], device)
+    tokens = decode_tokens(
+        hpac,
+        parts.tokens,
+        device,
+        token_codec=parts.token_codec,
+    )
     del hpac
     torch.cuda.empty_cache()
     render_video(semantic, basis, coeff, tokens, destination, device)

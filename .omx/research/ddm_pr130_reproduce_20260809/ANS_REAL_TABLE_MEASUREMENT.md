@@ -1,8 +1,11 @@
-# The coder gap MEASURED on PR130's real conditional tables — ANS recovers 97% of it
+# The coder gap MEASURED on PR130's real conditional tables — n600 ANS recovers 99.61%
 
 `score_claim=false` · scorer-free · MEASURED on the real model + real AR-conditional probability
 tables, not a synthetic. Supersedes the synthetic projection in
 `CORRECTION_clean60_lost_and_the_coder_gap.md` §2 (which UNDER-predicted).
+
+Axis: `[macOS-MPS table materialization + macOS-CPU entropy coding, scorer-free]`.
+This is not contest score authority.
 
 ## Measurement
 
@@ -32,13 +35,14 @@ distribution I approximated them with, and the range coder's quantization penalt
 
 ## Composed arithmetic vs the PR130 base
 
-| step | Δ bytes | archive | S |
+| step | Δ bytes | derived archive bytes | derived S |
 |---|---:|---:|---:|
 | PR130 base | — | 191,052 | 0.172141297491896447 |
 | + split-stream brotli pack (MEASURED, parse-back exact) | −903 | 190,149 | 0.171540027 |
 | + ANS token coder (**MEASURED n600**) | **−2,120** | **188,029** | **0.170128405876608123** |
 
-**n600 UPGRADE 2026-08-09 — PROJECTED → MEASURED.** The full 600-frame re-encode landed
+**n600 UPGRADE 2026-08-09 — PROJECTED → MEASURED.** On the axis above, the full
+600-frame re-encode landed
 (rc=0, 681 s, receipt `ans_n600/ans_vs_range_n600_result.json`):
 
 ```
@@ -46,21 +50,21 @@ frames 600 · ideal_B 114,851.8 · range_B 116,980 · ans_B 114,860
 range overhead vs ideal +1.8530%  ·  ANS overhead vs ideal +0.0071%
 ```
 
-**FAITHFULNESS CONTROL PASSED EXACTLY:** the re-encoded range-coder stream is **116,980 B —
-byte-for-byte the shipped token stream**. Delta 0. The harness reproduces PR130's own encoder
-exactly, so both arms are measured on the SAME object, not on a reconstruction that resembles it.
-Without this equality the ANS number would be a comparison between my harness and their reality.
+**LENGTH CONTROL PASSED EXACTLY:** the re-encoded range-coder stream is **116,980 B**, the same
+length as the shipped token stream. The harness did not persist or hash either newly encoded word
+stream, so this is not byte-for-byte equality. Both arms nevertheless used the same real symbols,
+tables, and coder process; the measured claim here is their serialized lengths only.
 
-**Coder inefficiency recovered: 99.61%.** ANS sits +0.0071% over the model's own cross-entropy —
-the stream is now genuinely at its model's entropy, which is what RATE_AXIS §4's "no generic coder
-win exists" was measuring, and confirms the lever was the CODER, not the packing.
+**Coder inefficiency recovered: 99.61%.** ANS sits 8.2 B (+0.0071%) above the model's own
+cross-entropy. This near-entropy length is what RATE_AXIS §4's "no generic coder win exists" was
+measuring, and confirms the lever was the CODER, not the packing.
 
 The 60-frame projection (−2,080) was **1.9% low** vs the measured −2,120. Direction and magnitude
 both held; the small window was not misleading here.
 
-The two compose exactly — disjoint sections (model bundle vs token stream), no interaction term.
-Distortion unchanged on both: the model bundle reconstructs bit-identically, and ANS is a lossless
-re-coding of the identical symbol sequence under the identical model.
+The two byte deltas are disjoint-section arithmetic. The derived 188,029 B and score are not a
+materialized archive or evaluator row. Model reconstruction is bit-identical, and a real n2 ANS
+round-trip proves the causal lossless mechanism; n600 ANS words were not retained or decoded.
 
 ## OWED / NOT MEASURED
 
@@ -78,13 +82,16 @@ re-coding of the identical symbol sequence under the identical model.
    Two-landing cure: `tools/launch_detached_process.py` now refuses (rc=5) any argv matching the
    reaper predicate, with an executed positive control on this exact script. The rule previously
    existed only in a memory file, which is why it did not fire.
-2. **Receiver change OWED, both legs**: the 3-stream model parser AND an ANS (LIFO) token decoder.
-   Both are rule-118 FREE (generic decoder algorithm, zero counted bytes) but neither is built. The
-   intake copy is read-only; the change belongs in our own receiver.
+2. **Receiver change — CLOSED at TOY-BRACKET n2, not n600.** The owned receiver now has explicit
+   legacy/split-Brotli/split-raw-LZMA2 model dispatch plus Range/ANS dispatch. Durable tagged Range
+   archives preserve the measured ZIP sizes, and their model bundles reconstruct to SHA-256
+   `62dd72dfa0858a25ca32bdee1e536627a17883b6fc7efd7cd5b2de7b13b84517`. A pinned
+   constriction-0.5.0 real n2 run decoded 393,216/393,216 tokens exactly and exhausted the ANS
+   state in 2.683 s. This is explicitly not n600 receiver authority.
 3. **ANS encode-side memory**: encoding backwards requires the conditional tables materialized,
-   where the current encoder streams them. Corrected arithmetic: the tables are float64, so
-   600 × 196,608 × 5 × 8 B ≈ **4.7 GB** (not the 2.4 GB fp32 figure first written here), plus
-   ~0.47 GB of int32 symbols. Comfortable on a 128 GB host — the first attempt reached frame 300
-   (~2.6 GB) before an unrelated external SIGTERM (item 1). Engineering cost, not a correctness
-   blocker; the relaunched n600 run is measuring it.
+   where the current encoder streams them. `probability_table` returns float32, so the raw table
+   field is 2,359,296,000 B (2.197 GiB), plus 471,859,200 B of int32 symbols. The model first
+   quantizes logits to int16; spilling those exact codes would reduce the table field to
+   1,179,648,000 B. Reverse-chunk helpers are built and tested, but the resumable n600 materializer
+   and interrupted/resumed real-table proof remain owed.
 4. No archive built with ANS tokens; no `evaluate.py` row. `score_claim=false`.
