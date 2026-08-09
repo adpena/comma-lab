@@ -1,0 +1,142 @@
+{
+  "schema": "ddm_fx4_gt_provenance_manifest_v1",
+  "purpose": "Preserve target-cache identity per PR130 replay leg and fail closed before cross-leg metric comparison across different target axes.",
+  "immutable_intake": "/Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo",
+  "source_pins": {
+    "pr130_source_head": "e34f31bc4969042c0051ac81aa3c56884419a231",
+    "train_sh_sha256": "1d014518e55474e8f1be920e82a4f481ccae684aaa8e0f0bba86dbb92f7d425b",
+    "e2e_py_sha256": "f903193ac2eebcbde65dada7849fb1ebdba36b5264488e673a69118b361ddbf2",
+    "build_gt_cache_official_py_sha256": "a2c18da27eecdf94a236e7fc4284c262f2e3320458f7e077a33731b969c492b0",
+    "upstream_frame_utils_sha256": "d689aca7d263997cb2fb980d6098d503f955e56e8642cd0a04cc437f0ffdab90",
+    "upstream_evaluate_sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
+  },
+  "target_axes": {
+    "retained_semantic_av_like_8248a60d": {
+      "cache_sha256": "8248a60da56119eb4b3ad76bfa32f5498dee849eaf4b83b304275064141fd828",
+      "seg_raw_sha256": "36c6be718916de9b0a62fec0c1229c94e38f84c3313a1fad1357c9a24eef8b68",
+      "pose_raw_sha256": "6133af44619b5b7dcc33cc21a801a9599051e1b7192886d6d96525617877f344",
+      "decoder_classification": "AV_LIKE_BY_FULL_POPULATION_CONTENT",
+      "historical_producer_command_status": "UNRECOVERABLE_IN_PR130_INTAKE_GIT_AND_RESEARCH_CORPUS_SEARCHED_2026_08_09",
+      "color_conversion_classification": "CONSISTENT_WITH_AVVideoDataset_PYAV_YUV420_THEN_frame_utils_yuv420_to_rgb",
+      "claim_boundary": "The one-pixel n600 disagreement from the same-host AV cache strongly identifies content lineage but does not prove the exact historical invocation."
+    },
+    "retained_official_dali_382d7dfe": {
+      "cache_sha256": "382d7dfe38b37c0cc5017e5645032faa045af6924db66e0b67549cc96c840195",
+      "seg_raw_sha256": "c5c7671d037b6912980c57929a5b6d789d250ee6a93e3b0a6018cf9f63e32ece",
+      "pose_raw_sha256": "23ae28d20aee8697d87e015c1145b248c111bc3ce61b9b66793e770d65522b2a",
+      "decoder_classification": "DALI_FAMILY_BY_RETAINED_ROLE_CODE_AND_DEPLOYED_TOKEN_IDENTITY",
+      "historical_producer_command_status": "EXACT_SHELL_INVOCATION_AND_LOG_UNRECOVERABLE_IN_PR130_INTAKE_GIT_AND_RESEARCH_CORPUS_SEARCHED_2026_08_09",
+      "producer_implementation": "code/build_gt_cache_official.py",
+      "color_conversion_classification": "DaliVideoDataset_NVDEC_RGB_OUTPUT_NO_frame_utils_yuv420_to_rgb_CALL",
+      "claim_boundary": "The retained builder and cache role support DALI identity; the cache object contains no self-authenticating decoder metadata."
+    },
+    "strict_fresh_dali_dynamic": {
+      "cache_sha256": null,
+      "decoder_classification": "DALI_EXPLICIT_BY_GRAPH_COMMAND",
+      "producer_stage": "01_targets",
+      "producer_entrypoint": "code/build_gt_cache_official.py",
+      "producer_fixed_argv": [
+        "--batch-size",
+        "16",
+        "--num-threads",
+        "2",
+        "--prefetch-queue-depth",
+        "4",
+        "--dataset",
+        "dali"
+      ],
+      "producer_path_bindings": {
+        "--challenge-root": "Pipeline.challenge_root",
+        "--out": "Pipeline.target_cache",
+        "--report": "Pipeline.report_dir joined with 01_targets.json"
+      },
+      "color_conversion_classification": "DaliVideoDataset_NVDEC_RGB_OUTPUT_NO_frame_utils_yuv420_to_rgb_CALL",
+      "claim_boundary": "This is a fresh coherent DALI-for-all formulation, not the historical mixed-cache retained replay."
+    }
+  },
+  "retained_boundary_replay": {
+    "semantic": {
+      "source": "scripts/train.sh:101-118",
+      "target_axis_id": "retained_semantic_av_like_8248a60d"
+    },
+    "carrier": {
+      "source": "scripts/train.sh:121-156",
+      "target_axis_id": "retained_official_dali_382d7dfe"
+    },
+    "hpac": {
+      "source": "scripts/train.sh:169-202",
+      "target_axis_id": "retained_official_dali_382d7dfe"
+    },
+    "encode_tokens": {
+      "source": "scripts/train.sh:237-268",
+      "target_axis_id": "retained_official_dali_382d7dfe"
+    }
+  },
+  "strict_raw_video_e2e": {
+    "stage_count": 49,
+    "target_producer_count": 1,
+    "target_consumer_count": 41,
+    "target_axis_id": "strict_fresh_dali_dynamic",
+    "target_producer": "01_targets",
+    "target_consumers": [
+      "02_semantic_seed_b2",
+      "03_semantic_all600",
+      "04_semantic_exact_b2",
+      "06_semantic_train_b4",
+      "07_semantic_qat12k",
+      "08_semantic_tail6k",
+      "09_pose_pilot4",
+      "10_pose_pilot12",
+      "11_pose_joint_qat",
+      "12_pose_raw7500",
+      "13_pose_hard750",
+      "14_pose_resident",
+      "15_pose_uniform",
+      "16_pose_tail64",
+      "17_pose_cpu_coeff100",
+      "18_pose_search32",
+      "19_pose_search256",
+      "20_pose_cpu_fullqat",
+      "21_pose_retarget_coeff1000",
+      "22_pose_basis_adapt250",
+      "23_pose_basis_adapt3000",
+      "24_pose_final_cpu100",
+      "25_pose_official_coeff",
+      "26_pose_grid128x3",
+      "27_pose_grid64x12",
+      "28_pose_refine_pass1",
+      "29_pose_refine_pass2",
+      "30_pose_anchor",
+      "31_pose_int6_stable8k",
+      "32_pose_int6_coefftail4k",
+      "33_hpac_smoke",
+      "34_hpac_epoch60",
+      "35_hpac_raw_refine",
+      "36_hpac_spm",
+      "37_hpac_frame_scale",
+      "38_hpac_halfstep_migrate",
+      "39_hpac_halfstep_refine",
+      "40_hpac_patch64",
+      "41_hpac_selfcompress",
+      "43_tokens_encode",
+      "44_tokens_verify"
+    ],
+    "formulation": "DALI_FOR_ALL",
+    "historical_reproduction_claim": "REFUSE",
+    "historical_reproduction_refusal_reason": "The selected semantic tail used retained_semantic_av_like_8248a60d, not strict_fresh_dali_dynamic."
+  },
+  "comparison_policy": {
+    "rule": "REFUSE_CROSS_LEG_METRIC_COMPARISON_WHEN_TARGET_AXIS_ID_DIFFERS",
+    "guard": ".omx/research/ddm_pr130_reproduce_20260809/fx4_gt_provenance_guard.sh",
+    "allowed_same_axis_examples": [
+      ["carrier", "hpac"],
+      ["hpac", "encode_tokens"]
+    ],
+    "refused_cross_axis_examples": [
+      ["semantic", "carrier"],
+      ["semantic", "hpac"],
+      ["semantic", "encode_tokens"]
+    ],
+    "target_axis_studies": "Cache-to-cache target-axis studies are recorded separately as non-candidate measurements and are not cross-leg metric comparisons."
+  }
+}

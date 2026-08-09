@@ -1,0 +1,177 @@
+{
+  "schema": "ddm_fx4_gt_cache_lineage_receipt_v1",
+  "arm": "ddm_fx4",
+  "measured_at_utc": "2026-08-09T16:23:22Z",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "axis": "[macOS-CPU advisory] n600 full-population scorer-free target-cache comparison",
+  "selection": {
+    "mode": "all_600_pairs",
+    "pairs": 600,
+    "prefix": false,
+    "sampling_seed": null,
+    "rng_used": false,
+    "seg_sites": 117964800,
+    "pose_elements": 3600
+  },
+  "inputs": {
+    "retained_semantic_av_like": {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_pr130_train_20260809/caches/gt_cache_600.pt",
+      "bytes": 117981133,
+      "sha256": "8248a60da56119eb4b3ad76bfa32f5498dee849eaf4b83b304275064141fd828",
+      "seg_raw_sha256": "36c6be718916de9b0a62fec0c1229c94e38f84c3313a1fad1357c9a24eef8b68",
+      "pose_raw_sha256": "6133af44619b5b7dcc33cc21a801a9599051e1b7192886d6d96525617877f344"
+    },
+    "retained_official_dali": {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_pr130_train_20260809/caches/gt_cache_600_official_ada.pt",
+      "bytes": 117981301,
+      "sha256": "382d7dfe38b37c0cc5017e5645032faa045af6924db66e0b67549cc96c840195",
+      "seg_raw_sha256": "c5c7671d037b6912980c57929a5b6d789d250ee6a93e3b0a6018cf9f63e32ece",
+      "pose_raw_sha256": "23ae28d20aee8697d87e015c1145b248c111bc3ce61b9b66793e770d65522b2a"
+    },
+    "same_host_av": {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_chroma_dali_av_20260809/gt_cache_av.pt",
+      "bytes": 117980720,
+      "sha256": "837b5852dc71ded7ffd20f59f0e8192a4ce753fe1a7b36882ed8e09f211e1f99",
+      "seg_raw_sha256": "0bedc2524c58a2eac937af309afc1399834a46cb0a246296a10110921893ad22",
+      "pose_raw_sha256": "9729ec4bbbb8789171db915c10f4b348d2cb20152b6ce71cf0abf9d78d8e1a4a"
+    },
+    "same_host_dali": {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_chroma_dali_av_20260809/gt_cache_dali.pt",
+      "bytes": 117980732,
+      "sha256": "a91d98252fe377c51ff7f3380c2fc9d30d84093fc54ee89e5e5f5102e6354994",
+      "seg_raw_sha256": "44d3c7437401cc665a7f8166cf23f1d061f317e4db20f3c0d122b875a103bfa5",
+      "pose_raw_sha256": "1604be266a8f1e85786730f599212c49e6bdbf1a2c3ed29205c14d81122684a8"
+    }
+  },
+  "retained_av_like_vs_retained_official_dali": {
+    "seg": {
+      "flips": 20750,
+      "sites": 117964800,
+      "flip_fraction": 0.00017589992947048612,
+      "pairs_with_any_flip": 600,
+      "pair_denominator": 600,
+      "per_pair_flip_count": {
+        "min": 15,
+        "q25": 27.75,
+        "median": 33.0,
+        "mean": 34.583333333333336,
+        "q75": 40.0,
+        "max": 103
+      },
+      "by_av_like_class": [
+        {"class": 0, "sites": 27407045, "flips": 9144, "flip_fraction": 0.0003336368441034048},
+        {"class": 1, "sites": 690639, "flips": 2788, "flip_fraction": 0.004036841244123196},
+        {"class": 2, "sites": 58413281, "flips": 3820, "flip_fraction": 0.0000653960868933214},
+        {"class": 3, "sites": 1460325, "flips": 1735, "flip_fraction": 0.001188091691917895},
+        {"class": 4, "sites": 29993510, "flips": 3263, "flip_fraction": 0.00010879020161361574}
+      ],
+      "by_dali_class": [
+        {"class": 0, "sites": 27407369, "flips": 9468, "flip_fraction": 0.00034545453815723793},
+        {"class": 1, "sites": 690874, "flips": 3023, "flip_fraction": 0.004375616972125163},
+        {"class": 2, "sites": 58413418, "flips": 3957, "flip_fraction": 0.00006774128505885411},
+        {"class": 3, "sites": 1460279, "flips": 1689, "flip_fraction": 0.0011566282881558935},
+        {"class": 4, "sites": 29992860, "flips": 2613, "flip_fraction": 0.0000871207347348669}
+      ],
+      "transition_matrix_av_like_to_dali": [
+        [27397901, 2994, 2900, 649, 2601],
+        [2751, 687851, 16, 9, 12],
+        [2790, 5, 58409461, 1025, 0],
+        [685, 9, 1041, 1458590, 0],
+        [3242, 15, 0, 6, 29990247]
+      ]
+    },
+    "pose": {
+      "mse": 0.00014004340079290474,
+      "mae": 0.003892889264971018,
+      "max_abs": 0.09792327880859375,
+      "exact_unequal_elements": 3600,
+      "element_denominator": 3600,
+      "pairs_with_any_difference": 600,
+      "pair_denominator": 600,
+      "per_dim_mse": [
+        0.0008397918631574916,
+        2.509762424019596e-7,
+        1.7470552726054493e-7,
+        1.7144075373417187e-8,
+        3.783680909234348e-9,
+        2.193207399187972e-8
+      ],
+      "per_dim_max_abs": [
+        0.09792327880859375,
+        0.002016685903072357,
+        0.001634739339351654,
+        0.0006372109055519104,
+        0.00025013089179992676,
+        0.0007572323083877563
+      ]
+    },
+    "score_form_target_separation": {
+      "formula": "100*d_seg + sqrt(10*d_pose) + rate_delta",
+      "seg_term": 0.017589992947048612,
+      "pose_term": 0.03742237309323191,
+      "rate_term": 0.0,
+      "total": 0.05501236604028052,
+      "boundary": "This is the score-form separation between two target tensors. It is not a candidate score and is not a generally additive candidate penalty because candidate residuals can cancel and the pose term is nonlinear."
+    }
+  },
+  "lineage_cross_checks": {
+    "retained_av_like_vs_same_host_av": {
+      "seg_flips": 1,
+      "seg_sites": 117964800,
+      "seg_flip_fraction": 8.477105034722222e-9,
+      "pose_mse": 1.0483765967618982e-12,
+      "score_form_target_separation_total": 4.085574918116384e-6,
+      "interpretation": "Strong content evidence for AV-like identity; not proof of the unrecovered historical command."
+    },
+    "retained_official_dali_vs_same_host_dali": {
+      "seg_flips": 1644,
+      "seg_sites": 117964800,
+      "seg_flip_fraction": 0.000013936360677083333,
+      "pose_mse": 0.0000010652253518058493,
+      "score_form_target_separation_total": 0.004657415091793526,
+      "interpretation": "Both are DALI-family targets, but they are not interchangeable cache objects; hardware or runtime-version drift remains visible."
+    }
+  },
+  "same_host_906": {
+    "terminal_status_asserted": true,
+    "status": "OK",
+    "coverage": {"av_pairs": 600, "dali_pairs": 600, "expected_pairs": 600, "ok": true},
+    "hardware": "Tesla T4",
+    "torch_version": "2.5.1+cu124",
+    "receipt_reference_seg_disagreement_float32": 0.00017523023416288197,
+    "rederived_seg_flips": 20671,
+    "rederived_seg_sites": 117964800,
+    "rederived_exact_seg_disagreement": 0.00017523023817274304,
+    "receipt_reference_pose_mse_float32": 0.00014061325055081397,
+    "rederived_float64_pose_mse": 0.00014061324889363773,
+    "score_form_target_separation": {
+      "seg_term": 0.017523023817274306,
+      "pose_term": 0.03749843315308491,
+      "total": 0.05502145697035922
+    },
+    "receipt_path": "/Volumes/VertigoDataTier/pact/ddm_chroma_dali_av_20260809/result_summary.json",
+    "receipt_sha256": "15f43860a2d0a32bd7191ee12f3f1f1308cf3345090a4ad1cf2f3bb67bc5aa2c"
+  },
+  "fixed_renderer_axis_effect": {
+    "axis": "[macOS-Metal advisory], score_claim=false",
+    "av_d_seg": 0.0002764044867621528,
+    "dali_d_seg": 0.0002857038709852431,
+    "dali_minus_av_d_seg": 0.000009299384223090295,
+    "dali_minus_av_seg_score_term": 0.0009299384223090295,
+    "boundary": "Same selected quantized semantic renderer evaluated against the two retained targets; pose was not measured by this semantic-leg receipt."
+  },
+  "source_receipts": {
+    "op1r_reproduction_receipt": {
+      "path": ".omx/research/ddm_op1r_20260809/OP1R_REPRODUCTION_RECEIPT.json",
+      "sha256": "852286a65d91cec811f7fd1c07d8e8ec7a46c0e42ee65a077e5df8bc67062af6"
+    },
+    "op1r_measurements": {
+      "path": ".omx/research/ddm_op1r_20260809/OP1R_MEASUREMENTS.json",
+      "sha256": "074f926d3df5598d664a8e9163e4f5f90dcb1c8a6791a5d36c25d61906b1e06d"
+    },
+    "rr1_audit_commit": "ecfd4ec595",
+    "pr130_source_head": "e34f31bc4969042c0051ac81aa3c56884419a231"
+  },
+  "verdict_scope": "INSTANCE: the two retained PR130 cache objects and the completed same-host #906 decoder-isolation pair; no family-level decoder verdict and no candidate-score claim."
+}
