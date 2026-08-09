@@ -100,9 +100,15 @@ our suite is everywhere-optimal. This is a live update to #940.
 
 ## 5. What was NOT checked
 
-- **GT `lstars` is not PR130's decoded token field.** Same object class, same dimensions, same clip —
-  but their tokens are a *fitted* partition and ours is the oracle. The comparison is same-CLASS, not
-  same-INSTANCE. A same-instance race needs their tokens decoded, which needs CUDA (`inflate.py:665`).
+- **GT `lstars` is not PR130's decoded token field — but NOT for the reason first written here.**
+  ⚠ **CORRECTED 2026-08-09 (source-level; the original text was over-scoped).** The original claim was
+  "their tokens are a *fitted* partition and ours is the oracle." **That is WRONG.** Both are the
+  frozen SegNet's exact argmax — PR130's tokens are the oracle partition, same as ours. The real
+  difference is the **GT DECODER**: theirs is decoded by DALI/nvdec, ours by PyAV. That difference is
+  MEASURED (ADDENDUM2): Modal-DALI vs Modal-AV disagree on **20,671 px of 117,964,800 = 1.7523023e-04**,
+  which is 61.25% of PR130's entire seg term. So the comparison is same-CLASS-and-same-DEFINITION but
+  DIFFERENT-DECODER-INSTANCE. A same-instance race still needs their tokens decoded (CUDA,
+  `inflate.py:665`), but the expected delta is a decoder delta, not a fitted-vs-oracle delta.
 - **P=96 FAILED** for all four coders with `DDMR7CoderError`; cause not diagnosed. So the scaling ladder
   has two points, not three, for every coder except lzma.
 - The P=600 projection for our coders is DERIVED from lzma's slope, not measured.

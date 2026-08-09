@@ -14,6 +14,7 @@ import argparse
 import datetime as _dt
 import json
 import os
+import re
 import subprocess
 import sys
 import time
@@ -21,6 +22,22 @@ from pathlib import Path
 from typing import Any
 
 SCHEMA = "detached_local_process_launch.v1"
+
+# The fleet launchd agent ``com.vertigo.claude-code-reaper`` SIGTERMs any process
+# whose ``ps`` cmdline matches ``\b(claude|codex)\b`` when it has no TTY and
+# (PPID==1 or a dead stdin) and is older than 300s.  Correct detachment produces
+# exactly that orphan signature, so a matching argv dies silently at 300-360s with
+# a truncated log and no traceback -- indistinguishable from a hang.
+#
+# MEASURED instances: fz4/rt1/qj1 arms (335/337/337s, 2026-08-04); an n600 endpoint
+# probe launched through THIS tool from the session scratchpad (344s, 2026-08-05);
+# an n600 coder race from the same scratchpad (337s, 2026-08-09).  The last two
+# matched on the PATH, not the program: ``/private/tmp/claude-501/...`` contains
+# ``claude-501`` and the hyphen is a word boundary.
+#
+# ``codex_runs/`` is deliberately safe: ``_`` is a word character, so ``\bcodex\b``
+# does not match it.  That is the fleet-side keeper carve-out, not an accident.
+_REAPER_NAME_PREDICATE = re.compile(r"\b(claude|codex)\b")
 
 
 def _utc_now() -> str:
@@ -103,6 +120,17 @@ def parse_args() -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--allow-reaper-name-match",
+        action="store_true",
+        help=(
+            "Launch even though the child argv matches the fleet reaper's "
+            "\\b(claude|codex)\\b predicate. Only correct when the fleet carve-out "
+            "covers this cmdline (e.g. a path under codex_runs/ or a REAPER_KEEPALIVE "
+            "token). Otherwise the child dies silently at 300-360s. Recorded in the "
+            "manifest."
+        ),
+    )
+    parser.add_argument(
         "--dry-run",
         action="store_true",
         help="Write manifest without launching the child process.",
@@ -138,6 +166,33 @@ def main() -> int:
                       file=sys.stderr)
                 return 2
             break  # only the first script arg is the entry point
+    # Fail fast on the reaper's orphan predicate: a matching argv is SIGTERMed at
+    # 300-360s with no traceback and a truncated log, which reads as a hang.
+    # Refuse rather than mutate argv -- appending a keepalive token would change
+    # the child's own sys.argv and can break it.
+    reaper_hits = sorted(
+        {m.group(0) for part in args.cmd for m in _REAPER_NAME_PREDICATE.finditer(str(part))}
+    )
+    if reaper_hits and not args.allow_reaper_name_match:
+        print(
+            json.dumps(
+                {
+                    "error": "argv matches the fleet reaper predicate; child would be "
+                    "SIGTERMed at ~300-360s",
+                    "matched_tokens": reaper_hits,
+                    "matching_argv_parts": [
+                        str(p) for p in args.cmd if _REAPER_NAME_PREDICATE.search(str(p))
+                    ],
+                    "cure": "move the script and its output paths to a repo or SSD path "
+                    "(never the session scratchpad: /private/tmp/claude-NNN/... matches "
+                    "because the hyphen is a word boundary), then relaunch",
+                    "override": "--allow-reaper-name-match (only if the fleet carve-out "
+                    "covers this cmdline)",
+                }
+            ),
+            file=sys.stderr,
+        )
+        return 5
     out.mkdir(parents=True, exist_ok=True)
     env = os.environ.copy()
     env.update(dict(item.split("=", 1) for item in args.env))
@@ -157,6 +212,8 @@ def main() -> int:
         "log_path": log_path.as_posix(),
         "argv": [str(part) for part in args.cmd],
         "dry_run": bool(args.dry_run),
+        "reaper_predicate_hits": reaper_hits,
+        "reaper_name_match_allowed": bool(args.allow_reaper_name_match),
     }
     launch_argv = [str(part) for part in args.cmd]
     if args.done_receipt:

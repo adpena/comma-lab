@@ -44,13 +44,27 @@ re-coding of the identical symbol sequence under the identical model.
 
 ## OWED / NOT MEASURED
 
-1. **n600 ANS re-encode RUNNING** (pid 77736, log `ans_vs_range_n600.log`) — converts the −2,080
-   projection into a measurement. Until it lands, −2,080 is PROJECTED from a 60-frame window whose
-   overhead matches the full stream to 0.03pp, not measured at n600.
+1. **n600 ANS re-encode — first attempt KILLED, relaunched.** ⚠ **CORRECTED 2026-08-09.** The
+   original text here said "RUNNING (pid 77736)". That run **died at frame 300/600 (337 s)** with no
+   traceback and no final JSON. Cause DIAGNOSED and it was **not** the memory path: the fleet launchd
+   agent `com.vertigo.claude-code-reaper` SIGTERMs any no-TTY, PPID-1 process whose `ps` cmdline
+   matches `\b(claude|codex)\b` after 300 s, and the script was launched from the session scratchpad
+   `/private/tmp/claude-501/...` — `claude-501` matches because the hyphen is a word boundary. The
+   337 s death is inside the measured 300–360 s window and matches three banked receipts exactly
+   (fz4/rt1/qj1 at 335/337/337 s). Peak memory at frame 300 was ~2.6 GB on a 128 GB machine, so OOM
+   is excluded. Relaunched from the SSD (`ans_n600/`, no matching token in argv) through the canonical
+   detached launcher. Until it lands, **−2,080 stays PROJECTED** from a 60-frame window whose overhead
+   matches the full stream to 0.03pp — not measured at n600.
+   Two-landing cure: `tools/launch_detached_process.py` now refuses (rc=5) any argv matching the
+   reaper predicate, with an executed positive control on this exact script. The rule previously
+   existed only in a memory file, which is why it did not fire.
 2. **Receiver change OWED, both legs**: the 3-stream model parser AND an ANS (LIFO) token decoder.
    Both are rule-118 FREE (generic decoder algorithm, zero counted bytes) but neither is built. The
    intake copy is read-only; the change belongs in our own receiver.
-3. **ANS encode-side memory**: encoding backwards requires the conditional tables materialized
-   (117.9M × 5 ≈ 2.4 GB fp32) where the current encoder streams them. Engineering cost, not a
-   correctness blocker; the n600 run is testing exactly this.
+3. **ANS encode-side memory**: encoding backwards requires the conditional tables materialized,
+   where the current encoder streams them. Corrected arithmetic: the tables are float64, so
+   600 × 196,608 × 5 × 8 B ≈ **4.7 GB** (not the 2.4 GB fp32 figure first written here), plus
+   ~0.47 GB of int32 symbols. Comfortable on a 128 GB host — the first attempt reached frame 300
+   (~2.6 GB) before an unrelated external SIGTERM (item 1). Engineering cost, not a correctness
+   blocker; the relaunched n600 run is measuring it.
 4. No archive built with ANS tokens; no `evaluate.py` row. `score_claim=false`.
