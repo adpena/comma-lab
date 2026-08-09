@@ -491,6 +491,32 @@ RESEARCH_ORIGINAL_DESIGN_AUTHORITY = (
     "priced with a real coder, honesty-labeled, and borrowed-substrate-accounted."
 )
 
+#: Operator 2026-08-09 verbatim: "All sol ultra agents from here have full online research
+#: authority and full authority to leverage anything that we have anywhere in our code base or
+#: research documentation or anywhere. To use off the shelf or to adapt or refactor or extend or
+#: enhance or otherwise drive our own variant or original." RESEARCH_AUTHORITY already grants the
+#: EXTERNAL half and RESEARCH_ORIGINAL_DESIGN_AUTHORITY the ORIGINAL half; this is the INTERNAL
+#: half, and it is the one our measured pathologies live in — built-elsewhere-unwired (#864/#868),
+#: adoption decay (#936: a surface with 0 production callers), and arms re-deriving what the corpus
+#: already holds. Filing a debt row about our own unwired code is now the WRONG move when wiring it
+#: is in-authority. Memory: all_sol_ultra_full_internal_leverage_authority_standing_20260809.
+INTERNAL_LEVERAGE_AUTHORITY = (
+    "INTERNAL-LEVERAGE AUTHORITY (operator 2026-08-09 verbatim: \"full authority to leverage "
+    "anything that we have anywhere in our code base or research documentation or anywhere. To "
+    "use off the shelf or to adapt or refactor or extend or enhance or otherwise drive our own "
+    "variant or original\"): ANY surface we already own — shipped code, dead code, a built-but-"
+    "unwired module, a landed-but-unconsumed receipt, a worktree residue, a research memo, a "
+    "registry, an equation, a harness, a kernel — is yours to USE OFF THE SHELF, ADAPT, REFACTOR, "
+    "EXTEND, ENHANCE, or fork into our own variant. You do NOT need a per-arm grant, and you do "
+    "NOT file a debt row about our own unwired code when wiring it is the cheaper correct move. "
+    "Consult the corpus FIRST (tools/corpus_query.py) — re-deriving what we already measured is "
+    "the cardinal signal-loss sin. Guardrails, all unchanged: reuse is PROVENANCE-PINNED (cite "
+    "path + commit/sha of what you took); a reused number is re-measured on THIS object, never "
+    "inherited across vehicles or regimes; a refactor that touches a score-authority path proves "
+    "byte-identity or measures the delta; and the READ-ONLY surfaces stay read-only (pinned "
+    "upstream snapshot, public-PR intake clones, sister arms' landed artifacts are append-only)."
+)
+
 # --- Registry (consumed by tests + the preflight integrity gate) -----------------------------
 
 #: Every named contract constant this module guarantees. The preflight integrity gate
@@ -532,6 +558,7 @@ CONTRACT_CONSTANT_NAMES: tuple[str, ...] = (
     "CORRECT_OVER_EASY",
     "RETAINED_REASONING",
     "RESEARCH_ORIGINAL_DESIGN_AUTHORITY",
+    "INTERNAL_LEVERAGE_AUTHORITY",
     "CHECKPOINT_FINDINGS",
 )
 
@@ -586,6 +613,9 @@ KEY_PHRASES: dict[str, str] = {
     "RESEARCH_ORIGINAL_DESIGN_AUTHORITY": (
         "derive and engineer and iterate and optimize our own variants or original"
     ),
+    "INTERNAL_LEVERAGE_AUTHORITY": (
+        "use off the shelf or to adapt or refactor or extend or enhance"
+    ),
     "CHECKPOINT_FINDINGS": "every tools/subagent_checkpoint.py write carries at least one --finding",
 }
 
@@ -627,6 +657,7 @@ def standard_contract(*, review: bool = True, triality: bool = True) -> str:
         CONTENT_LINEAGE_CRUX,
         CORRECT_OVER_EASY,
         RESEARCH_ORIGINAL_DESIGN_AUTHORITY,
+        INTERNAL_LEVERAGE_AUTHORITY,
         RETAINED_REASONING,
         CHECKPOINT_FINDINGS,
         FRESH_CONTEXT_VERIFIER,

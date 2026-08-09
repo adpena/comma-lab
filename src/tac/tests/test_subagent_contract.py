@@ -105,7 +105,10 @@ def test_standard_contract_blocks_separated_by_blank_lines() -> None:
     # resume" and never "what did we learn", so four arms killed by a usage limit took
     # their findings with them. Asserted against the live composer, not a memory; update
     # it deliberately when you add a block, never reflexively.
-    assert composed.count("\n\n") == 29
+    # +1 on 2026-08-09 for INTERNAL_LEVERAGE_AUTHORITY — the operator's standing grant over our
+    # OWN codebase/docs (use off the shelf, adapt, refactor, extend, or fork to a variant); the
+    # INTERNAL sibling of RESEARCH_AUTHORITY (external) and RESEARCH_ORIGINAL_DESIGN_AUTHORITY.
+    assert composed.count("\n\n") == 30
 
 
 def test_review_only_names_are_subset_of_contract_names() -> None:

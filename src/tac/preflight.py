@@ -89717,6 +89717,11 @@ _SUBAGENT_CONTRACT_REQUIRED_CONSTANTS: tuple[str, ...] = (
     # #785, 2026-07-30). Hardcoded here per the same anti-self-waive design.
     "RETAINED_REASONING",
     "RESEARCH_ORIGINAL_DESIGN_AUTHORITY",
+    # Internal-leverage authority (operator 2026-08-09 — the INTERNAL half of the
+    # research/original pair: our own codebase, docs, and unwired modules are
+    # off-the-shelf usable, adaptable, refactorable, extendable). Hardcoded here
+    # per the same anti-self-waive design.
+    "INTERNAL_LEVERAGE_AUTHORITY",
 )
 _SUBAGENT_CONTRACT_REQUIRED_KEY_PHRASES: dict[str, str] = {
     "RESEARCH_AUTHORITY": "'$0 local' bounds spend only, never information",
