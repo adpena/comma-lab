@@ -1,0 +1,202 @@
+{
+  "schema": "ddm_rr3_hpac_shipping_receipt.v1",
+  "generated_at_utc": "2026-08-09T15:07:42Z",
+  "axis": "[byte-only scorer-free, macOS CPU]",
+  "authority": {
+    "contest_score_measured": false,
+    "cuda_used": false,
+    "metal_or_mps_used": false,
+    "scorer_slot_used": false,
+    "pointer_moved": false
+  },
+  "provenance": {
+    "pact_head_at_audit_start": "3856788c96dd01d38f2d8db9da27146656511935",
+    "intake_root": "/Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo",
+    "intake_head": "e34f31bc4969042c0051ac81aa3c56884419a231",
+    "canonical_archive_bytes": 191052,
+    "canonical_archive_sha256": "0491d5df84fc70b62b3f7ccf8894f5e1b81c616de46a052e4423fc1e18fdc7cd"
+  },
+  "storage_preflight": {
+    "requested_bytes": 268435456,
+    "selected_tier": "vertigo",
+    "selected_workload_root": "/Volumes/VertigoDataTier/pact/ddm_rr3_hpac_shipping_20260809",
+    "free_bytes_at_preflight": 86309560320,
+    "blockers": [],
+    "plan_path": "/Volumes/VertigoDataTier/pact/ddm_rr3_hpac_shipping_20260809_storage_plan.json",
+    "plan_sha256": "12a90a8e70df047aa0ff2e80c8c8babe1ffb98c76b44d3cff725b3f9978731fb"
+  },
+  "cleanup": {
+    "action": "deleted success-only scratch venv and empty decode-output directory",
+    "reason": "the venv is deterministically rebuildable from the recorded command and the result is certified in this receipt",
+    "selected_workload_root_exists_after_cleanup": false,
+    "storage_plan_retained": true
+  },
+  "git_custody": {
+    "primary_checkout_serializer_return_code": 128,
+    "primary_checkout_error": "unable to create temporary file: Operation not permitted; failed to insert into database",
+    "primary_checkout_index_remained_empty": true,
+    "fallback_kind": "isolated writable shared-object clone from the exact clean HEAD commit",
+    "fallback_root": "/Volumes/VertigoDataTier/pact/ddm_rr3_hpac_shipping_commit_20260809",
+    "fallback_branch": "rr3_hpac_shipping_audit",
+    "fallback_base_head": "3856788c96dd01d38f2d8db9da27146656511935",
+    "fallback_precommit_porcelain": [
+      "?? .omx/research/ddm_pr130_reproduce_20260809/RR3_HPAC_SHIPPING_AUDIT.md",
+      "?? .omx/research/ddm_pr130_reproduce_20260809/RR3_HPAC_SHIPPING_RECEIPT.json"
+    ],
+    "fallback_precommit_staged_path_count": 0
+  },
+  "dependency_closure": {
+    "decode_import": "code/inflate.py:13 imports constriction unconditionally",
+    "decode_uses": [
+      "code/inflate.py:563 constructs constriction.stream.queue.RangeDecoder",
+      "code/inflate.py:564-568 constructs constriction categorical models"
+    ],
+    "shipped_inflate_self_install": false,
+    "reproduction_repo_files_searched": 68,
+    "reproduction_repo_dependency_manifest_found": false,
+    "pr130_commit_changed_path_count": 13,
+    "pr130_commit_dependency_path_count": 0,
+    "current_upstream_runtime_dependency_count": 11,
+    "current_upstream_declares_constriction": false,
+    "current_workflow_timeout_minutes_whole_job": 30,
+    "current_rate_denominator_definition": "sum(file.stat().st_size for file in uncompressed_dir.rglob('*') if file.is_file())",
+    "bare_venv": {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rr3_hpac_shipping_20260809/bare_venv",
+      "python": "3.14.6",
+      "installed_packages": {
+        "pip": "26.1.2"
+      },
+      "site_enable_user_site": false,
+      "constriction_find_spec": null,
+      "command": "PATH=<bare_venv>/bin:/usr/bin:/bin /usr/bin/time -p bash <intake>/code/inflate.sh <missing_archive> <output> upstream/public_test_video_names.txt",
+      "return_code": 1,
+      "elapsed_seconds": 0.03,
+      "failure": "ModuleNotFoundError: No module named 'constriction'",
+      "scope": "clean empty-venv decode-entrypoint dependency smoke; the deliberately absent archive is never reached because the unconditional import fails first"
+    },
+    "historical_positive_evidence": {
+      "official_pr_eval_completed_n600": true,
+      "retained_source_full_gpu_runs_with_constriction_0_4_2": 2,
+      "independent_rtx5070_full_wrapper_seconds_with_constriction_0_5_0": 142.098,
+      "interpretation": "decoder compatibility and historical total-runtime feasibility when constriction is externally present; not proof of current declared or self-installing dependency closure"
+    },
+    "verdict_scope": "current reproduced PR130 submission tree plus current upstream evaluator dependency tree"
+  },
+  "integer_exactness": {
+    "float32_exact_integer_limit_exclusive": 16777216,
+    "constructor_guard_value": 1065024,
+    "constructor_guard_direct_scope": "64-channel 1x1 head accumulator plus maximum bias",
+    "canonical_affine_absolute_bounds": {
+      "frame_shift_or_scale_8_terms": 161800,
+      "conv_a_7_inputs_x_23_mask_sites": 2629537,
+      "conv_b1_14_mask_sites": 258574,
+      "conv_b2_5_mask_sites": 113413,
+      "conv_past_5_inputs_x_9_sites": 758573,
+      "spm_depthwise_9_sites": 177929,
+      "spm_pointwise_64_terms": 1065024,
+      "head_64_terms": 1065024
+    },
+    "canonical_affine_sites_checked": 9,
+    "canonical_affine_sites_below_float32_limit": 9,
+    "verdict": "canonical configuration is bounded below 2^24, but the constructor guard alone is not a whole-topology proof"
+  },
+  "wavefront": {
+    "patch": 64,
+    "delta": 2,
+    "group_count": 190,
+    "expected_group_count": 190,
+    "pixels_per_frame": 196608,
+    "pixels_covered_exactly_once": 196608,
+    "coverage_min": 1,
+    "coverage_max": 1,
+    "group_size_min": 48,
+    "group_size_max": 1536,
+    "group_size_sum": 196608,
+    "mask_A_7_nonzero": 23,
+    "mask_B_5_nonzero": 14,
+    "mask_B_3_nonzero": 5
+  },
+  "probability_lattice": {
+    "quantization_step": 0.125,
+    "supplemental_toy_bracket_output_values": 20480,
+    "supplemental_toy_bracket_frame_index": 317,
+    "max_distance_from_one_eighth_lattice": 0.0,
+    "scope": "source-code proof plus one 64x64 mechanism check; not an n600 verdict"
+  },
+  "canonical_hpac_blob_roundtrip": {
+    "blob_path": "/Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo/artifacts/hpac/hpac_selfcompress_l1_fastbits_e60.bin.xz",
+    "checkpoint_path": "/Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo/artifacts/checkpoints/hpac_selfcompress_l1_fastbits_e60.pt",
+    "blob_bytes": 15164,
+    "blob_sha256": "ef8bb9d59bdd3916fb77713c11cdcb85e029f01d80b82472a40ab28f7e56a9ee",
+    "raw_bytes": 20179,
+    "raw_sha256": "b07fff73fac41c5fec2d8acbfd7c43c518852696f18d95cf7465fc6ed7510b58",
+    "magic": "IHS1",
+    "compressible_module_count": 9,
+    "output_channel_descriptor_count": 517,
+    "metadata_bytes": 259,
+    "bit_depth_histogram": {
+      "0": 6,
+      "1": 2,
+      "2": 7,
+      "3": 11,
+      "4": 38,
+      "5": 59,
+      "6": 110,
+      "7": 275,
+      "8": 9
+    },
+    "checkpoint_reserializes_raw_exact": true,
+    "pinned_lzma_recompresses_blob_exact": true,
+    "packer_runtime_state_equal": true,
+    "state_tensor_denominator": 28,
+    "state_tensors_equal": 28,
+    "supplemental_inference_batch_indices": [
+      0,
+      599
+    ],
+    "checkpoint_to_packer_max_logit_diff": 0.0,
+    "checkpoint_to_runtime_max_logit_diff": 0.0
+  },
+  "canonical_codec_receipt_search": {
+    "roots": [
+      {
+        "path": "/Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo",
+        "file_count": 68
+      },
+      {
+        "path": ".omx/research/ddm_pr130_reproduce_20260809",
+        "file_count_before_rr3_deliverables": 8
+      }
+    ],
+    "encode_logit_hash": "33fd711b305efb12ab9f7363c1404229996b79b8e27896f20ed910e98f105f75",
+    "canonical_decode_logit_hash_receipt_found": false,
+    "retained_full_cpu_decode_raw_token_sha256": "c5c7671d037b6912980c57929a5b6d789d250ee6a93e3b0a6018cf9f63e32ece",
+    "retained_full_cpu_decode_seconds": 2197.6,
+    "verdict_scope": "the two enumerated roots; source fields named logit_hash_decode are capabilities, not completed canonical receipts"
+  },
+  "zip_surface": {
+    "member_count": 1,
+    "member_name": "p",
+    "member_order": [
+      "p"
+    ],
+    "compression": "ZIP_STORED",
+    "member_bytes": 190952,
+    "member_sha256": "fcc6a3c242106350077d3c328a2c07c8994c86d19b1a361f8507917de6ba3d84",
+    "timestamp": [
+      1980,
+      1,
+      1,
+      0,
+      0,
+      0
+    ],
+    "create_system": 3,
+    "create_version": 20,
+    "extract_version": 20,
+    "flag_bits": 0,
+    "external_attr": 2175008768,
+    "allow_zip64": false,
+    "filesystem_iteration_used": false
+  }
+}
