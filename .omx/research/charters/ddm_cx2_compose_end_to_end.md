@@ -46,6 +46,38 @@ already taken.
 - Composed arithmetic to date: 191,052 → **188,029 B**, derived S **0.170128405876608123**.
   That is **−0.002013 S**. Sub-0.15 needs −0.0221. **We are 9% of the way, on arithmetic, unbuilt.**
 
+**LANDED AFTER THIS CHARTER WAS WRITTEN — `ddm_sd1_semantic` (600af8ef7d), the first semantic win:**
+PR130's uniform q4 is optimal among UNIFORM post-hoc q3/q4/q5, but NOT within mixed-bit.
+
+| allocation | archive B | d_seg n600 | ΔS_sem |
+|---|---:|---:|---:|
+| uniform q4 (shipped) | 191,052 | 0.000286161635 | 0 |
+| uniform q3 | 184,828 | 0.016552073161 | +1.622446846491 |
+| uniform q5 | 202,324 | 0.001315884060 | +0.110477804687 |
+| **4 tensors q3 + 12 q4** | **190,204** | 0.000287568834 | **−0.000423928449** |
+
+The four are `frame_embed.weight` + `blocks.{1,2,3}.film.weight`. Real counted archive at
+`/Volumes/VertigoDataTier/pact/ddm_sd1_semantic_20260809/cpu_screen/archives/selected_mixed_n600.zip`,
+sha256 `010a8a5273ae87595191ffc03447fa36e61978ae9f827c2def46dea7075dfa67`. Independent double-build
+equality, unchanged carrier/HPAC/tokens, exact parse-back of all 38 tensors, all 32 single-tensor
+cells on seeded stratified n120.
+
+**TWO BLOCKERS you must respect, not route around:**
+1. Its `SD1M` format is NOT public-receiver-readable — current public decode is int4-only. Composing
+   it requires a counted semantic-allocation schema in the receiver plus a proven legacy-q4 identity.
+   The allocation header costs 14 B; that is in the budget, not free.
+2. **Pose was NOT measured.** sd1 explicitly closed "assume pose invariance" as a dead end, because
+   PoseNet directly consumes the changed semantic frame. Sparse Seg changes do not prove continuous
+   PoseNet stability. Any composition carrying this MUST measure pose, or carry it as unpriced.
+
+Also from sd1, and binding on your composition: **summing marginal tensor deltas is CLOSED** — the
+strongest pair carried a measured −0.0000731437 interaction cross-term. Joint replay was essential.
+And analytical raw-parameter-byte estimates are CLOSED: actual archive deltas were −6,224 and
++11,272 B against them.
+
+**UPDATED composed arithmetic** (still arithmetic, still unbuilt): 191,052 − 903 − 2,120 − 848 =
+**187,181 B**, ΔS ≈ **−0.002437**. Sub-0.15 needs −0.0221. Roughly 11% of the way.
+
 **AXES MEASURED SHUT — do not re-open without new mechanism:**
 - **Coder axis, ALL FOUR sections** (`SEMANTIC_SECTION_NO_MEMORYLESS_SLACK.md`): semantic is 1,772 B
   BELOW its memoryless bound under brotli, hpac 1,605 B below, pose 0.28% above its own Huffman
