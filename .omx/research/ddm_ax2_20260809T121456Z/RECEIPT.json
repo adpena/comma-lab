@@ -1,0 +1,71 @@
+{
+  "schema": "ddm_ax2_axis_reconciliation_receipt.v1",
+  "generated_at_utc": "2026-08-09T12:14:56Z",
+  "git_head_at_start": "5ceb33d612391a353eb4536bccfe15523f0592e6",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "pointer_moved": false,
+  "scope": {
+    "mode": "scorer_free_source_and_receipt_reconciliation",
+    "forbidden_actions_not_taken": [
+      "scorer_call",
+      "eval",
+      "dispatch",
+      "launch",
+      "archive_build",
+      "promotion",
+      "upstream_edit",
+      "pr130_intake_edit",
+      "shared_probe_ledger_edit"
+    ]
+  },
+  "source_custody": [
+    {"path": "upstream/evaluate.py", "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b", "lines": "21-42,58-69"},
+    {"path": "upstream/.github/workflows/eval.yml", "sha256": "8a6cd6300b51a44f36b49774bc0c6100dbb37ef8290d42bf8e584f1dceddce56", "lines": "18-33,87-89"},
+    {"path": "upstream/README.md", "sha256": "68ea239d7333696e79716e47a9c4288d2918efbcd8912f78932b0befe0af872b", "lines": "108-121"},
+    {"path": "/Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/pr130_comments.txt", "sha256": "50566d66327da43a274802420bcbf5855ddc51a1624ccd6276e36cbd1595440e", "lines": "54-73", "read_only": true},
+    {"path": "/Volumes/VertigoDataTier/pact/ddm_chroma_dali_av_20260809/result_summary.json", "sha256": "15f43860a2d0a32bd7191ee12f3f1f1308cf3345090a4ad1cf2f3bb67bc5aa2c"},
+    {"path": ".omx/state/probe_outcomes.jsonl", "sha256": "f8be1693495fa012e9f499d0db02b910f54aa7e3e0743676ea81c15380754565", "sha256_scope": "prefix_first_675_lines", "physical_rows_in_prefix": 675, "latest_live_rows_in_prefix": 383, "latest_score_name_rows_in_prefix": 35, "selected_whole_s_rows_in_prefix": 18},
+    {"path": ".omx/state/canonical_frontier_pointer.json", "sha256": "7898ea668e18e2c95ffc5dca7f08056207f340fba05312bef837d85d0f0d6eec"},
+    {"path": "experiments/auth_eval_renderer.py", "sha256": "41b61b8d6cd5f851fbcdee04d4a55bbf606157573460f21fc8ed224586716bae", "lines": "91-141,544-596,810-824"}
+  ],
+  "conclusions": {
+    "official_ranking_axis": "MIXED: CPU/AV for ubuntu-latest, CUDA/DALI for linux-nvidia-t4; public leaderboard ranks both",
+    "pr130_gt_decoder": "DALI",
+    "pr130_device": "cuda",
+    "pr130_recomputed_score_from_published_rounded_components": 0.17214129749189644,
+    "fixed_archive_decoder_swap_score_movement_upper_bound": 0.055021456790339165,
+    "bound_semantics": "triangle-inequality upper bound, not measured score delta, not score, not loss, not recoverable score",
+    "same_axis_dali_target_strictly_below": 0.17214129749189644,
+    "cross_axis_av_robust_target_strictly_below": 0.11711984070155727,
+    "campaign_shorthand_cross_axis_target_strictly_below": 0.11712024320966084,
+    "banked_rows": {"selected": 53, "av": 42, "dali": 4, "unknown_with_reason": 7, "resolved": 46, "mismatched_to_pr130_dali": 42, "mismatch_fraction_of_resolved": 0.9130434782608695},
+    "reciprocal_confound": "experiments/auth_eval_renderer.py hard-codes AV GT but derives contest_cuda label from CUDA scorer device",
+    "later_vehicle_specific_research_signal": {"axis": "[macOS-MPS realization-fidelity, NOT contest authority]", "seg_only_realized_swap_s": 0.00034077962239584866, "pose_realized_swap": "UNKNOWN", "effect_on_ax2_target": "does not tighten the total bound; reinforces direct DALI comparison"}
+  },
+  "measurement_routes": [
+    {"field": "coverage", "value": {"av_pairs": 600, "dali_pairs": 600, "expected_pairs": 600, "ok": true}, "downstream_consumer": "AX2 population-completeness gate", "consumer_store": ".omx/research/ddm_ax2_20260809T121456Z/RECEIPT.json#/measurement_routes", "disposition": "FIRED"},
+    {"field": "environment", "value": {"cuda_available": true, "torch_version": "2.5.1+cu124", "device_name": "Tesla T4", "modal_app": "ap-J9gb8djZEQT4Sqi8PdBIJP"}, "downstream_consumer": "decoder-cache provenance and reproducibility custody", "consumer_store": ".omx/research/ddm_ax2_20260809T121456Z/RECEIPT.json#/measurement_routes", "disposition": "FIRED"},
+    {"field": "decode_elapsed_seconds", "value": {"av": 98.03059697151184, "dali": 10.639149904251099, "av_over_dali": 9.214138145787535}, "downstream_consumer": "future GT-cache materializer wall-clock planner", "consumer_store": ".omx/research/ddm_ax2_20260809T121456Z/RECEIPT.json#/measurement_routes", "disposition": "FIRED"},
+    {"field": "cache_custody", "value": {"av": {"bytes": 117980720, "sha256": "837b5852dc71ded7ffd20f59f0e8192a4ce753fe1a7b36882ed8e09f211e1f99"}, "dali": {"bytes": 117980732, "sha256": "a91d98252fe377c51ff7f3380c2fc9d30d84093fc54ee89e5e5f5102e6354994"}, "authority": "neither; hosted evaluator rebuilds GT"}, "downstream_consumer": "#984 target-cache selector and hash guard", "consumer_store": ".omx/research/ddm_ax2_20260809T121456Z/RECEIPT.json#/measurement_routes", "disposition": "FIRED"},
+    {"field": "pose_min_av", "value": [23.26153564453125, -0.1319098025560379, -0.09612443298101425, -0.03346703201532364, -0.02672836184501648, -0.06824126839637756], "downstream_consumer": "pose-target range guard", "consumer_store": ".omx/research/ddm_ax2_20260809T121456Z/RECEIPT.json#/measurement_routes", "disposition": "FIRED"},
+    {"field": "pose_max_av", "value": [35.054019927978516, 0.07278881967067719, 0.06578008830547333, 0.03556717187166214, 0.03622007369995117, 0.05464202165603638], "downstream_consumer": "pose-target range guard", "consumer_store": ".omx/research/ddm_ax2_20260809T121456Z/RECEIPT.json#/measurement_routes", "disposition": "FIRED"},
+    {"field": "pose_min_dali", "value": [23.249534606933594, -0.13131144642829895, -0.09583737701177597, -0.03335803002119064, -0.026679255068302155, -0.06812694668769836], "downstream_consumer": "pose-target range guard", "consumer_store": ".omx/research/ddm_ax2_20260809T121456Z/RECEIPT.json#/measurement_routes", "disposition": "FIRED"},
+    {"field": "pose_max_dali", "value": [35.07977294921875, 0.07286320626735687, 0.0662430003285408, 0.03515049070119858, 0.036039166152477264, 0.05455085635185242], "downstream_consumer": "pose-target range guard", "consumer_store": ".omx/research/ddm_ax2_20260809T121456Z/RECEIPT.json#/measurement_routes", "disposition": "FIRED"},
+    {"field": "seg_disagreement", "value": 0.00017523023416288197, "downstream_consumer": "#984 axis-margin gate and per-class decoder-sensitivity consumer", "consumer_store": ".omx/state/probe_outcomes.jsonl:667 and this receipt", "disposition": "FIRED"},
+    {"field": "pose_mse", "value": 0.00014061325055081397, "downstream_consumer": "#984 axis-margin gate", "consumer_store": ".omx/state/probe_outcomes.jsonl:667 and this receipt", "disposition": "FIRED"},
+    {"field": "pose_max_abs", "value": 0.0970001220703125, "downstream_consumer": "pose-target range and outlier guard", "consumer_store": ".omx/research/ddm_ax2_20260809T121456Z/RECEIPT.json#/measurement_routes", "disposition": "FIRED"},
+    {"field": "pose_dim_mse", "value": [0.0008432159083895385, 2.4946984922280535e-07, 1.7155434761662036e-07, 1.6997219631775806e-08, 3.781031931993084e-09, 2.175574742580011e-08], "downstream_consumer": "rank-1 forward-motion pose-axis allocator", "consumer_store": ".omx/state/probe_outcomes.jsonl:667 notes and this receipt", "disposition": "FIRED"},
+    {"field": "pose_dim0_fraction", "value": 0.99945055, "downstream_consumer": "rank-1 forward-motion pose-axis allocator", "consumer_store": ".omx/state/probe_outcomes.jsonl:667 and this receipt", "disposition": "FIRED"},
+    {"field": "seg_bound_component", "value": 0.017523023416288197, "downstream_consumer": "#984 target-margin derivation", "consumer_store": ".omx/state/probe_outcomes.jsonl:667 and this receipt", "disposition": "FIRED"},
+    {"field": "pose_bound_component", "value": 0.03749843337405097, "downstream_consumer": "#984 target-margin derivation", "consumer_store": ".omx/state/probe_outcomes.jsonl:667 and this receipt", "disposition": "FIRED"},
+    {"field": "fixed_archive_decoder_swap_upper_bound", "value": 0.055021456790339165, "downstream_consumer": "#984 axis-matched beat-PR130 admission gate", "consumer_store": ".omx/state/probe_outcomes.jsonl:667 and this receipt", "disposition": "FIRED"}
+  ],
+  "canonical_ingest_followon": {"disposition": "QUEUED-WITH-A-FIRE-ORDER", "owner": "probe-outcomes ledger steward", "consumer_store": ".omx/state/probe_outcomes.jsonl", "fire_trigger": "current uncommitted shared-ledger writer releases the file", "action": "append timing/range/custody fields without duplicating the existing headline row"},
+  "recall_evidence": {
+    "queries": ["DaliVideoDataset", "AVVideoDataset", "PR130", "contest_cpu", "contest_cuda", "axis", "gt_cache", "auth_eval_renderer", "cpu_axis_optimal_archive_selector_v1", "cpu_cuda_score_gap_v1"],
+    "scopes": [".omx/research", ".omx/state", "CANONICAL_RESEARCH_INDEX", "sub015_DAG", "canonical equations registry", "upstream", "experiments", "tools", "src/tac"],
+    "beyond_charter_findings": ["stale CPU-only ranking equation", "auth_eval_renderer AV-GT/CUDA-label confound", "frontier pointer cross-axis min selector", "non-authority seg-only realized swap is small on one renderer but pose remains unknown"]
+  },
+  "own_vehicle_frontier": {"score": 0.7534578126155775, "archive_bytes": 357837, "axis": "[macOS-CPU advisory]", "changed_by_ax2": false}
+}
