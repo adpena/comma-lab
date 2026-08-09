@@ -95,3 +95,21 @@ round-trip proves the causal lossless mechanism; n600 ANS words were not retaine
    1,179,648,000 B. Reverse-chunk helpers are built and tested, but the resumable n600 materializer
    and interrupted/resumed real-table proof remain owed.
 4. No archive built with ANS tokens; no `evaluate.py` row. `score_claim=false`.
+5. ⚠ **THE −2,120 B IS A LENGTH, NOT A PAYLOAD — my defect, found by `ddm_rc1_receiver`
+   (`5de03569ad`).** `ans_n600/ans_real_n600.py` computed `len(enc.get_compressed().tobytes())`
+   and DISCARDED the bytes (line 37 literally `del enc`; line 41 same shape for ANS). The
+   measurement is real — the faithfulness control passed and the range arm reproduced 116,980 B
+   exactly — but **no ANS words were retained, so no archive can be assembled from this run.**
+   The composed 188,029 B / `S=0.170128405876608123` is arithmetic over a measured length, not a
+   built object. Re-run retaining the words (SSD atomic int16 chunks + resume receipt; the tables
+   are ~4.7 GB and the run is 681 s) before any archive claim.
+   **Correction to how MAIN framed this:** the blocker was NOT "no receiver" — the receiver IS
+   built and selector-explicit as of `5de03569ad`. The blocker is the discarded payload.
+6. ⚠ **DECODE WALL-CLOCK IS AN UNCLOSED GATE, newly named.** RC1 measured n2 ANS decode at
+   2.683 s; a **linear** extrapolation to n600 is **~805 s (13.4 min) of ANS decode alone**, with
+   rendering SEPARATE and on top, against the contest's **30-min total** budget
+   (`upstream/README.md:114`). Extrapolated from n=2 — very weak evidence, promotable only by a
+   real n600 decode. The quantity that actually matters is **ANS-decode-time MINUS range-decode-time**
+   (range decode is already inside the shipped budget), and that delta is UNMEASURED. It is
+   possible that PR130 chose the range coder partly for decode speed; we have not checked.
+   Until measured, treat −2,120 B as a rate win with an unpriced wall-clock cost.
