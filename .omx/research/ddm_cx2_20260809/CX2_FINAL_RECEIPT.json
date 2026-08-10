@@ -67,8 +67,9 @@
     "constriction_version": "0.5.0",
     "dt1_receipt_path": "/Volumes/VertigoDataTier/pact/ddm_dt1_20260809/retained/retained_n600_result.json",
     "dt1_receipt_sha256": "5c15f38ab68df68c09a5859d17d19e4247f90e76457282edccbc8a34d060916c",
-    "source_commit_created": false,
-    "source_landing_blocker": "Managed sandbox denied Git object insertion during the required serializer invocation; the staged index remained empty."
+    "source_commit_created": true,
+    "source_commit": "cf53216e3e856c15f849bcfe96a5dd4717da2d04",
+    "source_landing_blocker": null
   },
   "not_run": [
     "contest-CUDA or Linux DALI evaluation",

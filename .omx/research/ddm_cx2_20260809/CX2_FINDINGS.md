@@ -88,9 +88,9 @@ The sole scorer receipt is `/Volumes/VertigoDataTier/pact/ddm_cx2_20260809/evalu
 
 `MEASURED`: 28 targeted tests passed, including the existing RC1 surface; the direct CX2 subset was 16/16. Ruff, Python compile, shell syntax, `git diff --check`, runtime-manifest hashes, and the pinned dependency smoke passed. Every changed Python file received two review marks. Final adversarial review found no remaining concrete P0; P1 remains because the literal wrapper's promotion/recovery and custody branches lack dedicated fault-injection unit tests.
 
-The nine CX2 source/test/runtime files are **not committed**. The required serializer was invoked with post-edit content hashes and `[no-triality] [p0-ledger-ok]`, but managed Git object insertion failed with `unable to create temporary file: Operation not permitted` / `failed to insert into database`. No fallback Git write or override was used, and `git diff --cached --name-only` remains empty. Therefore the archive and SSD receipts are real, but the source landing gate remains open.
+The nine CX2 source/test/runtime files and these two terminal evidence files landed through the required serializer at commit `cf53216e3e856c15f849bcfe96a5dd4717da2d04`, with post-edit content hashes, `[no-triality] [p0-ledger-ok]`, and no attribution trailer. No fallback Git write or override was used, and `git diff --cached --name-only` was empty after landing.
 
-The exact rescue allowlist is:
+The exact landed implementation allowlist is:
 
 - `experiments/ddm_cx2_compose_end_to_end.py`
 - `experiments/ddm_cx2_literal_receiver.py`
@@ -122,8 +122,7 @@ Sources and queries consulted beyond the charter seeds:
 ## Follow-on dispositions
 
 - `QUEUED-WITH-A-FIRE-ORDER` — owner: MAIN scorer owner; consumer store: a paired q4/SD1M CPU-AV distortion receipt beside `/Volumes/VertigoDataTier/pact/ddm_cx2_20260809/evaluation/`; fire trigger: the n600 scorer lane is free and the exact same pinned raw-generation/evaluator axis can be used once for each bound archive.
-- `QUEUED-WITH-A-FIRE-ORDER` — owner: MAIN Git-custody owner; consumer store: the main branch plus review/serializer ledgers; fire trigger: a Git-object-writable shell recomputes all nine post-edit hashes and reruns the required serializer without absorbing unrelated worktree changes.
-- `QUEUED-WITH-A-FIRE-ORDER` — owner: MAIN contest-row owner; consumer store: contest-CUDA/Linux receiver and evaluator receipts for archive `2acd09e7...`; fire trigger: source lands, Linux dependency/receiver closure passes, the lane is claimed, and operator authorization exists. This is lower priority than the paired q4 control because the local row is 0.0830 S numerically over the bar.
+- `QUEUED-WITH-A-FIRE-ORDER` — owner: MAIN contest-row owner; consumer store: contest-CUDA/Linux receiver and evaluator receipts for archive `2acd09e7...`; fire trigger: Linux dependency/receiver closure passes, the lane is claimed, and operator authorization exists. This is lower priority than the paired q4 control because the local row is 0.0830 S numerically over the bar.
 
 ## LIVE-HYPOTHESES
 
@@ -140,6 +139,5 @@ Sources and queries consulted beyond the charter seeds:
 - More memoryless coder swapping is closed on these sections by prior same-object measurements; the remaining token route requires a better model or representation.
 - Shared FX1 cannot decode SD1M or satisfy the evaluator's three-argument contract unchanged; the isolated pinned runtime is the tested object.
 - A local CPU/AV number cannot stand in for contest-CUDA/DALI, and no promotion claim is made.
-- Source landing was not achieved: Git object writes were sandbox-blocked and no commit hash exists for CX2.
 
 Own-vehicle frontier: `S=0.7539807296911207 @ 357,836 B [macOS-CPU advisory] n600` — UNMOVED.
