@@ -110,3 +110,16 @@ now a BUILD task, not a paid measurement.
 
 #381 spend this replay: CUDA leg ~$0.10-0.15 + CPU leg ~$0.01 + image rebuilds. Both lanes
 terminal; no live Modal claims.
+
+## ADDENDUM 3 (MAIN, 2026-08-10 19:58Z) — THE BAR HAS BEEN BEATEN (composed-on-granted-base)
+
+The best-known point on the board is no longer PR135's row. The cp135 composed candidate
+(their base + our VP1/CAP1/HP3 lossless levers, −472 B) CONFIRMED at
+**S = 0.16195513827824176 @ 186,252 B [contest-CUDA T4, n600, MAIN-adjudicated]**, archive sha
+`6eb1a3b79cb167e03372339e07e93cae13b6ba3114a9eb917288bb038622edb6` — distortion bit-identical
+to the PR135 replay (the 117,964,800-symbol identity held through the T4 render). That is
+−0.00031429 below the custodied bar this memo established and below their published score.
+Full receipts + honesty accounting: `.omx/research/ddm_cp135_rate_compose_20260810.md`
+ADDENDUM 3 (commit c11027ffe1). This memo's earlier sections remain the correct BAR history;
+the LIVE best-known point now lives in the cp135 memo + the gap-equation registry anchor
+`cp135_composed_floor_waterfall_20260810`.
