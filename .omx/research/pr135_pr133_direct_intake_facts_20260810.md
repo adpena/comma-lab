@@ -94,3 +94,19 @@ is the entire mechanism. PR134 dominated (+0.7686 S vs lc2). PR136 = PR95 reskin
 ours. No PR above 136.
 
 #381 spend: CUDA replay leg ≈ $0.10–0.15 (T4 ~7 min + image build); CPU leg pending harvest.
+
+## ADDENDUM 2 — 17:33Z — CPU AXIS: PR135 IS CUDA-LOCKED BY ITS OWN CODE
+
+CPU leg (call fc-01KZPBPPRJ9V7QRV3C0EKVWN4W) failed in 5.2 s at THEIR code:
+`runtime/f26_inflate.py:105: raise InflationError("F26 inflation requires a CUDA-capable GPU")`.
+Claim closed `failed_modal_cpu_auth_eval_no_score_claim`. Cost ≈ $0.01.
+
+Verdict: PR135 mirrors PR130's device lock (#998 "CUDA-locked by choice") — the CPU axis on
+their bytes is UNBUYABLE without modifying their runtime (= a different candidate). Consequence
+for the #998 cure hypothesis: native RC64 must be tested on OUR vehicle — port their public
+rc64_backend.c into OUR CPU-capable lc2-lineage inflate, targeting the measured 1,777.6 s token
+decode (the term that broke the 1,800 s budget). That is the honest reactivation path, and it is
+now a BUILD task, not a paid measurement.
+
+#381 spend this replay: CUDA leg ~$0.10-0.15 + CPU leg ~$0.01 + image rebuilds. Both lanes
+terminal; no live Modal claims.
