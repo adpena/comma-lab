@@ -1479,19 +1479,26 @@ def _q4_expected_master_frame() -> tuple[bytes, dict[str, object]]:
         raise StageCError("q4 literal-decode receipt is malformed")
     raw_path_value = raw_record.get("path")
     raw_bytes = raw_record.get("bytes")
-    if not isinstance(raw_path_value, str) or type(raw_bytes) is not int:
+    raw_sha256 = raw_record.get("sha256")
+    if (
+        not isinstance(raw_path_value, str)
+        or type(raw_bytes) is not int
+        or not isinstance(raw_sha256, str)
+    ):
         raise StageCError("q4 literal-decode raw binding is malformed")
-    raw_path = Path(raw_path_value)
+    literal_raw_path = Path(raw_path_value)
+    current_raw_path = pose.LC2_RAW
     expected_raw_bytes = pose.N * 2 * MASTER_FRAME_BYTES
     if (
-        raw_path.resolve() != pose.LC2_RAW.resolve()
-        or not raw_path.is_file()
-        or raw_path.stat().st_size != expected_raw_bytes
-        or raw_bytes != expected_raw_bytes
+        raw_bytes != expected_raw_bytes
+        or raw_bytes != pose.LC2_RAW_BYTES
+        or raw_sha256 != pose.LC2_RAW_SHA256
+        or not current_raw_path.is_file()
+        or current_raw_path.stat().st_size != expected_raw_bytes
     ):
-        raise StageCError("q4 literal-decode raw path or geometry differs")
+        raise StageCError("q4 literal-decode raw custody pin or geometry differs")
     offset = Q4_PARITY_RAW_FRAME_INDEX * MASTER_FRAME_BYTES
-    with raw_path.open("rb") as stream:
+    with current_raw_path.open("rb") as stream:
         stream.seek(offset)
         expected = stream.read(MASTER_FRAME_BYTES)
     if (
@@ -1501,9 +1508,14 @@ def _q4_expected_master_frame() -> tuple[bytes, dict[str, object]]:
         raise StageCError("q4 retained final odd frame differs from its exact pin")
     return expected, {
         "literal_decode_receipt": pose.file_record(Q4_LITERAL_DECODE_RECEIPT),
-        "raw_path": str(raw_path.resolve()),
+        "literal_raw_path": str(literal_raw_path.resolve()),
+        "current_raw_path": str(current_raw_path.resolve()),
+        "cold_store_relocated": (
+            literal_raw_path.resolve() != current_raw_path.resolve()
+        ),
         "raw_bytes": raw_bytes,
-        "raw_receipt_sha256": raw_record.get("sha256"),
+        "raw_receipt_sha256": raw_sha256,
+        "current_raw_full_sha256_pin": pose.LC2_RAW_SHA256,
         "frame_index": Q4_PARITY_RAW_FRAME_INDEX,
         "frame_offset": offset,
         "frame_bytes": MASTER_FRAME_BYTES,

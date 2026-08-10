@@ -849,6 +849,82 @@ def test_q4_parity_validator_rejects_incomplete_receipt(
         stage_c.validate_q4_parity_receipt(output_root)
 
 
+def test_q4_expected_master_accepts_pinned_cold_store_relocation(
+    governed_test_store: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root = governed_test_store / "q4_expected_cold_store_relocation"
+    frame = b"q4ok"
+    frame_bytes = len(frame)
+    raw = b"x" * ((2 * stage_c.pose.N - 1) * frame_bytes) + frame
+    current_raw = root / "cold_decode" / "0.raw"
+    stage_c.pose.persist_exact(current_raw, raw)
+    literal_receipt = root / "literal_decode_receipt.json"
+    canonical_raw_sha = "a" * 64
+    stage_c.pose.atomic_json(
+        literal_receipt,
+        {
+            "raw": {
+                "path": str(root / "retired_literal_path" / "0.raw"),
+                "bytes": len(raw),
+                "sha256": canonical_raw_sha,
+            },
+            "provenance": {"python": "pinned-test-runtime"},
+        },
+    )
+    monkeypatch.setattr(stage_c, "MASTER_FRAME_BYTES", frame_bytes)
+    monkeypatch.setattr(
+        stage_c, "Q4_PARITY_EXPECTED_SHA256", stage_c.pose.sha256_bytes(frame)
+    )
+    monkeypatch.setattr(stage_c, "Q4_LITERAL_DECODE_RECEIPT", literal_receipt)
+    monkeypatch.setattr(stage_c.pose, "LC2_RAW", current_raw)
+    monkeypatch.setattr(stage_c.pose, "LC2_RAW_BYTES", len(raw))
+    monkeypatch.setattr(stage_c.pose, "LC2_RAW_SHA256", canonical_raw_sha)
+
+    expected, binding = stage_c._q4_expected_master_frame()
+
+    assert expected == frame
+    assert binding["cold_store_relocated"] is True
+    assert binding["literal_raw_path"] != binding["current_raw_path"]
+    assert binding["raw_receipt_sha256"] == canonical_raw_sha
+    assert binding["current_raw_full_sha256_pin"] == canonical_raw_sha
+
+
+def test_q4_expected_master_refuses_relocated_receipt_with_wrong_full_pin(
+    governed_test_store: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root = governed_test_store / "q4_expected_wrong_full_pin"
+    frame = b"q4ok"
+    frame_bytes = len(frame)
+    raw = b"x" * ((2 * stage_c.pose.N - 1) * frame_bytes) + frame
+    current_raw = root / "cold_decode" / "0.raw"
+    stage_c.pose.persist_exact(current_raw, raw)
+    literal_receipt = root / "literal_decode_receipt.json"
+    stage_c.pose.atomic_json(
+        literal_receipt,
+        {
+            "raw": {
+                "path": str(root / "retired_literal_path" / "0.raw"),
+                "bytes": len(raw),
+                "sha256": "b" * 64,
+            },
+            "provenance": {"python": "pinned-test-runtime"},
+        },
+    )
+    monkeypatch.setattr(stage_c, "MASTER_FRAME_BYTES", frame_bytes)
+    monkeypatch.setattr(
+        stage_c, "Q4_PARITY_EXPECTED_SHA256", stage_c.pose.sha256_bytes(frame)
+    )
+    monkeypatch.setattr(stage_c, "Q4_LITERAL_DECODE_RECEIPT", literal_receipt)
+    monkeypatch.setattr(stage_c.pose, "LC2_RAW", current_raw)
+    monkeypatch.setattr(stage_c.pose, "LC2_RAW_BYTES", len(raw))
+    monkeypatch.setattr(stage_c.pose, "LC2_RAW_SHA256", "a" * 64)
+
+    with pytest.raises(stage_c.StageCError, match="custody pin"):
+        stage_c._q4_expected_master_frame()
+
+
 def test_q4_parity_validator_binds_actual_checkpoint_and_current_sources(
     governed_test_store: Path,
     monkeypatch: pytest.MonkeyPatch,
