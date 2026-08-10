@@ -61,6 +61,17 @@ AUTH_CACHE_VOLUME_NAME = "comma-auth-eval-cache-artifacts"
 AUTH_CACHE_VOLUME_ROOT = Path("/modal_auth_cache")
 REQUIRED_SAMPLES = 600
 DALI_DISABLE_NVML_VALUE = "1"
+
+# The dependency group the CONTEST's own CUDA runner installs. Authority:
+# ``upstream/.github/workflows/eval.yml:32`` --
+#   UV_GROUP: ${{ inputs.runner == 'linux-nvidia-t4' && 'cu128' || 'cpu' }}
+# so the T4 CUDA axis syncs ``cu128`` and the CPU axis syncs ``cpu``. These are
+# CONFLICTING groups in ``upstream/pyproject.toml`` (a package can only come from
+# one), and they resolve to DIFFERENT torch majors: cu128 -> torch 2.9.0+cu128 /
+# torchvision 0.24.0, cpu -> torch 2.10.0+cpu / torchvision 0.25.0. Picking the
+# group therefore picks the score axis' numerics, not just its device.
+# NOT a tunable: change it only if upstream's workflow changes.
+UPSTREAM_UV_GROUP_CUDA = "cu128"
 REMOTE_PYTHONPATH = f"{REMOTE_REPO / 'src'}:{REMOTE_REPO / 'upstream'}:{REMOTE_REPO}"
 
 # ``include_source=False``: this dispatcher self-mounts every dir it needs via the
@@ -153,6 +164,33 @@ eval_image = (
         remote_path=str(REMOTE_REPO / "upstream"),
         copy=True,
         ignore=ignore_generated_mount_path,
+    )
+    # UPSTREAM LOCKED ENVIRONMENT (2026-08-10). Build ``upstream/.venv`` INSIDE the
+    # image from ``upstream/uv.lock`` so ``upstream/evaluate.py`` runs under the same
+    # resolved dependency set the contest's own runner installs. Placed immediately
+    # after the ``upstream`` mount so the expensive sync layer is invalidated only by
+    # upstream changes, not by the mounts below it.
+    #
+    # WHY THIS EXISTS: contest_auth_eval.py compares the evaluating interpreter's
+    # torch/torchvision/timm/numpy against ``upstream/.venv/bin/python`` and, on any
+    # mismatch, stamps ``env_mismatch{advisory_only: true}`` -- which correctly refused
+    # a real n600 T4 CUDA row on 2026-08-10 (S=0.170536856816211 @ 188,636 B) because
+    # this image hand-pins torch 2.5.1 / torchvision 0.20.1 / timm 1.0.27 / numpy
+    # 1.26.4 while the lock resolves 2.9.0+cu128 / 0.24.0 / 1.0.22 / 2.3.4. The cure is
+    # to BUILD the locked env and evaluate through it, never to assert past the check.
+    #
+    # ``--frozen`` forbids re-resolving (the lock is the authority); ``--no-install-project``
+    # skips building the upstream project itself (it is a dependency manifest, not a
+    # library we import). The assertion is deliberately EXISTENCE+EXEC only: the real
+    # version comparison is contest_auth_eval.py's fail-closed parity gate, and
+    # duplicating hardcoded version literals here would be a second, drifting authority.
+    .run_commands(  # MODAL_MANUAL_MOUNT_OK:narrow auth-eval dispatcher; locked upstream env
+        f"cd {REMOTE_REPO / 'upstream'} && uv sync --frozen --no-install-project"
+        f" --group {UPSTREAM_UV_GROUP_CUDA}",
+        f"{REMOTE_REPO / 'upstream/.venv/bin/python'} -c "
+        "'import sys,torch,torchvision,timm,numpy;"
+        'print("upstream-locked-env", sys.version.split()[0], torch.__version__,'
+        " torchvision.__version__, timm.__version__, numpy.__version__)'",
     )
     .add_local_dir(  # MODAL_MANUAL_MOUNT_OK:narrow auth-eval dispatcher; submissions subset
         "submissions/robust_current",
@@ -659,6 +697,12 @@ def _run_auth_eval_inner(
         str(inflate_sh_path),
         "--upstream-dir",
         str(REMOTE_REPO / "upstream"),
+        # Run upstream/evaluate.py under the LOCKED upstream venv built at image
+        # build time (see UPSTREAM_UV_GROUP_CUDA above). This path IS the parity
+        # gate's reference interpreter, so the gate passes by identity rather than
+        # by assertion; contest_auth_eval.py evaluates parity unconditionally.
+        "--upstream-python",
+        str(REMOTE_REPO / "upstream/.venv/bin/python"),
         "--video-names-file",
         str(REMOTE_REPO / "upstream/public_test_video_names.txt"),
         "--device",

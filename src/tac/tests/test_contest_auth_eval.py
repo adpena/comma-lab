@@ -1224,3 +1224,98 @@ def test_help_includes_canonical_one_liner(cae):
     assert "inflate.sh" in doc
     assert "upstream/evaluate.py" in doc
     assert "CANONICAL" in doc
+
+
+def test_explicit_upstream_python_still_evaluates_parity(
+    cae, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """``--upstream-python`` must NOT disable the upstream-lock parity check.
+
+    REGRESSION GUARD 2026-08-10. The gate previously computed mismatches only
+    when ``--upstream-python`` was ABSENT, so passing the flag turned an operator
+    DECLARATION of parity into a substitute for a MEASUREMENT of it. Both halves
+    are pinned here:
+
+    * pointing the flag at the upstream reference venv passes BY IDENTITY (the
+      evaluating interpreter IS the reference, so there is nothing to differ);
+    * pointing it anywhere else is still reported as ``env_mismatch``.
+
+    The second assertion is the one that fails on the pre-fix code.
+    """
+
+    work_dir = tmp_path / "work"
+    work_dir.mkdir()
+    upstream = tmp_path / "upstream"
+    upstream_python = upstream / ".venv" / "bin" / "python"
+    upstream_python.parent.mkdir(parents=True)
+    upstream_python.write_text("# fake executable path for synthetic fixture\n")
+    (upstream / "evaluate.py").write_text("# frozen evaluator\n", encoding="utf-8")
+    video_names = upstream / "public_test_video_names.txt"
+    video_names.write_text("0.mkv\n", encoding="utf-8")
+    other_python = tmp_path / "image_venv" / "bin" / "python"
+    other_python.parent.mkdir(parents=True)
+    other_python.write_text("# a DIFFERENT interpreter\n")
+    archive = tmp_path / "archive.zip"
+    archive.write_bytes(b"archive")
+    inflate = tmp_path / "inflate.sh"
+    inflate.write_text("#!/bin/sh\n", encoding="utf-8")
+
+    locked_env = {
+        "python_version": "3.11.9",
+        "packages": {
+            "torch": "2.9.0+cu128",
+            "torchvision": "0.24.0",
+            "timm": "1.0.22",
+            "numpy": "2.3.4",
+        },
+    }
+    image_env = {
+        "python_version": "3.11.9",
+        "packages": {
+            "torch": "2.5.1",  # the hand-pinned image torch that caused the refusal
+            "torchvision": "0.20.1",
+            "timm": "1.0.27",
+            "numpy": "1.26.4",
+        },
+    }
+
+    def _external(path: Path) -> dict:
+        env = locked_env if Path(path) == upstream_python.resolve() else image_env
+        return {**env, "packages": dict(env["packages"])}
+
+    monkeypatch.setattr(cae, "_runtime_dependency_manifest", lambda *_args: {})
+    monkeypatch.setattr(cae, "_external_python_environment_versions", _external)
+    monkeypatch.setattr(
+        cae,
+        "_current_python_environment_versions",
+        lambda: {"python_executable": sys.executable, **image_env},
+    )
+
+    def _provenance(chosen: Path) -> dict:
+        target = work_dir / f"run_{chosen.parent.parent.name}"
+        target.mkdir()
+        return cae._record_provenance(
+            target,
+            archive,
+            inflate,
+            upstream,
+            SimpleNamespace(
+                device="cuda",
+                inflate_timeout=1,
+                evaluate_timeout=2,
+                video_names_file=video_names,
+                upstream_python=str(chosen),
+            ),
+        )
+
+    identity = _provenance(upstream_python)
+    assert identity["auth_eval_environment"]["evaluation_python_source"] == "cli_upstream_python"
+    assert identity["auth_eval_environment"]["evaluation"]["packages"]["torch"] == "2.9.0+cu128"
+    assert "env_mismatch" not in identity, "parity holds by identity; nothing should be flagged"
+
+    divergent = _provenance(other_python)
+    assert divergent["env_mismatch"]["advisory_only"] is True
+    assert divergent["env_mismatch"]["mismatches"]["torch"] == {
+        "evaluation": "2.5.1",
+        "reference": "2.9.0+cu128",
+    }

@@ -656,7 +656,6 @@ def _build_auth_eval_environment_report(
     }
 
     upstream_ref = upstream_dir / ".venv" / "bin" / "python"
-    explicit_upstream_python = getattr(args, "upstream_python", None) is not None
     if upstream_ref.exists():
         if eval_python == upstream_ref.resolve():
             reference = dict(evaluation)
@@ -671,49 +670,59 @@ def _build_auth_eval_environment_report(
             "exists": False,
         }
 
-    if not explicit_upstream_python:
-        mismatches: dict[str, dict[str, object]] = {}
-        if reference is None or reference.get("query_error"):
-            mismatches["upstream_reference_python"] = {
-                "evaluation": str(eval_python),
-                "reference": str(upstream_ref.resolve()),
-                "reason": (
-                    reference.get("query_error")
-                    if isinstance(reference, dict)
-                    else "missing"
-                ),
+    # PARITY IS ALWAYS EVALUATED (2026-08-10). This block previously ran only when
+    # ``--upstream-python`` was ABSENT, so passing the flag disabled the check
+    # entirely -- an operator DECLARATION of parity stood in for a MEASUREMENT of it,
+    # which is precisely the assertion-instead-of-proof failure the gate exists to
+    # prevent. Now it always runs. Nothing is made stricter for the honest case: when
+    # the declared interpreter IS ``upstream/.venv/bin/python`` the identity branch
+    # above sets ``reference = dict(evaluation)`` and the per-package comparison is
+    # skipped, so parity passes BY IDENTITY -- proven, not asserted. A declared
+    # interpreter that is something else is now correctly reported as a mismatch, and
+    # a missing reference venv still records reason 'missing' and refuses. The
+    # declaration itself survives for readers as ``evaluation_python_source``.
+    mismatches: dict[str, dict[str, object]] = {}
+    if reference is None or reference.get("query_error"):
+        mismatches["upstream_reference_python"] = {
+            "evaluation": str(eval_python),
+            "reference": str(upstream_ref.resolve()),
+            "reason": (
+                reference.get("query_error")
+                if isinstance(reference, dict)
+                else "missing"
+            ),
+        }
+    elif eval_python != upstream_ref.resolve():
+        eval_packages = (
+            evaluation.get("packages")
+            if isinstance(evaluation.get("packages"), dict)
+            else {}
+        )
+        ref_packages = (
+            reference.get("packages")
+            if isinstance(reference.get("packages"), dict)
+            else {}
+        )
+        if evaluation.get("python_version") != reference.get("python_version"):
+            mismatches["python"] = {
+                "evaluation": evaluation.get("python_version"),
+                "reference": reference.get("python_version"),
             }
-        elif eval_python != upstream_ref.resolve():
-            eval_packages = (
-                evaluation.get("packages")
-                if isinstance(evaluation.get("packages"), dict)
-                else {}
-            )
-            ref_packages = (
-                reference.get("packages")
-                if isinstance(reference.get("packages"), dict)
-                else {}
-            )
-            if evaluation.get("python_version") != reference.get("python_version"):
-                mismatches["python"] = {
-                    "evaluation": evaluation.get("python_version"),
-                    "reference": reference.get("python_version"),
+        for name in AUTH_EVAL_ENV_PACKAGES:
+            if eval_packages.get(name) != ref_packages.get(name):
+                mismatches[name] = {
+                    "evaluation": eval_packages.get(name),
+                    "reference": ref_packages.get(name),
                 }
-            for name in AUTH_EVAL_ENV_PACKAGES:
-                if eval_packages.get(name) != ref_packages.get(name):
-                    mismatches[name] = {
-                        "evaluation": eval_packages.get(name),
-                        "reference": ref_packages.get(name),
-                    }
-        if mismatches:
-            report["env_mismatch"] = {
-                "schema": "contest_auth_eval_env_mismatch_v1",
-                "reason": "current_python_without_proven_upstream_lock_parity",
-                "evaluation_python": str(eval_python),
-                "reference_python": str(upstream_ref.resolve()),
-                "mismatches": mismatches,
-                "advisory_only": True,
-            }
+    if mismatches:
+        report["env_mismatch"] = {
+            "schema": "contest_auth_eval_env_mismatch_v1",
+            "reason": "current_python_without_proven_upstream_lock_parity",
+            "evaluation_python": str(eval_python),
+            "reference_python": str(upstream_ref.resolve()),
+            "mismatches": mismatches,
+            "advisory_only": True,
+        }
     return report
 
 
