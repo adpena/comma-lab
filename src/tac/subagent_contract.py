@@ -450,8 +450,15 @@ CORRECT_OVER_EASY = (
     "CORRECT OVER EASY: never go for easy - go for correct and true and understanding. Easy is "
     "the generator of every drift class: archives over from-scratch, proxies over exact, "
     "constants over derivations, composites over decompositions. Encode-side compute is "
-    "UNBOUNDED (only decode carries the 30-min budget): never scope a solve down for cost; a "
-    "wall met mid-solve is a missing equation to register, not a stop."
+    "UNBOUNDED: never scope a solve down for cost; a wall met mid-solve is a missing equation "
+    "to register, not a stop. DECODE TIME IS NOT A DISQUALIFIER (operator binding 2026-08-09, "
+    "'Don't disqualify anything decoder due to time unless I give authorization'): never "
+    "reject, down-rank, cap, or scope down a decoder/receiver/inflate candidate on wall-clock "
+    "alone without explicit operator authorization. The score has NO time term "
+    "(upstream/evaluate.py:92) - it charges archive.zip bytes only - and `timeout-minutes: 30` "
+    "bounds the WHOLE CI job, of which decode is the term WE MOVE with measured headroom. "
+    "Report a measured decode time as a FACT alongside its bytes; never convert it into a "
+    "verdict, a gate, or a reason a candidate was not raced."
 )
 
 # --- Harness retained-reasoning + original-design authority (ddm_hw1, task #785; 2026-07-30) --
