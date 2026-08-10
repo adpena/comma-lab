@@ -77,6 +77,42 @@ def test_modal_source_mount_ignore_excludes_generated_bytecode(mod) -> None:
     assert not mod.ignore_generated_mount_path(Path("src/tac/tests/test_modal_auth_eval.py"))
 
 
+def test_mount_ignore_excludes_virtualenv_roots() -> None:
+    """REGRESSION (2026-08-10): a HOST-SPECIFIC virtualenv must never enter a
+    Modal mount. Modal's ``add_local_dir`` DEREFERENCES symlinks on upload, so a
+    macOS ``upstream/.venv`` lands a Mach-O binary at ``.venv/bin/python`` in the
+    Linux image where it ``exists()`` but cannot exec. MEASURED: that broke the
+    contest_auth_eval upstream-lock parity check on Modal T4 call
+    fc-01KZNSY6WYB5YXZQFXS2N0YASW, downgrading a real n600 CUDA row to
+    'auth-eval env mismatch advisory', and baked 566 MB / 19,604 files of dead
+    macOS venv into every image layer.
+
+    Excluding is SAFE and STILL FAIL-CLOSED: with no reference venv the parity
+    check records mismatch reason 'missing' and keeps refusing. The cure for the
+    refusal is to BUILD a Linux venv from upstream/uv.lock inside the image."""
+    from tac.deploy.modal.mount_ignore import ignore_generated_mount_path
+
+    for excluded in (
+        ".venv",
+        ".venv/bin/python",
+        "upstream/.venv",
+        "upstream/.venv/bin/python",
+        "upstream/.venv/lib/python3.11/site-packages/torch/__init__.py",
+        "venv/bin/python",
+    ):
+        assert ignore_generated_mount_path(Path(excluded)), f"must exclude {excluded}"
+
+    # Near-miss names that merely CONTAIN the token must be KEPT. A blanket
+    # substring match here would silently empty real mounts.
+    for kept in (
+        "upstream/.venvrc",
+        "upstream/myvenv/x.py",
+        "upstream/venv_notes.md",
+        "upstream/evaluate.py",
+    ):
+        assert not ignore_generated_mount_path(Path(kept)), f"must keep {kept}"
+
+
 def test_mount_ignore_keeps_mount_relative_real_files_that_do_not_resolve_in_cwd() -> None:
     """REGRESSION (pr110pp_r1 5th-bug, 2026-06-10): Modal passes the ignore
     callable paths RELATIVE to the mount SOURCE root (e.g. ``evaluate.py`` for

@@ -34,6 +34,23 @@ GENERATED_MOUNT_DIR_NAMES = frozenset(
         ".pytest_cache",
         ".ruff_cache",
         ".git",
+        # 3. Virtualenv roots (2026-08-10). A venv is HOST-SPECIFIC by construction:
+        #    its ``bin/python`` is a symlink to the build host's interpreter and its
+        #    site-packages hold platform-tagged binaries. Modal's ``add_local_dir``
+        #    DEREFERENCES symlinks on upload, so mounting a macOS ``upstream/.venv``
+        #    into a Linux image copies a Mach-O executable to ``.venv/bin/python``
+        #    where it ``exists()`` but cannot exec -> ``OSError(8, Exec format
+        #    error)``. MEASURED 2026-08-10: this broke the contest_auth_eval
+        #    upstream-lock parity check (contest_auth_eval.py:673-712) on Modal T4
+        #    call fc-01KZNSY6WYB5YXZQFXS2N0YASW, downgrading a real n600 CUDA row to
+        #    'auth-eval env mismatch advisory'. It also baked 566 MB / 19,604 files
+        #    of dead macOS venv into every image layer.
+        #    EXCLUDING IS SAFE AND STILL FAIL-CLOSED: with no reference venv present
+        #    the parity check records mismatch reason 'missing' and keeps refusing.
+        #    The cure for the refusal is to BUILD a Linux venv from upstream/uv.lock
+        #    inside the image -- never to hide the absence.
+        ".venv",
+        "venv",
     }
 )
 GENERATED_MOUNT_FILE_NAMES = frozenset(
