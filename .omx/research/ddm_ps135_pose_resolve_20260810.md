@@ -1,8 +1,10 @@
 # ddm_ps135 — LC2 PoseNet re-solve checkpoint
 
 **Checkpoint date:** 2026-08-10  
-**Status:** apparatus hardening and scorer-free closure in progress; no new n600
-score has been measured yet  
+**Status:** fail-closed apparatus landed and scorer-free closure complete; Leg A
+is blocked by candidate-store headroom, Stage C is blocked by exact-runtime
+parity plus an unfrozen scorer seam, and no new n600 score has been measured
+
 **Authority boundary:** every future local scorer result in this arm is
 `[macOS-CPU advisory]`; MAIN alone may fire one exact contest-CUDA row
 
@@ -21,14 +23,15 @@ runtime refuses CPU and no exact PR135 raw/master-frame bank is retained.
 
 Second, LC2's shipped `inflate.py` already supports counted `SD1M` mixed
 semantic precision.  Stage C is not blocked by a missing selector.  The
-retained SD1 cumulative q3 rung order can be composed into the LC2 CX2/Brotli
-container and each rung must then receive a full receiver-realized int12 pose
-compensation.  A separate sequential Stage-C driver is being built against
-`.omx/research/ddm_ps135_stage_c_implementation_spec.md`; no uncompensated
-mixed row will be reported as a candidate.
+retained SD1 cumulative q3 rung order was composed into the LC2 CX2/Brotli
+container and reproduced as five byte-exact, parse-backed, scorer-free
+archives.  The landed driver refuses master-bank creation until an exact q4
+parity receipt exists and the sequential scorer seam is explicitly frozen.
+That scorer seam is not implemented, so no uncompensated mixed row is reported
+as a candidate.
 
-Leg A remains the first scorer action: start from LC2's own decoded PR130
-carrier state, run full-n600 signed-int12 finite-difference/GN passes with
+Leg A remains the first scorer action once storage admits it: start from LC2's
+own decoded PR130 carrier state, run full-n600 signed-int12 finite-difference/GN passes with
 exact lattice and complete-archive acceptance, require at least eight passes
 and three dry passes, then run a distinct exact JRD-style terminal ladder.
 Every coefficient state and every materialized archive is retained.  The
@@ -151,8 +154,10 @@ remains a borrowed-vehicle successor, not the original task-space witness.
 The stale SD2 scorer claim was reconciled with a terminal failure row after
 its retained PID was absent and its safe-run log showed receiver-preflight exit
 1 before any scorer chunk.  The live claim summary then contained zero active
-rows.  A fresh ps135 claim will be written only after the final runner review,
-serializer commit, storage preflight, and host-equivalent process check.
+rows.  The final runner landed in commits `d6ea363904` and `452ce890b5`.
+Committed-source preflight found zero active claims and no suspicious Python
+open files, but the candidate-store reserve failed, so no ps135 claim was
+written.
 
 Candidate archives/coefficients stay under
 `/Volumes/VertigoDataTier/pact/ddm_ps135_20260810/`; bulk target caches, raw
@@ -162,28 +167,109 @@ checks fail closed as Vertigo headroom falls.  One fleet scorer lock and the
 dispatch claim guard the full-n600 slot.
 
 Measured so far: exact custody hashes/bytes, complete source behavior, LC2
-base archive reproduction, LC2 frame-0 carrier parity, and scorer-free
-container/runtime properties.  Not measured yet: a new Leg-A coefficient
-state, any new d_pose/d_seg/S, any compensated mixed-precision rung, any
-contest-CUDA row, or any PR135 global candidate.
+base archive reproduction, LC2 frame-0 carrier parity, five scorer-free Stage-C
+archives, and the live storage/liveness gates.  Not measured: a new Leg-A
+coefficient state, exact q4 semantic-master parity, any new d_pose/d_seg/S, any
+compensated mixed-precision rung, any contest-CUDA row, or any PR135 global
+candidate.
+
+## Executed receipts and verification
+
+### Landed apparatus
+
+- Commit `d6ea363904` landed the fail-closed Leg-A solver, Stage-C preflight,
+  and focused tests.
+- Commit `452ce890b5` made the sandboxed process-table preflight reach its
+  bounded `lsof` fallback instead of crashing on `PermissionError`.
+- Two review-tracker passes were recorded with distinct `council` and `codex`
+  approvers.  `py_compile` and Ruff passed on all four files.
+- Governed non-parity tests: **54 passed, one exact-runtime parity test
+  deliberately deselected**, exit 0 in 43.66 s.  Safe-run receipt:
+  `845ec9ee93ddb858eca50670c9e9ee941f05ea30e6a4e8245d0f2b3e110cceea`;
+  JUnit receipt:
+  `a96026e12298d25b62d4d1bfc0e9a26a9dc924345f09f98211d0716acdc4c772`.
+- The full developer preflight was also run.  Seventeen of twenty-five gates
+  passed; eight repository-wide gates were already red (state-writer strict
+  load, custody-tag validation, codebase drift, dispatch helper, old landing
+  wire-ins, lane registration, scorer-contract census, and pose-default
+  census).  No exemption was widened and this result is not called green.
+
+### Leg-A scorer-free admission
+
+`/Volumes/VertigoDataTier/pact/ddm_ps135_20260810/preflight.json` is complete,
+scorer-free, 4,869 B, SHA
+`6fa86be063797deaf82a6272854cd56ebae8f72f197259e4233d1a0c8e405095`.
+It measured:
+
+- active dispatch claims: `0`;
+- canonical `/bin/ps`: sandbox-blocked with `PermissionError`;
+- bounded Python `lsof` fallback: return 0, four Python PIDs, no suspicious
+  scorer open files;
+- AP bulk store: `1,042,733,596,672` B free versus `8,000,000,000` required;
+- Vertigo candidate store: `1,241,710,592` B free versus
+  `3,000,000,000` required.
+
+Therefore `admission_ready_except_ps135_claim=false` solely on storage.  The
+safe-run receipt is 1,065 B, SHA
+`fe007b6eda7143f326ca1b369b9c1d29b33bb14e6bf8eb0baa5572a75c144542`.
+No lane was claimed and no scorer was loaded.
+
+### Stage-C scorer-free archive closure
+
+The committed-source preflight at
+`/Volumes/VertigoDataTier/pact/ddm_ps135_20260810/stage_c/freeze_452ce890b5/`
+completed in 57.83 s.  `PREFLIGHT.json` is 6,406 B, SHA
+`fabfa7cf7178147f63c91f585f21ec813b6bd68d18256724ce8790bb4fbbe100`;
+the safe-run receipt is 1,397 B, SHA
+`19f7747021a86167e23d7cc00375be2fdb1af6f970d5ad313aa35290b9ef8edb`.
+Every archive, repeat, wire section, and receipt is retained.
+
+| Rung | Archive bytes | SHA-256 | Scorer status |
+|---|---:|---|---|
+| q4 LC2 identity | 187,226 | `f154f0abb76980a30715282cf330d611cac7ebce3379c5f8093830dc273e1a45` | not run |
+| blocks.3 FiLM q3 | 187,141 | `8def4a214959ac5c42f02a1a04c3d7dcd789d62e7e7acb918daba759a440f548` | not run |
+| + blocks.2 FiLM q3 | 186,889 | `059e32fba2b9dea290085dbbd9e57c00a5b66932b9e8c1ad128aaa7a2380a482` | not run |
+| + frame embedding q3 | 186,595 | `3543232b40569c19f7fc9a21fcb4f32f479d8e125d3be1be624bf342f59784db` | not run |
+| + blocks.1 FiLM q3 | 186,393 | `e89063130bb5f25dee18d9a1079cdd76bae2e5a6bad72a0f358a53be46df58db` | not run |
+
+These are real byte savings, not score improvements.  Compensation and exact
+n600 scoring have not run.
+
+### Exact parity and future-launch blockers
+
+The only completed non-authority control used Python 3.11/Torch 2.10/thread 1
+and differed from retained q4 frame 1199 at 12 bytes, each by one level.  It is
+not parity authority.  The pinned Python 3.13.12/NumPy 1.26.4/Torch 2.12.1
+attempt produced no frame before a 126.76 s import timeout; typed blocker SHA
+`78b1c98e3155e18c27046c168cba8b6212d00a095d1eb69d64052ea393aa1032`.
+A separately governed isolated attempt also timed out at 120.46 s with receipt
+SHA `73d9e6a93840bc894572c8b2f93bb6eff4a36cc85fd48fe2f2d4c334ef13e62f`.
+
+Master-bank and scorer paths are therefore hard-blocked.  Before changing the
+scorer-seam constant to `FROZEN`, the v3 master validator must also make both
+stream checkpoints mandatory and cross-bind their canonical path, candidate,
+attempt kind, range, render/driver identity, and payload record.  At the landed
+hash this future-launch P0 is contained behind `QUEUED_NOT_FROZEN`; there is no
+runnable bank bypass.
 
 ## Checkpoint disposition
 
-- Leg A full-n600 re-solve: **FIRED only after final code review/commit and the
-  sole lane claim**; owner `ddm_ps135_pose_resolve`; consumer store
-  `/Volumes/VertigoDataTier/pact/ddm_ps135_20260810/`; fire trigger all runner,
-  storage, process, and claim gates pass.
+- Leg A full-n600 re-solve: **BLOCKED-STORAGE**; owner
+  `ddm_ps135_pose_resolve`; consumer store
+  `/Volumes/VertigoDataTier/pact/ddm_ps135_20260810/`; fire trigger Vertigo has
+  at least `3,000,000,000` free bytes, then rerun committed-source preflight,
+  obtain an empty process/claim gate, and claim the sole lane.
 - Leg B global PR135 joint solve: **QUEUED-WITH-A-FIRE-ORDER**; owner
   `MAIN/#995 current-base joint solver`; consumer store
   `/Volumes/VertigoDataTier/pact/pr135_joint_solve_20260810/`; fire trigger exact
   PR135 master frames or a proven CPU-equivalent receiver are retained, then
   run global int12 x basis x FiLM starts rather than singleton clicks.
-- Stage C adaptive mixed precision x compensation: **implementation in
-  progress, then serially fired after Leg A**; owner `ddm_ps135 Stage-C
-  consumer`; consumer store
-  `/Volumes/VertigoDataTier/pact/ddm_ps135_20260810/stage_c/`; fire trigger Leg A
-  convergence plus the scorer lane re-claim, with q4 identity and four LC2
-  mixed archives already byte-closed in scorer-free preflight.
+- Stage C adaptive mixed precision x compensation: **SCORER-FREE PREFLIGHT
+  COMPLETE; SCORER/BANK BLOCKED**; owner `ddm_ps135 Stage-C consumer`;
+  consumer store `/Volumes/VertigoDataTier/pact/ddm_ps135_20260810/stage_c/`;
+  fire trigger completed Leg A bindings, implemented sequential rung scorer,
+  mandatory master-checkpoint cross-binding, frozen driver, passing exact q4
+  parity, then the scorer lane re-claim.
 - One exact Modal row: **QUEUED-WITH-A-FIRE-ORDER**; owner `MAIN` only;
   consumer store MAIN's exact-eval receipt store; fire trigger the final local
   candidate is byte-closed, <=187,226 B, and strictly improves full advisory S.
@@ -215,6 +301,12 @@ contest-CUDA row, or any PR135 global candidate.
   closed by its own dormant activation gate.
 - Treating uncompensated uniform or mixed precision as the Stage-C candidate is
   closed because the retained controls show compensation is the mechanism.
+- Treating the four smaller SD1M archives as score improvements is closed:
+  they are scorer-free rate artifacts until sequential compensation and exact
+  n600 evaluation complete.
+- Materializing Stage-C master banks at the landed hash is closed: exact q4
+  parity is blocked, the scorer seam is unfrozen, and later driver edits would
+  invalidate whole-driver-bound banks.
 - Treating local CPU rows as contest authority is closed; only exact
   contest-CPU/CUDA replay on the exact archive can move the pointer.
 
