@@ -9,6 +9,7 @@ context, and a live T4. We verify:
 """
 from __future__ import annotations
 
+import ast
 import importlib.util
 import io
 import json
@@ -49,6 +50,66 @@ def _load_cpu_module():
     sys.modules["modal_auth_eval_cpu_mod"] = mod
     spec.loader.exec_module(mod)
     return mod
+
+
+def _remote_param_names(tool_path: Path, func_name: str) -> tuple[str, ...]:
+    """Parameter names of a remote Modal function, read from SOURCE via ast.
+
+    The dispatchers call ``<fn>.remote(*call_args)`` with a positional tuple, so tests
+    that assert ``captured_args[0][N]`` couple to slot ORDER. That coupling lies the
+    moment a parameter is inserted: on 2026-08-10 five tests here asserted slot 10 was
+    ``scorer_input_cache_hashes`` while ``inner_expected_runtime_tree_sha256`` had taken
+    it, so the tests were RED against CORRECT production code. Bind by NAME instead and
+    an inserted parameter can no longer make an unrelated assertion false.
+    """
+
+    tree = ast.parse(tool_path.read_text(encoding="utf-8"))
+    for node in ast.walk(tree):
+        if isinstance(node, ast.FunctionDef) and node.name == func_name:
+            args = node.args
+            return tuple(a.arg for a in (*args.posonlyargs, *args.args))
+    raise AssertionError(f"{func_name} not found in {tool_path}")
+
+
+def _call_kwargs(captured_args, tool_path: Path, func_name: str) -> dict[str, object]:
+    """Bind one captured positional ``*args`` tuple to its parameter names."""
+
+    names = _remote_param_names(tool_path, func_name)
+    positional = captured_args[0]
+    assert len(positional) <= len(names), (
+        f"{func_name} received {len(positional)} positional args but declares "
+        f"{len(names)} parameters — the call site and signature have diverged"
+    )
+    return dict(zip(names, positional, strict=False))
+
+
+def _cpu_call_kwargs(captured_args) -> dict[str, object]:
+    return _call_kwargs(captured_args, CPU_TOOL_PATH, "run_auth_eval_cpu")
+
+
+def test_cpu_remote_call_site_matches_signature_arity() -> None:
+    """One guard for the whole positional-coupling class.
+
+    The CPU dispatcher builds ``call_args`` as a literal tuple and splats it. If a
+    parameter is added to the signature without extending that tuple (or vice versa),
+    every downstream value silently shifts by one. Assert the two agree HERE, once,
+    instead of discovering it as five unrelated assertion failures.
+    """
+
+    names = _remote_param_names(CPU_TOOL_PATH, "run_auth_eval_cpu")
+    tree = ast.parse(CPU_TOOL_PATH.read_text(encoding="utf-8"))
+    tuples = [
+        node.value
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Assign)
+        and any(getattr(t, "id", "") == "call_args" for t in node.targets)
+        and isinstance(node.value, ast.Tuple)
+    ]
+    assert len(tuples) == 1, "expected exactly one call_args construction"
+    assert len(tuples[0].elts) == len(names), (
+        f"call_args builds {len(tuples[0].elts)} values for "
+        f"{len(names)} parameters {names}"
+    )
 
 
 @pytest.fixture(scope="module")
@@ -395,11 +456,12 @@ def test_cpu_run_auth_eval_signature_and_source_commit_flow(tmp_path, monkeypatc
     assert request["expected_runtime_tree_sha256"] == expected_hash
     assert result["source_repo_commit"] == request["source_repo_commit"]
     assert result["expected_runtime_tree_sha256"] == expected_hash
-    assert captured_args[0][6] == request["source_repo_commit"]
-    assert captured_args[0][9] == expected_hash
-    assert captured_args[0][10] is False
-    assert captured_args[0][11] == 8
-    assert captured_args[0][12] is False
+    sent = _cpu_call_kwargs(captured_args)
+    assert sent["source_repo_commit"] == request["source_repo_commit"]
+    assert sent["expected_runtime_tree_sha256"] == expected_hash
+    assert sent["scorer_input_cache_hashes"] is False
+    assert sent["scorer_input_cache_hash_batch_pairs"] == 8
+    assert sent["scorer_input_cache_tensors"] is False
 
 
 def test_source_uses_literal_cuda_canonical_contest_eval() -> None:
@@ -740,7 +802,7 @@ def test_modal_cpu_auth_eval_rejects_local_root_runtime_hash_for_uploaded_runtim
     monkeypatch.setattr(
         cpu_mod,
         "_expected_uploaded_runtime_tree_sha256",
-        lambda **_kwargs: (remote_hash, content_hash),
+        lambda **_kwargs: (remote_hash, content_hash, ""),
     )
     monkeypatch.setattr(
         cpu_mod,
@@ -835,14 +897,14 @@ def test_modal_cpu_auth_eval_auto_runtime_hash_binds_projected_hash(
     monkeypatch.setattr(
         cpu_mod,
         "_expected_uploaded_runtime_tree_sha256",
-        lambda **_kwargs: (remote_hash, content_hash),
+        lambda **_kwargs: (remote_hash, content_hash, ""),
     )
 
     assert cpu_mod._validate_uploaded_runtime_tree_expectation(
         expected_runtime_tree_sha256="auto",
         submission_dir_path=tmp_path,
         inflate_sh_rel="inflate.sh",
-    ) == (remote_hash, content_hash)
+    ) == (remote_hash, content_hash, "")
 
 
 def test_modal_runtime_upload_skips_host_metadata_files(tmp_path):
@@ -1417,11 +1479,12 @@ def test_modal_cpu_tensor_volume_export_flows_to_remote_call(tmp_path, monkeypat
     assert result["scorer_input_cache_tensors_requested"] is True
     assert result["scorer_input_cache_tensor_batch_pairs"] == 2
     assert (out_dir / "scorer_input_cache_tensor_volume_manifest.json").is_file()
-    assert captured_args[0][12] is True
-    assert captured_args[0][13] == 2
-    assert captured_args[0][14] == 600
-    assert captured_args[0][15] is True
-    assert captured_args[0][16] == "unit_cpu_tensor_run"
+    sent = _cpu_call_kwargs(captured_args)
+    assert sent["scorer_input_cache_tensors"] is True
+    assert sent["scorer_input_cache_tensor_batch_pairs"] == 2
+    assert sent["scorer_input_cache_tensor_large_pair_threshold"] == 600
+    assert sent["allow_large_scorer_input_cache_tensor_export"] is True
+    assert sent["scorer_input_cache_tensor_volume_run_id"] == "unit_cpu_tensor_run"
 
 
 def test_detached_modal_auth_eval_writes_canonical_spawn_metadata(mod, tmp_path, monkeypatch):

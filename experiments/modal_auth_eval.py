@@ -1160,6 +1160,36 @@ def run_auth_eval_h100(
     )
 
 
+@app.function(image=eval_image, timeout=1800)
+def prove_locked_env() -> dict:
+    """CPU-only proof that this image's LOCKED upstream venv execs and imports.
+
+    Runs on the SAME ``eval_image`` the paid GPU path uses, so invoking it forces the
+    identical build. Costs CPU-seconds instead of GPU-minutes, and answers the one
+    question a paid row cannot afford to discover mid-flight: did ``uv sync`` produce a
+    working ``upstream/.venv``? See tac.deploy.modal.locked_env_probe for why.
+    """
+
+    from tac.deploy.modal.locked_env_probe import probe_locked_upstream_env
+
+    return probe_locked_upstream_env(
+        str(REMOTE_REPO / "upstream"),
+        expect_dali=True,  # the cu128 group carries nvidia-dali-cuda120
+    )
+
+
+@app.local_entrypoint()
+def prove_env() -> None:
+    """``modal run experiments/modal_auth_eval.py::prove_env`` -- run BEFORE any paid row."""
+
+    import json as _json
+
+    receipt = prove_locked_env.remote()
+    print(_json.dumps(receipt, indent=2, sort_keys=True))
+    if not receipt.get("ok"):
+        raise SystemExit("locked upstream env NOT proven — do not spend on this image")
+
+
 @app.local_entrypoint()
 def main(
     archive: str = "/tmp/modal_submission/archive.zip",

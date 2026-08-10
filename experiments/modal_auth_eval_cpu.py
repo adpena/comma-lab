@@ -1107,6 +1107,35 @@ def run_auth_eval_cpu(
     )
 
 
+@app.function(image=eval_image, timeout=1800)
+def prove_locked_env() -> dict:
+    """CPU proof that this image's LOCKED upstream venv execs and imports.
+
+    Same contract as the CUDA dispatcher's twin, minus DALI: the ``cpu`` dependency
+    group does not carry ``nvidia-dali-cuda120``. Forces the identical image build the
+    paid path uses, so a ``uv sync`` failure surfaces here instead of mid-eval.
+    """
+
+    from tac.deploy.modal.locked_env_probe import probe_locked_upstream_env
+
+    return probe_locked_upstream_env(
+        str(REMOTE_REPO / "upstream"),
+        expect_dali=False,
+    )
+
+
+@app.local_entrypoint()
+def prove_env() -> None:
+    """``modal run experiments/modal_auth_eval_cpu.py::prove_env`` -- BEFORE any paid row."""
+
+    import json as _json
+
+    receipt = prove_locked_env.remote()
+    print(_json.dumps(receipt, indent=2, sort_keys=True))
+    if not receipt.get("ok"):
+        raise SystemExit("locked upstream env NOT proven — do not spend on this image")
+
+
 @app.local_entrypoint()
 def main(
     archive: str = "/tmp/modal_submission/archive.zip",
