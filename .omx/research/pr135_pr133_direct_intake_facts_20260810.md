@@ -75,3 +75,22 @@ Reproduce the CURRENT rank-1 base, then iterate on THAT base — now PR135, not 
 Consumers: ddm_pi135 (depth, LIVE) · ddm_pi136 (breadth incl. PR133 already
 partially covered here, LIVE) · ddm_ah2 (arm harvest re-ranked vs 0.162268, LIVE) ·
 #984 composed campaign · #995 roadmap (re-aim to PR135 base).
+
+## ADDENDUM 2026-08-10 17:31Z — THE BAR IS CUSTODIED [contest-CUDA]
+
+PR135 replay through OUR locked env (`/opt/upstream-locked-venv`, cu128, Modal T4, n600,
+archive sha `12cf5d71a94065184f097c3e40dfe9f1db8402a1a76a80efc76a6956fe1e4004`):
+- seg 0.00029643 · pose 6.88e-06 · **S recomputed from components = 0.16226942370411543**
+- vs their self-published 0.16226842169958583 → Δ = +1.00e-6 (reproduced; component-rounding scale)
+- call fc-01KZPB7XW218B3FMNAPJJ70CHS · claim closed `completed_contest_cuda_modal_auth_eval_recovered`
+- artifacts: experiments/results/modal_auth_eval/pr135_replay_paired_modal_auth_20260810T171929Z_cuda/
+- their RC64 C-compile-at-decode runtime WORKED in our image (build-essential, commit 1032479001)
+- CPU leg dispatched separately after the single-flight refusal of the paired CPU spawn
+  (the guard saw the dispatcher's own fresh CUDA claim; correct behavior; no CPU spend lost).
+
+pi136 breadth (committed b591fb1a4e): PR133 = the one direct transfer — matched control isolates
+CBQ at 828 B / ~2.55% pose, and CBQ-alone WORSENS pose ~29×; the joint n600 coefficient re-solve
+is the entire mechanism. PR134 dominated (+0.7686 S vs lc2). PR136 = PR95 reskin, coder already
+ours. No PR above 136.
+
+#381 spend: CUDA replay leg ≈ $0.10–0.15 (T4 ~7 min + image build); CPU leg pending harvest.
