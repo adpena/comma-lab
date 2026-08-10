@@ -208,7 +208,16 @@ COMMIT_DISCIPLINE = (
     "snapshot); when you edit a shared hot file (the trainer, curriculum_dsl.py, "
     "preflight.py, the DAG, CLAUDE.md), shared-file edits use --patch-file "
     "(supply exactly your hunks — the serializer applies them to a clean index "
-    "and ignores the working tree, so no sibling hunk is absorbed)."
+    "and ignores the working tree, so no sibling hunk is absorbed). "
+    "IF THE SERIALIZER CANNOT RUN AT ALL (it fails before staging — e.g. the "
+    "sandbox refuses .git writes), do NOT bypass it and do NOT stop silently: "
+    "emit an UNCOMMITTED-WORK MANIFEST in your final message and in a durable "
+    "receipt — every path you changed, each with the sha256 of its POST-EDIT "
+    "working-tree content — so MAIN can verify byte-identity and land it "
+    "unchanged. Measured work you cannot commit is signal loss unless the "
+    "manifest exists (ddm_ai1 2026-08-09: −2,416 B receiver-closed, stranded by "
+    "a git-write refusal, recovered in one turn because its handoff listed all "
+    "four files with post-edit hashes that verified ALL-MATCH)."
 )
 
 #: `ddm_rs2` 2026-08-03 — the checkpoint store answers "where do I resume" and never
