@@ -1,0 +1,131 @@
+{
+  "schema": "ddm_pz2_pose_representation_compact_receipt.v1",
+  "score_claim": false,
+  "scorer_invoked": false,
+  "scorer_slot_owned": false,
+  "axis": "[macOS-CPU scorer-free representation measurement; official DALI GT targets, n600]",
+  "projection_axis": "[TOY-BRACKET over contest-CUDA,DALI,n600 base components; no receiver/scorer]",
+  "provenance": {
+    "base_archive": {
+      "bytes": 191052,
+      "sha256": "0491d5df84fc70b62b3f7ccf8894f5e1b81c616de46a052e4423fc1e18fdc7cd"
+    },
+    "base_score": 0.172141297491896447,
+    "base_raw": {
+      "bytes": 3662409600,
+      "sha256": "a18eb42a8da9399bcc03e795e17597bfbd459412dbb37990117665f48c4c0353",
+      "verification": "receipt-only; source raw was success-cleaned and was not consumed"
+    },
+    "official_dali_cache": {
+      "bytes": 117981301,
+      "sha256": "382d7dfe38b37c0cc5017e5645032faa045af6924db66e0b67549cc96c840195",
+      "pose_shape": [600, 6]
+    },
+    "retained_pose_targets": {
+      "bytes": 14400,
+      "sha256": "23ae28d20aee8697d87e015c1145b248c111bc3ce61b9b66793e770d65522b2a",
+      "repeat_byte_identical": true
+    },
+    "pr130_intake_git_head": "e34f31bc4969042c0051ac81aa3c56884419a231",
+    "selection": {
+      "seed": 20260809,
+      "n": 120,
+      "block_counts_120": [24, 24, 24, 24, 24],
+      "receipt_sha256": "2e2778fd65e69c2af3ddcd1bff1bed3db3737a54743df89393e1e8f673a90f99"
+    }
+  },
+  "score_sensitivity": {
+    "base_d_pose": 0.00002331,
+    "d_pose_derivative": 327.49062162160806,
+    "s_cost_per_1e-6_d_pose": 0.000327490621621608,
+    "byte_equivalent_per_1e-6_d_pose": 491.83182126788984,
+    "per_dimension_sensitivity": "equal: each dimension is 1/6 of aggregate MSE",
+    "byte_equivalent_per_1e-6_dimension_mse": 81.97197021131497
+  },
+  "base_precision_packet": {
+    "candidate_id": "direct_p040_b10-5-3-3-0-3",
+    "allocation_bits": [10, 5, 3, 3, 0, 3],
+    "packet_bytes": 1817,
+    "packet_sha256": "372c6e1ff24ca928e8023feb64e9b7a9c8b966ee1a2f9f9ff391bef1ce3f32cc",
+    "quantization_mse_official_dali_n600": 0.000023288776049774852,
+    "quantization_mse_official_dali_n120_stratified": 0.00002159636937415691,
+    "gaussian_rd_model_bytes": 1328.379080287127,
+    "zero_order_marginal_entropy_bytes": 1438.7486689364894,
+    "hypothetical_archive_bytes": 169485,
+    "projection": {
+      "perfect_realization_s": 0.15777376522238235,
+      "additive_error_s": 0.16409985432097607,
+      "worst_aligned_error_s": 0.17304137800238173
+    }
+  },
+  "best_additive_bracket_packet": {
+    "candidate_id": "direct_p092_b12-6-6-5-5-5",
+    "allocation_bits": [12, 6, 6, 5, 5, 5],
+    "packet_bytes": 2860,
+    "packet_sha256": "f332b3f6a52cdb4661baf35d6767d1cb6325d422d9c91ebcd5d061794174e668",
+    "repeat_byte_identical": true,
+    "quantization_mse_official_dali_n600": 6.912240592300149e-7,
+    "quantization_mse_official_dali_n120_stratified": 6.697267158135475e-7,
+    "zero_order_marginal_entropy_bytes": 2378.577426954226,
+    "hypothetical_archive_bytes": 170528,
+    "hypothetical_delta_archive_bytes": -20524,
+    "projection": {
+      "perfect_realization_s": 0.14583670958983525,
+      "additive_error_s": 0.15869992400122784,
+      "worst_aligned_error_s": 0.1611043223698346,
+      "additive_delta_s_vs_base": -0.013441373490668596
+    }
+  },
+  "temporal": {
+    "lag1_correlations": [
+      0.6062890507637987,
+      0.7918848537148208,
+      0.8694295097693872,
+      0.6894946719707181,
+      0.5519320843005109,
+      0.9832362753013211
+    ],
+    "base_precision_packet_bytes": {
+      "direct": 1817,
+      "delta1": 2163,
+      "delta2": 2340
+    },
+    "verdict_scope": "FORMULATION: uniform per-dimension scalar quantization plus Brotli-q11 on this official DALI tensor"
+  },
+  "klt": {
+    "axis_aligned_gaussian_rd_model_bytes": 1328.379080287127,
+    "klt_gaussian_rd_model_bytes_before_basis": 1278.142912999793,
+    "saving_before_basis_bytes": 50.236167287333956,
+    "counted_basis_bytes": 144,
+    "net_loss_bytes": 93.76383271266604,
+    "basis_sha256": "019320cbf6015f673f1247be388e7dcb11db3bdf6f0db907c5316a7b7512dcd4",
+    "verdict_scope": "INSTANCE: official DALI n600 target tensor at base d_pose under Gaussian reverse-waterfill"
+  },
+  "frame_parity": {
+    "status": "NOT_RUN_NO_FRAME_REALIZATION",
+    "reason": "target packets have no PR130-compatible frame receiver"
+  },
+  "queue": {
+    "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+    "owner": "unassigned successor with explicit scorer-slot claim",
+    "consumer_store": ".omx/research/ddm_pz2_pose_representation_20260810/PZ2_SCORER_QUEUE.jsonl",
+    "fire_trigger": "byte-closed PR130-compatible receiver consumes direct_p092, deterministic x2 decode passes, odd frames are byte-identical to base, and even-frame differences are declared"
+  },
+  "retention": {
+    "payload_count": 2455,
+    "payloads_examined": 2455,
+    "payloads_invalid": 0,
+    "full_receipt_path": "/Volumes/VertigoDataTier/pact/ddm_pz2_pose_representation_20260810_v3/PZ2_MEASUREMENT_RECEIPT.json",
+    "full_receipt_sha256": "4c835983985cf58878765ae2e748d0b392d4f94390d1bff300dfc7120c8d832a",
+    "payload_manifest_path": "/Volumes/VertigoDataTier/pact/ddm_pz2_pose_representation_20260810_v3/payload_manifest.json",
+    "payload_manifest_sha256": "9d2619518f07f70032052afef97da24d11309778db5f75ba09644e8d59099dc1",
+    "resume_receipt_byte_identical": true,
+    "payload_retention_gate_findings": 0
+  },
+  "frontier": {
+    "moved": false,
+    "score": 0.172141297491896447,
+    "archive_bytes": 191052,
+    "axis": "[contest-CUDA,DALI,n600] inherited base; not remeasured"
+  }
+}
