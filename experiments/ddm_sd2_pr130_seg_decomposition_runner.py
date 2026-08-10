@@ -19,6 +19,7 @@ import datetime as dt
 import hashlib
 import importlib
 import importlib.metadata
+import importlib.util
 import json
 import math
 import os
@@ -539,6 +540,99 @@ def next_attempt_dir(root: Path) -> Path:
     return root / f"attempt_{max(numbers, default=0) + 1:04d}"
 
 
+def inspect_retained_token_codec(
+    runtime_dir: Path,
+    member_record: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Parse the retained payload with the exact materialized receiver.
+
+    The caller must not infer checkpoint capability from the candidate name.
+    The codec discriminator belongs to the retained archive bytes and the
+    pinned receiver is the authority that interprets it.
+    """
+
+    member_path = Path(str(member_record["path"]))
+    if artifact(member_path) != dict(member_record):
+        raise ValueError(f"retained archive member differs before codec inspection: {member_path}")
+    receiver_path = runtime_dir / "receiver.py"
+    receiver_record = artifact(receiver_path)
+    if receiver_record["sha256"] != RUNTIME_FILE_SHA256["receiver.py"]:
+        raise ValueError("materialized receiver differs before codec inspection")
+    module_name = f"ddm_sd2_pinned_receiver_{receiver_record['sha256'][:12]}"
+    receiver = sys.modules.get(module_name)
+    if receiver is None:
+        spec = importlib.util.spec_from_file_location(module_name, receiver_path)
+        if spec is None or spec.loader is None:
+            raise ImportError(f"cannot load pinned receiver from {receiver_path}")
+        receiver = importlib.util.module_from_spec(spec)
+        sys.modules[module_name] = receiver
+        try:
+            spec.loader.exec_module(receiver)
+        except Exception:
+            sys.modules.pop(module_name, None)
+            raise
+    parts = receiver.split_payload(member_path.read_bytes())
+    if parts.token_codec not in ("range", "ans"):
+        raise ValueError(f"pinned receiver returned an unsupported token codec: {parts.token_codec!r}")
+    return {
+        "token_codec": parts.token_codec,
+        "model_codec": parts.model_codec,
+        "archive_member": dict(member_record),
+        "receiver": receiver_record,
+        "inspection": "pinned receiver.split_payload on the retained archive member",
+    }
+
+
+def token_checkpoint_policy(
+    *,
+    decode_root: Path,
+    codec_inspection: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Bind checkpoint requests to the actual token coder's capabilities."""
+
+    token_codec = str(codec_inspection["token_codec"])
+    cache_path = decode_root / "token_cache/tokens.npz"
+    receipt_path = decode_root / "token_cache/TOKEN_RECEIPT.json"
+    progress_path = cache_path.with_name("tokens.progress.npz")
+    if token_codec == "ans":
+        return {
+            "token_codec": token_codec,
+            "intra_decode_checkpointing": "ENABLED_ANS_STACK",
+            "token_cache": str(cache_path.resolve()),
+            "token_receipt": str(receipt_path.resolve()),
+            "token_progress": str(progress_path.resolve()),
+            "environment": {
+                "PR130_TOKEN_CACHE": str(cache_path.resolve()),
+                "PR130_TOKEN_RECEIPT": str(receipt_path.resolve()),
+            },
+            "resume_boundary": (
+                "ANS preserves periodic token progress and the completed token stage; "
+                "the retained 60-pair scorer chunks remain the outer resume boundary."
+            ),
+        }
+    if token_codec != "range":
+        raise ValueError(f"unsupported checkpoint policy token codec: {token_codec!r}")
+    stale = [path for path in (cache_path, receipt_path, progress_path) if path.exists()]
+    if stale:
+        raise ValueError(
+            "Range archive has token-checkpoint artifacts that cannot be silently ignored: "
+            + ", ".join(str(path) for path in stale)
+        )
+    return {
+        "token_codec": token_codec,
+        "intra_decode_checkpointing": "DISABLED_RANGE_SEQUENTIAL_REPLAY",
+        "token_cache": None,
+        "token_receipt": None,
+        "token_progress": None,
+        "environment": {},
+        "resume_boundary": (
+            "Range has no compatible periodic token checkpoint in the pinned receiver. "
+            "A failed receiver attempt is retained and the next attempt replays the full "
+            "Range decode; the retained 60-pair scorer chunks remain resumable."
+        ),
+    }
+
+
 def promote_successful_attempt(
     attempt: Path,
     final_raw: Path,
@@ -637,6 +731,11 @@ def ensure_real_decode(
             atomic_write_json(final_receipt, receipt)
             return receipt
 
+    codec_inspection = inspect_retained_token_codec(runtime_dir, archive_record["member_p"])
+    checkpoint_policy = token_checkpoint_policy(
+        decode_root=decode_root,
+        codec_inspection=codec_inspection,
+    )
     attempt = next_attempt_dir(attempts_root)
     attempt.mkdir(parents=True)
     command = [
@@ -654,12 +753,11 @@ def ensure_real_decode(
         "receiver_commit": RUNTIME_COMMIT,
         "decode_device": decode_device,
         "archive": archive_record["archive"],
-        "token_cache": str((decode_root / "token_cache/tokens.npz").resolve()),
-        "resumability": (
-            "The pinned receiver checkpoints token decode every 50 frames and preserves "
-            "the completed token stage. A failed render attempt remains in its own retained "
-            "attempt directory; the next attempt resumes the token stage."
-        ),
+        "codec_inspection": codec_inspection,
+        "token_checkpoint_policy": {
+            key: value for key, value in checkpoint_policy.items() if key != "environment"
+        },
+        "resumability": checkpoint_policy["resume_boundary"],
     }
     atomic_write_json(attempt / "command.json", command_receipt)
     env = os.environ.copy()
@@ -668,11 +766,11 @@ def ensure_real_decode(
             "PYTHON": str(Path(sys.executable).absolute()),
             "PR130_INFLATE_DEVICE": decode_device,
             "PR130_RUNTIME_DEPS_DIR": str((out_dir / "retained/runtime/dependencies").resolve()),
-            "PR130_TOKEN_CACHE": str((decode_root / "token_cache/tokens.npz").resolve()),
-            "PR130_TOKEN_RECEIPT": str((decode_root / "token_cache/TOKEN_RECEIPT.json").resolve()),
         }
     )
-    Path(env["PR130_TOKEN_CACHE"]).parent.mkdir(parents=True, exist_ok=True)
+    env.update(checkpoint_policy["environment"])
+    if checkpoint_policy["token_cache"] is not None:
+        Path(str(checkpoint_policy["token_cache"])).parent.mkdir(parents=True, exist_ok=True)
     started = time.monotonic()
     log_path = attempt / "decode.log"
     with log_path.open("wb") as log:
@@ -692,7 +790,13 @@ def ensure_real_decode(
             "returncode": completed.returncode,
             "elapsed_seconds": time.monotonic() - started,
             "log": artifact(log_path),
-            "disposition": "RETAINED_FAILED_ATTEMPT; safe to retry from token checkpoint",
+            "token_codec": codec_inspection["token_codec"],
+            "checkpoint_policy": checkpoint_policy["intra_decode_checkpointing"],
+            "disposition": (
+                "RETAINED_FAILED_ATTEMPT; retry resumes the ANS token stage"
+                if codec_inspection["token_codec"] == "ans"
+                else "RETAINED_FAILED_ATTEMPT; retry replays sequential Range decode"
+            ),
         }
         atomic_write_json(attempt / "failure.json", failure)
         raise RuntimeError(f"real receiver failed for {candidate_id}: {failure}")
@@ -701,6 +805,8 @@ def ensure_real_decode(
         "returncode": completed.returncode,
         "elapsed_seconds": time.monotonic() - started,
         "log": artifact(log_path),
+        "token_codec": codec_inspection["token_codec"],
+        "checkpoint_policy": checkpoint_policy["intra_decode_checkpointing"],
     }
     atomic_write_json(attempt / "subprocess_success.json", success)
     promoted = promote_successful_attempt(
@@ -723,6 +829,10 @@ def ensure_real_decode(
         "raw": promoted,
         "attempt": str(attempt.resolve()),
         "decode_device": decode_device,
+        "codec_inspection": codec_inspection,
+        "token_checkpoint_policy": {
+            key: value for key, value in checkpoint_policy.items() if key != "environment"
+        },
         "subprocess": success,
     }
     atomic_write_json(final_receipt, receipt)
@@ -740,7 +850,54 @@ def initialize_progress(
         if progress.get("configuration") != configuration:
             raise ValueError("resume configuration differs")
         if progress.get("fingerprints") != fingerprints:
-            raise ValueError("resume fingerprints differ")
+            prior_fingerprints = progress.get("fingerprints")
+            if not isinstance(prior_fingerprints, Mapping):
+                raise ValueError("resume fingerprints are not an object")
+            differing = {
+                key
+                for key in set(prior_fingerprints) | set(fingerprints)
+                if prior_fingerprints.get(key) != fingerprints.get(key)
+            }
+            out_dir = Path(str(configuration["out_dir"]))
+            final_decode_paths = [
+                out_dir / f"retained/decode/{candidate_id}/0.raw"
+                for candidate_id in (BASE_ID, CANDIDATE_ID)
+            ]
+            decode_receipts = [
+                path.parent / "DECODE_RECEIPT.json" for path in final_decode_paths
+            ]
+            chunks_root = out_dir / "retained/chunks"
+            chunk_payload_exists = chunks_root.exists() and any(
+                path.is_file() for path in chunks_root.rglob("*")
+            )
+            safe_runner_only_migration = (
+                differing == {"runner"}
+                and progress.get("completed_stages") == ["retention_preflight"]
+                and progress.get("chunks") == []
+                and progress.get("active_chunk") is None
+                and not any(path.exists() for path in final_decode_paths + decode_receipts)
+                and not chunk_payload_exists
+            )
+            if not safe_runner_only_migration:
+                raise ValueError(
+                    "resume fingerprints differ outside the safe pre-decode runner-only migration: "
+                    f"{sorted(differing)}"
+                )
+            migration = {
+                "schema": "ddm_sd2.progress_runner_migration.v1",
+                "migrated_at_utc": utc_now(),
+                "from_runner_sha256": prior_fingerprints["runner"],
+                "to_runner_sha256": fingerprints["runner"],
+                "admission": "PRE_DECODE_ONLY_NO_RETAINED_SCORER_CHUNKS",
+                "reason": (
+                    "caller repair binds token checkpoint requests to the retained "
+                    "archive's actual token codec"
+                ),
+            }
+            progress.setdefault("migrations", []).append(migration)
+            progress["fingerprints"] = dict(fingerprints)
+            progress["updated_at_utc"] = utc_now()
+            atomic_write_json(path, progress)
         return progress
     progress = {
         "schema": "ddm_sd2.progress.v1",
@@ -1659,6 +1816,29 @@ def main(argv: Sequence[str] | None = None) -> int:
             expected_sha256=CANDIDATE_ARCHIVE_SHA256,
         ),
     }
+    decode_capability_preflight = {}
+    for role, candidate_id in (
+        ("base", BASE_ID),
+        ("candidate", CANDIDATE_ID),
+    ):
+        codec_inspection = inspect_retained_token_codec(
+            runtime_dir,
+            archives[role]["member_p"],
+        )
+        checkpoint_policy = token_checkpoint_policy(
+            decode_root=args.out_dir / f"retained/decode/{candidate_id}",
+            codec_inspection=codec_inspection,
+        )
+        decode_capability_preflight[role] = {
+            "candidate_id": candidate_id,
+            "codec_inspection": codec_inspection,
+            "checkpoint_policy": {
+                key: value
+                for key, value in checkpoint_policy.items()
+                if key != "environment"
+            },
+            "checkpoint_environment_keys": sorted(checkpoint_policy["environment"]),
+        }
     environment = environment_provenance()
     preflight = {
         "schema": "ddm_sd2.retention_preflight.v1",
@@ -1681,6 +1861,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             "commit": RUNTIME_COMMIT,
             "source_path": RUNTIME_SOURCE_ROOT,
             "materialized_files": runtime_records,
+            "decode_capability_preflight": decode_capability_preflight,
         },
         "storage": {
             "free_bytes_before_preflight": free_before,

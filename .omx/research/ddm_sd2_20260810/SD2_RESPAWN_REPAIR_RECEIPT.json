@@ -1,0 +1,139 @@
+{
+  "schema": "ddm_sd2.respawn_repair.v1",
+  "status": "RUNNER_REPAIRED_SCORER_FREE_READY_FOR_MAIN_FIRE",
+  "checked_at_utc": "2026-08-10T04:08:45Z",
+  "score_claim": false,
+  "scorer_ran": false,
+  "receiver_decode_ran": false,
+  "pointer_moved": false,
+  "runner": {
+    "path": "experiments/ddm_sd2_pr130_seg_decomposition_runner.py",
+    "bytes": 86566,
+    "sha256": "c2090da5268de46ffd164455f72659761060d5d014f8a1d1f7a656f88894904d"
+  },
+  "tests": {
+    "path": "experiments/tests/test_ddm_sd2_pr130_seg_decomposition_runner.py",
+    "bytes": 12218,
+    "sha256": "93f6d4be01d4862ae71ea00ff28236aa8137e4b22d937140faa32766095fab51",
+    "command": ".venv/bin/pytest -q experiments/tests/test_ddm_sd2_pr130_seg_decomposition_runner.py",
+    "result": "15 passed"
+  },
+  "repair": {
+    "diagnosed_failure": "unconditional ANS-only token checkpoint request on a Range archive",
+    "receiver_guard_changed": false,
+    "policy": {
+      "range": "do not set PR130_TOKEN_CACHE or PR130_TOKEN_RECEIPT; replay full sequential decode after failure",
+      "ans": "set both cache variables; keep periodic stack and completed-token-stage resume",
+      "outer_resume": "retained 60-pair scorer chunks for both codecs"
+    },
+    "stale_incompatible_checkpoint_policy": "REFUSE_SILENT_IGNORE",
+    "predecode_progress_migration": "runner fingerprint only; retention_preflight only; no decode, chunks, or active chunk"
+  },
+  "retained_payload_inspection": [
+    {
+      "candidate_id": "pr130_q4_control",
+      "member": {
+        "path": "/Volumes/APDataStore/pact/ddm_sd2_20260810/matched_local_n600/retained/candidates/pr130_q4_control/decode_input/p",
+        "bytes": 190952,
+        "sha256": "fcc6a3c242106350077d3c328a2c07c8994c86d19b1a361f8507917de6ba3d84"
+      },
+      "token_codec": "range",
+      "model_codec": "legacy_lzma",
+      "checkpoint_environment_keys": [],
+      "intra_decode_checkpointing": "DISABLED_RANGE_SEQUENTIAL_REPLAY"
+    },
+    {
+      "candidate_id": "sd1_selected_mixed_q3q4_n600",
+      "member": {
+        "path": "/Volumes/APDataStore/pact/ddm_sd2_20260810/matched_local_n600/retained/candidates/sd1_selected_mixed_q3q4_n600/decode_input/p",
+        "bytes": 190104,
+        "sha256": "590af0611f7fdb40a7c6efcaf28be5fe1a0d808ff532915d729cdf2fd6bc3037"
+      },
+      "token_codec": "range",
+      "model_codec": "legacy_lzma",
+      "checkpoint_environment_keys": [],
+      "intra_decode_checkpointing": "DISABLED_RANGE_SEQUENTIAL_REPLAY"
+    }
+  ],
+  "retained_failure_evidence": {
+    "disposition": "RETAINED_HISTORICAL_FAILURE; old retry wording is the diagnosed bug and is not reused as truth",
+    "log": {
+      "path": "/Volumes/APDataStore/pact/ddm_sd2_20260810/matched_local_n600/retained/decode/pr130_q4_control/attempts/attempt_0001/decode.log",
+      "bytes": 1490,
+      "sha256": "8bb9bc56f4bd8ce86d99104b493dbeb5fa1f0bc2bd8bf7d4aa464dbd1d84e54f"
+    },
+    "failure_receipt": {
+      "path": "/Volumes/APDataStore/pact/ddm_sd2_20260810/matched_local_n600/retained/decode/pr130_q4_control/attempts/attempt_0001/failure.json",
+      "bytes": 444,
+      "sha256": "1d2c31f8867769e09ef698c5ff2277078a65bb456a8d2517599b371de9116c73"
+    }
+  },
+  "validation": {
+    "ruff_check": "PASS",
+    "python_compile": "PASS",
+    "git_diff_check": "PASS",
+    "payload_retention_gate": {
+      "files_scanned": 8,
+      "findings": 0,
+      "status": "PASS"
+    },
+    "writer_reachability": "PASS_ON_APDATASTORE",
+    "plan_only": {
+      "status": "READY_FOR_MAIN_FIRE",
+      "scorer_ran": false,
+      "path": "/Volumes/APDataStore/pact/ddm_sd2_20260810/matched_local_n600/SD2_RETENTION_PREFLIGHT.json",
+      "bytes": 17938,
+      "sha256": "b90fc80d5be447df980df80ce759c373aabedef1902da9e1cc390b61044c02dd",
+      "decode_capability_preflight": "both retained inputs parse as Range with zero checkpoint environment keys"
+    }
+  },
+  "storage": {
+    "bulk_root": "/Volumes/APDataStore/pact/ddm_sd2_20260810",
+    "free_bytes_at_preflight": 1070822326272,
+    "projected_final_bytes": 19199789712,
+    "credited_retained_final_bytes": 3405501,
+    "projected_remaining_bytes": 19196384211,
+    "failed_decode_attempt_contingency_bytes": 3662409600,
+    "minimum_reserve_bytes": 5000000000,
+    "required_free_bytes_at_admission": 27858793811,
+    "capacity_fits": true
+  },
+  "exact_main_fire_command": "/Users/adpena/Projects/pact/.venv/bin/python /Users/adpena/Projects/pact/experiments/ddm_sd2_pr130_seg_decomposition_runner.py --out-dir /Volumes/APDataStore/pact/ddm_sd2_20260810/matched_local_n600 --resume-from /Volumes/APDataStore/pact/ddm_sd2_20260810/matched_local_n600/progress.json --queue /Users/adpena/Projects/pact/.omx/research/ddm_sg2_20260810/SG2_SCORER_QUEUE.json --base-archive /Volumes/VertigoDataTier/pact/ddm_pr130_reproduce_20260809/reproduction/archive.zip --candidate-archive /Volumes/VertigoDataTier/pact/ddm_sd1_semantic_20260809/cpu_screen/archives/selected_mixed_n600.zip --challenge-root /Users/adpena/Projects/pact/upstream --video-names-file /Users/adpena/Projects/pact/upstream/public_test_video_names.txt --uncompressed-dir /Users/adpena/Projects/pact/upstream/videos --device mps --decode-device cpu --batch-size 4 --chunk-pairs 60 --pair-count 600 --seed 20260810 --cpu-threads 6 --num-threads 2 --prefetch-queue-depth 4 --minimum-free-bytes 5000000000",
+  "future_action": {
+    "disposition": "QUEUED_WITH_A_FIRE_ORDER",
+    "owner": "MAIN scorer owner",
+    "consumer_store": "/Volumes/APDataStore/pact/ddm_sd2_20260810/matched_local_n600",
+    "lane": "lane_ddm_sd2_seg_decomposition_20260810",
+    "fire_trigger": "the serialized ddm_sd2 repair commit is present and MAIN's sole full-n600 scorer slot is free"
+  },
+  "runtime_projection": {
+    "honest_wallclock_band": "approximately 45-90 minutes on MAIN Metal; unmeasured for this full runner",
+    "prior_same_family_single_decode_seconds": 1010.8084664579947
+  },
+  "recall_evidence": {
+    "queries": [
+      "ddm_sd2",
+      "PR130 argmax retention seg decomposition",
+      "token_codec progress checkpoint Range ANS"
+    ],
+    "surfaces": [
+      ".omx/research corpus",
+      "canonical equations registry",
+      "CANONICAL_RESEARCH_INDEX and sub015_DAG",
+      "specifications, task state, and lane state",
+      "exact materialized PR130 receiver"
+    ],
+    "beyond_charter": [
+      "HP3 Range resume requires a changed counted stream with explicit seek state and does not transfer to unchanged PR130 bytes",
+      "CP2 token-cache environment belongs to an ANS archive and is not a generic receiver-resume switch",
+      "pinned receiver.split_payload is the canonical codec discriminator and parses both fire inputs as Range"
+    ],
+    "plan_change": "bind the cache environment to parsed codec capability; do not weaken the receiver guard or wait for ANS"
+  },
+  "boundaries": [
+    "No full receiver decode, SegNet, PoseNet, or contest evaluator ran during this repair.",
+    "No d_seg, d_pose, edge matrix, S value, or pointer movement was measured.",
+    "The queued MPS measurement is advisory and cannot promote a contest score.",
+    "PR130 remains S=0.172141297491896447 at 191052 bytes on contest-CUDA with DALI GT n600."
+  ]
+}

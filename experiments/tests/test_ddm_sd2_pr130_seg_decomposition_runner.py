@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import json
+import struct
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -123,6 +124,100 @@ def test_decode_promotion_refuses_a_stale_archive_binding(tmp_path: Path) -> Non
             candidate_id=sd2.BASE_ID,
             archive_sha256=sd2.BASE_ARCHIVE_SHA256,
             decode_device="cpu",
+        )
+
+
+def test_token_checkpoint_policy_follows_pinned_receiver_codec(tmp_path: Path) -> None:
+    runtime_dir = tmp_path / "runtime"
+    sd2.materialize_runtime(runtime_dir)
+    payload_dir = tmp_path / "payloads"
+    payload_dir.mkdir()
+
+    range_payload = payload_dir / "range.p"
+    range_payload.write_bytes(struct.pack("<I", 1) + b"m" + b"t")
+    range_inspection = sd2.inspect_retained_token_codec(
+        runtime_dir,
+        sd2.artifact(range_payload),
+    )
+    range_policy = sd2.token_checkpoint_policy(
+        decode_root=tmp_path / "range_decode",
+        codec_inspection=range_inspection,
+    )
+    assert range_inspection["token_codec"] == "range"
+    assert range_policy["environment"] == {}
+    assert range_policy["token_cache"] is None
+    assert range_policy["intra_decode_checkpointing"] == "DISABLED_RANGE_SEQUENTIAL_REPLAY"
+
+    ans_payload = payload_dir / "ans.p"
+    ans_payload.write_bytes(struct.pack("<I", (1 << 31) | 1) + b"m" + b"t")
+    ans_inspection = sd2.inspect_retained_token_codec(
+        runtime_dir,
+        sd2.artifact(ans_payload),
+    )
+    ans_policy = sd2.token_checkpoint_policy(
+        decode_root=tmp_path / "ans_decode",
+        codec_inspection=ans_inspection,
+    )
+    assert ans_inspection["token_codec"] == "ans"
+    assert set(ans_policy["environment"]) == {
+        "PR130_TOKEN_CACHE",
+        "PR130_TOKEN_RECEIPT",
+    }
+    assert ans_policy["token_cache"] is not None
+    assert ans_policy["intra_decode_checkpointing"] == "ENABLED_ANS_STACK"
+
+
+def test_range_policy_refuses_stale_ans_checkpoint_artifacts(tmp_path: Path) -> None:
+    decode_root = tmp_path / "decode"
+    stale = decode_root / "token_cache/tokens.progress.npz"
+    stale.parent.mkdir(parents=True)
+    stale.write_bytes(b"retained-stale-checkpoint")
+    with pytest.raises(ValueError, match="cannot be silently ignored"):
+        sd2.token_checkpoint_policy(
+            decode_root=decode_root,
+            codec_inspection={"token_codec": "range"},
+        )
+
+
+def test_predecode_progress_allows_only_recorded_runner_hash_migration(
+    tmp_path: Path,
+) -> None:
+    out_dir = tmp_path / "out"
+    out_dir.mkdir()
+    progress_path = out_dir / "progress.json"
+    configuration = {"out_dir": str(out_dir), "pair_count": 600}
+    old_fingerprints = {"runner": "old", "queue": "same"}
+    progress_path.write_text(
+        json.dumps(
+            {
+                "schema": "ddm_sd2.progress.v1",
+                "configuration": configuration,
+                "fingerprints": old_fingerprints,
+                "completed_stages": ["retention_preflight"],
+                "chunks": [],
+                "active_chunk": None,
+            }
+        )
+    )
+    migrated = sd2.initialize_progress(
+        progress_path,
+        configuration=configuration,
+        fingerprints={"runner": "new", "queue": "same"},
+    )
+    assert migrated["fingerprints"]["runner"] == "new"
+    assert migrated["migrations"][-1]["from_runner_sha256"] == "old"
+    assert migrated["migrations"][-1]["admission"] == (
+        "PRE_DECODE_ONLY_NO_RETAINED_SCORER_CHUNKS"
+    )
+
+    migrated["completed_stages"].append("base_real_decode")
+    migrated["fingerprints"]["runner"] = "new"
+    progress_path.write_text(json.dumps(migrated))
+    with pytest.raises(ValueError, match="safe pre-decode"):
+        sd2.initialize_progress(
+            progress_path,
+            configuration=configuration,
+            fingerprints={"runner": "newer", "queue": "same"},
         )
 
 
