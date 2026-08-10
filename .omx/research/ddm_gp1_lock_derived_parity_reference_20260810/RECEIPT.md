@@ -2,7 +2,7 @@
 
 ## Verdict
 
-**IMPLEMENTATION READY FOR GOVERNED LANDING; SCORE ROW NOT FIRED AND POINTER UNMOVED.**
+**IMPLEMENTATION LANDED IN `d827cba079`; SCORE ROW NOT FIRED AND POINTER UNMOVED.**
 
 The missing-`upstream/.venv/bin/python` branch now derives its parity reference from an exact
 `uv export --frozen` of the declared upstream dependency group, evaluates requirement markers in
@@ -155,8 +155,9 @@ equivalent landing makes that raw retention explicit and durable.
 
 Disposition: **QUEUED, NOT FIRED.** Owner: **MAIN**. Consumer store:
 `.omx/state/active_lane_dispatch_claims.md` plus the per-axis result directories below. Fire trigger:
-this change lands; the harvested call receives a terminal claim row; no other n600 scorer owns the
-slot; and the Modal wrapper durably retains the materialized raw payload with bytes and SHA.
+commit `d827cba079` remains in the firing source; the harvested call receives a terminal claim row;
+no other n600 scorer owns the slot; and the Modal wrapper durably retains the materialized raw
+payload with bytes and SHA.
 
 CUDA first:
 
@@ -204,8 +205,8 @@ Then the CPU axis, using the separately resolved `cpu` lock group:
   duplicate lane claim**.
 - **QUEUED** — owner **MAIN**; consumer store
   **`experiments/results/modal_auth_eval/ai1_ans_temporal_188636_lockderived_gp1_20260810_cuda`**;
-  fire trigger **this commit is landed, raw retention is proven, the old claim is terminal, and the
-  n600 scorer slot is free; execute the CUDA command above exactly**.
+  fire trigger **commit `d827cba079` is present in the firing source, raw retention is proven, the
+  old claim is terminal, and the n600 scorer slot is free; execute the CUDA command above exactly**.
 - **QUEUED** — owner **MAIN**; consumer store
   **`experiments/results/modal_auth_eval_cpu/ai1_ans_temporal_188636_lockderived_gp1_20260810_cpu`**;
   fire trigger **the paired CUDA result is harvested and the n600 scorer slot is free; execute the
