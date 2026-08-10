@@ -91,3 +91,25 @@ and as a FINISHER, not as a rival mechanism:
   now warm-started from a PoseNet-optimal point instead of a never-optimized one).
 Race, don't presume: if the finisher yields < noise floor after the re-solve, record that as
 the honest subsumption verdict for the JRD family on this base.
+
+## ADDENDUM 2 (MAIN, from fd135's landed decomposition — consume at next checkpoint)
+
+fd135 receipts (memo ddm_fd135_fractal_decomposition_20260810.md) RESHAPE leg B + add a stage:
+- **Leg B goes GLOBAL, not singleton.** fd135 measured PR135's shipped state as EXHAUSTED for
+  local singleton moves (their own book + fd135 probes: post-hoc clipping/temperature/bias/LoRA/
+  motion-replacement/repacks ALL lose). pi136's "still accepting" was the PR133 matched arms,
+  NOT the shipped state. So leg B = NEW GLOBAL JOINT starts (int12 × basis × FiLM jointly),
+  never singleton continuation. Live hypothesis on record: the global joint space is unexhausted.
+- **STAGE C (the final-rate-attack composition): adaptive mixed precision × compensation.**
+  fd135 measured static uniform W3 = −852 B but catastrophic (closes UNIFORM only); adaptive
+  W3/W4 is OPEN with fire trigger "exact F26 sensitivity map exists without importing static-W3
+  byte credits". Your Jacobian passes PRODUCE that sensitivity map — emit it as a deliverable to
+  /Volumes/VertigoDataTier/pact/pr135_joint_solve_20260810/mixed_precision/ and, on the lc2 leg,
+  run the composed lossy attack: #869/wr1 waterfill RANKING (mechanism only — never transfer the
+  −113,555 B number, it was task-lossy with scorer harm) × the re-solve COMPENSATION per drop
+  rung → trace (bytes, d_pose) past the uniform point. Drop-without-compensate is the measured
+  29×/catastrophic failure on BOTH vehicles; compensation is everything.
+- **Clicks scoping (historical clicks = tq1/#399/JRD family):** singleton clicks on PR135's
+  shipped state are MEASURED-DEAD (above). Clicks remain live ONLY (a) as the post-re-solve
+  terminal finisher at a NEW optimum (addendum 1), (b) on the lc2 leg where the state was never
+  optimized. Do not spend budget clicking their shipped coefficients.

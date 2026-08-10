@@ -78,3 +78,19 @@ Operator directive: leverage ALL corpus coders/techniques. Two additions to the 
    Our TR1 renderer ran 3.3 KB via LOTTO — the technique is proven on our side, unraced on theirs.
 Both additions obey the same ledger discipline: per-lever {−B, absorbed?} rows, whole-container
 recount, payloads kept.
+
+## ADDENDUM 2 (MAIN, from fd135's landed decomposition — consume at next checkpoint)
+
+fd135's −4,328 B closure (−52 RCF1 · −336 IHS2 · −4 repack · −999 WANS1/CAP1/container ·
+−2,122 RC64 · −815 CBQ) SCOPES the race:
+- **RC64 coder tuning is DEAD**: realized RC64 sits 0.539946 B above its own model ideal.
+  Do not spend passes there. The live lossless surfaces are (a) SAME-STATE ANS on the dominant
+  token surface (fd135 hypothesis: lc2's 178 B cross-state advantage may partially survive —
+  needs exact F26 probability export + receiver-equality harness, the f26_same_state_ans_race
+  row), (b) CAP1 metadata fixed-field pack (≤~40 raw B pre-LZ), (c) container slack in the
+  −999 row. SMEVR races these same surfaces per addendum 1.
+- **#401/#580 direct byte reclaim is DEAD on this base** (no camera-res residual field stored) —
+  do not attempt it.
+- Retained payloads: /Volumes/VertigoDataTier/pact/pr135_intake_20260810/pr135/retained_fd135/
+  (77 files, EVIDENCE_MANIFEST.json) — the extracted sections are ALREADY on disk; consume them
+  instead of re-extracting.
