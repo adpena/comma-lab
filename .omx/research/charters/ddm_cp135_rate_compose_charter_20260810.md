@@ -62,3 +62,19 @@ axis on this base is CLOSED at their form.
 
 Composed candidate ≥ 186,724 B after all three levers raced → PR135's lossless stack dominates
 ours on its own sections; record per-lever absorption evidence and close the rate leg honestly.
+
+## ADDENDUM (MAIN, post-spawn — consume at charter-read or your next checkpoint)
+
+Operator directive: leverage ALL corpus coders/techniques. Two additions to the race set:
+5. **SMEVR in the per-section race.** Race SMEVR (r7 machinery, recalled not rebuilt) against
+   their RC64/WANS1/CAP1 AND our ANS on EVERY section of `p` separately — per the #940
+   races-not-reputation verdicts: SMEVR wins phase-field-genus streams 15-20% (ph1, every rung)
+   and loses LZ-structured token bulk (sv2 +5,183 B on IX2TOK01). Their int12 coefficient +
+   frame-0 edit + selector streams are UNRACED surfaces closer to the phase-field genus.
+   Winner per section by measured bytes, never reputation.
+6. **LOTTO-class recode of their renderer-weights section.** Their ExperimentBook contains
+   `renderer_weight_codec` — absorption-check what they already did FIRST; then race a
+   supermask/shared-dictionary (p3v2 machinery, recalled) recode of their weight section.
+   Our TR1 renderer ran 3.3 KB via LOTTO — the technique is proven on our side, unraced on theirs.
+Both additions obey the same ledger discipline: per-lever {−B, absorbed?} rows, whole-container
+recount, payloads kept.

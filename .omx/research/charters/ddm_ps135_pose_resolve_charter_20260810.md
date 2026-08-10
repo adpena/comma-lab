@@ -77,3 +77,17 @@ specific — decompose per-pair before any family verdict (one-defect law).
 Leg A converged (3 dry passes at uncapped budget) with d_pose > 1.8e-5 → the re-solve mechanism
 does NOT transfer to our carrier at this formulation; record per-pair decomposition + the exact
 divergence from PR133's setup, INSTRUMENT-scoped (m94), never a family kill.
+
+## ADDENDUM (MAIN, post-spawn — consume at charter-read or your next checkpoint)
+
+Operator directive: leverage the JRD lineage. The #453 JRD last-safe-plane attack + #460's
+harvested priors are the greedy exact-gated ancestor of this re-solve — consume them as DATA
+and as a FINISHER, not as a rival mechanism:
+- SEED the coordinate-pass trust regions from the #460 JRD priors (safe-plane structure,
+  per-plane sensitivity, step sizes measured on the PR110-lineage carrier — same family as lc2).
+  Receipts: the #453/#460 artifacts under experiments/results/ + .omx/research (grep jrd).
+- TERMINAL FINISHER after re-solve convergence: JRD-style exact-gated click-polish on the
+  residual quanta the Jacobian linearization misses (the same role tq1's snap moves played,
+  now warm-started from a PoseNet-optimal point instead of a never-optimized one).
+Race, don't presume: if the finisher yields < noise floor after the re-solve, record that as
+the honest subsumption verdict for the JRD family on this base.
