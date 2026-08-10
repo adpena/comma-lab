@@ -1,0 +1,442 @@
+{
+  "authority_boundary": {
+    "measured": "Scorer-free full-population CPR1 arrays, actual canonical Huffman and per-column Rice serialization, actual full XZ+ZIP archive bytes, parser parse-back, pinned receiver normalization, direct C@normalized_basis(B)/sqrt(12) MSE for every materialized row, and a byte-identical selected-payload repeat.",
+    "not_measured": "PoseNet d_pose, SegNet d_seg, exact contest CPU/CUDA score, QAT response, rendered uint8 frames, or a retrained carrier.",
+    "relationship_to_realized_d_pose": {
+      "exact_product_equality": "DERIVED only when the direct fp32 receiver products are elementwise equal: unchanged downstream deterministic rendering then preserves frames and d_pose.",
+      "nonzero_mse": "UNMEASURED and unbounded: the 2.5e-6 product-MSE bar is the chartered scorer-free firing gate, not a d_pose estimate."
+    }
+  },
+  "axis": "[macOS-CPU scorer-free byte/MSE projection]",
+  "best_explicit_mse_admissible_candidate": {
+    "archive_bytes": 190988,
+    "archive_bytes_saved": 64,
+    "archive_path": "/Volumes/VertigoDataTier/pact/ddm_pk3_20260809/receiver_v7/retained/candidates/E4_decoder_dead_radial_2cbc11e6920828bfdbd4/archive.zip",
+    "archive_sha256": "cb6d86775211450599fa86b3f0dee5a4a548f101f4e1efb165222fb497cb7d9b",
+    "basis_bit_count": 104135,
+    "candidate_id": "E4_decoder_dead_radial_2cbc11e6920828bfdbd4",
+    "carrier_bytes": 23053,
+    "carrier_path": "/Volumes/VertigoDataTier/pact/ddm_pk3_20260809/receiver_v7/retained/candidates/E4_decoder_dead_radial_2cbc11e6920828bfdbd4/carrier.cpr1",
+    "carrier_sha256": "e530bc4b8867822b22d14f9ce39a8ba35457e1c51c64ef714178eefd42650422",
+    "coefficient_bit_count": 79069,
+    "explicitly_validated": true,
+    "last_operation": {
+      "factors": [
+        1.1382178398915759,
+        1.0780166342822481,
+        1.3007458200791726,
+        0.8302183104104581,
+        0.9726073425372638,
+        1.2058165073773646,
+        0.832699076642568,
+        1.065179147086731,
+        1.1541457872982859,
+        1.1428743481793369,
+        1.2428241294268696,
+        1.0191684671622947
+      ],
+      "kind": "decoder_dead_radial_scale",
+      "label": "nearest_power_of_two"
+    },
+    "mse_bar_strict_explicit_pass": true,
+    "mse_bar_strict_screen_pass": true,
+    "parent_candidate_id": "E3_exact_permutation_1f37f0d6813cd32dc0bf",
+    "raw_stored_factor_product_mse_non_authority": 0.00015953356302168768,
+    "receiver_carrier_product_mse": 1.3587311152639644e-15,
+    "receiver_carrier_product_mse_explicit": 1.3587311152639644e-15,
+    "receiver_carrier_product_mse_explicit_population_values": 353894400,
+    "receiver_carrier_product_mse_method": "chunked_direct_fp32_C_at_normalized_basis_div_sqrt12_float64_SSE",
+    "stage": "E4_decoder_dead_radial",
+    "trigger_pass": false
+  },
+  "carrier_anatomy": {
+    "basis_bits": 104135,
+    "basis_payload_bytes": 13017,
+    "coefficient_bits": 79076,
+    "coefficient_payload_bytes": 9885,
+    "fixed_prefix_bytes": 152,
+    "measured_full_archive_leave_one_out_pose_marginal_bytes": 23384,
+    "raw_serialized_cpr1_bytes": 23054,
+    "relationship": "23,054 B is the raw CPR1 section; 23,384 B is the distinct measured full-archive leave-one-out marginal attributed to pose",
+    "saving_bar_fraction_of_archive": 0.010468354165358122,
+    "saving_bar_fraction_of_carrier": 0.08675284115554785,
+    "saving_bar_rate_score_units": 0.0013317179062443426
+  },
+  "commands": {
+    "prepare_verification": ".venv/bin/python experiments/ddm_pk3_rate_aware_gauge_preflight.py --prepare-verification",
+    "run": "/Users/adpena/Projects/pact/.venv/bin/python experiments/ddm_pk3_rate_aware_gauge_preflight.py --out-dir /Volumes/VertigoDataTier/pact/ddm_pk3_20260809/receiver_v7 --resume-from /Volumes/VertigoDataTier/pact/ddm_pk3_20260809/receiver_v7/progress.json --verification-receipt /Volumes/VertigoDataTier/pact/ddm_pk3_20260809/receiver_v7/verification/receipt.json",
+    "tests": ".venv/bin/python -m pytest -q experiments/tests/test_ddm_pk3_rate_aware_gauge_preflight.py"
+  },
+  "completed_at_utc": "2026-08-10T01:57:38.677150Z",
+  "existing_qat_action_disposition": {
+    "consumer_store": ".omx/state/codex_arm_queue.next_if_resumed.jsonl",
+    "disposition": "FOLDED",
+    "new_task_minted": false,
+    "owner": "future PR130 pose-carrier training owner",
+    "queue_provenance": [
+      {
+        "block_sha256": "f04289d9feaeb064c3b8d22a83175fc09ae98959e90ec3d2d727993e595429b3",
+        "line": 106,
+        "row_id": "00e3384581d8e23b568e0b17544e82c51c3bd8acebb36c2af424f30f6bd64afa"
+      },
+      {
+        "block_sha256": "e10b3de351bad3ef0e92c8f0a5eec820329a05cad5fb8cc7bafb8c851ca9256d",
+        "line": 107,
+        "row_id": "f72d7b3dafb0365a40319c5081f9bb1c5aacef184b095ff2a06bf21be6a98d20"
+      },
+      {
+        "block_sha256": "f443ac0831ac06e62f69752d6150a15ccc0611f045c0e0e09d82cb78da947acd",
+        "line": 108,
+        "row_id": "9b5e901bde2b802e2a81c68465db6cfc45c82b70ac27fce702b9ab1255a3a5a5"
+      }
+    ],
+    "reason_code": "TRIGGER_FAILED",
+    "stable_action": "ddm_pk2_rate_aware_gauge_qat"
+  },
+  "frontier_movement": false,
+  "future_action": null,
+  "live_frontier_unchanged": "PR130 CPR1 S=0.172141297491896447 @191052 B [contest-CUDA, DALI GT, n600]",
+  "near_bar": {
+    "best_saving_under_mse_bar": {
+      "archive_bytes": 190988,
+      "archive_bytes_saved": 64,
+      "archive_path": "/Volumes/VertigoDataTier/pact/ddm_pk3_20260809/receiver_v7/retained/candidates/E4_decoder_dead_radial_6c1df4e58fce81d2bc32/archive.zip",
+      "archive_sha256": "12fb364d6e515fd8237bd09f3246ffb5c947b3bf1be3eb626e83e835e2336767",
+      "basis_bit_count": 104135,
+      "candidate_id": "E4_decoder_dead_radial_6c1df4e58fce81d2bc32",
+      "carrier_bytes": 23053,
+      "carrier_path": "/Volumes/VertigoDataTier/pact/ddm_pk3_20260809/receiver_v7/retained/candidates/E4_decoder_dead_radial_6c1df4e58fce81d2bc32/carrier.cpr1",
+      "carrier_sha256": "715461fc786b42372cb180d6d49cbefea1fea0897b6ced4e69948868840fe82c",
+      "coefficient_bit_count": 79069,
+      "explicitly_validated": true,
+      "last_operation": {
+        "factors": [
+          36.42297087653043,
+          34.49653229703194,
+          41.62386624253352,
+          26.56698593313466,
+          31.12343496119244,
+          38.586128236075666,
+          26.646370452562177,
+          34.08573270677539,
+          36.93266519354515,
+          36.57197914173878,
+          39.77037214165983,
+          32.61339094919343
+        ],
+        "kind": "decoder_dead_radial_scale",
+        "label": "unit_scales"
+      },
+      "mse_bar_strict_explicit_pass": true,
+      "mse_bar_strict_screen_pass": true,
+      "parent_candidate_id": "E3_exact_permutation_1f37f0d6813cd32dc0bf",
+      "raw_stored_factor_product_mse_non_authority": 14.047385715348872,
+      "receiver_carrier_product_mse": 1.3587311152639644e-15,
+      "receiver_carrier_product_mse_explicit": 1.3587311152639644e-15,
+      "receiver_carrier_product_mse_explicit_population_values": 353894400,
+      "receiver_carrier_product_mse_method": "chunked_direct_fp32_C_at_normalized_basis_div_sqrt12_float64_SSE",
+      "stage": "E4_decoder_dead_radial",
+      "trigger_pass": false
+    },
+    "mse_excess_at_saving_bar": null,
+    "saving_shortfall_bytes": 1936,
+    "smallest_explicit_mse_at_or_above_saving_bar": null
+  },
+  "pins_and_reuse": {
+    "charter": {
+      "path": "/Users/adpena/Projects/pact/.omx/research/charters/ddm_pk3_rate_aware_gauge_preflight.md",
+      "sha256": "8675a010cdb3ce9c072b7deb2d4b591ba3d3886420f547582c86aebcd27513c1"
+    },
+    "common_contract": {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/_common_contract.md",
+      "sha256": "eeae9e0035582e6bdd65fd837e4aa35a65e064fd09900b9c212d41ac02086771"
+    },
+    "copied_inputs": {
+      "archive.zip": {
+        "bytes": 191052,
+        "copied_path": "/Volumes/VertigoDataTier/pact/ddm_pk3_20260809/receiver_v7/retained/inputs/archive.zip",
+        "intake_path": "/Volumes/VertigoDataTier/pact/ddm_pr130_reproduce_20260809/reproduction/archive.zip",
+        "sha256": "0491d5df84fc70b62b3f7ccf8894f5e1b81c616de46a052e4423fc1e18fdc7cd"
+      },
+      "carrier_codec.py": {
+        "bytes": 13770,
+        "copied_path": "/Volumes/VertigoDataTier/pact/ddm_pk3_20260809/receiver_v7/retained/inputs/pr130_runtime_e34f31bc4969/carrier_codec.py",
+        "intake_path": "/Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo/code/carrier_codec.py",
+        "sha256": "d2f14402374b4e622b7f981d736389fb04f0ca0165180e4c75f3a32ffe996bed"
+      },
+      "hpac_integer.py": {
+        "bytes": 16236,
+        "copied_path": "/Volumes/VertigoDataTier/pact/ddm_pk3_20260809/receiver_v7/retained/inputs/pr130_runtime_e34f31bc4969/hpac_integer.py",
+        "intake_path": "/Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo/code/hpac_integer.py",
+        "sha256": "6e6b4f4d0b293fb60cc1b751958756a4cd6c2ce7bcff68c6f03e20277856803f"
+      },
+      "hpac_integer_sparse.py": {
+        "bytes": 8012,
+        "copied_path": "/Volumes/VertigoDataTier/pact/ddm_pk3_20260809/receiver_v7/retained/inputs/pr130_runtime_e34f31bc4969/hpac_integer_sparse.py",
+        "intake_path": "/Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo/code/hpac_integer_sparse.py",
+        "sha256": "2240ee32c53fe949b560d316d349e0bbdccc0ceb78787307cd4d530623d42a0c"
+      },
+      "inflate.py": {
+        "bytes": 28304,
+        "copied_path": "/Volumes/VertigoDataTier/pact/ddm_pk3_20260809/receiver_v7/retained/inputs/pr130_runtime_e34f31bc4969/inflate.py",
+        "intake_path": "/Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo/code/inflate.py",
+        "sha256": "335369c9b3b295707f1790feb0b5b7ae288338fae350056cc4bb03aaa18f0c9e"
+      },
+      "integer_model_io.py": {
+        "bytes": 6197,
+        "copied_path": "/Volumes/VertigoDataTier/pact/ddm_pk3_20260809/receiver_v7/retained/inputs/pr130_runtime_e34f31bc4969/integer_model_io.py",
+        "intake_path": "/Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo/code/integer_model_io.py",
+        "sha256": "6f91c91ed4785d203aa3570af362fbe9c6a64bb2249599f8554adb31174b80a5"
+      },
+      "pk3_runner.py": {
+        "bytes": 105810,
+        "copied_path": "/Volumes/VertigoDataTier/pact/ddm_pk3_20260809/receiver_v7/retained/inputs/pk3_runner.py",
+        "intake_path": "/Users/adpena/Projects/pact/experiments/ddm_pk3_rate_aware_gauge_preflight.py",
+        "sha256": "b0259dfa1775d83d45fe57bdda40f7a694aca5e9b0ff5f094199b2afbeaabfd7"
+      }
+    },
+    "intake_commit": "e34f31bc4969042c0051ac81aa3c56884419a231",
+    "numpy": "1.26.4",
+    "pk2_runner": {
+      "commit": "cfddfc503a76e72ec7654ac9e69ff2acdba439b1",
+      "path": "/Users/adpena/Projects/pact/experiments/ddm_pk2_pose_carrier_representation.py",
+      "reused_surfaces": "archive extraction/replacement, CPR1 absolute-to-delta lattice coding, and deployment quantizers; PK2 raw-product MSE is diagnostic-only",
+      "sha256": "634ac0d899925c5c34df24bfc5efa68f99bd48bf74c2d7810e6d3152e55d9c7e"
+    },
+    "python": "3.13.12",
+    "runner_sha256": "b0259dfa1775d83d45fe57bdda40f7a694aca5e9b0ff5f094199b2afbeaabfd7",
+    "runtime_manifest": {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_pk3_20260809/receiver_v7/retained/inputs/pr130_runtime_e34f31bc4969/MANIFEST.json",
+      "sha256": "c854f12bbcd089e1a410a9a85a1bfdb26aa46bf8de217c99639d682db6caa493"
+    },
+    "torch": "2.12.1",
+    "workspace_head_before_pk3_landing": "f0f51f9190ab1428a1bf20de153316761757a509"
+  },
+  "population": {
+    "basis_shape": [
+      12,
+      3,
+      24,
+      32
+    ],
+    "basis_values": 27648,
+    "coefficient_shape": [
+      600,
+      12
+    ],
+    "coefficient_values": 7200,
+    "receiver_product_values_per_explicit_mse": 353894400,
+    "selection_mode": "full_population_no_slice"
+  },
+  "recall_evidence": {
+    "bounded_research_query_file_counts": {
+      "basis_scales|coefficient_scales": 3,
+      "carrier_codec|CPR1|compact_carrier": 274,
+      "ddm_pk2|ddm_pk3|PK2R": 19,
+      "gauge_QAT_terms": 8,
+      "rate-aware|coding-cost-aware": 6,
+      "word_boundary_Huffman": 364,
+      "word_boundary_Rice": 87
+    },
+    "count_timing": "preimplementation, before PK3 research outputs entered the searched corpus",
+    "findings": [
+      "No direct CPR1 rate-aware-gauge equation was found in the bounded canonical registry.",
+      "Canonical witness_lossless_cross_tensor_storage_law_v1 reports a 417 B different-object storage result; it was not transferred to CPR1.",
+      "The DAG has the PR intake FEED-603 node but no bounded PK2/PK3 FEED hit.",
+      "Queue lines 106-108 are provenance duplicates of one stable PK2 future action.",
+      "G110 redundant-scale removal is a different wire/object and transfers no bytes; its spec commit is 2403b8093db21f1d376be5a8ef5117c730111f8b and its receipt source_git_head is a0164871e103a128af1e32ef6cabc34056944ccb.",
+      "QA70 v4d at .omx/research/ddm_v4d_adaptive_hybrid_20260731.md:104-111,175-176 saved 0 B on a different-object hardest-120 local gauge; no number transferred.",
+      "The legacy-to-CPR1 -3,328 B repack is already spent in this baseline.",
+      "The PR130 trainer has fidelity QAT but no rate term and no bit-faithful optimizer/RNG/cursor resume.",
+      "Receiver normalization at inflate.py:601-607 and application at :640-641 changed the PK3 metric and transform law."
+    ],
+    "initial_broad_search_disposition": "discarded; replaced by bounded word and identifier queries with explicit scopes",
+    "plan_changes": [
+      "Receiver-source recall replaced PK2 raw 24x32 C@B MSE and raw inverse mixing with direct full-population C@normalized_basis(B)/sqrt(12) MSE and the H/D law.",
+      "Lossless storage-law recall added real full-archive arbitration, signs, permutations, legal decoder-null DC shifts, and basis-only radial controls.",
+      "Different-object G110, QA70, and canonical-equation byte numbers were not transferred.",
+      "Trainer recall barred the unchanged PR130 fidelity-QAT script because it has no rate term or bit-faithful optimizer/scheduler/RNG/order/cursor resume.",
+      "Ledger recall folded or reuses the one stable ddm_pk2_rate_aware_gauge_qat identity instead of minting a duplicate successor."
+    ],
+    "protected_live_scopes": "ddm_cx2 and ddm_tm1 were not touched",
+    "query_commands": {
+      "bounded_research_file_counts": "for q in 'ddm_pk2|ddm_pk3|PK2R' 'rate[-_ ]aware[[:space:][:punct:]]*gauge|coding[-_ ]cost[-_ ]aware' 'carrier_codec|CPR1|compact_carrier' '\\bHuffman\\b|_encode_huffman' '\\bRice\\b|_encode_rice' 'basis_scales|coefficient_scales' 'gauge.{0,120}QAT|QAT.{0,120}gauge'; do printf 'QUERY=%s\\n' \"$q\"; rg -l -i --glob '*.md' --glob '*.json' --glob '*.jsonl' --glob '*.yaml' --glob '*.yml' \"$q\" .omx/research | wc -l; done",
+      "canonical_equations": ".venv/bin/python tools/list_canonical_equations.py --json | jq -r '.[] | select((.equation_id+\" \"+.name+\" \"+.one_line_summary+\" \"+.latex_form+\" \"+(.canonical_producers|join(\" \"))+\" \"+(.canonical_consumers|join(\" \")))|test(\"gauge|carrier|huffman|rice|quant|pose|rate-aware|rate aware|coding cost\";\"i\")) | [.equation_id,.name,.one_line_summary] | @tsv'",
+      "canonical_indexes": "rg -n -i -C 3 \"gauge|huffman|rice|carrier|pose|QAT|quantiz|coder-aware|rate[- ]aware|factor\" .omx/research/CANONICAL_RESEARCH_INDEX* .omx/research/canonical_research_index_*",
+      "dag": "rg -n -i -C 6 \"ddm_pk2|PK2R|CPR1|rate[-_ ]aware gauge|gauge QAT|pose-carrier representation\" .omx/research/sub015_DAG_*.md",
+      "harness_bridge_and_fold_quarantine": "rg -n -i 'ddm_pk2|ddm_pk3|PK2R|CPR1|carrier_codec|rate[-_ ]aware[ -]gauge|gauge[ -]QAT|pose[ -]carrier' .omx/research/harness_tasklist_bridge_20260803.jsonl .omx/research/canonical_task_status_fold_quarantine_20260731.jsonl 2>/dev/null || true",
+      "task_ledgers_and_queue": "rg -n -i \"ddm_pk2|ddm_pk3|PK2R|CPR1|carrier_codec|rate[-_ ]aware gauge|pose carrier|Huffman|Rice|QAT\" .omx/state/canonical_task_status.jsonl .omx/state/operator_p0_ledger.jsonl .omx/research/ddm_deferral_queue_ledger_20260729.md .omx/state/codex_arm_queue.next_if_resumed.jsonl 2>/dev/null"
+    },
+    "stores_consulted": [
+      ".omx/state/main_hot_state.md",
+      ".omx/state/codex_arm_queue.next_if_resumed.jsonl",
+      ".omx/state/canonical_task_status.jsonl",
+      ".omx/research/harness_tasklist_bridge_20260803.jsonl",
+      ".omx/research/canonical_task_status_fold_quarantine_20260731.jsonl",
+      ".omx/research/CANONICAL_RESEARCH_INDEX*",
+      ".omx/research/sub015_DAG_*",
+      "tools/list_canonical_equations.py --json",
+      ".omx/research/ddm_pk2_pose_carrier_representation_20260809/",
+      "PR130 carrier_codec.py, inflate.py, and train_pose_carrier_full.py"
+    ]
+  },
+  "resume": {
+    "behavior": "a resumed invocation revalidates copied inputs, reconstructs and reparses every candidate payload, recomputes every direct MSE, and rewrites stage checkpoints",
+    "cursor_resume_claim": false,
+    "mode": "deterministic_candidate_cache_replay"
+  },
+  "retention": {
+    "cleanup": "none; all payloads kept",
+    "determinism_repeat": {
+      "archive": {
+        "bytes": 190988,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_pk3_20260809/receiver_v7/retained/determinism_repeat/E4_decoder_dead_radial_2cbc11e6920828bfdbd4/archive.repeat.zip",
+        "sha256": "cb6d86775211450599fa86b3f0dee5a4a548f101f4e1efb165222fb497cb7d9b"
+      },
+      "byte_identical": true,
+      "carrier": {
+        "bytes": 23053,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_pk3_20260809/receiver_v7/retained/determinism_repeat/E4_decoder_dead_radial_2cbc11e6920828bfdbd4/carrier.repeat.cpr1",
+        "sha256": "e530bc4b8867822b22d14f9ce39a8ba35457e1c51c64ef714178eefd42650422"
+      }
+    },
+    "excluded_development_receiver_v6": {
+      "disposition": "ABORTED_SOURCE_DRIFT_PRESERVED_NOT_COUNTED",
+      "path": "/Volumes/VertigoDataTier/pact/ddm_pk3_20260809/receiver_v6",
+      "reason": "all 432 candidate carrier/archive pairs were retained, but the runner source changed during review; the source guard withheld FINAL_RECEIPT and v7 uses a fresh identity and output root"
+    },
+    "excluded_legacy_raw_product_v1": {
+      "disposition": "INVALID_FOR_TRIGGER_RAW_PRODUCT_V1_PRESERVED_NOT_COUNTED",
+      "path": "/Volumes/VertigoDataTier/pact/ddm_pk3_20260809/retained/candidates",
+      "reason": "the concurrent pre-correction run used reciprocal coefficient scaling and raw 24x32 C@B MSE; its payloads cannot fire or close PK3"
+    },
+    "excluded_source_drift_receiver_v4": {
+      "disposition": "ABORTED_SOURCE_DRIFT_PRESERVED_NOT_COUNTED",
+      "path": "/Volumes/VertigoDataTier/pact/ddm_pk3_20260809/receiver_v4",
+      "reason": "the self-pinned run detected a runner edit before finalization and aborted without issuing a verdict receipt"
+    },
+    "excluded_source_unpinned_receiver_v3": {
+      "disposition": "SUPERSEDED_SOURCE_IDENTITY_AND_PROSE_AUDIT_PRESERVED_NOT_COUNTED",
+      "path": "/Volumes/VertigoDataTier/pact/ddm_pk3_20260809/receiver_v3",
+      "reason": "the warning-free measurement completed, but candidate cache identities did not bind the PK3 runner source and its RESULTS conflated raw CPR1 bytes with the distinct leave-one-out archive marginal"
+    },
+    "excluded_sparse_explicit_receiver_v5": {
+      "disposition": "SUPERSEDED_SPARSE_EXPLICIT_MSE_PRESERVED_NOT_COUNTED",
+      "path": "/Volumes/VertigoDataTier/pact/ddm_pk3_20260809/receiver_v5",
+      "reason": "the self-pinned run explicitly measured only verdict-bearing rows; v7 directly measures every candidate as the charter requires"
+    },
+    "excluded_warning_bearing_receiver_v2": {
+      "disposition": "SUPERSEDED_NUMPY_MATMUL_WARNINGS_PRESERVED_NOT_COUNTED",
+      "path": "/Volumes/VertigoDataTier/pact/ddm_pk3_20260809/receiver_v2",
+      "reason": "the first receiver-aware pass emitted overflow/invalid warnings in NumPy matmul screens; its finite rows were not trusted for the verdict"
+    },
+    "recorded_payload_bytes": 92708675,
+    "root": "/Volumes/VertigoDataTier/pact/ddm_pk3_20260809/receiver_v7/retained",
+    "rows": {
+      "bytes": 715127,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_pk3_20260809/receiver_v7/PK3R_ROWS.jsonl",
+      "sha256": "25859d13bbe7f691209a6bdc5c2c0bf110bc1c84a12983110de152a76f4ba2a0"
+    },
+    "rule": "all materialized carrier and archive payloads retained per candidate"
+  },
+  "schema": "ddm_pk3_rate_aware_gauge_preflight.v4",
+  "score_claim": false,
+  "sealed_qat_ticket": null,
+  "search": {
+    "angle_magnitudes": [
+      0.001953125,
+      0.00390625,
+      0.0078125,
+      0.015625
+    ],
+    "composition_mode": "deterministic_stagewise_greedy_chain",
+    "configured_maximum_rows": 452,
+    "control_count": 1,
+    "cross_stage_cartesian_product": false,
+    "explicitly_validated_candidate_count": 432,
+    "formal_preregistered_maximum_rows": 452,
+    "materialized_candidate_count": 432,
+    "selection_objective": "minimum actual full archive bytes subject to receiver-product MSE strictly below 2.5e-6; MSE then candidate ID tie-break",
+    "shear_directions_screened_not_materialized": 132,
+    "stage_counts": {
+      "E1_exact_sign": 71,
+      "E2_exact_dc_shift": 39,
+      "E3_exact_permutation": 66,
+      "E4_decoder_dead_radial": 3,
+      "L1_givens_coarse": 132,
+      "L1_givens_refine": 48,
+      "L2_directed_shear": 64,
+      "L3_global_homotopy": 8,
+      "control": 1
+    },
+    "unique_quantized_state_count": 432
+  },
+  "ssd_final_receipt": {
+    "bytes": 24492,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_pk3_20260809/receiver_v7/FINAL_RECEIPT.json",
+    "sha256": "51fa2def318a7dddba642b76abc058e5022414c51ee38c2565879663a7cdb2aa"
+  },
+  "storage_preflight": {
+    "free_bytes": 63890657280,
+    "measured_at_utc": "2026-08-10T01:54:21.531183Z",
+    "passed": true,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_pk3_20260809/receiver_v7",
+    "required_free_bytes": 5000000000
+  },
+  "trigger": {
+    "best_passing_candidate": null,
+    "metric_version": "inflate_normalized_basis_fp32_explicit_every_candidate_v7_sealed",
+    "passing_candidate_count": 0,
+    "required_archive_bytes_saved": 2000,
+    "required_receiver_carrier_product_mse_strictly_below": 2.5e-06,
+    "same_row_join_required": true,
+    "status": "NOT_MET"
+  },
+  "verdict_scope": {
+    "excluded": [
+      "exhaustive GL(12) or arbitrary higher-order/global transforms",
+      "QAT, retraining, new wire formats, scorer runs, n120, and n600 exact evaluation",
+      "the exhaustive Cartesian product of operations across stages"
+    ],
+    "included": [
+      "all 600 frames, all 27,648 stored basis values, all 7,200 coefficients",
+      "bounded exact sign and legal global-DC interaction banks",
+      "all 66 pairwise permutations and three positive basis-radial canonicalizations",
+      "all 66 normalization-aware Givens supports at +/-1/128 plus top-eight refinement",
+      "top-eight of 132 deterministically screened directed shears at eight amplitudes",
+      "eight KLT and R-orthogonal KLT near-identity homotopy anchors",
+      "actual real-coder and actual full-archive measurement for every materialized row"
+    ],
+    "instance": "frozen PR130 archive 0491... and its parsed 12D CPR1 carrier",
+    "type": "INSTANCE_X_DECLARED_SEARCH_SURFACE"
+  },
+  "verification": {
+    "actual_argv": [
+      "/Users/adpena/Projects/pact/.venv/bin/python",
+      "-m",
+      "pytest",
+      "-q",
+      "experiments/tests/test_ddm_pk3_rate_aware_gauge_preflight.py"
+    ],
+    "actual_argv_shell": "/Users/adpena/Projects/pact/.venv/bin/python -m pytest -q experiments/tests/test_ddm_pk3_rate_aware_gauge_preflight.py",
+    "created_at_utc": "2026-08-10T01:54:10.191405Z",
+    "exit_code": 0,
+    "identity": {
+      "runner_sha256": "b0259dfa1775d83d45fe57bdda40f7a694aca5e9b0ff5f094199b2afbeaabfd7",
+      "test_command": ".venv/bin/python -m pytest -q experiments/tests/test_ddm_pk3_rate_aware_gauge_preflight.py",
+      "test_sha256": "4c107ca166519860c6be05310c90c4e42fdeb1cf45c453e1d11d2defa1cc4c04"
+    },
+    "log": {
+      "bytes": 99,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_pk3_20260809/receiver_v7/verification/pytest.log",
+      "sha256": "e5458dab7c7f4d5bf73e526a68212ecd8a55324c1d55e9e803282d55905bbecf"
+    },
+    "passed_count": 17,
+    "receipt": {
+      "bytes": 977,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_pk3_20260809/receiver_v7/verification/receipt.json",
+      "sha256": "72f8afd93bafff2efad0f9fd190ecf2dbd71584f0d11f9ede71c6197f40ef537"
+    },
+    "schema": "ddm_pk3_verification.v1"
+  }
+}
