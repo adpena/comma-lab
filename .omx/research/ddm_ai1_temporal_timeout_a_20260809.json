@@ -1,0 +1,53 @@
+{
+  "schema": "ddm_ai1_decode_timeout_recovery.v1",
+  "complete": true,
+  "written_at_utc": "2026-08-10T03:01:00Z",
+  "axis": "[macOS-CPU receiver decode; scorer-free]",
+  "score_claim": false,
+  "candidate": "temporal_reversion",
+  "label": "a",
+  "disposition": "RETAINED-TIMEOUT-PAYLOAD",
+  "timeout_seconds": 1800,
+  "within_1800_second_inflate_limit": false,
+  "failure_mode": "subprocess timeout killed inflate.sh but left its Python grandchild flushing the raw mmap after the run lock was released",
+  "original_path": "/Volumes/VertigoDataTier/pact/ddm_ai1_20260809/temporal_v2/decode_temporal_reversion/a/staging/0.raw",
+  "retained_path": "/Volumes/VertigoDataTier/pact/ddm_ai1_20260809/temporal_v2/retained/temporal_reversion/failed_decode_a_timeout.raw",
+  "payload": {
+    "bytes": 3662409600,
+    "sha256": "a18eb42a8da9399bcc03e795e17597bfbd459412dbb37990117665f48c4c0353"
+  },
+  "payload_equal_to_ans_control_raw": true,
+  "archive": {
+    "bytes": 188636,
+    "sha256": "0f5a797fda844ee63f6057fdb7203f6578b135b4e12deafa98d6ddc3260a5c84"
+  },
+  "command": [
+    "/Volumes/VertigoDataTier/pact/ddm_ai1_20260809/temporal_v2/submission_temporal_reversion/inflate.sh",
+    "/Volumes/VertigoDataTier/pact/ddm_ai1_20260809/temporal_v2/submission_temporal_reversion/archive",
+    "/Volumes/VertigoDataTier/pact/ddm_ai1_20260809/temporal_v2/decode_temporal_reversion/a/staging",
+    "/Users/adpena/Projects/pact/upstream/public_test_video_names.txt"
+  ],
+  "config": {
+    "PR130_INFLATE_DEVICE": "cpu",
+    "minimum_free_bytes": 12884901888,
+    "free_bytes_at_launch": 57987035136,
+    "resumable_from_disk": true
+  },
+  "token_checkpoint": {
+    "complete": true,
+    "frames": 600,
+    "tokens": 117964800,
+    "decoded_token_sha256": "c5c7671d037b6912980c57929a5b6d789d250ee6a93e3b0a6018cf9f63e32ece",
+    "ans_final_state_empty": true,
+    "bytes": 117967988,
+    "sha256": "0a8a69d9df5f6182b1c56a3e9d6ba2db63fab460a697c191f8e54a3f504a33fa"
+  },
+  "log": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_ai1_20260809/temporal_v2/decode_temporal_reversion/a/inflate.log",
+    "current_bytes": 2461,
+    "current_sha256": "8548e7e658a052226baac59c24d99842be22ae8f10e2db32d15b30faf5b290a5",
+    "timeout_prefix_bytes": 1310,
+    "timeout_prefix_sha256": "67d65fe20ef494d0b1bb3a04eddecad83176247f28e190bfa37c2c7096e23b0d"
+  },
+  "reason_retained": "The timeout payload is a real full raw output and cannot be overwritten by a checkpointed retry."
+}

@@ -23,10 +23,13 @@ from hpac_integer import IntegerHPAC
 from hpac_integer_sparse import SparseIntegerHPAC
 from integer_model_io import deserialize_integer_model
 from receiver import (
+    TemporalReversion,
     TokenCodec,
     decode_models,
     finish_token_decode,
     new_token_decoder,
+    probability_tables_from_codes,
+    split_optional_temporal_reversion,
     split_payload,
 )
 
@@ -606,15 +609,46 @@ def cached_context_logits(model: HPACMini, current, context):
     return model._from_patches(model.head(hidden), batch, patch_rows, patch_cols)
 
 
-def probability_table(selected_logits: torch.Tensor):
-    quantized = selected_logits.mul(HPAC_LOGIT_PRECISION).round().clamp(
+def quantized_logit_codes(selected_logits: torch.Tensor) -> np.ndarray:
+    return selected_logits.mul(HPAC_LOGIT_PRECISION).round().clamp(
         -32768, 32767
-    ).to(torch.int16)
-    logits = quantized.cpu().numpy().astype(np.float64) / HPAC_LOGIT_PRECISION
-    logits -= logits.max(axis=1, keepdims=True)
-    probabilities = np.exp(logits)
-    probabilities /= probabilities.sum(axis=1, keepdims=True)
-    return probabilities.astype(np.float32)
+    ).to(torch.int16).cpu().numpy()
+
+
+def probability_table(selected_logits: torch.Tensor):
+    return probability_tables_from_codes(
+        quantized_logit_codes(selected_logits),
+        logit_precision=HPAC_LOGIT_PRECISION,
+    )
+
+
+def apply_temporal_reversion(
+    codes: np.ndarray,
+    temporal_reversion: TemporalReversion,
+    previous_one: np.ndarray,
+    previous_two: np.ndarray,
+) -> np.ndarray:
+    """Apply TM1's measured integer correction on the exact logit lattice."""
+
+    corrected = np.asarray(codes, dtype=np.int32).copy()
+    previous_one = np.asarray(previous_one, dtype=np.uint8)
+    previous_two = np.asarray(previous_two, dtype=np.uint8)
+    if (
+        corrected.ndim != 2
+        or corrected.shape[1] != NUM_CLASSES
+        or previous_one.shape != (len(corrected),)
+        or previous_two.shape != (len(corrected),)
+    ):
+        raise ValueError("temporal-reversion geometry changed")
+    changed = previous_one != previous_two
+    indices = np.flatnonzero(changed)
+    prior_one = previous_one[indices].astype(np.int64)
+    prior_two = previous_two[indices].astype(np.int64)
+    corrected[indices, prior_two] += temporal_reversion.corrections[
+        prior_one,
+        prior_two,
+    ].astype(np.int32)
+    return np.clip(corrected, -32768, 32767).astype(np.int16)
 
 
 def hierarchical_decode(decoder, families, table: np.ndarray):
@@ -728,6 +762,7 @@ def decode_tokens(
     progress_cache_path: Path | None = None,
     progress_binding: dict[str, str] | None = None,
     checkpoint_interval_frames: int = 50,
+    temporal_reversion: TemporalReversion | None = None,
 ):
     if not 1 <= frame_count <= N:
         raise ValueError(f"frame_count must be in [1, {N}], got {frame_count}")
@@ -746,6 +781,7 @@ def decode_tokens(
     sparse = SparseIntegerHPAC(model, EVAL_H, EVAL_W)
     tokens = torch.empty((frame_count, EVAL_H, EVAL_W), dtype=torch.uint8)
     previous_raw = torch.zeros((1, EVAL_H, EVAL_W), dtype=torch.long, device=device)
+    previous_previous_raw = torch.zeros_like(previous_raw)
     start_frame = 0
     if progress_cache_path is not None and progress_cache_path.is_file():
         prefix, remaining_words = load_token_progress_checkpoint(
@@ -757,6 +793,10 @@ def decode_tokens(
             raise ValueError("token progress checkpoint exceeds requested frame count")
         tokens[:start_frame].copy_(prefix)
         previous_raw.copy_(prefix[-1:].to(device=device, dtype=torch.long))
+        if start_frame >= 2:
+            previous_previous_raw.copy_(
+                prefix[-2:-1].to(device=device, dtype=torch.long)
+            )
         print(
             f"resumed ANS token stack at frame {start_frame}/{frame_count}",
             flush=True,
@@ -778,18 +818,32 @@ def decode_tokens(
         context = model.prepare_frame_context(idx, previous_raw)
         for group, mask in enumerate(masks):
             selected = sparse.selected_logits(current, context, group)
-            table = probability_table(selected)
+            if temporal_reversion is None:
+                table = probability_table(selected)
+            else:
+                codes = apply_temporal_reversion(
+                    quantized_logit_codes(selected),
+                    temporal_reversion,
+                    previous_raw[0, mask].to(torch.uint8).cpu().numpy(),
+                    previous_previous_raw[0, mask].to(torch.uint8).cpu().numpy(),
+                )
+                table = probability_tables_from_codes(
+                    codes,
+                    logit_precision=HPAC_LOGIT_PRECISION,
+                )
             symbols = (
                 hierarchical_decode(decoder, hierarchical_families, table)
                 if HPAC_HIERARCHICAL
                 else decoder.decode(family, table)
             )
             current[0, mask] = torch.from_numpy(symbols.astype(np.int64)).to(device)
-        previous_raw = (
+        decoded_raw = (
             current.clone()
             if HPAC_TARGET_MODE == "raw"
             else (current + previous_raw) % NUM_CLASSES
         )
+        previous_previous_raw = previous_raw
+        previous_raw = decoded_raw
         tokens[frame].copy_(previous_raw[0].to(torch.uint8).cpu())
         if progress_cache_path is not None and (
             (frame + 1) % checkpoint_interval_frames == 0
@@ -828,6 +882,58 @@ def render_video(semantic, basis, coeff, tokens, destination: Path, device):
     basis = normalized_basis(basis.to(device))
     coeff = coeff.to(device)
     destination.parent.mkdir(parents=True, exist_ok=True)
+    if device.type == "cpu":
+        started = time.time()
+        with destination.open("wb", buffering=0) as output:
+            for frame in range(N):
+                idx = torch.tensor([frame], device=device)
+                current_tokens = tokens[frame : frame + 1].long().to(device)
+                master_eval = semantic(current_tokens, idx)
+                master = F.interpolate(
+                    master_eval,
+                    size=(CAMERA_H, CAMERA_W),
+                    mode="bilinear",
+                    align_corners=False,
+                ).clamp(0.0, 255.0).round()
+                carrier = torch.einsum(
+                    "bk,kchw->bchw",
+                    coeff[frame : frame + 1],
+                    basis,
+                )
+                carrier = carrier / math.sqrt(CARRIER_DIM)
+                slave_eval = (127.5 + CARRIER_AMPLITUDE * carrier).clamp(
+                    0.0,
+                    255.0,
+                ).round()
+                slave = F.interpolate(
+                    slave_eval,
+                    size=(CAMERA_H, CAMERA_W),
+                    mode="bicubic",
+                    align_corners=False,
+                ).clamp(0.0, 255.0).round()
+                output.write(
+                    slave.to(torch.uint8)
+                    .permute(0, 2, 3, 1)
+                    .cpu()
+                    .numpy()
+                    .tobytes(order="C")
+                )
+                output.write(
+                    master.to(torch.uint8)
+                    .permute(0, 2, 3, 1)
+                    .cpu()
+                    .numpy()
+                    .tobytes(order="C")
+                )
+                if frame == 0 or (frame + 1) % 50 == 0:
+                    print(
+                        f"rendered frame pairs {frame + 1}/{N} in "
+                        f"{time.time() - started:.1f}s",
+                        flush=True,
+                    )
+            os.fsync(output.fileno())
+        return
+
     output = np.memmap(
         destination, mode="w+", dtype=np.uint8,
         shape=(N * 2, CAMERA_H, CAMERA_W, 3),
@@ -1055,7 +1161,10 @@ def main():
     payload = (data_dir / "p").read_bytes()
     parts = split_payload(payload)
     decoded_models = decode_models(parts.models, model_codec=parts.model_codec)
-    models_raw = decoded_models.raw
+    models_raw_wire = decoded_models.raw
+    models_raw, temporal_reversion = split_optional_temporal_reversion(
+        models_raw_wire
+    )
     if len(models_raw) < 8:
         raise ValueError("model bundle is truncated before semantic-pose lengths")
     semantic_bytes = int.from_bytes(models_raw[:4], byteorder="little")
@@ -1075,7 +1184,7 @@ def main():
     if token_cache_text and Path(token_cache_text).is_file():
         tokens, token_receipt = load_token_checkpoint(
             payload=payload,
-            models_raw=models_raw,
+            models_raw=models_raw_wire,
             token_payload=parts.tokens,
             token_codec=parts.token_codec,
             cache_path=Path(token_cache_text),
@@ -1101,10 +1210,16 @@ def main():
             return_finish_proof=True,
             progress_cache_path=progress_path,
             progress_binding=(
-                token_binding(payload, models_raw, parts.tokens, parts.token_codec)
+                token_binding(
+                    payload,
+                    models_raw_wire,
+                    parts.tokens,
+                    parts.token_codec,
+                )
                 if progress_path is not None
                 else None
             ),
+            temporal_reversion=temporal_reversion,
         )
         del hpac
         if token_cache_text:
@@ -1112,7 +1227,7 @@ def main():
                 tokens,
                 finish_proof=finish_proof,
                 payload=payload,
-                models_raw=models_raw,
+                models_raw=models_raw_wire,
                 token_payload=parts.tokens,
                 token_codec=parts.token_codec,
                 cache_path=Path(token_cache_text),

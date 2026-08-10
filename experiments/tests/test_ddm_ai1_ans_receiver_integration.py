@@ -87,11 +87,17 @@ def test_ans_progress_checkpoint_round_trips_and_binds_payload(tmp_path: Path) -
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     prior_path = list(sys.path)
+    prior_receiver = sys.modules.get("receiver")
     sys.path.insert(0, str(ai1.RUNTIME))
+    sys.modules["receiver"] = ai1.receiver
     try:
         spec.loader.exec_module(module)
     finally:
         sys.path[:] = prior_path
+        if prior_receiver is None:
+            sys.modules.pop("receiver", None)
+        else:
+            sys.modules["receiver"] = prior_receiver
 
     tokens = torch.zeros((1, module.EVAL_H, module.EVAL_W), dtype=torch.uint8)
     tokens[:, 3, 7] = 4
@@ -146,6 +152,61 @@ def test_ans_decoder_continues_exactly_from_retained_stack_words() -> None:
     assert decoder.is_empty()
     assert np.array_equal(resumed.decode(family, probabilities[1:]), symbols[1:])
     assert resumed.is_empty()
+
+
+def test_temporal_sidecar_parse_and_integer_lattice_action() -> None:
+    import numpy as np
+    import pytest
+
+    if not ai1.TM1_TEMPORAL_SIDECAR.is_file():
+        pytest.skip("TM1 temporal sidecar custody is not mounted")
+    sidecar = ai1.TM1_TEMPORAL_SIDECAR.read_bytes()
+    base = b"base-model-bundle"
+    combined = base + sidecar + struct.pack("<I", len(sidecar)) + b"T1E1"
+    restored_base, temporal = ai1.receiver.split_optional_temporal_reversion(combined)
+
+    assert restored_base == base
+    assert temporal is not None
+    assert temporal.packed == sidecar
+    assert temporal.corrections.tolist() == [
+        [0, 3, 1, 0, 3],
+        [1, 0, 0, -5, 2],
+        [2, 11, 0, -1, 0],
+        [1, 6, 2, 0, -16],
+        [3, 4, 0, -5, 0],
+    ]
+    assert ai1.receiver.split_optional_temporal_reversion(base) == (base, None)
+
+    inflate = ai1.RUNTIME / "inflate.py"
+    spec = importlib.util.spec_from_file_location("ddm_ai1_temporal_inflate", inflate)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    prior_path = list(sys.path)
+    prior_receiver = sys.modules.get("receiver")
+    sys.path.insert(0, str(ai1.RUNTIME))
+    sys.modules["receiver"] = ai1.receiver
+    try:
+        spec.loader.exec_module(module)
+    finally:
+        sys.path[:] = prior_path
+        if prior_receiver is None:
+            sys.modules.pop("receiver", None)
+        else:
+            sys.modules["receiver"] = prior_receiver
+    codes = np.zeros((4, 5), dtype=np.int16)
+    corrected = module.apply_temporal_reversion(
+        codes,
+        temporal,
+        np.array([0, 1, 2, 3], dtype=np.uint8),
+        np.array([1, 0, 2, 4], dtype=np.uint8),
+    )
+
+    assert corrected.tolist() == [
+        [0, 3, 0, 0, 0],
+        [1, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0],
+        [0, 0, 0, 0, -16],
+    ]
 
 
 def test_real_pins_and_legacy_rebuild_when_ssd_is_mounted() -> None:

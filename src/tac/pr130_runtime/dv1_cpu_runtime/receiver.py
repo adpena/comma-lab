@@ -51,6 +51,10 @@ CX2_SEMANTIC_BLOCK_BYTES = 4096
 XZ_MAGIC = b"\xfd7zXZ\x00"
 SPLIT_HEADER = struct.Struct("<III")
 OUTER_HEADER = struct.Struct("<I")
+TM1_ENVELOPE_MAGIC = b"TM1P"
+TM1_CORRECTION_MAGIC = b"TM1C"
+TM1_TRAILER_MAGIC = b"T1E1"
+TM1_TEMPORAL_REVERSION_ID = 6
 
 TokenCodec = Literal["range", "ans"]
 ModelCodec = Literal[
@@ -86,6 +90,14 @@ class DecodedModels:
     raw: bytes
     codec: ModelCodec
     compressed_stream_bytes: tuple[int, ...]
+
+
+@dataclass(frozen=True)
+class TemporalReversion:
+    """Counted second-order correction table parsed from a TM1 sidecar."""
+
+    corrections: np.ndarray
+    packed: bytes
 
 
 @dataclass(frozen=True)
@@ -364,6 +376,52 @@ def decode_models(models: bytes, *, model_codec: ModelCodec) -> DecodedModels:
         raise ReceiverFormatError("split model pack decoded an empty raw section")
     raw = struct.pack("<II", len(semantic), len(carrier)) + semantic + carrier + hpac
     return DecodedModels(raw, codec, tuple(map(len, streams)))
+
+
+def split_optional_temporal_reversion(
+    models_raw: bytes,
+) -> tuple[bytes, TemporalReversion | None]:
+    """Split the exact TM1 temporal sidecar, preserving unsuffixed legacy bundles."""
+
+    if not models_raw.endswith(TM1_TRAILER_MAGIC):
+        return models_raw, None
+    if len(models_raw) < 8:
+        raise ReceiverFormatError("TM1 model bundle is truncated before its trailer")
+    sidecar_bytes = struct.unpack_from("<I", models_raw, len(models_raw) - 8)[0]
+    sidecar_start = len(models_raw) - 8 - sidecar_bytes
+    if sidecar_start <= 0:
+        raise ReceiverFormatError("TM1 sidecar length is out of bounds")
+    sidecar = models_raw[sidecar_start:len(models_raw) - 8]
+    if len(sidecar) < 10 or not sidecar.startswith(TM1_ENVELOPE_MAGIC):
+        raise ReceiverFormatError("TM1 sidecar lacks its packed envelope")
+    envelope_version, codec_id, raw_bytes = struct.unpack_from("<BBI", sidecar, 4)
+    if envelope_version != 1:
+        raise ReceiverFormatError("unsupported TM1 packed-envelope version")
+    if codec_id != 0:
+        raise ReceiverFormatError(
+            "shipping temporal receiver requires the measured raw TM1 sidecar"
+        )
+    correction_raw = sidecar[10:]
+    if len(correction_raw) != raw_bytes:
+        raise ReceiverFormatError("TM1 correction raw length mismatch")
+    if len(correction_raw) < 9 or not correction_raw.startswith(TM1_CORRECTION_MAGIC):
+        raise ReceiverFormatError("TM1 correction payload lacks its magic")
+    version, candidate_id, rows, classes = struct.unpack_from(
+        "<BBHB", correction_raw, 4
+    )
+    body = correction_raw[9:]
+    if (
+        version != 1
+        or candidate_id != TM1_TEMPORAL_REVERSION_ID
+        or rows != 5
+        or classes != 5
+        or len(body) != 20
+    ):
+        raise ReceiverFormatError("unsupported TM1 temporal-reversion payload")
+    corrections = np.zeros((5, 5), dtype=np.int8)
+    corrections[~np.eye(5, dtype=bool)] = np.frombuffer(body, dtype=np.int8)
+    corrections.setflags(write=False)
+    return models_raw[:sidecar_start], TemporalReversion(corrections, sidecar)
 
 
 def new_token_decoder(blob: bytes, token_codec: TokenCodec) -> _EntropyDecoder:
