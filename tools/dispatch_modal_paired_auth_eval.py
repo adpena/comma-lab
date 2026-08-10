@@ -49,6 +49,9 @@ from tac.deploy.modal.anchor_lookup import (  # noqa: E402
 from tac.deploy.modal.auth_eval import (  # noqa: E402
     modal_uploaded_submission_dir_runtime_manifest,
 )
+from tac.deploy.modal.paired_dispatch_preflight import (  # noqa: E402
+    preflight_axis_commands,
+)
 from tac.deploy.modal.paired_dispatch import (  # noqa: E402
     MODAL_AUTH_EVAL_CPU_REMOTE_SUBMISSION_DIR,
     MODAL_AUTH_EVAL_CUDA_REMOTE_SUBMISSION_DIR,
@@ -776,9 +779,35 @@ def main() -> int:
         )
         return 0
 
-    for axis in ("contest_cuda", "contest_cpu"):
-        if skipped_map.get(axis):
-            continue
+    # LOCAL PREFLIGHT — run the wrappers' OWN guards before any Modal app is
+    # created. ``modal run`` hydrates the app (BUILDING the image, ~5 min)
+    # BEFORE it invokes the ``@app.local_entrypoint()``, so a guard inside
+    # main() costs a full image build to fire. Measured 2026-08-10: three
+    # sequential refusals, one per round trip, ~5 min each. The same checks
+    # locally cost 0.12 s for both axes.
+    to_run = [a for a in ("contest_cuda", "contest_cpu") if not skipped_map.get(a)]
+    preflight = preflight_axis_commands(
+        {axis: plan["commands"][axis] for axis in to_run},
+        repo_root=REPO_ROOT,
+    )
+    refused = {axis: rs for axis, rs in preflight.items() if rs}
+    if refused:
+        for axis, refusals in refused.items():
+            for refusal in refusals:
+                print(f"[PREFLIGHT-REFUSED] axis={axis} {refusal}", flush=True)
+        print(
+            "[PREFLIGHT-REFUSED] no Modal dispatch fired; every refusal above "
+            "would otherwise have surfaced only AFTER a ~5-minute image build.",
+            flush=True,
+        )
+        return 7
+    print(
+        f"[PREFLIGHT-CLEAN] axes={to_run} passed the local wrapper-guard "
+        "reproduction; dispatching.",
+        flush=True,
+    )
+
+    for axis in to_run:
         proc = subprocess.run(plan["commands"][axis], cwd=REPO_ROOT)
         if proc.returncode:
             return proc.returncode
