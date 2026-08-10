@@ -4,9 +4,9 @@
 The outer PR130 payload remains ``[u32 model_word][models][tokens]``.  Bit 31
 of ``model_word`` is the token-coder tag: clear means the shipped queue range
 coder, set means the LIFO ANS coder.  Bits 29--30 explicitly select legacy XZ,
-split Brotli, or split raw LZMA2.  The low 29 bits remain the model-section
-length, so all tags cost zero bytes and the custodied legacy PR130 payload is
-unchanged.
+split Brotli, split raw LZMA2, or the CX2 reversible split-Brotli transform.
+The low 29 bits remain the model-section length, so all tags cost zero bytes
+and the custodied legacy PR130 payload is unchanged.
 
 The model section is either the shipped single XZ/LZMA stream or the split
 three-stream form::
@@ -15,15 +15,19 @@ three-stream form::
     [brotli(semantic)][brotli(carrier)][brotli(hpac)]
 
 Raw LZMA2 streams are accepted as the explicitly tagged dependency-free split
-alternative.  In all cases :func:`decode_models` reconstructs the original
-``models_raw`` bytes, including its two raw-length words, before the real model
-loaders see the result.
+alternative.  The CX2 form applies a bijective signed-zigzag/block-lane map to
+the semantic bytes and XOR-0x80 to the HPAC bytes before Brotli; the receiver
+inverts both maps before any model loader sees them.  In all cases
+:func:`decode_models` reconstructs ``models_raw``, including its two raw-length
+words, before the real model loaders see the result.
 """
 
 from __future__ import annotations
 
 import lzma
+import os
 import struct
+import subprocess
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -43,12 +47,18 @@ SPLIT_BROTLI_FLAG = 1 << 29
 SPLIT_LZMA2_FLAG = 1 << 30
 MODEL_CODEC_MASK = SPLIT_BROTLI_FLAG | SPLIT_LZMA2_FLAG
 MODEL_LENGTH_MASK = SPLIT_BROTLI_FLAG - 1
+CX2_SEMANTIC_BLOCK_BYTES = 4096
 XZ_MAGIC = b"\xfd7zXZ\x00"
 SPLIT_HEADER = struct.Struct("<III")
 OUTER_HEADER = struct.Struct("<I")
 
 TokenCodec = Literal["range", "ans"]
-ModelCodec = Literal["legacy_lzma", "split_brotli", "split_lzma2"]
+ModelCodec = Literal[
+    "legacy_lzma",
+    "split_brotli",
+    "split_lzma2",
+    "split_brotli_cx2",
+]
 
 
 class ReceiverFormatError(ValueError):
@@ -124,11 +134,9 @@ def split_payload(payload: bytes) -> PayloadParts:
         0: "legacy_lzma",
         SPLIT_BROTLI_FLAG: "split_brotli",
         SPLIT_LZMA2_FLAG: "split_lzma2",
+        MODEL_CODEC_MASK: "split_brotli_cx2",
     }
-    try:
-        model_codec = model_codecs[model_flags]
-    except KeyError as error:
-        raise ReceiverFormatError("reserved model-codec selector 3 is invalid") from error
+    model_codec = model_codecs[model_flags]
     model_end = OUTER_HEADER.size + model_bytes
     if model_bytes == 0:
         raise ReceiverFormatError("combined payload declares an empty model section")
@@ -161,6 +169,7 @@ def pack_payload(
         "legacy_lzma": 0,
         "split_brotli": SPLIT_BROTLI_FLAG,
         "split_lzma2": SPLIT_LZMA2_FLAG,
+        "split_brotli_cx2": MODEL_CODEC_MASK,
     }
     if model_codec not in model_flags:
         raise ReceiverFormatError(f"unsupported model codec: {model_codec!r}")
@@ -191,14 +200,100 @@ def _split_streams(models: bytes) -> tuple[bytes, bytes, bytes] | None:
 
 def _decompress_brotli(stream: bytes) -> bytes:
     if brotli is None:
-        raise BrotliDependencyError(
-            "split_brotli requires Brotli==1.2.0; the shipping inflate.sh must "
-            "self-install that exact wheel before importing the receiver"
+        cli = os.environ.get("PR130_BROTLI_CLI", "").strip()
+        if not cli:
+            raise BrotliDependencyError(
+                "split_brotli requires Brotli==1.2.0; the shipping inflate.sh "
+                "must self-install that exact wheel or verify an explicit "
+                "PR130_BROTLI_CLI provider before importing the receiver"
+            )
+        result = subprocess.run(
+            [cli, "--decompress", "--stdout"],
+            input=stream,
+            capture_output=True,
+            check=False,
         )
+        if result.returncode != 0:
+            detail = result.stderr.decode(errors="replace").strip()
+            raise ReceiverFormatError(
+                f"invalid Brotli model stream via CLI provider: {detail}"
+            )
+        return result.stdout
     try:
         return brotli.decompress(stream)
     except brotli.error as error:
         raise ReceiverFormatError("invalid Brotli model stream") from error
+
+
+def _lane2_blocks(data: bytes, *, block_bytes: int) -> bytes:
+    """Put even byte lanes before odd byte lanes within fixed-size blocks."""
+
+    if block_bytes <= 0:
+        raise ReceiverFormatError("lane transform block size must be positive")
+    output = bytearray(len(data))
+    for start in range(0, len(data), block_bytes):
+        block = data[start:start + block_bytes]
+        midpoint = (len(block) + 1) // 2
+        output[start:start + midpoint] = block[0::2]
+        output[start + midpoint:start + len(block)] = block[1::2]
+    return bytes(output)
+
+
+def _unlane2_blocks(data: bytes, *, block_bytes: int) -> bytes:
+    """Invert :func:`_lane2_blocks` exactly, including a short final block."""
+
+    if block_bytes <= 0:
+        raise ReceiverFormatError("lane transform block size must be positive")
+    output = bytearray(len(data))
+    for start in range(0, len(data), block_bytes):
+        block = data[start:start + block_bytes]
+        midpoint = (len(block) + 1) // 2
+        output[start:start + len(block):2] = block[:midpoint]
+        output[start + 1:start + len(block):2] = block[midpoint:]
+    return bytes(output)
+
+
+def _signed_zigzag_bytes(data: bytes) -> bytes:
+    values = np.frombuffer(data, dtype=np.int8).astype(np.int16)
+    encoded = ((values << 1) ^ (values >> 7)).astype(np.uint8)
+    return encoded.tobytes(order="C")
+
+
+def _inverse_signed_zigzag_bytes(data: bytes) -> bytes:
+    encoded = np.frombuffer(data, dtype=np.uint8).astype(np.int16)
+    decoded = (encoded >> 1) ^ -(encoded & 1)
+    return decoded.astype(np.int8).tobytes(order="C")
+
+
+def encode_cx2_model_sections(
+    semantic: bytes, carrier: bytes, hpac: bytes,
+) -> tuple[bytes, bytes, bytes]:
+    """Apply the counted-selector CX2 bijections before independent Brotli."""
+
+    if not semantic or not carrier or not hpac:
+        raise ReceiverFormatError("CX2 model transform requires three non-empty sections")
+    semantic_encoded = _lane2_blocks(
+        _signed_zigzag_bytes(semantic),
+        block_bytes=CX2_SEMANTIC_BLOCK_BYTES,
+    )
+    hpac_encoded = bytes(value ^ 0x80 for value in hpac)
+    return semantic_encoded, carrier, hpac_encoded
+
+
+def decode_cx2_model_sections(
+    semantic: bytes, carrier: bytes, hpac: bytes,
+) -> tuple[bytes, bytes, bytes]:
+    """Invert the CX2 model-section bijections before loader consumption."""
+
+    if not semantic or not carrier or not hpac:
+        raise ReceiverFormatError("CX2 model transform decoded an empty section")
+    semantic_unlaned = _unlane2_blocks(
+        semantic,
+        block_bytes=CX2_SEMANTIC_BLOCK_BYTES,
+    )
+    semantic_decoded = _inverse_signed_zigzag_bytes(semantic_unlaned)
+    hpac_decoded = bytes(value ^ 0x80 for value in hpac)
+    return semantic_decoded, carrier, hpac_decoded
 
 
 def _decompress_xz(stream: bytes, *, label: str) -> bytes:
@@ -241,7 +336,11 @@ def decode_models(models: bytes, *, model_codec: ModelCodec) -> DecodedModels:
             raise ReceiverFormatError("legacy model bundle is truncated before raw lengths")
         return DecodedModels(raw, "legacy_lzma", (len(models),))
 
-    if model_codec not in ("split_brotli", "split_lzma2"):
+    if model_codec not in (
+        "split_brotli",
+        "split_lzma2",
+        "split_brotli_cx2",
+    ):
         raise ReceiverFormatError(f"unsupported model codec: {model_codec!r}")
     streams = _split_streams(models)
     if streams is None:
@@ -254,7 +353,13 @@ def decode_models(models: bytes, *, model_codec: ModelCodec) -> DecodedModels:
         codec: ModelCodec = "split_lzma2"
     else:
         semantic, carrier, hpac = (_decompress_brotli(stream) for stream in streams)
-        codec = "split_brotli"
+        codec = model_codec
+        if model_codec == "split_brotli_cx2":
+            semantic, carrier, hpac = decode_cx2_model_sections(
+                semantic,
+                carrier,
+                hpac,
+            )
     if not semantic or not carrier or not hpac:
         raise ReceiverFormatError("split model pack decoded an empty raw section")
     raw = struct.pack("<II", len(semantic), len(carrier)) + semantic + carrier + hpac

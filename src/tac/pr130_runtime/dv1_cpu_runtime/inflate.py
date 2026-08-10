@@ -3,6 +3,9 @@
 
 from __future__ import annotations
 
+import datetime as dt
+import hashlib
+import json
 import math
 import os
 import sys
@@ -31,10 +34,13 @@ N = 600
 NUM_CLASSES = 5
 EVAL_H, EVAL_W = 384, 512
 CAMERA_H, CAMERA_W = 874, 1164
+_TOKEN_FINISH_SENTINEL = object()
 SEMANTIC_WIDTH = 96
-SEMANTIC_WIDTH_BY_PAYLOAD_BYTES = {30748: 80, 40252: 96}
+SEMANTIC_WIDTH_BY_PAYLOAD_BYTES = {30748: 80, 39090: 96, 40252: 96}
 SEMANTIC_BLOCKS = 4
 SEMANTIC_FRAME_DIM = 8
+SEMANTIC_MIXED_MAGIC = b"SD1M"
+SEMANTIC_MIXED_VERSION = 1
 CARRIER_DIM = 12
 CARRIER_H, CARRIER_W = 24, 32
 CARRIER_AMPLITUDE = 64.0
@@ -100,6 +106,8 @@ def unpack_signed_bits(blob: memoryview, count: int, bits: int):
     if not 2 <= bits <= 8:
         raise ValueError("signed bit unpacker supports 2 through 8 bits")
     byte_count = (count * bits + 7) // 8
+    if len(blob) < byte_count:
+        raise ValueError("truncated signed code stream")
     packed = np.frombuffer(blob[:byte_count], dtype=np.uint8)
     bitstream = np.unpackbits(packed, bitorder="little")[:count * bits]
     bitstream = bitstream.reshape(count, bits).astype(np.int16, copy=False)
@@ -172,14 +180,49 @@ class SemanticTokenRenderer(nn.Module):
         return torch.sigmoid(self.head(F.gelu(value))) * 255.0
 
 
-def unpack_semantic(blob: bytes, template: dict[str, torch.Tensor]):
+def semantic_allocation(
+    blob: bytes,
+    template: dict[str, torch.Tensor],
+) -> tuple[dict[str, int], memoryview, str]:
+    """Parse the counted SD1 allocation or select byte-identical legacy int4."""
+
+    names = [name for name, value in template.items() if value.ndim >= 2]
     remaining = memoryview(blob)
+    if blob.startswith(SEMANTIC_MIXED_MAGIC):
+        if len(remaining) < 6:
+            raise ValueError("truncated mixed semantic header")
+        version = int(remaining[4])
+        count = int(remaining[5])
+        if version != SEMANTIC_MIXED_VERSION or count != len(names):
+            raise ValueError("unsupported mixed semantic header")
+        depth_bytes = (count + 1) // 2
+        if len(remaining) < 6 + depth_bytes:
+            raise ValueError("truncated mixed semantic allocation")
+        packed = np.frombuffer(remaining[6:6 + depth_bytes], dtype=np.uint8)
+        depths_array = np.empty(depth_bytes * 2, dtype=np.uint8)
+        depths_array[0::2] = packed & 0xF
+        depths_array[1::2] = packed >> 4
+        depths = depths_array[:count].astype(int).tolist()
+        if any(depth < 2 or depth > 8 for depth in depths):
+            raise ValueError("invalid bit depth in mixed semantic allocation")
+        remaining = remaining[6 + depth_bytes:]
+        format_name = "sd1_mixed_v1"
+    else:
+        depths = [4] * len(names)
+        format_name = "legacy_int4"
+    return dict(zip(names, depths, strict=True)), remaining, format_name
+
+
+def unpack_semantic(blob: bytes, template: dict[str, torch.Tensor]):
+    allocation, remaining, _ = semantic_allocation(blob, template)
     restored = {}
     for name, value in template.items():
         shape = tuple(value.shape)
         count = value.numel()
         if value.ndim < 2:
             byte_count = count * 2
+            if len(remaining) < byte_count:
+                raise ValueError(f"truncated fp16 tensor {name}")
             array = np.frombuffer(remaining[:byte_count], dtype="<f2").copy()
             restored[name] = torch.from_numpy(array).reshape(shape).float()
             remaining = remaining[byte_count:]
@@ -187,11 +230,13 @@ def unpack_semantic(blob: bytes, template: dict[str, torch.Tensor]):
         is_embedding = name.endswith("embed.weight")
         scale_count = shape[-1] if is_embedding else shape[0]
         scale_bytes = scale_count * 2
+        if len(remaining) < scale_bytes:
+            raise ValueError(f"truncated scale tensor {name}")
         scales = torch.from_numpy(
             np.frombuffer(remaining[:scale_bytes], dtype="<f2").copy()
         ).float()
         remaining = remaining[scale_bytes:]
-        codes, remaining = unpack_signed_int4(remaining, count)
+        codes, remaining = unpack_signed_bits(remaining, count, allocation[name])
         scale_shape = [1] * len(shape)
         scale_shape[-1 if is_embedding else 0] = scale_count
         restored[name] = codes.reshape(shape).float() * scales.reshape(scale_shape)
@@ -560,6 +605,22 @@ def hierarchical_decode(decoder, families, table: np.ndarray):
     return symbols
 
 
+class _TokenFinishProof:
+    __slots__ = ("_sentinel", "ans_final_state_empty", "token_codec")
+
+    def __init__(self, sentinel: object, token_codec: TokenCodec) -> None:
+        if sentinel is not _TOKEN_FINISH_SENTINEL:
+            raise TypeError("token-finish proof can only follow the receiver check")
+        self._sentinel = sentinel
+        self.token_codec = token_codec
+        self.ans_final_state_empty = token_codec == "ans"
+
+
+def _finish_token_stage(decoder, token_codec: TokenCodec) -> _TokenFinishProof:
+    finish_token_decode(decoder, token_codec)
+    return _TokenFinishProof(_TOKEN_FINISH_SENTINEL, token_codec)
+
+
 @torch.no_grad()
 def decode_tokens(
     model: IntegerHPAC,
@@ -568,6 +629,7 @@ def decode_tokens(
     *,
     token_codec: TokenCodec = "range",
     frame_count: int = N,
+    return_finish_proof: bool = False,
 ):
     if not 1 <= frame_count <= N:
         raise ValueError(f"frame_count must be in [1, {N}], got {frame_count}")
@@ -607,7 +669,9 @@ def decode_tokens(
                 f"in {time.time() - started:.1f}s",
                 flush=True,
             )
-    finish_token_decode(decoder, token_codec)
+    finish_proof = _finish_token_stage(decoder, token_codec)
+    if return_finish_proof:
+        return tokens, finish_proof
     return tokens
 
 
@@ -694,6 +758,149 @@ def resolve_device() -> torch.device:
     return torch.device(requested)
 
 
+def sha256_bytes(payload: bytes) -> str:
+    return hashlib.sha256(payload).hexdigest()
+
+
+def sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(8 << 20), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def atomic_json(path: Path, payload: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+    with temporary.open("w", encoding="utf-8") as handle:
+        json.dump(payload, handle, indent=2, sort_keys=True)
+        handle.write("\n")
+        handle.flush()
+        os.fsync(handle.fileno())
+    os.replace(temporary, path)
+
+
+def token_binding(
+    payload: bytes,
+    models_raw: bytes,
+    token_payload: bytes,
+    token_codec: TokenCodec,
+) -> dict[str, str]:
+    return {
+        "archive_member_sha256": sha256_bytes(payload),
+        "models_raw_sha256": sha256_bytes(models_raw),
+        "token_payload_sha256": sha256_bytes(token_payload),
+        "token_codec": token_codec,
+    }
+
+
+def write_token_checkpoint(
+    tokens: torch.Tensor,
+    *,
+    finish_proof: _TokenFinishProof,
+    payload: bytes,
+    models_raw: bytes,
+    token_payload: bytes,
+    token_codec: TokenCodec,
+    cache_path: Path,
+    receipt_path: Path,
+) -> dict:
+    if (
+        not isinstance(finish_proof, _TokenFinishProof)
+        or finish_proof._sentinel is not _TOKEN_FINISH_SENTINEL
+        or finish_proof.token_codec != token_codec
+        or (token_codec == "ans" and not finish_proof.ans_final_state_empty)
+    ):
+        raise TypeError("token checkpoint lacks a matching receiver-finish proof")
+    array = tokens.detach().cpu().contiguous().numpy()
+    if array.dtype != np.uint8 or tuple(array.shape) != (N, EVAL_H, EVAL_W):
+        raise ValueError("token checkpoint requires the exact n600 uint8 geometry")
+    binding = token_binding(payload, models_raw, token_payload, token_codec)
+    token_sha256 = sha256_bytes(array.tobytes(order="C"))
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = cache_path.with_name(f".{cache_path.name}.{os.getpid()}.tmp")
+    with temporary.open("wb") as handle:
+        np.savez(
+            handle,
+            tokens=array,
+            token_sha256=np.array(token_sha256),
+            finish_token_decode_returned=np.array(True),
+            ans_final_state_empty=np.array(finish_proof.ans_final_state_empty),
+            **{name: np.array(value) for name, value in binding.items()},
+        )
+        handle.flush()
+        os.fsync(handle.fileno())
+    os.replace(temporary, cache_path)
+    result = {
+        "schema": "ddm_cx2_token_checkpoint.v1",
+        "complete": True,
+        "written_at_utc": dt.datetime.now(dt.UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "axis": "[macOS-CPU receiver token decode; scorer-free]",
+        "score_claim": False,
+        **binding,
+        "frames": N,
+        "tokens": int(array.size),
+        "decoded_token_sha256": token_sha256,
+        "cache": {
+            "path": str(cache_path),
+            "bytes": cache_path.stat().st_size,
+            "sha256": sha256_file(cache_path),
+        },
+        "finish_token_decode_returned": True,
+        "ans_final_state_empty": finish_proof.ans_final_state_empty,
+    }
+    atomic_json(receipt_path, result)
+    return result
+
+
+def load_token_checkpoint(
+    *,
+    payload: bytes,
+    models_raw: bytes,
+    token_payload: bytes,
+    token_codec: TokenCodec,
+    cache_path: Path,
+    receipt_path: Path,
+) -> tuple[torch.Tensor, dict]:
+    expected = token_binding(payload, models_raw, token_payload, token_codec)
+    with np.load(cache_path, allow_pickle=False) as checkpoint:
+        for name, value in expected.items():
+            if str(checkpoint[name].item()) != value:
+                raise ValueError(f"token checkpoint binding changed at {name}")
+        array = checkpoint["tokens"]
+        token_sha256 = str(checkpoint["token_sha256"].item())
+        finish_returned = bool(checkpoint["finish_token_decode_returned"].item())
+        ans_final_state_empty = bool(checkpoint["ans_final_state_empty"].item())
+    if array.dtype != np.uint8 or tuple(array.shape) != (N, EVAL_H, EVAL_W):
+        raise ValueError("token checkpoint geometry changed")
+    if sha256_bytes(array.tobytes(order="C")) != token_sha256:
+        raise ValueError("token checkpoint decoded-token hash changed")
+    if not finish_returned or (token_codec == "ans" and not ans_final_state_empty):
+        raise ValueError("token checkpoint lacks the receiver-finish proof")
+    result = {
+        "schema": "ddm_cx2_token_checkpoint.v1",
+        "complete": True,
+        "written_at_utc": dt.datetime.now(dt.UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "axis": "[macOS-CPU receiver token decode; scorer-free]",
+        "score_claim": False,
+        **expected,
+        "frames": N,
+        "tokens": int(array.size),
+        "decoded_token_sha256": token_sha256,
+        "cache": {
+            "path": str(cache_path),
+            "bytes": cache_path.stat().st_size,
+            "sha256": sha256_file(cache_path),
+        },
+        "finish_token_decode_returned": finish_returned,
+        "ans_final_state_empty": ans_final_state_empty,
+        "resumed_from_cache": True,
+    }
+    atomic_json(receipt_path, result)
+    return torch.from_numpy(array.copy()), result
+
+
 def main():
     if len(sys.argv) != 4:
         raise SystemExit("usage: inflate.py <archive-dir> <base> <destination.raw>")
@@ -721,14 +928,47 @@ def main():
     semantic, basis, coeff = unpack_semantic_pose(
         models_raw[:semantic_pose_bytes]
     )
-    hpac = load_hpac(models_raw[semantic_pose_bytes:], device)
-    tokens = decode_tokens(
-        hpac,
-        parts.tokens,
-        device,
-        token_codec=parts.token_codec,
-    )
-    del hpac
+    token_cache_text = os.environ.get("PR130_TOKEN_CACHE", "").strip()
+    token_receipt_text = os.environ.get("PR130_TOKEN_RECEIPT", "").strip()
+    if bool(token_cache_text) != bool(token_receipt_text):
+        raise RuntimeError(
+            "PR130_TOKEN_CACHE and PR130_TOKEN_RECEIPT must be set together"
+        )
+    if token_cache_text and Path(token_cache_text).is_file():
+        tokens, token_receipt = load_token_checkpoint(
+            payload=payload,
+            models_raw=models_raw,
+            token_payload=parts.tokens,
+            token_codec=parts.token_codec,
+            cache_path=Path(token_cache_text),
+            receipt_path=Path(token_receipt_text),
+        )
+        print(
+            "resumed exact token stage from "
+            f"{token_receipt['cache']['path']}",
+            flush=True,
+        )
+    else:
+        hpac = load_hpac(models_raw[semantic_pose_bytes:], device)
+        tokens, finish_proof = decode_tokens(
+            hpac,
+            parts.tokens,
+            device,
+            token_codec=parts.token_codec,
+            return_finish_proof=True,
+        )
+        del hpac
+        if token_cache_text:
+            write_token_checkpoint(
+                tokens,
+                finish_proof=finish_proof,
+                payload=payload,
+                models_raw=models_raw,
+                token_payload=parts.tokens,
+                token_codec=parts.token_codec,
+                cache_path=Path(token_cache_text),
+                receipt_path=Path(token_receipt_text),
+            )
     if device.type == "cuda":
         torch.cuda.empty_cache()
     render_video(semantic, basis, coeff, tokens, destination, device)

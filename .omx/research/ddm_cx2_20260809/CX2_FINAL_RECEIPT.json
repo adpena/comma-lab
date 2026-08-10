@@ -1,0 +1,86 @@
+{
+  "schema": "ddm_cx2_final_receipt.v1",
+  "written_at_utc": "2026-08-10T00:08:28Z",
+  "complete": true,
+  "outcome": "did_not_beat_bar",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "axis": "[macOS-CPU advisory; upstream AV GT; immutable evaluate.py; n600]",
+  "bar": {
+    "score": 0.17214129749189645,
+    "axis": "[contest-CUDA; DALI GT; n600]",
+    "comparable_to_measurement": false
+  },
+  "candidate": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_cx2_20260809/composed/archive.zip",
+    "bytes": 186698,
+    "sha256": "2acd09e7a585c12403936d1e8a6dc70a9b35d826fe61ead7dea49ad470c4a996",
+    "base_bytes": 191052,
+    "delta_bytes": -4354,
+    "rate_delta": -0.0028991498818939504
+  },
+  "score": {
+    "sample_count": 600,
+    "average_segnet_distortion": 0.00042839895468205214,
+    "segnet_contribution": 0.042839895468205214,
+    "average_posenet_distortion": 0.0007747594499960542,
+    "posenet_contribution": 0.08802042092583141,
+    "rate_contribution": 0.12431453483000314,
+    "recomputed_score": 0.25517485122403977,
+    "numeric_delta_to_noncomparable_bar": 0.08303355373214333
+  },
+  "fixed_local_distortion_residual": {
+    "strict_archive_cap_bytes_for_score_below_bar": 61996,
+    "candidate_bytes_over_cap": 124702,
+    "token_stream_bytes": 114860,
+    "bytes_still_over_cap_if_token_stream_were_free": 9842,
+    "interpretation": "A coder-only token deletion cannot cross the bar at the measured local distortions; distortion and multiple byte sections must move."
+  },
+  "receiver": {
+    "receipt_path": "/Volumes/VertigoDataTier/pact/ddm_cx2_20260809/decode/literal_receiver_receipt.json",
+    "receipt_sha256": "3f9b135ac6e07b90984a420b45d6a8164957612fad821644c1ca655438fc7d37",
+    "wall_s": 1010.8084664579947,
+    "limit_s": 1800.0,
+    "headroom_s": 789.1915335420053,
+    "raw_path": "/Volumes/VertigoDataTier/pact/ddm_cx2_20260809/submission/inflated/0.raw",
+    "raw_bytes": 3662409600,
+    "raw_sha256": "3319a2bddb98a93dc4552d1ccde8f404767bf3939985fae23c58098996ee541d",
+    "decoded_tokens": 117964800,
+    "decoded_token_sha256": "c5c7671d037b6912980c57929a5b6d789d250ee6a93e3b0a6018cf9f63e32ece",
+    "ans_final_state_empty": true
+  },
+  "evaluator": {
+    "receipt_path": "/Volumes/VertigoDataTier/pact/ddm_cx2_20260809/evaluation/evaluator_trace.json",
+    "receipt_sha256": "39ab09e4d51365489310b1f6dbf631c5d58a2cfb7d09bb634ed95a1da72477e1",
+    "evaluate_py_sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b",
+    "pre_post_identity": true
+  },
+  "build": {
+    "pipeline_receipt_path": "/Volumes/VertigoDataTier/pact/ddm_cx2_20260809/CX2_PIPELINE_RECEIPT.json",
+    "pipeline_receipt_sha256": "9463c04b5e74a72f5c80b72de3d7d5575e21a4fc8c02ec4005fba23701e56c16",
+    "search_receipt_path": "/Volumes/VertigoDataTier/pact/ddm_cx2_20260809/search/complete_zip_search.json",
+    "search_receipt_sha256": "75f87ebddb625398c16406e217a3d474bc53559cb3b08dfbee6dc6d66401202f",
+    "candidate_denominator": 6534,
+    "parseback_all_sections_consumed": true
+  },
+  "custody": {
+    "constriction_version": "0.5.0",
+    "dt1_receipt_path": "/Volumes/VertigoDataTier/pact/ddm_dt1_20260809/retained/retained_n600_result.json",
+    "dt1_receipt_sha256": "5c15f38ab68df68c09a5859d17d19e4247f90e76457282edccbc8a34d060916c",
+    "source_commit_created": false,
+    "source_landing_blocker": "Managed sandbox denied Git object insertion during the required serializer invocation; the staged index remained empty."
+  },
+  "not_run": [
+    "contest-CUDA or Linux DALI evaluation",
+    "paired uniform-q4 control on the same CPU/AV axis",
+    "Modal dispatch",
+    "Linux runtime closure"
+  ],
+  "own_vehicle_frontier_moved": false,
+  "own_vehicle_frontier": {
+    "score": 0.7539807296911207,
+    "bytes": 357836,
+    "axis": "[macOS-CPU advisory]",
+    "sample_count": 600
+  }
+}

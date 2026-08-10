@@ -8,10 +8,12 @@ EXPECTED_BROTLI_VERSION=1.2.0
 MODEL_SELECTOR_SHIFT=29
 SPLIT_BROTLI_SELECTOR=1
 DEPS_DIR=${PR130_RUNTIME_DEPS_DIR:-"$SCRIPT_DIR/.runtime-deps"}
+BROTLI_CLI=${PR130_BROTLI_CLI:-}
 
 export PYTHONNOUSERSITE=1
 export PYTHONDONTWRITEBYTECODE=1
 export PYTHONPATH="$DEPS_DIR:$SCRIPT_DIR${PYTHONPATH:+:$PYTHONPATH}"
+export PR130_BROTLI_CLI="$BROTLI_CLI"
 
 # CONTEST-RUNTIME-PROVIDED dependencies. `inflate.py` and its siblings import numpy and
 # torch as well as constriction; upstream/pyproject.toml declares numpy and upstream's selected
@@ -56,10 +58,14 @@ if len(payload) < 4:
     raise SystemExit("PR130 dependency selection: payload is truncated before model_word")
 model_word = struct.unpack_from("<I", payload)[0]
 selector = (model_word >> int(sys.argv[2])) & 0b11
-codecs = {0: "legacy_lzma", 1: "split_brotli", 2: "split_lzma2"}
-if selector not in codecs:
-    raise SystemExit("PR130 dependency selection: reserved model-codec selector 3")
-print(codecs[selector], int(selector == int(sys.argv[3])))
+codecs = {
+    0: "legacy_lzma",
+    1: "split_brotli",
+    2: "split_lzma2",
+    3: "split_brotli_cx2",
+}
+needs_brotli = selector in (int(sys.argv[3]), 3)
+print(codecs[selector], int(needs_brotli))
 PY
     )
     MODEL_CODEC=${MODEL_SELECTION% *}
@@ -72,16 +78,18 @@ if [ "${PR130_DEPENDENCY_SELECTION_ONLY:-0}" = 1 ]; then
 fi
 
 dependency_ready() {
-    "$PYBIN" - "$EXPECTED_CONSTRICTION_VERSION" "$NEEDS_BROTLI" "$EXPECTED_BROTLI_VERSION" <<'PY'
+    "$PYBIN" - "$EXPECTED_CONSTRICTION_VERSION" "$NEEDS_BROTLI" "$EXPECTED_BROTLI_VERSION" "$BROTLI_CLI" <<'PY'
 import importlib
 import importlib.metadata
+import subprocess
 import sys
 
 import constriction
 
 needs_brotli = sys.argv[2] == "1"
+brotli_cli = sys.argv[4]
 expected = {"constriction": sys.argv[1]}
-if needs_brotli:
+if needs_brotli and not brotli_cli:
     expected["Brotli"] = sys.argv[3]
 for package, wanted in expected.items():
     actual = importlib.metadata.version(package)
@@ -98,7 +106,19 @@ required_apis = [
     (stack, "AnsCoder"),
     (model, "Categorical"),
 ]
-if needs_brotli:
+if needs_brotli and brotli_cli:
+    result = subprocess.run(
+        [brotli_cli, "--version"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0 or result.stdout.strip() != f"brotli {sys.argv[3]}":
+        raise SystemExit(
+            "Brotli CLI version mismatch: expected "
+            f"brotli {sys.argv[3]!s}, got {result.stdout.strip()!r}"
+        )
+elif needs_brotli:
     required_apis.append((importlib.import_module("brotli"), "decompress"))
 for owner, name in required_apis:
     if not hasattr(owner, name):
@@ -201,35 +221,50 @@ fi
 
 if [ "${PR130_DEPENDENCY_SMOKE_ONLY:-0}" = 1 ]; then
     cd -- "$SCRIPT_DIR"
-    exec "$PYBIN" - "$EXPECTED_CONSTRICTION_VERSION" "$EXPECTED_BROTLI_VERSION" <<'PY'
+    exec "$PYBIN" - "$EXPECTED_CONSTRICTION_VERSION" "$EXPECTED_BROTLI_VERSION" "$BROTLI_CLI" <<'PY'
 import importlib.metadata
+import subprocess
 import sys
 
-import brotli
 import constriction
 import inflate
 import receiver
 
-expected_constriction, expected_brotli = sys.argv[1:]
+expected_constriction, expected_brotli, brotli_cli = sys.argv[1:]
 actual_constriction = importlib.metadata.version("constriction")
-actual_brotli = importlib.metadata.version("Brotli")
 if actual_constriction != expected_constriction:
     raise SystemExit(
         f"entrypoint smoke resolved constriction {actual_constriction}, "
         f"expected {expected_constriction}"
     )
+if brotli_cli:
+    result = subprocess.run(
+        [brotli_cli, "--version"],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    actual_brotli = result.stdout.strip().removeprefix("brotli ")
+    provider = f"cli:{brotli_cli}"
+else:
+    import brotli
+
+    actual_brotli = importlib.metadata.version("Brotli")
+    provider = "python-wheel"
+    if receiver.brotli is not brotli:
+        raise SystemExit("receiver.py did not bind the verified Brotli module")
 if actual_brotli != expected_brotli:
     raise SystemExit(
         f"entrypoint smoke resolved Brotli {actual_brotli}, expected {expected_brotli}"
     )
 if inflate.constriction is not constriction:
     raise SystemExit("inflate.py did not bind the verified constriction module")
-if receiver.constriction is not constriction or receiver.brotli is not brotli:
-    raise SystemExit("receiver.py did not bind the verified dependency modules")
+if receiver.constriction is not constriction:
+    raise SystemExit("receiver.py did not bind the verified constriction module")
 print(
     "PR130_DEPENDENCY_READY "
     f"constriction={actual_constriction} Brotli={actual_brotli} "
-    "receiver=inflate.py+receiver.py"
+    f"brotli_provider={provider} receiver=inflate.py+receiver.py"
 )
 PY
 fi
