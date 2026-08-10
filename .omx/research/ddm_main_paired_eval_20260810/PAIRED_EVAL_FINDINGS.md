@@ -135,3 +135,67 @@ Add centering (store a per-row mean, tiny) as the second arm.
 
 This is the named next measurement for the -6,272 B that the paired eval withdrew.
 It is worth running because that figure is 2.6x the entire currently-bankable saving.
+
+---
+
+## ADDENDUM 2 (MAIN, 2026-08-10) — a correction to my own corrected ledger, and one scorer pass closed by arithmetic
+
+### The correction: -2,424 B assumed an additivity the producing arm had already disclaimed
+
+Addendum 1 stated the bankable saving as **-2,424 B = ai1 -2,416 + hp3 -8**. That addition is not
+licensed. `ddm_hp3`'s own report says so at line 123, verbatim:
+
+> require a new real archive because the `-8 B` result is not additive with a changed token coder.
+
+The mechanism is in hp3's decomposition: its -8 B is not one number, it is
+**-548 B (joint model XZ) + 516 B (token Range stream) + 24 B (seek checkpoint)**. The +516 B
+token term is measured against the BASE Range coder. `ai1` REPLACES that coder with ANS. Under a
+different coder the token term is a different number, so the net is unknown until a real composed
+archive is built and stat'd.
+
+**Corrected ledger:**
+
+| claim | bytes | share of the 33,252 B sub-0.15 rate target | status |
+|---|---:|---:|---|
+| `ai1` ANS token re-code | **-2,416** | **7.27%** | BANKABLE — lossless by construction (same symbols, fewer bytes; canonical token sha reproduced) |
+| `hp3` frame-embed step2 | -8 | 0.02% | **NOT ADDITIVE** with ai1 — needs a real composed archive |
+| `sm3` low-rank r32 | -6,272 | — | REFUTED (S 0.2098374 -> 7.4924) |
+
+The magnitude of this correction is negligible (7.27% vs 7.29%). **The kind is not.** It is the
+same assumed-additivity error that the paired eval had just punished on the distortion axis, made
+again on the rate axis in the same document, against an explicit written warning from the arm that
+produced the number. Recording it here because a ledger that quietly rounds in its own favour is
+worse than one that is 8 B smaller.
+
+### hp3's queued exact eval is CLOSED BY ARITHMETIC — do not spend the slot
+
+`hp3` measured its realized raw output at sha256 `a18eb42a8da9399bcc03e795e17597bfbd459412dbb37990117665f48c4c0353`
+— **byte-identical to the base raw**. That is a measurement, not an assumption: the re-quantization
+changes 2,371 of 4,800 int8 frame-embedding values and none of them survive to a rendered pixel.
+
+`upstream/evaluate.py` computes d_seg and d_pose as deterministic functions of
+`submission_dir/inflated/<name>.raw` against a fixed GT. Identical raw bytes therefore give
+**identical distortion terms by construction**. The only quantity that moves is `archive.zip` size,
+and that delta is exactly -8 B. So both axes are already fully determined:
+
+- `[contest-CUDA, DALI GT]`: S = 0.172141297491896447 - 0.000005327 = **0.172135970620271**
+- `[macOS-CPU advisory, AV GT]`: S = 0.209837400 - 0.000005327 = **0.209832073**
+
+A scorer pass would consume the sole slot for ~7 minutes to reproduce two numbers we hold exactly.
+**Row closed. Not deferred — closed.** It reopens only if the composed-with-ai1 archive changes the
+realized raw, which is precisely the composition measurement named above.
+
+### What the fleet is doing about all of it
+
+Four arms spawned on the two live rate levers and the two screening debts:
+
+- `ddm_sm4` — the r16-int8 vs r32-int4 equal-byte discriminator from Addendum 1. Recovers the
+  -6,272 B if the defect is factor-quantization compounding rather than rank insufficiency.
+- `ddm_hm1` — HPAC model capacity vs token bytes as ONE joint budget. tokens are 61.23% of the
+  archive and rc2 closed the coder axis on every section; the model is the surviving lever.
+- `ddm_sv3` — screens the two still-unmeasured semantic candidates (VQ32 -4,648 B, SD1 -848 B)
+  with the refuted low-rank as a mandatory positive control.
+- `ddm_pz2` — the pose section as a representation problem: 23,384 B for 3,600 score-relevant
+  scalars, with the measured 6.83x AV-vs-DALI pose gap as a hard no-transfer constraint.
+
+**BASE: PR130 CPR1 S = 0.172141297491896447 @ 191,052 B `[contest-CUDA, DALI GT, n600]` — UNMOVED.**
