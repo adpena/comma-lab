@@ -31,7 +31,7 @@ The score path remains the repository's canonical evaluator:
 
 Usage:
     PYTHONPATH=src:upstream:$PWD .venv/bin/modal run \
-        experiments/modal_auth_eval_cpu.py \
+        experiments/modal_auth_eval_cpu.py::main \
         --archive experiments/results/public_pr_intake_full/.../archive.zip \
         --inflate-sh experiments/results/.../source/submissions/apogee/inflate.sh \
         --output-dir experiments/results/pr107_apogee_cpu_auth_eval_<ts>
@@ -40,7 +40,7 @@ Detached long runs must detach at BOTH layers: Modal CLI keeps the ephemeral
 app alive, and the wrapper spawns the remote function.
 
     PYTHONPATH=src:upstream:$PWD .venv/bin/modal run --detach \
-        experiments/modal_auth_eval_cpu.py \
+        experiments/modal_auth_eval_cpu.py::main \
         --archive experiments/results/.../archive.zip \
         --output-dir experiments/results/modal_auth_eval_cpu/<run_id> \
         --detach --provider-detach-ack \
@@ -93,6 +93,10 @@ REQUIRED_SAMPLES = 600
 # NOT a tunable: change it only if upstream's workflow changes.
 # Sister constant: UPSTREAM_UV_GROUP_CUDA in experiments/modal_auth_eval.py.
 UPSTREAM_UV_GROUP_CPU = "cpu"
+# Built OUTSIDE the pinned snapshot -- see the CUDA dispatcher's note: uv's
+# ``.venv/lib64`` symlink breaks tac.contest_compliance's snapshot hasher, and
+# writing into ``upstream/`` is forbidden regardless.
+UPSTREAM_LOCKED_VENV = "/opt/upstream-locked-venv"
 
 # ``include_source=False``: this dispatcher self-mounts every dir it needs via the
 # explicit ``add_local_dir(...)`` / ``add_local_file(...)`` calls on ``eval_image``
@@ -202,7 +206,8 @@ eval_image = (
         ignore=ignore_generated_mount_path,
     )
     # UPSTREAM LOCKED ENVIRONMENT (2026-08-10) -- sister of the CUDA wrapper's block.
-    # Build ``upstream/.venv`` from ``upstream/uv.lock`` at the ``cpu`` group so
+    # Build a venv from ``upstream/uv.lock`` at the ``cpu`` group -- OUTSIDE the
+    # pinned snapshot (the CUDA block records the provenance failure that taught us) -- so
     # ``upstream/evaluate.py`` runs under the same resolved dependency set the
     # contest's own CPU runner installs, and contest_auth_eval.py's upstream-lock
     # parity gate passes BY IDENTITY instead of being asserted past. Placed right
@@ -211,9 +216,11 @@ eval_image = (
     # existence+exec only -- the version comparison is the parity gate's job, and a
     # second hardcoded copy here would be a drifting authority.
     .run_commands(  # MODAL_MANUAL_MOUNT_OK:narrow CPU auth-eval dispatcher; locked upstream env
-        f"cd {REMOTE_REPO / 'upstream'} && uv sync --frozen --no-install-project"
-        f" --group {UPSTREAM_UV_GROUP_CPU}",
-        f"{REMOTE_REPO / 'upstream/.venv/bin/python'} -c "
+        f"cd {REMOTE_REPO / 'upstream'} && UV_PROJECT_ENVIRONMENT={UPSTREAM_LOCKED_VENV}"
+        f" uv sync --frozen --no-install-project --group {UPSTREAM_UV_GROUP_CPU}",
+        # Fail the BUILD, not a paid row, if the snapshot was polluted anyway.
+        f"test ! -e {REMOTE_REPO / 'upstream/.venv'}",
+        f"{UPSTREAM_LOCKED_VENV}/bin/python -c "
         "'import sys,torch,torchvision,timm,numpy;"
         'print("upstream-locked-env", sys.version.split()[0], torch.__version__,'
         " torchvision.__version__, timm.__version__, numpy.__version__)'",
@@ -288,7 +295,7 @@ eval_image = (
     # 'modal_auth_eval_cpu'`` and EVERY contest-CPU dispatch since 2026-05-31
     # failed silently (0 scored rows; z5/v15 stuck "pending"). The function is
     # serialized by module name ``modal_auth_eval_cpu`` (this file's stem when
-    # run via ``modal run experiments/modal_auth_eval_cpu.py``); the remote MUST
+    # run via ``modal run experiments/modal_auth_eval_cpu.py::main``); the remote MUST
     # be able to import it. ``add_local_python_source`` re-adds exactly that one
     # module without re-enabling the repo-root automount scan that triggers the
     # fsmonitor socket bug. Sister fix in experiments/modal_auth_eval.py.
@@ -760,7 +767,7 @@ def _run_auth_eval_inner(
         # build time (see UPSTREAM_UV_GROUP_CPU above) -- the parity gate's own
         # reference interpreter, so parity holds by identity, not by assertion.
         "--upstream-python",
-        str(REMOTE_REPO / "upstream/.venv/bin/python"),
+        f"{UPSTREAM_LOCKED_VENV}/bin/python",
         "--video-names-file",
         str(REMOTE_REPO / "upstream/public_test_video_names.txt"),
         "--device",
@@ -1120,6 +1127,7 @@ def prove_locked_env() -> dict:
 
     return probe_locked_upstream_env(
         str(REMOTE_REPO / "upstream"),
+        venv_python=f"{UPSTREAM_LOCKED_VENV}/bin/python",
         expect_dali=False,
     )
 
@@ -1178,7 +1186,7 @@ def main(
     if detach and not provider_detach_ack:
         raise SystemExit(
             "FATAL: wrapper --detach requires provider-level Modal CLI detach. "
-            "Use `.venv/bin/modal run --detach experiments/modal_auth_eval_cpu.py ... "
+            "Use `.venv/bin/modal run --detach experiments/modal_auth_eval_cpu.py::main ... "
             "--detach --provider-detach-ack ...`. Without CLI --detach the ephemeral "
             "Modal app may stop before the spawned function returns, producing a "
             "blank RemoteError and no score artifact."

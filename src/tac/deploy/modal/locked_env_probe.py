@@ -4,9 +4,15 @@
 WHY THIS EXISTS. On 2026-08-10 a real n600 T4 CUDA row came back
 (S = 0.170536856816211 @ 188,636 B, -0.001604 vs the PR130 bar) and was REFUSED by
 ``contest_auth_eval.py``'s upstream-lock parity gate: the image hand-pinned torch 2.5.1
-while ``upstream/uv.lock`` resolves 2.9.0+cu128. The cure is to BUILD ``upstream/.venv``
-from the lock inside the image (see ``UPSTREAM_UV_GROUP_CUDA`` /
+while ``upstream/uv.lock`` resolves 2.9.0+cu128. The cure is to BUILD a venv from that
+lock inside the image (see ``UPSTREAM_LOCKED_VENV`` / ``UPSTREAM_UV_GROUP_CUDA`` /
 ``UPSTREAM_UV_GROUP_CPU`` in the dispatchers) and evaluate through it.
+
+The venv lives OUTSIDE the pinned snapshot, and that placement is load-bearing. The
+first attempt put it at ``upstream/.venv`` and every eval then died in provenance:
+``tac.contest_compliance`` hashes the upstream tree and refuses symlinks, so
+``.venv/lib64`` broke ``compute_upstream_snapshot_sha256``. Writing anything into the
+pinned snapshot also violates the read-only-upstream rule outright.
 
 That cure is a NEW image layer. Firing a paid GPU eval on an unbuilt layer risks
 spending the envelope to discover a ``uv sync`` failure. So this module is the CHEAP
@@ -70,21 +76,29 @@ def _last_json(stdout: str) -> dict[str, Any] | None:
 def probe_locked_upstream_env(
     upstream_dir: str,
     *,
+    venv_python: str,
     expect_dali: bool,
     timeout: int = 600,
 ) -> dict[str, Any]:
     """Verify the locked upstream venv in THIS container. Returns a typed receipt.
 
     ``upstream_dir`` is the remote upstream root (the dispatcher's
-    ``REMOTE_REPO / "upstream"``). ``expect_dali`` is True on the CUDA axis, whose
-    dependency group carries ``nvidia-dali-cuda120``; the CPU group does not.
+    ``REMOTE_REPO / "upstream"``); it is the PYTHONPATH root for the import check, and
+    nothing is written into it. ``venv_python`` is the locked interpreter, passed
+    EXPLICITLY rather than derived: an earlier version guessed
+    ``{upstream_dir}/.venv/bin/python`` and that guess was the defect. Materializing a
+    venv inside the pinned snapshot put ``.venv/lib64`` (a symlink) into the tree that
+    ``tac.contest_compliance`` hashes, and the canonical hasher correctly refuses
+    symlinks -- so every eval died at provenance with
+    ``canonical upstream snapshot cannot contain symlinks``. The venv now lives outside
+    the snapshot and the caller says where. ``expect_dali`` is True on the CUDA axis,
+    whose dependency group carries ``nvidia-dali-cuda120``; the CPU group does not.
 
     ``ok`` is True only when the locked interpreter execs, reports all parity packages,
     and can import upstream's own modules. It is a PRECONDITION for spending, never
     evidence about a score.
     """
 
-    venv_python = f"{upstream_dir}/.venv/bin/python"
     receipt: dict[str, Any] = {
         "schema": "modal_locked_upstream_env_probe.v1",
         "score_claim": False,

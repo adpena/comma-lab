@@ -269,7 +269,7 @@ def _dispatch_command_stub(
         kind = "shared" if runner.endswith("shared") else "isolated"
         return (
             f"# Modal CPU ({kind}) for archive sha={sha_short}; verify wrapper flags before spend:\n"
-            f".venv/bin/modal run --detach experiments/modal_auth_eval_cpu.py -- \\\n"
+            f".venv/bin/modal run --detach experiments/modal_auth_eval_cpu.py::main -- \\\n"
             f"    --archive {archive_path} \\\n"
             f"    --inflate-sh {inflate_sh_path} \\\n"
             f"    --output-dir {Path(output_relpath).parent.as_posix()} \\\n"

@@ -12,14 +12,14 @@ Promotion/ranking still requires the normal adjudication step over the
 harvested ``contest_auth_eval.json`` and the exact local archive bytes.
 
 Usage:
-    PYTHONPATH=src:upstream:$PWD .venv/bin/modal run experiments/modal_auth_eval.py \
+    PYTHONPATH=src:upstream:$PWD .venv/bin/modal run experiments/modal_auth_eval.py::main \
         --archive experiments/results/.../point_004_eps_p2.zip \
         --output-dir experiments/results/modal_auth_eval/point_004_eps_p2
 
 Detached long runs must detach at BOTH layers: Modal CLI keeps the ephemeral
 app alive, and the wrapper spawns the remote function.
 
-    PYTHONPATH=src:upstream:$PWD .venv/bin/modal run --detach experiments/modal_auth_eval.py \
+    PYTHONPATH=src:upstream:$PWD .venv/bin/modal run --detach experiments/modal_auth_eval.py::main \
         --archive experiments/results/.../archive.zip \
         --output-dir experiments/results/modal_auth_eval/<run_id> \
         --detach --provider-detach-ack \
@@ -72,6 +72,10 @@ DALI_DISABLE_NVML_VALUE = "1"
 # group therefore picks the score axis' numerics, not just its device.
 # NOT a tunable: change it only if upstream's workflow changes.
 UPSTREAM_UV_GROUP_CUDA = "cu128"
+# The locked upstream venv is built OUTSIDE the pinned snapshot: writing into
+# ``upstream/`` is forbidden, and uv's ``.venv/lib64`` symlink breaks the canonical
+# snapshot hasher (tac.contest_compliance refuses symlinks). See the image layer below.
+UPSTREAM_LOCKED_VENV = "/opt/upstream-locked-venv"
 REMOTE_PYTHONPATH = f"{REMOTE_REPO / 'src'}:{REMOTE_REPO / 'upstream'}:{REMOTE_REPO}"
 
 # ``include_source=False``: this dispatcher self-mounts every dir it needs via the
@@ -165,14 +169,22 @@ eval_image = (
         copy=True,
         ignore=ignore_generated_mount_path,
     )
-    # UPSTREAM LOCKED ENVIRONMENT (2026-08-10). Build ``upstream/.venv`` INSIDE the
-    # image from ``upstream/uv.lock`` so ``upstream/evaluate.py`` runs under the same
-    # resolved dependency set the contest's own runner installs. Placed immediately
-    # after the ``upstream`` mount so the expensive sync layer is invalidated only by
-    # upstream changes, not by the mounts below it.
+    # UPSTREAM LOCKED ENVIRONMENT (2026-08-10). Build a venv INSIDE the image from
+    # ``upstream/uv.lock`` so ``upstream/evaluate.py`` runs under the same resolved
+    # dependency set the contest's own runner installs. Placed immediately after the
+    # ``upstream`` mount so the expensive sync layer is invalidated only by upstream
+    # changes, not by the mounts below it.
+    #
+    # THE VENV LIVES OUTSIDE THE SNAPSHOT, and that is load-bearing. The first version
+    # of this layer synced to ``upstream/.venv`` and every eval died in provenance:
+    # ``tac.contest_compliance._iter_upstream_files`` refuses symlinks in the canonical
+    # snapshot, and uv's venv contains ``lib64 -> lib``. Writing into the pinned upstream
+    # snapshot is also forbidden outright. ``UV_PROJECT_ENVIRONMENT`` relocates it; the
+    # assertion below FAILS THE BUILD if uv ever writes ``.venv`` into upstream anyway,
+    # so the snapshot can never be silently polluted again.
     #
     # WHY THIS EXISTS: contest_auth_eval.py compares the evaluating interpreter's
-    # torch/torchvision/timm/numpy against ``upstream/.venv/bin/python`` and, on any
+    # torch/torchvision/timm/numpy against the declared ``--upstream-python`` and, on any
     # mismatch, stamps ``env_mismatch{advisory_only: true}`` -- which correctly refused
     # a real n600 T4 CUDA row on 2026-08-10 (S=0.170536856816211 @ 188,636 B) because
     # this image hand-pins torch 2.5.1 / torchvision 0.20.1 / timm 1.0.27 / numpy
@@ -185,9 +197,11 @@ eval_image = (
     # version comparison is contest_auth_eval.py's fail-closed parity gate, and
     # duplicating hardcoded version literals here would be a second, drifting authority.
     .run_commands(  # MODAL_MANUAL_MOUNT_OK:narrow auth-eval dispatcher; locked upstream env
-        f"cd {REMOTE_REPO / 'upstream'} && uv sync --frozen --no-install-project"
-        f" --group {UPSTREAM_UV_GROUP_CUDA}",
-        f"{REMOTE_REPO / 'upstream/.venv/bin/python'} -c "
+        f"cd {REMOTE_REPO / 'upstream'} && UV_PROJECT_ENVIRONMENT={UPSTREAM_LOCKED_VENV}"
+        f" uv sync --frozen --no-install-project --group {UPSTREAM_UV_GROUP_CUDA}",
+        # Fail the BUILD, not a paid row, if the snapshot was polluted anyway.
+        f"test ! -e {REMOTE_REPO / 'upstream/.venv'}",
+        f"{UPSTREAM_LOCKED_VENV}/bin/python -c "
         "'import sys,torch,torchvision,timm,numpy;"
         'print("upstream-locked-env", sys.version.split()[0], torch.__version__,'
         " torchvision.__version__, timm.__version__, numpy.__version__)'",
@@ -702,7 +716,7 @@ def _run_auth_eval_inner(
         # gate's reference interpreter, so the gate passes by identity rather than
         # by assertion; contest_auth_eval.py evaluates parity unconditionally.
         "--upstream-python",
-        str(REMOTE_REPO / "upstream/.venv/bin/python"),
+        f"{UPSTREAM_LOCKED_VENV}/bin/python",
         "--video-names-file",
         str(REMOTE_REPO / "upstream/public_test_video_names.txt"),
         "--device",
@@ -1167,13 +1181,14 @@ def prove_locked_env() -> dict:
     Runs on the SAME ``eval_image`` the paid GPU path uses, so invoking it forces the
     identical build. Costs CPU-seconds instead of GPU-minutes, and answers the one
     question a paid row cannot afford to discover mid-flight: did ``uv sync`` produce a
-    working ``upstream/.venv``? See tac.deploy.modal.locked_env_probe for why.
+    working locked venv? See tac.deploy.modal.locked_env_probe for why.
     """
 
     from tac.deploy.modal.locked_env_probe import probe_locked_upstream_env
 
     return probe_locked_upstream_env(
         str(REMOTE_REPO / "upstream"),
+        venv_python=f"{UPSTREAM_LOCKED_VENV}/bin/python",
         expect_dali=True,  # the cu128 group carries nvidia-dali-cuda120
     )
 
@@ -1235,7 +1250,7 @@ def main(
     if detach and not provider_detach_ack:
         raise SystemExit(
             "FATAL: wrapper --detach requires provider-level Modal CLI detach. "
-            "Use `.venv/bin/modal run --detach experiments/modal_auth_eval.py ... "
+            "Use `.venv/bin/modal run --detach experiments/modal_auth_eval.py::main ... "
             "--detach --provider-detach-ack ...`. Without CLI --detach the ephemeral "
             "Modal app may stop before the spawned function returns, producing a "
             "blank RemoteError and no score artifact."

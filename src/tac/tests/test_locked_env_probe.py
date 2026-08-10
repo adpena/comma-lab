@@ -15,9 +15,13 @@ import pytest
 
 from tac.deploy.modal import locked_env_probe as lep
 
+# The locked venv lives OUTSIDE the pinned snapshot (see the module docstring: uv's
+# .venv/lib64 symlink broke the canonical upstream-snapshot hasher on 2026-08-10).
+LOCKED_VENV_PY = "/opt/upstream-locked-venv/bin/python"
+
 LOCKED = {
     "python": "3.12.7",
-    "executable": "/workspace/pact/upstream/.venv/bin/python",
+    "executable": LOCKED_VENV_PY,
     "torch": "2.9.0+cu128",
     "torchvision": "0.24.0",
     "timm": "1.0.22",
@@ -49,10 +53,10 @@ def _default_script(*, locked_rc=0, evaluate_rc=0, locked_env=LOCKED):
             if evaluate_rc != 0:
                 return evaluate_rc, "", "ModuleNotFoundError: No module named 'nvidia'"
             return 0, "evaluate-imports-ok\n", ""
-        # Must be the UPSTREAM venv specifically. A bare ".venv/bin/python" substring
-        # also matches this test process's own sys.executable, which would silently
-        # alias the two interpreters and hide the very contrast the probe reports.
-        if exe.endswith("/upstream/.venv/bin/python"):
+        # Match the locked interpreter EXACTLY. Substring matching on ".venv/bin/python"
+        # would also catch this test process's own sys.executable, silently aliasing the
+        # two interpreters and hiding the very contrast the probe exists to report.
+        if exe == LOCKED_VENV_PY:
             if locked_rc != 0:
                 return locked_rc, "", "OSError: [Errno 8] Exec format error"
             return 0, json.dumps(locked_env) + "\n", ""
@@ -85,7 +89,11 @@ def test_last_json_returns_none_when_absent():
 def test_healthy_env_is_ok_and_never_a_score_claim(monkeypatch):
     monkeypatch.setattr(lep, "_run", _fake_run(_default_script()))
 
-    receipt = lep.probe_locked_upstream_env("/workspace/pact/upstream", expect_dali=True)
+    receipt = lep.probe_locked_upstream_env(
+        "/workspace/pact/upstream",
+        venv_python=LOCKED_VENV_PY,
+        expect_dali=True,
+    )
 
     assert receipt["ok"] is True
     assert receipt["locked_rc"] == 0
@@ -104,7 +112,11 @@ def test_mach_o_interpreter_is_not_ok_and_keeps_stderr(monkeypatch):
 
     monkeypatch.setattr(lep, "_run", _fake_run(_default_script(locked_rc=1)))
 
-    receipt = lep.probe_locked_upstream_env("/workspace/pact/upstream", expect_dali=True)
+    receipt = lep.probe_locked_upstream_env(
+        "/workspace/pact/upstream",
+        venv_python=LOCKED_VENV_PY,
+        expect_dali=True,
+    )
 
     assert receipt["ok"] is False
     assert receipt["locked_env"] is None
@@ -117,7 +129,11 @@ def test_evaluate_import_failure_blocks_ok(monkeypatch):
 
     monkeypatch.setattr(lep, "_run", _fake_run(_default_script(evaluate_rc=1)))
 
-    receipt = lep.probe_locked_upstream_env("/workspace/pact/upstream", expect_dali=True)
+    receipt = lep.probe_locked_upstream_env(
+        "/workspace/pact/upstream",
+        venv_python=LOCKED_VENV_PY,
+        expect_dali=True,
+    )
 
     assert receipt["ok"] is False
     assert receipt["locked_rc"] == 0  # interpreter fine; the IMPORT is what failed
@@ -130,7 +146,11 @@ def test_partial_parity_report_blocks_ok(monkeypatch):
     partial.pop("timm")
     monkeypatch.setattr(lep, "_run", _fake_run(_default_script(locked_env=partial)))
 
-    receipt = lep.probe_locked_upstream_env("/workspace/pact/upstream", expect_dali=True)
+    receipt = lep.probe_locked_upstream_env(
+        "/workspace/pact/upstream",
+        venv_python=LOCKED_VENV_PY,
+        expect_dali=True,
+    )
 
     assert receipt["ok"] is False
     assert receipt["missing_parity_packages"] == ["timm"]
@@ -150,7 +170,11 @@ def test_dali_probe_is_axis_specific(monkeypatch, expect_dali):
 
     monkeypatch.setattr(lep, "_run", _fake_run(script))
 
-    receipt = lep.probe_locked_upstream_env("/workspace/pact/upstream", expect_dali=expect_dali)
+    receipt = lep.probe_locked_upstream_env(
+        "/workspace/pact/upstream",
+        venv_python=LOCKED_VENV_PY,
+        expect_dali=expect_dali,
+    )
 
     evaluate_code = [c for c in seen if "evaluate-imports-ok" in c][0]
     assert ("nvidia.dali" in evaluate_code) is expect_dali
@@ -171,8 +195,37 @@ def test_upstream_dir_is_quoted_into_the_probe_source(monkeypatch):
     monkeypatch.setattr(lep, "_run", _fake_run(script))
     odd_dir = "/work space/pact's/upstream"
 
-    receipt = lep.probe_locked_upstream_env(odd_dir, expect_dali=False)
+    receipt = lep.probe_locked_upstream_env(
+        odd_dir,
+        venv_python=LOCKED_VENV_PY,
+        expect_dali=False,
+    )
 
     evaluate_code = [c for c in seen if "evaluate-imports-ok" in c][0]
     compile(evaluate_code, "<probe>", "exec")  # the generated program must parse
-    assert receipt["venv_python"] == f"{odd_dir}/.venv/bin/python"
+    assert receipt["upstream_dir"] == odd_dir
+
+
+def test_venv_python_is_taken_verbatim_never_derived_from_upstream_dir(monkeypatch):
+    """The 2026-08-10 regression: deriving the venv from upstream_dir put it INSIDE the
+    pinned snapshot, whose hasher refuses the .venv/lib64 symlink. The caller decides."""
+
+    seen: list[str] = []
+
+    def script(argv):
+        seen.append(argv[0])
+        if "evaluate-imports-ok" in argv[2]:
+            return 0, "evaluate-imports-ok\n", ""
+        return 0, json.dumps(LOCKED) + "\n", ""
+
+    monkeypatch.setattr(lep, "_run", _fake_run(script))
+
+    receipt = lep.probe_locked_upstream_env(
+        "/workspace/pact/upstream",
+        venv_python="/opt/elsewhere/bin/python",
+        expect_dali=False,
+    )
+
+    assert receipt["venv_python"] == "/opt/elsewhere/bin/python"
+    assert "/opt/elsewhere/bin/python" in seen
+    assert not any(exe.startswith("/workspace/pact/upstream/.venv") for exe in seen)
