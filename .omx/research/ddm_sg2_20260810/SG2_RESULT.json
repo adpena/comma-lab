@@ -1,0 +1,114 @@
+{
+  "schema": "ddm_sg2_repo_receipt.v1",
+  "status": "SCORER_FREE_COMPLETE_SCORER_GATE_QUEUED",
+  "axis": "[scorer-free audit with explicitly labeled reused measurement axes]",
+  "score_claim": false,
+  "pointer_moved": false,
+  "base": {
+    "archive_bytes": 191052,
+    "archive_sha256": "0491d5df84fc70b62b3f7ccf8894f5e1b81c616de46a052e4423fc1e18fdc7cd",
+    "commit": "113b52fdb1",
+    "contest_cuda_dali_n600_s": 0.17214129749189645,
+    "reported_d_seg": 0.00028609,
+    "reported_seg_contribution_s": 0.028609000000000002
+  },
+  "official_pr130_edge_decomposition": {
+    "pixel_denominator": 117964800,
+    "rounded_scalar_implied_mismatches": 33748.549632,
+    "candidate_argmax_payload_status": "NOT_RETAINED_IN_SEARCHED_SCOPE",
+    "status": "UNMEASURED_SCORER_GATED_AND_SOURCE_PAYLOAD_NOT_RETAINED",
+    "disposition": "QUEUED_WITH_A_FIRE_ORDER"
+  },
+  "chroma_siting_906": {
+    "axis": "[macOS-CPU advisory]",
+    "sampled_pairs": 120,
+    "selection": "seeded_stratified_random",
+    "pixel_denominator": 23592960,
+    "disagreement_pixels": 5377,
+    "disagreement_fraction": 0.00022790696885850695,
+    "fraction_of_rounded_pr130_reported_d_seg": 0.7966268267276274,
+    "status": "REPRODUCED_AS_HYPOTHETICAL_SOURCE_CHROMA_SITING_SENSITIVITY_NOT_PR130_ERROR"
+  },
+  "av_dali_source_target_control": {
+    "axis": "[same-host Tesla T4; AV-vs-DALI retained target-cache reduction]",
+    "population_pairs": 600,
+    "pixel_denominator": 117964800,
+    "disagreement_pixels": 20671,
+    "disagreement_fraction": 0.00017523023817274304,
+    "fraction_of_rounded_pr130_reported_d_seg": 0.6125003955844072,
+    "road_participating_pixels": 18531,
+    "road_share_of_disagreements": 0.8964733201102995,
+    "symmetric_edges": [
+      {"edge": "Road<->MyCar", "pixels": 5824},
+      {"edge": "Road<->Lane", "pixels": 5695},
+      {"edge": "Road<->Undrivable", "pixels": 5668},
+      {"edge": "Undrivable<->Movable", "pixels": 2068},
+      {"edge": "Road<->Movable", "pixels": 1344},
+      {"edge": "Lane<->MyCar", "pixels": 25},
+      {"edge": "Lane<->Undrivable", "pixels": 22},
+      {"edge": "Lane<->Movable", "pixels": 19},
+      {"edge": "Movable<->MyCar", "pixels": 6},
+      {"edge": "Undrivable<->MyCar", "pixels": 0}
+    ],
+    "status": "MEASURED_SOURCE_TARGET_DECODER_DIFFERENCE_NOT_PR130_CANDIDATE_ERROR"
+  },
+  "exchange_rate": {
+    "original_video_bytes": 37545489,
+    "rate_s_per_1000_bytes": 0.0006658589531221713
+  },
+  "priced_levers": [
+    {
+      "lever": "stage07_to_stage08_expected_flip_tail_qat",
+      "axis": "[checkpoint-recorded CUDA n600 research cache plus exact scorer-free complete-archive bytes]",
+      "old_archive_bytes": 191040,
+      "new_archive_bytes": 191052,
+      "delta_archive_bytes": 12,
+      "old_d_seg": 0.0002972496880425347,
+      "new_d_seg": 0.0002763705783420139,
+      "delta_d_seg": -0.000020879109700520817,
+      "seg_delta_s": -0.0020879109700520817,
+      "rate_delta_s": 0.000007990307437466055,
+      "semantic_leg_delta_s": -0.002079920662614616,
+      "status": "MEASURED_AND_ALREADY_CONSUMED_BY_PR130_BASE"
+    },
+    {
+      "lever": "sd1_selected_mixed_q3q4",
+      "axis": "[macOS-CPU advisory; retained official-Ada conditioning and target]",
+      "old_archive_bytes": 191052,
+      "new_archive_bytes": 190204,
+      "delta_archive_bytes": -848,
+      "old_d_seg": 0.00028616163465711804,
+      "new_d_seg": 0.00028756883409288193,
+      "delta_d_seg": 0.000001407199435763892,
+      "seg_delta_s": 0.0001407199435763892,
+      "rate_delta_s": -0.0005646483922476013,
+      "semantic_leg_delta_s": -0.0004239284486712121,
+      "pose_status": "UNMEASURED",
+      "status": "MEASURED_SEMANTIC_LEG_WIN_FULL_SCORE_QUEUED"
+    }
+  ],
+  "custody": {
+    "ssd_result_path": "/Volumes/VertigoDataTier/pact/ddm_sg2_20260810/source_audit_v2/SG2_SOURCE_AUDIT_RESULT.json",
+    "ssd_result_bytes": 11362,
+    "ssd_result_sha256": "4459179fc9e7367b32561c29ac95b827ad95639c81f6c269dd8031bb9caf33e3",
+    "stage07_archive_path": "/Volumes/VertigoDataTier/pact/ddm_sg2_20260810/source_audit_v2/retained/stage07_counterfactual/archive.zip",
+    "stage07_archive_bytes": 191040,
+    "stage07_archive_sha256": "ab11494c15a320dfcc005e950b028ee5630c3bff985ce39fafe3a1a03880ba51",
+    "mixed_archive_path": "/Volumes/VertigoDataTier/pact/ddm_sd1_semantic_20260809/cpu_screen/archives/selected_mixed_n600.zip",
+    "mixed_archive_bytes": 190204,
+    "mixed_archive_sha256": "010a8a5273ae87595191ffc03447fa36e61978ae9f827c2def46dea7075dfa67",
+    "measurement_source_sha256": "f8dcabd43f152eb0d17b357e0fa5d135bd9b19f09eeba6bb0f324dfdd0dc4c17",
+    "reused_sd1_commit": "600af8ef7d5f4573f6b3793d7a946fe5bf10d4d5",
+    "sd1_public_receiver_commit": "58f62cd22ff07562c0534c999d705fb9edfe5279",
+    "payload_retention_gate_files": 1,
+    "payload_retention_gate_findings": 0
+  },
+  "boundaries": [
+    "No SegNet, PoseNet, candidate rendering, or contest evaluator ran in this audit.",
+    "The AV-DALI edge table is a source-target decoder control, not the requested PR130 candidate-error table.",
+    "The tail-QAT d_seg values are checkpoint-recorded; only exact archive bytes were newly materialized.",
+    "The mixed q3/q4 price excludes pose and is not a score or frontier row."
+  ],
+  "queue": ".omx/research/ddm_sg2_20260810/SG2_SCORER_QUEUE.json",
+  "own_vehicle_frontier": "S=0.7539807296911207 @ 357836 B [macOS-CPU advisory] n600"
+}

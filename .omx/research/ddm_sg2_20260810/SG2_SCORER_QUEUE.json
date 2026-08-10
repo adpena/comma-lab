@@ -1,0 +1,65 @@
+{
+  "schema": "ddm_sm3_scorer_queue.v1",
+  "status": "QUEUED_WITH_FIRE_ORDER",
+  "score_claim": false,
+  "source_result": ".omx/research/ddm_sg2_20260810/SG2_RESULT.json",
+  "retained_root": "/Volumes/VertigoDataTier/pact/ddm_sg2_20260810/scorer",
+  "baseline": {
+    "archive_path": "/Volumes/VertigoDataTier/pact/ddm_pr130_reproduce_20260809/reproduction/archive.zip",
+    "archive_bytes": 191052,
+    "archive_sha256": "0491d5df84fc70b62b3f7ccf8894f5e1b81c616de46a052e4423fc1e18fdc7cd"
+  },
+  "candidate": {
+    "candidate_id": "sd1_selected_mixed_q3q4_n600",
+    "archive_path": "/Volumes/VertigoDataTier/pact/ddm_sd1_semantic_20260809/cpu_screen/archives/selected_mixed_n600.zip",
+    "archive_bytes": 190204,
+    "archive_sha256": "010a8a5273ae87595191ffc03447fa36e61978ae9f827c2def46dea7075dfa67",
+    "receiver_commit": "58f62cd22ff07562c0534c999d705fb9edfe5279",
+    "prior_semantic_leg_delta_s": -0.0004239284486712121,
+    "pose_status": "UNMEASURED"
+  },
+  "required_retention": {
+    "per_candidate": [
+      "archive.zip",
+      "archive.repeat.zip",
+      "decoded camera-frame chunks with bytes and SHA-256",
+      "SegNet argmax chunks with bytes and SHA-256",
+      "PoseNet output chunks with bytes and SHA-256",
+      "directed target-to-prediction edge matrix",
+      "atomic progress and final receipt"
+    ],
+    "chunk_pair_limit": 120,
+    "resume_required": true,
+    "minimum_storage_preflight_bytes": 5000000000,
+    "do_not_launch_if_any_payload_writer_is_absent": true
+  },
+  "fire_order": [
+    {
+      "order": 1,
+      "disposition": "QUEUED_WITH_A_FIRE_ORDER",
+      "owner": "MAIN scorer owner",
+      "consumer_store": "/Volumes/VertigoDataTier/pact/ddm_sg2_20260810/scorer/matched_local_n600",
+      "fire_trigger": "ddm_ai1 releases the sole scorer slot, active_lane_dispatch_claims has no conflicting live scorer job, SG2 claims the lane, at least 5 GB is free, and a resume-plus-per-chunk payload writer passes tac.payload_retention_gate",
+      "action": "Run paired PR130 q4 control versus selected mixed q3/q4 at full n600 on one pinned local advisory axis in chunks no larger than 120. Retain every decoded camera-frame, SegNet argmax, and PoseNet output chunk for both candidates. Recompute total S from components.",
+      "admission": "The mixed candidate survives only if its measured full delta S is negative. MPS or macOS CPU remains advisory."
+    },
+    {
+      "order": 2,
+      "disposition": "QUEUED_WITH_A_FIRE_ORDER",
+      "owner": "MAIN Seg-axis attribution owner",
+      "consumer_store": "/Volumes/VertigoDataTier/pact/ddm_sg2_20260810/scorer/pr130_edge_decomposition",
+      "fire_trigger": "order 1 retained the matched PR130 control argmax payload and completed without custody error",
+      "action": "Compute the directed target-class to predicted-class mismatch matrix for the PR130 control and its symmetric per-edge table. Report both 117,964,800 evaluated pixels and the exact mismatch denominator; do not substitute the AV-DALI source-target table.",
+      "admission": "This closes the PR130 current-vehicle edge table only on the measured local advisory axis; it does not reconstruct the rounded contest-CUDA 0.028609 row."
+    },
+    {
+      "order": 3,
+      "disposition": "QUEUED_WITH_A_FIRE_ORDER",
+      "owner": "MAIN contest-CUDA evaluator",
+      "consumer_store": "/Volumes/VertigoDataTier/pact/ddm_sg2_20260810/scorer/contest_cuda",
+      "fire_trigger": "the mixed candidate has negative matched full delta S, the exact public receiver is pinned, the scorer lane is exclusively claimed, and the operator gives explicit remote-execution authorization",
+      "action": "Run paired q4-versus-mixed upstream/evaluate.py on contest-CUDA DALI n600, retain all candidate and target argmax payloads plus exact evaluator receipts, and recompute S from components.",
+      "admission": "Only this authority row can promote or decompose the contest-CUDA reference; no Modal job may launch before the explicit operator trigger."
+    }
+  ]
+}
