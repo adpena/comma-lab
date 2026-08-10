@@ -1612,3 +1612,98 @@ def test_lock_reference_refuses_lock_mutation_across_export(
 
     assert reference["query_error"] == "upstream_uv_lock_mutated"
     assert reference["uv_lock_sha256_before"] != reference["uv_lock_sha256_after"]
+
+
+# --- requires-python range check (the interpreter channel of the lock reference) ---
+#
+# The lock pins package versions EXACTLY but the interpreter only by a RANGE, so
+# these two channels carry different strengths of guarantee. An equality check on
+# the interpreter would have to source BOTH sides from the evaluation interpreter
+# (uv export emits no Python pin) and could therefore never fail -- a gauge that
+# reads the same under the cure and under the defect. Range SATISFACTION is the
+# strongest honest check the lock licenses, and these tests exist to prove it
+# still REFUSES. A cure that cannot refuse is not a cure.
+
+_PARITY_EXPORT = (
+    "torch==2.9.0+cu128\n"
+    "torchvision==0.24.0 ; platform_machine == 'aarch64'\n"
+    "torchvision==0.24.0+cu128 ; platform_machine != 'aarch64'\n"
+    "timm==1.0.22\n"
+    "numpy==2.3.4\n"
+)
+
+
+def test_requires_python_satisfied_resolves(cae):
+    result = cae._resolve_exported_parity_requirements(
+        Path(sys.executable), _PARITY_EXPORT, requires_python=">=3.11, <4"
+    )
+    assert result["ok"] is True
+    assert result["packages"]["torch"] == "2.9.0+cu128"
+
+
+@pytest.mark.parametrize("version", ["3.10.9", "4.0.0"])
+def test_requires_python_outside_range_refuses(cae, version):
+    """POSITIVE CONTROL. If this ever passes, the check has gone inert.
+
+    The 2026-08-10 defect it pins: ``requires_python`` was accepted as a
+    parameter and silently dropped from the subprocess payload, so every
+    interpreter resolved OK -- including a 3.10 and a 4.x.
+    """
+
+    result = cae._resolve_exported_parity_requirements(
+        Path(sys.executable),
+        _PARITY_EXPORT,
+        requires_python=">=3.11, <4",
+        marker_environment_overrides={"python_full_version": version},
+    )
+    assert result["ok"] is False
+    assert result["failure_reason"] == "evaluation_python_outside_lock_requires_python"
+    assert result["python_full_version"] == version
+
+
+def test_requires_python_invalid_specifier_refuses_without_crashing(cae):
+    result = cae._resolve_exported_parity_requirements(
+        Path(sys.executable), _PARITY_EXPORT, requires_python=">>=nonsense"
+    )
+    assert result["ok"] is False
+    assert result["failure_reason"] == "requires_python_invalid"
+
+
+@pytest.mark.parametrize(
+    ("machine", "expected"),
+    [("aarch64", "0.24.0"), ("x86_64", "0.24.0+cu128")],
+)
+def test_marker_split_resolves_per_architecture(cae, machine, expected):
+    """Both directions: a naive first-match parser manufactures a FALSE mismatch."""
+
+    result = cae._resolve_exported_parity_requirements(
+        Path(sys.executable),
+        _PARITY_EXPORT,
+        requires_python=">=3.11, <4",
+        marker_environment_overrides={"platform_machine": machine},
+    )
+    assert result["ok"] is True
+    assert result["packages"]["torchvision"] == expected
+
+
+def test_lock_reference_declares_range_kind_and_reads_requires_python(cae):
+    """The reference must SAY which guarantee its interpreter channel carries."""
+
+    reference = cae._derive_upstream_lock_environment_reference(
+        Path("upstream").resolve(), Path(sys.executable), "cu128"
+    )
+    assert reference["python_version_reference_kind"] == "requires_python_range"
+    assert reference["requires_python"]
+    # Read-only: the pinned snapshot must be byte-identical across the call.
+    assert reference["uv_lock_sha256_before"] == reference["uv_lock_sha256_after"]
+
+
+def test_lock_reference_refuses_when_lock_has_no_requires_python(cae, tmp_path: Path):
+    synthetic = tmp_path / "upstream"
+    synthetic.mkdir()
+    (synthetic / "uv.lock").write_text('version = 1\n', encoding="utf-8")
+
+    reference = cae._derive_upstream_lock_environment_reference(
+        synthetic, Path(sys.executable), "cpu"
+    )
+    assert reference["query_error"] == "upstream_uv_lock_missing_requires_python"

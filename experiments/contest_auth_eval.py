@@ -55,6 +55,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import tomllib
 import zipfile
 from pathlib import Path, PurePosixPath
 
@@ -624,6 +625,7 @@ def _resolve_exported_parity_requirements(
     python_executable: Path,
     requirements_text: str,
     *,
+    requires_python: str | None = None,
     marker_environment_overrides: dict[str, str] | None = None,
 ) -> dict:
     """Resolve lock-export rows in the evaluation interpreter's marker env.
@@ -633,6 +635,14 @@ def _resolve_exported_parity_requirements(
     markers. Marker evaluation therefore belongs to the interpreter that will
     actually run ``upstream/evaluate.py``; evaluating in this wrapper process
     would manufacture parity on a cross-platform dispatch.
+
+    ``requires_python`` is the lock's own interpreter constraint. It is checked
+    HERE, in the interpreter being judged, because the lock pins no exact
+    Python version -- ``uv export`` emits none and ``uv.lock`` carries only a
+    RANGE (currently ``>=3.11, <4``). An equality comparison against a
+    lock-derived reference would therefore have to source both sides from this
+    same interpreter and could never fail; range SATISFACTION is the strongest
+    honest check the lock can license, and it does fail on 3.10 or 4.x.
 
     The subprocess returns a typed result rather than raising so the authority
     gate can preserve a precise fail-closed reason in provenance. The optional
@@ -645,6 +655,7 @@ import sys
 
 from packaging.markers import default_environment
 from packaging.requirements import InvalidRequirement, Requirement
+from packaging.specifiers import InvalidSpecifier, SpecifierSet
 from packaging.utils import canonicalize_name
 
 payload = json.load(sys.stdin)
@@ -653,6 +664,35 @@ target_by_canonical = {canonicalize_name(name): name for name in targets}
 environment = default_environment()
 environment.update(payload.get("marker_environment_overrides") or {})
 surviving = {name: [] for name in targets}
+
+requires_python = payload.get("requires_python")
+requires_python_satisfied = None
+if requires_python:
+    try:
+        specifier_set = SpecifierSet(requires_python)
+    except InvalidSpecifier as exc:
+        print(json.dumps({
+            "ok": False,
+            "failure_reason": "requires_python_invalid",
+            "requires_python": requires_python,
+            "error": repr(exc),
+            "marker_environment": environment,
+        }, sort_keys=True))
+        raise SystemExit(0)
+    # prereleases=True so a release-candidate interpreter is judged on its
+    # version, not silently excluded by the specifier's default filtering.
+    requires_python_satisfied = specifier_set.contains(
+        environment["python_full_version"], prereleases=True
+    )
+    if not requires_python_satisfied:
+        print(json.dumps({
+            "ok": False,
+            "failure_reason": "evaluation_python_outside_lock_requires_python",
+            "requires_python": requires_python,
+            "python_full_version": environment["python_full_version"],
+            "marker_environment": environment,
+        }, sort_keys=True))
+        raise SystemExit(0)
 
 for line_number, raw_line in enumerate(payload["requirements_text"].splitlines(), 1):
     line = raw_line.strip()
@@ -726,6 +766,7 @@ print(json.dumps({
     payload = {
         "targets": list(AUTH_EVAL_ENV_PACKAGES),
         "requirements_text": requirements_text,
+        "requires_python": requires_python,
         "marker_environment_overrides": marker_environment_overrides or {},
     }
     try:
@@ -788,6 +829,12 @@ def _derive_upstream_lock_environment_reference(
     reference: dict = {
         "schema": "contest_auth_eval_uv_lock_reference_v1",
         "reference_source": "uv_export_frozen_declared_group",
+        # The lock pins package versions EXACTLY but the interpreter only by a
+        # RANGE (``requires-python``), so the two channels carry different
+        # strengths of guarantee and must be labelled as such. A reader who
+        # mistakes the interpreter channel for an identity pin would over-trust
+        # this reference.
+        "python_version_reference_kind": "requires_python_range",
         "reference_identity": (
             f"{lock_path.resolve()}#group={group}" if group else str(lock_path.resolve())
         ),
@@ -812,6 +859,22 @@ def _derive_upstream_lock_environment_reference(
     except OSError as exc:
         return refuse("upstream_uv_lock_unreadable", error=repr(exc))
     reference["uv_lock_sha256_before"] = lock_before
+
+    # ``uv export`` emits no interpreter constraint at all, so the lock's own
+    # top-level ``requires-python`` is the only interpreter statement the pinned
+    # snapshot makes. Read it here rather than comparing versions later: a
+    # lock-derived reference can only source a version from the evaluation
+    # interpreter itself, so an equality check would compare that interpreter to
+    # itself and could never fail. Satisfaction of this range CAN fail.
+    try:
+        lock_document = tomllib.loads(lock_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, tomllib.TOMLDecodeError) as exc:
+        return refuse("upstream_uv_lock_unparseable", error=repr(exc))
+    requires_python = lock_document.get("requires-python")
+    if not isinstance(requires_python, str) or not requires_python.strip():
+        return refuse("upstream_uv_lock_missing_requires_python")
+    requires_python = requires_python.strip()
+    reference["requires_python"] = requires_python
 
     uv_executable = shutil.which("uv")
     if uv_executable is None:
@@ -890,6 +953,7 @@ def _derive_upstream_lock_environment_reference(
         marker_result = _resolve_exported_parity_requirements(
             evaluation_python,
             export_text,
+            requires_python=requires_python,
         )
         reference["marker_resolution"] = marker_result
 
@@ -1027,11 +1091,20 @@ def _build_auth_eval_environment_report(
             if isinstance(reference.get("packages"), dict)
             else {}
         )
-        if evaluation.get("python_version") != reference.get("python_version"):
-            mismatches["python"] = {
-                "evaluation": evaluation.get("python_version"),
-                "reference": reference.get("python_version"),
-            }
+        # The interpreter channel is checked DIFFERENTLY per reference kind, and
+        # conflating them would fake a proof. Against a real ``upstream/.venv``
+        # the reference is a DIFFERENT interpreter, so equality is a genuine
+        # measurement. Against the lock it is not: the lock states only a RANGE,
+        # so the reference's version can only come from the evaluation
+        # interpreter itself and equality would be ``x != x`` -- a check that
+        # cannot fire. Range satisfaction is enforced instead, inside the
+        # derivation, where a failure refuses via ``query_error`` above.
+        if reference.get("python_version_reference_kind") != "requires_python_range":
+            if evaluation.get("python_version") != reference.get("python_version"):
+                mismatches["python"] = {
+                    "evaluation": evaluation.get("python_version"),
+                    "reference": reference.get("python_version"),
+                }
         for name in AUTH_EVAL_ENV_PACKAGES:
             if eval_packages.get(name) != ref_packages.get(name):
                 mismatches[name] = {
