@@ -188,8 +188,9 @@ for candidate argmax.
   PR130 `d_seg`, bytes, Pose, or exact score. All five live rows are derived routes with explicit
   falsifiers, not adoption claims.
 - **Disk and retention:** no experiment bulk or payload was written; research-bulk footprint is
-  **0 B**, and nothing was moved or deleted. A 6.6 MiB sparse administrative clone under the named
-  `ddm_lt1` scratch path retains the serializer commit after the managed sandbox refused writes to
+  **0 B**, and nothing was moved or deleted. A sparse administrative clone under the named
+  `ddm_lt1` scratch path remained under 8 MiB at final verification and retains the serializer
+  commits after the managed sandbox refused writes to
   the main checkout's Git object store. The main index stayed untouched; this report remains
   untracked there until MAIN lands the retained commit range.
 
