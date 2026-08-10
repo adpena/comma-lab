@@ -621,6 +621,71 @@ def _finish_token_stage(decoder, token_codec: TokenCodec) -> _TokenFinishProof:
     return _TokenFinishProof(_TOKEN_FINISH_SENTINEL, token_codec)
 
 
+def write_token_progress_checkpoint(
+    tokens_prefix: torch.Tensor,
+    remaining_words: np.ndarray,
+    *,
+    binding: dict[str, str],
+    cache_path: Path,
+) -> None:
+    """Atomically retain a resumable ANS stack and its exact decoded prefix."""
+
+    array = tokens_prefix.detach().cpu().contiguous().numpy()
+    words = np.asarray(remaining_words, dtype="<u4")
+    if (
+        array.dtype != np.uint8
+        or array.ndim != 3
+        or tuple(array.shape[1:]) != (EVAL_H, EVAL_W)
+        or not 1 <= len(array) <= N
+    ):
+        raise ValueError("token progress checkpoint has invalid prefix geometry")
+    if words.ndim != 1:
+        raise ValueError("token progress checkpoint ANS state must be rank 1")
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = cache_path.with_name(f".{cache_path.name}.{os.getpid()}.tmp")
+    with temporary.open("wb") as handle:
+        np.savez(
+            handle,
+            tokens_prefix=array,
+            remaining_words=words,
+            frames_completed=np.array(len(array), dtype=np.int64),
+            prefix_sha256=np.array(sha256_bytes(array.tobytes(order="C"))),
+            **{name: np.array(value) for name, value in binding.items()},
+        )
+        handle.flush()
+        os.fsync(handle.fileno())
+    os.replace(temporary, cache_path)
+
+
+def load_token_progress_checkpoint(
+    *,
+    binding: dict[str, str],
+    cache_path: Path,
+) -> tuple[torch.Tensor, np.ndarray]:
+    """Load a fail-closed ANS progress checkpoint bound to the exact payload."""
+
+    with np.load(cache_path, allow_pickle=False) as checkpoint:
+        for name, value in binding.items():
+            if str(checkpoint[name].item()) != value:
+                raise ValueError(f"token progress binding changed at {name}")
+        array = checkpoint["tokens_prefix"].copy()
+        words = checkpoint["remaining_words"].astype("<u4", copy=True)
+        frames_completed = int(checkpoint["frames_completed"].item())
+        prefix_sha256 = str(checkpoint["prefix_sha256"].item())
+    if (
+        array.dtype != np.uint8
+        or array.ndim != 3
+        or tuple(array.shape[1:]) != (EVAL_H, EVAL_W)
+        or not 1 <= frames_completed <= N
+        or len(array) != frames_completed
+        or words.ndim != 1
+    ):
+        raise ValueError("token progress checkpoint geometry changed")
+    if sha256_bytes(array.tobytes(order="C")) != prefix_sha256:
+        raise ValueError("token progress checkpoint prefix hash changed")
+    return torch.from_numpy(array), words
+
+
 @torch.no_grad()
 def decode_tokens(
     model: IntegerHPAC,
@@ -630,10 +695,18 @@ def decode_tokens(
     token_codec: TokenCodec = "range",
     frame_count: int = N,
     return_finish_proof: bool = False,
+    progress_cache_path: Path | None = None,
+    progress_binding: dict[str, str] | None = None,
+    checkpoint_interval_frames: int = 50,
 ):
     if not 1 <= frame_count <= N:
         raise ValueError(f"frame_count must be in [1, {N}], got {frame_count}")
-    decoder = new_token_decoder(blob, token_codec)
+    if bool(progress_cache_path) != bool(progress_binding):
+        raise ValueError("token progress path and binding must be supplied together")
+    if progress_cache_path is not None and token_codec != "ans":
+        raise ValueError("periodic token progress checkpoints require the ANS stack")
+    if checkpoint_interval_frames <= 0:
+        raise ValueError("token checkpoint interval must be positive")
     family = constriction.stream.model.Categorical(perfect=HPAC_CODER_PERFECT)
     hierarchical_families = (
         constriction.stream.model.Categorical(perfect=HPAC_CODER_PERFECT),
@@ -643,8 +716,33 @@ def decode_tokens(
     sparse = SparseIntegerHPAC(model, EVAL_H, EVAL_W)
     tokens = torch.empty((frame_count, EVAL_H, EVAL_W), dtype=torch.uint8)
     previous_raw = torch.zeros((1, EVAL_H, EVAL_W), dtype=torch.long, device=device)
+    start_frame = 0
+    if progress_cache_path is not None and progress_cache_path.is_file():
+        prefix, remaining_words = load_token_progress_checkpoint(
+            binding=progress_binding,
+            cache_path=progress_cache_path,
+        )
+        start_frame = len(prefix)
+        if start_frame > frame_count:
+            raise ValueError("token progress checkpoint exceeds requested frame count")
+        tokens[:start_frame].copy_(prefix)
+        previous_raw.copy_(prefix[-1:].to(device=device, dtype=torch.long))
+        print(
+            f"resumed ANS token stack at frame {start_frame}/{frame_count}",
+            flush=True,
+        )
+        if start_frame == frame_count:
+            if len(remaining_words):
+                raise ValueError("complete token progress retains non-empty ANS state")
+            finish_proof = _TokenFinishProof(_TOKEN_FINISH_SENTINEL, token_codec)
+            if return_finish_proof:
+                return tokens, finish_proof
+            return tokens
+        decoder = new_token_decoder(remaining_words.tobytes(order="C"), token_codec)
+    else:
+        decoder = new_token_decoder(blob, token_codec)
     started = time.time()
-    for frame in range(frame_count):
+    for frame in range(start_frame, frame_count):
         idx = torch.tensor([frame], dtype=torch.long, device=device)
         current = torch.zeros_like(previous_raw)
         context = model.prepare_frame_context(idx, previous_raw)
@@ -663,6 +761,16 @@ def decode_tokens(
             else (current + previous_raw) % NUM_CLASSES
         )
         tokens[frame].copy_(previous_raw[0].to(torch.uint8).cpu())
+        if progress_cache_path is not None and (
+            (frame + 1) % checkpoint_interval_frames == 0
+            or frame + 1 == frame_count
+        ):
+            write_token_progress_checkpoint(
+                tokens[:frame + 1],
+                decoder.get_compressed(),
+                binding=progress_binding,
+                cache_path=progress_cache_path,
+            )
         if frame == 0 or (frame + 1) % 50 == 0:
             print(
                 f"decoded tokens {frame + 1}/{frame_count} "
@@ -950,12 +1058,23 @@ def main():
         )
     else:
         hpac = load_hpac(models_raw[semantic_pose_bytes:], device)
+        progress_path = (
+            Path(token_cache_text).with_name("tokens.progress.npz")
+            if token_cache_text
+            else None
+        )
         tokens, finish_proof = decode_tokens(
             hpac,
             parts.tokens,
             device,
             token_codec=parts.token_codec,
             return_finish_proof=True,
+            progress_cache_path=progress_path,
+            progress_binding=(
+                token_binding(payload, models_raw, parts.tokens, parts.token_codec)
+                if progress_path is not None
+                else None
+            ),
         )
         del hpac
         if token_cache_text:
