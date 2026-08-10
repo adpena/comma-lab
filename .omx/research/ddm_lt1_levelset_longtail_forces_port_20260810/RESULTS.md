@@ -187,15 +187,18 @@ for candidate argmax.
 - **No PR130 efficacy measurement:** this arm did not measure whether any long-tail force lowers
   PR130 `d_seg`, bytes, Pose, or exact score. All five live rows are derived routes with explicit
   falsifiers, not adoption claims.
-- **Disk and retention:** repository report only; no bulk was written to local disk, tier-1, or
-  tier-2. Bulk footprint is **0 B**. Nothing was moved or deleted. The report itself is small source
-  evidence and is committed in Git.
+- **Disk and retention:** no experiment bulk or payload was written; research-bulk footprint is
+  **0 B**, and nothing was moved or deleted. A 6.6 MiB sparse administrative clone under the named
+  `ddm_lt1` scratch path retains the serializer commit after the managed sandbox refused writes to
+  the main checkout's Git object store. The main index stayed untouched; this report remains
+  untracked there until MAIN lands the retained commit range.
 
 Base unchanged: **PR130 CPR1 S = 0.172141297491896447 @ 191,052 B
 `[contest-CUDA, DALI GT, n600]`**. This value is the pinned base, not a measurement by LT1.
 
 ## NEXT_IF_RESUMED
 
+- **QUEUED-WITH-A-FIRE-ORDER / MAIN-COMMIT-LANDING** — owner: MAIN/operator with a writable Git object store; consumer store: main branch; fire trigger: Git object writes are permitted in the main checkout. Fetch `/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_lt1_commit_fallback_20260810` branch `main`, then cherry-pick `0269bcab7b1704fafc26c16160928eb2791630ca..FETCH_HEAD`; verify the resulting report blob has the SHA-256 recorded in the final handoff.
 - **QUEUED-WITH-A-FIRE-ORDER / SD2-HARVEST-AND-AIM** — owner: MAIN `ddm_sd2` harvest owner; consumer store: `.omx/research/ddm_lt1_levelset_longtail_forces_port_20260810/RESULTS.md`; fire trigger: `ddm_sd2` lands a complete retained n600 PR130 base argmax payload with target→prediction 5×5 matrix, per-frame mass, boundary/interior split, bytes, and SHA-256. Apply the routing tree and select or fold each live force by directed cell.
 - **QUEUED-WITH-A-FIRE-ORDER / PR130-DIRECTED-GUARD-PORT** — owner: future PR130 semantic-force builder; consumer store: `.omx/state/codex_arm_queue.next_if_resumed.jsonl`; fire trigger: SD2 shows a material directed boundary or erasure cell and the scorer slot is free. Build the smallest typed FX3-compatible adapter for the selected force, with complete resume state, per-stage retained checkpoints, exact-R margin/component telemetry, and a no-op identity test; do not fire training in the build arm.
 - **QUEUED-WITH-A-FIRE-ORDER / MATCHED-PACKED-A-B** — owner: MAIN PR130 semantic optimization and scorer owner; consumer store: `.omx/state/main_hot_state.md` PR130 base row; fire trigger: the selected adapter passes deterministic tests, P0 retention preflight, n600 pack/parse identity for its control, and storage admission. Run a matched control/treatment from the same parent and retain every payload; advance to contest authority only if the full n600 packed candidate has negative total delta S.
