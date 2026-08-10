@@ -199,3 +199,83 @@ Four arms spawned on the two live rate levers and the two screening debts:
   scalars, with the measured 6.83x AV-vs-DALI pose gap as a hard no-transfer constraint.
 
 **BASE: PR130 CPR1 S = 0.172141297491896447 @ 191,052 B `[contest-CUDA, DALI GT, n600]` — UNMOVED.**
+
+---
+
+## Addendum 3 — the CUDA row came back, and it is REFUSED for a real reason
+
+`fc-01KZNSY6WYB5YXZQFXS2N0YASW` / `ap-H0plwfCQHJCEmjprn1vyEV`, Tesla T4, 665.16 s, n600, on the ai1
+ANS+temporal_reversion archive sha `0f5a797fda844ee63f6057fdb7203f6578b135b4e12deafa98d6ddc3260a5c84`,
+188,636 B. Full result + 8 artifacts retained at
+`/Volumes/VertigoDataTier/pact/ddm_main_ai1_exact_20260810/cuda/` (RESULT.json sha `26960f5d9e23a08b…`,
+ARTIFACT_MANIFEST.json carries per-file bytes + sha256).
+
+**The row is `score_claim=False`, `evidence_grade='auth-eval env mismatch advisory'`, rc=10.**
+It is NOT a contest-CUDA row and the pointer does NOT move.
+
+### What it measured
+
+| quantity | ai1 archive (this run) | PR130 base (contest bot, 2026-07-21) | delta |
+|---|---:|---:|---:|
+| d_seg | 0.00029661 | 0.00029660 | +1e-08 |
+| d_pose | 0.00002332 | 0.00002331 | +1e-08 |
+| bytes | 188,636 | 191,052 | **-2,416** |
+| S | 0.170536856816211 | 0.172141297491896 | **-0.001604** |
+
+**The distortion-invariance argument is now MEASURED on the CUDA axis, not just derived.** Our
+archive's inflated raw is byte-identical to PR130's base raw, and on Modal T4 CUDA it reproduces the
+contest bot's own published PR130 distortion values to their full displayed precision. Two
+independently-produced numbers on two different machines agree at 1e-8.
+
+### The 4.275e-06 residual is display rounding in MY derivation input, not measurement noise
+
+I derived 0.170532582261153 = bar − 25·2416/W. Measured came back 0.170536856816211. I initially
+read the 4.275e-06 gap as ~5 flipped tie pixels. It is not. Recompute with the bot's *displayed*
+d_seg/d_pose and our bytes: 0.170532582261153, matching my derivation to **2.8e-17**. The entire
+residual is the bot's 8-decimal display truncation propagating into the bar I derived from. The
+derivation was exact; its input was rounded. Corrected, and it strengthens rather than weakens the
+result.
+
+### The refusal mechanism, named exactly
+
+`experiments/contest_auth_eval.py:673-712` requires proven parity against `upstream/.venv/bin/python`
+before it will stamp `contest-CUDA`. On Modal it recorded
+`OSError(8, 'Exec format error')` for that reference. Two independent defects:
+
+1. **A macOS binary is being shipped into the Linux image.** Locally
+   `upstream/.venv/bin/python -> /opt/homebrew/opt/python@3.11/bin/python3.11`. The upload
+   dereferences the symlink, so the container holds a Mach-O executable at that path — it `exists()`,
+   so the gate tries it, and Linux refuses to exec it. This is the concrete form of #836's "2 lost
+   symlinks" drift, surfacing as a dispatch blocker.
+
+2. **The image's packages materially diverge from `upstream/uv.lock`.** Measured:
+
+   | package | Modal image ran | upstream/uv.lock pins |
+   |---|---|---|
+   | torch | 2.5.1 | **2.9.0+cu126** |
+   | torchvision | 0.20.1 | **0.24.0** |
+   | timm | 1.0.27 | **1.0.22** |
+   | numpy | 1.26.4 | **2.3.4** |
+
+   Even with defect 1 fixed, parity would fail on the merits. Fixing only the symlink would convert an
+   honest refusal into a passing gate over a still-divergent environment — the worse outcome.
+
+**The gate was right and the fail-closed design paid for itself.** Note the empirical counterweight,
+recorded so it is not mistaken for a dismissal: torch 2.5.1 and whatever the contest bot runs agree to
+1e-8 on this exact input, so the divergence is not *detectably* moving the score here. That is one
+data point on one archive, and it is not a licence to relabel the axis.
+
+### What this costs and what it buys
+
+The candidate is worth **-0.001604 S** against the bar, on measured distortion and measured bytes. It
+needs a contest-CUDA row to move the pointer, and that needs the locked environment built inside the
+image (`uv sync` from `upstream/uv.lock`, then evaluate through that interpreter so
+`eval_python == upstream_ref` and the mismatch block is skipped by identity rather than by assertion).
+`--upstream-python` exists as a bypass; using it here would be an operator assertion of a parity that
+is measurably false.
+
+The CPU axis (`ap-NcyMr0ASXxEDRSjP3oseaw`) produced **0 tasks** and stopped — no ledger row, nothing
+ran, nothing charged. It needs re-firing after the environment fix, not before.
+
+**BASE: PR130 CPR1 S = 0.172141297491896447 @ 191,052 B `[contest-CUDA, DALI GT, n600]` — UNMOVED.**
+Best candidate 0.170536856816211 @ 188,636 B `[CUDA env-mismatch advisory, MEASURED]`.
