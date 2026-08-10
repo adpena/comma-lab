@@ -1,0 +1,158 @@
+{
+  "schema": "ddm_sm4_lowrank_mechanism_discriminator.v1",
+  "written_at_utc": "2026-08-10T12:24:00Z",
+  "axis": "[macOS-CPU advisory; scorer-free real PR130 weights, exact archive bytes, and receiver parse-back]",
+  "score_claim": false,
+  "base": {
+    "archive_bytes": 191052,
+    "archive_sha256": "0491d5df84fc70b62b3f7ccf8894f5e1b81c616de46a052e4423fc1e18fdc7cd",
+    "score_decimal": "0.172141297491896447",
+    "score_axis": "[contest-CUDA, DALI GT, n600]",
+    "frontier_moved": false
+  },
+  "scope": {
+    "checkpoint": "/Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo/artifacts/checkpoints/semantic_renderer_w96_b4_qat4_fixedtau05_tail6k_lr2e7.pt",
+    "checkpoint_sha256": "3948ccfcd44778dc42affee18a10c3f3baa434d1a2eb2345a013146c1dbfb647",
+    "selected_tensors": [
+      "blocks.0.pw.weight",
+      "blocks.1.pw.weight",
+      "blocks.2.pw.weight",
+      "blocks.3.pw.weight",
+      "coord_mix.weight"
+    ],
+    "selected_tensor_denominator": 5,
+    "selected_parameter_denominator": 46464,
+    "ranks": "all integers 8 through 48 inclusive",
+    "factor_bits": [4, 5, 6, 7, 8],
+    "centered": [false, true],
+    "grid_cell_denominator": 410,
+    "matched_actual_archive_budget_bytes": 182364,
+    "matched_actual_archive_budget_cell": "r32_b4_uncentered",
+    "eligible_cell_denominator": 131,
+    "verdict_scope": "uniform global rank and factor precision over the five named PR130 matrices, optional stored fp16 row means, and actual temporal-composed archives at or below the r32-int4 archive budget"
+  },
+  "mechanism_discriminator": {
+    "r32_int4_uncentered": {
+      "semantic_bytes": 32774,
+      "archive_bytes": 182364,
+      "aggregate_relative_l2": 0.5067223843910071
+    },
+    "r16_int8_uncentered": {
+      "semantic_bytes": 32614,
+      "archive_bytes": 183312,
+      "aggregate_relative_l2": 0.6945925741620346
+    },
+    "r16_int8_error_over_r32_int4_error": 1.3707556554795086,
+    "r16_int8_per_tensor_wins": 0,
+    "r16_int8_per_tensor_denominator": 5,
+    "verdict": "RANK_INSUFFICIENCY_SUPPORTED_AT_EQUAL_BYTE_LAW",
+    "falsifier": "Factor-quantization compounding would remain viable if r16-int8 lowered aggregate and per-tensor error against r32-int4 under the equal raw-factor byte law. It did neither."
+  },
+  "per_tensor_equal_law": [
+    {
+      "tensor": "blocks.0.pw.weight",
+      "r32_int4_relative_l2": 0.4984886350216967,
+      "r16_int8_relative_l2": 0.6963037557456494,
+      "r16_over_r32": 1.3968297506227856
+    },
+    {
+      "tensor": "blocks.1.pw.weight",
+      "r32_int4_relative_l2": 0.5146722785223874,
+      "r16_int8_relative_l2": 0.7133798825115819,
+      "r16_over_r32": 1.386085694297893
+    },
+    {
+      "tensor": "blocks.2.pw.weight",
+      "r32_int4_relative_l2": 0.4683292867232217,
+      "r16_int8_relative_l2": 0.6719154613051985,
+      "r16_over_r32": 1.4347073316862509
+    },
+    {
+      "tensor": "blocks.3.pw.weight",
+      "r32_int4_relative_l2": 0.46935002338698173,
+      "r16_int8_relative_l2": 0.668969949828171,
+      "r16_over_r32": 1.4253114232330646
+    },
+    {
+      "tensor": "coord_mix.weight",
+      "r32_int4_relative_l2": 0.5065641500303779,
+      "r16_int8_relative_l2": 0.672118388600419,
+      "r16_over_r32": 1.3268179135063407
+    }
+  ],
+  "centering_discriminator": {
+    "same_rank_r32_int4_centered": {
+      "archive_bytes": 183332,
+      "aggregate_relative_l2": 0.5022485265253328,
+      "error_over_uncentered": 0.9911709882896704,
+      "archive_byte_cost": 968
+    },
+    "best_centered_within_budget": {
+      "candidate_id": "r29_b4_centered",
+      "archive_bytes": 182036,
+      "aggregate_relative_l2": 0.5360592236766537
+    },
+    "best_uncentered_within_budget": {
+      "candidate_id": "r32_b4_uncentered",
+      "archive_bytes": 182364,
+      "aggregate_relative_l2": 0.5067223843910071
+    },
+    "matched_budget_centered_error_over_uncentered": 1.0578952897865452,
+    "verdict": "CENTERING_IS_REAL_BUT_TOO_SMALL_TO_REPAY_ITS_COUNTED_BYTES"
+  },
+  "positive_control": {
+    "shipped_direct_q4_aggregate_relative_l2": 0.1278827512018338,
+    "best_matched_budget_lowrank_error_over_shipped_direct_q4_error": 3.962398209522888
+  },
+  "selected_archive": {
+    "candidate_id": "r32_b4_uncentered",
+    "selection_rule": "minimum aggregate relative L2 among all 131 actual-byte-eligible cells",
+    "archive_bytes": 182364,
+    "archive_delta_vs_pr130_bytes": -8688,
+    "archive_sha256": "6e6efb1154c763b49f713ce8fcaad4ee111425aaddd55b5566a4638b5429592e",
+    "path": "/Volumes/VertigoDataTier/pact/ddm_sm4_20260810/selected/r32_b4_uncentered/submission/archive.zip",
+    "staged_receiver_state_sha256": "5063e24b2c2374aff44db3f50eb8e000908034a54512dd4cbf3108d5aa59c01e",
+    "existing_refuted_r32_receiver_state_sha256": "5063e24b2c2374aff44db3f50eb8e000908034a54512dd4cbf3108d5aa59c01e",
+    "state_byte_equal_to_existing_refuted_r32": true,
+    "new_full_inflate_executed": false,
+    "new_full_inflate_omission_reason": "The selected state is byte-identical to the already full-inflated and exact-local-scored r32 state; rerunning would reproduce settled frames without new information."
+  },
+  "reused_full_raw_and_score_evidence": {
+    "raw_path": "/Volumes/VertigoDataTier/pact/ddm_cp2_20260810/pointwise_lowrank_r32__temporal_reversion/receiver_parseback/staging/0.raw",
+    "raw_bytes": 3662409600,
+    "raw_sha256": "46ca24e7004c5a3ea42a118981a4fdf6a523e9d5b56cf6baff4444a062176f32",
+    "even_pose_frames_mean_abs_delta": 0.0,
+    "even_pose_frames_changed_fraction": 0.0,
+    "odd_semantic_frames_mean_abs_delta": 67.71,
+    "odd_semantic_frames_changed_fraction": 0.9926,
+    "local_exact_score": 7.4924,
+    "local_exact_axis": "[macOS-CPU advisory; AV CPU GT, n600]",
+    "source": ".omx/research/ddm_main_paired_eval_20260810/PAIRED_EVAL_FINDINGS.md"
+  },
+  "scorer_disposition": {
+    "scorer_queue_row_written": false,
+    "disposition": "FOLDED_DEAD",
+    "reason": "The unique matched-budget optimum is the already-refuted r32 decoded state; no novel parity survivor exists and this arm does not own a scorer slot."
+  },
+  "retained": {
+    "bulk_root": "/Volumes/VertigoDataTier/pact/ddm_sm4_20260810",
+    "grid_result": {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sm4_20260810/GRID_RESULT.json",
+      "bytes": 2911574,
+      "sha256": "49414acc4efc203d9a38bf63775afaa690ae603b4b11628155d6bf76e694ae52"
+    },
+    "selected_receipt": {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sm4_20260810/SELECTED.json",
+      "bytes": 7360,
+      "sha256": "41cc4774034ffd74a6ee4b19e2b2f62afdb549b5f0edc5d243c9950d598e3171"
+    },
+    "candidate_payload_count": 410,
+    "retained_bulk_bytes_human": "522 MiB at completion"
+  },
+  "sources": {
+    "measurement_source_sha256": "f2ed4f24886d372b2bd66c3c4726faa04d150b46605173dfdf2ed5b4f56ba813",
+    "receiver_source_sha256": "6771baa191840deefe94bb63cc2b5e37493d4c7d0845005e4dc174dd305e02ba",
+    "sm3_reuse": "experiments/ddm_sm3_semantic_representation.py@d3650d6c68764385cad2d32faa394af7c87360c6",
+    "cp2_reuse": "experiments/ddm_cp2_composition_receiver_and_harness.py@58d270898002cde052b4ad34506b14984db06d49"
+  }
+}
