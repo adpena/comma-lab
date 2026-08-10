@@ -276,9 +276,24 @@ def _resolve_axis_runtime_expectations(
                 "flags."
             )
 
+    # What we FORWARD to each wrapper is not always what we RESOLVED. When the
+    # operator asked for ``auto`` (or omitted the flag), forward the literal
+    # ``auto``: both wrappers derive their own portable custody digest, and the
+    # CPU wrapper structurally REFUSES a concrete tree hash on the uploaded
+    # --submission-dir axis (modal_auth_eval_cpu.py:372, the 2026-08-04 r9m
+    # deadlock — projected and remote tree hashes cannot agree in general).
+    # Resolving auto into a concrete hash therefore turned a working flag into a
+    # guaranteed CPU-axis refusal, after the image build. Measured 2026-08-10.
+    # An EXPLICIT operator-supplied hash is still forwarded verbatim: that is a
+    # real expectation, and a wrapper refusing it is a real disagreement.
+    forwarded_cuda = AUTO_RUNTIME_TREE if should_auto else cuda_expected
+    forwarded_cpu = AUTO_RUNTIME_TREE if should_auto else cpu_expected
+
     return {
         "contest_cuda": cuda_expected,
         "contest_cpu": cpu_expected,
+        "forwarded_contest_cuda": forwarded_cuda,
+        "forwarded_contest_cpu": forwarded_cpu,
         "observed_uploaded_runtime": observed,
         "common_expected_runtime_tree_sha256": (
             cuda_expected if cuda_expected and cuda_expected == cpu_expected else None
@@ -415,6 +430,19 @@ def build_plan(
         "contest_cuda": str(runtime_expectations.get("contest_cuda") or ""),
         "contest_cpu": str(runtime_expectations.get("contest_cpu") or ""),
     }
+    # The concrete projection above stays the ANCHOR-LOOKUP key and the plan's
+    # informational record; the wrappers get the forwarded form (see
+    # _resolve_axis_runtime_expectations for why they differ).
+    forwarded_runtime_by_axis = {
+        "contest_cuda": str(
+            runtime_expectations.get("forwarded_contest_cuda")
+            or expected_runtime_by_axis["contest_cuda"]
+        ),
+        "contest_cpu": str(
+            runtime_expectations.get("forwarded_contest_cpu")
+            or expected_runtime_by_axis["contest_cpu"]
+        ),
+    }
     cuda_output = output_root / "modal_auth_eval" / f"{run_id}_cuda"
     cpu_output = output_root / "modal_auth_eval_cpu" / f"{run_id}_cpu"
     cuda_lane = f"{lane_id_base}_contest_cuda"
@@ -437,7 +465,7 @@ def build_plan(
             f"archive_sha={archive_sha}; bytes={archive_bytes}"
         ),
         submission_dir=submission_dir,
-        expected_runtime_tree_sha256=expected_runtime_by_axis["contest_cuda"],
+        expected_runtime_tree_sha256=forwarded_runtime_by_axis["contest_cuda"],
     )
     cpu_cmd = paired_auth_eval_axis_command(
         axis="contest_cpu",
@@ -455,7 +483,7 @@ def build_plan(
             f"archive_sha={archive_sha}; bytes={archive_bytes}"
         ),
         submission_dir=submission_dir,
-        expected_runtime_tree_sha256=expected_runtime_by_axis["contest_cpu"],
+        expected_runtime_tree_sha256=forwarded_runtime_by_axis["contest_cpu"],
     )
 
     # Resolve per-axis skip-decisions before assembling the plan dict so the
