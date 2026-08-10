@@ -1,0 +1,52 @@
+{
+  "schema": "ddm_sv3_scorer_queue.v1",
+  "status": "QUEUED_WITH_FIRE_ORDER",
+  "score_claim": false,
+  "source_result": ".omx/research/ddm_sv3_20260810/SV3_RESULT.json",
+  "survivor_count": 1,
+  "excluded_candidates": [
+    {
+      "candidate_id": "pointwise_lowrank_r32",
+      "reason": "known scorer refutation reproduced by positive-control raw alert"
+    },
+    {
+      "candidate_id": "vector_scale_vq32",
+      "reason": "odd semantic RAW crossed the predeclared catastrophic-damage gate"
+    }
+  ],
+  "survivors": [
+    {
+      "candidate_id": "sd1_selected_mixed_q3q4__temporal_reversion",
+      "archive_path": "/Volumes/VertigoDataTier/pact/ddm_sv3_20260810/candidates/sd1_selected_mixed_q3q4/retained/build_a/archive.zip",
+      "archive_bytes": 187788,
+      "archive_sha256": "fc283b6a6a538c74f2f0c30d7cf8ace93bd9496a96a18701e7eb9ed130dc8320",
+      "raw_path": "/Volumes/VertigoDataTier/pact/ddm_sv3_20260810/candidates/sd1_selected_mixed_q3q4/receiver_parseback/staging/0.raw",
+      "raw_bytes": 3662409600,
+      "raw_sha256": "3319a2bddb98a93dc4552d1ccde8f404767bf3939985fae23c58098996ee541d",
+      "screen_status": "SURVIVED_CHEAP_SCREEN",
+      "d_seg_status": "PRIOR_SEMANTIC_ONLY_MACOS_CPU_ADVISORY",
+      "d_pose_status": "UNMEASURED",
+      "full_s_status": "UNMEASURED"
+    }
+  ],
+  "fire_order": [
+    {
+      "order": 1,
+      "disposition": "QUEUED_WITH_A_FIRE_ORDER",
+      "owner": "MAIN scorer owner",
+      "consumer_store": "/Volumes/VertigoDataTier/pact/ddm_sv3_20260810/scorer/sd1_selected_mixed_q3q4",
+      "fire_trigger": "MAIN resolves the existing lane_ddm_sd2_seg_decomposition_20260810 claim as resumed, completed, or released; no conflicting full-n600 scorer job remains; ddm_sv3 claims the sole scorer lane; and the storage plus payload-retention preflight passes",
+      "action": "Run a matched full-n600 scorer row from the retained base and mixed candidate RAWs in chunks no larger than 120, retain every component output, and recompute S from d_seg, d_pose, and the exact 187788-byte archive.",
+      "fold_rule": "If SD2 completes first with retained component outputs whose base and candidate RAW hashes match SV3, fold those distortion components and use the exact SV3 archive bytes instead of duplicating the scorer pass.",
+      "admission": "Bank the 848-byte semantic saving only if measured total delta S is negative on the matched advisory axis; no authority or frontier claim follows."
+    },
+    {
+      "order": 2,
+      "disposition": "QUEUED_WITH_A_FIRE_ORDER",
+      "owner": "MAIN exact-eval owner",
+      "consumer_store": "/Volumes/VertigoDataTier/pact/ddm_sv3_20260810/exact_eval/sd1_selected_mixed_q3q4",
+      "fire_trigger": "the matched local full-n600 row has negative total delta S, the exact receiver and archive hashes remain pinned, the contest lane is exclusively claimed, and remote execution has operator authorization",
+      "action": "Run the exact retained archive through upstream/evaluate.py on the authorized contest axis, retain all payloads and receipts, and recompute S from components."
+    }
+  ]
+}

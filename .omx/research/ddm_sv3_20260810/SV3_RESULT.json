@@ -1,0 +1,158 @@
+{
+  "schema": "ddm_sv3_repo_receipt.v1",
+  "status": "SCREEN_COMPLETE_ONE_SURVIVOR_QUEUED",
+  "axis": "[scorer-free exact reconstructed weights and retained RGB24 RAW bytes]",
+  "score_claim": false,
+  "pointer_moved": false,
+  "base": {
+    "archive_bytes": 191052,
+    "archive_sha256": "0491d5df84fc70b62b3f7ccf8894f5e1b81c616de46a052e4423fc1e18fdc7cd",
+    "contest_cuda_dali_n600_s": 0.17214129749189645,
+    "raw_bytes": 3662409600,
+    "raw_sha256": "a18eb42a8da9399bcc03e795e17597bfbd459412dbb37990117665f48c4c0353"
+  },
+  "instrument": {
+    "weight_relative_l2_alert_threshold": 0.05,
+    "raw_catastrophic_mean_absolute_threshold": 5.0,
+    "raw_catastrophic_changed_rgb_fraction_threshold": 0.5,
+    "raw_alert_rule": "mean_absolute >= 5 OR (changed_rgb_fraction >= 0.5 AND rms >= 5)",
+    "weight_resolution": "exact fp32 reconstructed-tensor differences; cannot see activation, rendered-pixel, SegNet, or PoseNet sensitivity",
+    "raw_resolution": "exact changed RGB24 bytes and pixels by frame parity; cannot see SegNet or PoseNet sensitivity to small pixel changes",
+    "positive_control_status": "PASS_WEIGHT_AND_RAW_ALERTS_FIRED"
+  },
+  "candidates": [
+    {
+      "candidate_id": "pointwise_lowrank_r32",
+      "role": "KNOWN_CATASTROPHIC_POSITIVE_CONTROL",
+      "semantic_delta_bytes": -6272,
+      "composed_archive_bytes": 182364,
+      "composed_archive_sha256": "2080215145b8958de5ec79f9d2f02777eb14370836989cf4acac2646b5f3f0e4",
+      "weight_relative_l2": 0.07859787339423985,
+      "even": {
+        "mean_absolute_delta": 0.0,
+        "changed_byte_fraction": 0.0,
+        "changed_rgb_pixel_fraction": 0.0,
+        "byte_identical": true
+      },
+      "odd": {
+        "mean_absolute_delta": 67.62273199698909,
+        "root_mean_square_delta": 87.641891306732,
+        "max_absolute_delta": 244,
+        "changed_byte_fraction": 0.9921131808959872,
+        "changed_rgb_pixel_fraction": 0.9999930013289612
+      },
+      "raw_sha256": "46ca24e7004c5a3ea42a118981a4fdf6a523e9d5b56cf6baff4444a062176f32",
+      "raw_alert_fired": true,
+      "disposition": "REFUTED_PRIOR_SCORER_ROW_AND_REPRODUCED_BY_SCREEN",
+      "verdict_scope": "INSTANCE"
+    },
+    {
+      "candidate_id": "vector_scale_vq32",
+      "role": "UNMEASURED_SIBLING",
+      "semantic_delta_bytes": -4648,
+      "composed_archive_bytes": 183992,
+      "composed_archive_sha256": "d8bf1fa5f87913bd028693dd9971c841f251437114f05cb93d1edc6c0779c11b",
+      "weight_relative_l2": 0.0920196245446602,
+      "even": {
+        "mean_absolute_delta": 0.0,
+        "changed_byte_fraction": 0.0,
+        "changed_rgb_pixel_fraction": 0.0,
+        "byte_identical": true
+      },
+      "odd": {
+        "mean_absolute_delta": 6.254666840650483,
+        "root_mean_square_delta": 8.127180428332451,
+        "max_absolute_delta": 98,
+        "changed_byte_fraction": 0.94031001830052,
+        "changed_rgb_pixel_fraction": 0.9996973484342112
+      },
+      "raw_sha256": "9dda985fcb3a492ff6ab661d0bdab035dd3ea0e3ab6d333209f3802f798c33b0",
+      "raw_alert_fired": true,
+      "disposition": "WITHDRAWN_AT_RAW_SCREEN_NO_SCORER",
+      "verdict_scope": "INSTANCE_POSTHOC_JOINT_VECTOR_SCALE_VQ32"
+    },
+    {
+      "candidate_id": "sd1_selected_mixed_q3q4",
+      "role": "UNMEASURED_SIBLING",
+      "semantic_delta_bytes": -848,
+      "semantic_leg_delta_s_prior_macos_cpu_advisory": -0.00042392844867121244,
+      "composed_archive_bytes": 187788,
+      "composed_archive_sha256": "fc283b6a6a538c74f2f0c30d7cf8ace93bd9496a96a18701e7eb9ed130dc8320",
+      "weight_relative_l2": 0.30840421185122563,
+      "even": {
+        "mean_absolute_delta": 0.0,
+        "changed_byte_fraction": 0.0,
+        "changed_rgb_pixel_fraction": 0.0,
+        "byte_identical": true
+      },
+      "odd": {
+        "mean_absolute_delta": 0.9908806295177907,
+        "root_mean_square_delta": 1.4495839874871672,
+        "max_absolute_delta": 25,
+        "changed_byte_fraction": 0.6406460211331906,
+        "changed_rgb_pixel_fraction": 0.9213210220943064
+      },
+      "raw_sha256": "3319a2bddb98a93dc4552d1ccde8f404767bf3939985fae23c58098996ee541d",
+      "raw_alert_fired": false,
+      "disposition": "SURVIVED_CHEAP_SCREEN_QUEUED_FOR_FULL_SCORER",
+      "verdict_scope": "INSTANCE_POSTHOC_MIXED_Q3_Q4"
+    }
+  ],
+  "corrected_ledger": {
+    "rows": [
+      {
+        "candidate_id": "ai1_ans_temporal_reversion",
+        "section": "tokens",
+        "delta_bytes": -2416,
+        "status": "BANKABLE_LOSSLESS_RAW_BYTE_IDENTICAL"
+      },
+      {
+        "candidate_id": "hp3_requant_frame_embed_step2",
+        "section": "hpac",
+        "delta_bytes": -8,
+        "status": "BANKABLE_LOSSLESS_RAW_BYTE_IDENTICAL"
+      },
+      {
+        "candidate_id": "pointwise_lowrank_r32",
+        "section": "semantic",
+        "delta_bytes": -6272,
+        "status": "REFUTED"
+      },
+      {
+        "candidate_id": "vector_scale_vq32",
+        "section": "semantic",
+        "delta_bytes": -4648,
+        "status": "WITHDRAWN_AT_RAW_SCREEN"
+      },
+      {
+        "candidate_id": "sd1_selected_mixed_q3q4",
+        "section": "semantic",
+        "delta_bytes": -848,
+        "status": "QUEUED_NOT_BANKABLE"
+      }
+    ],
+    "bankable_delta_bytes": -2424,
+    "bankable_rate_delta_s": -0.0016140421023681433,
+    "share_of_33252_byte_sub015_rate_target": 0.07289787080476362
+  },
+  "scorer_queue": ".omx/research/ddm_sv3_20260810/SV3_SCORER_QUEUE.json",
+  "custody": {
+    "bulk_root": "/Volumes/VertigoDataTier/pact/ddm_sv3_20260810",
+    "screen_path": "/Volumes/VertigoDataTier/pact/ddm_sv3_20260810/final/screen.json",
+    "screen_bytes": 68699,
+    "screen_sha256": "11d566d618f83e4190b8f135ca5c7f48ace08b60d15f300df2e44630aa62512a",
+    "screen_progress_path": "/Volumes/VertigoDataTier/pact/ddm_sv3_20260810/final/progress.json",
+    "screen_progress_sha256": "51b13113653fb09ccca4d3d4dac69666b055f4e9f6fa7c1ae1a829e8abe09ef0",
+    "vq_inflate_receipt_sha256": "25db286f34b9c5b7d93768d36463d8177f920f11929141b24a377539333b25d2",
+    "mixed_inflate_receipt_sha256": "0b98f3aee4d903f910415683911748c37ea45de06afbc953f3f91b753d7c8ed3",
+    "measurement_source_sha256": "23fbdc28c7b8684f81e3b1a99412a264da72d92ddd892e8932b0d9db4dc21a46"
+  },
+  "boundaries": [
+    "No SegNet, PoseNet, upstream evaluator, contest-CPU, contest-CUDA, MPS score, or Modal job ran in SV3.",
+    "Weight alerts are triage signals only; SD1 is the positive demonstration that weight L2 does not rank semantic behavior.",
+    "The raw screen can refute gross render damage but cannot prove small pixel changes safe for either scorer.",
+    "The mixed candidate is queued and remains absent from bankable bytes until a matched full scorer row measures pose and total S.",
+    "The exact frontier did not move."
+  ],
+  "own_vehicle_frontier": "S=0.7539807296911207 @ 357836 B [macOS-CPU advisory] n600"
+}
