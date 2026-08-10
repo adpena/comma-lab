@@ -184,8 +184,8 @@ eval_image = (
     # so the snapshot can never be silently polluted again.
     #
     # WHY THIS EXISTS: contest_auth_eval.py compares the evaluating interpreter's
-    # torch/torchvision/timm/numpy against the declared ``--upstream-python`` and, on any
-    # mismatch, stamps ``env_mismatch{advisory_only: true}`` -- which correctly refused
+    # torch/torchvision/timm/numpy against a frozen export of the declared upstream lock
+    # group and, on any mismatch, stamps ``env_mismatch{advisory_only: true}`` -- which refused
     # a real n600 T4 CUDA row on 2026-08-10 (S=0.170536856816211 @ 188,636 B) because
     # this image hand-pins torch 2.5.1 / torchvision 0.20.1 / timm 1.0.27 / numpy
     # 1.26.4 while the lock resolves 2.9.0+cu128 / 0.24.0 / 1.0.22 / 2.3.4. The cure is
@@ -712,11 +712,12 @@ def _run_auth_eval_inner(
         "--upstream-dir",
         str(REMOTE_REPO / "upstream"),
         # Run upstream/evaluate.py under the LOCKED upstream venv built at image
-        # build time (see UPSTREAM_UV_GROUP_CUDA above). This path IS the parity
-        # gate's reference interpreter, so the gate passes by identity rather than
-        # by assertion; contest_auth_eval.py evaluates parity unconditionally.
+        # build time. The declared group selects the frozen-lock reference; the gate
+        # then measures this interpreter against it package by package.
         "--upstream-python",
         f"{UPSTREAM_LOCKED_VENV}/bin/python",
+        "--upstream-uv-group",
+        UPSTREAM_UV_GROUP_CUDA,
         "--video-names-file",
         str(REMOTE_REPO / "upstream/public_test_video_names.txt"),
         "--device",

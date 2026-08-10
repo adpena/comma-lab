@@ -520,6 +520,8 @@ def test_modal_auth_eval_images_include_hard_runtime_entropy_deps() -> None:
     assert 'REMOTE_WORK_ROOT = Path("/root/modal_auth_eval_cpu_work")' in cpu_text
     assert 'work_dir = out_dir / "eval_work"' not in cuda_text
     assert 'work_dir = out_dir / "eval_work"' not in cpu_text
+    assert '"--upstream-uv-group",\n        UPSTREAM_UV_GROUP_CUDA,' in cuda_text
+    assert '"--upstream-uv-group",\n        UPSTREAM_UV_GROUP_CPU,' in cpu_text
 
 
 def test_cuda_artifact_harvest_includes_inflated_output_manifest(mod, tmp_path):

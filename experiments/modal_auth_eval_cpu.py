@@ -764,10 +764,12 @@ def _run_auth_eval_inner(
         "--upstream-dir",
         str(REMOTE_REPO / "upstream"),
         # Run upstream/evaluate.py under the LOCKED upstream venv built at image
-        # build time (see UPSTREAM_UV_GROUP_CPU above) -- the parity gate's own
-        # reference interpreter, so parity holds by identity, not by assertion.
+        # build time. The declared group selects the frozen-lock reference; the gate
+        # then measures this interpreter against it package by package.
         "--upstream-python",
         f"{UPSTREAM_LOCKED_VENV}/bin/python",
+        "--upstream-uv-group",
+        UPSTREAM_UV_GROUP_CPU,
         "--video-names-file",
         str(REMOTE_REPO / "upstream/public_test_video_names.txt"),
         "--device",

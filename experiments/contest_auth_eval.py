@@ -620,16 +620,338 @@ def _external_python_environment_versions(python_executable: Path) -> dict:
     return payload
 
 
+def _resolve_exported_parity_requirements(
+    python_executable: Path,
+    requirements_text: str,
+    *,
+    marker_environment_overrides: dict[str, str] | None = None,
+) -> dict:
+    """Resolve lock-export rows in the evaluation interpreter's marker env.
+
+    ``uv export`` emits a universal requirements set. In particular, the CUDA
+    groups currently emit two ``torchvision`` rows separated by environment
+    markers. Marker evaluation therefore belongs to the interpreter that will
+    actually run ``upstream/evaluate.py``; evaluating in this wrapper process
+    would manufacture parity on a cross-platform dispatch.
+
+    The subprocess returns a typed result rather than raising so the authority
+    gate can preserve a precise fail-closed reason in provenance. The optional
+    overrides exist only to execute both architecture branches in tests.
+    """
+
+    script = r"""
+import json
+import sys
+
+from packaging.markers import default_environment
+from packaging.requirements import InvalidRequirement, Requirement
+from packaging.utils import canonicalize_name
+
+payload = json.load(sys.stdin)
+targets = tuple(payload["targets"])
+target_by_canonical = {canonicalize_name(name): name for name in targets}
+environment = default_environment()
+environment.update(payload.get("marker_environment_overrides") or {})
+surviving = {name: [] for name in targets}
+
+for line_number, raw_line in enumerate(payload["requirements_text"].splitlines(), 1):
+    line = raw_line.strip()
+    if not line or line.startswith("#") or line.startswith("--"):
+        continue
+    try:
+        requirement = Requirement(line)
+    except InvalidRequirement as exc:
+        print(json.dumps({
+            "ok": False,
+            "failure_reason": "requirement_parse_failed",
+            "line_number": line_number,
+            "row": line,
+            "error": repr(exc),
+            "marker_environment": environment,
+        }, sort_keys=True))
+        raise SystemExit(0)
+    target = target_by_canonical.get(canonicalize_name(requirement.name))
+    if target is None:
+        continue
+    if requirement.marker is None or requirement.marker.evaluate(environment=environment):
+        surviving[target].append({
+            "line_number": line_number,
+            "row": line,
+            "specifier": str(requirement.specifier),
+        })
+
+resolved = {}
+selected_rows = {}
+for target in targets:
+    rows = surviving[target]
+    if not rows:
+        print(json.dumps({
+            "ok": False,
+            "failure_reason": "parity_package_missing",
+            "package": target,
+            "surviving_rows": rows,
+            "marker_environment": environment,
+        }, sort_keys=True))
+        raise SystemExit(0)
+    if len(rows) != 1:
+        print(json.dumps({
+            "ok": False,
+            "failure_reason": "marker_evaluation_ambiguous",
+            "package": target,
+            "surviving_rows": rows,
+            "marker_environment": environment,
+        }, sort_keys=True))
+        raise SystemExit(0)
+    requirement = Requirement(rows[0]["row"])
+    specifiers = list(requirement.specifier)
+    if len(specifiers) != 1 or specifiers[0].operator != "==":
+        print(json.dumps({
+            "ok": False,
+            "failure_reason": "parity_requirement_not_exact",
+            "package": target,
+            "surviving_rows": rows,
+            "marker_environment": environment,
+        }, sort_keys=True))
+        raise SystemExit(0)
+    resolved[target] = specifiers[0].version
+    selected_rows[target] = rows[0]
+
+print(json.dumps({
+    "ok": True,
+    "packages": resolved,
+    "selected_rows": selected_rows,
+    "marker_environment": environment,
+}, sort_keys=True))
+"""
+    payload = {
+        "targets": list(AUTH_EVAL_ENV_PACKAGES),
+        "requirements_text": requirements_text,
+        "marker_environment_overrides": marker_environment_overrides or {},
+    }
+    try:
+        proc = subprocess.run(
+            [str(python_executable), "-c", script],
+            input=json.dumps(payload),
+            capture_output=True,
+            text=True,
+            timeout=15,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        return {
+            "ok": False,
+            "failure_reason": "marker_evaluation_exec_failed",
+            "error": repr(exc),
+        }
+    if proc.returncode != 0:
+        return {
+            "ok": False,
+            "failure_reason": "marker_evaluation_nonzero",
+            "returncode": proc.returncode,
+            "stdout_tail": proc.stdout[-2000:],
+            "stderr_tail": proc.stderr[-2000:],
+        }
+    try:
+        result = json.loads(proc.stdout)
+    except json.JSONDecodeError as exc:
+        return {
+            "ok": False,
+            "failure_reason": "marker_evaluation_invalid_json",
+            "error": repr(exc),
+            "stdout_tail": proc.stdout[-2000:],
+            "stderr_tail": proc.stderr[-2000:],
+        }
+    if not isinstance(result, dict):
+        return {
+            "ok": False,
+            "failure_reason": "marker_evaluation_non_object_json",
+            "stdout_tail": proc.stdout[-2000:],
+        }
+    return result
+
+
+def _derive_upstream_lock_environment_reference(
+    upstream_dir: Path,
+    evaluation_python: Path,
+    uv_group: str | None,
+) -> dict:
+    """Derive parity versions from the immutable upstream lock, or refuse.
+
+    This is used only when the historical ``upstream/.venv`` reference does
+    not exist. The operator may declare an axis-specific dependency group;
+    whether the selected evaluation interpreter matches that group is still
+    measured package by package.
+    """
+
+    lock_path = upstream_dir / "uv.lock"
+    group = str(uv_group or "").strip()
+    reference: dict = {
+        "schema": "contest_auth_eval_uv_lock_reference_v1",
+        "reference_source": "uv_export_frozen_declared_group",
+        "reference_identity": (
+            f"{lock_path.resolve()}#group={group}" if group else str(lock_path.resolve())
+        ),
+        "python_executable": str(evaluation_python),
+        "uv_group": group or None,
+        "uv_lock_path": str(lock_path.resolve()),
+        "packages": dict.fromkeys(AUTH_EVAL_ENV_PACKAGES),
+    }
+
+    def refuse(reason: str, **details: object) -> dict:
+        reference["query_error"] = reason
+        reference["failure_reason"] = reason
+        reference.update(details)
+        return reference
+
+    if not group:
+        return refuse("uv_group_not_declared")
+    if not lock_path.is_file():
+        return refuse("upstream_uv_lock_missing")
+    try:
+        lock_before = _sha256(lock_path, prefix=0)
+    except OSError as exc:
+        return refuse("upstream_uv_lock_unreadable", error=repr(exc))
+    reference["uv_lock_sha256_before"] = lock_before
+
+    uv_executable = shutil.which("uv")
+    if uv_executable is None:
+        return refuse("uv_not_found")
+    reference["uv_executable"] = uv_executable
+    export_argv = [
+        uv_executable,
+        "export",
+        "--frozen",
+        "--no-emit-project",
+        "--no-hashes",
+        "--format",
+        "requirements-txt",
+        "--directory",
+        str(upstream_dir),
+        "--group",
+        group,
+    ]
+    reference["uv_export_argv"] = export_argv
+
+    try:
+        version_proc = subprocess.run(
+            [uv_executable, "--version"],
+            capture_output=True,
+            text=True,
+            timeout=15,
+            check=False,
+        )
+        reference["uv_version"] = (
+            version_proc.stdout.strip() if version_proc.returncode == 0 else None
+        )
+        if version_proc.returncode != 0:
+            reference["uv_version_query_error"] = {
+                "returncode": version_proc.returncode,
+                "stderr_tail": version_proc.stderr[-2000:],
+            }
+    except (OSError, subprocess.SubprocessError) as exc:
+        reference["uv_version"] = None
+        reference["uv_version_query_error"] = repr(exc)
+
+    export_failure: tuple[str, dict[str, object]] | None = None
+    export_text = ""
+    try:
+        export_proc = subprocess.run(
+            export_argv,
+            capture_output=True,
+            text=True,
+            timeout=60,
+            check=False,
+        )
+        reference["uv_export_returncode"] = export_proc.returncode
+        if export_proc.returncode != 0:
+            export_failure = (
+                "uv_export_nonzero",
+                {
+                    "uv_export_returncode": export_proc.returncode,
+                    "uv_export_stdout_tail": export_proc.stdout[-2000:],
+                    "uv_export_stderr_tail": export_proc.stderr[-2000:],
+                },
+            )
+        else:
+            export_text = export_proc.stdout
+            reference["uv_export_sha256"] = hashlib.sha256(
+                export_text.encode("utf-8")
+            ).hexdigest()
+    except subprocess.TimeoutExpired as exc:
+        export_failure = (
+            "uv_export_timeout",
+            {"timeout_seconds": 60, "error": repr(exc)},
+        )
+    except OSError as exc:
+        export_failure = ("uv_export_exec_failed", {"error": repr(exc)})
+
+    marker_result: dict | None = None
+    if export_failure is None:
+        marker_result = _resolve_exported_parity_requirements(
+            evaluation_python,
+            export_text,
+        )
+        reference["marker_resolution"] = marker_result
+
+    try:
+        lock_after = _sha256(lock_path, prefix=0)
+    except OSError as exc:
+        return refuse("upstream_uv_lock_unreadable_after_export", error=repr(exc))
+    reference["uv_lock_sha256_after"] = lock_after
+    if lock_before != lock_after:
+        return refuse(
+            "upstream_uv_lock_mutated",
+            uv_lock_sha256_before=lock_before,
+            uv_lock_sha256_after=lock_after,
+        )
+    if export_failure is not None:
+        reason, details = export_failure
+        return refuse(reason, **details)
+    assert marker_result is not None
+    if not marker_result.get("ok"):
+        return refuse(
+            str(marker_result.get("failure_reason") or "marker_evaluation_failed"),
+            marker_resolution=marker_result,
+        )
+
+    marker_environment = marker_result.get("marker_environment")
+    if not isinstance(marker_environment, dict) or not marker_environment.get(
+        "python_full_version"
+    ):
+        return refuse(
+            "marker_environment_missing_python_full_version",
+            marker_resolution=marker_result,
+        )
+    packages = marker_result.get("packages")
+    if not isinstance(packages, dict):
+        return refuse(
+            "marker_resolution_packages_not_object",
+            marker_resolution=marker_result,
+        )
+
+    reference["python_version"] = marker_environment["python_full_version"]
+    reference["packages"] = packages
+    reference["selected_requirement_rows"] = marker_result.get("selected_rows", {})
+    reference["marker_environment"] = marker_environment
+    return reference
+
+
 def _resolve_evaluate_python(args: argparse.Namespace, upstream_dir: Path) -> tuple[Path, str]:
-    """Resolve the interpreter that will run upstream/evaluate.py."""
+    """Select the interpreter that will run upstream/evaluate.py.
+
+    Make the path absolute, but deliberately do NOT resolve symlinks. Python
+    venv launchers are normally symlinks; invoking their base-interpreter
+    target bypasses the adjacent ``pyvenv.cfg`` and therefore the locked
+    site-packages the authority gate is meant to measure.
+    """
 
     raw = getattr(args, "upstream_python", None)
     if raw is not None:
-        path = Path(raw).resolve()
+        path = Path(os.path.abspath(Path(raw)))
         if not path.exists():
             raise SystemExit(f"--upstream-python does not exist: {path}")
         return path, "cli_upstream_python"
-    return Path(sys.executable).resolve(), "current_process_python"
+    return Path(os.path.abspath(sys.executable)), "current_process_python"
 
 
 def _build_auth_eval_environment_report(
@@ -642,7 +964,7 @@ def _build_auth_eval_environment_report(
     current = _current_python_environment_versions()
     evaluation = (
         dict(current)
-        if eval_python == Path(sys.executable).resolve()
+        if eval_python == Path(os.path.abspath(sys.executable))
         else _external_python_environment_versions(eval_python)
     )
     evaluation["python_executable"] = str(eval_python)
@@ -655,44 +977,46 @@ def _build_auth_eval_environment_report(
         "wrapper": current,
     }
 
-    upstream_ref = upstream_dir / ".venv" / "bin" / "python"
+    upstream_ref = Path(
+        os.path.abspath(upstream_dir / ".venv" / "bin" / "python")
+    )
     if upstream_ref.exists():
-        if eval_python == upstream_ref.resolve():
+        if eval_python == upstream_ref:
             reference = dict(evaluation)
         else:
-            reference = _external_python_environment_versions(upstream_ref.resolve())
-            reference["python_executable"] = str(upstream_ref.resolve())
+            reference = _external_python_environment_versions(upstream_ref)
+            reference["python_executable"] = str(upstream_ref)
         report["upstream_reference"] = reference
     else:
-        reference = None
-        report["upstream_reference"] = {
-            "python_executable": str(upstream_ref.resolve()),
-            "exists": False,
-        }
+        reference = _derive_upstream_lock_environment_reference(
+            upstream_dir,
+            eval_python,
+            getattr(args, "upstream_uv_group", None),
+        )
+        report["upstream_reference"] = reference
 
     # PARITY IS ALWAYS EVALUATED (2026-08-10). This block previously ran only when
     # ``--upstream-python`` was ABSENT, so passing the flag disabled the check
     # entirely -- an operator DECLARATION of parity stood in for a MEASUREMENT of it,
     # which is precisely the assertion-instead-of-proof failure the gate exists to
-    # prevent. Now it always runs. Nothing is made stricter for the honest case: when
-    # the declared interpreter IS ``upstream/.venv/bin/python`` the identity branch
-    # above sets ``reference = dict(evaluation)`` and the per-package comparison is
-    # skipped, so parity passes BY IDENTITY -- proven, not asserted. A declared
-    # interpreter that is something else is now correctly reported as a mismatch, and
-    # a missing reference venv still records reason 'missing' and refuses. The
-    # declaration itself survives for readers as ``evaluation_python_source``.
+    # prevent. Now it always runs. Nothing is made stricter for the historical honest
+    # case: when the declared interpreter IS ``upstream/.venv/bin/python`` the identity
+    # branch above sets ``reference = dict(evaluation)`` and the per-package comparison
+    # is skipped, so parity passes BY IDENTITY -- proven, not asserted. When that path
+    # is absent, the reference instead comes from a frozen uv export of the declared
+    # lock group and is compared package by package. The interpreter declaration itself
+    # survives for readers as ``evaluation_python_source``.
     mismatches: dict[str, dict[str, object]] = {}
-    if reference is None or reference.get("query_error"):
+    reference_identity = str(
+        reference.get("reference_identity") or upstream_ref
+    )
+    if reference.get("query_error"):
         mismatches["upstream_reference_python"] = {
             "evaluation": str(eval_python),
-            "reference": str(upstream_ref.resolve()),
-            "reason": (
-                reference.get("query_error")
-                if isinstance(reference, dict)
-                else "missing"
-            ),
+            "reference": reference_identity,
+            "reason": reference.get("query_error"),
         }
-    elif eval_python != upstream_ref.resolve():
+    elif not (upstream_ref.exists() and eval_python == upstream_ref):
         eval_packages = (
             evaluation.get("packages")
             if isinstance(evaluation.get("packages"), dict)
@@ -715,11 +1039,15 @@ def _build_auth_eval_environment_report(
                     "reference": ref_packages.get(name),
                 }
     if mismatches:
+        mismatch_reason = str(
+            reference.get("failure_reason")
+            or "current_python_without_proven_upstream_lock_parity"
+        )
         report["env_mismatch"] = {
             "schema": "contest_auth_eval_env_mismatch_v1",
-            "reason": "current_python_without_proven_upstream_lock_parity",
+            "reason": mismatch_reason,
             "evaluation_python": str(eval_python),
-            "reference_python": str(upstream_ref.resolve()),
+            "reference_python": reference_identity,
             "mismatches": mismatches,
             "advisory_only": True,
         }
@@ -2272,6 +2600,16 @@ def main() -> int:
             "upstream/.venv/bin/python. Without this, runs under the current "
             "repo venv are labeled advisory if package parity with the "
             "upstream lock is not proven."
+        ),
+    )
+    parser.add_argument(
+        "--upstream-uv-group",
+        default=None,
+        help=(
+            "Declared upstream dependency group (for example cpu or cu128). "
+            "Required to derive the parity reference from upstream/uv.lock "
+            "when upstream/.venv/bin/python is absent; the declaration selects "
+            "an axis but never asserts parity."
         ),
     )
     parser.add_argument("--video-names-file", type=Path,

@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 import subprocess
 import sys
 import zipfile
@@ -1319,3 +1320,295 @@ def test_explicit_upstream_python_still_evaluates_parity(
         "evaluation": "2.5.1",
         "reference": "2.9.0+cu128",
     }
+
+
+def _copy_upstream_lock_inputs_without_venv(tmp_path: Path) -> Path:
+    """Create a lock-export root without copying the forbidden reference venv."""
+
+    synthetic = tmp_path / "upstream_without_venv"
+    synthetic.mkdir()
+    for name in ("pyproject.toml", "uv.lock"):
+        (synthetic / name).write_bytes((REPO / "upstream" / name).read_bytes())
+    return synthetic
+
+
+def _real_uv_export(cae, upstream: Path, group: str, cache_dir: Path) -> str:
+    uv = cae.shutil.which("uv")
+    if uv is None:
+        pytest.skip("uv is required for the real-lock control")
+    env = dict(os.environ)
+    env["UV_CACHE_DIR"] = str(cache_dir)
+    proc = subprocess.run(
+        [
+            uv,
+            "export",
+            "--frozen",
+            "--no-emit-project",
+            "--no-hashes",
+            "--format",
+            "requirements-txt",
+            "--directory",
+            str(upstream),
+            "--group",
+            group,
+        ],
+        capture_output=True,
+        text=True,
+        env=env,
+        check=False,
+    )
+    assert proc.returncode == 0, proc.stderr
+    return proc.stdout
+
+
+def test_missing_venv_reference_is_derived_from_real_cpu_lock_and_matches(
+    cae, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """NEGATIVE CONTROL: a genuinely matching interpreter passes measurement."""
+
+    synthetic = _copy_upstream_lock_inputs_without_venv(tmp_path)
+    lock_before = cae._sha256(synthetic / "uv.lock", prefix=0)
+    matching_python = REPO / "upstream" / ".venv" / "bin" / "python"
+    if not matching_python.exists():
+        pytest.skip("upstream locked interpreter is absent")
+    monkeypatch.setenv("UV_CACHE_DIR", str(tmp_path / "uv-cache"))
+
+    report = cae._build_auth_eval_environment_report(
+        SimpleNamespace(
+            upstream_python=str(matching_python),
+            upstream_uv_group="cpu",
+        ),
+        synthetic,
+    )
+
+    assert "env_mismatch" not in report
+    reference = report["upstream_reference"]
+    assert reference["reference_source"] == "uv_export_frozen_declared_group"
+    assert reference["uv_group"] == "cpu"
+    assert reference["packages"] == report["evaluation"]["packages"]
+    assert reference["python_version"] == report["evaluation"]["python_version"]
+    assert reference["uv_lock_sha256_before"] == lock_before
+    assert reference["uv_lock_sha256_after"] == lock_before
+    assert cae._sha256(synthetic / "uv.lock", prefix=0) == lock_before
+
+
+def test_missing_venv_reference_refuses_real_mismatched_interpreter(
+    cae, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """POSITIVE CONTROL: real package drift remains advisory and scoreless."""
+
+    synthetic = _copy_upstream_lock_inputs_without_venv(tmp_path)
+    monkeypatch.setenv("UV_CACHE_DIR", str(tmp_path / "uv-cache"))
+    mismatched_python = REPO / ".venv" / "bin" / "python"
+
+    report = cae._build_auth_eval_environment_report(
+        SimpleNamespace(
+            upstream_python=str(mismatched_python),
+            upstream_uv_group="cpu",
+        ),
+        synthetic,
+    )
+
+    assert report["env_mismatch"]["advisory_only"] is True
+    assert report["env_mismatch"]["mismatches"]["torch"]["evaluation"] == "2.12.1"
+    assert report["env_mismatch"]["mismatches"]["torch"]["reference"] in {
+        "2.10.0",
+        "2.10.0+cpu",
+    }
+    contract = cae._auth_eval_evidence_contract(
+        "cpu",
+        600,
+        {"env_mismatch": report["env_mismatch"]},
+    )
+    assert contract["evidence_grade"] == "auth-eval env mismatch advisory"
+    assert contract["score_claim"] is False
+    assert contract["promotion_eligible"] is False
+
+
+def test_evaluate_python_preserves_venv_symlink_path(cae, tmp_path: Path) -> None:
+    """A venv symlink must not collapse to the base interpreter executable."""
+
+    base_python = tmp_path / "base" / "python3"
+    base_python.parent.mkdir()
+    base_python.write_text("base interpreter placeholder\n")
+    venv_python = tmp_path / "locked-venv" / "bin" / "python"
+    venv_python.parent.mkdir(parents=True)
+    venv_python.symlink_to(base_python)
+
+    selected, source = cae._resolve_evaluate_python(
+        SimpleNamespace(upstream_python=venv_python),
+        tmp_path / "upstream",
+    )
+
+    assert selected == venv_python.absolute()
+    assert selected != venv_python.resolve()
+    assert source == "cli_upstream_python"
+
+
+def test_cu128_torchvision_markers_resolve_in_both_linux_architectures(
+    cae, tmp_path: Path
+) -> None:
+    """MARKER CONTROL: never first-match the universal torchvision rows."""
+
+    requirements = _real_uv_export(
+        cae,
+        REPO / "upstream",
+        "cu128",
+        tmp_path / "uv-cache",
+    )
+    common = {
+        "sys_platform": "linux",
+        "platform_python_implementation": "CPython",
+        "python_full_version": "3.13.12",
+        "python_version": "3.13",
+    }
+    x86 = cae._resolve_exported_parity_requirements(
+        Path(sys.executable),
+        requirements,
+        marker_environment_overrides={**common, "platform_machine": "x86_64"},
+    )
+    arm = cae._resolve_exported_parity_requirements(
+        Path(sys.executable),
+        requirements,
+        marker_environment_overrides={**common, "platform_machine": "aarch64"},
+    )
+
+    assert x86["ok"] is True
+    assert x86["packages"]["torchvision"] == "0.24.0+cu128"
+    assert "+cu128" in x86["selected_rows"]["torchvision"]["row"]
+    assert arm["ok"] is True
+    assert arm["packages"]["torchvision"] == "0.24.0"
+    assert "+cu128" not in arm["selected_rows"]["torchvision"]["row"].split(";")[0]
+
+
+def test_lock_reference_refuses_without_declared_group(cae, tmp_path: Path) -> None:
+    synthetic = _copy_upstream_lock_inputs_without_venv(tmp_path)
+
+    reference = cae._derive_upstream_lock_environment_reference(
+        synthetic,
+        Path(sys.executable),
+        None,
+    )
+
+    assert reference["query_error"] == "uv_group_not_declared"
+
+
+def test_lock_reference_refuses_when_uv_is_absent(
+    cae, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    synthetic = _copy_upstream_lock_inputs_without_venv(tmp_path)
+    monkeypatch.setattr(cae.shutil, "which", lambda _name: None)
+
+    reference = cae._derive_upstream_lock_environment_reference(
+        synthetic,
+        Path(sys.executable),
+        "cpu",
+    )
+
+    assert reference["query_error"] == "uv_not_found"
+
+
+def test_lock_reference_refuses_nonzero_uv_export(
+    cae, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    synthetic = _copy_upstream_lock_inputs_without_venv(tmp_path)
+    monkeypatch.setattr(cae.shutil, "which", lambda _name: "/usr/bin/uv")
+
+    def fake_run(argv, **_kwargs):
+        if argv[1:] == ["--version"]:
+            return subprocess.CompletedProcess(argv, 0, "uv 1.0\n", "")
+        return subprocess.CompletedProcess(argv, 23, "", "resolution failed")
+
+    monkeypatch.setattr(cae.subprocess, "run", fake_run)
+    reference = cae._derive_upstream_lock_environment_reference(
+        synthetic,
+        Path(sys.executable),
+        "cpu",
+    )
+
+    assert reference["query_error"] == "uv_export_nonzero"
+    assert reference["uv_export_returncode"] == 23
+
+
+def test_marker_resolution_refuses_missing_package(cae) -> None:
+    requirements = "\n".join(
+        [
+            "torch==2.9.0+cu128",
+            "torchvision==0.24.0+cu128",
+            "timm==1.0.22",
+        ]
+    )
+
+    result = cae._resolve_exported_parity_requirements(
+        Path(sys.executable), requirements
+    )
+
+    assert result["ok"] is False
+    assert result["failure_reason"] == "parity_package_missing"
+    assert result["package"] == "numpy"
+
+
+def test_marker_resolution_refuses_ambiguous_surviving_rows(cae) -> None:
+    requirements = "\n".join(
+        [
+            "torch==2.9.0+cu128",
+            "torchvision==0.24.0+cu128",
+            "torchvision==0.24.1+cu128 ; python_version >= '3.0'",
+            "timm==1.0.22",
+            "numpy==2.3.4",
+        ]
+    )
+
+    result = cae._resolve_exported_parity_requirements(
+        Path(sys.executable), requirements
+    )
+
+    assert result["ok"] is False
+    assert result["failure_reason"] == "marker_evaluation_ambiguous"
+    assert result["package"] == "torchvision"
+    assert len(result["surviving_rows"]) == 2
+
+
+def test_lock_reference_refuses_lock_mutation_across_export(
+    cae, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    synthetic = _copy_upstream_lock_inputs_without_venv(tmp_path)
+    lock_path = synthetic / "uv.lock"
+    monkeypatch.setattr(cae.shutil, "which", lambda _name: "/usr/bin/uv")
+
+    def fake_run(argv, **_kwargs):
+        if argv[1:] == ["--version"]:
+            return subprocess.CompletedProcess(argv, 0, "uv 1.0\n", "")
+        lock_path.write_bytes(lock_path.read_bytes() + b"\n# forbidden mutation\n")
+        return subprocess.CompletedProcess(
+            argv,
+            0,
+            "torch==2.9.0\ntorchvision==0.24.0\ntimm==1.0.22\nnumpy==2.3.4\n",
+            "",
+        )
+
+    monkeypatch.setattr(cae.subprocess, "run", fake_run)
+    monkeypatch.setattr(
+        cae,
+        "_resolve_exported_parity_requirements",
+        lambda *_args, **_kwargs: {
+            "ok": True,
+            "packages": {
+                "torch": "2.9.0",
+                "torchvision": "0.24.0",
+                "timm": "1.0.22",
+                "numpy": "2.3.4",
+            },
+            "selected_rows": {},
+            "marker_environment": {"python_full_version": "3.11.12"},
+        },
+    )
+
+    reference = cae._derive_upstream_lock_environment_reference(
+        synthetic,
+        Path(sys.executable),
+        "cpu",
+    )
+
+    assert reference["query_error"] == "upstream_uv_lock_mutated"
+    assert reference["uv_lock_sha256_before"] != reference["uv_lock_sha256_after"]
