@@ -53,7 +53,20 @@ DEFAULT_RECEIVER_PYTHON = cp2.DEFAULT_RECEIVER_PYTHON
 CHECKPOINT_SHA256 = "3948ccfcd44778dc42affee18a10c3f3baa434d1a2eb2345a013146c1dbfb647"
 TOKEN_DRIVER_SHA256 = "0f5a797fda844ee63f6057fdb7203f6578b135b4e12deafa98d6ddc3260a5c84"
 TOKEN_DRIVER_BYTES = 188_636
-BASE_RAW_SHA256 = "a18eb42ca6f14e1a96a0a09f11136ae491b560a66c342be32348fb5db85fa03b"
+# CORRECTED 2026-08-10 (MAIN). The prior literal here was
+# "a18eb42ca6f14e1a96a0a09f11136ae491b560a66c342be32348fb5db85fa03b" — it shares an
+# 8-hex-character prefix with the true digest and then diverges, which is not a
+# coincidence any independent measurement produces (~1 in 4e9). It disagreed with FOUR
+# independent citations of the base raw digest and was NOT corroborated by this arm's own
+# SM4_RESULT.json, which carries no raw hash at all. Two of the four are MEASURED hashes of
+# actually-decoded 3,662,409,600 B raws (ddm_ai1's ANS+temporal output and ddm_hp3's
+# frame-embed step2 output, both of which reproduced the base byte-for-byte). The gate below
+# is fail-closed, so the wrong constant would have REFUSED the correct base raw; SM4 never
+# exercised it (it ran no duplicate inflate), which is why the error stayed latent.
+# Corroborating sources: .omx/research/ddm_ai1_ans_receiver_integration_20260809.md ·
+# .omx/research/ddm_hp3_20260810/FINAL_REPORT.md ·
+# .omx/research/ddm_main_paired_eval_20260810/PAIRED_EVAL_FINDINGS.md
+BASE_RAW_SHA256 = "a18eb42a8da9399bcc03e795e17597bfbd459412dbb37990117665f48c4c0353"
 BASE_RAW_BYTES = 3_662_409_600
 BASE_ARCHIVE_BYTES = 191_052
 ORIGINAL_BYTES = 37_545_489
