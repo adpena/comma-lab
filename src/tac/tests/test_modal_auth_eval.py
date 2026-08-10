@@ -118,6 +118,35 @@ def mod():
     return _load_module()
 
 
+@pytest.fixture(autouse=True)
+def _hermetic_single_flight(monkeypatch, request):
+    """Isolate every test from the LIVE Modal single-flight state.
+
+    ``main()`` imports ``assert_modal_single_flight`` INSIDE its function body
+    (experiments/modal_auth_eval.py:1451), so the module-level monkeypatches
+    the tests already apply never covered it. Unstubbed, the guard reads the
+    REAL ``.omx/state`` ledgers and even shells out to ``modal app list`` —
+    which made 16 unit tests here RED whenever a genuine Modal job was live
+    (measured 2026-08-10, during the lc2 contest-CPU dispatch) and coupled
+    unit-test results to session state. Same genus as the test_ddm_co9
+    staleness-in-tests fix (#780).
+
+    The guard's own semantics stay covered by its dedicated module tests; the
+    RECORDING stub here lets ``test_main_calls_single_flight_guard`` still
+    prove the wire-in is live without touching real state.
+    """
+    del request
+    import tac.deploy.modal.single_flight as sf
+
+    calls: list[dict] = []
+    monkeypatch.setattr(
+        sf,
+        "assert_modal_single_flight",
+        lambda **kwargs: (calls.append(kwargs), [])[1],
+    )
+    yield calls
+
+
 def test_module_imports_clean(mod):
     """Module loads without errors when modal is installed."""
     assert hasattr(mod, "run_auth_eval")
@@ -786,10 +815,18 @@ def test_modal_auth_eval_requires_runtime_hash_for_uploaded_runtime(
     assert "--expected-runtime-tree-sha256 is required" in str(exc.value)
 
 
-def test_modal_cpu_auth_eval_rejects_local_root_runtime_hash_for_uploaded_runtime(
+def test_modal_cpu_auth_eval_rejects_concrete_tree_hash_for_uploaded_runtime(
     tmp_path,
     monkeypatch,
 ) -> None:
+    """The 2026-08-04 r9m deadlock, permanent fix (modal_auth_eval_cpu.py:361).
+
+    A concrete tree-hash expectation on the uploaded --submission-dir axis is
+    structurally unvalidatable (tree hashes bake in environment-coupled fields;
+    local projection and remote computation cannot agree), so the CPU wrapper
+    REFUSES it with guidance instead of silently dropping it — and it refuses
+    BEFORE recording a dispatch claim.
+    """
     pytest.importorskip("modal", reason="modal SDK not installed")
     cpu_mod = _load_cpu_module()
     archive = tmp_path / "candidate.zip"
@@ -801,10 +838,11 @@ def test_modal_cpu_auth_eval_rejects_local_root_runtime_hash_for_uploaded_runtim
 
     remote_hash = "d" * 64
     content_hash = "e" * 64
+    files_hash = "a1b2" * 16
     monkeypatch.setattr(
         cpu_mod,
         "_expected_uploaded_runtime_tree_sha256",
-        lambda **_kwargs: (remote_hash, content_hash, ""),
+        lambda **_kwargs: (remote_hash, content_hash, files_hash),
     )
     monkeypatch.setattr(
         cpu_mod,
@@ -825,47 +863,67 @@ def test_modal_cpu_auth_eval_rejects_local_root_runtime_hash_for_uploaded_runtim
         )
 
     message = str(exc.value)
-    assert "uploaded --submission-dir runtime tree" in message
+    assert "cannot be validated on the" in message
+    # The guidance names the portable custody digest that IS enforced, and
+    # carries the projected tree/content hashes as informational context.
+    assert files_hash in message
     assert remote_hash in message
     assert content_hash in message
 
 
-def test_modal_cpu_auth_eval_requires_runtime_hash_for_uploaded_runtime(
+def test_modal_cpu_auth_eval_omitted_runtime_hash_binds_files_digest(
     tmp_path,
     monkeypatch,
 ) -> None:
+    """Omission is LEGAL on the CPU uploaded axis (r9m permanent fix).
+
+    The pre-fix contract required --expected-runtime-tree-sha256; the fix
+    inverted it: an omitted flag behaves like 'auto', and custody is carried by
+    the transport-zip sha256 plus the environment-free runtime FILES digest.
+    """
     pytest.importorskip("modal", reason="modal SDK not installed")
     cpu_mod = _load_cpu_module()
-    archive = tmp_path / "candidate.zip"
-    archive.write_bytes(b"archive bytes")
-    runtime = tmp_path / "runtime"
-    runtime.mkdir()
-    (runtime / "inflate.sh").write_text("#!/usr/bin/env bash\npython inflate.py\n")
-    (runtime / "inflate.py").write_text("print('ok')\n")
-
+    remote_hash = "d" * 64
+    content_hash = "e" * 64
+    files_hash = "c3d4" * 16
     monkeypatch.setattr(
         cpu_mod,
         "_expected_uploaded_runtime_tree_sha256",
-        lambda **_kwargs: pytest.fail("runtime hash should be required before hashing"),
+        lambda **_kwargs: (remote_hash, content_hash, files_hash),
     )
+
+    assert cpu_mod._validate_uploaded_runtime_tree_expectation(
+        expected_runtime_tree_sha256="",
+        submission_dir_path=tmp_path,
+        inflate_sh_rel="inflate.sh",
+    ) == (files_hash, content_hash, "")
+
+
+def test_modal_cpu_auth_eval_refuses_when_files_digest_underivable(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    """Fail-closed: no portable custody expectation means NO dispatch.
+
+    Pinned deliberately — two earlier fixtures stubbed an empty FILES digest
+    by accident and exercised this path without asserting it.
+    """
+    pytest.importorskip("modal", reason="modal SDK not installed")
+    cpu_mod = _load_cpu_module()
     monkeypatch.setattr(
         cpu_mod,
-        "claim_modal_auth_eval_dispatch",
-        lambda **_kwargs: pytest.fail("claim should not be recorded before hash validation"),
+        "_expected_uploaded_runtime_tree_sha256",
+        lambda **_kwargs: ("d" * 64, "e" * 64, ""),
     )
 
     with pytest.raises(SystemExit) as exc:
-        cpu_mod.main(
-            str(archive),
-            str(tmp_path / "out"),
-            inflate_sh="inflate.sh",
-            submission_dir=str(runtime),
-            lane_id="lane_unit_modal_cpu_auth_eval_runtime_hash_required",  # FAKE_LANE_OK:test-fixture lane_id
-            instance_job_id="job_unit_modal_cpu_auth_eval_runtime_hash_required",
-            pair_group_id="pair_unit_modal_auth_eval",
+        cpu_mod._validate_uploaded_runtime_tree_expectation(
+            expected_runtime_tree_sha256="auto",
+            submission_dir_path=tmp_path,
+            inflate_sh_rel="inflate.sh",
         )
 
-    assert "--expected-runtime-tree-sha256 is required" in str(exc.value)
+    assert "could not derive the runtime FILES digest" in str(exc.value)
 
 
 def test_modal_cuda_auth_eval_auto_runtime_hash_binds_projected_hash(
@@ -888,25 +946,32 @@ def test_modal_cuda_auth_eval_auto_runtime_hash_binds_projected_hash(
     ) == (remote_hash, content_hash)
 
 
-def test_modal_cpu_auth_eval_auto_runtime_hash_binds_projected_hash(
+def test_modal_cpu_auth_eval_auto_runtime_hash_binds_files_digest(
     tmp_path,
     monkeypatch,
 ) -> None:
+    """'auto' binds the environment-free FILES digest, NOT the projected tree.
+
+    Pre-r9m this bound the projected tree hash (the CUDA sibling above still
+    does). The CPU uploaded axis binds files_sha256 because tree hashes are
+    environment-coupled and structurally deadlock (modal_auth_eval_cpu.py:361).
+    """
     pytest.importorskip("modal", reason="modal SDK not installed")
     cpu_mod = _load_cpu_module()
     remote_hash = "3" * 64
     content_hash = "4" * 64
+    files_hash = "5" * 64
     monkeypatch.setattr(
         cpu_mod,
         "_expected_uploaded_runtime_tree_sha256",
-        lambda **_kwargs: (remote_hash, content_hash, ""),
+        lambda **_kwargs: (remote_hash, content_hash, files_hash),
     )
 
     assert cpu_mod._validate_uploaded_runtime_tree_expectation(
         expected_runtime_tree_sha256="auto",
         submission_dir_path=tmp_path,
         inflate_sh_rel="inflate.sh",
-    ) == (remote_hash, content_hash, "")
+    ) == (files_hash, content_hash, "")
 
 
 def test_modal_runtime_upload_skips_host_metadata_files(tmp_path):
@@ -1073,6 +1138,52 @@ def test_local_request_metadata_is_non_promotable_shape(mod, tmp_path, monkeypat
     assert result["promotion_eligible"] is False
     assert claim_calls[0]["status"] == "active_modal_auth_eval_running"
     assert terminal_calls[0]["status"] == "completed_modal_auth_eval_recovered"
+
+
+def test_main_calls_single_flight_guard(
+    mod, tmp_path, monkeypatch, _hermetic_single_flight
+):
+    """The #513 single-flight guard must fire on EVERY dispatch path.
+
+    The hermetic autouse fixture replaces the guard with a recording stub;
+    this test asserts main() actually reached it, so stubbing the guard for
+    isolation can never silently hide a dropped wire-in.
+    """
+    archive = tmp_path / "archive.zip"
+    archive.write_bytes(b"archive bytes")
+    out_dir = tmp_path / "out"
+
+    class FakeRemote:
+        @staticmethod
+        def remote(*_args):
+            return {
+                "passed": True,
+                "returncode": 0,
+                "score_recomputed_from_components": 1.23,
+                "avg_posenet_dist": 0.01,
+                "avg_segnet_dist": 0.002,
+                "archive_size_bytes": archive.stat().st_size,
+                "promotion_eligible": False,
+                "artifacts": {},
+            }
+
+    monkeypatch.setattr(mod, "run_auth_eval", FakeRemote)
+    monkeypatch.setattr(mod, "claim_modal_auth_eval_dispatch", lambda **kwargs: None)
+    monkeypatch.setattr(mod, "terminal_modal_auth_eval_claim", lambda **kwargs: None)
+
+    mod.main(
+        str(archive),
+        str(out_dir),
+        lane_id="lane_unit_single_flight",  # FAKE_LANE_OK:test-fixture lane_id
+        instance_job_id="job_unit_single_flight",
+        pair_group_id="pair_unit_single_flight",
+    )
+
+    assert len(_hermetic_single_flight) == 1, (
+        "main() no longer calls assert_modal_single_flight before dispatch — "
+        "the #513 pre-spawn guard wire-in has been dropped"
+    )
+    assert _hermetic_single_flight[0]["lane_id"] == "lane_unit_single_flight"
 
 
 def test_modal_cuda_inflate_env_request_is_diagnostic_only(mod, tmp_path, monkeypatch):

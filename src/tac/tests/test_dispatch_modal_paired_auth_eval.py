@@ -94,8 +94,13 @@ def test_paired_modal_plan_emits_cpu_and_cuda_commands_with_same_pair_group(
         assert cmd[cmd.index("--archive") + 1] == str(archive.resolve())
         assert cmd[cmd.index("--expected-archive-sha256") + 1] == expected_archive_sha
         assert "--single-axis-waiver-reason" not in cmd
-    assert "experiments/modal_auth_eval.py" in cuda_cmd
-    assert "experiments/modal_auth_eval_cpu.py" in cpu_cmd
+    # The entrypoint MUST be named explicitly: ``modal run <file>`` only
+    # auto-selects when the app exposes exactly ONE local entrypoint, and both
+    # wrappers also expose ``prove_env`` — the bare form fails on Modal with
+    # "Specify a Modal Function or local entrypoint to run" (measured
+    # 2026-08-10 when it refused the lc2 exact row after a full image build).
+    assert "experiments/modal_auth_eval.py::main" in cuda_cmd
+    assert "experiments/modal_auth_eval_cpu.py::main" in cpu_cmd
 
 
 def test_paired_modal_plan_relativizes_inflate_sh_under_submission_dir(
@@ -516,22 +521,31 @@ def test_paired_modal_plan_auto_computes_axis_specific_uploaded_runtime_hashes(
         claim_notes="unit test",
     )
 
+    # RESOLVE vs FORWARD (dispatch_modal_paired_auth_eval.py:282, measured
+    # 2026-08-10): the plan still RESOLVES concrete per-axis hashes so the plan
+    # JSON stays auditable...
     assert plan["runtime"]["expected_runtime_tree_sha256"] is None
     assert plan["runtime"]["expected_runtime_tree_sha256_by_axis"] == {
         "contest_cuda": cuda_hash,
         "contest_cpu": cpu_hash,
     }
+    # ...but FORWARDS the literal 'auto' when the operator asked for auto (or
+    # omitted the flag): each wrapper derives its own portable custody digest,
+    # and the CPU wrapper structurally REFUSES a concrete tree hash on the
+    # uploaded --submission-dir axis (the 2026-08-04 r9m deadlock). Resolving
+    # auto into a concrete hash turned a working flag into a guaranteed
+    # CPU-axis refusal AFTER the ~5-minute image build.
     assert (
         plan["commands"]["contest_cuda"][
             plan["commands"]["contest_cuda"].index("--expected-runtime-tree-sha256") + 1
         ]
-        == cuda_hash
+        == "auto"
     )
     assert (
         plan["commands"]["contest_cpu"][
             plan["commands"]["contest_cpu"].index("--expected-runtime-tree-sha256") + 1
         ]
-        == cpu_hash
+        == "auto"
     )
 
 
