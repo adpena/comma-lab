@@ -87,3 +87,51 @@ claims and this is what the difference costs.
 - base raw sha256 `a18eb42a8da9399bcc03e795e17597bfbd459412dbb37990117665f48c4c0353` (= established base raw hash)
 - cand raw sha256 `46ca24e7004c5a3ea42a118981a4fdf6a523e9d5b56cf6baff4444a062176f32` (matches cp2's own receipt)
 - both raws retained; both reports retained; no payload discarded.
+
+## ADDENDUM — the defect read at source, and a zero-byte-cost discriminator
+
+Read at source, `sm3r_receiver.py::_decode_lowrank`:
+
+```python
+left,  remaining = _decode_standard_q4("factor.left",  left_template,  remaining)
+right, remaining = _decode_standard_q4("factor.right", right_template, remaining)
+restored[name] = (left @ right).reshape(value.shape)
+```
+
+Two facts, both confirmed in code:
+1. **No centering / no mean term.** Rank-32 must also represent the DC structure.
+2. **Both FACTORS are int4-quantized**, then multiplied. Reconstruction is
+   `dequant_q4(L) @ dequant_q4(R)` -- quantization error in each factor multiplies
+   and accumulates across the 32 rank terms. The standard path quantizes W DIRECTLY,
+   where per-element error is bounded.
+
+Targets are `coord_mix.weight` + `blocks.{0..3}.pw.weight` -- the pointwise-conv
+capacity of the semantic model.
+
+STATUS: this is a code-level READ plus the pixel-level signature (consistent DC
+shift, variance compression, corr ~0.31). It is a strong hypothesis for the
+mechanism, NOT yet a measurement of it. Labelled accordingly.
+
+### Byte arithmetic (derived from the receiver's own format)
+
+standard q4 = `rows*cols/2 + rows*2` · lowrank q4 = `(rows*r)/2 + (r*cols)/2 + (rows+r)*2`
+Break-even rank: **r* = rows*cols/(rows+cols)** (= n/2 for square n x n), so r=32
+only saves bytes when the tensor exceeds 64 wide.
+
+| shape | std q4 | r32-int4 | r16-int8 (same bits/factor-element x2) |
+|---|---:|---:|---:|
+| 128x128 | 8,448 | 4,416 | ~4,384 |
+| 96x96 | 4,800 | 3,328 | ~3,296 |
+
+### The discriminator (ZERO byte cost)
+
+**r16-int8 costs the same bytes as r32-int4** but quantizes each factor 16x finer.
+
+- If the defect is FACTOR-QUANTIZATION COMPOUNDING -> r16-int8 beats r32-int4 decisively.
+- If it is RANK INSUFFICIENCY -> r16-int8 is worse.
+
+Either outcome is a mechanism verdict, at equal bytes, on the same receiver.
+Add centering (store a per-row mean, tiny) as the second arm.
+
+This is the named next measurement for the -6,272 B that the paired eval withdrew.
+It is worth running because that figure is 2.6x the entire currently-bankable saving.
