@@ -82,6 +82,34 @@ def test_delta_zigzag_refuses_wrong_shape_and_range() -> None:
         ps135.delta_zigzag_from_signed_codes(values)
 
 
+def test_process_scan_uses_lsof_when_ps_exec_is_forbidden(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[list[str]] = []
+
+    def fake_run(command: list[str], **_kwargs: object) -> SimpleNamespace:
+        calls.append(command)
+        if command[0] == "/bin/ps":
+            raise PermissionError(1, "sandbox denied process table")
+        return SimpleNamespace(
+            returncode=0,
+            stdout="COMMAND PID USER FD TYPE DEVICE SIZE/OFF NODE NAME\n",
+            stderr="",
+        )
+
+    monkeypatch.setattr(ps135.subprocess, "run", fake_run)
+    receipt = ps135.process_scan_receipt()
+
+    assert calls == [
+        ["/bin/ps", "-axo", "command"],
+        ["/usr/sbin/lsof", "-nP", "-c", "Python"],
+    ]
+    assert receipt["canonical_returncode"] == 126
+    assert "PermissionError" in receipt["canonical_stderr"]
+    assert receipt["fallback_returncode"] == 0
+    assert receipt["passes"] is True
+
+
 def test_score_matches_upstream_formula() -> None:
     expected = 100 * 0.00029662 + np.sqrt(10 * 0.00002332)
     expected += 25 * ps135.LC2_ARCHIVE_BYTES / ps135.ORIGINAL_BYTES

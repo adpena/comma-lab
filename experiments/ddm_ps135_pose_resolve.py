@@ -1282,7 +1282,17 @@ def process_scan_receipt() -> dict[str, object]:
         Path(__file__).name,
     )
     command = ["/bin/ps", "-axo", "command"]
-    completed = subprocess.run(command, text=True, capture_output=True, check=False)
+    try:
+        completed = subprocess.run(
+            command, text=True, capture_output=True, check=False
+        )
+    except OSError as error:
+        completed = subprocess.CompletedProcess(
+            command,
+            126,
+            stdout="",
+            stderr=f"{type(error).__name__}: {error}",
+        )
     if completed.returncode == 0:
         from tools.argv_role import process_table_entrypoint_holders
 
@@ -1300,7 +1310,17 @@ def process_scan_receipt() -> dict[str, object]:
         }
 
     lsof_command = ["/usr/sbin/lsof", "-nP", "-c", "Python"]
-    lsof = subprocess.run(lsof_command, text=True, capture_output=True, check=False)
+    try:
+        lsof = subprocess.run(
+            lsof_command, text=True, capture_output=True, check=False
+        )
+    except OSError as error:
+        lsof = subprocess.CompletedProcess(
+            lsof_command,
+            126,
+            stdout="",
+            stderr=f"{type(error).__name__}: {error}",
+        )
     lines = lsof.stdout.splitlines()
     suspicious = sorted(
         {
