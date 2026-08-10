@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import fcntl
 import hashlib
 import importlib.util
 import json
@@ -111,6 +112,27 @@ def atomic_json(path: Path, payload: dict[str, Any]) -> None:
         path,
         (json.dumps(payload, indent=2, sort_keys=True) + "\n").encode(),
     )
+
+
+def acquire_run_lock(path: Path):
+    """Hold one non-blocking advisory lock for the lifetime of a decode call."""
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    handle = path.open("a+", encoding="utf-8")
+    try:
+        fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError as error:
+        handle.close()
+        raise RuntimeError(f"decode already active for run lock: {path}") from error
+    handle.seek(0)
+    handle.truncate()
+    handle.write(
+        json.dumps({"pid": os.getpid(), "acquired_at_utc": utc_now()}, sort_keys=True)
+        + "\n"
+    )
+    handle.flush()
+    os.fsync(handle.fileno())
+    return handle
 
 
 def read_stored_member(path: Path) -> bytes:
@@ -407,6 +429,8 @@ def decode(
     build_receipt, submission = validate_build(output)
     run_root = output / "decode" / label
     run_root.mkdir(parents=True, exist_ok=True)
+    run_lock_path = run_root / ".run.lock"
+    run_lock = acquire_run_lock(run_lock_path)
     complete_path = run_root / "decode_receipt.json"
     final_raw = run_root / "0.raw"
     token_cache = run_root / "checkpoint" / "tokens.npz"
@@ -441,6 +465,8 @@ def decode(
         "complete": False,
         "written_at_utc": utc_now(),
         "label": label,
+        "launcher_pid": os.getpid(),
+        "run_lock": str(run_lock_path.resolve()),
         "command": command,
         "archive": build_receipt["archive"],
         "token_cache": str(token_cache.resolve()),
@@ -520,6 +546,7 @@ def decode(
     state["complete"] = True
     state["completed_receipt"] = file_record(complete_path)
     atomic_json(run_root / "decode_state.json", state)
+    run_lock.close()
     return result
 
 

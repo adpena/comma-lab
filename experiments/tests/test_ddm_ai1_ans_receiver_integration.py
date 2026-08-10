@@ -62,6 +62,21 @@ def test_pinned_python_path_keeps_venv_identity_instead_of_resolving_symlink() -
     assert ai1.PINNED_PYTHON.absolute() == ai1.PINNED_PYTHON
 
 
+def test_decode_run_lock_refuses_a_concurrent_owner(tmp_path: Path) -> None:
+    import pytest
+
+    lock_path = tmp_path / ".run.lock"
+    first = ai1.acquire_run_lock(lock_path)
+    try:
+        with pytest.raises(RuntimeError, match="decode already active"):
+            ai1.acquire_run_lock(lock_path)
+    finally:
+        first.close()
+
+    second = ai1.acquire_run_lock(lock_path)
+    second.close()
+
+
 def test_ans_progress_checkpoint_round_trips_and_binds_payload(tmp_path: Path) -> None:
     import numpy as np
     import pytest
