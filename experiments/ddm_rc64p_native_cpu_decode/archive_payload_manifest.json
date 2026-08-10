@@ -1,0 +1,26 @@
+{
+  "schema": "ddm_rc64p_native_payload_manifest.v1",
+  "native_code_is_free_generic_runtime": true,
+  "native_source": "ans_backend.c",
+  "video_derived_constants_embedded_in_native_source": [],
+  "counted_payload": {
+    "archive_sha256": "f154f0abb76980a30715282cf330d611cac7ebce3379c5f8093830dc273e1a45",
+    "archive_bytes": 187226,
+    "ans_token_sha256": "85d6c199ffb93ddab0fe1631448882a255e9fea1f6858bab5a04cea2310a7331",
+    "ans_token_bytes": 114528
+  },
+  "archive_bytes_changed_by_route_a": false,
+  "route_b": {
+    "borrowed_rc64_recurrence": true,
+    "rc64_token_sha256": "df52c86682363073bdaf2d654b6c12459063ee29a01d4881f91e58e05ad08ce4",
+    "rc64_token_bytes": 114524,
+    "archive_sha256": "b3365410a423fa6ae4d53e9a86fc2bd38bc59793ea2b437fc161bdcca11712b0",
+    "archive_bytes": 187222,
+    "archive_bytes_saved_vs_lc2": 4,
+    "exact_n600_receiver_validation": true,
+    "decoded_token_sha256": "c5c7671d037b6912980c57929a5b6d789d250ee6a93e3b0a6018cf9f63e32ece",
+    "literal_raw_bytes": 3662409600,
+    "literal_raw_sha256": "a18eb42a8da9399bcc03e795e17597bfbd459412dbb37990117665f48c4c0353",
+    "score_status": "not_run_rate_only_projection"
+  }
+}

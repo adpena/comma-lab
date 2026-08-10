@@ -1,0 +1,10 @@
+LC2_ANS_ALPHABET=5 generic scorer class count already present in the public receiver
+LC2_ANS_PRECISION=24 public constriction DefaultAnsCoder categorical precision
+LC2_ANS_WORD_BITS=32 public constriction DefaultAnsCoder word width
+LC2_ANS_STATE_BITS=64 public constriction DefaultAnsCoder state width
+LC2_RC64_ALPHABET=5 generic scorer class count already present in the public receiver
+LC2_RC64_TOTAL=2147483648 granted PR135 public arithmetic-coder frequency lattice
+LC2_RC64_STATE_BITS=63 granted PR135 generic arithmetic-coder interval width
+LC2_RC64_DATA_MAGIC=R6D1 generic receiver wire discriminator
+LC2_RC64_CHECKPOINT_MAGIC=R6C1 generic resumability discriminator
+VIDEO_DERIVED_CONSTANTS=NONE
