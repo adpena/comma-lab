@@ -1,0 +1,124 @@
+{
+  "schema": "ddm_sm3_repo_receipt.v1",
+  "axis": "[scorer-free exact archive bytes and exact semantic parse-back]",
+  "score_claim": false,
+  "selection_status": "NO_WINNER_WITHOUT_DSEG_AND_DPOSE_MEASUREMENT",
+  "base": {
+    "archive_bytes": 191052,
+    "archive_sha256": "0491d5df84fc70b62b3f7ccf8894f5e1b81c616de46a052e4423fc1e18fdc7cd",
+    "contest_cuda_dali_n600_s": 0.17214129749189645
+  },
+  "section_decomposition": {
+    "parameter_denominator": 66339,
+    "rank_ge_2_parameter_denominator": 63936,
+    "rank_lt_2_parameter_denominator": 2403,
+    "raw_semantic_bytes": 40252,
+    "q4_code_bytes": 31968,
+    "fp16_scale_bytes": 3478,
+    "fp16_vector_bytes": 4806,
+    "naive_all_parameter_q4_bytes": 33169.5,
+    "standalone_semantic_brotli_q11_bytes": 35033,
+    "exact_archive_leave_one_out_marginal_bytes": 36580
+  },
+  "candidates": [
+    {
+      "candidate_id": "legacy_q4_control",
+      "archive_bytes": 191052,
+      "archive_delta_bytes": 0,
+      "archive_sha256": "0491d5df84fc70b62b3f7ccf8894f5e1b81c616de46a052e4423fc1e18fdc7cd",
+      "rate_only_delta_s": 0.0,
+      "break_even_max_d_seg_increase_if_d_pose_unchanged": 0.0,
+      "public_receiver_readable": true,
+      "d_seg_status": "PRIOR_SD1_N600_MEASURED_0.00028616163465711804"
+    },
+    {
+      "candidate_id": "sd1_selected_mixed_q3q4",
+      "archive_bytes": 190204,
+      "archive_delta_bytes": -848,
+      "archive_sha256": "010a8a5273ae87595191ffc03447fa36e61978ae9f827c2def46dea7075dfa67",
+      "rate_only_delta_s": -0.0005646483922476013,
+      "break_even_max_d_seg_increase_if_d_pose_unchanged": 0.000005646483922476013,
+      "public_receiver_readable": true,
+      "d_seg_status": "PRIOR_SD1_N600_MEASURED_0.00028756883409288193"
+    },
+    {
+      "candidate_id": "vector_vq32",
+      "archive_bytes": 188124,
+      "archive_delta_bytes": -2928,
+      "archive_sha256": "02324459e20bcdfcf4bb1b54598d91f2c0e1bbb68f8f0c00690e9f7d35cb0882",
+      "rate_only_delta_s": -0.0019496350147417177,
+      "break_even_max_d_seg_increase_if_d_pose_unchanged": 0.00001949635014741718,
+      "public_receiver_readable": false,
+      "d_seg_status": "UNMEASURED"
+    },
+    {
+      "candidate_id": "scale_vq32",
+      "archive_bytes": 189444,
+      "archive_delta_bytes": -1608,
+      "archive_sha256": "d633e3432310649d185db9878c13462fa5c391eeb5eaf5fed846479bd231cb30",
+      "rate_only_delta_s": -0.0010707011966204515,
+      "break_even_max_d_seg_increase_if_d_pose_unchanged": 0.000010707011966204516,
+      "public_receiver_readable": false,
+      "d_seg_status": "UNMEASURED"
+    },
+    {
+      "candidate_id": "vector_scale_vq32",
+      "archive_bytes": 186404,
+      "archive_delta_bytes": -4648,
+      "archive_sha256": "6beaf75a081b580262fb1bc0febbb94a5c036611882038fec43bbe192fa7fa92",
+      "rate_only_delta_s": -0.0030949124141118525,
+      "break_even_max_d_seg_increase_if_d_pose_unchanged": 0.000030949124141118525,
+      "public_receiver_readable": false,
+      "d_seg_status": "UNMEASURED"
+    },
+    {
+      "candidate_id": "pointwise_lowrank_r32",
+      "archive_bytes": 184780,
+      "archive_delta_bytes": -6272,
+      "archive_sha256": "fc1f3612e0243a45d3569c9f6c0164603ca5436101a9c264f1afc8800a20217f",
+      "rate_only_delta_s": -0.0041762673539822584,
+      "break_even_max_d_seg_increase_if_d_pose_unchanged": 0.000041762673539822587,
+      "public_receiver_readable": false,
+      "d_seg_status": "UNMEASURED"
+    },
+    {
+      "candidate_id": "film_row_prune_keep75",
+      "archive_bytes": 190328,
+      "archive_delta_bytes": -724,
+      "archive_sha256": "92afa3bc0eabdef00c9a1a832812df15d77face250ba94cf6e6fd7610d9e1d44",
+      "rate_only_delta_s": -0.00048208188206045206,
+      "break_even_max_d_seg_increase_if_d_pose_unchanged": 0.00000482081882060452,
+      "public_receiver_readable": false,
+      "d_seg_status": "UNMEASURED"
+    },
+    {
+      "candidate_id": "film_row_prune_keep50",
+      "archive_bytes": 189552,
+      "archive_delta_bytes": -1500,
+      "archive_sha256": "cf21fb59e378cc65d78cd2d5dc5d559e75659b85bea8e9fa59589fad7ab5649e",
+      "rate_only_delta_s": -0.000998788429683257,
+      "break_even_max_d_seg_increase_if_d_pose_unchanged": 0.00000998788429683257,
+      "public_receiver_readable": false,
+      "d_seg_status": "UNMEASURED"
+    }
+  ],
+  "proxy_diagnostics_not_score_authority": {
+    "vector_vq32_relative_l2_vs_q4": 0.006648619358575604,
+    "scale_vq32_relative_l2_vs_q4": 0.09177912160162029,
+    "vector_scale_vq32_relative_l2_vs_q4": 0.0920196245446602,
+    "pointwise_lowrank_r32_relative_l2_vs_q4": 0.07859787337121515,
+    "film_row_prune_keep75_relative_l2_vs_q4": 0.004468742649005596,
+    "film_row_prune_keep50_relative_l2_vs_q4": 0.007629348945081973,
+    "sd1_selected_mixed_q3q4_relative_l2_vs_q4": 0.30840421185122563
+  },
+  "custody": {
+    "ssd_result_path": "/Volumes/VertigoDataTier/pact/ddm_sm3_20260810/final_v3/SM3_RESULT.json",
+    "ssd_result_bytes": 41728,
+    "ssd_result_sha256": "475630c49cbb2f65d2237a7fdd68afdf1324ad64f309c6196b912d2248432dea",
+    "ssd_decomposition_path": "/Volumes/VertigoDataTier/pact/ddm_sm3_20260810/final_v3/SECTION_DECOMPOSITION.json",
+    "ssd_decomposition_sha256": "91e8eea62d85fa97bebf17580e0e0375e679289f9be7ea88235fb4a8540e9ac8",
+    "measurement_source_sha256": "6da0aa13649f8f22082723d71e4844495fd9f9aa4897c1bcd87c55ecb81fa7b2",
+    "reused_sd1_commit": "600af8ef7d5f4573f6b3793d7a946fe5bf10d4d5",
+    "sd1_public_receiver_commit": "58f62cd22ff07562c0534c999d705fb9edfe5279"
+  }
+}

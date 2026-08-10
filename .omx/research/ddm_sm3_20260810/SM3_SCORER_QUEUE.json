@@ -1,0 +1,61 @@
+{
+  "schema": "ddm_sm3_scorer_queue.v1",
+  "status": "QUEUED_WITH_FIRE_ORDER",
+  "score_claim": false,
+  "source_result": ".omx/research/ddm_sm3_20260810/SM3_RESULT.json",
+  "retained_root": "/Volumes/VertigoDataTier/pact/ddm_sm3_20260810/final_v3/retained/candidates",
+  "screen_pairset": {
+    "selection": "seeded_stratified_random_10_strata_x_12_pairs",
+    "seed": 20260810,
+    "population_denominator": 600,
+    "selected_denominator": 120,
+    "int16_le_sha256": "ff4994e99a3ca2a8ca24920b2bcfcf8dcb005845c532076484998bd3c6d2fab3",
+    "pair_ids": [
+      0, 8, 10, 14, 15, 33, 34, 36, 43, 46, 52, 59,
+      61, 72, 83, 92, 107, 109, 110, 114, 116, 117, 118, 119,
+      124, 129, 130, 147, 148, 151, 152, 156, 158, 162, 171, 175,
+      181, 186, 188, 192, 198, 203, 206, 213, 223, 225, 227, 230,
+      241, 251, 253, 255, 267, 269, 272, 273, 276, 277, 278, 279,
+      312, 314, 322, 325, 327, 333, 337, 342, 343, 347, 354, 359,
+      360, 362, 379, 380, 383, 384, 385, 394, 397, 409, 416, 419,
+      422, 424, 433, 436, 442, 447, 459, 460, 465, 472, 476, 478,
+      486, 488, 489, 492, 501, 507, 515, 518, 528, 530, 533, 534,
+      546, 547, 550, 554, 557, 563, 564, 567, 572, 584, 586, 592
+    ]
+  },
+  "fire_order": [
+    {
+      "order": 1,
+      "disposition": "QUEUED_WITH_A_FIRE_ORDER",
+      "owner": "MAIN scorer owner",
+      "consumer_store": "/Volumes/VertigoDataTier/pact/ddm_sm3_20260810/final_v3/scorer/n120",
+      "fire_trigger": "ddm_ai1 releases the scorer slot, active_lane_dispatch_claims has no conflicting live scorer row, and the ddm_sm3 scorer lane is claimed",
+      "action": "Run the q4 control and all six new SM3R candidates through the exact research parser, real semantic renderer, and frozen CPU-torch SegNet on the fixed n120 pairset; batch chunks must be at most 120 and every output payload must be retained.",
+      "admission": "Keep only candidates whose measured 100*delta_d_seg plus measured rate_only_delta_s is negative; this is a screen, not a family verdict or score."
+    },
+    {
+      "order": 2,
+      "disposition": "QUEUED_WITH_A_FIRE_ORDER",
+      "owner": "MAIN scorer owner",
+      "consumer_store": "/Volumes/VertigoDataTier/pact/ddm_sm3_20260810/final_v3/scorer/n600",
+      "fire_trigger": "at least one new candidate passes the fixed n120 semantic-leg gate and the scorer lane remains exclusively claimed",
+      "action": "Rerun every survivor at full n600 in chunks no larger than 120, with a matched q4 control, and retain decoded frames plus d_seg receipts."
+    },
+    {
+      "order": 3,
+      "disposition": "QUEUED_WITH_A_FIRE_ORDER",
+      "owner": "PR130 receiver/runtime successor",
+      "consumer_store": "/Volumes/VertigoDataTier/pact/ddm_sm3_20260810/final_v3/receiver",
+      "fire_trigger": "a new SM3R candidate has a negative measured n600 semantic-leg delta",
+      "action": "Add only the winning SM3R mode to the counted DV1 receiver, preserve legacy q4 and SD1M byte identity, and prove complete-archive parse-back plus exact decoded tensor equality."
+    },
+    {
+      "order": 4,
+      "disposition": "QUEUED_WITH_A_FIRE_ORDER",
+      "owner": "MAIN full-candidate evaluator",
+      "consumer_store": "/Volumes/VertigoDataTier/pact/ddm_sm3_20260810/final_v3/evaluation",
+      "fire_trigger": "the winning candidate is receiver-readable, paired pose replay leaves total delta S negative, the scorer lane is claimed, and any remote execution has operator authorization",
+      "action": "Run paired q4-versus-candidate n600 upstream/evaluate.py on the identical pinned local axis, recompute S from components, and retain the exact archive and evaluator receipts; promotion requires later contest authority."
+    }
+  ]
+}
