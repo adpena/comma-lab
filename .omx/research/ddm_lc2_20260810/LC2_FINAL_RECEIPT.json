@@ -1,0 +1,113 @@
+{
+  "schema": "ddm_lc2_final_receipt.v1",
+  "complete": true,
+  "written_at_utc": "2026-08-10T15:23:00Z",
+  "axis": "[archive-byte exact + macOS-CPU fresh-cache literal receiver; scorer-free]",
+  "score_claim": false,
+  "archive": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_lc2_20260810/submission/archive.zip",
+    "bytes": 187226,
+    "sha256": "f154f0abb76980a30715282cf330d611cac7ebce3379c5f8093830dc273e1a45"
+  },
+  "byte_ladder": {
+    "ai1_ans_temporal_bytes": 188636,
+    "split_brotli_bytes": 187771,
+    "cx2_split_brotli_bytes": 187226,
+    "split_delta_vs_ai1_bytes": -865,
+    "cx2_delta_after_split_bytes": -545,
+    "total_delta_vs_ai1_bytes": -1410,
+    "total_delta_vs_pr130_bytes": -3826,
+    "corrected_charter_prediction_bytes": 187733,
+    "measured_minus_prediction_bytes": -507
+  },
+  "search": {
+    "candidate_denominator": 54,
+    "minimum_byte_tie_denominator": 3,
+    "minimum_unique_archive_denominator": 1,
+    "winner": {
+      "semantic_transform": "signed_zigzag_block4096_lane2",
+      "semantic_brotli_quality": 10,
+      "carrier_transform": "identity",
+      "carrier_brotli_quality_tie": [9, 10, 11],
+      "hpac_transform": "xor80",
+      "hpac_brotli_quality": 10,
+      "zip_codec": "stored"
+    },
+    "best_deflate_bytes": 187286,
+    "deflate_delta_vs_winner_bytes": 60
+  },
+  "parseback": {
+    "all_sections_consumed": true,
+    "models_raw_wire_bytes": 83540,
+    "models_raw_wire_sha256": "618ac80da2bfb82a52a94317877cfd79af71290f751e3d4f130a46258b29092a",
+    "base_models_raw_bytes": 83493,
+    "base_models_raw_sha256": "62dd72dfa0858a25ca32bdee1e536627a17883b6fc7efd7cd5b2de7b13b84517",
+    "token_payload_bytes": 114528,
+    "token_payload_sha256": "85d6c199ffb93ddab0fe1631448882a255e9fea1f6858bab5a04cea2310a7331",
+    "temporal_packed_bytes": 39,
+    "temporal_packed_sha256": "f920f7be8108b83831971a8d07c9ef522eadb18abed095cf395bf3a6f871e796"
+  },
+  "fresh_cache_receiver": {
+    "complete": true,
+    "wall_seconds": 856.0356150830048,
+    "within_1800_second_inflate_limit": true,
+    "fresh_token_cache_at_launch": true,
+    "raw_byte_identical_to_pr130": true,
+    "raw": {
+      "path": "/Volumes/APDataStore/pact/ddm_lc2_20260810/cold_decode/0.raw",
+      "bytes": 3662409600,
+      "sha256": "a18eb42a8da9399bcc03e795e17597bfbd459412dbb37990117665f48c4c0353"
+    },
+    "decoded_tokens": 117964800,
+    "decoded_token_sha256": "c5c7671d037b6912980c57929a5b6d789d250ee6a93e3b0a6018cf9f63e32ece",
+    "ans_terminal_state_empty": true
+  },
+  "derived_score": {
+    "status": "DERIVED_NOT_EXACT_RECEIPT",
+    "formula": "0.172141297491896447 - 25*(191052-187226)/37545489",
+    "value": 0.16959372113725102
+  },
+  "receipts": {
+    "terminal": {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_lc2_20260810/LC2_RESULT.json",
+      "bytes": 25863,
+      "sha256": "473fcc3b3d5303c626f7cfbd93b0714f0192a84e440835fac3a4fe6df83918ab"
+    },
+    "ready": {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_lc2_20260810/READY_EXACT_EVAL.json",
+      "bytes": 1796,
+      "sha256": "f37045417f1ea6109a4d35870d2df86f751ba3ae39324448bda04b1246b1f7e8"
+    },
+    "search": {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_lc2_20260810/search/complete_zip_search.json",
+      "bytes": 140514,
+      "sha256": "bc582ee2b42171aa628db0e03d98c6937d860ac0d30d2a7bf68db7ad95af4676"
+    },
+    "fresh_cache_decode": {
+      "path": "/Volumes/APDataStore/pact/ddm_lc2_20260810/cold_decode/cold_decode_receipt.json",
+      "bytes": 5436,
+      "sha256": "afcec2a11ad306f5d0217b0aedfeeb10293a270012f3af168b05eaa53c567783"
+    },
+    "timeout": {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_lc2_20260810/retained/decode/decode_timeout_receipt.json",
+      "bytes": 2634,
+      "sha256": "c8d1bb7710142d7d1a07edcf5303f4abbf8bf4f3c0a2274a6ee52902fee70ca5"
+    },
+    "timeout_partial_move": {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_lc2_20260810/retained/decode/timeout_partial_move_receipt.json",
+      "bytes": 1078,
+      "sha256": "5d5b36a5325786e8adb5305f9cef34452f4ca73d7e228bedf2e13e34555d0f47"
+    }
+  },
+  "pending_terminal_gates": [
+    "MAIN fires one exact n600 row on the immutable archive bytes"
+  ],
+  "dispatch": {
+    "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+    "owner": "MAIN exact contest-row owner",
+    "consumer_store": "/Volumes/APDataStore/pact/ddm_lc2_20260810/exact_eval",
+    "fire_trigger": "MAIN claims the sole exact-eval lane and the locked upstream environment passes parity; archive bytes remain f154f0abb76980a30715282cf330d611cac7ebce3379c5f8093830dc273e1a45"
+  },
+  "pointer_moved": false,
+  "own_vehicle_frontier_moved": false
+}
