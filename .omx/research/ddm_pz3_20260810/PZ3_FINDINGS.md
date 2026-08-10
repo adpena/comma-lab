@@ -104,7 +104,8 @@ public receiver dispatch, and byte-closed receiver proof.
 
 - Upstream and the intake clone remained read-only.
 - No Modal, paid dispatch, MPS authority, n600 scorer, contest-CPU, or contest-CUDA run occurred.
-- All 67 materialized payload entries, including every candidate and repeat plus both rendered
+- All 115 materialized payload entries, including every carrier, compressed model bundle, public
+  `p` member, archive, determinism repeat, parsed array payload, and both rendered
   n120 tensors, are retained under `/Volumes/VertigoDataTier/pact/ddm_pz3_20260810/retained/` with
   bytes and SHA-256 in `PZ3_RESULT.json`.
 - The run is resumable from its canonical checkpoint and preserves preflight, materialization,

@@ -34,7 +34,14 @@ def _target_packet(codes: np.ndarray) -> bytes:
     for dimension in range(receiver.TARGET_DIMS):
         raw = np.asarray(codes[:, dimension], dtype="<u2").tobytes()
         compressed = brotli.compress(raw, quality=11)
-        chunks.append(receiver.PZ2_STREAM_HEADER.pack(8, -1.0, 0.125, len(compressed)))
+        chunks.append(
+            receiver.PZ2_STREAM_HEADER.pack(
+                8,
+                -1.0,
+                0.125,
+                len(compressed),  # MEASURE_ONLY_OK:synthetic test fixture with no empirical input or measurement
+            )
+        )
         chunks.append(compressed)
     return b"".join(chunks)
 

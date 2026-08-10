@@ -120,6 +120,11 @@ def atomic_bytes(path: Path, payload: bytes) -> None:
     os.replace(temporary, path)
 
 
+def retain_payload(path: Path, payload: bytes) -> None:
+    """Atomically retain one materialized byte payload."""
+    atomic_bytes(path, payload)
+
+
 def atomic_json(path: Path, value: Any) -> None:
     atomic_bytes(
         path,
@@ -209,6 +214,7 @@ def extract_bundle(archive_blob: bytes) -> dict[str, bytes]:
         raise ValueError("PR130 model sections exceed the raw model bundle")
     return {
         "member": member,
+        "models_compressed": models_compressed,
         "models_raw": models_raw,
         "semantic": models_raw[semantic_start:carrier_start],
         "carrier": models_raw[carrier_start:hpac_start],
@@ -217,7 +223,13 @@ def extract_bundle(archive_blob: bytes) -> dict[str, bytes]:
     }
 
 
-def replace_carrier(bundle: dict[str, bytes], carrier: bytes) -> bytes:
+def replace_carrier(
+    bundle: dict[str, bytes],
+    carrier: bytes,
+    *,
+    models_path: Path,
+    member_path: Path,
+) -> bytes:
     raw = (
         struct.pack("<II", len(bundle["semantic"]), len(carrier))
         + bundle["semantic"]
@@ -225,7 +237,9 @@ def replace_carrier(bundle: dict[str, bytes], carrier: bytes) -> bytes:
         + bundle["hpac"]
     )
     models = lzma.compress(raw, format=lzma.FORMAT_XZ, filters=XZ_FILTERS)
+    retain_payload(models_path, models)
     member = struct.pack("<I", len(models)) + models + bundle["tokens"]
+    retain_payload(member_path, member)
     return deterministic_archive(member)
 
 
@@ -514,8 +528,18 @@ def main() -> int:
                 )
                 if carrier != repeat_carrier:
                     raise RuntimeError(f"{candidate_name}: nondeterministic carrier")
-                archive = replace_carrier(bundle, carrier)
-                repeat_archive = replace_carrier(bundle, repeat_carrier)
+                archive = replace_carrier(
+                    bundle,
+                    carrier,
+                    models_path=candidate_dir / "models.xz",
+                    member_path=candidate_dir / "p",
+                )
+                repeat_archive = replace_carrier(
+                    bundle,
+                    repeat_carrier,
+                    models_path=candidate_dir / "models.repeat.xz",
+                    member_path=candidate_dir / "p.repeat",
+                )
                 if archive != repeat_archive:
                     raise RuntimeError(f"{candidate_name}: nondeterministic archive")
                 parsed_basis, parsed_coefficients = receiver.decode_pose_target_carrier(
@@ -553,6 +577,21 @@ def main() -> int:
                         "archive_repeat": artifact(
                             candidate_dir / "archive.repeat.zip",
                             "determinism repeat candidate archive",
+                        ),
+                        "models": artifact(
+                            candidate_dir / "models.xz",
+                            "retained compressed candidate model bundle",
+                        ),
+                        "models_repeat": artifact(
+                            candidate_dir / "models.repeat.xz",
+                            "retained determinism-repeat compressed model bundle",
+                        ),
+                        "member": artifact(
+                            candidate_dir / "p", "retained candidate p member"
+                        ),
+                        "member_repeat": artifact(
+                            candidate_dir / "p.repeat",
+                            "retained determinism-repeat p member",
                         ),
                         "parsed_arrays": artifact(
                             candidate_dir / "parsed_arrays.npz",
@@ -595,6 +634,64 @@ def main() -> int:
         )
         atomic_json(state_path, state)
         atomic_json(checkpoints / "stage_materialize_complete.json", state)
+
+    if not state.get("materialize_payload_closure_complete"):
+        materialize_path = Path(state["materialize_receipt"])
+        materialized = json.loads(materialize_path.read_text(encoding="utf-8"))
+        for candidate in materialized["candidates"]:
+            candidate_dir = Path(candidate["archive"]["path"]).parent
+            for suffix, archive_key in (("", "archive"), (".repeat", "archive_repeat")):
+                archive_blob = Path(candidate[archive_key]["path"]).read_bytes()
+                extracted = extract_bundle(archive_blob)
+                models_path = candidate_dir / f"models{suffix}.xz"
+                member_path = candidate_dir / f"p{suffix}"
+                retain_payload(models_path, extracted["models_compressed"])
+                retain_payload(member_path, extracted["member"])
+                key_suffix = "_repeat" if suffix else ""
+                candidate[f"models{key_suffix}"] = artifact(
+                    models_path,
+                    "retained determinism-repeat compressed model bundle"
+                    if suffix
+                    else "retained compressed candidate model bundle",
+                )
+                candidate[f"member{key_suffix}"] = artifact(
+                    member_path,
+                    "retained determinism-repeat p member"
+                    if suffix
+                    else "retained candidate p member",
+                )
+        atomic_json(materialize_path, materialized)
+        state.update(
+            {
+                "materialize_payload_closure_complete": True,
+                "materialize_receipt_sha256": sha256_file(materialize_path),
+            }
+        )
+        if state.get("finalize_complete"):
+            final_path = Path(state["final_result"])
+            final = json.loads(final_path.read_text(encoding="utf-8"))
+            known_paths = {entry["path"] for entry in final["retained_payloads"]}
+            for candidate in materialized["candidates"]:
+                for key in ("models", "models_repeat", "member", "member_repeat"):
+                    entry = candidate[key]
+                    if entry["path"] not in known_paths:
+                        final["retained_payloads"].append(entry)
+                        known_paths.add(entry["path"])
+            final["retained_payload_count"] = len(final["retained_payloads"])
+            final["materialize_receipt"] = artifact(
+                materialize_path, "materialization receipt"
+            )
+            closure_checkpoint = str(
+                checkpoints / "stage_materialize_payload_closure_complete.json"
+            )
+            if closure_checkpoint not in final["resumability"]["stage_checkpoints"]:
+                final["resumability"]["stage_checkpoints"].append(closure_checkpoint)
+            atomic_json(final_path, final)
+            state["final_result_sha256"] = sha256_file(final_path)
+        atomic_json(state_path, state)
+        atomic_json(
+            checkpoints / "stage_materialize_payload_closure_complete.json", state
+        )
 
     if not state.get("verify_complete"):
         materialize_path = Path(state["materialize_receipt"])
@@ -812,6 +909,10 @@ def main() -> int:
                     candidate["archive"],
                     candidate["archive_repeat"],
                     candidate["parsed_arrays"],
+                    candidate["models"],
+                    candidate["models_repeat"],
+                    candidate["member"],
+                    candidate["member_repeat"],
                 ]
             )
         payloads.extend(
