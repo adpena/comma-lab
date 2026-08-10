@@ -93,6 +93,11 @@ auth_cache_vol = modal.Volume.from_name(AUTH_CACHE_VOLUME_NAME, create_if_missin
 base_image = (
     modal.Image.debian_slim(python_version="3.11")
     .apt_install(
+        # build-essential: the contest GHA ubuntu runner ships a C toolchain and
+        # PR135-lineage inflate.sh compiles runtime/entropy/rc64_backend.c with
+        # `cc` at decode time — without it the replay fails at the compile step
+        # (measured need 2026-08-10; also closes a 1:1-fidelity gap to CI).
+        "build-essential",
         "ca-certificates",
         "curl",
         "ffmpeg",

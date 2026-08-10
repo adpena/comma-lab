@@ -120,6 +120,10 @@ auth_cache_vol = modal.Volume.from_name(AUTH_CACHE_VOLUME_NAME, create_if_missin
 base_image = (
     modal.Image.debian_slim(python_version="3.11")
     .apt_install(
+        # build-essential: same rationale as the CUDA image — PR135-lineage
+        # inflate.sh compiles rc64_backend.c with `cc` at decode time, and the
+        # contest GHA runner ships a C toolchain (1:1-fidelity, 2026-08-10).
+        "build-essential",
         "ca-certificates",
         "curl",
         "ffmpeg",
