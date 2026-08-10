@@ -112,6 +112,7 @@ no equation was added.
 
 - **QUEUED-WITH-A-FIRE-ORDER — owner: MAIN scorer owner; consumer store: `/Volumes/VertigoDataTier/pact/ddm_sv3_20260810/scorer/sd1_selected_mixed_q3q4/`; fire trigger: MAIN resolves the existing SD2 claim, no conflicting n600 scorer job remains, SV3 claims the sole lane, and storage/retention preflight passes.** Run or fold the matched full-n600 mixed row; bank the 848 B only if total delta S is negative.
 - **QUEUED-WITH-A-FIRE-ORDER — owner: MAIN exact-eval owner; consumer store: `/Volumes/VertigoDataTier/pact/ddm_sv3_20260810/exact_eval/sd1_selected_mixed_q3q4/`; fire trigger: the matched local total delta S is negative, exact receiver/archive hashes remain pinned, the contest lane is claimed, and remote execution is authorized.** Run the exact retained archive through `upstream/evaluate.py` and retain all payloads.
+- **QUEUED-WITH-A-FIRE-ORDER — owner: PR130 resumable-QAT successor; consumer store: `/Volumes/VertigoDataTier/pact/ddm_sv3_20260810/vq_qat/`; fire trigger: the mixed full row fails or leaves a material rate gap, and a compatible resumable q4 checkpoint plus counted SM3R receiver is available.** Test representation-aware vector/scale VQ with preserved per-stage checkpoints; do not reopen the refuted post-hoc VQ32 instance.
 
 ## LIVE-HYPOTHESES
 
