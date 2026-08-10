@@ -1,0 +1,51 @@
+{
+  "schema": "ddm_rc2_blocker_and_scope_receipt_v1",
+  "utc": "2026-08-10T04:01:16Z",
+  "axis": "macOS-CPU advisory",
+  "scorer_free": true,
+  "score_claim": false,
+  "state": "BLOCKED-STORAGE-PERMISSION",
+  "base": {
+    "name": "PR130 CPR1",
+    "archive_bytes": 191052,
+    "archive_sha256": "0491d5df84fc70b62b3f7ccf8894f5e1b81c616de46a052e4423fc1e18fdc7cd",
+    "score_decimal": "0.172141297491896447",
+    "score_axis": "contest-CUDA, DALI GT, n600"
+  },
+  "scope_determination": {
+    "task_996_reference_adaptive_arithmetic_raced": false,
+    "task_996_bp_ldpc_syndrome_raced": false,
+    "task_996_closure_scope": "tested candidate set only: existing HPAC model Range versus ANS, generic recodes, and reported memoryless/order-1 comparisons",
+    "rc2_reopening_stale": false
+  },
+  "storage_preflight": {
+    "required_root": "/Volumes/APDataStore/pact/ddm_rc2_20260810/",
+    "attempt": "mkdir -p /Volumes/APDataStore/pact/ddm_rc2_20260810/retained && touch /Volumes/APDataStore/pact/ddm_rc2_20260810/retained/.write_probe",
+    "exit_code": 1,
+    "error": "mkdir: /Volumes/APDataStore/pact/ddm_rc2_20260810: Operation not permitted",
+    "apdatastore_available_1k_blocks": 1045735808,
+    "apdatastore_utilization_percent": 47,
+    "vertigo_available_1k_blocks": 30202148,
+    "vertigo_utilization_percent": 99,
+    "fallback_used": false
+  },
+  "materialization": {
+    "candidate_payloads_created": 0,
+    "candidate_payloads_discarded": 0,
+    "encoders_launched": 0,
+    "native_decoders_built": 0,
+    "decode_timings_measured": 0,
+    "scorer_jobs_launched": 0
+  },
+  "family_verdicts": {
+    "adaptive_arithmetic": "UNMEASURED-BLOCKED-BEFORE-MATERIALIZATION",
+    "bp_ldpc_syndrome": "UNMEASURED-BLOCKED-BEFORE-MATERIALIZATION"
+  },
+  "follow_on": {
+    "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+    "owner": "ddm_rc2 successor after operator restores the required mount permission",
+    "consumer_store": ".omx/research/ddm_rc2_20260810/RC2_BLOCKER_AND_SCOPE_RECEIPT.json",
+    "fire_trigger": "/Volumes/APDataStore/pact/ddm_rc2_20260810/ accepts an atomic retained-payload write and read-back probe",
+    "first_action": "execute the adaptive reference stream, then the LDPC applicability check and any applicable retained stream; lower only byte winners"
+  }
+}
