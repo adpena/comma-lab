@@ -34,8 +34,8 @@ for entry in (str(REPO), str(REPO / "src"), str(REPO / "experiments")):
     if entry not in sys.path:
         sys.path.insert(0, entry)
 
-from experiments import ddm_r7_token_coder as r7  # noqa: E402
-from tac.optimization import ddm_ix2_archive_container as ix2  # noqa: E402
+from experiments import ddm_r7_token_coder as r7
+from tac.optimization import ddm_ix2_archive_container as ix2
 
 try:
     import brotli
@@ -639,7 +639,12 @@ def raw_token_frame(codes: np.ndarray) -> bytes:
     return struct.pack("<4H", *array.shape) + array.tobytes()
 
 
-def measure_baseline_coders(codes: np.ndarray, shipped_bulk: bytes) -> dict[str, Any]:
+def measure_baseline_coders(
+    codes: np.ndarray,
+    shipped_bulk: bytes,
+    *,
+    retained_dir: Path,
+) -> dict[str, Any]:
     if brotli is None:
         raise HP1Error("brotli dependency unavailable")
     raw = raw_token_frame(codes)
@@ -650,27 +655,45 @@ def measure_baseline_coders(codes: np.ndarray, shipped_bulk: bytes) -> dict[str,
     if brotli.decompress(raw_brotli) != raw:
         raise HP1Error("raw token Brotli baseline decode differs")
     ix2_lzma = forced_lzma_ix2_token_frame(codes)
+    retained = {
+        "raw_token_frame": retain_payload(retained_dir / "raw_token_frame.bin", raw),
+        "shipped_ix2_brotli_q11": retain_payload(
+            retained_dir / "shipped_ix2_brotli_q11.bin", shipped_bulk
+        ),
+        "forced_ix2_lzma1": retain_payload(retained_dir / "forced_ix2_lzma1.bin", ix2_lzma),
+        "raw_token_frame_lzma1": retain_payload(
+            retained_dir / "raw_token_frame_lzma1.bin", raw_lzma
+        ),
+        "raw_token_frame_brotli_q11": retain_payload(
+            retained_dir / "raw_token_frame_brotli_q11.bin", raw_brotli
+        ),
+    }
     return {
+        "raw_token_frame": retained["raw_token_frame"],
         "shipped_ix2_brotli_q11": {
             "bytes": len(shipped_bulk),
             "sha256": sha256_bytes(shipped_bulk),
+            "retained_payload": retained["shipped_ix2_brotli_q11"],
             "note": "exact IX2TOK01 bulk section from tq1c archive; both residual and base blocks use coder_id=2 Brotli",
         },
         "forced_ix2_lzma1": {
             "bytes": len(ix2_lzma),
             "sha256": sha256_bytes(ix2_lzma),
+            "retained_payload": retained["forced_ix2_lzma1"],
             "delta_vs_shipped_bytes": len(ix2_lzma) - len(shipped_bulk),
             "delta_vs_shipped_s_rate": score_rate_delta(len(ix2_lzma) - len(shipped_bulk)),
         },
         "raw_token_frame_lzma1": {
             "bytes": len(raw_lzma),
             "sha256": sha256_bytes(raw_lzma),
+            "retained_payload": retained["raw_token_frame_lzma1"],
             "delta_vs_shipped_bytes": len(raw_lzma) - len(shipped_bulk),
             "delta_vs_shipped_s_rate": score_rate_delta(len(raw_lzma) - len(shipped_bulk)),
         },
         "raw_token_frame_brotli_q11": {
             "bytes": len(raw_brotli),
             "sha256": sha256_bytes(raw_brotli),
+            "retained_payload": retained["raw_token_frame_brotli_q11"],
             "delta_vs_shipped_bytes": len(raw_brotli) - len(shipped_bulk),
             "delta_vs_shipped_s_rate": score_rate_delta(len(raw_brotli) - len(shipped_bulk)),
         },
@@ -689,6 +712,16 @@ def write_bytes(path: Path, payload: bytes) -> None:
     tmp = path.with_name(f".{path.name}.{os.getpid()}.tmp")
     tmp.write_bytes(payload)
     os.replace(tmp, path)
+
+
+def retain_payload(path: Path, payload: bytes) -> dict[str, Any]:
+    """Persist one materialized candidate before its scalar metrics are reported."""
+    write_bytes(path, payload)
+    nbytes, digest = sha256_file(path)
+    expected = sha256_bytes(payload)
+    if nbytes != len(payload) or digest != expected:
+        raise HP1Error(f"retained payload verification failed for {path}")
+    return {"path": str(path), "bytes": nbytes, "sha256": digest}
 
 
 def run_hp1(
@@ -759,6 +792,10 @@ def run_hp1(
         decode_seconds = time.monotonic() - decode_start
         if not np.array_equal(decoded, codes):
             raise HP1Error(f"HP1 decode equality failed for context mode {mode}")
+        retained_frame = retain_payload(
+            ssd_dir / "retained" / "learned_contexts" / f"{mode}.hp1",
+            frame,
+        )
         row = {
             "context_mode": mode,
             "context_rows": rows,
@@ -767,6 +804,7 @@ def run_hp1(
             "range_stream_bytes": len(learned_stream),
             "frame_bytes": len(frame),
             "frame_sha256": sha256_bytes(frame),
+            "retained_payload": retained_frame,
             "model_info": model_info,
             "encode_seconds": encode_seconds,
             "decode_seconds_including_canonical_reencode": decode_seconds,
@@ -781,7 +819,11 @@ def run_hp1(
     if best_row is None or best_frame is None:
         raise HP1Error("no learned-prior context mode was measured")
 
-    baselines = measure_baseline_coders(codes, live["token_bulk"])
+    baselines = measure_baseline_coders(
+        codes,
+        live["token_bulk"],
+        retained_dir=ssd_dir / "retained" / "baseline_coders",
+    )
     frame_path = ssd_dir / "hp1_learned_prior.hp1"
     write_bytes(frame_path, best_frame)
     frame_bytes, frame_sha = sha256_file(frame_path)

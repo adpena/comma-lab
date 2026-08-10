@@ -31,18 +31,22 @@ Catalog #287 sister discipline.
 from __future__ import annotations
 
 import ast
+import re
+import subprocess
+from collections.abc import Iterable, Iterator, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, Iterator, Sequence
 
 __all__ = [
-    "PayloadDiscardFinding",
-    "PAYLOAD_PRODUCERS",
     "BYTE_PERSISTERS",
+    "PAYLOAD_PRODUCERS",
     "WAIVER_TOKEN",
-    "scan_source",
-    "scan_paths",
+    "PayloadDiscardFinding",
+    "PayloadRetentionPopulation",
+    "audit_measure_and_discard_payload",
     "check_no_measure_and_discard_payload",
+    "scan_paths",
+    "scan_source",
 ]
 
 #: Calls whose result is a real byte payload. Deliberately NARROW: these are
@@ -79,6 +83,7 @@ BYTE_PERSISTERS: frozenset[str] = frozenset(
         "savez_compressed",
         "dump",         # pickle.dump / joblib.dump
         "writestr",     # zipfile, explicit bytes
+        "retain_payload",  # canonical/local checked retention helper
     }
 )
 
@@ -98,10 +103,14 @@ class PayloadDiscardFinding:
     root: str
     producer: str
     snippet: str
+    payload_line: int
+    payload_column: int
 
     def render(self) -> str:
         return (
-            f"{self.path}:{self.line}: payload from `{self.root}.{self.producer}(...)` is reduced "
+            f"{self.path}:{self.line}: payload materialized at "
+            f"{self.payload_line}:{self.payload_column + 1} by "
+            f"`{self.root}.{self.producer}(...)` is reduced "
             f"to a scalar and never persisted — `{self.snippet}`.\n"
             f"    RULE: CLAUDE.md 'ALWAYS KEEP THE PAYLOAD' (P0, operator 2026-08-09). Every run "
             f"that materializes a payload MUST persist it; a scalar-only artifact is forbidden.\n"
@@ -111,6 +120,21 @@ class PayloadDiscardFinding:
             f"    WAIVE (genuine scalar-only probe only): append "
             f"`# {WAIVER_TOKEN}:<substantive rationale>` on line {self.line}."
         )
+
+
+@dataclass(frozen=True)
+class PayloadRetentionPopulation:
+    """One bounded census of the gate's static detector population."""
+
+    findings: tuple[PayloadDiscardFinding, ...]
+    python_files_discovered: int
+    python_files_examined: int
+    candidate_files_parsed: int
+    unreadable_files: int
+
+    @property
+    def files_with_findings(self) -> int:
+        return len({finding.path for finding in self.findings})
 
 
 def _waiver_rationale(line_text: str) -> str | None:
@@ -141,9 +165,7 @@ def _root_binding(node: ast.AST) -> str | None:
     while True:
         if isinstance(cur, ast.Call):
             cur = cur.func
-        elif isinstance(cur, ast.Attribute):
-            cur = cur.value
-        elif isinstance(cur, ast.Subscript):
+        elif isinstance(cur, (ast.Attribute, ast.Subscript)):
             cur = cur.value
         elif isinstance(cur, ast.Name):
             return cur.id
@@ -151,28 +173,61 @@ def _root_binding(node: ast.AST) -> str | None:
             return None
 
 
-def _producers_in(node: ast.AST) -> list[tuple[str, str]]:
-    """Every (root_binding, producer_name) pair reachable inside ``node``."""
-    found: list[tuple[str, str]] = []
-    for sub in ast.walk(node):
-        if not isinstance(sub, ast.Call):
-            continue
-        func = sub.func
-        name = func.attr if isinstance(func, ast.Attribute) else (
-            func.id if isinstance(func, ast.Name) else None
-        )
-        if name not in PAYLOAD_PRODUCERS:
-            continue
-        # For `brotli.compress(payload)` the interesting root is the ARGUMENT (the
-        # payload), not the module. Prefer an argument root when the callee root is a
-        # bare module-looking name and an argument resolves to a Name.
-        root = _root_binding(func)
-        if name in {"compress", "serialize", "pack_model", "build_archive"} and sub.args:
-            arg_root = _root_binding(sub.args[0])
-            if arg_root is not None:
-                root = arg_root
-        if root is not None:
-            found.append((root, name))
+@dataclass(frozen=True)
+class _PayloadCall:
+    root: str
+    producer: str
+    line: int
+    column: int
+
+    @property
+    def identity(self) -> tuple[int, int, str]:
+        return (self.line, self.column, self.producer)
+
+
+def _producer_name(node: ast.Call) -> str | None:
+    func = node.func
+    name = func.attr if isinstance(func, ast.Attribute) else (
+        func.id if isinstance(func, ast.Name) else None
+    )
+    return name if name in PAYLOAD_PRODUCERS else None
+
+
+def _payload_call(node: ast.Call) -> _PayloadCall | None:
+    """Describe one payload-producing call without counting its ingredients."""
+    name = _producer_name(node)
+    if name is None:
+        return None
+    root = _root_binding(node.func)
+    if name in {"compress", "serialize", "pack_model", "build_archive"} and node.args:
+        arg_root = _root_binding(node.args[0])
+        if arg_root is not None:
+            root = arg_root
+    if root is None:
+        root = name
+    return _PayloadCall(
+        root=root,
+        producer=name,
+        line=getattr(node, "lineno", 0),
+        column=getattr(node, "col_offset", 0),
+    )
+
+
+def _outer_payload_calls(node: ast.AST) -> list[_PayloadCall]:
+    """Return the outer payload(s) reduced by an expression.
+
+    A producer consumes any nested producers into ONE new payload.  Therefore
+    ``zlib.compress(q.tobytes() + scale.tobytes())`` is one zlib payload, not
+    three findings.  Sibling producers under a non-producer expression remain
+    distinct payloads.
+    """
+    if isinstance(node, ast.Call):
+        payload = _payload_call(node)
+        if payload is not None:
+            return [payload]
+    found: list[_PayloadCall] = []
+    for child in ast.iter_child_nodes(node):
+        found.extend(_outer_payload_calls(child))
     return found
 
 
@@ -180,57 +235,138 @@ def _names_touched(node: ast.AST) -> set[str]:
     return {sub.id for sub in ast.walk(node) if isinstance(sub, ast.Name)}
 
 
-def _persisted_roots(tree: ast.AST) -> set[str]:
-    """Root bindings that reach a byte-persisting call anywhere in the module.
+_LEXICAL_SCOPES = (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda, ast.ClassDef)
 
-    Deliberately module-scoped (not flow-sensitive): a persistence anywhere clears the
-    binding. False negatives here are acceptable; false positives are not, because this
-    gate is STRICT-eligible and must never refuse an honest run.
+
+def _position(node: ast.AST) -> tuple[int, int]:
+    return (getattr(node, "lineno", 0), getattr(node, "col_offset", 0))
+
+
+def _scope_nodes(scope: ast.AST) -> tuple[list[ast.AST], list[ast.AST]]:
+    """Nodes owned by one lexical scope plus its immediately nested scopes.
+
+    Module-wide binding was the original gate's second counting bug: a local named
+    ``blob`` in function A could be joined to ``len(blob)`` in function B.  Walking
+    each lexical scope independently keeps a materialization tied to the name that can
+    actually reference it.
     """
-    persisted: set[str] = set()
-    for node in ast.walk(tree):
+    stack = (
+        [scope.body]
+        if isinstance(scope, ast.Lambda)
+        else list(reversed(getattr(scope, "body", ())))
+    )
+    owned: list[ast.AST] = []
+    nested: list[ast.AST] = []
+    while stack:
+        node = stack.pop()
+        if isinstance(node, _LEXICAL_SCOPES):
+            nested.append(node)
+            continue
+        owned.append(node)
+        stack.extend(reversed(list(ast.iter_child_nodes(node))))
+    return owned, nested
+
+
+def _call_name(node: ast.Call) -> str | None:
+    if isinstance(node.func, ast.Attribute):
+        return node.func.attr
+    if isinstance(node.func, ast.Name):
+        return node.func.id
+    return None
+
+
+def _open_mode(node: ast.Call) -> str:
+    mode = ""
+    if len(node.args) >= 2 and isinstance(node.args[1], ast.Constant):
+        mode = str(node.args[1].value)
+    for keyword in node.keywords:
+        if keyword.arg == "mode" and isinstance(keyword.value, ast.Constant):
+            mode = str(keyword.value.value)
+    return mode
+
+
+def _is_binary_write_open(node: ast.Call) -> bool:
+    if _call_name(node) != "open":
+        return False
+    mode = _open_mode(node)
+    return "b" in mode and any(flag in mode for flag in "wax")
+
+
+def _latest_binding(
+    bindings: dict[str, list[tuple[tuple[int, int], list[_PayloadCall]]]],
+    name: str,
+    before: tuple[int, int],
+) -> list[_PayloadCall]:
+    eligible = [entry for entry in bindings.get(name, ()) if entry[0] < before]
+    return max(eligible, key=lambda entry: entry[0])[1] if eligible else []
+
+
+def _scope_bindings(
+    nodes: Sequence[ast.AST],
+) -> dict[str, list[tuple[tuple[int, int], list[_PayloadCall]]]]:
+    bindings: dict[str, list[tuple[tuple[int, int], list[_PayloadCall]]]] = {}
+    for node in nodes:
+        if not isinstance(node, ast.Assign) or len(node.targets) != 1:
+            continue
+        target = node.targets[0]
+        if not isinstance(target, ast.Name):
+            continue
+        payloads = _outer_payload_calls(node.value)
+        if payloads:
+            bindings.setdefault(target.id, []).append((_position(node), payloads))
+    return bindings
+
+
+def _binary_handles(nodes: Sequence[ast.AST]) -> set[str]:
+    handles: set[str] = set()
+    for node in nodes:
+        if not isinstance(node, (ast.With, ast.AsyncWith)):
+            continue
+        for item in node.items:
+            if (
+                isinstance(item.context_expr, ast.Call)
+                and _is_binary_write_open(item.context_expr)
+                and isinstance(item.optional_vars, ast.Name)
+            ):
+                handles.add(item.optional_vars.id)
+    return handles
+
+
+def _persisted_payloads(
+    nodes: Sequence[ast.AST],
+    bindings: dict[str, list[tuple[tuple[int, int], list[_PayloadCall]]]],
+) -> set[tuple[int, int, str]]:
+    """Materialization identities that reach a byte persister in this scope."""
+    persisted: set[tuple[int, int, str]] = set()
+    binary_handles = _binary_handles(nodes)
+    for node in nodes:
         if not isinstance(node, ast.Call):
             continue
-        func = node.func
-        name = func.attr if isinstance(func, ast.Attribute) else (
-            func.id if isinstance(func, ast.Name) else None
-        )
-
-        # `open(path, 'wb').write(payload)` / `with open(path,'wb') as f: f.write(payload)`
-        if name == "open":
-            mode = ""
-            if len(node.args) >= 2 and isinstance(node.args[1], ast.Constant):
-                mode = str(node.args[1].value)
-            for kw in node.keywords:
-                if kw.arg == "mode" and isinstance(kw.value, ast.Constant):
-                    mode = str(kw.value.value)
-            if "b" in mode and ("w" in mode or "a" in mode or "x" in mode):
-                # Binary-write handle: everything written through it counts. Approximate
-                # by clearing every root that appears in a `.write(...)` in the module.
-                persisted.add("__BINARY_HANDLE__")
+        name = _call_name(node)
+        args: list[ast.AST]
+        if name in BYTE_PERSISTERS:
+            args = list(node.args) + [keyword.value for keyword in node.keywords]
+        elif (
+            name == "write"
+            and isinstance(node.func, ast.Attribute)
+            and (
+                _root_binding(node.func.value) in binary_handles
+                or (
+                    isinstance(node.func.value, ast.Call)
+                    and _is_binary_write_open(node.func.value)
+                )
+            )
+        ):
+            args = list(node.args)
+        else:
             continue
-
-        if name not in BYTE_PERSISTERS:
-            continue
-        for arg in list(node.args) + [kw.value for kw in node.keywords]:
-            persisted |= _names_touched(arg)
-        # `payload.write_bytes(...)`-style: also clear the receiver.
-        if isinstance(func, ast.Attribute):
-            recv = _root_binding(func.value)
-            if recv is not None:
-                persisted.add(recv)
+        for arg in args:
+            for touched in _names_touched(arg):
+                persisted.update(
+                    payload.identity
+                    for payload in _latest_binding(bindings, touched, _position(node))
+                )
     return persisted
-
-
-def _binary_write_targets(tree: ast.AST) -> set[str]:
-    """Names passed to any ``.write(...)`` — paired with a binary ``open`` elsewhere."""
-    targets: set[str] = set()
-    for node in ast.walk(tree):
-        if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
-            if node.func.attr == "write":
-                for arg in node.args:
-                    targets |= _names_touched(arg)
-    return targets
 
 
 def scan_source(source: str, path: str = "<string>") -> list[PayloadDiscardFinding]:
@@ -241,58 +377,54 @@ def scan_source(source: str, path: str = "<string>") -> list[PayloadDiscardFindi
         return []  # not our bug class
 
     lines = source.splitlines()
-    persisted = _persisted_roots(tree)
-    if "__BINARY_HANDLE__" in persisted:
-        persisted |= _binary_write_targets(tree)
-
-    # BIND-THEN-MEASURE: `payload = enc.get_compressed().tobytes()` ... `len(payload)`.
-    # Without this map the detector only saw the inline `len(<producer expr>)` form and
-    # was blind to the more common two-line shape (caught by this module's own test,
-    # 2026-08-09). The bound NAME becomes the tracked root, because that is the name a
-    # cure would persist.
-    bound: dict[str, str] = {}
-    for node in ast.walk(tree):
-        if isinstance(node, ast.Assign) and len(node.targets) == 1:
-            target = node.targets[0]
-            if isinstance(target, ast.Name):
-                produced = _producers_in(node.value)
-                if produced:
-                    bound[target.id] = produced[0][1]
-
     findings: list[PayloadDiscardFinding] = []
-    seen: set[str] = set()
-
-    for node in ast.walk(tree):
-        # The defect shape: len(<payload expression>) — inline OR via a bound name.
-        if not (isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
-                and node.func.id == "len" and node.args):
-            continue
-        arg = node.args[0]
-        pairs = _producers_in(arg)
-        if not pairs and isinstance(arg, ast.Name) and arg.id in bound:
-            pairs = [(arg.id, bound[arg.id])]
-        for root, producer in pairs:
-            if root in persisted:
-                continue  # the cure was applied — detector correctly goes quiet
-            line_no = getattr(node, "lineno", 0)
-            # ONE discarded payload = ONE finding, keyed on the root binding, not on the
-            # number of `len()` sites that measure it. Counting per-site would report one
-            # fact N times (the #821 law); the population is payloads, not call sites.
-            if root in seen:
+    seen: set[tuple[int, int, str]] = set()
+    scopes: list[ast.AST] = [tree]
+    while scopes:
+        nodes, nested = _scope_nodes(scopes.pop())
+        scopes.extend(nested)
+        bindings = _scope_bindings(nodes)
+        persisted = _persisted_payloads(nodes, bindings)
+        for node in nodes:
+            # The defect shape: len(<payload expression>) — inline OR via a bound name.
+            if not (
+                isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Name)
+                and node.func.id == "len"
+                and node.args
+            ):
                 continue
-            seen.add(root)
-            line_text = lines[line_no - 1] if 0 < line_no <= len(lines) else ""
-            if _waiver_is_valid(_waiver_rationale(line_text)):
-                continue
-            findings.append(
-                PayloadDiscardFinding(
-                    path=path,
-                    line=line_no,
-                    root=root,
-                    producer=producer,
-                    snippet=line_text.strip()[:160],
+            arg = node.args[0]
+            payloads = _outer_payload_calls(arg)
+            if not payloads and isinstance(arg, ast.Name):
+                payloads = [
+                    _PayloadCall(
+                        root=arg.id,
+                        producer=payload.producer,
+                        line=payload.line,
+                        column=payload.column,
+                    )
+                    for payload in _latest_binding(bindings, arg.id, _position(node))
+                ]
+            for payload in payloads:
+                if payload.identity in persisted or payload.identity in seen:
+                    continue
+                seen.add(payload.identity)
+                line_no = getattr(node, "lineno", 0)
+                line_text = lines[line_no - 1] if 0 < line_no <= len(lines) else ""
+                if _waiver_is_valid(_waiver_rationale(line_text)):
+                    continue
+                findings.append(
+                    PayloadDiscardFinding(
+                        path=path,
+                        line=line_no,
+                        root=payload.root,
+                        producer=payload.producer,
+                        snippet=line_text.strip()[:160],
+                        payload_line=payload.line,
+                        payload_column=payload.column,
+                    )
                 )
-            )
     return findings
 
 
@@ -308,8 +440,98 @@ def scan_paths(paths: Iterable[Path]) -> list[PayloadDiscardFinding]:
     return out
 
 
-def _iter_python(roots: Sequence[Path]) -> Iterator[Path]:
-    skip = {".git", ".venv", "node_modules", "__pycache__", "upstream"}
+def _scan_population(
+    paths: Iterable[Path],
+    *,
+    candidate_paths: set[Path] | None = None,
+) -> PayloadRetentionPopulation:
+    findings: list[PayloadDiscardFinding] = []
+    discovered = 0
+    examined = 0
+    parsed = 0
+    unreadable = 0
+    producer_needles = tuple(PAYLOAD_PRODUCERS)
+    for path in paths:
+        discovered += 1
+        examined += 1
+        if candidate_paths is not None and path not in candidate_paths:
+            continue
+        try:
+            source = path.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            unreadable += 1
+            continue
+        # Cheap lossless prefilter: the AST detector cannot fire without a len call
+        # and one of the deliberately narrow producer names.  This keeps preflight
+        # under its wall-clock budget while preserving the census denominator.
+        if "len" not in source or not any(needle in source for needle in producer_needles):
+            continue
+        parsed += 1
+        findings.extend(scan_source(source, str(path)))
+    return PayloadRetentionPopulation(
+        findings=tuple(findings),
+        python_files_discovered=discovered,
+        python_files_examined=examined,
+        candidate_files_parsed=parsed,
+        unreadable_files=unreadable,
+    )
+
+
+def _rg_paths(args: Sequence[str]) -> set[Path] | None:
+    try:
+        completed = subprocess.run(
+            ["rg", *args],
+            check=False,
+            capture_output=True,
+        )
+    except OSError:
+        return None
+    if completed.returncode not in {0, 1}:
+        return None
+    return {
+        Path(raw.decode("utf-8", errors="surrogateescape"))
+        for raw in completed.stdout.split(b"\0")
+        if raw
+    }
+
+
+def _rg_population_paths(
+    roots: Sequence[Path],
+    *,
+    excluded_parts: Sequence[str] = (),
+) -> tuple[set[Path], set[Path]] | None:
+    """Use ripgrep's indexed walker to enumerate and prefilter a large corpus."""
+    exclusions = (
+        "-g", "*.py",
+        "-g", "!**/.git/**",
+        "-g", "!**/.venv/**",
+        "-g", "!**/node_modules/**",
+        "-g", "!**/__pycache__/**",
+        "-g", "!**/upstream/**",
+        "-g", "!**/*_intake_*/**",
+        *(item for part in excluded_parts for item in ("-g", f"!**/{part}/**")),
+    )
+    root_args = tuple(str(root.resolve()) for root in roots if root.exists())
+    if not root_args:
+        return set(), set()
+    all_paths = _rg_paths(("--files", "-0", "-uu", *exclusions, *root_args))
+    len_paths = _rg_paths(("-l", "-0", "-uu", *exclusions, r"\blen\s*\(", *root_args))
+    producer_pattern = rf"\b(?:{'|'.join(re.escape(name) for name in PAYLOAD_PRODUCERS)})\s*\("
+    producer_paths = _rg_paths(
+        ("-l", "-0", "-uu", *exclusions, producer_pattern, *root_args)
+    )
+    if all_paths is None or len_paths is None or producer_paths is None:
+        return None
+    candidates = all_paths & len_paths & producer_paths
+    return all_paths, candidates
+
+
+def _iter_python(
+    roots: Sequence[Path],
+    *,
+    excluded_parts: Sequence[str] = (),
+) -> Iterator[Path]:
+    skip = {".git", ".venv", "node_modules", "__pycache__", "upstream", *excluded_parts}
     for root in roots:
         if not root.exists():
             continue
@@ -328,8 +550,8 @@ def check_no_measure_and_discard_payload(
 
     Returns the findings. In ``strict`` mode raises ``RuntimeError`` when any survive.
     """
-    base = Path(repo_root)
-    findings = scan_paths(_iter_python([base / r for r in roots]))
+    report = audit_measure_and_discard_payload(repo_root=repo_root, roots=roots)
+    findings = list(report.findings)
     if strict and findings:
         detail = "\n".join(f.render() for f in findings)
         raise RuntimeError(
@@ -337,3 +559,18 @@ def check_no_measure_and_discard_payload(
             f"{len(findings)} measure-and-discard site(s) found.\n{detail}"
         )
     return findings
+
+
+def audit_measure_and_discard_payload(
+    repo_root: Path | str = ".",
+    roots: Sequence[str] = ("experiments", "tools", "src/tac", "scripts"),
+    excluded_parts: Sequence[str] = (),
+) -> PayloadRetentionPopulation:
+    """Return findings and explicit file denominators for one bounded census."""
+    base = Path(repo_root)
+    scope_roots = [base / root for root in roots]
+    indexed = _rg_population_paths(scope_roots, excluded_parts=excluded_parts)
+    if indexed is not None:
+        paths, candidates = indexed
+        return _scan_population(sorted(paths), candidate_paths=candidates)
+    return _scan_population(_iter_python(scope_roots, excluded_parts=excluded_parts))

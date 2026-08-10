@@ -2698,9 +2698,25 @@ def preflight_all(
 
     # 1. Codebase drift check (cheap, always run unless explicitly disabled)
     if check_codebase:
+        # ddm_pr1 / task #1001 (2026-08-09): ALWAYS KEEP THE PAYLOAD.  WARN-ONLY
+        # because the corrected live population is non-zero; a strict flip while
+        # real violations survive would block unrelated work and would be a fake
+        # closure.  This call is deliberately inside preflight_all(), not merely a
+        # standalone module that no operator path reaches.
+        from tac.payload_retention_gate import audit_measure_and_discard_payload
+
         _parallel = _ParallelPreflightRunner(
             enabled=_preflight_parallel_enabled(),
             verbose=verbose,
+        )
+        def _run_payload_retention_audit():
+            return audit_measure_and_discard_payload(
+                REPO_ROOT,
+                excluded_parts=("results", "tests", "fixtures"),
+            )
+        _parallel.submit(
+            "audit_measure_and_discard_payload",
+            _run_payload_retention_audit,
         )
         _parallel.submit(
             "check_codebase_drift",
@@ -2756,6 +2772,24 @@ def preflight_all(
             "check_eval_roundtrip_gate_called_after_output_dir_resolution",
             lambda: check_eval_roundtrip_gate_called_after_output_dir_resolution(strict=True, verbose=False),
         )
+        _payload_retention_population = _parallel.run(
+            "audit_measure_and_discard_payload",
+            "[always-keep-payload]",
+            _run_payload_retention_audit,
+            strict=False,
+        )
+        if verbose:
+            _payload_status = "WARN" if _payload_retention_population.findings else "OK"
+            print(
+                "  [always-keep-payload] "
+                f"{_payload_status}: {len(_payload_retention_population.findings)} finding(s) / "
+                f"{_payload_retention_population.python_files_examined} examined .py "
+                f"({_payload_retention_population.python_files_discovered} discovered; "
+                f"{_payload_retention_population.candidate_files_parsed} AST candidates; "
+                f"{_payload_retention_population.unreadable_files} unreadable). "
+                "Live-source scope excludes results/tests/fixtures; P0 gate remains "
+                "warn-only until the population reaches zero."
+            )
         _parallel.run(
             "check_codebase_drift",
             "[codebase-drift]",

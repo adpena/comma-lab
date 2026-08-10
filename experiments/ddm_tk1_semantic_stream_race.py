@@ -36,7 +36,7 @@ for entry in (str(REPO), str(REPO / "src"), str(REPO / "experiments"), str(REPO 
     if entry not in sys.path:
         sys.path.insert(0, entry)
 
-from experiments import ddm_pp1_direct_partition_coder as pp1  # noqa: E402
+from experiments import ddm_pp1_direct_partition_coder as pp1
 
 try:
     import brotli
@@ -262,10 +262,11 @@ def load_label_array(
     file_bytes, file_sha = sha256_file(path)
     if expected_file_sha256 and file_sha != expected_file_sha256:
         raise TK1Error(f"{path} sha256 {file_sha} != expected {expected_file_sha256}")
-    if path.suffix == ".npz":
-        loaded = np.load(path, mmap_mode="r")[npz_key]
-    else:
-        loaded = np.load(path, mmap_mode="r")
+    loaded = (
+        np.load(path, mmap_mode="r")[npz_key]
+        if path.suffix == ".npz"
+        else np.load(path, mmap_mode="r")
+    )
     labels = _validate_labels(loaded, n=n, expected_hw=(384, 512))
     raw = labels.tobytes()
     raw_sha = sha256_bytes(raw)
@@ -313,7 +314,12 @@ def _lzma_raw(payload: bytes) -> bytes:
     return lzma.compress(payload, format=lzma.FORMAT_RAW, filters=RAW_LZMA_FILTERS)
 
 
-def generic_baselines(labels: np.ndarray, *, stream_name: str) -> dict[str, Any]:
+def generic_baselines(
+    labels: np.ndarray,
+    *,
+    stream_name: str,
+    retained_dir: Path,
+) -> dict[str, Any]:
     raw = labels.tobytes()
     print(f"[tk1] {stream_name}: LZMA1-x9e raw baseline", file=sys.stderr, flush=True)
     lzma_blob = _lzma_raw(raw)
@@ -327,18 +333,46 @@ def generic_baselines(labels: np.ndarray, *, stream_name: str) -> dict[str, Any]
     bz2_blob = bz2.compress(raw, 9)
     if bz2.decompress(bz2_blob) != raw:
         raise TK1Error("raw bz2 round-trip failed")
+    retained = {
+        "raw_uint8": retain_payload(retained_dir / "raw_uint8.bin", raw),
+        "lzma1_x9e": retain_payload(retained_dir / "lzma1_x9e.bin", lzma_blob),
+        "zlib_9": retain_payload(retained_dir / "zlib_9.bin", zlib_blob),
+        "bz2_9": retain_payload(retained_dir / "bz2_9.bin", bz2_blob),
+    }
     out: dict[str, Any] = {
         "raw_uint8_bytes": len(raw),
-        "lzma1_x9e": {"bytes": len(lzma_blob), "roundtrip": True, "sha256": sha256_bytes(lzma_blob)},
-        "zlib_9": {"bytes": len(zlib_blob), "roundtrip": True, "sha256": sha256_bytes(zlib_blob)},
-        "bz2_9": {"bytes": len(bz2_blob), "roundtrip": True, "sha256": sha256_bytes(bz2_blob)},
+        "raw_uint8_retained_payload": retained["raw_uint8"],
+        "lzma1_x9e": {
+            "bytes": len(lzma_blob),
+            "roundtrip": True,
+            "sha256": sha256_bytes(lzma_blob),
+            "retained_payload": retained["lzma1_x9e"],
+        },
+        "zlib_9": {
+            "bytes": len(zlib_blob),
+            "roundtrip": True,
+            "sha256": sha256_bytes(zlib_blob),
+            "retained_payload": retained["zlib_9"],
+        },
+        "bz2_9": {
+            "bytes": len(bz2_blob),
+            "roundtrip": True,
+            "sha256": sha256_bytes(bz2_blob),
+            "retained_payload": retained["bz2_9"],
+        },
     }
     if brotli is not None:
         print(f"[tk1] {stream_name}: Brotli-q11 raw baseline", file=sys.stderr, flush=True)
         br = brotli.compress(raw, quality=11)
         if brotli.decompress(br) != raw:
             raise TK1Error("raw Brotli round-trip failed")
-        out["brotli_11"] = {"bytes": len(br), "roundtrip": True, "sha256": sha256_bytes(br)}
+        br_retained = retain_payload(retained_dir / "brotli_11.bin", br)
+        out["brotli_11"] = {
+            "bytes": len(br),
+            "roundtrip": True,
+            "sha256": sha256_bytes(br),
+            "retained_payload": br_retained,
+        }
     else:
         out["brotli_11"] = {"bytes": None, "roundtrip": False, "reason": "brotli unavailable"}
     return out
@@ -369,7 +403,7 @@ def context_arith_race(labels: np.ndarray) -> dict[str, Any]:
         laplace_bytes, _ = pp1.adaptive_code_bytes(labels.astype(np.int64), template, alpha=1.0)
         rows[name] = {
             "kt_bytes": kt_bytes,
-            "kt_bytes_ceiled": int(math.ceil(kt_bytes)),
+            "kt_bytes_ceiled": math.ceil(kt_bytes),
             "laplace_bytes": laplace_bytes,
             "n_contexts": n_contexts,
         }
@@ -784,6 +818,10 @@ def learned_prior_race(
         model, info = train_label_context_table(
             labels, mode=mode, context_rows=context_rows, patch=patch
         )
+        retained_model = retain_payload(
+            Path(ssd_dir) / "retained" / stream_name / "models" / f"{mode}.freq_u8",
+            model,
+        )
         bits = estimated_static_model_bits(
             labels, model, mode=mode, context_rows=context_rows, patch=patch
         )
@@ -792,10 +830,11 @@ def learned_prior_race(
             "context_rows": context_rows,
             "model_raw_bytes": len(model),
             "header_bytes": TK1_HEADER.size,
-            "estimated_range_bytes": int(math.ceil(bits / 8.0)),
+            "estimated_range_bytes": math.ceil(bits / 8.0),
             "estimated_frame_bytes": int(TK1_HEADER.size + len(model) + math.ceil(bits / 8.0)),
             "estimated_bits_per_symbol": float(bits / labels.size),
             "model_info": info,
+            "model_retained_payload": retained_model,
             "skipped": False,
         }
         rows.append(row)
@@ -843,6 +882,11 @@ def learned_prior_race(
                 "frame_bytes": frame_bytes,
                 "frame_sha256": frame_sha,
                 "frame_path": str(frame_path),
+                "retained_payload": {
+                    "path": str(frame_path),
+                    "bytes": frame_bytes,
+                    "sha256": frame_sha,
+                },
                 "encode_seconds": encode_seconds,
                 "decode_seconds_including_canonical_reencode": decode_seconds,
                 "decode_equal": True,
@@ -873,6 +917,10 @@ def learned_prior_race(
         decoded = decode_tk1_frame(frame, verify_canonical=True)
         if not np.array_equal(decoded, subset):
             raise TK1Error("learned prior subset round-trip failed")
+        subset_retained = retain_payload(
+            Path(ssd_dir) / "retained" / stream_name / "subset_control.tk1",
+            frame,
+        )
         full_row.update(
             {
                 "full_range_measured": False,
@@ -881,6 +929,7 @@ def learned_prior_race(
                 "subset_roundtrip_frames": int(subset.shape[0]),
                 "subset_range_stream_bytes": len(stream),
                 "subset_frame_bytes": len(frame),
+                "subset_retained_payload": subset_retained,
                 "decode_equal": True,
                 "canonical_reencode_equal": True,
             }
@@ -906,7 +955,11 @@ def summarize_stream(
     learned: bool,
 ) -> dict[str, Any]:
     start = time.monotonic()
-    generic = generic_baselines(labels, stream_name=name)
+    generic = generic_baselines(
+        labels,
+        stream_name=name,
+        retained_dir=Path(ssd_dir) / "retained" / name / "generic_coders",
+    )
     print(f"[tk1] {name}: PP1 KT context-arith race", file=sys.stderr, flush=True)
     context = context_arith_race(labels)
     print(f"[tk1] {name}: learned counted prior race", file=sys.stderr, flush=True)
@@ -971,6 +1024,16 @@ def write_bytes(path: Path, payload: bytes) -> None:
     tmp = path.with_name(f".{path.name}.{os.getpid()}.tmp")
     tmp.write_bytes(payload)
     os.replace(tmp, path)
+
+
+def retain_payload(path: Path, payload: bytes) -> dict[str, Any]:
+    """Persist one materialized candidate before recording scalar metrics."""
+    write_bytes(path, payload)
+    nbytes, digest = sha256_file(path)
+    expected = sha256_bytes(payload)
+    if nbytes != len(payload) or digest != expected:
+        raise TK1Error(f"retained payload verification failed for {path}")
+    return {"path": str(path), "bytes": nbytes, "sha256": digest}
 
 
 def run_tk1(

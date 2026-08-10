@@ -9,6 +9,7 @@ rejects a placeholder one.
 
 from __future__ import annotations
 
+import ast
 from pathlib import Path
 
 import pytest
@@ -16,6 +17,7 @@ import pytest
 from tac.payload_retention_gate import (
     PAYLOAD_PRODUCERS,
     WAIVER_TOKEN,
+    audit_measure_and_discard_payload,
     check_no_measure_and_discard_payload,
     scan_source,
 )
@@ -119,6 +121,86 @@ def test_brotli_compress_cleared_by_persisting_its_result() -> None:
     assert scan_source(src, "x.py") == []
 
 
+def test_nested_producers_are_one_outer_payload() -> None:
+    """The charter's inflated-count anchor is one compressed payload, not three roots."""
+    src = "n = len(zlib.compress(cq.tobytes() + np.float32(s).tobytes(), 9))\n"
+    findings = scan_source(src, "x.py")
+    assert len(findings) == 1
+    assert findings[0].producer == "compress"
+
+
+def test_repeated_measurement_of_one_bound_payload_counts_once() -> None:
+    src = (
+        "blob = zlib.compress(raw, 9)\n"
+        "first = len(blob)\n"
+        "second = len(blob)\n"
+    )
+    findings = scan_source(src, "x.py")
+    assert len(findings) == 1
+    assert findings[0].payload_line == 1
+
+
+def test_rebinding_one_name_to_two_payloads_counts_both() -> None:
+    src = (
+        "blob = zlib.compress(first, 9)\n"
+        "n1 = len(blob)\n"
+        "blob = zlib.compress(second, 9)\n"
+        "n2 = len(blob)\n"
+    )
+    findings = scan_source(src, "x.py")
+    assert {(finding.payload_line, finding.producer) for finding in findings} == {
+        (1, "compress"),
+        (3, "compress"),
+    }
+
+
+def test_only_latest_rebinding_is_measured_when_earlier_value_was_overwritten() -> None:
+    src = (
+        "blob = zlib.compress(first, 9)\n"
+        "blob = zlib.compress(second, 9)\n"
+        "n = len(blob)\n"
+    )
+    findings = scan_source(src, "x.py")
+    assert [(finding.payload_line, finding.producer) for finding in findings] == [
+        (2, "compress")
+    ]
+
+
+def test_same_local_name_in_unrelated_functions_does_not_cross_bind() -> None:
+    src = (
+        "def build():\n"
+        "    blob = zlib.compress(first, 9)\n"
+        "    return blob\n"
+        "\n"
+        "def inspect():\n"
+        "    blob = unrelated\n"
+        "    return len(blob)\n"
+    )
+    assert scan_source(src, "x.py") == []
+
+
+def test_persistence_clears_only_the_binding_it_received() -> None:
+    src = (
+        "blob = zlib.compress(first, 9)\n"
+        "Path(out).write_bytes(blob)\n"
+        "n1 = len(blob)\n"
+        "blob = zlib.compress(second, 9)\n"
+        "n2 = len(blob)\n"
+    )
+    findings = scan_source(src, "x.py")
+    assert [(finding.payload_line, finding.producer) for finding in findings] == [
+        (4, "compress")
+    ]
+
+
+def test_persisting_raw_input_does_not_clear_inline_compressed_output() -> None:
+    src = (
+        "Path(raw_path).write_bytes(raw)\n"
+        "n = len(brotli.compress(raw, quality=11))\n"
+    )
+    assert len(scan_source(src, "x.py")) == 1
+
+
 def test_plain_len_on_a_list_is_not_a_finding() -> None:
     """Precision guard: the gate must never fire on ordinary length checks."""
     src = "n = len(pair_ids)\nm = len(frames)\nk = len('abc')\n"
@@ -130,6 +212,15 @@ def test_numpy_save_counts_as_persistence() -> None:
         "payload = arr.tobytes()\n"
         "np.save(path, payload)\n"
         "n = len(payload)\n"
+    )
+    assert scan_source(src, "x.py") == []
+
+
+def test_checked_retention_helper_counts_as_persistence() -> None:
+    src = (
+        "blob = brotli.compress(raw, quality=11)\n"
+        "retained = retain_payload(path, blob)\n"
+        "n = len(blob)\n"
     )
     assert scan_source(src, "x.py") == []
 
@@ -175,3 +266,41 @@ def test_missing_root_is_skipped_not_an_error(tmp_path: Path) -> None:
     assert check_no_measure_and_discard_payload(
         repo_root=tmp_path, strict=True, roots=("does_not_exist",)
     ) == []
+
+
+def test_population_reports_explicit_denominator(tmp_path: Path) -> None:
+    root = tmp_path / "experiments"
+    root.mkdir()
+    (root / "bad.py").write_text(ANCHOR, encoding="utf-8")
+    (root / "clean.py").write_text("n = len(items)\n", encoding="utf-8")
+    report = audit_measure_and_discard_payload(
+        repo_root=tmp_path,
+        roots=("experiments",),
+    )
+    assert report.python_files_discovered == 2
+    assert report.python_files_examined == 2
+    assert report.candidate_files_parsed == 1
+    assert report.unreadable_files == 0
+    assert len(report.findings) == 2
+    assert report.files_with_findings == 1
+
+
+def test_preflight_all_calls_population_gate_warn_only() -> None:
+    source = Path("src/tac/preflight.py").read_text(encoding="utf-8")
+    tree = ast.parse(source)
+    preflight_all = next(
+        node for node in tree.body
+        if isinstance(node, ast.FunctionDef) and node.name == "preflight_all"
+    )
+    calls = [
+        node for node in ast.walk(preflight_all)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Name)
+        and node.func.id == "audit_measure_and_discard_payload"
+    ]
+    assert len(calls) == 1
+    assert not any(
+        keyword.arg == "strict" and isinstance(keyword.value, ast.Constant)
+        and keyword.value.value is True
+        for keyword in calls[0].keywords
+    )
