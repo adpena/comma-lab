@@ -101,6 +101,12 @@
       "inflate.py": "consumes the counted SD1M q3/q4 allocation while preserving legacy int4 tensor identity",
       "inflate.sh": "binds the CX2 selector to the already-pinned Brotli dependency and verifies an explicit local Brotli 1.2.0 CLI when wheel fetch is sandbox-blocked"
     },
+    "ddm_ai1_modified_files": {
+      "inflate.py": "adds resumable, finish-proven ANS token checkpoints without changing the semantic allocation grammar"
+    },
+    "ddm_sr1_modified_files": {
+      "inflate.py": "dispatches every SD1M v1 allocation to the fixed width-96 template, pins the 16-name allocation order, and preserves legacy size dispatch; retained scorer-free proof is /Volumes/VertigoDataTier/pact/ddm_sr1_20260809/SR1_RECEIVER_PROOF.json"
+    },
     "borrowed_base_with_ddm_rc1_modifications": {
       "inflate.py": "335369c9b3b295707f1790feb0b5b7ae288338fae350056cc4bb03aaa18f0c9e"
     },
@@ -109,12 +115,12 @@
   "source": {
     "intake_root": "/Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo",
     "intake_git_commit": "e34f31bc4969042c0051ac81aa3c56884419a231",
-    "copied_files_semantics": "current shipping-tree custody hashes; post-FX5 CX2 edits are locally tested but not yet closed on the Linux contest rail, and borrowed intake origins are recorded separately above",
+    "copied_files_semantics": "current shipping-tree custody hashes after CX2, AI1, and SR1; these local edits are not yet closed on the Linux contest rail, and borrowed intake origins are recorded separately above",
     "copied_files": {
       "carrier_codec.py": "d2f14402374b4e622b7f981d736389fb04f0ca0165180e4c75f3a32ffe996bed",
       "hpac_integer.py": "6e6b4f4d0b293fb60cc1b751958756a4cd6c2ce7bcff68c6f03e20277856803f",
       "hpac_integer_sparse.py": "2240ee32c53fe949b560d316d349e0bbdccc0ceb78787307cd4d530623d42a0c",
-      "inflate.py": "105c951edccf58223818fc492e504b39872c0279e29bd4b901b60236acbf7d39",
+      "inflate.py": "9a42628e6306ddaa4682c915db31196ffdace8fa502c6322a4586e3c4a7562a2",
       "inflate.sh": "bc92880ef9c038c6adfe4968a4b6206b8e565501e839634e1d6762a704421915",
       "integer_model_io.py": "6f91c91ed4785d203aa3570af362fbe9c6a64bb2249599f8554adb31174b80a5",
       "receiver.py": "6239649cc81e9c5a86273502be0beff19805720854b980f167bb71a0a80c3a42"

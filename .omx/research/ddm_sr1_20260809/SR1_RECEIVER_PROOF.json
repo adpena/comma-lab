@@ -1,0 +1,79 @@
+{
+  "schema": "ddm_sr1_semantic_alloc_schema_landed_receipt.v1",
+  "complete": true,
+  "axis": "[macOS-CPU scorer-free receiver proof; exact archive and RAW bytes]",
+  "score_claim": false,
+  "implementation": {
+    "core_schema_reused_from_commit": "cf53216e3e856c15f849bcfe96a5dd4717da2d04",
+    "landed_commit": "58f62cd22ff07562c0534c999d705fb9edfe5279",
+    "landed_runtime_path": "src/tac/pr130_runtime/dv1_cpu_runtime/inflate.py",
+    "intended_runtime_sha256": "9a42628e6306ddaa4682c915db31196ffdace8fa502c6322a4586e3c4a7562a2",
+    "sr1_delta": "pin the sixteen SD1M v1 allocation names and dispatch every valid SD1M payload length to the fixed width-96 template"
+  },
+  "inputs": {
+    "uniform_q4_archive": {
+      "bytes": 191052,
+      "sha256": "0491d5df84fc70b62b3f7ccf8894f5e1b81c616de46a052e4423fc1e18fdc7cd"
+    },
+    "selected_mixed_archive": {
+      "bytes": 190204,
+      "sha256": "010a8a5273ae87595191ffc03447fa36e61978ae9f827c2def46dea7075dfa67"
+    }
+  },
+  "receiver_proof": {
+    "outer_archives_routed_through_public_receiver": [
+      "uniform_q4_no_record",
+      "uniform_q4_with_SD1M_record",
+      "selected_mixed_with_SD1M_record"
+    ],
+    "legacy_no_record_exact_tensors": "38/38",
+    "all_q4_record_exact_tensors": "38/38",
+    "selected_mixed_exact_tensors": "38/38",
+    "legacy_no_record_combined_state_sha256": "2110644c92c283b69277cc06fec247c60b25225088d6f50da045730ff4d616c5",
+    "selected_mixed_combined_state_sha256": "8c61131d0c67a327f35a3ffb794c2e00eb00bb43fc90811a7b1c6cc3bced8324",
+    "raw_byte_identity": {
+      "legacy_no_record_path": "/Volumes/VertigoDataTier/pact/ddm_sr1_20260809/retained/raw_identity/legacy_no_record.raw",
+      "all_q4_record_path": "/Volumes/VertigoDataTier/pact/ddm_sr1_20260809/retained/raw_identity/extended_all_q4_record.raw",
+      "bytes_compared": 3662409600,
+      "streaming_byte_equal": true,
+      "both_sha256": "a18eb42a8da9399bcc03e795e17597bfbd459412dbb37990117665f48c4c0353",
+      "outer_models_raw_fed_to_inner_loader": true,
+      "all_q4_hpac_matches_base": true,
+      "all_q4_range_tokens_match_base": true,
+      "retained_token_bytes_match_completed_range_decode": true,
+      "cli_main_invoked": false
+    }
+  },
+  "real_archive_pricing": {
+    "allocation_record_raw_bytes": 14,
+    "selected_headerless_counterfactual_archive_bytes": 190204,
+    "allocation_record_complete_archive_marginal_bytes": 0,
+    "selected_archive_bytes": 190204,
+    "selected_delta_archive_bytes": -848,
+    "selected_rate_delta_s": -0.0005646483922476013,
+    "all_q4_record_archive_bytes": 191044,
+    "all_q4_record_delta_archive_bytes": -8,
+    "schema_is_already_counted_in_selected_archive": true,
+    "subtracting_14_again_would_double_count": true
+  },
+  "durable_full_receipt": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_sr1_20260809/SR1_RECEIVER_PROOF.json",
+    "bytes": 91619,
+    "sha256": "7b956662c772a32b80637b11b0cd0162b66850d0cd35b09e3870ab0d3a3e6f58"
+  },
+  "boundaries": {
+    "scorer_run": false,
+    "pose_measured": false,
+    "modal_used": false,
+    "training_run": false,
+    "upstream_modified": false,
+    "exact_pointer_moved": false
+  },
+  "pose_fire_order": {
+    "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+    "owner": "MAIN scorer owner",
+    "consumer_store": "/Volumes/VertigoDataTier/pact/ddm_cx2_20260809/evaluation/q4_control/",
+    "fire_trigger": "the n600 scorer lane is free and the uniform-q4 and selected-SD1M archives can use the identical pinned real evaluator path",
+    "action": "measure paired uniform-q4 versus selected-SD1M n600 d_pose before any promotion or bit-specific QAT"
+  }
+}
