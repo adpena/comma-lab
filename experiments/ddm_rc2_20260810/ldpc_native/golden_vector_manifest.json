@@ -1,0 +1,72 @@
+{
+  "schema": "ddm_rc2_ldpc_golden_vector.v1",
+  "axis": "macOS-CPU advisory, scorer-free",
+  "score_claim": false,
+  "source_scope": "PR130 HPAC token symbols, frames 0:2",
+  "wire_semantics": {
+    "top_class_tie_break": "first equal maximum, matching PR130 NumPy/Torch argmax",
+    "graph": "deterministic sparse LDPC graph from splitmix64 seed",
+    "decoder": "normalized min-sum BP with exact raw fallback flag",
+    "miss_values": "finite-precision arithmetic stream under HPAC conditional probabilities"
+  },
+  "inputs": {
+    "packet": {
+      "path": "/Volumes/APDataStore/pact/ddm_rc2_20260810/ldpc_reference_tiefirst/alpha_04000_degree_04_iter_030/stages/frames_0000_0002/chunk_packet.bin",
+      "bytes": 3693,
+      "sha256": "b84c068c60e94bfe270f000858e78901eb2f5606f7a60842c34692ea14264847"
+    },
+    "codes_npy": {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dt1_20260809/retained/chunks/codes_0000_0002.npy",
+      "sha256": "a5505082044dbfada5f3375e825de274bb8116775d11f973498aad043c0d42ea"
+    },
+    "symbols_npy": {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dt1_20260809/retained/chunks/symbols_0000_0002.npy",
+      "sha256": "175983850ee25a9a0be803086716dd28215334e1e4090b28dbd2a655b01301e4"
+    }
+  },
+  "implementations": {
+    "rust_source_sha256": "b670abf754894d59d8ec626dc85cee337c1ac97642d274ff2dce637ab5191097",
+    "rust_release_binary": {
+      "path": "/Volumes/APDataStore/pact/ddm_rc2_20260810/ldpc_reference_tiefirst/native_binary/ddm-rc2-ldpc-native",
+      "bytes": 369408,
+      "sha256": "7f657d4884d112975e49ee99fa37bef42fef2741af52a6b545e1f567f38cfdd6"
+    },
+    "python_oracle_sha256": "4716cde9a4d4296427e09244b8412c82309959d76685c44ea1683df4e8853c34"
+  },
+  "positive_control": {
+    "python_decoded": {
+      "path": "/Volumes/APDataStore/pact/ddm_rc2_20260810/ldpc_reference_tiefirst/golden_vector_alpha4000_d4/python_decoded.bin",
+      "bytes": 393216,
+      "sha256": "ef719b437b4436215b3186626a323c4a997c9d3ae4d8c26a4cefa0deac8557db"
+    },
+    "rust_decoded": {
+      "path": "/Volumes/APDataStore/pact/ddm_rc2_20260810/ldpc_reference_tiefirst/alpha_04000_degree_04_iter_030/stages/frames_0000_0002/decoded_symbols.bin",
+      "bytes": 393216,
+      "sha256": "ef719b437b4436215b3186626a323c4a997c9d3ae4d8c26a4cefa0deac8557db"
+    },
+    "source_payload_sha256": "ef719b437b4436215b3186626a323c4a997c9d3ae4d8c26a4cefa0deac8557db",
+    "python_rust_source_byte_identical": true
+  },
+  "negative_control": {
+    "mutation": "xor bit 0 at packet byte 64",
+    "packet_path": "/Volumes/APDataStore/pact/ddm_rc2_20260810/ldpc_reference_tiefirst/golden_vector_alpha4000_d4/packet.bitflip.bin",
+    "packet_sha256": "b6a77139f7efa7f8b1b898581a43f28c424956840b4063457f61f686a537fb5b",
+    "outcome": "Python and Rust BP failed for a non-fallback group",
+    "rust_failure_log": {
+      "path": "/Volumes/APDataStore/pact/ddm_rc2_20260810/ldpc_reference_tiefirst/golden_vector_alpha4000_d4/rust_negative_control.log",
+      "bytes": 633,
+      "sha256": "dc662bb19f90ef45ca92b7c975b3331a7d896ca51cbc1b1baad499c371d6b8f3"
+    },
+    "source_equality": false,
+    "passed": true
+  },
+  "parity_receipt": {
+    "path": "/Volumes/APDataStore/pact/ddm_rc2_20260810/ldpc_reference_tiefirst/golden_vector_alpha4000_d4/python_parity_receipt.json",
+    "bytes": 1974,
+    "sha256": "bbfc6e29ba0de24038eaec1d32b6da6b216d559ab498bb2c981799c158cb66bd"
+  },
+  "rebuild": [
+    "cargo build --release --manifest-path experiments/ddm_rc2_20260810/ldpc_native/Cargo.toml",
+    ".venv/bin/python experiments/ddm_rc2_20260810/ldpc_python_reference.py --packet /Volumes/APDataStore/pact/ddm_rc2_20260810/ldpc_reference_tiefirst/alpha_04000_degree_04_iter_030/stages/frames_0000_0002/chunk_packet.bin --codes /Volumes/VertigoDataTier/pact/ddm_dt1_20260809/retained/chunks/codes_0000_0002.npy --symbols /Volumes/VertigoDataTier/pact/ddm_dt1_20260809/retained/chunks/symbols_0000_0002.npy --rust-decoded /Volumes/APDataStore/pact/ddm_rc2_20260810/ldpc_reference_tiefirst/alpha_04000_degree_04_iter_030/stages/frames_0000_0002/decoded_symbols.bin --output /Volumes/APDataStore/pact/ddm_rc2_20260810/ldpc_reference_tiefirst/golden_vector_alpha4000_d4/python_decoded.bin --negative-control"
+  ]
+}
