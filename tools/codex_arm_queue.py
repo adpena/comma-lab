@@ -66,7 +66,26 @@ FINAL_MESSAGE_INDEX = _REPO / ".omx" / "state" / "codex_arm_queue.final_messages
 NEXT_IF_RESUMED = _REPO / ".omx" / "state" / "codex_arm_queue.next_if_resumed.jsonl"
 
 DEFAULT_CAP = 4
-SSD_ADD_DIR = "/Volumes/VertigoDataTier/pact"
+# EVERY connected SSD tier, not just tier-1. Granting only VertigoDataTier was a
+# silent wall: when tier-1 filled to 98% and charters were re-routed to
+# APDataStore, arms inherited a sandbox that forbade their own output directory
+# and died with `PermissionError: [Errno 1] Operation not permitted` on mkdir --
+# a capacity-shaped error message masking a permission cause (ddm_sd2 and
+# ddm_vh2, both 2026-08-10, 997 GiB free at the time). Existence-gated so an
+# unmounted drive cannot break the spawn.
+SSD_ADD_DIRS = (
+    "/Volumes/VertigoDataTier/pact",
+    "/Volumes/APDataStore/pact",
+)
+
+
+def _ssd_add_dir_args() -> list[str]:
+    """Emit one --add-dir per SSD tier that is actually mounted."""
+    args: list[str] = []
+    for tier in SSD_ADD_DIRS:
+        if Path(tier).is_dir():
+            args.extend(["--add-dir", tier])
+    return args
 # THE arm model. Single source of truth: the pin used to live inside
 # keeper_source(), where a stale generation went unnoticed until the operator
 # caught it (2026-08-08, "You should be using GPT five point six" -> then "a
@@ -576,7 +595,7 @@ def keeper_source(name: str, prompt_path: str, effort: str | None = None) -> str
     resolved_effort = resolve_arm_effort(effort)
     argv_prefix = [
         "codex", "exec", "--skip-git-repo-check", "-s", "workspace-write",
-        "--add-dir", SSD_ADD_DIR,
+        *_ssd_add_dir_args(),
         "-m", ARM_MODEL, "-c", f"model_reasoning_effort={resolved_effort}",
         "-o", f".omx/tmp/codex_runs/{name}.last.txt",
     ]
