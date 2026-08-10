@@ -60,3 +60,32 @@ attribution needs re-measurement.
 Neither route fits the derived budget margin at symbol identity → the CPU axis on this carrier
 family is decode-structure-limited, not implementation-limited; record the per-stage timing
 decomposition and close honestly (INSTRUMENT/host-scoped, contest-CPU proof still owed).
+
+## ADDENDUM (MAIN, 2026-08-10 ~20:55Z — operator grant; consume at next checkpoint)
+
+Your falsifier FIRED and your receipts prove it: symbol recovery is 1.11s constriction / 1.78s
+native (0.08-0.12% of wall); ~99.9% of the #998 "token decode" term is HPAC PROBABILITY
+GENERATION. The operator has granted, verbatim: **"You can lower anything into rust"** +
+**"And otherwise optimize."** Consequences for this arm:
+
+1. **The HPAC model itself is in scope for native lowering** — not just the entropy coder.
+   Rule-118: decoder CODE (the HPAC context-mixing algorithm) is FREE; its learned parameters
+   are ALREADY counted archive bytes. Lowering changes ZERO archive bytes — pure wall-clock,
+   the route-A byte-identity property preserved.
+2. **Full optimization authority, any route**: Rust (runtime-rs crate discipline —
+   tac-boundary-decode precedent: Python oracle + golden vectors + bit-identical parity test +
+   payload-cleanliness audit, `video_derived_constants_embedded_in_native_source` must stay []) ·
+   C via the cc-at-decode pattern (their rc64_backend.c precedent, toolchain-presence proven) ·
+   vectorized integer numpy · algorithmic restructuring (batch independent streams/cells;
+   probability generation is per-symbol-serial WITHIN a stream but parallel ACROSS independent
+   contexts) · 4-thread (contest CPU = 4-core; you already built the --threads {1,4} worker).
+3. **Bit-identity is the gate, not a preference**: the integer-HPAC forward must reproduce the
+   full 117,964,800-symbol stream sha (c5c7671d…) exactly. Integer arithmetic only in the hot
+   path — the "Native eval-time runtime discipline" deterministic-integer-kernel case.
+4. **Bootstrap honesty (rr3)**: GitHub Actions ubuntu-latest images ship rustc/cargo AND cc —
+   but VERIFY, never assume: toolchain-presence check + fail-closed fallback to the pure-Python
+   path + compile time counted inside the 30-min budget. Prefer whichever of {Rust, C} your
+   measured bootstrap proves; race if cheap.
+5. Deliverable unchanged in shape: measured old-vs-new per-stage timing (1-thread AND 4-thread),
+   symbol identity receipt, payloads kept, honest margin vs the 1,800s budget. If even the
+   lowered model misses budget, the falsifier close stands — but now measured at the TRUE term.
