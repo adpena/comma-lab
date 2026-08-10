@@ -9,6 +9,9 @@ PAIRED_AUTH_EVAL_DISPATCH_TOOL = "tools/dispatch_modal_paired_auth_eval.py"
 PAIRED_AUTH_EVAL_DEFAULT_CLAIM_AGENT = "codex:modal_paired_auth_eval"
 PAIRED_AUTH_EVAL_CUDA_WRAPPER = "experiments/modal_auth_eval.py"
 PAIRED_AUTH_EVAL_CPU_WRAPPER = "experiments/modal_auth_eval_cpu.py"
+# The ``@app.local_entrypoint()`` both wrappers expose for a scored dispatch.
+# Kept separate from the wrapper paths, which are also used as plain file paths.
+PAIRED_AUTH_EVAL_ENTRYPOINT = "main"
 MODAL_AUTH_EVAL_CUDA_REMOTE_SUBMISSION_DIR = "/tmp/modal_auth_eval/submission_dir"
 MODAL_AUTH_EVAL_CPU_REMOTE_SUBMISSION_DIR = "/tmp/modal_auth_eval_cpu/submission_dir"
 
@@ -44,11 +47,16 @@ def paired_auth_eval_axis_command(
         if axis == "contest_cuda"
         else PAIRED_AUTH_EVAL_CPU_WRAPPER
     )
+    # Name the entrypoint EXPLICITLY. ``modal run <file>`` only auto-selects when
+    # the app exposes exactly one local entrypoint; both wrappers now also expose
+    # ``prove_env`` (the pre-paid locked-env prover), so the bare form fails with
+    # "Specify a Modal Function or local entrypoint to run". Measured 2026-08-10
+    # when this dispatcher refused the lc2 exact row.
     command = [
         modal_bin,
         "run",
         "--detach",
-        wrapper,
+        f"{wrapper}::{PAIRED_AUTH_EVAL_ENTRYPOINT}",
         "--archive",
         str(archive_path),
         "--expected-archive-sha256",

@@ -38,3 +38,45 @@ def test_paired_dispatch_command_blockers_reject_single_axis_targets() -> None:
         "paired_dispatch_command_missing:--skip-axis-if-promotable-anchor-exists"
         in blockers
     )
+
+
+def test_axis_command_names_the_modal_entrypoint_explicitly() -> None:
+    """``modal run <file>`` is ambiguous once the app has >1 local entrypoint.
+
+    Measured 2026-08-10: both wrappers expose ``prove_env`` alongside ``main``,
+    so the bare form died with "Specify a Modal Function or local entrypoint to
+    run" and refused the lc2 exact-row dispatch. The wrapper target must always
+    carry the ``::main`` suffix.
+    """
+
+    from tac.deploy.modal.paired_dispatch import (
+        PAIRED_AUTH_EVAL_CPU_WRAPPER,
+        PAIRED_AUTH_EVAL_CUDA_WRAPPER,
+        PAIRED_AUTH_EVAL_ENTRYPOINT,
+        paired_auth_eval_axis_command,
+    )
+
+    expected = {
+        "contest_cuda": f"{PAIRED_AUTH_EVAL_CUDA_WRAPPER}::{PAIRED_AUTH_EVAL_ENTRYPOINT}",
+        "contest_cpu": f"{PAIRED_AUTH_EVAL_CPU_WRAPPER}::{PAIRED_AUTH_EVAL_ENTRYPOINT}",
+    }
+    for axis, wrapper_target in expected.items():
+        command = paired_auth_eval_axis_command(
+            axis=axis,
+            modal_bin=".venv/bin/modal",
+            archive_path="/tmp/archive.zip",
+            archive_sha256="ab" * 32,
+            inflate_sh="inflate.sh",
+            output_dir="/tmp/out",
+            pair_group_id="pair_x",
+            lane_id="lane_x",
+            instance_job_id="job_x",
+            claim_agent="MAIN",
+            claim_notes="n",
+        )
+        # The wrapper target sits immediately after ``modal run --detach``.
+        assert command[:3] == [".venv/bin/modal", "run", "--detach"]
+        assert command[3] == wrapper_target
+        # Positive control: the bare, ambiguous form must NOT appear anywhere.
+        assert PAIRED_AUTH_EVAL_CUDA_WRAPPER not in command[4:]
+        assert PAIRED_AUTH_EVAL_CPU_WRAPPER not in command[4:]
