@@ -32,7 +32,7 @@ sm3 = importlib.import_module("experiments.ddm_sm3_semantic_representation")
 
 
 SSD_ROOT = Path("/Volumes/VertigoDataTier/pact")
-DEFAULT_OUT = SSD_ROOT / "ddm_sg2_20260810/source_audit"
+DEFAULT_OUT = SSD_ROOT / "ddm_sg2_20260810/source_audit_v3"
 DEFAULT_BASE = SSD_ROOT / "ddm_pr130_reproduce_20260809/reproduction/archive.zip"
 DEFAULT_STAGE07 = (
     SSD_ROOT
@@ -240,14 +240,32 @@ def main() -> None:
     fingerprints = {
         name: record["sha256"] for name, record in source_pins.items()
     }
+    configuration = {
+        "out_dir": str(out_dir),
+        "resume_from": str(resume_path),
+        "base_archive": str(args.base_archive.resolve()),
+        "stage07": str(args.stage07.resolve()),
+        "stage08": str(args.stage08.resolve()),
+        "chroma_receipt": str(args.chroma_receipt.resolve()),
+        "av_cache": str(args.av_cache.resolve()),
+        "dali_cache": str(args.dali_cache.resolve()),
+        "sd1_result": str(args.sd1_result.resolve()),
+        "minimum_free_bytes": args.minimum_free_bytes,
+        "seed": None,
+        "determinism": "no RNG is used; archive builder is deterministic",
+    }
     if resume_path.exists():
         progress = json.loads(resume_path.read_text())
         if progress.get("fingerprints") != fingerprints:
             raise ValueError("resume fingerprints differ")
+        if progress.get("configuration") != configuration:
+            raise ValueError("resume configuration differs")
     else:
         progress = {
             "schema": "ddm_sg2_source_audit.progress.v1",
             "created_at_utc": utc_now(),
+            "argv": sys.argv,
+            "configuration": configuration,
             "fingerprints": fingerprints,
             "completed_stages": [],
         }
@@ -412,6 +430,10 @@ def main() -> None:
         "axis": "[scorer-free audit with explicitly labeled reused measurement axes]",
         "score_claim": False,
         "pointer_moved": False,
+        "run": {
+            "argv": sys.argv,
+            "configuration": configuration,
+        },
         "source_pins": source_pins,
         "pr130_reported_seg": {
             "rounded_d_seg": EXPECTED_PR130_REPORTED_DSEG,

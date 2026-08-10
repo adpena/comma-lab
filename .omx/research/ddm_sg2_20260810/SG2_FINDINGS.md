@@ -87,18 +87,21 @@ component replay is queued rather than inferred.
 ## Payload custody
 
 New bulk evidence lives only below
-`/Volumes/VertigoDataTier/pact/ddm_sg2_20260810/source_audit_v2/`:
+`/Volumes/VertigoDataTier/pact/ddm_sg2_20260810/source_audit_v3/`:
 
 | artifact | bytes | SHA-256 |
 |---|---:|---|
-| source-audit result | 11,362 | `4459179fc9e7367b32561c29ac95b827ad95639c81f6c269dd8031bb9caf33e3` |
+| source-audit result | 12,846 | `008170cfcdeb52996c9e098f7c8c24a178efd948ae94f3c5034f88245f44e391` |
+| resume progress | 2,676 | `0d70507a83974945950910afcb94a3a78994b592dde29a3939940b247590af8b` |
 | chroma pair IDs, int16 LE | 240 | `19db1c1b47494a9742f923957e322c9337109eca901cab895a2017120de7ec9b` |
 | stage-07 semantic payload | 40,252 | `81058169865ffc7d1a400feba7dbe174d3610b5d55af78d13aa595062ecc1ea9` |
 | stage-07 archive | 191,040 | `ab11494c15a320dfcc005e950b028ee5630c3bff985ce39fafe3a1a03880ba51` |
 | stage-07 archive repeat | 191,040 | `ab11494c15a320dfcc005e950b028ee5630c3bff985ce39fafe3a1a03880ba51` |
 | stage-07 decoded state | 266,745 | `5a1ce07cafa810208489fdce3bcddf9f682d941fdbfeb1b9e3c8fea08027aaaf` |
 
-The audit is resumable from `progress.json`; each stage is recorded atomically.
+The audit is resumable from `progress.json`; its effective argv, input paths,
+minimum-free-space gate, no-RNG determinism declaration, and each completed
+stage are recorded atomically.
 The targeted `tac.payload_retention_gate` scan reports 1 Python file scanned
 and 0 findings.
 
