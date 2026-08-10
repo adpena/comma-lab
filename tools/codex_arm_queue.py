@@ -965,7 +965,13 @@ def lint_charter_optimal_form(prompt_path: str) -> list[str]:
     section = section.split("\n## ", 1)[0]
     if "reference" not in section and "receipt" not in section:
         problems.append("OPTIMAL FORM block cites no family reference/receipt")
-    if not re.search(r"\b[0-9a-f]{7,40}\b", section):
+    # {7,64}: 7+ truncated git hash, 40 full git SHA-1, 64 full SHA-256. The
+    # earlier {7,40} bound REJECTED a full SHA-256 — the leading \b forces the
+    # match to start at the token's first char, 40 chars cannot reach char 64,
+    # and every shorter ending lands mid-token where there is no \b — so the
+    # lint punished the STRONGER pin while accepting a 7-char truncation
+    # (task #1002, measured 2026-08-10).
+    if not re.search(r"\b[0-9a-f]{7,64}\b", section):
         problems.append("OPTIMAL FORM block carries no sha/commit provenance pin")
     return problems
 
