@@ -1,0 +1,137 @@
+{
+  "schema": "ddm_sd2.build_retention_proof.v1",
+  "status": "RUNNER_BUILT_AND_LOCALLY_VALIDATED_APDATASTORE_PREFLIGHT_BLOCKED_BY_SANDBOX",
+  "checked_at_utc": "2026-08-10T03:53:40Z",
+  "score_claim": false,
+  "scorer_ran": false,
+  "pointer_moved": false,
+  "runner": {
+    "path": "experiments/ddm_sd2_pr130_seg_decomposition_runner.py",
+    "bytes": 78536,
+    "sha256": "29e88f44232322a27d1376b9401a9ed1a89eec6c1ed1f1fdf1bc600d66d6a576"
+  },
+  "tests": {
+    "path": "experiments/tests/test_ddm_sd2_pr130_seg_decomposition_runner.py",
+    "bytes": 8721,
+    "sha256": "03000dfbda0ab8b305bf38178ee7562bf0ba8efb1ad790e34849c4132c41a57f",
+    "command": ".venv/bin/pytest -q experiments/tests/test_ddm_sd2_pr130_seg_decomposition_runner.py",
+    "result": "12 passed"
+  },
+  "validation": {
+    "ruff_check": "PASS",
+    "python_compile": "PASS",
+    "git_diff_check": "PASS",
+    "payload_retention_gate": {
+      "files_scanned": 8,
+      "findings": 0,
+      "status": "PASS",
+      "scope": "runner, runner tests, and the six pinned receiver Python modules materialized from Git commit 58f62cd22ff07562c0534c999d705fb9edfe5279"
+    },
+    "writer_reachability": {
+      "status": "PASS_IN_UNIT_TEST",
+      "probes": [
+        "atomic byte writer",
+        "NumPy memmap writer plus fsync and immutable finalization",
+        "retained byte-range SHA-256 writer",
+        "atomic JSON receipt writer"
+      ]
+    },
+    "apdatastore_plan_only": {
+      "status": "BLOCKED_BEFORE_ANY_SCORER_OR_PAYLOAD_MATERIALIZATION",
+      "command": ".venv/bin/python experiments/ddm_sd2_pr130_seg_decomposition_runner.py --resume-from /Volumes/APDataStore/pact/ddm_sd2_20260810/matched_local_n600/progress.json --plan-only",
+      "error": "RuntimeError: bulk custody unavailable at the charter-mandated APDataStore path: /Volumes/APDataStore/pact/ddm_sd2_20260810/matched_local_n600",
+      "cause": "PermissionError: [Errno 1] Operation not permitted",
+      "boundary": "The volume is mounted and has space, but this codex sandbox does not grant write access to it. The runner did not fall back or symlink to another tier."
+    }
+  },
+  "pins": {
+    "base_archive": {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_pr130_reproduce_20260809/reproduction/archive.zip",
+      "bytes": 191052,
+      "sha256": "0491d5df84fc70b62b3f7ccf8894f5e1b81c616de46a052e4423fc1e18fdc7cd"
+    },
+    "candidate_archive": {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sd1_semantic_20260809/cpu_screen/archives/selected_mixed_n600.zip",
+      "bytes": 190204,
+      "sha256": "010a8a5273ae87595191ffc03447fa36e61978ae9f827c2def46dea7075dfa67"
+    },
+    "receiver": {
+      "commit": "58f62cd22ff07562c0534c999d705fb9edfe5279",
+      "source_path": "src/tac/pr130_runtime/dv1_cpu_runtime",
+      "materialization": "git show by commit and path, with a fixed SHA-256 for each of eight files; the dirty live runtime worktree is never consumed"
+    },
+    "uncompressed_video": {
+      "path": "upstream/videos/0.mkv",
+      "bytes": 37545489,
+      "sha256": "2611f5f3e186f3529777749f97bd4cce3a208d6b3559e137bd45d256980d2fa9"
+    },
+    "segnet_weights_sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6",
+    "posenet_weights_sha256": "0f3a0874c5c387f990d7b88bd1d7e1f6de35d98b45f2a289989db2c77b9b6576"
+  },
+  "retention_contract": {
+    "population_pairs": 600,
+    "selection_mode": "full_population_n600",
+    "batch_pairs": 4,
+    "chunk_pairs": 60,
+    "chunk_limit_pairs": 120,
+    "resume_from": "/Volumes/APDataStore/pact/ddm_sd2_20260810/matched_local_n600/progress.json",
+    "atomic_progress": true,
+    "retained_per_candidate": [
+      "archive.zip and byte-identical archive.repeat.zip",
+      "exact public-receiver decoded camera output with per-chunk byte-range SHA-256",
+      "full SegNet float32 logits",
+      "SegNet uint8 argmax chunks",
+      "full PoseNet float32 pose outputs"
+    ],
+    "retained_target": [
+      "decoded RGB camera-frame chunks from upstream frame_utils.yuv420_to_rgb",
+      "full SegNet float32 logits",
+      "SegNet uint8 argmax chunks",
+      "full PoseNet float32 pose outputs"
+    ],
+    "decomposition_source": "retained argmax chunks reopened and SHA-256 verified",
+    "outputs": [
+      "directed target-row by prediction-column 5x5 matrix",
+      "directed and symmetric edge tables",
+      "per-frame exact mismatch counts and concentration classification",
+      "target-side four-neighbor boundary versus exact-complement interior split",
+      "spatial-signature class-index self-detection before canonical names are admitted"
+    ]
+  },
+  "storage": {
+    "bulk_root": "/Volumes/APDataStore/pact/ddm_sd2_20260810",
+    "free_bytes_measured": 1070843559936,
+    "projected_final_bytes": 19199789712,
+    "failed_decode_attempt_contingency_bytes": 3662409600,
+    "minimum_reserve_bytes": 5000000000,
+    "required_free_bytes_at_fresh_admission": 27862199312,
+    "capacity_would_fit": true,
+    "writer_permission_in_this_sandbox": false,
+    "earlier_scorer_free_development_preflight": {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sd2_20260810/matched_local_n600",
+      "logical_bytes": 1283713,
+      "files": 19,
+      "disposition": "RETAINED; no deletion attempted; not the MAIN fire target and not authority evidence"
+    }
+  },
+  "runtime_projection": {
+    "prior_same_family_single_decode_seconds": 1010.8084664579947,
+    "prior_axis": "[macOS-CPU advisory; upstream AV GT; immutable evaluate.py; n600]",
+    "prior_receipt": ".omx/research/ddm_cx2_20260809/CX2_FINAL_RECEIPT.json",
+    "new_runner": "two serial CPU public-receiver decodes plus one paired target/base/candidate MPS scorer pass",
+    "honest_wallclock_band": "approximately 45-90 minutes on MAIN Metal; the three-way retained scorer pass is unmeasured"
+  },
+  "exact_main_fire_command": "/Users/adpena/Projects/pact/.venv/bin/python /Users/adpena/Projects/pact/experiments/ddm_sd2_pr130_seg_decomposition_runner.py --out-dir /Volumes/APDataStore/pact/ddm_sd2_20260810/matched_local_n600 --resume-from /Volumes/APDataStore/pact/ddm_sd2_20260810/matched_local_n600/progress.json --queue /Users/adpena/Projects/pact/.omx/research/ddm_sg2_20260810/SG2_SCORER_QUEUE.json --base-archive /Volumes/VertigoDataTier/pact/ddm_pr130_reproduce_20260809/reproduction/archive.zip --candidate-archive /Volumes/VertigoDataTier/pact/ddm_sd1_semantic_20260809/cpu_screen/archives/selected_mixed_n600.zip --challenge-root /Users/adpena/Projects/pact/upstream --video-names-file /Users/adpena/Projects/pact/upstream/public_test_video_names.txt --uncompressed-dir /Users/adpena/Projects/pact/upstream/videos --device mps --decode-device cpu --batch-size 4 --chunk-pairs 60 --pair-count 600 --seed 20260810 --cpu-threads 6 --num-threads 2 --prefetch-queue-depth 4 --minimum-free-bytes 5000000000",
+  "future_action": {
+    "disposition": "QUEUED_WITH_A_FIRE_ORDER",
+    "owner": "MAIN scorer owner",
+    "consumer_store": "/Volumes/APDataStore/pact/ddm_sd2_20260810/matched_local_n600",
+    "fire_trigger": "the ddm_sd2 commit is present, APDataStore is writable to MAIN, and the sole full-n600 scorer slot is free"
+  },
+  "boundaries": [
+    "No SegNet, PoseNet, real receiver, or contest evaluator ran in this arm.",
+    "No d_seg, d_pose, edge, frame, boundary, interior, or S result was measured.",
+    "MPS output from the future fire is diagnostic and cannot promote the contest pointer.",
+    "The PR130 0.17214129749189645 contest-CUDA DALI n600 row remains a borrowed bar, not this arm's result."
+  ]
+}
