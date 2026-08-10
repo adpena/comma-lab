@@ -204,7 +204,127 @@ def test_protocol_constants_exceed_public_eight_pass_shape() -> None:
     assert ps135.MAX_CODE_STEP == 32.0
     assert ps135.JRD_LINEAGE_STEPS == (1, 2, 4, 8, 16, 32)
     assert ps135.JRD_GRID_SIZE == 145
-    assert ps135.GRID_MAX == 53
+    assert ps135.NEIGHBOUR_RADIUS == 2
+    assert ps135.GN_START_FAMILIES == (
+        "native_gn",
+        "wrong_sign_gn",
+        "public_pr133_projected_global",
+    )
+    assert ps135.GRID_MAX == 400
+
+
+def test_candidate_grid_fires_radius2_wrong_and_global_starts(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_pose_outputs(
+        _renderer: object,
+        _posenet: object,
+        _masters: object,
+        codes: np.ndarray,
+        _rows: np.ndarray,
+        _batch_size: int,
+        *,
+        pad_partial: bool,
+    ) -> np.ndarray:
+        assert pad_partial is True
+        return np.asarray(codes[:, : ps135.POSE_DIMS], dtype=np.float32)
+
+    monkeypatch.setattr(ps135, "pose_outputs", fake_pose_outputs)
+    row = ps135.candidate_grid_for_row(
+        np.zeros(ps135.D, dtype=np.int16),
+        np.zeros(ps135.POSE_DIMS, dtype=np.float32),
+        np.ones(ps135.POSE_DIMS, dtype=np.float32),
+        object(),
+        object(),
+        SimpleNamespace(),
+        0,
+        16,
+        np.full(ps135.D, 10, dtype=np.int16),
+    )
+    valid = int(row["grid_valid"])
+    families = {
+        ps135.GRID_FAMILY_NAMES[int(index)]
+        for index in row["grid_start_family_ids"][:valid]
+    }
+    assert ps135.GN_START_FAMILIES[0] in families
+    assert ps135.GN_START_FAMILIES[1] in families
+    assert ps135.GN_START_FAMILIES[2] in families
+    assert np.any(row["grid_codes"][:valid, 0] == -3)
+    assert np.any(row["grid_codes"][:valid, 0] == 12)
+    assert row["grid_codes"].shape == (ps135.GRID_MAX, ps135.D)
+    assert row["grid_outputs"].shape == (ps135.GRID_MAX, ps135.POSE_DIMS)
+
+
+def test_realized_basis_projection_identity_is_exact_and_retained(
+    governed_pose_payload_store: Path,
+) -> None:
+    carrier_path = ps135.LC2_INPUTS / "carrier.raw"
+    if not carrier_path.is_file():
+        pytest.skip("pinned LC2 carrier is not mounted")
+    state = ps135.decode_carrier(carrier_path.read_bytes())
+    _, _, inflate = ps135.import_runtime_modules()
+    projection = ps135.project_public_carrier_into_lc2(
+        state, state, inflate, __import__("torch")
+    )
+    root = governed_pose_payload_store / "identity_projection"
+    record = ps135.atomic_npz(root / "projection_payload.npz", **projection)
+    ps135.atomic_json(
+        root / "receipt.json",
+        {
+            "schema": "ddm_ps135_identity_projection_test.v1",
+            "complete": True,
+            "score_claim": False,
+            "source": ps135.file_record(carrier_path),
+            "payload": record,
+            "payloads_retained": True,
+        },
+    )
+    assert np.array_equal(projection["projected_codes"], state.codes)
+    assert int(projection["clipped_code_count"]) == 0
+    assert float(projection["quantized_residual_mse"]) < 1e-8
+
+
+def test_public_pr133_projection_is_lc2_native_and_retained(
+    governed_pose_payload_store: Path,
+) -> None:
+    carrier_path = ps135.LC2_INPUTS / "carrier.raw"
+    if not carrier_path.is_file() or not ps135.PR133_ARCHIVE.is_file():
+        pytest.skip("pinned LC2/PR133 carriers are not mounted")
+    lc2 = ps135.decode_carrier(carrier_path.read_bytes())
+    public = ps135.decode_carrier(ps135.extract_pr133_carrier())
+    _, _, inflate = ps135.import_runtime_modules()
+    projection = ps135.project_public_carrier_into_lc2(
+        lc2, public, inflate, __import__("torch")
+    )
+    root = governed_pose_payload_store / "public_pr133_projection"
+    projection_record = ps135.atomic_npz(
+        root / "projection_payload.npz", **projection
+    )
+    projected_carrier = ps135.encode_carrier(lc2, projection["projected_codes"])
+    carrier_record = ps135.persist_exact(
+        root / "carrier.projected.cpr1", projected_carrier
+    )
+    ps135.atomic_json(
+        root / "receipt.json",
+        {
+            "schema": "ddm_ps135_public_projection_test.v1",
+            "complete": True,
+            "score_claim": False,
+            "lc2_source": ps135.file_record(carrier_path),
+            "public_source": ps135.file_record(ps135.PR133_ARCHIVE),
+            "projection": projection_record,
+            "projected_carrier": carrier_record,
+            "invalid_codes_only_copy": False,
+            "payloads_retained": True,
+        },
+    )
+    parsed = ps135.decode_carrier(projected_carrier)
+    assert np.array_equal(parsed.basis_codes, lc2.basis_codes)
+    assert np.array_equal(parsed.basis_scales, lc2.basis_scales)
+    assert np.array_equal(parsed.coefficient_scales, lc2.coefficient_scales)
+    assert np.array_equal(parsed.codes, projection["projected_codes"])
+    assert not np.array_equal(parsed.codes, public.codes)
+    assert np.all(np.isfinite(projection["projection_transform"]))
 
 
 def test_jrd_reusable_prior_compiles_dormant_and_retains_exactly(

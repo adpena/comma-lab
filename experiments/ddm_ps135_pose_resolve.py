@@ -202,9 +202,18 @@ GN_DAMPING = 0.01
 JRD_LINEAGE_STEPS = (1, 2, 4, 8, 16, 32)
 MAX_CODE_STEP = float(max(JRD_LINEAGE_STEPS))
 NEIGHBOUR_DIMS = 3
-NEIGHBOUR_RADIUS = 1
+NEIGHBOUR_RADIUS = 2
+GN_START_FAMILIES = (
+    "native_gn",
+    "wrong_sign_gn",
+    "public_pr133_projected_global",
+)
+GRID_FAMILY_NAMES = ("padding", "incumbent", "singleton_fd", *GN_START_FAMILIES)
+GRID_FAMILY_IDS = {name: index for index, name in enumerate(GRID_FAMILY_NAMES)}
 JRD_GRID_SIZE = 1 + 2 * D * len(JRD_LINEAGE_STEPS)
-GRID_MAX = 25 + (1 + (2 * NEIGHBOUR_RADIUS + 1) ** NEIGHBOUR_DIMS)
+GRID_MAX = 25 + len(GN_START_FAMILIES) * (
+    (2 * NEIGHBOUR_RADIUS + 1) ** NEIGHBOUR_DIMS
+)
 # A rate variant currently retains an archive, raw/recompressed carrier,
 # coefficient/output/error arrays, and receipts.  One MiB is a conservative
 # fail-closed allowance for that materialization; a pass/finisher may retain up
@@ -829,6 +838,107 @@ def extract_pr133_carrier() -> bytes:
         raise PoseResolveError("PR133 archive did not expose the pinned complete CPR1")
     decode_carrier(carrier)
     return carrier
+
+
+def project_public_carrier_into_lc2(
+    lc2: CarrierState,
+    public: CarrierState,
+    inflate_module,
+    torch_module,
+) -> dict[str, np.ndarray]:
+    """Project the complete public carrier into LC2's realized basis.
+
+    This is deliberately not a code copy: both carriers are expanded through
+    the exact receiver's bicubic-normalized basis, and a full-field least-
+    squares map is solved before the result is quantized on LC2's own scales.
+    The returned matrices are retained with the projected coefficient payload
+    so the global start is independently reproducible.
+    """
+
+    def realized_basis(template: CarrierState) -> np.ndarray:
+        raw = template.basis_codes.reshape(D, 3, CARRIER_H, CARRIER_W).astype(
+            np.float32
+        )
+        raw *= template.basis_scales[:, None, None, None]
+        with torch_module.inference_mode():
+            basis = inflate_module.normalized_basis(torch_module.from_numpy(raw))
+        value = basis.cpu().numpy().reshape(D, -1).astype(np.float32, copy=False)
+        if value.shape[1] != 3 * SCORER_H * SCORER_W or not np.all(
+            np.isfinite(value)
+        ):
+            raise PoseResolveError("realized projection basis is invalid")
+        return value
+
+    lc2_basis = realized_basis(lc2)
+    public_basis = realized_basis(public)
+    lc2_gram = np.zeros((D, D), dtype=np.float64)
+    public_gram = np.zeros((D, D), dtype=np.float64)
+    public_to_lc2 = np.zeros((D, D), dtype=np.float64)
+    for start in range(0, lc2_basis.shape[1], 65_536):
+        end = min(start + 65_536, lc2_basis.shape[1])
+        own_chunk = lc2_basis[:, start:end].astype(np.float64)
+        public_chunk = public_basis[:, start:end].astype(np.float64)
+        lc2_gram += np.einsum("ik,jk->ij", own_chunk, own_chunk, optimize=False)
+        public_gram += np.einsum(
+            "ik,jk->ij", public_chunk, public_chunk, optimize=False
+        )
+        public_to_lc2 += np.einsum(
+            "ik,jk->ij", public_chunk, own_chunk, optimize=False
+        )
+    condition = float(np.linalg.cond(lc2_gram))
+    if not np.isfinite(condition):
+        raise PoseResolveError("LC2 realized basis Gram matrix is singular")
+    transform = np.linalg.solve(lc2_gram, public_to_lc2.T).T
+    public_coefficients = (
+        public.codes.astype(np.float64)
+        * public.coefficient_scales.astype(np.float64)[None, :]
+    )
+    projected_coefficients = np.einsum(
+        "ni,ij->nj", public_coefficients, transform, optimize=False
+    )
+    scaled = projected_coefficients / lc2.coefficient_scales.astype(np.float64)[
+        None, :
+    ]
+    rounded = np.rint(scaled)
+    clipped = np.clip(rounded, -2048, 2047)
+    projected_codes = clipped.astype(np.int16)
+    quantized_coefficients = (
+        projected_codes.astype(np.float64)
+        * lc2.coefficient_scales.astype(np.float64)[None, :]
+    )
+
+    def residual_mse(coefficients: np.ndarray) -> float:
+        own_energy = np.einsum(
+            "ni,ij,nj->n", coefficients, lc2_gram, coefficients
+        )
+        public_energy = np.einsum(
+            "ni,ij,nj->n", public_coefficients, public_gram, public_coefficients
+        )
+        cross_energy = np.einsum(
+            "ni,ij,nj->n", public_coefficients, public_to_lc2, coefficients
+        )
+        residual = np.maximum(own_energy + public_energy - 2.0 * cross_energy, 0.0)
+        return float(np.mean(residual) / lc2_basis.shape[1])
+
+    return {
+        "projected_codes": projected_codes,
+        "projected_real_coefficients": projected_coefficients,
+        "quantized_real_coefficients": quantized_coefficients,
+        "projection_transform": transform,
+        "lc2_basis_gram": lc2_gram,
+        "public_basis_gram": public_gram,
+        "public_to_lc2_cross": public_to_lc2,
+        "lc2_basis_condition": np.asarray(condition, dtype=np.float64),
+        "unquantized_residual_mse": np.asarray(
+            residual_mse(projected_coefficients), dtype=np.float64
+        ),
+        "quantized_residual_mse": np.asarray(
+            residual_mse(quantized_coefficients), dtype=np.float64
+        ),
+        "clipped_code_count": np.asarray(
+            np.count_nonzero(rounded != clipped), dtype=np.int32
+        ),
+    }
 
 
 def selected_lc2_streams() -> tuple[bytes, bytes, dict[str, Any]]:
@@ -1931,6 +2041,7 @@ def candidate_grid_for_row(
     master_provider: MasterFrameProvider,
     row: int,
     batch_size: int,
+    global_start: np.ndarray,
 ) -> dict[str, np.ndarray]:
     (
         solve_damped_least_squares,
@@ -1978,25 +2089,51 @@ def candidate_grid_for_row(
     )
     centre = quantize_int12_update(current.astype(np.int32), solve.update)
     active = rank_neighbour_dimensions(jacobian, solve.update, NEIGHBOUR_DIMS)
-    gn = nearby_int12_candidates(
-        current.astype(np.int32),
-        centre,
-        active_dimensions=active,
-        radius=NEIGHBOUR_RADIUS,
+    wrong_centre = quantize_int12_update(
+        current.astype(np.int32), -solve.update
+    )
+    global_value = np.asarray(global_start, dtype=np.int32)
+    if global_value.shape != (D,) or np.any(global_value < -2048) or np.any(
+        global_value > 2047
+    ):
+        raise PoseResolveError("global projected start is not signed-int12")
+    global_displacement = global_value.astype(np.float64) - current.astype(np.float64)
+    global_active = rank_neighbour_dimensions(
+        jacobian, global_displacement, NEIGHBOUR_DIMS
+    )
+    family_centres = (
+        (GN_START_FAMILIES[0], centre, active),
+        (GN_START_FAMILIES[1], wrong_centre, active),
+        (GN_START_FAMILIES[2], global_value, global_active),
     )
     combined: list[np.ndarray] = []
+    families: list[str] = []
     seen: set[bytes] = set()
-    for candidate in (*fd, *gn):
+
+    def add(candidate: np.ndarray, family: str) -> None:
         value = np.asarray(candidate, dtype=np.int16)
         key = value.tobytes()
         if key not in seen:
             combined.append(value)
+            families.append(family)
             seen.add(key)
+
+    for index, candidate in enumerate(fd):
+        add(candidate, "incumbent" if index == 0 else "singleton_fd")
+    for family, family_centre, family_active in family_centres:
+        for candidate in nearby_int12_candidates(
+            current.astype(np.int32),
+            family_centre,
+            active_dimensions=family_active,
+            radius=NEIGHBOUR_RADIUS,
+        ):
+            add(candidate, family)
     valid = len(combined)
     if valid > GRID_MAX:
         raise PoseResolveError("candidate grid exceeded its derived maximum")
     while len(combined) < GRID_MAX:
         combined.append(np.asarray(current, dtype=np.int16))
+        families.append("padding")
     grid_codes = np.stack(combined)
     grid_outputs = pose_outputs(
         renderer,
@@ -2032,9 +2169,15 @@ def candidate_grid_for_row(
         "gn_condition": np.asarray(solve.condition, dtype=np.float64),
         "gn_ridge_lambda": np.asarray(solve.ridge_lambda, dtype=np.float64),
         "gn_centre": centre.astype(np.int16),
+        "wrong_sign_gn_centre": wrong_centre.astype(np.int16),
+        "global_start_centre": global_value.astype(np.int16),
         "active_dimensions": np.asarray(active, dtype=np.int8),
+        "global_active_dimensions": np.asarray(global_active, dtype=np.int8),
         "grid_codes": grid_codes,
         "grid_outputs": grid_outputs,
+        "grid_start_family_ids": np.asarray(
+            [GRID_FAMILY_IDS[family] for family in families], dtype=np.int8
+        ),
         "grid_valid": np.asarray(valid, dtype=np.int16),
         "grid_errors": np.pad(
             errors,
@@ -2062,6 +2205,7 @@ def solve_pass_chunks(
     posenet,
     master_provider: MasterFrameProvider,
     batch_size: int,
+    global_start_codes: np.ndarray,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, list[dict[str, object]]]:
     _, _, inflate = import_runtime_modules()
     renderer = ExactCarrierRenderer(template, inflate, __import__("torch"))
@@ -2075,6 +2219,8 @@ def solve_pass_chunks(
         template.coefficient_scales
     )
     master_binding_json = canonical_json(master_provider.binding)
+    global_start_sha = sha256_array(global_start_codes)
+    grid_family_names_json = canonical_json(list(GRID_FAMILY_NAMES))
     for chunk_start in range(0, N, SEARCH_CHUNK_PAIRS):
         chunk_end = min(chunk_start + SEARCH_CHUNK_PAIRS, N)
         path = chunk_root / f"chunk_{chunk_start:04d}_{chunk_end:04d}.npz"
@@ -2091,6 +2237,11 @@ def solve_pass_chunks(
                     != sha256_array(pose_targets[chunk_start:chunk_end])
                     or str(payload["input_outputs_sha"].item())
                     != sha256_array(current_outputs[chunk_start:chunk_end])
+                    or "global_start_sha" not in payload.files
+                    or str(payload["global_start_sha"].item()) != global_start_sha
+                    or "grid_family_names_json" not in payload.files
+                    or str(payload["grid_family_names_json"].item())
+                    != grid_family_names_json
                     or "master_binding_json" not in payload.files
                     or str(payload["master_binding_json"].item())
                     != master_binding_json
@@ -2120,6 +2271,7 @@ def solve_pass_chunks(
                     master_provider,
                     row,
                     batch_size,
+                    global_start_codes[row],
                 )
             )
         arrays: dict[str, np.ndarray] = {
@@ -2135,6 +2287,8 @@ def solve_pass_chunks(
             "input_outputs_sha": np.asarray(
                 sha256_array(current_outputs[chunk_start:chunk_end])
             ),
+            "global_start_sha": np.asarray(global_start_sha),
+            "grid_family_names_json": np.asarray(grid_family_names_json),
             "master_binding_json": np.asarray(master_binding_json),
         }
         for key in rows[0]:
@@ -3507,6 +3661,60 @@ def run_solver(args: argparse.Namespace) -> dict[str, object]:
             pr133_carrier = extract_pr133_carrier()
             pr133_state = decode_carrier(pr133_carrier)
             _, _, inflate = import_runtime_modules()
+            projection = project_public_carrier_into_lc2(
+                own_state, pr133_state, inflate, torch
+            )
+            projection_root = (
+                output
+                / "leg_a"
+                / "starts"
+                / "public_pr133_projected_into_lc2"
+            )
+            projection_payload = atomic_npz(
+                projection_root / "projection_payload.npz", **projection
+            )
+            projected_codes = projection["projected_codes"].astype(np.int16)
+            projected_carrier = encode_carrier(own_state, projected_codes)
+            projected_state, projected = evaluate_start(
+                output,
+                bulk,
+                name="public_pr133_projected_into_lc2",
+                carrier=projected_carrier,
+                source=source,
+                posenet=posenet,
+                segnet=segnet,
+                master_provider=master_provider,
+                pose_targets=pose_targets,
+                seg_targets=seg_targets,
+                batch_size=args.batch_size,
+                expected_raw_parity=False,
+            )
+            projection_receipt = {
+                "schema": "ddm_ps135_pr133_to_lc2_projection.v1",
+                "complete": True,
+                "score_claim": False,
+                "method": (
+                    "full realized bicubic-normalized carrier-basis least squares, "
+                    "then LC2-scale signed-int12 quantization"
+                ),
+                "invalid_codes_only_copy": False,
+                "source_complete_carrier_sha256": PR133_CARRIER_SHA256,
+                "destination_complete_carrier_sha256": LC2_CARRIER_SHA256,
+                "payload": projection_payload,
+                "projected_candidate_receipt": file_record(
+                    projection_root / "receipt.json"
+                ),
+                "lc2_basis_condition": float(projection["lc2_basis_condition"]),
+                "unquantized_residual_mse": float(
+                    projection["unquantized_residual_mse"]
+                ),
+                "quantized_residual_mse": float(
+                    projection["quantized_residual_mse"]
+                ),
+                "clipped_code_count": int(projection["clipped_code_count"]),
+                "payloads_retained": True,
+            }
+            atomic_json(projection_root / "projection_receipt.json", projection_receipt)
             pr133_renderer = ExactCarrierRenderer(pr133_state, inflate, torch)
             pr133_archive, pr133_stream, pr133_parseback = build_candidate_archive(
                 pr133_carrier, source
@@ -3568,6 +3776,18 @@ def run_solver(args: argparse.Namespace) -> dict[str, object]:
                     "errors": np.load(own["scorer"]["pair_errors"]["path"]),
                     "d_seg": float(own["d_seg"]),
                     "score": float(own["score"]),
+                },
+                {
+                    "name": "public_pr133_projected_into_lc2",
+                    "state": projected_state,
+                    "receipt": projected,
+                    "archive": Path(
+                        projected["records"]["archive"]["path"]
+                    ).read_bytes(),
+                    "outputs": np.load(projected["scorer"]["pose_outputs"]["path"]),
+                    "errors": np.load(projected["scorer"]["pair_errors"]["path"]),
+                    "d_seg": float(projected["d_seg"]),
+                    "score": float(projected["score"]),
                 },
                 {
                     "name": "public_pr133_complete_carrier",
@@ -3634,7 +3854,7 @@ def run_solver(args: argparse.Namespace) -> dict[str, object]:
             ):
                 raise PoseResolveError("selected start lacks bound scorer payloads")
             state = {
-                "schema": "ddm_ps135_state.v2",
+                "schema": "ddm_ps135_state.v3",
                 "complete": False,
                 "started_at_utc": utc_now(),
                 "axis": AXIS,
@@ -3649,10 +3869,20 @@ def run_solver(args: argparse.Namespace) -> dict[str, object]:
                     "jrd_lineage_steps": list(JRD_LINEAGE_STEPS),
                     "neighbour_dimensions": NEIGHBOUR_DIMS,
                     "neighbour_radius": NEIGHBOUR_RADIUS,
+                    "gn_start_families": list(GN_START_FAMILIES),
                 },
                 "inputs": input_pins(),
                 "target_manifest": file_record(target_manifest_path),
                 "selected_start": selected_start["name"],
+                "global_start": {
+                    "name": "public_pr133_projected_into_lc2",
+                    "coefficients": file_record(
+                        projection_root / "coefficients.int16.npy"
+                    ),
+                    "projection_receipt": file_record(
+                        projection_root / "projection_receipt.json"
+                    ),
+                },
                 "start_race": file_record(output / "leg_a" / "starts" / "race.json"),
                 "operational_max_passes_seen": args.max_passes,
                 "d_seg": selected_start["d_seg"],
@@ -3672,7 +3902,7 @@ def run_solver(args: argparse.Namespace) -> dict[str, object]:
             }
             atomic_json(state_path, state)
 
-        if state.get("schema") != "ddm_ps135_state.v2":
+        if state.get("schema") != "ddm_ps135_state.v3":
             raise PoseResolveError(
                 "resume state predates immutable current-artifact bindings"
             )
@@ -3686,6 +3916,7 @@ def run_solver(args: argparse.Namespace) -> dict[str, object]:
             "jrd_lineage_steps": list(JRD_LINEAGE_STEPS),
             "neighbour_dimensions": NEIGHBOUR_DIMS,
             "neighbour_radius": NEIGHBOUR_RADIUS,
+            "gn_start_families": list(GN_START_FAMILIES),
         }:
             raise PoseResolveError("resume configuration differs")
         if state.get("target_manifest") != file_record(target_manifest_path):
@@ -3709,6 +3940,22 @@ def run_solver(args: argparse.Namespace) -> dict[str, object]:
             source,
         )
         del current_carrier
+        global_start_binding = state.get("global_start")
+        if not isinstance(global_start_binding, dict):
+            raise PoseResolveError("resume state lacks its projected global start")
+        verify_file_record_binding(
+            global_start_binding.get("coefficients"),
+            label="projected global-start coefficients",
+        )
+        verify_file_record_binding(
+            global_start_binding.get("projection_receipt"),
+            label="projected global-start receipt",
+        )
+        global_start_codes = np.load(
+            global_start_binding["coefficients"]["path"], allow_pickle=False
+        ).astype(np.int16)
+        if global_start_codes.shape != (N, D):
+            raise PoseResolveError("projected global-start coefficients have wrong shape")
         template_carrier = (
             extract_pr133_carrier()
             if state["selected_start"] == "public_pr133_complete_carrier"
@@ -3767,6 +4014,7 @@ def run_solver(args: argparse.Namespace) -> dict[str, object]:
                 posenet=posenet,
                 master_provider=master_provider,
                 batch_size=args.batch_size,
+                global_start_codes=global_start_codes,
             )
             selection = rate_aware_select(
                 pass_root,
@@ -3805,8 +4053,9 @@ def run_solver(args: argparse.Namespace) -> dict[str, object]:
                 chunks=chunks,
                 stage="joint_pose_pass",
                 candidate_neighbourhood=(
-                    "all singleton +/-1 plus public damped-GN center rank-3 "
-                    "radius-1 cube"
+                    "all singleton +/-1 plus radius-2 rank-3 cubes around native "
+                    "GN, wrong-sign GN, and the full-field PR133-to-LC2 projected "
+                    "global start"
                 ),
                 elapsed_seconds=time.time() - pass_started,
                 previous_score=previous_score,
