@@ -1,0 +1,145 @@
+{
+  "schema": "ddm_cp2_repo_receipt.v1",
+  "axis": "[scorer-free exact archive bytes and real shipped receiver parse-back]",
+  "score_claim": false,
+  "base": {
+    "archive_bytes": 191052,
+    "archive_sha256": "0491d5df84fc70b62b3f7ccf8894f5e1b81c616de46a052e4423fc1e18fdc7cd",
+    "contest_cuda_dali_n600_s": 0.17214129749189645,
+    "status": "UNMOVED"
+  },
+  "receiver": {
+    "schema": "SM3R.v1",
+    "absent_magic_action": "UNCHANGED_LEGACY_OR_SD1M_LOADER",
+    "known_modes": {
+      "1": "vector_vq",
+      "2": "scale_vq",
+      "3": "vector_scale_vq",
+      "4": "pointwise_lowrank"
+    },
+    "unknown_or_malformed_action": "REFUSE_WITH_SM3RFormatError",
+    "legacy_control_semantic_state_sha256": "23ef13ea9f00217d3b09250096a6f4cb14a0312612be3b50fe62f5d05bdd7933",
+    "lowrank_semantic_state_sha256": "5063e24b2c2374aff44db3f50eb8e000908034a54512dd4cbf3108d5aa59c01e",
+    "vector_scale_vq32_semantic_state_sha256": "ca0ef6b348a9c24ffd637f0dc0b67b19eb66553a0f00272d4239e7feb0798875"
+  },
+  "compositions": [
+    {
+      "rank": 1,
+      "candidate_id": "pointwise_lowrank_r32__temporal_reversion",
+      "archive_bytes": 182364,
+      "archive_sha256": "2080215145b8958de5ec79f9d2f02777eb14370836989cf4acac2646b5f3f0e4",
+      "actual_archive_delta_bytes": -8688,
+      "summed_individual_delta_bytes": -8688,
+      "additive_expected_archive_bytes": 182364,
+      "interaction_gap_bytes_actual_minus_additive": 0,
+      "interaction_class": "EXACTLY_ADDITIVE",
+      "rate_only_delta_s": -0.0057849825847254245,
+      "build_receipt": "/Volumes/VertigoDataTier/pact/ddm_cp2_20260810/pointwise_lowrank_r32__temporal_reversion/build_receipt.json",
+      "d_seg_status": "UNMEASURED",
+      "d_pose_status": "UNMEASURED"
+    },
+    {
+      "rank": 2,
+      "candidate_id": "vector_scale_vq32__temporal_reversion",
+      "archive_bytes": 183992,
+      "archive_sha256": "d8bf1fa5f87913bd028693dd9971c841f251437114f05cb93d1edc6c0779c11b",
+      "actual_archive_delta_bytes": -7060,
+      "summed_individual_delta_bytes": -7064,
+      "additive_expected_archive_bytes": 183988,
+      "interaction_gap_bytes_actual_minus_additive": 4,
+      "interaction_class": "SUBADDITIVE_SAVINGS",
+      "rate_only_delta_s": -0.00470096420904253,
+      "build_receipt": "/Volumes/VertigoDataTier/pact/ddm_cp2_20260810/vector_scale_vq32__temporal_reversion/build_receipt.json",
+      "d_seg_status": "UNMEASURED",
+      "d_pose_status": "UNMEASURED"
+    },
+    {
+      "rank": 3,
+      "candidate_id": "sd1_selected_mixed_q3q4__temporal_reversion",
+      "archive_bytes": 187788,
+      "archive_sha256": "fc283b6a6a538c74f2f0c30d7cf8ace93bd9496a96a18701e7eb9ed130dc8320",
+      "actual_archive_delta_bytes": -3264,
+      "summed_individual_delta_bytes": -3264,
+      "additive_expected_archive_bytes": 187788,
+      "interaction_gap_bytes_actual_minus_additive": 0,
+      "interaction_class": "EXACTLY_ADDITIVE",
+      "rate_only_delta_s": -0.0021733636229907673,
+      "build_receipt": "/Volumes/VertigoDataTier/pact/ddm_cp2_20260810/sd1_selected_mixed_q3q4__temporal_reversion/build_receipt.json",
+      "d_seg_status": "PRIOR_SEMANTIC_ONLY_NUMBER_NOT_TRANSFERRED",
+      "d_pose_status": "UNMEASURED"
+    }
+  ],
+  "checks": {
+    "archive_double_build_byte_identical": "3/3",
+    "outer_receiver_models_raw_byte_identical": "3/3",
+    "outer_receiver_token_payload_byte_identical": "3/3",
+    "semantic_state_equals_packer_state": "3/3",
+    "retained_payload_records_rehashed": "60/60",
+    "runtime_file_records_rehashed": "27/27",
+    "payload_retention_gate_python_files_examined": 4,
+    "payload_retention_gate_findings": 0,
+    "focused_pytest": "4 passed in 8.05s",
+    "real_inflate_sh_rank1": "PASS"
+  },
+  "real_inflate": {
+    "status": "PASS",
+    "candidate_id": "pointwise_lowrank_r32__temporal_reversion",
+    "success_receipt": "/Volumes/VertigoDataTier/pact/ddm_cp2_20260810/pointwise_lowrank_r32__temporal_reversion/receiver_parseback/inflate_receipt.json",
+    "success_receipt_bytes": 3310,
+    "success_receipt_sha256": "5a1efedeec8bdbab3d04d05387290aecac765ddd61839bdba0d2006c50873795",
+    "safe_run_success_receipt": "/Volumes/VertigoDataTier/pact/ddm_cp2_20260810/pointwise_lowrank_r32__temporal_reversion/receiver_parseback/safe_run_status.attempt3.json",
+    "returncode": 0,
+    "wall_seconds": 1086.320886,
+    "within_1800_second_inflate_limit": true,
+    "raw": {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_cp2_20260810/pointwise_lowrank_r32__temporal_reversion/receiver_parseback/staging/0.raw",
+      "bytes": 3662409600,
+      "sha256": "46ca24e7004c5a3ea42a118981a4fdf6a523e9d5b56cf6baff4444a062176f32"
+    },
+    "token_checkpoint": {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_cp2_20260810/pointwise_lowrank_r32__temporal_reversion/receiver_parseback/checkpoint/tokens.npz",
+      "bytes": 117967988,
+      "sha256": "aeb8b403a9ecd5a0cfb80ee01bfbcd389e627e59d538e1030d9a9c71103e833d"
+    },
+    "rss_measurement_boundary": "safe_run's sandboxed ps sampler returned zero; no peak-RSS claim",
+    "failed_attempts_retained": [
+      {
+        "attempt": 1,
+        "exit": 1,
+        "child_inflate_exit": 68,
+        "reason": "resolved venv symlink selected system Python and hid NumPy/Torch",
+        "receipt": "/Volumes/VertigoDataTier/pact/ddm_cp2_20260810/pointwise_lowrank_r32__temporal_reversion/receiver_parseback/safe_run_status.json"
+      },
+      {
+        "attempt": 2,
+        "exit": 1,
+        "child_inflate_exit": 2,
+        "reason": "repo venv constriction 0.4.2 failed the required 0.5.0 gate and sandboxed uv cache blocked bootstrap",
+        "receipt": "/Volumes/VertigoDataTier/pact/ddm_cp2_20260810/pointwise_lowrank_r32__temporal_reversion/receiver_parseback/safe_run_status.attempt2.json"
+      }
+    ]
+  },
+  "provenance": {
+    "pr130_gauge_commit": "113b52fdb1",
+    "sm3_commit": "d3650d6c68",
+    "sd1m_receiver_commit": "58f62cd22f",
+    "ai1_ans_commits": [
+      "46c7b85219",
+      "caa8eef4d8"
+    ],
+    "ai1_temporal_archive_sha256": "0f5a797fda844ee63f6057fdb7203f6578b135b4e12deafa98d6ddc3260a5c84",
+    "source_files": {
+      "experiments/ddm_cp2_composition_receiver_and_harness.py": "194120dd62cf36563514130b3d31af0cc0d630d67f58c15687010f3369401d4e",
+      "experiments/ddm_cp2_runtime/inflate.py": "c1db49fd4140f0fe9efdc7213786040c8cf833a3eda0a0793e00cca4af88c61a",
+      "experiments/ddm_cp2_runtime/sm3r_receiver.py": "9dd04e1f5bebf5c4e3b74e578597012d79598188ddeda13cc592ce72b92b1b8d",
+      "experiments/tests/test_ddm_cp2_composition_receiver_and_harness.py": "4df11d34d95b78e9a2e50e6ea4ebee2a724eb95bdd0dec05512d9154e9f39605",
+      ".omx/research/ddm_cp2_20260810/CP2_FINDINGS.md": "720e1996b56f3661d735588fb757efd4084d91a42ca4d10fadcf40f2e396ff72",
+      ".omx/research/ddm_cp2_20260810/SM3_SCORER_QUEUE.json": "25549fc79b3c5565b6aee011cfe9199ea6efc35bcee2eb401e10b0bc5809ba2a"
+    },
+    "bulk_root": "/Volumes/VertigoDataTier/pact/ddm_cp2_20260810"
+  },
+  "scorer_queue": ".omx/research/ddm_cp2_20260810/SM3_SCORER_QUEUE.json",
+  "scorer_queue_status": "QUEUED_WITH_FIRE_ORDER",
+  "modal_used": false,
+  "upstream_modified": false
+}

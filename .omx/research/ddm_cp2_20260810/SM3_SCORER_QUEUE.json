@@ -1,0 +1,89 @@
+{
+  "schema": "ddm_sm3_scorer_queue.v1",
+  "status": "QUEUED_WITH_FIRE_ORDER",
+  "score_claim": false,
+  "axis": "[queued exact n600 evaluation; no scorer executed by ddm_cp2]",
+  "source_result": ".omx/research/ddm_cp2_20260810/CP2_RESULT.json",
+  "retained_root": "/Volumes/VertigoDataTier/pact/ddm_cp2_20260810",
+  "control_archive": {
+    "candidate_id": "temporal_reversion__legacy_q4_control",
+    "archive_path": "/Volumes/VertigoDataTier/pact/ddm_ai1_20260809/temporal_v2/retained/temporal_reversion/archive.zip",
+    "archive_bytes": 188636,
+    "archive_sha256": "0f5a797fda844ee63f6057fdb7203f6578b135b4e12deafa98d6ddc3260a5c84",
+    "d_seg_status": "UNMEASURED_OR_OWNED_BY_DDM_AI1",
+    "d_pose_status": "UNMEASURED_OR_OWNED_BY_DDM_AI1"
+  },
+  "screen_pairset": {
+    "selection": "full_n600_exact_upstream_evaluator_no_prefix_screen",
+    "population_denominator": 600,
+    "selected_denominator": 600,
+    "reason": "The temporal token replacement can change both scorer legs, and task 827 closed rate-plus-one-leg arithmetic as a promotion surface. Each exact composed archive therefore needs both d_seg and d_pose on all 600 pairs."
+  },
+  "ranked_composed_archives": [
+    {
+      "rank": 1,
+      "candidate_id": "pointwise_lowrank_r32__temporal_reversion",
+      "archive_path": "/Volumes/VertigoDataTier/pact/ddm_cp2_20260810/pointwise_lowrank_r32__temporal_reversion/retained/build_a/archive.zip",
+      "archive_bytes": 182364,
+      "archive_sha256": "2080215145b8958de5ec79f9d2f02777eb14370836989cf4acac2646b5f3f0e4",
+      "d_seg_status": "UNMEASURED",
+      "d_pose_status": "UNMEASURED",
+      "rank_basis": "largest scorer-free rate reduction; no distortion preference asserted"
+    },
+    {
+      "rank": 2,
+      "candidate_id": "vector_scale_vq32__temporal_reversion",
+      "archive_path": "/Volumes/VertigoDataTier/pact/ddm_cp2_20260810/vector_scale_vq32__temporal_reversion/retained/build_a/archive.zip",
+      "archive_bytes": 183992,
+      "archive_sha256": "d8bf1fa5f87913bd028693dd9971c841f251437114f05cb93d1edc6c0779c11b",
+      "d_seg_status": "UNMEASURED",
+      "d_pose_status": "UNMEASURED",
+      "rank_basis": "second-largest scorer-free rate reduction; no distortion preference asserted"
+    },
+    {
+      "rank": 3,
+      "candidate_id": "sd1_selected_mixed_q3q4__temporal_reversion",
+      "archive_path": "/Volumes/VertigoDataTier/pact/ddm_cp2_20260810/sd1_selected_mixed_q3q4__temporal_reversion/retained/build_a/archive.zip",
+      "archive_bytes": 187788,
+      "archive_sha256": "fc283b6a6a538c74f2f0c30d7cf8ace93bd9496a96a18701e7eb9ed130dc8320",
+      "d_seg_status": "PRIOR_SEMANTIC_ONLY_NUMBER_DOES_NOT_TRANSFER_TO_COMPOSITION",
+      "d_pose_status": "UNMEASURED",
+      "rank_basis": "smallest scorer-free rate reduction; retained as the measured-semantic ancestor control"
+    }
+  ],
+  "fire_order": [
+    {
+      "order": 1,
+      "disposition": "QUEUED_WITH_A_FIRE_ORDER",
+      "owner": "MAIN scorer owner",
+      "consumer_store": "/Volumes/VertigoDataTier/pact/ddm_cp2_20260810/scorer/n600/control",
+      "fire_trigger": "ddm_ai1 releases the scorer slot and active_lane_dispatch_claims has no conflicting live scorer row",
+      "action": "Consume ddm_ai1's d_seg and d_pose only if its receipt names archive SHA 0f5a797fda844ee63f6057fdb7203f6578b135b4e12deafa98d6ddc3260a5c84 on the identical evaluator axis; otherwise run this exact temporal-reversion control through upstream/evaluate.py at n600, with scorer chunks no larger than 120, and retain all generated payloads and component receipts."
+    },
+    {
+      "order": 2,
+      "disposition": "QUEUED_WITH_A_FIRE_ORDER",
+      "owner": "MAIN scorer owner",
+      "consumer_store": "/Volumes/VertigoDataTier/pact/ddm_cp2_20260810/scorer/n600/pointwise_lowrank_r32__temporal_reversion",
+      "fire_trigger": "order 1 has an exact-axis control receipt, the scorer lane is exclusively claimed, and CP2's real inflate receipt is complete",
+      "action": "Run archive SHA 2080215145b8958de5ec79f9d2f02777eb14370836989cf4acac2646b5f3f0e4 through upstream/evaluate.py at n600, with scorer chunks no larger than 120; retain decoded frames, d_seg, d_pose, archive custody, and recomputed full S."
+    },
+    {
+      "order": 3,
+      "disposition": "QUEUED_WITH_A_FIRE_ORDER",
+      "owner": "MAIN scorer owner",
+      "consumer_store": "/Volumes/VertigoDataTier/pact/ddm_cp2_20260810/scorer/n600/vector_scale_vq32__temporal_reversion",
+      "fire_trigger": "order 2 is harvested, the scorer lane remains exclusively claimed, and a scorer-free real inflate receipt for this exact archive is complete",
+      "action": "Run archive SHA d8bf1fa5f87913bd028693dd9971c841f251437114f05cb93d1edc6c0779c11b through upstream/evaluate.py at n600, with scorer chunks no larger than 120; retain decoded frames, d_seg, d_pose, archive custody, and recomputed full S."
+    },
+    {
+      "order": 4,
+      "disposition": "QUEUED_WITH_A_FIRE_ORDER",
+      "owner": "MAIN scorer owner",
+      "consumer_store": "/Volumes/VertigoDataTier/pact/ddm_cp2_20260810/scorer/n600/sd1_selected_mixed_q3q4__temporal_reversion",
+      "fire_trigger": "order 3 is harvested, the scorer lane remains exclusively claimed, and a scorer-free real inflate receipt for this exact archive is complete",
+      "action": "Run archive SHA fc283b6a6a538c74f2f0c30d7cf8ace93bd9496a96a18701e7eb9ed130dc8320 through upstream/evaluate.py at n600, with scorer chunks no larger than 120; retain decoded frames, d_seg, d_pose, archive custody, and recomputed full S."
+    }
+  ],
+  "promotion_boundary": "Local results are [macOS-CPU advisory]. No pointer movement or contest claim is allowed without exact archive custody and contest-CPU and/or contest-CUDA authority."
+}
