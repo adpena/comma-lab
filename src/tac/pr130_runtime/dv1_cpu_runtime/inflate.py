@@ -36,11 +36,33 @@ EVAL_H, EVAL_W = 384, 512
 CAMERA_H, CAMERA_W = 874, 1164
 _TOKEN_FINISH_SENTINEL = object()
 SEMANTIC_WIDTH = 96
-SEMANTIC_WIDTH_BY_PAYLOAD_BYTES = {30748: 80, 39090: 96, 40252: 96}
+SEMANTIC_WIDTH_BY_PAYLOAD_BYTES = {
+    30748: 80,
+    39090: 96,
+    40252: 96,
+}
 SEMANTIC_BLOCKS = 4
 SEMANTIC_FRAME_DIM = 8
 SEMANTIC_MIXED_MAGIC = b"SD1M"
 SEMANTIC_MIXED_VERSION = 1
+SEMANTIC_MIXED_V1_NAMES = (
+    "token_embed.weight",
+    "frame_embed.weight",
+    "coord_mix.weight",
+    "blocks.0.dw.weight",
+    "blocks.0.pw.weight",
+    "blocks.0.film.weight",
+    "blocks.1.dw.weight",
+    "blocks.1.pw.weight",
+    "blocks.1.film.weight",
+    "blocks.2.dw.weight",
+    "blocks.2.pw.weight",
+    "blocks.2.film.weight",
+    "blocks.3.dw.weight",
+    "blocks.3.pw.weight",
+    "blocks.3.film.weight",
+    "head.weight",
+)
 CARRIER_DIM = 12
 CARRIER_H, CARRIER_W = 24, 32
 CARRIER_AMPLITUDE = 64.0
@@ -189,6 +211,8 @@ def semantic_allocation(
     names = [name for name, value in template.items() if value.ndim >= 2]
     remaining = memoryview(blob)
     if blob.startswith(SEMANTIC_MIXED_MAGIC):
+        if tuple(names) != SEMANTIC_MIXED_V1_NAMES:
+            raise ValueError("SD1M v1 semantic template order differs")
         if len(remaining) < 6:
             raise ValueError("truncated mixed semantic header")
         version = int(remaining[4])
@@ -254,12 +278,18 @@ def unpack_semantic_pose(raw: bytes):
         raise ValueError("semantic-pose payload length mismatch")
     semantic_blob = raw[8:8 + semantic_bytes]
     carrier_blob = memoryview(raw[8 + semantic_bytes:])
-    try:
-        semantic_width = SEMANTIC_WIDTH_BY_PAYLOAD_BYTES[semantic_bytes]
-    except KeyError as error:
-        raise ValueError(
-            f"unsupported semantic payload size: {semantic_bytes} bytes"
-        ) from error
+    if semantic_blob.startswith(SEMANTIC_MIXED_MAGIC):
+        # SD1M v1 is a counted allocation for the fixed PR130 width-96
+        # template. Its payload length varies with the declared bit depths,
+        # so size-based dispatch would accept only allocations seen before.
+        semantic_width = SEMANTIC_WIDTH
+    else:
+        try:
+            semantic_width = SEMANTIC_WIDTH_BY_PAYLOAD_BYTES[semantic_bytes]
+        except KeyError as error:
+            raise ValueError(
+                f"unsupported semantic payload size: {semantic_bytes} bytes"
+            ) from error
     semantic = SemanticTokenRenderer(semantic_width)
     semantic.load_state_dict(unpack_semantic(semantic_blob, semantic.state_dict()))
 
