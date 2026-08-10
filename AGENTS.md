@@ -34,6 +34,53 @@
 > Modal <$5 budget exists to BUY exact rows — spend it to measure real byte-closed candidates; do not
 > hoard it while the score sits unmoved. Canonical body: the **`## THE GOAL — SUB-0.15`** section below.
 
+## ⛔ ALWAYS KEEP THE PAYLOAD — NON-NEGOTIABLE, P0, DEF CON 1000 ⛔
+
+> **Operator binding 2026-08-09, verbatim:** *"You should be constantly keeping payloads. You
+> shouldn't be running anything that doesn't keep the payload."* Escalated in the same minute:
+> *"That's nonnegotiable. P zero."* + *"Def con 1000."* Subordinate only to NO-FAKE and THE GOAL.
+
+**THE RULE.** Every run that MATERIALIZES a payload MUST PERSIST that payload. Writing only the
+payload's measured LENGTH (bytes / sha / entropy / score) while the bytes themselves are discarded
+is **FORBIDDEN**. This binds at the **typing moment**, not at review: **do not launch a script
+whose only persisted artifact is a JSON of scalars when the script holds real bytes in memory.**
+Retention is a PRECONDITION FOR RUNNING, never an optimization to add later.
+
+**The empirical anchor (2026-08-09, the incident this extincts).** `ans_real_n600.py` on the PR130
+base measured the range and ANS coders over all 600 frames, then threw both payloads away:
+
+```python
+rng = len(enc.get_compressed().tobytes()); del enc     # :37  range payload — DISCARDED
+an  = len(ans.get_compressed().tobytes())              # :41  ANS payload   — DISCARDED
+open(D+'/ans_vs_range_n600_result.json','w').write(json.dumps(res, indent=2))   # :47  scalars only
+```
+
+681 s of encode; the one artifact the next step needed was gone. Cost: **TWO** full re-encodes
+(`dt1`, `ap1`) to recreate bytes we had already produced once — and the recovered ANS payload then
+measured **−2,120 B vs the shipped range coder** (188,932 vs 191,052 B), so the discard also
+**DELAYED a real rate win.** The `del` was incidental. **The defect is the scalar-only artifact.**
+
+**Detector signature (NOT `del`).** *"The script's only persisted artifact is scalars, while a
+payload existed in memory."* Scan for `len(...get_compressed()...)`, `len(...tobytes())`,
+`.nbytes`, `len(compress(...))`, `len(encode(...))` with no adjacent `write_bytes` /
+`open(..., 'wb')` / `np.save` on the same object.
+
+**How to comply.**
+1. Persist to the SSD tier (`/Volumes/VertigoDataTier/pact/<arm>/retained/`) per the disk rules below.
+2. Record `sha256` + `bytes` of the persisted payload in the result JSON so the next consumer can
+   prove byte-identity (`tm1` consumed `dt1`'s `ans_n600.bin` sha `a0b18dc0…` byte-identically).
+3. Keep **per-candidate** payloads, not only the winner's — plus a determinism repeat where cheap
+   (`tm1` retained `tokens.ans`, `model.tm1p`, `archive.zip`, `archive.repeat.zip` for all six).
+4. Too large for local disk is a **storage-ROUTING** question answered by the SSD tier and the
+   certify-or-block rule below. It is **never** a licence to discard.
+
+**Enforcement.** `tac.preflight.check_no_measure_and_discard_payload` (STRICT-eligible; same-line
+`# MEASURE_ONLY_OK:<rationale>` waiver for genuine scalar-only probes, placeholder rationales
+rejected). Sister of the certify-or-block artifact rule below, of
+`[[orphan_sweeps_that_do_not_write_the_store_are_the_disease_20260803]]` (split banks), and of the
+#878/#890/#931/#933 not-recorded genus — but STRICTER than all of them: those govern REPORTING; this
+one forbids the RUN. Memory: `always_keep_the_payload_never_run_a_measure_and_discard_20260809`.
+
 ## Local Disk, SSD Spill, Auto-Cleanup, And Provenance — NON-NEGOTIABLE, HIGHEST EMPHASIS
 
 Local disk is for source, small manifests, and live metadata. Bulky rebuildable
