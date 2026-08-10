@@ -156,3 +156,27 @@ row, harvest all payloads, recompute score from components, and promote only the
 
 Own-vehicle frontier remains **lc2 `S = 0.16959899569230852 @ 187,226 B [contest-CUDA T4, adjudicated,
 n600]`**. This scorer-free unit did not move it or reach sub-0.15.
+
+## ADDENDUM 3 (MAIN, 2026-08-10 19:55Z) — EXACT ROW CONFIRMED SUB-BAR + MAIN ADJUDICATION
+
+The one contest-CUDA row fired per the fire order LANDED and CONFIRMED the derivation exactly:
+
+- **S = 0.16195513827824176** recomputed from components [contest-CUDA T4, n600, locked env]
+- avg_segnet_dist **0.00029643** · avg_posenet_dist **6.88e-06** — BIT-FOR-BIT identical to the
+  PR135 replay's distortions. The 117,964,800-symbol identity proof HELD through the literal T4
+  render; the one untested link is now tested.
+- Custody: archive sha `6eb1a3b79cb167e03372339e07e93cae13b6ba3114a9eb917288bb038622edb6`
+  @ 186,252 B (expected==evaluated, gpu_t4_match=True, validation_errors=[]); runtime tree
+  `36712078…`; call `fc-01KZPK1KHE01QWDSVH7BQBEA3W`; modal_elapsed 403.6 s; result at
+  `experiments/results/modal_auth_eval/ddm_cp135_composed_paired_modal_auth_20260810T193605Z_cuda/`.
+- **vs the custodied bar** (PR135 replay 0.16226942370411543): **−0.00031429. FIRST SUB-BAR ROW.**
+  Also below PR135's published 0.16226842169958583. Best-known point on the board.
+- MAIN ADJUDICATION: ACCEPT. Grounds: sha+size+GPU custody exact, n600, zero validation errors,
+  distortion identity with the base replay (the strongest possible cross-check). CPU leg
+  redispatched for the honest per-axis record (their f26 renderer is CUDA-locked; expected fast
+  refusal, same as the base). Axis label stands [contest-CUDA]; contest-CPU remains
+  REFUSED-BY-VEHICLE for this family.
+- Honesty (NO-FAKE #7 unchanged): PR135/codexblack base + F26 receiver + CUDA renderer are
+  borrowed-granted; ours-original = VP1/CAP1/HP3 composition + exact recodes + receiver-equality
+  harness. This row is a COMPOSED-ON-GRANTED-BASE bank, not an own-vehicle row; lc2 remains the
+  own-vehicle frontier. Next composition: ps135's pose re-solve on top of this base (js1).
