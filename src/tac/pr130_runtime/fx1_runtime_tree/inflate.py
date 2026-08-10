@@ -16,6 +16,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from carrier_codec import MAGIC as COMPACT_CARRIER_MAGIC
 from carrier_codec import decode_compact_carrier
+from pose_target_receiver import MAGIC as POSE_TARGET_CARRIER_MAGIC
+from pose_target_receiver import decode_pose_target_carrier
 from hpac_integer import IntegerHPAC
 from hpac_integer_sparse import SparseIntegerHPAC
 from integer_model_io import deserialize_integer_model
@@ -221,6 +223,11 @@ def unpack_semantic_pose(raw: bytes):
     scale_bytes = CARRIER_DIM * 4
     basis_count = CARRIER_DIM * 3 * CARRIER_H * CARRIER_W
     coeff_count = N * CARRIER_DIM
+    if carrier_blob[:4] == POSE_TARGET_CARRIER_MAGIC:
+        basis_array, coefficient_array = decode_pose_target_carrier(carrier_blob)
+        basis = torch.from_numpy(basis_array)
+        coeff = torch.from_numpy(coefficient_array)
+        return semantic, basis, coeff
     if carrier_blob[:4] == COMPACT_CARRIER_MAGIC:
         (
             basis_scales_array,

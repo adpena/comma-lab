@@ -48,6 +48,7 @@ if [ "${PR130_DEPENDENCY_SMOKE_ONLY:-0}" != 1 ] && [ -n "${1:-}" ] && [ -f "$1/p
     MODEL_SELECTION=$(
         "$PYBIN" - "$1/p" "$MODEL_SELECTOR_SHIFT" "$SPLIT_BROTLI_SELECTOR" <<'PY'
 import pathlib
+import lzma
 import struct
 import sys
 
@@ -59,7 +60,38 @@ selector = (model_word >> int(sys.argv[2])) & 0b11
 codecs = {0: "legacy_lzma", 1: "split_brotli", 2: "split_lzma2"}
 if selector not in codecs:
     raise SystemExit("PR130 dependency selection: reserved model-codec selector 3")
-print(codecs[selector], int(selector == int(sys.argv[3])))
+needs_brotli = selector == int(sys.argv[3])
+
+# PZ3R embeds Brotli-compressed PZ2 target streams inside the carrier even when
+# the outer model bundle remains legacy XZ or split raw-LZMA2. Detect that wire
+# tag before dependency provisioning. Malformed synthetic probes retain the
+# outer-codec answer and fail closed later in the real receiver.
+model_bytes = model_word & ((1 << 29) - 1)
+models = payload[4:4 + model_bytes]
+try:
+    carrier = b""
+    if selector == 0 and models.startswith(b"\xfd7zXZ\x00"):
+        raw = lzma.decompress(models, format=lzma.FORMAT_XZ)
+        semantic_bytes, carrier_bytes = struct.unpack_from("<II", raw)
+        start = 8 + semantic_bytes
+        carrier = raw[start:start + carrier_bytes]
+    elif selector == 2 and len(models) >= 12:
+        semantic_bytes, carrier_bytes, hpac_bytes = struct.unpack_from("<III", models)
+        if 12 + semantic_bytes + carrier_bytes + hpac_bytes == len(models):
+            start = 12 + semantic_bytes
+            compressed_carrier = models[start:start + carrier_bytes]
+            carrier = lzma.decompress(
+                compressed_carrier,
+                format=lzma.FORMAT_RAW,
+                filters=[{
+                    "id": lzma.FILTER_LZMA2,
+                    "preset": 9 | lzma.PRESET_EXTREME,
+                }],
+            )
+    needs_brotli = needs_brotli or carrier.startswith(b"PZ3R")
+except (lzma.LZMAError, struct.error, ValueError):
+    pass
+print(codecs[selector], int(needs_brotli))
 PY
     )
     MODEL_CODEC=${MODEL_SELECTION% *}
