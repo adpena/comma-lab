@@ -146,9 +146,9 @@ used.
 ## NEXT_IF_RESUMED
 
 - `QUEUED-WITH-A-FIRE-ORDER` — owner: MAIN roadmap owner; consumer store: `.omx/state/main_hot_state.md`
-  plus the active JS1/rate-allocation plan; fire trigger: this LP135 memo lands; action: remove the stale
-  “fd135 residue >=1KB” premise and route any further rate work to a representation- or learned-state
-  change, not these exact F26 coder/metadata rows.
+  plus the active JS1/rate-allocation plan; fire trigger: before MAIN next allocates rate work or launches
+  a row that relies on the stale “fd135 residue >=1KB” premise; action: remove that premise and route any
+  further rate work to a representation- or learned-state change, not these exact F26 coder/metadata rows.
 
 ## LIVE-HYPOTHESES
 
