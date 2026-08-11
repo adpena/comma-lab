@@ -32,14 +32,17 @@ ActionQuote = POLICY.ActionQuote
 AdvisorySignals = POLICY.AdvisorySignals
 Decision = POLICY.Decision
 DecisionAction = POLICY.DecisionAction
+CompleteScoreDominanceReceipt = POLICY.CompleteScoreDominanceReceipt
 EndgamePolicyError = POLICY.EndgamePolicyError
 OperatingPoint = POLICY.OperatingPoint
+StopVerdict = POLICY.StopVerdict
 TrajectoryRegime = POLICY.TrajectoryRegime
 build_endgame_arithmetic_receipt = POLICY.build_endgame_arithmetic_receipt
 contest_score = POLICY.contest_score
 decide_endgame_policy = POLICY.decide_endgame_policy
 strict_integer_byte_ceiling = POLICY.strict_integer_byte_ceiling
 derive_request = TOOL.derive_request
+derive_stop_verdict = POLICY.derive_stop_verdict
 
 CHECKPOINT_SHA = "1" * 64
 ARCHIVE_SHA = "2" * 64
@@ -355,3 +358,98 @@ def test_resume_payloads_reject_invented_controls() -> None:
         ActionQuote.from_payload({**quote.to_payload(), "skip_receiver_check": True})
     with pytest.raises(ValueError, match="unexpected keys"):
         derive_request({"operating_point": point.to_payload(), "force_handoff": True})
+
+
+# --- vehicle-neutral EG1 stop-policy interface port --------------------------
+
+
+def _dominance(
+    receipt_id: str,
+    action: StopVerdict,
+    candidate,
+    *,
+    parent=None,
+    parent_sha: str = CHECKPOINT_SHA,
+):
+    return CompleteScoreDominanceReceipt.from_components(
+        receipt_id=receipt_id,
+        action=action,
+        parent_sha256=parent_sha,
+        parent_components=parent or {"distortion": 2.0, "rate": 1.0},
+        candidate_components=candidate,
+    )
+
+
+def test_parameterized_complete_score_selects_continue():
+    receipt = _dominance(
+        "train", StopVerdict.CONTINUE, {"distortion": 1.5, "rate": 1.0}
+    )
+    assert receipt.parent_complete_score == 3.0
+    assert receipt.candidate_complete_score == 2.5
+    assert derive_stop_verdict((receipt,)) is StopVerdict.CONTINUE
+
+
+def test_parameterized_complete_score_selects_handoff_when_best():
+    receipts = (
+        _dominance("train", StopVerdict.CONTINUE, {"distortion": 1.8, "rate": 1.0}),
+        _dominance("finish", StopVerdict.HANDOFF, {"distortion": 1.1, "rate": 1.2}),
+    )
+    assert derive_stop_verdict(receipts) is StopVerdict.HANDOFF
+
+
+def test_no_strict_complete_score_improvement_stops():
+    receipts = (
+        _dominance("equal", StopVerdict.CONTINUE, {"distortion": 2.0, "rate": 1.0}),
+        _dominance("worse", StopVerdict.HANDOFF, {"distortion": 2.1, "rate": 1.0}),
+    )
+    assert derive_stop_verdict(receipts) is StopVerdict.STOP
+
+
+def test_component_names_are_parameterized_not_contest_specific():
+    receipt = _dominance(
+        "generic",
+        StopVerdict.HANDOFF,
+        {"energy": 2.0, "latency": 3.0, "risk": 0.5},
+        parent={"energy": 3.0, "latency": 3.0, "risk": 0.5},
+    )
+    assert derive_stop_verdict((receipt,)) is StopVerdict.HANDOFF
+
+
+def test_dominance_receipts_refuse_foreign_parent():
+    with pytest.raises(EndgamePolicyError, match="one parent_sha256"):
+        derive_stop_verdict((
+            _dominance("a", StopVerdict.CONTINUE, {"distortion": 1.0, "rate": 1.0}),
+            _dominance(
+                "b", StopVerdict.HANDOFF, {"distortion": 1.0, "rate": 1.0},
+                parent_sha=FOREIGN_SHA,
+            ),
+        ))
+
+
+def test_dominance_receipts_refuse_incomplete_component_join():
+    with pytest.raises(EndgamePolicyError, match="same complete component names"):
+        _dominance("bad", StopVerdict.CONTINUE, {"distortion": 1.0})
+
+
+def test_dominance_receipts_refuse_stop_as_input_action():
+    with pytest.raises(EndgamePolicyError, match="continue or handoff"):
+        _dominance("bad", StopVerdict.STOP, {"distortion": 1.0, "rate": 1.0})
+
+
+def test_dominance_receipts_refuse_ambiguous_equal_best_actions():
+    candidate = {"distortion": 1.0, "rate": 1.0}
+    with pytest.raises(EndgamePolicyError, match="equal best"):
+        derive_stop_verdict((
+            _dominance("a", StopVerdict.CONTINUE, candidate),
+            _dominance("b", StopVerdict.HANDOFF, candidate),
+        ))
+
+
+def test_dominance_receipts_refuse_absent_evidence_and_duplicate_ids():
+    with pytest.raises(EndgamePolicyError, match="at least one"):
+        derive_stop_verdict(())
+    receipt = _dominance(
+        "same", StopVerdict.CONTINUE, {"distortion": 1.0, "rate": 1.0}
+    )
+    with pytest.raises(EndgamePolicyError, match="ids must be unique"):
+        derive_stop_verdict((receipt, receipt))

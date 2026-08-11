@@ -19,7 +19,7 @@ import hashlib
 import json
 import os
 from collections.abc import Iterable, Mapping, Sequence
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from enum import StrEnum
 from pathlib import Path
@@ -43,6 +43,13 @@ class Hr1Arm(StrEnum):
 class BindingState(StrEnum):
     BOUND = "bound"
     UNRESOLVED_TERMINAL = "unresolved_terminal"
+
+
+class SameParentObjectKind(StrEnum):
+    FIT = "fit"
+    MAP = "map"
+    SELECTOR = "selector"
+    CORRECTION = "correction"
 
 
 class MemoryDisposition(StrEnum):
@@ -427,6 +434,57 @@ class ObjectBinding:
         }
 
 
+@dataclass(frozen=True, slots=True)
+class SameParentFreshnessReceipt:
+    """Scorer-free proof that one cached object consumes its producing parent."""
+
+    object_kind: SameParentObjectKind
+    producer_parent_sha: str
+    consumer_parent_sha: str
+    freshness_ok: bool = field(init=False)
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.object_kind, SameParentObjectKind):
+            try:
+                object.__setattr__(self, "object_kind", SameParentObjectKind(self.object_kind))
+            except (TypeError, ValueError) as exc:
+                raise Hr1PrestageError(
+                    "object_kind must be one of fit, map, selector, correction"
+                ) from exc
+        _require_sha256(self.producer_parent_sha, label="producer_parent_sha")
+        _require_sha256(self.consumer_parent_sha, label="consumer_parent_sha")
+        expected = self.producer_parent_sha == self.consumer_parent_sha
+        object.__setattr__(self, "freshness_ok", expected)
+        if not expected:
+            raise Hr1PrestageError(
+                f"REFUSE stale {self.object_kind.value}: producer and consumer parents differ"
+            )
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "schema_version": "same_parent_freshness.v1",
+            "object_kind": self.object_kind.value,
+            "producer_parent_sha": self.producer_parent_sha,
+            "consumer_parent_sha": self.consumer_parent_sha,
+            "freshness_ok": self.freshness_ok,
+        }
+
+
+def assert_same_parent_freshness(
+    *,
+    object_kind: SameParentObjectKind | str,
+    producer_parent_sha: str,
+    consumer_parent_sha: str,
+) -> SameParentFreshnessReceipt:
+    """Return a typed receipt or refuse absent, malformed, or stale custody."""
+
+    return SameParentFreshnessReceipt(
+        object_kind=object_kind,  # type: ignore[arg-type]
+        producer_parent_sha=producer_parent_sha,
+        consumer_parent_sha=consumer_parent_sha,
+    )
+
+
 def bind_existing_file(request: FileBindingRequest) -> ObjectBinding:
     digest, size = stream_sha256(request.path)
     if request.expected_bytes is not None and size != request.expected_bytes:
@@ -760,8 +818,11 @@ __all__ = [
     "ObjectBinding",
     "PayloadRecord",
     "ResumeManifest",
+    "SameParentFreshnessReceipt",
+    "SameParentObjectKind",
     "TensorDType",
     "TensorShapeSpec",
+    "assert_same_parent_freshness",
     "atomic_write_json",
     "bind_existing_file",
     "build_hr1_binding_manifest",

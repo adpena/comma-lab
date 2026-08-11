@@ -14,6 +14,7 @@ import pytest
 from tac.verdicts import (
     AxisTag,
     Composition,
+    InstrumentClaimScope,
     InteractionSign,
     MeasurementRow,
     Provenance,
@@ -264,14 +265,110 @@ def test_emit_verdict_and_verdict_payload_share_one_validation_path(tmp_path):
     """emit_verdict must be a thin write-wrapper: identical payload modulo timestamp."""
     import json as _json
 
-    kw = dict(
-        verdict="DEFER",
-        scope=VerdictScope(level=ScopeLevel.INSTANCE, scoped_to="one config"),
-        composition=Composition.deferred(),
-        constraint_carved="pins nothing yet",
-        measured=False,
-    )
+    kw = {
+        "verdict": "DEFER",
+        "scope": VerdictScope(level=ScopeLevel.INSTANCE, scoped_to="one config"),
+        "composition": Composition.deferred(),
+        "constraint_carved": "pins nothing yet",
+        "measured": False,
+    }
     direct = verdict_payload(**kw)
     written = _json.loads(emit_verdict(tmp_path / "v.json", **kw).read_text())
     direct.pop("emitted_at_utc"), written.pop("emitted_at_utc")
     assert direct == written
+
+
+# --- m94 claim-unit instrument scoping ---------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("instrument_capacity", "object_capacity", "units"),
+    [
+        (1, 0, "degrees_of_freedom"),
+        (1, 1, "degrees_of_freedom"),
+        (11, 6, "knobs"),
+        (600, 120, "pairs"),
+        (384 * 512, 56, "pixels"),
+        (0, 0, "coordinates"),
+        (1.5, 1.25, "bits_per_symbol"),
+        (float("1e300"), float("1e299"), "states"),
+    ],
+)
+def test_instrument_claim_scope_accepts_capacity_in_both_safe_directions(
+    instrument_capacity, object_capacity, units
+):
+    scope = InstrumentClaimScope(instrument_capacity, object_capacity, units)
+    assert scope.scope_ok is True
+    assert scope.to_json_dict()["claim_units"] == units
+
+
+@pytest.mark.parametrize(
+    ("instrument_capacity", "object_capacity"),
+    [
+        (0, 1),
+        (6, 11),
+        (119, 120),
+        (0.5, 0.5000001),
+    ],
+)
+def test_instrument_claim_scope_refuses_object_richer_than_instrument(
+    instrument_capacity, object_capacity
+):
+    with pytest.raises(VerdictEmitError, match="REFUSE verdict emission"):
+        InstrumentClaimScope(instrument_capacity, object_capacity, "claim_units")
+
+
+@pytest.mark.parametrize(
+    ("instrument_capacity", "object_capacity"),
+    [
+        (True, 1),
+        (1, False),
+        (float("nan"), 1),
+        (1, float("inf")),
+        (-1, 0),
+        (1, -1),
+    ],
+)
+def test_instrument_claim_scope_refuses_malformed_capacities(
+    instrument_capacity, object_capacity
+):
+    with pytest.raises(VerdictEmitError, match="finite non-negative"):
+        InstrumentClaimScope(instrument_capacity, object_capacity, "claim_units")
+
+
+def test_instrument_claim_scope_refuses_blank_units_and_has_no_forged_scope_surface():
+    with pytest.raises(VerdictEmitError, match="claim_units"):
+        InstrumentClaimScope(1, 1, "  ")
+    assert "scope_ok" not in __import__("inspect").signature(InstrumentClaimScope).parameters
+
+
+def test_verdict_payload_embeds_claim_unit_fields_at_canonical_surface():
+    payload = verdict_payload(
+        verdict="PROCEED",
+        scope=VerdictScope(level=ScopeLevel.INSTANCE, scoped_to="one instrument"),
+        composition=Composition.deferred(),
+        constraint_carved="instrument can express the claimed object",
+        measured=False,
+        instrument_claim_scope=InstrumentClaimScope(11, 6, "knobs"),
+    )
+    assert {key: payload[key] for key in (
+        "instrument_capacity", "object_capacity", "claim_units", "scope_ok"
+    )} == {
+        "instrument_capacity": 11,
+        "object_capacity": 6,
+        "claim_units": "knobs",
+        "scope_ok": True,
+    }
+
+
+def test_verdict_payload_unused_claim_scope_preserves_legacy_shape():
+    payload = verdict_payload(
+        verdict="DEFER",
+        scope=VerdictScope(level=ScopeLevel.INSTANCE, scoped_to="one config"),
+        composition=Composition.deferred(),
+        constraint_carved="none yet",
+        measured=False,
+    )
+    assert not {
+        "instrument_capacity", "object_capacity", "claim_units", "scope_ok"
+    }.intersection(payload)

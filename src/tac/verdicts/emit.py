@@ -41,11 +41,13 @@ tac.verdicts only — the emitted JSON write is unchanged and byte-identical.
 from __future__ import annotations
 
 import json
+import math
 import os
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import StrEnum
+from numbers import Real
 from pathlib import Path
 
 from tac.verdicts.measurement_row import MeasurementRow
@@ -53,6 +55,7 @@ from tac.verdicts.measurement_row import MeasurementRow
 __all__ = [
     "SCHEMA_VERSION",
     "Composition",
+    "InstrumentClaimScope",
     "InteractionSign",
     "ScopeLevel",
     "VerdictEmitError",
@@ -68,6 +71,49 @@ SCHEMA_VERSION = "verdict.v1"
 class VerdictEmitError(ValueError):
     """Raised when :func:`emit_verdict` is called with a claim that omits a
     required honesty field. Subclasses ``ValueError``."""
+
+
+@dataclass(frozen=True, slots=True)
+class InstrumentClaimScope:
+    """Capacity cross-check for an object-level claim.
+
+    Both capacities are expressed in ``claim_units``.  Construction refuses
+    when the claimed object is richer than the instrument that produced the
+    verdict, so no caller can accidentally serialize an object-level closure
+    from an instrument-scoped probe.
+    """
+
+    instrument_capacity: int | float
+    object_capacity: int | float
+    claim_units: str
+    scope_ok: bool = field(init=False)
+
+    def __post_init__(self) -> None:
+        for label, value in (
+            ("instrument_capacity", self.instrument_capacity),
+            ("object_capacity", self.object_capacity),
+        ):
+            if isinstance(value, bool) or not isinstance(value, Real):
+                raise VerdictEmitError(f"{label} must be a finite non-negative number")
+            if not math.isfinite(float(value)) or value < 0:
+                raise VerdictEmitError(f"{label} must be a finite non-negative number")
+        if not isinstance(self.claim_units, str) or not self.claim_units.strip():
+            raise VerdictEmitError("claim_units must be a non-empty string")
+        expected = self.object_capacity <= self.instrument_capacity
+        object.__setattr__(self, "scope_ok", expected)
+        if not expected:
+            raise VerdictEmitError(
+                "REFUSE verdict emission: object claim exceeds instrument capacity "
+                f"in {self.claim_units}"
+            )
+
+    def to_json_dict(self) -> dict:
+        return {
+            "instrument_capacity": self.instrument_capacity,
+            "object_capacity": self.object_capacity,
+            "claim_units": self.claim_units,
+            "scope_ok": self.scope_ok,
+        }
 
 
 class ScopeLevel(StrEnum):
@@ -245,6 +291,7 @@ def verdict_payload(
     reformulation_empty_reason: str | None = None,
     measured: bool = True,
     stores_consulted: Sequence[str] | None = None,
+    instrument_claim_scope: InstrumentClaimScope | None = None,
     extra: dict | None = None,
 ) -> dict:
     """Validate a verdict and return its canonical payload dict — WITHOUT writing.
@@ -278,6 +325,7 @@ def verdict_payload(
         reformulation_empty_reason=reformulation_empty_reason,
         measured=measured,
         stores_consulted=stores_consulted,
+        instrument_claim_scope=instrument_claim_scope,
         extra=extra,
     )
 
@@ -295,6 +343,7 @@ def emit_verdict(
     reformulation_empty_reason: str | None = None,
     measured: bool = True,
     stores_consulted: Sequence[str] | None = None,
+    instrument_claim_scope: InstrumentClaimScope | None = None,
     extra: dict | None = None,
 ) -> Path:
     """Atomically write a validated verdict JSON to ``path``; return the ``Path``.
@@ -344,6 +393,7 @@ def emit_verdict(
         reformulation_empty_reason=reformulation_empty_reason,
         measured=measured,
         stores_consulted=stores_consulted,
+        instrument_claim_scope=instrument_claim_scope,
         extra=extra,
     )
 
@@ -387,6 +437,7 @@ def _build_verdict_payload(
     reformulation_empty_reason: str | None,
     measured: bool,
     stores_consulted: Sequence[str] | None,
+    instrument_claim_scope: InstrumentClaimScope | None,
     extra: dict | None,
 ) -> dict:
     """The ONE validation + payload path shared by :func:`verdict_payload` and
@@ -464,6 +515,12 @@ def _build_verdict_payload(
         "stores_consulted": list(stores_consulted) if stores_consulted else [],
         "extra": dict(extra) if extra else {},
     }
+    if instrument_claim_scope is not None:
+        if not isinstance(instrument_claim_scope, InstrumentClaimScope):
+            raise VerdictEmitError(
+                "instrument_claim_scope must be an InstrumentClaimScope or None"
+            )
+        payload.update(instrument_claim_scope.to_json_dict())
     return payload
 
 

@@ -27,6 +27,7 @@ from __future__ import annotations
 
 from tac.verdicts.emit import (
     Composition,
+    InstrumentClaimScope,
     InteractionSign,
     ScopeLevel,
     VerdictEmitError,
@@ -45,6 +46,7 @@ from tac.verdicts.measurement_row import (
 __all__ = [
     "AxisTag",
     "Composition",
+    "InstrumentClaimScope",
     "InteractionSign",
     "MeasurementRow",
     "MeasurementRowError",

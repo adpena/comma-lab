@@ -23,8 +23,10 @@ from tac.witness_dsl.hr1_prestage import (
     MemoryProbeReceipt,
     PayloadRecord,
     ResumeManifest,
+    SameParentObjectKind,
     TensorDType,
     TensorShapeSpec,
+    assert_same_parent_freshness,
     atomic_write_json,
     bind_existing_file,
     compile_memory_configuration,
@@ -205,6 +207,57 @@ def test_terminal_binding_uses_typed_unresolved_state_not_placeholder_string():
     assert binding.path is None
     assert binding.sha256 is None
     assert "placeholder" not in json.dumps(binding.to_dict()).lower()
+
+
+@pytest.mark.parametrize("object_kind", list(SameParentObjectKind))
+def test_same_parent_freshness_accepts_every_typed_object_kind(object_kind):
+    receipt = assert_same_parent_freshness(
+        object_kind=object_kind,
+        producer_parent_sha="a" * 64,
+        consumer_parent_sha="a" * 64,
+    )
+    assert receipt.freshness_ok is True
+    assert receipt.to_dict()["object_kind"] == object_kind.value
+
+
+@pytest.mark.parametrize("object_kind", list(SameParentObjectKind))
+def test_same_parent_freshness_refuses_mismatch_for_every_kind(object_kind):
+    with pytest.raises(Hr1PrestageError, match=f"REFUSE stale {object_kind.value}"):
+        assert_same_parent_freshness(
+            object_kind=object_kind,
+            producer_parent_sha="a" * 64,
+            consumer_parent_sha="b" * 64,
+        )
+
+
+@pytest.mark.parametrize(
+    ("producer", "consumer"),
+    [
+        (None, "a" * 64),
+        ("a" * 64, None),
+        ("", "a" * 64),
+        ("a" * 64, ""),
+        ("A" * 64, "a" * 64),
+        ("a" * 63, "a" * 64),
+    ],
+)
+def test_same_parent_freshness_refuses_absent_or_noncanonical_parent(producer, consumer):
+    with pytest.raises(Hr1PrestageError, match="canonical lowercase SHA-256"):
+        assert_same_parent_freshness(
+            object_kind=SameParentObjectKind.FIT,
+            producer_parent_sha=producer,
+            consumer_parent_sha=consumer,
+        )
+
+
+def test_same_parent_freshness_refuses_unknown_kind_and_has_no_waiver_surface():
+    with pytest.raises(Hr1PrestageError, match="object_kind"):
+        assert_same_parent_freshness(
+            object_kind="profile",
+            producer_parent_sha="a" * 64,
+            consumer_parent_sha="a" * 64,
+        )
+    assert "waiver" not in assert_same_parent_freshness.__annotations__
 
 
 @pytest.mark.parametrize("arm", list(Hr1Arm))

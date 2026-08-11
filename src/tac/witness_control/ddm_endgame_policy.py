@@ -101,6 +101,126 @@ class DecisionAction(StrEnum):
     REFUSE_INSUFFICIENT_EVIDENCE = "REFUSE_INSUFFICIENT_EVIDENCE"
 
 
+class StopVerdict(StrEnum):
+    """Vehicle-neutral stage disposition from complete-score dominance."""
+
+    CONTINUE = "continue"
+    HANDOFF = "handoff"
+    STOP = "stop"
+
+
+@dataclass(frozen=True, slots=True)
+class CompleteScoreDominanceReceipt:
+    """One same-parent complete-score action quote with parameterized components.
+
+    This is the EG1 E2 grammar without its TR1 score law or constants.  The
+    caller supplies the complete additive component set; the interface only
+    enforces same-parent identity and strict total-score dominance.
+    """
+
+    receipt_id: str
+    action: StopVerdict
+    parent_sha256: str
+    parent_components: tuple[tuple[str, float], ...]
+    candidate_components: tuple[tuple[str, float], ...]
+
+    def __post_init__(self) -> None:
+        _require_nonempty("receipt_id", self.receipt_id)
+        if self.action not in {StopVerdict.CONTINUE, StopVerdict.HANDOFF}:
+            raise EndgamePolicyError("dominance receipt action must be continue or handoff")
+        _require_sha256("parent_sha256", self.parent_sha256)
+        parent = self._validate_components("parent_components", self.parent_components)
+        candidate = self._validate_components(
+            "candidate_components", self.candidate_components
+        )
+        if tuple(name for name, _ in parent) != tuple(name for name, _ in candidate):
+            raise EndgamePolicyError(
+                "parent and candidate must carry the same complete component names"
+            )
+
+    @staticmethod
+    def _validate_components(
+        label: str, components: object
+    ) -> tuple[tuple[str, float], ...]:
+        if not isinstance(components, tuple) or not components:
+            raise EndgamePolicyError(f"{label} must be a non-empty canonical tuple")
+        normalized: list[tuple[str, float]] = []
+        for index, item in enumerate(components):
+            if not isinstance(item, tuple) or len(item) != 2:
+                raise EndgamePolicyError(f"{label}[{index}] must be a (name, value) tuple")
+            name, value = item
+            normalized.append((
+                _require_nonempty(f"{label}[{index}].name", name),
+                _require_finite(f"{label}[{index}].value", value),
+            ))
+        names = [name for name, _ in normalized]
+        if len(names) != len(set(names)):
+            raise EndgamePolicyError(f"{label} component names must be unique")
+        if tuple(names) != tuple(sorted(names)):
+            raise EndgamePolicyError(f"{label} components must be sorted by name")
+        return tuple(normalized)
+
+    @classmethod
+    def from_components(
+        cls,
+        *,
+        receipt_id: str,
+        action: StopVerdict,
+        parent_sha256: str,
+        parent_components: Mapping[str, float],
+        candidate_components: Mapping[str, float],
+    ) -> CompleteScoreDominanceReceipt:
+        return cls(
+            receipt_id=receipt_id,
+            action=action,
+            parent_sha256=parent_sha256,
+            parent_components=tuple(sorted(parent_components.items())),
+            candidate_components=tuple(sorted(candidate_components.items())),
+        )
+
+    @property
+    def parent_complete_score(self) -> float:
+        return math.fsum(value for _, value in self.parent_components)
+
+    @property
+    def candidate_complete_score(self) -> float:
+        return math.fsum(value for _, value in self.candidate_components)
+
+    @property
+    def strictly_dominates_parent(self) -> bool:
+        return self.candidate_complete_score < self.parent_complete_score
+
+
+def derive_stop_verdict(
+    receipts: Sequence[CompleteScoreDominanceReceipt],
+) -> StopVerdict:
+    """Choose continue/handoff by strict total-score dominance, else stop."""
+
+    rows = tuple(receipts)
+    if not rows or not all(isinstance(row, CompleteScoreDominanceReceipt) for row in rows):
+        raise EndgamePolicyError(
+            "at least one CompleteScoreDominanceReceipt is required"
+        )
+    if len({row.receipt_id for row in rows}) != len(rows):
+        raise EndgamePolicyError("dominance receipt ids must be unique")
+    parent_sha = rows[0].parent_sha256
+    parent_components = rows[0].parent_components
+    if any(row.parent_sha256 != parent_sha for row in rows):
+        raise EndgamePolicyError("dominance receipts must share one parent_sha256")
+    if any(row.parent_components != parent_components for row in rows):
+        raise EndgamePolicyError("dominance receipts must quote the same complete parent")
+    improving = [row for row in rows if row.strictly_dominates_parent]
+    if not improving:
+        return StopVerdict.STOP
+    best_score = min(row.candidate_complete_score for row in improving)
+    best = [row for row in improving if row.candidate_complete_score == best_score]
+    if len({row.action for row in best}) != 1:
+        raise EndgamePolicyError(
+            "equal best complete scores disagree between continue and handoff"
+        )
+    return best[0].action
+
+
 class TrajectoryRegime(StrEnum):
     """Advisory #216/#475 trajectory label; never an actuator by itself."""
 
@@ -937,13 +1057,16 @@ __all__ = [
     "ActionKind",
     "ActionQuote",
     "AdvisorySignals",
+    "CompleteScoreDominanceReceipt",
     "Decision",
     "DecisionAction",
     "EndgamePolicyError",
     "OperatingPoint",
+    "StopVerdict",
     "TrajectoryRegime",
     "build_endgame_arithmetic_receipt",
     "contest_score",
     "decide_endgame_policy",
+    "derive_stop_verdict",
     "strict_integer_byte_ceiling",
 ]

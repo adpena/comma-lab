@@ -27,12 +27,16 @@ its DECIDE queue: the CONTROLLER remembers and surfaces; the operator never has 
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import math
 import os
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from enum import StrEnum
 from pathlib import Path
+from typing import Any
 
 from tac.jsonl_store import append_locked_jsonl
 from tac.witness_dsl.lever_registry import lever_factories
@@ -92,7 +96,15 @@ _SIGNIFICANCE_LEVER_ALIASES: dict[str, str] = {
 EVENT_FIRED = "fired"        # a run launched with this lever (an A/B arm was actually run)
 EVENT_MEASURED = "measured"  # a byte-closed verdict landed for a run using this lever
 EVENT_RETIRED = "retired"    # the lever was retired with a recorded reason (dormant-with-reactivation)
-VALID_EVENTS = frozenset({EVENT_FIRED, EVENT_MEASURED, EVENT_RETIRED})
+EVENT_FOLDED = "folded"      # terminal config explicitly folds the lever into another treatment
+EVENT_QUEUED = "queued"      # terminal config explicitly queues the lever with a fire trigger
+VALID_EVENTS = frozenset({
+    EVENT_FIRED,
+    EVENT_MEASURED,
+    EVENT_RETIRED,
+    EVENT_FOLDED,
+    EVENT_QUEUED,
+})
 
 # canonical states (latest-event-wins per lever, with fired/measured monotonic)
 STATE_NEVER_FIRED = "never-fired"
@@ -125,6 +137,10 @@ def record_activation(
         raise ValueError(f"invalid activation event {event!r}; must be one of {sorted(VALID_EVENTS)}")
     if not lever or not isinstance(lever, str):
         raise ValueError(f"lever must be a non-empty str, got {lever!r}")
+    if event in {EVENT_FOLDED, EVENT_QUEUED, EVENT_RETIRED} and not (
+        isinstance(reason, str) and reason.strip()
+    ):
+        raise ValueError(f"{event} activation event requires a non-empty reason")
     row = {
         "lever": lever,
         "event": event,
@@ -368,6 +384,174 @@ def activation_report(known: tuple[str, ...] | None = None, path: Path | None = 
     _order = {STATE_NEVER_FIRED: 0, STATE_FIRED_UNMEASURED: 1, STATE_MEASURED: 2, STATE_RETIRED: 3}
     rows.sort(key=lambda r: (_order.get(r["state"], 9), r["lever"]))
     return rows
+
+
+class TerminalJoinDisposition(StrEnum):
+    FIRED = "FIRED"
+    FOLDED = "FOLDED"
+    QUEUED = "queued"
+
+
+class TerminalJoinStatus(StrEnum):
+    PASS = "PASS"
+    REFUSE = "REFUSE"
+
+
+@dataclass(frozen=True, slots=True)
+class TerminalActivationJoinRow:
+    lever: str
+    disposition: TerminalJoinDisposition
+    ledger_event: str
+    reason: str
+    run_ref: str | None
+    verdict_ref: str | None
+    ts: str | None
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "lever": self.lever,
+            "disposition": self.disposition.value,
+            "ledger_event": self.ledger_event,
+            "reason": self.reason,
+            "run_ref": self.run_ref,
+            "verdict_ref": self.verdict_ref,
+            "ts": self.ts,
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class TerminalActivationJoinReceipt:
+    compiled_config_sha256: str
+    ledger_path: str
+    ledger_sha256: str | None
+    non_default_levers: tuple[str, ...]
+    rows: tuple[TerminalActivationJoinRow, ...]
+    missing_levers: tuple[str, ...]
+
+    @property
+    def status(self) -> TerminalJoinStatus:
+        return TerminalJoinStatus.REFUSE if self.missing_levers else TerminalJoinStatus.PASS
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "schema": "terminal_activation_join.v1",
+            "status": self.status.value,
+            "compiled_config_sha256": self.compiled_config_sha256,
+            "ledger_path": self.ledger_path,
+            "ledger_sha256": self.ledger_sha256,
+            "non_default_levers": list(self.non_default_levers),
+            "rows": [row.to_dict() for row in self.rows],
+            "missing_levers": list(self.missing_levers),
+            "score_claim": False,
+            "execution_allowed": False,
+        }
+
+
+def _canonical_config_bytes(config: Mapping[str, Any]) -> bytes:
+    try:
+        return json.dumps(
+            config, sort_keys=True, separators=(",", ":"), ensure_ascii=True
+        ).encode("ascii")
+    except (TypeError, ValueError) as exc:
+        raise ValueError("compiled config must be canonical-JSON serializable") from exc
+
+
+def _lever_names_from_sequence(raw: object) -> tuple[str, ...]:
+    if not isinstance(raw, Sequence) or isinstance(raw, (str, bytes, bytearray)):
+        raise ValueError("compiled config lever list must be a sequence")
+    names: list[str] = []
+    for item in raw:
+        if isinstance(item, str):
+            name = item
+            non_default = True
+        elif isinstance(item, Mapping):
+            name = item.get("name")
+            default = item.get("default", False)
+            if type(default) is not bool:
+                raise ValueError("lever default marker must be boolean")
+            non_default = item.get("non_default", not default)
+            if type(non_default) is not bool:
+                raise ValueError("lever non_default/default marker must be boolean")
+        else:
+            raise ValueError("compiled config lever entries must be names or mappings")
+        if not isinstance(name, str) or not name.strip():
+            raise ValueError("compiled config lever name must be a non-empty string")
+        if non_default:
+            names.append(name)
+    if len(names) != len(set(names)):
+        raise ValueError("compiled config contains duplicate non-default lever names")
+    return tuple(names)
+
+
+def compiled_non_default_levers(config: Mapping[str, Any]) -> tuple[str, ...]:
+    """Extract explicitly active/non-default levers from a compiled DSL JSON object."""
+
+    if not isinstance(config, Mapping):
+        raise ValueError("compiled config must be a mapping")
+    manifest = config.get("dsl_program_manifest")
+    if isinstance(manifest, Mapping) and "expected_active_levers" in manifest:
+        return _lever_names_from_sequence(manifest["expected_active_levers"])
+    if "expected_active_levers" in config:
+        return _lever_names_from_sequence(config["expected_active_levers"])
+    typed = config.get("typed_config")
+    if isinstance(typed, Mapping) and "levers" in typed:
+        return _lever_names_from_sequence(typed["levers"])
+    if "levers" in config:
+        return _lever_names_from_sequence(config["levers"])
+    raise ValueError(
+        "compiled config must expose expected_active_levers or typed_config.levers"
+    )
+
+
+def terminal_activation_join(
+    compiled_config: Mapping[str, Any],
+    *,
+    path: Path | None = None,
+) -> TerminalActivationJoinReceipt:
+    """Join every non-default compiled lever to explicit terminal ledger evidence."""
+
+    config_bytes = _canonical_config_bytes(compiled_config)
+    names = compiled_non_default_levers(compiled_config)
+    ledger = Path(path) if path is not None else LEDGER_PATH
+    ledger_sha256 = hashlib.sha256(ledger.read_bytes()).hexdigest() if ledger.is_file() else None
+    events = _read_events(ledger)
+    rows: list[TerminalActivationJoinRow] = []
+    missing: list[str] = []
+    for name in names:
+        evidence = [row for row in events if row.get("lever") == name]
+        selected: dict[str, Any] | None = None
+        disposition: TerminalJoinDisposition | None = None
+        for event in reversed(evidence):
+            kind = event.get("event")
+            if kind in {EVENT_FIRED, EVENT_MEASURED}:
+                selected, disposition = event, TerminalJoinDisposition.FIRED
+                break
+            if kind in {EVENT_FOLDED, EVENT_RETIRED}:
+                selected, disposition = event, TerminalJoinDisposition.FOLDED
+                break
+            if kind == EVENT_QUEUED:
+                selected, disposition = event, TerminalJoinDisposition.QUEUED
+                break
+        if selected is None or disposition is None:
+            missing.append(name)
+            continue
+        rows.append(TerminalActivationJoinRow(
+            lever=name,
+            disposition=disposition,
+            ledger_event=str(selected["event"]),
+            reason=str(selected.get("reason") or ""),
+            run_ref=selected.get("run_ref"),
+            verdict_ref=selected.get("verdict_ref"),
+            ts=selected.get("ts"),
+        ))
+    return TerminalActivationJoinReceipt(
+        compiled_config_sha256=hashlib.sha256(config_bytes).hexdigest(),
+        ledger_path=str(ledger),
+        ledger_sha256=ledger_sha256,
+        non_default_levers=names,
+        rows=tuple(rows),
+        missing_levers=tuple(missing),
+    )
 
 
 # ── VACUITY SELF-REPORT: the ledger must state its own denominator (ddm_lr2, 2026-08-03) ────────
@@ -1414,7 +1598,9 @@ __all__ = [
     "BUILD_NOT_DESIGNED",
     "BUILD_RETIRED",
     "EVENT_FIRED",
+    "EVENT_FOLDED",
     "EVENT_MEASURED",
+    "EVENT_QUEUED",
     "EVENT_RETIRED",
     "LEDGER_PATH",
     "RECORD_DECLARED_UNVERIFIED",
@@ -1437,11 +1623,16 @@ __all__ = [
     "VALID_SIG_AXES",
     "VALID_SIG_LABELS",
     "ActivationStatus",
+    "TerminalActivationJoinReceipt",
+    "TerminalActivationJoinRow",
+    "TerminalJoinDisposition",
+    "TerminalJoinStatus",
     "activation_report",
     "activation_status",
     "build_completeness_report",
     "build_grade",
     "built_elsewhere_unwired",
+    "compiled_non_default_levers",
     "curriculum_dsl_known_levers",
     "duty_to_measure",
     "duty_to_measure_ranked",
@@ -1458,5 +1649,6 @@ __all__ = [
     "record_required_component",
     "relative_significance",
     "required_component_integrity_summary",
+    "terminal_activation_join",
     "verify_required_component_row",
 ]

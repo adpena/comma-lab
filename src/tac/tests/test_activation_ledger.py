@@ -2,6 +2,11 @@
 queue" apparatus (#247 SENSE / CLAUDE.md orphaned-signal non-negotiable)."""
 from __future__ import annotations
 
+import json
+import subprocess
+import sys
+from pathlib import Path
+
 import pytest
 
 from tac.witness_dsl import activation_ledger as al
@@ -23,6 +28,12 @@ def test_record_and_read_roundtrip(ledger):
 def test_invalid_event_raises(ledger):
     with pytest.raises(ValueError):
         al.record_activation("X", "bogus", path=ledger)
+
+
+def test_folded_and_queued_events_require_reason(ledger):
+    for event in (al.EVENT_FOLDED, al.EVENT_QUEUED, al.EVENT_RETIRED):
+        with pytest.raises(ValueError, match="requires a non-empty reason"):
+            al.record_activation("X", event, path=ledger)
 
 
 def test_empty_lever_raises(ledger):
@@ -208,6 +219,89 @@ def test_ranked_marks_aliased_lever_registered_not_unbuilt(tmp_path, monkeypatch
     assert row["activation_state"] == "never-fired"
     assert row["est_delta_s"] == 0.02
     assert not any(r["lever"] == "d_seg_aware_taper_121" for r in ranked)
+
+
+# --- terminal compiled-config join (ddm_ip1) --------------------------------
+
+
+def _compiled(*names):
+    return {"dsl_program_manifest": {"expected_active_levers": list(names)}}
+
+
+def test_terminal_join_accepts_fired_folded_and_queued_evidence(ledger):
+    al.record_activation("A", al.EVENT_FIRED, run_ref="run-a", path=ledger)
+    al.record_activation("B", al.EVENT_FOLDED, reason="folded into A", path=ledger)
+    al.record_activation("C", al.EVENT_QUEUED, reason="fire when terminal binds", path=ledger)
+    receipt = al.terminal_activation_join(_compiled("A", "B", "C"), path=ledger)
+    assert receipt.status is al.TerminalJoinStatus.PASS
+    assert [row.disposition for row in receipt.rows] == [
+        al.TerminalJoinDisposition.FIRED,
+        al.TerminalJoinDisposition.FOLDED,
+        al.TerminalJoinDisposition.QUEUED,
+    ]
+    assert receipt.missing_levers == ()
+
+
+def test_terminal_join_refuses_any_non_default_lever_without_row(ledger):
+    al.record_activation("A", al.EVENT_FIRED, path=ledger)
+    receipt = al.terminal_activation_join(_compiled("A", "missing"), path=ledger)
+    assert receipt.status is al.TerminalJoinStatus.REFUSE
+    assert receipt.missing_levers == ("missing",)
+    assert receipt.to_dict()["execution_allowed"] is False
+
+
+def test_terminal_join_excludes_explicit_default_levers(ledger):
+    config = {"typed_config": {"levers": [
+        {"name": "on", "non_default": True},
+        {"name": "off", "default": True},
+    ]}}
+    al.record_activation("on", al.EVENT_MEASURED, verdict_ref="v.json", path=ledger)
+    receipt = al.terminal_activation_join(config, path=ledger)
+    assert receipt.non_default_levers == ("on",)
+    assert receipt.status is al.TerminalJoinStatus.PASS
+
+
+def test_terminal_join_refuses_config_without_compiled_lever_surface(ledger):
+    with pytest.raises(ValueError, match="expected_active_levers"):
+        al.terminal_activation_join({"name": "not-compiled"}, path=ledger)
+
+
+def test_terminal_join_refuses_duplicate_or_blank_lever_names(ledger):
+    with pytest.raises(ValueError, match="duplicate"):
+        al.terminal_activation_join(_compiled("A", "A"), path=ledger)
+    with pytest.raises(ValueError, match="non-empty"):
+        al.terminal_activation_join(_compiled(""), path=ledger)
+    with pytest.raises(ValueError, match="default marker must be boolean"):
+        al.terminal_activation_join(
+            {"levers": [{"name": "A", "default": "false"}]}, path=ledger
+        )
+
+
+def test_current_v752_era_compiled_config_is_positive_against_live_ledger():
+    from tac.witness_autoconfig import compile_crucible_v752_launch_config
+
+    compiled = compile_crucible_v752_launch_config(
+        "/dev/null", num_pairs=8, epochs=3000, self_orient=False
+    )
+    config = {"dsl_program_manifest": compiled.dsl_program_manifest}
+    receipt = al.terminal_activation_join(config)
+    assert receipt.status is al.TerminalJoinStatus.PASS
+    assert len(receipt.rows) == 9
+    assert all(row.disposition is al.TerminalJoinDisposition.FIRED for row in receipt.rows)
+
+
+def test_terminal_join_cli_returns_nonzero_and_emits_refusal_receipt(tmp_path, ledger):
+    config_path = tmp_path / "compiled.json"
+    config_path.write_text(json.dumps(_compiled("missing")), encoding="utf-8")
+    tool = Path(__file__).resolve().parents[3] / "tools" / "report_terminal_activation_join.py"
+    result = subprocess.run(
+        [sys.executable, str(tool), str(config_path), "--ledger", str(ledger)],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert result.returncode != 0
+    assert json.loads(result.stdout)["status"] == "REFUSE"
 
 
 if __name__ == "__main__":
