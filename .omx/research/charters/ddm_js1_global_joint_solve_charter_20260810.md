@@ -97,3 +97,25 @@ placement with the real frozen scorer on the terminal base — the pixel proxy m
 RGB-argmax pixels / 1,126,626 scorer-grid values changed across two real frames (placement is
 material), but no SegNet-cell claim exists yet. Memory clearance = fresh per-arm real-config
 probes via hr2's compiler (shape-only sums are NOT clearance).
+
+## AMENDMENT 5 (2026-08-11, rvs1 landed — the SURVIVAL PLAYBOOK): consume
+`.omx/research/ddm_rvs1_realization_survival_harvest_20260811.md` (commit 234aeccf74; 22
+receipted mechanisms: 6 encoded / 5 partial / 9 MISSING / 2 folded) at reseal. The FOUR named
+deltas (preserve hr1/hr2 baseline; NO fifth arm):
+1. Stage-0 FREE-TREATMENT FORK: incumbent camera order · L28-only (isolated — the Z8 receipt
+   co-varied with L32, never cite it as measured) · one token-derived camera-pre-R coverage
+   child · one token-derived hood child; select ONE by complete V5 score, never sum deltas.
+2. SURVIVAL-FORCE ABLATION inside Arms B-D: exact-R baseline, then ONE-AT-A-TIME QAT staging ·
+   dynamic realized-quantum proposals (g2f k* rule) · S_R×margin allocation (raw UNIWARD
+   closed, chance-level) · component margin floor (lg1) · PR95 sigma quasi-arm
+   (hypothesis-grade). Combined treatment destroys attribution — forbidden.
+3. CAMERA-LATTICE COMPENSATION EVENT (the headline, PR133/135 lifted): hard-round camera bytes
+   FIRST, hold the realized lattice fixed, re-solve remaining nearby DOF (int12 coeffs / FiLM /
+   head / adapters / hard tokens) through the exact scorer; relinearize after every accepted
+   hard state (v17); remeasure the whole remaining queue (v19b nonadditivity). NEVER quantize
+   without compensating (CBQ alone = 29× pose worse).
+4. JOINT HARD ADMISSION: every accepted artifact = retained complete archive + exact
+   Seg/Pose/byte row; no proxy banked (v19 realized-acceptance law).
+Dead-end guards binding at reseal: sub-quantum real-valued writes are NULL at uint8 · float-
+first exactness then rounding closed where an integer-native solve exists (#532/dk1) ·
+PT1 amplitude-statistics preservation ranks ABOVE more edge geometry.
