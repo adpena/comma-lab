@@ -210,3 +210,17 @@ This scorer-free pre-proof did not move it or itself reach sub-0.15.
   and PK2's exact low-rank-plus-residual form cost `+4,316 B`.
 - Treating the retained rate envelope as a submission candidate or score row: forbidden; the unchanged
   receiver cannot parse PGQ1, and no rendered PoseNet output has been measured.
+
+## ADD.1 (2026-08-11, MAIN) — SUPERSESSION: the 168,005 B envelope is NON-RENDERABLE (pz4r)
+
+ddm_pz4r (commits c7b9387b96 / 5c962530fe, memo `.omx/research/ddm_pz4r_pgq1_receiver_20260811.md`)
+built the real receiver and adjudicated this memo's headline: **the 19,221 B envelope does not
+survive realization.** FORMULATION verdict: PGQ1 (or lc2 minus CPR1 plus PGQ1) cannot render —
+the removed CPR1 carrier holds basis/coefficient data the decoder requires. The realized
+residual-free archive is **183,137 B = −4,089 B vs lc2** (21.3% of the envelope), sha
+c408adf910…, gauge `target_quadratic_previous_f10_q20`, coefficient surrogate R² 0.4861.
+Read every "19,221 B" / "168,005 B" figure above as a NON-RENDERABLE upper bound on the
+container arithmetic, never a candidate saving. The pre-proof's own boundary paragraph
+("forbidden; the unchanged receiver cannot parse PGQ1") was correct and is now the operative
+scope. Realized (d_seg, d_pose) on the 183,137 B candidate: QUEUED behind the ps135b scorer
+lane (fire-order in pz4r's NEXT_IF_RESUMED).
