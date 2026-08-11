@@ -48,3 +48,13 @@ Reference: PR133's joint form EXCEEDED (global starts, not singletons) + the #99
 the joint-remeasure law (never per-axis-additive). PRIOR-LAW PREDICTION placeholder: to be
 derived from ps135's realized convergence curve — a charter that fires with a borrowed
 prediction violates the re-anchor law (m38); derive it fresh from the landed receipts.
+
+## AMENDMENT (2026-08-11, operator capstone-hybrid steer)
+
+At reseal, ALSO consume ddm_hy1's js1-RESEAL AMENDMENT BLOCK
+(`.omx/research/ddm_hy1_capstone_hybrid_20260811.md`, the capstone-hybrid arm): the operator
+elevated this campaign to a full corpus × PR135-family hybrid — solver-arsenal elevation
+(ms3/ms4 metric preconditioning · #580 projector · j11 Q3-null · ms2r tolerance homotopy ·
+sq2 uncapped GN) and, if hy1's probes pass, the solved-partition-through-their-carriage head
+(C1 solve d_seg ≈1.52e-4 through the semantic token wire). js1's stage list re-ranks against
+hy1's priced spec at fire time.
