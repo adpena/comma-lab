@@ -119,3 +119,26 @@ deltas (preserve hr1/hr2 baseline; NO fifth arm):
 Dead-end guards binding at reseal: sub-quantum real-valued writes are NULL at uint8 · float-
 first exactness then rounding closed where an integer-native solve exists (#532/dk1) ·
 PT1 amplitude-statistics preservation ranks ABOVE more edge geometry.
+
+## AMENDMENT 6 (2026-08-11, rvs2 landed — the GEOMETRY class): consume
+`.omx/research/ddm_rvs2_geometry_survival_crosswalk_20260811.md` at reseal. THREE nested event
+contracts (no fifth arm; bind AFTER Amendment 5's deltas):
+1. GEOMETRY-CUSTODY GATE at receiver_bound: every proposal family names coordinate domain ·
+   object SHA · metric ID · receiver inner Jacobians · score-block weights · Euclid/Fisher/
+   rel-norm readback (m65 dual-metric law — BOTH, never one). Compensation iterations steer by
+   G_theta = J_R^T[w_seg·G_Fisher(rank-4) + w_pose·J_pose^T J_pose]J_R + damping, refreshed +
+   realized-secant-corrected per accepted hard state; metrics PROPOSE, exact complete hard
+   score ADMITS. MS4D blocks are scorer-intrinsic — REFUSE inheriting them without a
+   current-object receiver-Jacobian join (all 25 occupied blocks unreachable by counted coords).
+2. POSE-NULL SIBLING (not blanket projection — FOLDED at FORMULATION scope: j11's 1-D
+   projectors were rank-zero; Q31 0.23035 vs 0.69643 bar; ET2 integer pose leakage): when a
+   seg proposal materially touches pose-sensitive frame-1 coords AND a higher-dimensional
+   current-object projector integer-realizes, race unprojected vs SHA-bound pose-null sibling;
+   complete hard score selects. AC-only law binds (pose_null_subspace_is_ac_only_v1).
+3. XI-TRANSPORT RUNG (conditional, never a promised saving — UF1: zero data-complete rows;
+   the clip-fraction rule closed by #891's census): only AFTER a neighboring exact accepted
+   compensation solution retains H/mixed-partial/chart/radius, race ONE transported warm start
+   vs the incumbent joint start at equal exact-call budget.
+GROUP-CHART OPTIMIZERS (#469/#552/#556): NOT in the initial race — late conditional fork only
+after a measured optimizer-limited wall + current-object custody. Folded guards: raw-matrix
+MuonH · dense-SPD head replacement · #574/QA39 carried-xi coders into compensation.
