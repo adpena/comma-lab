@@ -95,12 +95,20 @@ isolation; no claim is made that a real arm has resumed.
 - A larger MLX selection reached 44 passes and 11 failures. Every failure was the managed host's
   `metal::load_device` no-device error in `test_pr95_hnerv_mlx_training.py`; MLX/Metal integration
   therefore remains unverified here rather than being reported as a code failure or a pass.
+- The targeted commit hook passed. The subsequent full developer preflight passed 17 of 25 declared
+  gates and was RED on eight repository-wide gates. A non-strict census found no HR2 path in the
+  violations: the concrete failures name `probe_outcomes_ledger.py`, `submission_chain.py`, existing
+  detached launchers, AGENTS dispatch documentation, three other lane references, 56 substrate loss
+  files, and 21 substrate trainers. The remaining landing-memo gate scans `feedback_*_landed_*`
+  memory files, not this HR2 memo. This is shared-tree debt outside the six-file landing, not reported
+  as a green full-preflight result.
 
 The first adversarial review found two apparatus defects: the compiled typed config could be mutated
 after hashing, and RSS was sampled twice. The config now exposes freshly decoded immutable content,
 and the runner captures RSS once. All relevant checks and the retained real-frame control were rerun
-after those fixes. A second review found no new defect. Review-tracker receipts and serializer custody
-are the landing gate, not mechanism evidence.
+after those fixes. A second review found no new defect. Two clean review-tracker passes were recorded,
+and the six-file serializer landing is commit `436edf452c`. Those receipts are custody, not mechanism
+evidence.
 
 ## RECALL EVIDENCE
 
