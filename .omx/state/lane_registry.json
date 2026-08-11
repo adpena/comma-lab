@@ -94311,6 +94311,298 @@
         }
       },
       "notes": "Scorer-free PR130 HPAC rate-lambda ladder; local Metal fire gated on P0 resume, exact pack, real token encode, and one-Metal claim."
+    },
+    {
+      "id": "lane_ddm_rc64p_native_cpu_decode_20260810",
+      "name": "DDM RC64P native CPU decode and Route-B rate candidate",
+      "phase": 3.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/ddm_rc64p_native_cpu_decode_20260810.md"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": "/Volumes/VertigoDataTier/pact/ddm_rc64p_20260810/receipts/route_b_end_to_end.json"
+        },
+        "contest_cuda": {
+          "status": true,
+          "evidence": ".omx/research/ddm_rc64p_native_cpu_decode_20260810.md"
+        },
+        "contest_cpu": {
+          "status": true,
+          "evidence": ".omx/research/ddm_rc64p_native_cpu_decode_20260810_modal/contest_cpu_diag"
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Route A entropy cure refused at INSTANCE scope; Route B 187222 B receiver-closed but unscored; paired LC2 control establishes opposite-sign device delta."
+    },
+    {
+      "id": "lane_ddm_cp135_rate_compose_20260810",
+      "name": "DDM CP135 exact lossless rate composition",
+      "phase": 3.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/ddm_cp135_rate_compose_20260810.md"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": "/Volumes/VertigoDataTier/pact/ddm_cp135_20260810/PARSEBACK_RESULT.json"
+        },
+        "contest_cuda": {
+          "status": true,
+          "evidence": ".omx/research/ddm_cp135_rate_compose_20260810.md"
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Receiver-closed composed-on-granted-base archive; exact contest-CUDA row 0.16195513827824176 at 186252 B; contest-CPU not established."
+    },
+    {
+      "id": "lane_ddm_lp135_lossless_pack_20260810",
+      "name": "DDM LP135 lossless-pack reconciliation",
+      "phase": 3.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": ".omx/research/ddm_lp135_lossless_pack_20260810.md"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Reconciliation-only lane: 100 percent of FD135 ancestry already banked; no new implementation or scorer row; exact retained archives reverified.",
+      "research_only": true
+    },
+    {
+      "id": "lane_ddm_sr1_implicit_edge_conditioning_20260811",
+      "name": "DDM SR1 implicit edge conditioning",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/ddm_sr1_implicit_edge_conditioning_20260811.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Scorer-free full-n600 real-coder section result; additive edge calibration FORMULATION closed at minus 2 B; joint distortion conditioning remains queued.",
+      "research_only": true
+    },
+    {
+      "id": "lane_ddm_pz4p_pose_gauge_preproof_20260811",
+      "name": "DDM PZ4P learned pose-gauge QAT pre-proof",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/ddm_pz4p_pose_gauge_preproof_20260811.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Scorer-free non-renderable envelope; 19221 B upper-bound saving superseded by PZ4R 4089 B realized rate saving; never an archive candidate.",
+      "research_only": true
+    },
+    {
+      "id": "lane_ddm_pz4r_pgq1_receiver_20260811",
+      "name": "DDM PZ4R PGQ1-conditioned receiver",
+      "phase": 2.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/ddm_pz4r_pgq1_receiver_20260811.md"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": "/Volumes/VertigoDataTier/pact/ddm_pz4_joint_target_conditioned_receiver/direct_v6/PZ4R_RESULT.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": ".omx/research/ddm_pz4r_pgq1_receiver_20260811.md"
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Receiver-closed 183137 B archive at 4089 B below LC2; scorer and Linux runtime closure pending; no score claim.",
+      "research_only": true
+    },
+    {
+      "id": "lane_ddm_ps135_pose_resolve_20260810",
+      "name": "DDM PS135 LC2 pose re-solve",
+      "phase": 2.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/ddm_ps135_pose_resolve_20260810.md"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": "/Volumes/VertigoDataTier/pact/ddm_ps135_20260810/leg_a/passes/pass_02/receipt.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Live resumable advisory solve; pass 1 and pass 2 are receiver-closed n600 local rows; exact contest transfer remains open and scorer store stays read-only to CN4.",
+      "research_only": true
     }
   ],
   "level_rules": {
@@ -94320,5 +94612,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-08-09T21:07:07Z"
+  "updated_at": "2026-08-11T11:38:43Z"
 }

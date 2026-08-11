@@ -499,6 +499,78 @@ def eval_ema_decay_run_geometry(inputs: Mapping[str, Any]) -> float:
         "seed_fraction_from_decay)")
 
 
+def eval_cpu_cuda_score_gap(inputs: Mapping[str, Any]) -> float:
+    """Return the registered ``CUDA - CPU`` score delta for one archive.
+
+    The sign is deliberately not predicted from lineage.  The LC2 anchor added
+    by ddm_cn4 has the opposite sign from the older HNeRV cluster, so callers
+    must supply both measured per-axis scores for the exact same archive bytes.
+    """
+
+    cpu_score = float(inputs["score_cpu"])
+    cuda_score = float(inputs["score_cuda"])
+    if (
+        not math.isfinite(cpu_score)
+        or not math.isfinite(cuda_score)
+        or cpu_score < 0.0
+        or cuda_score < 0.0
+    ):
+        raise EvaluatorError(
+            "cpu_cuda_score_gap_v1: scores must be finite and non-negative"
+        )
+    return cuda_score - cpu_score
+
+
+def eval_realization_breakeven_bytes(inputs: Mapping[str, Any]) -> float:
+    """Return the exact contest-rate byte budget for realized score recovery."""
+
+    realized_recovery_s = float(inputs["realized_recovery_s"])
+    if not math.isfinite(realized_recovery_s) or realized_recovery_s < 0.0:
+        raise EvaluatorError(
+            "realization_breakeven_bytes_v1: realized_recovery_s must be finite and non-negative"
+        )
+    return realized_recovery_s / (25.0 / 37_545_489.0)
+
+
+def eval_radius2_multistart_singleton_escape(inputs: Mapping[str, Any]) -> dict[str, Any]:
+    """Summarize whether broadened radius-2 starts escaped a singleton optimum.
+
+    This is an apparatus law, not a score predictor.  Its output remains
+    advisory unless the supplied score axis is an exact contest authority.
+    """
+
+    pair_count = int(inputs["pair_count"])
+    accepted_rows = int(inputs["accepted_rows"])
+    score_before = float(inputs["score_before"])
+    score_after = float(inputs["score_after"])
+    d_pose_before = float(inputs["d_pose_before"])
+    d_pose_after = float(inputs["d_pose_after"])
+    if pair_count <= 0:
+        raise EvaluatorError(
+            "radius2_multistart_singleton_escape_v1: pair_count must be positive"
+        )
+    if accepted_rows < 0 or accepted_rows > pair_count:
+        raise EvaluatorError(
+            "radius2_multistart_singleton_escape_v1: accepted_rows must be in [0, pair_count]"
+        )
+    for name, value in (
+        ("score_before", score_before),
+        ("score_after", score_after),
+        ("d_pose_before", d_pose_before),
+        ("d_pose_after", d_pose_after),
+    ):
+        if not math.isfinite(value) or value < 0.0:
+            raise EvaluatorError(
+                f"radius2_multistart_singleton_escape_v1: {name} must be finite and non-negative"
+            )
+    return {
+        "escaped": accepted_rows > 0 and score_after < score_before,
+        "accepted_fraction": accepted_rows / pair_count,
+        "score_reduction": score_before - score_after,
+        "d_pose_reduction": d_pose_before - d_pose_after,
+    }
+
+
 # Canonical equation_id -> evaluator for the built-in laws.
 LAWREF_BUILTIN_EVALUATORS: dict[str, Callable[[Mapping[str, Any]], Any]] = {
     "forfeit_matched_exit_v1": eval_forfeit_matched_exit_s_star,
@@ -552,6 +624,11 @@ LAWREF_BUILTIN_EVALUATORS: dict[str, Callable[[Mapping[str, Any]], Any]] = {
     # waived constants; grants NO derivation authority (ladder_class on the LawRef
     # records the honest rung — class-4 hardcoded_waiver for generic config knobs).
     "dsl_custodied_scalar_identity_v1": eval_dsl_custodied_scalar_identity,
+    # ddm_cn4 arc consolidation (2026-08-11): two existing surfaces gain
+    # executable LawRef adapters and one new advisory multistart law.
+    "cpu_cuda_score_gap_v1": eval_cpu_cuda_score_gap,
+    "realization_breakeven_bytes_v1": eval_realization_breakeven_bytes,
+    "radius2_multistart_singleton_escape_v1": eval_radius2_multistart_singleton_escape,
 }
 
 
@@ -576,6 +653,7 @@ __all__ = [
     "eval_cgauge_parabolic_along_tangent",
     "eval_cgauge_whitney_moddim",
     "eval_conley_absolute_bar",
+    "eval_cpu_cuda_score_gap",
     "eval_critical_nucleus_release_r_star",
     "eval_dsl_custodied_scalar_identity",
     "eval_forfeit_matched_exit_s_star",
@@ -584,6 +662,8 @@ __all__ = [
     "eval_lr_control_denominator",
     "eval_lr_hold_frac_no_hold",
     "eval_margin_band_satisficing_threshold",
+    "eval_radius2_multistart_singleton_escape",
+    "eval_realization_breakeven_bytes",
     "eval_settle_window",
     "eval_tail_cycle_floor",
     "eval_tau_end_knee_launch",
