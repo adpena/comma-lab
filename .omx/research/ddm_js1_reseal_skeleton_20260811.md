@@ -57,3 +57,33 @@ Payload law (retain everything) · m94 scope fields on every verdict · m37 pare
 sole-scorer-lane claims · n600 only, axis-labeled · dead-end tables of rvs1/rvs2/lv2 (never
 CBQ-alone · sub-quantum writes NULL · blanket pose-null FOLDED · no CP135 lossless hunting ·
 no #869 import · no PZ4P envelope scoring · #828 closed).
+
+## T8 ANNEX (pre-computed 2026-08-11, post pass-4): compositor arithmetic — WHICH BASE CARRIES THE C1 PLANE
+
+All numbers advisory/proxy where labeled; EVERY gate recomputes from terminal receipts (A8 law).
+Survival fraction ρ = fraction of the C1 seg gain surviving the frozen-decode/realization race.
+
+**Candidate (a): cp135 base + C1 plane swap** (per-axis, contest-CUDA-derived components):
+S(ρ) = [0.029643 − ρ·(0.029643−0.015196)] + 0.0082946 + 0.1243317(+11B proxy)
+→ ρ=1.0: **0.14752** · ρ=0.828: **0.15003** · ρ=0.50: 0.15474 · ρ=0.25: 0.15835.
+
+**Candidate (b): ps135-terminal lc2 base + C1 plane swap** (advisory axis, solve asymptote
+pose ≈0.0095): S(ρ) = [0.042735 − ρ·(0.042735−0.015196)] + ~0.0095 + 0.124657
+→ ρ=1.0: ≈0.1494 · needs ρ≈0.979 for 0.150.
+
+**READ: candidate (a) DOMINATES at every ρ** — cp135's pose section (0.00829 contribution,
+PR135's own 8-pass-compensated carrier) beats our solve's advisory asymptote (~0.0095) AND its
+rate is 970 B cheaper AND its survival bar for sub-0.15 is 82.8% vs 97.9%. CAVEAT (cross-axis,
+binding): (a)'s components are CUDA-derived, (b)'s pose is advisory — the comparison is
+INDICATIVE, not decided; cn4's cpu_cuda_score_gap_v1 says never infer one axis from the other.
+T8 therefore still whole-candidate-reranks BOTH on consistent axes at terminal.
+
+**Consequence for the ps135 solve's role (honest):** if (a) wins as the arithmetic suggests,
+the solve's terminal value = (1) the improved OWN-VEHICLE lc2 row (its own frontier line), (2)
+the sensitivity map + convergence receipts feeding js1's adaptive mixed precision, (3) the
+warm-startable pose machinery for any refit on the composed container — NOT the composed
+candidate's pose section. That is consistent with the campaign design and takes nothing from
+the solve; it sharpens where the remaining sub-0.15 distance is bought: the C1 plane's ρ (the
+realization race) and the rate races. The FOURTH option T8 must also price: cp135 base +
+C1 plane + ps135-refit pose on the COMPOSED frames (if the refit transfers and beats 0.00829
+on the same axis — measure, never assume).
