@@ -142,3 +142,26 @@ contracts (no fifth arm; bind AFTER Amendment 5's deltas):
 GROUP-CHART OPTIMIZERS (#469/#552/#556): NOT in the initial race — late conditional fork only
 after a measured optimizer-limited wall + current-object custody. Folded guards: raw-matrix
 MuonH · dense-SPD head replacement · #574/QA39 carried-xi coders into compensation.
+
+## AMENDMENT 7 (2026-08-11, lv2 landed — CAMPAIGN COMPLETENESS CERTIFIED): consume
+`.omx/research/ddm_lv2_terminal_campaign_completeness_20260811.md` + its 55-row JSONL
+(81ca1affef; sealed w/ 2 dry critic rounds; 26/26 lx1 rows regraded; 0/10 in-scope legs empty).
+FOUR PORT-NOW reseal obligations (decision-integrity, before first terminal verdict):
+1. m94 instrument-capacity + object-capacity fields in claim units on EVERY Stage-0/admission
+   verdict, fail-closed on over-broad scope.
+2. m37 producer-parent == consumer-parent hash enforcement on all fits/maps/selectors/
+   corrections at terminal binding.
+3. Activation-ledger audit: join every non-default lever of the exact terminal DSL config to
+   FIRED/FOLDED/queued evidence before any realization command enables (the 251-row ledger has
+   no terminal-config join today).
+4. EG1 same-parent total-score stop/continue/handoff interface (current components, NO TR1
+   constants) before Stage-0 stop rules seal.
+TWO RACES (post-Stage-0, governed lane): equal-parameter WeightEntropyPenaltyMLX arm ·
+HP3-successor probability-object/section-geometry race (CP135 closed LOSSLESS rate only —
+learned state + section geometry remain open).
+FOUR ORDERED FIRES (triggers in the memo's NEXT_IF_RESUMED): PZ4R full-n600 realized row →
+compositor · #949 rate-crush after member selection (worktree residue needs custody-safe
+owner) · QDBS at proven same-parent plateau · six-equation pose GN only on measured economic
+pose debt. Dead-end guards: no more CP135 lossless hunting (LP135) · no #869 IX2 import · no
+PZ4P envelope scoring (non-renderable; pz4r is the smallest admissible object) · #828 is
+COMPLETE (bf5981158f) despite the stale pending row — do not reopen.
