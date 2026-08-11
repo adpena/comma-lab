@@ -176,3 +176,33 @@ COMPLEX: each arm fires at its family's OPTIMAL FORM with the full applicable le
 Amendments 5-6 (naive first passes are born at charter time — refuse them at the typing
 moment). (4) OPTIMAL: races decide, reputation never; per-lever optimum before comparison;
 a stage that ends without meeting this bar is INCOMPLETE, not done.
+
+## AMENDMENT 9 (2026-08-11, from ddm_rho1) — ρ prior consumption and terminal recomputation — BINDING
+
+Planning prior: `.omx/research/ddm_rho1_survival_prior_20260811.md`, committed content SHA-256
+`ce87832f60869f936bdf5fdb66cd9f12e8690600124d4148e614c67653b52378`. It supplies an
+analogy-conditioned optimal-form planning band `rho ∈ [0.55, 1.00]`; it is NOT an acceptance gate,
+score credit, confidence interval, or substitute for T4. Three bands stay separate: identified
+C1-on-cp135 rho = `[0,1]` (honest absence — no terminal receipt exists) · optimal-form planning
+band `[0.55,1.00]` (ET1 n32 floor 0.5490603542, exact semantic/token realizers at ceiling) ·
+frozen/fixed-prototype FAILURE band `≈[0,0.234]` (v14/RP1 current-base converted — never mixed in).
+
+T4 recomputes on the ps135 terminal same-parent objects:
+  rho_measured = (d_base − d_candidate) / (d_base − d_target)
+  rho_required = (100·d_base + √(10·d_pose_cand) + 25·bytes_cand/37_545_489 − 0.15) / (100·(d_base − d_target))
+with cp135 same-parent `d_base = 0.00029639352578669786`, C1 `d_target = 0.00015196058485`.
+Refuse if d_base ≤ d_target, parent/archive bindings differ, axis differs, any component is
+proxy-only, or complete parse-back/repeat custody is absent. The historical `rho_required =
+0.828236457` used the +11-B F26 calibration proxy and unchanged Pose — NEVER placed in a launch
+config; cp135 uses HP3, so T4 re-encodes the C1 state on the terminal probability object.
+
+Consequences folded from the prior: (a) DOMINANT-RISK SHARPENING — the token coder is PROVEN exact
+(HY1/LP135); the live survival enemy is semantic/token→contextual-RGB rendering (v14 mechanism) with
+camera-lattice error secondary — Arms B/C/D treat exactly this, frozen-incumbent Arm A is
+identification-only; (b) TWO NEW SUB-ARMS admitted to A5's ladder: DK1 lattice-native CVP/Babai
+local compensation (inside the camera-lattice compensation event) + amplitude/prosody-statistics
+preservation (Arm B/C regularizer or deterministic receiver child, PT1 receipt); (c) T9 menu:
+L28-isolated = FIRST free child; S12 + #401 FOLDED for cp135/F26 (no camera-resolution payload to
+bite on — reopen only if a counted camera payload section ever exists, never double-counted);
+(d) the ranked ρ-raiser table (prior §"Ranked rho raisers") orders the arms; a prior miss changes
+future ordering, never the measured verdict.
