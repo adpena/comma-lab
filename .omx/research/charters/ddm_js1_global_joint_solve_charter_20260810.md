@@ -15,6 +15,14 @@ The #995-successor program = fd135's three converged queue rows as ONE campaign,
    overlays measured-dead (cost > benefit) AND our pk1/lc1 #941 (explicit labels net-harmful,
    conditioning-only survives). Our machinery: m91 per-EDGE decomposition (Road 87.8% of flips,
    Road↔Lane 49.2%), pe3 hybrid, #580 projector as the conditioning-space constraint.
+   **sr1 ADJUDICATED THE ROUTE (016c2a62dd, memo
+   `.omx/research/ddm_sr1_implicit_edge_conditioning_20260811.md`): the RATE half is CLOSED
+   (causal-edge conditioning −2 B on the 114,706 B token wire; pose cross-stream +43 B; HPAC
+   already captures the context; falsifier fired, FORMULATION scope). The ONLY surviving half
+   is the DISTORTION side this row was always about: decoder-derived edge state changing joint
+   proposal generation + capacity allocation, 0 counted bytes, jointly priced vs an
+   equal-parameter control. Consume sr1's ranked table + DEAD-ENDS list at reseal; do NOT
+   re-attempt probability-calibration variants.**
 3. **adaptive_mixed_precision** — consume ps135's emitted F26/lc2 sensitivity map (its stage-C
    deliverable) → adaptive W3/W4 per-cell allocation WITH compensation per rung (uniform-W3
    −852 B catastrophic = closed; compensation per the 29× control = mandatory).
