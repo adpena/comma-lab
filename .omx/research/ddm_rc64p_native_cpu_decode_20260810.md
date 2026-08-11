@@ -182,3 +182,25 @@ components on Route B; a true native C/Rust HPAC kernel; scorer or Modal row.
 Own-vehicle frontier remains **lc2 S 0.16959899569230852 @ 187,226 B
 [contest-CUDA T4, n600]**. The effective frontier is cp135 composed, but it is
 not this arm's own-vehicle row; Route B's 0.16959633225649604 is projection-only.
+
+## ADDENDUM 1 (MAIN, 2026-08-11T00:15Z) — contest-CPU authority receipt: inflate DOES NOT fit 1,800 s as shipped
+
+MAIN fired the queued contest-CPU replay (Modal call `fc-01KZPZSXSP2RZ0XSW0FHHEQVZ0`, lane
+`lane_ddm_rc64p_lc2_contest_cpu_authority_20260810`, archive f154f0ab… 187,226 B, locked-env
+proven). Result: the shipped single-thread `inflate.sh` was killed at exactly the 1,800 s
+contest cap. Measured on Modal contest-CPU hardware `[contest-CPU-class wall; no score]`:
+tokens 2,156.8 s + render 250.5 s ≈ 2,407 s total (the orphaned child completed the raw after
+the harness kill; local byte-identity sha a18eb42a… gives confidence in output identity, not
+re-verified on host). This is 2.8× the local M5 shipped-path wall (856.0 s, LC2 READY receipt).
+The eval step never ran; no CPU score exists. Cost ≈ 40 min CPU, < $1 of #381.
+
+Consequences: (1) this memo's component-sum margin (721.8 s on this Mac) does NOT transfer to
+contest-CPU hardware — host drift is ~2.8–3.0× on the HPAC term; (2) the QUEUED native/threading
+successor's fire trigger ("contest CPU misses 1,800 seconds") has FIRED with an exact receipt —
+projected cure: 4-thread decode (2.0× measured locally, t1 1,437.4→t4 716.9) puts Modal-class
+decode ≈ 1,329 s < 1,800; native C/Rust HPAC adds headroom beyond that; (3) per the
+first-attempt-wall-clock law (2026-08-10), this negative is IMPLEMENTATION-scoped — the CPU
+axis stays OPEN pending the threaded/native inflate; (4) the CPU-vs-CUDA SCORE delta remains
+unmeasured — a diagnostic re-dispatch with `--inflate-timeout 7200` (tool-suggested dev mode,
+score_claim=false, no-promotion) buys that delta on identical bytes without claiming compliance.
+Receipts: `.omx/research/ddm_rc64p_native_cpu_decode_20260810_modal/contest_cpu/`.
