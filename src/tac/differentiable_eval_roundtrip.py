@@ -31,11 +31,19 @@ These are READ-ONLY ORACLES per CLAUDE.md ``forbidden_in_place_edits_to_public_P
 Public API
 ----------
 
-``apply_eval_roundtrip_during_training(rgb_tensor, *, simulate_uint8=True,
-simulate_resize=True, ste_round=True, target_h=874, target_w=1164) -> Tensor``
+``apply_eval_roundtrip_during_training(rgb_tensor, *, ordering=..., lift_kernel=...,
+simulate_uint8=True, simulate_resize=True, ste_round=True,
+target_h=874, target_w=1164) -> Tensor``
     Inner-loop wrapper around the full contest eval roundtrip with the same
     upscale/quantize/downscale ladder PR #95 uses, with autograd preserved
     via straight-through-estimator on the round step.
+
+``apply_camera_uint8_lift_during_training(rgb_tensor, *, lift_kernel=...) -> Tensor``
+    The camera-byte portion of the corrected receiver: typed lift followed by
+    exact camera-resolution clamp/round in the forward pass and Uint8STE in the
+    backward pass.  The returned floating tensor is integer-valued and may be
+    losslessly cast to ``torch.uint8`` for byte comparison with a public
+    receiver.
 
 ``differentiable_rgb_to_yuv6(rgb_chw) -> Tensor``
     Autograd-friendly drop-in for ``frame_utils.rgb_to_yuv6``. Numerically
@@ -141,6 +149,36 @@ class Yuv6RoutingMode(StrEnum):
     AUTO = "auto"
 
 
+class EvalRoundTripOrdering(StrEnum):
+    """Where the uint8 cliff occurs in the resize ladder.
+
+    ``LEGACY_SCORER_UINT8`` preserves the historical helper exactly: lift to
+    camera resolution, downsample to scorer resolution, then clamp/round.  It
+    remains the default solely for backward compatibility.
+
+    ``CAMERA_UINT8`` is the public-receiver ordering required by HR1: lift to
+    camera resolution, clamp/round there, then bilinear-downsample.  The final
+    scorer-resolution tensor is intentionally floating point because the
+    public scorer consumes a bilinearly resized view of camera uint8 bytes.
+    """
+
+    LEGACY_SCORER_UINT8 = "legacy_scorer_uint8"
+    CAMERA_UINT8 = "camera_uint8"
+
+
+class CameraLiftKernel(StrEnum):
+    """Typed work-grid to camera-grid interpolation kernel.
+
+    HR1's corrected learned arms use ``BICUBIC``.  The retained PR130/PR135
+    semantic receiver uses ``BILINEAR`` for its master-frame lift, so that
+    incumbent comparator must remain explicitly representable rather than
+    being hidden behind an untyped boolean or call-site convention.
+    """
+
+    BICUBIC = "bicubic"
+    BILINEAR = "bilinear"
+
+
 # --------------------------------------------------------------------------- #
 # Differentiable rgb_to_yuv6 (Finding B)                                       #
 # --------------------------------------------------------------------------- #
@@ -210,9 +248,111 @@ def differentiable_rgb_to_yuv6(rgb_chw: torch.Tensor) -> torch.Tensor:
 # --------------------------------------------------------------------------- #
 
 
+def _validate_roundtrip_rgb(rgb_tensor: torch.Tensor, *, caller: str) -> None:
+    if rgb_tensor.dim() < 3:
+        raise ValueError(
+            f"{caller} requires (..., 3, H, W); got shape {tuple(rgb_tensor.shape)}"
+        )
+    if rgb_tensor.shape[-3] != 3:
+        raise ValueError(
+            f"{caller} expects 3 channels at dim -3; got {rgb_tensor.shape[-3]}"
+        )
+    if not rgb_tensor.is_floating_point():
+        raise ValueError(f"{caller} requires a float tensor; got {rgb_tensor.dtype}")
+
+
+def _coerce_lift_kernel(value: CameraLiftKernel | str) -> CameraLiftKernel:
+    try:
+        return value if isinstance(value, CameraLiftKernel) else CameraLiftKernel(value)
+    except ValueError as exc:
+        choices = ", ".join(member.value for member in CameraLiftKernel)
+        raise ValueError(f"lift_kernel must be one of {{{choices}}}; got {value!r}") from exc
+
+
+def _coerce_roundtrip_ordering(
+    value: EvalRoundTripOrdering | str,
+) -> EvalRoundTripOrdering:
+    try:
+        return value if isinstance(value, EvalRoundTripOrdering) else EvalRoundTripOrdering(value)
+    except ValueError as exc:
+        choices = ", ".join(member.value for member in EvalRoundTripOrdering)
+        raise ValueError(f"ordering must be one of {{{choices}}}; got {value!r}") from exc
+
+
+def _lift_to_camera(
+    flat: torch.Tensor,
+    *,
+    target_h: int,
+    target_w: int,
+    lift_kernel: CameraLiftKernel,
+) -> torch.Tensor:
+    return F.interpolate(
+        flat,
+        size=(target_h, target_w),
+        mode=lift_kernel.value,
+        align_corners=False,
+    )
+
+
+def _clamp_or_uint8_ste(
+    tensor: torch.Tensor,
+    *,
+    simulate_uint8: bool,
+    ste_round: bool,
+) -> torch.Tensor:
+    if not simulate_uint8:
+        return tensor
+    return Uint8STE.apply(tensor) if ste_round else tensor.clamp(0.0, 255.0)
+
+
+def apply_camera_uint8_lift_during_training(
+    rgb_tensor: torch.Tensor,
+    *,
+    lift_kernel: CameraLiftKernel | str = CameraLiftKernel.BICUBIC,
+    simulate_uint8: bool = True,
+    ste_round: bool = True,
+    target_h: int = CAMERA_HW[0],
+    target_w: int = CAMERA_HW[1],
+) -> torch.Tensor:
+    """Lift work-grid RGB to camera resolution and apply the camera uint8 cliff.
+
+    This is the exact camera-byte boundary shared by the corrected HR1 training
+    graph and its saved public receiver.  Forward values with
+    ``simulate_uint8=True`` and ``ste_round=True`` are exactly
+    ``clamp(round(lift(rgb)), 0, 255)``; backward is the saturation-aware
+    :class:`~tac.quantization.Uint8STE` derivative.
+
+    The PR130/PR135 semantic public receiver lifts master frames with bilinear
+    interpolation.  HR1's corrected learned arms require bicubic.  The typed
+    ``lift_kernel`` parameter keeps both receivers representable and prevents a
+    comparator change from hiding inside the round-trip helper.
+    """
+    caller = "apply_camera_uint8_lift_during_training"
+    _validate_roundtrip_rgb(rgb_tensor, caller=caller)
+    if type(target_h) is not int or type(target_w) is not int or target_h <= 0 or target_w <= 0:
+        raise ValueError("target_h and target_w must be positive exact integers")
+    kernel = _coerce_lift_kernel(lift_kernel)
+    orig_shape = rgb_tensor.shape
+    flat = rgb_tensor.reshape(-1, 3, orig_shape[-2], orig_shape[-1])
+    camera = _lift_to_camera(
+        flat,
+        target_h=target_h,
+        target_w=target_w,
+        lift_kernel=kernel,
+    )
+    camera = _clamp_or_uint8_ste(
+        camera,
+        simulate_uint8=simulate_uint8,
+        ste_round=ste_round,
+    )
+    return camera.reshape(*orig_shape[:-2], target_h, target_w)
+
+
 def apply_eval_roundtrip_during_training(
     rgb_tensor: torch.Tensor,
     *,
+    ordering: EvalRoundTripOrdering | str = EvalRoundTripOrdering.LEGACY_SCORER_UINT8,
+    lift_kernel: CameraLiftKernel | str = CameraLiftKernel.BICUBIC,
     simulate_uint8: bool = True,
     simulate_resize: bool = True,
     ste_round: bool = True,
@@ -229,9 +369,12 @@ def apply_eval_roundtrip_during_training(
         # ...
         decoded_bhwc = Uint8STE.apply(decoded_bhwc)
 
-    Note PR #95 uses bicubic UP and bilinear DOWN (asymmetric), and applies the
-    STE round AFTER the resize roundtrip in HWC layout. We replicate the same
-    sequence in CHW layout (the layout the renderer emits before scorer preprocess).
+    The default ``LEGACY_SCORER_UINT8`` branch remains byte-identical to the
+    historical helper: bicubic-up, bilinear-down, then scorer-grid Uint8STE.
+    ``CAMERA_UINT8`` implements HR1's receiver-faithful order: typed lift,
+    camera-grid Uint8STE, then bilinear-down.  The retained PR130/PR135 master
+    renderer uses a bilinear lift while HR1 specifies bicubic, hence the
+    independent typed ``lift_kernel`` parameter.
 
     The STE step makes the gradient pass through the round-to-uint8 cliff
     (``round.detach()`` cancels the round forward, leaves identity backward).
@@ -243,6 +386,10 @@ def apply_eval_roundtrip_during_training(
         rgb_tensor: ``(..., 3, H, W)`` float in ``[0, 255]`` at scorer resolution
             (typically ``H=384, W=512``). Layout: NCHW or BTCHW (any leading
             dims; the spatial roundtrip applies to last two dims).
+        ordering: typed uint8 placement.  Default is the unchanged legacy
+            scorer-grid placement.  Use ``CAMERA_UINT8`` for HR1/public receiver
+            parity.
+        lift_kernel: typed work-to-camera lift, ``bicubic`` or ``bilinear``.
         simulate_uint8: if False, skip the STE clamp+round (debug only).
         simulate_resize: if False, skip the bicubic-up + bilinear-down
             (debug only; produces invalid eval-faithful gradients).
@@ -257,21 +404,12 @@ def apply_eval_roundtrip_during_training(
     Raises:
         ValueError: on dtype/shape/range mismatch.
     """
-    if rgb_tensor.dim() < 3:
-        raise ValueError(
-            f"apply_eval_roundtrip_during_training requires (..., 3, H, W); "
-            f"got shape {tuple(rgb_tensor.shape)}"
-        )
-    if rgb_tensor.shape[-3] != 3:
-        raise ValueError(
-            f"apply_eval_roundtrip_during_training expects 3 channels at dim -3; "
-            f"got {rgb_tensor.shape[-3]}"
-        )
-    if not rgb_tensor.is_floating_point():
-        raise ValueError(
-            f"apply_eval_roundtrip_during_training requires a float tensor; "
-            f"got {rgb_tensor.dtype}"
-        )
+    caller = "apply_eval_roundtrip_during_training"
+    _validate_roundtrip_rgb(rgb_tensor, caller=caller)
+    mode = _coerce_roundtrip_ordering(ordering)
+    kernel = _coerce_lift_kernel(lift_kernel)
+    if type(target_h) is not int or type(target_w) is not int or target_h <= 0 or target_w <= 0:
+        raise ValueError("target_h and target_w must be positive exact integers")
     orig_shape = rgb_tensor.shape
     orig_h, orig_w = orig_shape[-2], orig_shape[-1]
 
@@ -279,22 +417,35 @@ def apply_eval_roundtrip_during_training(
     flat = rgb_tensor.reshape(-1, 3, orig_h, orig_w)
 
     if simulate_resize:
-        # PR #95 uses bicubic UP, bilinear DOWN. (Asymmetric on purpose; this
-        # matches the contest evaluate.py ladder — see binary forensics.)
-        up = F.interpolate(
-            flat, size=(target_h, target_w), mode="bicubic", align_corners=False
+        up = _lift_to_camera(
+            flat,
+            target_h=target_h,
+            target_w=target_w,
+            lift_kernel=kernel,
         )
-        down = F.interpolate(
-            up, size=(orig_h, orig_w), mode="bilinear", align_corners=False
-        )
+        if mode is EvalRoundTripOrdering.CAMERA_UINT8:
+            up = _clamp_or_uint8_ste(
+                up,
+                simulate_uint8=simulate_uint8,
+                ste_round=ste_round,
+            )
+        down = F.interpolate(up, size=(orig_h, orig_w), mode="bilinear", align_corners=False)
     else:
         down = flat
 
-    # Canonical STE: forward is exact uint8 clamp/round; backward is identity
-    # inside range and zero outside saturation.
+    # The legacy branch quantizes after the complete resize ladder.  When resize
+    # is disabled, CAMERA_UINT8 has no separate camera grid, so quantization is
+    # still applied exactly once to the input-grid tensor.
+    should_quantize_output = (
+        mode is EvalRoundTripOrdering.LEGACY_SCORER_UINT8 or not simulate_resize
+    )
     out_flat = (
-        (Uint8STE.apply(down) if ste_round else down.clamp(0.0, 255.0))
-        if simulate_uint8
+        _clamp_or_uint8_ste(
+            down,
+            simulate_uint8=simulate_uint8,
+            ste_round=ste_round,
+        )
+        if should_quantize_output
         else down
     )
 

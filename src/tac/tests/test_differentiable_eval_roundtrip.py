@@ -16,6 +16,7 @@ from pathlib import Path
 
 import pytest
 import torch
+import torch.nn.functional as F
 
 # Ensure upstream is importable for the parity tests.
 _REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -23,11 +24,14 @@ _UPSTREAM = _REPO_ROOT / "upstream"
 if _UPSTREAM.is_dir() and str(_UPSTREAM) not in sys.path:
     sys.path.insert(0, str(_UPSTREAM))
 
-from tac.differentiable_eval_roundtrip import (
+from tac.differentiable_eval_roundtrip import (  # noqa: E402
     CAMERA_HW,
     SCORER_HW,
+    CameraLiftKernel,
+    EvalRoundTripOrdering,
     Yuv6PatchToken,
     Yuv6RoutingMode,
+    apply_camera_uint8_lift_during_training,
     apply_eval_roundtrip_during_training,
     assert_yuv6_forward_equivalence_to_upstream,
     differentiable_rgb_to_yuv6,
@@ -45,6 +49,67 @@ def _upstream_available() -> bool:
 
 
 _HAS_UPSTREAM = _upstream_available()
+
+
+@pytest.fixture(scope="session")
+def retained_real_work_rgb() -> torch.Tensor:
+    """One real contest frame, decoded only by the canonical retained-source path.
+
+    This fixture intentionally does not use random/synthetic pixels for HR2's
+    receiver tests.  The material positive-control runner retains this decoded
+    camera frame and every derived output on the SSD; the unit suite only uses
+    the same canonical source frame as a behavior fixture.
+    """
+    if not _HAS_UPSTREAM:
+        pytest.skip("upstream frame_utils unavailable")
+    try:
+        import av
+        from frame_utils import yuv420_to_rgb
+    except ImportError:
+        pytest.skip("PyAV/canonical yuv420_to_rgb unavailable")
+    video = _UPSTREAM / "videos" / "0.mkv"
+    if not video.is_file():
+        pytest.skip("retained upstream video unavailable")
+    with av.open(str(video)) as container:
+        frame = next(container.decode(container.streams.video[0]))
+        camera_hwc = yuv420_to_rgb(frame)
+    camera = camera_hwc.permute(2, 0, 1).unsqueeze(0).float()
+    return F.interpolate(camera, size=SCORER_HW, mode="bilinear", align_corners=False)
+
+
+def _explicit_camera_lift(
+    work_rgb: torch.Tensor,
+    *,
+    kernel: CameraLiftKernel,
+) -> torch.Tensor:
+    lifted = F.interpolate(
+        work_rgb,
+        size=CAMERA_HW,
+        mode=kernel.value,
+        align_corners=False,
+    )
+    return lifted.clamp(0.0, 255.0).round()
+
+
+def _explicit_camera_uint8_ste_roundtrip(
+    work_rgb: torch.Tensor,
+    *,
+    kernel: CameraLiftKernel,
+) -> torch.Tensor:
+    lifted = F.interpolate(
+        work_rgb,
+        size=CAMERA_HW,
+        mode=kernel.value,
+        align_corners=False,
+    )
+    clamped = lifted.clamp(0.0, 255.0)
+    camera_ste = clamped + (clamped.round() - clamped).detach()
+    return F.interpolate(camera_ste, size=SCORER_HW, mode="bilinear", align_corners=False)
+
+
+def _tensor_max_relative_error(actual: torch.Tensor, expected: torch.Tensor) -> float:
+    scale = torch.maximum(actual.abs().max(), expected.abs().max()).clamp_min(1e-12)
+    return float((actual - expected).abs().max() / scale)
 
 
 # --------------------------------------------------------------------------- #
@@ -286,6 +351,243 @@ def test_eval_roundtrip_deterministic_for_same_input():
     out1 = apply_eval_roundtrip_during_training(rgb)
     out2 = apply_eval_roundtrip_during_training(rgb)
     torch.testing.assert_close(out1, out2)
+
+
+# --------------------------------------------------------------------------- #
+# HR2 typed camera-uint8 ordering — real-frame forward/backward controls       #
+# --------------------------------------------------------------------------- #
+
+
+def test_hr2_ordering_enum_is_closed_and_typed():
+    assert {member.value for member in EvalRoundTripOrdering} == {
+        "legacy_scorer_uint8",
+        "camera_uint8",
+    }
+
+
+def test_hr2_lift_kernel_enum_represents_candidate_and_incumbent():
+    assert {member.value for member in CameraLiftKernel} == {"bicubic", "bilinear"}
+
+
+def test_hr2_invalid_ordering_refuses_on_real_frame(retained_real_work_rgb):
+    with pytest.raises(ValueError, match="ordering must be one of"):
+        apply_eval_roundtrip_during_training(
+            retained_real_work_rgb,
+            ordering="after_everything_somewhere",
+        )
+
+
+def test_hr2_invalid_lift_kernel_refuses_on_real_frame(retained_real_work_rgb):
+    with pytest.raises(ValueError, match="lift_kernel must be one of"):
+        apply_eval_roundtrip_during_training(
+            retained_real_work_rgb,
+            lift_kernel="nearest",
+        )
+
+
+def test_hr2_default_is_byte_identical_to_explicit_legacy_real_frame(
+    retained_real_work_rgb,
+):
+    default = apply_eval_roundtrip_during_training(retained_real_work_rgb)
+    explicit = apply_eval_roundtrip_during_training(
+        retained_real_work_rgb,
+        ordering=EvalRoundTripOrdering.LEGACY_SCORER_UINT8,
+        lift_kernel=CameraLiftKernel.BICUBIC,
+    )
+    torch.testing.assert_close(default, explicit, atol=0.0, rtol=0.0)
+
+
+def test_hr2_default_matches_pre_hr2_expression_exactly_on_real_frame(
+    retained_real_work_rgb,
+):
+    up = F.interpolate(
+        retained_real_work_rgb,
+        size=CAMERA_HW,
+        mode="bicubic",
+        align_corners=False,
+    )
+    expected = F.interpolate(
+        up,
+        size=SCORER_HW,
+        mode="bilinear",
+        align_corners=False,
+    ).clamp(0.0, 255.0).round()
+    actual = apply_eval_roundtrip_during_training(retained_real_work_rgb)
+    torch.testing.assert_close(actual, expected, atol=0.0, rtol=0.0)
+
+
+@pytest.mark.parametrize("kernel", list(CameraLiftKernel))
+def test_hr2_training_camera_bytes_equal_public_receiver_expression_real_frame(
+    retained_real_work_rgb,
+    kernel,
+):
+    actual = apply_camera_uint8_lift_during_training(
+        retained_real_work_rgb,
+        lift_kernel=kernel,
+    )
+    expected = _explicit_camera_lift(retained_real_work_rgb, kernel=kernel)
+    torch.testing.assert_close(actual, expected, atol=0.0, rtol=0.0)
+    assert torch.equal(actual.to(torch.uint8), expected.to(torch.uint8))
+
+
+def test_hr2_camera_lift_returns_camera_shape_on_real_frame(retained_real_work_rgb):
+    actual = apply_camera_uint8_lift_during_training(retained_real_work_rgb)
+    assert actual.shape == (1, 3, *CAMERA_HW)
+
+
+def test_hr2_camera_lift_forward_is_integer_valued_on_real_frame(
+    retained_real_work_rgb,
+):
+    actual = apply_camera_uint8_lift_during_training(retained_real_work_rgb)
+    torch.testing.assert_close(actual, actual.round(), atol=0.0, rtol=0.0)
+
+
+@pytest.mark.parametrize("kernel", list(CameraLiftKernel))
+def test_hr2_camera_uint8_roundtrip_matches_independent_forward_real_frame(
+    retained_real_work_rgb,
+    kernel,
+):
+    actual = apply_eval_roundtrip_during_training(
+        retained_real_work_rgb,
+        ordering=EvalRoundTripOrdering.CAMERA_UINT8,
+        lift_kernel=kernel,
+    )
+    expected = _explicit_camera_uint8_ste_roundtrip(
+        retained_real_work_rgb,
+        kernel=kernel,
+    )
+    torch.testing.assert_close(actual, expected, atol=0.0, rtol=0.0)
+
+
+def test_hr2_camera_uint8_downsample_remains_float_not_fake_second_round(
+    retained_real_work_rgb,
+):
+    actual = apply_eval_roundtrip_during_training(
+        retained_real_work_rgb,
+        ordering=EvalRoundTripOrdering.CAMERA_UINT8,
+    )
+    assert (actual - actual.round()).abs().max().item() > 0.0
+
+
+def test_hr2_orderings_are_materially_distinct_on_real_frame(retained_real_work_rgb):
+    legacy = apply_eval_roundtrip_during_training(retained_real_work_rgb)
+    camera = apply_eval_roundtrip_during_training(
+        retained_real_work_rgb,
+        ordering=EvalRoundTripOrdering.CAMERA_UINT8,
+    )
+    assert torch.count_nonzero(legacy != camera).item() > 0
+
+
+def test_hr2_prior_law_rgb_channel_argmax_diff_is_nonzero_on_real_frame(
+    retained_real_work_rgb,
+):
+    """Scorer-free prior-law proxy only; this is NOT a SegNet conclusion."""
+    legacy = apply_eval_roundtrip_during_training(retained_real_work_rgb)
+    camera = apply_eval_roundtrip_during_training(
+        retained_real_work_rgb,
+        ordering=EvalRoundTripOrdering.CAMERA_UINT8,
+    )
+    rgb_argmax_changes = torch.count_nonzero(legacy.argmax(1) != camera.argmax(1))
+    assert rgb_argmax_changes.item() > 0
+
+
+def test_hr2_camera_uint8_mode_is_deterministic_on_real_frame(retained_real_work_rgb):
+    first = apply_eval_roundtrip_during_training(
+        retained_real_work_rgb,
+        ordering=EvalRoundTripOrdering.CAMERA_UINT8,
+    )
+    second = apply_eval_roundtrip_during_training(
+        retained_real_work_rgb,
+        ordering=EvalRoundTripOrdering.CAMERA_UINT8,
+    )
+    torch.testing.assert_close(first, second, atol=0.0, rtol=0.0)
+
+
+@pytest.mark.parametrize("kernel", list(CameraLiftKernel))
+def test_hr2_per_tensor_gradient_max_relative_error_vs_cpu_torch_real_frame(
+    retained_real_work_rgb,
+    kernel,
+):
+    """#903 control: compare the full input-gradient tensor, never just loss."""
+    actual_input = retained_real_work_rgb.detach().clone().requires_grad_(True)
+    reference_input = retained_real_work_rgb.detach().clone().requires_grad_(True)
+    weight = torch.linspace(
+        0.25,
+        1.25,
+        SCORER_HW[0] * SCORER_HW[1],
+        dtype=actual_input.dtype,
+    ).reshape(1, 1, *SCORER_HW)
+    actual = apply_eval_roundtrip_during_training(
+        actual_input,
+        ordering=EvalRoundTripOrdering.CAMERA_UINT8,
+        lift_kernel=kernel,
+    )
+    reference = _explicit_camera_uint8_ste_roundtrip(
+        reference_input,
+        kernel=kernel,
+    )
+    (actual * weight).sum().backward()
+    (reference * weight).sum().backward()
+    assert actual_input.grad is not None
+    assert reference_input.grad is not None
+    max_rel_error = _tensor_max_relative_error(actual_input.grad, reference_input.grad)
+    assert max_rel_error <= 1e-7
+
+
+def test_hr2_gradient_control_would_detect_a_wrong_lift_kernel(retained_real_work_rgb):
+    bicubic_input = retained_real_work_rgb.detach().clone().requires_grad_(True)
+    bilinear_input = retained_real_work_rgb.detach().clone().requires_grad_(True)
+    bicubic = apply_eval_roundtrip_during_training(
+        bicubic_input,
+        ordering=EvalRoundTripOrdering.CAMERA_UINT8,
+        lift_kernel=CameraLiftKernel.BICUBIC,
+    )
+    bilinear = apply_eval_roundtrip_during_training(
+        bilinear_input,
+        ordering=EvalRoundTripOrdering.CAMERA_UINT8,
+        lift_kernel=CameraLiftKernel.BILINEAR,
+    )
+    weight = torch.linspace(0.5, 1.5, bicubic.numel(), dtype=bicubic.dtype).reshape_as(bicubic)
+    (bicubic * weight).sum().backward()
+    (bilinear * weight).sum().backward()
+    assert bicubic_input.grad is not None and bilinear_input.grad is not None
+    assert _tensor_max_relative_error(bicubic_input.grad, bilinear_input.grad) > 1e-5
+
+
+def test_hr2_camera_uint8_backward_is_nonzero_on_real_frame(retained_real_work_rgb):
+    work = retained_real_work_rgb.detach().clone().requires_grad_(True)
+    output = apply_eval_roundtrip_during_training(
+        work,
+        ordering=EvalRoundTripOrdering.CAMERA_UINT8,
+    )
+    output.square().mean().backward()
+    assert work.grad is not None
+    assert torch.count_nonzero(work.grad).item() > 0
+
+
+def test_hr2_camera_lift_preserves_leading_pair_dimension_real_frame(
+    retained_real_work_rgb,
+):
+    pair = torch.stack([retained_real_work_rgb[0], retained_real_work_rgb[0]], dim=0).unsqueeze(0)
+    camera = apply_camera_uint8_lift_during_training(pair)
+    scorer = apply_eval_roundtrip_during_training(
+        pair,
+        ordering=EvalRoundTripOrdering.CAMERA_UINT8,
+    )
+    assert camera.shape == (1, 2, 3, *CAMERA_HW)
+    assert scorer.shape == pair.shape
+
+
+def test_hr2_camera_mode_no_resize_quantizes_exactly_once_on_real_frame(
+    retained_real_work_rgb,
+):
+    actual = apply_eval_roundtrip_during_training(
+        retained_real_work_rgb,
+        ordering=EvalRoundTripOrdering.CAMERA_UINT8,
+        simulate_resize=False,
+    )
+    expected = retained_real_work_rgb.clamp(0.0, 255.0).round()
+    torch.testing.assert_close(actual, expected, atol=0.0, rtol=0.0)
 
 
 # --------------------------------------------------------------------------- #
