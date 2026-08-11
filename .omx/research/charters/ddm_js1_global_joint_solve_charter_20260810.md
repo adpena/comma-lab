@@ -58,3 +58,27 @@ elevated this campaign to a full corpus × PR135-family hybrid — solver-arsena
 sq2 uncapped GN) and, if hy1's probes pass, the solved-partition-through-their-carriage head
 (C1 solve d_seg ≈1.52e-4 through the semantic token wire). js1's stage list re-ranks against
 hy1's priced spec at fire time.
+
+## AMENDMENT 2 (2026-08-11, operator realization steer — BINDING on the joint-realization stage)
+
+Operator verbatim: "We might need to incorporate a learned prior into our hybrid or do other
+clever engineering techniques for realization. Remember the importance of doing upstream and r
+during training and such in training... keeping the round trip in all transforms and everything
+in mind." Consequences, binding on hy1-stage-3 (joint realization) whenever it fires:
+
+1. **ROUND-TRIP-IN-LOOP IS MANDATORY, not optional.** Any learned adaptation (renderer
+   fine-tune, adapter, joint token+renderer descent) trains through the EXACT composite
+   round trip: render → bicubic↑874 → uint8 (STE) → bilinear↓384 → scorer preprocess, with
+   differentiable yuv6 wherever pose gradients flow (tac.differentiable_eval_roundtrip is the
+   canonical surface; eval_roundtrip=True semantics per the CLAUDE.md non-negotiable). A
+   realization stage that optimizes pre-round-trip fields is the measured 2-11× proxy-auth
+   trap and is REFUSED. Sister laws: fd2's uint8-STE+R-in-loop lesson (encoded in SPEC_tr1),
+   [[realization_gap_is_fixable_through_actual_S_R_GT_20260806]], the #149 pre-R placement.
+2. **A LEARNED REALIZATION PRIOR must be RACED, not presumed or skipped** (the neural-codec
+   3-placements law: RECEIVER/ENCODE/DECODER placements raced). Minimum arms: frozen-decode
+   baseline · their-renderer fine-tune on the C1 plane w/ scorer-in-loop (the dw1/QA75
+   solve-distillation lineage, KD #74 reopened) · light adapter/LoRA-class head · joint
+   token+renderer descent (jd-line machinery). Counted-byte deltas of any adapted weights
+   are priced honestly (rule-118: learned = counted).
+3. The design SPEC for this stage is owned by ddm_hr1
+   (`.omx/research/ddm_hr1_realization_engineering_20260811.md` when landed) — consume it.
