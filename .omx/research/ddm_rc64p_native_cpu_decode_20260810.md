@@ -204,3 +204,30 @@ axis stays OPEN pending the threaded/native inflate; (4) the CPU-vs-CUDA SCORE d
 unmeasured — a diagnostic re-dispatch with `--inflate-timeout 7200` (tool-suggested dev mode,
 score_claim=false, no-promotion) buys that delta on identical bytes without claiming compliance.
 Receipts: `.omx/research/ddm_rc64p_native_cpu_decode_20260810_modal/contest_cpu/`.
+
+## ADDENDUM 2 (MAIN, 2026-08-11T00:45Z) — the EXACT [contest-CPU] row: CPU is the WRONG axis for this lineage
+
+Diagnostic leg (Modal call `fc-01KZQ2F7AHQR4EGP8CYB531WRS`, dev-mode `--inflate-timeout 7200`,
+same lc2 bytes f154f0ab…, locked env, canonical path, n600, Linux x86_64) COMPLETED:
+
+| axis | S | d_seg | d_pose | rate | custody |
+|---|---:|---:|---:|---:|---|
+| contest-CUDA T4 (adjudicated) | 0.16959899569230852 | ~2.94e-4 | ~2.42e-5 | 0.1246661 | prior row |
+| **contest-CPU x86 (THIS row)** | **0.20728492781521812** | 0.00042739 | 0.00015904 | 0.1246661 | `contest_cpu_diag/` receipts |
+
+**The #998 device-lever question is ANSWERED with the opposite sign from PR102: CPU is
++0.03769 WORSE on identical bytes.** Decomposition: pose term 0.01557→0.03988 (d_pose 6.6×
+worse — the semantic-pose mechanism is CUDA-numerics-favorable) + seg term 0.02936→0.04274
+(d_seg 1.45× worse). PR130/PR135's CUDA-lock was a rational choice, not an oversight. There is
+NO free CPU score for this lineage; CUDA remains the shipping axis.
+
+Secondary findings: (1) inflate FIT this host at 1,683.2 s < 1,800 (tokens 1,483.6 + render
+196.3) vs leg 1's 2,407 s kill — Modal host variance 1.45×; shipped-inflate compliance is
+HOST-MARGINAL, and the threading/native successor is hereby DOWNGRADED to robustness-only
+value (no score prize behind it). (2) CPU evaluate.py took only 122.7 s for n600 — the eval is
+cheap; inflate is the entire CPU-budget story. (3) Cross-platform raw divergence: Linux raw
+sha b849fec4… ≠ local macOS-ARM raw a18eb42a… at identical size 3,662,409,600 — the render is
+platform-float-sensitive; token streams remain bit-identical (sha c5c7671d…). Contest hosts
+are Linux, so Linux raws are the authoritative realization; local raws are advisory.
+Row semantics per the result payload: `[contest-CPU]` score_claim=true, promotion_eligible=false
+(cpu_leaderboard_reproduction_eligible; drift-diagnosis use). Cost both legs ≈ $1–1.5 of #381.
