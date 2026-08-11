@@ -71,7 +71,7 @@ def is_observer_stripped_launch(
 # (or an agent's `rg`, an editor, a pager) made `tok in line` fire and the tool refused to launch.
 READER_PROGRAMS: tuple[str, ...] = (
     "ack", "ag", "awk", "bat", "cat", "code", "cut", "diff", "du", "egrep", "emacs", "fgrep",
-    "find", "fzf", "grep", "head", "less", "ls", "mdfind", "more", "nano", "nvim", "open",
+    "find", "fzf", "git", "grep", "head", "less", "ls", "mdfind", "more", "nano", "nvim", "open",
     "pgrep", "ps", "rg", "ripgrep", "sed", "sort", "strings", "tail", "tee", "tr", "uniq",
     "vi", "view", "vim", "wc", "xargs",
 )
