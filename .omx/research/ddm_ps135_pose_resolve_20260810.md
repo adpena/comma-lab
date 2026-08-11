@@ -313,3 +313,174 @@ runnable bank bypass.
 This checkpoint has not moved the exact pointer or reached sub-0.15.  The
 current own-vehicle frontier remains **LC2 `S = 0.16959899569230852 @ 187,226 B`
 `[contest-CUDA T4, adjudicated, n600]`**.
+
+# ADDENDUM — ddm_ps135b GEN-2 parity clearance and Leg-A fire (2026-08-11 UTC)
+
+This addendum extends the gen-1 checkpoint.  It does not replace any earlier
+negative or authority boundary.  The GEN-2 run is still active at the time of
+this append: pass 1 is complete and byte-closed; pass 2 is checkpointing.
+
+## RECALL EVIDENCE — GEN-2 additions
+
+The GEN-2 recall repeated the earlier full-corpus searches and additionally
+searched for `wrong sign`, `global start`, `multistart`, `PR133 projection`,
+`q4 parity`, `bare python`, `shared venv`, `cold store relocation`, and
+`pair 599` across `.omx/research`, the canonical research index and DAG FEED
+blocks, canonical equations, task/bridge stores, PR135 ExperimentBook source,
+and current SSD receipts.  Beyond the original charter seeds it found the
+`ss1`, `pu1`, `pu2`, `v4c`, and `uv1` precedents for multistart control,
+environment isolation, and receiver/runtime parity.  Those findings changed
+the implementation in three concrete ways:
+
+1. PR133 enters LC2 through a full realized-carrier least-squares projection
+   into LC2's bicubic-normalized basis and scales, never through integer-code
+   copying.  The retained projection has LC2 Gram condition `16.0433`,
+   unquantized residual MSE `0.005076724`, quantized residual MSE `0.005078733`,
+   and six clipped codes.
+2. Every row now screens native GN, wrong-sign GN, and the projected-global
+   center with radius 2 on the three ranked dimensions, plus the complete
+   singleton `+/-1` control.  All 400 codes, outputs, errors, and family IDs are
+   retained per row.
+3. The q4 parity gate binds the relocated cold-store raw by the original full
+   raw SHA and literal-decode receipt.  Relocation alone can no longer make a
+   valid retained parity target look stale.
+
+The recall did not find a current-vehicle measurement that permits changing
+the frozen batch-16 scorer geometry, dropping the eight-pass minimum, or
+treating macOS CPU as contest authority.
+
+## Cleared parity and storage gates
+
+- The pinned Python `3.13.12`, NumPy `1.26.4`, Torch `2.12.1` environment now
+  imports responsively.  The earlier import timeout did not reproduce and is
+  classified as a transient Vertigo-I/O/environment incident, not a Torch-pin
+  family failure.
+- Exact q4 pair 599 parity passed at `OMP_NUM_THREADS=2`,
+  `MKL_NUM_THREADS=2`, `PYTHONHASHSEED=0`: retained payload `3,052,008` B, SHA
+  `3ddebcfe23c60e891b2c5b8cccb2df1fe261d5a2cb660b64c70b97aa4b562563`,
+  mismatch count `0`.  Receipt:
+  `/Volumes/VertigoDataTier/pact/ddm_ps135_20260810/stage_c/parity/q4_pair_0599/driver_8287ecb080e8b8518ddb1d5407832b55fc33b6e9988e97970c212bd0a9d9fa71/parity_receipt.json`
+  (`6,663` B, SHA
+  `95b049c557b3df100f14722b00507a807a8fe7f83ce5a705ca2e56ecf8113d25`).
+- The certified AI1 cold move completed as schema `vertigo_cold_move.v2`:
+  `26,941,292,544` allocated source bytes and 141 data files verified by
+  per-file SHA before deletion; ExFAT AppleDouble metadata sidecars were
+  explicitly excluded.  A symlink remains at the original path.  Manifest:
+  `/Volumes/APDataStore/pact/ddm_ai1_20260809_MOVE_MANIFEST/MOVED.json`, SHA
+  `8bb38b2d98036441b3b53fc9b6bb27e2eabdeef58a3aeb9be71e40f276c69169`.
+- Post-move committed preflight passed with `28,010,373,120` B free on
+  Vertigo, `1,004,317,966,336` B free on APDataStore, zero active claims, and
+  no suspicious process under the bounded fallback scan.  Receipt:
+  `/Volumes/VertigoDataTier/pact/ddm_ps135_20260810/preflight.json`, SHA
+  `02d5723261184d0fd3ea2ef6bafe1549ede0e40a4e1ab2385f531fc6e3d2e9cf`.
+
+## Landed GEN-2 apparatus
+
+- Commit `5ad0c4b7e1` binds q4 parity across the certified raw relocation.
+- Commit `27eec82708` lands radius-2 native/wrong-sign/projected-global starts,
+  full per-row family retention, and the projected public-carrier control.
+- Focused Stage-C tests passed `37`; focused Leg-A tests passed `23` with the
+  one intentionally excluded multi-gigabyte raw-hash test covered by the
+  committed preflight.  `py_compile`, Ruff, projection tests, and two distinct
+  review-tracker passes passed.  No source or test payload from these commits
+  is uncommitted.
+- The public whole-carrier controls are `[macOS-CPU advisory]` only: LC2 native
+  `S=0.2072899013894104 @ 187,226 B`, projected PR133-in-LC2
+  `S=0.3097879361803798 @ 187,209 B`, and complete public PR133 carrier
+  `S=0.2053611939808186 @ 186,476 B`.  The poor whole projected start does not
+  kill row-local projected basins.
+
+## Leg-A execution checkpoint
+
+The sole claimed lane is
+`lane_ddm_ps135_pose_resolve_20260810` / job
+`ddm_ps135_lc2_joint_pose_n600`, owner `codex:ddm_ps135b`, status
+`running_full_n600_local_cpu`, with the fleet scorer and single-writer locks
+held.  The frozen target cache is complete for all 600 pairs in six retained
+chunks.  Every run-created payload is retained under the Vertigo/AP stores.
+
+Pass 1 completed in `22,589.07` s:
+
+| Field | Measured value |
+|---|---:|
+| accepted rows | 597 / 600 |
+| archive | 187,223 B, SHA `886b9d57610d38295cefb27f8db099e34b98136cd8ffa815160a6144367ec826` |
+| `d_pose` | `0.000030088120534088604` |
+| `d_seg` | `0.0004273478190104167` |
+| recomputed `S` | `0.18474482031130968` |
+| axis | `[macOS-CPU advisory]`, n600 |
+
+All 598 materialized aggregate/rate-trim candidates, including losers, were
+retained and globally exact-refreshed before selection.  The selected archive
+and deterministic repeat are byte-identical.  Receipt:
+`/Volumes/VertigoDataTier/pact/ddm_ps135_20260810/leg_a/passes/pass_01/receipt.json`
+(`4,836,321` B, SHA
+`20476a4cd2a2a9a5b827855e273e9b93e9368c035cabccb1ee2d2492d32d7df5`).
+
+Pass 1 improved the same local axis from `S=0.2072899013894104` to
+`0.18474482031130968`, a reduction of `0.02254508107810072`, while shrinking
+the archive by three bytes.  This is a real byte-closed local row but is not a
+contest row and does not move the exact pointer.
+
+Pass 2 is active.  Its first retained 20-row chunk accepted 14 further moves,
+reducing that chunk's error from `0.00016759976696789636` to
+`0.00010365416810032002`; therefore the dry stopping law has not fired.  The
+chunk is `215,714` B, SHA
+`5d58942d3c794bcd044483393c363c4ef9bcf97313162356de8d4e1684cf0150`.
+The managed sandbox refused an operator child-only `SIGTERM` with
+`operation not permitted`; no checkpoint was damaged and the governed process
+continued.  The frozen batch-16 path remains the execution authority.
+
+## Boundaries and dispositions at this append
+
+- Leg A: **FIRED-RUNNING-RESUMABLE**; owner `codex:ddm_ps135b`; consumer store
+  `/Volumes/VertigoDataTier/pact/ddm_ps135_20260810/`; fire trigger already
+  satisfied.  Continue the live process through `MIN_PASSES=8`, three dry
+  passes, terminal JRD, and exact local decode/evaluate.  Refresh the claim
+  before `2026-08-11T21:45:00Z` if still active; otherwise terminalize it with
+  the actual exit.
+- Stage C: **QUEUED-WITH-A-FIRE-ORDER**; owner `MAIN/#995 Stage-C
+  continuation`; consumer store
+  `/Volumes/VertigoDataTier/pact/ddm_ps135_20260810/stage_c/`; fire trigger a
+  complete Leg-A result, frozen sequential four-rung scorer seam, four validated
+  receiver-realized master banks, and a fresh sole-lane claim.  The five
+  scorer-free archives remain rate artifacts, not wins.
+- Exact contest replay: **QUEUED-WITH-A-FIRE-ORDER**; owner `MAIN` only;
+  consumer store MAIN's exact-evaluation receipts; fire trigger a final
+  byte-closed local candidate `<=187,226` B that strictly improves full local
+  advisory S.  No Modal dispatch occurred here.
+
+## LIVE-HYPOTHESES — GEN-2
+
+- Additional radius-2 passes will continue reducing pose because pass 2 is
+  already non-dry on 14/20 observed rows after pass 1.
+- Row-local projected-global basins remain useful even though the whole
+  projected control is poor: they won 95 of pass 1's 600 row selections and
+  materially contributed to the accepted aggregate.
+- Wrong-sign GN is a real lattice escape route rather than a negative control:
+  it won 95 of pass 1's 600 row selections.
+- Stage-C cumulative byte savings can survive compensation because q4 runtime
+  parity is now exact and the Leg-A compensation machinery has already produced
+  a byte-closed local score reduction on this LC2 lineage.
+
+## DEAD-ENDS — GEN-2
+
+- The pinned Torch environment as a persistent import-timeout family is closed;
+  the healthy pinned runtime completed exact parity and full scoring.
+- Treating cold-store relocation as parity invalidation is closed by the
+  original-raw SHA and literal-decode binding.
+- Copying PR133 integer codes into LC2 is closed; the only admitted public
+  global start is the complete-carrier projection through LC2 basis/scales.
+- Killing projected-global row starts because the whole projected candidate is
+  worse is closed by their retained accepted-row wins.
+- The GEN-1 singleton-neighborhood exhaustion does not extend to radius-2
+  multistart: pass 1 accepted 597 rows and both broadened families won rows.
+- Pass 1 is not convergence: pass 2 accepted 14/20 in its first retained chunk.
+- The pass-1 local row is not contest authority, does not move the exact
+  pointer, and is not a Stage-C rate claim.
+
+At this append, the exact pointer is unchanged and sub-0.15 has not been
+reached.  The current own-vehicle authority remains **LC2
+`S = 0.16959899569230852 @ 187,226 B` `[contest-CUDA T4, adjudicated, n600]`**;
+the new pass-1 row is **`S = 0.18474482031130968 @ 187,223 B`
+`[macOS-CPU advisory, n600]`**.
