@@ -82,3 +82,7 @@ in mind." Consequences, binding on hy1-stage-3 (joint realization) whenever it f
    are priced honestly (rule-118: learned = counted).
 3. The design SPEC for this stage is owned by ddm_hr1
    (`.omx/research/ddm_hr1_realization_engineering_20260811.md` when landed) — consume it.
+
+## AMENDMENT 3 (2026-08-11): consume `.omx/research/ddm_capstone_5w_matrix_20260811.md` at
+reseal — the per-piece WHERE/WHAT/WHO/WHY/WHEN/HOW assignment matrix; recompute the survival
+gate from the terminal archive per its open-cell 3.
