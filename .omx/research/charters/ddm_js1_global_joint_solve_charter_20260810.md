@@ -206,3 +206,32 @@ L28-isolated = FIRST free child; S12 + #401 FOLDED for cp135/F26 (no camera-reso
 bite on — reopen only if a counted camera payload section ever exists, never double-counted);
 (d) the ranked ρ-raiser table (prior §"Ranked rho raisers") orders the arms; a prior miss changes
 future ordering, never the measured verdict.
+
+## AMENDMENT 10 (2026-08-11, operator verbatim "use as much precision as possible but only as much
+## as is necessary and optimal at every stage") — PRECISION AS A PER-STAGE WATERFILL — BINDING
+
+Memory: `precision-max-possible-min-necessary-optimal-per-stage`. Precision is a budgeted resource
+on BOTH sides of S: too little loses distortion (pi136: direct quantization worsened pose ~29×),
+too much loses rate (uniform depth on low-sensitivity coefficients), wall-clock (excess numerics),
+or realization (sub-quantum float polish is INVISIBLE on the uint8 actuator lattice — dk1). Every
+terminal stage answers TWO questions: (1) what precision does this stage's CONSUMER actually
+resolve (scorer margin · uint8 quantum · coder symbol · authority axis)? Supply no more. (2) where
+does one more bit buy the most ΔS? Allocate there — the instrument is the ps135 TERMINAL
+SENSITIVITY MAP ((600,6,12) Jacobian + (600,12) GN update + (600,3) active dims, bound at T0 via
+the m37 final-parent gate) fed through the #157 reverse-waterfill machinery; the recovery form when
+depth must drop is quantize-then-COMPENSATE (A5 camera-lattice event; never naked CBQ).
+
+Per-stage bindings:
+- T1 container build: per-SECTION precision audit — no section ships a depth its sensitivity row
+  cannot justify; depth changes are representation moves priced through the real coder.
+- T4/T5 race arms: candidate depths are RACED per the quantization-toolbox law (adaptive per-cell ·
+  aware in-loop · sub-int16 rungs), never adopted uniform-by-default; dk1's integer-native sub-arm
+  (A9) is this doctrine's lattice side — propose ON the actuator lattice.
+- T7 RATE RACES — NEW NAMED CANDIDATE: variable-precision/active-dimension recode of the pose
+  coefficient stream. The solve's own receipts show uniform int16 × 12 dims vs (600,3) active dims
+  per pair — sensitivity-priced allocation (per-pair active-dim mask + per-dim derived depth,
+  compensate after) is the derived form of the pz4 pose-gauge attack and inherits pz4's 2,000 B
+  pre-proof gate. Whole-candidate remeasure; receiver adaptation is ours to make (receiver-is-ours).
+- T10/authority: NEVER degraded — fp32 exact reference, full decimals on S, n600 full-population,
+  dual-axis. Measurement precision follows the CLAIM's units (m94), surrogates only feed priors.
+A stage that adopts a precision it neither derived nor raced is INCOMPLETE under Amendment 8.
