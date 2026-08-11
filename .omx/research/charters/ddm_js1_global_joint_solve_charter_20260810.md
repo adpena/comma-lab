@@ -86,3 +86,14 @@ in mind." Consequences, binding on hy1-stage-3 (joint realization) whenever it f
 ## AMENDMENT 3 (2026-08-11): consume `.omx/research/ddm_capstone_5w_matrix_20260811.md` at
 reseal — the per-piece WHERE/WHAT/WHO/WHY/WHEN/HOW assignment matrix; recompute the survival
 gate from the terminal archive per its open-cell 3.
+
+## AMENDMENT 4 (2026-08-11, hr2 landed): the realization apparatus is BUILT (commits
+436edf452c/9f657a4624, memo `.omx/research/ddm_hr2_prestage_build_20260811.md`) — typed
+camera-uint8 round-trip mode (camera bytes proven equal to the public receiver on real frames,
+both lift kernels; legacy default byte-identical) + fail-closed arm schemas/manifests/binder/
+memory compiler (all REFUSE until terminal objects bound). CONSUME AT RESEAL, do not rebuild.
+NEW PRE-ARM GATE (hr2 fire-order 3): before ANY realization arm launches, test the camera-uint8
+placement with the real frozen scorer on the terminal base — the pixel proxy measured 8,288
+RGB-argmax pixels / 1,126,626 scorer-grid values changed across two real frames (placement is
+material), but no SegNet-cell claim exists yet. Memory clearance = fresh per-arm real-config
+probes via hr2's compiler (shape-only sums are NOT clearance).
