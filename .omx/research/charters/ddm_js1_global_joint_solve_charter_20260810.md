@@ -165,3 +165,14 @@ owner) · QDBS at proven same-parent plateau · six-equation pose GN only on mea
 pose debt. Dead-end guards: no more CP135 lossless hunting (LP135) · no #869 IX2 import · no
 PZ4P envelope scoring (non-renderable; pz4r is the smallest admissible object) · #828 is
 COMPLETE (bf5981158f) despite the stale pending row — do not reopen.
+
+## AMENDMENT 8 (2026-08-11, operator quality bar — verbatim "hybrid research and findings all
+work must be recursive and deep and complex and optimal"): BINDING on every terminal stage and
+every race arm. (1) RECURSIVE: no single-pass verdicts — V0-V5 ladders loop until dry;
+compensation relinearizes per accepted hard state; the remaining queue remeasures after every
+acceptance; gates re-derive per stage from the LIVE base. (2) DEEP: every verdict decomposes to
+mechanism level (per-edge/per-class/per-section/per-arm), never a headline composite. (3)
+COMPLEX: each arm fires at its family's OPTIMAL FORM with the full applicable lever set from
+Amendments 5-6 (naive first passes are born at charter time — refuse them at the typing
+moment). (4) OPTIMAL: races decide, reputation never; per-lever optimum before comparison;
+a stage that ends without meeting this bar is INCOMPLETE, not done.
