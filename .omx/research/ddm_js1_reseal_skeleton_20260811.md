@@ -196,3 +196,29 @@ same-parent pose carrier → replace the sole stale CPR1 input → rerun `all` �
 Live hypotheses carried: terminal pose section may fit ≤ the stale 22,934 B section; the
 composed object clears the HY1 realization gate if the renderer preserves ≥82.824% of C1's
 solved-plane Seg gain (matches the A9 ρ bar).
+
+## TERMINAL EVENT — SOLVE ENDED AT PASS 4 BY LAUNCHER TIMEOUT (2026-08-12 04:50Z)
+
+The solve's original detached launcher carried an 86,400 s (24 h) timeout; it killed pid 26406
+at rc=124 mid-pass-5 (29/30 chunks), BEFORE the operator-approved pass-6 boundary. What fired:
+- Boundary-stop v2 behaved exactly as review-hardened: identity check saw the pid gone, refused
+  any kill, ran the standalone emission on pass-4 (map published, 600 pairs), wrote
+  `leg_a/TERMINAL_BY_POLICY.json` (honest: self_exited=true, passes_completed=4, resumable=true).
+- Watcher v2 TERMINAL branch fired but its alert-arm spawn FAILED on `--effort low` (invalid
+  choice; the adversarial review verified the trigger, not the spawn args — a recorded miss).
+  MAIN woke via the fleet monitors regardless.
+
+ADJUDICATION (MAIN): PROCEED with pass-4 as terminal. Reasons: (1) the T8-dominant composed
+candidate uses cp135's pose section — unaffected; (2) own-vehicle delta pass-4→pass-6 ≈ 0.0007 S
+against ~12.5 h of resume; (3) the state is resumable forever (tranche semantics) if the
+own-vehicle row ever wants passes 5–6; (4) the operator's approval spirit was acceleration.
+The operator may override with a resume order at any time.
+
+THE ACCELERATION: t1r1's pose input sha `da9bba74fdaadc8110b9eb0614decb6d3a5caa076a03b01eee5647d32c37590e`
+EXACTLY matches the terminal `pass_04/selected/coefficients.int16.npy`. The t1r1 rehearsal
+archive (187,046 B, sha 12a5b181…) is therefore built from the TERMINAL pose carrier — the
+"stale stand-in" label is DISSOLVED and the T1 fire-trigger is satisfied by sha identity
+(repeat already proven byte-identical). The composed container EXISTS; what remains before any
+scorer lane: the js1 reseal (T2, Amendments 1–10) and the realization/ρ verdict chain.
+Map adjudication unchanged: planning-band, parent = pass-3-selected, consumer retired (pz4a).
+Runbook tranche table reads with pass_04 substituted for pass_06.
