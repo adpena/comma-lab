@@ -248,3 +248,61 @@ unchanged and in fact CONFIRMED on this section: PR135's container already obeys
 per-dim precision; the probe verified nothing was left on the table there. T7 does not re-fire this
 family; no receiver, compensation build, or scorer row is owed. Terminal-day note: the skeleton
 amendment index's A10 line reads "T7 candidate under the pz4 gate" — consume it WITH this addendum.
+
+## RESEAL BLOCK (2026-08-12, MAIN — T2 executed; SUPERSEDES "DO NOT SPAWN")
+
+STATUS: RESEALED AND SPAWNED. The ps135 solve is TERMINAL AT PASS 4 (launcher 24h timeout,
+adjudicated beb39b41a9); T0 intake ADMITTED (experiments/ddm_t0_terminal_intake_binder.py,
+manifests at pr135_joint_solve_20260810/hr1_preflight/content_bindings/).
+
+### Terminal-receipt slots BOUND
+- TERMINAL_ARCHIVE: e269d1ffbe0bf56ec8471a6869b7ec081f3de07e852b193aa251a963c543becb,
+  187,223 B, S 0.17723389831723768 [macOS-CPU advisory exact n600].
+- TERMINAL_D_POSE: 9.672733585629108e-06 (contribution 0.0098351).
+- SENSITIVITY_MAP: mixed_precision/lc2_int12_pose_sensitivity_map.npz sha d0a7a7d9da1c92ec…,
+  PLANNING_BAND, parent = pass-4 INPUT (pass-3 selected 93f8d7b4…), consumer
+  RETIRED_PER_PZ4A — adaptive-mixed-precision stream #3 consumes it as a PRIOR only.
+- CONVERGENCE_CURVE: passes 1-4 d_pose = 3.00881e-05 → 1.47171e-05 → 1.07719e-05 →
+  9.67273e-06 (T0 convergence receipt, per-pass receipt shas bound).
+- RECOMPUTED_SURVIVAL_GATE (A9 formulas, terminal receipts, NO literal): candidate (a)
+  cp135-base × C1-plane at the MEASURED +6 B compose cost (t1r1): rate 0.1240216,
+  S(rho) = 0.029643 − rho·0.014447 + 0.0082946 + 0.1240216; S(1.0) = 0.147512.
+- RECOMPUTED_SUB015_REQUIREMENT: **rho >= 0.827795** (supersedes the 0.828236 literal).
+  Cross-check candidate (d) (t1r1 container w/ pass-4 pose, 187,046 B): rho_req 0.970739 —
+  candidate (a) DOMINATES on terminal numbers; T8 still whole-candidate-reranks on
+  consistent axes (cn4 cross-axis law).
+
+### FRESH PRIOR-LAW PREDICTION (m38 — derived from the REALIZED curve, falsifiable)
+The per-pass pose gains decay geometrically: g2=1.5371e-05, g3=3.9452e-06, g4=1.0991e-06;
+ratio estimates 0.2567 and 0.2786, r_geo=0.2674. PREDICTION: if the solve is ever resumed,
+pass-5 d_pose lands in [9.3665e-06, 9.3906e-06] (point 9.3788e-06), and the family asymptote
+is d_pose_inf ≈ 9.2715e-06 (contribution 0.009629). CONSEQUENCE: the total own-vehicle value
+of passes 5→∞ is 0.000206 S — the pass-4 terminal acceptance is arithmetically settled.
+CAMPAIGN LAW derived from the same curve: any T5 arm whose per-unit-cost gain ratio exceeds
+~0.27 per pass-equivalent is outperforming this solve family's tail and deserves the slot.
+
+### Amendments A1-A10: ALL CONSUMED (skeleton index = the binding one-line dispositions).
+sr1's ranked table + DEAD-ENDS bind stream 2 (distortion-side conditioning only; rate half
+CLOSED). hy1's amendment block binds the solver-arsenal elevation + solved-carriage head.
+Standing guards + dead-end tables bind at every stage. A8 quality bar binds every stage.
+
+### Activation join (T0 §5) — PRECONDITION, not yet run
+compiled_terminal_config.json is produced by the FIRST governed-launch ticket this campaign
+compiles (T5 race arms / any heavy trainer stage). The join
+(tools/report_terminal_activation_join.py, rehearsal control 9/9 rc=0) MUST run clean on
+that compiled config BEFORE the launch fires. Stage-0/T4 solver work needs no trainer
+config; execution_allowed for realization arms flips ONLY through that join.
+
+### js1 arm operating contract (spawn = this reseal)
+1. FIRST scorer-slot action = charter Stage 0: per-pair × per-EDGE seg decomposition of the
+   TERMINAL COMPOSED BASE CANDIDATE (the t1r1/cp135×C1 composed container AND the cp135 base
+   — m91 hub accounting; KEEP decoded argmax fields, payload law). Claim the scorer lane
+   via tools/claim_lane_dispatch.py first; n600 only, axis-labeled.
+2. Then T4 stage-0 ladder per the skeleton (V0-V5 causal ladder; free-treatment fork chosen
+   by complete V5 score). T5 fires ONLY if stage-0 misses rho 0.827795, via sealed
+   DSL-compiled tickets + the activation join + governed launch; heavy Metal launches are
+   MAIN-fire-only (#999) — the arm prepares tickets, MAIN fires.
+3. Every verdict carries m94 scope fields; every gate recomputes from receipts (A8);
+   payloads retained to the SSD tiers (P0).
+4. Consumer store: /Volumes/VertigoDataTier/pact/pr135_joint_solve_20260810/. Commit via
+   the serializer, no co-author trailer, [no-triality] [p0-ledger-ok] tags.
