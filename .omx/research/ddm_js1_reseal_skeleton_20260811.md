@@ -420,3 +420,16 @@ this operating point — larger than the whole −0.011955 gap to sub-0.15.
 - FORK FIRED: ddm_js4 spawned — pose-null PROJECTION of the correction (exact kernel
   pre-quantization per #889/#837/j11; uint8 leakage #532 held as verification, not a fight).
   Existence result stands: the gradient IS alive through receiver→R→uint8→frozen SegNet.
+
+## ANNEX (MAIN, 2026-08-12): js4 LINEAR PROJECTOR — SEG SURVIVES, TWO WALLS NAMED; js5 DISTILLATION FIRES
+js4 n32 smoke (FINAL_RESULT sha 21bb694d…): F1 NOT fired — 64 robust beneficial
+flips / projected n600 robust −305 under full pose-null projection (the #837
+seg-reachable overlap SURVIVES this module family). Two walls: (a) F2-realized —
+continuous NONLINEAR pose leakage 8.836e-4 = 442× the 2e-6 gate with first order
+exactly nulled; quantization SHRANK leakage (−2.6e-5) so CVP is not the cure;
+(b) F3 FIRED — decode-time projection needs a 452,988,928 B basis (or scorer at
+inflate, forbidden). Economics: 2.44 B/robust-flip vs 1.28 break-even for the
+full seg debt. Burn FOLDED by the arm (correct). ROUTE: ddm_js5 projector-
+DISTILLED conditioning (training-time-only projection + v19-law realized
+acceptance + re-linearization + bare-module admission) — FOLLOW_ON action-2
+trigger met. Charter: charters/ddm_js5_projector_distilled_conditioning_20260812.md
