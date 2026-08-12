@@ -235,3 +235,16 @@ Per-stage bindings:
 - T10/authority: NEVER degraded — fp32 exact reference, full decimals on S, n600 full-population,
   dual-axis. Measurement precision follows the CLAIM's units (m94), surrogates only feed priors.
 A stage that adopts a precision it neither derived nor raced is INCOMPLETE under Amendment 8.
+
+### A10 ADDENDUM (2026-08-11 late, from ddm_pz4a 5105a60639) — T7 active-dim recode ADJUDICATED: REFUTED
+The named T7 candidate (sensitivity-allocated variable-precision pose-coefficient recode) is DROPPED
+with receipt (`.omx/research/ddm_pz4a_precision_preproof_20260811.md`): best exact gross joint
+saving +500 B, allocation wire 2,732 B → NET −2,232 B, 4,232 B below the pz4 +2,000 B gate; even a
+zero-cost map leaves gross 1,500 B under the gate. PREMISE CORRECTIONS folded: the shipped inner
+CPR1 stream is signed INT12 (not int16) and already Rice-coded PER-DIMENSION — the container
+already allocates depth per-dim, which is WHY no headroom exists. Raw int16-width accounting is
+CLOSED as a gate proxy (predicts 8.16 KB where the exact coder grows 12 B). The A10 DOCTRINE is
+unchanged and in fact CONFIRMED on this section: PR135's container already obeys consumer-resolved
+per-dim precision; the probe verified nothing was left on the table there. T7 does not re-fire this
+family; no receiver, compensation build, or scorer row is owed. Terminal-day note: the skeleton
+amendment index's A10 line reads "T7 candidate under the pz4 gate" — consume it WITH this addendum.
