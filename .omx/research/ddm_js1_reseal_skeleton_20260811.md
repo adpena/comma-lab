@@ -222,3 +222,26 @@ archive (187,046 B, sha 12a5b181…) is therefore built from the TERMINAL pose c
 scorer lane: the js1 reseal (T2, Amendments 1–10) and the realization/ρ verdict chain.
 Map adjudication unchanged: planning-band, parent = pass-3-selected, consumer retired (pz4a).
 Runbook tranche table reads with pass_04 substituted for pass_06.
+
+## T0 EXECUTED AND ADMITTED (2026-08-12, MAIN)
+
+`experiments/ddm_t0_terminal_intake_binder.py` ran the runbook's T0 on the pass-4 terminal
+state with the tranche substitutions. Result: **ADMIT** — 6 roles bound with stream-hashed
+custody (archive e269d1ff… 187,223 B · renderer semantic 9b98360b… 40,252 B · carrier
+4c1a65c7… · coefficients da9bba74… · HPAC base b07fff73… 20,179 B · convergence receipt
+passes 1–4), `terminal_sensitivity_map` unresolved-by-policy (PLANNING_BAND,
+RETIRED_PER_PZ4A, refusal receipt records producer parent 93f8d7b4… = the pass-4 INPUT
+archive vs consumer e269d1ff…), m37 freshness 3/3 (selected-archive receipt · global-exact
+selector · coefficient fit). The CX2/TM1 extraction verified the archive-embedded
+semantic/HPAC sections byte-equal the pinned LC2 source; the direct coefficient file equals
+the carrier parse-back. Manifests:
+`/Volumes/VertigoDataTier/pact/pr135_joint_solve_20260810/hr1_preflight/content_bindings/`
+(terminal_content_bindings.json + terminal_m37_receipts.json + objects/).
+
+§5 activation join: **PENDING_T2_COMPILE** — its input (compiled_terminal_config.json) is
+the js1 reseal's product; the rehearsal's 9/9 rc=0 join stands as positive control; the join
+fires as the FIRST act after the reseal compiles, before any launch.
+
+NEXT: T2 — the js1 reseal (Amendments 1–10 consumed, ρ formulas recomputed never the
+literal, crosswalk tables bound, terminal config compiled) → activation join → realization
+arms (execution_allowed flips only there).
