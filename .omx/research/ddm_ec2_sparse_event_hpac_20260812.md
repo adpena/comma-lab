@@ -31,9 +31,10 @@ of this arm is a byte-real, resumable build and an explicit MAIN fire order, not
 
 Durable CPU-side evidence:
 
-- `/Volumes/VertigoDataTier/pact/ddm_ec2/BUILD_RECEIPT.json`
-- `/Volumes/VertigoDataTier/pact/ddm_ec2/READY_TO_FIRE.json`
+- `/Volumes/VertigoDataTier/pact/ddm_ec2/BUILD_RECEIPT.json`, SHA `e5e80f71…`
+- `/Volumes/VertigoDataTier/pact/ddm_ec2/READY_TO_FIRE.json`, SHA `f2aab767…`
 - `/Volumes/VertigoDataTier/pact/ddm_ec2/retained/contexts/coordinate_custody_manifest.json`
+- `/Volumes/VertigoDataTier/pact/ddm_ec2/retained/CLEANUP_RETENTION_MANIFEST.json`, SHA `9a6f2ad2…`
 - `/Volumes/VertigoDataTier/pact/ddm_ec2/queue/main_metal_fire_order.json`
 
 ## RECEIVER AND COMPLETE-CONTAINER LAW
@@ -150,6 +151,20 @@ PYTHONHASHSEED=0 TAC_ADMISSION_ENFORCE=1 PYTORCH_ENABLE_MPS_FALLBACK=0 .venv/bin
 - The JS5 store is 200 receiver-effective proposals from a stratified n32 frame sample and is
   explicitly not scorer-acceptance-tested. A negative EC2 result closes this precise sparse-mask
   HPAC formulation; it does not globally kill all learned local priors.
+
+## POST-COMMIT VERIFICATION
+
+The code/test/memo landing is serializer commit `d05b803022`; post-commit HEAD content matched all
+three declared SHA-256 values. Ruff, Python compilation, the six focused tests, and the targeted
+P0 measure-and-discard scanner (0 findings over the EC2 runner) passed after landing.
+
+The full fast developer preflight was also run. It reported 17/25 green and 8 red. The complete
+red-set diagnosis did not name either EC2 Python file or this memo: the findings were the existing
+strict-load writer in `probe_outcomes_ledger.py`, authoritative-tag site in `submission_chain.py`,
+25 legacy ad-hoc launch surfaces, missing terminal-claim prose in `AGENTS.md`, 124 external-memory
+landing memos, eight pre-existing `lane_program_delta` registry references in EC1/JS6 surfaces, 56
+legacy substrate scorer-contract violations, and 21 legacy trainer pose-default violations. These
+unrelated baseline failures were not widened, waived, or modified by EC2.
 
 ## LIVE-HYPOTHESES
 
