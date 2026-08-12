@@ -132,3 +132,15 @@ PLANNING-BAND with consumer_status=RETIRED_PER_PZ4A (the A10/T7 active-dim recod
 the T0 binder's m37 gate records that label explicitly instead of silently binding or dropping.
 Rationale: diminishing per-pass pose gains (−50%/−27%/−10%) at 6.25 h/pass against the T8
 compositor arithmetic (cp135-base composition dominates the lc2-terminal base at every ρ).
+
+## T10 ANNEX ADDENDUM — CLEAN INFLATE.SH STAGED (2026-08-11)
+
+The T10 "reword the inflate.sh comment" step is PRE-PAID. Staged at
+`/Volumes/VertigoDataTier/pact/ddm_lc2_20260810/terminal_assets/inflate.sh`
+(sha256 d0534f5baca894a4ca0192e0c3fca6f6e21c51a0d3dfaa6a30e2408a3bc61cb5): byte-identical to the
+pinned `submission_modal_stage/inflate.sh` (sha256 bc92880ef9c038c6...) except ONE comment
+reword removing the literal `evaluate.py` token. Verified clean against the exact
+`INFLATE_SH_FORBIDDEN_EVAL_RE` (tokens: evaluate.py · contest_auth_eval · DistortionNet ·
+segnet_sd_path · posenet_sd_path · compute_distortion) with the 3-arg contract intact.
+The pinned packet copies are NOT edited — exact-row runtime-tree custody preserved.
+Terminal packet assembly (T1/T10) copies inflate.sh FROM terminal_assets/.
