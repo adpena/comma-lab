@@ -335,3 +335,24 @@ Custody: harvests + full artifact sets under
 (artifacts_cuda/ per row); both lane claims closed with properly-keyed terminal
 rows (lesson: the single-flight gate matches lane_id + INSTANCE/JOB-ID — a
 terminal row keyed to the fc- call id does NOT clear the flight).
+
+## ANNEX (2026-08-12) — js2 F1 FIRED: THE SEG LEG IS INSTRUMENT-BLOCKED
+
+- `ddm_js2`: **BLOCKED_INSTRUMENT (F1 FIRED)** — the CP135 local control is
+  50,395 flips versus 34,964 on the promoted row, a 44.13% disagreement against
+  the 1% limit; zero conditioning proposals and zero T4 candidate rows were
+  admitted. Deeper than batch-shape (et4-class repair CLOSED): the local and
+  promoted **rendered-raw hashes differ** — the local decode of the CUDA-locked
+  receiver renders different frames. INSTANCE-scoped closure only.
+  **Disposition:** QUEUED-WITH-A-FIRE-ORDER. **Owner:** MAIN shipping-axis
+  instrument owner. **Consumer store:**
+  `/Volumes/VertigoDataTier/pact/ddm_js2_20260812/instrument_validation_cuda/`.
+  **Fire trigger:** a 1:1 batch-16 T4 CUDA lane with artifact return, or
+  retained promoted CP135 raw plus argmax custody, is available; retain the
+  full n600 argmax field, rerun the control, and enable the edge-conditioned
+  solve only if flip disagreement is at most 1%. **MAIN note:** the t1r1/pass-4
+  harvests already retain the promoted RAW sha256 (container-level custody,
+  e.g. 8b505d85… for the full 3,662,409,600 B stream) — what is missing is the
+  per-pair ARGMAX field custody; the likely build is a Modal-Volume artifact
+  extension of the CUDA auth-eval wrapper (~$0.08–0.15 vs #381, short dispatch
+  buying a durable asset = compute-split compliant).
