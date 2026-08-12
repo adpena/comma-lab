@@ -347,7 +347,7 @@ def _safe_run_receipt(
 
 def _common_codec_argv(checkpoint: Path) -> list[str]:
     return [
-        str(PYTHON_PATH.resolve()),
+        str(PYTHON_PATH),  # no .resolve(): following the venv symlink strips site-packages (numpy gone)
         str((INTAKE_CODE_ROOT / "codec_hpac_integer.py").resolve()),
         "--checkpoint",
         str(checkpoint),
@@ -387,7 +387,7 @@ def _common_codec_argv(checkpoint: Path) -> list[str]:
 
 def _expected_pack_argv(checkpoint: Path, blob: Path, report: Path) -> list[str]:
     return [
-        str(PYTHON_PATH.resolve()),
+        str(PYTHON_PATH),  # no .resolve(): following the venv symlink strips site-packages (numpy gone)
         str((INTAKE_CODE_ROOT / "pack_hpac_self_compress.py").resolve()),
         "--checkpoint",
         str(checkpoint),
@@ -445,7 +445,7 @@ def _expected_training_argv(
     resume_from: Path | None = None,
 ) -> list[str]:
     argv = [
-        str(PYTHON_PATH.resolve()),
+        str(PYTHON_PATH),  # no .resolve(): following the venv symlink strips site-packages (numpy gone)
         str(TRAINER_PATH.resolve()),
         "--cache",
         str(CANONICAL_CACHE_PATH.resolve()),
@@ -533,7 +533,7 @@ def _expected_runner_argv(
     raw: Path | None = None,
 ) -> list[str]:
     output = [
-        str(PYTHON_PATH.resolve()),
+        str(PYTHON_PATH),  # no .resolve(): following the venv symlink strips site-packages (numpy gone)
         str(Path(__file__).resolve()),
         operation,
         "--checkpoint",
@@ -881,7 +881,7 @@ def _parse_training_receipt(
         raise CL1FitError(f"row {index} training receipt argv is malformed")
     argv = _normalize_argv(raw_argv)
     if len(argv) < 2 or argv[:2] != [
-        str(PYTHON_PATH.resolve()),
+        str(PYTHON_PATH),  # no .resolve(): following the venv symlink strips site-packages (numpy gone)
         str(TRAINER_PATH.resolve()),
     ]:
         raise CL1FitError(f"row {index} training receipt names the wrong trainer")
