@@ -388,3 +388,20 @@ this operating point — larger than the whole −0.011955 gap to sub-0.15.
    (seg + pose) + the local argmax field (lstars_local_on_custody.npy, sha
    receipted) under
    /Volumes/VertigoDataTier/pact/ddm_js2_20260812/instrument_validation_cuda/.
+
+## ANNEX (2026-08-12, MAIN, from ddm_js2b) — TWO-FiLM CONTINUATION FORMULATION-DEAD; SEG ROUTES TO THE TRAINING LEG
+
+- `ddm_js2b`: **FORMULATION-DEAD at stratified-random n32; F1 + F2 FIRED** — the fixed nine
+  two-FiLM seeds produced 15 beneficial flips and all 15 were below the measured robustness bar
+  `δ = 0.0803604` (SegNet logit-margin units, conservative rank calibration on the T4 custody
+  planes); the best compensated stack projected −37 total but 0 ROBUST flips and exact-coded to
+  186,294 B (+42 B vs cp135) — infinite price per robust flip. Pose guard passed (subset). No T4
+  row queued; the arm honestly refused to spend. Disposition FOLDED. Receipt:
+  /Volumes/VertigoDataTier/pact/ddm_js2b_20260812/FINAL_RESULT.json (commit 8978c0548220).
+- ROUTE (typed, ROUTE.json): direct two-W4-code continuation on the CP135/F26 state is
+  FORBIDDEN; the allowed successor is a REPRESENTATION-CHANGING learned implicit-conditioning
+  actuator. **ddm_js3 spawned 2026-08-12** with the δ-hinge margin-robust objective (js2b's
+  calibration consumed as the LOSS): train through receiver→R→uint8-STE→frozen SegNet to flip
+  pixels PAST δ; build-to-admission + bounded n32 smoke; the long burn fires from MAIN (governed).
+- Scope note: F1/F2 kill the fixed catalog + exact coder instance ONLY — learned conditioning,
+  other tensors, larger semantic moves remain OPEN (the js3 charter is the first of these).
