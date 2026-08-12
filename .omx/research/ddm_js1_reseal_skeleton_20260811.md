@@ -280,3 +280,58 @@ field); admitted rho = (0.029643 − 100·d_seg_composed) / 0.014447 against the
 RECOMPUTED gate rho ≥ 0.827795; candidate-(d) S vs the floor
 0.16195513827824176 (pointer refresh if lower); V0–V5 fires only if admitted;
 record spend in #381 + close the lane claim + redispatch the CPU leg.
+
+---
+
+## ANNEX (2026-08-12) — THE TWO-ROW ADJUDICATION: PLANE DOUBLY DEAD, CPU POSE SOLVE AXIS-LOCKED
+
+Two T4 rows (~$0.16 total vs #381) settled the terminal campaign's two open
+mechanisms. Both [contest-CUDA T4, n600, gpu_t4_match, no blockers]; S always
+recomputed from components.
+
+**Row 1 — t1r1 composed container** (fc-01KZTC8YJFJ1MCD00Y07YC4XS7, 187,046 B):
+S = 0.4044688071472634. d_seg 0.0004731 → admitted rho = −1.2229 vs the
+0.827795 gate. d_pose 0.00541086.
+
+**Row 2 — pass-4 archive alone** (fc-01KZTCZVHRE8P0RWDJGF63ZCYW, 187,223 B):
+S = 0.1926327681652386. d_seg 0.00029662 (= cp135's 0.00029643 within 7 flips —
+seg sections untouched, clean control). d_pose 0.00014674.
+
+**Decomposition (MEASURED):**
+- C1 plane, seg: rho −1.2229 — HARMFUL, not merely non-surviving. (Row 1 vs base.)
+- C1 plane, pose: 1.4674e-04 → 5.41086e-03 = ×36.9 damage. (Row 1 vs Row 2.)
+- CPU pose re-solve, axis transfer: 9.672733585629108e-06 [macOS-CPU advisory]
+  → 1.4674e-04 [contest-CUDA] = ×15.2. The ORIGINAL lc2 carrier transfers at
+  only ×1.29 (CPU 3.0088e-05 → CUDA ~2.33e-05 implied by the lc2 row). The
+  37.5 h solve crossed BELOW the original on the CPU gauge while DEGRADING the
+  CUDA truth ~6.3× (2.33e-05 → 1.4674e-04).
+
+**Verdicts:**
+1. The C1/plane realization family is DEAD on the authority axis, both terms,
+   with mechanism (target solved against a local decode whose flip set
+   disagrees 44% with CUDA — js1 stage-0's et4-class finding, now confirmed at
+   score level). V0–V5 retired. Candidates (a) and (d) retired.
+2. THE SOLVE-OBJECTIVE AXIS LAW (new, measured): on this CUDA-locked family, a
+   pose objective evaluated on macOS-CPU is a DIFFERENT FUNCTION below the
+   ~2e-5 axis-disagreement scale. A "positive" also measures the instrument
+   (sister of m94). Any future pose re-solve must either (a) verify each
+   accepted pass with ONE T4 row (gate-per-pass, ~$0.08, compute-split
+   compliant) and stop when CUDA stops improving, or (b) not chase below the
+   measured axis-noise floor. Per-candidate CUDA loops remain out of budget.
+3. The ps135 terminal state's own-vehicle claim is RE-SCOPED: S 0.17723 was
+   [macOS-CPU advisory]; the authority row is 0.19263 — NOT an improvement over
+   lc2 0.16959899569230852. The solve machinery's residual value is the
+   warm-startable refit under law 2.
+4. Campaign routing: pose→0 via CPU solving is CLOSED as a transfer path. The
+   floor's own pose (6.88e-06, PR135's CUDA-solved carrier) stands as the
+   pose to beat ON-AXIS or to simply ACCEPT (its contribution is 0.0083; the
+   whole pose axis was only ever worth −0.0083 of the −0.012 needed). SEG is
+   now unambiguously load-bearing: implicit edge conditioning (fd135 OPEN row)
+   + the T5 race are the live legs, and any CPU-trained candidate owes a
+   same-axis transfer check before promotion.
+
+Custody: harvests + full artifact sets under
+/Volumes/VertigoDataTier/pact/{ddm_t1r1_dispatch,ddm_ps135_20260810/pass4_dispatch}/
+(artifacts_cuda/ per row); both lane claims closed with properly-keyed terminal
+rows (lesson: the single-flight gate matches lane_id + INSTANCE/JOB-ID — a
+terminal row keyed to the fc- call id does NOT clear the flight).
