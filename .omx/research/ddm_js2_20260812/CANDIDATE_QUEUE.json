@@ -1,0 +1,30 @@
+{
+  "schema": "ddm_js2_candidate_queue.v1",
+  "recorded_at_utc": "2026-08-12T08:10:22Z",
+  "status": "EMPTY_BY_F1",
+  "owner": "MAIN exact contest-row owner",
+  "consumer_store": "/Volumes/VertigoDataTier/pact/ddm_js2_20260812/t4_gate_rows",
+  "required_entry_fields": [
+    "archive_path",
+    "archive_sha256",
+    "archive_bytes",
+    "advisory_d_seg",
+    "advisory_d_pose",
+    "advisory_score_recomputed",
+    "t4_gate_row_request"
+  ],
+  "entries": [],
+  "t4_gate_row_requests": [],
+  "reason": "F1 fired before proposal evaluation; manufacturing a candidate or predicted component row on the invalid local instrument would be instrument overfit and a fake queue entry.",
+  "control_archive": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_js2_20260812/retained/control_cp135/archive.zip",
+    "sha256": "6eb1a3b79cb167e03372339e07e93cae13b6ba3114a9eb917288bb038622edb6",
+    "bytes": 186252,
+    "contest_cuda_components": {
+      "d_seg_report_8dp": 0.00029643,
+      "d_pose_report_8dp": 0.00000688,
+      "score_recomputed": 0.16195513827824176
+    },
+    "queue_role": "control only, not a js2 candidate"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "schema": "ddm_js2_state.v1",
+  "updated_at_utc": "2026-08-12T08:10:22Z",
+  "status": "BLOCKED_INSTRUMENT",
+  "git_head_at_validation": "e2309fcaf6800a8d6ec3bc6ed7e3a2bfacaf735b",
+  "seed": 1234,
+  "current_milestone": 0,
+  "milestones_completed": [
+    "recall_and_input_custody",
+    "instrument_validation_failed_closed"
+  ],
+  "passes_completed": 0,
+  "dry_passes": 0,
+  "edge_conditioning_on_candidates": 0,
+  "edge_conditioning_off_candidates": 0,
+  "candidate_archives_materialized": 0,
+  "candidate_argmax_fields_materialized": 0,
+  "resumability": {
+    "resume_from": "/Volumes/VertigoDataTier/pact/ddm_js2_20260812/state.json",
+    "checkpoint": "/Volumes/VertigoDataTier/pact/ddm_js2_20260812/checkpoints/milestone_00_instrument_validation.json",
+    "next_stage_allowed": false,
+    "next_stage_gate": "INSTRUMENT_VALIDATION.status must be PASS with at most 1 percent flip disagreement"
+  },
+  "falsifiers": {
+    "F1": "FIRED: 44.133966365404415 percent flip disagreement and no retained shipping-axis argmax field",
+    "F2": "NOT_REACHED: no matched ON/OFF passes were admissible",
+    "F3": "NOT_REACHED: no advisory winner or T4 candidate exists"
+  },
+  "stop_reason": "The charter forbids proposal evaluation on an unvalidated instrument."
+}

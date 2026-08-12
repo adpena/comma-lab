@@ -1,0 +1,122 @@
+{
+  "schema": "ddm_js2_evidence_manifest.v1",
+  "recorded_at_utc": "2026-08-12T08:10:22Z",
+  "status": "BLOCKED_INSTRUMENT",
+  "ssd_root": "/Volumes/VertigoDataTier/pact/ddm_js2_20260812",
+  "storage_preflight": {
+    "filesystem": "/Volumes/VertigoDataTier",
+    "available_bytes_before_copy": 240463491072,
+    "copy_bytes_required_before_manifest": 236160125,
+    "passed": true
+  },
+  "retained_copies": [
+    {
+      "role": "exact CP135 control archive",
+      "source_path": "/Volumes/VertigoDataTier/pact/ddm_cp135_20260810/adapted_runtime/archive.zip",
+      "path": "/Volumes/VertigoDataTier/pact/ddm_js2_20260812/retained/control_cp135/archive.zip",
+      "bytes": 186252,
+      "sha256": "6eb1a3b79cb167e03372339e07e93cae13b6ba3114a9eb917288bb038622edb6"
+    },
+    {
+      "role": "complete local diagnostic argmax field",
+      "source_path": "/Volumes/VertigoDataTier/pact/pr135_joint_solve_20260810/stage0_per_edge/candidates/cp135_base/scorer/argmax_n600.npy",
+      "path": "/Volumes/VertigoDataTier/pact/ddm_js2_20260812/retained/control_cp135/argmax_n600.macos_cpu.npy",
+      "bytes": 117964928,
+      "sha256": "b8f063eb53891ca89d02c80adc7fca7d8c5f638f80cecf364a7f7a89bc68647a"
+    },
+    {
+      "role": "complete GT argmax field",
+      "source_path": "/Volumes/VertigoDataTier/pact/pr135_joint_solve_20260810/stage0_per_edge/custody/gt_argmax_n600.npy",
+      "path": "/Volumes/VertigoDataTier/pact/ddm_js2_20260812/retained/control_cp135/gt_argmax_n600.npy",
+      "bytes": 117964928,
+      "sha256": "b74a14b226a5aceb5824899898bcb06e5413c54b7db2441268da7bc91a10db5d"
+    }
+  ],
+  "receipts": [
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_js2_20260812/INSTRUMENT_VALIDATION.json",
+      "bytes": 5897,
+      "sha256": "ec1a411d4f6f0901ffccf3fd071cb9c794ea9e87002ba397269f5d13b64a87c5"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_js2_20260812/state.json",
+      "bytes": 1265,
+      "sha256": "32143f491fce05db065b502e804264dcc4cfd959e0c3f3f735b8fa0ae940f5df"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_js2_20260812/CANDIDATE_QUEUE.json",
+      "bytes": 1125,
+      "sha256": "ee9fa9b5b17918d386e451546bafbf96f8637f7c3ef1ab64b492672d0e89a2db"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_js2_20260812/SKELETON_ANNEX_QUEUE.md",
+      "bytes": 739,
+      "sha256": "bc2599f66d3851bca88c4d03b4fc3eb94f5bd33989b6a9209c90dfadd82d7a33"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_js2_20260812/MEMO.md",
+      "bytes": 10034,
+      "sha256": "89369c9a2564cf29e1eda5d6596a3a63913508c1f51c4429b7f52d0d22f3b9d9"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_js2_20260812/checkpoints/milestone_00_instrument_validation.json",
+      "bytes": 5897,
+      "sha256": "ec1a411d4f6f0901ffccf3fd071cb9c794ea9e87002ba397269f5d13b64a87c5"
+    }
+  ],
+  "receipt_mirrors": [
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_js2_20260812/receipts/INSTRUMENT_VALIDATION.json",
+      "bytes": 5897,
+      "sha256": "ec1a411d4f6f0901ffccf3fd071cb9c794ea9e87002ba397269f5d13b64a87c5"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_js2_20260812/receipts/state.json",
+      "bytes": 1265,
+      "sha256": "32143f491fce05db065b502e804264dcc4cfd959e0c3f3f735b8fa0ae940f5df"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_js2_20260812/receipts/CANDIDATE_QUEUE.json",
+      "bytes": 1125,
+      "sha256": "ee9fa9b5b17918d386e451546bafbf96f8637f7c3ef1ab64b492672d0e89a2db"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_js2_20260812/receipts/SKELETON_ANNEX_QUEUE.md",
+      "bytes": 739,
+      "sha256": "bc2599f66d3851bca88c4d03b4fc3eb94f5bd33989b6a9209c90dfadd82d7a33"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_js2_20260812/receipts/MEMO.md",
+      "bytes": 10034,
+      "sha256": "89369c9a2564cf29e1eda5d6596a3a63913508c1f51c4429b7f52d0d22f3b9d9"
+    }
+  ],
+  "predecessor_payload_bindings_not_duplicated": [
+    {
+      "role": "local CP135 rendered raw",
+      "path": "/Volumes/VertigoDataTier/pact/pr135_joint_solve_20260810/stage0_per_edge/candidates/cp135_base/retained/0.raw",
+      "bytes": 3662409600,
+      "sha256": "a641d1ef149f8da8f06af3da9234d6d2f6be9702c3f606b7acf838b4b298ed47a",
+      "reason": "already retained and hash-bound in the predecessor store; no move or delete performed"
+    },
+    {
+      "role": "local CP135 logits",
+      "path": "/Volumes/VertigoDataTier/pact/pr135_joint_solve_20260810/stage0_per_edge/candidates/cp135_base/scorer/logits_n600.float32.npy",
+      "bytes": 2359296128,
+      "sha256": "3e14fd9e9fd72f3d139af9cb6f52193462e88652cfcd52a7e0aeea15a77baebe",
+      "reason": "already retained and hash-bound in the predecessor store; no move or delete performed"
+    }
+  ],
+  "reproduction": {
+    "seed": 1234,
+    "source_receipt": "/Volumes/VertigoDataTier/pact/pr135_joint_solve_20260810/stage0_per_edge/STAGE0_RESULT.json",
+    "source_archive_runtime_sha256": "6eb1a3b79cb167e03372339e07e93cae13b6ba3114a9eb917288bb038622edb6",
+    "new_measurement_command": null,
+    "note": "No new scorer or renderer job ran. The retained complete prior n600 control was reused for F1 validation."
+  },
+  "cleanup": {
+    "files_deleted": 0,
+    "files_moved": 0,
+    "signal_loss": false
+  }
+}

@@ -1,0 +1,3 @@
+# js2 skeleton annex line queued for MAIN
+
+- `ddm_js2`: **BLOCKED_INSTRUMENT (F1 FIRED)** — the CP135 local control is 50,395 flips versus 34,964 on the promoted row, a 44.13% disagreement against the 1% limit; zero conditioning proposals and zero T4 candidate rows were admitted. **Disposition:** QUEUED-WITH-A-FIRE-ORDER. **Owner:** MAIN shipping-axis instrument owner. **Consumer store:** `/Volumes/VertigoDataTier/pact/ddm_js2_20260812/instrument_validation_cuda/`. **Fire trigger:** a 1:1 batch-16 T4 CUDA lane with artifact return, or retained promoted CP135 raw plus argmax custody, is available; retain the full n600 argmax field, rerun the control, and enable the edge-conditioned solve only if flip disagreement is at most 1%.

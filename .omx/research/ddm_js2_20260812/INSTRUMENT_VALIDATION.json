@@ -1,0 +1,129 @@
+{
+  "schema": "ddm_js2_instrument_validation.v1",
+  "recorded_at_utc": "2026-08-12T08:10:22Z",
+  "status": "BLOCKED_INSTRUMENT",
+  "axis": "[instrument cross-axis validation; no new score row]",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "pointer_moved": false,
+  "falsifier": {
+    "id": "F1",
+    "status": "FIRED",
+    "rule": "the instrument control must reproduce the promoted row to no more than 1 percent flip-count disagreement before any proposal is evaluated"
+  },
+  "control": {
+    "archive": {
+      "source_path": "/Volumes/VertigoDataTier/pact/ddm_cp135_20260810/adapted_runtime/archive.zip",
+      "retained_copy_path": "/Volumes/VertigoDataTier/pact/ddm_js2_20260812/retained/control_cp135/archive.zip",
+      "bytes": 186252,
+      "sha256": "6eb1a3b79cb167e03372339e07e93cae13b6ba3114a9eb917288bb038622edb6"
+    },
+    "population": {
+      "pairs": 600,
+      "pixels_per_pair": 196608,
+      "total_pixels": 117964800,
+      "selection_mode": "full population, no sampling"
+    },
+    "promoted_reference": {
+      "axis": "[contest-CUDA T4, n600]",
+      "flips": 34964,
+      "exact_d_seg_from_flip_count": 0.00029639350043402776,
+      "report_d_seg_rounded_8dp": 0.00029643,
+      "raw_bytes": 3662409600,
+      "raw_sha256": "604459e2bcd45d34d6d0582c569f779813ee7da56177dc9e4fab65140949fe1a",
+      "contest_eval_receipt": {
+        "path": "/Users/adpena/Projects/pact/experiments/results/modal_auth_eval/ddm_cp135_composed_paired_modal_auth_20260810T193605Z_cuda/contest_auth_eval.json",
+        "bytes": 26604,
+        "sha256": "1a62d07db424f176b64985c50f587387a5989384f75175c372eff40524683bd2"
+      }
+    },
+    "local_observation": {
+      "axis": "[macOS-CPU frozen-SegNet advisory, n600] NON-PROMOTABLE",
+      "flips": 50395,
+      "d_seg": 0.0004272037082248264,
+      "raw_bytes": 3662409600,
+      "raw_sha256": "a641d1ef149f8da8f06af3da9234d6d2f6be9702c3f606b7acf838b4b298ed47",
+      "argmax": {
+        "source_path": "/Volumes/VertigoDataTier/pact/pr135_joint_solve_20260810/stage0_per_edge/candidates/cp135_base/scorer/argmax_n600.npy",
+        "retained_copy_path": "/Volumes/VertigoDataTier/pact/ddm_js2_20260812/retained/control_cp135/argmax_n600.macos_cpu.npy",
+        "bytes": 117964928,
+        "sha256": "b8f063eb53891ca89d02c80adc7fca7d8c5f638f80cecf364a7f7a89bc68647a"
+      },
+      "source_receipt": {
+        "path": "/Volumes/VertigoDataTier/pact/pr135_joint_solve_20260810/stage0_per_edge/STAGE0_RESULT.json",
+        "bytes": 31009,
+        "sha256": "4247320a2e824e03ed94ac9fbe6a96a97d2b125dadb4fbdfe5e59fd813d7d76f"
+      }
+    },
+    "comparison": {
+      "absolute_flip_difference": 15431,
+      "relative_flip_disagreement": 0.44133966365404415,
+      "maximum_allowed_relative_flip_disagreement": 0.01,
+      "maximum_allowed_flip_difference_before_rounding": 349.64,
+      "absolute_population_fraction_difference": 0.00013081020779079862,
+      "seg_score_unit_difference": 0.013081020779079862,
+      "passes": false
+    }
+  },
+  "instrument_identity": {
+    "promoted": {
+      "platform": "Linux x86_64 Tesla T4",
+      "device": "cuda",
+      "batch_pairs": 16,
+      "num_threads": 2,
+      "python": "3.11.12",
+      "torch": "2.9.0+cu128",
+      "torchvision": "0.24.0+cu128",
+      "numpy": "2.3.4",
+      "timm": "1.0.22"
+    },
+    "available_local": {
+      "platform": "macOS arm64",
+      "device": "cpu",
+      "cuda_available": false,
+      "cuda_device_count": 0,
+      "mps_available": false,
+      "torch": "2.12.1",
+      "numpy": "1.26.4",
+      "default_num_threads": 6,
+      "prior_control_num_threads": 4,
+      "prior_control_batch_pairs": 1
+    },
+    "batch_shape_adjudication": "The et4 law explains the one-pixel C1 reference difference, but changing the scorer batch cannot repair a 15431-flip baseline miss after the renderer has already produced a different raw byte stream. The shipping renderer/device axis is the load-bearing mismatch."
+  },
+  "m94_claim_units": {
+    "local_diagnostic": {
+      "instrument_capacity": 117964800,
+      "object_capacity": 117964800,
+      "claim_units": "macOS-CPU retained argmax pixels",
+      "scope_ok": true,
+      "scope_limit": "diagnostic INSTANCE only"
+    },
+    "shipping_axis_solve_verdict": {
+      "instrument_capacity": 0,
+      "object_capacity": 117964800,
+      "claim_units": "contest-CUDA retained argmax pixels",
+      "scope_ok": false,
+      "refusal": "the promoted harvest retained a scalar component and raw hash but no contest-CUDA raw or argmax payload for proposal conditioning"
+    }
+  },
+  "availability_audit": {
+    "searched_scope": [
+      "/Volumes/VertigoDataTier/pact/ddm_cp135_20260810",
+      "/Volumes/VertigoDataTier/pact/ddm_t1r1_dispatch",
+      "/Volumes/VertigoDataTier/pact/ddm_ps135_20260810/pass4_dispatch",
+      "/Users/adpena/Projects/pact/experiments/results/modal_auth_eval/ddm_cp135_composed_paired_modal_auth_20260810T193605Z_cuda"
+    ],
+    "finding": "did not find the promoted CP135 contest-CUDA 0.raw or argmax bytes in the searched scope; found the raw SHA-256 manifest and scalar components only",
+    "modal_dispatch_attempted": false,
+    "new_scorer_job_launched": false,
+    "reason_no_remeasurement": "the complete prior n600 control is already retained and hash-bound; repeating it on the same local surface cannot fix the unavailable shipping renderer axis"
+  },
+  "verdict_scope_ladder": {
+    "INSTANCE": "CLOSED for this local macOS-CPU instrument as a js2 solve-admission surface",
+    "FORMULATION": "NO VERDICT because no edge-conditioned candidate was admissibly evaluated",
+    "FAMILY": "NO VERDICT",
+    "PARADIGM": "NO VERDICT"
+  },
+  "allowed_next_action": "Acquire a retained batch-16 contest-CUDA CP135 argmax field, or a 1:1 T4 environment with artifact return, then rerun only the control and admit proposals only if disagreement is no more than 1 percent."
+}
