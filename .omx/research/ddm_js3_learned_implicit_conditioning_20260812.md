@@ -95,7 +95,7 @@ Every stage retains:
 - parse-backed coded candidate camera frames, corrections, logits, argmax arrays, and Pose errors;
 - float-QAT counterparts for exact export-drift comparison.
 
-The retained root is `/Volumes/VertigoDataTier/pact/ddm_js3_20260812/`, about 3.1 GiB across 128 files at completion. No materialized payload was discarded. Key custody:
+The retained root is `/Volumes/VertigoDataTier/pact/ddm_js3_20260812/`, about 3.1 GiB across 140 files at completion. No materialized payload was discarded. The capacity-ladder fp16/int8 raw and Brotli payloads are retained under `design/retained/hidden_{4,8,12}/`, not merely priced as scalars. Key custody:
 
 - main checkpoint: 29,638 B, SHA `b551fbd8d22e30fbdffab1ab5684921d66125830610afa8309c371f3891a4829`;
 - main selected module: 751 B, SHA `e8c29f39f5fa34aefa492bfcfd2d89b0aee917ff00f8b9f798ade0c08af328ca`;

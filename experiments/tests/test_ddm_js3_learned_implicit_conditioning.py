@@ -38,15 +38,17 @@ def test_delta_hinge_pushes_gt_margin_and_prices_collateral() -> None:
 
 
 @pytest.mark.parametrize("mode", ["fp16", "int8"])
-def test_real_brotli_module_roundtrip(mode: str) -> None:
+def test_real_brotli_module_roundtrip(mode: str, tmp_path) -> None:
     torch.manual_seed(js3.SEED)
     model = js3.build_model(torch, functional, 4, 6.0, qat=True)
     with torch.no_grad():
         model.head.weight.fill_(0.125)
-    exported = js3.serialize_module(model, mode)
+    exported = js3.serialize_module(model, mode, tmp_path / mode)
     decoded = js3.parse_module(exported.coded)
     assert exported.report["parseback_exact"] is True
     assert exported.report["brotli_q11_bytes"] == len(exported.coded)
+    assert exported.report["coded"]["bytes"] == len(exported.coded)
+    assert exported.report["raw"]["bytes"] == len(exported.raw)
     assert set(decoded) == set(model.state_dict())
 
 

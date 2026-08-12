@@ -258,7 +258,7 @@ def _tensor_records(model: Any) -> list[tuple[str, np.ndarray]]:
     return [(name, value.detach().cpu().numpy()) for name, value in sorted(model.state_dict().items())]
 
 
-def serialize_module(model: Any, mode: str) -> ExportedModule:
+def serialize_module(model: Any, mode: str, retention_root: Path) -> ExportedModule:
     if mode not in {"fp16", "int8"}:
         raise ValueError("mode must be fp16 or int8")
     metadata: list[dict[str, Any]] = []
@@ -275,7 +275,7 @@ def serialize_module(model: Any, mode: str) -> ExportedModule:
             row = {"name": name, "shape": list(array.shape), "dtype": "int8", "scale": scale}
             restored = stored.astype(np.float32) * scale
         raw = stored.tobytes(order="C")
-        row["bytes"] = len(raw)
+        row["bytes"] = int(stored.size * stored.dtype.itemsize)
         metadata.append(row)
         chunks.append(raw)
         decoded[name] = restored.reshape(array.shape)
@@ -292,6 +292,10 @@ def serialize_module(model: Any, mode: str) -> ExportedModule:
     ).encode()
     raw = MODULE_MAGIC + len(header).to_bytes(4, "little") + header + b"".join(chunks)
     coded = brotli.compress(raw, quality=11)
+    raw_path = retention_root / f"conditioner.{mode}.raw"
+    coded_path = retention_root / f"conditioner.{mode}.br"
+    atomic_bytes(raw_path, raw)
+    atomic_bytes(coded_path, coded)
     restored = parse_module(coded)
     if set(restored) != set(decoded) or any(
         not np.array_equal(restored[name], decoded[name]) for name in decoded
@@ -305,11 +309,13 @@ def serialize_module(model: Any, mode: str) -> ExportedModule:
         report={
             "mode": mode,
             "parameter_count": int(sum(value.size for _, value in _tensor_records(model))),
-            "raw_bytes": len(raw),
-            "brotli_q11_bytes": len(coded),
+            "raw_bytes": raw_path.stat().st_size,
+            "brotli_q11_bytes": coded_path.stat().st_size,
             "raw_sha256": sha256_bytes(raw),
             "brotli_q11_sha256": sha256_bytes(coded),
             "parseback_exact": True,
+            "raw": file_record(raw_path),
+            "coded": file_record(coded_path),
         },
     )
 
@@ -455,13 +461,8 @@ def export_stage(model: Any, output: Path, label: str) -> dict[str, Any]:
     rows = []
     exports = []
     for mode in ("fp16", "int8"):
-        exported = serialize_module(model, mode)
-        raw_path = root / f"conditioner.{mode}.raw"
-        coded_path = root / f"conditioner.{mode}.br"
-        atomic_bytes(raw_path, exported.raw)
-        atomic_bytes(coded_path, exported.coded)
+        exported = serialize_module(model, mode, root)
         row = dict(exported.report)
-        row.update({"raw": file_record(raw_path), "coded": file_record(coded_path)})
         rows.append(row)
         exports.append(exported)
     selected = min(rows, key=lambda row: (int(row["brotli_q11_bytes"]), str(row["mode"])))
@@ -503,7 +504,11 @@ def capacity_ladder(torch: Any, functional: Any, output: Path, max_delta: float)
     for hidden in CAPACITY_LADDER:
         torch.manual_seed(SEED + hidden)
         model = build_model(torch, functional, hidden, max_delta, qat=True)
-        race = [serialize_module(model, mode).report for mode in ("fp16", "int8")]
+        retention_root = output / "design/retained" / f"hidden_{hidden}"
+        race = [
+            serialize_module(model, mode, retention_root).report
+            for mode in ("fp16", "int8")
+        ]
         selected = min(race, key=lambda row: (int(row["brotli_q11_bytes"]), str(row["mode"])))
         rows.append({"hidden": hidden, "parameter_count": selected["parameter_count"], "races": race, "selected": selected})
     atomic_json(output / "design/CAPACITY_LADDER.json", {"schema": "ddm_js3_capacity_ladder.v1", "rows": rows})
