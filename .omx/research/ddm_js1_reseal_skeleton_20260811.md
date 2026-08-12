@@ -117,3 +117,18 @@ CRASHES the checker (UnicodeDecodeError on AppleDouble `._*.py` binaries masquer
 Checker hardening (binary-safe read + comment-aware token scan) filed as a reviewed-window task.
 NET: the final gate has NO structural blocker; terminal T10 = generate 4 artifacts + reworded
 comment + one command.
+
+## TIMELINE AMENDMENT — OPERATOR-APPROVED PASS-6 TRANCHE STOP (2026-08-11)
+
+Operator verbatim: *"Is it resumable? If so then your rec is approved."* Resumability VERIFIED at
+source (`experiments/ddm_ps135_pose_resolve.py:3642-3643` --resume contract; `:3976-3986` tranche
+semantics) — condition MET, stop APPROVED. The ps135b solve stops at the pass-6 boundary
+(~2026-08-12 ~11:25Z→earlier than the min-8/dry-3 natural exit ~08-13) via a detached
+boundary-stop (armed pid 53276; script + receipt at the solve tree's `terminal_watch/` +
+`leg_a/TERMINAL_BY_POLICY.json`). State remains RESUMABLE forever (tranche semantics). The
+terminal program T0–T10 executes ~12h earlier. Sensitivity-map role amendment: the emitted map's
+parent is the pass-5-selected archive (one-generation stale at an improving boundary) — it binds
+PLANNING-BAND with consumer_status=RETIRED_PER_PZ4A (the A10/T7 active-dim recode was refuted);
+the T0 binder's m37 gate records that label explicitly instead of silently binding or dropping.
+Rationale: diminishing per-pass pose gains (−50%/−27%/−10%) at 6.25 h/pass against the T8
+compositor arithmetic (cp135-base composition dominates the lc2-terminal base at every ρ).
