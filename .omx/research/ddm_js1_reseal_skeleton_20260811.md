@@ -356,3 +356,35 @@ terminal row keyed to the fc- call id does NOT clear the flight).
   per-pair ARGMAX field custody; the likely build is a Modal-Volume artifact
   extension of the CUDA auth-eval wrapper (~$0.08–0.15 vs #381, short dispatch
   buying a durable asset = compute-split compliant).
+
+## ANNEX (2026-08-12, MAIN) — DECODE EXONERATED; THE 44% IS THE FORWARD INSTRUMENT
+
+Fire-order 1 executed for ~$0.15 with ZERO build: the CUDA auth-eval wrapper
+already persists scorer-input tensors (`--scorer-input-cache-tensors` → Modal
+Volume). One cp135 T4 re-run (call fc-01KZTHR25S1YN3DFFE3V1T0PNW) reproduced
+the floor row bit-for-bit (S 0.16195513827824176; seg 0.00029643, pose
+6.88e-06) and exported the exact per-pair SegNet/PoseNet input planes
+(sha-verified download to the js2 consumer store, ~2.7 GB).
+
+**The control result (INSTRUMENT_VALIDATION_CUDA_CUSTODY.json, script
+`experiments/ddm_js2_instrument_control_on_custody_tensors.py`):** the frozen
+CPU-torch SegNet on the REAL T4 scorer inputs yields **50,389 flips** vs the
+promoted scalar's 34,968 — and vs js2's local-decode control of 50,395.
+The local decode and the promoted decode are scorer-equivalent within
+**6 flips**. js2's F1 attribution is CORRECTED: the hash-different raws were
+score-neutral; the entire 44.1% disagreement is the **CPU-vs-CUDA SegNet
+forward instrument**, measured at **0.00013072 d_seg absolute = 0.0131 S** at
+this operating point — larger than the whole −0.011955 gap to sub-0.15.
+
+**Routing (binds the js2 respawn):**
+1. The ≤1% absolute-agreement admission gate is RETIRED as wrong-object — no
+   local CPU instrument can pass it; the floor is the axis itself.
+2. The edge-conditioned seg solve proceeds with the LOCAL instrument as a
+   RELATIVE gauge only (rank proposals by local Δflips on custody-consistent
+   bases), and acceptance = ONE T4 gate row per accepted stage (~$0.08) — the
+   solve-objective-must-live-on-the-shipping-axis law extended to seg with a
+   measured floor. Local absolute seg numbers are never quoted as progress.
+3. Custody assets now in place for the solve: the 600-pair scorer-input planes
+   (seg + pose) + the local argmax field (lstars_local_on_custody.npy, sha
+   receipted) under
+   /Volumes/VertigoDataTier/pact/ddm_js2_20260812/instrument_validation_cuda/.
