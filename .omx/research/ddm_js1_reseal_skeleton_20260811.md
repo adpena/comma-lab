@@ -179,3 +179,20 @@ the terminal-day full re-mirror (#1023 fire-order), named here so it is not miss
 identity token in tools/codex_status.py, tools/memory_guard.py, tools/launch_witness_run.py
 (dashboard_up/ctl/supervisor already identity-aware). Risk windows are short-lived there but
 the class is the same; fire-condition = next reviewed hygiene window on any of those files.
+
+## T1 ANNEX — WHOLE-CONTAINER REHEARSAL LANDED (ddm_t1r1, commit 45dfd8ed6d, 2026-08-11)
+
+T1 is REHEARSED end to end. Receipts (memo `ddm_t1r1_container_build_rehearsal_20260812.md`):
+rehearsal archive 187,046 B (sha 12a5b181…ece80) = cp135 base × C1 solved plane × STALE pass-4
+pose stand-in; +794 B vs cp135. THE RATE FINDING: the real C1-on-HP3 RC64 re-encode is
+115,237 B — **+6 B vs cp135's token stream** (the +11 B F26 proxy is CLOSED; gluing without
+re-encode CLOSED — different probability objects; ANS on this HP3 state CLOSED at INSTANCE,
+9 B worse). Repeat byte-identical · receiver parse-back PASS · all 117,964,800 tokens restored
+exactly · corrupt/mismatch controls refused · shipped RC64 decode 11.844 s (0.658% of budget) ·
+1,398 payload files retained (1.78 GB). m38 prediction CONFIRMED: no wired whole-container
+adapter existed; `experiments/ddm_t1r1_container_build_rehearsal.py` closes the gap (18 tests).
+NOT a candidate (stale pose bytes; no scorer ran). FIRE TRIGGER: ps135 terminal receipt +
+same-parent pose carrier → replace the sole stale CPR1 input → rerun `all` → scorer lane.
+Live hypotheses carried: terminal pose section may fit ≤ the stale 22,934 B section; the
+composed object clears the HY1 realization gate if the renderer preserves ≥82.824% of C1's
+solved-plane Seg gain (matches the A9 ρ bar).
