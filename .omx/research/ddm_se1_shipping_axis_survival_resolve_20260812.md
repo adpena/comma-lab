@@ -136,6 +136,11 @@ completed EC1 event representation. This is not an original renderer, scorer, pr
   `df8a75997a59f9d820c2c357b8183f2be85226dbe76f193e6408d8558c2ba3a3`.
 - Focused plus inherited suites: 36 passed. Ruff check and format-check pass. Review tracker records
   37 entities in each of `ddm_se1_pass1` and `ddm_se1_pass2`.
+- The full developer preflight was not globally green: 8/25 gates were red on the shared dirty
+  worktree. Individual non-strict enumeration found 1 state-writer, 1 authoritative-tag, 25 drift,
+  1 dispatch-helper, 124 historical wire-in, 9 lane-registration, 56 substrate scorer-contract, and
+  21 substrate pose-default violations; **0 in every set referenced either ddm_se1 file**. The staged
+  fast hook passed. This arm did not edit unrelated violations to manufacture a green result.
 - Shared staged index remained empty; protected files and `upstream/` were untouched.
 
 ## BOUNDARIES
