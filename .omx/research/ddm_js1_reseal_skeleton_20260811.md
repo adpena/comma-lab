@@ -245,3 +245,38 @@ fires as the FIRST act after the reseal compiles, before any launch.
 NEXT: T2 — the js1 reseal (Amendments 1–10 consumed, ρ formulas recomputed never the
 literal, crosswalk tables bound, terminal config compiled) → activation join → realization
 arms (execution_allowed flips only there).
+
+---
+
+## ANNEX (2026-08-12) — js1 STAGE-0 VERDICT + THE ONE-ROW PURCHASE
+
+**js1 stage-0 landed (arm FINISHED rc=0, 3,775 s, commit 3325810a9a):
+`BLOCKED_AXIS_MISMATCH`, honestly non-admitted.** The local macOS-CPU decode
+failed BOTH of its own reference controls: it moves cp135 by 50,395 flips where
+the promoted contest-CUDA row records 34,964, and the C1 target reproduces off
+by one pixel (the et4 batch-shape tie-flip class). The local diagnostic
+rho = 0.07530491560921523 is explicitly NON-ADMITTED (m94: a negative measures
+the instrument; cn4 cross-axis law). V0–V5 held per the charter gate. All
+19 GiB payloads retained. Fire-order recorded by the arm: "a working 1:1 T4
+CUDA lane with artifact return."
+
+**MAIN adjudication — the one-row purchase.** d_seg is pose-section-independent
+on this vehicle (frames render from tokens + renderer; the CPR1 carrier drives
+only pose coefficients). Therefore ONE contest-CUDA row on the t1r1 composed
+container yields, simultaneously: (a) the ADMITTED same-axis rho for the C1
+plane on this base family, (b) the full composed S row for candidate (d), and
+(c) by the (a)-arithmetic, the survival read for candidate (a). Dispatched
+2026-08-12 ~06:57Z under the #381 envelope via the canonical
+tools/dispatch_modal_paired_auth_eval.py from an AppleDouble-free APFS staging
+copy (/Volumes/VertigoDataTier/pact/ddm_t1r1_dispatch/adapted_runtime; archive
+sha 12a5b181fef4e15ad8a752161c744347beca0b5a1224c5d3d542ab148f6ece80 @187,046 B
+re-verified post-copy). CUDA leg LIVE: call fc-01KZTC8YJFJ1MCD00Y07YC4XS7,
+lane lane_ddm_t1r1_composed_paired_paired_modal_auth_20260812T065710Z_contest_cuda.
+CPU leg refused pre-spend by the single-flight gate (correct; redispatch after
+harvest — expected REFUSED-BY-VEHICLE record, same as cp135 ADD.3).
+
+**Harvest contract (this row):** recompute S from components (never the rounded
+field); admitted rho = (0.029643 − 100·d_seg_composed) / 0.014447 against the
+RECOMPUTED gate rho ≥ 0.827795; candidate-(d) S vs the floor
+0.16195513827824176 (pointer refresh if lower); V0–V5 fires only if admitted;
+record spend in #381 + close the lane claim + redispatch the CPU leg.
