@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import importlib
+import json
 import shutil
 import sys
 from pathlib import Path
@@ -40,6 +42,51 @@ def test_cp135_python_files_pass_payload_retention_gate() -> None:
         ),
     )
     assert findings == []
+
+
+def test_parser_accepts_explicit_decode_identity_pins() -> None:
+    event_sha = "1" * 64
+    spatial_sha = "2" * 64
+    args = compose.parser().parse_args(
+        [
+            "encode-rc64",
+            "--expected-event-order-sha256",
+            event_sha,
+            "--expected-spatial-token-sha256",
+            spatial_sha,
+        ]
+    )
+    assert args.expected_event_order_sha256 == event_sha
+    assert args.expected_spatial_token_sha256 == spatial_sha
+
+
+def test_parser_preserves_cp135_decode_identity_defaults() -> None:
+    args = compose.parser().parse_args(["encode-rc64"])
+    assert args.expected_event_order_sha256 == compose.EXPECTED_EVENT_ORDER_SHA256
+    assert args.expected_spatial_token_sha256 == compose.EXPECTED_SPATIAL_TOKEN_SHA256
+
+
+def test_decode_identity_pin_validation_refuses_non_sha256() -> None:
+    with pytest.raises(RuntimeError, match="lowercase SHA-256"):
+        compose.require_sha256("ABC", "test digest")
+
+
+def test_probability_identity_record_uses_stable_custodied_receipt(tmp_path: Path) -> None:
+    identity_path = tmp_path / "PROBABILITY_IDENTITY.json"
+    identity_path.write_text(json.dumps({"stable": True}))
+    export_path = tmp_path / "EXPORT_RESULT.json"
+    export_path.write_text(json.dumps({"wall_s": 1.0}))
+    declared = compose.file_record(identity_path)
+    assert compose.probability_identity_record(export_path, {"probability_identity": declared}) == declared
+    export_path.write_text(json.dumps({"wall_s": 2.0}))
+    assert compose.probability_identity_record(export_path, {"probability_identity": declared}) == declared
+
+
+@pytest.mark.skipif(not compose.DEFAULT_RUNTIME.is_dir(), reason="custodied CP135 runtime unavailable")
+def test_sparse_optimizer_is_exported_by_hpac_inference() -> None:
+    compose.load_runtime(compose.DEFAULT_RUNTIME)
+    module = importlib.import_module("runtime.hpac_inference")
+    assert callable(module.optimize_sparse_evaluator)
 
 
 def test_lotto_nibble_selectors_round_trip_and_refuse_padding() -> None:

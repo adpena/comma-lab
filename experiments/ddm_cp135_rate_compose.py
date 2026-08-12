@@ -82,6 +82,11 @@ def sha256_file(path: Path) -> str:
         return hashlib.file_digest(stream, "sha256").hexdigest()
 
 
+def require_sha256(value: str, label: str) -> None:
+    if len(value) != 64 or any(character not in "0123456789abcdef" for character in value):
+        raise RuntimeError(f"{label} is not a lowercase SHA-256")
+
+
 def file_record(path: Path) -> dict[str, Any]:
     return {
         "path": str(path.resolve()),
@@ -113,6 +118,18 @@ def tree_record(root: Path) -> dict[str, Any]:
         "file_count": len(rows),
         "tree_sha256": digest.hexdigest(),
     }
+
+
+def probability_identity_record(export_path: Path, export: dict[str, Any]) -> dict[str, Any]:
+    """Return the stable code/source identity used to bind resumable coders."""
+
+    declared = export.get("probability_identity")
+    if declared is None:
+        return file_record(export_path)
+    identity_path = Path(declared["path"])
+    if file_record(identity_path) != declared:
+        raise RuntimeError("probability identity receipt failed custody")
+    return declared
 
 
 def atomic_bytes(path: Path, value: bytes, *, executable: bool = False) -> None:
@@ -377,6 +394,7 @@ def export_probabilities(args: argparse.Namespace) -> dict[str, Any]:
     require_base(args.archive)
     runtime_module = load_runtime(args.runtime)
     archive_module = importlib.import_module("runtime.residual_archive")
+    inference_module = importlib.import_module("runtime.hpac_inference")
     parts = runtime_module.read_residual_archive(args.archive)
     renderer = runtime_module._load_renderer(args.runtime / "cpr1")
     hpac, hpac_report = variant_hpac(parts, variant)
@@ -384,11 +402,25 @@ def export_probabilities(args: argparse.Namespace) -> dict[str, Any]:
     model = renderer.load_hpac(canonical_hpac, torch.device("cpu"))
     masks = renderer.group_masks(torch.device("cpu"))
     sparse = archive_module._sparse_class(args.runtime / "cpr1")(model, renderer.EVAL_H, renderer.EVAL_W)
-    archive_module.optimize_sparse_evaluator(sparse)
+    inference_module.optimize_sparse_evaluator(sparse)
     group_positions = [np.flatnonzero(mask.detach().cpu().numpy().reshape(-1)) for mask in masks]
     source = SourceSymbols(args.dt1_manifest)
     output = args.output / "retained" / "probabilities" / variant
     output.mkdir(parents=True, exist_ok=True)
+    source_binding = {
+        "schema": "ddm_cp135_probability_source_binding.v1",
+        "variant": variant,
+        "archive": file_record(args.archive),
+        "dt1_manifest": file_record(args.dt1_manifest),
+        "source_symbol_sha256": source.digest(),
+        "hpac_sha256": sha256_bytes(hpac),
+    }
+    source_binding_path = output / "SOURCE_BINDING.json"
+    if source_binding_path.is_file():
+        if json.loads(source_binding_path.read_text()) != source_binding:
+            raise RuntimeError("probability export output is bound to a different source")
+    else:
+        atomic_json(source_binding_path, source_binding)
     stage_records = []
     started = time.time()
     table = parts.table
@@ -463,6 +495,22 @@ def export_probabilities(args: argparse.Namespace) -> dict[str, Any]:
         receipt = output / f"codes_{frame:04d}.json"
         if path.is_file() and receipt.is_file():
             completed.append(_frame_record(path, frame, variant))
+    probability_identity = {
+        "schema": "ddm_cp135_probability_identity.v1",
+        "axis": AXIS,
+        "score_claim": SCORE_CLAIM,
+        "variant": variant,
+        "archive": file_record(args.archive),
+        "hpac": hpac_report,
+        "canonical_hpac_sha256": sha256_bytes(canonical_hpac),
+        "source_binding": file_record(source_binding_path),
+        "source_symbol_sha256": source_binding["source_symbol_sha256"],
+        "completed_frames": len(completed),
+        "complete_n600": len(completed) == 600,
+        "frames": completed,
+    }
+    probability_identity_path = output / "PROBABILITY_IDENTITY.json"
+    atomic_json(probability_identity_path, probability_identity)
     result = {
         "schema": "ddm_cp135_probability_export.v1",
         "axis": AXIS,
@@ -474,7 +522,9 @@ def export_probabilities(args: argparse.Namespace) -> dict[str, Any]:
         "completed_frames": len(completed),
         "requested_range": [args.start_frame, args.end_frame],
         "complete_n600": len(completed) == 600,
-        "source_symbol_sha256": source.digest() if len(completed) == 600 else None,
+        "source_symbol_sha256": source_binding["source_symbol_sha256"] if len(completed) == 600 else None,
+        "source_binding": file_record(source_binding_path),
+        "probability_identity": file_record(probability_identity_path),
         "frames": completed,
         "wall_s": time.time() - started,
     }
@@ -2036,10 +2086,13 @@ def encode_rc64(args: argparse.Namespace) -> dict[str, Any]:
     """Fresh, resumable RC64 recode of one retained probability variant."""
 
     variant: Variant = args.variant
+    require_sha256(args.expected_event_order_sha256, "expected event-order digest")
+    require_sha256(args.expected_spatial_token_sha256, "expected spatial-token digest")
     export_path = args.output / "retained" / "probabilities" / variant / "EXPORT_RESULT.json"
     export = json.loads(export_path.read_text())
     if not export.get("complete_n600"):
         raise RuntimeError(f"{variant} probability export is incomplete")
+    export_record = probability_identity_record(export_path, export)
     source = SourceSymbols(args.dt1_manifest)
     library_path = _compile_checkpointable_rc64(args)
     book_src = args.experiment_book / "src"
@@ -2054,11 +2107,16 @@ def encode_rc64(args: argparse.Namespace) -> dict[str, Any]:
     start_frame = 0
     if progress_path.is_file():
         progress = json.loads(progress_path.read_text())
+        bound_export = progress.get("probability_identity", progress.get("probability_export"))
+        if bound_export != export_record:
+            raise RuntimeError("RC64 checkpoint is bound to a different probability export")
         state_path = Path(progress["state"]["path"])
         if file_record(state_path) != progress["state"]:
             raise RuntimeError("RC64 checkpoint failed custody")
         encoder = _rc64_resume(NativeEncoder, library_path, state_path.read_bytes())
         start_frame = int(progress["next_frame"])
+        if not 0 <= start_frame <= 600:
+            raise RuntimeError("RC64 checkpoint next-frame marker differs")
     else:
         encoder = NativeEncoder(library_path)
     started = time.time()
@@ -2075,7 +2133,7 @@ def encode_rc64(args: argparse.Namespace) -> dict[str, Any]:
                 "through_frame": frame,
                 "next_frame": frame + 1,
                 "state": file_record(state_path),
-                "probability_export": file_record(export_path),
+                "probability_identity": export_record,
             }
             atomic_json(state_path.with_suffix(".json"), receipt)
             atomic_json(progress_path, receipt)
@@ -2092,9 +2150,11 @@ def encode_rc64(args: argparse.Namespace) -> dict[str, Any]:
     payload = encoder.finish()
     token_path = retained / "tokens.rc64"
     atomic_bytes(token_path, payload)
+    encode_wall_s = time.time() - started
     if variant == "control" and (len(payload) != EXPECTED_RC64_BYTES or sha256_bytes(payload) != EXPECTED_RC64_SHA256):
         raise RuntimeError("fresh control RC64 stream differs from custodied PR135")
 
+    decode_started = time.time()
     decoder = NativeDecoder(library_path, payload)
     decoded_path = retained / "decoded_symbols.fresh_rc64.bin"
     spatial_path = retained / "decoded_spatial_tokens.fresh_rc64.bin"
@@ -2123,8 +2183,8 @@ def encode_rc64(args: argparse.Namespace) -> dict[str, Any]:
     os.replace(temporary, decoded_path)
     os.replace(spatial_temporary, spatial_path)
     if (
-        event_digest.hexdigest() != EXPECTED_EVENT_ORDER_SHA256
-        or spatial_digest.hexdigest() != EXPECTED_SPATIAL_TOKEN_SHA256
+        event_digest.hexdigest() != args.expected_event_order_sha256
+        or spatial_digest.hexdigest() != args.expected_spatial_token_sha256
     ):
         raise RuntimeError("fresh RC64 decoded-token digest differs")
     result = {
@@ -2137,6 +2197,8 @@ def encode_rc64(args: argparse.Namespace) -> dict[str, Any]:
         "decoded_spatial_tokens": file_record(spatial_path),
         "decoded_event_order_sha256": event_digest.hexdigest(),
         "decoded_spatial_token_sha256": spatial_digest.hexdigest(),
+        "expected_event_order_sha256": args.expected_event_order_sha256,
+        "expected_spatial_token_sha256": args.expected_spatial_token_sha256,
         "symbol_identity": True,
         "events": EXPECTED_EVENTS,
         "decoder_bit_position": decoder.bit_position,
@@ -2145,6 +2207,8 @@ def encode_rc64(args: argparse.Namespace) -> dict[str, Any]:
         "source_backend": file_record(args.experiment_book / "src" / "cpr1_sub4" / "entropy" / "rc64_backend.c"),
         "checkpoint_backend": file_record(args.output / "work" / "rc64_checkpoint_backend.c"),
         "library": file_record(library_path),
+        "encode_wall_s": encode_wall_s,
+        "decode_wall_s": time.time() - decode_started,
         "wall_s": time.time() - started,
     }
     atomic_json(retained / "FRESH_RC64_RESULT.json", result)
@@ -2176,6 +2240,16 @@ def parser() -> argparse.ArgumentParser:
     value.add_argument("--dt1-manifest", type=Path, default=DEFAULT_DT1_MANIFEST)
     value.add_argument("--hp3-manifest", type=Path, default=DEFAULT_HP3_MANIFEST)
     value.add_argument("--experiment-book", type=Path, default=DEFAULT_EXPERIMENT_BOOK)
+    value.add_argument(
+        "--expected-event-order-sha256",
+        default=EXPECTED_EVENT_ORDER_SHA256,
+        help="required SHA-256 of the decoded n600 symbols in F26 event order",
+    )
+    value.add_argument(
+        "--expected-spatial-token-sha256",
+        default=EXPECTED_SPATIAL_TOKEN_SHA256,
+        help="required SHA-256 of the decoded n600 [frame,row,column] token field",
+    )
     value.add_argument("--start-frame", type=int, default=0)
     value.add_argument("--end-frame", type=int, default=600)
     value.add_argument("--torch-threads", type=int, default=4)
