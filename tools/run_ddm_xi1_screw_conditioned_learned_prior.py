@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib
 import importlib.util
 import io
 import json
@@ -55,7 +56,13 @@ from tac.pr130_lift.train_semantic_quantized_resumable import resolve_ema_policy
 from tac.training import EMA  # noqa: E402
 
 OUTPUT = Path("/Volumes/APDataStore/pact/ddm_xi1_20260812")
-STATE = OUTPUT / "state.json"
+FIX_OUTPUT = OUTPUT / "fix"
+STATE = FIX_OUTPUT / "state.json"
+LEG_A_RETAINED = FIX_OUTPUT / "retained/leg_a"
+LEG_A_RESULT = FIX_OUTPUT / "LEG_A_RESULT.json"
+LEG_A_PREPARATION = FIX_OUTPUT / "LEG_A_PREPARATION.json"
+LEG_A_FIRE_ORDER = FIX_OUTPUT / "queue/leg_a_mps.json"
+FINAL_RESULT = FIX_OUTPUT / "FINAL_RESULT.json"
 HP3_PATH = ROOT / "experiments/ddm_hp3_hpac_section_and_zip_frame.py"
 POSE_WARP_PATH = ROOT / "tools/measure_pose_warp_dseg.py"
 INTAKE = Path("/Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo")
@@ -71,6 +78,8 @@ POSE_RAW = Path("/Volumes/VertigoDataTier/pact/ddm_tf1_20260812/final_v2/retaine
 CALIBRATION_RAW = Path("/Volumes/VertigoDataTier/pact/ddm_tf1_20260812/final_v2/retained/inputs/warp_calibration_f64.bin")
 
 SCHEMA = "ddm_xi1_screw_conditioned_learned_prior.v1"
+CHECKPOINT_SCHEMA = "ddm_xi1_hpac_checkpoint.v2"
+LEGACY_CHECKPOINT_SCHEMA = "ddm_xi1_hpac_checkpoint.v1"
 AXIS_A = "[macOS-MPS research-signal training; macOS-CPU advisory real Range bytes; scorer-free]"
 AXIS_B = "[macOS-CPU advisory; n600 exact carrier decode; inherited contest-CUDA CP135 d_pose]"
 SEED = 20260716
@@ -84,6 +93,17 @@ TOKENS_PER_FRAME = H * W
 RATE_LAMBDAS = (1.0, 0.5)
 CONTEXT_MODES = ("spatial", "xi")
 DEFAULT_EPOCHS = 6
+EXPECTED_BIT_DEPTH_NAMES = (
+    "conv_a.bit_depth",
+    "conv_b1.bit_depth",
+    "conv_b2.bit_depth",
+    "conv_past.bit_depth",
+    "frame_scale.bit_depth",
+    "frame_shift.bit_depth",
+    "head.bit_depth",
+    "spm_dw.bit_depth",
+    "spm_pw.bit_depth",
+)
 POSE_D = 0.00000688
 CP135_SCORE = 0.16195513827824176
 CP135_BYTES = 186_252
@@ -537,12 +557,34 @@ def run_leg_b(poses: np.ndarray, calibration: np.ndarray) -> dict[str, Any]:
 
 
 def configure_hpac() -> tuple[ModuleType, ModuleType, ModuleType, ModuleType]:
-    for path in (str(INTAKE_CODE), str(FX1_RUNTIME)):
-        if path not in sys.path:
-            sys.path.insert(0, path)
-    integer = import_path(INTAKE_CODE / "hpac_integer.py", "ddm_xi1_hpac_integer")
-    compression = import_path(INTAKE_CODE / "hpac_self_compress.py", "ddm_xi1_hpac_self_compress")
-    packer = import_path(INTAKE_CODE / "pack_hpac_self_compress.py", "ddm_xi1_hpac_packer")
+    # These three PR130 modules use absolute sibling imports.  They must share
+    # the canonical ``hpac_integer`` module object: loading hpac_integer.py
+    # under a private alias creates distinct IntegerConv2d class identities,
+    # causing every self-compression isinstance check to fail silently.
+    for path in (FX1_RUNTIME, INTAKE_CODE):
+        text = str(path)
+        if text in sys.path:
+            sys.path.remove(text)
+        sys.path.insert(0, text)
+    integer = importlib.import_module("hpac_integer")
+    compression = importlib.import_module("hpac_self_compress")
+    packer = importlib.import_module("pack_hpac_self_compress")
+    expected_modules = {
+        "hpac_integer": INTAKE_CODE / "hpac_integer.py",
+        "hpac_self_compress": INTAKE_CODE / "hpac_self_compress.py",
+        "pack_hpac_self_compress": INTAKE_CODE / "pack_hpac_self_compress.py",
+    }
+    for name, expected_path in expected_modules.items():
+        module = sys.modules[name]
+        observed_path = Path(module.__file__).resolve()
+        if observed_path != expected_path.resolve():
+            raise XI1Error(f"{name} resolved to {observed_path}, expected {expected_path}")
+    if (
+        compression.IntegerConv2d is not integer.IntegerConv2d
+        or compression.IntegerLinear is not integer.IntegerLinear
+        or packer.IntegerHPAC is not integer.IntegerHPAC
+    ):
+        raise XI1Error("HPAC module class identities diverged; self-compression registration is unsafe")
     inflate = import_path(FX1_RUNTIME / "inflate.py", "ddm_xi1_hpac_inflate")
     return integer, compression, packer, inflate
 
@@ -577,17 +619,35 @@ def build_train_model(integer: ModuleType, compression: ModuleType, device: torc
         use_norm_gates=False,
     ).to(device)
     compression.enable_self_compression(model, 8.0)
+    _require_bit_depth_schema(model, label="fresh trainer")
     initial = torch.load(HPAC_INIT, map_location="cpu", weights_only=False)
     incompatible = model.load_state_dict(initial["state_dict"], strict=False)
     unexpected_missing = {name for name in incompatible.missing_keys if not name.endswith(".bit_depth")}
     if incompatible.unexpected_keys or unexpected_missing:
         raise XI1Error(f"HPAC initializer is incompatible: {incompatible}")
+    _require_bit_depth_schema(model, label="initialized trainer")
     return model
+
+
+def _bit_depth_names(value: torch.nn.Module | dict[str, Any]) -> tuple[str, ...]:
+    names = value.keys() if isinstance(value, dict) else dict(value.named_parameters()).keys()
+    return tuple(sorted(name for name in names if name.endswith(".bit_depth")))
+
+
+def _require_bit_depth_schema(value: torch.nn.Module | dict[str, Any], *, label: str) -> tuple[str, ...]:
+    observed = _bit_depth_names(value)
+    if observed != EXPECTED_BIT_DEPTH_NAMES:
+        missing = sorted(set(EXPECTED_BIT_DEPTH_NAMES) - set(observed))
+        unexpected = sorted(set(observed) - set(EXPECTED_BIT_DEPTH_NAMES))
+        raise XI1Error(
+            f"{label} has an invalid learned bit-depth schema; missing={missing}, unexpected={unexpected}"
+        )
+    return observed
 
 
 def optimizer_for(model: torch.nn.Module) -> torch.optim.Optimizer:
     parameters = dict(model.named_parameters())
-    bit_names = {name for name in parameters if name.endswith(".bit_depth")}
+    bit_names = set(_require_bit_depth_schema(model, label="optimizer model"))
     exponent_names = {name for name in parameters if name.endswith(".exponent")}
     other_names = set(parameters) - bit_names - exponent_names
     groups: list[dict[str, Any]] = [
@@ -630,16 +690,24 @@ def checkpoint_payload(
     generator: torch.Generator,
     history: list[dict[str, Any]],
 ) -> dict[str, Any]:
+    live_state = _cpu_tree(model.state_dict())
+    ema_shadow = _cpu_tree(ema.state_dict())
+    bit_depth_names = _require_bit_depth_schema(live_state, label="checkpoint live state")
+    _require_bit_depth_schema(ema_shadow, label="checkpoint EMA shadow")
     return {
-        "schema": "ddm_xi1_hpac_checkpoint.v1",
+        "schema": CHECKPOINT_SCHEMA,
         "epoch": epoch,
         "epochs": epochs,
         "phase": "discrete_qat" if epoch > epochs // 2 else ("initial" if epoch == 0 else "continuous"),
         "context_mode": context_mode,
         "rate_lambda": rate_lambda,
         "sample_frame_ids": ids.astype(int).tolist(),
-        "live_state_dict": _cpu_tree(model.state_dict()),
-        "ema_shadow": _cpu_tree(ema.state_dict()),
+        "live_state_dict": live_state,
+        "ema_shadow": ema_shadow,
+        "self_compression": {
+            "bit_depth_parameter_names": list(bit_depth_names),
+            "trainer_registration": "canonical hpac_integer class identity",
+        },
         "ema_decay": ema.decay,
         "ema_updates": ema._num_updates,
         "optimizer_state_dict": _cpu_tree(optimizer.state_dict()),
@@ -678,14 +746,22 @@ def _restore_checkpoint(
     scheduler: torch.optim.lr_scheduler.LRScheduler,
     generator: torch.Generator,
 ) -> tuple[int, list[dict[str, Any]]]:
+    schema = checkpoint.get("schema")
+    if schema == LEGACY_CHECKPOINT_SCHEMA:
+        raise XI1Error(
+            "legacy Leg-A checkpoint has no trained bit_depth state or optimizer history; "
+            "fresh 20-epoch rerun required under the fix output root"
+        )
     if (
-        checkpoint.get("schema") != "ddm_xi1_hpac_checkpoint.v1"
+        schema != CHECKPOINT_SCHEMA
         or checkpoint.get("context_mode") != context_mode
         or checkpoint.get("rate_lambda") != rate_lambda
         or checkpoint.get("epochs") != epochs
         or checkpoint.get("sample_frame_ids") != ids.astype(int).tolist()
     ):
         raise XI1Error("Leg A resume identity changed")
+    _require_bit_depth_schema(checkpoint["live_state_dict"], label="resume live state")
+    _require_bit_depth_schema(checkpoint["ema_shadow"], label="resume EMA shadow")
     model.load_state_dict(checkpoint["live_state_dict"])
     ema.shadow = {name: value.to(next(model.parameters()).device) for name, value in checkpoint["ema_shadow"].items()}
     ema._num_updates = int(checkpoint["ema_updates"])
@@ -744,7 +820,7 @@ def train_cell(
     compression: ModuleType,
 ) -> dict[str, Any]:
     cell_name = f"lambda_{str(rate_lambda).replace('.', 'p')}_{context_mode}"
-    root = OUTPUT / "retained/leg_a" / cell_name
+    root = LEG_A_RETAINED / cell_name
     result_path = root / "RESULT.json"
     if result_path.is_file():
         return json.loads(result_path.read_text(encoding="utf-8"))
@@ -984,13 +1060,11 @@ def pack_and_encode_cell(
     terminal: dict[str, Any],
     history: list[dict[str, Any]],
 ) -> dict[str, Any]:
-    root = OUTPUT / "retained/leg_a" / cell_name
+    root = LEG_A_RETAINED / cell_name
     hp3 = import_path(HP3_PATH, f"ddm_xi1_hp3_{cell_name}")
     _, _, packer, inflate = configure_hpac()
     args = model_args()
-    source = packer.model_from_args(args, True).eval()
-    source.load_state_dict(terminal["ema_shadow"])
-    packer.set_deployed_bit_depths(source, True)
+    source = load_terminal_ema_for_pack(terminal=terminal, packer=packer, args=args)
     raw = packer.serialize_self_compressed(source)
     raw_record = _atomic_bytes(root / "hpac.raw", raw)
     model_xz = lzma.compress(raw, format=lzma.FORMAT_XZ, filters=hp3.LZMA_FILTERS)
@@ -1044,6 +1118,24 @@ def pack_and_encode_cell(
     }
     atomic_json(root / "RESULT.json", result)
     return result
+
+
+def load_terminal_ema_for_pack(*, terminal: dict[str, Any], packer: ModuleType, args: Any) -> torch.nn.Module:
+    """Build the production pack source and strictly load trained bit depths."""
+
+    if terminal.get("schema") == LEGACY_CHECKPOINT_SCHEMA:
+        raise XI1Error(
+            "legacy Leg-A terminal cannot be packed: bit_depth was never registered or trained; "
+            "fresh 20-epoch rerun required"
+        )
+    if terminal.get("schema") != CHECKPOINT_SCHEMA:
+        raise XI1Error(f"unsupported Leg-A terminal schema: {terminal.get('schema')!r}")
+    _require_bit_depth_schema(terminal["ema_shadow"], label="pack terminal EMA shadow")
+    source = packer.model_from_args(args, True).eval()
+    _require_bit_depth_schema(source, label="pack source")
+    source.load_state_dict(terminal["ema_shadow"], strict=True)
+    packer.set_deployed_bit_depths(source, True)
+    return source
 
 
 def run_leg_a(
@@ -1100,18 +1192,18 @@ def run_leg_a(
         "axis": AXIS_A,
         "score_claim": False,
     }
-    atomic_json(OUTPUT / "LEG_A_RESULT.json", result, replace=True)
+    atomic_json(LEG_A_RESULT, result, replace=True)
     return result
 
 
 def queue_dispositions(leg_a: dict[str, Any] | None, leg_b: dict[str, Any] | None) -> list[str]:
     rows: list[str] = []
-    queue = OUTPUT / "queue"
+    queue = FIX_OUTPUT / "queue"
     if leg_a is not None:
         if leg_a["falsifier_FA"]["fires"]:
             rows.append(
                 "ddm_xi1_leg_a_n600: FOLDED. Owner: ddm_xi1. Consumer store: "
-                f"{OUTPUT / 'LEG_A_RESULT.json'}. Fire trigger: none; both n120 matched rungs met the FA close threshold."
+                f"{LEG_A_RESULT}. Fire trigger: none; both n120 matched rungs met the FA close threshold."
             )
         else:
             order = {
@@ -1147,8 +1239,12 @@ def queue_dispositions(leg_a: dict[str, Any] | None, leg_b: dict[str, Any] | Non
                 "ddm_xi1_leg_b_runtime: FOLDED. Owner: ddm_xi1. Consumer store: "
                 f"{OUTPUT / 'LEG_B_RESULT.json'}. Fire trigger: none; CAP1 is already the CP135 incumbent and counted geometric-xi conditioning did not beat direct storage."
             )
-    atomic_json(OUTPUT / "QUEUE_DISPOSITIONS.json", {"rows": rows}, replace=True)
-    _atomic_bytes(OUTPUT / "QUEUE_DISPOSITIONS.md", ("\n".join(f"- {row}" for row in rows) + "\n").encode(), replace=True)
+    atomic_json(FIX_OUTPUT / "QUEUE_DISPOSITIONS.json", {"rows": rows}, replace=True)
+    _atomic_bytes(
+        FIX_OUTPUT / "QUEUE_DISPOSITIONS.md",
+        ("\n".join(f"- {row}" for row in rows) + "\n").encode(),
+        replace=True,
+    )
     return rows
 
 
@@ -1180,7 +1276,8 @@ def update_state(*, stages: dict[str, str], pins: dict[str, Any], preflight: dic
         "complete": complete,
         "updated_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "mission": "matched learned xi context rate screen plus exact CP135 pose-carrier prior race",
-        "output_root": str(OUTPUT),
+        "output_root": str(FIX_OUTPUT),
+        "source_payload_root": str(OUTPUT),
         "payload_policy": "retain every materialized payload with bytes and sha256",
         "stages": stages,
         "input_pins": pins,
@@ -1262,26 +1359,26 @@ def main() -> None:
             "resume_command": (
                 "PYTHONHASHSEED=0 TAC_ADMISSION_ENFORCE=1 PYTORCH_ENABLE_MPS_FALLBACK=0 "
                 ".venv/bin/python tools/safe_run.py --rss-mb 12288 --projected-gib 12 --timeout 2390 "
-                "--label ddm_xi1_leg_a_n120 --status-receipt "
-                "/Volumes/APDataStore/pact/ddm_xi1_20260812/leg_a.safe_run.json -- "
+                "--label ddm_xi1f_leg_a_n120 --status-receipt "
+                "/Volumes/APDataStore/pact/ddm_xi1_20260812/fix/leg_a.safe_run.json -- "
                 ".venv/bin/python tools/run_ddm_xi1_screw_conditioned_learned_prior.py --leg a --epochs 20"
             ),
             "axis": AXIS_A,
             "score_claim": False,
         }
-        atomic_json(OUTPUT / "LEG_A_PREPARATION.json", preparation, replace=True)
+        atomic_json(LEG_A_PREPARATION, preparation, replace=True)
         fire_order = {
             "schema": "ddm_xi1_leg_a_mps_fire_order.v1",
             "disposition": "QUEUED-WITH-A-FIRE-ORDER",
             "owner": "MAIN Metal executor",
-            "consumer_store": str(OUTPUT / "LEG_A_RESULT.json"),
+            "consumer_store": str(LEG_A_RESULT),
             "fire_trigger": "a governed process reports torch.backends.mps.is_available() == True; execute the pinned resume_command without CPU substitution",
-            "preparation": file_record(OUTPUT / "LEG_A_PREPARATION.json"),
+            "preparation": file_record(LEG_A_PREPARATION),
         }
-        atomic_json(OUTPUT / "queue/leg_a_mps.json", fire_order, replace=True)
+        atomic_json(LEG_A_FIRE_ORDER, fire_order, replace=True)
         row = (
             "ddm_xi1_leg_a_mps: QUEUED-WITH-A-FIRE-ORDER. Owner: MAIN Metal executor. Consumer store: "
-            f"{OUTPUT / 'LEG_A_RESULT.json'}. Fire trigger: a governed process reports "
+            f"{LEG_A_RESULT}. Fire trigger: a governed process reports "
             "torch.backends.mps.is_available() == True; execute the pinned resume_command without CPU substitution."
         )
         existing_leg_b = None
@@ -1289,16 +1386,16 @@ def main() -> None:
             existing_leg_b = json.loads((OUTPUT / "LEG_B_RESULT.json").read_text(encoding="utf-8"))
         dispositions = queue_dispositions(None, existing_leg_b)
         dispositions.append(row)
-        atomic_json(OUTPUT / "QUEUE_DISPOSITIONS.json", {"rows": dispositions}, replace=True)
+        atomic_json(FIX_OUTPUT / "QUEUE_DISPOSITIONS.json", {"rows": dispositions}, replace=True)
         _atomic_bytes(
-            OUTPUT / "QUEUE_DISPOSITIONS.md",
+            FIX_OUTPUT / "QUEUE_DISPOSITIONS.md",
             ("\n".join(f"- {item}" for item in dispositions) + "\n").encode(),
             replace=True,
         )
         partial_final = {
             "schema": SCHEMA,
             "status": "PARTIAL_BLOCKED_NO_METAL_DEVICE",
-            "leg_a_preparation": file_record(OUTPUT / "LEG_A_PREPARATION.json"),
+            "leg_a_preparation": file_record(LEG_A_PREPARATION),
             "leg_a_result": None,
             "leg_b": (
                 file_record(OUTPUT / "LEG_B_RESULT.json")
@@ -1310,7 +1407,7 @@ def main() -> None:
             "score_claim": False,
             "frontier_moved": False,
         }
-        atomic_json(OUTPUT / "FINAL_RESULT.json", partial_final, replace=True)
+        atomic_json(FINAL_RESULT, partial_final, replace=True)
         stages["leg_a"] = "ready_blocked_no_metal_device"
         stages["leg_b"] = "complete" if (OUTPUT / "LEG_B_RESULT.json").is_file() else "pending"
         stages["receipt"] = "complete"
@@ -1327,14 +1424,14 @@ def main() -> None:
     dispositions = queue_dispositions(leg_a, leg_b)
     final = {
         "schema": SCHEMA,
-        "leg_a": None if leg_a is None else file_record(OUTPUT / "LEG_A_RESULT.json"),
+        "leg_a": None if leg_a is None else file_record(LEG_A_RESULT),
         "leg_b": None if leg_b is None else file_record(OUTPUT / "LEG_B_RESULT.json"),
         "queue_dispositions": dispositions,
         "axis": [AXIS_A, AXIS_B],
         "score_claim": False,
         "frontier_moved": False,
     }
-    atomic_json(OUTPUT / "FINAL_RESULT.json", final, replace=True)
+    atomic_json(FINAL_RESULT, final, replace=True)
     stages["receipt"] = "complete"
     update_state(stages=stages, pins=pins, preflight=preflight, complete=True)
     print(json.dumps(final, indent=2, sort_keys=True))
