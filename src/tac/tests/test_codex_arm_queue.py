@@ -128,9 +128,16 @@ def test_spawn_refuses_missing_prompt(q, capsys):
 
 
 def test_keeper_carries_the_ssd_add_dir(q):
-    """The flag whose absence killed fz3 — pinned so it cannot silently vanish."""
+    """The flag whose absence killed fz3 — pinned so it cannot silently vanish.
+
+    Upgraded 2026-08-12 for the multi-tier grant (SSD_ADD_DIR -> SSD_ADD_DIRS):
+    EVERY granted tier must ride the keeper, not just one — arms measurably
+    write both (sr2 coldstore + pz4a retained payloads live on tier-2)."""
     src = q.keeper_source("x", ".omx/tmp/codex_runs/x_prompt.md")
-    assert "--add-dir" in src and q.SSD_ADD_DIR in src
+    assert "--add-dir" in src
+    assert q.SSD_ADD_DIRS, "the grant list must never be empty"
+    for tier in q.SSD_ADD_DIRS:
+        assert tier in src, f"granted tier missing from keeper: {tier}"
 
 
 def test_spawn_command_detaches_via_setsid_not_merely_disown(q):
