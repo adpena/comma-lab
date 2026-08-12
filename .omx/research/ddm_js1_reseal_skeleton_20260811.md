@@ -87,3 +87,16 @@ the solve; it sharpens where the remaining sub-0.15 distance is bought: the C1 p
 realization race) and the rate races. The FOURTH option T8 must also price: cp135 base +
 C1 plane + ps135-refit pose on the COMPOSED frames (if the refit transfers and beats 0.00829
 on the same axis — measure, never assume).
+
+## AMENDMENT INDEX (as of 2026-08-11 late — T2 reseal MUST consume ALL TEN; one line each)
+A1 hy1 reseal block (capstone-hybrid solved-carriage findings) · A2 round-trip-in-loop + learned-
+prior race (hr1) · A3 5W matrix · A4 hr2 apparatus + pre-arm frozen-scorer camera-uint8 placement
+gate · A5 rvs1 survival playbook (free-treatment fork · survival-force ablation · camera-lattice
+compensation event · joint hard admission) · A6 rvs2 geometry (G_theta custody gate + dual-metric
+readback · pose-null sibling race · conditional ξ-transport · MS4D refusal) · A7 lv2 completeness
+(4 integrity ports · WeightEntropyMLX + probability-object races · PZ4R→#949→QDBS→pose-GN fires) ·
+A8 recursive/deep/complex/optimal quality bar (a stage below the bar is INCOMPLETE) · A9 ρ prior
+consumption (bound SHA ce87832f… · three bands separate · T4 recompute formulas · DK1-CVP +
+prosody-stats sub-arms · L28 first T9 child · S12/#401 folded) · A10 precision-as-per-stage-
+waterfill (consumer-resolved depth · sensitivity-map allocation via #157 · active-dim pose-recode
+T7 candidate under the pz4 2,000 B pre-proof gate · authority precision never degraded).
