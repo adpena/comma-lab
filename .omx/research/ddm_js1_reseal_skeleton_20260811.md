@@ -405,3 +405,18 @@ this operating point — larger than the whole −0.011955 gap to sub-0.15.
   pixels PAST δ; build-to-admission + bounded n32 smoke; the long burn fires from MAIN (governed).
 - Scope note: F1/F2 kill the fixed catalog + exact coder instance ONLY — learned conditioning,
   other tensors, larger semantic moves remain OPEN (the js3 charter is the first of these).
+
+## ANNEX (2026-08-12, MAIN, js3 burn endpoint) — PENALTY FORMULATION DEAD; js4 PROJECTOR FORK FIRES
+
+- js3 300-step pose-guarded burn (sealed recipe, λ_pose=1000, pose-every-1) ENDPOINT: every
+  export variant fails BOTH gates — pose Δ 0.0241 (12,000× the 2e-6 gate) and robust flips
+  INVERTED (+2,319 projected n600; robust harmful 366 > beneficial 242 — vs −174 projected at
+  step 100). The penalty landscape has no region where robust seg movement and the pose tube
+  hold together; best joint state was ~step 100 and decayed with training. Consistent with
+  #889: seg spends pose legibility when it spends the pose-visible subspace.
+- Verdict scope: INSTANCE (hidden-4, this schedule) for the numbers; the PENALTY family on
+  this vehicle is now measured-dead at two horizons (20 + 300 steps). Receipts:
+  main_burn/stages/stage_0{1,2,3}*/RESULT.json under ddm_js3_20260812 (sha-receipted).
+- FORK FIRED: ddm_js4 spawned — pose-null PROJECTION of the correction (exact kernel
+  pre-quantization per #889/#837/j11; uint8 leakage #532 held as verification, not a fight).
+  Existence result stands: the gradient IS alive through receiver→R→uint8→frozen SegNet.
