@@ -162,9 +162,11 @@ a receiver-framed archive carrying PZ4D, runtime, complete archive size, `d_pose
 contest score. No MPS, GPU, Modal, scorer lane, evaluator, public-PR mutation, upstream edit, or live
 solve-tree write occurred. This arm did not move the frontier and did not reach sub-0.15.
 
-Git custody: pending the serializer attempt. The source and focused
-test post-edit SHA-256 values are `6a152a0828cc04cf4603b0c313f5bfc67549be9e3eb9ae23fdbe5156cfdcb3a4`
-and `05d76ea13b7defbd8032e0bd4b88541c54c3d1604745d7da7d740aad62e825f9`.
+Git custody: committed. Implementation, focused tests, and the initial handoff landed in
+`d0c222fc0e`; this final custody wording is a serializer-scoped memo-only follow-up. The source and
+focused test post-edit SHA-256 values are
+`6a152a0828cc04cf4603b0c313f5bfc67549be9e3eb9ae23fdbe5156cfdcb3a4` and
+`05d76ea13b7defbd8032e0bd4b88541c54c3d1604745d7da7d740aad62e825f9`.
 
 ## LIVE-HYPOTHESES
 
