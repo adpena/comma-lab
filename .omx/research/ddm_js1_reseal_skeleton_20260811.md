@@ -144,3 +144,38 @@ reword removing the literal `evaluate.py` token. Verified clean against the exac
 segnet_sd_path · posenet_sd_path · compute_distortion) with the 3-arg contract intact.
 The pinned packet copies are NOT edited — exact-row runtime-tree custody preserved.
 Terminal packet assembly (T1/T10) copies inflate.sh FROM terminal_assets/.
+
+## ADVERSARIAL REVIEW — PASS-6 STOP IMPLEMENTATION (2026-08-11, MAIN self-review, 1 real finding CURED)
+
+Scope: boundary-stop script · emission rehearsal · runbook tranche addendum · T10 clean
+inflate.sh · wake chain. Method: per-surface attack + mental execution + assumption-challenge axis.
+
+**F1 (REAL, CURED + control-verified): PID-reuse hazard in the boundary killer.** The script
+polled a bare pid for hours then sent `killpg(26406)` with no identity check — a recycled pid
+would have received the kill. Cure: `solve_identity_holds()` (ps command-line must contain
+`ddm_ps135_pose_resolve`) gates BOTH the kill (refuse + log on mismatch) and the poll-loop
+exit detection (recycled pid ⇒ treated as solve-exited, emission proceeds honestly on the last
+completed pass). Positive/negative controls EXECUTED: identity(26406)=True, identity(1)=False.
+Old poller killed; v2 relaunched (pid 61090, armed 03:28Z, solve untouched at pass 4).
+
+**F2 (VERIFIED CLEAN): watcher TERMINAL branch.** `watch_ps135.sh` fires on bare `kill -0`
+failure — no convergence artifacts required, so a KILLED solve triggers the alert arm
+identically to a converged one. Residual: watcher shares the bare-pid class (a reuse inside its
+60s window would mask the exit) — acceptable because the boundary script's own .done receipt
+notifies MAIN through the fleet channel regardless (defense in depth).
+
+**Reviewed clean:** rehearsal validity (same code path; source order chunks→receipt→state
+proves the state>=6 trigger implies complete pass-6 chunks) · atomic writes vs concurrent
+readers (tmp+rename) · early-solve-exit path (emission falls back to last completed pass,
+receipt records it) · runbook addendum role mapping · T10 inflate.sh one-comment diff vs the
+exact forbidden-token regex · assumption axis (the stop rests on T8 arithmetic whose
+CUDA-vs-advisory caveat is recorded BINDING; a future terminal-parent map remains computable
+via the recorded resume path if ever wanted).
+
+**F3 (minor, routed):** `terminal_assets/` postdates the 08-11 APDataStore mirror — covered by
+the terminal-day full re-mirror (#1023 fire-order), named here so it is not missed.
+
+**Class-spread (owned: MAIN, deferred w/ fire-condition):** grep shows `killpg` WITHOUT an
+identity token in tools/codex_status.py, tools/memory_guard.py, tools/launch_witness_run.py
+(dashboard_up/ctl/supervisor already identity-aware). Risk windows are short-lived there but
+the class is the same; fire-condition = next reviewed hygiene window on any of those files.
