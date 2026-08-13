@@ -321,3 +321,36 @@ Own-vehicle row: **UNMOVED** at LC2
   same-object interaction principle without the overloaded identifier.
 - Claiming goal progress from HV1 is closed: no exact row moved, and the own-vehicle frontier remains
   **MEASURED LC2 `S=0.16959899569230852 @ 187,226 B [contest-CUDA T4, n600]`**.
+
+## MAIN ADJUDICATION APPENDIX — verdict-scope declarations + relative significance (2026-08-13, append-only)
+
+The ranked rows above state their scopes in prose; this block adds the literal declarations the
+verdict-scope discipline requires, at the NARROWEST level each measurement supports:
+
+- Rank 1 (PO1 gated int16/local-Jacobian candidate) — verdict_scope: formulation — one-shot
+  batched local-Jacobian-GUIDED edits at this operating point. The closure is MEASURED
+  un-recoverability, not magnitude: base d_pose 6.886e-6 sits BELOW the local model's measured
+  forward-error floor 9.36e-6, so THIS instrument cannot resolve any improvement at this
+  operating point. NOT closed: exact-feedback-per-step methods (v17 realize-then-relinearize
+  with T4 in the loop) and learned pose representations — different instruments.
+- Rank 8 (JS7 event stack) — verdict_scope: instance — these exact 44 events on this base.
+- Rank 9 (SA1 stage-1 EMA conditioner) — verdict_scope: instance (candidate) / formulation
+  (train-local-gate-T4 endpoint); CUDA-trained conditioners outside scope.
+- Rank 10 (HY1 literal C1-on-HP3 head) — verdict_scope: formulation — direct C1 substitution
+  on this receiver/axis; learned shipping-axis representatives outside scope.
+- Rank 11 (CP5V five-event composition) — verdict_scope: instance.
+- Rank 12 (JO1 six-event object) — verdict_scope: instance; DG1-bending-vs-B/flip at
+  current-store formulation scope.
+- Rank 13 (TF1 dense transport) — verdict_scope: formulation — dense exact-raster/global-ξ;
+  sparse learned support outside scope.
+- Rank 14 (PZ4A/PK2/PK3/PS135 alternatives) — verdict_scope: instance/formulation per row as
+  stated; new learned rate-aware representations outside scope.
+
+**Relative-significance backing for the prior-law line ("PO1 ... too small to finish", line 81).**
+That line was a pre-read PREDICTION, and the evidence diff corrected it; the numbers now: the po1
+candidate's best-case predicted move was Δd_pose −4.47e-7 → ΔS ≈ −2.7e-4 pose minus +5.5e-5 rate
+= net ≈ −2.2e-4, which is **1.8% of the remaining −0.011955 gap** — small RELATIVELY, with both
+numbers stated. The pose AXIS as a whole is NOT small: its ceiling −0.0083 is **69.4% of the
+remaining gap**, which is why the pose leg routes to representation-level moves (PZ4R next)
+rather than closing. verdict_scope: instance — this quantification dismisses only the po1
+candidate's magnitude, never the pose axis.
