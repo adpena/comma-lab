@@ -212,7 +212,10 @@ gate_image = (
         remote_path=str(REMOTE_JS1B_WORKER),
         copy=False,
     )
-    .add_local_python_source("ddm_sa1_modal_t4_sign_gate")
+    .add_local_python_source(
+        "ddm_sa1_modal_t4_sign_gate",
+        "ddm_js1b_modal_cuda_argmax_field_materializer",
+    )
 )
 
 
