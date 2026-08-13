@@ -571,6 +571,104 @@ def eval_radius2_multistart_singleton_escape(inputs: Mapping[str, Any]) -> dict[
     }
 
 
+def eval_local_model_step_resolvability_ratio(inputs: Mapping[str, Any]) -> float:
+    """Return modeled step magnitude divided by measured forward-mismatch floor.
+
+    A local-model admission decision is instrument-resolved only above one.  The
+    ratio deliberately uses the most charitable absolute step magnitude; a
+    signed improvement smaller than the model's own forward mismatch cannot be
+    distinguished from instrument error.
+    """
+
+    step = abs(float(inputs["predicted_step_magnitude"]))
+    floor = float(inputs["forward_mismatch_floor"])
+    if not math.isfinite(step):
+        raise EvaluatorError("local_model_step_resolvability_ratio_v1: predicted_step_magnitude must be finite")
+    if not math.isfinite(floor) or floor <= 0.0:
+        raise EvaluatorError(
+            "local_model_step_resolvability_ratio_v1: forward_mismatch_floor must be finite and positive"
+        )
+    return step / floor
+
+
+def eval_receiver_pose_semantic_preservation_ratio(inputs: Mapping[str, Any]) -> float:
+    """Return candidate/base PoseNet distortion for a matched receiver row."""
+
+    base = float(inputs["base_d_pose"])
+    candidate = float(inputs["candidate_d_pose"])
+    if not math.isfinite(base) or base <= 0.0:
+        raise EvaluatorError("receiver_pose_semantic_preservation_ratio_v1: base_d_pose must be finite and positive")
+    if not math.isfinite(candidate) or candidate < 0.0:
+        raise EvaluatorError(
+            "receiver_pose_semantic_preservation_ratio_v1: candidate_d_pose must be finite and non-negative"
+        )
+    return candidate / base
+
+
+def eval_pose_stack_exact_budget(inputs: Mapping[str, Any]) -> float:
+    """Invert the exact contest Pose term after Seg credit and byte cost.
+
+    ``seg_credit_s`` is a non-negative improvement allowance in score units.
+    ``archive_delta_bytes`` is signed: positive means added bytes and therefore
+    consumes allowance; negative means a rate saving.  A negative net allowance
+    is refused because no non-negative Pose degradation can satisfy it.
+    """
+
+    base = float(inputs["base_d_pose"])
+    seg_credit = float(inputs["seg_credit_s"])
+    archive_delta_bytes = float(inputs["archive_delta_bytes"])
+    for name, value in (
+        ("base_d_pose", base),
+        ("seg_credit_s", seg_credit),
+        ("archive_delta_bytes", archive_delta_bytes),
+    ):
+        if not math.isfinite(value):
+            raise EvaluatorError(f"pose_stack_exact_budget_v1: {name} must be finite")
+    if base < 0.0:
+        raise EvaluatorError("pose_stack_exact_budget_v1: base_d_pose must be non-negative")
+    if seg_credit < 0.0:
+        raise EvaluatorError("pose_stack_exact_budget_v1: seg_credit_s must be non-negative")
+    net_allowance = seg_credit - 25.0 * archive_delta_bytes / 37_545_489.0
+    if net_allowance < 0.0:
+        raise EvaluatorError(
+            "pose_stack_exact_budget_v1: byte cost exceeds Seg credit; no non-negative Pose degradation budget exists"
+        )
+    return ((math.sqrt(10.0 * base) + net_allowance) ** 2) / 10.0 - base
+
+
+def eval_receiver_lattice_leakage_exponent(inputs: Mapping[str, Any]) -> float:
+    """Fit the OLS log-log exponent of leakage against positive amplitudes."""
+
+    amplitudes_raw = inputs["amplitudes"]
+    leakages_raw = inputs["leakages"]
+    if not isinstance(amplitudes_raw, (list, tuple)) or not isinstance(leakages_raw, (list, tuple)):
+        raise EvaluatorError("receiver_lattice_leakage_exponent_v1: amplitudes and leakages must be lists or tuples")
+    if len(amplitudes_raw) != len(leakages_raw) or len(amplitudes_raw) < 2:
+        raise EvaluatorError(
+            "receiver_lattice_leakage_exponent_v1: equal-length series with at least two observations are required"
+        )
+    log_amplitudes: list[float] = []
+    log_leakages: list[float] = []
+    for amplitude_raw, leakage_raw in zip(amplitudes_raw, leakages_raw, strict=True):
+        amplitude = float(amplitude_raw)
+        leakage = float(leakage_raw)
+        if not math.isfinite(amplitude) or not math.isfinite(leakage) or amplitude <= 0.0 or leakage <= 0.0:
+            raise EvaluatorError(
+                "receiver_lattice_leakage_exponent_v1: every amplitude and leakage must be finite and positive"
+            )
+        log_amplitudes.append(math.log(amplitude))
+        log_leakages.append(math.log(leakage))
+    mean_x = sum(log_amplitudes) / len(log_amplitudes)
+    mean_y = sum(log_leakages) / len(log_leakages)
+    denominator = sum((value - mean_x) ** 2 for value in log_amplitudes)
+    if denominator == 0.0:
+        raise EvaluatorError("receiver_lattice_leakage_exponent_v1: amplitudes must not all be equal")
+    numerator = sum(
+        (x_value - mean_x) * (y_value - mean_y) for x_value, y_value in zip(log_amplitudes, log_leakages, strict=True)
+    )
+    return numerator / denominator
+
+
 # Canonical equation_id -> evaluator for the built-in laws.
 LAWREF_BUILTIN_EVALUATORS: dict[str, Callable[[Mapping[str, Any]], Any]] = {
     "forfeit_matched_exit_v1": eval_forfeit_matched_exit_s_star,
@@ -629,6 +727,12 @@ LAWREF_BUILTIN_EVALUATORS: dict[str, Callable[[Mapping[str, Any]], Any]] = {
     "cpu_cuda_score_gap_v1": eval_cpu_cuda_score_gap,
     "realization_breakeven_bytes_v1": eval_realization_breakeven_bytes,
     "radius2_multistart_singleton_escape_v1": eval_radius2_multistart_singleton_escape,
+    # ddm_cn5 arc consolidation (2026-08-13): bounded instrument, receiver,
+    # exact-score-budget, and quantized-lattice laws from the named-arm corpus.
+    "local_model_step_resolvability_ratio_v1": eval_local_model_step_resolvability_ratio,
+    "receiver_pose_semantic_preservation_ratio_v1": eval_receiver_pose_semantic_preservation_ratio,
+    "pose_stack_exact_budget_v1": eval_pose_stack_exact_budget,
+    "receiver_lattice_leakage_exponent_v1": eval_receiver_lattice_leakage_exponent,
 }
 
 
@@ -659,11 +763,15 @@ __all__ = [
     "eval_forfeit_matched_exit_s_star",
     "eval_hosc_beta_fireband_pin",
     "eval_isoperimetric_birth_weight",
+    "eval_local_model_step_resolvability_ratio",
     "eval_lr_control_denominator",
     "eval_lr_hold_frac_no_hold",
     "eval_margin_band_satisficing_threshold",
+    "eval_pose_stack_exact_budget",
     "eval_radius2_multistart_singleton_escape",
     "eval_realization_breakeven_bytes",
+    "eval_receiver_lattice_leakage_exponent",
+    "eval_receiver_pose_semantic_preservation_ratio",
     "eval_settle_window",
     "eval_tail_cycle_floor",
     "eval_tau_end_knee_launch",
