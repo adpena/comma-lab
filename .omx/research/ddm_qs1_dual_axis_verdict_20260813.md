@@ -1,8 +1,9 @@
 # QS1 six-pair Schur coupled candidate — dual-axis T4 verdict (2026-08-13, MAIN)
 
 > ⚠ ERRATA 2026-08-13: REFUSED sign ROBUST, but the 'pose compensation PROVEN 50–1800×'
-> precision claim is WITHDRAWN (cross-instrument: worker pose vs a memo-propagated
-> 16-digit pseudo-receipt value that exists in NO receipt). Bounded claim + resolution in
+> precision claim was WITHDRAWN, then PARTIALLY REHABILITATED same day: the base d_pose
+> is po1-receipt-backed on the worker FAMILY (deterministic repeat) — claim now
+> WORKER-FAMILY-MATCHED, batch-shape pin owed. Full chain in
 > `ddm_errata_8dp_band_instrument_mixing_20260813.md`.
 
 

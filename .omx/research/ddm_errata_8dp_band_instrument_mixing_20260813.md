@@ -52,3 +52,17 @@ Operator prompt: "You have made other errors." Self-audit found them. Source rec
   memo · qs1 verdict memo (per the stale-headline law — corrections at the HEADLINE).
 - Memory: new durable law file + MEMORY.md m04 row annotated with the band.
 - qs2 directive 2: base+re1 legs mandatory in the fire-order; band-sized composite target.
+
+## CORRECTION TO THIS ERRATA (2026-08-13, later same day — honesty cuts both ways)
+Root fact 2 over-claimed. The 16-digit d_pose 6.885642960696714e-6 IS receipt-backed:
+po1's T4 dispatch measured the cp135 BASE decode directly with a deterministic repeat
+(`d_pose_decoded_first == d_pose_decoded_repeat`, po1 memo :237), and pz4r explicitly
+paired it with 34,970 flips as "the contest-CUDA T4 CP135 reference" while itself warning
+against instrument mixing. Corrected status: the value exists in NO evaluate.py CANONICAL
+receipt (that part stands — the canonical knows only 6.88e-06) but is a real WORKER-FAMILY
+measurement. Consequences: qs1's pose-cure claim upgrades WITHDRAWN → WORKER-FAMILY-
+MATCHED (batch-shape pin between po1's worker and the js6b worker still owed); the re1
+CANONICAL retraction and the 8dp-band law are UNCHANGED. The qs2 R2 dispatch (fired
+2026-08-13, call fc-01KZYQJE57P4FV9PS0SXMA2BXM) measures the candidate on the same worker
+family — its verdict uses the po1 base pair as the matched base, caveated by the
+batch-shape pin.
