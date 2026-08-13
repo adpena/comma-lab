@@ -143,6 +143,28 @@ def assert_arm_model_admissible(model: str) -> None:
                 f"Set TAC_CODEX_ARM_MODEL to a live model "
                 f"(canonical default {_DEFAULT_ARM_MODEL!r})."
             )
+
+
+def charter_file_path(prompt_path: str) -> tuple[Path | None, str | None]:
+    """Resolve a charter file or return a typed file-path-contract refusal."""
+
+    contract = "charters must be files; --prompt expects a file path, not inline text"
+    if not isinstance(prompt_path, str) or not prompt_path.strip():
+        return None, contract
+    if any(marker in prompt_path for marker in ("\n", "\r", "\x00")):
+        return None, contract
+    try:
+        raw_path = Path(prompt_path)
+        resolved = raw_path if raw_path.is_absolute() else _REPO / raw_path
+        if not resolved.is_file():
+            return None, f"prompt file missing ({prompt_path})"
+    except (OSError, ValueError):
+        # In particular, suppress ENAMETOOLONG from Path.stat()/is_file(): it
+        # means an inline charter was supplied at the file-path boundary.
+        return None, contract
+    return resolved, None
+
+
 KILL_SWITCH = "TAC_CODEX_SATURATE_OFF"
 _LIVE_STATUSES = frozenset({"queued", "live"})
 _NEXT_SCHEMA = "codex_arm_queue.next_if_resumed.v1"
@@ -718,8 +740,9 @@ def spawn(name: str, prompt_path: str, effort: str | None = None) -> bool:
     # forked -- a refusal must not leave a half-written keeper behind.
     assert_arm_model_admissible(ARM_MODEL)
     resolved_effort = resolve_arm_effort(effort)
-    if not (_REPO / prompt_path).exists():
-        print(f"  REFUSED {name}: prompt file missing ({prompt_path})", file=sys.stderr)
+    _prompt_file, refusal = charter_file_path(prompt_path)
+    if refusal is not None:
+        print(f"  REFUSED {name}: {refusal}", file=sys.stderr)
         return False
     # Clear STALE evidence from a previous generation: a leftover `.done`
     # (death receipt) or `.last.txt` (clean-finish marker) would corrupt the
@@ -985,8 +1008,13 @@ def lint_charter_optimal_form(prompt_path: str) -> list[str]:
 
 
 def cmd_add(args) -> int:
-    problems = lint_charter_optimal_form(args.prompt)
-    advisories = lint_charter_fm_advisories(args.prompt)
+    prompt_file, refusal = charter_file_path(args.prompt)
+    if refusal is not None:
+        print(f"REFUSED {args.name}: {refusal}", file=sys.stderr)
+        return 2
+    assert prompt_file is not None
+    problems = lint_charter_optimal_form(str(prompt_file))
+    advisories = lint_charter_fm_advisories(str(prompt_file))
     if problems:
         strict = os.environ.get("TAC_CHARTER_LINT_STRICT") == "1"
         tag = "REFUSED" if strict else "WARN"

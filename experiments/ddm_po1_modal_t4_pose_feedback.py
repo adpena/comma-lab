@@ -10,6 +10,7 @@ retains upload payloads before claiming the lane and supports detached recovery.
 from __future__ import annotations
 
 import argparse
+import fcntl
 import hashlib
 import io
 import json
@@ -36,6 +37,7 @@ from tac.deploy.modal.auth_eval import (
     write_spawn_metadata,
 )
 from tac.deploy.modal.call_id_ledger import (
+    query_by_call_id,
     register_dispatched_call_id_fail_closed,
     update_call_id_outcome,
 )
@@ -111,6 +113,53 @@ def atomic_bytes(path: Path, payload: bytes) -> None:
 
 def atomic_json(path: Path, value: Any) -> None:
     atomic_bytes(path, canonical_json_bytes(value))
+
+
+def _terminal_outcome_exists(
+    *,
+    call_id: str,
+    run_id: str,
+    terminal_status: str,
+) -> bool:
+    """Return whether this exact run/status terminal event is already durable."""
+
+    for row in query_by_call_id(call_id):
+        harvest_result = row.get("harvest_result")
+        if (
+            row.get("status") == terminal_status
+            and isinstance(harvest_result, dict)
+            and harvest_result.get("run_id") == run_id
+        ):
+            return True
+    return False
+
+
+def _terminal_claim_exists(
+    *,
+    claims_path: Path,
+    run_id: str,
+    terminal_status: str,
+) -> bool:
+    """Return whether the claim ledger already has this run/status terminal row."""
+
+    try:
+        lines = claims_path.read_text(encoding="utf-8", errors="replace").splitlines()
+    except FileNotFoundError:
+        return False
+    for line in lines:
+        if not line.startswith("|") or "timestamp_utc" in line:
+            continue
+        cells = [cell.strip() for cell in line.strip("|").split("|")]
+        if len(cells) < 8 or cells[6] != terminal_status:
+            continue
+        instance_job_id, notes = cells[4], cells[7]
+        if (
+            instance_job_id == f"modal:{run_id}"
+            or f"run_id={run_id}" in notes
+            or f"run={run_id}" in notes
+        ):
+            return True
+    return False
 
 
 def _safe_runtime_member(relative: Path) -> bool:
@@ -411,29 +460,60 @@ def recover(output_dir: Path, *, timeout_seconds: float = 0.0) -> int:
         atomic_bytes(output_dir / name, payload)
     atomic_json(output_dir / "modal_po1_result.json", result)
     passed = bool(result.get("passed"))
-    update_call_id_outcome(
-        call_id=call_id,
-        status="harvested" if passed else "failed",
-        rc=int(result.get("returncode", 1)),
-        score_axis="contest_cuda_pose_feedback_component",
-        evidence_grade="contest-CUDA T4 frozen-PoseNet first6 repeat and SegNet fields n600",
-        lane_id=str(spawn["lane_id"]),
-        label=LANE_LABEL,
-        gpu="T4",
-        agent=str(spawn["claim_agent"]),
-        harvest_result={key: value for key, value in result.items() if key != "worker_log_tail"},
+    run_id = str(result["run_id"])
+    outcome_status = "harvested" if passed else "failed"
+    claim_status = (
+        "completed_cuda_pose_feedback_recovered"
+        if passed
+        else "failed_cuda_pose_feedback_recovered"
     )
-    terminal_modal_auth_eval_claim(
-        repo_root=REPO,
-        spec=ClaimSpec(
-            lane_id=str(spawn["lane_id"]),
-            instance_job_id=str(spawn["instance_job_id"]),
-            agent=str(spawn["claim_agent"]),
-            force=True,
-        ),
-        status="completed_cuda_pose_feedback_recovered" if passed else "failed_cuda_pose_feedback_recovered",
-        notes=f"PO1 recovered; call_id={call_id}; output={output_dir}",
-    )
+    # One output directory can be polled by more than one recovery process.  Hold
+    # this lock across both check-before-append decisions so concurrent re-entry
+    # cannot race two terminal rows into either append-only ledger.
+    recovery_lock = output_dir / "terminal_recovery.lock"
+    with recovery_lock.open("a+", encoding="utf-8") as lock_handle:
+        fcntl.flock(lock_handle.fileno(), fcntl.LOCK_EX)
+        if not _terminal_outcome_exists(
+            call_id=call_id,
+            run_id=run_id,
+            terminal_status=outcome_status,
+        ):
+            update_call_id_outcome(
+                call_id=call_id,
+                status=outcome_status,
+                rc=int(result.get("returncode", 1)),
+                score_axis="contest_cuda_pose_feedback_component",
+                evidence_grade="contest-CUDA T4 frozen-PoseNet first6 repeat and SegNet fields n600",
+                lane_id=str(spawn["lane_id"]),
+                label=LANE_LABEL,
+                gpu="T4",
+                agent=str(spawn["claim_agent"]),
+                harvest_result={
+                    key: value
+                    for key, value in result.items()
+                    if key != "worker_log_tail"
+                },
+            )
+        claims_path = REPO / ".omx" / "state" / "active_lane_dispatch_claims.md"
+        if not _terminal_claim_exists(
+            claims_path=claims_path,
+            run_id=run_id,
+            terminal_status=claim_status,
+        ):
+            terminal_modal_auth_eval_claim(
+                repo_root=REPO,
+                spec=ClaimSpec(
+                    lane_id=str(spawn["lane_id"]),
+                    instance_job_id=str(spawn["instance_job_id"]),
+                    agent=str(spawn["claim_agent"]),
+                    force=True,
+                ),
+                status=claim_status,
+                notes=(
+                    f"PO1 recovered; run_id={run_id}; call_id={call_id}; "
+                    f"output={output_dir}"
+                ),
+            )
     print(json.dumps(result, indent=2, sort_keys=True))
     return 0 if passed else 1
 

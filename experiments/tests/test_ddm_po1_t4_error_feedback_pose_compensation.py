@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import copy
 import json
 from pathlib import Path
 
@@ -8,6 +9,7 @@ import numpy as np
 import pytest
 
 from experiments import ddm_js1b_cuda_argmax_field_materializer_worker as js1b
+from experiments import ddm_po1_modal_t4_pose_feedback as dispatcher
 from experiments import ddm_po1_t4_error_feedback_pose_compensation as solver
 from experiments import ddm_po1_t4_pose_feedback_worker as worker
 
@@ -170,3 +172,76 @@ def test_round2_adjudication_requires_exact_seg_field_identity(
     result = json.loads(output.read_text())
     assert result["status"] == "CLOSED_F3_SEGNET_MOVED"
     assert result["disposition"] == "do not ship"
+
+
+def test_dispatch_recover_is_idempotent_for_both_terminal_ledgers(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    output_dir = tmp_path / "recover"
+    output_dir.mkdir()
+    call_id = "fc-double-recover"
+    run_id = "ddm_po1_double_recover"
+    spawn = {
+        "call_id": call_id,
+        "lane_id": "ddm_po1_double_recover_lane",
+        "instance_job_id": f"modal:{run_id}",
+        "claim_agent": "test:po1",
+    }
+    (output_dir / "modal_auth_eval_spawn.json").write_text(json.dumps(spawn))
+    remote_result = {
+        "schema": "ddm_po1_modal_return.v1",
+        "passed": True,
+        "returncode": 0,
+        "run_id": run_id,
+        "artifacts": {"PO1_FINAL_RESULT.json": b"retained"},
+        "score_claim": False,
+        "promotion_eligible": False,
+    }
+
+    class FakeCall:
+        @staticmethod
+        def get(*, timeout: float):
+            assert timeout == 0.0
+            return copy.deepcopy(remote_result)
+
+    monkeypatch.setattr(
+        dispatcher.modal.functions.FunctionCall,
+        "from_id",
+        lambda value: FakeCall() if value == call_id else None,
+    )
+    outcome_rows: list[dict] = []
+    monkeypatch.setattr(dispatcher, "query_by_call_id", lambda _call_id: outcome_rows)
+
+    def fake_update(**kwargs):
+        outcome_rows.append(
+            {
+                "call_id": kwargs["call_id"],
+                "status": kwargs["status"],
+                "harvest_result": kwargs["harvest_result"],
+            }
+        )
+
+    monkeypatch.setattr(dispatcher, "update_call_id_outcome", fake_update)
+    fake_repo = tmp_path / "repo"
+    claims_path = fake_repo / ".omx/state/active_lane_dispatch_claims.md"
+    monkeypatch.setattr(dispatcher, "REPO", fake_repo)
+    claim_rows: list[dict] = []
+
+    def fake_terminal(*, repo_root, spec, status, notes):
+        assert repo_root == fake_repo
+        claims_path.parent.mkdir(parents=True, exist_ok=True)
+        row = (
+            f"| now | {spec.agent} | {spec.lane_id} | modal | "
+            f"{spec.instance_job_id} | now | {status} | {notes} |\n"
+        )
+        with claims_path.open("a", encoding="utf-8") as handle:
+            handle.write(row)
+        claim_rows.append({"status": status, "notes": notes})
+
+    monkeypatch.setattr(dispatcher, "terminal_modal_auth_eval_claim", fake_terminal)
+
+    assert dispatcher.recover(output_dir) == 0
+    assert dispatcher.recover(output_dir) == 0
+    assert len(outcome_rows) == 1
+    assert len(claim_rows) == 1

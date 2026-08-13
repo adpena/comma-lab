@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import subprocess
 import sys
 from argparse import Namespace
 from pathlib import Path
@@ -125,6 +126,31 @@ def test_scorer_owner_fires_when_slot_free(q):
 
 def test_spawn_refuses_missing_prompt(q, capsys):
     assert q.spawn("ghost", ".omx/tmp/codex_runs/definitely_absent_prompt.md") is False
+
+
+def test_add_refuses_inline_charter_without_raw_oserror_or_traceback():
+    inline_charter = "inline-charter-" + ("x" * 5000)
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(_TOOL),
+            "add",
+            "--name",
+            "inline-must-refuse",
+            "--prompt",
+            inline_charter,
+        ],
+        cwd=_REPO,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    output = proc.stdout + proc.stderr
+    assert proc.returncode != 0
+    assert "charters must be files" in output
+    assert "file path" in output
+    assert "Traceback" not in output
+    assert "OSError" not in output
 
 
 def test_keeper_carries_the_ssd_add_dir(q):
