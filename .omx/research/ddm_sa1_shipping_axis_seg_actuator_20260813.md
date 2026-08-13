@@ -109,3 +109,27 @@ that cross-axis sign is not transferable; therefore every local number remains o
 Exact pointer: **UNMOVED**. Current custodial frontier remains CP135 composed
 `S = 0.16195513827824176 @ 186,252 B [contest-CUDA T4, n600]`. Current own-vehicle row remains
 LC2 `S = 0.16959899569230852 @ 187,226 B [contest-CUDA T4, n600]`.
+
+## ADDENDUM (MAIN, 2026-08-13) — T4 verdict + the corrected failure-chain root causes
+
+**T4 verdict (run ddm_sa1_t4_sign_20260813i, attempt 12, FINAL_RESULT sha 230539ed0c5e…):
+REJECTED_BY_T4_SIGN_GATE.** candidate_flips 34,970 == base_flips 34,970 (delta_flips 0 —
+the 814 B conditioner is exactly T4-INERT). Joint ΔS +0.0013158 = rate +0.0006166 (926 B)
++ pose +0.0006993 (local linearized) + seg 0.0. The −37-flip local ordering signal did not
+invert at T4; it VANISHED. Mechanism read: consistent with js5's measured quantum-floor law
+(post-uint8 α^0.957) — a locally-minimized amplitude dies at T4's uint8+argmax quantum.
+**F2 routing fires: the train-local/gate-T4 HYBRID is closed at this endpoint** (scope:
+INSTANCE on this candidate; the family conclusion rests on js5 + sa1 jointly — two
+independent amplitude-annihilation measurements). Residual seg route per charter = true
+CUDA-in-loop training (cost arithmetic only; not attempted). The T4 gate INSTRUMENT itself
+is proven: $0.15-class exact seg verdicts on demand, 12-attempt chain fully diagnosed.
+
+**Corrected root causes for attempts 9–11 (supersedes the attempt-9 claim note):**
+(1) attempts 9+11 died on REMOTE bytecode self-pollution — the worker's own upstream
+import wrote `__pycache__/modules.cpython-311.pyc` into the mounted tree and the END-of-run
+`compute_upstream_snapshot_sha256` refused it (js1b survives only by computing the sha
+BEFORE `load_segnet`); the attempt-9 "local pycache" diagnosis was wrong. (2) attempt 10
+died because stage_00 checkpointed the volatile `storage_preflight` dict (`free_bytes`) —
+byte-identical resume was structurally unsatisfiable. Both cured in a3eb572dae
+(`sys.dont_write_bytecode = True` + volatile fields out of the resume digest); the same
+two cures applied to the po1 worker pre-fire (99e4c05f99).
