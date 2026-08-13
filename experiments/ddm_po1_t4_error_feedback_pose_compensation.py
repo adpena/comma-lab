@@ -358,6 +358,13 @@ class LocalJacobian:
         self.posenet.load_state_dict(load_file(posenet_sd_path, device="cpu"))
         for parameter in self.posenet.parameters():
             parameter.requires_grad_(False)
+        # Upstream rgb_to_yuv6 is @torch.no_grad() (frame_utils.py:50) and severs the
+        # codes->pose autograd graph inside preprocess_input. Patch both module
+        # references with the canonical differentiable twin (the PR95 data.py:80-81
+        # lesson). Forward values are unchanged; only gradient flow is restored.
+        from tac.differentiable_eval_roundtrip import patch_upstream_yuv6_globally
+
+        patch_upstream_yuv6_globally()
 
     def pose_and_jacobian(
         self,
