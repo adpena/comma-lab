@@ -182,16 +182,28 @@ def build_model(torch: Any, functional: Any, hidden: int, max_delta: float, qat:
 
 
 def camera_roundtrip(torch: Any, functional: Any, pre_r: Any, correction: Any) -> tuple[Any, Any]:
-    from tac.quantization import Uint8STE
-
-    camera = functional.interpolate(
-        pre_r + correction,
-        size=(CAMERA_H, CAMERA_W),
-        mode="bilinear",
-        align_corners=False,
+    from tac.differentiable_eval_roundtrip import (
+        CameraLiftKernel,
+        EvalRoundTripOrdering,
+        apply_camera_uint8_lift_during_training,
+        apply_eval_roundtrip_during_training,
     )
-    camera = Uint8STE.apply(camera)
-    scorer = functional.interpolate(camera, size=(H, W), mode="bilinear", align_corners=False)
+
+    del functional  # The canonical HR2 apparatus owns both interpolation operations.
+    value = pre_r + correction
+    camera = apply_camera_uint8_lift_during_training(
+        value,
+        lift_kernel=CameraLiftKernel.BILINEAR,
+        target_h=CAMERA_H,
+        target_w=CAMERA_W,
+    )
+    scorer = apply_eval_roundtrip_during_training(
+        value,
+        ordering=EvalRoundTripOrdering.CAMERA_UINT8,
+        lift_kernel=CameraLiftKernel.BILINEAR,
+        target_h=CAMERA_H,
+        target_w=CAMERA_W,
+    )
     return camera, scorer
 
 
@@ -549,7 +561,7 @@ def memory_preflight(output: Path, hidden: int) -> dict[str, Any]:
 
 
 def run_config(args: argparse.Namespace) -> dict[str, Any]:
-    return {
+    config = {
         "seed": SEED,
         "batch": BATCH,
         "threads": THREADS,
@@ -563,6 +575,10 @@ def run_config(args: argparse.Namespace) -> dict[str, Any]:
         "grad_clip": args.grad_clip,
         "qat": True,
     }
+    target_bindings = getattr(args, "target_bindings", None)
+    if target_bindings is not None:
+        config["target_bindings"] = target_bindings
+    return config
 
 
 def load_or_start(args: argparse.Namespace, torch: Any, functional: Any) -> tuple[Any, Any, dict[str, Any], int, list[dict[str, Any]]]:
@@ -602,6 +618,13 @@ def train(args: argparse.Namespace, context: Any, pre_r_store: np.ndarray) -> di
     for stage_index, stage_end in enumerate(args.stage_steps, start=1):
         label = f"stage_{stage_index:02d}_step_{stage_end:06d}"
         if stage_end <= start_step:
+            result_path = args.output / "stages" / label / "RESULT.json"
+            if not result_path.is_file():
+                raise JS3Error(f"resume checkpoint passed a stage with no result: {result_path}")
+            retained_stage = json.loads(result_path.read_text())
+            if retained_stage.get("stage") != label or int(retained_stage.get("step", -1)) != stage_end:
+                raise JS3Error(f"retained stage result identity differs: {result_path}")
+            completed_stages.append(retained_stage)
             continue
         stage_started = time.perf_counter()
         for step in range(start_step + 1, stage_end + 1):

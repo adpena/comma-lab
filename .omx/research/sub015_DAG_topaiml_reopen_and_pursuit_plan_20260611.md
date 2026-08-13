@@ -27684,3 +27684,17 @@ exists and MAIN owns the scorer lane.
 
 CLOSING-ARTIFACT: `.omx/research/ddm_gv2_lane_road_grammar_v2_20260812.md`; retained store
 `/Volumes/VertigoDataTier/pact/ddm_gv2_20260812/event_store_target_anchored_v2/`.
+
+<!-- FEED-ddm-sa1-20260813 -->
+### FEED — ddm_sa1 tiny counted shipping-axis Seg actuator
+
+`READY_TO_FIRE`, pointer unmoved. SA1 reused the real JS3 hidden-4 conditioner, rebound training
+to the retained JS1B T4 GT/base field hashes, and routed camera uint8/R through HR2's canonical
+apparatus. All three Stage-A forms fit the 2,048 B worst-case box. The selected pose-safe local
+ordering cell carries an 814 B counted module in a deterministic 187,178 B archive (+926 B vs
+CP135), with projected Seg −37/600, robust 0, pose +1.1596e-6, joint +0.00128448
+`[macOS-CPU ordering on contest-CUDA T4 targets; non-promotable]`. MAIN owns the prepared
+candidate-only exact T4 receiver/field gate; admission requires at most 33,417 flips versus 34,970
+and negative mixed-axis gate delta S. F2 remains ineligible until that field lands. Receipt:
+`.omx/research/ddm_sa1_shipping_axis_seg_actuator_20260813.md`; retained store:
+`/Volumes/VertigoDataTier/pact/ddm_sa1_20260813/`.
