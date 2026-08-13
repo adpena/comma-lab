@@ -94603,6 +94603,129 @@
       },
       "notes": "Live resumable advisory solve; pass 1 and pass 2 are receiver-closed n600 local rows; exact contest transfer remains open and scorer store stays read-only to CN4.",
       "research_only": true
+    },
+    {
+      "id": "ddm_po1_t4_pose_feedback_round1",
+      "name": "DDM PO1 T4 pose feedback round 1",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Component-only T4 vector/repeat/Seg field materialization; MAIN owns dispatch"
+    },
+    {
+      "id": "ddm_po1_t4_pose_feedback_round2",
+      "name": "DDM PO1 T4 pose feedback round 2",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Component-only same-instrument remeasurement of one PO1 candidate; MAIN owns dispatch"
+    },
+    {
+      "id": "lane_ddm_po1_admitted_exact_20260813",
+      "name": "DDM PO1 admitted paired exact replay",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Conditional paired exact CPU/CUDA replay only after PO1 component admission; MAIN owns dispatch"
     }
   ],
   "level_rules": {
@@ -94612,5 +94735,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-08-11T11:38:43Z"
+  "updated_at": "2026-08-13T10:33:58Z"
 }

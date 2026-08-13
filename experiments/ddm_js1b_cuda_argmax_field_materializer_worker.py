@@ -317,6 +317,22 @@ def load_segnet(device: Any) -> Any:
     return network
 
 
+def load_posenet(device: Any) -> Any:
+    """Load the exact upstream PoseNet used by ``upstream/evaluate.py``."""
+    from safetensors.torch import load_file
+
+    sys.path.insert(0, str(UPSTREAM))
+    try:
+        from modules import PoseNet, posenet_sd_path
+    finally:
+        sys.path.pop(0)
+    network = PoseNet().eval().to(device=device)
+    network.load_state_dict(load_file(posenet_sd_path, device=str(device)))
+    for parameter in network.parameters():
+        parameter.requires_grad_(False)
+    return network
+
+
 def _dataset(source: str, raw_root: Path | None, device: Any) -> Any:
     sys.path.insert(0, str(UPSTREAM))
     try:
@@ -507,6 +523,178 @@ def score_argmax_field(
         "retained_gt_rgb_batches": source == "gt",
         "retained_seg_inputs": True,
         "retained_logits": True,
+        "elapsed_seconds": time.time() - started,
+        "complete": True,
+    }
+    atomic_json(result_path, result)
+    return result
+
+
+def score_pose_vectors(
+    *,
+    source: str,
+    raw_root: Path | None,
+    raw_record: dict[str, Any] | None,
+    scorer: Any,
+    device: Any,
+    run_root: Path,
+) -> dict[str, Any]:
+    """Retain exact PoseNet inputs, full outputs, and the scored first six values.
+
+    A distinct ``source`` names every repeat.  Recreating the upstream dataset
+    for each call makes decoded-repeat noise an observed same-job quantity,
+    while immutable per-batch receipts keep an interrupted pass resumable.
+    """
+    import einops
+    import torch
+
+    scorer_root = run_root / f"retained/pose/{source}"
+    result_path = scorer_root / "POSE_RESULT.json"
+    vector_path = run_root / f"retained/pose_vectors/{source}_first6_n600.npy"
+    if result_path.is_file():
+        result = json.loads(result_path.read_text())
+        require_record(vector_path, result["first6_vectors"])
+        return result
+
+    progress_path = scorer_root / "PROGRESS.json"
+    progress = _progress(progress_path)
+    completed_batches = int(progress["completed_batches"])
+    completed_pairs = int(progress["completed_pairs"])
+    partial_vectors = vector_path.with_name(vector_path.name + ".inprogress.npy")
+    vector_storage = vector_path if vector_path.is_file() else partial_vectors
+    if vector_storage.is_file():
+        vectors = np.lib.format.open_memmap(vector_storage, mode="r+")
+        if vectors.shape != (N_PAIRS, 6) or vectors.dtype != np.float32:
+            raise WorkerError(f"partial PoseNet vector shape/dtype differs: {vector_storage}")
+    else:
+        if completed_batches or completed_pairs:
+            raise WorkerError(f"pose progress exists without vector payload: {source}")
+        partial_vectors.parent.mkdir(parents=True, exist_ok=True)
+        vectors = np.lib.format.open_memmap(
+            partial_vectors,
+            mode="w+",
+            dtype=np.float32,
+            shape=(N_PAIRS, 6),
+        )
+
+    dataset_source = "gt" if source == "gt" else "candidate"
+    dataset = _dataset(dataset_source, raw_root, device)
+    cursor = 0
+    batch_rows: list[dict[str, Any]] = []
+    started = time.time()
+    with torch.inference_mode():
+        for ordinal, (_path, _index, batch) in enumerate(dataset):
+            batch_size = int(batch.shape[0])
+            batch_root = scorer_root / f"batches/batch_{ordinal:04d}"
+            row_path = batch_root / "BATCH_RESULT.json"
+            if dataset_source == "gt":
+                gt_batch_path = run_root / f"retained/gt_rgb_batches/batch_{ordinal:04d}.uint8.npy"
+                batch_cpu = batch.cpu().numpy()
+                if gt_batch_path.is_file():
+                    retained_batch = np.load(gt_batch_path, mmap_mode="r", allow_pickle=False)
+                    if not np.array_equal(retained_batch, batch_cpu):
+                        raise WorkerError(f"resumed GT RGB batch differs: {gt_batch_path}")
+                    source_record = file_record(gt_batch_path)
+                else:
+                    source_record = atomic_npy(gt_batch_path, batch_cpu)
+            else:
+                if raw_root is None or raw_record is None:
+                    raise WorkerError(f"candidate source has no retained raw root: {source}")
+                source_record = raw_record
+
+            if ordinal < completed_batches:
+                if not row_path.is_file():
+                    raise WorkerError(f"resume PoseNet batch receipt is missing: {row_path}")
+                row = json.loads(row_path.read_text())
+                if int(row["pair_start"]) != cursor or int(row["pair_end"]) != cursor + batch_size:
+                    raise WorkerError(f"resume PoseNet batch geometry differs: {row_path}")
+                if row.get("source_payload") != source_record:
+                    raise WorkerError(f"resume PoseNet source payload differs: {row_path}")
+                for key in ("pose_input", "pose_output_full"):
+                    require_record(Path(row[key]["path"]), row[key])
+                batch_rows.append(row)
+                cursor += batch_size
+                continue
+
+            batch_device = batch.to(device)
+            tensor = einops.rearrange(
+                batch_device,
+                "b t h w c -> b t c h w",
+                b=batch_size,
+                t=2,
+                c=3,
+            ).float()
+            pose_input = scorer.preprocess_input(tensor)
+            pose_output = scorer(pose_input)["pose"]
+            pose_input_record = atomic_npy(
+                batch_root / "pose_input.float32.npy", pose_input.cpu().numpy()
+            )
+            pose_output_cpu = pose_output.cpu().numpy().astype(np.float32, copy=False)
+            pose_output_record = atomic_npy(
+                batch_root / "pose_output_full.float32.npy", pose_output_cpu
+            )
+            first6 = np.ascontiguousarray(pose_output_cpu[:, :6])
+            vectors[cursor : cursor + batch_size] = first6
+            vectors.flush()
+            row = {
+                "schema": "ddm_js1b_pose_batch.v1",
+                "source": source,
+                "ordinal": ordinal,
+                "pair_start": cursor,
+                "pair_end": cursor + batch_size,
+                "source_payload": source_record,
+                "pose_input": pose_input_record,
+                "pose_output_full": pose_output_record,
+                "first6_slice_bytes": int(first6.nbytes),
+                "first6_slice_sha256": sha256_bytes(first6.tobytes()),
+                "vector_storage": str(vector_storage),
+                "complete": True,
+            }
+            atomic_json(row_path, row)
+            batch_rows.append(row)
+            cursor += batch_size
+            completed_batches = ordinal + 1
+            completed_pairs = cursor
+            atomic_json(
+                progress_path,
+                {
+                    "schema": "ddm_js1b_pose_progress.v1",
+                    "source": source,
+                    "completed_batches": completed_batches,
+                    "completed_pairs": completed_pairs,
+                    "vectors_inprogress": {
+                        "path": str(vector_storage),
+                        "bytes": vector_storage.stat().st_size,
+                        "complete_sha256": None,
+                    },
+                },
+            )
+            del batch_device, tensor, pose_input, pose_output, pose_output_cpu, first6
+
+    if device.type == "cuda":
+        torch.cuda.synchronize(device)
+    if cursor != N_PAIRS or completed_pairs != N_PAIRS:
+        raise WorkerError(
+            f"PoseNet census differs for {source}: cursor={cursor}, progress={completed_pairs}"
+        )
+    vectors.flush()
+    del vectors
+    if vector_storage != vector_path:
+        os.replace(vector_storage, vector_path)
+    batches_path = scorer_root / "BATCH_RESULTS.jsonl"
+    atomic_bytes(batches_path, b"".join(canonical_json_bytes(row) for row in batch_rows))
+    result = {
+        "schema": "ddm_js1b_pose_result.v1",
+        "axis": "[contest-CUDA T4 frozen-PoseNet first6 vectors, n600, batch=16] COMPONENT-ONLY",
+        "source": source,
+        "batch_size": BATCH_SIZE,
+        "seed": SEED,
+        "pairs": N_PAIRS,
+        "first6_vectors": file_record(vector_path),
+        "retained_batch_receipts": file_record(batches_path),
+        "retained_gt_rgb_batches": dataset_source == "gt",
+        "retained_pose_inputs": True,
+        "retained_full_pose_outputs": True,
         "elapsed_seconds": time.time() - started,
         "complete": True,
     }
