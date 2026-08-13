@@ -14,8 +14,13 @@ codes events THROUGH the prior — two directions of the same joint object.
 
 CHARTER — the JOINT PROBABILITY-OBJECT round (eu3-R1 at optimal form, no
 naive/toy, operator binding "all signal useful"):
-1. BASE: cp135 lineage + ps135's terminal pose carrier (verify custody/sha at
-   spawn; if ec2 admitted, its conditioned prior is the base prior).
+1. BASE: cp135 lineage with cp135's OWN pose carrier (ps135 pass4 REFUTED at
+   exact: S 0.192632768165, d_pose 1.4674e-4 = 21x cp135's 6.88e-6 — see
+   ddm_ps135_pass4_exact_row_harvest_20260812.md; do NOT use its carrier).
+   ec2 counted-conditioning lost by +213 B complete-vs-complete (see
+   ddm_ec2_bar_correction_20260812.md — MAIN's bar error corrected): its
+   -280 B token win is REAL; the DERIVED-site variant (0 counted B,
+   decoder-derived topology sites) is in-scope for your prior choice.
 2. Reprice ec1's 200-event alphabet (+ js7's 44 admitted + 20 prefix-rejected)
    through ACTUAL HP3/RC64 archive recloses — complete-container deltas ONLY
    (the js7 +323 B and hp4 lessons). Bending-energy ranking feature (dg1
