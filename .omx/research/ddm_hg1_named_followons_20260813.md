@@ -165,7 +165,13 @@ Beyond the seeds, recall found:
   changed Python file with no remaining HG1 finding.
 - No existing staged entry was touched during implementation or verification.
 
-The serializer disposition is finalized after this memo's post-edit hash is known.
+The first serializer attempt correctly stopped at the review gate because the recorded reviewer
+label was not a policy principal; no override was used. Both passes were re-recorded under the
+policy's `codex` principal, and `policy-check` then reported **43/43 entities compliant** for the
+standard-policy queue test file. The governed serializer committed the four Python files and the
+initial memo as `2001b6bc3b`, with the required base/post hashes, explicit file list, no co-author,
+and message suffix `[no-triality] [p0-ledger-ok]`. This receipt finalization is the only follow-up
+memo edit; its enclosing commit is its Git authority.
 
 ## Frontier
 
