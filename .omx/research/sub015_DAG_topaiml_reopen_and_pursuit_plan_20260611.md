@@ -27652,3 +27652,35 @@ scan had its file list mangled and would have produced FOUR confident negatives 
 instrument (redone in Python with an explicit denominator and a positive control).
 
 CLOSING-ARTIFACT: task #900 (completed), commit 10bdd9d9f3.
+
+---
+
+## FEED-gv2 (2026-08-12) — connected Road↔Lane token segments are formulation-closed on CP135
+
+TRAJECTORY POINT. ddm_gv2. Pointer UNMOVED: CP135 effective 0.16195513827824176 / LC2 own-vehicle
+0.16959899569230852. No archive, Modal dispatch, n600 authority row, or exact evaluation ran.
+
+`[macOS-CPU advisory, frozen affected-pair scorer, n600 denominator]`: 254 connected, GT-error-anchored,
+sign-aware Road↔Lane events (12/24/48/96 token sites; two 96-site directions omitted because no sufficiently
+large boundary component was within three pixels of an error) yielded 0 positive, 1 neutral, and
+253 harmful net-flip deltas. The top-200 unchanged-VD1-compatible store has 0 positive events; 16/200
+pass the full 1.3e-7 nonnegative pose-bound stack individually, but none improves Seg. Eligible optimistic
+gain is therefore 0.0 S versus the pre-registered 0.000216 S bar. Falsifier FIRED.
+
+MECHANISM. LC1's dense Lane overclaim survives sparsification because CP135's semantic receiver has a
+large spatial blast radius relative to the sparse correct-sign anchors. Every emitted event reaches at
+least one target error, but median reach is only 1 pixel and median sign precision is 0.01786; harm increases monotonically with
+segment length (mean −9.5 / −22.375 / −45.328125 / −87.16129 flips at 12/24/48/96 sites).
+
+POSE BOUNDARY. The unchanged EC1 wire cannot carry JS4's continuous projection or Q3 output-space
+correction. GV2 used the JS4 Jacobian only for discrete pre-scorer support minimization and says plainly
+that exact pose-null construction was not achieved. The nonlinear CPU pose bound was retained for every
+event; no post-filtered pose-null claim was made.
+
+DECISION. Sparse Road↔Lane token-event FAMILY on this CP135 base is FORMULATION-closed; no GV3. Fold the
+pinned VD1 re-fire because no candidate can clear a positive-gain gate. Route the Seg obligation to
+learned implicit edge conditioning in the JS1 stage-0 lineage after a current-vehicle retained checkpoint
+exists and MAIN owns the scorer lane.
+
+CLOSING-ARTIFACT: `.omx/research/ddm_gv2_lane_road_grammar_v2_20260812.md`; retained store
+`/Volumes/VertigoDataTier/pact/ddm_gv2_20260812/event_store_target_anchored_v2/`.
