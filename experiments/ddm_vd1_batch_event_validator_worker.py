@@ -21,6 +21,7 @@ import shutil
 import struct
 import subprocess
 import sys
+import tempfile
 import time
 import zipfile
 from pathlib import Path
@@ -285,6 +286,16 @@ def ensure_adapted_runtime_brotli(
         raise WorkerError(f"adapted runtime requires {spec}, but uv is unavailable")
     site.mkdir(parents=True, exist_ok=True)
     cache.mkdir(parents=True, exist_ok=True)
+    # Install on LOCAL container disk, then copy to the retained volume. uv's cache
+    # and --target both persist temp files via rename, which Modal volumes refuse
+    # ("Could not persist temporary file ... Operation not permitted" — measured
+    # fc-01KZWKRB00 run ddm_vd1_20260812b BOOTSTRAP.json rc=2). Local tmp has full
+    # POSIX semantics; the volume copy is custody, not the install target.
+    local_root = Path(tempfile.mkdtemp(prefix="vd1_brotli_"))
+    local_site = local_root / "site"
+    local_cache = local_root / "uv_cache"
+    local_site.mkdir(parents=True, exist_ok=True)
+    local_cache.mkdir(parents=True, exist_ok=True)
     command = [
         uv,
         "pip",
@@ -292,7 +303,7 @@ def ensure_adapted_runtime_brotli(
         "--python",
         sys.executable,
         "--target",
-        str(site),
+        str(local_site),
         "--no-deps",
         "--only-binary",
         ":all:",
@@ -303,8 +314,10 @@ def ensure_adapted_runtime_brotli(
         check=False,
         capture_output=True,
         text=True,
-        env={**os.environ, "UV_CACHE_DIR": str(cache)},
+        env={**os.environ, "UV_CACHE_DIR": str(local_cache)},
     )
+    if not completed.returncode:
+        shutil.copytree(local_site, site, dirs_exist_ok=True)
     install = {
         "argv": command,
         "returncode": completed.returncode,
