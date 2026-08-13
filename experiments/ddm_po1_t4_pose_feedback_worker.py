@@ -13,9 +13,15 @@ from __future__ import annotations
 import argparse
 import json
 import shutil
+import sys
 import time
 from pathlib import Path
 from typing import Any, Final
+
+# The end-of-run compute_upstream_snapshot_sha256 refuses executable bytecode; without
+# this flag any upstream import writes __pycache__ into the mounted tree and the worker
+# fails on its own artifact (the sa1 run-h defect, cured in a3eb572dae).
+sys.dont_write_bytecode = True
 
 import numpy as np
 
@@ -195,7 +201,7 @@ def run(run_root: Path, resume_from: str) -> dict[str, Any]:
             raise WorkerError("retained PO1 final result is not complete")
         return result
 
-    storage = storage_preflight(run_root)
+    storage_preflight(run_root)
     for filename, record in request["inputs"].items():
         require_record(run_root / f"inputs/{filename}", record)
     checkpoint_once(
@@ -204,7 +210,10 @@ def run(run_root: Path, resume_from: str) -> dict[str, Any]:
             "schema": "ddm_po1_stage_checkpoint.v1",
             "stage": "inputs_and_storage",
             "inputs": request["inputs"],
-            "storage": storage,
+            # storage_preflight is deliberately NOT checkpointed: it embeds volatile
+            # free_bytes, which makes checkpoint_once's byte-identical resume
+            # structurally unsatisfiable (the sa1 run-g defect). The preflight itself
+            # still runs fail-closed above on every attempt.
             "resume_from": resume_from,
             "complete": True,
         },
