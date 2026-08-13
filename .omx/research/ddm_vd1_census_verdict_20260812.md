@@ -56,3 +56,26 @@ Run-c T4 677.95 s ≈ $0.11 + 8 failed dispatch attempts (died pre/early-GPU, co
 Effective frontier UNMOVED: cp135 S 0.16195513827824176 @ 186,252 B [contest-CUDA T4 n600].
 Own-vehicle: lc2 0.16959899569230852 @ 187,226 B. This unit bought the INSTRUMENT row (per-event exact
 census), not a pointer move — the composed row is the next exact candidate.
+
+## ADDENDUM 2026-08-13 — cp5v composed row: the additivity calibration ANSWERED
+
+**Row:** cp5v 5-event composed archive (sha `1c66e434…`, 186,252 B, +0 B) → **S 0.16195716412468952**
+[contest-CUDA T4 n600, fc-01KZWQBR0HG6EJ635RH4J41W9C, recomputed-from-components] = **+2.03e-6 vs the cp135
+floor** (projection was −5.09e-6). No pointer move. #381 chain spend now ≈ $0.35.
+
+**Exact decomposition (reconstructs the realized S to 9 decimals):**
+- seg: 0.029643 → 0.029639 = **−4.0e-6 S (~4.7 of 6 predicted flips REALIZED)** → seg-through-exact-compose
+  additivity HOLDS at 5-event scale. The compose mechanism is PROVEN — the js7 compose-failure question is answered.
+- pose: 6.88e-6 → 6.89e-6 d_pose = **+6.03e-6 S** (realized ≈1.5× the singleton sum 6.54e-9 — a measured
+  small super-additivity, NOT a blowup).
+- rate: identical.
+
+**The named defect (m67 law violated at selection):** the vd1 eligibility gate used independent per-axis
+thresholds (flip-positive ∩ pose≤budget) where the axes trade at 603 S/unit d_pose. The 5 "eligible" events
+carried a PREDICTED pose cost of +3.94e-6 S against +5.09e-6 S seg gain — predicted net −1.15e-6 S with zero
+interaction slack; realized net +2.03e-6. **Selection must price the JOINT net S per event
+(100·Δd_seg + 603·Δd_pose < 0), never per-axis budgets.** With that pricing, 0 of the 5 events clear —
+consistent with gv2's 0/254 and closing the sparse-event arc with fully-reconciled arithmetic.
+
+verdict_scope: instance — the cp5v 5-event composition on cp135; the seg-compose-additivity POSITIVE and the
+net-S selection law are the durable transfers (both feed every future composed candidate's selection step).
