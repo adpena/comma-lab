@@ -14,7 +14,10 @@ from typing import Any, Final
 
 import modal
 
-from experiments import ddm_js1b_modal_cuda_argmax_field_materializer as js1b_dispatch
+try:
+    from experiments import ddm_js1b_modal_cuda_argmax_field_materializer as js1b_dispatch
+except (ImportError, ModuleNotFoundError):
+    import ddm_js1b_modal_cuda_argmax_field_materializer as js1b_dispatch  # type: ignore[no-redef]
 
 try:
     from experiments.modal_auth_eval import UPSTREAM_LOCKED_VENV, eval_image
