@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Retain the RE1 Round-1 CUDA decode and SegNet field measurement.
+"""Retain one hash-pinned CUDA decode and its frozen-scorer measurements.
 
-This worker deliberately does not adjudicate.  It runs the exact hash-pinned
-public receiver, retains every raw/scorer payload, reduces the full candidate
-field against the retained GT/base controls, and returns the measurement for
-local mixed-axis arithmetic.
+This worker deliberately does not adjudicate.  Its legacy mode runs the exact
+RE1T SegNet-only measurement byte-for-byte as before.  The explicitly sealed
+dual-axis mode additionally retains official PoseNet first-six vectors for GT
+and two candidate passes from the same decoded payload.  All complete-S
+arithmetic remains local.
 """
 
 from __future__ import annotations
@@ -29,6 +30,9 @@ except ModuleNotFoundError:
     import ddm_js1b_cuda_argmax_field_materializer_worker as js1b  # type: ignore[no-redef]
 
 AXIS: Final = "[contest-CUDA T4 frozen-SegNet argmax field, n600, batch=16] COMPONENT-ONLY"
+AXIS_POSE: Final = (
+    "[contest-CUDA T4 frozen-PoseNet first6 vectors, n600, batch=16] COMPONENT-ONLY"
+)
 PRIOR_RUN: Final = Path("/ddm_js1b_retained/ddm_js1b_20260813b")
 GT_FIELD: Final = PRIOR_RUN / "retained/fields/gt_argmax_n600.npy"
 BASE_FIELD: Final = PRIOR_RUN / "retained/fields/cp135_base_argmax_n600.npy"
@@ -44,36 +48,93 @@ BASE_FLIPS: Final = 34_970
 EXPECTED_RETAINED_PAYLOAD_BYTES: Final = (
     js1b.RAW_BYTES + js1b.SEG_INPUT_BYTES + js1b.LOGIT_BYTES + js1b.FIELD_DATA_BYTES + 128
 )
+POSE_INPUT_BYTES: Final = js1b.N_PAIRS * 12 * js1b.SEG_HEIGHT * js1b.SEG_WIDTH * 4
+POSE_OUTPUT_BYTES: Final = js1b.N_PAIRS * 12 * 4
+POSE_VECTOR_BYTES: Final = js1b.N_PAIRS * 6 * 4
+EXPECTED_POSE_RETENTION_BYTES: Final = (
+    js1b.RAW_BYTES
+    + 3 * (POSE_INPUT_BYTES + POSE_OUTPUT_BYTES + POSE_VECTOR_BYTES)
+    + 2 * js1b.N_PAIRS * 8
+)
 
 
 class RE1TWorkerError(RuntimeError):
     """A retained-input, receiver, scorer, or resume invariant failed."""
 
 
-def storage_preflight(run_root: Path) -> dict[str, Any]:
+def storage_preflight(
+    run_root: Path,
+    *,
+    retain_pose_vectors: bool = False,
+) -> dict[str, Any]:
     """Fail closed unless the volume can retain every materialized payload."""
     usage = shutil.disk_usage(run_root)
     already_retained = js1b.current_retained_bytes(run_root)
-    remaining = max(0, EXPECTED_RETAINED_PAYLOAD_BYTES - already_retained)
+    expected_total = EXPECTED_RETAINED_PAYLOAD_BYTES
+    if retain_pose_vectors:
+        expected_total += EXPECTED_POSE_RETENTION_BYTES
+    remaining = max(0, expected_total - already_retained)
     required = remaining + js1b.STORAGE_RESERVE_BYTES
     result = {
         "schema": "ddm_re1t_t4_storage_preflight.v1",
         "tier": str(run_root),
         "free_bytes": usage.free,
         "already_retained_bytes": already_retained,
-        "expected_total_retained_payload_bytes": EXPECTED_RETAINED_PAYLOAD_BYTES,
+        "expected_total_retained_payload_bytes": expected_total,
         "remaining_payload_bytes": remaining,
         "reserve_bytes": js1b.STORAGE_RESERVE_BYTES,
         "required_free_bytes": required,
         "passed": usage.free >= required,
         "cleanup_policy": "block and retain; no generated payload is deleted",
     }
+    if retain_pose_vectors:
+        result["retain_pose_vectors"] = True
+        result["expected_pose_retention_bytes"] = EXPECTED_POSE_RETENTION_BYTES
     js1b.atomic_json(run_root / "STORAGE_PREFLIGHT.json", result)
     if not result["passed"]:
         raise RE1TWorkerError(
             f"RE1T storage preflight failed: free={usage.free}, required={required}"
         )
     return result
+
+
+def pose_measurement(
+    gt: np.ndarray,
+    candidate_first: np.ndarray,
+    candidate_repeat: np.ndarray,
+) -> dict[str, Any]:
+    """Reduce retained official first-six vectors without discarding pair payloads."""
+    arrays = tuple(
+        np.asarray(value, dtype=np.float32)
+        for value in (gt, candidate_first, candidate_repeat)
+    )
+    if any(value.shape != (js1b.N_PAIRS, 6) for value in arrays):
+        raise RE1TWorkerError("PoseNet vector arrays must each have shape (600, 6)")
+    if any(not np.all(np.isfinite(value)) for value in arrays):
+        raise RE1TWorkerError("PoseNet vector arrays must be finite")
+    gt32, first32, repeat32 = arrays
+    first_error = first32 - gt32
+    repeat_error = repeat32 - gt32
+    repeat_delta = repeat32 - first32
+    pair_error_rms = np.sqrt(np.mean(first_error * first_error, axis=1, dtype=np.float32))
+    pair_repeat_rms = np.sqrt(np.mean(repeat_delta * repeat_delta, axis=1, dtype=np.float32))
+    return {
+        "schema": "ddm_re1t_t4_pose_measurement.v1",
+        "pairs": js1b.N_PAIRS,
+        "components_per_pair": 6,
+        "d_pose_candidate_first": float(
+            np.mean(first_error * first_error, dtype=np.float32)
+        ),
+        "d_pose_candidate_repeat": float(
+            np.mean(repeat_error * repeat_error, dtype=np.float32)
+        ),
+        "repeat_noise_mse": float(
+            np.mean(repeat_delta * repeat_delta, dtype=np.float32)
+        ),
+        "pair_error_rms": pair_error_rms.astype(np.float64),
+        "pair_repeat_noise_rms": pair_repeat_rms.astype(np.float64),
+        "adjudicated_remotely": False,
+    }
 
 
 def field_measurement(
@@ -101,7 +162,12 @@ def field_measurement(
     }
 
 
-def run(run_root: Path, resume_from: str) -> dict[str, Any]:
+def run(
+    run_root: Path,
+    resume_from: str,
+    *,
+    retain_pose_vectors: bool = False,
+) -> dict[str, Any]:
     import timm
     import torch
     import torchvision
@@ -116,10 +182,18 @@ def run(run_root: Path, resume_from: str) -> dict[str, Any]:
         raise RE1TWorkerError("request crossed the component-only authority boundary")
     if request.get("local_pose_delta") != 0.0 or request.get("pose_unmeasured") is not True:
         raise RE1TWorkerError("request lost the explicit Pose-unknown placeholder law")
+    requested_pose_vectors = bool(request.get("retain_pose_vectors", False))
+    if requested_pose_vectors != retain_pose_vectors:
+        raise RE1TWorkerError("worker Pose-vector mode differs from the sealed request")
+    evidence_input = (
+        "POSE_SCREEN_RESULT.json"
+        if retain_pose_vectors
+        else "RE1X_FULL_N600_BLOCKER.json"
+    )
     if set(request.get("inputs", {})) != {
         "candidate_archive.zip",
         "candidate_runtime.zip",
-        "RE1X_FULL_N600_BLOCKER.json",
+        evidence_input,
     }:
         raise RE1TWorkerError("request input census differs")
     source_shas = {
@@ -138,10 +212,20 @@ def run(run_root: Path, resume_from: str) -> dict[str, Any]:
             raise RE1TWorkerError("retained final result belongs to a different candidate")
         if result.get("score_claim") is not False or result.get("axis") != AXIS:
             raise RE1TWorkerError("retained final result crossed its component-only authority")
-        js1b.checkpoint_once(run_root / "checkpoints/stage_30_measurement_final.json", result)
+        retained_pose = bool(
+            result.get("retention", {}).get("all_pose_inputs_outputs_and_first6_vectors", False)
+        )
+        if retained_pose != retain_pose_vectors:
+            raise RE1TWorkerError("retained final result belongs to another Pose-vector mode")
+        final_checkpoint = (
+            "stage_40_measurement_final.json"
+            if retain_pose_vectors
+            else "stage_30_measurement_final.json"
+        )
+        js1b.checkpoint_once(run_root / "checkpoints" / final_checkpoint, result)
         return result
 
-    storage_preflight(run_root)
+    storage_preflight(run_root, retain_pose_vectors=retain_pose_vectors)
     for filename, record in request["inputs"].items():
         js1b.require_record(run_root / "inputs" / filename, record)
     js1b.require_record(GT_FIELD, GT_FIELD_RECORD)
@@ -211,6 +295,69 @@ def run(run_root: Path, resume_from: str) -> dict[str, Any]:
             "complete": True,
         },
     )
+    pose_results: dict[str, Any] | None = None
+    pose_metrics: dict[str, Any] | None = None
+    if retain_pose_vectors:
+        del scorer
+        torch.cuda.empty_cache()
+        posenet = js1b.load_posenet(device)
+        raw_root = Path(receiver["raw"]["path"]).parent
+        raw_record = receiver["raw"]
+        pose_results = {
+            "gt": js1b.score_pose_vectors(
+                source="gt",
+                raw_root=None,
+                raw_record=None,
+                scorer=posenet,
+                device=device,
+                run_root=run_root,
+            ),
+            "candidate_first": js1b.score_pose_vectors(
+                source="candidate_first",
+                raw_root=raw_root,
+                raw_record=raw_record,
+                scorer=posenet,
+                device=device,
+                run_root=run_root,
+            ),
+            "candidate_repeat": js1b.score_pose_vectors(
+                source="candidate_repeat",
+                raw_root=raw_root,
+                raw_record=raw_record,
+                scorer=posenet,
+                device=device,
+                run_root=run_root,
+            ),
+        }
+        vector_paths = {
+            name: Path(value["first6_vectors"]["path"])
+            for name, value in pose_results.items()
+        }
+        pose_metrics = pose_measurement(
+            np.load(vector_paths["gt"], mmap_mode="r", allow_pickle=False),
+            np.load(vector_paths["candidate_first"], mmap_mode="r", allow_pickle=False),
+            np.load(vector_paths["candidate_repeat"], mmap_mode="r", allow_pickle=False),
+        )
+        pair_error = pose_metrics.pop("pair_error_rms")
+        pair_repeat = pose_metrics.pop("pair_repeat_noise_rms")
+        pose_metrics["pair_error_rms"] = js1b.atomic_npy(
+            run_root / "retained/pose_vectors/pair_error_rms_n600.npy",
+            pair_error,
+        )
+        pose_metrics["pair_repeat_noise_rms"] = js1b.atomic_npy(
+            run_root / "retained/pose_vectors/pair_repeat_noise_rms_n600.npy",
+            pair_repeat,
+        )
+        js1b.checkpoint_once(
+            run_root / "checkpoints/stage_30_posenet_complete.json",
+            {
+                "schema": "ddm_re1t_t4_stage_checkpoint.v1",
+                "stage": "posenet_complete",
+                "scorers": pose_results,
+                "measurement": pose_metrics,
+                "complete": True,
+            },
+        )
     candidate_path = Path(scorer_result["argmax"]["path"])
     candidate = np.load(candidate_path, mmap_mode="r", allow_pickle=False)
     metrics = field_measurement(candidate, gt, base)
@@ -270,8 +417,29 @@ def run(run_root: Path, resume_from: str) -> dict[str, Any]:
             "adjudication_surface": "local dispatcher after harvest",
         },
     }
+    if retain_pose_vectors:
+        final["axis_pose"] = AXIS_POSE
+        final["pose_scorers"] = pose_results
+        final["pose_measurement"] = pose_metrics
+        final["retention"]["all_pose_inputs_outputs_and_first6_vectors"] = True
+        final["retention"]["candidate_pose_forward_repeat_same_decoded_payload"] = True
+        final["boundaries"] = {
+            "measured": (
+                "exact candidate public decode, n600 frozen T4 SegNet field, and official "
+                "PoseNet first-six vectors for GT plus two candidate passes"
+            ),
+            "not_measured": (
+                "contest-CPU or upstream evaluate.py; complete-S adjudication remains local"
+            ),
+            "adjudication_surface": "local dispatcher after harvest",
+        }
     js1b.checkpoint_once(final_path, final)
-    js1b.checkpoint_once(run_root / "checkpoints/stage_30_measurement_final.json", final)
+    final_checkpoint = (
+        "stage_40_measurement_final.json"
+        if retain_pose_vectors
+        else "stage_30_measurement_final.json"
+    )
+    js1b.checkpoint_once(run_root / "checkpoints" / final_checkpoint, final)
     return final
 
 
@@ -279,8 +447,23 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--run-root", type=Path, required=True)
     parser.add_argument("--resume-from", required=True)
+    parser.add_argument(
+        "--retain-pose-vectors",
+        action="store_true",
+        help="also retain official PoseNet first-six vectors for GT and two candidate passes",
+    )
     args = parser.parse_args(argv)
-    print(json.dumps(run(args.run_root.resolve(), args.resume_from), indent=2, sort_keys=True))
+    print(
+        json.dumps(
+            run(
+                args.run_root.resolve(),
+                args.resume_from,
+                retain_pose_vectors=args.retain_pose_vectors,
+            ),
+            indent=2,
+            sort_keys=True,
+        )
+    )
     return 0
 
 
