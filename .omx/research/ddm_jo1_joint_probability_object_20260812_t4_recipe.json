@@ -1,0 +1,26 @@
+{
+  "schema": "ddm_jo1_t4_recipe.v1",
+  "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+  "owner": "MAIN exact contest-CUDA scorer owner",
+  "consumer_store": "/Volumes/VertigoDataTier/pact/ddm_jo1_20260812/main_t4",
+  "fire_trigger": "MAIN owns the sole scorer lane, the archive and runtime pins below pass, and MAIN accepts that the optimistic non-authority prefilter is 0.15345692936452698 rather than sub-0.15",
+  "candidate": {
+    "archive": "/Volumes/VertigoDataTier/pact/ddm_jo1_20260812/retained/candidates/calibrated_pose_nonspending/primary/objects/archive.zip",
+    "archive_bytes": 186253,
+    "archive_sha256": "cbcbb9ec22f81ad6ce2f8f97c976148831e825ba64312878a798d92a46907c8f",
+    "submission_dir": "/Volumes/VertigoDataTier/pact/ddm_jo1_20260812/retained/candidates/calibrated_pose_nonspending/primary/adapted_runtime",
+    "independent_repeat_archive": "/Volumes/VertigoDataTier/pact/ddm_jo1_20260812/retained/candidates/calibrated_pose_nonspending/determinism_repeat/objects/archive.zip",
+    "independent_repeat_sha256": "cbcbb9ec22f81ad6ce2f8f97c976148831e825ba64312878a798d92a46907c8f"
+  },
+  "validation_order": [
+    "claim lane_ddm_jo1_composed_contest_cuda_20260812 and refuse any duplicate active Modal claim",
+    "verify archive size and SHA-256 plus the uploaded runtime tree",
+    "treat the exact row as the missing n600 Seg/Pose validation; do not promote from n32 sums",
+    "run one contest-CUDA T4 upstream/evaluate.py row and harvest all payloads",
+    "recompute S from d_seg, d_pose, and exact archive bytes; promote only identical bytes below the effective frontier"
+  ],
+  "claim_command": ".venv/bin/python tools/claim_lane_dispatch.py claim --lane-id lane_ddm_jo1_composed_contest_cuda_20260812 --platform modal --instance-job-id ddm_jo1_composed_t4_20260812 --agent MAIN --status active_exact_eval_spawning --notes 'JO1 six-event direct HP3/RC64 archive; sole contest-CUDA row; validate cbcbb9ec at 186253 B'",
+  "dispatch_command": ".venv/bin/modal run --detach experiments/modal_auth_eval.py::main --archive /Volumes/VertigoDataTier/pact/ddm_jo1_20260812/retained/candidates/calibrated_pose_nonspending/primary/objects/archive.zip --output-dir /Volumes/VertigoDataTier/pact/ddm_jo1_20260812/main_t4 --expected-archive-sha256 cbcbb9ec22f81ad6ce2f8f97c976148831e825ba64312878a798d92a46907c8f --submission-dir /Volumes/VertigoDataTier/pact/ddm_jo1_20260812/retained/candidates/calibrated_pose_nonspending/primary/adapted_runtime --inflate-sh inflate.sh --gpu T4 --scorer-device cuda --expected-runtime-tree-sha256 auto --lane-id lane_ddm_jo1_composed_contest_cuda_20260812 --instance-job-id ddm_jo1_composed_t4_20260812 --claim-agent MAIN --claim-policy require_active --single-axis-waiver-reason 'CP135 F26 family is CUDA-locked; contest-CPU refused by vehicle precedent' --detach --provider-detach-ack",
+  "recover_command": ".venv/bin/python tools/recover_modal_auth_eval.py --output-dir /Volumes/VertigoDataTier/pact/ddm_jo1_20260812/main_t4",
+  "authority_boundary": "Not fired by JO1. No n600 scorer result or score claim exists for the composed archive."
+}
