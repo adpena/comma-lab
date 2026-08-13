@@ -226,3 +226,34 @@ Post-edit source SHA-256:
   `/Volumes/VertigoDataTier/pact/ddm_po1_20260813/dispatch/round2_candidate`; fire trigger:
   `SOLVE_RESULT.json` status `CANDIDATE_READY_FOR_T4_ROUND2`, sole component lane clear, and generated
   archive bytes/SHA reverified; action: execute the exact generated Round 2 command.
+
+## ADDENDUM 1 — Round-1 T4 result (2026-08-13, MAIN harvest)
+
+Round 1 ran to COMPLETE on Modal T4 (run `ddm_po1_round1_cp135_20260813`, detached dispatch
+46 s, job ~18 min). Status: **FEEDBACK_USABLE**. The three headline numbers:
+
+- `repeat_noise_mse = 0.0` — the T4 PoseNet forward is **bit-deterministic in-job**. Two
+  independent forwards over all 600 pairs produced byte-identical first-six vectors.
+- `d_pose_decoded_first == d_pose_decoded_repeat == 6.885642960696714e-06` — independently
+  confirms cp135's composed-row d_pose from a fresh decode + fresh scorer load.
+- `noise_comparable_pairs 0/600`, `f1_instrument_floor_closed: false` — the F1 falsifier
+  (instrument noise floor comparable to the signal) did NOT fire. The remaining d_pose is
+  100% signal; the compensation solve faces **no noise-floor constraint**.
+
+Custody: ~32 GB retained on volume `comma-ddm-po1-pose-feedback-retained` at
+`/ddm_po1_retained/ddm_po1_round1_cp135_20260813` (raw frames, GT RGB, seg logits/fields,
+pose vectors). Seg field sha `7648ad42…` matches the sa1/js1b BASE_FIELD_RECORD exactly —
+three independent T4 decodes of cp135 now agree byte-for-byte on the argmax field.
+
+Local consumer store staged at `/Volumes/VertigoDataTier/pact/ddm_po1_20260813/round1_cp135`:
+FINAL_RESULT.json + 5 pose-vector npy (sha-verified) + candidate argmax field (sha-verified)
++ retained/raw/candidate/0.raw (3.66 GB, downloaded from the volume — the T4-decoded bytes
+the solve linearizes around, NOT a local re-decode, per the sign-flip custody law).
+
+Worker defect fixes applied to both sa1 and po1 workers pre-fire (commits a3eb572dae,
+99e4c05f99): `sys.dont_write_bytecode = True` (bytecode self-pollution refused the end-of-run
+upstream sha) and volatile `storage_preflight` excluded from the stage-00 checkpoint (its
+free_bytes drift made byte-identical resume structurally unsatisfiable).
+
+Next: damped local-Jacobian compensation solve (`solve --resume-from
+ddm_po1_solve_attempt1_20260813`, damping 0.01) → Round-2 T4 dispatch on the candidate.
