@@ -22,7 +22,12 @@ from typing import Any, Final
 
 import modal
 
-from experiments.modal_auth_eval import UPSTREAM_LOCKED_VENV, eval_image
+try:
+    from experiments.modal_auth_eval import UPSTREAM_LOCKED_VENV, eval_image
+except ModuleNotFoundError:
+    # Remote container: modal_auth_eval is mounted TOP-LEVEL (add_local_python_source
+    # at modal_auth_eval.py:254), not under an `experiments` package.
+    from modal_auth_eval import UPSTREAM_LOCKED_VENV, eval_image  # type: ignore[no-redef]
 from tac.deploy.modal.auth_eval import (
     ClaimSpec,
     claim_modal_auth_eval_dispatch,
@@ -377,14 +382,20 @@ def prepare_request(
 app = modal.App(APP_NAME, include_source=False)
 retained_volume = modal.Volume.from_name(VOLUME_NAME, create_if_missing=True)
 validator_image = (
+    # copy=False (lazy startup mounts): eval_image ends with lazy mounts, and Modal
+    # refuses a build step (copy=True) after any lazy add_local_*. Lazy is safe HERE
+    # (single file + python module, no .git-tree ignore callable — the 2026-06-10
+    # silent-drop regression applied to callable-ignore DIRECTORY mounts only).
     eval_image.add_local_file(
         "experiments/ddm_vd1_batch_event_validator_worker.py",
         remote_path=str(REMOTE_WORKER),
-        copy=True,
+        copy=False,
     )
     .add_local_python_source(  # MODAL_ENTRYPOINT_SELF_MOUNT_OK:include_source=False requires this dispatcher module
-        "experiments.ddm_vd1_modal_batch_event_validator",
-        copy=True,
+        # TOP-LEVEL stem, not "experiments.…": `modal run experiments/foo.py` imports the
+        # entrypoint as module "foo", so the remote must resolve that exact name
+        # (sister pattern: modal_auth_eval.py:254 mounts "modal_auth_eval").
+        "ddm_vd1_modal_batch_event_validator",
     )
 )
 
@@ -595,7 +606,7 @@ def main(
             recipe="experiments/ddm_vd1_modal_batch_event_validator.py::main",
             max_seconds=int(CONTEST_LIMIT_SECONDS),
             agent=claim_agent,
-            archive_sha256=CP135_ARCHIVE_SHA256,
+            base_archive_sha256=CP135_ARCHIVE_SHA256,  # 'archive_sha256' is a reserved ledger schema field
             event_count=int(k),
             volume_name=VOLUME_NAME,
             volume_run_id=run_id,

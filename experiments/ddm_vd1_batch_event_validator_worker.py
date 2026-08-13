@@ -11,9 +11,13 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib
+import importlib.metadata
 import json
 import math
 import os
+import re
+import shutil
 import struct
 import subprocess
 import sys
@@ -37,6 +41,9 @@ POSE_PER_EVENT_GLOBAL_BUDGET: Final = POSE_STACK_BUDGET_GLOBAL / POSE_STACK_EQUI
 POSE_PER_EVENT_PAIR_BUDGET: Final = POSE_PER_EVENT_GLOBAL_BUDGET * N_PAIRS
 JS7_DAMAGE_SCALE: Final = 0.000216
 CP135_ARCHIVE_SHA256: Final = "6eb1a3b79cb167e03372339e07e93cae13b6ba3114a9eb917288bb038622edb6"
+CP135_DECODED_TOKEN_SHA256: Final = (
+    "c5c7671d037b6912980c57929a5b6d789d250ee6a93e3b0a6018cf9f63e32ece"
+)
 AXIS: Final = "[contest-CUDA T4 exact-upstream affected-pair n600 delta]"
 CHECKPOINT_EVERY_EVENTS: Final = 10
 
@@ -181,31 +188,193 @@ def compile_rc64(runtime_root: Path, work_root: Path) -> Path:
     return output
 
 
+def tree_record(root: Path) -> dict[str, Any]:
+    """Hash one retained dependency tree without omitting its materialized files."""
+    digest = hashlib.sha256()
+    rows = []
+    total_bytes = 0
+    for path in sorted(value for value in root.rglob("*") if value.is_file()):
+        relative = path.relative_to(root).as_posix()
+        record = file_record(path)
+        rows.append({"relative_path": relative, **record})
+        total_bytes += int(record["bytes"])
+        digest.update(relative.encode())
+        digest.update(b"\0")
+        digest.update(str(record["bytes"]).encode())
+        digest.update(b"\0")
+        digest.update(str(record["sha256"]).encode())
+        digest.update(b"\n")
+    return {
+        "root": str(root),
+        "file_count": len(rows),
+        "bytes": total_bytes,
+        "tree_sha256": digest.hexdigest(),
+        "files": rows,
+    }
+
+
+def _adapted_brotli_spec(runtime_root: Path) -> str:
+    """Read the dependency pin from the staged runtime's own inflate entrypoint."""
+    source = (runtime_root / "inflate.sh").read_text()
+    matches = sorted(set(re.findall(r"Brotli==[0-9]+(?:\.[0-9]+)+", source)))
+    if len(matches) != 1:
+        raise WorkerError(f"adapted runtime Brotli pin is not singular: {matches}")
+    return matches[0]
+
+
+def _loaded_brotli_record(expected_spec: str) -> dict[str, Any] | None:
+    expected_version = expected_spec.partition("==")[2]
+    try:
+        module = importlib.import_module("brotli")
+        version = importlib.metadata.version("Brotli")
+    except (ImportError, importlib.metadata.PackageNotFoundError):
+        return None
+    if version != expected_version or not callable(getattr(module, "decompress", None)):
+        return None
+    module_path = Path(module.__file__).resolve()
+    return {"spec": expected_spec, "version": version, "module": file_record(module_path)}
+
+
+def _activate_brotli_site(site: Path, spec: str) -> dict[str, Any] | None:
+    site_text = str(site)
+    if site_text not in sys.path:
+        sys.path.insert(0, site_text)
+    for name in ("brotli", "_brotli"):
+        sys.modules.pop(name, None)
+    importlib.invalidate_caches()
+    return _loaded_brotli_record(spec)
+
+
+def ensure_adapted_runtime_brotli(
+    runtime_root: Path,
+    retained_root: Path,
+) -> dict[str, Any]:
+    """Apply the adapted inflate.sh Brotli bootstrap inside the locked worker Python."""
+    spec = _adapted_brotli_spec(runtime_root)
+    receipt_path = retained_root / "BOOTSTRAP.json"
+    available = _loaded_brotli_record(spec)
+    if available is not None:
+        receipt = {
+            "schema": "ddm_vd1_adapted_runtime_dependency.v1",
+            "status": "ALREADY_AVAILABLE",
+            "authority": file_record(runtime_root / "inflate.sh"),
+            "dependency": available,
+            "installed_tree": None,
+        }
+        atomic_json(receipt_path, receipt)
+        return {**receipt, "receipt": file_record(receipt_path)}
+
+    site = retained_root / "site"
+    cache = retained_root / "uv_cache"
+    if site.is_dir():
+        available = _activate_brotli_site(site, spec)
+        if available is not None:
+            receipt = {
+                "schema": "ddm_vd1_adapted_runtime_dependency.v1",
+                "status": "REUSED_RETAINED_INSTALL",
+                "authority": file_record(runtime_root / "inflate.sh"),
+                "dependency": available,
+                "installed_tree": tree_record(site),
+                "cache_tree": tree_record(cache) if cache.is_dir() else None,
+            }
+            atomic_json(receipt_path, receipt)
+            return {**receipt, "receipt": file_record(receipt_path)}
+
+    uv = shutil.which("uv")
+    if not uv:
+        raise WorkerError(f"adapted runtime requires {spec}, but uv is unavailable")
+    site.mkdir(parents=True, exist_ok=True)
+    cache.mkdir(parents=True, exist_ok=True)
+    command = [
+        uv,
+        "pip",
+        "install",
+        "--python",
+        sys.executable,
+        "--target",
+        str(site),
+        "--no-deps",
+        "--only-binary",
+        ":all:",
+        spec,
+    ]
+    completed = subprocess.run(
+        command,
+        check=False,
+        capture_output=True,
+        text=True,
+        env={**os.environ, "UV_CACHE_DIR": str(cache)},
+    )
+    install = {
+        "argv": command,
+        "returncode": completed.returncode,
+        "stdout": completed.stdout,
+        "stderr": completed.stderr,
+        "uv_cache": str(cache),
+    }
+    if completed.returncode:
+        atomic_json(
+            receipt_path,
+            {
+                "schema": "ddm_vd1_adapted_runtime_dependency.v1",
+                "status": "INSTALL_FAILED",
+                "authority": file_record(runtime_root / "inflate.sh"),
+                "install": install,
+            },
+        )
+        raise WorkerError(f"adapted runtime dependency install failed for {spec}")
+
+    available = _activate_brotli_site(site, spec)
+    if available is None:
+        raise WorkerError(f"adapted runtime dependency remained unavailable after installing {spec}")
+    receipt = {
+        "schema": "ddm_vd1_adapted_runtime_dependency.v1",
+        "status": "INSTALLED_FROM_ADAPTED_RUNTIME_PIN",
+        "authority": file_record(runtime_root / "inflate.sh"),
+        "dependency": available,
+        "install": install,
+        "installed_tree": tree_record(site),
+        "cache_tree": tree_record(cache),
+    }
+    atomic_json(receipt_path, receipt)
+    return {**receipt, "receipt": file_record(receipt_path)}
+
+
+def _load_adapted_f26(runtime_root: Path) -> Any:
+    """Import the exact staged module used by adapted_runtime/inflate.py."""
+    expected = (runtime_root / "runtime/f26_inflate.py").resolve()
+    sys.path.insert(0, str(runtime_root))
+    try:
+        module = importlib.import_module("runtime.f26_inflate")
+    finally:
+        sys.path.pop(0)
+    actual = Path(module.__file__).resolve()
+    if actual != expected:
+        raise WorkerError(f"adapted runtime import resolved elsewhere: {actual} != {expected}")
+    return module
+
+
 def load_receiver_state(
     archive_path: Path,
     runtime_root: Path,
     retained_root: Path,
     device: Any,
-) -> tuple[Any, Any, Any, Any, Any, dict[str, Any]]:
+) -> tuple[Any, Any, Any, Any, Any, Any, dict[str, Any]]:
     """Decode CP135 once and retain a complete receiver checkpoint."""
     import torch
 
-    sys.path.insert(0, str(runtime_root))
-    try:
-        from runtime import f26_inflate as f26
-        from runtime.carrier_repack import materialize_cpr1, split_frame0_selector_carrier
-        from runtime.entropy.renderer_weight_codec import decode_wans1
-        from runtime.frame0_selector import decode_selector
-        from runtime.residual_archive import decode_production_tokens, read_residual_archive
-    finally:
-        sys.path.pop(0)
-    parts = read_residual_archive(archive_path)
+    dependency_report = ensure_adapted_runtime_brotli(
+        runtime_root,
+        retained_root / "runtime_dependencies/brotli",
+    )
+    f26 = _load_adapted_f26(runtime_root)
+    parts = f26.read_residual_archive(archive_path)
     renderer = f26._load_renderer(runtime_root / "cpr1")
-    carrier_blob, selector_blob = split_frame0_selector_carrier(parts.carrier_blob)
-    canonical_carrier = materialize_cpr1(carrier_blob, renderer)
+    carrier_blob, selector_blob = f26.split_frame0_selector_carrier(parts.carrier_blob)
+    canonical_carrier = f26.materialize_cpr1(carrier_blob, renderer)
     semantic_pose = struct.pack("<II", 40_252, len(canonical_carrier)) + bytes(40_252) + canonical_carrier
     _, basis, coefficients = renderer.unpack_semantic_pose(semantic_pose)
-    records = decode_wans1(parts.semantic_blob)
+    records = f26.decode_wans1(parts.semantic_blob)
     semantic = renderer.SemanticTokenRenderer(96)
     state = {
         record.schema.name: torch.from_numpy(np.ascontiguousarray(record.values, dtype=np.float32))
@@ -218,13 +387,21 @@ def load_receiver_state(
         tokens = torch.from_numpy(np.load(tokens_path, allow_pickle=False))
         token_report = json.loads(report_path.read_text())
     else:
-        tokens, token_report = decode_production_tokens(parts, renderer, runtime_root / "runtime", device)
+        tokens, token_report = f26.decode_production_tokens(
+            parts,
+            renderer,
+            runtime_root / "cpr1",
+            device,
+        )
         atomic_npy(tokens_path, tokens.numpy())
         atomic_json(report_path, token_report)
     if tuple(tokens.shape) != (N_PAIRS, HEIGHT, WIDTH):
         raise WorkerError(f"decoded token shape differs: {tuple(tokens.shape)}")
-    if sha256_bytes(np.asarray(tokens).tobytes()) != token_report["decoded_token_sha256"]:
+    decoded_token_sha256 = sha256_bytes(tokens.numpy().tobytes())
+    if decoded_token_sha256 != token_report["decoded_token_sha256"]:
         raise WorkerError("decoded token digest differs from receiver report")
+    if decoded_token_sha256 != CP135_DECODED_TOKEN_SHA256:
+        raise WorkerError("decoded token plane differs from the adapted CP135 receiver golden")
     atomic_npz(
         retained_root / "decoded/semantic_weights.float32.npz",
         {name: value.numpy() for name, value in state.items()},
@@ -234,7 +411,7 @@ def load_receiver_state(
     if selector_blob is None:
         selector_modes, selector_indices = (), np.zeros(N_PAIRS, dtype=np.uint8)
     else:
-        selector_modes, selector_indices = decode_selector(selector_blob)
+        selector_modes, selector_indices = f26.decode_selector(selector_blob)
     atomic_npy(retained_root / "decoded/frame0_selector_indices.uint8.npy", selector_indices)
     token_report = {
         **token_report,
@@ -244,6 +421,10 @@ def load_receiver_state(
         "basis": file_record(retained_root / "decoded/carrier_basis.float32.npy"),
         "coefficients": file_record(retained_root / "decoded/carrier_coefficients.float32.npy"),
         "selector_indices": file_record(retained_root / "decoded/frame0_selector_indices.uint8.npy"),
+        "adapted_runtime_module": file_record(Path(f26.__file__).resolve()),
+        "adapted_runtime_dependency": dependency_report,
+        "adapted_runtime_token_golden_sha256": CP135_DECODED_TOKEN_SHA256,
+        "adapted_runtime_token_golden_match": True,
     }
     return renderer, semantic, basis, coefficients, tokens, (selector_modes, selector_indices), token_report
 
