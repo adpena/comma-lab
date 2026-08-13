@@ -248,7 +248,7 @@ def decode_exact_receiver(
         atomic_json(data_marker, {"archive": bound_archive_record, "complete": True})
     file_list = run_root / f"work/{name}/public_test_video_names.txt"
     video_names = (UPSTREAM / "public_test_video_names.txt").read_bytes()
-    if video_names.splitlines() != [b"0.hevc"]:
+    if video_names.splitlines() != [b"0.mkv"]:
         raise WorkerError("upstream public video-name census differs from the pinned one-object set")
     atomic_bytes(file_list, video_names)
     output_dir = raw_path.parent
