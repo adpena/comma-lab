@@ -17,6 +17,11 @@ REMOTE_REPO: Final = Path("/workspace/pact")
 if str(REMOTE_REPO) not in sys.path:
     sys.path.insert(0, str(REMOTE_REPO))
 
+# The end-of-run compute_upstream_snapshot_sha256 refuses executable bytecode; without this
+# flag the scorer import writes __pycache__ into the mounted upstream tree and the worker
+# fails on its own artifact (run ddm_sa1_t4_sign_20260813h, 871s of completed T4 work lost).
+sys.dont_write_bytecode = True
+
 from experiments import ddm_js1b_cuda_argmax_field_materializer_worker as js1b
 
 AXIS: Final = "[contest-CUDA T4 frozen-SegNet argmax field, n600, batch=16] COMPONENT-ONLY"
@@ -129,7 +134,7 @@ def run(run_root: Path, resume_from: str) -> dict[str, Any]:
             raise SA1T4Error("retained final result is not complete")
         return result
 
-    preflight = storage_preflight(run_root)
+    storage_preflight(run_root)
     for filename, record in request["inputs"].items():
         js1b.require_record(run_root / "inputs" / filename, record)
     js1b.require_record(GT_FIELD, GT_FIELD_RECORD)
@@ -146,7 +151,11 @@ def run(run_root: Path, resume_from: str) -> dict[str, Any]:
             "inputs": request["inputs"],
             "prior_gt_field": GT_FIELD_RECORD,
             "prior_base_field": BASE_FIELD_RECORD,
-            "storage_preflight": preflight,
+            # storage_preflight is deliberately NOT checkpointed: it embeds free_bytes /
+            # already_retained_bytes, which drift between attempts, so baking it into the
+            # checkpoint makes checkpoint_once's byte-identical resume structurally
+            # unsatisfiable (the true cause of run ...20260813g's resume refusal). The
+            # preflight itself still runs fail-closed above on every attempt.
             "resume_from": resume_from,
             "complete": True,
         },
