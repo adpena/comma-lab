@@ -1,5 +1,7 @@
 # ddm_vd1 run-c census verdict — gen-1 event alphabet REFUTED at n600 authority; falsifier fired → gen-2
 
+verdict_scope: instance — the gen-1 ec1 200-event alphabet on the cp135 composed base (per-event exact T4 measurement); the sparse-event FAMILY stays open (gv2 gen-2 pre-registered), the carrier is proven free, the validator instrument is proven.
+
 **Date:** 2026-08-12 · **Owner:** MAIN (Fable) · **Axis:** [contest-CUDA T4 exact-upstream affected-pair n600 delta]
 **Modal:** fc-01KZWM334XKMRQE4YFJ5PX3574 · run_id `ddm_vd1_20260812c` · Tesla T4 · 677.95 s · rc=0 · status COMPLETE
 **Ledgers:** call-id `harvested` + lane claim `completed_harvested` (modal:ddm_vd1_20260812c) — both closed 2026-08-12.
