@@ -7,12 +7,14 @@ rate (+77 B for 6 pairs ≈ 12.8 B/pair). **The measured breakeven law: 0.785 re
 flips per compensation byte; qs1 delivered 0.416.** Close that 1.9× gap. Scorer-free
 local build + solve; NO Modal fire (MAIN fires); sealed dual-axis fire-order output.
 
-**PRIOR-LAW PREDICTION (m38):** admissibility ⇔ realized flips/B > 0.785. At qs1's
-realization efficiency (~17–20% of screened target — use this as the SCREEN CALIBRATION,
-never optimistic crediting) and coding at ≤6.8 B/pair, a six-pair-equivalent candidate
-sits near breakeven; the win requires BOTH levers composed (cheaper coding AND
-waterfilled pair selection). Honest outcomes: a small realized win (−1e-5-scale ΔS — a
-FLOOR MOVE) or a measured family ceiling (flips/B asymptote < 0.785). Both are rows.
+**PRIOR-LAW PREDICTION (m38):** admissibility ⇔ realized flips/B > 0.785. **OPERATOR
+STEER (2026-08-13, binding): the ~17–20% realization efficiency and 12.8 B/pair coding
+cost are FIRST-PASS INSTANCE numbers — IMPROVABLE, never constants** (realization-gap-is-
+fixable · first-attempt ≠ family verdict · constants-are-poison). Use measured efficiency
+only as the honest PRIOR for screens while you RAISE it. Three levers compose:
+efficiency ×2.5 alone clears breakeven at qs1's own bytes; coding ≤6.8 B/pair alone
+reaches ~breakeven; both together give real margin. Honest outcomes: a realized win
+(a FLOOR MOVE) or measured ceilings on ALL THREE levers. Both are rows.
 
 **OPERATOR DOCTRINES BINDING:** "no naive or toy or generic basis ever" (real archive
 coder prices, calibrated screens, per-pair exact decomposition from RETAINED fields —
@@ -35,6 +37,12 @@ Rate-rung arm on a PROVEN engine. Reference forms (ADAPT, provenance-pin path+sh
 1. **Per-pair post-mortem** from retained fields: realized flips, changed pixels, and
    coded bytes PER PAIR. Identify the waterfill order (marginal flips/B per pair) and
    where the 189→32 realization loss lives (which edits reverted through uint8/decode).
+1b. **RAISE the realization efficiency (co-equal lever, operator steer)**: from the
+   post-mortem, classify the reverted edits (sub-quantum amplitude vs the js5 uint8
+   quantum floor · AA/resize washout · tie-margin failures) and ENGINEER surviving edits
+   per the hr1/rvs1 realization-survival playbook (amplitude above the quantum floor,
+   margin-targeted placement). Report the efficiency CURVE per engineering variant —
+   17–20% is the naive first-pass floor, not the family's number.
 2. **Compensation coding race** (real coder, honest byte counts): (a) coarser dc0
    quantization along the measured pose-null slack — derive the coarsest step whose
    residual pose leakage stays ≤ ~2e-7 S per candidate; (b) shared codebook / joint

@@ -26,10 +26,19 @@ The candidate loses on RATE: compensation coding cost 77 B for 6 pairs (~12.8 B/
 - **Breakeven law (derived from S): 0.785 realized flips per compensation byte.**
 - This candidate: 32 flips / 77 B = **0.416 flips/B — 1.9× short.**
 - Realization efficiency: 32 net flips from ~189 changed pixels ≈ the screen's
-  realized-seg uncertainty resolving LOW (~17–20% of screened target). Calibrate all
-  future screens with this number.
+  realized-seg uncertainty resolving LOW (~17–20% of screened target). **OPERATOR STEER
+  (2026-08-13): this number is a FIRST-PASS INSTANCE measurement, not a family constant —
+  treat it as an ATTACK TARGET, never a calibration ceiling** (the realization-gap-is-
+  fixable law; first-attempt ≠ family verdict; constants-are-poison). It is the honest
+  PRIOR for screens only until the engineering below moves it.
 
-## The two named levers (family OPEN, reopen conditions measured)
+## The three named levers (family OPEN, reopen conditions measured)
+0. **Realization-efficiency engineering (co-equal, per operator steer)** — diagnose from
+   the retained per-pair fields WHY 189 changed pixels realized only 32 net flips (edits
+   reverting through uint8/decode/resize: sub-quantum amplitudes vs the js5 quantum floor,
+   AA washout, tie-margin failures), then engineer edits that SURVIVE (hr1/rvs1
+   realization-survival playbook). Efficiency 17%→~50% at constant bytes clears breakeven
+   with NO coding change.
 1. **Cheaper compensation coding** — get ≤6.8 B/pair (vs 12.8) at equal cancellation:
    coarser dc0 quantization along the pose-null slack, shared codebook across pairs, or
    restrict to the highest-cancellation subset (several pairs cancelled >99.8% — drop
