@@ -1,5 +1,11 @@
 # re1 Round-1 full evaluate.py row — HONEST LOSS + the family law (2026-08-13, MAIN)
 
+> ⚠ ERRATA 2026-08-13 (`ddm_errata_8dp_band_instrument_mixing_20260813.md`): the
+> '+4.03e-6 WORSE' verdict is RETRACTED as a signed result — the pose leg is exactly ONE
+> 8dp report ULP (+6.02e-6); both canonicals carry declared ±3.5e-6 bounds. Sign
+> INDETERMINATE; resolution = dual-axis worker base+candidate legs (qs2 fire-order).
+
+
 ## The row [contest-CUDA T4, n600 — full evaluate.py, score_claim: true]
 - Archive: re1 Round-1, sha `7be3eb94b229306278a6ed204e2c716d7aafa98f6f93c82a5d2be18822467dfa`
   @ 186,252 B. Dispatch `fc-01KZY85HNP3RX6GMQXSM6RBQYG` (paired dispatcher, CUDA leg;

@@ -1,5 +1,10 @@
 # re1 Round-1 T4 sign gate — PROVISIONALLY ADMITTED (2026-08-13, MAIN)
 
+> ⚠ ERRATA 2026-08-13: the 'new floor 0.16195344' projection is RETRACTED — a −1.7e-6
+> move is below the evaluate.py 8dp canonical resolution (±3.5e-6 declared per side).
+> The −2-flip sign-gate measurement itself stands (worker instrument, exact counts).
+
+
 ## The row [contest-CUDA T4 frozen-SegNet argmax field, n600, batch=16 — COMPONENT-ONLY]
 - Candidate: re1 Round-1 HP3/RC64-closed archive, sha
   `7be3eb94b229306278a6ed204e2c716d7aafa98f6f93c82a5d2be18822467dfa` @ 186,252 B

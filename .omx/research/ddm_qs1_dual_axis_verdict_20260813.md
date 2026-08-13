@@ -1,5 +1,11 @@
 # QS1 six-pair Schur coupled candidate — dual-axis T4 verdict (2026-08-13, MAIN)
 
+> ⚠ ERRATA 2026-08-13: REFUSED sign ROBUST, but the 'pose compensation PROVEN 50–1800×'
+> precision claim is WITHDRAWN (cross-instrument: worker pose vs a memo-propagated
+> 16-digit pseudo-receipt value that exists in NO receipt). Bounded claim + resolution in
+> `ddm_errata_8dp_band_instrument_mixing_20260813.md`.
+
+
 ## The row [contest-CUDA T4 dual-axis component instrument, n600, batch=16 — matched-base]
 - Candidate: sha `e474d4528aa2917db1433f8ef0ef63a943a15a511628542f98af45d8c972db9d` @ 186,329 B
   (+77 B vs cp135). Dispatch call `fc-01KZYKRGDZVRRQHPYQCBVFNMWE`, run-id
