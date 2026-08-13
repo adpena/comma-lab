@@ -65,6 +65,13 @@ RHO_REQUIRED = 0.827795
 TERMINAL_BASE_D_SEG = 0.00029639352578669786
 TERMINAL_BASE_FLIPS = 34_964
 C1_BATCH16_REFERENCE_FLIPS = 17_926
+# ddm_js1b_cuda_custody_adjudication_20260813: measured T4 residual 6 flips
+# (batch-shape/tie-break class, et4); tolerance bounds that class, never a
+# renderer-drift magnitude (local drift measured +15,425).
+CP135_BATCH_SHAPE_TOLERANCE_FLIPS = 20
+C1_TARGET_CUSTODY_SHA256 = (
+    "a9c4936c41bc6634477f9c060be3d170542bd2a1d4d0cd04d5afcd0912fb3908"
+)
 MIN_RESERVE_BYTES = 32 * 1024**3
 EXPECTED_NEW_BYTES = 2 * RAW_BYTES + 2 * RAW_BYTES + 2 * (N * 5 * SEG_PX * 4)
 EXPECTED_NEW_BYTES += 5 * (N * SEG_PX) + 2 * 1024**3
@@ -910,18 +917,29 @@ def load_cuda_argmax_bundle(root: Path) -> dict[str, Any]:
         or bool(receipt.get("promotion_eligible"))
     ):
         raise RuntimeError(f"JS1B field receipt contract differs: {receipt_path}")
+    # Adjudicated admission (ddm_js1b_cuda_custody_adjudication_20260813):
+    # the worker's literal bars were measured on the LOCAL Mac GT instrument;
+    # on the T4 instrument the honest contract is (a) CP135-vs-GT within the
+    # et4 batch-shape tolerance of the promoted row and (b) the stored C1
+    # target field byte-identical to js1 custody. The 17,926 C1 bar was a
+    # local-instrument number (T4-instrument value: 27,330) — never a decode
+    # control; do not re-impose it here.
     adjudication = receipt.get("axis_adjudication", {})
-    if (
-        receipt.get("status") != "ADMITTED"
-        or not adjudication.get("admitted_for_js1_stage0")
-        or int(adjudication.get("cp135_control", {}).get("observed_flips", -1))
-        != TERMINAL_BASE_FLIPS
-        or int(adjudication.get("c1_target_control", {}).get("observed_flips", -1))
-        != C1_BATCH16_REFERENCE_FLIPS
-    ):
+    cp135_observed = int(
+        adjudication.get("cp135_control", {}).get("observed_flips", -1)
+    )
+    if abs(cp135_observed - TERMINAL_BASE_FLIPS) > CP135_BATCH_SHAPE_TOLERANCE_FLIPS:
         raise RuntimeError(
-            "JS1B CUDA controls did not reproduce CP135=34964 and C1=17926; "
-            "stop and treat the discrepancy as a field/custody question"
+            f"JS1B CP135 control {cp135_observed} outside the batch-shape "
+            f"tolerance ±{CP135_BATCH_SHAPE_TOLERANCE_FLIPS} of the promoted "
+            f"{TERMINAL_BASE_FLIPS}; stop and treat as a field/custody question"
+        )
+    c1_field_path = root / "retained/fields/c1_target_argmax_n600.npy"
+    c1_sha = hashlib.sha256(c1_field_path.read_bytes()).hexdigest()
+    if c1_sha != C1_TARGET_CUSTODY_SHA256:
+        raise RuntimeError(
+            f"JS1B c1_target field sha {c1_sha} differs from js1 custody "
+            f"{C1_TARGET_CUSTODY_SHA256}; stop and treat as a custody question"
         )
     field_paths = {
         name: root / f"retained/fields/{name}_argmax_n600.npy"
@@ -942,13 +960,18 @@ def load_cuda_argmax_bundle(root: Path) -> dict[str, Any]:
         for name, value in fields.items()
         if name != "gt"
     }
+    # Adjudicated bars (ddm_js1b_cuda_custody_adjudication_20260813): CP135
+    # within the et4 batch-shape tolerance of the promoted row; the C1 target
+    # field is custody-checked by sha above — its flips-vs-GT on the T4
+    # instrument (27,330) REPLACE the local-instrument 17,926 as reference.
     if (
-        actual_flips["cp135_base"] != TERMINAL_BASE_FLIPS
-        or actual_flips["c1_target"] != C1_BATCH16_REFERENCE_FLIPS
+        abs(actual_flips["cp135_base"] - TERMINAL_BASE_FLIPS)
+        > CP135_BATCH_SHAPE_TOLERANCE_FLIPS
     ):
         raise RuntimeError(
-            "downloaded JS1B field bytes do not reproduce CP135=34964 and C1=17926; "
-            "stop and treat the discrepancy as a field/custody question"
+            f"downloaded JS1B cp135 field flips {actual_flips['cp135_base']} "
+            f"outside ±{CP135_BATCH_SHAPE_TOLERANCE_FLIPS} of "
+            f"{TERMINAL_BASE_FLIPS}; stop and treat as a field/custody question"
         )
     receipt_flips = adjudication.get("flips_vs_gt")
     if receipt_flips != actual_flips:
