@@ -17,8 +17,15 @@ from typing import Any, Final
 
 import modal
 
-from experiments import ddm_js1b_cuda_argmax_field_materializer_worker as js1b
-from experiments import ddm_re1t_modal_t4_sign_gate as substrate
+try:
+    from experiments import ddm_js1b_cuda_argmax_field_materializer_worker as js1b
+except (ImportError, ModuleNotFoundError):
+    import ddm_js1b_cuda_argmax_field_materializer_worker as js1b  # type: ignore[no-redef]
+
+try:
+    from experiments import ddm_re1t_modal_t4_sign_gate as substrate
+except (ImportError, ModuleNotFoundError):
+    import ddm_re1t_modal_t4_sign_gate as substrate  # type: ignore[no-redef]
 from tac.deploy.modal.auth_eval import (
     ClaimSpec,
     claim_modal_auth_eval_dispatch,
@@ -79,7 +86,8 @@ def load_sealed_inputs(
 app = modal.App(APP_NAME, include_source=False)
 retained_volume = modal.Volume.from_name(VOLUME_NAME, create_if_missing=False)
 image = substrate.gate_image.add_local_python_source(
-    "ddm_qs1_modal_t4_dual_axis"
+    "ddm_qs1_modal_t4_dual_axis",
+    "ddm_js1b_cuda_argmax_field_materializer_worker",
 )
 
 
