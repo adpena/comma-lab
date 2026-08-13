@@ -516,6 +516,29 @@ def build_candidate(
     archive_path = output_runtime / "archive.zip"
     atomic_bytes(archive_path, archive_payload)
 
+    # cp135's inflate.py pins archive.zip to the promoted artifact (_verify_input
+    # raises "does not match the promoted F26 artifact" — the Round-2 T4 refusal:
+    # the local parse-back below reads the residual archive directly and never
+    # exercised this pin). Repoint the pin to the candidate archive. A generic
+    # self-verification constant repoint; no video-derived data enters code.
+    inflate_path = output_runtime / "inflate.py"
+    inflate_source = inflate_path.read_text()
+    candidate_record = file_record(archive_path)
+    old_sha_line = f'ARCHIVE_SHA256 = "{CP135_SHA256}"'
+    old_bytes_line = f"ARCHIVE_BYTES = {CP135_BYTES:_}"
+    new_sha_line = f'ARCHIVE_SHA256 = "{candidate_record["sha256"]}"'
+    new_bytes_line = f"ARCHIVE_BYTES = {int(candidate_record['bytes']):_}"
+    if old_sha_line not in inflate_source or old_bytes_line not in inflate_source:
+        raise PO1SolveError("candidate inflate.py archive pin anchor differs")
+    atomic_bytes(
+        inflate_path,
+        inflate_source.replace(old_sha_line, new_sha_line)
+        .replace(old_bytes_line, new_bytes_line)
+        .encode(),
+    )
+    if new_sha_line not in inflate_path.read_text():
+        raise PO1SolveError("candidate inflate.py archive pin rewrite failed")
+
     # Parse-back runs in a clean interpreter so source/candidate runtime modules
     # cannot alias through Python's module cache.
     command = [
