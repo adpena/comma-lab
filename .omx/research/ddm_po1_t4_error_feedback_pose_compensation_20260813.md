@@ -257,3 +257,43 @@ free_bytes drift made byte-identical resume structurally unsatisfiable).
 
 Next: damped local-Jacobian compensation solve (`solve --resume-from
 ddm_po1_solve_attempt1_20260813`, damping 0.01) → Round-2 T4 dispatch on the candidate.
+
+## ADDENDUM 2 — Round-2b T4 verdict: REJECTED (2026-08-13, MAIN adjudication)
+
+**Verdict: the gated damped local-Jacobian candidate is DEAD-CONFIRMED at instance scope.**
+Round-2b receipt (`dispatch/round2b_candidate/PO1_FINAL_RESULT.json`, execution_status COMPLETE,
+archive sha `5d89150d61a0…` 186,335 B — the exact attempt3 candidate):
+
+- **Realized d_pose 5.6857839808799326e-05** [contest-CUDA T4 component-only, n600], first and
+  repeat bit-identical (repeat_noise_mse 0.0 — zero noise floor again).
+- Base d_pose 6.885642960696714e-06 → realized **8.257× WORSE**. Predicted gain was +4.4656e-7
+  (d_pose → 6.439e-6); realized −4.9972e-5. **Realization ratio ≈ −112×.**
+- ΔS ≈ **+0.0156** (pose √-term 0.008298 → 0.023845, rate +83 B). Independent arm (hv1) derived
+  +0.015602 from the same receipt before this adjudication — agreement.
+
+**Mechanism (the instrument finding, na2 law: a negative measures the instrument).** The per-pair
+acceptance gate consumed the LOCAL linearized prediction, and the accepted per-pair gains
+(~1e-9…1e-8 each, +4.47e-7 total) sit far below the model's own measured forward-mismatch floor
+(9.36e-6 vs residual RMS 1.589e-3, ~1% trust). The gate was filtering noise: every acceptance was
+unfalsifiable by the instrument that proposed it. Attempt1's ungated +55.6% already showed int16
+quantization dominates the continuous step (quantum-floor law, third measurement); the gate cured
+the PREDICTED regression but could not create real signal below the model's error floor.
+**Law sharpened: a local-model acceptance gate is only valid for candidate steps whose predicted
+magnitude exceeds the model's measured forward-mismatch floor.** The v17 doctrine (realize one
+step → re-linearize) would have rejected this at step 1; the one-shot batch of 3,867 quantized
+coefficient changes was outside the validity radius.
+
+**Custody:** all Round-2b payloads retained on the Modal volume run-root
+(`ddm_po1_round2b_candidate_20260813`: raw, seg inputs, logits, pose vectors, batch receipts —
+shas in the receipt). Lane claim closed `failed_candidate_rejected_on_t4`. Poller pid 39514
+stopped (log preserved); the recover-idempotence defect (duplicate terminal ledger rows) is
+hv1's queued fix row.
+
+**Spend:** Round-2b ≈ $0.16; po1 arc total ≈ $2.2 of the #381 $20 envelope.
+
+**Routing:** the pose leg's iterative local-Jacobian family is CLOSED on this vehicle at this
+operating point. Next pose lead per the hv1 fresh-eyes review (memo sha `1e071f66…`, commit
+eb7771b1cd): **PZ4R** — the receiver-closed 183,137 B recode (−4,089 B measured, distortion
+unmeasured) — one retained full-n600 public-runtime evaluation decides it. hv1 also corrected
+js7's pose stack budget: the published 1.3e-7 is arithmetically wrong; the candidate-specific
+allowance is ~1.2–1.3e-6 (≈10× looser), which softens the seg-leg composition constraint.
