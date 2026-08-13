@@ -679,11 +679,26 @@ def solve(args: argparse.Namespace) -> int:
         codes[pair] = selected
         delta = selected.astype(np.float64) - current.astype(np.float64)
         predicted[pair] = first[pair] + jacobian @ delta
+        # Per-pair acceptance gate: keep the quantized step only where the
+        # linearized prediction strictly improves this pair's T4 pose error.
+        # Ungated, int16 quantization turned a ~0-gain continuous step into
+        # +55.6% predicted d_pose (250/600 pairs regressed, 10 pairs carried
+        # 91.4% of the damage) — the js5 quantum-floor law on the pose lattice.
+        quantized_gate_rejected = False
+        if skip_reason is None:
+            base_sq = float(np.mean(np.square(first[pair] - gt[pair])))
+            pred_sq = float(np.mean(np.square(predicted[pair] - gt[pair])))
+            if pred_sq >= base_sq:
+                quantized_gate_rejected = True
+                selected = current.copy()
+                codes[pair] = selected
+                predicted[pair] = first[pair]
         row = {
             "schema": "ddm_po1_pair_solve.v1",
             "pair": pair,
             "selector_choice": int(state.selector_choices[pair]),
             "skip_reason": skip_reason,
+            "quantized_gate_rejected": quantized_gate_rejected,
             "t4_error_rms": float(pair_error[pair]),
             "t4_repeat_noise_rms": float(pair_noise[pair]),
             "local_vs_t4_output_rms": float(np.sqrt(np.mean(np.square(local_output - first[pair])))),
