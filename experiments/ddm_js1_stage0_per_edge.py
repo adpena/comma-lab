@@ -879,35 +879,158 @@ def adjudicate_axis(base_flips: int, c1_flips: int) -> dict[str, Any]:
     }
 
 
+def require_downloaded_record(record: dict[str, Any], path: Path) -> None:
+    """Bind a downloaded Modal payload by content, independent of its remote path."""
+    require_file(path, size=int(record["bytes"]), digest=str(record["sha256"]))
+
+
+def load_cuda_argmax_bundle(root: Path) -> dict[str, Any]:
+    """Load one admitted JS1B T4 field bundle without running a local scorer."""
+    root = root.resolve()
+    receipt_candidates = [
+        path
+        for path in (root / "FINAL_RESULT.json", root / "JS1B_FINAL_RESULT.json")
+        if path.is_file()
+    ]
+    if len(receipt_candidates) != 1:
+        raise RuntimeError(
+            "--from-argmax-fields requires exactly one FINAL_RESULT.json or "
+            f"JS1B_FINAL_RESULT.json under {root}"
+        )
+    receipt_path = receipt_candidates[0]
+    receipt = json.loads(receipt_path.read_text())
+    if (
+        receipt.get("schema")
+        != "ddm_js1b_cuda_argmax_field_materializer_result.v1"
+        or receipt.get("execution_status") != "COMPLETE"
+        or receipt.get("axis")
+        != "[contest-CUDA T4 frozen-SegNet argmax fields, n600, batch=16] COMPONENT-ONLY"
+        or int(receipt.get("batch_size", -1)) != 16
+        or bool(receipt.get("score_claim"))
+        or bool(receipt.get("promotion_eligible"))
+    ):
+        raise RuntimeError(f"JS1B field receipt contract differs: {receipt_path}")
+    adjudication = receipt.get("axis_adjudication", {})
+    if (
+        receipt.get("status") != "ADMITTED"
+        or not adjudication.get("admitted_for_js1_stage0")
+        or int(adjudication.get("cp135_control", {}).get("observed_flips", -1))
+        != TERMINAL_BASE_FLIPS
+        or int(adjudication.get("c1_target_control", {}).get("observed_flips", -1))
+        != C1_BATCH16_REFERENCE_FLIPS
+    ):
+        raise RuntimeError(
+            "JS1B CUDA controls did not reproduce CP135=34964 and C1=17926; "
+            "stop and treat the discrepancy as a field/custody question"
+        )
+    field_paths = {
+        name: root / f"retained/fields/{name}_argmax_n600.npy"
+        for name in ("gt", "cp135_base", "t1r1_c1_composed", "c1_target")
+    }
+    fields = {}
+    for name, path in field_paths.items():
+        record = receipt.get("fields", {}).get(name)
+        if not isinstance(record, dict):
+            raise RuntimeError(f"JS1B receipt has no {name} field record")
+        require_downloaded_record(record, path)
+        value = np.load(path, mmap_mode="r", allow_pickle=False)
+        if value.shape != (N, SEG_H, SEG_W) or value.dtype != np.uint8:
+            raise RuntimeError(f"JS1B field shape/dtype differs: {path}")
+        fields[name] = value
+    actual_flips = {
+        name: int(np.count_nonzero(value != fields["gt"]))
+        for name, value in fields.items()
+        if name != "gt"
+    }
+    if (
+        actual_flips["cp135_base"] != TERMINAL_BASE_FLIPS
+        or actual_flips["c1_target"] != C1_BATCH16_REFERENCE_FLIPS
+    ):
+        raise RuntimeError(
+            "downloaded JS1B field bytes do not reproduce CP135=34964 and C1=17926; "
+            "stop and treat the discrepancy as a field/custody question"
+        )
+    receipt_flips = adjudication.get("flips_vs_gt")
+    if receipt_flips != actual_flips:
+        raise RuntimeError("downloaded JS1B field counts differ from the remote receipt")
+    return {
+        "root": root,
+        "receipt": receipt,
+        "receipt_path": receipt_path,
+        "field_paths": field_paths,
+        "fields": fields,
+        "flips_vs_gt": actual_flips,
+    }
+
+
 def summarize(args: argparse.Namespace) -> dict[str, Any]:
-    gt_path = args.output / "custody/gt_argmax_n600.npy"
-    c1_path = args.output / "custody/c1_target_argmax_n600.npy"
-    gt = np.load(gt_path, mmap_mode="r", allow_pickle=False)
-    c1 = np.load(c1_path, mmap_mode="r", allow_pickle=False)
-    fields = {"c1_target": c1}
+    cuda_bundle = None
     scorer_receipts: dict[str, dict[str, Any]] = {}
-    for name, candidate in CANDIDATES.items():
-        scorer_result = candidate_root(args.output, candidate) / "scorer/SCORER_RESULT.json"
-        if not scorer_result.is_file():
-            raise RuntimeError(f"incomplete scorer payload for {name}")
-        scorer_receipt = json.loads(scorer_result.read_text())
-        if not scorer_receipt["complete"]:
-            raise RuntimeError(f"incomplete scorer payload for {name}")
-        root = candidate_root(args.output, candidate)
-        require_receipt_binding(scorer_receipt["archive"], candidate.archive)
-        require_receipt_binding(scorer_receipt["raw"], root / "retained/0.raw")
-        require_receipt_binding(
-            scorer_receipt["argmax"], root / "scorer/argmax_n600.npy"
-        )
-        require_receipt_binding(
-            scorer_receipt["logits"], root / "scorer/logits_n600.float32.npy"
-        )
-        scorer_receipts[name] = scorer_receipt
-        fields[name] = np.load(
-            root / "scorer/argmax_n600.npy",
-            mmap_mode="r",
-            allow_pickle=False,
-        )
+    if args.from_argmax_fields is not None:
+        cuda_bundle = load_cuda_argmax_bundle(args.from_argmax_fields)
+        fields = dict(cuda_bundle["fields"])
+        gt = fields.pop("gt")
+        c1 = fields["c1_target"]
+        gt_path = cuda_bundle["field_paths"]["gt"]
+        c1_path = cuda_bundle["field_paths"]["c1_target"]
+        axis = str(cuda_bundle["receipt"]["axis"])
+        for name in CANDIDATES:
+            scorer_receipts[name] = cuda_bundle["receipt"]["scorers"][name]
+        object_receipts = {
+            name: {
+                "archive": cuda_bundle["receipt"]["receivers"][name]["archive"],
+                "raw": cuda_bundle["receipt"]["receivers"][name]["raw"],
+                "argmax": file_record(cuda_bundle["field_paths"][name]),
+                "scorer_receipt": scorer_receipts[name],
+                "retained_scorer_payloads": {
+                    "seg_inputs": True,
+                    "logits": True,
+                    "batch_receipts": scorer_receipts[name]["retained_batch_receipts"],
+                },
+            }
+            for name in CANDIDATES
+        }
+    else:
+        gt_path = args.output / "custody/gt_argmax_n600.npy"
+        c1_path = args.output / "custody/c1_target_argmax_n600.npy"
+        gt = np.load(gt_path, mmap_mode="r", allow_pickle=False)
+        c1 = np.load(c1_path, mmap_mode="r", allow_pickle=False)
+        fields = {"c1_target": c1}
+        axis = AXIS
+        for name, candidate in CANDIDATES.items():
+            scorer_result = candidate_root(args.output, candidate) / "scorer/SCORER_RESULT.json"
+            if not scorer_result.is_file():
+                raise RuntimeError(f"incomplete scorer payload for {name}")
+            scorer_receipt = json.loads(scorer_result.read_text())
+            if not scorer_receipt["complete"]:
+                raise RuntimeError(f"incomplete scorer payload for {name}")
+            root = candidate_root(args.output, candidate)
+            require_receipt_binding(scorer_receipt["archive"], candidate.archive)
+            require_receipt_binding(scorer_receipt["raw"], root / "retained/0.raw")
+            require_receipt_binding(
+                scorer_receipt["argmax"], root / "scorer/argmax_n600.npy"
+            )
+            require_receipt_binding(
+                scorer_receipt["logits"], root / "scorer/logits_n600.float32.npy"
+            )
+            scorer_receipts[name] = scorer_receipt
+            fields[name] = np.load(
+                root / "scorer/argmax_n600.npy",
+                mmap_mode="r",
+                allow_pickle=False,
+            )
+        object_receipts = {
+            name: {
+                "archive": scorer_receipts[name]["archive"],
+                "raw": scorer_receipts[name]["raw"],
+                "argmax": scorer_receipts[name]["argmax"],
+                "logits": scorer_receipts[name]["logits"],
+                "scorer_receipt": file_record(
+                    candidate_root(args.output, candidate) / "scorer/SCORER_RESULT.json"
+                ),
+            }
+            for name, candidate in CANDIDATES.items()
+        }
     decomp_root = args.output / "decomposition"
     summaries = {
         name: decomposition(field, gt, decomp_root / f"{name}_per_pair.jsonl")
@@ -956,9 +1079,13 @@ def summarize(args: argparse.Namespace) -> dict[str, Any]:
         key=lambda row: (-abs(row["base_to_composed_flip_gain"]), row["edge"])
     )
     result = {
-        "schema": "ddm_js1_stage0_per_edge_result.v1",
+        "schema": (
+            "ddm_js1_stage0_per_edge_result.v2"
+            if cuda_bundle is not None
+            else "ddm_js1_stage0_per_edge_result.v1"
+        ),
         "status": axis_adjudication["status"],
-        "axis": AXIS,
+        "axis": axis,
         "score_claim": False,
         "promotion_eligible": False,
         "pointer_moved": False,
@@ -977,33 +1104,36 @@ def summarize(args: argparse.Namespace) -> dict[str, Any]:
                 "directed cells and 10 undirected interfaces"
             ),
             "object_capacity_in_claim_units": (
-                "the complete local-CPU decoded argmax fields for the two exact bound archives"
+                "the complete downloaded contest-CUDA argmax fields for both exact bound archives"
+                if cuda_bundle is not None
+                else "the complete local-CPU decoded argmax fields for the two exact bound archives"
             ),
             "scope_limit": (
-                "matched macOS CPU diagnostic receiver/scorer only; no CUDA transfer, "
+                "contest-CUDA T4 SegNet component field only; no PoseNet, full score, "
+                "contest-CPU transfer, family kill, or pointer claim"
+                if cuda_bundle is not None
+                else "matched macOS CPU diagnostic receiver/scorer only; no CUDA transfer, "
                 "family kill, or contest score claim"
             ),
         },
-        "objects": {
-            name: {
-                "archive": scorer_receipts[name]["archive"],
-                "raw": scorer_receipts[name]["raw"],
-                "argmax": scorer_receipts[name]["argmax"],
-                "logits": scorer_receipts[name]["logits"],
-                "scorer_receipt": file_record(
-                    candidate_root(args.output, candidate) / "scorer/SCORER_RESULT.json"
-                ),
-            }
-            for name, candidate in CANDIDATES.items()
-        },
+        "objects": object_receipts,
         "gt_argmax": file_record(gt_path),
         "c1_target_argmax": file_record(c1_path),
+        "argmax_field_source": (
+            file_record(cuda_bundle["receipt_path"])
+            if cuda_bundle is not None
+            else None
+        ),
         "decompositions": summaries,
         "axis_adjudication": axis_adjudication,
         "comparison": {
             "base_to_composed_flip_gain": base["total_flips"] - composed["total_flips"],
             "base_to_composed_d_seg_gain": base["d_seg"] - composed["d_seg"],
-            "diagnostic_rho_not_admitted": diagnostic_rho,
+            "diagnostic_rho_not_admitted": (
+                diagnostic_rho
+                if not axis_adjudication["admitted_for_stage0_rho"]
+                else None
+            ),
             "rho_measured": admitted_rho,
             "rho_required_for_sub015_reseal": RHO_REQUIRED,
             "rho_gate_passed": admitted_rho is not None and admitted_rho >= RHO_REQUIRED,
@@ -1011,15 +1141,23 @@ def summarize(args: argparse.Namespace) -> dict[str, Any]:
         },
         "boundaries": {
             "measured": (
-                "receiver-closed local CPU raw, frozen-SegNet logits/argmax, full-n600 "
-                "per-pair directed and undirected edge counts"
+                "downloaded receiver-closed contest-CUDA T4 frozen-SegNet argmax fields "
+                "and full-n600 per-pair directed and undirected edge counts"
+                if cuda_bundle is not None
+                else "receiver-closed local CPU raw, frozen-SegNet logits/argmax, "
+                "full-n600 per-pair directed and undirected edge counts"
             ),
             "not_measured": (
-                "PoseNet, complete score, contest CUDA/CPU runtime, public evaluator, "
+                "PoseNet, complete score, contest-CPU, public evaluator, V1-V5 causal "
+                "ladder, any trained or optimized realization arm"
+                if cuda_bundle is not None
+                else "PoseNet, complete score, contest CUDA/CPU runtime, public evaluator, "
                 "V1-V5 causal ladder, any trained or optimized realization arm"
             ),
             "blocking_reason": (
-                "the local CPU renderer does not reproduce the CUDA-locked terminal "
+                None
+                if cuda_bundle is not None
+                else "the local CPU renderer does not reproduce the CUDA-locked terminal "
                 "CP135 Seg row, and the local GT plane differs by one pixel from the "
                 "retained C1 batch-16 reference; promoted CUDA argmax custody is required"
             ),
@@ -1047,6 +1185,11 @@ def parser() -> argparse.ArgumentParser:
     value.add_argument("--candidate", choices=tuple(CANDIDATES))
     value.add_argument("--chunk", type=int, default=120)
     value.add_argument("--batch", type=int, default=1)
+    value.add_argument(
+        "--from-argmax-fields",
+        type=Path,
+        help="downloaded admitted JS1B CUDA field root; summarize only, no local forward",
+    )
     return value
 
 
@@ -1054,6 +1197,8 @@ def main() -> None:
     args = parser().parse_args()
     if args.stage in {"inflate", "score"} and args.candidate is None:
         raise SystemExit(f"{args.stage} requires --candidate")
+    if args.from_argmax_fields is not None and args.stage != "summarize":
+        raise SystemExit("--from-argmax-fields is valid only with summarize")
     if args.batch <= 0 or args.batch > args.chunk:
         raise SystemExit("--batch must be positive and no larger than --chunk")
     actions = {
