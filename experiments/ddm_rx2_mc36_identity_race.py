@@ -204,6 +204,12 @@ def preflight(args: argparse.Namespace) -> dict[str, Any]:
         "score_claim": SCORE_CLAIM,
         "checkpoint": file_record(args.checkpoint),
         "checkpoint_causal_state_sha256": checkpoint["causal_state_sha256"],
+        "runner": file_record(Path(__file__)),
+        "software": {
+            "python": sys.version,
+            "numpy": np.__version__,
+            "torch": torch.__version__,
+        },
         "base_archive": file_record(BASE_ARCHIVE),
         "expected_spatial": file_record(EXPECTED_SPATIAL),
         "source_manifest": file_record(SOURCE_MANIFEST),
@@ -514,6 +520,7 @@ def export_base(args: argparse.Namespace) -> dict[str, Any]:
         "frames": frames,
         "stats": stats_record,
         "wall_s": time.time() - started,
+        "torch_threads": args.torch_threads,
         "all_probability_payloads_retained": True,
     }
     atomic_json(root / "EXPORT_RESULT.json", identity)
