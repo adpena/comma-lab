@@ -49,7 +49,7 @@ ordering, dual-ledger false matching, git handoff, stale headlines, then already
 sampling. That ordering uses observed commands, seconds, retries, and arm cycles; it does not invent a
 dollar conversion between them.
 
-The charter also forbids duplicate cures. Removing `ddm_ac1`'s active endpoint ownership, task
+The charter also forbids duplicate cures. Removing AC1's owned-and-landed endpoint apparatus, task
 #1001's payload migration, and the already-strict prefix selector leaves this implementation order:
 
 | eligible rank | recurrence x cost / cure size rationale | built result |
@@ -113,9 +113,9 @@ extraction, exact membership comparison, or guarded legacy fallback.
 | **FIRED** | Worker closure, target-venv seal, and strict gate | DT1 landing | EC2 sealed request, `WORKER_DEPENDENCY_CLOSURE.json`, full preflight | Every EC2 `prepare` before dispatch |
 | **FIRED** | Guard-before-write with agent-precise self-claim | DT1 landing | `tac.deploy.modal.auth_eval` claim helper | Every common Modal claim transition |
 | **FIRED** | Call-ID-first terminal matcher and strict gate | DT1 landing | modal call ledger terminal update and claims ledger | Every terminal call-ledger write |
-| **FIRED** | Generic automatic endpoint close, payload harvest, memo handoff, and both-ledger closure | `ddm_ac1`, commit `4f4537d835` | `tools/modal_endpoint_close.py`, endpoint receipts, Modal ledgers | Landed with 131 focused tests and retained dry-run receipt |
+| **FIRED** | Generic automatic endpoint close, payload harvest, memo handoff, and both-ledger closure | `ddm_ac1`, commits `4f4537d835` through `f204c8fcb6` | `tools/modal_endpoint_close.py`, endpoint receipts, Modal ledgers | Landed with 131 focused tests and retained dry-run receipt |
 | **QUEUED-WITH-A-FIRE-ORDER** | Exercise the landed closer on one live endpoint | next data-bearing Modal dispatcher owner | EC2 closure manifest, named SSD `endpoint_closure/`, and retained payload store | Next data-bearing Modal spawn after the global single-flight guard is clear |
-| **QUEUED-WITH-A-FIRE-ORDER** | Teach the keeper to serializer-commit a declared path/SHA when Git custody is available | keeper maintainer after AC1 manifest schema lands | `tools/codex_arm_queue.py`, arm-final-message index, Git history | Next non-Modal final message declaring a Git-blocked memo path and SHA |
+| **QUEUED-WITH-A-FIRE-ORDER** | Teach the keeper to serializer-commit a declared path/SHA when Git custody is available | keeper maintainer | `tools/codex_arm_queue.py`, arm-final-message index, Git history | Next non-Modal final message declaring a Git-blocked memo path and SHA |
 | **FOLDED** | Canonical representative subset selection and positive-control gate | subset-selector maintainer | commit hook and `src/tac/subset_selection_gate.py` | Reopen only on a mutation-test or positive-control failure |
 | **QUEUED-WITH-A-FIRE-ORDER** | Adjudicate and retain the remaining measure-and-discard candidates; move gate into normal hook before strict flip | task #1001 successor | `.omx/state/operator_p0_ledger.jsonl` | Current source owners land, then work the executable-value order already recorded by PR1 |
 | **QUEUED-WITH-A-FIRE-ORDER** | Require body adjudication before an AU1 headline candidate becomes a task/status fact | `ddm_nb1_r2` | AU1 candidate JSONL and canonical task-status body | Next AU1 candidate promotion into a canonical status row |
@@ -195,7 +195,7 @@ existing strict gate covered any of the three implemented semantics.
 ## NEXT_IF_RESUMED
 
 - **QUEUED-WITH-A-FIRE-ORDER** — owner: next data-bearing Modal dispatcher owner; consumer store: EC2 closure manifest, named SSD `endpoint_closure/`, retained payload store, and both Modal ledgers; fire trigger: the next data-bearing Modal spawn after the global single-flight guard is clear.
-- **QUEUED-WITH-A-FIRE-ORDER** — owner: keeper maintainer; consumer store: `tools/codex_arm_queue.py`, arm-final-message index, and Git history; fire trigger: AC1's manifest schema lands or the next non-Modal arm declares a Git-blocked memo path and SHA.
+- **QUEUED-WITH-A-FIRE-ORDER** — owner: keeper maintainer; consumer store: `tools/codex_arm_queue.py`, arm-final-message index, and Git history; fire trigger: the next non-Modal arm declares a Git-blocked memo path and SHA.
 - **QUEUED-WITH-A-FIRE-ORDER** — owner: task #1001 successor; consumer store: `.omx/state/operator_p0_ledger.jsonl`; fire trigger: current source owners land, then continue PR1's executable-value-ordered payload-retention migration and earn normal-hook coverage before a strict flip.
 - **QUEUED-WITH-A-FIRE-ORDER** — owner: `ddm_nb1_r2`; consumer store: AU1 candidate JSONL and canonical task-status bodies; fire trigger: the next headline candidate is proposed for canonical promotion, requiring its body/correction receipt first.
 - **QUEUED-WITH-A-FIRE-ORDER** — owner: costate apparatus maintainer; consumer store: canonical task-status/costate duty queue; fire trigger: two deduplicated incident receipts share a genus with neither a strict cure nor an active owner.
