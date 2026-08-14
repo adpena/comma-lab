@@ -149,6 +149,8 @@ def _batch_census(root: Path) -> dict[str, Any]:
 def verify_download(output: Path) -> dict[str, Any]:
     final_path = QS1_FIELDS / "FINAL_RESULT.json"
     final = json.loads(final_path.read_text())
+    done_text = QS1_DONE.read_text().strip() if QS1_DONE.is_file() else None
+    done_valid = bool(done_text and done_text.split()[0] == "rc=0")
     batch_roots = {
         "seg_candidate": QS1_FIELDS / "retained/scorer/candidate/batches",
         "pose_candidate_first": QS1_FIELDS / "retained/pose/candidate_first/batches",
@@ -196,11 +198,11 @@ def verify_download(output: Path) -> dict[str, Any]:
         and all(row["exact_n600_partition"] for row in censuses.values())
     )
     trusted_for_postmortem = (
-        QS1_DONE.is_file() and download_set_complete and all(pins.values())
+        done_valid and download_set_complete and all(pins.values())
     )
     blockers = []
-    if not QS1_DONE.is_file():
-        blockers.append("the required .done receipt is absent")
+    if not done_valid:
+        blockers.append("the required .done receipt is absent or does not report rc=0")
     if not pins["gt_matches"]:
         blockers.append("the exact matched T4 GT argmax field is absent")
     if not download_set_complete:
@@ -212,6 +214,9 @@ def verify_download(output: Path) -> dict[str, Any]:
         "done_receipt": {
             "path": str(QS1_DONE.resolve()),
             "present": QS1_DONE.is_file(),
+            "valid_rc0": done_valid,
+            "content": done_text,
+            "file": file_record(QS1_DONE) if QS1_DONE.is_file() else None,
         },
         "json_documents_checked": len(json_paths),
         "referenced_in_run_files": len(in_run_records),
