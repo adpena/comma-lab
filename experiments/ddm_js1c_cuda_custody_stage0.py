@@ -17,20 +17,25 @@ import re
 import shlex
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 from typing import Any, Final
 
 import modal
 import numpy as np
 
-try:
-    from experiments import ddm_js1_stage0_per_edge as stage0
-    from experiments import ddm_js1b_modal_cuda_argmax_field_materializer as js1b
-    from experiments import ddm_re1t_modal_t4_sign_gate as re1t
-except (ImportError, ModuleNotFoundError):
-    import ddm_js1_stage0_per_edge as stage0  # type: ignore[no-redef]
-    import ddm_js1b_modal_cuda_argmax_field_materializer as js1b  # type: ignore[no-redef]
-    import ddm_re1t_modal_t4_sign_gate as re1t  # type: ignore[no-redef]
+# BARE-FIRST imports: this dispatcher reuses re1t.run_gate, a remote function
+# whose image ships these modules as BARE local python sources. Importing re1t
+# under the package-qualified name binds run_gate to a module identity the
+# container cannot resolve (fc-01M001GR1F died on
+# ModuleNotFoundError: experiments.ddm_re1t_modal_t4_sign_gate). The local
+# module identity MUST match the shipped bare name.
+_EXPERIMENTS_DIR = str(Path(__file__).resolve().parent)
+if _EXPERIMENTS_DIR not in sys.path:
+    sys.path.insert(0, _EXPERIMENTS_DIR)
+import ddm_js1_stage0_per_edge as stage0
+import ddm_js1b_modal_cuda_argmax_field_materializer as js1b
+import ddm_re1t_modal_t4_sign_gate as re1t
 
 from tac.deploy.modal.auth_eval import (
     ClaimSpec,
