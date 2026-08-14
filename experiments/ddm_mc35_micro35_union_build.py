@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
-"""Build and locally gate the RFO1 MICRO35 union as one retained archive.
+"""Build and locally gate the RFO1 MICRO35 union and its retained successors.
 
 This is a macOS-CPU advisory builder.  It composes the six exact QS2 token
 objects with RE1's admitted pair-96 singleton and the sign-verified pair-7
 singleton, solves Schur compensation against the final token frames, closes
 HP3/RC64 once, applies the receiver-identical HP4 order-0 repack, and recounts
-the eight changed pairs through the frozen CPU scorers.  It never dispatches a
-remote job and never promotes the local results.
+the changed pairs through the frozen CPU scorers.  The successor mode builds
+the pose-constrained pair-105 and drop-532 variants, conditionally composes
+them, and seals at most one fire order.  It never dispatches a remote job and
+never promotes the local results.
 """
 
 from __future__ import annotations
@@ -22,6 +24,7 @@ import shutil
 import struct
 import sys
 import zipfile
+from collections.abc import Sequence
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Final
@@ -41,6 +44,17 @@ from experiments import ddm_qs3_saturation_compose as qs3
 from experiments import ddm_qs5_resolve_compensation as qs5
 
 OUTPUT: Final = Path("/Volumes/VertigoDataTier/pact/ddm_mc35_20260814")
+MC36_OUTPUT: Final = Path("/Volumes/VertigoDataTier/pact/ddm_mc36_20260814")
+PAIR105_OUTPUT: Final = Path(
+    "/Volumes/VertigoDataTier/pact/ddm_mc35_successor_pair105"
+)
+DROP532_OUTPUT: Final = Path(
+    "/Volumes/VertigoDataTier/pact/ddm_mc35_successor_drop532"
+)
+COMPOSED_OUTPUT: Final = Path(
+    "/Volumes/VertigoDataTier/pact/ddm_mc35_successor_drop532_pair105"
+)
+MC36_BULK: Final = Path("/Volumes/APDataStore/pact/ddm_mc36_20260814")
 AXIS: Final = "[macOS-CPU advisory frozen CPU-torch SegNet/PoseNet; eight changed pairs over n600] NON-PROMOTABLE"
 CP135_BYTES: Final = 186_252
 CP135_FLIPS: Final = 34_970
@@ -84,6 +98,8 @@ QS2_IDS: Final = (
 QS2_PAIRS: Final = (105, 176, 178, 517, 523, 532)
 RE1_IDS: Final = ("ec1_0164_3a4e239de5b9", "ec1_0004_3bc2b69c706c")
 RE1_PAIRS: Final = (96, 7)
+PAIR105: Final = 105
+DROP_PAIR: Final = 532
 
 HP4_HEADER: Final = struct.Struct("<4sBBBBHHHHH")
 HP4_MAGIC: Final = b"HP4M"
@@ -120,6 +136,165 @@ def checkpoint(output: Path, stage: str, payload: dict[str, Any]) -> dict[str, A
     value = {"schema": "ddm_mc35_checkpoint.v1", "stage": stage, **payload}
     qs1.retain_json(output / "checkpoints" / f"{stage}.json", value)
     return value
+
+
+def route_variant_bulk(
+    *, output: Path, bulk_root: Path, variant: str, expected_bulk_bytes: int
+) -> dict[str, Any]:
+    """Route large retained stages to APDataStore with an explicit receipt."""
+    output.mkdir(parents=True, exist_ok=True)
+    bulk_root.mkdir(parents=True, exist_ok=True)
+    receipt_path = output / "STORAGE_ROUTING.json"
+    if receipt_path.is_file():
+        prior = json.loads(receipt_path.read_text())
+        if (
+            prior.get("schema") != "ddm_mc36_storage_routing.v1"
+            or prior.get("variant") != variant
+            or prior.get("physical_bulk_store") != str(bulk_root.resolve())
+            or int(prior.get("expected_new_bulk_bytes", -1)) != expected_bulk_bytes
+            or prior.get("passed") is not True
+        ):
+            raise MC35Error(f"resumed storage route differs: {receipt_path}")
+        retained_link = output / "retained"
+        retained_target = (bulk_root / "retained").resolve()
+        if (
+            not retained_link.is_symlink()
+            or retained_link.resolve() != retained_target
+        ):
+            raise MC35Error(f"resumed storage link differs: {retained_link}")
+        addendum_path = output / "STORAGE_ROUTING_ADDENDUM.json"
+        if addendum_path.is_file():
+            addendum = json.loads(addendum_path.read_text())
+            workspace = output / "compile_workspace"
+            attempt = output / "compile_workspace_cross_device_attempt"
+            expected_attempt = (bulk_root / "compile_workspace").resolve()
+            if (
+                addendum.get("schema")
+                != "ddm_mc36_compile_workspace_same_device_route.v1"
+                or addendum.get("variant") != variant
+                or workspace.is_symlink()
+                or not workspace.is_dir()
+                or not attempt.is_symlink()
+                or attempt.resolve() != expected_attempt
+            ):
+                raise MC35Error(f"resumed compile-workspace addendum differs: {output}")
+        else:
+            workspace_link = output / "compile_workspace"
+            workspace_target = (bulk_root / "compile_workspace").resolve()
+            if (
+                not workspace_link.is_symlink()
+                or workspace_link.resolve() != workspace_target
+            ):
+                raise MC35Error(f"resumed storage link differs: {workspace_link}")
+        return prior
+    reserve = 8 * 1024**3
+    free = shutil.disk_usage(bulk_root).free
+    required = expected_bulk_bytes + reserve
+    if free < required:
+        raise MC35Error(
+            f"storage preflight failed for {variant}: {free} < {required} bytes"
+        )
+    links = {}
+    for name in ("retained", "compile_workspace"):
+        target = (bulk_root / name).resolve()
+        target.mkdir(parents=True, exist_ok=True)
+        link = output / name
+        if link.is_symlink():
+            if link.resolve() != target:
+                raise MC35Error(f"{variant} bulk route differs: {link} -> {link.resolve()}")
+        elif link.exists():
+            raise MC35Error(f"{variant} bulk route is a non-symlink path: {link}")
+        else:
+            link.symlink_to(target, target_is_directory=True)
+        links[name] = {
+            "logical_path": str(link.absolute()),
+            "physical_path": str(target),
+            "kind": "directory_symlink",
+        }
+    receipt = {
+        "schema": "ddm_mc36_storage_routing.v1",
+        "variant": variant,
+        "logical_store": str(output.resolve()),
+        "physical_bulk_store": str(bulk_root.resolve()),
+        "links": links,
+        "free_bytes_before": free,
+        "expected_new_bulk_bytes": expected_bulk_bytes,
+        "reserve_bytes": reserve,
+        "required_free_bytes": required,
+        "passed": True,
+        "reason": (
+            "Vertigo had insufficient headroom for both fully retained variants; "
+            "APDataStore is the governed second SSD tier"
+        ),
+        "cleanup_policy": "certify-or-block; no payload is deleted or moved",
+    }
+    qs1.retain_json(receipt_path, receipt)
+    return receipt
+
+
+def migrate_compile_workspace_to_hardlink_device(
+    *, output: Path, variant: str, source_payload: Path
+) -> dict[str, Any]:
+    """Keep JO1's hardlink workspace on the source payload's filesystem."""
+    addendum_path = output / "STORAGE_ROUTING_ADDENDUM.json"
+    if addendum_path.is_file():
+        prior = json.loads(addendum_path.read_text())
+        if prior.get("variant") != variant:
+            raise MC35Error("compile-workspace route variant differs on resume")
+        return prior
+    workspace = output / "compile_workspace"
+    if not workspace.is_symlink():
+        if not workspace.is_dir():
+            raise MC35Error(f"compile workspace is absent: {workspace}")
+        if workspace.stat().st_dev != source_payload.stat().st_dev:
+            raise MC35Error("compile workspace cannot hard-link the JO1 source payload")
+        return {
+            "schema": "ddm_mc36_compile_workspace_same_device_route.v1",
+            "variant": variant,
+            "migration_required": False,
+            "workspace": str(workspace.resolve()),
+            "source_payload": qs1.file_record(source_payload),
+        }
+    physical_attempt = workspace.resolve()
+    if physical_attempt.stat().st_dev == source_payload.stat().st_dev:
+        return {
+            "schema": "ddm_mc36_compile_workspace_same_device_route.v1",
+            "variant": variant,
+            "migration_required": False,
+            "workspace": str(physical_attempt),
+            "source_payload": qs1.file_record(source_payload),
+        }
+    free = shutil.disk_usage(output).free
+    required = 4 * 1024**3 + 8 * 1024**3
+    if free < required:
+        raise MC35Error(
+            f"same-device compile workspace lacks reserve: {free} < {required}"
+        )
+    attempt_link = output / "compile_workspace_cross_device_attempt"
+    if attempt_link.exists() or attempt_link.is_symlink():
+        raise MC35Error(f"cross-device attempt custody path already exists: {attempt_link}")
+    os.replace(workspace, attempt_link)
+    workspace.mkdir()
+    if workspace.stat().st_dev != source_payload.stat().st_dev:
+        raise MC35Error("migrated compile workspace is still cross-device")
+    addendum = {
+        "schema": "ddm_mc36_compile_workspace_same_device_route.v1",
+        "variant": variant,
+        "migration_required": True,
+        "source_payload": qs1.file_record(source_payload),
+        "source_device": source_payload.stat().st_dev,
+        "failed_attempt_physical_store": str(physical_attempt),
+        "failed_attempt_logical_link": str(attempt_link.absolute()),
+        "replacement_workspace": str(workspace.resolve()),
+        "replacement_device": workspace.stat().st_dev,
+        "free_bytes_before": free,
+        "required_free_bytes": required,
+        "failed_attempt_payload_preserved": True,
+        "payload_deleted_or_moved": False,
+        "reason": "JO1 unchanged probabilities require same-filesystem hard links",
+    }
+    qs1.retain_json(addendum_path, addendum)
+    return addendum
 
 
 def preflight(output: Path) -> dict[str, Any]:
@@ -279,6 +454,53 @@ def build_supports(output: Path) -> dict[str, Any]:
     return result
 
 
+def build_variant_supports(
+    *, output: Path, variant: str, drop_pair: int | None
+) -> dict[str, Any]:
+    """Bind a successor to mc35's retained exact token objects."""
+    result_path = output / "OBJECT_SUPPORTS.json"
+    if result_path.is_file():
+        prior = json.loads(result_path.read_text())
+        if prior.get("variant") != variant:
+            raise MC35Error(f"resumed support variant differs: {variant}")
+        for row in prior["rows"]:
+            require_record(row["candidate_tokens"])
+        return prior
+    source_path = OUTPUT / "OBJECT_SUPPORTS.json"
+    source = json.loads(source_path.read_text())
+    if source.get("schema") != "ddm_mc35_object_supports.v1":
+        raise MC35Error("mc35 support source schema differs")
+    rows = [
+        dict(row)
+        for row in source["rows"]
+        if drop_pair is None or int(row["pair"]) != drop_pair
+    ]
+    for row in rows:
+        require_record(row["candidate_tokens"])
+    expected = 8 if drop_pair is None else 7
+    if len(rows) != expected or len({int(row["pair"]) for row in rows}) != expected:
+        raise MC35Error(f"{variant} retained support census differs")
+    result = {
+        "schema": "ddm_mc36_variant_object_supports.v1",
+        "variant": variant,
+        "selection_mode": (
+            "all eight exact mc35 token objects"
+            if drop_pair is None
+            else f"seven exact mc35 token objects with pair {drop_pair} removed"
+        ),
+        "rows": rows,
+        "pairs": [int(row["pair"]) for row in rows],
+        "dropped_pair": drop_pair,
+        "source_mc35_supports": qs1.file_record(source_path),
+        "pair_overlap_count": 0,
+        "token_site_overlap_count": 0,
+        "all_payloads_retained": True,
+    }
+    qs1.retain_json(result_path, result)
+    checkpoint(output, "stage_10_supports", {"supports": qs1.file_record(result_path)})
+    return result
+
+
 def materialize_union(output: Path, supports: dict[str, Any]) -> dict[str, Any]:
     result_path = output / "MATERIALIZED_UNION.json"
     if result_path.is_file():
@@ -382,6 +604,319 @@ def render_and_solve(
         {"result": qs1.file_record(output / "FRESH_COMPENSATION.json")},
     )
     return rendered, solved
+
+
+def load_mc35_solved_rows() -> list[dict[str, Any]]:
+    """Load and revalidate mc35's exact-object compensation rows."""
+    source = OUTPUT / "FRESH_COMPENSATION.json"
+    value = json.loads(source.read_text())
+    if value.get("schema") != "ddm_mc35_fresh_compensation.v1":
+        raise MC35Error("mc35 compensation source schema differs")
+    rows = []
+    for source_row in value["rows"]:
+        row = dict(source_row)
+        assert_union_compensation(row)
+        pose_path = (
+            OUTPUT
+            / "retained/compensation"
+            / str(row["proposal_id"])
+            / "FINAL_POSE_VECTOR.float32.npy"
+        )
+        row["variant_final_pose_vector"] = qs1.file_record(pose_path)
+        rows.append(row)
+    rows.sort(key=lambda row: int(row["pair"]))
+    if [int(row["pair"]) for row in rows] != [7, 96, 105, 176, 178, 517, 523, 532]:
+        raise MC35Error("mc35 compensation pair census differs")
+    return rows
+
+
+def verify_reused_exact_object(
+    *, support: dict[str, Any], rendered: dict[str, Any], solved: dict[str, Any]
+) -> dict[str, Any]:
+    """Prove a retained solve is for the byte-identical final per-pair object."""
+    binding = solved["compensation_object"]
+    token = qs1.file_record(Path(support["candidate_tokens"]["path"]))
+    master = qs1.file_record(Path(rendered["master_camera"]["path"]))
+    expected = qs1.compensation_object_fingerprint(
+        pair=int(support["pair"]), semantic_tokens=token, master_camera=master
+    )
+    if (
+        int(solved["pair"]) != int(support["pair"])
+        or binding["fingerprint_sha256"] != expected
+        or solved["solve"]["compensation_object_fingerprint_sha256"] != expected
+    ):
+        raise MC35Error(f"reused exact object differs: {support['proposal_id']}")
+    return {
+        "proposal_id": str(support["proposal_id"]),
+        "pair": int(support["pair"]),
+        "fingerprint_sha256": expected,
+        "semantic_tokens": token,
+        "rendered_master": master,
+        "source_binding": binding,
+        "passed": True,
+    }
+
+
+def _signed_int12_neighbours(codes: np.ndarray) -> tuple[np.ndarray, ...]:
+    values = np.asarray(codes, dtype=np.int32)
+    candidates = [values.copy()]
+    for dimension in range(qs1.DIMENSIONS):
+        for delta in (-1, 1):
+            candidate = values.copy()
+            candidate[dimension] += delta
+            if -2048 <= candidate[dimension] <= 2047:
+                candidates.append(candidate)
+    return tuple(candidates)
+
+
+def _pose_delta_dpose(
+    vector: np.ndarray, baseline: np.ndarray, gt: np.ndarray
+) -> float:
+    return (
+        float(
+            np.sum(
+                np.square(vector.astype(np.float64) - gt.astype(np.float64))
+            )
+        )
+        - float(
+            np.sum(
+                np.square(baseline.astype(np.float64) - gt.astype(np.float64))
+            )
+        )
+    ) / (600 * qs1.POSE_DIMENSIONS)
+
+
+def _best_pose_feasible_index(
+    objectives: np.ndarray, composed_deltas: np.ndarray, cap: float
+) -> int | None:
+    values = np.asarray(objectives, dtype=np.float64)
+    deltas = np.asarray(composed_deltas, dtype=np.float64)
+    if values.ndim != 1 or deltas.shape != values.shape:
+        raise MC35Error("pose-constrained candidate metrics have different geometry")
+    if not np.all(np.isfinite(values)) or not np.all(np.isfinite(deltas)):
+        raise MC35Error("pose-constrained candidate metrics are non-finite")
+    feasible = np.flatnonzero(deltas <= cap + 1e-18).tolist()
+    if not feasible:
+        return None
+    return min(
+        feasible,
+        key=lambda index: (float(values[index]), float(deltas[index]), index),
+    )
+
+
+def _complementary_gate_coverage(
+    left: dict[str, bool], right: dict[str, bool]
+) -> tuple[set[str], set[str]]:
+    if set(left) != set(right):
+        raise MC35Error("variant gate names differ")
+    left_only = {name for name in left if left[name] and not right[name]}
+    right_only = {name for name in left if right[name] and not left[name]}
+    return left_only, right_only
+
+
+def _composition_evidence(
+    *,
+    pair_result: dict[str, Any],
+    drop_result: dict[str, Any],
+    pair_recount: dict[str, Any],
+    drop_recount: dict[str, Any],
+) -> dict[str, Any]:
+    """Admit C only when both partial rows expose measured complementary value."""
+    pair_gates = pair_result["gates"]
+    drop_gates = drop_result["gates"]
+    pair_partial = any(pair_gates.values()) and not all(pair_gates.values())
+    drop_partial = any(drop_gates.values()) and not all(drop_gates.values())
+    evidence = {
+        "pair105_supplies_pose_pass": bool(
+            pair_gates["delta_dpose_lte_cap"]
+            and not drop_gates["delta_dpose_lte_cap"]
+        ),
+        "drop532_supplies_more_seg_flips": int(
+            drop_recount["seg"]["net_flip_gain"]
+        )
+        > int(pair_recount["seg"]["net_flip_gain"]),
+        "drop532_supplies_rate_relief_vs_pair105": int(
+            drop_recount["rate"]["candidate_archive_bytes"]
+        )
+        < int(pair_recount["rate"]["candidate_archive_bytes"]),
+    }
+    return {
+        "pair105_is_partial": pair_partial,
+        "drop532_is_partial": drop_partial,
+        "measured_complementarity": evidence,
+        "justified": pair_partial and drop_partial and all(evidence.values()),
+    }
+
+
+def select_pose_constrained_pair105(
+    *,
+    output: Path,
+    support: dict[str, Any],
+    rendered: dict[str, Any],
+    fixed_rows: Sequence[dict[str, Any]],
+) -> dict[str, Any]:
+    """Extend the exact-object Schur solve with a GT-relative pose constraint.
+
+    QS5 supplies the real DLS/integer-cube solve.  This extension evaluates the
+    signed-int12 neighbors of its final point on the same exact rendered object,
+    admits only candidates whose composed n600 delta-d_pose meets the unchanged
+    MICRO35 cap, and descends the baseline-return objective inside that feasible
+    set.  It is a bounded local constrained solve, not a global optimum claim.
+    """
+    if int(support["pair"]) != PAIR105:
+        raise MC35Error("pose-constrained successor is defined only for pair 105")
+    result_root = output / "retained/constrained_compensation" / str(
+        support["proposal_id"]
+    )
+    result_path = result_root / "RESULT.json"
+    if result_path.is_file():
+        prior = json.loads(result_path.read_text())
+        assert_union_compensation(prior)
+        require_record(prior["variant_final_pose_vector"])
+        return prior
+    surface, _carrier = qs1.CP135Surface.load()
+    posenet = qs1.load_posenet()
+    solver = qs1._load_module("ddm_mc36_joint_pose_solve", qs1.JOINT_SOLVER_SOURCE)
+    raw = np.memmap(
+        qs1.CP135_RAW,
+        mode="r",
+        dtype=np.uint8,
+        shape=(1_200, qs1.CAMERA_H, qs1.CAMERA_W, 3),
+    )
+    base_pose_all = np.load(qs1.CP135_BASE_POSE, allow_pickle=False)
+    gt_pose_all = np.load(qs1.GT_POSE, allow_pickle=False)
+    initial = qs5.solve_exact_object(
+        output=output,
+        support=support,
+        rendered=rendered,
+        surface=surface,
+        posenet=posenet,
+        raw=raw,
+        base_pose_all=base_pose_all,
+        gt_pose_all=gt_pose_all,
+        solver=solver,
+    )
+    pair = PAIR105
+    baseline = np.load(
+        output
+        / "retained/compensation"
+        / str(support["proposal_id"])
+        / "stage_10_baseline/ALL_POSE_VECTORS.float32.npy",
+        allow_pickle=False,
+    )[0]
+    gt = gt_pose_all[pair]
+    exact_master = np.load(rendered["master_camera"]["path"], allow_pickle=False)
+    fixed_delta = sum(
+        float(row["pose"]["exact_local_delta_dpose_one_pair_over_n600"])
+        for row in fixed_rows
+    )
+    pair_cap = POSE_GATE - fixed_delta
+    current_codes = np.asarray(initial["solve"]["final_codes"], dtype=np.int32)
+    current_objective = math.inf
+    current_vector = np.full(qs1.POSE_DIMENSIONS, np.nan, dtype=np.float32)
+    passes = 0
+    entry_from_infeasible_initial = False
+    while True:
+        candidates = _signed_int12_neighbours(current_codes)
+        stage = result_root / f"stage_60_constraint_descent/pass_{passes:04d}"
+        vectors = qs1.evaluate_codes(
+            surface=surface,
+            posenet=posenet,
+            codes=candidates,
+            master=exact_master,
+            pair=pair,
+            stage_root=stage,
+        )
+        objectives = np.mean(
+            np.square(vectors.astype(np.float64) - baseline[None].astype(np.float64)),
+            axis=1,
+        )
+        pair_deltas = np.asarray(
+            [_pose_delta_dpose(vector, baseline, gt) for vector in vectors],
+            dtype=np.float64,
+        )
+        composed_deltas = pair_deltas + fixed_delta
+        feasible = composed_deltas <= POSE_GATE + 1e-18
+        qs1.retain_npy(stage / "OBJECTIVES.float64.npy", objectives)
+        qs1.retain_npy(stage / "PAIR_DELTA_DPOSE.float64.npy", pair_deltas)
+        qs1.retain_npy(stage / "COMPOSED_DELTA_DPOSE.float64.npy", composed_deltas)
+        qs1.retain_npy(stage / "FEASIBLE.uint8.npy", feasible.astype(np.uint8))
+        best_index = _best_pose_feasible_index(
+            objectives, composed_deltas, POSE_GATE
+        )
+        if best_index is None:
+            raise MC35Error("pair-105 exact neighbor set has no pose-feasible candidate")
+        best_objective = float(objectives[best_index])
+        if math.isinf(current_objective):
+            entry_from_infeasible_initial = not bool(feasible[0])
+        elif not best_objective < current_objective:
+            break
+        current_codes = np.asarray(candidates[best_index], dtype=np.int32)
+        current_vector = np.asarray(vectors[best_index], dtype=np.float32)
+        current_objective = best_objective
+        passes += 1
+        if passes > 64:
+            raise MC35Error("pair-105 constrained descent exceeded 64 strict passes")
+    pair_delta = _pose_delta_dpose(current_vector, baseline, gt)
+    composed_delta = fixed_delta + pair_delta
+    if composed_delta > POSE_GATE + 1e-18:
+        raise MC35Error("pair-105 final constrained object violates the pose cap")
+    base_codes = np.asarray(initial["solve"]["base_codes"], dtype=np.int32)
+    leak = np.asarray(initial["pose"]["leak_vector"], dtype=np.float64)
+    residual = current_vector.astype(np.float64) - baseline.astype(np.float64)
+    metrics = qs1.cancellation_metrics(leak, residual)
+    result = json.loads(json.dumps(initial))
+    result.update(
+        {
+            "schema": "ddm_mc36_pair105_pose_constrained_result.v1",
+            "variant": "successor_pair105",
+            "solve_scope": (
+                "bounded local exact-object Schur plus signed-int12 constrained descent"
+            ),
+            "verdict_scope": (
+                "INSTANCE: pair 105 on the retained mc35 semantic object and CP135 "
+                "int12 carrier; macOS-CPU advisory PoseNet"
+            ),
+        }
+    )
+    result["solve"].update(
+        {
+            "unconstrained_initial_final_codes": initial["solve"]["final_codes"],
+            "final_codes": current_codes.tolist(),
+            "final_code_delta": (current_codes - base_codes).tolist(),
+            "final_objective_mse_to_base_pose_vector": current_objective,
+            "constraint_descent_full_passes": passes,
+            "entry_from_infeasible_initial": entry_from_infeasible_initial,
+            "derived_stop": (
+                "one complete signed-int12 feasible pass accepted zero strict "
+                "baseline-objective improvements"
+            ),
+        }
+    )
+    result["pose"] = {
+        **metrics,
+        "leak_vector": leak.tolist(),
+        "residual_vector": residual.tolist(),
+        "exact_local_delta_dpose_one_pair_over_n600": pair_delta,
+        "fixed_other_pairs_delta_dpose": fixed_delta,
+        "pair105_delta_dpose_cap": pair_cap,
+        "composed_delta_dpose": composed_delta,
+        "composed_pose_gate": POSE_GATE,
+        "constraint_passed": True,
+    }
+    qs1.retain_npy(result_root / "FINAL_CODES.int32.npy", current_codes)
+    pose_record = qs1.retain_npy(
+        result_root / "FINAL_POSE_VECTOR.float32.npy", current_vector
+    )
+    result["variant_final_pose_vector"] = pose_record
+    qs1.retain_json(result_path, result)
+    assert_union_compensation(result)
+    checkpoint(
+        output,
+        "stage_35_pair105_pose_constrained",
+        {"result": qs1.file_record(result_path)},
+    )
+    return result
 
 
 def assert_union_compensation(row: dict[str, Any]) -> dict[str, Any]:
@@ -542,7 +1077,11 @@ def _patch_hp4_runtime(runtime_root: Path) -> dict[str, Any]:
 
 
 def build_archive(
-    output: Path, solved: list[dict[str, Any]]
+    output: Path,
+    solved: list[dict[str, Any]],
+    *,
+    primary_override: dict[str, Any] | None = None,
+    primary_repeat_override: dict[str, Any] | None = None,
 ) -> tuple[dict[str, Any], Any]:
     result_path = output / "COMPILED_ARCHIVE.json"
     if result_path.is_file():
@@ -550,15 +1089,28 @@ def build_archive(
         require_record(prior["archive"])
         require_record(prior["archive_repeat"])
         return prior, None
-    primary = qs1._compile_one(output=output, selected=solved, repeat=False)
-    # The primary compile intentionally loads its copied receiver for parse-back.
-    # Release that module tree before the repeat re-enters the pinned base runtime.
-    for module_name in tuple(sys.modules):
-        if module_name == "runtime" or module_name.startswith("runtime."):
-            sys.modules.pop(module_name, None)
-    repeated = qs1._compile_one(output=output, selected=solved, repeat=True)
-    if primary["archive"]["sha256"] != repeated["archive"]["sha256"]:
-        raise MC35Error("fresh-compensation closure repeat differs")
+    if primary_override is None:
+        primary = qs1._compile_one(output=output, selected=solved, repeat=False)
+        # The primary compile intentionally loads its copied receiver for parse-back.
+        # Release that module tree before the repeat re-enters the pinned base runtime.
+        for module_name in tuple(sys.modules):
+            if module_name == "runtime" or module_name.startswith("runtime."):
+                sys.modules.pop(module_name, None)
+        repeated = qs1._compile_one(output=output, selected=solved, repeat=True)
+        if primary["archive"]["sha256"] != repeated["archive"]["sha256"]:
+            raise MC35Error("fresh-compensation closure repeat differs")
+        primary_reencoded = True
+    else:
+        if primary_repeat_override is None:
+            raise MC35Error("retained entropy source lacks its deterministic repeat")
+        primary = json.loads(json.dumps(primary_override))
+        require_record(primary["archive"])
+        require_record(primary["token"])
+        require_record(primary_repeat_override)
+        if primary["archive"]["sha256"] != primary_repeat_override["sha256"]:
+            raise MC35Error("retained entropy source repeat differs")
+        repeated = {"archive": primary_repeat_override}
+        primary_reencoded = False
     overlay = qs5._exact_overlay_candidate(output, primary, solved)
     if overlay is None:
         raise MC35Error("fresh compensation escaped Q2C1 exact overlay domain")
@@ -658,6 +1210,8 @@ def build_archive(
         "axis": "[macOS-CPU scorer-free real coder and runtime parse-back]",
         "fresh_compensation_hp3_rc64": primary,
         "fresh_compensation_repeat": repeated["archive"],
+        "primary_reencoded_for_this_variant": primary_reencoded,
+        "retained_entropy_source_only": not primary_reencoded,
         "q2c1_split_candidate": split_final,
         "hp4": hp4,
         "archive": archive,
@@ -692,6 +1246,8 @@ def local_recount(
     rendered: list[dict[str, Any]],
     solved: list[dict[str, Any]],
     compiled: dict[str, Any],
+    *,
+    axis: str = AXIS,
 ) -> dict[str, Any]:
     result_path = output / "LOCAL_ADVISORY_RECOUNT.json"
     if result_path.is_file():
@@ -788,11 +1344,17 @@ def local_recount(
     gt_pose = np.load(qs1.GT_POSE, allow_pickle=False)
     candidate_pose = np.asarray(base_pose).copy()
     for pair, row in solved_by_pair.items():
-        candidate_pose[pair] = np.load(
-            output
+        pose_record = row.get("variant_final_pose_vector")
+        pose_path = (
+            Path(pose_record["path"])
+            if isinstance(pose_record, dict)
+            else output
             / "retained/compensation"
             / row["proposal_id"]
-            / "FINAL_POSE_VECTOR.float32.npy",
+            / "FINAL_POSE_VECTOR.float32.npy"
+        )
+        candidate_pose[pair] = np.load(
+            pose_path,
             allow_pickle=False,
         )
     candidate_pose_record = qs1.retain_npy(
@@ -819,8 +1381,11 @@ def local_recount(
     }
     result = {
         "schema": "ddm_mc35_local_advisory_recount.v1",
-        "axis": AXIS,
-        "selection_mode": "all eight changed pairs after one composed receiver closure; no prefix",
+        "axis": axis,
+        "selection_mode": (
+            f"all {len(pairs)} changed pairs after one composed receiver closure; "
+            "no prefix"
+        ),
         "denominators": {"pairs": 600, "seg_pixels": PIXELS, "pose_scalars": 3_600},
         "retention": {
             "candidate_input": candidate_input_record,
@@ -963,6 +1528,507 @@ def finalize(output: Path, compiled: dict[str, Any], recount: dict[str, Any]) ->
     return final
 
 
+def _variant_axis(variant: str, pair_count: int) -> str:
+    return (
+        "[macOS-CPU advisory frozen CPU-torch SegNet/PoseNet; "
+        f"{pair_count} changed pairs over n600; {variant}] NON-PROMOTABLE"
+    )
+
+
+def finalize_variant(
+    *,
+    output: Path,
+    variant: str,
+    compiled: dict[str, Any],
+    recount: dict[str, Any],
+) -> dict[str, Any]:
+    status = (
+        "PASS_ELIGIBLE_FOR_MC36_ADJUDICATION"
+        if recount["all_gates_passed"]
+        else "TERMINAL_LOCAL_GATE_FAILURE"
+    )
+    if not recount["all_gates_passed"]:
+        qs1.retain_json(
+            output / "GATE_FAILURE.json",
+            {
+                "schema": "ddm_mc36_variant_gate_failure.v1",
+                "variant": variant,
+                "status": status,
+                "failed_gates": [
+                    name for name, passed in recount["gates"].items() if not passed
+                ],
+                "no_fire_order": True,
+                "no_gate_relaxation": True,
+            },
+        )
+    final = {
+        "schema": "ddm_mc36_variant_final_result.v1",
+        "variant": variant,
+        "status": status,
+        "axis": recount["axis"],
+        "archive": compiled["archive"],
+        "archive_repeat": compiled["archive_repeat"],
+        "runtime_root": compiled["runtime_root"],
+        "local_recount": qs1.file_record(output / "LOCAL_ADVISORY_RECOUNT.json"),
+        "gates": recount["gates"],
+        "all_gates_passed": recount["all_gates_passed"],
+        "fire_order": None,
+        "remote_dispatched": False,
+        "frontier_pointer_moved": False,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "all_materialized_payloads_retained": True,
+    }
+    qs1.retain_json(output / "FINAL_RESULT.json", final)
+    checkpoint(
+        output,
+        "stage_90_final",
+        {"result": qs1.file_record(output / "FINAL_RESULT.json")},
+    )
+    return final
+
+
+def _retained_primary_source(source_output: Path) -> tuple[dict[str, Any], dict[str, Any]]:
+    compiled_path = source_output / "COMPILED_ARCHIVE.json"
+    compiled = json.loads(compiled_path.read_text())
+    primary = compiled["fresh_compensation_hp3_rc64"]
+    repeated = compiled["fresh_compensation_repeat"]
+    require_record(primary["archive"])
+    require_record(primary["token"])
+    require_record(repeated)
+    if primary["archive"]["sha256"] != repeated["sha256"]:
+        raise MC35Error(f"retained primary repeat differs: {source_output}")
+    return primary, repeated
+
+
+def _retain_compensation_result(
+    *,
+    output: Path,
+    variant: str,
+    rows: Sequence[dict[str, Any]],
+    reuse_proofs: Sequence[dict[str, Any]],
+) -> dict[str, Any]:
+    value = {
+        "schema": "ddm_mc36_variant_fresh_compensation.v1",
+        "variant": variant,
+        "rows": list(rows),
+        "reused_exact_object_proofs": list(reuse_proofs),
+        "stale_compensation_carried": False,
+        "all_final_object_fingerprints_asserted": True,
+        "all_payloads_retained": True,
+    }
+    legacy_path = output / "FRESH_COMPENSATION.json"
+    if legacy_path.is_file():
+        legacy = json.loads(legacy_path.read_text())
+        legacy_rows = [
+            {key: item for key, item in row.items() if key != "variant_final_pose_vector"}
+            for row in legacy["rows"]
+        ]
+        variant_rows = [
+            {key: item for key, item in row.items() if key != "variant_final_pose_vector"}
+            for row in rows
+        ]
+        if legacy_rows != variant_rows:
+            raise MC35Error("legacy fresh-compensation rows differ from variant receipt")
+    else:
+        qs1.retain_json(legacy_path, value)
+    path = output / "VARIANT_COMPENSATION.json"
+    qs1.retain_json(path, value)
+    checkpoint(
+        output,
+        "stage_35_variant_compensation_receipt",
+        {"result": qs1.file_record(path)},
+    )
+    return value
+
+
+def build_successor_pair105(*, bulk_root: Path) -> dict[str, Any]:
+    output = PAIR105_OUTPUT
+    route_variant_bulk(
+        output=output,
+        bulk_root=bulk_root,
+        variant="successor_pair105",
+        expected_bulk_bytes=4 * 1024**3,
+    )
+    preflight(output)
+    supports = build_variant_supports(
+        output=output, variant="successor_pair105", drop_pair=None
+    )
+    source_materialized_path = OUTPUT / "MATERIALIZED_UNION.json"
+    source_materialized = json.loads(source_materialized_path.read_text())
+    require_record(source_materialized["entropy_primary"]["token"])
+    require_record(source_materialized["entropy_repeat"]["token"])
+    if (
+        source_materialized["entropy_primary"]["token"]["sha256"]
+        != source_materialized["entropy_repeat"]["token"]["sha256"]
+    ):
+        raise MC35Error("mc35 retained token entropy repeat differs")
+    qs1.retain_json(
+        output / "MATERIALIZED_UNION.json",
+        {
+            "schema": "ddm_mc36_retained_union_reuse.v1",
+            "variant": "successor_pair105",
+            "reason": "the eight frame-1 token objects are byte-identical to mc35",
+            "source": qs1.file_record(source_materialized_path),
+            "token_primary": source_materialized["entropy_primary"]["token"],
+            "token_repeat": source_materialized["entropy_repeat"]["token"],
+            "repeat_byte_identical": True,
+            "all_payloads_retained": True,
+        },
+    )
+    rendered, _semantic = qs5._render_exact_masters(output, {"rows": supports["rows"]})
+    rendered_by_id = {row["proposal_id"]: row for row in rendered}
+    source_rows = load_mc35_solved_rows()
+    fixed_rows = [row for row in source_rows if int(row["pair"]) != PAIR105]
+    reuse_proofs = []
+    support_by_pair = {int(row["pair"]): row for row in supports["rows"]}
+    for row in fixed_rows:
+        support = support_by_pair[int(row["pair"])]
+        reuse_proofs.append(
+            verify_reused_exact_object(
+                support=support,
+                rendered=rendered_by_id[support["proposal_id"]],
+                solved=row,
+            )
+        )
+    pair105_support = support_by_pair[PAIR105]
+    constrained = select_pose_constrained_pair105(
+        output=output,
+        support=pair105_support,
+        rendered=rendered_by_id[pair105_support["proposal_id"]],
+        fixed_rows=fixed_rows,
+    )
+    solved = sorted([*fixed_rows, constrained], key=lambda row: int(row["pair"]))
+    _retain_compensation_result(
+        output=output,
+        variant="successor_pair105",
+        rows=solved,
+        reuse_proofs=reuse_proofs,
+    )
+    primary, repeated = _retained_primary_source(OUTPUT)
+    compiled, _parsed = build_archive(
+        output,
+        solved,
+        primary_override=primary,
+        primary_repeat_override=repeated,
+    )
+    recount = local_recount(
+        output,
+        supports,
+        rendered,
+        solved,
+        compiled,
+        axis=_variant_axis("successor_pair105", len(solved)),
+    )
+    return finalize_variant(
+        output=output,
+        variant="successor_pair105",
+        compiled=compiled,
+        recount=recount,
+    )
+
+
+def build_successor_drop532(*, bulk_root: Path) -> dict[str, Any]:
+    output = DROP532_OUTPUT
+    route_variant_bulk(
+        output=output,
+        bulk_root=bulk_root,
+        variant="successor_drop532",
+        expected_bulk_bytes=32 * 1024**3,
+    )
+    preflight(output)
+    supports = build_variant_supports(
+        output=output, variant="successor_drop532", drop_pair=DROP_PAIR
+    )
+    migrate_compile_workspace_to_hardlink_device(
+        output=output,
+        variant="successor_drop532",
+        source_payload=jo1.BASE_PROBABILITIES / "codes_0000.npy",
+    )
+    materialize_union(output, supports)
+    rendered, solved = render_and_solve(output, supports)
+    for row in solved:
+        row["variant_final_pose_vector"] = qs1.file_record(
+            output
+            / "retained/compensation"
+            / str(row["proposal_id"])
+            / "FINAL_POSE_VECTOR.float32.npy"
+        )
+    _retain_compensation_result(
+        output=output,
+        variant="successor_drop532",
+        rows=solved,
+        reuse_proofs=[],
+    )
+    compiled, _parsed = build_archive(output, solved)
+    recount = local_recount(
+        output,
+        supports,
+        rendered,
+        solved,
+        compiled,
+        axis=_variant_axis("successor_drop532", len(solved)),
+    )
+    return finalize_variant(
+        output=output,
+        variant="successor_drop532",
+        compiled=compiled,
+        recount=recount,
+    )
+
+
+def build_successor_composed(*, bulk_root: Path) -> dict[str, Any]:
+    output = COMPOSED_OUTPUT
+    route_variant_bulk(
+        output=output,
+        bulk_root=bulk_root,
+        variant="successor_drop532_pair105",
+        expected_bulk_bytes=2 * 1024**3,
+    )
+    preflight(output)
+    supports = build_variant_supports(
+        output=output, variant="successor_drop532_pair105", drop_pair=DROP_PAIR
+    )
+    drop_compensation = json.loads(
+        (DROP532_OUTPUT / "VARIANT_COMPENSATION.json").read_text()
+    )
+    pair_compensation = json.loads(
+        (PAIR105_OUTPUT / "VARIANT_COMPENSATION.json").read_text()
+    )
+    pair105 = next(
+        row for row in pair_compensation["rows"] if int(row["pair"]) == PAIR105
+    )
+    rows = [
+        row for row in drop_compensation["rows"] if int(row["pair"]) != PAIR105
+    ] + [pair105]
+    rows.sort(key=lambda row: int(row["pair"]))
+    rendered = []
+    reuse_proofs = []
+    support_by_pair = {int(row["pair"]): row for row in supports["rows"]}
+    for support in supports["rows"]:
+        source_root = (
+            PAIR105_OUTPUT if int(support["pair"]) == PAIR105 else DROP532_OUTPUT
+        )
+        rendered_row = json.loads(
+            (
+                source_root
+                / "retained/supports"
+                / str(support["proposal_id"])
+                / "exact_master/RESULT.json"
+            ).read_text()
+        )
+        rendered.append(rendered_row)
+    rendered_by_id = {row["proposal_id"]: row for row in rendered}
+    for row in rows:
+        support = support_by_pair[int(row["pair"])]
+        reuse_proofs.append(
+            verify_reused_exact_object(
+                support=support,
+                rendered=rendered_by_id[support["proposal_id"]],
+                solved=row,
+            )
+        )
+    _retain_compensation_result(
+        output=output,
+        variant="successor_drop532_pair105",
+        rows=rows,
+        reuse_proofs=reuse_proofs,
+    )
+    primary, repeated = _retained_primary_source(DROP532_OUTPUT)
+    compiled, _parsed = build_archive(
+        output,
+        rows,
+        primary_override=primary,
+        primary_repeat_override=repeated,
+    )
+    recount = local_recount(
+        output,
+        supports,
+        rendered,
+        rows,
+        compiled,
+        axis=_variant_axis("successor_drop532_pair105", len(rows)),
+    )
+    return finalize_variant(
+        output=output,
+        variant="successor_drop532_pair105",
+        compiled=compiled,
+        recount=recount,
+    )
+
+
+def seal_mc36_fire_order(
+    *, coordinator: Path, winner_output: Path, winner: dict[str, Any]
+) -> dict[str, Any]:
+    compiled = json.loads((winner_output / "COMPILED_ARCHIVE.json").read_text())
+    runtime_root = Path(compiled["runtime_root"])
+    runtime_record = qs1.retain_bytes(
+        winner_output / "fire_order/fire_inputs/candidate_runtime.zip",
+        deterministic_runtime_zip(runtime_root),
+    )
+    archive_record = qs1.retain_bytes(
+        winner_output / "fire_order/fire_inputs/candidate_archive.zip",
+        Path(compiled["archive"]["path"]).read_bytes(),
+    )
+    request = {
+        "schema": "ddm_mc36_dual_axis_fire_order.v1",
+        "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+        "variant": winner["variant"],
+        "owner": "MAIN sole scorer-lane router; self-claim before launch",
+        "consumer_store": str(
+            winner_output / "dispatch/ddm_mc36_dual_axis_t4_r1"
+        ),
+        "fire_trigger": (
+            "MAIN verifies no active full-n600 scorer lane, claims "
+            "ddm_mc36_dual_axis_t4_r1, and the sealed archive/runtime SHAs match"
+        ),
+        "worker": "proven RE1T/JS1B dual-axis T4 chain",
+        "estimated_cost_usd": 0.16,
+        "max_scorer_chunk": 120,
+        "candidate_archive": archive_record,
+        "candidate_runtime": runtime_record,
+        "required_returns": [
+            "retained decoded 0.raw",
+            "candidate/GT/base argmax fields",
+            "candidate/base/GT first-six PoseNet vectors",
+            "exact upstream evaluator receipt on the same archive bytes",
+        ],
+        "arm_preclaimed_lane": False,
+        "remote_dispatched": False,
+    }
+    request_record = qs1.retain_json(
+        winner_output / "fire_order/SEALED_REQUEST.json", request
+    )
+    sealed = {
+        **request,
+        "sealed_request": request_record,
+        "request_sha256": request_record["sha256"],
+    }
+    qs1.retain_json(winner_output / "SEALED_FIRE_ORDER.json", sealed)
+    winner = dict(winner)
+    winner["status"] = "PASS_QUEUED_WITH_FIRE_ORDER"
+    winner["fire_order"] = sealed
+    qs1.retain_json(winner_output / "FINAL_RESULT_SEALED.json", winner)
+    qs1.retain_json(coordinator / "SEALED_FIRE_ORDER.json", sealed)
+    return sealed
+
+
+def run_mc36_successors(*, coordinator: Path, bulk_root: Path) -> dict[str, Any]:
+    final_path = coordinator / "FINAL_RESULT_V2.json"
+    if final_path.is_file():
+        prior = json.loads(final_path.read_text())
+        if prior.get("sealed_fire_order") is not None:
+            require_record(prior["sealed_fire_order"]["sealed_request"])
+        return prior
+    superseded_path = coordinator / "FINAL_RESULT.json"
+    superseded = (
+        qs1.file_record(superseded_path) if superseded_path.is_file() else None
+    )
+    route_variant_bulk(
+        output=coordinator,
+        bulk_root=bulk_root / "coordinator",
+        variant="mc36_coordinator",
+        expected_bulk_bytes=1024**3,
+    )
+    pair105 = build_successor_pair105(bulk_root=bulk_root / "successor_pair105")
+    drop532 = build_successor_drop532(bulk_root=bulk_root / "successor_drop532")
+    candidates: list[tuple[Path, dict[str, Any]]] = [
+        (PAIR105_OUTPUT, pair105),
+        (DROP532_OUTPUT, drop532),
+    ]
+    pair_only, drop_only = _complementary_gate_coverage(
+        pair105["gates"], drop532["gates"]
+    )
+    pair_recount = json.loads((PAIR105_OUTPUT / "LOCAL_ADVISORY_RECOUNT.json").read_text())
+    drop_recount = json.loads((DROP532_OUTPUT / "LOCAL_ADVISORY_RECOUNT.json").read_text())
+    composition_evidence = _composition_evidence(
+        pair_result=pair105,
+        drop_result=drop532,
+        pair_recount=pair_recount,
+        drop_recount=drop_recount,
+    )
+    compose_justified = bool(composition_evidence["justified"])
+    composed = None
+    if compose_justified:
+        composed = build_successor_composed(
+            bulk_root=bulk_root / "successor_drop532_pair105"
+        )
+        candidates.append((COMPOSED_OUTPUT, composed))
+    passing = [item for item in candidates if item[1]["all_gates_passed"]]
+    if passing:
+        winner_output, winner = min(
+            passing,
+            key=lambda item: (
+                float(
+                    json.loads(
+                        (item[0] / "LOCAL_ADVISORY_RECOUNT.json").read_text()
+                    )["projected_delta_s"]
+                ),
+                int(item[1]["archive"]["bytes"]),
+                item[1]["variant"],
+            ),
+        )
+        sealed = seal_mc36_fire_order(
+            coordinator=coordinator, winner_output=winner_output, winner=winner
+        )
+        status = "PASS_ONE_FIRE_ORDER_SEALED"
+    else:
+        winner_output = None
+        winner = None
+        sealed = None
+        status = "TERMINAL_NO_VARIANT_PASSED_ALL_GATES"
+    result = {
+        "schema": "ddm_mc36_successor_adjudication.v1",
+        "status": status,
+        "variant_results": {
+            "successor_pair105": qs1.file_record(PAIR105_OUTPUT / "FINAL_RESULT.json"),
+            "successor_drop532": qs1.file_record(DROP532_OUTPUT / "FINAL_RESULT.json"),
+            "successor_drop532_pair105": (
+                None
+                if composed is None
+                else qs1.file_record(COMPOSED_OUTPUT / "FINAL_RESULT.json")
+            ),
+        },
+        "compose_decision": {
+            "justified": compose_justified,
+            "pair105_only_passed_gates": sorted(pair_only),
+            "drop532_only_passed_gates": sorted(drop_only),
+            **composition_evidence,
+            "measured_pair105_archive_bytes": int(
+                pair_recount["rate"]["candidate_archive_bytes"]
+            ),
+            "measured_drop532_archive_bytes": int(
+                drop_recount["rate"]["candidate_archive_bytes"]
+            ),
+            "measured_pair105_net_flip_gain": int(
+                pair_recount["seg"]["net_flip_gain"]
+            ),
+            "measured_drop532_net_flip_gain": int(
+                drop_recount["seg"]["net_flip_gain"]
+            ),
+            "rule": (
+                "compose only when A and B are partial and measured A/B results "
+                "supply complementary pose, Seg, and rate value"
+            ),
+        },
+        "winner_variant": None if winner is None else winner["variant"],
+        "winner_store": None if winner_output is None else str(winner_output),
+        "winner_sealed_result": (
+            None
+            if winner_output is None
+            else qs1.file_record(winner_output / "FINAL_RESULT_SEALED.json")
+        ),
+        "sealed_fire_order": sealed,
+        "remote_dispatched": False,
+        "frontier_pointer_moved": False,
+        "score_claim": False,
+        "all_materialized_payloads_retained": True,
+        "superseded_prior_adjudication": superseded,
+    }
+    qs1.retain_json(final_path, result)
+    return result
+
+
 def run(output: Path) -> dict[str, Any]:
     preflight(output)
     supports = build_supports(output)
@@ -975,18 +2041,28 @@ def run(output: Path) -> dict[str, Any]:
 
 def parser() -> argparse.ArgumentParser:
     value = argparse.ArgumentParser(description=__doc__)
-    value.add_argument("--output", type=Path, default=OUTPUT)
+    value.add_argument(
+        "--variant", choices=("micro35", "successors"), default="micro35"
+    )
+    value.add_argument("--output", type=Path)
+    value.add_argument("--bulk-root", type=Path, default=MC36_BULK)
     value.add_argument("--resume-from", type=Path, required=True)
     return value
 
 
 def main() -> None:
     args = parser().parse_args()
-    output = args.output.resolve()
+    default_output = OUTPUT if args.variant == "micro35" else MC36_OUTPUT
+    output = (args.output or default_output).resolve()
     if args.resume_from.resolve() != output:
         raise SystemExit("FATAL: --resume-from must equal --output")
     with arm_lock(output):
-        result = run(output)
+        if args.variant == "successors":
+            result = run_mc36_successors(
+                coordinator=output, bulk_root=args.bulk_root.resolve()
+            )
+        else:
+            result = run(output)
     print(json.dumps(result, indent=2, sort_keys=True), flush=True)
 
 
