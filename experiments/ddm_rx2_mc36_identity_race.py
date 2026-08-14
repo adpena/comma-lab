@@ -51,6 +51,8 @@ EXPECTED_SPATIAL = rx1.DEFAULT_EXPECTED_SPATIAL
 EXPERIMENT_BOOK = rx1.DEFAULT_EXPERIMENT_BOOK
 INTAKE_CODE = Path("/Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo/code")
 TERMINAL_CHECKPOINT = BULK_ROOT / "training/checkpoints/mc36_hpac_best_ema.checkpoints/qat_stage_end_epoch_0060.pt"
+TRAINING_REPORT = BULK_ROOT / "training/reports/trainer.json"
+TRAINING_MANIFEST = BULK_ROOT / "training/checkpoints/mc36_hpac_best_ema.artifacts.json"
 F26P_LIFTED_RUNTIME = rx1.F26P_LIFTED_RUNTIME
 
 AXIS = "[macOS-CPU advisory, scorer-free lossless composition]"
@@ -176,6 +178,8 @@ def preflight(args: argparse.Namespace) -> dict[str, Any]:
     _require(BASE_ARCHIVE, size=rx1.EXPECTED_ARCHIVE_BYTES, digest=rx1.EXPECTED_ARCHIVE_SHA256)
     _require(EXPECTED_SPATIAL, size=TOKEN_COUNT, digest=rx1.EXPECTED_SPATIAL_SHA256)
     _require(args.checkpoint)
+    _require(TRAINING_REPORT)
+    _require(TRAINING_MANIFEST)
     if not BASE_RUNTIME.is_dir() or not EXPERIMENT_BOOK.is_dir() or not INTAKE_CODE.is_dir():
         raise RX2RaceError("pinned runtime, ExperimentBook, or intake source is absent")
     checkpoint = torch.load(args.checkpoint, map_location="cpu", weights_only=False)
@@ -192,6 +196,19 @@ def preflight(args: argparse.Namespace) -> dict[str, Any]:
     trainer = importlib.import_module("tools.train_ddm_cl1_hpac_capacity")
     if trainer._causal_state_sha256(checkpoint) != checkpoint["causal_state_sha256"]:
         raise RX2RaceError("selected checkpoint causal-state hash does not verify")
+    training_report = json.loads(TRAINING_REPORT.read_text(encoding="utf-8"))
+    history = training_report.get("history")
+    if (
+        training_report.get("schema") != "ddm_cl1_hpac_capacity_trainer_result.v1"
+        or training_report.get("config", {}).get("profile") != "rx2_mc36"
+        or not isinstance(history, list)
+        or not history
+        or history[-1].get("epoch") != 60
+    ):
+        raise RX2RaceError("RX2 trainer result is absent, incomplete, or belongs to another run")
+    training_manifest = json.loads(TRAINING_MANIFEST.read_text(encoding="utf-8"))
+    if training_manifest.get("schema") != "ddm_cl1_hpac_capacity_artifact_manifest.v1":
+        raise RX2RaceError("RX2 trainer artifact manifest is absent or malformed")
     source_digest = _source().digest()
     if source_digest != rx1.EXPECTED_EVENT_SHA256:
         raise RX2RaceError("MC36 event-order symbol source changed")
@@ -204,6 +221,8 @@ def preflight(args: argparse.Namespace) -> dict[str, Any]:
         "score_claim": SCORE_CLAIM,
         "checkpoint": file_record(args.checkpoint),
         "checkpoint_causal_state_sha256": checkpoint["causal_state_sha256"],
+        "training_report": file_record(TRAINING_REPORT),
+        "training_manifest": file_record(TRAINING_MANIFEST),
         "runner": file_record(Path(__file__)),
         "software": {
             "python": sys.version,
