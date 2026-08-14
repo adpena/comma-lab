@@ -13,13 +13,70 @@ Usage:
 Writes DIR/<result-name> on success, DIR/poller.done | poller.failed markers, and marks
 the call ledger 'harvested' (rc=0) or 'failed'.
 """
+
 import argparse
 import json
 import pathlib
 import sys
 import time
+from collections.abc import Callable
+from typing import Any
 
 REPO_SRC = "/Users/adpena/Projects/pact/src"
+
+POLL_RESULT = "result"
+POLL_REMOTE_FAILURE = "remote_failure"
+POLL_DEADLINE = "deadline"
+
+
+def poll_modal_call(
+    *,
+    call_id: str,
+    deadline_s: float,
+    poll_s: float,
+    get_result: Callable[[float], Any] | None = None,
+    sleep: Callable[[float], None] = time.sleep,
+    monotonic: Callable[[], float] = time.monotonic,
+) -> dict[str, Any]:
+    """Poll one Modal call to a terminal provider response.
+
+    This is the canonical polling loop used by both the legacy CLI below and
+    ``tools/modal_endpoint_close.py``.  It deliberately performs no ledger or
+    filesystem mutation: callers own terminal classification and custody.
+    Keeping those effects outside the loop lets the endpoint closer close the
+    claim ledger *before* the call-id ledger without forking polling logic.
+    """
+
+    if get_result is None:
+        import modal
+
+        call = modal.functions.FunctionCall.from_id(call_id)
+
+        def get_result(timeout: float) -> Any:
+            return call.get(timeout=timeout)
+
+    started = monotonic()
+    while monotonic() - started < deadline_s:
+        try:
+            result = get_result(5.0)
+        except TimeoutError:
+            remaining = deadline_s - (monotonic() - started)
+            if remaining > 0 and poll_s > 0:
+                sleep(min(poll_s, remaining))
+            continue
+        except Exception as exc:  # terminal remote failure
+            return {
+                "kind": POLL_REMOTE_FAILURE,
+                "error_class": type(exc).__name__,
+                "error": str(exc),
+            }
+        return {"kind": POLL_RESULT, "result": result}
+
+    return {
+        "kind": POLL_DEADLINE,
+        "error_class": "PollDeadlineExceeded",
+        "error": f"deadline {deadline_s:.0f}s exceeded",
+    }
 
 
 def main() -> int:
@@ -38,30 +95,34 @@ def main() -> int:
     out.mkdir(parents=True, exist_ok=True)
     result_path = out / args.result_name
 
-    import modal
-
-    t0 = time.time()
-    while time.time() - t0 < args.deadline_s:
-        try:
-            r = modal.functions.FunctionCall.from_id(args.call_id).get(timeout=5)
-        except TimeoutError:
-            time.sleep(args.poll_s)
-            continue
-        except Exception as e:  # terminal remote failure
-            (out / "poller.failed").write_text(f"{type(e).__name__}: {e}\n")
-            update_call_id_outcome(call_id=args.call_id, status="failed", rc=1,
-                                   agent="MAIN", harvest_result={"error": str(e)[:500]})
-            return 1
+    outcome = poll_modal_call(
+        call_id=args.call_id,
+        deadline_s=args.deadline_s,
+        poll_s=args.poll_s,
+    )
+    if outcome["kind"] == POLL_RESULT:
+        r = outcome["result"]
         result_path.write_text(json.dumps(r, indent=2, default=str))
-        update_call_id_outcome(call_id=args.call_id, status="harvested", rc=0,
-                               agent="MAIN",
-                               harvest_result={"result_path": str(result_path)})
+        update_call_id_outcome(
+            call_id=args.call_id,
+            status="harvested",
+            rc=0,
+            agent="MAIN",
+            harvest_result={"result_path": str(result_path)},
+        )
         (out / "poller.done").write_text("ok\n")
         return 0
 
-    (out / "poller.failed").write_text(f"deadline {args.deadline_s:.0f}s exceeded\n")
-    update_call_id_outcome(call_id=args.call_id, status="failed", rc=124, agent="MAIN",
-                           harvest_result={"error": "poller deadline exceeded"})
+    error = str(outcome["error"])
+    (out / "poller.failed").write_text(f"{outcome['error_class']}: {error}\n")
+    rc = 124 if outcome["kind"] == POLL_DEADLINE else 1
+    update_call_id_outcome(
+        call_id=args.call_id,
+        status="failed",
+        rc=rc,
+        agent="MAIN",
+        harvest_result={"error": error[:500]},
+    )
     return 1
 
 
