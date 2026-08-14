@@ -657,8 +657,31 @@ def main() -> None:
         type=Path,
         help="optional retained T4 raw whose SHA-256 is the charter pin",
     )
+    parser.add_argument(
+        "--token-decoder",
+        choices=("python", "native-hpac"),
+        default="python",
+        help="explicitly select the parity-gated F26 token path; Python remains the default",
+    )
     args = parser.parse_args()
     repo_root = Path(__file__).resolve().parents[1]
+    if args.token_decoder == "native-hpac":
+        native_path = repo_root / "experiments" / "ddm_f26q_rc64_native_lowering.py"
+        spec = importlib.util.spec_from_file_location("_ddm_f26q_native_lowering", native_path)
+        if spec is None or spec.loader is None:
+            raise CpuLiftError("cannot load the parity-gated native F26 runner")
+        native = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(native)
+        native_command = {
+            "prepare": "prepare",
+            "decode": "run-native",
+            "analyze": "summarize",
+            "finalize": "summarize",
+            "all": "summarize",
+        }[args.command]
+        result = native.run_command(repo_root, native_command, 600)
+        print(json.dumps(result, indent=2, sort_keys=True))
+        return
     if args.command == "prepare":
         result = prepare(repo_root)
     elif args.command == "decode":

@@ -1,0 +1,36 @@
+{
+  "schema": "ddm_f26q_native_payload_manifest.v1",
+  "axis_label": "[M5-CPU 4-thread scorer-free native token decode]",
+  "score_authority": false,
+  "archive": {
+    "bytes": 186269,
+    "sha256": "f0ba4bb41d55fff85542f2a17dfe682508aa4f9ab50ef51cda573d79f0c4b1de"
+  },
+  "retained_payloads": [
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_f26q_rc64_native_20260814/retained/native_tokens_v13_n600.u8",
+      "bytes": 117964800,
+      "sha256": "9ba2e52b3096585895970066b389bf1261ebc203d5b828cdea056c13858aea52",
+      "rebuild_command": ".venv/bin/python experiments/ddm_f26q_rc64_native_lowering.py run-native --frames 600"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_f26q_rc64_native_20260814/retained/native_build_v13_persistent_vector/f26_hpac_native_a.so",
+      "bytes": 52816,
+      "sha256": "b791acf032c7f373beb329c3241323af04f8e939dd8c0195ac84ae908221779c",
+      "rebuild_command": ".venv/bin/python experiments/ddm_f26q_rc64_native_lowering.py build"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_f26q_rc64_native_20260814/retained/native_build_v13_persistent_vector/f26_hpac_native_b.so",
+      "bytes": 52816,
+      "sha256": "b791acf032c7f373beb329c3241323af04f8e939dd8c0195ac84ae908221779c",
+      "rebuild_command": ".venv/bin/python experiments/ddm_f26q_rc64_native_lowering.py build"
+    }
+  ],
+  "receipts": {
+    "build": "/Volumes/VertigoDataTier/pact/ddm_f26q_rc64_native_20260814/receipts/native_build_v13.json",
+    "full_parity": "/Volumes/VertigoDataTier/pact/ddm_f26q_rc64_native_20260814/receipts/native_run_v13_n600.json",
+    "result": "/Volumes/VertigoDataTier/pact/ddm_f26q_rc64_native_20260814/receipts/result.json"
+  },
+  "checkpoint_policy": "initial state plus distinct through_frame_XXX receipts every 25 frames",
+  "cleanup_disposition": "keep all payloads; no deletion or move authorized"
+}
