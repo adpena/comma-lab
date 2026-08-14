@@ -75,6 +75,13 @@ CALIBRATED_REALIZATION_EFFICIENCY: Final = (
 BREAKEVEN_FLIPS_PER_BYTE: Final = 0.785
 RATE_S_PER_BYTE: Final = 25.0 / 37_545_489
 AXIS: Final = "[macOS-CPU scorer-free retained-payload analysis]"
+QS2_REFERENCE_COMMIT: Final = "d77fb69efc390bf9cbb41dab90d10400300180e5"
+QS2_RATE_RUNNER_SHA256: Final = (
+    "8654e6d325212acf9a2260a3f3ef73494231f68cae5003295eceaa37537813f1"
+)
+QS2_OVERLAY_SHA256: Final = (
+    "7e5d905d42cd0ec65851d5df5f762ce8adac65783781015ad48585a9fc91231f"
+)
 
 
 class QS3Error(RuntimeError):
@@ -337,6 +344,10 @@ def unique_pair_calibration_rows() -> list[dict[str, Any]]:
 
 
 def codebook_race(output: Path) -> dict[str, Any]:
+    if sha256_file(Path(qs2.__file__).resolve()) != QS2_RATE_RUNNER_SHA256:
+        raise QS3Error("QS2 reference rate runner differs from commit d77fb69efc")
+    if sha256_file(qs2.RUNTIME_OVERLAY_SOURCE) != QS2_OVERLAY_SHA256:
+        raise QS3Error("QS2 reference overlay differs from commit d77fb69efc")
     rows = unique_pair_calibration_rows()
     pairs, exact = qs2.exact_deltas(rows)
     sources = qs2._candidate_rate_sources()
@@ -364,6 +375,14 @@ def codebook_race(output: Path) -> dict[str, Any]:
     result = {
         "schema": "ddm_qs3_shared_codebook_race.v1",
         "axis": "[macOS-CPU exact byte/container measurement]",
+        "reference_form": {
+            "commit": QS2_REFERENCE_COMMIT,
+            "rate_runner_sha256": QS2_RATE_RUNNER_SHA256,
+            "overlay_sha256": QS2_OVERLAY_SHA256,
+            "qs1_compile_store": str(qs2.QS1_STORE.resolve()),
+            "qs2_store": str(qs2.OUTPUT.resolve()),
+            "js6_bank": str(qs1.JS6_BANK.resolve()),
+        },
         "verdict_scope": (
             "FORMULATION: Q3C1 four-bit shared compensation overlay on nine unique retained "
             "QS1 Schur rows; semantic suffix remains the six-pair QS1 object and no contest "

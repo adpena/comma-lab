@@ -111,6 +111,9 @@ exact Schur/authority evaluation only after the post-mortem is unblocked; none i
 QS2 Q2C1 cannot represent the three additional unique retained rows: their exact code deltas
 reach ±6, outside its `[-3,4]` alphabet. QS3 therefore implemented and round-trip-tested Q3C1,
 a strict four-bit `[-8,7]` payload. All 24 q0–q11 candidate payload sets were retained.
+The adapted reference is provenance-pinned to QS2 commit
+`d77fb69efc390bf9cbb41dab90d10400300180e5`: the current rate runner and overlay hashes match
+that commit byte-for-byte (`8654e6d3…` and `7e5d905d…`).
 
 | rung | active pairs | overlay bytes | best q | archive bytes | ΔB vs CP135 | B/active pair | closure |
 |---|---:|---:|---:|---:|---:|---:|---|
