@@ -1016,7 +1016,10 @@ def cmd_add(args) -> int:
     problems = lint_charter_optimal_form(str(prompt_file))
     advisories = lint_charter_fm_advisories(str(prompt_file))
     if problems:
-        strict = os.environ.get("TAC_CHARTER_LINT_STRICT") == "1"
+        # STRICT BY DEFAULT (operator 2026-08-13 "No naive or toy ever"): a charter
+        # that fails the optimal-form lint is refused at the spawn site. The explicit
+        # escape is TAC_CHARTER_LINT_STRICT=0 — a tracked waiver, never a silent default.
+        strict = os.environ.get("TAC_CHARTER_LINT_STRICT", "1") != "0"
         tag = "REFUSED" if strict else "WARN"
         for p in problems:
             print(f"charter-lint {tag} [{args.name}]: {p}")
