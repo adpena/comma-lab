@@ -931,12 +931,8 @@ def main() -> None:
     if init_sha256 != EXPECTED_INIT_SHA256:
         raise CL1TrainingError(f"init SHA differs: expected {EXPECTED_INIT_SHA256}, observed {init_sha256}")
 
-    if args.device == "mps":
-        if not torch.backends.mps.is_built() or not torch.backends.mps.is_available():
-            raise CL1TrainingError("local Metal is unavailable in this process; CPU substitution is forbidden")
-    else:
-        torch.set_num_threads(4)
-        torch.set_num_interop_threads(1)
+    if args.device == "mps" and (not torch.backends.mps.is_built() or not torch.backends.mps.is_available()):
+        raise CL1TrainingError("local Metal is unavailable in this process; CPU substitution is forbidden")
     device = torch.device(args.device)
     torch.manual_seed(args.seed)
     np.random.seed(args.seed)
