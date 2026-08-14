@@ -41,9 +41,14 @@ _MODEL_SCALARS = (
     "b1_taps",
     "b2_taps",
     "logit_precision",
+    "num_frames",
+    "frame_dim",
+    "has_frame_scale",
+    "has_spm",
 )
 _MODEL_POINTERS = (
     "conv_a_weight",
+    "conv_a_delta",
     "conv_a_initial",
     "conv_a_bias",
     "conv_a_exponent",
@@ -57,6 +62,22 @@ _MODEL_POINTERS = (
     "head_bias",
     "head_exponent",
     "residual_table",
+    "frame_codes",
+    "frame_shift_weight",
+    "frame_shift_bias",
+    "frame_shift_exponent",
+    "frame_scale_weight",
+    "frame_scale_bias",
+    "frame_scale_exponent",
+    "conv_past_weight",
+    "conv_past_bias",
+    "conv_past_exponent",
+    "spm_dw_weight",
+    "spm_dw_bias",
+    "spm_dw_exponent",
+    "spm_pw_weight",
+    "spm_pw_bias",
+    "spm_pw_exponent",
     "a_offsets",
     "group_h_offsets",
     "group_b1_offsets",
@@ -142,6 +163,11 @@ def _build_model_buffers(parts: Any, runtime: Any, sparse: Any) -> _ModelBuffers
         cache.conv_a_weight, np.dtype(np.int8), "conv_a.active_weight"
     ).reshape(channels, model.num_classes + 2, len(sparse.a_offsets))
     conv_a_weight = np.ascontiguousarray(conv_a_dense.transpose(1, 2, 0))
+    conv_a_delta = np.ascontiguousarray(
+        conv_a_weight[: model.num_classes].astype(np.int16)
+        - conv_a_weight[0:1].astype(np.int16),
+        dtype=np.int16,
+    )
     coordinate_rows = []
     for plan in cache.conv_a_plans:
         coordinate = _integer_array(
@@ -185,6 +211,13 @@ def _build_model_buffers(parts: Any, runtime: Any, sparse: Any) -> _ModelBuffers
     b1 = _module_codes(model.conv_b1, "conv_b1")
     b2 = _module_codes(model.conv_b2, "conv_b2")
     head = _module_codes(model.head, "head")
+    frame_shift = _module_codes(model.frame_shift, "frame_shift")
+    if not model.use_frame_scale or not model.use_spm:
+        raise F26NativeError("the sealed F26 context path requires frame-scale and SPM")
+    frame_scale = _module_codes(model.frame_scale, "frame_scale")
+    conv_past = _module_codes(model.conv_past, "conv_past")
+    spm_dw = _module_codes(model.spm_dw, "spm_dw")
+    spm_pw = _module_codes(model.spm_pw, "spm_pw")
     b1_weight = _integer_array(
         cache.depthwise_weights[id(model.conv_b1)][0, 0],
         np.dtype(np.int8),
@@ -231,6 +264,7 @@ def _build_model_buffers(parts: Any, runtime: Any, sparse: Any) -> _ModelBuffers
 
     arrays = {
         "conv_a_weight": conv_a_weight,
+        "conv_a_delta": conv_a_delta,
         "conv_a_initial": conv_a_initial,
         "conv_a_bias": conv_a[1],
         "conv_a_exponent": conv_a[2],
@@ -244,6 +278,30 @@ def _build_model_buffers(parts: Any, runtime: Any, sparse: Any) -> _ModelBuffers
         "head_bias": head[1],
         "head_exponent": head[2],
         "residual_table": np.ascontiguousarray(parts.table.values, dtype=np.float32),
+        "frame_codes": _integer_array(
+            model.frame_codes(), np.dtype(np.int8), "frame_codes"
+        ),
+        "frame_shift_weight": np.ascontiguousarray(frame_shift[0], dtype=np.int8),
+        "frame_shift_bias": frame_shift[1],
+        "frame_shift_exponent": frame_shift[2],
+        "frame_scale_weight": np.ascontiguousarray(frame_scale[0], dtype=np.int8),
+        "frame_scale_bias": frame_scale[1],
+        "frame_scale_exponent": frame_scale[2],
+        "conv_past_weight": np.ascontiguousarray(
+            conv_past[0].transpose(2, 3, 1, 0), dtype=np.int8
+        ),
+        "conv_past_bias": conv_past[1],
+        "conv_past_exponent": conv_past[2],
+        "spm_dw_weight": np.ascontiguousarray(
+            spm_dw[0][:, 0].transpose(1, 2, 0), dtype=np.int8
+        ),
+        "spm_dw_bias": spm_dw[1],
+        "spm_dw_exponent": spm_dw[2],
+        "spm_pw_weight": np.ascontiguousarray(
+            spm_pw[0][:, :, 0, 0], dtype=np.int8
+        ),
+        "spm_pw_bias": spm_pw[1],
+        "spm_pw_exponent": spm_pw[2],
         "a_offsets": np.ascontiguousarray(sparse.a_offsets, dtype=np.int16),
         "group_h_offsets": _offsets(h_lengths),
         "group_b1_offsets": _offsets(b1_lengths),
@@ -282,6 +340,10 @@ def _build_model_buffers(parts: Any, runtime: Any, sparse: Any) -> _ModelBuffers
         "b1_taps": int(b1_weight.shape[0]),
         "b2_taps": int(b2_weight.shape[0]),
         "logit_precision": int(runtime.HPAC_LOGIT_PRECISION),
+        "num_frames": int(model.num_pairs),
+        "frame_dim": int(model.frame_embed.weight.shape[1]),
+        "has_frame_scale": int(model.use_frame_scale),
+        "has_spm": int(model.use_spm),
     }
     native = _NativeModel(
         **scalars,
@@ -294,7 +356,6 @@ def _load_library(path: Path) -> Any:
     library = ctypes.CDLL(str(path.resolve()))
     u8p = ctypes.POINTER(ctypes.c_uint8)
     f32p = ctypes.POINTER(ctypes.c_float)
-    i16p = ctypes.POINTER(ctypes.c_int16)
     library.f26_rc64_create.argtypes = [u8p, ctypes.c_size_t]
     library.f26_rc64_create.restype = ctypes.c_void_p
     library.f26_rc64_destroy.argtypes = [ctypes.c_void_p]
@@ -308,10 +369,8 @@ def _load_library(path: Path) -> Any:
         ctypes.c_void_p,
         ctypes.POINTER(_NativeModel),
         u8p,
-        i16p,
-        i16p,
-        i16p,
-        i16p,
+        u8p,
+        ctypes.c_int32,
         u8p,
         f32p,
         f32p,
@@ -348,7 +407,6 @@ def decode_native_tokens(
 ) -> tuple[Any, dict[str, object]]:
     """Decode a real F26 prefix or full field and retain resumable token bytes."""
     import torch
-
     from runtime.hpac_inference import optimize_sparse_evaluator
     from runtime.ihs2 import materialize_ihs1
     from runtime.residual_archive import _boundary_buckets, _sparse_class
@@ -466,29 +524,19 @@ def decode_native_tokens(
     native_seconds = 0.0
     digest_seconds = 0.0
     checkpoint_seconds = 0.0
-    native_element_seconds = np.zeros(4, dtype=np.float64)
+    native_element_seconds = np.zeros(5, dtype=np.float64)
     trace_corrected = np.empty((runtime.EVAL_H * runtime.EVAL_W, 5), dtype=np.float32)
     trace_probability = np.empty_like(trace_corrected)
+    zero_previous = np.zeros(runtime.EVAL_H * runtime.EVAL_W, dtype=np.uint8)
     try:
         for frame in range(start_frame, total_frames):
             context_started = time.perf_counter()
             if frame:
-                previous = torch.from_numpy(np.asarray(tokens[frame - 1])).long().unsqueeze(0)
-            else:
-                previous = torch.zeros(
-                    (1, runtime.EVAL_H, runtime.EVAL_W), dtype=torch.long, device=device
+                previous = np.ascontiguousarray(
+                    np.asarray(tokens[frame - 1]).reshape(-1), dtype=np.uint8
                 )
-            index = torch.tensor([frame], dtype=torch.long, device=device)
-            context = model.prepare_frame_context(index, previous)
-            context_arrays = []
-            for context_index, value in enumerate(context):
-                floating = np.ascontiguousarray(value.detach().cpu().numpy(), dtype=np.float32)
-                integer = np.ascontiguousarray(floating, dtype=np.int16)
-                if not np.array_equal(floating, integer):
-                    raise F26NativeError(
-                        f"frame context {context_index} is not exactly representable as int16"
-                    )
-                context_arrays.append(integer)
+            else:
+                previous = zero_previous
             context_seconds += time.perf_counter() - context_started
 
             boundary_started = time.perf_counter()
@@ -505,7 +553,8 @@ def decode_native_tokens(
                 decoder,
                 ctypes.byref(buffers.native),
                 _pointer(boundary, ctypes.c_uint8),
-                *(_pointer(value, ctypes.c_int16) for value in context_arrays),
+                _pointer(previous, ctypes.c_uint8),
+                frame,
                 _pointer(current, ctypes.c_uint8),
                 _pointer(trace_corrected, ctypes.c_float),
                 _pointer(trace_probability, ctypes.c_float),
@@ -513,7 +562,7 @@ def decode_native_tokens(
             native_seconds += time.perf_counter() - native_started
             if status:
                 raise F26NativeError(f"native frame {frame} failed with status {status}")
-            frame_element_seconds = np.empty(4, dtype=np.float64)
+            frame_element_seconds = np.empty(5, dtype=np.float64)
             library.f26_hpac_last_timing(_pointer(frame_element_seconds, ctypes.c_double))
             native_element_seconds += frame_element_seconds
 
@@ -559,7 +608,7 @@ def decode_native_tokens(
     elapsed = time.perf_counter() - started
     report = {
         "schema": "ddm_f26q_native_token_report.v1",
-        "implementation": "native_c_fused_integer_hpac_probability_rc64",
+        "implementation": "native_c_direct_int16_context_delta_hpac_probability_rc64",
         "frames": total_frames,
         "resumed_from_frame": start_frame,
         "decoded_token_sha256": token_sha256,
@@ -572,13 +621,14 @@ def decode_native_tokens(
         "decode_runtime_seconds": elapsed,
         "stage_seconds": {
             "setup": setup_seconds,
-            "frame_context_python_reference": context_seconds,
+            "frame_context_python_pointer_prep": context_seconds,
             "boundary_buckets": boundary_seconds,
             "native_fused_hpac_probability_rc64": native_seconds,
-            "native_conv_state_initialization": float(native_element_seconds[0]),
-            "native_sparse_hidden_and_logits": float(native_element_seconds[1]),
-            "native_probability_and_rc64": float(native_element_seconds[2]),
-            "native_incremental_conv_update": float(native_element_seconds[3]),
+            "native_frame_context_int16": float(native_element_seconds[0]),
+            "native_conv_state_initialization": float(native_element_seconds[1]),
+            "native_sparse_hidden_and_logits": float(native_element_seconds[2]),
+            "native_probability_and_rc64": float(native_element_seconds[3]),
+            "native_incremental_conv_update": float(native_element_seconds[4]),
             "digest_updates": digest_seconds,
             "checkpoint_persistence": checkpoint_seconds,
             "final_token_flush_and_sha256": finalization_seconds,

@@ -579,6 +579,38 @@ def test_cuda_artifact_harvest_includes_inflated_output_manifest(mod, tmp_path):
     assert b'"aggregate_sha256"' in artifacts["inflated_outputs_manifest.json"]
 
 
+def test_cpu_inflated_output_manifest_is_committed_to_volume(tmp_path, monkeypatch):
+    cpu = _load_cpu_module()
+    out_dir = tmp_path / "out"
+    work_dir = tmp_path / "work"
+    volume_root = tmp_path / "volume"
+    out_dir.mkdir()
+    work_dir.mkdir()
+    source = work_dir / "inflated_outputs_manifest.json"
+    source.write_text('{"aggregate_sha256": "' + ("d" * 64) + '"}\n')
+    commits: list[bool] = []
+
+    class _Volume:
+        @staticmethod
+        def commit() -> None:
+            commits.append(True)
+
+    monkeypatch.setattr(cpu, "AUTH_CACHE_VOLUME_ROOT", volume_root)
+    monkeypatch.setattr(cpu, "auth_cache_vol", _Volume())
+    record = cpu._record_inflated_manifest_to_volume(
+        out_dir=out_dir,
+        work_dir=work_dir,
+        volume_run_id="f26r_cpu",
+    )
+
+    assert record is not None
+    assert commits == [True]
+    persisted = volume_root / "f26r_cpu/inflated_output_manifest/inflated_outputs_manifest.json"
+    assert persisted.read_bytes() == source.read_bytes()
+    assert record["manifest_sha256"] == cpu._sha256_path(persisted)
+    assert (out_dir / "inflated_outputs_volume_manifest.json").is_file()
+
+
 def test_submission_dir_transport_zip_is_deterministic_and_filtered(mod, tmp_path):
     submission_dir = tmp_path / "submission_dir"
     submission_dir.mkdir()

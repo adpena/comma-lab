@@ -6,6 +6,12 @@
 #include <string.h>
 #include <time.h>
 
+#if defined(__ARM_NEON) && !defined(F26_FORCE_SCALAR)
+#include <arm_neon.h>
+#elif defined(__AVX2__) && !defined(F26_FORCE_SCALAR)
+#include <immintrin.h>
+#endif
+
 #ifdef _OPENMP
 #include <omp.h>
 #endif
@@ -23,7 +29,7 @@
 #define F26_HALF ((uint64_t)1u << 62)
 #define F26_THIRD_QTR (F26_FIRST_QTR * 3u)
 
-static double f26_last_timing[4];
+static double f26_last_timing[5];
 
 static double f26_now_seconds(void) {
 #ifdef _OPENMP
@@ -46,11 +52,23 @@ typedef struct {
     int16_t *hidden_workspace;
     int16_t *b1_workspace;
     int16_t *logits_workspace;
+    int16_t *shift_workspace;
+    int16_t *past_workspace;
+    int16_t *scale_workspace;
+    int16_t *spm_workspace;
+    int16_t *spm_dw_workspace;
+    int32_t *pool_workspace;
     int32_t *conv_state_workspace;
     uint8_t *decoded_workspace;
     size_t hidden_capacity;
     size_t b1_capacity;
     size_t logits_capacity;
+    size_t shift_capacity;
+    size_t past_capacity;
+    size_t scale_capacity;
+    size_t spm_capacity;
+    size_t spm_dw_capacity;
+    size_t pool_capacity;
     size_t conv_state_capacity;
     size_t decoded_capacity;
 } f26_rc64_decoder;
@@ -76,9 +94,15 @@ typedef struct {
     int32_t b1_taps;
     int32_t b2_taps;
     int32_t logit_precision;
+    int32_t num_frames;
+    int32_t frame_dim;
+    int32_t has_frame_scale;
+    int32_t has_spm;
 
     /* conv_a_weight is [7, a_taps, channels], channel-contiguous. */
     const int8_t *conv_a_weight;
+    /* Exact [5, a_taps, channels] class-minus-class-zero deltas. */
+    const int16_t *conv_a_delta;
     /* Exact class-zero plus coordinate accumulator per [patch position, channel]. */
     const int32_t *conv_a_initial;
     const int16_t *conv_a_bias;
@@ -93,6 +117,26 @@ typedef struct {
     const int16_t *head_bias;
     const int8_t *head_exponent;
     const float *residual_table;
+
+    const int8_t *frame_codes;
+    const int8_t *frame_shift_weight;
+    const int16_t *frame_shift_bias;
+    const int8_t *frame_shift_exponent;
+    const int8_t *frame_scale_weight;
+    const int16_t *frame_scale_bias;
+    const int8_t *frame_scale_exponent;
+    /* conv_past_weight is [3, 3, 5, channels], channel-contiguous. */
+    const int8_t *conv_past_weight;
+    const int16_t *conv_past_bias;
+    const int8_t *conv_past_exponent;
+    /* spm_dw_weight is [3, 3, channels], channel-contiguous. */
+    const int8_t *spm_dw_weight;
+    const int16_t *spm_dw_bias;
+    const int8_t *spm_dw_exponent;
+    /* spm_pw_weight is [channels, channels], output-major. */
+    const int8_t *spm_pw_weight;
+    const int16_t *spm_pw_bias;
+    const int8_t *spm_pw_exponent;
 
     const int16_t *a_offsets;
     const int32_t *group_h_offsets;
@@ -139,6 +183,12 @@ void f26_rc64_destroy(void *opaque) {
     free(decoder->hidden_workspace);
     free(decoder->b1_workspace);
     free(decoder->logits_workspace);
+    free(decoder->shift_workspace);
+    free(decoder->past_workspace);
+    free(decoder->scale_workspace);
+    free(decoder->spm_workspace);
+    free(decoder->spm_dw_workspace);
+    free(decoder->pool_workspace);
     free(decoder->conv_state_workspace);
     free(decoder->decoded_workspace);
     free(decoder);
@@ -269,6 +319,234 @@ static int32_t requantize_affine(
     );
 }
 
+static void add_i8x64_to_i32(int32_t destination[64], const int8_t source[64]) {
+    int channel;
+#if defined(__ARM_NEON) && !defined(F26_FORCE_SCALAR)
+    for (channel = 0; channel < 64; channel += 16) {
+        int8x16_t packed = vld1q_s8(source + channel);
+        int16x8_t low16 = vmovl_s8(vget_low_s8(packed));
+        int16x8_t high16 = vmovl_s8(vget_high_s8(packed));
+        int32x4_t values[4] = {
+            vmovl_s16(vget_low_s16(low16)),
+            vmovl_s16(vget_high_s16(low16)),
+            vmovl_s16(vget_low_s16(high16)),
+            vmovl_s16(vget_high_s16(high16)),
+        };
+        int lane;
+        for (lane = 0; lane < 4; ++lane) {
+            int32_t *target = destination + channel + lane * 4;
+            vst1q_s32(target, vaddq_s32(vld1q_s32(target), values[lane]));
+        }
+    }
+#elif defined(__AVX2__) && !defined(F26_FORCE_SCALAR)
+    for (channel = 0; channel < 64; channel += 8) {
+        __m128i packed = _mm_loadl_epi64((const __m128i *)(source + channel));
+        __m256i values = _mm256_cvtepi8_epi32(packed);
+        __m256i prior = _mm256_loadu_si256((const __m256i *)(destination + channel));
+        _mm256_storeu_si256((__m256i *)(destination + channel), _mm256_add_epi32(prior, values));
+    }
+#else
+    for (channel = 0; channel < 64; ++channel) {
+        destination[channel] += (int32_t)source[channel];
+    }
+#endif
+}
+
+static int f26_prepare_frame_context(
+    f26_rc64_decoder *decoder,
+    const f26_hpac_model *model,
+    int32_t frame_index,
+    const uint8_t *previous
+) {
+    int16_t *shift = decoder->shift_workspace;
+    int16_t *past = decoder->past_workspace;
+    int16_t *scale = decoder->scale_workspace;
+    int16_t *spm = decoder->spm_workspace;
+    int16_t *spm_dw = decoder->spm_dw_workspace;
+    int32_t *pooled = decoder->pool_workspace;
+    int32_t patch_index;
+
+    if (
+        frame_index < 0 || frame_index >= model->num_frames || model->frame_dim <= 0 ||
+        model->patch != 64 || model->channels != 64 || !previous || !model->frame_codes ||
+        !model->frame_shift_weight || !model->frame_shift_bias ||
+        !model->frame_shift_exponent || !model->conv_past_weight ||
+        !model->conv_past_bias || !model->conv_past_exponent
+    ) return -1;
+    if (
+        model->has_frame_scale &&
+        (!model->frame_scale_weight || !model->frame_scale_bias || !model->frame_scale_exponent)
+    ) return -2;
+    if (
+        model->has_spm &&
+        (!model->spm_dw_weight || !model->spm_dw_bias || !model->spm_dw_exponent ||
+         !model->spm_pw_weight || !model->spm_pw_bias || !model->spm_pw_exponent)
+    ) return -3;
+
+    {
+        const int8_t *embedding = model->frame_codes +
+            (size_t)frame_index * (size_t)model->frame_dim;
+        int16_t frame_shift[64];
+        int16_t frame_scale[64];
+        int32_t channel;
+        for (channel = 0; channel < model->channels; ++channel) {
+            int64_t shift_sum = 0;
+            int64_t scale_sum = 0;
+            int32_t feature;
+            for (feature = 0; feature < model->frame_dim; ++feature) {
+                shift_sum += (int64_t)embedding[feature] *
+                    model->frame_shift_weight[channel * model->frame_dim + feature];
+                if (model->has_frame_scale) {
+                    scale_sum += (int64_t)embedding[feature] *
+                        model->frame_scale_weight[channel * model->frame_dim + feature];
+                }
+            }
+            frame_shift[channel] = (int16_t)requantize_affine(
+                shift_sum, model->frame_shift_bias[channel],
+                model->frame_shift_exponent[channel], 1u, -127, 127
+            );
+            frame_scale[channel] = model->has_frame_scale
+                ? (int16_t)requantize_affine(
+                    scale_sum, model->frame_scale_bias[channel],
+                    model->frame_scale_exponent[channel], 4u, -8, 8
+                )
+                : 0;
+        }
+        for (patch_index = 0; patch_index < model->patch_count; ++patch_index) {
+            memcpy(
+                shift + (size_t)patch_index * (size_t)model->channels,
+                frame_shift,
+                (size_t)model->channels * sizeof(int16_t)
+            );
+            memcpy(
+                scale + (size_t)patch_index * (size_t)model->channels,
+                frame_scale,
+                (size_t)model->channels * sizeof(int16_t)
+            );
+        }
+    }
+
+#ifdef _OPENMP
+#pragma omp parallel for schedule(static) num_threads(4)
+#endif
+    for (patch_index = 0; patch_index < model->patch_count; ++patch_index) {
+        int32_t patch_row = patch_index / model->patch_cols;
+        int32_t patch_col = patch_index % model->patch_cols;
+        int32_t pool_sum[64] = {0};
+        int32_t local_row;
+        for (local_row = 0; local_row < model->patch; ++local_row) {
+            int32_t local_col;
+            int32_t global_row = patch_row * model->patch + local_row;
+            for (local_col = 0; local_col < model->patch; ++local_col) {
+                int32_t accum[64] = {0};
+                int32_t global_col = patch_col * model->patch + local_col;
+                int32_t kernel_row;
+                size_t destination_offset =
+                    (((size_t)patch_index * (size_t)model->patch + (size_t)local_row) *
+                     (size_t)model->patch + (size_t)local_col) * (size_t)model->channels;
+                for (kernel_row = 0; kernel_row < 3; ++kernel_row) {
+                    int32_t source_row = global_row + kernel_row - 1;
+                    int32_t kernel_col;
+                    if (source_row < 0 || source_row >= model->height) continue;
+                    for (kernel_col = 0; kernel_col < 3; ++kernel_col) {
+                        int32_t source_col = global_col + kernel_col - 1;
+                        uint8_t class_id;
+                        const int8_t *weights;
+                        if (source_col < 0 || source_col >= model->width) continue;
+                        class_id = previous[
+                            (size_t)source_row * (size_t)model->width + (size_t)source_col
+                        ];
+                        if (class_id >= F26_ALPHABET) continue;
+                        weights = model->conv_past_weight +
+                            ((((size_t)kernel_row * 3u + (size_t)kernel_col) * F26_ALPHABET +
+                              (size_t)class_id) * (size_t)model->channels);
+                        add_i8x64_to_i32(accum, weights);
+                    }
+                }
+                {
+                    int32_t channel;
+                    for (channel = 0; channel < model->channels; ++channel) {
+                        int32_t value = requantize_affine(
+                            accum[channel], model->conv_past_bias[channel],
+                            model->conv_past_exponent[channel], 0u, -127, 127
+                        );
+                        past[destination_offset + (size_t)channel] = (int16_t)value;
+                        pool_sum[channel] += value;
+                    }
+                }
+            }
+        }
+        {
+            int32_t channel;
+            for (channel = 0; channel < model->channels; ++channel) {
+                pooled[(size_t)patch_index * (size_t)model->channels + (size_t)channel] =
+                    (int32_t)round_div_pow2_even(pool_sum[channel], 12u);
+            }
+        }
+    }
+
+    if (!model->has_spm) {
+        memset(spm, 0, (size_t)model->patch_count * (size_t)model->channels * sizeof(int16_t));
+        return 0;
+    }
+
+#ifdef _OPENMP
+#pragma omp parallel for schedule(static) num_threads(4)
+#endif
+    for (patch_index = 0; patch_index < model->patch_count; ++patch_index) {
+        int32_t patch_row = patch_index / model->patch_cols;
+        int32_t patch_col = patch_index % model->patch_cols;
+        int32_t channel;
+        for (channel = 0; channel < model->channels; ++channel) {
+            int64_t sum = 0;
+            int32_t kernel_row;
+            for (kernel_row = 0; kernel_row < 3; ++kernel_row) {
+                int32_t source_row = patch_row + kernel_row - 1;
+                int32_t kernel_col;
+                if (source_row < 0 || source_row >= model->patch_rows) continue;
+                for (kernel_col = 0; kernel_col < 3; ++kernel_col) {
+                    int32_t source_col = patch_col + kernel_col - 1;
+                    int32_t source_patch;
+                    if (source_col < 0 || source_col >= model->patch_cols) continue;
+                    source_patch = source_row * model->patch_cols + source_col;
+                    sum += (int64_t)pooled[
+                        (size_t)source_patch * (size_t)model->channels + (size_t)channel
+                    ] * model->spm_dw_weight[
+                        ((size_t)kernel_row * 3u + (size_t)kernel_col) *
+                        (size_t)model->channels + (size_t)channel
+                    ];
+                }
+            }
+            {
+                int32_t value = requantize_affine(
+                    sum, model->spm_dw_bias[channel], model->spm_dw_exponent[channel],
+                    3u, -127, 127
+                );
+                if (value < 0) value = 0;
+                spm_dw[(size_t)patch_index * (size_t)model->channels + (size_t)channel] =
+                    (int16_t)value;
+            }
+        }
+        for (channel = 0; channel < model->channels; ++channel) {
+            int64_t sum = 0;
+            int32_t input_channel;
+            const int8_t *weights = model->spm_pw_weight +
+                (size_t)channel * (size_t)model->channels;
+            for (input_channel = 0; input_channel < model->channels; ++input_channel) {
+                sum += (int64_t)spm_dw[
+                    (size_t)patch_index * (size_t)model->channels + (size_t)input_channel
+                ] * weights[input_channel];
+            }
+            spm[(size_t)patch_index * (size_t)model->channels + (size_t)channel] =
+                (int16_t)requantize_affine(
+                    sum, model->spm_pw_bias[channel], model->spm_pw_exponent[channel],
+                    4u, -127, 127
+                );
+        }
+    }
+    return 0;
+}
+
 static int probability_and_frequencies(
     const float corrected[F26_ALPHABET],
     int precision,
@@ -322,10 +600,8 @@ int f26_hpac_decode_frame(
     void *opaque_decoder,
     const f26_hpac_model *model,
     const uint8_t *boundary,
-    const int16_t *shift,
-    const int16_t *past,
-    const int16_t *scale,
-    const int16_t *spm,
+    const uint8_t *previous,
+    int32_t frame_index,
     uint8_t *current,
     float *corrected_trace,
     float *probability_trace
@@ -334,11 +610,17 @@ int f26_hpac_decode_frame(
     int16_t *hidden = NULL;
     int16_t *b1 = NULL;
     int16_t *logits = NULL;
+    int16_t *shift = NULL;
+    int16_t *past = NULL;
+    int16_t *scale = NULL;
+    int16_t *spm = NULL;
     int32_t *conv_state = NULL;
     uint8_t *decoded_patch_major = NULL;
     size_t hidden_capacity;
     size_t b1_capacity;
     size_t logits_capacity;
+    size_t compact_context_capacity;
+    size_t past_capacity;
     size_t conv_state_capacity;
     int32_t max_h = 0;
     int32_t max_b1 = 0;
@@ -348,13 +630,14 @@ int f26_hpac_decode_frame(
     double timing_started;
 
     if (
-        !decoder || !model || !boundary || !shift || !past || !scale || !spm ||
-        !current || !corrected_trace || !probability_trace
+        !decoder || !model || !boundary || !previous || !current || !corrected_trace ||
+        !probability_trace
     ) return -1;
     if (
         model->channels != 64 || model->patch_count != model->patch_rows * model->patch_cols ||
         model->height != model->patch_rows * model->patch ||
-        model->width != model->patch_cols * model->patch || model->groups <= 0
+        model->width != model->patch_cols * model->patch || model->groups <= 0 ||
+        !model->conv_a_delta
     ) return -2;
     if (fesetround(FE_TONEAREST)) return -3;
 
@@ -369,12 +652,23 @@ int f26_hpac_decode_frame(
     hidden_capacity = (size_t)model->patch_count * (size_t)(max_h + 1) * (size_t)model->channels;
     b1_capacity = (size_t)model->patch_count * (size_t)(max_b1 + 1) * (size_t)model->channels;
     logits_capacity = (size_t)model->patch_count * (size_t)max_targets * F26_ALPHABET;
+    compact_context_capacity = (size_t)model->patch_count * (size_t)model->channels;
+    past_capacity = (size_t)model->patch_count * (size_t)model->patch *
+        (size_t)model->patch * (size_t)model->channels;
     conv_state_capacity = (size_t)model->patch_count * (size_t)model->patch *
         (size_t)model->patch * (size_t)model->channels;
     if (!decoder->hidden_workspace) {
         decoder->hidden_workspace = (int16_t *)malloc(hidden_capacity * sizeof(int16_t));
         decoder->b1_workspace = (int16_t *)malloc(b1_capacity * sizeof(int16_t));
         decoder->logits_workspace = (int16_t *)malloc(logits_capacity * sizeof(int16_t));
+        decoder->shift_workspace = (int16_t *)malloc(compact_context_capacity * sizeof(int16_t));
+        decoder->past_workspace = (int16_t *)malloc(past_capacity * sizeof(int16_t));
+        decoder->scale_workspace = (int16_t *)malloc(compact_context_capacity * sizeof(int16_t));
+        decoder->spm_workspace = (int16_t *)malloc(compact_context_capacity * sizeof(int16_t));
+        decoder->spm_dw_workspace = (int16_t *)malloc(
+            compact_context_capacity * sizeof(int16_t)
+        );
+        decoder->pool_workspace = (int32_t *)malloc(compact_context_capacity * sizeof(int32_t));
         decoder->conv_state_workspace = (int32_t *)malloc(conv_state_capacity * sizeof(int32_t));
         decoder->decoded_workspace = (uint8_t *)malloc(
             (size_t)model->patch_count * (size_t)max_targets
@@ -382,14 +676,28 @@ int f26_hpac_decode_frame(
         decoder->hidden_capacity = hidden_capacity;
         decoder->b1_capacity = b1_capacity;
         decoder->logits_capacity = logits_capacity;
+        decoder->shift_capacity = compact_context_capacity;
+        decoder->past_capacity = past_capacity;
+        decoder->scale_capacity = compact_context_capacity;
+        decoder->spm_capacity = compact_context_capacity;
+        decoder->spm_dw_capacity = compact_context_capacity;
+        decoder->pool_capacity = compact_context_capacity;
         decoder->conv_state_capacity = conv_state_capacity;
         decoder->decoded_capacity = (size_t)model->patch_count * (size_t)max_targets;
     }
     if (
         !decoder->hidden_workspace || !decoder->b1_workspace || !decoder->logits_workspace ||
+        !decoder->shift_workspace || !decoder->past_workspace || !decoder->scale_workspace ||
+        !decoder->spm_workspace || !decoder->spm_dw_workspace || !decoder->pool_workspace ||
         !decoder->conv_state_workspace || !decoder->decoded_workspace ||
         decoder->hidden_capacity < hidden_capacity || decoder->b1_capacity < b1_capacity ||
         decoder->logits_capacity < logits_capacity ||
+        decoder->shift_capacity < compact_context_capacity ||
+        decoder->past_capacity < past_capacity ||
+        decoder->scale_capacity < compact_context_capacity ||
+        decoder->spm_capacity < compact_context_capacity ||
+        decoder->spm_dw_capacity < compact_context_capacity ||
+        decoder->pool_capacity < compact_context_capacity ||
         decoder->conv_state_capacity < conv_state_capacity ||
         decoder->decoded_capacity < (size_t)model->patch_count * (size_t)max_targets
     ) {
@@ -399,11 +707,22 @@ int f26_hpac_decode_frame(
     hidden = decoder->hidden_workspace;
     b1 = decoder->b1_workspace;
     logits = decoder->logits_workspace;
+    shift = decoder->shift_workspace;
+    past = decoder->past_workspace;
+    scale = decoder->scale_workspace;
+    spm = decoder->spm_workspace;
     conv_state = decoder->conv_state_workspace;
     decoded_patch_major = decoder->decoded_workspace;
 
     memset(current, 0, (size_t)model->height * (size_t)model->width);
     memset(f26_last_timing, 0, sizeof(f26_last_timing));
+    timing_started = f26_now_seconds();
+    status = f26_prepare_frame_context(decoder, model, frame_index, previous);
+    if (status) {
+        status -= 40;
+        goto cleanup;
+    }
+    f26_last_timing[0] = f26_now_seconds() - timing_started;
     timing_started = f26_now_seconds();
     for (group = 0; group < model->patch_count; ++group) {
         memcpy(
@@ -414,7 +733,7 @@ int f26_hpac_decode_frame(
             sizeof(int32_t)
         );
     }
-    f26_last_timing[0] = f26_now_seconds() - timing_started;
+    f26_last_timing[1] = f26_now_seconds() - timing_started;
     for (group = 0; group < model->groups; ++group) {
         int32_t h_start = model->group_h_offsets[group];
         int32_t h_count = model->group_h_offsets[group + 1] - h_start;
@@ -450,14 +769,14 @@ int f26_hpac_decode_frame(
                         model->conv_a_exponent[channel], 1u, -127, 127
                     );
                     int32_t context_offset =
-                        ((patch_index * model->channels + channel) * model->patch + local_row) *
-                        model->patch + local_col;
+                        (((patch_index * model->patch + local_row) * model->patch + local_col) *
+                         model->channels + channel);
                     int32_t film_offset = patch_index * model->channels + channel;
                     int64_t scaled = (int64_t)value * (16 + (int32_t)scale[film_offset]);
                     value = clamp_i32(round_div_pow2_even(scaled, 4u), -127, 127);
                     {
                         int32_t past_value = (int32_t)past[context_offset];
-                        past_value += (int32_t)spm[context_offset];
+                        past_value += (int32_t)spm[film_offset];
                         /* Match the reference's distinct past+SPM requantization. */
                         past_value = clamp_i32(past_value, -127, 127);
                         value += (int32_t)shift[film_offset];
@@ -566,7 +885,7 @@ int f26_hpac_decode_frame(
             }
         }
         if (status) goto cleanup;
-        f26_last_timing[1] += f26_now_seconds() - timing_started;
+        f26_last_timing[2] += f26_now_seconds() - timing_started;
 
         timing_started = f26_now_seconds();
         for (local_index = 0; local_index < output_count; ++local_index) {
@@ -613,7 +932,7 @@ int f26_hpac_decode_frame(
             current[flat_position] = decoded;
             decoded_patch_major[patch_major] = decoded;
         }
-        f26_last_timing[2] += f26_now_seconds() - timing_started;
+        f26_last_timing[3] += f26_now_seconds() - timing_started;
         /* Apply this group's decoded symbols to the incremental conv-A state. */
         timing_started = f26_now_seconds();
 #ifdef _OPENMP
@@ -640,8 +959,7 @@ int f26_hpac_decode_frame(
                     int32_t hidden_col = source_col - model->a_offsets[tap * 2 + 1];
                     int32_t channel;
                     int32_t *destination;
-                    const int8_t *class_weight;
-                    const int8_t *zero_weight;
+                    const int16_t *class_delta;
                     if (
                         hidden_row < 0 || hidden_row >= model->patch ||
                         hidden_col < 0 || hidden_col >= model->patch
@@ -650,20 +968,17 @@ int f26_hpac_decode_frame(
                         (((size_t)patch_index * (size_t)model->patch * (size_t)model->patch +
                           (size_t)hidden_row * (size_t)model->patch + (size_t)hidden_col) *
                          (size_t)model->channels);
-                    class_weight = model->conv_a_weight +
+                    class_delta = model->conv_a_delta +
                         ((size_t)class_id * (size_t)model->a_taps + (size_t)tap) *
                         (size_t)model->channels;
-                    zero_weight = model->conv_a_weight +
-                        (size_t)tap * (size_t)model->channels;
                     for (channel = 0; channel < model->channels; ++channel) {
-                        destination[channel] +=
-                            (int32_t)class_weight[channel] - (int32_t)zero_weight[channel];
+                        destination[channel] += (int32_t)class_delta[channel];
                     }
                 }
             }
         }
         if (status) goto cleanup;
-        f26_last_timing[3] += f26_now_seconds() - timing_started;
+        f26_last_timing[4] += f26_now_seconds() - timing_started;
     }
 
 cleanup:
@@ -674,6 +989,6 @@ uint64_t f26_total_frequency(void) {
     return F26_TOTAL;
 }
 
-void f26_hpac_last_timing(double output[4]) {
+void f26_hpac_last_timing(double output[5]) {
     if (output) memcpy(output, f26_last_timing, sizeof(f26_last_timing));
 }

@@ -1,9 +1,9 @@
 audit=PASS
-scope=retained v13 C source, Python binding, and f26_hpac_native_a.so
-command_1=strings <retained-binary> | rg '9ba2e52b|f0ba4bb4|617e9fcf|ba0d529b'
+scope=retained F26R C source, Python binding, optimized binaries, and scalar-twin binaries
+command_1=strings <each-retained-binary> | rg '9ba2e52b|f0ba4bb4|617e9fcf|ba0d529b'
 command_1_matches=0
 command_2=rg '[0-9a-f]{32,}' f26_hpac_native.c experiments/ddm_f26q_f26_hpac_native.py
 command_2_matches=0
-generic_shape_constants=alphabet 5; channels 64; RC64 total 2^31; RC64 interval constants
-archive_derived_inputs=all weights; biases; exponents; residual table; plans; frame context; RC64 stream
+generic_shape_constants=alphabet 5; channels 64; patch 64 direct-context specialization; RC64 total 2^31; RC64 interval constants
+archive_derived_inputs=all weights; biases; exponents; residual table; plans; frame codes; frame context codes; conv-A deltas; RC64 stream
 learned_or_video_derived_constants_embedded=none found in audited scope

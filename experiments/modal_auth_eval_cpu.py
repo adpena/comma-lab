@@ -528,6 +528,7 @@ def _collect_artifacts(out_dir: Path, work_dir: Path) -> dict[str, bytes]:
         out_dir / "contest_auth_eval.stderr.log",
         work_dir / "contest_auth_eval.json",
         work_dir / "inflated_outputs_manifest.json",
+        out_dir / "inflated_outputs_volume_manifest.json",
         work_dir / "scorer_input_cache_hashes.json",
         work_dir / "provenance.json",
         work_dir / "report.txt",
@@ -898,6 +899,13 @@ def _run_auth_eval_inner(
     result_json = work_dir / "contest_auth_eval.json"
     payload: dict[str, Any] | None = None
     validation_errors: list[str] = []
+    inflated_volume_manifest = _record_inflated_manifest_to_volume(
+        out_dir=out_dir,
+        work_dir=work_dir,
+        volume_run_id=tensor_volume_run_id,
+    )
+    if inflated_volume_manifest is None:
+        validation_errors.append("inflated_outputs_volume_manifest was not produced")
     tensor_volume_manifest = None
     if scorer_input_cache_tensors:
         tensor_volume_manifest = _record_tensor_volume_manifest(
@@ -958,6 +966,7 @@ def _run_auth_eval_inner(
             f"{tensor_volume_run_id}/ ./modal_{tensor_volume_run_id}/"
         ),
         "scorer_input_cache_tensor_volume_manifest": tensor_volume_manifest,
+        "inflated_outputs_volume_manifest": inflated_volume_manifest,
         "validation_errors": validation_errors,
         "score_claim": payload_score_claim,
         "promotion_eligible": False,  # CPU axis: not promotion-eligible
@@ -1525,6 +1534,45 @@ def _safe_tensor_volume_run_id(value: str, *, archive_sha256: str, axis: str) ->
     safe = "".join(ch if ch.isalnum() or ch in {"-", "_", "."} else "_" for ch in raw)
     safe = safe.strip("._-/")
     return safe or f"{axis}_{archive_sha256[:16]}"
+
+
+def _record_inflated_manifest_to_volume(
+    *,
+    out_dir: Path,
+    work_dir: Path,
+    volume_run_id: str,
+) -> dict[str, Any] | None:
+    """Persist the per-frame inflated-output identity manifest to the Modal volume."""
+    source = work_dir / "inflated_outputs_manifest.json"
+    if not source.is_file():
+        return None
+    volume_dir = AUTH_CACHE_VOLUME_ROOT / volume_run_id / "inflated_output_manifest"
+    volume_dir.mkdir(parents=True, exist_ok=True)
+    destination = volume_dir / source.name
+    payload = source.read_bytes()
+    if destination.is_file() and destination.read_bytes() != payload:
+        raise RuntimeError(
+            f"refusing to overwrite differing inflated-output volume manifest: {destination}"
+        )
+    destination.write_bytes(payload)
+    auth_cache_vol.commit()
+    record = {
+        "schema_version": "modal_auth_eval_inflated_volume_manifest.v1",
+        "volume_name": AUTH_CACHE_VOLUME_NAME,
+        "volume_run_id": volume_run_id,
+        "volume_path": str(volume_dir),
+        "manifest_path": str(destination),
+        "manifest_bytes": len(payload),
+        "manifest_sha256": _sha256_path(destination),
+        "volume_download_command": (
+            f".venv/bin/modal volume get --force {AUTH_CACHE_VOLUME_NAME} "
+            f"{volume_run_id}/inflated_output_manifest/ "
+            f"./modal_{volume_run_id}_inflated_output_manifest/"
+        ),
+        "retention_role": "volume-backed per-frame identity for the materialized inflate payload",
+    }
+    write_json(out_dir / "inflated_outputs_volume_manifest.json", record)
+    return record
 
 
 def _record_tensor_volume_manifest(

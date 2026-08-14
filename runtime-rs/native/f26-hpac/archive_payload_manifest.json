@@ -1,5 +1,5 @@
 {
-  "schema": "ddm_f26q_native_payload_manifest.v1",
+  "schema": "ddm_f26r_native_payload_manifest.v1",
   "axis_label": "[M5-CPU 4-thread scorer-free native token decode]",
   "score_authority": false,
   "archive": {
@@ -8,29 +8,58 @@
   },
   "retained_payloads": [
     {
-      "path": "/Volumes/VertigoDataTier/pact/ddm_f26q_rc64_native_20260814/retained/native_tokens_v13_n600.u8",
+      "role": "primary full-field token payload",
+      "path": "/Volumes/VertigoDataTier/pact/ddm_f26r_hpac_final_rung_20260814/rungs/direct_context_delta_v1/retained/native_tokens_v13_n600.u8",
       "bytes": 117964800,
       "sha256": "9ba2e52b3096585895970066b389bf1261ebc203d5b828cdea056c13858aea52",
-      "rebuild_command": ".venv/bin/python experiments/ddm_f26q_rc64_native_lowering.py run-native --frames 600"
+      "rebuild_command": ".venv/bin/python experiments/ddm_f26r_hpac_hot_stage_final_rung.py run-optimized --rung direct_context_delta_v1 --frames 600"
     },
     {
-      "path": "/Volumes/VertigoDataTier/pact/ddm_f26q_rc64_native_20260814/retained/native_build_v13_persistent_vector/f26_hpac_native_a.so",
-      "bytes": 52816,
-      "sha256": "b791acf032c7f373beb329c3241323af04f8e939dd8c0195ac84ae908221779c",
-      "rebuild_command": ".venv/bin/python experiments/ddm_f26q_rc64_native_lowering.py build"
+      "role": "independent optimized repeat full-field token payload",
+      "path": "/Volumes/VertigoDataTier/pact/ddm_f26r_hpac_final_rung_20260814/rungs/direct_context_delta_v1/retained/native_tokens_optimized_repeat_n600.u8",
+      "bytes": 117964800,
+      "sha256": "9ba2e52b3096585895970066b389bf1261ebc203d5b828cdea056c13858aea52",
+      "rebuild_command": ".venv/bin/python experiments/ddm_f26r_hpac_hot_stage_final_rung.py run-optimized-repeat --rung direct_context_delta_v1 --frames 600"
     },
     {
-      "path": "/Volumes/VertigoDataTier/pact/ddm_f26q_rc64_native_20260814/retained/native_build_v13_persistent_vector/f26_hpac_native_b.so",
-      "bytes": 52816,
-      "sha256": "b791acf032c7f373beb329c3241323af04f8e939dd8c0195ac84ae908221779c",
-      "rebuild_command": ".venv/bin/python experiments/ddm_f26q_rc64_native_lowering.py build"
+      "role": "forced-scalar x86-twin equality full-field token payload",
+      "path": "/Volumes/VertigoDataTier/pact/ddm_f26r_hpac_final_rung_20260814/rungs/direct_context_delta_v1/retained/native_tokens_scalar_twin_n600.u8",
+      "bytes": 117964800,
+      "sha256": "9ba2e52b3096585895970066b389bf1261ebc203d5b828cdea056c13858aea52",
+      "rebuild_command": ".venv/bin/python experiments/ddm_f26r_hpac_hot_stage_final_rung.py run-scalar-twin --rung direct_context_delta_v1 --frames 600"
+    },
+    {
+      "role": "optimized deterministic build A",
+      "path": "/Volumes/VertigoDataTier/pact/ddm_f26r_hpac_final_rung_20260814/rungs/direct_context_delta_v1/retained/native_build_direct_context_delta/f26_hpac_native_a.so",
+      "bytes": 69424,
+      "sha256": "1cf0e61b53d5b25a2b0cbb6adb47232921ebd442aa461cfcbb8db97d664a6aae"
+    },
+    {
+      "role": "optimized deterministic build B",
+      "path": "/Volumes/VertigoDataTier/pact/ddm_f26r_hpac_final_rung_20260814/rungs/direct_context_delta_v1/retained/native_build_direct_context_delta/f26_hpac_native_b.so",
+      "bytes": 69424,
+      "sha256": "1cf0e61b53d5b25a2b0cbb6adb47232921ebd442aa461cfcbb8db97d664a6aae"
+    },
+    {
+      "role": "scalar-twin deterministic build A",
+      "path": "/Volumes/VertigoDataTier/pact/ddm_f26r_hpac_final_rung_20260814/rungs/direct_context_delta_v1/retained/native_build_scalar_twin/f26_hpac_scalar_a.so",
+      "bytes": 69424,
+      "sha256": "64efe1e803aa0d22dbb0e3d02df5e7799a2e76b7ae4298311e78ab96cc86f4a8"
+    },
+    {
+      "role": "scalar-twin deterministic build B",
+      "path": "/Volumes/VertigoDataTier/pact/ddm_f26r_hpac_final_rung_20260814/rungs/direct_context_delta_v1/retained/native_build_scalar_twin/f26_hpac_scalar_b.so",
+      "bytes": 69424,
+      "sha256": "64efe1e803aa0d22dbb0e3d02df5e7799a2e76b7ae4298311e78ab96cc86f4a8"
     }
   ],
   "receipts": {
-    "build": "/Volumes/VertigoDataTier/pact/ddm_f26q_rc64_native_20260814/receipts/native_build_v13.json",
-    "full_parity": "/Volumes/VertigoDataTier/pact/ddm_f26q_rc64_native_20260814/receipts/native_run_v13_n600.json",
-    "result": "/Volumes/VertigoDataTier/pact/ddm_f26q_rc64_native_20260814/receipts/result.json"
+    "result": "/Volumes/VertigoDataTier/pact/ddm_f26r_hpac_final_rung_20260814/receipts/result.json",
+    "fire_order": "/Volumes/VertigoDataTier/pact/ddm_f26r_hpac_final_rung_20260814/SEALED_FIRE_ORDER.json",
+    "primary_full_parity": "/Volumes/VertigoDataTier/pact/ddm_f26r_hpac_final_rung_20260814/rungs/direct_context_delta_v1/receipts/native_run_v13_n600.json",
+    "repeat_full_parity": "/Volumes/VertigoDataTier/pact/ddm_f26r_hpac_final_rung_20260814/rungs/direct_context_delta_v1/receipts/native_run_optimized_repeat_n600.json",
+    "scalar_twin_full_parity": "/Volumes/VertigoDataTier/pact/ddm_f26r_hpac_final_rung_20260814/rungs/direct_context_delta_v1/receipts/native_run_scalar_twin_n600.json"
   },
-  "checkpoint_policy": "initial state plus distinct through_frame_XXX receipts every 25 frames",
-  "cleanup_disposition": "keep all payloads; no deletion or move authorized"
+  "checkpoint_policy": "each n600 run has an initial state plus distinct through_frame_XXX receipts every 25 frames",
+  "cleanup_disposition": "keep every payload, binary, checkpoint, and receipt; no deletion or move authorized"
 }
