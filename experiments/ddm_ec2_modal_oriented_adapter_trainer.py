@@ -73,6 +73,8 @@ PRIOR_BASE_FIELD: Final = PRIOR_RUN / "retained/fields/cp135_base_argmax_n600.np
 COMMIT_PERIOD_SECONDS: Final = 20.0
 HARD_CAP_SECONDS: Final = 10_800
 ESTIMATED_T4_COST_USD: Final = 1.80
+CLOSURE_MANIFEST_SCHEMA: Final = "modal_endpoint_closure_manifest.v1"
+ENDPOINT_CLOSER_DEADLINE_SECONDS: Final = HARD_CAP_SECONDS + 3_600
 
 DEFAULT_ARCHIVE: Final = Path(
     "/Volumes/APDataStore/pact/submittable_custody_mirror_20260811/cp135_packet/adapted_runtime/archive.zip"
@@ -132,6 +134,93 @@ def sha256_file(path: Path) -> str:
 
 def file_record(path: Path) -> dict[str, Any]:
     return {"path": str(path.resolve()), "bytes": path.stat().st_size, "sha256": sha256_file(path)}
+
+
+def _volume_relative_path(path_value: str, run_id: str) -> str:
+    parts = Path(path_value).parts
+    if run_id not in parts:
+        raise EC2DispatchError(
+            f"retained payload path does not contain run_id={run_id!r}: {path_value}"
+        )
+    return Path(*parts[parts.index(run_id) :]).as_posix()
+
+
+def _closure_payload_entries(
+    value: Any,
+    *,
+    run_id: str,
+    prefix: tuple[str, ...] = (),
+) -> list[dict[str, Any]]:
+    """Enumerate every exact retained_payloads/payloads record in a result."""
+
+    entries: list[dict[str, Any]] = []
+    if isinstance(value, dict):
+        for key, child in value.items():
+            if key == "closure_manifest":
+                continue
+            if key in {"retained_payloads", "payloads"} and isinstance(child, dict):
+                for name, record in child.items():
+                    if not isinstance(record, dict):
+                        continue
+                    if not {"path", "sha256", "bytes"}.issubset(record):
+                        continue
+                    entries.append(
+                        {
+                            "name": ".".join((*prefix, key, str(name))),
+                            "remote_path": _volume_relative_path(str(record["path"]), run_id),
+                            "bytes": int(record["bytes"]),
+                            "sha256": str(record["sha256"]).lower(),
+                        }
+                    )
+                continue
+            entries.extend(
+                _closure_payload_entries(child, run_id=run_id, prefix=(*prefix, str(key)))
+            )
+    elif isinstance(value, list):
+        for index, child in enumerate(value):
+            entries.extend(
+                _closure_payload_entries(child, run_id=run_id, prefix=(*prefix, str(index)))
+            )
+    return entries
+
+
+def build_closure_manifest(
+    *,
+    request: dict[str, Any],
+    result: dict[str, Any] | None,
+    explicit_paths: dict[str, Path],
+) -> dict[str, Any]:
+    """Build the complete data-driven payload contract consumed by AC1."""
+
+    run_id = str(request["run_id"])
+    entries = _closure_payload_entries(result or {}, run_id=run_id)
+    entries.extend(
+        {
+            "name": name,
+            "remote_path": _volume_relative_path(str(path), run_id),
+            "bytes": path.stat().st_size,
+            "sha256": sha256_file(path),
+        }
+        for name, path in explicit_paths.items()
+        if path.is_file()
+    )
+    unique: dict[str, dict[str, Any]] = {}
+    for entry in entries:
+        remote_path = str(entry["remote_path"])
+        prior = unique.get(remote_path)
+        if prior and (
+            int(prior["bytes"]) != int(entry["bytes"])
+            or str(prior["sha256"]) != str(entry["sha256"])
+        ):
+            raise EC2DispatchError(f"conflicting payload identity for {remote_path}")
+        unique[remote_path] = entry
+    return {
+        "schema": CLOSURE_MANIFEST_SCHEMA,
+        "volume_name": VOLUME_NAME,
+        "lane_id": str(request["lane_id"]),
+        "instance_job_id": str(request["instance_job_id"]),
+        "payloads": [unique[path] for path in sorted(unique)],
+    }
 
 
 def atomic_bytes(path: Path, payload: bytes) -> None:
@@ -535,7 +624,7 @@ def run_trainer(payloads: dict[str, bytes], request: dict[str, Any]) -> dict[str
     retained_volume.commit()
     final_path = run_root / "FINAL_RESULT.json"
     if returncode or not final_path.is_file():
-        return {
+        failed_result = {
             "schema": "ddm_ec2_modal_return.v1",
             "training_complete": False,
             "returncode": returncode,
@@ -548,9 +637,19 @@ def run_trainer(payloads: dict[str, bytes], request: dict[str, Any]) -> dict[str
             "resume_same_run_id": run_id,
             "score_claim": False,
         }
+        failed_result["closure_manifest"] = build_closure_manifest(
+            request=request,
+            result=None,
+            explicit_paths={"worker_log": log_path},
+        )
+        return failed_result
     final_bytes = final_path.read_bytes()
-    selected_bytes = (run_root / "stages/selected/SELECTED_RESULT.json").read_bytes()
-    return {
+    selected_path = run_root / "stages/selected/SELECTED_RESULT.json"
+    selected_bytes = selected_path.read_bytes()
+    final_result = json.loads(final_bytes)
+    if not isinstance(final_result, dict):
+        raise EC2DispatchError("FINAL_RESULT.json root is not an object")
+    success_result = {
         "schema": "ddm_ec2_modal_return.v1",
         "training_complete": True,
         "returncode": 0,
@@ -567,6 +666,16 @@ def run_trainer(payloads: dict[str, bytes], request: dict[str, Any]) -> dict[str
         "score_claim": False,
         "promotion_eligible": False,
     }
+    success_result["closure_manifest"] = build_closure_manifest(
+        request=request,
+        result=final_result,
+        explicit_paths={
+            "final_result": final_path,
+            "selected_result": selected_path,
+            "worker_log": log_path,
+        },
+    )
+    return success_result
 
 
 def _load_sealed(path: Path, expected_sha256: str, fire_input_dir: Path) -> tuple[dict[str, bytes], dict[str, Any]]:
@@ -644,7 +753,83 @@ def _claim_and_spawn(
         ),
         status="active_ec2_adapter_training_spawned",
     )
+    arm_endpoint_closer(call_id=call_id, request=request, output=output)
     return call_id
+
+
+def arm_endpoint_closer(
+    *,
+    call_id: str,
+    request: dict[str, Any],
+    output: Path,
+) -> dict[str, Any]:
+    """Arm the canonical detached closer immediately after dispatch acceptance."""
+
+    closer_output = output / "endpoint_closure"
+    launch_output = output / "endpoint_closer_process"
+    local_store = output / "retained/endpoint_payloads"
+    done_name = f"{request['run_id']}_endpoint_closure"
+    command = [
+        str(REPO / ".venv/bin/python"),
+        str(REPO / "tools/launch_detached_process.py"),
+        "--output-dir",
+        str(launch_output),
+        "--cwd",
+        str(REPO),
+        "--purpose",
+        f"automatic Modal endpoint closure for {request['run_id']}",
+        "--authority",
+        "typed endpoint-closure receipt; no score authority",
+        "--done-receipt",
+        done_name,
+        "--verify-alive-secs",
+        "3",
+        "--",
+        str(REPO / ".venv/bin/python"),
+        str(REPO / "tools/modal_endpoint_close.py"),
+        "--call-id",
+        call_id,
+        "--output-dir",
+        str(closer_output),
+        "--local-store",
+        str(local_store),
+        "--lane-id",
+        str(request["lane_id"]),
+        "--instance-job-id",
+        str(request["instance_job_id"]),
+        "--agent",
+        str(request["claim_agent"]),
+        "--deadline-s",
+        str(ENDPOINT_CLOSER_DEADLINE_SECONDS),
+        "--poll-s",
+        "60",
+    ]
+    process = subprocess.run(
+        command,
+        cwd=REPO,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    receipt = {
+        "schema": "ddm_ec2_endpoint_closer_arm.v1",
+        "call_id": call_id,
+        "run_id": request["run_id"],
+        "launch_output": str(launch_output),
+        "closer_output": str(closer_output),
+        "local_store": str(local_store),
+        "done_receipt": f".omx/tmp/codex_runs/{done_name}.done",
+        "returncode": process.returncode,
+        "stdout": process.stdout[-2_000:],
+        "stderr": process.stderr[-2_000:],
+    }
+    atomic_json(output / "ENDPOINT_CLOSER_ARM.json", receipt)
+    if process.returncode:
+        raise EC2DispatchError(
+            "provider accepted the call but automatic endpoint closer failed to arm; "
+            f"call_id={call_id} rc={process.returncode}"
+        )
+    return receipt
 
 
 @app.local_entrypoint()
@@ -708,6 +893,12 @@ def controls(
 
 def recover(output: Path, timeout_seconds: float = 0.0) -> int:
     output = output.resolve()
+    automatic_receipt = output / "endpoint_closure/ENDPOINT_CLOSURE.receipt.json"
+    if automatic_receipt.is_file():
+        receipt = json.loads(automatic_receipt.read_text())
+        if receipt.get("status") in {"CLOSED", "CLOSED_REMOTE_FAILED"}:
+            print(json.dumps(receipt, indent=2, sort_keys=True))
+            return int(receipt.get("process_rc", 1))
     spawn = json.loads((output / "modal_auth_eval_spawn.json").read_text())
     call_id = str(spawn["call_id"])
     try:
