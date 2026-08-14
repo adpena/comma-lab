@@ -5,6 +5,11 @@ no dual-axis candidate was sealed or fired. The effective frontier is **UNMOVED*
 
 ## Result first
 
+> **Superseded GT-field status (QS4, 2026-08-13):** the hash-pinned matched GT field and
+> MAIN's identity-validated decomposition receipt are now present. The runner consumes and
+> independently verifies that receipt, then folds the obsolete recovery order into QS4.
+> The original paragraph below is retained as the historical state when QS3 stopped.
+
 QS3 did not produce a valid composed candidate. The required download receipt eventually
 landed, and all 38 batches on each of the four downloaded n600 surfaces form exact 0–599
 partitions, but the download does **not** contain the referenced matched T4 GT argmax field

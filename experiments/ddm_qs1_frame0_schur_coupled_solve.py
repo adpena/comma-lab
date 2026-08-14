@@ -843,15 +843,21 @@ def _materialize_js6_tokens(
     for row in selected:
         proposal_id = str(row["proposal_id"])
         pair = int(row["pair"])
-        candidate_path = JS6_BANK / "proposals" / proposal_id / "candidate_tokens.uint8.npy"
+        candidate_path = Path(
+            row.get(
+                "candidate_tokens_path",
+                JS6_BANK / "proposals" / proposal_id / "candidate_tokens.uint8.npy",
+            )
+        )
         candidate = np.load(candidate_path, allow_pickle=False)
         before = np.asarray(spatial[pair])
         indices = np.flatnonzero(candidate.reshape(-1) != before.reshape(-1))
-        if indices.size != int(
-            json.loads((JS6_BANK / "proposals" / proposal_id / "proposal.json").read_text())[
-                "token_site_count"
-            ]
-        ):
+        expected_sites = row.get("token_site_count")
+        if expected_sites is None:
+            expected_sites = json.loads(
+                (JS6_BANK / "proposals" / proposal_id / "proposal.json").read_text()
+            )["token_site_count"]
+        if indices.size != int(expected_sites):
             raise QS1Error(f"JS6 token diff count differs: {proposal_id}")
         overlap = {(pair, int(index)) for index in indices.tolist()} & touched
         if overlap:

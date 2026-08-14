@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""QS3 scorer-free saturation composition and fail-closed T4 post-mortem.
+"""QS3 scorer-free saturation composition and retained-field post-mortem.
 
 The runner consumes retained QS1/QS2/JS6 artifacts without launching Modal or
 SegNet.  It verifies the downloaded QS1 run, measures a nine-pair shared
 compensation-codebook bracket, screens the complete 200-row JS6 bank at the
-measured QS1 realization calibration, and writes a sealed no-fire receipt when
-the T4 GT field required for exact pixel attribution is unavailable.
+measured QS1 realization calibration, and consumes the hash-pinned
+GT-attributed decomposition when the matched T4 GT field is available.  The
+unavailable-field branch remains fail-closed.
 
 Mechanism variants are deliberately labelled TOY-BRACKET.  They do not become
 receiver candidates or family verdicts until the retained-field post-mortem,
@@ -47,6 +48,7 @@ QS1_BASE_FIELD: Final = Path(
 )
 QS1_CANDIDATE_FIELD: Final = QS1_FIELDS / "retained/fields/candidate_argmax_n600.npy"
 QS1_GT_FIELD: Final = OUTPUT / "retained/inputs/gt_argmax_n600.npy"
+GT_ATTRIBUTED_RECEIPT: Final = OUTPUT / "GT_ATTRIBUTED_DECOMPOSITION.json"
 QS2_REMOTE_RESULT: Final = (
     qs2.OUTPUT
     / "dispatch/ddm_qs2_dual_axis_20260813_r2/QS2_T4_REMOTE_RESULT.json"
@@ -324,6 +326,121 @@ def changed_field_census(output: Path, rows: Sequence[dict[str, Any]]) -> dict[s
         "score_claim": False,
     }
     retain_json(output / "POSTMORTEM_BLOCKED_CENSUS.json", result)
+    return result
+
+
+def compute_gt_attribution(
+    *,
+    base: np.ndarray,
+    candidate: np.ndarray,
+    gt: np.ndarray,
+    pair_to_proposal: dict[int, str],
+) -> dict[str, Any]:
+    """Classify every changed cell against GT without inferring identities from totals."""
+    if base.shape != candidate.shape or base.shape != gt.shape or base.ndim != 3:
+        raise QS3Error("GT-attribution field geometry differs")
+    changed = base != candidate
+    changed_pairs = np.flatnonzero(np.count_nonzero(changed, axis=(1, 2)))
+    if set(changed_pairs.astype(int).tolist()) != set(pair_to_proposal):
+        raise QS3Error("GT-attribution changed pairs differ from proposal ownership")
+    per_pair: dict[str, dict[str, Any]] = {}
+    total_b = total_h = total_w = total_changed = 0
+    for pair in changed_pairs.astype(int).tolist():
+        pair_changed = changed[pair]
+        beneficial = pair_changed & (base[pair] != gt[pair]) & (candidate[pair] == gt[pair])
+        harmful = pair_changed & (base[pair] == gt[pair]) & (candidate[pair] != gt[pair])
+        wrong_to_wrong = (
+            pair_changed
+            & (base[pair] != gt[pair])
+            & (candidate[pair] != gt[pair])
+        )
+        b = int(np.count_nonzero(beneficial))
+        h = int(np.count_nonzero(harmful))
+        w = int(np.count_nonzero(wrong_to_wrong))
+        count = int(np.count_nonzero(pair_changed))
+        if b + h + w != count:
+            raise QS3Error("GT-attribution classes do not partition changed cells")
+        per_pair[str(pair)] = {
+            "proposal_id": pair_to_proposal[pair],
+            "changed": count,
+            "B": b,
+            "H": h,
+            "W": w,
+            "net": b - h,
+        }
+        total_b += b
+        total_h += h
+        total_w += w
+        total_changed += count
+    return {
+        "changed": total_changed,
+        "beneficial_B": total_b,
+        "harmful_H": total_h,
+        "wrong_to_wrong_W": total_w,
+        "identity_B_minus_H_equals_net": total_b - total_h,
+        "gross_activity": total_b + total_h,
+        "per_pair": per_pair,
+    }
+
+
+def consume_gt_attributed_receipt(
+    output: Path,
+    rows: Sequence[dict[str, Any]],
+    *,
+    receipt_path: Path = GT_ATTRIBUTED_RECEIPT,
+) -> dict[str, Any]:
+    """Recompute and verify MAIN's GT receipt before downstream use."""
+    receipt = json.loads(receipt_path.read_text())
+    if receipt.get("schema") != "ddm_qs3_gt_attributed_decomposition.v1":
+        raise QS3Error("GT-attributed receipt schema differs")
+    pins = receipt.get("field_pins", {})
+    actual_pins = {
+        "gt": sha256_file(QS1_GT_FIELD),
+        "base": sha256_file(QS1_BASE_FIELD),
+        "candidate": sha256_file(QS1_CANDIDATE_FIELD),
+    }
+    if pins != actual_pins:
+        raise QS3Error("GT-attributed receipt field pins differ")
+    base = np.load(QS1_BASE_FIELD, mmap_mode="r", allow_pickle=False)
+    candidate = np.load(QS1_CANDIDATE_FIELD, mmap_mode="r", allow_pickle=False)
+    gt = np.load(QS1_GT_FIELD, mmap_mode="r", allow_pickle=False)
+    pair_to_proposal = {int(row["pair"]): str(row["proposal_id"]) for row in rows}
+    computed = compute_gt_attribution(
+        base=base,
+        candidate=candidate,
+        gt=gt,
+        pair_to_proposal=pair_to_proposal,
+    )
+    receipt_totals = receipt.get("totals", {})
+    total_keys = (
+        "changed",
+        "beneficial_B",
+        "harmful_H",
+        "wrong_to_wrong_W",
+        "identity_B_minus_H_equals_net",
+        "gross_activity",
+    )
+    for key in total_keys:
+        if int(receipt_totals.get(key, -1)) != int(computed[key]):
+            raise QS3Error(f"GT-attributed receipt total differs: {key}")
+    for pair_text, row in computed["per_pair"].items():
+        receipt_row = receipt.get("per_pair", {}).get(pair_text)
+        if receipt_row is None:
+            raise QS3Error(f"GT-attributed receipt pair is absent: {pair_text}")
+        for key in ("changed", "B", "H", "W", "net"):
+            if int(receipt_row.get(key, -1)) != int(row[key]):
+                raise QS3Error(f"GT-attributed receipt pair differs: {pair_text}/{key}")
+    result = {
+        "schema": "ddm_qs3_gt_attributed_decomposition_verification.v1",
+        "axis": receipt["axis"],
+        "receipt": file_record(receipt_path),
+        "field_pins": actual_pins,
+        "totals": {key: computed[key] for key in total_keys},
+        "per_pair": computed["per_pair"],
+        "identity_validated": True,
+        "score_claim": False,
+    }
+    retain_json(output / "GT_ATTRIBUTED_DECOMPOSITION_VERIFIED.json", result)
     return result
 
 
@@ -701,6 +818,7 @@ def finalize(
     qs2_calibration: dict[str, Any],
     codebook: dict[str, Any],
     bank: dict[str, Any],
+    gt_attribution: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     blocker = {
         "schema": "ddm_qs3_sealed_no_fire_order.v1",
@@ -734,19 +852,43 @@ def finalize(
         "modal_fired": False,
         "score_claim": False,
     }
-    no_fire_record = retain_json(output / "SEALED_NO_FIRE_ORDER.json", blocker)
+    if gt_attribution is None:
+        no_fire_record = retain_json(output / "SEALED_NO_FIRE_ORDER.json", blocker)
+        disposition = "QUEUED-WITH-A-FIRE-ORDER"
+        waterfill_status = "BLOCKED_MISSING_MATCHED_T4_GT_FIELD"
+    else:
+        supersession = {
+            "schema": "ddm_qs3_gt_attribution_supersession.v1",
+            "disposition": "FOLDED",
+            "owner": "ddm_qs4_collateral_suppression",
+            "consumer_store": "/Volumes/VertigoDataTier/pact/ddm_qs4_20260813",
+            "fire_trigger": (
+                "the verified 108 B / 76 H / 5 W decomposition is consumed by QS4's "
+                "collateral map and strict-support compile"
+            ),
+            "gt_attribution": gt_attribution,
+            "obsolete_gt_recovery_order": True,
+            "modal_fired": False,
+            "score_claim": False,
+        }
+        no_fire_record = retain_json(
+            output / "GT_ATTRIBUTION_SUPERSESSION.json", supersession
+        )
+        disposition = "FOLDED"
+        waterfill_status = "GT_ATTRIBUTION_CONSUMED_BY_QS4_SUCCESSOR"
     result = {
         "schema": "ddm_qs3_final_result.v1",
         "axis": AXIS,
-        "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+        "disposition": disposition,
         "download_verification": verification,
         "postmortem": census,
         "qs2_calibration": qs2_calibration,
         "shared_codebook": codebook,
         "full_bank_screen": bank,
         "waterfilled_compile": None,
-        "waterfill_status": "BLOCKED_MISSING_MATCHED_T4_GT_FIELD",
-        "sealed_no_fire_order": no_fire_record,
+        "waterfill_status": waterfill_status,
+        "gt_attribution": gt_attribution,
+        "follow_on_disposition": no_fire_record,
         "segnet_rerun": False,
         "modal_fired": False,
         "all_materialized_payloads_retained": True,
@@ -765,6 +907,13 @@ def run(output: Path = OUTPUT) -> dict[str, Any]:
     storage_preflight(output)
     verification = verify_download(output)
     rows = _qs1_selected_rows()
+    gt_attribution = None
+    if verification["trusted_for_postmortem"]:
+        if not GT_ATTRIBUTED_RECEIPT.is_file():
+            raise QS3Error(
+                "matched GT is trusted but MAIN's GT-attributed receipt is absent"
+            )
+        gt_attribution = consume_gt_attributed_receipt(output, rows)
     census = changed_field_census(output, rows)
     qs2_calibration = consume_qs2_calibration(output)
     codebook = codebook_race(output)
@@ -776,6 +925,7 @@ def run(output: Path = OUTPUT) -> dict[str, Any]:
         qs2_calibration=qs2_calibration,
         codebook=codebook,
         bank=bank,
+        gt_attribution=gt_attribution,
     )
 
 

@@ -63,3 +63,20 @@ def test_qs3_runners_do_not_measure_and_discard_payloads() -> None:
         ],
     )
     assert findings == []
+
+
+def test_gt_attribution_partitions_changed_cells_exactly() -> None:
+    base = np.asarray([[[0, 0, 1, 1, 2]]], dtype=np.uint8)
+    candidate = np.asarray([[[1, 2, 0, 2, 3]]], dtype=np.uint8)
+    gt = np.asarray([[[1, 0, 1, 3, 4]]], dtype=np.uint8)
+    result = qs3.compute_gt_attribution(
+        base=base,
+        candidate=candidate,
+        gt=gt,
+        pair_to_proposal={0: "proposal"},
+    )
+    assert result["changed"] == 5
+    assert result["beneficial_B"] == 1
+    assert result["harmful_H"] == 2
+    assert result["wrong_to_wrong_W"] == 2
+    assert result["identity_B_minus_H_equals_net"] == -1
