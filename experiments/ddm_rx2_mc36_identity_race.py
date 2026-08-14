@@ -1022,6 +1022,7 @@ def finalize(_args: argparse.Namespace) -> dict[str, Any]:
     if not cpu.get("raw_identity_vs_mc36_cpu") or not cpu.get("decoded_token_identity"):
         raise RX2RaceError("finalize full raw/token identity gate is incomplete")
     admitted = winner["archive"]["bytes"] < rx1.EXPECTED_ARCHIVE_BYTES
+    retained_inventory = rx1.retention_inventory(BULK_ROOT / "retained")
     result = {
         "schema": "ddm_rx2_final.v1",
         "complete": True,
@@ -1045,6 +1046,7 @@ def finalize(_args: argparse.Namespace) -> dict[str, Any]:
         "receiver_parseback": True,
         "decoded_token_identity": True,
         "local_rgb_raw_decode": cpu,
+        "retention_inventory": retained_inventory,
         "main_t4_fire_order": {
             "sealed": True,
             "owner": "MAIN",
