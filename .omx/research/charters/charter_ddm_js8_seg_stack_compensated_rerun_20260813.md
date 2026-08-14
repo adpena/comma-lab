@@ -50,8 +50,10 @@ since js7 landed 08-12. This arm revives it at the corrected form its own verdic
    event iterations.
 
 ## OPTIMAL FORM
-Family reference = js7's chain (provenance-pin the verdict memo + its byte-close
-receipts) + qs5's compiler (pin path+sha). SCOPE reductions legal + declared; MECHANISM
+Family reference PINS: js7 verdict memo 
+sha256 e887b217c8f75f43e5e950976b905778e5873d8a391b13ebdd90e1b65393053c · qs5 compensation compiler
+ sha256 11cf05984af00e5d93edfd148b37a0f8d5aa9d3a7efa5a9eb802d3ccb58fc39c
+(guard at :963) · base pair (34,970 flips / d_pose 6.885642960696714e-6, po1 receipt). SCOPE reductions legal + declared; MECHANISM
 reductions = TOY-BRACKET (cannot produce family verdicts; the fire gate refuses
 toy-bound stores). Model-derived candidates declare `model_derived` +
 `generalization_gate{passed}` in store JSONs. No naive or toy ever.
