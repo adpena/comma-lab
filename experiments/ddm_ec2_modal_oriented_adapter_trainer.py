@@ -512,7 +512,7 @@ def run_trainer(payloads: dict[str, bytes], request: dict[str, Any]) -> dict[str
     # the image symlinks uv at /usr/local/bin/uv — install through it instead.
     subprocess.run(
         ["/usr/local/bin/uv", "pip", "install", "--quiet",
-         "--python", f"{UPSTREAM_LOCKED_VENV}/bin/python", "pydantic>=2.0,<3"],
+         "--python", f"{UPSTREAM_LOCKED_VENV}/bin/python", "pydantic>=2.0,<3", "brotli>=1.0"],
         check=True,
     )
     command = [
