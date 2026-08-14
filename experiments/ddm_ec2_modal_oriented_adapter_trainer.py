@@ -508,8 +508,11 @@ def run_trainer(payloads: dict[str, bytes], request: dict[str, Any]) -> dict[str
     # identical to the js1b field materializer) but ships no pydantic, which
     # tac.training's legacy module needs at import (fc-01M006HSKX died on it).
     # Fail-closed self-install per the e4 brotli precedent; training-side only.
+    # uv-built venvs ship without pip (r2 fc-01M006SQ2N died on `-m pip`);
+    # the image symlinks uv at /usr/local/bin/uv — install through it instead.
     subprocess.run(
-        [f"{UPSTREAM_LOCKED_VENV}/bin/python", "-m", "pip", "install", "--quiet", "pydantic>=2.0,<3"],
+        ["/usr/local/bin/uv", "pip", "install", "--quiet",
+         "--python", f"{UPSTREAM_LOCKED_VENV}/bin/python", "pydantic>=2.0,<3"],
         check=True,
     )
     command = [
