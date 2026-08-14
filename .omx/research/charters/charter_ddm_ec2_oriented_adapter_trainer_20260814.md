@@ -49,9 +49,14 @@ local/T4 axis mismatch at 15,431 flips; MPS is never authority).
 
 ## OPTIMAL FORM
 
-PINS: ec1 commit fa29eb9ea17d3bfd5138478470600f322050634d · fire order sha
-0d403be3… · base instrument (34,970 flips · d_pose 6.885642960696714e-6 ·
-186,252 B) · break-even 0.785 flips/B ⇒ 1,340 flips at +1,707 B. MECHANISM
+Family reference PINS (receipts): ec1 design landing commit
+fa29eb9ea17d3bfd5138478470600f322050634d · fire-order receipt
+MAIN_CUDA_FIRE_ORDER.json sha
+0d403be3b5af461c9e6e8c9caf77066b126f22be853c51d85509d0bcc8a6185c ·
+FINAL_RESULT.json sha
+bb0a6582745492dc77e4dc8a6556248bea5cc4084b06de028a4b1aa2aec76bd3 · base
+instrument (34,970 flips · d_pose 6.885642960696714e-6 · 186,252 B) ·
+break-even 0.785 flips/B ⇒ 1,340 flips at +1,707 B. MECHANISM
 reductions = TOY-BRACKET: local-CPU or MLX scorer as training authority ·
 proxy realized-flip counts · prefix-sampled verdicts · seeded design modules
 scored as trained candidates (ec1's own dead-end list). Payload law DEF CON
