@@ -28,9 +28,23 @@ except ModuleNotFoundError:
     from experiments import ddm_js1b_modal_cuda_argmax_field_materializer as js1b_dispatch
 
 try:
-    from modal_auth_eval import UPSTREAM_LOCKED_VENV, eval_image
+    from modal_auth_eval import (
+        DALI_DISABLE_NVML_VALUE,
+        REMOTE_PYTHONPATH,
+        UPSTREAM_LOCKED_VENV,
+        UPSTREAM_UV_GROUP_CUDA,
+        base_image,
+        ignore_generated_mount_path,
+    )
 except ModuleNotFoundError:
-    from experiments.modal_auth_eval import UPSTREAM_LOCKED_VENV, eval_image
+    from experiments.modal_auth_eval import (
+        DALI_DISABLE_NVML_VALUE,
+        REMOTE_PYTHONPATH,
+        UPSTREAM_LOCKED_VENV,
+        UPSTREAM_UV_GROUP_CUDA,
+        base_image,
+        ignore_generated_mount_path,
+    )
 
 from tac.deploy.modal.auth_eval import (
     ClaimSpec,
@@ -427,7 +441,27 @@ def prepare(
 app = modal.App(APP_NAME, include_source=False)
 retained_volume = modal.Volume.from_name(VOLUME_NAME, create_if_missing=False)
 worker_image = (
-    eval_image.run_commands(
+    base_image
+    .env(
+        {
+            "DALI_DISABLE_NVML": DALI_DISABLE_NVML_VALUE,
+            "PYTHONPATH": REMOTE_PYTHONPATH,
+        }
+    )
+    .add_local_dir(
+        "upstream",
+        remote_path=str(REMOTE_REPO / "upstream"),
+        copy=True,
+        ignore=ignore_generated_mount_path,
+    )
+    .run_commands(
+        f"cd {REMOTE_REPO / 'upstream'} && UV_PROJECT_ENVIRONMENT={UPSTREAM_LOCKED_VENV}"
+        f" uv sync --frozen --no-install-project --group {UPSTREAM_UV_GROUP_CUDA}",
+        f"test ! -e {REMOTE_REPO / 'upstream/.venv'}",
+        f"{UPSTREAM_LOCKED_VENV}/bin/python -c "
+        "'import sys,torch,torchvision,timm,numpy;"
+        'print("upstream-locked-env", sys.version.split()[0], torch.__version__,'
+        " torchvision.__version__, timm.__version__, numpy.__version__)'",
         shlex.join(
             [
                 "/usr/local/bin/uv",
@@ -437,7 +471,13 @@ worker_image = (
                 f"{UPSTREAM_LOCKED_VENV}/bin/python",
                 *TARGET_VENV_EXTRA_DEPENDENCIES,
             ]
-        )
+        ),
+    )
+    .add_local_dir(
+        "src",
+        remote_path=str(REMOTE_REPO / "src"),
+        copy=False,
+        ignore=ignore_generated_mount_path,
     )
     .add_local_file(
         "experiments/ddm_mt1_t4_sign_gate_worker.py",
