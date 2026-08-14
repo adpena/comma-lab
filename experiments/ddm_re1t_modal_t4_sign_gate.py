@@ -294,8 +294,13 @@ def prepare_request(
     resume_from: str = RUN_ID,
 ) -> tuple[dict[str, bytes], dict[str, Any]]:
     """Build the exact upload payload set and immutable dispatch request."""
-    if run_id != RUN_ID:
-        raise RE1TDispatchError(f"fresh RE1T run id must be {RUN_ID!r}")
+    if run_id != RUN_ID and not re.fullmatch(re.escape(RUN_ID) + r"r[0-9]{1,2}", run_id):
+        # Versioned suffix (e.g. "...r2") is the RESEAL path: a later commit changed a
+        # pinned worker source, the remote volume retains the ORIGINAL seal's inputs
+        # under the canonical run id (byte-identity resume guard, run_gate:747-749),
+        # and the payload law forbids mutating that namespace. A reseal therefore gets
+        # its own run namespace; the old one stays retained for forensics.
+        raise RE1TDispatchError(f"fresh RE1T run id must be {RUN_ID!r} or {RUN_ID!r}+'rN'")
     if resume_from != run_id:
         raise RE1TDispatchError("--resume-from is mandatory and must equal --run-id")
     if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,127}", run_id):
@@ -547,8 +552,11 @@ def load_sealed_inputs(
     if js1b_dispatch.sha256_file(request_path) != expected_request_sha256:
         raise RE1TDispatchError("sealed request SHA-256 differs from the fire order")
     request = json.loads(request_path.read_text(encoding="utf-8"))
-    if request.get("run_id") != RUN_ID or request.get("resume_from") != RUN_ID:
+    run_id = str(request.get("run_id", ""))
+    if run_id != RUN_ID and not re.fullmatch(re.escape(RUN_ID) + r"r[0-9]{1,2}", run_id):
         raise RE1TDispatchError("sealed request does not use the fresh RE1T run id")
+    if request.get("resume_from") != run_id:
+        raise RE1TDispatchError("sealed request resume_from must equal its run_id")
     if request.get("lane_id") != LANE_ID or request.get("instance_job_id") != INSTANCE_JOB_ID:
         raise RE1TDispatchError("sealed request lane identity differs")
     if request.get("score_claim") is not False or request.get("promotion_eligible") is not False:
