@@ -136,7 +136,9 @@ def test_ssd_boundary_rejects_local_output() -> None:
     tool = _load_tool()
     accepted = Path("/Volumes/VertigoDataTier/pact/ddm_cl1_capacity_20260809/a.pt")
     assert tool._require_ssd_path(accepted, "test") == accepted
-    with pytest.raises(tool.CL1TrainingError, match="primary SSD tier"):
+    fallback = Path("/Volumes/APDataStore/pact/ddm_rx2_current_mc36_label_hpac/a.pt")
+    assert tool._require_ssd_path(fallback, "test") == fallback
+    with pytest.raises(tool.CL1TrainingError, match="admitted SSD tier"):
         tool._require_ssd_path(REPO_ROOT / "local.pt", "test")
 
 
@@ -167,6 +169,37 @@ def test_preregistered_config_is_receiver_closed(tmp_path: Path) -> None:
     args.target_mode = "residual"
     with pytest.raises(tool.CL1TrainingError, match="receiver-closed"):
         tool._assert_preregistered_config(args)
+
+
+def test_rx2_profile_changes_only_the_admitted_execution_substrate(tmp_path: Path) -> None:
+    tool = _load_tool()
+    args = _minimum_args(
+        tool,
+        save=tmp_path / "model.pt",
+        out=tmp_path / "result.json",
+    )
+    args.profile = "rx2_mc36"
+    for key, value in tool.RX2_PREREGISTERED_CONFIG.items():
+        setattr(args, key, value)
+    tool._assert_preregistered_config(args)
+    assert args.device == "cpu"
+    assert {key: value for key, value in tool.RX2_PREREGISTERED_CONFIG.items() if key != "device"} == {
+        key: value for key, value in tool.PREREGISTERED_CONFIG.items() if key != "device"
+    }
+    args.rate_lambda = 0.5
+    with pytest.raises(tool.CL1TrainingError, match="receiver-closed"):
+        tool._assert_preregistered_config(args)
+
+
+def test_rx2_cache_gate_refuses_noncanonical_shape() -> None:
+    tool = _load_tool()
+    with pytest.raises(tool.CL1TrainingError, match="shape"):
+        tool._verify_rx2_cache_payload(
+            {
+                "seg": torch.zeros((1, 2, 3), dtype=torch.uint8),
+                "spatial_token_sha256": tool.EXPECTED_RX2_SPATIAL_TOKEN_SHA256,
+            }
+        )
 
 
 def test_stage_controls_do_not_add_selection_observations() -> None:

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Resumable local-Metal trainer for the DDM CL1 HPAC rate ladder.
+"""Resumable local trainer for the DDM CL1/RX2 HPAC rate ladders.
 
 This is an owned lift of PR130's ``train_hpac_self_compress.py``.  The model,
 loss, optimizer, scheduler, and selection cadence are intentionally kept the
@@ -15,8 +15,9 @@ including the repository-mandated EMA deployment policy:
 
 It is a training tool, not a byte verdict.  Its reported token/model estimates
 remain advisory until the intake packer and codec produce real serialized
-bytes.  Only ``mps`` is admitted because the CL1 charter assigns training to
-local Metal and forbids a CPU substitute.
+bytes.  The default CL1 profile admits only MPS.  The sealed RX2 profile uses
+CPU-torch, as explicitly admitted by its charter, and keeps the HB2 reference
+architecture, context, schedule, and training budget unchanged.
 """
 
 from __future__ import annotations
@@ -54,7 +55,9 @@ from tac.pr130_lift.train_semantic_quantized_resumable import (  # noqa: E402
 )
 from tac.training import EMA  # noqa: E402
 
-SSD_ROOT = Path("/Volumes/VertigoDataTier/pact")
+PRIMARY_SSD_ROOT = Path("/Volumes/VertigoDataTier/pact")
+FALLBACK_SSD_ROOT = Path("/Volumes/APDataStore/pact")
+SSD_ROOTS = (PRIMARY_SSD_ROOT, FALLBACK_SSD_ROOT)
 DEFAULT_INTAKE_CODE = Path("/Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo/code")
 EXPECTED_INTAKE_SHA256 = {
     "hpac_integer.py": "6e6b4f4d0b293fb60cc1b751958756a4cd6c2ce7bcff68c6f03e20277856803f",
@@ -97,9 +100,21 @@ PREREGISTERED_CONFIG = {
     "device": "mps",
     "ema_target_seed_fraction": 0.01,
 }
-PREREGISTERED_RATE_LAMBDAS = frozenset({1.0, 0.5, 0.25})
+RX2_PREREGISTERED_CONFIG = {
+    **PREREGISTERED_CONFIG,
+    "device": "cpu",
+}
+PREREGISTERED_CONFIG_BY_PROFILE = {
+    "cl1": PREREGISTERED_CONFIG,
+    "rx2_mc36": RX2_PREREGISTERED_CONFIG,
+}
+PREREGISTERED_RATE_LAMBDAS_BY_PROFILE = {
+    "cl1": frozenset({1.0, 0.5, 0.25}),
+    "rx2_mc36": frozenset({1.0}),
+}
 EXPECTED_CACHE_SHA256 = "382d7dfe38b37c0cc5017e5645032faa045af6924db66e0b67549cc96c840195"
 EXPECTED_INIT_SHA256 = "0e6c30cef6b36c4e530779c92c56e9128c1d86c62e85e9fc5358a7e9f40ec985"
+EXPECTED_RX2_SPATIAL_TOKEN_SHA256 = "9ba2e52b3096585895970066b389bf1261ebc203d5b828cdea056c13858aea52"
 DEFAULT_MIN_FREE_BYTES = 1 << 30
 CHECKPOINT_SCHEMA = "ddm_cl1_hpac_capacity_checkpoint.v2"
 MANIFEST_SCHEMA = "ddm_cl1_hpac_capacity_artifact_manifest.v1"
@@ -151,7 +166,13 @@ def _stable_hash_update(digest: Any, value: Any) -> None:
             separators=(",", ":"),
         ).encode("ascii")
         raw = tensor.reshape(-1).view(torch.uint8).numpy().tobytes(order="C")
-        digest.update(b"T" + len(metadata).to_bytes(8, "big") + metadata + len(raw).to_bytes(8, "big") + raw)
+        digest.update(
+            b"T"
+            + len(metadata).to_bytes(8, "big")
+            + metadata
+            + len(raw).to_bytes(8, "big")  # MEASURE_ONLY_OK:atomic checkpoint retains this tensor payload
+            + raw  # MEASURE_ONLY_OK:atomic checkpoint retains this tensor payload
+        )
     elif isinstance(value, np.ndarray):
         array = np.ascontiguousarray(value)
         metadata = json.dumps(
@@ -160,7 +181,13 @@ def _stable_hash_update(digest: Any, value: Any) -> None:
             separators=(",", ":"),
         ).encode("ascii")
         raw = array.tobytes(order="C")
-        digest.update(b"A" + len(metadata).to_bytes(8, "big") + metadata + len(raw).to_bytes(8, "big") + raw)
+        digest.update(
+            b"A"
+            + len(metadata).to_bytes(8, "big")
+            + metadata
+            + len(raw).to_bytes(8, "big")  # MEASURE_ONLY_OK:atomic checkpoint retains this array payload
+            + raw  # MEASURE_ONLY_OK:atomic checkpoint retains this array payload
+        )
     elif isinstance(value, np.generic):
         _stable_hash_update(digest, value.item())
     elif isinstance(value, dict):
@@ -363,27 +390,37 @@ def _preserve_lineage_parents(entries: list[dict[str, Any]], checkpoint_root: Pa
     return preserved
 
 
-def _require_ssd_path(path: Path, label: str) -> Path:
-    resolved_root = SSD_ROOT.resolve()
+def _ssd_root_for_path(path: Path, label: str) -> Path:
     resolved_parent = path.expanduser().resolve(strict=False).parent
-    try:
-        resolved_parent.relative_to(resolved_root)
-    except ValueError as exc:
-        raise CL1TrainingError(f"{label} must live under the primary SSD tier {resolved_root}: {path}") from exc
+    for root in SSD_ROOTS:
+        resolved_root = root.resolve()
+        try:
+            resolved_parent.relative_to(resolved_root)
+        except ValueError:
+            continue
+        return resolved_root
+    roots = ", ".join(str(root.resolve()) for root in SSD_ROOTS)
+    raise CL1TrainingError(f"{label} must live under an admitted SSD tier ({roots}): {path}")
+
+
+def _require_ssd_path(path: Path, label: str) -> Path:
+    _ssd_root_for_path(path, label)
     return path
 
 
 def _storage_preflight(save: Path, out: Path, *, min_free_bytes: int) -> dict[str, Any]:
-    _require_ssd_path(save, "--save")
-    _require_ssd_path(out, "--out")
+    save_root = _ssd_root_for_path(save, "--save")
+    out_root = _ssd_root_for_path(out, "--out")
+    if save_root != out_root:
+        raise CL1TrainingError("--save and --out must use the same admitted SSD tier")
     if min_free_bytes < 0:
         raise CL1TrainingError("--min-free-bytes must be nonnegative")
-    free = shutil.disk_usage(SSD_ROOT).free
+    free = shutil.disk_usage(save_root).free
     if free < min_free_bytes:
         raise CL1TrainingError(f"SSD storage preflight failed: required {min_free_bytes} free bytes, observed {free}")
     return {
         "schema": "ddm_cl1_storage_preflight.v1",
-        "tier": str(SSD_ROOT),
+        "tier": str(save_root),
         "save": str(save),
         "out": str(out),
         "required_free_bytes": min_free_bytes,
@@ -414,14 +451,16 @@ def _local_causal_sha256() -> dict[str, str]:
 
 
 def _assert_preregistered_config(args: argparse.Namespace) -> None:
+    expected_config = PREREGISTERED_CONFIG_BY_PROFILE[args.profile]
     differences = {
         key: {"expected": expected, "observed": getattr(args, key)}
-        for key, expected in PREREGISTERED_CONFIG.items()
+        for key, expected in expected_config.items()
         if getattr(args, key) != expected
     }
-    if args.rate_lambda not in PREREGISTERED_RATE_LAMBDAS:
+    admitted_lambdas = PREREGISTERED_RATE_LAMBDAS_BY_PROFILE[args.profile]
+    if args.rate_lambda not in admitted_lambdas:
         differences["rate_lambda"] = {
-            "expected": sorted(PREREGISTERED_RATE_LAMBDAS),
+            "expected": sorted(admitted_lambdas),
             "observed": args.rate_lambda,
         }
     if differences:
@@ -559,6 +598,8 @@ def _hardware_identity() -> dict[str, Any]:
         "memory_bytes": _sysctl_value("hw.memsize"),
         "mps_built": torch.backends.mps.is_built(),
         "mps_available": torch.backends.mps.is_available(),
+        "torch_num_threads": torch.get_num_threads(),
+        "torch_num_interop_threads": torch.get_num_interop_threads(),
         "environment": {name: os.environ.get(name) for name in relevant_env},
     }
 
@@ -572,6 +613,7 @@ def _run_identity(
     ema_policy: dict[str, Any],
 ) -> dict[str, Any]:
     training_keys = (
+        "profile",
         "epochs",
         "batch_size",
         "eval_batch_size",
@@ -726,7 +768,7 @@ def _write_success_manifest(
         "schema": MANIFEST_SCHEMA,
         "generated_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "score_claim": False,
-        "axis": "[macOS-MPS research-signal; byte measurement pending]",
+        "axis": _training_axis(args.device),
         "argv": [sys.executable, *sys.argv],
         "cwd": str(Path.cwd()),
         "git_sha": run_identity["launch_git_sha"],
@@ -761,7 +803,8 @@ def _write_success_manifest(
 
 
 def _build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="P0-resumable local-Metal lift of PR130 HPAC self-compression")
+    parser = argparse.ArgumentParser(description="P0-resumable local lift of PR130 HPAC self-compression")
+    parser.add_argument("--profile", choices=tuple(PREREGISTERED_CONFIG_BY_PROFILE), default="cl1")
     parser.add_argument("--cache", type=Path, required=True)
     parser.add_argument("--init", type=Path, required=True)
     parser.add_argument("--epochs", type=int, default=100)
@@ -791,7 +834,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--target-mode", choices=("raw", "residual"), default="raw")
     parser.add_argument("--seed", type=int, default=20260716)
     parser.add_argument("--ema-target-seed-fraction", type=float, default=0.01)
-    parser.add_argument("--device", choices=("mps",), default="mps")
+    parser.add_argument("--device", choices=("mps", "cpu"), default="mps")
     parser.add_argument("--save", type=Path, required=True)
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--resume-from", type=Path)
@@ -803,6 +846,33 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--min-free-bytes", type=int, default=DEFAULT_MIN_FREE_BYTES)
     parser.add_argument("--intake-code", type=Path, default=DEFAULT_INTAKE_CODE)
     return parser
+
+
+def _training_axis(device: str) -> str:
+    if device == "cpu":
+        return "[macOS-CPU training-signal; byte measurement pending]"
+    return "[macOS-MPS research-signal; byte measurement pending]"
+
+
+def _verify_rx2_cache_payload(cache_payload: Any) -> str:
+    if not isinstance(cache_payload, dict) or "seg" not in cache_payload:
+        raise CL1TrainingError("RX2 cache must be a mapping containing seg")
+    seg = cache_payload["seg"]
+    if not isinstance(seg, torch.Tensor):
+        raise CL1TrainingError("RX2 cache seg must be a torch tensor")
+    if seg.device.type != "cpu" or seg.dtype != torch.uint8 or tuple(seg.shape) != (600, 384, 512):
+        raise CL1TrainingError("RX2 cache seg must be CPU uint8 with shape (600,384,512)")
+    if int(seg.min()) < 0 or int(seg.max()) > 4:
+        raise CL1TrainingError("RX2 cache seg values must be in [0,4]")
+    digest = hashlib.sha256(seg.contiguous().numpy().tobytes(order="C")).hexdigest()
+    if digest != EXPECTED_RX2_SPATIAL_TOKEN_SHA256:
+        raise CL1TrainingError(
+            f"RX2 cache token SHA differs: expected {EXPECTED_RX2_SPATIAL_TOKEN_SHA256}, observed {digest}"
+        )
+    declared = cache_payload.get("spatial_token_sha256")
+    if declared != digest:
+        raise CL1TrainingError("RX2 cache spatial_token_sha256 metadata is absent or differs")
+    return digest
 
 
 def main() -> None:
@@ -844,7 +914,7 @@ def main() -> None:
         raise CL1TrainingError("set PYTHONHASHSEED=0 before launch")
     if os.environ.get("TAC_ADMISSION_ENFORCE") != "1":
         raise CL1TrainingError("set TAC_ADMISSION_ENFORCE=1 for a hard governor gate")
-    if os.environ.get("PYTORCH_ENABLE_MPS_FALLBACK") != "0":
+    if args.device == "mps" and os.environ.get("PYTORCH_ENABLE_MPS_FALLBACK") != "0":
         raise CL1TrainingError("set PYTORCH_ENABLE_MPS_FALLBACK=0; CPU fallback is forbidden")
 
     storage_preflight = _storage_preflight(args.save, args.out, min_free_bytes=args.min_free_bytes)
@@ -853,14 +923,21 @@ def main() -> None:
         raise CL1TrainingError("--cache and --init must be existing files")
     cache_sha256 = _sha256_file(args.cache)
     init_sha256 = _sha256_file(args.init)
-    if cache_sha256 != EXPECTED_CACHE_SHA256:
+    cache_payload = torch.load(args.cache, map_location="cpu", weights_only=False)
+    if args.profile == "cl1" and cache_sha256 != EXPECTED_CACHE_SHA256:
         raise CL1TrainingError(f"cache SHA differs: expected {EXPECTED_CACHE_SHA256}, observed {cache_sha256}")
+    if args.profile == "rx2_mc36":
+        _verify_rx2_cache_payload(cache_payload)
     if init_sha256 != EXPECTED_INIT_SHA256:
         raise CL1TrainingError(f"init SHA differs: expected {EXPECTED_INIT_SHA256}, observed {init_sha256}")
 
-    if not torch.backends.mps.is_built() or not torch.backends.mps.is_available():
-        raise CL1TrainingError("local Metal is unavailable in this process; CPU substitution is forbidden")
-    device = torch.device("mps")
+    if args.device == "mps":
+        if not torch.backends.mps.is_built() or not torch.backends.mps.is_available():
+            raise CL1TrainingError("local Metal is unavailable in this process; CPU substitution is forbidden")
+    else:
+        torch.set_num_threads(4)
+        torch.set_num_interop_threads(1)
+    device = torch.device(args.device)
     torch.manual_seed(args.seed)
     np.random.seed(args.seed)
     random.seed(args.seed)
@@ -877,7 +954,7 @@ def main() -> None:
         variable_weight_bits,
     ) = _import_pr130(args.intake_code)
 
-    raw_tokens = torch.load(args.cache, map_location="cpu", weights_only=False)["seg"].long().to(device)
+    raw_tokens = cache_payload["seg"].long().to(device)
     if tuple(raw_tokens.shape) != (600, 384, 512):
         raise CL1TrainingError("CL1 requires the exact n600 segmentation field shape (600,384,512)")
     if 384 % args.patch or 512 % args.patch:
@@ -1223,7 +1300,7 @@ def main() -> None:
         "run_identity": run_identity,
         "resume_lineage": resume_lineage,
         "score_claim": False,
-        "axis": "[macOS-MPS research-signal; byte measurement pending]",
+        "axis": _training_axis(args.device),
         "selection_warning": (
             "best is selected by the intake trainer's ideal-token plus theoretical "
             "model-bit surrogate and is excluded from the CL1 ladder; the "
