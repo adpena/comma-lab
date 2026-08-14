@@ -231,3 +231,30 @@ Own-vehicle frontier: **UNMOVED** at LC2, `S=0.16959899569230852 @ 187,226 B [co
 - Treating MT1's two queue-starvation events as scientific evidence is closed: they cost `$0`, measured no score, and did not invalidate the sealed request.
 - Claiming that RX2 tests JS8's gate-aware distortion hypothesis is closed by the typed consumer adjudication: RX2 reproduces fixed tokens and can only test rate.
 - Claiming NA7 as goal progress is closed: it fired no exact row and left both the effective and own-vehicle frontiers unmoved.
+
+## MAIN ADDENDUM (magnitude-dismissal gate #404, 2026-08-14) — S08 relative-significance arithmetic
+
+The S08 closure is upheld, with the numbers the row omitted (verdict_scope
+unchanged: FORMULATION for the exact three-pair support):
+
+1. RELATIVE SIGNIFICANCE at the current operating point (floor 0.1619345,
+   gap to 0.15 = 0.0119345): the measured 17-net-flip seg benefit is
+   −1.441e-5 S = **0.121% of the remaining gap**. The best-case upside if
+   coding were perfect (17 flips at the banked 4 B/pair coder, 12 B, zero
+   container/compensation overhead) is ≈ −6.4e-6 S = **0.054% of the gap**
+   — below the 1e-5 naming bar even in the ideal limit. Break-even is
+   0.785 flips/B ⇒ 17 flips supports ≤21.66 B; both measured attempts
+   cost more (qs5 +26 B, qs4 +23 B equiv), and qs5's in-compile
+   compensation bytes are REQUIRED (their removal was qs4's +2.396e-4
+   pose disaster).
+2. THE CLOSURE IS SIGN- AND CEILING-BASED, NOT MAGNITUDE-EYEBALL: both
+   measured attempts were NET HARMFUL (qs5 +2.519822e-6, qs4 +2.437870e-4
+   — refused on sign), and the un-recoverability EXIT CRITERION is
+   MEASURED: the 17-flip ceiling reproduced on two independent
+   implementations with different edit supports (qs4: 17 from 100 px;
+   qs5: 17 from 132 px), and qs5's connective-restoration expansion
+   recovered ZERO net flips beyond it.
+3. WHAT THIS DOES NOT LICENSE: killing larger supports. The family is
+   PARKED pose-first at this support only; larger-support seg objects
+   route through the mt1 sign gate (#978) and the JS1/#982 joint
+   treatment per the na7 routing table.
