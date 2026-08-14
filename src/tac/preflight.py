@@ -7806,6 +7806,20 @@ def preflight_all(
         #     assert_modal_single_flight). WARN-ONLY; strict-flip when live count
         #     stays 0 across a review cycle.
         check_modal_dispatch_single_flight(strict=False, verbose=verbose)
+        # DDM DT1 (2026-08-14): these three repeated-loss classes each have a
+        # runtime cure plus this strict source invariant. The gates are narrow,
+        # deterministic, and zero-provider: fail before a worker can pay to
+        # discover an import, before a dispatcher can collide with a manual
+        # preclaim, or before an old terminal call can lane-match a newer call.
+        check_worker_target_venv_dependency_closure_is_sealed(  # CLAUDE_MD_ENTRY_OK: strict scope extension of Catalog #203 from one canonical image to worker-chain versus target-venv closure
+            strict=True, verbose=verbose,
+        )
+        check_modal_dispatch_claim_guard_precedes_write(  # CLAUDE_MD_ENTRY_OK: strict claim-ordering sub-surface of Catalog #513 single-flight enforcement
+            strict=True, verbose=verbose,
+        )
+        check_modal_dual_ledger_matching_is_call_id_first(  # CLAUDE_MD_ENTRY_OK: strict terminal-matching sub-surface of Catalog #513 dual-ledger enforcement
+            strict=True, verbose=verbose,
+        )
 
         if codebase_cache_token is not None:
             _store_preflight_all_clean_cache(
@@ -90768,6 +90782,229 @@ def check_modal_dispatch_single_flight(
             "check_modal_dispatch_single_flight found "
             f"{len(violations)} violation(s) (modal-spawn-without-single-flight-guard):\n  "
             + "\n  ".join(violations[:10]))
+    return violations
+
+
+# ----------------------------------------------------------------------------
+# DDM DT1 — repeated-lesson deterministic cures (2026-08-14).
+#
+# These three strict checks protect the implementation halves of the worker
+# dependency closure, dispatcher-owned claim ordering, and call-id-first
+# dual-ledger matching.  Each cure also has incident-shaped runtime tests; the
+# checks below prevent a later source edit from silently removing the cure.
+# ----------------------------------------------------------------------------
+
+_DT1_DEPENDENCY_DISPATCHER = "experiments/ddm_ec2_modal_oriented_adapter_trainer.py"
+_DT1_DEPENDENCY_HELPER = "src/tac/deploy/worker_dependency_closure.py"
+_DT1_AUTH_EVAL_HELPER = "src/tac/deploy/modal/auth_eval.py"
+_DT1_SINGLE_FLIGHT_HELPER = "src/tac/deploy/modal/single_flight.py"
+
+
+def _dt1_parse_function(path: Path, function_name: str) -> tuple[ast.FunctionDef | None, str | None]:
+    try:
+        text = path.read_text(encoding="utf-8")
+        tree = ast.parse(text, filename=str(path))
+    except (OSError, UnicodeDecodeError, SyntaxError) as exc:
+        return None, str(exc)
+    for node in tree.body:
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == function_name:
+            if isinstance(node, ast.FunctionDef):
+                return node, None
+    return None, f"function {function_name!r} is missing"
+
+
+def _dt1_call_leaf(node: ast.Call) -> str:
+    if isinstance(node.func, ast.Name):
+        return node.func.id
+    if isinstance(node.func, ast.Attribute):
+        return node.func.attr
+    return ""
+
+
+def check_worker_target_venv_dependency_closure_is_sealed(
+    *, repo_root: Path | str | None = None, strict: bool = False, verbose: bool = False,
+) -> list[str]:
+    """Refuse regression to paid discovery of a locked-venv worker import.
+
+    EC2 r1/r3 paid to discover ``pydantic`` then ``brotli`` were absent from
+    the interpreter that actually launched the worker.  The seal must compute
+    the recursive worker closure, compare it with ``upstream/uv.lock`` plus a
+    single pinned extra-dependency tuple, and the image build must consume the
+    same tuple.  Runtime self-install inside the GPU function is forbidden.
+    """
+
+    root = Path(repo_root or REPO_ROOT)
+    dispatcher = root / _DT1_DEPENDENCY_DISPATCHER
+    helper = root / _DT1_DEPENDENCY_HELPER
+    violations: list[str] = []
+    if not helper.is_file():
+        violations.append(f"{_DT1_DEPENDENCY_HELPER}: missing canonical worker closure helper")
+    prepare, error = _dt1_parse_function(dispatcher, "prepare")
+    run_trainer, run_error = _dt1_parse_function(dispatcher, "run_trainer")
+    try:
+        text = dispatcher.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError) as exc:
+        text = ""
+        error = error or str(exc)
+    if error or prepare is None:
+        violations.append(f"{_DT1_DEPENDENCY_DISPATCHER}: cannot inspect prepare: {error}")
+    else:
+        calls = {_dt1_call_leaf(node) for node in ast.walk(prepare) if isinstance(node, ast.Call)}
+        if "require_worker_dependency_closure" not in calls:
+            violations.append(
+                f"{_DT1_DEPENDENCY_DISPATCHER}: prepare no longer seals the recursive "
+                "worker-to-target-venv dependency closure"
+            )
+    required_tokens = (
+        "TARGET_VENV_EXTRA_DEPENDENCIES",
+        "extra_target_dependencies=TARGET_VENV_EXTRA_DEPENDENCIES",
+        "*TARGET_VENV_EXTRA_DEPENDENCIES",
+        "WORKER_DEPENDENCY_CLOSURE.json",
+    )
+    missing_tokens = [token for token in required_tokens if token not in text]
+    if missing_tokens:
+        violations.append(
+            f"{_DT1_DEPENDENCY_DISPATCHER}: dependency seal/image provisioning drift; "
+            f"missing tokens={missing_tokens!r}"
+        )
+    if run_error or run_trainer is None:
+        violations.append(
+            f"{_DT1_DEPENDENCY_DISPATCHER}: cannot inspect run_trainer: {run_error}"
+        )
+    else:
+        runtime_calls = {
+            _dt1_call_leaf(node) for node in ast.walk(run_trainer) if isinstance(node, ast.Call)
+        }
+        run_source = ast.get_source_segment(text, run_trainer) or ""
+        if "uv" in run_source and "install" in run_source:
+            violations.append(
+                f"{_DT1_DEPENDENCY_DISPATCHER}: run_trainer reinstalls dependencies "
+                "after provider dispatch; bake the sealed tuple into the image instead"
+            )
+        if "run" in runtime_calls and "TARGET_VENV_EXTRA_DEPENDENCIES" in run_source:
+            violations.append(
+                f"{_DT1_DEPENDENCY_DISPATCHER}: target dependencies are provisioned "
+                "inside the GPU function instead of the image build"
+            )
+    if verbose:
+        print(
+            "  [ddm-dt1] check_worker_target_venv_dependency_closure_is_sealed: "
+            f"{len(violations)} violation(s)" if violations else
+            "  [ddm-dt1] check_worker_target_venv_dependency_closure_is_sealed: OK"
+        )
+    if strict and violations:
+        raise PreflightError(
+            "check_worker_target_venv_dependency_closure_is_sealed found "
+            f"{len(violations)} violation(s):\n  " + "\n  ".join(violations)
+        )
+    return violations
+
+
+def check_modal_dispatch_claim_guard_precedes_write(
+    *, repo_root: Path | str | None = None, strict: bool = False, verbose: bool = False,
+) -> list[str]:
+    """Refuse dispatcher claim writes that precede their precise guard."""
+
+    root = Path(repo_root or REPO_ROOT)
+    path = root / _DT1_AUTH_EVAL_HELPER
+    function, error = _dt1_parse_function(path, "claim_modal_auth_eval_dispatch")
+    violations: list[str] = []
+    if error or function is None:
+        violations.append(f"{_DT1_AUTH_EVAL_HELPER}: cannot inspect claim helper: {error}")
+    else:
+        calls = sorted(
+            (node.lineno, _dt1_call_leaf(node), node)
+            for node in ast.walk(function)
+            if isinstance(node, ast.Call)
+        )
+        guard_calls = [row for row in calls if row[1] == "assert_modal_single_flight"]
+        write_calls = [row for row in calls if row[1] == "record_dispatch_claim"]
+        if len(guard_calls) != 1 or len(write_calls) != 1:
+            violations.append(
+                f"{_DT1_AUTH_EVAL_HELPER}: expected exactly one guard and one claim write; "
+                f"found guard={len(guard_calls)} write={len(write_calls)}"
+            )
+        elif guard_calls[0][0] >= write_calls[0][0]:
+            violations.append(
+                f"{_DT1_AUTH_EVAL_HELPER}: single-flight guard must execute before claim write"
+            )
+        else:
+            guard_keywords = {
+                keyword.arg for keyword in guard_calls[0][2].keywords
+            }
+            if not {"claim_agent", "label"}.issubset(guard_keywords):
+                violations.append(
+                    f"{_DT1_AUTH_EVAL_HELPER}: guard omits claim_agent or label, so an "
+                    "unrelated same-lane preclaim can masquerade as the dispatcher's own claim"
+                )
+    if verbose:
+        print(
+            "  [ddm-dt1] check_modal_dispatch_claim_guard_precedes_write: "
+            f"{len(violations)} violation(s)" if violations else
+            "  [ddm-dt1] check_modal_dispatch_claim_guard_precedes_write: OK"
+        )
+    if strict and violations:
+        raise PreflightError(
+            "check_modal_dispatch_claim_guard_precedes_write found "
+            f"{len(violations)} violation(s):\n  " + "\n  ".join(violations)
+        )
+    return violations
+
+
+def check_modal_dual_ledger_matching_is_call_id_first(
+    *, repo_root: Path | str | None = None, strict: bool = False, verbose: bool = False,
+) -> list[str]:
+    """Refuse lane fallback when a live claim already names a call ID."""
+
+    root = Path(repo_root or REPO_ROOT)
+    path = root / _DT1_SINGLE_FLIGHT_HELPER
+    function, error = _dt1_parse_function(path, "dual_ledger_terminality_blockers")
+    violations: list[str] = []
+    if error or function is None:
+        violations.append(f"{_DT1_SINGLE_FLIGHT_HELPER}: cannot inspect matcher: {error}")
+    else:
+        names = {node.id for node in ast.walk(function) if isinstance(node, ast.Name)}
+        required_names = {
+            "_MODAL_CALL_ID_RE",
+            "call_id_l",
+            "claim_call_ids",
+            "fallback_tokens",
+        }
+        missing = sorted(required_names - names)
+        exact_compare = any(
+            isinstance(node, ast.Compare)
+            and isinstance(node.left, ast.Name)
+            and node.left.id == "call_id_l"
+            and any(
+                isinstance(comparator, ast.Name) and comparator.id == "claim_call_ids"
+                for comparator in node.comparators
+            )
+            and any(isinstance(operator, ast.In) for operator in node.ops)
+            for node in ast.walk(function)
+        )
+        guarded_branch = any(
+            isinstance(node, ast.If)
+            and isinstance(node.test, ast.Name)
+            and node.test.id == "claim_call_ids"
+            for node in ast.walk(function)
+        )
+        if missing or not exact_compare or not guarded_branch:
+            violations.append(
+                f"{_DT1_SINGLE_FLIGHT_HELPER}: terminal matching no longer proves "
+                f"call-id-first semantics; missing_names={missing!r}, "
+                f"exact_compare={exact_compare}, guarded_branch={guarded_branch}"
+            )
+    if verbose:
+        print(
+            "  [ddm-dt1] check_modal_dual_ledger_matching_is_call_id_first: "
+            f"{len(violations)} violation(s)" if violations else
+            "  [ddm-dt1] check_modal_dual_ledger_matching_is_call_id_first: OK"
+        )
+    if strict and violations:
+        raise PreflightError(
+            "check_modal_dual_ledger_matching_is_call_id_first found "
+            f"{len(violations)} violation(s):\n  " + "\n  ".join(violations)
+        )
     return violations
 
 

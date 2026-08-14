@@ -13,6 +13,7 @@ import argparse
 import hashlib
 import json
 import os
+import shlex
 import shutil
 import subprocess
 import time
@@ -58,6 +59,7 @@ from tac.deploy.modal.call_id_ledger import (
     update_call_id_outcome,
 )
 from tac.deploy.modal.single_flight import assert_modal_single_flight
+from tac.deploy.worker_dependency_closure import require_worker_dependency_closure
 
 REPO: Final = Path(__file__).resolve().parents[1]
 REMOTE_REPO: Final = Path("/workspace/pact")
@@ -75,6 +77,16 @@ HARD_CAP_SECONDS: Final = 10_800
 ESTIMATED_T4_COST_USD: Final = 1.80
 CLOSURE_MANIFEST_SCHEMA: Final = "modal_endpoint_closure_manifest.v1"
 ENDPOINT_CLOSER_DEADLINE_SECONDS: Final = HARD_CAP_SECONDS + 3_600
+TARGET_VENV_EXTRA_DEPENDENCIES: Final = (
+    "pydantic==2.13.4",
+    "Brotli==1.2.0",
+)
+TARGET_VENV_PAYLOAD_IMPORT_ROOTS: Final = (
+    "ddm_ec1_implicit_edge_conditioning",
+    "ddm_ec1_runtime",
+    "modules",
+    "runtime",
+)
 
 DEFAULT_ARCHIVE: Final = Path(
     "/Volumes/APDataStore/pact/submittable_custody_mirror_20260811/cp135_packet/adapted_runtime/archive.zip"
@@ -376,6 +388,19 @@ def prepare(
         label="EC1 fire order",
     )
     storage = storage_preflight(output, TOKENS_BYTES + 2 * 1024**3)
+    dependency_closure = require_worker_dependency_closure(
+        repo_root=REPO,
+        worker_entrypoints=(
+            REPO / "experiments/ddm_ec2_oriented_adapter_trainer_worker.py",
+            REPO / "experiments/ddm_ec1_implicit_edge_conditioning.py",
+            REPO / "experiments/ddm_ec1_runtime/ec1_latent_conditioner.py",
+        ),
+        target_lock_path=REPO / "upstream/uv.lock",
+        extra_target_dependencies=TARGET_VENV_EXTRA_DEPENDENCIES,
+        payload_provided_import_roots=TARGET_VENV_PAYLOAD_IMPORT_ROOTS,
+    )
+    dependency_closure_path = output / "preflight/WORKER_DEPENDENCY_CLOSURE.json"
+    atomic_json(dependency_closure_path, dependency_closure)
     toy = run_toy_gate(output / "toy_gate")
     runtime_bundle, runtime_manifest = js1b_dispatch.build_runtime_bundle(runtime, label="cp135")
     fire_inputs = output / "fire_inputs"
@@ -390,6 +415,9 @@ def prepare(
         "worker": source_record(REPO / "experiments/ddm_ec2_oriented_adapter_trainer_worker.py"),
         "ec1_design": source_record(REPO / "experiments/ddm_ec1_implicit_edge_conditioning.py"),
         "ec1_runtime": source_record(REPO / "experiments/ddm_ec1_runtime/ec1_latent_conditioner.py"),
+        "dependency_closure": source_record(
+            REPO / "src/tac/deploy/worker_dependency_closure.py"
+        ),
     }
     payload_records = {**input_records, "sources": source_records}
     oriented = make_request(
@@ -499,6 +527,7 @@ def prepare(
         "fire_inputs": input_records,
         "toy_gate": toy,
         "storage_preflight": storage,
+        "worker_dependency_closure": file_record(dependency_closure_path),
         "does_not_dispatch": True,
     }
     fire_path = output / "SEALED_FIRE_ORDER.json"
@@ -512,6 +541,7 @@ def prepare(
         "fire_inputs": input_records,
         "toy_gate": toy,
         "storage_preflight": storage,
+        "worker_dependency_closure": file_record(dependency_closure_path),
         "modal_dispatched": False,
         "score_claim": False,
         "pointer_moved": False,
@@ -523,7 +553,19 @@ def prepare(
 app = modal.App(APP_NAME, include_source=False)
 retained_volume = modal.Volume.from_name(VOLUME_NAME, create_if_missing=False)
 trainer_image = (
-    eval_image.add_local_file(
+    eval_image.run_commands(
+        shlex.join(
+            [
+                "/usr/local/bin/uv",
+                "pip",
+                "install",
+                "--python",
+                f"{UPSTREAM_LOCKED_VENV}/bin/python",
+                *TARGET_VENV_EXTRA_DEPENDENCIES,
+            ]
+        )
+    )
+    .add_local_file(
         "experiments/ddm_ec2_oriented_adapter_trainer_worker.py",
         remote_path=str(REMOTE_WORKER),
         copy=False,
@@ -593,17 +635,6 @@ def run_trainer(payloads: dict[str, bytes], request: dict[str, Any]) -> dict[str
         BASE_FIELD_RECORD,
     )
     retained_volume.commit()
-    # The locked venv is the matched scorer instrument (torch/weights/batch
-    # identical to the js1b field materializer) but ships no pydantic, which
-    # tac.training's legacy module needs at import (fc-01M006HSKX died on it).
-    # Fail-closed self-install per the e4 brotli precedent; training-side only.
-    # uv-built venvs ship without pip (r2 fc-01M006SQ2N died on `-m pip`);
-    # the image symlinks uv at /usr/local/bin/uv — install through it instead.
-    subprocess.run(
-        ["/usr/local/bin/uv", "pip", "install", "--quiet",
-         "--python", f"{UPSTREAM_LOCKED_VENV}/bin/python", "pydantic>=2.0,<3", "brotli>=1.0"],
-        check=True,
-    )
     command = [
         f"{UPSTREAM_LOCKED_VENV}/bin/python",
         "-u",

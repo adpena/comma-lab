@@ -10,8 +10,9 @@ same turn.
 This module is the RUNTIME half of the #513 two-landing (the static halves are
 ``check_modal_single_flight_ledger_consistency`` — ledger-STATE consistency —
 and ``check_modal_dispatch_single_flight`` — dispatch-SURFACE routing — in
-``src/tac/preflight.py``). Every Modal dispatch entry point calls
-:func:`assert_modal_single_flight` immediately BEFORE ``.spawn()``:
+``src/tac/preflight.py``). The common claim helper performs a precise guard
+before it writes the dispatcher-owned claim. Every Modal dispatch entry point
+also calls :func:`assert_modal_single_flight` immediately BEFORE ``.spawn()``:
 
     from tac.deploy.modal.single_flight import assert_modal_single_flight
     assert_modal_single_flight(label=label, lane_id=lane_id)
@@ -22,8 +23,9 @@ legitimate refusal-free dispatch, and the cloud check must not require
 network health to dispatch):
 
 * refuses when the local call-id ledger has ANY live (non-terminal) call_id;
-* refuses when the claims file has an ACTIVE Modal claim on a DIFFERENT lane
-  (the caller's own just-claimed lane row is expected and excluded);
+* refuses when the claims file has an ACTIVE Modal claim that is not the
+  caller's own lane-agent-job claim (legacy immediate pre-spawn rechecks may
+  omit the agent and exclude their already-claimed lane);
 * refuses when the live ``modal app list`` cross-check (opt-out via
   ``check_cloud=False`` or env ``TAC_MODAL_SINGLE_FLIGHT_SKIP_CLOUD=1``)
   reports a deployed app with running tasks (JSON ``tasks > 0`` and state not
@@ -47,6 +49,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -70,30 +73,67 @@ _MODAL_CLAIMS_REL = ".omx/state/active_lane_dispatch_claims.md"
 # Non-terminal ledger states (mirror of the claim tool + preflight vocab; a
 # row whose LATEST state is one of these is "live"). Everything else
 # (harvested/failed/stale/manually_terminated/pre_spawn_fatal/...) is terminal.
-_NON_TERMINAL_LEDGER_STATES: frozenset[str] = frozenset({
-    "dispatched", "active", "running", "spawned", "in_progress", "pending", "queued",
-})
+_NON_TERMINAL_LEDGER_STATES: frozenset[str] = frozenset(
+    {
+        "dispatched",
+        "active",
+        "running",
+        "spawned",
+        "in_progress",
+        "pending",
+        "queued",
+    }
+)
 
 # Claims-file status-token vocab (mirror of check_modal_single_flight_ledger_
 # consistency in src/tac/preflight.py — keep in sync).
 _CLAIM_TERMINAL_TOKENS: tuple[str, ...] = (
-    "failed", "stopped", "completed", "complete", "harvested", "refused", "stale",
-    "cancelled", "canceled", "terminal", "timeout", "timed_out", "error", "killed",
-    "superseded", "oom",
+    "failed",
+    "stopped",
+    "completed",
+    "complete",
+    "harvested",
+    "refused",
+    "stale",
+    "cancelled",
+    "canceled",
+    "terminal",
+    "timeout",
+    "timed_out",
+    "error",
+    "killed",
+    "superseded",
+    "oom",
 )
 _CLAIM_ACTIVE_TOKENS: tuple[str, ...] = (
-    "active", "dispatched", "running", "spawned", "eval",
+    "active",
+    "dispatched",
+    "running",
+    "spawned",
+    "eval",
 )
 
 # Placeholder rationales rejected per Catalog #287 (data-content layer).
-_PLACEHOLDER_RATIONALES: frozenset[str] = frozenset({
-    "<rationale>", "<reason>", "rationale", "reason", "tbd", "todo",
-    "placeholder", "x", "-", "none", "n/a",
-})
+_PLACEHOLDER_RATIONALES: frozenset[str] = frozenset(
+    {
+        "<rationale>",
+        "<reason>",
+        "rationale",
+        "reason",
+        "tbd",
+        "todo",
+        "placeholder",
+        "x",
+        "-",
+        "none",
+        "n/a",
+    }
+)
 
 _FORCE_ENV = "TAC_MODAL_SINGLE_FLIGHT_FORCE_RATIONALE"
 _SKIP_CLOUD_ENV = "TAC_MODAL_SINGLE_FLIGHT_SKIP_CLOUD"
 _CLOUD_TIMEOUT_SECONDS = 45.0
+_MODAL_CALL_ID_RE = re.compile(r"\bfc-[A-Za-z0-9]+\b", re.IGNORECASE)
 
 
 class ModalSingleFlightRefusal(RuntimeError):
@@ -163,7 +203,8 @@ def live_modal_call_rows(*, repo_root: Path | str | None = None) -> list[dict[st
 
 
 def active_modal_claims(
-    *, repo_root: Path | str | None = None,
+    *,
+    repo_root: Path | str | None = None,
 ) -> list[dict[str, str]]:
     """ACTIVE (non-terminal) Modal claim rows from the cross-agent claims file.
 
@@ -226,8 +267,7 @@ def cloud_live_modal_apps(*, timeout_seconds: float = _CLOUD_TIMEOUT_SECONDS) ->
     """
     if shutil.which("modal") is None:
         print(
-            "[modal-single-flight] WARNING: `modal` CLI not found — cloud "
-            "cross-check SKIPPED (local ledgers only).",
+            "[modal-single-flight] WARNING: `modal` CLI not found — cloud cross-check SKIPPED (local ledgers only).",
             file=sys.stderr,
         )
         return None
@@ -248,8 +288,7 @@ def cloud_live_modal_apps(*, timeout_seconds: float = _CLOUD_TIMEOUT_SECONDS) ->
         return None
     if proc.returncode != 0:
         print(
-            f"[modal-single-flight] WARNING: `modal app list` rc={proc.returncode} "
-            "— cloud cross-check SKIPPED.",
+            f"[modal-single-flight] WARNING: `modal app list` rc={proc.returncode} — cloud cross-check SKIPPED.",
             file=sys.stderr,
         )
         return None
@@ -257,8 +296,7 @@ def cloud_live_modal_apps(*, timeout_seconds: float = _CLOUD_TIMEOUT_SECONDS) ->
         apps = json.loads(proc.stdout or "[]")
     except json.JSONDecodeError:
         print(
-            "[modal-single-flight] WARNING: `modal app list --json` returned "
-            "non-JSON — cloud cross-check SKIPPED.",
+            "[modal-single-flight] WARNING: `modal app list --json` returned non-JSON — cloud cross-check SKIPPED.",
             file=sys.stderr,
         )
         return None
@@ -291,14 +329,17 @@ def single_flight_findings(
     *,
     label: str = "",
     lane_id: str = "",
+    claim_agent: str = "",
     repo_root: Path | str | None = None,
     check_cloud: bool = True,
 ) -> list[str]:
     """All single-flight conflicts across the (up to) three surfaces.
 
-    The caller's OWN active claim (same ``lane_id``) is excluded — the healthy
-    dispatch path claims its lane FIRST (``tools/claim_lane_dispatch.py claim``,
-    which itself refuses a 2nd cross-lane live Modal claim), THEN dispatches.
+    The caller's OWN active claim is excluded.  When ``claim_agent`` is
+    supplied, lane, agent, and a supplied job label must match; an external or
+    stale same-lane pre-claim is a conflict, not the dispatcher's own row.  The
+    legacy lane-only exclusion remains when no agent is supplied so already-
+    claimed dispatchers can perform their immediate pre-spawn recheck.
     Live LEDGER rows are never excluded: a non-terminal call_id on the same
     lane is exactly the un-harvested duplicate-breeder this guard exists for.
     """
@@ -311,16 +352,23 @@ def single_flight_findings(
             f"{row.get('status') or row.get('event_type')}"
         )
     lane_l = (lane_id or "").strip().lower()
+    agent_l = (claim_agent or "").strip().lower()
+    label_l = (label or "").strip().lower()
     for claim in active_modal_claims(repo_root=repo_root):
-        if lane_l and claim["lane_id"].strip().lower() == lane_l:
-            continue  # the caller's own just-claimed lane row
+        same_lane = lane_l and claim["lane_id"].strip().lower() == lane_l
+        same_agent = agent_l and claim["agent"].strip().lower() == agent_l
+        same_label = label_l and claim["instance_job_id"].strip().lower() == label_l
+        if same_lane and (not agent_l or (same_agent and (not label_l or same_label))):
+            continue  # caller's own claim; never an unrelated same-lane preclaim
         findings.append(
             "claims file: ACTIVE Modal claim lane="
             f"{claim['lane_id']} job={claim['instance_job_id']} "
             f"status={claim['status']}"
         )
     skip_cloud_env = os.environ.get(_SKIP_CLOUD_ENV, "").strip().lower() in (
-        "1", "true", "yes",
+        "1",
+        "true",
+        "yes",
     )
     if check_cloud and not skip_cloud_env:
         cloud = cloud_live_modal_apps()
@@ -343,6 +391,7 @@ def assert_modal_single_flight(
     *,
     label: str = "",
     lane_id: str = "",
+    claim_agent: str = "",
     force_rationale: str | None = None,
     repo_root: Path | str | None = None,
     check_cloud: bool = True,
@@ -358,6 +407,7 @@ def assert_modal_single_flight(
     findings = single_flight_findings(
         label=label,
         lane_id=lane_id,
+        claim_agent=claim_agent,
         repo_root=repo_root,
         check_cloud=check_cloud,
     )
@@ -397,22 +447,25 @@ def dual_ledger_terminality_blockers(
     Operator binding 2026-07-15 rule 3: whoever observes a terminal state
     appends BOTH the ledger outcome row AND the claim terminal row in the same
     turn. This checker runs after the ledger half lands and reports the claims
-    half still owed. Matching is by call_id / label / lane_id token presence in
-    the active claim row (mirrors the ``reconcile`` subcommand's matching).
+    half still owed. Matching is call-id-first: if an active claim names any
+    Modal call ID, only that exact terminal call ID can match it. Label/lane
+    fallback is reserved for legacy claim rows that contain no call ID. This
+    prevents an older terminal attempt from matching a newer live attempt on
+    the same lane and emitting a false blocker.
     """
     blockers: list[str] = []
-    tokens = [
-        t.strip().lower()
-        for t in (call_id, label or "", lane_id or "")
-        if isinstance(t, str) and t.strip()
-    ]
-    if not tokens:
+    fallback_tokens = [t.strip().lower() for t in (label or "", lane_id or "") if isinstance(t, str) and t.strip()]
+    call_id_l = call_id.strip().lower()
+    if not call_id_l and not fallback_tokens:
         return []
     for claim in active_modal_claims(repo_root=repo_root):
-        claim_text = (
-            f"{claim['lane_id']} {claim['instance_job_id']} {claim['notes']}"
-        ).lower()
-        if any(tok in claim_text for tok in tokens):
+        claim_text = (f"{claim['lane_id']} {claim['instance_job_id']} {claim['notes']}").lower()
+        claim_call_ids = {match.group(0).lower() for match in _MODAL_CALL_ID_RE.finditer(claim_text)}
+        if claim_call_ids:
+            matched = bool(call_id_l) and call_id_l in claim_call_ids
+        else:
+            matched = any(tok in claim_text for tok in fallback_tokens)
+        if matched:
             blockers.append(
                 f"claims file still ACTIVE for terminal call_id={call_id}: "
                 f"lane={claim['lane_id']} job={claim['instance_job_id']} "
@@ -426,7 +479,9 @@ def dual_ledger_terminality_blockers(
 
 
 def emit_dual_ledger_terminality_blocker_if_needed(
-    *, record: dict[str, Any], ledger_path: Path | None = None,
+    *,
+    record: dict[str, Any],
+    ledger_path: Path | None = None,
 ) -> list[str]:
     """Print a LOUD blocker when a terminal outcome row leaves an active claim.
 

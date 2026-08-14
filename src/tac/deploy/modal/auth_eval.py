@@ -5,6 +5,7 @@ The experiment entry points own provider-specific images and archive upload.
 This module owns the provider-agnostic custody shape: dispatch claims, detached
 Modal call metadata, artifact harvest, and result JSON materialization.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -53,9 +54,11 @@ SENSITIVE_RUNTIME_UPLOAD_NAMES = {
 }
 # Reviewed video-token codec modules the "token" secrets-marker false-positives
 # on (exact basenames only — see validate_runtime_upload_file for the contract).
-RUNTIME_UPLOAD_BASENAME_ALLOWLIST = frozenset({
-    "ddm_r7_token_coder.py",
-})
+RUNTIME_UPLOAD_BASENAME_ALLOWLIST = frozenset(
+    {
+        "ddm_r7_token_coder.py",
+    }
+)
 
 SENSITIVE_RUNTIME_UPLOAD_SUBSTRINGS = (
     "apikey",
@@ -126,9 +129,7 @@ def validate_modal_auth_eval_pairing(
     pair = str(pair_group_id or "").strip()
     waiver = str(single_axis_waiver_reason or "").strip()
     if pair and waiver:
-        raise ModalAuthEvalPairingError(
-            "set either pair_group_id or single_axis_waiver_reason, not both"
-        )
+        raise ModalAuthEvalPairingError("set either pair_group_id or single_axis_waiver_reason, not both")
     if not pair and not waiver:
         raise ModalAuthEvalPairingError(
             "Modal auth eval is paired-by-default. Use the paired launcher or "
@@ -241,21 +242,14 @@ def safe_modal_artifact_path(artifacts_dir: Path, relpath: str) -> Path:
 
     raw = str(relpath).replace("\\", "/").strip()
     path = Path(raw)
-    if (
-        not raw
-        or raw in {".", ".."}
-        or path.is_absolute()
-        or any(part in {"", ".."} for part in path.parts)
-    ):
+    if not raw or raw in {".", ".."} or path.is_absolute() or any(part in {"", ".."} for part in path.parts):
         raise UnsafeModalArtifactPath(f"unsafe Modal artifact path: {relpath!r}")
     root = artifacts_dir.resolve(strict=False)
     target = (artifacts_dir / path).resolve(strict=False)
     try:
         target.relative_to(root)
     except ValueError as exc:
-        raise UnsafeModalArtifactPath(
-            f"Modal artifact path escapes recovery root: {relpath!r}"
-        ) from exc
+        raise UnsafeModalArtifactPath(f"Modal artifact path escapes recovery root: {relpath!r}") from exc
     return target
 
 
@@ -278,10 +272,7 @@ def materialize_modal_artifacts(
             if not isinstance(name, str):
                 raise TypeError(f"artifact key must be str, got {type(name).__name__}")
             if not isinstance(data, (bytes, bytearray, memoryview)):
-                raise TypeError(
-                    "artifact payload must be bytes-like, "
-                    f"got {type(data).__name__}"
-                )
+                raise TypeError(f"artifact payload must be bytes-like, got {type(data).__name__}")
             planned.append((name, safe_modal_artifact_path(out_dir, name), bytes(data)))
         except Exception as exc:
             errors.append(
@@ -426,13 +417,10 @@ def prepare_modal_auth_eval_request(
         else:
             inflate_sh_rel = str(inflate_sh_path)
         if ".." in Path(inflate_sh_rel).parts:
-            raise SystemExit(
-                f"FATAL: --inflate-sh must not contain parent traversal: {inflate_sh_rel}"
-            )
+            raise SystemExit(f"FATAL: --inflate-sh must not contain parent traversal: {inflate_sh_rel}")
         if not (submission_dir_path / inflate_sh_rel).is_file():
             raise SystemExit(
-                f"FATAL: --inflate-sh {inflate_sh_rel!r} not found under --submission-dir "
-                f"{submission_dir_path}"
+                f"FATAL: --inflate-sh {inflate_sh_rel!r} not found under --submission-dir {submission_dir_path}"
             )
         transport_zip = submission_dir_zip_bytes(submission_dir_path)
         transport_zip_sha256 = sha256_bytes(transport_zip)
@@ -442,15 +430,12 @@ def prepare_modal_auth_eval_request(
                 inflate_sh_rel = str(inflate_sh_path.resolve().relative_to(root))
             except ValueError as exc:
                 raise SystemExit(
-                    "FATAL: --inflate-sh must be relative to repo root or inside it: "
-                    f"{inflate_sh_path}"
+                    f"FATAL: --inflate-sh must be relative to repo root or inside it: {inflate_sh_path}"
                 ) from exc
         else:
             inflate_sh_rel = str(inflate_sh_path)
         if ".." in Path(inflate_sh_rel).parts:
-            raise SystemExit(
-                f"FATAL: --inflate-sh must not contain parent traversal: {inflate_sh_rel}"
-            )
+            raise SystemExit(f"FATAL: --inflate-sh must not contain parent traversal: {inflate_sh_rel}")
 
     label = safe_artifact_label(archive_path.stem)
     out_dir = (
@@ -479,13 +464,26 @@ def claim_modal_auth_eval_dispatch(
     spec: ClaimSpec,
     status: str,
 ) -> None:
-    """Record the required Level-2 dispatch claim before provider submission."""
+    """Guard, then record the required claim before provider submission.
+
+    The dispatcher owns this claim transition. A pre-claim without the same
+    lane, agent, and job identity is refused before the claim write, which
+    prevents the repeated preclaim/self-claim collision without adopting an
+    ambiguous reservation as permission to spend.
+    """
 
     if not spec.lane_id or not spec.instance_job_id:
         raise SystemExit(
-            "FATAL: Modal auth eval dispatch requires --lane-id and "
-            "--instance-job-id before provider work starts"
+            "FATAL: Modal auth eval dispatch requires --lane-id and --instance-job-id before provider work starts"
         )
+    from tac.deploy.modal.single_flight import assert_modal_single_flight
+
+    assert_modal_single_flight(
+        label=spec.instance_job_id,
+        lane_id=spec.lane_id,
+        claim_agent=spec.agent,
+        repo_root=repo_root,
+    )
     record_dispatch_claim(
         repo_root=repo_root,
         spec=spec,
@@ -503,8 +501,7 @@ def require_active_modal_auth_eval_claim(
 
     if not spec.lane_id or not spec.instance_job_id:
         raise SystemExit(
-            "FATAL: Modal auth eval dispatch requires --lane-id and "
-            "--instance-job-id before provider work starts"
+            "FATAL: Modal auth eval dispatch requires --lane-id and --instance-job-id before provider work starts"
         )
     claims_path = repo_root / ".omx" / "state" / "active_lane_dispatch_claims.md"
     try:
@@ -515,8 +512,7 @@ def require_active_modal_auth_eval_claim(
         )
     except ValueError as exc:
         raise SystemExit(
-            "FATAL: Modal auth eval --claim-policy require_active could not "
-            f"find an active lane claim: {exc}"
+            f"FATAL: Modal auth eval --claim-policy require_active could not find an active lane claim: {exc}"
         ) from exc
     if row.get("platform") != spec.platform:
         raise SystemExit(
@@ -646,9 +642,7 @@ def _function_call_from_id(modal_module: Any, call_id: str) -> Any:
 
 
 def _truthy(value: Any) -> bool:
-    return value is True or (
-        isinstance(value, str) and value.strip().lower() in {"1", "true", "yes"}
-    )
+    return value is True or (isinstance(value, str) and value.strip().lower() in {"1", "true", "yes"})
 
 
 def _recovered_claim_flags(
@@ -683,24 +677,15 @@ def _recovered_claim_flags(
             flags["score_claim"] = True
             flags["promotion_eligible"] = _truthy(payload.get("promotion_eligible"))
         else:
-            flags["diagnostic_blockers"] = [
-                f"canonical_auth_eval_not_valid_{score_axis}_score_claim"
-            ]
+            flags["diagnostic_blockers"] = [f"canonical_auth_eval_not_valid_{score_axis}_score_claim"]
     elif score_axis == "contest_cpu":
-        if (
-            payload.get("score_axis") != "contest_cpu"
-            or payload.get("evidence_grade") != "contest-CPU"
-        ):
-            flags["diagnostic_blockers"] = [
-                "canonical_auth_eval_not_valid_contest_cpu_leaderboard_artifact"
-            ]
+        if payload.get("score_axis") != "contest_cpu" or payload.get("evidence_grade") != "contest-CPU":
+            flags["diagnostic_blockers"] = ["canonical_auth_eval_not_valid_contest_cpu_leaderboard_artifact"]
         else:
             flags["score_claim"] = True
             flags["promotion_eligible"] = False
     else:
-        flags["diagnostic_blockers"] = [
-            f"unsupported_modal_auth_eval_recovery_axis:{score_axis or '<missing>'}"
-        ]
+        flags["diagnostic_blockers"] = [f"unsupported_modal_auth_eval_recovery_axis:{score_axis or '<missing>'}"]
     for key in (
         "score_axis",
         "evidence_grade",
@@ -747,9 +732,7 @@ def recover_modal_auth_eval(
         import modal as modal_module  # type: ignore[no-redef]
 
     try:
-        result = _function_call_from_id(modal_module, resolved_call_id).get(
-            timeout=float(timeout_s)
-        )
+        result = _function_call_from_id(modal_module, resolved_call_id).get(timeout=float(timeout_s))
     except TimeoutError:
         summary = {
             "schema_version": "modal_auth_eval_recover_summary_v1",
@@ -818,9 +801,7 @@ def recover_modal_auth_eval(
             return summary
 
     result_without_artifacts = {k: v for k, v in result.items() if k != "artifacts"}
-    result_name = result_json_name or str(
-        metadata.get("result_json_name") or "modal_auth_eval_result.json"
-    )
+    result_name = result_json_name or str(metadata.get("result_json_name") or "modal_auth_eval_result.json")
     write_json(out_dir / result_name, result_without_artifacts)
     claim_flags = _recovered_claim_flags(
         out_dir=out_dir,
@@ -828,9 +809,7 @@ def recover_modal_auth_eval(
         score_axis=str(metadata.get("axis") or ""),
     )
     diagnostic_blockers = claim_flags.get("diagnostic_blockers")
-    diagnostic_blocker_list = (
-        diagnostic_blockers if isinstance(diagnostic_blockers, list) else []
-    )
+    diagnostic_blocker_list = diagnostic_blockers if isinstance(diagnostic_blockers, list) else []
     canonical_artifact_blockers = {
         "missing_canonical_contest_auth_eval_json",
         "invalid_canonical_contest_auth_eval_json",
@@ -860,9 +839,7 @@ def recover_modal_auth_eval(
         "returncode": recovered_returncode,
         "score_claim": claim_flags["score_claim"],
         "promotion_eligible": claim_flags["promotion_eligible"],
-        "score_recomputed_from_components": result_without_artifacts.get(
-            "score_recomputed_from_components"
-        ),
+        "score_recomputed_from_components": result_without_artifacts.get("score_recomputed_from_components"),
         "avg_posenet_dist": result_without_artifacts.get("avg_posenet_dist"),
         "avg_segnet_dist": result_without_artifacts.get("avg_segnet_dist"),
     }
