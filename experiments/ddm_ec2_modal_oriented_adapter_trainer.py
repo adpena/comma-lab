@@ -504,6 +504,14 @@ def run_trainer(payloads: dict[str, bytes], request: dict[str, Any]) -> dict[str
         BASE_FIELD_RECORD,
     )
     retained_volume.commit()
+    # The locked venv is the matched scorer instrument (torch/weights/batch
+    # identical to the js1b field materializer) but ships no pydantic, which
+    # tac.training's legacy module needs at import (fc-01M006HSKX died on it).
+    # Fail-closed self-install per the e4 brotli precedent; training-side only.
+    subprocess.run(
+        [f"{UPSTREAM_LOCKED_VENV}/bin/python", "-m", "pip", "install", "--quiet", "pydantic>=2.0,<3"],
+        check=True,
+    )
     command = [
         f"{UPSTREAM_LOCKED_VENV}/bin/python",
         "-u",
