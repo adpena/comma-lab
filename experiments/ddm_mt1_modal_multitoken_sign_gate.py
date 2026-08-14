@@ -647,11 +647,22 @@ def main(
     output.mkdir(parents=True, exist_ok=True)
     write_spawn_metadata(
         out_dir=output,
-        lane_id=LANE_ID,
-        instance_job_id=INSTANCE_JOB_ID,
+        tool="experiments/ddm_mt1_modal_multitoken_sign_gate.py",
+        app=APP_NAME,
+        axis="contest_cuda_mt1_n32_component_sign_gate",
         call_id=call_id,
-        status="spawned_detached",
-        extra={"run_id": RUN_ID, "volume_name": VOLUME_NAME},
+        local_request={
+            "run_id": RUN_ID,
+            "lane_id": LANE_ID,
+            "instance_job_id": INSTANCE_JOB_ID,
+        },
+        result_json_name="FINAL_RESULT.json",
+        extra={
+            "run_id": RUN_ID,
+            "volume_name": VOLUME_NAME,
+            "lane_id": LANE_ID,
+            "instance_job_id": INSTANCE_JOB_ID,
+        },
     )
     print(json.dumps({"call_id": call_id, "run_id": RUN_ID}, sort_keys=True))
 
