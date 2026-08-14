@@ -960,6 +960,109 @@ def _load_cp135_carrier_codes() -> np.ndarray:
     ).astype(np.int32, copy=False)
 
 
+def compensation_object_fingerprint(
+    *,
+    pair: int,
+    semantic_tokens: dict[str, Any],
+    master_camera: dict[str, Any],
+) -> str:
+    """Bind a frame-0 compensation solve to one exact frame-1 object.
+
+    Paths are intentionally excluded from the digest.  The binding follows the
+    bytes across retained-store copies, while the caller separately verifies
+    that the recorded path still contains those bytes.
+    """
+
+    if not 0 <= int(pair) < PAIR_COUNT:
+        raise QS1Error("compensation object pair exceeds the n600 domain")
+    payload = {
+        "schema": "ddm_qs1_compensation_object_fingerprint.v1",
+        "pair": int(pair),
+        "semantic_tokens": {
+            "bytes": int(semantic_tokens["bytes"]),
+            "sha256": str(semantic_tokens["sha256"]),
+        },
+        "master_camera": {
+            "bytes": int(master_camera["bytes"]),
+            "sha256": str(master_camera["sha256"]),
+        },
+        "cp135_archive_sha256": CP135_ARCHIVE_SHA256,
+    }
+    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def assert_compensation_matches_compile_object(row: dict[str, Any]) -> dict[str, Any]:
+    """Refuse stale frame-0 compensation after a frame-1 object change.
+
+    Original QS1 rows predate explicit object fingerprints, but their solver
+    consumed the proposal's canonical ``candidate_tokens.uint8.npy`` directly.
+    That one unchanged legacy object remains admissible.  Any content change
+    requires an explicit binding emitted by the fresh solve; carrying the old
+    ``final_codes`` across the change is a compile error.
+    """
+
+    proposal_id = str(row["proposal_id"])
+    pair = int(row["pair"])
+    canonical_tokens = (
+        JS6_BANK / "proposals" / proposal_id / "candidate_tokens.uint8.npy"
+    )
+    compile_tokens = Path(row.get("candidate_tokens_path", canonical_tokens))
+    canonical_record = file_record(canonical_tokens)
+    compile_record = file_record(compile_tokens)
+    changed = compile_record["sha256"] != canonical_record["sha256"]
+    binding = row.get("compensation_object")
+    if binding is None:
+        if changed:
+            raise QS1Error(
+                "changed frame-1 edit object lacks an exact-object compensation solve: "
+                f"{proposal_id}"
+            )
+        return {
+            "schema": "ddm_qs1_compile_compensation_binding.v1",
+            "proposal_id": proposal_id,
+            "pair": pair,
+            "mode": "LEGACY_CANONICAL_OBJECT_SOLVED_IN_QS1",
+            "semantic_tokens": compile_record,
+            "object_changed_from_canonical_proposal": False,
+            "passed": True,
+        }
+    if binding.get("schema") != "ddm_qs1_compensation_object_binding.v1":
+        raise QS1Error(f"compensation object binding schema differs: {proposal_id}")
+    if int(binding.get("pair", -1)) != pair:
+        raise QS1Error(f"compensation object binding pair differs: {proposal_id}")
+    if binding.get("semantic_tokens") != compile_record:
+        raise QS1Error(f"bound semantic-token object differs at compile: {proposal_id}")
+    master_record = binding.get("master_camera")
+    if not isinstance(master_record, dict):
+        raise QS1Error(f"bound master-camera record is absent: {proposal_id}")
+    master_path = Path(str(master_record.get("path", "")))
+    if file_record(master_path) != master_record:
+        raise QS1Error(f"bound master-camera bytes differ at compile: {proposal_id}")
+    expected = compensation_object_fingerprint(
+        pair=pair,
+        semantic_tokens=compile_record,
+        master_camera=master_record,
+    )
+    if binding.get("fingerprint_sha256") != expected:
+        raise QS1Error(f"compensation object fingerprint differs: {proposal_id}")
+    if row.get("solve", {}).get("compensation_object_fingerprint_sha256") != expected:
+        raise QS1Error(f"frame-0 solve is stale for compile object: {proposal_id}")
+    if binding.get("exact_master_rendered_from_semantic_tokens") is not True:
+        raise QS1Error(f"compensation master lacks exact render proof: {proposal_id}")
+    return {
+        "schema": "ddm_qs1_compile_compensation_binding.v1",
+        "proposal_id": proposal_id,
+        "pair": pair,
+        "mode": "EXACT_OBJECT_BOUND_FRESH_SOLVE",
+        "semantic_tokens": compile_record,
+        "master_camera": master_record,
+        "fingerprint_sha256": expected,
+        "object_changed_from_canonical_proposal": changed,
+        "passed": True,
+    }
+
+
 def _candidate_physical_carrier(
     base_codes: np.ndarray, selected: list[dict[str, Any]]
 ) -> tuple[bytes, np.ndarray, dict[str, Any]]:
@@ -982,7 +1085,9 @@ def _candidate_physical_carrier(
         SimpleNamespace(N=PAIR_COUNT, CARRIER_DIM=DIMENSIONS),
     )
     codes = np.asarray(base_codes, dtype=np.int32).copy()
+    compensation_bindings = []
     for row in selected:
+        compensation_bindings.append(assert_compensation_matches_compile_object(row))
         final_codes = np.asarray(row["solve"]["final_codes"], dtype=np.int32)
         codes[int(row["pair"])] = final_codes
     sys.path.insert(0, str(EXPERIMENT_BOOK / "src"))
@@ -1020,6 +1125,8 @@ def _candidate_physical_carrier(
         "physical_bytes": len(physical),
         "physical_sha256": hashlib.sha256(physical).hexdigest(),
         "cap1_report": cap1_report,
+        "compensation_object_bindings": compensation_bindings,
+        "all_compensation_solved_for_exact_compile_objects": True,
     }
     return physical, codes, report
 
