@@ -69,6 +69,19 @@ def _staged_py_files() -> list[str]:
     return [f for f in out.splitlines() if f.endswith(".py") and (REPO_ROOT / f).exists()]
 
 
+def _staged_added_py_files() -> list[str]:
+    """Return newly-added staged Python files for additive-coverage warnings."""
+    try:
+        out = subprocess.check_output(
+            ["git", "diff", "--cached", "--name-only", "--diff-filter=A"],
+            cwd=REPO_ROOT,
+            text=True,
+        )
+    except subprocess.CalledProcessError:
+        return []
+    return [f for f in out.splitlines() if f.endswith(".py") and (REPO_ROOT / f).exists()]
+
+
 def _staged_doc_files() -> list[str]:
     """Staged .md files.
 
@@ -1309,8 +1322,83 @@ def run_guarded_constant_frozen_literal_scan(staged: list[str]) -> int:
     return 0
 
 
+_MODAL_CLOSURE_SCHEMA = "modal_endpoint_closure_manifest.v1"
+_MODAL_CLOSURE_WAIVER = re.compile(
+    r"\.spawn\([^\n]*#\s*MODAL_CLOSURE_MANIFEST_FREE:\s*(?P<reason>.+)$"
+)
+_PLACEHOLDER_WAIVER_WORDS = {"later", "none", "placeholder", "tbd", "test", "todo"}
+
+
+def scan_modal_closure_manifest_source(path: str, source: str) -> str | None:
+    """Return a coverage warning for one new Modal dispatcher, else ``None``."""
+
+    if not re.fullmatch(r"experiments/[^/]*_modal_[^/]*\.py", path) or ".spawn(" not in source:
+        return None
+    if _MODAL_CLOSURE_SCHEMA in source and "closure_manifest" in source:
+        return None
+
+    spawn_lines = [line for line in source.splitlines() if ".spawn(" in line]
+    waiver_reasons: list[str] = []
+    for line in spawn_lines:
+        match = _MODAL_CLOSURE_WAIVER.search(line)
+        if not match:
+            return f"{path}: .spawn() has no closure manifest and no same-line waiver"
+        reason = match.group("reason").strip()
+        words = re.findall(r"[A-Za-z0-9]+", reason.lower())
+        if (
+            len(reason) < 20
+            or len(words) < 3
+            or any(word in _PLACEHOLDER_WAIVER_WORDS for word in words)
+        ):
+            return f"{path}: placeholder MODAL_CLOSURE_MANIFEST_FREE rationale rejected"
+        waiver_reasons.append(reason)
+    if not waiver_reasons:
+        return f"{path}: Modal spawn coverage could not be classified"
+    return None
+
+
+def run_modal_closure_manifest_scan(staged_added: list[str]) -> int:
+    """AC1 warn-only coverage for newly-added Modal dispatchers.
+
+    Existing launchers are intentionally outside this first landing. A warning
+    cannot prove that an endpoint returns payloads, but it prevents silent
+    expansion of the unclosable-dispatcher denominator.
+    """
+
+    candidates = [
+        path
+        for path in staged_added
+        if re.fullmatch(r"experiments/[^/]*_modal_[^/]*\.py", path)
+    ]
+    warnings: list[str] = []
+    for path in candidates:
+        try:
+            source = (REPO_ROOT / path).read_text(encoding="utf-8")
+            warning = scan_modal_closure_manifest_source(path, source)
+        except OSError as exc:
+            warning = f"{path}: unreadable ({exc})"
+        if warning:
+            warnings.append(warning)
+    if warnings:
+        print(
+            f"{YELLOW}[preflight-hook] Modal endpoint closure coverage WARNING: "
+            f"{len(candidates)} new dispatcher(s), {len(warnings)} uncovered{RST}",
+            file=sys.stderr,
+        )
+        for warning in warnings:
+            print(f"[preflight-hook]   {warning}", file=sys.stderr)
+    elif candidates:
+        print(
+            f"{GREEN}[preflight-hook] Modal endpoint closure coverage: "
+            f"{len(candidates)} new dispatcher(s), 0 uncovered{RST}",
+            file=sys.stderr,
+        )
+    return 0
+
+
 def main() -> int:
     staged = _staged_py_files()
+    staged_added = _staged_added_py_files()
     staged_docs = _staged_doc_files()
     staged_shell = _staged_shell_files()
 
@@ -1365,6 +1453,12 @@ def main() -> int:
     # Step 1g: `ddm_gk1` guarded-constant frozen-derivation guard. Same placement
     # rationale as 1b/1c/1d/1e/1f — before run_preflight(), which early-returns on failure.
     rc = run_guarded_constant_frozen_literal_scan(staged)
+    if rc != 0:
+        return rc
+
+    # Step 1h: AC1 additive Modal endpoint-closure coverage. Warn-only in this
+    # first landing; only newly-added dispatcher files are in its denominator.
+    rc = run_modal_closure_manifest_scan(staged_added)
     if rc != 0:
         return rc
 
