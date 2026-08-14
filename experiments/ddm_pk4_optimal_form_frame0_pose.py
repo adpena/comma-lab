@@ -479,10 +479,15 @@ def select_rung_controls(
 
 
 def _mlx_pose_vectors(posenet_cpu: Any, mlx_posenet: Any, inputs: np.ndarray, root: Path) -> np.ndarray:
-    """Run the frozen PoseNet through MLX after retaining its exact real input."""
-    import torch
+    """Run the frozen PoseNet after retaining its exact real input.
 
-    from tac.local_acceleration.mlx_scorer_adapters import run_mlx_posenet_nchw
+    Default backend is the torch-CPU AUTHORITY. The MLX forward is opt-in
+    (PK4_POSE_BACKEND=mlx): measured 2026-08-13 on retained batch inputs it
+    drifts up to 0.0709 abs (~0.55% rel) from torch-CPU, which is what tripped
+    the stage-11 parity gate at threshold 0.05 — the retained cp135 vectors
+    are CPU-consistent (0.0038), so the drift is the MLX forward itself.
+    """
+    import torch
 
     value = np.asarray(inputs, dtype=np.uint8)
     retain_npy(root / "pose_input.uint8.npy", value)
@@ -490,8 +495,16 @@ def _mlx_pose_vectors(posenet_cpu: Any, mlx_posenet: Any, inputs: np.ndarray, ro
     with torch.inference_mode():
         yuv = posenet_cpu.preprocess_input(tensor).cpu().numpy().astype(np.float32, copy=False)
     retain_npy(root / "pose_preprocessed_yuv6.float32.npy", yuv)
-    output = run_mlx_posenet_nchw(mlx_posenet, np.ascontiguousarray(yuv))
-    pose = output["pose"] if isinstance(output, dict) else output
+    if os.environ.get("PK4_POSE_BACKEND", "torch_cpu") == "mlx":
+        from tac.local_acceleration.mlx_scorer_adapters import run_mlx_posenet_nchw
+
+        output = run_mlx_posenet_nchw(mlx_posenet, np.ascontiguousarray(yuv))
+        pose = output["pose"] if isinstance(output, dict) else output
+    else:
+        with torch.inference_mode():
+            out = posenet_cpu(torch.from_numpy(yuv))
+        pose = out["pose"] if isinstance(out, dict) else out
+        pose = pose.cpu().numpy()
     vectors = np.asarray(pose, dtype=np.float32)[:, :POSE_DIMENSIONS]
     retain_npy(root / "pose_vectors.float32.npy", vectors)
     return vectors
