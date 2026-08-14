@@ -128,6 +128,10 @@ were absent from the bounded fixture store and were honestly reported as
   --check`: passed.
 - Two review-tracker passes were recorded for every changed Python file. No
   `REVIEW_GATE_OVERRIDE` was used on Python.
+- Governed serializer landings: core closer/poller/tests/initial memo
+  `4f4537d835`; warn-only coverage gate `b4404f9fa3`; EC2 reference emitter and
+  automatic arming `8a3207e10e`. All three use `[no-triality] [p0-ledger-ok]`,
+  no co-author trailer, and isolated temporary indexes.
 
 ## RECALL EVIDENCE
 
@@ -172,8 +176,9 @@ Beyond the charter seeds, recall found:
   archive was evaluated, and no score or promotion claim was made.
 - Existing unrelated working-tree edits were preserved. The EC2 dispatcher and
   preflight hook already contained uncommitted dependency-closure and receipt-
-  wording edits when AC1 began; AC1's serializer handoff must use exact-hunk
-  patch mode for those shared files rather than absorbing them.
+  wording edits when AC1 began. AC1 landed those two shared files through exact-
+  hunk serializer patch mode; the unrelated working-tree diffs remain present
+  and absent from the three AC1 commits.
 
 Effective frontier remains CP135 at **S = 0.16195513827824176 @ 186,252 B
 `[contest-CUDA T4, n600]`**. Own-vehicle frontier remains LC2 at
