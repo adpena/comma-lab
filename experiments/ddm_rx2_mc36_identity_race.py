@@ -252,6 +252,13 @@ def _pack_terminal_ihs1(checkpoint_path: Path, output: Path) -> dict[str, Any]:
     atomic_bytes(raw_path, raw)
     restored = packer.model_from_args(topology, False).eval()
     packer.deserialize_self_compressed(restored, raw)
+    source_state = source.state_dict()
+    restored_state = restored.state_dict()
+    if source_state.keys() != restored_state.keys():
+        raise RX2RaceError("IHS1 pack changed the deployed state-dict schema")
+    changed_tensors = [name for name in source_state if not torch.equal(source_state[name], restored_state[name])]
+    if changed_tensors:
+        raise RX2RaceError(f"IHS1 pack changed deployed tensors: {changed_tensors[:8]}")
     generator = torch.Generator(device="cpu").manual_seed(20260716)
     current = torch.randint(0, 5, (2, 384, 512), generator=generator)
     previous = torch.randint(0, 5, (2, 384, 512), generator=generator)
@@ -269,6 +276,8 @@ def _pack_terminal_ihs1(checkpoint_path: Path, output: Path) -> dict[str, Any]:
         "raw": file_record(raw_path),
         "xz": file_record(xz_path),
         "verified_exact": True,
+        "state_dict_exact": True,
+        "state_tensor_count": len(source_state),
         "max_logit_diff": max_diff,
         "weight_bound": 127,
         "activation_bound": 127,
