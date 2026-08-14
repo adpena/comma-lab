@@ -6,6 +6,7 @@
 
 | timestamp_utc | agent | lane_id | platform | instance/job_id | predicted_eta_utc | status | notes |
 |---|---|---|---|---|---|---|---|
+| 2026-08-14T04:00:58Z | claude:fable5-main | ddm_pk4_local_metal_measure_20260813 | macos_cpu_local | pk4_metal_measure_r3_pid3913 |  | completed_local_gate_fail_no_compile | r3 CPU-authority rc=0; 3/3 rungs GATE_FAIL heldout<=0; family ceiling; memo ddm_pk4_optimal_form_frame0_pose_verdict_20260813.md |
 | 2026-08-14T02:13:38Z | MAIN | ddm_pk4_local_metal_measure_20260813 | local | local:pk4_measure_n64 |  | active_local_metal_measure | MAIN-fired sealed pk4 order: n64 Jacobian bank + GN + LOPO gate + reach curve on Metal |
 | 2026-08-14T01:45:09Z | MAIN | ddm_qs5_resolve_compensation_n600_20260813 | modal | modal:ddm_qs5_dual_axis_20260813_r2 |  | completed_harvested_refused_plus2p52e6_compensation_proven | REFUSED +2.519822e-6 near-miss: pose -3.814e-7 (COMPENSATION PROVEN, d_pose BELOW base) · seg -17 flips (ceiling reproduced x2 vs modeled 57) · rate +26B; eu4 union gate FAILED (17<30); family parked pose-first |
 | 2026-08-14T01:30:33Z | MAIN | ddm_qs5_resolve_compensation_n600_20260813 | modal | modal:ddm_qs5_dual_axis_20260813_r1 | 2026-08-14T04:30:33Z | active_qs1_dual_axis_spawning | QS1 one-candidate dual-axis T4 measurement; run=ddm_qs5_dual_axis_20260813_r2 |
