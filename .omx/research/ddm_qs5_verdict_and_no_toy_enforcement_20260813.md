@@ -26,10 +26,15 @@ ceiling of THIS 3-pair object family (517/523+connective), not noise. The seg mo
 consistently over-predicts ~3.4× here.
 
 **Consequences.** eu4's gated union (needed ≥30 flips from qs5's child) FAILS its own
-gate → union candidate DEAD as gated. The micro-edit family is PARKED at this support:
-with pose free and coding at ~4 B/pair, the family's binding question ("≥21 flips at
-≤26 B") is answered NO twice on this object. Pose-first allocation (eu4: 69.38% of gap)
-is unambiguous; the route is pk4 (optimal-form frame-0 pose representation).
+gate → union candidate DEAD as gated (verdict_scope: instance — THIS gated composition
+at THIS ≥30-flip threshold on qs5's measured child; the component pieces stay banked
+and a re-gated union at different thresholds is not precluded). The micro-edit family
+is PARKED at this support (verdict_scope: formulation — coupled frame-1 micro-edits on
+the 3-pair 517/523+connective support; NOT a family kill: other supports, other edit
+objects, and the proven-compensation mechanism remain open): with pose free and coding
+at ~4 B/pair, the binding question ("≥21 flips at ≤26 B") measured NO twice on this
+object. Pose-first allocation (eu4: 69.38% of gap) is unambiguous; the route is pk4
+(optimal-form frame-0 pose representation).
 
 Family ledger (all full-precision worker rows): JO1 +2.16e-4 · re1 indeterminate ·
 qs1 REFUSED +2.43e-5 · **qs2 ADMITTED −4.374914e-6 (banked)** · qs4 REFUSED +2.44e-4 ·
