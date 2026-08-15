@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """RX2 terminal IHS1 pack, table fit, native-RC64, and identity race.
 
-This runner consumes the terminal epoch-60 EMA checkpoint produced by
+This runner consumes the terminal EMA QAT checkpoint (epoch declared via
+--terminal-epoch, default 60 = the sealed CPU-lineage run) produced by
 ``train_ddm_cl1_hpac_capacity.py --profile rx2_mc36``.  It retains the raw
 IHS1 payload, every lossless model representation, base float logits, fitted
 table payloads, every selected candidate's quantized probabilities and RC64
@@ -178,14 +179,14 @@ def preflight(args: argparse.Namespace) -> dict[str, Any]:
     _require(BASE_ARCHIVE, size=rx1.EXPECTED_ARCHIVE_BYTES, digest=rx1.EXPECTED_ARCHIVE_SHA256)
     _require(EXPECTED_SPATIAL, size=TOKEN_COUNT, digest=rx1.EXPECTED_SPATIAL_SHA256)
     _require(args.checkpoint)
-    _require(TRAINING_REPORT)
-    _require(TRAINING_MANIFEST)
+    _require(args.training_report)
+    _require(args.training_manifest)
     if not BASE_RUNTIME.is_dir() or not EXPERIMENT_BOOK.is_dir() or not INTAKE_CODE.is_dir():
         raise RX2RaceError("pinned runtime, ExperimentBook, or intake source is absent")
     checkpoint = torch.load(args.checkpoint, map_location="cpu", weights_only=False)
     if (
         checkpoint.get("schema") != "ddm_cl1_hpac_capacity_checkpoint.v2"
-        or checkpoint.get("epoch") != 60
+        or checkpoint.get("epoch") != args.terminal_epoch
         or checkpoint.get("phase") != "discrete_qat"
         or checkpoint.get("deployment_weights") != "ema_shadow"
         or checkpoint.get("run_identity", {}).get("training_config", {}).get("profile") != "rx2_mc36"
@@ -196,17 +197,17 @@ def preflight(args: argparse.Namespace) -> dict[str, Any]:
     trainer = importlib.import_module("tools.train_ddm_cl1_hpac_capacity")
     if trainer._causal_state_sha256(checkpoint) != checkpoint["causal_state_sha256"]:
         raise RX2RaceError("selected checkpoint causal-state hash does not verify")
-    training_report = json.loads(TRAINING_REPORT.read_text(encoding="utf-8"))
+    training_report = json.loads(args.training_report.read_text(encoding="utf-8"))
     history = training_report.get("history")
     if (
         training_report.get("schema") != "ddm_cl1_hpac_capacity_trainer_result.v1"
         or training_report.get("config", {}).get("profile") != "rx2_mc36"
         or not isinstance(history, list)
         or not history
-        or history[-1].get("epoch") != 60
+        or history[-1].get("epoch") != args.terminal_epoch
     ):
         raise RX2RaceError("RX2 trainer result is absent, incomplete, or belongs to another run")
-    training_manifest = json.loads(TRAINING_MANIFEST.read_text(encoding="utf-8"))
+    training_manifest = json.loads(args.training_manifest.read_text(encoding="utf-8"))
     if training_manifest.get("schema") != "ddm_cl1_hpac_capacity_artifact_manifest.v1":
         raise RX2RaceError("RX2 trainer artifact manifest is absent or malformed")
     source_digest = _source().digest()
@@ -221,8 +222,9 @@ def preflight(args: argparse.Namespace) -> dict[str, Any]:
         "score_claim": SCORE_CLAIM,
         "checkpoint": file_record(args.checkpoint),
         "checkpoint_causal_state_sha256": checkpoint["causal_state_sha256"],
-        "training_report": file_record(TRAINING_REPORT),
-        "training_manifest": file_record(TRAINING_MANIFEST),
+        "terminal_epoch": args.terminal_epoch,
+        "training_report": file_record(args.training_report),
+        "training_manifest": file_record(args.training_manifest),
         "runner": file_record(Path(__file__)),
         "software": {
             "python": sys.version,
@@ -1173,6 +1175,9 @@ def parser() -> argparse.ArgumentParser:
         ),
     )
     value.add_argument("--checkpoint", type=Path, default=TERMINAL_CHECKPOINT)
+    value.add_argument("--terminal-epoch", type=int, default=60)
+    value.add_argument("--training-report", type=Path, default=TRAINING_REPORT)
+    value.add_argument("--training-manifest", type=Path, default=TRAINING_MANIFEST)
     value.add_argument("--variant", default="neutral")
     value.add_argument("--start-frame", type=int, default=0)
     value.add_argument("--end-frame", type=int, default=600)
