@@ -467,3 +467,44 @@ sensitivity waterfill over the learned per-tensor bit_depth assignments on the
 winning endpoint checkpoint (the #157/#69 solve-don't-train family applied to
 this vehicle), priced through the real IHS1 pack + archive bytes; no trainer
 edit, composes with the micro-edit bank at the parameterized race gate.
+
+## §5e Boundary-protocol EXECUTION record (2026-08-15, MAIN)
+
+The §5 protocol ran end-to-end at the 60-epoch receipt boundary. Receipts:
+
+1. **60-epoch race completed clean.** rc=0, 2,978.03 s (49.6 s/epoch), receipt
+   `rx2_wc2_full_mps.done` (counter 8). Endpoint ep60 joint estimate
+   **134,323 B** (tokens 114,251 + model 20,072; QAT cut model bytes
+   27,026→20,072), bpp 0.0077481.
+2. **Endpoint pack custody GREEN** via the comparator's proven `_pack_twice`:
+   `deterministic_repeat_exact: true`, raw sha `6547fdb0728e1b18…`,
+   20,076 B raw / 15,132 B xz, decode logit diff 0.0
+   (`gpu_race/full/endpoint_pack_check/`).
+3. **Full-curve refit** (`tools/fit_hpac_descent_law.py`, receipt
+   `gpu_race/full/descent_law_fit_full60.json`): continuous phase exp_floor
+   asymptote 135,248 B (N*(1 band)=74.4 rel); QAT phase exp_floor asymptote
+   **132,798 B** — the ep60 endpoint sits **1,525 B above** its own QAT
+   asymptote with τ≈40 ep, N*(1 band)=249 rel. Label: ENTRY_STATE_CONDITIONAL.
+4. **N=480 selected from the law** (not a guess): at qat_fraction 0.5,
+   N=480 gives 240 continuous epochs (saturated, remaining gain ~0 B) +
+   240 QAT epochs (~6τ, remaining gain ~7 B < 2 bands) = full squeeze,
+   ~6.6 h at the measured 49.6 s/epoch. N=240 would leave ~137 B (~9.1e-5 S
+   in rate) on the table.
+5. **First fire REFUSED by the wrapper's sealed envelope** (`full-mps` pins
+   epochs=60) — the 4th correct fail-closed refusal of this chain. Cure:
+   NEW sealed mode `full-mps-e480` (identical in every other field), landed
+   with review-mark via the serializer; the `full-mps` 60-seal untouched.
+   Failed-attempt residue retained at `gpu_race/full_e480/` per
+   certify-or-block; relaunch used fresh suffixed root `full_e480b`.
+6. **N=480 extension FIRED**: pid 13787, launch counter 10, watchers armed at
+   launch (liveness+quality), receipt name `rx2_wc2_full_mps_e480b`, root
+   `gpu_race/full_e480b/`. ep0 entry point matches the 60-ep run exactly
+   (bpp 0.0079963) — same init, same seed, expected. Quality watcher knee
+   pinned at epoch 241 (the derived qat_start), bar 186,269 B (the MC36
+   frontier archive bytes).
+
+Owed at the e480b endpoint (~6.6 h): pack custody check → refit (does the
+QAT law hold at the deeper entry state? the ENTRY_STATE_CONDITIONAL label's
+first test) → sealed identity-race parameterization (checkpoint path + terminal
+epoch as declared inputs, comparator pin update same commit) → race the best
+endpoint → if archive < 186,269 B, T4 fire (projected S ≈ 0.134).
