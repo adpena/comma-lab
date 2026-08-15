@@ -1,6 +1,14 @@
 # wd2 ep60 advisory n600 verdict: REFUSED — the sub-0.15 composed route dies at this form (MAIN, 2026-08-15)
 
-## The measurement [macOS-CPU advisory via mirror d5bb36a2, n600, attempt 2]
+## The measurement [macOS-CPU advisory via the upstream_eval_mirror, n600, attempt 2]
+**SHA CORRECTION (av2 audit 2026-08-15):** attempt 2 ran on the POST-SWEEP mirror digest
+fa7c4bf51d47a6140ec0f95275ebf86b0e6c3c1dc00caff03a417ee989645799, not the birth digest
+d5bb36a2… cited below; the delta is the documented hygiene-sweep class only (av2's bounded
+post-sweep audit: no AppleDouble / bytecode / pycache / symlink / changed scorer input).
+Also superseded by av2: my "160+ epochs" continuation estimate is UNSOUND (no measured
+decode-loss→scorer transfer function; TRAIN_RESULT.json has decode-MSE every 5 ep, not
+endpoints-only as this memo's trajectory paragraph implies), and the advisory evidence-grade
+stamp mechanism is `uv_group_not_declared` (a declaration artifact), not observed package drift.
 Receipt: .../advisory_n600_cpu/contest_auth_eval.json (durable, work dir retained).
 - avg_segnet_dist **0.00117677** vs base 0.00029611 → **Δd_seg +8.81e-4 = 8.2× OVER the
   ≤1.07e-4 admission bar**. Seg cost alone +0.0881 S vs a rate prize of −0.0116 S.
