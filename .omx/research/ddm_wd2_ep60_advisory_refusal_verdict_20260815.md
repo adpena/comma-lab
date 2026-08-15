@@ -27,6 +27,19 @@ FAMILY question (can any narrow student hold scorer fidelity?) stays open but is
   capacity (eroding the rate prize) or a scorer-aware loss — that is the js1 joint line's
   territory, not a cheap distillation.
 
+## SAME-INSTRUMENT CONFIRMATION (2026-08-15 ~14:03Z — the cross-instrument caveat is RESOLVED)
+The hv1-base advisory n600 ran through the IDENTICAL mirror chain (receipt:
+/Volumes/APDataStore/pact/ddm_hv1_base_advisory_n600_cpu/contest_auth_eval.json; r1 crashed on
+a NEW contamination class — runs write __pycache__ INTO the mirror; cured by sweep +
+PYTHONDONTWRITEBYTECODE=1, now part of the launch env). Base on mirror-CPU: d_seg 0.00042714 ·
+d_pose 1.4747e-4 · S_advisory 0.20280753928705508 @182,759 B. Same-axis deltas (student−base):
+**Δd_seg +7.4963e-4 = 7.01× the 1.07e-4 bar** (was 8.2× cross-instrument) · **Δd_pose
++9.1839e-2 = 624× the base → pose ΔS +0.9207** · rate ΔS −0.01157. **REFUSED stands on clean
+same-instrument arithmetic.** Axis note (et4 law, for av2): base CPU-vs-T4 gaps here are d_seg
+1.443× / d_pose 1.778× — milder than #1054's contest-CPU 21× pose read on the mc36 bytes;
+different env (macOS advisory vs Modal contest-CPU) = different instrument; deltas within ONE
+chain are the decision quantities. This base row is ALSO mp2's admission baseline (relayed).
+
 ## Routing (rfo2's measured route order CONFIRMED by this refusal)
 Route order stands: **mixed precision → carrier rank/refit (22,032 B pool) → nested-width
 (now parked with its measured curve) → token drop/coder refit.**
