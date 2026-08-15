@@ -273,9 +273,23 @@ def _pack_terminal_ihs1(checkpoint_path: Path, output: Path) -> dict[str, Any]:
     packer.deserialize_self_compressed(restored, raw)
     source_state = source.state_dict()
     restored_state = restored.state_dict()
-    if source_state.keys() != restored_state.keys():
-        raise RX2RaceError("IHS1 pack changed the deployed state-dict schema")
-    changed_tensors = [name for name in source_state if not torch.equal(source_state[name], restored_state[name])]
+    # Trainer-emitted checkpoints carry learned per-tensor ".bit_depth" buffers
+    # that exist ONLY on the training construction; set_deployed_bit_depths()
+    # snaps them and the deploy construction carries them implicitly (same
+    # asymmetry the trainer tolerates at load via allowed_missing). The schema
+    # gate therefore demands EXACT equality modulo that named buffer set —
+    # any other key drift still refuses.
+    source_keys = set(source_state.keys())
+    restored_keys = set(restored_state.keys())
+    training_only = {name for name in source_keys - restored_keys if name.endswith(".bit_depth")}
+    unexplained_extra = (source_keys - restored_keys) - training_only
+    if unexplained_extra or (restored_keys - source_keys):
+        raise RX2RaceError(
+            "IHS1 pack changed the deployed state-dict schema: "
+            f"source-only={sorted(unexplained_extra)[:8]} restored-only={sorted(restored_keys - source_keys)[:8]}"
+        )
+    shared = source_keys & restored_keys
+    changed_tensors = [name for name in sorted(shared) if not torch.equal(source_state[name], restored_state[name])]
     if changed_tensors:
         raise RX2RaceError(f"IHS1 pack changed deployed tensors: {changed_tensors[:8]}")
     generator = torch.Generator(device="cpu").manual_seed(20260716)
