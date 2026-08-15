@@ -1,0 +1,63 @@
+{
+  "schema": "ddm_wd2_width_distillation_launch_validation.v1",
+  "generated_utc": "2026-08-15T15:40:58Z",
+  "complete": true,
+  "score_claim": false,
+  "training_launched": false,
+  "dry_run_only": true,
+  "ticket": {
+    "path": ".omx/research/ddm_wd2_width_distillation_build_20260815/launch_ticket.json",
+    "sha256": "1a68543e141b1db6c5f8a9098d1f89d6bc2bc89eb10fd01774eb026aac1adc37"
+  },
+  "watcher_configs": [
+    {
+      "path": ".omx/research/ddm_wd2_width_distillation_build_20260815/teacher_cache_liveness.json",
+      "sha256": "7f80596531cc800550bfa28ac7ba6141a7142cdbb37ff61c7a145cc95fc3d7c1",
+      "validation": "tools/run_liveness_watcher.py --validate-only rc=0"
+    },
+    {
+      "path": ".omx/research/ddm_wd2_width_distillation_build_20260815/teacher_cache_quality.json",
+      "sha256": "69f874a89423c194c58a9348e4589b102eb7446f3bb6762cf1a2b3fd60a1d853",
+      "validation": "tools/run_quality_poller.py --validate-only rc=0"
+    },
+    {
+      "path": ".omx/research/ddm_wd2_width_distillation_build_20260815/train_liveness.json",
+      "sha256": "9a412d45ed7f8c3c509668b9b095513519b8a50d304239bdf3805c58890c49db",
+      "validation": "tools/run_liveness_watcher.py --validate-only rc=0"
+    },
+    {
+      "path": ".omx/research/ddm_wd2_width_distillation_build_20260815/train_quality.json",
+      "sha256": "bf58de6bcab70591e9c45d8073d9c1bee843b10dd5d41a0efd64fafe1b94e3ed",
+      "validation": "tools/run_quality_poller.py --validate-only rc=0"
+    }
+  ],
+  "dry_runs": [
+    {
+      "order": 1,
+      "stage": "retain_exact_teacher_receiver_cache",
+      "launcher_rc": 0,
+      "fresh_root_state": "absent_after_recoverable_manifest_move",
+      "manifest_original_path": "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/teacher_cache_e480b/launcher/launch_manifest.json",
+      "manifest_preserved_path": "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/dry_run_validation/teacher_cache_e480b_validation_3/launcher/launch_manifest.json",
+      "move_receipt_path": "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/dry_run_validation/teacher_cache_e480b_validation_3/MOVED_RECEIPT.json",
+      "move_receipt_sha256": "d4f525e7625169cd2ae76c930ba4ee63258472aebd0a5edeae0c9e18e894ec44"
+    },
+    {
+      "order": 2,
+      "stage": "train_primary_student",
+      "launcher_rc": 0,
+      "fresh_root_state": "absent_after_recoverable_manifest_move",
+      "manifest_original_path": "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/primary_flattened_d4_w64/launcher/launch_manifest.json",
+      "manifest_preserved_path": "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/dry_run_validation/primary_flattened_d4_w64_validation_3/launcher/launch_manifest.json",
+      "move_receipt_path": "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/dry_run_validation/primary_flattened_d4_w64_validation_3/MOVED_RECEIPT.json",
+      "move_receipt_sha256": "40fe04d5f729c9cc7984703bb7b36771c07f3bf57fb44318b1bc23689543fe19"
+    }
+  ],
+  "source_pin_validation": {
+    "builder_current": true,
+    "receiver_current": true,
+    "child_argparse_passed": true,
+    "launcher_argparse_passed": true
+  },
+  "status": "READY_TO_FIRE_AT_SLOT_BOUNDARY"
+}

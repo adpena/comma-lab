@@ -1,0 +1,48 @@
+{
+  "schema": "pact.run_quality_poller.config.v1",
+  "log_path": "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/teacher_cache_e480b/launcher/run.log",
+  "pid_file": "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/teacher_cache_e480b/launcher/run.pid",
+  "telemetry_path": "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/teacher_cache_e480b/watchers/quality_telemetry.jsonl",
+  "alert_path": "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/teacher_cache_e480b/watchers/quality.alert.json",
+  "poll_s": 60,
+  "eval_period_s": 600,
+  "stale_periods": 3,
+  "startup_grace_s": 900,
+  "json_marker": "\"estimated_joint_bytes\"",
+  "fields": {
+    "epoch": "epoch",
+    "value": "estimated_joint_bytes",
+    "phase": "phase",
+    "finite": [
+      "bpp",
+      "top1_error"
+    ]
+  },
+  "bar_value": 183502,
+  "bar_start_epoch": 1,
+  "phase_knee": {
+    "epoch": 1,
+    "window_epochs": 1,
+    "shock_multiplier": 1.0,
+    "continuous_phase": "teacher_cache"
+  },
+  "best_not_latest": {
+    "phase": "teacher_cache",
+    "min_rows": 4,
+    "lag_epochs": 1000
+  },
+  "alert_conditions": {
+    "joint_regression": true,
+    "qat_knee_shock": false,
+    "nan_or_garbage": true,
+    "stale_telemetry": true
+  },
+  "regression_bands": [
+    {
+      "label": "teacher_self_identity_top1_band",
+      "field": "top1_error",
+      "upper": 0.0,
+      "start_epoch": 1
+    }
+  ]
+}
