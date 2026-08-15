@@ -36,6 +36,11 @@ PORT_MODES = {
     "parity-cpu": {"device": "cpu", "epochs": 6},
     "parity-mps": {"device": "mps", "epochs": 6},
     "full-mps": {"device": "mps", "epochs": 60},
+    # Law-derived extension (wc2 memo §5/§5a boundary protocol, 2026-08-15):
+    # N=480 from the fitted exp-floor descent laws on the completed 60-epoch
+    # run (continuous saturates ~ep75-120; QAT tau ~40 ep wants ~240 QAT
+    # epochs). Same sealed envelope in every other field.
+    "full-mps-e480": {"device": "mps", "epochs": 480},
 }
 
 
