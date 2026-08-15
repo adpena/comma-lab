@@ -75,3 +75,17 @@ receiver chain) is now the REQUIRED next step: rank rows/cells by pose sensitivi
 candidate ONLY from pose-null coordinates, THEN spend one n600 run on it. If the field shows
 NO pose-null sub-KB coordinates exist, Stage 1 closes honestly (FORMULATION: sub-KB carrier
 cuts on this pool) and Stage 2 proceeds pose-gated from birth.
+
+## RELAY 7 (MAIN adjudication — keep75 REFUSED +4.137e-2, but the DOSE-RESPONSE INVERTED)
+keep75: seg 0.00042821 · pose 0.00063959 = 4.337× base · 182,288 B (−471). Pose ratios across
+the three candidates: q3/q4 4.958× · keep87 4.638× · keep75 4.337× — MORE pruning produced
+LESS pose damage. THE MARGINAL SET (rows pruned in keep75 but NOT keep87) measured Δd_pose
+−4.43e-5 (pose-IMPROVING) at −341 B marginal rate. This is measured existence evidence for
+pose-null/pose-positive rows in the pool — the toxic subset is SHARED by all three candidates.
+DIFFERENTIAL CANDIDATE (pre-screened by data already paid for): receiver-close a generation
+that prunes ONLY the marginal row set (keep75 ∖ keep87) on the hv1 base. If its pose stays
+≤ ~+7% of base, the −341 B prize admits (bar −3.5e-6 vs rate −2.27e-4). This is worth ONE
+n600 run WITHOUT waiting for the full FD field; the FD probe then refines row-by-row.
+LANE NOTE: MAIN is claiming the scorer lane for the wd3 teacher-cache build NOW (hours-long,
+the campaign main line). Queue your differential n600 for the next lane boundary; MAIN will
+relay when the lane frees. Do NOT contend for the scorer lane while the cache build runs.
