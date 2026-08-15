@@ -1,63 +1,75 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
-"""Launch a long local command as a real detached session with provenance.
-
-This is intentionally small: macOS shells launched from agent/tool contexts can
-clean up background children even when ``nohup`` is used.  ``start_new_session``
-hands the child to PID 1, records the argv, and leaves a deterministic run
-directory that can be polled or harvested later.
-"""
+"""Launch a long local command as a watched detached session with provenance."""
 
 from __future__ import annotations
 
 import argparse
 import datetime as _dt
+import fcntl
+import hashlib
 import json
 import os
 import re
+import signal
 import subprocess
 import sys
 import time
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
-SCHEMA = "detached_local_process_launch.v1"
+SCHEMA = "detached_local_process_launch.v2"
+DONE_RECEIPT_SCHEMA = "detached_local_process_done.v2"
+CONSUMED_RECEIPT_SCHEMA = "detached_local_process_done_consumed.v1"
 
-# The fleet launchd agent ``com.vertigo.claude-code-reaper`` SIGTERMs any process
-# whose ``ps`` cmdline matches ``\b(claude|codex)\b`` when it has no TTY and
-# (PPID==1 or a dead stdin) and is older than 300s.  Correct detachment produces
-# exactly that orphan signature, so a matching argv dies silently at 300-360s with
-# a truncated log and no traceback -- indistinguishable from a hang.
-#
-# MEASURED instances: fz4/rt1/qj1 arms (335/337/337s, 2026-08-04); an n600 endpoint
-# probe launched through THIS tool from the session scratchpad (344s, 2026-08-05);
-# an n600 coder race from the same scratchpad (337s, 2026-08-09).  The last two
-# matched on the PATH, not the program: ``/private/tmp/claude-501/...`` contains
-# ``claude-501`` and the hyphen is a word boundary.
-#
-# ``codex_runs/`` is deliberately safe: ``_`` is a word character, so ``\bcodex\b``
-# does not match it.  That is the fleet-side keeper carve-out, not an accident.
+# See the v1 history for the measured 300-360s fleet-reaper incidents.  A
+# detached argv containing either standalone word is not safe without the
+# explicit fleet carve-out.
 _REAPER_NAME_PREDICATE = re.compile(r"\b(claude|codex)\b")
+_RECEIPT_NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,127}\Z")
+_THREAD_ENV_KEYS = (
+    "OMP_NUM_THREADS",
+    "OPENBLAS_NUM_THREADS",
+    "MKL_NUM_THREADS",
+    "VECLIB_MAXIMUM_THREADS",
+    "NUMEXPR_NUM_THREADS",
+)
+
+
+class LaunchRefusal(RuntimeError):
+    def __init__(self, message: str, *, rc: int = 2, **detail: Any) -> None:
+        super().__init__(message)
+        self.rc = rc
+        self.detail = detail
 
 
 def _utc_now() -> str:
     return _dt.datetime.now(_dt.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+def _utc_compact() -> str:
+    return _dt.datetime.now(_dt.UTC).strftime("%Y%m%dT%H%M%SZ")
+
+
 def _git_sha(cwd: Path) -> str | None:
     try:
         return subprocess.check_output(
-            ["git", "rev-parse", "HEAD"],
-            cwd=cwd,
-            text=True,
-            stderr=subprocess.DEVNULL,
+            ["git", "rev-parse", "HEAD"], cwd=cwd, text=True, stderr=subprocess.DEVNULL
         ).strip()
     except Exception:
         return None
 
 
-def _write_json(path: Path, payload: dict[str, Any]) -> None:
-    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+def _canonical_json(payload: Mapping[str, Any]) -> str:
+    return json.dumps(payload, indent=2, sort_keys=True, allow_nan=False) + "\n"
+
+
+def _write_json(path: Path, payload: Mapping[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(f".{path.name}.tmp.{os.getpid()}")
+    tmp.write_text(_canonical_json(payload), encoding="utf-8")
+    tmp.replace(path)
 
 
 def _tail_lines(path: Path, limit: int = 20) -> list[str]:
@@ -67,74 +79,677 @@ def _tail_lines(path: Path, limit: int = 20) -> list[str]:
         return []
 
 
+def _sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _runs_dir() -> Path:
+    # Preserve the original CLI contract: receipt custody is relative to the
+    # launcher's invocation directory, which is the repository in production
+    # and a hermetic temporary tree in controls.
+    return Path.cwd() / ".omx" / "tmp" / "codex_runs"
+
+
+def _next_launch_counter(runs: Path) -> int:
+    runs.mkdir(parents=True, exist_ok=True)
+    counter_path = runs / "_detached_launch_counter"
+    lock_path = runs / "_detached_launch_counter.lock"
+    with lock_path.open("a+", encoding="utf-8") as lock:
+        fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
+        try:
+            current = int(counter_path.read_text(encoding="utf-8").strip())
+        except (OSError, ValueError):
+            current = 0
+        value = current + 1
+        # Keep a plain integer for bounded shell inspection.
+        tmp = counter_path.with_name(f".{counter_path.name}.plain.{os.getpid()}")
+        tmp.write_text(f"{value}\n", encoding="utf-8")
+        tmp.replace(counter_path)
+        return value
+
+
+def _consumed_path(done_path: Path) -> Path:
+    return done_path.with_name(done_path.name + ".consumed.json")
+
+
+def _armed_path(done_path: Path) -> Path:
+    return done_path.with_name(done_path.name + ".armed.json")
+
+
+def _receipt_is_consumed(done_path: Path) -> bool:
+    marker = _consumed_path(done_path)
+    try:
+        payload = json.loads(marker.read_text(encoding="utf-8"))
+        return (
+            isinstance(payload, dict)
+            and payload.get("schema") == CONSUMED_RECEIPT_SCHEMA
+            and payload.get("receipt_sha256") == _sha256(done_path)
+        )
+    except (OSError, json.JSONDecodeError):
+        return False
+
+
+def _tombstone_receipt(done_path: Path, *, reason: str) -> dict[str, Any]:
+    stamp = _utc_compact()
+    digest = _sha256(done_path)
+    target = done_path.with_name(f"{done_path.name}.superseded.{stamp}.{digest[:12]}")
+    ordinal = 1
+    while target.exists():
+        target = done_path.with_name(
+            f"{done_path.name}.superseded.{stamp}.{digest[:12]}.{ordinal}"
+        )
+        ordinal += 1
+    done_path.replace(target)
+    consumed = _consumed_path(done_path)
+    consumed_target: str | None = None
+    if consumed.exists():
+        moved = target.with_name(target.name + ".consumed.json")
+        consumed.replace(moved)
+        consumed_target = str(moved)
+    record = {
+        "schema": "detached_local_process_receipt_tombstone.v1",
+        "generated_utc": _utc_now(),
+        "reason": reason,
+        "original_path": str(done_path),
+        "tombstone_path": str(target),
+        "receipt_sha256": digest,
+        "consumed_marker_tombstone": consumed_target,
+    }
+    _write_json(target.with_name(target.name + ".tombstone.json"), record)
+    return record
+
+
+def _reserve_receipt(path: Path, *, receipt_name: str, counter: int) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "schema": "detached_local_process_receipt_arm.v1",
+        "generated_utc": _utc_now(),
+        "receipt_name": receipt_name,
+        "monotonic_launch_counter": counter,
+        "owner_launcher_pid": os.getpid(),
+    }
+    try:
+        with path.open("x", encoding="utf-8") as handle:
+            handle.write(_canonical_json(payload))
+            handle.flush()
+            os.fsync(handle.fileno())
+    except FileExistsError as exc:
+        raise LaunchRefusal(
+            "done receipt name already has an active launch reservation",
+            rc=6,
+            receipt_arm_path=str(path),
+        ) from exc
+
+
+def _update_receipt_reservation(
+    path: Path | None,
+    *,
+    identity: Mapping[str, Any],
+) -> None:
+    if path is None:
+        return
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise LaunchRefusal("receipt reservation is malformed", rc=6, receipt_arm_path=str(path))
+    payload["launch_id"] = dict(identity)
+    _write_json(path, payload)
+
+
+def _pid_exists(pid: int) -> bool:
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    return True
+
+
+def _receipt_reservation_active(path: Path) -> bool:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        owner_pid = int(payload["owner_launcher_pid"])
+        launch_id = payload.get("launch_id")
+        launch_pid = int(launch_id["pid"]) if isinstance(launch_id, dict) else None
+    except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError):
+        # A malformed reservation cannot certify that no launch still owns it.
+        return True
+    return _pid_exists(owner_pid) or (launch_pid is not None and _pid_exists(launch_pid))
+
+
+def _tombstone_reservation(path: Path, *, dry_run: bool) -> dict[str, Any]:
+    digest = _sha256(path)
+    if dry_run:
+        return {
+            "dry_run_would_tombstone": str(path),
+            "reason": "explicit_stale_reservation_supersede",
+            "receipt_arm_sha256": digest,
+        }
+    stamp = _utc_compact()
+    target = path.with_name(f"{path.name}.superseded.{stamp}.{digest[:12]}")
+    ordinal = 1
+    while target.exists():
+        target = path.with_name(f"{path.name}.superseded.{stamp}.{digest[:12]}.{ordinal}")
+        ordinal += 1
+    path.replace(target)
+    record = {
+        "schema": "detached_local_process_receipt_arm_tombstone.v1",
+        "generated_utc": _utc_now(),
+        "reason": "explicit_stale_reservation_supersede",
+        "original_path": str(path),
+        "tombstone_path": str(target),
+        "receipt_arm_sha256": digest,
+    }
+    _write_json(target.with_name(target.name + ".tombstone.json"), record)
+    return record
+
+
+def _release_receipt_reservation(path: Path | None, counter: int) -> None:
+    if path is None:
+        return
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        if int(payload.get("monotonic_launch_counter")) != int(counter):
+            return
+        path.unlink()
+    except (OSError, json.JSONDecodeError, TypeError, ValueError):
+        return
+
+
+def _path_nonempty(path: Path) -> bool:
+    if not path.exists():
+        return False
+    if not path.is_dir():
+        return True
+    try:
+        next(path.iterdir())
+    except StopIteration:
+        return False
+    except OSError:
+        # If contents cannot be inspected, the path cannot be certified fresh.
+        return True
+    return True
+
+
+def _resolve_fresh_roots(raw_roots: list[Path], suffix: bool) -> tuple[dict[str, str], list[dict[str, Any]]]:
+    roots = [path.expanduser().resolve(strict=False) for path in raw_roots]
+    if len(set(roots)) != len(roots):
+        raise LaunchRefusal("duplicate --fresh-root path")
+    for left in roots:
+        for right in roots:
+            if left != right and (left in right.parents or right in left.parents):
+                raise LaunchRefusal("nested --fresh-root paths are ambiguous", left=str(left), right=str(right))
+    mapping: dict[str, str] = {}
+    rows: list[dict[str, Any]] = []
+    stamp = _utc_compact()
+    for raw_root, root in zip(raw_roots, roots, strict=True):
+        dirty = _path_nonempty(root)
+        effective = root
+        state = "absent" if not root.exists() else "clean_existing"
+        if dirty:
+            if not suffix:
+                raise LaunchRefusal(
+                    "fresh root exists and is non-empty",
+                    rc=7,
+                    fresh_root=str(root),
+                    cure="choose a new root or pass --fresh-root-suffix; existing bytes are never deleted",
+                )
+            effective = root.with_name(f"{root.name}_{stamp}")
+            ordinal = 1
+            while effective.exists():
+                effective = root.with_name(f"{root.name}_{stamp}_{ordinal:02d}")
+                ordinal += 1
+            state = "minted_from_nonempty"
+        mapping[str(root)] = str(effective)
+        raw_text = str(raw_root.expanduser())
+        if raw_text != str(root):
+            mapping[raw_text] = str(effective)
+        rows.append(
+            {"requested_path": str(root), "effective_path": str(effective), "state": state}
+        )
+    return mapping, rows
+
+
+def _rewrite_value(value: str, mapping: Mapping[str, str]) -> str:
+    result = value
+    # Longest path first if a future caller relaxes the nested-root refusal.
+    for old in sorted(mapping, key=len, reverse=True):
+        new = mapping[old]
+        if old != new and old in result:
+            if old.startswith(os.sep):
+                pattern = re.escape(old) + r"(?=$|/)"
+                result = re.sub(pattern, lambda _match, replacement=new: replacement, result)
+            else:
+                pattern = r"(^|=)" + re.escape(old) + r"(?=$|/)"
+                result = re.sub(
+                    pattern,
+                    lambda match, replacement=new: match.group(1) + replacement,
+                    result,
+                )
+    return result
+
+
+def _rewrite_path(path: Path, mapping: Mapping[str, str]) -> Path:
+    return Path(_rewrite_value(str(path.expanduser().resolve(strict=False)), mapping))
+
+
+def _launch_identity(manifest_path: Path, pid: int, counter: int) -> dict[str, Any]:
+    return {
+        "manifest_path": str(manifest_path),
+        "pid": int(pid),
+        "monotonic_launch_counter": int(counter),
+    }
+
+
+def _done_receipt(
+    *,
+    identity: Mapping[str, Any],
+    receipt_name: str,
+    rc: int,
+    elapsed_s: float,
+    adjudicated_at_launch: bool,
+    detail: str = "",
+) -> dict[str, Any]:
+    return {
+        "schema": DONE_RECEIPT_SCHEMA,
+        "generated_utc": _utc_now(),
+        "receipt_name": receipt_name,
+        "launch_id": dict(identity),
+        "rc": int(rc),
+        "elapsed_s": round(float(elapsed_s), 6),
+        "detail": detail,
+        "adjudicated_at_launch": bool(adjudicated_at_launch),
+    }
+
+
+def _supervisor_main(argv: list[str]) -> int:
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument("--start-gate", required=True, type=Path)
+    parser.add_argument("--manifest", required=True, type=Path)
+    parser.add_argument("--counter", required=True, type=int)
+    parser.add_argument("--done", type=Path)
+    parser.add_argument("--armed", type=Path)
+    parser.add_argument("--receipt-name", default="")
+    parser.add_argument("cmd", nargs=argparse.REMAINDER)
+    args = parser.parse_args(argv)
+    if args.cmd and args.cmd[0] == "--":
+        args.cmd = args.cmd[1:]
+    if not args.cmd:
+        return 126
+
+    started = time.time()
+    caught_signal: int | None = None
+    child: subprocess.Popen[bytes] | None = None
+
+    def forward(signum: int, _frame: Any) -> None:
+        nonlocal caught_signal
+        caught_signal = signum
+        if child is not None:
+            try:
+                child.send_signal(signum)
+            except ProcessLookupError:
+                pass
+
+    for name in ("SIGTERM", "SIGINT", "SIGHUP", "SIGQUIT"):
+        try:
+            signal.signal(getattr(signal, name), forward)
+        except (AttributeError, OSError, ValueError):
+            pass
+    for name in ("SIGURG", "SIGPIPE"):
+        try:
+            signal.signal(getattr(signal, name), signal.SIG_IGN)
+        except (AttributeError, OSError, ValueError):
+            pass
+    deadline = time.monotonic() + 30.0
+    while not args.start_gate.exists() and caught_signal is None:
+        if time.monotonic() >= deadline:
+            caught_signal = signal.SIGTERM
+            break
+        time.sleep(0.02)
+
+    detail = ""
+    if caught_signal is not None:
+        rc = 128 + int(caught_signal)
+        detail = f"signal_before_exec={caught_signal}"
+    else:
+        try:
+            child = subprocess.Popen(args.cmd)
+            rc = int(child.wait())
+        except FileNotFoundError as exc:
+            rc = 127
+            detail = f"exec_error=FileNotFoundError:{exc.filename}"
+        except OSError as exc:
+            rc = 126
+            detail = f"exec_error={type(exc).__name__}:{exc.errno}"
+    if args.done is not None:
+        identity = _launch_identity(args.manifest, os.getpid(), args.counter)
+        _write_json(
+            args.done,
+            _done_receipt(
+                identity=identity,
+                receipt_name=args.receipt_name,
+                rc=rc,
+                elapsed_s=time.time() - started,
+                adjudicated_at_launch=False,
+                detail=detail,
+            ),
+        )
+        _release_receipt_reservation(args.armed, args.counter)
+    return rc
+
+
+def _apply_and_verify_nice(pid: int, requested: int) -> int:
+    try:
+        os.setpriority(os.PRIO_PROCESS, pid, requested)
+        actual = os.getpriority(os.PRIO_PROCESS, pid)
+    except (OSError, PermissionError) as exc:
+        raise LaunchRefusal(
+            "requested niceness could not be applied",
+            rc=8,
+            pid=pid,
+            requested_nice=requested,
+            error=f"{type(exc).__name__}: {exc}",
+        ) from exc
+    if actual != requested:
+        raise LaunchRefusal(
+            "requested niceness did not verify",
+            rc=8,
+            pid=pid,
+            requested_nice=requested,
+            actual_nice=actual,
+        )
+    return int(actual)
+
+
+def _stop_process(proc: subprocess.Popen[Any]) -> None:
+    if proc.poll() is not None:
+        return
+    try:
+        proc.terminate()
+        proc.wait(timeout=2)
+    except (ProcessLookupError, subprocess.TimeoutExpired):
+        try:
+            proc.kill()
+            proc.wait(timeout=2)
+        except (ProcessLookupError, subprocess.TimeoutExpired):
+            pass
+
+
+def _adjudicate_receipt(
+    done_path: Path | None,
+    *,
+    identity: Mapping[str, Any],
+    receipt_name: str,
+    rc: int,
+    elapsed_s: float,
+    detail: str,
+) -> None:
+    if done_path is None:
+        return
+    payload: dict[str, Any]
+    try:
+        loaded = json.loads(done_path.read_text(encoding="utf-8"))
+        payload = loaded if isinstance(loaded, dict) else {}
+    except (OSError, json.JSONDecodeError):
+        payload = {}
+    payload.update(
+        _done_receipt(
+            identity=identity,
+            receipt_name=receipt_name,
+            rc=rc,
+            elapsed_s=elapsed_s,
+            adjudicated_at_launch=True,
+            detail=detail,
+        )
+    )
+    _write_json(done_path, payload)
+
+
+def _validate_watcher(tool: Path, config: Path, cwd: Path, env: Mapping[str, str]) -> None:
+    result = subprocess.run(
+        [sys.executable, str(tool), "--config", str(config), "--validate-only"],
+        cwd=cwd,
+        env=dict(env),
+        capture_output=True,
+        text=True,
+        timeout=15,
+    )
+    if result.returncode != 0:
+        raise LaunchRefusal(
+            "watcher config validation failed",
+            rc=9,
+            tool=str(tool),
+            config=str(config),
+            stderr=result.stderr[-2000:],
+        )
+
+
+def _arm_watchers(
+    *,
+    out: Path,
+    cwd: Path,
+    env: Mapping[str, str],
+    liveness_config: Path,
+    quality_config: Path,
+    launch_manifest: Path,
+    watcher_start_gate: Path,
+    launch_counter: int,
+    runs: Path,
+) -> list[dict[str, Any]]:
+    repo = Path(__file__).resolve().parents[1]
+    specs = (
+        ("liveness", repo / "tools" / "run_liveness_watcher.py", liveness_config),
+        ("quality", repo / "tools" / "run_quality_poller.py", quality_config),
+    )
+    watcher_dir = out / "watchers"
+    watcher_dir.mkdir(parents=True, exist_ok=True)
+    armed: list[dict[str, Any]] = []
+    processes: list[tuple[str, subprocess.Popen[Any], Path]] = []
+    for label, tool, config in specs:
+        log_path = watcher_dir / f"{label}.log"
+        event_receipt = runs / f"watched_launch_{launch_counter}_{label}.done"
+        with log_path.open("ab", buffering=0) as log:
+            proc = subprocess.Popen(
+                [
+                    sys.executable,
+                    str(tool),
+                    "--config",
+                    str(config),
+                    "--event-receipt",
+                    str(event_receipt),
+                    "--launch-manifest",
+                    str(launch_manifest),
+                    "--start-gate",
+                    str(watcher_start_gate),
+                ],
+                cwd=cwd,
+                env=dict(env),
+                stdout=log,
+                stderr=log,
+                stdin=subprocess.DEVNULL,
+                start_new_session=True,
+                close_fds=True,
+            )
+        time.sleep(0.05)
+        rc = proc.poll()
+        if rc is not None:
+            for _armed_label, armed_proc, _armed_log in processes:
+                try:
+                    armed_proc.terminate()
+                except ProcessLookupError:
+                    continue
+            raise LaunchRefusal(
+                "watcher exited while arming",
+                rc=9,
+                watcher=label,
+                watcher_rc=rc,
+                log_path=str(log_path),
+                last_log_lines=_tail_lines(log_path),
+            )
+        processes.append((label, proc, log_path))
+        armed.append(
+            {
+                "kind": label,
+                "pid": int(proc.pid),
+                "config_path": str(config),
+                "log_path": str(log_path),
+                "tool_path": str(tool),
+                "event_receipt_path": str(event_receipt),
+            }
+        )
+    time.sleep(0.1)
+    for label, proc, log_path in processes:
+        rc = proc.poll()
+        if rc is None:
+            continue
+        for _armed_label, armed_proc, _armed_log in processes:
+            if armed_proc.poll() is None:
+                armed_proc.terminate()
+        raise LaunchRefusal(
+            "watcher exited while arming",
+            rc=9,
+            watcher=label,
+            watcher_rc=rc,
+            log_path=str(log_path),
+            last_log_lines=_tail_lines(log_path),
+        )
+    _write_json(watcher_dir / "watchers_manifest.json", {"schema": "watched_launch.watchers.v1", "watchers": armed})
+    return armed
+
+
+def _stop_watchers(rows: list[dict[str, Any]]) -> None:
+    """Stop newly armed watchers when launch adjudication stays synchronous."""
+
+    for row in rows:
+        try:
+            os.kill(int(row["pid"]), signal.SIGTERM)
+            row["stopped_at_launch"] = True
+        except (KeyError, TypeError, ValueError, ProcessLookupError):
+            row["stopped_at_launch"] = True
+        except PermissionError:
+            row["stopped_at_launch"] = False
+
+
+def _derive_resource_budget(
+    args: argparse.Namespace,
+    *,
+    out: Path,
+    cmd: list[str],
+    env: dict[str, str],
+) -> tuple[list[str], dict[str, Any]]:
+    """Build a real safe_run envelope from measured demand and host policy."""
+
+    if not args.derive_resource_budgets:
+        return cmd, {
+            "mode": "child_owned",
+            "note": "launcher did not invent an RSS or thread limit without measured demand",
+        }
+    if "safe_run.py" in " ".join(cmd):
+        raise LaunchRefusal(
+            "--derive-resource-budgets cannot wrap an argv that already owns safe_run",
+            rc=10,
+        )
+    try:
+        import system_memory_governor as memory_governor
+
+        operator_ceiling_gib = float(memory_governor.operator_ceiling_gib())
+    except (ImportError, AttributeError, TypeError, ValueError) as exc:
+        raise LaunchRefusal(
+            "cannot resolve the canonical operator memory ceiling",
+            rc=10,
+            error=f"{type(exc).__name__}: {exc}",
+        ) from exc
+    projected_peak_gib = float(args.measured_peak_rss_gib)
+    if operator_ceiling_gib <= 0 or projected_peak_gib > operator_ceiling_gib:
+        raise LaunchRefusal(
+            "measured peak does not fit the canonical operator ceiling",
+            rc=10,
+            measured_peak_rss_gib=projected_peak_gib,
+            operator_ceiling_gib=operator_ceiling_gib,
+        )
+    logical_cpus = max(1, os.cpu_count() or 1)
+    thread_budget = min(int(args.measured_thread_need), logical_cpus)
+    for key in _THREAD_ENV_KEYS:
+        env[key] = str(thread_budget)
+    rss_cap_mib = int(operator_ceiling_gib * 1024)
+    safe_run = Path(__file__).resolve().with_name("safe_run.py")
+    status_receipt = out / "resource_safe_run_status.json"
+    child_pidfile = out / "resource_safe_run_child.pid"
+    wrapped = [
+        sys.executable,
+        str(safe_run),
+        "--rss-mb",
+        str(rss_cap_mib),
+        "--projected-gib",
+        str(projected_peak_gib),
+        "--timeout",
+        str(float(args.walltime_cap_s)),
+        "--status-receipt",
+        str(status_receipt),
+        "--child-pidfile",
+        str(child_pidfile),
+        "--quiet",
+        "--",
+        *cmd,
+    ]
+    return wrapped, {
+        "mode": "derived_and_enforced",
+        "measured_peak_rss_gib": projected_peak_gib,
+        "operator_ceiling_gib": operator_ceiling_gib,
+        "rss_cap_mib": rss_cap_mib,
+        "measured_thread_need": int(args.measured_thread_need),
+        "logical_cpus": logical_cpus,
+        "thread_budget": thread_budget,
+        "thread_environment": {key: env[key] for key in _THREAD_ENV_KEYS},
+        "walltime_cap_s": float(args.walltime_cap_s),
+        "status_receipt": str(status_receipt),
+        "child_pidfile": str(child_pidfile),
+        "concurrency_policy": "niceness plus system admission; no artificial abstinence",
+    }
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Launch a command detached from the current shell/process group."
-    )
-    parser.add_argument(
-        "--output-dir",
-        required=True,
-        type=Path,
-        help="Durable run directory for manifest, pid, stdout/stderr log, and exit placeholder.",
-    )
-    parser.add_argument(
-        "--cwd",
-        default=".",
-        type=Path,
-        help="Working directory for the child command.",
-    )
-    parser.add_argument(
-        "--purpose",
-        default="detached local long run",
-        help="Human-readable reason stored in launch_manifest.json.",
-    )
-    parser.add_argument(
-        "--authority",
-        default="local detached execution; downstream artifacts decide authority",
-        help="Authority/provenance note stored in launch_manifest.json.",
-    )
-    parser.add_argument(
-        "--env",
-        action="append",
-        default=[],
-        metavar="KEY=VALUE",
-        help="Environment override for the child. May be repeated.",
-    )
-    parser.add_argument(
-        "--done-receipt",
-        default=None,
-        metavar="NAME",
-        help=(
-            "Write .omx/tmp/codex_runs/<NAME>.done (rc=<rc> elapsed=<s>) when the "
-            "child exits — the fleet watcher (tools/codex_arm_watch.py) turns it "
-            "into a MAIN notification, same channel as codex-arm completions."
+        description=__doc__,
+        epilog=(
+            "Resource policy: new heavy jobs should use --derive-resource-budgets with a "
+            "measured peak, measured thread need, and wall cap. The launcher then enforces "
+            "the canonical host ceiling (116 GiB by current governor policy) through safe_run "
+            "and derives threads from measured need and available CPUs. It never copies the "
+            "old 16384 MiB wrapper literal. Concurrency is handled by --nice plus the system "
+            "admission gate, not by leaving the machine idle."
         ),
     )
+    parser.add_argument("--output-dir", required=True, type=Path)
+    parser.add_argument("--cwd", default=".", type=Path)
+    parser.add_argument("--purpose", default="detached local long run")
     parser.add_argument(
-        "--verify-alive-secs",
-        type=float,
-        default=3.0,
-        help=(
-            "After spawning, wait this many seconds and fail if the detached child "
-            "already exited. Use 0 to skip the survival check."
-        ),
+        "--authority", default="local detached execution; downstream artifacts decide authority"
     )
+    parser.add_argument("--env", action="append", default=[], metavar="KEY=VALUE")
+    parser.add_argument("--fresh-root", action="append", default=[], type=Path, metavar="PATH")
     parser.add_argument(
-        "--allow-reaper-name-match",
+        "--fresh-root-suffix",
         action="store_true",
-        help=(
-            "Launch even though the child argv matches the fleet reaper's "
-            "\\b(claude|codex)\\b predicate. Only correct when the fleet carve-out "
-            "covers this cmdline (e.g. a path under codex_runs/ or a REAPER_KEEPALIVE "
-            "token). Otherwise the child dies silently at 300-360s. Recorded in the "
-            "manifest."
-        ),
+        help="If a declared fresh root is nonempty, mint PATH_<utc> and rewrite declared paths.",
     )
+    parser.add_argument("--nice", type=int, default=None, metavar="N")
+    parser.add_argument("--derive-resource-budgets", action="store_true")
+    parser.add_argument("--measured-peak-rss-gib", type=float)
+    parser.add_argument("--measured-thread-need", type=int)
+    parser.add_argument("--walltime-cap-s", type=float)
+    parser.add_argument("--done-receipt", default=None, metavar="NAME")
     parser.add_argument(
-        "--dry-run",
+        "--receipt-supersede",
         action="store_true",
-        help="Write manifest without launching the child process.",
+        help="Tombstone an unconsumed prior receipt before arming this launch.",
     )
+    parser.add_argument("--arm-watchers", action="store_true")
+    parser.add_argument("--liveness-config", type=Path)
+    parser.add_argument("--quality-config", type=Path)
+    parser.add_argument("--verify-alive-secs", type=float, default=3.0)
+    parser.add_argument("--allow-reaper-name-match", action="store_true")
+    parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("cmd", nargs=argparse.REMAINDER)
     args = parser.parse_args()
     if args.cmd and args.cmd[0] == "--":
@@ -144,124 +759,320 @@ def parse_args() -> argparse.Namespace:
     for item in args.env:
         if "=" not in item:
             parser.error(f"--env must be KEY=VALUE, got {item!r}")
+    if args.fresh_root_suffix and not args.fresh_root:
+        parser.error("--fresh-root-suffix requires at least one --fresh-root")
+    if args.receipt_supersede and not args.done_receipt:
+        parser.error("--receipt-supersede requires --done-receipt")
+    if args.done_receipt and not _RECEIPT_NAME.fullmatch(args.done_receipt):
+        parser.error("--done-receipt must match [A-Za-z0-9][A-Za-z0-9_.-]{0,127}")
+    if args.nice is not None and not -20 <= args.nice <= 20:
+        parser.error("--nice must be between -20 and 20")
+    resource_values = (
+        args.measured_peak_rss_gib,
+        args.measured_thread_need,
+        args.walltime_cap_s,
+    )
+    if args.derive_resource_budgets and any(value is None for value in resource_values):
+        parser.error(
+            "--derive-resource-budgets requires --measured-peak-rss-gib, "
+            "--measured-thread-need, and --walltime-cap-s"
+        )
+    if not args.derive_resource_budgets and any(value is not None for value in resource_values):
+        parser.error("resource measurement flags require --derive-resource-budgets")
+    if args.derive_resource_budgets and (
+        args.measured_peak_rss_gib <= 0
+        or args.measured_thread_need <= 0
+        or args.walltime_cap_s <= 0
+    ):
+        parser.error("resource measurements and caps must be positive")
+    if args.arm_watchers and (args.liveness_config is None or args.quality_config is None):
+        parser.error("--arm-watchers requires --liveness-config and --quality-config")
+    if args.verify_alive_secs < 0:
+        parser.error("--verify-alive-secs must be nonnegative")
     return args
+
+
+def _print_refusal(exc: LaunchRefusal, **context: Any) -> int:
+    print(json.dumps({"error": str(exc), **exc.detail, **context}, sort_keys=True), file=sys.stderr)
+    return exc.rc
 
 
 def main() -> int:
     args = parse_args()
-    out = args.output_dir.expanduser().resolve(strict=False)
-    cwd = args.cwd.expanduser().resolve(strict=False)
-    # Fail fast on unlaunchable argv: a detached child dies silently in run.log otherwise
-    # (2026-07-20 launch_003: script existed only on an unmerged arm branch, not at cwd).
-    # Absolute executables must exist; a relative script path in argv must exist at cwd.
-    exe = args.cmd[0]
+    try:
+        mapping, fresh_rows = _resolve_fresh_roots(args.fresh_root, args.fresh_root_suffix)
+    except LaunchRefusal as exc:
+        return _print_refusal(exc)
+    out = _rewrite_path(args.output_dir, mapping)
+    cwd = _rewrite_path(args.cwd, mapping)
+    cmd = [_rewrite_value(str(part), mapping) for part in args.cmd]
+    env_items = [_rewrite_value(item, mapping) for item in args.env]
+
+    exe = cmd[0]
     if "/" in exe and not Path(exe).expanduser().exists():
-        print(json.dumps({"error": f"executable not found: {exe}"}), file=sys.stderr)
-        return 2
-    for part in args.cmd[1:]:
+        return _print_refusal(LaunchRefusal(f"executable not found: {exe}"))
+    for part in cmd[1:]:
         if part.endswith(".py"):
-            cand = Path(part) if Path(part).is_absolute() else (cwd / part)
-            if not cand.exists():
-                print(json.dumps({"error": f"script not found at cwd: {cand.as_posix()}"}),
-                      file=sys.stderr)
-                return 2
-            break  # only the first script arg is the entry point
-    # Fail fast on the reaper's orphan predicate: a matching argv is SIGTERMed at
-    # 300-360s with no traceback and a truncated log, which reads as a hang.
-    # Refuse rather than mutate argv -- appending a keepalive token would change
-    # the child's own sys.argv and can break it.
-    reaper_hits = sorted(
-        {m.group(0) for part in args.cmd for m in _REAPER_NAME_PREDICATE.finditer(str(part))}
-    )
+            candidate = Path(part) if Path(part).is_absolute() else cwd / part
+            if not candidate.exists():
+                return _print_refusal(LaunchRefusal(f"script not found at cwd: {candidate}"))
+            break
+    reaper_hits = sorted({m.group(0) for part in cmd for m in _REAPER_NAME_PREDICATE.finditer(part)})
     if reaper_hits and not args.allow_reaper_name_match:
-        print(
-            json.dumps(
-                {
-                    "error": "argv matches the fleet reaper predicate; child would be "
-                    "SIGTERMed at ~300-360s",
-                    "matched_tokens": reaper_hits,
-                    "matching_argv_parts": [
-                        str(p) for p in args.cmd if _REAPER_NAME_PREDICATE.search(str(p))
-                    ],
-                    "cure": "move the script and its output paths to a repo or SSD path "
-                    "(never the session scratchpad: /private/tmp/claude-NNN/... matches "
-                    "because the hyphen is a word boundary), then relaunch",
-                    "override": "--allow-reaper-name-match (only if the fleet carve-out "
-                    "covers this cmdline)",
-                }
-            ),
-            file=sys.stderr,
+        return _print_refusal(
+            LaunchRefusal(
+                "argv matches the fleet reaper predicate; child would be SIGTERMed at ~300-360s",
+                rc=5,
+                matched_tokens=reaper_hits,
+                matching_argv_parts=[part for part in cmd if _REAPER_NAME_PREDICATE.search(part)],
+                cure="move script/output paths outside standalone claude/codex path components",
+            )
         )
-        return 5
-    out.mkdir(parents=True, exist_ok=True)
+
     env = os.environ.copy()
-    env.update(dict(item.split("=", 1) for item in args.env))
+    env.update(dict(item.split("=", 1) for item in env_items))
+    try:
+        effective_cmd, resource_budget = _derive_resource_budget(
+            args,
+            out=out,
+            cmd=cmd,
+            env=env,
+        )
+    except LaunchRefusal as exc:
+        return _print_refusal(exc)
+    liveness_config = _rewrite_path(args.liveness_config, mapping) if args.liveness_config else None
+    quality_config = _rewrite_path(args.quality_config, mapping) if args.quality_config else None
+    if args.arm_watchers:
+        repo = Path(__file__).resolve().parents[1]
+        try:
+            _validate_watcher(repo / "tools" / "run_liveness_watcher.py", liveness_config, cwd, env)
+            _validate_watcher(repo / "tools" / "run_quality_poller.py", quality_config, cwd, env)
+        except LaunchRefusal as exc:
+            return _print_refusal(exc)
+
+    runs = _runs_dir()
+    done_path = runs / f"{args.done_receipt}.done" if args.done_receipt else None
+    receipt_arm_path = _armed_path(done_path) if done_path is not None else None
+    receipt_tombstone: dict[str, Any] | None = None
+    receipt_arm_tombstone: dict[str, Any] | None = None
+    if receipt_arm_path is not None and receipt_arm_path.exists():
+        active = _receipt_reservation_active(receipt_arm_path)
+        if active or not args.receipt_supersede:
+            return _print_refusal(
+                LaunchRefusal(
+                    "done receipt name already has an active launch reservation"
+                    if active
+                    else "done receipt name has a stale launch reservation",
+                    rc=6,
+                    receipt_arm_path=str(receipt_arm_path),
+                    cure=(
+                        "wait for the active launch to finish"
+                        if active
+                        else "pass --receipt-supersede to preserve and replace the stale reservation"
+                    ),
+                )
+            )
+        receipt_arm_tombstone = _tombstone_reservation(
+            receipt_arm_path,
+            dry_run=bool(args.dry_run),
+        )
+    if done_path is not None and done_path.exists():
+        consumed = _receipt_is_consumed(done_path)
+        if not consumed and not args.receipt_supersede:
+            return _print_refusal(
+                LaunchRefusal(
+                    "done receipt name is already armed and unconsumed",
+                    rc=6,
+                    done_receipt_path=str(done_path),
+                    cure="let the fleet monitor consume it or pass --receipt-supersede to preserve and replace it",
+                )
+            )
+        if args.dry_run:
+            receipt_tombstone = {
+                "dry_run_would_tombstone": str(done_path),
+                "reason": "explicit_unconsumed_supersede" if not consumed else "consumed_name_reuse",
+                "receipt_sha256": _sha256(done_path),
+            }
+        else:
+            receipt_tombstone = _tombstone_receipt(
+                done_path,
+                reason="explicit_unconsumed_supersede" if not consumed else "consumed_name_reuse",
+            )
+
+    out.mkdir(parents=True, exist_ok=True)
+    for row in fresh_rows:
+        Path(row["effective_path"]).mkdir(parents=True, exist_ok=True)
     log_path = out / "run.log"
     pid_path = out / "run.pid"
     manifest_path = out / "launch_manifest.json"
+    start_gate = out / ".launch_start_gate"
+    watcher_start_gate = out / ".watchers_start_gate"
     payload: dict[str, Any] = {
         "schema": SCHEMA,
         "generated_utc": _utc_now(),
-        "cwd": cwd.as_posix(),
+        "cwd": str(cwd),
         "git_sha": _git_sha(cwd),
         "purpose": str(args.purpose),
         "authority": str(args.authority),
-        "detach_method": "subprocess.Popen(start_new_session=True)",
-        "output_dir": out.as_posix(),
-        "pid_path": pid_path.as_posix(),
-        "log_path": log_path.as_posix(),
-        "argv": [str(part) for part in args.cmd],
+        "detach_method": "gated supervisor + subprocess.Popen(start_new_session=True)",
+        "output_dir": str(out),
+        "pid_path": str(pid_path),
+        "log_path": str(log_path),
+        "argv": cmd,
+        "effective_argv": effective_cmd,
         "dry_run": bool(args.dry_run),
         "reaper_predicate_hits": reaper_hits,
         "reaper_name_match_allowed": bool(args.allow_reaper_name_match),
+        "fresh_roots": fresh_rows,
+        "requested_nice": args.nice,
+        "actual_nice": None,
+        "resource_budget": resource_budget,
+        "done_receipt_path": str(done_path) if done_path else None,
+        "receipt_tombstone": receipt_tombstone,
+        "receipt_arm_tombstone": receipt_arm_tombstone,
+        "watchers_requested": bool(args.arm_watchers),
+        "watchers": [],
     }
-    launch_argv = [str(part) for part in args.cmd]
-    if args.done_receipt:
-        # Wrap in a detached supervisor that writes the watcher-visible exit
-        # receipt (same format as codex-arm keepers). The fleet watcher
-        # (tools/codex_arm_watch.py) turns the receipt into a MAIN
-        # notification — no polling, ever (operator permanent-fix 2026-08-04).
-        runs_dir = Path.cwd() / ".omx" / "tmp" / "codex_runs"
-        runs_dir.mkdir(parents=True, exist_ok=True)
-        done_path = runs_dir / f"{args.done_receipt}.done"
-        supervisor_src = (
-            "import signal,subprocess,sys,time,pathlib\n"
-            "for _s in ('SIGURG','SIGPIPE'):\n"
-            "    try: signal.signal(getattr(signal,_s), signal.SIG_IGN)\n"
-            "    except Exception: pass\n"
-            "done=pathlib.Path(sys.argv[1]); argv=sys.argv[2:]\n"
-            "t0=time.time(); detail=''\n"
-            "try:\n"
-            "    rc=subprocess.call(argv)\n"
-            "except FileNotFoundError as e:\n"
-            "    rc=127; detail=' exec_error=FileNotFoundError:%s' % e.filename\n"
-            "except OSError as e:\n"
-            "    rc=126; detail=' exec_error=%s:%s' % (type(e).__name__, e.errno)\n"
-            "tmp=done.with_suffix('.done.tmp')\n"
-            "tmp.write_text('rc=%d elapsed=%d detached-job%s\\n' % (rc, int(time.time()-t0), detail))\n"
-            "tmp.replace(done)\n"
-            "sys.exit(rc)\n"
-        )
-        launch_argv = [sys.executable, "-c", supervisor_src, str(done_path), *launch_argv]
-        payload["done_receipt_path"] = done_path.as_posix()
     if args.dry_run:
         _write_json(manifest_path, payload)
-        print(json.dumps({"dry_run": True, "manifest_path": manifest_path.as_posix()}))
+        print(json.dumps({"dry_run": True, "manifest_path": str(manifest_path), "fresh_roots": fresh_rows}))
         return 0
-    with open(log_path, "ab", buffering=0) as log:
-        proc = subprocess.Popen(
-            launch_argv,
-            cwd=cwd,
-            env=env,
-            stdout=log,
-            stderr=log,
-            stdin=subprocess.DEVNULL,
-            start_new_session=True,
-            close_fds=True,
+
+    counter = _next_launch_counter(runs)
+    if receipt_arm_path is not None:
+        try:
+            _reserve_receipt(
+                receipt_arm_path,
+                receipt_name=args.done_receipt,
+                counter=counter,
+            )
+        except LaunchRefusal as exc:
+            return _print_refusal(exc)
+    supervisor_argv = [
+        sys.executable,
+        str(Path(__file__).resolve()),
+        "_supervise",
+        "--start-gate",
+        str(start_gate),
+        "--manifest",
+        str(manifest_path),
+        "--counter",
+        str(counter),
+    ]
+    if done_path is not None:
+        supervisor_argv.extend(
+            [
+                "--done",
+                str(done_path),
+                "--armed",
+                str(receipt_arm_path),
+                "--receipt-name",
+                args.done_receipt,
+            ]
+        )
+    supervisor_argv.extend(["--", *effective_cmd])
+    started = time.time()
+    try:
+        with log_path.open("ab", buffering=0) as log:
+            proc = subprocess.Popen(
+                supervisor_argv,
+                cwd=cwd,
+                env=env,
+                stdout=log,
+                stderr=log,
+                stdin=subprocess.DEVNULL,
+                start_new_session=True,
+                close_fds=True,
+            )
+    except OSError as exc:
+        _release_receipt_reservation(receipt_arm_path, counter)
+        payload["adjudicated_at_launch"] = True
+        payload["launch_error"] = {
+            "error": "supervisor spawn failed",
+            "detail": f"{type(exc).__name__}: {exc}",
+        }
+        _write_json(manifest_path, payload)
+        return _print_refusal(
+            LaunchRefusal(
+                "supervisor spawn failed",
+                rc=2,
+                error=f"{type(exc).__name__}: {exc}",
+            ),
+            manifest_path=str(manifest_path),
+        )
+    identity = _launch_identity(manifest_path, proc.pid, counter)
+    try:
+        _update_receipt_reservation(receipt_arm_path, identity=identity)
+    except (OSError, json.JSONDecodeError, LaunchRefusal) as exc:
+        _stop_process(proc)
+        _adjudicate_receipt(
+            done_path,
+            identity=identity,
+            receipt_name=args.done_receipt or "",
+            rc=6,
+            elapsed_s=time.time() - started,
+            detail="receipt reservation identity update failed",
+        )
+        _release_receipt_reservation(receipt_arm_path, counter)
+        payload["adjudicated_at_launch"] = True
+        payload["launch_error"] = {
+            "error": "receipt reservation identity update failed",
+            "detail": f"{type(exc).__name__}: {exc}",
+        }
+        _write_json(manifest_path, payload)
+        return _print_refusal(
+            LaunchRefusal(
+                "receipt reservation identity update failed",
+                rc=6,
+                error=f"{type(exc).__name__}: {exc}",
+            ),
+            manifest_path=str(manifest_path),
+            pid=proc.pid,
         )
     payload["pid"] = int(proc.pid)
-    _write_json(manifest_path, payload)
-    pid_path.write_text(f"{proc.pid}\n")
+    payload["launch_id"] = identity
+    pid_path.write_text(f"{proc.pid}\n", encoding="utf-8")
+    try:
+        if args.nice is not None:
+            payload["actual_nice"] = _apply_and_verify_nice(proc.pid, args.nice)
+        else:
+            try:
+                payload["actual_nice"] = int(os.getpriority(os.PRIO_PROCESS, proc.pid))
+            except OSError:
+                payload["actual_nice"] = None
+        # Watchers receive this manifest as their launch-identity authority, so
+        # publish it before they are allowed to start.
+        _write_json(manifest_path, payload)
+        if args.arm_watchers:
+            payload["watchers"] = _arm_watchers(
+                out=out,
+                cwd=cwd,
+                env=env,
+                liveness_config=liveness_config,
+                quality_config=quality_config,
+                launch_manifest=manifest_path,
+                watcher_start_gate=watcher_start_gate,
+                launch_counter=counter,
+                runs=runs,
+            )
+        _write_json(manifest_path, payload)
+        _write_json(start_gate, {"schema": "detached_local_process_start_gate.v1", "launch_id": identity})
+    except LaunchRefusal as exc:
+        _stop_process(proc)
+        payload["adjudicated_at_launch"] = True
+        payload["launch_error"] = {"error": str(exc), **exc.detail}
+        _write_json(manifest_path, payload)
+        _adjudicate_receipt(
+            done_path,
+            identity=identity,
+            receipt_name=args.done_receipt or "",
+            rc=exc.rc,
+            elapsed_s=time.time() - started,
+            detail=str(exc),
+        )
+        _release_receipt_reservation(receipt_arm_path, counter)
+        return _print_refusal(exc, manifest_path=str(manifest_path), pid=proc.pid)
+
     if args.verify_alive_secs > 0:
         deadline = time.monotonic() + float(args.verify_alive_secs)
         rc: int | None = None
@@ -271,33 +1082,46 @@ def main() -> int:
                 break
             time.sleep(min(0.05, max(0.0, deadline - time.monotonic())))
         if rc is not None:
-            print(
-                json.dumps(
-                    {
-                        "error": "detached child exited during verify-alive window",
-                        "pid": int(proc.pid),
-                        "rc": int(rc),
-                        "verify_alive_secs": float(args.verify_alive_secs),
-                        "output_dir": out.as_posix(),
-                        "manifest_path": manifest_path.as_posix(),
-                        "log_path": log_path.as_posix(),
-                        "last_log_lines": _tail_lines(log_path),
-                    },
-                    sort_keys=True,
-                ),
-                file=sys.stderr,
+            _stop_watchers(payload["watchers"])
+            payload["adjudicated_at_launch"] = True
+            payload["verify_alive_rc"] = int(rc)
+            _write_json(manifest_path, payload)
+            _adjudicate_receipt(
+                done_path,
+                identity=identity,
+                receipt_name=args.done_receipt or "",
+                rc=int(rc),
+                elapsed_s=time.time() - started,
+                detail="detached child exited during verify-alive window",
             )
-            if 1 <= int(rc) <= 125:
-                return int(rc)
-            return 4
+            _release_receipt_reservation(receipt_arm_path, counter)
+            error = {
+                "error": "detached child exited during verify-alive window",
+                "pid": int(proc.pid),
+                "rc": int(rc),
+                "verify_alive_secs": float(args.verify_alive_secs),
+                "output_dir": str(out),
+                "manifest_path": str(manifest_path),
+                "log_path": str(log_path),
+                "last_log_lines": _tail_lines(log_path),
+            }
+            print(json.dumps(error, sort_keys=True), file=sys.stderr)
+            return int(rc) if 1 <= int(rc) <= 125 else 4
+    _write_json(
+        watcher_start_gate,
+        {"schema": "detached_local_process_watchers_start_gate.v1", "launch_id": identity},
+    )
     print(
         json.dumps(
             {
                 "schema": SCHEMA,
                 "pid": int(proc.pid),
-                "output_dir": out.as_posix(),
-                "manifest_path": manifest_path.as_posix(),
-                "log_path": log_path.as_posix(),
+                "launch_id": identity,
+                "output_dir": str(out),
+                "manifest_path": str(manifest_path),
+                "log_path": str(log_path),
+                "fresh_roots": fresh_rows,
+                "watchers": payload["watchers"],
             },
             sort_keys=True,
         )
@@ -306,4 +1130,6 @@ def main() -> int:
 
 
 if __name__ == "__main__":
+    if len(sys.argv) > 1 and sys.argv[1] == "_supervise":
+        raise SystemExit(_supervisor_main(sys.argv[2:]))
     raise SystemExit(main())

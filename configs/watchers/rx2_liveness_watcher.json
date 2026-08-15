@@ -1,0 +1,25 @@
+{
+  "schema": "pact.run_liveness_watcher.config.v1",
+  "pid_file": "/Volumes/APDataStore/pact/ddm_rx2_current_mc36_label_hpac/training/safe_run_status_resume.json.child.pid",
+  "alert_path": "/Users/adpena/Projects/pact/.omx/tmp/rx2_liveness.alert",
+  "poll_s": 120,
+  "initial_delay_s": 120,
+  "warmup_s": 300,
+  "receipt_checks": [
+    {
+      "label": "safe_run_status_resume",
+      "path": "/Volumes/APDataStore/pact/ddm_rx2_current_mc36_label_hpac/training/safe_run_status_resume.json",
+      "max_age_s": 600,
+      "grace_s": 0
+    }
+  ],
+  "heartbeat_checks": [],
+  "artifact_checks": [
+    {
+      "label": "mc36_hpac_best_ema_latest",
+      "path": "/Volumes/APDataStore/pact/ddm_rx2_current_mc36_label_hpac/training/checkpoints/mc36_hpac_best_ema.checkpoints/latest.pt",
+      "max_age_s": 2700,
+      "grace_s": 2700
+    }
+  ]
+}

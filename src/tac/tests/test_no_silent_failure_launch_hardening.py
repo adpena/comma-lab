@@ -316,7 +316,7 @@ def test_launch_detached_live_child_succeeds(tmp_path):
             text=True,
             timeout=10,
         )
-        assert res.returncode == 0, res.stderr
+        assert res.returncode == 0, res.stderr  # LAUNCHER_RC_OK: live-child launch-start health only
         payload = json.loads(res.stdout)
         pid = int(payload["pid"])
         assert (out / "run.pid").read_text().strip() == str(pid)

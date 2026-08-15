@@ -358,6 +358,8 @@ src/tac.egg-info/
 !.omx/state/canonical_doc_registry.json
 # Catalog #185 scope extension — committed strict-gate violation-count baseline manifest
 !.omx/state/strict_gate_violation_baseline.json
+# LH1 canonical advisory registry: small, provenance-carrying, and reviewable.
+!.omx/state/codex_arm_capabilities.json
 .omx/state/*.jsonl
 # Catalog #245 — committed canonical Modal call_id ledger (HISTORICAL_PROVENANCE)
 !.omx/state/modal_call_id_ledger.jsonl

@@ -19,10 +19,12 @@ reintroducing the poll-on-request regime.
 from __future__ import annotations
 
 import argparse
+import datetime as dt
+import hashlib
+import json
 import os
 import signal
 import stat
-import sys
 import time
 from pathlib import Path
 
@@ -38,6 +40,8 @@ for _sig in ("SIGURG", "SIGPIPE"):
 RUNS = Path(".omx/tmp/codex_runs")
 HEARTBEAT = RUNS / "_watcher.alive"
 HEARTBEAT_STALE_S = 90  # liveness bar used by the dispatcher
+DONE_RECEIPT_SCHEMA = "detached_local_process_done.v2"
+CONSUMED_RECEIPT_SCHEMA = "detached_local_process_done_consumed.v1"
 
 
 def _snapshot(runs: Path) -> dict[str, tuple[float, int]]:
@@ -75,6 +79,57 @@ def _terminal_kind(receipt: str) -> tuple[str, str]:
     return "ALERT", line
 
 
+def _structured_terminal(receipt: str) -> tuple[str, str, bool] | None:
+    """Parse the additive watched-launch receipt while preserving legacy text."""
+
+    try:
+        payload = json.loads(receipt)
+    except json.JSONDecodeError:
+        kind, line = _terminal_kind(receipt)
+        return kind, line, False
+    if not isinstance(payload, dict) or payload.get("schema") != DONE_RECEIPT_SCHEMA:
+        kind, line = _terminal_kind(receipt)
+        return kind, line, False
+    try:
+        rc = int(payload["rc"])
+        elapsed = float(payload["elapsed_s"])
+        launch_id = payload["launch_id"]
+        counter = int(launch_id["monotonic_launch_counter"])
+        pid = int(launch_id["pid"])
+        manifest = str(launch_id["manifest_path"])
+    except (KeyError, TypeError, ValueError):
+        return "ALERT", "malformed structured done receipt", False
+    terminal = (
+        f"rc={rc} elapsed={int(elapsed)} launch_counter={counter} "
+        f"launch_pid={pid} manifest={manifest}"
+    )
+    return ("FINISHED" if rc == 0 else "ALERT"), terminal, bool(
+        payload.get("adjudicated_at_launch", False)
+    )
+
+
+def _mark_consumed(path: Path, *, suppressed: bool) -> bool:
+    """Acknowledge only after the real monitor read/delivery path handled it."""
+
+    try:
+        data = path.read_bytes()
+    except OSError:
+        return False
+    marker = path.with_name(path.name + ".consumed.json")
+    payload = {
+        "schema": CONSUMED_RECEIPT_SCHEMA,
+        "consumed_utc": dt.datetime.now(dt.UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "receipt_path": str(path),
+        "receipt_sha256": hashlib.sha256(data).hexdigest(),
+        "consumer": "tools/codex_arm_watch.py",
+        "suppressed_adjudicated_at_launch": bool(suppressed),
+    }
+    tmp = marker.with_name(f".{marker.name}.tmp.{os.getpid()}")
+    tmp.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+    tmp.replace(marker)
+    return True
+
+
 def format_events(
     runs: Path, before: dict[str, tuple[float, int]], after: dict[str, tuple[float, int]]
 ) -> list[str]:
@@ -90,7 +145,15 @@ def format_events(
         except OSError:
             continue
         if name.endswith(".done"):
-            kind, terminal = _terminal_kind(content)
+            parsed = _structured_terminal(content)
+            if parsed is None:
+                continue
+            kind, terminal, adjudicated_at_launch = parsed
+            if adjudicated_at_launch:
+                # launch_detached_process already reported this failure
+                # synchronously with log tail; re-alerting is the measured D2
+                # double-alert class.
+                continue
             lines.append(
                 f"ARM {arm} {kind} {terminal}"
                 f" | last: {_final_msg_head(runs, arm)}"
@@ -148,12 +211,30 @@ def watch(runs: Path, interval_s: float, once: bool) -> int:
     runs.mkdir(parents=True, exist_ok=True)
     before = _snapshot(runs)  # baseline: pre-existing receipts stay silent
     while True:
+        delivery_channel = stdout_delivery_channel()
         HEARTBEAT.parent.mkdir(parents=True, exist_ok=True)
         _write_heartbeat()
         time.sleep(interval_s)
         after = _snapshot(runs)
         for line in format_events(runs, before, after):
             print(line, flush=True)
+        # Consumption happens only after formatting and stdout delivery.  A
+        # broken monitor pipe kills this process before the acknowledgement,
+        # so the launcher will refuse accidental receipt-name reuse.
+        for name in sorted(after):
+            if not name.endswith(".done") or before.get(name) == after[name]:
+                continue
+            if delivery_channel not in {"socket", "fifo"}:
+                # A manual/file-backed watcher may inspect or log the event,
+                # but only the harness-delivering channel may acknowledge it.
+                continue
+            path = runs / name
+            try:
+                parsed = _structured_terminal(path.read_text(errors="replace").strip())
+            except OSError:
+                continue
+            suppressed = bool(parsed and parsed[2])
+            _mark_consumed(path, suppressed=suppressed)
         before = after
         if once:
             return 0

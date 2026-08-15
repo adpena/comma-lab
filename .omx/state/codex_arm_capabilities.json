@@ -1,0 +1,50 @@
+{
+  "schema": "pact.codex_arm_capabilities.v1",
+  "generated_utc": "2026-08-15T01:49:11Z",
+  "spawn_surface": "tools/codex_arm_queue.py",
+  "capabilities": [
+    {
+      "capability_family": "metal_device_access",
+      "status": "denied_in_codex_arm_sandbox",
+      "demand_patterns": [
+        "\\b(?:must|requires?|run|launch|train|profile|use|prove)\\b[^\\n]{0,120}\\b(?:metal|mps|mlx)\\b",
+        "\\b(?:metal|mps|mlx)\\b[^\\n]{0,120}\\b(?:must|required|training|profile|launch)\\b"
+      ],
+      "main_handoff": "Route execution to MAIN on a governed real host-Metal process; the arm may prepare and verify the fire order.",
+      "evidence": [
+        {
+          "path": ".omx/research/ddm_mp2_20260809T105302Z/RECEIPT.json",
+          "sha256": "69791a8cdca7c4321dbcd13b22312528d0d6b5b9d56d60dba434b4d676d6c41d",
+          "measured_fact": "the codex arm exposed zero Metal devices while MAIN on the same host had working Metal"
+        }
+      ]
+    },
+    {
+      "capability_family": "process_priority_control",
+      "status": "denied_in_codex_arm_sandbox",
+      "demand_patterns": [
+        "(?im)^\\s*[-*]\\s*--nice\\b[^\\n]*(?:apply|verify|required|must)",
+        "\\b(?:must|requires?|run|launch|profile|apply|prove)\\b[^\\n]{0,120}\\b(?:nice\\s+-n|setpriority|taskpolicy|launchctl|launchd)\\b",
+        "\\b(?:nice\\s+-n|setpriority|taskpolicy|launchctl|launchd)\\b[^\\n]{0,120}\\b(?:must|required|verified|profile|launch)\\b"
+      ],
+      "main_handoff": "Route the priority-sensitive launch to MAIN or another execution surface that can apply and verify the requested niceness.",
+      "evidence": [
+        {
+          "path": "/Volumes/APDataStore/pact/ddm_wc1_hpac_throughput_port_20260814/source_repo/.omx/research/ddm_wc1_hpac_throughput_port_20260814.md",
+          "sha256": "45315e8c49a59a52f4d19f4305f61d2bb567286d006d52c43d2f2b32da39e158",
+          "measured_fact": "nice, setpriority, taskpolicy, and bounded launchd handoff were denied"
+        },
+        {
+          "path": "/Volumes/APDataStore/pact/ddm_wc1_hpac_throughput_port_20260814/profile_cpu_reference/safe_run_status.json",
+          "sha256": "2df49c05e71122127eb435aa9f33a5aef7e693542fc1f2c9ac8db45fb32ffcc4",
+          "measured_fact": "the noncompliant priority attempt was terminated and retained as status killed"
+        }
+      ]
+    }
+  ],
+  "scope_notes": [
+    "This registry is advisory and never blocks an arm spawn.",
+    "No durable git-push denial receipt was found in the bounded recall scope, so git-push is not declared denied here.",
+    "Re-measure a family when the keeper, sandbox profile, host runtime, or spawn mechanism changes."
+  ]
+}

@@ -1,0 +1,39 @@
+{
+  "schema": "pact.run_quality_poller.config.v1",
+  "log_path": "/Volumes/APDataStore/pact/ddm_rx2_current_mc36_label_hpac/training/detached_resume_r5/run.log",
+  "pid_file": "/Volumes/APDataStore/pact/ddm_rx2_current_mc36_label_hpac/training/safe_run_status_resume.json.child.pid",
+  "telemetry_path": "/Volumes/APDataStore/pact/ddm_rx2_current_mc36_label_hpac/training/telemetry_quality_poller.jsonl",
+  "alert_path": "/Users/adpena/Projects/pact/.omx/tmp/rx2_quality.alert",
+  "poll_s": 300,
+  "eval_period_s": 2880,
+  "stale_periods": 3,
+  "startup_grace_s": 0,
+  "json_marker": "\"estimated_joint_bytes\"",
+  "fields": {
+    "epoch": "epoch",
+    "value": "estimated_joint_bytes",
+    "phase": "phase",
+    "finite": [
+      "bpp"
+    ]
+  },
+  "bar_value": 186073,
+  "bar_start_epoch": 33,
+  "phase_knee": {
+    "epoch": 31,
+    "window_epochs": 3,
+    "shock_multiplier": 1.25,
+    "continuous_phase": "continuous"
+  },
+  "best_not_latest": {
+    "phase": "discrete_qat",
+    "min_rows": 4,
+    "lag_epochs": 6
+  },
+  "alert_conditions": {
+    "joint_regression": true,
+    "qat_knee_shock": true,
+    "nan_or_garbage": true,
+    "stale_telemetry": true
+  }
+}

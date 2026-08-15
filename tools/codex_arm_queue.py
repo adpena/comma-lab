@@ -48,7 +48,7 @@ import shlex
 import subprocess
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 _REPO = Path(__file__).resolve().parents[1]
@@ -64,6 +64,7 @@ SPAWN_LOG = _REPO / ".omx" / "state" / "codex_arm_spawn_log.jsonl"
 FINAL_MESSAGES = _REPO / ".omx" / "research" / "arm_final_messages"
 FINAL_MESSAGE_INDEX = _REPO / ".omx" / "state" / "codex_arm_queue.final_messages.jsonl"
 NEXT_IF_RESUMED = _REPO / ".omx" / "state" / "codex_arm_queue.next_if_resumed.jsonl"
+ARM_CAPABILITIES = _REPO / ".omx" / "state" / "codex_arm_capabilities.json"
 
 DEFAULT_CAP = 4
 # EVERY connected SSD tier, not just tier-1. Granting only VertigoDataTier was a
@@ -211,7 +212,7 @@ def _append_jsonl_once(path: Path, row: dict, key_fields: tuple[str, ...]) -> bo
 
 
 def _utcstamp() -> str:
-    return datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    return datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
 
 
 def _normalize_phrase(text: str) -> str:
@@ -362,7 +363,7 @@ def extract_next_if_resumed(
                 "heading": block["heading"],
                 "text": block["text"],
                 "block_sha256": block_sha256,
-                "written_at_utc": datetime.now(timezone.utc).isoformat(),
+                "written_at_utc": datetime.now(UTC).isoformat(),
                 "reader_main_harvest": _rel(NEXT_IF_RESUMED),
                 "reader_costate_digest": "tools/costate_digest.py section_arm_next_if_resumed",
                 "score_claim": False,
@@ -398,11 +399,11 @@ def persist_final_message(name: str, rc: int, elapsed: int, last_path: Path | No
         "path": _rel(dest),
         "sha256": sha256,
         "source_path": _rel(source),
-        "written_at_utc": datetime.now(timezone.utc).isoformat(),
+        "written_at_utc": datetime.now(UTC).isoformat(),
         "score_claim": False,
     }
     row["row_id"] = _sha256_bytes(
-        f"{_FINAL_SCHEMA}|{row['name']}|{row['path']}|{row['sha256']}".encode("utf-8")
+        f"{_FINAL_SCHEMA}|{row['name']}|{row['path']}|{row['sha256']}".encode()
     )
     _append_jsonl_once(FINAL_MESSAGE_INDEX, row, ("row_id",))
     extract_next_if_resumed([dest], provenance="harvested-final", name=name, out_path=NEXT_IF_RESUMED)
@@ -744,6 +745,11 @@ def spawn(name: str, prompt_path: str, effort: str | None = None) -> bool:
     if refusal is not None:
         print(f"  REFUSED {name}: {refusal}", file=sys.stderr)
         return False
+    for advisory in lint_charter_capability_advisories(str(_prompt_file)):
+        # Advisory by construction: never turn a measured sandbox limitation
+        # into a mechanism verdict or a spawn refusal.  The warning names the
+        # MAIN handoff route instead.
+        print(f"charter-lint WARN [{name}]: {advisory}")
     # Clear STALE evidence from a previous generation: a leftover `.done`
     # (death receipt) or `.last.txt` (clean-finish marker) would corrupt the
     # next death-vs-completion read — the exact ambiguity the receipt exists
@@ -905,7 +911,7 @@ def _fm_advisory_module():
     without fmtools. The returned module is used only for WARN lines, never refusals.
     """
     try:
-        from tac import fm_advisory as _fm  # noqa: PLC0415
+        from tac import fm_advisory as _fm
     except Exception:
         return None
     try:
@@ -953,6 +959,56 @@ def lint_charter_fm_advisories(prompt_path: str) -> list[str]:
     if reduction and reduction.get("flags"):
         flags = ", ".join(str(f) for f in reduction.get("flags", []))
         warnings.append(f"fmtools advisory mechanism_reduction_language={flags}")
+    return warnings
+
+
+def lint_charter_capability_advisories(
+    prompt_path: str, registry_path: Path = ARM_CAPABILITIES
+) -> list[str]:
+    """Warn when a charter demands a capability denied on the arm surface.
+
+    This is deliberately read-only and advisory.  A missing or malformed
+    registry produces one visible warning but never blocks queueing or spawn.
+    """
+
+    try:
+        text = Path(prompt_path).read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return []
+    try:
+        payload = json.loads(registry_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return [f"capability registry unavailable ({exc})"]
+    if not isinstance(payload, dict) or payload.get("schema") != "pact.codex_arm_capabilities.v1":
+        return ["capability registry schema differs; denied-capability advice unavailable"]
+    warnings: list[str] = []
+    for row in payload.get("capabilities", []):
+        if not isinstance(row, dict) or row.get("status") != "denied_in_codex_arm_sandbox":
+            continue
+        patterns = row.get("demand_patterns", [])
+        if not isinstance(patterns, list):
+            continue
+        try:
+            demanded = any(re.search(str(pattern), text, re.IGNORECASE) for pattern in patterns)
+        except re.error as exc:
+            warnings.append(
+                f"capability registry pattern invalid for {row.get('capability_family', 'unknown')} ({exc})"
+            )
+            continue
+        if not demanded:
+            continue
+        evidence = row.get("evidence", [])
+        evidence_paths = [
+            str(item.get("path"))
+            for item in evidence
+            if isinstance(item, dict) and item.get("path")
+        ]
+        warnings.append(
+            "charter demands denied arm capability "
+            f"{row.get('capability_family', 'unknown')!r}; "
+            f"MAIN-handoff: {row.get('main_handoff', 'route to MAIN')}; "
+            f"measured receipt: {', '.join(evidence_paths) or 'registry row'}"
+        )
     return warnings
 
 
@@ -1014,7 +1070,10 @@ def cmd_add(args) -> int:
         return 2
     assert prompt_file is not None
     problems = lint_charter_optimal_form(str(prompt_file))
-    advisories = lint_charter_fm_advisories(str(prompt_file))
+    advisories = [
+        *lint_charter_capability_advisories(str(prompt_file)),
+        *lint_charter_fm_advisories(str(prompt_file)),
+    ]
     if problems:
         # STRICT BY DEFAULT (operator 2026-08-13 "No naive or toy ever"): a charter
         # that fails the optimal-form lint is refused at the spawn site. The explicit
@@ -1047,6 +1106,23 @@ def cmd_add(args) -> int:
         f"effort {resolve_arm_effort(getattr(args, 'effort', None))})"
     )
     return 0
+
+
+def cmd_lint(args) -> int:
+    prompt_file, refusal = charter_file_path(args.prompt)
+    if refusal is not None:
+        print(f"REFUSED lint: {refusal}", file=sys.stderr)
+        return 2
+    assert prompt_file is not None
+    problems = lint_charter_optimal_form(str(prompt_file))
+    for problem in problems:
+        print(f"charter-lint REFUSED [{args.name}]: {problem}")
+    for advisory in (
+        *lint_charter_capability_advisories(str(prompt_file)),
+        *lint_charter_fm_advisories(str(prompt_file)),
+    ):
+        print(f"charter-lint WARN [{args.name}]: {advisory}")
+    return 3 if problems else 0
 
 
 def cmd_mark(args) -> int:
@@ -1113,10 +1189,14 @@ def main(argv=None) -> int:
     parser.add_argument("--cap", type=int, default=DEFAULT_CAP)
     sub = parser.add_subparsers(dest="cmd", required=True)
 
-    p = sub.add_parser("status"); p.add_argument("--limit", type=int, default=12); p.set_defaults(fn=cmd_status)
+    p = sub.add_parser("status")
+    p.add_argument("--limit", type=int, default=12)
+    p.set_defaults(fn=cmd_status)
     p = sub.add_parser("add")
-    p.add_argument("--name", required=True); p.add_argument("--prompt", required=True)
-    p.add_argument("--rank", type=int, default=100); p.add_argument("--owns-scorer", action="store_true")
+    p.add_argument("--name", required=True)
+    p.add_argument("--prompt", required=True)
+    p.add_argument("--rank", type=int, default=100)
+    p.add_argument("--owns-scorer", action="store_true")
     p.add_argument("--note", default="")
     p.add_argument(
         "--effort",
@@ -1132,7 +1212,13 @@ def main(argv=None) -> int:
     p.add_argument("--name", required=True)
     p.add_argument("--status", required=True, choices=["queued", "live", "landed", "dropped"])
     p.set_defaults(fn=cmd_mark)
-    p = sub.add_parser("saturate"); p.add_argument("--spawn", action="store_true"); p.set_defaults(fn=cmd_saturate)
+    p = sub.add_parser("lint")
+    p.add_argument("--prompt", required=True)
+    p.add_argument("--name", default="charter")
+    p.set_defaults(fn=cmd_lint)
+    p = sub.add_parser("saturate")
+    p.add_argument("--spawn", action="store_true")
+    p.set_defaults(fn=cmd_saturate)
     p = sub.add_parser("persist-final")
     p.add_argument("--name", required=True)
     p.add_argument("--rc", type=int, required=True)

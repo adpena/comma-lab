@@ -9,6 +9,7 @@ from 2026-08-04 (hand-rolled nohup clone; run_in_background git clone rc=144).
 from __future__ import annotations
 
 import importlib.util
+import json
 import os
 import subprocess
 import sys
@@ -65,20 +66,18 @@ def test_guard_allows_canonical_detach_surfaces_and_hatch() -> None:
 
 def test_launcher_done_receipt_supervisor_shape() -> None:
     """--done-receipt wraps argv in the SIGURG-ignoring supervisor and the
-    receipt path targets the fleet-watcher dir with keeper-compatible format."""
+    receipt path targets the fleet-watcher dir with structured launch identity."""
     src = (_TOOLS / "launch_detached_process.py").read_text()
     assert "--done-receipt" in src
     assert "codex_runs" in src  # the watched dir — completions notify MAIN
     assert "SIGURG" in src  # supervisor is immune to the reaper signal
-    assert "rc=%d elapsed=%d" in src  # keeper-compatible receipt prefix
+    assert 'DONE_RECEIPT_SCHEMA = "detached_local_process_done.v2"' in src
+    assert '"manifest_path"' in src
+    assert '"monotonic_launch_counter"' in src
 
 
-def test_launcher_done_receipt_records_child_nonzero_rc(tmp_path: Path) -> None:
-    """Executed BL1 positive control: launcher rc is not the job verdict.
-
-    The parent launcher exits 0 after starting the detached supervisor; the
-    watcher-visible .done receipt must carry the child process rc instead.
-    """
+def test_launcher_adjudicates_child_nonzero_rc_during_verify_window(tmp_path: Path) -> None:
+    """An immediate child failure is reported once and tagged for suppression."""
     repo = _TOOLS.parent
     name = f"bl1_receipt_{os.getpid()}_{time.time_ns()}"
     done = repo / ".omx" / "tmp" / "codex_runs" / f"{name}.done"
@@ -105,12 +104,19 @@ def test_launcher_done_receipt_records_child_nonzero_rc(tmp_path: Path) -> None:
             timeout=30,
             check=False,
         )
-        assert proc.returncode == 0, proc.stderr  # LAUNCHER_RC_OK: launch-start health; child rc is asserted from .done
+        assert proc.returncode == 7, proc.stderr
         deadline = time.time() + 10
         while time.time() < deadline and not done.exists():
             time.sleep(0.05)
         assert done.exists(), proc.stdout
-        receipt = done.read_text(encoding="utf-8").strip()
-        assert receipt.startswith("rc=7 "), receipt
+        receipt = json.loads(done.read_text(encoding="utf-8"))
+        assert receipt["rc"] == 7
+        assert receipt["adjudicated_at_launch"] is True
+        assert set(receipt["launch_id"]) == {
+            "manifest_path",
+            "pid",
+            "monotonic_launch_counter",
+        }
     finally:
         done.unlink(missing_ok=True)
+        done.with_name(done.name + ".consumed.json").unlink(missing_ok=True)
