@@ -10,11 +10,14 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib
+import inspect
 import json
 import os
 import shlex
 import shutil
 import subprocess
+import sys
 import time
 from pathlib import Path
 from typing import Any, Final
@@ -22,29 +25,25 @@ from typing import Any, Final
 import modal
 import numpy as np
 
-try:
-    import ddm_js1b_modal_cuda_argmax_field_materializer as js1b_dispatch
-except ModuleNotFoundError:
-    from experiments import ddm_js1b_modal_cuda_argmax_field_materializer as js1b_dispatch
+_SOURCE_REPO = Path(__file__).resolve().parents[1]
+REPO: Final = (
+    Path("/workspace/pact")
+    if Path("/workspace/pact/experiments").is_dir()
+    else _SOURCE_REPO
+)
+if str(REPO) not in sys.path:
+    sys.path.insert(0, str(REPO))
 
-try:
-    from modal_auth_eval import (
-        DALI_DISABLE_NVML_VALUE,
-        REMOTE_PYTHONPATH,
-        UPSTREAM_LOCKED_VENV,
-        UPSTREAM_UV_GROUP_CUDA,
-        base_image,
-        ignore_generated_mount_path,
-    )
-except ModuleNotFoundError:
-    from experiments.modal_auth_eval import (
-        DALI_DISABLE_NVML_VALUE,
-        REMOTE_PYTHONPATH,
-        UPSTREAM_LOCKED_VENV,
-        UPSTREAM_UV_GROUP_CUDA,
-        base_image,
-        ignore_generated_mount_path,
-    )
+js1b_dispatch = importlib.import_module(
+    "experiments.ddm_js1b_modal_cuda_argmax_field_materializer"
+)
+modal_auth_eval = importlib.import_module("experiments.modal_auth_eval")
+DALI_DISABLE_NVML_VALUE = modal_auth_eval.DALI_DISABLE_NVML_VALUE
+REMOTE_PYTHONPATH = modal_auth_eval.REMOTE_PYTHONPATH
+UPSTREAM_LOCKED_VENV = modal_auth_eval.UPSTREAM_LOCKED_VENV
+UPSTREAM_UV_GROUP_CUDA = modal_auth_eval.UPSTREAM_UV_GROUP_CUDA
+base_image = modal_auth_eval.base_image
+ignore_generated_mount_path = modal_auth_eval.ignore_generated_mount_path
 
 from tac.deploy.modal.auth_eval import (
     ClaimSpec,
@@ -56,7 +55,6 @@ from tac.deploy.modal.call_id_ledger import register_dispatched_call_id_fail_clo
 from tac.deploy.modal.single_flight import assert_modal_single_flight
 from tac.deploy.worker_dependency_closure import require_worker_dependency_closure
 
-REPO: Final = Path(__file__).resolve().parents[1]
 REMOTE_REPO: Final = Path("/workspace/pact")
 REMOTE_WORKER: Final = REMOTE_REPO / "experiments/ddm_mt1_t4_sign_gate_worker.py"
 APP_NAME: Final = "comma-ddm-mt1-multitoken-sign-gate"
@@ -105,6 +103,10 @@ DEFAULT_GT_POSE: Final = Path(
 )
 DEFAULT_MODEL: Final = LOCAL_ROOT / "stages/20_collateral_finish/ema.mt1.br"
 DEFAULT_SELECTION: Final = LOCAL_ROOT / "inputs/SELECTION.json"
+EXPECTED_DR1_REQUEST_SHA256: Final = (
+    "c9d6d62c8115f6c209576a57d4cbf7e40c2191c542473fa0df33bc82af91dffc"
+)
+DR1_REPAIR_ID: Final = "ddm_dr1_dispatch_infra_repair_20260814"
 
 
 class MT1DispatchError(RuntimeError):
@@ -190,6 +192,229 @@ def require_record(path: Path, record: dict[str, Any]) -> None:
         or sha256_file(path) != str(record["sha256"])
     ):
         raise MT1DispatchError(f"sealed input differs: {path}")
+
+
+def parse_sealed_request_bytes(payload: bytes, expected_sha256: str) -> dict[str, Any]:
+    digest = hashlib.sha256(payload).hexdigest()
+    if digest != expected_sha256:
+        raise MT1DispatchError(
+            f"sealed request SHA-256 differs: expected={expected_sha256} actual={digest}"
+        )
+    try:
+        request = json.loads(payload)
+    except json.JSONDecodeError as exc:
+        raise MT1DispatchError("sealed request is not valid JSON") from exc
+    if not isinstance(request, dict) or request.get("schema") != "ddm_mt1_t4_sign_gate_request.v1":
+        raise MT1DispatchError("sealed request schema differs")
+    payloads = request.get("payloads")
+    if not isinstance(payloads, dict) or not payloads:
+        raise MT1DispatchError("sealed request has no payload table")
+    for name, record in payloads.items():
+        if not isinstance(name, str) or not isinstance(record, dict):
+            raise MT1DispatchError("sealed request payload table is malformed")
+        if not {"path", "bytes", "sha256"}.issubset(record):
+            raise MT1DispatchError(f"sealed request payload record is incomplete: {name}")
+    return request
+
+
+def _entrypoint_option_contract(entrypoint: Any) -> dict[str, Any]:
+    signature = inspect.signature(entrypoint)
+    options: dict[str, dict[str, Any]] = {}
+    for parameter in signature.parameters.values():
+        if parameter.kind not in (
+            inspect.Parameter.POSITIONAL_OR_KEYWORD,
+            inspect.Parameter.KEYWORD_ONLY,
+        ):
+            raise MT1DispatchError(
+                f"unsupported Modal entrypoint parameter kind: {parameter.name}={parameter.kind}"
+            )
+        option = "--" + parameter.name.replace("_", "-")
+        options[option] = {
+            "parameter": parameter.name,
+            "required": parameter.default is inspect.Parameter.empty,
+            "boolean": parameter.annotation is bool
+            or isinstance(parameter.default, bool),
+        }
+    return {
+        "python_signature": str(signature),
+        "options": options,
+    }
+
+
+def validate_main_fire_argv(argv: str) -> dict[str, Any]:
+    """Parse a sealed fire order against the function wrapped by Modal ``::main``."""
+
+    tokens = shlex.split(argv)
+    entrypoint = "experiments/ddm_mt1_modal_multitoken_sign_gate.py::main"
+    try:
+        start = tokens.index(entrypoint) + 1
+    except ValueError as exc:
+        raise MT1DispatchError(f"fire order does not target {entrypoint}") from exc
+    contract = _entrypoint_option_contract(_main_entrypoint)
+    expected = contract["options"]
+    observed: dict[str, str | bool] = {}
+    index = start
+    while index < len(tokens):
+        option = tokens[index]
+        if option not in expected:
+            raise MT1DispatchError(f"fire order has unknown main option: {option}")
+        if option in observed:
+            raise MT1DispatchError(f"fire order repeats main option: {option}")
+        if expected[option]["boolean"]:
+            observed[option] = True
+            index += 1
+            continue
+        if index + 1 >= len(tokens) or tokens[index + 1].startswith("--"):
+            raise MT1DispatchError(f"fire order option has no value: {option}")
+        observed[option] = tokens[index + 1]
+        index += 2
+    missing = sorted(option for option, row in expected.items() if row["required"] and option not in observed)
+    if missing:
+        raise MT1DispatchError(f"fire order is missing required main options: {missing}")
+    for acknowledgement in ("--detach", "--provider-detach-ack"):
+        if observed.get(acknowledgement) is not True:
+            raise MT1DispatchError(f"fire order is missing required acknowledgement: {acknowledgement}")
+    return {
+        "schema": "ddm_mt1_modal_entrypoint_signature_check.v1",
+        "entrypoint": entrypoint,
+        "python_signature": contract["python_signature"],
+        "accepted_options": sorted(expected),
+        "observed_options": observed,
+        "passed": True,
+    }
+
+
+def build_fire_order(
+    *,
+    output: Path,
+    request_record: dict[str, Any],
+    records: dict[str, Any],
+    dispatch_dir: Path,
+) -> dict[str, Any]:
+    argv = shlex.join(
+        [
+            ".venv/bin/modal",
+            "run",
+            "--detach",
+            "experiments/ddm_mt1_modal_multitoken_sign_gate.py::main",
+            "--sealed-request",
+            str(output / "SEALED_REQUEST.json"),
+            "--fire-input-dir",
+            str(output / "fire_inputs"),
+            "--expected-request-sha256",
+            str(request_record["sha256"]),
+            "--output-dir",
+            str(dispatch_dir),
+            "--detach",
+            "--provider-detach-ack",
+        ]
+    )
+    signature_check = validate_main_fire_argv(argv)
+    return {
+        "schema": "ddm_mt1_t4_sign_gate_fire_order.v1",
+        "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+        "owner": "MAIN sole Modal scorer-lane router",
+        "consumer_store": str(output),
+        "fire_trigger": (
+            "MAIN confirms the #978 T4 scorer lane is free and all sealed request/payload "
+            "hashes plus the repaired dispatcher source record still match"
+        ),
+        "exact_argv": argv,
+        "entrypoint_signature_check": signature_check,
+        "dispatcher_source": file_record(Path(__file__)),
+        "sealed_request": request_record,
+        "fire_inputs": records,
+        "remote_retention": {
+            "volume": VOLUME_NAME,
+            "run_id": RUN_ID,
+            "complete_remote_custody": True,
+        },
+        "hard_cap_seconds": HARD_CAP_SECONDS,
+        "t4_usd_per_hour_assumption": T4_USD_PER_HOUR_ASSUMPTION,
+        "hard_cap_cost_usd": ESTIMATED_HARD_CAP_USD,
+        "schedule_derivation": {
+            "endpoint_batches": 24,
+            "arms": 3,
+            "pairs_per_arm": 32,
+            "batch_size": 4,
+            "prior_local_cpu_observation": "completed inside one bounded interactive run",
+            "hard_cap_rationale": "16 minutes bounds the 24-batch T4 sign-only endpoint",
+        },
+        "harvest": {
+            "commands": [
+                f"mkdir -p {output / 'harvest'}",
+                (
+                    f".venv/bin/modal volume get --force {VOLUME_NAME} "
+                    f"{RUN_ID}/FINAL_RESULT.json {output / 'harvest/FINAL_RESULT.json'}"
+                ),
+            ],
+            "complete_remote_custody_command": (
+                f"mkdir -p {output / 'complete_remote_custody'} && "
+                f".venv/bin/modal volume get --force {VOLUME_NAME} "
+                f"{RUN_ID}/ {output / 'complete_remote_custody/'}"
+            ),
+        },
+        "on_positive_t4_sign": (
+            "consume SECOND_TRAIN_FIRE_ORDER only if it exists and all T4 gates are true; "
+            "the local negative created no second train order"
+        ),
+        "does_not_dispatch": True,
+        "score_claim": False,
+    }
+
+
+def reseal_fire_order(
+    *, output: Path, expected_request_sha256: str = EXPECTED_DR1_REQUEST_SHA256
+) -> dict[str, Any]:
+    """Replace only the fire-order envelope; retain request and payload bytes exactly."""
+
+    output = output.resolve()
+    request_path = output / "SEALED_REQUEST.json"
+    request_bytes = request_path.read_bytes()
+    request = parse_sealed_request_bytes(request_bytes, expected_request_sha256)
+    request_record = file_record(request_path)
+    for name, record in request["payloads"].items():
+        require_record(output / "fire_inputs" / name, record)
+    fire_order = build_fire_order(
+        output=output,
+        request_record=request_record,
+        records=request["payloads"],
+        dispatch_dir=output / "dispatch_dr1_repaired",
+    )
+    fire_order["repair_id"] = DR1_REPAIR_ID
+    fire_path = output / "SEALED_FIRE_ORDER.json"
+    prior_record = file_record(fire_path) if fire_path.is_file() else None
+    if prior_record and fire_path.read_bytes() == canonical_json(fire_order):
+        superseded_record = None
+    else:
+        superseded_record = None
+        if prior_record:
+            superseded_path = output / "superseded" / (
+                f"SEALED_FIRE_ORDER.{prior_record['sha256']}.json"
+            )
+            persist_exact_file(fire_path, superseded_path)
+            superseded_record = file_record(superseded_path)
+        atomic_bytes(fire_path, canonical_json(fire_order))
+    superseded_records = [
+        file_record(path)
+        for path in sorted((output / "superseded").glob("SEALED_FIRE_ORDER.*.json"))
+    ]
+    receipt = {
+        "schema": "ddm_mt1_t4_sign_gate_dr1_reseal.v1",
+        "repair_id": DR1_REPAIR_ID,
+        "sealed_request": request_record,
+        "sealed_request_unchanged": request_record["sha256"] == expected_request_sha256,
+        "payloads_reverified": request["payloads"],
+        "superseded_fire_order": superseded_record,
+        "superseded_fire_orders": superseded_records,
+        "sealed_fire_order": file_record(fire_path),
+        "entrypoint_signature_check": fire_order["entrypoint_signature_check"],
+        "modal_dispatched": False,
+        "score_claim": False,
+        "pointer_moved": False,
+    }
+    atomic_json(output / "DR1_RESEAL_RESULT.json", receipt)
+    return receipt
 
 
 def frame0_slave_payload(selection: dict[str, Any]) -> np.ndarray:
@@ -363,63 +588,12 @@ def prepare(
     request_path = output / "SEALED_REQUEST.json"
     persist_exact_bytes(request_path, canonical_json(request))
     request_record = file_record(request_path)
-    command = (
-        ".venv/bin/modal run --detach "
-        "experiments/ddm_mt1_modal_multitoken_sign_gate.py::main "
-        f"--sealed-request {request_path} "
-        f"--fire-input-dir {fire_inputs} "
-        f"--expected-request-sha256 {request_record['sha256']} "
-        f"--output-dir {output / 'dispatch'} --detach --provider-detach-ack"
+    fire_order = build_fire_order(
+        output=output,
+        request_record=request_record,
+        records=records,
+        dispatch_dir=output / "dispatch",
     )
-    fire_order = {
-        "schema": "ddm_mt1_t4_sign_gate_fire_order.v1",
-        "disposition": "QUEUED-WITH-A-FIRE-ORDER",
-        "owner": "MAIN sole Modal scorer-lane router",
-        "consumer_store": str(output),
-        "fire_trigger": (
-            "MAIN confirms the #978 T4 scorer lane is free, terminals the local build claim, "
-            "and all sealed request/source hashes still match"
-        ),
-        "exact_argv": command,
-        "sealed_request": request_record,
-        "fire_inputs": records,
-        "remote_retention": {
-            "volume": VOLUME_NAME,
-            "run_id": RUN_ID,
-            "complete_remote_custody": True,
-        },
-        "hard_cap_seconds": HARD_CAP_SECONDS,
-        "t4_usd_per_hour_assumption": T4_USD_PER_HOUR_ASSUMPTION,
-        "hard_cap_cost_usd": ESTIMATED_HARD_CAP_USD,
-        "schedule_derivation": {
-            "endpoint_batches": 24,
-            "arms": 3,
-            "pairs_per_arm": 32,
-            "batch_size": 4,
-            "prior_local_cpu_observation": "completed inside one bounded interactive run",
-            "hard_cap_rationale": "16 minutes bounds the 24-batch T4 sign-only endpoint",
-        },
-        "harvest": {
-            "commands": [
-                f"mkdir -p {output / 'harvest'}",
-                (
-                    f".venv/bin/modal volume get --force {VOLUME_NAME} "
-                    f"{RUN_ID}/FINAL_RESULT.json {output / 'harvest/FINAL_RESULT.json'}"
-                ),
-            ],
-            "complete_remote_custody_command": (
-                f"mkdir -p {output / 'complete_remote_custody'} && "
-                f".venv/bin/modal volume get --force {VOLUME_NAME} "
-                f"{RUN_ID}/ {output / 'complete_remote_custody/'}"
-            ),
-        },
-        "on_positive_t4_sign": (
-            "consume SECOND_TRAIN_FIRE_ORDER only if it exists and all T4 gates are true; "
-            "the local negative created no second train order"
-        ),
-        "does_not_dispatch": True,
-        "score_claim": False,
-    }
     fire_path = output / "SEALED_FIRE_ORDER.json"
     persist_exact_bytes(fire_path, canonical_json(fire_order))
     seal = {
@@ -520,15 +694,24 @@ worker_image = (
         remote_path=str(REMOTE_REPO / "experiments/__init__.py"),
         copy=False,
     )
+    .add_local_file(
+        "experiments/modal_auth_eval.py",
+        remote_path=str(REMOTE_REPO / "experiments/modal_auth_eval.py"),
+        copy=False,
+    )
+    .add_local_file(
+        "experiments/ddm_js1b_modal_cuda_argmax_field_materializer.py",
+        remote_path=str(
+            REMOTE_REPO / "experiments/ddm_js1b_modal_cuda_argmax_field_materializer.py"
+        ),
+        copy=False,
+    )
     .add_local_dir(
         "experiments/ddm_mt1_runtime",
         remote_path=str(REMOTE_REPO / "experiments/ddm_mt1_runtime"),
         copy=False,
     )
-    .add_local_python_source(
-        "ddm_mt1_modal_multitoken_sign_gate",
-        "ddm_js1b_modal_cuda_argmax_field_materializer",
-    )
+    .add_local_python_source("ddm_mt1_modal_multitoken_sign_gate")
 )
 
 
@@ -586,9 +769,7 @@ def load_sealed(
     expected_sha256: str,
     fire_input_dir: Path,
 ) -> tuple[dict[str, bytes], dict[str, Any]]:
-    if sha256_file(path) != expected_sha256:
-        raise MT1DispatchError("sealed request SHA-256 differs")
-    request = json.loads(path.read_text())
+    request = parse_sealed_request_bytes(path.read_bytes(), expected_sha256)
     payloads: dict[str, bytes] = {}
     for name, record in request["payloads"].items():
         source = fire_input_dir / name
@@ -597,8 +778,7 @@ def load_sealed(
     return payloads, request
 
 
-@app.local_entrypoint()
-def main(
+def _main_entrypoint(
     sealed_request: str,
     fire_input_dir: str,
     expected_request_sha256: str,
@@ -667,6 +847,63 @@ def main(
     print(json.dumps({"call_id": call_id, "run_id": RUN_ID}, sort_keys=True))
 
 
+main = app.local_entrypoint()(_main_entrypoint)
+
+
+@app.function(image=worker_image, cpu=1, timeout=120, memory=1024)
+def run_import_and_seal_parse_smoke(
+    request_bytes: bytes, expected_request_sha256: str
+) -> dict[str, Any]:
+    package_js1b = importlib.import_module(
+        "experiments.ddm_js1b_modal_cuda_argmax_field_materializer"
+    )
+    package_auth = importlib.import_module("experiments.modal_auth_eval")
+    request = parse_sealed_request_bytes(request_bytes, expected_request_sha256)
+    return {
+        "schema": "ddm_mt1_container_import_seal_parse_smoke.v1",
+        "request_sha256": hashlib.sha256(request_bytes).hexdigest(),
+        "payload_count": len(request["payloads"]),
+        "js1b_module": str(Path(package_js1b.__file__).resolve()),
+        "modal_auth_eval_module": str(Path(package_auth.__file__).resolve()),
+        "passed": True,
+        "gpu_requested": False,
+        "scorer_loaded": False,
+        "score_claim": False,
+    }
+
+
+@app.local_entrypoint()
+def smoke_import_and_seal(
+    sealed_request: str,
+    expected_request_sha256: str,
+    output_receipt: str,
+) -> None:
+    request_bytes = Path(sealed_request).resolve().read_bytes()
+    receipt_path = Path(output_receipt).resolve()
+    try:
+        receipt = run_import_and_seal_parse_smoke.remote(
+            request_bytes, expected_request_sha256
+        )
+    except Exception as exc:
+        atomic_json(
+            receipt_path,
+            {
+                "schema": "ddm_mt1_container_import_seal_parse_smoke.v1",
+                "request_sha256": hashlib.sha256(request_bytes).hexdigest(),
+                "passed": False,
+                "worker_receipt_observed": False,
+                "error_class": type(exc).__name__,
+                "error": str(exc),
+                "gpu_requested": False,
+                "scorer_loaded": False,
+                "score_claim": False,
+            },
+        )
+        raise
+    atomic_json(receipt_path, receipt)
+    print(json.dumps(receipt, sort_keys=True))
+
+
 def cli() -> None:
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -680,18 +917,29 @@ def cli() -> None:
     prepare_parser.add_argument("--gt-pose", type=Path, default=DEFAULT_GT_POSE)
     prepare_parser.add_argument("--model", type=Path, default=DEFAULT_MODEL)
     prepare_parser.add_argument("--selection", type=Path, default=DEFAULT_SELECTION)
-    args = parser.parse_args()
-    result = prepare(
-        output=args.output,
-        archive=args.archive,
-        runtime=args.runtime,
-        base_tokens=args.base_tokens,
-        c1_tokens=args.c1_tokens,
-        gt_field=args.gt_field,
-        gt_pose=args.gt_pose,
-        model=args.model,
-        selection_path=args.selection,
+    reseal_parser = subparsers.add_parser("reseal-fire-order")
+    reseal_parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
+    reseal_parser.add_argument(
+        "--expected-request-sha256", default=EXPECTED_DR1_REQUEST_SHA256
     )
+    args = parser.parse_args()
+    if args.command == "prepare":
+        result = prepare(
+            output=args.output,
+            archive=args.archive,
+            runtime=args.runtime,
+            base_tokens=args.base_tokens,
+            c1_tokens=args.c1_tokens,
+            gt_field=args.gt_field,
+            gt_pose=args.gt_pose,
+            model=args.model,
+            selection_path=args.selection,
+        )
+    else:
+        result = reseal_fire_order(
+            output=args.output,
+            expected_request_sha256=args.expected_request_sha256,
+        )
     print(json.dumps(result, indent=2, sort_keys=True))
 
 

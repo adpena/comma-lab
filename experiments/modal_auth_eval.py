@@ -50,6 +50,7 @@ from tac.deploy.modal.auth_eval import (
     validate_modal_auth_eval_pairing,
     write_spawn_metadata,
 )
+from tac.deploy.modal.call_id_ledger import register_dispatched_call_id_fail_closed
 from tac.deploy.modal.mount_ignore import ignore_generated_mount_path
 from tac.repo_io import json_text, read_json, sha256_file, write_json
 
@@ -1475,6 +1476,22 @@ def main(
             )
             raise
         call_id = function_call_id(call)
+        register_dispatched_call_id_fail_closed(
+            call_id=call_id,
+            lane_id=lane_id,
+            label="modal_auth_eval",
+            platform="modal",
+            gpu=gpu_key,
+            expected_axis=axis_label,
+            recipe="experiments/modal_auth_eval.py",
+            max_seconds=int(inflate_timeout) + int(evaluate_timeout),
+            mounted_code_git_head=source_repo_commit,
+            agent=claim_agent,
+            base_archive_sha256=archive_sha256,
+            composed_archive_sha256=archive_sha256,
+            archive_count=1,
+            pair_group_id=pairing.get("pair_group_id"),
+        )
         write_spawn_metadata(
             out_dir=out_dir,
             tool="experiments/modal_auth_eval.py",

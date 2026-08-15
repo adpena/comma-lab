@@ -37,6 +37,7 @@ from tac.deploy.claims import (  # noqa: E402
 from tac.deploy.modal.call_id_ledger import (  # noqa: E402
     TERMINAL_STATUSES,
     query_by_call_id,
+    register_dispatched_call_id_fail_closed,
     update_call_id_outcome,
 )
 from tools.codex_arm_queue import (  # noqa: E402
@@ -432,6 +433,82 @@ def _latest_claim(
     return None
 
 
+def _validated_spawn_registration(
+    metadata: dict[str, Any],
+    *,
+    call_id: str,
+    lane_id: str,
+    instance_job_id: str,
+    agent: str,
+) -> dict[str, Any]:
+    """Authenticate legacy recovery from the exact dispatcher spawn receipt."""
+
+    if metadata.get("schema_version") != "modal_auth_eval_spawn_v1":
+        raise EndpointClosureError("spawn metadata recovery schema differs")
+    expected = {
+        "call_id": call_id,
+        "lane_id": lane_id,
+        "instance_job_id": instance_job_id,
+        "claim_agent": agent,
+        "claim_platform": "modal",
+    }
+    mismatches = {
+        key: {"expected": value, "actual": metadata.get(key)}
+        for key, value in expected.items()
+        if metadata.get(key) != value
+    }
+    if mismatches:
+        raise EndpointClosureError(
+            "spawn metadata does not authenticate ledger recovery: "
+            + json.dumps(mismatches, sort_keys=True)
+        )
+    tool = str(metadata.get("tool") or "")
+    if tool not in {
+        "experiments/modal_auth_eval.py",
+        "experiments/modal_auth_eval_cpu.py",
+    }:
+        raise EndpointClosureError(f"unsupported spawn metadata recovery tool: {tool!r}")
+    axis = str(metadata.get("axis") or "")
+    if not axis:
+        raise EndpointClosureError("spawn metadata recovery has no axis")
+    expected_app = (
+        "comma-auth-eval-cpu"
+        if tool == "experiments/modal_auth_eval_cpu.py"
+        else "comma-auth-eval"
+    )
+    if metadata.get("app") != expected_app:
+        raise EndpointClosureError(
+            f"spawn metadata recovery app/tool mismatch: {metadata.get('app')!r} != {expected_app!r}"
+        )
+    if tool.endswith("_cpu.py") and axis != "contest_cpu":
+        raise EndpointClosureError(
+            f"CPU spawn metadata recovery axis differs: {axis!r}"
+        )
+    local_request = metadata.get("local_request")
+    if not isinstance(local_request, dict):
+        raise EndpointClosureError("spawn metadata recovery has no local request")
+    archive_sha256 = str(local_request.get("archive_sha256") or "")
+    if archive_sha256 and not _SHA256_RE.fullmatch(archive_sha256):
+        raise EndpointClosureError("spawn metadata recovery has invalid archive SHA-256")
+    return {
+        "call_id": call_id,
+        "lane_id": lane_id,
+        "label": "modal_auth_eval_cpu" if tool.endswith("_cpu.py") else "modal_auth_eval",
+        "platform": "modal",
+        "gpu": "CPU" if axis == "contest_cpu" else str(metadata.get("gpu") or "T4"),
+        "expected_axis": axis,
+        "recipe": tool,
+        "dispatched_at_utc": metadata.get("dispatched_at_utc"),
+        "mounted_code_git_head": local_request.get("source_repo_commit"),
+        "agent": agent,
+        "base_archive_sha256": archive_sha256 or None,
+        "composed_archive_sha256": archive_sha256 or None,
+        "archive_count": 1,
+        "pair_group_id": local_request.get("pair_group_id"),
+        "legacy_registration_recovery": RECEIPT_SCHEMA,
+    }
+
+
 def ensure_dual_ledgers_terminal(
     *,
     call_id: str,
@@ -443,6 +520,7 @@ def ensure_dual_ledgers_terminal(
     repo_root: Path = REPO_ROOT,
     claims_path: Path | None = None,
     call_ledger_path: Path | None = None,
+    spawn_metadata: dict[str, Any] | None = None,
     dry_run: bool = False,
 ) -> dict[str, Any]:
     """Close claim first, then call-id ledger, using both canonical writers."""
@@ -465,8 +543,37 @@ def ensure_dual_ledgers_terminal(
         raise EndpointClosureError(f"dual-ledger read failed: {exc}") from exc
     if claim_before is None:
         raise EndpointClosureError(f"no canonical claim row for lane={lane_id} instance-job={instance_job_id}")
+    registration_action = "not_needed"
     if not call_rows_before:
-        raise EndpointClosureError(f"no canonical call-id ledger row for {call_id}")
+        if spawn_metadata is None:
+            raise EndpointClosureError(f"no canonical call-id ledger row for {call_id}")
+        registration = _validated_spawn_registration(
+            spawn_metadata,
+            call_id=call_id,
+            lane_id=lane_id,
+            instance_job_id=instance_job_id,
+            agent=agent,
+        )
+        if dry_run:
+            call_rows_before = [{**registration, "status": "dispatched"}]
+            registration_action = "would_recover_from_spawn_metadata"
+        else:
+            try:
+                register_dispatched_call_id_fail_closed(
+                    **registration,
+                    path=call_ledger_path,
+                    lock_path=call_ledger_path.with_suffix(call_ledger_path.suffix + ".lock"),
+                )
+                call_rows_before = query_by_call_id(call_id, path=call_ledger_path)
+            except (Exception, SystemExit) as exc:
+                raise EndpointClosureError(
+                    f"canonical legacy call-id registration recovery failed: {exc}"
+                ) from exc
+            if not call_rows_before:
+                raise EndpointClosureError(
+                    f"legacy call-id registration recovery wrote no canonical row for {call_id}"
+                )
+            registration_action = "recovered_from_spawn_metadata"
     claim_was_terminal = is_terminal_status(str(claim_before.get("status") or ""))
     call_was_terminal = str(call_rows_before[-1].get("status")) in TERMINAL_STATUSES
 
@@ -512,7 +619,11 @@ def ensure_dual_ledgers_terminal(
     if dry_run:
         return {
             "claim": {"before": claim_before, "action": "no-op" if claim_was_terminal else "would_close"},
-            "call_id": {"before": call_rows_before[-1], "action": "no-op" if call_was_terminal else "would_close"},
+            "call_id": {
+                "before": call_rows_before[-1],
+                "registration_action": registration_action,
+                "action": "no-op" if call_was_terminal else "would_close",
+            },
             "both_terminal": claim_was_terminal and call_was_terminal,
             "dry_run": True,
         }
@@ -544,6 +655,7 @@ def ensure_dual_ledgers_terminal(
         "call_id": {
             "before": call_rows_before[-1],
             "after": call_rows_after[-1],
+            "registration_action": registration_action,
             "action": "no-op" if call_was_terminal else "closed",
         },
         "both_terminal": True,
@@ -922,6 +1034,7 @@ def execute_endpoint_closure(
     repo_root: Path = REPO_ROOT,
     claims_path: Path | None = None,
     call_ledger_path: Path | None = None,
+    spawn_metadata: dict[str, Any] | None = None,
     next_store: Path | None = None,
     modal_executable: Path | None = None,
     volume_get: Callable[..., None] | None = None,
@@ -971,6 +1084,7 @@ def execute_endpoint_closure(
             repo_root=repo_root,
             claims_path=claims_path,
             call_ledger_path=call_ledger_path,
+            spawn_metadata=spawn_metadata,
             dry_run=dry_run,
         )
     except EndpointClosureError as exc:
@@ -1077,6 +1191,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--deadline-s", type=float, default=3 * 3600)
     parser.add_argument("--poll-s", type=float, default=60)
     parser.add_argument("--result-file", type=Path)
+    parser.add_argument("--closure-manifest-file", type=Path)
+    parser.add_argument("--spawn-metadata", type=Path)
     parser.add_argument("--payload-manifest-source", action="append", default=[], type=Path)
     parser.add_argument("--arm-final-message", action="append", default=[], type=Path)
     parser.add_argument("--allow-legacy-manifest", action="store_true")
@@ -1110,7 +1226,15 @@ def main(argv: list[str] | None = None) -> int:
                 "error_class": poll.get("error_class"),
                 "error": poll.get("error"),
             }
+    if args.closure_manifest_file:
+        supplied_manifest = _load_json(args.closure_manifest_file)
+        if result.get("closure_manifest") not in (None, supplied_manifest):
+            raise EndpointClosureError(
+                "result closure manifest conflicts with --closure-manifest-file"
+            )
+        result = {**result, "closure_manifest": supplied_manifest}
     supplemental = [_load_json(path) for path in args.payload_manifest_source]
+    spawn_metadata = _load_json(args.spawn_metadata) if args.spawn_metadata else None
     receipt = execute_endpoint_closure(
         call_id=args.call_id,
         result=result,
@@ -1127,6 +1251,7 @@ def main(argv: list[str] | None = None) -> int:
         fixture_roots=args.fixture_root,
         claims_path=args.claims_path,
         call_ledger_path=args.call_ledger_path,
+        spawn_metadata=spawn_metadata,
         next_store=args.next_store,
         modal_executable=args.modal_executable,
     )

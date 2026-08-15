@@ -1,0 +1,16 @@
+{
+  "schema": "modal_endpoint_closure_manifest.v1",
+  "volume_name": "comma-auth-eval-cache-artifacts",
+  "lane_id": "lane_ddm_f26r_mc36_contest_cpu_20260814",
+  "instance_job_id": "ddm_f26r_mc36_contest_cpu_20260814",
+  "payloads": [
+    {
+      "name": "inflated_outputs_manifest",
+      "remote_path": "ddm_f26r_mc36_contest_cpu_20260814/inflated_output_manifest/inflated_outputs_manifest.json",
+      "bytes": 578,
+      "sha256": "181549a1098812a8dc8be3bb2bcaac3ee7fb090bc97a7a9b60a9458a0d925a0f",
+      "source": "MODAL_REMOTE_RESULT.inflated_outputs_volume_manifest"
+    }
+  ],
+  "legacy_adapter_scope": "The completed F26R CPU call predates AC1 closure_manifest emission; this manifest names the exact volume-backed manifest already recorded in its returned result."
+}

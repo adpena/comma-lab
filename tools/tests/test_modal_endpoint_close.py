@@ -402,6 +402,25 @@ def _active_ledgers(tmp_path: Path) -> tuple[Path, Path, str]:
     return claims, ledger, call_id
 
 
+def _authenticated_spawn_metadata(call_id: str = "fc-ac1-test") -> dict:
+    return {
+        "schema_version": "modal_auth_eval_spawn_v1",
+        "tool": "experiments/modal_auth_eval_cpu.py",
+        "app": "comma-auth-eval-cpu",
+        "axis": "contest_cpu",
+        "call_id": call_id,
+        "lane_id": "lane_ac1_test",
+        "instance_job_id": "modal:ac1-test",
+        "claim_agent": "test-agent",
+        "claim_platform": "modal",
+        "local_request": {
+            "archive_sha256": "a" * 64,
+            "source_repo_commit": "b" * 40,
+            "pair_group_id": "pair-test",
+        },
+    }
+
+
 def test_dual_ledgers_close_and_idempotent_rerun_adds_no_rows(tmp_path: Path) -> None:
     claims, ledger, call_id = _active_ledgers(tmp_path)
     kwargs = {
@@ -425,6 +444,75 @@ def test_dual_ledgers_close_and_idempotent_rerun_adds_no_rows(tmp_path: Path) ->
     assert len(ledger_lines) == len(ledger.read_text().splitlines()) == 2
     assert len(claim_rows) == len([line for line in claims.read_text().splitlines() if "lane_ac1_test" in line]) == 2
     assert query_by_call_id(call_id, path=ledger)[-1]["status"] == "harvested"
+
+
+def test_missing_call_registration_is_recovered_from_exact_spawn_metadata(
+    tmp_path: Path,
+) -> None:
+    claims = tmp_path / "claims.md"
+    claims.write_text(
+        HEADER + "| 2026-08-14T12:00:00Z | test-agent | lane_ac1_test | modal | "
+        "modal:ac1-test | 2026-08-14T15:00:00Z | active_test | test claim |\n"
+    )
+    ledger = tmp_path / "calls.jsonl"
+    receipt = close.execute_endpoint_closure(
+        call_id="fc-ac1-test",
+        result=_result(),
+        poll_kind=POLL_RESULT,
+        output_dir=tmp_path / "output",
+        local_store=tmp_path / "store",
+        lane_id="lane_ac1_test",
+        instance_job_id="modal:ac1-test",
+        agent="test-agent",
+        claims_path=claims,
+        call_ledger_path=ledger,
+        spawn_metadata=_authenticated_spawn_metadata(),
+    )
+    assert receipt["status"] == "CLOSED"
+    assert receipt["ledgers"]["call_id"]["registration_action"] == (
+        "recovered_from_spawn_metadata"
+    )
+    rows = query_by_call_id("fc-ac1-test", path=ledger)
+    assert [row["status"] for row in rows] == ["dispatched", "harvested"]
+
+
+def test_spawn_metadata_mismatch_refuses_registration_recovery(tmp_path: Path) -> None:
+    claims = tmp_path / "claims.md"
+    claims.write_text(
+        HEADER + "| 2026-08-14T12:00:00Z | test-agent | lane_ac1_test | modal | "
+        "modal:ac1-test | 2026-08-14T15:00:00Z | active_test | test claim |\n"
+    )
+    metadata = _authenticated_spawn_metadata()
+    metadata["lane_id"] = "lane-wrong"
+    receipt = close.execute_endpoint_closure(
+        call_id="fc-ac1-test",
+        result=_result(),
+        poll_kind=POLL_RESULT,
+        output_dir=tmp_path / "output",
+        local_store=tmp_path / "store",
+        lane_id="lane_ac1_test",
+        instance_job_id="modal:ac1-test",
+        agent="test-agent",
+        claims_path=claims,
+        call_ledger_path=tmp_path / "calls.jsonl",
+        spawn_metadata=metadata,
+    )
+    assert receipt["status"] == "REFUSED_DUAL_LEDGER"
+    assert "does not authenticate" in receipt["errors"][0]
+
+
+@pytest.mark.parametrize(
+    "relative_path",
+    ["experiments/modal_auth_eval.py", "experiments/modal_auth_eval_cpu.py"],
+)
+def test_auth_dispatchers_register_before_writing_spawn_metadata(
+    relative_path: str,
+) -> None:
+    source = (close.REPO_ROOT / relative_path).read_text()
+    spawn = source.index(".spawn(*call_args)")
+    register = source.index("register_dispatched_call_id_fail_closed(", spawn)
+    metadata = source.index("write_spawn_metadata(", spawn)
+    assert spawn < register < metadata
 
 
 def test_dry_run_does_not_mutate_either_ledger(tmp_path: Path) -> None:

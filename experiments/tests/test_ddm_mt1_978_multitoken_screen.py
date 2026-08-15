@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 import numpy as np
 import torch
 
@@ -70,3 +72,46 @@ def test_t4_fire_order_is_bounded_and_main_owned() -> None:
     assert dispatch.ESTIMATED_HARD_CAP_USD == 0.16
     assert dispatch.INSTANCE_JOB_ID == "modal:ddm_mt1_t4_sign_gate_20260814"
     assert dispatch.DEFAULT_OUTPUT.name == "t4_sign_gate_r1"
+
+
+def test_fire_order_is_checked_against_actual_entrypoint_signature() -> None:
+    order = dispatch.build_fire_order(
+        output=dispatch.DEFAULT_OUTPUT,
+        request_record={"sha256": dispatch.EXPECTED_DR1_REQUEST_SHA256},
+        records={},
+        dispatch_dir=dispatch.DEFAULT_OUTPUT / "dispatch_test",
+    )
+    check = order["entrypoint_signature_check"]
+    assert check["passed"]
+    assert "--output-dir" in check["accepted_options"]
+    assert check["observed_options"]["--detach"] is True
+    with np.testing.assert_raises_regex(
+        dispatch.MT1DispatchError, "missing required main options"
+    ):
+        dispatch.validate_main_fire_argv(
+            order["exact_argv"].replace(
+                f" --output-dir {dispatch.DEFAULT_OUTPUT / 'dispatch_test'}", ""
+            )
+        )
+
+
+def test_sealed_request_parser_is_hash_and_schema_closed() -> None:
+    request = {
+        "schema": "ddm_mt1_t4_sign_gate_request.v1",
+        "payloads": {
+            "a.bin": {"path": "/retained/a.bin", "bytes": 1, "sha256": "0" * 64}
+        },
+    }
+    payload = json.dumps(request).encode()
+    digest = dispatch.hashlib.sha256(payload).hexdigest()
+    assert dispatch.parse_sealed_request_bytes(payload, digest) == request
+    with np.testing.assert_raises_regex(dispatch.MT1DispatchError, "SHA-256 differs"):
+        dispatch.parse_sealed_request_bytes(payload, "f" * 64)
+
+
+def test_dispatcher_uses_one_explicit_experiments_package_import_topology() -> None:
+    source = dispatch.Path(dispatch.__file__).read_text()
+    assert 'importlib.import_module("experiments.modal_auth_eval")' in source
+    assert '"experiments/modal_auth_eval.py"' in source
+    assert '"experiments/ddm_js1b_modal_cuda_argmax_field_materializer.py"' in source
+    assert "except ModuleNotFoundError" not in source
