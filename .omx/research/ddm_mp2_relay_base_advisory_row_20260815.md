@@ -42,3 +42,21 @@ be pose-sensitivity-weighted (pose term in the per-coefficient gate, not bytes+s
 a depth map selected without a pose channel repeats this refusal by construction. The
 FiLM-row prune family (candidate 2 running) is a DIFFERENT mechanism (row sparsity vs
 precision cut) — pose risk remains, same gate applies.
+
+## RELAY 5 (operator doctrine 2026-08-15 "All negative signal is signal that directs us to
+## what needs engineering and design and optimization attention and love" — the instruments)
+The refusal trio (wd2 student · qs4 stale-Schur · q3/q4) all point at ONE engineering object:
+a measured PER-COEFFICIENT POSE-SENSITIVITY FIELD over the carrier pool. Do not reinvent it —
+assets that exist:
+- ms6 receiver-support probe pattern (perturb at the actual quantum step THROUGH the real
+  receiver/R/uint8/scorer; probe-then-aggregate, retained custody) — the proven mechanism for
+  exactly this field, at row/tensor granularity.
+- Strided/stratified subset law (m88/m96): a pose FD probe on a prefix subset is
+  anti-conservative 2.5–4.2×; stride the pairs.
+- pz4a DEAD-END (do not redo): sensitivity-allocated coarsening of the POSE coefficients
+  themselves came out +2,232 B net (#1062). The live question is the SEMANTIC/FiLM pool's
+  pose sensitivity through the RENDER — a different object.
+- wd3 (parallel arm) is the training-time version of the same cure (pose term in-loop);
+  your Stage-2 gate is the compress-time version. Same law, two surfaces.
+Minimal Stage-2 compliance: per-row/per-tensor FD pose probe at quantization step size on a
+strided pair subset → pose channel in the waterfill metric → joint remeasure on survivors.
