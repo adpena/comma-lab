@@ -266,7 +266,7 @@ archive sha e9c4a9ed5e6bef89d228ca877a9f9e37345e3c79dc07ba20087c218ff89fcf87 @16
 teacher cache sha prefix 695023d4 (VERIFY full sha from wd2 receipts before citing) · mirror
 post-sweep sha fa7c4bf51d47a6140ec0f95275ebf86b0e6c3c1dc00caff03a417ee989645799 · same-instrument
 base receipt d_seg 0.00042714 / d_pose 1.4747e-4 / S 0.20280753928705508 (ddm_hv1_base_advisory_
-n600_cpu/contest_auth_eval.json) · av2 landing commit  · amendment commits (quantum/regions/
+n600_cpu/contest_auth_eval.json) · av2 landing commit b93c7a1cb0 · amendment commits (quantum/regions/
 cells + selective/surgical) in charter history.
 SCOPE reductions allowed: gate-subset size (strided/stratified per clause 4d), smoke epoch
 counts, arm-count within the sealed W0→D56→F64→W96 order. MECHANISM reductions: NONE — the
