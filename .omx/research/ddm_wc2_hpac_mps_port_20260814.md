@@ -627,3 +627,39 @@ Lesson (r1→r3 chain, recorded once): a byte-closed candidate is
 archive+receiver JOINTLY — the sha pin caught the archive mismatch (r1), the
 format reader caught the receiver mismatch (r3). Both refusals were the
 custody system working; the race's own decode tree was always the submission.
+
+## 5i. POINTER MOVED + the composition campaign (2026-08-15)
+
+**THE ROW LANDED.** v2 T4 auth eval (call `fc-01M02QMN3SQ9SNHXZMRWXYEJEW`, 421.6 s, score_claim=True):
+**S = 0.1600920261571558 @ 183,502 B [contest-CUDA T4 n600]** — seg 0.029611 + pose
+0.0082946 (both IDENTICAL to MC36, as the identity race guaranteed) + rate 0.1221864.
+Realized score matches the projection to the last printed digit. Δ vs the prior frontier
+0.1619344578804448: **−1.8424e-3** (~526 canonical bands) — the largest single pointer
+move of the micro-campaign era. Pointer promoted via posterior backfill (accepted: 1;
+custody dir `experiments/results/modal_auth_eval/ddm_rx2_e480b_hpac_winner_v2_…_cuda/`;
+one extraction defect cured en route: the remote stored artifacts as Python bytes-repr
+strings — recovered via ast.literal_eval, 8 files). effective_frontier now 0.1600920261571558.
+
+**Projection reconciliation (operator "you projected a sub 0.15 score earlier" — answered
+with receipts):** the trainer's ep480 estimate was tokens 113,229 + model 17,991 = 131,220 B
+→ S ≈ 0.1253 IF that were the archive. Tokens realized almost exactly (112,749). The model
+section realized at **70,557 B vs the 17,991 B estimate — a 3.92× serialization gap =
+52,566 B = 0.0350 S.** That gap is now THE named lever: sub-0.15 needs only ≥15,153 B of
+it recovered losslessly (→ 0.14999); full closure → ~0.1251. Arm ddm_mz1_model_section_rate_race
+SPAWNED (charter .omx/research/charters/ddm_mz1_model_section_rate_race_20260815.md).
+
+**The composition campaign (operator "Composing QAT long burn and micro edits and all"):**
+three independent axes on the SAME vehicle, composed in dependency order:
+1. **QAT long burn (tokens).** The e480b endpoint refit (descent_law_fit_e480b.json)
+   REVERSED the law form: power (alpha 0.14, rms 680 B) beats exp-floor at this depth,
+   fitted QAT asymptote 118,147 B — the descent has NOT floored. Projected ~1.2 KB/doubling
+   of QAT epochs (~−8e-4 S per doubling; the 60-ep exp-floor's "~7 B left" was
+   ENTRY_STATE_CONDITIONAL exactly as labeled). Next fire: e960 continuation from the ep480
+   checkpoint, overnight Metal (MAIN-fire, resume-flag verification owed first — never-invent-flags).
+2. **mz1 model-section recode (rate).** Up to −52,566 B; the identity race's cpu-decode
+   stage is the built verifier. LIVE.
+3. **Micro-edit bank (distortion).** qs2 −4.375e-6 + re1 −1.207e-6 measured on the
+   MC36/cp135 lineage; decoded tokens are byte-identical in the e480b winner so the edits
+   transfer semantically but must be RE-COMPILED against the final composed archive's coder.
+Order: burn endpoint → identity race → model recode → micro-edit recompile → ONE T4 row.
+Modal ≈$5.9/$20 (r1+r3 refusals + v2 421 s).
