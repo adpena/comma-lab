@@ -839,6 +839,15 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--resume-from", type=Path)
     parser.add_argument(
+        "--resume-allow-trainer-drift",
+        action="store_true",
+        help=(
+            "Allow resume when ONLY the trainer file's own hash drifted from the "
+            "checkpoint (e.g. a resume-gate fix). All cache/init/intake/config/"
+            "hardware identity guards stay strict; the drift is printed loudly."
+        ),
+    )
+    parser.add_argument(
         "--stop-after-epoch",
         type=int,
         help="test-only governed pause after publishing this epoch checkpoint",
@@ -1090,8 +1099,33 @@ def main() -> None:
         )
     else:
         observed_identity = resume.get("run_identity")
-        if observed_identity != run_identity:
-            raise CL1TrainingError("--resume-from run identity differs; config/input/source drift refused")
+        # launch_git_sha moves on ANY repo commit (even an unrelated memo), which
+        # would brick resume forever; behavioral drift is still fully guarded by
+        # trainer_sha256, source/intake/cache/init hashes, config, and hardware.
+        _volatile = {"launch_git_sha"}
+        if args.resume_allow_trainer_drift:
+            # Explicit, recorded override: the trainer file changed since the
+            # checkpoint (e.g. a resume-gate fix). Cache/init/intake/config/
+            # hardware guards stay strict; the drift is printed, never silent.
+            _volatile |= {"trainer_sha256", "trainer_source_identity_sha256"}
+            print(
+                "[resume] trainer drift EXPLICITLY allowed: "
+                f"ckpt={str((observed_identity or {}).get('trainer_sha256'))[:16]} "
+                f"now={str(run_identity.get('trainer_sha256'))[:16]}",
+                flush=True,
+            )
+        observed_cmp = {k: v for k, v in (observed_identity or {}).items() if k not in _volatile}
+        current_cmp = {k: v for k, v in run_identity.items() if k not in _volatile}
+        if observed_cmp != current_cmp:
+            drift = sorted(
+                k
+                for k in set(observed_cmp) | set(current_cmp)
+                if observed_cmp.get(k) != current_cmp.get(k)
+            )
+            raise CL1TrainingError(
+                "--resume-from run identity differs; config/input/source drift refused; "
+                f"drifting keys: {drift}"
+            )
         optimizer.load_state_dict(resume["optimizer_state_dict"])
         scheduler.load_state_dict(resume["scheduler_state_dict"])
         if resume.get("ema_policy") != ema_policy:
