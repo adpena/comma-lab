@@ -619,6 +619,10 @@ worker_image = (
     .env(
         {
             "DALI_DISABLE_NVML": DALI_DISABLE_NVML_VALUE,
+            # Catalog #244 canonical CUDA env: the worker enables
+            # torch.use_deterministic_algorithms(True), and CuBLAS einsum
+            # refuses without a workspace config (r4 remote rc=1 receipt).
+            "CUBLAS_WORKSPACE_CONFIG": ":4096:8",
             "PYTHONPATH": REMOTE_PYTHONPATH,
         }
     )
