@@ -186,19 +186,32 @@ def evaluate(config: Mapping[str, Any], *, started_at: float, now: float) -> dic
 
 
 def atomic_write_once(path: Path, payload: Mapping[str, Any]) -> bool:
-    """Atomically publish ``payload`` without overwriting an earlier alert."""
+    """Publish one durable alert without requiring hard-link support."""
 
     path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_name(f".{path.name}.tmp.{os.getpid()}")
     data = json.dumps(payload, indent=2, sort_keys=True, allow_nan=False) + "\n"
-    tmp.write_text(data, encoding="utf-8")
-    try:
-        os.link(tmp, path)
-    except FileExistsError:
+    if path.exists():
         return False
+    claim = path.with_name(f".{path.name}.publish-lock")
+    try:
+        claim.mkdir()
+    except FileExistsError as exc:
+        if path.exists():
+            return False
+        raise RuntimeError(f"alert publish lock exists without alert: {claim}") from exc
+    tmp = path.with_name(f".{path.name}.tmp.{os.getpid()}")
+    try:
+        if path.exists():
+            return False
+        with tmp.open("x", encoding="utf-8") as handle:
+            handle.write(data)
+            handle.flush()
+            os.fsync(handle.fileno())
+        tmp.replace(path)
+        return True
     finally:
         tmp.unlink(missing_ok=True)
-    return True
+        claim.rmdir()
 
 
 def run(config: Mapping[str, Any], *, once: bool = False) -> int:

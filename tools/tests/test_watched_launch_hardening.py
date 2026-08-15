@@ -29,6 +29,54 @@ def _load(name: str, path: Path):
 
 launch_mod = _load("watched_launch_launcher_test", LAUNCHER)
 watch_mod = _load("watched_launch_monitor_test", REPO / "tools" / "codex_arm_watch.py")
+liveness_mod = _load("watched_launch_liveness_test", LIVENESS)
+quality_mod = _load("watched_launch_quality_test", QUALITY)
+
+
+def _quality_config(tmp_path: Path, log: Path, pid_file: Path) -> Path:
+    path = tmp_path / "quality-config.json"
+    path.write_text(
+        json.dumps(
+            {
+                "schema": "pact.run_quality_poller.config.v1",
+                "log_path": str(log),
+                "pid_file": str(pid_file),
+                "telemetry_path": str(tmp_path / "quality-telemetry.jsonl"),
+                "alert_path": str(tmp_path / "quality-alert.json"),
+                "poll_s": 1,
+                "eval_period_s": 10,
+                "stale_periods": 3,
+                "startup_grace_s": 0,
+                "json_marker": "estimated_joint_bytes",
+                "fields": {
+                    "epoch": "epoch",
+                    "value": "estimated_joint_bytes",
+                    "phase": "phase",
+                    "finite": ["bpp", "top1_error"],
+                },
+                "bar_value": 131220,
+                "bar_start_epoch": 481,
+                "phase_knee": {
+                    "epoch": 481,
+                    "window_epochs": 3,
+                    "shock_multiplier": 1.25,
+                    "continuous_phase": "continuous",
+                },
+                "best_not_latest": {
+                    "phase": "discrete_qat",
+                    "min_rows": 4,
+                    "lag_epochs": 6,
+                },
+                "alert_conditions": {
+                    "joint_regression": False,
+                    "qat_knee_shock": False,
+                    "nan_or_garbage": True,
+                    "stale_telemetry": False,
+                },
+            }
+        )
+    )
+    return path
 
 
 def _run_launcher(tmp_path: Path, *args: str, timeout: float = 15) -> subprocess.CompletedProcess[str]:
@@ -349,6 +397,23 @@ def test_liveness_watcher_dead_pid_round_trip(tmp_path: Path) -> None:
     assert len(lines) == 1 and "ALERT rc=1" in lines[0]
 
 
+@pytest.mark.parametrize(
+    "writer",
+    [liveness_mod.atomic_write_once, quality_mod._atomic_write_once],
+)
+def test_watcher_alert_publish_does_not_require_hard_links(
+    tmp_path: Path, monkeypatch, writer
+) -> None:
+    def hard_link_is_unsupported(*_args, **_kwargs):
+        raise OSError(45, "Operation not supported")
+
+    monkeypatch.setattr(os, "link", hard_link_is_unsupported)
+    alert = tmp_path / "watcher.alert.json"
+    assert writer(alert, {"sequence": 1}) is True
+    assert writer(alert, {"sequence": 2}) is False
+    assert json.loads(alert.read_text()) == {"sequence": 1}
+
+
 def test_rx2_quality_semantics_are_config_driven(tmp_path: Path) -> None:
     pid_file = tmp_path / "child.pid"
     pid_file.write_text(f"{os.getpid()}\n")
@@ -413,6 +478,120 @@ def test_rx2_quality_semantics_are_config_driven(tmp_path: Path) -> None:
     payload = json.loads(alert.read_text())
     assert payload["reason"] == "joint_regression"
     assert payload["bar"] == 186073
+
+
+def test_quality_regression_band_alerts_on_top1_without_joint_regression(tmp_path: Path) -> None:
+    pid_file = tmp_path / "child.pid"
+    pid_file.write_text(f"{os.getpid()}\n")
+    log = tmp_path / "run.log"
+    log.write_text(
+        json.dumps(
+            {
+                "epoch": 482,
+                "phase": "discrete_qat",
+                "estimated_joint_bytes": 130000,
+                "bpp": 1.0,
+                "top1_error": 0.0021,
+            }
+        )
+        + "\n"
+    )
+    alert = tmp_path / "quality.alert"
+    config = tmp_path / "quality.json"
+    config.write_text(
+        json.dumps(
+            {
+                "schema": "pact.run_quality_poller.config.v1",
+                "log_path": str(log),
+                "pid_file": str(pid_file),
+                "telemetry_path": str(tmp_path / "telemetry.jsonl"),
+                "alert_path": str(alert),
+                "poll_s": 1,
+                "eval_period_s": 2880,
+                "stale_periods": 3,
+                "startup_grace_s": 0,
+                "json_marker": "estimated_joint_bytes",
+                "fields": {
+                    "epoch": "epoch",
+                    "value": "estimated_joint_bytes",
+                    "phase": "phase",
+                    "finite": ["bpp", "top1_error"],
+                },
+                "bar_value": 131220,
+                "bar_start_epoch": 481,
+                "regression_bands": [
+                    {
+                        "label": "top1_error_parent_discrete_qat_max",
+                        "field": "top1_error",
+                        "upper": 0.002,
+                        "start_epoch": 481,
+                    }
+                ],
+                "phase_knee": {
+                    "epoch": 481,
+                    "window_epochs": 3,
+                    "shock_multiplier": 1.25,
+                    "continuous_phase": "continuous",
+                },
+                "best_not_latest": {
+                    "phase": "discrete_qat",
+                    "min_rows": 4,
+                    "lag_epochs": 6,
+                },
+                "alert_conditions": {
+                    "joint_regression": False,
+                    "qat_knee_shock": False,
+                    "nan_or_garbage": True,
+                    "stale_telemetry": False,
+                },
+            }
+        )
+    )
+    result = subprocess.run(
+        [sys.executable, str(QUALITY), "--config", str(config), "--once"],
+        capture_output=True,
+        text=True,
+        timeout=10,
+    )
+    assert result.returncode == 1
+    payload = json.loads(alert.read_text())
+    assert payload["reason"] == "regression_band"
+    assert payload["field"] == "top1_error"
+    assert payload["upper"] == 0.002
+
+
+def test_quality_regression_band_fails_closed_when_field_is_missing(tmp_path: Path) -> None:
+    pid_file = tmp_path / "child.pid"
+    pid_file.write_text(f"{os.getpid()}\n")
+    log = tmp_path / "run.log"
+    log.write_text(
+        json.dumps(
+            {
+                "epoch": 482,
+                "phase": "discrete_qat",
+                "estimated_joint_bytes": 130000,
+                "bpp": 1.0,
+            }
+        )
+        + "\n"
+    )
+    config = quality_mod.load_config(_quality_config(tmp_path, log, pid_file))
+    config["conditions"]["nan_or_garbage"] = False
+    config["regression_bands"] = [
+        {
+            "label": "top1_error_parent_band",
+            "field": "top1_error",
+            "upper": 0.002,
+            "start_epoch": 481,
+        }
+    ]
+    alert, _ = quality_mod.poll_once(config, quality_mod.PollState(), now=1.0)
+    assert alert == {
+        "reason": "regression_band_unreadable",
+        "label": "top1_error_parent_band",
+        "field": "top1_error",
+        "epoch": 482,
+    }
 
 
 def test_arm_watchers_spawns_both_canonical_tools_before_job(tmp_path: Path) -> None:

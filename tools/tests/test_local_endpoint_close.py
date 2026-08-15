@@ -52,6 +52,10 @@ def _completed_run(tmp_path: Path, *, source_rc: int = 0, checkpoints: bool = Tr
     log = run_root / "launcher/run.log"
     rows = []
     for index, epoch in enumerate(range(482, 498, 2)):
+        if checkpoints:
+            periodic = stage.parent / "periodic" / f"epoch_{epoch:04d}.pt"
+            periodic.parent.mkdir(parents=True, exist_ok=True)
+            periodic.write_bytes(f"retained-periodic-{epoch}".encode())
         rows.append(
             json.dumps(
                 {
@@ -82,10 +86,20 @@ def test_completed_endpoint_refits_hashes_payloads_and_emits_contained_chain(tmp
     receipt = LEC.execute_closure(run_root=run_root, done_receipt_path=done, output_dir=output)
     assert receipt["status"] == "CLOSED"
     assert receipt["retained_source_done_receipt"]["sha256"] == receipt["source_done_receipt"]["sha256"]
-    assert {row["path"] for row in receipt["payloads"]} == {str(save), str(stage)}
+    selected = stage.parent / "periodic/epoch_0496.pt"
+    assert {row["path"] for row in receipt["payloads"]} == {
+        str(save),
+        str(stage),
+        str(selected),
+    }
     assert all(len(row["sha256"]) == 64 and row["bytes"] > 0 for row in receipt["payloads"])
     fit = json.loads((output / "descent_law_refit.json").read_text())
     assert fit["schema"] == "hpac_descent_law_fit.v1"
+    selection = json.loads((output / "checkpoint_joint_proxy_selection.json").read_text())
+    assert selection["schema"] == "hpac_checkpoint_joint_proxy_selection.v1"
+    assert selection["selected"]["epoch"] == 496
+    assert selection["selected_checkpoint"]["path"] == str(selected)
+    assert selection["score_claim"] is False
     order = json.loads((output / "NEXT_FIRE_ORDER.json").read_text())
     assert [step["order"] for step in order["steps"]] == [1, 2, 3, 4]
     assert [step["disposition"] for step in order["steps"]] == [
@@ -99,6 +113,7 @@ def test_completed_endpoint_refits_hashes_payloads_and_emits_contained_chain(tmp
         for step in order["steps"]
     )
     assert order["paid_or_scorer_work_launched"] is False
+    assert order["steps"][0]["selection"]["selected_checkpoint"]["path"] == str(selected)
     note = (output / "TERMINAL_NOTE.md").read_text()
     assert "PUSH NOTIFICATION" in note and "no paid or scorer work" in note
     assert (output / "ENDPOINT_CLOSURE.done.json").is_file()
@@ -124,7 +139,23 @@ def test_missing_final_checkpoint_refuses_after_retaining_fit_receipt(tmp_path: 
     receipt = LEC.execute_closure(run_root=run_root, done_receipt_path=done, output_dir=output)
     assert receipt["status"] == "REFUSED_CHECKPOINT_OR_REFIT_CUSTODY"
     assert any("final checkpoint custody is incomplete" in error for error in receipt["errors"])
+    assert receipt["fit"] is not None
     assert (output / "descent_law_refit.json").is_file()
+    assert not (output / "NEXT_FIRE_ORDER.json").exists()
+
+
+def test_missing_periodic_checkpoint_refuses_joint_proxy_selection(tmp_path: Path) -> None:
+    run_root, done, save, _ = _completed_run(tmp_path)
+    periodic = save.with_name(save.stem + ".checkpoints") / "periodic"
+    for path in periodic.iterdir():
+        path.unlink()
+    periodic.rmdir()
+    output = tmp_path / "closure"
+    receipt = LEC.execute_closure(run_root=run_root, done_receipt_path=done, output_dir=output)
+    assert receipt["status"] == "REFUSED_CHECKPOINT_OR_REFIT_CUSTODY"
+    assert any("selection failed" in error for error in receipt["errors"])
+    assert receipt["fit"] is not None
+    assert len(receipt["payloads"]) == 2
     assert not (output / "NEXT_FIRE_ORDER.json").exists()
 
 
@@ -172,3 +203,25 @@ def test_unknown_prior_terminal_status_is_not_silently_adopted(tmp_path: Path) -
     _write_json(output / LEC.RECEIPT_NAME, receipt)
     with pytest.raises(LEC.LocalEndpointCloseError, match="status is unknown"):
         LEC.execute_closure(run_root=run_root, done_receipt_path=done, output_dir=output)
+
+
+def test_corrupt_v2_selection_is_not_silently_adopted(tmp_path: Path) -> None:
+    run_root, done, _, _ = _completed_run(tmp_path)
+    output = tmp_path / "closure"
+    receipt = LEC.execute_closure(run_root=run_root, done_receipt_path=done, output_dir=output)
+    receipt["selection"] = {}
+    _write_json(output / LEC.RECEIPT_NAME, receipt)
+    with pytest.raises(LEC.LocalEndpointCloseError, match="lacks payload"):
+        LEC.execute_closure(run_root=run_root, done_receipt_path=done, output_dir=output)
+
+
+def test_live_v1_closer_receipt_remains_replayable_after_selector_upgrade(tmp_path: Path) -> None:
+    run_root, done, _, _ = _completed_run(tmp_path)
+    output = tmp_path / "closure"
+    receipt = LEC.execute_closure(run_root=run_root, done_receipt_path=done, output_dir=output)
+    receipt["schema"] = LEC.LEGACY_RECEIPT_SCHEMA
+    receipt.pop("selection")
+    _write_json(output / LEC.RECEIPT_NAME, receipt)
+    assert LEC.execute_closure(
+        run_root=run_root, done_receipt_path=done, output_dir=output
+    ) == receipt

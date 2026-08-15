@@ -343,6 +343,53 @@ def _parent_endpoint(log_path: Path) -> dict[str, Any]:
         raise ContinuationCompositionError("parent endpoint epoch/joint bytes are not integers") from exc
 
 
+def _parent_regression_band(
+    log_path: Path,
+    *,
+    field: str,
+    phase_field: str,
+    phase: str,
+    start_epoch: int,
+    tail_rows: int,
+) -> dict[str, Any]:
+    if tail_rows < 1:
+        raise ContinuationCompositionError("regression-band tail_rows must be positive")
+    observations: dict[int, float] = {}
+    for line in log_path.read_text(encoding="utf-8", errors="replace").splitlines():
+        if "{" not in line or field not in line:
+            continue
+        try:
+            row = json.loads(line[line.index("{") :])
+            epoch = int(row["epoch"])
+            value = float(row[field])
+        except (KeyError, TypeError, ValueError, json.JSONDecodeError):
+            continue
+        if row.get(phase_field) != phase or not math.isfinite(value):
+            continue
+        if epoch in observations:
+            raise ContinuationCompositionError(
+                f"parent log has duplicate {field!r} observations at epoch {epoch}"
+            )
+        observations[epoch] = value
+    if len(observations) < tail_rows:
+        raise ContinuationCompositionError(
+            f"parent log has {len(observations)} finite {field!r} observations in phase "
+            f"{phase!r}, fewer than required tail_rows={tail_rows}: {log_path}"
+        )
+    selected = sorted(observations.items())[-tail_rows:]
+    return {
+        "label": f"{field}_parent_{phase}_tail_max",
+        "field": field,
+        "upper": max(value for _, value in selected),
+        "start_epoch": start_epoch,
+        "source_phase": phase,
+        "source_rows": len(selected),
+        "source_total_phase_rows": len(observations),
+        "source_epoch_min": min(epoch for epoch, _ in selected),
+        "source_epoch_max": max(epoch for epoch, _ in selected),
+    }
+
+
 def locate_resume_checkpoint(parent_argv: Sequence[str], continuation_of_epochs: int) -> Path:
     save = Path(_option_value(parent_argv, "--save")).expanduser().resolve(strict=False)
     checkpoint_root = save.with_name(save.stem + ".checkpoints")
@@ -603,6 +650,44 @@ def compose_continuation(
     )
     quality["bar_value"] = endpoint["joint_bytes"]
     quality["bar_start_epoch"] = continuation_of_epochs + 1
+    conditions = quality.get("alert_conditions")
+    if not isinstance(conditions, dict):
+        raise ContinuationCompositionError("parent quality watcher has no alert_conditions object")
+    conditions["joint_regression"] = True
+    fields = quality.get("fields")
+    finite_fields = fields.get("finite") if isinstance(fields, dict) else None
+    phase_field = fields.get("phase") if isinstance(fields, dict) else None
+    if not isinstance(finite_fields, list) or "top1_error" not in finite_fields:
+        raise ContinuationCompositionError(
+            "parent quality watcher must finite-check top1_error before deriving its regression band"
+        )
+    if not isinstance(phase_field, str) or not phase_field:
+        raise ContinuationCompositionError("parent quality watcher has no fields.phase name")
+    best = quality.get("best_not_latest")
+    best_phase = best.get("phase") if isinstance(best, dict) else None
+    best_min_rows = best.get("min_rows") if isinstance(best, dict) else None
+    if not isinstance(best_phase, str) or not best_phase:
+        raise ContinuationCompositionError("parent quality watcher has no best_not_latest phase")
+    if isinstance(best_min_rows, bool) or not isinstance(best_min_rows, int) or best_min_rows < 1:
+        raise ContinuationCompositionError(
+            "parent quality watcher best_not_latest.min_rows must be a positive integer"
+        )
+    existing_bands = quality.get("regression_bands", [])
+    if not isinstance(existing_bands, list) or not all(
+        isinstance(row, dict) for row in existing_bands
+    ):
+        raise ContinuationCompositionError("parent quality watcher regression_bands is malformed")
+    top1_band = _parent_regression_band(
+        parent_run_dir / "launcher/run.log",
+        field="top1_error",
+        phase_field=phase_field,
+        phase=best_phase,
+        start_epoch=continuation_of_epochs + 1,
+        tail_rows=best_min_rows,
+    )
+    quality["regression_bands"] = [
+        row for row in existing_bands if row.get("field") != "top1_error"
+    ] + [top1_band]
     if isinstance(quality.get("phase_knee"), dict):
         quality["phase_knee"]["epoch"] = continuation_of_epochs + 1
     _atomic_json(liveness_path, liveness)
@@ -718,6 +803,8 @@ def compose_continuation(
             "quality": _file_record(quality_path),
             "quality_bar_value": endpoint["joint_bytes"],
             "bar_start_epoch": continuation_of_epochs + 1,
+            "joint_regression": True,
+            "top1_error_regression_band": top1_band,
         },
         "trainer_argv": trainer_argv,
         "closer_launcher_argv": closer_cmd,

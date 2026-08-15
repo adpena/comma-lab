@@ -37,19 +37,23 @@ def _parent_fixture(tmp_path: Path) -> tuple[Path, Path]:
     checkpoint.write_bytes(b"retained-parent-checkpoint")
     log = parent / "launcher/run.log"
     log.parent.mkdir(parents=True)
-    log.write_text(
-        json.dumps(
-            {
-                "epoch": 480,
-                "phase": "discrete_qat",
-                "estimated_joint_bytes": 131220,
-                "bpp": 0.1,
-                "top1_error": 0.01,
-            }
+    rows = [
+        {
+            "epoch": epoch,
+            "phase": "discrete_qat",
+            "estimated_joint_bytes": 131220 if epoch == 480 else 132000,
+            "bpp": 0.1,
+            "top1_error": top1_error,
+        }
+        for epoch, top1_error in (
+            (472, 0.02),
+            (474, 0.009),
+            (476, 0.008),
+            (478, 0.007),
+            (480, 0.01),
         )
-        + "\n",
-        encoding="utf-8",
-    )
+    ]
+    log.write_text("".join(json.dumps(row) + "\n" for row in rows), encoding="utf-8")
     liveness = tmp_path / "parent_liveness.json"
     quality = tmp_path / "parent_quality.json"
     _write_json(
@@ -244,6 +248,23 @@ def test_compose_positive_control_seals_full_command_and_derived_watchers(tmp_pa
     )
     quality = json.loads((run_root / "launcher/generated_quality.json").read_text())
     assert quality["bar_value"] == 131220 and quality["bar_start_epoch"] == 481
+    assert quality["alert_conditions"]["joint_regression"] is True
+    assert quality["regression_bands"] == [
+        {
+            "field": "top1_error",
+            "label": "top1_error_parent_discrete_qat_tail_max",
+            "source_epoch_max": 480,
+            "source_epoch_min": 474,
+            "source_phase": "discrete_qat",
+            "source_rows": 4,
+            "source_total_phase_rows": 5,
+            "start_epoch": 481,
+            "upper": 0.01,
+        }
+    ]
+    assert result["watcher_configs"]["top1_error_regression_band"] == quality[
+        "regression_bands"
+    ][0]
     quality_log = Path(quality["log_path"])
     assert run_root in quality_log.parents and parent not in quality_log.parents
     launch = (run_root / "launcher/launch.sh").read_text()
@@ -257,6 +278,29 @@ def test_compose_positive_control_seals_full_command_and_derived_watchers(tmp_pa
     assert "--resume-from" in launch and str(checkpoint) in launch
     assert "--arm-watchers" in launch and "--done-receipt" in launch
     assert not (run_root / "launcher/run.log").exists()
+
+
+def test_parent_regression_band_refuses_insufficient_terminal_rows(tmp_path: Path) -> None:
+    log = tmp_path / "run.log"
+    log.write_text(
+        json.dumps(
+            {
+                "epoch": 480,
+                "phase": "discrete_qat",
+                "top1_error": 0.01,
+            }
+        )
+        + "\n"
+    )
+    with pytest.raises(FWC.ContinuationCompositionError, match="fewer than required"):
+        FWC._parent_regression_band(
+            log,
+            field="top1_error",
+            phase_field="phase",
+            phase="discrete_qat",
+            start_epoch=481,
+            tail_rows=2,
+        )
 
 
 def test_newest_checkpoint_ambiguity_refuses(tmp_path: Path) -> None:

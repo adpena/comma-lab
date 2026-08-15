@@ -2,9 +2,10 @@
 """Close a completed local HPAC continuation without firing downstream work.
 
 The process is safe to arm at launch: it waits for the canonical detached-run
-done receipt, fits the retained log, inventories both final checkpoints, and
-publishes a typed fire order for MAIN.  It never invokes a scorer, provider,
-identity race, archive compiler, or auth evaluation.
+done receipt, fits the retained log, inventories both final checkpoints, selects
+a retained periodic checkpoint by a declared joint proxy, and publishes a typed
+fire order for MAIN. It never invokes a scorer, provider, identity race, archive
+compiler, or auth evaluation.
 """
 
 from __future__ import annotations
@@ -22,10 +23,12 @@ from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 FITTER = REPO_ROOT / "tools/fit_hpac_descent_law.py"
+SELECTOR = REPO_ROOT / "tools/select_hpac_checkpoint.py"
 DONE_SCHEMA = "detached_local_process_done.v2"
 ARM_SCHEMA = "detached_local_process_receipt_arm.v1"
-RECEIPT_SCHEMA = "local_hpac_endpoint_closure_receipt.v1"
-FIRE_ORDER_SCHEMA = "local_hpac_endpoint_next_fire_order.v1"
+RECEIPT_SCHEMA = "local_hpac_endpoint_closure_receipt.v2"
+LEGACY_RECEIPT_SCHEMA = "local_hpac_endpoint_closure_receipt.v1"
+FIRE_ORDER_SCHEMA = "local_hpac_endpoint_next_fire_order.v2"
 RECEIPT_NAME = "ENDPOINT_CLOSURE.receipt.json"
 
 
@@ -176,8 +179,78 @@ def _run_fitter(run_root: Path, output_dir: Path) -> dict[str, Any]:
     return process_receipt
 
 
+def _run_selector(
+    manifest: Mapping[str, Any], run_root: Path, output_dir: Path
+) -> dict[str, Any]:
+    argv_from_manifest = manifest.get("argv")
+    if not isinstance(argv_from_manifest, list) or not all(
+        isinstance(item, str) for item in argv_from_manifest
+    ):
+        raise LocalEndpointCloseError("launch manifest argv is malformed")
+    save = Path(_option_value(argv_from_manifest, "--save")).expanduser().resolve(strict=False)
+    checkpoint_dir = save.with_name(save.stem + ".checkpoints") / "periodic"
+    selection_path = output_dir / "checkpoint_joint_proxy_selection.json"
+    argv = [
+        str(REPO_ROOT / ".venv/bin/python"),
+        str(SELECTOR),
+        "--log",
+        str(run_root / "launcher/run.log"),
+        "--checkpoint-dir",
+        str(checkpoint_dir),
+        "--out",
+        str(selection_path),
+    ]
+    proc = subprocess.run(
+        argv,
+        cwd=REPO_ROOT,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        check=False,
+    )
+    selection_log = output_dir / "checkpoint_joint_proxy_selection.log"
+    atomic_text(selection_log, proc.stdout)
+    if proc.returncode != 0 or not selection_path.is_file():
+        raise LocalEndpointCloseError(
+            f"checkpoint joint-proxy selection failed rc={proc.returncode}; retained log {selection_log}"
+        )
+    selection = _read_object(selection_path)
+    if selection.get("schema") != "hpac_checkpoint_joint_proxy_selection.v1":
+        raise LocalEndpointCloseError("checkpoint selection receipt schema differs")
+    if selection.get("score_claim") is not False:
+        raise LocalEndpointCloseError("checkpoint selection receipt made a score claim")
+    source_log = selection.get("source_log")
+    observed_log = file_record((run_root / "launcher/run.log").resolve(strict=True))
+    if source_log != observed_log:
+        raise LocalEndpointCloseError("checkpoint selection did not bind the exact retained run log")
+    selected_checkpoint = selection.get("selected_checkpoint")
+    if not isinstance(selected_checkpoint, dict) or not isinstance(
+        selected_checkpoint.get("path"), str
+    ):
+        raise LocalEndpointCloseError("checkpoint selection has no selected payload record")
+    selected_path = Path(selected_checkpoint["path"])
+    if selected_path.parent != checkpoint_dir.resolve(strict=True):
+        raise LocalEndpointCloseError("selected checkpoint is outside the periodic checkpoint store")
+    observed = file_record(selected_path)
+    if observed != selected_checkpoint:
+        raise LocalEndpointCloseError("selected checkpoint changed after selection")
+    return {
+        "schema": "local_hpac_checkpoint_selection_process.v1",
+        "argv": argv,
+        "rc": proc.returncode,
+        "source_log": observed_log,
+        "process_log": file_record(selection_log),
+        "selection_receipt": file_record(selection_path),
+        "selected_checkpoint": observed,
+    }
+
+
 def _next_fire_order(
-    *, run_root: Path, checkpoint_records: Sequence[Mapping[str, Any]], fit: Mapping[str, Any]
+    *,
+    run_root: Path,
+    checkpoint_records: Sequence[Mapping[str, Any]],
+    fit: Mapping[str, Any],
+    selection: Mapping[str, Any],
 ) -> dict[str, Any]:
     return {
         "schema": FIRE_ORDER_SCHEMA,
@@ -187,20 +260,23 @@ def _next_fire_order(
         "steps": [
             {
                 "order": 1,
-                "action": "endpoint descent-law refit and checkpoint custody",
+                "action": "endpoint descent-law refit, joint-proxy selection, and checkpoint custody",
                 "disposition": "FIRED",
                 "owner": "local_endpoint_close",
                 "consumer_store": str(Path(fit["fit_receipt"]["path"]).parent),
                 "fire_trigger": "source detached done receipt rc=0",
                 "checkpoint_payloads": list(checkpoint_records),
+                "selection": dict(selection),
             },
             {
                 "order": 2,
-                "action": "run the RX2 terminal CPU identity race on the retained final checkpoint",
+                "action": "run the RX2 terminal CPU identity race on the selected retained checkpoint",
                 "disposition": "QUEUED-WITH-A-FIRE-ORDER",
                 "owner": "MAIN identity-race owner",
                 "consumer_store": "experiments/ddm_rx2_mc36_identity_race.py and the RX2 retained run store",
-                "fire_trigger": "endpoint refit and both checkpoint SHA-256 custody records pass",
+                "fire_trigger": (
+                    "endpoint refit, joint-proxy selection, and selected-checkpoint SHA-256 custody pass"
+                ),
             },
             {
                 "order": 3,
@@ -252,8 +328,12 @@ def _write_terminal(output_dir: Path, receipt: dict[str, Any]) -> dict[str, Any]
 
 
 def validate_receipt(receipt: Any) -> dict[str, Any]:
-    if not isinstance(receipt, dict) or receipt.get("schema") != RECEIPT_SCHEMA:
+    if not isinstance(receipt, dict) or receipt.get("schema") not in {
+        RECEIPT_SCHEMA,
+        LEGACY_RECEIPT_SCHEMA,
+    }:
         raise LocalEndpointCloseError("invalid local endpoint closure receipt schema")
+    legacy = receipt["schema"] == LEGACY_RECEIPT_SCHEMA
     required = {
         "generated_utc",
         "status",
@@ -271,6 +351,8 @@ def validate_receipt(receipt: Any) -> dict[str, Any]:
         "paid_or_scorer_work_launched",
     }
     missing = required - set(receipt)
+    if not legacy:
+        missing |= {"selection"} - set(receipt)
     if missing:
         raise LocalEndpointCloseError(f"local endpoint closure receipt missing {sorted(missing)}")
     if not isinstance(receipt["process_rc"], int):
@@ -280,10 +362,26 @@ def validate_receipt(receipt: Any) -> dict[str, Any]:
         raise LocalEndpointCloseError(f"local endpoint closure status is unknown: {receipt['status']!r}")
     if not isinstance(receipt["payloads"], list) or not isinstance(receipt["errors"], list):
         raise LocalEndpointCloseError("local endpoint closure payloads/errors must be lists")
+    if not legacy and receipt["selection"] is not None and not isinstance(
+        receipt["selection"], dict
+    ):
+        raise LocalEndpointCloseError("local endpoint closure selection must be an object or null")
     if receipt["score_claim"] is not False or receipt["paid_or_scorer_work_launched"] is not False:
         raise LocalEndpointCloseError("local endpoint closure containment fields must remain false")
     if receipt["status"] == "CLOSED":
-        if receipt["process_rc"] != 0 or not receipt["payloads"] or receipt["next_fire_order"] is None:
+        selected = (
+            receipt["selection"].get("selected_checkpoint")
+            if not legacy and isinstance(receipt["selection"], dict)
+            else None
+        )
+        if (
+            receipt["process_rc"] != 0
+            or not receipt["payloads"]
+            or (not legacy and receipt["selection"] is None)
+            or (not legacy and not isinstance(selected, dict))
+            or (not legacy and selected not in receipt["payloads"])
+            or receipt["next_fire_order"] is None
+        ):
             raise LocalEndpointCloseError("closed endpoint receipt lacks payload or fire-order custody")
     elif receipt["next_fire_order"] is not None:
         raise LocalEndpointCloseError("non-closed endpoint receipt must not emit a downstream fire order")
@@ -310,6 +408,7 @@ def execute_closure(*, run_root: Path, done_receipt_path: Path, output_dir: Path
         "retained_source_done_receipt": file_record(retained_done_path),
         "source_launch_manifest": file_record(manifest_path),
         "fit": None,
+        "selection": None,
         "payloads": [],
         "next_fire_order": None,
         "terminal_note": None,
@@ -328,8 +427,24 @@ def execute_closure(*, run_root: Path, done_receipt_path: Path, output_dir: Path
     manifest = _read_object(manifest_path)
     try:
         fit = _run_fitter(run_root, output_dir)
+        base["fit"] = fit
         checkpoints = _checkpoint_records(manifest, run_root)
-        order = _next_fire_order(run_root=run_root, checkpoint_records=checkpoints, fit=fit)
+        base["payloads"] = checkpoints
+        selection = _run_selector(manifest, run_root, output_dir)
+        base["selection"] = selection
+        if fit["source_log"] != selection["source_log"]:
+            raise LocalEndpointCloseError(
+                "endpoint fit and checkpoint selection did not consume the same retained log"
+            )
+        selected_checkpoint = selection["selected_checkpoint"]
+        if not any(row["path"] == selected_checkpoint["path"] for row in checkpoints):
+            checkpoints.append(selected_checkpoint)
+        order = _next_fire_order(
+            run_root=run_root,
+            checkpoint_records=checkpoints,
+            fit=fit,
+            selection=selection,
+        )
         order_path = output_dir / "NEXT_FIRE_ORDER.json"
         atomic_json(order_path, order)
         note_path = output_dir / "TERMINAL_NOTE.md"
@@ -338,6 +453,7 @@ def execute_closure(*, run_root: Path, done_receipt_path: Path, output_dir: Path
             {
                 "status": "CLOSED",
                 "fit": fit,
+                "selection": selection,
                 "payloads": checkpoints,
                 "next_fire_order": file_record(order_path),
                 "terminal_note": file_record(note_path),
@@ -373,6 +489,7 @@ def wait_and_close(
         "poll_s": poll_s,
         "resumable_by": "rerun the same argv; terminal receipt is idempotent",
         "closer_tool": file_record(Path(__file__).resolve()),
+        "selector_tool": file_record(SELECTOR),
     }
     atomic_json(output_dir / "ARMED.json", armed)
     started = time.monotonic()

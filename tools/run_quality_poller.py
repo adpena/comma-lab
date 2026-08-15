@@ -100,6 +100,30 @@ def load_config(path: Path) -> dict[str, Any]:
         name: _boolean(conditions.get(name, False), f"alert_conditions.{name}")
         for name in ("joint_regression", "qat_knee_shock", "nan_or_garbage", "stale_telemetry")
     }
+    raw_bands = raw.get("regression_bands", [])
+    if not isinstance(raw_bands, list):
+        raise ConfigError("regression_bands must be a list")
+    regression_bands: list[dict[str, Any]] = []
+    for index, band in enumerate(raw_bands):
+        if not isinstance(band, dict):
+            raise ConfigError(f"regression_bands[{index}] must be an object")
+        field_name = _string(band.get("field"), f"regression_bands[{index}].field")
+        if field_name not in finite_fields and field_name != fields.get("value"):
+            raise ConfigError(
+                f"regression_bands[{index}].field must also be checked by fields.finite"
+            )
+        regression_bands.append(
+            {
+                "field": field_name,
+                "label": _string(
+                    band.get("label", field_name), f"regression_bands[{index}].label"
+                ),
+                "upper": _number(band.get("upper"), f"regression_bands[{index}].upper"),
+                "start_epoch": _integer(
+                    band.get("start_epoch"), f"regression_bands[{index}].start_epoch"
+                ),
+            }
+        )
     config = {
         "schema": CONFIG_SCHEMA,
         "log_path": _path(raw.get("log_path"), "log_path"),
@@ -129,14 +153,17 @@ def load_config(path: Path) -> dict[str, Any]:
         "best_min_rows": _integer(best.get("min_rows", 4), "best_not_latest.min_rows"),
         "best_lag_epochs": _integer(best.get("lag_epochs", 6), "best_not_latest.lag_epochs"),
         "conditions": enabled,
+        "regression_bands": regression_bands,
     }
     if config["startup_grace_s"] < 0:
         raise ConfigError("startup_grace_s must be nonnegative")
     for name in ("bar_start_epoch", "knee_epoch", "knee_window_epochs", "best_min_rows", "best_lag_epochs"):
         if config[name] < 0:
             raise ConfigError(f"{name} must be nonnegative")
-    if not any(enabled.values()):
-        raise ConfigError("at least one alert condition must be enabled")
+    if any(band["start_epoch"] < 0 for band in regression_bands):
+        raise ConfigError("regression-band start epochs must be nonnegative")
+    if not any(enabled.values()) and not regression_bands:
+        raise ConfigError("at least one alert condition or regression band must be enabled")
     return config
 
 
@@ -172,19 +199,32 @@ def read_eval_rows(config: Mapping[str, Any]) -> list[dict[str, Any]]:
 
 
 def _atomic_write_once(path: Path, payload: Mapping[str, Any]) -> bool:
+    """Publish one durable alert without requiring hard-link support."""
+
     path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_name(f".{path.name}.tmp.{os.getpid()}")
-    tmp.write_text(
-        json.dumps(payload, indent=2, sort_keys=True, allow_nan=False) + "\n",
-        encoding="utf-8",
-    )
-    try:
-        os.link(tmp, path)
-    except FileExistsError:
+    data = json.dumps(payload, indent=2, sort_keys=True, allow_nan=False) + "\n"
+    if path.exists():
         return False
+    claim = path.with_name(f".{path.name}.publish-lock")
+    try:
+        claim.mkdir()
+    except FileExistsError as exc:
+        if path.exists():
+            return False
+        raise RuntimeError(f"alert publish lock exists without alert: {claim}") from exc
+    tmp = path.with_name(f".{path.name}.tmp.{os.getpid()}")
+    try:
+        if path.exists():
+            return False
+        with tmp.open("x", encoding="utf-8") as handle:
+            handle.write(data)
+            handle.flush()
+            os.fsync(handle.fileno())
+        tmp.replace(path)
+        return True
     finally:
         tmp.unlink(missing_ok=True)
-    return True
+        claim.rmdir()
 
 
 def _append_jsonl(path: Path, payload: Mapping[str, Any]) -> None:
@@ -270,6 +310,34 @@ def poll_once(
                     "value": value,
                     "bar": config["bar_value"],
                 }, _pid_alive(config["pid_file"])
+            for band in config["regression_bands"]:
+                if epoch < band["start_epoch"]:
+                    continue
+                try:
+                    band_value = float(row[band["field"]])
+                except (KeyError, TypeError, ValueError):
+                    return {
+                        "reason": "regression_band_unreadable",
+                        "label": band["label"],
+                        "field": band["field"],
+                        "epoch": epoch,
+                    }, _pid_alive(config["pid_file"])
+                if not math.isfinite(band_value):
+                    return {
+                        "reason": "regression_band_unreadable",
+                        "label": band["label"],
+                        "field": band["field"],
+                        "epoch": epoch,
+                    }, _pid_alive(config["pid_file"])
+                if band_value > band["upper"]:
+                    return {
+                        "reason": "regression_band",
+                        "label": band["label"],
+                        "field": band["field"],
+                        "epoch": epoch,
+                        "value": band_value,
+                        "upper": band["upper"],
+                    }, _pid_alive(config["pid_file"])
 
     phase_rows: list[dict[str, Any]] = []
     for row in rows:
