@@ -66,6 +66,22 @@ def test_runtime_patch_is_additive_and_single_site(tmp_path):
     assert "tagged_state = unpack_semantic(semantic_blob, semantic.state_dict())" in patched
     assert "SEMANTIC_WIDTH_BY_PAYLOAD_BYTES[semantic_bytes]" in patched
 
+    residual = tmp_path / "residual_archive.py"
+    residual.write_bytes((builder.BASE_GENERATION / "runtime/residual_archive.py").read_bytes())
+    builder.patch_residual_runtime(residual)
+    residual_first = residual.read_bytes()
+    builder.patch_residual_runtime(residual)
+    assert residual.read_bytes() == residual_first
+    assert b"tagged_semantic = semantic_body.startswith" in residual_first
+
+    f26 = tmp_path / "f26_inflate.py"
+    f26.write_bytes((builder.BASE_GENERATION / "runtime/f26_inflate.py").read_bytes())
+    builder.patch_f26_runtime(f26)
+    f26_first = f26.read_bytes()
+    builder.patch_f26_runtime(f26)
+    assert f26.read_bytes() == f26_first
+    assert b"renderer.unpack_variant_semantic_or_none" in f26_first
+
 
 def test_candidate_set_and_hv1_member_geometry_are_pinned():
     score_result = builder.json.loads(builder.MZ2_SCORE_RESULT.read_text(encoding="utf-8"))

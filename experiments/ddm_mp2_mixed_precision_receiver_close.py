@@ -227,6 +227,85 @@ def patch_inner_runtime(path: Path) -> None:
     path.write_text(source, encoding="utf-8")
 
 
+def patch_residual_runtime(path: Path) -> None:
+    source = path.read_text(encoding="utf-8")
+    marker = "    tagged_semantic = semantic_body.startswith((b\"SD1M\", b\"SM3R\"))\n"
+    if marker in source:
+        if source.count(marker) != 1:
+            raise MP2BuildError("partially applied MP2 residual-runtime patch")
+        return
+    old = '''    if len(semantic_body) != WANS_BODY_BYTES:
+        raise ResidualArchiveError("RX1 semantic section length differs")
+    try:
+        semantic = decode_f12_wans_body(semantic_body, WANS_STREAM_ORDER)
+        decode_wans1(semantic)
+    except RendererWeightCodecError as error:
+        raise ResidualArchiveError("invalid RX1 renderer weights") from error
+'''
+    new = '''    tagged_semantic = semantic_body.startswith((b"SD1M", b"SM3R"))
+    if tagged_semantic:
+        semantic = semantic_body
+    else:
+        if len(semantic_body) != WANS_BODY_BYTES:
+            raise ResidualArchiveError("RX1 semantic section length differs")
+        try:
+            semantic = decode_f12_wans_body(semantic_body, WANS_STREAM_ORDER)
+            decode_wans1(semantic)
+        except RendererWeightCodecError as error:
+            raise ResidualArchiveError("invalid RX1 renderer weights") from error
+'''
+    path.write_text(
+        _replace_once(source, old, new, "RX1 tagged semantic decode"),
+        encoding="utf-8",
+    )
+
+
+def patch_f26_runtime(path: Path) -> None:
+    source = path.read_text(encoding="utf-8")
+    marker = "    tagged_state = renderer.unpack_variant_semantic_or_none(\n"
+    if marker in source:
+        if source.count(marker) != 1:
+            raise MP2BuildError("partially applied MP2 F26-runtime patch")
+        return
+    source = _replace_once(
+        source,
+        '''    if not parts.semantic_blob.startswith(WANS1_MAGIC):
+        raise InflationError("F26 requires WANS1 semantic weights")
+''',
+        '''    if not parts.semantic_blob.startswith((WANS1_MAGIC, b"SD1M", b"SM3R")):
+        raise InflationError("F26 requires WANS1, SD1M, or SM3R semantic weights")
+''',
+        "F26 semantic guard",
+    )
+    old = '''    semantic = renderer.SemanticTokenRenderer(96)
+    records = decode_wans1(parts.semantic_blob)
+    state = {
+        record.schema.name: torch.from_numpy(np.ascontiguousarray(record.values, dtype=np.float32))
+        for record in records
+    }
+    semantic.load_state_dict(state, strict=True)
+'''
+    new = '''    semantic = renderer.SemanticTokenRenderer(96)
+    tagged_state = renderer.unpack_variant_semantic_or_none(
+        parts.semantic_blob,
+        semantic.state_dict(),
+    )
+    if tagged_state is None:
+        records = decode_wans1(parts.semantic_blob)
+        tagged_state = {
+            record.schema.name: torch.from_numpy(
+                np.ascontiguousarray(record.values, dtype=np.float32)
+            )
+            for record in records
+        }
+    semantic.load_state_dict(tagged_state, strict=True)
+'''
+    path.write_text(
+        _replace_once(source, old, new, "F26 semantic construction"),
+        encoding="utf-8",
+    )
+
+
 def bind_outer_runtime(path: Path, archive: Path) -> None:
     source = path.read_text(encoding="utf-8")
     source, sha_count = re.subn(
@@ -261,6 +340,23 @@ def load_runtime_module(path: Path, name: str):
     return module
 
 
+def load_runtime_package_module(generation: Path, candidate_id: str, module_name: str):
+    safe_id = re.sub(r"[^A-Za-z0-9_]", "_", candidate_id)
+    package_name = f"_ddm_mp2_{safe_id}_runtime_{os.getpid()}"
+    package_path = generation / "runtime"
+    package_spec = importlib.util.spec_from_file_location(
+        package_name,
+        package_path / "__init__.py",
+        submodule_search_locations=[str(package_path)],
+    )
+    if package_spec is None or package_spec.loader is None:
+        raise MP2BuildError(f"could not load candidate runtime package: {generation}")
+    package = importlib.util.module_from_spec(package_spec)
+    sys.modules[package_name] = package
+    package_spec.loader.exec_module(package)
+    return importlib.import_module(f"{package_name}.{module_name}")
+
+
 def expected_state(
     parser: str,
     semantic_raw: bytes,
@@ -283,23 +379,37 @@ def retain_receiver_decode(
     *,
     candidate_id: str,
     parser: str,
-    semantic_raw: bytes,
-    carrier_raw: bytes,
     template: Mapping[str, torch.Tensor],
 ) -> dict[str, Any]:
+    residual_runtime = load_runtime_package_module(
+        generation,
+        candidate_id,
+        "residual_archive",
+    )
     runtime = load_runtime_module(
         generation / "cpr1/inflate.py",
         f"ddm_mp2_runtime_{candidate_id}_{os.getpid()}",
     )
-    semantic_pose = (
-        len(semantic_raw).to_bytes(4, "little")
-        + len(carrier_raw).to_bytes(4, "little")
-        + semantic_raw
-        + carrier_raw
-    )
-    semantic, basis, coefficients = runtime.unpack_semantic_pose(semantic_pose)
-    actual = OrderedDict(semantic.state_dict())
-    expected = expected_state(parser, semantic_raw, template)
+    parts = residual_runtime.read_residual_archive(generation / "archive.zip")
+    if parser == "legacy":
+        records = residual_runtime.decode_wans1(parts.semantic_blob)
+        actual = OrderedDict(
+            (
+                record.schema.name,
+                torch.from_numpy(np.ascontiguousarray(record.values, dtype=np.float32)),
+            )
+            for record in records
+        )
+        expected = OrderedDict(template)
+    else:
+        decoded = runtime.unpack_variant_semantic_or_none(
+            parts.semantic_blob,
+            runtime.SemanticTokenRenderer(96).state_dict(),
+        )
+        if decoded is None:
+            raise MP2BuildError(f"tagged candidate reached the legacy receiver: {candidate_id}")
+        actual = OrderedDict(decoded)
+        expected = expected_state(parser, parts.semantic_blob, template)
     if tuple(actual) != tuple(expected):
         raise MP2BuildError(f"receiver schema differs for {candidate_id}")
     for name in expected:
@@ -310,6 +420,27 @@ def retain_receiver_decode(
             )
 
     decoded_root = generation / "retained/receiver_decode"
+    outer_payloads = {
+        "semantic_blob": atomic_bytes(decoded_root / "outer_semantic.bin", parts.semantic_blob),
+        "carrier_blob": atomic_bytes(decoded_root / "outer_carrier.bin", parts.carrier_blob),
+        "hpac_blob": atomic_bytes(decoded_root / "outer_hpac.bin", parts.hpac_blob),
+        "token_stream": atomic_bytes(decoded_root / "outer_tokens.rc64", parts.token_stream),
+        "residual_payload": atomic_bytes(
+            decoded_root / "outer_residual.bin",
+            parts.residual_payload,
+        ),
+        "compressed_models": atomic_bytes(
+            decoded_root / "outer_compressed_models.bin",
+            parts.compressed_models,
+        ),
+    }
+    if parts.compensation_blob is not None:
+        outer_payloads["compensation_blob"] = atomic_bytes(
+            decoded_root / "outer_compensation.bin",
+            parts.compensation_blob,
+        )
+    table_codes = atomic_npy(decoded_root / "residual_table_codes.npy", parts.table.codes)
+    table_values = atomic_npy(decoded_root / "residual_table_values.npy", parts.table.values)
     state_records = []
     for index, (name, value) in enumerate(actual.items()):
         safe_name = name.replace(".", "_")
@@ -318,22 +449,17 @@ def retain_receiver_decode(
             value.detach().cpu().numpy(),
         )
         state_records.append({"name": name, **record})
-    basis_record = atomic_npy(decoded_root / "carrier_basis.npy", basis.detach().cpu().numpy())
-    coefficient_record = atomic_npy(
-        decoded_root / "carrier_coefficients.npy",
-        coefficients.detach().cpu().numpy(),
-    )
     result = {
         "schema": "ddm_mp2_receiver_parseback.v1",
         "candidate_id": candidate_id,
         "parser": parser,
         "semantic_tensor_denominator": len(actual),
         "semantic_state_exact_to_packer": True,
-        "carrier_shape": list(basis.shape),
-        "coefficient_shape": list(coefficients.shape),
+        "exact_archive_outer_parse": True,
+        "outer_payloads": outer_payloads,
+        "residual_table_codes": table_codes,
+        "residual_table_values": table_values,
         "state_payloads": state_records,
-        "carrier_basis": basis_record,
-        "carrier_coefficients": coefficient_record,
         "complete": True,
     }
     atomic_json(generation / "RECEIVER_PARSEBACK.json", result)
@@ -378,11 +504,10 @@ def verify_generation_receipt(destination: Path, receipt: Mapping[str, Any]) -> 
     parseback = json.loads(Path(str(parseback_record["path"])).read_text(encoding="utf-8"))
     if parseback.get("complete") is not True or parseback.get("semantic_state_exact_to_packer") is not True:
         raise MP2BuildError(f"receiver parse-back receipt is incomplete: {destination}")
-    decoded_records = [
-        *parseback["state_payloads"],
-        parseback["carrier_basis"],
-        parseback["carrier_coefficients"],
-    ]
+    decoded_records = [*parseback["state_payloads"], *parseback["outer_payloads"].values()]
+    decoded_records.extend(
+        (parseback["residual_table_codes"], parseback["residual_table_values"])
+    )
     for record in decoded_records:
         verify_record(record)
 
@@ -536,6 +661,8 @@ def build_generation(
     receiver_copy = destination / "cpr1/ddm_mp2_semantic_receiver.py"
     shutil.copy2(RECEIVER_SOURCE, receiver_copy)
     patch_inner_runtime(destination / "cpr1/inflate.py")
+    patch_residual_runtime(destination / "runtime/residual_archive.py")
+    patch_f26_runtime(destination / "runtime/f26_inflate.py")
     bind_outer_runtime(destination / "inflate.py", destination / "archive.zip")
     if sha256_file(destination / "archive.zip") != archive_record["sha256"]:
         raise MP2BuildError("candidate archive changed during runtime binding")
@@ -557,8 +684,6 @@ def build_generation(
         destination,
         candidate_id=candidate_id,
         parser=parser,
-        semantic_raw=semantic_raw,
-        carrier_raw=carrier_raw,
         template=template,
     )
     receipt = {
@@ -574,6 +699,8 @@ def build_generation(
         "candidate_bound_runtime": {
             "outer_inflate": file_record(destination / "inflate.py"),
             "inner_inflate": file_record(destination / "cpr1/inflate.py"),
+            "residual_archive": file_record(destination / "runtime/residual_archive.py"),
+            "f26_inflate": file_record(destination / "runtime/f26_inflate.py"),
             "semantic_receiver": file_record(receiver_copy),
             "archive_sha_pin_updated": True,
             "archive_bytes_pin_updated": True,
