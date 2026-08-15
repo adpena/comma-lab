@@ -1,0 +1,38 @@
+{
+  "schema": "pact.run_quality_poller.config.v1",
+  "log_path": "/Volumes/APDataStore/pact/ddm_mp2_mixed_precision_receiver_close_20260815/advisory_n600_cpu/score_gated_film_row_prune_keep75_minus_keep87/attempt_0000/launcher/run.log",
+  "pid_file": "/Volumes/APDataStore/pact/ddm_mp2_mixed_precision_receiver_close_20260815/advisory_n600_cpu/score_gated_film_row_prune_keep75_minus_keep87/attempt_0000/launcher/run.pid",
+  "telemetry_path": "/Volumes/APDataStore/pact/ddm_mp2_mixed_precision_receiver_close_20260815/advisory_n600_cpu/score_gated_film_row_prune_keep75_minus_keep87/attempt_0000/watchers/quality_telemetry.jsonl",
+  "alert_path": "/Volumes/APDataStore/pact/ddm_mp2_mixed_precision_receiver_close_20260815/advisory_n600_cpu/score_gated_film_row_prune_keep75_minus_keep87/attempt_0000/watchers/quality.alert.json",
+  "poll_s": 300,
+  "eval_period_s": 1800,
+  "stale_periods": 100,
+  "startup_grace_s": 3600,
+  "json_marker": "\"avg_segnet_dist\"",
+  "fields": {
+    "epoch": "n_samples",
+    "value": "avg_segnet_dist",
+    "phase": "device",
+    "finite": []
+  },
+  "bar_value": 1.0,
+  "bar_start_epoch": 999999,
+  "alert_conditions": {
+    "joint_regression": false,
+    "qat_knee_shock": false,
+    "nan_or_garbage": true,
+    "stale_telemetry": false
+  },
+  "regression_bands": [],
+  "phase_knee": {
+    "epoch": 1,
+    "window_epochs": 1,
+    "shock_multiplier": 1.0,
+    "continuous_phase": "advisory_eval"
+  },
+  "best_not_latest": {
+    "phase": "advisory_eval",
+    "min_rows": 999999,
+    "lag_epochs": 999999
+  }
+}

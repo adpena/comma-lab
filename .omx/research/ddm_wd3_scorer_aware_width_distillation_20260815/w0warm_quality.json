@@ -1,0 +1,38 @@
+{
+ "schema": "pact.run_quality_poller.config.v1",
+ "log_path": "/Volumes/APDataStore/pact/ddm_wd3_scorer_aware_width_distillation/fire_rung2_w0warm/launcher/run.log",
+ "pid_file": "/Volumes/APDataStore/pact/ddm_wd3_scorer_aware_width_distillation/fire_rung2_w0warm/launcher/run.pid",
+ "telemetry_path": "/Volumes/APDataStore/pact/ddm_wd3_scorer_aware_width_distillation/fire_rung2_w0warm/watchers/quality_telemetry.jsonl",
+ "alert_path": "/Volumes/APDataStore/pact/ddm_wd3_scorer_aware_width_distillation/fire_rung2_w0warm/watchers/quality.alert.json",
+ "poll_s": 300,
+ "eval_period_s": 1800,
+ "stale_periods": 100,
+ "startup_grace_s": 3600,
+ "json_marker": "\"schema\"",
+ "fields": {
+  "epoch": "start_pair",
+  "value": "end_pair",
+  "phase": "repeat",
+  "finite": []
+ },
+ "bar_value": 1000000.0,
+ "bar_start_epoch": 999999,
+ "alert_conditions": {
+  "joint_regression": false,
+  "qat_knee_shock": false,
+  "nan_or_garbage": true,
+  "stale_telemetry": false
+ },
+ "regression_bands": [],
+ "phase_knee": {
+  "epoch": 1,
+  "window_epochs": 1,
+  "shock_multiplier": 1.0,
+  "continuous_phase": "cache_build"
+ },
+ "best_not_latest": {
+  "phase": "cache_build",
+  "min_rows": 999999,
+  "lag_epochs": 999999
+ }
+}

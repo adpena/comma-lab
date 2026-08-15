@@ -89,3 +89,16 @@ n600 run WITHOUT waiting for the full FD field; the FD probe then refines row-by
 LANE NOTE: MAIN is claiming the scorer lane for the wd3 teacher-cache build NOW (hours-long,
 the campaign main line). Queue your differential n600 for the next lane boundary; MAIN will
 relay when the lane frees. Do NOT contend for the scorer lane while the cache build runs.
+
+## RELAY 8 (MAIN — DIFFERENTIAL FIRED, 2026-08-15 ~22:0xZ)
+The RELAY-7 differential candidate was found MATERIALIZED receiver-closed by the arm
+(DIFFERENTIAL_RESULT.json: archive 37194782ed5c…@182,734 B = −25 B vs hv1; all runtime
+hashes pinned; QUEUED fire order owned by MAIN). Fire trigger met — the wd3 teacher-cache
+build released the scorer lane (293.5 s, byte-identical repeat receipt) and the W0 warm
+trainer holds only the Metal/MPS lane. MAIN executed the fire order: 7/7 hashes verified,
+AppleDouble + __pycache__ swept (generation + attempt + mirror), queue-driver argv replicated
+(shim PATH + PYTHONDONTWRITEBYTECODE=1), watchers armed. Eval pid 39740; done receipt
+ddm_mp2_score_gated_film_row_prune_keep75_minus_keep87_n600_attempt_0000. Task #1071 owns
+adjudication (admit net ΔS < −3.5e-6; rate credit −1.6646e-5 ⇒ pose must be ≈neutral-or-better —
+exactly the marginal-set hypothesis under test). keep75's stale RUNNING queue-state row cured
+from its receipt (seg 0.00042821 · pose 0.00063959 · 182,288 B).
