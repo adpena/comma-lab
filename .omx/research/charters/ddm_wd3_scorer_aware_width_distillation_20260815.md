@@ -192,3 +192,34 @@ conditional W96 -> same-instrument n600 -> exact contest axis only for a passing
 
 Vehicle frontier UNCHANGED: **S 0.15959729295498598 @ 182,759 B [contest-CUDA T4, n600]**, archive
 SHA `80d9c8c6fdc72caaa3e180a8abb2a859e7f316a484b38f33fe90d5701420178e`.
+
+## OPERATOR AMENDMENT (2026-08-15, verbatim "Remember quantum and regions and cells too") — BINDING on the build
+
+Three standing doctrines fold INTO the wd3 mechanism (recalled from corpus, not working memory):
+
+1. **QUANTUM — the student packet trains quantization-AWARE, and its allocation is adaptive.**
+   The uint8 frame chain in R is already in the sealed loss; this amendment binds the OTHER
+   quantizer: the student's own counted weight packet. Per the standing toolbox law
+   (`quantization_toolbox_adaptive_aware_subint16_20260804`, operator ×3): (a) train WITH the
+   packet quantizer in-loop (STE on the export grid — never round post-hoc; a candidate "broken
+   by quantisation" without the aware-solve is MECHANISM-scoped, not family-scoped); (b) export
+   allocation is ADAPTIVE per-cell/per-coefficient, sub-int16 where int16 is unnecessary rate
+   (word width = an m21-class assumed constant; `precision_max_possible_min_necessary_optimal_
+   per_stage_20260811`); (c) naive-re-score first — the ladder's cheapest passing rung wins.
+2. **REGIONS — the seg objective and its telemetry live at region/edge level, not pixel level.**
+   SegNet reads REGIONS (stride-2 stem; the ×3 measured NO-GO of pixel-level sidecars), and the
+   seg error is ONE GRAPH with ONE HUB (Road in 87.8% of flips, Road↔Lane 49.2% — pc2/m91):
+   the margin-hinge weighting SHOULD concentrate on the codim-1 boundary band and be
+   DECOMPOSABLE per class-pair EDGE; validation gates report per-edge flip deltas (Road↔Lane
+   first), never only aggregate d_seg. A student that wins aggregate while losing the Lane edge
+   is the known trap.
+3. **CELLS — per-cell treatment of capacity, quantization, and validation.** "Preserve the
+   teacher's decision geometry" MEANS the argmax/Laguerre CELL complex — say so and measure it
+   (per-cell flip counts). The vehicle precedent: the e960/QAT burn descended on the SELECTIVE
+   384-cell mask (qa24) and the token grid's per-cell waterfill (#869, 4-rung adaptive map;
+   #873: PLACEMENT beats SELECTION 5.7×) — the student's capacity/quant allocation and the
+   validation subset are PER-CELL objects, uniform grids being the degenerate rung.
+
+CONSUMER NOTE (mp2, Stage 2 carrier rank/refit): the same toolbox binds — race per-cell adaptive
+quantization + sub-int16 depth of the 22,032 B basis+coeff pool AGAINST (not only alongside)
+global rank reduction; a rank verdict without the adaptive-quant arm is not the family verdict.
