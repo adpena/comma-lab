@@ -663,3 +663,35 @@ three independent axes on the SAME vehicle, composed in dependency order:
    transfer semantically but must be RE-COMPILED against the final composed archive's coder.
 Order: burn endpoint → identity race → model recode → micro-edit recompile → ONE T4 row.
 Modal ≈$5.9/$20 (r1+r3 refusals + v2 421 s).
+
+## 5j. mz1 consumption + the e960 continuation fire (2026-08-15, MAIN)
+
+**mz1 verdict consumed (memo `ddm_mz1_model_section_rate_race_20260815.md`, commit
+31711735fa).** The projected "52,566 B model-serialization gap" that fed the earlier
+sub-0.15 projection was an ATTRIBUTION ERROR: the 70,557 B model section decomposes
+as 13,619 HPAC + 34,763 semantic + 22,161 carrier + 14 wrapper. HPAC ships 4,372 B
+BELOW its 17,991 B estimate; 8/8 lossless coder races LOST to the shipped
+split-Brotli q10/q11/q11 (best alternative +41 B); exact pack savings = 0 B.
+Sub-0.15 does NOT come from a pack fix. Revised route ranking: (a) THIS e960 QAT
+token burn (~1.2 KB/doubling ≈ −8e-4 S per the power-law tail), (b) representation
+attack on the 56,938 B frozen semantic/carrier sections (mz1 LIVE-HYPOTHESIS,
+unowned), (c) js1 pose line (−0.0083 ceiling).
+
+**e960 fire receipt (attempt 5, LIVE).** Trainer pid 47772, launch counter 23,
+watchers armed at launch (liveness 47773 / quality 47776, quality bar 131,220 B
+from ep481). Resume = `full_e480b/.../qat_stage_end_epoch_0480.pt`, mode
+`full-mps-e960` (sealed: eta_min LR hold past ep480 at 6e-5 + EMA parent-geometry
+hold 72000→36000 updates → decay 0.9998720867875375 dict-equal to parent).
+Attempts 1–4 died to fail-closed gates, each cured at source: env gates ×3
+(PYTHONHASHSEED/TAC_ADMISSION_ENFORCE/PYTORCH_ENABLE_MPS_FALLBACK) → resume-identity
+drift (cured by the wrapper continuation adapter: torch.load stash + closed
+allowlist reconciliation + epochs-only config rule, commit 6aee906d52) → typed
+resume_lineage custody (cured by moving wrapper provenance OUT of the trainer's
+typed lineage chain into `reports/wrapper_continuation_receipt.json`, schema
+`wc2_wrapper_epoch_extension_continuation.v1`, commit c156d7fabc). First forward
+row ep482: joint est **131,743 B** — already 1,055 B below the old QAT exp-floor
+132,798 (the §5f power-law refit's "not floored" call confirmed at first contact),
+top1_error 0.00191, EMA-shadow evaluated. ETA ~6.6 h (478 ep × ~49.6 s/ep).
+Endpoint obligations: descent-law refit at ep960 (the ENTRY_STATE_CONDITIONAL
+label's second test) → identity race → micro-edit recompile (qs2 −4.375e-6 +
+re1 −1.207e-6 vs the FINAL coder) → ONE composed T4 row (#1058).
