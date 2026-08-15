@@ -376,3 +376,21 @@ budget constraint moved. Protocol, in order — no step fires early:
    otherwise unchanged) in ONE commit that also updates the comparator's
    `RACE_PACKER_SHA256` pin. This edit is owed for the MPS 60-epoch
    endpoint too — it is the same generalization, done once.
+
+### §5a Equations-leg instrument (operator recall 2026-08-14: EventGated / canonical-equations / DE discipline)
+
+The sizing step is now LAW-DERIVED, not eyeballed: `tools/fit_hpac_descent_law.py`
+fits exponential-to-floor vs power-law per phase over the retained eval rows,
+selects by SSE, and derives N* against byte bars in canonical-band units
+(1 band = 3.5e-6 S = 5.256 B on the rate term). Partial fit on the live race's
+first 10 continuous points (receipt `gpu_race/full/descent_law_fit_partial.json`):
+exp_floor wins (asymptote ≈ 136,413 B joint-est, τ ≈ 7.6 ep); remaining
+continuous gain at phase exit: N=60 → ~190 B · N=120 → ~3.6 B (<1 band) ·
+N=240 → ~0. Preliminary implication: continuous saturates near ep~60, so the
+law points at N≈120–240, NOT the naive 480 default — the constants-are-poison
+cure paying out in real time. Caveats owed at the boundary refit: 10 early
+points can under-estimate a slow second timescale; QAT phase entirely unfitted
+until the 60-ep run's ep32–60 rows land (and stays ENTRY-STATE-CONDITIONAL).
+At the fit boundary, register the fitted law as canonical equation
+`hpac_mc36_joint_descent_law_v1` (producer: the fitter; anchors: fit receipt +
+log shas; consumers: extension sizing + the race epoch-gate parameterization).
