@@ -306,3 +306,41 @@ frontier remains MC36 Variant C at
 `S=0.1619344578804448 @ 186,269 B [contest-CUDA T4, n600]`, archive SHA-256
 `f0ba4bb41d55fff85542f2a17dfe682508aa4f9ab50ef51cda573d79f0c4b1de`.
 This WC2 arm did not move it.
+
+## MAIN trajectory-gap classification (2026-08-14, comparator run comparison_r4)
+
+**Verdict: DIFFERENT-INSTRUMENT, ADMITTED FOR THE RACE.** Receipt:
+`/Volumes/APDataStore/pact/ddm_rx2_current_mc36_label_hpac/gpu_race/parity/comparison_r4/PARITY_RESULT.json`.
+
+The measured gates, in order of the §4 contract:
+
+1. **Comparator completed** — schema `ddm_cl1_hpac_capacity_mps_parity.v1`,
+   all materialized payloads retained (4 endpoint packs, raw + xz, SHA-pinned).
+2. **Every pack repeat exact** — CPU endpoint `deterministic_repeat_exact=true`
+   (raw sha `97330ccd…` identical across repeats, 24,937 B) and MPS endpoint
+   `deterministic_repeat_exact=true` (raw sha `527346ec…` identical, 24,917 B).
+   Decode logit diff 0.0 on both. `verified_exact_semantics =
+   idempotent_pack_and_deterministic_decode` — the custody invariant that
+   survived the two latent-blocker fixes (schema modulo the 9 training-only
+   `.bit_depth` buffers; quantization delta demoted to QAT telemetry).
+3. **Projection subtraction positive** — `finish_margin_hours = +13.11`
+   (cpu remaining 14.05 h − full-mps 0.93 h), measured speedup 18.81×,
+   `projection_not_measurement=true` honored.
+4. **The gap itself** — relative divergence compounds through QAT: bpp 0.026%
+   at ep0 → 0.375% at ep6 (joint-bytes 0.294%, top1 0.220%). This is float
+   drift through a quantization-aware nonlinearity under full Metal kernel
+   coverage (`PYTORCH_ENABLE_MPS_FALLBACK=0`, rc=0), not a defect. It is
+   MATERIAL as parity and therefore NOT called parity: MPS is admitted as a
+   second SEARCH instrument, not a bit-parity clone. No promotion claim rides
+   parity. The authority boundaries that make this safe: (a) the sealed race
+   gates in `experiments/ddm_rx2_mc36_identity_race.py` are device-blind —
+   they gate the terminal checkpoint's IHS1 pack, archive bytes, and T4 exact
+   eval; (b) serialization authority stays the CPU IHS1 pack path, proven
+   idempotent + decode-deterministic on BOTH endpoints above; (c) score
+   authority is T4 exact eval only; the MPS trainer.json is labeled
+   `[macOS-MPS research-signal]`.
+
+Honest note: the CPU ep6 endpoint was marginally better (est joint 140,969 B
+vs 141,384 B, 0.29%). The live CPU run continues untouched, so the race yields
+TWO terminal endpoints and the sealed device-blind chain adjudicates them; a
+losing MPS endpoint costs nothing but the ~0.93 h of Metal time.
