@@ -27698,3 +27698,18 @@ candidate-only exact T4 receiver/field gate; admission requires at most 33,417 f
 and negative mixed-axis gate delta S. F2 remains ineligible until that field lands. Receipt:
 `.omx/research/ddm_sa1_shipping_axis_seg_actuator_20260813.md`; retained store:
 `/Volumes/VertigoDataTier/pact/ddm_sa1_20260813/`.
+
+## FEED-2026-08-15-cpu-authority-staged (MAIN)
+Trajectory point: pq1 packet red #1 (contest-CPU authority leg, dual-axis submission mandate)
+adjudicated at the post-hv1 compose boundary. Sealed V1 order found targeting the SUPERSEDED
+e480b bytes AND carrying an explicit operator-GO fire trigger → NOT fired; RE-STAGED for the
+frontier per the candidate-bound runtime law: generation
+ddm_pq1_submission_packet/generations/hv1_ep0634_cpu_authority (pq1 device-flexible f26p-lifted
+runtime, archive swapped to 80d9c8c6… @182,759 B, pins verified) + V2 sealed order
+CPU_AXIS_SEALED_FIRE_ORDER_V2_HV1.json (STAGED_READY_NOT_DISPATCHED, ~$0.40 measured-predecessor
+cost). Economics: family CPU-axis gap already characterized (#1054, +0.043 pose-dominated) ⇒
+this row = SUBMISSION EVIDENCE, correctly operator-GO-priced. Memo:
+ddm_hv1_cpu_authority_staged_ready_20260815.md. Same-day sister rows: wd2 refusal
+same-instrument-confirmed (7.0059×/623.76×, av2) · wd3 scorer-aware distillation charter sealed
++ amended (quantum/regions/cells + selective/surgical) + build arm LIVE · mp2 rate arm LIVE w/
+measured admission baseline (base advisory S 0.20280753928705508).
