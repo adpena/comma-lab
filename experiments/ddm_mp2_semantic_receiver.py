@@ -4,7 +4,7 @@
 The receiver is deliberately additive.  Untagged semantic payloads return
 ``None`` so the unchanged HV1 legacy q4 parser remains authoritative.  The
 only tagged formats accepted here are the retained SD1M mixed-precision
-packet and the SM3R row-prune packet used by the six MZ2 candidates.
+packet and the SM3R row-prune packets used by MZ2/MP2 candidates.
 """
 
 from __future__ import annotations

@@ -46,6 +46,7 @@ MZ2_SCORE_RESULT = MZ2_ROOT / "SCORE_GATE_RESULT.json"
 MZ2_RETENTION_INVENTORY = MZ2_ROOT / "RETENTION_INVENTORY.json"
 RECEIVER_SOURCE = REPO / "experiments/ddm_mp2_semantic_receiver.py"
 DEFAULT_OUTPUT = Path("/Volumes/APDataStore/pact/ddm_mp2_mixed_precision_receiver_close_20260815")
+DIFFERENTIAL_CANDIDATE_ID = "score_gated_film_row_prune_keep75_minus_keep87"
 
 BASE_ARCHIVE_BYTES = 182_759
 BASE_ARCHIVE_SHA256 = "80d9c8c6fdc72caaa3e180a8abb2a859e7f316a484b38f33fe90d5701420178e"
@@ -484,6 +485,99 @@ def candidate_rows(score_result: Mapping[str, Any]) -> list[dict[str, Any]]:
     return rows
 
 
+def pack_differential_prune_candidate(
+    state: Mapping[str, torch.Tensor],
+) -> tuple[bytes, OrderedDict[str, torch.Tensor], dict[str, Any]]:
+    """Prune only the rows removed by keep75 after keep87 already retained them.
+
+    The SM3R receiver permits any row mask with the count declared by its
+    keep-percent header.  For the current 192-row FiLM tensors, the
+    ``keep87 ∖ keep75`` marginal contains 23 rows, so retaining every other
+    row produces 169 rows, the count declared exactly by a keep88 header.  The
+    exact selected indices are returned for retained per-row attribution.
+    """
+
+    header_keep_percent = 88
+    qnames = mz2.sd1.quantized_names(state)
+    prune_names = set(mz2.sm3.PRUNE_NAMES)
+    tensor_mask = mz2.sm3.mask_for_names(qnames, prune_names)
+    payload = bytearray(
+        mz2.sm3.representation_header(
+            mz2.sm3.MODE_ROW_PRUNE,
+            header_keep_percent,
+        )
+    )
+    payload.extend(int(tensor_mask).to_bytes(2, byteorder="little", signed=False))
+    expected: OrderedDict[str, torch.Tensor] = OrderedDict()
+    tensor_rows: dict[str, Any] = {}
+
+    for name, value in state.items():
+        if value.ndim < 2:
+            stored = value.detach().cpu().to(torch.float16)
+            payload.extend(stored.numpy().astype("<f2", copy=False).tobytes())
+            expected[name] = stored.float()
+            continue
+        if name not in prune_names:
+            encoded, restored = mz2.sm3.standard_q4_payload(name, value)
+            payload.extend(encoded)
+            expected[name] = restored
+            continue
+
+        rows = int(value.shape[0])
+        keep87 = max(1, round(rows * 87 / 100.0))
+        keep75 = max(1, round(rows * 75 / 100.0))
+        flat = value.detach().cpu().float().reshape(rows, -1)
+        norms = flat.square().sum(dim=1)
+        order = sorted(range(rows), key=lambda index: (-float(norms[index]), index))
+        reference_keep87 = frozenset(order[:keep87])
+        reference_keep75 = frozenset(order[:keep75])
+        marginal = reference_keep87 - reference_keep75
+        retained = frozenset(range(rows)) - marginal
+        if not reference_keep75.issubset(reference_keep87):
+            raise MP2BuildError(f"non-nested prune reference for {name}")
+        header_keep = max(1, round(rows * header_keep_percent / 100.0))
+        if len(retained) != header_keep:
+            raise MP2BuildError(
+                f"differential row count cannot use the keep88 receiver header for {name}"
+            )
+
+        selected = np.zeros(rows, dtype=np.uint8)
+        selected[list(retained)] = 1
+        payload.extend(np.packbits(selected, bitorder="little").tobytes())
+        compact = flat[torch.from_numpy(selected.astype(bool))]
+        encoded, restored_compact = mz2.sm3.standard_q4_payload(
+            "pruned.rows",
+            compact,
+        )
+        payload.extend(encoded)
+        restored = torch.zeros_like(flat)
+        restored[torch.from_numpy(selected.astype(bool))] = restored_compact
+        expected[name] = restored.reshape(value.shape)
+        tensor_rows[name] = {
+            "row_denominator": rows,
+            "reference_keep87_rows": sorted(reference_keep87),
+            "reference_keep75_rows": sorted(reference_keep75),
+            "marginal_pruned_rows": sorted(marginal),
+            "differential_retained_rows": sorted(retained),
+            "marginal_pruned_count": len(marginal),
+            "differential_retained_count": len(retained),
+            "header_declared_retained_count": header_keep,
+        }
+
+    metadata = {
+        "schema": "ddm_mp2_film_row_differential_selection.v1",
+        "candidate_id": DIFFERENTIAL_CANDIDATE_ID,
+        "seed": SEED,
+        "relationship": "prune only rows selected by keep87 and omitted by keep75",
+        "header_keep_percent": header_keep_percent,
+        "selected_tensor_names": sorted(prune_names),
+        "selection_mask": tensor_mask,
+        "tensor_rows": tensor_rows,
+        "complete": True,
+    }
+    return bytes(payload), expected, metadata
+
+
 def verify_generation_receipt(destination: Path, receipt: Mapping[str, Any]) -> None:
     if receipt.get("complete") is not True or receipt.get("receiver_closed") is not True:
         raise MP2BuildError(f"generation receipt is incomplete: {destination}")
@@ -614,9 +708,11 @@ def build_generation(
     parser: str,
     semantic_stream: bytes,
     semantic_raw: bytes,
-    expected_delta_bytes: int,
+    expected_delta_bytes: int | None,
     base_parts: Mapping[str, bytes | int],
     template: Mapping[str, torch.Tensor],
+    selection_metadata: Mapping[str, Any] | None = None,
+    additional_retained_payloads: Mapping[str, Mapping[str, Any]] | None = None,
 ) -> dict[str, Any]:
     generations = output / "generations"
     destination = generations / candidate_id
@@ -651,8 +747,10 @@ def build_generation(
     archive_repeat = rx1.deterministic_zip(member)
     if archive != archive_repeat:
         raise MP2BuildError(f"candidate archive is nondeterministic: {candidate_id}")
-    expected_bytes = BASE_ARCHIVE_BYTES + expected_delta_bytes
-    if len(archive) != expected_bytes:
+    expected_bytes = (
+        None if expected_delta_bytes is None else BASE_ARCHIVE_BYTES + expected_delta_bytes
+    )
+    if expected_bytes is not None and len(archive) != expected_bytes:
         raise MP2BuildError(
             f"candidate archive delta differs for {candidate_id}: {len(archive)} != {expected_bytes}"
         )
@@ -680,6 +778,27 @@ def build_generation(
         tail=tail,
         archive_repeat=archive_repeat,
     )
+    for label, record in (additional_retained_payloads or {}).items():
+        retained_path = Path(str(record["path"]))
+        if destination not in retained_path.parents:
+            raise MP2BuildError(f"additional retained payload escapes candidate root: {label}")
+        require_file(
+            retained_path,
+            size=int(record["bytes"]),
+            digest=str(record["sha256"]),
+        )
+        retained[label] = dict(record)
+    if selection_metadata is not None:
+        selection_path = destination / "retained/selection_map.json"
+        if "selection_map" in retained:
+            observed_selection = json.loads(selection_path.read_text(encoding="utf-8"))
+            if observed_selection != dict(selection_metadata):
+                raise MP2BuildError("pre-retained differential selection map differs")
+        else:
+            retained["selection_map"] = atomic_json(
+                selection_path,
+                selection_metadata,
+            )
     parseback = retain_receiver_decode(
         destination,
         candidate_id=candidate_id,
@@ -711,6 +830,14 @@ def build_generation(
             "semantic_state_exact_to_packer": parseback["semantic_state_exact_to_packer"],
             "semantic_tensor_denominator": parseback["semantic_tensor_denominator"],
         },
+        "selection_attribution": (
+            {
+                "selection_map": retained["selection_map"],
+                "schema": selection_metadata["schema"],
+            }
+            if selection_metadata is not None
+            else None
+        ),
         "archive_repeat_byte_identical": True,
         "receiver_closed": True,
         "n600_status": "PENDING",
@@ -718,6 +845,152 @@ def build_generation(
     }
     atomic_json(receipt_path, receipt)
     return receipt
+
+
+def build_differential(output: Path) -> dict[str, Any]:
+    """Build the Relay-7 keep75-minus-keep87 differential generation."""
+
+    preflight_path = output / "PREFLIGHT.json"
+    build_path = output / "BUILD_RESULT.json"
+    if not preflight_path.is_file() or not build_path.is_file():
+        raise MP2BuildError("original MP2 preflight and build receipts are required")
+    original_build = json.loads(build_path.read_text(encoding="utf-8"))
+    if (
+        original_build.get("complete") is not True
+        or original_build.get("all_receivers_closed") is not True
+    ):
+        raise MP2BuildError("original MP2 receiver-close build is incomplete")
+
+    base_member = read_stored_member(BASE_GENERATION / "archive.zip")
+    base_parts = split_member(base_member)
+    records, _, _ = mz2._load_records()
+    template = OrderedDict(
+        (
+            record.schema.name,
+            torch.from_numpy(np.ascontiguousarray(record.values, dtype=np.float32)),
+        )
+        for record in records
+    )
+    semantic_raw, expected, selection_map = pack_differential_prune_candidate(template)
+    destination = output / "generations" / DIFFERENTIAL_CANDIDATE_ID
+    prebuilt_raw = atomic_bytes(
+        destination / "retained/differential_source_semantic.raw.bin",
+        semantic_raw,
+    )
+    independent = OrderedDict(mz2.sm3.unpack_prune_candidate(semantic_raw, template))
+    if tuple(independent) != tuple(expected) or any(
+        not torch.equal(independent[name], expected[name]) for name in expected
+    ):
+        raise MP2BuildError("differential SM3R independent parse-back differs")
+    semantic_stream = brotli.compress(semantic_raw, quality=11)
+    prebuilt_stream = atomic_bytes(
+        destination / "retained/differential_source_semantic.br",
+        semantic_stream,
+    )
+    if brotli.decompress(semantic_stream) != semantic_raw:
+        raise MP2BuildError("differential semantic Brotli parse-back differs")
+
+    score_result = json.loads(MZ2_SCORE_RESULT.read_text(encoding="utf-8"))
+    reference_records: dict[str, Any] = {}
+    by_keep = {
+        int(row["keep_percent"]): row
+        for row in score_result["structured_sparsity_candidates"]
+    }
+    for keep_percent in (75, 87):
+        declared = by_keep[keep_percent]["payloads"]["semantic_raw"]
+        reference_path = Path(str(declared["path"]))
+        reference_records[f"keep{keep_percent}"] = require_file(
+            reference_path,
+            size=int(declared["bytes"]),
+            digest=str(declared["sha256"]),
+        )
+        repacked, _, _ = mz2.sm3.pack_prune_candidate(template, keep_percent)
+        if repacked != reference_path.read_bytes():
+            raise MP2BuildError(
+                f"differential selection reference keep{keep_percent} differs from custody"
+            )
+    selection_map["reference_candidate_raw_payloads"] = reference_records
+    prebuilt_selection = atomic_json(
+        destination / "retained/selection_map.json",
+        selection_map,
+    )
+
+    receipt = build_generation(
+        output,
+        candidate_id=DIFFERENTIAL_CANDIDATE_ID,
+        parser="sm3r",
+        semantic_stream=semantic_stream,
+        semantic_raw=semantic_raw,
+        expected_delta_bytes=None,
+        base_parts=base_parts,
+        template=template,
+        selection_metadata=selection_map,
+        additional_retained_payloads={
+            "differential_source_semantic_raw": prebuilt_raw,
+            "differential_source_semantic_stream": prebuilt_stream,
+            "selection_map": prebuilt_selection,
+        },
+    )
+    fire_order = {
+        "schema": "ddm_mp2_differential_advisory_fire_order.v1",
+        "seed": SEED,
+        "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+        "owner": "MAIN",
+        "consumer_store": str(
+            (
+                output
+                / "advisory_n600_cpu"
+                / DIFFERENTIAL_CANDIDATE_ID
+                / "attempt_0000"
+                / "contest_auth_eval.json"
+            ).resolve()
+        ),
+        "candidate": {
+            "candidate_id": DIFFERENTIAL_CANDIDATE_ID,
+            "archive": receipt["archive"],
+            "runtime": receipt["candidate_bound_runtime"],
+            "selection_map": receipt["selection_attribution"]["selection_map"],
+        },
+        "fire_trigger": (
+            "MAIN confirms the WD3 teacher-cache scorer lane has released and no full-n600 "
+            "scorer is active; reverify the exact archive and candidate-bound runtime hashes, "
+            "delete every ._* file from the generation, attempt directory, and pinned mirror "
+            "with /usr/bin/find, then launch one retained macOS-CPU advisory n600 through "
+            "experiments/contest_auth_eval.py. Admit only if exact recomputed delta S versus "
+            "the HV1 same-axis control is below -3.5e-6."
+        ),
+        "current_fire": False,
+    }
+    fire_record = atomic_json(output / "DIFFERENTIAL_N600_FIRE_ORDER.json", fire_order)
+    result = {
+        "schema": "ddm_mp2_differential_receiver_close.v1",
+        "axis": AXIS,
+        "score_claim": False,
+        "seed": SEED,
+        "builder_source": file_record(Path(__file__)),
+        "receiver_source": file_record(RECEIVER_SOURCE),
+        "candidate": {
+            "candidate_id": DIFFERENTIAL_CANDIDATE_ID,
+            "archive": receipt["archive"],
+            "archive_delta_bytes_vs_hv1": receipt["archive_delta_bytes_vs_hv1"],
+            "projected_rate_only_delta_score": receipt[
+                "projected_rate_only_delta_score"
+            ],
+            "receiver_closed": receipt["receiver_closed"],
+            "semantic_state_exact_to_packer": receipt["receiver_parseback"][
+                "semantic_state_exact_to_packer"
+            ],
+            "semantic_tensor_denominator": receipt["receiver_parseback"][
+                "semantic_tensor_denominator"
+            ],
+            "selection_map": receipt["selection_attribution"]["selection_map"],
+            "n600_status": "QUEUED",
+        },
+        "fire_order": fire_record,
+        "complete": True,
+    }
+    atomic_json(output / "DIFFERENTIAL_RESULT.json", result)
+    return result
 
 
 def build_control(
@@ -863,7 +1136,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--resume-from", type=Path, required=True)
     parser.add_argument(
         "--stage",
-        choices=("preflight", "build", "finalize", "all"),
+        choices=("preflight", "build", "finalize", "differential", "all"),
         default="all",
     )
     return parser.parse_args()
@@ -876,6 +1149,10 @@ def main() -> None:
     torch.manual_seed(SEED)
     np.random.seed(SEED)
     torch.use_deterministic_algorithms(True)
+    if args.stage == "differential":
+        result = build_differential(args.output)
+        print(json.dumps({"stage": "differential", "complete": result["complete"]}, sort_keys=True))
+        return
     stages = (
         ("preflight", preflight),
         ("build", build_all),

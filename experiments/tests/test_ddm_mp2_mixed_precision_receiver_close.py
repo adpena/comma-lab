@@ -52,6 +52,30 @@ def test_receiver_preserves_legacy_dispatch_and_refuses_unknown_sm3r():
         receiver.unpack_variant_semantic_or_none(b"SM3R\x01\x04\x00\x00", template)
 
 
+def test_differential_packet_is_exact_and_prunes_only_keep87_minus_keep75_rows():
+    _, template = current_template()
+    payload, expected, metadata = builder.pack_differential_prune_candidate(template)
+    independent = builder.mz2.sm3.unpack_prune_candidate(payload, template)
+    received = receiver.unpack_variant_semantic_or_none(payload, template)
+    assert received is not None
+    assert_state_equal(expected, independent)
+    assert_state_equal(expected, received)
+    assert metadata["header_keep_percent"] == 88
+    for name, row_map in metadata["tensor_rows"].items():
+        keep87 = set(row_map["reference_keep87_rows"])
+        keep75 = set(row_map["reference_keep75_rows"])
+        marginal = set(row_map["marginal_pruned_rows"])
+        retained = set(row_map["differential_retained_rows"])
+        assert keep75 < keep87
+        assert marginal == keep87 - keep75
+        assert retained == set(range(row_map["row_denominator"])) - marginal
+        assert row_map["marginal_pruned_count"] == 23
+        assert row_map["differential_retained_count"] == 169
+        assert row_map["header_declared_retained_count"] == 169
+        flat = expected[name].reshape(row_map["row_denominator"], -1)
+        assert torch.count_nonzero(flat[list(marginal)]) == 0
+
+
 def test_runtime_patch_is_additive_and_single_site(tmp_path):
     source = builder.BASE_GENERATION / "cpr1/inflate.py"
     candidate = tmp_path / "inflate.py"
