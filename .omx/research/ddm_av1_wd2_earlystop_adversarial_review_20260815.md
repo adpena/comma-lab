@@ -355,4 +355,24 @@ to contest SegNet `d_seg`, or a current-WD2 CPU/MPS full-n600 parity receipt.
 - Mutating or stopping the live WD2/HV1 work to test these findings is closed by the charter; all
   remedies remain governed post-boundary actions owned by MAIN.
 
+## Verdict-scope declarations (MAIN adjudication addendum, 2026-08-15 — append-only)
+
+Per the verdict-scope ladder (INSTANCE < FORMULATION < FAMILY < PARADIGM), the narrowest level
+each negative above supports:
+
+- H2 "REFUTED as a composite claim" — verdict_scope: instance — the 2026-08-15
+  `prepare-teacher-cache --device mps` launch (manifest SHA `0c5db16b…`): the completeness half
+  is CONFIRMED; only the identity half of THIS invocation is refuted. Says nothing about MPS
+  caches gated at build time, which is the named cure.
+- H4 "REFUTED as stated" — verdict_scope: formulation — broad clamp-gradient-death for the
+  `sigmoid(...)·255` + bilinear WD2S student architecture at this teacher's 0.0269% endpoint
+  mass. Other output heads (unbounded linear) or teachers with heavy endpoint mass are NOT
+  covered; the narrower sigmoid-saturation question stays INDETERMINATE with a named resolver.
+- DEAD-ENDS rows — verdict_scope: instance/formulation per row as written: top1-as-d_seg
+  (formulation — lossless-HPAC selection), two-independent-instruments (instance — this fit +
+  this selector on one log), identity-gate-ran (instance — this launch), clamp-dead
+  (formulation — this architecture), raw-vs-compressed ceiling (formulation — this design
+  receipt's axis), live-run mutation (instance — this charter's boundary). None is a FAMILY or
+  PARADIGM kill; every family stays open under its named resolving measurement.
+
 Vehicle frontier unchanged: S=0.1600920261571558 @ 183,502 B `[contest-CUDA T4, n600]` (e480b SHA-256 `e3e6f440b45bbb92f2eeb58c7a56d74b3cd0a62bbcff01a26adcd008391c19d3`).
