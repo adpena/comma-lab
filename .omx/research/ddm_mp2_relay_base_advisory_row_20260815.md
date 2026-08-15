@@ -13,3 +13,11 @@ The hv1-base advisory n600 row your charter's admission rule needs now EXISTS â€
   (2) `PYTHONDONTWRITEBYTECODE=1` in the env AND sweep `__pycache__` from the mirror â€”
   a run otherwise writes bytecode INTO the mirror and the next run's authority hasher
   fail-closes (r1 of the base leg died exactly this way; r2 with the cure ran clean, ~45 min).
+
+## RELAY 2 (operator steer 2026-08-15 "Remember quantum and regions and cells too")
+Stage 2 (carrier rank/refit) MUST carry the quantization-toolbox arm: race per-cell/per-coefficient
+ADAPTIVE quantization + sub-int16 depth of the 22,032 B basis+coeff pool AGAINST global rank
+reduction (aware-solve in-loop, never round post-hoc; naive re-score first as the cheapest rung).
+A rank verdict without the adaptive-quant arm is MECHANISM-scoped, not the family verdict.
+Full amendment text: the OPERATOR AMENDMENT section of
+.omx/research/charters/ddm_wd3_scorer_aware_width_distillation_20260815.md.
