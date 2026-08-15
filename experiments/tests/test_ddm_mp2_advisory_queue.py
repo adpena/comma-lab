@@ -80,4 +80,6 @@ def test_launch_argv_is_candidate_bound_and_retained(tmp_path: Path) -> None:
     assert "PYTHONDONTWRITEBYTECODE=1" in command
     assert generation["archive"]["path"] in command
     assert receipt.name == "ddm_mp2_candidate_n600_attempt_0000.done"
+    done_index = command.index("--done-receipt")
+    assert command[done_index + 1] == "ddm_mp2_candidate_n600_attempt_0000"
     assert result == tmp_path / "attempt_0000" / "contest_auth_eval.json"

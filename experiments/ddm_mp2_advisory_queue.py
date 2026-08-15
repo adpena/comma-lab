@@ -165,7 +165,7 @@ def _launch_argv(
     work_dir = attempt_dir / "work"
     result_path = attempt_dir / "contest_auth_eval.json"
     launcher_dir = attempt_dir / "launcher"
-    receipt_name = f"ddm_mp2_{candidate_id}_n600_attempt_{attempt:04d}.done"
+    receipt_name = f"ddm_mp2_{candidate_id}_n600_attempt_{attempt:04d}"
     command = [
         sys.executable,
         str(REPO_ROOT / "tools" / "launch_detached_process.py"),
@@ -210,7 +210,7 @@ def _launch_argv(
         "--evaluate-timeout",
         "14400",
     ]
-    return command, RUNS_ROOT / receipt_name, result_path
+    return command, RUNS_ROOT / f"{receipt_name}.done", result_path
 
 
 def _candidate_rows(manifest: dict[str, Any]) -> list[dict[str, Any]]:
