@@ -14,6 +14,7 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import hashlib
+import importlib.util
 import json
 import os
 import subprocess
@@ -37,6 +38,10 @@ CONTROL_DONE = RUNS_ROOT / "hv1_base_advisory_n600.done"
 AXIS = "[macOS-CPU advisory]"
 POLL_SECONDS = 15.0
 ATTEMPT_TIMEOUT_SECONDS = 6 * 60 * 60
+WC1_ADMISSION_GATE = Path(
+    "/Volumes/APDataStore/pact/ddm_wc1_advisory_decode_wallclock_20260815/"
+    "receipts/ADMISSION_GATE.json"
+)
 
 
 class QueueRefusal(RuntimeError):
@@ -53,6 +58,14 @@ def _sha256(path: Path) -> str:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def _file_fact(path: Path) -> dict[str, Any]:
+    return {
+        "path": str(path.resolve()),
+        "bytes": path.stat().st_size,
+        "sha256": _sha256(path),
+    }
 
 
 def _read_json(path: Path) -> dict[str, Any]:
@@ -153,15 +166,71 @@ def _clean_appledouble(roots: list[Path]) -> list[str]:
     return removed
 
 
+def _load_wc1_builder():
+    path = REPO_ROOT / "experiments/ddm_wc1_advisory_decode_wallclock.py"
+    spec = importlib.util.spec_from_file_location("_ddm_wc1_consumer_builder", path)
+    if spec is None or spec.loader is None:
+        raise QueueRefusal(f"cannot load WC1 advisory builder: {path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _validated_wc1_fast_path(path: Path = WC1_ADMISSION_GATE) -> dict[str, Any] | None:
+    """Enable WC1 only from its complete, byte-identity admission receipt."""
+
+    if not path.is_file():
+        return None
+    gate = _read_json(path)
+    blockers: list[str] = []
+    if gate.get("schema") != "ddm_wc1_advisory_fast_path_admission.v1":
+        blockers.append("schema")
+    if gate.get("complete") is not True or gate.get("identity_pass") is not True:
+        blockers.append("identity")
+    if gate.get("shipping_packet_touched") is not False:
+        blockers.append("shipping_containment")
+    environment = gate.get("consumer_environment")
+    required_environment = {
+        "F26_TOKEN_DECODER",
+        "F26_HPAC_NATIVE_LIBRARY",
+        "F26_ADVISORY_RENDER_WORKERS",
+        "F26_ADVISORY_DECODE_CACHE_ROOT",
+        "F26_ADVISORY_RENDER_RSS_BYTES",
+    }
+    if not isinstance(environment, dict) or set(environment) != required_environment:
+        blockers.append("consumer_environment")
+    code = gate.get("consumer_code")
+    if not isinstance(code, dict):
+        blockers.append("consumer_code")
+    else:
+        for label, fact in code.items():
+            if not isinstance(fact, dict):
+                blockers.append(f"consumer_code:{label}")
+                continue
+            observed = Path(str(fact.get("path", "")))
+            if not observed.is_file() or _file_fact(observed) != fact:
+                blockers.append(f"consumer_code:{label}")
+    if blockers:
+        raise QueueRefusal(f"WC1 admission gate is present but invalid: {blockers}")
+    return {"gate": _file_fact(path), "environment": environment}
+
+
 def _launch_argv(
     *,
     candidate_id: str,
     generation: dict[str, Any],
     attempt_dir: Path,
     attempt: int,
+    wc1_fast_path: dict[str, Any] | None = None,
 ) -> tuple[list[str], Path, Path]:
     archive = Path(generation["archive"]["path"])
     inflate_sh = archive.parent / "inflate.sh"
+    if wc1_fast_path is not None:
+        builder = _load_wc1_builder()
+        stage = attempt_dir / "wc1_advisory_generation"
+        builder.prepare_advisory_runtime(archive.parent, stage)
+        archive = stage / "archive.zip"
+        inflate_sh = stage / "inflate.sh"
     work_dir = attempt_dir / "work"
     result_path = attempt_dir / "contest_auth_eval.json"
     launcher_dir = attempt_dir / "launcher"
@@ -181,12 +250,18 @@ def _launch_argv(
         f"PATH={SHIM_BIN}:{os.environ.get('PATH', '')}",
         "--env",
         "PYTHONDONTWRITEBYTECODE=1",
-        "--done-receipt",
-        receipt_name,
-        "--verify-alive-secs",
-        "10",
-        "--",
-        str(REPO_ROOT / ".venv" / "bin" / "python"),
+    ]
+    if wc1_fast_path is not None:
+        for key, value in sorted(wc1_fast_path["environment"].items()):
+            command.extend(["--env", f"{key}={value}"])
+    command.extend(
+        [
+            "--done-receipt",
+            receipt_name,
+            "--verify-alive-secs",
+            "10",
+            "--",
+            str(REPO_ROOT / ".venv" / "bin" / "python"),
         str(REPO_ROOT / "experiments" / "contest_auth_eval.py"),
         "--archive",
         str(archive),
@@ -209,7 +284,8 @@ def _launch_argv(
         "5400",
         "--evaluate-timeout",
         "14400",
-    ]
+        ]
+    )
     return command, RUNS_ROOT / f"{receipt_name}.done", result_path
 
 
@@ -303,6 +379,7 @@ def run_queue(manifest_path: Path, output_root: Path) -> dict[str, Any]:
         raise QueueRefusal("queue state belongs to a different build manifest")
 
     control = _wait_for_control()
+    wc1_fast_path = _validated_wc1_fast_path()
     state["control"] = {
         "status": "COMPLETE",
         "result_path": str(CONTROL_RESULT),
@@ -366,6 +443,7 @@ def run_queue(manifest_path: Path, output_root: Path) -> dict[str, Any]:
             generation=generation,
             attempt_dir=attempt_dir,
             attempt=attempt,
+            wc1_fast_path=wc1_fast_path,
         )
         attempt_state = {
             "attempt": attempt,
@@ -382,6 +460,11 @@ def run_queue(manifest_path: Path, output_root: Path) -> dict[str, Any]:
             },
             "appledouble_removed_count": len(removed),
             "appledouble_removed": removed,
+            "wc1_fast_path": (
+                {"status": "DISABLED_NO_ADMISSION_GATE"}
+                if wc1_fast_path is None
+                else {"status": "ADMITTED_DEFAULT", **wc1_fast_path}
+            ),
             "launch_argv": command,
             "started_utc": _utc_now(),
         }

@@ -64,12 +64,22 @@ def test_wc1_thread_pin_sets_env_without_real_torch(monkeypatch) -> None:
 def test_wc1_microbatch_full_batch_variant_is_explicit() -> None:
     driver = _driver()
 
+    auto_plan = driver._derive_train_microbatch_plan(
+        argparse.Namespace(microbatch_pairs=0, microbatch_policy="auto", device="gpu"),
+        total_pairs=32,
+    )
+    assert auto_plan["microbatch_pairs"] == 4
+    assert auto_plan["source"] == "wc2_auto_empirical_wallclock_anchor"
     assert driver._derive_train_microbatch_pairs(
-        argparse.Namespace(microbatch_pairs=0, device="gpu"),
+        argparse.Namespace(microbatch_pairs=0, microbatch_policy="auto", device="gpu"),
         total_pairs=32,
     ) == 4
     assert driver._derive_train_microbatch_pairs(
-        argparse.Namespace(microbatch_pairs=32, device="gpu"),
+        argparse.Namespace(microbatch_pairs=32, microbatch_policy="auto", device="gpu"),
+        total_pairs=32,
+    ) == 32
+    assert driver._derive_train_microbatch_pairs(
+        argparse.Namespace(microbatch_pairs=0, microbatch_policy="full", device="gpu"),
         total_pairs=32,
     ) == 32
 
@@ -209,6 +219,9 @@ def test_wc1_bench_plan_builds_guarded_variant_ticket(tmp_path: Path) -> None:
         rss_mb=45_000,
         timeout_s=600.0,
         projected_gib=24.0,
+        concurrent_verdict_batch_size=16,
+        ane_parity_pairs=32,
+        coreml_compute_units="CPU_AND_NE",
     )
 
     ticket, rows = bench.build_plan(args)
@@ -222,6 +235,84 @@ def test_wc1_bench_plan_builds_guarded_variant_ticket(tmp_path: Path) -> None:
     assert "--compile-train-loss" in rows[3]["train_command"]
     assert "--train-compute-dtype" in rows[4]["train_command"]
     assert ticket["mem_probe_receipt_paths"]["argv_wc1_fp16_train"].endswith("mem_probe_receipt.json")
+
+
+def test_wc2_bench_plan_adds_ram_concurrent_and_ane_variants(tmp_path: Path) -> None:
+    bench = _bench()
+    resume = tmp_path / "mlx.latest.npz"
+    with resume.open("wb") as handle:
+        np.savez(handle, **{"meta::step": np.asarray([6000], dtype=np.int64)})
+    source_ticket = tmp_path / "source_ticket.json"
+    run_dir = tmp_path / "source_run"
+    source_ticket.write_text(
+        json.dumps(
+            {
+                "argv_n32_arm_cap": [
+                    ".venv/bin/python",
+                    "experiments/ddm_mx1_pr130_semantic_renderer.py",
+                    "--mode",
+                    "mlx-train",
+                    "--device",
+                    "gpu",
+                    "--pairs",
+                    "32",
+                    "--lr",
+                    "2e-07",
+                    "--ce-fraction",
+                    "0.0",
+                    "--softplus-fraction",
+                    "-999.0",
+                    "--bits",
+                    "4",
+                    "--seed",
+                    "20260806",
+                    "--input-cache",
+                    str(tmp_path / "veh.pt"),
+                    "--target-cache",
+                    str(tmp_path / "gt.pt"),
+                    "--init",
+                    str(tmp_path / "init.pt"),
+                    "--run-dir",
+                    str(run_dir),
+                    "--resume-from",
+                    str(resume),
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    args = argparse.Namespace(
+        source_ticket=source_ticket,
+        source_argv_key="argv_n32_arm_cap",
+        resume_from=None,
+        output_root=tmp_path / "bench",
+        ticket_out=tmp_path / "wc2_ticket.json",
+        variants="ram-cache,derived-microbatch-4,concurrent-cpu-verdict,ane-verdict",
+        pairs=32,
+        seed=20260806,
+        bench_steps=5,
+        mem_probe_steps=2,
+        rss_mb=45_000,
+        timeout_s=600.0,
+        projected_gib=24.0,
+        concurrent_verdict_batch_size=8,
+        ane_parity_pairs=32,
+        coreml_compute_units="CPU_AND_NE",
+    )
+
+    ticket, rows = bench.build_plan(args)
+
+    assert [row["variant"] for row in rows] == [
+        "ram-cache",
+        "derived-microbatch-4",
+        "concurrent-cpu-verdict",
+        "ane-verdict",
+    ]
+    assert "--cache-residency" in rows[0]["train_command"]
+    assert "--microbatch-policy" in rows[1]["train_command"]
+    assert rows[2]["cpu_verdict_command"][rows[2]["cpu_verdict_command"].index("--mode") + 1] == "torch-verdict"
+    assert rows[3]["ane_parity_command"][rows[3]["ane_parity_command"].index("--mode") + 1] == "coreml-segnet-parity"
+    assert "argv_wc1_ane_verdict_ane_parity" in ticket
 
 
 def test_wc1_fire_guard_compares_throughput_flags(tmp_path: Path) -> None:
@@ -265,6 +356,8 @@ def test_wc1_fire_guard_compares_throughput_flags(tmp_path: Path) -> None:
             "--compile-train-loss",
             "--perf-thread-pin",
             "one",
+            "--cache-residency",
+            "ram-full",
         ]
     )
     receipt = guard._receipt_config(
@@ -279,6 +372,8 @@ def test_wc1_fire_guard_compares_throughput_flags(tmp_path: Path) -> None:
                 "softplus_fraction": -999.0,
                 "bits": 4,
                 "microbatch_pairs": 0,
+                "microbatch_policy": "auto",
+                "cache_residency": "ram-full",
                 "mem_budget_gb": None,
                 "allow_soft_mem_limit": False,
                 "input_cache": str(input_cache),
@@ -299,3 +394,8 @@ def test_wc1_fire_guard_compares_throughput_flags(tmp_path: Path) -> None:
     assert ok is False
     assert reason == "receipt_config_mismatch"
     assert "train_compute_dtype" in detail["mismatches"]
+    receipt["train_compute_dtype"] = "fp16"
+    receipt["cache_residency"] = "selected"
+    ok, reason, detail = guard._validate_config_match(fire, receipt)
+    assert ok is False
+    assert "cache_residency" in detail["mismatches"]
