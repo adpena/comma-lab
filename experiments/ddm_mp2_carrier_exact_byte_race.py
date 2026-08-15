@@ -54,6 +54,15 @@ def _atomic_json(path: Path, payload: dict[str, Any]) -> None:
     _atomic_bytes(path, (json.dumps(payload, indent=2, sort_keys=True) + "\n").encode())
 
 
+def _retain_exact(path: Path, payload: bytes) -> str:
+    if path.exists():
+        if path.read_bytes() != payload:
+            raise CarrierRaceRefusal(f"retained payload differs on resume: {path}")
+        return "RESUMED_EXACT"
+    _atomic_bytes(path, payload)
+    return "MATERIALIZED"
+
+
 def run_race(source: Path, incumbent: Path, output: Path) -> dict[str, Any]:
     source = source.resolve()
     incumbent = incumbent.resolve()
@@ -73,8 +82,10 @@ def run_race(source: Path, incumbent: Path, output: Path) -> dict[str, Any]:
             raise CarrierRaceRefusal(f"Brotli quality {quality} failed exact decode equality")
         path = payload_root / f"carrier_q{quality:02d}.br"
         repeat_path = payload_root / f"carrier_q{quality:02d}.repeat.br"
-        _atomic_bytes(path, payload)
-        _atomic_bytes(repeat_path, brotli.compress(raw, quality=quality))
+        payload_status = _retain_exact(path, payload)
+        repeat_status = _retain_exact(
+            repeat_path, brotli.compress(raw, quality=quality)
+        )
         if path.read_bytes() != repeat_path.read_bytes():
             raise CarrierRaceRefusal(f"Brotli quality {quality} is not deterministic")
         rows.append(
@@ -84,6 +95,8 @@ def run_race(source: Path, incumbent: Path, output: Path) -> dict[str, Any]:
                 "repeat": _file_record(repeat_path),
                 "decode_exact": True,
                 "repeat_byte_identical": True,
+                "payload_status": payload_status,
+                "repeat_status": repeat_status,
                 "delta_bytes_vs_incumbent": len(payload) - len(incumbent_payload),
             }
         )

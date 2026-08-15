@@ -30,6 +30,9 @@ def test_exact_race_retains_all_payloads_and_ties_best(tmp_path: Path) -> None:
     for row in result["rows"]:
         assert Path(row["payload"]["path"]).is_file()
         assert Path(row["repeat"]["path"]).read_bytes() == Path(row["payload"]["path"]).read_bytes()
+        assert row["payload_status"] == "MATERIALIZED"
+    resumed = RACE.run_race(source, incumbent, tmp_path / "output")
+    assert {row["payload_status"] for row in resumed["rows"]} == {"RESUMED_EXACT"}
 
 
 def test_exact_race_refuses_wrong_source_size(tmp_path: Path) -> None:
