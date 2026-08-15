@@ -508,3 +508,42 @@ QAT law hold at the deeper entry state? the ENTRY_STATE_CONDITIONAL label's
 first test) → sealed identity-race parameterization (checkpoint path + terminal
 epoch as declared inputs, comparator pin update same commit) → race the best
 endpoint → if archive < 186,269 B, T4 fire (projected S ≈ 0.134).
+
+## §5f e480b ENDPOINT + the race's first execution (2026-08-15, MAIN)
+
+**Endpoint (advisory, ADVISORY_ESTIMATE_NOT_SERIALIZED):** ep480 terminal
+joint estimate **131,220 B** (tokens 113,229 + model 17,991), bpp 0.0076788,
+top1_error 0.0019019 — **−3,103 B vs the 60-ep endpoint** (134,323), and
+**below the fitted 60-ep QAT asymptote** (132,798). Wall 23,372.5 s (6.49 h,
+on the 6.6 h projection). rc=0, receipt counter 10. Pack custody GREEN on
+`qat_stage_end_epoch_0480.pt`: model 17,996 B raw / 13,688 B xz, repeats
+byte-identical, decode logit diff 0.0
+(`gpu_race/full_e480b/endpoint_pack_check/`).
+
+**Trajectory finding — the schedule-dimension constant-transfer bite.** Under
+the re-derived cosine (T_max=480) the continuous phase is NON-MONOTONIC:
+144,937 → 135,953 @ep30 (matching the 60-ep run early, where the schedules
+still agree) → back UP to 144,527 @ep240 as the mid-schedule LR stays high.
+The 240-epoch QAT anneal then does all the work: 144,527 → 131,220. The
+fitted "continuous saturates by ep75-120" projection encoded T_max=60's LR
+trajectory implicitly; re-deriving the scheduler (the very reason fresh-fire
+beat resume) invalidated it. The law's own `constants_run_scoped` /
+`ENTRY_STATE_CONDITIONAL` labels covered this; the sizing arithmetic
+transferred anyway — logged as a cross-regime transfer in the SCHEDULE
+dimension (m21/m22 genus). Direct evidence for the dt1-filed WSD/trapezoid
+schedule: hold-then-decay would likely have kept the ep30 gains. Refit
+receipt: `gpu_race/full_e480b/descent_law_fit_e480b.json`.
+
+**The sealed race's first execution caught a LATENT BUG (fixed a364573c13).**
+`prepare` refused with "MC36 residual-table accounting changed": the check
+compared `_hp4_fields`' full member TAIL (96-byte table + token stream,
+115,334 B — rx1's own consumer saves it whole as
+`residual_and_tokens.compact`) against a bare-96-byte expectation. The chain
+had NEVER run (no PREPARE_RESULT.json existed), so the bug was invisible
+until now. $0 measurement verified the true contract byte-exact
+(`residual_payload == b"RCF1" + tail[:96]` AND `tail[96:] == token_stream`)
+and the check was STRENGTHENED to it, not loosened. Comparator pin updated
+same-commit both times (declared-inputs parameterization ec72ca343b + this
+fix). Attempt-2 race LIVE (counter 12, receipt
+`rx2_e480b_identity_race_r2`): preflight ✓ prepare ✓ export-base in
+progress.
