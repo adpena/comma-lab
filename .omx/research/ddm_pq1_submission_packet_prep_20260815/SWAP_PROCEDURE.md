@@ -1,0 +1,63 @@
+# Typed candidate swap procedure
+
+## Trigger and invariant
+
+Swap generation 0 targets only e480b v2. A swap is permitted only after the
+e960 composition endpoint materializes one exact retained archive plus its
+receiver, reports archive bytes and SHA-256 from disk, and is selected by MAIN
+as the candidate to prepare. A projected candidate, an advisory checkpoint, or
+an archive without receiver closure cannot trigger a swap.
+
+The e480b packet remains retained. Never overwrite it in place and never reuse
+its authority receipts for changed bytes.
+
+## Procedure
+
+1. `VERIFY_SOURCE` — owner `MAIN packet owner`; consumer `new generation
+   staging root`; fire trigger `selected e960-composed archive and receiver
+   exist under retained custody`. Hash the source archive and every executable
+   runtime file, verify archive member safety and receiver parse-back, and stop
+   on any mismatch.
+2. `STAGE_NEW_GENERATION` — owner `MAIN packet owner`; consumer
+   `ddm_pq1_submission_packet/generations/<candidate-id>/`; fire trigger
+   `VERIFY_SOURCE green`. Copy the exact archive and receiver, retain the source
+   provenance, and diff the copy to the source before adding documentation.
+3. `RESET_AUTHORITY` — owner `MAIN scorer router`; consumer `candidate authority
+   store`; fire trigger `staged copy identity green`. Mark both `[contest-CUDA]`
+   and `[contest-CPU]` exact rows pending for the new bytes. No component, score,
+   runtime, or lane receipt transfers merely because the renderer lineage is
+   shared.
+4. `REFRESH_PUBLIC_PACKET` — owner `MAIN packet owner`; consumer `README.md`,
+   `report.txt`, `archive_manifest.json`, PR body, accounting table, packet
+   target, and CPU fire order`; fire trigger `real new receipts exist`. Replace
+   all archive/member/runtime/source/score fields from machine receipts, rerun
+   borrowed-substrate accounting at section level, and ensure the public body
+   contains no private infrastructure, local paths, provider transcript, or
+   machine attribution.
+5. `RERUN_STRICT_CHAIN` — owner `MAIN packet owner`; consumer `generation gap
+   report and compliance JSON`; fire trigger `public packet refreshed`. Execute
+   the exact strict checker with the new expected SHA and size. Record every red
+   item; never convert a red to green by copying an old receipt.
+6. `DELTA_REVIEW` — owner `submission reviewers`; consumer `review scaffold`;
+   fire trigger `strict checker receipt exists`. Compare generation 1 against
+   generation 0 for archive, member grammar, receiver files, dependencies,
+   score axes, source pin, lineage table, public text, runtime budget, and every
+   blocker. Any finding resets the consecutive-pass counter to `0/5` after the
+   fix.
+7. `SELECT_ACTIVE_GENERATION` — owner `MAIN`; consumer `PACKET_TARGET.json` and
+   final PR hold surface`; fire trigger `both exact axes complete, strict
+   checker green, public URL/source visible, and five consecutive clean passes`.
+   Select exactly one candidate. Retain the losing generation without
+   submitting it.
+
+## Refusal conditions
+
+- Source archive hash or size differs from the selection receipt.
+- Receiver tree lacks a byte-identity or exact authority binding for the new
+  archive.
+- Only one score axis exists.
+- Any public artifact contains unresolved placeholders or private operational
+  details.
+- The strict checker is red or the review counter is below `5/5`.
+- An actual push, hosting action, or pull-request opening lacks explicit
+  operator authorization.

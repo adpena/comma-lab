@@ -1,0 +1,30 @@
+# PQ1 strict-compliance gap report
+
+Disposition: **HOLD — packet prepared, not safe to PR or submit.**
+
+The final real strict check evaluated 86 checks: 78 passed and 8 failed. The
+exact candidate archive, member, CUDA authority receipt, executable runtime,
+public report, public README, archive manifest, source pin, axis labels, and
+competitive statement all passed. The remaining red items are typed below;
+none is hidden by a waiver, placeholder, or edited authority receipt.
+
+| Red check | Disposition | Owner | Consumer store | Fire trigger |
+|---|---|---|---|---|
+| `auth_eval_schema_metric_consistency` | `QUEUED_WITH_A_FIRE_ORDER` | MAIN, authority-adjudication owner | A new blocker-free paired authority receipt beside `receipts/cuda_auth/contest_auth_eval.json` | Exact e480b contest-CPU authority is harvested and the canonical adjudicator can preserve the real component-derived score without rewriting the historical raw receipt |
+| `auth_eval_raw_promotion_policy_blockers_absent` | `QUEUED_WITH_A_FIRE_ORDER` | MAIN, submission-policy adjudicator | Paired CPU/CUDA adjudication record in the retained packet receipts | Exact e480b contest-CPU authority and final compliance evidence both exist, so the raw receipt's explicit promotion blockers can be resolved by the real policy review |
+| `contest_cpu_auth_eval_exists` | `QUEUED_WITH_A_FIRE_ORDER` | MAIN | `/Volumes/VertigoDataTier/pact/ddm_pq1_submission_packet/receipts/cpu_auth/` and the packet `submission_dir/contest_cpu_auth_eval.json` consumer copy | The e960 packet decision is complete, no conflicting live scorer lane or call exists, the exact archive/runtime hashes revalidate, and MAIN claims the sealed CPU lane in `CPU_AXIS_SEALED_FIRE_ORDER.json` |
+| `submission_runtime_has_no_network_install_or_local_paths` | `HOLD_RUNTIME_AUTHORITY` | MAIN, dependency-closure/compliance owner | Accepted dependency-closure equivalence or fresh authority-runtime receipt | The compliance policy explicitly accepts the pinned fail-closed Brotli bootstrap, or a changed dependency-closed runtime receives a fresh exact authority evaluation; do not edit the currently measured receiver in place |
+| `hosted_archive_manifest_supplied` | `BLOCKED_ON_OPERATOR_AUTHORITY` | Operator / MAIN after authorization | Hosted archive manifest and PR evidence bundle | The operator authorizes hosting after candidate selection, and the hosted bytes are fetched back and proven SHA-identical to the exact archive |
+| `dispatch_claim_successful_exact_eval_terminal_row` | `QUEUED_WITH_A_FIRE_ORDER` | MAIN, lane-claim custodian | `.omx/state/active_lane_dispatch_claims.md` plus a refreshed compliance receipt | The retained CUDA authority receipt is reconciled into a canonical terminal status accepted by the checker; do not manufacture a terminal row from this prep arm |
+| `dispatch_claim_terminal_archive_sha_bound` | `QUEUED_WITH_A_FIRE_ORDER` | MAIN, lane-claim custodian | The canonical terminal lane row in `.omx/state/active_lane_dispatch_claims.md` | The real terminal-row reconciliation is performed and its notes bind archive SHA-256 `e3e6f440b45bbb92f2eeb58c7a56d74b3cd0a62bbcff01a26adcd008391c19d3` |
+| `dispatch_claim_terminal_runtime_tree_sha_bound` | `QUEUED_WITH_A_FIRE_ORDER` | MAIN, lane-claim custodian | The canonical terminal lane row in `.omx/state/active_lane_dispatch_claims.md` | The same real reconciliation binds runtime-tree SHA-256 `77b94b5c02c6564024265e3692fc4add10b021038367f962103a648c34ca5035` |
+
+No scorer, paid dispatch, source push, PR, submission, or hosting action was
+performed. The active e960 work was not inspected or mutated.
+
+## Additional publication gap outside the 86 strict checks
+
+| Gap | Disposition | Owner | Consumer store | Fire trigger |
+|---|---|---|---|---|
+| Friendly compression-source bundle | `QUEUED_WITH_A_FIRE_ORDER` | MAIN, public-source owner | Sanitized compression bundle at an immutable public source pin plus its reproduction manifest | The four real RX1/RX2 compression-side scripts have path/config inputs externalized, all RNG and stage checkpoints remain explicit, a clean documented run consumes pinned public inputs, and its retained output proves archive SHA-256 `e3e6f440b45bbb92f2eeb58c7a56d74b3cd0a62bbcff01a26adcd008391c19d3`; until then the PR answer remains “no” |
+| Canonical Git landing | `QUEUED_WITH_A_FIRE_ORDER` | MAIN, Git custodian | Canonical source checkout | Git metadata is writable; verify the retained clean-clone commit/patch against all 14 source artifacts, then land it through the serializer without staging unrelated work |

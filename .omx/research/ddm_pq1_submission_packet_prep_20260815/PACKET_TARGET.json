@@ -1,0 +1,36 @@
+{
+  "active_candidate": {
+    "archive_bytes": 183502,
+    "archive_sha256": "e3e6f440b45bbb92f2eeb58c7a56d74b3cd0a62bbcff01a26adcd008391c19d3",
+    "candidate_id": "e480b_v2_s1p25_c1p0_brotli_q10",
+    "cuda_authority": {
+      "axis": "[contest-CUDA]",
+      "hardware": "Tesla T4",
+      "n_samples": 600,
+      "score_pose_contribution": 0.008294576541331089,
+      "score_rate_contribution": 0.12218644961582469,
+      "score_recomputed_from_components": 0.1600920261571558,
+      "score_seg_contribution": 0.029611
+    },
+    "member": {
+      "bytes": 183402,
+      "name": "p",
+      "sha256": "30c0165ec56dd9327ca4dcda477c34c25f7664622ac37ec8ed171114267d1b58"
+    }
+  },
+  "auth_runtime": {
+    "cuda_remote_runtime_tree_sha256": "77b94b5c02c6564024265e3692fc4add10b021038367f962103a648c34ca5035",
+    "file_count": 25,
+    "portable_content_tree_sha256": "26c7d4f6a8e111c071d74208fc625bf2358e077a06dc59b54ec9421a8d198e0b",
+    "runtime_files_sha256": "0f9f410066789de222401678f71ccaedf897205f1a7db7c5b0799f1f96ecf609",
+    "source_commit": "19dd7916eb9ab5058bbeafa885ac68d8218d0a1e"
+  },
+  "cpu_axis": {
+    "exact_candidate_score_status": "PENDING_NOT_MEASURED",
+    "e480b_macos_identity_receipt_sha256": "a9d8b4ae9a8108052dc867eeda173c3ccfef0994f3320266cc71be8d959c9a5e",
+    "predecessor_contest_cpu_receipt_sha256": "3d0d94802ab10c513e1b1e2906c0e64efbd13579703b0710d022cb8d6c90fa20"
+  },
+  "disposition": "PREPARED_HOLD_NOT_SUBMITTED",
+  "schema": "ddm_pq1_packet_target.v1",
+  "swap_generation": 0
+}

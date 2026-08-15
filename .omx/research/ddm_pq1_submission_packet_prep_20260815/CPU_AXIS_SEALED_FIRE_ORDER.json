@@ -1,0 +1,129 @@
+{
+  "archive": {
+    "bytes": 183502,
+    "sha256": "e3e6f440b45bbb92f2eeb58c7a56d74b3cd0a62bbcff01a26adcd008391c19d3"
+  },
+  "axis": "[contest-CPU] Linux x86_64 n600",
+  "canonical_chain": "experiments/modal_auth_eval_cpu.py::main",
+  "claim_argv": [
+    ".venv/bin/python",
+    "tools/claim_lane_dispatch.py",
+    "claim",
+    "--lane-id",
+    "lane_ddm_pq1_e480b_exact_contest_cpu_20260815",
+    "--platform",
+    "modal",
+    "--instance-job-id",
+    "ddm_pq1_e480b_exact_contest_cpu_20260815",
+    "--agent",
+    "MAIN",
+    "--status",
+    "dispatching",
+    "--notes",
+    "pq1 exact e480b CPU axis; archive e3e6f440b45bbb92; retained f26p device-flexible runtime; one canonical n600 fire"
+  ],
+  "close": {
+    "poller_argv_template": [
+      ".venv/bin/python",
+      "tools/modal_harvest_poller.py",
+      "--call-id",
+      "CALL_ID_FROM_MODAL_AUTH_EVAL_SPAWN_JSON",
+      "--output-dir",
+      "experiments/results/ddm_pq1_e480b_exact_contest_cpu_20260815",
+      "--result-name",
+      "MODAL_REMOTE_RESULT.json",
+      "--deadline-s",
+      "9000",
+      "--poll-s",
+      "20"
+    ],
+    "recovery_argv": [
+      ".venv/bin/python",
+      "tools/recover_modal_auth_eval.py",
+      "--output-dir",
+      "experiments/results/ddm_pq1_e480b_exact_contest_cpu_20260815",
+      "--timeout-s",
+      "9000"
+    ],
+    "rule": "Launch the poller through tools/launch_detached_process.py immediately after the spawn receipt yields a call id. If it exits nonzero or the shell dies, execute recovery once; recovery owns terminal claim closure."
+  },
+  "command_argv": [
+    "env",
+    "PYTHONPATH=src:upstream:$PWD",
+    ".venv/bin/modal",
+    "run",
+    "--detach",
+    "experiments/modal_auth_eval_cpu.py::main",
+    "--archive",
+    "/Volumes/VertigoDataTier/pact/ddm_pq1_submission_packet/auth_runtime_dir/archive.zip",
+    "--submission-dir",
+    "/Volumes/VertigoDataTier/pact/ddm_pq1_submission_packet/auth_runtime_dir",
+    "--inflate-sh",
+    "inflate.sh",
+    "--expected-archive-sha256",
+    "e3e6f440b45bbb92f2eeb58c7a56d74b3cd0a62bbcff01a26adcd008391c19d3",
+    "--expected-runtime-tree-sha256",
+    "auto",
+    "--output-dir",
+    "experiments/results/ddm_pq1_e480b_exact_contest_cpu_20260815",
+    "--inflate-timeout",
+    "1800",
+    "--evaluate-timeout",
+    "5400",
+    "--scorer-input-cache-tensor-volume-run-id",
+    "ddm_pq1_e480b_exact_contest_cpu_20260815",
+    "--detach",
+    "--provider-detach-ack",
+    "--lane-id",
+    "lane_ddm_pq1_e480b_exact_contest_cpu_20260815",
+    "--instance-job-id",
+    "ddm_pq1_e480b_exact_contest_cpu_20260815",
+    "--claim-agent",
+    "MAIN",
+    "--claim-policy",
+    "require_active",
+    "--pair-group-id",
+    "ddm_rx2_e480b_hpac_winner_v2_paired_modal_auth_20260815T125117Z"
+  ],
+  "consumer_store": "experiments/results/ddm_pq1_e480b_exact_contest_cpu_20260815 plus the canonical frontier and submission-compliance stores",
+  "cost": {
+    "charter_planning_estimate_usd": 0.15,
+    "confidence": "LOW; the measured MC36 predecessor CPU call was approximately 0.40 USD",
+    "kind": "PROJECTION_NOT_SPEND"
+  },
+  "disposition": "QUEUED_WITH_A_FIRE_ORDER",
+  "fire_trigger": "MAIN only: operator GO to finish submission evidence; e960 packet-swap decision resolved; reconciliation reports zero live remote calls and zero active claims; unique lane claim succeeds; auth_runtime_dir still matches every sealed hash; no other full-n600 scorer owns the slot.",
+  "hash_manifest": {
+    "archive_sha256": "e3e6f440b45bbb92f2eeb58c7a56d74b3cd0a62bbcff01a26adcd008391c19d3",
+    "cuda_authority_json_sha256": "59881c30b296f79df310f0fd712fcf6f66f96ac9ab711b08da0e90b30b8403db",
+    "cuda_remote_runtime_tree_sha256": "77b94b5c02c6564024265e3692fc4add10b021038367f962103a648c34ca5035",
+    "e480b_cpu_identity_receipt_sha256": "a9d8b4ae9a8108052dc867eeda173c3ccfef0994f3320266cc71be8d959c9a5e",
+    "portable_runtime_content_tree_sha256": "26c7d4f6a8e111c071d74208fc625bf2358e077a06dc59b54ec9421a8d198e0b",
+    "runtime_file_count": 25,
+    "runtime_files_sha256": "0f9f410066789de222401678f71ccaedf897205f1a7db7c5b0799f1f96ecf609"
+  },
+  "owner": "MAIN",
+  "payload_retention": {
+    "required": true,
+    "required_returned_artifacts": [
+      "contest_auth_eval.json with exact components",
+      "report.txt",
+      "stdout and stderr",
+      "provenance.json",
+      "inflated_outputs_manifest.json",
+      "inflated_outputs_volume_manifest.json",
+      "modal_cpu_auth_eval_validation.json",
+      "failure sentinel and terminal claim receipt"
+    ],
+    "rule": "The wrapper must volume-retain the inflated-output identity manifest before returning. No scalar-only result is sufficient."
+  },
+  "preflight_argv": [
+    ".venv/bin/python",
+    "tools/claim_lane_dispatch.py",
+    "reconcile",
+    "--format",
+    "json"
+  ],
+  "schema": "ddm_pq1_cpu_axis_sealed_fire_order.v1",
+  "status": "NOT_DISPATCHED"
+}

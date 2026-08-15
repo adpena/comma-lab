@@ -1,0 +1,88 @@
+{
+  "schema": "pact.pq1.strict_compliance_gap_report.v1",
+  "candidate_archive_sha256": "e3e6f440b45bbb92f2eeb58c7a56d74b3cd0a62bbcff01a26adcd008391c19d3",
+  "candidate_archive_bytes": 183502,
+  "strict_check": {
+    "passed": false,
+    "checks_total": 86,
+    "checks_passed": 78,
+    "checks_failed": 8,
+    "receipt": "/Volumes/VertigoDataTier/pact/ddm_pq1_submission_packet/receipts/pre_submission_compliance.final.json"
+  },
+  "packet_disposition": "HOLD_NOT_SAFE_TO_PR_OR_SUBMIT",
+  "gaps": [
+    {
+      "check": "auth_eval_schema_metric_consistency",
+      "disposition": "QUEUED_WITH_A_FIRE_ORDER",
+      "owner": "MAIN authority-adjudication owner",
+      "consumer_store": "retained paired authority receipts",
+      "fire_trigger": "exact e480b contest-CPU authority is harvested and the canonical adjudicator can preserve the real component-derived score without rewriting the historical raw receipt"
+    },
+    {
+      "check": "auth_eval_raw_promotion_policy_blockers_absent",
+      "disposition": "QUEUED_WITH_A_FIRE_ORDER",
+      "owner": "MAIN submission-policy adjudicator",
+      "consumer_store": "retained paired CPU-CUDA adjudication record",
+      "fire_trigger": "exact e480b contest-CPU authority and final compliance evidence both exist"
+    },
+    {
+      "check": "contest_cpu_auth_eval_exists",
+      "disposition": "QUEUED_WITH_A_FIRE_ORDER",
+      "owner": "MAIN",
+      "consumer_store": "/Volumes/VertigoDataTier/pact/ddm_pq1_submission_packet/receipts/cpu_auth/",
+      "fire_trigger": "e960 packet decision complete; zero conflicting scorer calls or claims; exact archive and runtime hashes revalidate; sealed CPU lane claimed"
+    },
+    {
+      "check": "submission_runtime_has_no_network_install_or_local_paths",
+      "disposition": "HOLD_RUNTIME_AUTHORITY",
+      "owner": "MAIN dependency-closure and compliance owner",
+      "consumer_store": "accepted dependency-closure equivalence or fresh authority-runtime receipt",
+      "fire_trigger": "policy accepts the pinned fail-closed Brotli bootstrap or a changed dependency-closed runtime receives fresh exact authority evaluation"
+    },
+    {
+      "check": "hosted_archive_manifest_supplied",
+      "disposition": "BLOCKED_ON_OPERATOR_AUTHORITY",
+      "owner": "operator, then MAIN",
+      "consumer_store": "hosted archive manifest and PR evidence bundle",
+      "fire_trigger": "operator authorizes hosting after candidate selection and fetched hosted bytes prove SHA-identical"
+    },
+    {
+      "check": "dispatch_claim_successful_exact_eval_terminal_row",
+      "disposition": "QUEUED_WITH_A_FIRE_ORDER",
+      "owner": "MAIN lane-claim custodian",
+      "consumer_store": ".omx/state/active_lane_dispatch_claims.md and refreshed compliance receipt",
+      "fire_trigger": "retained CUDA authority receipt is reconciled into a canonical checker-accepted terminal status"
+    },
+    {
+      "check": "dispatch_claim_terminal_archive_sha_bound",
+      "disposition": "QUEUED_WITH_A_FIRE_ORDER",
+      "owner": "MAIN lane-claim custodian",
+      "consumer_store": "canonical terminal lane row",
+      "fire_trigger": "real terminal-row reconciliation binds the exact archive SHA-256"
+    },
+    {
+      "check": "dispatch_claim_terminal_runtime_tree_sha_bound",
+      "disposition": "QUEUED_WITH_A_FIRE_ORDER",
+      "owner": "MAIN lane-claim custodian",
+      "consumer_store": "canonical terminal lane row",
+      "fire_trigger": "real terminal-row reconciliation binds the exact runtime-tree SHA-256"
+    }
+  ],
+  "additional_publication_gaps": [
+    {
+      "gap": "friendly_compression_source_bundle",
+      "disposition": "QUEUED_WITH_A_FIRE_ORDER",
+      "owner": "MAIN public-source owner",
+      "consumer_store": "sanitized compression bundle at an immutable public source pin plus its reproduction manifest",
+      "fire_trigger": "real RX1-RX2 scripts have externalized path and config inputs, explicit RNG and stage checkpoints, a clean documented run on pinned public inputs, and an emitted archive matching the exact candidate SHA-256"
+    },
+    {
+      "gap": "canonical_git_landing",
+      "disposition": "QUEUED_WITH_A_FIRE_ORDER",
+      "owner": "MAIN Git custodian",
+      "consumer_store": "canonical source checkout",
+      "fire_trigger": "Git metadata is writable; verify the retained clean-clone commit and patch against all 14 source artifacts, then land through the serializer without unrelated staged work"
+    }
+  ],
+  "external_actions_performed": []
+}
