@@ -545,6 +545,18 @@ def _run_real_token_fallback(
         "all_probability_payloads_retained": True,
     }
     _atomic_json(output / "EXPORT_RESULT.json", export)
+    _atomic_json(
+        root / "PREPARE_RESULT.json",
+        {
+            "schema": "ddm_rx2_midrun_unpacked_token_prepare.v1",
+            "complete": True,
+            "model_status": "NOT_SERIALIZABLE",
+            "checkpoint": race.file_record(checkpoint_path),
+            "scope": "native RC64 token coding only; no serialized model byte claim",
+            "all_materialized_payloads_retained": True,
+            **_authority(),
+        },
+    )
     _install_neutral_table(root)
     args = _stage_args("neutral", brotli, required_free_gib)
     encoded = race.encode_rc64(args)
