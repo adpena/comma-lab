@@ -253,3 +253,23 @@ CONSUMER NOTE (mp2): Stage 1's FiLM-row sparsity candidates ARE surgical row-lev
 score them as such (per-row attribution in the receipts); Stage 2's adaptive-quant arm is
 SELECTIVE by construction (waterfill decides which coefficients get depth) — report the
 selection map, not only the aggregate bytes.
+
+## OPTIMAL FORM (MAIN addendum at spawn, 2026-08-15 — satisfies the charter-time law; av2's "Hard gates" section remains binding)
+Family reference: the wd2 build arm's landed trainer/exporter/receiver harness at its retained
+form (custody: /Volumes/APDataStore/pact/ddm_wd2_width_distillation/primary_flattened_d4_w64/
+TRAIN_RESULT.json + retained candidates tree) + the proven advisory chain (mirror + shim +
+watched launcher) + the declarative design ddm_wd3_scorer_aware_width_distillation_20260815.json
+(the mechanism SoT — never invent flags from it).
+Provenance pins: hv1 frontier archive sha
+80d9c8c6fdc72caaa3e180a8abb2a859e7f316a484b38f33fe90d5701420178e @182,759 B · wd2 student
+archive sha e9c4a9ed5e6bef89d228ca877a9f9e37345e3c79dc07ba20087c218ff89fcf87 @165,387 B ·
+teacher cache sha prefix 695023d4 (VERIFY full sha from wd2 receipts before citing) · mirror
+post-sweep sha fa7c4bf51d47a6140ec0f95275ebf86b0e6c3c1dc00caff03a417ee989645799 · same-instrument
+base receipt d_seg 0.00042714 / d_pose 1.4747e-4 / S 0.20280753928705508 (ddm_hv1_base_advisory_
+n600_cpu/contest_auth_eval.json) · av2 landing commit  · amendment commits (quantum/regions/
+cells + selective/surgical) in charter history.
+SCOPE reductions allowed: gate-subset size (strided/stratified per clause 4d), smoke epoch
+counts, arm-count within the sealed W0→D56→F64→W96 order. MECHANISM reductions: NONE — the
+scorer-aware loss trains through the REAL receiver resize/clamp/uint8/scorer chain with the
+sealed adaptive-dual weight policies; the student packet quantizer is in-loop (clause 1); no
+proxy-only verdicts; NO LAUNCH from the arm (governed Metal launch = MAIN).
