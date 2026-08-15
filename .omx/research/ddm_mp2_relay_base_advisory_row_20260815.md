@@ -21,3 +21,10 @@ reduction (aware-solve in-loop, never round post-hoc; naive re-score first as th
 A rank verdict without the adaptive-quant arm is MECHANISM-scoped, not the family verdict.
 Full amendment text: the OPERATOR AMENDMENT section of
 .omx/research/charters/ddm_wd3_scorer_aware_width_distillation_20260815.md.
+
+## RELAY 3 (operator steer 2026-08-15 "We can also do selective and surgical targeting")
+Stage 1's FiLM-row candidates = surgical row-level edits: keep per-row attribution in receipts.
+Stage 2's adaptive-quant waterfill = selective by construction: persist the SELECTION MAP (which
+coefficients got which depth), not only aggregate bytes. Bounding laws: selection re-priced under
+joint remeasure (never ranked once, #873); validation subsets strided/stratified never prefix
+(m88/m96). Full clause: wd3 charter OPERATOR AMENDMENT clause 4.

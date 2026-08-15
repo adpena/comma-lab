@@ -223,3 +223,33 @@ Three standing doctrines fold INTO the wd3 mechanism (recalled from corpus, not 
 CONSUMER NOTE (mp2, Stage 2 carrier rank/refit): the same toolbox binds — race per-cell adaptive
 quantization + sub-int16 depth of the 22,032 B basis+coeff pool AGAINST (not only alongside)
 global rank reduction; a rank verdict without the adaptive-quant arm is not the family verdict.
+
+## OPERATOR AMENDMENT clause 4 (2026-08-15, verbatim "We can also do selective and surgical targeting")
+
+SELECTIVE (choose WHICH cells/regions/pairs get treatment at all) and SURGICAL (micro-intervene
+at exactly the measured defect sites, touching nothing else) are first-class mechanisms of this
+build, with the measured laws that bound them:
+
+4a. **Selective TRAINING**: freeze/skip what already matches — spend student capacity and
+    gradient only where the teacher↔student decision-geometry delta concentrates (per-cell flip
+    maps from the in-loop gate). Precedent: the e960 burn itself descended on the SELECTIVE
+    384-cell mask (qa24), not the full grid. Selection is re-derived from measured flip maps,
+    never a naive top-k — #873's law: PLACEMENT beat re-SELECTION 5.7× on the token surface;
+    selection sets must be re-priced under joint remeasure, not ranked once.
+4b. **Surgical FINISHING composes with the student**: after training, the residual flip set is
+    a micro-edit object — the PROVEN qs2-class compile applies (few-pixel/few-token edits with
+    IN-COMPILE Schur pose compensation, d_pose held below base, repeat identical — the qs5
+    proof). A student that lands NEAR the bar can be surgically finished over it; budget this
+    as a designed stage, not an afterthought.
+4c. **The PER-AXIS selectivity law (measured — do not misapply)**: tail/surgical targeting PAYS
+    on the POSE axis (error tail-concentrated) and on carriage, but INVERTS on SEG (#930: seg
+    error is broad + hub-graph-coupled; tail-targeting seg made it worse). Surgical seg work
+    targets EDGES of the Road-hub graph (clause 2), not per-pair tails.
+4d. **Selective VALIDATION under the subset-bias laws**: any selected gate subset is STRIDED/
+    STRATIFIED, never prefix (m88/m96: pose prefix bias 2.5–4.2×, seg 0.96×, rate ~neutral);
+    a selected subset is a DIFFERENT population until proven otherwise (#875 scope-censoring).
+
+CONSUMER NOTE (mp2): Stage 1's FiLM-row sparsity candidates ARE surgical row-level edits —
+score them as such (per-row attribution in the receipts); Stage 2's adaptive-quant arm is
+SELECTIVE by construction (waterfill decides which coefficients get depth) — report the
+selection map, not only the aggregate bytes.
