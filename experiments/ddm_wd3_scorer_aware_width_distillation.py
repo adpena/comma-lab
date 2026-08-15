@@ -915,6 +915,7 @@ def adaptive_allocation_from_sensitivity(
 
     while total_error() > maximum_predicted_error:
         choices = []
+        took_free_upgrade = False
         for name, values in depths.items():
             for index, bit in enumerate(values):
                 if bit == 8:
@@ -923,8 +924,17 @@ def adaptive_allocation_from_sensitivity(
                 saving = float(row["errors"][str(bit)]) - float(row["errors"][str(bit + 1)])
                 extra_bytes = int(row["bytes"][str(bit + 1)]) - int(row["bytes"][str(bit)])
                 if extra_bytes <= 0:
-                    raise WD3Error("quantization rung byte cost is nonincreasing")
+                    # Real coder measurements are not strictly monotone in bit depth: a
+                    # higher-precision rung can compress to the same or fewer bytes. When
+                    # it also reduces error it strictly dominates — take it for free;
+                    # when it saves nothing it buys nothing — skip it as a candidate.
+                    if saving > 0.0:
+                        depths[name][index] += 1
+                        took_free_upgrade = True
+                    continue
                 choices.append((saving / extra_bytes, saving, name, index))
+        if took_free_upgrade:
+            continue
         if not choices:
             raise WD3Error("even int8 allocation cannot meet the predicted-error ceiling")
         _, saving, name, index = max(choices, key=lambda row: (row[0], row[1], row[2], -row[3]))

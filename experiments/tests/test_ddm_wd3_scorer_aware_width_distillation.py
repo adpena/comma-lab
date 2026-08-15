@@ -513,3 +513,40 @@ def test_build_verification_retains_payloads_and_stays_blocked(tmp_path: Path) -
     assert receipt["payloads"]["uniform_packet"]["bytes"] > 0
     loaded = json.loads((tmp_path / "BUILD_RECEIPT.json").read_text())
     assert loaded["frontier_moved"] is False
+
+
+def test_nonmonotone_rung_byte_cost_is_data_not_a_crash() -> None:
+    """Governor-incident regression (2026-08-15): real coder measurements can code a
+    higher-precision rung to the same or fewer bytes. A dominant (error-reducing) free
+    rung must be TAKEN, a useless one SKIPPED — neither may abort the allocation."""
+    model = tiny_model()
+    sensitivity = {}
+    first_name = None
+    for name, value in model.state_dict().items():
+        if value.ndim < 2:
+            continue
+        if first_name is None:
+            first_name = name
+        axis = value.ndim - 1 if name.endswith("embed.weight") else 0
+        rows = []
+        for group in range(value.shape[axis]):
+            errors = {str(bit): 1.0 / (bit + group + 1) for bit in range(2, 9)}
+            bytes_by_bit = {str(bit): bit + 2 for bit in range(2, 9)}
+            rows.append({"group": group, "errors": errors, "bytes": bytes_by_bit})
+        sensitivity[name] = rows
+    # Dominant free rung: 2->3 bits on group 0 costs ZERO extra bytes yet reduces error.
+    sensitivity[first_name][0]["bytes"]["3"] = sensitivity[first_name][0]["bytes"]["2"]
+    # Useless free rung: 3->4 bits costs fewer bytes AND saves no error.
+    sensitivity[first_name][0]["bytes"]["4"] = sensitivity[first_name][0]["bytes"]["3"] - 1
+    sensitivity[first_name][0]["errors"]["4"] = sensitivity[first_name][0]["errors"]["3"]
+    ceiling = sum(row["errors"]["4"] for rows in sensitivity.values() for row in rows)
+    allocation = wd3.adaptive_allocation_from_sensitivity(
+        model,
+        sensitivity,
+        maximum_predicted_error=ceiling,
+        selection_sha256="b" * 64,
+    )
+    depths = {bit for values in allocation.bits.values() for bit in values}
+    assert min(depths) >= 2 and max(depths) <= 8
+    # The dominant free rung was taken: group 0 sits at >= 3 bits.
+    assert allocation.bits[first_name][0] >= 3
