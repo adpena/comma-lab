@@ -14,12 +14,14 @@ This hook moves the law to the spawn site: an ``Agent`` call that does not name
 an allowed model is REFUSED, so the expensive default can no longer be reached
 by omission.
 
-THE LIVE RULE (operator 2026-08-04, superseding the above remedy): Claude
-subagents are OFF entirely — codex arms only, via the canonical detached
-``codex exec`` Pattern A, which runs through Bash and draws no Claude quota.
-``ALLOWED_MODELS`` is therefore empty and every Agent spawn refuses. The
-model-omission history is retained because it explains WHY the guard exists and
-what reverting the allow-set would re-expose.
+THE LIVE RULE (operator 2026-08-04 base + named carve-outs): codex arms are the
+DEFAULT route, via the canonical keeper (``tools/codex_arm_queue.py``), which
+runs through Bash and draws no Claude quota. A spawn that OMITS ``model``
+always refuses (the expensive-default-by-omission class). Two explicit grants
+pass: ``model: "fable"`` (operator 2026-08-04, convocation-class) and
+``model: "opus"`` (operator 2026-08-15, close-supervision contract, granted
+during the codex credit outage). The model-omission history is retained because
+it explains WHY the guard exists and what widening the allow-set re-exposes.
 
 Scope notes:
   * Forks are NOT exempt. A fork inherits the parent model by tool contract, but
@@ -59,19 +61,24 @@ _ERROR_LOG = _REPO / ".omx" / "state" / "agent_model_routing_guard_errors.log"
 # 08-04 quota burn came from spawns that OMITTED `model` and silently inherited
 # fable; a spawn that NAMES fable is a deliberate operator-authorized act, and
 # forks (which always run the parent model) must still declare it to pass.
-ALLOWED_MODELS: frozenset[str] = frozenset({"fable"})
+# CARVE-OUT 2 (operator 2026-08-15, during the codex credit outage, verbatim
+# "You can use opus subagents but they will need close supervision"): an
+# explicit `model: "opus"` spawn is permitted under the close-supervision
+# contract (bounded charter, checkpoint discipline, MAIN reviews every landing
+# — memory: opus_subagents_close_supervision_20260815). Codex remains the
+# default arm route whenever credits allow. Omission still refuses.
+ALLOWED_MODELS: frozenset[str] = frozenset({"fable", "opus"})
 _ESCAPE_ENV = "TAC_AGENT_MODEL_GUARD_OK"
 
 BLOCK_MESSAGE = (
-    "BLOCKED by tools/agent_model_routing_guard_hook.py: CLAUDE SUBAGENTS ARE OFF. "
-    "Operator directive 2026-08-04: codex arms only, spawned via the canonical "
-    "detached `codex exec` Pattern A (nohup + bash -c + disown, "
-    "-s workspace-write -m <tools.codex_arm_queue.ARM_MODEL> "
-    "-c model_reasoning_effort=xhigh -o <last.txt>), "
-    "which runs through Bash and does not draw Claude quota. Context: omitting "
-    "`model` made every arm inherit the fable session default and burned weeks of "
-    "rate limit in one day on 2026-08-04; the operator's remedy is codex, not a "
-    "different Claude model. Deliberate exception: set {escape}=1."
+    "BLOCKED by tools/agent_model_routing_guard_hook.py: Claude subagents require an "
+    "EXPLICIT allowed model. Operator routing law 2026-08-04: codex arms are the "
+    "default (tools/codex_arm_queue.py keeper); a spawn that OMITS `model` inherits "
+    "the expensive fable session default (the 08-04 quota burn) and is refused. "
+    "Named exceptions: model:'opus' (operator grant 2026-08-15, close-supervision "
+    "contract — bounded charter, checkpoints, MAIN reviews every landing) and "
+    "model:'fable' (operator grant 2026-08-04, convocation-class only). "
+    "Last-resort escape: set {escape}=1."
 )
 
 

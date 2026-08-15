@@ -37,8 +37,9 @@ def hook():
 # --- the live law: every Claude subagent spawn refuses ---------------------------
 
 
-def test_allow_set_is_empty_under_the_codex_only_directive(hook):
-    assert hook.ALLOWED_MODELS == frozenset()
+def test_allow_set_is_exactly_the_two_operator_grants(hook):
+    """08-04 fable (convocation-class) + 08-15 opus (close-supervision bridge)."""
+    assert hook.ALLOWED_MODELS == frozenset({"fable", "opus"})
 
 
 def test_omitted_model_is_blocked(hook):
@@ -47,11 +48,18 @@ def test_omitted_model_is_blocked(hook):
     assert reason
 
 
-@pytest.mark.parametrize("model", ["opus", "sonnet", "haiku", "fable", "opuss", ""])
-def test_every_named_model_is_blocked(hook, model):
-    """Naming a model no longer helps — Claude subagents are off entirely."""
+@pytest.mark.parametrize("model", ["sonnet", "haiku", "opuss", ""])
+def test_ungranted_named_models_are_blocked(hook, model):
+    """Only the two explicit operator grants pass; near-misses (opuss) refuse."""
     blocked, _ = hook.decide({"model": model, "prompt": "x"}, {})
     assert blocked is True
+
+
+@pytest.mark.parametrize("model", ["opus", "  Opus ", "fable"])
+def test_granted_named_models_pass(hook, model):
+    """Explicitly NAMING a granted model is the deliberate act the guard demands."""
+    blocked, _ = hook.decide({"model": model, "prompt": "x"}, {})
+    assert blocked is False
 
 
 def test_none_model_is_blocked(hook):
@@ -73,8 +81,9 @@ def test_general_purpose_subagent_type_is_blocked(hook):
 def test_blocked_reason_names_the_directive_and_the_alternative(hook):
     _, reason = hook.decide({"prompt": "x"}, {})
     assert "2026-08-04" in reason
-    assert "codex exec" in reason
-    assert "CLAUDE SUBAGENTS ARE OFF" in reason
+    assert "2026-08-15" in reason  # the opus close-supervision grant is named
+    assert "codex_arm_queue" in reason
+    assert "EXPLICIT allowed model" in reason
 
 
 def test_blocked_reason_has_no_unformatted_placeholders(hook):
@@ -100,11 +109,11 @@ def test_escape_hatch_requires_exactly_one(hook):
 
 def test_nonempty_allow_set_would_permit_a_named_model(hook, monkeypatch):
     """If Claude arms re-open, the guard reverts to enforcing EXPLICIT routing."""
-    monkeypatch.setattr(hook, "ALLOWED_MODELS", frozenset({"opus"}))
-    assert hook.decide({"model": "opus"}, {})[0] is False
-    assert hook.decide({"model": "  Opus "}, {})[0] is False  # case/space tolerant
+    monkeypatch.setattr(hook, "ALLOWED_MODELS", frozenset({"sonnet"}))
+    assert hook.decide({"model": "sonnet"}, {})[0] is False
+    assert hook.decide({"model": "  Sonnet "}, {})[0] is False  # case/space tolerant
     assert hook.decide({"prompt": "x"}, {})[0] is True  # omission still refuses
-    assert hook.decide({"model": "fable"}, {})[0] is True  # the expensive default
+    assert hook.decide({"model": "opus"}, {})[0] is True  # not in the patched set
 
 
 # --- end-to-end process contract -------------------------------------------------
@@ -135,11 +144,11 @@ def test_process_denies_agent_spawn_without_model():
     assert emitted["reason"] == emitted["hookSpecificOutput"]["permissionDecisionReason"]
 
 
-def test_process_denies_agent_spawn_with_model_opus():
-    """The 08-04 flip: naming opus used to pass, now refuses."""
+def test_process_allows_agent_spawn_with_model_opus():
+    """The 08-15 grant: an explicit opus spawn (supervised bridge) passes silently."""
     proc = _run({"tool_name": "Agent", "tool_input": {"model": "opus", "prompt": "x"}})
     assert proc.returncode == 0
-    assert json.loads(proc.stdout)["decision"] == "block"
+    assert proc.stdout.strip() == ""
 
 
 def test_process_ignores_other_tools():
