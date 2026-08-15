@@ -547,3 +547,43 @@ same-commit both times (declared-inputs parameterization ec72ca343b + this
 fix). Attempt-2 race LIVE (counter 12, receipt
 `rx2_e480b_identity_race_r2`): preflight ✓ prepare ✓ export-base in
 progress.
+
+## §5g e480b identity race COMPLETE + T4 fire (2026-08-15)
+
+The race finished after two more driver defects, both the same genus as §5f's
+(the sealed chain's per-variant middle section was driven once): r3 ran `build`
+without the variant's `RC64_RESULT.json` (encode is per-variant); r4 ran
+`encode` without `EXPORT_RESULT.json` (materialize is per-variant). r5 drove
+the full per-variant chain materialize→encode→build for the 4 remaining
+fit-selected variants, then cpu-decode + finalize: rc=0 end to end. Driver
+committed (`e480b_race_finish.sh`); lesson: read the stage dependency graph
+from source after the FIRST missing-artifact refusal, not the second.
+
+**FINAL_RESULT (schema ddm_rx2_final.v1, [macOS-CPU advisory, scorer-free
+lossless composition], score_claim=false):**
+- WINNER `s1p25_c1p0` @ brotli_q10: archive **183,502 B**
+  (sha e3e6f440b45bbb92f2eeb58c7a56d74b3cd0a62bbcff01a26adcd008391c19d3),
+  **−2,767 B vs the MC36 frontier archive** (186,269 B). Repeat build
+  byte-identical. Sections: token 112,749 B + model 70,557 B + table 100 B +
+  residual 96 B.
+- `measured_delta_distortion = 0.0` BY CONSTRUCTION and VERIFIED: decoded
+  tokens byte-identical to MC36's; full 3,662,409,600-byte raw RGB decode on
+  the lifted F26 CPU runtime (4 threads, 915.5 s) sha-identical to the MC36
+  CPU decode (e5539653f598a1c3…). Receiver parseback + component identity
+  green. All payloads retained (17,394 files / 13.4 GB inventory).
+- Projected S if MC36 distortion holds: **0.16009202615715576**
+  (0.1619344578804448 − 25·2,767/37,545,489) — NOT a score claim.
+- The e480b HPAC endpoint's advisory joint estimate (131,220 B) vs the
+  realized delta (−2,767 B): the estimate replaces a DIFFERENT accounting
+  basis than the archive's realized token+model sections; the REAL number is
+  the archive stat, per the rate-term law.
+
+**T4 fire (the sealed MAIN-owned fire order, trigger met):** submission dir
+`/Volumes/VertigoDataTier/pact/ddm_rx2_current_mc36_label_hpac/e480b_submission/`
+= MC36's `adapted_runtime` tree byte-identical (diff -r clean) + the candidate
+archive. Dispatched via the canonical paired launcher; CUDA leg LIVE
+`fc-01M02Q4XFXSE2NHFPGWV5NMB8A` (2026-08-15T12:43:02Z, ~$0.25); the CPU
+sibling was refused by modal-single-flight AFTER the CUDA spawn — acceptable:
+the CPU axis is structurally infeasible on this CUDA-locked runtime (the MC36
+promotion measured it, 3.2 s InflationError). Closer pid 57240, receipt
+`rx2_e480b_t4_harvest`.
