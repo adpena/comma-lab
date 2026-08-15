@@ -445,3 +445,25 @@ owed edit).
 REJECTED in-run: any mechanism change (architecture/lr/activation/coder) —
 breaks the single-variable evidence chain and the comparator's parity basis;
 new mechanisms are separate raced arms per charter-time optimal form.
+
+### §5d Loss/schedule adjudication (operator 2026-08-14 "better loss than just cosine or whatever... I don't know if that works for this")
+
+LOSS: already optimal for THIS vehicle — trainer :1234-1236 is
+CE(tokens) + rate_lambda·ln2·model_bits/pixels, i.e. the training loss IS the
+deployed joint-rate objective (source coding theorem: CE nats = arithmetic-
+coder bits). Zero proxy gap; witness-line loss machinery cures a gap this
+vehicle does not have. NO CHANGE.
+
+SCHEDULE: cosine (T_max=epochs, :1037) is the weak inherited piece — it bakes
+the horizon into every step, which is mechanically why extension-resume was
+refused (§5b). ADOPTED ROUTE: WSD/trapezoid (per ng1 + px1 crosswalks,
+horizon-FREE plateau + short derived tail) lands as ONE design with the dt1
+extension-resume patch — a horizon-extensible trainer wants a horizon-free
+schedule. NOT in the live race or the single-variable extension (mechanism
+change = separate evidence chain); raced arm optional after the patch.
+
+TERMINAL-CHAIN ADDITION to §5c bank: terminal BIT-DEPTH RE-SOLVE — post-hoc
+sensitivity waterfill over the learned per-tensor bit_depth assignments on the
+winning endpoint checkpoint (the #157/#69 solve-don't-train family applied to
+this vehicle), priced through the real IHS1 pack + archive bytes; no trainer
+edit, composes with the micro-edit bank at the parameterized race gate.
