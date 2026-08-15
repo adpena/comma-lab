@@ -32,7 +32,7 @@ SSD_ROOTS = (Path("/Volumes/VertigoDataTier/pact"), Path("/Volumes/APDataStore/p
 REFERENCE_TRAINER = REPO_ROOT / "tools/train_ddm_cl1_hpac_capacity.py"
 REFERENCE_TRAINER_SHA256 = "8392a9b9f2d303698de59e627fa489a792ab0b0b38170cebd425f9310162059e"
 RACE_PACKER = REPO_ROOT / "experiments/ddm_rx2_mc36_identity_race.py"
-RACE_PACKER_SHA256 = "5f9cd39f4338a33f8bbca5052508b0989114b15d61ebf521629922e03d7b1d57"
+RACE_PACKER_SHA256 = "27d22573963374d73380465095393dcd7953e9c69c7facf32993b8e5262bc6ce"
 
 
 class ParityError(RuntimeError):

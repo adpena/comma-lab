@@ -403,10 +403,15 @@ def prepare(args: argparse.Namespace) -> dict[str, Any]:
         "base_residual": atomic_bytes(frozen / "residual.rcf1", parts.residual_payload),
         "base_tokens": atomic_bytes(frozen / "tokens.rc64", parts.token_stream),
     }
+    # _hp4_fields returns the member TAIL after the model fields: the 96-byte
+    # compact table followed by the token stream (verified byte-exact against
+    # the runtime's read_residual_archive on the pinned base, 2026-08-15).
+    compact_table = compact_section[:TABLE_COMPACT_BYTES]
     if (
         len(parts.residual_payload) != TABLE_FULL_BYTES
-        or len(compact_section) != TABLE_COMPACT_BYTES
-        or parts.residual_payload != b"RCF1" + compact_section
+        or len(compact_section) < TABLE_COMPACT_BYTES
+        or parts.residual_payload != b"RCF1" + compact_table
+        or compact_section[TABLE_COMPACT_BYTES:] != parts.token_stream
     ):
         raise RX2RaceError("MC36 residual-table accounting changed")
 
