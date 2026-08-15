@@ -394,3 +394,54 @@ until the 60-ep run's ep32–60 rows land (and stays ENTRY-STATE-CONDITIONAL).
 At the fit boundary, register the fitted law as canonical equation
 `hpac_mc36_joint_descent_law_v1` (producer: the fitter; anchors: fit receipt +
 log shas; consumers: extension sizing + the race epoch-gate parameterization).
+
+### §5b Resume-vs-fresh adjudication (operator 2026-08-14 "Shouldn't it be able to just be resumed?")
+
+YES in architecture, NOT YET in the gate — adjudicated at source:
+- The natural resume point EXISTS by design: `continuous_stage_end_epoch_0030.pt`
+  is written at qat_start−1 (trainer:734/:1292), plus per-eval periodic
+  checkpoints, all under sha-pinned resume lineage (the r5 CPU run is itself a
+  5th-generation resume of this machinery).
+- The schedule is horizon-DERIVED throughout: qat_start = f(epochs, fraction)
+  (:1041), cosine LR T_max = epochs (:1037), EMA decay from
+  --ema-target-seed-fraction. Extension-resume is therefore the law-following
+  shape: change ONLY the horizon, everything re-derives.
+- BUT the resume identity gate REFUSES it: `epochs` is in the compared
+  training_config (:616–645 keys, refusal at :1146), the restored scheduler
+  state bakes in the OLD T_max, and the ema_policy equality check (:~1152)
+  refuses the re-derived decay. Three named touch points.
+
+DECISION for THIS extension: FRESH-FIRE, not resume. Economics: the patch
+touches a sha-pinned custody surface (run identity + EMA policy + scheduler
+restore) whose pins cascade through the wc2 wrapper (reference_trainer sha
+8392a9b9…) and the parity evidence chain — a careful ~1h two-landing change —
+versus ~28 min of Metal (30 continuous epochs × 56 s) saved by resuming.
+Fresh-fire also keeps the extension a pure single-variable run against the
+fitted law. The 60-epoch run is NOT waste: it is the calibration instrument,
+the QAT-curve producer, and a sealed-race entrant in its own right.
+
+CAPABILITY GAP FILED (dt1 determinization genus — make the law-following path
+legal): typed EXTENSION-RESUME on this trainer — identity gate treats `epochs`
+as extension-legal (grow-only, recorded in lineage as an extension event),
+scheduler re-derived at the new horizon then advanced to start_epoch, EMA
+policy re-derived with the shadow carried. Lands as a deliberate two-landing
+patch with pin updates at a quiet boundary, never mid-race.
+
+### §5c Truly-optimal composition boundary (operator: "other things to compose and include?")
+
+IN the extended run (law-derivations only, no new mechanisms):
+law-derived N (§5a fitter, refit with QAT data) · phase boundary AT the
+measured knee (choose N × fraction so qat_start ≈ knee; N=120 @ 0.5 → 61 ≈ the
+partial-fit knee 57–60) · EMA + cosine horizons re-derive automatically ·
+canonical watchers + QAT-knee serialization cadence (sp2 analog).
+
+AT the terminal chain, NOT in the run (banked, owners live): qs2 −4.375e-6
+(+34 B) + re1 −1.207e-6 (0 B) micro-edit bank (edits the token FIELD — compose
+edits then re-encode with the winning model; union fire still held at the
+≥1e-5 pool bar) · pz4/pz4a variable-precision pose recode (2,000 B pre-proof
+gate) · HP4 repack. They meet the race at its parameterized epoch gate (§5
+owed edit).
+
+REJECTED in-run: any mechanism change (architecture/lr/activation/coder) —
+breaks the single-variable evidence chain and the comparator's parity basis;
+new mechanisms are separate raced arms per charter-time optimal form.
