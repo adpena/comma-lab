@@ -1,0 +1,301 @@
+{
+  "schema": "ddm_wd3_scorer_aware_width_distillation_design.v1",
+  "status": "SEALED_DESIGN_CODE_NOT_BUILT_NO_LAUNCH",
+  "created_utc": "2026-08-15T19:04:00Z",
+  "authority": {
+    "score_claim": false,
+    "promotion_eligible": false,
+    "axis": "[design only; no scorer run]",
+    "budget_usd": 0,
+    "launch_authorized": false,
+    "note": "This JSON is a declarative design contract. It is not executable argv and invents no trainer flags."
+  },
+  "base": {
+    "frontier_archive_bytes": 182759,
+    "frontier_archive_sha256": "80d9c8c6fdc72caaa3e180a8abb2a859e7f316a484b38f33fe90d5701420178e",
+    "frontier_score": 0.15959729295498598,
+    "frontier_axis": "[contest-CUDA T4, n600]",
+    "frontier_d_seg": 0.00029611,
+    "frontier_pose_contribution": 0.008294576541331089,
+    "same_instrument_receipt": "/Volumes/APDataStore/pact/ddm_hv1_base_advisory_n600_cpu/contest_auth_eval.json",
+    "same_instrument_receipt_status_at_seal": "COMPLETE_CONSUMED",
+    "same_instrument_receipt_bytes": 23416,
+    "same_instrument_receipt_sha256": "cfdac1fd0965095152ffd88c878d9c4b8f38c644d755e594ad028a798daf3a7f",
+    "same_instrument_values": {
+      "axis": "[env-mismatch advisory] macOS CPU n600",
+      "archive_bytes": 182759,
+      "archive_sha256": "80d9c8c6fdc72caaa3e180a8abb2a859e7f316a484b38f33fe90d5701420178e",
+      "d_seg": 0.00042714,
+      "d_pose": 0.00014747,
+      "seg_contribution": 0.042714,
+      "pose_contribution": 0.03840182287340017,
+      "rate_contribution": 0.12169171641365491,
+      "canonical_score": 0.20280753928705508,
+      "upstream_snapshot_sha256_from_provenance": "fa7c4bf51d47a6140ec0f95275ebf86b0e6c3c1dc00caff03a417ee989645799",
+      "promotion_eligible": false
+    }
+  },
+  "provenance": {
+    "teacher_camera_cache": {
+      "path": "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/teacher_cache_e480b/retained/teacher/teacher_master_camera.rgb.u8",
+      "bytes": 1831204800,
+      "sha256": "695023d4ca56e14f53f1e90b56134821c3c0a0c66f9b07f6aa6bd6ffdf9f4ebd"
+    },
+    "warm_checkpoint": {
+      "path": "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/primary_flattened_d4_w64/checkpoints/flattened_d4_w64/distill_qat_stage_end_epoch_0060.pt",
+      "bytes": 583929,
+      "sha256": "046ee7d0171e04c3d468edd747a82bc81eb91642e5e85f17316b4419fe615071"
+    },
+    "wd2_train_result": {
+      "path": "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/primary_flattened_d4_w64/TRAIN_RESULT.json",
+      "bytes": 16234,
+      "sha256": "c4260cf03eb4cb19f1788150592bf84f5468ebc5052dc0ab8a0ee123c3577918"
+    },
+    "wd2_student_archive": {
+      "bytes": 165387,
+      "sha256": "e9c4a9ed5e6bef89d228ca877a9f9e37345e3c79dc07ba20087c218ff89fcf87"
+    },
+    "wd2_student_advisory_receipt": "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/primary_flattened_d4_w64/retained/candidates/flattened_d4_w64_epoch_0060/attempt_0000/advisory_n600_cpu/contest_auth_eval.json",
+    "receiver_source_sha256": "9024b563a4895a695927bda9f8f2f6aaf6adc2780f074eebb6760610c3bebfa0"
+  },
+  "teacher_scorer_cache": {
+    "status": "TO_BUILD_ONCE_WITH_SCORER_SLOT",
+    "retention_root": "/Volumes/APDataStore/pact/ddm_wd3_scorer_aware_width_distillation/teacher_scorer_cache/retained",
+    "population_pairs": 600,
+    "max_chunk_pairs": 120,
+    "through_R": [
+      "resize_to_874x1164",
+      "clamp",
+      "uint8",
+      "frozen_scorer_preprocess"
+    ],
+    "retained_fields": [
+      "teacher_segnet_logits_f16",
+      "teacher_segnet_argmax_u8",
+      "teacher_top1_runnerup_margin_f16",
+      "teacher_posenet_first6_f32",
+      "original_gt_segnet_argmax_u8",
+      "original_gt_posenet_first6_f32"
+    ],
+    "receipt_requirements": [
+      "path",
+      "bytes",
+      "sha256",
+      "shape",
+      "dtype",
+      "source_archive_sha256",
+      "upstream_snapshot_sha256",
+      "scorer_weights_sha256",
+      "command",
+      "environment",
+      "determinism_repeat"
+    ],
+    "payload_policy": "retain every materialized payload; no scalar-only measurement artifact"
+  },
+  "objective": {
+    "contest_score": "100*d_seg + sqrt(10*d_pose) + (25/37545489)*archive_bytes",
+    "rate_score_per_byte": 6.658589531221714e-7,
+    "primary_train_quantity": "score-native surrogate through R using original scorer targets",
+    "segmentation": {
+      "hard_authority": "mean(student_argmax != original_gt_argmax)",
+      "differentiable_term": "original-target soft disagreement through R, stage-frozen into d_seg units by calibration_scale = measured hard d_seg / mean soft disagreement on the same fixed subset and state",
+      "score_exchange_weight": 100.0,
+      "calibration_policy": "derive at each stage boundary from the fixed strided controller subset; freeze within the stage; never update per step",
+      "teacher_margin_constraint": {
+        "kind": "impostor-complete teacher-top1 margin hinge after R",
+        "fixed_weight": null,
+        "weight_policy": "adaptive nonnegative dual initialized at zero and updated only on teacher-decision-geometry violation"
+      },
+      "kd_auxiliary": {
+        "kind": "T^2 * KL(softmax(teacher/T) || softmax(student/T))",
+        "temperature": 2.0,
+        "fixed_weight": null,
+        "weight_policy": "adaptive dual on teacher-distribution preservation; initialize zero and update from constraint violation, never transfer kd_w=0.3 from another vehicle"
+      }
+    },
+    "pose": {
+      "teacher_target": "teacher PoseNet first six outputs",
+      "hard_authority": "MSE(student PoseNet first six, original GT PoseNet first six)",
+      "score_term": "sqrt(10*d_pose)",
+      "t4_base_local_derivative_dS_ddpose": 602.8035277130151,
+      "same_instrument_base_local_derivative_dS_ddpose": 130.20215255102787,
+      "same_instrument_derivative_policy": "resolved as 5/sqrt(10*0.00014747) from the consumed local base receipt; use the exact nonlinear pose term for training and admission",
+      "fixed_weight": null
+    },
+    "decode_anchor": {
+      "quantity": "decode_mse_uint8 versus retained teacher camera renders",
+      "ep60_anchor": 50.6728233448345,
+      "ep60_rms_uint8_levels": 7.118484624189243,
+      "form": "inequality trust region decode_mse_uint8 <= ep60_anchor",
+      "fixed_weight": null,
+      "weight_policy": "adaptive nonnegative dual initialized at zero; increases only on anchor violation"
+    },
+    "selection_rule": "hard realized components and exact archive bytes decide; the calibrated soft surrogate and preservation constraints never admit a candidate"
+  },
+  "validation": {
+    "periodic_in_loop": {
+      "subset": "fixed evenly-strided n60 over all 600 pairs",
+      "prefix": false,
+      "chain": "real receiver render through R, uint8, frozen SegNet and PoseNet",
+      "cadence": "at every preserved stage checkpoint and no less often than every 5 epochs",
+      "use": "early warning and controller input only; cannot bank a negative"
+    },
+    "negative_confirmation": {
+      "subset": "fixed seeded stratified-random n120",
+      "minimum_n": 120,
+      "max_chunk_pairs": 120,
+      "required_before_negative": true
+    },
+    "final": {
+      "population_pairs": 600,
+      "requires_global_scorer_slot": true,
+      "requires_receiver_parseback": true,
+      "requires_exact_archive_bytes": true,
+      "requires_repeat_archive": true
+    }
+  },
+  "admission": {
+    "delta_score_formula": "100*(d_seg_candidate-d_seg_base) + sqrt(10*d_pose_candidate)-sqrt(10*d_pose_base) + (25/37545489)*(candidate_bytes-base_bytes)",
+    "net_delta_score_strictly_below": -3.5e-6,
+    "delta_d_seg_at_most": 0.000107,
+    "pose_policy": "pose contribution must not regress beyond the candidate's earned rate prize after reserving the -3.5e-6 net gate",
+    "same_instrument_required": true,
+    "base_receipt_required": "/Volumes/APDataStore/pact/ddm_hv1_base_advisory_n600_cpu/contest_auth_eval.json"
+  },
+  "architecture_order": [
+    {
+      "id": "W0_flattened_d4_w64_ep60_warm",
+      "disposition": "FIRST",
+      "reason": "cheapest mechanism discriminator; changes the loss while reusing the retained student and payloads"
+    },
+    {
+      "id": "D56_dense_d4_w56",
+      "disposition": "SECOND",
+      "reason": "smallest raw packet and changes inherited computation least"
+    },
+    {
+      "id": "F64_factorized_d4_w64_r19",
+      "disposition": "THIRD",
+      "reason": "tests factorized capacity at nearly the measured primary rate"
+    },
+    {
+      "id": "W96_factorized_or_flattened",
+      "disposition": "CONDITIONAL",
+      "reason": "only after smaller arms show scorer-aware capacity pressure; dense w96 is projection-priced out"
+    }
+  ],
+  "warm_fresh_protocol": {
+    "precedent": ".omx/research/ddm_gc15_fresh_vs_warm_20260731.md",
+    "finding": "warm versus fresh is not a binary choice; optimizer and EMA reset semantics are separate actuators",
+    "arms": [
+      "warm weights plus preserved optimizer moments and EMA state with stage-boundary re-treatment",
+      "warm weights plus fresh optimizer only under a magnitude-matched learning-rate ramp that removes the 3.16x-to-6.57x reset spike",
+      "fresh weights only if both warm continuations fail the seeded n120 mechanism gate at matched compute"
+    ],
+    "forbidden": "uncontrolled zero-moment reset at inherited learning rate"
+  },
+  "rate_prize_erosion": {
+    "packet_accounting_method": "dense d4/w56, factorized d4/w64/r19, and flattened d4/w64 come from build_v4/DESIGN_RECEIPT.json exact_uncompressed_packet_bytes. The three w96 values are DERIVED by a read-only call to wd2_receiver.serialized_bytes_for_spec on receiver source SHA 9024b563. No w96 payload was materialized.",
+    "projection_method": "For unmaterialized arms only: fixed archive remainder 148739 B plus round(exact_uncompressed_packet_bytes * 16648/19465). These are projections, not measured archives.",
+    "rows": [
+      {
+        "arm": "dense_d4_w56",
+        "exact_uncompressed_packet_bytes": 18905,
+        "packet_bytes_status": "EXACT_DESIGN_RECEIPT_ACCOUNTING",
+        "full_archive_bytes": 164908,
+        "full_archive_status": "PROJECTED",
+        "bytes_saved_vs_hv1": 17851,
+        "rate_prize_score": 0.011886248172183882,
+        "pose_held_max_delta_d_seg_after_net_gate": 0.00011882748172183882,
+        "effective_delta_d_seg_cap": 0.000107
+      },
+      {
+        "arm": "factorized_d4_w64_r19",
+        "exact_uncompressed_packet_bytes": 19513,
+        "packet_bytes_status": "EXACT_DESIGN_RECEIPT_ACCOUNTING",
+        "full_archive_bytes": 165428,
+        "full_archive_status": "PROJECTED",
+        "bytes_saved_vs_hv1": 17331,
+        "rate_prize_score": 0.011540001516560353,
+        "pose_held_max_delta_d_seg_after_net_gate": 0.00011536501516560353,
+        "effective_delta_d_seg_cap": 0.000107
+      },
+      {
+        "arm": "flattened_d4_w64_ep60",
+        "exact_uncompressed_packet_bytes": 19465,
+        "packet_bytes_status": "EXACT_DESIGN_RECEIPT_ACCOUNTING_AND_MATERIALIZED_EP60",
+        "full_archive_bytes": 165387,
+        "full_archive_status": "MEASURED",
+        "bytes_saved_vs_hv1": 17372,
+        "rate_prize_score": 0.011567301733638362,
+        "pose_held_max_delta_d_seg_after_net_gate": 0.00011563801733638362,
+        "effective_delta_d_seg_cap": 0.000107
+      },
+      {
+        "arm": "factorized_d4_w96_r20",
+        "exact_uncompressed_packet_bytes": 29833,
+        "packet_bytes_status": "DERIVED_SERIALIZER_LAYOUT_NO_PAYLOAD_MATERIALIZED",
+        "full_archive_bytes": 174255,
+        "full_archive_status": "PROJECTED",
+        "bytes_saved_vs_hv1": 8504,
+        "rate_prize_score": 0.005662464537350946,
+        "pose_held_max_delta_d_seg_after_net_gate": 0.00005658964537350946,
+        "effective_delta_d_seg_cap": 0.00005658964537350946
+      },
+      {
+        "arm": "flattened_d4_w96",
+        "exact_uncompressed_packet_bytes": 35657,
+        "packet_bytes_status": "DERIVED_SERIALIZER_LAYOUT_NO_PAYLOAD_MATERIALIZED",
+        "full_archive_bytes": 179236,
+        "full_archive_status": "PROJECTED",
+        "bytes_saved_vs_hv1": 3523,
+        "rate_prize_score": 0.0023458210918494097,
+        "pose_held_max_delta_d_seg_after_net_gate": 0.000023423210918494096,
+        "effective_delta_d_seg_cap": 0.000023423210918494096
+      },
+      {
+        "arm": "dense_d4_w96",
+        "exact_uncompressed_packet_bytes": 40265,
+        "packet_bytes_status": "DERIVED_SERIALIZER_LAYOUT_NO_PAYLOAD_MATERIALIZED",
+        "full_archive_bytes": 183177,
+        "full_archive_status": "PROJECTED",
+        "bytes_saved_vs_hv1": -418,
+        "rate_prize_score": -0.00027832904240506764,
+        "pose_held_max_delta_d_seg_after_net_gate": -0.000002818290424050676,
+        "effective_delta_d_seg_cap": null,
+        "disposition": "PROJECTED_PRICED_OUT_UNLESS_REAL_CODER_BEATS_PROJECTION"
+      }
+    ]
+  },
+  "resumability_and_retention": {
+    "resume_from_disk_required": true,
+    "preserve_optimizer_state": true,
+    "preserve_ema_state": true,
+    "atomic_checkpoints": true,
+    "periodic_checkpoint_max_epochs": 5,
+    "stage_end_checkpoint_required": true,
+    "distinct_stage_filenames": true,
+    "retain_every_candidate": [
+      "student model payload",
+      "rendered camera payload",
+      "scorer outputs",
+      "encoded packet",
+      "archive.zip",
+      "archive.repeat.zip",
+      "parseback receipt"
+    ]
+  },
+  "fire_gate": {
+    "disposition": "QUEUED_WITH_FIRE_ORDER",
+    "owner": "MAIN",
+    "consumer_store": "/Volumes/APDataStore/pact/ddm_wd3_scorer_aware_width_distillation/",
+    "trigger": "same-instrument hv1 base receipt is complete and consumed; r5 pid 63183 has exited; global scorer and Metal slots are claimed; scorer-aware trainer code, receiver path, teacher-scorer cache builder, resume registry, retention hooks, and dry-run validation have landed",
+    "blocked_now": true,
+    "blockers": [
+      "scorer-aware trainer code not built",
+      "teacher scorer cache not materialized",
+      "r5 exit not verified",
+      "no scorer or Metal slot granted to AV2"
+    ]
+  }
+}
