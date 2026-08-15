@@ -1,0 +1,150 @@
+{
+  "axis": "[contest-CUDA] Tesla T4 n600",
+  "candidate": {
+    "archive_bytes": 182759,
+    "archive_path": "/Volumes/VertigoDataTier/pact/ddm_hv1_harvest_compose/ep0634/retained/candidate/archive.zip",
+    "archive_sha256": "80d9c8c6fdc72caaa3e180a8abb2a859e7f316a484b38f33fe90d5701420178e",
+    "candidate_id": "hv1_ep0634_s1p25_c1p0_brotli_q10",
+    "member_bytes": 182659,
+    "member_sha256": "88828f3ded072886c8b4aa56c4215192e2d429fa1d80c173841fab6489052585",
+    "model_bytes": 70453,
+    "model_sha256": "e35d12371fa797478dd91f3aba595bcc805dcdbd2a9ca0b27cbff24ea5ce1b99",
+    "repeat_archive_sha256": "80d9c8c6fdc72caaa3e180a8abb2a859e7f316a484b38f33fe90d5701420178e",
+    "residual_sha256": "8ab2fe748ab7d69d2102ba2292289e22bd7ea503f8ae29938e0854ec46ca3da1",
+    "selected_checkpoint": {
+      "bytes": 1103503,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_hv1_harvest_compose/retained/epoch_0634.pt",
+      "sha256": "5007beae7af7789758092f12f49096e13692e2e59850c85eb4642cd6fad147ec"
+    },
+    "token_bytes": 112110,
+    "token_sha256": "73a878891a31c3668a0403f842740f21598999fee5c8afd8982fb2ca31125829"
+  },
+  "canonical_chain": "experiments/modal_auth_eval.py::main",
+  "claim_argv": [
+    ".venv/bin/python",
+    "tools/claim_lane_dispatch.py",
+    "claim",
+    "--lane-id",
+    "lane_ddm_hv1_ep0634_harvest_exact_contest_cuda_20260815",
+    "--platform",
+    "modal",
+    "--instance-job-id",
+    "ddm_hv1_ep0634_harvest_exact_contest_cuda_20260815",
+    "--agent",
+    "MAIN",
+    "--status",
+    "dispatching",
+    "--notes",
+    "hv1 ep634 harvest candidate 80d9c8c6fdc72caa @ 182759 B; rate-only delta -743 B vs e480b v2"
+  ],
+  "close": {
+    "poller_argv_template": [
+      ".venv/bin/python",
+      "tools/modal_harvest_poller.py",
+      "--call-id",
+      "CALL_ID_FROM_MODAL_AUTH_EVAL_SPAWN_JSON",
+      "--output-dir",
+      "experiments/results/ddm_hv1_ep0634_exact_contest_cuda_20260815",
+      "--result-name",
+      "MODAL_REMOTE_RESULT.json",
+      "--deadline-s",
+      "9000",
+      "--poll-s",
+      "20"
+    ],
+    "rule": "Launch the poller through tools/launch_detached_process.py immediately after the spawn receipt yields a call id; the poller owns terminal claim closure."
+  },
+  "command_argv_template": [
+    "env",
+    "PYTHONPATH=src:upstream:$PWD",
+    ".venv/bin/modal",
+    "run",
+    "--detach",
+    "experiments/modal_auth_eval.py::main",
+    "--archive",
+    "/Volumes/VertigoDataTier/pact/ddm_hv1_harvest_compose/ep0634/retained/candidate/archive.zip",
+    "--expected-archive-sha256",
+    "80d9c8c6fdc72caaa3e180a8abb2a859e7f316a484b38f33fe90d5701420178e",
+    "--submission-dir",
+    "MAIN_STAGED_CUDA_RUNTIME_DIR",
+    "--inflate-sh",
+    "MAIN_STAGED_CUDA_RUNTIME_DIR/inflate.sh",
+    "--expected-runtime-tree-sha256",
+    "MAIN_STAGED_CUDA_RUNTIME_TREE_SHA256",
+    "--gpu",
+    "T4",
+    "--scorer-device",
+    "cuda",
+    "--output-dir",
+    "experiments/results/ddm_hv1_ep0634_exact_contest_cuda_20260815",
+    "--lane-id",
+    "lane_ddm_hv1_ep0634_harvest_exact_contest_cuda_20260815",
+    "--instance-job-id",
+    "ddm_hv1_ep0634_harvest_exact_contest_cuda_20260815",
+    "--claim-agent",
+    "MAIN",
+    "--detach",
+    "--provider-detach-ack"
+  ],
+  "consumer_store": ".omx/state/main_hot_state.md plus the canonical frontier pointer",
+  "cpu_axis_note": "the pq1 CPU-axis sealed order targets e480b v2 at swap_generation 0; re-targeting it to these bytes is the landed SWAP_PROCEDURE.md path and needs its own CPU row \u2014 no e480b receipt transfers to changed bytes",
+  "disposition": "QUEUED_WITH_A_FIRE_ORDER",
+  "dual_repeat": {
+    "local_repeat_byte_identical": true,
+    "repeat_archive_path": "/Volumes/VertigoDataTier/pact/ddm_hv1_harvest_compose/ep0634/retained/candidate/repeat_archive.repeat.zip",
+    "requirement": "fire the identical archive twice or reuse the retained repeat archive"
+  },
+  "fire_trigger": "MAIN only, on operator GO: the candidate is strictly smaller than the incumbent, carries local full-raw identity, and no other full-n600 scorer owns the slot",
+  "incumbent": {
+    "archive_bytes": 183502,
+    "archive_sha256": "e3e6f440b45bbb92f2eeb58c7a56d74b3cd0a62bbcff01a26adcd008391c19d3",
+    "authority": "[contest-CUDA] Tesla T4 n600",
+    "candidate_id": "e480b_v2_s1p25_c1p0_brotli_q10",
+    "member_bytes": 183402,
+    "member_sha256": "30c0165ec56dd9327ca4dcda477c34c25f7664622ac37ec8ed171114267d1b58",
+    "model_bytes": 70557,
+    "score_pose_contribution": 0.008294576541331089,
+    "score_rate_contribution": 0.12218644961582469,
+    "score_recomputed_from_components": 0.1600920261571558,
+    "score_seg_contribution": 0.029611,
+    "token_bytes": 112749
+  },
+  "local_identity_evidence": {
+    "axis": "[macOS-CPU advisory, four-thread lifted F26]",
+    "decode_receiver": {
+      "bytes": 23552,
+      "path": "/Volumes/APDataStore/pact/ddm_hv1_harvest_compose/ep0634/retained/cpu_decode/best_rx2/lifted_submission_cpu/runtime/residual_archive.py",
+      "sha256": "b15ded8ff88f4bc920f53ba7b7e48d152b5724fb052570b055269bd4a42f932a"
+    },
+    "decode_runtime_entrypoint": {
+      "bytes": 2190,
+      "path": "/Volumes/APDataStore/pact/ddm_hv1_harvest_compose/ep0634/retained/cpu_decode/best_rx2/lifted_submission_cpu/inflate.py",
+      "sha256": "3f4487ffabd19761c38f27a6856b2cc936a6efa695d122df51343e033efce77d"
+    },
+    "decoded_token_identity": true,
+    "decoded_token_sha256": "9ba2e52b3096585895970066b389bf1261ebc203d5b828cdea056c13858aea52",
+    "raw_identity_vs_mc36_cpu": true,
+    "raw_output_bytes": 3662409600,
+    "raw_output_sha256": "e5539653f598a1c31e28900888f450a6de019cb29864674f232ad2f8956b15c9"
+  },
+  "owner": "MAIN",
+  "preconditions": [
+    "MAIN stages and verifies the CUDA runtime tree for these exact archive bytes through .omx/research/ddm_pq1_submission_packet_prep_20260815/SWAP_PROCEDURE.md steps VERIFY_SOURCE and STAGE_NEW_GENERATION; runtime custody is MAIN-owned",
+    "reconciliation reports zero live remote calls and zero active claims",
+    "the unique lane claim lane_ddm_hv1_ep0634_harvest_exact_contest_cuda_20260815 succeeds",
+    "every hash in this order still matches the retained payloads on disk"
+  ],
+  "projection_vs_incumbent": {
+    "archive_bytes": 182759,
+    "authority": "[macOS-CPU advisory projection; the exact row remains owed on T4]",
+    "delta_bytes_vs_e480b_v2": -743,
+    "delta_score_vs_e480b_v2": -0.0004947332021697733,
+    "projected_score": 0.159597292954986,
+    "projection_basis": "full raw-output byte identity holds d_seg and d_pose EXACTLY at the incumbent's measured CUDA values, so only the rate term moves",
+    "residual_assumption": "the measured identity is on the CPU decode axis while the incumbent's d_seg/d_pose were measured on CUDA; carrying them across assumes a device-deterministic integer receiver \u2014 sound, but an assumption on this arm's evidence until the T4 row fires",
+    "score_claim": false
+  },
+  "schema": "ddm_hv1_t4_sealed_fire_order.v1",
+  "score_claim": false,
+  "why_only_the_rate_term_moves": "the full raw decode is byte-identical to the MC36 CPU decode the incumbent shares, so SegNet and PoseNet consume identical frames and d_seg/d_pose are the incumbent's measured CUDA values by construction"
+}
