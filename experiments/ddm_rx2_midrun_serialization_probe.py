@@ -759,6 +759,12 @@ def run_probe(
         ratio = real_bytes["model_plus_token_bytes"] / surrogate["estimated_joint_bytes"]
     else:
         ratio = None
+    token_record = real_bytes.get("token_payload")
+    token_ratio = (
+        token_record["bytes"] / surrogate["estimated_token_bytes"]
+        if isinstance(token_record, dict) and isinstance(token_record.get("bytes"), int)
+        else None
+    )
     result = {
         "schema": "ddm_rx2_midrun_serialization_probe.v1",
         "generated_utc": _utc_now(),
@@ -771,6 +777,7 @@ def run_probe(
         "model_stage": model_stage,
         "real_bytes": real_bytes,
         "real_model_plus_token_to_surrogate_joint_ratio": ratio,
+        "real_token_to_surrogate_token_ratio": token_ratio,
         "retention": retention,
         "wall_seconds": time.time() - started,
         "scorer_invoked": False,
