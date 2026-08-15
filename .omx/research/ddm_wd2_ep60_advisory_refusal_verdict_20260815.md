@@ -13,7 +13,9 @@ Receipt: .../advisory_n600_cpu/contest_auth_eval.json (durable, work dir retaine
 
 ## Verdict + scope
 **REFUSED.** The composed ≈0.1480 projection via the ep60 flattened d4/w64 student is DEAD.
-verdict_scope: **INSTANCE** (this config, ep60, decode-MSE-only distillation loss). The
+verdict_scope: instance — the ep60 flattened d4/w64 decode-MSE-only student on the hv1 base;
+the nested-width FAMILY stays open (parked with its measured trajectory, reactivation =
+scorer-aware loss or larger width per the routing below). The
 FAMILY question (can any narrow student hold scorer fidelity?) stays open but is now priced:
 - Trajectory (TRAIN_RESULT.json): decode_mse_uint8 1,582 (ep1) → 50.7 (ep60), RMS ≈ 7 uint8
   levels/px. Train loss log-slope DECELERATING (−0.0210/ep at ep20→40 → −0.0128/ep at
