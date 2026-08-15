@@ -344,3 +344,35 @@ Honest note: the CPU ep6 endpoint was marginally better (est joint 140,969 B
 vs 141,384 B, 0.29%). The live CPU run continues untouched, so the race yields
 TWO terminal endpoints and the sealed device-blind chain adjudicates them; a
 losing MPS endpoint costs nothing but the ~0.93 h of Metal time.
+
+## §5 Extended-epoch run (operator 2026-08-14: "Because it's so much faster, we can give it more time. More epochs I mean. Once we confirm working and understand the trajectory better.")
+
+The 60-epoch budget was sized by the CPU instrument's economics (60 × 17.6 min
+≈ 17.6 h). At the measured 56 s/epoch on MPS, epochs are ~19× cheaper, so the
+budget constraint moved. Protocol, in order — no step fires early:
+
+1. **Confirm working** — `rx2_wc2_full_mps` receipt rc=0 AND the terminal
+   epoch-60 pack passes the same custody invariants comparison_r4 proved
+   (idempotent pack, deterministic decode).
+2. **Read the trajectory** — the full eval-every-2 curve from the 60-epoch
+   run (continuous ep0–30, QAT ep31–60). Classify: knee-at-K vs
+   still-descending-at-60, separately for the continuous and QAT phases.
+   Early live evidence: MPS ep12 bpp 0.0078589, slightly ahead of the CPU
+   instrument's same-epoch 0.0078908; descent healthy.
+3. **Size from the curve, then fire** — extended run with ALL constants
+   identical except `--epochs N` (pure SCOPE extension: the phase split and
+   `--ema-target-seed-fraction` derive from total epochs by design, so no
+   latched per-epoch constant is silently re-scoped; candidate default
+   N=480 ≈ 7.5 h, adjusted at the boundary from the measured slope).
+   Fresh root `gpu_race/full_eN`, receipt `rx2_wc2_full_mps_eN`, watcher
+   configs derived from the full_mps pair with phase-knee epoch = N/2+1.
+   Single Metal fire: the extended run launches only after the 60-epoch
+   receipt (governor law) and only from this protocol.
+4. **Owed edit at extended harvest** — the sealed identity race hard-pins
+   epoch 60 three ways (`TERMINAL_CHECKPOINT` :53 filename +
+   `checkpoint.epoch != 60` :188 + `history[-1].epoch != 60` :206) and
+   points at the CPU lineage checkpoint dir. Parameterize these to the
+   declared run config (checkpoint path + terminal epoch as inputs, gates
+   otherwise unchanged) in ONE commit that also updates the comparator's
+   `RACE_PACKER_SHA256` pin. This edit is owed for the MPS 60-epoch
+   endpoint too — it is the same generalization, done once.
