@@ -1114,8 +1114,28 @@ def main() -> None:
                 f"now={str(run_identity.get('trainer_sha256'))[:16]}",
                 flush=True,
             )
-        observed_cmp = {k: v for k, v in (observed_identity or {}).items() if k not in _volatile}
-        current_cmp = {k: v for k, v in run_identity.items() if k not in _volatile}
+        # Hardware: compare only the BEHAVIORAL subset (thread geometry, arch,
+        # OS family, relevant env). Probe metadata (cpu_brand/hw_model/memory/
+        # mps flags/host/release) varies with the OBSERVER, not the machine —
+        # a sandboxed arm launch records sysctl=None and mps_available=False on
+        # the very same M5 Max, which must not brick resume from MAIN.
+        _hw_behavioral = (
+            "system",
+            "machine",
+            "torch_num_threads",
+            "torch_num_interop_threads",
+            "environment",
+        )
+
+        def _cmp_view(identity: dict[str, Any]) -> dict[str, Any]:
+            view = {k: v for k, v in identity.items() if k not in _volatile}
+            hw = view.get("hardware")
+            if isinstance(hw, dict):
+                view["hardware"] = {k: hw.get(k) for k in _hw_behavioral}
+            return view
+
+        observed_cmp = _cmp_view(observed_identity or {})
+        current_cmp = _cmp_view(run_identity)
         if observed_cmp != current_cmp:
             drift = sorted(
                 k
