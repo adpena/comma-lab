@@ -28,3 +28,17 @@ Stage 2's adaptive-quant waterfill = selective by construction: persist the SELE
 coefficients got which depth), not only aggregate bytes. Bounding laws: selection re-priced under
 joint remeasure (never ranked once, #873); validation subsets strided/stratified never prefix
 (m88/m96). Full clause: wd3 charter OPERATOR AMENDMENT clause 4.
+
+## RELAY 4 (MAIN adjudication, 2026-08-15 ~20:3xZ — candidate 1 REFUSED, pose-dominated)
+score_gated_selected_mixed_q3q4 attempt_0000 (rc=0, 4,550 s, receipt + work dir retained):
+seg 0.00042828 · pose 0.00073123 · 181,936 B. Same-chain deltas vs base:
+Δd_seg +1.14e-6 (ΔS +1.14e-4, near-neutral) · Δd_pose +5.8376e-4 = **4.96× base**
+(ΔS +4.711e-2) · Δbytes −823 (ΔS −5.48e-4, exactly the mz2 projection).
+**NET +4.668e-2 → REFUSED.** Mechanism = the recurring vehicle law (wd2, qs4, now q3/q4):
+seg tolerates representation cuts; POSE reads near-photometric precision and pays 86× the
+rate prize here. verdict_scope: instance (q3/q4 depth map on this pool).
+CONSEQUENCE FOR STAGE 2 (binding): the adaptive per-cell waterfill's selection metric MUST
+be pose-sensitivity-weighted (pose term in the per-coefficient gate, not bytes+seg alone);
+a depth map selected without a pose channel repeats this refusal by construction. The
+FiLM-row prune family (candidate 2 running) is a DIFFERENT mechanism (row sparsity vs
+precision cut) — pose risk remains, same gate applies.
