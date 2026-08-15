@@ -41,6 +41,20 @@ PORT_MODES = {
     # run (continuous saturates ~ep75-120; QAT tau ~40 ep wants ~240 QAT
     # epochs). Same sealed envelope in every other field.
     "full-mps-e480": {"device": "mps", "epochs": 480},
+    # QAT power-tail continuation (wc2 §5i, 2026-08-15): the e480b ENDPOINT
+    # refit flipped the QAT law to a power tail (alpha 0.14, asymptote
+    # 118,147 B) — descent not floored, ~1.2 KB/doubling. Resumes the ep480
+    # checkpoint for 480 more QAT epochs. REQUIRES --resume-from (fail-closed)
+    # and holds LR at eta_min past the resume boundary: the restored cosine
+    # scheduler carries T_max=480, so un-patched forward epochs would ride the
+    # cosine past pi and RAISE the LR — a regime change; the measured tail was
+    # fitted near eta_min, so eta_min-hold is the within-regime continuation.
+    "full-mps-e960": {
+        "device": "mps",
+        "epochs": 960,
+        "resume_required": True,
+        "lr_floor_hold_after_epoch": 480,
+    },
 }
 
 
@@ -105,7 +119,34 @@ def _validate_mode_args(reference: ModuleType, port_mode: str, argv: Sequence[st
         qat_start = max(1, int(args.epochs * (1.0 - args.qat_fraction)) + 1)
         if args.epochs - qat_start + 1 < 2:
             raise MPSPortError("parity run must include at least two QAT epochs")
+    if expected.get("resume_required") and args.resume_from is None:
+        raise MPSPortError(f"{port_mode} is a continuation mode: --resume-from is required")
     return args
+
+
+def _install_lr_floor_hold(reference: ModuleType, boundary_epoch: int) -> None:
+    """Hold LR at eta_min once the scheduler passes ``boundary_epoch``.
+
+    The reference restores the checkpoint's CosineAnnealingLR state including
+    its T_max; forward epochs past T_max would otherwise mirror the cosine and
+    RAISE the LR.  The e480b tail law was measured near eta_min, so the
+    continuation holds eta_min exactly (process-scoped class patch; inert for
+    epochs at or below the boundary).
+    """
+    import torch
+
+    scheduler_cls = torch.optim.lr_scheduler.CosineAnnealingLR
+    if getattr(scheduler_cls, "_rx2_lr_floor_hold_after", None) == boundary_epoch:
+        return
+    original_get_lr = scheduler_cls.get_lr
+
+    def held_get_lr(self):  # type: ignore[no-untyped-def]
+        if self.last_epoch > boundary_epoch:
+            return [self.eta_min for _ in self.optimizer.param_groups]
+        return original_get_lr(self)
+
+    scheduler_cls.get_lr = held_get_lr
+    scheduler_cls._rx2_lr_floor_hold_after = boundary_epoch
 
 
 def _configure_reference(
@@ -115,6 +156,9 @@ def _configure_reference(
     raw_launch_argv: Sequence[str],
 ) -> None:
     mode = PORT_MODES[port_mode]
+    lr_hold_boundary = mode.get("lr_floor_hold_after_epoch")
+    if lr_hold_boundary is not None:
+        _install_lr_floor_hold(reference, int(lr_hold_boundary))
     admitted = dict(reference.RX2_PREREGISTERED_CONFIG)
     admitted["device"] = mode["device"]
     admitted["epochs"] = mode["epochs"]
@@ -144,6 +188,13 @@ def _configure_reference(
                     "admission/provenance only: device and scaled-parity epoch envelope; "
                     "reference model, STE, loss, optimizer, EMA, evaluation, checkpoints, "
                     "and result JSON are imported unchanged"
+                    + (
+                        f"; lr_floor_hold_after_epoch={mode['lr_floor_hold_after_epoch']}"
+                        " (eta_min held past the resume boundary — within-regime"
+                        " continuation of the measured power tail)"
+                        if mode.get("lr_floor_hold_after_epoch") is not None
+                        else ""
+                    )
                 ),
                 "training_reproducibility": {
                     "seeded": True,
