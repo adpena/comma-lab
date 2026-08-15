@@ -60,3 +60,18 @@ assets that exist:
   your Stage-2 gate is the compress-time version. Same law, two surfaces.
 Minimal Stage-2 compliance: per-row/per-tensor FD pose probe at quantization step size on a
 strided pair subset → pose channel in the waterfill metric → joint remeasure on survivors.
+
+## RELAY 6 (MAIN adjudication ~21:1xZ — candidate 2 REFUSED, the field is now the PREREQUISITE)
+film_row_prune_keep87: seg +6.4e-7 (neutral) · pose 0.00068390 = **4.638× base** (ΔS +4.430e-2)
+· −130 B (ΔS −8.66e-5) → **NET +4.427e-2 REFUSED.** Two DIFFERENT mechanisms (q3/q4 precision
+cut · row sparsity) → nearly identical pose damage (4.96× / 4.64×): pose fragility is a
+property of the touched carrier region, not the mechanism. ADMISSION ARITHMETIC: the biggest
+retained prize (−2,051 B → −1.37e-3 S) requires d_pose ≤ 1.576e-4 = +6.9% over base; measured
+candidates sit at +360–400% — TWO ORDERS from admission.
+BINDING RE-ROUTE: (a) let keep75 finish if already running (completes the prune dose-response
+curve — 3rd point, real signal); (b) do NOT n600-score further unscreened candidates — 40+ min
+each buys a foregone conclusion; (c) the RELAY-5 per-row FD pose probe (strided subset, real
+receiver chain) is now the REQUIRED next step: rank rows/cells by pose sensitivity, compose a
+candidate ONLY from pose-null coordinates, THEN spend one n600 run on it. If the field shows
+NO pose-null sub-KB coordinates exist, Stage 1 closes honestly (FORMULATION: sub-KB carrier
+cuts on this pool) and Stage 2 proceeds pose-gated from birth.
