@@ -190,6 +190,7 @@ def _install_continuation_adapter(
     resume_path: Path,
     continuation_of_epochs: int,
     port_mode: str,
+    receipt_dir: Path | None = None,
 ) -> dict[str, Any]:
     """Wrap ``reference.torch.load`` to stash the resume payload for the
     identity reconciliation performed in ``ported_run_identity``.
@@ -220,6 +221,7 @@ def _install_continuation_adapter(
     reference.torch.load = stashing_load
     state["continuation_of_epochs"] = int(continuation_of_epochs)
     state["port_mode"] = port_mode
+    state["receipt_dir"] = receipt_dir
     return state
 
 
@@ -267,26 +269,31 @@ def _reconcile_continuation_identity(
             "hold — resolve_ema_policy patch did not take effect"
         )
     record = {
+        "schema": "wc2_wrapper_epoch_extension_continuation.v1",
         "event": "wrapper_epoch_extension_continuation",
         "port_mode": state.get("port_mode"),
         "continuation_of_epochs": state.get("continuation_of_epochs"),
         "parent_run_identity_sha256": _canonical_sha256_of(observed),
+        "parent_run_identity": observed,
         "drifting_keys_accepted": drifting,
     }
-    lineage = resume.setdefault(
-        "resume_lineage",
-        {"schema": "ddm_cl1_hpac_capacity_resume_lineage.v1", "entries": []},
-    )
-    # The reference stores lineage as a dict-with-entries on fresh runs but a
-    # bare list in saved checkpoints; append to whichever shape is present.
-    if isinstance(lineage, list):
-        lineage.append(record)
-    else:
-        lineage.setdefault("entries", []).append(record)
+    # resume_lineage is the trainer's TYPED custody chain (source_path/
+    # preserved_path/bytes/sha256/epoch, appended by the trainer itself for the
+    # parent checkpoint) — never inject free-form records there.  The wrapper's
+    # continuation provenance goes to a durable receipt file beside the run's
+    # result JSON instead.
+    receipt_dir = state.get("receipt_dir")
+    if receipt_dir is not None:
+        import json
+
+        receipt_path = Path(receipt_dir) / "wrapper_continuation_receipt.json"
+        receipt_path.parent.mkdir(parents=True, exist_ok=True)
+        receipt_path.write_text(json.dumps(record, indent=2, default=str))
+        print(f"[continuation] provenance receipt written: {receipt_path}", flush=True)
     resume["run_identity"] = copy.deepcopy(current_identity)
     print(
         "[continuation] epoch-extension identity reconciled: accepted drift "
-        f"{drifting}; parent identity recorded in resume_lineage",
+        f"{drifting}; parent identity recorded in the continuation receipt",
         flush=True,
     )
 
@@ -305,6 +312,7 @@ def _configure_reference(
     port_mode: str,
     raw_launch_argv: Sequence[str],
     resume_from: Path | None = None,
+    receipt_dir: Path | None = None,
 ) -> None:
     mode = PORT_MODES[port_mode]
     lr_hold_boundary = mode.get("lr_floor_hold_after_epoch")
@@ -336,6 +344,7 @@ def _configure_reference(
             resume_path=resume_from,
             continuation_of_epochs=int(mode["continuation_of_epochs"]),
             port_mode=port_mode,
+            receipt_dir=receipt_dir,
         )
     admitted = dict(reference.RX2_PREREGISTERED_CONFIG)
     admitted["device"] = mode["device"]
@@ -407,6 +416,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         port_mode=port_mode,
         raw_launch_argv=[sys.executable, str(Path(__file__).resolve()), *raw],
         resume_from=validated.resume_from,
+        receipt_dir=validated.out.parent,
     )
     sys.argv = [str(Path(__file__).resolve()), *reference_argv]
     reference.main()
