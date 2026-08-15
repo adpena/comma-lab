@@ -137,7 +137,7 @@ def _epoch_from_name(path: Path) -> int | None:
 def _candidate_checkpoints() -> list[tuple[int, Path]]:
     candidates: dict[int, Path] = {}
     for path in sorted(CHECKPOINT_ROOT.rglob("*.pt")):
-        if path.name == "latest.pt" or ".tmp" in path.name:
+        if path.name.startswith("._") or path.name == "latest.pt" or ".tmp" in path.name:
             continue
         epoch = _epoch_from_name(path)
         if epoch is None:
