@@ -27713,3 +27713,25 @@ ddm_hv1_cpu_authority_staged_ready_20260815.md. Same-day sister rows: wd2 refusa
 same-instrument-confirmed (7.0059×/623.76×, av2) · wd3 scorer-aware distillation charter sealed
 + amended (quantum/regions/cells + selective/surgical) + build arm LIVE · mp2 rate arm LIVE w/
 measured admission baseline (base advisory S 0.20280753928705508).
+
+## FEED-wd3a (2026-08-16 ~00:2xZ) — W0_warm HARVESTED: scorer-aware distillation descends BOTH axes; W0_reset staged at the mp2 boundary
+
+- **Trajectory point:** wd3 W0_warm (5-ep dual-constrained window from wd2 ep60, decode/margin/teacher-KL
+  ceilings frozen at ep60 levels, duals rising 11.86→18.05) MEASURED on the fixed n60 controller subset:
+  d_pose 0.04064@ep61 → 0.022940@ep65 (−43.5%/4ep; wd2's plain path had pose destroyed at 0.092,
+  decelerating) · hard_d_seg 0.0011497 → 0.0010857 (−5.6%/4ep) · archive ≈165,985 B (rate prize
+  ≈ −0.0112 S vs hv1 182,759 B). n60 = positive-trajectory read ONLY (spec forbids negatives from n60).
+  Receipts: W0_warm/W0_warm/TRAIN_RESULT.json (complete, payloads retained, stage ckpt sha 86e3c95f…).
+  Operator steer honored: "distillation is not dead" — first measured window confirms the scorer-aware
+  reactivation MECHANISM at INSTANCE scope (W0 arch, warm start, 5 epochs).
+- **Next sealed rung:** W0_reset (same weights, fresh optimizer, ramp divisor 3.16 fail-closed to
+  [3.16, 6.57]) COMPILED READY_TO_FIRE, config ad6ab661c8e2f378, watchers staged; fires at the mp2
+  done-receipt boundary. Then both-W0 verdicts → D56→F64 (prepare-arm-birth) → conditional W96 →
+  same-instrument n600 (admit < −3.5e-6 net vs base S_adv 0.20280753928705508) → exact axis.
+- **Apparatus (gb1 charter incident #3, commit 7cc15894f3):** the reset launch was REFUSED on phantom
+  growth — ONE mp2 safe_run tree (wrapper declared 6.07; child + grandchild each +25 default in their
+  own sessions) charged 64.8 GiB vs ~9 real. D1-family; fix contract = aggregate launch trees under the
+  wrapper's declaration; gb1 arm briefed. No bypass — event-driven fire at the boundary instead.
+- **Sister lesson banked:** zombie children defeat `kill -0` rescue pollers (mp2 inflate child exited
+  as a zombie the SIGSTOPped parent could not reap; poller looped forever). Rescue pollers must treat
+  stat `Z` as exited.
