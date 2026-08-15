@@ -261,6 +261,11 @@ HIGH defects, so it does not advance the compose/freeze clean-pass counter. Stat
    maintainer. Consumer: the next WD2 design/build receipt. Fire trigger: after the live run
    terminates and before choosing any successor width. Rank capacity using realized compressed
    complete archives; keep raw packet size only as a separately named serializer bound.
+6. **QUEUED-WITH-A-FIRE-ORDER — numerical sigmoid-saturation telemetry.** Owner: MAIN WD2
+   telemetry maintainer. Consumer: the next WD2 eval schema and decision memo. Fire trigger:
+   only if a successor WD2 training configuration is prepared after the live run terminates.
+   Record pre-sigmoid logit quantiles and near-zero sigmoid-derivative mass; do not disturb the
+   current run merely to collect it.
 
 ## RECALL EVIDENCE
 
@@ -312,6 +317,12 @@ to contest SegNet `d_seg`, or a current-WD2 CPU/MPS full-n600 parity receipt.
 - **QUEUED-WITH-A-FIRE-ORDER** — owner: MAIN endpoint-governance maintainer; consumer store:
   task-1058 endpoint closure; fire trigger: before any next HPAC burn; replace the same-stream
   convergence claim with held-out byte-closed forecasting or explicit opportunity-cost policy.
+- **QUEUED-WITH-A-FIRE-ORDER** — owner: MAIN WD2 maintainer; consumer store: the next WD2
+  design/build receipt; fire trigger: after live-run termination and before choosing a successor
+  width; rank capacity on compressed complete archives and label raw packet bounds separately.
+- **QUEUED-WITH-A-FIRE-ORDER** — owner: MAIN WD2 telemetry maintainer; consumer store: the next
+  WD2 eval schema and decision memo; fire trigger: preparation of a post-terminal successor WD2
+  config; record logit quantiles and near-zero sigmoid-derivative mass without touching this run.
 
 ## LIVE-HYPOTHESES
 
