@@ -1,0 +1,19 @@
+{
+  "cleanup_disposition": "KEEP; certify-or-block",
+  "file_count": 2,
+  "files": [
+    {
+      "bytes": 3570,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_wd3_scorer_aware_width_distillation_20260815/build_v1/retained/verify_adaptive.wd3q",
+      "sha256": "9d1111d322a166e8b6f08564623afe3cfaf9ee7ec049d591913db899323a067a"
+    },
+    {
+      "bytes": 3569,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_wd3_scorer_aware_width_distillation_20260815/build_v1/retained/verify_uniform.wd3q",
+      "sha256": "89b09fbe6c88e443ed89d62b902519b787ce66269302fd974c2e2966b4239fbd"
+    }
+  ],
+  "root": "/Users/adpena/Projects/pact/.omx/research/ddm_wd3_scorer_aware_width_distillation_20260815/build_v1/retained",
+  "schema": "ddm_wd3_retention_inventory.v1",
+  "total_bytes": 7139
+}

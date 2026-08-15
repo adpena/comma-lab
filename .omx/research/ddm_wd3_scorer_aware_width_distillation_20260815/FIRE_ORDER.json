@@ -1,0 +1,64 @@
+{
+  "schema": "ddm_wd3_governed_fire_order.v1",
+  "arm": "ddm_wd3_scorer_aware_width_distillation",
+  "date": "2026-08-15",
+  "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+  "owner": "MAIN",
+  "consumer_store": "/Volumes/APDataStore/pact/ddm_wd3_scorer_aware_width_distillation/",
+  "fire_trigger": "MAIN re-verifies PID 63183 absent, claims distinct live scorer and Metal lanes, compiles a source-pinned retaining config against the complete repeated teacher/scorer cache, and explicitly changes launch_authorized to true",
+  "gate_state": {
+    "G0": "PASS_FROM_CHARTER_PINNED_BASE; heavy entrypoints re-hash before work",
+    "G1": "BLOCKED; PID probe observed absent in this process namespace, but MAIN has not claimed the two required live lanes and must re-verify at fire time",
+    "G2": "PASS_BUILD_REVIEWED; real packet, cache, paired receiver/scorers, objective, controller, birth checkpoints, trainer, admission, and retention paths landed",
+    "G3": "IMPLEMENTED_NOT_RUN; APDataStore-only storage preflight and certify-or-block retention are wired",
+    "G4": "IMPLEMENTED_NOT_RUN; seeded deterministic state, ResumeRegistry controller, atomic periodic/stage checkpoints, EMA, optimizer, scheduler, scaler-disabled state, RNG, selection, allocation, and cursor are persisted",
+    "G5": "PASS_SCORER_FREE_DRY_RUN; compiler rejected missing cache, unclaimed lanes, false authorization, false PID declaration, and tests cover every required rejection class"
+  },
+  "current_blockers": [
+    "complete two-repeat n600 teacher/scorer cache does not exist",
+    "global single n600 scorer lane is not claimed by MAIN",
+    "global Metal lane is not claimed by MAIN",
+    "charter launch_authorized remains false"
+  ],
+  "sequence": [
+    {
+      "action": "build/cache",
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "owner": "MAIN",
+      "consumer_store": "/Volumes/APDataStore/pact/ddm_wd3_scorer_aware_width_distillation/teacher_scorer_cache/",
+      "fire_trigger": "PID absent plus distinct live scorer and Metal claims plus compiled cache config plus explicit launch authorization"
+    },
+    {
+      "action": "W0 preserved-state then W0 magnitude-matched reset",
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "owner": "MAIN",
+      "consumer_store": "/Volumes/APDataStore/pact/ddm_wd3_scorer_aware_width_distillation/W0/",
+      "fire_trigger": "complete byte-identical cache receipt and W0 configs compiled in sealed order"
+    },
+    {
+      "action": "D56 then F64",
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "owner": "MAIN",
+      "consumer_store": "/Volumes/APDataStore/pact/ddm_wd3_scorer_aware_width_distillation/",
+      "fire_trigger": "both W0 instance verdicts land and scorer-free typed birth checkpoints are materialized"
+    },
+    {
+      "action": "conditional W96 or fresh",
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "owner": "MAIN",
+      "consumer_store": "/Volumes/APDataStore/pact/ddm_wd3_scorer_aware_width_distillation/",
+      "fire_trigger": "W96 only after smaller-arm capacity pressure; fresh only after both matched W0 arms are seeded-n120 instance negatives"
+    },
+    {
+      "action": "same-instrument n600 then exact contest axis",
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "owner": "MAIN",
+      "consumer_store": "/Volumes/APDataStore/pact/ddm_wd3_scorer_aware_width_distillation/admission/",
+      "fire_trigger": "retained receiver-closed candidate passes delta-S and delta-dseg admission gates; contest evaluation only for that passing archive"
+    }
+  ],
+  "training_launched": false,
+  "scorer_invocations": 0,
+  "metal_invocations": 0,
+  "frontier_moved": false
+}

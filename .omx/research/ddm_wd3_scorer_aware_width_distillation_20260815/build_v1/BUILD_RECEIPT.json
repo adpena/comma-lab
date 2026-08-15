@@ -1,0 +1,64 @@
+{
+  "adaptive_packet_behavior": {
+    "adaptive_allocation_changes_counted_packet": true,
+    "adaptive_packet_bytes": 3570,
+    "uniform_packet_bytes": 3569,
+    "uniform_roundtrip_byte_identical": true
+  },
+  "axis": "[scorer-free build and dry-run apparatus]",
+  "builder": {
+    "bytes": 121255,
+    "path": "/Users/adpena/Projects/pact/experiments/ddm_wd3_scorer_aware_width_distillation.py",
+    "sha256": "79f3a640a85c25530eda2d87fa88ea0f96ff13c4c51d370032a87143155a1274"
+  },
+  "complete": true,
+  "design": {
+    "bytes": 14024,
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_wd3_scorer_aware_width_distillation_20260815.json",
+    "sha256": "d556b682059ed3c793d98900de5f7ea9f4c7214d1091e31e1129759d10ca15d5"
+  },
+  "dry_run_fire_order": {
+    "blockers": [
+      "complete teacher/scorer cache receipt is absent",
+      "global scorer lane is unclaimed",
+      "global metal lane is unclaimed",
+      "charter launch authorization remains false",
+      "r5 PID 63183 exit is not verified in the compiled config"
+    ],
+    "config_sha256": "55f7da97d90fa8bbe8423eef67126d6cc01b9e418509d19b46fc3706faaf64a7",
+    "consumer_store": "/Volumes/APDataStore/pact/ddm_wd3_scorer_aware_width_distillation/",
+    "disposition": "BLOCKED_NOT_LAUNCHABLE",
+    "fire_trigger": "G0-G5 pass; r5 exited; distinct scorer and Metal lanes claimed; reviewed WD3 code/config dry-run landed",
+    "metal_invocations": 0,
+    "owner": "MAIN",
+    "schema": "ddm_wd3_fire_order.v1",
+    "scorer_invocations": 0,
+    "training_launched": false,
+    "validation": null
+  },
+  "frontier_moved": false,
+  "metal_invocations": 0,
+  "payloads": {
+    "adaptive_packet": {
+      "bytes": 3570,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_wd3_scorer_aware_width_distillation_20260815/build_v1/retained/verify_adaptive.wd3q",
+      "sha256": "9d1111d322a166e8b6f08564623afe3cfaf9ee7ec049d591913db899323a067a"
+    },
+    "uniform_packet": {
+      "bytes": 3569,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_wd3_scorer_aware_width_distillation_20260815/build_v1/retained/verify_uniform.wd3q",
+      "sha256": "89b09fbe6c88e443ed89d62b902519b787ce66269302fd974c2e2966b4239fbd"
+    }
+  },
+  "promotion_eligible": false,
+  "receiver": {
+    "bytes": 18960,
+    "path": "/Users/adpena/Projects/pact/experiments/ddm_wd3_student_receiver.py",
+    "sha256": "0661d22092c11ce7c580cb6c429d938b0814c1fc2584738e0f90fc65dffefde5"
+  },
+  "retention": "all materialized verification packets retained with bytes and SHA-256",
+  "schema": "ddm_wd3_build_receipt.v1",
+  "score_claim": false,
+  "scorer_invocations": 0,
+  "training_launched": false
+}
