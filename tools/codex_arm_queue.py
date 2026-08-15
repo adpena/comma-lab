@@ -1060,6 +1060,23 @@ def lint_charter_optimal_form(prompt_path: str) -> list[str]:
     # (task #1002, measured 2026-08-10).
     if not re.search(r"\b[0-9a-f]{7,64}\b", section):
         problems.append("OPTIMAL FORM block carries no sha/commit provenance pin")
+    # Negative-signal accounting (operator 2026-08-15: "Anything that doesn't
+    # account for all of our negative signal is naive or toy to a certain
+    # extent"). A build charter citing NO prior negative (dead-end / refusal /
+    # refutation / no-go / parked family) designs blind to the measured
+    # failure corpus — naive by construction regardless of mechanism grade.
+    # Coarse token instrument, warn-only; NEGATIVES_NA:<rationale> waives
+    # genuinely first-of-family work with no bearing negatives.
+    if "negatives_na:" in low:
+        rationale = low.split("negatives_na:", 1)[1].splitlines()[0].strip()
+        if len(rationale) < 8 or rationale.startswith("<"):
+            problems.append("NEGATIVES_NA waiver rationale is placeholder/too short")
+    elif not re.search(r"dead[- ]end|refus|refut|no[- ]go|negative|parked", low):
+        problems.append(
+            "charter accounts for no prior negative signal "
+            "(operator 2026-08-15: unaccounted negatives = naive/toy) — cite "
+            "the bearing dead-ends/refusals or NEGATIVES_NA:<rationale>"
+        )
     return problems
 
 
