@@ -122,6 +122,14 @@ def atomic_npy(path: Path, value: np.ndarray) -> dict[str, Any]:
     return atomic_bytes(path, buffer.getvalue())
 
 
+def copy_runtime_file(source: str, destination: str) -> str:
+    """Copy runtime bytes and executable mode without ExFAT xattr metadata."""
+
+    shutil.copyfile(source, destination)
+    os.chmod(destination, os.stat(source).st_mode & 0o777)
+    return destination
+
+
 def read_stored_member(archive_path: Path) -> bytes:
     with zipfile.ZipFile(archive_path) as archive:
         infos = archive.infolist()
@@ -493,13 +501,15 @@ def build_generation(
         verify_generation_receipt(destination, receipt)
         return receipt
 
-    if not destination.exists():
-        staging = generations / f".{candidate_id}.building-{os.getpid()}"
-        if staging.exists():
-            raise MP2BuildError(f"current-process staging path already exists: {staging}")
-        staging.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copytree(BASE_GENERATION, staging, symlinks=True)
-        os.replace(staging, destination)
+    generations.mkdir(parents=True, exist_ok=True)
+    shutil.copytree(
+        BASE_GENERATION,
+        destination,
+        symlinks=True,
+        dirs_exist_ok=True,
+        copy_function=copy_runtime_file,
+        ignore=shutil.ignore_patterns("__pycache__", "._*"),
+    )
 
     hpac_stream = bytes(base_parts["hpac"])
     carrier_stream = bytes(base_parts["carrier"])
