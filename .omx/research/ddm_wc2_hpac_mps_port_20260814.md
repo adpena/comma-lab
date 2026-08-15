@@ -587,3 +587,43 @@ sibling was refused by modal-single-flight AFTER the CUDA spawn — acceptable:
 the CPU axis is structurally infeasible on this CUDA-locked runtime (the MC36
 promotion measured it, 3.2 s InflationError). Closer pid 57240, receipt
 `rx2_e480b_t4_harvest`.
+
+## 5h. T4 fire record r3→v2 — the receiver chain of custody (2026-08-15)
+
+**r3 refused correctly in seconds**: `ResidualArchiveError: invalid F24S model
+section`. The candidate's HPAC model section uses the race's new IHS1-pack
+serialization; MC36's SHIPPED receiver has no reader for it. Fail-closed
+behavior — the archive format and the receiver must ship together.
+
+**Adjudication — ship the race's ADAPTED receiver.** The correct submission
+tree already existed at
+`retained/cpu_decode/best_rx2/lifted_submission_cpu/` (built by the race's
+cpu-decode stage, the SAME tree that produced the raw-identity proof):
+- archive.zip = the winner (sha `e3e6f440…`, 183,502 B) — verified in place;
+- inflate.py already pins `ARCHIVE_SHA256`/`ARCHIVE_BYTES` for THIS candidate;
+- exactly 3 code files differ from MC36's shipped tree: `inflate.py`,
+  `runtime/f26_inflate.py` (device-flexible `_configure_device` accepting
+  cpu AND cuda), `runtime/residual_archive.py` (the new model-section reader).
+
+**One patch for the T4 axis**: the lifted entrypoint hardcoded
+`device_name="cpu"` (its CPU-lift purpose). Changed to
+`"cuda" if torch.cuda.is_available() else "cpu"` — no MPS anywhere in the
+chain. Rationale: the HPAC token decode is integer/deterministic
+(device-independent); after tokens, the neural render on CUDA is the SAME
+computation as MC36's frontier row, so the MC36 distortion components carry
+and the projected S 0.16009203 rests only on the realized −2,767 B rate delta.
+A CPU decode inside the T4 container would instead create a new unmeasured
+cell (decode-CPU × score-CUDA; cf. #1054's 21× CPU pose degradation on the
+score side).
+
+**v2 dispatch**: clean tree (AppleDouble/`__pycache__` excluded) at
+`/Volumes/VertigoDataTier/pact/ddm_rx2_current_mc36_label_hpac/e480b_submission_v2/`;
+r3 lane claim closed terminal
+(`failed_shipped_receiver_lacks_new_model_section_terminal`); CUDA call
+`fc-01M02QMN3SQ9SNHXZMRWXYEJEW`; closer pid 70027, receipt
+`rx2_e480b_t4_harvest_v2`. Modal spend ≈$5.5/$20 after the two short refusals.
+
+Lesson (r1→r3 chain, recorded once): a byte-closed candidate is
+archive+receiver JOINTLY — the sha pin caught the archive mismatch (r1), the
+format reader caught the receiver mismatch (r3). Both refusals were the
+custody system working; the race's own decode tree was always the submission.
