@@ -302,7 +302,17 @@ def _pack_terminal_ihs1(checkpoint_path: Path, output: Path) -> dict[str, Any]:
     # old tensor-equality refusal only ever passed on archive-derived inits
     # that were already fixed points of the pack.
     changed_tensors = [name for name in sorted(shared) if not torch.equal(source_state[name], restored_state[name])]
-    raw_repeat = packer.serialize_self_compressed(restored)
+    # serialize requires the training construction (it reads the bit_depth
+    # buffers), so idempotency is checked on a rehydrated training-form model:
+    # restored (quantized) weights + the deployed bit-depth buffers.
+    rehydrated = packer.model_from_args(topology, True)
+    merged_state = dict(restored_state)
+    for name in training_only:
+        merged_state[name] = source_state[name]
+    rehydrated.load_state_dict(merged_state)
+    packer.set_deployed_bit_depths(rehydrated, True)
+    rehydrated.eval()
+    raw_repeat = packer.serialize_self_compressed(rehydrated)
     if raw_repeat != raw:
         raise RX2RaceError("IHS1 pack is not idempotent: serialize(deserialize(raw)) != raw")
     restored_twin = packer.model_from_args(topology, False).eval()
