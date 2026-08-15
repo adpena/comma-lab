@@ -36,6 +36,11 @@ Route order stands: **mixed precision → carrier rank/refit (22,032 B pool) →
    22,032 B basis+coeff pool.
 2. wd2 assets retained (payload law): ep60 checkpoints + teacher cache (1.83 GB, sha
    695023d4…) + both advisory work dirs. The teacher cache serves any future student arm.
+   **AMENDMENT (operator 2026-08-15 "Also perhaps distillation is not dead"): the family is
+   elevated from parked to ACTIVELY REOPENED — ddm_av2 Mandate B owns the wd3 successor
+   design (scorer-aware distillation loss through R, derived weights, in-loop realized
+   verdicts, dense-w56/factorized/wider arms w/ rate-erosion table), gated on the
+   same-instrument hv1-base advisory row now in flight.**
 3. Metal slot: free after r5 self-terminates; no heavy launch until a candidate demands it.
 
 ## Ops notes
