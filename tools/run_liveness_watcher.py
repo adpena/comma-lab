@@ -77,6 +77,23 @@ def _check_list(config: Mapping[str, Any], key: str) -> list[dict[str, Any]]:
     return normalized
 
 
+def _success_receipt_list(config: Mapping[str, Any], key: str) -> list[dict[str, Any]]:
+    rows = config.get(key, [])
+    if not isinstance(rows, list):
+        raise ConfigError(f"{key} must be a list")
+    normalized: list[dict[str, Any]] = []
+    for index, row in enumerate(rows):
+        if not isinstance(row, dict):
+            raise ConfigError(f"{key}[{index}] must be an object")
+        normalized.append(
+            {
+                "path": _path(row.get("path"), f"{key}[{index}].path"),
+                "label": str(row.get("label") or f"{key}[{index}]"),
+            }
+        )
+    return normalized
+
+
 def load_config(path: Path) -> dict[str, Any]:
     try:
         raw = json.loads(path.read_text(encoding="utf-8"))
@@ -96,6 +113,10 @@ def load_config(path: Path) -> dict[str, Any]:
         "receipt_checks": _check_list(raw, "receipt_checks"),
         "heartbeat_checks": _check_list(raw, "heartbeat_checks"),
         "artifact_checks": _check_list(raw, "artifact_checks"),
+        "success_receipts": _success_receipt_list(raw, "success_receipts"),
+        "success_settle_s": _positive_number(
+            raw.get("success_settle_s", 30), "success_settle_s", allow_zero=True
+        ),
     }
     if not any(
         config[key] for key in ("receipt_checks", "heartbeat_checks", "artifact_checks")
@@ -133,6 +154,28 @@ def _json_summary(path: Path) -> dict[str, Any]:
     return {key: payload.get(key) for key in ("status", "exit", "rc", "error") if key in payload}
 
 
+_FAILURE_STATUSES = frozenset({"failed", "error", "killed", "timeout", "timed_out", "oom"})
+_SUCCESS_STATUSES = frozenset({"completed", "complete", "success", "succeeded", "ok", "done"})
+
+
+def _summary_is_success(summary: Mapping[str, Any]) -> bool:
+    """A receipt proves clean completion only when nothing in it contradicts rc=0."""
+    rc = summary.get("rc")
+    exit_code = summary.get("exit")
+    if isinstance(rc, (int, float)) and not isinstance(rc, bool) and int(rc) != 0:
+        return False
+    if isinstance(exit_code, (int, float)) and not isinstance(exit_code, bool) and int(exit_code) != 0:
+        return False
+    status = str(summary.get("status", "")).strip().lower()
+    if status in _FAILURE_STATUSES:
+        return False
+    if isinstance(rc, (int, float)) and not isinstance(rc, bool) and int(rc) == 0:
+        return True
+    if isinstance(exit_code, (int, float)) and not isinstance(exit_code, bool) and int(exit_code) == 0:
+        return True
+    return status in _SUCCESS_STATUSES
+
+
 def evaluate(config: Mapping[str, Any], *, started_at: float, now: float) -> dict[str, Any] | None:
     """Return one typed alert body, or ``None`` while all configured checks hold."""
 
@@ -148,12 +191,27 @@ def evaluate(config: Mapping[str, Any], *, started_at: float, now: float) -> dic
             "detail": str(exc),
         }
     if not _pid_alive(pid):
+        success_summaries = {
+            row["label"]: _json_summary(row["path"])
+            for row in config.get("success_receipts", [])
+            if row["path"].exists()
+        }
+        for label, summary in success_summaries.items():
+            if _summary_is_success(summary):
+                return {
+                    "reason": "clean_exit",
+                    "pid": pid,
+                    "success_receipt": label,
+                    "summary": summary,
+                }
         detail: dict[str, Any] = {"reason": "child_dead", "pid": pid}
         summaries = {
             row["label"]: _json_summary(row["path"])
             for row in config["receipt_checks"]
             if row["path"].exists()
         }
+        if success_summaries:
+            detail["success_receipt_summaries"] = success_summaries
         if summaries:
             detail["receipt_summaries"] = summaries
         return detail
@@ -218,9 +276,26 @@ def run(config: Mapping[str, Any], *, once: bool = False) -> int:
     started_at = time.time()
     if not once and config["initial_delay_s"] > 0:
         time.sleep(config["initial_delay_s"])
+    first_dead_at: float | None = None
     while True:
         now = time.time()
         alert = evaluate(config, started_at=started_at, now=now)
+        if alert is not None and alert.get("reason") == "clean_exit":
+            print(json.dumps({"schema": SCHEMA, **alert}, sort_keys=True, default=str))
+            return 0
+        if (
+            alert is not None
+            and alert.get("reason") == "child_dead"
+            and config.get("success_receipts")
+            and not once
+        ):
+            # The launcher writes the success receipt moments after the child
+            # exits; give it success_settle_s before adjudicating death.
+            if first_dead_at is None:
+                first_dead_at = now
+            if now - first_dead_at < config.get("success_settle_s", 0):
+                time.sleep(min(config["poll_s"], 5.0))
+                continue
         if alert is not None:
             body = {
                 "schema": ALERT_SCHEMA,
@@ -230,6 +305,7 @@ def run(config: Mapping[str, Any], *, once: bool = False) -> int:
             }
             atomic_write_once(config["alert_path"], body)
             return 1
+        first_dead_at = None
         if once:
             return 0
         time.sleep(config["poll_s"])
