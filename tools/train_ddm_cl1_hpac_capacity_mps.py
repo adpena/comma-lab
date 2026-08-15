@@ -54,6 +54,17 @@ PORT_MODES = {
         "epochs": 960,
         "resume_required": True,
         "lr_floor_hold_after_epoch": 480,
+        # Hold the PARENT run's EMA geometry: the parent decay was derived for
+        # a 480-epoch horizon, which is exactly this continuation's FORWARD
+        # window — within-regime (the tail law was measured under it) and
+        # horizon-correct. Also makes the trainer's ema_policy equality and
+        # EMA-decay restore checks pass natively instead of being bypassed.
+        "ema_geometry_epochs": 480,
+        # Epoch-extension continuation: the reference's resume-identity gate is
+        # designed for same-config crash recovery; the wrapper reconciles the
+        # comparison explicitly (see _install_continuation_adapter) with a
+        # closed allowlist and an epochs-only training_config rule.
+        "continuation_of_epochs": 480,
     },
 }
 
@@ -149,16 +160,183 @@ def _install_lr_floor_hold(reference: ModuleType, boundary_epoch: int) -> None:
     scheduler_cls._rx2_lr_floor_hold_after = boundary_epoch
 
 
+_CONTINUATION_ALLOWED_DRIFT = frozenset(
+    {
+        # Sanctioned by the reference's own --resume-allow-trainer-drift class
+        # (the wrapper file's self-hash changed since the parent run).
+        "trainer_sha256",
+        "trainer_source_identity_sha256",
+        # Launch provenance: describes THIS invocation, never behavior.
+        "raw_launch_argv",
+        "port_mode",
+        "port_delta",
+        # The intended extension itself (epochs-only; deep-checked below) and
+        # its pure derivative (schedule hash includes epochs).
+        "training_config",
+        "seed_schedule_identity_sha256",
+        # Volatile per the reference's own comparison.
+        "launch_git_sha",
+        # Observer-dependent probe metadata (the reference compares only a
+        # behavioral subset; the wrapper compares none of it).
+        "hardware",
+        "software",
+    }
+)
+
+
+def _install_continuation_adapter(
+    reference: ModuleType,
+    *,
+    resume_path: Path,
+    continuation_of_epochs: int,
+    port_mode: str,
+) -> dict[str, Any]:
+    """Wrap ``reference.torch.load`` to stash the resume payload for the
+    identity reconciliation performed in ``ported_run_identity``.
+
+    The reference's resume-identity gate guards same-config crash recovery;
+    an epoch extension intentionally drifts a closed set of keys.  The adapter
+    verifies every OTHER key strictly (cache/init/intake/source shas, config
+    minus epochs, ema_policy) and fails closed on anything outside the
+    allowlist, then rewrites the in-memory comparison reference to the current
+    identity while appending a typed continuation record to the checkpoint's
+    resume_lineage (which the trainer persists into every new save).  The
+    parent file on disk is never touched.
+    """
+    state: dict[str, Any] = {"resume": None}
+    resolved_resume = resume_path.resolve()
+    original_load = reference.torch.load
+
+    def stashing_load(path, *args: Any, **kwargs: Any):  # type: ignore[no-untyped-def]
+        payload = original_load(path, *args, **kwargs)
+        try:
+            matches = Path(path).resolve() == resolved_resume
+        except (TypeError, OSError):
+            matches = False
+        if matches and isinstance(payload, dict) and "run_identity" in payload:
+            state["resume"] = payload
+        return payload
+
+    reference.torch.load = stashing_load
+    state["continuation_of_epochs"] = int(continuation_of_epochs)
+    state["port_mode"] = port_mode
+    return state
+
+
+def _reconcile_continuation_identity(
+    state: dict[str, Any],
+    current_identity: dict[str, Any],
+) -> None:
+    """Fail-closed epoch-extension reconciliation (see adapter docstring)."""
+    import copy
+
+    resume = state.get("resume")
+    if resume is None:
+        raise MPSPortError(
+            "continuation adapter: resume checkpoint was not loaded before "
+            "run-identity computation; reference call order changed — re-audit"
+        )
+    observed = resume.get("run_identity") or {}
+    drifting = sorted(
+        k
+        for k in set(observed) | set(current_identity)
+        if observed.get(k) != current_identity.get(k)
+    )
+    illegal = [k for k in drifting if k not in _CONTINUATION_ALLOWED_DRIFT]
+    if illegal:
+        raise MPSPortError(
+            f"continuation refused: non-continuation identity drift {illegal} "
+            f"(full drift set: {drifting})"
+        )
+    if "training_config" in drifting:
+        parent_cfg = observed.get("training_config") or {}
+        current_cfg = current_identity.get("training_config") or {}
+        cfg_drift = sorted(
+            k
+            for k in set(parent_cfg) | set(current_cfg)
+            if parent_cfg.get(k) != current_cfg.get(k)
+        )
+        if cfg_drift != ["epochs"]:
+            raise MPSPortError(
+                f"continuation refused: training_config drift {cfg_drift} "
+                "(only 'epochs' may change in a continuation)"
+            )
+    if observed.get("ema_policy") != current_identity.get("ema_policy"):
+        raise MPSPortError(
+            "continuation refused: ema_policy drifted despite parent-geometry "
+            "hold — resolve_ema_policy patch did not take effect"
+        )
+    record = {
+        "event": "wrapper_epoch_extension_continuation",
+        "port_mode": state.get("port_mode"),
+        "continuation_of_epochs": state.get("continuation_of_epochs"),
+        "parent_run_identity_sha256": _canonical_sha256_of(observed),
+        "drifting_keys_accepted": drifting,
+    }
+    lineage = resume.setdefault(
+        "resume_lineage",
+        {"schema": "ddm_cl1_hpac_capacity_resume_lineage.v1", "entries": []},
+    )
+    # The reference stores lineage as a dict-with-entries on fresh runs but a
+    # bare list in saved checkpoints; append to whichever shape is present.
+    if isinstance(lineage, list):
+        lineage.append(record)
+    else:
+        lineage.setdefault("entries", []).append(record)
+    resume["run_identity"] = copy.deepcopy(current_identity)
+    print(
+        "[continuation] epoch-extension identity reconciled: accepted drift "
+        f"{drifting}; parent identity recorded in resume_lineage",
+        flush=True,
+    )
+
+
+def _canonical_sha256_of(payload: dict[str, Any]) -> str:
+    import json
+
+    return hashlib.sha256(
+        json.dumps(payload, sort_keys=True, default=str).encode("utf-8")
+    ).hexdigest()
+
+
 def _configure_reference(
     reference: ModuleType,
     *,
     port_mode: str,
     raw_launch_argv: Sequence[str],
+    resume_from: Path | None = None,
 ) -> None:
     mode = PORT_MODES[port_mode]
     lr_hold_boundary = mode.get("lr_floor_hold_after_epoch")
     if lr_hold_boundary is not None:
         _install_lr_floor_hold(reference, int(lr_hold_boundary))
+    ema_geometry_epochs = mode.get("ema_geometry_epochs")
+    if ema_geometry_epochs is not None:
+        original_resolve = reference.resolve_ema_policy
+        geometry_ratio = int(ema_geometry_epochs), int(mode["epochs"])
+
+        def held_resolve_ema_policy(updates_per_run, **kwargs):  # type: ignore[no-untyped-def]
+            if updates_per_run is not None:
+                held = int(updates_per_run) * geometry_ratio[0] // geometry_ratio[1]
+                print(
+                    f"[continuation] EMA geometry held at parent horizon: "
+                    f"updates_per_run {updates_per_run} -> {held}",
+                    flush=True,
+                )
+                updates_per_run = held
+            return original_resolve(updates_per_run, **kwargs)
+
+        reference.resolve_ema_policy = held_resolve_ema_policy
+    continuation_state: dict[str, Any] | None = None
+    if mode.get("continuation_of_epochs") is not None:
+        if resume_from is None:
+            raise MPSPortError(f"{port_mode} requires --resume-from for the continuation adapter")
+        continuation_state = _install_continuation_adapter(
+            reference,
+            resume_path=resume_from,
+            continuation_of_epochs=int(mode["continuation_of_epochs"]),
+            port_mode=port_mode,
+        )
     admitted = dict(reference.RX2_PREREGISTERED_CONFIG)
     admitted["device"] = mode["device"]
     admitted["epochs"] = mode["epochs"]
@@ -212,6 +390,8 @@ def _configure_reference(
             "port_mode": port_mode,
         }
         identity["trainer_source_identity_sha256"] = reference._canonical_json_sha256(source_identity)
+        if continuation_state is not None:
+            _reconcile_continuation_identity(continuation_state, identity)
         return identity
 
     reference._run_identity = ported_run_identity
@@ -221,11 +401,12 @@ def main(argv: Sequence[str] | None = None) -> None:
     raw = list(sys.argv[1:] if argv is None else argv)
     port_mode, reference_argv = _split_port_args(raw)
     reference = _load_reference()
-    _validate_mode_args(reference, port_mode, reference_argv)
+    validated = _validate_mode_args(reference, port_mode, reference_argv)
     _configure_reference(
         reference,
         port_mode=port_mode,
         raw_launch_argv=[sys.executable, str(Path(__file__).resolve()), *raw],
+        resume_from=validated.resume_from,
     )
     sys.argv = [str(Path(__file__).resolve()), *reference_argv]
     reference.main()
