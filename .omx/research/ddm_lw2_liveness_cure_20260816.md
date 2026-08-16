@@ -28,6 +28,13 @@ Three findings, all MEASURED:
 Cured both, at the one derivation point, from the launch's own argv. Both control directions
 executed: healthy child **rc=0** (no alert), genuinely dead child **rc=1 `child_dead`**.
 
+A fourth finding came out of attacking my own fix (§6 of the operating manual — "does this repair
+the CLASS or the instance?"): **the sibling watcher had the same drift, worse.** Both runs' QUALITY
+configs pointed `log_path` at a `stdout.log` that never existed, and rank4's quality `pid_file`
+carried the identical `launcher/` drift. A quality poller with a missing pidfile reads
+`_pid_alive` false and `return 0`s after its startup grace — a silent clean exit that writes no
+event receipt. It watched nothing and looked exactly like health. Class fix landed.
+
 ---
 
 ## 1. Independent diagnosis (re-derived from artifacts, not from MAIN's account)
@@ -122,6 +129,28 @@ argument, zero runtime effect, and a docstring that read as if the class were cl
 
 ---
 
+## 1.6 The same drift on the sibling watcher — measured, and worse
+
+Attacking my own fix for class-vs-instance surfaced that `tools/run_quality_poller.py` carries the
+same hand-typed `pid_file`, plus a hand-typed `log_path`. Both drifted:
+
+| run | quality `pid_file` | quality `log_path` |
+|---|---|---|
+| `rank4` | `…/**launcher/**resource_safe_run_child.pid` — **does not exist** | `…/launcher/**stdout.log**` — **does not exist** (launcher writes `run.log`) |
+| `a0` | correct | `…/launcher/**stdout.log**` — **does not exist** |
+
+Consequence, read from source: `run_quality_poller._pid_alive` catches `OSError` and returns
+False, so with a missing pidfile the poller falls to `if not alive: … return 0` after
+`startup_grace_s`. **rc=0 writes no event receipt** (the receipt is gated on `rc != 0`), so MAIN
+is never told the poller stopped. Corroborating artifacts: rank4's `watchers/quality.log` is
+**0 bytes** and no `watched_launch_116_quality.done` exists, while the liveness receipt for the
+same launch counter does.
+
+This is the standing law verbatim — a dead monitor looks like healthy work — and it is strictly
+worse than the liveness bug, because the liveness bug at least alarmed.
+
+---
+
 ## 2. The cure, at the derivation point
 
 `tools/launch_detached_process.py`:
@@ -129,12 +158,20 @@ argument, zero runtime effect, and a docstring that read as if the class were cl
 * `_safe_run_wrapper_flag(effective_cmd, flag)` — reads a launcher-injected safe_run flag,
   scanning **only** the wrapper's own flag region (before the first bare `--`), so a same-named
   flag inside the wrapped user command can never be mistaken for one the launcher owns.
-* `_derive_liveness_config(...)` replaces `_augment_liveness_success_receipts` and derives
-  **both** run-specific values from the argv the child will actually receive:
-  `pid_file` ← `--child-pidfile`, `success_receipts` ← `--status-receipt`.
+* `_derive_watcher_config(...)` replaces `_augment_liveness_success_receipts` and derives every
+  run-specific value each watcher config duplicates, from the launch itself:
+
+  | key | source | applies to |
+  |---|---|---|
+  | `pid_file` | argv `--child-pidfile` | **both** watchers |
+  | `success_receipts` | argv `--status-receipt` | liveness |
+  | `log_path` | the launcher's own `out/run.log` | quality |
+
 * Call site fixed: `cmd` → `effective_cmd` (the inert-argument bug), with the reason in a
-  comment at the line so it cannot be re-introduced by inspection.
-* The derivation record lands in the launch manifest as `liveness_config_derivation`.
+  comment at the line so it cannot be re-introduced by inspection, and now applied to the
+  quality config as well as the liveness config.
+* The derivation record lands in the launch manifest as `watcher_config_derivation`, keyed by
+  watcher kind.
 
 **Fail-closed policy — explicit, because silence here is the defect:**
 
@@ -167,6 +204,17 @@ Real watcher binary, real pids, hermetic root `/tmp/lw2ctl.EF89TZ`.
 | **C2** | **healthy child, exits rc=0, success receipt `exit:0`** | **no alarm** | **rc=0**, `clean_exit`, **no alert file**, 5.1 s |
 | **C3** | **genuinely dead child, no success receipt** | **alarm** | **rc=1**, `child_dead`, 0.0 s |
 | C4 | dead child, receipt says `status:killed exit:137` | alarm | **rc=1**, `child_dead` after 3 s settle |
+| C5 | replay all four real configs (2 runs × liveness/quality) | every path resolves | see below |
+
+C5 — the class fix, on the real 2026-08-16 artifacts. **Before the cure 3 of these 6 paths pointed
+at files that do not exist; after it, 6 of 6 exist:**
+
+| case | `pid_file` | `success_receipts` / `log_path` |
+|---|---|---|
+| rank4 liveness | `argv_superseded`, exists ✅ | receipts `argv_derived` |
+| rank4 quality | `argv_superseded`, exists ✅ | `log_path` `launch_superseded`, exists ✅ |
+| a0 liveness | `argv_confirmed`, exists ✅ | receipts `argv_derived` |
+| a0 quality | `argv_confirmed`, exists ✅ | `log_path` `launch_superseded`, exists ✅ |
 
 C2 vs C3 is the both-directions pair: the watcher is silent on health and still loud on death.
 C4 additionally shows a success receipt cannot be abused to buy silence for a real failure.
@@ -225,6 +273,14 @@ cured. Fixing it requires one owner holding both files.
 * **No STRICT preflight gate landed** for the "derivation helper called with the unwrapped argv"
   class. The two-landing rule wants one; a static gate that proves an argv-scanning helper is fed
   the wrapped argv is not obviously expressible without over-fitting to this call site. Owed.
+  Note the sharper lesson for whoever writes it: the prior fix had a correct function, tests that
+  passed, and a docstring asserting the class was closed — and was **inert for a full day**. The
+  gate that would have caught it is not a static one; it is a control that asserts the effective
+  config was actually WRITTEN. `liveness_config_effective.json`'s absence was the visible tell.
+* **The quality poller's silent `return 0` is untouched.** I fixed its INPUTS, not its behavior:
+  a poller that loses its child still exits rc=0 with no receipt, so a future drift from any other
+  cause is still silent. Making that exit announce itself belongs in `tools/run_quality_poller.py`,
+  which this arm does not own. Flagged as the highest-value follow-on.
 * **3 pre-existing failures in `tools/tests/test_modal_endpoint_close.py`** — A/B'd against
   pristine HEAD with my file reverted: **identical 3 failures**, so not mine. Cause is a stale
   active claim (`lane_ac1_test`, age 58.84 h) in `.omx/state/active_lane_dispatch_claims.md`, a

@@ -540,33 +540,42 @@ def _safe_run_wrapper_flag(effective_cmd: Sequence[str], flag: str) -> str | Non
     return value
 
 
-def _derive_liveness_config(
+def _derive_watcher_config(
     config_path: Path,
     *,
+    kind: str,
     effective_cmd: Sequence[str],
     resource_budget: Mapping[str, Any],
     out: Path,
+    log_path: Path,
 ) -> tuple[Path, dict[str, Any]]:
-    """Derive the liveness watcher's run-specific paths from the launch itself.
+    """Derive a watcher's run-specific paths from the launch itself.
 
-    A liveness config carries two values that MUST agree with the launch:
-    ``pid_file`` (the pid the watcher polls) and ``success_receipts`` (how a
-    clean rc=0 exit is told apart from a silent death).  Both were hand-typed
-    into the config while the launcher independently passed the same two paths
-    to safe_run, so the pair could drift.  It did, twice, on 2026-08-16:
+    Both watcher configs carry values that MUST agree with the launch:
+    ``pid_file`` (the pid the watcher polls, BOTH kinds), ``success_receipts``
+    (liveness: how a clean rc=0 exit is told apart from a silent death), and
+    ``log_path`` (quality: the stdout log the poller parses).  All were
+    hand-typed into the config while the launcher independently passed or
+    created the same paths, so the pair could drift.  It did, on 2026-08-16:
 
       * ``ddm_ra2c_rank4`` — the config's ``pid_file`` carried a ``launcher/``
         path component that run's layout did not have, so the watcher published
         ``pidfile_missing_or_invalid`` 303 s into a run that finished rc=0.
-      * ``ddm_ra2c_alpha_ladder_a0`` — the config declared no
+      * ``ddm_ra2c_alpha_ladder_a0`` — the liveness config declared no
         ``success_receipts``, so the watcher published ``child_dead`` 9 s after
         a clean rc=0 exit, with the rc=0 safe_run receipt sitting unread in the
         same directory as the pidfile.
+      * BOTH runs' QUALITY configs pointed ``log_path`` at a ``stdout.log`` that
+        never existed (the launcher writes ``run.log``), and rank4's quality
+        ``pid_file`` carried the same ``launcher/`` drift.  A quality poller
+        whose pidfile is missing reads ``_pid_alive`` false and returns 0 after
+        its startup grace — a SILENT clean exit that writes no event receipt.
+        It watched nothing, and looked exactly like health.
 
-    The launcher already holds both values: it wrote them into the argv the
-    child receives.  Derive them from that argv, write an EFFECTIVE config
-    beside the watcher logs (never mutate the caller's file), and return it
-    with a record of what was derived.
+    The launcher already holds every one of these values: it wrote them into
+    the argv the child receives, or it created the file itself.  Derive them,
+    write an EFFECTIVE config beside the watcher logs (never mutate the
+    caller's file), and return it with a record of what was derived.
 
     Fail-closed policy, stated explicitly because silence here IS the defect:
 
@@ -586,11 +595,13 @@ def _derive_liveness_config(
     the launcher's own two accounts of the same path had diverged.
     """
     record: dict[str, Any] = {
-        "schema": "detached_local_process_liveness_derivation.v1",
+        "schema": "detached_local_process_watcher_derivation.v1",
+        "kind": kind,
         "declared_config": str(config_path),
         "effective_config": None,
         "pid_file": {"source": "config_declared", "value": None, "declared": None},
         "success_receipts": {"source": "config_declared", "value": None},
+        "log_path": {"source": "config_declared", "value": None},
         "supersessions": [],
     }
     try:
@@ -637,21 +648,38 @@ def _derive_liveness_config(
             config["pid_file"] = derived_pidfile
             changed = True
 
-    if config.get("success_receipts"):
-        record["success_receipts"]["source"] = "config_declared"
-        record["success_receipts"]["value"] = config["success_receipts"]
-    elif derived_receipt is not None:
-        config["success_receipts"] = [{"label": "safe_run_status", "path": derived_receipt}]
-        config.setdefault("success_settle_s", 90)
-        record["success_receipts"]["source"] = "argv_derived"
-        record["success_receipts"]["value"] = config["success_receipts"]
-        changed = True
+    if "success_receipts" in config or kind == "liveness":
+        if config.get("success_receipts"):
+            record["success_receipts"]["source"] = "config_declared"
+            record["success_receipts"]["value"] = config["success_receipts"]
+        elif derived_receipt is not None:
+            config["success_receipts"] = [{"label": "safe_run_status", "path": derived_receipt}]
+            config.setdefault("success_settle_s", 90)
+            record["success_receipts"]["source"] = "argv_derived"
+            record["success_receipts"]["value"] = config["success_receipts"]
+            changed = True
+
+    # The quality poller parses the run's stdout; the launcher CREATED that file,
+    # so a declared path that disagrees is drift by construction. A poller aimed
+    # at a log that does not exist never alarms and never says so.
+    if "log_path" in config:
+        declared_log = config.get("log_path")
+        record["log_path"]["value"] = str(log_path)
+        if declared_log == str(log_path):
+            record["log_path"]["source"] = "launch_confirmed"
+        else:
+            record["log_path"]["source"] = "launch_superseded"
+            record["supersessions"].append(
+                {"key": "log_path", "declared": declared_log, "derived": str(log_path)}
+            )
+            config["log_path"] = str(log_path)
+            changed = True
 
     if not changed:
         return config_path, record
 
     config["derived_by"] = record["schema"]
-    effective = out / "watchers" / "liveness_config_effective.json"
+    effective = out / "watchers" / f"{kind}_config_effective.json"
     effective.parent.mkdir(parents=True, exist_ok=True)
     effective.write_text(json.dumps(config, indent=1), encoding="utf-8")
     record["effective_config"] = str(effective)
@@ -659,7 +687,12 @@ def _derive_liveness_config(
         # Loud AT LAUNCH: a drifted hand-typed path is exactly the silence this
         # cure exists to end.  Do not downgrade this to a manifest-only note.
         print(
-            json.dumps({"liveness_config_superseded": row, "effective_config": str(effective)}),
+            json.dumps(
+                {
+                    "watcher_config_superseded": {"kind": kind, **row},
+                    "effective_config": str(effective),
+                }
+            ),
             file=sys.stderr,
         )
     return effective, record
@@ -983,20 +1016,31 @@ def main() -> int:
         return _print_refusal(exc)
     liveness_config = _rewrite_path(args.liveness_config, mapping) if args.liveness_config else None
     quality_config = _rewrite_path(args.quality_config, mapping) if args.quality_config else None
-    liveness_derivation: dict[str, Any] | None = None
-    if liveness_config is not None:
-        # effective_cmd, NOT cmd: --child-pidfile and --status-receipt are
-        # injected by _derive_resource_budget and appear ONLY in the wrapped
-        # argv.  Passing the raw cmd made this derivation silently inert.
-        try:
-            liveness_config, liveness_derivation = _derive_liveness_config(
+    watcher_derivations: dict[str, Any] = {}
+    # effective_cmd, NOT cmd: --child-pidfile and --status-receipt are injected
+    # by _derive_resource_budget and appear ONLY in the wrapped argv.  Passing
+    # the raw cmd made this derivation silently inert.
+    try:
+        if liveness_config is not None:
+            liveness_config, watcher_derivations["liveness"] = _derive_watcher_config(
                 liveness_config,
+                kind="liveness",
                 effective_cmd=effective_cmd,
                 resource_budget=resource_budget,
                 out=out,
+                log_path=out / "run.log",
             )
-        except LaunchRefusal as exc:
-            return _print_refusal(exc)
+        if quality_config is not None:
+            quality_config, watcher_derivations["quality"] = _derive_watcher_config(
+                quality_config,
+                kind="quality",
+                effective_cmd=effective_cmd,
+                resource_budget=resource_budget,
+                out=out,
+                log_path=out / "run.log",
+            )
+    except LaunchRefusal as exc:
+        return _print_refusal(exc)
     if args.arm_watchers:
         repo = Path(__file__).resolve().parents[1]
         try:
@@ -1086,7 +1130,7 @@ def main() -> int:
         "receipt_tombstone": receipt_tombstone,
         "receipt_arm_tombstone": receipt_arm_tombstone,
         "watchers_requested": bool(args.arm_watchers),
-        "liveness_config_derivation": liveness_derivation,
+        "watcher_config_derivation": watcher_derivations or None,
         "watchers": [],
     }
     if args.dry_run:
