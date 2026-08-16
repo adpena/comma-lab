@@ -27954,3 +27954,45 @@ by construction — SegNet reads `x[:, -1]` = frame_1, so this is a pure (pose, 
 measurement rung in a probe harness, not a Lever/WitnessProgram change; it adds no trainer flag,
 no launch config, no curriculum stage. Claiming a DSL leg here would register a Lever that levers
 nothing.
+
+### FEED-ra2c-rank4 ERRATUM — operator recall correction, still PRE-RESULT (2026-08-16)
+
+Operator, mid-run: *"We have extensive past research and findings into how Euclidean cosine is
+not optimal but still useful signal."* Recalled at source (not from working memory):
+`cosine_is_hardly_ever_optimal_prefer_fisher_derived_basis_20260803` + [[m65]]. Three measured
+facts I under-used when writing the block above:
+
+1. **Euclid-vs-Fisher cosine SIGN-FLIPS (MEASURED).** The two metrics disagree in SIGN, not
+   merely in magnitude. The dual-metric diagnostic exists precisely because one metric alone
+   misleads. Law: *"never one alone."*
+2. **Euclid is not noise — it is unladdered.** The standing directive is that cosine is "hardly
+   ever optimal for our thing," NOT that it is uninformative. It is a real but non-derived signal.
+3. **Fisher is CHEAP here.** Fisher curvature ↔ (−margin) Pearson **0.978** — the margin field IS
+   the Fisher surrogate. And the producers already exist: the ms3/ms4 metric-custody bundle
+   carries matched Fisher-vs-Euclid cosine + rel-norm rows. The pose-metric truncation is NOT a
+   from-scratch build.
+
+**BOTH falsifier branches above were mis-stated. Corrected, with the third outcome the corpus
+actually predicts:**
+
+- ~~"ratio ≈ prediction ⇒ closed in BOTH metrics"~~ — **WITHDRAWN, over-strong.** Given a measured
+  SIGN-FLIP between the metrics, agreement at ONE rank cannot license a claim about the
+  pose-metric-OPTIMAL truncation. Near-prediction would show only that Frobenius is a decent
+  PROXY at this operating point. That is a screening result, not a closure.
+- ~~"ratio ≪ prediction ⇒ Frobenius is the WRONG norm"~~ — over-stated in the other direction.
+  Corrected: Frobenius would be shown MIS-CALIBRATED as a ranker while remaining useful as a
+  screen.
+- **THE OUTCOME THE CORPUS PREDICTS (which the original block did not name):** ratio somewhere
+  between — Euclid tracking pose damage in ORDER but not in OPTIMUM. Under a sign-flip regime the
+  Euclid-optimal rank-r and the Fisher-optimal rank-r are different subspaces at the same r.
+  That is the actionable case, and the correct next step is not another Euclid rung but the
+  **Fisher-whitened truncation** using the ALREADY-BUILT ms3/ms4 bundle.
+
+**What the rank-4 row can and cannot decide.** CAN: whether the damage law's quadratic form
+predicts realized d_pose at 25.14% Frobenius error (a law check, useful either way). CANNOT: close
+the pose-metric ladder in either direction — that needs the Fisher-whitened truncation measured
+against the same bar. Reporting the Euclid rung alone as a family verdict would be the
+"never one alone" violation this corpus already names.
+
+**Cost correction:** the pose-metric rung is CHEAPER than the block above implied — margin field
+as the Fisher surrogate + existing ms3/ms4 producers, not a new build.
