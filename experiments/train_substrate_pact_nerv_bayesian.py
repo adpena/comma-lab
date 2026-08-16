@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import sys
 from dataclasses import asdict
 from pathlib import Path
@@ -116,7 +117,7 @@ def _build_parser() -> argparse.ArgumentParser:
     p.add_argument("--ema-decay", type=float, default=0.997)
     p.add_argument("--alpha-rate", type=float, default=25.0)
     p.add_argument("--beta-seg", type=float, default=100.0)
-    p.add_argument("--gamma-pose", type=float, default=1.0)
+    p.add_argument("--gamma-pose", type=float, default=math.sqrt(10.0))
     p.add_argument("--pose-weight-scale", type=float, default=1.0)
     p.add_argument("--noise-std", type=float, default=0.5)
     p.add_argument("--max-pairs", type=int, default=None)

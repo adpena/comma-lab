@@ -89,6 +89,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import sys
 from dataclasses import asdict
 from pathlib import Path
@@ -267,8 +268,8 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Score-domain Lagrangian SegNet weight (contest canonical 100.0).",
     )
     p.add_argument(
-        "--gamma-pose", type=float, default=1.0,
-        help="Score-domain Lagrangian PoseNet sqrt weight scale.",
+        "--gamma-pose", type=float, default=math.sqrt(10.0),
+        help="PoseNet sqrt-term coefficient (contest evaluate.py: sqrt(10)).",
     )
     p.add_argument(
         "--pose-weight-scale", type=float, default=1.0,
