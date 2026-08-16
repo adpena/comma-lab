@@ -61,13 +61,20 @@ constant label, largest collision class 85,487).
 `r` = label→scored amplification: scored SegNet flips produced per transmitted-label flip. It is
 **UNMEASURED on this vehicle**. Every rung's admission collapses to it.
 
-| threshold | tokens | gross B | B | H | net flips | dS_rate | r* breakeven |
+Gross figures first — **before** the pose leg, which the next section adds and which is what
+actually decides the rung:
+
+| threshold | tokens | gross B | B | H | net flips | dS_rate (gross) | r* (gross) |
 |---|---|---|---|---|---|---|---|
 | ≥16 bits | 143 | 316 | 4 | 139 | 135 | −2.106e-04 | 1.8400 |
 | ≥8 bits | 9,819 | 12,806 | 40 | 9,779 | 9,739 | −8.527e-03 | 1.0329 |
 | ≥4 bits | 38,028 | 32,094 | 264 | 37,764 | 37,500 | −2.137e-02 | 0.6723 |
 | ≥2 bits | 90,994 | 51,412 | 511 | 90,483 | 89,972 | −3.423e-02 | 0.4488 |
 | ≥0.01 bits | 213,986 | 66,117 | 784 | 213,198 | 212,414 | −4.402e-02 | 0.2445 |
+
+The committed artifact prices compensation **inline**, so `TD1_ATTRIBUTION.json` reports
+`any_rung_clears_bar: false` and every rung's `clears_admission_bar: false`. A gross-only ladder
+would have read `true` and contradicted this memo; that defect was found and fixed before landing.
 
 ## The pose column closes it
 

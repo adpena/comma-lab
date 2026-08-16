@@ -414,6 +414,14 @@ GROSS_REALIZATION_MODELED = 184.0 / 189.0
 # Rungs whose breakeven amplification exceeds 1; their concrete drop sets are retained.
 DROP_SET_THRESHOLDS = (8.0, 16.0)
 
+# Pose compensation price, per ACTIVE PAIR: qs4 step 2 at brotli q11 measured 12 B over 3
+# active pairs = 4.000 B/pair. Token edits are frame-level, so every touched pair owes a
+# frame-0 Schur solve. qs5 proved that solve carries ~zero pose tax ONLY when it runs
+# in-compile against the final token bytes; a carried/stale solve was qs4's +2.396e-4 pose
+# disaster. Any consumer of these rungs must re-solve in-compile and fail closed on a
+# stale fingerprint. MODELED price, measured basis, scope: qs4's three-pair coder race.
+COMPENSATION_BYTES_PER_ACTIVE_PAIR = 4.0
+
 
 def derive_event_to_spatial_permutation(
     events: np.ndarray, spatial: np.ndarray, frames: int = FRAMES
@@ -512,6 +520,11 @@ def attribute(args: argparse.Namespace) -> dict[str, Any]:
     # (frame, event_index) drop sets for the two rungs whose breakeven amplification sits
     # above 1. These are what a real re-encode would consume.
     drop_sets: dict[float, list[np.ndarray]] = {t: [] for t in DROP_SET_THRESHOLDS}
+    # Which pairs each saving bucket touches. Compensation is charged per ACTIVE PAIR, so
+    # a rung's true price depends on how widely its tokens scatter, not just how many
+    # there are. Without this the ladder reports a gross saving and silently omits the
+    # pose leg.
+    bucket_frames = np.zeros((nb, FRAMES), dtype=bool)
 
     for frame in range(FRAMES):
         codes = np.asarray(np.load(probs / f"codes_{frame:04d}.npy", mmap_mode="r", allow_pickle=False))
@@ -537,6 +550,7 @@ def attribute(args: argparse.Namespace) -> dict[str, Any]:
         pool_b += np.bincount(
             idx[changed], weights=saving.astype(np.float64)[changed], minlength=nb
         ) / 8.0
+        bucket_frames[:, frame] = np.bincount(idx[changed], minlength=nb) > 0
         for threshold, store in drop_sets.items():
             selected = np.flatnonzero(changed & (saving >= threshold))
             if selected.size:
@@ -578,9 +592,11 @@ def attribute(args: argparse.Namespace) -> dict[str, Any]:
     b_c = 0
     h_c = 0
     w_c = 0
+    pairs_c = np.zeros(FRAMES, dtype=bool)
     for i in range(nb - 1, -1, -1):
         if edges[i] <= 0.0:
             continue
+        pairs_c |= bucket_frames[i]
         tok_c += int(b_cnt[i] + h_cnt[i] + w_cnt[i])
         byt_c += float(pool_b[i])
         b_c += int(b_cnt[i])
@@ -589,20 +605,23 @@ def attribute(args: argparse.Namespace) -> dict[str, Any]:
         if tok_c == 0:
             continue
         net_label_flips = h_c - b_c
+        active_pairs = int(pairs_c.sum())
+        compensation = active_pairs * COMPENSATION_BYTES_PER_ACTIVE_PAIR
+        net_bytes = byt_c - compensation
         rung = {
             "drop_threshold_bits": float(edges[i]),
             "tokens_dropped": tok_c,
-            "bytes_saved_first_order": byt_c,
+            "gross_bytes_saved_first_order": byt_c,
+            "active_pairs": active_pairs,
+            "compensation_bytes": compensation,
+            "net_bytes_after_compensation": net_bytes,
             "bytes_per_token": byt_c / tok_c,
             "B_benefit": b_c,
             "H_harm": h_c,
             "W_wash": w_c,
             "net_label_flips": net_label_flips,
-            "realized_flips_per_byte": (net_label_flips * GROSS_REALIZATION_MODELED / byt_c)
-            if byt_c > 0
-            else None,
             "breakeven_flips_per_byte": breakeven_flips_per_byte(),
-            "dS_rate": -byt_c * rate_delta_per_byte(),
+            "dS_rate": -net_bytes * rate_delta_per_byte(),
             "dS_seg_modeled": net_label_flips * GROSS_REALIZATION_MODELED * seg_delta_per_flip(),
         }
         rung["dS_net_modeled"] = rung["dS_rate"] + rung["dS_seg_modeled"]
@@ -612,11 +631,11 @@ def attribute(args: argparse.Namespace) -> dict[str, Any]:
         # breaks even and the r at which it exactly reaches the admission bar, so the
         # verdict does not depend on any transferred prior.
         if net_label_flips > 0:
-            rung["breakeven_amplification"] = (byt_c * rate_delta_per_byte()) / (
+            rung["breakeven_amplification"] = (net_bytes * rate_delta_per_byte()) / (
                 net_label_flips * seg_delta_per_flip()
             )
             rung["amplification_at_admission_bar"] = (
-                byt_c * rate_delta_per_byte() - 3.5e-6
+                net_bytes * rate_delta_per_byte() - 3.5e-6
             ) / (net_label_flips * seg_delta_per_flip())
         else:
             rung["breakeven_amplification"] = None
