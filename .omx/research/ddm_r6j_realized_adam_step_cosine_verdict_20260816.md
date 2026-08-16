@@ -101,13 +101,45 @@ matched-‖Δw‖ or long-window judge is for — and until one runs, no descent
 The `sign`-limit proxy rg1b measured and this exact-moment reconstruction agree in direction,
 but neither is a multi-step compounding argument.
 
-## Fire-order
+## ADDENDUM — the free judge is UNDER-POWERED, and that re-orders the fire-order
 
-1. **rg1b §6.6 item (a) — matched-‖Δw‖ comparison.** Now the highest-value R6 leg: the law
-   predicts expected flips at any displacement, so the **residual off the curve is the
-   direction signal** at σ_log 0.0728 resolution. Free to compute for any existing arm.
-2. **rg1b §6.6 item (b) — the long window.** The untested question is whether direction
-   compounds past the diffusive noise; rg1b's §6.5 names it as *the* live question.
+rg1b §6.6 item 2 proposes the residual-off-the-law as "a usable free judge … it is
+~0.07σ-resolvable." I computed the detection arithmetic before spending a Metal slot on it.
+**σ_log 0.0728 is the fit's residual SCATTER, not the resolution of a single new point** — a
+new arm's residual must BEAT that scatter to be distinguishable, and the band arm's sits
+*inside* one sigma.
+
+| what | improvement over the law needed |
+|---|---:|
+| **band arm DELIVERED** | **6.14%** (residual −0.871σ, peak/prediction 0.9386) |
+| single new arm to clear 1σ | 7.02% |
+| single new arm to clear 2σ | **13.55%** |
+| law-vs-law, 3 band arms vs the 4 stock | 10.53% |
+| law-vs-law, 4 band arms | 9.79% |
+| law-vs-law, 8 band arms | 8.53% |
+
+(law-vs-law: SE(Δ log A) ≈ σ√(1/n₁+1/n₂), leverage ignored — an optimistic bound, so the real
+bars are *higher* than shown.)
+
+**The measured effect is ~0.45× the single-arm detection threshold, and adding arms does not
+rescue it**: even 8 band arms leave a 8.53% bar against a 6.14% effect. The residual judge
+cannot resolve this effect size **at any affordable n**. rg1b's own receipt anticipated the
+shape of this — `instrument_capacity_caveat`: *"n=4, dof=2 … this bar detects a LARGE direction
+change only. A 20% improvement is inside the noise."* — but item 2 then proposed the same
+statistic as the cheap route. It is cheap; it is also blind here.
+
+**Consequence:** item (a) drops below item (b). The discriminator must be the **LONG WINDOW**,
+where a per-step direction advantage compounds instead of being read off a single noisy
+displacement point.
+
+## Fire-order (re-ordered by the addendum)
+
+1. **rg1b §6.6 item (b) — the long window.** Promoted to rank 1. The untested question is
+   whether direction compounds past the diffusive noise; rg1b §6.5 names it as *the* live
+   question, and the addendum shows it is now the only judge with the power to answer.
+2. **rg1b §6.6 item (a) — matched-‖Δw‖ comparison.** Demoted, NOT dead: matching displacement
+   removes the location confound, which is a different (and real) gain from resolving the
+   residual. Worth doing *inside* the long window, not as a standalone cheap substitute for it.
 3. The **F3/ns1 protection-list blocker** (rg1b §5) still binds the rg1 full burn and is
    unaffected by this result.
 
