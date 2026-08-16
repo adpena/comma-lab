@@ -1,6 +1,6 @@
 # ddm_b2e SEALED LAUNCH TICKET — F2-ALONE short decisive row (burn-2 train-for-editability)
 
-Status: **READY_TO_FIRE_PENDING_TWO_INPUT_PINS** (upgraded from BLOCKED_ON_OBJECT_REPIN)
+Status: **FIRED (MAIN, 2026-08-16) — pins resolved sha-exact; 50-step governed smoke PASS ×2 receipts (166.30 s / 50 steps end-to-end, peak RSS 2,779 MiB @ 12 GiB admission, per-stage ckpts + resume.latest + final save verified, packed export 40,252 B == sd1 EXPECTED_BASE_SEMANTIC_BYTES; first attempt refused by the admission guard for a raw launch — guard CORRECT, rerouted through tools/safe_run.py). Derived window: ≤3.33 s/step → 3,000 steps ≈ 2.8 h + 12 checkpoint saves. NOTE: was READY_TO_FIRE_PENDING_TWO_INPUT_PINS** (upgraded from BLOCKED_ON_OBJECT_REPIN)
 Prepared by: ddm_b2e arm · Owner of the FIRE: **MAIN** (governed Metal slot)
 Landing memo: `.omx/research/ddm_b2e_landing_and_charter_repin_20260816.md`
 Commits: `ec83c44223` (levers + harness) · `f035530ef2` (memo) · `277fc58d13` (trainer wiring)
