@@ -27797,3 +27797,14 @@ measured admission baseline (base advisory S 0.20280753928705508).
 - Memos: `ddm_wd3_f64_family_boundary_verdict_20260815.md` + `ddm_wd3_d56_fresh_dense_verdict_20260815.md`.
 - Side: wc1 optimized n600 r3 FIRED post-F64 (admission passed: 108.8 GiB available); gb1 D5
   aggregation held correct across the overlap window.
+
+FEED-wd3f (2026-08-16, MAIN): wd3 n120 seeded confirmation COMPLETE — D56 INSTANCE_NEGATIVE
+(Δ+1.4806) + F64 INSTANCE_NEGATIVE (Δ+1.1093) vs W0_warm baseline (n120 hard_d_seg 0.0012388 /
+d_pose 0.024782), same 120 pairs, trainer-native compiler, checkpoint SHAs pinned. Family verdict
+(first licensed family word): fresh-init @65ep NEGATIVE → PARKED w/ reactivation ladder
+(warm-at-w56 · longer budget · curriculum-inherited birth). W96 no-fire stands. n600 admission
+trajectory-stopped: student packet 21,807 B int4 ⇒ byte bar ~1.07e-4 raw vs projected +6.6e-4
+(~6× over, PROJECTED). #1070 chain: ALL RUNGS RESOLVED. Equation
+wd3_fresh_topology_pose_carry_v1 → 4 anchors, family gate discharged. Memo:
+ddm_wd3_n120_family_disposition_20260816.md. Import-fix lesson: script-execution sys.path
+bootstrap required in eval harnesses (091835e1d6).

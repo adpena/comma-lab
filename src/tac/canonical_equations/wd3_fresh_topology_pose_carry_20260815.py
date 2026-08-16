@@ -54,6 +54,7 @@ EQUATION_ID = "wd3_fresh_topology_pose_carry_v1"
 AXIS = "[Darwin-mps training / n60 advisory] frozen-scorer fixed-subset instrument"
 MEMO = ".omx/research/ddm_wd3_d56_fresh_dense_verdict_20260815.md"
 F64_MEMO = ".omx/research/ddm_wd3_f64_family_boundary_verdict_20260815.md"
+N120_MEMO = ".omx/research/ddm_wd3_n120_family_disposition_20260816.md"
 D56_CONFIG_SHA256 = "f8e2c8e625bd01a8e2e3263e6a7b43cfb226c0fef7add0efff45cb36387f8526"
 
 #: MEASURED 2026-08-15 (W0 A/B, 4-epoch windows, matched weights/subset/epochs).
@@ -119,7 +120,7 @@ def build_wd3_fresh_topology_pose_carry_v1() -> CanonicalEquation:
                 "seg_asymptote_from_epoch": 40,
                 "seg_ratio_vs_w0_floor": 2.5,
                 "verdict": "NEGATIVE-LEANING",
-                "verdict_scope": "instance (D56, n60); n120 confirmation OWED",
+                "verdict_scope": "instance (D56, n60); n120 confirmation DISCHARGED 2026-08-16 (INSTANCE_NEGATIVE, see the n120 anchor)",
             },
             residual=0.0,
             source_artifact=MEMO,
@@ -165,6 +166,53 @@ def build_wd3_fresh_topology_pose_carry_v1() -> CanonicalEquation:
             provenance=provenance,
             empirical_verification_status="VERIFIED_VIA_EMPIRICAL_ANCHOR",
         ),
+        EmpiricalAnchor(
+            anchor_id="wd3_n120_seeded_confirmation_both_negatives_upheld_20260816",
+            measurement_utc="2026-08-16T05:20:00Z",
+            inputs={
+                "population": "seeded stratified nonprefix n120 (config subsets."
+                              "negative_n120), SAME 120 pairs for all three arms",
+                "instrument": "experiments/ddm_wd3_n120_confirmation.py @ 091835e1d6 "
+                              "(eval-only over evaluate_subset_and_retain + "
+                              "compile_n120_negative_confirmation)",
+                "checkpoints": "wd3_stage_end_epoch_0065.pt x3 (SHAs pinned in "
+                               "N120_VERDICT_*.json)",
+            },
+            predicted_output={
+                "question": "do the n60 fresh-arm negatives survive the sealed spec "
+                            "law's seeded n120 confirmation?"
+            },
+            empirical_output={
+                "W0_warm_baseline": {"hard_d_seg": 0.0012388017494231462,
+                                     "d_pose": 0.024782374501228333},
+                "D56": {"hard_d_seg": 0.0024938795249909163,
+                        "d_pose": 0.34316346049308777,
+                        "disposition": "INSTANCE_NEGATIVE",
+                        "delta_score": 1.4805548059017015},
+                "F64": {"hard_d_seg": 0.0029885186813771725,
+                        "d_pose": 0.20484790205955505,
+                        "disposition": "INSTANCE_NEGATIVE",
+                        "delta_score": 1.1092878244084168},
+                "family_verdict": "fresh-init scorer-free-birth distillation at the "
+                                  "65-epoch budget on this teacher: NEGATIVE",
+                "verdict_scope": "family (FAMILY(fresh-init @65ep, this teacher/"
+                                 "receiver); reactivation ladder = warm-at-w56, "
+                                 "longer budget, curriculum-inherited birth)",
+                "admission_note": "W0_warm student packet 21,807 B int4 => byte bar "
+                                  "~1.07e-4 raw d_seg vs projected +6.6e-4 gap "
+                                  "(~6x over bar, PROJECTED not measured); n600 "
+                                  "admission row trajectory-stopped per the memo",
+            },
+            residual=0.0,
+            source_artifact=N120_MEMO,
+            measurement_method=(
+                "three governed watched eval-only runs (134s/117s/~120s, MPS, rc=0), "
+                "receiver-closed retained rows, trainer-native fail-closed verdict "
+                "compiler (pair_ids + cache_surface_sha256 matched)"
+            ),
+            provenance=provenance,
+            empirical_verification_status="VERIFIED_VIA_EMPIRICAL_ANCHOR",
+        ),
     )
     return CanonicalEquation(
         equation_id=EQUATION_ID,
@@ -189,9 +237,10 @@ def build_wd3_fresh_topology_pose_carry_v1() -> CanonicalEquation:
             "research_only": True,
             "score_claim": False,
             "promotion_eligible": False,
-            "verdict_scope": "instance for the D56/F64 endpoints; the pose-carry LAW "
-                             "and the no-separation regime read are the registered "
-                             "objects; family word gated on the n120 confirmation",
+            "verdict_scope": "family for the fresh-init @65ep negative (n120 seeded "
+                             "confirmation DISCHARGED 2026-08-16, both arms "
+                             "INSTANCE_NEGATIVE); the pose-carry LAW and the "
+                             "no-separation regime read remain the registered objects",
             "spec_law": "a negative cannot be emitted from n60 (sealed wd3 charter)",
         },
         units_in={"window_delta": "relative d_pose change over a matched epoch window"},
