@@ -27781,3 +27781,19 @@ measured admission baseline (base advisory S 0.20280753928705508).
 - **gb1 production reads:** D5 launch-tree aggregation VALIDATED (one charge per declared job);
   D1 cp-measurement residue LIVE in the safe_run leg (clamp fired at 73.95/125.71 GiB
   total-used-shaped) → routed to #1073.
+
+## FEED-wd3e (2026-08-15/16 boundary — F64 verdict + W96 no-fire + wc1 r3 fired)
+- **F64 COMPLETE** (fresh factorized w64 r19, 65 ep, 6,851 s, rc=0 attempt 1): best hard_d_seg
+  0.0029242 (ep60), ep65 0.0029793, d_pose 0.2325 — 2.75× the W0 warm floor, only 9-11% from D56.
+- **The boundary read:** two DIFFERENT capacity forms (dense w56, factorized w64 r19) converged
+  without separating ⇒ per the same-defect-negatives law this is ONE finding (fresh-init
+  optimization regime binding at this budget, not capacity form) ⇒ `capacity_pressure_confirmed`
+  stays FALSE ⇒ **W96 does NOT fire**. Disambiguators recorded as reactivation criteria:
+  longer-budget fresh (regime test) · warm-lineage-at-w56 (capacity test).
+- Verdicts: D56 + F64 both NEGATIVE-LEANING at INSTANCE scope; family word gated on the owed n120
+  seeded-stratified confirmation (no eval-only subcommand exists — harness build is the next unit;
+  `compile_n120_negative_confirmation` at trainer:2551 demands matched retained n120 rows).
+- Equation leg: `wd3_fresh_topology_pose_carry_v1` extended to 3 anchors (F64 no-separation).
+- Memos: `ddm_wd3_f64_family_boundary_verdict_20260815.md` + `ddm_wd3_d56_fresh_dense_verdict_20260815.md`.
+- Side: wc1 optimized n600 r3 FIRED post-F64 (admission passed: 108.8 GiB available); gb1 D5
+  aggregation held correct across the overlap window.
