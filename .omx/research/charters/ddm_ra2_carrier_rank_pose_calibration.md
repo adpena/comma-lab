@@ -324,3 +324,75 @@ chain, and per-atom RMS is absorbable into the coefficients. Closed-form error a
 exactly (512.7490). **Error-only so far — not yet priced in bytes.** If ra2's d_pose(MSE)
 curve is steep, this is the rung to price next; a pose-Jacobian-weighted (Fisher) rotation is
 better still and also unbuilt.
+
+---
+
+## AMENDMENT 3 (2026-08-16, MAIN) — the ra2a decode path was at the WRONG LAYER; the corrected chain, and why no archive writer is needed
+
+**Status: ra2a is BLOCKED and the blocker is now fully diagnosed.** Three plumbing layers were
+peeled in the prior pass (runtime path · receiver identity · fx1 tree path). The fourth is not
+plumbing — it is a scope error in this charter, and it is now named exactly.
+
+### C7. ra2a read the archive at the wrong layer
+
+ra2a did `zipfile.read("p")` → `receiver.split_payload(payload)`. That is the CPR1 semantic-pose
+receiver's entry point, and it correctly REFUSED ("combined payload has no complete token
+section") because the hv1 archive is **F26-wrapped**: `GEN/inflate.py` is the F26 outer wrapper,
+and `split_payload` expects the already-unwrapped combined payload. There are TWO receivers,
+nested; the charter assumed one.
+
+**The exact chain** (verified at source in `GEN/runtime/f26_inflate.py::inflate_archive`):
+
+```
+parts             = read_residual_archive(archive_path)              # F26 section split
+carrier_blob, _   = split_frame0_selector_carrier(parts.carrier_blob)
+canonical_carrier = materialize_cpr1(carrier_blob, renderer)
+semantic_pose     = pack("<II", 40252, len(canonical_carrier)) + bytes(40252) + canonical_carrier
+_, basis, coeff   = renderer.unpack_semantic_pose(semantic_pose)
+...                                                                   # + compensation overlay
+render_video(semantic, basis, coeff, tokens, destination, device)
+```
+
+Note that `ddm_ra1_carrier_rank_refit_preproof.py` already reads at the RIGHT layer — it consumes
+a pre-extracted `receiver_decode/outer_carrier.bin` and calls `materialize_cpr1` directly. ra1's
+coded-byte numbers are therefore unaffected by this defect; only ra2a's decode was wrong.
+
+### C8. `residual_archive` is READ-ONLY — and the pose measurement does not need a writer
+
+There is no archive writer in `runtime/residual_archive.py` (reader + decoders only). So
+"re-pack a modified archive and inflate it" is not an available operation on our side.
+
+**It is also not required.** The carrier enters the render at exactly one place
+(`inflate.py:660`): `carrier = einsum("bk,kchw->bchw", coeff, basis)` → bicubic → frame_0.
+d_pose is a function of the RENDERED frames, not of the container. So the honest measurement is:
+unwrap once, perturb `coeff`, render twice, score twice. The container round-trip is only needed
+for the RATE column — and the rate column is already exactly known from ra1b's measured coded
+lengths through the shipped codec.
+
+**The measurement therefore SPLITS, and each half already has its instrument:**
+
+| column | instrument | status |
+|---|---|---|
+| rate (bytes returned) | ra1b coded lengths through the shipped CPR1 codec + Brotli cell | MEASURED |
+| d_pose(fidelity) | unwrap → perturb coeff → `render_video` ×2 → PoseNet | the remaining build |
+| affordance bar | `carrier_rate_credit_pose_affordance_v1` | REGISTERED, evaluator executable |
+
+### C9. The mirror needs a byte-identity control, and it has an exact one
+
+Reproducing the f26 unwrap chain inside ra2a is duplication of a pinned source. That is
+acceptable ONLY with a control that proves the mirror is faithful: **at α = 1 (carrier
+unmodified) the mirrored chain must reproduce the RETAINED base render byte-identically.** If the
+render sha does not match the retained receipt, the mirror is wrong and no ladder row is
+admissible. Pin the f26_inflate source sha in the receipt alongside it.
+
+### C10. Fire order, corrected
+
+1. Build the mirrored unwrap + the α=1 byte-identity control. Refuse on sha mismatch.
+2. Fire **α = 0 FIRST** (carrier deleted). Per the registered affordance law it returns 153.8% of
+   the remaining gap and sits under the loosest bar (7.72× tolerance) — it is one decode, it
+   bounds the whole d_pose(fidelity) curve, and it answers affordability in the easiest regime
+   rather than the hardest.
+3. Only then walk interior rungs, and only if α=0 is NOT affordable.
+
+Ordering interior-rungs-first was the charter's error, and it is the same LEVEL error as ranking
+the ladder by Euclidean MSE: both optimize something other than the question being asked.
