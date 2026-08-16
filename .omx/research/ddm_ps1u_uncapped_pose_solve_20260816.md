@@ -85,22 +85,24 @@ bind the exact-solve sibling.
 
 ## 3. THE ANSWER TO #850 — the descent flattens, and the curve says so
 
-n=21 seeded-random pairs (seed 20260816; **never a prefix** — m88/m96: pose prefixes measure
+n=29 seeded-random pairs (seed 20260816; **never a prefix** — m88/m96: pose prefixes measure
 2.5–4.2× ANTI-conservatively). Sweep = one relinearization + damped-LS step + uncapped descent.
 
 | cap | mass-weighted gain FORFEITED by stopping there |
 |---|---:|
-| stop after 1 sweep | 2.076% |
-| stop after 2 sweeps (the su2 minimum) | 1.239% |
-| **stop after 3 sweeps (the su2 default)** | **0.062%** |
+| stop after 1 sweep | 2.08% |
+| stop after 2 sweeps (the su2 minimum) | 1.24% |
+| **stop after 3 sweeps (the su2 default)** | **0.19%** |
 
-20 of 21 pairs terminated on `sweep_no_improvement` and 1 on
-`sweep_relative_gain_below_tol` — both convergence proofs, not bounds. Mean sweeps 2.62,
+28 of 29 pairs terminated on `sweep_no_improvement` and 1 on
+`sweep_relative_gain_below_tol` — both convergence proofs, not bounds. Mean sweeps ~2.6,
 max 5. **Zero pairs hit the runaway guard.**
 
-**The 0.062% is not tautological.** 5 of 21 pairs actually ran past 3 sweeps; on those the
-mass-weighted gain past cap-3 is **0.72%**. So the honest statement is: uncapping buys ~0.06%
-overall, and under 1% on the minority of pairs that would have been truncated. **The iteration
+**The 0.19% is not tautological.** 6 of 29 pairs actually ran past 3 sweeps; on those the
+mass-weighted gain past cap-3 is **3.16%**. ⚠ That sub-population figure is **NOT converged** —
+it moved 0.91% (n=13) → 0.72% (n=21) → 3.16% (n=29) as heavy pairs entered, so treat it as
+`verdict_scope: instance` and do not quote it. The **population** figure (0.19%) is the robust
+one and is what closes #850: uncapping buys ~0.2% of the achievable reduction. **The iteration
 cap was worth ~nothing on this actuator.**
 
 This reproduces pg1's independent finding on a different rung ("the descent is front-loaded, so
@@ -114,22 +116,22 @@ the arm pivoted to the target.
 
 ---
 
-## 4. THE PRIZE IS IN THE TARGET — 95.2% realized d_pose reduction
+## 4. THE PRIZE IS IN THE TARGET — 94.9% realized d_pose reduction
 
-Same n=21, same instrument, realized through the real render + uint8 + frozen PoseNet:
+Same n=29, same instrument, realized through the real render + uint8 + frozen PoseNet:
 
 | quantity | value |
 |---|---|
-| mass-weighted d_pose | **1.323377e-04 → 6.315080e-06** |
-| **mass-weighted reduction** | **95.23%** |
-| per-pair reduction | mean 74.5% · median 94.9% · min 0.0% · max 99.9% |
+| mass-weighted d_pose | **1.428705e-04 → 7.349168e-06** |
+| **mass-weighted reduction** | **94.86%** |
+| per-pair reduction | mean 75.1% · median 94.0% · min 0.0% · max 99.9% |
 | pairs ending worse than base | **0** (realized acceptance is structural) |
 | accepted code delta | median 10 of 12 dims nonzero; \|Δ\|max median 5, p95 19, max 20 |
 | cost | ~350–2,200 scorer evals/pair, ~30 s/pair on 2 threads |
 
-The subset's base mass-weighted d_pose (1.323e-04) sits close to the n600 mean (1.4747e-04), so
-the sample is representative in scale. Mass-weighted reduction (95.2%) exceeds the per-pair mean
-(74.5%) because **the heavy pairs solve best** — the favourable direction for a waterfill.
+The subset's base mass-weighted d_pose (1.4287e-04) sits within 3% of the n600 mean
+(1.4747e-04), so the sample is representative in scale. Mass-weighted reduction (94.9%) exceeds
+the per-pair mean (75.1%) because **the heavy pairs solve best** — the favourable direction for a waterfill.
 
 The reduction is **structural, not noise-fitting**: it concentrates in pose dim 0 (the dim that
 carries ~81% of the base error), it is produced by a coherent multi-dimension photometric change
@@ -138,14 +140,14 @@ per-pair gains** (max live-vs-retained base drift 2.40e-07 against gains of ~1e-
 
 ### What it is worth, on the instrument that measured the base
 
-If the n600 reduction matched this subset (**an extrapolation, not a measurement** — n=21):
+If the n600 reduction matched this subset (**an extrapolation, not a measurement** — n=29):
 
 | bytes spent | net ΔS |
 |---:|---:|
-| 2,400 | **−0.0284** |
-| 4,800 | **−0.0268** |
-| 7,200 | −0.0252 |
-| 12,000 | −0.0220 |
+| 2,400 | **−0.0281** |
+| 4,800 | **−0.0265** |
+| 7,200 | −0.0249 |
+| 12,000 | −0.0217 |
 
 against an admission bar of −3.5e-6. Byte **cost model**: the empirical order-0 entropy of a
 delta symbol is 3.548 bits → **5.32 B/pair** over 12 dims. Per the td1 law, *an entropy estimate
@@ -211,7 +213,7 @@ closing it.
 * **No byte-closed archive, no `upstream/evaluate.py` row, no T4 fire.** §5 gates it: compiling a
   candidate whose prize is stated on a chain that disagrees 21.4× with the frontier row would be
   a row I could not interpret in either direction. The gate spent $0 saying wait.
-* **No n600.** n=21 of a seeded-random 64 at the time of writing; shards continue and are
+* **No n600.** n=29 of a seeded-random 64 at the time of writing; shards continue and are
   resumable. Every magnitude in §4 is `verdict_scope: **instance**` and is **not** a finding —
   only §3's cap answer and §5's discrepancy are scope-`formulation`. A partial-n mean presented
   as a finding is exactly the failure this program has a rule against (pg1 §7).
@@ -221,8 +223,8 @@ closing it.
 ## 7. My own round-1 adversarial review (a fix is unreviewed new code)
 
 1. **Is "0.074% past cap-3" tautological?** Partly — pairs converging in ≤3 sweeps have it 0 by
-   construction. Caught it, and reported the non-tautological subset separately (5 pairs that
-   ran past 3 sweeps: 0.72%). Without that split the number would have been a fake.
+   construction. Caught it, and reported the non-tautological subset separately (6 pairs that
+   ran past 3 sweeps: 3.16%), and flagged that the sub-population figure is still moving. Without that split the number would have been a fake.
 2. **Is the reduction instrument noise?** Measured rather than assumed: live-vs-retained base
    drift is 2.40e-07 against gains of ~1e-04 (two orders). Also checked the shape — the gain is
    concentrated in the dominant dim and produced by coherent multi-dim deltas, not ±1 wiggles.
