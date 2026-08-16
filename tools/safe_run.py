@@ -435,6 +435,18 @@ def main(argv: list[str]) -> int:
                 ),
                 "status": status,
                 "exit": exit_code,
+                # (ddm_av3 F2) `status` is "ok" for ANY child exit that was not a
+                # timeout/oom/kill/interrupt -- so a CRASHED child reads
+                # `status=ok, exit=1`.  ddm_lr1/A2 produced exactly that receipt
+                # after losing its whole result to an IsADirectoryError.  The
+                # exit-code passthrough contract is unchanged (consumers that
+                # already check `exit` keep working); these two derived fields
+                # are additive, so a consumer keying on `status` alone can see
+                # the disagreement instead of reading a crash as a success.
+                "child_exit_nonzero": exit_code is not None and exit_code != 0,
+                "receipt_status_disagrees_with_exit": (
+                    status == "ok" and exit_code is not None and exit_code != 0
+                ),
                 "elapsed_s": round(time.monotonic() - start, 3),
                 "rss_limit_mib": ns.rss_mb,
                 "timeout_s": ns.timeout,

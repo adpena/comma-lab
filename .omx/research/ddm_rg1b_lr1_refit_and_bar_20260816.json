@@ -1,0 +1,110 @@
+{
+  "schema": "ddm_rg1b_lr1_refit_and_bar.v1",
+  "score_claim": false,
+  "axis": "[macOS-CPU advisory] read-back of retained ddm_lr1 payloads -- NEVER a score",
+  "note": "independent re-derivation of ddm_av3 F1b from the retained checkpoints; the memo's table was NOT copied",
+  "total_px": 117964800,
+  "arms": [
+    {
+      "arm": "C0",
+      "lr": 2e-07,
+      "init_seg": 0.00028616163465711804,
+      "peak_dpx": 5879.000000000001,
+      "end_dpx": 2163.9999999999995,
+      "best_seg": 0.00028616163465711804,
+      "best_step": 0,
+      "improved_over_init": false,
+      "dw_100": 0.0014435114227947486,
+      "dw_600": 0.001445069273440861
+    },
+    {
+      "arm": "A1",
+      "lr": 2e-06,
+      "init_seg": 0.00028616163465711804,
+      "peak_dpx": 14960.000000000004,
+      "end_dpx": 3828.0000000000036,
+      "best_seg": 0.00028616163465711804,
+      "best_step": 0,
+      "improved_over_init": false,
+      "dw_100": 0.00952089266272516,
+      "dw_600": 0.008771655929807685
+    },
+    {
+      "arm": "A2",
+      "lr": 2e-05,
+      "init_seg": 0.00028616163465711804,
+      "peak_dpx": 27170.000000000007,
+      "end_dpx": 8049.000000000002,
+      "best_seg": 0.00028616163465711804,
+      "best_step": 0,
+      "improved_over_init": false,
+      "dw_100": 0.047399682085730054,
+      "dw_600": 0.050453302923846546
+    },
+    {
+      "arm": "A3",
+      "lr": 0.0002,
+      "init_seg": 0.00028616163465711804,
+      "peak_dpx": 76594.00000000001,
+      "end_dpx": 59357.0,
+      "best_seg": 0.00028616163465711804,
+      "best_step": 0,
+      "improved_over_init": false,
+      "dw_100": 0.36143569325229574,
+      "dw_600": 0.53490903907918
+    }
+  ],
+  "fit_peak_vs_dw100": {
+    "form": "peak_flips = A * ||dw||_100 ** b",
+    "A": 118563.15252608266,
+    "exponent": 0.4576396715630064,
+    "r2": 0.996948162110932,
+    "sigma_log": 0.07282660413418493,
+    "dof": 2,
+    "n": 4,
+    "av3_reported": {
+      "exponent": 0.458,
+      "r2": 0.9969
+    },
+    "residuals_log": [
+      -0.010785960000545103,
+      0.05991129029278319,
+      -0.07792501078231417,
+      0.028799680490090296
+    ]
+  },
+  "bar_break_the_exponent": {
+    "definition": "at the arm's OWN measured ||dw||_100 = d, the fit predicts P(d) = A*d**b; the arm BREAKS the law iff measured peak_dpx < P(d)/K(d), K(d)=exp(t*SE_pred(d)), SE_pred=sigma*sqrt(1+1/n+(ln d - xbar)^2/Sxx)",
+    "derived_from": "the fit's own residual scatter -- nothing picked",
+    "matched_arm_dw100": 0.047399682085730054,
+    "predicted_peak_dpx": 29371.89997767812,
+    "K99": 1.7772488635245194,
+    "bar99_peak_dpx": 16526.610639902035,
+    "K95": 1.2726540843071001,
+    "bar95_peak_dpx": 23079.24858754508,
+    "SE_pred_log": 0.08257044724739193,
+    "t99_dof2": 6.964557,
+    "t95_dof2": 2.919986,
+    "A2_measured_peak_dpx": 27170.000000000007,
+    "required_reduction_vs_A2_at_99": 1.6440152546705766,
+    "instrument_capacity_caveat": "n=4, dof=2, so t99=6.96 and the interval is WIDE: this bar detects a LARGE direction change only. A 20% improvement is inside the noise of a 4-point fit and would read as NOT BROKEN."
+  },
+  "bar_descend": {
+    "definition": "history-min quantized_exact_seg < the init",
+    "init_seg": 0.00028616163465711804,
+    "all_four_arms_best_step": {
+      "C0": 0,
+      "A1": 0,
+      "A2": 0,
+      "A3": 0
+    },
+    "all_four_arms_improved": {
+      "C0": false,
+      "A1": false,
+      "A2": false,
+      "A3": false
+    },
+    "metric_granularity_px": 1,
+    "metric_granularity_seg": 8.477105034722222e-09
+  }
+}

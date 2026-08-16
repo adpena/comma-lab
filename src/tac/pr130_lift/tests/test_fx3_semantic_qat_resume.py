@@ -149,10 +149,17 @@ def test_full_state_resume_matches_uninterrupted_trajectory(tmp_path: Path) -> N
         history=[{"step": 2}],
         best_key=(0.1,),
         best_seg=0.1,
+        # ddm_av3 F3: which step actually won, and what the init measured.  Both
+        # are REQUIRED (never defaulted) -- a checkpoint that cannot say whether
+        # its "best" is its own input is exactly the defect these fields close.
+        best_step=2,
+        init_seg=0.2,
         best_rgb=None,
         best_state=best_state,
         deployment_state=best_state,
     )
+    assert payload["training_state"]["best_step"] == 2
+    assert payload["training_state"]["init_seg"] == 0.2
     checkpoint = tmp_path / "resume.pt"
     trainer._atomic_torch_save(payload, checkpoint)
     assert checkpoint.exists()

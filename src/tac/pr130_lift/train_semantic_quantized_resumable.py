@@ -39,6 +39,14 @@ import torch.nn.functional as F
 from safetensors.torch import load_file
 
 from tac.admission_guard import assert_governed_admission
+from tac.pr130_lift.band_objective import (
+    band_weight_field,
+    band_weight_stats,
+    band_weight_table_sha256,
+    curriculum_loss_weighted,
+    label_boundary,
+    load_band_weight_table,
+)
 from tac.pr130_lift.checkpoint_schema import (
     architecture_config_from_checkpoint,
     build_semantic_checkpoint_metadata,
@@ -152,6 +160,87 @@ def resolve_ema_policy(
         "lawref_declaration": lawref_to_declaration(ref),
         "resolved_manifest": manifest,
         "warmup": True,
+        **_ema_warmup_dominance(decay, updates),
+    }
+
+
+#: Above this ``target_seed_fraction`` the warmup ramp dominates the resolved
+#: decay at EVERY run length.  Derived, not measured: the LawRef resolves
+#: ``decay = f**(1/N)``, so ``1 - decay ~ ln(1/f)/N`` and the warmup crossover
+#: ``t* = (10*decay - 1)/(1 - decay) ~ 9N/ln(1/f)``.  Then ``N < t*`` iff
+#: ``ln(1/f) < 9`` iff ``f > exp(-9)`` -- independent of N.
+EMA_WARMUP_DOMINANCE_SEED_FRACTION_THRESHOLD = 1.2340980408667956e-04  # exp(-9)
+
+
+def _ema_warmup_dominance(decay: float, updates: int) -> dict[str, Any]:
+    """Say whether the resolved decay ever actually governs the run.
+
+    ``EMA.effective_decay()`` returns ``min(decay, (1 + t) / (10 + t))``.  The
+    warmup branch only reaches the target at ``t = (10 * decay - 1) / (1 - decay)``.
+    For a 600-step run at decay 0.99235 that crossover is **t = 1,167**, so the
+    target decay is applied on **no step at all** and the realised seed retention
+    is ~3.3e-19, not the declared 0.01 -- seventeen orders of magnitude apart.
+
+    ``ddm_av3`` F7 recorded this as an instance ("inert for any run shorter than
+    ~1,167 steps").  It is STRUCTURAL: because the LawRef derives the decay FROM
+    the run geometry as ``f**(1/N)``, the crossover scales as ``9N/ln(1/f)``,
+    i.e. **~1.954 x N at the canonical f = 0.01, for every N**.  At this seed
+    fraction the target decay is therefore never applied at ANY run length --
+    the warmup ramp is the whole policy.  It would govern only for
+    ``f < exp(-9)`` (see :data:`EMA_WARMUP_DOMINANCE_SEED_FRACTION_THRESHOLD`).
+
+    This is NOT the anti-freeze bug; the warmup ramp is the deliberate cure and
+    ``ddm_av3`` F1 measured it working (end lag 0.006-0.010 in all four arms).
+    It is a PROVENANCE honesty defect: the manifest recorded a
+    ``derived_at_config`` decay as governing a run it never governed.  These
+    derived fields are observability, not causal inputs, so they are excluded
+    from the resume equality check by
+    :data:`EMA_POLICY_DERIVED_OBSERVABILITY_KEYS`.
+    """
+
+    crossover = (10.0 * decay - 1.0) / (1.0 - decay) if decay < 1.0 else float("inf")
+    dominates = updates < crossover
+    # Realised retention of the seed weight under the warmup ramp:
+    # prod_{t=0}^{updates-1} min(decay, (1 + t) / (10 + t)).
+    retention = 1.0
+    for step in range(int(updates)):
+        retention *= min(decay, (1.0 + step) / (10.0 + step))
+    return {
+        "warmup_dominates_target": bool(dominates),
+        "warmup_target_crossover_updates": crossover,
+        "warmup_crossover_over_updates": crossover / max(updates, 1),
+        "declared_target_seed_fraction": decay**updates,
+        "realized_seed_retention_under_warmup": retention,
+        "governing_policy": "warmup_ramp" if dominates else "target_decay",
+    }
+
+
+#: Fields of ``ema_policy`` that are DERIVED observability, never causal inputs.
+#: Excluded from the resume equality check so that (a) a checkpoint written
+#: before they existed still resumes, and (b) a checkpoint written after them
+#: does not refuse against an older reader.  This cannot weaken the guard: every
+#: one is a pure function of ``decay`` (still compared, inside ``ema_policy``)
+#: and ``updates_per_run`` (still compared, as ``steps``, in the producing
+#: config), so an actual policy change is still caught by the surviving keys.
+EMA_POLICY_DERIVED_OBSERVABILITY_KEYS: frozenset[str] = frozenset(
+    {
+        "warmup_dominates_target",
+        "warmup_target_crossover_updates",
+        "warmup_crossover_over_updates",
+        "declared_target_seed_fraction",
+        "realized_seed_retention_under_warmup",
+        "governing_policy",
+    }
+)
+
+
+def _causal_ema_policy(policy: Mapping[str, Any]) -> dict[str, Any]:
+    """``policy`` minus the derived-observability fields."""
+
+    return {
+        key: value
+        for key, value in policy.items()
+        if key not in EMA_POLICY_DERIVED_OBSERVABILITY_KEYS
     }
 
 
@@ -293,6 +382,10 @@ ADDITIVE_LEVER_CONFIG_DEFAULTS: dict[str, Any] = {
     "carrier_rank_penalty": 0.0,
     "carrier_tensors": [],
     "lever_seed": 20260816,
+    # RG1 band objective: inert at alpha 0, and the table sha is recorded only
+    # when the term is active, so a pre-RG1 checkpoint resumes into an off run.
+    "band_objective_weight": 0.0,
+    "band_weight_table_sha256": None,
 }
 
 
@@ -391,6 +484,8 @@ def _checkpoint_payload(
     history: list[dict[str, Any]],
     best_key: tuple[Any, ...],
     best_seg: float,
+    best_step: int,
+    init_seg: float,
     best_rgb: float | None,
     best_state: Mapping[str, torch.Tensor],
     deployment_state: Mapping[str, torch.Tensor],
@@ -435,6 +530,8 @@ def _checkpoint_payload(
                 "history": copy.deepcopy(history),
                 "best_key": tuple(best_key),
                 "best_seg": float(best_seg),
+                "best_step": int(best_step),
+                "init_seg": float(init_seg),
                 "best_rgb": None if best_rgb is None else float(best_rgb),
                 "best_ema_state_dict": {
                     key: value.detach().cpu().clone()
@@ -478,7 +575,7 @@ def _load_resume_state(
     )
     if prior_config != current_config:
         raise ValueError("resume producing-stage config differs from the current invocation")
-    if prior_ema_policy != dict(ema_policy):
+    if _causal_ema_policy(prior_ema_policy) != _causal_ema_policy(ema_policy):
         raise ValueError("resume LawRef-resolved EMA policy differs from current geometry")
     if payload.get("input_artifacts") != dict(artifacts):
         raise ValueError("resume input artifact bytes differ from the original run")
@@ -496,6 +593,11 @@ def _load_resume_state(
         "history": list(state["history"]),
         "best_key": tuple(state["best_key"]),
         "best_seg": float(state["best_seg"]),
+        # Additive + legacy-compatible: a pre-F3-fix checkpoint has neither key.
+        # Computed LAZILY -- dict.get(k, default) evaluates its default eagerly,
+        # so an inline fallback would read history[0] even when the key exists.
+        "best_step": int(state.get("best_step", 0)),
+        "init_seg": _restored_init_seg(state),
         "best_rgb": (
             None if state["best_rgb"] is None else float(state["best_rgb"])
         ),
@@ -504,6 +606,22 @@ def _load_resume_state(
             for key, value in state["best_ema_state_dict"].items()
         },
     }
+
+
+def _restored_init_seg(state: Mapping[str, Any]) -> float:
+    """The step-0 metric of a resumed run, tolerant of pre-F3-fix checkpoints.
+
+    Preference order: the recorded ``init_seg``; else the first history row (the
+    step-0 evaluation, which every run writes); else ``best_seg``, which for a
+    pre-fix checkpoint IS the seeded step-0 value whenever nothing displaced it.
+    """
+
+    if "init_seg" in state:
+        return float(state["init_seg"])
+    history = state.get("history") or []
+    if history and "quantized_exact_seg" in history[0]:
+        return float(history[0]["quantized_exact_seg"])
+    return float(state["best_seg"])
 
 
 def _checkpoint_paths(save: Path, *, step: int, phase: str, stage_boundary: bool) -> tuple[Path, Path]:
@@ -808,7 +926,21 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=20260816,
         help="seed for the DEDICATED lever RNG stream (never the global stream)",
     )
+    parser.add_argument(
+        "--band-objective-weight",
+        type=float,
+        default=0.0,
+        help=(
+            "RG1: mixing fraction alpha for the debt-proportional 1-px label-band "
+            "loss weight. 0 = off (exactly the stock objective); 1 = pure measured "
+            "debt density. mean(weight) == 1 at every alpha, so this never rescales "
+            "the effective learning rate."
+        ),
+    )
     args = parser.parse_args(argv)
+    # Derived, never supplied: present only when the term is actually active, so a
+    # pre-RG1 resume checkpoint reconciles additively against an inert run.
+    args.band_weight_table_sha256 = None
     if args.input_cache is None:
         args.input_cache = args.cache
     if args.target_cache is None:
@@ -833,6 +965,22 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         parser.error("--smoke-pairs must be in [1,600]")
     if args.smoke_pairs is not None and args.batch_size > args.smoke_pairs:
         parser.error("--batch-size cannot exceed --smoke-pairs")
+    # ddm_av3 F2: --save and --out are FILE paths that the atomic writers finish
+    # with os.replace().  An existing DIRECTORY at either path raises
+    # IsADirectoryError -- but only at the END of the run, after the full final
+    # evaluation.  ddm_lr1/A2 hit exactly this: 379 s of Metal, a computed
+    # final_seg / parity / packed-bytes / verdict, and no result.json at all.
+    # Refuse in milliseconds instead, so the payload is never computed-then-lost.
+    for flag, path in (("--save", args.save), ("--out", args.out)):
+        if path is not None and Path(path).is_dir():
+            parser.error(
+                f"{flag} must be a file path, but {path} is an existing directory "
+                "(the run would compute its full result and then fail to write it)"
+            )
+    if args.band_objective_weight > 0.0:
+        # Record the table by CONTENT, never by location: the path differs across
+        # machines, the bytes do not, and the bytes are what makes the run causal.
+        args.band_weight_table_sha256 = band_weight_table_sha256()
     return args
 
 
@@ -971,6 +1119,13 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             key: value.detach().cpu().clone()
             for key, value in ema.state_dict().items()
         }
+        # ddm_av3 F3: the selection is seeded from step 0, so a run that only
+        # degrades never displaces its own INIT.  That is correct SELECTION and
+        # misleading REPORTING -- all four ddm_lr1 arms headline `verdict: PASS`
+        # on a number that is their input.  Tracking which step won makes the
+        # difference legible in the result instead of only in `history`.
+        best_step = 0
+        init_seg = best_seg
         history = [
             {
                 "step": 0,
@@ -1003,12 +1158,38 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         best_seg = restored["best_seg"]
         best_rgb = restored["best_rgb"]
         best_state = restored["best_state"]
+        best_step = restored["best_step"]
+        init_seg = restored["init_seg"]
         print(
             json.dumps(
                 {
                     "event": "resume_loaded",
                     "resume_from": str(args.resume_from),
                     "start_step": start_step,
+                }
+            ),
+            flush=True,
+        )
+
+    # RG1 band objective.  Default OFF, but "off" is a TRACKED state: the table
+    # is resolved (and its content sha recorded) only when the term is active,
+    # and the activation counter below makes a held-but-never-fired term
+    # detectable in the receipt rather than silent.
+    band_table = (
+        load_band_weight_table() if args.band_objective_weight > 0.0 else None
+    )
+    band_activations = 0
+    band_stats_first: dict[str, Any] | None = None
+    if band_table is not None:
+        print(
+            json.dumps(
+                {
+                    "event": "band_objective_active",
+                    "alpha": args.band_objective_weight,
+                    "basis": band_table.basis,
+                    "table_sha256": args.band_weight_table_sha256,
+                    "off_band_weight": band_table.off_band_weight,
+                    "band_px_ring0": band_table.provenance.get("band_px_ring0"),
                 }
             ),
             flush=True,
@@ -1047,10 +1228,23 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             with levers.applied(model, base_bits=args.bits):
                 frame = qat.render_float(model, conditioning, idx, exact_path=True)
         logits = segnet(frame)
+        band_weight = (
+            band_weight_field(target, band_table, args.band_objective_weight)
+            if band_table is not None
+            else None
+        )
         if in_float_warmup:
-            segmentation_loss = F.cross_entropy(logits, target)
+            # The band weight applies here too when active, so the term is not
+            # silently phase-dependent for a future run with a warmup.
+            if band_weight is None:
+                segmentation_loss = F.cross_entropy(logits, target)
+            else:
+                per_pixel = F.cross_entropy(logits, target, reduction="none")
+                segmentation_loss = (per_pixel * band_weight).sum() / band_weight.sum()
+                band_activations += 1
             phase = "float_ce"
-        else:
+        elif band_weight is None:
+            # Untouched stock path: byte-identical to the pre-RG1 trainer.
             qat_steps = args.steps - args.float_warmup_steps
             segmentation_loss, phase = qat.curriculum_loss(
                 logits,
@@ -1060,6 +1254,22 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                 args.ce_fraction,
                 args.softplus_fraction,
             )
+        else:
+            qat_steps = args.steps - args.float_warmup_steps
+            segmentation_loss, phase = curriculum_loss_weighted(
+                logits,
+                target,
+                step - args.float_warmup_steps - 1,
+                qat_steps,
+                args.ce_fraction,
+                args.softplus_fraction,
+                band_weight,
+            )
+            band_activations += 1
+            if band_stats_first is None:
+                band_stats_first = band_weight_stats(
+                    band_weight, label_boundary(target)
+                )
         if phase != _phase_for_step(args, step):
             raise RuntimeError("curriculum phase derivation drifted from lifted PR130 code")
         last_phase = phase
@@ -1134,6 +1344,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                 best_key = candidate_key
                 best_seg = exact
                 best_rgb = rgb_mse
+                best_step = step
                 best_state = {
                     key: value.detach().cpu().clone()
                     for key, value in ema.state_dict().items()
@@ -1182,6 +1393,8 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                 history=history,
                 best_key=best_key,
                 best_seg=best_seg,
+                best_step=best_step,
+                init_seg=init_seg,
                 best_rgb=best_rgb,
                 best_state=best_state,
                 deployment_state=ema.state_dict(),
@@ -1202,6 +1415,16 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                 ),
                 flush=True,
             )
+
+    # Fail fast, BEFORE the expensive finalize: a term that was requested but never
+    # fired must refuse rather than report as an active lever.  Placed here, not
+    # after the final evaluation, so this guard can never discard a computed result
+    # -- which is the exact defect the write-order fix below repairs.
+    if band_table is not None and band_activations == 0:
+        raise RuntimeError(
+            "band objective requested but never fired -- a held-but-inert term "
+            "would silently report as an active lever"
+        )
 
     deployment_ema = EMA(model, decay=float(ema_policy["decay"]), warmup=True)
     deployment_ema.shadow = {
@@ -1263,11 +1486,33 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         "mechanism_pair_denominator": int(active_pair_ids.numel()),
         "ema_deployed_argmax_parity": parity,
         "quantized_exact_seg": final_seg,
+        # ddm_av3 F3: `quantized_exact_seg` is the argmin INCLUDING step 0, so a
+        # degrade-only run reports its own input.  These three fields say so.
+        "init_quantized_exact_seg": init_seg,
+        "best_step": int(best_step),
+        "improved_over_init": bool(best_step != 0 and final_seg < init_seg),
         "normalized_rgb_mse": best_rgb,
         "packed_parameter_bytes": final_packed_bytes,
+        "band_objective": {
+            "alpha": args.band_objective_weight,
+            "active": band_table is not None,
+            "activations": band_activations,
+            "table_sha256": args.band_weight_table_sha256,
+            "basis": band_table.basis if band_table is not None else None,
+            "first_step_weight_stats": band_stats_first,
+            "reason_if_off": (
+                None if band_table is not None else "alpha == 0 (default)"
+            ),
+        },
         "history": history,
         "checkpoints_written": checkpoints_written,
     }
+    # ddm_av3 F2, ALWAYS KEEP THE PAYLOAD: the result JSON is the CHEAP,
+    # IRREPLACEABLE artifact (final_seg, parity, packed bytes, the full history);
+    # the 1.7 MB checkpoint is the expensive but REBUILDABLE one.  ddm_lr1/A2 had
+    # this order inverted, the save raised IsADirectoryError, and 379 s of Metal
+    # produced no readable result at all.  Cheap-and-irreplaceable goes first.
+    _atomic_write_json(result, args.out)
     final_payload = _checkpoint_payload(
         args=args,
         architecture_config=architecture,
@@ -1286,6 +1531,8 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         history=history,
         best_key=best_key,
         best_seg=best_seg,
+        best_step=best_step,
+        init_seg=init_seg,
         best_rgb=best_rgb,
         best_state=best_state,
         deployment_state=best_state,
@@ -1293,7 +1540,6 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     final_payload["best_exact_seg"] = final_seg
     final_payload["result"] = result
     _atomic_torch_save(final_payload, args.save)
-    _atomic_write_json(result, args.out)
     print(json.dumps(result, indent=2), flush=True)
     return result
 

@@ -1,0 +1,97 @@
+{
+  "axis": "[macOS-CPU advisory] derived from retained payloads -- never a score",
+  "band_px_by_pair": {
+    "0-1": 1143639,
+    "0-2": 511947,
+    "0-3": 142296,
+    "0-4": 606287,
+    "1-2": 2981,
+    "1-3": 2198,
+    "1-4": 9566,
+    "2-3": 150332,
+    "2-4": 0,
+    "3-4": 266
+  },
+  "basis": "pred_vs_label",
+  "derived_concentration_vs_off_band": {
+    "0-1": 5702.228286834633,
+    "0-2": 6059.554166207191,
+    "0-3": 14184.670439212501,
+    "0-4": 1416.8907532091387,
+    "1-2": 46048.950809673384,
+    "1-3": 62651.99913144181,
+    "1-4": 19834.05076692072,
+    "2-3": 17762.31880226311,
+    "2-4": 0.0,
+    "3-4": 57522.5956937799
+  },
+  "derived_off_band_weight": 2.28743063106676e-06,
+  "derived_weights_by_pair": {
+    "0-1": 0.013043451648640873,
+    "0-2": 0.013860809810390529,
+    "0-3": 0.032446449654241864,
+    "0-4": 0.003241039309765837,
+    "1-2": 0.10533378061053338,
+    "1-3": 0.14331210191082802,
+    "1-4": 0.045369015262387624,
+    "2-3": 0.04063007210706968,
+    "2-4": 0.0,
+    "3-4": 0.13157894736842105
+  },
+  "flips_by_pair": {
+    "0-1": 14917,
+    "0-2": 7096,
+    "0-3": 4617,
+    "0-4": 1965,
+    "1-2": 314,
+    "1-3": 315,
+    "1-4": 434,
+    "2-3": 6108,
+    "2-4": 0,
+    "3-4": 35
+  },
+  "off_band_flips": 264,
+  "off_band_px": 115413336,
+  "provenance": {
+    "band_px_ring0": 2551464,
+    "band_px_total_incident": 2569512,
+    "confusion_by_pair_cross_check": {
+      "0-1": 14844,
+      "0-2": 6625,
+      "0-3": 4147,
+      "0-4": 1802,
+      "1-2": 25,
+      "1-3": 56,
+      "1-4": 388,
+      "2-3": 5829,
+      "2-4": 0,
+      "3-4": 27
+    },
+    "flips_by_pair_incident_sum": 35801,
+    "frames": 600,
+    "instrument_control_free_band_mask_parity": true,
+    "junction_fraction_of_band": 0.007050853941109888,
+    "junction_px": 17990,
+    "note": "flips_by_pair and band_px_by_pair are BOTH incidence counts over the same mask (a junction pixel counts toward each incident pair), so W_e is the flip rate on edge e; confusion_by_pair_cross_check is the (pred, label) pair table rt1 recorded and is NOT a weight numerator",
+    "on_band_flip_share": 0.9921761550543816,
+    "on_band_flips": 33479,
+    "sources": {
+      "free_band_mask": {
+        "path": "/Volumes/APDataStore/pact/ddm_rt1_seg_roundtrip_20260816/free_band_mask.npy",
+        "sha256": "649dd26f0843c87cc450952c1777b30b749e8834a2b26f5d7a5bc97568bf89c7"
+      },
+      "render_argmax": {
+        "path": "/Volumes/APDataStore/pact/ddm_rt1_seg_roundtrip_20260816/argmax_base.npy",
+        "sha256": "2aeb1e6be0f7c6ab8191b790204d8df0ae5fdce7ef2ecc5b2d18a715f1a674c4"
+      },
+      "transmitted_labels": {
+        "path": "/Volumes/APDataStore/pact/ddm_hv1_harvest_compose/ep0634/retained/coders/s1p25_c1p0/decoded_spatial_tokens.rc64.bin",
+        "sha256": "9ba2e52b3096585895970066b389bf1261ebc203d5b828cdea056c13858aea52"
+      }
+    },
+    "total_flips": 33743,
+    "total_px": 117964800
+  },
+  "schema": "ddm_rg1b_band_weight_table.v1",
+  "score_claim": false
+}
