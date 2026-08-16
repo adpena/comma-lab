@@ -20,6 +20,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from tac import process_liveness
+
 SCHEMA = "pact.run_quality_poller.v1"
 CONFIG_SCHEMA = "pact.run_quality_poller.config.v1"
 ALERT_SCHEMA = "pact.run_quality_poller.alert.v1"
@@ -167,15 +169,61 @@ def load_config(path: Path) -> dict[str, Any]:
     return config
 
 
+# Liveness is read through the CANONICAL surface, never re-implemented here.
+# ``_pid_alive`` was hand-rolled 11x across the tree with DIVERGENT semantics
+# (PermissionError reads ALIVE at three sites, DEAD at two); a 12th copy would
+# have deepened that drift.  ``tac.process_liveness`` is the single source.
+PID_ALIVE = process_liveness.ALIVE
+PID_DEAD = process_liveness.DEAD
+PID_UNREADABLE = process_liveness.UNREADABLE
+
+
+def _pid_state(pid_file: Path) -> str:
+    """Tri-state pid read for this poller's pid FILE.
+
+    The bool this replaced collapsed three states into one, and that collapse
+    WAS the defect (#1064, measured by ddm_lw2): a MISSING or garbage
+    ``pid_file`` -- the poller is BLIND -- read identically to a child that
+    exited -- genuine death, correctly owned by the liveness watcher.  So a
+    drifted ``pid_file`` made this poller return 0 silently, write no event
+    receipt, and look exactly like health.  ``ddm_ra2c_rank4``'s quality poller
+    watched nothing for a whole run: 0-byte log, no ``.done``, rc=0.
+
+    A watcher that fails silently is strictly worse than no watcher: it spends
+    a watcher's trust budget and pays out nothing.
+    """
+    return process_liveness.pid_file_state(pid_file)
+
+
 def _pid_alive(pid_file: Path) -> bool:
-    try:
-        pid = int(pid_file.read_text(encoding="utf-8").strip())
-        if pid <= 1:
-            return False
-        os.kill(pid, 0)
-    except (OSError, ValueError):
-        return False
-    return True
+    return _pid_state(pid_file) == PID_ALIVE
+
+
+def blindness_alert(
+    config: Mapping[str, Any], *, now: float, started_at: float
+) -> dict[str, Any] | None:
+    """Can this poller observe its target at all?  Loud past the startup grace.
+
+    Deliberately NOT gated by ``config["conditions"]``: an operator may disable
+    a *quality* condition, but "am I actually watching anything" is never a
+    tunable.  Within the startup grace this stays silent, because a launcher
+    legitimately has not written the pidfile or the log yet.
+    """
+    if now - started_at < config["startup_grace_s"]:
+        return None
+    if _pid_state(config["pid_file"]) == PID_UNREADABLE:
+        return {
+            "reason": "watcher_blind_pid_file_unreadable",
+            "pid_file": str(config["pid_file"]),
+            "startup_grace_s": config["startup_grace_s"],
+        }
+    if not config["log_path"].exists():
+        return {
+            "reason": "watcher_blind_log_absent",
+            "log_path": str(config["log_path"]),
+            "startup_grace_s": config["startup_grace_s"],
+        }
+    return None
 
 
 def read_eval_rows(config: Mapping[str, Any]) -> list[dict[str, Any]]:
@@ -383,6 +431,21 @@ def run(config: Mapping[str, Any], *, once: bool = False) -> int:
     started_at = time.time()
     while True:
         now = time.time()
+        # Blindness is checked FIRST: if the poller cannot see its target, every
+        # downstream quality verdict is drawn from an empty read and would be
+        # reported under the wrong reason (or, before the cure, not at all).
+        blind = blindness_alert(config, now=now, started_at=started_at)
+        if blind is not None:
+            _atomic_write_once(
+                config["alert_path"],
+                {
+                    "schema": ALERT_SCHEMA,
+                    "watcher_schema": SCHEMA,
+                    "generated_unix_s": now,
+                    **blind,
+                },
+            )
+            return 1
         alert, alive = poll_once(config, state, now=now)
         if alert is not None:
             _atomic_write_once(
