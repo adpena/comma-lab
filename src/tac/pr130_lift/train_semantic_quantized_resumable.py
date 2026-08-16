@@ -43,6 +43,11 @@ from tac.pr130_lift.checkpoint_schema import (
     architecture_config_from_checkpoint,
     build_semantic_checkpoint_metadata,
 )
+from tac.pr130_lift.editability_levers import (
+    DEFAULT_FILM_CRITICAL_MULTIPLIER,
+    EditabilityLeverConfig,
+    EditabilityLevers,
+)
 from tac.pr130_lift.pose.source_loader import load_lifted_module
 from tac.training import EMA
 from tac.witness_dsl.lawref import (
@@ -272,6 +277,52 @@ def _stable_training_config(args: argparse.Namespace) -> dict[str, Any]:
     }
 
 
+#: Config keys introduced by the B2E editability levers, with the INERT value
+#: that reproduces the pre-lever trainer exactly.  A resume checkpoint written
+#: before these flags existed has no such keys; per the canonical
+#: additive-legacy-compatible resume law, that checkpoint may still resume IFF
+#: every absent key currently sits at its inert value.  If a lever is ON, the run
+#: genuinely differs from the parent and the guard MUST refuse.
+ADDITIVE_LEVER_CONFIG_DEFAULTS: dict[str, Any] = {
+    "weight_perturb_robustness": 0.0,
+    "weight_perturb_shape": "quantization",
+    "film_critical_multiplier": DEFAULT_FILM_CRITICAL_MULTIPLIER,
+    "weight_qat_q3q4": False,
+    "film_row_dropout": 0.0,
+    "film_row_dropout_protect_top": 0,
+    "carrier_rank_penalty": 0.0,
+    "carrier_tensors": [],
+    "lever_seed": 20260816,
+}
+
+
+def _reconcile_additive_resume_config(
+    prior_config: dict[str, Any], current_config: dict[str, Any]
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Make a pre-lever resume checkpoint comparable to a lever-aware invocation.
+
+    Returns the two configs with legitimately-absent additive keys removed from
+    BOTH sides.  A key is legitimately absent only when the checkpoint predates
+    it AND the current run leaves it inert; otherwise it is left in place so the
+    caller's equality check refuses, loudly and for the right reason.
+
+    This EXTENDS the guard rather than weakening it: an unknown missing key, a
+    key that disappeared, or an active lever against a pre-lever parent all still
+    refuse.
+    """
+    prior = dict(prior_config)
+    current = dict(current_config)
+    for key, inert in ADDITIVE_LEVER_CONFIG_DEFAULTS.items():
+        if key in prior:
+            continue  # checkpoint knows the key; compare it normally.
+        if key not in current:
+            continue  # neither side has it; nothing to reconcile.
+        if current[key] == inert:
+            # Pre-lever parent + inert lever == byte-identical training.
+            del current[key]
+    return prior, current
+
+
 def _artifact_manifest(args: argparse.Namespace) -> dict[str, dict[str, Any]]:
     paths = {
         "init": args.init,
@@ -422,7 +473,10 @@ def _load_resume_state(
     prior_ema_policy = prior_config.pop("ema_policy")
     for key in ("checkpoint_step", "checkpoint_phase", "checkpoint_kind"):
         prior_config.pop(key, None)
-    if prior_config != _stable_training_config(args):
+    prior_config, current_config = _reconcile_additive_resume_config(
+        prior_config, _stable_training_config(args)
+    )
+    if prior_config != current_config:
         raise ValueError("resume producing-stage config differs from the current invocation")
     if prior_ema_policy != dict(ema_policy):
         raise ValueError("resume LawRef-resolved EMA policy differs from current geometry")
@@ -698,6 +752,62 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--fixed-zero-mask", action="store_true")
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--save", type=Path, required=True)
+    # --- B2E train-for-editability levers (ns1 P1) -------------------------
+    # Every one is DEFAULT-OFF and byte-identical to the pre-lever trainer when
+    # off, including RNG consumption.  See src/tac/pr130_lift/editability_levers.py.
+    parser.add_argument(
+        "--weight-perturb-robustness",
+        type=float,
+        default=0.0,
+        help="F1: weight-noise sigma in quantiser steps (0 = off)",
+    )
+    parser.add_argument(
+        "--weight-perturb-shape",
+        choices=("quantization", "gaussian"),
+        default="quantization",
+        help="F1: noise shape (inert while --weight-perturb-robustness is 0)",
+    )
+    parser.add_argument(
+        "--film-critical-multiplier",
+        type=float,
+        default=DEFAULT_FILM_CRITICAL_MULTIPLIER,
+        help="F1: extra perturbation on the pose-critical FiLM rows (inert when F1 is off)",
+    )
+    parser.add_argument(
+        "--weight-qat-q3q4",
+        action="store_true",
+        help="F2: train through the exact mp2 mixed q3/q4 weight grid instead of uniform --bits",
+    )
+    parser.add_argument(
+        "--film-row-dropout",
+        type=float,
+        default=0.0,
+        help="F3: FiLM output-row dropout probability (0 = off)",
+    )
+    parser.add_argument(
+        "--film-row-dropout-protect-top",
+        type=int,
+        default=0,
+        help="F3: number of highest-norm FiLM rows never dropped",
+    )
+    parser.add_argument(
+        "--carrier-rank-penalty",
+        type=float,
+        default=0.0,
+        help="F4: nuclear-norm penalty weight on --carrier-tensors (0 = off)",
+    )
+    parser.add_argument(
+        "--carrier-tensors",
+        nargs="*",
+        default=[],
+        help="F4: parameter names the rank penalty applies to (empty = off)",
+    )
+    parser.add_argument(
+        "--lever-seed",
+        type=int,
+        default=20260816,
+        help="seed for the DEDICATED lever RNG stream (never the global stream)",
+    )
     args = parser.parse_args(argv)
     if args.input_cache is None:
         args.input_cache = args.cache
@@ -779,6 +889,30 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     segnet.load_state_dict(load_file(modules.segnet_sd_path, device=str(device)))
     for parameter in segnet.parameters():
         parameter.requires_grad_(False)
+
+    lever_config = EditabilityLeverConfig(
+        weight_perturb_robustness=args.weight_perturb_robustness,
+        weight_perturb_shape=args.weight_perturb_shape,
+        film_critical_multiplier=args.film_critical_multiplier,
+        weight_qat_q3q4=args.weight_qat_q3q4,
+        weight_qat_low_bits=3,
+        weight_qat_high_bits=args.bits,
+        film_row_dropout=args.film_row_dropout,
+        film_row_dropout_protect_top=args.film_row_dropout_protect_top,
+        carrier_rank_penalty=args.carrier_rank_penalty,
+        carrier_tensors=tuple(args.carrier_tensors),
+        seed=args.lever_seed,
+    )
+    levers = EditabilityLevers(lever_config)
+    if lever_config.any_active:
+        # F2 deliberately EXTENDS the uniform-int4 refusal surface: --bits stays
+        # hard-pinned at 4 (the deployed packer is int4-only), and the mixed q3/q4
+        # grid is requested through its own flag so the uniform path is untouched
+        # and byte-identical whenever F2 is off.
+        print(
+            "[b2e] editability levers ACTIVE: "
+            + json.dumps(lever_config.activation_ledger()["levers"], sort_keys=True)
+        )
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=0.0)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
@@ -897,13 +1031,21 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         target = target_tokens[batch_ids_cpu].to(device)
         model.train()
         in_float_warmup = step <= args.float_warmup_steps
-        frame = (
-            qat.render_float(model, conditioning, idx, exact_path=True)
-            if in_float_warmup
-            else qat.render_quantized(
+        if in_float_warmup:
+            frame = qat.render_float(model, conditioning, idx, exact_path=True)
+        elif not lever_config.any_active:
+            # Untouched stock path: byte-identical to the pre-lever trainer.
+            frame = qat.render_quantized(
                 model, conditioning, idx, args.bits, exact_path=True
             )
-        )
+        else:
+            # Lever path. The levers OWN the weight quantization here (always at
+            # least uniform --bits), so we must call render_FLOAT to avoid
+            # double-quantizing what parameter_overrides already quantized. The
+            # render tail (ste_uint8 + the two interpolates) is identical in both
+            # helpers, so only the parameter values differ.
+            with levers.applied(model, base_bits=args.bits):
+                frame = qat.render_float(model, conditioning, idx, exact_path=True)
         logits = segnet(frame)
         if in_float_warmup:
             segmentation_loss = F.cross_entropy(logits, target)
@@ -933,6 +1075,10 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             )
             distill_loss = F.mse_loss(frame / 255.0, master / 255.0)
         loss = segmentation_loss + args.distill_weight * distill_loss
+        if lever_config.f4_active:
+            # F4 contributes exactly nothing (and no graph node) when inactive,
+            # so the stock loss is untouched with levers off.
+            loss = loss + levers.rank_penalty(model).to(loss.device)
         optimizer.zero_grad(set_to_none=True)
         loss.backward()
         for name, parameter in model.named_parameters():

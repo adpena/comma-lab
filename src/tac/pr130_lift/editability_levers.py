@@ -444,20 +444,74 @@ class EditabilityLevers:
 
     # -- application --------------------------------------------------------
 
-    def transform(self, name: str, value: torch.Tensor) -> torch.Tensor:
-        """Apply every active lever to one named tensor, in deployment order."""
+    def transform(
+        self, name: str, value: torch.Tensor, *, base_bits: int | None = None
+    ) -> torch.Tensor:
+        """Apply every active lever to one named tensor, in deployment order.
+
+        ``base_bits`` is the QAT depth the caller would otherwise have applied
+        uniformly (PR130's ``quantized_forward`` calls ``fake_quantize(v, bits)``
+        on every parameter).  When it is supplied, quantization is applied to
+        EVERY tensor unconditionally -- at the mp2 mixed map if F2 is on, at
+        ``base_bits`` if it is off.
+
+        That unconditional behaviour is load-bearing.  If quantization were
+        applied only when F2 is on, enabling F1 or F3 alone would silently drop
+        QAT from the run -- a catastrophic silent change that would look like a
+        lever effect but would actually be the absence of quantization.
+        """
         config = self._config
         result = value
         if config.f1_active:
             result = self._perturb(name, result)
-        if config.f2_active:
+        if base_bits is not None:
+            bits = (
+                self._mixed_bits(name)
+                if config.f2_active
+                else base_bits
+            )
+            result = deployed_fake_quant(name, result, bits)
+        elif config.f2_active:
             result = self._quantize(name, result)
         if config.f3_active:
             result = self._row_dropout(name, result)
         return result
 
+    def parameter_overrides(
+        self, model: torch.nn.Module, *, base_bits: int
+    ) -> dict[str, torch.Tensor]:
+        """Build the ``torch.func.functional_call`` parameter dict.
+
+        This is the PRIMARY integration point and it mirrors PR130's own
+        ``quantized_forward``, which builds
+        ``{name: fake_quantize(value, bits, ...)}`` and calls ``functional_call``.
+        The only change is that the per-tensor bit depth comes from the lever
+        config instead of one uniform ``bits``, and that F1/F3 compose in.
+
+        Preferred over :meth:`applied` because it does not mutate the module at
+        all -- so ``named_parameters()`` keeps its normal meaning throughout, and
+        there is no restore path that could fail.
+
+        With every lever off this returns exactly
+        ``fake_quantize(value, base_bits, embedding)`` per tensor, which is
+        bit-identical to the stock ``quantized_forward``.
+        """
+        return {
+            name: self.transform(name, value, base_bits=base_bits)
+            for name, value in model.named_parameters()
+        }
+
+    def _mixed_bits(self, name: str) -> int:
+        return mixed_bit_allocation(
+            [name],
+            low_bits=self._config.weight_qat_low_bits,
+            high_bits=self._config.weight_qat_high_bits,
+        )[name]
+
     @contextmanager
-    def applied(self, model: torch.nn.Module) -> Iterator[torch.nn.Module]:
+    def applied(
+        self, model: torch.nn.Module, *, base_bits: int | None = None
+    ) -> Iterator[torch.nn.Module]:
         """Temporarily swap each parameter for its lever-transformed value.
 
         Implemented by replacing the ``nn.Parameter`` entries in each module's
@@ -465,10 +519,13 @@ class EditabilityLevers:
         parameters, so autograd still reaches the originals.  The originals are
         restored unconditionally on exit, including on exception.
 
-        When no lever is active this is a strict no-op: it does not touch
-        ``_parameters``, does not read any tensor, and does not draw any RNG.
+        Pass ``base_bits`` when substituting for PR130's ``render_quantized`` so
+        the QAT depth is preserved even with every lever off (see
+        :meth:`transform`).  With ``base_bits=None`` and no lever active this is
+        a strict no-op: it does not touch ``_parameters``, does not read any
+        tensor, and does not draw any RNG.
         """
-        if not self._config.any_active:
+        if not self._config.any_active and base_bits is None:
             yield model
             return
 
@@ -479,7 +536,7 @@ class EditabilityLevers:
                     if param is None:
                         continue
                     qualified = f"{module_name}.{param_name}" if module_name else param_name
-                    transformed = self.transform(qualified, param)
+                    transformed = self.transform(qualified, param, base_bits=base_bits)
                     if transformed is param:
                         continue
                     originals.append((module, param_name, param))
