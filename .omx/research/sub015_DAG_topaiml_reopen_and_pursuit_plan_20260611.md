@@ -28055,6 +28055,15 @@ says only the Pose producer is identifiable at all. What DOES exist is
 **6×589,824 in PIXEL space at the CP135 base**, a different vehicle and a different variable. Its
 *pattern* was reused; the producer was built.
 
+`verdict_scope: instance` — the two named modules only (`ddm_metric_producers.py:183-217` and
+`produce_ddm_ms4_metric_custody.py:5-9`), established by READING them, not by measurement. This
+refutes ONE reuse claim about ONE bundle. It does NOT close the reusable-producer family: jc1's own
+search found a real exact PoseNet Jacobian at `ddm_js4_pose_null_projected_conditioning.py:228`
+(wrong vehicle, wrong variable — unusable here) and then BUILT the carrier producer. A future bundle
+that does carry `∂pose6/∂coeff` needs no re-litigation of this row, only a source check of its own.
+Separately scoped: the pose-metric re-fit LOSS is `verdict_scope: formulation` (r=11 measured, other
+rungs derived monotone) — see the arm's verdict memo; the two are different claims.
+
 **Built:** `experiments/ddm_jc1_carrier_pose_jacobian.py` — `J_i = ∂pose6/∂coeff_i ∈ R^{6×12}`,
 n600, through the shipped chain, 501 s. Retained at
 `/Volumes/APDataStore/pact/ddm_jc1/retained/` (`jacobian_pose6_x_coeff12.float64.npy`,
