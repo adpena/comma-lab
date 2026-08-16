@@ -104,6 +104,65 @@ def load_ra2b():
     return module
 
 
+def truncate_carrier_rank(basis, coeff, rank: int):
+    """Rank-r truncation of the RENDERED carrier field F = C @ B, returned as a coeff.
+
+    F (600 x 2304) has rows in rowspace(B) (12-dim), so its rank-r SVD truncation is
+    still in that rowspace and is therefore expressible as C_r @ B exactly. That lets
+    the truncation ride the SHIPPED render path unchanged (ra2b.render_frame0), instead
+    of a re-implementation.
+
+    Eckart-Young: the truncated SVD is the OPTIMAL rank-r approximation of F in
+    Frobenius norm, so the reported rel_err is a LOWER BOUND on any rank-r method in
+    that norm. It is NOT a bound in the pose (Jacobian-weighted) metric -- that is the
+    open question this rung exists to measure.
+    """
+    B = np.asarray(basis, dtype=np.float64).reshape(basis.shape[0], -1)   # 12 x 2304
+    C = np.asarray(coeff, dtype=np.float64)                               # 600 x 12
+    for name, arr in (("basis", B), ("coeff", C)):
+        if not np.isfinite(arr).all():
+            raise SystemExit(f"{name} carries non-finite values; refusing to truncate")
+    # Accelerate's SIMD tail raises spurious divide/overflow/invalid flags on these
+    # matmuls while returning correct values (verified: full-rank round trip 1.5e-15
+    # on finite, |x|<=1.1 inputs). Suppressed narrowly; the isfinite guards fail closed.
+    with np.errstate(divide="ignore", over="ignore", invalid="ignore"):
+        F = C @ B
+        U, S, Vt = np.linalg.svd(F, full_matrices=False)
+        # rank(F) <= rows(B) = 12, but svd(full_matrices=False) on 600x2304 returns 600
+        # singular values -- ~588 numerical zeros. Bounding by len(S) would admit
+        # rank=99 as a near-NO-OP wearing a treatment's name. Bound by the true rank.
+        max_rank = int(B.shape[0])
+        if not 1 <= rank <= max_rank:
+            raise SystemExit(
+                f"--carrier-rank {rank} outside [1, {max_rank}] (the carrier is "
+                f"{max_rank}-dimensional; svd returns {len(S)} values, "
+                f"{len(S) - max_rank} of them numerically zero)"
+            )
+        F_r = (U[:, :rank] * S[:rank]) @ Vt[:rank]
+        C_r, *_ = np.linalg.lstsq(B.T, F_r.T, rcond=None)                 # solve C_r @ B = F_r
+        C_r = C_r.T
+        # Round-trip: C_r @ B must reproduce F_r (it must, F_r is in rowspace(B)).
+        round_trip = float(np.max(np.abs(C_r @ B - F_r)))
+    if not np.isfinite(C_r).all():
+        raise SystemExit("rank truncation produced non-finite coefficients")
+    tot = float((S[:max_rank] ** 2).sum())
+    info = {
+        "rank": rank,
+        "carrier_true_rank": max_rank,
+        "energy_kept_frac": float((S[:rank] ** 2).sum() / tot),
+        "rel_frobenius_err": float(np.sqrt(max(0.0, 1.0 - (S[:rank] ** 2).sum() / tot))),
+        "rowspace_round_trip_max_abs": round_trip,
+        "singular_values": [float(v) for v in S[:max_rank]],
+        "eckart_young_note": "rel_frobenius_err is a LOWER BOUND on any rank-r method (Frobenius only)",
+    }
+    if round_trip > 1e-6:
+        raise SystemExit(
+            f"rank-{rank} truncation left rowspace(B) (max |C_r@B - F_r| = {round_trip:.3e}); "
+            "refusing to render a field the shipped path cannot express"
+        )
+    return C_r.astype(np.asarray(coeff).dtype), info
+
+
 def build_alpha_raw(
     ra2b,
     chain,
@@ -114,6 +173,7 @@ def build_alpha_raw(
     out_raw: Path,
     alpha: float,
     verify_pairs: int,
+    control_coeff=None,
 ) -> dict:
     """Stream base -> out, substituting even frames with the alpha render.
 
@@ -133,8 +193,10 @@ def build_alpha_raw(
                 "refusing to splice against a chain the control never proved"
             )
 
-    def render_pair(idx: int, a: float) -> np.ndarray:
-        frame = ra2b.render_frame0(renderer, basis, coeff, [idx], a)[0]
+    ctrl_coeff = coeff if control_coeff is None else control_coeff
+
+    def render_pair(idx: int, a: float, c=None) -> np.ndarray:
+        frame = ra2b.render_frame0(renderer, basis, coeff if c is None else c, [idx], a)[0]
         if modes is not None:
             frame = apply_pixel_mode(frame[None].copy(), modes[int(sel_indices[idx])])[0]
         return frame
@@ -161,7 +223,7 @@ def build_alpha_raw(
 
             idx = frame_no // 2
             if idx in verify_idx:
-                control = render_pair(idx, 1.0).tobytes()
+                control = render_pair(idx, 1.0, ctrl_coeff).tobytes()
                 control_checked += 1
                 if control != base_frame:
                     control_failures.append(idx)
@@ -250,6 +312,10 @@ def run_evaluate(
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--carrier-rank", type=int, default=None,
+                        help="rank-r truncation of the RENDERED carrier field (C@B) before "
+                             "rendering. r=None disables. This is the byte-RETURNING operator; "
+                             "--alpha is a pure fidelity dial that returns bytes only at 0.")
     parser.add_argument("--alpha", type=float, default=0.0,
                         help="carrier coefficient scale; 0.0 = carrier deleted (fire first)")
     parser.add_argument("--base-work-dir", type=Path, default=DEFAULT_BASE_WORK)
@@ -268,6 +334,8 @@ def main() -> int:
     args = parser.parse_args()
 
     tag = f"a{args.alpha:g}".replace(".", "p")
+    if args.carrier_rank is not None:
+        tag = f"rank{args.carrier_rank}_" + tag
     out = args.out_dir or (DEFAULT_OUT_ROOT / f"ddm_ra2c_alpha_ladder_{tag}_20260816")
     submission = out / "submission"
     (submission / "inflated").mkdir(parents=True, exist_ok=True)
@@ -286,6 +354,19 @@ def main() -> int:
     print(f"decoded carrier: basis {tuple(basis.shape)} coeff {tuple(coeff.shape)}")
     for key, value in provenance.items():
         print(f"  {key}: {value}")
+
+    rank_info = None
+    if args.carrier_rank is not None:
+        coeff, rank_info = truncate_carrier_rank(basis, coeff, args.carrier_rank)
+        print(f"\nRANK-{args.carrier_rank} truncation of the RENDERED FIELD:")
+        for key, value in rank_info.items():
+            print(f"  {key}: {value}")
+        # The alpha control is byte-identity vs the BASE render; a rank-truncated
+        # coeff makes that control structurally false, so it is disabled and the
+        # run is labelled accordingly. Refusing to report a control we did not run.
+        if args.alpha == 1.0 and args.verify_pairs:
+            print("  NOTE: alpha=1 control DISABLED under rank truncation "
+                  "(coeff is modified; byte-identity cannot hold by construction)")
 
     # archive.zip held CONSTANT: this run isolates DISTORTION. The rate credit is
     # applied analytically below, never measured here.
@@ -325,6 +406,7 @@ def main() -> int:
         "archive_held_constant": True,
         "archive_bytes": BASE_ARCHIVE_BYTES,
         "carrier_provenance": provenance,
+        "carrier_rank_truncation": rank_info,
         "control": build,
         "payload": payload,
         "base_row": {"d_pose": BASE_D_POSE, "d_seg": BASE_D_SEG},
