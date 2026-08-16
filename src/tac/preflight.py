@@ -14582,6 +14582,69 @@ def _scan_inflate_for_scorer_load_with_waivers(
     return unwaived, waived
 
 
+_CHECK_164_CANONICAL_MODULE = "tac.substrates.score_aware_common"
+
+# All three are canonical entry points DEFINED IN _CHECK_164_CANONICAL_MODULE, and
+# all three enforce the same contract: each calls _require_preprocess on both
+# scorers and routes the pair through scorer_loss_terms_btchw /
+# scorer_loss_terms_cached_btchw. `score_pair_components_dispatch` is the
+# documented "canonical dispatch entry point for substrate score-aware losses
+# (F3)" landed with the TIER-1-OPT-BATCH GTScorerCache wire-in (2026-05-14);
+# `score_pair_components_with_cache` is its cached leg.
+#
+# MEASURED 2026-08-16 (ddm_rd1g): this gate accepted only the bare
+# `score_pair_components`, so it reported 55 "missing canonical call"
+# violations of which 51 were substrates calling the F3 dispatcher --- ONE
+# stale token fanned across 51 files, not 51 findings. Only 4 files genuinely
+# import no canonical entry point at all.
+#
+# Widening the NAME set alone would have been a weakening, because a substrate
+# could satisfy it with a locally-defined function of the same name. So the
+# check now ALSO requires the file to import a canonical entry point from
+# _CHECK_164_CANONICAL_MODULE. Net effect is strictly stronger than before:
+# the pre-existing local-shadow hole on the bare name is closed at the same
+# time the two canonical sisters are admitted. The direct-scorer-forward half
+# of this gate is untouched.
+_CHECK_164_CANONICAL_ENTRY_POINTS = frozenset(
+    {
+        "score_pair_components",
+        "score_pair_components_with_cache",
+        "score_pair_components_dispatch",
+    }
+)
+
+
+def _check_164_imports_canonical_entry_point(tree: ast.AST) -> bool:
+    """Return True if the module imports a canonical scorer entry point.
+
+    Accepts ``from tac.substrates.score_aware_common import X``, the relative
+    ``from .score_aware_common import X``, and
+    ``import tac.substrates.score_aware_common [as alias]`` (attribute-style
+    call sites), so no canonical import spelling is penalised. Matching on the
+    trailing module component rather than the full dotted path is deliberate:
+    the alternative is a fresh false-positive every time the canonical module
+    is re-homed, which is the exact defect this correction exists to remove.
+    """
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom):
+            # `from .score_aware_common import X` gives module="score_aware_common"
+            # with level=1, so compare the trailing component, not a "." prefix.
+            module = node.module or ""
+            if module.rsplit(".", 1)[-1] == "score_aware_common":
+                if any(
+                    alias.name in _CHECK_164_CANONICAL_ENTRY_POINTS
+                    for alias in node.names
+                ):
+                    return True
+        elif isinstance(node, ast.Import):
+            if any(
+                alias.name.rsplit(".", 1)[-1] == "score_aware_common"
+                for alias in node.names
+            ):
+                return True
+    return False
+
+
 def check_substrate_score_aware_losses_use_canonical_scorer_contract(
     repo_root: Path | None = None,
     strict: bool = True,
@@ -14627,24 +14690,28 @@ def check_substrate_score_aware_losses_use_canonical_scorer_contract(
         except SyntaxError as exc:
             violations.append(f"{rel}:{exc.lineno or 1}: cannot parse score-aware loss")
             continue
-        has_canonical_call = any(
+        calls_canonical_name = any(
             isinstance(node, ast.Call)
             and (
                 (
                     isinstance(node.func, ast.Name)
-                    and node.func.id == "score_pair_components"
+                    and node.func.id in _CHECK_164_CANONICAL_ENTRY_POINTS
                 )
                 or (
                     isinstance(node.func, ast.Attribute)
-                    and node.func.attr == "score_pair_components"
+                    and node.func.attr in _CHECK_164_CANONICAL_ENTRY_POINTS
                 )
             )
             for node in ast.walk(tree)
         )
+        imports_canonical = _check_164_imports_canonical_entry_point(tree)
+        has_canonical_call = calls_canonical_name and imports_canonical
         if not has_canonical_call:
             violations.append(
-                f"{rel}: missing AST call to canonical score_pair_components(...); "
-                "comments/strings do not satisfy the scorer contract"
+                f"{rel}: missing AST call to a canonical scorer entry point "
+                f"({', '.join(sorted(_CHECK_164_CANONICAL_ENTRY_POINTS))}) imported "
+                f"from {_CHECK_164_CANONICAL_MODULE}; comments/strings do not "
+                "satisfy the scorer contract"
             )
         lines = text.splitlines()
         for node in ast.walk(tree):

@@ -421,6 +421,44 @@ def _now_iso() -> str:
     return _dt.datetime.now(_dt.UTC).isoformat(timespec="microseconds").replace("+00:00", "Z")
 
 
+def _as_utc(value: _dt.datetime) -> _dt.datetime:
+    """Return ``value`` as a UTC-AWARE datetime, assuming UTC when naive.
+
+    THE BUG CLASS THIS CLOSES (measured 2026-08-16). Every timestamp field in
+    this ledger is named ``*_at_utc``, but nothing enforced tz-awareness, so a
+    naive value could both ENTER and CRASH the module:
+
+    - WRITE side: ``_compute_expires_at_utc("2026-06-01T00:00:00")`` returned
+      ``'2026-07-01T00:00:00.000000'`` -- no ``Z``. The writer manufactured a
+      naive row.
+    - READ side: :func:`query_expired_deferrals` then did ``now - parsed`` on
+      that row and raised ``TypeError: can't subtract offset-naive and
+      offset-aware datetimes``. Its guard was ``except ValueError``, which does
+      NOT catch ``TypeError``, so the nag query crashed instead of degrading.
+      The same crash fired on the LIVE 728-row ledger whenever a caller passed
+      a naive ``now_utc`` -- the parameter is annotated ``datetime``, which
+      does not exclude naive.
+
+    Assuming UTC for a naive value is the honest reading here: the field name
+    asserts UTC, so a missing offset is a serialization omission, not an
+    unknown zone. Coercing at ONE point means the read side can never see a
+    mixed-awareness pair regardless of which side wrote the row.
+    """
+    if value.tzinfo is None:
+        return value.replace(tzinfo=_dt.UTC)
+    return value.astimezone(_dt.UTC)
+
+
+def _parse_utc(text: str) -> _dt.datetime:
+    """Parse an ISO-8601 ``*_at_utc`` string into a UTC-AWARE datetime.
+
+    Raises ``ValueError`` on unparseable input (callers already handle that);
+    never returns a naive datetime, so downstream arithmetic cannot raise the
+    ``TypeError`` documented in :func:`_as_utc`.
+    """
+    return _as_utc(_dt.datetime.fromisoformat(text.replace("Z", "+00:00")))
+
+
 def _is_substantive_string(text: Any) -> bool:
     """Return True if ``text`` is a non-placeholder string of substantive length.
 
@@ -793,7 +831,11 @@ def _compute_expires_at_utc(
     staleness window (Catalog #298).
     """
     try:
-        adjudicated = _dt.datetime.fromisoformat(adjudicated_at_utc.replace("Z", "+00:00"))
+        # _parse_utc, not bare fromisoformat: a naive input previously produced
+        # a naive expires_at_utc with no `Z`, which is the exact value that
+        # crashed query_expired_deferrals. Coerce at the writer so the poison
+        # is never emitted. See _as_utc.
+        adjudicated = _parse_utc(adjudicated_at_utc)
     except ValueError as exc:
         raise ValueError(
             f"adjudicated_at_utc must be ISO-8601: {adjudicated_at_utc!r} ({exc})"
@@ -1575,7 +1617,10 @@ def query_blocking_outcomes(
         if isinstance(pid, str):
             latest_by_probe_id[pid] = row  # JSONL append order; later wins
 
-    now = now_utc or _dt.datetime.now(_dt.UTC)
+    # Same coercion as query_expired_deferrals: a naive now_utc would build a
+    # now_iso with no `Z`, silently shifting the string comparison below. No
+    # TypeError here (no datetime arithmetic), but it is the same class.
+    now = _as_utc(now_utc or _dt.datetime.now(_dt.UTC))
     now_iso = now.isoformat(timespec="microseconds").replace("+00:00", "Z")
 
     blocking: list[dict[str, Any]] = []
@@ -1624,7 +1669,10 @@ def query_expired_deferrals(
         if isinstance(pid, str):
             latest_by_probe_id[pid] = row  # JSONL append order; later wins
 
-    now = now_utc or _dt.datetime.now(_dt.UTC)
+    # _as_utc, not the raw argument: a caller-supplied NAIVE now_utc used to
+    # crash the subtraction below with TypeError (the `except ValueError` guard
+    # does not catch it). See _as_utc for the measured bug class.
+    now = _as_utc(now_utc or _dt.datetime.now(_dt.UTC))
     now_iso = now.isoformat(timespec="microseconds").replace("+00:00", "Z")
 
     expired: list[dict[str, Any]] = []
@@ -1636,8 +1684,7 @@ def query_expired_deferrals(
             continue
         enriched = dict(row)
         try:
-            parsed = _dt.datetime.fromisoformat(expires_at.replace("Z", "+00:00"))
-            enriched["days_expired"] = (now - parsed).days
+            enriched["days_expired"] = (now - _parse_utc(expires_at)).days
         except ValueError:
             enriched["days_expired"] = None
         expired.append(enriched)
