@@ -37,7 +37,7 @@ which is the mechanism this entire harvest exists to protect.
 | `d_seg` / `d_pose` | `2.9611e-4` / `6.88e-6` | DERIVED from the components |
 | gap to 0.15 | `0.0095973 S` | DERIVED |
 | `S` per byte | `25/37,545,489 = 6.658590e-7` | DERIVED |
-| **rate-only close** | **−14,413 B → archive ≤ 168,346 B** | DERIVED |
+| **rate-only close** | **−14,413.4 B → archive ≤ 168,345 B** | DERIVED |
 | seg-only close | `d_seg` `2.9611e-4 → 2.0014e-4` (−32.4%) | DERIVED |
 | pose-only close | **IMPOSSIBLE** — `pose→0` buys `0.0082946 < 0.0095973`, leaves `S=0.1513027` | DERIVED |
 
@@ -180,13 +180,29 @@ These are cheap and they cause the exact signal loss this harvest exists to repa
 
 ## 7. What this unit did NOT do
 
-It moved no pointer. It ran no scorer, no dispatch, no training. Every number above is either
-re-derived from a receipt I opened or labelled as a pointer I could not re-derive. Specifically
-**not re-derived at source:** `g4`'s 89,161 B, `cr1`'s −110,538 B, and `pz2`'s 1,817 B were read
-from the arm finals and their receipts were not opened by me — rank 1 rests on `pz2`'s 1,817 B, so
-**that number must be re-derived from
-`/Volumes/VertigoDataTier/pact/ddm_pz2_pose_representation_20260810_v3/PZ2_MEASUREMENT_RECEIPT.json`
-before any launch is routed on it.** That re-derivation is written into the task row as a gate.
+It moved no pointer. It ran no scorer, no dispatch, no training.
+
+**What I re-derived at source myself** (opened the file, recomputed the number): the frontier
+components and every line of §2; `mz1`'s decomposition and `exact_model_section_savings = 0` from
+`FINAL_RESULT.json`; `rfo2`'s §3 table; the `ra2c` rank-4 verdict; the digest defect (all three
+legs); the ledger corruption; the arm/final/persistence counts.
+
+**What I did NOT re-derive** — these are POINTERS carrying their arm's framing, not my
+measurements:
+
+- **`pz2`'s 1,817 B** — rank 1 rests on it. It **must** be re-derived from
+  `/Volumes/VertigoDataTier/pact/ddm_pz2_pose_representation_20260810_v3/PZ2_MEASUREMENT_RECEIPT.json`
+  before any launch is routed on it. That gate is written into the task row.
+- **Every coder-race dead-end in §5** — the ANS `+6/+9 B` losses, SMEVR `0/14`, PPMd, LDPC
+  `+540,909 B`, `mz2`'s `+340 B`. These were read from the arms' own final messages by my reader
+  agents; I did not open `lp135`/`cp135`/`rc2r`/`mz2`'s receipts. This matters because §5 is what
+  tells a future arm **not** to re-try those paths. Treat §5 as a well-sourced prohibition list,
+  not as my measurement. Any single row is cheap to re-derive if it ever blocks a real candidate.
+- `g4`'s 89,161 B and `cr1`'s −110,538 B (ranks 5–6, already labelled UNKNOWN).
+
+One scope caveat on rank 1: the 22,161 B carrier is `rfo2`'s figure on the **e480b** object, and
+`pz2` measured against **PR130**'s 23,384 B carrier. Neither is the hv1 object. The 2.18× budget
+is therefore correct in form and approximate in its last digit.
 
 `verdict_scope: FORMULATION` for the lossless-recoding closure (exhausted across every coder
 family raced on *this vehicle's* current sections; a changed trained state reopens it — `rc2r` and
