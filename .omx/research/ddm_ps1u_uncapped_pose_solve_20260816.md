@@ -158,9 +158,15 @@ deltas reach ±30 across ~10 dims. A new coder is owed.
 
 ---
 
-## 5. THE BLOCKER — a 21.4× unreconciled pose discrepancy on the SHIPPED frontier archive
+## 5. THE #1054 PHENOMENON, MECHANISM-NARROWED — device-dependent decode is the survivor
 
-This is the most important thing in this memo and it gates everything in §4.
+**This is the known #1054 result, not a new discrepancy.** MAIN's receipt (2026-08-14): the
+first contest-CPU row on the MC36 frontier bytes — same F26/mc36 lineage as hv1 — measured
+contest-CPU S 0.20513189 vs CUDA 0.16193, "pose 21× CPU-degraded", on real Modal CPU vs T4,
+same archive bytes. **The T4 frontier row is NOT in question** (measured twice, repeat-identical);
+nothing here says the frontier is mis-priced.
+
+What this arm ADDS is the mechanism narrowing: three candidate explanations, two eliminated.
 
 Four measurements, all on archive **`80d9c8c6…` @182,759 B** or on frames proven byte-identical
 to it:
@@ -186,25 +192,88 @@ byte-identical to this arm's rendered frame_0 and to the retained cp135 raw** (0
 3/3 pairs checked). So a real T4 job, on exactly these frames, measured ~1.18e-04.
 
 The remaining explanation is that **the hv1 CUDA decode and the hv1 CPU decode produce different
-frames.** The fire memo supports this reading: the frontier's components were *inherited* —
+frames** — the one hypothesis this arm did not have the hardware to test, and the one §5b stages. The fire memo supports this reading: the frontier's components were *inherited* —
 "Components expected: seg 0.029611 (identical decode) · pose 0.0082946 (identical decode)" — and
 the decode identity was proven **on the CPU axis only** (`ddm_hv1_ep0634_t4_fire_execution_20260815.md`,
 "Local full-raw decode proven byte-identical to the incumbent's decode (sha e5539653…, CPU
 axis…)"). CPU-decode identity does not establish CPU-decode ≡ CUDA-decode. The seg component
 disagrees the same way (0.029611 vs 0.042714, 1.44×).
 
-**Consequences, both directions, stated plainly:**
-- If the advisory chain's 1.4747e-04 is the shipped reality, the frontier's pose contribution is
-  0.0384 not 0.0083, S is ~0.194 not 0.1596, and §4's −0.020 is close to the true prize.
-- If the T4 row's 6.88e-06 is the shipped reality, the maximum pose prize is −0.0083 and §4's
-  solve is optimizing a 21× inflated error whose transfer is **unestablished**.
+**Direct mechanism pin (new here).** The T4 run's own receipt
+(`experiments/results/ddm_hv1_ep0634_exact_contest_cuda_20260815_r2/MODAL_REMOTE_RESULT.json`)
+records `inflate_device_policy = "auto"` with `scorer_device = "cuda"` on a Tesla T4 — so the
+**inflate itself ran on CUDA**, while the advisory chain inflated on CPU. The two chains are not
+merely scoring differently; they are decoding on different devices.
 
-Either way this is a **P0 custody question for MAIN**, not something this arm can resolve
-locally, and **no candidate should be compiled from §4 until it is resolved.** I am not
-claiming the frontier is mis-priced; I am reporting that two chains disagree by 21.4× on the
-same archive bytes and that the disagreement has never been reconciled — the mp2 relay routed
-around it ("the DELTAS vs this row on the SAME chain are your decision quantities") rather than
-closing it.
+**Consequences, stated plainly:**
+1. **§4 is an ADVISORY-AXIS instance.** If the CPU decode manufactures most of the 1.4747e-04,
+   then the 94.86% reduction largely cancels CPU-decode-manufactured error. **Its CUDA-axis value
+   is UNMEASURED and bounded above by the full pose contribution, 0.0083 S** — not by §4's
+   −0.028. Every §4 number is `verdict_scope: instance` on the advisory axis and must not be
+   quoted as a CUDA prize.
+2. **A compliance-grade defect, independent of scoring axis.** Our deterministic-decode
+   non-negotiable requires "same `archive.zip` → bit-identical inflate output every run/host."
+   A device-dependent decode violates that whether or not either score is "right".
+
+**No candidate should be compiled from §4 until the reconciliation in §5b closes.**
+
+---
+
+## 5b. THE RECONCILIATION INSTRUMENT (local half BUILT, CUDA half STAGED — fires nothing)
+
+`experiments/ddm_ps1u_decode_axis_reconciliation.py`, three subcommands:
+
+* **`manifest`** — per-frame SHA-256 over a raw decode (1,200 frames → 600 pairs of f0/f1),
+  plus the aggregate `raw_sha256` and `frames_concat_sha256` and full geometry pins. It hashes
+  the **raw uint8 frames**, not preprocessed scorer tensors, deliberately: the raw decode is
+  exactly the object the determinism rule governs, and it keeps scorer preprocessing out of the
+  comparison as a confound. Streams via memmap — never loads 3.66 GB.
+* **`diff`** — adjudicates two manifests. `DECODE_IDENTICAL_ACROSS_AXES` ⇒ decode is
+  deterministic and the discrepancy must be re-hunted (the report names where: scorer-input
+  preprocessing boundary first, then evaluate.py batching/device-reduction).
+  `DEVICE_DEPENDENT_DECODE_CONFIRMED` ⇒ enumerates which pairs and which frame diverge, and
+  (when both raws are local) the first divergent byte offset with pixel coordinate and both
+  values. **Refuses fail-closed** if the two manifests describe different archives, or if the
+  raw geometry differs. Self-tested 4/4 including both refusal branches.
+* **`spec`** — emits the STAGED CUDA dispatch spec. It fires nothing.
+
+**Local half (done, $0):** the CPU manifest is built from the retained advisory decode
+`/Volumes/APDataStore/pact/ddm_hv1_base_advisory_n600_cpu/work_r2/inflated/0.raw` — the decode
+of the exact frontier archive that produced `avg_posenet_dist 0.00014747`. Geometry verified
+against the pin (3,662,409,600 B = 1200×874×1164×3).
+
+**CUDA half (staged, MAIN fires):** reuse — do not rebuild — the durable sealed-request T4
+transport `experiments/ddm_qs1_modal_t4_dual_axis.py::main` (`gpu="T4"`, `memory=16_384`,
+volume-backed, `timeout=substrate.CONTEST_LIMIT_SECONDS`). Its prior shape on this very archive
+is the r2 run above (421.6 s, PASSED). The hash-only return channel **already exists** on the
+canonical auth-eval path — that r2 receipt carries `scorer_input_cache_hashes_requested` and
+`scorer_input_cache_hash_batch_pairs` (currently `False`/`8`) — so nothing needs inventing. The
+remote step is one command after inflate:
+
+```
+experiments/ddm_ps1u_decode_axis_reconciliation.py manifest \
+    --raw <run_root>/inflated/0.raw --out <run_root>/CUDA_DECODE_MANIFEST.json \
+    --archive-sha256 80d9c8c6…0178e --label cuda_t4 --device cuda
+```
+
+Return payload ≈ **120 KB** (hashes only; no 3.66 GB egress). Expected cost **~$0.15–0.20**
+(T4, ~7 min). Adjudication:
+
+```
+experiments/ddm_ps1u_decode_axis_reconciliation.py diff \
+    --a CPU_DECODE_MANIFEST.json --b CUDA_DECODE_MANIFEST.json --out DECODE_AXIS_VERDICT.json
+```
+
+**Named decode-path suspects if DIFFERENT** (from the receiver code, ranked): (1) the receiver's
+device-adaptive block — the only known intentional CPU/CUDA branch in the shipped runtime, and
+the hv1 fire memo records it UNCHANGED from the incumbent; (2) `torch` bicubic/bilinear
+`interpolate` — the frame-0 carrier upsamples 384×512 → 874×1164 with `mode='bicubic'` and the
+result is `round()`ed to uint8, so a half-ULP straddle flips a pixel and CUDA/CPU kernels are not
+bit-identical; (3) clamp/round ordering and fp32 accumulation order in the HPAC/neural render;
+(4) native-decoder threading (the CPU lift runs 4 workers).
+
+Spec + manifest retained at
+`/Volumes/APDataStore/pact/ddm_ps1u_uncapped_pose_20260816/{CUDA_DECODE_DISPATCH_SPEC.json,CPU_DECODE_MANIFEST.json}`.
 
 ---
 
@@ -243,12 +312,11 @@ closing it.
 
 ## NEXT_IF_RESUMED
 
-1. **§5 FIRST — MAIN owns it.** Reconcile the 21.4× pose (and 1.44× seg) discrepancy between the
-   T4 frontier row and the advisory chain on archive `80d9c8c6…`. Cheapest decisive probe: dump
-   the CUDA-decode raw frames for a handful of pairs from the staged CUDA runtime generation and
-   diff them against the retained CPU decode `sha e5539653…`. If they differ, the frontier's
-   inherited components are the ones to re-measure; if they match, the T4 pose number is the one
-   to re-derive. **Nothing downstream of §4 should fire until this closes.**
+1. **§5b FIRST — MAIN fires the staged CUDA manifest job** (~$0.15–0.20, ~7 min) and runs the
+   `diff`. IDENTICAL ⇒ re-hunt at the scorer-input preprocessing boundary, then evaluate.py
+   batching. DIFFERENT ⇒ device-dependent decode confirmed: a deterministic-decode
+   non-negotiable violation, route to the ranked suspects in §5b. **Nothing downstream of §4
+   fires until this closes.**
 2. **Finish the fleet** (resumable, strided, ~30 s/pair):
    ```
    .venv/bin/python experiments/ddm_ps1u_uncapped_pose_solve.py \
@@ -256,8 +324,15 @@ closing it.
        --n-pairs 64 --seed 20260816 --shard <k> --shards 4
    ```
    then `--all-pairs` for n600 if §5 resolves favourably (~2 h at 4 shards).
-3. **If §5 resolves toward the advisory number**: design the delta coder (the Q2C1 format is
+3. **The CUDA-axis test for §2, AFTER reconciliation.** If decode turns out deterministic (or
+   once the device-dependence is cured), §2 becomes testable on the axis that ships: solve a
+   SMALL per-pair set (top-mass pairs only, ~60), price it honestly against the **0.0083 S
+   ceiling** — not §4's advisory −0.028 — and fire ONE T4 row. At 5.32 B/pair the 60-pair
+   candidate costs ~320 B (+2.1e-4 S), so it needs only a ~2.6% CUDA-axis pose reduction to
+   clear; that is a cheap, well-posed first CUDA row and it is the honest way to learn how much
+   of the 94.86% is real on the shipping axis.
+4. **If §5 resolves toward the advisory number**: design the delta coder (the Q2C1 format is
    structurally too small), waterfill pair selection by mass-removed-per-byte (top-60 pairs carry
    48.2% of the pose mass), re-solve compensation IN-COMPILE per qs5, and byte-close ONE
    candidate for a single advisory n600 row before any T4 spend.
-4. **Do not re-open the relinearization cap** on any pose GN. §3 closes it; pg1 and pj2 agree.
+5. **Do not re-open the relinearization cap** on any pose GN. §3 closes it; pg1 and pj2 agree.
