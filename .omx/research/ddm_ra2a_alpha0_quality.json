@@ -1,0 +1,38 @@
+{
+  "schema": "pact.run_quality_poller.config.v1",
+  "log_path": "/Volumes/APDataStore/pact/ddm_ra2a_carrier_pose_ladder_20260816/alpha0/stdout.log",
+  "pid_file": "/Users/adpena/Projects/pact/.omx/tmp/ra2a_alpha0/run.pid",
+  "telemetry_path": "/Users/adpena/Projects/pact/.omx/tmp/ra2a_alpha0/quality_telemetry.jsonl",
+  "alert_path": "/Users/adpena/Projects/pact/.omx/tmp/ra2a_alpha0/quality.alert.json",
+  "poll_s": 300,
+  "eval_period_s": 1800,
+  "stale_periods": 100,
+  "startup_grace_s": 1800,
+  "json_marker": "\"d_pose_advisory\"",
+  "fields": {
+    "epoch": "param",
+    "value": "d_pose_advisory",
+    "phase": "mode",
+    "finite": []
+  },
+  "bar_value": 1e+18,
+  "bar_start_epoch": 999999,
+  "alert_conditions": {
+    "joint_regression": false,
+    "qat_knee_shock": false,
+    "nan_or_garbage": true,
+    "stale_telemetry": false
+  },
+  "regression_bands": [],
+  "phase_knee": {
+    "epoch": 1,
+    "window_epochs": 1,
+    "shock_multiplier": 1.0,
+    "continuous_phase": "alpha"
+  },
+  "best_not_latest": {
+    "phase": "alpha",
+    "min_rows": 999999,
+    "lag_epochs": 999999
+  }
+}

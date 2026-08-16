@@ -1,0 +1,15 @@
+{
+  "schema": "pact.run_liveness_watcher.config.v1",
+  "pid_file": "/Users/adpena/Projects/pact/.omx/tmp/ra2a_alpha0/run.pid",
+  "alert_path": "/Users/adpena/Projects/pact/.omx/tmp/ra2a_alpha0/liveness.alert.json",
+  "poll_s": 120,
+  "initial_delay_s": 0,
+  "warmup_s": 2400,
+  "receipt_checks": [],
+  "heartbeat_checks": [],
+  "artifact_checks": [
+    {"label": "ra2a_alpha0_render_raw",
+     "path": "/Volumes/APDataStore/pact/ddm_ra2a_carrier_pose_ladder_20260816/alpha0p0/inflated/0.raw",
+     "max_age_s": 2400, "grace_s": 2400}
+  ]
+}
