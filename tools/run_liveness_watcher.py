@@ -14,11 +14,15 @@ import argparse
 import json
 import os
 import signal
-import subprocess
+import sys
 import time
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+
+from tac import process_liveness
 
 SCHEMA = "pact.run_liveness_watcher.v1"
 CONFIG_SCHEMA = "pact.run_liveness_watcher.config.v1"
@@ -135,29 +139,19 @@ def _read_pid(path: Path) -> int:
 
 
 def _pid_alive(pid: int) -> bool:
-    try:
-        os.kill(pid, 0)
-    except ProcessLookupError:
-        return False
-    except PermissionError:
-        # The PID exists even if this process cannot signal it.
-        return True
-    return not _pid_is_zombie(pid)
+    """Delegates to the canonical tri-state read (``tac.process_liveness``).
 
+    This site was ALREADY correct on both contested legs -- ``PermissionError``
+    -> alive and zombie -> dead -- and the canonical module took ITS zombie
+    rationale as the shared semantics.  So the migration is behaviour-preserving
+    for every ``pid > 0``; the local ``_pid_is_zombie`` helper is dropped rather
+    than kept as a second copy of logic that now lives in one place.
 
-def _pid_is_zombie(pid: int) -> bool:
-    # kill(pid, 0) succeeds on zombies: an exited child stays in the process
-    # table until its (possibly stopped) parent reaps it, so signal-based
-    # liveness alone reports it alive forever. A zombie can never run again —
-    # for liveness purposes it is dead.
-    try:
-        result = subprocess.run(
-            ["ps", "-o", "stat=", "-p", str(pid)],
-            capture_output=True, text=True, timeout=10,
-        )
-    except (OSError, subprocess.TimeoutExpired):
-        return False
-    return result.returncode == 0 and result.stdout.strip().startswith("Z")
+    Only edge inputs move: ``pid <= 0`` was ALIVE (``os.kill(0, 0)`` targets our
+    OWN process group and succeeds) and is now UNREADABLE -> False, and an
+    exotic non-ESRCH/EPERM ``OSError`` no longer escapes this function.
+    """
+    return process_liveness.pid_state(pid) == process_liveness.ALIVE
 
 
 def _json_summary(path: Path) -> dict[str, Any]:

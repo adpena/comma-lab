@@ -91,6 +91,9 @@ if str(_SRC_DIR) not in sys.path:
 _TOOLS_DIR = Path(__file__).resolve().parent
 if str(_TOOLS_DIR) not in sys.path:
     sys.path.insert(0, str(_TOOLS_DIR))
+
+from tac import process_liveness  # noqa: E402  (needs the _SRC_DIR bootstrap above)
+
 _REGISTRY_PATH = _REPO_ROOT / ".omx" / "state" / "durable_daemons.json"
 _REGISTRY_LOCK = _REPO_ROOT / ".omx" / "state" / ".durable_daemons.lock"
 
@@ -323,23 +326,22 @@ def _try_reap(pid: int) -> bool:
 def _pid_alive(pid: int) -> bool:
     """True iff the PID is alive AND not a reaped zombie.
 
-    signal-0 probe: ESRCH => dead; EPERM => alive (owned by another user). We
-    first attempt a non-blocking reap so a zombified own-child is reported as
-    dead rather than falsely alive.
+    Delegates to the canonical tri-state read (``tac.process_liveness``), with
+    ``reap_own_child=True`` to PRESERVE this site's deliberate extra: a
+    non-blocking ``waitpid`` first, so a zombified OWN child is reported dead
+    rather than falsely alive (the rationale in ``_try_reap`` above).  The
+    probe order is unchanged: reap, then signal-0, then the zombie check.
+
+    This site was already correct on both contested legs (ESRCH => dead,
+    EPERM => alive) and on ``pid <= 0``, so the migration is behaviour-
+    preserving except that a zombie we CANNOT reap -- one that is not our own
+    child -- now reads dead too, which is what the local docstring already
+    claimed this function did.
     """
-    if pid <= 0:
-        return False
-    if _try_reap(pid):
-        return False
-    try:
-        os.kill(pid, 0)
-    except OSError as exc:
-        if exc.errno == errno.ESRCH:
-            return False
-        if exc.errno == errno.EPERM:
-            return True  # exists but owned by another user
-        return False
-    return True
+    return (
+        process_liveness.pid_state(pid, reap_own_child=True)
+        == process_liveness.ALIVE
+    )
 
 
 def _pgid_alive(pgid: int) -> bool:

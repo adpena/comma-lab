@@ -50,6 +50,10 @@ import sys
 from pathlib import Path
 
 _REPO = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(_REPO / "src"))
+
+from tac import process_liveness  # noqa: E402  (needs the sys.path bootstrap above)
+
 _REGISTRY = _REPO / ".omx" / "state" / "durable_daemons.json"
 _OUT_JSONL = _REPO / ".omx" / "state" / "witness_chain_watchdog.jsonl"
 
@@ -63,15 +67,24 @@ def _utc() -> str:
 
 
 def _pid_alive(pid: int) -> bool:
+    """Delegates to the canonical tri-state read (``tac.process_liveness``).
+
+    PRESERVES this site's deliberate extra: ``pid`` arrives from a JSON
+    registry row, so it may be a string or junk -- the ``int()`` coercion and
+    its guard stay here, ahead of the canonical call.
+
+    This site already agreed on ``PermissionError`` -> alive.  CHANGED: a
+    zombie was ALIVE forever and is now DEAD, which is the point of the
+    surrounding ``_pid_alive_cmd`` cross-check -- an exited chain must not read
+    as running.  ``_pid_alive_cmd`` itself is UNTOUCHED: its pid-REUSE
+    cross-check against the live command line is a real protection that
+    canonical liveness does not replace.
+    """
     try:
-        os.kill(int(pid), 0)
-        return True
-    except ProcessLookupError:
-        return False
-    except PermissionError:
-        return True
+        pid_int = int(pid)
     except (ValueError, TypeError, OverflowError):
         return False
+    return process_liveness.pid_state(pid_int) == process_liveness.ALIVE
 
 
 def _live_cmdline(pid: int) -> str | None:
