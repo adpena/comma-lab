@@ -46,6 +46,13 @@ where qs5 PROVED in-compile Schur frame-0 compensation carries ~zero pose tax (q
 
 - Reference form: #869's token-by-token waterfill methodology (768 cells × rungs under joint
   remeasure, TR1 vehicle) is the family reference — declare this as the hv1-vehicle instance.
+- Provenance pins: base archive sha256
+  80d9c8c6fdc72caaa3e180a8abb2a859e7f316a484b38f33fe90d5701420178e (hv1 ep0634, 182,759 B) ·
+  base retained decode custody sha256 (carrier.br)
+  fd14aabcb9daa5f1dd1c9c6e63e745a88f2978766e3129b184dd3a9ac7334de0 · ns1 calibration memo sha256
+  91741c062c38ab88ce7e225921a0024d6dc45dacc858658e02ee83ff08b2dba0 · mp2 adjudication receipt
+  sha256 54228227d8d18bbceeca0944371ee2dcb5e773c3135bb1214416247677aeb743 · compose/export path
+  `experiments/ddm_hv1_harvest_compose.py` (grep its real coder stack; never invent flags).
 - Byte half is EXACT (real coder, full field). Seg/pose halves are MODELED (B/H + qs-coder),
   declared as such; the scorer row that converts MODELED→MEASURED is MAIN's fire, not this arm's.
 - TOY-BRACKET: none. If the coder re-price cannot run on the full field in budget, stop and

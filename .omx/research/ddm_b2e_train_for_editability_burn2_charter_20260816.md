@@ -72,10 +72,17 @@ The burn-2 regime trains the weights to TOLERATE the edits, converting the refus
 
 ## OPTIMAL FORM
 
-- Reference form: the e960 burn itself — same trainer, same n600 real labels, same receipt schema
-  (`ddm_rx2_final.v1`, base FINAL_RESULT at
-  `/Volumes/APDataStore/pact/ddm_rx2_current_mc36_label_hpac/FINAL_RESULT.json`). Every delta vs
-  that reference is a declared MECHANISM-ADDITION (the five levers + harnesses), not a reduction.
+- Reference form: the e960 burn itself — same trainer
+  (`experiments/ddm_rx2_mc36_label_hpac.py`, sha256
+  4a0db3c8fd42c4b4d38edd7a321a5cad84b26e9ee3f183ca73f931942b55f354), same n600 real labels, same
+  receipt schema (`ddm_rx2_final.v1`, base FINAL_RESULT at
+  `/Volumes/APDataStore/pact/ddm_rx2_current_mc36_label_hpac/FINAL_RESULT.json`, base_mc36
+  archive sha256 prefix f0ba4bb4). Warm-start object pin: ep0634 checkpoint per
+  `experiments/ddm_hv1_harvest_compose.py` CANDIDATES (checkpoint sha prefix 5007beae, joint
+  130,393 B @ top1 0.0018945). Calibration pins: MP2_ADVISORY_ADJUDICATION.json sha256
+  54228227d8d18bbceeca0944371ee2dcb5e773c3135bb1214416247677aeb743 + ns1 memo sha256
+  91741c062c38ab88ce7e225921a0024d6dc45dacc858658e02ee83ff08b2dba0. Every delta vs the reference
+  is a declared MECHANISM-ADDITION (the five levers + harnesses), not a reduction.
 - SCOPE reductions permitted and labeled: bounded lever smokes (n32/n60, epochs-capped) for
   wiring proof only — NO family verdict from any subset (wd3 spec law); the n600 rows are
   MAIN-fired.
