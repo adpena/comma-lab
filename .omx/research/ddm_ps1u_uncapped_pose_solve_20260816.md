@@ -313,29 +313,92 @@ including both refusal branches.
 
 ---
 
+## 8. THE CUDA-AXIS CANDIDATE — assembled and priced; byte-close is OWED
+
+The honest CUDA-axis test of §4, built exactly as designed: spend the byte budget where the
+pose mass is, price it against the **0.0083 S ceiling** (never against §4's advisory −0.028).
+
+**Selection.** The top-mass pairs by retained base-vs-GT error — a deliberate non-random rule,
+because the candidate's bytes must go where the mass is. Top-60 captures **48.19%** of the
+advisory-axis pose mass; reproducible from retained vectors with no scorer call
+(`top_mass_pairs`, recorded with the share it captures).
+
+**Counted section.** `Q2C1` cannot carry this payload — it admits 1–15 pairs with deltas in
+[−3, 4], while the solve produces 60 pairs with deltas in **[−29, 48]** over ~8.2 of 12 dims.
+So `P1D1` (`experiments/ddm_ps1u_carrier_delta_codec.py`): delta-coded 10-bit pair gaps +
+12-bit support mask + order-0 Exp-Golomb of zigzag values. Exp-Golomb rather than a fixed width
+because the magnitude distribution is heavy-headed (median |Δ| ~5) with a long tail — a 7-bit
+field truncates, a 12-bit field wastes ~40%. **No trained table ships**; the code is a fixed
+generic construction, so nothing here is video-derived. `encode` self-verifies its own
+round-trip; decode refuses truncation, disorder, zero-support, zero-in-support, nonzero padding,
+trailing bytes, and any overlay that drives a coefficient outside signed-int12. Self-tested.
+
+| quantity | value |
+|---|---|
+| pairs edited | **39** (fleet continuing to 60; the bundle regenerates deterministically) |
+| counted section | **405 B** = 10.38 B/pair, sha `d21043d4c8ba03f1…` |
+| rate cost | **+0.000270 S** |
+| pose prize CEILING (CUDA) | **0.008298 S** |
+| advisory-axis reduction on edited pairs | 84.78% |
+| advisory-axis n600 d_pose | 1.474653e-04 → 1.087900e-04 |
+
+### PRE-REGISTERED ADMISSION (stated before the row exists)
+
+> **ADMIT iff** the T4 row's recomputed S < **0.15959729295498598** with the pose leg
+> **MEASURED**, not projected. Equivalently: **CUDA d_pose must fall by more than
+> 6.39%** to pay for the 405 B section.
+> **The advisory row is DIRECTIONAL ONLY and cannot admit** — §5b proved it decodes a different
+> object than the shipping chain.
+
+**Transfer is the measurement, and I am not assuming it.** The edit is to the int12 **codes**,
+which both decoders consume; the qs2/re1 precedent is that CPU-solved candidates realized on T4
+to ~6 significant figures despite the decode divergence — which is why this is worth one row.
+That precedent is not a guarantee. `verdict_scope: instance` on every advisory number here.
+
+### What is OWED, named precisely (I did not complete it)
+
+The **byte-close**. The path exists and I located it rather than hand-waving:
+`ddm_qs1_frame0_schur_coupled_solve._candidate_physical_carrier` ("Encode selected CP135 int12
+changes through the banked CPR1/CAP1 producers") and `_compile_one` (which already carries a
+`repeat` flag for the repeat-identical build). **But it compiles into the CP135 container
+(186,252 B), not hv1 (182,759 B).** The hv1 integration point is its **compensation slot**:
+hv1's retained decode carries `outer_compensation.bin` = a 36 B `Q2C1` overlay whose own
+docstring says it "applies those deltas to the real 600×12 signed-int12 CP135 code lattice" —
+so **hv1 already carries this lattice and already has an overlay consumer**. `P1D1` is that
+consumer's widened sibling. The owed build is: teach the hv1 receiver's compensation slot to
+parse `P1D1`, re-encode, verify parse-back, confirm repeat-identical bytes. Well-scoped, not
+done here, and **no fire-order can be sealed without it** — a sealed order needs a byte-closed
+archive sha, and inventing one would be a fake.
+
+**Fire-order status: TEMPLATE, precondition UNMET.** `CANDIDATE_FIRE_ORDER_TEMPLATE.json`
+carries the admission rule, the runtime pins, and — per the §5b piggyback plan — **both decode
+hash-request fields enabled plus the remote `manifest` step**, so per-pair decode localization
+rides along free on whatever T4 row MAIN eventually fires. Its `preconditions_unmet` field names
+the byte-close explicitly.
+
+---
+
 ## NEXT_IF_RESUMED
 
-1. **§5b FIRST — MAIN fires the staged CUDA manifest job** (~$0.15–0.20, ~7 min) and runs the
-   `diff`. IDENTICAL ⇒ re-hunt at the scorer-input preprocessing boundary, then evaluate.py
-   batching. DIFFERENT ⇒ device-dependent decode confirmed: a deterministic-decode
-   non-negotiable violation, route to the ranked suspects in §5b. **Nothing downstream of §4
-   fires until this closes.**
-2. **Finish the fleet** (resumable, strided, ~30 s/pair):
+1. **BYTE-CLOSE the §8 candidate — the one owed build.** Teach the hv1 receiver's compensation
+   slot to parse `P1D1` (it already parses `Q2C1` over the same 600×12 int12 lattice), re-encode,
+   verify parse-back, confirm repeat-identical bytes. Then seal the fire order from
+   `CANDIDATE_FIRE_ORDER_TEMPLATE.json` — its `preconditions_unmet` names exactly this — and MAIN
+   fires ONE T4 row (~$0.16). **Admission is pre-registered: CUDA d_pose must fall >6.39%** (at
+   the 405 B section; recompute if the fleet finishes 60 pairs). Enable both decode hash-request
+   fields so per-pair decode localization rides along at $0 marginal.
+2. **Finish the fleet** (resumable, strided, ~30 s/pair). `--top-mass 60` for the candidate set;
+   `--n-pairs 64 --seed 20260816` for the characterization set; `--all-pairs` for n600 **only if
+   the T4 row shows CUDA-axis signal**:
    ```
    .venv/bin/python experiments/ddm_ps1u_uncapped_pose_solve.py \
-       --out /Volumes/APDataStore/pact/ddm_ps1u_uncapped_pose_20260816/n64 \
-       --n-pairs 64 --seed 20260816 --shard <k> --shards 4
+       --out <store>/cand60 --top-mass 60 --shard <k> --shards 4
    ```
-   then `--all-pairs` for n600 if §5 resolves favourably (~2 h at 4 shards).
-3. **The CUDA-axis test for §2, AFTER reconciliation.** If decode turns out deterministic (or
-   once the device-dependence is cured), §2 becomes testable on the axis that ships: solve a
-   SMALL per-pair set (top-mass pairs only, ~60), price it honestly against the **0.0083 S
-   ceiling** — not §4's advisory −0.028 — and fire ONE T4 row. At 5.32 B/pair the 60-pair
-   candidate costs ~320 B (+2.1e-4 S), so it needs only a ~2.6% CUDA-axis pose reduction to
-   clear; that is a cheap, well-posed first CUDA row and it is the honest way to learn how much
-   of the 94.86% is real on the shipping axis.
-4. **If §5 resolves toward the advisory number**: design the delta coder (the Q2C1 format is
-   structurally too small), waterfill pair selection by mass-removed-per-byte (top-60 pairs carry
-   48.2% of the pose mass), re-solve compensation IN-COMPILE per qs5, and byte-close ONE
-   candidate for a single advisory n600 row before any T4 spend.
-5. **Do not re-open the relinearization cap** on any pose GN. §3 closes it; pg1 and pj2 agree.
+3. **Cure the decode defect (§5b), independent of scoring.** Port the decode to the portable
+   native / `runtime-rs` program so ONE deterministic implementation runs on every host —
+   engineered to **PRESERVE the CUDA-favorable frames** (the frontier rides them), never naively
+   CPU-pinned, which would lock in the degraded decode at ~0.03 S. Suspects ranked in §5b.
+4. **Do not re-open the relinearization cap** on any pose GN. §3 closes it at formulation scope;
+   pg1 and pj2 agree on two other vehicles.
+5. **Do not quote §4's advisory −0.028 as a prize.** The CUDA ceiling is 0.0083 S. §5b proved the
+   advisory chain decodes a different object; every §4 magnitude is `verdict_scope: instance`.
