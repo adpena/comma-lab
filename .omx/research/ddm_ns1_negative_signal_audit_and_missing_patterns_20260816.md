@@ -69,8 +69,14 @@ prove the remaining −0.0096 is NOT reachable by edits on this frozen object. T
 are REGIME-level:
 
 **P1 — Train-for-editability (the inverse of every §B refusal).** Pose brittleness is a TRAINED
-property: the e960 burn ran QAT on TOKENS (which is why token quantization ships) but never on the
-semantic WEIGHTS — so q3/q4, row-prune, rank-cut, and width-distill all die post-hoc. One burn-2
+property. ⚠ MECHANISM CORRECTED 2026-08-16 (b2e arm, at source): the semantic weights WERE QAT'd —
+at UNIFORM INT4 (the semantic trainer hard-refuses other grids). The defect is "trained on the q4
+grid, edited onto q3/row-prune/rank grids it never saw" — train the grid you deploy. The original
+"never QAT'd on the semantic weights" line is WITHDRAWN; the P1 regime thesis stands unchanged
+(the cure is still training under the deployment edit distribution). Also corrected: the mp2-edited
+tensors live in the SemanticTokenRenderer (trainer src/tac/pr130_lift/train_semantic_quantized_resumable.py),
+NOT the cl1 token model — the archive member is three sections (hpac/semantic/carrier) with
+independent editability regimes. One burn-2
 regime adds: weight-perturbation robustness on the located FiLM-critical rows + mixed-q3/q4 QAT +
 row-dropout + spectral (rank) penalty + distillation-aware objective. Every one of §B's refused
 byte pools (−823, −2,051, rank pool, width multi-KB) then becomes harvestable at ~zero pose tax —
