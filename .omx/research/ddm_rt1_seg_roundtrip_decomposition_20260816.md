@@ -638,6 +638,13 @@ random choice (seed 20260816).
 
 **η = 0.6620 ≤ 0.753 → the family is CLOSED on arithmetic.**
 
+**Stability as rows land.** The run was left going at `nice 10` behind the sister b2e arm and the
+aggregator re-reads the incremental rows, so the live authority is
+`ETA_GATE_VERDICT_AGGREGATE.json`, not any number frozen here. The verdict has not wobbled:
+pooled η = **0.6442 (n=3) → 0.6620 (n=4) → 0.6448 (n=5)**, with **0 of n above the bar at every
+n** and per-pair sd ~0.08. The table above is the n=4 snapshot; re-run
+`--mode aggregate` for the current n.
+
 The margin is not marginal. At the measured pooled η the channel is a **LOSS of +0.0027 S**
 (S would go 0.15960 → **0.16227**). And the refutation does not depend on the pooled figure:
 **even the best single pair measured (0.7200) still loses (+0.0010 S).** The realization step is
