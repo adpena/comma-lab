@@ -10,9 +10,14 @@ more than an order of magnitude:
 surface                      reported        vs provider billing
 ===========================  ==============  =========================
 session prose                ``~$6.9``       **2.7x low**
-``modal_call_id_ledger``     ``~$1.74``      **10.7x low**
-``modal billing report``     ``$18.6124``    authority
+``modal_call_id_ledger``     ``$1.74``       **10.7x low**
+``modal billing report``     ``$18.61``      authority
 ===========================  ==============  =========================
+
+(``ddm_mb1`` read ``$18.61243961`` at 22:52Z; this tool read ``$18.61852110``
+twice at 23:29Z and 23:31Z.  The difference is later-settled usage, not a
+disagreement.  The ratios above are quoted to two figures for that reason --
+the exact total moves, the order of magnitude is the finding.)
 
 Three real defects produced the gap, none of them estimation slop (all MEASURED
 by ``ddm_mb1`` at source):
@@ -81,7 +86,7 @@ import json
 import subprocess
 import sys
 import time
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal, InvalidOperation
@@ -104,6 +109,7 @@ __all__ = [
     "SpendReading",
     "WindowReading",
     "chunk_window",
+    "ledger_contradiction",
     "ledger_lower_bound_usd",
     "main",
     "read_billing_window",
@@ -128,9 +134,16 @@ RECEIPT_SCHEMA = "modal_spend_report_v1"
 
 #: Substrings that mark a workspace rate-limit refusal.  Matched
 #: case-insensitively against stderr always, and against stdout ONLY when
-#: stdout is not a valid JSON list -- so a digit sequence inside a cost string
-#: can never be mistaken for an HTTP status.
-_RATE_LIMIT_MARKERS = ("rate limit", "ratelimit", "too many requests", "429")
+#: stdout is not a valid JSON list.
+#:
+#: A bare ``"429"`` was removed after review: it matches any benign line that
+#: happens to contain those digits (an app id, a log count), and because a
+#: rate-limit classification triggers BACKOFF, a false positive discards a
+#: readable window and can cascade into refusing the whole report.  The
+#: MEASURED provider frame is ``"Rate limit exceeded for workspace billing
+#: report requests."``, which ``"rate limit"`` already catches.  Prefer a
+#: marker that cannot appear by accident.
+_RATE_LIMIT_MARKERS = ("rate limit", "ratelimit", "too many requests")
 
 _SUBPROCESS_TIMEOUT_S = 300.0
 
@@ -595,6 +608,54 @@ def ledger_lower_bound_usd(
     }
 
 
+def ledger_contradiction(total_usd: Decimal, crosscheck: Mapping[str, Any]) -> str | None:
+    """Return a contradiction message when the ledger refutes the billed total.
+
+    The ledger is a LOWER BOUND on the same window, so it can cross-examine the
+    billing read for free.  Two cases, deliberately treated differently:
+
+    * **billed ``0`` while the ledger prices real calls above ``0``** — a genuine
+      contradiction.  Calls that cost money cannot bill to nothing.  This is the
+      one remaining path to a false ``$0.00``: every window legitimately
+      returning ``[]``.  It REFUSES.
+    * **billed ``> 0`` but below the ledger** — flagged, NOT refused.  The
+      ledger mixes rate-derived estimates with measurements, and configured
+      rates were MEASURED over-predicting by 2.01x, so an inflated estimate can
+      exceed reality without either number being wrong.
+    """
+    if not crosscheck.get("ledger_readable"):
+        return None
+    try:
+        ledger_sum = Decimal(str(crosscheck.get("ledger_sum_usd", "0")))
+    except (InvalidOperation, ValueError):
+        return None
+    if ledger_sum <= 0:
+        return None
+    if total_usd == 0:
+        return (
+            f"billing reported $0 for this window while the ledger prices "
+            f"{crosscheck.get('ledger_calls_priced')} call(s) at ${ledger_sum}. "
+            "Calls that cost money cannot bill to nothing — treat this read as "
+            "UNREADABLE, not as an empty cap."
+        )
+    return None
+
+
+def _write_receipt(path: Path, payload: Mapping[str, Any]) -> str | None:
+    """Append the receipt.  Never let a write failure destroy the reading.
+
+    The read is expensive and rate-limited; losing a measured total because a
+    ``--receipt`` path is unwritable would be a self-inflicted repeat of the
+    discard-the-payload class.  Returns the error text on failure so the caller
+    can say so out loud instead of failing silently.
+    """
+    try:
+        append_locked_jsonl(path, dict(payload))
+    except OSError as exc:
+        return f"{type(exc).__name__}: {exc}"
+    return None
+
+
 def _parse_date(text: str) -> date:
     return date.fromisoformat(text)
 
@@ -613,6 +674,8 @@ def _parse_usd(text: str) -> Decimal:
         raise argparse.ArgumentTypeError(f"{text!r} is not a valid dollar amount") from exc
     if not value.is_finite():
         raise argparse.ArgumentTypeError(f"{text!r} is not a finite dollar amount")
+    if value <= 0:
+        raise argparse.ArgumentTypeError(f"{text!r} is not a positive cap; headroom would be meaningless")
     return value
 
 
@@ -666,6 +729,12 @@ def _build_parser() -> argparse.ArgumentParser:
         "--no-ledger-crosscheck",
         action="store_true",
         help="Skip the ledger lower-bound cross-check.",
+    )
+    parser.add_argument(
+        "--ledger",
+        type=Path,
+        default=DEFAULT_LEDGER_PATH,
+        help=f"Ledger to cross-check against (default {DEFAULT_LEDGER_PATH}).",
     )
     parser.add_argument(
         "--retries",
@@ -734,11 +803,37 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     payload = reading.as_dict()
     payload["read_at_utc"] = datetime.now(UTC).isoformat()
+    crosscheck = None
     if not args.no_ledger_crosscheck:
-        payload["ledger_crosscheck"] = ledger_lower_bound_usd(args.start, end)
+        crosscheck = ledger_lower_bound_usd(args.start, end, ledger_path=args.ledger)
+        payload["ledger_crosscheck"] = crosscheck
+        contradiction = ledger_contradiction(reading.total_usd, crosscheck)
+        if contradiction is not None:
+            # The ledger just refuted the billing read.  Emitting the $0 anyway
+            # would be the exact failure this tool exists to prevent, so the
+            # reading is downgraded to UNREADABLE rather than reported.
+            payload["status"] = UNREADABLE
+            payload["reason"] = "contradicted_by_ledger"
+            payload["contradiction"] = contradiction
+            if not args.no_receipt:
+                _write_receipt(args.receipt, payload)
+            if args.json:
+                print(json.dumps(payload, indent=2, sort_keys=True))
+            else:
+                print("MODAL SPEND: UNREADABLE — no number emitted.")
+                print("  reason:     contradicted_by_ledger")
+                print(f"  {contradiction}")
+                print("MODAL SPEND: UNREADABLE (contradicted_by_ledger), rc=2.", file=sys.stderr)
+            return 2
+
+    receipt_error = None
     if not args.no_receipt:
-        append_locked_jsonl(args.receipt, payload)
+        # Set BEFORE writing so the stored row and the printed row are the same
+        # bytes; a stored/printed divergence is a drift generator.
         payload["receipt_path"] = str(args.receipt)
+        receipt_error = _write_receipt(args.receipt, payload)
+        if receipt_error is not None:
+            payload["receipt_error"] = receipt_error
 
     if args.json:
         print(json.dumps(payload, indent=2, sort_keys=True))
@@ -758,7 +853,10 @@ def main(argv: Sequence[str] | None = None) -> int:
                 f"{crosscheck['ledger_calls_in_window']} calls unpriced)"
             )
         if not args.no_receipt:
-            print(f"  receipt:         {args.receipt}")
+            if receipt_error is None:
+                print(f"  receipt:         {args.receipt}")
+            else:
+                print(f"  receipt:         NOT WRITTEN ({receipt_error}) — the total above still stands.")
         if reading.over_cap:
             print("  OVER CAP — every further dispatch breaches the operator constraint.")
 

@@ -13,8 +13,8 @@ TaskList (arms cannot see it), so task #381 is re-derived from `ddm_mb1`'s memo,
 
 ## THE ANSWER
 
-**Modal spend `2026-07-09` → `2026-08-17` is `$18.61852110` of the `$20.00` cap.
-Headroom is `$1.38147890`. The cap is 93.1% consumed.** [MEASURED — `modal billing report`,
+**Modal spend `2026-07-09` → `2026-08-17` is `$18.61972873` of the `$20.00` cap.
+Headroom is `$1.38027127`. The cap is 93.1% consumed.** [MEASURED — `modal billing report`,
 workspace `adpena`, 350 rows across 2 chunks.]
 
 Receipt: `.omx/state/modal_spend_receipts.jsonl` (schema `modal_spend_report_v1`), carrying the
@@ -26,7 +26,18 @@ Reproduce in one command:
 .venv/bin/python tools/modal_spend_report.py
 ```
 
-Two independent reads 92 s apart agreed to the cent (`$18.61852110` both times).
+**The total is a moving floor, and that is the honest reading.** Four reads today, all consistent:
+
+| reader | UTC | total |
+|---|---|---|
+| `ddm_mb1`, by hand | 22:52 | `$18.61243961` |
+| this tool | 23:29 | `$18.61852110` |
+| this tool | 23:31 | `$18.61852110` |
+| this tool, post-fix | 23:52 | `$18.61972873` |
+
+Two reads 92 s apart agreed to the cent; the drift across the day is usage still accruing, not
+disagreement. The figure is also biased LOW — very recent usage may not have settled in the
+provider's billing pipeline.
 
 ---
 
@@ -117,14 +128,55 @@ The tool refused and wrote an `UNREADABLE` receipt row rather than a number. Tha
 `.omx/state/modal_spend_receipts.jsonl`, timestamped `2026-08-16T23:27:04Z`, `reason: rate_limited`.
 The negative control ran itself.
 
-**Deterministic suite:** 41 passed, 2 skipped (`src/tac/tests/test_modal_spend_report.py`). Every
+**Deterministic suite:** 52 passed, 2 skipped (`src/tac/tests/test_modal_spend_report.py`). Every
 negative control asserts `pytest.raises`, never a field value — a test asserting `total == 0` would
 PASS on the broken code.
 
-**Mutation check — proof the controls are not decoration.** Five defects were injected into a scratch
-copy: drop the return-code guard · drop the stderr rate-limit guard · treat empty stdout as `[]` ·
-revert the ledger fold to whole-row · move the refusal banner off stdout. **11 tests fail.** The
-mutated CLI emits exactly the bug this tool extincts: `"total_usd": "0"`.
+**Mutation check — proof the controls are not decoration.** Thirteen defects injected into scratch
+copies, **every one killed**: drop the return-code guard · drop the stderr rate-limit guard · treat
+empty stdout as `[]` · revert the ledger fold to whole-row · move the refusal banner off stdout ·
+make `_default_end()` today · empty the receipt's `commands` · empty its `windows` · make the ledger
+window end inclusive · restore the bare `429` marker · disable the contradiction check · allow a
+negative cap · remove the receipt-write guard. The mutated CLI emits exactly the bug this tool
+extincts: `"total_usd": "0"`.
+
+---
+
+## Fresh-context verification round
+
+A fresh-eyes verifier audited the code against the eight required properties with no knowledge of how
+it was built. **All eight PASS.** It independently re-derived the chunk arithmetic by enumeration
+(39 days covered exactly once, plus a 3,000-window property sweep with zero violations), independently
+confirmed end-exclusivity from the raw provider files, and independently reproduced the field-wise vs
+whole-row fold split (`63` / `$1.74` against `22` / `$0.15`).
+
+It also found **eight defects my own review missed.** All are fixed:
+
+1. **The contradiction detector was computed and never consulted.** The tool already had the ledger's
+   lower bound in hand next to the billed total, and never compared them. Every window returning `[]`
+   would print `$0` beside a ledger sum of `$1.74` and exit `0` — the last surviving path to a false
+   `$0.00`. Now `ledger_contradiction()` refuses when billing says `$0` while the ledger prices real
+   calls. It deliberately does **not** refuse when billing merely comes in under the ledger: the
+   ledger carries rate-derived estimates measured over-predicting 2.01x, so that case is flagged, not
+   failed.
+2. **A bare `"429"` rate-limit marker over-matched** any line containing those digits — an app id, a
+   log count — and because that classification triggers backoff, a false positive discarded a
+   *readable* window and could cascade into refusing the whole report. Removed; the measured provider
+   phrase is caught by `"rate limit"`.
+3. **`_default_end()` had no test.** Changing it to today — silently dropping today's spend from every
+   default read — survived the entire suite. Pinned.
+4. **The receipt's `commands` and `windows` were unpinned**, and re-derivability rests entirely on
+   them. Emptying either survived. Pinned.
+5. **The ledger window's exclusive end was untested**; flipping it to inclusive survived. Pinned.
+6. **A receipt-write failure would have destroyed an expensive rate-limited read.** Now the write is
+   guarded and the total prints regardless, with the failure named out loud.
+7. Docstring cited a stale total. Corrected, with the accrual explained.
+8. `--cap-usd` accepted a negative cap. Refused.
+
+Two more, found while fixing: `ledger_lower_bound_usd`'s default path binds at definition time and so
+was not overridable (added `--ledger`), and one of my earlier edits **reported success but was not in
+the file** — the pre-commit `receipt_path` ordering fix had been silently lost. An edit's success
+message is not proof the change survived; I now read back after editing a file I am also formatting.
 
 ---
 
@@ -150,9 +202,9 @@ alone.
 
 ## Owed to the operator
 
-**A spend decision.** `$1.38147890` remains — 6.9% of the cap. Price every further Modal dispatch
-against that figure. The $18.62 is also biased slightly LOW: very recent usage may not have settled in
-the provider's billing pipeline.
+**A spend decision.** `$1.38027127` remains — 6.9% of the cap. Price every further Modal dispatch
+against that figure, and re-read before committing to one: the total moved `$0.007` in the hour I was
+watching it.
 
 Run `tools/modal_spend_report.py --fail-over-cap` in any gate that must respect the cap; it exits `3`
 when spend exceeds it and `2` when it cannot tell.
@@ -177,12 +229,12 @@ only automated guard resets to zero every process.
 ## Evidence
 
 - `tools/modal_spend_report.py` — the reader.
-- `src/tac/tests/test_modal_spend_report.py` — 41 controls, 2 live opt-in.
-- `.omx/state/modal_spend_receipts.jsonl` — 3 rows: one live `unreadable`/`rate_limited`, two
-  `readable` at `$18.61852110`. Un-ignored in `.gitignore` alongside `modal_call_id_ledger.jsonl`; a
-  local-only receipt would defeat its purpose on a fresh checkout, which is how the cap became prose.
+- `src/tac/tests/test_modal_spend_report.py` — 52 controls, 2 live opt-in.
+- `.omx/state/modal_spend_receipts.jsonl` — 4 rows: one live `unreadable`/`rate_limited`, three
+  `readable`. Un-ignored in `.gitignore` alongside `modal_call_id_ledger.jsonl`; a local-only receipt
+  would defeat its purpose on a fresh checkout, which is how the cap became prose.
 
 ## Ending on measurement
 
-`$18.61852110` measured of `$20.00`. `$1.38147890` left. 93.1% consumed. 350 rows, 2 chunks, 2
-agreeing reads. 41 controls green; 11 of them fail on 5 injected defects.
+`$18.61972873` measured of `$20.00`. `$1.38027127` left. 93.1% consumed. 350 rows, 2 chunks, 4
+agreeing reads across 60 minutes. 52 controls green; 13 injected defects, 13 killed.

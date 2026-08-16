@@ -382,9 +382,223 @@ def test_negative_retries_rejected() -> None:
         msr.read_billing_window(date(2026, 8, 15), date(2026, 8, 16), runner=_runner(_completed()), retries=-1)
 
 
+def test_benign_429_in_stderr_is_not_a_rate_limit() -> None:
+    """A bare ``429`` substring matched app ids and log counts.
+
+    A false rate-limit classification is not merely noisy: it discards a
+    READABLE window and triggers backoff, and under the CLI's default retries it
+    cascades into refusing the whole report.
+    """
+    reading = msr.read_billing_window(
+        date(2026, 8, 15),
+        date(2026, 8, 16),
+        runner=_runner(
+            _completed(
+                returncode=0,
+                stdout=json.dumps([{"cost": "1.00"}]),
+                stderr="WARNING: app ap-429abc emitted 429 log lines",
+            )
+        ),
+    )
+    assert reading.total_usd == Decimal("1.00")
+
+
+def test_real_rate_limit_phrase_still_refuses() -> None:
+    """The paired control for the test above: the MEASURED frame still refuses."""
+    with pytest.raises(msr.BillingUnreadable) as excinfo:
+        msr.read_billing_window(
+            date(2026, 8, 15),
+            date(2026, 8, 16),
+            runner=_runner(
+                _completed(
+                    returncode=0,
+                    stdout=json.dumps([{"cost": "1.00"}]),
+                    stderr="Rate limit exceeded for workspace billing report requests.",
+                )
+            ),
+        )
+    assert excinfo.value.reason == "rate_limited"
+
+
+# --------------------------------------------------------------------------
+# DEFAULT END — exclusive, so today must still be counted
+# --------------------------------------------------------------------------
+
+
+def test_default_end_is_tomorrow_so_today_is_counted() -> None:
+    """``--end`` is EXCLUSIVE. Using today would silently drop today's spend."""
+    from datetime import UTC, datetime, timedelta
+
+    today = datetime.now(UTC).date()
+    assert msr._default_end() == today + timedelta(days=1)
+    assert msr._default_end() != today
+
+
 # --------------------------------------------------------------------------
 # LEDGER CROSS-CHECK — labelled a lower bound, never authority
 # --------------------------------------------------------------------------
+
+
+def test_ledger_window_end_is_exclusive(tmp_path: Path) -> None:
+    """The cross-check window must match the billing window exactly."""
+    ledger = tmp_path / "ledger.jsonl"
+    ledger.write_text(
+        "\n".join(
+            [
+                json.dumps(
+                    {
+                        "call_id": "fc-in",
+                        "dispatched_at_utc": "2026-08-31T23:00:00Z",
+                        "cost_actual_usd": 1.0,
+                    }
+                ),
+                json.dumps(
+                    {
+                        "call_id": "fc-out",
+                        "dispatched_at_utc": "2026-09-01T00:00:00Z",
+                        "cost_actual_usd": 500.0,
+                    }
+                ),
+            ]
+        ),
+        encoding="utf-8",
+    )
+    out = msr.ledger_lower_bound_usd(date(2026, 8, 1), date(2026, 9, 1), ledger_path=ledger)
+    assert out["ledger_calls_in_window"] == 1, "the end bound must be EXCLUSIVE"
+    assert Decimal(out["ledger_sum_usd"]) == Decimal("1.0")
+
+
+# --------------------------------------------------------------------------
+# CONTRADICTION — the ledger cross-examines the billing read for free
+# --------------------------------------------------------------------------
+
+
+def test_contradiction_fires_when_billing_says_zero_but_the_ledger_priced_calls() -> None:
+    """The last path to a false $0.00: every window legitimately returning ``[]``."""
+    crosscheck = {"ledger_readable": True, "ledger_sum_usd": "1.74", "ledger_calls_priced": 8}
+    message = msr.ledger_contradiction(Decimal("0"), crosscheck)
+    assert message is not None
+    assert "cannot bill to nothing" in message
+
+
+def test_contradiction_does_not_fire_when_the_ledger_merely_over_estimates() -> None:
+    """Configured rates were MEASURED over-predicting 2.01x; that is not a refutation."""
+    crosscheck = {"ledger_readable": True, "ledger_sum_usd": "5.00", "ledger_calls_priced": 3}
+    assert msr.ledger_contradiction(Decimal("2.50"), crosscheck) is None
+
+
+def test_contradiction_silent_when_the_ledger_prices_nothing() -> None:
+    crosscheck = {"ledger_readable": True, "ledger_sum_usd": "0", "ledger_calls_priced": 0}
+    assert msr.ledger_contradiction(Decimal("0"), crosscheck) is None
+    assert msr.ledger_contradiction(Decimal("0"), {"ledger_readable": False}) is None
+
+
+def test_cli_refuses_a_zero_total_that_the_ledger_contradicts(capsys, tmp_path: Path) -> None:
+    ledger = tmp_path / "ledger.jsonl"
+    ledger.write_text(
+        json.dumps(
+            {
+                "call_id": "fc-a",
+                "dispatched_at_utc": "2026-08-15T00:00:00Z",
+                "cost_actual_usd": 1.25,
+            }
+        ),
+        encoding="utf-8",
+    )
+    original_runner = msr._default_runner
+    msr._default_runner = _runner(_completed(stdout="[]"))
+    try:
+        rc = msr.main(
+            [
+                "--start",
+                "2026-08-15",
+                "--end",
+                "2026-08-16",
+                "--no-receipt",
+                "--retries",
+                "0",
+                "--ledger",
+                str(ledger),
+            ]
+        )
+    finally:
+        msr._default_runner = original_runner
+    captured = capsys.readouterr()
+    assert rc == 2
+    assert "UNREADABLE" in captured.out
+    assert "contradicted_by_ledger" in captured.out
+
+
+# --------------------------------------------------------------------------
+# RECEIPT — re-derivability rests on the commands, and a write failure must
+# never destroy an expensive rate-limited read
+# --------------------------------------------------------------------------
+
+
+def test_receipt_pins_the_commands_and_windows_that_make_it_re_derivable(tmp_path: Path) -> None:
+    receipt = tmp_path / "receipt.jsonl"
+    original = msr._default_runner
+    msr._default_runner = _runner(_completed(stdout=json.dumps([{"cost": "1.00"}])))
+    try:
+        msr.main(
+            [
+                "--start",
+                "2026-07-09",
+                "--end",
+                "2026-08-17",
+                "--receipt",
+                str(receipt),
+                "--no-ledger-crosscheck",
+                "--retries",
+                "0",
+            ]
+        )
+    finally:
+        msr._default_runner = original
+    row = json.loads(receipt.read_text(encoding="utf-8").strip())
+    assert len(row["commands"]) == 2, "one command per chunk, so the read is reproducible"
+    for command in row["commands"]:
+        assert "billing" in command and "--json" in command
+        assert "--start" in command and "--end" in command
+    assert len(row["windows"]) == 2
+    assert [w["start"] for w in row["windows"]] == ["2026-07-09", "2026-08-09"]
+    assert [w["end_exclusive"] for w in row["windows"]] == ["2026-08-09", "2026-08-17"]
+    assert row["receipt_path"] == str(receipt)
+
+
+def test_a_receipt_write_failure_does_not_destroy_the_reading(capsys, tmp_path: Path) -> None:
+    """The read is expensive and rate-limited; never lose it to a bad path."""
+    unwritable = tmp_path / "a-file-not-a-dir"
+    unwritable.write_text("blocking", encoding="utf-8")
+    original = msr._default_runner
+    msr._default_runner = _runner(_completed(stdout=json.dumps([{"cost": "7.00"}])))
+    try:
+        rc = msr.main(
+            [
+                "--start",
+                "2026-08-15",
+                "--end",
+                "2026-08-16",
+                "--receipt",
+                str(unwritable / "receipt.jsonl"),
+                "--no-ledger-crosscheck",
+                "--retries",
+                "0",
+            ]
+        )
+    finally:
+        msr._default_runner = original
+    captured = capsys.readouterr()
+    assert rc == 0
+    assert "$7.00" in captured.out
+    assert "NOT WRITTEN" in captured.out
+
+
+def test_cli_rejects_a_non_positive_cap() -> None:
+    for bad in ("0", "-5"):
+        with pytest.raises(SystemExit) as excinfo:
+            msr.main(["--cap-usd", bad, "--no-receipt"])
+        assert excinfo.value.code == 2
 
 
 def test_ledger_crosscheck_labels_itself_non_authoritative(tmp_path: Path) -> None:
