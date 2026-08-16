@@ -54,7 +54,7 @@ DECODE_VERDICT: Final = STORE / "DECODE_AXIS_VERDICT.json"
 FIRE_ORDER: Final = STORE / "SEALED_T4_FIRE_ORDER.json"
 OUTPUT: Final = STORE / "dual_axis_pose"
 
-RUN_ID: Final = "ddm_ps1u_dual_axis_pose_20260816_r1"
+RUN_ID: Final = "ddm_ps1u_dual_axis_pose_20260816_r2"
 LANE_ID: Final = "ddm_ps1u_dual_axis_pose_n600_20260816"
 RUNTIME_LABEL: Final = "ps1u_p1d1_candidate"
 EXPECTED_CANDIDATE_SHA: Final = (
