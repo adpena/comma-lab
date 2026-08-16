@@ -23,13 +23,23 @@ Two measured facts, one law
    curriculum inheritance). verdict_scope: instance (D56, n60); per the sealed spec law
    a negative cannot be emitted from n60 — the n120 seeded confirmation is the owed
    discharge before any family word.
+3. **Second capacity form does not separate (F64, 65 ep from scorer-free birth):**
+   factorized w64 rank-19 lands best hard_d_seg 0.0029242 (ep60; ep65 0.0029793) —
+   decelerating descent, last-10-epoch band 0.0029-0.0032 — 2.75x the warm floor and
+   only 9-11% from D56 while both sit 150-180% above the floor. Per the same-defect-
+   negatives law this is ONE finding measured twice: the binding constraint is the
+   FRESH-INIT OPTIMIZATION REGIME at this budget, not the capacity form. Consequence:
+   capacity pressure is NOT confirmed, and the conditional wider-fresh arm (W96) does
+   not fire — it would measure the same confound a third time.
 
 The LAW this registers: comparisons across warm-vs-fresh students are CONFOUNDED by the
 optimizer-state pose carry unless (a) pose is read per fact 1's discount, and (b) seg is
-read at its asymptote, not mid-descent. The D56 seg asymptote is the un-confounded
-capacity read; the pose endpoint is not.
+read at its asymptote, not mid-descent. The D56/F64 seg asymptotes are the un-confounded
+capacity read; the pose endpoints are not — and near-identical asymptotes across
+capacity FORMS indict the regime, not capacity.
 
-Memo: ``.omx/research/ddm_wd3_d56_fresh_dense_verdict_20260815.md``.
+Memos: ``.omx/research/ddm_wd3_d56_fresh_dense_verdict_20260815.md`` +
+``.omx/research/ddm_wd3_f64_family_boundary_verdict_20260815.md``.
 """
 from __future__ import annotations
 
@@ -43,6 +53,7 @@ from tac.provenance.builders import build_provenance_for_macos_cpu_advisory
 EQUATION_ID = "wd3_fresh_topology_pose_carry_v1"
 AXIS = "[Darwin-mps training / n60 advisory] frozen-scorer fixed-subset instrument"
 MEMO = ".omx/research/ddm_wd3_d56_fresh_dense_verdict_20260815.md"
+F64_MEMO = ".omx/research/ddm_wd3_f64_family_boundary_verdict_20260815.md"
 D56_CONFIG_SHA256 = "f8e2c8e625bd01a8e2e3263e6a7b43cfb226c0fef7add0efff45cb36387f8526"
 
 #: MEASURED 2026-08-15 (W0 A/B, 4-epoch windows, matched weights/subset/epochs).
@@ -53,6 +64,7 @@ MEASURED_ENDPOINTS_N60 = {
     "W0_warm": {"hard_d_seg": 0.0010857, "d_pose": 0.02294},
     "W0_reset": {"hard_d_seg": 0.0010628, "d_pose": 0.03408},
     "D56_fresh": {"hard_d_seg": 0.002682, "d_pose": 0.3105},
+    "F64_fresh": {"hard_d_seg": 0.0029242, "d_pose": 0.2325},
 }
 
 
@@ -119,6 +131,40 @@ def build_wd3_fresh_topology_pose_carry_v1() -> CanonicalEquation:
             provenance=provenance,
             empirical_verification_status="VERIFIED_VIA_EMPIRICAL_ANCHOR",
         ),
+        EmpiricalAnchor(
+            anchor_id="wd3_f64_fresh_factorized_no_separation_20260815",
+            measurement_utc="2026-08-16T03:30:00Z",
+            inputs={
+                "arm": "F64 factorized_d4_w64_r19, scorer-free birth, 65 epochs "
+                       "(matched total budget; same n60 instrument)",
+                "run_wall_clock_s": 6851,
+                "peak_rss_mib": 7511,
+            },
+            predicted_output={
+                "question": "does a DIFFERENT capacity form (factorized vs dense) "
+                            "separate from D56 at matched budget?"
+            },
+            empirical_output={
+                "best_hard_d_seg_ep60": 0.0029242,
+                "endpoint_hard_d_seg_ep65": 0.0029793,
+                "d_pose_ep65": 0.2325,
+                "seg_ratio_vs_w0_floor": 2.75,
+                "ratio_vs_d56": 1.09,
+                "verdict": "NO SEPARATION — one finding measured twice; "
+                           "fresh-init regime binding, not capacity form",
+                "w96_gate": "capacity_pressure NOT confirmed; W96 does not fire",
+                "verdict_scope": "instance (F64, n60); n120 confirmation OWED",
+            },
+            residual=0.0,
+            source_artifact=F64_MEMO,
+            measurement_method=(
+                "full 65-epoch governed watched burn, attempt 1 (MPS env gate applied "
+                "at compose); per-epoch n60 evals through the same frozen-scorer "
+                "instrument; all payloads + stage checkpoints retained"
+            ),
+            provenance=provenance,
+            empirical_verification_status="VERIFIED_VIA_EMPIRICAL_ANCHOR",
+        ),
     )
     return CanonicalEquation(
         equation_id=EQUATION_ID,
@@ -143,8 +189,9 @@ def build_wd3_fresh_topology_pose_carry_v1() -> CanonicalEquation:
             "research_only": True,
             "score_claim": False,
             "promotion_eligible": False,
-            "verdict_scope": "instance for the D56 endpoint; the pose-carry LAW is the "
-                             "registered object (W0 A/B, one window — widen with F64)",
+            "verdict_scope": "instance for the D56/F64 endpoints; the pose-carry LAW "
+                             "and the no-separation regime read are the registered "
+                             "objects; family word gated on the n120 confirmation",
             "spec_law": "a negative cannot be emitted from n60 (sealed wd3 charter)",
         },
         units_in={"window_delta": "relative d_pose change over a matched epoch window"},
