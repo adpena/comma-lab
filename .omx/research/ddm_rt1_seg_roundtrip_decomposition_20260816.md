@@ -707,7 +707,7 @@ non-supply conclusion is unchanged and is now measured at a larger n than the br
 replaces.
 
 **verdict_scope: INSTANCE** — hv1 ep0634 base, ring-0 described set, r=1 described-set edit
-support, pose-null-constrained realization, this solver budget, n=4 seeded-random pairs. Per
+support, pose-null-constrained realization, this solver budget, n=9 seeded-random pairs. Per
 m96 a seeded-random subset **may** refute a bar (which is what happened: 0/4 clear it, and the
 maximum measured value still loses); a subset that *cleared* the bar would not have licensed a
 LIVE verdict without the fuller population — the aggregator enforces that asymmetry in code,
@@ -745,7 +745,7 @@ pose leg −0.00285, and *whichever way the pose term moves at larger n, the cha
 incapable of supplying a −0.0096 gap* — its entire seg gain at η=0.65 is 0.0190 S against a 0.0221 S
 rate cost. A supplier has to clear the gap, not graze zero.
 
-The closure is scoped (INSTANCE, n=4 seeded-random, this solver budget) and it is reopenable by
+The closure is scoped (INSTANCE, n=9 seeded-random, this solver budget) and it is reopenable by
 exactly two named things, neither of which is "try harder": a realization mechanism whose
 collateral is structurally lower than a solved local edit (the whole family measured here —
 flat paint, truth paint, band repaint, solved paint — is collateral-limited, §2.7/§6.3), **or**
@@ -765,7 +765,7 @@ that is a training target, and it is the one lever this unit did not bound away 
 ## §7 What this unit did NOT establish
 
 - **No causal `r`.** §3.4 is observational.
-- **η on hv1 is now measured (§6) but only at n=4 seeded-random pairs**, one solver budget, one
+- **η on hv1 is now measured (§6) but only at n=9 seeded-random pairs**, one solver budget, one
   support radius. It refutes the bar (0/4 clear it, and the maximum loses); it does not
   characterize the η distribution across the full 600.
 - **No LIVE verdict was ever available from this sample size** — by construction, per m96. Only
