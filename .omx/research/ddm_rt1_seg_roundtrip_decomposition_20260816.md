@@ -1,6 +1,6 @@
 ---
 arm: ddm_rt1
-title: "the seg axis is one pixel wide: 99.22% of hv1's scored flips sit ON the transmitted label boundary, the round trip is 33,743 flips (0.028604 S) MEASURED, flat paint is 35.4x worse, R supplies exactly zero, td1's r is 0.8492 -- and the free-band correction channel passes its coder gate at 32,270 real bytes then fails its realization bar (eta 0.6461 n=6 vs 0.753) and lands on BREAK-EVEN (+0.0003 S after a pose-aggregation correction to my own arithmetic), a non-supplier, so the seg axis routes to the renderer"
+title: "the seg axis is one pixel wide: 99.22% of hv1's scored flips sit ON the transmitted label boundary, the round trip is 33,743 flips (0.028604 S) MEASURED, flat paint is 35.4x worse, R supplies exactly zero, td1's r is 0.8492 -- and the free-band correction channel passes its coder gate at 32,270 real bytes then fails its realization bar (eta 0.6235 at n=9 vs 0.753, 0-of-n above it at every n) and is a NON-SUPPLIER (0.0183 S seg gain vs 0.0221 S rate cost; total +0.0025 S after correcting a pose-aggregation error in my own arithmetic), so the seg axis routes to the renderer"
 utc: 2026-08-16
 charter: ".omx/research/ddm_rt1_seg_roundtrip_decomposition_charter_20260816.md"
 axis: "[macOS-CPU advisory] frozen CPU-torch SegNet -- NEVER a score"
@@ -63,13 +63,18 @@ actually built and raced in **§5**.
 isolated single pixels (mean run 1.110), so the best real coder beats i.i.d. by 2.5% and the
 ceiling of all free conditioning is 12.2%.
 
-**§6 (follow-on #2, executed): the channel fails its realization bar and lands on zero.**
+**§6 (follow-on #2, executed): the channel fails its realization bar and cannot supply the gap.**
 Realization efficiency under the pose constraint, measured on hv1 for the first time, is
-**η = 0.6461** (n=6 seeded-random pairs, **0 of 6 above the bar**) against the required **0.753**.
-Seg+rate net is **+0.00314 S**; after the §6.2b correction the pose leg pays back **−0.00285 S**,
-so the **total is +0.00029 S — break-even.** The channel is not a catastrophe, it is a
-**non-supplier**: its whole seg gain at η=0.65 is 0.0190 S against a 0.0221 S rate cost, so it
-cannot cover a −0.0096 gap whichever way the pose term settles.
+**η = 0.6235** (n=9 seeded-random pairs, **0 of 9 above the bar**) against the required **0.753**.
+Seg+rate net is **+0.00381 S**; the pose leg pays back **−0.00129 S**, for a **total of
++0.00252 S**. The channel is a **non-supplier**: its whole seg gain at η=0.62 is **0.0183 S against
+a 0.0221 S rate cost**, so it cannot cover a −0.0096 gap whichever way the pose term settles.
+
+η is the stable quantity across the landing sequence (0.644 → 0.624 from n=3 to n=9, sd ~0.07,
+**0 of n above the bar at every n**). The pose leg is the noisy one: its payback shrank from
+×0.431 (n=6) to ×0.713 (n=9), which moved the total from a momentary **+0.00029 break-even** back
+to **+0.00252**. My own small-n caveat on that figure was correct and the later rows confirmed it
+— §6.2b carries the trajectory.
 
 Getting a trustworthy answer required finding and fixing **three defects in my own work** — two
 in the instrument, caught by a positive control (§6.1: sq1's objective and sq1's edit support each
@@ -78,8 +83,8 @@ artifact reported as physics), and one in my own arithmetic (§6.2b: I aggregate
 mean of per-pair ratios when the scorer averages d_pose itself — the two disagree in **sign**).
 
 **Net: every post-hoc lever on the seg axis is now bounded — flat paint 35× worse, band repaint
-+1.38 S, correction channel break-even (+0.0003 S) — so the whole seg axis routes to the
-renderer's own training.** lr2 closed this family at 14.6× this vehicle's flip count; §5–§6
++1.38 S, correction channel a non-supplier (+0.0025 S at n=9) — so the whole seg axis routes to
+the renderer's own training.** lr2 closed this family at 14.6× this vehicle's flip count; §5–§6
 re-priced it at *this* operating point, and it still cannot supply the gap — now with the reason
 measured rather than inherited, and with the one number I got wrong corrected in §6.2b.
 **Pointer UNMOVED.**
@@ -752,7 +757,7 @@ cross.** That is why this is a closure and not a deferral.
 
 **Everything routes to follow-on #3: the edge-weighted Road↔Lane objective in the renderer's own
 training** (wd3 / ns1-P1 line). This unit has now bounded every post-hoc lever on the seg axis —
-paint (35× worse), band repaint (+1.38 S), correction channel break-even (+0.0003 S) — while the render
+paint (35× worse), band repaint (+1.38 S), correction channel a non-supplier (+0.0025 S) — while the render
 itself is measured to be the only actor that ever put the scorer within 0.1 logits of the answer
 (§2.8). The seg axis is 99.22% a one-pixel edge-placement problem concentrated 43.4% on Road↔Lane;
 that is a training target, and it is the one lever this unit did not bound away from sub-0.15.
