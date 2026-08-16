@@ -142,3 +142,79 @@ is PERSISTED with sha256 + byte count in the receipt. Never a scalars-only artif
 Payloads to /Volumes/APDataStore/pact/ (VertigoDataTier is near-full).
 No launches from the arm. NO Claude/co-author attribution on commits.
 Report honestly: if the ladder dies, the d_pose(MSE) curve IS the deliverable.
+
+---
+
+## AMENDMENT 1 — 2026-08-16, round-1 recursive adversarial review (CRITICAL, self-caught)
+
+**This amendment BINDS and overrides any conflicting line above.** Caught by MAIN reviewing
+its own in-flight ra2 build before a scorer slot was spent. Two defects, one root cause.
+
+### D1 (CRITICAL) — the affordance column is CUDA-denominated; the measurement was routed to CPU
+
+The break-even rule above uses `POSE = 0.008294576541331089`, which is the frontier's
+**contest-CUDA** pose contribution (verified: `/incumbent/score_pose_contribution` in
+`ddm_hv1_t4_sealed_fire_order_ep0634_20260815.json`, axis `[contest-CUDA] Tesla T4 n600`;
+implied `d_pose = POSE²/10 = 6.880e-06`, matching `ddm_pv1_pose_floor_and_admission_bar_20260816.md`
+§ "the frontier's d_pose is 6.88e-06"). Step 3 then routes the measurement to the
+**macOS-CPU** authority, where the same bytes measure `d_pose = 1.4747e-04` (pv1 line 91,
+n600 advisory) — **21.4× larger**, consistent with the settled `#1054` CPU row (pose 21×
+CPU-degraded).
+
+Judging a CPU-measured ratio against the CUDA-derived affordance is a cross-instrument
+comparison, and the bias runs the wrong way. On the CPU axis the pose contribution is
+`√(10·1.4747e-04) = 0.038402`, so the affordance is far tighter:
+
+| rank | saved B | rate credit R (S) | affordance on CUDA | affordance on CPU | bar ratio |
+|---:|---:|---:|---:|---:|---:|
+| 11 | 1,667 | 1.110e-03 | 1.286× | 1.059× | 1.21× |
+| 8 | 7,587 | 5.052e-03 | 2.589× | 1.280× | 2.02× |
+| 6 | 11,049 | 7.357e-03 | 3.561× | 1.420× | 2.51× |
+| **4** | **14,709** | **9.794e-03** | **4.756×** | **1.575×** | **3.02×** |
+| 1 | 20,338 | 1.354e-02 | 6.931× | 1.830× | 3.79× |
+
+At the headline rank the bar is **3.02× too loose** — the false-ADMIT shape. Worse, a CPU
+d_pose is dominated by an instrument floor 21× the CUDA signal, so carrier damage is
+*diluted* in the CPU ratio: the error is anti-conservative on the pose axis, the same
+direction as the `m88`/`m96` prefix-bias law.
+
+Root cause is a **wrong-object transfer**: `ddm_pk4`'s law says *CPU beats MLX* (parity
+2.29e-05 vs MLX 0.55% rel drift). It does **not** say a CPU d_pose proxies a CUDA d_pose.
+Genus: `cross-regime-constant-transfer-genus-finishing-stage`.
+
+**Binding cure.** CLAUDE.md "Apples-to-apples evidence discipline" rule 2 — CPU and CUDA are
+separate evidence spaces, never inferred from each other:
+1. The CPU legs are a **SCREEN and knee-bracket ONLY**, never an ADMIT. Line 125's
+   "the ADMIT decision requires n600 on the torch-CPU authority" is **SUPERSEDED**: the ADMIT
+   requires a **dual-axis T4 row**, because the frontier is a CUDA row.
+2. Every CPU screen must be judged against the **CPU-axis affordance** computed from a
+   **same-instrument** CPU base d_pose measured in this run — never against the CUDA column,
+   and never against a base literal quoted from another instrument.
+3. The rank-12 full-rank refit is **not** the base (it saves 21 B, so it is not byte-identical).
+   Measure a genuine rank-0 shipped-carrier leg through the identical pipeline.
+4. Report every d_pose with its axis tag and its base's axis tag in the same row.
+
+### D2 (CRITICAL) — the render shortcut is a MECHANISM reduction
+
+MAIN's in-flight plan was to skip step 2's archive rebuild and instead synthesize the slave
+frame directly (`einsum → 127.5+64·c/√12 → clamp → round → bicubic → round → uint8`),
+reasoning that only frame_0 changes so the archive is unnecessary. **That is a second
+receiver, and the OPTIMAL FORM block declares MECHANISM reduction: NONE.** It is the same
+class the charter already forbids for the codec ("Do NOT hand-roll a second codec").
+
+The path is not benign. `inflate.py:657` sets `pose_batch = 64 if device.type == "cuda" else 1`
+— the receiver renders carriers at **batch 64 on CUDA and batch 1 on CPU**. Per the measured
+et4 law (*batch shape is part of the forward instrument*; oneDNN flips argmax ties between
+batch 1 and 16), a hand-rolled render can differ from the shipped one at `.round()` ties, and
+would differ from the T4 render regardless.
+
+**Binding cure.** Step 2 stands as written: build the real candidate archive per rank and
+render through the **shipped receiver**. No reimplementation of the synthesis chain is
+admissible as a d_pose measurement. If a fast pre-screen is wanted, it may rank ranks but may
+not produce any number reported as d_pose.
+
+### What is unchanged
+
+The ra1 ladder, both premises (P1 frame-0-only ⇒ seg-invisible; P2 least-squares lower bound),
+the pk2-gate invalidation, and the break-even *form* are untouched. Only the **axis of the
+denominator** and the **realization path** are corrected.

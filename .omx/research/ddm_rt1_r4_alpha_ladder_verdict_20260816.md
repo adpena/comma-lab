@@ -26,14 +26,26 @@ adding one.
 
 | α | flips_vs_gt | harm | seg (S units) | ΔS vs base | below base? |
 |---:|---:|---:|---:|---:|:--|
-| 0 (identity) | 34,938 | — | 0.029611 | — | — |
-| 0.02 | 35,155 | +217 | 0.029801 | +0.000184 | no |
-| 0.05 | 36,886 | +1,948 | 0.031269 | +0.001651 | no |
-| 0.10 | 44,851 | +9,913 | 0.038021 | +0.008403 | no |
-| 0.20 | 84,081 | +49,143 | 0.071276 | — | no |
-| 0.40 | 305,655 | +270,717 | 0.259107 | — | no |
+| 0 (identity) | 34,938 | — | 0.029617310 | — | — |
+| 0.02 | 35,155 | +217 | 0.029801263 | +0.000183953 | no |
+| 0.05 | 36,886 | +1,948 | 0.031268650 | +0.001651340 | no |
+| 0.10 | 44,851 | +9,913 | 0.038020664 | +0.008403354 | no |
+| 0.20 | 84,081 | +49,143 | 0.071276347 | +0.041659037 | no |
+| 0.40 | 305,655 | +270,717 | 0.259106954 | +0.229489644 | no |
+| 1.00 (anchor) | 1,663,803 | +1,628,865 | 1.410423279 | +1.380805969 | no |
 
-`REFUTED iff d_seg(α) > d_seg(0) for EVERY α` — **5 of 5, monotone, no ambiguity.**
+Every cell is `100·flips/117,964,800` from `R4_LADDER_VERDICT.json`; the ΔS column is the
+receipt's `delta_S_vs_base`. `REFUTED iff d_seg(α) > d_seg(0) for EVERY α` — **5 of 5 test
+rungs (6 of 6 including the α=1 anchor), monotone, no ambiguity.**
+
+> **CORRECTION 2026-08-16 (round-1 recursive adversarial review, self-caught).** The first
+> published version of this table printed the α=0 cell as `0.029611` — which is the
+> **contest-CUDA frontier seg component**, not this leg's advisory measurement
+> (`0.029617310`, a 6.31e-06 S / 7.4-flip difference). The receipt was always correct and
+> every ΔS was computed from the correct advisory baseline, so **the verdict never moved**;
+> only the displayed cell was wrong. It was wrong in precisely the genus
+> `ddm_errata_8dp_band_instrument_mixing_20260813` names — a CUDA-axis number standing in an
+> advisory-axis column. Two rungs whose ΔS was elided (`—`) are also filled in above.
 
 ## The mechanism — and it is stronger than the verdict
 
