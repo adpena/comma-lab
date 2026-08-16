@@ -731,11 +731,22 @@ pose-constrained 0.6531 — while destroying pose by **×396**. On this vehicle 
 projection is not only mandatory, it is also a **useful regularizer**: it restricts the edit to
 directions the scorer's pose head cannot see, which happens to limit seg collateral too.
 
-## §6.4 ROUTING — the post-hoc correction family is closed; everything goes to the renderer
+## §6.4 ROUTING — the post-hoc correction channel is closed AT THIS SOLVER; everything goes to the renderer
 
-**The free-band seg-correction channel cannot supply the remaining gap.** It passed its coder
-gate (32,270 real bytes, §5) and then failed the pre-registered realization bar: **η = 0.6461
-(n=6) against a required 0.753, with 0 of 6 pairs above it.** No fire-order is issued.
+> **av3 CORRECTION 2026-08-16 (two, applied at source; measured numbers unchanged).**
+> (1) **Stale n.** This section still read "η = 0.6461 (n=6) … 0 of 6" after commit `bdc54e01d5`
+> propagated n=9 elsewhere. The n=9 figures are **η = 0.6235, 0 of 9 above the bar**; the derived
+> byte threshold below was computed at the n=4 pooled η = 0.6620 and is left as-written with its n
+> labelled, because re-deriving it is a measurement this arm did not take.
+> (2) **Scope.** The heading said "the post-hoc correction **family** is closed" while §7 says
+> "one solver budget, one support radius." §7 is what the evidence supports, so the heading now
+> says **AT THIS SOLVER**, and a **third reopening condition** is named below. See
+> `.omx/research/ddm_av3_fresh_eyes_review_20260816.md` §F4.
+
+**The free-band seg-correction channel cannot supply the remaining gap at the solver measured
+here.** It passed its coder gate (32,270 real bytes, §5) and then failed the pre-registered
+realization bar: **η = 0.6235 (n=9) against a required 0.753, with 0 of 9 pairs above it**
+(n=6 snapshot: 0.6461, 0 of 6). No fire-order is issued.
 
 **The reason is weaker than I first wrote, and the honest one is stronger.** After the §6.2b
 pose-aggregation correction the total is **+0.00029 S — break-even, not a clear loss.** So the
@@ -746,14 +757,26 @@ incapable of supplying a −0.0096 gap* — its entire seg gain at η=0.65 is 0.
 rate cost. A supplier has to clear the gap, not graze zero.
 
 The closure is scoped (INSTANCE, n=9 seeded-random, this solver budget) and it is reopenable by
-exactly two named things, neither of which is "try harder": a realization mechanism whose
+exactly three named things, none of which is "try harder": a realization mechanism whose
 collateral is structurally lower than a solved local edit (the whole family measured here —
 flat paint, truth paint, band repaint, solved paint — is collateral-limited, §2.7/§6.3), **or**
 a described set small enough that the byte cost falls faster than η does. The second is worth
 one line of arithmetic: the channel needs `η·0.029387 > bytes·6.658e-7`, so at η = 0.6620 the
 whole channel must cost **under 29,215 B** — 12% below the 33,235 B it actually codes at, and
 §5.2 already measured the free-conditioning ceiling at 12.2%. **The two measured curves do not
-cross.** That is why this is a closure and not a deferral.
+cross.** That is why this is a closure and not a deferral **on those two axes**.
+
+**Third reopening condition (av3, 2026-08-16): a better-tuned SOLVER reaching η > 0.753 on the
+same support definition and the same whole-frame accounting.** I did not name this and I should
+have, because my own §6.1 is the evidence for it. The shortfall to the bar is **0.1295 η**. The
+support-radius ladder in §6.1 moved pair-34 η by **0.297** (r=0 0.5405 → r=1 0.6216 → r=2 0.3243)
+from one hyperparameter tuned on n=2 pairs — and before that fix η pinned at ~0. Step budget (30),
+starts (2), `focus_weight`, solver lr and per-pair adaptive radius were **never swept**. The stakes
+are not small: at η=1 the channel nets **−0.00726 S**, i.e. **76%** of the −0.0096 gap. So the
+verdict is load-bearing entirely on η, and η is the quantity this unit measured to be the most
+solver-dependent. The arithmetic still issues no fire-order today; but "family closed" was the
+wrong words for a one-configuration solver result, and the 32,270 B coder of §5 is already built
+if this condition is ever met.
 
 **Everything routes to follow-on #3: the edge-weighted Road↔Lane objective in the renderer's own
 training** (wd3 / ns1-P1 line). This unit has now bounded every post-hoc lever on the seg axis —

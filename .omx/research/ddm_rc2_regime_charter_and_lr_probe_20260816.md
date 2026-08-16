@@ -111,8 +111,20 @@ checkpoints/semantic_renderer_w96_b4_qat4_fixedtau05_tail6k_lr2e7.pt \
   --eval-every 100 --checkpoint-every 100 \
   --device mps --seed 20260715 \
   --out  /Volumes/APDataStore/pact/ddm_lr1/<arm>/result.json \
-  --save /Volumes/APDataStore/pact/ddm_lr1/<arm>/checkpoints
+  --save /Volumes/APDataStore/pact/ddm_lr1/<arm>/ckpt
 ```
+
+> **av3 CORRECTION 2026-08-16 (BLOCKING, applied at source).** The `--save` value above previously
+> read `.../<arm>/checkpoints`. A2 fired it literally, an empty directory of that name already
+> existed at the run dir, and the **final** save (`train_semantic_quantized_resumable.py:1295`,
+> `os.replace` inside `_atomic_torch_save`) raised `IsADirectoryError` after 379 s of Metal.
+> Because `_atomic_write_json(result, args.out)` is ordered **after** that save, **A2 produced no
+> `result.json`** — its deployment-EMA `final_seg`, `ema_deployed_argmax_parity`,
+> `packed_parameter_bytes` and verdict were computed and discarded. `tools/safe_run.py` reported
+> `status=ok exit=1`. C0 survived only because it was fired with `--save .../C0/ckpt`, which this
+> ticket now specifies for every arm. Owed 2-landing (not this arm's to write): an argparse guard
+> that `--save` is not an existing directory, and writing `result.json` **before** the checkpoint.
+> See `.omx/research/ddm_av3_fresh_eyes_review_20260816.md` §F2.
 
 **Pins (re-hash at fire time; do not trust these strings as current).** `--init` sha256
 `3948ccfcd44778dc42affee18a10c3f3baa434d1a2eb2345a013146c1dbfb647` (== sd1
