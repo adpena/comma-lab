@@ -90,9 +90,9 @@ rank-4 on the LOOSEST (T4) axis, a pose-metric-optimal rank-4 subspace must carr
 pose-relevant error at the same rank** under the quadratic form. On the advisory axis, 64.7×.
 
 That is a large ask for a 12-dimensional object whose spectrum is flat (cond 17.32 on the
-rendered field). I record it as **UNLIKELY on the evidence**, not as closed: Eckart–Young bounds
-the Frobenius case only, so no theorem shuts the pose-metric door, and the honest cost of finding
-out is now low (§5).
+rendered field). ~~I record it as UNLIKELY on the evidence, not as closed.~~ **SUPERSEDED by §8.1/§8.3:** the
+complete ladder misses by 32.2×–145.3× monotone with a FLAT spectrum, so the door is closed for
+rank-r truncation in ANY basis. No theorem shuts it — arithmetic does.
 
 ## 5. Cost correction — the successor is cheaper than the α=0 memo implied
 
@@ -102,12 +102,12 @@ matched Fisher-vs-Euclid cosine and rel-norm rows. The pose-metric rung is a whi
 existing 600×12 coefficient matrix against producers that already exist — not a from-scratch
 build.
 
-**Named successor (owner MAIN, $0 + one advisory slot):** whiten the coefficient space by the
-measured PoseNet quadratic, truncate to rank-r *there*, re-price against these same bars, and
-report the dual-metric pair (never one alone, per [[m65]]).
-**Falsifier:** if the pose-metric rank-4 damage also exceeds the 4.7394× T4 bar, the carrier
-family is closed in BOTH metrics at INSTANCE scope and the remaining pose route is exclusively
-the js1 joint line.
+~~**Named successor:** whiten the coefficient space by the measured PoseNet quadratic, truncate to
+rank-r *there*, re-price against these same bars.~~ **WITHDRAWN by §8.3.** Whiten-then-SVD is a
+GENERIC move in a derived coordinate, and §8.1 shows the tightest rung misses by 32.2× while the
+only measured metric-mismatch magnitude on this object is 9.23×. A rank ladder in any basis is
+closed. The surviving successor is §8.4's **common pose-null dimension** — an exactness question,
+not an approximation one.
 
 ## 6. Two products beyond the refusal
 
@@ -126,8 +126,11 @@ the js1 joint line.
 - `K_eff` is a one-point recalibration at a single error magnitude. It establishes that K varies
   along the ladder; it does not establish the functional form of that variation. Two points fix a
   line, not a curve — same caution the α=0 memo owed and now owes twice.
-- `p = 2` is retained as the principled exponent (d_pose is a quadratic form). The 9.23× could
-  alternatively be read as `p ≠ 2`; distinguishing requires a third rung.
+- ~~`p = 2` is retained as the principled exponent (d_pose is a quadratic form).~~ **CORRECTED by
+  §8.2: `p = 2` is ASSUMED, not principled.** d_pose is quadratic in the *pose residual*, but the
+  map coefficients → pose is the nonlinear chain render → R → uint8 → PoseNet; `p = 2` assumes
+  that chain is locally linear at this perturbation size, and the 9.23× over-prediction is
+  evidence against exactly that. The `p ≠ 2` reading is live, not a footnote.
 
 ---
 
