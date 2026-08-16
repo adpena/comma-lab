@@ -147,6 +147,15 @@ Fixed to `is False` (positive evidence only), plus two regression tests
 `test_deleting_both_pose_fields_is_not_a_bypass`). **35 passed** after the fix;
 real-corpus verdicts unchanged at 7 ALLOW / 1 REFUSE.
 
+**The fix immediately caught a live instance of the same bypass.**
+`experiments/tests/test_ddm_qs1_frame0_schur_coupled_solve.py::test_dispatcher_loads_and_verifies_the_sealed_input_census`
+had been passing through the real loader with a request that declared **no
+distortion screen at all** and an empty `POSE_SCREEN_RESULT.json` (`{}`) — it
+loaded only because the absent `pose_unmeasured` key read as "measured". That
+test passing was the bypass in action, in-tree, on the transport that fired
+ps1u. Fixture corrected to declare a real screen; the census assertion it
+actually tests is unchanged. Independent evidence the fix was not cosmetic.
+
 ## What I deliberately did NOT change, and why
 
 - **The 366 `nonadditive_stack_interactions_unmeasured` / 48

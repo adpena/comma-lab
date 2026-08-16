@@ -111,6 +111,12 @@ def test_dispatcher_loads_and_verifies_the_sealed_input_census(tmp_path: Path) -
         "resume_from": "test-run",
         "retain_pose_vectors": True,
         "inputs": inputs,
+        # A dispatchable request must carry a locally MEASURED distortion axis
+        # (tac.deploy.dispatch_axis_screen).  This fixture exercises the input
+        # census, so it declares the cheapest real screen; before that gate
+        # landed it declared none at all and loaded anyway.
+        "local_pose_delta": -1.2e-05,
+        "pose_unmeasured": False,
         "score_claim": False,
         "promotion_eligible": False,
     }
