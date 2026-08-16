@@ -121,7 +121,11 @@ def main() -> int:
         sub_scale = np.maximum(np.abs(c_refit).max(axis=0) / 2047.0, 1e-12)
         q = np.clip(np.rint(c_refit / sub_scale), -2048, 2047).astype(np.int64)
         delta = np.diff(np.concatenate([np.zeros((1, len(keep)), dtype=np.int64), q]), axis=0)
+        # Wrap into the signed 12-bit range BEFORE zigzag; the receiver's cumsum
+        # is modular (inflate.py:278). See ra1's _assert_round_trip docstring.
+        delta = ((delta + 2048) & 0xFFF) - 2048
         zigzag = ((delta << 1) ^ (delta >> 63)) & 0xFFF
+        ra1._assert_round_trip(zigzag, q)
         blob = ra1.encoded_bytes(
             encoder,
             np.asarray(basis_scales)[keep],

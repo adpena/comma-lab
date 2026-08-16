@@ -129,6 +129,30 @@ def load_codec():
     return module, repack, encoder
 
 
+def _assert_round_trip(zigzag: np.ndarray, q: np.ndarray) -> None:
+    """Replay the SHIPPED receiver's reconstruction and refuse on mismatch.
+
+    inflate.py:275-281 does, per column:
+        codes = zz & 0xFFF
+        delta = (codes >> 1) ^ -(codes & 1)          # unzigzag
+        codes = cumsum(delta, dim=0) & 0xFFF          # MODULAR
+        codes = where(codes >= 0x800, codes - 0x1000, codes)
+    A payload that does not reproduce `q` here is CORRUPT on disk regardless of
+    how clean the receipt's scalars look. This is the P0 measure-and-discard
+    sister defect: emitting bytes nobody decoded.
+    """
+    codes = np.asarray(zigzag, dtype=np.int64) & 0xFFF
+    delta = (codes >> 1) ^ -(codes & 1)
+    recon = np.cumsum(delta, axis=0) & 0xFFF
+    recon = np.where(recon >= 0x800, recon - 0x1000, recon)
+    if not np.array_equal(recon, np.asarray(q, dtype=np.int64)):
+        bad = int((recon != q).sum())
+        raise SystemExit(
+            f"ROUND-TRIP FAILED: {bad} of {q.size} coefficients do not decode "
+            "back through the shipped receiver — refusing to emit a corrupt payload"
+        )
+
+
 def normalized_basis(raw_basis: torch.Tensor) -> torch.Tensor:
     """Byte-for-byte the receiver's normalized_basis (inflate.py:621-627)."""
     basis = F.interpolate(
@@ -255,7 +279,14 @@ def main() -> int:
         sub_scale = np.maximum(np.abs(c_refit).max(axis=0) / 2047.0, 1e-12)
         q = np.clip(np.rint(c_refit / sub_scale), -2048, 2047).astype(np.int64)
         delta = np.diff(np.concatenate([np.zeros((1, r), dtype=np.int64), q]), axis=0)
+        # The receiver's cumsum is MODULAR (inflate.py:278 `cumsum(...) & 0xFFF`),
+        # so delta must be wrapped into the signed 12-bit range BEFORE zigzag.
+        # Masking AFTER zigzag (the pre-2026-08-16 bug) truncates the high bit of
+        # an already-doubled value and decodes to a different number whenever
+        # |delta| > 2047 -- 11 of 12 ranks emitted corrupt payloads that way.
+        delta = ((delta + 2048) & 0xFFF) - 2048
         zz = ((delta << 1) ^ (delta >> 63)) & 0xFFF
+        _assert_round_trip(zz, q)
 
         sub_basis = basis_codes.reshape(CARRIER_DIM, -1)[keep].reshape(-1)
         enc = encoded_bytes(
