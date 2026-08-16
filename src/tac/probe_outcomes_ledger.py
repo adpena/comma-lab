@@ -135,6 +135,7 @@ import datetime as _dt
 import fcntl
 import json
 import os
+import re
 import socket
 import threading
 import time
@@ -176,6 +177,9 @@ EVENT_OPERATOR_OVERRIDE = "operator_override"
 # ``reactivation_criteria_derivation_provenance`` so downstream feeder consumers
 # can distinguish auto-derived vs operator-supplied criteria.
 EVENT_BACKFILL = "backfill"
+# ddm_vh2 (2026-08-10): vehicle-corpus harvest routing is a distinct event
+# carried by this canonical store.  It is deliberately NOT a second JSONL.
+EVENT_VEHICLE_ROUTING = "vehicle_routing"
 
 VALID_EVENT_TYPES = frozenset(
     {
@@ -185,8 +189,49 @@ VALID_EVENT_TYPES = frozenset(
         EVENT_EXPIRED,
         EVENT_OPERATOR_OVERRIDE,
         EVENT_BACKFILL,
+        EVENT_VEHICLE_ROUTING,
     }
 )
+
+# Vehicle-routing status is intentionally separate from probe verdict.  Probe
+# verdicts answer whether a probe blocks dispatch; routing status answers who
+# owns a harvested finding and what condition fires it.  UNOWNED is absent by
+# construction and rejected explicitly below.
+ROUTING_STATUS_ROUTED_FIRED = "ROUTED-FIRED"
+ROUTING_STATUS_ROUTED_QUEUED = "ROUTED-QUEUED"
+ROUTING_STATUS_DEFERRED_WITH_BLOCKER = "DEFERRED-WITH-BLOCKER"
+ROUTING_STATUS_DEAD_ON_THIS_BASE = "DEAD-ON-THIS-BASE"
+ROUTING_STATUS_NEEDS_REMEASURE = "NEEDS-REMEASURE"
+VALID_ROUTING_STATUSES = frozenset(
+    {
+        ROUTING_STATUS_ROUTED_FIRED,
+        ROUTING_STATUS_ROUTED_QUEUED,
+        ROUTING_STATUS_DEFERRED_WITH_BLOCKER,
+        ROUTING_STATUS_DEAD_ON_THIS_BASE,
+        ROUTING_STATUS_NEEDS_REMEASURE,
+    }
+)
+
+EVIDENCE_CLASS_MEASURED = "MEASURED"
+EVIDENCE_CLASS_DERIVED = "DERIVED"
+EVIDENCE_CLASS_MEASURED_DERIVED = "MEASURED+DERIVED"
+EVIDENCE_CLASS_BUILT = "BUILT"
+EVIDENCE_CLASS_DESIGNED_ONLY = "DESIGNED-ONLY"
+EVIDENCE_CLASS_SOURCE_INSPECTED = "SOURCE-INSPECTED"
+EVIDENCE_CLASS_MIXED = "MIXED"
+VALID_VEHICLE_ROUTING_EVIDENCE_CLASSES = frozenset(
+    {
+        EVIDENCE_CLASS_MEASURED,
+        EVIDENCE_CLASS_DERIVED,
+        EVIDENCE_CLASS_MEASURED_DERIVED,
+        EVIDENCE_CLASS_BUILT,
+        EVIDENCE_CLASS_DESIGNED_ONLY,
+        EVIDENCE_CLASS_SOURCE_INSPECTED,
+        EVIDENCE_CLASS_MIXED,
+    }
+)
+
+VEHICLE_CORPUS_ROOT = REPO_ROOT / ".omx" / "research"
 
 # Canonical provenance string recorded on auto-derived ``reactivation_criteria``.
 # Sister of Catalog #371 auto-recalibrator pattern. Operator-routable downstream
@@ -599,6 +644,74 @@ def _validate_event_record(record: dict[str, Any]) -> None:
         )
 
 
+    if event_type == EVENT_VEHICLE_ROUTING:
+        _validate_vehicle_routing_record(record)
+
+
+def _require_nonempty_routing_string(record: dict[str, Any], key: str) -> str:
+    value = record.get(key)
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"vehicle-routing {key} must be a non-empty string")
+    if value.strip().upper() == "UNOWNED":
+        raise ValueError(f"vehicle-routing {key}=UNOWNED is forbidden")
+    return value.strip()
+
+
+def _validate_vehicle_routing_record(record: dict[str, Any]) -> None:
+    """Fail closed on an ownerless or incompletely routed harvest finding."""
+
+    route_id = _require_nonempty_routing_string(record, "route_id")
+    if route_id != record.get("probe_id"):
+        raise ValueError("vehicle-routing route_id must equal probe_id")
+    _require_nonempty_routing_string(record, "lineage")
+    _require_nonempty_routing_string(record, "source_doc")
+    _require_nonempty_routing_string(record, "corpus_artifact")
+    _require_nonempty_routing_string(record, "finding")
+    _require_nonempty_routing_string(record, "vehicle_scope")
+    _require_nonempty_routing_string(record, "owner")
+    _require_nonempty_routing_string(record, "consumer")
+
+    sha = _require_nonempty_routing_string(record, "sha").lower()
+    if re.fullmatch(r"[0-9a-f]{64}", sha) is None:
+        raise ValueError("vehicle-routing sha must be a 64-character lowercase SHA-256")
+
+    evidence_class = record.get("evidence_class")
+    if evidence_class not in VALID_VEHICLE_ROUTING_EVIDENCE_CLASSES:
+        raise ValueError(
+            "vehicle-routing evidence_class must be one of "
+            f"{sorted(VALID_VEHICLE_ROUTING_EVIDENCE_CLASSES)!r}, "
+            f"got {evidence_class!r}"
+        )
+
+    status = record.get("status")
+    if status not in VALID_ROUTING_STATUSES:
+        raise ValueError(
+            "vehicle-routing status must be one of "
+            f"{sorted(VALID_ROUTING_STATUSES)!r}; UNOWNED is not legal, "
+            f"got {status!r}"
+        )
+
+    fire_order = record.get("fire_order")
+    blocker = record.get("blocker")
+    fire_condition = record.get("fire_condition")
+    if status in {
+        ROUTING_STATUS_ROUTED_FIRED,
+        ROUTING_STATUS_ROUTED_QUEUED,
+        ROUTING_STATUS_NEEDS_REMEASURE,
+    }:
+        if not isinstance(fire_order, str) or not fire_order.strip():
+            raise ValueError(f"vehicle-routing status {status} requires fire_order")
+        if blocker is not None or fire_condition is not None:
+            raise ValueError(f"vehicle-routing status {status} uses fire_order, not blocker/fire_condition")
+    else:
+        if not isinstance(blocker, str) or not blocker.strip():
+            raise ValueError(f"vehicle-routing status {status} requires a named blocker")
+        if not isinstance(fire_condition, str) or not fire_condition.strip():
+            raise ValueError(f"vehicle-routing status {status} requires fire_condition")
+        if fire_order is not None:
+            raise ValueError(f"vehicle-routing status {status} uses blocker/fire_condition, not fire_order")
+
+
 def _save_ledger(rows: list[dict[str, Any]], path: Path | None = None) -> None:
     """Atomic write — unique tmp + fsync + os.replace.
 
@@ -1000,6 +1113,317 @@ def update_probe_outcome(
 
 
 # ─────────────────────────────────────────────────────────────────────────
+# Vehicle-corpus routing extension (ddm_vh2)
+# ─────────────────────────────────────────────────────────────────────────
+
+
+@dataclass(frozen=True)
+class VehicleRoutingAppendResult:
+    appended: tuple[dict[str, Any], ...]
+    already_present: tuple[dict[str, Any], ...]
+
+
+@dataclass(frozen=True)
+class VehicleCorpusArtifact:
+    lineage: str
+    path: str
+    kind: str
+
+
+_ROUTING_STATUS_TO_PROBE_VERDICT = {
+    ROUTING_STATUS_ROUTED_FIRED: VERDICT_PROCEED,
+    ROUTING_STATUS_ROUTED_QUEUED: VERDICT_PROCEED,
+    ROUTING_STATUS_DEFERRED_WITH_BLOCKER: VERDICT_DEFER,
+    ROUTING_STATUS_DEAD_ON_THIS_BASE: VERDICT_KILL,
+    ROUTING_STATUS_NEEDS_REMEASURE: VERDICT_PARTIAL,
+}
+
+
+def _build_vehicle_routing_record(
+    *,
+    route_id: str,
+    lineage: str,
+    source_doc: str,
+    corpus_artifact: str,
+    sha: str,
+    finding: str,
+    evidence_class: str,
+    vehicle_scope: str,
+    status: str,
+    owner: str,
+    consumer: str,
+    fire_order: str | None = None,
+    blocker: str | None = None,
+    fire_condition: str | None = None,
+    source_harvest: str | None = None,
+    supersedes_route_id: str | None = None,
+    notes: str | None = None,
+    agent: str = "codex",
+) -> dict[str, Any]:
+    """Build the typed routing event before the locked batch append."""
+
+    now = _now_iso()
+    record: dict[str, Any] = {
+        "schema_version": SCHEMA_VERSION,
+        "event_type": EVENT_VEHICLE_ROUTING,
+        "probe_id": route_id,
+        "route_id": route_id,
+        "substrate": f"vehicle_routing::{lineage}",
+        "recipe_path": None,
+        "probe_kind": "vehicle_harvest_routing",
+        "verdict": _ROUTING_STATUS_TO_PROBE_VERDICT.get(status, VERDICT_OPERATOR_REVIEW_REQUIRED),
+        "metric_name": "harvested_finding_count",
+        "metric_value": 1.0,
+        "threshold": None,
+        "threshold_token": None,
+        "evidence_path": source_doc,
+        "next_action": fire_order or fire_condition,
+        "blocker_status": BLOCKER_STATUS_ADVISORY,
+        "dispatched_at_utc": None,
+        "adjudicated_at_utc": now,
+        "expires_at_utc": None,
+        "staleness_window_days": None,
+        "agent": agent,
+        "subagent_id": "ddm_vh2",
+        "session_id": None,
+        "notes": notes,
+        "written_at_utc": now,
+        "written_pid": os.getpid(),
+        "written_host": socket.gethostname(),
+        "lineage": lineage,
+        "source_doc": source_doc,
+        "corpus_artifact": corpus_artifact,
+        "sha": sha.lower(),
+        "finding": finding,
+        "evidence_class": evidence_class,
+        "vehicle_scope": vehicle_scope,
+        "status": status,
+        "owner": owner,
+        "consumer": consumer,
+        "fire_order": fire_order,
+        "blocker": blocker,
+        "fire_condition": fire_condition,
+        "source_harvest": source_harvest,
+        "supersedes_route_id": supersedes_route_id,
+        "axis_tag": "[scorer-free corpus harvest; score_claim=false]",
+        "score_claim": False,
+        "promotion_eligible": False,
+    }
+    _validate_event_record(record)
+    return record
+
+
+_ROUTING_VOLATILE_FIELDS = frozenset({"adjudicated_at_utc", "written_at_utc", "written_pid", "written_host"})
+
+
+def _routing_semantic_projection(record: dict[str, Any]) -> dict[str, Any]:
+    return {k: v for k, v in record.items() if k not in _ROUTING_VOLATILE_FIELDS}
+
+
+def _save_appended_events_preserving_existing_text(
+    records: list[dict[str, Any]],
+    *,
+    path: Path,
+) -> None:
+    """Atomically append records without normalizing unrelated historical rows."""
+
+    if not _ledger_lock_held():
+        raise RuntimeError("_save_appended_events_preserving_existing_text requires _ledger_lock")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    existing = path.read_text(encoding="utf-8") if path.exists() else ""
+    if existing and not existing.endswith("\n"):
+        existing += "\n"
+    payload = existing + "".join(json.dumps(record, sort_keys=True, separators=(",", ":")) + "\n" for record in records)
+    tmp = path.with_suffix(path.suffix + f".tmp.{uuid.uuid4().hex[:12]}")
+    try:
+        tmp.write_text(payload, encoding="utf-8")
+        with open(tmp, "rb") as fh:
+            os.fsync(fh.fileno())
+        os.replace(tmp, path)
+    finally:
+        if tmp.exists():
+            try:
+                tmp.unlink()
+            except OSError:
+                pass
+
+
+def register_vehicle_routing_findings(
+    findings: list[dict[str, Any]],
+    *,
+    path: Path | None = None,
+    lock_path: Path | None = None,
+) -> VehicleRoutingAppendResult:
+    """Append a validated routing batch, idempotently by ``route_id``.
+
+    A repeated route with identical semantic content is returned in
+    ``already_present``.  A repeated route whose content changed refuses: an
+    append-only supersession must use a new route_id and ``supersedes_route_id``.
+    """
+
+    records = [_build_vehicle_routing_record(**finding) for finding in findings]
+    route_ids = [record["route_id"] for record in records]
+    if len(route_ids) != len(set(route_ids)):
+        raise ValueError("vehicle-routing batch contains duplicate route_id values")
+
+    ledger_path = path or PROBE_OUTCOMES_LEDGER_PATH
+    ledger_lock = lock_path or PROBE_OUTCOMES_LEDGER_LOCK
+    appended: list[dict[str, Any]] = []
+    already_present: list[dict[str, Any]] = []
+    with _ledger_lock(ledger_lock):
+        rows = load_outcomes_strict(ledger_path)
+        existing_by_route_id: dict[str, dict[str, Any]] = {}
+        for row in rows:
+            if row.get("event_type") != EVENT_VEHICLE_ROUTING or not isinstance(row.get("route_id"), str):
+                continue
+            existing_route_id = row["route_id"]
+            if existing_route_id in existing_by_route_id:
+                raise ValueError(
+                    f"vehicle-routing route_id {existing_route_id!r} occurs more than "
+                    "once in the canonical ledger; append is refused"
+                )
+            existing_by_route_id[existing_route_id] = row
+        for record in records:
+            existing = existing_by_route_id.get(record["route_id"])
+            if existing is None:
+                appended.append(record)
+                continue
+            if _routing_semantic_projection(existing) != _routing_semantic_projection(record):
+                raise ValueError(
+                    f"vehicle-routing route_id {record['route_id']!r} already exists "
+                    "with different content; append a superseding route instead"
+                )
+            already_present.append(existing)
+        if appended:
+            _save_appended_events_preserving_existing_text(
+                appended,
+                path=ledger_path,
+            )
+    return VehicleRoutingAppendResult(tuple(appended), tuple(already_present))
+
+
+def register_vehicle_routing_finding(
+    *,
+    path: Path | None = None,
+    lock_path: Path | None = None,
+    **finding: Any,
+) -> dict[str, Any]:
+    """Single-row convenience wrapper for ``register_vehicle_routing_findings``."""
+
+    result = register_vehicle_routing_findings([finding], path=path, lock_path=lock_path)
+    return (result.appended or result.already_present)[0]
+
+
+def query_vehicle_routing_findings(
+    *,
+    path: Path | None = None,
+) -> list[dict[str, Any]]:
+    return [row for row in load_outcomes_strict(path) if row.get("event_type") == EVENT_VEHICLE_ROUTING]
+
+
+def _vehicle_lineage_from_artifact_name(name: str) -> str:
+    if not name.startswith("ddm_"):
+        raise ValueError(f"vehicle artifact must start with 'ddm_': {name!r}")
+    arm_token = name[4:].split("_", 1)[0].lower()
+    match = re.match(r"([a-z]+?)(?=\d|$)", arm_token)
+    lineage = match.group(1) if match is not None else arm_token
+    if not lineage:
+        raise ValueError(f"could not derive lineage from {name!r}")
+    return lineage
+
+
+def partition_vehicle_corpus(
+    *,
+    research_root: Path | None = None,
+) -> tuple[VehicleCorpusArtifact, ...]:
+    """Partition top-level ``ddm_*`` research artifacts into disjoint lineages.
+
+    The denominator is top-level filesystem entries, files OR directories.
+    Nested run payloads are content of one arm artifact, not thousands of
+    independent routing units.  The lineage is the leading alphabetic arm
+    family before the first digit (``v19c -> v``, ``ms2r -> ms``); names with no
+    digit retain their full first token (``entropy -> entropy``).
+    """
+
+    root = research_root or VEHICLE_CORPUS_ROOT
+    artifacts: list[VehicleCorpusArtifact] = []
+    if not root.exists():
+        return ()
+    for entry in sorted(root.iterdir(), key=lambda item: item.name):
+        if not entry.name.startswith("ddm_"):
+            continue
+        if entry.is_symlink():
+            kind = "symlink"
+        elif entry.is_dir():
+            kind = "directory"
+        elif entry.is_file():
+            kind = "file"
+        else:
+            kind = "other"
+        artifacts.append(
+            VehicleCorpusArtifact(
+                lineage=_vehicle_lineage_from_artifact_name(entry.name),
+                path=f".omx/research/{entry.name}",
+                kind=kind,
+            )
+        )
+    return tuple(artifacts)
+
+
+def coverage(
+    *,
+    research_root: Path | None = None,
+    path: Path | None = None,
+) -> dict[str, Any]:
+    """Return artifact/harvest/routing/un-harvested counts per lineage."""
+
+    artifacts = partition_vehicle_corpus(research_root=research_root)
+    artifact_by_path = {artifact.path: artifact for artifact in artifacts}
+    rows_by_artifact: dict[str, list[dict[str, Any]]] = {}
+    for row in query_vehicle_routing_findings(path=path):
+        artifact_path = row.get("corpus_artifact")
+        if isinstance(artifact_path, str) and artifact_path in artifact_by_path:
+            rows_by_artifact.setdefault(artifact_path, []).append(row)
+
+    lineages: dict[str, dict[str, int]] = {}
+    for artifact in artifacts:
+        counts = lineages.setdefault(
+            artifact.lineage,
+            {"artifacts": 0, "harvested": 0, "routed": 0, "un_harvested": 0},
+        )
+        counts["artifacts"] += 1
+        artifact_rows = rows_by_artifact.get(artifact.path, [])
+        if artifact_rows:
+            counts["harvested"] += 1
+            try:
+                for row in artifact_rows:
+                    _validate_vehicle_routing_record(row)
+            except ValueError:
+                pass
+            else:
+                counts["routed"] += 1
+
+    for counts in lineages.values():
+        counts["un_harvested"] = counts["artifacts"] - counts["harvested"]
+
+    totals = {
+        key: sum(counts[key] for counts in lineages.values())
+        for key in ("artifacts", "harvested", "routed", "un_harvested")
+    }
+    return {
+        "schema": "vehicle_routing_coverage.v1",
+        "corpus_root": str(research_root or VEHICLE_CORPUS_ROOT),
+        "denominator_definition": (
+            "top-level filesystem entries under .omx/research whose basename "
+            "starts ddm_; files and directories each count once"
+        ),
+        "lineage_definition": ("leading alphabetic arm-family token before first digit; no-digit tokens remain whole"),
+        "lineages": dict(sorted(lineages.items())),
+        "totals": totals,
+    }
+
+
+# ─────────────────────────────────────────────────────────────────────────
 # Query helpers
 # ─────────────────────────────────────────────────────────────────────────
 
@@ -1165,6 +1589,63 @@ def query_blocking_outcomes(
     return blocking
 
 
+def query_expired_deferrals(
+    *,
+    now_utc: _dt.datetime | None = None,
+    path: Path | None = None,
+    verdicts: tuple[str, ...] = (VERDICT_DEFER, VERDICT_PARTIAL),
+) -> list[dict[str, Any]]:
+    """Return LATEST-per-probe_id rows that are deferred AND past their expiry.
+
+    THE ASYMMETRY THIS CURES (measured 2026-08-16 over 728 live rows). Before
+    this function, ``expires_at_utc`` had exactly ONE reader in the repo --
+    :func:`query_blocking_outcomes` -- and it used expiry only to RETIRE a row
+    ("aged past the staleness window" -> stop blocking). Expiry was wired as
+    AMNESTY and never as a NAG: a deferral crossing its own re-examination date
+    became MORE invisible, not less. Measured consequence: 113 probes whose
+    LATEST verdict is DEFER sat past expiry, median 52 days, 106 of them >30d,
+    none superseded. The ledger wrote down the exact date each should be
+    revisited and then used that date only to stop mentioning them.
+
+    This is the deferral-surface instance of the CLAUDE.md law "'off' is a
+    tracked queue, never a forgotten default" -- and strictly worse than a plain
+    default-off, because the timestamp EXISTS and was read in the wrong
+    direction.
+
+    Rows are returned newest-expiry-last so a caller printing them in order
+    surfaces the longest-stale first. Each row carries ``days_expired`` for
+    ranking. A row with no ``expires_at_utc`` is NOT returned (absence of a
+    staleness clock is a separate defect; do not silently invent one).
+    """
+    rows = load_outcomes(path)
+    latest_by_probe_id: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        pid = row.get("probe_id")
+        if isinstance(pid, str):
+            latest_by_probe_id[pid] = row  # JSONL append order; later wins
+
+    now = now_utc or _dt.datetime.now(_dt.UTC)
+    now_iso = now.isoformat(timespec="microseconds").replace("+00:00", "Z")
+
+    expired: list[dict[str, Any]] = []
+    for row in latest_by_probe_id.values():
+        if row.get("verdict") not in verdicts:
+            continue
+        expires_at = row.get("expires_at_utc")
+        if not isinstance(expires_at, str) or expires_at > now_iso:
+            continue
+        enriched = dict(row)
+        try:
+            parsed = _dt.datetime.fromisoformat(expires_at.replace("Z", "+00:00"))
+            enriched["days_expired"] = (now - parsed).days
+        except ValueError:
+            enriched["days_expired"] = None
+        expired.append(enriched)
+
+    expired.sort(key=lambda r: str(r.get("expires_at_utc")))
+    return expired
+
+
 def latest_blocking_outcome_by_recipe(
     recipe_path: str | Path,
     *,
@@ -1251,13 +1732,29 @@ __all__ = [
     "EVENT_OPERATOR_OVERRIDE",
     "EVENT_RATIFIED",
     "EVENT_SUPERSEDED",
+    "EVENT_VEHICLE_ROUTING",
+    "EVIDENCE_CLASS_BUILT",
+    "EVIDENCE_CLASS_DERIVED",
+    "EVIDENCE_CLASS_DESIGNED_ONLY",
+    "EVIDENCE_CLASS_MEASURED",
+    "EVIDENCE_CLASS_MEASURED_DERIVED",
+    "EVIDENCE_CLASS_MIXED",
+    "EVIDENCE_CLASS_SOURCE_INSPECTED",
     "LOCK_TIMEOUT_SECONDS",
     "PROBE_OUTCOMES_LEDGER_LOCK",
     "PROBE_OUTCOMES_LEDGER_PATH",
+    "ROUTING_STATUS_DEAD_ON_THIS_BASE",
+    "ROUTING_STATUS_DEFERRED_WITH_BLOCKER",
+    "ROUTING_STATUS_NEEDS_REMEASURE",
+    "ROUTING_STATUS_ROUTED_FIRED",
+    "ROUTING_STATUS_ROUTED_QUEUED",
     "SCHEMA_VERSION",
     "VALID_BLOCKER_STATUSES",
     "VALID_EVENT_TYPES",
+    "VALID_ROUTING_STATUSES",
+    "VALID_VEHICLE_ROUTING_EVIDENCE_CLASSES",
     "VALID_VERDICTS",
+    "VEHICLE_CORPUS_ROOT",
     "VERDICT_DEFER",
     "VERDICT_INDEPENDENT",
     "VERDICT_INFRASTRUCTURE_FAILURE",
@@ -1268,21 +1765,28 @@ __all__ = [
     "VERDICT_PROMOTE",
     "ProbeOutcomeView",
     "ProbeOutcomesLedgerCorruptError",
+    "VehicleCorpusArtifact",
+    "VehicleRoutingAppendResult",
     "_append_event_locked",
     "_auto_derive_reactivation_criteria_from_next_action",
     "_is_substantive_string",
     "_resolve_reactivation_criteria",
+    "coverage",
     "latest_blocking_outcome_by_recipe",
     "latest_blocking_outcome_by_substrate",
     "latest_outcome_by_probe_id",
     "latest_outcome_by_substrate",
     "load_outcomes",
     "load_outcomes_strict",
+    "partition_vehicle_corpus",
     "query_all_post_utc",
     "query_blocking_outcomes",
     "query_by_probe_id",
     "query_by_recipe",
     "query_by_substrate",
+    "query_vehicle_routing_findings",
     "register_probe_outcome",
+    "register_vehicle_routing_finding",
+    "register_vehicle_routing_findings",
     "update_probe_outcome",
 ]
