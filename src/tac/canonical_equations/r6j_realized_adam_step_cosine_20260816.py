@@ -107,8 +107,24 @@ DISPLACEMENT_LAW_EXPONENT = 0.457640
 DISPLACEMENT_LAW_SIGMA_LOG = 0.0728
 DISPLACEMENT_LAW_N = 4
 DISPLACEMENT_LAW_DOF = 2
-#: DERIVED from sigma_log with Student-t at dof=2 / normal law-vs-law SEs. Fractional
+#: DERIVED from sigma_log by the NORMAL law 1 - exp(-k * sigma_log). Fractional
 #: improvement over the law that a new measurement must show to be DISTINGUISHABLE.
+#:
+#: PROVENANCE CORRECTION 2026-08-16 (round-1 recursive adversarial review, finding 6):
+#: this comment previously read "Student-t at dof=2", which describes a method the code
+#: does NOT use. The single-arm bars reproduce exactly as 1 - exp(-k*sigma_log) with
+#: k in {1, 2}: 7.021% and 13.550%. Student-t at dof=2 would give t(0.975,2) = 4.303
+#: -> 26.9%, not 13.55%. Student-t IS the statistically correct choice at dof=2, so the
+#: honest fix would roughly DOUBLE these bars and STRENGTHEN the under-powered
+#: conclusion -- but changing the numbers is a separate measurement decision, not a
+#: comment edit. Recorded here as a Catalog #351 provenance defect: the label now names
+#: the method actually used.
+#:
+#: The law_vs_law_* entries carry a further undocumented factor: they are 1 - exp(-2*SE)
+#: with SE = sigma_log*sqrt(1/n1 + 1/n2), i.e. TWO standard errors, while the stated
+#: formula in the verdict memo is one. At 1 SE the n>=3 bar is 5.41% against a delivered
+#: 6.14%, which is nominally resolvable -- so "cannot resolve at any affordable n" is
+#: threshold-dependent. Leverage was never computed; treat both as provisional.
 DETECTION_BARS = {
     "band_arm_delivered": 0.0614,
     "single_new_arm_1sigma": 0.0702,

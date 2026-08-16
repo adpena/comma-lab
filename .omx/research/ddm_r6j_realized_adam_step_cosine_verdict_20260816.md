@@ -1,6 +1,50 @@
 # R6 judge repair, leg 3 — the realized-AdamW step cosine
 
-**verdict:** `JUDGE_DEAD_SURVIVES_STEP_IS_GENUINELY_ROTATED` (6 of 6 matched steps)
+> # ⛔ VERDICT WITHDRAWN 2026-08-16 — THE NULL CONTROL REFUTES IT
+>
+> **Round-1 recursive adversarial review (fresh-eyes reviewer, finding 1 CRITICAL) named the
+> missing control; MAIN ran it in 0.7 s at $0. It was free the whole time and this memo
+> shipped without it.**
+>
+> `ddm_lr1/{A1,A2,A3,C0}` each retain all seven `full_state` checkpoints — the same six steps
+> this memo compares. Running the SAME tool on two arms that SHARE an objective:
+>
+> | pair | objective | `cos_realized_step_cross_arm`, steps 100…600 |
+> |---|---|---|
+> | A1 vs A2 | SAME | +0.3716 +0.6449 +0.4206 +0.0410 +0.4279 +0.6767 |
+> | A1 vs A3 | SAME | +0.1991 +0.0755 +0.0012 −0.0291 +0.1136 +0.0997 |
+> | A1 vs C0 | SAME | +0.4969 +0.7842 +0.6128 +0.5133 +0.6027 +0.6449 |
+> | A2 vs band | **DIFFERENT** | +0.3420 +0.3564 +0.3061 **−0.1208** +0.3031 +0.5541 |
+>
+> **NULL pool** (n=18, same objective): mean **+0.3721**, range [−0.0291, +0.7842].
+> **BAND** (n=6, different objective): mean **+0.2902**, range [−0.1208, +0.5541].
+> Twelve of eighteen null values fall inside the band's own range, and **A1-vs-A3 — two arms
+> that share an objective — are LESS aligned than band-vs-stock.**
+>
+> **What this kills.** The pre-registered falsifier was `cos_u ≥ 0.95 ⇒ MECHANISM-DEAD`. With
+> no null, "cos_u never approaches 0.95" was read as refuting MECHANISM-DEAD. But arms that
+> share an objective *also* never approach 0.95 — the bar was unreachable for any pair, so the
+> test could never have fired. It discriminated nothing. **Both readings survive the data:**
+> under MECHANISM-DEAD the band arm should look like an ordinary stock pair, and it does
+> (0.2902 vs null 0.3721, well inside). The honest verdict is
+> `INDETERMINATE_NO_DISCRIMINATING_POWER`, not `JUDGE_DEAD`.
+>
+> **What still stands.** The measurement itself (moments read back from two byte-verified
+> checkpoints, 66,339 coords, 38 tensors) is sound and reproduces. The paired `s − g` statistic
+> and the per-arm `cos(m,u)` 0.42–0.54 control are unaffected. The *conclusion drawn from them*
+> — "the band objective genuinely moves the weights somewhere else" — is withdrawn: nothing
+> here separates objective-steering from ordinary lr-driven trajectory divergence.
+>
+> **Consequence for the fire-order.** The addendum's re-ranking (long window promoted over
+> matched-‖Δw‖) rested on the licensing paragraph and is also withdrawn. A discriminating
+> instrument must be established BEFORE either judge is ranked: any future arm comparison must
+> report its same-objective null alongside the treatment. Genus:
+> `[[m94]]` (a negative measures the instrument) — here the instrument measured, and its
+> capacity was zero.
+>
+> Null receipts: `/Volumes/APDataStore/pact/ddm_r6j_nullcontrol_20260816/{A1_vs_A2,A1_vs_A3,A1_vs_C0}/`.
+
+**verdict (SUPERSEDED, retained per APPEND-ONLY):** `JUDGE_DEAD_SURVIVES_STEP_IS_GENUINELY_ROTATED` (6 of 6 matched steps)
 
 verdict_scope: instance — two arms (stock `ddm_lr1/A2`, band `ddm_rg1/band_a1` at α=1),
 6 checkpoints over 600 steps, this init, MPS-trained state read back on CPU.
