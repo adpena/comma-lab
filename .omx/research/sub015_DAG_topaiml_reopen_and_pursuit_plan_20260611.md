@@ -28043,3 +28043,60 @@ MEASURED, never synthesise cost from a rate table. The one row carrying both a r
 **2.8× high** — the borrowed-constant genus inside my own arithmetic.
 
 Pointer UNMOVED: hv1 ep0634 **S 0.15959729295498598 @ 182,759 B [contest-CUDA T4, n600]**.
+
+### FEED-jc1 — the carrier Jacobian is built, K = 0, and the pose-metric re-fit LOSES to Euclid (2026-08-16, POST-RESULT)
+
+**Step 0 first, because it gates the cost.** The ERRATUM's proposed `ms3`/`ms4` reuse is
+**REFUTED by source inspection**, not merely unverified: `ddm_metric_producers.py:183-217`
+(`pose_quadratic_row`) returns `np.eye(6)/sqrt(6)` — a quadratic in POSE-OUTPUT space around a
+stored 6-vector center. No Jacobian, no carrier variable. `produce_ddm_ms4_metric_custody.py:5-9`
+says only the Pose producer is identifiable at all. What DOES exist is
+`ddm_js4_pose_null_projected_conditioning.py:228` — a real per-pair exact PoseNet Jacobian, but
+**6×589,824 in PIXEL space at the CP135 base**, a different vehicle and a different variable. Its
+*pattern* was reused; the producer was built.
+
+**Built:** `experiments/ddm_jc1_carrier_pose_jacobian.py` — `J_i = ∂pose6/∂coeff_i ∈ R^{6×12}`,
+n600, through the shipped chain, 501 s. Retained at
+`/Volumes/APDataStore/pact/ddm_jc1/retained/` (`jacobian_pose6_x_coeff12.float64.npy`,
+sha `fc5743c970c13f4f`, 345,728 B, + GT/gen pose, coeff, Gram, selector modes).
+**Forward exact, backward STE** — the exact quantized chain's Jacobian is 0 a.e.
+
+**Four controls, all green.** byte-identity vs shipped `0.raw` **600/600** · base `d_pose`
+rebuilt from residuals **1.478e-5** rel · no-op candidate eval **2.62e-5** rel · **central
+finite difference vs the STE Jacobian: cosine 0.9992–0.9998, rel. Frobenius 2.7–4.4%**. The
+byte-identity control earned its keep on the first run: it caught that I had omitted the sparse
+frame-0 **selector** (`apply_pixel_mode`, 5/600 frames) and failed on exactly those pairs.
+
+**(b) K = 0** at every tolerance 1e-16…1e-1, in both named coordinates (raw stored, coeff-RMS
+whitened). The informative part is the spectrum: `cond(J_stack) = 12.02`, per-column pose
+sensitivity spread only **2.16×**. **The pose spectrum is FLATTER than the field spectrum
+(ra2c's 17.32)** — the metric the score reads concentrates the carrier *less* than the metric
+ra2a optimised. No cheap subspace exists to route bytes out of.
+
+**(a) MEASURED, and it loses.** Five candidates, EXACT n600 `d_pose`, at the ladder's best rung
+r=11 (1,854 B back, advisory bar 1.0653): Euclidean incumbent **235.3×**; pose-metric ridge
+1e2/1e1/1e0/1e-1 → **238.9 / 258.6 / 272.2 / 256.7×**. Best of five misses by **220.9×**
+(advisory) / **178.3×** (T4). `ΔS` = **+0.5494** advisory, **+0.1177** T4, against a −0.0096 gap.
+`rank_refit_status = NOT_MEASURED_BY_THIS_EXACT_RACE` (`ddm_mp2_carrier_exact_byte_race.py:132`)
+is now **MEASURED and REFUSED**. Metric choice is worth ~16% where 221× is needed.
+
+**The artifact I caught.** The unregularized pose re-fit predicted ratio **0.000** at every
+`r ≥ 6` — a dimension count (6 scored dims, ≥6 free coefficients ⇒ the first-order residual is
+drivable to zero for EVERY keep-set), with steps 3.4–43.9× the carrier's own magnitude. A
+trust region brought the step to 0.24 and the prediction to 1.93 vs a 1.0653 bar — too close for
+any honest first-order refusal. So all five were measured instead of reported. **The model erred
+by 134×–1,065× on exactly the candidates it designed**, while the Jacobian itself is accurate to
+3% vs finite differences. An accurate local derivative bought *zero* design authority at a step
+of 0.24 — the sharp form of ra2c §8.2's live `p ≠ 2` reading.
+
+**Apparatus product:** `--eval-coeff` measures TRUE n600 `d_pose` for any candidate coefficient
+matrix in **62 s** with no bulk artifact, vs ra2c's 587 s + 3.66 GB. On every frame_0 carrier
+question (`d_seg` invariant, now four treatments) that is a **9.5× faster exact instrument**.
+
+**Verdict scope: FORMULATION** — coordinate keep-set + re-fit, either metric, hv1 carrier.
+r=11 MEASURED; other rungs DERIVED from the monotone ladder recalibrated at that point. Both
+of ra2c §8.4's branches have now fired the same way: no exactly-free direction, no
+approximately-cheap one. **The carrier stops consuming slots.**
+
+Memo: `.omx/research/ddm_jc1_carrier_jacobian_posemetric_refit_20260816.md`.
+Pointer UNMOVED: hv1 ep0634 **S 0.15959729295498598 @ 182,759 B [contest-CUDA T4, n600]**.
