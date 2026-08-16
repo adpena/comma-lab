@@ -1,6 +1,6 @@
 ---
 arm: ddm_rt1
-title: "the seg axis is one pixel wide: 99.22% of hv1's scored flips sit ON the transmitted label boundary, the round trip is 33,743 flips (0.028604 S) MEASURED, flat paint is 35.4x worse, R supplies exactly zero, td1's r is 0.8492 -- and (SS5) the free-band correction channel codes at 32,270 real bytes, passing the 35,117 B gate but bounded to S=0.1523 even at perfect realization"
+title: "the seg axis is one pixel wide: 99.22% of hv1's scored flips sit ON the transmitted label boundary, the round trip is 33,743 flips (0.028604 S) MEASURED, flat paint is 35.4x worse, R supplies exactly zero, td1's r is 0.8492 -- and the free-band correction channel passes its coder gate at 32,270 real bytes then CLOSES on realization (eta 0.6620 vs bar 0.753), routing the whole seg axis to the renderer"
 utc: 2026-08-16
 charter: ".omx/research/ddm_rt1_seg_roundtrip_decomposition_charter_20260816.md"
 axis: "[macOS-CPU advisory] frozen CPU-torch SegNet -- NEVER a score"
@@ -60,13 +60,25 @@ actually built and raced in **§5**.
 **§5 (follow-on #1, executed): the coder gate PASSES at 32,270 real verified bytes vs the
 35,117 B bar — but the family is bounded and the coder was never the binding constraint.** My
 §3.3 guess that a structured coder could halve the i.i.d. floor is **REFUTED**: the flips are
-isolated single pixels (mean run 1.109), so the best real coder beats i.i.d. by 2.5% and the
-ceiling of all free conditioning is 12.2%. Including the 965 B target-class channel, the route
-yields **S = 0.15234 at perfect realization** and **0.15853 at sq1's η = 0.7895** — it is **not a
-sub-0.15 route by itself**. It needs **η > 0.753**; sq1's pose-constrained η was 0.5406, at which
-it loses. lr2 closed this family at **14.6× this vehicle's flip count**, so its closure never
-priced this operating point — but §5 now prices it, and the answer is "live at the gate, bounded
-as a route." **Pointer UNMOVED.**
+isolated single pixels (mean run 1.110), so the best real coder beats i.i.d. by 2.5% and the
+ceiling of all free conditioning is 12.2%.
+
+**§6 (follow-on #2, executed): the channel is CLOSED.** Realization efficiency under the pose
+constraint, measured on hv1 for the first time, is **η = 0.6620** (n=4 seeded-random pairs, mean
+0.652 ± 0.082, **0 of 4 above the bar**) against the required **0.753**. At that η the channel
+*costs* **+0.0027 S** on seg+rate alone and **+0.004 to +0.008 S** once the pose leg is charged,
+and **even the best single pair still loses**. To clear, the whole channel would have to code
+under **29,215 B**, while §5 measured its realized floor at 33,235 B and its free-conditioning
+ceiling at 12.2% — **the two measured curves do not cross.** Getting a trustworthy NO required
+finding and fixing **two defects in my own instrument**, both caught by a positive control
+(§6.1): sq1's objective and sq1's edit support each fail to transfer to a 15×-smaller residual,
+and a NO measured on either would have been an artifact reported as physics.
+
+**Net: every post-hoc lever on the seg axis is now bounded — flat paint 35× worse, band repaint
++1.38 S, correction channel +0.0027 S — so the whole seg axis routes to the renderer's own
+training.** lr2 closed this family at 14.6× this vehicle's flip count; §5–§6 re-priced it at
+*this* operating point and it still closes, now with the reason measured rather than inherited.
+**Pointer UNMOVED.**
 
 ## §0 Prior-law prediction lines (stated BEFORE the measurement, per the anti-re-anchor law)
 
@@ -554,21 +566,149 @@ channel is **more likely dead than alive**, and one measurement settles it.
 ⚠ Scope: 272 flips (0.78%) lie off the band and are unaddressable by this support. Every η here
 is sq1's, measured on the v4d vehicle — nothing in §5 measures η on hv1.
 
-## §5.5 Routing update (supersedes §4 rows 1–2)
+## §5.5 Routing update (superseded by §6.4 — both follow-ons are now executed)
 
-1. **Follow-on #1 — DONE.** Gate passed at 32,270 B. Do not re-run.
-2. **Follow-on #2 is now THE decision point, with a sharp bar: measure η on hv1 under a pose
-   constraint; the channel lives only if η > 0.753.** If it lands near sq1's 0.5406, the family is
-   closed on arithmetic and everything routes to #3.
+1. **Follow-on #1 — DONE.** Coder gate passed at 32,270 B. Do not re-run.
+2. **Follow-on #2 — DONE (§6). η = 0.6620 vs bar 0.753 → CLOSED.**
 3. **Follow-on #3 (edge-weighted Road↔Lane objective into the wd3 / ns1-P1 training line) is
-   promoted**, because §5 bounds the best post-hoc outcome at −0.0073 S even with perfect
-   realization — less than the remaining gap. Carrier-free render improvement is the only lever
-   measured here that is not bounded away from sub-0.15.
+   promoted** — see §6.4.
 
-## §6 What this unit did NOT establish
+## §6 The ETA GATE — pose-constrained realization on hv1 (follow-on #2)
+
+Pre-registered bar, written into the tool before any solve: **η > 0.753 → LIVE; η ≤ 0.753 →
+CLOSED**. Tool `experiments/ddm_rt1_eta_gate_pose_constrained.py`; receipts under
+`/Volumes/APDataStore/pact/ddm_rt1_seg_roundtrip_20260816/eta_gate_{null,free}/`.
+
+Reference form imported, not reimplemented: sq1's `Scorer`, `decode_gt_frames`,
+`pose_null_projector` / `project_null` / `snap_band_to_blocks`,
+`realize_scorer_paint_to_camera`. Riders carried: multi-start (pu2), in-loop REALIZED-argmax
+validation with best-iterate retention (fd2/tb1), whole-frame accounting, and **d_pose
+recomputed against decoded GT** (qs4's stale-compensation lesson). Pairs drawn by seeded
+RANDOM choice, never a prefix (m96).
+
+### §6.1 Two instrument defects the positive control caught — both mine
+
+**No verdict was admissible until an unconstrained control could realize anything at all.** It
+could not, and the reason was my setup, twice over.
+
+1. **sq1's objective does not transfer.** sq1 used a plain whole-frame cross-entropy. On v4d
+   that was ~848 wrong pixels per pair; on hv1 it is ~50 wrong out of 196,608, so the target
+   carries **0.025%** of the loss. Measured signature: with sq1's loss the best iterate is
+   **step 0 for every pair in both modes** — the solver never moves. Cure: reweight the CE by
+   `focus_weight` on the described set, keeping every other pixel at weight 1 so the collateral
+   term survives.
+2. **sq1's edit SUPPORT does not transfer, and this one was worth 0.65 η.** sq1 edits the whole
+   label-boundary band. On hv1 that is **11,377 px to fix 37**. Measured what that does: the
+   solver fixes **37/37 described pixels by step 5** — they are trivially fixable, exactly as
+   §2.8's tiny deficits predict — while whole-frame flips go **35 → 343**. Collateral is **8×
+   the gain**, so best-iterate retention correctly refuses every iterate and η pins at ~0.
+
+   The correct actuator is the **described set dilated**, which is equally free (the receiver
+   decodes the flip mask, so it knows the described set). Support ladder, 2 pairs, unconstrained:
+
+   | support radius | pair 34 η | pair 82 η |
+   |---|---:|---:|
+   | r=0 (described only) | +0.5405 | +0.5098 |
+   | **r=1** | **+0.6216** | **+0.6863** |
+   | r=2 | +0.3243 | +0.5490 |
+
+   r=1 is the optimum and is the configured default. **A NO measured on sq1's support would
+   have been an instrument artifact reported as physics.**
+
+### §6.2 The measured gate — **CLOSED**
+
+Pose-null-constrained solve, described-set support r=1, 30 steps × 2 starts, best realized
+iterate, whole-frame accounted, d_pose recomputed against decoded GT. Pairs drawn by seeded
+random choice (seed 20260816).
+
+| pair | described | flips before → after | **η_net** | d_pose ratio | realization err |
+|---|---:|---:|---:|---:|---:|
+| 33 | 49 | 49 → 17 | **+0.6531** | ×1.582 | 0.0 |
+| 66 | 73 | 73 → 22 | **+0.6986** | ×0.218 | 0.0 |
+| 81 | 41 | 42 → 20 | **+0.5366** | ×7.735 | 0.0 |
+| 89 | 50 | 50 → 14 | **+0.7200** | ×0.902 | 0.0 |
+
+| statistic | value |
+|---|---:|
+| **η pooled** | **0.6620** |
+| η per-pair mean ± sd | 0.6521 ± 0.0819 |
+| η min / max | 0.5366 / 0.7200 |
+| **pairs above the 0.753 bar** | **0 of 4** |
+| realization fidelity (max abs err on support) | **0.0 on every pair** |
+
+**η = 0.6620 ≤ 0.753 → the family is CLOSED on arithmetic.**
+
+The margin is not marginal. At the measured pooled η the channel is a **LOSS of +0.0027 S**
+(S would go 0.15960 → **0.16227**). And the refutation does not depend on the pooled figure:
+**even the best single pair measured (0.7200) still loses (+0.0010 S).** The realization step is
+exact on every pair (`D` reproduces the solved paint to 0.0), so nothing is being lost between
+solve and score — the shortfall is entirely η.
+
+**The pose leg makes it worse, and it was excluded from the pre-registered bar.** The bar 0.753
+was derived from seg + rate only. d_pose enters S as √(10·d_pose), and the measured ratios span
+×0.218 to ×7.735 (median ×1.242; 2 of 4 pairs improved). Charging the median ratio adds
+**+0.0009 S**; charging the mean adds **+0.0051 S**. Including the pose leg the channel loses
+**+0.0036 to +0.0078 S**. Excluding it was the conservative choice, and the verdict survives it.
+
+**verdict_scope: INSTANCE** — hv1 ep0634 base, ring-0 described set, r=1 described-set edit
+support, pose-null-constrained realization, this solver budget, n=4 seeded-random pairs. Per
+m96 a seeded-random subset **may** refute a bar (which is what happened: 0/4 clear it, and the
+maximum measured value still loses); a subset that *cleared* the bar would not have licensed a
+LIVE verdict without the fuller population — the aggregator enforces that asymmetry in code,
+emitting `PASS_SUBSET_NOT_LICENSING_LIVE` rather than `LIVE` below n=120. The run was stopped
+early to yield cores to the
+sister b2e admission arm rather than contend; the aggregator reads the incrementally-written
+rows, so the verdict is honest at the n it reached.
+
+### §6.3 Why η lands at 0.64 and not 0.79 — the mechanism, not the budget
+
+The described pixels are **trivially fixable**: §6.1 measured 37/37 fixed by step 5. What caps η
+is **collateral** — every edit that moves a boundary pixel to its target also perturbs the region
+evidence its neighbours depend on. That is the same law that killed the flat band repaint
+(§2.7, +1.38 S) and sq1's truth paint (η −3.76): *a local edit is not local to the scorer.* The
+solver's whole-frame accounting prices that honestly, and what is left after collateral is ~0.64
+of the described flips — real, but a sixth short of what the byte arithmetic needs.
+
+sq1's free-solve 0.7895 does not transfer here, and the unconstrained control on hv1 shows why
+you cannot simply reach for it: on pair 33 the free solve returned η 0.5714 — *lower* than the
+pose-constrained 0.6531 — while destroying pose by **×396**. On this vehicle the pose-null
+projection is not only mandatory, it is also a **useful regularizer**: it restricts the edit to
+directions the scorer's pose head cannot see, which happens to limit seg collateral too.
+
+## §6.4 ROUTING — the post-hoc correction family is closed; everything goes to the renderer
+
+**The free-band seg-correction channel is CLOSED on measured arithmetic.** It passed its coder
+gate (32,270 real bytes, §5) and then failed the gate that actually decides it: realization
+efficiency under the pose constraint any shippable version must pay. Measured **η = 0.6620**
+against a required **0.753**; at that η the channel *costs* +0.0027 S on seg+rate alone and
++0.004 to +0.008 S once the pose leg is charged, and **no individual pair measured — including
+the best — clears break-even.** No fire-order is issued. Nothing about this routes to a build.
+
+The closure is scoped (INSTANCE, n=4 seeded-random, this solver budget) and it is reopenable by
+exactly two named things, neither of which is "try harder": a realization mechanism whose
+collateral is structurally lower than a solved local edit (the whole family measured here —
+flat paint, truth paint, band repaint, solved paint — is collateral-limited, §2.7/§6.3), **or**
+a described set small enough that the byte cost falls faster than η does. The second is worth
+one line of arithmetic: the channel needs `η·0.029387 > bytes·6.658e-7`, so at η = 0.6620 the
+whole channel must cost **under 29,215 B** — 12% below the 33,235 B it actually codes at, and
+§5.2 already measured the free-conditioning ceiling at 12.2%. **The two measured curves do not
+cross.** That is why this is a closure and not a deferral.
+
+**Everything routes to follow-on #3: the edge-weighted Road↔Lane objective in the renderer's own
+training** (wd3 / ns1-P1 line). This unit has now bounded every post-hoc lever on the seg axis —
+paint (35× worse), band repaint (+1.38 S), correction channel (+0.0027 S) — while the render
+itself is measured to be the only actor that ever put the scorer within 0.1 logits of the answer
+(§2.8). The seg axis is 99.22% a one-pixel edge-placement problem concentrated 43.4% on Road↔Lane;
+that is a training target, and it is the one lever this unit did not bound away from sub-0.15.
+
+## §7 What this unit did NOT establish
 
 - **No causal `r`.** §3.4 is observational.
-- **No η on hv1.** Every net-ΔS in §3.3 is conditional on an η measured on a different vehicle.
+- **η on hv1 is now measured (§6) but only at n=4 seeded-random pairs**, one solver budget, one
+  support radius. It refutes the bar (0/4 clear it, and the maximum loses); it does not
+  characterize the η distribution across the full 600.
+- **No LIVE verdict was ever available from this sample size** — by construction, per m96. Only
+  the refutation direction is licensed.
 - **No coded mask size.** 33,082 B is an i.i.d. entropy floor, not a coder result; a real coder
   may beat it (structure) or miss it (model cost). Both directions are open.
 - **No claim that the 27.7% GT-flicker coincidence is irreducible.** fl1's scope law forbids that
