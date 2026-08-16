@@ -42,6 +42,7 @@ import argparse
 import fcntl
 import hashlib
 import json
+import math
 import os
 import re
 import shlex
@@ -1012,6 +1013,283 @@ def lint_charter_capability_advisories(
     return warnings
 
 
+# ---------------------------------------------------------------------------
+# Charter-time RECALL + VALIDATION advisories (operator 2026-08-16:
+# "Need to be more proactive about recall and validation prior to issuing
+# charters").  Three arms found stale premises in charters MAIN wrote from
+# working memory on one day: gx1 (five stale premises, incl. a rate rung quoted
+# against a superseded archive and a target already executed 12h earlier by
+# td1), pv1 (an entire charter duplicating live sibling ps1u), sx1 (four,
+# incl. a cure chartered as unbuilt that rg1b had landed that morning).
+#
+# CLAUDE.md OPERATOR PRIORITY item 1 already binds PROACTIVE RECALL before
+# designing/proposing/killing.  It was volitional, so it depended on MAIN
+# remembering to remember — the goldfish failure the law itself names.  This
+# moves the recall to the APPARATUS: the checks run at the spawn site, so the
+# charter is measured against the corpus whether or not MAIN thought to look.
+#
+# Advisory (WARN) by construction.  The measured failure was NOT-CHECKING, and
+# a printed warning at spawn already breaks that chain; a refusal would trade a
+# cheap miss for an expensive false block.
+# ---------------------------------------------------------------------------
+
+RESEARCH_DIR = _REPO / ".omx" / "research"
+CORRECTIONS_INDEX = RESEARCH_DIR / "ddm_au1_20260805" / "au1_corrections_index.jsonl"
+FRONTIER_POINTER = _REPO / ".omx" / "state" / "canonical_frontier_pointer.json"
+
+# Claims that assert something does NOT exist / has NOT happened.  Per memory
+# `negative-existence claims = #1 false-claim class`, these need an exhaustive
+# search or an explicit scope — at charter time nobody has done either.
+_NEGATIVE_EXISTENCE = re.compile(
+    r"\b("
+    r"never (?:been |yet )?(?:run|fired|measured|built|tried|attempted|executed|owned)"
+    r"|has never|have never|was never|were never"
+    r"|un-?owned|unbuilt|un-?built|unmeasured|un-?fired"
+    r"|no(?:body| arm| one| agent)? (?:has|have|ever)"
+    r"|not (?:yet )?(?:owned|built|measured|run|fired)"
+    r"|nobody has|no arm has|first(?:-| )of(?:-| )family"
+    r")\b",
+    re.IGNORECASE,
+)
+
+# Stopwords that carry no discriminating power when matching a charter claim
+# against the recent memo corpus.
+_RECALL_STOPWORDS = frozenset(
+    """
+    charter measure measured measurement should would could there their these those
+    through against because before after within number result results verdict
+    should_be family families arm arms which where whose while about above below
+    return returns running current currently already always never nothing
+    """.split()
+)
+
+
+def _distinctive_tokens(text: str) -> set[str]:
+    """Tokens with enough specificity to join a charter claim to a memo.
+
+    Hyphens normalize to underscores because charters write ``token-drop``
+    while memo filenames write ``token_drop`` — the 2026-08-16 miss.  Compound
+    parts are emitted separately so a 2-word compound still joins when the
+    memo spells it differently.
+    """
+
+    normalized = text.replace("-", "_")
+    tokens: set[str] = set()
+    # Snake_case / arm-style identifiers are the highest-precision join key.
+    for match in re.findall(r"\b[a-z][a-z0-9]*(?:_[a-z0-9]+)+\b", normalized, re.IGNORECASE):
+        low = match.lower()
+        tokens.add(low)
+        for part in low.split("_"):
+            if len(part) >= 4 and part not in _RECALL_STOPWORDS:
+                tokens.add(part)
+    # Bare words: 5+ chars catches Schur/token/drop-class subjects that the
+    # earlier 6-char floor dropped, while the stopword set holds precision.
+    for match in re.findall(r"\b[a-zA-Z]{5,}\b", normalized):
+        low = match.lower()
+        if low not in _RECALL_STOPWORDS:
+            tokens.add(low)
+    return tokens
+
+
+def _recent_memos(days: int, limit: int = 400) -> list[Path]:
+    """Memos touched inside the window, newest first, bounded."""
+
+    if not RESEARCH_DIR.is_dir():
+        return []
+    cutoff = time.time() - days * 86400
+    rows: list[tuple[float, Path]] = []
+    for path in RESEARCH_DIR.rglob("*.md"):
+        # Worktree copies duplicate main's memos and would double-count.
+        if ".omx/tmp/codex_worktrees" in str(path):
+            continue
+        try:
+            mtime = path.stat().st_mtime
+        except OSError:
+            continue
+        if mtime >= cutoff:
+            rows.append((mtime, path))
+    rows.sort(key=lambda row: row[0], reverse=True)
+    return [path for _, path in rows[:limit]]
+
+
+def _lint_ownership(text: str, days: int) -> list[str]:
+    """Is the charter's 'nobody has done this' target already owned?
+
+    The gx1/pv1/sx1 class: MAIN charters a target as un-owned/unbuilt while a
+    memo from the last few days already executed it.  Joins on distinctive
+    tokens drawn from the negative-existence sentence itself.
+    """
+
+    claims = [
+        line.strip()
+        for line in text.splitlines()
+        if _NEGATIVE_EXISTENCE.search(line)
+    ]
+    if not claims:
+        return []
+    claim_tokens = set()
+    for claim in claims:
+        claim_tokens |= _distinctive_tokens(claim)
+    if len(claim_tokens) < 2:
+        return []
+    # PROPORTIONAL threshold, not a tuned constant: a claim with more
+    # distinctive terms must match more of them.  A flat cut calibrated on one
+    # example is exactly the constants-are-poison trap this lint exists to
+    # catch.  Measured on the 2026-08-16 incident (10 claim tokens -> cut 6):
+    # 5 hits, and all five ARE the arms that reported the stale premise; the
+    # overlap histogram falls away steeply below that (16 at 5, 26 at 4).
+    threshold = max(4, math.ceil(0.55 * len(claim_tokens)))
+    hits: list[tuple[int, str]] = []
+    for memo in _recent_memos(days):
+        try:
+            # Head-only: titles/headlines/abstracts carry the subject, and a
+            # bounded read keeps the spawn-site cost flat.
+            head = memo.read_text(encoding="utf-8", errors="replace")[:8192].lower()
+        except OSError:
+            continue
+        overlap = sum(1 for token in claim_tokens if token in head)
+        if overlap >= threshold:
+            hits.append((overlap, memo.name))
+    if not hits:
+        return []
+    hits.sort(reverse=True)
+    top = "; ".join(f"{name} ({n} shared terms)" for n, name in hits[:3])
+    return [
+        f"RECALL: charter asserts a negative-existence claim ({claims[0][:110]!r}) "
+        f"but {len(hits)} memo(s) from the last {days}d overlap its subject — {top}. "
+        "Read them before spawning; if the target is already owned, re-aim or "
+        "cite the memo as the baseline."
+    ]
+
+
+def _lint_stale_numbers(text: str) -> list[str]:
+    """Does the charter quote a number the corpus already corrected?
+
+    Consumes au1's corrections index (task #953) rather than building a second
+    one.  A charter literal that appears as some memo's `refuted_value` is the
+    gx1 class (-15,157 B quoted against a superseded archive).
+    """
+
+    if not CORRECTIONS_INDEX.is_file():
+        return []
+    literals = {
+        token.replace(",", "")
+        for token in re.findall(r"\b\d[\d,]{3,}(?:\.\d+)?\b", text)
+    }
+    if not literals:
+        return []
+    warnings: list[str] = []
+    seen: set[str] = set()
+    try:
+        with CORRECTIONS_INDEX.open(encoding="utf-8") as stream:
+            for line in stream:
+                try:
+                    row = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                refuted = str(row.get("refuted_value", "")).replace(",", "")
+                if not refuted or refuted not in literals or refuted in seen:
+                    continue
+                seen.add(refuted)
+                warnings.append(
+                    f"RECALL: charter quotes {refuted} — recorded as a REFUTED value in "
+                    f"{Path(str(row.get('source', '?'))).name}"
+                    f" (corrected to {row.get('corrected_value', '?')}). Re-derive before citing."
+                )
+                if len(warnings) >= 5:
+                    break
+    except OSError:
+        return []
+    return warnings
+
+
+def _lint_frontier_literals(text: str) -> list[str]:
+    """Frontier-shaped numbers must match the LIVE pointer, not a memory of it.
+
+    pv1 measured this twice on one charter: a d_pose literal belonging to a
+    different archive, and a frontier S the pointer file no longer carries.
+    """
+
+    if not FRONTIER_POINTER.is_file():
+        return []
+    try:
+        pointer = json.loads(FRONTIER_POINTER.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return []
+    live: set[str] = set()
+    for value in pointer.values():
+        if isinstance(value, dict) and "score" in value:
+            live.add(f"{float(value['score']):.10f}")
+    if not live:
+        return []
+    # Contest S literals: 0.1x-0.9x carried to >=6 decimals (a quoted score,
+    # never an incidental ratio).
+    quoted = {
+        f"{float(token):.10f}"
+        for token in re.findall(r"\b0\.\d{6,}\b", text)
+        if 0.05 < float(token) < 1.0
+    }
+    stale = quoted - live
+    if not stale:
+        return []
+    return [
+        "RECALL: charter quotes score-shaped literal(s) "
+        f"{sorted(stale)[:3]} that match NO anchor in the live "
+        "canonical_frontier_pointer.json — re-derive from the pointer "
+        "(a superseded frontier is the commonest stale premise)."
+    ]
+
+
+def _lint_bare_task_ids(text: str) -> list[str]:
+    """Bare #NNNN ids do not resolve for an arm; memo filenames do.
+
+    Reported independently by gx1, pv1 and sx1 on 2026-08-16: the harness task
+    list and the repo's canonical_task_status.jsonl are different ledgers, and
+    arms only see the repo.
+    """
+
+    ids = set(re.findall(r"#\d{3,4}\b", text))
+    if not ids:
+        return []
+    if re.search(r"\b[\w./-]+\.md\b", text):
+        return []
+    return [
+        f"RECALL: charter cites bare task ids {sorted(ids)[:5]} and NO memo filename — "
+        "arms cannot resolve harness ids against the repo ledger. Cite memo "
+        "filenames (and shas) instead."
+    ]
+
+
+def lint_charter_recall_advisories(prompt_path: str, days: int = 14) -> list[str]:
+    """Charter-time recall/validation advisories (operator 2026-08-16).
+
+    Four legs, all advisory, all read-only: ownership (is the target already
+    executed?), staleness (does a quoted number appear as a refuted value?),
+    live-pointer agreement (are frontier-derived numbers current?), and
+    id-resolvability (bare task ids vs memo filenames).  Any leg may fail to
+    read its store; that produces silence, never a block.
+    """
+
+    try:
+        text = Path(prompt_path).read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return []
+    if "recall_lint_na:" in text.lower():
+        return []
+    out: list[str] = []
+    for leg in (
+        lambda: _lint_ownership(text, days),
+        lambda: _lint_stale_numbers(text),
+        lambda: _lint_frontier_literals(text),
+        lambda: _lint_bare_task_ids(text),
+    ):
+        try:
+            out.extend(leg())
+        except Exception as exc:  # advisory: a broken leg must never block a spawn
+            out.append(f"recall-lint leg unavailable ({type(exc).__name__}: {exc})")
+    return out
+
+
 def lint_charter_optimal_form(prompt_path: str) -> list[str]:
     """Charter-time toy guard (operator 2026-08-06 'naive first pass' correction).
 
@@ -1090,6 +1368,7 @@ def cmd_add(args) -> int:
     advisories = [
         *lint_charter_capability_advisories(str(prompt_file)),
         *lint_charter_fm_advisories(str(prompt_file)),
+        *lint_charter_recall_advisories(str(prompt_file)),
     ]
     if problems:
         # STRICT BY DEFAULT (operator 2026-08-13 "No naive or toy ever"): a charter
@@ -1137,6 +1416,7 @@ def cmd_lint(args) -> int:
     for advisory in (
         *lint_charter_capability_advisories(str(prompt_file)),
         *lint_charter_fm_advisories(str(prompt_file)),
+        *lint_charter_recall_advisories(str(prompt_file)),
     ):
         print(f"charter-lint WARN [{args.name}]: {advisory}")
     return 3 if problems else 0

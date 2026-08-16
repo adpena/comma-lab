@@ -496,7 +496,13 @@ def test_fm_advisory_warns_but_strict_mode_still_queues(q, tmp_path, monkeypatch
         "Implement and measure the surface.\n\n"
         "## OPTIMAL FORM\n\n"
         "REFERENCE: source package.\n"
-        "sha abcdef1234567890\n",
+        "sha abcdef1234567890\n"
+        # Pre-existing RED repaired 2026-08-16: the negatives-accounting leg
+        # landed in lint_charter_optimal_form on 08-15 and this fixture was
+        # never updated, so cmd_add returned 3 at HEAD. The test's SUBJECT is
+        # the FM-advisory path (advisory warns, strict still queues), so the
+        # fixture conforms rather than the lint relaxing.
+        "Prior negative: the parked carrier family.\n",
         encoding="utf-8",
     )
     monkeypatch.setattr(q, "_fm_advisory_module", lambda: FakeFM)
@@ -550,3 +556,107 @@ def test_fm_advisory_does_not_rescue_deterministic_strict_refusal(
     assert "charter-lint REFUSED [x]:" in out
     assert "charter-lint WARN [x]: fmtools advisory charter_class=audit_analysis" in out
     assert "queued x" not in out
+
+
+# ---------------------------------------------------------------------------
+# Charter-time RECALL/VALIDATION advisories (operator 2026-08-16 correction).
+# Both-direction controls: the lint must FIRE on the measured 08-16 defect
+# shapes AND go SILENT on a conforming charter. A detector that only fires
+# positive is a rubber stamp.
+# ---------------------------------------------------------------------------
+
+
+def _recall_prompt(tmp_path, body: str):
+    prompt = tmp_path / "recall_prompt.md"
+    prompt.write_text(body, encoding="utf-8")
+    return str(prompt)
+
+
+def test_recall_lint_silent_on_conforming_charter(q, tmp_path):
+    """NEGATIVE CONTROL: a charter with no stale-premise shape emits nothing."""
+    path = _recall_prompt(
+        tmp_path,
+        "Build the carrier refit per ddm_rfo2_route_20260815.md.\n"
+        "Baseline re-derived at run time from the live pointer file.\n",
+    )
+    assert q.lint_charter_recall_advisories(path) == []
+
+
+def test_recall_lint_flags_bare_task_ids_without_memo_filename(q, tmp_path):
+    """Three arms reported this on 2026-08-16: arms cannot resolve #NNNN."""
+    path = _recall_prompt(tmp_path, "Execute #1074 and #1038 on the live base.\n")
+    out = q.lint_charter_recall_advisories(path)
+    assert any("bare task ids" in w for w in out)
+
+
+def test_recall_lint_accepts_task_ids_when_a_memo_is_cited(q, tmp_path):
+    """A task id is fine WITH a resolvable memo filename beside it."""
+    path = _recall_prompt(
+        tmp_path,
+        "Execute #1074 per ddm_td1_token_drop_schur_arithmetic_20260816.md.\n",
+    )
+    out = q.lint_charter_recall_advisories(path)
+    assert not any("bare task ids" in w for w in out)
+
+
+def test_recall_lint_flags_stale_frontier_literal(q, tmp_path, monkeypatch):
+    """A score-shaped literal absent from the live pointer is the pv1 class."""
+    pointer = tmp_path / "pointer.json"
+    pointer.write_text(
+        '{"effective_frontier": {"score": 0.15959729295498598}}', encoding="utf-8"
+    )
+    monkeypatch.setattr(q, "FRONTIER_POINTER", pointer)
+    path = _recall_prompt(tmp_path, "Frontier: S 0.1600920261571558 on the live base.\n")
+    out = q.lint_charter_recall_advisories(path)
+    assert any("match NO anchor in the live" in w for w in out)
+
+
+def test_recall_lint_silent_when_frontier_literal_is_current(q, tmp_path, monkeypatch):
+    """NEGATIVE CONTROL for the same leg — the live value must not fire."""
+    pointer = tmp_path / "pointer.json"
+    pointer.write_text(
+        '{"effective_frontier": {"score": 0.15959729295498598}}', encoding="utf-8"
+    )
+    monkeypatch.setattr(q, "FRONTIER_POINTER", pointer)
+    path = _recall_prompt(tmp_path, "Frontier: S 0.15959729295498598 on the live base.\n")
+    out = q.lint_charter_recall_advisories(path)
+    assert not any("match NO anchor" in w for w in out)
+
+
+def test_recall_lint_flags_refuted_numeric_from_corrections_index(q, tmp_path, monkeypatch):
+    """The gx1/ra1 class: a charter quoting a value the corpus corrected."""
+    index = tmp_path / "corrections.jsonl"
+    index.write_text(
+        json.dumps(
+            {
+                "refuted_value": "15157",
+                "corrected_value": "14414",
+                "source": ".omx/research/ddm_ra1_carrier_rank_refit_preproof_20260816.md",
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(q, "CORRECTIONS_INDEX", index)
+    path = _recall_prompt(tmp_path, "The rate rung is 15,157 B on the live base.\n")
+    out = q.lint_charter_recall_advisories(path)
+    assert any("REFUTED value" in w and "14414" in w for w in out)
+
+
+def test_recall_lint_waiver_silences_all_legs(q, tmp_path):
+    """RECALL_LINT_NA is the tracked escape, matching the sibling lints."""
+    path = _recall_prompt(
+        tmp_path,
+        "RECALL_LINT_NA: pure-apparatus landing with no research premises.\n"
+        "Execute #1074 and #1038.\n",
+    )
+    assert q.lint_charter_recall_advisories(path) == []
+
+
+def test_recall_lint_never_raises_on_unreadable_stores(q, tmp_path, monkeypatch):
+    """Advisory by construction: a missing store is silence, never a block."""
+    monkeypatch.setattr(q, "CORRECTIONS_INDEX", tmp_path / "absent.jsonl")
+    monkeypatch.setattr(q, "FRONTIER_POINTER", tmp_path / "absent.json")
+    monkeypatch.setattr(q, "RESEARCH_DIR", tmp_path / "absent_dir")
+    path = _recall_prompt(tmp_path, "This has never been run and is un-owned.\n")
+    assert q.lint_charter_recall_advisories(path) == []
