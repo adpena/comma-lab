@@ -1,6 +1,6 @@
 ---
 arm: ddm_rt1
-title: "the seg axis is one pixel wide: 99.22% of hv1's scored flips sit ON the transmitted label boundary, the round trip is 33,743 flips (0.028604 S) MEASURED, flat paint is 35.4x worse, R supplies exactly zero, and td1's r is 0.8492"
+title: "the seg axis is one pixel wide: 99.22% of hv1's scored flips sit ON the transmitted label boundary, the round trip is 33,743 flips (0.028604 S) MEASURED, flat paint is 35.4x worse, R supplies exactly zero, td1's r is 0.8492 -- and (SS5) the free-band correction channel codes at 32,270 real bytes, passing the 35,117 B gate but bounded to S=0.1523 even at perfect realization"
 utc: 2026-08-16
 charter: ".omx/research/ddm_rt1_seg_roundtrip_decomposition_charter_20260816.md"
 axis: "[macOS-CPU advisory] frozen CPU-torch SegNet -- NEVER a score"
@@ -53,12 +53,20 @@ scorer reads back, and asked where. **It is manufactured on a curve one pixel wi
 8. **Free bonus: td1's H2 is answered.** `r_observational = 0.8492`, against td1's 0.8393
    admission bar — its token-drop refusal stands, by 1.2%.
 
-**The lever** is sub-pixel edge placement on the Road↔Lane boundary. **The one live byte-carrying
-candidate** is a correction channel on that boundary — free support, 33,082 B i.i.d. entropy floor
-against a 44,480 B budget — which is live only for realization `η ≥ 0.744` and reaches sub-0.15
-(S ≈ 0.1472) if a structured coder halves the floor at sq1's η = 0.79. lr2 closed this family at
-**14.6× this vehicle's flip count**; its closure was priced at an operating point we no longer
-occupy, and §3.3 supplies the numbers to re-price it. **Pointer UNMOVED.**
+**The lever** is sub-pixel edge placement on the Road↔Lane boundary. **The one byte-carrying
+candidate** is a correction channel on that boundary — free support, priced in §3.3 and then
+actually built and raced in **§5**.
+
+**§5 (follow-on #1, executed): the coder gate PASSES at 32,270 real verified bytes vs the
+35,117 B bar — but the family is bounded and the coder was never the binding constraint.** My
+§3.3 guess that a structured coder could halve the i.i.d. floor is **REFUTED**: the flips are
+isolated single pixels (mean run 1.109), so the best real coder beats i.i.d. by 2.5% and the
+ceiling of all free conditioning is 12.2%. Including the 965 B target-class channel, the route
+yields **S = 0.15234 at perfect realization** and **0.15853 at sq1's η = 0.7895** — it is **not a
+sub-0.15 route by itself**. It needs **η > 0.753**; sq1's pose-constrained η was 0.5406, at which
+it loses. lr2 closed this family at **14.6× this vehicle's flip count**, so its closure never
+priced this operating point — but §5 now prices it, and the answer is "live at the gate, bounded
+as a route." **Pointer UNMOVED.**
 
 ## §0 Prior-law prediction lines (stated BEFORE the measurement, per the anti-re-anchor law)
 
@@ -370,9 +378,14 @@ MODELED, first order, and it credits no collateral and no class-disambiguation b
 | break-even carrier at η = 0.5406 (sq1 pose-constrained) | 24,046 B |
 
 Net ΔS at the i.i.d. floor: **−0.00759 at η = 1.0**, **−0.00136 at η = 0.79**, **+0.00601 at
-η = 0.54**. A structured coder that beats i.i.d. by 2× — plausible, because the flips are a
-contiguous 1-D signal along a curve the decoder already has — gives **−0.0124 S at η = 0.79**,
-i.e. **S ≈ 0.1472, sub-0.15**.
+η = 0.54**.
+
+> ⚠ **SUPERSEDED BY §5 — read §5 before citing anything in this subsection.** This paragraph
+> originally speculated that a structured coder could beat i.i.d. by 2× "because the flips are a
+> contiguous 1-D signal along a curve", giving S ≈ 0.1472. **§5 built the coders and refuted
+> that**: the flips are isolated single pixels (mean run 1.109), the best real coder beats i.i.d.
+> by 2.5%, and the ceiling over all free conditioning is 12.2%. The paragraph is kept for
+> provenance, not as a live claim.
 
 **Why this is not a re-opening of a closed family.** lr2 closed the offset-CARRIER family on the
 v4d vehicle at d_seg 0.004312 = **508,595 flips — 14.6× hv1's debt**. Carrier cost scales with the
@@ -447,7 +460,112 @@ Tool: `experiments/ddm_rt1_seg_roundtrip_decomposition.py` (stages `palette` / `
 decode `0.raw` (3,662,409,600 B, sha `e5539653…`, custody verified in-tool), the hv1 ep0634
 `decoded_spatial_tokens.rc64.bin`, and the qs3 `gt_argmax_n600.npy` (sha `91d3ff11…`).
 
-## §5 What this unit did NOT establish
+## §5 Follow-on #1 EXECUTED — the coder gate PASSES, and it was never the binding constraint
+
+MAIN routed follow-on #1 back to me. It is done, at $0, scorer-free. Tool:
+`experiments/ddm_rt1_flip_mask_coder_race.py` (`--mode race` / `--mode analysis`). Receipts
+`RT1_CODER_RACE.json` + `RT1_MASK_ANALYSIS.json` and all eight coded payloads:
+`/Volumes/APDataStore/pact/ddm_rt1_seg_roundtrip_20260816/coder_race/` — M7 sha `4fb718bd01be…`,
+M3 `00b46f253e86…`, M1 `75b7d95ee6f7…`, M2 `ff9617e78d00…`, M0 `36cf7f9229d0…`. The race is
+deterministic: two independent runs produced byte-identical payloads.
+
+**Every arithmetic payload was verified by decoding it back through the same online context
+machine the encoder used**, so these are bytes a real receiver could parse — not entropy
+estimates. Contexts read only the labels (free) and symbols already decoded.
+
+### §5.1 The race (n600, 2,551,464 band symbols, 34,666 flips)
+
+| coder | bytes | bits/flip | vs bar 35,117 B |
+|---|---:|---:|---|
+| **M7 CABAC boundary-walk (pair × run × temporal), 88 ctx** | **32,270** | 7.447 | **PASS −8.1%** |
+| M6 CABAC boundary-walk (run × temporal), 8 ctx | 32,627 | 7.529 | PASS |
+| M5 CABAC raster (pair × causal × temporal), 88 ctx | 32,699 | 7.546 | PASS |
+| M3 static binary AC — the i.i.d. floor, realized | 33,087 | 7.636 | PASS |
+| M4 adaptive binary AC, order-0 | 33,441 | 7.717 | PASS |
+| M2 lzma(packed) preset 9\|EXTREME | 37,224 | 8.590 | **FAIL** |
+| M1 brotli(packed) q11 | 37,632 | 8.684 | **FAIL** |
+| M0 raw packed band bits | 318,933 | 73.601 | FAIL |
+
+Two things worth keeping. First, **M3 lands at 33,087 B against my modelled 33,082 B floor — a
+5-byte agreement**, which independently validates the §3.3 arithmetic. Second, **both
+general-purpose compressors FAIL the bar**: brotli and lzma are 13–17% *worse* than a purpose-built
+binary arithmetic coder on this object. A sparse boundary mask is not something a byte-oriented
+LZ compressor can hold.
+
+### §5.2 My §3.3 speculation is REFUTED, and here is why
+
+§3.3 said "a structured coder that beats i.i.d. by 2× — plausible, because the flips are a
+contiguous 1-D signal along a curve" would reach S ≈ 0.1472. **Measured: the best real coder beats
+i.i.d. by 2.5%, not 50%.** The premise was wrong, and the diagnostic says exactly how:
+
+| statistic (walk order, **n600 full field**) | value |
+|---|---:|
+| P(flip) | 0.013587 |
+| P(flip \| previous walk symbol was a flip) | 0.0988 — a **7.27× lift** |
+| **mean run length of consecutive flips** | **1.110** |
+| runs of length 1 | **28,801 of 31,231 (92.2%)** |
+
+The clustering lift is real but the mass is not in it: **the flips are isolated single pixels
+scattered along the boundary, not contiguous displaced stretches.** So "the edge is shifted" is the
+wrong picture; "the edge is salt-and-peppered" is the right one, and run-length structure — the
+thing I bet on — barely exists.
+
+Exact conditional entropy over every free conditioning variable (ideal-model limit, no learning
+cost) confirms the ceiling:
+
+| conditioning (all free to the receiver) | bytes | vs i.i.d. |
+|---|---:|---:|
+| i.i.d. | 33,082 | — |
+| \| edge pair | 31,349 | +5.2% |
+| \| pair × causal neighbours | 30,770 | +7.0% |
+| \| pair × causal × temporal | 30,668 | +7.3% |
+| \| pair × causal × temporal × row-band | 30,229 | +8.6% |
+| **\| pair × causal × temporal × row × band-degree** | **29,058** | **+12.2%** |
+
+**12.2% is the ceiling of free conditioning, not 50%.** My implemented M7 captured 2.5% of it;
+a coder using the full context set would land near 29–30.5 KB after learning cost. That is
+bounded headroom, and it does not change the verdict below.
+
+### §5.3 The cost I had explicitly not credited: the target class
+
+A flip tells the receiver *that* a pixel is wrong, not what it should become. Conditioned on
+(our own label, edge pair) — both free — the target class costs **0.2226 bits/flip = 965 B**
+(unconditional it would be 8,884 B). Small, but it is real and it is now counted.
+
+### §5.4 The verdict — LIVE at the gate, BOUNDED as a route
+
+| channel | bytes | η required | net ΔS at η=1.0 | net ΔS at η=0.7895 | net ΔS at η=0.5406 |
+|---|---:|---:|---:|---:|---:|
+| measured M7 mask only | 32,270 | 0.7312 | −0.007899 | −0.001714 | +0.005601 |
+| **measured M7 + target class** | **33,235** | **0.7531** | **−0.007257** | **−0.001071** | **+0.006243** |
+| best modelled context + target | 30,023 | 0.6803 | −0.009396 | −0.003210 | +0.004104 |
+
+Resulting S from the hv1 base 0.15959729: **0.15234** at perfect realization, **0.15853** at sq1's
+free-solve η, and a **loss** at sq1's pose-constrained η. Even the best modelled coder reaches only
+**0.15020** at η = 1.0.
+
+**So: the correction-channel family PASSES the coder gate and does NOT die there — but it is not a
+sub-0.15 route by itself, and the coder was never the binding constraint. η is.** The gate that
+decides it is now precise: **η must exceed 0.753** for the channel to break even at all. sq1's
+free solve (0.7895) clears that by 5%; sq1's pose-constrained solve (0.5406) does not clear it at
+all. Since any shippable version must pay the pose constraint, the honest prior is that this
+channel is **more likely dead than alive**, and one measurement settles it.
+
+⚠ Scope: 272 flips (0.78%) lie off the band and are unaddressable by this support. Every η here
+is sq1's, measured on the v4d vehicle — nothing in §5 measures η on hv1.
+
+## §5.5 Routing update (supersedes §4 rows 1–2)
+
+1. **Follow-on #1 — DONE.** Gate passed at 32,270 B. Do not re-run.
+2. **Follow-on #2 is now THE decision point, with a sharp bar: measure η on hv1 under a pose
+   constraint; the channel lives only if η > 0.753.** If it lands near sq1's 0.5406, the family is
+   closed on arithmetic and everything routes to #3.
+3. **Follow-on #3 (edge-weighted Road↔Lane objective into the wd3 / ns1-P1 training line) is
+   promoted**, because §5 bounds the best post-hoc outcome at −0.0073 S even with perfect
+   realization — less than the remaining gap. Carrier-free render improvement is the only lever
+   measured here that is not bounded away from sub-0.15.
+
+## §6 What this unit did NOT establish
 
 - **No causal `r`.** §3.4 is observational.
 - **No η on hv1.** Every net-ΔS in §3.3 is conditional on an η measured on a different vehicle.
