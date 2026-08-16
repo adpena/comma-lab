@@ -85,8 +85,8 @@ cheaply — which is the whole reason the instrument was built before the burn.
 
 ```bash
 .venv/bin/python -m tac.pr130_lift.train_semantic_quantized_resumable \
-  --challenge-root <PIN-1> \
-  --cache          <PIN-2> \
+  --challenge-root upstream \
+  --cache          /Volumes/VertigoDataTier/pact/ddm_op1r_20260809/authority_cache/gt_cache_600_official_ada.pt \
   --init  /Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo/artifacts/\
 checkpoints/semantic_renderer_w96_b4_qat4_fixedtau05_tail6k_lr2e7.pt \
   --bits 4 \
@@ -146,8 +146,8 @@ lever is inert; with `--weight-qat-q3q4` set it refuses, correctly, because the 
 | 7 | Host trainer + lever wiring | **PASS** (`277fc58d13`) |
 | 8 | Resume config-identity handled additively | **PASS** (17 tests; refuses active levers vs pre-lever parent) |
 | 9 | Schedule + per-stage checkpoints | **PASS** (3,000 steps / 250 = 12 checkpoints; derivation above) |
-| 10 | **PIN-1: `--challenge-root`** | **OPEN** — mechanical lookup |
-| 11 | **PIN-2: `--cache`** (gt conditioning/target token cache; sd1 pins `EXPECTED_OFFICIAL_ADA_CACHE_SHA256`) | **OPEN** — mechanical lookup |
+| 10 | **PIN-1: `--challenge-root`** | **RESOLVED by MAIN 08-16**: `upstream/` — modules.py sha 065961ba… matches sd1 EXPECTED_UPSTREAM_MODULES_SHA256 exactly |
+| 11 | **PIN-2: `--cache`** | **RESOLVED by MAIN 08-16**: `/Volumes/VertigoDataTier/pact/ddm_op1r_20260809/authority_cache/gt_cache_600_official_ada.pt` (112.5 MB) — sha 382d7dfe38b37c0cc5017e5645032faa045af6924db66e0b67549cc96c840195 matches sd1 pin exactly |
 | 12 | Timing + memory preflight at the real config | **OPEN** — ~50-step smoke; MAIN fires |
 | 13 | Governor admission | **NOT REQUESTED** (correctly, while 10–12 are open) |
 
