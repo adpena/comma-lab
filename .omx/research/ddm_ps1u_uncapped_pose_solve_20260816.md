@@ -400,12 +400,43 @@ sha and overlay-module sha are unchanged).
 Both decode hash-request fields and the remote `manifest` step are in the order, so per-pair
 decode localization rides along at $0 marginal. MAIN fires; this arm fired nothing.
 
+### Transport seal — `SEALED_REQUEST.json`, dispatcher-validated
+
+`experiments/ddm_ps1u_pose_seal.py`, adapted from the banked `ddm_re1_pose_leg_seal.py`.
+Request sha **`9863de2057d96e5d97ceb746e0efb6c914bc9b23bc1c9f099280a805fde23230`** (6217 B),
+validated **in-process through the real `dispatcher.load_sealed_inputs`** before anything was
+emitted. Fire inputs: candidate archive (183,347 B, `97048f9f…`) · runtime bundle
+(26 members; base `archive.zip` **excluded** as required — the worker `install_archive()`s the
+candidate; all four required entries present, and the P1D1 `decode_frame0_overlay` graft is in
+the bundle) · `POSE_SCREEN_RESULT.json` carrying `pose_unmeasured=True`,
+`local_pose_delta=0.0`, the DEVICE_DEPENDENT_DECODE warning with both raw shas, and the
+pre-registered admission.
+
+**The seg leg is recorded as ASSERTED, never faked.** ps1u has no RE1T run, so
+`re1t_run_id = "NONE_ps1u_seg_asserted_decode_identical"`, `seg_delta_s_exact_t4_field = 0.0`,
+`seg_leg_measured = false`, basis *"frame-0-only edit; SegNet reads frame_1; T4 drift is signal"*,
+`rate_delta_s_exact_archive = 0.00039152506443583535`.
+
+**Consumption audit (the STOP clause), done at source:** `seg_leg_provenance` is **never read
+by any worker** — it appears only in the seal builders. The worker enforces the placeholder law
+on `local_pose_delta`/`pose_unmeasured` (`ddm_re1t_modal_t4_sign_gate.py:663-665`) and computes
+`seg_delta_s_exact_t4_field` and `rate_delta_s_exact_archive` **itself** from the real archive
+(`:704`, `:706`). So the block is metadata and cannot misstate the worker's arithmetic — no STOP
+condition fired. Had it been consumed numerically, this module would have refused to ship.
+
+Both decode hash-request keys are in the request (`scorer_input_cache_hashes_requested=true`,
+`..._batch_pairs=8`) so per-pair decode localization rides along. **Nothing was dispatched.**
+
 ## NEXT_IF_RESUMED
 
-1. **MAIN fires the sealed T4 row** (`SEALED_T4_FIRE_ORDER.json`, ~$0.16) on candidate
-   `97048f9f…` @183,347 B. Admission is pre-registered: **CUDA d_pose must fall >9.21%**.
-   Enable both decode hash-request fields + the remote `manifest` step so per-pair decode
-   localization rides along free.
+1. **MAIN fires the sealed transport row** (~$0.16) — everything it needs is built:
+   ```
+   .venv/bin/modal run --detach experiments/ddm_qs1_modal_t4_dual_axis.py::main --sealed-request /Volumes/APDataStore/pact/ddm_ps1u_uncapped_pose_20260816/dual_axis_pose/SEALED_REQUEST.json --fire-input-dir /Volumes/APDataStore/pact/ddm_ps1u_uncapped_pose_20260816/dual_axis_pose/fire_inputs --expected-request-sha256 9863de2057d96e5d97ceb746e0efb6c914bc9b23bc1c9f099280a805fde23230 --output-dir /Volumes/APDataStore/pact/ddm_ps1u_uncapped_pose_20260816/dual_axis_pose/dispatch/ddm_ps1u_dual_axis_pose_20260816_r1 --detach --provider-detach-ack
+   ```
+   Request sha `9863de2057d96e5d97ceb746e0efb6c914bc9b23bc1c9f099280a805fde23230`. Admission pre-registered:
+   **CUDA d_pose must fall >9.21%**. Hash-request keys are already in the request, so per-pair
+   decode localization rides along free. **Any measured seg drift is SIGNAL** — the seg leg is
+   asserted, not measured; price it, never absorb it.
 2. **On ADMIT**: the pointer moves; then re-solve the NEXT mass tranche (pairs 61–120 carry the
    following ~15% of mass) and re-price — the marginal B/pair is flat at ~10.4 so the exchange
    rate is known. On REFUSE: the transfer question is answered with a real number and the pose
