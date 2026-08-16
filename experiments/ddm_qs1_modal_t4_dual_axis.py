@@ -26,6 +26,7 @@ try:
     from experiments import ddm_re1t_modal_t4_sign_gate as substrate
 except (ImportError, ModuleNotFoundError):
     import ddm_re1t_modal_t4_sign_gate as substrate  # type: ignore[no-redef]
+from tac.deploy.dispatch_axis_screen import assert_distortion_axis_locally_screened
 from tac.deploy.modal.auth_eval import (
     ClaimSpec,
     claim_modal_auth_eval_dispatch,
@@ -51,6 +52,21 @@ AXIS: Final = (
 
 class QS1DispatchError(RuntimeError):
     """The sealed request, retained input, lane, or remote return differed."""
+
+
+def _parse_pose_screen_evidence(payload: bytes | None) -> dict[str, Any] | None:
+    """Parse the sealed pose-screen evidence, fail-closed on anything unusable.
+
+    An unparseable or non-object evidence file yields ``None``, which makes the
+    axis-screen census treat pose as UNSCREENED — the safe direction.
+    """
+    if not payload:
+        return None
+    try:
+        parsed = json.loads(payload.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return None
+    return parsed if isinstance(parsed, dict) else None
 
 
 def load_sealed_inputs(
@@ -80,6 +96,13 @@ def load_sealed_inputs(
         path = fire_input_dir.resolve() / name
         js1b.require_record(path, request["inputs"][name])
         payloads[name] = path.read_bytes()
+    # A paid row may not fire when EVERY distortion axis is an assertion; the
+    # ps1u r2 REFUSE (+1.686e-02 S) was bought with an unscreened pose leg.
+    # Fires here, so it refuses at BOTH in-process seal validation and at the
+    # real `modal run` entrypoint below.
+    assert_distortion_axis_locally_screened(
+        request, _parse_pose_screen_evidence(payloads.get("POSE_SCREEN_RESULT.json"))
+    )
     return payloads, request
 
 
