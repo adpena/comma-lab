@@ -619,6 +619,13 @@ def test_fixed_snapshot_plus50_false_refuse_is_gone_but_real_growth_still_refuse
     current 4.4/5.1 GiB is already in used + new 6. Old +25 each => 106 > 72 REFUSE. Fresh measured
     plateaus keep only the runtime-poll reserves => ~59.3 < 72 ADMIT. A real rising fixture still
     reaches the old +25 and refuses.
+
+    ddm_mb1: every ``list_tracked_jobs`` call here passes ``layer2_backstop_armed=True`` EXPLICITLY.
+    The measured-growth relaxation is licensed by Layer 2 (the SIGSTOP throttle) being able to pause
+    the job it relaxes, and that actuator is now default-OFF, so the relaxation is withdrawn while
+    it is disarmed. Stating the precondition here isolates the variable this test is actually about
+    (history freshness) instead of letting the assertion swing on whatever arming state the host
+    machine happens to carry.
     """
     history_path = tmp_path / "rss_history.json"
     ceiling = gov.compute_adaptive_ceiling(
@@ -646,6 +653,7 @@ def test_fixed_snapshot_plus50_false_refuse_is_gone_but_real_growth_still_refuse
     first = gov.list_tracked_jobs(
         samples=stable, registry_rows=[], self_pid=1,
         rss_history_path=history_path, rss_history_now_ts=100.0,
+        layer2_backstop_armed=True,
     )
     old_headroom = gov.sum_active_growth_headroom_gib(first)
     old_decision = gov.admission_decision(
@@ -661,6 +669,7 @@ def test_fixed_snapshot_plus50_false_refuse_is_gone_but_real_growth_still_refuse
     plateau = gov.list_tracked_jobs(
         samples=stable, registry_rows=[], self_pid=1,
         rss_history_path=history_path, rss_history_now_ts=160.0,
+        layer2_backstop_armed=True,
     )
     measured_headroom = gov.sum_active_growth_headroom_gib(plateau)
     measured_decision = gov.admission_decision(
@@ -685,6 +694,7 @@ def test_fixed_snapshot_plus50_false_refuse_is_gone_but_real_growth_still_refuse
     rising = gov.list_tracked_jobs(
         samples=growing, registry_rows=[], self_pid=1,
         rss_history_path=history_path, rss_history_now_ts=220.0,
+        layer2_backstop_armed=True,
     )
     rising_headroom = gov.sum_active_growth_headroom_gib(rising)
     assert rising_headroom >= gov.UNKNOWN_GROWTH_HEADROOM_GIB

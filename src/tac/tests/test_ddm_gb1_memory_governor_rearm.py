@@ -801,7 +801,15 @@ def test_gate_is_registered_with_executed_positive_controls():
     assert "check_throttle_rearms_and_admission_reconciles" in names
     mine = [c for c in cg.POSITIVE_CONTROLS
             if c.gate == "check_throttle_rearms_and_admission_reconciles"]
-    assert len(mine) == 2, "one control per leg — a single control leaves the other gutable"
+    # One control per detector rule, never per gate: a shared control leaves every other rule free
+    # to be gutted silently. Leg A (re-arm) + Leg B (admission reconcile) from ddm_gb1, then
+    # ddm_mb1's Leg C in two rules — C1 (a spawn path that FORCES the actuator on) and C2 (the
+    # actuator switch defaulting to a hardcoded ON). Four rules, four controls.
+    assert len(mine) == 4, "one control per detector rule — a shared control leaves rules gutable"
+    assert {c.must_mention for c in mine} == {
+        "planted_throttle.py", "planted_admission.py",
+        "planted_actuator_spawn.py", "planted_actuator_default.py",
+    }
     # The #831 class guard EXECUTES them; if it passes, both controls still fire.
     assert cg.check_refusal_gates_have_live_positive_control(strict=False, verbose=False) == []
     cov = cg.positive_control_coverage()

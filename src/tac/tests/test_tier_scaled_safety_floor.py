@@ -266,12 +266,34 @@ def test_band_defer_to_throttle_precedence_preserved_at_edge_tier():
 def test_measured_growth_relaxation_retains_runtime_throttle_backstop():
     """Layer-3 admission may use a stable measured trend only for the exact class Layer 2 can pause.
     The tier-scaled pressure policy and throttle target remain unchanged and still fire.
+
+    ddm_mb1 (2026-08-16) REPAIRED, not weakened, this invariant. The throttle ACTUATOR is now
+    default-OFF (durably armed) after it SIGSTOPped three live measurements for 75+ minutes, so
+    ``run_daemon``'s ``govern`` default is no longer the literal ``True`` this test used to read as
+    "the backstop is on". The invariant the test actually guards — *a relaxed measurement is only
+    ever charged to a job Layer 2 can really pause* — is now enforced on BOTH legs: structural
+    eligibility AND live arming. Asserting the old literal would have forced the backstop to stay
+    permanently armed, which is the state that froze the box.
     """
     assert gov.RUNTIME_THROTTLE_POLL_INTERVAL_S == mbb.DEFAULT_INTERVAL_S
-    assert inspect.signature(mbb.run_daemon).parameters["govern"].default is True
-    assert '"--no-govern"' not in inspect.getsource(mbb.ensure_blackbox_running)
+    # Tri-state: None = defer to the arming surface (default OFF), never a silent hardcoded ON.
+    assert inspect.signature(mbb.run_daemon).parameters["govern"].default is None
+    # The auto-start must not FORCE the actuator on (that was the silent re-enable path); it must
+    # also not hardcode --no-govern, so an operator-armed flag is still honoured.
+    autostart_src = inspect.getsource(mbb.ensure_blackbox_running)
+    assert '"--no-govern"' not in autostart_src
+    assert '"--govern"' not in autostart_src
     list_source = inspect.getsource(gov.list_tracked_jobs)
-    assert "if eligible else None" in list_source
+    # BOTH legs of the precondition, in one expression: pausable AND actually-armed.
+    assert "if (eligible and layer2_armed) else None" in list_source
+    # A disarmed throttle must WITHDRAW the relaxation (strictly safer), never widen admission.
+    # Hermetic: resolved against an empty env + a path that cannot exist, so the assertion cannot
+    # flip on whatever arming state this particular machine happens to carry.
+    assert gov.resolve_arming(
+        "TAC_GOV_THROTTLE_ARM_UNSET_IN_TEST",
+        Path("/nonexistent/ddm_mb1/governor_throttle_arm.flag"),
+        env={},
+    ).armed is False
     observed = gov.estimate_observed_remaining_growth_gib(
         [
             gov.RSSHistorySample(900, 4.4, 100.0, "start-a"),

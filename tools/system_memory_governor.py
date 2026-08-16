@@ -63,6 +63,7 @@ peak projection — the ``projected_new_gib`` this gate consumes).
 from __future__ import annotations
 
 import argparse
+import contextlib
 import hashlib
 import json
 import math
@@ -76,6 +77,7 @@ import time
 from collections.abc import Mapping, Sequence
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
+from typing import NamedTuple
 
 from tac.jsonl_store import append_locked_jsonl
 
@@ -218,6 +220,11 @@ DEFAULT_BAND_INTERVAL_S = 30.0
 MAX_STOP_DURATION_BAND_EVALUATIONS = 10
 DEFAULT_MAX_STOP_DURATION_S = MAX_STOP_DURATION_BAND_EVALUATIONS * DEFAULT_BAND_INTERVAL_S
 MAX_STOP_DURATION_ENV = "TAC_GOV_MAX_STOP_DURATION_S"
+# The token that marks an escape-hatch resume in ``GovernorAction.reason``. ONE source of truth
+# (ddm_mb1): ``memory_blackbox`` classifies the hatch by this token to raise its TYPED alarm, so a
+# reworded reason string here would otherwise silently stop the alarm from ever firing again — the
+# actuation would look like a routine resume, which is exactly the silence the incident ran in.
+ESCAPE_HATCH_REASON_TOKEN = "THROTTLE ESCAPE HATCH"
 
 
 def resolve_max_stop_duration_s(env: Mapping[str, str] | None = None) -> float:
@@ -291,21 +298,83 @@ ADMISSION_ENFORCE_ENV = "TAC_ADMISSION_ENFORCE"
 _ADMISSION_ENFORCE_FLAG = _TOOLS.parent / ".omx" / "state" / "admission_enforce.flag"
 
 
+_ARM_TRUTHY = frozenset({"1", "true", "yes", "on"})
+
+
+class Arming(NamedTuple):
+    """Resolved state of a durably-armed, default-OFF actuator.
+
+    ``source`` is WHY it reads that way ("env" / "flag" / "default"); ``detail`` is the operator-
+    facing sentence a daemon logs at startup. "Off" is only a tracked state if it is SURFACED with
+    its reason — a silent default is exactly the orphan-generator CLAUDE.md forbids."""
+    armed: bool
+    source: str
+    detail: str
+
+
+def resolve_arming(env_name: str, flag_path: Path, *,
+                   env: Mapping[str, str] | None = None) -> Arming:
+    """ONE resolver for every default-OFF actuator: armed iff ``env_name`` is truthy OR
+    ``flag_path`` exists with a truthy first line. PURE apart from the two reads.
+
+    Single source of truth on purpose (ddm_mb1). ``admission_enforcing()`` and
+    ``throttle_arming()`` are the two callers; a second hand-rolled copy of this env-or-flag dance
+    is how the two arming surfaces would silently diverge in their truthy-parsing or their
+    precedence. Malformed / unreadable flag file => NOT armed (fail-safe: the actuator stays off)."""
+    src = os.environ if env is None else env
+    if (src.get(env_name, "") or "").strip().lower() in _ARM_TRUTHY:
+        return Arming(True, "env", f"ARMED by {env_name}")
+    try:
+        if flag_path.is_file():
+            first = (flag_path.read_text().splitlines() or [""])[0].strip().lower()
+            if first in _ARM_TRUTHY:
+                return Arming(True, "flag", f"ARMED by durable flag {flag_path}")
+            return Arming(False, "default",
+                          f"NOT armed ({flag_path} present but first line {first!r} is not truthy)")
+    except OSError as exc:
+        return Arming(False, "default", f"NOT armed ({flag_path} unreadable: {exc})")
+    return Arming(False, "default",
+                  f"NOT armed (default OFF; set {env_name}=1 or write a truthy {flag_path})")
+
+
 def admission_enforcing() -> bool:
     """True iff the admission gate is in ENFORCE mode (blocks launches). Default FALSE (ADVISORY —
     logs what it WOULD refuse) until independent review arms enforce via the env var
     ``TAC_ADMISSION_ENFORCE=1`` OR the durable flag file ``.omx/state/admission_enforce.flag``
     (truthy first line). Only ADDS refusals the gate already computes (enforce ⊆ advisory)."""
-    _truthy = {"1", "true", "yes", "on"}
-    if os.environ.get(ADMISSION_ENFORCE_ENV, "0").strip().lower() in _truthy:
-        return True
-    try:
-        if _ADMISSION_ENFORCE_FLAG.is_file():
-            first = (_ADMISSION_ENFORCE_FLAG.read_text().splitlines() or [""])[0].strip().lower()
-            return first in _truthy
-    except OSError:
-        return False
-    return False
+    return resolve_arming(ADMISSION_ENFORCE_ENV, _ADMISSION_ENFORCE_FLAG).armed
+
+
+# ── the SIGSTOP THROTTLE actuator arming (ddm_mb1, 2026-08-16) ───────────────────────────────────
+# MEASURED INCIDENT 2026-08-15: the throttle SIGSTOPped five live jobs for 75+ minutes on a
+# 40.5-GiB-free box. ddm_gb1 fixed the MECHANISM (right object / re-arm / exit-resume). It did NOT
+# fix the ARMING: ``run_daemon`` still defaulted ``govern=True`` and the auto-start path
+# (``ensure_blackbox_running`` -> ``memory_blackbox.py --daemon``) passed no opt-out, so the next
+# training launch would silently restart the actuator that has not yet been re-adjudicated.
+#
+# THE SPLIT (CLAUDE.md "'Off' is a tracked queue, never a forgotten default"):
+#   * the RECORDER is read-only, score-neutral observability -> DEFAULT ON, never gated;
+#   * the THROTTLE is an ACTUATOR that SIGSTOPs live measurements -> DEFAULT OFF, durably armed,
+#     and its off-state is LOGGED with its reason at every daemon start.
+# The incident's own verdict is why off is the right default even post-fix: "per-job safe_run
+# envelopes (real RSS caps) were the protection that actually worked — the machine-wide SIGSTOP
+# layer was net-negative."
+THROTTLE_ARM_ENV = "TAC_GOV_THROTTLE_ARM"
+_THROTTLE_ARM_FLAG = _TOOLS.parent / ".omx" / "state" / "governor_throttle_arm.flag"
+
+
+def throttle_arming(*, env: Mapping[str, str] | None = None) -> Arming:
+    """Resolved arming of the SIGSTOP throttle actuator. DEFAULT OFF (see the block above).
+
+    Armed by ``TAC_GOV_THROTTLE_ARM=1`` or a truthy ``.omx/state/governor_throttle_arm.flag``.
+    Returns the full :class:`Arming` (not a bare bool) so the daemon can log WHY — an unexplained
+    "governor: off" line is how a disabled protection layer becomes a forgotten one."""
+    return resolve_arming(THROTTLE_ARM_ENV, _THROTTLE_ARM_FLAG, env=env)
+
+
+def throttle_armed(*, env: Mapping[str, str] | None = None) -> bool:
+    """True iff the SIGSTOP throttle actuator is armed. Convenience over :func:`throttle_arming`."""
+    return throttle_arming(env=env).armed
 
 # BROAD "our heavy jobs" allowlist for THROTTLE candidate discovery (beyond the registry).
 # The crash summed HETEROGENEOUS jobs, so the throttle must be able to pause a byte-close / inflate /
@@ -1771,6 +1840,7 @@ def list_tracked_jobs(
     our_jobs_pattern: str = OUR_JOBS_PATTERN,
     rss_history_path: Path | None = None,
     rss_history_now_ts: float | None = None,
+    layer2_backstop_armed: bool | None = None,
 ) -> list[TrackedJob]:
     """Build the live tracked-job list = (registry custody jobs) UNION (ps processes matching the
     broad our-jobs pattern), each annotated with priority / projected-peak / current-RSS / paused /
@@ -1778,9 +1848,17 @@ def list_tracked_jobs(
 
     A real live scan records material unregistered RSS history at ``_RSS_HISTORY_PATH``. Tests and
     callers that inject ``samples`` remain hermetic unless they explicitly provide a history path.
+
+    ``layer2_backstop_armed`` (ddm_mb1) defaults to the live throttle arming. It licenses the
+    measured-growth admission relaxation below: the relaxation exists ONLY because Layer 2 can pause
+    the job it relaxes, so a DISARMED throttle must withdraw it. See the callsite comment.
     """
     if _mg is None:
         return []
+    # Resolved ONCE per scan (not per candidate): one flag read, and a mid-scan flip cannot make two
+    # candidates in the same tick disagree about whether a backstop exists.
+    layer2_armed = (throttle_armed() if layer2_backstop_armed is None
+                    else bool(layer2_backstop_armed))
     live_process_scan = samples is None
     if samples is None:
         samples = _mg.sample_processes()
@@ -1901,7 +1979,20 @@ def list_tracked_jobs(
             # CRITICAL safety precondition: only throttle-eligible detached group leaders may use a
             # relaxed measurement. A non-leader/unpausable material process has no Layer-2 backstop
             # and therefore stays on +25 even if its history appears flat.
-            observed_remaining_growth_gib=(observed_growth_by_pid.get(pid) if eligible else None),
+            # ddm_mb1 SECOND LEG of the same precondition: structural eligibility is necessary but
+            # NOT sufficient — a throttle-eligible job still has no Layer-2 backstop when the
+            # actuator is DISARMED (now the default). So the relaxation is withdrawn wholesale in
+            # that state and every material unregistered job falls back to the conservative +25.
+            # Direction is deliberately the safe one: disarming the throttle makes admission
+            # STRICTER, never wider. Without this, ddm_mb1's default-OFF change would have silently
+            # widened Layer-3 admission by removing the very backstop that licensed it.
+            # KNOWN RESIDUAL (stated, not hidden): "armed" means the flag/env says the actuator MAY
+            # run, not that a daemon is running right now. A liveness check would have to import
+            # memory_blackbox, which imports THIS module — a cycle. This is strictly better than the
+            # pre-ddm_mb1 behaviour, which granted the relaxation with no throttle condition at all;
+            # closing the gap needs a registry-side liveness read and is left as owed work.
+            observed_remaining_growth_gib=(observed_growth_by_pid.get(pid)
+                                           if (eligible and layer2_armed) else None),
         )
         prio_field = rec.get("priority")
         try:
@@ -2089,7 +2180,7 @@ def decide_governor_action(
             longest = max(held for _, held in overdue)
             return GovernorAction(
                 level, "resume",
-                f"THROTTLE ESCAPE HATCH: {len(overdue)} job(s) SIGSTOPped >= {ceiling:.0f}s "
+                f"{ESCAPE_HATCH_REASON_TOKEN}: {len(overdue)} job(s) SIGSTOPped >= {ceiling:.0f}s "
                 f"(longest {longest:.0f}s) — a stop this long is a FROZEN measurement, not "
                 f"protection; resuming regardless of pressure level {level!r}",
                 resume_targets=_resume_order([j for j, _ in overdue]))
@@ -2743,6 +2834,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             import memory_blackbox as _mbb  # tools/ is on sys.path (same dir)
             _paused_since = _mbb.paused_since_ts()
         except Exception:
+            _mbb = None
             _paused_since = {}
         action = decide_governor_action(
             level=level, consecutive_warn=cw, consecutive_critical=cc, jobs=jobs,
@@ -2752,10 +2844,30 @@ def main(argv: Sequence[str] | None = None) -> int:
             max_stop_duration_s=resolve_max_stop_duration_s())
         acted = []
         if args.apply and action.action == "pause" and action.target is not None:
+            # ddm_mb1: MIRROR the daemon's ledger discipline at this second SIGSTOP entry point.
+            # Pre-fix, a `--apply` pause here SIGSTOPped a job and recorded NOTHING, so the stop was
+            # invisible to the exit sweep, to `memory_blackbox.py --resume-stopped`, and to the
+            # escape hatch (which ages pids by their ledger timestamp). That is the same "no
+            # exit-resume" defect the 2026-08-15 incident named, just reached through the CLI
+            # instead of the daemon — and it strands a job precisely when no daemon is running to
+            # adopt it. Record BEFORE signalling: a crash between the two must leave a sweepable
+            # ledger, never a stranded pid (recording a pid we then fail to stop is harmless — the
+            # sweep skips anything not in state T).
+            # INTERACTION, stated so it does not surprise: once recorded, this pause is sweepable,
+            # so a later black-box daemon start will SIGCONT it. That is the SAFE direction and it
+            # is intended — this CLI is one-shot, so its pause is stranded the moment the process
+            # exits. A resumed job at worst uses memory; a stopped one is a frozen measurement.
+            if _mbb is not None:
+                with contextlib.suppress(Exception):
+                    _mbb.record_stopped_pids(_mbb._stopped_scope_pids(action.target),
+                                             label=action.target.label)
             acted.append(("pause", action.target.label, pause_job(action.target)))
         elif args.apply and action.action == "resume":
             for j in action.resume_targets:
                 acted.append(("resume", j.label, resume_job(j)))
+                if _mbb is not None:
+                    with contextlib.suppress(Exception):
+                        _mbb.record_resumed(pids=_mbb._stopped_scope_pids(j), label=j.label)
         print(json.dumps({"snapshot": snap.to_json(), "action": action.to_json(),
                           "applied": acted}, indent=2))
         return 0

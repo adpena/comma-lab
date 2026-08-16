@@ -4423,6 +4423,21 @@ _PRESSURE_GATE_MARKERS = (
 # cannot be satisfied by anything except the re-arm actually being wired.
 _THROTTLE_REARM_CURE_MARKERS = ("resume_free_gib", "max_stop_duration")
 
+# ── LEG C markers (ddm_mb1 2026-08-16): the ACTUATOR's ARMING, not its mechanism ─────────────────
+# ddm_gb1 cured the throttle's mechanism (right object / re-arm / exit-resume) but left it ON by a
+# hardcoded default, with an auto-start path that passed no opt-out — so the next training launch
+# would have silently restarted the un-adjudicated SIGSTOP actuator. Leg C refuses the two shapes
+# that make "the actuator is off" a fact about nobody having launched yet rather than about code.
+_THROTTLE_ARM_WAIVER = "THROTTLE_ARM_OK"
+# The cure: the switch is resolved from the durable arming surface, never hardcoded.
+_THROTTLE_ARM_MARKERS = ("throttle_arming", "throttle_armed")
+# A function SPAWNS the actuator iff it builds the black-box daemon's argv.
+_ACTUATOR_SPAWN_MARKERS = ("memory_blackbox", '"--daemon"')
+# ...and forces it on iff that argv carries the force flag.
+_ACTUATOR_FORCE_ON_TOKEN = '"--govern"'
+# The actuator's own switch parameter.
+_ACTUATOR_SWITCH_PARAM = "govern"
+
 
 def _gb1_surface_files(root: Path) -> list[Path]:
     """DECLARED scope: tools/*.py + src/tac/**/*.py + experiments/*.py + scripts/*.py, minus tests
@@ -4494,8 +4509,20 @@ def check_throttle_rearms_and_admission_reconciles(
     under the registry lock) rather than in its gate function. Waiver:
     ``# ADMISSION_RECONCILE_OK:<rationale>`` on the call line.
 
+    **LEG C — the SIGSTOP actuator may not be ARMED BY DEFAULT** (ddm_mb1, 2026-08-16). Leg A cures
+    the throttle's MECHANISM; Leg C cures its ARMING, which ddm_gb1 left untouched. Two shapes are
+    refused: (C1) a function that builds the black-box daemon argv must not pass ``--govern``, which
+    FORCES the actuator on — the auto-start path did exactly this by omission, so "the daemon is
+    OFF" was true only because nobody had launched training yet; and (C2) a function taking the
+    ``govern`` switch must not default it to a hardcoded ``True``, and a ``None`` default must
+    actually resolve against ``throttle_arming()`` (an unresolved ``None`` is not a tracked
+    default-OFF — it is an actuator no operator can arm, the same orphan class one step over).
+    The RECORDER is deliberately out of scope: read-only observability defaults ON. Waiver:
+    ``# THROTTLE_ARM_OK:<rationale>`` anywhere in the function.
+
     WARN-ONLY at landing per the "Strict-flip atomicity rule", though live count IS 0 in this
-    landing (measured pre-fix: 3 Leg-A functions in 2 files + 2 Leg-B modules; post-fix 0). It stays
+    landing (measured pre-fix: 3 Leg-A functions in 2 files + 2 Leg-B modules + 1 Leg-C hardcoded
+    ``govern=True`` in ``memory_blackbox.run_daemon``; post-fix 0). It stays
     warn-only for one cycle because both legs scan a surface that sibling arms are actively editing
     (the launcher/governor family), and a strict gate that fires on someone else's in-flight commit
     trains readers to bypass the suite. Strict-flip condition: one clean cycle with live count 0.
@@ -4506,6 +4533,8 @@ def check_throttle_rearms_and_admission_reconciles(
     scanned = 0
     scanned_functions = 0
     admission_modules = 0
+    scanned_actuator_spawns = 0
+    scanned_actuator_switches = 0
     for path in _gb1_surface_files(root):
         considered += 1
         text = _read(path)
@@ -4516,7 +4545,12 @@ def check_throttle_rearms_and_admission_reconciles(
         # — and a gate people route around is not protection. A file that mentions none of these
         # tokens cannot contain either anti-pattern, so skipping it costs no coverage; `considered`
         # is still reported next to `scanned` so the prefilter can never hide a narrowed scan.
-        if not any(tok in text for tok in (*_THROTTLE_RESUME_MARKERS, "live_admission_decision")):
+        # ddm_mb1: Leg C's tokens join the prefilter. Without this a file that ONLY carries the
+        # actuator-arming anti-pattern (no resume_job, no admission call) would be skipped before
+        # the AST parse — and the Leg-C positive controls, which are exactly that shape, would
+        # never fire. A prefilter that hides a leg is the "vacuity == pass" failure.
+        if not any(tok in text for tok in (*_THROTTLE_RESUME_MARKERS, "live_admission_decision",
+                                           _ACTUATOR_SWITCH_PARAM)):
             continue
         scanned += 1
         try:
@@ -4554,6 +4588,79 @@ def check_throttle_rearms_and_admission_reconciles(
                 f"`# {_THROTTLE_REARM_WAIVER}:<rationale>` waiver."
             )
 
+        # ── LEG C: the SIGSTOP actuator may not be ARMED BY DEFAULT ──
+        # Placed BEFORE Leg B on purpose: Leg B short-circuits with `continue` on files with no
+        # admission call, which would silently skip every Leg-C check in the same file.
+        for node in ast.walk(tree):
+            if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            code = _function_code_lines(node, lines)
+            if not code:
+                continue
+            blob = "\n".join(code)
+            fn_lines = lines[node.lineno - 1:getattr(node, "end_lineno", node.lineno)]
+            waived = any(_waiver_present(ln, _THROTTLE_ARM_WAIVER) for ln in fn_lines)
+
+            # C1 — a spawn path must not FORCE the actuator on.
+            if all(m in blob for m in _ACTUATOR_SPAWN_MARKERS):
+                scanned_actuator_spawns += 1
+                if _ACTUATOR_FORCE_ON_TOKEN in blob and not waived:
+                    violations.append(
+                        f"{rel}:{node.lineno}: {node.name}() spawns the memory-blackbox daemon with "
+                        f"{_ACTUATOR_FORCE_ON_TOKEN} — that FORCES the SIGSTOP throttle on and "
+                        f"re-creates the silent re-enable (MEASURED 2026-08-15: the throttle "
+                        f"SIGSTOPped three live measurements for 75+ minutes on a 40.5-GiB-free "
+                        f"box). Pass neither --govern nor --no-govern so the daemon defers to the "
+                        f"durable arming surface, or add a `# {_THROTTLE_ARM_WAIVER}:<rationale>`."
+                    )
+
+            # C2 — the actuator's own switch must not default to a hardcoded ON, and a None default
+            # must actually RESOLVE against the arming surface (else "off" is unreachable-forever,
+            # which is just the opposite silent default).
+            args = getattr(node, "args", None)
+            if args is None:
+                continue
+            switch_defaults: list[ast.expr] = []
+            # POSITIONAL: ``args.defaults`` aligns to the TAIL of posonlyargs + args COMBINED.
+            # Splitting those two lists (or ignoring posonlyargs) mis-aligns the offset and can
+            # attribute a default to the wrong parameter — a false positive on someone else's arg.
+            positional = list(getattr(args, "posonlyargs", [])) + list(args.args)
+            pos_offset = len(positional) - len(args.defaults)
+            for idx, default in enumerate(args.defaults):
+                pos = pos_offset + idx
+                if 0 <= pos < len(positional) and positional[pos].arg == _ACTUATOR_SWITCH_PARAM:
+                    switch_defaults.append(default)
+            # KEYWORD-ONLY: ``kw_defaults`` is 1:1 with kwonlyargs, with None where there is none.
+            # strict=True: CPython guarantees these are 1:1; a mismatch would be a corrupt AST and
+            # should raise here rather than silently truncate the scan.
+            for kwarg, default in zip(args.kwonlyargs, args.kw_defaults, strict=True):
+                if default is not None and kwarg.arg == _ACTUATOR_SWITCH_PARAM:
+                    switch_defaults.append(default)
+            if not switch_defaults:
+                continue
+            scanned_actuator_switches += 1
+            if waived:
+                continue
+            for default in switch_defaults:
+                if isinstance(default, ast.Constant) and default.value is True:
+                    violations.append(
+                        f"{rel}:{node.lineno}: {node.name}() defaults `{_ACTUATOR_SWITCH_PARAM}=True` "
+                        f"— the SIGSTOP actuator is ON by a hardcoded default, so every auto-start "
+                        f"re-arms it with no operator adjudication and no recorded reason. Default "
+                        f"it to None and resolve via {_THROTTLE_ARM_MARKERS[0]}(), or add a "
+                        f"`# {_THROTTLE_ARM_WAIVER}:<rationale>` waiver."
+                    )
+                elif (isinstance(default, ast.Constant) and default.value is None
+                      and not any(m in blob for m in _THROTTLE_ARM_MARKERS)):
+                    violations.append(
+                        f"{rel}:{node.lineno}: {node.name}() defaults "
+                        f"`{_ACTUATOR_SWITCH_PARAM}=None` but never resolves it against the arming "
+                        f"surface ({' / '.join(_THROTTLE_ARM_MARKERS)}) — an unresolved None is not "
+                        f"a tracked default-OFF, it is an actuator no operator can ever arm. Call "
+                        f"`{_THROTTLE_ARM_MARKERS[0]}()`, or add a "
+                        f"`# {_THROTTLE_ARM_WAIVER}:<rationale>` waiver."
+                    )
+
         # ── LEG B ──
         admission_calls = [n for n in ast.walk(tree)
                            if isinstance(n, ast.Call)
@@ -4585,8 +4692,10 @@ def check_throttle_rearms_and_admission_reconciles(
         # DECLARED DENOMINATOR: a narrowed scope must never print a clean OK over an empty scan.
         ok_detail=(
             f"{scanned_functions} throttle-resume function(s) + {admission_modules} admission "
-            f"module(s) checked in {scanned} of {considered} in-scope source file(s) mentioning a "
-            f"marker (scope: tools/*.py + src/tac/**/*.py + experiments/*.py + scripts/*.py)"
+            f"module(s) + {scanned_actuator_spawns} actuator-spawn path(s) + "
+            f"{scanned_actuator_switches} actuator-switch default(s) checked in {scanned} of "
+            f"{considered} in-scope source file(s) mentioning a marker "
+            f"(scope: tools/*.py + src/tac/**/*.py + experiments/*.py + scripts/*.py)"
         ),
     )
 
@@ -4632,6 +4741,43 @@ POSITIVE_CONTROLS = (
         why=(
             "ddm_gb1 Leg B: the EXACT pre-fix safe_run shape — a REFUSING admission gate that "
             "reads the durable-daemon registry with no reconcile, so dead rows charge 25 GiB each."
+        ),
+    ),
+    PositiveControl(
+        gate="check_throttle_rearms_and_admission_reconciles",
+        files={
+            "tools/planted_actuator_spawn.py": (
+                "def ensure_blackbox_running():\n"
+                "    argv = [\n"
+                '        "--label", "memory_blackbox",\n'
+                '        "--", "python", "tools/memory_blackbox.py", "--daemon", "--govern",\n'
+                "    ]\n"
+                "    return spawn(argv)\n"
+            )
+        },
+        must_mention="planted_actuator_spawn.py",
+        why=(
+            "ddm_mb1 Leg C1: an auto-start path that FORCES the SIGSTOP throttle on. This is the "
+            "shape that made 'the daemon is OFF' a fact about nobody having launched training yet "
+            "rather than about the code — the next launch would silently re-arm the actuator that "
+            "froze three live measurements for 75+ minutes."
+        ),
+    ),
+    PositiveControl(
+        gate="check_throttle_rearms_and_admission_reconciles",
+        files={
+            "tools/planted_actuator_default.py": (
+                "def run_daemon(*, interval=2.0, govern=True):\n"
+                "    if govern:\n"
+                "        pause_job(lowest_priority_target())\n"
+                "    return 0\n"
+            )
+        },
+        must_mention="planted_actuator_default.py",
+        why=(
+            "ddm_mb1 Leg C2: the EXACT pre-fix run_daemon shape — the SIGSTOP actuator ON by a "
+            "hardcoded default, so every auto-start re-arms it with no operator adjudication and "
+            "no recorded reason. 'Off' must be a tracked, armed state, never a forgotten default."
         ),
     ),
 )

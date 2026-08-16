@@ -17,6 +17,16 @@ reference, and carries a hard ``max_stop_duration`` escape hatch. Every pid it s
 persisted ledger and SIGCONT-swept on exit (atexit + SIGTERM/SIGINT); ``--resume-stopped`` is the
 sweep for what a SIGKILL leaves behind.
 
+THE ACTUATOR IS DEFAULT-OFF AND DURABLY ARMED (ddm_mb1, 2026-08-16). ddm_gb1 fixed the throttle's
+MECHANISM but not its ARMING: ``run_daemon`` still defaulted ``govern=True`` and the auto-start path
+passed no opt-out, so the next training launch would have silently restarted the un-adjudicated
+SIGSTOP actuator. Now the RECORDER (read-only, score-neutral observability) is always on, while the
+THROTTLE actuator runs only when armed by ``TAC_GOV_THROTTLE_ARM=1`` or a truthy
+``.omx/state/governor_throttle_arm.flag`` — and its state + reason are LOGGED at every start, so
+"off" is a tracked state rather than a forgotten default. The exit/startup SIGCONT sweeps are
+UNCONDITIONAL (SIGCONT-only, and a recorder-only daemon must still rescue what an armed predecessor
+stranded).
+
 WHAT EACH SAMPLE CAPTURES (one JSON line, ~2 s cadence; 0.5 s when pressure is elevated):
   wall-clock ts (+ iso + monotonic + kern.boottime for reboot detection); TOTAL physical RAM;
   used / available / free / wired / compressor / swap-used; the macOS memory-PRESSURE level
@@ -616,8 +626,20 @@ def _govern_tick(consecutive_warn: int, consecutive_critical: int,
         for j in action.resume_targets:
             with contextlib.suppress(Exception):
                 record_resumed(pids=_stopped_scope_pids(j), label=j.label)
-        record = {"action": "resume", "results": results, "reason": action.reason}
-        _log_action(f"GOVERNOR RESUME {results} :: {action.reason}")
+        # ddm_mb1: an ESCAPE-HATCH resume is not routine — it means the throttle held a live
+        # measurement past the ceiling, i.e. the re-arm references THEMSELVES failed. Emit it as a
+        # TYPED, greppable alarm (CLAUDE.md confound-immune-system L1: turn silent artifacts LOUD),
+        # never as another indistinguishable RESUME line. The 2026-08-15 freeze was silent for 75+
+        # minutes precisely because nothing in the log said "this is anomalous".
+        hatched = gov.ESCAPE_HATCH_REASON_TOKEN in (action.reason or "")
+        record = {"action": "resume", "results": results, "reason": action.reason,
+                  "escape_hatch": hatched}
+        if hatched:
+            record["alarm"] = "throttle_escape_hatch"
+            _log_action(f"ALARM confound_alarm=throttle_escape_hatch GOVERNOR RESUME {results} "
+                        f":: {action.reason}")
+        else:
+            _log_action(f"GOVERNOR RESUME {results} :: {action.reason}")
     elif action.action in ("escalate_alert", "alert") and level in ("warn", "critical"):
         record = {"action": action.action, "reason": action.reason}
         _log_action(f"GOVERNOR {action.action.upper()} avail={snap.available_gib:.1f}GiB "
@@ -636,7 +658,7 @@ def run_daemon(
     *,
     interval: float = DEFAULT_INTERVAL_S,
     fast_interval: float = DEFAULT_FAST_INTERVAL_S,
-    govern: bool = True,
+    govern: bool | None = None,
     max_iterations: int | None = None,
     band: bool = True,
     band_interval_s: float = DEFAULT_BAND_INTERVAL_S,
@@ -660,20 +682,42 @@ def run_daemon(
     if fd is None:
         print("[memory-blackbox] another instance already holds the singleton lock; exiting 0.")
         return 0
-    # ddm_gb1 D3: arm the exit sweep BEFORE the first tick can stop anything, and sweep whatever a
-    # PREVIOUS daemon stranded (its SIGKILL ran no handler) so a restart is also a recovery.
-    if govern:
-        install_exit_resume_handlers()
-        with contextlib.suppress(Exception):
-            stale = resume_all_stopped()
-            if stale["resumed"] or stale["skipped_not_stopped"]:
-                _log_action(f"BLACKBOX startup sweep of a predecessor's stopped set: {stale}")
+    # ddm_mb1: the ACTUATOR is default-OFF and durably armed; the RECORDER is always on. ``govern``
+    # None = resolve from the arming surface (the auto-start path passes nothing, so it can no
+    # longer silently re-enable the throttle); an explicit True/False is a per-invocation override.
+    if govern is None:
+        arming = gov.throttle_arming()
+        govern = arming.armed
+    else:
+        # An explicit caller override must never be REPORTED as an arming-surface decision — that
+        # would make a forced-on test daemon look durably armed in the action log.
+        govern = bool(govern)
+        arming = gov.Arming(govern, "explicit",
+                            f"explicit govern={govern} passed by the caller (overrides the "
+                            f"{'armed' if gov.throttle_armed() else 'default-OFF'} arming surface)")
+    # ddm_gb1 D3 + ddm_mb1: arm the exit sweep BEFORE the first tick can stop anything, and sweep
+    # whatever a PREVIOUS daemon stranded (its SIGKILL ran no handler) so a restart is also a
+    # recovery. UNCONDITIONAL — never gated on ``govern``. A recorder-only daemon (now the DEFAULT)
+    # must still be able to rescue what a previously-armed governor left in state T; gating this on
+    # ``govern`` meant the common post-ddm_mb1 case could see a stranded ledger and walk past it.
+    # Both legs are SIGCONT-only, so running them with the actuator disarmed can never hurt.
+    install_exit_resume_handlers()
+    with contextlib.suppress(Exception):
+        stale = resume_all_stopped()
+        if stale["resumed"] or stale["skipped_not_stopped"]:
+            _log_action(f"BLACKBOX startup sweep of a predecessor's stopped set: {stale}")
     # Resolved ONCE: the env cannot change mid-process, so a malformed override warns once here
     # instead of at the sample rate.
     hatch_s = gov.resolve_max_stop_duration_s()
     _log_action(f"BLACKBOX start pid={os.getpid()} interval={interval}s fast={fast_interval}s "
                 f"govern={govern} band={band} band_interval={band_interval_s}s "
                 f"max_stop_duration={hatch_s:.0f}s")
+    # "Off" is only a TRACKED state if it is surfaced with its reason (CLAUDE.md "'Off' is a
+    # tracked queue, never a forgotten default"). One line, every start, either way.
+    _log_action(f"THROTTLE ACTUATOR {'ARMED' if govern else 'DISARMED'} "
+                f"[source={arming.source}] :: {arming.detail}"
+                + ("" if govern else " — recorder still ON; per-job safe_run RSS envelopes carry "
+                   "the OOM protection (the MEASURED 2026-08-15 verdict)"))
     consecutive_warn = consecutive_critical = 0
     floor_smoother = gov.SafetyFloorSmoother()
     last_band_mono: float | None = None
@@ -715,10 +759,11 @@ def run_daemon(
             time.sleep(fast_interval if elevated else interval)
     finally:
         # ddm_gb1 D3: a normal loop exit (max_iterations, exception, SystemExit from the signal
-        # handler) sweeps too — the atexit leg is the belt, this is the braces.
-        if govern:
-            with contextlib.suppress(Exception):
-                resume_all_stopped()
+        # handler) sweeps too — the atexit leg is the belt, this is the braces. ddm_mb1: also
+        # UNCONDITIONAL, for the same reason as the startup sweep — SIGCONT-only, and the ledger it
+        # drains may have been written by an armed predecessor rather than by this process.
+        with contextlib.suppress(Exception):
+            resume_all_stopped()
         with contextlib.suppress(OSError):
             fcntl.flock(fd, fcntl.LOCK_UN)
             os.close(fd)
@@ -751,7 +796,13 @@ def is_blackbox_running() -> bool:
 def ensure_blackbox_running(*, verbose: bool = True) -> bool:
     """Idempotently ensure the black-box daemon is running (called from spawn_durable_daemon on the
     first training launch). Launches it via spawn_durable_daemon so it is durable + registered +
-    liveness-verified. Returns True iff running (already or newly started)."""
+    liveness-verified. Returns True iff running (already or newly started).
+
+    ddm_mb1: the argv below deliberately passes NEITHER ``--govern`` NOR ``--no-govern``, so the
+    auto-started daemon defers to the arming surface — RECORDER on, SIGSTOP actuator off unless
+    explicitly armed. This is the path that made "the daemon is OFF" untrue in practice: it was
+    enforced only by nobody having launched training yet. Adding ``--govern`` here would restore the
+    silent re-enable and is refused by ``check_throttle_actuator_defaults_off_until_armed``."""
     if is_blackbox_running():
         return True
     try:
@@ -798,6 +849,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     ap.add_argument("--interval", type=float, default=DEFAULT_INTERVAL_S)
     ap.add_argument("--fast-interval", type=float, default=DEFAULT_FAST_INTERVAL_S)
     ap.add_argument("--no-govern", action="store_true", help="record only; do NOT run the throttle governor")
+    ap.add_argument("--govern", action="store_true",
+                    help="FORCE the SIGSTOP throttle actuator on for this invocation (default: OFF "
+                         "unless armed by TAC_GOV_THROTTLE_ARM=1 or a truthy "
+                         ".omx/state/governor_throttle_arm.flag). --no-govern wins if both given.")
     # ── guard-band wiring (BUILD #298): in-loop band evaluation, #294 semantics ──
     ap.add_argument("--no-band", action="store_true",
                     help="disable the in-loop guard-band evaluation (default: every --band-interval s)")
@@ -838,8 +893,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(json.dumps(resume_all_stopped(), indent=2))
         return 0
     if args.daemon:
+        # Tri-state (ddm_mb1): --no-govern forces OFF, --govern forces ON, neither defers to the
+        # arming surface (default OFF). --no-govern wins a contradictory pair: between two operator
+        # intents the SAFE one governs, and "off" is the safe one for a SIGSTOP actuator.
+        govern_arg = False if args.no_govern else (True if args.govern else None)
         return run_daemon(
-            interval=args.interval, fast_interval=args.fast_interval, govern=not args.no_govern,
+            interval=args.interval, fast_interval=args.fast_interval, govern=govern_arg,
             band=not args.no_band, band_interval_s=args.band_interval,
             band_envelope_frac=args.band_envelope_frac,
             band_run_dir=Path(args.band_run_dir) if args.band_run_dir else None)
