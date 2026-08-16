@@ -27748,3 +27748,21 @@ measured admission baseline (base advisory S 0.20280753928705508).
   refusal (incident #3, session-split triple-charge) preserved; attempt-2 admitted at the mp2 boundary.
   Harvest → warm-vs-reset trajectory compare → both-W0 verdicts unlock D56→F64.
 - Pointer UNMOVED: S 0.15959729295498598 @ 182,759 B [contest-CUDA T4 n600] (hv1 ep0634).
+
+## FEED-wd3c (2026-08-16 ~01:2xZ) — W0 warm-vs-reset LAW + D56 fired + gb1 governor landing
+- **MEASURED (n60, matched subsets/epochs 61→65): Adam optimizer state carries pose descent ~3×.**
+  W0_warm d_pose 0.040638→0.022940 (−43.5%) vs W0_reset 0.039802→0.034077 (−14.4%); seg near-tie
+  (−5.6% vs −6.0%, reset marginally lower absolute). Both arms descend BOTH axes under the
+  scorer-aware dual-constrained objective — "distillation is not dead" holds under either start;
+  the magnitude-matched reset ramp (÷3.16) removed the zero-moment excursion as designed.
+  Consequence for fresh topologies (forced reset-starts): budget extra pose epochs, never read
+  early pose sluggishness as a family negative. INSTANCE scope (this vehicle, this window).
+- **D56 FIRED (launch 64, child 47829)**: scorer-free typed birth (273KB ckpt) → 65-epoch governed
+  Metal burn (matched TOTAL budget = wd2's 60 + wd3's 5; EMA decay from run geometry per
+  p0_ema_calibration). Attempt-1 fail-closed refusal = the trainer's PYTORCH_ENABLE_MPS_FALLBACK=0
+  determinism gate working; cured via launcher --env.
+- **gb1 LANDED 31acf05204 (#1073)**: all 5 governor defects fixed (cp named-process measurement ·
+  throttle re-arm rungs · stopped-set ledger + exit sweep · safe_run/--admit reconcile ·
+  launch-tree aggregation) + refusal gate 5→0 w/ executed positive controls + 49 tests. Live:
+  phantom charged growth 81.56→0.0 GiB. Daemon stays OFF pending supervised soak (MAIN-gated).
+- Pointer UNMOVED: S 0.15959729295498598 @ 182,759 B [contest-CUDA T4 n600] (hv1 ep0634).
