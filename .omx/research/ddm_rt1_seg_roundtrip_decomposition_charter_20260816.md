@@ -52,6 +52,19 @@ manufactured, and which stage's cure is cheapest? Candidate stages on this vehic
 4. **Routing memo + queued follow-ons**: td1-H2 (measure r via one ≥8-bit-set row) queued with
    fire-condition; successor charter skeleton ONLY if a stage cure needs a build arm.
 
+## Prior negative signal this charter accounts for (bearing dead-ends)
+
+- v14 measured the Movable projection loss as a FORMULATION-scoped wall on the describe-line
+  vehicle (fixed-paint dependency named by a1) — this charter measures the TRAINED-renderer
+  vehicle, where that precondition differs; do not transfer v14's stage magnitudes, only its
+  taxonomy. fp1's f′=0.008305 flat-paint receiver floor is FORMULATION-scoped to flat paint
+  (gc16-r2 adjudication #909) — the shipped family's live d_seg 2.9611e-4 already sits far below
+  it, so no measured floor blocks this decomposition. Token-drop (td1), post-hoc weight edits
+  (mp2/ns1 family), lossless recoding (mz2), and linear pose overlays (pk4) are all dead — this
+  charter is the seg-axis successor precisely because those closures leave render fidelity as the
+  only unmeasured seg mass. #149 pre-R placement measured favorably at $0 (camera-res placement
+  survives D) — the S3 cure precedent.
+
 ## OPTIMAL FORM
 
 - Reference form: ddm_v14_realization_fidelity (#624) per-stage loss diagnosis — exact-mask →
