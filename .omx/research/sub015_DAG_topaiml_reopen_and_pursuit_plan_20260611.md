@@ -27996,3 +27996,50 @@ against the same bar. Reporting the Euclid rung alone as a family verdict would 
 
 **Cost correction:** the pose-metric rung is CHEAPER than the block above implied — margin field
 as the Fisher surrogate + existing ms3/ms4 producers, not a new build.
+
+### FEED-ra2c-rank4 RESULT + rung-2′ metric diagnosis (2026-08-16, POST-RESULT — supersedes the ERRATUM's pre-result framing)
+
+**The rank-4 row landed.** Advisory n600, archive byte-identical, rc=0 in 587 s.
+`d_pose 1.4747e-4 → 0.35402399` (ratio 2,400.65×) against a 22,158× prediction — the endpoint-fit
+damage law **over-predicts by 9.23×**, so `K = 350,427` is corrected to a measured
+`K_eff = 37,953` at rank-4's error. Rate credit 14,662 B = −0.009763 S; pose term
+0.038402 → 1.881553. NET **+1.833388 S**. The rfo2 rung-2 falsifier fired by 188.8×.
+
+Extended to the gentlest rung with the corrected constant: rank-11 (1,514 B back, 4.23%
+Frobenius error) fires by **278×**. Every rung of the pure-truncation ladder is refuted,
+189–278×. One measurement closed eleven rungs because the ordering law (largest-cut-first,
+quadratic bar) put the loosest bar first.
+
+`d_seg` measured EXACTLY unchanged (0.00042714, 8 s.f.) on a THIRD treatment — α=0, α=1, rank-4.
+Carrier questions are a pure **(pose, rate)** trade. Confound class removed.
+
+**The surviving half, and why it is the same object as the pose-metric rung.** rfo2's rung 2 was
+rank reduction *plus coefficient re-fit*. What was measured is truncation WITHOUT re-fit —
+Frobenius-optimal by Eckart–Young, and Eckart–Young gives no theorem in the pose metric.
+
+Reading the re-fit code today: it is **built in the wrong metric, and never measured.**
+`experiments/ddm_ra2a_carrier_fidelity_pose_ladder.py:138` states its own scope —
+*"Exhaustive-optimal keep set in the EUCLIDEAN metric, least-squares refit"* (plain `lstsq`, :151).
+`experiments/ddm_mp2_carrier_exact_byte_race.py:132` records
+`rank_refit_status = NOT_MEASURED_BY_THIS_EXACT_RACE`.
+
+**Convergence — one missing producer serves two open items.** A pose-metric re-fit is weighted
+least squares in `G_i = J_i^T J_i` from the per-pair PoseNet Jacobians. That is the same object the
+common-pose-null measurement needs: `K = dim(∩_i null(G_i))` over R^12, worth 1,854 B
+= −0.001234 S = 12.9% of the gap per free dimension (d_pose reads 6 scalars/pair, carrier is
+12-dim, so rank(G_i) ≤ 6 and every pair has a ≥6-dim pose-null subspace).
+
+**Scope-honest absence:** I searched `experiments/`, `src/tac/`, `tools/` and both SSD tiers and
+**did not find** a per-pair carrier Jacobian producer. pk4's exact Jacobians are the frame-0
+overlay family; the SSD hits are clone mirrors of unrelated `tools/`. The ERRATUM above proposed
+reusing the ms3/ms4 bundle — those producers built pose quadratics over pf2's atlas buckets, a
+DIFFERENT object, so that reuse is unverified rather than refuted. Verify before building.
+
+**Apparatus, same turn:** the canonical Modal poller dropped `modal_elapsed_seconds` and
+`gpu_model` from every harvest, leaving 49 of 63 cap-window calls with neither cost nor elapsed —
+the ≤$20 envelope was answerable only from memo prose. Cured (`f03c185acb`): record what is
+MEASURED, never synthesise cost from a rate table. The one row carrying both a real
+`cost_actual_usd` and an elapsed (H100, 1452.30 s → $1.59) showed a published-rate estimate
+**2.8× high** — the borrowed-constant genus inside my own arithmetic.
+
+Pointer UNMOVED: hv1 ep0634 **S 0.15959729295498598 @ 182,759 B [contest-CUDA T4, n600]**.
