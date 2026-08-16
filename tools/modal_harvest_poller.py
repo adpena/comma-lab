@@ -28,6 +28,39 @@ POLL_RESULT = "result"
 POLL_REMOTE_FAILURE = "remote_failure"
 POLL_DEADLINE = "deadline"
 
+# Field names the remote result actually uses for billed wall-clock and hardware.
+# Verified against a live MODAL_REMOTE_RESULT.json (hv1 ep0634 T4 row):
+#   modal_elapsed_seconds = 421.559061639 ; gpu_model = 'Tesla T4'
+_ELAPSED_KEYS = ("modal_elapsed_seconds", "elapsed_seconds")
+_GPU_KEYS = ("gpu_model", "gpu")
+
+
+def _result_elapsed_seconds(result: Any) -> float | None:
+    """Billed wall-clock from a Modal remote result, or None if absent.
+
+    Returns None rather than a guess: an absent elapsed must stay visibly
+    absent in the ledger so the spend reader can report its blind set instead
+    of silently pricing a fabricated duration.
+    """
+    if not isinstance(result, dict):
+        return None
+    for key in _ELAPSED_KEYS:
+        value = result.get(key)
+        if isinstance(value, (int, float)) and value >= 0:
+            return float(value)
+    return None
+
+
+def _result_gpu(result: Any) -> str | None:
+    """Hardware string from a Modal remote result, or None if absent."""
+    if not isinstance(result, dict):
+        return None
+    for key in _GPU_KEYS:
+        value = result.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return None
+
 
 def poll_modal_call(
     *,
@@ -103,11 +136,20 @@ def main() -> int:
     if outcome["kind"] == POLL_RESULT:
         r = outcome["result"]
         result_path.write_text(json.dumps(r, indent=2, default=str))
+        # The remote result carries the two facts the spend ledger needs and
+        # this poller has always dropped: MEASURED billed wall-clock and the
+        # hardware it ran on. Without them 49 of 63 cap-window calls carried
+        # neither cost nor elapsed, so the >=$20 envelope could only be
+        # answered from memo prose. Record what is measured; never synthesise
+        # cost from a rate table (the one row where a real cost_actual_usd and
+        # an elapsed both exist proved a published-rate estimate 2.8x high).
         update_call_id_outcome(
             call_id=args.call_id,
             status="harvested",
             rc=0,
             agent="MAIN",
+            elapsed_seconds=_result_elapsed_seconds(r),
+            gpu=_result_gpu(r),
             harvest_result={"result_path": str(result_path)},
         )
         (out / "poller.done").write_text("ok\n")
