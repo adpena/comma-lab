@@ -23,6 +23,32 @@ real byte-write of the payload — is exactly what clears the finding, and addin
 of some *unrelated* object does not, because persistence is matched against the ROOT
 BINDING of the measured expression, not against "any write anywhere".
 
+SCOPE OF THE DUTY (2026-08-16 census correction, ddm_kp2). The rule binds a **run** that
+materializes a payload, not every expression that touches one. A scope that hands its
+bytes onward — ``return blob``, ``out.write(blob)`` into any handle or ``io.BytesIO``
+container, ``parts.append(blob)`` later joined and written — has not discarded anything;
+the persistence duty moved to the caller. The first census measured 1,824 findings over
+890 files, of which 1,219 (66.8%) were this shape: 530 returned as bytes, 543 flowed into
+another binding, 146 written to a handle the gate did not model (the commonest single
+idiom being ``out.write(struct.pack("<I", len(blob))); out.write(blob)`` — a length
+PREFIX in a container format, i.e. correct codec design flagged as a discard). A gate
+firing 2-in-3 false is unactionable and trains readers to ignore it, so escape is now
+modelled explicitly.
+
+The distinction that keeps the gate strong is REDUCTION: a name reaching a sink as bytes
+escapes; a name reduced to a scalar first (``len(blob)``, ``sha256(blob).hexdigest()``)
+does not. That is exactly why the anchor stays caught — its surviving artifact is
+``json.dumps({"range": rng, ...})`` where ``rng`` is an int, never the bytes.
+
+KNOWN RESIDUAL FALSE NEGATIVE (stated, not hidden). ``.write(...)`` on an in-memory
+buffer counts as escape without proving the buffer itself is later persisted, so
+``buf = io.BytesIO(); buf.write(blob); print(len(buf.getvalue()))`` reads as retained
+when it is not. Modelling that would require whole-program flow; the trade was taken
+deliberately because the same relaxation removes 146 measured false positives on the
+dominant, correct ``length-prefix + payload into a returned container`` idiom. The gate
+is therefore SOUND-LEANING-PERMISSIVE at the container boundary and exact at the scalar
+boundary, which is where the anchor's defect lives.
+
 Waiver: same-line ``# MEASURE_ONLY_OK:<rationale>`` for a genuine scalar-only probe.
 Placeholder rationales (``<rationale>``, ``TBD``, ``reason``) are rejected, per the
 Catalog #287 sister discipline.
@@ -231,8 +257,80 @@ def _outer_payload_calls(node: ast.AST) -> list[_PayloadCall]:
     return found
 
 
-def _names_touched(node: ast.AST) -> set[str]:
-    return {sub.id for sub in ast.walk(node) if isinstance(sub, ast.Name)}
+#: Calls that reduce a payload to a scalar. A name that reaches a sink only through one
+#: of these has NOT escaped as bytes — this is the whole hinge of the escape model, and
+#: what keeps ``open(p, 'w').write(str(len(blob)))`` from laundering a discard.
+_SCALAR_REDUCERS: frozenset[str] = frozenset(
+    {
+        "len",
+        "print",
+        "repr",
+        "str",
+        "format",
+        "hash",
+        "id",
+        "bool",
+        "int",
+        "float",
+        "type",
+        "sha256",
+        "sha1",
+        "md5",
+        "blake2b",
+        "hexdigest",
+        "digest",
+        "entropy",
+    }
+)
+
+
+def _unreduced_names(node: ast.AST) -> set[str]:
+    """Names appearing in ``node`` that are NOT wrapped in a scalar reduction.
+
+    ``out.write(blob)`` -> ``{"out", "blob"}``; ``len(blob)`` -> ``set()``. Callers use
+    this to ask "did the bytes themselves reach this sink, or only a number about them?"
+    """
+    out: set[str] = set()
+
+    def walk(node_: ast.AST, reduced: bool) -> None:
+        if isinstance(node_, ast.Name):
+            if not reduced:
+                out.add(node_.id)
+            return
+        child_reduced = reduced
+        if isinstance(node_, ast.Call):
+            func = node_.func
+            name = func.attr if isinstance(func, ast.Attribute) else getattr(func, "id", None)
+            if name in _SCALAR_REDUCERS:
+                child_reduced = True
+        for child in ast.iter_child_nodes(node_):
+            walk(child, child_reduced)
+
+    walk(node, False)
+    return out
+
+
+def _bound_payload_calls(node: ast.AST) -> list[_PayloadCall]:
+    """Payload calls in an assignment RHS that survive as bytes.
+
+    Distinct from :func:`_outer_payload_calls`, which is applied to a ``len()`` argument
+    and must see through the reduction. Here the reduction is decisive: ``rng =
+    len(enc.get_compressed().tobytes())`` binds an INT, so ``rng`` must not be recorded
+    as a payload carrier — otherwise a later ``write(json.dumps({"n": rng}))`` would read
+    as persistence and clear the anchor itself.
+    """
+    if isinstance(node, ast.Call):
+        func = node.func
+        name = func.attr if isinstance(func, ast.Attribute) else getattr(func, "id", None)
+        if name in _SCALAR_REDUCERS:
+            return []
+        payload = _payload_call(node)
+        if payload is not None:
+            return [payload]
+    found: list[_PayloadCall] = []
+    for child in ast.iter_child_nodes(node):
+        found.extend(_bound_payload_calls(child))
+    return found
 
 
 _LEXICAL_SCOPES = (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda, ast.ClassDef)
@@ -275,30 +373,25 @@ def _call_name(node: ast.Call) -> str | None:
     return None
 
 
-def _open_mode(node: ast.Call) -> str:
-    mode = ""
-    if len(node.args) >= 2 and isinstance(node.args[1], ast.Constant):
-        mode = str(node.args[1].value)
-    for keyword in node.keywords:
-        if keyword.arg == "mode" and isinstance(keyword.value, ast.Constant):
-            mode = str(keyword.value.value)
-    return mode
-
-
-def _is_binary_write_open(node: ast.Call) -> bool:
-    if _call_name(node) != "open":
-        return False
-    mode = _open_mode(node)
-    return "b" in mode and any(flag in mode for flag in "wax")
-
-
 def _latest_binding(
     bindings: dict[str, list[tuple[tuple[int, int], list[_PayloadCall]]]],
     name: str,
     before: tuple[int, int],
 ) -> list[_PayloadCall]:
     eligible = [entry for entry in bindings.get(name, ()) if entry[0] < before]
-    return max(eligible, key=lambda entry: entry[0])[1] if eligible else []
+    if not eligible:
+        return []
+    # One statement can bind several payloads at the SAME position — its own
+    # (``comp = lzma.compress(body)``) plus everything it inherits from its operands.
+    # Taking a single ``max`` entry dropped the inherited half and re-reported retained
+    # bytes as discarded, so the newest position contributes ALL of its payloads.
+    newest = max(position for position, _ in eligible)
+    return [
+        payload
+        for position, payloads in eligible
+        if position == newest
+        for payload in payloads
+    ]
 
 
 def _scope_bindings(
@@ -311,62 +404,157 @@ def _scope_bindings(
         target = node.targets[0]
         if not isinstance(target, ast.Name):
             continue
-        payloads = _outer_payload_calls(node.value)
+        payloads = _bound_payload_calls(node.value)
         if payloads:
             bindings.setdefault(target.id, []).append((_position(node), payloads))
+    _propagate_carriers(nodes, bindings)
     return bindings
 
 
-def _binary_handles(nodes: Sequence[ast.AST]) -> set[str]:
-    handles: set[str] = set()
+_CARRIER_APPENDS = frozenset({"append", "extend", "add", "insert"})
+
+
+def _container_names(nodes: Sequence[ast.AST]) -> set[str]:
+    """Names used as accumulators (``parts.append(...)``, ``buf.extend(...)``)."""
+    names: set[str] = set()
     for node in nodes:
-        if not isinstance(node, (ast.With, ast.AsyncWith)):
-            continue
-        for item in node.items:
-            if (
-                isinstance(item.context_expr, ast.Call)
-                and _is_binary_write_open(item.context_expr)
-                and isinstance(item.optional_vars, ast.Name)
+        if (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and node.func.attr in _CARRIER_APPENDS
+        ):
+            container = _root_binding(node.func.value)
+            if container is not None:
+                names.add(container)
+    return names
+
+
+def _resolve_payloads(
+    bindings: dict[str, list[tuple[tuple[int, int], list[_PayloadCall]]]],
+    containers: set[str],
+    name: str,
+    before: tuple[int, int],
+) -> list[_PayloadCall]:
+    """Payloads ``name`` holds at ``before``.
+
+    Rebinding replaces (``x = a; x = b`` -> only ``b``), but an accumulator ACCUMULATES:
+    ``body_chunks`` filled by six appends carries all six payloads into
+    ``b"".join(body_chunks)``. Taking only the latest entry there dropped five of six
+    retained payloads on the floor and re-reported them as discards (measured on
+    ``src/tac/renderer_export.py``: 22 such findings, every one of them retained).
+    """
+    if name not in containers:
+        return _latest_binding(bindings, name, before)
+    return [
+        payload
+        for position, payloads in bindings.get(name, ())
+        if position < before
+        for payload in payloads
+    ]
+
+
+def _record(
+    bindings: dict[str, list[tuple[tuple[int, int], list[_PayloadCall]]]],
+    name: str,
+    position: tuple[int, int],
+    payloads: Sequence[_PayloadCall],
+) -> bool:
+    """Attach payloads to ``name`` at ``position``; True when anything was new."""
+    entries = bindings.setdefault(name, [])
+    known = {payload.identity for _, existing in entries for payload in existing}
+    fresh = [payload for payload in payloads if payload.identity not in known]
+    if not fresh:
+        return False
+    entries.append((position, fresh))
+    return True
+
+
+def _propagate_carriers(
+    nodes: Sequence[ast.AST],
+    bindings: dict[str, list[tuple[tuple[int, int], list[_PayloadCall]]]],
+) -> None:
+    """Follow a payload through the names that carry it onward, to a fixpoint.
+
+    ``blob = brotli.compress(raw)`` / ``parts.append(blob)`` / ``packet = b"".join(parts)``
+    / ``Path(p).write_bytes(packet)`` is ONE retained payload across four statements. The
+    dedup on payload identity bounds the iteration.
+    """
+    containers = _container_names(nodes)
+    for _ in range(len(nodes) + 1):
+        changed = False
+        for node in nodes:
+            position = _position(node)
+            if isinstance(node, ast.Assign) and len(node.targets) == 1:
+                target = node.targets[0]
+                if not isinstance(target, ast.Name):
+                    continue
+                inherited: list[_PayloadCall] = []
+                for name in _unreduced_names(node.value):
+                    if name != target.id:
+                        inherited.extend(_resolve_payloads(bindings, containers, name, position))
+                if inherited:
+                    changed |= _record(bindings, target.id, position, inherited)
+            elif (
+                isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Attribute)
+                and node.func.attr in _CARRIER_APPENDS
             ):
-                handles.add(item.optional_vars.id)
-    return handles
+                container = _root_binding(node.func.value)
+                if container is None:
+                    continue
+                inherited = []
+                for arg in node.args:
+                    for name in _unreduced_names(arg):
+                        inherited.extend(_resolve_payloads(bindings, containers, name, position))
+                if inherited:
+                    changed |= _record(bindings, container, position, inherited)
+        if not changed:
+            return
 
 
-def _persisted_payloads(
+def _escaped_payloads(
     nodes: Sequence[ast.AST],
     bindings: dict[str, list[tuple[tuple[int, int], list[_PayloadCall]]]],
 ) -> set[tuple[int, int, str]]:
-    """Materialization identities that reach a byte persister in this scope."""
-    persisted: set[tuple[int, int, str]] = set()
-    binary_handles = _binary_handles(nodes)
+    """Materialization identities whose BYTES leave this scope.
+
+    Three sinks discharge the scope's retention duty:
+
+    * a byte persister (``write_bytes``, ``np.save``, ``retain_payload``, ...);
+    * ``.write(bytes)`` on any handle — a file opened without ``with``, an
+      ``io.BytesIO`` archive container, ``sys.stdout.buffer``;
+    * ``return`` / ``yield`` of the bytes, which hands the duty to the caller.
+
+    A name that arrives at a sink only under a scalar reduction has NOT escaped, so
+    ``open(p, 'w').write(json.dumps({"n": len(blob)}))`` still leaves ``blob`` discarded.
+    """
+    escaped: set[tuple[int, int, str]] = set()
+    containers = _container_names(nodes)
     for node in nodes:
-        if not isinstance(node, ast.Call):
-            continue
-        name = _call_name(node)
         args: list[ast.AST]
-        if name in BYTE_PERSISTERS:
-            args = list(node.args) + [keyword.value for keyword in node.keywords]
-        elif (
-            name == "write"
-            and isinstance(node.func, ast.Attribute)
-            and (
-                _root_binding(node.func.value) in binary_handles
-                or (
-                    isinstance(node.func.value, ast.Call)
-                    and _is_binary_write_open(node.func.value)
-                )
-            )
-        ):
-            args = list(node.args)
+        if isinstance(node, ast.Call):
+            name = _call_name(node)
+            if name in BYTE_PERSISTERS:
+                args = list(node.args) + [keyword.value for keyword in node.keywords]
+            elif name == "write" and isinstance(node.func, ast.Attribute):
+                args = list(node.args)
+            else:
+                continue
+        elif isinstance(node, (ast.Return, ast.Yield, ast.YieldFrom)):
+            if node.value is None:
+                continue
+            args = [node.value]
         else:
             continue
         for arg in args:
-            for touched in _names_touched(arg):
-                persisted.update(
+            for touched in _unreduced_names(arg):
+                escaped.update(
                     payload.identity
-                    for payload in _latest_binding(bindings, touched, _position(node))
+                    for payload in _resolve_payloads(
+                        bindings, containers, touched, _position(node)
+                    )
                 )
-    return persisted
+    return escaped
 
 
 def scan_source(source: str, path: str = "<string>") -> list[PayloadDiscardFinding]:
@@ -384,7 +572,7 @@ def scan_source(source: str, path: str = "<string>") -> list[PayloadDiscardFindi
         nodes, nested = _scope_nodes(scopes.pop())
         scopes.extend(nested)
         bindings = _scope_bindings(nodes)
-        persisted = _persisted_payloads(nodes, bindings)
+        persisted = _escaped_payloads(nodes, bindings)
         for node in nodes:
             # The defect shape: len(<payload expression>) — inline OR via a bound name.
             if not (

@@ -36,6 +36,8 @@ from pathlib import Path
 
 import numpy as np
 
+from tac.payload_retention import retain_candidates, retain_payload, retention_root
+
 POINTER_LINE = "0.1910828242 [contest-CPU] UNMOVED"
 DEFAULT_CKPT = ("/Volumes/VertigoDataTier/pact/ddm_tb1_20260728/t2_n600_lotto/"
                 "checkpoints/stage_seg_trunk_tau_final.npz")
@@ -144,23 +146,54 @@ def race_channel_coders(q: np.ndarray, alphabet: int) -> dict[str, float]:
     return rows
 
 
-def race_generic_coders(q: np.ndarray) -> dict[str, int]:
+def race_generic_coders(
+    q: np.ndarray,
+    *,
+    retain_dir: Path,
+    label: str,
+) -> dict[str, object]:
+    """Race the general-purpose coders, RETAINING every candidate's bytes.
+
+    ALWAYS KEEP THE PAYLOAD (P0, operator 2026-08-09): this race is the exact shape of
+    the ``ans_real_n600.py`` incident — six real coder payloads materialized, only their
+    lengths kept. Every candidate is persisted, not just the winner, because the anchor's
+    discarded loser turned out to be a -2,120 B win. ``_retained`` carries each payload's
+    path, byte count and sha256 into the receipt so the exporter can consume these bytes
+    byte-identically instead of re-encoding them.
+    """
     raw = q.tobytes()
     d = q.copy()
     d[1:] = (q[1:].astype(np.int16) - q[:-1].astype(np.int16)) % 256
     dt = d.astype(np.uint8).tobytes()
-    rows = {
-        "zlib9_raw": len(zlib.compress(raw, 9)),
-        "zlib9_tdelta": len(zlib.compress(dt, 9)),
-        "lzma_raw": len(lzma.compress(raw, preset=9 | lzma.PRESET_EXTREME)),
-        "lzma_tdelta": len(lzma.compress(dt, preset=9 | lzma.PRESET_EXTREME)),
+    payloads: dict[str, bytes] = {
+        "zlib9_raw": zlib.compress(raw, 9),
+        "zlib9_tdelta": zlib.compress(dt, 9),
+        "lzma_raw": lzma.compress(raw, preset=9 | lzma.PRESET_EXTREME),
+        "lzma_tdelta": lzma.compress(dt, preset=9 | lzma.PRESET_EXTREME),
     }
+    brotli_error: str | None = None
     try:
         import brotli
-        rows["brotli_q11_raw"] = len(brotli.compress(raw, quality=11))
-        rows["brotli_q11_tdelta"] = len(brotli.compress(dt, quality=11))
+        payloads["brotli_q11_raw"] = brotli.compress(raw, quality=11)
+        payloads["brotli_q11_tdelta"] = brotli.compress(dt, quality=11)
     except Exception as exc:  # dep policy: report, never silently skip
-        rows["brotli_error"] = str(exc)  # type: ignore[assignment]
+        brotli_error = str(exc)
+
+    rows: dict = {name: len(blob) for name, blob in payloads.items()}
+    # The coder INPUTS are retained too: without them the race is not reproducible
+    # byte-identically, which is the property the retention rule exists to protect.
+    custody = retain_candidates(
+        retain_dir, {f"{label}.{name}": blob for name, blob in payloads.items()}
+    )
+    custody[f"{label}.source_raw"] = retain_payload(
+        retain_dir / f"{label}.source_raw.bin", raw
+    )
+    custody[f"{label}.source_tdelta"] = retain_payload(
+        retain_dir / f"{label}.source_tdelta.bin", dt
+    )
+    rows["_retained"] = custody
+    if brotli_error is not None:
+        rows["brotli_error"] = brotli_error
     return rows
 
 
@@ -303,9 +336,17 @@ def main() -> int:
     ap.add_argument("--out", default="/Volumes/VertigoDataTier/pact/ddm_lv1_20260728/"
                                      "c_token_stack_race/receipt.json")
     ap.add_argument("--chunk", type=int, default=32)
+    ap.add_argument("--retain-dir", default=None,
+                    help="where coder payloads are retained; default resolves the SSD "
+                         "tier waterfall (ALWAYS KEEP THE PAYLOAD, P0)")
     args = ap.parse_args()
     out_path = Path(args.out)
     out_path.parent.mkdir(parents=True, exist_ok=True)
+    # Resolved BEFORE any encode: retention is a precondition for running, so a full
+    # tier must fail the run here rather than after minutes of discarded compression.
+    retain_dir = (Path(args.retain_dir) if args.retain_dir
+                  else retention_root("ddm_lv1_token_coder_race"))
+    retain_dir.mkdir(parents=True, exist_ok=True)
     receipt: dict = {}
     if out_path.exists():
         receipt = json.loads(out_path.read_text())
@@ -321,22 +362,35 @@ def main() -> int:
 
     if args.stage == "bytes":
         rows: dict = {}
-        rows["F0_monolithic"] = {**race_generic_coders(q),
-                                 **race_channel_coders(q, meta["levels"])}
-        base_bytes = {"zlib9": len(zlib.compress(base.tobytes(), 9))}
+        rows["F0_monolithic"] = {
+            **race_generic_coders(q, retain_dir=retain_dir, label="F0_monolithic"),
+            **race_channel_coders(q, meta["levels"])}
+        base_payload = zlib.compress(base.tobytes(), 9)
+        base_bytes = {
+            "zlib9": len(base_payload),
+            "_retained": retain_payload(
+                retain_dir / "F1_staticbase.zlib9.bin", base_payload)}
         rows["F1_staticbase_delta"] = {
             "base": base_bytes,
-            "delta": {**race_generic_coders(d_stream),
-                      **race_channel_coders(d_stream, meta["levels"])}}
+            "delta": {
+                **race_generic_coders(
+                    d_stream, retain_dir=retain_dir, label="F1_delta"),
+                **race_channel_coders(d_stream, meta["levels"])}}
         variants, vstats, mstats = build_variants(q, base, meta, args.gt_cache)
         rows["stage23_variants"] = {"margin_cell_stats": mstats, "changed": vstats}
         for name, v in variants.items():
             vb, vd = factor_static_delta(v, meta["levels"])
+            delta_race = race_generic_coders(
+                vd, retain_dir=retain_dir, label=f"variant_{name}_delta")
+            vbase_payload = zlib.compress(vb.tobytes(), 9)
             rows["stage23_variants"][name] = {
                 "F1_delta_kt_inter_cae": race_channel_coders(vd, meta["levels"])[
                     "kt_inter_cae"],
-                "F1_delta_zlib9_tdelta": race_generic_coders(vd)["zlib9_tdelta"],
-                "F1_base_zlib9": len(zlib.compress(vb.tobytes(), 9)),
+                "F1_delta_zlib9_tdelta": delta_race["zlib9_tdelta"],
+                "F1_delta_retained": delta_race["_retained"],
+                "F1_base_zlib9": len(vbase_payload),
+                "F1_base_retained": retain_payload(
+                    retain_dir / f"variant_{name}_base.zlib9.bin", vbase_payload),
                 "dseg_validity": "PENDING (--stage validate; lossy adopt gate)"}
         receipt["bytes_race"] = rows
         receipt["ledger_anchor_note"] = (
