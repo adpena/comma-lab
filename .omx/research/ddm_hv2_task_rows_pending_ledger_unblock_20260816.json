@@ -1,0 +1,66 @@
+{
+  "schema": "ddm_hv2.pending_task_rows.v1",
+  "written_by": "ddm_hv2",
+  "written_at_utc": "2026-08-16T23:59:00Z",
+  "source_design_memo": ".omx/research/ddm_hv2_arm_final_harvest_20260816.md",
+  "why_this_file_exists": "ddm_hv2 was chartered to file its harvest head as REAL canonical task rows. It could not: .omx/state/canonical_task_status.jsonl FAILS STRICT LOAD, so tac.canonical_task_status.writer.register_task and tools/canonical_task_status.py update BOTH raise CanonicalTaskStatusCorruptError and refuse every write. ddm_hv2 did NOT repair the ledger, because the only in-order repair is to fabricate lifecycle events that never happened into an append-only custody ledger (see blocker below). These five rows are therefore staged here, machine-readable, for one-command replay the moment the ledger is unblocked.",
+
+  "blocker": {
+    "error": "CanonicalTaskStatusCorruptError: non-registration event for unknown task_id '1079_pv1_pose_floor_and_admission_bar_audit_20260816'",
+    "raised_at": "src/tac/canonical_task_status/loader.py:60 via _validate_history",
+    "cause": "Line 548 (the LAST row) is an event_type='completion' / status='completed' row appended by ddm_pv1 at 2026-08-16T15:23:27.639880Z. No 'registered' row for that task_id exists anywhere in the file (verified: the task appears on line 548 only).",
+    "blast_radius": "The ledger has accepted ZERO writes since 2026-08-16T15:23:27Z. Every arm and MAIN attempting to register or update a canonical task since then has been refused. This silently defeats the standing law that a follow-on must exit as a task row rather than as prose -- it is an orphan generator at the apparatus layer.",
+    "why_ddm_hv2_did_not_repair_it": "The loader validates rows in FILE ORDER and does not sort by timestamp, so appending cannot fix an ordering defect. Restoring the invariant requires INSERTING rows before line 548. A single inserted 'registered' row is not sufficient either: VALID_TRANSITIONS (contract.py:147) forbids pending -> completed, so a faithful repair needs BOTH a 'registered' (pending) and an 'in_progress' event that never occurred. Manufacturing two lifecycle events into a custody ledger is history fabrication, which the NO-FAKE supreme rule forbids and which is outside a read-harvest arm's authority.",
+    "repair_options_for_MAIN": [
+      "A (preferred, preserves every existing byte): insert before line 548 a 'registered' row and an 'in_progress' row for task 1079_pv1_pose_floor_and_admission_bar_audit_20260816, each explicitly labelled as a RECONSTRUCTION of a registration ddm_pv1 omitted, with event_actor recording who reconstructed it and why. Mutates zero existing rows; adds two self-declaring rows.",
+      "B: quarantine the ledger via the existing _quarantine_corrupt_file path and replay all 548 rows through the writer, which regenerates a valid history. Heavier; changes byte layout of the whole file.",
+      "C (NOT recommended): weaken _validate_history to warn instead of raise. This removes a real integrity check for everyone and converts a loud failure into a silent one."
+    ],
+    "self_protection_owed": "register_task currently lets an arm append a completion for a task_id it never registered, which is what produced this. The writer should refuse a non-registration append for an unknown task_id at WRITE time, so the defect cannot enter the ledger at all rather than being discovered later at every reader."
+  },
+
+  "replay_command": "cd /Users/adpena/Projects/pact && .venv/bin/python -c \"import sys,json; sys.path.insert(0,'src'); from tac.canonical_task_status.writer import register_task; rows=json.load(open('.omx/research/ddm_hv2_task_rows_pending_ledger_unblock_20260816.json'))['rows']; [register_task(task_id=r['task_id'], source_design_memo=r['source_design_memo'], title=r['title'], owner=r['owner'], actor='ddm_hv2', session_id='ddm_hv2_20260816', notes=r['notes']) for r in rows]\"",
+
+  "rows": [
+    {
+      "task_id": "hv2_pose_carrier_direct_replacement_successor_20260816",
+      "source_design_memo": ".omx/research/ddm_hv2_arm_final_harvest_20260816.md",
+      "rank": 1,
+      "title": "RANK-1 UNOWNED: pose-carrier direct replacement -- pz2 measured a 1,817 B direct 6-target packet against the 22,161 B shipped carrier; full realization saves 20,344 B with a 2.18x d_pose budget",
+      "owner": "UNASSIGNED-pending-MAIN-routing (the successor pz4r named was never spawned)",
+      "notes": "FIRE CONDITION IS ALREADY SATISFIED AND NOBODY CONSUMED IT. ddm_pz4r_pgq1_receiver's NEXT_IF_RESUMED reads: 'owner: future PZ4R joint-receiver arm; fire trigger: direct-v6 measures d_pose > 4e-5 or Seg collateral above 0.002 score units. Train a counted, resumable output-conditioned renderer.' ddm_pz4r_full_n600_eval then MEASURED d_pose = 0.631014228. The trigger fired; the successor does not exist. HARD GATE BEFORE ANY LAUNCH, applied against this row's own interest because it is the most attractive number in the harvest: ddm_hv2 read the 1,817 B from the ddm_pz2 arm final ONLY and did NOT open its receipt. Re-derive it from /Volumes/VertigoDataTier/pact/ddm_pz2_pose_representation_20260810_v3/PZ2_MEASUREMENT_RECEIPT.json first, and note pz2 measured against PR130's 23,384 B carrier, not the current vehicle's 22,161 B carrier. BUDGET ARITHMETIC (DERIVED by ddm_hv2 from the frontier components, all re-derived at source): saving 22,161-1,817 = 20,344 B = 0.013546 S = 141% of the 0.0095973 gap; the surplus 0.003949 S is a distortion allowance, so the pose term may rise 0.0082946 -> 0.012244, i.e. d_pose may rise 6.88e-6 -> 1.499e-5 (2.18x) and the row still lands sub-0.15. WHY PRIOR ATTEMPTS FAILED, and why none of them falsifies the family: pz4p built a 168,005 B envelope (-19,221 B vs LC2) that is NON-RENDERABLE; pz3 coded the exact residual through the FROZEN carrier and grew +3,068 B (verdict REALIZATION-LIMITED); pz4r direct-v6 reached a real 183,137 B archive (-4,089 B) but d_pose collapsed to 0.631014 = 91,717x the budget. Every failure is a post-hoc transform through a frozen carrier. The unbuilt cure is a TRAINED output-conditioned renderer. verdict_scope of the existing negatives: INSTANCE (pz4r direct-v6) and FORMULATION (pz3 exact-residual-through-frozen-carrier), per those arms' own tags -- the family is NOT closed."
+    },
+    {
+      "task_id": "hv2_arm_final_read_receipt_and_custody_20260816",
+      "source_design_memo": ".omx/research/ddm_hv2_arm_final_harvest_20260816.md",
+      "rank": 2,
+      "title": "APPARATUS: arm finals have no read-receipt, and 454 of 797 exist only in gitignored .omx/tmp",
+      "owner": "MAIN (tools/codex_arm_queue.py owner)",
+      "notes": "MEASURED by ddm_hv2 2026-08-16. 797 arms are FINISHED (a .done receipt plus a non-empty .last.txt) in .omx/tmp/codex_runs/. Only 343 are persisted to .omx/research/arm_final_messages/, and THAT DIRECTORY IS UNTRACKED: git ls-files returns 0 while git check-ignore returns rc=1, so it is not ignored, merely never added. A single git clean destroys the 454 that live only under gitignored .omx/tmp/, and the other 343 are uncommitted. SEPARATE AND EQUALLY IMPORTANT: .done receipts already receive a .consumed.json marker (42 exist, schema detached_local_process_done_consumed.v1, written by tools/codex_arm_watch.py) but FINALS RECEIVE NOTHING. Consequently the question ddm_hv2 was chartered to answer -- how many finals are genuinely unread -- is STRUCTURALLY UNANSWERABLE FROM DISK, and ddm_hv2 declined to invent a number. CURE (mirrors a pattern that already exists, adds no new object): emit a .consumed marker when a final is read, and either commit arm_final_messages or cold-store it under the certify-or-block rule. Sister of orphan_sweeps_that_do_not_write_the_store_are_the_disease_20260803."
+    },
+    {
+      "task_id": "hv2_costate_digest_arm_reader_never_prints_20260816",
+      "source_design_memo": ".omx/research/ddm_hv2_arm_final_harvest_20260816.md",
+      "rank": 3,
+      "title": "APPARATUS: the costate digest NEXT_IF_RESUMED reader is wired, correct, and silent (vacuity==PASS)",
+      "owner": "MAIN (tools/costate_digest.py owner)",
+      "notes": "MEASURED by ddm_hv2 2026-08-16. tools/costate_digest.py:2130 calls section_arm_next_if_resumed() and appends its line at :2131, but that call sits inside the 'if ddm_live:' branch opening at :2029. ddm_hv2 verified all three legs: ddm_live evaluates True; calling section_arm_next_if_resumed() directly returns a correct line reading '248 plan row(s)' with provenance counts harvested-final=191, today-receipt=32, hr1-backfill=18, backfilled=3, positive-control=2, dogfood=1, committed-result=1; and yet running tools/costate_digest.py emits 76 lines in which the string 'arm-next-if-resumed' appears ZERO times. So the queue-side reader of every arm's NEXT_IF_RESUMED plan is wired and correct and never reaches an operator. This is the vacuity-equals-pass class (m50): the surface reports nothing, and nothing reports that it reported nothing. CURE: assert the line is present in the digest output (a canary, per design philosophy P4), or hoist the call out of the branch. CONTEXT: np1 (commit 499ffd68a1) landed this surface claiming 'real readers wired'. The WRITER half is real and works -- 248 rows are being extracted and persisted. The READER half has never surfaced a row."
+    },
+    {
+      "task_id": "hv2_fire_orders_quote_stale_byte_bars_20260816",
+      "source_design_memo": ".omx/research/ddm_hv2_arm_final_harvest_20260816.md",
+      "rank": 4,
+      "title": "APPARATUS: live fire-orders cite byte bars stale against the frontier; quote the invariant archive <= 168,345 B instead of a delta",
+      "owner": "MAIN (fire-order authors)",
+      "notes": "MEASURED by ddm_hv2 2026-08-16. ddm_rx1, ddm_rx2 and ddm_sp2 fire-orders and alerts cite 'archive below 186,269 B' (the MC36 Variant C bar). The frontier archive is 182,759 B, so that bar sits 3,510 B ABOVE what we already ship: a candidate can PASS its own admission bar while being strictly worse than the incumbent. That is the dangerous direction of staleness, not the safe one. Separately ddm_mz1 cites a 15,153 B saving bar which ddm_wd2 and ddm_rfo2 independently corrected to 15,157 B. CURE: fire-orders must quote the INVARIANT rather than a delta. ddm_hv2 re-derived that invariant two independent ways and they agree to one byte: off e480b (S=0.1600920261571558 @ 183,502 B) the target is archive <= 168,345.6 B; off hv1 ep0634 (S=0.15959729295498598 @ 182,759 B) it is also archive <= 168,345.6 B. They agree because seg (0.029611) and pose (0.0082945765) are decode-identical across the two vehicles, so only the rate term moves. A delta goes stale on every pointer move; the absolute target does not. Sister of cross-regime-constant-transfer-genus-finishing-stage and of corrections_land_in_bodies_headlines_keep_the_stale_number_20260805."
+    },
+    {
+      "task_id": "hv2_mh1_orphan_rows_stranded_on_dead_vehicle_20260816",
+      "source_design_memo": ".omx/research/ddm_hv2_arm_final_harvest_20260816.md",
+      "rank": 5,
+      "title": "The prior harvest's mh1_orphan_* rows are unfireable as written: their fire conditions name TR1, a superseded vehicle",
+      "owner": "MAIN (or the mh1 successor)",
+      "notes": "MEASURED by ddm_hv2 2026-08-16 from .omx/state/canonical_task_status.jsonl. Four mh1_orphan_* rows remain pending and each gates on 're-measure on TR1 at n600' or on the v7.5.2 witness. TR1 is S ~ 0.7539807296911207 @ 357,836 B [macOS-CPU advisory]; the frontier is 0.15959729295498598 @ 182,759 B [contest-CUDA T4] on the entirely separate hv1/RX2/HPAC lineage. As written these rows can NEVER fire, so they sit gated-open forever, which is exactly the orphan state the m45 ownership law forbids. THIS IS NOT A REQUEST TO FIRE THEM: their numbers (post-hoc int8 lowering d_seg by 4.301114e-4, chroma-HF moving d_seg 3.86e-3 -> 1.71e-3 at n48) are ancestor-vehicle DIRECTIONS, and the L18 ancestor rule bars transferring them as numbers. The rows themselves say so, correctly. DECISION OWED, per row: either re-point the fire condition at the hv1 vehicle, or retire the row with its reason recorded. Rows: mh1_orphan_int8_posthoc_lowers_dseg_and_bytes, mh1_orphan_chroma_hf_dseg_actuator, mh1_orphan_seg_rd_secant_curve_data_never_banked, mh1_orphan_bayes_and_churn_seg_floors_uncanonicalized."
+    }
+  ]
+}
