@@ -25,9 +25,11 @@ NOT gate coverage.` The hook says so itself.
 
 ## 1. Method (canonical invocation, re-derived not assumed)
 
-The prompt's `PREFLIGHT_FULL=0 ... --scope dev` was not verified against the code. Read
-`src/tac/preflight.py:80353-80465`: `--scope` defaults to `dev` already, and no `PREFLIGHT_FULL`
-env var exists on this path. The canonical invocation is:
+The prompt's `PREFLIGHT_FULL=0 ... --scope dev` was not verified against the code, so I read it.
+`src/tac/preflight.py:80353-80465`: `--scope` already defaults to `dev`, and the CLI does not read
+`PREFLIGHT_FULL` at all — that variable belongs to the commit hook (see §1a, which turned out to
+matter more than this note). The `PREFLIGHT_FULL=0` prefix is inert on the CLI. Canonical
+invocation:
 
 ```bash
 .venv/bin/python -m tac.preflight --scope dev
@@ -40,6 +42,40 @@ Per-gate violation lists were collected by calling each check directly with `str
 Aggregation matters here: `_raise_aggregated_dev_gate_failures` (landed for task #852) is why a
 full RED set is visible at all. Before it, `--scope dev` raised the FIRST red gate and abandoned
 the rest — which is how a plan came to be written against one gate's violation count.
+
+### 1a. The finding that reframes #905: **the commit hook has no dev mode**
+
+I nearly shipped this memo with a wrong claim about `PREFLIGHT_FULL`, so I traced it. The variable
+is real and it lives in `tools/preflight_hook.py`. `_preflight_command()` (`:713-732`) is the single
+place the hook builds its preflight invocation, and it offers exactly **two** modes:
+
+```python
+if os.environ.get("PREFLIGHT_FULL", "0") == "1":
+    cmd.extend(["--scope", "all"])            # exhaustive release/custody stack
+    if os.environ.get("PREFLIGHT_ALLOW_SLOW", "0") == "1":
+        cmd.append("--allow-slow-preflight")
+else:
+    cmd.append("--no-codebase")               # skips EVERY codebase gate -> 0 gates
+    cmd.append("--acknowledge-empty-scope")
+```
+
+`grep '"--scope"' tools/preflight_hook.py` returns **one** line, and it is `all`. **The hook cannot
+currently run `--scope dev`.** Its choices are *zero gates* or *the exhaustive custody sweep* (which
+wants `--allow-slow-preflight` and a 600 s timeout).
+
+This reframes the task. The premise "#905 is blocked by RED dev gates" is only half right: even with
+every dev gate green, flipping the existing hook "on" would run `--scope all`, not the 22.7 s dev
+scope that was timed. **The concrete missing piece for #905 is a third hook mode** — a bounded
+`--scope dev` branch in `_preflight_command()`, between the current 0-gate default and the
+release sweep. That is a small, well-localized change, and it is a prerequisite the RED-gate triage
+does not by itself deliver.
+
+One margin caveat worth pricing before that branch lands: `_preflight_timeout_seconds()` returns
+**30 s** for any non-FULL mode, and I measured the dev scope at **22.7 s warm / 24.3 s** on this
+host. That is 19–24 % headroom. A dev-mode hook would sit close enough to its own timeout that a
+single slow-gate regression turns into commits that fail on the clock rather than on a finding.
+Either raise the dev-mode timeout deliberately or wire the existing `--timings-json` profile into a
+regression alarm.
 
 ## 2. The reproduced RED set (MEASURED 2026-08-16)
 
@@ -310,28 +346,33 @@ elsewhere.
 
 ## 6. Can the commit hook (#905) be flipped on?
 
-**Not today.** Timing is genuinely no longer the blocker — MEASURED 22.7 s against a 30 s budget,
-consistent with MAIN's warm 19.87 s. The blockers are these, in the order they must fall:
+**Not today, and the first blocker is not a gate at all.** Timing is no longer the headline
+objection — MEASURED 22.7 s against a 30 s budget, consistent with MAIN's warm 19.87 s. The blockers,
+in the order they must fall:
 
-0. **Gate 1 needs one paste by the owner of `probe_outcomes_ledger.py`** (§5.7) — cure written and
+0. **The hook needs a `--scope dev` mode at all** (§1a). Today `_preflight_command()` offers only
+   *0 gates* or `--scope all`. Without this branch, "flip the hook on" means running the exhaustive
+   custody sweep on every commit. This is the prerequisite, and it is independent of every gate
+   below.
+1. **Gate 1 needs one paste by the owner of `probe_outcomes_ledger.py`** (§5.7) — cure written and
    verified, blocked only on that file's own open review cycle. Cheapest item, plus a real bug
    handed back.
-1. **Gate 5 must be re-scoped** (§5.4). It gates commits on 800 un-versioned files outside the repo,
+2. **Gate 5 must be re-scoped** (§5.4). It gates commits on 800 un-versioned files outside the repo,
    on a per-host directory, with an APPEND-ONLY corpus that cannot be driven to zero. This one is
    structural: no amount of repo hygiene reaches it.
-2. **Gate 6's untracked-file exposure** (§5.5). A hook that refuses a commit because of an untracked
+3. **Gate 6's untracked-file exposure** (§5.5). A hook that refuses a commit because of an untracked
    file's contents will fire constantly — `src/tac/witness_dsl/` alone currently holds ~40 untracked
    modules plus ~30 untracked tests.
-3. **Gate 7 needs the two-line dispatcher-name decision** (§5.3), or 52 correct files stay red.
-4. **Gate 3 needs the deploy-semantics narrowing** (§5.2), or the hook refuses commits touching a
+4. **Gate 7 needs the two-line dispatcher-name decision** (§5.3), or 52 correct files stay red.
+5. **Gate 3 needs the deploy-semantics narrowing** (§5.2), or the hook refuses commits touching a
    launcher CLAUDE.md itself calls canonical.
-5. **Gate 4 needs one clause in CLAUDE.md** (§5.6) — cheapest item on the list, wrong owner for me.
-6. **Gate 2 needs a real decision** (§5.1) — the only one of the six that is plausibly a true defect
+6. **Gate 4 needs one clause in CLAUDE.md** (§5.6) — cheapest item on the list, wrong owner for me.
+7. **Gate 2 needs a real decision** (§5.1) — the only one of the six that is plausibly a true defect
    in live code.
 
-A defensible intermediate that unblocks #905 without weakening anything: **flip the hook on with a
-named subset** — the 18 currently-green gates plus the one I just cleared — and hold the seven under
-adjudication out of the *commit* scope while leaving them in `--scope all`. That gives commits real
+A defensible intermediate that unblocks #905 without weakening anything: **add the dev-mode branch
+and point it at a named subset** — the 18 currently-green gates plus the one I just cleared — holding
+the seven under adjudication out of the *commit* scope while leaving them in `--scope all`. That gives commits real
 coverage now instead of the current effectively-zero, and it does not launder a single unresolved
 decision into a pass. It also makes the remaining six visible as a short, owned list rather than an
 undifferentiated "316 violations" that nobody can act on.
