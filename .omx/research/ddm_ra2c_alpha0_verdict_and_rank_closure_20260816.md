@@ -58,6 +58,12 @@ Against the tolerances in §2 the best rung misses by 33× (rank-11: 4.23% vs 0.
 196× (25.15% vs 0.128%). Rescue would require a damage exponent **p > 5** (rank-11) or **p > 7**
 (rank-4) — implausible for a smooth quadratic scorer term.
 
+**Axis note.** §2's tolerances use the ADVISORY pose term (0.0384018), the tighter instrument.
+`carrier_error_tolerance()` defaults to the T4 term (0.0082945765), giving the LOOSER bars and
+tolerances 0.438% / 0.327% / 0.086%. The closure survives on the loose axis too — rank-4 still
+misses by **77×** — which is the stronger statement, so the verdict does not depend on which
+instrument's bar you price against.
+
 **VERDICT: the Euclidean carrier-rank ladder is CLOSED.** `verdict_scope: FORMULATION` — rank-r
 truncation of the shipped 12-dim carrier in the Frobenius/Euclidean metric, priced against the
 registered rate-credit affordance law on the hv1 ep0634 base.

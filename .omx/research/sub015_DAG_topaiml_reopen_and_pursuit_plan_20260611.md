@@ -27884,3 +27884,35 @@ verify-alive window; nothing ran silently.
 
 **Review counter: 0/3** (two finding-rounds, neither clean). Own-vehicle frontier UNMOVED:
 hv1 ep0634 **S 0.15959729295498598 @ 182,759 B [contest-CUDA T4 n600]**, gap to 0.15 = −0.0095973.
+
+## FEED-ra2c (2026-08-16) — the α=0 anchor closes the EUCLIDEAN carrier-rank ladder
+
+**MEASURED** (n600 `upstream/evaluate.py`, `archive.zip` held byte-identical, `[macOS-CPU advisory]`,
+receipt `RA2C_ALPHA_LADDER.json`, spliced raw sha `dbd30b21…` retained):
+
+- carrier deleted (α=0) → d_pose **1.4747e-4 → 51.67767334** = ratio **350,428×** vs a bar of
+  1.9162× (advisory) / 7.7229× (T4). REFUSED by 182,880× / 45,375×.
+- **d_seg EXACTLY unchanged** (0.00042714 → 0.00042714): the frame_0 carrier is seg-invisible, so
+  every carrier question is a pure (pose, rate) trade. Confound class removed.
+- **α=1 control 600/600 byte-identical**: `ddm_ra2b_carrier_chain_control` is a validated n600
+  mirror of the shipped f26 → selector-split → CPU1 → compensation → render → `apply_pixel_mode`
+  chain, not just ra2b's 3-pair proof.
+
+**EQUATIONS LEG** (`carrier_rate_credit_pose_affordance_20260816`): the two anchors fix
+`ratio − 1 = K·err^p` with **K = 350,427**; `carrier_error_tolerance()` inverts the affordance bar
+through it. Exact SVDs of all three shipped objects (`CARRIER_SPECTRA`) show flat spectra —
+cond 3.61 / 5.40 / 17.32 — so the 12-dim carrier is effectively full rank. **Eckart–Young makes
+those rank-r errors LOWER BOUNDS on any Frobenius-optimal rank-r method**, and the best rung
+(rank-11, returning 1,514 B) still misses tolerance by 33× (advisory) / 49× (T4).
+
+**VERDICT** `FORMULATION` — rank-r truncation of the shipped carrier **in the Euclidean metric** is
+CLOSED. Rescue needs p > 5.
+
+**OPEN DOOR (named successor, MAIN):** Eckart–Young is optimal in *Frobenius*; d_pose reads the
+PoseNet-Jacobian metric. The pose-metric-optimal rank-r truncation has never been built. This is the
+same level error as `rate_credit_ladders_run_largest_first_and_euclid_ladders_are_a_level_error_20260816`.
+Falsifier: if pose-metric rank-4 error also exceeds tolerance, the carrier family is closed in both
+metrics and pose routes exclusively through the js1 joint line.
+
+**CORRECTION:** the "ra1b rank-4 = 6.00% error" figure MAIN was carrying does not reproduce on any
+of the three objects (49.20% / 52.08% / 25.15%). Withdrawn from the argument.

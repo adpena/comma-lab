@@ -153,6 +153,48 @@ DERIVED_RUNGS = {
 }
 
 
+#: MEASURED 2026-08-16 (ra2c, n600 upstream/evaluate.py, archive held byte-identical):
+#: deleting the carrier entirely (alpha=0) raised d_pose from 1.4747e-4 to 51.67767334.
+#: With the trivial alpha=1 anchor (ratio 1, proven by a 600/600 byte-identity control) this
+#: fixes the one free constant of the damage law `ratio - 1 = K * frac_err ** p`.
+#: p = 2 is the principled exponent: d_pose is a quadratic form in the pose residual.
+CARRIER_ALPHA0_DPOSE = 51.67767334
+CARRIER_BASE_DPOSE_ADVISORY = 0.00014747
+CARRIER_DAMAGE_K = CARRIER_ALPHA0_DPOSE / CARRIER_BASE_DPOSE_ADVISORY - 1.0
+
+#: MEASURED 2026-08-16 (exact SVD of the shipped objects in archive 80d9c8c6...):
+#: label -> (condition number, rank-4 relative error, rank-11 relative error).
+#: Every spectrum is flat -- the 12-dim carrier is effectively full rank. By Eckart-Young the
+#: truncated SVD is the OPTIMAL rank-r approximation in Frobenius norm, so these are LOWER
+#: BOUNDS on any rank-r approximation error in that norm, not estimates of one method.
+CARRIER_SPECTRA = {
+    "basis_12x2304": (3.61, 0.52081, 0.14714),
+    "coeff_600x12": (5.40, 0.49203, 0.11224),
+    "rendered_field_600x2304": (17.32, 0.25145, 0.04231),
+}
+
+
+def carrier_error_tolerance(
+    returned_bytes: int,
+    *,
+    pose_term: float = FRONTIER_POSE_TERM,
+    exponent: float = 2.0,
+    denominator: int = RATE_DENOMINATOR_BYTES,
+) -> float:
+    """Max fractional carrier error an approximation may carry and still be affordable.
+
+    Inverts the affordance bar through the measured damage law: solve
+    `K * err ** p = bar - 1` for err, where `bar = (1 + R/POSE) ** 2`.
+
+    A LARGER exponent is MORE forgiving at small error, so `exponent=2` (the principled
+    quadratic) yields an UPPER BOUND on tolerance for any law with p <= 2.
+    """
+    bar = pose_affordance_ratio(returned_bytes, pose_term=pose_term, denominator=denominator)
+    if bar <= 1.0:
+        return 0.0
+    return float((bar - 1.0) / CARRIER_DAMAGE_K) ** (1.0 / exponent)
+
+
 def build_carrier_rate_credit_pose_affordance_v1() -> CanonicalEquation:
     provenance = build_provenance_for_macos_cpu_advisory(
         archive_sha256=FRONTIER_ARCHIVE_SHA256,
@@ -294,7 +336,12 @@ def populate_carrier_rate_credit_pose_affordance_equation(
 
 __all__ = [
     "AXIS",
+    "CARRIER_ALPHA0_DPOSE",
+    "CARRIER_BASE_DPOSE_ADVISORY",
+    "CARRIER_DAMAGE_K",
+    "CARRIER_SPECTRA",
     "CARRIER_STREAM_BYTES",
+    "carrier_error_tolerance",
     "DERIVED_RUNGS",
     "EQUATION_ID",
     "FRONTIER_POSE_TERM",
