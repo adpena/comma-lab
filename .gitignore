@@ -366,6 +366,11 @@ src/tac.egg-info/
 .omx/state/modal_call_id_ledger.jsonl.lock
 .omx/state/modal_call_id_ledger.jsonl.tmp.*
 .omx/state/modal_call_id_ledger.jsonl.corrupt.*
+# Canonical Modal spend receipts (tools/modal_spend_report.py). Small,
+# append-only, and the ONLY durable record of what the provider actually billed
+# against the operator cap — local-only would defeat its purpose on a fresh
+# checkout, which is exactly how the cap became a prose guess.
+!.omx/state/modal_spend_receipts.jsonl
 # Canonical dual-agent task/resume ledgers are small append-only control-plane
 # state, not raw provider logs. Commit the JSONL; keep locks/tmp/corrupt local.
 !.omx/state/canonical_task_status.jsonl
