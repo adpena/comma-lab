@@ -27766,3 +27766,18 @@ measured admission baseline (base advisory S 0.20280753928705508).
   launch-tree aggregation) + refusal gate 5→0 w/ executed positive controls + 49 tests. Live:
   phantom charged growth 81.56→0.0 GiB. Daemon stays OFF pending supervised soak (MAIN-gated).
 - Pointer UNMOVED: S 0.15959729295498598 @ 182,759 B [contest-CUDA T4 n600] (hv1 ep0634).
+
+## FEED-wd3d (2026-08-15/16 boundary — D56 verdict + F64 fire + wc1 governed refusal)
+- **D56 COMPLETE** (65 ep, 6,446 s, ~99 s/ep, rc=0): fresh dense w56 at matched budget lands
+  hard_d_seg 0.002682 (asymptote from ep40, 2.5× W0 floor) / d_pose 0.3105 (not converged —
+  expected per the 3× optimizer-state law). NEGATIVE-LEANING at INSTANCE(n60); no family verdict
+  per "a negative cannot be emitted from n60"; **n120 seeded confirmation OWED** at the F64
+  boundary. Memo: ddm_wd3_d56_fresh_dense_verdict_20260815.md
+- **F64 FIRED** (launch 65, pid 98052, watched + MPS env gate satisfied): factorized_d4_w64_r19,
+  65 ep — the clean within-fresh dense-vs-factorized comparison. Blocking-tail watcher armed.
+- **wc1 n600 r2 REFUSED** by the gb1-fixed admission gate under REAL kernel pressure (level 2,
+  process RSS only 5.7 GiB — transient file-cache). Correct fail-closed behavior; queued, single
+  retry at the F64 boundary.
+- **gb1 production reads:** D5 launch-tree aggregation VALIDATED (one charge per declared job);
+  D1 cp-measurement residue LIVE in the safe_run leg (clamp fired at 73.95/125.71 GiB
+  total-used-shaped) → routed to #1073.
