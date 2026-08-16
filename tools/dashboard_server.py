@@ -67,8 +67,12 @@ from types import SimpleNamespace
 
 # ── reuse the canonical verdict-parse + self-calibrating liveness (DRY) ──
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 import dashboard_trajectory_model as dtm  # sophisticated DATA-DERIVED projection
 import render_levelset_dashboard as rld
+
+# NB: after the sys.path bootstrap above -- import position is deliberate.
+from tac import process_liveness
 
 # schema-driven run introspection (#352): classifies the run's schedule/curriculum into
 # EVENT-TRIGGERED / DERIVED / FIXED-CAP + exposes the costate controller, LawRef constants
@@ -1232,13 +1236,19 @@ def _launch_config_family(pdir: Path) -> str | None:
 
 
 def _pid_alive(pid: int) -> bool:
-    if not pid:
-        return False
-    try:
-        os.kill(pid, 0)
-        return True
-    except Exception:
-        return False
+    """Delegates to the canonical tri-state read (``tac.process_liveness``).
+
+    Behaviour CHANGED in three ways (undocumented drift in the old local copy):
+
+    * ``PermissionError`` was DEAD, now ALIVE -- the UI no longer claims
+      "training gone" for a live process it merely cannot signal.
+    * A zombie was ALIVE forever, now DEAD -- and this function also gates the
+      16-min render LOCK (``_render_lock_held``), where a zombie holder used to
+      wedge the lock permanently instead of being reclaimed as stale.
+    * A NEGATIVE pid was ALIVE (``os.kill(-n, 0)`` is a process-GROUP probe),
+      now UNREADABLE -> False.
+    """
+    return process_liveness.pid_state(pid) == process_liveness.ALIVE
 
 
 def _training_alive(pid: int, sig: str) -> bool:

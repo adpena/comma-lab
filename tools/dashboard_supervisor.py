@@ -45,6 +45,10 @@ import urllib.request
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 sys.path.insert(0, HERE)  # import sibling tools (cloudflare_named_tunnel)
+sys.path.insert(0, os.path.join(ROOT, "src"))  # tac.process_liveness under ANY python3
+
+# NB: after the sys.path bootstrap above -- import position is deliberate.
+from tac import process_liveness  # noqa: E402
 
 TRAINING_SIG = "train_levelset_witness"  # NEVER kill
 SERVER_LABEL = "levelset_dash_server"
@@ -114,11 +118,12 @@ def cleanup(port: int, exclude_pgids: set[int], kinds: set[str]) -> list[tuple[i
     if targets:
         time.sleep(2)
         for pid, pgid, _ in targets:
-            try:
-                os.kill(pid, 0)
+            # Canonical liveness, not a bare kill(pid, 0) (same class as
+            # _pid_alive below).  CHANGED: a survivor we cannot SIGNAL (EPERM)
+            # now reads ALIVE and gets the SIGKILL escalation it used to be
+            # skipped for; a ZOMBIE now reads DEAD and is correctly left alone.
+            if process_liveness.pid_state(pid) == process_liveness.ALIVE:
                 _killpg(pgid, signal.SIGKILL)
-            except Exception:
-                pass
     return targets
 
 
@@ -191,13 +196,20 @@ def newest_log_age_s(run_dir: str, now: float | None = None) -> float | None:
 
 
 def _pid_alive(pid: int) -> bool:
-    if not pid:
-        return False
-    try:
-        os.kill(pid, 0)
-        return True
-    except Exception:
-        return False
+    """Delegates to the canonical tri-state read (``tac.process_liveness``).
+
+    Behaviour CHANGED by the migration, in three ways -- the old local copy was
+    drift, not a design choice (it documented no intent to differ):
+
+    * ``PermissionError`` (process exists, we cannot signal it) was DEAD, now
+      ALIVE.  This supervisor's job is to NOT tear down a live dashboard; the
+      old reading could declare a running-but-unsignallable trainer gone.
+    * A zombie was ALIVE forever, now DEAD.  ``kill(pid, 0)`` succeeds on an
+      unreaped child indefinitely, so the teardown gate could never fire.
+    * A NEGATIVE pid was ALIVE (``os.kill(-n, 0)`` targets a process GROUP);
+      it is now UNREADABLE -> False.
+    """
+    return process_liveness.pid_state(pid) == process_liveness.ALIVE
 
 
 def training_alive(pid: int, sig: str) -> bool:

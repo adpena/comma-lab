@@ -39,6 +39,11 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 REPO = Path("/Users/adpena/Projects/pact")
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+
+# NB: after the sys.path bootstrap above -- import position is deliberate.
+from tac import process_liveness  # noqa: E402
+
 VENV_PY = str(REPO / ".venv" / "bin" / "python")
 ROOT = Path("/Volumes/VertigoDataTier/pact/ddm_r1c_20260731")
 PARENT_TICKET = Path(
@@ -83,13 +88,19 @@ def _atomic_write(path: Path, payload: dict) -> None:
 
 
 def _pid_alive(pid: int) -> bool:
-    try:
-        os.kill(pid, 0)
-    except (ProcessLookupError, PermissionError):
-        return False
-    except Exception:
-        return False
-    return True
+    """Delegates to the canonical tri-state read (``tac.process_liveness``).
+
+    Behaviour CHANGED in three ways (undocumented drift in the old local copy):
+
+    * ``PermissionError`` was explicitly DEAD, now ALIVE.
+    * A zombie was ALIVE forever, now DEAD -- a finished-but-unreaped window
+      worker used to keep this supervisor waiting on a process that can never
+      run again.
+    * ``pid <= 0`` had NO guard: ``os.kill(0, 0)`` targets our OWN process
+      group and SUCCEEDS, so a ``launch_manifest.json`` carrying ``"pid": 0``
+      read the window as RUNNING forever.  It is now UNREADABLE -> False.
+    """
+    return process_liveness.pid_state(pid) == process_liveness.ALIVE
 
 
 def _window_dir(n: int) -> Path:

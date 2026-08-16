@@ -48,8 +48,14 @@ import argparse
 import json
 import os
 import shutil
+import sys
 import time
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+
+# NB: after the sys.path bootstrap above -- import position is deliberate.
+from tac import process_liveness
 
 # ---------------------------------------------------------------------------
 # Pure decision helpers (unit-tested in tests/test_snapshot_stage_boundary.py)
@@ -204,13 +210,20 @@ def _preserve(rolling_dir: Path, dest_dir: Path, *, reason: str, log_path: Path)
 
 
 def _pid_alive(pid: int) -> bool:
-    if pid <= 0:
-        return False
-    try:
-        os.kill(pid, 0)
-        return True
-    except OSError:
-        return False
+    """Delegates to the canonical tri-state read (``tac.process_liveness``).
+
+    Behaviour CHANGED in two ways (the old local copy was drift, undocumented):
+
+    * ``PermissionError`` was DEAD (it is an ``OSError`` subclass, so the bare
+      ``except OSError`` swallowed it), now ALIVE.  The watched trainer exists;
+      only our ability to signal it is missing.
+    * A zombie was ALIVE forever, now DEAD.
+
+    ``pid <= 0`` was already False and still is.  ``--watch-pid`` is ADVISORY
+    here (death is logged; the exit gate is manifest staleness), so the blast
+    radius of both changes is one log line.
+    """
+    return process_liveness.pid_state(pid) == process_liveness.ALIVE
 
 
 def main(argv: list[str] | None = None) -> int:

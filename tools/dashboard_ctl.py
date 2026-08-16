@@ -48,6 +48,11 @@ import urllib.request
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(_REPO_ROOT / "src"))
+
+# NB: after the sys.path bootstrap above -- import position is deliberate.
+from tac import process_liveness  # noqa: E402
+
 _TOOLS = _REPO_ROOT / "tools"
 _DEFAULT_PORT = 8790
 _TRAINING_SIG = "train_levelset_witness"  # NEVER kill this
@@ -192,12 +197,14 @@ def _killpg_server_procs(port: int) -> int:
     if procs:
         time.sleep(1.5)
         for pid, pgid, _ in procs:
-            try:
-                os.kill(pid, 0)
+            # Canonical liveness (tac.process_liveness) instead of a bare
+            # kill(pid, 0).  CHANGED: a survivor we cannot SIGNAL (EPERM) now
+            # reads ALIVE and gets the SIGKILL escalation it was previously
+            # skipped for; a ZOMBIE now reads DEAD and is correctly NOT
+            # escalated (it already exited -- SIGKILLing its group was noise).
+            if process_liveness.pid_state(pid) == process_liveness.ALIVE:
                 with contextlib.suppress(ProcessLookupError, PermissionError, OSError):
                     os.killpg(pgid, signal.SIGKILL)
-            except OSError:
-                pass
     return len(procs)
 
 
