@@ -121,12 +121,16 @@ def main() -> int:
     m88_ratio = subset_mean / POPULATION_D_POSE
     m88_representative = bool(0.5 <= m88_ratio <= 2.0)
 
-    # ---- Delta S under the measured mean ratio -------------------------
-    # d_pose enters S as sqrt(10*d_pose); with the mean ratio R the pose
-    # contribution scales by sqrt(R).  Reported for BOTH the subset mean ratio
-    # and the median pair ratio, because the two disagree under skew.
-    mean_ratio = float(sol.mean() / base.mean())
-    median_ratio = float(np.median(ratios))
+    # ---- Delta S: the VERDICT uses the scorer convention ----------------
+    # upstream/evaluate.py averages d_pose ITSELF across pairs and only then
+    # applies sqrt(10*.), so the axis verdict is the ratio of MEANS
+    # (sol.mean()/base.mean()).  The median of per-pair ratios is a
+    # distribution DIAGNOSTIC only and can disagree with the verdict IN SIGN
+    # under skew (rt1 measured x1.809 median-of-ratios vs x0.431 scorer
+    # convention on the same 7 pairs; law:
+    # pose_aggregation_is_mean_of_dpose_never_mean_of_ratios_20260816).
+    mean_ratio = float(sol.mean() / base.mean())      # scorer convention: THE VERDICT
+    median_ratio = float(np.median(ratios))           # diagnostic only, never the verdict
     ds_pose_mean = CX1_POSE_CONTRIB * (math.sqrt(mean_ratio) - 1.0)
     ds_pose_median = CX1_POSE_CONTRIB * (math.sqrt(median_ratio) - 1.0)
 
@@ -163,6 +167,8 @@ def main() -> int:
         "frac_pairs_worse": float(np.mean(sol > base)),
         "delta_S_pose_from_mean_ratio": ds_pose_mean,
         "delta_S_pose_from_median_ratio": ds_pose_median,
+        "pose_aggregation_verdict_basis": "ratio_of_means_scorer_convention",
+        "delta_S_pose_median_is_diagnostic_only": True,
         "tolerance": tol,
         "rows": rows,
         "axis": "[macOS-CPU advisory]",
@@ -180,8 +186,8 @@ def main() -> int:
     print(f"[pz1] ratio   mean {mean_ratio:.4f}  median {median_ratio:.4f}  "
           f"min {ratios.min():.4f}  max {ratios.max():.4f}")
     print(f"[pz1] pairs made worse: {100 * summary['frac_pairs_worse']:.1f}%")
-    print(f"[pz1] Delta S(pose) from mean ratio   : {ds_pose_mean:+.5f}")
-    print(f"[pz1] Delta S(pose) from median ratio : {ds_pose_median:+.5f}")
+    print(f"[pz1] Delta S(pose) from mean ratio   : {ds_pose_mean:+.5f}  (VERDICT: scorer convention)")
+    print(f"[pz1] Delta S(pose) from median ratio : {ds_pose_median:+.5f}  (diagnostic only, never the verdict)")
     for label, t in tol.items():
         print(f"[pz1] tolerance {label}: seg win {t['seg_win_S']:.4f} "
               f"survives only if ratio <= {t['max_tolerable_ratio']:.4f}")

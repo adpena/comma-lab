@@ -484,7 +484,23 @@ def aggregate_rows(
     )
     eta_pass = bool(eta is not None and eta > bar)
     pose_median = float(np.median(ratios))
-    pose_pass = bool(abs(pose_median - 1.0) <= pose_median_abs_tol and float(ratios.max()) <= pose_max_threshold)
+    # Scorer-convention aggregate: upstream/evaluate.py averages d_pose ITSELF
+    # across pairs before sqrt(10*.), so the pose VERDICT leg gates on the
+    # subset ratio-of-means (same tolerance constant), never on the median of
+    # per-pair ratios -- which can disagree with the verdict IN SIGN under
+    # skew (rt1 measured x1.809 vs x0.431 on the same pairs; law:
+    # pose_aggregation_is_mean_of_dpose_never_mean_of_ratios_20260816).  The
+    # max-ratio leg stays as the per-pair blow-up guard; the median stays a
+    # distribution diagnostic in the output.
+    pose_before_sum = float(sum(r["d_pose_before"] for r in rows))
+    pose_after_sum = float(sum(r["cvp_realized"]["d_pose_after"] for r in rows))
+    pose_agg_ratio = (
+        pose_after_sum / pose_before_sum if pose_before_sum > 0 else float("inf")
+    )
+    pose_pass = bool(
+        abs(pose_agg_ratio - 1.0) <= pose_median_abs_tol
+        and float(ratios.max()) <= pose_max_threshold
+    )
     if eta_pass and pose_pass:
         verdict = "GREEN_N32_FIRE_ORDER_2_QUEUED_FOR_MAIN_ADJUDICATION"
         fire_order_2 = "QUEUED_FULL_N600_BYTE_CLOSE"
@@ -512,6 +528,9 @@ def aggregate_rows(
             "pose_ratio_p75": float(np.quantile(ratios, 0.75)),
             "pose_ratio_max": float(ratios.max()),
             "pose_ratio_mean": float(ratios.mean()),
+            "pose_agg_ratio_scorer_convention": pose_agg_ratio,
+            "pose_ratio_stats_are_diagnostic_only": True,
+            "pose_bound_basis": "agg_ratio_of_means_scorer_convention_plus_max_ratio_guard",
             "pose_bound_pass": pose_pass,
             "subset_cvp_seg_delta_S_no_rate": seg_delta_s,
             "subset_cvp_pose_delta_S_against_parent": pose_delta_s,
