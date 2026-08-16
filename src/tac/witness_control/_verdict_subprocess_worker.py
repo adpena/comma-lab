@@ -23,6 +23,8 @@ from pathlib import Path
 
 import numpy as np
 
+from tac import process_liveness
+
 _REPO = Path(__file__).resolve().parents[3]
 for _p in (_REPO, _REPO / "src", _REPO / "upstream", _REPO / "experiments"):
     if str(_p) not in sys.path:
@@ -48,9 +50,17 @@ def _start_parent_death_watch() -> None:
         while True:
             if os.getppid() != want_pid:
                 os._exit(3)  # reparented -> launcher gone
-            try:
-                os.kill(want_pid, 0)  # probe existence (no signal sent)
-            except OSError:
+            # Canonical liveness, but zombie_is_dead=False DELIBERATELY: this is
+            # a 4 Hz loop inside a memory-constrained child, and the zombie leg
+            # forks `ps`.  Nothing is lost -- a zombied parent means we were
+            # already reparented, which the getppid check above catches first.
+            # CHANGED: PermissionError now reads ALIVE instead of exiting; the
+            # old bare `except OSError` swallowed EPERM and could kill a LIVE
+            # verdict child on a spurious permission error.
+            if (
+                process_liveness.pid_state(want_pid, zombie_is_dead=False)
+                != process_liveness.ALIVE
+            ):
                 os._exit(3)
             time.sleep(0.25)
 

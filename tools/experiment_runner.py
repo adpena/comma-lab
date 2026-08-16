@@ -108,6 +108,19 @@ def get_checkpoint(tag: str) -> dict | None:
 
 
 def is_process_alive(tag: str) -> bool:
+    """Deliberately NOT migrated to ``tac.process_liveness`` (task #1080).
+
+    This asks a DIFFERENT question: "is any process running with this tag in
+    its command line", answered by a ``pgrep -f`` cmdline match.  The canonical
+    surface answers "is THIS pid alive", which needs a pid nobody here holds.
+    Forcing the migration would mean inventing a pid lookup this caller does
+    not have -- an honest non-migration beats a forced one.
+
+    NOTE: as of 2026-08-16 this function has ZERO callers repo-wide (grep for
+    ``is_process_alive`` finds only this definition), so it is also not on any
+    live path.  Left in place rather than deleted: removal is a separate
+    decision from the liveness consolidation.
+    """
     result = subprocess.run(
         ["pgrep", "-f", f"--tag {tag}"],
         capture_output=True, text=True,

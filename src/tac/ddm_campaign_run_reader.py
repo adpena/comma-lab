@@ -51,6 +51,8 @@ import time
 from pathlib import Path
 from typing import Any
 
+from tac import process_liveness
+
 SNAPSHOT_SCHEMA = "ddm_campaign_dashboard_snapshot.v1"
 STEP_SCHEMA = "ddm_joint_descent_full_run_step.v1"
 VERDICT_SCHEMA = "ddm_joint_descent_chunked_stage_verdict.v1"
@@ -267,14 +269,20 @@ def _pid_status(run_dir: Path) -> dict[str, Any]:
                     out["launcher_procs"].append(proc.info["pid"])
         except Exception:  # a liveness scan must never crash the snapshot
             pass
-    else:  # kill(pid,0) fallback: existence only (cannot verify the cmdline)
+    else:  # canonical-liveness fallback: existence only (cannot verify the cmdline)
         pid = out["pid"]
         if pid:
-            try:
-                os.kill(pid, 0)
-                out["pid_alive"] = True
-            except OSError:
-                out["pid_alive"] = False
+            # tac.process_liveness instead of a bare kill(pid,0).  This brings
+            # the no-psutil branch INTO line with the psutil branch above on the
+            # leg they can both answer: psutil treats ZombieProcess as not
+            # running, and so does this now (the bare probe called a zombie
+            # alive forever).  PermissionError still differs by design -- psutil
+            # returns False on AccessDenied because it could not read the
+            # cmdline to match LAUNCHER_SIG, which is a different question from
+            # "does the pid exist"; this branch only ever claimed existence.
+            out["pid_alive"] = (
+                process_liveness.pid_state(pid) == process_liveness.ALIVE
+            )
     return out
 
 

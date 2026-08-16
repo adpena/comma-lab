@@ -706,6 +706,7 @@ from comma_lab.local_submission_replay import (  # noqa: E402
     run_local_submission_replay,
     stage_local_replay_submission,
 )
+from tac import process_liveness  # noqa: E402
 from tac.adaptation.hard_pair_indices import (  # noqa: E402
     HardPairIndicesError,
     load_pair_indices_file,
@@ -24855,15 +24856,14 @@ def _campaign_lock_digest(payload: Mapping[str, Any]) -> str:
 
 
 def _pid_is_alive(pid: int) -> bool:
-    if pid <= 0:
-        return False
-    try:
-        os.kill(pid, 0)
-    except ProcessLookupError:
-        return False
-    except PermissionError:
-        return True
-    return True
+    """Delegates to the canonical tri-state read (``tac.process_liveness``).
+
+    Already agreed on ``PermissionError`` -> alive and on ``pid <= 0``.
+    CHANGED: a zombie was ALIVE forever and is now DEAD.  That matters most at
+    the campaign-lock staleness check below -- an unreaped holder used to wedge
+    the duplicate-launch refusal permanently instead of being reclaimed stale.
+    """
+    return process_liveness.pid_state(pid) == process_liveness.ALIVE
 
 
 def _active_process_table_rows() -> list[dict[str, Any]]:
