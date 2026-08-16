@@ -27832,3 +27832,55 @@ only that the steps DIFFER. Equation r6j_realized_adam_step_cosine_v1 → 2 anch
 normalisation law + the detection-floor law). Memo:
 ddm_r6j_realized_adam_step_cosine_verdict_20260816.md; receipt R6J_REALIZED_ADAM_COSINE.json +
 6 retained per-tensor cosine payloads. Own-vehicle frontier UNMOVED (hv1 ep0634 S 0.15959729).
+
+## FEED-ra2a (2026-08-16 ~16:3xZ) — corrupt-payload cure ×2 + THE LEVEL ERROR: the ladder is optimal in a metric nobody scores
+
+**Round-1 recursive adversarial review, landing on MY OWN prior work.** Two products, one gestalt.
+
+**(1) CRITICAL, fixed.** `ddm_ra1_carrier_rank_refit_preproof.py` emitted **11 of 12 corrupt
+payloads**. Mechanism: `((delta << 1) ^ (delta >> 63)) & 0xFFF` masks AFTER zigzag, truncating the
+high bit of an already-doubled value whenever `|delta| > 2047` (observed max 3,506). The receiver's
+cumsum is MODULAR (`inflate.py:278`), so the delta must be wrapped into signed 12-bit BEFORE
+zigzag. Rank-4's true on-disk MSE was 638.13 against a receipted 156.93. The shipped
+`carrier_codec._zigzag_signed` RAISES on out-of-range; the hand-rolled copy dropped that guard —
+this is the P0 measure-and-discard sister defect, one level meaner: bytes were persisted, and they
+decoded to garbage. CURE: signed-mod before zigzag + a mandatory `_assert_round_trip` that replays
+the SHIPPED receiver and refuses to emit on mismatch. Same defect inherited by
+`ddm_ra1b_exhaustive_keepset_refit.py`; both fixed, 56 payloads regenerated, 12/12 + 44/44 pass.
+Rank 4 = 7,576 B greedy (+7 B vs the corrupt run — independently reproducing the reviewer's
+number). Commit `67afd3fd83`.
+
+**(2) The exhaustive keep set beats the greedy heuristic at 10 of 11 ranks** (C(12,r) = 4,094
+subsets, seconds to exhaust). Rank 4: 20.41% vs 30.60% error at 7,499 vs 7,576 B — strictly
+dominates. ra1's published P2 claim ("a LOWER BOUND on EVERY rank-r carrier") is REFUTED as
+published: the refit is optimal GIVEN the keep set; the keep set was a heuristic.
+
+**(3) THE LEVEL ERROR (the finding that outranks both).** greedy → exhaustive → rotated-subspace
+(6.00% at rank 4) is a ladder of improvements in **Euclidean field MSE**. The scored quantity is a
+**PoseNet readout**. Every rung is optimal in a metric nobody scores — not a bug in any rung, a
+LEVEL error, and exactly the class the S-geometry pullback P0 (#974) names. Corollary caught at
+the same time and MINE to have missed: **α = 0 (carrier deleted) is not on the ladder at all**, yet
+it is cheaper than every rung, returns all 22,161 B, and — by the newly registered affordance law —
+sits under the LOOSEST bar. A ladder that measures only interior rungs answers the affordability
+question in the regime where it is hardest to satisfy.
+
+**EQUATIONS leg:** `carrier_rate_credit_pose_affordance_v1` registered — exact closed form
+`d_pose_new/d_pose_base < (1 + R/POSE)**2`, `R = 25·ΔB/D`. The bar is **QUADRATIC in the returned
+bytes** because the pose term is a square root: α=0 returns 153.8% of the remaining gap in rate
+credit and tolerates **7.72×** d_pose degradation, while a conservative rank-11 shave returns 10.5%
+and tolerates only **1.26×**. Cheapest rung = most forgiving rung; this inverts the
+shave-conservatively instinct and re-orders every rate-credit ladder we will ever build. Evaluator
+is executable and the rung table reproduces from it (no hand-typed twin); both admission directions
+control-tested.
+
+**BLOCKED, honestly:** `ddm_ra2a_carrier_fidelity_pose_ladder.py` is built and committed but has
+NOT fired. Four plumbing layers; three peeled (runtime path · receiver identity · fx1 tree path).
+Layer 4 is itself a finding: **the hv1 archive payload is F26-WRAPPED** — `GEN/inflate.py` is the
+F26 outer wrapper and the CPR1 semantic-pose receiver expects the UNWRAPPED combined payload, so
+`split_payload` correctly refuses with "no complete token section". The ra2 charter assumed ONE
+receiver; there are TWO, nested. Next action = route through `runtime.f26_inflate` before the CPR1
+receiver, then fire α=0 FIRST. Every failure was caught inside the watched launcher's 3 s
+verify-alive window; nothing ran silently.
+
+**Review counter: 0/3** (two finding-rounds, neither clean). Own-vehicle frontier UNMOVED:
+hv1 ep0634 **S 0.15959729295498598 @ 182,759 B [contest-CUDA T4 n600]**, gap to 0.15 = −0.0095973.
