@@ -128,3 +128,76 @@ the js1 joint line.
   line, not a curve — same caution the α=0 memo owed and now owes twice.
 - `p = 2` is retained as the principled exponent (d_pose is a quadratic form). The 9.23× could
   alternatively be read as `p ≠ 2`; distinguishing requires a third rung.
+
+---
+
+## 8. LADDER CLOSED AT EVERY RANK + the no-arbitrariness correction (operator, 2026-08-16)
+
+Operator directive: *"No arbitrariness or naive or toy or generic basis."* Applied to this arm's
+own output first.
+
+### 8.1 All 11 rungs, computed from the measured spectrum + K_eff — monotone, no knee
+
+| r | bytes back | bar | tolerance | achieved (Eckart–Young optimal) | miss |
+|---:|---:|---:|---:|---:|---:|
+| 1 | 20,388 | 1.8320× | 0.4682% | 68.0521% | 145.3× |
+| 2 | 18,535 | 1.7461× | 0.4434% | 37.3035% | 84.1× |
+| 3 | 16,682 | 1.6622× | 0.4177% | 30.1415% | 72.2× |
+| 4 | 14,828 | 1.5803× | 0.3910% | 25.1449% | **64.3×** (measured rung) |
+| 6 | 11,121 | 1.4228× | 0.3338% | 16.5694% | 49.6× |
+| 8 | 7,414 | 1.2736× | 0.2685% | 11.2978% | 42.1× |
+| 10 | 3,707 | 1.1327× | 0.1870% | 6.7131% | 35.9× |
+| 11 | 1,854 | 1.0653× | 0.1312% | 4.2305% | **32.2×** (tightest) |
+
+**The miss is monotone in r and never below 32.2×.** The spectrum is FLAT — adjacent-σ ratios
+1.05–2.59, no structural knee — so a "derived rank ladder" has nothing to find. **Rank was never
+the lever.** The rank ladder is CLOSED at every rank, on this basis.
+
+### 8.2 Arbitrariness I introduced today, corrected at source
+
+- **`p = 2` was labelled "principled". It is not.** d_pose is a quadratic form in the *pose
+  residual*, but the map coefficients → pose is the nonlinear chain render → R → uint8 → PoseNet.
+  `p = 2` assumes that chain is locally linear at this perturbation size, and the measured 9.23×
+  over-prediction is evidence against exactly that. Re-labelled **ASSUMED (linearization), not
+  derived.** §7's alternative reading (`p ≠ 2`) is promoted from footnote to live.
+- **The rank ladder {4,6,8,10,11} was inherited round numbers**, not derived from the spectrum or
+  from the bar-crossing. §8.1 replaces it with the complete computed table; the conclusion is
+  unchanged, but the ladder is no longer arbitrary.
+- **SVD is the GENERIC basis.** It is Frobenius-optimal by Eckart–Young and has no relation to the
+  metric the score reads. Naming it "the ladder" was the level error one surface over.
+
+### 8.3 The pose-metric rung is ALSO closed — and my "open door" phrasing was too generous
+
+A pose-metric-optimal rank-r subspace would have to beat the Frobenius-optimal one by **32×** in
+error (≈1,037× in damage) at the tightest rung. The only metric-mismatch magnitude MEASURED on
+this object is **9.23×**, and that is a statement about the damage law's calibration, not about
+subspace choice. Whitening by G then running SVD is a *generic move in a derived coordinate*; it
+does not manufacture 32×. **Withdrawn:** "the pose-metric ladder is the one open door." It is
+closed on the same arithmetic unless the object below is nonzero.
+
+### 8.4 THE ONE DERIVED QUESTION THAT SURVIVES — common pose-null dimension
+
+Not "which basis approximates best" (an approximation framing, hence a rank ladder, hence closed)
+but an **exactness** framing derived from the scorer's own shape:
+
+`d_pose` reads **6** scalars per pair; the carrier is **12**-dimensional. So the pullback
+`Gᵢ = Jᵢᵀ Jᵢ` (12×12) has **rank ≤ 6** — every pair has a **≥6-dimensional pose-null subspace in
+carrier coordinates**. The decisive measurable is whether they intersect across the population:
+
+```
+K  =  dim ( ⋂_{i=1..600} null(Gᵢ) )   in R¹²
+```
+
+- `K ≥ 1` ⇒ dropping such a direction is **exactly pose-free**, and **provably d_seg-free** (frame_0
+  invariance, measured identically 3×). A pure free byte return: **1,854 B = −0.001234 S = 12.9%
+  of the remaining gap PER DIMENSION** (2 dims → 25.7%).
+- `K = 0` ⇒ the carrier family is closed in **both** metrics at INSTANCE scope, and the carrier
+  stops consuming slots entirely.
+
+Generic expectation is `K = 0` (600 six-dimensional null spaces in R¹² generically intersect
+trivially). **That is a prior, not a measurement, and it must not be spent as one** — the whole
+point of the directive. It is a single decisive number either way.
+
+**Cost, honestly:** needs `Jᵢ` (6×12 per pair) through the real chain — 12 directional derivatives
+× 600 pairs, or the exact-Jacobian machinery already used by pk4 on cp135, re-pointed at the hv1
+carrier. Not $0, not paid. It replaces the entire rank ladder with one number.
