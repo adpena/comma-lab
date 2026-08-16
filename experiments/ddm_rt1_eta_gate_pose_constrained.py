@@ -327,8 +327,20 @@ def aggregate(args: argparse.Namespace) -> int:
     d_pose_base = (0.0082946 ** 2) / 10.0
     pose_leg = {}
     if ratios.size:
+        # CORRECTNESS: upstream/evaluate.py aggregates d_pose as a MEAN OVER PAIRS
+        # (`posenet_dists.sum() / batch_sizes`) and only then takes sqrt(10*d_pose).  So the
+        # aggregate ratio is mean(d_pose_after)/mean(d_pose_before) -- NOT the mean or median
+        # of per-pair ratios, which weights a pair with a tiny d_pose the same as one carrying
+        # the axis.  Those two statistics disagree in SIGN here (mean-of-ratios 1.809 vs
+        # mean-of-d_pose 0.431), so the wrong one flips the verdict's pose term.
+        db = np.array([r["d_pose_before"] for r in rows], dtype=np.float64)
+        da = np.array([r["d_pose_after"] for r in rows], dtype=np.float64)
+        agg_ratio = float(da.mean() / db.mean())
+        pose_leg["d_pose_aggregate_ratio_scorer_convention"] = agg_ratio
+        pose_leg["delta_S_pose_scorer_convention"] = (
+            (10.0 * d_pose_base * agg_ratio) ** 0.5 - (10.0 * d_pose_base) ** 0.5)
         for name, ratio in (("median", float(np.median(ratios))), ("mean", float(ratios.mean()))):
-            pose_leg[f"delta_S_pose_at_{name}_ratio"] = (
+            pose_leg[f"diagnostic_delta_S_pose_at_{name}_of_ratios"] = (
                 (10.0 * d_pose_base * ratio) ** 0.5 - (10.0 * d_pose_base) ** 0.5)
     # m96 is asymmetric and the verdict string must be too: a seeded-random subset may REFUTE a
     # bar, but a subset that CLEARS it does not license LIVE.  Emitting "LIVE" off a small n
@@ -360,8 +372,15 @@ def aggregate(args: argparse.Namespace) -> int:
             "seg_gain_if_all_band_flips_fixed_S": -gain_all,
             "net_S_at_measured_eta": -eta_pooled * gain_all + cost,
             "S_at_measured_eta": HV1_S - eta_pooled * gain_all + cost,
+            "net_S_seg_rate_plus_pose_scorer_convention": (
+                -eta_pooled * gain_all + cost
+                + pose_leg.get("delta_S_pose_scorer_convention", 0.0)),
             "eta_needed": ETA_BAR},
         "verdict": verdict,
+        "verdict_note": (
+            "`verdict` answers the PRE-REGISTERED seg+rate bar only.  "
+            "`net_S_seg_rate_plus_pose_scorer_convention` is the total-S picture and it can "
+            "differ in sign: read both before routing."),
         "verdict_scope": "INSTANCE: hv1 ep0634 base, ring-0 described set, r=1 described-set "
                          "edit support, pose-null-constrained realization, this solver budget; "
                          "m96: a seeded-random subset may REFUTE, a subset PASS may not license "

@@ -1,6 +1,6 @@
 ---
 arm: ddm_rt1
-title: "the seg axis is one pixel wide: 99.22% of hv1's scored flips sit ON the transmitted label boundary, the round trip is 33,743 flips (0.028604 S) MEASURED, flat paint is 35.4x worse, R supplies exactly zero, td1's r is 0.8492 -- and the free-band correction channel passes its coder gate at 32,270 real bytes then CLOSES on realization (eta 0.6620 vs bar 0.753), routing the whole seg axis to the renderer"
+title: "the seg axis is one pixel wide: 99.22% of hv1's scored flips sit ON the transmitted label boundary, the round trip is 33,743 flips (0.028604 S) MEASURED, flat paint is 35.4x worse, R supplies exactly zero, td1's r is 0.8492 -- and the free-band correction channel passes its coder gate at 32,270 real bytes then fails its realization bar (eta 0.6461 n=6 vs 0.753) and lands on BREAK-EVEN (+0.0003 S after a pose-aggregation correction to my own arithmetic), a non-supplier, so the seg axis routes to the renderer"
 utc: 2026-08-16
 charter: ".omx/research/ddm_rt1_seg_roundtrip_decomposition_charter_20260816.md"
 axis: "[macOS-CPU advisory] frozen CPU-torch SegNet -- NEVER a score"
@@ -63,21 +63,25 @@ actually built and raced in **§5**.
 isolated single pixels (mean run 1.110), so the best real coder beats i.i.d. by 2.5% and the
 ceiling of all free conditioning is 12.2%.
 
-**§6 (follow-on #2, executed): the channel is CLOSED.** Realization efficiency under the pose
-constraint, measured on hv1 for the first time, is **η = 0.6620** (n=4 seeded-random pairs, mean
-0.652 ± 0.082, **0 of 4 above the bar**) against the required **0.753**. At that η the channel
-*costs* **+0.0027 S** on seg+rate alone and **+0.004 to +0.008 S** once the pose leg is charged,
-and **even the best single pair still loses**. To clear, the whole channel would have to code
-under **29,215 B**, while §5 measured its realized floor at 33,235 B and its free-conditioning
-ceiling at 12.2% — **the two measured curves do not cross.** Getting a trustworthy NO required
-finding and fixing **two defects in my own instrument**, both caught by a positive control
-(§6.1): sq1's objective and sq1's edit support each fail to transfer to a 15×-smaller residual,
-and a NO measured on either would have been an artifact reported as physics.
+**§6 (follow-on #2, executed): the channel fails its realization bar and lands on zero.**
+Realization efficiency under the pose constraint, measured on hv1 for the first time, is
+**η = 0.6461** (n=6 seeded-random pairs, **0 of 6 above the bar**) against the required **0.753**.
+Seg+rate net is **+0.00314 S**; after the §6.2b correction the pose leg pays back **−0.00285 S**,
+so the **total is +0.00029 S — break-even.** The channel is not a catastrophe, it is a
+**non-supplier**: its whole seg gain at η=0.65 is 0.0190 S against a 0.0221 S rate cost, so it
+cannot cover a −0.0096 gap whichever way the pose term settles.
+
+Getting a trustworthy answer required finding and fixing **three defects in my own work** — two
+in the instrument, caught by a positive control (§6.1: sq1's objective and sq1's edit support each
+fail to transfer to a 15×-smaller residual, and a NO measured on either would have been an
+artifact reported as physics), and one in my own arithmetic (§6.2b: I aggregated the pose leg as a
+mean of per-pair ratios when the scorer averages d_pose itself — the two disagree in **sign**).
 
 **Net: every post-hoc lever on the seg axis is now bounded — flat paint 35× worse, band repaint
-+1.38 S, correction channel +0.0027 S — so the whole seg axis routes to the renderer's own
-training.** lr2 closed this family at 14.6× this vehicle's flip count; §5–§6 re-priced it at
-*this* operating point and it still closes, now with the reason measured rather than inherited.
++1.38 S, correction channel break-even (+0.0003 S) — so the whole seg axis routes to the
+renderer's own training.** lr2 closed this family at 14.6× this vehicle's flip count; §5–§6
+re-priced it at *this* operating point, and it still cannot supply the gap — now with the reason
+measured rather than inherited, and with the one number I got wrong corrected in §6.2b.
 **Pointer UNMOVED.**
 
 ## §0 Prior-law prediction lines (stated BEFORE the measurement, per the anti-re-anchor law)
@@ -569,7 +573,7 @@ is sq1's, measured on the v4d vehicle — nothing in §5 measures η on hv1.
 ## §5.5 Routing update (superseded by §6.4 — both follow-ons are now executed)
 
 1. **Follow-on #1 — DONE.** Coder gate passed at 32,270 B. Do not re-run.
-2. **Follow-on #2 — DONE (§6). η = 0.6620 vs bar 0.753 → CLOSED.**
+2. **Follow-on #2 — DONE (§6). η = 0.6461 (n=6) vs bar 0.753 → fails the bar; total S break-even.**
 3. **Follow-on #3 (edge-weighted Road↔Lane objective into the wd3 / ns1-P1 training line) is
    promoted** — see §6.4.
 
@@ -641,21 +645,44 @@ random choice (seed 20260816).
 **Stability as rows land.** The run was left going at `nice 10` behind the sister b2e arm and the
 aggregator re-reads the incremental rows, so the live authority is
 `ETA_GATE_VERDICT_AGGREGATE.json`, not any number frozen here. The verdict has not wobbled:
-pooled η = **0.6442 (n=3) → 0.6620 (n=4) → 0.6448 (n=5)**, with **0 of n above the bar at every
-n** and per-pair sd ~0.08. The table above is the n=4 snapshot; re-run
+pooled η = **0.6442 (n=3) → 0.6620 (n=4) → 0.6448 (n=5) → 0.6461 (n=6)**, with **0 of n above the
+bar at every n** and per-pair sd ~0.07. The table above is the n=4 snapshot; re-run
 `--mode aggregate` for the current n.
 
-The margin is not marginal. At the measured pooled η the channel is a **LOSS of +0.0027 S**
-(S would go 0.15960 → **0.16227**). And the refutation does not depend on the pooled figure:
-**even the best single pair measured (0.7200) still loses (+0.0010 S).** The realization step is
-exact on every pair (`D` reproduces the solved paint to 0.0), so nothing is being lost between
-solve and score — the shortfall is entirely η.
+The η shortfall itself is not marginal: on seg+rate the channel costs **+0.00314 S** at the
+measured pooled η, and **even the best single pair (0.7200) does not clear break-even on that
+leg.** The realization step is exact on every pair (`D` reproduces the solved paint to 0.0), so
+nothing is lost between solve and score — the seg shortfall is entirely η. What *is* marginal is
+the TOTAL, once the pose leg is aggregated correctly — see §6.2b, which corrects an error of mine
+and moves the total to break-even.
 
-**The pose leg makes it worse, and it was excluded from the pre-registered bar.** The bar 0.753
-was derived from seg + rate only. d_pose enters S as √(10·d_pose), and the measured ratios span
-×0.218 to ×7.735 (median ×1.242; 2 of 4 pairs improved). Charging the median ratio adds
-**+0.0009 S**; charging the mean adds **+0.0051 S**. Including the pose leg the channel loses
-**+0.0036 to +0.0078 S**. Excluding it was the conservative choice, and the verdict survives it.
+### §6.2b ⚠ CORRECTION — I aggregated the pose leg wrongly, and it changes the total
+
+**What I first reported:** "the pose leg makes it worse… charging the mean adds +0.0051 S."
+**That was wrong, in sign.** I averaged per-pair d_pose *ratios*. `upstream/evaluate.py`
+aggregates **d_pose itself** across pairs (`posenet_dists.sum() / batch_sizes`) and only then
+takes √(10·d_pose). The correct aggregate is `mean(d_pose_after) / mean(d_pose_before)`, which
+weights each pair by how much of the axis it actually carries. Mean-of-ratios weights a pair with
+negligible d_pose the same as one carrying the axis, and here the two statistics **disagree in
+sign**: mean-of-ratios ×1.809 vs scorer-convention **×0.4309**.
+
+| statistic | ratio | ΔS pose |
+|---|---:|---:|
+| **scorer convention — mean of d_pose (CORRECT)** | **×0.4309** | **−0.00285** |
+| mean of per-pair ratios (what I first used) | ×1.809 | +0.00286 |
+| median of per-pair ratios | ×0.603 | −0.00185 |
+
+Per-pair ratios span ×0.109 to ×7.735; 4 of 6 pairs improved. **The pose axis improves 2.3× in
+aggregate**, so the pose leg *pays back* −0.00285 S rather than costing.
+
+**Corrected total (n=6):** seg+rate **+0.00314** and pose **−0.00285** give a net of
+**+0.00029 S — break-even, not a clear loss.** The tool now computes both and refuses to let one
+stand for the other; `verdict` answers the pre-registered seg+rate bar only.
+
+Two things I will not paper over. The pose gain is plausibly a **side effect of the `truth_dir`
+solver start** biasing the uint8 rounding residual toward GT — encoder-side and legal, but not a
+designed compensation, and it may not survive a different init or larger n. And an aggregate
+d_pose over **6 pairs** whose ratios span 70× is not a reliable estimate of the n600 aggregate.
 
 **verdict_scope: INSTANCE** — hv1 ep0634 base, ring-0 described set, r=1 described-set edit
 support, pose-null-constrained realization, this solver budget, n=4 seeded-random pairs. Per
@@ -684,12 +711,17 @@ directions the scorer's pose head cannot see, which happens to limit seg collate
 
 ## §6.4 ROUTING — the post-hoc correction family is closed; everything goes to the renderer
 
-**The free-band seg-correction channel is CLOSED on measured arithmetic.** It passed its coder
-gate (32,270 real bytes, §5) and then failed the gate that actually decides it: realization
-efficiency under the pose constraint any shippable version must pay. Measured **η = 0.6620**
-against a required **0.753**; at that η the channel *costs* +0.0027 S on seg+rate alone and
-+0.004 to +0.008 S once the pose leg is charged, and **no individual pair measured — including
-the best — clears break-even.** No fire-order is issued. Nothing about this routes to a build.
+**The free-band seg-correction channel cannot supply the remaining gap.** It passed its coder
+gate (32,270 real bytes, §5) and then failed the pre-registered realization bar: **η = 0.6461
+(n=6) against a required 0.753, with 0 of 6 pairs above it.** No fire-order is issued.
+
+**The reason is weaker than I first wrote, and the honest one is stronger.** After the §6.2b
+pose-aggregation correction the total is **+0.00029 S — break-even, not a clear loss.** So the
+durable finding is *not* "this loses badly"; it is **"this lands on zero."** That conclusion is
+robust to the pose noise in a way the loss claim was not: seg+rate contributes +0.00314 and the
+pose leg −0.00285, and *whichever way the pose term moves at larger n, the channel is arithmetically
+incapable of supplying a −0.0096 gap* — its entire seg gain at η=0.65 is 0.0190 S against a 0.0221 S
+rate cost. A supplier has to clear the gap, not graze zero.
 
 The closure is scoped (INSTANCE, n=4 seeded-random, this solver budget) and it is reopenable by
 exactly two named things, neither of which is "try harder": a realization mechanism whose
@@ -703,7 +735,7 @@ cross.** That is why this is a closure and not a deferral.
 
 **Everything routes to follow-on #3: the edge-weighted Road↔Lane objective in the renderer's own
 training** (wd3 / ns1-P1 line). This unit has now bounded every post-hoc lever on the seg axis —
-paint (35× worse), band repaint (+1.38 S), correction channel (+0.0027 S) — while the render
+paint (35× worse), band repaint (+1.38 S), correction channel break-even (+0.0003 S) — while the render
 itself is measured to be the only actor that ever put the scorer within 0.1 logits of the answer
 (§2.8). The seg axis is 99.22% a one-pixel edge-placement problem concentrated 43.4% on Road↔Lane;
 that is a training target, and it is the one lever this unit did not bound away from sub-0.15.
