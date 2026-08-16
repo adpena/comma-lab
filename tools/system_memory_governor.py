@@ -204,6 +204,42 @@ DEFAULT_WARN_CONSECUTIVE = 3              # debounce: sustained WARN polls befor
 DEFAULT_CRITICAL_CONSECUTIVE = 2         # act faster on CRITICAL (fewer sustained polls)
 _FLEET_TOTAL_RAM_FALLBACK_GIB = 128.0    # M5 Max last-resort when sysctl fails
 
+# ── guard-band cadence + throttle ESCAPE HATCH (ddm_gb1 D2) ──────────────────────────────────────
+# DEFAULT_BAND_INTERVAL_S lives HERE, with the rest of the band machinery it parameterises;
+# ``memory_blackbox`` binds the same name to this object so the cadence has ONE source of truth and
+# the hatch below cannot silently decouple from the band it is derived from.
+DEFAULT_BAND_INTERVAL_S = 30.0
+# The absolute ceiling on how long the throttle may hold ANY job SIGSTOPped. DERIVED, not chosen:
+# ten consecutive band evaluations with no recovery is not a transient pressure spike — it is a
+# throttle that is not working, and a job stopped that long is a FROZEN measurement, not a protected
+# one. 10 x 30 s = 300 s, 15x below the MEASURED 2026-08-15 freeze (75+ min) and well above any real
+# spike. Env-overridable (a tracked knob, never a forgotten default); a non-positive value would
+# DISABLE the hatch and is refused by the parser below, so "0" cannot silently restore the freeze.
+MAX_STOP_DURATION_BAND_EVALUATIONS = 10
+DEFAULT_MAX_STOP_DURATION_S = MAX_STOP_DURATION_BAND_EVALUATIONS * DEFAULT_BAND_INTERVAL_S
+MAX_STOP_DURATION_ENV = "TAC_GOV_MAX_STOP_DURATION_S"
+
+
+def resolve_max_stop_duration_s(env: Mapping[str, str] | None = None) -> float:
+    """The throttle escape-hatch ceiling in seconds: ``TAC_GOV_MAX_STOP_DURATION_S`` when it parses
+    to a POSITIVE float, else :data:`DEFAULT_MAX_STOP_DURATION_S`. A blank / non-numeric / <= 0
+    value is LOUDLY ignored — the hatch may be lengthened or shortened, never switched off, because
+    "off" is exactly the state the 75-minute freeze ran in."""
+    raw = (env if env is not None else os.environ).get(MAX_STOP_DURATION_ENV, "").strip()
+    if not raw:
+        return DEFAULT_MAX_STOP_DURATION_S
+    try:
+        value = float(raw)
+    except ValueError:
+        print(f"[system-governor] WARNING: ignoring non-numeric {MAX_STOP_DURATION_ENV}={raw!r}",
+              file=sys.stderr)
+        return DEFAULT_MAX_STOP_DURATION_S
+    if value <= 0.0:
+        print(f"[system-governor] WARNING: ignoring non-positive {MAX_STOP_DURATION_ENV}={raw!r} "
+              f"— the throttle escape hatch may not be disabled.", file=sys.stderr)
+        return DEFAULT_MAX_STOP_DURATION_S
+    return value
+
 # ── accounting-trust constants (the "why trust this over eyeballing vm_stat" answer) ─────────────
 # The accounting is PURE + UNIT-TESTED against fixed captured snapshots, CROSS-VALIDATED against a 2nd
 # independent kernel source, and CLOSURE-checked (partition sum ~= physical total). If any check fails
@@ -707,6 +743,41 @@ def resolve_projected_peak_gib(
     return current + float(unknown_growth_headroom_gib)
 
 
+_RSS_CAP_FLAGS = ("--rss-mb", "--rss-cap-mb")
+
+
+def declared_rss_cap_gib(cmd: str) -> float | None:
+    """The ENFORCED per-process RSS ceiling declared on a ``safe_run`` command line, in TRUE GiB —
+    ``--rss-mb N`` / ``--rss-cap-mb N`` (MiB) — or None when the command declares none. PURE.
+
+    WHY THIS IS A PROJECTION AND NOT A GUESS: safe_run KILLS the child at this cap, so it is an
+    upper bound the process cannot exceed. A declared, enforced ceiling always beats the
+    unknown-peak default.
+
+    ddm_gb1 D5b (MEASURED 2026-08-16, INCIDENT #3). The dashboard's registry row carries no
+    ``projected_peak_gib``, so it resolved to ``rss 0.22 + UNKNOWN_GROWTH_HEADROOM_GIB`` = 25.22 —
+    above ``HEAVY_MIN_PROJECTED_GIB``, so a 0.22 GiB telemetry daemon was counted as a HEAVY job
+    reserving 25 GiB of growth. That is precisely the case ``sum_active_growth_headroom_gib``'s
+    docstring says it excludes ("a 0.2-GiB dashboard with a 2.44-GiB recorded projection reserved
+    ~2.2 GiB of phantom heavy-growth and REFUSED a real launch", 2026-07-09) — the exclusion held
+    only while something recorded that 2.44. 2.44 GiB IS ``--rss-mb 2500``: the number was always in
+    the argv. Reading it back makes the #370 control-plane exemption independent of whether a
+    launcher remembered to copy it into the registry."""
+    tokens = str(cmd).split()
+    for i, token in enumerate(tokens):
+        flag, _, inline = token.partition("=")
+        if flag not in _RSS_CAP_FLAGS:
+            continue
+        raw = inline if inline else (tokens[i + 1] if i + 1 < len(tokens) else "")
+        try:
+            mib = float(raw)
+        except ValueError:
+            continue
+        if mib > 0:
+            return mib * (1024.0 ** 2) / (1024.0 ** 3)
+    return None
+
+
 def pending_reservation_rows(
     rows: Sequence[dict],
     *,
@@ -1130,11 +1201,57 @@ def cp_headroom_gib(
     return max(float(min_gib), float(frac) * float(total_gib))
 
 
-def measured_control_plane_rss_gib(*, used_gib: float, tracked_current_gib: float) -> float:
-    """The DYNAMICAL floor leg's input: live NON-workload footprint = system used minus the sum of
-    our tracked (governed) jobs' current RSS. Both inputs are TRUE GiB post GB-F1 (the units
-    conversion happens once, at the ``list_tracked_jobs`` read boundary). Clamped >= 0. PURE."""
+def non_workload_used_gib(*, used_gib: float, tracked_current_gib: float) -> float:
+    """The adaptive ceiling's BASELINE: system used minus the sum of our tracked (governed) jobs'
+    current RSS — i.e. OS + file cache + control plane + anything untracked. Both inputs are TRUE
+    GiB post GB-F1 (the units conversion happens once, at the ``list_tracked_jobs`` read boundary).
+    Clamped >= 0. PURE.
+
+    This is NOT the control-plane RSS (see ``measured_control_plane_rss_gib``). It was called that
+    until 2026-08-15 and the name lied about the object it measured — the ddm_gb1 incident."""
     return max(0.0, float(used_gib) - float(tracked_current_gib))
+
+
+def measured_control_plane_rss_gib(*, samples: Mapping[int, object] | None = None) -> float | None:
+    """TRUE-GiB RSS summed over the NAMED control-plane processes ONLY — enumerated from the live
+    process table by the same identity gates the throttle uses to refuse touching them
+    (``memory_guard.is_host_control_plane_process`` = Claude/Codex apps + helpers + their launcher
+    lineage, ``_matches_extra_protected`` = the ssh/tmux/shell denylist, ``is_protection_infra_cmd``
+    = black-box/guard/governor). Each pid counted once. ``samples`` injectable (PURE over an
+    injected table); a live scan otherwise.
+
+    Returns ``None`` when the measurement is UNAVAILABLE — ``memory_guard`` missing, or a LIVE scan
+    that came back empty (a running box always has processes, so an empty live table is a FAILED
+    scan, never "zero control plane"). ``None`` makes ``derive_safety_floor`` fall back to its
+    STATIC policy leg (0.08*T): a floor derived from a measurement we do not have is worse than the
+    policy floor.
+
+    MEASURED INCIDENT (2026-08-15, ddm_gb1; memory ``governor-stuck-throttle-froze-three-live-
+    measurements``). This function used to return ``used_gib - tracked_current_gib`` — the box's
+    TOTAL used memory INCLUDING FILE CACHE. Live receipt from
+    ``.omx/state/memory_blackbox.daemon.log``: "SAFETY-FLOOR CLAMP: measured_cp value 92.00 GiB
+    clamped to 64.00 GiB" repeating at ~1.5 Hz on a machine with 40.5 GiB free. A floor input of 92
+    on a 128 GiB box declares "less than half the box is free" permanently. The old arithmetic is a
+    real and useful quantity — the ceiling BASELINE — and now lives under its honest name
+    ``non_workload_used_gib``. WRONG-OBJECT MEASUREMENT is the confound genus here (sister:
+    ``check_no_raw_virtual_memory_safety_basis``); a name that lies about its object is how it
+    survived review for two months."""
+    if _mg is None:
+        return None
+    live = samples is None
+    table = _mg.sample_processes() if live else samples
+    if live and not table:
+        return None
+    total_kib = 0
+    for sample in table.values():
+        cmd = str(getattr(sample, "command", "") or "")
+        if (
+            _mg.is_host_control_plane_process(sample)
+            or _mg._matches_extra_protected(cmd)
+            or is_protection_infra_cmd(cmd)
+        ):
+            total_kib += int(getattr(sample, "rss_kb", 0) or 0)
+    return total_kib / (1024.0 ** 2)
 
 
 @dataclass(frozen=True)
@@ -1299,6 +1416,36 @@ def derived_warn_free_gib(total_gib: float) -> float:
     (within 1.4% of the legacy 15.0 — warn-pauses fire one 0.2 GiB step later; the jetsam-guarding
     CRITICAL rung above got strictly earlier); @8 -> 4.0 GiB. PURE."""
     return derived_critical_free_gib(total_gib) + cp_headroom_gib(total_gib)
+
+
+def derived_resume_free_gib(total_gib: float) -> float:
+    """Tier-scaled RESUME/NO-PAUSE threshold = warn + one more cp_headroom. @128 -> 21.2 GiB;
+    @8 -> 5.0 GiB. PURE.
+
+    THE GOVERNOR'S OWN re-arm reference (ddm_gb1 D2). The throttle must never depend SOLELY on the
+    macOS ``kern.memorystatus_vm_pressure_level`` to come back: that signal is STICKY at warn, so a
+    resume gated only on it never fires — the spike-guard median-freeze genus (#304), a guard whose
+    reference never re-arms. MEASURED 2026-08-15: level=warn at 40.4 GiB available for 75+ minutes
+    while five jobs sat SIGSTOPped.
+
+    One cp_headroom above WARN is deliberate HYSTERESIS: pause fires below this line, resume at or
+    above it, so the [warn, resume] band is a dead zone and the throttle cannot flap between the two
+    actuations on a sticky OS level. Same headroom physics as every other rung — derived, not a new
+    constant."""
+    return derived_warn_free_gib(total_gib) + cp_headroom_gib(total_gib)
+
+
+def governing_free_gib(snapshot: SystemMemorySnapshot) -> float:
+    """The CONSERVATIVE free-memory basis for throttle ACTUATION: reclaimable-aware available when
+    the accounting validated, else the legacy free+inactive. PURE.
+
+    macOS ``available`` = free + inactive counts DIRTY ANON parked in the inactive queue as
+    available (CLAUDE.md "raw virtual memory safety basis" class), so it OVER-reports. Using the
+    smaller reclaimable number here is protective in both directions of the ddm_gb1 D2 cure: it
+    makes the no-pause veto FIRE LESS and the resume FIRE LATER than the optimistic number would."""
+    if getattr(snapshot, "reclaimable_ok", False):
+        return float(snapshot.available_reclaimable_gib)
+    return float(snapshot.available_gib)
 
 
 # ─────────────────────────── adaptive ceiling (pure) ───────────────────────────
@@ -1717,14 +1864,33 @@ def list_tracked_jobs(
         # + the constants-block rationale). A ps-only candidate whose ancestor chain reaches a
         # REGISTERED running pid is a governed descendant (its growth is projected by the parent
         # row — e.g. the trainer inside a daemon->safe_run tree sits in its own session).
+        # ddm_gb1 D5a (MEASURED 2026-08-16, INCIDENT #3): a candidate whose ancestor chain reaches
+        # ANOTHER CANDIDATE — registered or ps-only — is a descendant of that candidate's launch
+        # tree. Its RSS is ALREADY inside the ancestor's descendant-inclusive ``group_rss_gb``, so
+        # charging it an independent +25 triple-counts one job. Pre-fix this recognised REGISTRY-
+        # owned ancestors only, and the mp2 tree's root (a ps-only ``launch_detached`` wrapper) was
+        # not registered: pids 39740 <- 39748 <- 25923, one intact ppid chain, MEASURED group RSS
+        # 7.30 GiB, charged 6.56 + 25.00 + 25.00 = 56.56 GiB and REFUSED a READY_TO_FIRE launch on a
+        # box using 37.9 of 128 GiB. pid 0/1 are excluded: the init chain is every process's
+        # ancestor and could never be a launch-tree root.
         governed_desc = False
         if not rec:
             try:
-                governed_desc = bool(_mg._ancestor_pids(samples, pid) & owned_pids)
+                ancestors = _mg._ancestor_pids(samples, pid) - {pid, 0, 1}
+                governed_desc = bool(ancestors & (owned_pids | candidate_pids))
             except Exception:
                 governed_desc = False
+        # A registered row with no declared projection falls back to its ENFORCED safe_run RSS cap
+        # before the unknown-peak default (ddm_gb1 D5b — the #370 control-plane regression).
+        recorded_peak = rec.get("projected_peak_gib")
+        if recorded_peak is None and rec:
+            # Registry argv first (the authoritative launch record), live ps argv second. Explicit
+            # None-checks, not `or`: a cap is a float and `or` would swallow a legitimate 0.0.
+            recorded_peak = declared_rss_cap_gib(cmd_str)
+            if recorded_peak is None:
+                recorded_peak = declared_rss_cap_gib(cmd)
         proj_peak = resolve_projected_peak_gib(
-            rec.get("projected_peak_gib"), current_rss, cmd=cmd,
+            recorded_peak, current_rss, cmd=cmd,
             governed_descendant=governed_desc,
             # An UNREGISTERED (ps-only) candidate below the material RSS floor is an incidental token
             # match (grep/editor/launcher/short probe), NOT a heavy job — charge it zero phantom growth
@@ -1856,6 +2022,11 @@ class GovernorAction:
         }
 
 
+def _resume_order(jobs: Sequence[TrackedJob]) -> tuple:
+    """Paused jobs in RESUME order: highest priority first, largest RSS as tie-break. PURE."""
+    return tuple(sorted(jobs, key=lambda j: (-j.priority, -j.current_rss_gib)))
+
+
 def decide_governor_action(
     *,
     level: str,
@@ -1864,23 +2035,86 @@ def decide_governor_action(
     jobs: Sequence[TrackedJob],
     warn_consecutive: int = DEFAULT_WARN_CONSECUTIVE,
     critical_consecutive: int = DEFAULT_CRITICAL_CONSECUTIVE,
+    available_gib: float | None = None,
+    resume_free_gib: float | None = None,
+    paused_since_ts: Mapping[int, float] | None = None,
+    now_ts: float | None = None,
+    max_stop_duration_s: float | None = None,
 ) -> GovernorAction:
-    """PURE governor policy (debounced, incremental, reversible):
+    """PURE governor policy (debounced, incremental, reversible, RE-ARMING):
 
-      * NORMAL -> resume any paused job (SIGCONT), highest priority first.
+      * ESCAPE HATCH — any job SIGSTOPped for >= ``max_stop_duration_s`` resumes UNCONDITIONALLY,
+        whatever the pressure says. Outranks every other rung.
+      * DERIVED-FREE RESUME — paused jobs resume when the pressure classifies NORMAL **or** when
+        our OWN measured free memory reaches ``resume_free_gib``, even while the OS level still
+        reads warn/critical.
+      * DERIVED-FREE NO-PAUSE VETO — no pause fires while free >= ``resume_free_gib``, so a sticky
+        OS level cannot drive actuation in EITHER direction and the two rungs cannot flap.
       * WARN sustained (>= warn_consecutive) -> pause ONE lowest-priority throttle-eligible job.
       * CRITICAL sustained (>= critical_consecutive) -> pause ONE (faster debounce); if nothing
         eligible -> escalate_alert (loud; hand off to memory_guard --watch / operator).
       * otherwise -> alert (loud, no action).
 
     NEVER kills; NEVER touches the control plane (throttle_eligible already excludes it).
+
+    ddm_gb1 D2 (MEASURED INCIDENT 2026-08-15). The pre-fix policy resumed on ``level == "normal"``
+    ALONE, and ``classify_pressure`` returns warn whenever the macOS pressure level reads >= 2 —
+    a STICKY signal. Receipt: "GOVERNOR ALERT avail=40.4GiB level=warn" while five jobs (the mp2
+    differential eval, the wc1 decode, the wd3 W0 warm train, the dashboard, three safe_run
+    wrappers) sat stopped for 75+ minutes on a 40.5-GiB-free box. The guard's reference never
+    re-armed — the spike-guard median-freeze genus (#304). ``resume_free_gib`` / ``available_gib``
+    give the policy its OWN reference (see ``derived_resume_free_gib`` for the hysteresis
+    derivation), and the escape hatch bounds the damage of ANY future reference that gets stuck.
+
+    BACKWARD-COMPATIBLE: the three re-arm inputs default to ``None`` and their rungs are simply
+    skipped when a caller does not supply them, so an old callsite behaves exactly as before. Every
+    LIVE callsite supplies them (enforced by ``check_throttle_rearms_and_admission_reconciles``).
     """
     paused = [j for j in jobs if j.paused]
-    if level == "normal":
+
+    # ── RUNG 0: escape hatch. A job held longer than the ceiling is a frozen measurement. ──
+    if paused and paused_since_ts is not None:
+        ceiling = (float(max_stop_duration_s) if max_stop_duration_s is not None
+                   else DEFAULT_MAX_STOP_DURATION_S)
+        now = time.time() if now_ts is None else float(now_ts)
+        overdue = []
+        for j in paused:
+            since = paused_since_ts.get(j.pid)
+            if since is None:
+                continue
+            held = now - float(since)
+            if held >= ceiling:
+                overdue.append((j, held))
+        if overdue:
+            longest = max(held for _, held in overdue)
+            return GovernorAction(
+                level, "resume",
+                f"THROTTLE ESCAPE HATCH: {len(overdue)} job(s) SIGSTOPped >= {ceiling:.0f}s "
+                f"(longest {longest:.0f}s) — a stop this long is a FROZEN measurement, not "
+                f"protection; resuming regardless of pressure level {level!r}",
+                resume_targets=_resume_order([j for j, _ in overdue]))
+
+    # ── RUNG 1: resume on the governor's OWN derived free-GiB reference (never the sticky OS level
+    # alone). ``level == "normal"`` remains sufficient; it is no longer NECESSARY. ──
+    derived_free_clear = (
+        available_gib is not None and resume_free_gib is not None
+        and float(available_gib) >= float(resume_free_gib)
+    )
+    if level == "normal" or derived_free_clear:
         if paused:
-            return GovernorAction(level, "resume", "pressure normal — resume paused job(s)",
-                                  resume_targets=tuple(sorted(paused, key=lambda j: (-j.priority, -j.current_rss_gib))))
-        return GovernorAction(level, "none", "pressure normal — no paused jobs")
+            why = ("pressure normal" if level == "normal" else
+                   f"DERIVED free {float(available_gib):.1f}GiB >= resume threshold "
+                   f"{float(resume_free_gib):.1f}GiB (OS pressure level still reads {level!r} — "
+                   f"sticky; our own measurement governs)")
+            return GovernorAction(level, "resume", f"{why} — resume paused job(s)",
+                                  resume_targets=_resume_order(paused))
+        if level == "normal":
+            return GovernorAction(level, "none", "pressure normal — no paused jobs")
+        return GovernorAction(
+            level, "alert",
+            f"OS pressure level reads {level!r} but DERIVED free {float(available_gib):.1f}GiB >= "
+            f"{float(resume_free_gib):.1f}GiB — NO pause (a sticky OS level may not actuate the "
+            f"throttle on its own); alerting only")
     if level == "critical" and consecutive_critical >= critical_consecutive:
         target = select_throttle_target(jobs)
         if target is not None:
@@ -2304,8 +2538,9 @@ def band_tick(
         applied = pause_job(decision.target)
     floor = derive_safety_floor(
         total_gib=snap.total_gib,
-        measured_cp_rss_gib=measured_control_plane_rss_gib(
-            used_gib=snap.used_gib, tracked_current_gib=sum_tracked_current_gib(jobs)),
+        # ddm_gb1 D1: NAMED control-plane processes only (was ``used - tracked`` = total-used incl.
+        # file cache — the 92-GiB clamp spam on a 40.5-GiB-free box).
+        measured_cp_rss_gib=measured_control_plane_rss_gib(),
         override_gib=(floor_override_gib if floor_override_gib is not None
                       else safety_floor_env_override_gib()),
         mode=floor_mode, log_fn=lambda m: print(m, file=sys.stderr),
@@ -2464,6 +2699,16 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0
 
     if args.admit:
+        # ddm_gb1 D4 (sister of the safe_run fix): converge the registry this decision counts to
+        # GROUND TRUTH first. A dead ``running`` row charges UNKNOWN_GROWTH_HEADROOM_GIB (25 GiB)
+        # of phantom active growth; MEASURED 2026-08-15, three dead rows = 100 GiB of phantom
+        # growth that refused a real launch twice. Fail-OPEN: the reconcile is a self-clean, the
+        # admission decision below is the real (fail-CLOSED) gate.
+        try:
+            import spawn_durable_daemon as _sdd  # tools/ is on sys.path (same dir)
+            _sdd.reconcile_dead_daemons(verbose=False)
+        except Exception:
+            pass
         ctx = live_admission_decision(projected_new_gib=args.projected_gib, exclude_pid=args.exclude_pid,
                                       floor_override_gib=floor_override,
                                       floor_mode=args.safety_floor_mode)
@@ -2491,7 +2736,20 @@ def main(argv: Sequence[str] | None = None) -> int:
                                   critical_free_gib=critical_free)
         cw = DEFAULT_WARN_CONSECUTIVE if level == "warn" else 0
         cc = DEFAULT_CRITICAL_CONSECUTIVE if level == "critical" else 0
-        action = decide_governor_action(level=level, consecutive_warn=cw, consecutive_critical=cc, jobs=jobs)
+        # ddm_gb1 D2: the CLI tick actuates the same throttle as the daemon, so it carries the same
+        # re-arm inputs (derived-free resume reference + escape hatch). A dry CLI tick that decided
+        # on the sticky OS level alone would report a different action than the live governor.
+        try:
+            import memory_blackbox as _mbb  # tools/ is on sys.path (same dir)
+            _paused_since = _mbb.paused_since_ts()
+        except Exception:
+            _paused_since = {}
+        action = decide_governor_action(
+            level=level, consecutive_warn=cw, consecutive_critical=cc, jobs=jobs,
+            available_gib=governing_free_gib(snap),
+            resume_free_gib=derived_resume_free_gib(snap.total_gib),
+            paused_since_ts=_paused_since,
+            max_stop_duration_s=resolve_max_stop_duration_s())
         acted = []
         if args.apply and action.action == "pause" and action.target is not None:
             acted.append(("pause", action.target.label, pause_job(action.target)))

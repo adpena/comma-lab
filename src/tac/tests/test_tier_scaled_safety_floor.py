@@ -322,7 +322,12 @@ def test_admission_growth_headroom_true_gib_matches_review_numbers():
     assert gov.sum_active_growth_headroom_gib([job]) == pytest.approx(13.55)
     # band + admission consume the SAME true-GiB field and agree on the same sample:
     assert gov.select_band_run([job]).current_rss_gib == pytest.approx(54.06)
-    assert gov.measured_control_plane_rss_gib(
+    # ddm_gb1 D1 (2026-08-15): this arithmetic is the ceiling's BASELINE and kept working under its
+    # honest name. It was called `measured_control_plane_rss_gib`, and that name lied — `used -
+    # tracked` is total-used-including-file-cache, which on the incident box fed the floor a
+    # MEASURED 92.00 GiB and clamped it to the 64 GiB cap at ~1.5 Hz. The cp measurement now
+    # enumerates NAMED control-plane processes (see test_ddm_gb1_memory_governor_rearm.py).
+    assert gov.non_workload_used_gib(
         used_gib=70.0, tracked_current_gib=gov.sum_tracked_current_gib([job])
     ) == pytest.approx(15.94)
 
@@ -499,9 +504,19 @@ def test_daemon_band_error_is_nonfatal(monkeypatch, tmp_path):
 
 
 def test_daemon_band_path_has_no_kill(monkeypatch):
-    src = inspect.getsource(mbb.run_daemon)
-    assert "SIGKILL" not in src and "SIGTERM" not in src and "kill(" not in src
-    assert "band_tick" in src   # routes through the canonical #294 band evaluator only
+    """No kill-class signal on the daemon path — asserted against CODE, not prose.
+
+    ddm_gb1 (2026-08-15): this guard used to scan the raw source, so it fired on a COMMENT that
+    merely NAMED SIGKILL while explaining why the stopped-set ledger is persisted (a SIGKILL runs no
+    exit handler). A comment cannot signal anything. Stripping comments and the docstring first
+    keeps the guard checking what it means to check — the same lesson its sister gate
+    ``check_throttle_rearms_and_admission_reconciles`` implements."""
+    raw = inspect.getsource(mbb.run_daemon)
+    code = "\n".join(ln.split("#", 1)[0] for ln in raw.splitlines())
+    doc = mbb.run_daemon.__doc__ or ""
+    code = code.replace(doc, "")
+    assert "SIGKILL" not in code and "SIGTERM" not in code and "kill(" not in code
+    assert "band_tick" in code   # routes through the canonical #294 band evaluator only
 
 
 def test_daemon_smoother_wired_into_samples(monkeypatch, tmp_path):

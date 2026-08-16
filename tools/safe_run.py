@@ -259,7 +259,19 @@ def _system_admission_gate(ns: argparse.Namespace, cmd: list[str]) -> int | None
     Parity with spawn_durable_daemon._system_admission_gate: REFUSE (rc=5) only when ENFORCE is
     armed AND the live system decision denies AND no real operator override; ADVISORY/unavailable/
     admit all proceed. Fail-safe: a governor import/read hiccup proceeds (the daemon path does the
-    same) — never silently BLOCK, and never falsely refuse."""
+    same) — never silently BLOCK, and never falsely refuse.
+
+    AUTO-RECONCILE FIRST (ddm_gb1 D4, 2026-08-15) — mirrors
+    ``witness_memory_preflight.system_aware_admission``. The other two admission paths converge the
+    durable-daemon registry to GROUND TRUTH before projecting: witness_memory_preflight since the
+    2026-07-09 phantom-growth fix, spawn_durable_daemon._do_start under its registry lock since
+    2026-07-11. safe_run did NOT, and that asymmetry is measured: a daemon killed out-of-band
+    (SIGKILL/OOM/jetsam/machine-sleep/SIGURG-144) can never write ``recorded=stopped``, and every
+    phantom ``running`` row charges UNKNOWN_GROWTH_HEADROOM_GIB = 25 GiB of active growth. On
+    2026-08-15 THREE dead rows (pids 7506, 8997, 31881) summed to "active-growth 100.0 GiB" and
+    REFUSED a real relaunch twice; a manual ``reconcile_dead_daemons()`` converged them and the
+    same launch was admitted at projected 81.6 < ceiling 116.0. Fail-OPEN on the reconcile leg (a
+    self-clean must never crash a launch); the admission decision below stays fail-CLOSED."""
     if ns.skip_admission_gate:
         return None
     try:
@@ -268,6 +280,11 @@ def _system_admission_gate(ns: argparse.Namespace, cmd: list[str]) -> int | None
         print(f"safe_run.py: WARNING system admission gate unavailable ({exc!r}); proceeding "
               f"(per-process --rss-mb cap remains).", file=sys.stderr)
         return None
+    try:
+        import spawn_durable_daemon as _sdd  # tools/ is sys.path[0] for this script
+        _sdd.reconcile_dead_daemons(verbose=False)
+    except Exception:
+        pass  # reconcile is a best-effort self-clean; the admission decision below is the real gate
     projected = ns.projected_gib if ns.projected_gib is not None else float(ns.rss_mb) / 1024.0
     try:
         ctx = gov.live_admission_decision(projected_new_gib=float(projected))

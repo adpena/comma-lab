@@ -877,7 +877,13 @@ class TestModule:
         # instead of DECIDED, whose value is summed into a total readers take as
         # checked). Both land STRICT at live-count 0 WITH registered positive
         # controls, so the uncovered ceiling does not move.
-        assert len(cg.CONFOUND_GATES) == 28
+        # 28 -> 29 on 2026-08-15: ddm_gb1 (#1073) appends
+        # check_throttle_rearms_and_admission_reconciles — ONE gate for the memory
+        # governor's two stale-reference anti-patterns (throttle resume gated solely
+        # on the sticky OS pressure level; admission counting an unreconciled
+        # registry). Warn-only for one cycle at MEASURED live-count 0, with two
+        # executed positive controls, so the uncovered ceiling does not move.
+        assert len(cg.CONFOUND_GATES) == 29
         names = {fn.__name__ for fn in cg.CONFOUND_GATES}
         assert names == {
             "check_no_spike_guard_defaults_to_deadlock_mode",
@@ -915,6 +921,14 @@ class TestModule:
             "check_checkpoint_saves_do_not_silently_drop_optimizer_state",
             "check_lever_module_declares_its_trainer",
             "check_no_asserted_packet_ir_readiness_fields",
+            # 2026-08-15 ddm_gb1 (#1073): the memory governor's two stale-reference
+            # anti-patterns — a SIGSTOP-throttle resume gated on the STICKY macOS
+            # pressure level (five jobs frozen 75+ min at 40.4 GiB available) and an
+            # admission path that counts the durable-daemon registry without
+            # reconciling it (three dead rows = 100.0 GiB phantom growth, two
+            # refused launches). One gate, two legs, per the #299 consolidation
+            # discipline; lands warn-only WITH two executed positive controls.
+            "check_throttle_rearms_and_admission_reconciles",
         }
 
     def test_followon_gates_are_strict_flipped_in_preflight_all(self):
@@ -1031,6 +1045,14 @@ class TestModule:
             # summed into packet_ir_byte_closed_operation_count as if checked.
             # Compute it like byte_shaving_campaign's sibling does; do NOT raise.
             "check_no_asserted_packet_ir_readiness_fields": 0,
+            # ddm_gb1 2026-08-15, warn-only for one cycle at MEASURED live count 0
+            # (pre-fix it measured 5: decide_governor_action + gov.main +
+            # mbb._govern_tick on Leg A, safe_run + governor CLI on Leg B). A
+            # nonzero count means a throttle resume went back to trusting the
+            # sticky OS pressure level alone, or an admission path started
+            # counting the durable-daemon registry without reconciling it -- wire
+            # the re-arm / the reconcile; do NOT raise this bound.
+            "check_throttle_rearms_and_admission_reconciles": 0,
         }
         v = fn(strict=False, verbose=False)
         assert len(v) <= bounds[fn.__name__], f"{fn.__name__} live-count grew: {v[:3]}"

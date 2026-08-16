@@ -39,7 +39,19 @@ def test_sample_once_has_all_trust_and_ceiling_fields(monkeypatch):
     # DERIVED-floor ceiling arithmetic on a 128 GiB scenario.
     monkeypatch.setenv("TAC_GOV_OPERATOR_CEILING_GIB", "0")
     monkeypatch.delenv(gov.SAFETY_FLOOR_ENV, raising=False)  # hermetic vs a leaked floor override
-    s = mbb.sample_once(jobs=[_job()], snapshot=_snap())
+    # ddm_gb1 D1: the floor's measured leg is now the RSS of the NAMED control-plane processes, so
+    # the scenario declares an 8.0 GiB control plane as a process table instead of arriving at 8.0
+    # via `used - tracked`. Same arithmetic, right object. (`used - tracked` = 8.0 here too, and it
+    # still drives `baseline_gib` below — that IS the quantity the ceiling wants.)
+    cp_table = {
+        7445: __import__("memory_guard").ProcessSample(
+            pid=7445, ppid=1, pgid=7445, rss_kb=8 * 1024 * 1024,
+            command="claude --dangerously-skip-permissions"),
+        4242: __import__("memory_guard").ProcessSample(
+            pid=4242, ppid=1, pgid=4242, rss_kb=20 * 1024 * 1024,
+            command="python experiments/train_levelset_witness_realized_through_R_mlx.py"),
+    }
+    s = mbb.sample_once(jobs=[_job()], snapshot=_snap(), process_samples=cp_table)
     for k in ("ts", "ts_iso", "mono", "boottime", "total_gib", "used_gib", "available_gib",
               "pressure", "pressure_level", "adaptive_ceiling_gib", "training_budget_gib",
               "baseline_gib", "system_used_headroom_gib", "tracked_sum_gib", "tracked",

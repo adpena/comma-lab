@@ -9,6 +9,14 @@ replay exactly what led into the most recent crash/reboot. It DOUBLES AS THE GOV
 evaluates memory pressure and, when sustained WARN/CRITICAL, SIGSTOP-pauses the lowest-priority
 throttle-eligible job (reversible; never the control plane) and SIGCONT-resumes on recovery.
 
+RECOVERY IS RE-ARMED (ddm_gb1, 2026-08-15). "On recovery" used to mean "when the macOS pressure
+level returns to normal" — a STICKY signal, so five live jobs sat SIGSTOPped for 75+ minutes on a
+box with 40.5 GiB free. The throttle now resumes on the governor's OWN derived free-GiB reference
+(``gov.derived_resume_free_gib``), refuses to PAUSE at all while free memory is above that same
+reference, and carries a hard ``max_stop_duration`` escape hatch. Every pid it stops is written to a
+persisted ledger and SIGCONT-swept on exit (atexit + SIGTERM/SIGINT); ``--resume-stopped`` is the
+sweep for what a SIGKILL leaves behind.
+
 WHAT EACH SAMPLE CAPTURES (one JSON line, ~2 s cadence; 0.5 s when pressure is elevated):
   wall-clock ts (+ iso + monotonic + kern.boottime for reboot detection); TOTAL physical RAM;
   used / available / free / wired / compressor / swap-used; the macOS memory-PRESSURE level
@@ -28,21 +36,24 @@ CLI:
     memory_blackbox.py --tail [N] [--json]                                     # last N recorded samples
     memory_blackbox.py --last-crash [--minutes 10]                             # trajectory into the last gap
     memory_blackbox.py --status                                               # is the daemon running?
+    memory_blackbox.py --stopped-ledger                                       # which pids it SIGSTOPped
+    memory_blackbox.py --resume-stopped                                       # SIGCONT sweep + clear
 """
 from __future__ import annotations
 
 import argparse
+import atexit
 import contextlib
 import datetime as _dt
 import fcntl
 import json
 import os
 import re
-import subprocess
+import signal
 import sys
 import time
 from pathlib import Path
-from typing import Iterator, Sequence
+from typing import Iterator, Mapping, Sequence
 
 _TOOLS = Path(__file__).resolve().parent
 _REPO_ROOT = _TOOLS.parent
@@ -57,6 +68,16 @@ _BLACKBOX = _STATE / "memory_blackbox.jsonl"
 _BLACKBOX_LOCK = _STATE / ".memory_blackbox.jsonl.lock"
 _SINGLETON_LOCK = _STATE / ".memory_blackbox.singleton.lock"
 _ACTION_LOG = _STATE / "memory_blackbox_actions.log"
+# ── the STOPPED-SET ledger (ddm_gb1 D3) ─────────────────────────────────────────────────────────
+# Every pid this daemon SIGSTOPs is written here BEFORE it is signalled, and removed when it is
+# resumed. Purpose: a SIGSTOPped victim cannot resume itself, so the daemon's death must never be
+# able to strand one. atexit + SIGTERM/SIGINT handlers sweep it; and because it is on DISK, even a
+# SIGKILL (which runs no handler) leaves a machine-readable list a successor — or an operator
+# running ``memory_blackbox.py --resume-stopped`` — can sweep. MEASURED 2026-08-15: the CONT sweep
+# for five stranded jobs had to be reconstructed BY HAND from ps output.
+_STOPPED_LEDGER = _STATE / "memory_blackbox_stopped_pids.json"
+_STOPPED_LEDGER_LOCK = _STATE / ".memory_blackbox_stopped_pids.lock"
+STOPPED_LEDGER_SCHEMA = "memory_blackbox_stopped_pids.v1"
 
 DEFAULT_INTERVAL_S = 2.0
 DEFAULT_FAST_INTERVAL_S = 0.5   # cadence when pressure is elevated
@@ -79,19 +100,28 @@ def _read_boottime_sec() -> int:
 
 
 # ─────────────────────────── one sample ───────────────────────────
-def sample_once(*, jobs=None, snapshot=None, floor_smoother=None) -> dict:
+def sample_once(*, jobs=None, snapshot=None, floor_smoother=None, process_samples=None) -> dict:
     """Gather ONE black-box sample: system snapshot + adaptive ceiling (tier-scaled DERIVED safety
     floor, BUILD #298 — full decomposition recorded per tick) + per-tracked-job RSS. Pure I/O (no
-    side effects). ``jobs``/``snapshot``/``floor_smoother`` injectable for testing; the daemon
-    passes a persistent ``gov.SafetyFloorSmoother`` so the applied floor rises instantly but decays
-    slowly (admission verdicts don't flap on an oscillating control plane)."""
+    side effects). ``jobs``/``snapshot``/``floor_smoother``/``process_samples`` injectable for
+    testing; the daemon passes a persistent ``gov.SafetyFloorSmoother`` so the applied floor rises
+    instantly but decays slowly (admission verdicts don't flap on an oscillating control plane).
+
+    ddm_gb1 D1: the derived floor's measured leg is now the RSS of the NAMED control-plane
+    processes, read from ``process_samples`` (or a live ``ps`` scan when omitted) — NOT
+    ``used - tracked``, which is total-used-including-file-cache and produced the permanent
+    92-GiB-clamped WARN. The ceiling's ``baseline_gib`` still uses ``used - tracked``; that is the
+    quantity the ceiling arithmetic actually wants (see ``gov.non_workload_used_gib``).
+
+    COST: the cp leg costs one extra ``ps`` per tick (``list_tracked_jobs`` keeps its own live scan
+    because that scan is also what records the RSS-growth history). ~40 ms per 2 s tick, paid for
+    measuring the right object."""
     snap = snapshot if snapshot is not None else gov.read_system_memory_snapshot()
     tracked = jobs if jobs is not None else gov.list_tracked_jobs()
     tracked_current = gov.sum_tracked_current_gib(tracked)
     floor = gov.derive_safety_floor(
         total_gib=snap.total_gib,
-        measured_cp_rss_gib=gov.measured_control_plane_rss_gib(
-            used_gib=snap.used_gib, tracked_current_gib=tracked_current),
+        measured_cp_rss_gib=gov.measured_control_plane_rss_gib(samples=process_samples),
         override_gib=gov.safety_floor_env_override_gib(),
         log_fn=lambda m: print(m, file=sys.stderr),
     )
@@ -177,6 +207,197 @@ def append_sample(sample: dict, *, path: Path | None = None, lock_path: Path | N
         os.close(fd)
 
 
+# ─────────────────────────── the STOPPED-SET ledger (ddm_gb1 D3) ───────────────────────────
+def _empty_ledger() -> dict:
+    return {"schema": STOPPED_LEDGER_SCHEMA, "daemon_pid": None, "updated_utc": None, "stopped": {}}
+
+
+def load_stopped_ledger(*, path: Path | None = None) -> dict:
+    """Read the stopped-set ledger (never raises; a corrupt/absent file reads as empty)."""
+    p = path or _STOPPED_LEDGER
+    try:
+        data = json.loads(p.read_text(encoding="utf-8")) if p.exists() else None
+    except (json.JSONDecodeError, OSError):
+        data = None
+    if not isinstance(data, dict) or not isinstance(data.get("stopped"), dict):
+        return _empty_ledger()
+    data.setdefault("schema", STOPPED_LEDGER_SCHEMA)
+    data.setdefault("daemon_pid", None)
+    data.setdefault("updated_utc", None)
+    return data
+
+
+def _mutate_stopped_ledger(mutate_fn, *, path: Path | None = None,
+                           lock_path: Path | None = None) -> dict:
+    """fcntl-locked read-modify-atomic-write of the stopped-set ledger (tmp + os.replace)."""
+    p = path or _STOPPED_LEDGER
+    lp = lock_path or _STOPPED_LEDGER_LOCK
+    p.parent.mkdir(parents=True, exist_ok=True)
+    lp.parent.mkdir(parents=True, exist_ok=True)
+    fd = os.open(str(lp), os.O_RDWR | os.O_CREAT, 0o644)
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX)
+        data = load_stopped_ledger(path=p)
+        data = mutate_fn(data)
+        data["schema"] = STOPPED_LEDGER_SCHEMA
+        data["daemon_pid"] = os.getpid()
+        data["updated_utc"] = _utc_now_iso()
+        tmp = p.with_suffix(p.suffix + ".tmp")
+        tmp.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        os.replace(tmp, p)
+        return data
+    finally:
+        with contextlib.suppress(OSError):
+            fcntl.flock(fd, fcntl.LOCK_UN)
+        os.close(fd)
+
+
+def record_stopped_pids(pids: Sequence[int], *, label: str, path: Path | None = None,
+                        lock_path: Path | None = None, now_ts: float | None = None) -> dict:
+    """Record ``pids`` as SIGSTOPped by ``label``. Idempotent: an already-recorded pid KEEPS its
+    original ``stopped_ts`` so the escape hatch measures the true hold duration, not the last
+    observation."""
+    now = time.time() if now_ts is None else float(now_ts)
+
+    def _add(data: dict) -> dict:
+        stopped = dict(data.get("stopped") or {})
+        for pid in pids:
+            key = str(int(pid))
+            if key in stopped and stopped[key].get("stopped_ts") is not None:
+                continue
+            stopped[key] = {"label": label, "stopped_ts": now, "stopped_iso": _utc_now_iso()}
+        data["stopped"] = stopped
+        return data
+
+    return _mutate_stopped_ledger(_add, path=path, lock_path=lock_path)
+
+
+def _drop_ledger_keys(keys: Sequence[str], *, path: Path | None = None,
+                      lock_path: Path | None = None) -> dict:
+    """Drop raw ledger KEYS (used by the sweep, which also drops malformed ones)."""
+    drop = set(keys)
+
+    def _remove(data: dict) -> dict:
+        data["stopped"] = {k: v for k, v in (data.get("stopped") or {}).items() if k not in drop}
+        return data
+
+    return _mutate_stopped_ledger(_remove, path=path, lock_path=lock_path)
+
+
+def record_resumed(*, pids: Sequence[int] = (), label: str | None = None,
+                   path: Path | None = None, lock_path: Path | None = None) -> dict:
+    """Drop ``pids`` and/or every entry carrying ``label`` from the ledger (a resumed job is no
+    longer stranded, so it must not keep aging toward the escape hatch)."""
+    drop = {str(int(p)) for p in pids}
+
+    def _remove(data: dict) -> dict:
+        stopped = {
+            k: v for k, v in (data.get("stopped") or {}).items()
+            if k not in drop and not (label is not None and v.get("label") == label)
+        }
+        data["stopped"] = stopped
+        return data
+
+    return _mutate_stopped_ledger(_remove, path=path, lock_path=lock_path)
+
+
+def paused_since_ts(*, path: Path | None = None) -> dict[int, float]:
+    """``{pid: wall-clock ts when it was SIGSTOPped}`` — the escape hatch's age reference.
+
+    WALL clock, not monotonic, ON PURPOSE: the ledger must survive a daemon restart, and monotonic
+    clocks are only comparable within one process. A wall-clock jump (NTP, machine sleep) can only
+    make a stopped job look OLDER and therefore resume EARLIER — the safe direction."""
+    out: dict[int, float] = {}
+    for key, row in (load_stopped_ledger(path=path).get("stopped") or {}).items():
+        try:
+            out[int(key)] = float(row["stopped_ts"])
+        except (KeyError, TypeError, ValueError):
+            continue
+    return out
+
+
+def resume_all_stopped(*, path: Path | None = None, lock_path: Path | None = None,
+                       kill_fn=None, state_fn=None, verify_stopped: bool = True,
+                       log: bool = True) -> dict:
+    """SIGCONT every pid the ledger says this governor stopped, then clear it. Returns
+    ``{"resumed": [...], "skipped_not_stopped": [...], "missing": [...]}``.
+
+    PID-RECYCLING SAFE: with ``verify_stopped`` (default) a pid is only signalled when ``ps`` still
+    reports it in state ``T``. A recycled pid running normal work is skipped — SIGCONT to a running
+    process is a no-op anyway, but not touching it at all is the honest gate. Every examined pid is
+    dropped from the ledger either way, so the sweep is idempotent and cannot loop.
+
+    ONLY EVER SIGCONT. There is no kill-class signal on this path (the control-plane kill-semantics
+    gauntlet, #409/#172 lineage)."""
+    kill = kill_fn if kill_fn is not None else os.kill
+    state = state_fn if state_fn is not None else gov._process_state
+    ledger = load_stopped_ledger(path=path)
+    resumed: list[int] = []
+    skipped: list[int] = []
+    missing: list[int] = []
+    malformed: list[str] = []
+    rows: list[tuple[int, dict]] = []
+    for key, row in (ledger.get("stopped") or {}).items():
+        try:
+            rows.append((int(key), row if isinstance(row, dict) else {}))
+        except (TypeError, ValueError):
+            # A malformed key can never be signalled, and leaving it would let the ledger grow
+            # without bound; it is dropped below with everything else this sweep examined.
+            malformed.append(str(key))
+    for pid, row in sorted(rows):
+        if verify_stopped and not gov.is_paused_state(state(pid)):
+            skipped.append(pid)
+            continue
+        try:
+            kill(pid, signal.SIGCONT)
+            resumed.append(pid)
+        except (ProcessLookupError, PermissionError, OSError):
+            missing.append(pid)
+        else:
+            if log:
+                _log_action(f"STOPPED-LEDGER SWEEP: SIGCONT pid={pid} label={row.get('label')!r} "
+                            f"(stopped at {row.get('stopped_iso')})")
+    if resumed or skipped or missing or malformed:
+        _drop_ledger_keys([*(str(p) for p in (*resumed, *skipped, *missing)), *malformed],
+                          path=path, lock_path=lock_path)
+        if log:
+            _log_action(f"STOPPED-LEDGER SWEEP done: resumed={resumed} "
+                        f"skipped_not_stopped={skipped} missing={missing} malformed={malformed}")
+    return {"resumed": resumed, "skipped_not_stopped": skipped, "missing": missing}
+
+
+_EXIT_SWEEP_INSTALLED = False
+
+
+def install_exit_resume_handlers() -> None:
+    """Install the atexit + SIGTERM/SIGINT sweep so the daemon can never strand a stopped job.
+
+    A SIGSTOPped process cannot resume itself. The pre-fix daemon had NO exit path that resumed its
+    victims, so killing it left them stopped forever (MEASURED 2026-08-15: the CONT sweep for five
+    jobs was done by hand). SIGKILL still runs no handler by definition — that is exactly why the
+    stopped set is PERSISTED: ``--resume-stopped`` sweeps what a SIGKILL leaves behind. Idempotent;
+    a non-main-thread install (no signal handlers available) still gets the atexit leg."""
+    global _EXIT_SWEEP_INSTALLED
+    if _EXIT_SWEEP_INSTALLED:
+        return
+    _EXIT_SWEEP_INSTALLED = True
+
+    def _sweep_quietly() -> None:
+        with contextlib.suppress(Exception):
+            resume_all_stopped()
+
+    atexit.register(_sweep_quietly)
+
+    def _handler(signum, _frame):
+        _log_action(f"BLACKBOX received signal {signum} — SIGCONT sweeping the stopped set before exit")
+        _sweep_quietly()
+        raise SystemExit(128 + int(signum))
+
+    for sig in (signal.SIGTERM, signal.SIGINT):
+        with contextlib.suppress(ValueError, OSError):
+            signal.signal(sig, _handler)
+
+
 def _log_action(msg: str) -> None:
     line = f"{_utc_now_iso()} {msg}"
     try:
@@ -185,7 +406,11 @@ def _log_action(msg: str) -> None:
             f.write(line + "\n")
     except OSError:
         pass
-    print(line, flush=True)
+    # The durable file write above is the record; stdout is a convenience. Guarded because this is
+    # reached from the atexit sweep, where stdout may already be closed — and an exception there
+    # would abort the SIGCONT sweep that is the whole point of the exit path (ddm_gb1 D3).
+    with contextlib.suppress(Exception):
+        print(line, flush=True)
 
 
 # ─────────────────────────── read helpers (tail / last-crash) ───────────────────────────
@@ -256,7 +481,7 @@ def last_crash_report(minutes: float = 10.0, gap_seconds: float = DEFAULT_GAP_SE
     return {
         "status": "reboot" if gap["reboot"] else "sampler_death_gap",
         "note": (
-            f"REBOOT detected (kern.boottime changed) at the boundary"
+            "REBOOT detected (kern.boottime changed) at the boundary"
             if gap["reboot"]
             else f"SAMPLER-DEATH gap of {gap['dt']:.0f}s (crash/hang/kill) — the last sample before "
                  f"silence is the crash edge"
@@ -305,9 +530,47 @@ def _acquire_singleton() -> int | None:
     return fd
 
 
-def _govern_tick(consecutive_warn: int, consecutive_critical: int) -> tuple[int, int, dict | None]:
+def _adopt_unrecorded_paused(jobs, *, ledger_path: Path | None = None,
+                             ledger_lock_path: Path | None = None,
+                             now_ts: float | None = None,
+                             known: Mapping[int, float] | None = None) -> dict[int, float]:
+    """Give every ALREADY-paused job with no ledger entry a stop timestamp NOW; return the updated
+    pid -> stop-ts map (so the caller reads the ledger once per tick, not twice).
+
+    Without this the escape hatch is blind to victims it did not stop itself — a job paused by a
+    previous (pre-fix, or simply restarted) daemon has no recorded age and would age forever. First
+    observation starts the clock: the hatch then bounds the hold at ``max_stop_duration_s`` from
+    here, which is late but FINITE. Silent-forever is the failure mode being extincted."""
+    since = dict(paused_since_ts(path=ledger_path) if known is None else known)
+    now = time.time() if now_ts is None else float(now_ts)
+    for j in jobs:
+        if j.paused and j.pid not in since:
+            with contextlib.suppress(Exception):
+                record_stopped_pids([j.pid], label=j.label, path=ledger_path,
+                                    lock_path=ledger_lock_path, now_ts=now)
+                since[j.pid] = now
+    return since
+
+
+def _stopped_scope_pids(job) -> list[int]:
+    """The pid set a pause/resume of ``job`` covers (its full tree), falling back to the registered
+    root pid when the tree scan is unavailable or raced to empty."""
+    pids: list[int] = []
+    with contextlib.suppress(Exception):
+        pids = list(gov.job_tree_pids(job))
+    if not pids:
+        pids = [int(job.pid)]
+    return pids
+
+
+def _govern_tick(consecutive_warn: int, consecutive_critical: int,
+                 *, max_stop_duration_s: float | None = None) -> tuple[int, int, dict | None]:
     """One governor decision from a fresh live read; act (pause/resume) and return the updated
-    consecutive counters + an action record (or None)."""
+    consecutive counters + an action record (or None).
+
+    ddm_gb1 D2/D3: the decision now carries the governor's OWN re-arm references (conservative free
+    GiB + the derived resume threshold + the per-pid stop ages from the persisted ledger), and
+    every actuation is mirrored into that ledger so nothing this daemon stops can be stranded."""
     snap = gov.read_system_memory_snapshot()
     jobs = gov.list_tracked_jobs()
     # Tier-scaled thresholds (BUILD #298): @128 -> warn 14.8 / critical 8.4 (critical strictly
@@ -318,27 +581,55 @@ def _govern_tick(consecutive_warn: int, consecutive_critical: int) -> tuple[int,
         critical_free_gib=gov.derived_critical_free_gib(snap.total_gib))
     consecutive_warn = consecutive_warn + 1 if level == "warn" else 0
     consecutive_critical = consecutive_critical + 1 if level == "critical" else 0
+    # ONE ledger read per tick: adopt any un-clocked victim and reuse the resulting map for the
+    # decision (a second read here would double the per-tick disk I/O for the same answer).
+    since = _adopt_unrecorded_paused(jobs)
     action = gov.decide_governor_action(
-        level=level, consecutive_warn=consecutive_warn, consecutive_critical=consecutive_critical, jobs=jobs)
+        level=level, consecutive_warn=consecutive_warn, consecutive_critical=consecutive_critical,
+        jobs=jobs,
+        # The re-arm inputs: our own conservative free measurement + our own derived threshold +
+        # the persisted stop ages. NEVER the sticky OS pressure level alone.
+        available_gib=gov.governing_free_gib(snap),
+        resume_free_gib=gov.derived_resume_free_gib(snap.total_gib),
+        paused_since_ts=since,
+        # Resolved ONCE per daemon (env cannot change mid-process), so a malformed override logs its
+        # warning once instead of at the sample rate — the log-spam shape the incident already had.
+        max_stop_duration_s=(gov.resolve_max_stop_duration_s()
+                             if max_stop_duration_s is None else float(max_stop_duration_s)))
     record: dict | None = None
     if action.action == "pause" and action.target is not None:
+        # Record BEFORE signalling: a crash between the two must leave a sweepable ledger, never a
+        # stranded pid. Recording a pid we then fail to stop is harmless (the sweep skips any pid
+        # that is not in state T).
+        scope = _stopped_scope_pids(action.target)
+        with contextlib.suppress(Exception):
+            record_stopped_pids(scope, label=action.target.label)
         ok = gov.pause_job(action.target)
         record = {"action": "pause", "label": action.target.label, "pid": action.target.pid,
-                  "rss_gib": round(action.target.current_rss_gib, 1), "ok": ok, "reason": action.reason}
+                  "rss_gib": round(action.target.current_rss_gib, 1), "ok": ok,
+                  "stopped_pids": scope, "reason": action.reason}
         _log_action(f"GOVERNOR PAUSE label={action.target.label!r} pid={action.target.pid} "
-                    f"rss={action.target.current_rss_gib:.1f}GiB ok={ok} :: {action.reason}")
+                    f"rss={action.target.current_rss_gib:.1f}GiB ok={ok} pids={scope} "
+                    f":: {action.reason}")
     elif action.action == "resume" and action.resume_targets:
         results = [(j.label, gov.resume_job(j)) for j in action.resume_targets]
+        for j in action.resume_targets:
+            with contextlib.suppress(Exception):
+                record_resumed(pids=_stopped_scope_pids(j), label=j.label)
         record = {"action": "resume", "results": results, "reason": action.reason}
         _log_action(f"GOVERNOR RESUME {results} :: {action.reason}")
     elif action.action in ("escalate_alert", "alert") and level in ("warn", "critical"):
         record = {"action": action.action, "reason": action.reason}
         _log_action(f"GOVERNOR {action.action.upper()} avail={snap.available_gib:.1f}GiB "
+                    f"governing_free={gov.governing_free_gib(snap):.1f}GiB "
                     f"level={level} :: {action.reason}")
     return consecutive_warn, consecutive_critical, record
 
 
-DEFAULT_BAND_INTERVAL_S = 30.0   # guard-band evaluation cadence inside the daemon loop (BUILD #298)
+# Guard-band evaluation cadence inside the daemon loop (BUILD #298). ONE source of truth: the
+# governor owns it alongside the band machinery it parameterises AND the escape-hatch ceiling
+# derived from it (ddm_gb1 D2 — a duplicate literal here would let the two silently decouple).
+DEFAULT_BAND_INTERVAL_S = gov.DEFAULT_BAND_INTERVAL_S
 
 
 def run_daemon(
@@ -369,8 +660,20 @@ def run_daemon(
     if fd is None:
         print("[memory-blackbox] another instance already holds the singleton lock; exiting 0.")
         return 0
+    # ddm_gb1 D3: arm the exit sweep BEFORE the first tick can stop anything, and sweep whatever a
+    # PREVIOUS daemon stranded (its SIGKILL ran no handler) so a restart is also a recovery.
+    if govern:
+        install_exit_resume_handlers()
+        with contextlib.suppress(Exception):
+            stale = resume_all_stopped()
+            if stale["resumed"] or stale["skipped_not_stopped"]:
+                _log_action(f"BLACKBOX startup sweep of a predecessor's stopped set: {stale}")
+    # Resolved ONCE: the env cannot change mid-process, so a malformed override warns once here
+    # instead of at the sample rate.
+    hatch_s = gov.resolve_max_stop_duration_s()
     _log_action(f"BLACKBOX start pid={os.getpid()} interval={interval}s fast={fast_interval}s "
-                f"govern={govern} band={band} band_interval={band_interval_s}s")
+                f"govern={govern} band={band} band_interval={band_interval_s}s "
+                f"max_stop_duration={hatch_s:.0f}s")
     consecutive_warn = consecutive_critical = 0
     floor_smoother = gov.SafetyFloorSmoother()
     last_band_mono: float | None = None
@@ -385,7 +688,8 @@ def run_daemon(
                 if govern:
                     try:
                         consecutive_warn, consecutive_critical, rec = _govern_tick(
-                            consecutive_warn, consecutive_critical)
+                            consecutive_warn, consecutive_critical,
+                            max_stop_duration_s=hatch_s)
                         if rec is not None:
                             sample["governor_action"] = rec  # (not re-appended; live-log only)
                     except Exception as exc:  # governor hiccup must NEVER kill the recorder
@@ -410,6 +714,11 @@ def run_daemon(
                 break
             time.sleep(fast_interval if elevated else interval)
     finally:
+        # ddm_gb1 D3: a normal loop exit (max_iterations, exception, SystemExit from the signal
+        # handler) sweeps too — the atexit leg is the belt, this is the braces.
+        if govern:
+            with contextlib.suppress(Exception):
+                resume_all_stopped()
         with contextlib.suppress(OSError):
             fcntl.flock(fd, fcntl.LOCK_UN)
             os.close(fd)
@@ -481,6 +790,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     ap.add_argument("--gap-seconds", type=float, default=DEFAULT_GAP_SECONDS,
                     help="ts jump (s) that counts as a crash/reboot boundary (default 30)")
     ap.add_argument("--status", action="store_true", help="report whether the black-box daemon is running")
+    ap.add_argument("--stopped-ledger", action="store_true",
+                    help="print the persisted stopped-set ledger (which pids the governor SIGSTOPped)")
+    ap.add_argument("--resume-stopped", action="store_true",
+                    help="SIGCONT every pid in the stopped-set ledger and clear it (the SIGKILL "
+                         "recovery sweep — a daemon killed with -9 runs no handler)")
     ap.add_argument("--interval", type=float, default=DEFAULT_INTERVAL_S)
     ap.add_argument("--fast-interval", type=float, default=DEFAULT_FAST_INTERVAL_S)
     ap.add_argument("--no-govern", action="store_true", help="record only; do NOT run the throttle governor")
@@ -516,6 +830,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         running = is_blackbox_running()
         print(json.dumps({"running": running, "label": _BLACKBOX_LABEL,
                           "jsonl": str(_BLACKBOX), "exists": _BLACKBOX.exists()}))
+        return 0
+    if args.stopped_ledger:
+        print(json.dumps(load_stopped_ledger(), indent=2))
+        return 0
+    if args.resume_stopped:
+        print(json.dumps(resume_all_stopped(), indent=2))
         return 0
     if args.daemon:
         return run_daemon(

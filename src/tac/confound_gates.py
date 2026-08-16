@@ -3685,7 +3685,11 @@ POSITIVE_CONTROLS: tuple[PositiveControl, ...] = (
 
 # RATCHET FLOOR: the number of DISTINCT gates carrying a positive control at landing. It may only
 # grow. Deleting or stranding a control drops coverage below this and the meta-gate refuses.
-MIN_POSITIVE_CONTROL_COVERAGE = 9  # 4 -> 5 (vc1, #842) -> 8 (ddm_gc16, #831) -> 9 (ddm_op2: OP2-1)
+# 4 -> 5 (vc1, #842) -> 8 (ddm_gc16, #831) -> 9 (ddm_op2: OP2-1) -> 12 (ddm_gb1, #1073).
+# ddm_gb1 raised it to the MEASURED live value, not to its own +1: the floor had drifted three
+# below actual, so three controls could have been deleted with the guard still printing OK. A floor
+# that lags the truth is not a ratchet. Re-measure and raise on every landing that adds a control.
+MIN_POSITIVE_CONTROL_COVERAGE = 12
 
 # RATCHET CEILING (added 2026-07-31, task #831). The floor above is on the NUMERATOR — the count
 # of gates that HAVE controls — so it can only ever fire when a control is REMOVED. Landing a new
@@ -4374,3 +4378,260 @@ def check_checkpoint_saves_do_not_silently_drop_optimizer_state(
 
 CONFOUND_GATES = (*CONFOUND_GATES,
                   check_checkpoint_saves_do_not_silently_drop_optimizer_state)
+
+
+# ---------------------------------------------------------------------------
+# ddm_gb1 (2026-08-15) — THE THROTTLE THAT COULD NOT RE-ARM, AND THE ADMISSION
+# PATH THAT COUNTED PHANTOM ROWS.
+#
+# MEASURED INCIDENT. tools/memory_blackbox.py --daemon (pid 8997) SIGSTOPped every
+# throttle-eligible python at ~16:53 local and never resumed one: the mp2 differential
+# eval, the wc1 decode run, the wd3 W0 warm train, the dashboard and three safe_run
+# wrappers sat in state `T` for 75+ minutes on a box with 40.5 GiB free. Receipt in
+# .omx/state/memory_blackbox.daemon.log: "GOVERNOR ALERT avail=40.4GiB level=warn".
+# Cause: decide_governor_action resumed on `level == "normal"` ALONE, and
+# classify_pressure returns "warn" whenever the macOS kern.memorystatus_vm_pressure_level
+# reads >= 2 — a STICKY signal. The guard's re-arm reference was the one thing it could
+# not observe recovering. Exactly the spike-guard median-freeze genus (#304).
+#
+# SAME DAY, SECOND HALF. The wd3 relaunch was REFUSED with "active-growth 100.0 GiB" =
+# 4 registry rows x UNKNOWN_GROWTH_HEADROOM_GIB (25.0), of which THREE were DEAD phantom
+# `running` rows (pids 7506, 8997, 31881) in .omx/state/durable_daemons.json. A manual
+# spawn_durable_daemon.reconcile_dead_daemons() converged them and the identical launch
+# was admitted (projected 81.6 < ceiling 116.0). witness_memory_preflight (2026-07-09) and
+# spawn_durable_daemon._do_start (2026-07-11) both auto-reconcile before projecting.
+# safe_run did not. An ASYMMETRY between sibling admission paths is invisible to every
+# gate that checks a path in isolation.
+#
+# Both legs are the same class: a decision that reads a stale reference and cannot tell.
+# One gate, two anti-patterns — per the Catalog #299 consolidation discipline, not a
+# pure-additive pair.
+_THROTTLE_REARM_WAIVER = "THROTTLE_REARM_OK"
+_ADMISSION_RECONCILE_WAIVER = "ADMISSION_RECONCILE_OK"
+
+# A function is a THROTTLE RESUME POLICY iff it names the SIGSTOP-throttle's resume actuator or its
+# action payload. Deliberately NOT the bare word "resume": checkpoint resume is everywhere in this
+# repo (measured: 40+ files) and a detector that matched it would be permanently red, which is how
+# a gate gets parked behind a flag where it can never fire (the #821 lesson).
+_THROTTLE_RESUME_MARKERS = ("resume_job", "resume_targets")
+# ...and it gates that resume on a PRESSURE CLASSIFICATION — the OS-derived signal that went sticky.
+_PRESSURE_GATE_MARKERS = (
+    "pressure_level", "PRESSURE_NORMAL", "PRESSURE_WARN", "PRESSURE_CRITICAL",
+    '"normal"', "'normal'", '"warn"', "'warn'", '"critical"', "'critical'",
+)
+# The two cures, named. The detector ZEROES ON THE CURE: with both present it reads clean, so it
+# cannot be satisfied by anything except the re-arm actually being wired.
+_THROTTLE_REARM_CURE_MARKERS = ("resume_free_gib", "max_stop_duration")
+
+
+def _gb1_surface_files(root: Path) -> list[Path]:
+    """DECLARED scope: tools/*.py + src/tac/**/*.py + experiments/*.py + scripts/*.py, minus tests
+    and this module. Top-level only for experiments/ + scripts/ (their subtrees are vendored deps
+    and frozen run bundles — the #830 denominator lesson). system_memory_governor.py is IN scope
+    here: it owns the throttle policy, so excluding it would exclude the incident itself."""
+    out: list[Path] = []
+    for relative, pattern in (
+        ("tools", "*.py"), ("src/tac", "**/*.py"), ("experiments", "*.py"), ("scripts", "*.py"),
+    ):
+        directory = root.joinpath(*relative.split("/"))
+        if directory.is_dir():
+            out.extend(sorted(directory.glob(pattern)))
+    skip = {root / "src" / "tac" / "confound_gates.py"}
+    return [p for p in out if p not in skip and "/tests/" not in p.as_posix()]
+
+
+def _function_code_lines(node: ast.AST, lines: list[str]) -> list[str]:
+    """The function's own source lines with COMMENTS and its DOCSTRING removed.
+
+    Both removals matter. A comment naming the waiver marker (which contains "rearm") or narrating
+    the fix would otherwise masquerade as the fix; and a docstring that describes the resume policy
+    in prose would otherwise satisfy a code-level marker test. Only executable text votes."""
+    start = getattr(node, "lineno", 1) - 1
+    end = getattr(node, "end_lineno", start + 1)
+    body = getattr(node, "body", None) or []
+    doc_range: set[int] = set()
+    if body:
+        first = body[0]
+        if isinstance(first, ast.Expr) and isinstance(getattr(first, "value", None), ast.Constant) \
+                and isinstance(first.value.value, str):
+            doc_range = set(range(getattr(first, "lineno", 0) - 1,
+                                  getattr(first, "end_lineno", 0)))
+    kept = [ln for i, ln in enumerate(lines[start:end], start=start) if i not in doc_range]
+    return _strip_comments("\n".join(kept)).splitlines()
+
+
+def _call_func_name(node: ast.Call) -> str:
+    fn = node.func
+    if isinstance(fn, ast.Attribute):
+        return fn.attr
+    if isinstance(fn, ast.Name):
+        return fn.id
+    return ""
+
+
+def check_throttle_rearms_and_admission_reconciles(
+    *,
+    repo_root: str | Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """ddm_gb1 (2026-08-15) — two stale-reference anti-patterns in the memory governor, one gate.
+
+    **LEG A — a SIGSTOP-throttle resume gated on a pressure classification must carry its own
+    re-arm.** Any function that names ``resume_job`` / ``resume_targets`` AND branches on a
+    pressure class must also name ``resume_free_gib`` (the governor's OWN derived free-GiB
+    reference) and ``max_stop_duration`` (the escape hatch that bounds ANY stuck reference). The
+    macOS pressure level is sticky at warn; a resume that depends on it alone never fires. MEASURED:
+    five jobs frozen 75+ minutes at 40.4 GiB available. Waiver: ``# THROTTLE_REARM_OK:<rationale>``
+    anywhere in the function.
+
+    **LEG B — an admission path that reads the durable-daemon registry must converge it first.**
+    Any module calling ``live_admission_decision`` must also call ``reconcile_dead_daemons``. A
+    daemon killed out-of-band cannot write ``recorded=stopped``, and every phantom ``running`` row
+    charges 25 GiB (``UNKNOWN_GROWTH_HEADROOM_GIB``) of active growth. MEASURED: three dead rows =
+    100 GiB of phantom growth that refused a live relaunch twice. Module granularity is the right
+    unit because ``spawn_durable_daemon`` legitimately reconciles in the CALLER (``_do_start``,
+    under the registry lock) rather than in its gate function. Waiver:
+    ``# ADMISSION_RECONCILE_OK:<rationale>`` on the call line.
+
+    WARN-ONLY at landing per the "Strict-flip atomicity rule", though live count IS 0 in this
+    landing (measured pre-fix: 3 Leg-A functions in 2 files + 2 Leg-B modules; post-fix 0). It stays
+    warn-only for one cycle because both legs scan a surface that sibling arms are actively editing
+    (the launcher/governor family), and a strict gate that fires on someone else's in-flight commit
+    trains readers to bypass the suite. Strict-flip condition: one clean cycle with live count 0.
+    """
+    root = Path(repo_root or REPO_ROOT)
+    violations: list[str] = []
+    considered = 0
+    scanned = 0
+    scanned_functions = 0
+    admission_modules = 0
+    for path in _gb1_surface_files(root):
+        considered += 1
+        text = _read(path)
+        if not text:
+            continue
+        # Cheap substring prefilter BEFORE ast.parse (the sister gates' pattern). Parsing all 6474
+        # in-scope files measured 18.9 s, which is too slow to sit in preflight_all on every commit
+        # — and a gate people route around is not protection. A file that mentions none of these
+        # tokens cannot contain either anti-pattern, so skipping it costs no coverage; `considered`
+        # is still reported next to `scanned` so the prefilter can never hide a narrowed scan.
+        if not any(tok in text for tok in (*_THROTTLE_RESUME_MARKERS, "live_admission_decision")):
+            continue
+        scanned += 1
+        try:
+            tree = ast.parse(text)
+        except SyntaxError:
+            continue
+        lines = text.splitlines()
+        rel = path.relative_to(root).as_posix()
+
+        # ── LEG A ──
+        for node in ast.walk(tree):
+            if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            code = _function_code_lines(node, lines)
+            if not code:
+                continue
+            blob = "\n".join(code)
+            if not any(m in blob for m in _THROTTLE_RESUME_MARKERS):
+                continue
+            if not any(m in blob for m in _PRESSURE_GATE_MARKERS):
+                continue
+            scanned_functions += 1
+            if all(m in blob for m in _THROTTLE_REARM_CURE_MARKERS):
+                continue
+            if any(_waiver_present(ln, _THROTTLE_REARM_WAIVER)
+                   for ln in lines[node.lineno - 1:getattr(node, "end_lineno", node.lineno)]):
+                continue
+            missing = [m for m in _THROTTLE_REARM_CURE_MARKERS if m not in blob]
+            violations.append(
+                f"{rel}:{node.lineno}: {node.name}() resumes a SIGSTOP-throttled job on a PRESSURE "
+                f"CLASSIFICATION but is missing {missing} — the macOS pressure level is STICKY at "
+                f"warn, so a resume gated on it alone never fires (MEASURED 2026-08-15: five jobs "
+                f"SIGSTOPped 75+ minutes at 40.4 GiB available). Pass the governor's own "
+                f"`resume_free_gib` reference and a `max_stop_duration_s` escape hatch, or add a "
+                f"`# {_THROTTLE_REARM_WAIVER}:<rationale>` waiver."
+            )
+
+        # ── LEG B ──
+        admission_calls = [n for n in ast.walk(tree)
+                           if isinstance(n, ast.Call)
+                           and _call_func_name(n) == "live_admission_decision"]
+        if not admission_calls:
+            continue
+        admission_modules += 1
+        if any(isinstance(n, ast.Call) and _call_func_name(n) == "reconcile_dead_daemons"
+               for n in ast.walk(tree)):
+            continue
+        for node in admission_calls:
+            line = lines[node.lineno - 1] if 0 < node.lineno <= len(lines) else ""
+            if _waiver_present(line, _ADMISSION_RECONCILE_WAIVER):
+                continue
+            violations.append(
+                f"{rel}:{node.lineno}: live_admission_decision() without a "
+                f"reconcile_dead_daemons() anywhere in this module — every phantom `running` "
+                f"registry row charges 25 GiB of active growth (MEASURED 2026-08-15: three dead "
+                f"rows = 100.0 GiB of phantom growth REFUSED a live relaunch twice). Call "
+                f"`spawn_durable_daemon.reconcile_dead_daemons(verbose=False)` fail-OPEN before "
+                f"the decision, or add a `# {_ADMISSION_RECONCILE_WAIVER}:<rationale>` waiver."
+            )
+    return _finish(
+        name="check_throttle_rearms_and_admission_reconciles",
+        tag="throttle-rearm-and-admission-reconcile",
+        violations=violations,
+        strict=strict,
+        verbose=verbose,
+        # DECLARED DENOMINATOR: a narrowed scope must never print a clean OK over an empty scan.
+        ok_detail=(
+            f"{scanned_functions} throttle-resume function(s) + {admission_modules} admission "
+            f"module(s) checked in {scanned} of {considered} in-scope source file(s) mentioning a "
+            f"marker (scope: tools/*.py + src/tac/**/*.py + experiments/*.py + scripts/*.py)"
+        ),
+    )
+
+
+CONFOUND_GATES = (*CONFOUND_GATES, check_throttle_rearms_and_admission_reconciles)
+
+# The #831 ratchet: a REFUSE-capable gate lands WITH its executed positive controls, never bare.
+# Both legs get one, because a single control would leave the other leg free to be gutted silently.
+POSITIVE_CONTROLS = (
+    *POSITIVE_CONTROLS,
+    PositiveControl(
+        gate="check_throttle_rearms_and_admission_reconciles",
+        files={
+            "tools/planted_throttle.py": (
+                "def decide(level, jobs):\n"
+                "    paused = [j for j in jobs if j.paused]\n"
+                '    if level == "normal" and paused:\n'
+                '        return ("resume", resume_targets(paused))\n'
+                "    return None\n"
+                "def resume_targets(paused):\n"
+                "    return tuple(paused)\n"
+            )
+        },
+        must_mention="planted_throttle.py",
+        why=(
+            "ddm_gb1 Leg A: the EXACT pre-fix decide_governor_action shape — a throttle resume "
+            "keyed on `level == \"normal\"` with no derived-free reference and no escape hatch. "
+            "The macOS pressure level is sticky at warn, so this resume never fires."
+        ),
+    ),
+    PositiveControl(
+        gate="check_throttle_rearms_and_admission_reconciles",
+        files={
+            "tools/planted_admission.py": (
+                "import system_memory_governor as gov\n"
+                "def gate(projected):\n"
+                "    ctx = gov.live_admission_decision(projected_new_gib=projected)\n"
+                "    if not ctx.decision.admit:\n"
+                "        raise SystemExit(5)\n"
+            )
+        },
+        must_mention="planted_admission.py",
+        why=(
+            "ddm_gb1 Leg B: the EXACT pre-fix safe_run shape — a REFUSING admission gate that "
+            "reads the durable-daemon registry with no reconcile, so dead rows charge 25 GiB each."
+        ),
+    ),
+)
