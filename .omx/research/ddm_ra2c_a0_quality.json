@@ -1,0 +1,20 @@
+{
+  "schema": "pact.run_quality_poller.config.v1",
+  "log_path": "/Volumes/APDataStore/pact/ddm_ra2c_alpha_ladder_a0_20260816/launcher/stdout.log",
+  "pid_file": "/Volumes/APDataStore/pact/ddm_ra2c_alpha_ladder_a0_20260816/launcher/resource_safe_run_child.pid",
+  "telemetry_path": "/Users/adpena/Projects/pact/.omx/tmp/ra2c_a0/quality_telemetry.jsonl",
+  "alert_path": "/Users/adpena/Projects/pact/.omx/tmp/ra2c_a0/quality.alert.json",
+  "poll_s": 60,
+  "eval_period_s": 300,
+  "stale_periods": 6,
+  "startup_grace_s": 240,
+  "json_marker": "\"ra2c_progress\"",
+  "fields": {"epoch": "pair", "value": "control_failed", "phase": "phase", "finite": []},
+  "bar_value": 1e+18,
+  "bar_start_epoch": 999999,
+  "alert_conditions": {"joint_regression": false, "qat_knee_shock": false,
+                       "nan_or_garbage": true, "stale_telemetry": true},
+  "regression_bands": [],
+  "phase_knee": {"epoch": 1, "window_epochs": 1, "shock_multiplier": 1.0, "continuous_phase": "build"},
+  "best_not_latest": {"phase": "build", "min_rows": 999999, "lag_epochs": 999999}
+}
