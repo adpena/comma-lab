@@ -160,7 +160,15 @@ def truncate_carrier_rank(basis, coeff, rank: int):
             f"rank-{rank} truncation left rowspace(B) (max |C_r@B - F_r| = {round_trip:.3e}); "
             "refusing to render a field the shipped path cannot express"
         )
-    return C_r.astype(np.asarray(coeff).dtype), info
+    # render_frame0 einsums `coeff` directly, so the return type must MATCH the
+    # input's, not merely its dtype. Returning numpy for a torch input crashed the
+    # first launch 3s in (caught by the launcher's verify-alive window).
+    if hasattr(coeff, "detach"):          # torch tensor in -> torch tensor out
+        import torch
+        out = torch.from_numpy(C_r).to(dtype=coeff.dtype, device=coeff.device)
+    else:
+        out = C_r.astype(np.asarray(coeff).dtype)
+    return out, info
 
 
 def build_alpha_raw(
@@ -356,17 +364,20 @@ def main() -> int:
         print(f"  {key}: {value}")
 
     rank_info = None
+    control_coeff = None
     if args.carrier_rank is not None:
+        control_coeff = coeff          # the UNTRUNCATED coeff; the control uses this
         coeff, rank_info = truncate_carrier_rank(basis, coeff, args.carrier_rank)
         print(f"\nRANK-{args.carrier_rank} truncation of the RENDERED FIELD:")
         for key, value in rank_info.items():
             print(f"  {key}: {value}")
-        # The alpha control is byte-identity vs the BASE render; a rank-truncated
-        # coeff makes that control structurally false, so it is disabled and the
-        # run is labelled accordingly. Refusing to report a control we did not run.
+        # The alpha=1 byte-identity control renders with control_coeff (untruncated),
+        # so it still verifies the chain reproduces the base while the OUTPUT carries
+        # the treatment. Running it against the truncated coeff would be a control
+        # that cannot pass -- and reporting it would be a control we did not run.
         if args.alpha == 1.0 and args.verify_pairs:
-            print("  NOTE: alpha=1 control DISABLED under rank truncation "
-                  "(coeff is modified; byte-identity cannot hold by construction)")
+            print("  NOTE: alpha=1 control renders with the UNTRUNCATED coeff "
+                  "(chain check); the emitted frames carry the rank truncation")
 
     # archive.zip held CONSTANT: this run isolates DISTORTION. The rate credit is
     # applied analytically below, never measured here.
@@ -377,6 +388,7 @@ def main() -> int:
     build = build_alpha_raw(
         ra2b, chain, basis, coeff, selector_blob,
         base_raw, out_raw, args.alpha, args.verify_pairs,
+        control_coeff=control_coeff,
     )
     print(f"CONTROL: {build['control_verdict']} "
           f"({build['control_pairs_identical']}/{build['control_pairs_checked']} pairs)")
