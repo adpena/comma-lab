@@ -645,8 +645,8 @@ random choice (seed 20260816).
 **Stability as rows land.** The run was left going at `nice 10` behind the sister b2e arm and the
 aggregator re-reads the incremental rows, so the live authority is
 `ETA_GATE_VERDICT_AGGREGATE.json`, not any number frozen here. The verdict has not wobbled:
-pooled η = **0.6442 (n=3) → 0.6620 (n=4) → 0.6448 (n=5) → 0.6461 (n=6)**, with **0 of n above the
-bar at every n** and per-pair sd ~0.07. The table above is the n=4 snapshot; re-run
+pooled η = **0.6442 (n=3) → 0.6620 (n=4) → 0.6448 (n=5) → 0.6461 (n=6) → 0.6235 (n=9)**, with
+**0 of n above the bar at every n** and per-pair sd ~0.07. The table above is the n=4 snapshot; re-run
 `--mode aggregate` for the current n.
 
 The η shortfall itself is not marginal: on seg+rate the channel costs **+0.00314 S** at the
@@ -676,13 +676,30 @@ Per-pair ratios span ×0.109 to ×7.735; 4 of 6 pairs improved. **The pose axis 
 aggregate**, so the pose leg *pays back* −0.00285 S rather than costing.
 
 **Corrected total (n=6):** seg+rate **+0.00314** and pose **−0.00285** give a net of
-**+0.00029 S — break-even, not a clear loss.** The tool now computes both and refuses to let one
+**+0.00029 S — break-even at that n, not the clear loss I first reported.** (Later rows move it
+to +0.00252 at n=9; see the trajectory below.) The tool now computes both and refuses to let one
 stand for the other; `verdict` answers the pre-registered seg+rate bar only.
 
 Two things I will not paper over. The pose gain is plausibly a **side effect of the `truth_dir`
 solver start** biasing the uint8 rounding residual toward GT — encoder-side and legal, but not a
 designed compensation, and it may not survive a different init or larger n. And an aggregate
 d_pose over **6 pairs** whose ratios span 70× is not a reliable estimate of the n600 aggregate.
+
+**That caveat was correct, and later rows confirmed it.** As the run continued the pose payback
+shrank and the total drifted away from break-even:
+
+| n | η pooled | pairs above bar | pose agg ratio | ΔS pose | **total ΔS** |
+|---:|---:|---:|---:|---:|---:|
+| 6 | 0.6461 | 0 of 6 | ×0.431 | −0.00285 | **+0.00029** |
+| 7 | 0.6382 | 0 of 7 | ×0.457 | −0.00260 | **+0.00078** |
+| 9 | 0.6235 | 0 of 9 | ×0.713 | −0.00129 | **+0.00252** |
+
+**η is the stable quantity** (0.644 → 0.624 across n=3…9, sd ~0.07, **0 of n above the bar at
+every n**); the pose leg is the noisy one, and it is regressing toward no payback. The break-even
+reading at n=6 was the optimistic end of the noise, not the answer. At n=9 the channel costs
+**+0.0025 S**, and its seg gain (0.0183 S) still sits below its rate cost (0.0221 S) — the
+non-supply conclusion is unchanged and is now measured at a larger n than the break-even claim it
+replaces.
 
 **verdict_scope: INSTANCE** — hv1 ep0634 base, ring-0 described set, r=1 described-set edit
 support, pose-null-constrained realization, this solver budget, n=4 seeded-random pairs. Per
