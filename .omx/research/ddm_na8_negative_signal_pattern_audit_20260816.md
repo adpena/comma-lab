@@ -93,11 +93,21 @@ artifact (#874) and from under-convergence (#850/#935): those are *instrument* l
 
 ## 3. WHAT THIS BUYS THE OPTIMIZATION EFFORT
 
-The 148 expired deferrals are not a hygiene backlog — several are score-relevant work with a
-written next_action and a measured blocker that may since have cleared. The optimization value
-is **re-adjudication under changed preconditions**, which is exactly the rv1/na6/na7 protocol
-that has repeatedly converted stale negatives into live candidates. The reader is now the join
-that protocol was missing.
+**CORRECTION (measured after the first draft — it changes this section's claim).** I wrote that
+the 148 are "score-relevant work that may since have unblocked." Then I dated them: **0 of 148
+were adjudicated on or after 2026-07-15.** Every expired deferral predates the current vehicle
+— they belong to the substrate/HNeRV era whose lineage is BANNED as a vehicle. The 104 my
+keyword filter called "axis-relevant" are named for axes that still exist on a base that does
+not.
+
+So the honest value is **smaller and different** than I first claimed: the expiry defect is a
+LEAK THAT HAS ALREADY DRAINED, not a live reservoir. Its real worth is prospective — the reader
+now exists *before* the current vehicle's deferrals start expiring, so the class cannot recur
+silently. Re-adjudicating the 148 head is a low-priority hygiene pass, not an optimization vein,
+and I am not routing a scorer slot to it.
+
+What survives as live optimization value is §2's two patterns, both drawn from **current-vehicle**
+measurements (pk3/pk4/qs4/qs5), and both already actionable in charter design.
 
 **Remaining owed (named, not silently dropped):**
 1. A consumer that ranks the 148 by `days_expired × score-relevance` and re-adjudicates the head
