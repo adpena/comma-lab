@@ -1,65 +1,155 @@
-# ddm_b2e SEALED LAUNCH TICKET — burn-2 train-for-editability
+# ddm_b2e SEALED LAUNCH TICKET — F2-ALONE short decisive row (burn-2 train-for-editability)
 
-Status: **BLOCKED_ON_OBJECT_REPIN** (not READY_TO_FIRE_UNDER_STANDING_GO)
+Status: **READY_TO_FIRE_PENDING_TWO_INPUT_PINS** (upgraded from BLOCKED_ON_OBJECT_REPIN)
 Prepared by: ddm_b2e arm · Owner of the FIRE: **MAIN** (governed Metal slot)
-Landing memo: `.omx/research/ddm_b2e_landing_and_charter_repin_20260816.md` · Commit `ec83c44223`
+Landing memo: `.omx/research/ddm_b2e_landing_and_charter_repin_20260816.md`
+Commits: `ec83c44223` (levers + harness) · `f035530ef2` (memo) · `277fc58d13` (trainer wiring)
 
-The blocker is **not** budget, apparatus, or capacity. It is that two of the charter's four launch
-pins name objects that cannot perform the job. A burn fired on the charter's pins as written would
-train the wrong object and could not make the mp2 edits free. MAIN owns the re-pin; this arm did not
-make it unilaterally.
-
----
-
-## GATE CHECKLIST
-
-| # | Gate | State | Evidence / blocker |
-|---|---|---|---|
-| 1 | Levers built at real form, default-off, byte-identical when off | **PASS** | `src/tac/pr130_lift/editability_levers.py`; 39 tests; zero-RNG-when-off pinned |
-| 2 | F2 trains on the DEPLOYED grid | **PASS** | parity vs `sd1.quantized_tensor` at rtol=0/atol=0 |
-| 3 | Admission instrument exists with a PRE-REGISTERED bar | **PASS** | `experiments/ddm_b2e_edit_replay_admission.py`; bar=50× pinned in code + test |
-| 4 | Edit constructions are the shipped ones | **PASS** | replay reproduces ns1 §A to 4 decimals on all 3 edits + global L2 |
-| 5 | Subset-bias law applied (m96) | **PASS** | seeded stratified n32 (ids 4→598), bias-tagged, cannot grant admission alone |
-| 6 | Warm-start object identified and verified | **BLOCKED** | ep0634 verified (sha + optimizer state present) but it is the **cl1 token** object; the edits target the **semantic** object. Semantic warm-start artifact **NOT located**. |
-| 7 | Host trainer identified for the levers | **BLOCKED** | charter pinned a non-trainer. Correct host is `src/tac/pr130_lift/train_semantic_quantized_resumable.py`; **MAIN must ratify** before wiring. |
-| 8 | Resume/config-identity interaction verified | **NOT VERIFIED** | new flags change the config hash; `_assert_preregistered_config` + resume guards may refuse. Untested. |
-| 9 | Derived schedule (~60–120 ep, per-stage checkpoints P0) | **NOT SET** | depends on gate 6/7 (steps-based vs epochs-based trainers differ) |
-| 10 | Watcher configs + memory preflight at the REAL config | **NOT SET** | depends on gate 6/7 |
-| 11 | Phase-B uncapped pose-solve harness (#850 cap-lift) | **NOT BUILT** | requires #850 + qs5 at source; this arm held them only via ns1 summaries. Declared unbuilt rather than guessed. |
-| 12 | Governor admission | **NOT REQUESTED** | correctly not requested while 6–10 are open |
+MAIN's re-pin is executed. Gates 6 and 7 are CLOSED with measured evidence. Two mechanical input
+pins remain — both are lookups MAIN can close in minutes, neither is a design question.
 
 ---
 
-## WHAT MAIN MUST DECIDE (the re-pin)
+## RE-PIN EXECUTED — measured results
 
-1. **Object.** Confirm burn-2 trains the **`SemanticTokenRenderer`** (38-tensor semantic section), not
-   the cl1 HPAC token model. All ns1 §A evidence, the FiLM protection list, and the mp2 refusals are
-   measurements on the semantic object.
-2. **Host trainer.** Ratify `src/tac/pr130_lift/train_semantic_quantized_resumable.py` as the lever
-   host. Its real flags are already greppable; note `--bits` is hard-refused at ≠4, so F2 must enter
-   as its **own** flag rather than by relaxing `--bits` (relaxing it would silently change the
-   deployed packer contract).
-3. **Warm-start artifact.** Locate the semantic checkpoint whose weights ship in the frontier archive,
-   and confirm whether its optimizer state was retained (the wd3 3× pose-carry law). If the renderer
-   is inherited PR130 intake rather than ours, "warm-start" means starting from the intake object
-   under the off-the-shelf grant — a different plan with different provenance obligations.
-4. **Whether the burn is scoped to the semantic section alone.** The archive has three sections
-   (`hpac`, `semantic`, `carrier`). ns1's §A screen covers `semantic` only. Whether `carrier` (F4's
-   22,032 B target) shares the ~94× anisotropy is **unmeasured** — F4 may be aimed at an untested
-   regime.
+### Gate 7 (host trainer) — CLOSED
+`src/tac/pr130_lift/train_semantic_quantized_resumable.py`. F1–F4 wired as default-off flags
+(commit `277fc58d13`).
 
-## RECOMMENDED FIRST ROW (cheapest thing that decides the most)
+### Gate 6 (warm-start object) — CLOSED, and it is the INHERITED case
 
-Before any long burn: a **short warm-start run with F2 alone**, then `replay` + `admit` on the result.
-F2 is the single lever whose mechanism is fully derived (train the grid you deploy), it is the one the
-−823 B q3/q4 pool depends on, and the admission bar is pre-registered. If F2 alone does not move the
-collapse factor materially off 1×, the regime thesis is in trouble early and cheaply — which is the
-point of building the instrument before the burn.
+**`b489c735…` is the sha256 of `/Volumes/VertigoDataTier/pact/pr135_intake_20260810/pr135/retained_fd135/pr135/canonical/semantic.wans1` (36,051 B) — EXACT MATCH.**
 
-## RETENTION / SAFETY
+The provenance chain is `mz2._load_records()` → decodes `F12_BODY` → asserts equality with that
+canonical WANS file → those records ARE the shipped semantic state (mp2's `parser="legacy"` returns
+the template unchanged).
 
-- All levers default-off ⇒ a lever-free run is byte-identical to the pre-lever trainer.
-- `--out-dir` retention is opt-in and **not yet guarded against the SSD tiers**; add the storage-tier
-  guard before any retention run (ALWAYS KEEP THE PAYLOAD + disk policy).
-- Nothing in this ticket has been fired. No training, no Modal, no n600 scorer pass; the scorer slot
-  was free at start and was never used.
+**Say it plainly, as MAIN asked: the shipped semantic weights are INHERITED PR135 intake weights.
+We never trained them.** Consequences, all measured:
+
+- **No semantic training checkpoint of ours exists.** MAIN's search order (a) — the hb1
+  `checkpoints/{gt,tq1c}/` run — contains only HPAC **token** models: all 10 checkpoints score 2/5 on
+  SemanticTokenRenderer key overlap (the coincidental `frame_embed`/`head` names), none is semantic.
+- **No optimizer state exists at all** for the semantic object — not in hb1, not in the intake
+  checkpoints (`has_opt=False`). The burn starts on **fresh Adam**.
+- **The wd3 warm-carry law (Adam state carries ~3× pose descent) therefore does NOT apply here.**
+  This is a real downgrade in expected descent rate versus the charter's assumption and MAIN should
+  price the window accordingly.
+- This also fully explains ns1's "never QAT'd on semantic weights": we never trained that object at
+  all. The sharper statement is that it was trained *by PR135* for a **uniform q4** grid, and our
+  edits move it to **mixed q3/q4** it has never seen.
+
+### The `--init` object — located, and it is NOT bit-exact (report, do not pin over)
+
+`--init` needs a torch checkpoint carrying architecture metadata; the `.wans1` is a raw byte stream
+and cannot serve. The correct init is:
+
+```
+/Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo/artifacts/checkpoints/
+    semantic_renderer_w96_b4_qat4_fixedtau05_tail6k_lr2e7.pt
+sha256 3948ccfcd44778dc42affee18a10c3f3baa434d1a2eb2345a013146c1dbfb647
+```
+
+That sha is **exactly** sd1's pinned `EXPECTED_CHECKPOINT_SHA256`, so it is the canonical semantic
+init. Its `config` is `width=96, blocks=4, frame_dim=8`, `quant_bits=4`,
+`best_exact_seg=0.0002763705783420139`.
+
+**Verification result, fail-closed:** `q4(init float weights)` reproduces the shipped decoded state
+on **37 of 38 tensors exactly**. One tensor differs:
+
+| tensor | differing elements | nature |
+|---|---|---|
+| `blocks.3.film.weight` (192×8) | **2 of 1,536** | rows 87 and 189, one element each |
+
+These are **not** rounding tie-breaks — I checked: row 87 col 7 has normalized value 7.0015 (rounds to
+code 7) but ships as code **5**; row 189 col 2 has normalized 0.6167 (rounds to code 1) but ships as
+code **−1**, a sign flip. Both are ~2 code steps. There are no zeroed rows, so it is not a prune.
+
+**Reading:** the shipped state carries **2 deliberately-modified elements** in the pose-critical FiLM
+family relative to `q4(init)` — most likely a downstream targeted correction, or the ship came from a
+marginally later checkpoint. It is 2 elements out of ~181k semantic parameters and is almost certainly
+immaterial to training dynamics, **but the warm-start is NOT bit-exact to the shipped object and this
+ticket does not claim that it is.** MAIN may proceed knowingly; the delta is quantified above.
+
+---
+
+## THE F2-ALONE SHORT ROW
+
+**Why F2 alone is the cheapest decisive row.** It is the only lever whose mechanism is fully derived
+(train the grid you deploy), it is the lever the −823 B q3/q4 pool depends on, the admission bar is
+pre-registered at 50×, and it removes exactly the uniform-q4-vs-mixed-q3q4 mismatch that ns1 located.
+If the collapse factor does not move materially off 1×, the regime thesis is in trouble early and
+cheaply — which is the whole reason the instrument was built before the burn.
+
+### Command shape (every flag verified against the real argparse)
+
+```bash
+.venv/bin/python -m tac.pr130_lift.train_semantic_quantized_resumable \
+  --challenge-root <PIN-1> \
+  --cache          <PIN-2> \
+  --init  /Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo/artifacts/\
+checkpoints/semantic_renderer_w96_b4_qat4_fixedtau05_tail6k_lr2e7.pt \
+  --bits 4 \
+  --weight-qat-q3q4 \
+  --steps 3000 --lr 2e-7 --float-warmup-steps 0 \
+  --checkpoint-every 250 --eval-every 250 \
+  --device mps --seed 20260715 \
+  --out  <SSD>/ddm_b2e_f2_alone/result.json \
+  --save <SSD>/ddm_b2e_f2_alone/checkpoints
+```
+
+`--bits` stays **4**. F2 does not relax the int4 refusal — it requests the mixed grid through its own
+flag, so the uniform path is untouched and byte-identical whenever F2 is off.
+
+### Window derivation (stated as derivation, not measurement)
+
+The init is itself a **6k-step tail at lr 2e-7** (`…tail6k_lr2e7`), i.e. the object is already
+converged and was last moved by a low-LR tail. The F2 row is a *regrid*, not a retrain: it needs only
+enough steps to relax the 4 q3-target tensors onto the coarser grid. 3,000 steps at the same tail LR
+is one half of the init's own tail — the smallest window that is a genuine tail rather than a nudge.
+`--steps` also sets EMA decay via `resolve_ema_policy(args.steps, …)`, so shortening the window
+correctly speeds the EMA rather than leaving a stale shadow.
+
+**Wall-clock is NOT derived here.** I have no timing measurement for this trainer on this box and I
+will not invent one (first-attempt wall-clock is not a verdict, and a fabricated duration is worse
+than an absent one). MAIN should take a ~50-step timing smoke to convert steps → hours before
+committing the slot.
+
+### Resumability (P0) — satisfied by construction
+
+`--checkpoint-every 250` over 3,000 steps = 12 per-stage checkpoints. The trainer's resume payload
+already carries model + EMA + optimizer + scheduler + generator + order/cursor + RNG + history +
+best-EMA state, and writes the EMA shadow as the deployment state. The new lever flags are inside the
+causal config, and the guard I added is **additive**: a pre-lever checkpoint resumes only while every
+lever is inert; with `--weight-qat-q3q4` set it refuses, correctly, because the run genuinely differs.
+17 tests pin that behaviour.
+
+### Endpoint obligations
+
+1. `ddm_b2e_edit_replay_admission.py replay --checkpoint <burn2 ckpt>` → weight-space deltas.
+2. Measure pose/seg on the seeded stratified pair set (`… pairs` emits the exact ids).
+3. `… admit --measured <rows>` → ADMITTED / REFUSED against the 50× bar.
+4. Only then: byte-close and the exact-eval chain.
+
+---
+
+## REMAINING GATE CHECKLIST
+
+| # | Gate | State |
+|---|---|---|
+| 1 | Levers built, default-off, byte-identical when off | **PASS** (83 tests) |
+| 2 | F2 trains on the deployed grid | **PASS** (rtol=0/atol=0 vs `sd1.quantized_tensor`; levers-off `parameter_overrides` == PR130 `quantized_forward` exactly) |
+| 3 | Admission bar pre-registered | **PASS** (50×, in code + test) |
+| 4 | Edit constructions are the shipped ones | **PASS** (ns1 §A reproduced to 4 decimals) |
+| 5 | Subset-bias law applied | **PASS** (stratified n32, bias-tagged) |
+| 6 | Warm-start object identified + verified | **PASS with a quantified caveat** (inherited PR135; 37/38 exact; 2-element FiLM delta documented; no optimizer state) |
+| 7 | Host trainer + lever wiring | **PASS** (`277fc58d13`) |
+| 8 | Resume config-identity handled additively | **PASS** (17 tests; refuses active levers vs pre-lever parent) |
+| 9 | Schedule + per-stage checkpoints | **PASS** (3,000 steps / 250 = 12 checkpoints; derivation above) |
+| 10 | **PIN-1: `--challenge-root`** | **OPEN** — mechanical lookup |
+| 11 | **PIN-2: `--cache`** (gt conditioning/target token cache; sd1 pins `EXPECTED_OFFICIAL_ADA_CACHE_SHA256`) | **OPEN** — mechanical lookup |
+| 12 | Timing + memory preflight at the real config | **OPEN** — ~50-step smoke; MAIN fires |
+| 13 | Governor admission | **NOT REQUESTED** (correctly, while 10–12 are open) |
+
+**Nothing was fired.** No training, no Modal, no n600 scorer pass; the scorer slot was free at start
+and was never used. `upstream/` untouched.

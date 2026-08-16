@@ -186,6 +186,65 @@ pins name objects that cannot do the job. Gate checklist in the ticket.
 
 ---
 
+---
+
+# ADDENDUM — MAIN's re-pin EXECUTED (same session, commit `277fc58d13`)
+
+MAIN adjudicated the premise falsification CORRECT and decided both blocked gates. Results:
+
+## The warm-start object is INHERITED — the case MAIN anticipated
+
+**`b489c735…` = sha256 of `/Volumes/VertigoDataTier/pact/pr135_intake_20260810/pr135/retained_fd135/pr135/canonical/semantic.wans1` (36,051 B). EXACT MATCH.**
+
+Chain: `mz2._load_records()` decodes `F12_BODY`, asserts equality with that canonical file, and those
+records ARE the shipped semantic state (mp2's `parser="legacy"` returns the template unchanged).
+
+**We never trained the semantic weights.** They are PR135 intake weights. Measured consequences:
+
+- hb1 `checkpoints/{gt,tq1c}/` holds **only HPAC token models** — all 10 score 2/5 on
+  SemanticTokenRenderer key overlap (coincidental `frame_embed`/`head`), none semantic.
+- **No optimizer state exists anywhere for the semantic object.** Fresh Adam.
+- **The wd3 warm-carry law does NOT apply.** This is a genuine downgrade vs the charter's assumption
+  and the window must be priced for it.
+- It also sharpens ns1: the object wasn't "never QAT'd", it was QAT'd *by PR135 at uniform q4* and our
+  edits move it to a mixed q3/q4 grid it has never seen.
+
+## The `--init` object — located, 37/38 exact, NOT bit-exact
+
+`semantic_renderer_w96_b4_qat4_fixedtau05_tail6k_lr2e7.pt`, sha `3948ccfc…` — **exactly** sd1's pinned
+`EXPECTED_CHECKPOINT_SHA256`. `q4(init)` reproduces the shipped state on **37/38 tensors exactly**.
+
+`blocks.3.film.weight` differs in **2 of 1,536 elements** (rows 87, 189). Checked and **not** rounding
+tie-breaks: normalized 7.0015 ships as code 5; normalized 0.6167 ships as code **−1** (sign flip).
+No zeroed rows, so not a prune. Reading: 2 deliberately-modified elements in the pose-critical FiLM
+family, likely a downstream targeted correction or a marginally later ship. Almost certainly immaterial
+to training, but **the warm-start is not bit-exact and the ticket does not claim it is.**
+
+## Wiring landed
+
+F1–F4 are default-off flags on `train_semantic_quantized_resumable.py`. Two findings shaped it:
+
+1. **`quantized_forward` already fake-quantizes every parameter via `functional_call` at a uniform
+   `bits`.** A naive parameter swap would have **double-quantized**. The levers therefore OWN the
+   quantization on the lever path, which calls `render_float` (identical tail, no second quantize).
+2. **The `base_bits` guard is load-bearing.** If quantization applied only when F2 is on, enabling F1
+   or F3 alone would have *silently dropped QAT* — an effect that would look like a lever result but
+   would actually be the absence of quantization. `applied(base_bits=…)` now always quantizes, at the
+   mixed map when F2 is on and at `--bits` when it is off. Verified: levers-off `parameter_overrides`
+   equals PR130's `quantized_forward` parameters **exactly**.
+
+`--bits` stays hard-pinned at 4; F2 requests the mixed grid through its own flag, so the uniform path
+is untouched.
+
+**Additive resume guard.** `_reconcile_additive_resume_config` drops a lever key from the comparison
+only when the checkpoint predates it AND the current run leaves it inert. Active lever vs pre-lever
+parent still refuses; a vanished key still refuses; a non-lever difference still refuses. The guard is
+extended, never bypassed. 17 tests pin it.
+
+Totals: **83 tests green**, ruff clean. The whole-`src/tac/tests` collection error
+(`conflicting in-process LawRef evaluator for realization_breakeven_bytes_v1`) is **pre-existing** —
+reproduced with my change stashed out.
+
 ## LIVE HYPOTHESES
 
 1. **The regime thesis is intact and now sharper.** The object was trained for uniform q4 and edited
@@ -211,25 +270,28 @@ pins name objects that cannot do the job. Gate checklist in the ticket.
   **legacy** parser, where `expected_state(parser="legacy")` returns the template unchanged. Using the
   SD1M parser raises `truncated signed code stream` (hit and fixed during the smoke).
 
-## NEXT_IF_RESUMED
+## NEXT_IF_RESUMED (updated after the re-pin)
 
-1. **Verify whether the semantic run's optimizer state was retained**, and locate the semantic
-   checkpoint whose weights are the ones shipping in the hv1 frontier archive. This is the true
-   warm-start pin and it is the single highest-value unknown. (Note the semantic renderer may be
-   inherited PR130 weights rather than ours — `pr130_eureka_intake_20260806` — in which case
-   "warm-start" means starting from the intake object under the off-the-shelf grant.)
-2. **MAIN decides the object re-pin**, then wire the lever module into
-   `train_semantic_quantized_resumable.py`. The module is deliberately standalone so wiring is a small,
-   separately reviewable diff. Watch its `_assert_preregistered_config` / resume config-identity guards:
-   adding flags changes the config hash and can refuse a resume — that interaction is **unverified**.
-3. **Build F5 (gate-aware conditioning).** Blocker: it needs the js8 *gated application distribution*,
-   which is not derivable from any receipt this arm holds. It is named, not stubbed.
-4. **Sweep F1's FiLM multiplier** {1.0, sqrt(93.7), 93.7} and run the F1×F2 2×2 off-diagonal.
-5. **Wire the scorer leg**: the harness deliberately emits candidates/pairs and adjudicates results
-   rather than reimplementing a scorer loop it could not validate; the proven instrument is
-   `ddm_mp2_advisory_queue.py --manifest --output-root`. Add manifest emission to `replay`.
-6. `--out-dir` retention is opt-in and unenforced against the SSD tiers; add a storage-tier guard
+1. ~~Locate the semantic warm-start + optimizer state.~~ **DONE** — inherited PR135 intake; no
+   optimizer state anywhere; `--init` pinned at sha `3948ccfc…` with a documented 2-element delta.
+2. ~~MAIN decides the re-pin; wire the levers; handle the resume guard.~~ **DONE** (`277fc58d13`).
+3. **Close PIN-1 (`--challenge-root`) and PIN-2 (`--cache`)** — the two mechanical lookups blocking
+   the F2-alone row. sd1 pins the cache sha as `EXPECTED_OFFICIAL_ADA_CACHE_SHA256`; find the local
+   artifact matching it.
+4. **Take the ~50-step timing + memory smoke** at the real config. Wall-clock is deliberately NOT
+   derived in the ticket — I have no measurement and refuse to invent one.
+5. **Investigate the 2-element `blocks.3.film.weight` delta.** 2 elements of 1,536, one a sign flip,
+   in the pose-critical family. Either a downstream targeted correction (a PR101-style single-element
+   sidecar) or a later ship. If it is a *correction*, it is itself evidence that targeted 2-element
+   FiLM edits are viable — which would be a live rate lever, not a curiosity.
+6. **Build F5 (gate-aware conditioning).** Blocker unchanged: needs the js8 gated application
+   distribution, not derivable from any receipt this arm holds. Named, not stubbed.
+7. **Sweep F1's FiLM multiplier** {1.0, sqrt(93.7), 93.7} and run the F1×F2 2×2 off-diagonal.
+8. **Wire the scorer leg** via the proven `ddm_mp2_advisory_queue.py --manifest --output-root`; add
+   manifest emission to `replay` rather than reimplementing a scorer loop.
+9. `--out-dir` retention is opt-in and unenforced against the SSD tiers; add a storage-tier guard
    before any retention run.
+10. **Phase-B (#850 cap-lift) remains NOT BUILT** — still requires #850 and qs5 at source.
 
 ## STORES CONSULTED
 
