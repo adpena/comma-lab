@@ -27916,3 +27916,41 @@ metrics and pose routes exclusively through the js1 joint line.
 
 **CORRECTION:** the "ra1b rank-4 = 6.00% error" figure MAIN was carrying does not reproduce on any
 of the three objects (49.20% / 52.08% / 25.15%). Withdrawn from the argument.
+
+## FEED-ra2c-rank4 — PRE-REGISTERED, written BEFORE the result (2026-08-16)
+
+Firing the successor `ra2c_alpha0_verdict_and_rank_closure` §5 named: the **pose-metric** rank
+rung. This block is written while the run is still in its evaluate phase, so the falsifier below
+cannot be fitted to the answer.
+
+**What fires.** Rank-4 SVD truncation of the RENDERED carrier field `F = C @ B` (600×2304),
+solved back to a coeff (`C_r @ B = F_r`, round-trip 4.2e-15) so it rides the SHIPPED render path
+unchanged. `--carrier-rank 4 --alpha 1 --returned-bytes 14662`, `archive.zip` byte-identical.
+
+**Measured inputs (this run, not carried):** rank-4 Frobenius error **25.14%** · carrier true
+rank **12** · α=1 control **600/600 byte-identical** (renders with the UNTRUNCATED coeff, so the
+chain check stays real while the output carries the treatment).
+
+**PRE-REGISTERED PREDICTION.** The registered damage law
+(`carrier_rate_credit_pose_affordance_20260816`, K = 350,427, p = 2) gives
+`ratio = 1 + K·err² = 1 + 350,427·0.2514² ≈ 22,157×` against the advisory bar **1.5731×** at
+14,662 B returned.
+
+**FALSIFIER, both directions:**
+- ratio ≈ 22,157× (within ~2×) ⇒ the pose metric tracks Frobenius here. The carrier family is
+  closed in BOTH metrics, and pose routes exclusively to the js1 joint line. The Euclidean
+  closure in §3 of the α=0 memo then generalizes.
+- ratio ≪ prediction (≥10× below) ⇒ Frobenius is the WRONG norm for this ladder, exactly the
+  level error named in `rate_credit_ladders_run_largest_first_...`. The pose-metric-optimal
+  truncation becomes a live, unbuilt candidate — rank-4 returns 14,662 B ≈ 101.7% of the
+  remaining sub-0.15 gap in rate credit.
+
+**Honest limits.** Advisory axis, single instrument, held-rate (the credit is applied
+analytically through the registered law, never measured as a candidate's S). d_seg is untouched
+by construction — SegNet reads `x[:, -1]` = frame_1, so this is a pure (pose, rate) trade.
+
+**Triality legs.** DAG = this block. EQUATIONS = `carrier_error_tolerance()` + `CARRIER_DAMAGE_K`
++ `CARRIER_SPECTRA`, already registered. DSL = **N/A and deliberately so** — this is a
+measurement rung in a probe harness, not a Lever/WitnessProgram change; it adds no trainer flag,
+no launch config, no curriculum stage. Claiming a DSL leg here would register a Lever that levers
+nothing.
