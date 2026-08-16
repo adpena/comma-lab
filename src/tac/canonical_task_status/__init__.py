@@ -20,6 +20,7 @@ from .loader import (
     latest_status_by_task_id,
     latest_statuses,
     load_canonical_task_status_strict,
+    unreadable_task_ids,
 )
 from .query import (
     query_task_history,
@@ -50,6 +51,7 @@ __all__ = [
     "query_tasks_by_status",
     "register_task",
     "task_id_for_memo_item",
+    "unreadable_task_ids",
     "update_status",
     "validate_ledger",
 ]
