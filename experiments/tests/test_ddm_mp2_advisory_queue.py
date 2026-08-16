@@ -5,6 +5,7 @@ from __future__ import annotations
 import importlib.util
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -83,3 +84,71 @@ def test_launch_argv_is_candidate_bound_and_retained(tmp_path: Path) -> None:
     done_index = command.index("--done-receipt")
     assert command[done_index + 1] == "ddm_mp2_candidate_n600_attempt_0000"
     assert result == tmp_path / "attempt_0000" / "contest_auth_eval.json"
+
+
+def test_wc1_gate_is_optional_but_present_gate_fails_closed(tmp_path: Path) -> None:
+    gate_path = tmp_path / "ADMISSION_GATE.json"
+    assert QUEUE._validated_wc1_fast_path(gate_path) is None
+    gate_path.write_text(json.dumps({"schema": "wrong"}))
+    with pytest.raises(QUEUE.QueueRefusal, match="present but invalid"):
+        QUEUE._validated_wc1_fast_path(gate_path)
+
+
+def test_wc1_gate_threads_admitted_flags_through_staged_generation(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    code_file = tmp_path / "code.py"
+    code_file.write_text("# pinned\n")
+    environment = {
+        "F26_TOKEN_DECODER": "native-hpac",
+        "F26_HPAC_NATIVE_LIBRARY": "/retained/native.so",
+        "F26_ADVISORY_RENDER_WORKERS": "auto",
+        "F26_ADVISORY_DECODE_CACHE_ROOT": "/retained/cache",
+        "F26_ADVISORY_RENDER_RSS_BYTES": 123,
+    }
+    gate_path = tmp_path / "ADMISSION_GATE.json"
+    gate_path.write_text(
+        json.dumps(
+            {
+                "schema": "ddm_wc1_advisory_fast_path_admission.v1",
+                "complete": True,
+                "identity_pass": True,
+                "shipping_packet_touched": False,
+                "consumer_environment": environment,
+                "consumer_code": {"test": QUEUE._file_fact(code_file)},
+            }
+        )
+    )
+    fast_path = QUEUE._validated_wc1_fast_path(gate_path)
+    assert fast_path is not None
+
+    generation_root = tmp_path / "generation"
+    generation_root.mkdir()
+    (generation_root / "archive.zip").write_bytes(b"archive")
+    (generation_root / "inflate.sh").write_text("#!/bin/sh\n")
+
+    def prepare(_source: Path, destination: Path) -> None:
+        destination.mkdir(parents=True)
+        (destination / "archive.zip").write_bytes(b"archive")
+        (destination / "inflate.sh").write_text("#!/bin/sh\n")
+
+    monkeypatch.setattr(
+        QUEUE,
+        "_load_wc1_builder",
+        lambda: SimpleNamespace(prepare_advisory_runtime=prepare),
+    )
+    generation = _generation("candidate")
+    generation["archive"]["path"] = str(generation_root / "archive.zip")
+    attempt = tmp_path / "attempt"
+    command, _, _ = QUEUE._launch_argv(
+        candidate_id="candidate",
+        generation=generation,
+        attempt_dir=attempt,
+        attempt=0,
+        wc1_fast_path=fast_path,
+    )
+    joined = " ".join(command)
+    assert str(attempt / "wc1_advisory_generation/archive.zip") in command
+    for key, value in environment.items():
+        assert f"{key}={value}" in command
+    assert str(generation_root / "archive.zip") not in joined
