@@ -27735,3 +27735,16 @@ measured admission baseline (base advisory S 0.20280753928705508).
 - **Sister lesson banked:** zombie children defeat `kill -0` rescue pollers (mp2 inflate child exited
   as a zombie the SIGSTOPped parent could not reap; poller looped forever). Rescue pollers must treat
   stat `Z` as exited.
+
+## FEED-wd3b (2026-08-16 ~00:5xZ) — #1064 permanent fix (apparatus, two-landing) + mp2 REFUSED + W0_reset live
+- **#1064 class extinct** (commit 8c9536b19f, 25/25 tests): (a) zombie-aware `_pid_alive` — `kill(pid,0)`
+  succeeds on zombies, `ps stat Z` now reads dead (the mp2 rescue-poller deadlock mechanism); (b) launcher
+  `_augment_liveness_success_receipts` — auto-injects `--status-receipt` into liveness configs lacking
+  `success_receipts` (the lh1 config-orphan that produced 3 same-day `child_dead` false-positives; cure at
+  the launch choke-point, so a config can no longer be born orphaned). Detector-zeroes-on-cure honored.
+- **#1071 CLOSED — REFUSED +3.617e-2**: keep75∖keep87 marginal FiLM-row prune destroys pose 3.77×; rate
+  realized as projected (−1.665e-5); seg near-neutral. Marginal-row-prune family DEAD at hv1 base (INSTANCE).
+- **wd3 W0_reset TRAINING LIVE** (launch 62, child 31709, config ad6ab661c8e2f378): attempt-1 governor
+  refusal (incident #3, session-split triple-charge) preserved; attempt-2 admitted at the mp2 boundary.
+  Harvest → warm-vs-reset trajectory compare → both-W0 verdicts unlock D56→F64.
+- Pointer UNMOVED: S 0.15959729295498598 @ 182,759 B [contest-CUDA T4 n600] (hv1 ep0634).
