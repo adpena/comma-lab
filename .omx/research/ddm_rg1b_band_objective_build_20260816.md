@@ -436,3 +436,138 @@ payload, the band operator is rt1's verbatim, and the instrument control is bit-
    `f = 0.01`, the honest options are to change `EMA_TARGET_SEED_FRACTION` below `e⁻⁹`, to change the
    warmup ramp, or to record the ramp as the policy. Currently the manifest just tells the truth about
    being decorative. Not this arm's call.
+
+---
+
+# §6 — ADDENDUM (2026-08-16, post-probe): the mechanism discriminator
+
+MAIN fired the sealed §4 ticket. **Neither bar was met**, and the engagement telemetry proves the lever
+fired: `active: true`, `activations: 600`, `band_weight_mass_fraction 0.99289`, `band_mean 42.46`,
+`mean 1.0000000` (the invariant held on the real field), `table_sha256 72658f02…`. So this is a REAL
+instance negative, not a wiring failure. MAIN then routed one decisive follow-up: **the WEIGHT-space
+cosine**. Instrument: `experiments/ddm_rg1b_weight_space_gradient_cosine.py`. Receipts:
+`/Volumes/APDataStore/pact/ddm_rg1/grad_cosine/` — `RG1B_WEIGHT_SPACE_COSINE.json` sha256
+`370725e5e8407f953900494cb921edcf0fe11cfb4e5c24aee9f7ee1ba0ad913b` (99.1 KB, carries the full
+per-group AND per-tensor tables, the bootstrap CIs and the cosine-vs-n curves) ·
+`RG1B_BAND_ARM_ON_THE_LAW.json` sha256
+`cf3f5a20d39db5476a5dd15b3f4ffadcd15a5533ca00dfd1777d29efee942bcd`.
+
+## §6.1 ANSWER FIRST — MAGNITUDE-DOMINATED DIFFUSION, decisively
+
+**The update WAS rotated, hard, and the trajectory did not care.** Not one of the 9 measured cells
+reaches the 0.95 collinearity threshold on either metric. At the **init** — where the run starts — the
+realized (Adam-limit) update direction sits at cos **0.209 / 0.524 / 0.619** across the three curriculum
+phases. **The parametrization is NOT the constraint. The pixel-reweighting family is NOT refuted.**
+
+**And the clincher:** the band arm lands **ON the plateau law derived from the four STOCK arms**, at its
+own displacement, at **−0.871σ** — a *smaller* residual than the worst of the four stock arms (1.07σ).
+It is simply a fifth point on the same curve.
+
+> `peak_flips = 118,563 · ‖Δw‖₁₀₀^0.4576` now holds across **three decades of learning rate AND an
+> 83° pixel-space / 21–88° weight-space objective rotation.** It is a function of **displacement alone**.
+> Direction does not enter it.
+
+## §6.2 The measurement
+
+Real gradient path, not a stand-in: the trainer's `EditabilityLevers.applied` route with
+`--weight-qat-q3q4` (mixed q3/q4, straight-through), exact-path render, frozen SegNet, same three
+phases. **One shared forward per pair**, both gradients read from the same graph, so the cosine carries
+no forward nondeterminism. Sampling is **m96-legal**: seeded RANDOM `n=120` over all 600 pairs
+(seed 20260816), never a prefix. `n` is not asserted — per-pair gradients give exact Gram matrices, so
+the CI is a closed-form bootstrap over pairs and a cosine-vs-n curve is reported alongside.
+
+| checkpoint | phase | cos(g) | CI95 | angle | cos(sign g) | sign agree | ‖g_band‖/‖g_stock‖ |
+|---|---|---:|---|---:|---:|---:|---:|
+| **init** | ce | **0.2839** | [0.259, 0.310] | 73.5° | **0.2087** | 60.4% | 6.8 |
+| **init** | softplus_margin | **0.7017** | [0.584, 0.820] | 45.4° | **0.5235** | 76.2% | 74.0 |
+| **init** | expected_flip | **0.8106** | [0.736, 0.875] | 35.9° | **0.6185** | 80.9% | 77.4 |
+| A2@100 | ce | 0.1106 | [0.023, 0.198] | 83.7° | 0.1183 | 55.9% | 6.9 |
+| A2@100 | softplus_margin | 0.9333 | [0.845, 0.959] | 21.1° | 0.7138 | 85.7% | 100.1 |
+| A2@100 | expected_flip | 0.9221 | [0.861, 0.934] | 22.8° | 0.7084 | 85.4% | 62.2 |
+| band@100 | ce | 0.0310 | [0.004, 0.062] | 88.2° | 0.0758 | 53.8% | 4.6 |
+| band@100 | softplus_margin | 0.6827 | [0.602, 0.757] | 47.0° | 0.5427 | 77.1% | 46.2 |
+| band@100 | expected_flip | 0.7891 | [0.674, 0.838] | 37.9° | 0.6216 | 81.1% | 32.3 |
+
+**I added the Adam-limit column because the discriminator as specified had a gap.** The trainer optimises
+with **AdamW**, whose update is per-coordinate normalised (`~m/√v`), so `cos(g)` is the *realized-update*
+rotation only under SGD — under Adam the magnitude is divided out and what survives is closer to
+`sign(g)`. On the metric that matches the optimiser the run actually used, **every cell is ≤ 0.714**, and
+at the init the update disagrees in SIGN on **19–40% of all 228,958 coordinates**. That is not a nudge.
+
+**Adam also explains the norm column.** `mean(w)==1` holds, yet `‖g_band‖` is **4.6–100×** larger —
+because in the margin phases the stock loss is dominated by the interior, where the margin is huge and
+softplus/sigmoid gradient is ~0, while the band is exactly where the gradient lives. Adam's scale
+invariance then divides that 100× straight back out. So the magnitude change was never going to move
+anything; only the direction could have, and the direction changed and nothing moved.
+
+**No group is collinear** (per-group and per-tensor tables in the receipt). At the init, every group sits
+at 0.18–0.86 raw / 0.01–0.71 sign. `conv` (the dw/pw stack) carries **99.3%** of the gradient norm and is
+rotated to 0.284/0.701/0.811 raw. The rotation is distributed across the whole parameter space, not
+confined to a low-capacity corner. Incidentally, FiLM carries only **0.4–0.8%** of gradient norm under
+this objective — so the band term barely touches ns1's pose-critical subspace.
+
+## §6.3 The band arm as a fifth point on the law
+
+| quantity | band arm | law's prediction at ITS displacement |
+|---|---:|---:|
+| ‖Δw‖₁₀₀ | 0.055976 | — |
+| peak Δpx | **29,747** | 31,695 |
+| log residual | **−0.0634** | (σ_log = 0.0728) |
+| **residual in σ** | **−0.871** | worst stock arm: 1.070 |
+| BREAK at 99% (bar 17,766) | **NO** | |
+| BREAK at 95% (bar 24,865) | **NO** | |
+| DESCEND (`improved_over_init`) | **NO** (`best_step 0`) | |
+
+Its displacement was 18% *larger* than A2's (0.05598 vs 0.04740) and its peak was correspondingly
+larger (29,747 vs 27,170) — right where the curve says it should be.
+
+## §6.4 Adjudication (pre-registered)
+
+**MAGNITUDE-DOMINATED DIFFUSION.** `cos` is materially below 0.90 on the Adam-relevant metric in **all
+nine** cells and on the raw metric in **seven of nine**; the two exceptions (A2@100 softplus/expected,
+raw 0.933/0.922) sit in the "in between" band, are on the STOCK arm's trajectory rather than the band
+arm's, and fall to 0.71 on the Adam metric. Nothing reaches 0.95 anywhere.
+
+**What this licenses:**
+
+1. **The pixel-reweighting family is NOT dead.** It did exactly what it claimed — a large, measured
+   rotation of the realized update. It was tested by an instrument that cannot see direction.
+2. **The 600-step flip-trajectory probe cannot test objectives on this vehicle, at all.** Any objective
+   that moves the same ‖Δw‖ produces the same trajectory. That invalidates the probe DESIGN — including
+   my own §4 ticket and its pre-registered bar — not the objective. **The judge and the window must
+   change before any objective claim is admissible here.**
+3. **av3's plateau law is upgraded**: from "no lr descends" to "**nothing tested so far descends,
+   because in this regime flips are a function of displacement alone**." Five arms, three decades of lr,
+   two very different directions, one curve.
+
+⚠ *verdict_scope: INSTANCE, and deliberately narrow.* This is **two directions** (stock, band α=1) at
+displacements 1.4e-3 … 5.3e-1, 600 steps, this init, MPS, `--weight-qat-q3q4`. It does **not** say every
+direction is equivalent — it says the two we have sampled are, and that this instrument could not have
+distinguished them if they were not. The cosine is measured at fixed checkpoints, not integrated along a
+trajectory; a direction whose advantage compounds only over many steps is untested. The Adam-limit
+`sign` cosine is a limit proxy, not a realized AdamW step with its actual moment state.
+
+## §6.5 What §6 did NOT establish
+
+- **No proof that no direction descends.** Two directions, not a spanning set.
+- **No long-window test.** Whether direction compounds past the diffusive noise over 3,000+ steps is
+  exactly what is untested, and is now the live question.
+- **No realized-AdamW-step cosine.** I measured raw and sign-limit; the true update uses accumulated
+  `m`/`v`, which I did not reconstruct from the optimizer state (it is retained and this is doable).
+- **No score.** Own-vehicle frontier UNMOVED: hv1 ep0634 S 0.15959729295498598 @ 182,759 B
+  `[contest-CUDA T4 n600]`.
+
+## §6.6 NEXT_IF_RESUMED (supersedes §NEXT_IF_RESUMED items 1–3)
+
+1. **CHANGE THE JUDGE, not the objective.** The binding finding is instrumental. Candidates, cheapest
+   first: (a) compare arms at **matched ‖Δw‖** rather than matched steps — the law already tells you the
+   expected flips, so the residual off the curve IS the direction signal, and it is ~0.07σ-resolvable;
+   (b) a long window where direction can compound; (c) a judge that is not peak/end flips.
+2. **The residual-off-the-law IS a usable free judge.** It needs no new run: any arm's
+   `(peak, ‖Δw‖₁₀₀)` residual against the 5-arm curve is a direction test with a known scatter
+   (σ_log 0.0728, n now 5). Re-scoring past and future arms on it costs nothing.
+3. **The realized-AdamW cosine** from the retained optimizer moments — one desk computation, closes the
+   last gap between "gradient rotated" and "step rotated."
+4. **Unchanged from §NEXT_IF_RESUMED:** the F3/ns1 protection-list blocker (§5) still binds the rg1 full
+   burn; av3's W1/R1/N0 discriminators are still unrun and are now *more* interesting, because they test
+   whether the cold start sets the displacement that the law then converts into flips.
