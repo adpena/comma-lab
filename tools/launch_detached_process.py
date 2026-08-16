@@ -15,7 +15,7 @@ import signal
 import subprocess
 import sys
 import time
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -524,38 +524,145 @@ def _validate_watcher(tool: Path, config: Path, cwd: Path, env: Mapping[str, str
         )
 
 
-def _augment_liveness_success_receipts(config_path: Path, cmd: list[str], out: Path) -> Path:
-    """Inject a success receipt into a liveness config that lacks one.
+def _safe_run_wrapper_flag(effective_cmd: Sequence[str], flag: str) -> str | None:
+    """Read one launcher-injected safe_run flag from the argv the child receives.
 
-    A liveness config without ``success_receipts`` cannot adjudicate a clean
-    rc=0 exit — the watcher publishes a ``child_dead`` ALERT the moment the pid
-    vanishes, even when the wrapped safe_run wrote a success receipt (the #1064
-    false-positive class; configs are path-swapped copies, so the omission
-    recurs through copying). The launcher already knows the receipt: the
-    wrapped command's ``--status-receipt`` argument. Derive it, write an
-    augmented EFFECTIVE config beside the watcher logs (never mutate the
-    caller's file), and return its path. Configs that declare their own
-    ``success_receipts``, and commands without ``--status-receipt``, pass
-    through unchanged.
+    Scans ONLY the wrapper's own flag region — everything before the first bare
+    ``--`` separator — so a same-named flag inside the WRAPPED user command can
+    never be mistaken for a value the launcher owns.
     """
+    value: str | None = None
+    for index, part in enumerate(effective_cmd):
+        if part == "--":
+            break
+        if part == flag and index + 1 < len(effective_cmd):
+            value = effective_cmd[index + 1]
+    return value
+
+
+def _derive_liveness_config(
+    config_path: Path,
+    *,
+    effective_cmd: Sequence[str],
+    resource_budget: Mapping[str, Any],
+    out: Path,
+) -> tuple[Path, dict[str, Any]]:
+    """Derive the liveness watcher's run-specific paths from the launch itself.
+
+    A liveness config carries two values that MUST agree with the launch:
+    ``pid_file`` (the pid the watcher polls) and ``success_receipts`` (how a
+    clean rc=0 exit is told apart from a silent death).  Both were hand-typed
+    into the config while the launcher independently passed the same two paths
+    to safe_run, so the pair could drift.  It did, twice, on 2026-08-16:
+
+      * ``ddm_ra2c_rank4`` — the config's ``pid_file`` carried a ``launcher/``
+        path component that run's layout did not have, so the watcher published
+        ``pidfile_missing_or_invalid`` 303 s into a run that finished rc=0.
+      * ``ddm_ra2c_alpha_ladder_a0`` — the config declared no
+        ``success_receipts``, so the watcher published ``child_dead`` 9 s after
+        a clean rc=0 exit, with the rc=0 safe_run receipt sitting unread in the
+        same directory as the pidfile.
+
+    The launcher already holds both values: it wrote them into the argv the
+    child receives.  Derive them from that argv, write an EFFECTIVE config
+    beside the watcher logs (never mutate the caller's file), and return it
+    with a record of what was derived.
+
+    Fail-closed policy, stated explicitly because silence here IS the defect:
+
+      * derived value equals the declared one -> ``argv_confirmed``.
+      * derived value differs                 -> ``argv_superseded``; the argv
+        wins (it is what safe_run will actually honor), the declared value is
+        preserved in the record, and the supersession is announced on stderr AT
+        LAUNCH rather than discovered at review.
+      * no safe_run wrapper, or the flag absent from it -> ``config_declared``;
+        fall back to the hand-typed value.  The launcher does NOT invent a path
+        it does not own.  ``pid_file`` remains mandatory in the watcher's own
+        ``load_config``, so an absent value still fails closed there.
+
+    Deriving from the argv rather than from ``resource_budget`` is deliberate:
+    the argv is the thing the child obeys.  The budget record is cross-checked
+    against it and a disagreement REFUSES the launch, because that would mean
+    the launcher's own two accounts of the same path had diverged.
+    """
+    record: dict[str, Any] = {
+        "schema": "detached_local_process_liveness_derivation.v1",
+        "declared_config": str(config_path),
+        "effective_config": None,
+        "pid_file": {"source": "config_declared", "value": None, "declared": None},
+        "success_receipts": {"source": "config_declared", "value": None},
+        "supersessions": [],
+    }
     try:
         config = json.loads(config_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return config_path
-    if not isinstance(config, dict) or config.get("success_receipts"):
-        return config_path
-    receipt: str | None = None
-    for index, part in enumerate(cmd):
-        if part == "--status-receipt" and index + 1 < len(cmd):
-            receipt = cmd[index + 1]
-    if receipt is None:
-        return config_path
-    config["success_receipts"] = [{"label": "safe_run_status", "path": receipt}]
-    config.setdefault("success_settle_s", 90)
+    except (OSError, json.JSONDecodeError) as exc:
+        # Not the launcher's file to adjudicate; the watcher's own
+        # --validate-only pass refuses an unreadable config loudly.
+        record["error"] = f"{type(exc).__name__}: {exc}"
+        return config_path, record
+    if not isinstance(config, dict):
+        record["error"] = "config is not a JSON object"
+        return config_path, record
+
+    wrapped = str(resource_budget.get("mode")) == "derived_and_enforced"
+    derived_pidfile = _safe_run_wrapper_flag(effective_cmd, "--child-pidfile") if wrapped else None
+    derived_receipt = _safe_run_wrapper_flag(effective_cmd, "--status-receipt") if wrapped else None
+    for flag, argv_value, budget_key in (
+        ("--child-pidfile", derived_pidfile, "child_pidfile"),
+        ("--status-receipt", derived_receipt, "status_receipt"),
+    ):
+        budget_value = resource_budget.get(budget_key)
+        if wrapped and budget_value is not None and argv_value != str(budget_value):
+            raise LaunchRefusal(
+                "launcher argv and resource budget disagree about a safe_run path",
+                rc=10,
+                flag=flag,
+                argv_value=argv_value,
+                resource_budget_value=str(budget_value),
+            )
+
+    changed = False
+    declared_pidfile = config.get("pid_file")
+    record["pid_file"]["declared"] = declared_pidfile
+    record["pid_file"]["value"] = declared_pidfile
+    if derived_pidfile is not None:
+        record["pid_file"]["value"] = derived_pidfile
+        if declared_pidfile == derived_pidfile:
+            record["pid_file"]["source"] = "argv_confirmed"
+        else:
+            record["pid_file"]["source"] = "argv_superseded"
+            record["supersessions"].append(
+                {"key": "pid_file", "declared": declared_pidfile, "derived": derived_pidfile}
+            )
+            config["pid_file"] = derived_pidfile
+            changed = True
+
+    if config.get("success_receipts"):
+        record["success_receipts"]["source"] = "config_declared"
+        record["success_receipts"]["value"] = config["success_receipts"]
+    elif derived_receipt is not None:
+        config["success_receipts"] = [{"label": "safe_run_status", "path": derived_receipt}]
+        config.setdefault("success_settle_s", 90)
+        record["success_receipts"]["source"] = "argv_derived"
+        record["success_receipts"]["value"] = config["success_receipts"]
+        changed = True
+
+    if not changed:
+        return config_path, record
+
+    config["derived_by"] = record["schema"]
     effective = out / "watchers" / "liveness_config_effective.json"
     effective.parent.mkdir(parents=True, exist_ok=True)
     effective.write_text(json.dumps(config, indent=1), encoding="utf-8")
-    return effective
+    record["effective_config"] = str(effective)
+    for row in record["supersessions"]:
+        # Loud AT LAUNCH: a drifted hand-typed path is exactly the silence this
+        # cure exists to end.  Do not downgrade this to a manifest-only note.
+        print(
+            json.dumps({"liveness_config_superseded": row, "effective_config": str(effective)}),
+            file=sys.stderr,
+        )
+    return effective, record
 
 
 def _arm_watchers(
@@ -876,8 +983,20 @@ def main() -> int:
         return _print_refusal(exc)
     liveness_config = _rewrite_path(args.liveness_config, mapping) if args.liveness_config else None
     quality_config = _rewrite_path(args.quality_config, mapping) if args.quality_config else None
+    liveness_derivation: dict[str, Any] | None = None
     if liveness_config is not None:
-        liveness_config = _augment_liveness_success_receipts(liveness_config, cmd, out)
+        # effective_cmd, NOT cmd: --child-pidfile and --status-receipt are
+        # injected by _derive_resource_budget and appear ONLY in the wrapped
+        # argv.  Passing the raw cmd made this derivation silently inert.
+        try:
+            liveness_config, liveness_derivation = _derive_liveness_config(
+                liveness_config,
+                effective_cmd=effective_cmd,
+                resource_budget=resource_budget,
+                out=out,
+            )
+        except LaunchRefusal as exc:
+            return _print_refusal(exc)
     if args.arm_watchers:
         repo = Path(__file__).resolve().parents[1]
         try:
@@ -967,6 +1086,7 @@ def main() -> int:
         "receipt_tombstone": receipt_tombstone,
         "receipt_arm_tombstone": receipt_arm_tombstone,
         "watchers_requested": bool(args.arm_watchers),
+        "liveness_config_derivation": liveness_derivation,
         "watchers": [],
     }
     if args.dry_run:
