@@ -122,6 +122,28 @@ def _atomic_write_npy(path: Path, value: np.ndarray) -> dict[str, Any]:
     return {"path": str(path), "bytes": len(payload), "sha256": _sha256_bytes(payload)}
 
 
+def _qs1_paths() -> dict[str, Any]:
+    from experiments import ddm_qs1_frame0_schur_coupled_solve as qs1
+
+    return {"base_pose": qs1.CP135_BASE_POSE, "gt_pose": qs1.GT_POSE}
+
+
+def top_mass_pairs(n: int, base_pose: np.ndarray, gt_pose: np.ndarray) -> np.ndarray:
+    """The n pairs carrying the most d_pose mass, by retained base-vs-GT error.
+
+    This is a DELIBERATE non-random selection: the candidate's byte budget is spent
+    where the pose mass is, so the selection rule must be the mass itself. It is
+    reproducible from retained vectors alone (no scorer call) and is recorded with
+    the realized mass share it captures."""
+    if not 1 <= n <= PAIR_COUNT:
+        raise PS1UError("top-mass size must lie in [1, 600]")
+    per_pair = np.mean(
+        np.square(base_pose.astype(np.float64) - gt_pose.astype(np.float64)), axis=1
+    )
+    order = np.argsort(-per_pair, kind="stable")[:n]
+    return np.sort(order).astype(np.int32)
+
+
 def seeded_pair_subset(n: int, seed: int) -> np.ndarray:
     """A SEEDED RANDOM subset -- never a prefix (m88/m96: a prefix of a skewed
     per-pair quantity is a different population, and the bias is 2.5-4.2x
@@ -394,11 +416,14 @@ def run(args: argparse.Namespace) -> int:
         for line in rows_path.read_text().splitlines():
             if line.strip():
                 done.add(int(json.loads(line)["pair"]))
-    pairs = (
-        np.arange(PAIR_COUNT, dtype=np.int32)
-        if args.all_pairs
-        else seeded_pair_subset(args.n_pairs, args.seed)
-    )
+    if args.top_mass:
+        base_pose = np.load(_qs1_paths()["base_pose"], allow_pickle=False)
+        gt_pose = np.load(_qs1_paths()["gt_pose"], allow_pickle=False)
+        pairs = top_mass_pairs(args.top_mass, base_pose, gt_pose)
+    elif args.all_pairs:
+        pairs = np.arange(PAIR_COUNT, dtype=np.int32)
+    else:
+        pairs = seeded_pair_subset(args.n_pairs, args.seed)
     pairs = pairs[args.shard :: args.shards]
     todo = [int(p) for p in pairs if int(p) not in done]
     print(
@@ -447,6 +472,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     ap.add_argument("--n-pairs", type=int, default=48)
     ap.add_argument("--seed", type=int, default=20260816)
     ap.add_argument("--all-pairs", action="store_true")
+    ap.add_argument("--top-mass", type=int, default=0,
+                    help="solve the N pairs carrying the most d_pose mass (candidate mode)")
     ap.add_argument("--shard", type=int, default=0)
     ap.add_argument("--shards", type=int, default=1)
     ap.add_argument("--batch", type=int, default=8)

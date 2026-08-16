@@ -215,6 +215,78 @@ def diff_manifests(a: dict[str, Any], b: dict[str, Any], *, sample: int = 3) -> 
     return report
 
 
+def adjudicate_aggregate(
+    cpu_manifest: dict[str, Any],
+    *,
+    cuda_raw_sha256: str,
+    cuda_raw_bytes: int,
+    cuda_source: str,
+    cuda_provenance: str,
+) -> dict[str, Any]:
+    """Aggregate-level verdict when only the CUDA side's raw sha is available.
+
+    This is the $0 path: the T4 run's own ``inflated_outputs_manifest`` already
+    records the CUDA-decoded ``0.raw`` sha, so the decode-identity question is
+    answerable without buying a dispatch. It yields the VERDICT but not the
+    per-pair localization — that rides the next T4 row for free."""
+    if cpu_manifest.get("schema") != SCHEMA:
+        raise ReconciliationError(f"cpu manifest is not {SCHEMA}")
+    cpu_sha = str(cpu_manifest["raw_sha256"])
+    cpu_bytes = int(cpu_manifest["raw_bytes"])
+    if cpu_bytes != cuda_raw_bytes:
+        raise ReconciliationError(
+            f"raw geometry differs across axes ({cpu_bytes} vs {cuda_raw_bytes}) — "
+            "the comparison would be confounded by a shape change, not a decode change"
+        )
+    identical = cpu_sha == cuda_raw_sha256
+    return {
+        "schema": "ddm_ps1u_decode_axis_aggregate_verdict.v1",
+        "axis": "[decode-identity adjudication; $0 from retained receipts]",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "verdict": (
+            "DECODE_IDENTICAL_ACROSS_AXES"
+            if identical
+            else "DEVICE_DEPENDENT_DECODE_CONFIRMED"
+        ),
+        "archive_sha256": cpu_manifest.get("archive_sha256"),
+        "archive_bytes": cpu_manifest.get("archive_bytes"),
+        "raw_bytes_both_axes": cpu_bytes,
+        "cpu": {
+            "raw_sha256": cpu_sha,
+            "source": cpu_manifest.get("source"),
+            "decode_device": cpu_manifest.get("decode_device"),
+            "frames_concat_sha256": cpu_manifest.get("frames_concat_sha256"),
+        },
+        "cuda": {
+            "raw_sha256": cuda_raw_sha256,
+            "source": cuda_source,
+            "decode_device": "cuda",
+            "provenance": cuda_provenance,
+        },
+        "localization_available": False,
+        "localization_plan": (
+            "per-pair localization requires the CUDA-side per-frame hashes; it rides the "
+            "NEXT T4 row for free by enabling the hash-request fields and running this "
+            "module's `manifest` step remotely — no dedicated dispatch is warranted"
+        ),
+        "compliance": (
+            "VIOLATION of the deterministic-decode non-negotiable ('same archive.zip -> "
+            "bit-identical inflate output every run/host'): one archive, two devices, two "
+            "different raw decodes. This is a vehicle defect independent of which scoring "
+            "axis is 'right'."
+            if not identical
+            else "deterministic-decode non-negotiable HOLDS across these two axes"
+        ),
+        "cure_direction": (
+            "port the decode to the portable native/runtime-rs program so ONE deterministic "
+            "implementation runs on every host. Engineer it to PRESERVE the CUDA-favorable "
+            "frames -- the frontier rides them -- rather than naively CPU-pinning, which "
+            "would lock in the degraded decode."
+        ),
+    }
+
+
 def locate_first_divergence(
     raw_a: Path, raw_b: Path, pairs: list[int], *, limit: int = 3
 ) -> list[dict[str, Any]]:
@@ -345,6 +417,14 @@ def main(argv: list[str] | None = None) -> int:
     s = sub.add_parser("spec", help="emit the STAGED CUDA dispatch spec (fires nothing)")
     s.add_argument("--out", required=True)
 
+    g = sub.add_parser("verdict-aggregate", help="$0 verdict from a retained CUDA raw sha")
+    g.add_argument("--cpu-manifest", required=True)
+    g.add_argument("--cuda-raw-sha256", required=True)
+    g.add_argument("--cuda-raw-bytes", type=int, required=True)
+    g.add_argument("--cuda-source", required=True)
+    g.add_argument("--cuda-provenance", required=True)
+    g.add_argument("--out", required=True)
+
     args = ap.parse_args(argv)
 
     if args.command == "manifest":
@@ -385,6 +465,23 @@ def main(argv: list[str] | None = None) -> int:
             f"frames {report['frames_differing']}/{FRAME_COUNT} "
             f"(f0-only {report['f0_only']} f1-only {report['f1_only']} both {report['both']})"
         )
+        print(f"[ps1u-recon] -> {out}")
+        return 0
+
+    if args.command == "verdict-aggregate":
+        report = adjudicate_aggregate(
+            json.loads(Path(args.cpu_manifest).read_text()),
+            cuda_raw_sha256=args.cuda_raw_sha256,
+            cuda_raw_bytes=args.cuda_raw_bytes,
+            cuda_source=args.cuda_source,
+            cuda_provenance=args.cuda_provenance,
+        )
+        out = Path(args.out)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
+        print(f"[ps1u-recon] VERDICT {report['verdict']}")
+        print(f"[ps1u-recon]   cpu  {report['cpu']['raw_sha256']}")
+        print(f"[ps1u-recon]   cuda {report['cuda']['raw_sha256']}")
         print(f"[ps1u-recon] -> {out}")
         return 0
 

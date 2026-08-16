@@ -223,61 +223,60 @@ merely scoring differently; they are decoding on different devices.
 
 ---
 
-## 5b. THE RECONCILIATION INSTRUMENT (local half BUILT, CUDA half STAGED — fires nothing)
+## 5b. RECONCILIATION — **ANSWERED at $0. DEVICE-DEPENDENT DECODE CONFIRMED.**
 
-`experiments/ddm_ps1u_decode_axis_reconciliation.py`, three subcommands:
+The dispatch was never needed: the T4 run's own receipt already carried the CUDA-side raw sha.
+Both sides re-derived here rather than inherited.
 
-* **`manifest`** — per-frame SHA-256 over a raw decode (1,200 frames → 600 pairs of f0/f1),
-  plus the aggregate `raw_sha256` and `frames_concat_sha256` and full geometry pins. It hashes
-  the **raw uint8 frames**, not preprocessed scorer tensors, deliberately: the raw decode is
-  exactly the object the determinism rule governs, and it keeps scorer preprocessing out of the
-  comparison as a confound. Streams via memmap — never loads 3.66 GB.
-* **`diff`** — adjudicates two manifests. `DECODE_IDENTICAL_ACROSS_AXES` ⇒ decode is
-  deterministic and the discrepancy must be re-hunted (the report names where: scorer-input
-  preprocessing boundary first, then evaluate.py batching/device-reduction).
-  `DEVICE_DEPENDENT_DECODE_CONFIRMED` ⇒ enumerates which pairs and which frame diverge, and
-  (when both raws are local) the first divergent byte offset with pixel coordinate and both
-  values. **Refuses fail-closed** if the two manifests describe different archives, or if the
-  raw geometry differs. Self-tested 4/4 including both refusal branches.
-* **`spec`** — emits the STAGED CUDA dispatch spec. It fires nothing.
+| axis | inflate device | raw `0.raw` sha256 | bytes |
+|---|---|---|---|
+| advisory chain | **cpu** | `e5539653f598a1c31e28900888f450a6de019cb29864674f232ad2f8956b15c9` | 3,662,409,600 |
+| T4 r2 chain | **cuda** (`inflate_device_policy=auto`) | `9a6b75e55268a68ed7e1b59d9ee871f99b89b0960bd63efae12ca2aa3e8f2339` | 3,662,409,600 |
 
-**Local half (done, $0):** the CPU manifest is built from the retained advisory decode
-`/Volumes/APDataStore/pact/ddm_hv1_base_advisory_n600_cpu/work_r2/inflated/0.raw` — the decode
-of the exact frontier archive that produced `avg_posenet_dist 0.00014747`. Geometry verified
-against the pin (3,662,409,600 B = 1200×874×1164×3).
+**One archive (`80c8…`→`80d9c8c6…`), identical geometry, two devices, two different decodes.**
+CPU side: this arm's manifest, `frames_concat_sha256 == raw_sha256` (proves the frame slicing
+tiles the file exactly), 1200/1200 unique frame hashes. CUDA side:
+`ddm_hv1_ep0634_exact_contest_cuda_20260815_r2/MODAL_REMOTE_RESULT.json` →
+`artifacts.inflated_outputs_manifest.json` → `files[0].sha256` (call
+`fc-01M036FY225QC9A75CM0Y7X7NP`, Tesla T4, 421.6 s, PASSED).
 
-**CUDA half (staged, MAIN fires):** reuse — do not rebuild — the durable sealed-request T4
-transport `experiments/ddm_qs1_modal_t4_dual_axis.py::main` (`gpu="T4"`, `memory=16_384`,
-volume-backed, `timeout=substrate.CONTEST_LIMIT_SECONDS`). Its prior shape on this very archive
-is the r2 run above (421.6 s, PASSED). The hash-only return channel **already exists** on the
-canonical auth-eval path — that r2 receipt carries `scorer_input_cache_hashes_requested` and
-`scorer_input_cache_hash_batch_pairs` (currently `False`/`8`) — so nothing needs inventing. The
-remote step is one command after inflate:
+**VERDICT `DEVICE_DEPENDENT_DECODE_CONFIRMED`** — receipt
+`DECODE_AXIS_VERDICT.json` (`ddm_ps1u_decode_axis_aggregate_verdict.v1`), emitted by
+`ddm_ps1u_decode_axis_reconciliation.py verdict-aggregate`, which refuses fail-closed if the two
+sides differ in raw geometry (a shape change would confound a decode change).
 
-```
-experiments/ddm_ps1u_decode_axis_reconciliation.py manifest \
-    --raw <run_root>/inflated/0.raw --out <run_root>/CUDA_DECODE_MANIFEST.json \
-    --archive-sha256 80d9c8c6…0178e --label cuda_t4 --device cuda
-```
+**This is a VEHICLE DEFECT, independent of which score is "right".** Our deterministic-decode
+non-negotiable requires *"same `archive.zip` → bit-identical inflate output every run/host."*
+The shipped vehicle violates it. `verdict_scope: **formulation**` — the hv1/e480b receiver
+family on the CPU-vs-CUDA axis, on this archive.
 
-Return payload ≈ **120 KB** (hashes only; no 3.66 GB egress). Expected cost **~$0.15–0.20**
-(T4, ~7 min). Adjudication:
+**Consequence for §4, restated sharply.** The CPU decode and the CUDA decode are *different
+objects*. §4's 94.86% was solved against the CPU-decode object; its CUDA-axis value is
+**unmeasured and bounded above by the 0.0083 S pose contribution** — never by §4's advisory
+−0.028. The advisory instrument remains valid for what it is (it reproduces the base row to 5
+s.f.); it is simply measuring a different decode than the one that ships.
 
-```
-experiments/ddm_ps1u_decode_axis_reconciliation.py diff \
-    --a CPU_DECODE_MANIFEST.json --b CUDA_DECODE_MANIFEST.json --out DECODE_AXIS_VERDICT.json
-```
+**Localization: rides free, no dedicated dispatch.** Per-pair localization needs the CUDA-side
+per-frame hashes. Enable the hash-request fields and run this module's `manifest` step remotely
+on the NEXT T4 row we buy; `diff` then names which pairs and which frame (f0/f1) diverge, and —
+with both raws local — the first divergent byte offset, pixel coordinate and both values. The
+`spec` subcommand carries the exact remote step; it fires nothing.
 
-**Named decode-path suspects if DIFFERENT** (from the receiver code, ranked): (1) the receiver's
-device-adaptive block — the only known intentional CPU/CUDA branch in the shipped runtime, and
-the hv1 fire memo records it UNCHANGED from the incumbent; (2) `torch` bicubic/bilinear
-`interpolate` — the frame-0 carrier upsamples 384×512 → 874×1164 with `mode='bicubic'` and the
-result is `round()`ed to uint8, so a half-ULP straddle flips a pixel and CUDA/CPU kernels are not
-bit-identical; (3) clamp/round ordering and fp32 accumulation order in the HPAC/neural render;
-(4) native-decoder threading (the CPU lift runs 4 workers).
+**Cure direction (the engineering ask).** Port the decode to the portable native /
+`runtime-rs` program so ONE deterministic implementation runs on every host. Engineer it to
+**PRESERVE the CUDA-favorable frames — the frontier rides them** — rather than naively
+CPU-pinning, which would lock in the degraded decode and cost ~0.03 S. Ranked suspects for where
+the divergence enters, from the receiver code: (1) the device-adaptive block, the only
+intentional CPU/CUDA branch, recorded UNCHANGED in the hv1 fire memo; (2) `torch` bicubic
+`interpolate` 384×512 → 874×1164 then `round()` to uint8 — CUDA/CPU kernels are not bit-identical
+and a half-ULP straddle flips a pixel; (3) clamp/round ordering and fp32 accumulation in the
+HPAC/neural render; (4) native-decoder threading (the CPU lift runs 4 workers).
 
-Spec + manifest retained at
-`/Volumes/APDataStore/pact/ddm_ps1u_uncapped_pose_20260816/{CUDA_DECODE_DISPATCH_SPEC.json,CPU_DECODE_MANIFEST.json}`.
+Instrument retained at `/Volumes/APDataStore/pact/ddm_ps1u_uncapped_pose_20260816/`:
+`CPU_DECODE_MANIFEST.json` (112.9 KB, 94.6 s) · `DECODE_AXIS_VERDICT.json` ·
+`CUDA_DECODE_DISPATCH_SPEC.json` (retained as the piggyback recipe) · `SELFTEST_DIFF.json`
+(positive control: CPU manifest vs itself → IDENTICAL 0/600). Diff tool self-tested 4/4
+including both refusal branches.
 
 ---
 
