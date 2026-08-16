@@ -27808,3 +27808,27 @@ trajectory-stopped: student packet 21,807 B int4 ⇒ byte bar ~1.07e-4 raw vs pr
 wd3_fresh_topology_pose_carry_v1 → 4 anchors, family gate discharged. Memo:
 ddm_wd3_n120_family_disposition_20260816.md. Import-fix lesson: script-execution sys.path
 bootstrap required in eval harnesses (091835e1d6).
+
+FEED-r6j (2026-08-16, MAIN): R6's blocker DISAMBIGUATED for $0/0.7 s, and my own entering
+hypothesis LOST. rg1b left two readings of one pair of facts (band objective rotates the
+gradient, yet the band arm's flips sit ON the 5-arm displacement law at −0.871σ): (M)
+MECHANISM-DEAD — AdamW's m̂/(√v̂+ε) divides a per-pixel reweight out — vs (J) JUDGE-DEAD — the
+peak-flip probe cannot see direction. I entered expecting (M) (prior: task #903, same stack,
+Adam sign behaviour dominated direction while the loss scalar was identical) and pre-registered
+the falsifier in the tool docstring. MEASURED by exact read-back of retained AdamW moments at
+matched steps (no re-forward, no scorer): cross-arm cos_u NEVER approaches the 0.95 bar and is
+NEGATIVE at step 400 (−0.1208) — (M) fails its own test 6/6. The sound statistic is the PAIRED
+difference (both cosines between the SAME two weight-space points, so the ‖Δw‖ location confound
+0.047400 vs 0.055976 largely cancels): mean s−g −0.00828, max |s−g| 0.07594. Per-arm control
+cos(m,u) = 0.42–0.54 on BOTH arms ⇒ Adam applies a large (~60°) rotation but it is COMMON-MODE:
+direction-preserving BETWEEN arms, far from direction-neutral WITHIN one. ADDENDUM (arithmetic,
+no run): rg1b §6.6's proposed "free judge" is UNDER-POWERED — σ_log 0.0728 is the fit's residual
+SCATTER, not a single-point resolution; the band arm delivered 6.14% improvement vs a 13.55%
+single-arm 2σ bar, and even 8 band arms leave 8.53% (optimistic bound, leverage ignored). Effect
+≈0.45× threshold; adding arms does not rescue it. FIRE-ORDER RE-ORDERED: rg1b §6.6 (b) LONG
+WINDOW → rank 1 (only judge with the power); (a) matched-‖Δw‖ demoted but alive, belongs INSIDE
+the long window; F3/ns1 protection-list blocker unaffected. Does NOT license "band is better" —
+only that the steps DIFFER. Equation r6j_realized_adam_step_cosine_v1 → 2 anchors (common-mode
+normalisation law + the detection-floor law). Memo:
+ddm_r6j_realized_adam_step_cosine_verdict_20260816.md; receipt R6J_REALIZED_ADAM_COSINE.json +
+6 retained per-tensor cosine payloads. Own-vehicle frontier UNMOVED (hv1 ep0634 S 0.15959729).

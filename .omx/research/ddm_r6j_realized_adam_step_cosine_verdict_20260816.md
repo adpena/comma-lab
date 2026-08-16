@@ -1,8 +1,16 @@
 # R6 judge repair, leg 3 — the realized-AdamW step cosine
 
 **verdict:** `JUDGE_DEAD_SURVIVES_STEP_IS_GENUINELY_ROTATED` (6 of 6 matched steps)
-**verdict_scope:** INSTANCE — two arms (stock `ddm_lr1/A2`, band `ddm_rg1/band_a1`),
-600 steps, this init, MPS-trained checkpoints read back on CPU.
+
+verdict_scope: instance — two arms (stock `ddm_lr1/A2`, band `ddm_rg1/band_a1` at α=1),
+6 checkpoints over 600 steps, this init, MPS-trained state read back on CPU.
+
+**The words MECHANISM-DEAD and JUDGE-DEAD in this memo are HYPOTHESIS NAMES under test,
+never family verdicts.** Nothing here kills any optimizer family or any objective family.
+What died is one specific *explanation* — that AdamW's per-coordinate normalisation divides
+the band reweight out — refuted on two arms of one vehicle. The band objective itself is
+neither confirmed nor killed by this measurement (see "Does NOT license" below).
+
 **axis:** `[macOS-CPU advisory]` — read-back of retained payloads. NEVER a score.
 **own-vehicle frontier UNMOVED:** hv1 ep0634 S 0.15959729295498598 @ 182,759 B `[contest-CUDA T4 n600]`.
 
