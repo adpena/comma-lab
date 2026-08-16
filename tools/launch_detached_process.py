@@ -524,6 +524,40 @@ def _validate_watcher(tool: Path, config: Path, cwd: Path, env: Mapping[str, str
         )
 
 
+def _augment_liveness_success_receipts(config_path: Path, cmd: list[str], out: Path) -> Path:
+    """Inject a success receipt into a liveness config that lacks one.
+
+    A liveness config without ``success_receipts`` cannot adjudicate a clean
+    rc=0 exit — the watcher publishes a ``child_dead`` ALERT the moment the pid
+    vanishes, even when the wrapped safe_run wrote a success receipt (the #1064
+    false-positive class; configs are path-swapped copies, so the omission
+    recurs through copying). The launcher already knows the receipt: the
+    wrapped command's ``--status-receipt`` argument. Derive it, write an
+    augmented EFFECTIVE config beside the watcher logs (never mutate the
+    caller's file), and return its path. Configs that declare their own
+    ``success_receipts``, and commands without ``--status-receipt``, pass
+    through unchanged.
+    """
+    try:
+        config = json.loads(config_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return config_path
+    if not isinstance(config, dict) or config.get("success_receipts"):
+        return config_path
+    receipt: str | None = None
+    for index, part in enumerate(cmd):
+        if part == "--status-receipt" and index + 1 < len(cmd):
+            receipt = cmd[index + 1]
+    if receipt is None:
+        return config_path
+    config["success_receipts"] = [{"label": "safe_run_status", "path": receipt}]
+    config.setdefault("success_settle_s", 90)
+    effective = out / "watchers" / "liveness_config_effective.json"
+    effective.parent.mkdir(parents=True, exist_ok=True)
+    effective.write_text(json.dumps(config, indent=1), encoding="utf-8")
+    return effective
+
+
 def _arm_watchers(
     *,
     out: Path,
@@ -842,6 +876,8 @@ def main() -> int:
         return _print_refusal(exc)
     liveness_config = _rewrite_path(args.liveness_config, mapping) if args.liveness_config else None
     quality_config = _rewrite_path(args.quality_config, mapping) if args.quality_config else None
+    if liveness_config is not None:
+        liveness_config = _augment_liveness_success_receipts(liveness_config, cmd, out)
     if args.arm_watchers:
         repo = Path(__file__).resolve().parents[1]
         try:

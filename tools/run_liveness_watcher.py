@@ -14,6 +14,7 @@ import argparse
 import json
 import os
 import signal
+import subprocess
 import time
 from collections.abc import Mapping
 from pathlib import Path
@@ -141,7 +142,22 @@ def _pid_alive(pid: int) -> bool:
     except PermissionError:
         # The PID exists even if this process cannot signal it.
         return True
-    return True
+    return not _pid_is_zombie(pid)
+
+
+def _pid_is_zombie(pid: int) -> bool:
+    # kill(pid, 0) succeeds on zombies: an exited child stays in the process
+    # table until its (possibly stopped) parent reaps it, so signal-based
+    # liveness alone reports it alive forever. A zombie can never run again —
+    # for liveness purposes it is dead.
+    try:
+        result = subprocess.run(
+            ["ps", "-o", "stat=", "-p", str(pid)],
+            capture_output=True, text=True, timeout=10,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    return result.returncode == 0 and result.stdout.strip().startswith("Z")
 
 
 def _json_summary(path: Path) -> dict[str, Any]:

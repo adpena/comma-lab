@@ -195,3 +195,128 @@ class TestRunAdjudication:
         rc = watcher.run(config, once=False)
         assert rc == 0
         assert not config["alert_path"].exists()
+
+
+class TestZombiePidIsDead:
+    """A zombie stays in the process table until its parent reaps it, so
+    kill(pid, 0) reports it alive forever — the rescue-poller incident of
+    2026-08-15 (a SIGSTOPped parent could not reap its exited child and the
+    pid-liveness check looped for the full timeout). A zombie can never run
+    again: liveness must treat stat ``Z`` as dead."""
+
+    def test_zombie_counts_as_dead(self, monkeypatch):
+        def fake_run(argv, **kwargs):
+            class R:
+                returncode = 0
+                stdout = "Z+\n"
+            return R()
+
+        monkeypatch.setattr(watcher.subprocess, "run", fake_run)
+        assert watcher._pid_alive(12345) is False
+
+    def test_running_stat_counts_as_alive(self, monkeypatch):
+        def fake_run(argv, **kwargs):
+            class R:
+                returncode = 0
+                stdout = "S+\n"
+            return R()
+
+        monkeypatch.setattr(watcher.subprocess, "run", fake_run)
+        # PID 1 (launchd) always exists; kill(1, 0) raises PermissionError,
+        # which the alive check treats as alive without consulting ps — use a
+        # real child of ours instead so the kill(pid, 0) leg also exercises.
+        proc = subprocess.Popen(["sleep", "5"])
+        try:
+            assert watcher._pid_alive(proc.pid) is True
+        finally:
+            proc.kill()
+            proc.wait()
+
+    def test_ps_failure_falls_back_to_alive(self, monkeypatch):
+        def fake_run(argv, **kwargs):
+            raise OSError("ps unavailable")
+
+        monkeypatch.setattr(watcher.subprocess, "run", fake_run)
+        proc = subprocess.Popen(["sleep", "5"])
+        try:
+            assert watcher._pid_alive(proc.pid) is True
+        finally:
+            proc.kill()
+            proc.wait()
+
+
+class TestLauncherSuccessReceiptInjection:
+    """The launcher must close the config-orphan half of #1064: a liveness
+    config without success_receipts gets one derived from the wrapped
+    command's safe_run --status-receipt, written as an EFFECTIVE copy (the
+    caller's file is never mutated)."""
+
+    def _load_launcher(self):
+        spec = importlib.util.spec_from_file_location(
+            "launch_detached_process", _REPO / "tools" / "launch_detached_process.py"
+        )
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+
+    def _bare_config(self, tmp_path: Path, **extra) -> Path:
+        raw = {
+            "schema": "pact.run_liveness_watcher.config.v1",
+            "pid_file": str(tmp_path / "run.pid"),
+            "alert_path": str(tmp_path / "alert.json"),
+            "poll_s": 1,
+        }
+        raw.update(extra)
+        path = tmp_path / "liveness.json"
+        path.write_text(json.dumps(raw), encoding="utf-8")
+        return path
+
+    def test_injects_receipt_from_status_receipt_flag(self, tmp_path):
+        launcher = self._load_launcher()
+        config_path = self._bare_config(tmp_path)
+        cmd = ["python", "tools/safe_run.py", "--status-receipt", str(tmp_path / "s.json"), "--", "python", "train.py"]
+        effective = launcher._augment_liveness_success_receipts(config_path, cmd, tmp_path)
+        assert effective != config_path
+        augmented = json.loads(effective.read_text(encoding="utf-8"))
+        assert augmented["success_receipts"] == [
+            {"label": "safe_run_status", "path": str(tmp_path / "s.json")}
+        ]
+        assert augmented["success_settle_s"] == 90
+        # The caller's file is untouched.
+        original = json.loads(config_path.read_text(encoding="utf-8"))
+        assert "success_receipts" not in original
+
+    def test_declared_receipts_pass_through(self, tmp_path):
+        launcher = self._load_launcher()
+        config_path = self._bare_config(
+            tmp_path,
+            success_receipts=[{"label": "mine", "path": str(tmp_path / "mine.json")}],
+        )
+        cmd = ["python", "tools/safe_run.py", "--status-receipt", str(tmp_path / "s.json")]
+        assert launcher._augment_liveness_success_receipts(config_path, cmd, tmp_path) == config_path
+
+    def test_no_status_receipt_passes_through(self, tmp_path):
+        launcher = self._load_launcher()
+        config_path = self._bare_config(tmp_path)
+        cmd = ["python", "some_tool.py", "--flag", "value"]
+        assert launcher._augment_liveness_success_receipts(config_path, cmd, tmp_path) == config_path
+
+    def test_augmented_config_loads_and_adjudicates_clean_exit(self, tmp_path):
+        launcher = self._load_launcher()
+        heartbeat = tmp_path / "heartbeat.log"
+        heartbeat.write_text("x\n", encoding="utf-8")
+        config_path = self._bare_config(
+            tmp_path,
+            artifact_checks=[
+                {"label": "hb", "path": str(heartbeat), "max_age_s": 3600, "grace_s": 0}
+            ],
+        )
+        receipt = tmp_path / "safe_run_status.json"
+        cmd = ["python", "tools/safe_run.py", "--status-receipt", str(receipt), "--", "python", "x.py"]
+        effective = launcher._augment_liveness_success_receipts(config_path, cmd, tmp_path)
+        config = watcher.load_config(effective)
+        (tmp_path / "run.pid").write_text(str(_dead_pid()), encoding="utf-8")
+        receipt.write_text(json.dumps({"exit": 0, "status": "ok"}), encoding="utf-8")
+        now = time.time()
+        alert = watcher.evaluate(config, started_at=now - 10, now=now)
+        assert alert is not None and alert["reason"] == "clean_exit"
