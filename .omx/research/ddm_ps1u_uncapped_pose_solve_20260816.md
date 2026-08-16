@@ -118,7 +118,11 @@ the arm pivoted to the target.
 
 ## 4. THE PRIZE IS IN THE TARGET — 94.9% realized d_pose reduction
 
-Same n=29, same instrument, realized through the real render + uint8 + frozen PoseNet:
+Same n=29, same instrument, realized through the real render + uint8 + frozen PoseNet.
+**Snapshot note:** the fleet continued past this snapshot; at n=50/64 the figures are
+mass-weighted reduction **92.00%**, gain past a 3-sweep cap **0.155%**, worse-than-base **0** —
+both conclusions (cap ≈ worthless, retarget large) stable across n=13/21/29/50.
+
 
 | quantity | value |
 |---|---|
