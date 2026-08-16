@@ -28,11 +28,20 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
 from typing import Any, Mapping
 
 import numpy as np
 import torch
+
+# Same bootstrap the trainer uses: `python experiments/<script>.py` puts only the
+# script's own directory on sys.path, so the `experiments` package (and src/tac)
+# must be inserted before the imports below.
+_REPO_ROOT = Path(__file__).resolve().parents[1]
+for _root in (_REPO_ROOT, _REPO_ROOT / "src"):
+    if str(_root) not in sys.path:
+        sys.path.insert(0, str(_root))
 
 from experiments import ddm_wd2_width_distillation_build as wd2_build
 from experiments.ddm_wd3_scorer_aware_width_distillation import (
