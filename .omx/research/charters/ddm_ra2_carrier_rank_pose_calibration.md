@@ -218,3 +218,109 @@ not produce any number reported as d_pose.
 The ra1 ladder, both premises (P1 frame-0-only ⇒ seg-invisible; P2 least-squares lower bound),
 the pk2-gate invalidation, and the break-even *form* are untouched. Only the **axis of the
 denominator** and the **realization path** are corrected.
+
+---
+
+## AMENDMENT 2 (2026-08-16, round-1 recursive adversarial review, independent reviewer arm)
+
+An independent reviewer re-derived this charter's premises from source. **The rank-4 BYTE
+conclusion survives. The rank-4 MSE conclusion does not, and the payloads on disk were
+corrupt.** Six binding corrections; two of them correct arguments *this charter* made.
+
+### C1 — CRITICAL, FIXED: the emitted payloads did not decode back (11 of 12 corrupt)
+
+ra1 hand-rolled the codec's zigzag as `((delta << 1) ^ (delta >> 63)) & 0xFFF`. The
+receiver's coefficient cumsum is **modular** (`inflate.py:278`, `torch.cumsum(...) & 0xFFF`),
+so `delta` must be wrapped into signed 12-bit **before** zigzag. Masking **after** zigzag
+truncates the high bit of an already-doubled value and decodes to a different number whenever
+`|delta| > 2047` — which happens at 11 of 12 ranks (max |delta| reaches 3,506). The shipped
+`carrier_codec._zigzag_signed` **raises** on out-of-range; the hand-rolled copy dropped that
+guard. Rank-4 true on-disk MSE was 638.13 against a receipted 156.93.
+
+FIXED at both sites (`67afd3fd83`) with `((delta + 2048) & 0xFFF) - 2048` before zigzag, plus
+a mandatory `_assert_round_trip` that replays the receiver's exact reconstruction and refuses
+to emit on mismatch. All 12 ra1 ranks and all 44 ra1b payloads regenerated, 12/12 and 44/44
+verified. Cost: **+7 B at rank 4**. **ra2 MUST use the regenerated payloads** and must assert
+`round_trip_verified` in its own receipt — the pre-fix payloads would have made ra2 measure a
+carrier nobody designed and report a false NO-GO.
+
+### C2 — the keep set is EXHAUSTIVELY optimal, not energy-greedy; P2 is REFUTED as published
+
+`ddm_ra1b_exhaustive_keepset_refit.py` searches all C(12,r). Greedy is suboptimal at **10 of
+11 ranks**. ra1's greedy keep set ranks **269th of 495** at r=4. P2's claim — "a LOWER BOUND on
+the reconstruction error of EVERY rank-r carrier … a rank that fails here fails under every
+refit heuristic" — is FALSE as published: the refit is optimal **given** the keep set; the keep
+set was a heuristic; the space is exhaustible in seconds. **Two independent derivations agree**
+on the r=4 optimum (keep `[1,2,3,8]`, MSE 104.665).
+
+### C3 — the baseline is 22,161 B, not 22,278 B; the rank-4 margin is +248 B, not +295 B
+
+The archive's actual carrier stream is **22,161 B** (the custody pin at the head of this
+charter already says so). Every "saved bytes" row was computed against a 22,278 B CPR1
+rebaseline and overstated by 117 B. Corrected, at the **exhaustive** rank-4 keep set:
+
+| quantity | value |
+|---|---:|
+| coded bytes (exhaustive r=4) | 7,499 |
+| saved vs the real 22,161 B stream | **14,662** |
+| the rung (`RUNG_BYTES`) | 14,414 |
+| margin over the rung | **+248 B** |
+| rate credit | 0.0097628 S |
+| % of the 0.0095973 gap | **101.7%** |
+| affordable d_pose ratio | **4.739×** |
+
+Greedy r=4 lands 7,576 B → +171 B margin. Both still clear the rung; the margin is 42%
+smaller than this charter first published, so **report the margin, never just "clears."**
+
+### C4 — this charter's pk2 refutation was WRONG; the honest statement is a units error
+
+§"The gate that is INVALID" argued the pk2 gate is refuted because "the rank-12 FULL-RANK
+control realizes int12 MSE 2.4865e-05, 9.9× the gate." **Withdrawn.** Rank 12 is *not* a
+full-rank control — it re-derives `sub_scale` and requantises, so its residual belongs to the
+tool's requantizer, not to the shipped bytes; the shipped codes against themselves are exactly
+0.0. The correct finding is narrower and more useful: **pk2 never defined or measured the
+quantity its 2.5e-6 gate is denominated in.** It is an undefined-units gate, not a gate the
+frontier fails. Do not cite the 9.9× figure. The break-even rule in §"The VALID decision rule"
+is unaffected — it needs no gate literal.
+
+### C5 — the shipped receiver HARD-GATES the carrier body length; a container port is in scope
+
+The receiver expects a carrier body of exactly 22,183 B. A rank-reduced carrier cannot be
+dropped in as this charter's step 2 describes. Every one of these hardcodes 12 and must be
+ported for the swap to parse back: `PACKED_CAP1_SECTION_BYTES`,
+`_restore_packed_cap1_metadata`, `_restore_cap1`, `decode_cap1(dimensions=)`, the F0C1 u16
+length field, and the Q2C1 overlay. **This is a porting item, not a wall** (the receiver is
+ours, rule-118 free code) — but it is REQUIRED work that must be scoped before the swap, not
+discovered at runtime.
+
+### C6 — this charter's warnings paragraph was wrong in evidence AND mechanism
+
+Step 1 says "0/12 raise" under `errstate(all="raise")` and instructs the next arm not to
+re-litigate. **Measured: 12/12 raise.** My check wrapped `lstsq` alone; the raise comes from
+the `matmul` at `ra1:263` (`Grc @ coeff.T`) and is a numpy-1.26 matmul false positive —
+data-independent, unrelated to torch, and visible in the re-run output above the ladder. The
+*conclusion* survives (the solve is correct: verified to 1.6e-15, cond ≤ 15.71), but the
+evidence and mechanism were both wrong, and "do not re-litigate" is withdrawn. Replace it with:
+the warnings are a known numpy-matmul false positive at `ra1:263`; do not suppress warnings
+globally; do not treat them as a numerical defect.
+
+### What SURVIVED independent re-derivation (cite these freely)
+
+- Custody re-derived byte-identically from the four pins.
+- **P1 seg-invisibility HOLDS**, including the adversarial half (aliasing, cross-frame stats).
+- The archive is **ONE STORED ZIP member** (compress_type 0, compress_size = file_size =
+  182,659, +100 B fixed overhead), so carrier byte changes map **1:1** to archive bytes and
+  `archive_bytes_if_adopted` is exact on the byte axis.
+- The closed-form MSE is validated against a real render: 156.543 actual vs 156.926 closed
+  form — **0.24% conservative**.
+- `RUNG_BYTES = 14,414` is correct.
+
+### A strictly better candidate that is still unbuilt
+
+Rotating the rank-r subspace (whitened eigendecomposition of the Gram) is receiver-legal for
+free — the basis atoms are stored data, rotation commutes with the bicubic→mean-subtract
+chain, and per-atom RMS is absorbable into the coefficients. Closed-form error at r=4 is
+**6.00%** (vs 20.41% exhaustive-selection, 30.60% greedy); r=6 is 2.56%. Eigen-sum closes
+exactly (512.7490). **Error-only so far — not yet priced in bytes.** If ra2's d_pose(MSE)
+curve is steep, this is the rung to price next; a pose-Jacobian-weighted (Fisher) rotation is
+better still and also unbuilt.
