@@ -353,36 +353,67 @@ An honest trap caught in my own review: the first run resolved the selector tail
 checks 2–3 silently skipped while `failed_checks` stayed empty. Cured by reconstructing the tail
 from the packed carrier and making a non-evaluated required check FAIL LOUD.
 
-### The one remaining gap: the CONTAINER WRITER
+### Container writer: BUILT and PROVEN — the fire order is SEALED
 
-`read_residual_archive` is decode-only **by design** — the hv1 runtime has no writer, so
-re-packing the `p` member and re-zipping lives in the compile path. Until that runs there is no
-candidate archive sha256/bytes, so **the fire order cannot be sealed** and inventing a sha would
-be exactly the fake this program forbids. `CANDIDATE_FIRE_ORDER_TEMPLATE.json` carries the
-recomputed bar, the expected-components arithmetic, both decode hash-request fields and the
-remote manifest step (so decode localization rides along free), and names all four unmet
-preconditions: the writer, the ARCHIVE-level byte-identity control, the repeat-identical build,
-and parse-back verification.
+`experiments/ddm_ps1u_container_writer.py` → **`CONTAINER_WRITER_PROVEN`**.
+
+**The structural fact that made it tractable** (measured at source): the frame-0 overlay is the
+*trailing slice* of the brotli-decompressed carrier body — `PACKED_CAP1_SECTION_BYTES` = 22,183
+of packed CAP1 metadata, then the overlay to the end (22,219), and the shipped bytes at exactly
+that offset are `Q2C1`, 36 B. So a swap is a splice plus one recompression.
+
+**The recompression identity is exact and was measured, not guessed:**
+`brotli.compress(body, quality=11, lgwin=24)` reproduces the shipped 22,161 B carrier stream
+**byte-for-byte**. Quality 9 and 10 miss by length; quality 11 at lgwin 22 matches in *length*
+but not in bytes. The writer pins (11, 24) and **re-proves the round-trip on every run** rather
+than trusting the constant.
+
+| proof | result |
+|---|---|
+| **(a) byte-identity control, through the WRITER path** | writer with the ORIGINAL overlay reproduces **182,759 B / sha `80d9c8c6…`** exactly; `member_identical = true` |
+| **(b) parse-back** | written archive → real receiver → recovered overlay **626 B byte-equal** to the retained P1D1; 60 pairs; **deltas equal the solved deltas exactly** |
+| **(c) repeat-identical** | two independent writer runs → **same sha** `97048f9f…`, same 183,347 B |
+
+**Candidate archive: 183,347 B, sha `97048f9fe1845a2b0b602dbdaf5f85e87fb19dee0e6cc57503fe5fd60096bef8`.**
+The archive delta is **+588 B**, not the section's 626 B — brotli absorbs part of the addition,
+which is why the rate leg is priced from **real archive bytes** and never from the section size.
+
+**Receiver graft lives in a NEW generation.** The shipped receiver refuses `P1D1` by design
+(`_decode_rx1_models` accepts only `Q2C1` at the overlay offset) — a correct fail-closed refusal,
+and the reason the first parse-back attempt failed. The graft (a `decode_frame0_overlay` magic
+dispatch plus magic acceptance, vendored generic code) went into a COPY at
+`retained/candidate_generation`; **the pinned generation was not mutated** (verified: its archive
+sha and overlay-module sha are unchanged).
+
+### SEALED FIRE ORDER — `SEALED_T4_FIRE_ORDER.json`
+
+| leg | value |
+|---|---|
+| rate | 0.12169172 → **0.12208324** (**+0.000392 S**, from +588 real archive bytes) |
+| seg | **0.029611 asserted decode-identical** — the edit touches only the frame-0 carrier; SegNet reads the LAST frame, untouched. Any T4 seg drift is signal. |
+| pose | **the measured unknown**, ceiling 0.008295 S |
+
+> **ADMIT iff** the T4 row's recomputed S < **0.15959729295498598** with the pose leg
+> **MEASURED**. Equivalently: **CUDA d_pose must fall by more than 9.21%** (from 6.885643e-06 to
+> below **6.251199e-06**). The advisory row is DIRECTIONAL ONLY and cannot admit (§5b).
+
+Both decode hash-request fields and the remote `manifest` step are in the order, so per-pair
+decode localization rides along at $0 marginal. MAIN fires; this arm fired nothing.
 
 ## NEXT_IF_RESUMED
 
-1. **BUILD THE CONTAINER WRITER — the single owed piece.** Re-pack the `p` member with the P1D1
-   selector tail and re-zip. The receiver half is done and verified (§8); the writer is not.
-   Reuse `qs1._candidate_physical_carrier` / `_compile_one` mechanics (the `repeat` flag gives
-   the repeat-identical build) — never a parallel compiler. Then close the three remaining
-   preconditions in `CANDIDATE_FIRE_ORDER_TEMPLATE.json`: (a) ARCHIVE-level byte-identity
-   control — an ABSENT P1D1 section must reproduce 182,759 B / sha `80d9c8c6…` exactly;
-   (b) two builds, equal shas; (c) parse-back verified through the real receiver. Assert
-   seg-hold at compile (advisory Δd_seg == 0, or price it exactly).
-2. **SEAL and fire.** Fill the template's real archive sha + bytes, keep the recomputed bar
-   (**CUDA d_pose must fall >9.79%** at 626 B — recompute if the section changes), and MAIN
-   fires ONE T4 row (~$0.16) with both decode hash-request fields enabled plus the remote
-   `manifest` step, so per-pair decode localization rides along at $0 marginal.
-3. **Cure the decode defect (§5b), independent of scoring.** Port the decode to the portable
-   native / `runtime-rs` program so ONE deterministic implementation runs on every host —
-   engineered to **PRESERVE the CUDA-favorable frames** (the frontier rides them), never naively
-   CPU-pinned, which would lock in the degraded decode at ~0.03 S. Suspects ranked in §5b.
-4. **n600 only if the T4 row shows CUDA-axis signal.** `--all-pairs`, ~2 h at 4 shards.
-5. **Do not re-open the relinearization cap** (§3, formulation scope; pg1 and pj2 agree on two
-   other vehicles). **Do not quote §4's advisory −0.028 as a prize** — the CUDA ceiling is
-   0.0083 S and the advisory chain decodes a different object.
+1. **MAIN fires the sealed T4 row** (`SEALED_T4_FIRE_ORDER.json`, ~$0.16) on candidate
+   `97048f9f…` @183,347 B. Admission is pre-registered: **CUDA d_pose must fall >9.21%**.
+   Enable both decode hash-request fields + the remote `manifest` step so per-pair decode
+   localization rides along free.
+2. **On ADMIT**: the pointer moves; then re-solve the NEXT mass tranche (pairs 61–120 carry the
+   following ~15% of mass) and re-price — the marginal B/pair is flat at ~10.4 so the exchange
+   rate is known. On REFUSE: the transfer question is answered with a real number and the pose
+   axis routes to joint/nonlinear training (js8) with that number in hand.
+3. **Cure the decode defect (§5b) independent of scoring** — portable native / `runtime-rs`
+   decode, engineered to **PRESERVE the CUDA-favorable frames** (the frontier rides them), never
+   naive CPU-pinning, which would lock in ~0.03 S of degradation.
+4. **Promote the P1D1 receiver graft** into the canonical runtime lineage if the row admits; it
+   is generic code (no video-derived data) and is already contract-verified 8/8.
+5. **Do not re-open the relinearization cap** (§3). **Do not quote §4's advisory −0.028 as a
+   prize** — the CUDA ceiling is 0.0083 S.
