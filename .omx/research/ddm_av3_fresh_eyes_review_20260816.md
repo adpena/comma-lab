@@ -34,8 +34,16 @@ movement.
 **But the probe is confounded on a different axis, and its own control proves it.** C0 (lr 2e-7 —
 100× lower) reproduces the same up-then-anneal shape: **+5,879 flipped pixels at step 100, +2,164
 at step 600**, against A2's +27,170 / +8,049. A 100× learning-rate change bought only a **4.6×**
-excursion. And **neither arm ever beat step 0** — `best_quantized_exact_seg` stayed pinned at the
-init in both.
+excursion. And **no arm ever beat step 0** — `best_quantized_exact_seg` stayed pinned at the init in
+all four.
+
+**With all four arms landed, the shape is a power law the control obeys too.** Across three decades
+of lr and **250× of weight displacement**, `peak_flips ∝ ‖Δw‖^0.458` (**R² = 0.9969**). A smooth
+local optimum would give exponent ≈ 2. Exponent ½ is what a **piecewise-constant argmax field
+perturbed diffusively** gives: only pixels already within δ of a decision boundary can flip, so
+flips scale as √δ. **The init sits on an argmax plateau, not in a descendable basin** — so the
+adjudication's two branches ("genuine local optimum" vs "EMA artifact") are both wrong, and the
+binding constraint is the objective's *direction*, not the learning rate. Full ladder in §F1b.
 
 **The mechanism is an optimizer cold start, not a learning rate.** The trainer builds
 `torch.optim.AdamW(model.parameters(), lr=args.lr, ...)` fresh (line 917) with **no moment restore
@@ -83,7 +91,7 @@ residuals**, neither on today's arc (F9).
 
 | # | sev | finding | what it changes |
 |---|---|---|---|
-| **F1** | HIGH | EMA lag REFUTED (0.087 → 0.008); control C0 reproduces the shape; mechanism is a cold-start Adam transient at full lr, no warmup | the lr1 ladder measures an optimizer transient; A1/A3 as designed cannot answer the question |
+| **F1** | HIGH | EMA lag REFUTED (end lag 0.006–0.010 in all 4 arms); `peak_flips ∝ ‖Δw‖^0.458`, R²=0.9969 over 250× displacement — an argmax **plateau**, not a basin (a basin gives exponent ≈2) | answers MAIN's pending adjudication: neither branch is right; the constraint is the objective's direction, not lr |
 | **F2** | HIGH | A2's final payload computed then discarded; no `result.json`; `safe_run status=ok exit=1`; sealed ticket reproduces the crash | A1/A3 must not fire as sealed; 2-landing fix owed (ALWAYS KEEP THE PAYLOAD) |
 | **F3** | HIGH | `result.json` headline is the argmin **including step 0**, so a run that only degrades reports its INIT with `verdict: PASS` | any lr1 adjudication read from result.json top-level is unsafe; `history` is the only honest surface |
 | **F4** | MED-HIGH | η closure is solver-instance, not family; shortfall 0.1295 < rt1's own measured 0.297 solver swing; at η=1 the channel supplies 76% of the gap | rt1 §6.4 needs a third reopening condition + headline aligned to §7 |
@@ -157,19 +165,69 @@ Three things follow, none of which the adjudication assumed:
   (`packed_parameter_bytes` 40,252 at 4 bits); `√80504 · 100·lr` = 0.57 (A2) / 5.7e-3 (C0);
   measured 4.74e-2 / 1.44e-3 — the same ~1/12 and ~1/4 fractions, consistent with clipping.
 
-**Routing consequence for the lr1 adjudication.** "A2 MOVED-UPWARD" is not an lr result. Firing A1
-(2e-6) and A3 (2e-4) as designed will trace the same cold-start ladder at three more points. The
-arms that would actually discriminate cost the same and are all one flag:
+### F1b — the complete four-arm ladder (A1/A3 landed during this review)
 
-- **N0 — `--lr 0`** (or 2e-9): the true null. Isolates any non-optimizer drift.
-- **W1 — linear lr warmup** (or `--float-warmup-steps > 0`, which the trainer already supports at
-  `:1033`): if the excursion collapses, it is the cold start, and lr was never the variable.
-- **R1 — resume optimizer state**: `--resume-from` restores AdamW moments (`:489`, `:1171`). A
-  burn-2 checkpoint with moments would test the object rather than the restart.
+All four arms measured the same way, from their retained `*.full_state.pt`:
 
-*verdict_scope: INSTANCE (A2 + C0, burn-2 semantic base, 600 steps, MPS, seed 20260715). The
-cold-start mechanism is DERIVED from code + a scale check, not from an ablation; W1/N0 are the
-falsifiers.*
+| arm | lr | peak Δpx | end Δpx | recovery | ‖Δw‖@100 | ‖Δw‖@600 | max lag | **end lag** |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| C0 | 2e-7 | 5,879 | 2,164 | 63.2% | 1.444e-03 | 1.445e-03 | 0.110 | **0.010** |
+| A1 | 2e-6 | 14,960 | 3,828 | 74.4% | 9.521e-03 | 8.772e-03 | 0.159 | **0.006** |
+| A2 | 2e-5 | 27,170 | 8,049 | 70.4% | 4.740e-02 | 5.045e-02 | 0.227 | **0.008** |
+| A3 | 2e-4 | 76,594 | 59,357 | 22.5% | 3.614e-01 | 5.349e-01 | 0.271 | **0.009** |
+
+**Answer to the pending adjudication: it is NOT an EMA artifact, and it is NOT a local optimum
+either.** Two facts settle it:
+
+1. **At the horizon, shadow ≡ live in every arm** — end lag 0.006–0.010. The four-arm ranking
+   (C0 3.05e-4 < A1 3.19e-4 < A2 3.54e-4 < A3 7.89e-4) is a ranking of *live weights*. The lag
+   peaks at step 300 in every arm — the ce→softplus_margin stage boundary, where the objective
+   changes and the weights jump — and it collapses again by step 500. Real, explained, transient,
+   and never at an eval that carries the verdict.
+2. **The excursion is a clean SQUARE-ROOT law in weight displacement, across 250× of it:**
+
+   > `peak_flips ∝ ‖Δw‖^0.458`  (R² = **0.9969**, four arms, three decades of lr)
+   > `end_flips ∝ ‖Δw‖^0.557`   (R² = 0.9460)
+   > `‖Δw‖@100 ∝ lr^0.789`      (R² = 0.9982)
+
+**A local optimum in a smooth basin gives exponent ≈ 2** — the metric would rise quadratically and
+the control would be nearly flat. Measured is **≈ 0.5**, and the control is *not* flat. Exponent ½
+is the signature of a **piecewise-constant argmax field perturbed diffusively**: displace the
+weights by δ and the number of pixels whose argmax crosses scales as √δ, because only pixels within
+δ of a decision boundary can flip. That is a *plateau*, not a *basin*.
+
+So the honest verdict is neither of the two branches the adjudication offered:
+
+> **The init is not at a descendable optimum and it is not an EMA artifact. It sits on an argmax
+> plateau where every displacement costs flips at rate √‖Δw‖, and the trainer's descent direction
+> does not buy back more boundary pixels than the displacement costs — at any of the four learning
+> rates.** A3 additionally breaks (22.5% recovery vs 63–74%) and its displacement is still *growing*
+> at step 600 (1.48× its step-100 value), which is divergence, not a wider search.
+
+This is a statement about the **objective**, not the learning rate — and it is the same conclusion
+rt1 §6.4 reached from the other side. The metric counts one-pixel boundary crossings; the trainer
+descends a scalar `curriculum_loss` that is already `.mean()`-reduced over the whole field
+(`lifted/semantic_renderer_oracle.py:181`). No learning rate fixes a direction mismatch.
+
+**Routing consequence for the lr1 adjudication.** "MOVED-UPWARD" is real but is not an lr finding —
+every arm moves upward and the shape is a power law the control also obeys. The arms that would
+discriminate the *remaining* question (is the plateau a property of the object, or of the cold
+start?) are all one flag and cost ~380 s each:
+
+- **W1 — lr warmup** (`--float-warmup-steps > 0`, already supported at `:1033`): if the step-100
+  peak collapses while the horizon value holds, the peak was the cold start and only the horizon is
+  the object.
+- **R1 — resume optimizer state**: `--resume-from` restores AdamW moments (`:489`, `:1171`), so the
+  run continues the tail instead of restarting it.
+- **N0 — `--lr 0`**: the true null, isolating any non-optimizer drift. Cheapest of the three.
+
+But note the ladder already bounds what they can find: the C0→A3 fit has R² 0.997, so a warmup arm
+that lands off this curve is the interesting result, and one that lands on it closes the question.
+
+*verdict_scope: INSTANCE (the four ddm_lr1 arms, burn-2 semantic base, 600 steps, MPS, seed
+20260715, `--weight-qat-q3q4`). The √‖Δw‖ law is MEASURED on this ladder; the cold-start attribution
+for the step-100 peak is DERIVED from code plus the scaling, not from an ablation — W1 is its
+falsifier. Nothing here licenses a claim about longer horizons or other objectives.*
 
 ---
 
@@ -466,21 +524,29 @@ copies were excluded from live classification; could not verify their consumers.
 
 ### (a) the lr1 adjudication
 
-1. **Do not fire A1/A3 from the sealed ticket** until `--save` no longer collides (F2). One-word fix
-   in the ticket; the argparse guard is the durable one.
-2. **Re-scope the verdict.** The probe as designed cannot separate learning rate from optimizer
-   cold start, because its control moves too (F1). "A2 MOVED-UPWARD" should read *"A2 and C0 both
-   move upward; the excursion is sub-linear in lr (100× → 4.6×) and neither arm beats the init."*
-3. **Swap the remaining arms.** N0 (`--lr 0`), W1 (lr warmup / `--float-warmup-steps > 0`), R1
-   (`--resume-from` with optimizer moments) each cost one flag and ~380 s, and each discriminates
-   the mechanism. A1/A3 add two more points on a ladder whose shape is already explained.
-4. **Read `history`, never `result.json` top-level** (F3), and note A2 has neither a result nor a
-   final deployment eval — only its `run.log`.
+1. **Adjudicate as PLATEAU, not as optimum-or-artifact** (F1b). Both offered branches are refuted:
+   the shadow tracks live to <1% at every horizon eval, and the excursion follows √‖Δw‖ with
+   R²=0.997 including the control. The receipt-supported line is *"no lr descends because the
+   trainer's direction is not the metric's direction; the init sits on an argmax plateau where any
+   displacement costs flips at rate √‖Δw‖."*
+2. **A1/A3 have already fired** — with `--save …/ckpt`, so they survived. **A2 remains the only arm
+   with no `result.json`** (F2); its ladder row above is reconstructed from `run.log` + checkpoints.
+   Any future arm must use `ckpt`, and the argparse guard is the durable fix.
+3. **The remaining discriminator is W1 (lr warmup), not another lr.** The ladder's R²=0.997 already
+   bounds what a fifth lr can show. W1 / R1 / N0 each cost one flag and ~380 s and test whether the
+   step-100 peak is the cold start; an arm landing *off* the curve is the informative outcome.
+4. **Read `history`, never `result.json` top-level** (F3): C0's headline is its own input with
+   `verdict: PASS`, and the same will be true of every arm that only degrades — which is all four.
 
 ### (b) the ddm_rg1 regime charter
 
 rc2 deliberately did not build `band_objective.py` until the probe answered. **The probe has now
-answered in a way that promotes it.** The one code delta rc2 identified — a per-pixel variant of
+answered in the way that most strongly promotes it.** The measured plateau law (F1b) says the
+failure is a *direction* mismatch — a scalar field-mean objective descending against a metric that
+counts one-pixel boundary crossings — which is precisely what a band-weighted per-pixel objective
+changes. The charter's own gating condition ("new objective terms must claim a DIFFERENT landscape
+vs this measured no-descent baseline") is now answerable: the baseline landscape is `√‖Δw‖` with
+R²=0.997, so a band objective must break that exponent, and that is a cheap pre-registered bar. The one code delta rc2 identified — a per-pixel variant of
 `curriculum_loss` (`lifted/semantic_renderer_oracle.py:181`, currently scalar `.mean()`-reduced) —
 is what rt1 §6.4 independently routes everything to (edge-weighted Road↔Lane). It is now the
 prerequisite, not the downstream: an objective that does not weight the one-pixel Road↔Lane
