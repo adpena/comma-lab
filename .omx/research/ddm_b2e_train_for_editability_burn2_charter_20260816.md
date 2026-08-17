@@ -2,8 +2,25 @@
 
 Operator authority: 2026-08-16 "full authorization to pursue all pattern follow ons work and regimes
 level work and everything" — this is ns1 P1 (#1074), the only named supplier class for the
-−15,157 B rate rung. Owner of the FIRE: MAIN (governed Metal slot). This arm BUILDS to admission
+rate rung. Owner of the FIRE: MAIN (governed Metal slot). This arm BUILDS to admission
 and seals; it never launches training, never runs a full n600 scorer pass.
+
+> **BAR REBASED 2026-08-17 (MAIN, ra2crr NEXT_IF_RESUMED row 2).** This charter shipped citing
+> **−15,157 B**. That figure is computed against the SUPERSEDED e480b base and citing it against
+> the live `hv1` frontier *inverts* `fb1`, the memo written to kill it. The live figures, re-derived
+> here rather than inherited:
+>
+> | quantity | value | why |
+> |---|---|---|
+> | live rate bar | **−14,413.4 B** | `hv1` ep0634 archive 182,759 B − ceiling |
+> | **invariant form** | **archive ≤ 168,345.6 B** | `(0.15 − seg 0.029611 − pose 0.0082945765) × 37,545,489 / 25` |
+>
+> **Prefer the CEILING to the DELTA, and this is the structural cure for the whole stale-bar genus.**
+> A delta goes stale on *every* rate move, because its base is the archive size. The ceiling goes
+> stale only when DISTORTION moves. Since nearly every move this campaign makes is a rate move at
+> fixed distortion, the ceiling survives the updates the delta does not. It is not literally
+> invariant — it *is* invariant under the moves we actually make, which is what matters. State
+> future rate targets as `archive ≤ N B` and the number stops rotting.
 
 ## The regime thesis (measured, do not re-derive)
 

@@ -212,6 +212,18 @@ The closure rests on three independent grounds, none of which is the falsifier:
    the 2×2 implied.
 2. **Structural ceiling.** Perfect execution returns 913–1,847 B = **6.3–12.8% of the gap** (§3).
    A rung whose *best case* is a tenth of the target does not deserve further slots.
+
+   > **SCOPE CORRECTED 2026-08-17 (MAIN, ra2crr NEXT_IF_RESUMED row 3).** This ground is stated
+   > at FAMILY scope but the 6.3–12.8% ceiling is **r=11-scoped**. `ra1` measured the *family*
+   > ceiling at **102.1% of the gap** — at family scope the carrier could in principle supply the
+   > whole thing. Read as written, this ground would tell the next reader the carrier family is
+   > structurally incapable of mattering, which is false.
+   >
+   > **The closure survives, on grounds 1 and 3.** What actually kills this rung is DISTORTION,
+   > not a ceiling: 35.5× from break-even on the only priceable axis, with a byte credit
+   > 1.11–2.0× too generous. Cite distortion here. The ceiling belongs to the radius, not the
+   > family. Genus: `measured_object_vs_named_object_20260816` — the named object was the family,
+   > the measured object was one radius.
 3. **The denominator is optimistic.** The byte credit every arm divided by is 1.11–2.0× too large
    when measured (§3), so grounds 1 and 2 are both stated in the family's own favour.
 
