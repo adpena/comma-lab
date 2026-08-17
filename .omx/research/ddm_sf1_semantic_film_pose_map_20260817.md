@@ -1,6 +1,6 @@
 ---
 arm: ddm_sf1
-title: "The -2,874 B does not exist and what remains is worth 0 B. The sum is undecodable (two mutually exclusive receiver formats), so the honest ceiling is -2,051 B, and its MEASURED pose price on the correct GT axis is +0.062 S -- 6.5x the whole remaining gap, the wrong way. Re-pricing every mp2 row against the authority-tracking GT makes the refusal 1.45x STRONGER, not weaker. The map, over an 18-group partition of all 576 FiLM rows: raw damage spans 192.9x but per unit perturbation energy only 5.65x, so energy is the controlling variable. The one free lever found and REALISED: the shipped selector ranks rows WITHIN each tensor while blocks.1 carries 152x the row energy of blocks 2-3, and ranking globally at byte parity cuts d_pose 22.30x -- from 3,942x over break-even to 184x over. Mechanism: keep87 removes 0.00078% of the semantic weight energy and moves d_pose 76.8x."
+title: "The -2,874 B does not exist and what remains is worth 0 B. The sum is undecodable (two mutually exclusive receiver formats), so the honest ceiling is -2,051 B, and its MEASURED pose price on the correct GT axis is +0.062 S -- 6.5x the whole remaining gap, the wrong way. Re-pricing every mp2 row against the authority-tracking GT makes the refusal 1.45x STRONGER, not weaker. The map, over an 18-group partition of all 576 FiLM rows: raw damage spans 192.9x but per unit perturbation energy only 5.65x, so energy is the controlling variable. The one free lever found and REALISED: the shipped selector ranks rows WITHIN each tensor while blocks.1 carries 152x the row energy of blocks 2-3, and ranking globally at byte parity cuts d_pose 18.0-22.3x across two seeded subsets -- taking the best cell from 3,942x over break-even to 184x over. Mechanism: keep87 removes 0.00078% of the semantic weight energy and moves d_pose 76.8x."
 utc: 2026-08-17
 parent: ".omx/research/ddm_ra2crr_priced_pose_null_and_pool_census_20260816.md"
 fire_order: "ra2crr NEXT_IF_RESUMED row 1b (this unit also closes ra2crr row 5, unowned until now)"
@@ -95,7 +95,8 @@ Since the SM3R packet spends 6 B per RETAINED row, the byte credit depends only 
 are dropped, so ranking globally is free. At the keep87 count a global ranking picks **0 rows from
 blocks.1** (37 from blocks.2, 38 from blocks.3) and drops **24.95x less energy** for −125 B instead
 of −130 B. **REALISED through the full render and scorer: `Δd_pose` falls from 5.6863e-04 to
-2.5498e-05 — a 22.30x reduction at byte parity**, against a prediction of 2.09e-05 registered
+2.5498e-05 — a 22.30x reduction at byte parity (17.99x on an independent second subset,
+so the honest band is 18.0-22.3x)**, against a prediction of 2.09e-05 registered
 before the measurement (realised/predicted = 1.22). That is a real, free, previously unfound
 improvement to the selector: it takes the best cell from 3,942x over break-even to **184x over**.
 It does not rescue the family.
@@ -246,7 +247,7 @@ the 232 B format toll):
 | `sel_highest_norm_anticontrol` (prune the LARGEST rows) | −153 | 1.4061e-03 | 2.47x worse |
 | `sel_random_seed303` | −140 | 1.5450e-03 | 2.72x worse |
 | `sel_random_seed505` | −179 | 1.6726e-03 | 2.94x worse |
-| **`glob_lowest_norm_keep87count`** (rank globally, same 75 rows' worth of bytes) | **−125** | **2.5498e-05** | **22.30x BETTER** |
+| **`glob_lowest_norm_keep87count`** (rank globally, same 75 rows' worth of bytes) | **−125** | **2.5498e-05** | **22.30x BETTER** (17.99x at the second seed, §6b) |
 
 Against a random-pick mean of 1.0606e-03 the shipped magnitude selector buys a **1.87x** damage
 reduction and beats all five random draws, and the anti-control (prune the LARGEST rows) is 2.47x
@@ -314,10 +315,30 @@ What IS model-shaped here, and the realised check for each:
    but anyone porting "damage tracks energy" to a different actuator must re-measure the constant.
    This is exactly the cross-regime constant transfer the corpus keeps paying for.
 
-**Subset-sampling variability** is measured by a second seeded subset (seed 20260818) over five
-groups, launched detached as `run/chain_seed2.sh` writing `SF1_MAP__seed2.json`. It had not landed
-at write time. It bounds the n=120 sampling error only; it cannot move a verdict, because the
-n120↔n600 agreement is already measured at 9.0% against a miss factor of 184x at best.
+### §6b Subset-sampling variability — MEASURED on a second seeded subset
+
+The instrument's own repeat floor is exactly zero (deterministic render, deterministic forward,
+fixed thread pin and batch shape), so the variability worth reporting is SUBSET sampling. Five
+groups were re-measured on an independent seeded random subset, **seed 20260818**:
+
+| group | seed 20260817 | seed 20260818 | ratio |
+|---|---:|---:|---:|
+| `null_zero_perturbation_control` | 0.0000e+00 | **0.0000e+00** | control passes at both seeds |
+| `b2_scale_lo` | 1.0261e-05 | 9.1229e-06 | 0.889 |
+| `sel_mp2_keep87_lowest_norm` | 5.6863e-04 | 5.7492e-04 | **1.011** |
+| `glob_lowest_norm_keep87count` | 2.5498e-05 | 3.1959e-05 | 1.253 |
+| `b1_scale_hi` | 1.9789e-03 | 2.5931e-03 | 1.310 |
+
+**Individual absolutes move by −11% to +31%; the 75-row selections, which average over all three
+tensors, move by 1.1% and 25%.** The one number this could threaten is the global re-ranking gain,
+so it is reported as a range rather than a point: **17.99x (seed 20260818) to 22.30x (seed
+20260817).** Nothing in this memo turns on a factor smaller than that band — the smallest
+load-bearing factor is the 5.65x per-unit-energy spread, and the decisive ones are 184x, 3,942x
+and 21.4x.
+
+**What this variability does NOT threaten:** the byte findings (exact file measurements), the
+authority re-pricing (n600), the frame_0 invariance (n600, exact), the format-exclusivity finding
+(source), or the family verdict (a 184x miss cannot be closed by a 31% sampling swing).
 
 ## §7 Verdict
 
@@ -339,7 +360,8 @@ anything involving joint re-descent.
 **3. The free lever the shipped selector misses — MEASURED, not predicted.**
 `pack_prune_candidate` ranks within each tensor; `blocks.1.film.weight` carries 152x the row energy
 of blocks 2 and 3; a global ranking at the same cardinality picks 0 rows from block 1 and realises
-a **22.30x** lower `Δd_pose` (5.6863e-04 → 2.5498e-05) for 5 B less credit (−125 vs −130 B). That
+a **22.30x** lower `Δd_pose` (5.6863e-04 → 2.5498e-05) for 5 B less credit (−125 vs −130 B);
+**17.99x on an independent second subset, so the load-bearing band is 18.0-22.3x** (§6b). That
 moves the best cell in the unit from **3,942x to 184x** over break-even.
 `verdict_scope: INSTANCE` on the two mp2 prune counts. **This improves the selector and does not
 rescue the family.**
@@ -398,9 +420,9 @@ in this unit produced a length without keeping the bytes.
 - **ra2crr row 4 (the 22,032 B pool drift) is untouched.** My object is the 34,763 B semantic
   section, not the 22,161 B carrier, so I never cite the pool figure and did not re-derive it. That
   row stays open for whoever prices against the carrier next.
-- **The second-seed subset repeat had not landed at write time** — stated as such, with its armed
-  chain script (`run/chain_seed2.sh`) and output path (`SF1_MAP__seed2.json`), and with no claim
-  resting on it. Everything else in this memo is realised and in hand.
+- **The second-seed repeat covers 5 of the 31 groups, not all of them** (§6b). The other 26 have a
+  single subset each; their individual absolutes carry an unmeasured error of the same order
+  (−11% to +31% is the observed range).
 - **No shippable global-re-ranked candidate.** The 22.30x lever is measured on the weights; a real
   archive would need the SM3R header to carry a per-tensor keep count (it carries one global
   `keep_percent`), which is a receiver change this unit did not make.
@@ -418,7 +440,7 @@ re-pricing to WEAKEN the refusal; it strengthened it 1.45x.
 | # | row | owner | fire-condition |
 |---|---|---|---|
 | 1 | **Nothing further on post-hoc semantic weight edits.** `#1058`'s FAMILY closure survives on a corrected axis and a corrected mechanism; this unit adds a partition-wide measurement over all 576 rows. | — | do not reopen without joint re-descent |
-| 2 | **Harvest the second-seed repeat** — `run/chain_seed2.sh` is armed and detached, writing `SF1_MAP__seed2.json` over 5 groups at seed 20260818. It bounds n=120 sampling error; it cannot move a verdict. | MAIN | already running; $0 |
+| 2 | **Second-seed repeat: DONE and folded in** (§6b). Sampling error on individual absolutes is −11% to +31%; the global re-ranking gain reads 18.0-22.3x across the two subsets. No verdict moved. | — | closed |
 | 3 | **Fix the ranking SCOPE in `pack_prune_candidate`.** It ranks rows within each tensor; ranking globally is byte-neutral (−125 vs −130 B) and MEASURED 22.30x cheaper in pose. `global_lowest_norm_selection` is written and tested in `experiments/ddm_sf1_semantic_film_pose_map.py`; shipping it also needs a per-tensor keep count in the SM3R header, which today carries one global `keep_percent`. It does not rescue this family, but any future consumer of that packer inherits the defect. | unowned | any arm that reuses SM3R row pruning |
 | 4 | **Re-price the remaining PyAV-axis rows.** mp2's three are done here. `ddm_b2e_edit_replay_admission_verdict_20260816` and every memo quoting base `d_pose` 1.4747e-04 sits on the 21.4x-inflated lineage; where `pose6` was retained the correction is pure arithmetic, and it makes refusals STRONGER, not weaker. | MAIN | $0 wherever pose6 is retained |
 | 5 | **The 0.00078%-energy / 76.8x-`d_pose` ratio is the transferable number for the joint line.** It says which weights a joint objective must protect: block-1 FiLM carries 152x the row energy of blocks 2-3 and every one of the six loudest groups. The 18-group map plus the per-tensor energy census is the retained asset. | joint line (#982 trained receiver · js8) | when the joint line needs a freeze/allow mask |
