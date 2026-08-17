@@ -30,12 +30,37 @@ Scope notes:
   * ``TAC_AGENT_MODEL_GUARD_OK=1`` is the deliberate escape hatch (record the
     reason in the prompt).
 
+SECOND DUTY — CHARTER LINT (task #1082, ddm_cl3, 2026-08-17). Registry row
+``charter_lint_is_spawn_path_conditional_20260817`` measured the gap: all three
+charter-lint legs (``_lint_stale_numbers`` :1491 · ``_lint_falsified_premises``
+:1532 · ``lint_charter_optimal_form`` :1702) live ONLY in
+``tools/codex_arm_queue.py`` — the CODEX keeper path. Codex has been WALLED
+since 2026-08-15 (#1079), so every arm spawns through the Agent tool instead,
+and this hook is the ONLY PreToolUse matcher on ``Agent``. Consequence: every
+charter written during the wall was UNLINTED. The genus is a correct cure wired
+to a population that stopped being live (sisters: gl1's allow-listed suffixes
+going blind when the live artifacts changed extension; a discovery sweep
+returning zero because it searched the wrong disk). Two clauses fall out and are
+implemented here:
+  1. ALLOW-LISTS FAIL OPEN — so an Agent spawn this hook cannot lint is
+     announced LOUDLY on stderr, never passed in silence. An unrecognised spawn
+     shape is exactly how this defect was born.
+  2. A SEARCH THAT FINDS NOTHING MUST PROVE IT LOOKED — ``charter_lint`` returns
+     an explicit ``status`` so "ran, 0 findings" is distinguishable from "never
+     ran". Vacuity is never reported as a pass.
+The legs are IMPORTED from their one home, never copied: a second copy of a lint
+is a second thing to drift.
+
 Design invariants (mirroring ``tools/launch_guard_hook.py``):
   * FAIL-OPEN — any exception ⇒ allow (exit 0, no output). A PreToolUse hook
     must NEVER brick the session. Errors append (best-effort) to
-    ``.omx/state/agent_model_routing_guard_errors.log``.
+    ``.omx/state/agent_model_routing_guard_errors.log``. This binds the charter
+    lint doubly: it gates ALL Agent spawns, so a lint that fails closed on its
+    own bug is strictly worse than the coverage gap it cures.
   * PURE decision surface — ``decide(tool_input, env)`` has no I/O; unit-tested
-    in ``src/tac/tests/test_agent_model_routing_guard_hook.py``.
+    in ``src/tac/tests/test_agent_model_routing_guard_hook.py``. The charter
+    lint reads files, so it lives in its own ``charter_lint`` surface rather
+    than widening ``decide``.
   * Block emits both the current ``hookSpecificOutput.permissionDecision``
     shape and the legacy ``decision/reason`` shape for compatibility.
 
@@ -46,11 +71,13 @@ from __future__ import annotations
 
 import json
 import sys
+import tempfile
 import time
 from pathlib import Path
 
 _REPO = Path(__file__).resolve().parents[1]
 _ERROR_LOG = _REPO / ".omx" / "state" / "agent_model_routing_guard_errors.log"
+_QUEUE = _REPO / "tools" / "codex_arm_queue.py"
 
 # OPERATOR DIRECTIVE 2026-08-04 (superseding the 07-31 "Opus for all arms" law):
 # CODEX ARMS ONLY by default. No Claude subagent may be spawned — not Opus, not
@@ -97,6 +124,96 @@ def decide(tool_input: dict, env: dict) -> tuple[bool, str]:
     return True, BLOCK_MESSAGE.format(escape=_ESCAPE_ENV)
 
 
+# --- charter lint (task #1082) --------------------------------------------------
+
+#: Only ``lint_charter_optimal_form`` may gate a spawn. The two recall legs are
+#: advisory FOREVER, exactly as ``codex_arm_queue.cmd_add`` treats them — that
+#: file's own note reads "so TAC_CHARTER_LINT_STRICT never upgrades an FM result
+#: into a refusal". Mirroring that split is the point of this binding.
+_LINT_STRICT_ENV = "TAC_CHARTER_LINT_STRICT"
+_LINT_NA_TOKEN = "recall_lint_na:"
+
+
+def _load_lint_legs():
+    """Import the three lint legs from their single home in ``codex_arm_queue``.
+
+    Deliberately an import, never a copy. ``codex_arm_queue`` is a ``tools/``
+    script rather than a package, so it is loaded by path; it guards its own
+    ``main()`` and executes in ~7 ms with no side effects (measured 2026-08-17).
+    """
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("_codex_arm_queue_for_lint", _QUEUE)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"cannot load lint legs from {_QUEUE}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def charter_lint(tool_input: dict, env: dict) -> tuple[bool, list[str], str]:
+    """Lint one Agent spawn's charter. Returns ``(blocked, messages, status)``.
+
+    ``status`` is the clause-2 receipt — it proves the search looked:
+      * ``"ran"``            — the legs executed against a real prompt.
+      * ``"no-prompt"``      — an Agent spawn carrying no lintable prompt. NOT a
+                               pass; the caller announces it loudly.
+      * ``"unavailable:..."`` — the legs could not be loaded or run. Fail-open,
+                               but never silent.
+
+    Enforcement mirrors ``codex_arm_queue``'s env contract: only optimal-form
+    problems are gateable, and ``TAC_CHARTER_LINT_STRICT=1`` turns them into a
+    block. See the memo for the measured default-divergence between the two
+    paths (codex ``cmd_add`` is strict-by-default since 2026-08-13; this path is
+    warn-by-default per the #1082 charter, because the very charter that
+    commissioned this work trips the optimal-form leg).
+    """
+    prompt = tool_input.get("prompt")
+    if not isinstance(prompt, str) or not prompt.strip():
+        return False, [], "no-prompt"
+    try:
+        legs = _load_lint_legs()
+    except Exception as exc:
+        return False, [], f"unavailable:{type(exc).__name__}: {exc}"
+
+    problems: list[str] = []
+    advisories: list[str] = []
+    handle = None
+    try:
+        # ``lint_charter_optimal_form`` takes a path, so the in-memory prompt is
+        # staged to ephemeral scratch. Never an evidence path; deleted below.
+        with tempfile.NamedTemporaryFile(
+            "w", suffix=".md", encoding="utf-8", delete=False
+        ) as fh:
+            handle = Path(fh.name)
+            fh.write(prompt)
+        problems.extend(legs.lint_charter_optimal_form(str(handle)))
+        # Mirror the recall-advisory opt-out so this path is not noisier than
+        # the codex path on the same text.
+        if _LINT_NA_TOKEN not in prompt.lower():
+            for leg in (legs._lint_stale_numbers, legs._lint_falsified_premises):
+                try:
+                    advisories.extend(leg(prompt))
+                except Exception as exc:  # one broken leg must not mute the rest
+                    advisories.append(
+                        f"recall-lint leg unavailable ({type(exc).__name__}: {exc})"
+                    )
+    except Exception as exc:
+        return False, [], f"unavailable:{type(exc).__name__}: {exc}"
+    finally:
+        if handle is not None:
+            try:
+                handle.unlink()
+            except OSError:
+                pass
+
+    strict = env.get(_LINT_STRICT_ENV) == "1"
+    tag = "REFUSED" if (strict and problems) else "WARN"
+    messages = [f"charter-lint {tag}: {p}" for p in problems]
+    messages += [f"charter-lint WARN: {a}" for a in advisories]
+    return bool(strict and problems), messages, "ran"
+
+
 def _log_error(exc: BaseException) -> None:
     try:  # best-effort; fail-open must stay silent to the harness
         _ERROR_LOG.parent.mkdir(parents=True, exist_ok=True)
@@ -124,9 +241,40 @@ def main() -> int:
             return 0
         import os
 
-        blocked, reason = decide(tool_input, dict(os.environ))
+        env = dict(os.environ)
+        blocked, reason = decide(tool_input, env)
         if not blocked:
-            return 0
+            # Model routing passed; now lint the charter. Wrapped so a lint bug
+            # can never brick a spawn this hook had already cleared.
+            try:
+                lint_blocked, messages, status = charter_lint(tool_input, env)
+            except Exception as exc:  # FAIL-OPEN, but LOUD
+                _log_error(exc)
+                print(
+                    f"[agent_model_routing_guard_hook] charter-lint DID NOT RUN "
+                    f"({type(exc).__name__}: {exc}) — allowing the spawn UNLINTED.",
+                    file=sys.stderr,
+                )
+                return 0
+            if status != "ran":
+                # Clause 1 + 2: an Agent spawn we could not examine is announced,
+                # never silently passed as clean. "no findings" and "never ran"
+                # must not look the same.
+                print(
+                    f"[agent_model_routing_guard_hook] charter-lint DID NOT RUN "
+                    f"(status={status}) — this spawn was NOT examined; allowing "
+                    "UNLINTED (fail-open).",
+                    file=sys.stderr,
+                )
+                return 0
+            for line in messages:
+                print(f"[agent_model_routing_guard_hook] {line}", file=sys.stderr)
+            if not lint_blocked:
+                return 0
+            reason = (
+                "BLOCKED by tools/agent_model_routing_guard_hook.py charter lint "
+                f"({_LINT_STRICT_ENV}=1): " + " | ".join(messages)
+            )
         print(
             json.dumps(
                 {
