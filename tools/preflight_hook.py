@@ -36,14 +36,18 @@ Environment overrides:
     PREFLIGHT_SKIP_RUFF=1      Skip ruff F821 step (e.g., when ruff missing)
     PREFLIGHT_SKIP_CI_BLIND_TESTS=1  Skip the CI-blind test step (NOT recommended)
     PREFLIGHT_CI_BLIND_TIMEOUT_SECONDS  Override that step's subprocess timeout
+    PREFLIGHT_CI_BLIND_FORCE=1 Run CI-blind tests even while a governed Metal burn is
+                               live (default: DEFER with a receipt — see #1107)
 """
 from __future__ import annotations
 
 import ast
+import json
 import os
 import re
 import subprocess
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -542,6 +546,63 @@ def _ci_blind_timeout_seconds() -> int:
     return _CI_BLIND_TIMEOUT_DEFAULT_SECONDS
 
 
+_GOVERNED_METAL_TRAINER_SIGNATURES = (
+    "train_tr1_partition_renderer_mlx.py",
+    "train_levelset_witness_realized_through_R_mlx.py",
+    "train_witness_realized_through_R_mlx.py",
+)
+
+
+def _governed_metal_burn_pids() -> list[str]:
+    """PIDs of live governed Metal trainers (empty list = device free).
+
+    The CI-blind pytest step allocates MLX/Metal buffers; running it while a governed
+    burn holds the device produced hard SIGSEGV crashes twice on 2026-08-17 (#1107) —
+    false-red blocks on commits that touched nothing MLX-related. The hook therefore
+    DEFERS loudly with a receipt instead of racing the device (an MLX-allocating test
+    suite counts as a Metal fire under the one-Metal-fire law).
+    """
+    pids: list[str] = []
+    for sig in _GOVERNED_METAL_TRAINER_SIGNATURES:
+        try:
+            out = subprocess.run(["pgrep", "-f", sig], capture_output=True, text=True,
+                                 timeout=10)
+        except Exception:
+            continue
+        pids.extend(p.strip() for p in out.stdout.split() if p.strip())
+    return sorted(set(pids))
+
+
+def _record_ci_blind_deferral(selected: list[str], burn_pids: list[str]) -> None:
+    """Append a machine-readable deferral receipt — the burn-end re-verify queue.
+
+    A deferral WITHOUT a durable receipt would be skip-as-green wearing a log line;
+    this row is what the burn-end re-verify consumes, so the deferral is a debt with
+    an address, not a silence.
+    """
+    try:
+        head = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True,
+                              text=True, cwd=REPO_ROOT, timeout=10).stdout.strip()
+    except Exception:
+        head = "unknown"
+    row = {
+        "ts_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "head_at_deferral": head,
+        "burn_pids": burn_pids,
+        "deferred_targets": selected,
+        "reverify_cmd": (".venv/bin/python -m pytest " + " ".join(selected)
+                         + " -q -m 'not slow'"),
+    }
+    path = REPO_ROOT / ".omx" / "state" / "ci_blind_deferred.jsonl"
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("a") as fh:
+            fh.write(json.dumps(row) + "\n")
+    except Exception as exc:  # the receipt failing must not hide the deferral itself
+        print(f"{YELLOW}[preflight-hook] could not write deferral receipt: {exc}{RST}",
+              file=sys.stderr)
+
+
 def run_ci_blind_tests(staged: list[str]) -> int:
     """Run the CI-blind (MLX-gated) tests reachable from the staged files.
 
@@ -554,6 +615,20 @@ def run_ci_blind_tests(staged: list[str]) -> int:
     selected = _select_ci_blind_tests(staged)
     if not selected:
         return 0
+    if os.environ.get("PREFLIGHT_CI_BLIND_FORCE") != "1":
+        burn_pids = _governed_metal_burn_pids()
+        if burn_pids:
+            _record_ci_blind_deferral(selected, burn_pids)
+            print(f"{YELLOW}{BOLD}[preflight-hook] CI-blind step DEFERRED — NOT "
+                  f"verified: {len(selected)} target(s) not run; governed Metal burn "
+                  f"live (pids {', '.join(burn_pids)}){RST}", file=sys.stderr)
+            print("  MLX-allocating tests segfault under a live Metal burn (#1107, "
+                  "measured 2x on 2026-08-17). Receipt appended to "
+                  ".omx/state/ci_blind_deferred.jsonl — re-verify at burn end.",
+                  file=sys.stderr)
+            print("  Force anyway: PREFLIGHT_CI_BLIND_FORCE=1 git commit ...",
+                  file=sys.stderr)
+            return 0
     timeout = _ci_blind_timeout_seconds()
     try:
         result = subprocess.run(
@@ -968,8 +1043,8 @@ def run_subset_selection_scan(staged: list[str]) -> int:
         )
         print(
             "  A silent subset IS a video-order prefix, and a prefix measures "
-            "2.54-4.21x HARDER\n  than the population on the pose axis (ddm_na2) — "
-            "the false-negative shape.",
+            "2.54-4.21x HARDER\n  than the population on the pose axis "
+            "(ddm_mi1 receipt d2853c92090c) — the false-negative shape.",
             file=sys.stderr,
         )
         for v in violations:
