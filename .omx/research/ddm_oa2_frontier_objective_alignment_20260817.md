@@ -23,10 +23,13 @@ exactly as cw1 quoted it. The conclusion drawn from it — that the frontier's s
 by-product of a misaimed objective, and that aiming `rg1b`'s probe there would say so — does not
 hold. Absence of a seg term here is **correct**, not a defect.
 
-**The cheap lever exists, and it runs the opposite way from this charter's premise.** My charter
-said the selector is `argmin(joint_bytes)` and asked me to price making it seg-aware. The selector
-is **already seg-aware**, and *that is the defect*. On the real e960 receipt its seg term flipped
-the pick and cost **86 B = 5.73e-5 S**. The intervention is to **remove** a seg term, not add one.
+**On the cheap lever: the charter's premise is backwards, and my own first measurement was wrong.**
+My charter said the selector is `argmin(joint_bytes)` and asked me to price making it seg-aware.
+The selector is **already seg-aware**, and that term has zero score effect while carrying **2.18×
+the weight of the term that is the score**. But on the **frontier's actual selection it cost
+nothing**: the authoritative e960 receipt (81 candidates) picked epoch 634, which is the argmin on
+*both* criteria. **Measured seg-proxy cost on the frontier: 0 B.** The term is a live hazard that
+did not fire here. See §4 — including the correction to my own first pass.
 
 ---
 
@@ -107,34 +110,70 @@ architecture, not an oversight.
 
 ---
 
-## 4. The cheap lever — MEASURED, $0, already-materialized checkpoints
+## 4. The selector's seg term — priced on the right receipt, after I priced the wrong one
 
-Source: `/Volumes/APDataStore/pact/ddm_hv1_harvest_compose/checkpoint_selection_e960_endpoint.json`
-(a real `hpac_checkpoint_joint_proxy_selection.v1` receipt, 31 joined candidates, epochs 1–60).
+### 4.0 Correction to my own first pass (same turn)
 
-| | epoch | est. joint bytes | top1_error | proxy |
-|---|---:|---:|---:|---:|
-| **selector picked** | 46 | 134,539 | 0.00192072 | 0.281656 |
-| **rate optimum** | 54 | **134,453** | 0.00192657 | 0.282184 |
-| **cost of the seg proxy** | | **+86 B** | | **+5.726e-5 S** |
+My first measurement used
+`/Volumes/APDataStore/pact/ddm_hv1_harvest_compose/checkpoint_selection_e960_endpoint.json` and I
+called it "the real e960 receipt". **It is not.** Despite the filename, its `checkpoint_dir` points
+at `…/training/checkpoints/mc36_hpac_best_ema.checkpoints/periodic` and it holds **31** candidates
+over epochs 1–60 — an earlier, different run. The e960 endpoint has **81** candidates over epochs
+482–642. The filename is a live trap for anyone reading by name; nothing downstream appears to
+consume it, but it should be renamed.
 
-**The spurious term outweighs the real one by 2.15×.** At the rate optimum the terms are
-`rate = 6.659e-7 × 134,453 = 0.08953` versus `seg proxy = 100 × 0.0019266 = 0.19266`. A quantity
-with **zero score effect** carries 68% of the selection criterion's mass.
+I am correcting the headline rather than footnoting it, because a stale headline surviving a
+corrected body is a failure genus this repo has hit repeatedly — and here I was the one committing
+it.
 
-**The clincher on the modelling error.** The coefficient `100.0` is the S formula's seg
-coefficient — the tool treats `top1_error` *as* `d_seg`. It is not. True `d_seg` at the frontier is
-`0.029611/100 = 2.9611e-4`; `top1_error` reads `1.9266e-3`, **6.51× larger**, and it *moves with
-the checkpoint while true d_seg does not move at all*. Two different quantities in two different
-charts, joined by a shared coefficient.
+### 4.1 The authoritative receipt (the one that produced the frontier)
 
-**Scope and honesty about the number.** The 86 B is on the **estimated** byte axis
-(`byte_authority: ADVISORY_ESTIMATE_NOT_SERIALIZED`). It is deterministic given weights — there is
-no sampling noise, so no statistical noise floor applies — but an estimate can order candidates
-differently than serialized archive bytes would. **The ordering defect is exact and structural; the
-86 B magnitude is advisory** and needs one serialization pass to become real. Candidate byte spread
-across the pool is 10,453 B = 6.96e-3 S, so getting this criterion right is worth more in general
-than this one instance.
+`/Volumes/APDataStore/pact/ddm_rx2_current_mc36_label_hpac/gpu_race/full_e480b_e960/endpoint_closure/checkpoint_selection.json`
+— 81 candidates, bound by sha to the run log, and cited by both `PREFLIGHT.json` and the governed
+early-stop receipt.
+
+| | epoch | est. joint bytes | top1_error |
+|---|---:|---:|---:|
+| **selector picked** | 634 | 130,393 | 0.00189454 |
+| **rate optimum** | **634** | **130,393** | — |
+| **cost of the seg proxy** | | **0 B** | **0.0 S** |
+
+**The criteria agreed.** Epoch 634 is the argmin on both axes, so the spurious term changed nothing
+on the shipped selection. That is the honest answer for the frontier, and it is a *fortunate
+coincidence*, not a property of the criterion.
+
+### 4.2 The hazard is real and it does fire
+
+Same tool, the earlier 31-candidate receipt — a genuine `hpac_checkpoint_joint_proxy_selection.v1`
+run:
+
+| | epoch | est. joint bytes | top1_error |
+|---|---:|---:|---:|
+| selector picked | 46 | 134,539 | 0.00192072 |
+| rate optimum | 54 | **134,453** | 0.00192657 |
+| **cost** | | **+86 B** | **+5.73e-5 S** |
+
+So the term **can and does** override the score axis; it simply did not on the frontier's pool.
+
+### 4.3 Why it is a hazard at all — the structural defect, exact on both receipts
+
+**The spurious term outweighs the real one by 2.18×** on the authoritative receipt
+(`seg proxy = 100 × 0.00189454 = 0.18945` versus `rate = 6.659e-7 × 130,393 = 0.08683`), and 2.15×
+on the other. A quantity with **zero score effect** carries ~69% of the criterion's mass. Whether it
+flips the pick is then left to luck about how the candidates happen to line up.
+
+**The modelling error, named.** The coefficient `100.0` is the S formula's seg coefficient — the
+tool treats `top1_error` *as* `d_seg`. It is not. True `d_seg` at the frontier is
+`0.029611/100 = 2.9611e-4`; `top1_error` at ep634 reads `1.89454e-3`, **6.40× larger**, and it
+*moves with the checkpoint while true d_seg does not move at all*. Two different quantities in two
+different charts, joined by a shared coefficient.
+
+**Scope of the numbers.** Both are on the **estimated** byte axis
+(`byte_authority: ADVISORY_ESTIMATE_NOT_SERIALIZED`) — deterministic given weights, so no
+statistical noise floor applies, but an estimate can order candidates differently than serialized
+bytes would. The **term-dominance ratio is exact**; the 86 B magnitude is advisory. Candidate byte
+spread across the e960 pool is worth checking before any future selection, since the criterion
+governs it.
 
 ---
 
@@ -153,9 +192,18 @@ design intent unilaterally is not mine to do. The receipt now carries the eviden
 adjudicated rather than argued.
 
 **Recommended (cheapest honest intervention, for MAIN/council):** set `SEG_PROXY_COEFFICIENT = 0.0`
-— one constant, $0, no retraining — and update that test. Expected gain on the measured instance:
-86 B advisory. Pre-condition: one serialization pass confirming estimated-byte ordering matches
-real-byte ordering.
+— one constant, $0, no retraining — and update that test. **Expected gain on the frontier's own
+selection: 0 B.** This is *insurance*, not a win: the term is worth 2.18× the score term and fired
+on one of the two real receipts I checked (86 B advisory). Buy it because the next selection may not
+be as lucky, not because it recovers anything already lost. Pre-condition if a magnitude is ever
+claimed: one serialization pass confirming estimated-byte ordering matches real-byte ordering.
+
+**Also owed (housekeeping, not mine to land mid-arm):** rename
+`ddm_hv1_harvest_compose/checkpoint_selection_e960_endpoint.json` — it is not the e960 endpoint and
+it cost me a wrong headline. Related: `local_endpoint_close.py` writes
+`checkpoint_joint_proxy_selection.json`, but the landed authoritative file is
+`checkpoint_selection.json`; no `*joint_proxy*` file exists in either store, so that receipt came
+from a differently-named invocation than the current code path.
 
 ---
 
@@ -173,8 +221,11 @@ already runs and where the "92.7% CONFIGURATION" result was measured. Per
 
 ## 7. Labels
 
-- **MEASURED:** the 86 B / 5.726e-5 S selector cost; the 2.15× term dominance; the 6.51×
-  top1-vs-d_seg ratio; 31 candidates; 10,453 B spread. All from the named receipt.
+- **MEASURED:** seg-proxy cost **0 B on the frontier's authoritative 81-candidate receipt**; 86 B /
+  5.726e-5 S on the earlier 31-candidate receipt; 2.18× / 2.15× term dominance; 6.40×
+  top1-vs-d_seg ratio at ep634. All recomputed by me from the two named receipts.
+- **CORRECTED IN-TURN:** my first pass priced the wrong receipt (misnamed file) and reported 86 B as
+  the frontier's cost. The frontier's cost is 0 B. §4.0.
 - **MEASURED (by other arms, re-verified at their sources):** decode-identity of seg+pose to 1e-15
   across the lineage; losslessness via decoded spatial-token SHA-256; fixed MC36 labels.
 - **VERIFIED_VIA_SOURCE_INSPECTION:** every line-number claim about the trainer and the selector.
@@ -186,4 +237,18 @@ already runs and where the "92.7% CONFIGURATION" result was measured. Per
 
 **verdict_scope:** `FORMULATION` for "no seg lever exists here" — it binds the HPAC/RX2 fixed-label
 lossless-coder formulation, not the paradigm. Any vehicle that renders RGB, or any change making the
-label field trainable, reopens it immediately. **`INSTANCE`** for the 86 B, which is one receipt.
+label field trainable, reopens it immediately. **`INSTANCE`** for each byte figure: 0 B binds the
+e960 receipt, 86 B binds the 31-candidate receipt. Neither generalises; the 2.18× term dominance is
+the part that does, because it is a property of the formula rather than of a candidate pool.
+
+---
+
+## 8. Provenance note on the vehicle
+
+"hv1" is a **harvest/composition arm**, not a training run. The checkpoint `epoch_0634.pt` came from
+`rx2_wc2_full_mps_e960`, launched via `tools/train_ddm_cl1_hpac_capacity_mps.py`, which imports
+`tools/train_ddm_cl1_hpac_capacity.py` by pinned content hash (`run_identity` embedded in the
+checkpoint records both, `port_mode: full-mps-e960`). So cw1's file attribution is right, reached
+through the MPS port. hv1 then byte-closes an archive from it — `measured_delta_distortion: 0.0`,
+`decoded_token_identity: true`, raw decode byte-identical to the MC36 CPU decode — which is the
+composition-side confirmation of §2's invariance, independent of the lineage memos.
