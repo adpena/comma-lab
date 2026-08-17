@@ -1,6 +1,6 @@
 ---
 arm: ddm_a1s_foa
-title: "FO-A answered at n600: the A1 pose damage is NOT escapable by masking. Band-only drift rms is 0.018162 -- 6.92x the entire incumbent pose error, 2.19x the pre-registered CLOSED bar, and 1.27x above the drift at which the actuator loses even if it recovered ALL 33,743 manufactured round-trip flips. FAMILY_CLOSED. The mechanism is the finding: pose damage tracks perturbation ENERGY, not band membership -- band and interior are within 6% of each other per unit energy -- and the two halves partially CANCEL (cos -0.483), so restricting the actuator to either half makes it WORSE per unit of perturbation it keeps. Interior-only drift (0.023995) exceeds the whole actuator's own (0.022019)"
+title: "FO-A answered at n600: the A1 pose damage is NOT escapable by masking. Band-only drift rms is 0.018162 -- 6.92x the entire incumbent pose error, 2.19x the pre-registered CLOSED bar, and 1.27x above the drift at which the actuator loses even if it recovered ALL 33,743 manufactured round-trip flips. FAMILY_CLOSED. The mechanism is the finding: pose damage tracks perturbation ENERGY, not band membership -- band and interior are within 6% of each other per unit energy -- and the two halves partially CANCEL (cos -0.483), so restricting the actuator to either half makes it WORSE per unit of perturbation it keeps. Interior-only drift (0.023995) exceeds the whole actuator's own (0.022019). The seg leg confirms from the other side: masking keeps 40.1% of the seg win for 82.5% of the pose cost, cost/benefit 189.7x vs the unmasked 98.7x -- strictly dominated on both axes. Charter positive control passed exactly (34,938 flips, argmax sha 2aeb1e6b...)"
 utc: 2026-08-17
 parent: ".omx/research/ddm_a1s_alpha_sign_verdict_20260816.md"
 fire_order: "ddm_a1s section 8 FO-A"
@@ -82,12 +82,20 @@ cost is lowering the total perturbation energy — which is exactly lowering α,
 already measured that the seg gain peaks at α = 0.25 and reverses above it. **The post-hoc
 de-blur of `A` has no pose-null direction to hide in.**
 
+**The seg leg confirms it from the other side (§6).** The band-restricted actuator keeps only
+**40.1%** of the parent's seg win (−254 flips vs −634) while keeping **82.5%** of its pose cost.
+Its cost/benefit is **189.7×**, nearly double the unmasked lever's 98.7×. **Masking is strictly
+dominated on both axes at once** — and the charter's literal positive control passed exactly on
+that same leg (34,938 flips, argmax sha `2aeb1e6b…`).
+
 Pointer UNMOVED. No dispatch, no Modal, `[macOS-CPU advisory]` throughout, $0.
 
 ## §1 Positive controls — every one passed, and one is stronger than asked
 
 | control | required | measured | verdict |
 |---|---|---|---|
+| **α = 0 seg flips (the charter's literal control)** | **exactly 34,938** | **34,938** | **PASS** |
+| **α = 0 argmax field vs rt1 `argmax_base.npy`** | sha `2aeb1e6b…` | **`2aeb1e6be0f7c6ab8191b790204d8df0ae5fdce7ef2ecc5b2d18a715f1a674c4` — bit-identical** | **PASS** |
 | default-off pose6 vs the parent's retained payload | — | **sha-identical**, `max abs diff 0.0` | **PASS (see §2)** |
 | α = 0 camera frame vs the shipped frame | — | **bit-identical, asserted every pair, in code** | **PASS**, all 3 legs |
 | rebuilt `d@u` vs sr1's retained `A_row` / `A_col` | exact | **max abs diff 0.000e+00**, both axes | **PASS**, all 3 legs |
@@ -96,16 +104,14 @@ Pointer UNMOVED. No dispatch, no Modal, `[macOS-CPU advisory]` throughout, $0.
 | every input sha before use | parent §9 | **all 7 match** (§8) | **PASS** |
 | emitted FO-A verdict vs the adjudicator re-applied to the drift | agree | `FAMILY_CLOSED` == `FAMILY_CLOSED` | **PASS** |
 
-**On the charter's literal control.** The charter names the parent's *seg* control — α = 0 must
-give exactly **34,938** flips with the argmax field sha-identical to rt1's `argmax_base.npy`
-(`2aeb1e6b…`). FO-A's verdict comes from a **pose** leg, which computes no argmax, so that
-control cannot be evaluated by it. What the pose legs discharge instead is **the same control in
-its strongest available form for this instrument**: the α = 0 pose vector is byte-identical to the
-parent's retained `pose6_by_alpha.npy` (§2), which pins today's instrument to the exact one that
-produced the parent row — including the frozen CPU PoseNet, batch = 1 pair, the 8-thread pin, and
-the operator rebuild. The seg control is being run anyway, on the band-masked seg leg, and lands
-in §6; it is **not** load-bearing for the verdict above, and I am labelling it that way rather
-than implying it is.
+**On the charter's literal control.** It names a *seg* control, and FO-A's verdict comes from a
+**pose** leg, which computes no argmax — so I ran the band-masked **seg** leg at n600 as well
+(§6). It **passed in its strongest form**: 34,938 flips exactly, and the α = 0 argmax field is
+bit-identical to rt1's base, same sha. The pose legs independently discharge the same control in
+the form available to them — the α = 0 pose vector is byte-identical to the parent's retained
+`pose6_by_alpha.npy` (§2), pinning today's instrument to the exact one that produced the parent
+row: frozen CPU PoseNet, batch = 1 pair, the 8-thread pin, the operator rebuild. Both controls
+reproduced; the instrument is sound and the verdict is admissible.
 
 ## §2 Byte-identity of the default-off flag — proven at n600, not argued
 
@@ -230,10 +236,35 @@ Everything measured here is a statement about perturbing a finished frame; none 
 a frame that was shaped with pose in the loop. That is consistent with the standing vehicle law
 that only joint descent crosses the photometric wall.
 
-**The seg row FO-A said a LIVE branch would owe: NOT owed** — the branch did not fire, and §4 shows
-no seg value could change the verdict. It is being measured anyway, because the charter's literal
-positive control lives on the seg leg, and because the band-restricted lever's seg benefit is a
-real input to FO-C's design. It is a **bonus row, not a gate**.
+**The seg row FO-A said a LIVE branch would owe: NOT owed, but measured anyway — and it makes the
+verdict worse, not closer.** The branch did not fire, and §4 shows no seg value could change the
+sign. I ran it regardless, because the charter's literal positive control lives on the seg leg
+and because the band-restricted lever's seg benefit is a real input to FO-C. Band-masked seg
+ladder, n600, same frozen CPU SegNet and pre-registered bands:
+
+| α | flips vs GT | Δ vs control | ΔS_seg |
+|---:|---:|---:|---:|
+| 0.00 | **34,938** | +0 | 0.000000 |
+| **0.25** | **34,684** | **−254** | **−0.000215** |
+| 0.50 | 35,281 | +343 | +0.000291 |
+| 0.75 | 36,336 | +1,398 | +0.001185 |
+| 1.00 | 37,816 | +2,878 | +0.002440 |
+
+Same shape as the parent's unmasked ladder — non-monotone with an interior optimum at α = 0.25,
+so the seg sub-verdict is again `INDETERMINATE_MIXED`, 0.75% of the round trip, 2.24% of the gap.
+**The mask is strictly dominated on both axes at once:**
+
+| at α = 0.25 | unmasked (parent) | **band-masked (this row)** |
+|---|---:|---:|
+| seg win | −634 flips, −0.000537 S | **−254 flips, −0.000215 S — only 40.1% retained** |
+| pose cost, LOWER bound | +0.053035 S | **+0.040839 S — 82.5% retained** |
+| **net, best case** | +0.052497 S | **+0.040623 S** |
+| pose cost ÷ seg gain | 98.7× | **189.7×** |
+
+Restricting the actuator to the band **throws away 60% of the seg benefit to buy back 18% of the
+pose cost**, nearly doubling the cost/benefit ratio. The masked lever is 4.23× the whole remaining
+gap, the wrong way. This is the same conclusion as §4 reached without it, arrived at from the
+other side.
 
 ## §7 Apparatus landed with this row
 
@@ -273,9 +304,15 @@ Root `/Volumes/APDataStore/pact/ddm_sr1_manufactured_seg_recovery_20260816/foa/`
 | `SR1_A1POSE.json` | 3,951 | `d3a87f1bb5702302…` | off receipt |
 | `SR1_A1POSE_BANDMASK.json` | 195,907 | `2c5db5383157fc8e…` | band receipt + 600 per-pair geometry rows |
 | `SR1_A1POSE_INTERIORMASK.json` | 195,580 | `6f3c3b91e6bf25cf…` | interior receipt + 600 per-pair geometry rows |
-| `FOA_VERDICT.json` | — | — | the adjudicated record: byte-identity, all three legs, the derived bars |
-| `a1sign/delta_cam_pair33_bandmask_f32.npy` | 12,208,160 | recorded in `FOA_VERDICT.json` | the band-masked camera perturbation itself, one sample pair |
-| `a1sign/argmax_alpha_*_bandmask.npy` (×5) | 117,964,928 ea. | recorded on completion | the band-masked seg ladder (§6 bonus row) |
+| `FOA_VERDICT.json` | 7,304 | `6c2e3d84f03b6b83…` | the adjudicated record: byte-identity, all three pose legs, the derived bars |
+| `SR1_A1SIGN_BANDMASK.json` | 464,386 | `e9d6fff3f777cd39…` | band-masked seg receipt: the positive control + the §6 ladder + 600 per-pair rows |
+| `a1sign/A1SIGN_BANDMASK_PER_PAIR.jsonl` | 388,433 | `6e0eebd71a0ae795…` | per-pair seg journal (band px, clip, realisation, energy share) |
+| `a1sign/delta_cam_pair33_bandmask_f32.npy` | 12,208,160 | `9030112e857125de…` | the band-masked camera perturbation itself, one sample pair |
+| `a1sign/argmax_alpha_a0_bandmask.npy` | 117,964,928 | `2aeb1e6be0f7c6ab…` | α = 0 argmax — **identical sha to rt1's `argmax_base.npy`**: the charter's control |
+| `a1sign/argmax_alpha_a0p25_bandmask.npy` | 117,964,928 | `e41a06f5ac5fc11b…` | α = 0.25 argmax (the band-masked seg best) |
+| `a1sign/argmax_alpha_a0p5_bandmask.npy` | 117,964,928 | `269d8101192da822…` | α = 0.50 argmax |
+| `a1sign/argmax_alpha_a0p75_bandmask.npy` | 117,964,928 | `4709c1209caaba38…` | α = 0.75 argmax |
+| `a1sign/argmax_alpha_a1_bandmask.npy` | 117,964,928 | `30891c02cb021e74…` | α = 1.00 argmax |
 
 Run custody: `/Volumes/APDataStore/pact/ddm_a1s_foa_20260817/run/` — `launch_manifest.json`
 (git HEAD `fde2290364c42b46e4a446e98d8be90a8d4bdd55`, tool sha at launch, python/platform, the
@@ -310,9 +347,10 @@ different population — **no number from it is cited anywhere in this memo.**
 - **No mechanism for the −0.4828 cancellation.** I measured that the band and interior pose
   responses partially oppose; I did not establish why. Plausible candidates I did not separate:
   PoseNet's own spatial pooling, the YUV6 preprocess, or the sign structure of `A⁻¹`.
-- **The seg control the charter names literally** was not evaluable on a pose leg (§1); the
-  band-masked seg leg supplies it as a bonus row, and until it lands the seg-flip control for this
-  row rests on the parent's measurement plus this row's byte-identity control.
+- **No repeat run of any leg.** Each n600 leg was measured once. The instrument is deterministic
+  by construction (frozen weights, fixed thread count, fixed batch shape, seeded nothing), and the
+  α = 0 rungs reproduce the parent bit-for-bit on both axes, but I did not run a determinism
+  repeat of an α > 0 rung.
 
 **My own pre-registered prediction, recorded before the number landed** (`run/pre_registered_prediction.json`):
 band-only drift in **[0.013123, 0.014863]**, bucket **FAMILY_CLOSED**. The bucket was right; the
