@@ -55,4 +55,28 @@ regexes = [
     # ghp_… / xoxb-… / sk-… / -----BEGIN PRIVATE KEY) and the Tailscale fleet-IP rule above
     # are UNAFFECTED on these files. Narrowing one entropy heuristic, never a detector.
     '''^[a-z][a-z0-9]*(_[a-z0-9]+)+_?$''',
+    # CUSTODY-ASSERTION shape (2026-08-17). `require_file(path, expect_bytes=FRAMES * ...)`
+    # and its `expect_sha=` sibling are OUR standard file-custody signature — the
+    # ALWAYS-KEEP-THE-PAYLOAD contract in code — so they appear in every arm that pins a
+    # payload. generic-api-key reports the Secret as `expect_bytes=FRAMES`: an identifier,
+    # an `=`, and a bare ALL-CAPS Python CONSTANT NAME. Held the 2026-08-17 sf1 push
+    # (hand-verified benign: experiments/ddm_sf1_semantic_film_pose_map.py:520, entropy
+    # 3.892, a byte-count assertion, no credential and no IP).
+    # SCOPE, deliberately tight: the kwarg NAME is anchored to expect_bytes/expect_sha, so
+    # this can never exempt `api_key=…` / `token=…` / `secret=…`. The general shape
+    # `<ident>=<ALLCAPS>` was CONSIDERED AND REJECTED — an AWS key IS `[A-Z][A-Z0-9]*`, so
+    # it would have exempted `api_key=AKIA…`, and the top-level allowlist applies to EVERY
+    # rule, including the high-precision AWS/GitHub/Slack prefix rules.
+    # POSITIVE CONTROL, EXECUTED (differential, with-entry vs without-entry): both configs
+    # report the SAME 3 findings — a realistic AWS key (`AKIA5T7QZR3XK9WLMN24`,
+    # generic-api-key), a GitHub PAT (`ghp_…`, github-pat), and a fleet IP
+    # (`100.101.102.103`, tailscale-cgnat-fleet-ip). `api_key=AKIA5T7QZR3XK9WLMN24` still
+    # fires. Only `expect_bytes=FRAMES` goes silent. This entry changes detection of
+    # nothing else.
+    # ⚠ CONTROL-DESIGN NOTE, learned the hard way here: do NOT use
+    # `AKIAIOSFODNN7EXAMPLE` as the planted key. It is gitleaks' own documentation example
+    # and the DEFAULT ruleset allowlists it, so it is silent with or without any entry of
+    # ours — a control that cannot fail, which proves nothing. A vacuous falsifier reads as
+    # a pass. Plant a realistic non-canonical key instead.
+    '''^expect_(?:bytes|sha)=[A-Z][A-Z0-9_]*$''',
 ]
