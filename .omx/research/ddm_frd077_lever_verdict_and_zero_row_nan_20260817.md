@@ -1,4 +1,11 @@
-# The FiLM-row lever is seg-neutral — and zeroing a FiLM row makes the deployed quantiser emit NaN
+# The FiLM-row lever is seg-neutral — and zeroing a FiLM row makes the TRAINER's quantiser emit NaN
+
+> ⚠ **CORRECTED 2026-08-17, same day, after the corpus recall I owed before writing this.**
+> The original headline said "the **deployed** quantiser" and §"Who else this blocks" claimed this
+> NaN blocked the FiLM-row-sparsity rate family. **Both are refuted.** The defect is real and its
+> arithmetic is unchanged, but it lives on the TRAINER path only; the shipping receiver never
+> touches it, and `ddm_sf1` (landed the same day, same directory) measured the whole family
+> through that receiver. Corrections are inline below, marked ⚠. See §"Who else this blocks".
 
 **Status:** MEASURED (2026-08-17, MAIN, $0 local Metal).
 **Axis:** `[macOS-MPS training-signal]` `quantized_exact_seg`, EMA shadow, n600, eval-batch 8.
@@ -21,7 +28,8 @@ Two results, one of them mine to own.
    Wall clock 1,451 s vs 1,445 s (+0.4%). The lever passes its gate: it costs nothing.
 
 2. **The lever's PAYOFF cannot be measured the way I measured it, and the reason is a real
-   defect.** Zeroing *any* FiLM row makes the deployed lifted quantiser emit **NaN** frames.
+   defect.** Zeroing *any* FiLM row **in the fp32 weights, then quantizing**, makes the trainer's
+   lifted quantiser emit **NaN** frames. ⚠ The shipping receiver does not do this — see below.
 
 ## The defect, exactly
 
@@ -79,18 +87,50 @@ the number had to be the instrument. That is the only reason I looked.
    *zero it before the deployed quantiser sees it* — which is the NaN path. Same words, different
    object. The payoff test needs the receiver's own reconstruction, not a pre-quantiser zero.
 
-## Who else this blocks
+## Who else this blocks — ⚠ NOBODY. Corrected at source.
 
-`mz2` (5c073e915) retains **6 FiLM-row sparsity candidates at −130..−2,051 B**, explicitly
-**"RETAINED unscored"** — bytes measured, distortion never measured. Those candidates sit on this
-exact path. Anything that realises them by zeroing rows ahead of the deployed quantiser produces
-NaN, so the byte win was never scoreable as implemented. That is not an mz2 error — it measured
-what it said it measured — but the family cannot be priced until the zero-row path is cured or
-routed around.
+**The original claim here was: this NaN blocks the FiLM-row-sparsity rate family, because `mz2`'s
+6 retained candidates (−130..−2,051 B) were "bytes measured, distortion never measured" and sit on
+this path. Both halves are REFUTED.**
 
-**verdict_scope: FORMULATION** for the row-sparsity family *as realised by pre-quantiser zeroing*
-at `bits=4` on this trainer. Not a verdict on FiLM-row sparsity as a rate lever: an all-zero row
-that the receiver simply omits and reconstructs never reaches this divide.
+**1. The receiver never touches the defect.** Read at source
+(`experiments/ddm_mp2_semantic_receiver.py::_decode_row_prune`, lines 188-211): the SM3R path
+quantizes **only the kept rows** into a compact `(expected_keep, columns)` tensor, then scatters
+them into a `torch.zeros((rows, columns))` buffer. A dropped row is materialized as zeros
+**after** dequantization and is never handed to a quantiser at all. There is no zero-`amax` row on
+the shipping path, so there is no zero scale and no NaN.
+
+The two operations wear the same three words:
+
+| path | order | zero-`amax` row reaches `fake_quantize`? |
+|---|---|---|
+| receiver `_decode_row_prune` | prune → quantize kept rows → scatter into zeros | **No** |
+| my `film_row_ablation_curve.py` | zero the fp32 row → quantize the whole tensor | **Yes** → NaN |
+
+**2. The family was measured — the day before my charter, and again the same day as this memo.**
+`#1058` closed the FiLM-row sparsity family at **FAMILY scope on 2026-08-16** on three measured
+n600 rows. `ddm_sf1` (2026-08-17, same directory, "film" in the filename) then mapped **all 576
+FiLM rows** in 32-row groups through the shipped renderer at batch=1 **with a pose channel**, and
+re-priced `mz2`'s candidates against authority-tracking GT: the best nets **+0.062227 S — 6.5× the
+whole remaining gap, the wrong way**. It also measured that the −2,874 B sum is **undecodable**
+(the mixed-q3/q4 credit rides `SD1M`, the row credit rides `SM3R`, `unpack_variant_semantic_or_none`
+dispatches on ONE magic, no combined format exists); honest ceiling −2,051 B.
+
+So the family did not die of my NaN. It died on **pose price**, measured twice, through the real
+receiver, before and independent of this memo.
+
+**What the defect's blast radius actually is:** the TRAINER, whenever a training-time actuator
+drives a row to exactly zero and the next step quantizes it — e.g. `--fixed-zero-mask` pinning a
+full row, or any future ablation harness that zeroes before `fake_quantize`. That is a narrow,
+real, worth-fixing class. It is not a rate-family blocker.
+
+**verdict_scope: INSTANCE** — `film_row_ablation_curve.py`'s pre-quantiser zeroing at `bits=4` on
+`train_semantic_quantized.py`. The FiLM-row-sparsity FAMILY verdict is **not mine**; it belongs to
+`#1058` (FAMILY, 08-16) and `ddm_sf1` (08-17, partition-wide, pose-priced).
+
+**Genus:** `measured_object_vs_named_object_20260816`. "Drop a row" named the receiver's
+reconstruct-as-zero on one side of the quantiser and my zero-then-quantize on the other. I measured
+the second and wrote a conclusion about the first.
 
 ## Two-landing
 
@@ -107,12 +147,18 @@ that the receiver simply omits and reconstructs never reaches this divide.
 
 * **MEASURED:** the lever is seg-neutral (0.18σ) and byte-neutral. The NaN, its exact arithmetic,
   and its invariance across k and across checkpoints.
-* **NOT MEASURED:** whether the lever bought droppability. That test is unrun — it needs a harness
-  that reconstructs a dropped row the way the receiver would, and it will not be an argument about
-  norms.
-* **NOT MEASURED:** the pose cost of dropping FiLM rows. `FILM_ROW_FAMILY` **is**
-  `POSE_CRITICAL_TENSORS` (ns1: ~94× sensitivity spread vs `frame_embed`), and this harness is
-  seg-only. Any future row-drop row owes a pose channel.
+* **NOT MEASURED:** whether the lever bought droppability **on its own trained checkpoint**. ⚠ But
+  the instrument I called for **already exists**: `ddm_sf1` built exactly the harness this bullet
+  demanded — receiver-semantics drop (`_decode_row_prune`), shipped renderer at batch=1, proven
+  bit-identical at zero perturbation — and ran it over all 576 rows. It ran on the `hv1` base, not
+  on `FRD077`, so the lever-specific question is open; but it is open for want of a *run*, not for
+  want of a *harness*, and the family that run would feed is closed (below).
+* ⚠ **The pose channel is BUILT, and it is what killed the family.** I wrote that
+  `FILM_ROW_FAMILY` **is** `POSE_CRITICAL_TENSORS` (ns1: ~94× spread vs `frame_embed`) and that
+  "any future row-drop row owes a pose channel." `sf1` paid that debt and the answer is the
+  verdict: the best candidate prices **+0.062227 S**, pose-dominated. The seg-only harness was the
+  right worry about the wrong outcome — I expected a missing number; the number exists and it is
+  disqualifying.
 
 ## NEXT
 
