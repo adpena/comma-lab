@@ -253,3 +253,44 @@ retained corrector state, token field, logits, boundary, group index (all sha-ve
 Payloads: `/Volumes/APDataStore/pact/ddm_me1/` — `ME1_CODER_RESULTS.json`, eight retained
 per-frame bit vectors (one per architecture), `table_values.npy`.
 Ledger: `.omx/research/micro_edit_outcome_ledger.jsonl` (7 realized rows, every one payload-backed).
+
+## Landing blocker (open, NOT caused by this arm)
+
+The memo and the ledger landed at `679506f4e3`. The ten engine `.py` files are on disk,
+ruff-clean, 19/19 tests green (16 light + 3 heavy under `TAC_ME1_HEAVY=1`), and carry their two
+review-tracker passes — but they are **NOT COMMITTED**. The pre-commit hook's CI-blind step
+refuses, and the refusal is unrelated to this arm:
+
+```
+src/tac/tests/test_compact_renderer_mlx_spine_runner.py::test_hinerv_execute_runs_training_archive_and_receiver_proof
+Fatal Python error: Bus error
+Fatal Python error: Segmentation fault
+```
+
+That is a pre-existing MLX/Metal test. Every file this arm adds is NEW, so nothing here can
+change its behaviour; the hook selects it merely because `src/tac/**` is staged. It passes when
+run in a small group and hard-crashes in the 31-node selection under concurrent MLX load (3-5
+sibling pytest processes were live throughout). Signature matches the known
+`concurrent_metal_fires_without_composed_preflight_oomed_the_machine_20260806` genus.
+
+I did NOT set `PREFLIGHT_SKIP_CI_BLIND_TESTS=1`. The gate is the only surface that runs these
+modules, and an arm silencing it to land its own work is exactly the bypass that memory names.
+
+**Handoff — run when the machine is quiet (no sibling MLX pytest):**
+
+```bash
+FILES=(src/tac/micro_edit/__init__.py src/tac/micro_edit/score_model.py \
+  src/tac/micro_edit/ledger.py src/tac/micro_edit/candidate.py \
+  src/tac/micro_edit/coder_replay.py src/tac/micro_edit/tests/__init__.py \
+  src/tac/micro_edit/tests/test_score_model.py src/tac/micro_edit/tests/test_coder_replay.py \
+  experiments/ddm_me1_spatial_context_corrector.py \
+  experiments/ddm_me1_mixed_context_corrector.py)
+ARGS=(); for f in "${FILES[@]}"; do S=$(shasum -a 256 "$f" | awk '{print $1}'); \
+  ARGS+=(--expected-content-sha256 "$f=$S"); done
+.venv/bin/python tools/subagent_commit_serializer.py --timeout-seconds 2400 \
+  --message "ddm_me1 engine code: exact-arithmetic score model + payload-guarded ledger + typed candidates + decode-identical coder replay (controls exact to 0.000000) + two context-architecture correctors [no-triality] [p0-ledger-ok]" \
+  --files "${FILES[@]}" "${ARGS[@]}"
+```
+
+If it refuses again with the same node, that MLX test is a standing repo-wide commit hazard for
+anyone touching `src/tac/**` and deserves its own arm — not a skip flag.
