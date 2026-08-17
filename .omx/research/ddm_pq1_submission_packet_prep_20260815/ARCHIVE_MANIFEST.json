@@ -1,21 +1,49 @@
 {
-  "archive_bytes": 183502,
-  "archive_sha256": "e3e6f440b45bbb92f2eeb58c7a56d74b3cd0a62bbcff01a26adcd008391c19d3",
+  "schema": "ddm_pq1_archive_manifest.v1",
+  "swap_generation": 2,
+  "candidate_id": "rr4_free_corrector_v2_reencode",
+  "archive_bytes": 181161,
+  "archive_sha256": "35ac2b9beb7e6fa81075c7d84b5247d8d24c056fe49ce1cbd22a334bc9618956",
   "evidence_axis": "[contest-CUDA]",
+  "n_samples": 600,
   "members": [
     {
-      "compress_size": 183402,
-      "compression_method": "stored",
-      "crc": 56962426,
-      "file_size": 183402,
       "name": "p",
-      "sha256": "30c0165ec56dd9327ca4dcda477c34c25f7664622ac37ec8ed171114267d1b58"
+      "compression_method": "stored",
+      "compress_size": 181061,
+      "file_size": 181061,
+      "crc": 885609521,
+      "sha256": "1a6b40cc7bee289e5efd4ce81205888ef23829ed4a78c198344bb679ba9da47a"
     }
   ],
-  "n_samples": 600,
-  "portable_runtime_content_tree_sha256": "26c7d4f6a8e111c071d74208fc625bf2358e077a06dc59b54ec9421a8d198e0b",
-  "schema": "ddm_pq1_archive_manifest.v1",
+  "member_sections_decoded": [
+    {"section": "compressed_models", "bytes": 70453, "sha256_prefix": "e35d12371fa79747", "byte_identical_to_base": true},
+    {"section": "semantic_blob", "bytes": 36051, "sha256_prefix": "b489c73567046e64", "byte_identical_to_base": true},
+    {"section": "carrier_blob", "bytes": 22242, "sha256_prefix": "196f0e5136f4d6bf", "byte_identical_to_base": true},
+    {"section": "hpac_blob", "bytes": 17952, "sha256_prefix": "e8c0cfd73d3275ad", "byte_identical_to_base": true},
+    {"section": "residual_payload", "bytes": 100, "sha256_prefix": "74775aab04c7615c", "byte_identical_to_base": true},
+    {"section": "compensation_blob", "bytes": 36, "sha256_prefix": "38792b4953318117", "byte_identical_to_base": true},
+    {"section": "table_codes", "bytes": null, "sha256_prefix": "76afdc3ceda1212a", "byte_identical_to_base": true},
+    {"section": "token_stream", "bytes": 110512, "sha256_prefix": "6c3757bd52a18d3c", "byte_identical_to_base": false}
+  ],
+  "sections_changed_vs_base": 1,
+  "sections_byte_identical_vs_base": 7,
+  "base_archive_sha256": "80d9c8c6fdc72caaa3e180a8abb2a859e7f316a484b38f33fe90d5701420178e",
+  "base_archive_bytes": 182759,
+  "bytes_saved_vs_base": 1598,
+  "portable_runtime_content_tree_sha256": "4358aaf34fcbfc1cdc4a8865b9aead709199465c9909321abf279ebcd0fe3721",
+  "runtime_tree_sha256": "7acedb07e670e76c798f153ac53a3045b053074d702e226411a2353745b98351",
+  "upstream_snapshot_sha256": "cdad563c2a3eee39c027d531a8c276ec7970ace47741e937d18d32938bfe7008",
+  "source_commit": "e7ca85754bb9e6a4b319e5a8fa206366c90bd6f4",
   "score_claim": true,
-  "score_recomputed_from_components": 0.1600920261571558,
-  "source_commit": "19dd7916eb9ab5058bbeafa885ac68d8218d0a1e"
+  "score_recomputed_from_components": 0.15853325034789678,
+  "score_components": {
+    "seg": 0.029611,
+    "pose": 0.008294576541331089,
+    "rate": 0.12062767380656568
+  },
+  "decoded_field_sha256": "9ba2e52b3096585895970066b389bf1261ebc203d5b828cdea056c13858aea52",
+  "decoded_field_note": "The decoded token field is byte-identical to the base candidate's. An identical decoded field cannot move d_seg or d_pose, so the score delta against the base is a pure rate delta.",
+  "reproduction_entry_point": "experiments/ddm_pq2_compress_e2e.py",
+  "reproduction_verified": true
 }

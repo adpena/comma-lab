@@ -1,27 +1,112 @@
 {
-  "archive": {
-    "bytes": 183502,
-    "sha256": "e3e6f440b45bbb92f2eeb58c7a56d74b3cd0a62bbcff01a26adcd008391c19d3"
-  },
+  "schema": "ddm_pq1_cpu_axis_sealed_fire_order.v1",
+  "swap_generation": 2,
+  "prepared_by": "ddm_pq2",
+  "prepared_utc": "2026-08-17T19:55:00Z",
+  "status": "NOT_DISPATCHED",
+  "disposition": "QUEUED_WITH_A_FIRE_ORDER",
+  "owner": "MAIN",
   "axis": "[contest-CPU] Linux x86_64 n600",
-  "canonical_chain": "experiments/modal_auth_eval_cpu.py::main",
+  "archive": {
+    "bytes": 181161,
+    "sha256": "35ac2b9beb7e6fa81075c7d84b5247d8d24c056fe49ce1cbd22a334bc9618956"
+  },
+  "runtime_dir": "/Volumes/APDataStore/pact/ddm_rr4_cuda_prob_reencode/candidate_runtime",
+  "hash_manifest": {
+    "archive_sha256": "35ac2b9beb7e6fa81075c7d84b5247d8d24c056fe49ce1cbd22a334bc9618956",
+    "runtime_tree_sha256": "7acedb07e670e76c798f153ac53a3045b053074d702e226411a2353745b98351",
+    "portable_runtime_content_tree_sha256": "4358aaf34fcbfc1cdc4a8865b9aead709199465c9909321abf279ebcd0fe3721",
+    "runtime_files_sha256": "ba713a2578418497ac8ba8067a4632e960e3a38b0224a0cac898bf5446312e03",
+    "cuda_authority_artifacts": "experiments/results/ddm_rr4_cuda_exact_contest_cuda_20260817_r1/returned_artifacts/"
+  },
+  "economics": {
+    "modal_headroom_remaining_usd": 1.38,
+    "headroom_authority": "measured billing authority, rv2 finding F5, 2026-08-17",
+    "cpu_row_precedent_usd": 0.40,
+    "cpu_row_precedent_source": "measured MC36 predecessor CPU call",
+    "estimated_share_of_remaining_headroom_pct": 29,
+    "kind": "PROJECTION_NOT_SPEND",
+    "correction_note": "An earlier framing of ~13 USD headroom understated scarcity by roughly 10x. This row would consume about 29 percent of everything remaining."
+  },
+  "adjudication_owed_to_main": {
+    "question": "Is a contest-CPU row required for THIS submission, or is it optional?",
+    "fact_for": "Our packet currently answers the GPU-required question as 'yes' precisely because no CPU row exists. A CPU row would let us answer more strongly and would close the strict-checker gap contest_cpu_auth_eval_exists.",
+    "fact_against": "PR135 and PR138 both declare GPU-required evaluation. The field norm is that a GPU-only submission is acceptable, so this row may buy compliance polish rather than competitive position, at 29 percent of remaining headroom.",
+    "arm_position": "PREPARED, NOT RECOMMENDED EITHER WAY. This is an operator/MAIN economic call, not an arm call."
+  },
+  "canonical_chain_gap": {
+    "finding": "tools/fire_modal_auth_eval.py, the ONE canonical deterministic firing path, targets experiments/modal_auth_eval.py::main and is CUDA-only. There is no CPU-axis equivalent.",
+    "consequence": "A CPU row must currently be hand-assembled, which is the exact hazard the hand-assembled-dispatch law names as an error factory.",
+    "recommended_cure": "Extend tools/fire_modal_auth_eval.py with an explicit CPU chain selector before firing any CPU row, so the CPU axis inherits the same sealed-pin, auto-armed-poller, and terminal-close guarantees.",
+    "severity": "blocks a SAFE fire, not the arithmetic"
+  },
+  "preflight_argv": [
+    ".venv/bin/python",
+    "tools/claim_lane_dispatch.py",
+    "reconcile",
+    "--format",
+    "json"
+  ],
   "claim_argv": [
     ".venv/bin/python",
     "tools/claim_lane_dispatch.py",
     "claim",
     "--lane-id",
-    "lane_ddm_pq1_e480b_exact_contest_cpu_20260815",
+    "lane_ddm_pq2_rr4_exact_contest_cpu_20260817",
     "--platform",
     "modal",
     "--instance-job-id",
-    "ddm_pq1_e480b_exact_contest_cpu_20260815",
+    "ddm_pq2_rr4_exact_contest_cpu_20260817",
     "--agent",
     "MAIN",
     "--status",
     "dispatching",
     "--notes",
-    "pq1 exact e480b CPU axis; archive e3e6f440b45bbb92; retained f26p device-flexible runtime; one canonical n600 fire"
+    "pq2 exact rr4 CPU axis; archive 35ac2b9beb7e6fa8; one canonical n600 fire"
   ],
+  "command_argv": [
+    "env",
+    "PYTHONPATH=src:upstream:$PWD",
+    ".venv/bin/modal",
+    "run",
+    "--detach",
+    "experiments/modal_auth_eval_cpu.py::main",
+    "--archive",
+    "/Volumes/APDataStore/pact/ddm_rr4_cuda_prob_reencode/candidate_runtime/archive.zip",
+    "--submission-dir",
+    "/Volumes/APDataStore/pact/ddm_rr4_cuda_prob_reencode/candidate_runtime",
+    "--inflate-sh",
+    "inflate.sh",
+    "--expected-archive-sha256",
+    "35ac2b9beb7e6fa81075c7d84b5247d8d24c056fe49ce1cbd22a334bc9618956",
+    "--expected-runtime-tree-sha256",
+    "7acedb07e670e76c798f153ac53a3045b053074d702e226411a2353745b98351",
+    "--output-dir",
+    "experiments/results/ddm_pq2_rr4_exact_contest_cpu_20260817",
+    "--inflate-timeout",
+    "1800",
+    "--evaluate-timeout",
+    "5400",
+    "--scorer-input-cache-tensor-volume-run-id",
+    "ddm_pq2_rr4_exact_contest_cpu_20260817",
+    "--detach",
+    "--provider-detach-ack",
+    "--lane-id",
+    "lane_ddm_pq2_rr4_exact_contest_cpu_20260817",
+    "--instance-job-id",
+    "ddm_pq2_rr4_exact_contest_cpu_20260817",
+    "--claim-agent",
+    "MAIN",
+    "--claim-policy",
+    "require_active",
+    "--single-axis-waiver-reason",
+    "CUDA axis already measured on these exact bytes; this row completes the pair"
+  ],
+  "argparse_verification": {
+    "verified_utc": "2026-08-17T19:55:00Z",
+    "method": "read the local_entrypoint signature of experiments/modal_auth_eval_cpu.py at line 1163 and confirmed every flag above maps to a declared parameter",
+    "all_flags_declared": true
+  },
   "close": {
     "poller_argv_template": [
       ".venv/bin/python",
@@ -29,7 +114,7 @@
       "--call-id",
       "CALL_ID_FROM_MODAL_AUTH_EVAL_SPAWN_JSON",
       "--output-dir",
-      "experiments/results/ddm_pq1_e480b_exact_contest_cpu_20260815",
+      "experiments/results/ddm_pq2_rr4_exact_contest_cpu_20260817",
       "--result-name",
       "MODAL_REMOTE_RESULT.json",
       "--deadline-s",
@@ -41,68 +126,12 @@
       ".venv/bin/python",
       "tools/recover_modal_auth_eval.py",
       "--output-dir",
-      "experiments/results/ddm_pq1_e480b_exact_contest_cpu_20260815",
+      "experiments/results/ddm_pq2_rr4_exact_contest_cpu_20260817",
       "--timeout-s",
       "9000"
     ],
-    "rule": "Launch the poller through tools/launch_detached_process.py immediately after the spawn receipt yields a call id. If it exits nonzero or the shell dies, execute recovery once; recovery owns terminal claim closure."
+    "rule": "Arm the poller through tools/launch_detached_process.py immediately after the spawn receipt yields a call id. If it exits nonzero or the shell dies, execute recovery once; recovery owns terminal claim closure. The rr4 CUDA row had to be recovered from the Modal cache because its payload was returned but not persisted - do not repeat that."
   },
-  "command_argv": [
-    "env",
-    "PYTHONPATH=src:upstream:$PWD",
-    ".venv/bin/modal",
-    "run",
-    "--detach",
-    "experiments/modal_auth_eval_cpu.py::main",
-    "--archive",
-    "/Volumes/VertigoDataTier/pact/ddm_pq1_submission_packet/auth_runtime_dir/archive.zip",
-    "--submission-dir",
-    "/Volumes/VertigoDataTier/pact/ddm_pq1_submission_packet/auth_runtime_dir",
-    "--inflate-sh",
-    "inflate.sh",
-    "--expected-archive-sha256",
-    "e3e6f440b45bbb92f2eeb58c7a56d74b3cd0a62bbcff01a26adcd008391c19d3",
-    "--expected-runtime-tree-sha256",
-    "auto",
-    "--output-dir",
-    "experiments/results/ddm_pq1_e480b_exact_contest_cpu_20260815",
-    "--inflate-timeout",
-    "1800",
-    "--evaluate-timeout",
-    "5400",
-    "--scorer-input-cache-tensor-volume-run-id",
-    "ddm_pq1_e480b_exact_contest_cpu_20260815",
-    "--detach",
-    "--provider-detach-ack",
-    "--lane-id",
-    "lane_ddm_pq1_e480b_exact_contest_cpu_20260815",
-    "--instance-job-id",
-    "ddm_pq1_e480b_exact_contest_cpu_20260815",
-    "--claim-agent",
-    "MAIN",
-    "--claim-policy",
-    "require_active",
-    "--pair-group-id",
-    "ddm_rx2_e480b_hpac_winner_v2_paired_modal_auth_20260815T125117Z"
-  ],
-  "consumer_store": "experiments/results/ddm_pq1_e480b_exact_contest_cpu_20260815 plus the canonical frontier and submission-compliance stores",
-  "cost": {
-    "charter_planning_estimate_usd": 0.15,
-    "confidence": "LOW; the measured MC36 predecessor CPU call was approximately 0.40 USD",
-    "kind": "PROJECTION_NOT_SPEND"
-  },
-  "disposition": "QUEUED_WITH_A_FIRE_ORDER",
-  "fire_trigger": "MAIN only: operator GO to finish submission evidence; e960 packet-swap decision resolved; reconciliation reports zero live remote calls and zero active claims; unique lane claim succeeds; auth_runtime_dir still matches every sealed hash; no other full-n600 scorer owns the slot.",
-  "hash_manifest": {
-    "archive_sha256": "e3e6f440b45bbb92f2eeb58c7a56d74b3cd0a62bbcff01a26adcd008391c19d3",
-    "cuda_authority_json_sha256": "59881c30b296f79df310f0fd712fcf6f66f96ac9ab711b08da0e90b30b8403db",
-    "cuda_remote_runtime_tree_sha256": "77b94b5c02c6564024265e3692fc4add10b021038367f962103a648c34ca5035",
-    "e480b_cpu_identity_receipt_sha256": "a9d8b4ae9a8108052dc867eeda173c3ccfef0994f3320266cc71be8d959c9a5e",
-    "portable_runtime_content_tree_sha256": "26c7d4f6a8e111c071d74208fc625bf2358e077a06dc59b54ec9421a8d198e0b",
-    "runtime_file_count": 25,
-    "runtime_files_sha256": "0f9f410066789de222401678f71ccaedf897205f1a7db7c5b0799f1f96ecf609"
-  },
-  "owner": "MAIN",
   "payload_retention": {
     "required": true,
     "required_returned_artifacts": [
@@ -111,19 +140,10 @@
       "stdout and stderr",
       "provenance.json",
       "inflated_outputs_manifest.json",
-      "inflated_outputs_volume_manifest.json",
       "modal_cpu_auth_eval_validation.json",
       "failure sentinel and terminal claim receipt"
     ],
     "rule": "The wrapper must volume-retain the inflated-output identity manifest before returning. No scalar-only result is sufficient."
   },
-  "preflight_argv": [
-    ".venv/bin/python",
-    "tools/claim_lane_dispatch.py",
-    "reconcile",
-    "--format",
-    "json"
-  ],
-  "schema": "ddm_pq1_cpu_axis_sealed_fire_order.v1",
-  "status": "NOT_DISPATCHED"
+  "fire_trigger": "MAIN only, and only after ALL of: operator GO; the canonical_chain_gap above is cured or explicitly waived; reconciliation reports zero live remote calls and zero active claims; the unique lane claim succeeds; the runtime dir still matches every sealed hash above."
 }

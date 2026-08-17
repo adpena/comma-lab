@@ -80,26 +80,44 @@ sys.path.insert(0, str(REPO / "experiments"))
 CORRECTOR_MODULE = os.environ.get("TAC_RR2_CORRECTOR_MODULE", "ddm_rr2_free_corrector")
 FreeCorrector = importlib.import_module(CORRECTOR_MODULE).FreeCorrector
 
-PREPARED = Path(
-    "/Volumes/APDataStore/pact/ddm_wc1_advisory_decode_wallclock_20260815/prepared/hv1_base_control"
+def _env_path(variable: str, default: str) -> Path:
+    """Input-root override hook for the ddm_pq2 public compression entry point.
+
+    Every default below is the retained local-custody location, so any existing
+    invocation resolves exactly as before and the sealed byte targets are
+    unchanged -- the override is inert unless a caller sets the variable.  A
+    public runner supplies its own roots through these variables, which is what
+    lets the end-to-end compression script ship without a private filesystem
+    layout baked into it.  Byte-identity across the override is proved, not
+    assumed: rebuilding through this path must still return the pinned archive
+    sha256.
+    """
+    return Path(os.environ.get(variable, default))
+
+
+PREPARED = _env_path(
+    "TAC_PQ2_PREPARED_DIR",
+    "/Volumes/APDataStore/pact/ddm_wc1_advisory_decode_wallclock_20260815/prepared/hv1_base_control",
 )
 ARCHIVE = PREPARED / "archive.zip"
 ARCHIVE_SHA = "80d9c8c6fdc72caaa3e180a8abb2a859e7f316a484b38f33fe90d5701420178e"
 ARCHIVE_BYTES = 182759
 MEMBER_SHA = "88828f3ded072886c8b4aa56c4215192e2d429fa1d80c173841fab6489052585"
 
-HM1 = Path("/Volumes/APDataStore/pact/ddm_hm1_20260816/retained")
+HM1 = _env_path("TAC_PQ2_HM1_DIR", "/Volumes/APDataStore/pact/ddm_hm1_20260816/retained")
 LOGITS = HM1 / "base_logits_int16_n600.i16"
 BOUNDARY = HM1 / "boundary_bucket_n600.u8"
 GROUP_INDEX = HM1 / "group_index.u8"
-TOKENS = Path(
+TOKENS = _env_path(
+    "TAC_PQ2_TOKENS_FILE",
     "/Volumes/APDataStore/pact/ddm_hv1_base_advisory_n600_cpu/work_r2/inflated/"
-    ".f26_decode_checkpoints/tokens_cpu_stage_complete.u8"
+    ".f26_decode_checkpoints/tokens_cpu_stage_complete.u8",
 )
 TOKEN_FIELD_SHA = "9ba2e52b3096585895970066b389bf1261ebc203d5b828cdea056c13858aea52"
 
-RC64_SOURCE = Path(
-    "/Volumes/VertigoDataTier/pact/pr135_intake_20260810/experiment_book/src/cpr1_sub4/entropy/rc64_backend.c"
+RC64_SOURCE = _env_path(
+    "TAC_PQ2_RC64_SOURCE",
+    "/Volumes/VertigoDataTier/pact/pr135_intake_20260810/experiment_book/src/cpr1_sub4/entropy/rc64_backend.c",
 )
 RC64_SOURCE_SHA = "5c75e2c70b89f148bc9d117d4dbd39a24dfb2e72ec41b0a7e9b9cf490ca07ee6"
 ROUTE_B = REPO / "experiments/ddm_rc64p_native_cpu_decode/route_b_rc64.py"

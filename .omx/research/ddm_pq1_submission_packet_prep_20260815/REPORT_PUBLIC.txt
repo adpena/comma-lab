@@ -2,23 +2,48 @@
 Evidence axis: [contest-CUDA]
 Hardware: Tesla T4, Linux x86_64
 Samples: 600
-Archive SHA-256: e3e6f440b45bbb92f2eeb58c7a56d74b3cd0a62bbcff01a26adcd008391c19d3
-Archive size: 183502 bytes
-Portable executable-runtime content tree SHA-256: 26c7d4f6a8e111c071d74208fc625bf2358e077a06dc59b54ec9421a8d198e0b
+Archive SHA-256: 35ac2b9beb7e6fa81075c7d84b5247d8d24c056fe49ce1cbd22a334bc9618956
+Archive size: 181161 bytes
+Member: p, 181061 bytes, stored, SHA-256 1a6b40cc7bee289e5efd4ce81205888ef23829ed4a78c198344bb679ba9da47a
+Portable executable-runtime content tree SHA-256: 4358aaf34fcbfc1cdc4a8865b9aead709199465c9909321abf279ebcd0fe3721
+Runtime tree SHA-256: 7acedb07e670e76c798f153ac53a3045b053074d702e226411a2353745b98351
 Upstream snapshot SHA-256: cdad563c2a3eee39c027d531a8c276ec7970ace47741e937d18d32938bfe7008
+Upstream evaluate.py SHA-256: 7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b
 
 === Evaluation results over 600 samples ===
 Average PoseNet Distortion: 0.00000688
 Average SegNet Distortion: 0.00029611
 Seg contribution: 0.029611
 Pose contribution: 0.008294576541331089
-Rate contribution: 0.12218644961582469
-Recomputed score: 0.1600920261571558
-Inflation wall time: 364.761996965 seconds
-Evaluation wall time: 41.22217605 seconds
-Total authority wrapper wall time: 416.2068744 seconds
+Rate contribution: 0.12062767380656568
+Recomputed score: 0.15853325034789678
+Reported (2 dp display): 0.16
+Inflation wall time: 476.611040218 seconds
+Evaluation wall time: 61.047152556 seconds
+Total authority wrapper wall time: 553.22138149 seconds
+Inflate budget: 1800 seconds; measured headroom 3.777x
+
+=== Relationship to the base candidate ===
+Base archive SHA-256: 80d9c8c6fdc72caaa3e180a8abb2a859e7f316a484b38f33fe90d5701420178e (182,759 bytes)
+Sections byte-identical to the base: 7 of 8
+Section re-encoded: token_stream, 112,110 -> 110,512 bytes
+Archive bytes saved: 1,598
+Decoded token field SHA-256: 9ba2e52b3096585895970066b389bf1261ebc203d5b828cdea056c13858aea52
+The decoded field is byte-identical to the base candidate's, so the seg and pose
+components are unchanged by construction and the improvement is a pure rate delta.
+
+=== Reproduction ===
+Entry point: experiments/ddm_pq2_compress_e2e.py
+Rebuilt from the retained checkpoint on 2026-08-17T19:41:52Z into a clean store:
+  token stream SHA-256 6c3757bd52a18d3c38e9120d56293f03c7aefd111fb9ee655b19d055e8d06b14 (matches)
+  archive SHA-256 35ac2b9beb7e6fa81075c7d84b5247d8d24c056fe49ce1cbd22a334bc9618956 (matches)
+  determinism repeat byte-identical: yes
 
 === CPU boundary ===
 Evidence axis: [contest-CPU]
-Status on exact e480b bytes: PENDING; no CPU score claimed.
-Predecessor runtime-only receipt: MC36 archive f0ba4bb41d55fff85542f2a17dfe682508aa4f9ab50ef51cda573d79f0c4b1de, 186269 bytes, inflated in 831.534525545 seconds on Linux x86_64 CPU. This predecessor score was 0.20513189128858372 and does not transfer to e480b.
+Status on these exact archive bytes: PENDING; no CPU score is claimed.
+A CPU decode of these exact bytes has been demonstrated as a runtime property only:
+the receiver parse-back inflated the archive on arm64 CPU and produced an output
+byte-identical to the base candidate's own CPU inflate. That is runtime evidence,
+not a CPU score. CPU and CUDA are distinct score axes and neither is inferred
+from the other.

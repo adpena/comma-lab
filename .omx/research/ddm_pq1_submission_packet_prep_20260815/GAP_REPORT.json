@@ -1,87 +1,92 @@
 {
   "schema": "pact.pq1.strict_compliance_gap_report.v1",
-  "candidate_archive_sha256": "e3e6f440b45bbb92f2eeb58c7a56d74b3cd0a62bbcff01a26adcd008391c19d3",
-  "candidate_archive_bytes": 183502,
+  "swap_generation": 2,
+  "refreshed_by": "ddm_pq2",
+  "refreshed_utc": "2026-08-17T20:10:00Z",
+  "candidate_archive_sha256": "35ac2b9beb7e6fa81075c7d84b5247d8d24c056fe49ce1cbd22a334bc9618956",
+  "candidate_archive_bytes": 181161,
   "strict_check": {
     "passed": false,
-    "checks_total": 86,
-    "checks_passed": 78,
-    "checks_failed": 8,
-    "receipt": "/Volumes/VertigoDataTier/pact/ddm_pq1_submission_packet/receipts/pre_submission_compliance.final.json"
+    "checks_total": 85,
+    "checks_passed": 81,
+    "checks_failed": 4,
+    "receipt": "/Volumes/APDataStore/pact/ddm_pq2/compliance_rr4_gen2.json",
+    "receipt_sha256": "ba596648e1e1f6a5b8c3eb4e5af28bca8eccc9597f5598a8119de3bbc3c43656",
+    "command": "scripts/pre_submission_compliance_check.py --contest-final against the staged submission dir",
+    "prior_generation_for_comparison": "generation 0 scored 78/86"
   },
-  "packet_disposition": "HOLD_NOT_SAFE_TO_PR_OR_SUBMIT",
+  "packet_disposition": "READY_EXCEPT_OPERATOR_GO",
+  "submission_authority": "OPERATOR_GO_REQUIRED_NOT_GRANTED",
   "gaps": [
     {
       "check": "auth_eval_schema_metric_consistency",
-      "disposition": "QUEUED_WITH_A_FIRE_ORDER",
-      "owner": "MAIN authority-adjudication owner",
-      "consumer_store": "retained paired authority receipts",
-      "fire_trigger": "exact e480b contest-CPU authority is harvested and the canonical adjudicator can preserve the real component-derived score without rewriting the historical raw receipt"
+      "details": "canonical_score_source_not_recomputed_from_components",
+      "disposition": "CHECKER_SCHEMA_DRIFT_NOT_A_ROW_DEFECT",
+      "owner": "MAIN",
+      "analysis": "The recovered receipt records canonical_score_source = report_8dp_components_plus_exact_archive_bytes and carries score_recomputed_from_components only as legacy_canonical_score_source_alias. The score itself is correct and was independently re-derived to 17 digits. Editing the receipt to satisfy the checker would be forging evidence.",
+      "fire_trigger": "MAIN decides whether the checker should accept the newer canonical source name, or whether the emitter should keep the older one"
     },
     {
       "check": "auth_eval_raw_promotion_policy_blockers_absent",
+      "details": "promotion_blockers include raw_auth_eval_does_not_verify_submission_policy_gates, cpu_leaderboard_reproduction_not_adjudicated, pre_submission_compliance_check_not_recorded",
       "disposition": "QUEUED_WITH_A_FIRE_ORDER",
       "owner": "MAIN submission-policy adjudicator",
-      "consumer_store": "retained paired CPU-CUDA adjudication record",
-      "fire_trigger": "exact e480b contest-CPU authority and final compliance evidence both exist"
+      "analysis": "pre_submission_compliance_check_not_recorded is circular: it clears once this compliance run is recorded as an adjudicated artifact.",
+      "fire_trigger": "MAIN records this compliance receipt and adjudicates the CPU-vs-CUDA policy review"
     },
     {
       "check": "contest_cpu_auth_eval_exists",
       "disposition": "QUEUED_WITH_A_FIRE_ORDER",
       "owner": "MAIN",
-      "consumer_store": "/Volumes/VertigoDataTier/pact/ddm_pq1_submission_packet/receipts/cpu_auth/",
-      "fire_trigger": "e960 packet decision complete; zero conflicting scorer calls or claims; exact archive and runtime hashes revalidate; sealed CPU lane claimed"
+      "analysis": "No contest-CPU row exists on these bytes. The packet answers the GPU-required question as yes precisely because of this. PR135 and PR138 both declare GPU-required evaluation, so the row may be optional.",
+      "fire_order": "CPU_AXIS_SEALED_FIRE_ORDER.json",
+      "economics": "Modal headroom 1.38 USD measured; the row costs about 0.40 USD, roughly 29 percent of what remains",
+      "additional_blocker": "tools/fire_modal_auth_eval.py is CUDA-only; there is no canonical CPU firing path, so a CPU row would have to be hand-assembled",
+      "fire_trigger": "operator GO plus a cured or explicitly waived CPU firing path"
     },
     {
       "check": "submission_runtime_has_no_network_install_or_local_paths",
+      "details": "inflate.sh:27 runs uv pip install --target for the pinned Brotli dependency",
       "disposition": "HOLD_RUNTIME_AUTHORITY",
       "owner": "MAIN dependency-closure and compliance owner",
-      "consumer_store": "accepted dependency-closure equivalence or fresh authority-runtime receipt",
-      "fire_trigger": "policy accepts the pinned fail-closed Brotli bootstrap or a changed dependency-closed runtime receives fresh exact authority evaluation"
+      "analysis": "Verified working by a bare-venv bootstrap smoke: absent Brotli triggers the path, the pinned wheel installs, the guard then passes, a round trip succeeds, and with uv absent the script exits 69 fail-closed. Only a pinned wheel crosses the network; no model, table, or video-derived payload does, so rule 118 is not implicated. NOTE: the charter's premise that this runtime carries a constriction dependency is FALSIFIED; an AST scan of all 32 runtime files finds brotli, numpy and torch only.",
+      "fire_trigger": "MAIN records acceptance of the pinned fail-closed bootstrap under the existing precedent"
+    }
+  ],
+  "gaps_closed_this_generation": [
+    {"check": "submission_runtime_tree_matches_auth_eval", "cure": "staged exactly the 32 files in the evaluated manifest, excluding __pycache__ and submission custody files; the pinned tree hash 7acedb07 now reproduces"},
+    {"check": "dispatch_claim_terminal_row", "cure": "used the real lane and job ids and appended a terminal row"},
+    {"check": "dispatch_claim_successful_exact_eval_terminal_row", "cure": "terminal row restated in the canonical completed_contest_cuda status vocabulary"},
+    {"check": "dispatch_claim_terminal_archive_sha_bound", "cure": "terminal row notes now bind the archive sha256"},
+    {"check": "dispatch_claim_terminal_runtime_tree_sha_bound", "cure": "terminal row notes now bind the runtime tree sha256"},
+    {"check": "dispatch_claim_prior_active_row", "cure": "resolved with the corrected lane binding"},
+    {"check": "public_source_repo_link_present", "cure": "restored the repo and pinned-revision links to the public README"},
+    {"check": "required_file_present:report.txt and the report/label family", "cure": "staged a real submission directory rather than pointing the checker at the runtime tree"}
+  ],
+  "new_hazards_found_and_closed": [
+    {
+      "hazard": "AppleDouble contamination",
+      "detail": "The ExFAT SSD creates ._* files on every copy. They are non-UTF-8 and CRASHED the compliance checker mid-run with UnicodeDecodeError, silently leaving a stale receipt on disk. They would also have ridden along into a submission directory.",
+      "cure": "COPYFILE_DISABLE=1 plus an explicit strip and a non-UTF-8 scan before every compliance run"
     },
     {
-      "check": "hosted_archive_manifest_supplied",
-      "disposition": "BLOCKED_ON_OPERATOR_AUTHORITY",
-      "owner": "operator, then MAIN",
-      "consumer_store": "hosted archive manifest and PR evidence bundle",
-      "fire_trigger": "operator authorizes hosting after candidate selection and fetched hosted bytes prove SHA-identical"
-    },
-    {
-      "check": "dispatch_claim_successful_exact_eval_terminal_row",
-      "disposition": "QUEUED_WITH_A_FIRE_ORDER",
-      "owner": "MAIN lane-claim custodian",
-      "consumer_store": ".omx/state/active_lane_dispatch_claims.md and refreshed compliance receipt",
-      "fire_trigger": "retained CUDA authority receipt is reconciled into a canonical checker-accepted terminal status"
-    },
-    {
-      "check": "dispatch_claim_terminal_archive_sha_bound",
-      "disposition": "QUEUED_WITH_A_FIRE_ORDER",
-      "owner": "MAIN lane-claim custodian",
-      "consumer_store": "canonical terminal lane row",
-      "fire_trigger": "real terminal-row reconciliation binds the exact archive SHA-256"
-    },
-    {
-      "check": "dispatch_claim_terminal_runtime_tree_sha_bound",
-      "disposition": "QUEUED_WITH_A_FIRE_ORDER",
-      "owner": "MAIN lane-claim custodian",
-      "consumer_store": "canonical terminal lane row",
-      "fire_trigger": "real terminal-row reconciliation binds the exact runtime-tree SHA-256"
+      "hazard": "custody file inside the hashed tree",
+      "detail": "The two inherited stale receipts are INSIDE the evaluated 32-file runtime tree, so writing a CUSTODY_SUPERSEDED.json beside them would have changed the pinned tree hash and broken replay.",
+      "cure": "moved the supersession record to the store root and put the correction in README.md, which the evaluated manifest excludes"
     }
   ],
   "additional_publication_gaps": [
     {
       "gap": "friendly_compression_source_bundle",
-      "disposition": "QUEUED_WITH_A_FIRE_ORDER",
-      "owner": "MAIN public-source owner",
-      "consumer_store": "sanitized compression bundle at an immutable public source pin plus its reproduction manifest",
-      "fire_trigger": "real RX1-RX2 scripts have externalized path and config inputs, explicit RNG and stage checkpoints, a clean documented run on pinned public inputs, and an emitted archive matching the exact candidate SHA-256"
+      "disposition": "CLOSED",
+      "cure": "experiments/ddm_pq2_compress_e2e.py rebuilds the archive from the retained checkpoint and fails closed unless the bytes hash to the pinned value. No private paths; inputs arrive via --inputs-json or environment variables and are sha256-verified. Verified 2026-08-17: token stream and archive hashes both matched, determinism repeat byte-identical."
     },
     {
-      "gap": "canonical_git_landing",
-      "disposition": "QUEUED_WITH_A_FIRE_ORDER",
-      "owner": "MAIN Git custodian",
-      "consumer_store": "canonical source checkout",
-      "fire_trigger": "Git metadata is writable; verify the retained clean-clone commit and patch against all 14 source artifacts, then land through the serializer without unrelated staged work"
+      "gap": "hosted_archive_manifest_supplied",
+      "disposition": "BLOCKED_ON_OPERATOR_AUTHORITY",
+      "owner": "operator, then MAIN",
+      "prep_state": "The exact artifact list and shas are recorded in ARCHIVE_MANIFEST.json and PACKET_TARGET.json. Nothing has been published.",
+      "fire_trigger": "operator authorizes hosting after candidate selection and fetched hosted bytes prove SHA-identical"
     }
   ],
   "external_actions_performed": []

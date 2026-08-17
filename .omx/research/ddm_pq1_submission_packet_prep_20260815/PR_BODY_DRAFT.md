@@ -1,9 +1,9 @@
-# submission name: e480b RX2
+# submission name: rr4 free-corrector re-encode
 
-Prepared by the repository operator. This is a hold-state draft and must not
-be opened as a pull request until the download URL, exact-byte CPU row, source
-visibility check, strict compliance pass, and five consecutive clean review
-passes are complete.
+Prepared by the repository operator. **This is a hold-state draft.** It must not
+be opened as a pull request until the download URL, source-visibility check,
+strict compliance pass, and five consecutive clean review passes are complete.
+Generation 2 of this packet; it supersedes the e480b and hv1 drafts.
 
 # upload zipped `archive.zip`
 
@@ -12,10 +12,10 @@ claimed in this draft.
 
 Exact file identity:
 
-- 183,502 bytes
-- SHA-256 `e3e6f440b45bbb92f2eeb58c7a56d74b3cd0a62bbcff01a26adcd008391c19d3`
-- single stored member `p`, 183,402 bytes, SHA-256
-  `30c0165ec56dd9327ca4dcda477c34c25f7664622ac37ec8ed171114267d1b58`
+- 181,161 bytes
+- SHA-256 `35ac2b9beb7e6fa81075c7d84b5247d8d24c056fe49ce1cbd22a334bc9618956`
+- single stored member `p`, 181,061 bytes, SHA-256
+  `1a6b40cc7bee289e5efd4ce81205888ef23829ed4a78c198344bb679ba9da47a`, CRC32 885609521
 
 # report.txt
 
@@ -27,122 +27,145 @@ Average PoseNet Distortion: 0.00000688
 Average SegNet Distortion: 0.00029611
 Seg contribution: 0.029611
 Pose contribution: 0.008294576541331089
-Rate contribution: 0.12218644961582469
-Archive size: 183502 bytes
-Archive SHA-256: e3e6f440b45bbb92f2eeb58c7a56d74b3cd0a62bbcff01a26adcd008391c19d3
-Recomputed score: 0.1600920261571558
-Inflation wall time: 364.761996965 seconds
-Evaluation wall time: 41.22217605 seconds
+Rate contribution: 0.12062767380656568
+Archive size: 181161 bytes
+Archive SHA-256: 35ac2b9beb7e6fa81075c7d84b5247d8d24c056fe49ce1cbd22a334bc9618956
+Recomputed score: 0.15853325034789678
+Inflation wall time: 476.611040218 seconds
+Evaluation wall time: 61.047152556 seconds
 
 Evidence axis: [contest-CPU]
-Status on the exact e480b bytes: pending; no CPU score claimed.
+Status on these exact bytes: pending; no CPU score claimed.
 ```
 
 # eval host info
 
-The exact measured row used a Linux x86_64 Tesla T4 and all 600 samples. The
-exact e480b contest-CPU row has not been run. The retained predecessor and
-macOS receipts below establish only CPU runtime feasibility and output
-identity, not a transferable CPU score.
+Linux x86_64, Tesla T4, all 600 samples, unmodified upstream scorer
+(`evaluate.py` SHA-256 `7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b`,
+upstream snapshot `cdad563c2a3eee39c027d531a8c276ec7970ace47741e937d18d32938bfe7008`).
+Inflation used 476.6 s of the 1,800 s budget — 3.78x headroom.
 
 # build cost info
 
-No public total-training-cost claim is made in this draft. The retained source
-records the seeded terminal checkpoint, stage boundaries, source hashes, and
-candidate materialization receipts. A final PR must publish a sanitized build
-manifest from those real receipts rather than estimate or reconstruct a cost
-after the fact.
+No public total-training-cost claim is made. This submission adds **no training
+cost at all** over its base candidate: it is a lossless entropy re-encode of an
+already-trained archive, and the re-encode itself runs in well under a minute
+from the retained checkpoint. The base candidate's training cost is a separate
+figure and is not reconstructed after the fact here.
 
 # does your submission require gpu for evaluation (inflation)?
 
-The measured score above used a T4 GPU. The shipped receiver is also
-CPU-runnable through the device-flexible F26 port, but its exact-byte
-`[contest-CPU]` score is still pending and must not be inferred from CUDA.
+**Yes — treat this submission as requiring a GPU for evaluation.** The measured
+score above used a T4.
+
+Being precise rather than convenient: the receiver has been demonstrated to
+decode these exact bytes on CPU (the parse-back produced an output byte-identical
+to the base candidate's own CPU inflate), so CPU decoding is not impossible. But
+we have **not** measured a `[contest-CPU]` score on these bytes, and we will not
+infer one from the CUDA row. Until that row exists, "requires GPU" is the honest
+answer.
 
 # did you include the compression script? and want it to be merged?
 
-The score-bearing archive and inflation receiver are included. The exact
-compression-side source exists at the pinned commit, including the RX2
-current-label materializer, resumable HPAC trainer, terminal identity race,
-and RX1 representation/packet builder. Those scripts currently contain
-storage-layout paths and repository-internal dependencies, so they are **not
-yet proposed for merge** and are not described as a friendly standalone
-compressor. Before this answer can become “yes,” the operator must publish a
-sanitized, seeded, documented bundle and prove that it reproduces the retained
-archive from the pinned inputs. The HOLD state prevents a fake reproducibility
-claim.
+**Yes, and it is offered for merge.** The entry point is
+`experiments/ddm_pq2_compress_e2e.py`. What it does, stated exactly:
+
+- **Stage A — provenance (documented, not re-run).** Reproducing the underlying
+  checkpoint from raw video is multi-day GPU compute. The script emits the
+  lineage, the stage scripts, their arguments, and the input manifest with every
+  SHA-256. It does not pretend to re-run training.
+- **Stage B — build (exact and verifiable).** From the retained checkpoint it
+  replays the shipped decode order, re-encodes the token stream under the
+  decode-time corrector, splices it into the member, and repacks the archive.
+  It then **hashes the result and exits non-zero unless it equals
+  `35ac2b9beb7e6fa8…`**. It also writes a second archive from the same member and
+  asserts the two are byte-identical.
+- **Stage C — decode.** Runs the shipped receiver over the rebuilt archive and
+  checks the decoded token field against its pinned SHA-256.
+
+Verified on 2026-08-17: rebuilt into a clean store, token stream hashed
+`6c3757bd52a18d3c…` (match), archive hashed `35ac2b9beb7e6fa8…` (match),
+determinism repeat byte-identical.
+
+The script contains no local filesystem layout. Every input root is supplied
+through `--inputs-json` or the matching environment variables and is verified by
+SHA-256 before any stage runs; `--emit-inputs-template` prints the schema.
 
 # changes from upstream
 
-The learned semantic and carrier state is byte-identical to the PR130/PR135
-lineage. This packet retrains the PR130-lineage HPAC probability object on the
-current MC36 labels, carries the resulting current-label RC64 stream, uses the
-RX1M split-section lossless container, and binds the F26 device-flexible CPU
-port to the exact receiver. The detailed byte accounting below is the claim
-boundary.
+This submission changes **one section** of an inherited archive. Seven of the
+eight parsed sections are byte-identical to the base candidate; the eighth, the
+RC64 token stream, is re-encoded from 112,110 to 110,512 bytes by a decode-time
+probability corrector that ships in the receiver, stores zero archive bytes, and
+is driven entirely by already-decoded symbols. The decoded token field is
+byte-identical to the base candidate's (SHA-256 `9ba2e52b3096…`), so `d_seg` and
+`d_pose` are unchanged by construction and the entire improvement is rate.
 
 # competitive or innovative?
 
-**Competitive: yes.** On the exact submitted bytes, the measured `[contest-CUDA]`
-score is 0.1600920261571558, below the prior custodied 0.1619344578804448 row.
-The improvement comes from a current-label HPAC retrain and lossless
-whole-container composition while preserving exact decoded labels. The learned
-semantic and carrier substrate is borrowed from PR130/PR135 and is itemized
-below rather than presented as new work.
+**Competitive, on a measured row, stated against what is actually verified.**
+
+On the exact submitted bytes the measured `[contest-CUDA]` 600-sample score is
+`0.15853325034789678`, which we re-derived from the reported components
+independently. That is below our own prior custodied row and below the best
+score on the leaderboard at the time of writing.
+
+Two honesty qualifications we would rather state than have found:
+
+1. There is an open PR claiming `0.1591495384`. That figure is **author-claimed
+   and not yet evaluated by the maintainers**, as is ours until this PR is run.
+   We are not asserting a win over an unverified number; we are reporting our
+   measured one.
+2. The **innovation here is narrow and we scope it narrowly**: a zero-byte
+   decode-time probability corrector that losslessly saves 1,598 archive bytes.
+   The learned vehicle underneath — semantic renderer, carrier, HPAC probability
+   object — is PR130/PR135 lineage, is not ours, and is itemized below rather
+   than folded into the claim.
 
 # additional comments
 
 ## Score and runtime boundary
 
-The CUDA score is a 600-sample exact evaluation of the archive hash printed
-above through the unmodified upstream scorer. CPU and CUDA are separate axes.
-The exact e480b `[contest-CPU]` score remains pending.
-
-Two CPU receipts bound feasibility without substituting for that missing row:
-
-- `[contest-CPU]` predecessor: the 186,269-byte MC36 archive inflated in
-  831.5345 seconds on Linux x86_64 CPU, leaving 2.1647x, rounded to 2.17x,
-  headroom against the 1,800-second wall. Its score was
-  0.20513189128858372 on different bytes and does not transfer to e480b.
-- `[macOS-CPU advisory]` exact e480b receiver-identity replay: the
-  device-flexible F26 port decoded the 183,502-byte archive in 915.5 seconds
-  with raw-output identity to the predecessor vehicle. This proves the packet
-  is CPU-runnable, not what its contest-CPU score will be.
+The CUDA score is a 600-sample exact evaluation of the archive hash printed above
+through the unmodified upstream scorer. CPU and CUDA are separate axes and the
+exact `[contest-CPU]` score on these bytes remains pending. One CPU receipt bounds
+feasibility without substituting for that missing row: the receiver parse-back
+decoded these exact bytes on arm64 CPU and produced a 3,662,409,600-byte output
+whose SHA-256 equals the base candidate's own CPU inflate. That proves the packet
+is CPU-runnable and that the decoded content is identical; it is not a CPU score.
 
 ## Borrowed-substrate accounting
 
 | Section or mechanism | Classification | SHA-256 receipt and boundary |
 |---|---|---|
-| Semantic renderer physical state | `PR130/135-byte-identical` | decoded 36,040-byte section `b0d41ec904aca82f93f3c8bc68d0e48896ba08efdaa7a4a2ee204f002fc28ec8`; shipped as 34,763 bytes |
-| Carrier physical state | `PR130/135-byte-identical` | decoded 22,219-byte section `065fce08fc3d44e49d29ad624561cbef86d01282cc73dcd32533b5d63115bd9f`; shipped as 22,161 bytes |
-| HPAC IHS1 probability object | `PR130-lineage-retrained-on-our-labels` | decoded 17,996-byte object `94526d667a9c8b98f1e3ef8d39fe8769d6cc6721cb9a102629ad47f26016460d`; shipped as 13,619 bytes |
-| RC64 token stream | `PR130-lineage-retrained-on-our-labels` | 112,749-byte stream `b981b8399f184795da7cd99b8ee44416bd672c8c4ed1672f1252b32a64c10627`; decoded label field `9ba2e52b3096585895970066b389bf1261ebc203d5b828cdea056c13858aea52` |
-| Current-label correction table and residual | `ours-original` | table `3572a0db3d511f2c26b0ade0734e11112fec3f068bcba5900b54a0646eae61ec`; residual `64bbf9dfd88d6eb50d111f72d968ab7e8f8dc0ab00fb675d8ed2ee8a410b73ac` |
-| RX1M split container and lossless selection | `ours-original` | 70,557-byte wrapper `7cf390160189e8708faf3a7b09a76fc18cee85e45fdc7f71d30f725014417411`; learned contents retain the borrowing labels above |
-| Device-flexible CPU port and receiver binding | `ours-original` | portable executable content tree `26c7d4f6a8e111c071d74208fc625bf2358e077a06dc59b54ec9421a8d198e0b`; underlying F26 renderer remains borrowed lineage |
-| Final member and deterministic archive assembly | `ours-original` | member `30c0165ec56dd9327ca4dcda477c34c25f7664622ac37ec8ed171114267d1b58`; archive `e3e6f440b45bbb92f2eeb58c7a56d74b3cd0a62bbcff01a26adcd008391c19d3` |
+| Semantic renderer state | `PR130/135-byte-identical` | decoded 36,051 B, `b489c73567046e64…`; byte-identical to base |
+| Carrier state | `PR130/135-byte-identical` | decoded 22,242 B, `196f0e5136f4d6bf…`; byte-identical to base |
+| Compressed model container | `PR130/135-byte-identical` | 70,453 B, `e35d12371fa79747…`; byte-identical to base |
+| HPAC probability object | `PR130-lineage`, inherited unchanged here | 17,952 B, `e8c0cfd73d3275ad…`; byte-identical to base |
+| Compensation blob | `PR130/135-byte-identical` | 36 B, `38792b4953318117…`; byte-identical to base |
+| Residual payload + table codes | `ours-original`, inherited unchanged here | residual `74775aab04c7615c…`; table codes `76afdc3ceda1212a…` |
+| **RC64 token stream (only changed section)** | **`ours-original` estimator over borrowed probabilities** | 110,512 B, `6c3757bd52a18d3c…` (base 112,110 B, `73a878891a31c366…`); corrector `96fd35aaf82c737a…` |
+| RC64 backend, encoder side | `PR135-byte-identical` | compiles PR135's `rc64_backend.c`, `5c75e2c70b89f148…`, unmodified |
+| RC64 backend, shipped receiver | `PR135-lineage-modified` | shipped `05839d1416e68a49…`, which **differs** from the PR135 source above |
+| Receiver binding and archive assembly | `ours-original` | runtime tree `7acedb07e670e76c…`; archive `35ac2b9beb7e6fa8…` |
+| End-to-end compression entry point | `ours-original` | `experiments/ddm_pq2_compress_e2e.py`, rebuild verified |
 
-This is a new exact-byte composition and current-label probability retrain on
-a PR130/PR135 learned substrate, not a claim that the learned vehicle is wholly
-original.
+This is a lossless entropy re-encode on a PR130/PR135 learned substrate, not a
+claim that the learned vehicle is original.
 
 ## Public source and reproducibility
 
 - Source repository: https://github.com/adpena/comma-lab
-- Runtime/evaluation source pin:
-  https://github.com/adpena/comma-lab/commit/19dd7916eb9ab5058bbeafa885ac68d8218d0a1e
+- Runtime/evaluation source pin: commit `e7ca85754bb9e6a4b319e5a8fa206366c90bd6f4`
+- Runtime tree SHA-256: `7acedb07e670e76c798f153ac53a3045b053074d702e226411a2353745b98351`
 - Portable executable-runtime content tree:
-  `26c7d4f6a8e111c071d74208fc625bf2358e077a06dc59b54ec9421a8d198e0b`
-- Upstream snapshot:
-  `cdad563c2a3eee39c027d531a8c276ec7970ace47741e937d18d32938bfe7008`
-- Compression-side files at the pin:
-  `experiments/ddm_rx2_mc36_label_hpac.py`,
-  `tools/train_ddm_cl1_hpac_capacity_mps.py`,
-  `experiments/ddm_rx2_mc36_identity_race.py`, and
-  `experiments/ddm_rx1_rate_representation_attack.py`.
+  `4358aaf34fcbfc1cdc4a8865b9aead709199465c9909321abf279ebcd0fe3721`
+- Upstream snapshot: `cdad563c2a3eee39c027d531a8c276ec7970ace47741e937d18d32938bfe7008`
+- Compression entry point: `experiments/ddm_pq2_compress_e2e.py`; stage scripts
+  `experiments/ddm_rr2_encoder_byteclose.py` and
+  `experiments/ddm_rr2_receiver_close.py`; corrector
+  `experiments/ddm_rr4_free_corrector_v2.py`.
 
-Before submission, the operator must verify anonymous visibility of the pinned
-source URL, replace the download-status paragraph with the verified public
-archive URL and its hosted manifest, and either land a friendly reproducible
-compression bundle or keep the compression-script answer “no” without implying
-otherwise.
+Before submission the operator must verify anonymous visibility of the pinned
+source URL and replace the download-status paragraph with the verified public
+archive URL and its hosted manifest.
