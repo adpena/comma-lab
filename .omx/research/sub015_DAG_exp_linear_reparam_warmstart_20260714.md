@@ -178,3 +178,16 @@ tc1 memos 99ad5cb5d5/7763583f6d · er1 ledger · me1 charter.
 
 STORES CONSULTED: ddm_rv2_frontier_adversarial_review_r1_20260817.md · MODAL_REMOTE_RESULT.json ·
 RECOVERY_MANIFEST.json · bu1 registration rows · billing authority tool output (per rv2 F5).
+
+## FEED-20260817f — THE GESTALT NAMED (operator-prompted synthesis)
+
+The two-week arc synthesized (ddm_gestalt_operator_algebra_synthesis_20260817.md): **the contest
+has resolved into an OPERATOR ALGEBRA on a frozen semantic object** — every pointer move was an
+operator (SELECT/EDIT/RECODE), never descent; the field converged independently (PR138 opal =
+our rr4 in different clothes); zero-counted-byte mechanisms dominate (rule-118 lived); no single
+axis closes (pose→0 short 2.4e-4, exact); models rank / reality accepts; correction propagation
+(not discovery) is the binding apparatus constraint. Grokking read: plateau→representation-change
+→4 moves in 4 days. Pre-registered prediction (falsifiable): next rate win = opal-class online
+prior (me1 leg iii); next seg win = retrain-FOR-operators (aligned objective/editability); pose =
+joint/nonlinear only. If a plain longer burn or static coder race moves the pointer next, the
+gestalt is WRONG in a named way. 23rd convocation spawned to adversarially test + extend.
