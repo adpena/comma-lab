@@ -88,6 +88,22 @@
       ]
     },
     {
+      "sha256": "177d22f0ef16e31f9de0229606f72e69d22dd550b7ff55342f82d01ebe6f228d",
+      "bytes": 235929600,
+      "basename": "gt_segnet_margin.f16",
+      "lineage": "UNKNOWN_UNCOMPARABLE",
+      "lineage_evidence": "NONE",
+      "measurement": "dtype float16 carries seg geometry but is not a class-label field (the rulers store argmax labels); not comparable",
+      "claim_boundary": "Lineage NOT established. Recorded so the artifact is VISIBLE to the population gauge, not because it is usable: assert_gt_lineage still refuses every unresolved row. Reason: dtype float16 carries seg geometry but is not a class-label field (the rulers store argmax labels); not comparable",
+      "known_paths": [
+        "/Volumes/VertigoDataTier/pact/lever_b_score_native_argmax_smoke_20260610/targets_n600/gt_segnet_margin.f16"
+      ],
+      "known_basenames": [
+        "gt_segnet_margin.f16"
+      ],
+      "registered_by": "experiments/ddm_gl2_raw_gt_lineage_census.py"
+    },
+    {
       "sha256": "1aa74b2f952111bdfa3858477c2f656984a4344f63a080c89acc97d4e2bbad82",
       "bytes": 75500573,
       "basename": "gt_targets_n48.pt",
@@ -149,6 +165,22 @@
       ]
     },
     {
+      "sha256": "36c6be718916de9b0a62fec0c1229c94e38f84c3313a1fad1357c9a24eef8b68",
+      "bytes": 117964800,
+      "basename": "gt_segnet_argmax.u8",
+      "lineage": "PYAV_YUV420_TO_RGB",
+      "lineage_evidence": "PRODUCER_DECLARED|EMPIRICAL_NEAREST_RULER_SEG_SITES",
+      "measurement": "seg: 20,672 differing sites vs DALI ruler, 1 vs AV ruler, of 117,964,800; producer receipt BOUND to these bytes (receipt argmax_class_histogram reproduces EXACTLY from these bytes (5 classes, max |delta| = 0.0)); declared decoder frame_utils.yuv420_to_rgb on device cpu by tools/lever_b_build_score_native_targets.py",
+      "claim_boundary": "A producer receipt is BOUND to these exact bytes -- its published class histogram reproduces from them with max |delta| = 0.0 -- and the receipt's producer script imports frame_utils.yuv420_to_rgb and refuses any non-CPU device. This is the strongest rung: the decoder is declared, not merely inferred. Content comparison against both #906 rulers agrees with the receipt. It still does not recover the original package versions or host, and within-family drift is nonzero.",
+      "known_paths": [
+        "/Volumes/VertigoDataTier/pact/lever_b_score_native_argmax_smoke_20260610/targets_n600/gt_segnet_argmax.u8"
+      ],
+      "known_basenames": [
+        "gt_segnet_argmax.u8"
+      ],
+      "registered_by": "experiments/ddm_gl2_raw_gt_lineage_census.py"
+    },
+    {
       "sha256": "382d7dfe38b37c0cc5017e5645032faa045af6924db66e0b67549cc96c840195",
       "bytes": 117981301,
       "basename": "gt_cache_600_official_ada.pt",
@@ -163,6 +195,22 @@
       "known_basenames": [
         "gt_cache_600_official_ada.pt"
       ]
+    },
+    {
+      "sha256": "41d3ef535f5b5855fe17aab678580114a50309dc48d04948af62c2f563ed3b52",
+      "bytes": 1179648000,
+      "basename": "gt_segnet_logits.f16",
+      "lineage": "UNKNOWN_UNCOMPARABLE",
+      "lineage_evidence": "NONE",
+      "measurement": "dtype float16 carries seg geometry but is not a class-label field (the rulers store argmax labels); not comparable",
+      "claim_boundary": "Lineage NOT established. Recorded so the artifact is VISIBLE to the population gauge, not because it is usable: assert_gt_lineage still refuses every unresolved row. Reason: dtype float16 carries seg geometry but is not a class-label field (the rulers store argmax labels); not comparable",
+      "known_paths": [
+        "/Volumes/VertigoDataTier/pact/lever_b_score_native_argmax_smoke_20260610/teacher_logits_n600/gt_segnet_logits.f16"
+      ],
+      "known_basenames": [
+        "gt_segnet_logits.f16"
+      ],
+      "registered_by": "experiments/ddm_gl2_raw_gt_lineage_census.py"
     },
     {
       "sha256": "49e8a8023edd71032519aed1642ebb7556f679c9f46d3e0b0e5a108663c53a8a",
@@ -271,6 +319,38 @@
       ]
     },
     {
+      "sha256": "62206d742049b317b8ea6ab831b2125eb81ca6e022c744038b874f06ff751c5d",
+      "bytes": 2880,
+      "basename": "gt_poses.f32",
+      "lineage": "UNKNOWN_AMBIGUOUS",
+      "lineage_evidence": "EMPIRICAL_POSE_ROW_SUBSET_PARTIAL",
+      "measurement": "only 0/120 rows match the DALI ruler and 0/120 the AV ruler exactly; no decisive content identity, and no second test exists for a bare pose table",
+      "claim_boundary": "Lineage NOT established. Recorded so the artifact is VISIBLE to the population gauge, not because it is usable: assert_gt_lineage still refuses every unresolved row. Reason: only 0/120 rows match the DALI ruler and 0/120 the AV ruler exactly; no decisive content identity, and no second test exists for a bare pose table",
+      "known_paths": [
+        "/Volumes/VertigoDataTier/pact/taskspace_fresh_scorer_planes_n600_20260726/stage_00_0000_0120/gt_poses.f32"
+      ],
+      "known_basenames": [
+        "gt_poses.f32"
+      ],
+      "registered_by": "experiments/ddm_gl2_raw_gt_lineage_census.py"
+    },
+    {
+      "sha256": "631ebaceabf38e2409542ceea2b2d5211e5b3493180523f938f6a518ccbcc28c",
+      "bytes": 6291456,
+      "basename": "gt_segnet_margin.f16",
+      "lineage": "UNKNOWN_UNCOMPARABLE",
+      "lineage_evidence": "NONE",
+      "measurement": "dtype float16 carries seg geometry but is not a class-label field (the rulers store argmax labels); not comparable",
+      "claim_boundary": "Lineage NOT established. Recorded so the artifact is VISIBLE to the population gauge, not because it is usable: assert_gt_lineage still refuses every unresolved row. Reason: dtype float16 carries seg geometry but is not a class-label field (the rulers store argmax labels); not comparable",
+      "known_paths": [
+        "/Volumes/VertigoDataTier/pact/lever_b_score_native_argmax_smoke_20260610/targets_n16/gt_segnet_margin.f16"
+      ],
+      "known_basenames": [
+        "gt_segnet_margin.f16"
+      ],
+      "registered_by": "experiments/ddm_gl2_raw_gt_lineage_census.py"
+    },
+    {
       "sha256": "684a2e043f5637eec6f2bc837b845588a7ec759c2a5c4b3b75dcb9f872541ede",
       "bytes": 221996742,
       "basename": "gt_n24.npz",
@@ -329,6 +409,54 @@
       "known_basenames": [
         "gt_cache.pt"
       ]
+    },
+    {
+      "sha256": "7012e5843b23579389048e9349b9cd31063c17fb1293b4e97241265e536a1e09",
+      "bytes": 2880,
+      "basename": "gt_poses.f32",
+      "lineage": "UNKNOWN_AMBIGUOUS",
+      "lineage_evidence": "EMPIRICAL_POSE_ROW_SUBSET_PARTIAL",
+      "measurement": "only 0/120 rows match the DALI ruler and 0/120 the AV ruler exactly; no decisive content identity, and no second test exists for a bare pose table",
+      "claim_boundary": "Lineage NOT established. Recorded so the artifact is VISIBLE to the population gauge, not because it is usable: assert_gt_lineage still refuses every unresolved row. Reason: only 0/120 rows match the DALI ruler and 0/120 the AV ruler exactly; no decisive content identity, and no second test exists for a bare pose table",
+      "known_paths": [
+        "/Volumes/VertigoDataTier/pact/taskspace_fresh_scorer_planes_n600_20260726/stage_01_0120_0240/gt_poses.f32"
+      ],
+      "known_basenames": [
+        "gt_poses.f32"
+      ],
+      "registered_by": "experiments/ddm_gl2_raw_gt_lineage_census.py"
+    },
+    {
+      "sha256": "7588e39b765e0d4c86243bf9c9f3a3e1035297ce5bb048ab6a072432a7eacfb5",
+      "bytes": 2880,
+      "basename": "gt_poses.f32",
+      "lineage": "UNKNOWN_AMBIGUOUS",
+      "lineage_evidence": "EMPIRICAL_POSE_ROW_SUBSET_PARTIAL",
+      "measurement": "only 0/120 rows match the DALI ruler and 0/120 the AV ruler exactly; no decisive content identity, and no second test exists for a bare pose table",
+      "claim_boundary": "Lineage NOT established. Recorded so the artifact is VISIBLE to the population gauge, not because it is usable: assert_gt_lineage still refuses every unresolved row. Reason: only 0/120 rows match the DALI ruler and 0/120 the AV ruler exactly; no decisive content identity, and no second test exists for a bare pose table",
+      "known_paths": [
+        "/Volumes/VertigoDataTier/pact/taskspace_fresh_scorer_planes_n600_20260726/stage_02_0240_0360/gt_poses.f32"
+      ],
+      "known_basenames": [
+        "gt_poses.f32"
+      ],
+      "registered_by": "experiments/ddm_gl2_raw_gt_lineage_census.py"
+    },
+    {
+      "sha256": "7646794a39c8e3283c5458916185f60d1a2628e244f90e8681eaea5722449730",
+      "bytes": 3145728,
+      "basename": "gt_segnet_argmax.u8",
+      "lineage": "PYAV_YUV420_TO_RGB",
+      "lineage_evidence": "PRODUCER_DECLARED|EMPIRICAL_EXACT_FRAME_SUBSET",
+      "measurement": "seg: 0/16 frames bit-identical to DALI ruler, 16/16 to AV ruler; producer receipt BOUND to these bytes (receipt argmax_class_histogram reproduces EXACTLY from these bytes (5 classes, max |delta| = 0.0)); declared decoder frame_utils.yuv420_to_rgb on device cpu by tools/lever_b_build_score_native_targets.py",
+      "claim_boundary": "A producer receipt is BOUND to these exact bytes -- its published class histogram reproduces from them with max |delta| = 0.0 -- and the receipt's producer script imports frame_utils.yuv420_to_rgb and refuses any non-CPU device. This is the strongest rung: the decoder is declared, not merely inferred. Every frame is additionally bit-identical to a frame of a producer-declared ruler.",
+      "known_paths": [
+        "/Volumes/VertigoDataTier/pact/lever_b_score_native_argmax_smoke_20260610/targets_n16/gt_segnet_argmax.u8"
+      ],
+      "known_basenames": [
+        "gt_segnet_argmax.u8"
+      ],
+      "registered_by": "experiments/ddm_gl2_raw_gt_lineage_census.py"
     },
     {
       "sha256": "77ed36b2d49cea3040dbbaf5e76142f7dadd588a42e1fbc57eb0913a466f071c",
@@ -433,6 +561,22 @@
         "gt_argmax.npy",
         "gt_argmax_n600.npy"
       ]
+    },
+    {
+      "sha256": "94d8afad3bde298ad9ab2659235c407c46c58eb6c59eaf9457a79da49be7b848",
+      "bytes": 2880,
+      "basename": "gt_poses.f32",
+      "lineage": "UNKNOWN_AMBIGUOUS",
+      "lineage_evidence": "EMPIRICAL_POSE_ROW_SUBSET_PARTIAL",
+      "measurement": "only 0/120 rows match the DALI ruler and 0/120 the AV ruler exactly; no decisive content identity, and no second test exists for a bare pose table",
+      "claim_boundary": "Lineage NOT established. Recorded so the artifact is VISIBLE to the population gauge, not because it is usable: assert_gt_lineage still refuses every unresolved row. Reason: only 0/120 rows match the DALI ruler and 0/120 the AV ruler exactly; no decisive content identity, and no second test exists for a bare pose table",
+      "known_paths": [
+        "/Volumes/VertigoDataTier/pact/taskspace_fresh_scorer_planes_n600_20260726/stage_04_0480_0600/gt_poses.f32"
+      ],
+      "known_basenames": [
+        "gt_poses.f32"
+      ],
+      "registered_by": "experiments/ddm_gl2_raw_gt_lineage_census.py"
     },
     {
       "sha256": "95a324f7616b12e4c1b4092e3089373171876929e7885fdaf46a7a24bf5c88f7",
@@ -723,6 +867,22 @@
       ]
     },
     {
+      "sha256": "fb1e1399dbfc012ef40afc938d94df225882ada6a5cb84e0388abdb490a1db8f",
+      "bytes": 2880,
+      "basename": "gt_poses.f32",
+      "lineage": "UNKNOWN_AMBIGUOUS",
+      "lineage_evidence": "EMPIRICAL_POSE_ROW_SUBSET_PARTIAL",
+      "measurement": "only 0/120 rows match the DALI ruler and 0/120 the AV ruler exactly; no decisive content identity, and no second test exists for a bare pose table",
+      "claim_boundary": "Lineage NOT established. Recorded so the artifact is VISIBLE to the population gauge, not because it is usable: assert_gt_lineage still refuses every unresolved row. Reason: only 0/120 rows match the DALI ruler and 0/120 the AV ruler exactly; no decisive content identity, and no second test exists for a bare pose table",
+      "known_paths": [
+        "/Volumes/VertigoDataTier/pact/taskspace_fresh_scorer_planes_n600_20260726/stage_03_0360_0480/gt_poses.f32"
+      ],
+      "known_basenames": [
+        "gt_poses.f32"
+      ],
+      "registered_by": "experiments/ddm_gl2_raw_gt_lineage_census.py"
+    },
+    {
       "sha256": "fc516da6ad42e5e98edb70a16657da4ad8c492acb4f7458933f23ab54d455751",
       "bytes": 75500573,
       "basename": "gt_targets_n48.pt",
@@ -768,5 +928,9 @@
         "gt_argmax_n600.npy"
       ]
     }
-  ]
+  ],
+  "merged_censuses": [
+    "experiments/ddm_gl2_raw_gt_lineage_census.py"
+  ],
+  "last_merged_utc": "2026-08-17T06:31:38Z"
 }

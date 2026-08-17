@@ -46,12 +46,15 @@ __all__ = [
     "FEASIBILITY_ONLY_TAG",
     "GIT_LOG_WC_COUNT_PATTERN",
     "GT_ARGMAX_TOKENS",
+    "GT_ARTIFACT_LITERAL_PATTERN",
+    "NON_FIELD_SUFFIXES",
     "PROXY_DSEG_SIGNATURE_TOKENS",
     "REALIZED_HARNESS_TOKENS",
     "STALE_SWAP_R_FN",
     "VALIDATION_LEDGER_REL",
     "assert_no_git_log_wc_count_consumers",
     "find_git_log_wc_count_consumers",
+    "find_gt_artifact_literals",
     "validation_ledger_path",
     "warn_ema_only_dseg",
     "warn_feasibility_only_dseg",
@@ -93,6 +96,24 @@ PROXY_DSEG_SIGNATURE_TOKENS = frozenset(
 )
 
 # Tokens naming the GT argmax target a proxy diffs against.
+#
+# ⚠ DETECTION VOCABULARY ONLY -- A NAME IS NOT AN IDENTITY, AND NEVER A LINEAGE.
+# These four strings answer "does this source text talk about a GT argmax target?".  They do NOT
+# answer "which ground truth does it read?", and no gate may treat a hit here as evidence that the
+# bytes behind the name are the right ones.  ``ddm_gl1`` MEASURED six distinct files named
+# ``gt_argmax_n600.npy``, and two of them -- identical in name AND byte count -- carry DIFFERENT
+# decode lineages (DALI/nvdec vs PyAV).  ``ddm_gl2`` then measured that the artifact these tokens
+# most often name in practice, ``gt_segnet_argmax.u8``, is PyAV lineage and differs from the DALI
+# ``gt_argmax_n600.npy`` on 20,673 of 117,964,800 sites = 0.017525 S units.  So "the file is called
+# gt_argmax" is worth exactly nothing about which of those two it is.
+#
+# The content-addressed answer lives in :mod:`tac.gt_lineage`, keyed by sha256:
+# :func:`tac.gt_lineage.assert_gt_lineage` for a single read,
+# :func:`tac.gt_lineage.assert_single_lineage` for one instrument's span, and
+# :func:`tac.gt_lineage.assert_gt_population_registered` for the repo-wide population.
+# Use :data:`GT_ARTIFACT_LITERAL_PATTERN` / :func:`find_gt_artifact_literals` below when you need
+# the PATH a file reads -- a path resolves to bytes, which resolve to a sha256, which resolves to a
+# lineage.  A bare name resolves to nothing.
 GT_ARGMAX_TOKENS = frozenset(
     {
         "gt_argmax",
@@ -100,6 +121,40 @@ GT_ARGMAX_TOKENS = frozenset(
         "lstar",
         "lstars",
     }
+)
+
+# Suffixes that are DEFINITIONALLY not a ground-truth tensor field: source, docs, config, and
+# receipts.  This is a DENY-list on purpose, and that polarity is the whole point.
+#
+# ``ddm_gl1``'s census used an ALLOW-list (``npy|npz|pt|pth``) at BOTH discovery legs, so its
+# disk sweep of 66 files contained zero ``.u8`` and zero ``.f16`` and a whole second GT population
+# -- headerless raw memmaps with 15 live readers -- was structurally invisible.  An allow-list
+# fails OPEN on every container nobody thought of.  A deny-list fails CLOSED: a new raw suffix
+# lands in the must-be-registered population automatically and the guard refuses until someone
+# measures it.
+NON_FIELD_SUFFIXES = frozenset(
+    {
+        ".py",
+        ".json",
+        ".md",
+        ".txt",
+        ".log",
+        ".yaml",
+        ".yml",
+        ".csv",
+        ".sh",
+        ".toml",
+        ".lookup",
+        ".v1",
+    }
+)
+
+# GT-artifact PATH literals, with NO extension allow-list.  Matches a quoted literal whose final
+# component starts with ``gt_`` and carries any short suffix; the suffix filtering happens
+# afterwards against :data:`NON_FIELD_SUFFIXES`, where it is visible and auditable, instead of
+# being welded into the regex where a missing alternative silently deletes a population.
+GT_ARTIFACT_LITERAL_PATTERN = re.compile(
+    r"""["']([^"'\s]*\bgt_[A-Za-z0-9_.]*\.[A-Za-z0-9_]{1,6})["']"""
 )
 
 # The canonical contest-faithful R function and the deprecated SWAP twin.
@@ -117,6 +172,29 @@ GIT_LOG_WC_COUNT_PATTERN = re.compile(
     r"\bgit\s+log\b[^\n|]*\\?\|\s*wc\s+-l\b",
     re.IGNORECASE,
 )
+
+
+def find_gt_artifact_literals(text: str) -> set[str]:
+    """Return the ground-truth-artifact PATH literals in a source text.
+
+    This is the content-addressable counterpart to :data:`GT_ARGMAX_TOKENS`.  A token tells you a
+    file TALKS ABOUT ground truth; a path literal tells you WHICH BYTES it reads, and bytes have a
+    sha256, and a sha256 has a recorded decode lineage.  Every consumer that needs to decide
+    anything about ground truth -- rather than merely notice that ground truth is mentioned --
+    should start here and finish in :mod:`tac.gt_lineage`.
+
+    Suffixes in :data:`NON_FIELD_SUFFIXES` are dropped because a receipt, a script, or a config is
+    not a tensor field.  Every OTHER suffix is kept, including ones nobody has seen yet: that is
+    the deny-list polarity, and it is what makes a new raw container visible on the day it lands
+    instead of on the day someone remembers to widen a regex.
+    """
+    out: set[str] = set()
+    for m in GT_ARTIFACT_LITERAL_PATTERN.finditer(text):
+        lit = m.group(1)
+        if Path(lit).suffix.lower() in NON_FIELD_SUFFIXES:
+            continue
+        out.add(lit)
+    return out
 
 
 def find_git_log_wc_count_consumers(text: str, relpath: str = "<text>") -> list[str]:

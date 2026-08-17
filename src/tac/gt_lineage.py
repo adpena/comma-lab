@@ -99,6 +99,7 @@ from typing import Any
 __all__ = [
     "AUTHORITY_LINEAGE",
     "DALI_NVDEC",
+    "GT_ARTIFACT_SEARCH_ROOTS",
     "PYAV_YUV420_TO_RGB",
     "REGISTRY_PATH",
     "SPLIT_LINEAGE_WITHIN_ARTIFACT",
@@ -109,17 +110,22 @@ __all__ = [
     "GtLineageMismatch",
     "GtLineageSplit",
     "GtLineageUnknown",
+    "GtLineageUnregisteredPopulation",
     "GtSource",
     "assert_gt_lineage",
+    "assert_gt_population_registered",
     "assert_single_lineage",
     "basename_lineage_collisions",
+    "enumerate_gt_artifact_literals",
     "is_known_lineage",
     "lineage_of_file",
     "lineage_of_source",
     "load_registry",
     "population_split_report",
+    "resolve_gt_literal",
     "runtime_decode_lineage",
     "sha256_file",
+    "unregistered_gt_artifacts",
 ]
 
 # --- lineage vocabulary --------------------------------------------------------------------
@@ -157,6 +163,17 @@ class GtLineageUnknown(GtLineageError):
 
 class GtLineageMismatch(GtLineageError):
     """The artifact's recorded lineage is not the one the instrument declared it needs."""
+
+
+class GtLineageUnregisteredPopulation(GtLineageError):
+    """Ground-truth artifacts our own instruments can load are absent from the registry.
+
+    Carries STRUCTURED detail (``artifacts``) so a caller never has to parse the message text.
+    """
+
+    def __init__(self, message: str, *, artifacts: tuple[dict[str, Any], ...] = ()):
+        super().__init__(message)
+        self.artifacts = tuple(artifacts)
 
 
 class GtLineageSplit(GtLineageError):
@@ -432,6 +449,181 @@ def basename_lineage_collisions(
         for name, sides in sorted(by_name.items())
         if len(sides) > 1
     }
+
+
+#: Directories our instruments join a BARE ground-truth basename onto.
+#:
+#: Readers write ``targets_dir / "gt_segnet_argmax.u8"``, so the source literal is often just a
+#: filename while the directory lives in a separate module constant.  Resolving only
+#: ``<repo>/<literal>`` therefore finds nothing, and "found nothing" reads exactly like "nothing to
+#: check" -- which is how a whole population stays invisible.  These roots are read out of the
+#: reader sources (``DEFAULT_SURFACE_ROOT`` / ``_SSD`` / ``_DEFAULT_ARGMAX``), never invented.
+GT_ARTIFACT_SEARCH_ROOTS: tuple[Path, ...] = (
+    Path("/Volumes/VertigoDataTier/pact/lever_b_score_native_argmax_smoke_20260610"),
+    Path("/Volumes/VertigoDataTier/pact/lever_b_score_native_argmax_smoke_20260610/targets_n600"),
+    Path("/Volumes/VertigoDataTier/pact/lever_b_score_native_argmax_smoke_20260610/targets_n16"),
+)
+
+#: Source trees scanned for ground-truth reads.  Tests are excluded because a fixture that writes
+#: a GT name into ``tmp_path`` names a file no instrument ever loads.
+_SCAN_DIRS = ("experiments", "tools", "src")
+
+
+def _repo_root(repo_root: str | Path | None = None) -> Path:
+    return Path(repo_root) if repo_root is not None else Path(__file__).resolve().parents[2]
+
+
+def enumerate_gt_artifact_literals(
+    repo_root: str | Path | None = None,
+) -> dict[str, list[str]]:
+    """Every ground-truth artifact PATH literal in our instruments -> the files naming it.
+
+    Discovery is EXTENSION-AGNOSTIC by construction (see
+    :func:`tac.measurement_integrity.find_gt_artifact_literals`).  ``ddm_gl1``'s census used an
+    allow-list of ``npy|npz|pt|pth`` and therefore could not see the raw ``.u8`` / ``.f16`` GT
+    population at all -- 5 artifacts, the largest 117,964,800 bytes with 15 live readers.  An
+    allow-list fails OPEN on every container nobody anticipated; this fails CLOSED.
+    """
+    from tac.measurement_integrity import find_gt_artifact_literals
+
+    root = _repo_root(repo_root)
+    out: dict[str, list[str]] = {}
+    for sub in _SCAN_DIRS:
+        base = root / sub
+        if not base.is_dir():
+            continue
+        for py in base.rglob("*.py"):
+            if "tests" in py.parts or py.name.startswith("test_"):
+                continue
+            try:
+                text = py.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            for lit in find_gt_artifact_literals(text):
+                out.setdefault(lit, []).append(str(py.relative_to(root)))
+    return {k: sorted(set(v)) for k, v in sorted(out.items())}
+
+
+def resolve_gt_literal(
+    literal: str,
+    *,
+    repo_root: str | Path | None = None,
+    search_roots: Sequence[Path] | None = None,
+) -> list[Path]:
+    """Resolve one source literal to the existing files it can name.
+
+    Returns every distinct existing path, not the first hit: one basename legitimately resolves
+    under several roots (``targets_n16`` and ``targets_n600`` both hold a ``gt_segnet_argmax.u8``,
+    and they are different bytes), and collapsing them to one would recreate the name-as-identity
+    error this module exists to kill.
+    """
+    root = _repo_root(repo_root)
+    roots = tuple(search_roots) if search_roots is not None else GT_ARTIFACT_SEARCH_ROOTS
+    p = Path(literal)
+    hits: list[Path] = []
+    for cand in (p, root / literal):
+        if cand.is_file():
+            hits.append(cand.resolve())
+    if not p.is_absolute():
+        for r in roots:
+            cand = r / literal
+            if cand.is_file():
+                hits.append(cand.resolve())
+    return sorted(set(hits))
+
+
+def unregistered_gt_artifacts(
+    *,
+    repo_root: str | Path | None = None,
+    search_roots: Sequence[Path] | None = None,
+    registry: dict[str, GtArtifactLineage] | None = None,
+) -> list[dict[str, Any]]:
+    """THE LIVE COUNT: ground-truth files our instruments can load whose sha256 is unregistered.
+
+    This is a property of REALITY, not of this module's instrumentation, so it does not zero out
+    on its own cure.  Adding a lineage DECLARATION to an already-registered artifact moves it by
+    zero; it moves only when a GT artifact appears on, or leaves, a reachable read path.  A new
+    raw container landing tomorrow raises it the same day.
+
+    Registry membership means "measured and recorded", NOT "usable": an artifact recorded as
+    ``UNKNOWN_UNCOMPARABLE`` is still refused by :func:`assert_gt_lineage`.  Separating VISIBILITY
+    from USABILITY is deliberate -- conflating them is what makes people either register junk to
+    silence a gate, or leave real artifacts unrecorded to avoid mislabelling them.
+    """
+    reg = registry if registry is not None else load_registry()
+    out: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for literal, readers in enumerate_gt_artifact_literals(repo_root).items():
+        for path in resolve_gt_literal(
+            literal, repo_root=repo_root, search_roots=search_roots
+        ):
+            key = str(path)
+            if key in seen:
+                continue
+            seen.add(key)
+            digest = _cached_digest(path)
+            if digest in reg:
+                continue
+            out.append(
+                {
+                    "path": key,
+                    "sha256": digest,
+                    "bytes": path.stat().st_size,
+                    "literal": literal,
+                    "readers": readers,
+                }
+            )
+    return sorted(out, key=lambda r: r["path"])
+
+
+def assert_gt_population_registered(
+    *,
+    repo_root: str | Path | None = None,
+    search_roots: Sequence[Path] | None = None,
+    registry: dict[str, GtArtifactLineage] | None = None,
+    allow_sha256: Sequence[str] = (),
+) -> list[dict[str, Any]]:
+    """REFUSE when any loadable ground-truth artifact is missing from the registry.
+
+    This is the second landing for the ``ddm_gl2`` coverage gap, per CLAUDE.md's two-landing rule:
+    the first landing registered the raw ``.u8`` / ``.f16`` population that ``ddm_gl1`` could not
+    see; this one refuses its re-introduction in any container, named or not yet invented.
+
+    An unregistered GT artifact is not a cosmetic gap.  ``ddm_gl2`` MEASURED that the unregistered
+    ``gt_segnet_argmax.u8`` is PyAV lineage while the registered ``gt_argmax_n600.npy`` most
+    instruments compare against is DALI lineage, and that the two differ on 20,673 of 117,964,800
+    sites = 0.017525 S units.  Reading an unrecorded GT is reading an unknown one of those.
+
+    ``allow_sha256`` exists for a genuinely transient artifact and is deliberately keyed by DIGEST,
+    never by path or name -- an allow-list keyed by name would reintroduce the exact defect.
+
+    Returns the (empty) violation list on success so callers can log the re-derived live count.
+    """
+    allowed = set(allow_sha256)
+    violations = [
+        r
+        for r in unregistered_gt_artifacts(
+            repo_root=repo_root, search_roots=search_roots, registry=registry
+        )
+        if r["sha256"] not in allowed
+    ]
+    if violations:
+        detail = "\n".join(
+            f"    {r['sha256'][:16]}  {r['bytes']:>13,} B  {r['path']}\n"
+            f"        named by {r['literal']!r} in {', '.join(r['readers'][:4])}"
+            + (" ..." if len(r["readers"]) > 4 else "")
+            for r in violations
+        )
+        raise GtLineageUnregisteredPopulation(
+            f"{len(violations)} ground-truth artifact(s) reachable from our instruments are NOT in "
+            f"the lineage registry, so their decode lineage is unrecorded and no seg/pose claim may "
+            f"rest on them:\n{detail}\n"
+            "Classify them with experiments/ddm_gl1_gt_lineage_census.py (npy/npz/pt) or "
+            "experiments/ddm_gl2_raw_gt_lineage_census.py (raw containers), then merge the measured "
+            "rows into src/tac/gt_lineage_registry.json. Do NOT hand-type a lineage.",
+            artifacts=tuple(violations),
+        )
+    return violations
 
 
 def population_split_report(
