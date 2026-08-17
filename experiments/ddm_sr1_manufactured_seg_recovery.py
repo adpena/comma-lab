@@ -39,6 +39,10 @@ Stages
 roperator   exact separable characterisation of A = D.U, with a positive control against the
             real F.interpolate chain, plus the realised blur magnitude on the shipped decode
             and the clipping feasibility of a zero-byte pre-compensation m <- A^-1 m.
+a1sign      FO-1, run by ddm_a1s: the DECISIVE argmax row for the zero-byte de-blur.  Synthesise
+            the post-fix camera frame from the retained decode at a ladder of strengths, push
+            each through the frozen CPU SegNet, and adjudicate against the bands this memo
+            pre-registered.  Needs the scorer; every other stage here is scorer-free.
 waterfill   re-price rt1's free-band correction channel PER CELL instead of on average.  rt1
             priced the whole band at its mean density 1.359%; the break-even density at a given
             eta is a fixed number, so any free-to-the-receiver sub-support above it already
@@ -990,6 +994,340 @@ def stage_waterfill(args: argparse.Namespace) -> dict:
 
 
 # ============================================================================================
+# stage: a1sign -- FO-1, the decisive $0 argmax row for the zero-byte de-blur (ddm_a1s)
+# ============================================================================================
+# Pre-registered by the sr1 FIRE-ORDER (memo section FO-1) BEFORE any alpha > 0 was scored.
+# These four constants are the verdict and MUST NOT be moved by the arm that runs the row.
+A1_ALPHAS = (0.0, 0.25, 0.5, 0.75, 1.0)
+A1_CONTROL_FLIPS = 34_938        # rt1 base leg, `argmax_base.npy` sha 2aeb1e6b...
+A1_LIVE_BELOW = 33_251           # >= 5% of the 33,743 round-trip flips recovered
+A1_NEUTRAL_LO = 34_589           # ceil(34938 * 0.99)
+A1_NEUTRAL_HI = 35_287           # floor(34938 * 1.01)
+A1_PIN_THREADS = 8               # et4: batch shape and thread count are part of the instrument
+
+
+def _a1_axis_operators(tikhonov: float) -> dict:
+    """Rebuild D, U and A = D.U per axis, and fail closed unless A reproduces sr1's retained A.
+
+    sr1 retained only the SQUARE composite A (384x384, 512x512).  FO-1 needs `D(cam)`, which A
+    cannot express -- D maps 874 -> 384.  So the four one-axis operators are rebuilt here from
+    the same deterministic `resample_matrix`, and the rebuild is tied back to sr1's custody by
+    requiring `d @ u` to equal the retained matrices EXACTLY.
+    """
+    u_r = resample_matrix(SEG_H, CAM_H)   # (874, 384)
+    d_r = resample_matrix(CAM_H, SEG_H)   # (384, 874)
+    u_c = resample_matrix(SEG_W, CAM_W)   # (1164, 512)
+    d_c = resample_matrix(CAM_W, SEG_W)   # (512, 1164)
+    a_r = d_r @ u_r
+    a_c = d_c @ u_c
+
+    def reg_inverse(mat: np.ndarray) -> np.ndarray:
+        u, s, vt = np.linalg.svd(mat)
+        return (vt.T * (s / (s * s + tikhonov))) @ u.T
+
+    ops = {"u_r": u_r, "d_r": d_r, "u_c": u_c, "d_c": d_c, "a_r": a_r, "a_c": a_c,
+           "inv_r": reg_inverse(a_r), "inv_c": reg_inverse(a_c)}
+    for name, mat in ops.items():
+        if not np.all(np.isfinite(mat)):
+            raise Sr1Error(f"operator {name} is not finite")
+    return ops
+
+
+def _a1_custody_control(ops: dict, work: Path) -> dict:
+    """Tie the rebuilt operators to sr1's retained payloads, and to the real interpolate chain."""
+    import torch
+    import torch.nn.functional as F
+
+    rec: dict = {}
+    for axis, fname, key in (("row", "A_row_384x384.npy", "a_r"),
+                             ("col", "A_col_512x512.npy", "a_c")):
+        path = work / fname
+        if not path.exists():
+            raise Sr1Error(f"missing sr1 retained operator {path}")
+        retained = np.load(path)
+        diff = float(np.abs(ops[key] - retained).max())
+        rec[f"{axis}_rebuild_vs_retained_max_abs"] = diff
+        rec[f"{axis}_retained_sha256"] = sha256_file(path)
+        if diff != 0.0:
+            raise Sr1Error(
+                f"{axis} operator rebuild does not reproduce sr1's retained {fname} "
+                f"(max abs diff {diff:.3e}); custody chain broken"
+            )
+
+    # sr1's own positive control, re-run: the separable matrices must reproduce the real chain.
+    rng = np.random.default_rng(12345)
+    probe = rng.uniform(0.0, 255.0, size=(1, 1, SEG_H, SEG_W))
+    up = F.interpolate(torch.from_numpy(probe), size=(CAM_H, CAM_W),
+                       mode="bilinear", align_corners=False)
+    chain = F.interpolate(up, size=(SEG_H, SEG_W),
+                          mode="bilinear", align_corners=False)[0, 0].numpy()
+    separable = ops["a_r"] @ probe[0, 0] @ ops["a_c"].T
+    max_abs = float(np.abs(chain - separable).max())
+    rec["separable_vs_interpolate_max_abs"] = max_abs
+    rec["separable_vs_interpolate_rel"] = float(max_abs / max(np.abs(chain).max(), 1e-12))
+    if rec["separable_vs_interpolate_rel"] >= 1e-9:
+        raise Sr1Error("separable operator does not reproduce the real interpolate chain")
+    rec["inverse_row_residual"] = float(
+        np.abs(ops["inv_r"] @ ops["a_r"] - np.eye(SEG_H)).max())
+    rec["inverse_col_residual"] = float(
+        np.abs(ops["inv_c"] @ ops["a_c"] - np.eye(SEG_W)).max())
+    return rec
+
+
+def _a1_delta_camera(cam_f64: np.ndarray, ops: dict) -> tuple[np.ndarray, np.ndarray]:
+    """Return `(x, delta_cam)`: what the scorer reads from the SHIPPED frame, and the actuator's
+    camera-side perturbation whose alpha-scaled sum with `cam` realises the de-blur.
+
+    The shipped decoder writes `cam = round(clamp(U m))` for a renderer master `m`, so the
+    scorer reads `x = D(cam) ~= A m`.  The A1 actuator instead writes `U(m + a(A^-1 m - m))`.
+    `m` is not retained, but `m_est = A^-1 x` recovers it to 1e-4 RGB levels at the band (this
+    unit measured that residual directly), so the actuator's camera-side perturbation is
+
+        delta_cam = U(A^-1 m_est - m_est),      cam'(a) = round(clamp(cam + a * delta_cam))
+
+    which puts `x + a(A^-1 x - x)` at the scorer, because `D U = A` collapses the lift exactly.
+
+    This is an ALGEBRAIC REARRANGEMENT of the FO-1 object, not a different object.  It is used
+    instead of the order's literal `cam' = round(clamp(U(x + a(A^-1 x - x))))` because that
+    form leaves the scorer reading `A x` at a = 0 -- one EXTRA blur, 14.98 RGB levels from the
+    shipped decode -- and reading `x` (the status quo) at a = 1, so its ladder runs from
+    double-blur to baseline and never reaches the de-blur.  The delta form is `cam` exactly at
+    a = 0, so the pre-registered positive control is bit-exact by construction rather than
+    approximate; and it matches a fresh `round(clamp(U(A^-1 m_est)))` render to 0.002 levels,
+    so it also drops the order's stated one-extra-uint8-round pessimism.
+    """
+    x = np.empty((SEG_H, SEG_W, 3), dtype=np.float64)
+    m_est = np.empty_like(x)
+    delta_seg = np.empty_like(x)
+    delta_cam = np.empty((CAM_H, CAM_W, 3), dtype=np.float64)
+    for ch in range(3):
+        x[:, :, ch] = ops["d_r"] @ cam_f64[:, :, ch] @ ops["d_c"].T
+        m_est[:, :, ch] = ops["inv_r"] @ x[:, :, ch] @ ops["inv_c"].T
+        delta_seg[:, :, ch] = (
+            ops["inv_r"] @ m_est[:, :, ch] @ ops["inv_c"].T - m_est[:, :, ch]
+        )
+        delta_cam[:, :, ch] = ops["u_r"] @ delta_seg[:, :, ch] @ ops["u_c"].T
+    if not (np.all(np.isfinite(delta_cam)) and np.all(np.isfinite(x))):
+        raise Sr1Error("non-finite field in the A1 perturbation; refusing to score")
+    return x, delta_cam
+
+
+def _a1_per_class(pred: np.ndarray, ref: np.ndarray) -> dict:
+    """Flips charged to the REFERENCE class (rt1 / fl1 charge-by-target convention)."""
+    bad = pred != ref
+    return {str(c): int(np.count_nonzero(bad & (ref == c))) for c in range(N_CLASSES)}
+
+
+def _a1_verdict(flips: dict) -> dict:
+    """Adjudicate the ladder against the bands pre-registered in the sr1 FIRE-ORDER."""
+    positive = {a: f for a, f in flips.items() if a > 0.0}
+    best_alpha = min(positive, key=lambda a: positive[a])
+    best = positive[best_alpha]
+    all_in_band = all(A1_NEUTRAL_LO <= f <= A1_NEUTRAL_HI for f in flips.values())
+    all_harmful = all(f > A1_NEUTRAL_HI for f in positive.values())
+    if best < A1_LIVE_BELOW:
+        verdict, scope = "LIVE", "INSTANCE on the hv1 ep0634 vehicle"
+    elif all_in_band:
+        verdict, scope = "CLOSED_NEUTRAL", "FORMULATION: global linear de-blur of A, this vehicle"
+    elif all_harmful:
+        verdict, scope = "CLOSED_HARMFUL", "FORMULATION: global linear de-blur of A, this vehicle"
+    else:
+        verdict, scope = "INDETERMINATE_MIXED", "no pre-registered band fired; reported as shaped"
+    return {
+        "verdict": verdict,
+        "verdict_scope": scope,
+        "best_alpha": best_alpha,
+        "best_flips": best,
+        "flips_recovered_vs_control": A1_CONTROL_FLIPS - best,
+        "share_of_round_trip_recovered": (A1_CONTROL_FLIPS - best) / RT1_ROUND_TRIP_FLIPS,
+        "delta_S_seg": (best - A1_CONTROL_FLIPS) * SEG_DS_PER_FLIP,
+        "share_of_gap_closed": (A1_CONTROL_FLIPS - best) * SEG_DS_PER_FLIP / GAP_S,
+        "bands": {"live_below": A1_LIVE_BELOW, "neutral_lo": A1_NEUTRAL_LO,
+                  "neutral_hi": A1_NEUTRAL_HI, "control": A1_CONTROL_FLIPS},
+    }
+
+
+def stage_a1sign(args: argparse.Namespace) -> dict:
+    """FO-1: does undoing A before the up-sample recover argmax flips?  n600, $0, no dispatch."""
+    if args.threads != A1_PIN_THREADS:
+        raise Sr1Error(
+            f"instrument pin violation: FO-1 requires --threads {A1_PIN_THREADS} "
+            f"(rt1's base leg), got {args.threads}"
+        )
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    # Import the scorer and the NN lift from rt1 rather than re-typing them: the FO-1 pin is
+    # that this leg differs from rt1's base leg ONLY in the camera frame, so it must run the
+    # same code object, not an equivalent-looking copy.
+    from ddm_rt1_seg_roundtrip_decomposition import SegInstrument, nn_lift_index
+
+    t0 = time.time()
+    alphas = list(A1_ALPHAS)
+    ops = _a1_axis_operators(args.tikhonov)
+    custody = _a1_custody_control(ops, args.work)
+    print(json.dumps(custody, indent=2, sort_keys=True), flush=True)
+
+    raw = open_raw(args.raw)
+    tok = open_tokens(args.tokens)
+    gt = np.load(args.gt, mmap_mode="r")
+    if gt.shape != (FRAMES, SEG_H, SEG_W):
+        raise Sr1Error(f"GT cache shape {gt.shape} != {(FRAMES, SEG_H, SEG_W)}")
+
+    out_dir = args.work / "a1sign"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    tags = {a: f"a{a:g}".replace(".", "p") for a in alphas}
+    # Resume-from-disk (P0): the argmax fields ARE the checkpoint, and the per-pair diagnostic
+    # rows are journalled beside them so a resumed run does not silently drop the rows measured
+    # before the interruption.
+    prog_path = out_dir / "A1SIGN_PROGRESS.json"
+    rows_path = out_dir / "A1SIGN_PER_PAIR.jsonl"
+    paths = {a: out_dir / f"argmax_alpha_{tags[a]}.npy" for a in alphas}
+    done = 0
+    rows: list[dict] = []
+    if prog_path.exists() and all(p.exists() for p in paths.values()):
+        prev = json.loads(prog_path.read_text())
+        if prev.get("alphas") == alphas and prev.get("frames") == args.frames:
+            done = int(prev.get("pairs_done", 0))
+    if done:
+        if rows_path.exists():
+            # Dedupe by pair keeping the newest write: a crash between checkpoints can journal
+            # rows for pairs whose argmax bytes were never flushed, and those pairs are re-run.
+            seen_rows = {}
+            for ln in rows_path.read_text().splitlines():
+                if ln.strip():
+                    r = json.loads(ln)
+                    if r["pair"] < done:
+                        seen_rows[r["pair"]] = r
+            rows = [seen_rows[k] for k in sorted(seen_rows)]
+        fields = {a: np.lib.format.open_memmap(paths[a], mode="r+") for a in alphas}
+        print(f"resuming from pair {done} with {len(rows)} journalled rows", flush=True)
+    else:
+        rows_path.unlink(missing_ok=True)
+        fields = {a: np.lib.format.open_memmap(
+            paths[a], mode="w+", dtype=np.uint8, shape=(args.frames, SEG_H, SEG_W))
+            for a in alphas}
+
+    inst = SegInstrument(args.threads)
+    diag_pairs = set(seeded_pairs(args.diag_pairs, args.seed).tolist())
+    for t in range(done, args.frames):
+        cam_u8 = np.asarray(raw[2 * t + 1])
+        cam_f = cam_u8.astype(np.float64)
+        x, delta_cam = _a1_delta_camera(cam_f, ops)
+        band = boundary(np.asarray(tok[t]))
+        band_cam = band[np.ix_(*nn_lift_index())]
+        row = {"pair": t, "band_px": int(band.sum())}
+        deblur = None
+        if t in diag_pairs:
+            deblur = np.stack(
+                [ops["inv_r"] @ x[:, :, c] @ ops["inv_c"].T for c in range(3)], axis=2) - x
+            if t == min(diag_pairs) and args.retain:
+                save_payload(out_dir / f"delta_cam_pair{t}_f32.npy",
+                             delta_cam.astype(np.float32))
+        for a in alphas:
+            shifted = cam_f + a * delta_cam
+            cam_prime = np.clip(shifted, 0.0, 255.0).round().astype(np.uint8)
+            if a == 0.0 and not np.array_equal(cam_prime, cam_u8):
+                raise Sr1Error(f"pair {t}: alpha=0 is not bit-identical to the shipped frame")
+            fields[a][t] = inst.argmax_from_camera(cam_prime)
+            clip = (shifted < 0.0) | (shifted > 255.0)
+            row[f"clip_all_a{a:g}"] = float(clip.mean())
+            row[f"clip_band_a{a:g}"] = float(clip.max(axis=2)[band_cam].mean())
+            if deblur is not None:
+                seen = np.stack(
+                    [ops["d_r"] @ cam_prime[:, :, c].astype(np.float64) @ ops["d_c"].T
+                     for c in range(3)], axis=2)
+                target = x + a * deblur
+                row[f"realise_band_a{a:g}"] = float(
+                    np.abs(seen - target).max(axis=2)[band].mean())
+                row[f"intent_band_a{a:g}"] = float(
+                    np.abs(target - x).max(axis=2)[band].mean())
+        rows.append(row)
+        with rows_path.open("a") as fh:
+            fh.write(json.dumps(row, sort_keys=True) + "\n")
+        if (t + 1) % args.checkpoint_every == 0 or t + 1 == args.frames:
+            for a in alphas:
+                fields[a].flush()
+            prog_path.write_text(json.dumps(
+                {"pairs_done": t + 1, "alphas": alphas, "frames": args.frames}, indent=2))
+            el = time.time() - t0
+            print(f"  pair {t + 1}/{args.frames}  {el:.0f}s  "
+                  f"eta {el / (t + 1 - done) * (args.frames - t - 1):.0f}s", flush=True)
+
+    gt_arr = np.asarray(gt)[: args.frames]
+    tok_arr = np.asarray(tok)[: args.frames]
+    scored_px = args.frames * SEG_H * SEG_W
+    ladder, flips = [], {}
+    for a in alphas:
+        pred = np.asarray(fields[a])
+        f_gt = int(np.count_nonzero(pred != gt_arr))
+        flips[a] = f_gt
+        path = paths[a]
+        ladder.append({
+            "alpha": a,
+            "flips_vs_gt": f_gt,
+            "seg_S_units": 100.0 * f_gt / scored_px,
+            "flips_vs_label": int(np.count_nonzero(pred != tok_arr)),
+            "delta_flips_vs_control": f_gt - A1_CONTROL_FLIPS,
+            "per_class_flips_vs_gt_charged_to_gt": _a1_per_class(pred, gt_arr),
+            "payload": {"path": str(path), "bytes": path.stat().st_size,
+                        "sha256": sha256_file(path)},
+        })
+
+    control_flips = flips[0.0]
+    control_ok = control_flips == A1_CONTROL_FLIPS and args.frames == FRAMES
+    base_identical = None
+    if args.base_argmax.exists() and args.frames == FRAMES:
+        base_identical = bool(np.array_equal(np.asarray(fields[0.0]),
+                                             np.load(args.base_argmax, mmap_mode="r")))
+    verdict = _a1_verdict(flips) if control_ok else {
+        "verdict": "INVALID_CONTROL_FAILED",
+        "verdict_scope": "no alpha row may be scored; the instrument did not reproduce the base",
+    }
+    record = {
+        "schema": "ddm_a1s_a1sign.v1",
+        "arm": "ddm_a1s",
+        "fire_order": "sr1 FO-1",
+        "axis": "[macOS-CPU advisory]",
+        "score_claim": False,
+        "promotable": False,
+        "promotion_eligible": False,
+        "base_archive_sha256": BASE_ARCHIVE_SHA256,
+        "instrument": {
+            "scorer": "frozen CPU torch SegNet, upstream/models/segnet.safetensors",
+            "scorer_module": str(Path(__file__).resolve().parent
+                                 / "ddm_rt1_seg_roundtrip_decomposition.py"),
+            "batch_pairs": 1,
+            "torch_threads": args.threads,
+            "preprocess": "upstream SegNet.preprocess_input verbatim",
+            "tikhonov": float(args.tikhonov),
+        },
+        "custody": custody,
+        "positive_control": {
+            "alpha0_flips_measured": control_flips,
+            "alpha0_flips_required": A1_CONTROL_FLIPS,
+            "passed": control_ok,
+            "alpha0_field_bit_identical_to_rt1_base": base_identical,
+            "camera_frame_bit_identity_asserted_every_pair": True,
+        },
+        "ladder": ladder,
+        "verdict": verdict,
+        "n_pairs": args.frames,
+        "scored_px": scored_px,
+        "diagnostics_pairs": sorted(diag_pairs),
+        "per_pair": rows,
+        "wall_s": time.time() - t0,
+    }
+    write_json(args.work / "SR1_A1SIGN.json", record)
+    print(json.dumps({k: record[k] for k in ("positive_control", "verdict")},
+                     indent=2, sort_keys=True))
+    if not control_ok:
+        raise Sr1Error(
+            f"POSITIVE CONTROL FAILED: alpha=0 gave {control_flips} flips, "
+            f"required {A1_CONTROL_FLIPS}; no alpha > 0 row is admissible"
+        )
+    return record
+
+
+# ============================================================================================
 # stage: ledger
 # ============================================================================================
 def stage_ledger(args: argparse.Namespace) -> dict:
@@ -1058,7 +1396,7 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--stage",
-                    choices=["roperator", "sign", "emphasis", "waterfill", "ledger"],
+                    choices=["roperator", "sign", "emphasis", "waterfill", "a1sign", "ledger"],
                     required=True)
     ap.add_argument("--work", type=Path, default=DEFAULT_WORK)
     ap.add_argument("--raw", type=Path, default=DEFAULT_RAW)
@@ -1086,6 +1424,10 @@ def main(argv: list[str] | None = None) -> int:
                     help="roperator: sha256 the 3.6 GB decode for custody (slow)")
     ap.add_argument("--allow-control-fail", action="store_true",
                     help="roperator: continue past a failed positive control (diagnosis only)")
+    ap.add_argument("--diag-pairs", type=int, default=12,
+                    help="a1sign: seeded-random pairs carrying the realisation-fidelity read")
+    ap.add_argument("--checkpoint-every", type=int, default=10,
+                    help="a1sign: flush the argmax fields and the resume marker every N pairs")
     args = ap.parse_args(argv)
 
     args.work.mkdir(parents=True, exist_ok=True)
@@ -1097,6 +1439,8 @@ def main(argv: list[str] | None = None) -> int:
         stage_emphasis(args)
     elif args.stage == "waterfill":
         stage_waterfill(args)
+    elif args.stage == "a1sign":
+        stage_a1sign(args)
     else:
         stage_ledger(args)
     return 0
