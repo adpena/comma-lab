@@ -518,10 +518,41 @@ ps aux | grep -E 'train_semantic|train_ddm_cl1' | grep -v grep
 `CW1-LR6E5` endpoint **0.000277684529622 = −1,000 flips vs init** (rc=0, 1,053 s, pid 36604,
 payload `/Volumes/APDataStore/pact/ddm_cw1/LR6E5/`). Band: **≥ −1,430 → REFUTED at this
 formulation.** 3× the integrated LR at identical steps/seed/curriculum/init lands 1,286 flips
-(1.5σ) WORSE than the 1× control's −2,286. Higher lr damages under alignment as it did under
+(1.5σ — RE-GRADED to ~0.9σ vs the two-seed control mean, see §7.2) WORSE than the 1× control's −2,286. Higher lr damages under alignment as it did under
 misalignment; **2e-5 is at or above the aligned optimum and any further sweep is DOWN, not up.**
 Rung 3 (10×) does NOT fire, per the pre-registered gate. §8 item 2 (aim cos(sign g) at the
 frontier trainer) was answered by `ddm_oa2` the same day: ∂d_seg/∂θ ≡ 0 there — no alignment
 object exists; the frontier trainer is exactly rate-aligned by construction. Next from §8:
 item 3 (second seed on EF3000 — fired at this adjudication) and item 4 (the transfer
 measurement, where the S lives).
+
+## §7.2 SEED-2 RESULT — the σ band is now MEASURED, and it re-grades §7.1 (2026-08-17)
+
+`EF3000_SEED2` (seed 20260817, all other argv tokens identical, verified by set-diff at fire):
+endpoint **0.0002745903862847222 = 32,392 flips = −1,365 vs init** (rc=0, 1,031 s, launch
+counter 153, payload `/Volumes/APDataStore/pact/ddm_cw1/EF3000_SEED2/` — result.json +
+per-200-step full-state checkpoints retained). `best_step` 3000 (at cap, same as seed-1),
+`packed_parameter_bytes` 40,252 (byte-neutral ×3 now), EMA-deployed argmax parity 0/117,964,800
+pixels, verdict PASS. Axis `[macOS-MPS training-signal]`, `score_claim: false`.
+
+**The measured band.** Two real seeds of the IDENTICAL config: −2,286 (20260715) vs −1,365
+(20260817) → |Δ| = 921 flips → σ_est = 921/√2 ≈ **651 flips** (n=2 — itself wide, ~76% rel.
+error at this n). The previously QUOTED band (σ ≈ 605, 855 two-run) is **CONFIRMED in
+magnitude** (ratio 1.08). No verdict flips on band size alone.
+
+**The re-grade §7.1 owes.** The control's own seed spread (−2,286 … −1,365) **straddles the
+pre-registered falsifier boundary (−1,430)**: seed-2's control endpoint lands INSIDE the
+"REFUTED" band. The §7 bands were seed-fragile — calibrated against seed-1's control as if it
+were the population mean. Re-graded rung-2 verdict (verdict_scope: formulation, unchanged):
+**WEAKENED-DIRECTIONAL, not 1.5σ-REFUTED** — LR6E5 (−1,000) is worse than BOTH seed controls
+(sign stable across seeds), but only **0.9σ vs the two-seed mean (−1,825.5)**. The ROUTING
+conclusion survives intact: rung 3 stays cold, the un-swept lr direction stays DOWN — both
+controls beat 3×, and nothing here licenses UP. What changes is the strength quote and the
+lesson: **falsifier bands on stochastic endpoints must be calibrated against a seed ENSEMBLE,
+never a single control run** (sister of the prefix-bias genus: one draw from a spread is not
+the population).
+
+**The other three verdicts re-checked against the measured band — all UNCHANGED:**
+FRD077 seg-neutral (0.18σ → ~0.17σ at σ=651) · q3q4 lever −563 = 0.61 of the measured 921
+two-run band, still within noise · F1 block (endpoint = init to 17 digits) is structural zero,
+σ-independent.
