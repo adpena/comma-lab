@@ -127,3 +127,38 @@ No direct prior WD2 student receipt or current-renderer width/depth distortion l
 - Writing the teacher cache or n600 renders to Vertigo is closed at current free space; the build records the APDataStore waterfall instead.
 
 Vehicle frontier unchanged: S=0.1600920261571558 @ 183,502 B `[contest-CUDA T4, n600]` (e480b SHA-256 `e3e6f440…`).
+
+---
+
+## REBASE NOTE (appended 2026-08-16 by `ddm_fb1`) — APPEND-ONLY, nothing above is changed
+
+**The body above was CORRECT WHEN WRITTEN.** Per Catalog #110/#113 HISTORICAL_PROVENANCE no line
+above is rewritten; this is a superseding row.
+
+The `-15,157 B` sub-0.15 rung at `:95` is computed off the **e480b v2** archive (183,502 B). The
+frontier has since moved to **hv1 ep0634: S = 0.15959729295498598 @ 182,759 B
+`[contest-CUDA T4, n600]`**, sha `80d9c8c6fdc72caaa3e180a8abb2a859e7f316a484b38f33fe90d5701420178e`.
+
+**Rebased requirement: -14,413.4 B** (183,502 - 182,759 = 743 B of the old rung is already spent).
+
+**This staleness is in the SAFE direction** — the old rung is 743.6 B TOO TIGHT, so it costs a
+missed admit, never a false admit. **No verdict in this file flips:** the measured 17,372 B saving
+clears the stale bar by 2,215 B and the live bar by 2,959 B, and the refusal here was on
+distortion (`d_seg` 7.0059x), not on rate.
+
+**Use the stale-proof form instead.** `seg + pose` is decode-identical across
+`cp135 -> MC36 -> e480b v2 -> hv1` (measured to 1e-15), so only rate moves:
+
+```
+sub-0.15  <=>  archive <= 168,345.5977 B
+```
+
+This target is identical off every base in the lineage and does not move when the pointer does.
+Caveat: it is a PURE-RATE target. Any candidate that changes `d_seg` or `d_pose` — which semantic
+width distillation does — must re-measure against the live pointer, not against this number.
+
+Sister still owed to MAIN: the same stale rung appears in this arm's final message at
+`.omx/research/arm_final_messages/ddm_wd2_width_distillation_build_20260815T154455Z.md:22`, inside
+a LIVE fire-order. That file is untracked (another agent's uncommitted work) and was not touched.
+
+Full derivation + repo-wide sweep: `.omx/research/ddm_fb1_stale_bar_rebase_and_bank_union_20260816.md`.

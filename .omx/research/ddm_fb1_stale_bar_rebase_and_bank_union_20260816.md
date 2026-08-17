@@ -1,6 +1,6 @@
 ---
 arm: ddm_fb1
-title: "The stale-bar population is FOUR arms and ONE number, not a repo-wide rot; and the banked micro-edit union cannot be fired — two of its four listed members are already inside the pointer, and the two real members are not composable onto hv1 and reach only 55.8% of their own bar"
+title: "The stale-bar population is SIX arms and TWO numbers with OPPOSITE staleness directions, not a repo-wide rot; and the banked micro-edit union cannot be fired — two of its four listed members are already inside the pointer, and the two real members are not composable onto hv1 and reach only 55.8% of their own bar"
 utc: 2026-08-16
 axis: "[local-CPU $0 arithmetic over MEASURED primary receipts] — NEVER a score"
 research_only: true
@@ -27,14 +27,25 @@ memories [[m66]] [[m88]] [[m96]] [[cross-regime-constant-transfer-genus-finishin
 
 ## ANSWER FIRST
 
-**JOB A. The honest population is FOUR arms and ONE number. No crusade is warranted.**
-`rx1`, `rx2`, `sp2`, and `wc2` all carry the same live fire trigger — *"archive below 186,269 B"* —
-across 13 lines in 11 files. That is the entire live population. Everything else that mentions a
-superseded anchor is a past-tense record that was correct when written. `hv2` had already named
-three of the four on 2026-08-16; **`wc2` is the one it missed, and `wc2` carries the most dangerous
-form**: an unconditional automatic fire (`if archive < 186,269 B, T4 fire`). The hazard is real and
-I priced it: a candidate landing exactly at the stale bar **passes its own bar while scoring
-+0.002337165 worse than what we already ship — 233.7× the 1e-5 naming bar.**
+**JOB A. The honest population is SIX arms and TWO numbers, with OPPOSITE staleness directions.
+No crusade is warranted.**
+
+- **Population 1 — the ABSOLUTE bar, stale ANTI-conservatively (dangerous).** `rx1`, `rx2`, `sp2`,
+  `wc2` all carry the same live fire trigger — *"archive below 186,269 B"* — across 13 lines in
+  11 files. `hv2` had already named three of the four; **`wc2` is the one it missed, and `wc2`
+  carries the most dangerous form**: an unconditional automatic fire
+  (`if archive < 186,269 B, T4 fire`). A candidate landing exactly at that bar **passes it while
+  scoring +0.002337165 WORSE than what we already ship — 233.7× the 1e-5 naming bar.**
+- **Population 2 — the DELTA rung, stale CONSERVATIVELY (self-announcing).** `wd2` (and `rfo2`,
+  already caught by `gx1`) require a cut of **15,157 B**, computed off the superseded e480b v2
+  archive. Off the live 182,759 B the requirement is **14,413.4 B**. Stale by 743.6 B, but in the
+  SAFE direction: the bar is too TIGHT, so it costs a missed admit, never a false admit. **I
+  verified no wd2 verdict flipped** — wd2's measured 17,372 B saving clears both bars, and wd2
+  failed on distortion (Δ`d_seg` 7.0059×), not on rate.
+
+Everything else that mentions a superseded anchor is a past-tense record that was correct when
+written. **Positive control: `ra1` (2026-08-16) quotes `14,414 B` — correct for the live base.**
+The newest arms already do this right, which is why the cure is a convention, not a cleanup.
 
 **JOB B. The union must NOT fire, and the rule that holds it is itself stale.**
 Two of the four items in the pool as handed to me are **already inside the pointer** and cannot be
@@ -72,14 +83,20 @@ CLAUDE.md), `.omx/cache/`, and `.omx/state/archive/`.
 | files citing ANY superseded live-lineage anchor | 296 |
 | lines where that anchor sits in a **forward-looking** admission/fire predicate | 27 |
 | files carrying such a line | 20 |
-| **of those: TRUE live stale bars** | **13 lines / 11 files / 4 arms / 1 number** |
+| **of those: TRUE live stale bars (absolute-anchor form)** | **13 lines / 11 files / 4 arms / 1 number** |
+| plus the delta-phrased form this sweep CANNOT see (§A.4) | 3 lines / 2 files / 2 arms / 1 number |
+| **combined live population** | **6 arms / 2 numbers** |
 
 **The 296 is the important denominator.** 283 of the 296 files mention a superseded anchor in
 past tense — a measurement, a verdict, a receipt. Those are correct as written and Catalog
 #110/#113 forbids touching them. The defect rate among anchor-mentioning files is **4.4%**, and it
-collapses to **one distinct bar value** repeated by four arms of one chain.
+collapses to **two distinct bar values** across two chains. That is a convention problem, not rot.
 
-### A.1 The live population, itemised
+**Scope limit, stated before the table rather than after it:** this sweep matches ABSOLUTE anchors
+only. §A.4 is the delta-phrased population it structurally cannot see, and §D.3 records that I
+found that gap by attacking my own method rather than by design.
+
+### A.1 The live population (absolute-anchor form), itemised
 
 All four cite the same bar: **186,269 B (the MC36 Variant C archive)**.
 
@@ -128,7 +145,37 @@ S penalty at the bar       + 0.002337165
 This is the anti-conservative direction. A stale bar that is too TIGHT costs a missed admit and
 announces itself. A stale bar that is too LOOSE admits a regression silently.
 
-### A.4 The structural cure — recommend, do not crusade
+### A.4 The SECOND population — delta-phrased rungs (found by attacking my own sweep)
+
+My §A.1 sweep matches on absolute anchors. **A bar phrased purely as a DELTA carries no absolute
+anchor and is invisible to it.** I only found this by attacking my own method, and it changes the
+headline from "one number" to "two". A second sweep over delta-phrased byte bars
+(`save|cut|reduce … N,NNN B` co-occurring with bar/rung/fire language) returned 46 lines; after
+scale filtering, the sub-0.15 rate rung class is:
+
+| file | quoted cut | correct for | live requirement | status |
+|---|---:|---|---:|---|
+| `ddm_wd2_width_distillation_build_20260815.md:95` | 15,157 B | e480b v2 (183,502 B) | 14,413.4 B | **STALE −743.6 B** (tracked/clean → rebased) |
+| `arm_final_messages/ddm_wd2_…T154455Z.md:8, :22` | 15,157 B | e480b v2 | 14,413.4 B | **STALE**, `:22` is a live fire-order — **UNTRACKED, owed to MAIN** |
+| `rfo2` semantic rung (via `gx1`) | 15,157 B | e480b v2 | 14,413.4 B | already caught by `gx1` |
+| `ddm_hv2_arm_final_harvest_20260816.md:77` | 14,413 B | **live** | 14,413.4 B | CORRECT |
+| `ddm_ra1_carrier_rank_refit_preproof_20260816.md:22` | 14,414 B | **live** | 14,413.4 B | **CORRECT — positive control** |
+
+**The two populations fail in opposite directions, and that asymmetry is the finding.**
+
+```
+186,269 B  absolute bar   TOO LOOSE  -> false admit, SILENT   -> DANGEROUS
+ 15,157 B  delta rung     TOO TIGHT  -> missed admit, LOUD    -> merely wasteful
+```
+
+Both resolve to the same stale-proof invariant. `183,502 − 168,345.5977 = 15,156.4` and
+`182,759 − 168,345.5977 = 14,413.4`: the rung moves by exactly the pointer's byte move (743 B),
+because seg and pose are decode-identical. **Quote the invariant and neither number can go stale.**
+
+I verified the staleness changed no verdict: wd2's measured 17,372 B saving clears the stale bar by
+2,215 B and the live bar by 2,959 B — it PASSES either way, and its refusal was on distortion.
+
+### A.5 The structural cure — recommend, do not crusade
 
 Per Catalog #299/#821 a 4-arm population does not justify re-stamping documents. But three
 independent audit arms found stale-anchor defects on **2026-08-16 alone**, in three different
@@ -304,17 +351,24 @@ row cannot clear the bar and must not be bought.
    the hv1 base whose measured dual-axis row lands at ≈ −5.58e-6, which would show the edits do
    transfer additively after all. Nobody has built it; until someone does, my label stands at
    DERIVED, not MEASURED.
-3. **The Job A population depends on my definition of "live".** I scoped `.omx/tmp/` out as
+3. **My first sweep MISSED an entire population, and only self-review caught it.** §A.1 matches
+   absolute anchors, so every delta-phrased bar was invisible to it. I shipped a headline saying
+   "ONE number" before attacking my own method; the corrected answer is TWO. Recorded rather than
+   quietly patched, because it bounds how much the §A.1 denominator is worth: **that sweep proves
+   nothing about bar phrasings it cannot see.** A third phrasing I have NOT swept for is a bar
+   stated as a percentage or as an S-value rather than bytes. **Falsifier:** any stale bar found in
+   `.omx/` phrased in neither of the two forms I searched. I expect some exist.
+4. **The Job A population depends on my definition of "live".** I scoped `.omx/tmp/` out as
    declared scratch and treated past-tense mentions as historical. A reader who counts every
    mention gets 296 files, not 11. I report both so the definition is visible and arguable rather
    than buried. **Falsifier:** an arm that resumes off a `.omx/tmp/` log or an
    `arm_final_messages/` body and consumes a stale bar from it — that would prove my exclusion
    wrong, and the fix would be to widen the scope, not to re-stamp more documents.
-4. **I did not verify that `rx1`/`rx2`/`sp2`/`wc2` are still wanted at all.** Their fire-orders are
+5. **I did not verify that `rx1`/`rx2`/`sp2`/`wc2` are still wanted at all.** Their fire-orders are
    live in the queue, but a fire-order for a chain MAIN has abandoned is dead weight, not a hazard.
    If MAIN has closed the RX2 label-HPAC chain, the correct action is to close the queue rows, not
    to rebase them. I flag rather than assume.
-5. **The `+0.002337165` hazard figure is a WORST CASE**, not an expectation. It prices a candidate
+6. **The `+0.002337165` hazard figure is a WORST CASE**, not an expectation. It prices a candidate
    landing *exactly* at the stale bar. A candidate landing at, say, 183,000 B would pass the stale
    bar and lose only 1.6e-4. The direction of the error is what matters; the magnitude is an upper
    bound and is labelled as one.
@@ -331,6 +385,13 @@ row cannot clear the bar and must not be bought.
   three queue rows and the two untracked files from `< 186,269 B` to the live pointer, or to the
   stale-proof invariant `archive <= 168,345.5977 B`. I could not touch them — the two files carry
   another agent's uncommitted work and the queue is machine-written. **$0.**
+- **`QUEUED-WITH-A-FIRE-ORDER`** — owner: **MAIN**. Consumer surface:
+  `.omx/research/arm_final_messages/ddm_wd2_width_distillation_build_20260815T154455Z.md:22`
+  (live fire-order, **UNTRACKED — another agent's uncommitted file, I could not touch it**). Fire
+  trigger: before any WD2 semantic/carrier successor is adjudicated. Action: rebase the `15,157 B`
+  rung to `14,413.4 B`, or to the invariant `archive <= 168,345.5977 B`. This one is stale in the
+  SAFE direction (too tight), so it is lower priority than the RX2 rows — it costs a missed admit,
+  not a false one. **$0.**
 - **`QUEUED-WITH-A-FIRE-ORDER`** — owner: **MAIN**. Fire trigger: the next time an RX2/WC2 chain
   candidate is proposed. Action: apply the §B.5 non-fire order — no union dispatch without a
   pre-registered projection ≤ −1e-5 on the hv1 base. **$0.**
