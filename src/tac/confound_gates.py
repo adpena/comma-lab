@@ -3374,6 +3374,144 @@ def _factory_waived(path: Path, factory: str) -> bool:
     return _factory_waived_for(path, factory, "DESIGNED_STUB_OK")
 
 
+_FILE_MOVE_CALLS = frozenset({"move", "rename", "replace"})
+
+
+def _row_contract_exception_names(tree: ast.AST) -> set[str]:
+    """Exception classes RAISED inside a ``validate``-named function.
+
+    MECHANISM, not name-matching.  Which exceptions are "row-contract" is
+    decided by WHERE THEY ARE RAISED -- inside per-row validation -- so a class
+    called ``FooError`` is caught by this gate exactly when validation raises it.
+    Keying on the exception's own spelling would repeat the name-keying mistake
+    the GT-lineage census measured (seven files, one name, three lineages).
+    """
+
+    names: set[str] = set()
+    for fn in _func_defs(tree):
+        if "validate" not in fn.name.lower():
+            continue
+        for node in ast.walk(fn):
+            if not isinstance(node, ast.Raise) or node.exc is None:
+                continue
+            exc = node.exc
+            target = exc.func if isinstance(exc, ast.Call) else exc
+            if isinstance(target, ast.Attribute):
+                names.add(target.attr)
+            elif isinstance(target, ast.Name):
+                names.add(target.id)
+    return names
+
+
+def _handler_moves_a_file(handler: ast.ExceptHandler) -> str | None:
+    """Only ATTRIBUTE form counts: ``shutil.move`` / ``os.replace`` / ``p.rename``.
+
+    A BARE ``replace(...)`` is almost always ``dataclasses.replace`` -- a copy,
+    not a move.  The first draft of this gate matched bare names and flagged
+    ``pr106_sidecar_packet.py:3965``, where ``replace(packet, pr106_bytes=...)``
+    rebuilds a frozen dataclass on a recode fallback.  Reading the site (rather
+    than trusting the count) is what caught it; the predicate now requires the
+    receiver form, and excludes the one attribute spelling that is still a copy.
+    """
+
+    for node in ast.walk(ast.Module(body=handler.body, type_ignores=[])):
+        if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Attribute):
+            continue
+        recv = node.func.value
+        recv_name = recv.id if isinstance(recv, ast.Name) else getattr(recv, "attr", "")
+        if recv_name == "dataclasses":
+            continue
+        if node.func.attr in _FILE_MOVE_CALLS:
+            return f"{recv_name}.{node.func.attr}" if recv_name else node.func.attr
+    return None
+
+
+def check_no_row_contract_error_quarantines_the_ledger(
+    *,
+    repo_root: str | Path | None = None,
+    strict: bool = True,
+    verbose: bool = True,
+) -> list[str]:
+    """Refuse: a ROW-contract violation must not move the whole shared ledger.
+
+    THE INCIDENT (2026-08-17, two sites).  A strict reader caught
+    ``json.JSONDecodeError`` and a per-row validation error in the SAME handler
+    and then ``shutil.move``d the ledger.  One arm's malformed row deleted
+    shared state for the whole fleet -- first in the canonical task-status
+    ledger, then in ``codex_to_claude_inbox`` (7 in-module read paths, two of
+    them reached from WRITE paths, so an append destroyed the file too).
+
+    The two failure classes are NOT the same and must not share a response:
+
+    * FILE corruption -- the bytes do not parse.  Later offsets are
+      untrustworthy; quarantine is proportionate and stays allowed.
+    * ROW-CONTRACT violation -- the line IS a well-formed object and one field
+      relationship fails.  Every other row is exactly as valid as before.
+      Isolate the ROW.
+
+    Population MEASURED before landing, not assumed: an AST sweep of 7,532
+    files under ``src/`` found ZERO remaining sites after the cure, so this
+    lands STRICT from byte one rather than sitting in warn-only purgatory.
+
+    Same-line waiver ``# ROW_CONTRACT_QUARANTINE_OK:<rationale>`` on the
+    ``except`` line, for a reader whose rows genuinely cannot be isolated
+    (a per-key state machine where dropping one row orphans its successors).
+    """
+
+    repo = Path(repo_root or REPO_ROOT)
+    violations: list[str] = []
+    scanned = 0
+    for path in sorted((repo / "src").rglob("*.py")):
+        text = _read(path)
+        if text is None:
+            continue
+        try:
+            tree = ast.parse(text)
+        except SyntaxError:
+            continue
+        scanned += 1
+        row_excs = _row_contract_exception_names(tree)
+        if not row_excs:
+            continue
+        lines = text.splitlines()
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Try):
+                continue
+            for handler in node.handlers:
+                mover = _handler_moves_a_file(handler)
+                if mover is None:
+                    continue
+                caught = handler.type
+                if caught is None:
+                    continue
+                parts = caught.elts if isinstance(caught, ast.Tuple) else [caught]
+                hit = sorted(
+                    {
+                        (p.attr if isinstance(p, ast.Attribute) else getattr(p, "id", ""))
+                        for p in parts
+                    }
+                    & row_excs
+                )
+                if not hit:
+                    continue
+                line = lines[handler.lineno - 1] if handler.lineno <= len(lines) else ""
+                if _waiver_present(line, "ROW_CONTRACT_QUARANTINE_OK"):
+                    continue
+                violations.append(
+                    f"{path.relative_to(repo)}:{handler.lineno}: except {hit} "
+                    f"(raised by a validate-* function) calls {mover}() -- a ROW-contract "
+                    f"violation must isolate the row, not move the shared ledger"
+                )
+    return _finish(
+        name="check_no_row_contract_error_quarantines_the_ledger",
+        tag="row-contract-quarantine",
+        violations=violations,
+        strict=strict,
+        verbose=verbose,
+        ok_detail=f"{scanned} modules examined, no row-contract quarantine paths",
+    )
+
+
 # The two automatable eightfold gates (P1 + P4), for the preflight wire-in + tests.
 EIGHTFOLD_GATES = (
     check_significance_keys_canonical,
@@ -3383,6 +3521,7 @@ EIGHTFOLD_GATES = (
 
 # Convenience: the gates in catalog order, for the preflight wire-in + tests.
 CONFOUND_GATES = (
+    check_no_row_contract_error_quarantines_the_ledger,
     check_no_spike_guard_defaults_to_deadlock_mode,
     check_reject_filter_updates_reference_from_accepted_only_has_rearm,
     check_no_duplicate_long_flags_in_launch,
