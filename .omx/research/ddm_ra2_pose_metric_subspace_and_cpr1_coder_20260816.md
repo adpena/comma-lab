@@ -17,6 +17,17 @@
 > 1.11–2.0× optimistic, because rotated rank-r atoms cost **+6.4% per atom** — pro-rating a
 > basis is an entropy assumption, not arithmetic.
 >
+> **WHICH BODY LINES THIS BANNER SUPERSEDES** (added 2026-08-16 after the corpus sweep — a
+> reader landing mid-document never sees a top banner, which is the #953 genus mirrored: the
+> correction went to the headline and left the body's forward-binding sentence standing).
+> Six body sites carry the superseded bar: **§1 row 1** ("the miss is 11.5×, not 179×"), **§159**
+> ("costs 11.5× more damage"), **§240–241** — *especially* §241's "**The correct standing
+> statement is: refused at 11.5×**", which is a FORWARD-BINDING claim, not a measurement, and is
+> the one sentence a mid-document reader would carry away wrong — **§274**, and the **§280
+> fire-order** ("Needs 11.5×"), which ra3 has already consumed and closed. Every one of them
+> reads **35.5×** on the priceable axis. The measurements around them are untouched and stand
+> (APPEND-ONLY, Catalog #110/#113); only the ratio-as-bar framing is superseded.
+>
 > Standing consequence (ra3's named obligation, adopted): **no advisory `d_pose` RATIO is
 > quotable forward.** Price on the composed S axis or state the absolute delta. Sisters:
 > [[the-instruments-own-units-level-and-aggregation-are-part-of-the-claim-20260816]] (the

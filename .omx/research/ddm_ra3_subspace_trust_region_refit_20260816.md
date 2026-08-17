@@ -271,6 +271,39 @@ implements it, re-derives the floor closure at import time, and **refuses** a be
 a ratio-as-score. Encoding it is the only thing that stops the level error recurring — it survived
 three arms as an unexamined "11.5× bar".
 
+> **MAIN VERIFICATION (2026-08-16) — the guard is REAL; two claims above are narrowed.**
+> I fired four positive controls against `ddm_ra3_advisory_pose_pricing.py` rather than take the
+> claim on the arm's word (NO-FAKE: a guard that is asserted but never fired is a marker, not a
+> mechanism). All four behave:
+> (1) a below-floor input (`6.88e-06`, a T4-axis value fed to the advisory pricer) → `PricingRefusal`;
+> (2) a legal input still prices — it is not a blanket refuser (`ra2_r11` → `net_dS +0.135481`,
+> cost/credit `111.2×`, reproducing §7's headline independently);
+> (3) **no advisory-`d_pose` ratio exists anywhere in the public API** — the only ratio emitted is
+> `dS_pose / rate_credit`, both already in S units, which is the legal comparison;
+> (4) mutating `ADVISORY_BASE_D_POSE` to `9.9e-04` trips the import-time closure check
+> (`0.85102` relative) → `RuntimeError`. The self-check bites; it is not decorative.
+>
+> **Narrowing 1 — "refuses a ratio-as-score" is refusal BY CONSTRUCTION, module-scoped.** There is
+> no ratio input to refuse; the module simply cannot emit one. That genuinely extincts the error
+> *on this path*, and it is the stronger design. But it does not stop an arm writing a ratio in a
+> memo — no corpus-wide gate for this class exists (verified: nothing in `preflight.py`,
+> `confound_gates.py`, or `tools/` matches it). Read "structurally" as *this module cannot produce
+> the error*, never as *the corpus cannot*.
+>
+> **Narrowing 2 — "propagated through three arms" is not what the corpus shows.** Sweeping every
+> `11.5×`-class occurrence under `.omx/research/`: the pose-ratio class appears in exactly **one**
+> memo (`ddm_ra2_…_20260816.md`, superseded at source the same day) plus this memo's own charter,
+> which inherited it from ra2 — a chain of one claim, not three independent sites. The other five
+> hits are **different quantities** that share the digits and must NOT be "corrected": `ddm_df1` +
+> `ddm_na2` (`11.5×–55.8×` = a *noise-floor understatement* ratio), `order_exploit_rate_budget`
+> (`11.5× over` a rate budget), `z7_mamba2` (`11.5× loss reduction`), and two
+> `t5_crucible/ORCHESTRATION_LEDGER` lines (training-loss pose *term* `11.5→0.5`). Scope of this
+> sweep: literal `11.5×|11.5x|11.5-fold|11.5 times` and pose-adjacent `15.21` under
+> `.omx/research/**/*.md`. Bounded absence, not proven nonexistence.
+>
+> The standing consequence is UNCHANGED and adopted: **no advisory `d_pose` RATIO is quotable
+> forward** — price on the composed S axis or state the absolute delta.
+
 ### 7b. But the conversion is the FALLBACK; the FIX is a fixed reference — and I MEASURED why that matters
 
 `pi2`'s final (`ed153d0203`) found the root cause inside our own tooling: the advisory instrument
