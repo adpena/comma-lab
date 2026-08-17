@@ -1,6 +1,6 @@
 ---
 arm: ddm_pn2
-title: "the pose tax that killed every seg-edit candidate this campaign is REMOVED inside PoseNet's null space -- matched A/B (n=10, same pairs/solver/support/seed, only the projection differs): unprojected d_pose x3.3239 vs projected x0.7764, worth 0.007817 S = 0.81x the whole remaining gap -- and the seg leg does not pay for it (pooled eta 0.5571 -> 0.6224, +11.7%, 9 of 10 pairs, exact sign p=0.0215), with the 2x2-snap confound isolated and measured at only +0.0077 eta against the projection's +0.0618 (n=5); but the channel still does not deliver, because the binding constraint moves from POSE to the seg x rate arithmetic where sr1's waterfill is only a marginal supplier (-0.000589 S, 6.1% of the gap) on IDEAL-entropy bytes no real coder has yet priced (18.5% headroom); separately rt2's DERIVED x1.004 small-support pose leak is accidentally right at one alpha and wrong by 10.4-24.4x at its neighbours, and its alpha=1.0 row is an estimator artifact in which one pair carries 710% of the aggregate excess"
+title: "the pose tax that killed every seg-edit candidate this campaign is REMOVED inside PoseNet's null space -- matched A/B over the COMPLETE pre-registered sample (n=12, same pairs/solver/support/seed, only the projection differs): unprojected d_pose x4.6089 vs projected x0.7935, worth 0.010423 S = 1.09x the whole remaining gap -- and the seg leg does not pay for it (pooled eta 0.5651 -> 0.6111, +8.1%, 10 of 12 pairs, exact sign p=0.0386), with the 2x2-snap confound isolated and measured running the OTHER way (snap -0.0029 eta vs projection +0.0824, n=7); but the channel still does not deliver, because the binding constraint moves from POSE to the seg x rate arithmetic where sr1's waterfill is only a marginal supplier (-0.000526 S, 5.5% of the gap) on IDEAL-entropy bytes no real coder has yet priced (18.5% headroom); separately rt2's DERIVED x1.004 small-support pose leak is accidentally right at one alpha and wrong by 10.4-24.4x at its neighbours, and its alpha=1.0 row is an estimator artifact in which one pair carries 710% of the aggregate excess"
 utc: 2026-08-17
 charter: "operator/MAIN charter to ddm_pn2, 2026-08-17"
 axis: "[macOS-CPU advisory] frozen CPU-torch SegNet + PoseNet -- NEVER a score"
@@ -30,25 +30,26 @@ frame_utils.py:51-76` and `upstream/modules.py:73,108-109` read at source · mem
 
 1. **The pose tax is REMOVED, and it is the largest single number this unit produced.** Matched
    A/B — same seeded-random pairs, same solver, same support, same seed, only the projection
-   differs — the unprojected solve costs `d_pose` **×3.3239** and the pose-null-projected solve
-   costs **×0.7764** (n=10 matched). Converted to contest S against hv1's own n600 pose base, that
-   is **+0.006831 S vs −0.000986 S: the projection removes 0.007817 S of pose cost = 0.81× the
-   entire remaining −0.0095973 gap.** Every seg-edit candidate this campaign refused died on
+   differs — the unprojected solve costs `d_pose` **×4.6089** and the pose-null-projected solve
+   costs **×0.7935**, over the **complete pre-registered sample (n=12, both arms finished)**.
+   Converted to contest S against hv1's own n600 pose base, that is **+0.009516 S vs −0.000906 S:
+   the projection removes 0.010423 S of pose cost = 1.09× the entire remaining −0.0095973 gap.** Every seg-edit candidate this campaign refused died on
    exactly this term (rt2's de-blur +0.2475 S, sf1 +0.0622 S, rt2 α=0.25 +0.0241 S, qs4's
    +2.396e-4 d_pose). **Inside the null space that blocker is gone.**
-2. **The seg leg does not pay for it — η RISES.** Pooled η **null 0.6224 vs free 0.5571, +11.7%**,
-   and the projection raised η on **9 of 10** matched pairs — **exact sign test p = 0.0215**. A
+2. **The seg leg does not pay for it — η RISES.** Pooled η **null 0.6111 vs free 0.5651, +8.1%**,
+   and the projection raised η on **10 of 12** matched pairs — **exact sign test p = 0.0386**. A
    constraint that makes the objective *better* is the opposite of the expected trade.
    **The confound I found in my own design (§4) is measured and it does not carry the result:**
    `null` mode also snaps the edit support to whole 2×2 blocks (snap_tax **1.77×**), so the bare
    A/B varies projection and support size together — but the isolating control (`--snap-support`,
-   built and run) measures the snap alone at **+0.0077 η** against the projection's **+0.0618** at
-   matched support, i.e. **the projection carries 88.9% of the gain**, and on pose the snap is
-   mildly *harmful* (0.86×) while the projection is worth **15.7×**. Scope: n=5 matched, filling.
+   built and run) measures the snap alone at **−0.0029 η** — a small *negative* — against the
+   projection's **+0.0824** at matched support, i.e. **the projection carries the entire gain**, and
+   on pose the snap is mildly *harmful* (0.87×) while the projection is worth **14.7×**. Scope:
+   n=7 of 12, still filling.
 3. **The channel still does not deliver the gap.** Removing pose moves the binding constraint, it
    does not close the arithmetic. At the measured projected η, rt1's describe-everything channel
-   is a **NON-SUPPLIER (+0.003838 S pose-neutral)** and sr1's waterfill is a **marginal SUPPLIER
-   (−0.000589 S pose-neutral, 6.1% of the gap)** — on bytes that are an **ideal
+   is a **NON-SUPPLIER (+0.004171 S pose-neutral)** and sr1's waterfill is a **marginal SUPPLIER
+   (−0.000526 S pose-neutral, 5.5% of the gap)** — on bytes that are an **ideal
    conditional-entropy ceiling, not a real coder**, with only **18.5% real-coder headroom**. The
    pose blocker is retired; the seg×rate blocker is not.
 4. **FO-A, adjudicated: rt2's DERIVED ×1.004 is accidentally right and mechanically wrong.** The
@@ -84,10 +85,11 @@ blind prediction from a direction I already knew from retained data.
    rt2's "DERIVED holds" band, for a reason that is an estimator artifact (§2).
 3. **PREDICTED: the projection's η advantage would shrink as n grows** (regression to the mean,
    the way rt1's pose payback went ×0.431 → ×0.713 → ×0.794 across n=6/9/12). **HELD.** The η
-   advantage fell +15.6% (n=4) → +14.2% (n=7) → **+11.7% (n=10)**, and the pose gap-multiple fell
-   1.65× → 1.53× → **0.81×** of the remaining gap. The **direction** never moved and the seg sign
-   test *strengthened* (4/4 p=0.125 → 9/10 **p=0.0215**). Recording this because it is the reason
-   the headline is stated as a direction with a scope, not as a level.
+   advantage fell +15.6% (n=4) → +14.2% (n=7) → +11.7% (n=10) → **+8.1% (n=12, complete)**, and the
+   pose gap-multiple wandered 1.65× → 1.53× → 0.81× → **1.09×** — noisy, not monotone, because the
+   aggregate is a ratio of means over a heavy-tailed per-pair distribution. The **direction** never
+   moved and the sign test stayed significant (**10/12, p=0.0386**). Recording this because it is
+   the reason the headline is a direction and an order of magnitude, never a level.
 4. **PREDICTED (rt2 §7's own caveat, inherited): ratios transfer across the advisory pose
    instrument's offset, absolutes do not.** **HELD and quantified**: rt1's 12 pairs carry mean
    `d_pose` 1.30107e-04 against hv1's contest n600 aggregate 6.885643e-06 — a factor **18.90**,
@@ -198,27 +200,31 @@ prefix per m96).
 
 | statistic | unprojected (`free`) | pose-null projected (`null`) | delta |
 |---|---:|---:|---|
-| pooled η, n=10 matched pairs | **0.5571** | **0.6224** | **+0.0653 (+11.7%)** |
-| pairs where the projection raised η | — | — | **9 of 10** (exact sign test **p = 0.0215**) |
-| `d_pose` ratio, scorer convention | **×3.3239** | **×0.7764** | **4.3× less pose** |
-| ΔS_pose against hv1's n600 pose term | **+0.006831** | **-0.000986** | **0.007817 S removed** |
-| that, as a multiple of the whole remaining gap | — | — | **0.81×** |
+| pooled η, **all 12** matched pairs | **0.5651** | **0.6111** | **+0.0460 (+8.1%)** |
+| pairs where the projection raised η | — | — | **10 of 12** (exact sign test **p = 0.0386**) |
+| `d_pose` ratio, scorer convention | **×4.6089** | **×0.7935** | **5.8× less pose** |
+| ΔS_pose against hv1's n600 pose term | **+0.009516** | **-0.000906** | **0.010423 S removed** |
+| that, as a multiple of the whole remaining gap | — | — | **1.09×** |
 
-Per-pair Δη (null − free), **9 of 10 positive**: `33` +0.0816, `66` +0.0959, `81` +0.1220, `89` +0.0600, `280` -0.0217, `299` +0.0816, `322` +0.1562, `353` +0.0333, `410` +0.0213, `438` +0.0411.
-Pair 280 is the one pair where the projection cost seg; it is recorded rather
-than smoothed away.
+This is the **complete pre-registered sample** — all 12 seeded-random pairs, both arms finished.
+The projected pooled η here (0.6111) is *identical* to the full null run's own n=12 figure, as it
+must be, which is a closure check on the join.
 
-**Reading.** The unprojected solve buys its seg flips and hands back **+0.006831 S** on pose —
-**0.71× the whole remaining gap** — which is precisely why every prior seg-edit candidate
-was refused. The projected solve fixes *more* flips and pays **-0.000986 S**. On this evidence the
-pose tax is not reduced; it is gone.
+Per-pair Δη (null − free), **10 of 12 positive**: `33` +0.0816, `66` +0.0959, `81` +0.1220, `89` +0.0600, `280` -0.0217, `299` +0.0816, `322` +0.1562, `353` +0.0333, `410` +0.0213, `438` +0.0411, `474` -0.0847, `538` +0.0247.
+Pairs 280, 474 are the two where the projection cost seg; they are recorded rather than
+smoothed away.
 
-**η trajectory as rows landed** (the regression-to-the-mean check of §0.3, which **HELD**): rt1's
-null-mode pooled η ran 0.6442 (n=3) → 0.6620 (n=4) → 0.6461 (n=6) → 0.6235 (n=9) → 0.6111 (n=12),
-and my matched free arm tracks it down in parallel, so the **difference** is the stable quantity,
-not either level. The pose leg regressed hardest — the gap-multiple fell 1.65× (n=4) → 1.53× (n=7)
-→ **0.81× (n=10)** as heavy pairs averaged in. The **direction** never moved and the seg sign
-test *strengthened* to 9/10, **p = 0.0215**.
+**Reading.** The unprojected solve buys its seg flips and hands back **+0.009516 S** on pose —
+**0.99× the whole remaining gap** — which is precisely why every prior seg-edit candidate was
+refused. The projected solve fixes *more* flips and pays **-0.000906 S**. On this evidence the pose
+tax is not reduced; it is gone.
+
+**η trajectory as rows landed** (the regression-to-the-mean check of §0.3, which **HELD**): the
+η advantage fell +15.6% (n=4) → +14.2% (n=7) → +11.7% (n=10) → **+8.1% (n=12)**, and the pose
+gap-multiple wandered 1.65× → 1.53× → 0.81× → **1.09×** — noisy, not monotone, because the
+aggregate is a ratio of means over a heavy-tailed per-pair distribution. **The direction never moved**
+and the seg sign test stayed significant (10/12, **p = 0.0386**). Quote the direction and the
+order of magnitude — the pose removal is *on the order of the whole remaining gap* — never a level.
 
 ## §4 The confound in my own A/B, and the control I built for it
 
@@ -239,28 +245,29 @@ independently of `--mode`, applied to BOTH the solve mask and the realize mask, 
 `None` = legacy behaviour so no existing invocation changes. `--mode free --snap-support true`
 isolates the projection.
 
-**Measured, n=5 matched pairs [33, 66, 81, 89, 280]** — the three-way split:
+**Measured, n=7 matched pairs [33, 66, 81, 89, 280, 299, 322]** — the three-way split:
 
 | arm | support | projection | pooled η | `d_pose` ratio |
 |---|---|---|---:|---:|
-| `free` | pixel | none | 0.5753 | ×5.886 |
-| `free --snap-support true` | **2×2 blocks** | none | 0.5830 | ×6.880 |
-| `null` | 2×2 blocks | **pose-null** | 0.6448 | ×0.4370 |
+| `free` | pixel | none | 0.5588 | ×6.059 |
+| `free --snap-support true` | **2×2 blocks** | none | 0.5559 | ×6.944 |
+| `null` | 2×2 blocks | **pose-null** | 0.6382 | ×0.4720 |
 
-- η attributable to the **support snap alone**: **+0.0077**
-- η attributable to the **projection alone**, at matched support: **+0.0618**
-- **the projection carries 88.9% of the η gain**; the snap carries 11.1%
-- pose: the snap alone moves it **0.86×** (slightly *worse*), the projection alone **15.7×** better
+- η attributable to the **support snap alone**: **-0.0029**
+- η attributable to the **projection alone**, at matched support: **+0.0824**
+- **the projection carries 103.7% of the η gain**; the snap carries -3.7%
+- pose: the snap alone moves it **0.87×** (slightly *worse*), the projection alone **14.7×** better
 
-**So the confound is real but it does not carry the result.** The snap is worth
-+0.0077 η — 11% of the observed gain — while the projection at matched
-support is worth **+0.0618**. On pose the snap alone is mildly *harmful*
-(0.86×) while the projection is worth **15.7×**. **The η claim survives de-confounding.**
+**So the confound is real and it runs the OTHER WAY.** Growing the support to 2×2 blocks is worth
+**-0.0029 η** on its own — a small *negative* — while the projection at matched support is
+worth **+0.0824**, i.e. the projection carries slightly more than the whole observed
+gain. On pose the snap alone is mildly *harmful* (0.87×) while the projection is worth
+**14.7×**. **The η claim survives de-confounding**, and the confound was never the
+threat it looked like.
 
-⚠ **Scope, plainly:** n=5 matched pairs [33, 66, 81, 89, 280]; the control arm was still filling at write time
-and its rows land incrementally in `eta_gate_free_snapped_n12/ETA_GATE_ROWS.jsonl`. Five pairs cannot
-license a LIVE verdict (m96). Re-run the aggregator for the current n; the pre-registered FO-2
-reading in §7 stands unchanged.
+⚠ **Scope:** n=7 of 12; the control arm was still filling at write time and its rows land
+incrementally in `eta_gate_free_snapped_n12/ETA_GATE_ROWS.jsonl`. Seven pairs cannot license a LIVE
+verdict (m96). Re-run the aggregator for the current n; the pre-registered FO-2 reading in §7 stands.
 
 ## §5 Joint arithmetic at n600 scale
 
@@ -273,28 +280,27 @@ advisory instrument's own 24-pair base (2.2557e-04), which is **32.8×** the con
 aggregate, so its absolute pose costs overstate the contest term by ≈√32.8 ≈ 5.7×. rt2's *ratios*
 stand; its absolute pose S figures do not transfer.
 
-Priced at the projected pooled η over the **10 matched pairs, η = 0.6224**, and the pose ratio
-×0.7764 measured on those same pairs. ⚠ The full null run's n=12 pooled η is **0.6111**; both are
-quoted rather than blended, and the verdict is unchanged across that range.
+Priced at the projected pooled η over **all 12 matched pairs, η = 0.6111** — which is also the full
+null run's own n=12 figure, so there is no subset-vs-full ambiguity left — and the pose ratio ×0.7935.
 
 | channel framing | pose leg | ΔS_seg | ΔS_rate | ΔS_pose | **net ΔS** | verdict |
 |---|---|---:|---:|---:|---:|---|
-| rt1 describe-everything (real M7 coder) | measured x0.7764 | -0.018292 | +0.022130 | -0.000986 | **+0.002852** | NON-SUPPLIER |
-| rt1 describe-everything (real M7 coder) | pose-neutral | -0.018292 | +0.022130 | +0.000000 | **+0.003838** | NON-SUPPLIER |
-| sr1 waterfill (IDEAL entropy, unpriced) | measured x0.7764 | -0.003436 | +0.002847 | -0.000986 | **-0.001575** | SUPPLIER |
-| sr1 waterfill (IDEAL entropy, unpriced) | pose-neutral | -0.003436 | +0.002847 | +0.000000 | **-0.000589** | SUPPLIER |
+| rt1 describe-everything (real M7 coder) | measured ×0.7935 | -0.017959 | +0.022130 | -0.000906 | **+0.003265** | NON-SUPPLIER |
+| rt1 describe-everything (real M7 coder) | pose-neutral | -0.017959 | +0.022130 | +0.000000 | **+0.004171** | NON-SUPPLIER |
+| sr1 waterfill (IDEAL entropy, unpriced) | measured ×0.7935 | -0.003374 | +0.002847 | -0.000906 | **-0.001433** | SUPPLIER |
+| sr1 waterfill (IDEAL entropy, unpriced) | pose-neutral | -0.003374 | +0.002847 | +0.000000 | **-0.000526** | SUPPLIER |
 
 - **rt1's describe-everything channel is a NON-SUPPLIER**, confirming rt1's CLOSED verdict on
   independent rows — and for a reason that has nothing to do with pose: even with the pose leg set
-  to exactly zero it loses (**+0.003838 S**).
-- **sr1's waterfill is a marginal SUPPLIER**: **-0.000589 S** pose-neutral
-  (6.1% of the gap), **-0.001575 S** if the measured pose *gain* survived
-  to n600 — which §9 says must not be assumed, since it is regressing toward neutral as n grows.
+  to exactly zero it loses (**+0.004171 S**).
+- **sr1's waterfill is a marginal SUPPLIER**: **-0.000526 S** pose-neutral
+  (5.5% of the gap), **-0.001433 S** (14.9%) if the measured pose *gain* survived
+  to n600 — which §9 says must not be assumed.
 - η is **below rt1's 0.753 describe-everything bar** (0 of 12 null pairs above it) and **above sr1's
   0.3871 guarded waterfill supplier margin** (12 of 12 above it). Both prior verdicts reproduce
   exactly; my rows change neither.
-- Break-even on the waterfilled support is **5160 B** against sr1's ideal **4276 B** —
-  **20.7% real-coder headroom**.
+- Break-even on the waterfilled support is **5066 B** against sr1's ideal **4276 B** —
+  **18.5% real-coder headroom**.
 
 ## §6 The rate leg — priced honestly, and the one thing that is NOT priced
 
@@ -353,17 +359,19 @@ read-only for this arm).
 
 | artifact | bytes | sha256 (prefix) |
 |---|---:|---|
-| `eta_gate_free_n12/ETA_GATE_ROWS.jsonl` | 6077 | `36b5f21a7519…` |
-| `eta_gate_free_snapped_n12/ETA_GATE_ROWS.jsonl` | 3330 | `a6bb2c841288…` |
-| `PN2_VERDICT_partial.json` | 5014 | `ae11a5d9aac7…` |
-| `PN2_VERDICT.json` | 5233 | `60c3922618d7…` |
+| `eta_gate_free_n12/ETA_GATE_ROWS.jsonl` | 6638 | `e1f784e08b8c…` |
+| `eta_gate_free_n12/ETA_GATE_VERDICT.json` | 10176 | `228649e64dc4…` |
+| `eta_gate_free_snapped_n12/ETA_GATE_ROWS.jsonl` | 4434 | `3900a50fc28d…` |
+| `PN2_VERDICT_partial.json` | 5305 | `ad0f969b9478…` |
+| `PN2_VERDICT.json` | 5361 | `2466e01a1503…` |
 | `RT2_DEBLUR_LADDER_n2_s20260817_posenull_supf1.json` | 4653 | `e51fc93c9e41…` |
 | `RT2_DEBLUR_LADDER_n24_s20260817_posenull_supboth.json` | 6681 | `f751bb9f83b1…` |
 | `RT2_DEBLUR_LADDER_n24_s20260817_posenull_supf1.json` | 33382 | `da5d1a77868b…` |
 
-`PN2_VERDICT.json` is the machine-readable verdict (matched A/B + three-way decomposition + joint
-arithmetic); the `RT2_DEBLUR_LADDER_*_sup*` receipts carry per-pair `d_pose` and flip rows, not only
-aggregates; the `eta_gate_*` JSONL are append-only and were still filling at write time.
+`PN2_VERDICT.json` is the machine-readable verdict (matched A/B + three-way decomposition +
+joint arithmetic) at the n reported here; the `RT2_DEBLUR_LADDER_*_sup*` receipts carry per-pair
+`d_pose` and flip rows, not only aggregates. `eta_gate_free_n12` is COMPLETE (12/12);
+`eta_gate_free_snapped_n12` is append-only and was still filling at write time.
 
 Tools landed this unit (commit `44742c4bb1`): `experiments/ddm_rt2_deblur_ladder.py`
 (`--support`, `--edit-frames`, per-pair retention, fail-closed nullity assertion) ·
@@ -381,9 +389,9 @@ decode `0.raw`, the qs3 `gt_argmax_n600.npy`, and `upstream/videos/0.mkv` via
 
 - **No score, no pointer move.** Every number is `[macOS-CPU advisory]`, `score_claim=false`.
 - **The η half of the seg-reach claim is CONFOUNDED** by the 1.77× support snap (§4). Only the
-  pose half is clean. The isolating control (§4) measures the snap at +0.0077 η and the
-  projection at +0.0618 at matched support (88.9% of the gain) — so the confound does not carry
-  the result — but that decomposition is **n=5** and the control was still filling at write time.
+  pose half is clean. The isolating control (§4) measures the snap at −0.0029 η and the
+  projection at +0.0824 at matched support — so the confound runs *against* the claim, not for it —
+  but that decomposition is **n=7 of 12** and the control was still filling at write time.
 - **n=12 (solver) and n=24 (ladder) are SCOPE reductions**, seeded-random, never a prefix. Per m96
   a random subset may REFUTE a bar but may not license a LIVE verdict. No LIVE verdict is claimed.
   Per m96's sister finding, prefix bias on the pose axis runs 2.5–4.2× — which is *why* both arms
