@@ -115,6 +115,28 @@ def pose_agg_ratio(rows: list[dict]) -> float:
     return float(da.mean() / db.mean()) if db.mean() else float("nan")
 
 
+def pose_concentration(rows: list[dict]) -> dict:
+    """How much of the aggregate pose move comes from ONE pair.
+
+    pn2 s2 measured a case where a single pair carried 710% of the aggregate excess and
+    concluded the aggregate 'is not resolved'.  Any aggregate pose ratio quoted without this
+    diagnostic is quoting a number that one heavy-tailed pair may own outright, so it is
+    computed here rather than left to the reader.
+    """
+    d = np.array([r["d_pose_after"] - r["d_pose_before"] for r in rows], dtype=np.float64)
+    tot = float(d.sum())
+    if not rows or tot == 0.0:
+        return {"total_excess": tot, "top_pair_share_of_excess": None}
+    k = int(np.argmax(np.abs(d)))
+    return {"total_excess": tot,
+            "top_pair": rows[k]["pair"],
+            "top_pair_excess": float(d[k]),
+            "top_pair_share_of_excess": float(d[k] / tot),
+            "n_pairs_with_positive_excess": int((d > 0).sum()),
+            "note": "share > 1.0 means the aggregate is a near-cancellation of large "
+                    "opposite-signed per-pair moves, not a small uniform effect"}
+
+
 def bootstrap_spread(rows: list[dict], n_boot: int, seed: int) -> dict:
     """Pair-level bootstrap of the pooled ratio estimator: 'would another draw of these n pairs
     have cleared the bar?'  Resampling PAIRS is the right unit because the pair is the sampling
@@ -265,6 +287,8 @@ def adjudicate(args: argparse.Namespace) -> int:
                                                if (r.get("d_pose_ratio") or 9e9) < 1.0)),
             "n_new": len(new_rows),
             "convention": "mean(d_pose_after)/mean(d_pose_before), the evaluate.py aggregation",
+            "concentration": pose_concentration(new_rows),
+            "pn2_n12_projected_reference": 0.7935,
             "delta_S_pose": ((10.0 * D_POSE_N600 * pose_agg_ratio(new_rows)) ** 0.5
                              - (10.0 * D_POSE_N600) ** 0.5)}
 
