@@ -1,0 +1,772 @@
+{
+  "schema": "ddm_gl1_gt_lineage_registry_v1",
+  "produced_by": "experiments/ddm_gl1_gt_lineage_census.py --emit-registry",
+  "produced_utc": "2026-08-17T01:45:01Z",
+  "git_head": "66d05d3e5ed3badcd0f281f645a2eb60a81db8eb",
+  "rulers": {
+    "dali": {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_chroma_dali_av_20260809/gt_cache_dali.pt",
+      "sha256": "a91d98252fe377c51ff7f3380c2fc9d30d84093fc54ee89e5e5f5102e6354994"
+    },
+    "av": {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_chroma_dali_av_20260809/gt_cache_av.pt",
+      "sha256": "837b5852dc71ded7ffd20f59f0e8192a4ce753fe1a7b36882ed8e09f211e1f99"
+    },
+    "provenance": "Modal job #906 experiments/modal_dali_av_gt_cache_diff.py, 2026-08-09: PR130's build_gt_cache_official.py run TWICE in ONE container on ONE Tesla T4, --dataset av then --dataset dali. Lineage is PRODUCER_DECLARED by that argv."
+  },
+  "decisive_margin": 10.0,
+  "denominators": {
+    "code_referenced_path_literals": 84,
+    "disk_sweep_files": 66,
+    "existing_candidates": 68,
+    "classified": 68,
+    "capped_out": 0
+  },
+  "keying": "sha256 of file bytes -- NEVER path or basename",
+  "axis": "[macOS-CPU advisory] lineage classification -- NEVER a score",
+  "score_claim": false,
+  "artifacts": [
+    {
+      "sha256": "026a4ad9e5e152488544bf6bc6ceb7b510f2913f02a6529ca32d684ea3ebc898",
+      "bytes": 3662409728,
+      "basename": "pr95_gt_pairs_600.npy",
+      "lineage": "UNKNOWN_UNCOMPARABLE",
+      "lineage_evidence": "NONE",
+      "measurement": "array shape is neither a (n,384,512) seg field nor an (n,6) pose table",
+      "claim_boundary": "Lineage NOT established. No producer receipt was located and content comparison against the #906 rulers was indecisive or impossible. Recorded as UNKNOWN on purpose: a guessed label here is the exact failure ddm_pi2 surfaced.",
+      "known_paths": [
+        "/Users/adpena/Projects/pact/.omx/tmp/pr95_gt_pairs_600.npy"
+      ],
+      "known_basenames": [
+        "pr95_gt_pairs_600.npy"
+      ]
+    },
+    {
+      "sha256": "0eae6dab35331bfacebd787548b901553bdcf373abe3d88371a723989fb65d68",
+      "bytes": 117981301,
+      "basename": "gt_pose_cache_600.pt",
+      "lineage": "DALI_NVDEC",
+      "lineage_evidence": "EMPIRICAL_NEAREST_RULER_POSE_MSE|EMPIRICAL_NEAREST_RULER_SEG_SITES",
+      "measurement": "seg: 1,644 differing sites vs DALI ruler, 20,749 vs AV ruler, of 117,964,800; pose: MSE 1.065225e-06 vs DALI ruler, 1.400450e-04 vs AV ruler",
+      "claim_boundary": "Classified by nearest ruler with the margin recorded. Content strongly indicates the family but does not prove the exact historical invocation, and within-family drift is nonzero (FX4 measured 1,644 seg sites between two DALI builds).",
+      "known_paths": [
+        "/Volumes/VertigoDataTier/pact/ddm_mx2_20260806/inputs/gt_pose_cache_600.pt"
+      ],
+      "known_basenames": [
+        "gt_pose_cache_600.pt"
+      ]
+    },
+    {
+      "sha256": "121265b0825e50242b7b4574e6b082cc3293817cfd87ebdfbd81122dc8f249d8",
+      "bytes": 12583040,
+      "basename": "gt_argmax_n64.npy",
+      "lineage": "DALI_NVDEC",
+      "lineage_evidence": "EMPIRICAL_EXACT_FRAME_SUBSET",
+      "measurement": "seg: 64/64 frames bit-identical to DALI ruler, 0/64 to AV ruler",
+      "claim_boundary": "Every frame is bit-identical to a frame of a producer-declared ruler. Strong content identity for the frames present; says nothing about frames absent from this subset.",
+      "known_paths": [
+        "/Volumes/VertigoDataTier/pact/pr135_joint_solve_20260810/multitoken_978/ddm_mt1_20260814/optimal_form_r2/retained/inputs/gt_argmax_n64.npy",
+        "/Volumes/VertigoDataTier/pact/pr135_joint_solve_20260810/multitoken_978/ddm_mt1_20260814/retained/inputs/gt_argmax_n64.npy"
+      ],
+      "known_basenames": [
+        "gt_argmax_n64.npy"
+      ]
+    },
+    {
+      "sha256": "162b866202ad29c10080ee3b32adfef4cce345212b9d6b76d0e41a1a64b63bda",
+      "bytes": 97665868,
+      "basename": "gt_frames.pt",
+      "lineage": "UNKNOWN_UNCOMPARABLE",
+      "lineage_evidence": "NONE",
+      "measurement": "bare tensor of shape [32, 874, 1164, 3] is neither a seg field nor a pose table",
+      "claim_boundary": "Lineage NOT established. No producer receipt was located and content comparison against the #906 rulers was indecisive or impossible. Recorded as UNKNOWN on purpose: a guessed label here is the exact failure ddm_pi2 surfaced.",
+      "known_paths": [
+        "/Users/adpena/Projects/pact/experiments/results/local_trend_coolchic_c3_20260425/data/gt_frames.pt"
+      ],
+      "known_basenames": [
+        "gt_frames.pt"
+      ]
+    },
+    {
+      "sha256": "1aa74b2f952111bdfa3858477c2f656984a4344f63a080c89acc97d4e2bbad82",
+      "bytes": 75500573,
+      "basename": "gt_targets_n48.pt",
+      "lineage": "PYAV_YUV420_TO_RGB",
+      "lineage_evidence": "EMPIRICAL_EXACT_FRAME_SUBSET|EMPIRICAL_NEAREST_RULER_POSE_MSE_VIA_SEG_INDEX_MAP",
+      "measurement": "seg: 0/48 frames bit-identical to DALI ruler, 48/48 to AV ruler",
+      "claim_boundary": "Every frame is bit-identical to a frame of a producer-declared ruler. Strong content identity for the frames present; says nothing about frames absent from this subset.",
+      "known_paths": [
+        "/Users/adpena/Projects/pact/experiments/results/capstone_gt_targets_cache/gt_targets_n48.pt"
+      ],
+      "known_basenames": [
+        "gt_targets_n48.pt"
+      ]
+    },
+    {
+      "sha256": "1cf5f6e186b30beaa55eb308733a39d4b8836ab72ce4743663f0259d54dcec71",
+      "bytes": 3662411191,
+      "basename": "gt_frames.pt",
+      "lineage": "UNKNOWN_UNCOMPARABLE",
+      "lineage_evidence": "NONE",
+      "measurement": "bare tensor of shape [1200, 874, 1164, 3] is neither a seg field nor a pose table",
+      "claim_boundary": "Lineage NOT established. No producer receipt was located and content comparison against the #906 rulers was indecisive or impossible. Recorded as UNKNOWN on purpose: a guessed label here is the exact failure ddm_pi2 surfaced.",
+      "known_paths": [
+        "/Volumes/VertigoDataTier/pact/cold_store/externalized_ignored_large_artifacts/Users_adpena_Projects_pact/precomputed_local/gt_frames.pt"
+      ],
+      "known_basenames": [
+        "gt_frames.pt"
+      ]
+    },
+    {
+      "sha256": "1f2fe6d117cf48b3bf90829e17905985bae65379121c17f4531877fa65acdb49",
+      "bytes": 14528,
+      "basename": "gt_first6_n600.npy",
+      "lineage": "DALI_NVDEC",
+      "lineage_evidence": "EMPIRICAL_NEAREST_RULER_POSE_MSE",
+      "measurement": "pose: MSE 8.663512e-13 vs DALI ruler, 1.406131e-04 vs AV ruler",
+      "claim_boundary": "Classified by nearest ruler with the margin recorded. Content strongly indicates the family but does not prove the exact historical invocation, and within-family drift is nonzero (FX4 measured 1,644 seg sites between two DALI builds).",
+      "known_paths": [
+        "/Volumes/VertigoDataTier/pact/ddm_po1_20260813/round1_cp135/retained/pose_vectors/gt_first6_n600.npy",
+        "/Volumes/VertigoDataTier/pact/ddm_qs1_20260813/retained_fields/ddm_qs1_dual_axis_20260813_r2/retained/pose_vectors/gt_first6_n600.npy"
+      ],
+      "known_basenames": [
+        "gt_first6_n600.npy"
+      ]
+    },
+    {
+      "sha256": "286fe40a2a29aa6950684f43229fce3a4a284ac7ffc65040e7e18953b95787d4",
+      "bytes": 943720076,
+      "basename": "gt_seg_cache.pt",
+      "lineage": "PYAV_YUV420_TO_RGB",
+      "lineage_evidence": "EMPIRICAL_NEAREST_RULER_SEG_SITES",
+      "measurement": "seg: 20,671 differing sites vs DALI ruler, 2 vs AV ruler, of 117,964,800",
+      "claim_boundary": "Classified by nearest ruler with the margin recorded. Content strongly indicates the family but does not prove the exact historical invocation, and within-family drift is nonzero (FX4 measured 1,644 seg sites between two DALI builds).",
+      "known_paths": [
+        "/Volumes/VertigoDataTier/pact/ddm_hb1_20260806/inputs/gt_seg_cache.pt"
+      ],
+      "known_basenames": [
+        "gt_seg_cache.pt"
+      ]
+    },
+    {
+      "sha256": "382d7dfe38b37c0cc5017e5645032faa045af6924db66e0b67549cc96c840195",
+      "bytes": 117981301,
+      "basename": "gt_cache_600_official_ada.pt",
+      "lineage": "DALI_NVDEC",
+      "lineage_evidence": "EMPIRICAL_NEAREST_RULER_POSE_MSE|EMPIRICAL_NEAREST_RULER_SEG_SITES",
+      "measurement": "seg: 1,644 differing sites vs DALI ruler, 20,749 vs AV ruler, of 117,964,800; pose: MSE 1.065225e-06 vs DALI ruler, 1.400450e-04 vs AV ruler",
+      "claim_boundary": "Classified by nearest ruler with the margin recorded. Content strongly indicates the family but does not prove the exact historical invocation, and within-family drift is nonzero (FX4 measured 1,644 seg sites between two DALI builds).",
+      "known_paths": [
+        "/Volumes/VertigoDataTier/pact/ddm_op1r_20260809/authority_cache/gt_cache_600_official_ada.pt",
+        "/Volumes/VertigoDataTier/pact/ddm_pr130_train_20260809/caches/gt_cache_600_official_ada.pt"
+      ],
+      "known_basenames": [
+        "gt_cache_600_official_ada.pt"
+      ]
+    },
+    {
+      "sha256": "49e8a8023edd71032519aed1642ebb7556f679c9f46d3e0b0e5a108663c53a8a",
+      "bytes": 25168157,
+      "basename": "gt_targets_n16.pt",
+      "lineage": "PYAV_YUV420_TO_RGB",
+      "lineage_evidence": "EMPIRICAL_EXACT_FRAME_SUBSET|EMPIRICAL_NEAREST_RULER_POSE_MSE_VIA_SEG_INDEX_MAP",
+      "measurement": "seg: 0/16 frames bit-identical to DALI ruler, 16/16 to AV ruler",
+      "claim_boundary": "Every frame is bit-identical to a frame of a producer-declared ruler. Strong content identity for the frames present; says nothing about frames absent from this subset.",
+      "known_paths": [
+        "/Users/adpena/Projects/pact/experiments/results/capstone_gt_targets_cache/gt_targets_n16.pt"
+      ],
+      "known_basenames": [
+        "gt_targets_n16.pt"
+      ]
+    },
+    {
+      "sha256": "4a1e7004dc15f4a703ce299f8f9372fe3e1c2a60db3a80e3aba810d1f2dd7f7d",
+      "bytes": 107082,
+      "basename": "comma2k19_gt_pose_raw.npz",
+      "lineage": "UNKNOWN_UNCOMPARABLE",
+      "lineage_evidence": "NONE",
+      "measurement": "no member matched a seg field or a pose table",
+      "claim_boundary": "Lineage NOT established. No producer receipt was located and content comparison against the #906 rulers was indecisive or impossible. Recorded as UNKNOWN on purpose: a guessed label here is the exact failure ddm_pi2 surfaced.",
+      "known_paths": [
+        "/Users/adpena/Projects/pact/experiments/results/pose_feasibility_probe/comma2k19_gt_pose_raw.npz"
+      ],
+      "known_basenames": [
+        "comma2k19_gt_pose_raw.npz"
+      ]
+    },
+    {
+      "sha256": "4d03b1f6aed71a9413e27de71d80aadc72522aeaffb912b5b4e7f985c74cdac6",
+      "bytes": 150999197,
+      "basename": "gt_targets_n96.pt",
+      "lineage": "PYAV_YUV420_TO_RGB",
+      "lineage_evidence": "EMPIRICAL_EXACT_FRAME_SUBSET|EMPIRICAL_NEAREST_RULER_POSE_MSE_VIA_SEG_INDEX_MAP",
+      "measurement": "seg: 0/96 frames bit-identical to DALI ruler, 96/96 to AV ruler",
+      "claim_boundary": "Every frame is bit-identical to a frame of a producer-declared ruler. Strong content identity for the frames present; says nothing about frames absent from this subset.",
+      "known_paths": [
+        "/Users/adpena/Projects/pact/experiments/results/capstone_gt_targets_cache/gt_targets_n96.pt"
+      ],
+      "known_basenames": [
+        "gt_targets_n96.pt"
+      ]
+    },
+    {
+      "sha256": "4fe596cc6f058f67f38a85aedb80a1c0e7517d41d76cbecd4dc2c9f5e746393f",
+      "bytes": 157290725,
+      "basename": "gt_targets_n100.pt",
+      "lineage": "PYAV_YUV420_TO_RGB",
+      "lineage_evidence": "EMPIRICAL_EXACT_FRAME_SUBSET|EMPIRICAL_NEAREST_RULER_POSE_MSE_VIA_SEG_INDEX_MAP",
+      "measurement": "seg: 0/100 frames bit-identical to DALI ruler, 100/100 to AV ruler",
+      "claim_boundary": "Every frame is bit-identical to a frame of a producer-declared ruler. Strong content identity for the frames present; says nothing about frames absent from this subset.",
+      "known_paths": [
+        "/Users/adpena/Projects/pact/experiments/results/capstone_gt_targets_cache/gt_targets_n100.pt"
+      ],
+      "known_basenames": [
+        "gt_targets_n100.pt"
+      ]
+    },
+    {
+      "sha256": "515a90ac32dd8611b360071b1b494a6765838e82bfc4347e7482c4dbf88a2a4f",
+      "bytes": 1664,
+      "basename": "gt_pose_n64.npy",
+      "lineage": "UNKNOWN_AMBIGUOUS",
+      "lineage_evidence": "EMPIRICAL_INDECISIVE",
+      "measurement": "measured against both rulers but no leg reached a decisive margin",
+      "claim_boundary": "Lineage NOT established. No producer receipt was located and content comparison against the #906 rulers was indecisive or impossible. Recorded as UNKNOWN on purpose: a guessed label here is the exact failure ddm_pi2 surfaced.",
+      "known_paths": [
+        "/Volumes/VertigoDataTier/pact/pr135_joint_solve_20260810/multitoken_978/ddm_mt1_20260814/optimal_form_r2/retained/inputs/gt_pose_n64.npy",
+        "/Volumes/VertigoDataTier/pact/pr135_joint_solve_20260810/multitoken_978/ddm_mt1_20260814/retained/inputs/gt_pose_n64.npy"
+      ],
+      "known_basenames": [
+        "gt_pose_n64.npy"
+      ]
+    },
+    {
+      "sha256": "533a48884f421541a226435701d30b6032054d63afaeef2f53b99293e4c4825e",
+      "bytes": 37751261,
+      "basename": "gt_targets_n24.pt",
+      "lineage": "PYAV_YUV420_TO_RGB",
+      "lineage_evidence": "EMPIRICAL_EXACT_FRAME_SUBSET|EMPIRICAL_NEAREST_RULER_POSE_MSE_VIA_SEG_INDEX_MAP",
+      "measurement": "seg: 0/24 frames bit-identical to DALI ruler, 24/24 to AV ruler",
+      "claim_boundary": "Every frame is bit-identical to a frame of a producer-declared ruler. Strong content identity for the frames present; says nothing about frames absent from this subset.",
+      "known_paths": [
+        "/Users/adpena/Projects/pact/experiments/results/capstone_gt_targets_cache/gt_targets_n24.pt"
+      ],
+      "known_basenames": [
+        "gt_targets_n24.pt"
+      ]
+    },
+    {
+      "sha256": "56cb19801ae267646e559603a46b9e7e32ac5bf0662051a9f911857c59351e71",
+      "bytes": 3147669,
+      "basename": "gt_targets_n2.pt",
+      "lineage": "PYAV_YUV420_TO_RGB",
+      "lineage_evidence": "EMPIRICAL_EXACT_FRAME_SUBSET|EMPIRICAL_NEAREST_RULER_POSE_MSE_VIA_SEG_INDEX_MAP",
+      "measurement": "seg: 0/2 frames bit-identical to DALI ruler, 2/2 to AV ruler",
+      "claim_boundary": "Every frame is bit-identical to a frame of a producer-declared ruler. Strong content identity for the frames present; says nothing about frames absent from this subset.",
+      "known_paths": [
+        "/Users/adpena/Projects/pact/experiments/results/torch_vehicle_chaos_control_smoke/gt_targets_cache/gt_targets_n2.pt"
+      ],
+      "known_basenames": [
+        "gt_targets_n2.pt"
+      ]
+    },
+    {
+      "sha256": "684a2e043f5637eec6f2bc837b845588a7ec759c2a5c4b3b75dcb9f872541ede",
+      "bytes": 221996742,
+      "basename": "gt_n24.npz",
+      "lineage": "PYAV_YUV420_TO_RGB",
+      "lineage_evidence": "EMPIRICAL_MAJORITY_FRAME_SUBSET",
+      "measurement": "seg: 0/24 frames bit-identical to DALI ruler, 23/24 to AV ruler",
+      "claim_boundary": "Every frame is bit-identical to a frame of a producer-declared ruler. Strong content identity for the frames present; says nothing about frames absent from this subset.",
+      "known_paths": [
+        "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n24.npz"
+      ],
+      "known_basenames": [
+        "gt_n24.npz"
+      ]
+    },
+    {
+      "sha256": "6aad6600d93a5c25e94207ee411d3b4daf93136b8ea4235b6f7b9d96f04ab104",
+      "bytes": 812484058,
+      "basename": "gt_n96.npz",
+      "lineage": "PYAV_YUV420_TO_RGB",
+      "lineage_evidence": "EMPIRICAL_MAJORITY_FRAME_SUBSET",
+      "measurement": "seg: 0/96 frames bit-identical to DALI ruler, 95/96 to AV ruler",
+      "claim_boundary": "Every frame is bit-identical to a frame of a producer-declared ruler. Strong content identity for the frames present; says nothing about frames absent from this subset.",
+      "known_paths": [
+        "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n96.npz"
+      ],
+      "known_basenames": [
+        "gt_n96.npz"
+      ]
+    },
+    {
+      "sha256": "6adc6d96ea9ee09b290212aa94c7076a99c2c64ea5ac34096d26b76cd72c39d5",
+      "bytes": 301996453,
+      "basename": "gt_targets_n192.pt",
+      "lineage": "PYAV_YUV420_TO_RGB",
+      "lineage_evidence": "EMPIRICAL_EXACT_FRAME_SUBSET|EMPIRICAL_NEAREST_RULER_POSE_MSE_VIA_SEG_INDEX_MAP",
+      "measurement": "seg: 0/192 frames bit-identical to DALI ruler, 192/192 to AV ruler",
+      "claim_boundary": "Every frame is bit-identical to a frame of a producer-declared ruler. Strong content identity for the frames present; says nothing about frames absent from this subset.",
+      "known_paths": [
+        "/Users/adpena/Projects/pact/experiments/results/capstone_gt_targets_cache/gt_targets_n192.pt"
+      ],
+      "known_basenames": [
+        "gt_targets_n192.pt"
+      ]
+    },
+    {
+      "sha256": "6c62b5f72456c7bb1c1fc8b9f853a68a67a6d549fcb97d36acf0f1a0ef7a4260",
+      "bytes": 943734701,
+      "basename": "gt_cache.pt",
+      "lineage": "PYAV_YUV420_TO_RGB",
+      "lineage_evidence": "EMPIRICAL_NEAREST_RULER_POSE_MSE|EMPIRICAL_NEAREST_RULER_SEG_SITES",
+      "measurement": "seg: 20,671 differing sites vs DALI ruler, 2 vs AV ruler, of 117,964,800; pose: MSE 1.406115e-04 vs DALI ruler, 3.572376e-12 vs AV ruler",
+      "claim_boundary": "Classified by nearest ruler with the margin recorded. Content strongly indicates the family but does not prove the exact historical invocation, and within-family drift is nonzero (FX4 measured 1,644 seg sites between two DALI builds).",
+      "known_paths": [
+        "/Users/adpena/Projects/pact/experiments/results/dqs1_multielement_search_20260611/gt_cache.pt"
+      ],
+      "known_basenames": [
+        "gt_cache.pt"
+      ]
+    },
+    {
+      "sha256": "77ed36b2d49cea3040dbbaf5e76142f7dadd588a42e1fbc57eb0913a466f071c",
+      "bytes": 14528,
+      "basename": "gt_posenet_pose6.npy",
+      "lineage": "PYAV_YUV420_TO_RGB",
+      "lineage_evidence": "EMPIRICAL_NEAREST_RULER_POSE_MSE",
+      "measurement": "pose: MSE 1.406115e-04 vs DALI ruler, 3.572376e-12 vs AV ruler",
+      "claim_boundary": "Classified by nearest ruler with the margin recorded. Content strongly indicates the family but does not prove the exact historical invocation, and within-family drift is nonzero (FX4 measured 1,644 seg sites between two DALI builds).",
+      "known_paths": [
+        "/Volumes/VertigoDataTier/pact/lever_b_score_native_argmax_smoke_20260610/targets_n600/gt_posenet_pose6.npy"
+      ],
+      "known_basenames": [
+        "gt_posenet_pose6.npy"
+      ]
+    },
+    {
+      "sha256": "8248a60da56119eb4b3ad76bfa32f5498dee849eaf4b83b304275064141fd828",
+      "bytes": 117981133,
+      "basename": "gt_cache_600.pt",
+      "lineage": "PYAV_YUV420_TO_RGB",
+      "lineage_evidence": "EMPIRICAL_NEAREST_RULER_POSE_MSE|EMPIRICAL_NEAREST_RULER_SEG_SITES",
+      "measurement": "seg: 20,672 differing sites vs DALI ruler, 1 vs AV ruler, of 117,964,800; pose: MSE 1.406117e-04 vs DALI ruler, 1.048377e-12 vs AV ruler",
+      "claim_boundary": "Classified by nearest ruler with the margin recorded. Content strongly indicates the family but does not prove the exact historical invocation, and within-family drift is nonzero (FX4 measured 1,644 seg sites between two DALI builds).",
+      "known_paths": [
+        "/Volumes/VertigoDataTier/pact/ddm_pr130_train_20260809/caches/gt_cache_600.pt"
+      ],
+      "known_basenames": [
+        "gt_cache_600.pt"
+      ]
+    },
+    {
+      "sha256": "82ac5ace8998283f7a64a4a76a60e5c8ea5ef8fd39447b1fab4f13a1fea02218",
+      "bytes": 471859712,
+      "basename": "gt_n600_sR.npz",
+      "lineage": "UNKNOWN_AMBIGUOUS",
+      "lineage_evidence": "EMPIRICAL_INDECISIVE",
+      "measurement": "seg: 91,226,362 differing sites vs DALI ruler, 91,226,751 vs AV ruler, of 117,964,800",
+      "claim_boundary": "Lineage NOT established. No producer receipt was located and content comparison against the #906 rulers was indecisive or impossible. Recorded as UNKNOWN on purpose: a guessed label here is the exact failure ddm_pi2 surfaced.",
+      "known_paths": [
+        "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600_sR.npz"
+      ],
+      "known_basenames": [
+        "gt_n600_sR.npz"
+      ]
+    },
+    {
+      "sha256": "82ed61ce6a11a6612502527fbb6864a22fe6c6099312e637d971214ab660fb27",
+      "bytes": 14528,
+      "basename": "gt_pose.npy",
+      "lineage": "PYAV_YUV420_TO_RGB",
+      "lineage_evidence": "EMPIRICAL_NEAREST_RULER_POSE_MSE",
+      "measurement": "pose: MSE 1.406151e-04 vs DALI ruler, 4.889832e-12 vs AV ruler",
+      "claim_boundary": "Classified by nearest ruler with the margin recorded. Content strongly indicates the family but does not prove the exact historical invocation, and within-family drift is nonzero (FX4 measured 1,644 seg sites between two DALI builds).",
+      "known_paths": [
+        "/Volumes/APDataStore/pact/ddm_mt1_t4_sign_gate_20260814_custody/ddm_mt1_t4_sign_gate_20260814/inputs/gt_pose.npy",
+        "/Volumes/VertigoDataTier/pact/ddm_pz4_joint_target_conditioned_receiver/direct_v6/full_n600_eval/retained/pose_vectors/gt_first6_n600.npy",
+        "/Volumes/VertigoDataTier/pact/pr135_joint_solve_20260810/multitoken_978/ddm_mt1_20260814/optimal_form_r2/retained/t4_sign_gate_r1/fire_inputs/gt_pose.npy",
+        "/Volumes/VertigoDataTier/pact/pr135_joint_solve_20260810/multitoken_978/ddm_mt1_20260814/retained/t4_sign_gate/fire_inputs/gt_pose.npy",
+        "/Volumes/VertigoDataTier/pact/pr135_joint_solve_20260810/multitoken_978/ddm_mt1_20260814/retained/t4_sign_gate_r2/fire_inputs/gt_pose.npy",
+        "/Volumes/VertigoDataTier/pact/pr135_joint_solve_20260810/multitoken_978/ddm_mt1_20260814/retained/t4_sign_gate_r3/fire_inputs/gt_pose.npy"
+      ],
+      "known_basenames": [
+        "gt_first6_n600.npy",
+        "gt_pose.npy"
+      ]
+    },
+    {
+      "sha256": "837b5852dc71ded7ffd20f59f0e8192a4ce753fe1a7b36882ed8e09f211e1f99",
+      "bytes": 117980720,
+      "basename": "gt_cache_av.pt",
+      "lineage": "PYAV_YUV420_TO_RGB",
+      "lineage_evidence": "EMPIRICAL_EXACT_MATCH",
+      "measurement": "seg: 20,671 differing sites vs DALI ruler, 0 vs AV ruler, of 117,964,800; pose: MSE 1.406132e-04 vs DALI ruler, 0.000000e+00 vs AV ruler",
+      "claim_boundary": "Bit-identical to a producer-declared ruler over the full population; content identity is as strong as empirical evidence gets. It still does not recover the original argv, package versions, or host.",
+      "known_paths": [
+        "/Volumes/VertigoDataTier/pact/ddm_chroma_dali_av_20260809/gt_cache_av.pt"
+      ],
+      "known_basenames": [
+        "gt_cache_av.pt"
+      ]
+    },
+    {
+      "sha256": "91d3ff11a904c476b56a8be8af2225fb4a390d02fac9d3b09ef4704ad6e77248",
+      "bytes": 117964928,
+      "basename": "gt_argmax.npy",
+      "lineage": "DALI_NVDEC",
+      "lineage_evidence": "EMPIRICAL_NEAREST_RULER_SEG_SITES",
+      "measurement": "seg: 3 differing sites vs DALI ruler, 20,672 vs AV ruler, of 117,964,800",
+      "claim_boundary": "Classified by nearest ruler with the margin recorded. Content strongly indicates the family but does not prove the exact historical invocation, and within-family drift is nonzero (FX4 measured 1,644 seg sites between two DALI builds).",
+      "known_paths": [
+        "/Volumes/APDataStore/pact/ddm_mt1_t4_sign_gate_20260814_custody/ddm_mt1_t4_sign_gate_20260814/inputs/gt_argmax.npy",
+        "/Volumes/VertigoDataTier/pact/ddm_qs3_20260813/retained/inputs/gt_argmax_n600.npy",
+        "/Volumes/VertigoDataTier/pact/pr135_joint_solve_20260810/multitoken_978/ddm_mt1_20260814/optimal_form_r2/retained/t4_sign_gate_r1/fire_inputs/gt_argmax.npy",
+        "/Volumes/VertigoDataTier/pact/pr135_joint_solve_20260810/multitoken_978/ddm_mt1_20260814/retained/t4_sign_gate/fire_inputs/gt_argmax.npy",
+        "/Volumes/VertigoDataTier/pact/pr135_joint_solve_20260810/multitoken_978/ddm_mt1_20260814/retained/t4_sign_gate_r2/fire_inputs/gt_argmax.npy",
+        "/Volumes/VertigoDataTier/pact/pr135_joint_solve_20260810/multitoken_978/ddm_mt1_20260814/retained/t4_sign_gate_r3/fire_inputs/gt_argmax.npy",
+        "/Volumes/VertigoDataTier/pact/pr135_joint_solve_20260810/stage0_per_edge/contest_cuda/ddm_js1b_20260813b/retained/fields/gt_argmax_n600.npy",
+        "/Volumes/VertigoDataTier/pact/pr135_joint_solve_20260810/stage0_per_edge/contest_cuda/ddm_js1c_20260814/retained/fields/gt_argmax_n600.npy"
+      ],
+      "known_basenames": [
+        "gt_argmax.npy",
+        "gt_argmax_n600.npy"
+      ]
+    },
+    {
+      "sha256": "95a324f7616b12e4c1b4092e3089373171876929e7885fdaf46a7a24bf5c88f7",
+      "bytes": 2831156791,
+      "basename": "gt_frames.pt",
+      "lineage": "UNKNOWN_UNCOMPARABLE",
+      "lineage_evidence": "NONE",
+      "measurement": "bare tensor of shape [1200, 384, 512, 3] is neither a seg field nor a pose table",
+      "claim_boundary": "Lineage NOT established. No producer receipt was located and content comparison against the #906 rulers was indecisive or impossible. Recorded as UNKNOWN on purpose: a guessed label here is the exact failure ddm_pi2 surfaced.",
+      "known_paths": [
+        "/Users/adpena/Projects/pact/experiments/results/postfilter_precomputed/gt_frames.pt"
+      ],
+      "known_basenames": [
+        "gt_frames.pt"
+      ]
+    },
+    {
+      "sha256": "9a0d53d30e1421a47b6e8811d7eeb005459f89c0da24594bcf8105bcb69e6295",
+      "bytes": 512,
+      "basename": "gt_posenet_pose6.npy",
+      "lineage": "UNKNOWN_AMBIGUOUS",
+      "lineage_evidence": "EMPIRICAL_INDECISIVE",
+      "measurement": "measured against both rulers but no leg reached a decisive margin",
+      "claim_boundary": "Lineage NOT established. No producer receipt was located and content comparison against the #906 rulers was indecisive or impossible. Recorded as UNKNOWN on purpose: a guessed label here is the exact failure ddm_pi2 surfaced.",
+      "known_paths": [
+        "/Volumes/VertigoDataTier/pact/lever_b_score_native_argmax_smoke_20260610/targets_n16/gt_posenet_pose6.npy"
+      ],
+      "known_basenames": [
+        "gt_posenet_pose6.npy"
+      ]
+    },
+    {
+      "sha256": "9b686b566c5df50f697c5d80f15f5a8393760330fb67f2d8678173c3753fb179",
+      "bytes": 8464858,
+      "basename": "gt_n1.npz",
+      "lineage": "PYAV_YUV420_TO_RGB",
+      "lineage_evidence": "EMPIRICAL_EXACT_FRAME_SUBSET|EMPIRICAL_NEAREST_RULER_POSE_MSE_VIA_SEG_INDEX_MAP",
+      "measurement": "seg: 0/1 frames bit-identical to DALI ruler, 1/1 to AV ruler",
+      "claim_boundary": "Every frame is bit-identical to a frame of a producer-declared ruler. Strong content identity for the frames present; says nothing about frames absent from this subset.",
+      "known_paths": [
+        "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n1.npz"
+      ],
+      "known_basenames": [
+        "gt_n1.npz"
+      ]
+    },
+    {
+      "sha256": "9b8d6c63e44be105f4d81c17b344b272ca4585337c767af3e0af0aaeffbb83c5",
+      "bytes": 15620,
+      "basename": "gt_pose_targets.pt",
+      "lineage": "UNKNOWN_AMBIGUOUS",
+      "lineage_evidence": "EMPIRICAL_INDECISIVE",
+      "measurement": "pose: MSE 9.796132e-04 vs DALI ruler, 8.373186e-04 vs AV ruler",
+      "claim_boundary": "Lineage NOT established. No producer receipt was located and content comparison against the #906 rulers was indecisive or impossible. Recorded as UNKNOWN on purpose: a guessed label here is the exact failure ddm_pi2 surfaced.",
+      "known_paths": [
+        "/Users/adpena/Projects/pact/experiments/results/lane_a_landed/gt_pose_targets.pt"
+      ],
+      "known_basenames": [
+        "gt_pose_targets.pt"
+      ]
+    },
+    {
+      "sha256": "a75d0b0103e9afc9c01fe0a2592ef6e7cfdde9d5a3ac60ed743e4cc7a9cd25fc",
+      "bytes": 3147669,
+      "basename": "gt_targets_n2.pt",
+      "lineage": "PYAV_YUV420_TO_RGB",
+      "lineage_evidence": "EMPIRICAL_EXACT_FRAME_SUBSET|EMPIRICAL_NEAREST_RULER_POSE_MSE_VIA_SEG_INDEX_MAP",
+      "measurement": "seg: 0/2 frames bit-identical to DALI ruler, 2/2 to AV ruler",
+      "claim_boundary": "Every frame is bit-identical to a frame of a producer-declared ruler. Strong content identity for the frames present; says nothing about frames absent from this subset.",
+      "known_paths": [
+        "/Users/adpena/Projects/pact/experiments/results/capstone_gt_targets_cache/gt_targets_n2.pt"
+      ],
+      "known_basenames": [
+        "gt_targets_n2.pt"
+      ]
+    },
+    {
+      "sha256": "a83f079098ad1b9bf7b01b684d21b1f463e8e433a275f67cc9cbefd0c0739393",
+      "bytes": 3385345610,
+      "basename": "gt_heldout_n400.npz",
+      "lineage": "PYAV_YUV420_TO_RGB",
+      "lineage_evidence": "EMPIRICAL_MAJORITY_FRAME_SUBSET",
+      "measurement": "seg: 0/400 frames bit-identical to DALI ruler, 399/400 to AV ruler",
+      "claim_boundary": "Every frame is bit-identical to a frame of a producer-declared ruler. Strong content identity for the frames present; says nothing about frames absent from this subset.",
+      "known_paths": [
+        "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_heldout_n400.npz"
+      ],
+      "known_basenames": [
+        "gt_heldout_n400.npz"
+      ]
+    },
+    {
+      "sha256": "a91d98252fe377c51ff7f3380c2fc9d30d84093fc54ee89e5e5f5102e6354994",
+      "bytes": 117980732,
+      "basename": "gt_cache_dali.pt",
+      "lineage": "DALI_NVDEC",
+      "lineage_evidence": "EMPIRICAL_EXACT_MATCH",
+      "measurement": "seg: 0 differing sites vs DALI ruler, 20,671 vs AV ruler, of 117,964,800; pose: MSE 0.000000e+00 vs DALI ruler, 1.406132e-04 vs AV ruler",
+      "claim_boundary": "Bit-identical to a producer-declared ruler over the full population; content identity is as strong as empirical evidence gets. It still does not recover the original argv, package versions, or host.",
+      "known_paths": [
+        "/Volumes/VertigoDataTier/pact/ddm_chroma_dali_av_20260809/gt_cache_dali.pt"
+      ],
+      "known_basenames": [
+        "gt_cache_dali.pt"
+      ]
+    },
+    {
+      "sha256": "b09a41614d676cdbc1edd46e8aef3eae7d7183f6529c9ea1260d8f9895c2ba34",
+      "bytes": 8752,
+      "basename": "gt_poses.pt",
+      "lineage": "UNKNOWN_AMBIGUOUS",
+      "lineage_evidence": "EMPIRICAL_INDECISIVE",
+      "measurement": "pose: MSE 1.532819e-03 vs DALI ruler, 1.501526e-03 vs AV ruler",
+      "claim_boundary": "Lineage NOT established. No producer receipt was located and content comparison against the #906 rulers was indecisive or impossible. Recorded as UNKNOWN on purpose: a guessed label here is the exact failure ddm_pi2 surfaced.",
+      "known_paths": [
+        "/Users/adpena/Projects/pact/experiments/results/gt_poses.pt"
+      ],
+      "known_basenames": [
+        "gt_poses.pt"
+      ]
+    },
+    {
+      "sha256": "b34178eb31670dcb191eb99d16c4f64ecd3c04837af457f69819086fff66f1a7",
+      "bytes": 16068,
+      "basename": "gt_pose_targets_n600.pt",
+      "lineage": "PYAV_YUV420_TO_RGB",
+      "lineage_evidence": "EMPIRICAL_NEAREST_RULER_POSE_MSE",
+      "measurement": "pose: MSE 1.406115e-04 vs DALI ruler, 3.572376e-12 vs AV ruler",
+      "claim_boundary": "Classified by nearest ruler with the margin recorded. Content strongly indicates the family but does not prove the exact historical invocation, and within-family drift is nonzero (FX4 measured 1,644 seg sites between two DALI builds).",
+      "known_paths": [
+        "/Users/adpena/Projects/pact/experiments/results/pose_targets/gt_pose_targets_n600.pt"
+      ],
+      "known_basenames": [
+        "gt_pose_targets_n600.pt"
+      ]
+    },
+    {
+      "sha256": "b74a14b226a5aceb5824899898bcb06e5413c54b7db2441268da7bc91a10db5d",
+      "bytes": 117964928,
+      "basename": "gt_argmax_n600.npy",
+      "lineage": "PYAV_YUV420_TO_RGB",
+      "lineage_evidence": "EMPIRICAL_NEAREST_RULER_SEG_SITES",
+      "measurement": "seg: 20,671 differing sites vs DALI ruler, 2 vs AV ruler, of 117,964,800",
+      "claim_boundary": "Classified by nearest ruler with the margin recorded. Content strongly indicates the family but does not prove the exact historical invocation, and within-family drift is nonzero (FX4 measured 1,644 seg sites between two DALI builds).",
+      "known_paths": [
+        "/Volumes/VertigoDataTier/pact/ddm_js2_20260812/retained/control_cp135/gt_argmax_n600.npy",
+        "/Volumes/VertigoDataTier/pact/ddm_pu2_20260803/argmax_cache/gt_argmax_n600.npy",
+        "/Volumes/VertigoDataTier/pact/pr135_joint_solve_20260810/stage0_per_edge/custody/gt_argmax_n600.npy"
+      ],
+      "known_basenames": [
+        "gt_argmax_n600.npy"
+      ]
+    },
+    {
+      "sha256": "cf2922ebba8f8dc6e7e77b2d62585d475f5010d1a9f39add560998e5c43299a2",
+      "bytes": 12585045,
+      "basename": "gt_targets_n8.pt",
+      "lineage": "PYAV_YUV420_TO_RGB",
+      "lineage_evidence": "EMPIRICAL_EXACT_FRAME_SUBSET|EMPIRICAL_NEAREST_RULER_POSE_MSE_VIA_SEG_INDEX_MAP",
+      "measurement": "seg: 0/8 frames bit-identical to DALI ruler, 8/8 to AV ruler",
+      "claim_boundary": "Every frame is bit-identical to a frame of a producer-declared ruler. Strong content identity for the frames present; says nothing about frames absent from this subset.",
+      "known_paths": [
+        "/Users/adpena/Projects/pact/experiments/results/capstone_gt_targets_cache/gt_targets_n8.pt"
+      ],
+      "known_basenames": [
+        "gt_targets_n8.pt"
+      ]
+    },
+    {
+      "sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6",
+      "bytes": 5078017610,
+      "basename": "gt_n600.npz",
+      "lineage": "PYAV_YUV420_TO_RGB",
+      "lineage_evidence": "EMPIRICAL_NEAREST_RULER_POSE_MSE|EMPIRICAL_NEAREST_RULER_SEG_SITES",
+      "measurement": "seg: 20,671 differing sites vs DALI ruler, 2 vs AV ruler, of 117,964,800; pose: MSE 1.406115e-04 vs DALI ruler, 3.572376e-12 vs AV ruler",
+      "claim_boundary": "Classified by nearest ruler with the margin recorded. Content strongly indicates the family but does not prove the exact historical invocation, and within-family drift is nonzero (FX4 measured 1,644 seg sites between two DALI builds).",
+      "known_paths": [
+        "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz"
+      ],
+      "known_basenames": [
+        "gt_n600.npz"
+      ]
+    },
+    {
+      "sha256": "d4aca7c561b7019888fec2c17a58898baae03d42d243553e73f35e17f549c3ad",
+      "bytes": 15620,
+      "basename": "gt_pose_targets.pt",
+      "lineage": "UNKNOWN_AMBIGUOUS",
+      "lineage_evidence": "EMPIRICAL_INDECISIVE",
+      "measurement": "pose: MSE 9.707200e-04 vs DALI ruler, 8.275405e-04 vs AV ruler",
+      "claim_boundary": "Lineage NOT established. No producer receipt was located and content comparison against the #906 rulers was indecisive or impossible. Recorded as UNKNOWN on purpose: a guessed label here is the exact failure ddm_pi2 surfaced.",
+      "known_paths": [
+        "/Users/adpena/Projects/pact/experiments/results/shiraz_retto_v2_remote_pull/gt_pose_targets.pt"
+      ],
+      "known_basenames": [
+        "gt_pose_targets.pt"
+      ]
+    },
+    {
+      "sha256": "e0ec6826bf7737923b8a547ba87ba3915ba6d61de64bfda3e370a64ff84c0500",
+      "bytes": 707790490,
+      "basename": "gt_pairs_btchw.pt",
+      "lineage": "UNKNOWN_UNCOMPARABLE",
+      "lineage_evidence": "NONE",
+      "measurement": "bare tensor of shape [600, 2, 3, 384, 512] is neither a seg field nor a pose table",
+      "claim_boundary": "Lineage NOT established. No producer receipt was located and content comparison against the #906 rulers was indecisive or impossible. Recorded as UNKNOWN on purpose: a guessed label here is the exact failure ddm_pi2 surfaced.",
+      "known_paths": [
+        "/Users/adpena/Projects/pact/experiments/results/sjkl_tensor_prep_c067_full_20260502/gt_pairs_btchw.pt"
+      ],
+      "known_basenames": [
+        "gt_pairs_btchw.pt"
+      ]
+    },
+    {
+      "sha256": "e3f5ce8e79374ed0b9a3f007167dd7488862b51420f0b25b7bcec7ee6865f63e",
+      "bytes": 55500486,
+      "basename": "gt_n6.npz",
+      "lineage": "PYAV_YUV420_TO_RGB",
+      "lineage_evidence": "EMPIRICAL_EXACT_FRAME_SUBSET|EMPIRICAL_NEAREST_RULER_POSE_MSE_VIA_SEG_INDEX_MAP",
+      "measurement": "seg: 0/6 frames bit-identical to DALI ruler, 6/6 to AV ruler",
+      "claim_boundary": "Every frame is bit-identical to a frame of a producer-declared ruler. Strong content identity for the frames present; says nothing about frames absent from this subset.",
+      "known_paths": [
+        "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n6.npz"
+      ],
+      "known_basenames": [
+        "gt_n6.npz"
+      ]
+    },
+    {
+      "sha256": "e41718a047b77b9072828e72f8cbffa0f5ef7ddf462c7ef4329d997ace89de50",
+      "bytes": 2064464,
+      "basename": "gt_n600_lstars_slim.npz",
+      "lineage": "PYAV_YUV420_TO_RGB",
+      "lineage_evidence": "EMPIRICAL_NEAREST_RULER_POSE_MSE|EMPIRICAL_NEAREST_RULER_SEG_SITES",
+      "measurement": "seg: 20,671 differing sites vs DALI ruler, 2 vs AV ruler, of 117,964,800; pose: MSE 1.406115e-04 vs DALI ruler, 3.572376e-12 vs AV ruler",
+      "claim_boundary": "Classified by nearest ruler with the margin recorded. Content strongly indicates the family but does not prove the exact historical invocation, and within-family drift is nonzero (FX4 measured 1,644 seg sites between two DALI builds).",
+      "known_paths": [
+        "/Users/adpena/Projects/pact/experiments/results/ot_offset_n600_modal_20260709/gt_n600_lstars_slim.npz"
+      ],
+      "known_basenames": [
+        "gt_n600_lstars_slim.npz"
+      ]
+    },
+    {
+      "sha256": "e4abd42b5e1cb4282e2cebeaad70bb10406f29a57e4a642d12109c93167bc2f4",
+      "bytes": 6293461,
+      "basename": "gt_targets_n4.pt",
+      "lineage": "PYAV_YUV420_TO_RGB",
+      "lineage_evidence": "EMPIRICAL_EXACT_FRAME_SUBSET|EMPIRICAL_NEAREST_RULER_POSE_MSE_VIA_SEG_INDEX_MAP",
+      "measurement": "seg: 0/4 frames bit-identical to DALI ruler, 4/4 to AV ruler",
+      "claim_boundary": "Every frame is bit-identical to a frame of a producer-declared ruler. Strong content identity for the frames present; says nothing about frames absent from this subset.",
+      "known_paths": [
+        "/Users/adpena/Projects/pact/experiments/results/capstone_gt_targets_cache/gt_targets_n4.pt",
+        "/Users/adpena/Projects/pact/experiments/results/torch_vehicle_split_head_smoke/gt_targets_cache/gt_targets_n4.pt"
+      ],
+      "known_basenames": [
+        "gt_targets_n4.pt"
+      ]
+    },
+    {
+      "sha256": "ed415d14ca877a8c89d1189b5ef014ec5f3a87be24ce5e47967860274b6ff347",
+      "bytes": 943734757,
+      "basename": "gt_targets_n600.pt",
+      "lineage": "PYAV_YUV420_TO_RGB",
+      "lineage_evidence": "EMPIRICAL_NEAREST_RULER_POSE_MSE|EMPIRICAL_NEAREST_RULER_SEG_SITES",
+      "measurement": "seg: 20,672 differing sites vs DALI ruler, 1 vs AV ruler, of 117,964,800; pose: MSE 1.406115e-04 vs DALI ruler, 3.572376e-12 vs AV ruler",
+      "claim_boundary": "Classified by nearest ruler with the margin recorded. Content strongly indicates the family but does not prove the exact historical invocation, and within-family drift is nonzero (FX4 measured 1,644 seg sites between two DALI builds).",
+      "known_paths": [
+        "/Users/adpena/Projects/pact/experiments/results/capstone_gt_targets_cache/gt_targets_n600.pt"
+      ],
+      "known_basenames": [
+        "gt_targets_n600.pt"
+      ]
+    },
+    {
+      "sha256": "f3f793cdbd3356dec07f59d4e8e8c4a7006c2ba0b267514a5108a3f2fd6aab86",
+      "bytes": 1692673498,
+      "basename": "gt_strided_n200.npz",
+      "lineage": "PYAV_YUV420_TO_RGB",
+      "lineage_evidence": "EMPIRICAL_MAJORITY_FRAME_SUBSET",
+      "measurement": "seg: 0/200 frames bit-identical to DALI ruler, 199/200 to AV ruler",
+      "claim_boundary": "Every frame is bit-identical to a frame of a producer-declared ruler. Strong content identity for the frames present; says nothing about frames absent from this subset.",
+      "known_paths": [
+        "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_strided_n200.npz"
+      ],
+      "known_basenames": [
+        "gt_strided_n200.npz"
+      ]
+    },
+    {
+      "sha256": "fc516da6ad42e5e98edb70a16657da4ad8c492acb4f7458933f23ab54d455751",
+      "bytes": 75500573,
+      "basename": "gt_targets_n48.pt",
+      "lineage": "PYAV_YUV420_TO_RGB",
+      "lineage_evidence": "EMPIRICAL_EXACT_FRAME_SUBSET|EMPIRICAL_NEAREST_RULER_POSE_MSE_VIA_SEG_INDEX_MAP",
+      "measurement": "seg: 0/48 frames bit-identical to DALI ruler, 48/48 to AV ruler",
+      "claim_boundary": "Every frame is bit-identical to a frame of a producer-declared ruler. Strong content identity for the frames present; says nothing about frames absent from this subset.",
+      "known_paths": [
+        "/Users/adpena/Projects/pact/experiments/results/torch_vehicle_mps_descent_ab/gt_targets_cache/gt_targets_n48.pt",
+        "/Users/adpena/Projects/pact/experiments/results/torch_vehicle_split_head_gate_n48/gt_targets_cache/gt_targets_n48.pt"
+      ],
+      "known_basenames": [
+        "gt_targets_n48.pt"
+      ]
+    },
+    {
+      "sha256": "fd9eeddece3f6c642db49e539528e72e6f98a2e0cf040a8d1477c2b928283b60",
+      "bytes": 9439253,
+      "basename": "gt_targets_n6.pt",
+      "lineage": "PYAV_YUV420_TO_RGB",
+      "lineage_evidence": "EMPIRICAL_EXACT_FRAME_SUBSET|EMPIRICAL_NEAREST_RULER_POSE_MSE_VIA_SEG_INDEX_MAP",
+      "measurement": "seg: 0/6 frames bit-identical to DALI ruler, 6/6 to AV ruler",
+      "claim_boundary": "Every frame is bit-identical to a frame of a producer-declared ruler. Strong content identity for the frames present; says nothing about frames absent from this subset.",
+      "known_paths": [
+        "/Users/adpena/Projects/pact/experiments/results/capstone_gt_targets_cache/gt_targets_n6.pt"
+      ],
+      "known_basenames": [
+        "gt_targets_n6.pt"
+      ]
+    },
+    {
+      "sha256": "fee51ccfb9c18405667d2d9b6f38eb0a68462e114477f85ad00b349744bdd6ee",
+      "bytes": 117964928,
+      "basename": "gt_argmax_n600.npy",
+      "lineage": "PYAV_YUV420_TO_RGB",
+      "lineage_evidence": "EMPIRICAL_NEAREST_RULER_SEG_SITES",
+      "measurement": "seg: 20,670 differing sites vs DALI ruler, 3 vs AV ruler, of 117,964,800",
+      "claim_boundary": "Classified by nearest ruler with the margin recorded. Content strongly indicates the family but does not prove the exact historical invocation, and within-family drift is nonzero (FX4 measured 1,644 seg sites between two DALI builds).",
+      "known_paths": [
+        "/Volumes/VertigoDataTier/pact/ddm_pz4_joint_target_conditioned_receiver/direct_v6/full_n600_eval/retained/fields/gt_argmax_n600.npy"
+      ],
+      "known_basenames": [
+        "gt_argmax_n600.npy"
+      ]
+    }
+  ]
+}
