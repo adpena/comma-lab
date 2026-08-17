@@ -57,6 +57,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import sys
 import time
 from pathlib import Path
@@ -1328,6 +1329,156 @@ def stage_a1sign(args: argparse.Namespace) -> dict:
 
 
 # ============================================================================================
+# stage: a1pose -- the pose half of the A1 row (ddm_a1s)
+# ============================================================================================
+# FO-1 counts seg flips only, but `PoseNet.preprocess_input` (upstream/modules.py:69-73) keeps
+# BOTH frames of the pair, so an actuator that edits frame_1 moves `d_pose` as well.  At the hv1
+# operating point d_pose is 6.885642960696714e-06, so the pose contribution sqrt(10*d_pose) has
+# marginal 5/sqrt(10*d_pose) = 602.6 per unit d_pose -- a third-of-a-percent pose move can erase
+# a whole seg win.  This stage measures the pose half on the SAME synthesised frames.
+HV1_D_POSE = 6.885642960696714e-06   # ddm_wc2_hpac_mps_port_20260814.md, hv1 ep0634
+
+
+class _PoseInstrument:
+    """Frozen CPU-torch PoseNet, batch = 1 pair, upstream preprocessing verbatim."""
+
+    def __init__(self, threads: int) -> None:
+        import torch
+
+        upstream = REPO / "upstream"
+        if str(upstream) not in sys.path:
+            sys.path.insert(0, str(upstream))
+        import einops
+        from modules import PoseNet
+        from safetensors.torch import load_file
+
+        torch.set_num_threads(threads)
+        torch.set_grad_enabled(False)
+        self._torch, self._einops = torch, einops
+        net = PoseNet().eval()
+        net.load_state_dict(load_file(str(upstream / "models" / "posenet.safetensors"),
+                                      device="cpu"))
+        self.net = net
+
+    def pose6(self, frame0_u8: np.ndarray, frame1_u8: np.ndarray) -> np.ndarray:
+        """The 6 scored pose dimensions for one pair (upstream takes `[..., :out // 2]`)."""
+        torch = self._torch
+        with torch.inference_mode():
+            x = torch.from_numpy(np.ascontiguousarray(np.stack([frame0_u8, frame1_u8])))[None]
+            x = self._einops.rearrange(x, "b t h w c -> b t c h w").float()
+            return self.net(self.net.preprocess_input(x))["pose"][0, :6].numpy().astype(
+                np.float64)
+
+
+def stage_a1pose(args: argparse.Namespace) -> dict:
+    """Measure how far A1 moves PoseNet, and bound the d_pose it can cost, GT-free."""
+    if args.threads != A1_PIN_THREADS:
+        raise Sr1Error(f"instrument pin violation: requires --threads {A1_PIN_THREADS}")
+    t0 = time.time()
+    alphas = list(A1_ALPHAS)
+    ops = _a1_axis_operators(args.tikhonov)
+    custody = _a1_custody_control(ops, args.work)
+    raw = open_raw(args.raw)
+    inst = _PoseInstrument(args.threads)
+
+    out_dir = args.work / "a1sign"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    poses = np.zeros((args.frames, len(alphas), 6), dtype=np.float64)
+    for t in range(args.frames):
+        cam_u8 = np.asarray(raw[2 * t + 1])
+        frame0 = np.asarray(raw[2 * t])
+        cam_f = cam_u8.astype(np.float64)
+        _, delta_cam = _a1_delta_camera(cam_f, ops)
+        for i, a in enumerate(alphas):
+            cam_prime = np.clip(cam_f + a * delta_cam, 0.0, 255.0).round().astype(np.uint8)
+            if a == 0.0 and not np.array_equal(cam_prime, cam_u8):
+                raise Sr1Error(f"pair {t}: alpha=0 is not bit-identical to the shipped frame")
+            poses[t, i] = inst.pose6(frame0, cam_prime)
+        if (t + 1) % args.checkpoint_every == 0 or t + 1 == args.frames:
+            el = time.time() - t0
+            print(f"  pose pair {t + 1}/{args.frames}  {el:.0f}s  "
+                  f"eta {el / (t + 1) * (args.frames - t - 1):.0f}s", flush=True)
+
+    payload = save_payload(out_dir / "pose6_by_alpha.npy", poses)
+    base = poses[:, 0, :]
+    # Seg deltas measured by the a1sign stage, so the two halves are priced on one object.
+    sign_path = args.work / "SR1_A1SIGN.json"
+    seg_flips = {}
+    if sign_path.exists():
+        for r in json.loads(sign_path.read_text())["ladder"]:
+            seg_flips[float(r["alpha"])] = int(r["flips_vs_gt"])
+
+    gt6 = None
+    if args.gt_pose is not None and Path(args.gt_pose).exists():
+        gt6 = np.load(args.gt_pose).astype(np.float64)
+        if gt6.shape != (args.frames, 6):
+            gt6 = None
+
+    rows = []
+    for i, a in enumerate(alphas):
+        drift = poses[:, i, :] - base
+        drift_rms = float(np.sqrt(np.mean(drift ** 2)))
+        row = {
+            "alpha": a,
+            "pose_drift_rms_vs_alpha0": drift_rms,
+            "pose_drift_max_abs": float(np.abs(drift).max()),
+            # Triangle bounds, both directions, GT-free.  With p_a = p_0 + d,
+            #   d_pose(a) = E||p_0 - p_gt + d||^2 / 6,
+            # so sqrt(d_pose(a)) is within rms||d|| of sqrt(d_pose(0)).  The LOWER bound is the
+            # decisive one here: once the drift exceeds the incumbent pose error, d_pose MUST
+            # rise no matter which direction the drift points.
+            "d_pose_worst_case": float((math.sqrt(HV1_D_POSE) + drift_rms) ** 2),
+            "d_pose_best_case": float(max(0.0, drift_rms - math.sqrt(HV1_D_POSE)) ** 2),
+        }
+        row["d_pose_worst_case_rise"] = row["d_pose_worst_case"] - HV1_D_POSE
+        row["d_pose_best_case_rise"] = row["d_pose_best_case"] - HV1_D_POSE
+        row["delta_S_pose_worst_case"] = (
+            math.sqrt(10.0 * row["d_pose_worst_case"]) - math.sqrt(10.0 * HV1_D_POSE))
+        row["delta_S_pose_best_case"] = (
+            math.sqrt(10.0 * row["d_pose_best_case"]) - math.sqrt(10.0 * HV1_D_POSE))
+        if a in seg_flips:
+            row["seg_flips"] = seg_flips[a]
+            row["delta_S_seg"] = (seg_flips[a] - A1_CONTROL_FLIPS) * SEG_DS_PER_FLIP
+            row["delta_S_total_worst_case"] = (
+                row["delta_S_seg"] + row["delta_S_pose_worst_case"])
+            # The best case for A1: the largest seg win with the smallest pose cost the
+            # geometry permits.  If THIS is positive, A1 is a net loss under every assumption.
+            row["delta_S_total_best_case"] = (
+                row["delta_S_seg"] + row["delta_S_pose_best_case"])
+        if gt6 is not None:
+            row["d_pose_vs_cached_gt"] = float(np.mean((poses[:, i, :] - gt6) ** 2))
+        rows.append(row)
+
+    record = {
+        "schema": "ddm_a1s_a1pose.v1",
+        "arm": "ddm_a1s",
+        "axis": "[macOS-CPU advisory]",
+        "score_claim": False,
+        "promotable": False,
+        "base_archive_sha256": BASE_ARCHIVE_SHA256,
+        "instrument": {
+            "scorer": "frozen CPU torch PoseNet, upstream/models/posenet.safetensors",
+            "batch_pairs": 1, "torch_threads": args.threads,
+            "preprocess": "upstream PoseNet.preprocess_input verbatim, first 6 pose dims",
+        },
+        "custody": custody,
+        "hv1_d_pose_reference": HV1_D_POSE,
+        "method": "GT-FREE: the triangle inequality bounds sqrt(d_pose(a)) by sqrt(d_pose(0)) "
+                  "plus the measured rms pose drift, so no GT pose target is needed for the "
+                  "worst case.  `d_pose_vs_cached_gt` is a SECONDARY advisory read against a "
+                  "2026-06-10 cache whose sister seg GT disagrees with the qs3 GT on 20,673 px.",
+        "gt_pose_cache": str(args.gt_pose) if gt6 is not None else None,
+        "ladder": rows,
+        "payload": payload,
+        "n_pairs": args.frames,
+        "wall_s": time.time() - t0,
+    }
+    write_json(args.work / "SR1_A1POSE.json", record)
+    print(json.dumps(rows, indent=2, sort_keys=True))
+    return record
+
+
+# ============================================================================================
 # stage: ledger
 # ============================================================================================
 def stage_ledger(args: argparse.Namespace) -> dict:
@@ -1396,7 +1547,8 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--stage",
-                    choices=["roperator", "sign", "emphasis", "waterfill", "a1sign", "ledger"],
+                    choices=["roperator", "sign", "emphasis", "waterfill", "a1sign",
+                             "a1pose", "ledger"],
                     required=True)
     ap.add_argument("--work", type=Path, default=DEFAULT_WORK)
     ap.add_argument("--raw", type=Path, default=DEFAULT_RAW)
@@ -1426,6 +1578,8 @@ def main(argv: list[str] | None = None) -> int:
                     help="roperator: continue past a failed positive control (diagnosis only)")
     ap.add_argument("--diag-pairs", type=int, default=12,
                     help="a1sign: seeded-random pairs carrying the realisation-fidelity read")
+    ap.add_argument("--gt-pose", type=Path, default=None,
+                    help="a1pose: optional (600, 6) cached GT PoseNet target, advisory only")
     ap.add_argument("--checkpoint-every", type=int, default=10,
                     help="a1sign: flush the argmax fields and the resume marker every N pairs")
     args = ap.parse_args(argv)
@@ -1441,6 +1595,8 @@ def main(argv: list[str] | None = None) -> int:
         stage_waterfill(args)
     elif args.stage == "a1sign":
         stage_a1sign(args)
+    elif args.stage == "a1pose":
+        stage_a1pose(args)
     else:
         stage_ledger(args)
     return 0
