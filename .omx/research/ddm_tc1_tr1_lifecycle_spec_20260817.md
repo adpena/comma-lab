@@ -360,9 +360,73 @@ is one day old. Also set `--persist-optimizer-state on` if any resume is contemp
 | 1 | F4 — live PR130-class vehicle work as the achiever-class primary | MAIN | now |
 | 2 | F5 — correct the 3.810 B/B quote at every live site | MAIN | now |
 | 3 | F6 — EMA warmup defect | successor | before the next TR1 endpoint read |
-| 4 | Fold `ddm_oq1`'s `live_achiever_tr1` survivors into §3 | successor | **NAMED FOLD-POINT** — oq1 had not landed at synthesis |
+| 4 | ~~Fold `ddm_oq1`'s survivors~~ | — | **CLOSED — see §9.** 35 rows consumed; 4 live PRE candidates survive the dominance filter |
 | 5 | Fold the hg1 §8 arm_b hinge verdict into §3.2 | successor | **NAMED FOLD-POINT** — arm_b fired 18:52Z, lands after this seal |
 | 6 | F1/F2 if the Metal slot goes idle | MAIN | contingent |
+
+## §9 FOLD-POINT CLOSED — ddm_oq1's `live_achiever_tr1` rows
+
+`ddm_oq1` landed (02f3f1851b, 6d404ae62e, f9cf240434). Charter FEED-IN discharged against
+`.omx/research/ddm_oq1_drain_dispositions_20260817.json`. §8 row 4 is CLOSED.
+
+### §9.1 Count correction
+
+The handoff named 22 rows; the file carries **35** with `oq1_vehicle_scope=live_achiever_tr1`.
+**22 is the QUEUED subset**; the balance is DEFERRED 5 · FIRED 5 · FOLDED 3. Phase tags:
+PRE-seeding **4** · DURING-conditioning **2** · POST-solving **4** · COMPOSITION **12** ·
+untagged **13**.
+
+### §9.2 oq1 independently corroborates §1.2, by a different method
+
+oq1's headline: all 377 datable backlog rows were authored 2026-06-17..08-04, **ZERO postdate the
+2026-08-06 PR130 intake**, and every byte magnitude is denominated on **274K–605K B archives
+against a live archive of 182,759 B**; 298 rows (68.2%) are dead mass. That is the same
+conclusion §1.2 reaches from the score identity, reached instead from provenance dating. Two
+independent methods, one verdict: **the TR1 backlog prices against a base ~3.3× the live one, so
+per L18 only its MECHANISMS transfer — never its numbers.** I have inherited no oq1 magnitude.
+
+### §9.3 The routing note's named lever — CORRECTED AT SOURCE
+
+oq1 routes me to start with `boundary_gated_token_code_width`, reasoning *"the lever IS wired —
+registered in the TR1 trainer lever table at experiments/train_tr1_partition_renderer_mlx.py:248
+with state='never-fired'"*. **I checked line 248 and the argparse. That conflates *registered in a
+documentation tuple* with *wired*:**
+
+* L248 is an entry in a prose lever-ledger tuple — `{"lever": …, "state": "never-fired",
+  "receipt": …, "note": "$0 gate owed …"}`. It emits no config field and no code path.
+* **No argparse flag exists.** `--code-width` is a UNIFORM scalar, `choices=(2, 4, 6)`. There is
+  no per-cell or boundary-conditioned code width anywhere in the trainer.
+
+Correct grade: **DECLARED-ONLY** — weaker than BUILT-UNFIRED, because there is nothing to fire.
+Adopting it would require building variable-width tokens *and* a coder that prices them.
+
+### §9.4 And its own criterion puts it under §1.2's dominance
+
+The declared adoption rule is *"adopt iff **≥15% token-stream saving** vs uniform c"* — a **pure
+RATE criterion**. §1.2 measured that a **FREE archive** still leaves TR1 at **2.49×** the
+frontier. So the owed $0 `H(cell|neighbors)` gate could pass at 100% and **the class verdict would
+not move**. It should not be the starting point; it is a good mechanism aimed at the wrong term.
+
+### §9.5 What survives the dominance filter — the whole point of the fold
+
+| bucket | rows | disposition under §1.2 |
+|---|---:|---|
+| **Can touch d_seg** — structured warm reset · KD-from-warm-into-fresh (`kd_warm_start_dir`, BUILT + 6 NO-FAKE tests, default-off) · reset-operator race (#815/#824/#820) · 5-arm magnitude-matched reset race | **4** (all PRE-seeding) | **the only live candidates**; optimizer/init geometry is the one non-rate axis oq1 surfaced |
+| **Pose-only** — gk2 `window_solve` d_pose under the v4d warp gate · Row A full-600 mixed-k6/k8 solve | 2 (POST) | bounded: TR1's whole pose term is worth ≤ 0.0083 against a 2.49× gap |
+| **Rate / coder / carrier** — g4 boundary-gated width · QA06 reverse-waterfill · QA08 context-mixing coder · QA62 pm1 rungs · zb1 continuation-knee (×2) · gk2 L-levels sweep · SMEVR base-rule · #859 verify rung · the rest of COMPOSITION | **~29** | **DOMINATED by §1.2** — no rate lever can rescue TR1 |
+
+**A scope correction I owe against my own §3.1.** My distill row is graded MEASURED-NEGATIVE
+(12.8× the noise floor) — but that receipt is `dw1`/QA75 **teacher-field KD into the live run**.
+oq1's **KD-from-warm-into-fresh** (`kd_warm_start_dir`) is a **different formulation**: a warm
+teacher initializing a fresh student. My negative does **not** cover it, and I must not
+over-extend it. It stays a live PRE candidate.
+
+### §9.6 Net effect on this memo
+
+**None of §1–§7 changes.** oq1 corroborates the verdict, corrects one routing claim in my favour
+(the lever is weaker than advertised, not stronger), and narrows 35 rows to **4 live PRE
+candidates** — all of which sit on a **retired vehicle**, so F4 still dominates them. The honest
+fold is: *this is the surviving TR1 work if TR1 is ever resumed; it is not a reason to resume it.*
 
 **Own-vehicle frontier: hv1 ep0634, S 0.15959729295498598 @ 182,759 B [contest-CUDA T4 n600] —
 UNMOVED by this unit.**
