@@ -13,9 +13,9 @@
  "headline": "All 437 queued rows dispositioned. The decisive measured fact: all 377 datable rows were authored 2026-06-17..08-04; ZERO postdate the 2026-08-06 PR130 intake that produced the live vehicle. The backlog predates the live frontier entirely, and every byte magnitude in it is denominated on archives 274K-605K B against a live archive of 182,759 B. 298 rows (68.2%) are dead mass.",
  "counts": {
   "FIRED": 35,
-  "QUEUED": 80,
-  "FOLDED": 297,
-  "DEFERRED": 25
+  "QUEUED": 81,
+  "DEFERRED": 25,
+  "FOLDED": 296
  },
  "counts_total": 437,
  "vehicle_scope_counts": {
@@ -605,11 +605,11 @@
    "source_id": "ddm_p1a_followon_unknown_adjudication_20260801.md#p1a-item-02",
    "qj1_owner": "codex-qj1-followon-drain",
    "oq1_vehicle_scope": "retired",
-   "oq1_disposition": "FOLDED",
-   "oq1_reason": "DEAD MASS: authored pre-2026-08-06 (before the PR130/HPAC vehicle existed); vehicle-bound, no transferable mechanism named; unfired through 5 successive inventory arms (iv1 08-03, qj1 08-04, oh1 08-07, hr1 08-09, qw1 08-16)",
-   "oq1_owner": "",
-   "oq1_evidence": ".omx/research/ddm_oh1_20260807/OH1_CONSUMPTION_PLAN.jsonl + ddm_hr1_20260809T031504Z/HR1_ROUTING.jsonl | all 377 datable rows span 06-17..08-04; ZERO postdate the 08-06 PR130 intake",
-   "oq1_method": "manual-verified"
+   "oq1_disposition": "QUEUED",
+   "oq1_reason": "EXECUTED this unit (re-query): ALREADY ADJUDICATED by a live arm on 08-16. ddm_hv2 rank 5: g4 free per-pixel causal context \"89,161 B, 18.17%, zero payload\" is MEASURED IN CELL SPACE ONLY; RGB receiver survival was NEVER established, so the byte figure is UNKNOWN on the archive. hv2 labels it \"unowned; hypothesis only\" and names the blocker: build an RGB receiver. NOT a live-frontier win.",
+   "oq1_owner": "ddm_hv2 (already ranked it; unowned build)",
+   "oq1_evidence": ".omx/research/ddm_hv2_arm_final_harvest_20260816.md:80 (+:201 explicitly labelled UNKNOWN)",
+   "oq1_method": "manual-executed"
   },
   {
    "oq1_idx": 3,
@@ -6721,5 +6721,15 @@
    "row": "T1: g4 boundary-gated token code width $0 H(cell|neighbors) gate",
    "result": "lever IS wired in the TR1 trainer, state=\"never-fired\", adopt iff >=15% token-stream saving; routed to ddm_tc1"
   }
+ ],
+ "loop_until_dry": {
+  "round_1": "p2a sweep 16/16 closed via the iv1 08-03 verdict table",
+  "round_2": "T0 rank-1 phi executed (1/phi=518.9x, UNREACHABLE); g4 code-width lever confirmed wired in the TR1 trainer",
+  "round_3": "ZERO new rows executable \u2014 remaining T1 rows are retired-vehicle (tw1 knee, W1-COH, gc13 R1 bundle, QA58 rung-B), scorer-gated (fp1, one n600 pass), or already owned by a live arm (LP1 G4 -> ddm_hv2 rank 5). LOOP IS DRY."
+ },
+ "independent_corroboration": [
+  "ddm_hv2 20260816 \u00a75 prohibition list: \"SMEVR won 0 of 14 exact section races (cp135)\" \u2014 independently corroborates this unit's #859 refutation (gestalt 08-16 measured SMEVR LOSES +5,183 B; the queued -2,781 B was wrong-signed).",
+  "ddm_qw1 20260816: the whole unfired-MEASURED-wins queue prices to ONE row worth 1.6% of the gap.",
+  "MAIN 20260816: post-hoc byte surgery on this archive EXHAUSTED \u2014 all lossless routes supply <=~278 B of a 14,414 B bar."
  ]
 }

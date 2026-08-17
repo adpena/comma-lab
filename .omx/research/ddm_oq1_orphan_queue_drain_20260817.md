@@ -1,6 +1,6 @@
 ---
 arm: ddm_oq1
-title: "The 437-row backlog predates the live vehicle entirely: zero of 377 datable rows postdate the 08-06 PR130 intake, every byte magnitude is denominated on archives 1.5x-3.3x larger than the live one, and five successive inventory arms re-listed it without firing it. 297 rows (68.0%) are dead mass."
+title: "The 437-row backlog predates the live vehicle entirely: zero of 377 datable rows postdate the 08-06 PR130 intake, every byte magnitude is denominated on archives 1.5x-3.3x larger than the live one, and five successive inventory arms re-listed it without firing it. 296 rows (67.7%) are dead mass."
 utc: 2026-08-17
 axis: "[local-CPU $0 reads/greps/ledger-joins over primary artifacts] — NEVER a score"
 research_only: true
@@ -31,8 +31,8 @@ tokens: "[no-triality] [p0-ledger-ok]"
 
 ## Headline
 
-I dispositioned all **437** queued rows. **297 (68.0%) are dead mass and are FOLDED.** The residual
-is **80 owned rows**: 22 TR1-class survivors routed to `ddm_tc1`, 19 verified-live apparatus defects
+I dispositioned all **437** queued rows. **296 (67.7%) are dead mass and are FOLDED.** The residual
+is **81 owned rows**: 22 TR1-class survivors routed to `ddm_tc1`, 19 verified-live apparatus defects
 routed to MAIN, 39 registered-open canonical tasks. **35 rows FIRED** — I located their closing
 artifacts or executed them. **25 DEFERRED** on one named, measured blocker.
 
@@ -110,8 +110,8 @@ anywhere in `.omx/research`.
 
 | disposition | rows | share |
 |---|---:|---:|
-| **FOLDED** (dead mass) | **297** | 68.0% |
-| **QUEUED** (owned, fire-condition) | **80** | 18.3% |
+| **FOLDED** (dead mass) | **296** | 67.7% |
+| **QUEUED** (owned, fire-condition) | **81** | 18.5% |
 | **FIRED** (resolved this unit) | **35** | 8.0% |
 | **DEFERRED** (named measured blocker) | **25** | 5.7% |
 | total | **437** | 100% |
@@ -264,7 +264,7 @@ fired on tr1) and `--existence-hinge-weight` (#920 — built in TR1, 6 config fi
 31 tests). Both are the default-off orphan class. **#824** is the readiest real *experiment*, but it is
 a training run behind a governed slot and a `ddm_op2` fire-condition (§6).
 
-**FO-4 — retire the qj1 queue as a standing surface.** 297 rows are folded here with reasons. Leaving
+**FO-4 — retire the qj1 queue as a standing surface.** 296 rows are folded here with reasons. Leaving
 the 437-row file live invites a sixth inventory. This memo's JSON is its append-only successor; qj1 was
 not edited.
 
@@ -291,6 +291,29 @@ Full table in the JSON under `charter_task_row_dispositions`. Summary:
 I did not touch the harness task ledger — I have no write authority over task state, and the charter
 forbids it. This table is for MAIN to apply.
 
+## 8a. Loop-until-dry, and three arms that agree with me
+
+| round | executed |
+|---|---|
+| 1 | p2a sweep — 16/16 closed via the `iv1` 08-03 verdict table |
+| 2 | T0 rank-1 φ executed (§4a); `boundary_gated_token_code_width` confirmed wired in the TR1 trainer |
+| 3 | **ZERO new rows executable → LOOP DRY.** Remaining T1 rows are retired-vehicle (tw1 knee, W1-COH, gc13 R1 bundle, QA58 rung-B), scorer-gated (fp1 — one n600 pass, MAIN owns the slot), or already owned by a live arm |
+
+That last case is worth naming. **LP1 G4** — *"context beat explicit bytes by 89,161 B with 0 counted
+context params"* — is the one row in the backlog whose mechanism (rule-118 free receiver context)
+genuinely could transfer. It is already adjudicated: `ddm_hv2` (08-16) ranks it **5th** and labels it
+**"MEASURED in cell space only … RGB receiver survival never established … unowned; hypothesis only."**
+The 89,161 B is not an archive number. I am not re-queuing it; hv2 holds it.
+
+**Three independent arms reached my wall from three directions**, which is why I am confident the
+near-zero survivor count is real and not my classifier being lazy:
+
+- `ddm_hv2` 08-16 §5: *"SMEVR won 0 of 14 exact section races"* — independently corroborates my #859
+  refutation, reached via a different receipt (`cp135`) than mine (`gestalt`).
+- `ddm_qw1` 08-16: the entire unfired-MEASURED-wins queue prices to **one row worth 1.6% of the gap**.
+- MAIN 08-16: post-hoc byte surgery on this archive is **exhausted** — all lossless routes supply
+  ≤ ~278 B of a 14,414 B bar.
+
 ## 9. What I did not do
 
 - I did not deep-read the ~110 memo_followon source memos (150 rows, mechanical classification only).
@@ -299,4 +322,4 @@ forbids it. This table is for MAIN to apply.
 - Three triage sub-agents I spawned were queued behind the 3-arm Opus cap and never ran; I folded
   their scopes into my own execution. No work was duplicated.
 - **The exact pointer did not move.** This unit is MEANS, not goal progress. It shrinks a 437-row
-  standing queue to 80 owned rows and frees the fleet from inventorying it a sixth time.
+  standing queue to 81 owned rows and frees the fleet from inventorying it a sixth time.
