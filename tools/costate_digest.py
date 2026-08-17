@@ -2216,79 +2216,84 @@ def build_digest(*, include_fm: bool = True) -> tuple[list[str], dict]:
         ):
             data[key] = dict(dominated)
         data["schedule"] = report["scheduler"]
-        data["verdict_scope"] = {
+        # ddm_cd1 (2026-08-17): this is the run's AUTHORITY PROVENANCE, and it used
+        # to be stored under data["verdict_scope"] -- SHADOWING the unrelated
+        # verdict-scope ADVISORY organ with a same-named, different-meaning object.
+        # A JSON consumer read a plausible dict and never learned advisories fired.
+        # Distinct key now; the advisory organ owns "verdict_scope" in the tail.
+        data["ddm_authority_provenance"] = {
             "evidence_axis": report["evidence_axis"],
             "score_claim": report["score_claim"],
             "promotion_eligible": report["promotion_eligible"],
             "main_landing_review_required": report["main_landing_review_required"],
         }
         data["resume_spine"] = report["resume_state"]
-        data["active_convening"] = None
-        data["corpus_recall"] = []
-        data["graph_memory"] = None
         data["costate_organ"] = report
-        if include_fm:
-            fm_lines, data["fm_advisory"] = section_fm_advisory(None, data)
-            lines.extend(fm_lines)
-        else:
-            data["fm_advisory"] = {
-                "available": None,
-                "enabled": False,
-                "reason": "compute-cost gate (fast path); set COSTATE_FM_ADVISORY=1",
-            }
-        rc_line, data["review_counter"] = section_review_counter()
-        if rc_line:
-            lines.append(rc_line)
-        lines.append(
+        boundary_line = (
             "BOUNDARY: autonomous = DDM advisory ranking + re-derivation queue + this digest. "
             "Operator-GO = launches, run mutation, paid dispatch, or promotion."
         )
-        lines.append(
+        deeper_line = (
             "deeper: .omx/research/codex_findings_ddm_costate_organ_elevation2_"
             "20260723T154610Z_codex.md"
         )
-        data["wall_clock_s"] = round(time.time() - t0, 3)
-        return lines, data
+    else:
+        # #403 P0: the curriculum-candidate pool (ANY form) as a tracked costate class, beside the lever queue.
+        cpool_line, data["curriculum_pool"] = section_curriculum_pool()
+        if cpool_line:
+            lines.append(cpool_line)
 
-    # #403 P0: the curriculum-candidate pool (ANY form) as a tracked costate class, beside the lever queue.
-    cpool_line, data["curriculum_pool"] = section_curriculum_pool()
-    if cpool_line:
-        lines.append(cpool_line)
+        dslorphan_line, data["dsl_orphan"] = section_dsl_orphan_flags()
+        if dslorphan_line:
+            lines.append(dslorphan_line)
 
-    dslorphan_line, data["dsl_orphan"] = section_dsl_orphan_flags()
-    if dslorphan_line:
-        lines.append(dslorphan_line)
+        fl_line, data["failure_ledger"] = section_failure_ledger()
+        lines.append(fl_line or "failure-ledger: none yet (sibling SENSE input pending)")
 
-    fl_line, data["failure_ledger"] = section_failure_ledger()
-    lines.append(fl_line or "failure-ledger: none yet (sibling SENSE input pending)")
+        wd_line, data["chain_watchdog"] = section_chain_watchdog()
+        if wd_line:
+            lines.append(wd_line)
 
-    wd_line, data["chain_watchdog"] = section_chain_watchdog()
-    if wd_line:
-        lines.append(wd_line)
+        # CLASS-4 (2026-07-17): surface subagent arms that registered but never advanced then went
+        # silent (a SPEC_v10 arm died at ~15 tokens with no work, human-visible only). Detect-only.
+        try:
+            from tools.subagent_liveness import digest_line as _zwa_line
+            zwa_line, data["zero_work_arms"] = _zwa_line()
+            if zwa_line:
+                lines.append(zwa_line)
+        except Exception as _exc:  # never let the detector break the digest
+            data["zero_work_arms"] = {"error": type(_exc).__name__}
 
-    # CLASS-4 (2026-07-17): surface subagent arms that registered but never advanced then went
-    # silent (a SPEC_v10 arm died at ~15 tokens with no work, human-visible only). Detect-only.
-    try:
-        from tools.subagent_liveness import digest_line as _zwa_line
-        zwa_line, data["zero_work_arms"] = _zwa_line()
-        if zwa_line:
-            lines.append(zwa_line)
-    except Exception as _exc:  # never let the detector break the digest
-        data["zero_work_arms"] = {"error": type(_exc).__name__}
+        dl_line, data["deferral_ledger"] = section_deferral_ledger()
+        if dl_line:
+            lines.append(dl_line)
 
-    dl_line, data["deferral_ledger"] = section_deferral_ledger()
-    if dl_line:
-        lines.append(dl_line)
+        sched_line, data["schedule"] = section_schedule(run_dir)
+        lines.append(sched_line or "schedule: planned-vs-actual read-back pending (sibling module)")
+        spine_line, data["resume_spine"] = section_resume_spine()
+        lines.append(spine_line)
 
-    sched_line, data["schedule"] = section_schedule(run_dir)
-    lines.append(sched_line or "schedule: planned-vs-actual read-back pending (sibling module)")
+        organ_lines, data["costate_organ"] = section_costate_organ(run_dir)
+        lines.extend(organ_lines)
 
+        boundary_line = (
+            "BOUNDARY: autonomous = advisory recs · duty-to-measure ranking · curriculum "
+            "condition inputs · this digest. Operator-GO = heavy/paid launches · run stops · "
+            "live-config changes (CONTAINMENT)."
+        )
+        deeper_line = f"deeper: {_DESIGN_DOC} (§2026-07-07 agent-native surfacing)"
+
+    # ---- SHARED TAIL (ddm_cd1, 2026-08-17) --------------------------------
+    # These organs are DDM-INDEPENDENT: they read the research corpus, the
+    # convening ledger, the advisory sink and the graph memory -- none of which
+    # the live DDM receipt fleet dominates.  They used to sit BELOW an early
+    # `return lines, data` inside the ddm_live branch, so on the LIVE path they
+    # never ran: verdict_scope was shadowed by a provenance dict, corpus_recall
+    # was hard-bound to [], active_convening/graph_memory to None.  Both branches
+    # run them now; branch-specific text travels in boundary_line/deeper_line.
     vs_line, data["verdict_scope"] = section_verdict_scope_advisories()
     if vs_line:
         lines.append(vs_line)
-
-    spine_line, data["resume_spine"] = section_resume_spine()
-    lines.append(spine_line)
 
     conv_line, data["active_convening"] = section_active_convening()
     if conv_line:
@@ -2300,12 +2305,6 @@ def build_digest(*, include_fm: bool = True) -> tuple[list[str], dict]:
     gm_line, data["graph_memory"] = section_graph_memory()
     if gm_line:
         lines.append(gm_line)
-
-    if ddm_live:
-        data["costate_organ"] = data["ddm_costate_organ"]
-    else:
-        organ_lines, data["costate_organ"] = section_costate_organ(run_dir)
-        lines.extend(organ_lines)
 
     # Task #522: on-device FM ADVISORY sense layer — PRESENT ONLY WHEN the fmtools venv exists
     # AND the compute-cost gate is enabled (⇒ byte-identical digest otherwise). Consumes the data
@@ -2321,12 +2320,12 @@ def build_digest(*, include_fm: bool = True) -> tuple[list[str], dict]:
     if rc_line:
         lines.append(rc_line)
 
-    lines.append(
-        "BOUNDARY: autonomous = advisory recs · duty-to-measure ranking · curriculum "
-        "condition inputs · this digest. Operator-GO = heavy/paid launches · run stops · "
-        "live-config changes (CONTAINMENT)."
-    )
-    lines.append(f"deeper: {_DESIGN_DOC} (§2026-07-07 agent-native surfacing)")
+    # Branch-specific closing text travels in these two locals so the shared tail
+    # above stays branch-agnostic (the live-DDM and legacy actuation boundaries
+    # differ). Appending the legacy literals here instead would have silently
+    # relabelled the live path's BOUNDARY -- caught by ruff F841 during review.
+    lines.append(boundary_line)
+    lines.append(deeper_line)
     data["wall_clock_s"] = round(time.time() - t0, 3)
     return lines, data
 

@@ -7643,6 +7643,25 @@ def preflight_all(
             # purgatory. Carries a live positive control per the sister class guard.
             # CLAUDE_MD_ENTRY_OK: rides the confound-gate 3-layer immune-system row (L2 STRICT preflight gates); standalone numbered catalog row deferred per Catalog #299 post-#400 consolidation
             "check_verdict_surfaces_report_examined_count",
+            # 2026-08-17 ddm_cd1 fix+gate atomic landing. A DEAD CONDITIONAL
+            # RE-TEST is the machine-provable fingerprint of an early return that
+            # silently truncated the rest of a builder. MEASURED anchor:
+            # tools/costate_digest.py build_digest opened `if ddm_live:` at :2200
+            # and closed it with `return lines, data` at :2251, orphaning :2253
+            # -:2330 on the LIVE path; the same commit (7fac2e7475) added an
+            # `if ddm_live:` at :2304 INSIDE the region it had just made
+            # unreachable. Harm was not a missing key (the branch re-provided a
+            # total 16-key schema) but FOUR keys carrying plausible WRONG values,
+            # so 7 verdict-scope recall advisories reached a sink whose only
+            # reader was dead code. The broader "early return truncates an
+            # accumulator" shape was implemented and MEASURED first and REJECTED:
+            # 30 sites, essentially all legitimate error-cascade guards, and a
+            # permanently-amber gate trains readers to ignore the suite. Live
+            # count 0 after the same-batch fix + one truthful waiver on a
+            # deliberately-redundant fail-safe, so it flips strict here rather
+            # than into warn-only purgatory. Carries a live positive control.
+            # CLAUDE_MD_ENTRY_OK: rides the confound-gate 3-layer immune-system row (L2 STRICT preflight gates); standalone numbered catalog row deferred per Catalog #299 post-#400 consolidation
+            "check_no_dead_conditional_retest_after_early_return",
         }
         for _confound_gate in _CONFOUND_GATES:
             _confound_gate(

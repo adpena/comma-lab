@@ -1042,6 +1042,15 @@ class TestModule:
             # means a NEW verdict landed that cannot report its denominator —
             # fix it or waive it with a real rationale; do NOT raise this bound.
             "check_verdict_surfaces_report_examined_count": 0,
+            # 2026-08-17 ddm_cd1. STRICT from byte one at live-count 0 (MEASURED:
+            # 10,782 files considered / 1,531 parsed / 42,527 functions / 691
+            # unconditional-return guards tracked), after the same-batch
+            # costate_digest fix and one truthful DEAD_CONDITIONAL_RETEST_OK waiver
+            # on gc_experiments_results' deliberately-redundant fail-safe. Any
+            # growth means an early return has orphaned the rest of a function
+            # again -- make the split an explicit if/else so the shared tail runs
+            # on BOTH paths; do NOT raise this bound.
+            "check_no_dead_conditional_retest_after_early_return": 0,
             # ddm_op2 (OP2-1) STRICT from byte one: all six trainer callsites now
             # pass the run's resolver or `no_opt_state("<reason>")`, and the three
             # test-fixture callsites carry a stated OPT_STATE_DROP_OK waiver. A

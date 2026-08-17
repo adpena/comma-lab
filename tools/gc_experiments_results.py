@@ -401,6 +401,12 @@ def _classify_dir(
     # Tracked-by-git → already handled above (moved to first-class precedence
     # 2026-05-12). Defense-in-depth: if any new control-flow path reaches
     # here AND is_tracked is True, KEEP it as a fail-safe.
+    # DEAD_CONDITIONAL_RETEST_OK: MEASURED unreachable TODAY (ddm_cd1, 2026-08-17)
+    # — the is_tracked guard above returns unconditionally, so this branch cannot
+    # fire on any current path. Retained DELIBERATELY: it is a KEEP-biased
+    # fail-safe whose whole purpose is to survive a future control-flow change
+    # that stops routing tracked dirs through the earlier guard. Cost is one dead
+    # branch; the failure it insures against is deleting git-tracked custody.
     if is_tracked:
         custody = _read_build_manifest_custody(entry)
         if custody in CUSTODY_PIN_STATUSES:

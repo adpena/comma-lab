@@ -5283,3 +5283,259 @@ POSITIVE_CONTROLS = (
         ),
     ),
 )
+
+
+# ===========================================================================
+# ddm_cd1 (2026-08-17) — a DEAD CONDITIONAL RE-TEST left behind by an early
+# return: the fingerprint of an ACCIDENTAL builder truncation.
+#
+# ANCHOR (live, MEASURED): tools/costate_digest.py build_digest() opened
+# `if ddm_live:` at :2200 and closed it with `return lines, data` at :2251.
+# Everything from :2253 to :2330 became unreachable whenever ddm_live was true
+# — which is the LIVE state. The consumer harm was not a missing key (the
+# branch re-provided a total 16-key schema) but FOUR keys carrying plausible
+# WRONG values: `verdict_scope` shadowed by an unrelated provenance dict,
+# `corpus_recall` hard-bound to `[]` in violation of its own `dict | None`
+# contract, `active_convening`/`graph_memory` hard-bound to None. A JSON
+# consumer read a plausible dict and a plausible empty list and never learned
+# that 7 recall advisories had fired in 14 days.
+#
+# WHY THIS SIGNATURE, and not "early return truncates an accumulator": that
+# broader shape was implemented and MEASURED first — 30 sites across 30 files,
+# and on inspection essentially all were legitimate error-cascade guards that
+# RECORD why they bailed (`blockers.append(...); return summary, blockers`).
+# Neither accumulator shape nor dict-key-set parity separates those from the
+# anchor, because the anchor's author deliberately maintained a total schema;
+# the defect lived in the VALUES. A gate on the broad shape would be
+# permanently amber over benign code, and a gate readers ignore is not
+# protection. Verdict on the broad shape: FORMULATION-level negative, not a
+# statement that no gateable form exists.
+#
+# What DOES separate them is provable: commit 7fac2e7475 added the early
+# return AND, in the same commit, an `if ddm_live:` at :2304 INSIDE the region
+# it had just orphaned. You do not write a branch into code you meant to make
+# unreachable. A re-test of a name an earlier early-return already decided is
+# machine-provable dead code and is the accidental-truncation fingerprint;
+# deliberate early returns do not leave dead re-tests behind.
+#
+# SIGNATURE refused: a top-level `if <name>:` in a function whose body is
+# preceded by another top-level `if <name>:` that (a) returns unconditionally
+# (its body's last statement is a `Return`) and (b) has no `else`, where
+# `<name>` is neither rebound nor mutated in between. On every reachable path
+# the later test is constant-false, so its branch is dead.
+#
+# DECLARED NARROWING (round-2 review, stated rather than left implicit): both
+# tests must be a BARE `ast.Name`. `if not x:` / `if x is None:` / compound
+# tests are NOT matched, so a `if not x: return` guard followed by `if not x:`
+# is a MISS. That is deliberate — negated and compound forms invert which
+# later test is dead vs constant-TRUE, and getting it wrong would put false
+# positives into a strict gate. The bare-name form is the anchor's shape and
+# the only one this gate claims. An un-declared narrowing is the VACUITY
+# failure; a declared one is a scope.
+#
+# SHAPE NOTE (where a lazy detector misses the anchor): the anchor's early
+# return is `return lines, data` — VALUE-returning. A detector keyed on a bare
+# `return` (`node.value is None`) reports a clean scan over the very incident
+# that motivated it — the ddm_qd1 "the detector's AST shape did not match how
+# the code expresses the thing" genus. Returns are matched by POSITION only.
+#
+# MUTATION NOTE (a real bug caught in this gate's own bring-up): the first
+# draft flagged `harvest_cuda_cpu_axis_profile_registry.build_combined_payload
+# _from_pair`, where `if blockers: return ...` is followed by more
+# `blockers.append(...)` and a second `if blockers:`. That second test is very
+# much alive. Clearing the decision only on NAME REBINDING misses method-call
+# mutation, so `_name_mutated_between` treats `x.append(...)`-style calls and
+# item stores as invalidating too.
+#
+# Waiver (in-function): ``# DEAD_CONDITIONAL_RETEST_OK:<rationale>`` — for a
+# deliberately redundant defense-in-depth branch retained against future
+# control-flow changes.
+# ===========================================================================
+
+_BARE_NAME_IF_RE = re.compile(r"^[ \t]*if[ \t]+[A-Za-z_]\w*[ \t]*:[ \t]*$", re.M)
+
+_MUTATING_METHODS = (
+    "append", "extend", "update", "setdefault", "insert", "add",
+    "pop", "remove", "clear", "sort", "reverse", "discard",
+)
+
+
+def _name_mutated_between(stmts: list[ast.stmt], name: str) -> bool:
+    """True iff ``name`` is rebound OR mutated in place anywhere under ``stmts``."""
+    for st in stmts:
+        for node in ast.walk(st):
+            if isinstance(node, ast.Name) and node.id == name and isinstance(
+                node.ctx, (ast.Store, ast.Del)
+            ):
+                return True
+            if (
+                isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Attribute)
+                and node.func.attr in _MUTATING_METHODS
+                and isinstance(node.func.value, ast.Name)
+                and node.func.value.id == name
+            ):
+                return True
+            if (
+                isinstance(node, ast.Subscript)
+                and isinstance(node.value, ast.Name)
+                and node.value.id == name
+                and isinstance(node.ctx, (ast.Store, ast.Del))
+            ):
+                return True
+            if isinstance(node, (ast.Global, ast.Nonlocal)) and name in node.names:
+                return True
+    return False
+
+
+def _python_sources_for_dead_retest(root: Path) -> list[Path]:
+    """Hand-authored repo Python. ``experiments/results/**`` is GENERATED
+    artifact territory (~40k files, +60 s) and is excluded deliberately; the
+    gate's declared denominator reports what WAS parsed so the narrowing is
+    visible rather than silent (the VACUITY==PASS discipline)."""
+    out: list[Path] = []
+    for sub in ("tools", "src/tac", "scripts"):
+        base = root / sub
+        if base.is_dir():
+            out.extend(base.rglob("*.py"))
+    exp = root / "experiments"
+    if exp.is_dir():
+        out.extend(exp.glob("*.py"))
+    keep: list[Path] = []
+    for p in out:
+        parts = set(p.parts)
+        if ".venv" in parts or "site-packages" in parts:
+            continue
+        if any("_intake_" in seg for seg in p.parts):
+            continue
+        keep.append(p)
+    return sorted(set(keep))
+
+
+def check_no_dead_conditional_retest_after_early_return(
+    *,
+    repo_root: str | Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Refuse a conditional re-test that an earlier early-return already decided.
+
+    See the block comment above for the anchor incident (costate_digest
+    build_digest, 18 statements orphaned, 4 keys poisoned, 8 digest lines lost),
+    for why this signature was chosen over the broader
+    early-return-truncates-an-accumulator shape (MEASURED: 30 benign sites), and
+    for the mutation bug caught during bring-up.
+
+    Waiver (anywhere in the offending function): a real
+    ``# DEAD_CONDITIONAL_RETEST_OK:<rationale>``. Placeholder rationales are
+    rejected per the Catalog #287 discipline.
+    """
+    root = Path(repo_root or REPO_ROOT)
+    violations: list[str] = []
+    n_considered = n_files = n_funcs = n_guards = 0
+    # PRE-FILTER on a PROVABLY NECESSARY condition, never a heuristic: a
+    # violation needs TWO top-level `if <bare-name>:` tests in one function, so a
+    # file with fewer than two such lines cannot hold one. Cuts ~10.8k parses to
+    # the candidates (28 s -> ~4 s) without narrowing the detector. Both counts
+    # ride in the denominator so the filter can never hide a shrunken scope.
+    for path in _python_sources_for_dead_retest(root):
+        n_considered += 1
+        text = _read(path)
+        if not text:
+            continue
+        if len(_BARE_NAME_IF_RE.findall(text)) < 2:
+            continue
+        try:
+            tree = ast.parse(text)
+        except SyntaxError:
+            continue
+        n_files += 1
+        src_lines = text.splitlines()
+        rel = path.relative_to(root).as_posix()
+        for fn in _func_defs(tree):
+            n_funcs += 1
+            body = fn.body
+            # name -> (lineno of the deciding guard, index of that statement)
+            decided: dict[str, tuple[int, int]] = {}
+            for i, st in enumerate(body):
+                if not isinstance(st, ast.If) or not isinstance(st.test, ast.Name):
+                    continue
+                name = st.test.id
+                prior = decided.get(name)
+                if prior is not None and not _name_mutated_between(
+                    body[prior[1] + 1 : i], name
+                ):
+                    if _waiver_present(
+                        _span_source(src_lines, fn), "DEAD_CONDITIONAL_RETEST_OK"
+                    ):
+                        continue
+                    violations.append(
+                        f"{rel}:{st.lineno}: `if {name}:` is DEAD — the guard at "
+                        f"line {prior[0]} in {getattr(fn, 'name', '?')!r} already "
+                        f"returns unconditionally when {name} is truthy, and "
+                        f"{name} is not rebound or mutated in between, so this "
+                        f"branch is unreachable. This is the fingerprint of an "
+                        f"early return that silently truncated the rest of the "
+                        f"function: make the split an explicit if/else so the "
+                        f"shared tail runs on BOTH paths, or add a "
+                        f"`# DEAD_CONDITIONAL_RETEST_OK:<why this redundant "
+                        f"branch is retained>` waiver."
+                    )
+                    continue
+                if st.body and isinstance(st.body[-1], ast.Return) and not st.orelse:
+                    n_guards += 1
+                    decided[name] = (st.lineno, i)
+    return _finish(
+        name="check_no_dead_conditional_retest_after_early_return",
+        tag="dead-conditional-retest-after-early-return",
+        violations=violations,
+        strict=strict,
+        verbose=verbose,
+        ok_detail=(
+            f"{n_considered} file(s) considered, {n_files} parsed after the "
+            f"necessary-condition pre-filter, {n_funcs} function(s), "
+            f"{n_guards} unconditional-return guard(s) tracked"
+        ),
+    )
+
+
+CONFOUND_GATES = (
+    *CONFOUND_GATES,
+    check_no_dead_conditional_retest_after_early_return,
+)
+
+POSITIVE_CONTROLS = (
+    *POSITIVE_CONTROLS,
+    PositiveControl(
+        gate="check_no_dead_conditional_retest_after_early_return",
+        files={
+            "tools/planted_truncated_builder.py": (
+                "def build_digest(ddm_live):\n"
+                "    lines = []\n"
+                "    data = {}\n"
+                "    lines.append('pointer')\n"
+                "    if ddm_live:\n"
+                "        data['schedule'] = 'dominated'\n"
+                "        lines.append('BOUNDARY')\n"
+                "        return lines, data\n"
+                "    lines.append('tail')\n"
+                "    if ddm_live:\n"
+                "        data['costate_organ'] = 'live'\n"
+                "    else:\n"
+                "        data['costate_organ'] = 'legacy'\n"
+                "    return lines, data\n"
+            )
+        },
+        must_mention="planted_truncated_builder.py",
+        why=(
+            "The EXACT ddm_cd1 anchor shape reproduced from tools/costate_digest.py "
+            "commit 7fac2e7475: `if ddm_live:` ends in `return lines, data`, and a "
+            "second `if ddm_live:` sits below in the region that return just "
+            "orphaned. Note the return is VALUE-returning -- if a future change keys "
+            "the detector on a bare `return` (node.value is None), stops requiring "
+            "the guard body's LAST statement to be the return, drops the no-`else` "
+            "requirement, or narrows the file scope away from tools/, this control "
+            "stops firing and the gate reports a clean scan over its own anchor."
+        ),
+    ),
+)
