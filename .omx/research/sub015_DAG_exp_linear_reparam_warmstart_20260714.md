@@ -210,3 +210,23 @@ gestalt is WRONG in a named way. 23rd convocation spawned to adversarially test 
    (2 refusals pinned at −17 flips, 3.4× over-prediction).
 4. CI-blind Metal-contention hit TWICE (my push + me1's commit) — #1107 two-landing filed;
    both skips documented, burn-end re-verify owed.
+
+## FEED-20260817h — gs1 convocation: the gestalt REFUTED at core; the queue re-ranks
+
+1. **P1 REFUTED at 28-digit posterior re-derivation** (gs1, a117cb42ea): 68.30% of the
+   fortnight's gain was GRADIENT DESCENT — the 480-ep QAT burn (−1.842432e-3, 53.84%, the
+   largest single move) was OMITTED from MAIN's draft because the ledger credited its product
+   to "SELECT". EDIT 0.60% · RECODE 31.10%. "Descent saturates" cited an av1-F3-voided fit;
+   the corrected refit: descent NOT floored. MAIN's memo self-instantiated its own P6
+   (correction decay) three times — the m44 lesson at memo scale.
+2. **SURVIVES refined**: training produces better frozen objects; operators harvest them.
+   NEW two-layer structure: distortion FROZEN to 14 sig figs since 08-14 — 3 of 4 moves were
+   rate-only operators on a bit-identical decoded field.
+3. **QUEUE RE-RANK**: #1 e960/e1920 QAT continuation + distortion-aware selector (the only
+   live measured slope; ~1.2 KB/doubling ⇒ contributes, does not close rate's 12,815 B alone);
+   me1 demoted to #4. Law: never fire a union on summed operator credits (hg1 non-submodular ·
+   cp1 union-net-loss · rr4 recompile hazard).
+4. **OPPOSED PRE-REGISTRATIONS now live**: PP3(a) (sharpened adaptive prior wins next) vs
+   GS1-PRED (next ≥1e-4 move = NEW CHECKPOINT). fx1 is the DISCRIMINATOR — either outcome
+   adjudicates. MAIN-owed next: ce1/cw1 ef3000/ef6000 byte-closed row (cheapest GS1-PRED
+   test) + the never-attacked 56,938 B frozen semantic+carrier representation.
