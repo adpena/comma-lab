@@ -274,8 +274,43 @@ here:** tr1 imports the *serial* `make_loss_fn`, whose `margin_hinge` branch doe
 - `src/tac/witness_dsl/tests/test_hg1_ring0_margin_hinge_levers.py` — 15 tests. The two
   load-bearing ones check no flag is invented (against the trainer's own argparse) and that the
   target **moves when the artifact moves** (so it is derived, not a literal wearing a law's name).
-- `.omx/research/configs/ddm_hg1_ring0_hinge_sealed_ab_20260816.json` — the sealed 3-arm A/B,
-  `sealed_sha256 f7bbdf0f6b4bba64…`. **NOT LAUNCHED.**
+- `.omx/research/configs/ddm_hg1_ring0_hinge_sealed_ab_20260816.json` — the 3-arm design record,
+  `sealed_sha256 f7bbdf0f6b4bba64…`. **SUPERSEDED for firing** (see below). **NOT LAUNCHED.**
+- `experiments/ddm_hg1_seal_tr1_ab_tickets.py` + the two launcher-loadable tickets
+  `.omx/research/configs/ddm_hg1_tr1_ticket_arm_{a_control_ce,b_hinge}_20260816.json` — the
+  fireable seal. **Both DRY-RUN OK on every gate.** **NOT LAUNCHED.**
+
+### §7.1 The re-seal (MAIN blocker, closed)
+
+The first seal used a private `ddm_hg1_tr1_sealed_ab.v1` schema. It is correct in content and
+**unfireable**: `tools/launch_tr1_run.py` refuses any schema but `ddm_tb1_tr1_sealed_ticket.v1`.
+Re-emitted as one ticket per arm. Two things the re-seal forced, both improvements:
+
+1. **The argv is COMPILED, not hand-assembled.** The launcher's G1 gate recompiles argv from the
+   ticket's own levers through `TR1RendererProgramV1.compile_trainer_argv()` and refuses on drift.
+   A hand-written argv that merely looks right is exactly what G1 catches.
+2. **The lv1 base bundled the seg FORM with the seg TRUNK WEIGHTS in one `tr1_seg_ce` lever.**
+   Swapping that bundle wholesale would have silently dropped `--class-weight-lane` and `--w-seg`
+   from arm B while the arms still *looked* matched. The bundle is split into
+   `hg1_seg_trunk_weights` (identical on both arms) and a per-arm form lever.
+
+Measured arm delta — the ONLY four flags that differ:
+
+| flag | arm A | arm B |
+|---|---|---|
+| `--seg-form-start` | `ce` | `margin_hinge` |
+| `--margin-target` | `1.0` | `0.039180326461791926` |
+| `--margin-weighted-loss` | *(absent)* | `on` |
+| `--out-dir` | `…/arm_a_control_ce` | `…/arm_b_hinge` |
+
+Everything else is byte-identical, including the resumability P0 (`--basin-handoff on`,
+`--max-wall-minutes 480.0`, `--epochs 400`, `--seed 0`). `scope_laws` is empty: every registered
+scope law is a jd1/jd3 pose-retreat policy and none governs a seg-form A/B, so declaring one to
+make a gate run would be inventing scope. `ticket_hash` is still emitted truthfully and
+recomputes under the canonical `ticket_payload_hash` on both tickets.
+
+**SERIAL, not concurrent.** The launcher's G4 gate admits ONE n600 job at a time. Memory is not
+the binding constraint (87.7 GiB free against a 25.6 GiB floor) — the scorer slot is.
 
 ## §8 The seal — 3 arms, declared fire order
 
@@ -346,7 +381,7 @@ unmodified: the wc1 retained decode `0.raw` (3,662,409,600 B), the hv1 ep0634
 
 | # | work | owner | fire condition |
 |---|---|---|---|
-| 1 | Fire sealed arms A+B (`ddm_hg1_ring0_hinge_sealed_ab_20260816.json`, `sealed_sha256 f7bbdf0f…`); judge at the seg asymptote against the pre-registered 25% falsifier | **MAIN** (Metal slot) | NOW — build + seal complete, Modal untouched |
+| 1 | Fire arm A (`ddm_hg1_tr1_ticket_arm_a_control_ce_20260816.json`), then arm B (`…arm_b_hinge…`) — SERIAL, G4 admits one n600 job. Both DRY-RUN OK. Judge at the seg asymptote against the pre-registered 25% falsifier | **MAIN** (Metal slot) | NOW — re-seal complete, both dry-runs pass, Modal untouched |
 | 2 | Arm C (hinge + Q3) | MAIN | ONLY if arm B shows a seg gain AND a measured pose cost |
 | 3 | Measured pose leg for arm B, on a non-advisory instrument | `pi2` + hg1 | arm B completes; do not quote advisory pose magnitudes (18.2× optimistic) |
 | 4 | Own the DSL discovery gap: per-arm lever modules are invisible to `lever_factories()` | unowned — needs a registry owner | after `curriculum_dsl.py` is released by its current holder |

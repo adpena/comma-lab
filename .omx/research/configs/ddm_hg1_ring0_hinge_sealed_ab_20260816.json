@@ -1,5 +1,13 @@
 {
   "DO_NOT_LAUNCH": "MAIN fires the Metal slot. Modal is at $18.62/$20 -- no dispatch, no burn.",
+  "SUPERSEDED_BY": {
+    "arm_a_control_ce": ".omx/research/configs/ddm_hg1_tr1_ticket_arm_a_control_ce_20260816.json",
+    "arm_b_hinge": ".omx/research/configs/ddm_hg1_tr1_ticket_arm_b_hinge_20260816.json",
+    "arm_c_hinge_q3": "NOT re-emitted: it fires only if arm_b shows a seg gain AND a measured pose cost. Re-seal it then, from experiments/ddm_hg1_seal_tr1_ab_tickets.py.",
+    "concurrency": "SERIAL, not concurrent: the launcher's G4 gate admits ONE n600 job at a time. Memory is not the binding constraint (87.7 GiB free vs a 25.6 GiB floor).",
+    "reason": "schema ddm_hg1_tr1_sealed_ab.v1 is correct in CONTENT but UNFIREABLE: tools/launch_tr1_run.py accepts only ddm_tb1_tr1_sealed_ticket.v1. Re-emitted as two launcher-loadable tickets, both DRY-RUN OK on all gates. This file is retained as the design record; FIRE THE TICKETS, not this.",
+    "sealer": "experiments/ddm_hg1_seal_tr1_ab_tickets.py"
+  },
   "arm": "ddm_hg1",
   "arms": {
     "arm_a_control_ce": [
