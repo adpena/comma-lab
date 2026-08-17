@@ -28390,3 +28390,27 @@ twice — treating no-descent as closing the question, then calling the named su
 Genus: over-scoping a POSITIVE existence result into a refutation of a correctly-scoped negative.
 Sister of [[the-instruments-own-units-level-and-aggregation-are-part-of-the-claim-20260816]] — the
 SCOPE of the claim being overturned is part of the overturning claim.
+
+### FEED-2026-08-17-EF3000 — REALIZATION CURES recalled (operator steer, from SOURCE not memory)
+
+MAIN framed EF3000's successor as *"TRANSFER is now the real question"* and left it open. **The
+corpus already holds the cure class, and it is not open territory.**
+
+- **The standing law:** [[realization_gap_is_fixable_through_actual_S_R_GT_20260806]] — *"REALIZATION
+  GAP FIXABLE: NAIVE = TODO not wall; rewire thru REAL S/R/GT."*
+- **The measured precedent (dk1, #897):** **96.6% of realization flips CURED, 88→3, ΔS −0.0144**
+  (n=3 smoke) — *by rewiring the solver through the real S/R/GT*, not by finding a better solver.
+  #897's own words: "the SOLVER axis is now closed, remaining optimality is elsewhere."
+- **Sisters:** `ddm_dm4_targeted_realization_cures` (scorer-recursive targeted cures) ·
+  `ddm_v14_realization_fidelity` (per-stage leak diagnosis, FORMULATION-scoped on fixed-RGB-prototype
+  painting) · `ddm_rvs1` survival playbook · `ddm_rvs2` the geometry (Bregman/Fisher × se(3)/ξ)
+  survival class · `ddm_hr1`/`hr2` realization-engineering.
+
+**Consequence for the EF3000 successor:** if the aligned-objective descent fails to transfer, the
+FIRST hypothesis is a NAIVE wiring in the transfer path — a TODO — not a wall, and the named cure is
+to rewire through the REAL S/R/GT before concluding anything. That inverts the prior default and is
+consistent with today's other correction (`R` supplies exactly zero; the residual is a 0.105-logit
+TIE — a training-reachable regime, not a downstream one).
+
+Recall discipline note: MAIN's grep for the cure inventory came up empty from working memory and had
+to be re-run at source, which is the day's third instance of the same genus.
