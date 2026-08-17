@@ -156,7 +156,13 @@ claim that the learned vehicle is original.
 ## Public source and reproducibility
 
 - Source repository: https://github.com/adpena/comma-lab
-- Runtime/evaluation source pin: commit `e7ca85754bb9e6a4b319e5a8fa206366c90bd6f4`
+  (VISIBILITY UNRESOLVED — sr1 measured this repo PRIVATE on 2026-08-17; operator decision
+  owed: publish a sanitized source release OR drop this claim + both pins before PR)
+- Evaluation source pin: commit `e7ca85754bb9e6a4b319e5a8fa206366c90bd6f4` — the commit
+  the T4 evaluation actually ran from (matches `provenance.pact_commit` in the receipt)
+- Compression-script pin: commit `a411f612aa` — the commit that carries
+  `experiments/ddm_pq2_compress_e2e.py` (the entry point landed AFTER the evaluation pin;
+  two labelled pins are stated rather than one misstated pin)
 - Runtime tree SHA-256: `7acedb07e670e76c798f153ac53a3045b053074d702e226411a2353745b98351`
 - Portable executable-runtime content tree:
   `4358aaf34fcbfc1cdc4a8865b9aead709199465c9909321abf279ebcd0fe3721`

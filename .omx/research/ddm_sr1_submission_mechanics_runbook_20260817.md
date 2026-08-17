@@ -62,6 +62,7 @@ gh release create rr4-submission-20260817 \
 # 4. finalize PR body: insert the asset URL + exact identity block, then open the PR
 gh pr create \
     --repo commaai/comma_video_compression_challenge \
+    --base master \
     --head adpena:submission/rr4-free-corrector \
     --title "rr4 free-corrector re-encode (0.15853 GPU-eval, 181,161 B)" \
     --body-file PR_BODY_FINAL.md
@@ -84,7 +85,9 @@ steps 0–5 in order, stopping on any mismatch.
 
 ## Refusal conditions (inherit SWAP_PROCEDURE + pq1 runbook)
 
-- staged-tree sha mismatch vs GENERATION_RECEIPT.json at copy time
+- staged-tree sha mismatch vs RESULT_build.json / the recovered contest_auth_eval.json at
+  copy time (NOT GENERATION_RECEIPT.json — sr1 measured that receipt STALE: it declares the
+  superseded 182,759 B / 80d9c8c6… identity and would fire on every correct packet)
 - any `._*`/private-path residue after step 1
 - sr1 RED verdict without operator waiver
 - report.txt score fields not byte-identical to the recovered contest_auth_eval.json
