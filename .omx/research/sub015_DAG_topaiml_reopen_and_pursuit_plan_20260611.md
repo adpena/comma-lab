@@ -28414,3 +28414,34 @@ TIE — a training-reachable regime, not a downstream one).
 
 Recall discipline note: MAIN's grep for the cure inventory came up empty from working memory and had
 to be re-run at source, which is the day's third instance of the same genus.
+
+## FEED-2026-08-17-TODO-P0-LIVE-LEVER-QUEUE
+
+**Operator directive:** *"Pursue todo as p0."* MEASURED, $0, MAIN. `verdict_scope: INSTANCE`
+(live trainer `tac.pr130_lift.train_semantic_quantized_resumable` at HEAD, 618 manifests swept).
+
+**Literal TODO on the live vehicle: ZERO** (pr130_lift 0 · boundary_math 0 · mlx_score_aware 0).
+So the directive routes to the SEMANTIC class — never-fired levers — and there the instrument is
+aimed wrong: `lever_registry.completeness()` returns `describes_live_vehicle: False`, pointing at
+`train_levelset_witness_realized_through_R_mlx.py` (443 flags) while the live trainer has 38.
+Its 199-row never-fired queue maps **34/199 to the retired trainer, 0/199 to the live one**.
+`.omx/state/lever_activation_ledger.jsonl` last written 2026-07-27 — 21 days of adoption decay
+(#936 genus). Independently reproduces #917 and quantifies it.
+
+**But the live vehicle keeps its own ledger and nothing reads it.** `train_semantic_quantized_
+resumable.py:1061` emits `[b2e] editability levers ACTIVE:` per run with `active` +
+**`reason_if_off`** per lever — visible right now in EF6000's `run.log`, naming F1/F3/F4/F5 OFF
+with reasons. It goes to the log; the campaign ledger never ingests it. **The cure is one consumer.**
+
+**The live queue, measured from manifests: 11 never-fired, 3 fired.** Three of the eleven have
+measured evidence already banked and never passed to the frontier trainer — `--film-row-dropout`
+(mz2: −130..−2,051 B, retained UNSCORED), `--carrier-rank-penalty`/`--carrier-tensors` (ra2 head,
+#1079), `--distill-weight` (wd3 built, #1069). That is built-elsewhere-unwired (#864) at the one
+place it costs score.
+
+**MAIN correction, same turn:** my earlier "0 never-fired rows extractable, the ledger carries no
+state" was a WRONG-KEY GUESS against an event log. `never_fired()` returns 199 and
+`duty_to_measure()` returns 200 — state is derived from events, the API works. Corrected at source
+before citation. Genus: asserting absence from a failed query instead of reading the producer.
+
+Memo: `.omx/research/ddm_todo_p0_live_lever_queue_20260817.md`.
