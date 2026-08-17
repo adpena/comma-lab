@@ -11,6 +11,14 @@
 > PR106 x-repack at `0.20945123680571204` remains a predecessor
 > custody/rate control, not the current anchor and not a new representation
 > result. The final official leaderboard winner was PR #101 at 0.193.
+> 2026-08-17 status update: every HNeRV-era anchor below is historical. The
+> current own-vehicle frontier is the rr4 free-corrector re-encode at
+> **`0.15853325034789678` [contest-CUDA T4, n600]**, archive `181161` bytes,
+> SHA-256 `35ac2b9beb7e6fa81075c7d84b5247d8d24c056fe49ce1cbd22a334bc9618956`
+> (receipts:
+> `experiments/results/ddm_rr4_cuda_exact_contest_cuda_20260817_r1/returned_artifacts/`).
+> The vehicle lineage and borrowed-substrate accounting for that row live in the
+> submission packet, not this chapter.
 
 This section reports only evidence-tagged results. A score row can rank the
 system only when it names exact archive bytes, archive SHA-256, CUDA auth-eval
