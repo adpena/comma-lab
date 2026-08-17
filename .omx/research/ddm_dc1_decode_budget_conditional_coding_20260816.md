@@ -31,8 +31,11 @@ axis might be unmeasured because #996 used a *memoryless* bound. Two things are 
    accumulated `−log2 p[actual symbol]` from the very buffer rc64 consumes. HPAC's own cross-entropy
    over the full n600 field is **112,109.578 B**; rc64 consumed **112,117.375 B**. Overhead
    **+7.80 B = +0.00696%**, and the 8-frame prefix showed +7.74 B — so it is a **constant flush
-   cost, not a rate**. The maximum possible prize from any coder swap on 61.4% of the archive is
-   **7.8 bytes**. The replay is byte-identical to the shipped decode: `decoded_token_sha256`,
+   cost, not a rate**. That 7.80 B is the CONSERVATIVE reading: `bit_position` includes the range
+   decoder's end-of-stream read-ahead, which is why it exceeds the 112,110 B stream itself. Measured
+   against the shipped stream length the gap is only **112,110 − 112,109.578 = 0.42 B**. Take the
+   larger: the maximum possible prize from any coder swap on 61.4% of the archive is **≤ 7.8 bytes**.
+   The replay is byte-identical to the shipped decode: `decoded_token_sha256`,
    `corrected_cdf_input_sha256` and `corrected_quantized_logit_sha256` all match the wc1 receipt.
 2. **The learned prior is worth 3.8× its counted bytes.** A table-free adaptive context model — zero
    counted table bytes, so it could DELETE the 13,515 B HPAC section — needs **177,109 B** for the
