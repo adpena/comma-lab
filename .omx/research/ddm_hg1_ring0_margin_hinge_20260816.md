@@ -232,6 +232,33 @@ buying safety no pixel needs. `m_safe` is the smallest target at which a fix is 
 **Two forces on one annulus must not disagree about "safe".** The lever reuses the sister lever's
 law and headroom rather than introducing a second threshold. A test enforces the agreement.
 
+### §4.1 What this axis is worth, relative to the gap (MAIN, appended 2026-08-16)
+
+The §4 argument above is a two-sided THRESHOLD DERIVATION, not a magnitude dismissal: below
+`delta_R` a correction sits inside a MEASURED perturbation (p95 over the annulus, receipt
+`reports/delta_R_noise_floor.json`) and can flip back; at 1.0 the target buys safety no pixel
+needs. Both sides are bounded by measurement, not by eyeball. The `#404` detector fired on it
+anyway, and the demand it makes is worth paying, because this memo never stated the one number
+that justifies spending an 8-hour Metal slot on the arm:
+
+| quantity | value |
+|---|---:|
+| S at the current operating point | 0.15959729295498598 |
+| remaining gap to 0.15 | **0.0095973** |
+| seg term (100·d_seg) | **0.029611** |
+| seg term ÷ remaining gap | **3.085×** |
+| seg recovery that closes sub-0.15 on this axis ALONE | **32.41%** |
+
+So the seg axis is worth three times the entire remaining gap, and roughly a third of it would
+finish the job unaided. That is why the arm gets the slot. Note the pre-registered primary
+falsifier (25% of the re-derived ladder) sits deliberately BELOW the 32.41% gap-closing
+threshold — the arm can fail its own bar and the measurement still buys a real bound on the
+family. Relative significance is the operative test near a goal; absolute smallness is not
+(memory: relative-not-absolute-significance-near-goal-dont-orphan-small-deltaS).
+
+verdict_scope: INSTANCE — this is one arm's justification arithmetic at one operating point,
+not a family claim. It moves when the pointer moves.
+
 ## §5 Q3 — built, composable, and NOT a default
 
 `--seg-grad-q3-project` already projects the seg gradient entering rendered frame_1 blockwise onto
