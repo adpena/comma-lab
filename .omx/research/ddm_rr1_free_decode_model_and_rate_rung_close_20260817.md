@@ -324,11 +324,25 @@ Owner: rate owner. Cost: $0 local build + a rebuild. Prerequisite: none.
    lose to dilution, so 1,598.30 B is the measured ceiling *of this estimator family*. A
    shrinkage or mixing estimator that shares strength across sparse contexts is a different
    family and remains unbounded by these rows — the one genuinely open door on this axis.
-4. **Decode cost is an instrument timing**, not a receiver timing (§2.8).
-5. **Composition with any future token field is unmeasured** (§3).
-6. `verdict_scope` on the negatives: the miss-branch correction is **INSTANCE** (two context
-   forms, this vehicle); the t−1-agreement term is **INSTANCE**. Neither closes a family. The
-   free-augmentation axis is **OPEN and positive** — this arm did not close it, it opened it.
+4. **Decode cost is an instrument timing**, not a receiver timing (§2.9).
+5. **The coder tax is assumed to carry, not measured to carry.** `dc1` measured rc64 at 1.00000
+   of cross-entropy on the SHIPPED probability tables. My corrected tables are different
+   distributions. `DELTA_CLIP = 4.0` bounds the odds shift to 16x, and the clipped probabilities
+   keep every RC64 frequency at 2 or more out of 2^31, so the frequency floor is nowhere near —
+   but I did not re-measure the tax. Row 1 of the build order settles it by construction,
+   because it produces a real stream.
+6. **The estimator constants are judgment, not a sweep — and that is deliberate.** `U_STEP`,
+   `KT_ALPHA`, `MIN_COUNT`, `DELTA_CLIP` and the run-length caps were chosen from first
+   principles and never tuned against this clip. That is what keeps them GENERIC, and therefore
+   free. **If a successor sweeps them on video 0 and keeps the argmax, they stop being generic
+   and become video-derived scalars** — which must then be counted in `archive.zip` (a handful
+   of bytes) or re-derived from something the decoder can compute for itself. Sweeping them is
+   legitimate; sweeping them and still calling them free is the hide-data-in-code fake.
+7. **Composition with any future token field is unmeasured** (§3).
+8. `verdict_scope` on the negatives: the miss-branch correction is **INSTANCE** (two context
+   forms, this vehicle); the t−1-agreement term is **INSTANCE**; the context-richness turnover is
+   **FORMULATION** (count-based per-context log-odds correction). None of them closes a family.
+   The free-augmentation axis is **OPEN and positive** — this arm did not close it, it opened it.
 
 ---
 
