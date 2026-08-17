@@ -22,7 +22,14 @@ at HEAD, against 618 launch manifests on both SSD tiers.
    `train_semantic_quantized_resumable.py:1061` prints `[b2e] editability levers ACTIVE:` with
    per-lever `active` + **`reason_if_off`** — the exact duty-to-measure record. It goes to `run.log`.
    `.omx/state/lever_activation_ledger.jsonl` has not been written since **2026-07-27** (21 days).
-5. **The live queue, measured from 12 manifests: 11 never-fired, 3 fired.**
+5. **The live queue, now MEASURED BY THE INSTRUMENT: 12 never-fired of 18 derived levers.**
+
+⚠ **Corrected by building the cure.** This memo first said "11 never-fired, 3 fired" from a
+hand-count over the table below. The landed ingester
+(`tac.pr130_lift.live_lever_activation`), run over all 417 run logs and 618 manifests, returns
+**18 derived levers · 6 fired · 12 never-fired**. My hand-count under-counted the never-fired by
+one and classified `lr` / `ce_fraction` / `softplus_fraction` as "swept" rather than as *fired*,
+which they are. The instrument wins; the table below is kept as the hand-audit it was.
 
 ⚠ **MAIN correction, same turn.** Earlier this session I wrote that the activation ledger's 251 rows
 "carry no state, so 0 never-fired rows are extractable." **That was a wrong-key guess against an
@@ -76,15 +83,45 @@ one place where it costs score.
 queries. Nothing needs designing — the two halves need connecting, and the registry needs to be
 told which vehicle is live.
 
+## THE CURE — LANDED, and it corrected me twice
+
+`src/tac/pr130_lift/live_lever_activation.py` + 30 tests. Two ingest paths, because the
+trainer's own emission turned out to be **partial**:
+
+- **`ingest_run_log`** consumes the `[b2e]` emission — authoritative for the 5-lever editability
+  family, carrying `reason_if_off` per lever. Records `fired` for ACTIVE levers ONLY; an off lever
+  is deliberately never written, because `never_fired()` derives the queue from ABSENCE.
+- **`ingest_launch_manifest`** consumes the launch argv — the *only* record for the other 14 levers,
+  which have no per-run telemetry at all. A flag passed AT its default is not a firing, so the
+  default is compared numerically (`2e-5` vs the source's `2e-05` is the same number).
+
+**Anti-staleness:** the live lever set is **derived by AST** from the trainer's own
+`add_argument` calls at call time. The registry went stale because its vehicle was a hardcoded
+pointer; this one cannot describe a vehicle the code does not have. The single hand-declared thing
+is `PLUMBING_FLAGS` (paths/caches/device/cadence/seeds), listed explicitly so every exclusion is
+auditable rather than pattern-guessed.
+
+**Building it corrected me twice, both caught by running it:**
+1. The `[b2e]` emission alone left `lr`/`ce_fraction`/`softplus_fraction`/`band_objective_weight`/
+   `float_warmup_steps` in the queue — levers I had *measured* as fired. The emission covers 4 of 18.
+   That gap is why the manifest path exists.
+2. The final count is 12/18, not the 11 I hand-counted.
+
+The emission also carries `gate_aware_conditioning` — a lever with **no flag at all**, state
+`DECLARED_UNBUILT_FOLLOW_ON`. That is the designed-stub grade surfacing honestly in telemetry;
+a hardcoded registry would have dropped it.
+
 ## NEXT
 
-1. **Ingest the live emission.** Parse `[b2e] editability levers ACTIVE:` from each run's `run.log`
-   into `record_activation()` rows so `never_fired()` answers for the vehicle we run. One consumer.
-2. **Re-point or scope the registry.** `describes_live_vehicle: False` should either be repaired or
-   made loud — a queue that silently describes a retired vehicle is the #936 adoption-decay genus
-   with a vehicle label on it.
-3. **Drain the 11.** Ranked by existing evidence: `--film-row-dropout` (mz2 measured bytes, unscored)
-   → `--carrier-rank-penalty` + `--carrier-tensors` (ra2 head) → `--distill-weight` (wd3 built).
-   Each is a single-variable window on a trainer whose windows now cost ~6.8 min at n=600.
-4. **`--fixed-zero-mask` and `--weight-perturb-robustness` have no evidence either way** — they are
-   genuinely unexplored, which is what a TODO queue is *for*.
+1. **Re-point or scope the registry.** `describes_live_vehicle: False` should be repaired or made
+   loud — a queue that silently describes a retired vehicle is the #936 adoption-decay genus with a
+   vehicle label on it. The live queue now has its own reader; the retired one still answers by default.
+2. **Drain the 12.** Ranked by existing evidence: `--film-row-dropout` (mz2 measured −130..−2,051 B,
+   retained UNSCORED — and training FOR row sparsity is the #1074 P1 train-for-editability pattern)
+   → `--carrier-rank-penalty` + `--carrier-tensors` (ra2 head, #1079) → `--distill-weight` +
+   `--distill-max-seg` (wd3 built, #1069). Each is a single-variable window on a trainer whose
+   windows cost ~6.8 min at n=600 by the corrected cadence law.
+3. **`--fixed-zero-mask` and `--weight-perturb-robustness` have no evidence either way** — genuinely
+   unexplored, which is what a TODO queue is *for*.
+4. **Wire the ingest into the launcher** so the queue stays current without a manual sweep. Until
+   then it is one command, and every new run leaves the record it needs.

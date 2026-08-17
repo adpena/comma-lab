@@ -28445,3 +28445,38 @@ state" was a WRONG-KEY GUESS against an event log. `never_fired()` returns 199 a
 before citation. Genus: asserting absence from a failed query instead of reading the producer.
 
 Memo: `.omx/research/ddm_todo_p0_live_lever_queue_20260817.md`.
+
+## FEED-2026-08-17-TODO-P0-CURE-LANDED
+
+The one consumer is BUILT and RUN. `tac.pr130_lift.live_lever_activation` (30 tests) ingests the
+live vehicle's own lever record into `.omx/state/lever_activation_ledger.jsonl`, which had not been
+written since 2026-07-27.
+
+**Two ingest paths, because the trainer's emission is PARTIAL.** `ingest_run_log` consumes the
+`[b2e] editability levers ACTIVE:` line (authoritative for the 5-lever editability family, carries
+`reason_if_off`); `ingest_launch_manifest` consumes the launch argv (the ONLY record for the other
+14 levers, with numeric default-comparison so a flag passed AT its default is correctly not a firing).
+
+**Anti-staleness contract:** the live lever set is DERIVED BY AST from the trainer's own
+`add_argument` calls at call time. The registry went stale because its vehicle was a hardcoded
+pointer; this cannot describe a vehicle the code does not have. Only `PLUMBING_FLAGS` is
+hand-declared, and explicitly so the exclusions are auditable.
+
+**MEASURED after ingest (417 run logs · 618 manifests · 12 live-trainer runs):**
+18 derived levers · **6 fired** (band_objective_weight · ce_fraction · float_warmup_steps · lr ·
+softplus_fraction · weight_qat_q3q4) · **12 NEVER-FIRED** = the live P0 TODO queue.
+
+**Building the cure corrected MAIN twice, both caught by running it:** (a) the emission alone left
+five measured-as-fired levers in the queue — it covers 4 of 18, which is why the manifest path
+exists; (b) the final count is 12, not the 11 I hand-counted (I had classified lr/ce_fraction/
+softplus_fraction as "swept" rather than as fired). Both corrected at source in the memo.
+
+The emission also carries `gate_aware_conditioning` — a lever with NO FLAG, state
+`DECLARED_UNBUILT_FOLLOW_ON`. The designed-stub grade surfacing honestly in telemetry; a hardcoded
+registry would have dropped it.
+
+Drain order by existing evidence: `--film-row-dropout` (mz2 −130..−2,051 B retained UNSCORED, and
+training FOR row sparsity IS #1074's P1 train-for-editability pattern) → `--carrier-rank-penalty` +
+`--carrier-tensors` (ra2 head, #1079) → `--distill-weight` + `--distill-max-seg` (wd3 built, #1069).
+
+Memo: `.omx/research/ddm_todo_p0_live_lever_queue_20260817.md`.
