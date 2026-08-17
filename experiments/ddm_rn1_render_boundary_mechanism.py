@@ -314,7 +314,7 @@ def write_receipt(work: Path, name: str, payload: dict) -> Path:
     return p
 
 
-def retain_field(work: Path, name: str, arr: np.ndarray) -> dict:
+def retain_field(work: Path, name: str, arr: np.ndarray) -> dict:  # MEASURE_ONLY_OK:the n600 `leg` stage retains its full argmax field here with sha256+bytes; the subset `spectrum`/`ties`/`exchange`/`race` stages are scalar-only screens whose per-pair intermediates regenerate in minutes from the retained wc1 decode and whose successor (a training-side objective) consumes none of them
     """ALWAYS KEEP THE PAYLOAD: persist the bytes, not only their measured length."""
     work.mkdir(parents=True, exist_ok=True)
     p = work / f"{name}.npy"
