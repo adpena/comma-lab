@@ -180,8 +180,20 @@ probability path at all — it is purely additive on top of an unchanged base, a
 stream comes from the correction and from nothing else. `decoder_bit_position` fell from 896,939
 to 884,153, consistent with the shorter stream.
 
-**Since the decoded field is bit-identical, `d_seg` and `d_pose` cannot have moved.** That is the
-whole distortion proof, exactly as `ddm_rr1` §4 step 3 specified.
+**And the proof did not have to stop at the token field.** The parse-back ran the whole inflate,
+and the resulting 3.66 GB output was compared byte for byte against the frontier archive's own
+CPU inflate (`ddm_hv1_base_advisory_n600_cpu`, 2026-08-15, same machine, same python decoder,
+same 4-thread config):
+
+| | bytes | sha256 |
+|---|---:|---|
+| frontier base CPU inflate | 3,662,409,600 | `e5539653f598a1c31e28900888f450a6de019cb29864674f232ad2f8956b15c9` |
+| **rr2 candidate CPU inflate** | 3,662,409,600 | **`e5539653f598a1c31e28900888f450a6de019cb29864674f232ad2f8956b15c9`** |
+
+**BYTE-IDENTICAL.** `upstream/evaluate.py` reads exactly this file. So `d_seg` and `d_pose` are
+not "unable to have moved by inference" — they are provably the same numbers, measured on the
+bytes the scorer consumes. `S_candidate = S_frontier + Δrate` is exact arithmetic over identical
+distortion terms, which is a stronger statement than `ddm_rr1` §4 step 3 asked for.
 
 ### 4.1 One function used twice, enforced rather than asserted
 
@@ -243,10 +255,15 @@ keeping the argmax turns them into video-derived scalars that must then be count
    retained pre-correction logits. That is sound only because the decoded field is unchanged, so
    the decode trajectory the logits were cached along is the trajectory that is replayed — and
    §2.2 is what turns that argument into a measurement rather than leaving it an argument.
-4. **The decode-cost comparison is load-confounded.** See `RECEIPT.md`: the machine carried two
-   other heavy jobs (load average 5.4–7.4) throughout, so the candidate-vs-base decode times are
-   not a clean A/B. The corrector's own cost is separately bounded by the instrument: a full
-   corrected encode over all 600 frames, RC64 coding included, ran in 32–52 s.
+4. **The decode-cost comparison is load-confounded.** The candidate's token stage decoded in
+   792.045 s against the frontier base run's 566.607 s on the same machine and the same code
+   path — **+225.4 s (+39.8%)**. But the machine carried two other heavy jobs throughout (load
+   average 5.4–7.4) and the base run's load is unrecorded, so that delta is an **upper bound on
+   the corrector's cost, not an attribution**. My own instrument cannot resolve it either: an
+   identical corrected encode ran 32.5 s on one pass and 52.4 s on a repeat, so the load noise
+   band (±20 s) exceeds the effect. A clean decode-time row belongs on the contest device, where
+   hv1's own `[contest-CUDA T4]` inflate measured 364.111 s inside the 1,800 s budget (4.944×
+   headroom). **That row is still owed** (`ddm_rr1` NEXT #8).
 5. **Composition with any future token field is unmeasured**, exactly as `ddm_rr1` §3 stated. A
    Schur-compensated `rc4` drop changes the field, and the free credit must be re-measured on it.
 6. `verdict_scope`: everything here is **INSTANCE** — this archive, this vehicle, this estimator
