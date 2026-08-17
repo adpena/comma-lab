@@ -102,9 +102,18 @@ Whiten → SVD → truncate → un-whiten is the exact optimal rank-r map in eac
 The pose-optimal subspace is better in the pose metric and worse in the Euclidean one at
 every rank — the expected trade, and a sanity check that the whitening does what it says.
 
-**PRE-REGISTERED FALSIFIER (MAIN's relay, honoured verbatim):** *if pose-metric rank-4
-reconstruction error > 0.389%, the carrier is closed in both metrics.* Measured
-**27.85%** — **FIRED by 71.6×**. Reported as fired.
+**PRE-REGISTERED FALSIFIER (MAIN's relay):** *if pose-metric rank-4 reconstruction error
+> 0.389%, the carrier is closed in both metrics and the rank/refit family is done —
+report that as a full verdict and stop.* Measured **27.85%** — **FIRED by 71.6×**.
+
+**I honour the refusal and DECLINE the family-scope clause, and I flag that as a
+deviation from pre-registration rather than leave it implicit.** The rung is refused;
+that half stands unconditionally. But the clause "the rank/refit family is done" was
+written before the subspace×pose cell existed, and that cell then measured **15.7×
+better** than the row the family verdict had been drawn from (§4). A pre-registration
+cannot bind a scope judgement to evidence that did not exist when it was written. So:
+**rung REFUSED (pre-registration honoured), family scope INSTANCE not FORMULATION
+(pre-registration declined, reasons in §7).**
 
 ## 4. The exact rows — the only authority here
 
@@ -211,6 +220,16 @@ correct standing statement is: *refused at 11.5×, on this base, by this treatme
 This is the [[same_defect_negatives_masquerade_as_family_convergence_20260805]] shape:
 three arms refused the carrier, but ra2c and jc1 shared an unexamined treatment choice, so
 they are closer to one instance than to three independent confirmations.
+
+**A second, independent reason the ra2c ladder is weaker than it reads.** `ra2c` never
+measured r=11 exactly — it DERIVED every rung from `ratio − 1 = K_eff·err²` with
+`K_eff = 37,953`. Against my exact euclid-subspace row that law predicts **63.87×** and
+measures **28.616×** — it **over-predicts by 2.23×**. That is consistent with ra2c's own
+§2 finding that `K` is not constant along the ladder (it over-predicted by 9.23× at
+rank-4). So "closed at every rank" rests on a law ra2c had itself shown to be
+mis-calibrated, and it is mis-calibrated in the direction that makes the family look
+deader than it is. The exact rows in §4 supersede the derived ladder wherever they
+disagree.
 
 ## 8. Honest limits
 
