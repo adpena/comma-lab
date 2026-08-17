@@ -1,4 +1,27 @@
-# ra2 — the carrier rung is REFUSED, but by 11.5× not 179×: subspaces beat keep-sets 15.7×, and the pose metric WINS once you stop confusing the two treatments
+# ra2 — the carrier rung is REFUSED [HEADLINE BAR SUPERSEDED: the miss is 35.5×, not 11.5×]: subspaces beat keep-sets 15.7×, and the pose metric WINS once you stop confusing the two treatments
+
+> ⚠ **SUPERSESSION BANNER (MAIN, 2026-08-16, from ddm_ra3 — headline only; the body's
+> measurements stand).** The "**11.5×**" in the original title is a **LEVEL ERROR** and must
+> not be quoted forward. It compared a **ratio of floored advisory quantities** against a
+> **ratio bar** — two optimistic compressions stacked. On the **priceable axis** (S units,
+> pose cost ÷ rate credit) the same incumbent misses by **110.9×**, and ra3's trust-regioned
+> per-pair refit — the largest gain any carrier arm produced, **3.13×** better, 506/600 pairs
+> improved — still misses by **35.5×**.
+>
+> The family CLOSES at **FORMULATION** scope, and it closes on an argument that needs no
+> mechanism: at **zero** pose damage the rung returns only its bytes — **913–1,847 B =
+> 6.3–12.8% of the gap**. Its best case is a tenth of the target.
+>
+> Also corrected here: the byte **denominator** was never measured. Three credits circulated
+> (1,514 / 1,847 / 1,854 B); through the **shipped** coder it is **913–1,658 B**, i.e.
+> 1.11–2.0× optimistic, because rotated rank-r atoms cost **+6.4% per atom** — pro-rating a
+> basis is an entropy assumption, not arithmetic.
+>
+> Standing consequence (ra3's named obligation, adopted): **no advisory `d_pose` RATIO is
+> quotable forward.** Price on the composed S axis or state the absolute delta. Sisters:
+> [[the-instruments-own-units-level-and-aggregation-are-part-of-the-claim-20260816]] (the
+> ORDERING/LEVEL laws) + [[the_denominator_and_the_falsifier_can_both_be_vacuous_20260816]].
+> Successor memo: `.omx/research/ddm_ra3_subspace_trust_region_refit_20260816.md`.
 
 `date_utc: 2026-08-16` · `owner: ddm_ra2` · `axis: [macOS-CPU advisory, upstream chain, n600]`
 `score_claim: false` · `promotable: false` · `frontier_moved: false`
