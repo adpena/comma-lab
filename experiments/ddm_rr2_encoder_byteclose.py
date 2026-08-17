@@ -80,49 +80,76 @@ sys.path.insert(0, str(REPO / "experiments"))
 CORRECTOR_MODULE = os.environ.get("TAC_RR2_CORRECTOR_MODULE", "ddm_rr2_free_corrector")
 FreeCorrector = importlib.import_module(CORRECTOR_MODULE).FreeCorrector
 
-def _env_path(variable: str, default: str) -> Path:
-    """Input-root override hook for the ddm_pq2 public compression entry point.
+_UNSET_INPUT_ROOTS: list[str] = []
 
-    Every default below is the retained local-custody location, so any existing
-    invocation resolves exactly as before and the sealed byte targets are
-    unchanged -- the override is inert unless a caller sets the variable.  A
-    public runner supplies its own roots through these variables, which is what
-    lets the end-to-end compression script ship without a private filesystem
-    layout baked into it.  Byte-identity across the override is proved, not
-    assumed: rebuilding through this path must still return the pinned archive
-    sha256.
+
+def _required_env_path(variable: str, purpose: str) -> Path:
+    """Resolve one input root from the environment, fail-closed and self-naming.
+
+    ddm_pv1: this script ships **no** local filesystem layout -- there is no
+    default path to silently fall back on.  An unset variable is recorded here
+    and refused by ``_refuse_if_input_roots_unset()`` before any stage does
+    work, so the failure names the missing variable instead of dying later on a
+    mysterious missing file.  A public runner supplies its own roots through
+    these variables, which is what lets the offered compression path ship
+    without a private layout baked into it.  Byte-identity across the override
+    is proved, not assumed: rebuilding through this path must still return the
+    pinned archive sha256.
     """
-    return Path(os.environ.get(variable, default))
+    raw = os.environ.get(variable, "").strip()
+    if not raw:
+        _UNSET_INPUT_ROOTS.append(f"{variable} -- {purpose}")
+        return Path(f"<unset:{variable}>")
+    return Path(raw)
 
 
-PREPARED = _env_path(
+def _refuse_if_input_roots_unset() -> None:
+    """Refuse, naming every missing variable, before any stage touches disk."""
+    if not _UNSET_INPUT_ROOTS:
+        return
+    raise SystemExit(
+        "refusing to run: required input roots are not set.\n  "
+        + "\n  ".join(_UNSET_INPUT_ROOTS)
+        + "\nThis script carries no local filesystem defaults. Set the variables"
+        " above, or use the end-to-end entry point, which sets them for you:\n"
+        "  python experiments/ddm_pq2_compress_e2e.py --emit-inputs-template\n"
+        "  python experiments/ddm_pq2_compress_e2e.py --stage all"
+        " --store <working directory> --inputs-json <your manifest>"
+    )
+
+
+PREPARED = _required_env_path(
     "TAC_PQ2_PREPARED_DIR",
-    "/Volumes/APDataStore/pact/ddm_wc1_advisory_decode_wallclock_20260815/prepared/hv1_base_control",
+    "directory holding the prepared base candidate (archive.zip + runtime)",
 )
 ARCHIVE = PREPARED / "archive.zip"
 ARCHIVE_SHA = "80d9c8c6fdc72caaa3e180a8abb2a859e7f316a484b38f33fe90d5701420178e"
 ARCHIVE_BYTES = 182759
 MEMBER_SHA = "88828f3ded072886c8b4aa56c4215192e2d429fa1d80c173841fab6489052585"
 
-HM1 = _env_path("TAC_PQ2_HM1_DIR", "/Volumes/APDataStore/pact/ddm_hm1_20260816/retained")
+HM1 = _required_env_path(
+    "TAC_PQ2_HM1_DIR",
+    "directory holding the retained base logits, boundary bucket, and group index",
+)
 LOGITS = HM1 / "base_logits_int16_n600.i16"
 BOUNDARY = HM1 / "boundary_bucket_n600.u8"
 GROUP_INDEX = HM1 / "group_index.u8"
-TOKENS = _env_path(
+TOKENS = _required_env_path(
     "TAC_PQ2_TOKENS_FILE",
-    "/Volumes/APDataStore/pact/ddm_hv1_base_advisory_n600_cpu/work_r2/inflated/"
-    ".f26_decode_checkpoints/tokens_cpu_stage_complete.u8",
+    "file holding the decoded 600-frame token field",
 )
 TOKEN_FIELD_SHA = "9ba2e52b3096585895970066b389bf1261ebc203d5b828cdea056c13858aea52"
 
-RC64_SOURCE = _env_path(
+RC64_SOURCE = _required_env_path(
     "TAC_PQ2_RC64_SOURCE",
-    "/Volumes/VertigoDataTier/pact/pr135_intake_20260810/experiment_book/src/cpr1_sub4/entropy/rc64_backend.c",
+    "RC64 range-coder C source (inherited substrate; see the accounting table)",
 )
 RC64_SOURCE_SHA = "5c75e2c70b89f148bc9d117d4dbd39a24dfb2e72ec41b0a7e9b9cf490ca07ee6"
 ROUTE_B = REPO / "experiments/ddm_rc64p_native_cpu_decode/route_b_rc64.py"
 
-STORE = Path("/Volumes/APDataStore/pact/ddm_rr2_encoder_build")
+# ddm_pv1: no local default.  `--store` is required on the command line; the
+# end-to-end entry point always passes it.
+STORE: Path | None = None
 
 N_FRAMES = 600
 HEIGHT, WIDTH = 384, 512
@@ -586,8 +613,17 @@ def main() -> int:
         default=N_FRAMES,
         help="SMOKE ONLY below 600: a prefix cannot close any byte target",
     )
-    parser.add_argument("--store", type=Path, default=STORE)
+    parser.add_argument(
+        "--store",
+        type=Path,
+        required=True,
+        help="working directory for this build; no local default is carried",
+    )
     args = parser.parse_args()
+
+    # ddm_pv1: refuse AFTER argparse (so `--help` still works) and BEFORE any
+    # stage touches disk, naming every input root the caller did not supply.
+    _refuse_if_input_roots_unset()
 
     STORE = args.store
     store = args.store

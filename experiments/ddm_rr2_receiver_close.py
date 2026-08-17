@@ -45,15 +45,53 @@ import zipfile
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
-SOURCE_TREE = Path(
-    "/Volumes/APDataStore/pact/ddm_wc1_advisory_decode_wallclock_20260815/prepared/hv1_base_control"
+
+_UNSET_INPUT_ROOTS: list[str] = []
+
+
+def _required_env_path(variable: str, purpose: str) -> Path:
+    """Resolve one input root from the environment, fail-closed and self-naming.
+
+    ddm_pv1: this script ships **no** local filesystem layout.  An unset
+    variable is recorded here and refused by ``_refuse_if_input_roots_unset()``
+    before any stage touches disk, so the failure names the missing variable
+    rather than dying later on a missing file.  The variable is the same one the
+    encoder stage reads, so one manifest drives both halves of the build.
+    """
+    raw = os.environ.get(variable, "").strip()
+    if not raw:
+        _UNSET_INPUT_ROOTS.append(f"{variable} -- {purpose}")
+        return Path(f"<unset:{variable}>")
+    return Path(raw)
+
+
+def _refuse_if_input_roots_unset() -> None:
+    """Refuse, naming every missing variable, before any stage touches disk."""
+    if not _UNSET_INPUT_ROOTS:
+        return
+    raise SystemExit(
+        "refusing to run: required input roots are not set.\n  "
+        + "\n  ".join(_UNSET_INPUT_ROOTS)
+        + "\nThis script carries no local filesystem defaults. Set the variables"
+        " above, or use the end-to-end entry point, which sets them for you:\n"
+        "  python experiments/ddm_pq2_compress_e2e.py --emit-inputs-template\n"
+        "  python experiments/ddm_pq2_compress_e2e.py --stage all"
+        " --store <working directory> --inputs-json <your manifest>"
+    )
+
+
+SOURCE_TREE = _required_env_path(
+    "TAC_PQ2_PREPARED_DIR",
+    "directory holding the prepared base candidate (archive.zip + runtime)",
 )
 # ddm_rr4: selectable corrector, default unchanged.  The receiver MUST ship the
 # same module the encoder used; cross-check corrector_sha256 in the two receipts.
 CORRECTOR_MODULE = os.environ.get("TAC_RR2_CORRECTOR_MODULE", "ddm_rr2_free_corrector")
 CORRECTOR = REPO / "experiments" / f"{CORRECTOR_MODULE}.py"
-STORE = Path("/Volumes/APDataStore/pact/ddm_rr2_encoder_build")
-CANDIDATE_ARCHIVE = STORE / "retained" / "archive.zip"
+# ddm_pv1: no local default.  `--store` is required on the command line; the
+# end-to-end entry point always passes it.  Both names are rebound in main().
+STORE: Path | None = None
+CANDIDATE_ARCHIVE: Path | None = None
 TOKEN_FIELD_SHA = "9ba2e52b3096585895970066b389bf1261ebc203d5b828cdea056c13858aea52"
 FRONTIER_ARCHIVE_SHA = "80d9c8c6fdc72caaa3e180a8abb2a859e7f316a484b38f33fe90d5701420178e"
 FRONTIER_ARCHIVE_BYTES = 182_759
@@ -297,7 +335,12 @@ def main() -> int:
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--stage", required=True, choices=("build", "parseback"))
-    parser.add_argument("--store", type=Path, default=STORE)
+    parser.add_argument(
+        "--store",
+        type=Path,
+        required=True,
+        help="working directory for this build; no local default is carried",
+    )
     parser.add_argument(
         "--tree",
         type=Path,
@@ -310,6 +353,10 @@ def main() -> int:
         help="names the parse-back work dir and receipt (use 'base' for the matched control)",
     )
     args = parser.parse_args()
+
+    # ddm_pv1: refuse AFTER argparse (so `--help` still works) and BEFORE any
+    # stage touches disk, naming every input root the caller did not supply.
+    _refuse_if_input_roots_unset()
 
     STORE = args.store
     CANDIDATE_ARCHIVE = args.store / "retained" / "archive.zip"
