@@ -284,6 +284,7 @@ comparison; it now has the reason.
 | 2 | Decide which lineage each of the 15 readers needs, then assert it per read | the arm that next touches a lever_b / score_native surface | on next edit to any of them |
 | 3 | Fold gl1's and gl2's discovery onto ONE enumerator so a third census cannot re-fork the rule | whoever proposes a third census | when a third GT census is proposed — refuse it, merge instead |
 | 4 | Obtain or refuse a producer receipt for `91d3ff11…` | whoever next relies on it as a DALI reference | before any claim that needs `PRODUCER_DECLARED` on it |
+| 5 | Resolve the five `gt_poses.f32` stage tables (0/120 exact row matches against either ruler — recorded `UNKNOWN_AMBIGUOUS`, lineage not claimed). The cheap next test is a pose-MSE comparison against each ruler through the stage's own pair-index map, which this unit did not build | the arm that next reads a `taskspace_fresh_scorer_planes_*` stage | before any d_pose number is drawn from those tables, or on the next edit to `taskspace_fresh_selected_plane_codec_v1.py` |
 
 ---
 
