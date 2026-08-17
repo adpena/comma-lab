@@ -28109,3 +28109,40 @@ approximately-cheap one. **The carrier stops consuming slots.**
 
 Memo: `.omx/research/ddm_jc1_carrier_jacobian_posemetric_refit_20260816.md`.
 Pointer UNMOVED: hv1 ep0634 **S 0.15959729295498598 @ 182,759 B [contest-CUDA T4, n600]**.
+
+## FEED-hm1 RESULT — the model-byte derivative, bracketed, and the correction branch closed
+
+**One rung on the whole ladder pays, and it is the one already inside the archive.** Nine realized
+correction-table rungs on hv1 (1 → 9,000 cells, five context families, n600 full field, fitted to
+the convex global optimum, quantized to real RCF1 6-bit codes, priced at `min(raw, brotli-q11)` plus
+the counted margin-bin edges): the shipped 100-byte table returns **335.5 token B, slope −3.355**;
+the next rung returns **2.2 B for +145 B, slope −0.016**. A **210× collapse in one step**, and every
+slope from r2 to r8 sits in **[−0.469, −0.000]**.
+
+**The ceiling kills the family, not the pricing.** Hand the table over for free and its entire reach
+is **356.1 B = ΔS 2.371e-4** against a required cut of **14,413.4 B = ΔS 9.597e-3** — **2.47% of the
+bar**. Pure-rate is proved from source (the table and HPAC weights enter only the probability handed
+to rc64, so the decoded field is bit-identical and both distortion legs are frozen), and with rc4's
+STORED-ZIP finding the joint delta is an archive delta 1:1, so the pointer's own bar applies.
+
+**The knee is now BRACKETED from both sides.** The prior `ddm_hm1` arm (2026-08-10) measured the
+shrink direction on PR130 — removing 420 model bytes costs 484 token bytes, **slope −1.15** — while
+this arm measures the grow direction at **−3.355 then −0.016**. Two vehicles, two mechanisms, so a
+DERIVED bracket rather than one curve; but the shipped model sits at the knee by measurement on both
+sides, not by assertion.
+
+**The law worth carrying: the counted byte is not fungible.** The HPAC network converts counted
+bytes to token bytes at **3.810 B/B** (dc1); the best correction table manages **0.146 B/B**. **26×.**
+Where a counted byte is spent dominates how many are spent — which is why the only live rung left on
+this axis is `ddm_cl1`'s in-network `rate_lambda` reallocation, and why every table / sidecar /
+hand-designed-conditioning proposal on hv1 is now closed at $0.
+
+**I refuted my own instrument too.** Four free-table oracle rows were built to bound any post-hoc
+function of the model output. They do not: a cell index built from that output *replaces* it instead
+of refining it, and even the finest (20,548 occupied cells, free table) costs **+2,097 B more than
+shipped**. Reported as a negative on the instrument — with the one thing it does establish, that the
+model's 5-vector output is not summarizable by hand-designed features.
+
+**Verdict scope: FORMULATION** — additive per-cell logit correction tables on hv1's HPAC output.
+Neural capacity is untouched. Memo: `.omx/research/ddm_hm1_model_byte_derivative_20260816.md`.
+Pointer UNMOVED: hv1 ep0634 **S 0.15959729295498598 @ 182,759 B [contest-CUDA T4, n600]**.
