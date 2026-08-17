@@ -109,9 +109,10 @@ unit; I do not proceed past it.
 **The judge is not weak. It is structurally incapable, at any n — and I can put a number on it.**
 
 The residual-off-the-law test that `rg1b` §6.6 item 2 proposed as "a usable free judge" has an
-**irreducible resolution floor of a 15.3% flip reduction** (`1.96·σ_log = 0.1427` log). The band
-arm's entire measured effect is **6.1%** (`0.0634` log). The floor is **2.25× coarser than the
-signal**, and adding arms cannot close it: `SE_pred = σ·√(1 + 1/n + leverage)` — more arms shrink
+**irreducible resolution floor of a 13.3% flip reduction** (`1.96·σ_log = 0.1427` log, a 1.153×
+ratio). The band arm's entire measured effect is a **6.1% reduction** (`0.0634` log, 1.065×). The
+floor is **2.25× coarser than the signal in log units** (2.16× in percentage-reduction terms), and
+adding arms cannot close it: `SE_pred = σ·√(1 + 1/n + leverage)` — more arms shrink
 `1/n` and the leverage term, but never the leading `1`, which is the new observation's own scatter.
 **No number of arms makes this judge work.** That is the refusal-with-a-number the charter asked for,
 and it retires a proposed free instrument before anyone spends on it.
@@ -492,7 +493,7 @@ is `rg1b` §6.5's untested long-window question and is **not** what this ticket 
 ## §7 Verdict scope
 
 `verdict_scope: FORMULATION` on **the residual-off-the-law judge** — refuted as a direction test for
-effects below ~15% flip reduction, at any n, by the `SE_pred` floor argument in §2.4. This is a
+effects below ~13% flip reduction, at any n, by the `SE_pred` floor argument in §2.4. This is a
 property of the estimator, not of one dataset.
 
 `verdict_scope: INSTANCE` on **the law's curriculum-conditionality** (§2.5) — one held-out arm, one
