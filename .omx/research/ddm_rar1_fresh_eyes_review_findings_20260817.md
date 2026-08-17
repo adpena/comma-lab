@@ -47,6 +47,37 @@ outcomes decisive: (1)≪(2) ⇒ the ranker is the defect and the whole attestat
 treatment; (1)≈(2) ⇒ prose is not indexable and the honest cure is the verdict index #936 already
 reached and parked.
 
+## verdict_scope — per negative, at the NARROWEST level its evidence supports
+
+Three distinct negatives live in this memo and they do NOT share a scope. Declaring one blanket
+level would over-claim two of them.
+
+* **verdict_scope: FORMULATION** — *the author-attestation formulation of the recall cure*
+  (memory rule → `STORES CONSULTED` → `cites_prior_recall` → per-memo citation check). Refuted on:
+  `cites_prior_recall(frd077) = True` while the decisive artifact was missed (the author searched);
+  plus MEASURED adoption decay over a real population (10 `corpus_query` runs in 25,313 Bash
+  invocations; 9 advisory fires on one file across 9 commits with no behavior change; 2 recall
+  tools at exactly 0 executions). **NOT FAMILY:** retrieval-quality cures (BM25/IDF, embeddings)
+  and answer-surface cures (verdict index) are UNTESTED — the recall@10 test named above is
+  exactly the measurement that would license a family-level verdict, and it has not been run.
+  **NOT PARADIGM:** nothing here says recall is unfixable.
+
+* **verdict_scope: INSTANCE** — *auto-extracted title terms as a ranker, on the frd077/sf1 incident*.
+  n=1, three rankings, one incident. This is the weakest of the three and is labelled as such in
+  the tool's own docstring. It cannot support "auto-extraction is refuted" as a general claim; arm 3
+  is explicitly right that it was tested on top of a possibly-broken scorer, so the wrong component
+  may have been blamed.
+
+* **verdict_scope: INSTANCE (implementation fact, not a family verdict)** — *the docstring's stated
+  length-bias MECHANISM*. Refuted by reading `corpus_query.py:246`: the frequency term
+  `min(total,100)*0.3` SATURATES at 30.0 for every top candidate (zero ordering information), and a
+  length-normalized density term already FAVORS the short documents (7.7/4.1 vs 1.9/0.8). The real
+  discriminator is `distinct*10` — term COVERAGE. This is a code fact about one scorer, and its
+  consequence is directional, not terminal: the lever to try next is IDF/rare-term weighting, NOT
+  length normalization.
+
+The FIXED table below records DEFECTS CURED, not verdicts — no scope applies to those rows.
+
 ## Fixed this turn (all verified by measurement)
 
 | # | defect | fix |
