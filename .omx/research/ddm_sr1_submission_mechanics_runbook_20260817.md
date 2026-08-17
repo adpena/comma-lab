@@ -24,6 +24,12 @@ confirm with exact candidate + score + URL. Publishing is outward-facing and irr
    Every copy below uses the rsync exclude form; never bare `cp -r` from APDataStore.
 5. PR body final: the `Download status: pending` line in PR_BODY_DRAFT.md replaced with the
    real release-asset URL (step 3 output) before `gh pr create`.
+6. sr1 F1: BORROWED_SUBSTRATE_ACCOUNTING.md refreshed to the FROZEN candidate (section-level
+   re-accounting per SWAP_PROCEDURE step 4) and staged so README.md:69's link resolves — the
+   packet's strongest honesty document must not ship as a dangling reference.
+7. sr1 F15 (next-candidate law): the receiver must guard its C-compiler dependency fail-closed
+   (command -v cc probe + declared dep) FROM BIRTH — retrofitting changes the runtime-tree
+   hash and forces a refire. fx1 instructed; verify on whichever candidate freezes.
 
 ## Command sequence (executed by MAIN only, after operator confirm)
 
@@ -45,6 +51,9 @@ rsync -a --exclude='._*' --exclude='.DS_Store' \
 rm submissions/rr4_free_corrector/archive.zip
 # verify: no AppleDouble residue, no private paths
 find submissions -name '._*' -o -name '.DS_Store' | wc -l   # must be 0
+# normalize ExFAT 0700 modes (sr1 F3): docs/data 644, executables 755
+find submissions/rr4_free_corrector -type f -exec chmod 644 {} +
+chmod 755 submissions/rr4_free_corrector/inflate.sh
 
 # 2. commit + push the branch to the fork
 git add submissions/rr4_free_corrector

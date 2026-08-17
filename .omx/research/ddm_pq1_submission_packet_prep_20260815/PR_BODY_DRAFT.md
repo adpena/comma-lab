@@ -79,7 +79,8 @@ answer.
   decode-time corrector, splices it into the member, and repacks the archive.
   It then **hashes the result and exits non-zero unless it equals
   `35ac2b9beb7e6fa8…`**. It also writes a second archive from the same member and
-  asserts the two are byte-identical.
+  records whether the two are byte-identical; only the sha and byte-count checks
+  gate the exit code (the repeat result is reported, not exit-gating).
 - **Stage C — decode.** Runs the shipped receiver over the rebuilt archive and
   checks the decoded token field against its pinned SHA-256.
 
@@ -108,7 +109,8 @@ byte-identical to the base candidate's (SHA-256 `9ba2e52b3096…`), so `d_seg` a
 On the exact submitted bytes the measured `[contest-CUDA]` 600-sample score is
 `0.15853325034789678`, which we re-derived from the reported components
 independently. That is below our own prior custodied row and below the best
-score on the leaderboard at the time of writing.
+ranked score on the leaderboard at the time of writing (PR #135,
+`semantic-pose-HPAC_CPR1_polished`, 0.162).
 
 Two honesty qualifications we would rather state than have found:
 
@@ -156,13 +158,13 @@ claim that the learned vehicle is original.
 ## Public source and reproducibility
 
 - Source repository: https://github.com/adpena/comma-lab
-  (VISIBILITY UNRESOLVED — sr1 measured this repo PRIVATE on 2026-08-17; operator decision
-  owed: publish a sanitized source release OR drop this claim + both pins before PR)
+  (PUBLIC — operator-authorized re-publication 2026-08-17; anonymous visibility verified
+  HTTP 200 on the repo and on the evaluation pin, same-day)
 - Evaluation source pin: commit `e7ca85754bb9e6a4b319e5a8fa206366c90bd6f4` — the commit
   the T4 evaluation actually ran from (matches `provenance.pact_commit` in the receipt)
-- Compression-script pin: commit `a411f612aa` — the commit that carries
-  `experiments/ddm_pq2_compress_e2e.py` (the entry point landed AFTER the evaluation pin;
-  two labelled pins are stated rather than one misstated pin)
+- Compression-script pin: commit `a411f612aaf095ec27ff05eaf38c5d8c17f28c30` — the commit
+  that carries `experiments/ddm_pq2_compress_e2e.py` (the entry point landed AFTER the
+  evaluation pin; two labelled pins are stated rather than one misstated pin)
 - Runtime tree SHA-256: `7acedb07e670e76c798f153ac53a3045b053074d702e226411a2353745b98351`
 - Portable executable-runtime content tree:
   `4358aaf34fcbfc1cdc4a8865b9aead709199465c9909321abf279ebcd0fe3721`
