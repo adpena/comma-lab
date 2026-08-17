@@ -1,6 +1,6 @@
 ---
 arm: ddm_pn2
-title: "the pose tax that killed every seg-edit candidate this campaign is REMOVED inside PoseNet's null space -- matched A/B over the COMPLETE pre-registered sample (n=12, same pairs/solver/support/seed, only the projection differs): unprojected d_pose x4.6089 vs projected x0.7935, worth 0.010423 S = 1.09x the whole remaining gap -- and the seg leg does not pay for it (pooled eta 0.5651 -> 0.6111, +8.1%, 10 of 12 pairs, exact sign p=0.0386), with the 2x2-snap confound isolated and measured running the OTHER way (snap -0.0029 eta vs projection +0.0824, n=7); but the channel still does not deliver, because the binding constraint moves from POSE to the seg x rate arithmetic where sr1's waterfill is only a marginal supplier (-0.000526 S, 5.5% of the gap) on IDEAL-entropy bytes no real coder has yet priced (18.5% headroom); separately rt2's DERIVED x1.004 small-support pose leak is accidentally right at one alpha and wrong by 10.4-24.4x at its neighbours, and its alpha=1.0 row is an estimator artifact in which one pair carries 710% of the aggregate excess"
+title: "the pose tax that killed every seg-edit candidate this campaign is REMOVED inside PoseNet's null space -- matched A/B over the COMPLETE pre-registered sample (n=12, same pairs/solver/support/seed, only the projection differs): unprojected d_pose x4.6089 vs projected x0.7935, worth 0.010423 S = 1.09x the whole remaining gap -- and the seg leg does not pay for it (pooled eta 0.5651 -> 0.6111, +8.1%, 10 of 12 pairs, exact sign p=0.0386), with the 2x2-snap confound isolated to COMPLETION (n=12) and measured running the OTHER way (snap -0.0286 eta vs projection +0.0746, so the bare A/B understated the projection; pre-registered FO-2 CLOSED); but the channel still does not deliver, because the binding constraint moves from POSE to the seg x rate arithmetic where sr1's waterfill is only a marginal supplier (-0.000526 S, 5.5% of the gap) on IDEAL-entropy bytes no real coder has yet priced (18.5% headroom); separately rt2's DERIVED x1.004 small-support pose leak is accidentally right at one alpha and wrong by 10.4-24.4x at its neighbours, and its alpha=1.0 row is an estimator artifact in which one pair carries 710% of the aggregate excess"
 utc: 2026-08-17
 charter: "operator/MAIN charter to ddm_pn2, 2026-08-17"
 axis: "[macOS-CPU advisory] frozen CPU-torch SegNet + PoseNet -- NEVER a score"
@@ -42,10 +42,10 @@ frame_utils.py:51-76` and `upstream/modules.py:73,108-109` read at source · mem
    **The confound I found in my own design (§4) is measured and it does not carry the result:**
    `null` mode also snaps the edit support to whole 2×2 blocks (snap_tax **1.77×**), so the bare
    A/B varies projection and support size together — but the isolating control (`--snap-support`,
-   built and run) measures the snap alone at **−0.0029 η** — a small *negative* — against the
-   projection's **+0.0824** at matched support, i.e. **the projection carries the entire gain**, and
-   on pose the snap is mildly *harmful* (0.87×) while the projection is worth **14.7×**. Scope:
-   n=7 of 12, still filling.
+   built and run to **completion, 12/12**) measures the snap alone at **−0.0286 η** — it *hurts* —
+   against the projection's **+0.0746** at matched support. **The projection carries 162% of the
+   observed gain**, i.e. the bare A/B *understated* it; on pose the snap alone is **1.57× worse**
+   while the projection is worth **9.1×**. This closes the pre-registered FO-2.
 3. **The channel still does not deliver the gap.** Removing pose moves the binding constraint, it
    does not close the arithmetic. At the measured projected η, rt1's describe-everything channel
    is a **NON-SUPPLIER (+0.004171 S pose-neutral)** and sr1's waterfill is a **marginal SUPPLIER
@@ -245,29 +245,33 @@ independently of `--mode`, applied to BOTH the solve mask and the realize mask, 
 `None` = legacy behaviour so no existing invocation changes. `--mode free --snap-support true`
 isolates the projection.
 
-**Measured, n=7 matched pairs [33, 66, 81, 89, 280, 299, 322]** — the three-way split:
+**Measured, all 12 matched pairs — the control is COMPLETE** (12/12, both arms finished):
 
 | arm | support | projection | pooled η | `d_pose` ratio |
 |---|---|---|---:|---:|
-| `free` | pixel | none | 0.5588 | ×6.059 |
-| `free --snap-support true` | **2×2 blocks** | none | 0.5559 | ×6.944 |
-| `null` | 2×2 blocks | **pose-null** | 0.6382 | ×0.4720 |
+| `free` | pixel | none | 0.5651 | ×4.609 |
+| `free --snap-support true` | **2×2 blocks** | none | 0.5365 | ×7.243 |
+| `null` | 2×2 blocks | **pose-null** | 0.6111 | ×0.7935 |
 
-- η attributable to the **support snap alone**: **-0.0029**
-- η attributable to the **projection alone**, at matched support: **+0.0824**
-- **the projection carries 103.7% of the η gain**; the snap carries -3.7%
-- pose: the snap alone moves it **0.87×** (slightly *worse*), the projection alone **14.7×** better
+- η attributable to the **support snap alone**: **-0.0286** — it *hurts*
+- η attributable to the **projection alone**, at matched support: **+0.0746**
+- the projection therefore carries **162.1%** of the observed gain — more than all of it, because
+  the snap it drags along is a drag
+- pose: the snap alone makes it **1.57× WORSE** (×4.609 → ×7.243); the projection alone is worth **9.1×**
 
-**So the confound is real and it runs the OTHER WAY.** Growing the support to 2×2 blocks is worth
-**-0.0029 η** on its own — a small *negative* — while the projection at matched support is
-worth **+0.0824**, i.e. the projection carries slightly more than the whole observed
-gain. On pose the snap alone is mildly *harmful* (0.87×) while the projection is worth
-**14.7×**. **The η claim survives de-confounding**, and the confound was never the
-threat it looked like.
+**The confound is real, it is larger than I first measured, and it runs entirely the OTHER WAY.**
+Growing the support to whole 2×2 blocks costs **-0.0286 η** and makes pose **1.57× worse**;
+the projection at matched support is worth **+0.0746 η** and **9.1×** on pose. So the bare
+null-vs-free A/B **understated** the projection: the true projection effect is larger than the
+confounded estimate, not smaller. **The η claim survives de-confounding with room to spare.**
 
-⚠ **Scope:** n=7 of 12; the control arm was still filling at write time and its rows land
-incrementally in `eta_gate_free_snapped_n12/ETA_GATE_ROWS.jsonl`. Seven pairs cannot license a LIVE
-verdict (m96). Re-run the aggregator for the current n; the pre-registered FO-2 reading in §7 stands.
+⚠ **This resolves the pre-registered FO-2 (§7) in its second branch.** The bar was: *snapped-free η
+at or above projected η → the gain is support growth; snapped-free η below projected η → the
+projection genuinely improves seg.* Measured: snapped-free **0.5365** vs projected
+**0.6111** — **below, by +0.0746**. FO-2 is **CLOSED: the projection genuinely
+improves seg.** The mechanism — that a chroma-at-fixed-luma edit is a lower-collateral seg actuator
+because it moves the argmax without disturbing the luminance structure SegNet's stride-2 stem keys
+on — remains a HYPOTHESIS this unit did not test.
 
 ## §5 Joint arithmetic at n600 scale
 
@@ -336,17 +340,13 @@ waterfilled channel is a real supplier; > 5,066 B → sr1's −0.000595 S is an 
 entropy and rt1's CLOSED verdict is restored on better evidence than it had.**
 Owner: a $0 desk arm.
 
-**FO-2 — finish the snap-isolating control (running, $0, local CPU).** `--mode free
---snap-support true`, same 12 pairs, rows landing incrementally. Pre-registered before the run and
-**not amended after the first 3 rows**: if snapped-free η lands at or above the projected η, the
-+14.2% is **support growth, not the projection**, and the seg-reach claim is withdrawn to "the
-projection is seg-NEUTRAL" — still sufficient for the headline, because the headline is the pose
-leg. If snapped-free η stays below projected η, the projection genuinely improves seg and the
-mechanism becomes the live question. **At n=3 it reads the second way** (snapped-free 0.5399 vs
-projected 0.6442); finishing to n=12 is the owed work, and the candidate mechanism to test next is
-that a chroma-at-fixed-luma edit is a *lower-collateral* seg actuator — it moves the argmax without
-disturbing the luminance structure SegNet's stride-2 stem keys on, so it breaks fewer neighbours.
-That mechanism is a HYPOTHESIS this unit did not test.
+**FO-2 — the snap-isolating control — RESOLVED, no longer owed.** `--mode free --snap-support true`,
+same 12 pairs, **completed 12/12**. Pre-registered before the run and not amended: snapped-free η at
+or above projected η → the gain is support growth; below → the projection genuinely improves seg.
+**Measured: snapped-free 0.5365 vs projected 0.6111 — below by 0.0746. CLOSED in the second branch:
+the projection genuinely improves seg**, and the support snap it drags along is a −0.0286 η drag
+that made the bare A/B *understate* the effect. See §4. The open successor is the MECHANISM
+(chroma-at-fixed-luma as a lower-collateral seg actuator), which this unit did not test.
 
 **NOT queued, and why.** A larger-n rerun of the pose leg is the obvious next thought and is worth
 less than it looks: the pose result is already ~14× with the confound running against it, and n600
@@ -361,17 +361,18 @@ read-only for this arm).
 |---|---:|---|
 | `eta_gate_free_n12/ETA_GATE_ROWS.jsonl` | 6638 | `e1f784e08b8c…` |
 | `eta_gate_free_n12/ETA_GATE_VERDICT.json` | 10176 | `228649e64dc4…` |
-| `eta_gate_free_snapped_n12/ETA_GATE_ROWS.jsonl` | 4434 | `3900a50fc28d…` |
+| `eta_gate_free_snapped_n12/ETA_GATE_ROWS.jsonl` | 6665 | `c6a0baeb675a…` |
+| `eta_gate_free_snapped_n12/ETA_GATE_VERDICT.json` | 10213 | `768e7b2d33f9…` |
 | `PN2_VERDICT_partial.json` | 5305 | `ad0f969b9478…` |
-| `PN2_VERDICT.json` | 5361 | `2466e01a1503…` |
+| `PN2_VERDICT.json` | 5426 | `7704e4802ddf…` |
 | `RT2_DEBLUR_LADDER_n2_s20260817_posenull_supf1.json` | 4653 | `e51fc93c9e41…` |
 | `RT2_DEBLUR_LADDER_n24_s20260817_posenull_supboth.json` | 6681 | `f751bb9f83b1…` |
 | `RT2_DEBLUR_LADDER_n24_s20260817_posenull_supf1.json` | 33382 | `da5d1a77868b…` |
 
 `PN2_VERDICT.json` is the machine-readable verdict (matched A/B + three-way decomposition +
-joint arithmetic) at the n reported here; the `RT2_DEBLUR_LADDER_*_sup*` receipts carry per-pair
-`d_pose` and flip rows, not only aggregates. `eta_gate_free_n12` is COMPLETE (12/12);
-`eta_gate_free_snapped_n12` is append-only and was still filling at write time.
+joint arithmetic). The `RT2_DEBLUR_LADDER_*_sup*` receipts carry per-pair `d_pose` and flip rows,
+not only aggregates. **Both eta-gate arms are COMPLETE at 12/12**: `eta_gate_free_n12` (the
+unprojected A/B arm) and `eta_gate_free_snapped_n12` (the snap-isolating control).
 
 Tools landed this unit (commit `44742c4bb1`): `experiments/ddm_rt2_deblur_ladder.py`
 (`--support`, `--edit-frames`, per-pair retention, fail-closed nullity assertion) ·
@@ -389,9 +390,9 @@ decode `0.raw`, the qs3 `gt_argmax_n600.npy`, and `upstream/videos/0.mkv` via
 
 - **No score, no pointer move.** Every number is `[macOS-CPU advisory]`, `score_claim=false`.
 - **The η half of the seg-reach claim is CONFOUNDED** by the 1.77× support snap (§4). Only the
-  pose half is clean. The isolating control (§4) measures the snap at −0.0029 η and the
-  projection at +0.0824 at matched support — so the confound runs *against* the claim, not for it —
-  but that decomposition is **n=7 of 12** and the control was still filling at write time.
+  pose half is clean. The isolating control (§4) measures the snap at −0.0286 η and the
+  projection at +0.0746 at matched support — so the confound runs *against* the claim, not for it,
+  and the bare A/B understated the projection. That decomposition is **COMPLETE at n=12**.
 - **n=12 (solver) and n=24 (ladder) are SCOPE reductions**, seeded-random, never a prefix. Per m96
   a random subset may REFUTE a bar but may not license a LIVE verdict. No LIVE verdict is claimed.
   Per m96's sister finding, prefix bias on the pose axis runs 2.5–4.2× — which is *why* both arms
