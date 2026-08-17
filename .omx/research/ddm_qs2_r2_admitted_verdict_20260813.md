@@ -1,4 +1,16 @@
-# QS2 R2 — FIRST ADMITTED CANDIDATE of the coupled family (2026-08-13, MAIN adjudication)
+# QS2 R2 — FIRST ADMITTED CANDIDATE of the coupled family (2026-08-13, MAIN adjudication) — ⚠ CONSUMED 2026-08-14, see banner
+
+> ⚠ **CONSUMED — this row is NOT banked, NOT held.** Recorded 2026-08-17 by `ddm_bu1`.
+> Five of the six qs2 token events (all but the measured-harmful pair-532) were consumed on
+> 2026-08-14 into `ddm_mc35` → `ddm_mc36` Variant C → **fired on T4 and PROMOTED at net
+> realized ΔS −2.068040e-5**; the current frontier `hv1 ep0634` carries them (hv1's T4 row
+> is component-identical to mc36 at 3,510 fewer bytes). Any "bank" arithmetic citing this
+> row's −4.375e-6 as un-spent double-counts value the frontier already holds. Body below
+> preserved unchanged; only the disposition is superseded. Spawn-site registration:
+> `qs2_re1_bank_union_is_held_and_unfired_20260817` in
+> `.omx/research/falsified_premise_registry.jsonl`. Also portable from the consumption:
+> mc36 beat the naive leg-sum 3.705× by fresh-Schur-solving compensation JOINTLY over the
+> composed object — never price a union as the sum of its legs' compensation objects.
 
 ## The row [contest-CUDA T4 dual-axis component instrument, n600, batch=16 — matched worker family]
 - Candidate: sha `0bb74f1d16e81138975a46c7d4f91f08e1d9fb574930255eac87ccd69f3f8b03` @ 186,286 B

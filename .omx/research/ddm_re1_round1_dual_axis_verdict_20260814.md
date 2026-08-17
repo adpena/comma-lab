@@ -1,4 +1,24 @@
-# ddm_re1 Round-1 dual-axis verdict — ADMITTED net −1.207e-6 (2026-08-14)
+# ddm_re1 Round-1 dual-axis verdict — ADMITTED net −1.207e-6 (2026-08-14) — ⚠ CONSUMED 2026-08-14, see banner
+
+> ⚠ **CONSUMED — this row is NOT banked, NOT held, NOT awaiting a union.**
+> Recorded 2026-08-17 by `ddm_bu1` after MAIN wrote a charter from this memo's
+> headline and spawned an arm to rebuild what we already own.
+>
+> Both re1 events (pairs **96** and **7**) were consumed on 2026-08-14 into
+> `ddm_mc35` → repaired as `ddm_mc36` Variant C → **fired on T4 and PROMOTED at
+> net realized ΔS −2.068040e-5**. Proof is at event-ID level: mc36's runtime
+> parse-back recovers compensation pairs `[7, 96, 105, 176, 178, 517, 523]` =
+> (qs2's six MINUS the measured-harmful 532) ∪ (re1's 96 and 7). The current
+> frontier `hv1 ep0634` carries it — hv1's T4 row returns seg 0.00029611 /
+> pose 6.88e-06, **identical** to mc36's measured values, at 3,510 fewer bytes.
+>
+> The body below is CORRECT as of its own date and is preserved unchanged. Only
+> the disposition is superseded. Registered as a spawn-site falsified premise:
+> `qs2_re1_bank_union_is_held_and_unfired_20260817` in
+> `.omx/research/falsified_premise_registry.jsonl`.
+> Genus: `corrections_land_in_bodies_headlines_keep_the_stale_number_20260805`
+> — here the defect is one layer worse: consumption was recorded only at the
+> CONSUMING row, so the consumed row's own headline never learned it was spent.
 
 Two Modal T4 dispatches closed the re1 arc (~$0.32 total; calls
 fc-01KZZVQNYVFTZ6D7YWWEARKP0Z seg r2 · fc-01KZZX0FGDJ1VWFTJHCWPXDC9B pose).
