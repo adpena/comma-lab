@@ -126,12 +126,37 @@ def decide(tool_input: dict, env: dict) -> tuple[bool, str]:
 
 # --- charter lint (task #1082) --------------------------------------------------
 
-#: Only ``lint_charter_optimal_form`` may gate a spawn. The two recall legs are
-#: advisory FOREVER, exactly as ``codex_arm_queue.cmd_add`` treats them — that
+#: Only ``lint_charter_optimal_form`` may gate a spawn. Every other entry point
+#: is advisory FOREVER, exactly as ``codex_arm_queue.cmd_add`` treats them — that
 #: file's own note reads "so TAC_CHARTER_LINT_STRICT never upgrades an FM result
 #: into a refusal". Mirroring that split is the point of this binding.
 _LINT_STRICT_ENV = "TAC_CHARTER_LINT_STRICT"
-_LINT_NA_TOKEN = "recall_lint_na:"
+
+#: BIND THE UNION ENTRY POINTS, NEVER THE SUB-LEGS (MAIN adjudication, #1082).
+#: The first version of this file enumerated three sub-legs. That is an
+#: ALLOW-LIST, and allow-lists fail open: a sixth recall leg lands inside
+#: ``lint_charter_recall_advisories`` and this path silently goes blind to it —
+#: the exact defect this hook was built to cure, reproduced one level down inside
+#: the cure. Binding the union means new sub-legs are picked up for free.
+_LINT_GATING_ENTRY = "lint_charter_optimal_form"
+_LINT_ADVISORY_ENTRIES = (
+    "lint_charter_recall_advisories",  # union of 5 recall legs (ownership,
+    # stale numbers, falsified premises, frontier literals, bare task ids) and
+    # owner of the ``recall_lint_na:`` opt-out.
+    "lint_charter_capability_advisories",  # cheap, deterministic, registry-read.
+)
+#: Entry points DELIBERATELY not bound, with the reason. The parity suite
+#: enumerates every ``lint_charter_*`` in ``codex_arm_queue`` and FAILS on any
+#: name that is neither bound above nor waived here — a deny-list that is loud
+#: about an unrecognised member instead of passing it in silence.
+_LINT_ENTRY_POINTS_WAIVED = {
+    "lint_charter_fm_advisories": (
+        "model-backed (fm.charter_class, timeout=15s per call). This hook is "
+        "SYNCHRONOUS in the spawn path with a measured 0.02s budget; codex's "
+        "cmd_add is a queueing CLI where a 15s stall is acceptable and this one "
+        "is not. Genuinely path-specific, not an oversight."
+    ),
+}
 
 
 def _load_lint_legs():
@@ -180,24 +205,19 @@ def charter_lint(tool_input: dict, env: dict) -> tuple[bool, list[str], str]:
     advisories: list[str] = []
     handle = None
     try:
-        # ``lint_charter_optimal_form`` takes a path, so the in-memory prompt is
-        # staged to ephemeral scratch. Never an evidence path; deleted below.
+        # Every bound entry point takes a charter PATH, so the in-memory prompt
+        # is staged to ephemeral scratch. Never an evidence path; deleted below.
         with tempfile.NamedTemporaryFile(
             "w", suffix=".md", encoding="utf-8", delete=False
         ) as fh:
             handle = Path(fh.name)
             fh.write(prompt)
-        problems.extend(legs.lint_charter_optimal_form(str(handle)))
-        # Mirror the recall-advisory opt-out so this path is not noisier than
-        # the codex path on the same text.
-        if _LINT_NA_TOKEN not in prompt.lower():
-            for leg in (legs._lint_stale_numbers, legs._lint_falsified_premises):
-                try:
-                    advisories.extend(leg(prompt))
-                except Exception as exc:  # one broken leg must not mute the rest
-                    advisories.append(
-                        f"recall-lint leg unavailable ({type(exc).__name__}: {exc})"
-                    )
+        problems.extend(getattr(legs, _LINT_GATING_ENTRY)(str(handle)))
+        for name in _LINT_ADVISORY_ENTRIES:
+            try:
+                advisories.extend(getattr(legs, name)(str(handle)))
+            except Exception as exc:  # one broken entry point must not mute the rest
+                advisories.append(f"{name} unavailable ({type(exc).__name__}: {exc})")
     except Exception as exc:
         return False, [], f"unavailable:{type(exc).__name__}: {exc}"
     finally:

@@ -1709,8 +1709,20 @@ def lint_charter_optimal_form(prompt_path: str) -> list[str]:
     (family reference cited + scope-vs-mechanism delta + provenance pins) or an
     explicit 'OPTIMAL_FORM_NA:<rationale>' waiver (audits/convocations/pure
     analysis). MVP-first reduces SCOPE (n, epochs), never MECHANISM fidelity.
-    Warn-only by default; TAC_CHARTER_LINT_STRICT=1 refuses (legacy respawn
-    charters predate the law, so strict is opt-in until conformance sweep).
+    STRICT BY DEFAULT since 2026-08-13 (operator "No naive or toy ever"): a
+    charter that fails this lint is REFUSED at ``cmd_add``. The tracked escape is
+    ``TAC_CHARTER_LINT_STRICT=0``.
+
+    HEADLINE-FOLLOWS-BODY (task #1082, 2026-08-17). Until this correction the
+    docstring read "Warn-only by default; TAC_CHARTER_LINT_STRICT=1 refuses" --
+    an EXACT INVERSION of ``cmd_add``'s ``get("TAC_CHARTER_LINT_STRICT", "1")
+    != "0"``. The body was corrected on 2026-08-13 and the headline kept the old
+    semantics for four days, then propagated: it was read as authoritative when
+    writing the #1082 charter, and produced divergent enforcement across the two
+    spawn paths. ``cmd_add`` (line ~1786) is the authority for what this env var
+    means; this paragraph exists so the next reader does not have to guess which
+    of the two is current. Genus:
+    ``corrections_land_in_bodies_headlines_keep_the_stale_number_20260805``.
     """
     problems: list[str] = []
     try:

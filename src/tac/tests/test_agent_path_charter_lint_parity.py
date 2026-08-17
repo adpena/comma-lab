@@ -79,6 +79,31 @@ def _codex_optimal_form(queue, text: str) -> list[str]:
         path.unlink(missing_ok=True)
 
 
+def _write(text: str) -> str:
+    """Stage charter text to a temp file (the codex entry points take paths)."""
+    with tempfile.NamedTemporaryFile("w", suffix=".md", encoding="utf-8", delete=False) as fh:
+        fh.write(text)
+        return fh.name
+
+
+def _codex_advisories(hook, queue, text: str) -> list[str]:
+    """Run every advisory ENTRY POINT the hook binds, on the same text.
+
+    Entry points, not sub-legs. Binding the union is what makes a newly added
+    recall leg appear on both paths for free instead of only on codex's.
+    """
+    out: list[str] = []
+    with tempfile.NamedTemporaryFile("w", suffix=".md", encoding="utf-8", delete=False) as fh:
+        path = Path(fh.name)
+        fh.write(text)
+    try:
+        for name in hook._LINT_ADVISORY_ENTRIES:
+            out.extend(getattr(queue, name)(str(path)))
+    finally:
+        path.unlink(missing_ok=True)
+    return out
+
+
 def _agent_findings(hook, text: str, env: dict | None = None):
     blocked, messages, status = hook.charter_lint({"prompt": text}, env or {})
     return blocked, messages, status
@@ -112,18 +137,51 @@ def test_gating_leg_verdict_is_identical_on_both_paths(hook, queue, name):
 
 
 @pytest.mark.parametrize("name", sorted(CHARTERS))
-def test_advisory_legs_verdict_is_identical_on_both_paths(hook, queue, name):
-    """Both shared recall legs must produce the same advisories on both paths."""
+def test_advisory_verdict_is_identical_on_both_paths(hook, queue, name):
+    """The FULL advisory set must match — union entry points, not a subset."""
     text = CHARTERS[name]
-    codex_advisories = list(queue._lint_stale_numbers(text)) + list(
-        queue._lint_falsified_premises(text)
-    )
+    codex_advisories = _codex_advisories(hook, queue, text)
     _, messages, _ = _agent_findings(hook, text)
     agent_lines = [m.split(": ", 1)[1] for m in messages if m.startswith("charter-lint WARN: ")]
     for advisory in codex_advisories:
         assert advisory in agent_lines, (
             f"{name}: codex advisory {advisory[:80]!r} is missing from the Agent path."
         )
+
+
+def test_union_binding_covers_legs_that_were_previously_codex_only(hook, queue):
+    """The regression that MAIN caught: an enumerated sub-leg list fails open.
+
+    ``_lint_bare_task_ids`` is reachable only through the union entry point. If
+    this file ever goes back to naming sub-legs, this test goes red.
+    """
+    text = "Proceed with #1082 and #1079 as the basis."
+    assert queue._lint_bare_task_ids(text), "fixture no longer trips the leg — vacuous"
+    _, messages, _ = _agent_findings(hook, text)
+    assert any("bare task ids" in m for m in messages), (
+        "a leg inside the union entry point is not reaching the Agent path"
+    )
+
+
+def test_every_lint_entry_point_is_bound_or_explicitly_waived(hook, queue):
+    """DENY-LIST, not allow-list: fail LOUD on an unrecognised entry point.
+
+    Allow-lists fail open — that is the genus this whole task cures. A new
+    ``lint_charter_*`` entry point must be bound or waived with a reason; it may
+    not simply be unmentioned, because unmentioned is how the Agent path went
+    blind in the first place.
+    """
+    discovered = {n for n in dir(queue) if n.startswith("lint_charter_") and callable(getattr(queue, n))}
+    accounted = {hook._LINT_GATING_ENTRY, *hook._LINT_ADVISORY_ENTRIES, *hook._LINT_ENTRY_POINTS_WAIVED}
+    unaccounted = discovered - accounted
+    assert not unaccounted, (
+        f"unbound charter-lint entry point(s) {sorted(unaccounted)} — bind them in "
+        "_LINT_ADVISORY_ENTRIES or waive them with a reason in "
+        "_LINT_ENTRY_POINTS_WAIVED. Silence is how this defect was born."
+    )
+    assert accounted - discovered == set(), "the hook names an entry point codex no longer has"
+    for name, reason in hook._LINT_ENTRY_POINTS_WAIVED.items():
+        assert len(reason) > 40, f"{name}: waiver reason is a placeholder"
 
 
 # --- POSITIVE CONTROLS: prove the instrument can fail ---------------------------
@@ -210,13 +268,7 @@ def test_recall_lint_na_opt_out_matches_codex(hook, queue):
     assert any("FALSIFIED premise" in m for m in _agent_findings(hook, base)[1])
 
     # with the opt-out both paths fall silent.
-    with tempfile.NamedTemporaryFile("w", suffix=".md", encoding="utf-8", delete=False) as fh:
-        path = Path(fh.name)
-        fh.write(text)
-    try:
-        codex_advisories = queue.lint_charter_recall_advisories(str(path))
-    finally:
-        path.unlink(missing_ok=True)
+    codex_advisories = queue.lint_charter_recall_advisories(_write(text))
     _, messages, status = _agent_findings(hook, text)
     assert status == "ran"
     assert codex_advisories == [], "codex honours recall_lint_na"
