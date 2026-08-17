@@ -556,3 +556,20 @@ the population).
 FRD077 seg-neutral (0.18σ → ~0.17σ at σ=651) · q3q4 lever −563 = 0.61 of the measured 921
 two-run band, still within noise · F1 block (endpoint = init to 17 digits) is structural zero,
 σ-independent.
+
+## §7.3 — LR1E5D (lr-DOWN rung) adjudicated: NULL — the lr axis is CLOSED on this window
+
+LR1E5D (lr 1.0e-5 = 0.5× baseline, seed 20260715, argv otherwise identical; rc=0, 1,219 s,
+byte-neutral 40,252 B, best_step 3000 at cap, EMA parity clean) endpoint
+quantized_exact_seg 0.00027326795789930556 → **−1,521 flips vs init** (init 33,757 → 32,236).
+Against the SEALED ensemble-calibrated pre-registration (PREREGISTRATION.json, the first
+consumer of `seed_ensemble_falsifier_band_v1`): inside the NULL band (−2,477 … −1,174),
+**0.47σ from the two-seed ensemble mean −1,825.5** — indistinguishable from the controls.
+**Verdict: NULL_2e-5_is_plateau** (verdict_scope: formulation — lr scaling of the aligned
+expected-flip window on the semantic renderer, this init/schedule, single-seed rung read).
+Both directions now measured: UP 3× = WEAKENED-DIRECTIONAL worse (§7.1–7.2), DOWN 2× = NULL
+⇒ lr 2e-5 sits on a plateau; rung 3 (10×) permanently cold for this window; **the lr axis is
+not the lever here**. Routing: §8 item 4 (the transfer measurement — where the advisory
+training win lives in byte-closed S) is now the window family's head.
+STORES CONSULTED: LR1E5D result.json + PREREGISTRATION.json (payloads retained per the law),
+EF3000/EF3000_SEED2 controls, seed_ensemble_falsifier_band_v1.
