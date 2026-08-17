@@ -2,7 +2,7 @@
 
 Date: 2026-08-16 · Owner: ddm_dc1 · Axis: `[macOS-CPU advisory / scorer-free byte measurement]`
 `score_claim=false` · `promotable=false` · pointer UNMOVED at 0.15959729295498598 @ 182,759 B.
-Workspace + payloads: `/Volumes/APDataStore/pact/ddm_dc1_20260816/` (33 artifacts,
+Workspace + payloads: `/Volumes/APDataStore/pact/ddm_dc1_20260816/` (61 artifacts,
 `RETENTION_MANIFEST.json`, every re-coded candidate payload kept with sha256).
 
 ## Verdict
@@ -25,10 +25,19 @@ axis might be unmeasured because #996 used a *memoryless* bound. Two things are 
    FiLM, plus a 25×5 boundary-residual correction table — and feeds its softmax to an rc64 range
    coder. Conditional coding is not an unexplored axis here; it is 61.4% of the archive.
 
-**The one number that decides it:** a table-free adaptive context model — zero counted table bytes,
-so it could DELETE the 13,515 B HPAC section — needs **177,109 B** for the token field. The shipped
-token subsystem costs **125,625 B** (112,110 stream + 13,515 model). Dropping the learned prior
-would **cost +51,484 B**. The learned prior pays for itself **3.8× over**.
+**The two numbers that decide it.**
+
+1. **The range coder is 7.80 bytes from optimal.** I replayed the shipped native decode and
+   accumulated `−log2 p[actual symbol]` from the very buffer rc64 consumes. HPAC's own cross-entropy
+   over the full n600 field is **112,109.578 B**; rc64 consumed **112,117.375 B**. Overhead
+   **+7.80 B = +0.00696%**, and the 8-frame prefix showed +7.74 B — so it is a **constant flush
+   cost, not a rate**. The maximum possible prize from any coder swap on 61.4% of the archive is
+   **7.8 bytes**. The replay is byte-identical to the shipped decode: `decoded_token_sha256`,
+   `corrected_cdf_input_sha256` and `corrected_quantized_logit_sha256` all match the wc1 receipt.
+2. **The learned prior is worth 3.8× its counted bytes.** A table-free adaptive context model — zero
+   counted table bytes, so it could DELETE the 13,515 B HPAC section — needs **177,109 B** for the
+   token field. The shipped token subsystem costs **125,625 B** (112,110 stream + 13,515 model).
+   Dropping the learned prior would **cost +51,484 B**.
 
 ## What I measured, and on which base
 
@@ -150,6 +159,7 @@ of LEARNED MODEL**, versus **`native_probability_and_rc64` 4.55 s of CODER**. Fu
 |---|---:|---:|---:|---|
 | **shipped learned HPAC prior (already banked)** | **+127.65** | **−51,484** | **+403** | BANKED |
 | drop the prior → best table-free KT coder | −127.65 | **+51,484** | — | LOSS |
+| **a PERFECT coder replacing rc64 (measured ceiling)** | any | **−7.8** | ~0 | **CEILING** |
 | rc64 → brotli-q11 on the token stream | ~0 | +5 | 0 | LOSS |
 | rc64 → ANS (measured on the F26 ancestor, lp135) | ~0 | +6 … +9 | 0 | LOSS (INHERITED) |
 | recode semantic / carrier | 0 | +0 (byte-identical) | 0 | NO-OP |
@@ -178,12 +188,10 @@ its own bound. **The coder axis is closed on hv1, at the conditional level, meas
 
 ## What I did NOT measure — stated plainly
 
-1. **HPAC's own cross-entropy on hv1 (the direct rc64-tightness number).** I inferred rc64 is tight
-   from (a) my hv1 race (brotli-q11 on the coded stream +5 B) and (b) the F26-ancestor lp135 row
-   where RC64 *beats* ANS by 6–9 B. That inference is **INFERRED, not MEASURED, on hv1**. The
-   precedent worth respecting: on PR130 the *range* coder sat +1.85% above its model and ANS
-   harvested 2,120 B. If hv1's rc64 were similarly loose, ~2,075 B would be available. The
-   ancestor measurement says it is not, but the cheap way to settle it is below.
+1. ~~HPAC's own cross-entropy on hv1.~~ **NOW MEASURED — this item is CLOSED** (see the verdict).
+   The concern was real and worth closing: on PR130 the *range* coder sat +1.85% above its model and
+   ANS harvested 2,120 B, so if hv1's rc64 were similarly loose ~2,075 B would have been available.
+   It is not: hv1's rc64 is +0.00696%, a constant 7.80 B flush. The PR130 looseness did not transfer.
 2. **The charter's "831.5 s contest-CPU decode" anchor is UNVERIFIABLE from any artifact I can
    reach** — no such figure exists in `.omx/research/` or the canonical task ledger. What I can
    verify: the retained hv1 CPU receipt is stamped `score_axis: cpu_env_mismatch_advisory` with
@@ -210,16 +218,26 @@ does not bind the HPAC-class prior on this object.
 
 | # | row | owner | fire condition | cost |
 |---|---|---|---|---|
-| 1 | Measure HPAC's own cross-entropy on hv1 by accumulating `−log2 p[actual]` from the native decoder's `trace_probability` buffer (`f26_hpac_native.py:560`), verifying against the retained `corrected_cdf_input_sha256`. Settles rc64 tightness on hv1 and closes owed item 1. | ddm_dc1 successor | fires now; ~150 s local, no dispatch | $0 |
+| 1 | ~~Measure HPAC's own cross-entropy on hv1.~~ **FIRED AND CLOSED this unit** — 215.8 s local, byte-identical replay, rc64 overhead +7.80 B (+0.00696%). Receipt `retained/hpac_cross_entropy_n600.json`. | ddm_dc1 | done | $0 |
 | 2 | **d(tokens)/d(model): does a larger HPAC prior keep returning >1 B per counted byte?** The only live cell in the rate axis. Needs training, so it is blocked while Modal is at $18.62/$20. | model owner | Modal budget reopens, or a local MLX training path lands | GPU |
 | 3 | Carrier is +18 B (+0.08%) above its own order-0 floor and ra2's arithmetic coder already found +263 B raw / ~230 B realized there. That is the only section with any measured slack, and it is 1.6% of the gap. | ddm_ra2 | already owned by ra2 | $0 |
 | 4 | Retire the coder family from the arm queue: no arm should propose a coder race on any hv1 section. Point them at this memo's race table. | MAIN | on read | $0 |
 
 **No fire-order is emitted.** No candidate archive was produced; nothing here is worth an exact row.
 
+## System-intelligence wire-in
+
+The structural bug here is not the closure — it is that the closure was measured once on PR130 and
+then *cited* on four downstream bases without re-measurement. `tools/audit_archive_coder_axis.py`
+makes re-pointing it a one-command operation on any RX1 archive: section census, samples-per-symbol,
+order-0 bound, order-1 oracle **and** order-1 adaptive (so the density trap is impossible to
+misread), plus a real coder race with every candidate payload retained. It reproduces every number
+in this memo independently and prints a `coder_axis_closed` / `coder_axis_open` verdict with the
+best available saving in bytes. **No arm should ever again inherit this closure — run the tool.**
+
 ## Receipts
 
-- `/Volumes/APDataStore/pact/ddm_dc1_20260816/RETENTION_MANIFEST.json` — 33 artifacts, 404,309,845 B,
+- `/Volumes/APDataStore/pact/ddm_dc1_20260816/RETENTION_MANIFEST.json` — 61 artifacts, 524,710,243 B,
   every payload with sha256 (raw sections, shipped sections, all 12 re-coded candidates, context
   count tables).
 - `retained/token_conditional_entropy.json` · `retained/deep_context_ladder.json` ·
