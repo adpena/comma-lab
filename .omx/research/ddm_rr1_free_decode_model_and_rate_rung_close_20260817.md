@@ -14,18 +14,19 @@ archive sha256 `80d9c8c6fdc72caaa3e180a8abb2a859e7f316a484b38f33fe90d5701420178e
 ## ANSWER
 
 **This archive cannot supply −14,414 B on the rate axis. Total measured, composable, pure-rate
-supply is now 1,549 B — 10.75% of the bar — and 89.25% of the bar has no measured supplier at
+supply is now 1,876 B — 13.0% of the bar — and 87.0% of the bar has no measured supplier at
 all.** The one thing that can supply the rest is not a rate lever: it is `ddm_rc4`'s token drop,
 already measured at −1.19754e-2 S on rate and −3.243e-3 S on rate+seg (125% of the bar in bytes),
 **gated entirely on whether the frame-0 Schur compensator can absorb its +0.174319 S pose leg.**
 
-**The new number this arm produced: 1,549 B of the token stream are recoverable at ZERO archive
+**The new number this arm produced: 1,598 B of the token stream are recoverable at ZERO archive
 cost and ZERO distortion, by a decode-time model that ships in `inflate.py` for free under rule
-118.** Measured at n600 on the real field, with the shipping decoder's own probability tables
-reproduced byte-identically. That is `ΔS = −1.0314e-3`, **10.75% of the gap**, clearing the
-standing −3.5e-6 admission bar by **294.7×**, and it is **4.35× the previous free-side ceiling**
-(`ddm_hm1`'s 356.1 B) and **119× the largest rule-118 arbitrage ever realised in this repo**
-(`ddm_m6`'s 13 B).
+118.** Measured at n600 on the real field across three independent stages, with the shipping
+decoder's own probability tables reproduced byte-identically. That is `ΔS = −1.0640e-3`,
+**11.09% of the gap**, clearing the standing −3.5e-6 admission bar by **304.1×**, and it is
+**4.49× `ddm_hm1`'s free-table ceiling** (356.1 B). For scale: the largest rule-118 arbitrage a
+corpus survey turned up is `ddm_m6`'s 13 B — I did not search exhaustively, so read that as the
+largest one *recorded*, not a proof none is larger.
 
 The mechanism is proven, not asserted: **HPAC sees exactly one frame of history, and frames
 t−2…t−4 are sitting in the decoder's own output buffer for free.** Verified at source
@@ -34,7 +35,7 @@ each frame; the FiLM carries only the frame index). The negative control confirm
 context term HPAC *already* sees (agreement with t−1) changes the result by **−18.13 B**, while
 adding run length over t−1…t−4 adds **+1,108.60 B**.
 
-**It is NOT byte-closed.** No archive was built. 1,549 B is a MEASURED code length converted to a
+**It is NOT byte-closed.** No archive was built. 1,598 B is a MEASURED code length converted to a
 PROJECTED archive byte count through a MEASURED constant coder overhead. Realising it needs a
 receiver change and a matching encoder. That build is the fire-order below — and it is a build
 order, not a T4 order, because there is no candidate archive to dispatch.
@@ -66,7 +67,7 @@ section is a byte off `archive.zip` 1:1; framing = **100 B**. `RX1M` header pars
 | **4. token drop** | 112,110 B token stream | **REFUSED uncompensated** | **FORMULATION** | hv1 | 17,985 B; rate −1.19754e-2, seg +8.7325e-3, **pose +0.174319 = 517.5× over budget** |
 | **4b. coder refit** | all 4 sections | **CLOSED** | measured on hv1 | hv1 | rc64 is **+0.42 B** over HPAC's cross-entropy on the shipped stream; any coder swap ceiling **≤ 7.8 B** |
 | **4c. free correction table** | RCF1 axis | **CLOSED** | 9 rungs, 5 context families | hv1 | free-table ceiling **356.1 B**; derivative collapses **210× in one step** past the shipped 25 cells |
-| **4d. free DECODE-TIME model** | 112,110 B token stream | **OPEN — supplier found** | this arm | hv1 | **1,549 B at zero bytes, zero distortion** |
+| **4d. free DECODE-TIME model** | 112,110 B token stream | **OPEN — supplier found** | this arm | hv1 | **1,598 B at zero bytes, zero distortion** |
 
 Rungs 1–3 ran on hv1 (rung 3's students are a separate object, as `wd3` states). `ddm_mz2`'s
 byte census ran on **e480b (183,502 B)** against a **15,153 B** bar — a different archive and a
@@ -159,7 +160,7 @@ n600, 77.2 s.
 |---|---:|---:|---:|---:|---:|
 | G1 hit, run length 4 (= stage 1 F4) | 110,660.78 | 1,448.79 | −9.647e-04 | 10.05 | 275.6 |
 | G2 run length 8 | 110,585.28 | 1,524.29 | −1.015e-03 | 10.58 | 290.0 |
-| **G3 + prev2 agreement — BEST** | **110,559.71** | **1,549.87** | **−1.032e-03** | **10.75** | **294.9** |
+| **G3 + prev2 agreement — stage 2 best** | **110,559.71** | **1,549.87** | **−1.032e-03** | **10.75** | **294.9** |
 | G4 = G3 + adaptive miss branch (M1) | 110,590.32 | 1,519.26 | −1.012e-03 | 10.54 | 289.0 |
 | G5 = G3 + richer miss branch (M2) | 110,610.54 | 1,499.04 | −9.981e-04 | 10.40 | 285.2 |
 | M2 miss branch alone | 112,160.41 | **−50.84** | +3.385e-05 | −0.35 | — |
@@ -183,19 +184,52 @@ cannot repay its own learning cost. Stage 1's choice to model only the hit/miss 
 right target by 89×. `verdict_scope: INSTANCE` — these two miss-context forms, this vehicle. The
 branch itself is 1.11% of the stream and is not worth another arm.
 
-### 2.7 The byte arithmetic, and exactly what is measured vs projected
+### 2.7 Stage 3 — per-group statistics, and where the ladder saturates
 
-* **MEASURED** — code length under G3: **110,559.71 B**; shipped HPAC cross-entropy
+Stage 2's last stated reduction was that statistics were refreshed only at frame boundaries.
+That was conservative rather than faithful: the shipped decoder already processes a frame as
+**190 causal patch groups**, decoding a whole group at once and then moving on, so a decoder
+that refreshes at group boundaries is doing exactly what the existing loop does. Stage 3
+measures it, and sweeps two richer free contexts in the same pass. n600, 49.1 s.
+
+| rung | contexts | warm | code B | saved B | ΔS | % of gap | admission × |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| **H1 = G3 context, per-GROUP updates — BEST** | 51,200 | 9,613 | **110,511.28** | **1,598.30** | **−1.064e-03** | **11.09** | **304.1** |
+| H2 = H1 + previous-frame neighbour agreement | 256,000 | 11,642 | 110,567.68 | 1,541.89 | −1.027e-03 | 10.70 | 293.3 |
+| H3 = H1 with run length to 16 | 102,400 | 15,317 | 110,542.00 | 1,567.58 | −1.044e-03 | 10.88 | 298.2 |
+
+Controls: cross-entropy reproduced; and the pre-registered guard that a strictly faster-adapting
+estimator must not lose ground **held** (H1 1,598.30 ≥ stage 2's G3 1,549.87).
+
+Two readings:
+
+1. **Granularity is worth +48.43 B** — real, and it removes stage 1 and 2's LOWER-bound caveat.
+   The effect shows from the first frame: at frame 0 the per-group model already saves 3.7 B,
+   where the frame-granularity model necessarily saved nothing.
+2. **The context ladder has SATURATED, and both richer contexts now LOSE.** The neighbour term
+   costs **−56.40 B** and deeper run length **−30.72 B**. The reason is legible in the table:
+   H2 spends 256,000 contexts to warm only 11,642 of them. Past ~50,000 contexts the estimator
+   is paying more in learning cost than the finer conditioning returns. `verdict_scope:
+   FORMULATION` — count-based per-context log-odds correction on this vehicle. A mixed or
+   shrinkage estimator (which shares strength across sparse contexts instead of splitting it)
+   is a different family and is not bounded by these rows.
+
+**H1 is the measured optimum of this estimator family: 1,598.30 B.** The ladder is no longer
+climbing — it has turned over — so this is a ceiling for the form, not a lower bound.
+
+### 2.8 The byte arithmetic, and exactly what is measured vs projected
+
+* **MEASURED** — code length under H1: **110,511.28 B**; shipped HPAC cross-entropy
   **112,109.578 B**; shipped token stream **112,110 B**, so the realised coder overhead is
   **+0.42242 B** (`dc1` independently measured this as a constant flush, +7.74 B at an 8-frame
   prefix vs +7.80 B at n600 on the decoder's bit position — a constant, not a rate).
-* **PROJECTED** — new token stream `110,559.71 + 0.42242 = 110,560.13 → 110,561 B`;
-  saving **1,549 B**; archive **181,210 B**; `ΔS = −0.00103142`; **S = 0.15856588**.
+* **PROJECTED** — new token stream `110,511.28 + 0.42242 = 110,511.70 → 110,512 B`;
+  saving **1,598 B**; archive **181,161 B**; `ΔS = −0.00106404`; **S = 0.15853325**.
 * The projection carries sub-byte uncertainty **only** because the ZIP member is STORED and the
   coder overhead is a measured constant. It is still a projection: **no archive was built and no
   `archive.zip` was stat'd.** Label it PROJECTED wherever it is quoted.
 
-### 2.8 Decode cost
+### 2.9 Decode cost
 
 The corrector is a table gather plus a sigmoid over 196,608 positions per frame. Stage 2
 evaluated **five** models plus the full base reconstruction over all 600 frames in **77.2 s** of
@@ -217,13 +251,13 @@ Pure-rate supply on hv1, every row measured:
 
 | source | bytes | % of 14,414 B bar | status |
 |---|---:|---:|---|
-| **free decode-time model (this arm)** | **1,549** | **10.75%** | MEASURED, zero distortion, needs a build |
+| **free decode-time model (this arm)** | **1,598** | **11.09%** | MEASURED, zero distortion, needs a build |
 | `ra2` CPR1 inner coder + `ra1` basis_scales gauge | ~278 | 1.93% | raw MEASURED / realised PROVISIONAL (117 B uncertainty), unowned, unfired |
 | any coder swap | ≤ 7.8 | 0.05% | ceiling, CLOSED |
 | free correction table | (356.1) | (2.47%) | CLOSED — and subsumed by row 1, not additive |
 | ZIP framing | 0 | 0% | structural floor, 30+1+46+1+22 |
-| **total measured composable** | **~1,827** | **~12.7%** | |
-| **residual with no measured supplier** | **~12,587** | **~87.3%** | |
+| **total measured composable** | **~1,876** | **~13.0%** | |
+| **residual with no measured supplier** | **~12,538** | **~87.0%** | |
 
 The lossy representation families are all refused above. The only unmeasured multi-KB rate cell
 is **HPAC network capacity growth** (`HPAC_CHANNELS`/`HPAC_PATCH`), which is training-blocked and
@@ -254,26 +288,27 @@ temporally stable, so the free credit could move either way. Unmeasured; stated 
 be a fake.** What exists is a measured code length and the exact build that realises it.
 
 ```
-TARGET (pre-registered, byte-closed):  archive.zip == 181,210 B  (+/- 2 B)
-                                       token stream == 110,561 B
+TARGET (pre-registered, byte-closed):  archive.zip == 181,161 B  (+/- 2 B)
+                                       token stream == 110,512 B
                                        every other section byte-identical to 80d9c8c6...
-FALSIFIED IF:                          the built archive exceeds 181,300 B, or the decoded
+FALSIFIED IF:                          the built archive exceeds 181,250 B, or the decoded
                                        token field is not bit-identical to sha 9ba2e52b...
 ```
 
 Build, in order:
 
 1. **Receiver** — add the adaptive corrector to `runtime/residual_archive.decode_production_tokens`,
-   immediately after `corrected = base_logits + parts.table.values[feature]`: maintain the G3
-   context tables, apply `delta` before `_probability_table`, update from the decoded frame. All
-   constants generic and hard-coded. `inflate.py` is unsized; no archive byte changes.
+   immediately after `corrected = base_logits + parts.table.values[feature]`: maintain the H1
+   context tables (= the G3 context, statistics refreshed at each of the 190 group boundaries),
+   apply `delta` before `_probability_table`, update from the decoded group. All constants are
+   generic and hard-coded. `inflate.py` is unsized; no archive byte changes.
 2. **Encoder** — mirror the identical rule when producing the token stream. The two must be one
    function used twice, not two implementations, or they will drift.
 3. **Parse-back** — decode the rebuilt archive and assert the token field reproduces sha
    `9ba2e52b…` bit-identically. This is the whole distortion proof: if the field is identical,
    `d_seg` and `d_pose` cannot have moved.
 4. **Byte-close** — `stat` the rebuilt `archive.zip` against the pre-registered target above.
-5. **Only then** does a T4 row make sense, and only bundled with other credit — 10.75% of the bar
+5. **Only then** does a T4 row make sense, and only bundled with other credit — 11.09% of the bar
    does not justify a solo dispatch.
 
 Owner: rate owner. Cost: $0 local build + a rebuild. Prerequisite: none.
@@ -283,10 +318,12 @@ Owner: rate owner. Cost: $0 local build + a rebuild. Prerequisite: none.
 ## 5. Honest limits
 
 1. **Not byte-closed.** Stated four times above because it is the one caveat that matters.
-2. **Frame-granularity statistics.** Every number is a LOWER bound: a per-group updater (190
-   groups/frame, 114,000 update steps instead of 600) adapts strictly faster. Unmeasured.
-3. **Context space unswept.** I measured 8 forms. There was no systematic sweep, and the ladder
-   was still climbing at G3 (+25.58 B from the last term added). The 1,549 B is not a ceiling.
+2. ~~Frame-granularity statistics.~~ **CLOSED by stage 3** (+48.43 B, §2.7). The headline is no
+   longer a granularity lower bound.
+3. ~~Context space unswept.~~ **CLOSED by stage 3**: the ladder turned over. Both richer contexts
+   lose to dilution, so 1,598.30 B is the measured ceiling *of this estimator family*. A
+   shrinkage or mixing estimator that shares strength across sparse contexts is a different
+   family and remains unbounded by these rows — the one genuinely open door on this axis.
 4. **Decode cost is an instrument timing**, not a receiver timing (§2.8).
 5. **Composition with any future token field is unmeasured** (§3).
 6. `verdict_scope` on the negatives: the miss-branch correction is **INSTANCE** (two context
@@ -301,14 +338,16 @@ Bars must be read from
 `tac.canonical_equations.sub015_pure_rate_archive_byte_bar_20260816.pure_rate_byte_bar_from_pointer()`,
 never from a literal.
 
-| # | row | owner | fire condition | ready? |
-|---|---|---|---|---|
-| 1 | **Build the free corrector** into receiver + encoder and byte-close against the 181,210 B target in §4. Zero distortion by construction; the parse-back is the proof. | rate owner | immediate, $0 local | design READY, build owed |
-| 2 | **Per-group statistics.** Re-run the G3 ladder updating at group boundaries (190×/frame). Pure upside on a measured lower bound; ~1 h of CPU. | ddm_rr1 successor | with row 1 | instrument READY (`--frames`/tag already parameterised) |
-| 3 | **Context sweep.** G3 was still climbing. Add depth-3/4 run-length, previous-frame neighbourhood pattern, and a mixed second predictor. | ddm_rr1 successor | after row 1 lands the plumbing | READY |
-| 4 | **Re-measure the free credit on any new token field.** Binding on the Schur-compensated drop, on any HPAC capacity change, and on any semantic-width change. Not additive with them. | whoever moves the field | at that arm's harvest | — |
-| 5 | **Retire `ra2`'s vacuous gate.** The CPR1 inner-coder row (~230–278 B, zero distortion, clears admission by 44–53×) is blocked only by its own "fire when a ≥2 KB rung is in flight" clause. **Row 1 above is a 1,549 B rung in flight — the gate's condition is now satisfied.** | ra2 / rate owner | row 1 charters | needs repack-layer re-measure (117 B uncertainty) |
-| 6 | **The bar is 14,414 B strict, ceiling ≤ 168,345 B.** The e480b-lineage `−15,157 B` and the `<186,269 B` MC36 bar are both stale; this memo is the eighth site to correct them. | MAIN | standing | — |
+| # | row | disposition | owner | fire condition | ready? |
+|---|---|---|---|---|---|
+| 1 | **Build the free corrector** into receiver + encoder and byte-close against the 181,161 B target in §4. Zero distortion by construction; the parse-back is the proof. | **QUEUED-WITH-A-FIRE-ORDER** (§4 carries the pre-registered target and falsifier) | rate owner | immediate, $0 local build | design READY, build owed |
+| 2 | Per-group statistics. | **FIRED this turn** → +48.43 B, folded into the headline (§2.7) | — | — | done |
+| 3 | Context sweep. | **FIRED this turn** → SATURATED; both richer contexts lose (§2.7) | — | — | done |
+| 4 | **Shrinkage / mixing estimator.** Stage 3 shows the count-based per-context estimator has turned over on context richness. An estimator that SHARES strength across sparse contexts (hierarchical shrinkage, or logistic mixing of two coarse predictors) is a different family and is not bounded by any row here. It is the one open door left on this axis. | **QUEUED** | ddm_rr1 successor | after row 1 lands the receiver plumbing | instrument READY to fork |
+| 5 | **Re-measure the free credit on any new token field.** Binding on the Schur-compensated drop, on any HPAC capacity change, and on any semantic-width change. Not additive with them. | **QUEUED** | whoever moves the field | at that arm's harvest | — |
+| 6 | **Retire `ra2`'s vacuous gate.** The CPR1 inner-coder row (~230–278 B, zero distortion, clears admission by 44–53×) is blocked only by its own "fire when a ≥2 KB rung is in flight" clause. **Row 1 above is a 1,598 B rung in flight, so the gate's own condition is now satisfied** — it should fire or be retired, not sit. | **QUEUED-WITH-A-FIRE-ORDER** | ra2 / rate owner | row 1 charters | needs repack-layer re-measure (117 B uncertainty) |
+| 7 | **The bar is 14,414 B strict, ceiling ≤ 168,345 B.** The e480b-lineage `−15,157 B` and the `<186,269 B` MC36 bar are both stale; this memo is the eighth site to correct them. | standing correction | MAIN | standing | — |
+| 8 | **Receiver-integrated decode-time row** for the corrector (§2.9). My figure is an instrument timing, not a decode timing. Must land with row 1, not after it. | **QUEUED** | rate owner | with row 1 | — |
 
 **Retracted / not claimed:** no fire-order, no candidate archive, no exact eval, no byte-closed
 row. The pointer did not move and this arm did not move it.
@@ -317,26 +356,29 @@ row. The pointer did not move and this arm did not move it.
 
 ## Artifacts (ALWAYS KEEP THE PAYLOAD)
 
-Store root `/Volumes/APDataStore/pact/ddm_rr1/`. 52 files, **1,849,426 B**, every one with
+Store root `/Volumes/APDataStore/pact/ddm_rr1/`. **61 files, 8,411,406 B**, every one with
 sha256 + byte count in `RETENTION_MANIFEST.json`. Nothing was measured and discarded.
 
 | result | bytes | sha256 (16) |
 |---|---:|---|
-| `FREE_MODEL_HEADROOM_n600.json` | 6,180 | `6f13c45ab67561be` |
-| `FREE_MODEL_OPTIMAL_FORM_n600.json` | 6,992 | `4afb1e1885f041e5` |
-| `retained/optimal_form/delta_hit_G3_rl8_t2_n600.npy` (the winning table) | 409,728 | `a8e1cb741ba2d12b` |
-| `retained/optimal_form/bits_per_frame_G3_hit_rl8_t2_n600.npy` | 4,928 | `156788c97555ef49` |
-| `retained/free_model/bits_per_frame_base_n600.npy` | 4,928 | `e5b495f243f6dbcd` |
-| `retained/optimal_form/bits_per_frame_G1_hit_rl4_n600.npy` (≡ stage 1 F4) | 4,928 | `7120c292ad7eb484` |
+| `FREE_MODEL_HEADROOM_n600.json` (stage 1) | 6,180 | `6f13c45ab67561be` |
+| `FREE_MODEL_OPTIMAL_FORM_n600.json` (stage 2) | 6,992 | `4afb1e1885f041e5` |
+| `FREE_MODEL_PER_GROUP_n600.json` (stage 3, the headline) | 3,116 | `baeab147aa205683` |
+| `retained/per_group/counts_H1_pergroup_G3_n600.npy` (the winning table's statistics) | 409,728 | `ac5e9e8a7150a46f` |
+| `retained/optimal_form/delta_hit_G3_rl8_t2_n600.npy` (stage 2's winning table) | 409,728 | `a8e1cb741ba2d12b` |
+| `retained/free_model/bits_per_frame_base_n600.npy` (shared by stages 1 and 2) | 4,928 | `e5b495f243f6dbcd` |
+| `retained/optimal_form/bits_per_frame_G1_hit_rl4_n600.npy` (≡ stage 1 F4, byte-identical) | 4,928 | `7120c292ad7eb484` |
 
-**Landed instruments** — both carry the fail-closed byte-identity control and both refuse to emit
-a verdict without it:
+**Landed instruments** — all three carry a fail-closed control and refuse to emit a verdict
+without it:
 
-* `experiments/ddm_rr1_free_decode_model_headroom.py` — stage 1, the ladder and the negative
-  control.
-* `experiments/ddm_rr1_free_model_optimal_form.py` — stage 2, optimal form, the branch split, and
-  the cross-stage reproduction gate.
+* `experiments/ddm_rr1_free_decode_model_headroom.py` — stage 1: the ladder, the two sha256
+  identity gates, and the negative control that identifies the mechanism.
+* `experiments/ddm_rr1_free_model_optimal_form.py` — stage 2: optimal form, the hit/miss branch
+  split, and a cross-stage gate that fails unless it reproduces stage 1.
+* `experiments/ddm_rr1_free_model_per_group.py` — stage 3: per-group statistics and the context
+  sweep, with a monotonicity gate that fails if a faster-adapting estimator loses ground.
 
-Both consume `ddm_hm1`'s retained `base_logits_int16_n600.i16` (1,179,648,000 B) and price a
-probability-side change in ~70 s instead of a ~950 s HPAC forward. hm1 predicted that asset would
-pay for itself; it did, twice, in this arm.
+All three consume `ddm_hm1`'s retained `base_logits_int16_n600.i16` (1,179,648,000 B) and price a
+probability-side change in 49–77 s instead of a ~950 s HPAC forward. hm1 predicted that asset
+would pay for itself; it did, three times, in this arm.
