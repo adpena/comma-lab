@@ -139,6 +139,22 @@ def project_pose_null(delta: np.ndarray) -> np.ndarray:
     return d
 
 
+def snap_to_blocks(mask: np.ndarray) -> np.ndarray:
+    """Grow a scorer-lattice mask to whole 2x2 blocks.
+
+    REQUIRED for exact nullity when a support is combined with the pose-null projection, not
+    cosmetic -- two of the six constraints are BLOCK-mean conditions (mean dR = 0, mean dB = 0),
+    so masking a projected delta at pixel granularity re-introduces a block mean and the edit
+    stops being pose-null.  Same convention as sq1's `snap_band_to_blocks`, which rt1's eta gate
+    already uses for exactly this reason.
+    """
+    h, w = mask.shape[0] // 2 * 2, mask.shape[1] // 2 * 2
+    out = np.zeros_like(mask, dtype=bool)
+    blk = mask[:h, :w].astype(bool).reshape(h // 2, 2, w // 2, 2).any(axis=(1, 3))
+    out[:h, :w] = np.repeat(np.repeat(blk, 2, axis=0), 2, axis=1)
+    return out
+
+
 class Deblur:
     """Recover the native render from the shipped camera frame, and realize it exactly."""
 
@@ -166,12 +182,29 @@ class Deblur:
                          self.Uc_pinv, optimize=True)
 
     def realize(self, frame_cam: np.ndarray, alpha: float,
-                *, pose_null: bool = False) -> tuple[np.ndarray, dict]:
+                *, pose_null: bool = False,
+                support: np.ndarray | None = None) -> tuple[np.ndarray, dict]:
         x = frame_cam.astype(np.float64)
         seen = self.rs.down_scorer(x)
         delta = alpha * (self.native(x) - seen)
+        extra: dict[str, float] = {}
+        if support is not None:
+            # snap FIRST, then mask, then project: every block is wholly in or wholly out, so
+            # the blockwise projection maps out-blocks 0 -> 0 and leaves nullity exact.
+            delta = delta * support[..., None]
+            extra["support_frac_scorer"] = float(support.mean())
         if pose_null:
             delta = project_pose_null(delta)
+            # nullity is asserted, never assumed (the whole pose claim rests on it)
+            dy = float(np.abs(delta @ K_YUV).max())
+            h, w = delta.shape[0] // 2 * 2, delta.shape[1] // 2 * 2
+            bm = float(np.abs(delta[:h, :w].reshape(h // 2, 2, w // 2, 2, 3)
+                              .mean(axis=(1, 3))).max())
+            extra |= {"nullity_max_abs_dY": dy, "nullity_max_abs_blockmean": bm}
+            if support is not None and max(dy, bm) > 1e-9:
+                raise LadderError(
+                    f"support+projection broke nullity (dY {dy:g}, blockmean {bm:g}); "
+                    f"the support snap is wrong -- no pose row from this run is admissible")
         target = seen + delta
         pre = self.rs.precompensate(x, target)
         out = np.clip(np.rint(pre), 0, 255).astype(np.uint8)
@@ -183,7 +216,8 @@ class Deblur:
             "camera_max_delta": float(np.abs(out.astype(np.float64) - x).max()),
             "frac_out_of_box_pre_clip": float(((pre < 0) | (pre > 255)).mean()),
             "scorer_rms_move": float(np.sqrt(((target - seen) ** 2).mean())),
-        }
+            "camera_frac_touched": float((out != frame_cam).any(axis=2).mean()),
+        } | extra
 
 
 def sha256_file(path: Path, chunk: int = 1 << 22) -> str:
@@ -206,6 +240,19 @@ def run(args: argparse.Namespace) -> int:
     gt = np.load(args.gt, mmap_mode="r")
     db = Deblur()
     inst = Instrument(args.threads, with_pose=not args.no_pose)
+
+    sup_all = sup_meta = None
+    if args.support is None and args.edit_frames != "both":
+        raise LadderError("--edit-frames only applies with --support; without a support the "
+                          "ladder is a whole-frame operator and both frames are always edited")
+    if args.support is not None:
+        sup_all = np.load(args.support, mmap_mode="r")
+        if sup_all.shape != (FRAMES, SEG_H, SEG_W):
+            raise LadderError(f"--support has shape {sup_all.shape}, expected "
+                              f"{(FRAMES, SEG_H, SEG_W)} (scorer-lattice, per pair)")
+        sup_meta = {"path": str(args.support), "sha256": sha256_file(args.support),
+                    "edit_frames": args.edit_frames,
+                    "snapped_to_2x2_blocks": bool(args.pose_null)}
 
     gtf = {}
     if not args.no_pose:
@@ -231,13 +278,26 @@ def run(args: argparse.Namespace) -> int:
         t0 = time.time()
         flips = fixed = broken = 0
         dp_after: list[float] = []
+        per_pair: list[dict] = []
         diag_acc: dict[str, list[float]] = {}
         for p in pairs:
             pair = np.asarray(raw[2 * p:2 * p + 2])
             edited = np.empty_like(pair)
+            sup = None
+            if sup_all is not None:
+                sup = np.asarray(sup_all[p]).astype(bool)
+                if args.pose_null:
+                    sup = snap_to_blocks(sup)
             for j in range(2):
+                # `f1` leaves frame_0 byte-identical: SegNet reads only frame_1
+                # (`modules.py:108` x[:, -1]), so a seg-correction channel has no reason to
+                # touch frame_0 -- but PoseNet reads BOTH, so this changes the pose leg and is
+                # measured as its own arm rather than assumed equivalent.
+                if sup is not None and args.edit_frames == "f1" and j == 0:
+                    edited[j] = pair[j]
+                    continue
                 edited[j], d = db.realize(pair[j], alpha,
-                                          pose_null=args.pose_null)
+                                          pose_null=args.pose_null, support=sup)
                 for k, v in d.items():
                     diag_acc.setdefault(k, []).append(v)
             am = inst.seg_argmax(edited[1])
@@ -246,9 +306,19 @@ def run(args: argparse.Namespace) -> int:
             flips += int(now.sum())
             fixed += int((was & ~now).sum())
             broken += int((~was & now).sum())
+            # PER-PAIR RETENTION (P0 always-keep-the-payload, and the scientific point): the
+            # scorer-convention aggregate is a ratio of MEANS, so a handful of heavy-d_pose pairs
+            # can dominate it and make the aggregate non-monotone in alpha.  Keeping the per-pair
+            # rows is what lets a reader tell "the leak is small" from "the estimator is noisy".
+            rec = {"pair": int(p), "flips": int(now.sum()),
+                   "fixed": int((was & ~now).sum()), "broken": int((~was & now).sum())}
             if not args.no_pose:
-                og, _ = base_dpose[p]
-                dp_after.append(inst.d_pose(og, inst.pose_out(edited)))
+                og, base_dp = base_dpose[p]
+                dpa = inst.d_pose(og, inst.pose_out(edited))
+                dp_after.append(dpa)
+                rec |= {"d_pose_before": float(base_dp), "d_pose_after": float(dpa),
+                        "d_pose_ratio_pair": float(dpa / base_dp) if base_dp else float("nan")}
+            per_pair.append(rec)
         d_flips = flips - base_flips
         scale = SCORED_PX / npx
         dS_seg = d_flips * scale * S_PER_FLIP
@@ -264,6 +334,7 @@ def run(args: argparse.Namespace) -> int:
             "broken_per_fixed": (broken / fixed if fixed else float("inf")),
             "pct_of_base_recovered": -100.0 * d_flips / base_flips,
             "delta_S_seg": dS_seg,
+            "per_pair": per_pair,
             "diagnostics_mean": {k: float(np.mean(v)) for k, v in diag_acc.items()},
             "diagnostics_max": {k: float(np.max(v)) for k, v in diag_acc.items()},
             "wall_s": time.time() - t0,
@@ -284,7 +355,7 @@ def run(args: argparse.Namespace) -> int:
             }
         rows.append(row)
         print(json.dumps({k: v for k, v in row.items()
-                          if k not in ("diagnostics_mean", "diagnostics_max")},
+                          if k not in ("diagnostics_mean", "diagnostics_max", "per_pair")},
                          sort_keys=True), flush=True)
 
     ctrl = next((r for r in rows if r["alpha"] == 0.0), None)
@@ -302,6 +373,7 @@ def run(args: argparse.Namespace) -> int:
         "pairs": pairs,
         "pose_measured": not args.no_pose,
         "pose_null_projected": args.pose_null,
+        "support": sup_meta,
         "positive_control_alpha0_reproduces_base": control_ok,
         "operator_identification": {
             "decoder_lift_U": "bilinear (bicubic leaves 1.54e-2 off the tridiagonal band)",
@@ -320,7 +392,8 @@ def run(args: argparse.Namespace) -> int:
         receipt["VOID"] = ("alpha=0 did not reproduce the base exactly; every row in this "
                            "receipt is instrument-confounded and MUST NOT be cited")
     tag = (f"n{len(pairs)}_s{args.seed}" + ("_posenull" if args.pose_null else "")
-           + ("_nopose" if args.no_pose else ""))
+           + ("_nopose" if args.no_pose else "")
+           + (f"_sup{args.edit_frames}" if sup_all is not None else ""))
     out = args.work / f"RT2_DEBLUR_LADDER_{tag}.json"
     args.work.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(receipt, indent=2, sort_keys=True))
@@ -343,6 +416,12 @@ def main(argv: list[str] | None = None) -> int:
                     help="project the perturbation onto PoseNet's exact null space")
     ap.add_argument("--no-pose", action="store_true",
                     help="seg-only -- DIAGNOSTIC ONLY; rn1 measured pose at 25-70x the seg leg")
+    ap.add_argument("--support", type=Path, default=None,
+                    help="(FRAMES,384,512) scorer-lattice per-pair mask restricting the edit; "
+                         "snapped to 2x2 blocks when --pose-null so nullity stays exact")
+    ap.add_argument("--edit-frames", choices=["both", "f1"], default="both",
+                    help="with --support: 'both' matches the full-frame ladder's convention; "
+                         "'f1' is the seg-channel shape (SegNet reads only frame_1)")
     args = ap.parse_args(argv)
     return run(args)
 

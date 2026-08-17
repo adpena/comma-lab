@@ -85,7 +85,8 @@ class EtaGateError(RuntimeError):
 
 def solve_multistart(segnet, dec_f1: np.ndarray, gt_f1: np.ndarray, band: np.ndarray,
                      lgt: np.ndarray, described: np.ndarray, P, *, steps: int, lr: float,
-                     eval_every: int, pose_null: bool, focus_weight: float) -> dict:
+                     eval_every: int, pose_null: bool, focus_weight: float,
+                     snap_support: bool | None = None) -> dict:
     """sq1's solve, with ONE declared operating-point adaptation.
 
     Riders carried verbatim from sq1: multi-start (pu2), in-loop REALIZED-argmax validation with
@@ -107,7 +108,8 @@ def solve_multistart(segnet, dec_f1: np.ndarray, gt_f1: np.ndarray, band: np.nda
     base = resize_to_scorer(dec_f1)
     truth = resize_to_scorer(gt_f1)
     tgt = torch.from_numpy(lgt.astype(np.int64))[None]
-    m = torch.from_numpy(snap_band_to_blocks(band) if pose_null else band)[None, None].float()
+    snap = pose_null if snap_support is None else snap_support
+    m = torch.from_numpy(snap_band_to_blocks(band) if snap else band)[None, None].float()
     w = torch.ones((1, SEG_H, SEG_W), dtype=torch.float32)
     w[0][torch.from_numpy(described)] = float(focus_weight)
     w_sum = w.sum()
@@ -195,10 +197,17 @@ def run(args: argparse.Namespace) -> int:
         # mode "free" is the unconstrained POSITIVE CONTROL: if it cannot realize flips either,
         # the instrument is broken and no verdict is admissible (confound-hunt L3).
         pose_null = args.mode == "null"
+        # CONFOUND ISOLATION (ddm_pn2): `null` mode snaps the edit support to whole 2x2 blocks
+        # (snap_tax ~1.77x) because two of the six pose constraints are BLOCK-mean conditions.
+        # So a bare null-vs-free A/B varies the PROJECTION and the SUPPORT SIZE together, and
+        # rt1 s6.1 measured that support size alone is worth ~0.65 eta.  `--snap-support` forces
+        # the snap in either mode, which isolates the projection.
+        snap = pose_null if args.snap_support is None else args.snap_support
         sol = solve_multistart(segnet, dec1, gt1, support, lgt, described, P,
                                steps=args.steps, lr=args.lr, eval_every=args.eval_every,
-                               pose_null=pose_null, focus_weight=args.focus_weight)
-        edit_mask = snap_band_to_blocks(support) if pose_null else support
+                               pose_null=pose_null, focus_weight=args.focus_weight,
+                               snap_support=snap)
+        edit_mask = snap_band_to_blocks(support) if snap else support
         cam_edit = realize_scorer_paint_to_camera(dec1, edit_mask, sol["paint_u8"])
         # realization fidelity: D must reproduce the solved paint on the edited support
         got = resize_to_scorer(cam_edit)[0].permute(1, 2, 0).numpy()
@@ -265,6 +274,10 @@ def run(args: argparse.Namespace) -> int:
                    "starts": 2, "pose_constraint": ("hard yuv6 null-space projection" if args.mode == "null"
                                        else "NONE -- unconstrained positive control"),
                    "mode": args.mode,
+                   "snap_support_flag": args.snap_support,
+                   "edit_support_snapped_to_2x2_blocks": (args.mode == "null"
+                                                          if args.snap_support is None
+                                                          else args.snap_support),
                    "support_radius": args.radius},
         "eta": {
             "pooled": eta_pooled,
@@ -421,6 +434,11 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--radius", type=int, default=1)
     ap.add_argument("--focus-weight", type=float, default=500.0,
                     help="CE weight on the described set (operating-point adaptation)")
+    ap.add_argument("--snap-support", type=lambda s: s.lower() in ("1", "true", "yes"),
+                    default=None,
+                    help="force (or forbid) the 2x2 block snap independently of --mode, to "
+                         "isolate the projection from the support-size change it drags along; "
+                         "default None = legacy behaviour (snap iff mode==null)")
     ap.add_argument("--mode", choices=["null", "free", "aggregate"], default="null",
                     help="null = pose-constrained (the gate); free = unconstrained "
                          "positive control")
