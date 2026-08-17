@@ -1,6 +1,6 @@
 ---
 arm: ddm_ns2
-title: "Campaign-wide audit of the negative/mixed corpus for exploitable constraint signal and naive/toy form. Half the corpus cannot constrain today's design (30.1% apparatus checkboxes, 20.4% dead-vehicle numbers). Two live-lineage rows carry real value: r1b7's uint8-survival refusal rests on a treatment that moved d_seg and flip_count by EXACTLY ZERO (a vacuous falsifier), and the UNIWARD cost-map family ratcheted monotonically THROUGH its own pre-registered 0.5 gate to 0.2597 while every row stayed labelled PARTIAL."
+title: "Campaign-wide audit of the negative/mixed corpus for exploitable constraint signal and naive/toy form. Half the corpus cannot constrain today's design (30.1% apparatus checkboxes, 20.4% dead-vehicle numbers). Two live-lineage rows carry real value: r1b7's uint8-survival refusal rests on a treatment that moved d_seg and flip_count by EXACTLY ZERO (a vacuous falsifier), and the UNIWARD cost-map family ratcheted monotonically THROUGH its own pre-registered 0.5 gate to 0.2597 while every row stayed labelled PARTIAL. SELF-CORRECTION landed in-unit: the UNIWARD consumer msal_uni sits on the tr1/levelset trainer, NOT on hv1's semantic-renderer trainer, so R2(b) is a routing question first -- this unit committed the same mis-routing genus nx1 named as the live error."
 utc: 2026-08-17
 axis: "[$0 local ledger + retained-receipt arithmetic] -- NEVER a score"
 research_only: true
@@ -111,9 +111,18 @@ its precondition met at 0.2597 and never fired.
 
 **DESIGN IMPLICATION.** `textured_avg_weight` is a **proxy** (a steg cost-map property), not a
 score, so crossing it is **not** a ΔS claim and I make none. What it establishes is narrower and
-still useful: the *sharpening direction* is real and monotone over 7 formulations, and the live
-witness lever `msal_uni` (UNIWARD margin-saliency, in-tree, **default-off**) is the consumer of
-exactly this cost map. The proxy→S link is **UNMEASURED**.
+still useful: the *sharpening direction* is real and monotone over 7 formulations.
+
+**ROUTING CAVEAT — verified, and it corrects my own first draft.** The built consumer is
+`msal_uni` / `LEVER4_uniward` (`--margin-saliency-uniward`, `store_true` → **default-off**), wired
+at `experiments/train_levelset_witness_realized_through_R_mlx.py:7751,8773-8782,9274` and held by
+the DSL at `src/tac/witness_dsl/curriculum_dsl.py:3797`. That trainer is the **tr1 / levelset**
+lineage. Per `nx1` Finding 1, **hv1's archive carries two learned objects with two trainers** —
+token/HPAC and semantic-renderer — and neither is the levelset witness trainer. So "fire
+`msal_uni`" is **NOT** a live-vehicle action; it is a **routing question that must be answered
+first**: does hv1's semantic-renderer margin term admit a texture weight? I did not verify that,
+and I make no claim that it does. My first draft asserted the consumer was live. That was the
+**same mis-routing genus `nx1` named as the live error**, committed inside an audit hunting for it.
 
 ### C2 — generic recompression of archive members is AT FLOOR (ceiling constraint)
 
@@ -207,12 +216,14 @@ perturb the scored object, and a metric at noise. Per C3, sweep **magnitude**, n
 Note the baseline `d_pose` of 131.15 — the object was pose-blind, so any pose reading here is
 uninformative by construction.
 
-**R2 — advance the UNIWARD ledger verdict, then price proxy→S. $0 then cheap.**
-The gate was met at 0.2597 vs 0.5. Two actions, in order: (a) correct the `PARTIAL` label on the
-gate-crossing row at source — headline *and* body per [[stale headlines]]; (b) measure what the
-cost map is worth in S by firing the in-tree `msal_uni` lever, which is **default-off** and is the
-built consumer of this exact map. Step (b) is the one that could move the pointer; step (a) is the
-signal-preservation debt.
+**R2 — advance the UNIWARD ledger verdict, then answer the routing question. $0.**
+The gate was met at 0.2597 vs 0.5. Three actions, in order: (a) correct the `PARTIAL` label on the
+gate-crossing row at source — headline *and* body per [[stale headlines]]; (b) **answer the routing
+question before any run**: read hv1's semantic-renderer trainer and determine whether its margin
+term admits a texture weight at all. `msal_uni` is built and default-off on the **tr1/levelset**
+trainer, which is **not** hv1's; (c) only if (b) is yes, price proxy→S. Step (b) is $0 source
+inspection and gates everything after it. **Do not launch on this row until (b) returns yes** —
+that is precisely the error this memo corrected in itself.
 
 **R3 — re-grade the 13 pre-08-03 pose-on-prefix rows to INSTANCE. $0, apparatus.**
 They were drawn blind to a 2.54–4.21× false-negative bias on their own axis. They should not be
@@ -249,15 +260,16 @@ I pre-registered three outcomes. Two fired.
 
 Two instruments that did not exist (gap-to-threshold; degenerate-gauge detection), one corrected
 denominator (half the corpus cannot constrain today's design), one vacuous falsifier caught on the
-live lineage, and one gate-crossing that was never labelled. **The pointer did not move.** The only
-row here that can move it is **R2(b)** — firing `msal_uni` and measuring what the sharpened cost map
-is worth in S.
+live lineage, one gate-crossing that was never labelled, and one **self-correction**: my own first
+draft mis-routed the UNIWARD consumer onto hv1. **The pointer did not move, and after the routing
+correction no row here is yet pointer-capable** — R2 becomes pointer-capable only if the $0 routing
+read returns yes. Claiming otherwise would be the means-as-ends fake.
 
 ## NEXT_IF_RESUMED
 
-1. **R2(b) first — it is the only pointer-capable row.** Fire the in-tree `msal_uni` lever with the
-   per-instance multi-scale wavelet cost map (the 0.2597 formulation) and measure ΔS byte-closed.
-   Everything else here is apparatus.
+1. **R2(b) first, and it is $0 source inspection, NOT a launch.** Read hv1's semantic-renderer
+   trainer and decide whether its margin term can carry a texture weight. `msal_uni` is on the
+   tr1/levelset trainer, not hv1's. Everything downstream is gated on this answer.
 2. **R1** — re-run the r1b7 carrier as a magnitude sweep, $0 local, gated on producing a non-zero
    `flip_count` delta before any verdict is recorded.
 3. **R3** — apply the INSTANCE re-grade to the 13 pre-08-03 pose-on-prefix rows, at source, headline
