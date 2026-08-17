@@ -230,3 +230,15 @@ gestalt is WRONG in a named way. 23rd convocation spawned to adversarially test 
    GS1-PRED (next ≥1e-4 move = NEW CHECKPOINT). fx1 is the DISCRIMINATOR — either outcome
    adjudicates. MAIN-owed next: ce1/cw1 ef3000/ef6000 byte-closed row (cheapest GS1-PRED
    test) + the never-attacked 56,938 B frozen semantic+carrier representation.
+
+### FEED-20260817h scope note (append-only, per the verdict-scope gate)
+
+verdict_scope: formulation — the REFUTED tokens in FEED-20260817h grade MAIN's OWN v0
+working-memory synthesis claims (P1 operator-attribution · P4 wording · PP3 pre-registration
+validity · R2 citation), refuted by gs1's corpus re-derivation. NO technique family is closed
+by these refutations; the refined one-sentence gestalt + P3/P5/P6/P7/P8 SURVIVE; the opposed
+predictions (GS1-PRED vs PP3-a) are OPEN pending the fx1/t1h/QAT discriminators.
+STORES CONSULTED (recall-depth #713): ddm_gs1 memo a117cb42ea · continual_learning posterior
+(the 28-digit four-move re-derivation) · av1 F3 receipt (the voided descent-floor fit) ·
+ddm_gestalt_operator_algebra_synthesis_20260817.md v0/v0.1/v1 · FEED-gz (the corrected
+plateau-breaker receipt).
