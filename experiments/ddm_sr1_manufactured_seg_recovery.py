@@ -92,7 +92,7 @@ SCORED_PX = FRAMES * SEG_H * SEG_W  # 117,964,800
 N_CLASSES = 5
 
 # Exchange rates.  Both are exact contest arithmetic, not fits.
-SEG_DS_PER_FLIP = 100.0 / SCORED_PX  # 8.477116e-07
+SEG_DS_PER_FLIP = 100.0 / SCORED_PX  # 8.477105e-07 (the comment read ...116e-07 until 2026-08-17)
 RATE_DS_PER_BYTE = 25.0 / 37_545_489  # 6.658590e-07
 BYTES_PER_FLIP_BAR = SEG_DS_PER_FLIP / RATE_DS_PER_BYTE  # 1.27312 B/flip
 
@@ -1006,6 +1006,87 @@ A1_NEUTRAL_LO = 34_589           # ceil(34938 * 0.99)
 A1_NEUTRAL_HI = 35_287           # floor(34938 * 1.01)
 A1_PIN_THREADS = 8               # et4: batch shape and thread count are part of the instrument
 
+# --- FO-A: where does the A1 perturbation live? ----------------------------------------------
+# ddm_a1s section 8 pre-registered ONE follow-on measurement: mask `delta_cam` to the lifted
+# label band and re-run the alpha = 0.25 pose leg, because the band is ~2.2% of the camera
+# pixels but carries the 22.5-level perturbation while the interior is 97.8% of pixels at ~1.8
+# levels.  'off' is the ddm_a1s object EXACTLY -- no mask is built, no token field is opened,
+# and the emitted pose6 array is byte-identical to the retained `pose6_by_alpha.npy`.  The
+# 'interior' leg is the complement, because "band-driven or interior-driven" cannot be answered
+# from the band leg alone: rms drift is not additive across a partition of the perturbation.
+A1_DELTA_MASKS = ("off", "band", "interior")
+# Pre-registered by ddm_a1s section 8 FO-A BEFORE this row was run.  Both are compared against
+# the BAND-only pose drift rms at alpha = 0.25, n600.
+A1_FOA_LIVE_BELOW = 0.0026240    # sqrt(HV1_D_POSE): the entire incumbent pose error
+A1_FOA_CLOSED_ABOVE = 0.0083     # 3.2x the incumbent -- erases any plausible seg win
+
+
+def _a1_foa_verdict(mask_mode: str, drift_rms: float) -> tuple[str, str]:
+    """Adjudicate FO-A against the thresholds ddm_a1s section 8 pre-registered.
+
+    Only the BAND leg carries the verdict; the interior leg is the complement reference.  The
+    band between the two thresholds is reported, never bucketed -- forcing a bucket would be
+    the same sin as forcing the seg ladder into a band it did not enter.
+    """
+    if mask_mode != "band":
+        return "COMPLEMENT_LEG", ("interior-only reference leg; the band leg carries the "
+                                  "FO-A verdict")
+    if drift_rms < A1_FOA_LIVE_BELOW:
+        return "POSE_NULL_BRANCH_LIVE", (
+            "the band-restricted de-blur costs less pose than the incumbent pose error; "
+            "OWES its own seg row before any win is claimed")
+    if drift_rms >= A1_FOA_CLOSED_ABOVE:
+        return "FAMILY_CLOSED", (
+            "FAMILY: the post-hoc de-blur of A on this vehicle, band-restricted or not")
+    return "INDETERMINATE_BETWEEN_BANDS", (
+        "measured between the pre-registered thresholds; NOT bucketed")
+
+
+def _a1_delta_mask_lift() -> tuple[np.ndarray, np.ndarray]:
+    """rt1's nearest-neighbour camera->scorer lift index, IMPORTED not re-typed.
+
+    Same instrument pin as `stage_a1sign`: the FO-A band must be the identical object a1sign
+    already reports its `clip_band_*` diagnostics on, so it comes from the same code.
+    """
+    parent = str(Path(__file__).resolve().parent)
+    if parent not in sys.path:
+        sys.path.insert(0, parent)
+    from ddm_rt1_seg_roundtrip_decomposition import nn_lift_index
+
+    return nn_lift_index()
+
+
+def _a1_apply_delta_mask(delta_cam: np.ndarray, tok_frame: np.ndarray, mode: str,
+                         lift: tuple[np.ndarray, np.ndarray]) -> tuple[np.ndarray, dict]:
+    """Restrict the actuator to the lifted label band (or to its complement).
+
+    Returns the masked perturbation and the amplitude split that explains it.  `mode == "off"`
+    never reaches here -- callers skip the whole path so the default is bit-for-bit the parent
+    row, not a mask that happens to be all-ones.
+    """
+    if mode not in ("band", "interior"):
+        raise Sr1Error(f"unknown delta mask mode {mode!r}")
+    band_cam = boundary(tok_frame)[np.ix_(*lift)]
+    keep = band_cam if mode == "band" else ~band_cam
+    amp = np.abs(delta_cam).max(axis=2)
+
+    def mean_or_zero(sel: np.ndarray) -> float:
+        # A degenerate frame (one token class everywhere, or no interior) would otherwise put a
+        # NaN in the receipt.  Diagnostics never gate the measurement, so report 0.0 and let the
+        # pixel count next to it say the set was empty.
+        return float(amp[sel].mean()) if sel.any() else 0.0
+
+    total = float((delta_cam ** 2).sum())
+    diag = {
+        "band_px_cam": int(band_cam.sum()),
+        "band_share_cam": float(band_cam.mean()),
+        "delta_absmax_mean_band": mean_or_zero(band_cam),
+        "delta_absmax_mean_interior": mean_or_zero(~band_cam),
+        "delta_energy_share_band": float((delta_cam[band_cam] ** 2).sum() / max(total, 1e-30)),
+        "delta_kept_energy_share": float((delta_cam[keep] ** 2).sum() / max(total, 1e-30)),
+    }
+    return delta_cam * keep[:, :, None], diag
+
 
 def _a1_axis_operators(tikhonov: float) -> dict:
     """Rebuild D, U and A = D.U per axis, and fail closed unless A reproduces sr1's retained A.
@@ -1119,19 +1200,25 @@ def _a1_per_class(pred: np.ndarray, ref: np.ndarray) -> dict:
     return {str(c): int(np.count_nonzero(bad & (ref == c))) for c in range(N_CLASSES)}
 
 
-def _a1_verdict(flips: dict) -> dict:
-    """Adjudicate the ladder against the bands pre-registered in the sr1 FIRE-ORDER."""
+def _a1_verdict(flips: dict, mask_mode: str = "off") -> dict:
+    """Adjudicate the ladder against the bands pre-registered in the sr1 FIRE-ORDER.
+
+    The BANDS never move with `mask_mode` -- the bar is the bar -- but the SCOPE string must,
+    because a band-restricted actuator is not the global de-blur the FO-1 scope names.
+    """
     positive = {a: f for a, f in flips.items() if a > 0.0}
     best_alpha = min(positive, key=lambda a: positive[a])
     best = positive[best_alpha]
     all_in_band = all(A1_NEUTRAL_LO <= f <= A1_NEUTRAL_HI for f in flips.values())
     all_harmful = all(f > A1_NEUTRAL_HI for f in positive.values())
+    actuator = ("global linear de-blur of A" if mask_mode == "off"
+                else f"{mask_mode}-restricted linear de-blur of A")
     if best < A1_LIVE_BELOW:
         verdict, scope = "LIVE", "INSTANCE on the hv1 ep0634 vehicle"
     elif all_in_band:
-        verdict, scope = "CLOSED_NEUTRAL", "FORMULATION: global linear de-blur of A, this vehicle"
+        verdict, scope = "CLOSED_NEUTRAL", f"FORMULATION: {actuator}, this vehicle"
     elif all_harmful:
-        verdict, scope = "CLOSED_HARMFUL", "FORMULATION: global linear de-blur of A, this vehicle"
+        verdict, scope = "CLOSED_HARMFUL", f"FORMULATION: {actuator}, this vehicle"
     else:
         verdict, scope = "INDETERMINATE_MIXED", "no pre-registered band fired; reported as shaped"
     return {
@@ -1163,6 +1250,8 @@ def stage_a1sign(args: argparse.Namespace) -> dict:
 
     t0 = time.time()
     alphas = list(A1_ALPHAS)
+    mask_mode = getattr(args, "delta_mask", "off")
+    suffix = "" if mask_mode == "off" else f"_{mask_mode}mask"
     ops = _a1_axis_operators(args.tikhonov)
     custody = _a1_custody_control(ops, args.work)
     print(json.dumps(custody, indent=2, sort_keys=True), flush=True)
@@ -1179,9 +1268,9 @@ def stage_a1sign(args: argparse.Namespace) -> dict:
     # Resume-from-disk (P0): the argmax fields ARE the checkpoint, and the per-pair diagnostic
     # rows are journalled beside them so a resumed run does not silently drop the rows measured
     # before the interruption.
-    prog_path = out_dir / "A1SIGN_PROGRESS.json"
-    rows_path = out_dir / "A1SIGN_PER_PAIR.jsonl"
-    paths = {a: out_dir / f"argmax_alpha_{tags[a]}.npy" for a in alphas}
+    prog_path = out_dir / f"A1SIGN{suffix.upper()}_PROGRESS.json"
+    rows_path = out_dir / f"A1SIGN{suffix.upper()}_PER_PAIR.jsonl"
+    paths = {a: out_dir / f"argmax_alpha_{tags[a]}{suffix}.npy" for a in alphas}
     done = 0
     rows: list[dict] = []
     if prog_path.exists() and all(p.exists() for p in paths.values()):
@@ -1208,6 +1297,7 @@ def stage_a1sign(args: argparse.Namespace) -> dict:
             for a in alphas}
 
     inst = SegInstrument(args.threads)
+    lift = _a1_delta_mask_lift() if mask_mode != "off" else None
     diag_pairs = set(seeded_pairs(args.diag_pairs, args.seed).tolist())
     for t in range(done, args.frames):
         cam_u8 = np.asarray(raw[2 * t + 1])
@@ -1216,12 +1306,24 @@ def stage_a1sign(args: argparse.Namespace) -> dict:
         band = boundary(np.asarray(tok[t]))
         band_cam = band[np.ix_(*nn_lift_index())]
         row = {"pair": t, "band_px": int(band.sum())}
+        if mask_mode != "off":
+            # ONE implementation of the mask, shared with `stage_a1pose`: a second inline copy
+            # here would drift from the helper the tests actually pin.
+            delta_cam, mrow = _a1_apply_delta_mask(delta_cam, np.asarray(tok[t]), mask_mode, lift)
+            row.update(mrow)
         deblur = None
         if t in diag_pairs:
-            deblur = np.stack(
-                [ops["inv_r"] @ x[:, :, c] @ ops["inv_c"].T for c in range(3)], axis=2) - x
+            if mask_mode == "off":
+                deblur = np.stack(
+                    [ops["inv_r"] @ x[:, :, c] @ ops["inv_c"].T for c in range(3)], axis=2) - x
+            else:
+                # Under a mask the actuator's intent is no longer the global de-blur, so the
+                # realisation diagnostic is measured against what the scorer will actually see
+                # per unit alpha -- D(masked delta) -- not against the unmasked A^-1 x - x.
+                deblur = np.stack(
+                    [ops["d_r"] @ delta_cam[:, :, c] @ ops["d_c"].T for c in range(3)], axis=2)
             if t == min(diag_pairs) and args.retain:
-                save_payload(out_dir / f"delta_cam_pair{t}_f32.npy",
+                save_payload(out_dir / f"delta_cam_pair{t}{suffix}_f32.npy",
                              delta_cam.astype(np.float32))
         for a in alphas:
             shifted = cam_f + a * delta_cam
@@ -1279,7 +1381,7 @@ def stage_a1sign(args: argparse.Namespace) -> dict:
     if args.base_argmax.exists() and args.frames == FRAMES:
         base_identical = bool(np.array_equal(np.asarray(fields[0.0]),
                                              np.load(args.base_argmax, mmap_mode="r")))
-    verdict = _a1_verdict(flips) if control_ok else {
+    verdict = _a1_verdict(flips, mask_mode) if control_ok else {
         "verdict": "INVALID_CONTROL_FAILED",
         "verdict_scope": "no alpha row may be scored; the instrument did not reproduce the base",
     }
@@ -1309,6 +1411,7 @@ def stage_a1sign(args: argparse.Namespace) -> dict:
             "alpha0_field_bit_identical_to_rt1_base": base_identical,
             "camera_frame_bit_identity_asserted_every_pair": True,
         },
+        "delta_mask": mask_mode,
         "ladder": ladder,
         "verdict": verdict,
         "n_pairs": args.frames,
@@ -1317,7 +1420,7 @@ def stage_a1sign(args: argparse.Namespace) -> dict:
         "per_pair": rows,
         "wall_s": time.time() - t0,
     }
-    write_json(args.work / "SR1_A1SIGN.json", record)
+    write_json(args.work / f"SR1_A1SIGN{suffix.upper()}.json", record)
     print(json.dumps({k: record[k] for k in ("positive_control", "verdict")},
                      indent=2, sort_keys=True))
     if not control_ok:
@@ -1376,19 +1479,29 @@ def stage_a1pose(args: argparse.Namespace) -> dict:
         raise Sr1Error(f"instrument pin violation: requires --threads {A1_PIN_THREADS}")
     t0 = time.time()
     alphas = list(A1_ALPHAS)
+    mask_mode = getattr(args, "delta_mask", "off")
+    suffix = "" if mask_mode == "off" else f"_{mask_mode}mask"
     ops = _a1_axis_operators(args.tikhonov)
     custody = _a1_custody_control(ops, args.work)
     raw = open_raw(args.raw)
     inst = _PoseInstrument(args.threads)
+    tok = open_tokens(args.tokens) if mask_mode != "off" else None
+    lift = _a1_delta_mask_lift() if mask_mode != "off" else None
 
     out_dir = args.work / "a1sign"
     out_dir.mkdir(parents=True, exist_ok=True)
     poses = np.zeros((args.frames, len(alphas), 6), dtype=np.float64)
+    mask_rows: list[dict] = []
     for t in range(args.frames):
         cam_u8 = np.asarray(raw[2 * t + 1])
         frame0 = np.asarray(raw[2 * t])
         cam_f = cam_u8.astype(np.float64)
         _, delta_cam = _a1_delta_camera(cam_f, ops)
+        if mask_mode != "off":
+            delta_cam, mrow = _a1_apply_delta_mask(
+                delta_cam, np.asarray(tok[t]), mask_mode, lift)
+            mrow["pair"] = t
+            mask_rows.append(mrow)
         for i, a in enumerate(alphas):
             cam_prime = np.clip(cam_f + a * delta_cam, 0.0, 255.0).round().astype(np.uint8)
             if a == 0.0 and not np.array_equal(cam_prime, cam_u8):
@@ -1399,10 +1512,11 @@ def stage_a1pose(args: argparse.Namespace) -> dict:
             print(f"  pose pair {t + 1}/{args.frames}  {el:.0f}s  "
                   f"eta {el / (t + 1) * (args.frames - t - 1):.0f}s", flush=True)
 
-    payload = save_payload(out_dir / "pose6_by_alpha.npy", poses)
+    payload = save_payload(out_dir / f"pose6_by_alpha{suffix}.npy", poses)
     base = poses[:, 0, :]
     # Seg deltas measured by the a1sign stage, so the two halves are priced on one object.
-    sign_path = args.work / "SR1_A1SIGN.json"
+    # The suffix keeps a masked pose leg paired with the SAME-mask seg leg, never the parent's.
+    sign_path = args.work / f"SR1_A1SIGN{suffix.upper()}.json"
     seg_flips = {}
     if sign_path.exists():
         for r in json.loads(sign_path.read_text())["ladder"]:
@@ -1468,13 +1582,35 @@ def stage_a1pose(args: argparse.Namespace) -> dict:
                   "worst case.  `d_pose_vs_cached_gt` is a SECONDARY advisory read against a "
                   "2026-06-10 cache whose sister seg GT disagrees with the qs3 GT on 20,673 px.",
         "gt_pose_cache": str(args.gt_pose) if gt6 is not None else None,
+        "delta_mask": mask_mode,
         "ladder": rows,
         "payload": payload,
         "n_pairs": args.frames,
         "wall_s": time.time() - t0,
     }
-    write_json(args.work / "SR1_A1POSE.json", record)
-    print(json.dumps(rows, indent=2, sort_keys=True))
+    if mask_mode != "off" and mask_rows:
+        keys = [k for k in mask_rows[0] if k != "pair"]
+        record["delta_mask_geometry"] = {
+            k: float(np.mean([r[k] for r in mask_rows])) for k in keys}
+        record["delta_mask_per_pair"] = mask_rows
+        record["foa_thresholds"] = {
+            "live_below": A1_FOA_LIVE_BELOW, "closed_above": A1_FOA_CLOSED_ABOVE,
+            "pre_registered_in": "ddm_a1s_alpha_sign_verdict_20260816.md section 8 FO-A",
+        }
+        at025 = next((r for r in rows if r["alpha"] == 0.25), None)
+        if at025 is None:
+            raise Sr1Error("FO-A adjudicates at alpha = 0.25; that rung is not on the ladder")
+        drift = at025["pose_drift_rms_vs_alpha0"]
+        verdict, scope = _a1_foa_verdict(mask_mode, drift)
+        record["foa_verdict"] = {
+            "verdict": verdict, "verdict_scope": scope,
+            "alpha": 0.25, "band_only_pose_drift_rms": drift,
+            "vs_incumbent_pose_error": drift / math.sqrt(HV1_D_POSE),
+        }
+    write_json(args.work / f"SR1_A1POSE{suffix.upper()}.json", record)
+    print(json.dumps({"ladder": rows, "foa": record.get("foa_verdict"),
+                      "geometry": record.get("delta_mask_geometry")},
+                     indent=2, sort_keys=True))
     return record
 
 
@@ -1582,7 +1718,17 @@ def main(argv: list[str] | None = None) -> int:
                     help="a1pose: optional (600, 6) cached GT PoseNet target, advisory only")
     ap.add_argument("--checkpoint-every", type=int, default=10,
                     help="a1sign: flush the argmax fields and the resume marker every N pairs")
+    ap.add_argument("--delta-mask", choices=list(A1_DELTA_MASKS), default="off",
+                    help="a1sign/a1pose (FO-A): restrict the A1 camera perturbation to the "
+                         "lifted label BAND, or to its INTERIOR complement.  Default 'off' is "
+                         "byte-identical to the ddm_a1s row -- the mask is never applied and no "
+                         "token field is read.")
     args = ap.parse_args(argv)
+
+    # An inert flag is a config-orphan: it looks like it did something and did not.  Refuse it
+    # on the stages that cannot consume it rather than silently ignoring it.
+    if args.delta_mask != "off" and args.stage not in ("a1sign", "a1pose"):
+        ap.error(f"--delta-mask is consumed only by a1sign/a1pose, not by '{args.stage}'")
 
     args.work.mkdir(parents=True, exist_ok=True)
     if args.stage == "roperator":
