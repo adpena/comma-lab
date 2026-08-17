@@ -131,23 +131,102 @@ PREDICTION_SCORECARD = {
 }
 
 #: ATTRIBUTION, not a measurement (2 equations, 3 unknowns; does not close against n=50).
+#:
+#: ⚠ REFUTED 2026-08-17 by the CE0 third point (memo
+#: ``.omx/research/ddm_wallclock_eval_cadence_refit_20260817.md``). A third run with a
+#: RECORDED save count -- 600 steps, 25 saves, 865.50101 s -- makes the three-term
+#: save model ``F + r*n + s*saves`` solvable, and it returns ``F = -17.41 s``. A fixed
+#: cost (process start + gt_cache load + model init) cannot be negative. Kept here as
+#: HISTORY, not as a usable term. The eval-cadence refit below supersedes it.
 RESIDUAL_SECONDS = 89.0
 EXTRA_SAVES_IN_3000_RUN = 6
-SECONDS_PER_SAVE_ATTRIBUTED = 14.8
+SECONDS_PER_SAVE_ATTRIBUTED = 14.8  # REFUTED; see CADENCE_REFIT below.
+
+# --------------------------------------------------------------------------------------
+# CADENCE REFIT (2026-08-17) -- the per-event cost is the EVAL, not the save.
+# --------------------------------------------------------------------------------------
+#: MEASURED, one instrument for all three (the launcher's
+#: ``detached_local_process_done.v2`` receipt ``elapsed_s``; checked at source before
+#: fitting, because mixing a launcher-measured elapsed with a trainer-measured one is
+#: this campaign's recurring defect).
+#:
+#: name -> (n_steps, n_evals, n_saves, elapsed_s)
+CADENCE_MEASURED_RUNS = {
+    "A2_repeat": (600, 6, 7, 408.29374),
+    "L3000_off": (3000, 30, 13, 1552.30873),
+    "CE0": (600, 24, 25, 865.50101),
+}
+
+#: DERIVED from those three rows under ``total = F + r*n + e*evals`` (save cost ASSUMED
+#: negligible -- 3 points cannot separate ``e`` from ``s``).
+#:
+#: The claim this licenses is the WEAK one, and only the weak one: the per-event cost is
+#: ATTRIBUTABLE to evaluation, because attributing it to saves alone forces ``F < 0``.
+#: Mechanistically expected -- an eval is a full n600 SegNet forward; a save is a few MB
+#: to SSD.
+CADENCE_FIXED_COST_SECONDS = 122.29
+CADENCE_MARGINAL_SECONDS_PER_STEP = 0.22267
+CADENCE_SECONDS_PER_EVAL = 25.400
+
+#: ⚠ THE COLLINEARITY THAT HID THIS. ``MARGINAL_SECONDS_PER_STEP = 0.4395`` above was fit
+#: from two points that BOTH ran ``--eval-every 100``. At a fixed cadence
+#: ``e*evals = (e/100)*n``, perfectly collinear with ``r*n``, so the fitted ``r`` is
+#: ``r_true + e/100 = 0.22267 + 0.25400 = 0.47667`` -- roughly 53% of what the law called
+#: "training rate" was evaluation. The two-term law's PREDICTIONS remain good wherever
+#: ``--eval-every 100`` holds (it scored +6.1% on L3000_off) and break silently the moment
+#: the cadence moves. It is retained, not deleted: it OVER-predicts at that cadence, which
+#: is the safe direction for its ``--walltime-cap-s`` consumer.
+CADENCE_CONFLATED_RATE_CHECK = 0.47667
 
 
 def end_to_end_rate(n_steps: int) -> float:
-    """Seconds per step INCLUDING amortised fixed cost, for a run of ``n_steps``."""
+    """Seconds per step INCLUDING amortised fixed cost, for a run of ``n_steps``.
+
+    ⚠ Valid only at ``--eval-every 100`` (see ``CADENCE_CONFLATED_RATE_CHECK``).
+    """
     if n_steps <= 0:
         raise ValueError("n_steps must be positive")
     return MARGINAL_SECONDS_PER_STEP + FIXED_COST_SECONDS / n_steps
 
 
 def predicted_total_seconds(n_steps: int) -> float:
-    """Total wall-clock for a run of ``n_steps`` on this trainer."""
+    """Total wall-clock for a run of ``n_steps`` on this trainer.
+
+    ⚠ Cadence-conflated: assumes ``--eval-every 100``. For any other eval cadence use
+    :func:`predicted_total_seconds_with_cadence`, which is the honest form.
+    """
     if n_steps <= 0:
         raise ValueError("n_steps must be positive")
     return FIXED_COST_SECONDS + n_steps * MARGINAL_SECONDS_PER_STEP
+
+
+def predicted_total_seconds_with_cadence(n_steps: int, eval_every: int) -> float:
+    """Total wall-clock as a function of BOTH run length and observation cadence.
+
+    A budget quoted without its cadence is under-specified -- the prefix-bias defect one
+    level down. ``eval_every`` is the trainer's ``--eval-every``.
+    """
+    if n_steps <= 0:
+        raise ValueError("n_steps must be positive")
+    if eval_every <= 0:
+        raise ValueError("eval_every must be positive")
+    n_evals = n_steps // eval_every
+    return (
+        CADENCE_FIXED_COST_SECONDS
+        + n_steps * CADENCE_MARGINAL_SECONDS_PER_STEP
+        + n_evals * CADENCE_SECONDS_PER_EVAL
+    )
+
+
+def observation_fraction(n_steps: int, eval_every: int) -> float:
+    """Fraction of a run's wall-clock spent EVALUATING rather than training.
+
+    MEASURED at the three fitted rows: A2_repeat 37.3%, L3000_off 49.1%, **CE0 70.4%**.
+    The observation cadence has never been chosen deliberately on this trainer; this is
+    what it costs.
+    """
+    total = predicted_total_seconds_with_cadence(n_steps, eval_every)
+    return (n_steps // eval_every) * CADENCE_SECONDS_PER_EVAL / total
 
 
 def build_wallclock_fixed_cost_prefix_bias_v1() -> CanonicalEquation:
@@ -208,6 +287,42 @@ def build_wallclock_fixed_cost_prefix_bias_v1() -> CanonicalEquation:
             ),
             provenance=provenance,
             empirical_verification_status="VERIFIED_VIA_EMPIRICAL_ANCHOR",
+        ),
+        EmpiricalAnchor(
+            anchor_id="wallclock_eval_cadence_refit_20260817",
+            measurement_utc="2026-08-17T11:09:00Z",
+            inputs={
+                "third_point": "(n=600, 24 evals, 25 saves, 865.50101 s) from "
+                "ddm_ce1/CE0 -- the point ddm_aa3 asked for",
+                "instrument": "launcher detached_local_process_done.v2 elapsed_s for ALL "
+                "three rows, verified at source before fitting",
+                "collinearity": "evals == saves in 2 of 3 runs (6/7 and 24/25); only "
+                "L3000_off (30 evals, 13 saves) breaks it",
+                "save_model_result": "F = -17.41 s (unphysical) -> REFUTED",
+                "eval_model_result": "F = +122.29 s, r = 0.22267 s/step, e = 25.400 s/eval",
+            },
+            # The prior law's r vs what the refit says it actually was.
+            predicted_output=0.4395,
+            empirical_output=0.47667,  # r_true + e/100, the cadence-collinear sum
+            residual=0.07797,  # |0.47667 - 0.4395| / 0.47667
+            source_artifact=(
+                "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ce1_ce0.done"
+            ),
+            measurement_method=(
+                "Three-point fit of two rival three-parameter models on ONE instrument. "
+                "The save-dominated model returns a NEGATIVE fixed cost, which is "
+                "physically impossible, so the data rejects it and accepts the "
+                "eval-dominated one. This licenses only the weak claim -- the per-event "
+                "cost is ATTRIBUTABLE to evaluation -- not a measurement of e: 3 points "
+                "cannot separate e from s. Exact fit, zero residual, no goodness-of-fit "
+                "by construction; EF0 (same cadence and length as CE0) is the "
+                "pre-registered reproducibility check at 865.5 s. Consequence for the "
+                "registered r: both prior fit points ran --eval-every 100, where "
+                "e*evals is collinear with r*n, so ~53% of the 'training rate' was "
+                "evaluation. CE0 spent 70.4% of its wall-clock evaluating."
+            ),
+            provenance=provenance,
+            empirical_verification_status="VERIFIED_VIA_SOURCE_INSPECTION",
         ),
     )
     return CanonicalEquation(

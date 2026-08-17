@@ -28214,3 +28214,32 @@ before any future length comparison on this trainer.
 
 **Own-vehicle frontier UNMOVED:** hv1 ep0634 **S 0.15959729295498598 @ 182,759 B**
 `[contest-CUDA T4, n600]`. Gap to 0.15: **−0.0095973**.
+
+## FEED-2026-08-17-wallclock-eval-cadence — the per-event cost is the EVAL, not the save
+
+**MEASURED, $0.** `ddm_ce1/CE0` supplied the third point `ddm_aa3` asked for, on ONE
+instrument (launcher done-receipt `elapsed_s`, verified at source before fitting).
+
+- **Save model REFUTED:** `F + r·n + s·saves` → `F = −17.41 s`. A fixed cost cannot be
+  negative. **Eval model accepted:** `F = 122.29 s · r = 0.22267 s/step · e = 25.400 s/eval`.
+- **Weak claim only:** the per-event cost is *attributable* to evaluation because
+  attributing it to saves forces an impossible `F`. 3 points, 4 unknowns — `e` and `s`
+  are not separable. Mechanistically expected: an eval is a full n600 SegNet forward.
+- **Mechanism:** CE0 changed `--eval-every` AND `--checkpoint-every` 100→25. They are
+  COLLINEAR in 2 of 3 runs (6/7, 24/25); only `L3000_off` (30 evals, 13 saves) breaks it.
+  Confounded-2×2 — I changed two knobs and attributed to one.
+- **The registered law was cadence-conflated:** both its fit points ran `--eval-every 100`,
+  where `e·evals = (e/100)·n` is collinear with `r·n`, so `r = 0.4395` was
+  `r_true + e/100 = 0.47667` — **~53% of the "training rate" was evaluation.** Retained,
+  not deleted: it over-predicts at that cadence, the safe direction for `--walltime-cap-s`.
+- **WHERE SPENT:** A2_repeat 32.7% train / 37.3% eval · L3000_off 43.0 / 49.1 ·
+  **CE0 15.4 / 70.4**. The observation cadence has never been chosen deliberately and now
+  has a price: **25.4 s per sample.**
+- **Pre-registered:** EF0 (identical cadence + length to CE0) → **865.5 s**. Reproducibility
+  check only; 3 points / 3 params is an exact fit with no goodness-of-fit by construction.
+
+Legs: equations `wallclock_fixed_cost_prefix_bias_v1` (anchor
+`wallclock_eval_cadence_refit_20260817`, cadence-aware predictor + `observation_fraction`) ·
+memo `.omx/research/ddm_wallclock_eval_cadence_refit_20260817.md` · ledger #1090.
+Genus: units×level×aggregation are part of the claim — a wall-clock budget quoted without
+its cadence is under-specified, the prefix-bias defect one level down.
