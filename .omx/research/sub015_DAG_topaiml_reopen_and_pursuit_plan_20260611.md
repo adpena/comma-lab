@@ -28480,3 +28480,64 @@ training FOR row sparsity IS #1074's P1 train-for-editability pattern) → `--ca
 `--carrier-tensors` (ra2 head, #1079) → `--distill-weight` + `--distill-max-seg` (wd3 built, #1069).
 
 Memo: `.omx/research/ddm_todo_p0_live_lever_queue_20260817.md`.
+
+## FEED-2026-08-17-Q3Q4-OWED-CONTROL — F2 measured; and a lever verdict proved CONFIG-CONDITIONAL
+
+**Row.** `Q3Q4OFF` (3,000 steps, rc=0, 1,441 s) vs `EF3000`. Init 33,757 flips.
+ON −2,286 · OFF −1,723 ⇒ lever contribution **−563 flips = 0.66σ** vs the 855-flip band
+(**within noise**); `packed_parameter_bytes` **40,252 on BOTH** (byte-neutral by itself).
+Single-variable by argv set-diff. Memo `.omx/research/ddm_q3q4_owed_control_verdict_20260817.md`.
+
+**What it closes.** F2 was ON in every `ce1` arm with NO control (FINDING 3 of the drain memo). Its
+baked-in contribution to every absolute `ce1` number is now bounded at ≲855 flips. No `ce1`
+conclusion moves. Comparisons were never at risk — F2 was held constant across them.
+
+**The genuinely new signal — a lever verdict is CONDITIONAL ON THE CONFIG IT WAS MEASURED UNDER.**
+`ddm_b2e_edit_replay_admission_verdict_20260816` ran an F2-alone window at lr 2e-7 with
+`ce_fraction 0.5 / softplus_fraction 0.85` and measured Δd_seg **+1.4e-7 — flat**. Mine, same lever
+and same 3,000 steps at lr 2e-5 with `ce/softplus 0.0/0.0`, measured **−1.938e-5**. **138× apart.**
+Two variables differ, so it does not attribute; it is the shape #1091 (*seg wall is 92.7%
+CONFIGURATION*) and #1089 (*81.19% of LR budget to the worst-aligned objective*) predicted. This is
+an INSTANCE of the existing `cross-regime-constant-transfer-genus-finishing-stage` memory applied to
+LEVER VERDICTS rather than to constants — deliberately NOT given its own MEMORY.md line (see
+apparatus note below).
+
+**b2e's open question is now closed by measurement.** It asked: *"does any lr / step budget move the
+burn-2 base d_seg or d_pose beyond the noise floor"*. Answer: **yes — −2,286 at 3k, −2,620 at 6k.**
+Which of the two variables carries it is OPEN and is the next single-variable A/B.
+
+**b2e also settles what my draft speculated.** It measured whether F2 training makes the mz2 edits
+cheaper to APPLY: `mixed_q3q4` REFUSED at collapse 0.945 vs required 50.0 (pose excess ~4× on BOTH
+bases). The mz2 −823 B recode's distortion blocker is NOT a training-time debt — measured, not
+inferred. My memo was corrected at source before landing.
+
+**How the error was caught.** `tools/recall_neighborhood_check.py --terms` fired on my own draft:
+6-of-6 uncited, b2e at rank 1. Read-before-landing, ~4 minutes. This is the tool built this turn
+doing exactly the job the operator's third "never recall from working memory alone" correction
+demanded — and catching MAIN, not a subagent.
+
+**Triality legs, recorded with reasons.**
+* **DAG** — this block.
+* **DSL** — *N/A with reason*: this is a MEASUREMENT of an existing DSL-held lever, not a lever
+  change. F2 already lives in `tac.pr130_lift.editability_levers.EditabilityLeverConfig`
+  (`weight_qat_q3q4`, `f2_active`, `activation_ledger()`) and is wired to behavior via
+  `mixed_bit_allocation` at `:373`/`:505` → `levers.applied()` at trainer `:1228` — verified at
+  source, NOT inferred from argparse (the FINDING-3 lesson). No new/changed Lever is owed.
+* **equations** — *N/A with reason*: no law was derived; the 138× is a two-variable observation, not
+  an attributed coefficient. Registering it as an equation would be the unlicensed-constant class.
+* **MEMORY.md** — *deliberately NOT added.* The index measured **17,675 B against a 17,408 B
+  budget — already 267 B over**, which risks the partial-load failure the anti-forgetfulness rule
+  exists to prevent. Adding an INSTANCE row of an already-indexed genus would worsen a live defect.
+  **Owed instead: a MEMORY.md consolidation pass back under budget** (queued, not fired mid-arm).
+
+**Apparatus caveat, stated not buried.** The A/B is single-variable in argv but the trainer BRANCHES
+on `lever_config.any_active` (`train_semantic_quantized_resumable.py:1215-1229`): OFF takes stock
+`render_quantized`, ON takes `levers.applied + render_float`. Their equivalence is asserted in a
+CODE COMMENT (`:1223-1227`), which this repo's own rules classify as a forbidden contract. Cheap
+cure (not applied — it is a training-path change): a byte-identity assert at `base_bits` with
+`any_active=False`. Immaterial here since the result sits inside the noise band either way.
+
+**Drain status (#1092):** 1 `--film-row-dropout` MEASURED seg-neutral · 2 `--carrier-rank-penalty`
+NOT FIRED (factorization negative by arithmetic) · **3 `--weight-qat-q3q4` MEASURED here** ·
+4–12 pending. Next: F1 `--weight-perturb-robustness` + `--weight-perturb-shape` +
+`--film-critical-multiplier` are ONE coupled family (`f1_active = sigma > 0`) = one A/B, not three.
