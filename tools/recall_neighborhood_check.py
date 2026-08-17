@@ -123,9 +123,15 @@ def cites(text: str, ref: str) -> bool:
     m = _MEMO_CODE.match(stem)
     if m:
         code = m.group(1)
-        # Word-bounded so `sf1` does not match inside `sf10`/`xsf1`.
-        if re.search(rf"\b{re.escape(code)}\b", body):
-            return True
+        # The second token is an ARM CODE only when it carries a digit (sf1, qs2, frd077, wd3,
+        # pk4, rfo1 -- every real one does). Without this guard the regex reads
+        # `ddm_deferral_queue_ledger_*` as code `deferral`, and any memo merely SAYING the word
+        # "deferral" counts as CITING that ledger -- a measured FALSE NEGATIVE that silently
+        # suppresses advisories. English words in that slot are never arm codes.
+        if any(ch.isdigit() for ch in code):
+            # Word-bounded so `sf1` does not match inside `sf10`/`xsf1`.
+            if re.search(rf"\b{re.escape(code)}\b", body):
+                return True
     return False
 
 
@@ -162,9 +168,13 @@ def uncited_neighbors(
         ref = str(hit.get("ref") or "")
         if Path(ref).name == self_name:  # the memo always ranks #1 on its own terms
             continue
-        checked += 1
-        if checked > top_k:
+        # BOUND BEFORE COUNTING. The reverse order (count, then break on >) leaves `checked`
+        # at top_k+1 and the report then overstates its own denominator by one -- measured on
+        # this tool's first run (`--top-k 5` printed "top 6"). Sister of #1084: the denominator
+        # is the thing to get right, including in the instrument that checks denominators.
+        if checked >= top_k:
             break
+        checked += 1
         if not cites(text, ref):
             uncited.append({"ref": ref, "score": hit.get("score"), "date": hit.get("date")})
     return {"memo": str(p), "terms": terms, "checked": checked, "uncited": uncited, "error": None}
