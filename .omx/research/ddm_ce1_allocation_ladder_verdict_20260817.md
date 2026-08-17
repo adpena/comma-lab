@@ -78,15 +78,30 @@ placement on the Road↔Lane boundary** (that edge alone = 43.4%).
 
 **The `ce1` init is 33,757 flips. `rt1`'s measured round trip is 33,743. They agree to 0.041%.**
 
-If those are the same object — INFERRED, not proven, since `rt1` measured on `hv1 ep0634` and
-these arms initialize on the burn-2/PR130-lineage QAT base — then the whole ladder reads
-differently: **all three arms START at the round-trip floor and the training only ever ADDS error
-on top of it.** `best_step = 0` then means *no arm went below the floor it was handed*, not *the
-regime cannot descend*. The control added 8,654 to that floor; EF0 added 636. The measured
-quantity was never the floor; it was the surcharge, and the surcharge is 92.7% configuration.
+⚠ **The owed check RAN, same turn, and it answers the conditional NO — which strengthens the
+reading rather than killing it.** MEASURED from the launch manifests (`$0`, read-only):
 
-**Cheap check owed before this is asserted:** confirm whether the `ce1` init object and `hv1
-ep0634` share a lineage, or whether 0.041% is a 1-in-2,400 coincidence.
+| object | identity |
+|---|---|
+| `ce1` init (all three arms) | `semantic_renderer_w96_b4_qat4_fixedtau05_tail6k_lr2e7.pt`, PR130 eureka-intake repro repo |
+| `rt1`'s subject | `hv1 ep0634` — epoch 634 of the RX2-lineage burn whose parent is `e480b` (`cd89907b…`, epoch 480) |
+
+**They are NOT the same object.** They are separated by hundreds of epochs of QAT/HPAC training on
+different branches of the lineage. So the 0.041% agreement is **CROSS-OBJECT**, not an identity.
+
+That is the more interesting fact. `rt1` measured that **99.22%** of round-trip flips sit exactly
+ON the transmitted label boundary and the label interior carries **7 flips in 104 million pixels**.
+If the quantity is dominated by boundary placement against the *label geometry*, then any object
+that reproduces those labels well lands at nearly the same flip count — which is exactly what two
+independently-trained objects agreeing to 14 flips looks like. **MECHANISM-CONSISTENT, still
+INFERRED:** two points do not prove invariance, and a third object at a different training state
+is the test. What the check does settle is that "same object" is off the table as the explanation.
+
+The ladder reading survives with its premise repaired: **all three arms start at (or beside) the
+round-trip floor and the training only ever ADDS error on top of it.** `best_step = 0` then means
+*no arm went below the floor it was handed*, not *the regime cannot descend*. The control added
+8,654 to that floor; EF0 added 636. The measured quantity was never the floor; it was the
+surcharge, and the surcharge is 92.7% configuration.
 
 **The $0 falsifier stands but its branches flip.** Decompose all three endpoints into
 boundary-tie vs interior flips. `rt1` predicts ~99.2% boundary and a median deficit near 0.105 on
