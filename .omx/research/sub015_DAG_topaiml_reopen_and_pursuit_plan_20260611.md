@@ -28243,3 +28243,39 @@ Legs: equations `wallclock_fixed_cost_prefix_bias_v1` (anchor
 memo `.omx/research/ddm_wallclock_eval_cadence_refit_20260817.md` · ledger #1090.
 Genus: units×level×aggregation are part of the claim — a wall-clock budget quoted without
 its cadence is under-specified, the prefix-bias defect one level down.
+
+## FEED-2026-08-17-allocation-ladder — the seg "wall" is 92.7% CONFIGURATION
+
+**MEASURED, $0.** Three 600-step arms, same init/seed/lr, differing ONLY in curriculum FRACTIONS.
+
+| arm | `cos(sign g)` | flips above init @600 | vs A/A floor (605) |
+|---|---:|---:|---:|
+| control (81.19% `ce`) | 0.2087 | **+8,654** | 14.3× |
+| `CE0` (0% `ce`) | mixed | **+4,852** | 8.0× |
+| **`EF0` (100% `expected_flip`)** | **0.6185** | **+636** | **1.05×** |
+
+**13.6× · 92.7% of the control's excess removed · one flag, no code change · monotone at all six
+checkpoints · gap 4–13× the absolute A/A spread.**
+
+- `best_step = 0` on all three — *"does not descend"* survives LITERALLY. But the margin collapsed
+  from **14.3× the noise floor to 1.05×**: at n=1 the EF0 endpoint is INDISTINGUISHABLE from parity.
+- **MAIN's CE0 read was UNDERSTATED and its pre-registered fork was WRONG.** I graded CE0 PARTIAL,
+  concluded "the floor is NOT the CE phase," and bet on *allocation is real but inert*. EF0 refutes
+  that bet. CE0 was PARTIAL because it left `softplus_margin` (cos 0.5235) holding 18% of the budget.
+- **Why nine runs missed it:** three decades of lr and two window lengths were swept across a
+  curriculum shape NEVER varied once — and the fractions are fractions OF THE RUN, invariant to
+  exactly the two swept axes. The search explored the axis that didn't matter.
+- **INFERRED (not measured):** the ~636 residue is `rt1`'s manufactured-error path — 95% of seg error
+  created by the render→SegNet round trip, not carried in the weights. $0 falsifier: decompose all
+  three endpoints manufactured-vs-label; invariant fraction across a 13.6× total ⇒ the floor is in
+  realization, not the trainer.
+- **`EF3000` FIRED** (pid 74123, ~26 min): EF0 was still descending at the cap (2,019→927→636 over its
+  last 75 steps) with lr annealed to 2e-7 — the ANNEAL ran out, not the objective. Pre-registered:
+  `best_step>0` ⇒ crossing, configuration not physics · `best_step=0` inside the floor ⇒ alignment
+  saturates at parity, residue is realization.
+- **Wall-clock law scored:** predicted 865.5 s, EF0 measured 842.0 s (−2.7%) — equal to the
+  identically-configured CE0's 2.7% run-to-run spread. First out-of-sample test of this morning's
+  three-point cadence fit; it holds.
+
+Memo `.omx/research/ddm_ce1_allocation_ladder_verdict_20260817.md`. Equations leg for the ladder
+itself is HELD pending EF3000 — n=3 with no mechanism is not yet a law.
