@@ -48,7 +48,10 @@ REPO = Path(__file__).resolve().parent.parent
 SOURCE_TREE = Path(
     "/Volumes/APDataStore/pact/ddm_wc1_advisory_decode_wallclock_20260815/prepared/hv1_base_control"
 )
-CORRECTOR = REPO / "experiments/ddm_rr2_free_corrector.py"
+# ddm_rr4: selectable corrector, default unchanged.  The receiver MUST ship the
+# same module the encoder used; cross-check corrector_sha256 in the two receipts.
+CORRECTOR_MODULE = os.environ.get("TAC_RR2_CORRECTOR_MODULE", "ddm_rr2_free_corrector")
+CORRECTOR = REPO / "experiments" / f"{CORRECTOR_MODULE}.py"
 STORE = Path("/Volumes/APDataStore/pact/ddm_rr2_encoder_build")
 CANDIDATE_ARCHIVE = STORE / "retained" / "archive.zip"
 TOKEN_FIELD_SHA = "9ba2e52b3096585895970066b389bf1261ebc203d5b828cdea056c13858aea52"
@@ -284,6 +287,14 @@ def run_parseback(candidate: Path, work: Path, expect_field_sha: str) -> dict[st
 
 
 def main() -> int:
+    # ddm_rr4 fix: same SyntaxError as the encoder had - the declaration sat
+    # after `default=STORE` had already read the name, so the committed
+    # instrument did not compile.  Declaring it first is semantically identical.
+    # ddm_rr4 fix: CANDIDATE_ARCHIVE was bound at import from the DEFAULT store,
+    # so `--store` staged one store's runtime around another store's archive.
+    # It is now rebound from the parsed argument.
+    global STORE, CANDIDATE_ARCHIVE
+
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--stage", required=True, choices=("build", "parseback"))
     parser.add_argument("--store", type=Path, default=STORE)
@@ -300,8 +311,8 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    global STORE
     STORE = args.store
+    CANDIDATE_ARCHIVE = args.store / "retained" / "archive.zip"
     candidate = args.tree if args.tree is not None else args.store / "candidate_runtime"
     work = args.store / f"parseback_{args.tag}" if args.tag != "candidate" else args.store / "parseback"
     work.mkdir(parents=True, exist_ok=True)

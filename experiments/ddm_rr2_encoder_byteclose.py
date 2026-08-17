@@ -72,7 +72,13 @@ import numpy as np
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO / "experiments"))
 
-from ddm_rr2_free_corrector import FreeCorrector
+# ddm_rr4: the corrector module is selectable so a platform-exact successor can
+# be encoded WITHOUT mutating ddm_rr2's sealed proof chain.  The default is
+# unchanged, so `--stage encode` with no environment override still reproduces
+# ddm_rr2's byte targets exactly.  Set TAC_RR2_CORRECTOR_MODULE to a module name
+# under experiments/ that exposes the same FreeCorrector surface.
+CORRECTOR_MODULE = os.environ.get("TAC_RR2_CORRECTOR_MODULE", "ddm_rr2_free_corrector")
+FreeCorrector = importlib.import_module(CORRECTOR_MODULE).FreeCorrector
 
 PREPARED = Path(
     "/Volumes/APDataStore/pact/ddm_wc1_advisory_decode_wallclock_20260815/prepared/hv1_base_control"
@@ -543,6 +549,12 @@ def stage_build(work: Path, retained: Path) -> dict[str, object]:
 
 
 def main() -> int:
+    # ddm_rr4 fix: this declaration used to sit AFTER `default=STORE` had already
+    # read the name, which is a hard SyntaxError - the committed instrument did
+    # not compile and so could not have produced ddm_rr2's artifacts.  Declaring
+    # it first is semantically identical and makes the file executable again.
+    global STORE
+
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--stage",
@@ -559,7 +571,6 @@ def main() -> int:
     parser.add_argument("--store", type=Path, default=STORE)
     args = parser.parse_args()
 
-    global STORE
     STORE = args.store
     store = args.store
     work = store / "work"
@@ -581,7 +592,8 @@ def main() -> int:
     result["promotable"] = False
     result["numpy_version"] = np.__version__
     result["python_version"] = sys.version
-    result["corrector_sha256"] = sha256_file(REPO / "experiments/ddm_rr2_free_corrector.py")
+    result["corrector_module"] = CORRECTOR_MODULE
+    result["corrector_sha256"] = sha256_file(REPO / "experiments" / f"{CORRECTOR_MODULE}.py")
     suffix = "" if args.frames == N_FRAMES else f"_smoke{args.frames}"
     atomic_json(store / f"RESULT_{args.stage}{suffix}.json", result)
     progress({"stage": args.stage, "event": "complete", "result": result})
