@@ -103,3 +103,67 @@ R3. Draft status: Level 1-3 above = working-memory v0 (honest label); this secti
     corpus correction; the 23rd convocation owes the FULL-corpus pass (corrections index 11,840
     rows · probe-outcomes ledger 662 rows · follow-on stores · 14-day memo sweep · canonical
     equations) and must hunt counter-evidence with the same energy as confirmation.
+
+## v1 — 23rd CONVOCATION VERDICT (APPEND-ONLY, 2026-08-17; v0/v0.1 above are UNMUTATED)
+
+Full memo: `.omx/research/ddm_gs1_gestalt_convocation_20260817.md` (ddm_gs1, Schmidhuber LEAD, T3,
+operator-convened). **5 CONFIRMED · 4 REFINED · 4 REFUTED. The gestalt is REFUTED at its core
+object-level claim.** Pointer UNMOVED, $0, no launch/Modal/scorer.
+
+**V1. P1 is REFUTED. 68.30% of the fortnight's gain was gradient DESCENT, not operators.** The four
+contest-CUDA moves total ΔS −0.00342188793034498. Re-derived shares: MC36 EDIT −2.068e-5 (**0.60%**) ·
+**e480b v2, a 480-epoch QAT burn, −1.842432e-3 (53.84%)** · **hv1 ep0634, +154 more epochs,
+−4.947332e-4 (14.46%)** · rr4 RECODE −1.064043e-3 (31.10%). **v0 names three moves and omits the
+largest.** Corrected claim: *operators are the withdrawal mechanism; the burn is the deposit.*
+
+**V2. The "descent saturates" premise cites a voided fit.** v0's "e960 ASYMPTOTED (~480 B remaining)"
+rests on a fit that `av1` F3 (**HIGH, CONFIRMED**, 08-15) declares defective (`y_inf=130,875`;
+selector later chose **130,393 B**) — the "~480 B" is the **482 B by which the run had already beaten
+that floor**. The e480b refit says in its own words: **"the descent has NOT floored"** (power tail,
+~1.2 KB/doubling ≈ −8e-4 S), and `wc2`'s route ranking puts the QAT burn **first**.
+
+**V3. NEW — distortion has been frozen since 08-14.** Implied distortion is identical to **14
+significant figures** across all four rows (0.0379055765413310…). Three of four moves changed only
+RATE at a **bit-identical decoded field**; only MC36 touched the field, buying −3.2000e-5 for +17 B
+= 0.375% of the remaining gap. v0's flat five-generator list misses this two-layer structure.
+
+**V4. P4 is REFUTED as written** — "NO single axis closes sub-0.15" is contradicted by its own next
+sentence ("seg −28.8% **or** rate −12,815 B"). Correct: **pose alone** cannot close it.
+
+**V5. PP3 is REFUTED: leaked, and its falsifier had already fired.** Leg (b) restates `ns1`'s
+prior-day P1 "Train-for-editability" (08-16). Leg (a)'s named mechanism is half-dead: `me1` §5 found
+**"our shipped rr4 law is already opal-class"** and measured the context-mixture difference **5/5
+negative** (+67 to +689 B); only the online-adaptive leg survives. Leg (c) restates `rv2`. And PP3's
+own falsifier — *"if a plain longer burn moves the pointer next"* — **had already fired twice (08-15,
+08-16) before the sentence was written.**
+
+**V6. R1 REFINED, R2 REFUTED in attribution.** `qs5` IS a genuine exact-object Schur constrained
+solve (verified, not a relabel) — but the 07-18 law is **witness-vehicle-scoped**, one of its three
+legs is an operator-caught **STRAWMAN**, and `gx1` (08-16) measured the closure **SCALE-CONDITIONAL**
+(139× miss → **1.7×** at the full pool). R2's FEED-gy citation is backwards: FEED-gy ranked CAPACITY
+**"THE #1 suspect"** and made it **"THE decisive plateau test"** — it CONTRADICTS the gestalt.
+**FEED-gz (same day) is the correct PREDICTS receipt.**
+
+**V7. P6 is CONFIRMED and SELF-INSTANTIATING** — v0 commits its own diagnosed error three times
+(V2, V4, V6).
+
+**V8. Composition hazard v0 does not carry.** `hg1` MEASURED the algebra: commutative idempotent
+join-semilattice (flat; commutators identically zero) whose **value function is not submodular ⇒ no
+greedy guarantee**; `cp1` measured a "safest" union as a **net loss** (+3.469e-05); `rr4` requires the
+banked offsets be **RECOMPILED** against the new coder. **Never fire a union on summed credits.**
+
+**V9. Re-ranking — v0's "me1 is the center of gravity" is DEMOTED.** #1 e960/e1920 QAT continuation +
+selector (only route with a live measured slope); #2 the *narrow* online-adaptive prior; #3 ce1/cw1
+aligned long burn (owed a byte-closed row); #4 me1 micro-edit composition (banked bank = **0.065%** of
+the gap); #5 pose line (ceiling −0.0083 < gap 0.00853). Honest caveat: at ~1.2 KB/doubling, closing
+12,815.4 B needs **10.7 doublings** — descent is a **contributing**, not a closing, lever. Neither
+class closes the gap alone.
+
+**V10. GS1-PRED (new, pre-registered, inverts PP3(a)):** the next ≥1e-4 pointer move comes from a
+**NEW CHECKPOINT** (e960/e1920 harvested by the selector), not from a post-hoc operator on the frozen
+rr4 object. **Falsifier:** if the next ≥1e-4 move is an operator on the frozen object with no new
+checkpoint in its lineage, GS1-PRED is wrong and PP3(a) is right.
+
+**What survives:** the one-sentence gestalt — *training's remaining role is to produce better frozen
+objects for the operators to act on* — is defensible and largely CONFIRMED, along with P3, P5, P6,
+P7, P8. The sharp object-level claim built on top of it is not.
