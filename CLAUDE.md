@@ -4146,12 +4146,12 @@ Yousfi (challenge creator) was Fridrich's PhD student at Binghamton DDE Lab. Eff
 - Output: 5-class logits, distortion = argmax disagreement rate
 - **Blind spot**: stride-2 stem loses half resolution immediately → artifacts below (256,192) invisible
 - **Key**: only argmax matters — tiny logit perturbations at class boundaries are the ENTIRE signal
-- **CLASS INDEX ORDER — MEASURED 2026-06-27 (canonical comma10k order; NON-NEGOTIABLE — do NOT re-derive by luma-sort):** verified from the ACTUAL cached SegNet argmax (`gt_n96.npz['lstars']`, n96; per-class area / vertical-centroid / temporal-IoU):
-  - `0 = Road` (22.9% area, ground/mid-lower, IoU 0.955)
+- **CLASS INDEX ORDER — MEASURED 2026-06-27 (canonical comma10k order; NON-NEGOTIABLE — do NOT re-derive by luma-sort):** verified from the ACTUAL cached SegNet argmax (per-class area / vertical-centroid / temporal-IoU). **AREAS CORRECTED 2026-08-17 to n600 (`gt_n600.npz['lstars']`) — the originals were the n96 PREFIX.** Only ONE class moved: Movable **1.56% (n96) → 1.24% (n600), a 1.258× overstatement**; Road/Lane/Undrivable/MyCar all agree within 1.2%, so this is a SELECTIVE scene-content prefix effect (the first 96 pairs simply contain more cars), not a blanket n96 defect. Genus [[m88]]: a prefix of a skewed population is a different population — and it was live in the always-loaded instructions. Areas below are n600; the ORDER, centroids, and IoUs are the unchanged 2026-06-27 n96 measurement.
+  - `0 = Road` (23.2% area, ground/mid-lower, IoU 0.955)
   - `1 = Lane markings` (0.59%, thin, IoU 0.263 — the unstable d_seg gate orbit; ~19% of flips)
-  - `2 = Undrivable` (incl. sky; 49.3%, TOP region rows ~9–182, IoU 0.995)
-  - `3 = Movable`/cars (1.56%, mid-band rows ~174–215, IoU 0.903)
-  - `4 = MyCar`/ego-hood (25.6%, BOTTOM rows ~290–379, STATIC IoU 0.994 — the #139 static core)
+  - `2 = Undrivable` (incl. sky; 49.5%, TOP region rows ~9–182, IoU 0.995)
+  - `3 = Movable`/cars (**1.24%** — n96 said 1.56%, 1.258× high; mid-band rows ~174–215, IoU 0.903)
+  - `4 = MyCar`/ego-hood (25.4%, BOTTOM rows ~290–379, STATIC IoU 0.994 — the #139 static core)
   - **FORBIDDEN**: re-deriving the order by luma-sorting comma10k `class_values=[41,76,90,124,161]` → that gives `[Road0,Lane1,MyCar2,Undriv3,Movable4]`, which is **WRONG** and bit us 3× (Yousfi-grounding + review luma-sort). The trained net emits the comma10k **canonical** order `[Road,Lane,Undrivable,Movable,MyCar]`, NOT the luma sort. Structured-manifold components must **SELF-DETECT** their class by spatial/static signature, never hardcode the index. d_seg flip mass: ~50% Road / 19% Lane / 13% Undrivable. Verifier: `np.load("experiments/results/mlx_fleet_gt_cache/gt_n96.npz")['lstars']`. Anchors: DAG FEED-dv/dw + `src/tac/boundary_math/{lane_sdf_component,hood_static_component}.py` (self-detecting).
 
 **PoseNet**: FastViT-T12 backbone (NOT EfficientNet)

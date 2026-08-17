@@ -28311,3 +28311,30 @@ placement on Road↔Lane (43.4% of the round trip), NOT a hand-off away from tra
 Genus: recall-from-working-memory instead of from source, on a number I had repeated all turn.
 Sister of [[measured_object_vs_named_object_20260816]] and the standing NEVER-RECALL-FROM-WORKING-
 MEMORY-ALONE law — my own charters failed it 4× this month.
+
+### FEED-2026-08-17-class-area-prefix-bias — a live prefix constant in the ALWAYS-LOADED instructions
+
+`ddm_ws4` flagged CLAUDE.md's class-3 area as n96-biased; MAIN verified from the caches before
+editing (the instructions file is not edited on an arm's say-so).
+
+| class | n96 (was in CLAUDE.md) | n600 (truth) | ratio |
+|---|---:|---:|---:|
+| 0 Road | 22.9544% | 23.2332% | 0.988× |
+| 1 Lane | 0.5885% | 0.5855% | 1.005× |
+| 2 Undrivable | 49.3266% | 49.5176% | 0.996× |
+| **3 Movable** | **1.5569%** | **1.2379%** | **1.258×** |
+| 4 MyCar | 25.5736% | 25.4258% | 1.006× |
+
+**Sharper than the flag:** only Movable moved. The other four agree within 1.2%. So this is a
+SELECTIVE scene-content prefix effect — the first 96 pairs contain more cars — not a blanket n96
+defect. The decay is monotone in n: **1.8127% (n1) → 1.7219% (n6) → 1.5340% (n24) → 1.5569% (n96)
+→ 1.2379% (n600)**. Genus [[m88]]/[[m96]], and the AXIS TRIPLE gains a fourth member: pose 2.5–4.2×
+harder on prefixes · seg ≈0.96× · rate ≈neutral · **per-class AREA biased only for the class whose
+objects enter and leave the scene.**
+
+CORRECTED at source in CLAUDE.md; order/centroids/IoUs unchanged (those were never area-dependent).
+
+Independent cross-validation from the same arm: ws4 fit **24.75 s/eval** from the retained
+displacement/telemetry data; MAIN's three-point cadence fit gave **25.400 s/eval**. Two derivations,
+different data, **2.6% apart** — the eval-cadence refit reproduces out-of-sample twice in one day
+(the other being EF0's 842.0 s vs the predicted 865.5 s).
