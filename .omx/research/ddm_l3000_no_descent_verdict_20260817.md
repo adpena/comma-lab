@@ -10,14 +10,25 @@ No score claim. Frontier untouched.
 `best_step = 0` · `improved_over_init = False` · final seg **exactly equals** init seg
 (0.00028616163465711804) because the best checkpoint *is* the initialization.
 
-| step | phase | flips above init | Δ per 100 |
+| step | phase | flips above init | Δ per 100 (LOCAL, from the previous eval) |
 |---:|---|---:|---:|
 | 100 | ce | +49,580 | +49,580 |
 | 900 | ce | +16,680 | −3,378 |
 | 1,500 | ce | +6,510 | −743 |
-| 1,800 | softplus_margin | **+7,469** | **+320 (rises)** |
+| **1,600** | **softplus_margin** | **+7,706** | **+1,196 (rises — the stage transition)** |
+| 1,800 | softplus_margin | +7,469 | −218 |
 | 2,400 | softplus_margin | +5,787 | −19 |
 | 3,000 | expected_flip | **+4,887** | **−104** |
+
+⚠ **CORRECTED 2026-08-17 by `ddm_aa3`.** The original table's 1,800 row read **`+320 (rises)`**.
+Every other row in that column is the **local** 100-step rate; `+320` was the **300-step average**
+over 1,500 → 1,800, i.e. a different aggregation in the one cell carrying the column's rhetorical
+point. The local rate at 1,800 is **−218 — it falls.** The *phenomenon* is real and survives intact:
+the softplus transition does undo repayment. It happens at **1,500 → 1,600 (+1,196)**, one stage
+boundary earlier, and that row is now shown instead. Re-derived from the 31-row `history` in
+`/Volumes/APDataStore/pact/ddm_jr1/L3000_off/run.log` (`flips = (qes − init) × 117,964,800`); every
+other cell in the table reproduces exactly. Genus:
+[[the-instruments-own-units-level-and-aggregation-are-part-of-the-claim-20260816]].
 
 **I predicted this was a truncation. It is not.** From `A2_repeat`'s tail (−765 flips/100 at the
 600 cap, +8,654 above init) I estimated ~1,131 more steps to parity. The real run went **2,400
@@ -30,7 +41,18 @@ a truncation. Linear extrapolation of a decaying tail was the wrong instrument, 
 `ddm_wallclock_prefix_bias_law_20260817`. `--ce-fraction 0.50` is a fraction *of the run*, so CE
 ends at step 300 in the 600-step arm and step 1,500 in the 3,000-step arm. At step 600 the short
 arm was already in softplus at +8,654 while the long arm was still in CE at +27,047. Only the
-**end states** compare: 5× the steps ends 43.5% closer to parity, with the rate 7.4× slower.
+**end states** compare: 5× the steps ends 43.5% closer to parity, with the rate **3.5×–7.4×**
+slower.
+
+⚠ **CORRECTED 2026-08-17 by `ddm_aa3` — the rate ratio was a point estimate off one run.** The
+numerator −765/100 is `A2_repeat`'s tail rate. **A2 — same config, same seed 20260715 — has a tail
+rate of −366/100.** Against L3000's −104/100 the ratio is therefore **3.52× (A2) to 7.36×
+(`A2_repeat`)**, a 2.1× span from MPS run-to-run nondeterminism alone. The headline quoted the
+larger end with no band.
+**The verdict is unaffected and the direction is not in doubt**: the *end-state* claim is
+well-clear of the noise — 8,654 → 4,887 is a 3,767-flip gap against a measured A/A run-to-run
+difference of 605 flips at step 600, i.e. **6.2× the floor**. Only the *rate ratio* is fragile.
+See the corrected floor table in `ddm_wallclock_prefix_bias_law_20260817.md`.
 
 ## What it closes
 
@@ -71,12 +93,24 @@ measured.
 ## NEXT_IF_RESUMED
 
 1. **Do not fire Leg C.** It ranks damage *rates* between objectives inside a regime that does
-   not descend. The comparison is well-powered (72-flip floor, 23× headroom) and would be
-   answering a question that no longer routes.
+   not descend, and would be answering a question that no longer routes.
+   ⚠ **The parenthetical "(72-flip floor, 23× headroom)" is CORRECTED by `ddm_aa3`**: that floor is
+   measured at **step 100 only**. The same A/A pair differs by **7.19%–12.48% at steps 200–600**
+   (mean 9.51%, 28× the step-100 figure). Leg C's own design compares *peaks* at step 100, so its
+   power claim survives at that step — but "well-powered" is not a property of this instrument in
+   general, and the floor rests on **n = 1**. Full table in
+   `ddm_wallclock_prefix_bias_law_20260817.md`.
 2. The live question is the **opening excursion**: +49,580 flips in the first 100 CE steps, which
    every subsequent phase spends the run repaying. Ask why CE creates that debt before asking
    which objective repays it faster.
 3. Pin stage boundaries in **absolute steps** before any future length comparison on this
    trainer, or length and schedule stay confounded.
-4. Re-price with `(F = 144.3 s, r = 0.4395 s/step, ~14.8 s/save)`; a 3,000-step arm is ~26 min,
-   not 2.8 h.
+4. Re-price with `(F = 144.3 s, r = 0.4395 s/step)`; a 3,000-step arm is ~26 min, not 2.8 h.
+   ⚠ **CORRECTED by `ddm_aa3`: the `~14.8 s/save` term was in this recipe and must not be.** `F`
+   and `r` were separated from two points that each already *include* their own checkpoint saves,
+   so `F = 144.3 s` already carries ~7 saves' cost; adding a separate 14.8 s/save term
+   **double-counts ~104 s**. The 14.8 s is itself back-solved from the +89 s residual it explains
+   (89.2 / 6 = 14.87) — it is not an independent measurement, which is exactly why the three-term
+   model predicts ~107 s against b2e's measured 166.30 s at n=50. The memo body said this
+   ("attribution, not a measurement; 2 equations, 3 unknowns"); the recipe line contradicted it.
+   Use `(F, r)` as a pair, or re-fit all three terms from ≥3 points with recorded save counts.

@@ -73,10 +73,20 @@ regexes = [
     # (`100.101.102.103`, tailscale-cgnat-fleet-ip). `api_key=AKIA5T7QZR3XK9WLMN24` still
     # fires. Only `expect_bytes=FRAMES` goes silent. This entry changes detection of
     # nothing else.
-    # ⚠ CONTROL-DESIGN NOTE, learned the hard way here: do NOT use
-    # `AKIAIOSFODNN7EXAMPLE` as the planted key. It is gitleaks' own documentation example
-    # and the DEFAULT ruleset allowlists it, so it is silent with or without any entry of
-    # ours — a control that cannot fail, which proves nothing. A vacuous falsifier reads as
-    # a pass. Plant a realistic non-canonical key instead.
+    # ⚠ CONTROL-DESIGN NOTE, learned the hard way here TWICE (2026-08-17):
+    # (1) Do NOT use `AKIAIOSFODNN7EXAMPLE` as the planted key. It is gitleaks' own
+    #     documentation example and the DEFAULT ruleset allowlists it, so it is silent with
+    #     or without any entry of ours — a control that cannot fail, which proves nothing.
+    #     A vacuous falsifier reads as a pass. Plant a realistic non-canonical key instead.
+    # (2) …and DO NOT COMMIT THE PLANTED LITERAL. Clause (1) alone is incomplete guidance:
+    #     a sister arm followed it exactly, committed the realistic key inside its audit
+    #     memo's results table, and the auto-push hygiene gate correctly HELD the push.
+    #     The gate is not a false positive — a scanner cannot distinguish a documented
+    #     fixture from a live credential and must not try, and an AWS-shaped literal in a
+    #     public repo trips GitHub secret scanning regardless of whether it unlocks
+    #     anything. CONTRACT: run the control with a realistic key, record the VERDICT,
+    #     commit a SHAPE DESCRIPTION ("realistic non-canonical AWS-shaped key, 20 chars,
+    #     AKIA-prefixed") — never the characters. Keep the key in the scratch dir only.
+    #     Genus: an instruction correct about the MEASUREMENT and silent about the ARTIFACT.
     '''^expect_(?:bytes|sha)=[A-Z][A-Z0-9_]*$''',
 ]

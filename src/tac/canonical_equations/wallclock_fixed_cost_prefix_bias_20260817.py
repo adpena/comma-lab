@@ -18,8 +18,16 @@ That 3.33 s/step became the campaign's cost model. It propagated into ``ddm_jr1`
 Nobody mis-multiplied: the number was measured honestly and then carried across a scope
 boundary where its DENOMINATOR changed.
 
-``A2_repeat`` ran 600 real steps (6 checkpoints, ``verdict = PASS``) in 408 s = 0.680
-s/step end-to-end. The sealed budget was **4.90x too expensive**.
+``A2_repeat`` ran 600 real steps (7 checkpoint saves per its own ``checkpoints_written``
+receipt) in 408.258 s = 0.680 s/step end-to-end. The sealed budget was **4.90x too
+expensive AT n=600**.
+
+⚠ SCOPE, corrected 2026-08-17 (ddm_aa3): the over-pricing factor is a FUNCTION of ``n``,
+never a constant. It is ``3.326 n / (F + r n)`` -- **1.00x at n=50** (where the smoke was
+measured, by construction), **4.89x at n=600**, **6.82x at n=3,000**, rising to an
+asymptote of ``3.326 / r`` = **7.57x**. "Every window priced 4.9x too expensive" is the
+n=600 value universalised; the memo's own re-pricing table already carries the 6.8x row
+for n=3,000. Quote the factor WITH its ``n``, or quote the ``(F, r)`` pair instead.
 
 The law
 -------
@@ -103,8 +111,21 @@ MARGINAL_SECONDS_PER_STEP = 0.4395
 FIXED_COST_SECONDS = 144.3
 
 #: The out-of-sample scoring of the three competing models at n=3,000.
+#:
+#: CONVENTION, stated because it was silently violated once (ddm_aa3, 2026-08-17):
+#: ``signed_relative_error = (predicted - measured) / measured`` with
+#: ``measured = 1552.0`` for EVERY row. A model comparison whose rows use different
+#: denominators is not a comparison.
+#:
+#: CORRECTED 2026-08-17 (ddm_aa3): ``two_point_fit`` carried ``+0.061``, which is
+#: ``(measured - predicted) / PREDICTED`` -- the other denominator AND the other sign.
+#: The honest value is ``-0.05735``: the fit **UNDER**-predicts by 89 s. The sign is
+#: load-bearing for the ``--walltime-cap-s`` consumer below: a cap set at
+#: ``predicted_total_seconds`` is 5.7% SHORT of the measured run and kills it.
+#: ``+6.1%`` remains correct as "the measured total is 6.1% above the prediction" and
+#: is what the memos quote; it is not this field's definition.
 PREDICTION_SCORECARD = {
-    "two_point_fit": (1463.0, 0.061),        # (predicted_s, signed_relative_error)
+    "two_point_fit": (1463.0, -0.05735),     # (predicted_s, signed_relative_error)
     "b2e_single_point": (9972.0, 5.424),
     "naive_from_600_e2e": (2040.0, 0.314),
 }

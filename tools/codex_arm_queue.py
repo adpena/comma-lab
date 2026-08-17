@@ -1523,7 +1523,26 @@ def _corrections_index_identifies_quantities() -> bool:
 def _lint_stale_numbers(text: str) -> list[str]:
     """Does the charter quote a number the corpus already corrected?
 
-    RETIRED-PENDING-STORE-REPAIR, 2026-08-17 (MAIN, measured; task #1085).
+    RETIRED-PENDING-STORE-REPAIR, 2026-08-17 (MAIN, measured).
+
+    OWNER: unowned.  FIRE-CONDITION: any arm that rebuilds the au1 corrections
+    index -- add a ``quantity`` field naming WHICH quantity each row corrected
+    (the shape ``.omx/research/falsified_premise_registry.jsonl`` already uses),
+    and this leg re-arms automatically via
+    ``_corrections_index_identifies_quantities`` with no code change.
+    ``tools/au1_measurement_integrity_audit.py`` writes the index with
+    ``write_jsonl`` (mode ``"w"``), so a rebuild replaces the file wholesale and
+    the first-row schema probe below is a sound re-arm signal.
+
+    ⚠ CITATION CORRECTED 2026-08-17 (ddm_aa3).  This docstring cited "task
+    #1085".  In the repo ledger -- the only one arms can read -- ``#1085`` is
+    ``1085_p0_always_keep_payload_retrofit_population_20260816`` (owner
+    ``next_retention_arm``), unrelated work; and NO ledger row mentioned this
+    leg or the corrections store at all, so the retirement was an untracked
+    "off".  Bare ids do not survive the harness/repo task-ledger split
+    ([[m89]]: cite CONTENT, never a bare id) and "off" must be a tracked queue
+    with an owner and a fire-condition, never a forgotten default.  Both are
+    now stated above, in this file, where the retirement lives.
 
     Intent was the gx1 class: -15,157 B quoted against a superseded archive.
     The leg cannot serve it, because the store it reads cannot say WHICH

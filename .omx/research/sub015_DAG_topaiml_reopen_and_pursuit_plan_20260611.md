@@ -28161,7 +28161,14 @@ to **+49,580 flips above init in the first 100 steps**, repays monotonically (�
 INIT, not a truncation.
 
 This REFUTED MAIN's own linear-tail extrapolation (~1,131 steps to parity from `A2_repeat`'s
-−765/100 tail; reality closed 3,767 of 8,654 flips in 2,400 steps with the rate collapsing 7.4×).
+−765/100 tail; reality closed 3,767 of 8,654 flips in 2,400 steps with the rate collapsing
+**3.5×–7.4×**).
+
+⚠ **AMENDED 2026-08-17 by `ddm_aa3`** (fresh-eyes audit, $0): the tail rate came from ONE run. A2 —
+same config, same seed — has a tail rate of **−366/100** against `A2_repeat`'s −765/100, so the
+collapse ratio spans **3.52×–7.36×** and the "~1,131 steps" estimate was `1,131–2,199`. The
+refutation itself is unaffected: the end-state gap (3,767 flips) is **6.2×** the measured A/A
+run-to-run difference at step 600 (605 flips).
 Population now complete: C0/A1/A2/A3 at 600 steps over three decades of lr, b2e at 3,000/lr 2e-7,
 L3000_off at 3,000/lr 2e-5 — **none descends below its own initialization.**
 
@@ -28169,8 +28176,14 @@ L3000_off at 3,000/lr 2e-5 — **none descends below its own initialization.**
 (2.161% of mass on a band holding 99.22% of the debt, 83.3°) STANDS. But reallocating gradient
 inside a descent that ends +4,887 flips worse than its start cannot supply the gap. This is jr1's
 pre-registered DIRECTION NULL branch reached with a measured curve. **Leg C should NOT fire** — it
-ranks damage RATES inside a regime that does not descend (well-powered: 72-flip run-to-run floor,
-23× headroom vs the 6.1% effect; wrong question).
+ranks damage RATES inside a regime that does not descend (wrong question).
+
+⚠ **AMENDED by `ddm_aa3`:** the original parenthetical read "well-powered: 72-flip run-to-run floor,
+23× headroom vs the 6.1% effect". The 72-flip floor is **step-100 only**. The same A/A pair differs
+by **7.19%–12.48% at steps 200–600** (mean 9.51%). At the step-600 floor the headroom is **0.81×**,
+not 23× — noise exceeds effect. Leg C's own design compares peaks at step 100 so its power claim
+survives *there*, but "well-powered" is not a general property of this instrument, and the floor
+rests on **n = 1**.
 
 **Successor edge:** the OPENING EXCURSION. ~50,000 flips created in the first 100 CE steps is where
 the debt originates; every later phase is repayment that never finishes. NOT closed: a different
@@ -28178,11 +28191,21 @@ formulation (different init, curriculum shape, absolute-step stage boundaries, a
 not spike).
 
 **2. WALL-CLOCK LAW (registered).** b2e's sealed ticket derived 3.33 s/step from a **50-step
-end-to-end smoke**; that priced every window on this trainer **4.90× too expensive**. An end-to-end
-rate is `r + F/n`: measured **r = 0.4395 s/step, F = 144.3 s** (at n=50, 87% was fixed cost). The
-n=3,000 prediction was PRE-REGISTERED at 1,463 s and measured 1,552 s (+6.1%) against b2e's 6.4×
-miss. Prefix-bias genus on the TIME axis. Re-priced: 600-step arm **6.8 min** · Leg C **27 min** ·
-3,000-step window **24.4 min**.
+end-to-end smoke**; that over-priced every window on this trainer by a factor that **GROWS with the
+window** — **4.89× at n=600, 6.82× at n=3,000**, asymptote 7.57×. An end-to-end rate is `r + F/n`:
+measured **r = 0.4395 s/step, F = 144.3 s** (at n=50, 87% was fixed cost). The n=3,000 prediction
+was PRE-REGISTERED at 1,463 s and measured 1,552 s (+6.1%) against b2e's 6.4× miss. Prefix-bias
+genus on the TIME axis. Re-priced: 600-step arm **6.8 min** · Leg C **27 min** · 3,000-step window
+**24.4 min**.
+
+⚠ **AMENDED by `ddm_aa3`:** the single figure "4.90× too expensive" was the **n=600** value written
+as universal — the factor is `3.326n/(F+rn)`, equal to 1.00× at n=50 by construction. Quote it with
+its `n`, or quote `(F, r)`. Two further corrections landed at source: the registered equation's
+`PREDICTION_SCORECARD["two_point_fit"]` carried **+0.061** where its own convention
+`(predicted−measured)/measured` gives **−0.05735** (wrong sign *and* wrong denominator — and the
+sign is load-bearing, since the named consumer is `--walltime-cap-s` and the fit UNDER-predicts);
+and the `~14.8 s/save` term was struck from the re-pricing recipe because `F` already contains ~7
+saves' cost, so adding it double-counts ~104 s.
 
 **Instrument caveat, confirmed live:** `--ce-fraction` is a FRACTION OF THE RUN, so stretching
 600→3,000 moves the CE→softplus handoff from step 300 to 1,500. The two arms are in different
