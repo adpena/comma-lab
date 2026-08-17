@@ -28146,3 +28146,48 @@ model's 5-vector output is not summarizable by hand-designed features.
 **Verdict scope: FORMULATION** — additive per-cell logit correction tables on hv1's HPAC output.
 Neural capacity is untouched. Memo: `.omx/research/ddm_hm1_model_byte_derivative_20260816.md`.
 Pointer UNMOVED: hv1 ep0634 **S 0.15959729295498598 @ 182,759 B [contest-CUDA T4, n600]**.
+
+## FEED-20260817a — the seg training regime asymptotes ABOVE its own init (+ the wall-clock law)
+
+**MEASURED 2026-08-17, MAIN, $0.** Two findings from one 26-minute run, both landed:
+`ddm_l3000_no_descent_verdict_20260817.md` (eb13f7e108) ·
+`ddm_wallclock_prefix_bias_law_20260817.md` (2adc2de7e3) · canonical equation
+`wallclock_fixed_cost_prefix_bias_v1`.
+
+**1. THE SEG NODE CLOSES AT FORMULATION SCOPE.** `L3000_off` (3,000 steps, lr 2e-5, band OFF)
+returned `best_step = 0`, `improved_over_init = False`, final seg EXACTLY equal to init. CE spikes
+to **+49,580 flips above init in the first 100 steps**, repays monotonically (−3,378/100 at step
+900), then the rate **decays 32×** to −104/100, ending **+4,887 above init**. An ASYMPTOTE ABOVE
+INIT, not a truncation.
+
+This REFUTED MAIN's own linear-tail extrapolation (~1,131 steps to parity from `A2_repeat`'s
+−765/100 tail; reality closed 3,767 of 8,654 flips in 2,400 steps with the rate collapsing 7.4×).
+Population now complete: C0/A1/A2/A3 at 600 steps over three decades of lr, b2e at 3,000/lr 2e-7,
+L3000_off at 3,000/lr 2e-5 — **none descends below its own initialization.**
+
+**R6 (band objective) is MOOTED, not refuted.** rg1b's measured 45.9× gradient misallocation
+(2.161% of mass on a band holding 99.22% of the debt, 83.3°) STANDS. But reallocating gradient
+inside a descent that ends +4,887 flips worse than its start cannot supply the gap. This is jr1's
+pre-registered DIRECTION NULL branch reached with a measured curve. **Leg C should NOT fire** — it
+ranks damage RATES inside a regime that does not descend (well-powered: 72-flip run-to-run floor,
+23× headroom vs the 6.1% effect; wrong question).
+
+**Successor edge:** the OPENING EXCURSION. ~50,000 flips created in the first 100 CE steps is where
+the debt originates; every later phase is repayment that never finishes. NOT closed: a different
+formulation (different init, curriculum shape, absolute-step stage boundaries, an opening that does
+not spike).
+
+**2. WALL-CLOCK LAW (registered).** b2e's sealed ticket derived 3.33 s/step from a **50-step
+end-to-end smoke**; that priced every window on this trainer **4.90× too expensive**. An end-to-end
+rate is `r + F/n`: measured **r = 0.4395 s/step, F = 144.3 s** (at n=50, 87% was fixed cost). The
+n=3,000 prediction was PRE-REGISTERED at 1,463 s and measured 1,552 s (+6.1%) against b2e's 6.4×
+miss. Prefix-bias genus on the TIME axis. Re-priced: 600-step arm **6.8 min** · Leg C **27 min** ·
+3,000-step window **24.4 min**.
+
+**Instrument caveat, confirmed live:** `--ce-fraction` is a FRACTION OF THE RUN, so stretching
+600→3,000 moves the CE→softplus handoff from step 300 to 1,500. The two arms are in different
+phases at every matched step; only END STATES compare. Pin stage boundaries in ABSOLUTE steps
+before any future length comparison on this trainer.
+
+**Own-vehicle frontier UNMOVED:** hv1 ep0634 **S 0.15959729295498598 @ 182,759 B**
+`[contest-CUDA T4, n600]`. Gap to 0.15: **−0.0095973**.
