@@ -28279,3 +28279,35 @@ checkpoints · gap 4–13× the absolute A/A spread.**
 
 Memo `.omx/research/ddm_ce1_allocation_ladder_verdict_20260817.md`. Equations leg for the ladder
 itself is HELD pending EF3000 — n=3 with no mechanism is not yet a law.
+
+### FEED-2026-08-17-allocation-ladder — CORRECTION (same turn, before re-citation)
+
+MAIN's "where the residue lives" half was **wrong and inverts**. I cited "95% manufactured by the
+render→R→uint8→SegNet round trip, therefore unreachable by training" four times without re-reading
+`rt1`. At source (`ddm_rt1_seg_roundtrip_decomposition_20260816.md`):
+
+- **`R` supplies EXACTLY ZERO** flips on piecewise-constant content — the R operator is innocent;
+  naming it as the mechanism is false.
+- **The residual is a TIE, not a wall:** 98.3% of flips have the wanted class already RUNNER-UP,
+  median logit deficit **0.105**, half the axis < 0.1 logits, none > 3 (correct pixels sit at 3–10).
+  A 0.1-logit tie is exactly what a training-side lever reaches — **the opposite of my inference.**
+- **`rt1`'s own verdict routes the seg axis TO THE RENDERER**, after its byte-carrying correction
+  channel passed the coder gate (32,270 B) then FAILED realization (η 0.6235 vs 0.753, +0.0025 S).
+- Numbers: round trip = **33,743 flips = 0.028604 S**, 96.6% of the seg axis, **2.98×** the gap
+  (I quoted 0.028155 / 2.9×). 99.22% ON the label boundary; interior = 7 flips in 104M px.
+
+**The arithmetic that reframes the ladder:** `ce1` init = **33,757** flips; `rt1` round trip =
+**33,743**. Agreement to **0.041%**. INFERRED (different named vehicles: `hv1 ep0634` vs the
+burn-2/PR130-lineage QAT base) — if the same object, all three arms START at the round-trip floor
+and training only ever ADDS a surcharge on top: control +8,654, EF0 +636. Then `best_step = 0`
+means *no arm went below the floor it was handed*, not *the regime cannot descend* — and the
+quantity this ladder measured is the SURCHARGE, which is 92.7% configuration. Cheap lineage check
+owed before assertion.
+
+EF3000 fork branch 2 RE-SPECIFIED before the result landed: `best_step = 0` inside the floor now
+means the surcharge is driven to ~0 and the FLOOR becomes the object — reachable by sub-pixel edge
+placement on Road↔Lane (43.4% of the round trip), NOT a hand-off away from training.
+
+Genus: recall-from-working-memory instead of from source, on a number I had repeated all turn.
+Sister of [[measured_object_vs_named_object_20260816]] and the standing NEVER-RECALL-FROM-WORKING-
+MEMORY-ALONE law — my own charters failed it 4× this month.
