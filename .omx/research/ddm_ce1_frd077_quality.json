@@ -1,0 +1,38 @@
+{
+  "schema": "pact.run_quality_poller.config.v1",
+  "log_path": "/Volumes/APDataStore/pact/ddm_ce1/FRD077/launcher/run.log",
+  "pid_file": "/Volumes/APDataStore/pact/ddm_ce1/FRD077/launcher/run.pid",
+  "telemetry_path": "/Volumes/APDataStore/pact/ddm_ce1/FRD077/watchers/quality_telemetry.jsonl",
+  "alert_path": "/Volumes/APDataStore/pact/ddm_ce1/FRD077/watchers/quality.alert.json",
+  "poll_s": 120,
+  "eval_period_s": 600,
+  "stale_periods": 100,
+  "startup_grace_s": 900,
+  "json_marker": "\"quantized_exact_seg\"",
+  "fields": {
+    "epoch": "step",
+    "value": "quantized_exact_seg",
+    "phase": "phase",
+    "finite": []
+  },
+  "bar_value": 1.0,
+  "bar_start_epoch": 999999,
+  "alert_conditions": {
+    "joint_regression": false,
+    "qat_knee_shock": false,
+    "nan_or_garbage": true,
+    "stale_telemetry": false
+  },
+  "regression_bands": [],
+  "phase_knee": {
+    "epoch": 1,
+    "window_epochs": 1,
+    "shock_multiplier": 1.0,
+    "continuous_phase": "expected_flip"
+  },
+  "best_not_latest": {
+    "phase": "expected_flip",
+    "min_rows": 999999,
+    "lag_epochs": 999999
+  }
+}
