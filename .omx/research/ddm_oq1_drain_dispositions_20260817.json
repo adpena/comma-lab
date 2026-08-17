@@ -12,20 +12,21 @@
  "own_vehicle_frontier": "hv1 ep0634 S 0.15959729295498598 @ 182,759 B [contest-CUDA T4 n600] \u2014 UNMOVED by this unit",
  "headline": "All 437 queued rows dispositioned. The decisive measured fact: all 377 datable rows were authored 2026-06-17..08-04; ZERO postdate the 2026-08-06 PR130 intake that produced the live vehicle. The backlog predates the live frontier entirely, and every byte magnitude in it is denominated on archives 274K-605K B against a live archive of 182,759 B. 298 rows (68.2%) are dead mass.",
  "counts": {
-  "FOLDED": 298,
-  "QUEUED": 79,
-  "FIRED": 34,
-  "DEFERRED": 26
+  "FIRED": 35,
+  "QUEUED": 80,
+  "FOLDED": 297,
+  "DEFERRED": 25
  },
  "counts_total": 437,
  "vehicle_scope_counts": {
   "retired": 70,
-  "apparatus": 246,
-  "live_achiever_tr1": 34,
+  "apparatus": 245,
+  "live_achiever_tr1": 35,
   "live_frontier_hpac": 87
  },
  "method_counts": {
-  "manual-verified": 45,
+  "manual-executed": 2,
+  "manual-verified": 43,
   "mechanical-vehicle-scope": 150,
   "ledger-join": 94,
   "drain-window-requery": 148
@@ -576,11 +577,11 @@
    "source_id": "ddm_p1a_followon_unknown_adjudication_20260801.md#p1a-item-01",
    "qj1_owner": "ddm_gc15",
    "oq1_vehicle_scope": "retired",
-   "oq1_disposition": "FOLDED",
-   "oq1_reason": "DEAD MASS: authored pre-2026-08-06 (before the PR130/HPAC vehicle existed); vehicle-bound, no transferable mechanism named; unfired through 5 successive inventory arms (iv1 08-03, qj1 08-04, oh1 08-07, hr1 08-09, qw1 08-16)",
+   "oq1_disposition": "FIRED",
+   "oq1_reason": "EXECUTED this unit. phi = ||Fisher adjoint||/||Euclidean control|| over the 25 direct blocks: geometric mean 1.927039e-03 => 1/phi = 518.9x (min 8.313387e-08, median 5.463920e-03, max 4.969174e-01). DECISIVE: all 25 blocks carry actuation_status=UNREACHABLE_BY_COUNTED_COORDINATES and NO_TARGET_BUCKET_EVENT_CHANGED_BY_ANY_COUNTED_RG3_MAGNITUDE_OR_SIGN; 80 probes fired, 0 target-bucket hits, 0 target events. The multiplier is real arithmetic over an adjoint no counted coordinate can actuate, so arms D+/D- cannot be fired from it. Also: fisher_euclidean_cosine spans [-1.0,+1.0] across blocks (the m65 dual-metric sign-flip), so the metric is not a pure rescale. No registered phi reducer exists anywhere in code - the only .py occurrences of the phrase are src/tac/followon_backlog_join.py (the queue tool that WROTE this fire_order) and its test.",
    "oq1_owner": "",
-   "oq1_evidence": ".omx/research/ddm_oh1_20260807/OH1_CONSUMPTION_PLAN.jsonl + ddm_hr1_20260809T031504Z/HR1_ROUTING.jsonl | all 377 datable rows span 06-17..08-04; ZERO postdate the 08-06 PR130 intake",
-   "oq1_method": "manual-verified"
+   "oq1_evidence": ".omx/research/ddm_ms4d_direct_metric_completion_20260724T155932Z/composite_r_direct_n600.json (schema ddm_composite_r_second_order_custody.direct_scorer_intrinsic.v2, 25 direct_blocks, n600, [macOS-CPU frozen-scorer advisory])",
+   "oq1_method": "manual-executed"
   },
   {
    "oq1_idx": 1,
@@ -673,12 +674,13 @@
    "item": "g4 boundary-gated code-width $0 H(cell|neighbors) gate",
    "source_id": "ddm_p1a_followon_unknown_adjudication_20260801.md#p1a-item-05",
    "qj1_owner": "ddm_lv1",
-   "oq1_vehicle_scope": "apparatus",
-   "oq1_disposition": "DEFERRED",
-   "oq1_reason": "oh1 08-07 routed it; hr1 08-09 DEFERRED it behind \"#984 member selection\" \u2014 MEASURED BLOCKER: #984 is ABSENT from the repo canonical ledger, so the gate is unresolvable by any arm reading repo state",
-   "oq1_owner": "MAIN (re-gate onto hv1/HPAC or TR1 before any arm can fire)",
-   "oq1_evidence": ".omx/research/ddm_oh1_20260807/OH1_CONSUMPTION_PLAN.jsonl + ddm_hr1_20260809T031504Z/HR1_ROUTING.jsonl",
-   "oq1_method": "manual-verified"
+   "oq1_vehicle_scope": "live_achiever_tr1",
+   "oq1_disposition": "QUEUED",
+   "oq1_reason": "EXECUTED this unit: the lever IS wired - registered in the TR1 trainer lever table at experiments/train_tr1_partition_renderer_mlx.py:248 with state=\"never-fired\" and a pre-registered adoption threshold. TR1-class SURVIVOR, not an orphan. Owed $0 gate: H(cell|neighbors) interior vs boundary cells on GT tokens at (D,c); ADOPT IFF >=15% token-stream saving vs uniform c; feeds G4. Boundary is 2,436 px/frame = 1.2% of pixels (op1 P3 row 3, PointRend logic at the coder).",
+   "oq1_owner": "ddm_tc1 (TR1 lifecycle composition)",
+   "oq1_evidence": "experiments/train_tr1_partition_renderer_mlx.py:248-252",
+   "oq1_method": "manual-executed",
+   "oq1_tr1_phase": "COMPOSITION"
   },
   {
    "oq1_idx": 8,
@@ -6706,6 +6708,18 @@
    "oq1_owner": "MAIN",
    "oq1_evidence": "handoff_requery.json",
    "oq1_method": "drain-window-requery"
+  }
+ ],
+ "fired_executions_this_unit": [
+  {
+   "oq1_idx": 0,
+   "row": "T0 rank-1: phi / 1-over-phi efficiency multiplier from the composite-R adjoint",
+   "result": "1/phi = 518.9x (geometric mean over 25 direct blocks); UNACTIONABLE - adjoint is UNREACHABLE_BY_COUNTED_COORDINATES, 0/80 probes hit a target bucket"
+  },
+  {
+   "oq1_idx": 7,
+   "row": "T1: g4 boundary-gated token code width $0 H(cell|neighbors) gate",
+   "result": "lever IS wired in the TR1 trainer, state=\"never-fired\", adopt iff >=15% token-stream saving; routed to ddm_tc1"
   }
  ]
 }

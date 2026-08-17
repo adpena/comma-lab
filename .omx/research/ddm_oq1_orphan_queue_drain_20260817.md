@@ -1,6 +1,6 @@
 ---
 arm: ddm_oq1
-title: "The 437-row backlog predates the live vehicle entirely: zero of 377 datable rows postdate the 08-06 PR130 intake, every byte magnitude is denominated on archives 1.5x-3.3x larger than the live one, and five successive inventory arms re-listed it without firing it. 298 rows (68.2%) are dead mass."
+title: "The 437-row backlog predates the live vehicle entirely: zero of 377 datable rows postdate the 08-06 PR130 intake, every byte magnitude is denominated on archives 1.5x-3.3x larger than the live one, and five successive inventory arms re-listed it without firing it. 297 rows (68.0%) are dead mass."
 utc: 2026-08-17
 axis: "[local-CPU $0 reads/greps/ledger-joins over primary artifacts] — NEVER a score"
 research_only: true
@@ -31,10 +31,15 @@ tokens: "[no-triality] [p0-ledger-ok]"
 
 ## Headline
 
-I dispositioned all **437** queued rows. **298 (68.2%) are dead mass and are FOLDED.** The residual
-is **79 owned rows**: 21 TR1-class survivors routed to `ddm_tc1`, 19 verified-live apparatus defects
-routed to MAIN, 39 registered-open canonical tasks. **34 rows FIRED** — I located their closing
-artifacts. **26 DEFERRED** on one named, measured blocker.
+I dispositioned all **437** queued rows. **297 (68.0%) are dead mass and are FOLDED.** The residual
+is **80 owned rows**: 22 TR1-class survivors routed to `ddm_tc1`, 19 verified-live apparatus defects
+routed to MAIN, 39 registered-open canonical tasks. **35 rows FIRED** — I located their closing
+artifacts or executed them. **25 DEFERRED** on one named, measured blocker.
+
+I executed the population's **#1-ranked row** (T0, "lowest cost-to-falsify in the entire population",
+unread since 08-01). Result: **1/φ = 518.9x** — and it is **unactionable**, because all 25 blocks of
+the adjoint it reads are `UNREACHABLE_BY_COUNTED_COORDINATES` (0 of 80 probes hit a target bucket).
+§4a. The cheapest row in the queue was cheap because it could never have paid.
 
 **The decisive fact is a date.** Of the 437 rows, **377 carry a datable source memo. They span
 2026-06-17 to 2026-08-04. ZERO postdate 2026-08-06** — the `pr130_eureka_intake_acquisition_20260806`
@@ -105,13 +110,13 @@ anywhere in `.omx/research`.
 
 | disposition | rows | share |
 |---|---:|---:|
-| **FOLDED** (dead mass) | **298** | 68.2% |
-| **QUEUED** (owned, fire-condition) | **79** | 18.1% |
-| **FIRED** (resolved this unit) | **34** | 7.8% |
-| **DEFERRED** (named measured blocker) | **26** | 5.9% |
+| **FOLDED** (dead mass) | **297** | 68.0% |
+| **QUEUED** (owned, fire-condition) | **80** | 18.3% |
+| **FIRED** (resolved this unit) | **35** | 8.0% |
+| **DEFERRED** (named measured blocker) | **25** | 5.7% |
 | total | **437** | 100% |
 
-Vehicle scope: `apparatus` 246 · `live_frontier_hpac` 87 · `retired` 70 · `live_achiever_tr1` 34.
+Vehicle scope: `apparatus` 245 · `live_frontier_hpac` 87 · `retired` 70 · `live_achiever_tr1` 35.
 Note the 87 "live_frontier_hpac" rows are scope-*classified* by mechanism keyword; on inspection their
 magnitudes are all denominated on retired archives, which is why most still fold.
 
@@ -148,6 +153,34 @@ Two of these matter beyond bookkeeping. **#859 was a queued *win* that is actual
 −2,781 B row sitting in the backlog whose sign flipped to +5,183 B when finally measured. **#860 was a
 queued *defect count* that did not reproduce.** Both are the same lesson: an unfired number decays.
 
+### 4a. The T0 rank-1 row, executed — φ = 1/518.9, and it is unactionable
+
+This was the highest-ranked row in the whole population: *"lowest cost-to-falsify in the entire
+population… read the adjoint out of the ms4d bundle, report 1/φ."* It sat unread from 08-01 through
+five inventory arms. I read it.
+
+The ms4d bundle is on disk. From
+`ddm_ms4d_direct_metric_completion_20260724T155932Z/composite_r_direct_n600.json` (25 direct blocks,
+n600, `[macOS-CPU frozen-scorer advisory]`):
+
+**φ = ‖Fisher adjoint‖ / ‖Euclidean control‖, geometric mean = 1.927039e-03 ⇒ 1/φ = 518.9x**
+(min 8.313387e-08, median 5.463920e-03, max 4.969174e-01).
+
+**And the number is unactionable.** All 25 blocks carry
+`actuation_status = UNREACHABLE_BY_COUNTED_COORDINATES` and
+`NO_TARGET_BUCKET_EVENT_CHANGED_BY_ANY_COUNTED_RG3_MAGNITUDE_OR_SIGN`. **80 probes fired; 0 target-bucket
+hits; 0 target events.** The multiplier is real arithmetic over an adjoint that **no counted coordinate
+can move**. Arms D± cannot be fired from it — not because the read was hard, but because the thing it
+measures is not reachable by anything we can ship. The row was gating a decision on a quantity that
+could never inform it.
+
+Two side facts worth keeping. `fisher_euclidean_cosine` spans the full **[-1.0, +1.0]** across blocks —
+the m65 dual-metric sign-flip is present here, so the metric is not a pure rescale (my first read of
+the leading blocks said cosine ≡ 1.0; that was a prefix artifact of the same shape as m88, and it is
+wrong). And **no registered φ reducer exists anywhere in code**: the only `.py` occurrences of the
+phrase are `src/tac/followon_backlog_join.py` — the queue tool that *wrote* this fire_order — and its
+test. The row's precondition was named only by the row's own generator.
+
 **17 handoff rows FIRED** by the drain-window re-query — successor activity found after 08-04 for arms
 `ca1 cr1 cx1 dc1 dt1 gp1 gr1 hb1 js1 mt1 sf1 tr1 ub1`, plus 2 rows whose target paths were touched
 (`tools/launch_tr1_run.py`, `src/tac/canonical_equations/__init__.py`).
@@ -183,7 +216,7 @@ unfired-wins queue at **one row worth 1.6% of the gap**, and MAIN's 08-16 verdic
 surgery on this archive is exhausted** (all lossless routes ≤ ~278 B of a 14,414 B bar). My result is a
 third arm reaching the same wall from the backlog side.
 
-**LIVE-ACHIEVER TR1: 21 survivors**, routed to `ddm_tc1` and phase-tagged per the operator's 08-17
+**LIVE-ACHIEVER TR1: 22 survivors**, routed to `ddm_tc1` and phase-tagged per the operator's 08-17
 steer. This is where the residual value sits.
 
 | phase | n | representative rows |
@@ -191,7 +224,15 @@ steer. This is where the residual value sits.
 | PRE-seeding | 4 | 5-arm magnitude-matched reset-operator race (#815/#824/#820); **structured warm reset** (#725, built, never run); **KD-from-warm-into-fresh** (`kd_warm_start_dir`, #74/#129 — BUILT, 6 NO-FAKE tests, DEFAULT-OFF, never fired on tr1) |
 | DURING-conditioning | 2 | zb1 continuation-knee state-dependence; influence-ranked sparsifier scope note |
 | POST-solving | 4 | zb1 post-snap knee re-measure; gk2 `window_solve=ON` d_pose-under-v4d-warp gate (**−0.01441 S d_seg already MEASURED**, blocker named in the tr1 docstring); full-600 mixed-k6/k8 solve on cr2_ep854 |
-| COMPOSITION | 11 | gk2 L-token-quant sweep through byte-close; QA08 context-MIXING coder; `--existence-hinge-weight` (#920, built in TR1, 6 config fields, default 0.0 = OFF, 31 tests) |
+| COMPOSITION | 12 | gk2 L-token-quant sweep through byte-close; QA08 context-MIXING coder; `--existence-hinge-weight` (#920, built in TR1, 6 config fields, default 0.0 = OFF, 31 tests); **`boundary_gated_token_code_width`** (see below) |
+
+**One TR1 row I executed rather than classified.** The g4 boundary-gated code-width row is *not* an
+orphan — it is **wired**, registered in the TR1 trainer's own lever table at
+`experiments/train_tr1_partition_renderer_mlx.py:248` with `state: "never-fired"` and a
+**pre-registered adoption threshold**: run the $0 `H(cell|neighbors)` gate on interior vs boundary
+cells over GT tokens at (D,c), and **adopt iff ≥15% token-stream saving vs uniform c**. Boundary is
+2,436 px/frame = 1.2% of pixels. A registered lever, a stated falsifier, zero dollars, never fired —
+this is the cleanest single item in the TR1 handoff.
 
 **#824 is the readiest of these**: `ddm_qd1:165` records it as explicitly **STANDALONE + UNBLOCKED,
 ~2h, $0**, and it does *not* depend on the #820 wiring debt. Two qualifiers qd1 states and I am
@@ -204,7 +245,7 @@ gate looks met — MAIN should confirm before firing rather than take my read of
 
 Each is $0 unless marked. None fired by me — arms do not own scorer, Metal, or Modal slots.
 
-**FO-1 — reconcile the split ledger (unblocks 26 DEFERRED rows + the 51 charter task rows).**
+**FO-1 — reconcile the split ledger (unblocks 25 DEFERRED rows + the 51 charter task rows).**
 Materialize the harness TaskList rows for the 51 absent ids into `.omx/state/canonical_task_status.jsonl`.
 Falsifier: after materialization, `#984`/`#971`/`#939`/`#938`/`#915`/`#920`/`#869` resolve from repo
 state and the 17 HR1 deferrals become fireable. Six ids (`#912 #926 #1087 #1088 #1093 #1094`) have no
@@ -216,14 +257,14 @@ nothing. OH1 ranked it fire-now #2 on 08-07; zc1 and hr1 both re-queued it; it i
 later. Require per banked member: receipt path, member bytes, parse-back equality, consumer row id.
 Cost: $0 + focused tests.
 
-**FO-3 — route the 21 TR1 survivors into `ddm_tc1`.** They are phase-tagged in the dispositions JSON
+**FO-3 — route the 22 TR1 survivors into `ddm_tc1`.** They are phase-tagged in the dispositions JSON
 under `oq1_tr1_phase`. The two BUILT-but-never-fired levers are the cheapest real starts because the
 build cost is already paid: `kd_warm_start_dir` (#74/#129 — built, 6 NO-FAKE tests, default-off, never
 fired on tr1) and `--existence-hinge-weight` (#920 — built in TR1, 6 config fields, default 0.0 = OFF,
 31 tests). Both are the default-off orphan class. **#824** is the readiest real *experiment*, but it is
 a training run behind a governed slot and a `ddm_op2` fire-condition (§6).
 
-**FO-4 — retire the qj1 queue as a standing surface.** 298 rows are folded here with reasons. Leaving
+**FO-4 — retire the qj1 queue as a standing surface.** 297 rows are folded here with reasons. Leaving
 the 437-row file live invites a sixth inventory. This memo's JSON is its append-only successor; qj1 was
 not edited.
 
@@ -258,4 +299,4 @@ forbids it. This table is for MAIN to apply.
 - Three triage sub-agents I spawned were queued behind the 3-arm Opus cap and never ran; I folded
   their scopes into my own execution. No work was duplicated.
 - **The exact pointer did not move.** This unit is MEANS, not goal progress. It shrinks a 437-row
-  standing queue to 79 owned rows and frees the fleet from inventorying it a sixth time.
+  standing queue to 80 owned rows and frees the fleet from inventorying it a sixth time.
