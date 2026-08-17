@@ -1017,7 +1017,12 @@ A1_PIN_THREADS = 8               # et4: batch shape and thread count are part of
 A1_DELTA_MASKS = ("off", "band", "interior")
 # Pre-registered by ddm_a1s section 8 FO-A BEFORE this row was run.  Both are compared against
 # the BAND-only pose drift rms at alpha = 0.25, n600.
-A1_FOA_LIVE_BELOW = 0.0026240    # sqrt(HV1_D_POSE): the entire incumbent pose error
+# NOT RE-DERIVED ON PURPOSE (ddm_pu3_r2, 2026-08-17).  This literal was pre-registered from the
+# superseded CP135 pin, so sqrt(HV1_D_POSE) now evaluates to 0.0026230, not 0.0026240 -- the bar
+# as written is 0.039% LOOSE.  It stays at its pre-registered value: silently retightening a
+# threshold that was fixed BEFORE the row ran is goalpost-moving, and 0.039% cannot flip a verdict
+# whose other edge (A1_FOA_CLOSED_ABOVE) sits 3.2x away.  Recorded, not moved.
+A1_FOA_LIVE_BELOW = 0.0026240    # ~sqrt(HV1_D_POSE): the entire incumbent pose error
 A1_FOA_CLOSED_ABOVE = 0.0083     # 3.2x the incumbent -- erases any plausible seg win
 
 
@@ -1436,10 +1441,21 @@ def stage_a1sign(args: argparse.Namespace) -> dict:
 # ============================================================================================
 # FO-1 counts seg flips only, but `PoseNet.preprocess_input` (upstream/modules.py:69-73) keeps
 # BOTH frames of the pair, so an actuator that edits frame_1 moves `d_pose` as well.  At the hv1
-# operating point d_pose is 6.885642960696714e-06, so the pose contribution sqrt(10*d_pose) has
-# marginal 5/sqrt(10*d_pose) = 602.6 per unit d_pose -- a third-of-a-percent pose move can erase
-# a whole seg win.  This stage measures the pose half on the SAME synthesised frames.
-HV1_D_POSE = 6.885642960696714e-06   # ddm_wc2_hpac_mps_port_20260814.md, hv1 ep0634
+# operating point d_pose is 6.88e-06, so the pose contribution sqrt(10*d_pose) has marginal
+# 5/sqrt(10*d_pose) = 602.8 per unit d_pose -- a third-of-a-percent pose move can erase a whole
+# seg win.  This stage measures the pose half on the SAME synthesised frames.
+#
+# SCOPE FIX (ddm_pu3_r2, 2026-08-17).  This pin previously read 6.885642960696714e-06 and cited
+# ddm_wc2 as authority for "hv1 ep0634".  Both halves were wrong, and wc2 says so itself at
+# :747-748: that 16-digit value is the CP135 base at 186,252 B, NOT hv1 at 182,759 B.  The value
+# is DERIVED here, not copied: hv1's receipt reports the pose TERM sqrt(10*d_pose) = 0.0082945765,
+# so d_pose = 0.0082945765**2 / 10 = 6.879999931e-06, which the receipt carries to 3 significant
+# figures as 6.88e-06.  The superseded pin lies OUTSIDE the rounding interval [6.875e-06, 6.885e-06)
+# that rounds to 6.88e-06, so it cannot be the unrounded source -- it is a different archive's
+# number.  Carrying it onto hv1 overstated the pose term by 3.400899e-06 S.  Genus:
+# [[cross-regime-constant-transfer-genus-finishing-stage]].  Raised by ddm_pv1 and ddm_pu3; this
+# is the first landing.
+HV1_D_POSE = 6.88e-06   # DERIVED from hv1 ep0634's own pose term (0.0082945765**2 / 10)
 
 
 class _PoseInstrument:
