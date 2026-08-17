@@ -70,6 +70,9 @@ from ddm_sq1_stage_decomposition_and_solved_paint import (  # noqa: E402
     resize_to_scorer,
 )
 
+sys.path.insert(0, str(REPO / "src"))
+from tac.payload_retention import retain_payload, retention_root  # noqa: E402
+
 S_PER_FLIP = 100.0 / (N_PAIRS_TOTAL * SEG_H * SEG_W)
 RATE_PER_BYTE = 25.0 / 37_545_489.0
 BLOCK = 16
@@ -81,8 +84,16 @@ OUT_DIR = Path("/Volumes/VertigoDataTier/pact/ddm_lr2_20260804")
 
 
 def lzma1_raw(b: bytes) -> int:
+    """Price ``b`` under the shipped LZMA1 filter chain. PURE ORACLE — prices, never owns.
+
+    Retention is discharged by the CALLER: every arm routes its carrier through
+    :func:`retain_arm_payload` before pricing it, so the bytes this function measures are
+    already on the SSD tier with a recorded sha256.  Persisting inside the oracle would
+    re-write the same payload once per ladder rung and per K/M sweep step, which is noise,
+    not custody.
+    """
     filt = [{"id": lzma.FILTER_LZMA1, "dict_size": 1 << 22, "lc": 0, "lp": 0, "pb": 0}]
-    return len(lzma.compress(b, format=lzma.FORMAT_RAW, filters=filt))
+    return len(lzma.compress(b, format=lzma.FORMAT_RAW, filters=filt))  # MEASURE_ONLY_OK: pure pricing oracle; every caller retains the carrier via retain_arm_payload before pricing it
 
 
 # ================================================================================================
@@ -217,6 +228,25 @@ def checkpoint(out_path: Path, payload: dict) -> None:
     with open(tmp, "w") as f:
         json.dump(payload, f, indent=1)
     tmp.replace(out_path)
+
+
+def retain_arm_payload(arm: str, pair: int, payload: bytes) -> dict:
+    """Persist ONE candidate carrier and return its custody row.
+
+    ALWAYS KEEP THE PAYLOAD (P0, operator 2026-08-09).  Every arm of this ladder solves a
+    real carrier -- block-selection indices plus int8 shifts -- prices it with LZMA1, and
+    used to drop the bytes on the floor, leaving a JSON of lengths.  That is the anchor
+    incident verbatim: ``ans_real_n600.py`` kept two coder LENGTHS and the discarded loser
+    later measured -2,120 B BETTER than the shipped winner.  So this keeps EVERY arm's
+    bytes, not the best one's, and records sha256 so the next consumer can prove
+    byte-identity instead of re-solving a 15 s/pair Adam descent.
+
+    Routing is delegated to :func:`retention_root`, never hardcoded: this module's
+    ``OUT_DIR`` points at VertigoDataTier, which measured 893 MiB free (100% capacity) on
+    2026-08-16, so a fixed first-tier write fails mid-run.
+    """
+    root = retention_root("ddm_lr2", need_bytes=len(payload)) / f"pair{pair:03d}"
+    return retain_payload(root / f"{arm}.carrier.bin", payload)
 
 
 def base_header(tag: str) -> dict:
@@ -421,9 +451,11 @@ def run_solve(args, sc, dec, raw, gt_frames, pairs) -> None:
             scr = ctx.score_f1(sc, cam_e)
             payload = (np.sort(moved_idx[keep]).astype(np.uint16).tobytes()
                        + shifts[keep].astype(np.int8).tobytes())
+            custody = retain_arm_payload(f"rungC_M{M}", p, payload)
             c_arms[f"M{M}"] = {**scr, "kept_blocks": int(len(keep)),
                                "payload_lzma1": lzma1_raw(payload),
-                               "payload_raw": len(payload)}
+                               "payload_raw": len(payload),
+                               "carrier_custody": custody}
 
         # ---------------- RUNG B: per-pixel sparse solved residual ----------------------------
         best_b = None
@@ -463,9 +495,11 @@ def run_solve(args, sc, dec, raw, gt_frames, pairs) -> None:
             ii, jj = np.nonzero(kmask)
             lin = (ii.astype(np.uint32) * SEG_W + jj.astype(np.uint32))
             payload = lin.astype("<u4").tobytes() + paint[kmask].astype(np.uint8).tobytes()
+            custody = retain_arm_payload(f"rungB_K{K}", p, payload)
             b_arms[f"K{K}"] = {**scr, "kept_px": int(kmask.sum()),
                                "payload_lzma1": lzma1_raw(payload),
-                               "payload_raw": len(payload)}
+                               "payload_raw": len(payload),
+                               "carrier_custody": custody}
         # dense-band reference (unpayable, the eta ceiling of this solve)
         cam_e = realize_scorer_paint_to_camera(cam_t, mask_s, paint)
         scr_dense = ctx.score_f1(sc, cam_e)
@@ -601,9 +635,12 @@ def run_solve0(args, sc, dec, raw, gt_frames, pairs) -> None:
                 scr = ctx.score_f1(sc, realize(shifts, keep), region=region)
                 payload = (np.sort(sel_blocks[keep]).astype(np.uint16).tobytes()
                            + shifts[keep].astype(np.int8).tobytes())
-                arms[f"M{M}{sfx}"] = {**scr, "kept_blocks": int(len(keep)),
-                                      "payload_lzma1": lzma1_raw(payload),
-                                      "payload_raw": len(payload)}
+                arm = f"M{M}{sfx}"
+                custody = retain_arm_payload(arm, p, payload)
+                arms[arm] = {**scr, "kept_blocks": int(len(keep)),
+                             "payload_lzma1": lzma1_raw(payload),
+                             "payload_raw": len(payload),
+                             "carrier_custody": custody}
 
         row = {"pair": p, "flips_before": ctx.flips0, "n_described": ctx.nd,
                "selected_blocks": n_sel, "arms": arms,
@@ -722,9 +759,11 @@ def run_keys(args, sc, dec, raw, gt_frames, pairs) -> None:
             _fa, shifts = best
             scr = ctx.score_f1(sc, realize(shifts), region=region)
             payload = shifts.astype(np.int8).tobytes()      # params ONLY, order = key rank
+            custody = retain_arm_payload(f"keys_{key}", p, payload)
             row["arms"][key] = {**scr, "capture_of_pair_flips": capture,
                                 "params_lzma1": lzma1_raw(payload),
-                                "params_raw": len(payload)}
+                                "params_raw": len(payload),
+                                "carrier_custody": custody}
         row["wall_s"] = round(time.time() - t0, 1)
         out["rows"].append(row)
         checkpoint(args.out, out)

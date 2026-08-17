@@ -304,3 +304,135 @@ def test_preflight_all_calls_population_gate_warn_only() -> None:
         and keyword.value.value is True
         for keyword in calls[0].keywords
     )
+
+
+# --------------------------------------------------------------------------------------
+# Blind spot #4 (ddm_kp2, 2026-08-16): project-local byte-persistence wrappers.
+#
+# 38 modules copy-paste an atomic byte-write helper under 15 different names and route
+# every payload through it.  Matching persistence against a fixed NAME list read 138 of
+# the 581 live findings (23.8%) as discards when the bytes were on disk.  These tests pin
+# BOTH halves: the wrapper is now honoured, and the two guards that keep the anchor caught
+# are load-bearing (a text sink and a reduced parameter must NOT qualify).
+# --------------------------------------------------------------------------------------
+
+LOCAL_ATOMIC_WRITER = """
+import os
+from pathlib import Path
+
+def _atomic_bytes(path: Path, payload: bytes) -> None:
+    temporary = path.with_name("." + path.name + ".tmp")
+    with temporary.open("wb") as stream:
+        stream.write(payload)
+        stream.flush()
+        os.fsync(stream.fileno())
+    os.replace(temporary, path)
+
+def race(q):
+    blob = zlib.compress(q, 9)
+    _atomic_bytes(out / "z.bin", blob)
+    return {"zlib9": len(blob)}
+"""
+
+
+def test_local_atomic_write_wrapper_counts_as_persistence() -> None:
+    """The repo's dominant retention idiom is retention, not a discard."""
+    assert scan_source(LOCAL_ATOMIC_WRITER, "g2.py") == []
+
+
+def test_local_wrapper_does_not_clear_a_payload_it_never_received() -> None:
+    """Persisting SOME other object through the wrapper must not launder the discard."""
+    source = LOCAL_ATOMIC_WRITER.replace(
+        '_atomic_bytes(out / "z.bin", blob)',
+        '_atomic_bytes(out / "other.bin", unrelated)',
+    )
+    findings = scan_source(source, "g2.py")
+    assert [f.producer for f in findings] == ["compress"]
+
+
+TEXT_RECORD_WRAPPER = """
+import json
+
+def _write_record(path, payload):
+    json.dump({"n": len(payload)}, open(path, "w"))
+
+def race(q):
+    blob = zlib.compress(q, 9)
+    _write_record(out / "r.json", blob)
+    return {"zlib9": len(blob)}
+"""
+
+
+def test_scalar_only_wrapper_is_not_a_persister() -> None:
+    """THE anchor, one call deeper.
+
+    ``_write_record`` accepts the payload and keeps only ``len(payload)`` in a TEXT
+    artifact — exactly line 47 of ``ans_real_n600.py``.  A wrapper detector that walked
+    the parameter without honouring scalar reduction would call this persistence and
+    silently launder the incident this whole gate exists to catch.
+    """
+    findings = scan_source(TEXT_RECORD_WRAPPER, "launder.py")
+    assert [f.producer for f in findings] == ["compress"]
+
+
+def test_text_mode_wrapper_is_not_a_persister() -> None:
+    """A wrapper that writes the payload to a TEXT handle is not a byte sink."""
+    source = """
+def _save(path, payload):
+    with open(path, "w") as fh:
+        fh.write(payload)
+
+def race(q):
+    blob = zlib.compress(q, 9)
+    _save(out / "z.txt", blob)
+    return {"zlib9": len(blob)}
+"""
+    assert [f.producer for f in scan_source(source, "text.py")] == ["compress"]
+
+
+def test_wrapper_taking_no_parameters_is_not_a_persister() -> None:
+    source = """
+def _touch():
+    open("marker.bin", "wb").write(b"")
+
+def race(q):
+    blob = zlib.compress(q, 9)
+    _touch()
+    return {"zlib9": len(blob)}
+"""
+    assert [f.producer for f in scan_source(source, "noargs.py")] == ["compress"]
+
+
+def test_np_save_wrapper_counts_as_persistence() -> None:
+    """A wrapper delegating to a canonical persister is itself a persister."""
+    source = """
+def save_decoder_npz(path, payload):
+    np.save(path, payload)
+
+def race(q):
+    blob = zlib.compress(q, 9)
+    save_decoder_npz(out / "d.npy", blob)
+    return {"zlib9": len(blob)}
+"""
+    assert scan_source(source, "npz.py") == []
+
+
+def test_json_dump_wrapper_is_not_a_persister() -> None:
+    """``json.dump`` writes text; only a binary ``dump`` (pickle/joblib) persists bytes."""
+    source = """
+import json
+
+def _publish(path, payload):
+    json.dump(payload, open(path, "w"))
+
+def race(q):
+    blob = zlib.compress(q, 9)
+    _publish(out / "p.json", blob)
+    return {"zlib9": len(blob)}
+"""
+    assert [f.producer for f in scan_source(source, "j.py")] == ["compress"]
+
+
+def test_anchor_survives_local_persister_modelling() -> None:
+    """Regression: the new escape path must not weaken the incident itself."""
+    assert len(scan_source(ANCHOR, "ans_real_n600.py")) == 2

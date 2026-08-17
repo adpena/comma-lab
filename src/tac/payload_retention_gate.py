@@ -373,6 +373,92 @@ def _call_name(node: ast.Call) -> str | None:
     return None
 
 
+#: Binary write modes. A TEXT handle is not a byte sink — that distinction is what stops
+#: ``open(p, 'w').write(str(len(blob)))``, line 47 of the anchor itself, from laundering.
+_BINARY_WRITE_MODES: frozenset[str] = frozenset(
+    {"wb", "bw", "ab", "ba", "xb", "bx", "w+b", "wb+", "r+b", "rb+", "a+b", "ab+"}
+)
+
+#: Modules whose ``dump`` writes TEXT. ``json.dump({"n": len(blob)}, fh)`` is precisely
+#: the anchor's scalar-only artifact and must never mark a function a byte persister.
+_TEXT_DUMP_MODULES: frozenset[str] = frozenset({"json", "yaml", "toml", "csv"})
+
+
+def _is_binary_sink(node: ast.Call) -> bool:
+    """True when this call durably writes BYTES (not text, not a scalar record)."""
+    name = _call_name(node)
+    if name in {"open", "fdopen", "NamedTemporaryFile", "TemporaryFile"}:
+        modes = [arg for arg in node.args if isinstance(arg, ast.Constant)]
+        modes += [kw.value for kw in node.keywords if kw.arg == "mode"]
+        return any(
+            isinstance(mode, ast.Constant)
+            and isinstance(mode.value, str)
+            and mode.value in _BINARY_WRITE_MODES
+            for mode in modes
+        )
+    if name not in BYTE_PERSISTERS:
+        return False
+    if isinstance(node.func, ast.Attribute):
+        owner = node.func.value
+        if isinstance(owner, ast.Name) and owner.id in _TEXT_DUMP_MODULES:
+            return False
+    return True
+
+
+def _local_byte_persisters(tree: ast.AST) -> frozenset[str]:
+    """Names of functions in THIS module that durably persist bytes handed to them.
+
+    Blind spot #4 (measured 2026-08-16, ddm_kp2). The gate matched persistence against a
+    fixed NAME list, so it could not see the repo's dominant retention idiom: a
+    copy-pasted local wrapper::
+
+        def _atomic_bytes(path: Path, payload: bytes) -> None:
+            with path.with_suffix('.tmp').open('wb') as fh:
+                fh.write(payload); fh.flush(); os.fsync(fh.fileno())
+            os.replace(tmp, path)
+
+    38 modules define that helper under 15 different names (``_atomic_bytes``,
+    ``_atomic_write``, ``atomic_bytes``, ``_publish_immutable``, ``save_decoder_npz``,
+    ...) and route EVERY payload through it. 138 of the 581 live findings (23.8%) sat in
+    such a module — ``tools/measure_realization_g2_lattice.py`` alone contributed 13,
+    every one of them written to disk four lines above the ``len()`` the gate flagged.
+    Matching persistence STRUCTURALLY instead of by name is what makes the gate's count
+    mean something.
+
+    Two guards keep this exact at the anchor boundary, and both are load-bearing:
+
+    * the sink must be BINARY — a text ``open(p, 'w')`` or ``json.dump`` does not qualify;
+    * the parameter must reach that sink UNREDUCED. Without this,
+      ``def rec(p, payload): json.dump({"n": len(payload)}, open(p, "w"))`` would be read
+      as a persister and would launder the anchor's own defect one call deeper.
+    """
+    persisters: set[str] = set()
+    for func in ast.walk(tree):
+        if not isinstance(func, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        spec = func.args
+        params = {arg.arg for arg in (*spec.posonlyargs, *spec.args, *spec.kwonlyargs)}
+        if spec.vararg is not None:
+            params.add(spec.vararg.arg)
+        if not params:
+            continue
+        has_binary_sink = False
+        carries_param = False
+        for node in ast.walk(func):
+            if not isinstance(node, ast.Call):
+                continue
+            binary = _is_binary_sink(node)
+            has_binary_sink = has_binary_sink or binary
+            if not (binary or _call_name(node) == "write"):
+                continue
+            args = list(node.args) + [kw.value for kw in node.keywords]
+            if any(name in params for arg in args for name in _unreduced_names(arg)):
+                carries_param = True
+        if has_binary_sink and carries_param:
+            persisters.add(func.name)
+    return frozenset(persisters)
+
+
 def _latest_binding(
     bindings: dict[str, list[tuple[tuple[int, int], list[_PayloadCall]]]],
     name: str,
@@ -515,12 +601,15 @@ def _propagate_carriers(
 def _escaped_payloads(
     nodes: Sequence[ast.AST],
     bindings: dict[str, list[tuple[tuple[int, int], list[_PayloadCall]]]],
+    local_persisters: frozenset[str] = frozenset(),
 ) -> set[tuple[int, int, str]]:
     """Materialization identities whose BYTES leave this scope.
 
     Three sinks discharge the scope's retention duty:
 
-    * a byte persister (``write_bytes``, ``np.save``, ``retain_payload``, ...);
+    * a byte persister — a canonical one (``write_bytes``, ``np.save``,
+      ``retain_payload``, ...) or one this module DEFINES, per
+      :func:`_local_byte_persisters`;
     * ``.write(bytes)`` on any handle — a file opened without ``with``, an
       ``io.BytesIO`` archive container, ``sys.stdout.buffer``;
     * ``return`` / ``yield`` of the bytes, which hands the duty to the caller.
@@ -534,7 +623,7 @@ def _escaped_payloads(
         args: list[ast.AST]
         if isinstance(node, ast.Call):
             name = _call_name(node)
-            if name in BYTE_PERSISTERS:
+            if name in BYTE_PERSISTERS or name in local_persisters:
                 args = list(node.args) + [keyword.value for keyword in node.keywords]
             elif name == "write" and isinstance(node.func, ast.Attribute):
                 args = list(node.args)
@@ -567,12 +656,14 @@ def scan_source(source: str, path: str = "<string>") -> list[PayloadDiscardFindi
     lines = source.splitlines()
     findings: list[PayloadDiscardFinding] = []
     seen: set[tuple[int, int, str]] = set()
+    # Module-wide: a helper defined at module level is callable from every scope.
+    local_persisters = _local_byte_persisters(tree)
     scopes: list[ast.AST] = [tree]
     while scopes:
         nodes, nested = _scope_nodes(scopes.pop())
         scopes.extend(nested)
         bindings = _scope_bindings(nodes)
-        persisted = _escaped_payloads(nodes, bindings)
+        persisted = _escaped_payloads(nodes, bindings, local_persisters)
         for node in nodes:
             # The defect shape: len(<payload expression>) — inline OR via a bound name.
             if not (
