@@ -135,6 +135,38 @@ def _ddm_pose_watch_deriver():
     return module.derive_pose_finish_engagement_watch
 
 
+def _load_codex_arm_queue():
+    """The arm-queue tool, for its retraction resolver. ONE implementation, not two.
+
+    Loaded by path rather than re-implemented here: a second copy of the
+    supersede-resolution rule would drift from the producer's, and the first
+    symptom of that drift would be a retracted fire order quietly coming back.
+    """
+    path = _REPO / "tools" / "codex_arm_queue.py"
+    spec = importlib.util.spec_from_file_location("_costate_codex_arm_queue", path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"cannot load codex arm queue: {path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _read_jsonl_rows(path: Path) -> list[dict]:
+    rows: list[dict] = []
+    if not path.exists():
+        return rows
+    for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+        if not line.strip():
+            continue
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(row, dict):
+            rows.append(row)
+    return rows
+
+
 def _fmt_age(seconds: float | None) -> str:
     if seconds is None:
         return "?"
@@ -1084,20 +1116,39 @@ def section_arm_next_if_resumed(
     orphaned-follow-on detector still decides EXECUTED/STAGED/UNKNOWN from
     memos and artifacts; this section makes fresh arm plans visible to the
     costate SENSE loop as soon as the keeper or harvest extractor writes them.
+
+    RETRACTION-AWARE since ddm_sc3 (2026-08-16). Rows retracted as SUPERSEDED are
+    EXCLUDED from ``latest`` -- a fire order whose admission bar has gone stale must
+    not be served to a resuming arm as if it were live. They are never silently
+    dropped: the count and the reasons ride on the line and in ``retraction_debt``,
+    because a retraction is DEBT somebody must clear, and a shrinking queue that
+    explains nothing reads as progress. AMEND_REQUIRED rows stay in ``latest``
+    stamped with their notice, since hiding them would suppress the live follow-ons
+    sitting beside the one stale clause.
     """
     path = _ARM_NEXT_IF_RESUMED if path is None else path
     try:
-        rows: list[dict] = []
-        if path.exists():
-            for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
-                if not line.strip():
-                    continue
-                try:
-                    row = json.loads(line)
-                except json.JSONDecodeError:
-                    continue
-                if row.get("schema") == "codex_arm_queue.next_if_resumed.v1":
-                    rows.append(row)
+        loader_error: str | None = None
+        try:
+            queue = _load_codex_arm_queue()
+            rows = queue.load_next_if_resumed(path)
+            debt = queue.next_if_resumed_debt(path)
+            superseded_n = debt["counts"][queue.RETRACTION_SUPERSEDED]
+            amend_n = debt["counts"][queue.RETRACTION_AMEND_REQUIRED]
+            reasons = [
+                f"{r.get('name')}:{(r['retractions'][0].get('reason') or '')[:80]}"
+                for r in debt["superseded"][-top_n:]
+                if r["retractions"]
+            ]
+        except Exception as exc:  # fail-open, but LOUDLY -- never silently unfiltered
+            loader_error = f"{type(exc).__name__}: {exc}"
+            rows = [
+                row
+                for row in _read_jsonl_rows(path)
+                if row.get("schema") == "codex_arm_queue.next_if_resumed.v1"
+            ]
+            superseded_n = amend_n = 0
+            reasons = []
         counts: dict[str, int] = {}
         for row in rows:
             provenance = str(row.get("provenance") or "unknown")
@@ -1110,6 +1161,10 @@ def section_arm_next_if_resumed(
             f"arm-next-if-resumed: {len(rows)} plan row(s) | "
             f"surface {_repo_rel(path)}"
         )
+        if loader_error is not None:
+            line += f" | RETRACTION FILTER OFF ({loader_error}) — rows may be stale"
+        elif superseded_n or amend_n:
+            line += f" | retracted: {superseded_n} superseded (hidden), {amend_n} amend-required"
         if counts:
             line += " | " + ", ".join(f"{k}={v}" for k, v in sorted(counts.items()))
         if head:
@@ -1119,6 +1174,13 @@ def section_arm_next_if_resumed(
             "rows": len(rows),
             "counts_by_provenance": counts,
             "latest": rows[-top_n:],
+            "retraction_debt": {
+                "superseded": superseded_n,
+                "amend_required": amend_n,
+                "reasons": reasons,
+                "filter_available": loader_error is None,
+                "loader_error": loader_error,
+            },
         }
     except Exception as exc:
         return f"arm-next-if-resumed: unavailable ({type(exc).__name__}: {exc})", None
@@ -1966,6 +2028,40 @@ def _fm_advisory_enabled(session_start: bool) -> bool:
     return not session_start  # explicit call → on; session-start → off (protect <5s budget)
 
 
+def _format_vehicle_routing_coverage(report: dict) -> str:
+    """Render the owner-visible harvest denominator without hiding missing rows."""
+
+    totals = report["totals"]
+    lineages = report["lineages"]
+    outstanding = sorted(
+        (
+            (name, int(counts["un_harvested"]))
+            for name, counts in lineages.items()
+            if int(counts["un_harvested"]) > 0
+        ),
+        key=lambda item: (-item[1], item[0]),
+    )[:3]
+    head = ",".join(f"{name}:{count}" for name, count in outstanding) or "none"
+    return (
+        "DDM-vehicle-harvest: "
+        f"{totals['routed']}/{totals['artifacts']} routed artifacts; "
+        f"harvested={totals['harvested']} un-harvested={totals['un_harvested']}; "
+        f"largest gaps={head}"
+    )
+
+
+def section_vehicle_routing_coverage() -> tuple[str, dict | None]:
+    """Read the canonical probe-outcomes extension; never write or block startup."""
+
+    try:
+        from tac.probe_outcomes_ledger import coverage
+
+        report = coverage()
+        return _format_vehicle_routing_coverage(report), report
+    except Exception as exc:  # SENSE row must never break the digest
+        return f"DDM-vehicle-harvest: unavailable ({type(exc).__name__})", None
+
+
 # ─────────────────────────── assembly ───────────────────────────
 def build_digest(*, include_fm: bool = True) -> tuple[list[str], dict]:
     t0 = time.time()
@@ -1988,6 +2084,10 @@ def build_digest(*, include_fm: bool = True) -> tuple[list[str], dict]:
         section_ddm_campaign_run()
     )
     lines.extend(campaign_run_lines)
+    routing_line, data["vehicle_routing_coverage"] = (
+        section_vehicle_routing_coverage()
+    )
+    lines.append(routing_line)
     if ddm_live:
         # The live DDM campaign is primary.  Do not even inspect the quarantined
         # witness run; compatibility keys remain explicit dominated markers.

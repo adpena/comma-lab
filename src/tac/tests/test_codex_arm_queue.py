@@ -419,8 +419,20 @@ def test_extract_next_if_resumed_is_idempotent_and_has_no_phantom(q, tmp_path):
     first = q.extract_next_if_resumed([receipt, no_block], provenance="positive-control", out_path=out)
     second = q.extract_next_if_resumed([receipt, no_block], provenance="positive-control", out_path=out)
 
-    assert first == {"sources": 2, "blocks_seen": 1, "written": 1, "files_with_rows": 1}
-    assert second == {"sources": 2, "blocks_seen": 1, "written": 0, "files_with_rows": 1}
+    assert first == {
+        "sources": 2,
+        "blocks_seen": 1,
+        "written": 1,
+        "files_with_rows": 1,
+        "auto_retracted": 0,
+    }
+    assert second == {
+        "sources": 2,
+        "blocks_seen": 1,
+        "written": 0,
+        "files_with_rows": 1,
+        "auto_retracted": 0,
+    }
     rows = [json.loads(line) for line in out.read_text(encoding="utf-8").splitlines()]
     assert len(rows) == 1
     assert rows[0]["name"] == "au1"
@@ -660,3 +672,177 @@ def test_recall_lint_never_raises_on_unreadable_stores(q, tmp_path, monkeypatch)
     monkeypatch.setattr(q, "RESEARCH_DIR", tmp_path / "absent_dir")
     path = _recall_prompt(tmp_path, "This has never been run and is un-owned.\n")
     assert q.lint_charter_recall_advisories(path) == []
+
+
+# --- the retraction channel (ddm_sc3, 2026-08-16) --------------------------------
+# A retraction is the ONLY way a correction at the source reaches a reader that
+# already serves the stale row. These tests are MUTATION tests on purpose: each one
+# plants the retraction, proves the row disappears, removes the retraction, and
+# proves the row comes back. A test that passes on the pre-fix code proves nothing.
+
+
+def _plan_store(q, tmp_path, text="1. Fire when the archive is below 186,269 B.\n"):
+    out = tmp_path / "next.jsonl"
+    receipt = tmp_path / "ddm_rx1_rate_attack_20260814" / "RECEIPT.md"
+    receipt.parent.mkdir(parents=True, exist_ok=True)
+    receipt.write_text(f"# RX1\n\n## NEXT_IF_RESUMED\n\n{text}", encoding="utf-8")
+    q.extract_next_if_resumed([receipt], provenance="positive-control", out_path=out)
+    rows = q.load_next_if_resumed(out)
+    assert len(rows) == 1
+    return out, receipt, rows[0]
+
+
+def test_retraction_hides_a_superseded_row_and_removing_it_brings_the_row_back(q, tmp_path):
+    out, _receipt, row = _plan_store(q, tmp_path)
+    before = out.read_text(encoding="utf-8")
+
+    assert row["retracted"] is False
+    assert row["retraction_disposition"] is None
+
+    q.retract_next_if_resumed_row(
+        row["row_id"],
+        reason="the admission bar 186,269 B is 3,510 B above the live 182,759 B frontier",
+        citation=".omx/research/ddm_fb1_stale_bar_rebase_and_bank_union_20260816.md",
+        retracted_by="ddm_sc3",
+        path=out,
+    )
+
+    assert q.load_next_if_resumed(out) == []  # MUTATION: the stale row is gone
+    with_flag = q.load_next_if_resumed(out, include_superseded=True)
+    assert len(with_flag) == 1
+    assert with_flag[0]["retraction_disposition"] == q.RETRACTION_SUPERSEDED
+    assert "182,759" in with_flag[0]["retractions"][0]["reason"]
+
+    out.write_text(before, encoding="utf-8")  # CONTROL: remove only the retraction
+    assert len(q.load_next_if_resumed(out)) == 1
+
+
+def test_amend_required_row_stays_visible_but_carries_its_notice(q, tmp_path):
+    out, _receipt, row = _plan_store(q, tmp_path)
+    q.retract_next_if_resumed_row(
+        row["row_id"],
+        reason="the third clause quotes a 15,157 B cut computed off a superseded base",
+        citation=".omx/research/ddm_fb1_stale_bar_rebase_and_bank_union_20260816.md",
+        retracted_by="ddm_sc3",
+        disposition=q.RETRACTION_AMEND_REQUIRED,
+        path=out,
+    )
+    rows = q.load_next_if_resumed(out)
+    assert len(rows) == 1, "AMEND_REQUIRED must not hide live follow-ons"
+    assert rows[0]["retraction_disposition"] == q.RETRACTION_AMEND_REQUIRED
+    assert rows[0]["retractions"][0]["disposition"] == q.RETRACTION_AMEND_REQUIRED
+
+
+def test_retraction_never_mutates_or_deletes_the_target_row(q, tmp_path):
+    out, _receipt, row = _plan_store(q, tmp_path)
+    stored_before = [json.loads(line) for line in out.read_text(encoding="utf-8").splitlines()]
+    q.retract_next_if_resumed_row(
+        row["row_id"],
+        reason="superseded by the live canonical frontier pointer, checked at source",
+        citation=".omx/state/canonical_frontier_pointer.json",
+        retracted_by="ddm_sc3",
+        path=out,
+    )
+    stored_after = [json.loads(line) for line in out.read_text(encoding="utf-8").splitlines()]
+    assert stored_after[: len(stored_before)] == stored_before  # append-only, byte-for-byte
+    assert len(stored_after) == len(stored_before) + 1
+    assert stored_after[-1]["schema"] == "codex_arm_queue.next_if_resumed.retraction.v1"
+
+
+def test_retraction_refuses_unknown_target_placeholder_reason_and_bad_disposition(q, tmp_path):
+    out, _receipt, row = _plan_store(q, tmp_path)
+    good = dict(
+        reason="the admission bar is stale against the live frontier pointer",
+        citation=".omx/state/canonical_frontier_pointer.json",
+        retracted_by="ddm_sc3",
+        path=out,
+    )
+    with pytest.raises(ValueError, match="targets nothing"):
+        q.retract_next_if_resumed_row("deadbeef" * 8, **good)
+    for placeholder in ("<reason>", "stale", "TBD", ""):
+        with pytest.raises(ValueError, match="real rationale"):
+            q.retract_next_if_resumed_row(
+                row["row_id"],
+                reason=placeholder,
+                citation=good["citation"],
+                retracted_by="ddm_sc3",
+                path=out,
+            )
+    with pytest.raises(ValueError, match="disposition"):
+        q.retract_next_if_resumed_row(row["row_id"], disposition="MAYBE", **good)
+    with pytest.raises(ValueError, match="citation"):
+        q.retract_next_if_resumed_row(
+            row["row_id"],
+            reason=good["reason"],
+            citation="  ",
+            retracted_by="ddm_sc3",
+            path=out,
+        )
+    assert len(q.load_next_if_resumed(out)) == 1  # every refusal left the row live
+
+
+def test_correcting_the_source_auto_retracts_the_pre_correction_row(q, tmp_path):
+    """THE defect: a corrected memo used to leave its stale row live beside the fix."""
+    out, receipt, stale = _plan_store(q, tmp_path)
+    receipt.write_text(
+        "# RX1\n\n## NEXT_IF_RESUMED\n\n1. Fire when the archive is at or below 168,345 B.\n",
+        encoding="utf-8",
+    )
+    summary = q.extract_next_if_resumed([receipt], provenance="positive-control", out_path=out)
+
+    assert summary["written"] == 1
+    assert summary["auto_retracted"] == 1
+    live = q.load_next_if_resumed(out)
+    assert len(live) == 1, "the pre-correction row must not survive the correction"
+    assert "168,345" in live[0]["text"]
+    assert stale["row_id"] not in {r["row_id"] for r in live}
+
+    everything = q.load_next_if_resumed(out, include_superseded=True)
+    assert len(everything) == 2  # nothing was deleted; the stale row is retained as debt
+
+
+def test_auto_retraction_does_not_fire_across_different_sources(q, tmp_path):
+    out, _receipt, _row = _plan_store(q, tmp_path)
+    other = tmp_path / "ddm_rx1_rate_attack_20260814" / "SECOND.md"
+    other.write_text("# RX1\n\n## NEXT_IF_RESUMED\n\n1. A different plan entirely.\n", encoding="utf-8")
+    summary = q.extract_next_if_resumed([other], provenance="positive-control", out_path=out)
+    assert summary["auto_retracted"] == 0
+    assert len(q.load_next_if_resumed(out)) == 2
+
+
+def test_debt_ledger_reports_the_denominator_not_just_the_survivors(q, tmp_path):
+    out, _receipt, row = _plan_store(q, tmp_path)
+    q.retract_next_if_resumed_row(
+        row["row_id"],
+        reason="the admission bar 186,269 B sits above the live shipping archive",
+        citation=".omx/research/ddm_fb1_stale_bar_rebase_and_bank_union_20260816.md",
+        retracted_by="ddm_sc3",
+        path=out,
+    )
+    debt = q.next_if_resumed_debt(out)
+    assert debt["plan_rows_total"] == 1
+    assert debt["plan_rows_live"] == 0
+    assert debt["counts"][q.RETRACTION_SUPERSEDED] == 1
+    assert debt["superseded"][0]["row_id"] == row["row_id"]
+
+
+def test_legacy_rows_without_any_retraction_load_unchanged(q, tmp_path):
+    """Additive: the 248 pre-channel rows must keep loading exactly as before."""
+    out = tmp_path / "legacy.jsonl"
+    out.write_text(
+        json.dumps(
+            {
+                "schema": "codex_arm_queue.next_if_resumed.v1",
+                "row_id": "abc123",
+                "name": "au1",
+                "text": "1. Resume here.",
+            }
+        )
+        + "\n"
+        + json.dumps({"schema": "some.other.surface.v1", "name": "ignored"})
+        + "\n",
+        encoding="utf-8",
+    )
+    rows = q.load_next_if_resumed(out)
+    assert [r["name"] for r in rows] == ["au1"]
+    assert rows[0]["retracted"] is False and rows[0]["retraction_disposition"] is None

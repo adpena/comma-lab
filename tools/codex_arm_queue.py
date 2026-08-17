@@ -173,6 +173,56 @@ _NEXT_SCHEMA = "codex_arm_queue.next_if_resumed.v1"
 _FINAL_SCHEMA = "codex_arm_queue.final_message.v1"
 _HEADING_RX = re.compile(r"^(#{1,6})\s+(.*)$")
 
+# --- the retraction channel (ddm_sc3, 2026-08-16) --------------------------------
+# THE DEFECT this closes: a plan row's ``row_id`` is minted from
+# ``(schema, arm, source_path, line_start, block_sha256)``. When a source memo is
+# CORRECTED, re-extraction mints a NEW row_id and the STALE row persists forever.
+# Both are then served to readers, so correcting the source could not reach the
+# consumer -- there was no field on the row that could say "do not act on this".
+# MEASURED cost of the gap (ddm_fb1, 2026-08-16): three live rows carried an
+# admission bar of ``archive < 186,269 B`` against a 182,759 B live frontier. A
+# candidate landing exactly at that bar PASSES while scoring +0.002337165 WORSE
+# than what we ship -- 233.7x the 1e-5 naming bar, and SILENT.
+#
+# The channel is APPEND-ONLY: a retraction is a NEW row in the same store, keyed to
+# the target's row_id. No existing row is ever mutated or deleted. Retraction rows
+# carry their OWN schema string, so a pre-existing reader that filters on
+# ``schema == _NEXT_SCHEMA`` simply does not see them -- additive by construction.
+_NEXT_RETRACTION_SCHEMA = "codex_arm_queue.next_if_resumed.retraction.v1"
+
+#: The row is dead. Do not act on it. EXCLUDED from the default plan view.
+RETRACTION_SUPERSEDED = "SUPERSEDED"
+#: The row is still actionable, but a NAMED clause inside it is stale. INCLUDED in
+#: the default plan view, stamped with the notice -- excluding it would hide the
+#: live clauses beside the dead one, which is the silent-drop disease wearing a
+#: retraction's coat.
+RETRACTION_AMEND_REQUIRED = "AMEND_REQUIRED"
+RETRACTION_DISPOSITIONS: tuple[str, ...] = (
+    RETRACTION_SUPERSEDED,
+    RETRACTION_AMEND_REQUIRED,
+)
+
+#: Catalog #287 sister discipline: a placeholder rationale is not a rationale. A
+#: retraction whose reason is "<reason>" records nothing and clears no debt.
+_PLACEHOLDER_REASONS = frozenset(
+    {
+        "",
+        "<reason>",
+        "<rationale>",
+        "reason",
+        "rationale",
+        "tbd",
+        "todo",
+        "n/a",
+        "na",
+        "none",
+        "placeholder",
+        "pending",
+        "stale",
+    }
+)
+_MIN_REASON_CHARS = 24
+
 
 def _rel(path: Path) -> str:
     try:
@@ -310,6 +360,224 @@ def _infer_arm_name(path: Path) -> str:
     return match.group(1) if match else stem
 
 
+def _read_jsonl(path: Path) -> list[dict]:
+    """Every well-formed JSON object in an append-only store, order preserved."""
+    if not path.exists():
+        return []
+    rows: list[dict] = []
+    for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+        if not line.strip():
+            continue
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(row, dict):
+            rows.append(row)
+    return rows
+
+
+def _retraction_row_id(target_row_id: str, reason: str, disposition: str) -> str:
+    return _sha256_bytes(
+        "|".join(
+            [_NEXT_RETRACTION_SCHEMA, target_row_id, disposition, reason]
+        ).encode("utf-8")
+    )
+
+
+def _validate_reason(reason: str) -> str:
+    text = (reason or "").strip()
+    if text.lower().strip(" .") in _PLACEHOLDER_REASONS or len(text) < _MIN_REASON_CHARS:
+        raise ValueError(
+            "retraction reason must be a real rationale of at least "
+            f"{_MIN_REASON_CHARS} chars (Catalog #287 sister discipline); got {reason!r}"
+        )
+    return text
+
+
+def load_next_if_resumed(
+    path: Path = NEXT_IF_RESUMED,
+    *,
+    include_superseded: bool = False,
+) -> list[dict]:
+    """Plan rows with their retraction state resolved. DEFAULT EXCLUDES the dead ones.
+
+    Every returned row is a COPY of the stored plan row plus three derived keys:
+
+    * ``retraction_disposition`` -- ``None`` | ``SUPERSEDED`` | ``AMEND_REQUIRED``
+      (the strongest disposition filed against it; SUPERSEDED wins a tie);
+    * ``retracted`` -- bool, true when any retraction targets the row;
+    * ``retractions`` -- the full retraction rows, so a reader can print WHY.
+
+    ``SUPERSEDED`` rows are dropped unless ``include_superseded=True``.
+    ``AMEND_REQUIRED`` rows are KEPT and stamped: hiding a row that still carries
+    live follow-ons in order to suppress one stale clause would trade a loud defect
+    for a silent one.
+
+    Legacy-compatible: rows written before the retraction channel existed have no
+    retraction filed against them, so they load exactly as before with
+    ``retracted=False``.
+    """
+    stored = _read_jsonl(path)
+    by_target: dict[str, list[dict]] = {}
+    for row in stored:
+        if row.get("schema") != _NEXT_RETRACTION_SCHEMA:
+            continue
+        target = row.get("target_row_id")
+        if isinstance(target, str) and target:
+            by_target.setdefault(target, []).append(row)
+
+    out: list[dict] = []
+    for row in stored:
+        if row.get("schema") != _NEXT_SCHEMA:
+            continue
+        hits = by_target.get(str(row.get("row_id")), [])
+        dispositions = {str(h.get("disposition")) for h in hits}
+        if RETRACTION_SUPERSEDED in dispositions:
+            disposition = RETRACTION_SUPERSEDED
+        elif RETRACTION_AMEND_REQUIRED in dispositions:
+            disposition = RETRACTION_AMEND_REQUIRED
+        else:
+            disposition = None
+        if disposition == RETRACTION_SUPERSEDED and not include_superseded:
+            continue
+        annotated = dict(row)
+        annotated["retracted"] = bool(hits)
+        annotated["retraction_disposition"] = disposition
+        annotated["retractions"] = hits
+        out.append(annotated)
+    return out
+
+
+def next_if_resumed_debt(path: Path = NEXT_IF_RESUMED) -> dict:
+    """The retraction LEDGER: what was retracted, by whom, and why.
+
+    A retracted row is DEBT somebody must clear (re-file the plan against the live
+    base, or close the chain). This is the surface-on-request half of the channel --
+    without it, retraction would silently shrink the queue and nobody would ever
+    learn that a fire order went stale. A skip that reports nothing reads as green.
+    """
+    rows = load_next_if_resumed(path, include_superseded=True)
+    superseded = [r for r in rows if r["retraction_disposition"] == RETRACTION_SUPERSEDED]
+    amend = [r for r in rows if r["retraction_disposition"] == RETRACTION_AMEND_REQUIRED]
+    return {
+        "surface": _rel(path),
+        "plan_rows_total": len(rows),
+        "plan_rows_live": len(rows) - len(superseded),
+        "superseded": superseded,
+        "amend_required": amend,
+        "counts": {
+            RETRACTION_SUPERSEDED: len(superseded),
+            RETRACTION_AMEND_REQUIRED: len(amend),
+        },
+    }
+
+
+def retract_next_if_resumed_row(
+    target_row_id: str,
+    *,
+    reason: str,
+    citation: str,
+    retracted_by: str,
+    disposition: str = RETRACTION_SUPERSEDED,
+    path: Path = NEXT_IF_RESUMED,
+) -> dict:
+    """Append a retraction against an EXISTING plan row. Never mutates that row.
+
+    Fails closed on an unknown ``target_row_id``: a retraction that targets nothing
+    is a no-op that LOOKS like a cleared hazard, which is worse than no retraction
+    at all. It also fails closed on a placeholder reason and an unknown disposition.
+    """
+    if disposition not in RETRACTION_DISPOSITIONS:
+        raise ValueError(
+            f"disposition must be one of {RETRACTION_DISPOSITIONS}; got {disposition!r}"
+        )
+    text = _validate_reason(reason)
+    cite = (citation or "").strip()
+    if not cite:
+        raise ValueError("retraction requires a citation naming the artifact that justifies it")
+    who = (retracted_by or "").strip()
+    if not who:
+        raise ValueError("retraction requires retracted_by")
+
+    targets = {
+        str(row.get("row_id"))
+        for row in _read_jsonl(path)
+        if row.get("schema") == _NEXT_SCHEMA
+    }
+    if target_row_id not in targets:
+        raise ValueError(
+            f"no plan row with row_id {target_row_id!r} in {_rel(path)} — refusing to "
+            "file a retraction that targets nothing"
+        )
+
+    row = {
+        "schema": _NEXT_RETRACTION_SCHEMA,
+        "row_id": _retraction_row_id(target_row_id, text, disposition),
+        "target_row_id": target_row_id,
+        "disposition": disposition,
+        "reason": text,
+        "citation": cite,
+        "retracted_by": who,
+        "written_at_utc": datetime.now(UTC).isoformat(),
+        "reader_costate_digest": "tools/costate_digest.py section_arm_next_if_resumed",
+        "score_claim": False,
+    }
+    _append_jsonl_once(path, row, ("row_id",))
+    return row
+
+
+def _auto_retract_reextracted_block(
+    out_path: Path,
+    *,
+    arm_name: str,
+    source_rel: str,
+    line_start: int,
+    new_row_id: str,
+    new_block_sha256: str,
+) -> list[dict]:
+    """Retract prior rows for the SAME (arm, source, line) whose block text changed.
+
+    This is the mechanical half. Correcting a memo and re-extracting used to leave
+    the pre-correction row live beside the corrected one, with no way for a reader
+    to tell them apart. Now the correction itself files the retraction, so the fix
+    reaches the consumer without anybody remembering to do it by hand.
+
+    Scoped deliberately tight: same arm, same source path, same starting line, and a
+    DIFFERENT block hash. A different source file is a different plan, not a
+    correction, and must not be retracted by inference.
+    """
+    filed: list[dict] = []
+    for row in _read_jsonl(out_path):
+        if row.get("schema") != _NEXT_SCHEMA:
+            continue
+        if (
+            row.get("name") != arm_name
+            or row.get("source_path") != source_rel
+            or row.get("line_start") != line_start
+        ):
+            continue
+        prior_id = str(row.get("row_id"))
+        if prior_id == new_row_id or row.get("block_sha256") == new_block_sha256:
+            continue
+        filed.append(
+            retract_next_if_resumed_row(
+                prior_id,
+                reason=(
+                    "superseded by re-extraction of the same NEXT_IF_RESUMED block from "
+                    f"{source_rel}:{line_start} after the source text changed "
+                    f"(block {str(row.get('block_sha256'))[:12]} -> {new_block_sha256[:12]}); "
+                    "the corrected block is the live plan"
+                ),
+                citation=f"{source_rel}:{line_start}",
+                retracted_by="tools/codex_arm_queue.py::extract_next_if_resumed",
+                disposition=RETRACTION_SUPERSEDED,
+                path=out_path,
+            )
+        )
+    return filed
+
+
 def extract_next_if_resumed(
     sources: list[Path],
     *,
@@ -321,6 +589,7 @@ def extract_next_if_resumed(
     written = 0
     seen = 0
     files_with_rows = 0
+    auto_retracted = 0
     for source in sources:
         try:
             text = source.read_text(encoding="utf-8", errors="replace")
@@ -371,7 +640,23 @@ def extract_next_if_resumed(
             }
             if _append_jsonl_once(out_path, row, ("row_id",)):
                 written += 1
-    return {"sources": len(sources), "blocks_seen": seen, "written": written, "files_with_rows": files_with_rows}
+                auto_retracted += len(
+                    _auto_retract_reextracted_block(
+                        out_path,
+                        arm_name=arm_name,
+                        source_rel=source_rel,
+                        line_start=block["line_start"],
+                        new_row_id=row_id,
+                        new_block_sha256=block_sha256,
+                    )
+                )
+    return {
+        "sources": len(sources),
+        "blocks_seen": seen,
+        "written": written,
+        "files_with_rows": files_with_rows,
+        "auto_retracted": auto_retracted,
+    }
 
 
 def persist_final_message(name: str, rc: int, elapsed: int, last_path: Path | None = None) -> dict | None:
@@ -1481,6 +1766,40 @@ def cmd_extract_next(args) -> int:
     return 0
 
 
+def cmd_retract(args) -> int:
+    try:
+        row = retract_next_if_resumed_row(
+            args.row_id,
+            reason=args.reason,
+            citation=args.citation,
+            retracted_by=args.by,
+            disposition=args.disposition,
+        )
+    except ValueError as exc:
+        print(f"REFUSED: {exc}")
+        return 2
+    print(json.dumps(row, sort_keys=True))
+    return 0
+
+
+def cmd_next(args) -> int:
+    rows = load_next_if_resumed(include_superseded=args.include_superseded)
+    debt = next_if_resumed_debt()
+    print(
+        f"plan rows: {len(rows)} shown | live {debt['plan_rows_live']} of "
+        f"{debt['plan_rows_total']} | superseded {debt['counts'][RETRACTION_SUPERSEDED]} | "
+        f"amend-required {debt['counts'][RETRACTION_AMEND_REQUIRED]}"
+    )
+    for row in rows[-args.limit :]:
+        flag = row["retraction_disposition"] or "live"
+        print(f"  [{flag}] {row.get('name')} {row.get('source_path')}:{row.get('line_start')}")
+        for hit in row["retractions"]:
+            print(f"      ! {hit.get('disposition')}: {hit.get('reason')}")
+    if not args.include_superseded and debt["counts"][RETRACTION_SUPERSEDED]:
+        print("  (pass --include-superseded to see the retracted rows and their reasons)")
+    return 0
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--cap", type=int, default=DEFAULT_CAP)
@@ -1528,6 +1847,31 @@ def main(argv=None) -> int:
     p.add_argument("--provenance", default="manual")
     p.add_argument("--name")
     p.set_defaults(fn=cmd_extract_next)
+    p = sub.add_parser(
+        "retract",
+        help=(
+            "file an APPEND-ONLY retraction against a NEXT_IF_RESUMED plan row so a "
+            "correction at the source reaches the readers that serve it"
+        ),
+    )
+    p.add_argument("--row-id", required=True)
+    p.add_argument("--reason", required=True, help="a real rationale; placeholders are refused")
+    p.add_argument("--citation", required=True, help="the artifact that justifies the retraction")
+    p.add_argument("--by", required=True, help="who filed it (arm name or tool path)")
+    p.add_argument(
+        "--disposition",
+        default=RETRACTION_SUPERSEDED,
+        choices=list(RETRACTION_DISPOSITIONS),
+        help=(
+            f"{RETRACTION_SUPERSEDED}: row is dead, hidden by default. "
+            f"{RETRACTION_AMEND_REQUIRED}: row still actionable, one named clause stale."
+        ),
+    )
+    p.set_defaults(fn=cmd_retract)
+    p = sub.add_parser("next", help="show live NEXT_IF_RESUMED plan rows + retraction debt")
+    p.add_argument("--limit", type=int, default=12)
+    p.add_argument("--include-superseded", action="store_true")
+    p.set_defaults(fn=cmd_next)
 
     args = parser.parse_args(argv)
     return args.fn(args)

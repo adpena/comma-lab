@@ -648,3 +648,35 @@ def test_ec2_arming_uses_detached_launcher_and_done_receipt(tmp_path: Path, monk
     assert "tools/modal_endpoint_close.py" in " ".join(command)
     assert "--done-receipt" in command
     assert receipt["returncode"] == 0
+
+
+def test_endpoint_closure_extract_inherits_the_retraction_channel(tmp_path: Path) -> None:
+    """The closer is a PRODUCER, not a reader of the JSONL: it extracts blocks from an
+    arm's final message and appends them. It must therefore inherit the auto-retraction
+    that fires when a corrected memo is re-extracted, or a closure re-run after a
+    correction would leave the stale plan row live beside the corrected one."""
+    store = tmp_path / "next.jsonl"
+    memo = tmp_path / "ddm_zz1_final.md"
+    memo.write_text("## NEXT_IF_RESUMED\n\n- fire below 186,269 B\n")
+    close.extract_next_surface(
+        final_message_paths=[memo],
+        inline_final_message=None,
+        dry_run=False,
+        next_store=store,
+        name="zz1",
+    )
+    memo.write_text("## NEXT_IF_RESUMED\n\n- fire at or below the derived pure-rate bar\n")
+    result = close.extract_next_surface(
+        final_message_paths=[memo],
+        inline_final_message=None,
+        dry_run=False,
+        next_store=store,
+        name="zz1",
+    )
+
+    assert result["extract_summary"]["auto_retracted"] == 1
+    rows = [json.loads(line) for line in store.read_text().splitlines()]
+    plans = [r for r in rows if r["schema"] == "codex_arm_queue.next_if_resumed.v1"]
+    retractions = [r for r in rows if r["schema"].endswith("retraction.v1")]
+    assert len(plans) == 2 and len(retractions) == 1  # nothing deleted; the stale one is flagged
+    assert retractions[0]["target_row_id"] == plans[0]["row_id"]

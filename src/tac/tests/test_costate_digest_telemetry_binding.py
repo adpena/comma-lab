@@ -91,3 +91,93 @@ def test_section_arm_next_if_resumed_reads_schema_rows(tmp_path) -> None:
     assert data is not None
     assert data["rows"] == 1
     assert data["latest"][0]["name"] == "au1"
+
+
+def _queue_module():
+    import importlib.util
+    from pathlib import Path
+
+    tool = Path(__file__).resolve().parents[3] / "tools" / "codex_arm_queue.py"
+    spec = importlib.util.spec_from_file_location("_q_for_costate_test", tool)
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_section_arm_next_if_resumed_hides_superseded_rows_and_says_so(tmp_path) -> None:
+    """MUTATION test on the live consumer: plant a retraction, prove the digest stops
+    serving the row; remove the retraction, prove it comes back.
+
+    The stale-bar hazard ddm_fb1 priced (+0.002337165 S, 233.7x the 1e-5 naming bar)
+    was loaded HERE -- this is the surface a resuming arm actually reads."""
+    q = _queue_module()
+    path = tmp_path / "next.jsonl"
+    plan = {
+        "schema": "codex_arm_queue.next_if_resumed.v1",
+        "row_id": "row-under-test",
+        "name": "rx1",
+        "provenance": "harvested-final",
+        "source_path": ".omx/research/arm_final_messages/rx1.md",
+        "line_start": 17,
+        "text": "fire trigger: a retained archive below 186,269 B",
+    }
+    path.write_text(json.dumps(plan) + "\n", encoding="utf-8")
+
+    line, data = cd.section_arm_next_if_resumed(path)
+    assert data is not None and data["rows"] == 1
+    assert data["retraction_debt"]["filter_available"] is True
+    assert data["retraction_debt"]["superseded"] == 0
+
+    q.retract_next_if_resumed_row(
+        "row-under-test",
+        reason="the 186,269 B bar sits 3,510 B above the live 182,759 B shipping archive",
+        citation=".omx/research/ddm_fb1_stale_bar_rebase_and_bank_union_20260816.md",
+        retracted_by="ddm_sc3",
+        path=path,
+    )
+
+    line, data = cd.section_arm_next_if_resumed(path)
+    assert data is not None
+    assert data["rows"] == 0, "a superseded fire order must not be served as live"
+    assert data["latest"] == []
+    assert data["retraction_debt"]["superseded"] == 1
+    assert "retracted: 1 superseded (hidden)" in line, "the drop must be reported, never silent"
+    assert data["retraction_debt"]["reasons"], "the reason must be surfaced on request"
+
+    path.write_text(json.dumps(plan) + "\n", encoding="utf-8")  # CONTROL
+    _line, data = cd.section_arm_next_if_resumed(path)
+    assert data is not None and data["rows"] == 1
+
+
+def test_section_arm_next_if_resumed_amend_required_row_stays_served(tmp_path) -> None:
+    q = _queue_module()
+    path = tmp_path / "next.jsonl"
+    path.write_text(
+        json.dumps(
+            {
+                "schema": "codex_arm_queue.next_if_resumed.v1",
+                "row_id": "amend-row",
+                "name": "wd2",
+                "provenance": "harvested-final",
+                "source_path": ".omx/research/arm_final_messages/wd2.md",
+                "line_start": 17,
+                "text": "three follow-ons, one of which quotes a 15,157 B cut",
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    q.retract_next_if_resumed_row(
+        "amend-row",
+        reason="one clause quotes a 15,157 B cut computed off the superseded e480b v2 base",
+        citation=".omx/research/ddm_fb1_stale_bar_rebase_and_bank_union_20260816.md",
+        retracted_by="ddm_sc3",
+        disposition=q.RETRACTION_AMEND_REQUIRED,
+        path=path,
+    )
+    line, data = cd.section_arm_next_if_resumed(path)
+    assert data is not None
+    assert data["rows"] == 1, "AMEND_REQUIRED must not suppress the live clauses"
+    assert data["retraction_debt"]["amend_required"] == 1
+    assert "1 amend-required" in line
