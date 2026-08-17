@@ -145,6 +145,13 @@ def select(log_path: Path, checkpoint_dir: Path) -> dict[str, Any]:
         ),
     )
     selected_path = Path(selected["checkpoint_path"])
+    rate_only = min(
+        candidates,
+        key=lambda row: (row["estimated_joint_bytes"], row["top1_error"], row["epoch"]),
+    )
+    seg_proxy_cost_bytes = (
+        selected["estimated_joint_bytes"] - rate_only["estimated_joint_bytes"]
+    )
     return {
         "schema": SCHEMA,
         "authority": "[macOS-MPS advisory telemetry proxy; no contest score]",
@@ -154,6 +161,28 @@ def select(log_path: Path, checkpoint_dir: Path) -> dict[str, Any]:
             "rate_coefficient_per_byte": rate_coefficient,
             "seg_proxy_coefficient": SEG_PROXY_COEFFICIENT,
             "pose_term_included": False,
+        },
+        # ddm_oa2 observability (score-neutral; does NOT change the selection).
+        # On this vehicle the MC36 token labels are FIXED and the HPAC codec is
+        # lossless (decoded spatial-token SHA-256 is the losslessness authority),
+        # so d_seg is decode-invariant across every checkpoint and `top1_error`
+        # carries no score effect: rate is the only axis a checkpoint can move.
+        # These fields expose what the seg-proxy term costs on the axis that does
+        # move, so a criterion change can be adjudicated on measured evidence
+        # rather than argued. Changing the criterion is a design decision and is
+        # deliberately NOT taken here.
+        "rate_only_optimum": {
+            "epoch": rate_only["epoch"],
+            "estimated_joint_bytes": rate_only["estimated_joint_bytes"],
+            "top1_error": rate_only["top1_error"],
+            "checkpoint_path": rate_only["checkpoint_path"],
+            "differs_from_selected": rate_only["epoch"] != selected["epoch"],
+            "seg_proxy_cost_bytes": seg_proxy_cost_bytes,
+            "seg_proxy_cost_score": seg_proxy_cost_bytes * rate_coefficient,
+            "boundary": (
+                "advisory estimated bytes, not serialized archive bytes; the "
+                "ordering it induces is the claim, the magnitude is an estimate"
+            ),
         },
         "source_log": {
             "path": str(log_path),

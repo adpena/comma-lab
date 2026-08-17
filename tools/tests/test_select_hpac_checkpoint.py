@@ -64,6 +64,61 @@ def test_selects_joint_proxy_argmin_not_latest_or_byte_minimum(tmp_path: Path) -
     )
 
 
+def test_reports_rate_only_optimum_and_seg_proxy_cost(tmp_path: Path) -> None:
+    """ddm_oa2: the receipt must expose what the zero-score-effect seg proxy costs.
+
+    MC36 token labels are fixed and the HPAC codec is lossless, so d_seg is
+    decode-invariant across checkpoints and only rate moves. The seg-proxy term
+    can therefore only ever cost bytes; the receipt must say how many.
+    """
+    log = tmp_path / "run.log"
+    log.write_text(
+        "\n".join(
+            [
+                _row(482, 130000, 0.0020),
+                _row(484, 129000, 0.0022),
+                _row(486, 131000, 0.0019),
+                _row(488, 128000, 0.0023),
+            ]
+        )
+        + "\n"
+    )
+    checkpoints = tmp_path / "periodic"
+    checkpoints.mkdir()
+    for epoch in (482, 484, 486, 488):
+        (checkpoints / f"epoch_{epoch:04d}.pt").write_bytes(f"cp-{epoch}".encode())
+    result = SELECT.select(log, checkpoints)
+    rate_only = result["rate_only_optimum"]
+    # The selection itself is unchanged: this field is observability only.
+    assert result["selected"]["epoch"] == 486
+    assert rate_only["epoch"] == 488
+    assert rate_only["estimated_joint_bytes"] == 128000
+    assert rate_only["differs_from_selected"] is True
+    assert rate_only["seg_proxy_cost_bytes"] == 131000 - 128000
+    assert rate_only["seg_proxy_cost_score"] == pytest.approx(
+        3000 * SELECT.RATE_NUMERATOR / SELECT.RATE_DENOMINATOR
+    )
+
+
+def test_rate_only_optimum_reports_zero_cost_when_criteria_agree(tmp_path: Path) -> None:
+    """When the proxy and the rate axis agree, the reported cost must be zero."""
+    log = tmp_path / "run.log"
+    log.write_text(
+        "\n".join([_row(482, 130000, 0.0020), _row(484, 128000, 0.0019)]) + "\n"
+    )
+    checkpoints = tmp_path / "periodic"
+    checkpoints.mkdir()
+    for epoch in (482, 484):
+        (checkpoints / f"epoch_{epoch:04d}.pt").write_bytes(f"cp-{epoch}".encode())
+    result = SELECT.select(log, checkpoints)
+    rate_only = result["rate_only_optimum"]
+    assert result["selected"]["epoch"] == 484
+    assert rate_only["epoch"] == 484
+    assert rate_only["differs_from_selected"] is False
+    assert rate_only["seg_proxy_cost_bytes"] == 0
+    assert rate_only["seg_proxy_cost_score"] == 0.0
+
+
 def test_refuses_duplicate_epoch_telemetry(tmp_path: Path) -> None:
     log = tmp_path / "run.log"
     log.write_text(_row(482, 130000, 0.002) + "\n" + _row(482, 129000, 0.002) + "\n")
