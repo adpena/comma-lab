@@ -512,3 +512,16 @@ ps aux | grep -E 'train_semantic|train_ddm_cl1' | grep -v grep
    logic predicts is poisonous. It needs a flag first; that is a real code change on the lifted oracle,
    which carries pinned lift custody (commit `9049e1caa5`) and is not a drive-by edit.
 6. **Do not quote `best` without its eval count**, anywhere, ever again (§5.6).
+
+## §7.1 RUNG-2 RESULT — MAIN adjudication (2026-08-17, read AFTER §7 per the ticket)
+
+`CW1-LR6E5` endpoint **0.000277684529622 = −1,000 flips vs init** (rc=0, 1,053 s, pid 36604,
+payload `/Volumes/APDataStore/pact/ddm_cw1/LR6E5/`). Band: **≥ −1,430 → REFUTED at this
+formulation.** 3× the integrated LR at identical steps/seed/curriculum/init lands 1,286 flips
+(1.5σ) WORSE than the 1× control's −2,286. Higher lr damages under alignment as it did under
+misalignment; **2e-5 is at or above the aligned optimum and any further sweep is DOWN, not up.**
+Rung 3 (10×) does NOT fire, per the pre-registered gate. §8 item 2 (aim cos(sign g) at the
+frontier trainer) was answered by `ddm_oa2` the same day: ∂d_seg/∂θ ≡ 0 there — no alignment
+object exists; the frontier trainer is exactly rate-aligned by construction. Next from §8:
+item 3 (second seed on EF3000 — fired at this adjudication) and item 4 (the transfer
+measurement, where the S lives).
