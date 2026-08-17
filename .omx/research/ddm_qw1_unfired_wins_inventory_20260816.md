@@ -1,6 +1,6 @@
 ---
 arm: ddm_qw1
-title: "The unfired-wins queue is ONE row worth 1.6% of the gap, it needs no scorer slot, and it is invisible to all three bank aggregators because it landed after them"
+title: "The unfired MEASURED-wins queue is ONE row worth 1.6% of the gap and it needs no scorer slot; the one genuinely large unfired object (mp2 keep25, 14.2% of the gap in real bytes) is unmeasured behind a $0 probe nobody ran because a .done.done defect killed the queue"
 utc: 2026-08-16
 axis: "[local-CPU $0 arithmetic over MEASURED primary receipts] — NEVER a score"
 research_only: true
@@ -51,6 +51,15 @@ bank that `fb1` measured is *not* composable — reaches **−1.587e-4 S = 1.654
 and go build.** The bank is exhausted to three decimal places; the gap needs a mechanism that
 returns thousands of bytes or moves `d_seg`, and no such mechanism is sitting built and measured.
 
+**One thing genuinely large IS sitting there, and it is not a win yet.** `mp2` built **nine**
+generations on the correct hv1 pins and scored **four**. `keep25` is retained, receiver-closed, and
+**never measured** at 180,708 B — **−2,051 B = 14.2% of the gap in real bytes.** Its pose leg is
+unmeasured and the measured dose-response projects it at **+0.0264 S net, 2.8× the gap in the wrong
+direction**. But the trend across the only monotone pair is *favourable*, `mp2` registered
+"pose-null rows likely exist" as a live hypothesis, and the named prerequisite is a **$0 local
+finite-difference probe, not a scorer run** — which nobody has run, partly because a `.done.done`
+receipt-naming defect silently killed the queue. **Fire the $0 probe. Never the n600 score.** §B row 4.
+
 **The structural finding, which is worth more than the row.** `gx1` (10:17), `hv2` (18:37) and
 `fb1` (19:12) each independently enumerated "the bank" today and each concluded it totals
 −5.5818e-06 (qs2 + re1). `ra2` landed at **20:50**. Its credit is **27× the entire bank they
@@ -88,8 +97,9 @@ CEILING and a MARGINAL are three different quantities and only one of them price
 | **1** | **ra2 CPR1 inner coder** (basis stream: static order-0 Huffman → adaptive arithmetic) | **−1.531e-4** (realized) / −1.751e-4 (raw) | **1.60%** | raw = **MEASURED**; realized = **PROVISIONAL** | **hv1**, the live 22,161 B carrier | INSTANCE | **YES — lossless, seg+pose exactly unchanged** | **$0, no scorer** | unowned |
 | 2 | ps1u sealed T4 order (frame-0 carrier delta, container BUILT + PROVEN + dispatcher-VALIDATED) | rate leg **+3.915e-4** MEASURED cost; pose leg **UNMEASURED**; ceiling −7.903e-3 | ceiling 82% | rate MEASURED, pose **UNMEASURED** | hv1 (candidate 183,347 B, sha `97048f9f…`) | INSTANCE | n/a — it *is* a candidate | **$0.16 Modal** (of $1.38 left) | MAIN |
 | 3 | sr1 FO-1 — A1 zero-byte de-blur, **sign unmeasured** | ceiling −2.860e-2 @100% recovery; −9.597e-3 @33.55% | ceiling 298% | **CEILING with UNMEASURED SIGN** | hv1, rt1 n600 retained masks | INSTANCE | 0 bytes, so rate-neutral by construction | **$0**, ~800 s/α local CPU | MAIN |
-| 4 | qs2 + re1 banked micro-edits | −5.582e-6 | 0.058% | MEASURED | **cp135** (superseded ×3) | INSTANCE | **NO** — 4 independent grounds (fb1 §B.2) | $0.16 + a rebuild + a *re-search* | MAIN |
-| 5 | sr1 FO-2 — waterfilled correction channel | −5.95e-4 | 6.20% | **CEILING** (ideal conditional-entropy limit, no coder) | hv1 | INSTANCE | 4 KB, composes in principle | $0, after FO-1, **+ a tool flag that does not exist** | MAIN |
+| 4 | **mp2 keep25** (+ keep37/50/62) — retained, receiver-closed on hv1 pins, **NEVER SCORED** | rate credit **−1.366e-3** MEASURED; pose leg **UNMEASURED**, projected **+0.0278** | rate credit **14.2%**; projected net **+2.8× the gap, wrong sign** | rate MEASURED, pose **PROJECTED (n=2)** | **hv1** (180,708 B) | INSTANCE, under a FAMILY refusal | bytes are real and correctly pinned | **$0** per-row FD pose probe first — **never an n600 score** | MAIN |
+| 5 | qs2 + re1 banked micro-edits | −5.582e-6 | 0.058% | MEASURED | **cp135** (superseded ×3) | INSTANCE | **NO** — 4 independent grounds (fb1 §B.2) | $0.16 + a rebuild + a *re-search* | MAIN |
+| 6 | sr1 FO-2 — waterfilled correction channel | −5.95e-4 | 6.20% | **CEILING** (ideal conditional-entropy limit, no coder) | hv1 | INSTANCE | 4 KB, composes in principle | $0, after FO-1, **+ a tool flag that does not exist** | MAIN |
 
 ### Row 1 — the only real one, in detail
 
@@ -118,7 +128,7 @@ from the other direction: *"that is the only section with any measured slack."*
   at +5 B. **By its own gate this row never fires.** That gate should be retired: the bundling
   rationale assumed a companion rung would appear, and the measured record now says none will.
 
-### Row 2 — the largest fully-built object, and it is a bad buy
+### Row 2 — the only sealed, dispatcher-validated order in the pile, and it is a bad buy
 
 `ps1u` built, proved and *dispatcher-validated* a sealed T4 request (sha `9863de20…`, 6,217 B) and
 fired nothing. This is a genuine class-5 row: the order exists, the candidate archive exists, the
@@ -152,7 +162,58 @@ zero cost."* **It is a coin flip with a free ticket, not a win**, and it must no
 and two pollers; no local scorer holds the lane. This is the clearest WON-THEN-STRANDED case in the
 inventory — the prerequisite was met and nobody re-checked.
 
-### Row 4 — the bank, confirmed dead independently
+### Row 4 — the largest retained byte credit, and why it is still not a win
+
+A sister sweep of both SSD tiers (692 `retained*` directories enumerated; **nothing unreachable**,
+no eviction observed despite VertigoDataTier at 893 MiB free) found the biggest omission in my first
+pass. `ddm_mp2` built **nine** generations against the correct hv1 archive/runtime pins and scored
+only **four**. Five are receiver-closed, retained, and carry a literal `NOT MEASURED` in every score
+column:
+
+| generation | bytes | Δ vs frontier | rate credit | %gap |
+|---|---:|---:|---:|---:|
+| keep62 | 182,011 | −748 | −4.981e-4 | 5.19% |
+| keep50 | 181,694 | −1,065 | −7.091e-4 | 7.39% |
+| keep37 | 181,235 | −1,524 | −1.015e-3 | 10.57% |
+| **keep25** | **180,708** | **−2,051** | **−1.366e-3** | **14.23%** |
+| keep75−keep87 | 182,734 | −25 | −1.665e-5 | 0.17% |
+
+**This is 14.2% of the gap in real, correctly-pinned bytes, and nobody has measured it.** That is a
+far bigger unfired object than anything else in this inventory, and it is why I am reporting it even
+though I recommend against scoring it.
+
+**Why it is still not a win.** `mp2`'s three scored siblings all failed on pose, and the adjudication
+closes the family with a measured dose-response: *"even −25 B costs +0.0362 S net; pose damage per
+byte removed ~1.4e-3 S/B vs rate value 6.66e-7 S/B (~2000× over)."* Pricing keep25 against the only
+monotone pair we have (keep87 −130 B → pose leg +0.044296; keep75 −471 B → +0.041366, slope
+**−8.59e-6 S/B, the favourable direction**) projects a keep25 pose leg of **+0.0278** against a
+**+0.0014** rate credit — net **+0.0264 S, 2.8× the gap in the wrong direction**, needing a **20×**
+further pose reduction to break even. `mp2`'s own DEAD-ENDS say it: *"Blindly scoring
+keep62/50/37/25 is closed until the pose-sensitivity prerequisite exists."*
+
+**The honest counterweight, and it is why the row stays open rather than closed.** The trend is
+favourable and it is `n=2`: pruning *more* improved pose from keep87 to keep75. `mp2` registered
+this as a live hypothesis — *"pose-null or pose-positive FiLM rows likely exist."* The named
+prerequisite is a **$0 local per-row finite-difference pose-sensitivity probe**, not a scorer run.
+**FIRE-ORDER: run the FD probe, never the n600 score.** If pose-null rows exist, a re-selected
+candidate at keep25's byte scale is worth 14% of the gap; if they do not, the family closes with a
+second measured leg instead of a projection.
+
+**An apparatus defect is part of why these are unscored, and it is already fixed but not restarted.**
+`launch_detached_process.py` appended `.done` to a name already ending in `.done`, producing
+`.done.done` receipts the queue could not observe; `ADVISORY_QUEUE_STATE.json` still labels keep75
+`RUNNING` and **no keep62 attempt directory was ever created.** The class was fixed by `0286280f95`
+— **the queue was never restarted.** That is a silent-control-plane instance
+([[the-control-plane-fails-silently-make-the-silence-loud-at-launch-20260816]]): the science reason
+(pose prerequisite) and the plumbing reason (dead queue) coincided, so nobody noticed the second one.
+
+Also retained-and-unscored, reported for completeness and **not** counted as candidates: `mz2`'s 11
+archives (**permanently unscoreable in place** — `mp2` closed it: they are not candidate-bound to the
+hv1 pins), `pz4`'s ~67 archives (cp135 base, family folded after direct-v6's `+2.4715 S` pose
+collapse), `lr2`'s 16 carrier bitstreams (sweep intermediates, no scorer contract), and ~163 analysis
+payloads across six 08-16 arms (`hm1`, `dc1`, `ra1b`, `rc4`, `ra2crr`, `cl2`).
+
+### Row 5 — the bank, confirmed dead independently
 
 I re-derived `fb1`'s finding rather than quoting it. `qs2 + re1 = −5.5817878492e-06` = **55.8%** of
 its own 1e-5 naming bar, so *waiting for the pool to grow cannot satisfy the rule*. Not composable
@@ -275,16 +336,23 @@ absent; the task ledger's strict load (repaired — 559 served, **2 still UNREAD
 `1079_pv1_…` and `1082_ddm_hm1_…`); `cpr1` absent from all three aggregator memos; the memo
 timestamps that explain *why* it is absent.
 
+**Retained-payload sweep (sister agent, both SSD tiers).** 142 `retained*` dirs on VertigoDataTier +
+550 on APDataStore enumerated (**692**); 81 arm-level queue/fire-order manifests opened, 16 parsed in
+full. **Nothing unreachable** — both volumes mounted, and despite VertigoDataTier sitting at 893 MiB
+free / 100% capacity **no eviction was observed**; every path stat'd existed. Triaged by (a) archive
+candidates near 182,759 B, (b) presence of a queue/fire-order manifest, (c) presence of a score
+receipt. **Explicitly not individually adjudicated:** the pre-2026-08-09 cp135/e480b-lineage arms
+(`sm3`, `sm4`, `sd1`, `sd2`, `ai1`, `cp2`, `hp3`) — enumerated only. `experiments/results/` (145 GB)
+contains **0** `retained*` dirs; it predates the retention policy.
+
 **What I could not reach.** The 454 arm finals that exist only in gitignored `.omx/tmp/codex_runs/`.
 A full read of the 28k-line DAG (grepped only; it is a June v4d/v19b lineage). The
 `lever_activation_ledger.jsonl` claim that *26 of 31 fire-now rows never fired* — the file is
 **unmodified since Jul 27**, which corroborates that nothing drained it, but those levers are
-witness/v9-vehicle and stranded exactly like the mh1 orphans. A sister sweep of retained payloads on
-both SSD tiers was dispatched and had not returned when I wrote this; §C covers the mz2/mp2 retained
-set from its own receipts, but a payload retained by some *other* arm and never scored could still
-exist. `kp2`'s census is the standing evidence that retention is systematically incomplete (272
-genuine RECORD-class discards live at the preflight scope), so **treat §C's retained-payload coverage
-as partial.**
+witness/v9-vehicle and stranded exactly like the mh1 orphans. `kp2`'s census is the standing evidence
+that retention is systematically incomplete (**272** genuine RECORD-class discards live at the
+preflight scope), so a payload that was *never persisted* cannot appear in any sweep, including this
+one.
 
 ---
 
@@ -298,6 +366,13 @@ as partial.**
 - **`QUEUED-WITH-A-FIRE-ORDER`** — owner **MAIN**. **Row 3, sr1 FO-1.** Its stated blocker (pid 4832)
   is **discharged** — verified absent. $0, local, ~800 s/α, positive control pre-registered. Fire
   trigger: immediately. **Bank the result either way; do not bank the ceiling.**
+- **`QUEUED-WITH-A-FIRE-ORDER`** — owner **MAIN**. **Row 4, mp2's four unscored deep prunes.** Action:
+  run the **$0 per-row finite-difference pose-sensitivity probe** mp2 named as the prerequisite, and
+  restart the advisory queue (the `.done.done` class was fixed by `0286280f95` and never restarted;
+  `ADVISORY_QUEUE_STATE.json` still shows keep75 `RUNNING` and keep62 has no attempt directory).
+  **Do NOT fire an n600 score on keep62/50/37/25** — mp2's DEAD-ENDS forbid it and the projection is
+  +2.8× the gap. Fire trigger: immediately. Admission for any successor candidate: a re-selection
+  built from measured pose-null rows, not a deeper blind prune.
 - **`DEFERRED, blocker named`** — owner **MAIN**. **Row 2, ps1u sealed T4.** Blocker: the admission
   rule's false-admit window `[6.245822e-06, 6.251199e-06)`, measured by `pv1`. Re-derive the
   threshold off hv1's `6.88e-06` before any dispatch. Even then it is an information buy against a
