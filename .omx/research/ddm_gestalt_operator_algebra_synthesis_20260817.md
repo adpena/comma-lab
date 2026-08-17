@@ -79,3 +79,27 @@ STORES CONSULTED: rv2 813153ca1d (routing arithmetic, F3/F5/F6) · rr4/hv1/MC36 
 PR138 body (opal mechanism) · tc1 7763583f6d (free-archive test) · oq1 dispositions (date-fact) ·
 pk3/pk4 LOPO receipts · e960 midrun_descent_fit · qs4/qs5 compensation receipts · er1 ledger ·
 CLAUDE.md unified-level-set + rule-118 doctrine.
+
+## CORPUS-GROUNDING PASS (v0.1, per operator "Not only from working memory" — m44 law applied)
+
+Graph-memory recall (38,276 nodes) immediately REFINED the draft:
+
+R1. **The alive subalgebra is narrower than the draft claimed.** Measured law
+    `post_hoc_stored_corrections_dead_joint_descent_required_law_20260718`: value-level
+    corrections stored as sidecars and applied post-hoc to frozen frames are DEAD on this
+    problem — only joint descent or a CONSTRAINED SOLVE crosses that wall. Reconciliation
+    (sharpens, does not refute): every winning operator of 08-04→17 lies in the PERMITTED
+    branches — LOSSLESS recodes (rr4/opal: distortion untouched by construction) · SELECTION
+    (hv1) · constrained-solve edits WITH in-compile joint compensation (qs5 = exactly the law's
+    "constrained solve" branch). pk3/pk4's linear post-hoc pose ceilings are the SAME law.
+    **Corrected gestalt: the operator algebra's ALIVE generators are {lossless recode, select,
+    constrained-solve edit}; arbitrary post-hoc value correction stays measured-dead.**
+R2. **The pattern predates the fortnight.** PR #67 (May) ran greedy coordinate descent on
+    trained pose values through the real chain — the field's first operator-on-frozen-object;
+    FEED-gy (06-28) already named the plateau-breaker as "CAPACITY or REPRESENTATION", the
+    grokking-shape prediction before we lived it. The two-week arc is the CONFIRMATION of a
+    longer arc, not its beginning.
+R3. Draft status: Level 1-3 above = working-memory v0 (honest label); this section = the first
+    corpus correction; the 23rd convocation owes the FULL-corpus pass (corrections index 11,840
+    rows · probe-outcomes ledger 662 rows · follow-on stores · 14-day memo sweep · canonical
+    equations) and must hunt counter-evidence with the same energy as confirmation.
