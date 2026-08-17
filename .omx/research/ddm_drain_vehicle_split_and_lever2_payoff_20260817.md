@@ -91,3 +91,35 @@ an ablation actuator — its one consumer pins already-zero init weights).
 
 **Owed on every row this drain produces:** the vehicle label. A verdict on the semantic renderer is
 not a verdict on the frontier, and the two are further apart than "different checkpoint."
+
+## FINDING 3 — CORRECTION, same turn: "never-fired" was inferred from argparse, not from the runs
+
+⚠ I routed `--weight-qat-q3q4` as "the next fire, one of the 12 never-fired levers." **It is ON in
+every `ce1` arm.** Read from the launch manifests, not the flag list:
+
+| arm | `--weight-qat-q3q4` | other levers passed |
+|---|---|---|
+| `CE0` | **ON** | `--band-objective-weight 0.0` (inert) |
+| `EF0` | **ON** | `--band-objective-weight 0.0` |
+| `EF3000` | **ON** | `--band-objective-weight 0.0` |
+| `EF6000` | **ON** | `--band-objective-weight 0.0` |
+| `FRD077` | **ON** | `--band-objective-weight 0.0`, `--film-row-dropout 0.077` |
+
+My inference was: argparse default is `False` ⇒ the lever has never fired. **Default-off in the
+parser is not evidence about the runs; the launch manifests are.** F2's real status is not
+NEVER-FIRED, it is **ON-WITHOUT-A-CONTROL** — which is worse, because its contribution is baked
+silently into every `ce1` number I have quoted today: the allocation ladder (control +8,654 /
+CE0 +4,852 / EF0 +636), the EF6000 depth curve, and the FRD077 verdict. None of those isolate it.
+
+**What SURVIVES this correction:** the FRD077 A/B is genuinely single-variable. Verified by argv
+diff — the *only* token difference between `EF3000` and `FRD077` is `--film-row-dropout 0.077`.
+`q3q4` is present in both, so it is held constant and cannot confound that comparison. The
+seg-neutral verdict stands; so does the ladder's ordering (q3q4 constant across all three arms).
+
+**What CHANGES:** F2 is not a fire, it is an **owed control** — the OFF arm has never been run, so
+"train through the mixed q3/q4 grid" has no measured contribution on this vehicle at all. And
+mz2's banked −823 B q3/q4 candidate cannot be attributed to it without that control.
+
+Genus: this is today's third instance of *asserting a property of the live system from a static
+surface instead of the runtime record* — after row-norms-instead-of-ablation and
+stable-rank-instead-of-truncation. The cure is the same each time: read what actually ran.
