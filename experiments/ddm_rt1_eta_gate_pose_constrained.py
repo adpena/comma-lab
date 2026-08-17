@@ -154,8 +154,49 @@ def run(args: argparse.Namespace) -> int:
     gt_argmax = np.load(args.gt_argmax, mmap_mode="r")
     base_argmax = np.load(args.work / "argmax_base.npy", mmap_mode="r")  # rt1, do NOT re-derive
 
+    # SAMPLING (m96 + m88).  Three modes, all recorded in the receipt:
+    #   explicit `--pairs`      -- the caller owns the draw (used to run a MATCHED subset arm on
+    #                              exactly the pairs another arm measured, which a fresh seeded
+    #                              draw cannot guarantee).
+    #   `--exclude-pairs`       -- removes pairs from the candidate population BEFORE the seeded
+    #                              draw, so a follow-on arm can measure a sample DISJOINT from the
+    #                              one whose number it is hardening (out-of-sample by construction).
+    #   default                 -- legacy: seeded random choice over all FRAMES.  Verified
+    #                              byte-identical to the pre-change `choice(FRAMES, ...)` form.
     rng = np.random.default_rng(args.seed)
-    pairs = sorted(rng.choice(FRAMES, size=args.n_pairs, replace=False).tolist())
+    excluded = sorted({int(p) for p in (args.exclude_pairs or [])})
+    if args.pairs:
+        pairs = sorted({int(p) for p in args.pairs})
+        bad = [p for p in pairs if not 0 <= p < FRAMES]
+        if bad:
+            raise EtaGateError(f"--pairs out of range [0,{FRAMES}): {bad}")
+        sampling_method = "explicit --pairs list (caller-owned draw)"
+    else:
+        pop = np.arange(FRAMES)
+        if excluded:
+            pop = np.setdiff1d(pop, np.asarray(excluded, dtype=pop.dtype))
+        if args.n_pairs > pop.size:
+            raise EtaGateError(
+                f"--n-pairs {args.n_pairs} exceeds candidate population {pop.size} "
+                f"after excluding {len(excluded)} pairs")
+        pairs = sorted(rng.choice(pop, size=args.n_pairs, replace=False).tolist())
+        sampling_method = ("seeded random choice without replacement (m96: never a [:n] prefix)"
+                           + (f"; {len(excluded)} pairs EXCLUDED from the population first"
+                              if excluded else ""))
+
+    # RESUMABILITY (P0).  The rows file is append-only and is the payload, so a run that was
+    # killed, reaped, or stopped to yield cores resumes by skipping the pairs already on disk.
+    # Default off so no existing invocation changes behaviour.
+    already: set[int] = set()
+    if args.resume:
+        rows_path = args.out / "ETA_GATE_ROWS.jsonl"
+        if rows_path.exists():
+            already = {json.loads(line)["pair"]
+                       for line in rows_path.read_text().splitlines() if line.strip()}
+            skipped = [p for p in pairs if p in already]
+            pairs = [p for p in pairs if p not in already]
+            print(f"  [resume] {len(skipped)} pair(s) already on disk, {len(pairs)} to go",
+                  flush=True)
 
     wanted = set()
     for t in pairs:
@@ -246,6 +287,13 @@ def run(args: argparse.Namespace) -> int:
         print(f"  [{k + 1}/{len(pairs)}] pair {t}: eta={row['eta_net']:+.4f} "
               f"desc={n_desc} {n_before}->{n_after} dpose x{row['d_pose_ratio']:.3f}", flush=True)
 
+    if args.resume and already:
+        # The rows FILE is the payload; when resuming, the in-memory list holds only the pairs
+        # this process computed.  Re-read from disk so the emitted verdict covers everything.
+        rows = [json.loads(line) for line
+                in (args.out / "ETA_GATE_ROWS.jsonl").read_text().splitlines() if line.strip()]
+    if not rows:
+        raise EtaGateError("no rows produced and none on disk -- refusing to emit a verdict")
     etas = np.array([r["eta_net"] for r in rows], dtype=np.float64)
     desc = np.array([r["n_described_ring0"] for r in rows], dtype=np.float64)
     before = np.array([r["flips_before"] for r in rows], dtype=np.float64)
@@ -264,15 +312,20 @@ def run(args: argparse.Namespace) -> int:
         "pre_registered_bar": ETA_BAR,
         "bar_provenance": f"rt1 §5.4: channel = {CHANNEL_BYTES} B "
                           "(M7 mask 32,270 + target class 965)",
-        "sampling": {"seed": args.seed, "method": "seeded random choice without replacement "
-                                                  "(m96: never a [:n] prefix)",
+        "sampling": {"seed": args.seed, "method": sampling_method,
                      "n_pairs_requested": args.n_pairs, "n_pairs_measured": len(rows),
+                     "excluded_pairs": excluded,
+                     "explicit_pairs": sorted({int(p) for p in args.pairs}) if args.pairs else None,
+                     "resumed_pairs_read_from_disk": sorted(already) if already else [],
                      "pairs": [r["pair"] for r in rows]},
         "solver": {"reference_form": "sq1 solve_null_constrained + pu2 multi-start rider",
                    "steps": args.steps, "lr": args.lr, "eval_every": args.eval_every,
                    "focus_weight": args.focus_weight,
                    "starts": 2, "pose_constraint": ("hard yuv6 null-space projection" if args.mode == "null"
                                        else "NONE -- unconstrained positive control"),
+                   # et4: thread count is part of the forward instrument (reduction order can
+                   # flip argmax ties), so rows are only poolable across runs that share it.
+                   "torch_threads": args.threads,
                    "mode": args.mode,
                    "snap_support_flag": args.snap_support,
                    "edit_support_snapped_to_2x2_blocks": (args.mode == "null"
@@ -406,6 +459,14 @@ def aggregate(args: argparse.Namespace) -> int:
     return 0
 
 
+def _csv_ints(s: str) -> list[int]:
+    """Parse a comma-separated int list, fail-closed on anything else."""
+    try:
+        return [int(tok) for tok in s.replace(" ", "").split(",") if tok]
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(f"expected comma-separated ints, got {s!r}") from exc
+
+
 def _boundary(lab: np.ndarray) -> np.ndarray:
     b = np.zeros(lab.shape, dtype=bool)
     d = lab[:-1, :] != lab[1:, :]
@@ -445,6 +506,16 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--full-population-n", type=int, default=120,
                     help="pairs required before a PASS may be called LIVE (m96)")
     ap.add_argument("--retain-frames", action="store_true")
+    ap.add_argument("--exclude-pairs", type=_csv_ints, default=None,
+                    help="comma-separated pairs removed from the candidate population BEFORE "
+                         "the seeded draw, so a follow-on arm can measure a sample DISJOINT "
+                         "from the one it is hardening; default None = legacy population")
+    ap.add_argument("--pairs", type=_csv_ints, default=None,
+                    help="comma-separated explicit pair list; overrides the seeded draw so a "
+                         "MATCHED arm can run on exactly the pairs another arm measured")
+    ap.add_argument("--resume", action="store_true",
+                    help="skip pairs already present in the out dir's ETA_GATE_ROWS.jsonl "
+                         "(P0 resumability: the append-only rows file is the checkpoint)")
     args = ap.parse_args(argv)
     return aggregate(args) if args.mode == "aggregate" else run(args)
 
