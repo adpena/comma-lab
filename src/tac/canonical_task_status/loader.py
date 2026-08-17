@@ -99,32 +99,69 @@ def _validate_history(
 
 def _parse_rows(
     path: Path,
-) -> tuple[list[CanonicalTaskStatusRow], int | None, Exception | None]:
-    """Parse every row; return ``(rows, first_corrupt_line, its_exception)``.
+) -> tuple[list[CanonicalTaskStatusRow], tuple[int, Exception] | None, dict[str, str]]:
+    """Parse every row, SPLITTING file corruption from row-contract violations.
 
-    ONE parse path for both public readers.  A second hand-rolled copy of this
-    loop is how the two readers would silently drift apart -- the same defect
-    measured in ``_pid_alive`` (11 copies, 2 semantics) the same day.  The
-    caller decides what a corrupt line MEANS; parsing does not decide for it.
+    Returns ``(rows, file_corruption, contract_violations)`` where
+    ``file_corruption`` is ``(line_number, exception)`` or ``None``, and
+    ``contract_violations`` maps ``task_id -> reason``.
+
+    THE TWO FAILURE CLASSES THIS FUNCTION USED TO CONFLATE, and what it cost
+    (measured 2026-08-17, by a live arm mid-run):
+
+    A row carrying ``actual_delta_s`` without its ``[empirical:<path>]`` note
+    raises ``ValueError`` from ``contract.py:280``.  The old code returned that
+    as "first corrupt line", the caller read it as file corruption, and
+    QUARANTINED -- i.e. MOVED AWAY -- the entire shared ledger.  An arm found the
+    file simply gone and had to restore it by hand.  ONE arm's contract
+    violation deleted shared state for the WHOLE FLEET.
+
+    They are not the same failure and must not share a response:
+
+    * FILE corruption -- the line is not JSON, or is not an object.  The byte
+      stream is untrustworthy; serving a truncated prefix would be worse than
+      refusing.  Quarantine stays.
+    * ROW-CONTRACT violation -- the line IS a well-formed JSON object and one
+      field RELATIONSHIP the schema polices does not hold.  Every other row is
+      exactly as valid as it was a moment ago.  Isolating the offending TASK is
+      proportionate; moving the file is not.
+
+    Sister of the per-task isolation cure one layer up in ``_validate_history``
+    (2026-08-16, same file).  That fix bounded the blast radius of a broken
+    HISTORY and left a broken ROW at "the whole file" -- a defect cured at one
+    site and left uncured at the second, which is its own recurring genus here.
+
+    A contract violation marks the whole TASK unreadable rather than dropping
+    just the one row: dropping a single row can make the rest of that task's
+    history incoherent (drop a ``registered`` row and every later row looks
+    orphaned), which would manufacture a second, fictional defect.
 
     The offending exception is RETURNED, not swallowed, so callers can chain it
-    with ``from``: the reason a line is corrupt (bad JSON vs missing audit
-    field vs wrong type) is the whole diagnostic, and dropping it would make
-    the report a record of its own blindness.
+    with ``from``: the reason a line failed is the whole diagnostic, and
+    dropping it would make the report a record of its own blindness.
     """
 
     rows: list[CanonicalTaskStatusRow] = []
+    contract_violations: dict[str, str] = {}
     for line_number, raw in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
         if not raw.strip():
             continue
         try:
             obj = json.loads(raw)
-            if not isinstance(obj, dict):
-                raise ValueError("row is not an object")
+        except json.JSONDecodeError as exc:
+            return rows, (line_number, exc), contract_violations
+        if not isinstance(obj, dict):
+            return rows, (line_number, ValueError("row is not an object")), contract_violations
+        try:
             rows.append(CanonicalTaskStatusRow.from_json_obj(obj))
-        except (json.JSONDecodeError, ValueError, TypeError) as exc:
-            return rows, line_number, exc
-    return rows, None, None
+        except (ValueError, TypeError) as exc:
+            # A well-formed object that fails the row contract. Key by task_id so
+            # the offender is NAMED; fall back to the line when the id itself is
+            # unusable, so the row is still reported rather than silently dropped.
+            raw_id = obj.get("task_id")
+            key = raw_id if isinstance(raw_id, str) and raw_id.strip() else f"<line {line_number}>"
+            contract_violations.setdefault(key, f"row contract violated at line {line_number}: {exc}")
+    return rows, None, contract_violations
 
 
 def load_canonical_task_status_strict(
@@ -139,13 +176,18 @@ def load_canonical_task_status_strict(
     path = ledger_path(repo_root)
     if not path.exists():
         return []
-    rows, corrupt_line, corrupt_exc = _parse_rows(path)
-    if corrupt_line is not None:
+    rows, file_corruption, contract_violations = _parse_rows(path)
+    if file_corruption is not None:
+        corrupt_line, corrupt_exc = file_corruption
         quarantine = _quarantine_corrupt_file(path)
         raise CanonicalTaskStatusCorruptError(
             f"corrupt canonical task-status row {corrupt_line}; quarantined to {quarantine}"
         ) from corrupt_exc
+    # History errors first, then contract violations OVERWRITE them: a row that
+    # failed its contract was never appended, so any history gap it leaves behind
+    # is a CONSEQUENCE, and reporting the consequence would hide the cause.
     unreadable = _validate_history(rows)
+    unreadable.update(contract_violations)
     if unreadable:
         # LOUD, never silent: a skipped task is debt somebody must clear, and a
         # quiet skip is how "the ledger looks fine" becomes a lie (vacuity==pass).
@@ -181,14 +223,17 @@ def unreadable_task_ids(repo_root: str | Path | None = None) -> dict[str, str]:
     path = ledger_path(repo_root)
     if not path.exists():
         return {}
-    rows, corrupt_line, corrupt_exc = _parse_rows(path)
-    if corrupt_line is not None:
+    rows, file_corruption, contract_violations = _parse_rows(path)
+    if file_corruption is not None:
+        corrupt_line, corrupt_exc = file_corruption
         raise CanonicalTaskStatusCorruptError(
             f"corrupt canonical task-status row {corrupt_line}; cannot report "
             f"unreadable tasks from a truncated read (not quarantined -- this "
             f"is a read-only audit; call the strict loader to quarantine)"
         ) from corrupt_exc
-    return _validate_history(rows)
+    unreadable = _validate_history(rows)
+    unreadable.update(contract_violations)
+    return unreadable
 
 
 def latest_status_by_task_id(

@@ -17,6 +17,7 @@ from tac.canonical_task_status import (
     query_task_history,
     query_tasks_by_status,
     register_task,
+    unreadable_task_ids,
     update_status,
 )
 
@@ -170,6 +171,20 @@ def test_note_after_empirical_completion_carries_evidence_tag(tmp_path: Path) ->
 
 
 def test_strict_loader_rejects_missing_audit_fields(tmp_path: Path) -> None:
+    """The ROW is rejected; the FILE is not moved (blast radius, 2026-08-17).
+
+    Originally this asserted ``CanonicalTaskStatusCorruptError``, which also
+    QUARANTINED -- moved away -- the whole ledger.  A live outage measured what
+    that costs: one arm appended a row missing its ``[empirical:]`` custody note
+    and the shared ledger vanished mid-run for the entire fleet.
+
+    Missing audit fields are the SAME class: a well-formed JSON object failing a
+    field relationship.  The test for quarantine is whether the remaining bytes
+    can still be parsed -- for unparseable JSON they cannot (that path still
+    raises, pinned in ``test_canonical_task_status_isolation.py``); for a bad
+    field they can.  So rejection is preserved and its blast radius is bounded:
+    the row is excluded, the task is named, the file stays put.
+    """
     ledger = tmp_path / ".omx/state/canonical_task_status.jsonl"
     ledger.parent.mkdir(parents=True)
     ledger.write_text(
@@ -201,8 +216,19 @@ def test_strict_loader_rejects_missing_audit_fields(tmp_path: Path) -> None:
         )
         + "\n"
     )
-    with pytest.raises(CanonicalTaskStatusCorruptError):
-        load_canonical_task_status_strict(tmp_path)
+    before = ledger.read_bytes()
+
+    with pytest.warns(UserWarning, match="UNREADABLE"):
+        rows = load_canonical_task_status_strict(tmp_path)
+    assert rows == [], "a row missing its audit fields must never be served"
+
+    broken = unreadable_task_ids(tmp_path)
+    assert set(broken) == {"memo::ITEM_BAD"}
+    assert "row contract violated" in broken["memo::ITEM_BAD"]
+
+    assert ledger.exists(), "one bad row must not move the shared ledger"
+    assert ledger.read_bytes() == before
+    assert list(ledger.parent.glob("*.corrupt.*")) == []
 
 
 def test_duckdb_refresh_exposes_latest_view(tmp_path: Path) -> None:

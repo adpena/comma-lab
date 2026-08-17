@@ -170,3 +170,99 @@ def test_unreadable_task_ids_refuses_on_corrupt_line_without_quarantining(
 def test_missing_ledger_is_valid_and_empty(tmp_path: Path) -> None:
     assert unreadable_task_ids(tmp_path) == {}
     assert load_canonical_task_status_strict(tmp_path) == []
+
+
+def _append_contract_violating_completion(repo_root: Path, task_id: str) -> None:
+    """A well-formed JSON object that fails ONE field relationship.
+
+    ``contract.py:280`` requires an ``[empirical:<path>]`` note on any row
+    carrying ``actual_delta_s``.  This row parses perfectly as JSON and violates
+    exactly that relationship -- the shape of the 2026-08-17 incident.
+    """
+
+    ledger = repo_root / LEDGER
+    ledger.parent.mkdir(parents=True, exist_ok=True)
+    with ledger.open("a", encoding="utf-8") as handle:
+        handle.write(
+            json.dumps(
+                {
+                    "schema_version": "canonical_task_status_v1_20260518",
+                    "task_id": task_id,
+                    "source_design_memo": ".omx/research/memo.md",
+                    "title": "Carries a delta",
+                    "status": "completed",
+                    "owner": "codex",
+                    "predicted_cost_usd": None,
+                    "predicted_delta_s_band": None,
+                    "actual_delta_s": -0.0983195,
+                    "commit_shas": [],
+                    "test_status": "pending",
+                    "blockers": [],
+                    "started_at_utc": None,
+                    "completed_at_utc": "2026-08-17T00:00:00Z",
+                    "event_type": "completion",
+                    "event_timestamp_utc": "2026-08-17T00:00:00Z",
+                    "event_actor": "codex_test",
+                    "event_notes": "no empirical tag here",
+                    "session_id": "s1",
+                    "written_at_utc": "2026-08-17T00:00:00Z",
+                    "written_pid": 1,
+                    "written_host": "test",
+                }
+            )
+            + "\n"
+        )
+
+
+def test_row_contract_violation_does_not_move_the_ledger(tmp_path: Path) -> None:
+    """THE 2026-08-17 INCIDENT: one arm's bad row must not delete shared state.
+
+    A row failing the ``[empirical:]`` contract used to be read as file
+    corruption, and the caller QUARANTINED -- moved -- the whole ledger. A live
+    arm found the file gone mid-run. The ledger must stay exactly where it is.
+    """
+    _register(tmp_path, "memo::GOOD", "Healthy")
+    _register(tmp_path, "memo::BAD", "Violator")
+    _append_contract_violating_completion(tmp_path, "memo::BAD")
+    ledger = tmp_path / LEDGER
+    before = ledger.read_bytes()
+
+    with pytest.warns(UserWarning, match="UNREADABLE"):
+        rows = load_canonical_task_status_strict(tmp_path)
+
+    assert ledger.exists(), "the shared ledger was MOVED by one bad row"
+    assert ledger.read_bytes() == before, "the ledger was rewritten, not just read"
+    assert list(ledger.parent.glob("*.corrupt.*")) == [], "quarantined a contract violation"
+    assert [row.task_id for row in rows] == ["memo::GOOD"]
+
+    broken = unreadable_task_ids(tmp_path)
+    assert set(broken) == {"memo::BAD"}
+    assert "row contract violated" in broken["memo::BAD"]
+    assert "empirical" in broken["memo::BAD"], "the offender's reason must name the cause"
+
+
+def test_file_corruption_still_quarantines(tmp_path: Path) -> None:
+    """The path I must NOT have broken: unparseable bytes are a different class.
+
+    A line that is not JSON makes later offsets untrustworthy, so refusing and
+    quarantining stays correct. Splitting the two classes must not soften this.
+    """
+    _register(tmp_path, "memo::GOOD", "Healthy")
+    ledger = tmp_path / LEDGER
+    with ledger.open("a", encoding="utf-8") as handle:
+        handle.write("{not json at all\n")
+
+    with pytest.raises(CanonicalTaskStatusCorruptError):
+        load_canonical_task_status_strict(tmp_path)
+    assert not ledger.exists(), "file corruption must still quarantine"
+    assert len(list(ledger.parent.glob("*.corrupt.*"))) == 1
+
+
+def test_a_non_object_row_is_file_corruption_not_a_contract_violation(tmp_path: Path) -> None:
+    """A bare JSON scalar parses, but there is no row to hold to a contract."""
+    ledger = tmp_path / LEDGER
+    ledger.parent.mkdir(parents=True)
+    ledger.write_text("42\n", encoding="utf-8")
+    with pytest.raises(CanonicalTaskStatusCorruptError):
+        unreadable_task_ids(tmp_path)
+    assert ledger.exists(), "the read-only audit must not quarantine"
