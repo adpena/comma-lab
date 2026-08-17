@@ -261,7 +261,12 @@ def code_and_verify(frames: list[dict]) -> dict:
     return {"mask_bytes": len(mask_blob), "target_bytes": len(tgt_blob),
             "symbols": n_sym, "flips": n_tgt,
             "mask_sha256": sha256_bytes(mask_blob), "target_sha256": sha256_bytes(tgt_blob),
-            "roundtrip_verified": True, "_mask_blob": mask_blob, "_tgt_blob": tgt_blob}
+            "roundtrip_verified": True, "_mask_blob": mask_blob, "_tgt_blob": tgt_blob,
+            # The DECODED field and the TRUTH field, kept so an auditor can prove the round trip
+            # from disk without re-running the coder: their sha256 must match (fo1's convention).
+            "_decoded_bits": np.concatenate(decoded) if decoded else np.zeros(0, np.uint8),
+            "_truth_bits": np.concatenate([f["bits_raster"] for f in frames])
+            if frames else np.zeros(0, np.uint8)}
 
 
 def cellset_bits(m: int, universe: int) -> float:
@@ -387,7 +392,8 @@ def sweep(args: argparse.Namespace) -> int:
             "selected_cells": save_array(
                 work / "retained" / f"fo2h_selected_cells_m{m:03d}.npy", sel),
         }
-        best_blobs[m] = {"mask": r["_mask_blob"], "tgt": r["_tgt_blob"], "sel": sel}
+        best_blobs[m] = {"mask": r["_mask_blob"], "tgt": r["_tgt_blob"], "sel": sel,
+                         "decoded": r["_decoded_bits"], "truth": r["_truth_bits"]}
         print(f"  [sweep] m={m:3d} flips={int(flips):6d} payload={payload_B:7d} B "
               f"side={side_live_B:6.1f} B  breakeven_eta={row['breakeven_eta']:.4f}", flush=True)
         progress(work, "leg2-level", {"cells": m, "flips": int(flips),
@@ -451,13 +457,22 @@ def sweep(args: argparse.Namespace) -> int:
         blob = best_blobs.get(m)
         if blob is None:
             continue
+        dec = save_array(work / "retained" / f"fo2h_roundtrip_decoded_m{m:03d}.npy",
+                         blob["decoded"])
+        tru = save_array(work / "retained" / f"fo2h_restricted_truth_m{m:03d}.npy", blob["truth"])
         retained[tag] = {
             "cells": int(m),
             "mask": save_blob(work / "retained" / f"fo2h_mask_m{m:03d}.rc", blob["mask"]),
             "target": save_blob(work / "retained" / f"fo2h_target_m{m:03d}.rc", blob["tgt"]),
             "selected_cells": save_array(
                 work / "retained" / f"fo2h_selected_cells_m{m:03d}.npy", blob["sel"]),
+            # The round-trip proof an auditor can check from disk without trusting a flag: the
+            # DECODED field and the TRUTH field must carry the same sha256 (fo1's convention).
+            "roundtrip_decoded": dec, "restricted_truth": tru,
+            "roundtrip_proved_by_matching_sha256": dec["sha256"] == tru["sha256"],
         }
+        if dec["sha256"] != tru["sha256"]:
+            raise Fo2hError(f"m={m}: retained decode does not match truth -- round trip unproven")
 
     rec = {
         "schema": "ddm_fo2h_waterfill_measured.v1",
@@ -499,6 +514,15 @@ def sweep(args: argparse.Namespace) -> int:
     }
     (work / "FO2H_WATERFILL_MEASURED.json").write_text(
         json.dumps(rec, indent=2, sort_keys=True) + "\n")
+    progress(work, "leg2-reoptimized", {
+        "incumbent_cells": SR1_IDEAL_CELLS,
+        "incumbent_breakeven_eta": incumbent["breakeven_eta"] if incumbent else None,
+        "reoptimized_min_breakeven_cells": min_breakeven["cells"],
+        "reoptimized_min_breakeven_eta": min_breakeven["breakeven_eta"],
+        "best_cells_by_eta": {k: v["cells"] for k, v in best_by_eta.items()},
+        "cellset_side_info_B_max_over_family": max(
+            r["cellset_side_info_B_live_universe"] for r in rows),
+        "marginal_ordering_monotone": marginal_analysis["monotone_in_real_marginal_cost"]})
     progress(work, "leg2-done", {"levels": len(rows),
                                  "min_breakeven_eta": min_breakeven["breakeven_eta"],
                                  "min_breakeven_cells": min_breakeven["cells"],
