@@ -223,3 +223,36 @@ Current exact own frontier remains MC36 Variant C
   `INSTANCE/FROZEN-TRANSFER`, not current-label retraining.
 - Unchanged-stream coder reraces are closed by task #996/LP135; RX2 reuses the
   settled native RC64 implementation and changes only its probability stream.
+
+---
+
+## REBASE NOTE (appended 2026-08-16 by `ddm_fb1`) — APPEND-ONLY, nothing above is changed
+
+**The body above was CORRECT WHEN WRITTEN. This note exists so the bar is not consumed stale.**
+Per Catalog #110/#113 HISTORICAL_PROVENANCE no line above is rewritten; this is a superseding row.
+
+At the time of writing, the frontier was `S = 0.1619344578804448 @ 186,269 B` (MC36 Variant C).
+**It has since moved twice:** `MC36 -> e480b v2 (183,502 B) -> hv1 ep0634`.
+
+**LIVE BASE as of 2026-08-16:**
+`S = 0.15959729295498598 @ 182,759 B [contest-CUDA T4, n600]`,
+sha `80d9c8c6fdc72caaa3e180a8abb2a859e7f316a484b38f33fe90d5701420178e`
+(`.omx/state/canonical_frontier_pointer.json`, `effective_frontier`).
+
+**WHY THIS MATTERS — the staleness runs in the dangerous direction.** The `186,269 B` bar sits
+**3,510 B ABOVE what we already ship**. A candidate can PASS the bar written above while scoring
+**+0.002337165 WORSE** than the incumbent — 233.7x the 1e-5 naming bar.
+
+**USE THIS INSTEAD — a bar that does not go stale.** `seg + pose` is decode-identical across the
+whole `cp135 -> MC36 -> e480b v2 -> hv1` lineage (measured to 1e-15), so only rate moves:
+
+```
+sub-0.15  <=>  archive <= 168,345.5977 B      (from the live 182,759 B: cut 14,413.4 B)
+beat the incumbent  <=>  archive <  182,759 B  (at equal-or-better distortion)
+```
+
+Caveat that travels with the invariant: it is a PURE-RATE target, valid only while distortion is
+held. Any candidate that CHANGES `d_seg` or `d_pose` must re-measure against the live pointer.
+
+Full derivation, the repo-wide sweep with its denominator, and the bank-union verdict:
+`.omx/research/ddm_fb1_stale_bar_rebase_and_bank_union_20260816.md`.

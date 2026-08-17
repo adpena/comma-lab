@@ -695,3 +695,61 @@ top1_error 0.00191, EMA-shadow evaluated. ETA ~6.6 h (478 ep × ~49.6 s/ep).
 Endpoint obligations: descent-law refit at ep960 (the ENTRY_STATE_CONDITIONAL
 label's second test) → identity race → micro-edit recompile (qs2 −4.375e-6 +
 re1 −1.207e-6 vs the FINAL coder) → ONE composed T4 row (#1058).
+
+---
+
+## REBASE NOTE (appended 2026-08-16 by `ddm_fb1`) — APPEND-ONLY, nothing above is changed
+
+**The body above was CORRECT WHEN WRITTEN. This note exists so the bar is not consumed stale.**
+Per Catalog #110/#113 HISTORICAL_PROVENANCE no line above is rewritten; this is a superseding row.
+
+At the time of writing, the frontier was `S = 0.1619344578804448 @ 186,269 B` (MC36 Variant C).
+**It has since moved twice:** `MC36 -> e480b v2 (183,502 B) -> hv1 ep0634`.
+
+**LIVE BASE as of 2026-08-16:**
+`S = 0.15959729295498598 @ 182,759 B [contest-CUDA T4, n600]`,
+sha `80d9c8c6fdc72caaa3e180a8abb2a859e7f316a484b38f33fe90d5701420178e`
+(`.omx/state/canonical_frontier_pointer.json`, `effective_frontier`).
+
+**WHY THIS MATTERS — the staleness runs in the dangerous direction.** The `186,269 B` bar sits
+**3,510 B ABOVE what we already ship**. A candidate can PASS the bar written above while scoring
+**+0.002337165 WORSE** than the incumbent — 233.7x the 1e-5 naming bar.
+
+**USE THIS INSTEAD — a bar that does not go stale.** `seg + pose` is decode-identical across the
+whole `cp135 -> MC36 -> e480b v2 -> hv1` lineage (measured to 1e-15), so only rate moves:
+
+```
+sub-0.15  <=>  archive <= 168,345.5977 B      (from the live 182,759 B: cut 14,413.4 B)
+beat the incumbent  <=>  archive <  182,759 B  (at equal-or-better distortion)
+```
+
+Caveat that travels with the invariant: it is a PURE-RATE target, valid only while distortion is
+held. Any candidate that CHANGES `d_seg` or `d_pose` must re-measure against the live pointer.
+
+Full derivation, the repo-wide sweep with its denominator, and the bank-union verdict:
+`.omx/research/ddm_fb1_stale_bar_rebase_and_bank_union_20260816.md`.
+
+**SECOND, WC2-SPECIFIC REBASE — two further items in this file are superseded.**
+
+1. **`:510` "if archive < 186,269 B, T4 fire (projected S ~ 0.134)".** Both halves are stale. The
+   bar is rebased above. The `~0.134` projection was never reachable: §5f of this same file
+   records the realized winner at **183,502 B -> S 0.16009202615715576**, and states that the joint
+   estimate "replaces a DIFFERENT accounting basis than the archive's realized token+model
+   sections; the REAL number is the archive stat." The body self-corrected; the fire trigger did
+   not inherit the correction.
+2. **The final endpoint obligation "micro-edit recompile (qs2 -4.375e-6 + re1 -1.207e-6 vs the
+   FINAL coder) -> ONE composed T4 row" is REFUSED as budgeted.** Measured by `ddm_fb1`:
+   - The two credits do **not** compose onto the hv1 base. `ddm_mc36_dual_axis_t4_verdict_20260814.md`
+     follow-on #3 already recorded non-composition onto **MC36**; hv1 is MC36's descendant, and
+     hv1's admission rests on exact decoded-token **and** full-raw byte identity, which any qs2
+     (189 px) or re1 (4 px) edit breaks by construction. `re1`'s object no longer exists at all —
+     hv1 REPLACES the probability object `re1` edited.
+   - `qs2`'s pose compensation was Schur-solved at base `d_pose 6.885642960696714e-06` (CP135 at
+     186,252 B). hv1's is `6.88e-06`. The gap is worth **3.4009e-06 S = 60.9% of the entire pool**,
+     and carrying a stale compensation cost `qs4` **+2.396e-4** (43x the pool).
+   - Even granting perfect composition, `qs2 + re1 = -5.5817878492e-06` = **55.8%** of the 1e-5
+     naming bar. It cannot clear by waiting.
+
+   The recompile is a **NEW candidate** requiring a fresh in-compile Schur solve and its own
+   dual-axis row, not a sum of banked deltas. Do not fire it without a pre-registered projection
+   <= -1e-5 on the hv1 base.
