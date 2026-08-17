@@ -12,16 +12,23 @@ below is `[macOS-CPU advisory]` on a stratified-random pair sample; every rate n
 
 ## VERDICT
 
-**Rung 4 is REFUSED as an uncompensated drop — on the POSE leg, by 534×.** The rate leg is
+**Rung 4 is REFUSED as an uncompensated drop — on the POSE leg, by 517×.** The rate leg is
 exact and favourable and the seg leg is genuinely net-negative (best rung −3.243e-3 S, 34% of
-the gap), but the pose leg costs **+0.17727 S**, which is **54.7× the entire rate+seg gain**
-and **534× the pose headroom the gain buys**. Measured `delta_d_pose` = 3.4366e-3 against an
+the gap), but the pose leg costs **+0.17432 S**, which is **53.8× the entire rate+seg gain**
+and **517× the pose headroom the gain buys**. Measured `delta_d_pose` = 3.3279e-3 against an
 allowed 6.431e-6.
+
+That pose figure is scored against the **authority-lineage** GT per ddm_pi2's fix
+(`gt_cache_dali.pt["pose"]`, sha `a91d9825…`, tracks contest authority at 1.00081×). Scoring
+the same retained vectors against the older PyAV-lineage GT gives `delta_d_pose` 3.4366e-3 →
+`dS_pose` +0.17727, i.e. **1.7% different**. The verdict does not depend on the GT-lineage
+question at all: the drop is measured as a *paired differential*, so a GT-lineage offset
+cancels in the difference. Both numbers are recorded in `POSE_RESCORED_DALI.json`.
 
 `verdict_scope: FORMULATION` — *uncompensated* confidence-threshold token drop on the hv1
 vehicle. This is NOT a family kill. The charter's own composition — qs5's **in-compile frame-0
 Schur compensation** — is untested at this amplitude and is the one door left. It must cancel
-**99.813%** of the pose perturbation to make the rung net-negative. qs5 achieved *full*
+**99.807%** of the pose perturbation to make the rung net-negative. qs5 achieved *full*
 cancellation at micro scale, and the structural case is strong (the 12-coefficient carrier
 already drives `d_pose` to 6.88e-6 from scratch, so it demonstrably has the authority to
 re-hit the pose target for a perturbed frame_1 — 6 pose equations, 12 free coefficients per
@@ -270,15 +277,33 @@ baseline**, never a ratio and never rescaled:
 dS_pose = sqrt(10*(6.88e-06 + delta_d_pose_abs)) - sqrt(10*6.88e-06)
 ```
 
-| quantity | value |
-|---|---:|
-| base advisory `d_pose` (floor-inflated) | 1.38622e-4 |
-| dropped advisory `d_pose` | 3.57523e-3 |
-| **`delta_d_pose` absolute** | **3.436612e-3** |
-| **`dS_pose` at the authority baseline** | **+0.1772719** |
-| pose headroom the rate+seg gain buys (exact sqrt inverse) | 6.431e-6 |
-| **over budget by** | **534.4×** |
-| pose cost ÷ rate+seg gain | **54.7×** |
+**The GT-lineage fix, applied.** ddm_pi2's final verdict is that the advisory pose gap was our
+own tooling reading two ground truths — the seg half off a DALI-lineage cache, the pose half
+decoding GT fresh with PyAV. The FIX is to score pose against
+`/Volumes/VertigoDataTier/pact/ddm_chroma_dali_av_20260809/gt_cache_dali.pt["pose"]`
+(sha `a91d9825…`, 1.00081× of authority). **Because this arm retained every per-pair pose
+vector, applying the fix cost a re-score, not a re-render** — `POSE_RESCORED_DALI.json`,
+`experiments/ddm_rc4_pose_rescore_dali.py`. That is what ALWAYS-KEEP-THE-PAYLOAD buys.
+
+| quantity | **FIX: authority-lineage GT** | prior PyAV-lineage GT |
+|---|---:|---:|
+| base `d_pose` | **3.33887e-6** (0.49× authority) | 1.38622e-4 (20.15× authority) |
+| dropped `d_pose` | 3.33124e-3 | 3.57523e-3 |
+| **`delta_d_pose` absolute** | **3.327899e-3** | 3.436612e-3 |
+| **`dS_pose` at the authority baseline** | **+0.174319** | +0.177272 |
+| pose headroom the rate+seg gain buys (exact sqrt inverse) | 6.431e-6 | 6.431e-6 |
+| **over budget by** | **517.5×** | 534.4× |
+| pose cost ÷ rate+seg gain | **53.8×** | 54.7× |
+
+The fix removes the floor entirely — base `d_pose` drops from 20.15× authority to 0.49×
+(the residual 0.49× is the n=48 population effect on a heavily skewed pose distribution, not
+an instrument gap) — and moves `dS_pose` by **1.7%**. The verdict is invariant to it.
+
+**GT-lineage control on the SEG half.** MAIN's correction warns that a hand PyAV GT decode
+inflates a seg number by 1.4425×. My seg half used a *cached* `gt_argmax.npy`, and I verified
+its lineage directly rather than assuming: it differs from the DALI authority cache's `seg`
+field at **3 sites out of 117,964,800** (2.54e-6 %) — exactly the 3-site agreement MAIN quoted
+for the authority cache. My seg GT *is* the authority lineage. No seg number here is inflated.
 
 **Determinism repeat.** The n=48 pose run was executed twice (the second time to regenerate a
 retained payload a smoke test of mine had overwritten — my error, caught and repaired). Both
@@ -313,8 +338,8 @@ legs and dies on the third:
 | rate | **−1.19754e-2** | EXACT (token bytes are archive bytes 1:1; ZIP member is STORED) |
 | seg | **+8.7325e-3** | `[macOS-CPU advisory]` n=120, A=0.79844 |
 | rate + seg | **−3.2430e-3** → S 0.1563543 | |
-| pose | **+0.1772719** | `[macOS-CPU advisory]` n=48, absolute delta at authority baseline |
-| **all three** | **+0.1740289** → S 0.3336 | REFUSED |
+| pose | **+0.174319** | `[macOS-CPU advisory]` n=48, absolute delta at authority baseline, authority-lineage GT |
+| **all three** | **+0.171076** → S 0.330673 | REFUSED |
 
 Rung 4 has no owner because it does not deserve one in its uncompensated form. It deserves
 exactly one more measurement, and that measurement is not another drop sweep — it is whether
@@ -339,8 +364,8 @@ that this rung is NOT pure-rate, so that bar bounds only its rate leg.
 
 | # | row | owner | fire condition | READY? |
 |---|---|---|---|---|
-| 1 | **Schur-compensated drop reach test.** At `p_max >= 0.9921875`, re-solve the 12 frame-0 carrier coefficients per pair against the 6 PoseNet equations *in-compile* (never carried), and measure the residual `delta_d_pose`. PASS iff it falls below 6.431e-6 (99.813% cancellation) **and** the re-coded carrier section grows by less than 17,985 B − 12,902·0.79844·1.2731 = 4,873 B. | qs5 successor / pose owner | immediate; $0 local, reuses `experiments/ddm_rc4_pose_leg.py` for the verdict half | code READY, solver owed |
-| 2 | **The compensator is now a GATE, not a composition step.** Every remaining frame_1 lever (semantic width, token representation, renderer edits) inherits this 534× pose exposure. Before any of them spends a measurement, the compensator's reach must be characterised once. | pose owner | fires with row 1 | — |
+| 1 | **Schur-compensated drop reach test.** At `p_max >= 0.9921875`, re-solve the 12 frame-0 carrier coefficients per pair against the 6 PoseNet equations *in-compile* (never carried), and measure the residual `delta_d_pose`. PASS iff it falls below 6.431e-6 (99.807% cancellation) **and** the re-coded carrier section grows by less than 17,985 B − 12,902·0.79844·1.2731 = 4,873 B. | qs5 successor / pose owner | immediate; $0 local, reuses `experiments/ddm_rc4_pose_leg.py` for the verdict half | code READY, solver owed |
+| 2 | **The compensator is now a GATE, not a composition step.** Every remaining frame_1 lever (semantic width, token representation, renderer edits) inherits this 517× pose exposure. Before any of them spends a measurement, the compensator's reach must be characterised once. | pose owner | fires with row 1 | — |
 | 3 | **Guarded 2-D drop — DEMOTED by this result.** `experiments/ddm_rc4_guarded_drop.py` tests whether a decoder-free boundary-bucket guard lowers A below 0.5084. It is built and unfired. It only improves the SEG leg, which is not what binds; fire it only if row 1 passes. | ddm_rc4 successor | row 1 PASSES | READY, unfired |
 | 4 | **HPAC model-size sweep — the genuinely unowned representation lever.** The 13,515 B model buys 51,484 B of token rate (dc1) and pays for itself 3.8×, but `d(token bytes)/d(model bytes)` has never been measured: the checkpoint selector optimises the joint at *fixed architecture*, never across `HPAC_CHANNELS`/`HPAC_PATCH`. This is pure-rate at fixed decoded field, so it carries none of rung 4's pose exposure. | rate owner | needs a burn slot | not ready (training) |
 | 5 | **Closed-loop rate correction.** The ladder is DERIVED-first-order; a live drop encoder perturbs 0.007–0.022% of positions' contexts. Only worth resolving if row 1 passes. | ddm_rc4 successor | row 1 PASSES | — |
