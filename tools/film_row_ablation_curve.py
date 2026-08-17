@@ -244,17 +244,32 @@ def main(argv: list[str] | None = None) -> int:
             model.load_state_dict(_apply_drop(state_dict, plan))
 
             # REFUSE on a NaN render. MEASURED 2026-08-17: zeroing ANY FiLM row
-            # makes the deployed lifted quantiser emit NaN frames, because
+            # makes the TRAINER-SIDE quantiser emit NaN frames. (Wording corrected
+            # 2026-08-17 -- "deployed" was retracted at the memo header and must not
+            # survive here: the SHIPPING receiver `_decode_row_prune` quantizes only
+            # the KEPT rows and scatters them into `torch.zeros`, so it never hands a
+            # zero-`amax` row to a quantiser at all. This is a trainer path.)
             # `fake_quantize` (lifted/train_semantic_quantized.py:50-54) computes
-            # `scale = amax.clamp_min(1e-8) / limit` = 1.4286e-9 and then casts it
-            # to fp16 on the NEXT line -- 1.4286e-9 is below fp16's smallest
-            # subnormal (5.96e-8), so the cast flushes it to 0.0 and `source/scale`
-            # is 0/0. The clamp_min guard is destroyed by the cast meant to follow
-            # it. SegNet then predicts one class everywhere and the mismatch count
-            # is a CONSTANT (59,551,382 = 50.48%) that is identical across k AND
-            # across independently-trained checkpoints. Without this guard that
-            # constant reads as a flat, reproducible ablation curve -- a degenerate
-            # number wearing a measurement's clothes.
+            # `scale = amax.clamp_min(1e-8) / limit` = 1.4286e-9 at bits=4 and then
+            # casts it to fp16 on the NEXT line -- below fp16's smallest subnormal
+            # (5.96e-8), so the cast flushes it to 0.0 and `source/scale` is 0/0.
+            # The clamp_min guard is destroyed by the cast meant to follow it.
+            # SCOPE, corrected: this fires at EVERY bit depth (measured 2,3,4,5,8,16)
+            # because 1e-8 is below fp16 subnormal after division by any limit >= 1 --
+            # bits=4 is the instance, not the boundary. And the same clamp-then-cast
+            # lives in THREE implementations, not one: this trainer, plus
+            # `editability_levers.deployed_fake_quant` and the packer
+            # `ddm_sd1_semantic_rd_curve.quantized_tensor`. Any regression must pin
+            # `amax == 0 -> finite` in all three.
+            # SegNet then predicts one class everywhere and the mismatch count is a
+            # CONSTANT (59,551,382 = 50.48%) identical across k AND across
+            # independently-trained checkpoints -- a degenerate number wearing a
+            # measurement's clothes. DEVICE CAVEAT (measured): that constant is
+            # MPS-specific. On MPS SegNet silently absorbs NaN and predicts
+            # Undrivable-everywhere; on CPU the NaN propagates and argmax returns
+            # Road-everywhere (90,557,431 = 76.77%). So this probe must sit on the
+            # RENDER, before the scorer -- a NaN guard placed after SegNet would be
+            # invisible on the MPS axis entirely.
             with torch.no_grad():
                 probe_ids = pair_ids[:1]
                 probe = qat.render_quantized(
@@ -269,7 +284,9 @@ def main(argv: list[str] | None = None) -> int:
                 if bool(torch.isnan(probe).any()):
                     raise ValueError(
                         f"{label} k={k}: render is NaN -- the ablated weights do "
-                        "not survive the deployed quantiser, so any d_seg from "
+                        "not survive the TRAINER-side quantiser (the shipping receiver "
+                        "prunes before quantizing and never sees a zero-amax row), "
+                        "so any d_seg from "
                         "them is a degenerate constant, not a measurement. A row "
                         "'dropped' by zeroing is NOT the row the receiver drops; "
                         "model the receiver's own reconstruction instead."
