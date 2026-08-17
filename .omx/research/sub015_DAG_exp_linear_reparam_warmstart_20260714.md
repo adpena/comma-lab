@@ -191,3 +191,22 @@ axis closes (pose→0 short 2.4e-4, exact); models rank / reality accepts; corre
 prior (me1 leg iii); next seg win = retrain-FOR-operators (aligned objective/editability); pose =
 joint/nonlinear only. If a plain longer burn or static coder race moves the pointer next, the
 gestalt is WRONG in a named way. 23rd convocation spawned to adversarially test + extend.
+
+## FEED-20260817g — me1 engine landed: the micro-edit crux is a THEOREM, the cure is fired
+
+1. **me1 landed** (679506f4e3 + engine code): bank-recompile VOID verified at source (mc36
+   subsumption at event-ID) · aim-changer: at the rr4 base pose→0 leaves 0.00023867 S = 281.55
+   net seg flips or 358.44 B (fell 15.3× when rate fell — micro-edits are now the CLOSER) ·
+   instrument law: local advisory d_pose 21× off T4 ⇒ only BYTES locally authoritative ⇒ the
+   probability-law axis is the one locally-decidable axis.
+2. **THE THEOREM** (the finding of the day): our HPAC law is already opal-class rank-one
+   transport; arithmetic-mean context mixtures are bounded by their best member (4 raced, all
+   REFUSED +67..+1,398 B); only LOGISTIC mixing sharpens; float transcendentals = the rr2
+   device-desync class; cure = FIXED-POINT INTEGER log-odds mixer. Target −1,000..−3,000 B
+   (PR138-sized). ddm_fx1 FIRED on it ($0, 40 s/architecture on me1's instrument, controls
+   exact to 0.000000).
+3. Gestalt PP3-leg-(a) is now IN TRIAL: the predicted next rate win (online-adaptive/sharpened
+   prior, not a static race) is exactly what fx1 races. Semantic-edit family stopped honestly
+   (2 refusals pinned at −17 flips, 3.4× over-prediction).
+4. CI-blind Metal-contention hit TWICE (my push + me1's commit) — #1107 two-landing filed;
+   both skips documented, burn-end re-verify owed.
