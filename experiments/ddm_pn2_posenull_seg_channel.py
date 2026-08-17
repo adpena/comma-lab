@@ -143,9 +143,40 @@ def run(args: argparse.Namespace) -> int:
     d_eta = [null_rows[p]["eta_net"] - free_rows[p]["eta_net"] for p in shared]
     n_pos = sum(1 for x in d_eta if x > 0)
 
+    # THREE-WAY DECOMPOSITION.  `null` mode snaps the edit support to whole 2x2 blocks
+    # (snap_tax ~1.77x) as well as projecting, so null-vs-free confounds the PROJECTION with a
+    # SUPPORT-SIZE change that rt1 s6.1 measured at ~0.65 eta on its own.  The `free + snapped`
+    # arm splits the two: free -> free_snap is the SNAP alone, free_snap -> null is the
+    # PROJECTION alone.
+    decomposition = None
+    if args.snap_rows is not None and args.snap_rows.exists():
+        snap_rows = load_rows(args.snap_rows)
+        tri = sorted(set(shared) & set(snap_rows))
+        if tri:
+            s_list = [snap_rows[p] for p in tri]
+            n3 = [null_rows[p] for p in tri]
+            f3 = [free_rows[p] for p in tri]
+            e_f, e_s, e_n = pooled_eta(f3), pooled_eta(s_list), pooled_eta(n3)
+            p_f, p_s, p_n = pose_ratio(f3), pose_ratio(s_list), pose_ratio(n3)
+            total = e_n - e_f
+            decomposition = {
+                "pairs": tri, "n": len(tri),
+                "pooled_eta": {"free": e_f, "free_snapped": e_s, "null_projected": e_n},
+                "eta_attributable_to_snap": e_s - e_f,
+                "eta_attributable_to_projection": e_n - e_s,
+                "eta_total": total,
+                "projection_share_of_eta_gain": ((e_n - e_s) / total) if total else float("nan"),
+                "pose_ratio": {"free": p_f, "free_snapped": p_s, "null_projected": p_n},
+                "pose_reduction_from_snap": (p_f / p_s) if p_s else float("nan"),
+                "pose_reduction_from_projection": (p_s / p_n) if p_n else float("nan"),
+                "note": ("free -> free_snapped isolates the 2x2 support snap; free_snapped -> "
+                         "null_projected isolates the pose-null projection at matched support"),
+            }
+
     matched = {
         "pairs": shared,
         "n_matched": len(shared),
+        "three_way_decomposition": decomposition,
         "pooled_eta_null": eta_n,
         "pooled_eta_free": eta_f,
         "pooled_eta_delta_null_minus_free": eta_n - eta_f,
@@ -217,6 +248,11 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--free-rows", type=Path,
                     default=Path("/Volumes/APDataStore/pact/ddm_pn2/eta_gate_free_n12"
                                  "/ETA_GATE_ROWS.jsonl"))
+    ap.add_argument("--snap-rows", type=Path,
+                    default=Path("/Volumes/APDataStore/pact/ddm_pn2/eta_gate_free_snapped_n12"
+                                 "/ETA_GATE_ROWS.jsonl"),
+                    help="free-mode rows run WITH the 2x2 support snap; enables the three-way "
+                         "decomposition that separates the snap from the projection")
     ap.add_argument("--out", type=Path,
                     default=Path("/Volumes/APDataStore/pact/ddm_pn2/PN2_VERDICT.json"))
     return run(ap.parse_args(argv))
