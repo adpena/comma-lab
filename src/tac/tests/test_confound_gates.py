@@ -883,7 +883,18 @@ class TestModule:
         # on the sticky OS pressure level; admission counting an unreconciled
         # registry). Warn-only for one cycle at MEASURED live-count 0, with two
         # executed positive controls, so the uncovered ceiling does not move.
-        assert len(cg.CONFOUND_GATES) == 29
+        # 29 -> 31 on 2026-08-16: the same fix-forward pattern, twice more.
+        # check_no_row_contract_error_quarantines_the_ledger (#1081) was appended
+        # to the tuple by a sibling arm without updating this test, so the assert
+        # was ALREADY failing at 30 before ddm_pl1 touched it -- and its absence
+        # from the `bounds` map below made that parametrised case a KeyError,
+        # which masks a real live-count regression rather than reporting one.
+        # ddm_pl1 adds the second: check_no_bulk_write_strands_the_ready_record,
+        # the two-landing gate for the ddm_lr1/A2 payload loss (a ready `result`
+        # stranded behind a fragile checkpoint save). It lands WARN-ONLY at a
+        # MEASURED live count of 10 over 11,016 modules, WITH a registered
+        # positive control, so the uncovered ceiling does not move.
+        assert len(cg.CONFOUND_GATES) == 31
         names = {fn.__name__ for fn in cg.CONFOUND_GATES}
         assert names == {
             "check_no_spike_guard_defaults_to_deadlock_mode",
@@ -929,6 +940,8 @@ class TestModule:
             # refused launches). One gate, two legs, per the #299 consolidation
             # discipline; lands warn-only WITH two executed positive controls.
             "check_throttle_rearms_and_admission_reconciles",
+            "check_no_row_contract_error_quarantines_the_ledger",
+            "check_no_bulk_write_strands_the_ready_record",
         }
 
     def test_followon_gates_are_strict_flipped_in_preflight_all(self):
@@ -1053,6 +1066,17 @@ class TestModule:
             # counting the durable-daemon registry without reconciling it -- wire
             # the re-arm / the reconcile; do NOT raise this bound.
             "check_throttle_rearms_and_admission_reconciles": 0,
+            # #1081, STRICT at a MEASURED live count of 0 over 7,532 modules.
+            # Was absent from this map entirely, which made its parametrised case
+            # raise KeyError -- a gate registered without a bound reports as a
+            # test ERROR, never as the live-count regression the bound exists to
+            # catch. Fixed forward by ddm_pl1; do NOT raise it.
+            "check_no_row_contract_error_quarantines_the_ledger": 0,
+            # ddm_pl1: WARN-ONLY at a MEASURED live count of 10 over 11,016
+            # modules (8 runner-context, 2 test-fixture). The bound is the
+            # measured value, not a round number, so ANY new stranded record
+            # fails here. Lower it as the ten sites are cured; never raise it.
+            "check_no_bulk_write_strands_the_ready_record": 10,
         }
         v = fn(strict=False, verbose=False)
         assert len(v) <= bounds[fn.__name__], f"{fn.__name__} live-count grew: {v[:3]}"

@@ -3828,7 +3828,8 @@ POSITIVE_CONTROLS: tuple[PositiveControl, ...] = (
 # ddm_gb1 raised it to the MEASURED live value, not to its own +1: the floor had drifted three
 # below actual, so three controls could have been deleted with the guard still printing OK. A floor
 # that lags the truth is not a ratchet. Re-measure and raise on every landing that adds a control.
-MIN_POSITIVE_CONTROL_COVERAGE = 12
+# 12 -> 13 (ddm_pl1): check_no_bulk_write_strands_the_ready_record ships with its control, MEASURED.
+MIN_POSITIVE_CONTROL_COVERAGE = 13
 
 # RATCHET CEILING (added 2026-07-31, task #831). The floor above is on the NUMERATOR — the count
 # of gates that HAVE controls — so it can only ever fire when a control is REMOVED. Landing a new
@@ -4917,6 +4918,368 @@ POSITIVE_CONTROLS = (
             "ddm_mb1 Leg C2: the EXACT pre-fix run_daemon shape — the SIGSTOP actuator ON by a "
             "hardcoded default, so every auto-start re-arms it with no operator adjudication and "
             "no recorded reason. 'Off' must be a tracked, armed state, never a forgotten default."
+        ),
+    ),
+)
+
+
+# ---------------------------------------------------------------------------
+# ddm_pl1 (2026-08-16) -- THE READY RECORD MADE TO WAIT
+#
+# Sister of `tac.payload_retention_gate.check_no_measure_and_discard_payload`,
+# and deliberately a DIFFERENT class.  That gate refuses a script whose only
+# persisted artifact is SCALARS while the bytes were in memory -- a defect of
+# DESIGN.  This gate refuses a script that persists BOTH, correctly, but ORDERS
+# the two writes so that one failure loses both -- a defect of SEQUENCE.
+# ddm_lr1/A2 was the second class, not the first, and the first gate could not
+# have seen it.
+# ---------------------------------------------------------------------------
+
+_BULK_ATTRS = frozenset({"save", "savez", "savez_compressed", "dump", "tofile", "savemat"})
+_BULK_RECVS = frozenset({"torch", "np", "numpy", "pickle", "joblib", "cloudpickle", "scipy"})
+_RECORD_ATTRS = frozenset({"dump", "safe_dump"})
+_RECORD_RECVS = frozenset({"json", "yaml", "toml", "orjson"})
+# A dict literal smaller than this is a closure box or an options bag, not a run
+# record.  MEASURED: `_tail_cycle_start_epoch = {"v": None}` in the levelset
+# trainer produced three false positives at 1 key; the incident's own `result`
+# carries 15.  Reading those sites (not trusting the count) set the threshold.
+_MIN_RECORD_KEYS = 3
+# Textual prefilter for the scan. Must stay a SUPERSET of every spelling
+# `_pl1_primitive_role` treats as bulk, or the gate goes quietly blind.
+# `test_the_prefilter_is_a_superset_of_the_bulk_predicate` pins that.
+_PL1_BULK_TOKENS = (
+    ".save(",
+    ".savez(",
+    ".savez_compressed(",
+    ".dump(",
+    ".tofile(",
+    ".savemat(",
+    ".write_bytes(",
+)
+
+
+def _pl1_attr_call(node: ast.AST) -> tuple[str, str] | tuple[None, None]:
+    if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
+        recv = node.func.value
+        name = recv.id if isinstance(recv, ast.Name) else getattr(recv, "attr", "")
+        return name, node.func.attr
+    return None, None
+
+
+def _pl1_primitive_role(node: ast.Call) -> str | None:
+    """BULK vs RECORD for one call, by WHAT IT WRITES -- never by its spelling."""
+    recv, attr = _pl1_attr_call(node)
+    if attr is None:
+        return None
+    if attr == "write_bytes" or (attr in _BULK_ATTRS and recv in _BULK_RECVS):
+        return "bulk"
+    # `json.dump(obj, fp)` persists; bare `json.dumps(obj)` only serialises, and
+    # `print(json.dumps(result))` is stdout, not an artifact.  Requiring the file
+    # argument is what keeps the CURED trainer (which prints its result after
+    # saving) out of the violation set.
+    if attr == "write_text" or (attr in _RECORD_ATTRS and recv in _RECORD_RECVS and len(node.args) >= 2):
+        return "record"
+    return None
+
+
+def _pl1_helper_roles(tree: ast.AST) -> dict[str, str]:
+    """Classify each module-local helper by the primitives ITS BODY calls.
+
+    MECHANISM, not name-matching: ``_atomic_torch_save`` is bulk because it
+    calls ``torch.save``, and would still be bulk under any other name.  Keying
+    on the helper's spelling is what makes a rename silently disarm a gate --
+    exactly how the sibling per-module test (which string-matches two literal
+    call spellings) would fail open.
+    """
+    roles: dict[str, str] = {}
+    for fn in _func_defs(tree):
+        bulk = record = False
+        for node in ast.walk(fn):
+            if not isinstance(node, ast.Call):
+                continue
+            recv, attr = _pl1_attr_call(node)
+            if attr == "write_bytes" or (attr in _BULK_ATTRS and recv in _BULK_RECVS):
+                bulk = True
+            elif attr in ("write_text", "write") or (attr in _RECORD_ATTRS and recv in _RECORD_RECVS):
+                record = True
+        if bulk and not record:
+            roles[fn.name] = "bulk"
+        elif record and not bulk:
+            roles[fn.name] = "record"
+    return roles
+
+
+def _pl1_stmt_role(stmt: ast.stmt, roles: Mapping[str, str]) -> str | None:
+    """The write role of ONE SIMPLE statement.
+
+    BRANCHING compound statements (``if`` / ``for`` / ``while`` / ``try``) are
+    excluded and recursed into as their own blocks: a write under a condition
+    is not a sibling of one that always runs.
+
+    ``with`` IS transparent, because it does not branch -- it is straight-line
+    code in a resource scope, and ``with open(p, "w") as fh: json.dump(...)`` is
+    the ordinary way to write JSON in Python.  My own positive control caught
+    this: the first draft excluded ``with`` wholesale and could not see its own
+    planted violation, which would have made the gate near-vacuous on real code.
+    """
+    if isinstance(stmt, (ast.With, ast.AsyncWith)):
+        for inner in stmt.body:
+            role = _pl1_stmt_role(inner, roles)
+            if role is not None:
+                return role
+        return None
+    if not isinstance(stmt, (ast.Expr, ast.Assign, ast.AnnAssign, ast.AugAssign, ast.Return)):
+        return None
+    for node in ast.walk(stmt):
+        if not isinstance(node, ast.Call):
+            continue
+        role = _pl1_primitive_role(node)
+        if role is not None:
+            return role
+        if isinstance(node.func, ast.Name):
+            local = roles.get(node.func.id)
+            if local is not None:
+                return local
+    return None
+
+
+def _pl1_serialized_names(stmt: ast.stmt, roles: Mapping[str, str]) -> set[str]:
+    """Names inside the ARGUMENTS of this statement's record-persisting calls.
+
+    The record must be the object BEING SERIALISED -- not merely a name that
+    appears somewhere in the line.  MEASURED false positive that forced this:
+    ``experiments/tests/test_ddm_cx2_trace_evaluate.py`` builds a dict of test
+    FIXTURE PATHS and then calls ``deps["frame_utils.py"].write_text(...)``.
+    There the dict is the subscript RECEIVER, and nothing about it is a run
+    record.  Restricting to the argument subtree drops it and keeps the real
+    sites (``profile_fp4_layer_sensitivity`` nests ``metadata`` inside the dict
+    literal it serialises, and that is still an argument).
+    """
+    out: set[str] = set()
+    for node in ast.walk(stmt):
+        if not isinstance(node, ast.Call):
+            continue
+        role = _pl1_primitive_role(node)
+        if role is None and isinstance(node.func, ast.Name):
+            role = roles.get(node.func.id)
+        if role != "record":
+            continue
+        for arg in list(node.args) + [kw.value for kw in node.keywords]:
+            out |= {n.id for n in ast.walk(arg) if isinstance(n, ast.Name)}
+    return out
+
+
+def _pl1_record_names(stmt: ast.stmt) -> set[str]:
+    """Names bound HERE to a dict literal of at least :data:`_MIN_RECORD_KEYS`."""
+    if not isinstance(stmt, ast.Assign) or not isinstance(stmt.value, ast.Dict):
+        return set()
+    if len(stmt.value.keys) < _MIN_RECORD_KEYS:
+        return set()
+    return {t.id for t in stmt.targets if isinstance(t, ast.Name)}
+
+
+def _pl1_block_violations(
+    body: list[ast.stmt], roles: Mapping[str, str], path_label: str
+) -> list[str]:
+    """One statement list.  Siblings only -- the ordering is what is at stake."""
+    out: list[str] = []
+    seq: list[tuple[ast.stmt, str | None]] = []
+    for stmt in body:
+        # A bulk write already inside try/except|finally cannot strand the
+        # record write: the handler runs and the record still lands.  That is
+        # the second legal cure, so a guarded save is never a bulk SITE here.
+        seq.append((stmt, "guarded" if isinstance(stmt, ast.Try) else _pl1_stmt_role(stmt, roles)))
+    for i, (bulk_stmt, bulk_role) in enumerate(seq):
+        if bulk_role != "bulk":
+            continue
+        for j in range(i + 1, len(seq)):
+            record_stmt, record_role = seq[j]
+            if record_role != "record":
+                continue
+            used = _pl1_serialized_names(record_stmt, roles)
+            for k in range(i):
+                built = _pl1_record_names(seq[k][0]) & used
+                if not built:
+                    continue
+                out.append(
+                    f"{path_label}:{bulk_stmt.lineno}: bulk payload write runs BEFORE the "
+                    f"already-built record {sorted(built)[0]!r} (built line {seq[k][0].lineno}, "
+                    f"persisted line {record_stmt.lineno}) -- if this save raises, the run's "
+                    f"only readable product is lost. Persist the record first, or guard the save."
+                )
+                break
+            break
+    return out
+
+
+def _pl1_walk(body: list[ast.stmt], roles: Mapping[str, str], label: str) -> list[str]:
+    out = _pl1_block_violations(body, roles, label)
+    for stmt in body:
+        for field in ("body", "orelse", "finalbody"):
+            nested = getattr(stmt, field, None)
+            if isinstance(nested, list) and nested and isinstance(nested[0], ast.stmt):
+                out.extend(_pl1_walk(nested, roles, label))
+        for handler in getattr(stmt, "handlers", []) or []:
+            out.extend(_pl1_walk(handler.body, roles, label))
+    return out
+
+
+def _pl1_scan(repo: Path) -> tuple[int, list[str], list[str]]:
+    """(modules_examined, violations, unparsed). The DENOMINATOR is returned.
+
+    A gate that reports "0 violations" over a scan it never states the size of
+    is indistinguishable from a gate that scanned nothing (the vacuity==pass
+    class). Both legs travel together -- and a module the parser CHOKED on is
+    reported by name rather than folded silently into the cleared count, because
+    "could not analyse" is not "clean".
+    """
+    violations: list[str] = []
+    unparsed: list[str] = []
+    scanned = 0
+    for root in ("src", "tools", "scripts", "experiments"):
+        base = repo / root
+        if not base.is_dir():
+            continue
+        for path in sorted(base.rglob("*.py")):
+            # `experiments/results` is harvested RUN OUTPUT, not source we
+            # maintain; scanning it would quadruple the cost and report defects
+            # nobody can fix in place.  Named here so the denominator is honest.
+            if {"results", "site-packages", ".venv", "__pycache__"} & set(path.parts):
+                continue
+            text = _read(path)
+            if text is None:
+                continue
+            scanned += 1
+            # Cheap textual prefilter BEFORE the AST parse. A module with no
+            # bulk-write spelling anywhere in its bytes cannot contain the
+            # pattern, so parsing it is pure cost. It is still EXAMINED and
+            # still counted in the denominator -- the prefilter skips the parse,
+            # never the population. (Shrinking the reported denominator to buy
+            # speed is the same dishonesty as shrinking it to buy a green.)
+            if not any(token in text for token in _PL1_BULK_TOKENS):
+                continue
+            try:
+                tree = ast.parse(text)
+            except (SyntaxError, ValueError):
+                unparsed.append(str(path.relative_to(repo)))
+                continue
+            roles = _pl1_helper_roles(tree)
+            lines = text.splitlines()
+            label = str(path.relative_to(repo))
+            for fn in _func_defs(tree):
+                for item in _pl1_walk(fn.body, roles, label):
+                    lineno = int(item.split(":")[1])
+                    line = lines[lineno - 1] if 0 < lineno <= len(lines) else ""
+                    if _waiver_present(line, "PAYLOAD_WRITE_ORDER_OK"):
+                        continue
+                    violations.append(item)
+    return scanned, violations, unparsed
+
+
+def payload_write_order_population(repo_root: str | Path | None = None) -> dict[str, object]:
+    """The declared denominator for :func:`check_no_bulk_write_strands_the_ready_record`."""
+    scanned, violations, unparsed = _pl1_scan(Path(repo_root or REPO_ROOT))
+    return {
+        "modules_examined": scanned,
+        "violations": violations,
+        "live_count": len(violations),
+        "unparsed": unparsed,
+    }
+
+
+def check_no_bulk_write_strands_the_ready_record(
+    *,
+    repo_root: str | Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Refuse: a fragile BULK write scheduled ahead of an already-built RECORD.
+
+    THE INCIDENT (ddm_lr1 arm A2, 2026-08-16).  The run finished 600 steps on
+    Metal, re-evaluated the deployment EMA, passed argmax parity, and built its
+    whole ``result`` dict -- ``final_seg``, the parity report, the packed byte
+    count, the verdict, the full six-row ``history``.  Then it wrote the 1.7 MB
+    checkpoint FIRST.  ``os.replace`` hit an existing empty directory at
+    ``--save``, raised ``IsADirectoryError``, and the ``result`` write two lines
+    later never ran.  379 s of compute, no ``result.json`` at all -- and the
+    ``safe_run`` receipt read ``status=ok exit=1``.
+
+    The two artifacts are NOT interchangeable and must not share a fate:
+
+    * the RECORD is cheap and IRREPLACEABLE -- scalars that cost a full final
+      evaluation to produce and cannot be recovered without re-running;
+    * the BULK payload is expensive but REBUILDABLE -- and it is the one whose
+      write is most likely to fail (size, disk, a path that is a directory).
+
+    Ordering the rebuildable-and-fragile write ahead of the
+    irreplaceable-and-cheap one inverts ALWAYS KEEP THE PAYLOAD (P0, operator
+    2026-08-09).  Either cure passes: persist the record first, or wrap the bulk
+    write in ``try``.
+
+    SISTER, not duplicate.  ``check_no_measure_and_discard_payload`` refuses a
+    run that persists ONLY scalars while bytes sat in memory -- a defect of
+    DESIGN, detected by a measurement with no adjacent write.  A2 persisted both
+    by design and still lost its product, so that gate is silent here.  This one
+    keys on SEQUENCE.
+
+    Population MEASURED, not assumed, and the DENOMINATOR is stated: 11,016
+    modules under ``src``, ``tools``, ``scripts`` and ``experiments``
+    (``experiments/results`` excluded -- harvested run output, not maintained
+    source).  Live count at landing is **10**, NOT zero, so this lands
+    WARN-ONLY.  Narrowing the scan until the count read zero was available and
+    refused: a strict gate bought by shrinking its own population is the
+    vacuity==pass class wearing a green label.
+    STRICT-FLIP CONDITION: the ten sites listed in
+    ``.omx/research/ddm_pl1_payload_loss_two_landing_20260816.md`` are cured or
+    waived, at which point flip the wire-in in ``tac.preflight``.
+
+    Same-line waiver ``# PAYLOAD_WRITE_ORDER_OK:<rationale>`` on the bulk-write
+    line, for a record that genuinely cannot be written until the save returns
+    (a manifest that must record the artifact's real sha).
+    """
+
+    scanned, violations, unparsed = _pl1_scan(Path(repo_root or REPO_ROOT))
+    return _finish(
+        name="check_no_bulk_write_strands_the_ready_record",
+        tag="payload-write-order",
+        violations=violations,
+        strict=strict,
+        verbose=verbose,
+        ok_detail=(
+            f"{scanned} modules examined ({len(unparsed)} unparseable), "
+            "no ready record stranded behind a bulk write"
+        ),
+    )
+
+
+CONFOUND_GATES = (*CONFOUND_GATES, check_no_bulk_write_strands_the_ready_record)
+
+POSITIVE_CONTROLS = (
+    *POSITIVE_CONTROLS,
+    PositiveControl(
+        gate="check_no_bulk_write_strands_the_ready_record",
+        files={
+            "src/tac/planted_stranded_record.py": (
+                "import json\n"
+                "import torch\n"
+                "def _atomic_torch_save(payload, path):\n"
+                "    torch.save(payload, path)\n"
+                "def finalize(model, args, history):\n"
+                "    result = {'verdict': 'PASS', 'seg': 1.0, 'history': history}\n"
+                "    _atomic_torch_save({'sd': model}, args.save)\n"
+                "    with open(args.out, 'w') as fh:\n"
+                "        json.dump(result, fh)\n"
+                "    return result\n"
+            )
+        },
+        must_mention="planted_stranded_record.py",
+        why=(
+            "The EXACT ddm_lr1/A2 shape: the run's `result` is fully built, then a bulk "
+            "checkpoint save is scheduled ahead of it, then the record is persisted. A2's save "
+            "raised IsADirectoryError and 379 s of Metal produced no result.json at all. If a "
+            "future change makes the gate classify helpers by NAME instead of by the primitives "
+            "they call, stop recursing into nested blocks, or drop the dict-literal record "
+            "predicate, this control stops firing."
         ),
     ),
 )
