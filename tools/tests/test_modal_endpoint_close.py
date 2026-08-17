@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime as dt
 import hashlib
 import importlib
 import json
@@ -383,11 +384,39 @@ def test_receipt_schema_round_trip(tmp_path: Path) -> None:
     assert json.loads((tmp_path / close.DONE_NAME).read_text())["receipt"]["sha256"]
 
 
+def _fresh_active_claim_table(age_hours: float = 1.0) -> str:
+    """A claims table holding ONE claim that is ACTIVE and FRESH right now.
+
+    These fixtures used to hard-code ``2026-08-14T12:00:00Z``. That is a TIME
+    BOMB, not a fixture: the claim ages past the 24 h TTL in
+    ``claim_lane_dispatch`` and the staleness guard then REFUSES before the
+    dual-ledger path these tests exist to exercise.  Three of them went RED at
+    age 60.68 h -- and the failure looked like an external stale claim needing
+    a terminal row, when in fact no such claim exists outside ``tmp_path``.
+
+    The fixture's INTENT is "a fresh active claim"; encode the intent, not one
+    day on which the intent happened to hold.  Sister of the same defect fixed
+    in ``test_ddm_co9`` (hard-coded live ledger status) -- a fixture that
+    encodes a moment instead of a condition will always come due eventually.
+
+    ``age_hours`` stays well inside the TTL so the guard sees ACTIVE, which is
+    the precondition under test; it is a parameter so a future test can ask
+    for a deliberately STALE claim without reintroducing an absolute date.
+    """
+
+    started = dt.datetime.now(dt.UTC) - dt.timedelta(hours=age_hours)
+    expected_done = started + dt.timedelta(hours=3)
+    fmt = "%Y-%m-%dT%H:%M:%SZ"
+    return (
+        HEADER + f"| {started.strftime(fmt)} | test-agent | lane_ac1_test | modal | "
+        f"modal:ac1-test | {expected_done.strftime(fmt)} | active_test | test claim |\n"
+    )
+
+
 def _active_ledgers(tmp_path: Path) -> tuple[Path, Path, str]:
     claims = tmp_path / "claims.md"
     claims.write_text(
-        HEADER + "| 2026-08-14T12:00:00Z | test-agent | lane_ac1_test | modal | "
-        "modal:ac1-test | 2026-08-14T15:00:00Z | active_test | test claim |\n"
+        _fresh_active_claim_table()
     )
     ledger = tmp_path / "calls.jsonl"
     call_id = "fc-ac1-test"
@@ -451,8 +480,7 @@ def test_missing_call_registration_is_recovered_from_exact_spawn_metadata(
 ) -> None:
     claims = tmp_path / "claims.md"
     claims.write_text(
-        HEADER + "| 2026-08-14T12:00:00Z | test-agent | lane_ac1_test | modal | "
-        "modal:ac1-test | 2026-08-14T15:00:00Z | active_test | test claim |\n"
+        _fresh_active_claim_table()
     )
     ledger = tmp_path / "calls.jsonl"
     receipt = close.execute_endpoint_closure(
@@ -479,8 +507,7 @@ def test_missing_call_registration_is_recovered_from_exact_spawn_metadata(
 def test_spawn_metadata_mismatch_refuses_registration_recovery(tmp_path: Path) -> None:
     claims = tmp_path / "claims.md"
     claims.write_text(
-        HEADER + "| 2026-08-14T12:00:00Z | test-agent | lane_ac1_test | modal | "
-        "modal:ac1-test | 2026-08-14T15:00:00Z | active_test | test claim |\n"
+        _fresh_active_claim_table()
     )
     metadata = _authenticated_spawn_metadata()
     metadata["lane_id"] = "lane-wrong"
