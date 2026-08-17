@@ -276,7 +276,7 @@ in its exact place. Two consequences worth keeping:
 
 | lever | prior status | this unit |
 |---|---|---|
-| sr1 **A1** zero-byte de-blur (its rank #1, ceiling −0.028604 S, sign "not settled scorer-free") | sealed FO-1, **never fired** | **CLOSED.** Seg 1.1σ at best and positive everywhere else; pose ×38.6. Both legs. |
+| sr1 **A1** zero-byte de-blur (its rank #1, ceiling −0.028604 S, sign "not settled scorer-free") | sealed FO-1, **never fired** | **CLOSED.** Seg 1.15σ at best and positive everywhere else; pose ×38.6. Both legs. |
 | sr1 **FO-1**'s pre-registered bands | flips only | **The bands are unsafe as written.** rn1 measured pose at 25–70× the seg leg; a seg-only ladder on this vehicle would have read −16 flips at α=0.25 as within its LIVE band while the row actually costs **+0.0237 S**. Any successor ladder must carry pose. |
 | "the round trip is aliasing" | my own §0 prediction | **REFUTED.** Antialiasing is worse in both kernels. |
 | "the render is natively camera-res" (rt1 §2.5b) | scope caveat | **Refuted; it is natively 384×512.** rn1 §4 already lifted the caveat from the `D` side; this lifts it from the `U` side and names the kernel. |
