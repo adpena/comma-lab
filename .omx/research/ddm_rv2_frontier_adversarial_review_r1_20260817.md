@@ -612,3 +612,16 @@ aligned objective), not from this memo.
 
 **Own-vehicle frontier: S 0.15853325034789678 @ 181,161 B [contest-CUDA T4, n600].
 Unmoved by this unit.**
+
+## ADDENDUM (MAIN, append-only) — verdict_scope declarations for the negatives above
+
+- §2.2 F3 "REFUTED — banked-micro-edit recompile premise": verdict_scope: instance — the specific
+  premise that the qs2/re1 bank needs recompile against the rr4 coder (they already shipped inside
+  mc35→mc36→hv1→rr4). Says nothing about recompile needs of FUTURE banked edits vs future coders.
+- §4 row 1 "INERT": not a verdict — a PRE-REGISTERED falsifier condition for the live hg1 arm_b
+  run (hinge active fraction ≈0 ⇒ run confounded); scope will be declared at adjudication.
+- §4 row 6 REGIME_THESIS_INSTANCE_REFUTED: scope carried in the token — instance (this burn-2
+  window on this base); the editability FAMILY stays open per the named unbuilt correct object.
+- §4.4/F10 "REFUTED — boundary_gated_token_code_width wired": verdict_scope: instance — the
+  wire-state claim about this one lever (DECLARED-ONLY, zero readers); not a verdict on
+  code-width levers as a family.

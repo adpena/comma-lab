@@ -147,3 +147,34 @@ Task #503 RECURSIVE-FRACTAL-OPTIMAL representation (DESIGN + $0 ranking, pointer
 STORES CONSULTED: MODAL_REMOTE_RESULT.json (rr4 row) · ddm_rr4_cuda_prob_reencode_20260817.md §6/§8 ·
 continual_learning posterior (hv1 precedent row) · ddm_oq1_drain_dispositions_20260817.json ·
 tc1 memos 99ad5cb5d5/7763583f6d · er1 ledger · me1 charter.
+
+## FEED-20260817e — rv2 review round 1: row SOUND, 10 findings, the exact routing arithmetic
+
+1. **The rr4 frontier row SURVIVED adversarial round 1** (ddm_rv2, 813153ca1d): S re-derived to
+   17 digits, archive independently hashed (35ac2b9b…, single stored member 1a6b40cc…), decode
+   falsifier resolved in favor; all 10 findings are custody/narration/apparatus. Counter 0/3.
+2. **FO-1 EXECUTED by MAIN ($0, before the ~24h TTL)**: all 8 discarded eval artifacts recovered
+   from the Modal result cache (contest_auth_eval.json 28,937 B · report.txt 664 B + 6 more,
+   shas in RECOVERY_MANIFEST.json; SSD mirror in endpoint_closure/returned_artifacts_fo1) —
+   the frontier row is now --contest-final-eligible. Root cause F1: modal_endpoint_close.py
+   drops str-typed artifacts (measure-and-discard class, payload-law violation) — FO-2
+   two-landing fix owed.
+3. **F3 correction applied**: "bank needs recompile" = registered falsified premise (instance) —
+   qs2/re1 already inside the row via mc36; me1's first job voided + re-aimed at source-verify
+   then the three-way prior race (recompile leg = identity baseline).
+4. **F5 spend correction**: Modal $18.62/$20, headroom $1.38 ≈ 8 T4 rows (MAIN's ~$7 was 2.7×
+   low); operator cap ruling OWED; CPU-axis row (~$0.40 ≈ 29% of headroom) held for adjudication
+   w/ the PR135/138 GPU-eval field-norm fact.
+5. **THE EXACT ROUTING ARITHMETIC (first time exact at this base)**: pose→0 saves 0.00829458 <
+   gap 0.00853325 (short 2.4e-4) — pose ALONE cannot close sub-0.15; seg needs −28.8% of d_seg;
+   rate needs −12,815 B (archive ≤168,346 B); pose marginal 6.03× seg. Every prior route memo
+   used the stale gap — re-derive before allocating.
+6. **Next-movers ranked from receipts**: hg1 arm_b hinge (live, ~23:20Z; m_safe derived 0.03918
+   vs default 1.0 = 25.5× too big, 97.65% of hinge gradient wasted — the case is STRONGER than
+   its own memo claimed) · ce1/cw1 aligned objective (EF3000 −2,286 flips below init, first
+   descent in 10 runs; S reach unmeasured, needs byte-closed repack) · ra2+ra1 ~278 B
+   ΔS −1.851e-4 $0 (gate measured vacuous — retire + fire). tc1 ratified over oq1 on
+   boundary_gated_token_code_width (DECLARED-ONLY, instance).
+
+STORES CONSULTED: ddm_rv2_frontier_adversarial_review_r1_20260817.md · MODAL_REMOTE_RESULT.json ·
+RECOVERY_MANIFEST.json · bu1 registration rows · billing authority tool output (per rv2 F5).
