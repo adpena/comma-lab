@@ -153,6 +153,27 @@ def cumulative_curve(rows: list[dict], seed: int) -> list[dict]:
     return out
 
 
+def matched_advantage_curve(free_rows: list[dict], null_rows: list[dict],
+                            pairs: list[int], seed: int) -> list[dict]:
+    """Cumulative null-vs-free eta ADVANTAGE (%) over a shuffled pair order.
+
+    This is the direct continuation of pn2's regression series.  Shuffled, not on-disk order,
+    for the same reason as `cumulative_curve`: pair index is time in the clip.
+    """
+    rng = np.random.default_rng(seed)
+    order = rng.permutation(len(pairs))
+    fmap = {r["pair"]: r for r in free_rows}
+    nmap = {r["pair"]: r for r in null_rows}
+    out = []
+    for k in range(1, len(pairs) + 1):
+        sub = [pairs[i] for i in order[:k]]
+        ef = pooled_eta([fmap[p] for p in sub])
+        en = pooled_eta([nmap[p] for p in sub])
+        out.append({"n": k, "pooled_eta_free": ef, "pooled_eta_null": en,
+                    "advantage_pct": (100.0 * (en - ef) / ef) if ef else None})
+    return out
+
+
 def net_dS(eta: float, flips: float, total_B: float) -> float:
     return -eta * flips * SEG_DS_PER_FLIP + total_B * RATE_DS_PER_BYTE
 
@@ -271,6 +292,18 @@ def adjudicate(args: argparse.Namespace) -> int:
                 "per_pair_delta_eta": per,
                 "pn2_n12_reference": {"unprojected": PN2_ETA_UNPROJECTED_N12,
                                       "projected": PN2_ETA_PROJECTED_N12},
+                # pn2's regression series (+15.6% -> +14.2% -> +11.7% -> +8.1% at n=4/7/10/12)
+                # was in THIS quantity -- the null-vs-free ADVANTAGE -- not in eta itself.  A
+                # cumulative curve of eta alone would answer a different question than the one
+                # pn2 left open, so the advantage gets its own curve on the new sample.
+                "pn2_advantage_regression_series_pct": [15.6, 14.2, 11.7, 8.1],
+                "cumulative_advantage_pct_shuffled": matched_advantage_curve(
+                    fr, nr, common, args.boot_seed),
+                "advantage_floor_note":
+                    "even if the advantage regressed to ZERO, the projected eta would fall back "
+                    "to the UNPROJECTED level, which pn2 measured at 0.5651 -- still above the "
+                    "0.5196 bar.  The advantage regressing is therefore not by itself a threat "
+                    "to the supplier verdict; it would be a threat to the MECHANISM claim.",
             }
 
     rec = {
