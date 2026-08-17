@@ -84,3 +84,21 @@ dominance; distillation/carrier-rank on rate). Do not manufacture a candidate.
 3. Sealed MAIN fire-order iff the bar clears.
 4. Final message: counts + the composed candidate's projected (ΔS, Δbytes) with provenance +
    NEXT_IF_RESUMED. End with the own-vehicle frontier line and whether your unit moved it.
+
+## AMENDMENT 1 (operator 2026-08-17, received while arm live): THE EDIT SIGNAL OPTIMIZES THE LEARNED PRIOR
+
+**Operator verbatim: "Seems like it's signal that could be used to optimize the learned prior too."**
+Binding consequence — add a PRIOR-OPTIMIZATION leg (stage 7):
+
+7. **PRIOR-REFIT**: the engine's realized-ΔS rows ARE a per-token score-sensitivity map. Use it to
+   (a) build the score-equivalence map over the token stream (which token deviations are REALIZED
+   score-free, per the engine's own evaluate stage — never assumed); (b) jointly choose the
+   cheapest score-equivalent stream AND refit/retrain the HPAC AR prior on it (the #602
+   min-description-polytope-member idea at the coder layer; composes with the standing hb1
+   fire-order — HPAC on OUR labels, now sensitivity-WEIGHTED); (c) measure total bytes vs the live
+   181,161 B with distortion RE-MEASURED (changed tokens ⇒ changed decode; never assume identity).
+   ACCOUNTING LAW: the refit prior's weights are COUNTED archive bytes — every prior delta pays
+   its own weight cost in the comparison. SCOPE NOTE: #996 closed the coder axis GIVEN the stream;
+   this changes the STREAM + prior jointly, which #996 did not measure — it is not a reopening of
+   a closed axis, it is the axis #996 could not see. Race this leg vs the plain bank-recompile
+   result; report both.
