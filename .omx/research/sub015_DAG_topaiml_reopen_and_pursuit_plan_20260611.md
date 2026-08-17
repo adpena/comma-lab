@@ -28338,3 +28338,32 @@ Independent cross-validation from the same arm: ws4 fit **24.75 s/eval** from th
 displacement/telemetry data; MAIN's three-point cadence fit gave **25.400 s/eval**. Two derivations,
 different data, **2.6% apart** — the eval-cadence refit reproduces out-of-sample twice in one day
 (the other being EF0's 842.0 s vs the predicted 865.5 s).
+
+## FEED-2026-08-17-EF3000 — THE SEG REGIME DESCENDS (ten-run verdict REFUTED by two flags)
+
+**MEASURED, $0.** `EF3000` (3,000 steps, `--ce-fraction 0.0 --softplus-fraction 0.0`, lr 2e-5,
+seed 20260715, rc=0, 1,445 s):
+
+```
+best_step = 3000 · improved_over_init = True · endpoint −2,286 flips BELOW init (min of 31 evals)
+```
+
+**Pre-registered fork, branch 1: the aligned objective CROSSES; the ten-run no-descent verdict was
+CONFIGURATION, not physics.** −2,286 = **3.78× the 605-flip A/A floor**. Tail still falling
+(−430/−356/−111/−234 per 100 over the last four evals) — **it ran out of steps, not out of descent.**
+
+REFUTES `ddm_l3000_no_descent_verdict_20260817` at FORMULATION scope. That verdict's own words —
+*"at any tested lr or window length"* — named the blind spot: ten runs swept lr and length, **none
+varied the curriculum fractions.** Both ingredients were necessary: EF0 (aligned, 600) reached
+parity without crossing; L3000_off (long, misaligned) stalled at +4,887. **Aligned × long crosses.**
+
+SCOPE **INSTANCE**: trainer-advisory `quantized_exact_seg`, burn-2 base, n600 — NOT the hv1 vehicle,
+NOT byte-closed, NOT exact. In S units −1.938e-3 seg (20.2% of the gap) **only if it transfers and
+byte-closes**, neither measured. The real next question is TRANSFER, not more window.
+
+**Fourth wall-clock term found:** predicted 1,552.3 s (exact `L3000_off` config), measured **1,445 s
+— 6.9% faster at identical steps AND evals.** `r` is CURRICULUM-DEPENDENT — `expected_flip` is
+cheaper per step than `ce`. Same genus as this morning's `e`-vs-`r` conflation, one level in: a rate
+fitted across a mixture is a mixture rate. Quote `r` with its active loss.
+
+Memo `.omx/research/ddm_ef3000_first_descent_verdict_20260817.md`.
